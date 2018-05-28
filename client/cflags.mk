@@ -2,7 +2,7 @@
 # across debug and release builds.
 
 LOCAL_CFLAGS	:= -DANDROID_NDK
-LOCAL_CFLAGS	+= -Werror			# error on warnings
+#LOCAL_CFLAGS	+= -Werror			# error on warnings
 LOCAL_CFLAGS	+= -Wall
 LOCAL_CFLAGS	+= -Wextra
 #LOCAL_CFLAGS	+= -Wlogical-op		# not part of -Wall or -Wextra
