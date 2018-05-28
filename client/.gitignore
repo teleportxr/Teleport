@@ -1,0 +1,8 @@
+.idea/
+.gradle/
+.externalNativeBuild/
+build/
+*.pyc
+*.iml
+*.keystore
+local.properties
