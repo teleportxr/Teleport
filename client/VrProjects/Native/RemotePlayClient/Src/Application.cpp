@@ -1,15 +1,7 @@
-/************************************************************************************
+// (C) Copyright 2018 Simul.co
 
-Filename    :   OvrApp.cpp
-Content     :   Trivial use of the application framework.
-Created     :   
-Authors     :   
+#include "Application.h"
 
-Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
-
-*************************************************************************************/
-
-#include "OvrApp.h"
 #include "GuiSys.h"
 #include "OVR_Locale.h"
 
@@ -26,14 +18,14 @@ jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface( JNIEnv 
 		jstring fromPackageName, jstring commandString, jstring uriString )
 {
 	LOG( "nativeSetAppInterface" );
-	return (new OvrApp())->SetActivity( jni, clazz, activity, fromPackageName, commandString, uriString );
+	return (new Application())->SetActivity( jni, clazz, activity, fromPackageName, commandString, uriString );
 }
 
 } // extern "C"
 
 #endif
 
-OvrApp::OvrApp()
+Application::Application()
 	: SoundEffectContext( NULL )
 	, SoundEffectPlayer( NULL )
 	, GuiSys( OvrGuiSys::Create() )
@@ -42,7 +34,7 @@ OvrApp::OvrApp()
 {
 }
 
-OvrApp::~OvrApp()
+Application::~Application()
 {
 	delete SoundEffectPlayer;
 	SoundEffectPlayer = NULL;
@@ -57,7 +49,7 @@ OvrApp::~OvrApp()
 	}
 }
 
-void OvrApp::Configure( ovrSettings & settings )
+void Application::Configure( ovrSettings & settings )
 {
 	settings.CpuLevel = 2;
 	settings.GpuLevel = 2;
@@ -69,7 +61,7 @@ void OvrApp::Configure( ovrSettings & settings )
 	settings.RenderMode = RENDERMODE_MULTIVIEW;
 }
 
-void OvrApp::EnteredVrMode( const ovrIntentType intentType, const char * intentFromPackage, const char * intentJSON, const char * intentURI )
+void Application::EnteredVrMode( const ovrIntentType intentType, const char * intentFromPackage, const char * intentJSON, const char * intentURI )
 {
 	OVR_UNUSED( intentFromPackage );
 	OVR_UNUSED( intentJSON );
@@ -102,7 +94,7 @@ void OvrApp::EnteredVrMode( const ovrIntentType intentType, const char * intentF
 		}
 		else
 		{
-			LOG( "OvrApp::EnteredVrMode Failed to load %s", sceneUri );
+			LOG( "Application::EnteredVrMode Failed to load %s", sceneUri );
 		}
 	}
 	else if ( intentType == INTENT_NEW )
@@ -110,12 +102,13 @@ void OvrApp::EnteredVrMode( const ovrIntentType intentType, const char * intentF
 	}
 }
 
-void OvrApp::LeavingVrMode()
+void Application::LeavingVrMode()
 {
 }
 
-bool OvrApp::OnKeyEvent( const int keyCode, const int repeatCount, const KeyEventType eventType )
+bool Application::OnKeyEvent( const int keyCode, const int repeatCount, const KeyEventType eventType )
 {
+	LOG("On key event!");
 	if ( GuiSys->OnKeyEvent( keyCode, repeatCount, eventType ) )
 	{
 		return true;
@@ -123,7 +116,7 @@ bool OvrApp::OnKeyEvent( const int keyCode, const int repeatCount, const KeyEven
 	return false;
 }
 
-ovrFrameResult OvrApp::Frame( const ovrFrameInput & vrFrame )
+ovrFrameResult Application::Frame( const ovrFrameInput & vrFrame )
 {
 	// process input events first because this mirrors the behavior when OnKeyEvent was
 	// a virtual function on VrAppInterface and was called by VrAppFramework.
@@ -140,6 +133,7 @@ ovrFrameResult OvrApp::Frame( const ovrFrameInput & vrFrame )
 		// If nothing consumed the key and it's a short-press of the back key, then exit the application to OculusHome.
 		if ( keyCode == OVR_KEY_BACK && eventType == KEY_EVENT_SHORT_PRESS )
 		{
+			LOG("Back!");
 			app->ShowSystemUI( VRAPI_SYS_UI_CONFIRM_QUIT_MENU );
 			continue;
 		}
