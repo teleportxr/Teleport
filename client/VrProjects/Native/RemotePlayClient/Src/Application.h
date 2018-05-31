@@ -24,6 +24,9 @@ public:
 	virtual OVR::ovrFrameResult Frame( const OVR::ovrFrameInput & vrFrame );
 
 	class OVR::ovrLocale& GetLocale() { return *Locale; }
+	void NotifyFrameAvailable() { ++mNumPendingFrames; }
+
+	static void InitializeJNI(JNIEnv* env);
 
 private:
 	OVR::ovrSoundEffectContext* SoundEffectContext;
@@ -31,7 +34,22 @@ private:
 	OVR::OvrGuiSys* GuiSys;
 	OVR::ovrLocale* Locale;
 
-	OVR::ModelFile* SceneModel;
 	OVR::OvrSceneView Scene;
-};
 
+    OVR::ovrSurfaceDef mVideoSurfaceDef;
+	OVR::GlProgram mVideoSurfaceProgram;
+    OVR::SurfaceTexture* mVideoSurfaceTexture;
+	OVR::GlTexture mVideoTexture;
+
+	int mNumPendingFrames = 0;
+
+	struct JNI {
+		JNIEnv* env;
+		jclass activityClass;
+		jmethodID initializeVideoStreamMethod;
+	};
+	static JNI jni;
+
+	static const int VideoWidth  = 2048;
+	static const int VideoHeight = 1024;
+};
