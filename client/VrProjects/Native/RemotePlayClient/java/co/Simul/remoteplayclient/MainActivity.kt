@@ -3,15 +3,17 @@
 package co.Simul.remoteplayclient
 
 import android.graphics.SurfaceTexture
-import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
 import android.view.Surface
 import com.oculus.vrappframework.VrActivity
+import java.util.concurrent.Executors
 
 class MainActivity : VrActivity(), SurfaceTexture.OnFrameAvailableListener {
     external fun nativeSetAppInterface(act: VrActivity?, fromPackageNameString: String, commandString: String, uriString: String): Long
     external fun nativeFrameAvailable(appPtr: Long)
+
+    private val mStreamDecoder = StreamDecoder(VideoCodec.H265)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,24 +35,29 @@ class MainActivity : VrActivity(), SurfaceTexture.OnFrameAvailableListener {
 
     private fun initializeVideoStream_Implementation(videoTexture: SurfaceTexture) {
         videoTexture.setOnFrameAvailableListener(this)
-        mVideoSurface = Surface(videoTexture)
-        mMediaPlayer.setSurface(mVideoSurface)
+        mStreamDecoder.configure(VIDEO_WIDTH, VIDEO_HEIGHT, Surface(videoTexture))
 
-        val fd = assets.openFd("video.mp4")
-        mMediaPlayer.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
-        mMediaPlayer.prepare()
-        mMediaPlayer.start()
+        val executorService = Executors.newSingleThreadExecutor()
+        executorService.execute(DecoderService(mStreamDecoder))
     }
 
     override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
         nativeFrameAvailable(appPtr)
     }
 
-    private val mMediaPlayer = MediaPlayer()
-    private lateinit var mVideoSurface: Surface
+    private class DecoderService(private val mStreamDecoder: StreamDecoder): Runnable {
+        override fun run() {
+            Thread.sleep(500)
+            while(true) {
+                mStreamDecoder.process()
+            }
+        }
+    }
 
     companion object {
         const val TAG = "RemotePlayClient"
+        const val VIDEO_WIDTH  = 3840
+        const val VIDEO_HEIGHT = 1920
 
         init {
             Log.d(TAG, "LoadLibrary")
