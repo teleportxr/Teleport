@@ -70,10 +70,10 @@ static const char* VideoSurface_FS = R"(
 Application::JNI Application::jni = {};
 
 Application::Application()
-	: SoundEffectContext(nullptr)
-	, SoundEffectPlayer(nullptr)
-	, GuiSys(OvrGuiSys::Create())
-	, Locale(nullptr)
+	: mSoundEffectContext(nullptr)
+	, mSoundEffectPlayer(nullptr)
+	, mGuiSys(OvrGuiSys::Create())
+	, mLocale(nullptr)
 	, mVideoSurfaceTexture(nullptr)
 {}
 
@@ -83,21 +83,22 @@ Application::~Application()
 	mVideoSurfaceDef.geo.Free();
 	GlProgram::Free(mVideoSurfaceProgram);
 
-	delete SoundEffectPlayer;
-	delete SoundEffectContext;
+	delete mSoundEffectPlayer;
+	delete mSoundEffectContext;
 
-	OvrGuiSys::Destroy( GuiSys );
+	OvrGuiSys::Destroy(mGuiSys);
 }
 
 void Application::Configure(ovrSettings& settings )
 {
-	settings.CpuLevel = 2;
+	settings.CpuLevel = 0;
 	settings.GpuLevel = 2;
-#if defined( OVR_OS_WIN32 )
-	settings.WindowParms.IconResourceId = IDI_ICON1;
-	settings.WindowParms.Title = "VrTemplate";		// TODO: Use VersionInfo.ProductName
-#endif
 
+	settings.EyeBufferParms.colorFormat = COLOR_8888;
+	settings.EyeBufferParms.depthFormat = DEPTH_16;
+	settings.EyeBufferParms.multisamples = 1;
+
+	settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 	settings.RenderMode = RENDERMODE_MONO;
 }
 
@@ -109,16 +110,17 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 	if(intentType == INTENT_LAUNCH)
 	{
-		const ovrJava * java = app->GetJava();
-		SoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
-		SoundEffectContext->Initialize(&app->GetFileSys());
-		SoundEffectPlayer = new OvrGuiSys::ovrDummySoundEffectPlayer();
+		const ovrJava* java = app->GetJava();
 
-		Locale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
+		mSoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
+		mSoundEffectContext->Initialize(&app->GetFileSys());
+		mSoundEffectPlayer = new OvrGuiSys::ovrDummySoundEffectPlayer();
+
+		mLocale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
 
 		String fontName;
 		GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
-		GuiSys->Init(this->app, *SoundEffectPlayer, fontName.ToCStr(), &app->GetDebugLines());
+		mGuiSys->Init(this->app, *mSoundEffectPlayer, fontName.ToCStr(), &app->GetDebugLines());
 
 		{
 			const ovrProgramParm uniformParms[] = {
@@ -135,14 +137,16 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		}
 
 		mVideoSurfaceTexture = new SurfaceTexture(app->GetJava()->Env);
+        mVideoTexture = GlTexture(mVideoSurfaceTexture->GetTextureId(), GL_TEXTURE_EXTERNAL_OES, 0, 0);
 
 		mVideoSurfaceDef.surfaceName = "VideoSurface";
 		mVideoSurfaceDef.geo = BuildGlobe();
 		mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
 		mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
 		mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
+        mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &mVideoTexture;
 
-		app->GetJava()->Env->CallVoidMethod(app->GetJava()->ActivityObject, jni.initializeVideoStreamMethod, mVideoSurfaceTexture->GetJavaObject());
+		java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, mVideoSurfaceTexture->GetJavaObject());
 	}
 }
 
@@ -150,9 +154,9 @@ void Application::LeavingVrMode()
 {
 }
 
-bool Application::OnKeyEvent( const int keyCode, const int repeatCount, const KeyEventType eventType )
+bool Application::OnKeyEvent(const int keyCode, const int repeatCount, const KeyEventType eventType)
 {
-	if(GuiSys->OnKeyEvent(keyCode, repeatCount, eventType))
+	if(mGuiSys->OnKeyEvent(keyCode, repeatCount, eventType))
 	{
 		return true;
 	}
@@ -163,37 +167,37 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
 	// process input events first because this mirrors the behavior when OnKeyEvent was
 	// a virtual function on VrAppInterface and was called by VrAppFramework.
-	for ( int i = 0; i < vrFrame.Input.NumKeyEvents; i++ )
+	for(int i = 0; i < vrFrame.Input.NumKeyEvents; i++)
 	{
 		const int keyCode = vrFrame.Input.KeyEvents[i].KeyCode;
 		const int repeatCount = vrFrame.Input.KeyEvents[i].RepeatCount;
 		const KeyEventType eventType = vrFrame.Input.KeyEvents[i].EventType;
 
-		if ( OnKeyEvent( keyCode, repeatCount, eventType ) )
+		if(OnKeyEvent(keyCode, repeatCount, eventType))
 		{
 			continue;   // consumed the event
 		}
 		// If nothing consumed the key and it's a short-press of the back key, then exit the application to OculusHome.
-		if ( keyCode == OVR_KEY_BACK && eventType == KEY_EVENT_SHORT_PRESS )
+		if(keyCode == OVR_KEY_BACK && eventType == KEY_EVENT_SHORT_PRESS)
 		{
-			app->ShowSystemUI( VRAPI_SYS_UI_CONFIRM_QUIT_MENU );
+			app->ShowSystemUI(VRAPI_SYS_UI_CONFIRM_QUIT_MENU);
 			continue;
 		}
 	}
 
-	if(mNumPendingFrames > 0) {
+	while(mNumPendingFrames > 0) {
 		mVideoSurfaceTexture->Update();
 		--mNumPendingFrames;
 	}
 
 	ovrFrameResult res;
 
-	Scene.Frame(vrFrame);
-	Scene.GetFrameMatrices(vrFrame.FovX, vrFrame.FovY, res.FrameMatrices);
-	Scene.GenerateFrameSurfaceList(res.FrameMatrices, res.Surfaces);
+	mScene.Frame(vrFrame);
+	mScene.GetFrameMatrices(vrFrame.FovX, vrFrame.FovY, res.FrameMatrices);
+	mScene.GenerateFrameSurfaceList(res.FrameMatrices, res.Surfaces);
 
 	// Update GUI systems after the app frame, but before rendering anything.
-	GuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
+	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -214,16 +218,12 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 
 	// Append video surface
-	if(mVideoSurfaceTexture) {
-		mVideoTexture = GlTexture(mVideoSurfaceTexture->GetTextureId(), GL_TEXTURE_EXTERNAL_OES, 0, 0);
-		mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &mVideoTexture;
-	}
 	res.Surfaces.PushBack(ovrDrawSurface(&mVideoSurfaceDef));
 
 	// Append GuiSys surfaces.
-	GuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
+	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
 
-	GL_CheckErrors("Draw");
+	GL_CheckErrors("Frame");
 	return res;
 }
 
