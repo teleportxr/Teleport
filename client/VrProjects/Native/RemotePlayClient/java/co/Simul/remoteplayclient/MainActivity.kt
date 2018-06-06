@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Surface
 import com.oculus.vrappframework.VrActivity
+import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 
 class MainActivity : VrActivity(), SurfaceTexture.OnFrameAvailableListener {
@@ -14,6 +15,7 @@ class MainActivity : VrActivity(), SurfaceTexture.OnFrameAvailableListener {
     external fun nativeFrameAvailable(appPtr: Long)
 
     private val mStreamDecoder = StreamDecoder(VideoCodec.H265)
+    private var mDecoderService: DecoderService? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,20 +27,33 @@ class MainActivity : VrActivity(), SurfaceTexture.OnFrameAvailableListener {
         appPtr = nativeSetAppInterface(this, fromPackageNameString, commandString, uriString)
     }
 
-    fun initializeVideoStream(videoTexture: SurfaceTexture?) {
+    fun initializeVideoStream(port: Int, width: Int, height: Int, videoTexture: SurfaceTexture?) {
         videoTexture?.let {
             runOnUiThread({
-                initializeVideoStream_Implementation(it)
+                initializeVideoStream_Implementation(port, width, height, it)
             })
         }
     }
 
-    private fun initializeVideoStream_Implementation(videoTexture: SurfaceTexture) {
+    fun closeVideoStream() {
+        runOnUiThread({
+            closeVideoStream_Implementation()
+        })
+    }
+
+    private fun initializeVideoStream_Implementation(port: Int, width: Int, height: Int, videoTexture: SurfaceTexture) {
         videoTexture.setOnFrameAvailableListener(this)
-        mStreamDecoder.configure(VIDEO_WIDTH, VIDEO_HEIGHT, Surface(videoTexture))
+        mStreamDecoder.configure(port, width, height, Surface(videoTexture))
 
         val executorService = Executors.newSingleThreadExecutor()
-        executorService.execute(DecoderService(mStreamDecoder))
+        mDecoderService = DecoderService(mStreamDecoder)
+        executorService.execute(mDecoderService)
+    }
+
+    private fun closeVideoStream_Implementation() {
+        mDecoderService?.stop()
+        mDecoderService = null
+        mStreamDecoder.reset()
     }
 
     override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
@@ -46,19 +61,24 @@ class MainActivity : VrActivity(), SurfaceTexture.OnFrameAvailableListener {
     }
 
     private class DecoderService(private val mStreamDecoder: StreamDecoder): Runnable {
+        private val mBarrier = CyclicBarrier(2)
+        @Volatile private var mRunning = true
+
         override fun run() {
             Thread.sleep(500)
-            while(true) {
+            while(mRunning) {
                 mStreamDecoder.process()
             }
+            mBarrier.await()
+        }
+        fun stop() {
+            mRunning = false
+            mBarrier.await()
         }
     }
 
     companion object {
         const val TAG = "RemotePlayClient"
-        const val VIDEO_WIDTH  = 3840
-        const val VIDEO_HEIGHT = 1920
-
         init {
             Log.d(TAG, "LoadLibrary")
             System.loadLibrary("ovrapp")

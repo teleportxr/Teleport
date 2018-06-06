@@ -7,11 +7,13 @@
 #include "SoundEffectContext.h"
 #include "GuiSys.h"
 
+#include "SessionClient.h"
+
 namespace OVR {
 	class ovrLocale;
 }
 
-class Application : public OVR::VrAppInterface
+class Application : public OVR::VrAppInterface, public SessionCommandInterface
 {
 public:
 	Application();
@@ -28,6 +30,11 @@ public:
 
 	static void InitializeJNI(JNIEnv* env);
 
+	/* Begin SessionCommandInterface */
+	virtual void OnVideoStreamChanged(uint port, uint width, uint height) override;
+	virtual void OnVideoStreamClosed() override;
+	/* End SessionCommandInterface */
+
 private:
 	OVR::ovrSoundEffectContext* mSoundEffectContext;
 	OVR::OvrGuiSys::SoundEffectPlayer* mSoundEffectPlayer;
@@ -42,12 +49,15 @@ private:
     OVR::SurfaceTexture* mVideoSurfaceTexture;
 	OVR::GlTexture mVideoTexture;
 
+	SessionClient mSession;
+
 	int mNumPendingFrames = 0;
 
 	struct JNI {
 		JNIEnv* env;
 		jclass activityClass;
 		jmethodID initializeVideoStreamMethod;
+		jmethodID closeVideoStreamMethod;
 	};
 	static JNI jni;
 };

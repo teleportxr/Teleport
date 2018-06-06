@@ -2,9 +2,12 @@
 
 #include <VrApi_Types.h>
 #include "Application.h"
+#include "Config.h"
 
 #include "GuiSys.h"
 #include "OVR_Locale.h"
+
+#include <enet/enet.h>
 
 #if defined( OVR_OS_WIN32 )
 #include "../res_pc/resource.h"
@@ -75,7 +78,12 @@ Application::Application()
 	, mGuiSys(OvrGuiSys::Create())
 	, mLocale(nullptr)
 	, mVideoSurfaceTexture(nullptr)
-{}
+    , mSession(this)
+{
+	if(enet_initialize() != 0) {
+		FAIL("Failed to initialize ENET library");
+	}
+}
 
 Application::~Application()
 {
@@ -87,6 +95,9 @@ Application::~Application()
 	delete mSoundEffectContext;
 
 	OvrGuiSys::Destroy(mGuiSys);
+
+	mSession.Disconnect(REMOTEPLAY_TIMEOUT);
+	enet_deinitialize();
 }
 
 void Application::Configure(ovrSettings& settings )
@@ -146,7 +157,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
         mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &mVideoTexture;
 
-		java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, mVideoSurfaceTexture->GetJavaObject());
+		mSession.Connect(REMOTEPLAY_SERVER_IP, REMOTEPLAY_SERVER_PORT, REMOTEPLAY_TIMEOUT);
 	}
 }
 
@@ -184,6 +195,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			continue;
 		}
 	}
+
+    // Service network requests
+    mSession.Service();
 
 	while(mNumPendingFrames > 0) {
 		mVideoSurfaceTexture->Update();
@@ -230,6 +244,23 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 void Application::InitializeJNI(JNIEnv* env)
 {
 	jni.activityClass = env->FindClass("co/Simul/remoteplayclient/MainActivity");
-	jni.initializeVideoStreamMethod = env->GetMethodID(jni.activityClass, "initializeVideoStream", "(Landroid/graphics/SurfaceTexture;)V");
+	jni.initializeVideoStreamMethod = env->GetMethodID(jni.activityClass, "initializeVideoStream", "(IIILandroid/graphics/SurfaceTexture;)V");
+    jni.closeVideoStreamMethod = env->GetMethodID(jni.activityClass, "closeVideoStream", "()V");
+}
+
+void Application::OnVideoStreamChanged(uint port, uint width, uint height)
+{
+    WARN("VIDEO STREAM CHANGED: %d %d %d", port, width, height);
+
+	const ovrJava* java = app->GetJava();
+	java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
+}
+
+void Application::OnVideoStreamClosed()
+{
+    WARN("VIDEO STREAM CLOSED");
+
+	const ovrJava* java = app->GetJava();
+	java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
 }
 

@@ -22,7 +22,7 @@ enum class VideoCodec {
 
 class StreamDecoder(private val mCodec : VideoCodec) : StreamSource.Listener {
     private val mDecoder = MediaCodec.createDecoderByType(mimeType)
-    private lateinit var mSource: StreamSource
+    private var mSource: StreamSource? = null
 
     private val mimeType get() = when(mCodec) {
         VideoCodec.H264 -> "video/avc"
@@ -33,18 +33,23 @@ class StreamDecoder(private val mCodec : VideoCodec) : StreamSource.Listener {
         VideoCodec.H265 -> PacketParserH265()
     }
 
-    fun configure(width: Int, height: Int, surface: Surface) {
+    fun configure(port: Int, width: Int, height: Int, surface: Surface) {
         val fmt = MediaFormat.createVideoFormat(mimeType, width, height)
         fmt.setInteger(MediaFormat.KEY_MAX_WIDTH, width)
         fmt.setInteger(MediaFormat.KEY_MAX_HEIGHT, height)
         mDecoder.configure(fmt, surface, null, 0)
         mDecoder.start()
 
-        mSource = NetworkStreamSource(this, 1666)
+        mSource = NetworkStreamSource(this, port)
+    }
+
+    fun reset() {
+        mDecoder.stop()
+        mSource = null
     }
 
     fun process() {
-        mSource.process()
+        mSource?.process()
     }
 
     private class DecoderState(private val mCodec: VideoCodec) {
