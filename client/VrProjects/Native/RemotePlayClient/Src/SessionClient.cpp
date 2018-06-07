@@ -7,9 +7,8 @@
 #include "SessionClient.h"
 
 enum RemotePlaySessionChannel {
-    RPCH_Command  = 0,
-    RPCH_Control  = 1,
-    RPCH_HeadPose = 2,
+    RPCH_Control  = 0,
+    RPCH_HeadPose = 1,
     RPCH_NumChannels,
 };
 
@@ -115,7 +114,7 @@ void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame)
 void SessionClient::DispatchEvent(const ENetEvent& event)
 {
     switch(event.channelID) {
-        case RPCH_Command:
+        case RPCH_Control:
             ParseCommandPacket(event.packet);
             break;
         default:
