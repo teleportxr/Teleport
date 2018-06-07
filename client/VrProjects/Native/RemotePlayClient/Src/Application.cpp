@@ -1,8 +1,8 @@
 // (C) Copyright 2018 Simul.co
 
-#include <VrApi_Types.h>
 #include "Application.h"
 #include "Config.h"
+#include "Input.h"
 
 #include "GuiSys.h"
 #include "OVR_Locale.h"
@@ -80,6 +80,7 @@ Application::Application()
 	, mLocale(nullptr)
 	, mVideoSurfaceTexture(nullptr)
     , mSession(this)
+	, mControllerID(-1)
 {
 	if(enet_initialize() != 0) {
 		FAIL("Failed to initialize ENET library");
@@ -123,6 +124,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	if(intentType == INTENT_LAUNCH)
 	{
 		const ovrJava* java = app->GetJava();
+
+		InitializeController();
 
 		mSoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
 		mSoundEffectContext->Initialize(&app->GetFileSys());
@@ -197,9 +200,23 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		}
 	}
 
-    // Update network session.
-    mSession.Frame(vrFrame);
+    // Query controller input state.
+    ControllerState controllerState = {};
+    if(mControllerID != -1) {
+		ovrInputStateTrackedRemote ovrState;
+		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
+		if(vrapi_GetCurrentInputState(app->GetOvrMobile(), mControllerID, &ovrState.Header) >= 0) {
+			controllerState.mButtons = ovrState.Buttons;
+			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
+			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
+			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
+		}
+    }
 
+	// Handle networked session.
+    mSession.Frame(vrFrame, controllerState);
+
+	// Update video texture if we have any pending decoded frames.
 	while(mNumPendingFrames > 0) {
 		mVideoSurfaceTexture->Update();
 		--mNumPendingFrames;
@@ -247,6 +264,33 @@ void Application::InitializeJNI(JNIEnv* env)
 	jni.activityClass = env->FindClass("co/Simul/remoteplayclient/MainActivity");
 	jni.initializeVideoStreamMethod = env->GetMethodID(jni.activityClass, "initializeVideoStream", "(IIILandroid/graphics/SurfaceTexture;)V");
     jni.closeVideoStreamMethod = env->GetMethodID(jni.activityClass, "closeVideoStream", "()V");
+}
+
+bool Application::InitializeController()
+{
+	ovrInputCapabilityHeader inputCapsHeader;
+	for(uint32_t i = 0;
+		vrapi_EnumerateInputDevices(app->GetOvrMobile(), i, &inputCapsHeader) == 0; ++i) {
+		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote) {
+			mControllerID = inputCapsHeader.DeviceID;
+			break;
+		}
+	}
+
+	if(mControllerID != -1) {
+		LOG("Using controller ID: %x", mControllerID);
+
+		ovrInputTrackedRemoteCapabilities trackedInputCaps;
+		trackedInputCaps.Header = inputCapsHeader;
+		vrapi_GetInputDeviceCapabilities(app->GetOvrMobile(), &trackedInputCaps.Header);
+		mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
+		mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
+		return true;
+	}
+	else {
+		WARN("No suitable remote controller found. Disabling input!");
+		return false;
+	}
 }
 
 void Application::OnVideoStreamChanged(uint port, uint width, uint height)

@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include <VrApi_Types.h>
+#include <VrApi_Input.h>
+
 #include "App.h"
 #include "SceneView.h"
 #include "SoundEffectContext.h"
@@ -29,6 +32,7 @@ public:
 	void NotifyFrameAvailable() { ++mNumPendingFrames; }
 
 	static void InitializeJNI(JNIEnv* env);
+	bool InitializeController();
 
 	/* Begin SessionCommandInterface */
 	virtual void OnVideoStreamChanged(uint port, uint width, uint height) override;
@@ -50,6 +54,9 @@ private:
 	OVR::GlTexture mVideoTexture;
 
 	SessionClient mSession;
+
+	ovrDeviceID mControllerID;
+	ovrVector2f mTrackpadDim;
 
 	int mNumPendingFrames = 0;
 

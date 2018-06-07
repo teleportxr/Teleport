@@ -3,6 +3,8 @@
 #include <VrApi_Types.h>
 #include <Kernel/OVR_LogUtils.h>
 #include <string>
+#include <OVR_Input.h>
+#include <VrApi_Input.h>
 
 #include "SessionClient.h"
 
@@ -12,10 +14,18 @@ enum RemotePlaySessionChannel {
     RPCH_NumChannels,
 };
 
+struct RemotePlayInputState {
+    uint32_t buttonsPressed;
+    uint32_t buttonsReleased;
+    float trackpadAxisX;
+    float trackpadAxisY;
+};
+
 SessionClient::SessionClient(SessionCommandInterface* commandInterface)
     : mCommandInterface(commandInterface)
     , mClientHost(nullptr)
     , mServerPeer(nullptr)
+    , mPrevControllerState({})
 {}
 
 SessionClient::~SessionClient()
@@ -91,11 +101,12 @@ void SessionClient::Disconnect(uint timeout)
     }
 }
 
-void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame)
+void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame, const ControllerState& controllerState)
 {
     if(mClientHost && mServerPeer) {
 
         SendHeadPose(vrFrame.Tracking.HeadPose);
+        SendInput(controllerState);
 
         ENetEvent event;
         while(enet_host_service(mClientHost, &event, 0) > 0) {
@@ -109,6 +120,8 @@ void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame)
             }
         }
     }
+
+    mPrevControllerState = controllerState;
 }
 
 void SessionClient::DispatchEvent(const ENetEvent& event)
@@ -151,4 +164,41 @@ void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
     const ovrQuatf orientation = pose.Pose.Orientation;
     ENetPacket* packet = enet_packet_create(&orientation, sizeof(orientation), 0);
     enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
+}
+
+void SessionClient::SendInput(const ControllerState& controllerState)
+{
+    RemotePlayInputState inputState = {};
+
+    const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
+    auto updateButtonState = [&inputState, &controllerState, buttonsDiffMask](uint32_t button)
+    {
+        if(buttonsDiffMask & button) {
+            if(controllerState.mButtons & button) inputState.buttonsPressed |= button;
+            else inputState.buttonsReleased |= button;
+        }
+    };
+
+    // We need to update trackpad axis on the server whenever:
+    // (1) User is currently touching the trackpad.
+    // (2) User was touching the trackpad previous frame.
+    bool updateTrackpadAxis =    controllerState.mTrackpadStatus
+                              || controllerState.mTrackpadStatus != mPrevControllerState.mTrackpadStatus;
+
+    bool stateDirty =  updateTrackpadAxis || buttonsDiffMask > 0;
+    if(stateDirty) {
+        updateButtonState(ovrButton_A);
+        updateButtonState(ovrButton_Enter); // FIXME: Currently not getting down event for this button.
+        updateButtonState(ovrButton_Back);
+
+        // Trackpad axis should be non-zero only if the user is currently touching the trackpad.
+        if(controllerState.mTrackpadStatus) {
+            // Remap axis value to [-1,1] range.
+            inputState.trackpadAxisX = 2.0f * controllerState.mTrackpadX - 1.0f;
+            inputState.trackpadAxisY = 2.0f * controllerState.mTrackpadY - 1.0f;
+        }
+
+        ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), ENET_PACKET_FLAG_RELIABLE);
+        enet_peer_send(mServerPeer, RPCH_Control, packet);
+    }
 }
