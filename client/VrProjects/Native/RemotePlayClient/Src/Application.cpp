@@ -48,8 +48,9 @@ static const char* VideoSurface_VS = R"(
     varying highp vec3 vSampleVec;
 
     void main() {
+		// Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
+		vSampleVec  = normalize(vec3(-position.z, position.y, position.x));
         gl_Position = TransformVertex(position);
-        vSampleVec  = normalize(position.xyz);
     }
 )";
 
@@ -196,8 +197,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		}
 	}
 
-    // Service network requests
-    mSession.Service();
+    // Update network session.
+    mSession.Frame(vrFrame);
 
 	while(mNumPendingFrames > 0) {
 		mVideoSurfaceTexture->Update();

@@ -92,9 +92,12 @@ void SessionClient::Disconnect(uint timeout)
     }
 }
 
-void SessionClient::Service()
+void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame)
 {
     if(mClientHost && mServerPeer) {
+
+        SendHeadPose(vrFrame.Tracking.HeadPose);
+
         ENetEvent event;
         while(enet_host_service(mClientHost, &event, 0) > 0) {
             switch(event.type) {
@@ -143,3 +146,10 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
     }
 }
 
+void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
+{
+    // TODO: Use compact representation with only 3 float values for wire format.
+    const ovrQuatf orientation = pose.Pose.Orientation;
+    ENetPacket* packet = enet_packet_create(&orientation, sizeof(orientation), 0);
+    enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
+}
