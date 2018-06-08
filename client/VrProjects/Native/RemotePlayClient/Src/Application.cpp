@@ -125,8 +125,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	{
 		const ovrJava* java = app->GetJava();
 
-		InitializeController();
-
 		mSoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
 		mSoundEffectContext->Initialize(&app->GetFileSys());
 		mSoundEffectPlayer = new OvrGuiSys::ovrDummySoundEffectPlayer();
@@ -198,6 +196,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			app->ShowSystemUI(VRAPI_SYS_UI_CONFIRM_QUIT_MENU);
 			continue;
 		}
+	}
+
+	// Try to find remote controller
+	if(mControllerID == -1) {
+		InitializeController();
 	}
 
     // Query controller input state.
@@ -278,7 +281,7 @@ bool Application::InitializeController()
 	}
 
 	if(mControllerID != -1) {
-		LOG("Using controller ID: %x", mControllerID);
+		LOG("Found GearVR controller (ID: %x)", mControllerID);
 
 		ovrInputTrackedRemoteCapabilities trackedInputCaps;
 		trackedInputCaps.Header = inputCapsHeader;
@@ -287,10 +290,7 @@ bool Application::InitializeController()
 		mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
 		return true;
 	}
-	else {
-		WARN("No suitable remote controller found. Disabling input!");
-		return false;
-	}
+	return false;
 }
 
 void Application::OnVideoStreamChanged(uint port, uint width, uint height)
