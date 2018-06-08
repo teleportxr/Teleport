@@ -187,6 +187,8 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 
     bool stateDirty =  updateTrackpadAxis || buttonsDiffMask > 0;
     if(stateDirty) {
+        enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
+
         updateButtonState(ovrButton_A);
         updateButtonState(ovrButton_Enter); // FIXME: Currently not getting down event for this button.
         updateButtonState(ovrButton_Back);
@@ -196,9 +198,14 @@ void SessionClient::SendInput(const ControllerState& controllerState)
             // Remap axis value to [-1,1] range.
             inputState.trackpadAxisX = 2.0f * controllerState.mTrackpadX - 1.0f;
             inputState.trackpadAxisY = 2.0f * controllerState.mTrackpadY - 1.0f;
+
+            // If this update does not include button information send it unreliably to improve latency.
+            if(buttonsDiffMask == 0) {
+                packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
+            }
         }
 
-        ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), ENET_PACKET_FLAG_RELIABLE);
+        ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), packetFlags);
         enet_peer_send(mServerPeer, RPCH_Control, packet);
     }
 }
