@@ -19,18 +19,40 @@ Clone the repository with submodules:
 `.\deploy.ps1 -Config x64-Release -Project UnrealPlugin`
 3. Build `UnrealPlugin` UE4 project in `Development Editor` configuration.
 
+## Building UE4 demo project
+
+This is ShooterGame project modified to work with RemotePlay.
+
+1. Make sure you have built the UE4 plugin project first.
+2. Copy `plugins/UnrealPlugin/Plugins/RemotePlay` to `plugins/UnrealDemo/Plugins/RemotePlay`. Delete `Binaries` & `Intermediate` directories if present.
+3. Build `UnrealDemo` UE4 project in `Development Editor` configuration.
+4. Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
+
 ## Building GearVR client application
 
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
 2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client/VrProjects/Native/RemotePlayClient/assets` directory.
 3. Connect your Android device to your PC and make sure that ADB debugging is enabled and the PC is authorized.
-4. Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
+4. Edit `client/VrProjects/Native/RemotePlayClient/Src/Config.h` file and set `REMOTEPLAY_SERVER_IP` to the IP address of your development PC.
+5. Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
 
 ## Running
 
 1. Connect your Android device to the same WiFi network your development PC is on.
-2. Set a known, static IP address on your Android device. Make sure you can ping it from your PC.
-3. Open `UnrealPlugin.uproject` in the UE4 editor and then open `Content/FirstPersonCPP/Blueprints/FirstPersonCharacter` blueprint.
-4. Select `RemotePlayCapture` component and set `RemoteIP` property to the IP address of the Android device.
-5. Make sure UE4 editor is not blocked by the Windows firewall.
-6. Run the game in the editor and then launch `RemotePlayClient` application on your Android device.
+2. Make sure UE4 editor is not blocked by the Windows firewall.
+3. Make sure the GearVR controller is paired with the Android device.
+4. Run the game in the editor and then launch `RemotePlayClient` application on your Android device.
+
+The video stream might be corrupted for the first few seconds after launch. It may also take some time for GearVR controller to be recognized.
+
+For best performance when testing with UE4 demo project run the packaged game in windowed mode, in the lowest possible resolution.
+
+### Controls
+
+| Control | Action |
+|--|--|
+| Swipe on trackpad up/down | Move forwards/backwards |
+| Swipe on trackpad left/right | Strafe left/right |
+| Click on trackpad | Jump |
+| Trigger | Fire |
+
