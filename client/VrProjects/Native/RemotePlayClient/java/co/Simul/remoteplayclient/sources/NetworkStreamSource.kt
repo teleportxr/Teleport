@@ -95,12 +95,13 @@ class NetworkStreamSource(private val mListener: StreamSource.Listener,
             val packetRange = findContiguousDecoderPacket()
             if(packetRange != null) {
                 var packetBytes = ByteArray(0)
-                for(key in packetRange.start..packetRange.end) {
-                    mNetworkPacketMap[key]?.let {
-                        mLastDispatchedTimestamp = it.timestamp
+                var packetSequence = packetRange.start
+                while(packetSequence != packetRange.end) {
+                    mNetworkPacketMap[packetSequence]?.let {
                         packetBytes = packetBytes.plus(it.payload)
                     }
-                    mNetworkPacketMap.remove(key)
+                    mNetworkPacketMap.remove(packetSequence)
+                    packetSequence = packetSequence.next()
                 }
                 mListener.onPacketAvailable(packetBytes)
             }
@@ -115,21 +116,24 @@ class NetworkStreamSource(private val mListener: StreamSource.Listener,
         range.start = mNetworkPacketMap.firstKey()
         range.end   = range.start
 
-        for(entry in mNetworkPacketMap) {
-            val sequence = entry.key
-            val packet = entry.value
+        // Scan in two passes to handle wrap-around
+        for(pass in 1..2) {
+            for (entry in mNetworkPacketMap) {
+                val sequence = entry.key
+                val packet = entry.value
 
-            if(sequence != range.start) {
-                if(sequence.isNextOf(range.end)) {
-                    range.end = sequence
+                if (sequence != range.start) {
+                    if (sequence.isNextOf(range.end)) {
+                        range.end = sequence
+                    } else {
+                        range.start = sequence
+                        range.end = range.start
+                    }
                 }
-                else {
-                    range.start = sequence
-                    range.end = range.start
+                if (packet.last) {
+                    // Return half-open range [start,end) for easy iteration.
+                    return SequenceRange(range.start, range.end.next())
                 }
-            }
-            if(packet.last) {
-                return range
             }
         }
         return null
