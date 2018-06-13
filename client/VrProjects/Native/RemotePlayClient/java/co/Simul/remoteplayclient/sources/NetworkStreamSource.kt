@@ -5,8 +5,10 @@ package co.Simul.remoteplayclient.sources
 import android.util.Log
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.util.*
+import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -25,16 +27,30 @@ class NetworkStreamSource(private val mListener: StreamSource.Listener,
                           port: Int): StreamSource {
 
     private class NetworkService(port: Int, private val mPacketQueue: LinkedBlockingQueue<ByteArray>): Runnable {
-        private val mSocket = DatagramSocket(port)
+        private val mSocket = DatagramSocket(null)
         private val mBuffer = ByteArray(MTU)
         private val mPacket = DatagramPacket(mBuffer, mBuffer.size)
 
-        override fun run() {
+        private val mBarrier = CyclicBarrier(2)
+        @Volatile private var mRunning = true
+
+        init {
             mSocket.reuseAddress = true
-            while(true) {
+            mSocket.bind(InetSocketAddress(port))
+        }
+
+        override fun run() {
+            while(mRunning) {
                 mSocket.receive(mPacket)
                 mPacketQueue.put(mPacket.data.copyOfRange(mPacket.offset, mPacket.length))
             }
+            mSocket.disconnect()
+            mSocket.close()
+            mBarrier.await()
+        }
+        fun stop() {
+            mRunning = false
+            mBarrier.await()
         }
 
         companion object {
@@ -48,13 +64,15 @@ class NetworkStreamSource(private val mListener: StreamSource.Listener,
         }
     }
 
+    private lateinit var mNetworkService: NetworkService
     private val mIncomingQueue = LinkedBlockingQueue<ByteArray>(INCOMING_QUEUE_CAPACITY)
     private val mNetworkPacketMap = TreeMap<Sequence, NetworkPacket>()
     private val mStatTimer = Timer()
 
     init {
+        mNetworkService = NetworkService(port, mIncomingQueue)
         val mExecutorService = Executors.newSingleThreadExecutor()
-        mExecutorService.execute(NetworkService(port, mIncomingQueue))
+        mExecutorService.execute(mNetworkService)
         mStatTimer.schedule(NetworkStatTask(mIncomingQueue, mNetworkPacketMap), STAT_INTERVAL, STAT_INTERVAL)
     }
 
@@ -62,6 +80,10 @@ class NetworkStreamSource(private val mListener: StreamSource.Listener,
         receiveNetworkPackets()
         dispatchDecoderPackets()
         return StreamSource.Result.CONTINUE
+    }
+
+    override fun close() {
+        mNetworkService.stop()
     }
 
     private fun receiveNetworkPackets() {

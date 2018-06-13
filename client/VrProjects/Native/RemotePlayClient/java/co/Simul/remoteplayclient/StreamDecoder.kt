@@ -45,6 +45,7 @@ class StreamDecoder(private val mCodec : VideoCodec) : StreamSource.Listener {
 
     fun reset() {
         mDecoder.stop()
+        mSource?.close()
         mSource = null
     }
 
