@@ -8,6 +8,7 @@ interface StreamSource {
     }
 
     fun process() : Result
+    fun close()
 
     enum class Result {
         CONTINUE,

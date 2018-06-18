@@ -24,6 +24,9 @@ class StreamDecoder(private val mCodec : VideoCodec) : StreamSource.Listener {
     private val mDecoder = MediaCodec.createDecoderByType(mimeType)
     private var mSource: StreamSource? = null
 
+    private var mConfigured = false
+    fun isConfigured() = mConfigured
+
     private val mimeType get() = when(mCodec) {
         VideoCodec.H264 -> "video/avc"
         VideoCodec.H265 -> "video/hevc"
@@ -33,7 +36,12 @@ class StreamDecoder(private val mCodec : VideoCodec) : StreamSource.Listener {
         VideoCodec.H265 -> PacketParserH265()
     }
 
-    fun configure(port: Int, width: Int, height: Int, surface: Surface) {
+    @Synchronized fun configure(port: Int, width: Int, height: Int, surface: Surface) {
+        if(mConfigured) {
+            Log.e("RemotePlay", "StreamDecoder: already configured")
+            return
+        }
+
         val fmt = MediaFormat.createVideoFormat(mimeType, width, height)
         fmt.setInteger(MediaFormat.KEY_MAX_WIDTH, width)
         fmt.setInteger(MediaFormat.KEY_MAX_HEIGHT, height)
@@ -41,14 +49,26 @@ class StreamDecoder(private val mCodec : VideoCodec) : StreamSource.Listener {
         mDecoder.start()
 
         mSource = NetworkStreamSource(this, port)
+
+        mConfigured = true
     }
 
-    fun reset() {
+    @Synchronized fun reset() {
+        if(!mConfigured) {
+            Log.e("RemotePlay", "StreamDecoder: not configured")
+            return
+        }
+
+        mDecoder.flush()
         mDecoder.stop()
+
+        mSource?.close()
         mSource = null
+
+        mConfigured = false
     }
 
-    fun process() {
+    @Synchronized fun process() {
         mSource?.process()
     }
 

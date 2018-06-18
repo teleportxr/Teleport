@@ -42,6 +42,10 @@ class MainActivity : VrActivity(), SurfaceTexture.OnFrameAvailableListener {
     }
 
     private fun initializeVideoStream_Implementation(port: Int, width: Int, height: Int, videoTexture: SurfaceTexture) {
+        if(mStreamDecoder.isConfigured()) {
+            closeVideoStream_Implementation()
+        }
+
         videoTexture.setOnFrameAvailableListener(this)
         mStreamDecoder.configure(port, width, height, Surface(videoTexture))
 

@@ -19,6 +19,10 @@ class LocalStreamSource(private val mListener: StreamSource.Listener,
         return StreamSource.Result.CONTINUE
     }
 
+    override fun close() {
+        // Empty.
+    }
+
     private fun processPacket(): Boolean {
         val header = ByteArray(4)
         mInputStream.readFully(header)
