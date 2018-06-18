@@ -1,0 +1,30 @@
+//  Copyright (c) 2015-2017 Simul Software Ltd. All rights reserved.
+#include "shader_platform.sl"
+#include "../SL/common.sl"
+#include "../SL/render_states.sl"
+#include "../SL/states.sl"
+#include "../SL/camera_constants.sl"
+
+uniform TextureCube cubemapTexture;
+
+shader vec4 PS_CubemapClear(posTexVertexOutput IN) : SV_TARGET
+{
+	vec3 view = TexCoordsToView(IN.texCoords);
+	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState,-view,0);
+    return lookup;
+}
+
+VertexShader vs = CompileShader(vs_4_0, VS_SimpleFullscreen());
+
+technique cubemap_clear
+{
+    pass p0
+    {
+		SetRasterizerState( RenderNoCull );
+		SetDepthStencilState( DisableDepth, 0 );
+		SetBlendState(DontBlend,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
+        SetGeometryShader(NULL);
+		SetVertexShader(vs);
+		SetPixelShader(CompileShader(ps_4_0,PS_CubemapClear()));
+    }
+}
