@@ -54,6 +54,7 @@ ClientRenderer::ClientRenderer():
 	,specularTexture(nullptr)
 	,diffuseCubemapTexture(nullptr)
 	,framenumber(0)
+	,sessionClient(this)
 {
 }
 

@@ -122,20 +122,24 @@ void InitRenderer(HWND hWnd)
 		renderPlatform->PushTexturePath("");
 		renderPlatform->PushTexturePath("../../../../Media/Textures");
 		renderPlatform->PushTexturePath("../../Media/Textures");
+		renderPlatform->PushTexturePath((simul_env+"/Media/Textures").c_str());
 		// Or from the Simul directory -e.g. by automatic builds:
-		renderPlatform->PushShaderPath("Platform/CrossPlatform/SFX/");
 
 		renderPlatform->PushTexturePath("Media/Textures");
 
-		renderPlatform->PushShaderPath("");		// working directory
+		renderPlatform->PushShaderPath("Shaders");		// working directory
+		renderPlatform->PushShaderPath("Platform/CrossPlatform/SFX/");
 		renderPlatform->PushShaderPath("../../../../Platform/CrossPlatform/SFX");
 		renderPlatform->PushShaderPath("../../Platform/CrossPlatform/SFX");
+		renderPlatform->PushShaderPath((simul_env+"/Platform/CrossPlatform/SFX").c_str());
+		renderPlatform->PushShaderPath((simul_env+"/Platform/CrossPlatform/SL").c_str());
 		renderPlatform->SetShaderBinaryPath("shaderbin");
 		if (strcmp(renderPlatform->GetName(), "DirectX 11") == 0)
 		{
 			renderPlatform->PushShaderPath("../../../../Platform/DirectX11/HLSL");
 			renderPlatform->PushShaderPath("../../Platform/DirectX11/HLSL");
 			renderPlatform->PushShaderPath("Platform/DirectX11/HLSL/");
+			renderPlatform->PushShaderPath((simul_env+"/Platform/DirectX11/HLSL").c_str());
 			if(simul_env.length())
 				renderPlatform->SetShaderBinaryPath((simul_env+"/Media/shaderbin").c_str());
 		}
