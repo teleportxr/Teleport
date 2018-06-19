@@ -5,7 +5,7 @@
 
 #include "SessionClient.h"
 #pragma comment(lib,"enet")
-#pragma comment(lib,"C:\\RemotePlay\\libavstream\\build\\Release\\libavstream.lib")
+#pragma comment(lib,"libavstream.lib")
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
