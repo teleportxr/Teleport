@@ -14,6 +14,7 @@
 #include "Simul/Platform/CrossPlatform/SphericalHarmonics.h"
 
 #include "SessionClient.h"
+#include "Config.h"
 
 #include <random>
 
@@ -54,6 +55,7 @@ ClientRenderer::ClientRenderer():
 	,specularTexture(nullptr)
 	,diffuseCubemapTexture(nullptr)
 	,framenumber(0)
+	,sessionClient(this)
 {
 }
 
@@ -106,6 +108,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	cameraConstants.RestoreDeviceObjects(renderPlatform);
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
+	sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
 }
 
 // This allows live-recompile of shaders. 
@@ -352,6 +355,10 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
+	controllerState.mTrackpadX=mouseCameraInput.right_left_input;
+	controllerState.mTrackpadY=mouseCameraInput.up_down_input;
+	controllerState.mTrackpadStatus=true;
+	sessionClient.Frame(controllerState);
 }
 
 void ClientRenderer::OnMouse(bool bLeftButtonDown

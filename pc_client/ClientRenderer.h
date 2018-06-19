@@ -37,6 +37,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::MouseCameraInput	mouseCameraInput;
 	bool keydown[256];
 	int framenumber;
+	SessionClient sessionClient;
+	ControllerState controllerState;
 public:
 	ClientRenderer();
 	~ClientRenderer();
