@@ -10,7 +10,8 @@ LOCAL_SHARED_LIBRARIES	:= vrapi libavstream
 
 LOCAL_SRC_FILES			:= \
     ../../../Src/Application.cpp \
-    ../../../Src/SessionClient.cpp
+    ../../../Src/SessionClient.cpp \
+    ../../../Src/VideoDecoderProxy.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 

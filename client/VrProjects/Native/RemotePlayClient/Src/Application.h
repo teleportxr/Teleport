@@ -5,33 +5,34 @@
 #include <VrApi_Types.h>
 #include <VrApi_Input.h>
 
+#include <libavstream/libavstream.hpp>
+
 #include "App.h"
 #include "SceneView.h"
 #include "SoundEffectContext.h"
 #include "GuiSys.h"
 
 #include "SessionClient.h"
+#include "VideoDecoderProxy.h"
 
 namespace OVR {
 	class ovrLocale;
 }
 
-class Application : public OVR::VrAppInterface, public SessionCommandInterface
+class Application : public OVR::VrAppInterface, public SessionCommandInterface, public DecodeEventInterface
 {
 public:
 	Application();
 	virtual	~Application();
 
-	virtual void Configure(OVR::ovrSettings& settings);
-	virtual void EnteredVrMode(const OVR::ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI);
-	virtual void LeavingVrMode();
-	virtual bool OnKeyEvent(const int keyCode, const int repeatCount, const OVR::KeyEventType eventType );
-	virtual OVR::ovrFrameResult Frame(const OVR::ovrFrameInput& vrFrame);
+	virtual void Configure(OVR::ovrSettings& settings) override;
+	virtual void EnteredVrMode(const OVR::ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI) override;
+	virtual void LeavingVrMode() override;
+	virtual bool OnKeyEvent(const int keyCode, const int repeatCount, const OVR::KeyEventType eventType);
+	virtual OVR::ovrFrameResult Frame(const OVR::ovrFrameInput& vrFrame) override;
 
 	class OVR::ovrLocale& GetLocale() { return *mLocale; }
-	void NotifyFrameAvailable() { ++mNumPendingFrames; }
 
-	static void InitializeJNI(JNIEnv* env);
 	bool InitializeController();
 
 	/* Begin SessionCommandInterface */
@@ -39,7 +40,19 @@ public:
 	virtual void OnVideoStreamClosed() override;
 	/* End SessionCommandInterface */
 
+	/* Begin DecodeEventInterface */
+	virtual void OnFrameAvailable() override;
+	/* End DecodeEventInterface */
+
 private:
+	static void avsMessageHandler(avs::LogSeverity severity, const char* msg, void*);
+
+	avs::Context mContext;
+	avs::Pipeline mPipeline;
+	avs::NetworkSource mNetworkSource;
+	avs::Decoder mDecoder;
+	avs::Surface mSurface;
+
 	OVR::ovrSoundEffectContext* mSoundEffectContext;
 	OVR::OvrGuiSys::SoundEffectPlayer* mSoundEffectPlayer;
 
@@ -50,8 +63,8 @@ private:
 
     OVR::ovrSurfaceDef mVideoSurfaceDef;
 	OVR::GlProgram mVideoSurfaceProgram;
-    OVR::SurfaceTexture* mVideoSurfaceTexture;
 	OVR::GlTexture mVideoTexture;
+	OVR::SurfaceTexture* mVideoSurfaceTexture;
 
 	SessionClient mSession;
 
@@ -59,12 +72,4 @@ private:
 	ovrVector2f mTrackpadDim;
 
 	int mNumPendingFrames = 0;
-
-	struct JNI {
-		JNIEnv* env;
-		jclass activityClass;
-		jmethodID initializeVideoStreamMethod;
-		jmethodID closeVideoStreamMethod;
-	};
-	static JNI jni;
 };

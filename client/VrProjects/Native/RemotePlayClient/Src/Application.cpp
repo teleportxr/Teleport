@@ -3,6 +3,7 @@
 #include "Application.h"
 #include "Config.h"
 #include "Input.h"
+#include "VideoSurface.h"
 
 #include "GuiSys.h"
 #include "OVR_Locale.h"
@@ -21,15 +22,8 @@ extern "C" {
 jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* jni, jclass clazz, jobject activity,
 		jstring fromPackageName, jstring commandString, jstring uriString )
 {
-	LOG("nativeSetAppInterface");
-	Application::InitializeJNI(jni);
-	return (new Application())->SetActivity( jni, clazz, activity, fromPackageName, commandString, uriString );
-}
-
-void Java_co_Simul_remoteplayclient_MainActivity_nativeFrameAvailable(JNIEnv* jni, jclass clazz, jlong interfacePtr)
-{
-	Application* app = static_cast<Application*>(reinterpret_cast<OVR::App*>(interfacePtr)->GetAppInterface());
-	app->NotifyFrameAvailable();
+	VideoDecoderProxy::InitializeJNI(jni);
+	return (new Application())->SetActivity(jni, clazz, activity, fromPackageName, commandString, uriString);
 }
 
 } // extern "C"
@@ -71,10 +65,9 @@ static const char* VideoSurface_FS = R"(
 
 } // shaders
 
-Application::JNI Application::jni = {};
-
 Application::Application()
-	: mSoundEffectContext(nullptr)
+    : mDecoder(avs::DecoderBackend::Custom)
+	, mSoundEffectContext(nullptr)
 	, mSoundEffectPlayer(nullptr)
 	, mGuiSys(OvrGuiSys::Create())
 	, mLocale(nullptr)
@@ -82,6 +75,8 @@ Application::Application()
     , mSession(this)
 	, mControllerID(-1)
 {
+	mContext.setMessageHandler(Application::avsMessageHandler, this);
+
 	if(enet_initialize() != 0) {
 		FAIL("Failed to initialize ENET library");
 	}
@@ -89,6 +84,8 @@ Application::Application()
 
 Application::~Application()
 {
+	mPipeline.deconfigure();
+
 	delete mVideoSurfaceTexture;
 	mVideoSurfaceDef.geo.Free();
 	GlProgram::Free(mVideoSurfaceProgram);
@@ -149,7 +146,9 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			}
 		}
 
-		mVideoSurfaceTexture = new SurfaceTexture(app->GetJava()->Env);
+		mDecoder.setBackend(new VideoDecoderProxy(java->Env, this, avs::VideoCodec::HEVC));
+
+		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
         mVideoTexture = GlTexture(mVideoSurfaceTexture->GetTextureId(), GL_TEXTURE_EXTERNAL_OES, 0, 0);
 
 		mVideoSurfaceDef.surfaceName = "VideoSurface";
@@ -225,6 +224,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		--mNumPendingFrames;
 	}
 
+	// Process stream pipeline
+	mPipeline.process();
+
 	ovrFrameResult res;
 
 	mScene.Frame(vrFrame);
@@ -262,13 +264,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	return res;
 }
 
-void Application::InitializeJNI(JNIEnv* env)
-{
-	jni.activityClass = env->FindClass("co/Simul/remoteplayclient/MainActivity");
-	jni.initializeVideoStreamMethod = env->GetMethodID(jni.activityClass, "initializeVideoStream", "(IIILandroid/graphics/SurfaceTexture;)V");
-    jni.closeVideoStreamMethod = env->GetMethodID(jni.activityClass, "closeVideoStream", "()V");
-}
-
 bool Application::InitializeController()
 {
 	ovrInputCapabilityHeader inputCapsHeader;
@@ -297,15 +292,43 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 {
     WARN("VIDEO STREAM CHANGED: %d %d %d", port, width, height);
 
-	const ovrJava* java = app->GetJava();
-	java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
+	avs::DecoderParams decoderParams = {};
+	decoderParams.codec = avs::VideoCodec::HEVC;
+	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
+	decoderParams.prependStartCodes = false;
+
+	mNetworkSource.configure(1, port, REMOTEPLAY_SERVER_IP, port);
+	mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams);
+	mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
+
+	mPipeline.add({&mNetworkSource, &mDecoder, &mSurface});
 }
 
 void Application::OnVideoStreamClosed()
 {
     WARN("VIDEO STREAM CLOSED");
 
-	const ovrJava* java = app->GetJava();
-	java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
+	mPipeline.deconfigure();
+	mPipeline.reset();
 }
 
+void Application::OnFrameAvailable()
+{
+	++mNumPendingFrames;
+}
+
+void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, void*)
+{
+	switch(severity) {
+		case avs::LogSeverity::Critical:
+			FAIL("%s", msg);
+			break;
+		case avs::LogSeverity::Error:
+		case avs::LogSeverity::Warning:
+			WARN("%s", msg);
+			break;
+		default:
+			LOG("%s", msg);
+			break;
+	}
+}
