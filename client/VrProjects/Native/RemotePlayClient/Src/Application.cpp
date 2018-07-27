@@ -73,6 +73,7 @@ Application::Application()
 	, mLocale(nullptr)
 	, mVideoSurfaceTexture(nullptr)
     , mSession(this)
+	, mVideoStream(&mRecvQueue)
 	, mControllerID(-1)
 {
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
@@ -84,6 +85,7 @@ Application::Application()
 
 Application::~Application()
 {
+	mVideoStream.StopReceiving();
 	mPipeline.deconfigure();
 
 	delete mVideoSurfaceTexture;
@@ -297,17 +299,19 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 	decoderParams.prependStartCodes = false;
 
-	mNetworkSource.configure(1, port, REMOTEPLAY_SERVER_IP, port);
+	mRecvQueue.configure(256);
 	mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams);
 	mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
 
-	mPipeline.add({&mNetworkSource, &mDecoder, &mSurface});
+	mPipeline.add({&mRecvQueue, &mDecoder, &mSurface});
+	mVideoStream.StartReceiving(REMOTEPLAY_SERVER_IP, port);
 }
 
 void Application::OnVideoStreamClosed()
 {
     WARN("VIDEO STREAM CLOSED");
 
+	mVideoStream.StopReceiving();
 	mPipeline.deconfigure();
 	mPipeline.reset();
 }

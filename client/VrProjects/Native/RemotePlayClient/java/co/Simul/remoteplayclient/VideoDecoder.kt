@@ -53,6 +53,11 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
     private var mDecoderConfigured = false
 
     fun initialize(frameWidth: Int, frameHeight: Int, surface: SurfaceTexture) {
+        if(mDecoderConfigured) {
+            Log.e("RemotePlay", "VideoDecoder: Cannot initialize: already configured")
+            return
+        }
+
         val format = MediaFormat.createVideoFormat(mCodecMimeType, frameWidth, frameHeight)
         format.setInteger(MediaFormat.KEY_MAX_WIDTH, frameWidth)
         format.setInteger(MediaFormat.KEY_MAX_HEIGHT, frameHeight)
@@ -118,7 +123,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
             mDecoder.queueInputBuffer(inputBufferID, 0, buffer.size, 0, flags)
         }
         else {
-            Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
+            //Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
         }
     }
 
@@ -129,7 +134,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
             mDecoder.releaseOutputBuffer(outputBufferID, true)
         }
         else {
-            Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder output buffer");
+            //Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder output buffer");
         }
     }
 
