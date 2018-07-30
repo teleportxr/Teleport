@@ -11,6 +11,7 @@ Clone the repository with submodules:
 1. Visual Studio 2017 (with Visual C++ tools for CMake)
 2. Android Studio
 3. Unreal Engine 4.19 (launcher version)
+4. NVIDIA CUDA Toolkit
 	
 ## Building UE4 plugin
 
@@ -43,7 +44,7 @@ This is ShooterGame project modified to work with RemotePlay.
 3. Make sure the GearVR controller is paired with the Android device.
 4. Run the game in the editor and then launch `RemotePlayClient` application on your Android device.
 
-The video stream might be corrupted for the first few seconds after launch. It may also take some time for GearVR controller to be recognized.
+It may take up to a few seconds for GearVR controller to be recognized.
 
 For best performance when testing with UE4 demo project run the packaged game in windowed mode, in the lowest possible resolution.
 
