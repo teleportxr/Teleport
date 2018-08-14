@@ -298,6 +298,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 	decoderParams.prependStartCodes = false;
+	decoderParams.displayImmediately = true;
 
 	mRecvQueue.configure(256);
 	mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams);

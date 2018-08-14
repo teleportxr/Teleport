@@ -23,6 +23,7 @@ public:
     avs::Result registerSurface(const avs::SurfaceBackendInterface* surface) override;
     avs::Result unregisterSurface(const avs::SurfaceBackendInterface* surface) override;
     avs::Result decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payaloadType) override;
+    avs::Result display() override;
     /* End avs::DecoderBackendInterface */
 
     void NotifyFrameAvailable();
@@ -47,6 +48,7 @@ private:
         jmethodID initializeMethod;
         jmethodID shutdownMethod;
         jmethodID decodeMethod;
+        jmethodID displayMethod;
     };
     static JNI jni;
 };

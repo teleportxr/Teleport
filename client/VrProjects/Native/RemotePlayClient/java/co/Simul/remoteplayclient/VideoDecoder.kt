@@ -51,6 +51,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
     private val mDecoder = MediaCodec.createDecoderByType(mCodecMimeType)
     private val mDecoderState = DecoderState(mCodecType)
     private var mDecoderConfigured = false
+    private var mDisplayRequests = 0
 
     fun initialize(frameWidth: Int, frameHeight: Int, surface: SurfaceTexture) {
         if(mDecoderConfigured) {
@@ -79,12 +80,13 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         mDecoder.stop()
         mDecoderState.reset()
         mDecoderConfigured = false
+        mDisplayRequests = 0
     }
 
-    fun decode(buffer: ByteBuffer, payloadTypeIndex: Int) {
+    fun decode(buffer: ByteBuffer, payloadTypeIndex: Int): Boolean {
         if(!mDecoderConfigured) {
             Log.e("RemotePlay", "VideoDecoder: Cannot decode buffer: not configured")
-            return
+            return false
         }
 
         val payloadType = getPayloadTypeFromIndex(payloadTypeIndex)
@@ -100,21 +102,35 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         }
 
         if(!mDecoderState.isConfigured && payloadFlags == 0) {
-            return
+            return false
         }
         mDecoderState.update(payloadType)
 
         if(payloadType == PayloadType.FirstVCL) {
-            // Decode previous access unit.
-            requestOutput()
+            // Request to output previous access unit.
+            ++mDisplayRequests
         }
 
         val inputBuffer = startCodes.plus(ByteArray(buffer.remaining()))
         buffer.get(inputBuffer, startCodes.size, buffer.remaining())
-        requestInput(inputBuffer, payloadFlags)
+        queueInputBuffer(inputBuffer, payloadFlags)
+        return mDisplayRequests > 0
     }
 
-    private fun requestInput(buffer: ByteArray, flags: Int) {
+    fun display(): Boolean {
+        if(!mDecoderConfigured) {
+            Log.e("RemotePlay", "VideoDecoder: Cannot display output: not configured")
+            return false
+        }
+
+        while(mDisplayRequests > 0) {
+            releaseOutputBuffer(mDisplayRequests == 1)
+            --mDisplayRequests
+        }
+        return true
+    }
+
+    private fun queueInputBuffer(buffer: ByteArray, flags: Int) {
         val inputBufferID = mDecoder.dequeueInputBuffer(0)
         if(inputBufferID >= 0) {
             val inputBuffer = mDecoder.getInputBuffer(inputBufferID)
@@ -127,11 +143,11 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         }
     }
 
-    private fun requestOutput() {
+    private fun releaseOutputBuffer(render: Boolean) {
         var bufferInfo = MediaCodec.BufferInfo()
         val outputBufferID = mDecoder.dequeueOutputBuffer(bufferInfo, 0)
         if(outputBufferID >= 0) {
-            mDecoder.releaseOutputBuffer(outputBufferID, true)
+            mDecoder.releaseOutputBuffer(outputBufferID, render)
         }
         else {
             //Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder output buffer");

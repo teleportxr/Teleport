@@ -41,7 +41,6 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
 {
     avs::NetworkSourceParams params = {};
     params.gcTTL = (1000/60) * 2; // TTL = 2 * expected frame time
-    params.jitterDelay = 0;
 
     avs::NetworkSource networkSource;
     if(!networkSource.configure(1, port, address.c_str(), port, params)) {

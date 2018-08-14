@@ -100,8 +100,21 @@ avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInByt
     }
 
     jobject jbuffer = mEnv->NewDirectByteBuffer(const_cast<void*>(buffer), bufferSizeInBytes);
-    mEnv->CallVoidMethod(mVideoDecoder, jni.decodeMethod, jbuffer, payaloadType);
-    return avs::Result::OK;
+    jboolean isReadyToDisplay = mEnv->CallBooleanMethod(mVideoDecoder, jni.decodeMethod, jbuffer, payaloadType);
+    return isReadyToDisplay ? avs::Result::DecoderBackend_ReadyToDisplay : avs::Result::OK;
+}
+
+avs::Result VideoDecoderProxy::display()
+{
+    if(!mInitialized) {
+        return avs::Result::DecoderBackend_NotInitialized;
+    }
+    if(!mSurfaceTexture) {
+        return avs::Result::DecoderBackend_InvalidSurface;
+    }
+
+    jboolean displayResult = mEnv->CallBooleanMethod(mVideoDecoder, jni.displayMethod);
+    return displayResult ? avs::Result::DecoderBackend_DisplayFailed : avs::Result::OK;
 }
 
 void VideoDecoderProxy::NotifyFrameAvailable()
@@ -121,7 +134,8 @@ void VideoDecoderProxy::InitializeJNI(JNIEnv* env)
     jni.ctorMethod = env->GetMethodID(jni.videoDecoderClass, "<init>", "(JI)V");
     jni.initializeMethod = env->GetMethodID(jni.videoDecoderClass, "initialize", "(IILandroid/graphics/SurfaceTexture;)V");
     jni.shutdownMethod = env->GetMethodID(jni.videoDecoderClass, "shutdown", "()V");
-    jni.decodeMethod = env->GetMethodID(jni.videoDecoderClass, "decode", "(Ljava/nio/ByteBuffer;I)V");
+    jni.decodeMethod = env->GetMethodID(jni.videoDecoderClass, "decode", "(Ljava/nio/ByteBuffer;I)Z");
+    jni.displayMethod = env->GetMethodID(jni.videoDecoderClass, "display", "()Z");
 }
 
 void VideoDecoderProxy::InitializeVideoDecoder(OVR::SurfaceTexture* surfaceTexture)
