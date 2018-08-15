@@ -25,31 +25,7 @@ enum class PayloadType {
 
 class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex: Int) : SurfaceTexture.OnFrameAvailableListener {
 
-    private class DecoderState(private val mCodecType: VideoCodec) {
-        private var hasVPS = false
-        private var hasPPS = false
-        private var hasSPS = false
-
-        val isConfigured get() = when(mCodecType) {
-            VideoCodec.H264 -> hasPPS && hasSPS
-            VideoCodec.H265 -> hasVPS && hasPPS && hasSPS
-        }
-        fun update(payloadType: PayloadType) {
-            when(payloadType) {
-                PayloadType.VPS -> hasVPS = true
-                PayloadType.PPS -> hasPPS = true
-                PayloadType.SPS -> hasSPS = true
-            }
-        }
-        fun reset() {
-            hasVPS = false
-            hasPPS = false
-            hasSPS = false
-        }
-    }
-
     private val mDecoder = MediaCodec.createDecoderByType(mCodecMimeType)
-    private val mDecoderState = DecoderState(mCodecType)
     private var mDecoderConfigured = false
     private var mDisplayRequests = 0
 
@@ -78,7 +54,6 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
 
         mDecoder.flush()
         mDecoder.stop()
-        mDecoderState.reset()
         mDecoderConfigured = false
         mDisplayRequests = 0
     }
@@ -100,11 +75,6 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
             MediaCodec.BUFFER_FLAG_CODEC_CONFIG -> byteArrayOf(0, 0, 0, 1)
             else -> byteArrayOf(0, 0, 1)
         }
-
-        if(!mDecoderState.isConfigured && payloadFlags == 0) {
-            return false
-        }
-        mDecoderState.update(payloadType)
 
         if(payloadType == PayloadType.FirstVCL) {
             // Request to output previous access unit.
