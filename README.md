@@ -34,8 +34,7 @@ This is ShooterGame project modified to work with RemotePlay.
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
 2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client/VrProjects/Native/RemotePlayClient/assets` directory.
 3. Connect your Android device to your PC and make sure that ADB debugging is enabled and the PC is authorized.
-4. Edit `client/VrProjects/Native/RemotePlayClient/Src/Config.h` file and set `REMOTEPLAY_SERVER_IP` to the IP address of your development PC.
-5. Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
+4. Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
 
 ## Running
 
@@ -46,7 +45,7 @@ This is ShooterGame project modified to work with RemotePlay.
 
 It may take up to a few seconds for GearVR controller to be recognized.
 
-For best performance when testing with UE4 demo project run the packaged game in windowed mode, in the lowest possible resolution.
+For best performance when testing with UE4 demo project run the packaged game in windowed mode, in 1024x768 resolution, with Low quality settings.
 
 ### Controls
 
@@ -57,3 +56,10 @@ For best performance when testing with UE4 demo project run the packaged game in
 | Click on trackpad | Jump |
 | Trigger | Fire |
 
+### Network ports
+
+| Protocol | Port  | Description |
+| ---------|-------|-------------|
+| UDP      | 10500 | Session control & player input
+| UDP      | 10501 | Video stream
+| UDP      | 10600 | Local network server discovery
