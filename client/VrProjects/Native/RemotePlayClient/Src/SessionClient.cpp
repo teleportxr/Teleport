@@ -2,9 +2,12 @@
 
 #include <VrApi_Types.h>
 #include <Kernel/OVR_LogUtils.h>
-#include <string>
 #include <OVR_Input.h>
 #include <VrApi_Input.h>
+
+#include <string>
+#include <time.h>
+#include <sys/socket.h>
 
 #include "SessionClient.h"
 
@@ -21,31 +24,109 @@ struct RemotePlayInputState {
     float trackpadAxisY;
 };
 
+struct ServiceDiscoveryResponse {
+    uint32_t clientID;
+    uint16_t remotePort;
+} __attribute__((packed));
+
 SessionClient::SessionClient(SessionCommandInterface* commandInterface)
     : mCommandInterface(commandInterface)
-    , mClientHost(nullptr)
-    , mServerPeer(nullptr)
-    , mPrevControllerState({})
-{}
+{
+    struct timespec timeNow;
+    clock_gettime(CLOCK_REALTIME, &timeNow);
+
+    // Generate random client ID
+    const unsigned int timeNowMs = static_cast<unsigned int>(timeNow.tv_sec * 1000 + timeNow.tv_nsec / 1000000);
+    srand(timeNowMs);
+    mClientID = static_cast<uint32_t>(rand());
+}
 
 SessionClient::~SessionClient()
 {
     Disconnect(0);
+    if(mServiceDiscoverySocket) {
+        close(mServiceDiscoverySocket);
+    }
 }
 
-bool SessionClient::Connect(const char* ipAddress, uint16_t port, uint timeout)
+bool SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
 {
-    ENetAddress address;
-    enet_address_set_host_ip(&address, ipAddress);
-    address.port = port;
+    bool serverDiscovered = false;
 
+    struct sockaddr_in broadcastAddress = { AF_INET, htons(discoveryPort) };
+    broadcastAddress.sin_addr.s_addr = INADDR_BROADCAST;
+
+    if(!mServiceDiscoverySocket) {
+        mServiceDiscoverySocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if(mServiceDiscoverySocket <= 0) {
+            FAIL("Failed to create service discovery UDP socket");
+            return false;
+        }
+
+        int flagEnable = 1;
+        setsockopt(mServiceDiscoverySocket, SOL_SOCKET, SO_REUSEADDR, &flagEnable, sizeof(int));
+        setsockopt(mServiceDiscoverySocket, SOL_SOCKET, SO_BROADCAST, &flagEnable, sizeof(int));
+
+        struct sockaddr_in bindAddress = { AF_INET, htons(discoveryPort) };
+        if(bind(mServiceDiscoverySocket, (struct sockaddr*)&bindAddress, sizeof(bindAddress)) == -1) {
+            FAIL("Failed to bind to service discovery UDP socket");
+            close(mServiceDiscoverySocket);
+            mServiceDiscoverySocket = 0;
+            return false;
+        }
+    }
+
+    sendto(mServiceDiscoverySocket, &mClientID, sizeof(mClientID), 0,
+           (struct sockaddr*)&broadcastAddress, sizeof(broadcastAddress));
+
+    {
+        ServiceDiscoveryResponse response = {};
+        struct sockaddr_in responseAddr;
+        socklen_t responseAddrSize = sizeof(responseAddr);
+
+        ssize_t bytesRecv;
+        do {
+            bytesRecv = recvfrom(mServiceDiscoverySocket, &response, sizeof(response),
+                                 MSG_DONTWAIT,
+                                 (struct sockaddr*)&responseAddr, &responseAddrSize);
+
+            if(bytesRecv == sizeof(response) && mClientID == response.clientID) {
+                remote.host = responseAddr.sin_addr.s_addr;
+                remote.port = response.remotePort;
+                serverDiscovered = true;
+            }
+        } while(bytesRecv > 0 && !serverDiscovered);
+    }
+
+    if(serverDiscovered) {
+        char remoteIP[20];
+        enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
+        LOG("Discovered session server: %s:%d", remoteIP, remote.port);
+
+        close(mServiceDiscoverySocket);
+        mServiceDiscoverySocket = 0;
+    }
+    return serverDiscovered;
+}
+
+bool SessionClient::Connect(const char* remoteIP, uint16_t remotePort, uint timeout)
+{
+    ENetAddress remote;
+    enet_address_set_host_ip(&remote, remoteIP);
+    remote.port = remotePort;
+
+    return Connect(remote, timeout);
+}
+
+bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
+{
     mClientHost = enet_host_create(nullptr, 1, RPCH_NumChannels, 0, 0);
     if(!mClientHost) {
         FAIL("Failed to create ENET client host");
         return false;
     }
 
-    mServerPeer = enet_host_connect(mClientHost, &address, RPCH_NumChannels, 0);
+    mServerPeer = enet_host_connect(mClientHost, &remote, RPCH_NumChannels, 0);
     if(!mServerPeer) {
         WARN("Failed to initiate connection to the server");
         enet_host_destroy(mClientHost);
@@ -55,7 +136,11 @@ bool SessionClient::Connect(const char* ipAddress, uint16_t port, uint timeout)
 
     ENetEvent event;
     if(enet_host_service(mClientHost, &event, timeout) > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
-        LOG("Connected to session server: %s:%d", ipAddress, port);
+        mServerEndpoint = remote;
+
+        char remoteIP[20];
+        enet_address_get_host_ip(&mServerEndpoint, remoteIP, sizeof(remoteIP));
+        LOG("Connected to session server: %s:%d", remoteIP, remote.port);
         return true;
     }
 
@@ -93,6 +178,7 @@ void SessionClient::Disconnect(uint timeout)
             }
         }
         mServerPeer = nullptr;
+        mServerEndpoint = {};
     }
 
     if(mClientHost) {
@@ -122,6 +208,23 @@ void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame, const ControllerSta
     }
 
     mPrevControllerState = controllerState;
+}
+
+bool SessionClient::IsConnected() const
+{
+    return mServerPeer != nullptr;
+}
+
+std::string SessionClient::GetServerIP() const
+{
+    if(IsConnected()) {
+        char remoteIP[20];
+        enet_address_get_host_ip(&mServerEndpoint, remoteIP, sizeof(remoteIP));
+        return std::string(remoteIP);
+    }
+    else {
+        return std::string{};
+    }
 }
 
 void SessionClient::DispatchEvent(const ENetEvent& event)

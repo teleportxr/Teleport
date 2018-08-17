@@ -159,8 +159,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
 		mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
         mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &mVideoTexture;
-
-		mSession.Connect(REMOTEPLAY_SERVER_IP, REMOTEPLAY_SERVER_PORT, REMOTEPLAY_TIMEOUT);
 	}
 }
 
@@ -218,7 +216,15 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     }
 
 	// Handle networked session.
-    mSession.Frame(vrFrame, controllerState);
+	if(mSession.IsConnected()) {
+		mSession.Frame(vrFrame, controllerState);
+	}
+	else {
+		ENetAddress remoteEndpoint;
+		if(mSession.Discover(REMOTEPLAY_DISCOVERY_PORT, remoteEndpoint)) {
+			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
+		}
+	}
 
 	// Update video texture if we have any pending decoded frames.
 	while(mNumPendingFrames > 0) {
@@ -305,7 +311,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
 
 	mPipeline.add({&mRecvQueue, &mDecoder, &mSurface});
-	mVideoStream.StartReceiving(REMOTEPLAY_SERVER_IP, port);
+	mVideoStream.StartReceiving(mSession.GetServerIP(), port);
 }
 
 void Application::OnVideoStreamClosed()

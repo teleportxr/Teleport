@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <string>
+
 #include <OVR_Input.h>
 #include <enet/enet.h>
 
@@ -20,10 +22,15 @@ public:
     SessionClient(SessionCommandInterface* commandInterface);
     ~SessionClient();
 
-    bool Connect(const char* ipAddress, uint16_t port, uint timeout);
+    bool Discover(uint16_t discoveryPort, ENetAddress& remote);
+    bool Connect(const char* remoteIP, uint16_t remotePort, uint timeout);
+    bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
 
     void Frame(const OVR::ovrFrameInput& vrFrame, const ControllerState& controllerState);
+
+    bool IsConnected() const;
+    std::string GetServerIP() const;
 
 private:
     void DispatchEvent(const ENetEvent& event);
@@ -32,10 +39,14 @@ private:
     void SendHeadPose(const ovrRigidBodyPosef& pose);
     void SendInput(const ControllerState& controllerState);
 
-    SessionCommandInterface* const mCommandInterface;
-    ENetHost* mClientHost;
-    ENetPeer* mServerPeer;
+    uint32_t mClientID = 0;
+    int mServiceDiscoverySocket = 0;
 
-    ControllerState mPrevControllerState;
+    SessionCommandInterface* const mCommandInterface;
+    ENetHost* mClientHost = nullptr;
+    ENetPeer* mServerPeer = nullptr;
+    ENetAddress mServerEndpoint;
+
+    ControllerState mPrevControllerState = {};
 };
 
