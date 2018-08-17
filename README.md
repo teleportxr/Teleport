@@ -56,7 +56,7 @@ For best performance when testing with UE4 demo project run the packaged game in
 | Click on trackpad | Jump |
 | Trigger | Fire |
 
-### Network ports
+### Default network ports
 
 | Protocol | Port  | Description |
 | ---------|-------|-------------|
