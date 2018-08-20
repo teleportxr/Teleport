@@ -10,7 +10,7 @@ Clone the repository with submodules:
 
 1. Visual Studio 2017 (with Visual C++ tools for CMake)
 2. Android Studio
-3. Unreal Engine 4.19 (launcher version)
+3. Unreal Engine 4.20 (launcher version)
 4. NVIDIA CUDA Toolkit
 	
 ## Building UE4 plugin
