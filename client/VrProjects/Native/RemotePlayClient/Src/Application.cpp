@@ -310,7 +310,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams);
 	mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
 
-	mPipeline.add({&mRecvQueue, &mDecoder, &mSurface});
+	mPipeline.link({&mRecvQueue, &mDecoder, &mSurface});
 	mVideoStream.StartReceiving(mSession.GetServerIP(), port);
 }
 

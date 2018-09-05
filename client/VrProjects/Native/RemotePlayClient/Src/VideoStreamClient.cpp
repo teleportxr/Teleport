@@ -52,7 +52,7 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
     forwarder.configure(1, 1, 64 * 1024);
 
     avs::Pipeline pipeline;
-    pipeline.add( { &networkSource, &forwarder, mRecvQueue} );
+    pipeline.link( { &networkSource, &forwarder, mRecvQueue} );
 
     while(mIsReceiving.load()) {
         pipeline.process();
