@@ -4,6 +4,9 @@
 
 #include <Kernel/OVR_LogUtils.h>
 #include <sched.h>
+#include <chrono>
+
+static constexpr auto StatInterval = std::chrono::seconds(1);
 
 VideoStreamClient::VideoStreamClient(avs::Queue *recvQueue)
     : mRecvQueue(recvQueue)
@@ -55,8 +58,20 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
     avs::Pipeline pipeline;
     pipeline.link( { &networkSource, &forwarder, mRecvQueue} );
 
+    auto lastTimestamp = std::chrono::steady_clock::now();
     while(mIsReceiving.load()) {
         pipeline.process();
         sched_yield();
+
+        const auto timestamp = std::chrono::steady_clock::now();
+        if(timestamp - lastTimestamp >= StatInterval) {
+            const avs::NetworkSourceCounters counters = networkSource.getCounterValues();
+            WARN("NP: %llu/%llu | DP: %llu/%llu | BYTES: %llu",
+                 counters.networkPacketsReceived, counters.networkPacketsDropped,
+                 counters.decoderPacketsReceived, counters.decoderPacketsDropped,
+                 counters.bytesReceived
+            );
+            lastTimestamp = timestamp;
+        }
     }
 }
