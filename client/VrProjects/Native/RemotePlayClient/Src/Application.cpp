@@ -67,13 +67,13 @@ static const char* VideoSurface_FS = R"(
 
 Application::Application()
     : mDecoder(avs::DecoderBackend::Custom)
+    , mPipelineConfigured(false)
 	, mSoundEffectContext(nullptr)
 	, mSoundEffectPlayer(nullptr)
 	, mGuiSys(OvrGuiSys::Create())
 	, mLocale(nullptr)
 	, mVideoSurfaceTexture(nullptr)
     , mSession(this)
-	, mVideoStream(&mRecvQueue)
 	, mControllerID(-1)
 {
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
@@ -85,7 +85,6 @@ Application::Application()
 
 Application::~Application()
 {
-	mVideoStream.StopReceiving();
 	mPipeline.deconfigure();
 
 	delete mVideoSurfaceTexture;
@@ -298,29 +297,47 @@ bool Application::InitializeController()
 
 void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 {
+	if(mPipelineConfigured) {
+		// TODO: Fix!
+		return;
+	}
+
     WARN("VIDEO STREAM CHANGED: %d %d %d", port, width, height);
+
+	avs::NetworkSourceParams sourceParams = {};
+	sourceParams.socketBufferSize = 16 * 1024 * 1024; // 16MiB socket buffer size
+	sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
+	sourceParams.maxJitterBufferLength = 0;
+
+	if(!mNetworkSource.configure(1, port, mSession.GetServerIP().c_str(), port, sourceParams)) {
+		WARN("OnVideoStreamChanged: Failed to configure network source node");
+		return;
+	}
 
 	avs::DecoderParams decoderParams = {};
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 	decoderParams.prependStartCodes = false;
 	decoderParams.deferDisplay = false;
+	if(!mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams)) {
+		WARN("OnVideoStreamChanged: Failed to configure decoder node");
+		mNetworkSource.deconfigure();
+		return;
+	}
 
-	mRecvQueue.configure(256);
-	mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams);
 	mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
 
-	mPipeline.link({&mRecvQueue, &mDecoder, &mSurface});
-	mVideoStream.StartReceiving(mSession.GetServerIP(), port);
+	mPipeline.link({&mNetworkSource, &mDecoder, &mSurface});
+	mPipelineConfigured = true;
 }
 
 void Application::OnVideoStreamClosed()
 {
     WARN("VIDEO STREAM CLOSED");
 
-	mVideoStream.StopReceiving();
 	mPipeline.deconfigure();
 	mPipeline.reset();
+	mPipelineConfigured = false;
 }
 
 void Application::OnFrameAvailable()

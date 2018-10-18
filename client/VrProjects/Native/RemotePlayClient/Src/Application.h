@@ -13,7 +13,6 @@
 #include "GuiSys.h"
 
 #include "SessionClient.h"
-#include "VideoStreamClient.h"
 #include "VideoDecoderProxy.h"
 
 namespace OVR {
@@ -50,9 +49,11 @@ private:
 
 	avs::Context mContext;
 	avs::Pipeline mPipeline;
+
 	avs::Decoder mDecoder;
 	avs::Surface mSurface;
-	avs::Queue mRecvQueue;
+	avs::NetworkSource mNetworkSource;
+    bool mPipelineConfigured;
 
 	OVR::ovrSoundEffectContext* mSoundEffectContext;
 	OVR::OvrGuiSys::SoundEffectPlayer* mSoundEffectPlayer;
@@ -68,7 +69,6 @@ private:
 	OVR::SurfaceTexture* mVideoSurfaceTexture;
 
 	SessionClient mSession;
-	VideoStreamClient mVideoStream;
 
 	ovrDeviceID mControllerID;
 	ovrVector2f mTrackpadDim;
