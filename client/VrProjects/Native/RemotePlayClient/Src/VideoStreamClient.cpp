@@ -23,7 +23,7 @@ VideoStreamClient::~VideoStreamClient()
 bool VideoStreamClient::StartReceiving(const std::string &address, uint16_t port)
 {
     if(mIsReceiving.load()) {
-        WARN("VideoStreamClient: Already receiving");
+        OVR_WARN("VideoStreamClient: Already receiving");
         return false;
     }
 
@@ -48,7 +48,7 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
 
     avs::NetworkSource networkSource;
     if(!networkSource.configure(1, port, address.c_str(), port, params)) {
-        WARN("VideoStreamClient: Failed to configure network source");
+        OVR_WARN("VideoStreamClient: Failed to configure network source");
         return;
     }
 
@@ -66,7 +66,7 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
         const auto timestamp = std::chrono::steady_clock::now();
         if(timestamp - lastTimestamp >= StatInterval) {
             const avs::NetworkSourceCounters counters = networkSource.getCounterValues();
-            WARN("NP: %llu/%llu | DP: %llu/%llu | BYTES: %llu",
+            OVR_WARN("NP: %llu/%llu | DP: %llu/%llu | BYTES: %llu",
                  counters.networkPacketsReceived, counters.networkPacketsDropped,
                  counters.decoderPacketsReceived, counters.decoderPacketsDropped,
                  counters.bytesReceived

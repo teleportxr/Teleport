@@ -5,7 +5,7 @@ Content     :   Data passed to VrAppInterface::Frame().
 Created     :   February 6, 2014
 Authors     :   John Carmack
 
-Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
 #ifndef OVR_Input_h
@@ -366,17 +366,13 @@ struct VrDeviceStatus
 	VrDeviceStatus() :
 		HeadPhonesPluggedState( OVR_HEADSET_PLUGGED_UNKNOWN ),
 		DeviceIsDocked( false ),
-		HeadsetIsMounted( false ),
-		WifiIsConnected( false ),
-		PowerLevelStateThrottled( false )
+		HeadsetIsMounted( false )
 	{
 	}
 
 	ovrHeadSetPluggedState HeadPhonesPluggedState;					// headphones plugged state (unknown, plugged, unplugged)
 	bool				DeviceIsDocked;								// true if device is docked in headset
 	bool				HeadsetIsMounted;							// true if headset is mounted
-	bool				WifiIsConnected;							// true if there is an active WiFi connection
-	bool				PowerLevelStateThrottled;					// true if in power save mode, 30 FPS etc.
 };
 
 // Passed to an application each frame.

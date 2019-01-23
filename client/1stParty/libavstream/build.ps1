@@ -1,4 +1,5 @@
 $ABIs=@('armeabi-v7a', 'arm64-v8a')
+$Platform='android-21'
 
 $RootDir     = Join-Path $PSScriptRoot -ChildPath "..\..\..\libavstream"
 $IncludeDir  = Join-Path $PSScriptRoot -ChildPath "Include"
@@ -7,6 +8,7 @@ $LibsDirBase = Join-Path $PSScriptRoot -ChildPath "Libs\Android"
 $ToolchainFile = Join-Path $env:ANDROID_NDK_HOME -ChildPath "build\cmake\android.toolchain.cmake"
 $MakeProgram = Join-Path $env:ANDROID_NDK_HOME -ChildPath "prebuilt\windows-x86_64\bin\make.exe"
 $BuildType = "RelWithDebInfo"
+#$BuildType = "Debug"
 
 New-Item -ItemType Directory -Force -Path $IncludeDir | Out-Null
 New-Item -ItemType Directory -Force -Path $LibsDirBase | Out-Null
@@ -22,7 +24,7 @@ foreach($abi in $ABIs) {
     Set-Location -Path $BuildDirectory
 
     echo "Building for $abi ..."
-    cmake -G"MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE="$ToolchainFile" -DCMAKE_MAKE_PROGRAM="$MakeProgram" -DCMAKE_BUILD_TYPE="$BuildType" -DANDROID_ABI="$abi" "$RootDir"
+    cmake -G"MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE="$ToolchainFile" -DCMAKE_MAKE_PROGRAM="$MakeProgram" -DCMAKE_BUILD_TYPE="$BuildType" -DANDROID_PLATFORM="$Platform" -DANDROID_ABI="$abi" "$RootDir"
     & "$MakeProgram"
 }
 

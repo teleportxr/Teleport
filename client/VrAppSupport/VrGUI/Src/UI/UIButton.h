@@ -5,7 +5,7 @@ Content     :
 Created     :	1/23/2015
 Authors     :   Jim Dose
 
-Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
 
@@ -29,7 +29,8 @@ class UIButtonComponent : public VRMenuComponent
 public:
 	static const int TYPE_ID = 159493;
 
-					UIButtonComponent( UIButton &button );
+					UIButtonComponent( UIButton & button );
+	virtual			~UIButtonComponent();
 
 	virtual int		GetTypeId() const { return TYPE_ID; }
 
@@ -38,8 +39,12 @@ public:
 	void			SetTouchDownSnd( const char * touchDownSnd );
 	void			SetTouchUpSnd( const char * touchUpSnd );
 
+	void			OwnerDeleted() { Button = nullptr; }
+
+	UIButton *		GetButton() const { return Button; }
+
 private:
-	UIButton &		Button;
+	UIButton *		Button;
 
     ovrSoundLimiter GazeOverSoundLimiter;
     ovrSoundLimiter DownSoundLimiter;

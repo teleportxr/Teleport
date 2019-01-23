@@ -5,7 +5,7 @@ Content     :   Framebuffer
 Created     :   July 3rd, 2015
 Authors     :   J.M.P. van Waveren
 
-Copyright   :   Copyright 2015 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
 
@@ -47,12 +47,12 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 		{
 			OVR_ASSERT( resolveDepth == false );
 			multisampleMode = MSAA_RENDER_TO_TEXTURE;
-			LOG( "multisample mode = MSAA_RENDER_TO_TEXTURE" );
+			OVR_LOG( "multisample mode = MSAA_RENDER_TO_TEXTURE" );
 		}
 		else
 		{
 			multisampleMode = MSAA_OFF;
-			LOG( "multisample mode = MSAA_OFF" );
+			OVR_LOG( "multisample mode = MSAA_OFF" );
 		}
 
 		// Create the color texture set and associated color buffer.
@@ -76,7 +76,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				case VRAPI_TEXTURE_FORMAT_DEPTH_16:				glInternalFormat = GL_DEPTH_COMPONENT16; break;
 				case VRAPI_TEXTURE_FORMAT_DEPTH_24:				glInternalFormat = GL_DEPTH_COMPONENT24; break;
 				case VRAPI_TEXTURE_FORMAT_DEPTH_24_STENCIL_8:	glInternalFormat = GL_DEPTH24_STENCIL8; break;
-				default: FAIL( "Unknown depthFormat %i", depthFormat );
+				default: OVR_FAIL( "Unknown depthFormat %i", depthFormat );
 			}
 			// FIXME: we should only need one depth buffer but the Mali driver
 			// does not like sharing the depth buffer between multiple frame buffers
@@ -127,12 +127,12 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				GLenum renderStatus = glCheckFramebufferStatus( GL_DRAW_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
-					FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
+					OVR_FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
 				}
 
 				GLint actualMultisamples = 0;
 				glGetIntegerv( GL_SAMPLES, &actualMultisamples );
-				LOG( "multisamples: requested = %d actual = %d", multisamples, actualMultisamples );
+				OVR_LOG( "multisamples: requested = %d actual = %d", multisamples, actualMultisamples );
 				glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
 
 				GL_CheckErrors( "MSAA_RENDER_TO_TEXTURE");
@@ -154,18 +154,22 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				GLenum renderStatus = glCheckFramebufferStatus( GL_DRAW_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
-					FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
+					OVR_FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
 				}
 				glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
 
 				GL_CheckErrors( "MSAA_OFF");
 			}
 
-			// Explicitly clear the color buffer to a color we would notice.
 			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, RenderFrameBuffers[i] );
 			glScissor( 0, 0, width, height );
 			glViewport( 0, 0, width, height );
+#if defined( _DEBUG )
+			// Explicitly clear the color buffer to a color we would notice.
 			glClearColor( 0, 1, 0, 1 );
+#else
+			glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+#endif
 			glClear( GL_COLOR_BUFFER_BIT );
 			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
 		}
@@ -177,21 +181,21 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 			if ( glFramebufferTexture2DMultisampleEXT_ != NULL && resolveDepth == false )
 			{
 				multisampleMode = MSAA_RENDER_TO_TEXTURE;
-				LOG( "multisample mode = MSAA_RENDER_TO_TEXTURE" );
+				OVR_LOG( "multisample mode = MSAA_RENDER_TO_TEXTURE" );
 			}
 			else
 			{
 				multisampleMode = MSAA_BLIT;
-				LOG( "multisample mode = MSAA_BLIT" );
+				OVR_LOG( "multisample mode = MSAA_BLIT" );
 			}
 		}
 		else
 		{
 			multisampleMode = MSAA_OFF;
-			LOG( "multisample mode = MSAA_OFF" );
+			OVR_LOG( "multisample mode = MSAA_OFF" );
 		}
 
-		LOG( "resolveDepth = %s", resolveDepth ? "true" : "false" );
+		OVR_LOG( "resolveDepth = %s", resolveDepth ? "true" : "false" );
 
 		// Create the color texture set and associated color buffer.
 		{
@@ -212,7 +216,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 					case VRAPI_TEXTURE_FORMAT_8888:			glInternalFormat = GL_RGBA8; break;
 					case VRAPI_TEXTURE_FORMAT_8888_sRGB:	glInternalFormat = GL_SRGB8_ALPHA8; break;
 					case VRAPI_TEXTURE_FORMAT_RGBA16F:		glInternalFormat = GL_RGBA16F; break;
-					default: FAIL( "Unknown colorFormat %i", colorFormat );
+					default: OVR_FAIL( "Unknown colorFormat %i", colorFormat );
 				}
 
 				// Create a multi-sampled render buffer.
@@ -221,7 +225,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				glRenderbufferStorageMultisample( GL_RENDERBUFFER, multisamples, glInternalFormat, width, height );
 				GLint actualMultisamples = 0;
 				glGetIntegerv( GL_SAMPLES, &actualMultisamples );
-				LOG( "multisamples: requested = %d actual = %d", multisamples, actualMultisamples );
+				OVR_LOG( "multisamples: requested = %d actual = %d", multisamples, actualMultisamples );
 				glBindRenderbuffer( GL_RENDERBUFFER, 0 );
 			}
 		}
@@ -249,7 +253,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 					case VRAPI_TEXTURE_FORMAT_DEPTH_16:				glInternalFormat = GL_DEPTH_COMPONENT16; break;
 					case VRAPI_TEXTURE_FORMAT_DEPTH_24:				glInternalFormat = GL_DEPTH_COMPONENT24; break;
 					case VRAPI_TEXTURE_FORMAT_DEPTH_24_STENCIL_8:	glInternalFormat = GL_DEPTH24_STENCIL8; break;
-					default: FAIL( "Unknown depthFormat %i", depthFormat );
+					default: OVR_FAIL( "Unknown depthFormat %i", depthFormat );
 				}
 
 				// FIXME: we should only need one depth buffer but the Mali driver
@@ -311,11 +315,11 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				GLenum renderStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
-					FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
+					OVR_FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
 				}
 				GLint actualMultisamples = 0;
 				glGetIntegerv( GL_SAMPLES, &actualMultisamples );
-				LOG( "multisamples: requested = %d actual = %d", multisamples, actualMultisamples );
+				OVR_LOG( "multisamples: requested = %d actual = %d", multisamples, actualMultisamples );
 				glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 
 				GL_CheckErrors( "MSAA_RENDER_TO_TEXTURE");
@@ -333,7 +337,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				GLenum renderStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
-					FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
+					OVR_FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
 				}
 				glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 
@@ -355,7 +359,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				GLenum resolveStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 				if ( resolveStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
-					FAIL( "resolve FBO %i is not complete: 0x%x", ResolveFrameBuffers[i], resolveStatus );	// TODO: fall back to something else
+					OVR_FAIL( "resolve FBO %i is not complete: 0x%x", ResolveFrameBuffers[i], resolveStatus );	// TODO: fall back to something else
 				}
 				glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 
@@ -381,18 +385,22 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				GLenum renderStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
-					FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
+					OVR_FAIL( "render FBO %i is not complete: 0x%x", RenderFrameBuffers[i], renderStatus );	// TODO: fall back to something else
 				}
 				glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 
 				GL_CheckErrors( "MSAA_OFF");
 			}
 
-			// Explicitly clear the color buffer to a color we would notice.
 			glBindFramebuffer( GL_FRAMEBUFFER, RenderFrameBuffers[i] );
 			glScissor( 0, 0, width, height );
 			glViewport( 0, 0, width, height );
+#if defined( _DEBUG )
+			// Explicitly clear the color buffer to a color we would notice.
 			glClearColor( 0, 1, 0, 1 );
+#else
+			glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+#endif
 			glClear( GL_COLOR_BUFFER_BIT );
 			glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 		}

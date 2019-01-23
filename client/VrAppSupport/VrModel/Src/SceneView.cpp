@@ -5,7 +5,7 @@ Content     :   Basic viewing and movement in a scene.
 Created     :   December 19, 2013
 Authors     :   John Carmack
 
-Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
 
@@ -375,20 +375,20 @@ static Vector3f AnimationInterpolateVector3f( float * buffer, int frame, float f
 	else if ( interpolationType == MODEL_ANIMATION_INTERPOLATION_CATMULLROMSPLINE )
 	{
 		// #TODO implement MODEL_ANIMATION_INTERPOLATION_CATMULLROMSPLINE
-		WARN( "MODEL_ANIMATION_INTERPOLATION_CATMULLROMSPLINE not implemented" );
+		OVR_WARN( "MODEL_ANIMATION_INTERPOLATION_CATMULLROMSPLINE not implemented" );
 		firstElement = firstElement.Lerp( secondElement, fraction );
 		return firstElement;
 	}
 	else if ( interpolationType == MODEL_ANIMATION_INTERPOLATION_CUBICSPLINE )
 	{
 		// #TODO implement MODEL_ANIMATION_INTERPOLATION_CUBICSPLINE
-		WARN( "MODEL_ANIMATION_INTERPOLATION_CUBICSPLINE not implemented" );
+		OVR_WARN( "MODEL_ANIMATION_INTERPOLATION_CUBICSPLINE not implemented" );
 		firstElement = firstElement.Lerp( secondElement, fraction );
 		return firstElement;
 	}
 	else
 	{
-		WARN( "inavlid interpolation type on animation" );
+		OVR_WARN( "inavlid interpolation type on animation" );
 		return firstElement;
 	}
 }
@@ -424,19 +424,19 @@ static Quatf AnimationInterpolateQuatf( float * buffer, int frame, float fractio
 	}
 	else if ( interpolationType == MODEL_ANIMATION_INTERPOLATION_CATMULLROMSPLINE )
 	{
-		WARN( "MODEL_ANIMATION_INTERPOLATION_CATMULLROMSPLINE does not make sense for quaternions." );
+		OVR_WARN( "MODEL_ANIMATION_INTERPOLATION_CATMULLROMSPLINE does not make sense for quaternions." );
 		firstElement = firstElement.Lerp( secondElement, fraction );
 		return firstElement;
 	}
 	else if ( interpolationType == MODEL_ANIMATION_INTERPOLATION_CUBICSPLINE )
 	{
-		WARN( "MODEL_ANIMATION_INTERPOLATION_CUBICSPLINE does not make sense for quaternions." );
+		OVR_WARN( "MODEL_ANIMATION_INTERPOLATION_CUBICSPLINE does not make sense for quaternions." );
 		firstElement = firstElement.Lerp( secondElement, fraction );
 		return firstElement;
 	}
 	else
 	{
-		WARN( "inavlid interpolation type on animation" );
+		OVR_WARN( "inavlid interpolation type on animation" );
 		return firstElement;
 	}
 }
@@ -532,11 +532,11 @@ void ModelInScene::AnimateJoints( const double timeInSeconds )
 					}
 					else if ( channel.path == MODEL_ANIMATION_PATH_WEIGHTS )
 					{
-						WARN("Weights animation not currently supported on channel %d '%s'", j, animation.name.ToCStr() );
+						OVR_WARN("Weights animation not currently supported on channel %d '%s'", j, animation.name.ToCStr() );
 					}
 					else
 					{
-						WARN( "Bad animation path on channel %d '%s'", j, animation.name.ToCStr() );
+						OVR_WARN( "Bad animation path on channel %d '%s'", j, animation.name.ToCStr() );
 					}
 
 					nodeState.CalculateLocalTransform();
@@ -555,7 +555,7 @@ void ModelInScene::AnimateJoints( const double timeInSeconds )
 
 //-------------------------------------------------------------------------------------
 
-OvrSceneView::OvrSceneView() :
+OvrSceneView::OvrSceneView( const int flags ) :
 	FreeWorldModelOnChange( false ),
 	LoadedPrograms( false ),
 	Paused( false ),
@@ -575,7 +575,8 @@ OvrSceneView::OvrSceneView() :
 	EyeYaw( 0.0f ),
 	EyePitch( 0.0f ),
 	EyeRoll( 0.0f ),
-	YawMod( -1.0f )
+	YawMod( -1.0f ),
+	SceneFlags( flags )
 {
 	CenterEyeTransform = ovrMatrix4f_CreateIdentity();
 	CenterEyeViewMatrix = ovrMatrix4f_CreateIdentity();
@@ -624,7 +625,7 @@ ModelGlPrograms OvrSceneView::GetDefaultGLPrograms()
 
 void OvrSceneView::LoadWorldModel( const char * sceneFileName, const MaterialParms & materialParms, const bool fromApk )
 {
-	LOG( "OvrSceneView::LoadScene( %s )", sceneFileName );
+	OVR_LOG( "OvrSceneView::LoadScene( %s )", sceneFileName );
 
 	if ( GlPrograms.ProgSingleTexture == NULL )
 	{
@@ -644,7 +645,7 @@ void OvrSceneView::LoadWorldModel( const char * sceneFileName, const MaterialPar
 
 	if ( model == nullptr )
 	{
-		WARN( "OvrSceneView::LoadScene( %s ) failed", sceneFileName );
+		OVR_WARN( "OvrSceneView::LoadScene( %s ) failed", sceneFileName );
 		return;
 	}
 
@@ -665,7 +666,7 @@ void OvrSceneView::LoadWorldModel( const char * sceneFileName, const MaterialPar
 
 void OvrSceneView::SetWorldModel( ModelFile & world )
 {
-	LOG( "OvrSceneView::SetWorldModel( %s )", world.FileName.ToCStr() );
+	OVR_LOG( "OvrSceneView::SetWorldModel( %s )", world.FileName.ToCStr() );
 
 	if ( FreeWorldModelOnChange && Models.GetSizeI() > 0 )
 	{
@@ -896,6 +897,22 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	//
 	// Player view angles
 	//
+	bool joystickValid[2];
+	joystickValid[0] = !( vrFrame.Input.sticks[0][0] == -1.0f && vrFrame.Input.sticks[0][1] == 1.0f );
+	joystickValid[1] = !( vrFrame.Input.sticks[1][0] == -1.0f && vrFrame.Input.sticks[1][1] == 1.0f );
+
+	float clampedSticks[2][2] = { };
+	const bool validateSticks = ( SceneFlags & SCENE_FLAG_IGNORE_JOYSTICK_UNTIL_DEADZONE ) != 0;
+	if ( joystickValid[0] || !validateSticks )
+	{
+		clampedSticks[0][0] = vrFrame.Input.sticks[0][0];
+		clampedSticks[0][1] = vrFrame.Input.sticks[0][1];
+	}
+	if ( joystickValid[1] || !validateSticks )
+	{
+		clampedSticks[1][0] = vrFrame.Input.sticks[1][0];
+		clampedSticks[1][1] = vrFrame.Input.sticks[1][1];
+	}
 
 	// Turn based on the look stick
 	// Because this can be predicted ahead by async TimeWarp, we apply
@@ -910,14 +927,14 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	{
 		StickYaw -= 2.0f * MATH_FLOAT_PI;
 	}
-	YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
+	YawVelocity = angleSpeed * clampedSticks[1][0];
 
 	// Only if there is no head tracking, allow right stick up/down to adjust pitch,
 	// which can be useful for debugging without having to dock the device.
 	if ( ( vrFrame.Tracking.Status & VRAPI_TRACKING_STATUS_ORIENTATION_TRACKED ) == 0 ||
 		 ( vrFrame.Tracking.Status & VRAPI_TRACKING_STATUS_HMD_CONNECTED ) == 0 )
 	{
-		StickPitch -= angleSpeed * vrFrame.Input.sticks[1][1] * dt;
+		StickPitch -= angleSpeed * clampedSticks[1][1] * dt;
 	}
 	else
 	{
@@ -949,9 +966,9 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	// Allow up / down movement if there is no floor collision model or in 'free move' mode.
 	const bool upDown = ( WorldModel.Definition == NULL || FreeMove ) && ( ( vrFrame.Input.buttonState & BUTTON_RIGHT_TRIGGER ) != 0 );
 	const Vector3f gamepadMove(
-			vrFrame.Input.sticks[0][0],
-			upDown ? -vrFrame.Input.sticks[0][1] : 0.0f,
-			upDown ? 0.0f : vrFrame.Input.sticks[0][1] );
+			clampedSticks[0][0],
+			upDown ? -clampedSticks[0][1] : 0.0f,
+			upDown ? 0.0f : clampedSticks[0][1] );
 
 	// Perform player movement if there is input.
 	if ( gamepadMove.LengthSq() > 0.0f )

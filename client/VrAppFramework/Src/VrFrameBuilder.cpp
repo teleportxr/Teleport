@@ -5,7 +5,7 @@ Content     :   Builds the input for VrAppInterface::Frame()
 Created     :   April 26, 2015
 Authors     :   John Carmack
 
-Copyright   :   Copyright 2015 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
 
@@ -14,17 +14,14 @@ Copyright   :   Copyright 2015 Oculus VR, LLC. All Rights reserved.
 #include "Android/JniUtils.h"
 #include "Kernel/OVR_Alg.h"
 #include "VrApi.h"
+#include "VrApi_Input.h"
 #include "VrApi_Helpers.h"
 #include "Kernel/OVR_String.h"
 #include "OVR_Input.h"
 
 #if defined ( OVR_OS_ANDROID )
 #include <android/input.h>
-#elif defined ( OVR_OS_WIN32 )
-#include <wininet.h>
-#include <BluetoothAPIs.h>
 #endif
-
 
 namespace OVR
 {
@@ -73,39 +70,24 @@ static struct
 static ovrHeadSetPluggedState HeadPhonesPluggedState = OVR_HEADSET_PLUGGED_UNKNOWN;
 
 VrFrameBuilder::VrFrameBuilder() :
-	BackKeyState( 0.25f ),	// NOTE: This is the default value. System specified value will be set on init.
 	lastTouchpadTime( 0.0 ),
 	touchpadTimer( 0.0 ),
 	lastTouchDown( false ),
-	touchState( 0 )
+	touchState( 0 ),
+	BackKeyDownLastFrame( false )
 {
+	RemoteTouchpadTouchedLastFrame[0] = false;
+	RemoteTouchpadTouchedLastFrame[1] = false;
+	TreatRemoteTouchpadTouchedAsButtonDown[0] = false;
+	TreatRemoteTouchpadTouchedAsButtonDown[1] = false;
 }
 
 void VrFrameBuilder::Init( ovrJava * java )
 {
 	OVR_ASSERT( java != NULL );
-
-	const float BackButtonShortPressTimeInSec = vrapi_GetSystemPropertyFloat( java, VRAPI_SYS_PROP_BACK_BUTTON_SHORTPRESS_TIME );
-
-	BackKeyState.SetShortPressTime( BackButtonShortPressTimeInSec );
 }
 
-void VrFrameBuilder::UpdateNetworkState( JNIEnv * jni, jclass activityClass, jobject activityObject )
-{
-#if defined( OVR_OS_ANDROID )
-	const jmethodID isWififConnectedMethodId = ovr_GetStaticMethodID( jni, activityClass, "isWifiConnected", "(Landroid/app/Activity;)Z" );
-
-	// NOTE: make sure android.permission.ACCESS_NETWORK_STATE is set in the manifest for isWifiConnected().
-	vrFrame.DeviceStatus.WifiIsConnected		= jni->CallStaticBooleanMethod( activityClass, isWififConnectedMethodId, activityObject );
-#elif defined ( OVR_OS_WIN32 )
-	DWORD dwState = 0;
-	vrFrame.DeviceStatus.WifiIsConnected		= InternetGetConnectedState( &dwState, 0 ) ? true : false;
-#else
-	vrFrame.DeviceStatus.WifiIsConnected		= false;
-#endif
-}
-
-void VrFrameBuilder::InterpretTouchpad( VrInput & input, const double currentTime )
+void VrFrameBuilder::InterpretTouchpad( VrInput & input, const double currentTime, const float min_swipe_distance )
 {
 	// 1) Down -> Up w/ Motion = Slide
 	// 1) Down -> Timeout w/o Motion = Long Press
@@ -114,8 +96,6 @@ void VrFrameBuilder::InterpretTouchpad( VrInput & input, const double currentTim
 	// 4) Down -> Up w/out Motion -> Down -> Up = Double Tap
 	static const double timer_finger_down = 0.3;
 	static const double timer_finger_up = 0.3;
-
-	static const float min_swipe_distance = 100.0f;
 
 	const double deltaTime = currentTime - lastTouchpadTime;
 	lastTouchpadTime = currentTime;
@@ -126,7 +106,7 @@ void VrFrameBuilder::InterpretTouchpad( VrInput & input, const double currentTim
 	bool down = false;
 	if ( currentTouchDown && !lastTouchDown )
 	{
-		//LOG( "DOWN" );
+		//OVR_LOG( "DOWN" );
 		down = true;
 		touchOrigin = input.touch;
 	}
@@ -134,7 +114,7 @@ void VrFrameBuilder::InterpretTouchpad( VrInput & input, const double currentTim
 	bool up = false;
 	if ( !currentTouchDown && lastTouchDown )
 	{
-		//LOG( "UP" );
+		//OVR_LOG( "UP" );
 		up = true;
 	}
 
@@ -161,12 +141,12 @@ void VrFrameBuilder::InterpretTouchpad( VrInput & input, const double currentTim
 			{
 				if ( input.touchRelative[0] < 0 )
 				{
-					//LOG( "SWIPE FORWARD" );
+					//OVR_LOG( "SWIPE FORWARD" );
 					dir = BUTTON_SWIPE_FORWARD | BUTTON_TOUCH_WAS_SWIPE;
 				}
 				else
 				{
-					//LOG( "SWIPE BACK" );
+					//OVR_LOG( "SWIPE BACK" );
 					dir = BUTTON_SWIPE_BACK | BUTTON_TOUCH_WAS_SWIPE;
 				}
 			}
@@ -174,12 +154,12 @@ void VrFrameBuilder::InterpretTouchpad( VrInput & input, const double currentTim
 			{
 				if ( input.touchRelative[1] > 0 )
 				{
-					//LOG( "SWIPE DOWN" );
+					//OVR_LOG( "SWIPE DOWN" );
 					dir = BUTTON_SWIPE_DOWN | BUTTON_TOUCH_WAS_SWIPE;
 				}
 				else
 				{
-					//LOG( "SWIPE UP" );
+					//OVR_LOG( "SWIPE UP" );
 					dir = BUTTON_SWIPE_UP | BUTTON_TOUCH_WAS_SWIPE;
 				}
 			}
@@ -254,7 +234,7 @@ void VrFrameBuilder::AddKeyEventToFrame( ovrKeyCode const keyCode, KeyEventType 
 		return;
 	}
 
-	LOG( "AddKeyEventToFrame: keyCode = %i, eventType = %i", keyCode, eventType );
+	OVR_LOG( "AddKeyEventToFrame: keyCode = %i, eventType = %i", keyCode, eventType );
 
 	vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].KeyCode = keyCode;
 	vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].RepeatCount = repeatCount;
@@ -271,50 +251,179 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 
 	// check before incrementing FrameNumber because it will be the previous frame's number
 	vrFrame.EnteredVrMode = vrFrame.FrameNumber == enteredVrModeFrameNumber;
-	if ( vrFrame.EnteredVrMode )
-	{
-		// clear any state that may be left over from the pause.
-		BackKeyState.Reset();
-	}
 
-	// Copy JoySticks and TouchPosition.
+	// Use the vrapi input api to check to see if a short back button press happened, and to fill in the touch data
+	bool backButtonDownThisFrame = false;
+	vrFrame.Input.buttonState &= ~BUTTON_TOUCH;
+
+	bool injectLeftStick = false;
+
+	float touchpadMinSwipe = 100.0f;
+
+	// Copy JoySticks
 	for ( int i = 0; i < 2; i++ )
 	{
 		for ( int j = 0; j < 2; j++ )
 		{
 			vrFrame.Input.sticks[i][j] = inputEvents.JoySticks[i][j];
 		}
-		vrFrame.Input.touch[i] = inputEvents.TouchPosition[i];
 	}
 
 #if defined( OVR_OS_ANDROID )
-	// Translate touch action into a touch button.
-	if ( inputEvents.TouchAction == AMOTION_EVENT_ACTION_DOWN )
+	int trackedRemoteIndex = 0;
+
+	for ( int i = 0; ; i++ )
 	{
-		vrFrame.Input.buttonState |= BUTTON_TOUCH;
-	}
-	else if ( inputEvents.TouchAction == AMOTION_EVENT_ACTION_UP )
-	{
-		vrFrame.Input.buttonState &= ~BUTTON_TOUCH;
+		ovrInputCapabilityHeader cap;
+		ovrResult result = vrapi_EnumerateInputDevices( ovr, i, &cap );
+		if ( result < 0 )
+		{
+			break;
+		}
+
+		if ( cap.Type == ovrControllerType_Headset )
+		{
+			ovrInputStateHeadset headsetInputState;
+			headsetInputState.Header.ControllerType = ovrControllerType_Headset;
+			result = vrapi_GetCurrentInputState( ovr, i, &headsetInputState.Header );
+			if ( result == ovrSuccess )
+			{
+				backButtonDownThisFrame |= headsetInputState.Buttons & ovrButton_Back;
+
+				if ( headsetInputState.TrackpadStatus )
+				{
+					ovrInputHeadsetCapabilities headsetCapabilities;
+					headsetCapabilities.Header.Type = ovrControllerType_Headset;
+					headsetCapabilities.Header.DeviceID = cap.DeviceID;
+					ovrResult result = vrapi_GetInputDeviceCapabilities( ovr, &headsetCapabilities.Header );
+
+					if ( result == ovrSuccess )
+					{
+						vrFrame.Input.buttonState |= BUTTON_TOUCH;
+						vrFrame.Input.touch[0] = headsetCapabilities.TrackpadMaxX - headsetInputState.TrackpadPosition.x;
+						vrFrame.Input.touch[1] = headsetCapabilities.TrackpadMaxY - headsetInputState.TrackpadPosition.y;
+					}
+				}
+			}
+		}
+		else if ( cap.Type == ovrControllerType_TrackedRemote )
+		{
+			float minTouchMove = 5.0f;
+
+			ovrInputStateTrackedRemote trackedRemoteState;
+			trackedRemoteState.Header.ControllerType = ovrControllerType_TrackedRemote;
+			result = vrapi_GetCurrentInputState( ovr, i, &trackedRemoteState.Header );
+			if ( result == ovrSuccess )
+			{
+				backButtonDownThisFrame |= trackedRemoteState.Buttons & ovrButton_Back;
+
+				bool setTouched = trackedRemoteState.Buttons & ovrButton_A || trackedRemoteState.Buttons & ovrButton_Enter || ( trackedRemoteState.TrackpadStatus && TreatRemoteTouchpadTouchedAsButtonDown[trackedRemoteIndex] );
+
+				ovrInputTrackedRemoteCapabilities remoteCapabilities;
+				remoteCapabilities.Header.Type = ovrControllerType_TrackedRemote;
+				remoteCapabilities.Header.DeviceID = cap.DeviceID;
+				ovrResult result = vrapi_GetInputDeviceCapabilities( ovr, &remoteCapabilities.Header );
+				OVR_UNUSED( result );
+
+				setTouched |= trackedRemoteState.Buttons & ovrButton_Trigger;
+
+				if ( result == ovrSuccess )
+				{
+					if ( remoteCapabilities.ControllerCapabilities & ovrControllerCaps_HasJoystick )
+					{
+						trackedRemoteState.TrackpadStatus = 0;
+						trackedRemoteState.TrackpadPosition.x = 0.0f;
+						trackedRemoteState.TrackpadPosition.y = 0.0f;
+
+						if ( remoteCapabilities.ControllerCapabilities & ovrControllerCaps_LeftHand )
+						{
+							vrFrame.Input.sticks[0][0] = trackedRemoteState.Joystick.x;
+							vrFrame.Input.sticks[0][1] = trackedRemoteState.Joystick.y;
+						}
+						else
+						{
+							vrFrame.Input.sticks[1][0] = trackedRemoteState.Joystick.x;
+							vrFrame.Input.sticks[1][1] = trackedRemoteState.Joystick.y;
+						}
+					}
+
+
+					if ( remoteCapabilities.ControllerCapabilities & ovrControllerCaps_ModelOculusTouch )
+					{
+						// to match the Rift, the menu button returns ovrButton_Enter
+						backButtonDownThisFrame |= trackedRemoteState.Buttons & ovrButton_Enter;
+
+						// to match design, the b button and the y button will also be treated as back buttons for the app framework apps when using the Oculus Touch controllers.
+						backButtonDownThisFrame |= trackedRemoteState.Buttons & ovrButton_B;
+						backButtonDownThisFrame |= trackedRemoteState.Buttons & ovrButton_Y;
+
+						setTouched = trackedRemoteState.Buttons & ovrButton_A || trackedRemoteState.Buttons & ovrButton_Trigger || ( trackedRemoteState.TrackpadStatus && TreatRemoteTouchpadTouchedAsButtonDown[trackedRemoteIndex] );
+
+						injectLeftStick = true;
+					}
+				}
+
+				if ( trackedRemoteState.Buttons & ovrButton_Enter || !trackedRemoteState.TrackpadStatus )
+				{
+					TreatRemoteTouchpadTouchedAsButtonDown[trackedRemoteIndex] = false;
+				}
+				else if ( !setTouched && trackedRemoteState.TrackpadStatus && RemoteTouchpadTouchedLastFrame[trackedRemoteIndex] )
+				{
+					// determine if we've moved far enough to count it as a touch, don't do this first frame because there will be a big jump.
+
+					const float diffMoveX = RemoteTouchpadPositionLastFrame[trackedRemoteIndex][0] - trackedRemoteState.TrackpadPosition.x;
+					const float diffMoveY = RemoteTouchpadPositionLastFrame[trackedRemoteIndex][1] - trackedRemoteState.TrackpadPosition.y;
+
+					if ( minTouchMove < fmax( fabsf( diffMoveX ), fabsf( diffMoveY ) ) )
+					{
+						setTouched = true;
+						TreatRemoteTouchpadTouchedAsButtonDown[trackedRemoteIndex] = true;
+					}
+				}
+
+				if ( setTouched )
+				{
+					vrFrame.Input.buttonState |= BUTTON_TOUCH;
+					if ( trackedRemoteState.Buttons & ovrButton_Enter )
+					{
+						vrFrame.Input.touch = touchOrigin;
+					}
+					else
+					{
+						vrFrame.Input.touch[0] = remoteCapabilities.TrackpadMaxX - trackedRemoteState.TrackpadPosition.x;
+						vrFrame.Input.touch[1] = remoteCapabilities.TrackpadMaxY - trackedRemoteState.TrackpadPosition.y;
+					}
+				}
+				else
+				{
+					TreatRemoteTouchpadTouchedAsButtonDown[trackedRemoteIndex] = false;
+				}
+			}
+
+			RemoteTouchpadTouchedLastFrame[trackedRemoteIndex] = trackedRemoteState.TrackpadStatus;
+			RemoteTouchpadPositionLastFrame[trackedRemoteIndex][0] = trackedRemoteState.TrackpadPosition.x;
+			RemoteTouchpadPositionLastFrame[trackedRemoteIndex][1] = trackedRemoteState.TrackpadPosition.y;
+
+			if ( trackedRemoteIndex == 0 )
+			{
+				trackedRemoteIndex = 1;
+			}
+		}
+		else if ( cap.Type == ovrControllerType_Gamepad )
+		{
+			ovrInputStateGamepad gamepadState;
+			gamepadState.Header.ControllerType = ovrControllerType_Gamepad;
+			result = vrapi_GetCurrentInputState( ovr, i, &gamepadState.Header );
+			if ( result == ovrSuccess )
+			{
+				backButtonDownThisFrame |= gamepadState.Buttons & ovrButton_Back;
+			}
+		}
 	}
 #endif
 
 	// Clear the key events.
 	vrFrame.Input.NumKeyEvents = 0;
-
-	// Handle the back key.
-	const double currentTime = vrapi_GetTimeInSeconds();
-	for ( int i = 0; i < inputEvents.NumKeyEvents; i++ )
-	{
-		// The back key is special because it has to handle short-press and long-press
-		if ( inputEvents.KeyEvents[i].KeyCode == OVR_KEY_ESCAPE )
-		{
-			BackKeyState.HandleEvent( currentTime, inputEvents.KeyEvents[i].Down, inputEvents.KeyEvents[i].RepeatCount );
-			continue;
-		}
-	}
-	const KeyEventType backKeyEventType = BackKeyState.Update( currentTime );
-	AddKeyEventToFrame( OVR_KEY_ESCAPE, backKeyEventType, 0 );
 
 	// Copy the key events.
 	for ( int i = 0; i < inputEvents.NumKeyEvents && vrFrame.Input.NumKeyEvents < MAX_KEY_EVENTS_PER_FRAME; i++ )
@@ -330,6 +439,131 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 		vrFrame.Input.NumKeyEvents++;
 	}
 
+	if ( injectLeftStick )
+	{
+		vrFrame.Input.buttonState &= ~BUTTON_LSTICK_UP;
+		vrFrame.Input.buttonState &= ~BUTTON_LSTICK_DOWN;
+		vrFrame.Input.buttonState &= ~BUTTON_LSTICK_RIGHT;
+		vrFrame.Input.buttonState &= ~BUTTON_LSTICK_LEFT;
+
+		LStick.ResetDirection();
+
+		LStick.StickPos.x = vrFrame.Input.sticks[0][0];
+		LStick.StickPos.y = vrFrame.Input.sticks[0][1];
+		ovrKeyCode leftkeycode = OVR_KEY_NONE;
+
+		// if LeftJoystick is being used then determine the direction
+		if ( LStick.StickPos.x != 0 && LStick.StickPos.y != 0 )
+		{
+			if ( LStick.StickPos.x > LStick.DeadZone )
+			{
+				LStick.StickRight = true;
+				leftkeycode = OVR_KEY_LSTICK_RIGHT;
+			}
+			else if ( LStick.StickPos.x < ( -1.0f * LStick.DeadZone ) )
+			{
+				LStick.StickLeft = true;
+				leftkeycode = OVR_KEY_LSTICK_LEFT;
+			}
+			else if ( LStick.StickPos.y < ( -1.0f * LStick.DeadZone ) )
+			{
+				LStick.StickUp = true;
+				leftkeycode = OVR_KEY_LSTICK_UP;
+			}
+			else if ( LStick.StickPos.y > LStick.DeadZone )
+			{
+				LStick.StickDown = true;
+				leftkeycode = OVR_KEY_LSTICK_DOWN;
+			}
+
+			if ( leftkeycode != OVR_KEY_NONE )
+			{
+				LStick.SetCurrStick( leftkeycode, true );
+			}
+		}
+	}
+
+
+	vrFrame.Input.buttonState &= ~BUTTON_RSTICK_UP;
+	vrFrame.Input.buttonState &= ~BUTTON_RSTICK_DOWN;
+	vrFrame.Input.buttonState &= ~BUTTON_RSTICK_RIGHT;
+	vrFrame.Input.buttonState &= ~BUTTON_RSTICK_LEFT;
+
+	RStick.ResetDirection();
+
+	RStick.StickPos.x = vrFrame.Input.sticks[1][0];
+	RStick.StickPos.y = vrFrame.Input.sticks[1][1];
+	ovrKeyCode rightkeycode = OVR_KEY_NONE;
+
+	// if RightJoystick is being used then determine the direction
+	if ( RStick.StickPos.x != 0 && RStick.StickPos.y != 0 )
+	{
+		if ( RStick.StickPos.x > RStick.DeadZone )
+		{
+			RStick.StickRight = true;
+			rightkeycode = OVR_KEY_RSTICK_RIGHT;
+		}
+		else if ( RStick.StickPos.x < ( -1.0f * RStick.DeadZone ) )
+		{
+			RStick.StickLeft = true;
+			rightkeycode = OVR_KEY_RSTICK_LEFT;
+		}
+		else if ( RStick.StickPos.y < ( -1.0f * RStick.DeadZone ) )
+		{
+			RStick.StickUp = true;
+			rightkeycode = OVR_KEY_RSTICK_UP;
+		}
+		else if ( RStick.StickPos.y > RStick.DeadZone )
+		{
+			RStick.StickDown = true;
+			rightkeycode = OVR_KEY_RSTICK_DOWN;
+		}
+
+		if ( rightkeycode != OVR_KEY_NONE )
+		{
+			RStick.SetCurrStick( rightkeycode, true );
+		}
+	}
+
+	// Create a fake event as if Joystick was used.
+	if ( vrFrame.Input.NumKeyEvents == 0 )
+	{
+		if ( injectLeftStick )
+		{
+			// if the LeftJoystick is pressed
+			if ( LStick.CurrStickState )
+			{
+				vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].KeyCode = LStick.CurrStickCode;
+				vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].RepeatCount = 0;
+				vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].EventType = KEY_EVENT_DOWN;
+				vrFrame.Input.NumKeyEvents++;
+			}
+			else if ( ( !LStick.CurrStickState && LStick.LastStickState ) ) // if the LeftJoystick is released
+			{
+				vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].KeyCode = LStick.LastStickCode;
+				vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].RepeatCount = 0;
+				vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].EventType = KEY_EVENT_UP;
+				vrFrame.Input.NumKeyEvents++;
+			}
+		}
+
+		// if the RightJoystick is pressed
+		if ( RStick.CurrStickState )
+		{
+			vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].KeyCode = RStick.CurrStickCode;
+			vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].RepeatCount = 0;
+			vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].EventType = KEY_EVENT_DOWN;
+			vrFrame.Input.NumKeyEvents++;
+		}
+		else if ( ( !RStick.CurrStickState && RStick.LastStickState ) ) // if the RightJoystick is released
+		{
+			vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].KeyCode = RStick.LastStickCode;
+			vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].RepeatCount = 0;
+			vrFrame.Input.KeyEvents[vrFrame.Input.NumKeyEvents].EventType = KEY_EVENT_UP;
+			vrFrame.Input.NumKeyEvents++;
+		}
+	}
+
 	// Clear previously set swipe buttons.
 	vrFrame.Input.buttonState &= ~(	BUTTON_SWIPE_UP |
 									BUTTON_SWIPE_DOWN |
@@ -341,13 +575,39 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 									BUTTON_TOUCH_LONGPRESS );
 
 	// Update the joypad buttons using the key events.
-	for ( int i = 0; i < inputEvents.NumKeyEvents; i++ )
+	for ( int i = 0; i < vrFrame.Input.NumKeyEvents; i++ )
 	{
-		const ovrKeyCode keyCode = inputEvents.KeyEvents[i].KeyCode;
-		const bool down = inputEvents.KeyEvents[i].Down;
+		const ovrKeyCode keyCode = vrFrame.Input.KeyEvents[i].KeyCode;
+		bool down = inputEvents.KeyEvents[i].Down;
+
+		if ( RStick.CurrStickState ) // if RStick is used
+		{
+			down = true;
+			RStick.SetLastStick();
+			RStick.ResetCurrStick();
+		}
+		else if ( !RStick.CurrStickState && RStick.LastStickState ) // if RStick is Released
+		{
+			down = false;
+			RStick.ResetLastStick();
+		} 
+		else if ( injectLeftStick )
+		{
+			if ( LStick.CurrStickState ) // if LStick is used
+			{
+				down = true;
+				LStick.SetLastStick();
+				LStick.ResetCurrStick();
+			}
+			else if ( !LStick.CurrStickState && LStick.LastStickState ) // if LStick is Released
+			{
+				down = false;
+				LStick.ResetLastStick();
+			}
+		}
 
 		// Keys always map to joystick buttons right now.
-        for ( int j = 0; buttonMappings[j].KeyCode != OVR_KEY_MAX; j++ )
+		for ( int j = 0; buttonMappings[j].KeyCode != OVR_KEY_MAX; j++ )
 		{
 			if ( keyCode == buttonMappings[j].KeyCode )
 			{
@@ -362,6 +622,7 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 				break;
 			}
 		}
+
 		if ( down && 0 /* keyboard swipes */ )
 		{
 			if ( keyCode == OVR_KEY_CLOSE_BRACKET )
@@ -392,7 +653,16 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 	}
 
 	// Synthesize swipe gestures as buttons.
-	InterpretTouchpad( vrFrame.Input, currentTime );
+	const double currentTime = vrapi_GetTimeInSeconds();
+	InterpretTouchpad( vrFrame.Input, currentTime, touchpadMinSwipe );
+
+	// Add the short back press to the event list
+	if ( BackKeyDownLastFrame && !backButtonDownThisFrame )
+	{
+		AddKeyEventToFrame( OVR_KEY_BACK, KEY_EVENT_SHORT_PRESS, 0 );
+	}
+
+	BackKeyDownLastFrame = backButtonDownThisFrame;
 
 	// This is the only place FrameNumber gets incremented,
 	// right before calling vrapi_GetPredictedDisplayTime().
@@ -423,7 +693,6 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 	vrFrame.DeviceStatus.HeadPhonesPluggedState		= HeadPhonesPluggedState;
 	vrFrame.DeviceStatus.DeviceIsDocked				= ( vrapi_GetSystemStatusInt( &java, VRAPI_SYS_STATUS_DOCKED ) != VRAPI_FALSE );
 	vrFrame.DeviceStatus.HeadsetIsMounted			= ( vrapi_GetSystemStatusInt( &java, VRAPI_SYS_STATUS_MOUNTED ) != VRAPI_FALSE );
-	vrFrame.DeviceStatus.PowerLevelStateThrottled	= ( vrapi_GetSystemStatusInt( &java, VRAPI_SYS_STATUS_THROTTLED ) != VRAPI_FALSE );
 }
 
 }	// namespace OVR
@@ -433,7 +702,7 @@ extern "C"
 {
 JNIEXPORT void Java_com_oculus_vrappframework_HeadsetReceiver_headsetStateChanged( JNIEnv * jni, jclass clazz, jint state )
 {
-	LOG( "nativeHeadsetEvent(%i)", state );
+	OVR_LOG( "nativeHeadsetEvent(%i)", state );
 	OVR::HeadPhonesPluggedState = ( state == 1 ) ? OVR::OVR_HEADSET_PLUGGED : OVR::OVR_HEADSET_UNPLUGGED;
 }
 }	// extern "C"

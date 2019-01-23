@@ -15,9 +15,14 @@ def call( cmdline ):
 
 def sdk_install_media( mediaDirName ):
     if os.path.exists(mediaDirName):
-        installcmd = "adb push " + mediaDirName + " /sdcard/"
+        installcmd = "adb push " + mediaDirName + "/." + " /sdcard/"
         print("Executing: %s " % installcmd)
         call( installcmd )
 
 if __name__ == '__main__':
-    sdk_install_media( 'sdcard_SDK' )
+
+    media_folder = "sdcard_SDK"
+    if len(sys.argv) > 1 and sys.argv[1] != "":
+        media_folder = sys.argv[1]
+
+    sdk_install_media( media_folder )

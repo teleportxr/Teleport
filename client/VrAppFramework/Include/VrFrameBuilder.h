@@ -5,7 +5,7 @@ Content     :   Builds the input for VrAppInterface::Frame()
 Created     :   April 26, 2015
 Authors     :   John Carmack
 
-Copyright   :   Copyright 2015 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
 
@@ -56,8 +56,6 @@ public:
 
 	void				Init( ovrJava * java );
 
-	void				UpdateNetworkState( JNIEnv * jni, jclass activityClass, jobject activityObject );
-
 	void				AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobile * ovr,
 										const ovrJava & java,
 										const ovrTrackingTransform trackingTransform,
@@ -66,7 +64,6 @@ public:
 
 private:
 	ovrFrameInput vrFrame;
-	KeyState	BackKeyState;
 
 	double		lastTouchpadTime;
 	double		touchpadTimer;
@@ -74,8 +71,65 @@ private:
 	int			touchState;
 	Vector2f	touchOrigin;
 
-	void 		InterpretTouchpad( VrInput & input, const double currentTime );
+	bool		BackKeyDownLastFrame;
+	bool		RemoteTouchpadTouchedLastFrame[2];
+	Vector2f	RemoteTouchpadPositionLastFrame[2];
+	bool		TreatRemoteTouchpadTouchedAsButtonDown[2];
+
+	void 		InterpretTouchpad( VrInput & input, const double currentTime, const float min_swipe_distance );
 	void		AddKeyEventToFrame( ovrKeyCode const keyCode, KeyEventType const eventType, int const repeatCount );
+
+	// Joystick support to enable BUTTON_*STICK_UP, BUTTON_*STICK_DOWN, BUTTON_*STICK_LEFT and BUTTON_*STICK_RIGHT
+	struct ovrJoyStick_t
+	{
+
+		const float DeadZone = 0.1f;
+		bool LastStickState = false;
+		bool CurrStickState = false;
+		ovrKeyCode LastStickCode = OVR_KEY_NONE;
+		ovrKeyCode CurrStickCode = OVR_KEY_NONE;
+		Vector2f StickPos; // (x, y) position of Right Joystick
+
+		bool StickLeft = false;
+		bool StickRight = false;
+		bool StickUp = false;
+		bool StickDown = false;
+
+		void ResetCurrStick()
+		{
+			CurrStickState = false;
+			CurrStickCode = OVR_KEY_NONE;
+		}
+
+		void ResetLastStick()
+		{
+			LastStickState = false;
+			LastStickCode = OVR_KEY_NONE;
+		}
+
+		void SetLastStick()
+		{
+			LastStickState = CurrStickState;
+			LastStickCode = CurrStickCode;
+		}
+
+		void SetCurrStick( const ovrKeyCode keycode, const bool state )
+		{
+			CurrStickState = state;
+			CurrStickCode = keycode;
+		}
+
+		void ResetDirection()
+		{
+			StickLeft = false;
+			StickRight = false;
+			StickUp = false;
+			StickDown = false;
+		}
+	};
+	
+	ovrJoyStick_t RStick;
+	ovrJoyStick_t LStick;
 };
 
 }	// namespace OVR

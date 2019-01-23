@@ -5,7 +5,7 @@ Content     :   Activity used by the application framework.
 Created     :   9/26/2013
 Authors     :   John Carmack
 
-Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
 package com.oculus.vrappframework;
@@ -26,8 +26,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.ComponentName;
 import android.content.ActivityNotFoundException;
 import android.media.AudioManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -227,11 +225,23 @@ public class VrActivity extends Activity {
 	*/
 
 	private float deadBand(float f) {
-		// The K joypad seems to need a little more dead band to prevent
+		// The XBOX joypad seems to need a quite a bit more dead band to prevent
 		// creep.
-		if (f > -0.01f && f < 0.01f) {
+		float deadspace = 0.1f;
+		float scale = 1.0f / (1.0f - deadspace);
+		
+		if (f > -deadspace && f < deadspace) {
 			return 0.0f;
 		}
+
+		if ( f > 0.0f ) {
+			f -= deadspace;
+		} else {
+			f += deadspace;
+		}
+		
+		f *= scale;
+
 		return f;
 	}
 
@@ -396,11 +406,6 @@ public class VrActivity extends Activity {
 	@Override
 	public boolean dispatchTouchEvent( MotionEvent e ) {
 		// Log.d(TAG, "real:" + e );		
-		int action = e.getAction();
-		float x = e.getRawX();
-		float y = e.getRawY();
-		Log.d(TAG, "onTouch dev:" + e.getDeviceId() + " act:" + action + " ind:" + e.getActionIndex() + " @ "+ x + "," + y );
-		nativeTouch( getAppPtr(), action, x, y );
 		return true;
 	}
 
@@ -558,17 +563,6 @@ public class VrActivity extends Activity {
 		}
 
 		return notInstalled;
-	}
-
-	public static boolean isWifiConnected( final Activity act ) {
-		try {
-			ConnectivityManager connManager = (ConnectivityManager) act.getSystemService( Context.CONNECTIVITY_SERVICE );
-			NetworkInfo mWifi = connManager.getNetworkInfo( ConnectivityManager.TYPE_WIFI );
-			return mWifi.isConnected();
-		} catch ( Exception e ) {
-			Log.d( TAG, "VrActivity::isWifiConnected exception: Make sure android.permission.ACCESS_NETWORK_STATE is set in the manifest." );
-		}
-		return false;
 	}
 
 	public static boolean isHybridApp( final Activity act ) {

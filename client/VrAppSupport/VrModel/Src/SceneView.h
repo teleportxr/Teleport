@@ -5,7 +5,7 @@ Content     :   Basic viewing and movement in a scene.
 Created     :   December 19, 2013
 Authors     :   John Carmack
 
-Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 ************************************************************************************/
 
@@ -41,7 +41,12 @@ public:
 class OvrSceneView
 {
 public:
-							OvrSceneView();
+	enum ovrSceneFlags
+	{
+		SCENE_FLAG_IGNORE_JOYSTICK_UNTIL_DEADZONE = ( 1 << 0 )
+	};
+
+							OvrSceneView( const int flags = 0 );
 
 	// The default view will be located at the origin, looking down the -Z axis,
 	// with +X to the right and +Y up.
@@ -205,6 +210,8 @@ private:
 	ovrTracking2			CurrentTracking;
 
 	float					YawMod;
+
+	int						SceneFlags;
 };
 
 // It probably isn't worth keeping these shared here, each user

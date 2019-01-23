@@ -3,21 +3,15 @@
 # using the externalNativeBuild path. This file can go away, once
 # remaining usage can be stripped from test libraries and applications.
 
-ifeq ($(OVR_DEBUG),1)
-  BUILDTYPE := Debug
-else
- BUILDTYPE := Release
-endif
-
 # This needs to be defined to get the right header directories for egl / etc
 # NOTE: this is ignored from here now, and must be specified in build.gradle!
 APP_PLATFORM := android-21
 
 APP_ABI := armeabi-v7a
 
-# Statically link the GNU STL. This may not be safe for multi-so libraries but
+# Statically link the C++_STATIC STL. This may not be safe for multi-so libraries but
 # we don't know of any problems yet.
-APP_STL := gnustl_static
+APP_STL := c++_static
 
 # Make sure every shared lib includes a .note.gnu.build-id header, for crash reporting
 APP_LDFLAGS := -Wl,--build-id

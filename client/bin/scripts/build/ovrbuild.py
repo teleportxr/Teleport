@@ -132,6 +132,12 @@ class BuildFailedException(Exception):
 class NoSourceException(Exception):
     pass
 
+# 'unicode' is not present with python 3.x
+try:
+    STRING_TYPES = [ str, unicode ]
+except:
+    STRING_TYPES = [ str, ]
+
 def build_command_list(cmdline, shell):
     """
     Returns a list of command-line arguments for subprocess.Popen
@@ -145,7 +151,7 @@ def build_command_list(cmdline, shell):
     if not cmdline:
         return []
     encoding = locale.getpreferredencoding() if shell else 'utf-8'
-    cmds = shlex.split(cmdline) if type(cmdline) in [ str, unicode ] else cmdline
+    cmds = shlex.split(cmdline) if type(cmdline) in STRING_TYPES else cmdline
     return map(lambda x: str(x).encode(encoding, 'ignore'), cmds)
 
 def call( cmdline, targetDir=".", suppressErrors=False, grabStdOut=False, verbose=True ):
@@ -154,14 +160,14 @@ def call( cmdline, targetDir=".", suppressErrors=False, grabStdOut=False, verbos
 
     with util.chdir(targetDir):
         if verbose:
-            print ' '.join(cmds)
+            print( ' '.join(map(bytes.decode,cmds)))
         if grabStdOut:
             p = Popen( cmdline, stdout=PIPE, stderr=PIPE, shell=useShell )
         else:
             p = Popen( cmdline, stderr=PIPE, shell=useShell )
         (out, err) = p.communicate()
         if grabStdOut and verbose:
-            print out
+            print(out)
         if not p.returncode == 0:
             # if this is not a source build, there will be no 'assemble' task for the root gradle to complete, so it
             # will throw an exception.  Rather than have the script determine whether a source build is necessary before
@@ -171,9 +177,9 @@ def call( cmdline, targetDir=".", suppressErrors=False, grabStdOut=False, verbos
               raise NoSourceException( targetDir )
             error_string = "command (%s) failed with returncode: %d" % (cmdline, p.returncode)
             if verbose:
-                print err
+                print(err)
             if suppressErrors:
-                print error_string
+                print(error_string)
             else:
                 raise BuildFailedException(error_string)
 
@@ -183,7 +189,7 @@ def check_call( cmdline ):
     try:
         call( cmdline, suppressErrors=False, grabStdOut=True, verbose=False )
         return True
-    except Exception, e:
+    except Exception as e:
         return False
 
 def init(options_parser = CommandOptions.parse):
@@ -203,7 +209,7 @@ def gradle_command():
     # Use the wrapper so people don't need to install Gradle
     # Handle directory structure types for building from an app project and building
     # from within a lib project
-    paths = ['.', '../../../', '../../../../', '../../../../../']
+    paths = ['.',  '../../', '../../../', '../../../../', '../../../../../']
     scriptdir  = os.path.realpath( os.path.dirname(os.path.realpath(__file__) ) )
     for path in paths:
         if os.path.exists(os.path.join(scriptdir, path, 'gradlew')):
@@ -248,7 +254,7 @@ def run_gradle_task(opts, task, args = None):
 
 def build_in_dir( targetDir, args = []):
     with util.chdir(targetDir):
-        print "\n\nbuilding in " + targetDir
+        print('\n\nbuilding in ' + targetDir)
         if os.path.exists( 'build.gradle' ):
             if command_options.should_clean:
                 run_gradle_task(command_options, 'clean')
@@ -256,7 +262,7 @@ def build_in_dir( targetDir, args = []):
                 run_gradle_task(command_options, 'assembleDebug', args)
             else:
                 run_gradle_task(command_options, 'assembleRelease', args)
-        print "\n\nfinished building in " + targetDir
+        print('\n\nfinished building in ' + targetDir)
 
 def build():
     try:
@@ -275,7 +281,7 @@ def build():
 
         # build the application
         build_in_dir( ".", flags )
-    except BuildFailedException, e:
-        print e.message
+    except BuildFailedException as e:
+        print( e.message )
         exit(-1)
 

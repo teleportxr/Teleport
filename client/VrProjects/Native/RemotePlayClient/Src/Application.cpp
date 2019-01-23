@@ -79,7 +79,7 @@ Application::Application()
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
 
 	if(enet_initialize() != 0) {
-		FAIL("Failed to initialize ENET library");
+		OVR_FAIL("Failed to initialize ENET library");
 	}
 }
 
@@ -142,7 +142,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 													uniformParms, 1);
 
 			if(!mVideoSurfaceProgram.IsValid()) {
-				FAIL("Failed to build video surface shader program");
+				OVR_FAIL("Failed to build video surface shader program");
 				return;
 			}
 		}
@@ -283,7 +283,7 @@ bool Application::InitializeController()
 	}
 
 	if(mControllerID != -1) {
-		LOG("Found GearVR controller (ID: %x)", mControllerID);
+		OVR_LOG("Found GearVR controller (ID: %x)", mControllerID);
 
 		ovrInputTrackedRemoteCapabilities trackedInputCaps;
 		trackedInputCaps.Header = inputCapsHeader;
@@ -302,7 +302,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 		return;
 	}
 
-    WARN("VIDEO STREAM CHANGED: %d %d %d", port, width, height);
+    OVR_WARN("VIDEO STREAM CHANGED: %d %d %d", port, width, height);
 
 	avs::NetworkSourceParams sourceParams = {};
 	sourceParams.socketBufferSize = 16 * 1024 * 1024; // 16MiB socket buffer size
@@ -310,7 +310,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	sourceParams.maxJitterBufferLength = 0;
 
 	if(!mNetworkSource.configure(1, port, mSession.GetServerIP().c_str(), port, sourceParams)) {
-		WARN("OnVideoStreamChanged: Failed to configure network source node");
+		OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
 		return;
 	}
 
@@ -320,7 +320,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	decoderParams.prependStartCodes = false;
 	decoderParams.deferDisplay = false;
 	if(!mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams)) {
-		WARN("OnVideoStreamChanged: Failed to configure decoder node");
+		OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
 		mNetworkSource.deconfigure();
 		return;
 	}
@@ -333,7 +333,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 
 void Application::OnVideoStreamClosed()
 {
-    WARN("VIDEO STREAM CLOSED");
+    OVR_WARN("VIDEO STREAM CLOSED");
 
 	mPipeline.deconfigure();
 	mPipeline.reset();
@@ -349,14 +349,14 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, 
 {
 	switch(severity) {
 		case avs::LogSeverity::Critical:
-			FAIL("%s", msg);
+			OVR_FAIL("%s", msg);
 			break;
 		case avs::LogSeverity::Error:
 		case avs::LogSeverity::Warning:
-			WARN("%s", msg);
+			OVR_WARN("%s", msg);
 			break;
 		default:
-			LOG("%s", msg);
+			OVR_LOG("%s", msg);
 			break;
 	}
 }

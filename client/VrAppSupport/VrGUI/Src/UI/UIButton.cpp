@@ -5,7 +5,7 @@ Content     :
 Created     :	1/23/2015
 Authors     :   Jim Dose
 
-Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
 
@@ -37,6 +37,13 @@ UIButton::UIButton( OvrGuiSys &guiSys ) :
 
 UIButton::~UIButton()
 {
+	// since components get deleted when the VRMenuObject is deleted, we need to let the 
+	// component know that it no longer has a valid button.
+	if ( ButtonComponent != nullptr ) 
+	{
+		ButtonComponent->OwnerDeleted();
+		ButtonComponent = nullptr;
+	}
 }
 
 void UIButton::AddToMenu( UIMenu *menu, UIObject *parent )
@@ -189,10 +196,14 @@ UIButtonComponent::UIButtonComponent( UIButton &button ) :
             VRMENU_EVENT_TOUCH_UP |
             VRMENU_EVENT_FOCUS_GAINED |
             VRMENU_EVENT_FOCUS_LOST ),
-    Button( button ),
+    Button( &button ),
 	TouchDown( false )
-
 {
+}
+
+UIButtonComponent::~UIButtonComponent()
+{
+	Button = nullptr;
 }
 
 //==============================
@@ -200,6 +211,11 @@ UIButtonComponent::UIButtonComponent( UIButton &button ) :
 eMsgStatus UIButtonComponent::OnEvent_Impl( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
         VRMenuObject * self, VRMenuEvent const & event )
 {
+	if ( Button == nullptr ) 
+	{
+		OVR_LOG( "UIButtonComponent::OnEvent_Impl - button deleted." );
+		return MSG_STATUS_ALIVE;
+	}
     switch( event.EventType )
     {
         case VRMENU_EVENT_FOCUS_GAINED:
@@ -207,31 +223,31 @@ eMsgStatus UIButtonComponent::OnEvent_Impl( OvrGuiSys & guiSys, ovrFrameInput co
         case VRMENU_EVENT_FOCUS_LOST:
             return FocusLost( guiSys, vrFrame, self, event );
         case VRMENU_EVENT_TOUCH_DOWN:
-			if ( Button.ToggleButton )
+			if ( Button->ToggleButton )
 			{
 				TouchDown = !TouchDown;
-				Button.OnClick();
+				Button->OnClick();
 			}
 			else
 			{
 				TouchDown = true;
-				if ( Button.ActionType == UIButton::eButtonActionType::ClickOnDown )
+				if ( Button->ActionType == UIButton::eButtonActionType::ClickOnDown )
 				{
-					Button.OnClick();
+					Button->OnClick();
 				}
 			}
-        	Button.UpdateButtonState();
+        	Button->UpdateButtonState();
 			DownSoundLimiter.PlaySoundEffect( guiSys, TouchDownSnd.ToCStr(), 0.1 );
             return MSG_STATUS_ALIVE;
 		case VRMENU_EVENT_TOUCH_UP:
-			if ( !Button.ToggleButton )
+			if ( !Button->ToggleButton )
 			{
 				TouchDown = false;
 			}
-        	Button.UpdateButtonState();
-			if ( !Button.ToggleButton && Button.ActionType == UIButton::eButtonActionType::ClickOnUp )
+        	Button->UpdateButtonState();
+			if ( !Button->ToggleButton && Button->ActionType == UIButton::eButtonActionType::ClickOnUp )
 			{
-				Button.OnClick();
+				Button->OnClick();
 			}
 			UpSoundLimiter.PlaySoundEffect( guiSys, TouchUpSnd.ToCStr(), 0.1 );
             return MSG_STATUS_ALIVE;
@@ -246,10 +262,15 @@ eMsgStatus UIButtonComponent::OnEvent_Impl( OvrGuiSys & guiSys, ovrFrameInput co
 eMsgStatus UIButtonComponent::FocusGained( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
         VRMenuObject * self, VRMenuEvent const & event )
 {
+	if ( Button == nullptr ) 
+	{
+		return MSG_STATUS_ALIVE;
+	}
+
     // set the hilight flag
-	Button.FocusGained();
+	Button->FocusGained();
     self->SetHilighted( true );
-    Button.UpdateButtonState();
+    Button->UpdateButtonState();
 	GazeOverSoundLimiter.PlaySoundEffect( guiSys, "gaze_on", 0.1 );
     return MSG_STATUS_ALIVE;
 }
@@ -259,12 +280,16 @@ eMsgStatus UIButtonComponent::FocusGained( OvrGuiSys & guiSys, ovrFrameInput con
 eMsgStatus UIButtonComponent::FocusLost( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
         VRMenuObject * self, VRMenuEvent const & event )
 {
+	if ( Button == nullptr ) 
+	{
+		return MSG_STATUS_ALIVE;
+	}
     // clear the hilight flag
-	Button.FocusLost();
+	Button->FocusLost();
     self->SetHilighted( false );
-	if ( !Button.ToggleButton )
+	if ( !Button->ToggleButton )
 		TouchDown = false;
-    Button.UpdateButtonState();
+    Button->UpdateButtonState();
     GazeOverSoundLimiter.PlaySoundEffect( guiSys, "gaze_off", 0.1 );
     return MSG_STATUS_ALIVE;
 }

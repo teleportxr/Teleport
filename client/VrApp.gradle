@@ -6,15 +6,12 @@ import org.apache.tools.ant.taskdefs.condition.Os
 
 buildscript {
   repositories {
-    jcenter()
-    // Gradle 4.1 and higher include support for Google's Maven repo using
-    // the google() method. And you need to include this repo to download
-    // Android plugin 3.0.0 or higher.
     google()
+    jcenter()
   }
 
   dependencies {
-    classpath 'com.android.tools.build:gradle:3.0.1'
+    classpath 'com.android.tools.build:gradle:3.1.2'
   }
 }
 
@@ -29,15 +26,16 @@ class VrAppPlugin implements Plugin<Project> {
     return !receiver.getOutput().isEmpty();
   }
 
-  void checkOsig( IDevice device, String deviceSerial, FileTree sigDir ) {
-	if ( !isPackageInstalled( device, "com.samsung.android.hmt.vrsvc" ) ) {
-		return;
-	}
+  boolean checkOsig( IDevice device, String deviceSerial, FileTree sigDir ) {
+	  if ( !isPackageInstalled( device, "com.samsung.android.hmt.vrsvc" ) ) {
+  		return true;
+	  }
 
     def oculusSig = "oculussig_${deviceSerial}"
     if ( sigDir.matching { include "**/${oculusSig}"}.isEmpty() ) {
-      throw new RuntimeException( "Missing ${oculusSig}. You can generate this file at http://developer.oculus.com/osig/", null )
+      return false;
     }
+    return true;
   }
 
   void clearAdbLog( IDevice device ) {
@@ -82,7 +80,8 @@ class VrAppPlugin implements Plugin<Project> {
     CollectingOutputReceiver receiver = new CollectingOutputReceiver()
       def activityClass =   new XmlSlurper().parse( manifestFile ).application.activity.find{ it.'intent-filter'.find{ filter ->
         return filter.action  .find{it.'@android:name'.text() == 'android.intent.action.MAIN'      } \
-            && filter.category.find{it.'@android:name'.text() == 'android.intent.category.LAUNCHER'}
+            && ( filter.category.find{it.'@android:name'.text() == 'android.intent.category.LAUNCHER'} \
+            || filter.category.find{it.'@android:name'.text() == 'android.intent.category.INFO'} )
       }}.'@android:name'
       def startActivity = "${project.android.defaultConfig.applicationId}/${activityClass}"
       project.logger.quiet "Starting \'$startActivity\' on ${project.deviceMap.size()} devices:"
@@ -103,7 +102,7 @@ class VrAppPlugin implements Plugin<Project> {
     project.android {
 
 	  compileSdkVersion 21
-	  buildToolsVersion '26.0.2'
+	  buildToolsVersion '27.0.3'
 
 	  defaultConfig {
 		  minSdkVersion 21
@@ -115,7 +114,7 @@ class VrAppPlugin implements Plugin<Project> {
 			  }
 			  ndkBuild {
 				  def numProcs = Runtime.runtime.availableProcessors()
-				  arguments "V=0", "-j$numProcs", "-C$project.buildDir.parent", "APP_PLATFORM=android-21"
+				  arguments "V=0", "-j$numProcs", "-C$project.buildDir.parent", "APP_PLATFORM=android-21", "NDK_TOOLCHAIN_VERSION=clang", "APP_STL=c++_static"
 				  abiFilters 'armeabi-v7a'
 			  }
 		  }
@@ -166,7 +165,7 @@ class VrAppPlugin implements Plugin<Project> {
 
 			  externalNativeBuild {
   				  ndkBuild {
-					  arguments "NDK_DEBUG=1","OVR_DEBUG=1"
+					  arguments "NDK_DEBUG=1","OVR_DEBUG=1","USE_ASAN=1"
 				  }
 			  }
           }
@@ -178,7 +177,7 @@ class VrAppPlugin implements Plugin<Project> {
 
 			  externalNativeBuild {
   				  ndkBuild {
-					  arguments "NDK_DEBUG=0","OVR_DEBUG=0"
+					  arguments "NDK_DEBUG=0","OVR_DEBUG=0","USE_ASAN=0"
 				  }
 			  }
           }
@@ -200,25 +199,27 @@ class VrAppPlugin implements Plugin<Project> {
   project.afterEvaluate {
 
       Task initDeviceList = project.task( "initDeviceList()" ) << {
-        AndroidDebugBridge.initIfNeeded( false )
-        AndroidDebugBridge bridge = AndroidDebugBridge.createBridge( project.android.getAdbExe().absolutePath, false )
-
-        long timeOut = 30000 // 30 sec
-        int sleepTime = 1000
-        while ( !bridge.hasInitialDeviceList() && timeOut > 0 ) {
-            sleep( sleepTime )
-            timeOut -= sleepTime
-        }
-        if ( timeOut <= 0 && !bridge.hasInitialDeviceList() ) {
-            throw new RuntimeException( "Timeout getting device list.", null )
-        }
-
         project.ext.deviceMap = [ : ]
-        // if a device is connected both physically and over the network, only include the physical ID
-        if ( project.hasProperty( "should_install" ) == true ) {
-          bridge.devices.split { it.getProperty( "ro.serialno" ) != it.serialNumber }.each {
-           it.collectEntries( project.deviceMap, { [ ( it.getProperty( "ro.serialno" )) : it ] } )
-          }
+        if (project.hasProperty( "should_install" ) == true || project.hasProperty( "disable_sig_check" ) == false) {
+            AndroidDebugBridge.initIfNeeded( false )
+            AndroidDebugBridge bridge = AndroidDebugBridge.createBridge( project.android.getAdbExe().absolutePath, false )
+
+            long timeOut = 30000 // 30 sec
+            int sleepTime = 1000
+            while ( !bridge.hasInitialDeviceList() && timeOut > 0 ) {
+                sleep( sleepTime )
+                timeOut -= sleepTime
+            }
+            if ( timeOut <= 0 && !bridge.hasInitialDeviceList() ) {
+                throw new RuntimeException( "Timeout getting device list.", null )
+            }
+
+            // if a device is connected both physically and over the network, only include the physical ID
+            if ( project.hasProperty( "should_install" ) == true ) {
+                  bridge.devices.split { it.getProperty( "ro.serialno" ) != it.serialNumber }.each {
+                   it.collectEntries( project.deviceMap, { [ ( it.getProperty( "ro.serialno" )) : it ] } )
+                }
+            }
         }
       }
 
@@ -246,7 +247,10 @@ class VrAppPlugin implements Plugin<Project> {
             }
             String deviceSerial = deviceElem.key
             IDevice device = deviceElem.value
-            checkOsig( device, deviceSerial, project.fileTree( dir: "../../assets" ).plus( project.fileTree( dir: "assets" ) ))
+            if ( !checkOsig( device, deviceSerial, project.fileTree( dir: "../assets" ).plus( project.fileTree( dir: "assets" ) ) ) &&
+                 !checkOsig( device, deviceSerial, project.fileTree( dir: "../../assets" ).plus( project.fileTree( dir: "assets" ) ) ) ) {
+                throw new RuntimeException( "Missing oculussig_${deviceSerial}. You can generate this file at http://developer.oculus.com/osig/", null )
+              }
           }
 
       }
@@ -338,12 +342,11 @@ project.task('genDebugKeystore', type: GenDebugKeystore ) {
 // *******************************
 
 class BuildSDKLibs extends DefaultTask {
+
+    String buildType
+
     @TaskAction
     buildSdkLibs() {
-        
-        // If the projects build type is set to Debug we build the debug libs otherwise we default
-        // to building the release libs
-        String buildType = project.ext.buildType == 'Debug' ? "debug" : ""
 
         println "buildSdkLibs() started"
         if (Os.isFamily(Os.FAMILY_WINDOWS)) {
@@ -364,9 +367,15 @@ class BuildSDKLibs extends DefaultTask {
     }
 }
 
-project.task('buildSdkLibs', type: BuildSDKLibs ) {
+project.task('buildSdkLibsDebug', type: BuildSDKLibs) {
     description 'build sdk libs'
+    buildType = "debug"
 }
+
+project.task('buildSdkLibsRelease', type: BuildSDKLibs) {
+    description 'build sdk libs'
+    buildType = "release"
+}	
 
 // **************************************************************
 // Task interceptor to add dependant tasks
@@ -379,8 +388,11 @@ project.tasks.whenTaskAdded { task ->
     if (task.name == 'validateSigningRelease') {
         task.dependsOn 'genDebugKeystore'
     }
-    if (task.name == 'preDebugBuild' || task.name == 'preReleaseBuild') {
-        task.dependsOn 'buildSdkLibs'
+    if (task.name == 'preDebugBuild') {
+        task.dependsOn buildSdkLibsDebug
+    }
+    if (task.name == 'preReleaseBuild') {
+        task.dependsOn buildSdkLibsRelease
     }
 }
 
