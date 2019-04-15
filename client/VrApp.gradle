@@ -102,7 +102,6 @@ class VrAppPlugin implements Plugin<Project> {
     project.android {
 
 	  compileSdkVersion 21
-	  buildToolsVersion '27.0.3'
 
 	  defaultConfig {
 		  minSdkVersion 21
@@ -350,7 +349,7 @@ class BuildSDKLibs extends DefaultTask {
 
         println "buildSdkLibs() started"
         if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-            def pythonCmd = "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_sdklibs.py.bat"
+            def pythonCmd = "${project.rootProject.projectDir}/client/bin/scripts/build/ovrbuild_sdklibs.py.bat"
             project.exec {
                 commandLine pythonCmd,
                 buildType
@@ -359,7 +358,7 @@ class BuildSDKLibs extends DefaultTask {
             def pythonCmd = 'python'
             project.exec {
                 commandLine pythonCmd,
-                "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_sdklibs.py",
+                "${project.rootProject.projectDir}/client/bin/scripts/build/ovrbuild_sdklibs.py",
                 buildType
             }
         }

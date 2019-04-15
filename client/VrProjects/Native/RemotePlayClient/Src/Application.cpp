@@ -197,13 +197,13 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 
 	// Try to find remote controller
-	if(mControllerID == -1) {
+	if((int)mControllerID == -1) {
 		InitializeController();
 	}
 
     // Query controller input state.
     ControllerState controllerState = {};
-    if(mControllerID != -1) {
+    if((int)mControllerID != -1) {
 		ovrInputStateTrackedRemote ovrState;
 		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
 		if(vrapi_GetCurrentInputState(app->GetOvrMobile(), mControllerID, &ovrState.Header) >= 0) {

@@ -11,7 +11,8 @@ Clone the repository with submodules:
 1. Visual Studio 2017 (with Visual C++ tools for CMake)
 2. Android Studio
 3. Unreal Engine 4.20 (launcher version)
-4. NVIDIA CUDA Toolkit
+4. NVIDIA CUDA Toolkit 9 with patch.
+5. NVIDIA Video Codec SDK
 	
 ## Building UE4 plugin
 
@@ -28,6 +29,7 @@ This is ShooterGame project modified to work with RemotePlay.
 2. Copy `plugins/UnrealPlugin/Plugins/RemotePlay` to `plugins/UnrealDemo/Plugins/RemotePlay`. Delete `Binaries` & `Intermediate` directories if present.
 3. Build `UnrealDemo` UE4 project in `Development Editor` configuration.
 4. Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
+5. Go to Edit->Editor Preferences, General->Performance and disable " "Use Less CPU When in Background"
 
 ## Building GearVR client application
 
@@ -35,6 +37,7 @@ This is ShooterGame project modified to work with RemotePlay.
 2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client/VrProjects/Native/RemotePlayClient/assets` directory.
 3. Connect your Android device to your PC and make sure that ADB debugging is enabled and the PC is authorized.
 4. Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
+5. In Android Studio open  client\VrProjects\Native\RemotePlayClient\Projects\Android
 
 ## Running
 

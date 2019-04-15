@@ -1,4 +1,4 @@
-apply from: "${rootProject.projectDir}/VrLib.gradle"
+apply from: "${rootProject.projectDir}/client/VrLib.gradle"
 apply plugin: 'com.android.library'
 
 android {
@@ -8,7 +8,9 @@ android {
 				targets "vrgui"
 			}
 		}
-	}
+        minSdkVersion 21
+        targetSdkVersion 21
+    }
 
 	sourceSets {
 		main {

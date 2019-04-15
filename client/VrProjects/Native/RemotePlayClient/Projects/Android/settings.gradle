@@ -1,9 +1,11 @@
-rootProject.projectDir = new File(settingsDir, '../../../../..')
-rootProject.name = "RemotePlayClient"
+include ':mylibrary', ':mylibrary2', ':avstream'
+rootProject.projectDir = new File(settingsDir, '../../../../../..')
+rootProject.name = "client"
 
 include ':', \
-	'VrAppFramework:Projects:Android', \
-	'VrAppSupport:VrLocale:Projects:Android', \
-	'VrAppSupport:VrSound:Projects:Android', \
-	'VrProjects:Native:RemotePlayClient:Projects:Android', \
-	'VrAppSupport:VrGUI:Projects:Android'
+	'client:VrAppFramework:Projects:Android', \
+	'client:VrAppSupport:VrLocale:Projects:Android', \
+	'client:VrAppSupport:VrSound:Projects:Android', \
+	'client:VrProjects:Native:RemotePlayClient:Projects:Android', \
+	'client:VrAppSupport:VrGUI:Projects:Android', \
+	'libavstream'

@@ -10,13 +10,14 @@ buildscript {
 }
 
 apply plugin: 'com.android.application'
-apply from: "${rootProject.projectDir}/VrApp.gradle"
+apply from: "${rootProject.projectDir}/client/VrApp.gradle"
 
 dependencies {
-  implementation project(':VrAppFramework:Projects:Android')
-  implementation project(':VrAppSupport:VrGUI:Projects:Android')
-  implementation project(':VrAppSupport:VrLocale:Projects:Android')
-  implementation project(':VrAppSupport:VrSound:Projects:Android')
+  implementation project(':client:VrAppFramework:Projects:Android')
+  implementation project(':client:VrAppSupport:VrGUI:Projects:Android')
+  implementation project(':client:VrAppSupport:VrLocale:Projects:Android')
+  implementation project(':client:VrAppSupport:VrSound:Projects:Android')
+  implementation project(':libavstream')
 
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
@@ -26,7 +27,6 @@ apply plugin: 'kotlin-android-extensions'
 
 android {
   project.archivesBaseName = "remoteplayclient"
-
   defaultConfig {
     applicationId "co.Simul.remoteplayclient"
 

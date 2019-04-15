@@ -170,6 +170,8 @@ void SessionClient::Disconnect(uint timeout)
                     case ENET_EVENT_TYPE_DISCONNECT:
                         isPeerConnected = false;
                         break;
+                    default:
+                        break;
                 }
             }
 

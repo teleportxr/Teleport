@@ -12,7 +12,6 @@ class VrLibPlugin implements Plugin<Project> {
 
     project.android {
       compileSdkVersion 21
-      buildToolsVersion '27.0.3'
 
       defaultConfig {
             minSdkVersion 21

@@ -14,8 +14,8 @@ set(srcs
 	stdafx.h
 	targetver.h
 )
-include_directories($ENV{SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include)
-link_directories("$ENV{SIMUL}/lib/x64/v140/Static Release" ${CMAKE_SOURCE_DIR}/../libavstream/build_static/release ${CMAKE_SOURCE_DIR}/../thirdparty/enet/build_static/release)
+include_directories(${SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include)
+link_directories("${SIMUL}/lib/x64/v140/Static Release" ${CMAKE_SOURCE_DIR}/../libavstream/build_static/release ${CMAKE_SOURCE_DIR}/../thirdparty/enet/build_static/release)
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
@@ -27,6 +27,7 @@ add_executable (pc_client ${srcs})
 
 set_target_properties(pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties(pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+set_target_properties( pc_client PROPERTIES FOLDER Client)
 target_compile_features(pc_client PRIVATE cxx_std_17)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

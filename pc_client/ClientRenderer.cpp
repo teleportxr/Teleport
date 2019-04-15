@@ -23,8 +23,6 @@ std::uniform_real_distribution<float> rando(-1.0f,1.f);
 
 using namespace simul;
 
-
-
 void set_float4(float f[4], float a, float b, float c, float d)
 {
 	f[0] = a;

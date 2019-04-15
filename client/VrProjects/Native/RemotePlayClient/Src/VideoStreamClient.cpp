@@ -66,8 +66,8 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
         const auto timestamp = std::chrono::steady_clock::now();
         if(timestamp - lastTimestamp >= StatInterval) {
             const avs::NetworkSourceCounters counters = networkSource.getCounterValues();
-            OVR_WARN("NP: %llu/%llu | DP: %llu/%llu | BYTES: %llu",
-                 counters.networkPacketsReceived, counters.networkPacketsDropped,
+            OVR_WARN("NP: %lu/%lu | DP: %lu/%lu | BYTES: %lu",
+                     counters.networkPacketsReceived, counters.networkPacketsDropped,
                  counters.decoderPacketsReceived, counters.decoderPacketsDropped,
                  counters.bytesReceived
             );

@@ -17,8 +17,8 @@ void Java_co_Simul_remoteplayclient_VideoDecoder_nativeFrameAvailable(JNIEnv* en
 VideoDecoderProxy::JNI VideoDecoderProxy::jni;
 
 VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInterface, avs::VideoCodec codecType)
-    : mInitialized(false)
-    , mFrameWidth(0), mFrameHeight(0)
+    : mFrameWidth(0), mFrameHeight(0)
+    , mInitialized(false)
     , mSurfaceTexture(nullptr)
     , mEventInterface(eventInterface)
     , mEnv(env)
