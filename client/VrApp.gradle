@@ -1,4 +1,4 @@
-import org.gradle.internal.os.OperatingSystem;
+import org.gradle.internal.os.OperatingSystem
 import com.android.ddmlib.AndroidDebugBridge
 import com.android.ddmlib.IDevice
 import com.android.ddmlib.CollectingOutputReceiver
@@ -21,21 +21,21 @@ class VrAppPlugin implements Plugin<Project> {
   // per-device methods //
 
   boolean isPackageInstalled( IDevice device, String packageName ) {
-	CollectingOutputReceiver receiver = new CollectingOutputReceiver();
-    device.executeShellCommand( "pm list packages " + packageName, receiver );
-    return !receiver.getOutput().isEmpty();
+	CollectingOutputReceiver receiver = new CollectingOutputReceiver()
+    device.executeShellCommand( "pm list packages " + packageName, receiver )
+    return !receiver.getOutput().isEmpty()
   }
 
   boolean checkOsig( IDevice device, String deviceSerial, FileTree sigDir ) {
 	  if ( !isPackageInstalled( device, "com.samsung.android.hmt.vrsvc" ) ) {
-  		return true;
+  		return true
 	  }
 
     def oculusSig = "oculussig_${deviceSerial}"
     if ( sigDir.matching { include "**/${oculusSig}"}.isEmpty() ) {
-      return false;
+      return false
     }
-    return true;
+    return true
   }
 
   void clearAdbLog( IDevice device ) {
@@ -105,7 +105,7 @@ class VrAppPlugin implements Plugin<Project> {
 
 	  defaultConfig {
 		  minSdkVersion 21
-		  targetSdkVersion 21
+		  targetSdkVersion 26
 
 		  externalNativeBuild {
 			  ndk {
@@ -171,8 +171,8 @@ class VrAppPlugin implements Plugin<Project> {
 
           release {
 			  signingConfig signingConfigs.release
-			  debuggable false
-			  jniDebuggable false
+			  debuggable true
+			  jniDebuggable true
 
 			  externalNativeBuild {
   				  ndkBuild {
@@ -199,7 +199,7 @@ class VrAppPlugin implements Plugin<Project> {
 
       Task initDeviceList = project.task( "initDeviceList()" ) << {
         project.ext.deviceMap = [ : ]
-        if (project.hasProperty( "should_install" ) == true || project.hasProperty( "disable_sig_check" ) == false) {
+        if (project.hasProperty( "should_install" ) || !project.hasProperty( "disable_sig_check" ) ) {
             AndroidDebugBridge.initIfNeeded( false )
             AndroidDebugBridge bridge = AndroidDebugBridge.createBridge( project.android.getAdbExe().absolutePath, false )
 

@@ -1,7 +1,7 @@
 # This file is included in all .mk files to ensure their compilation flags are in sync
 # across debug and release builds.
 
-LOCAL_CFLAGS	:= -DANDROID_NDK
+LOCAL_CFLAGS	:= -DANDROID_NDK -DPLATFORM_ANDROID
 #LOCAL_CFLAGS	+= -Werror			# error on warnings
 LOCAL_CFLAGS	+= -Wall
 LOCAL_CFLAGS	+= -Wextra
@@ -12,7 +12,7 @@ LOCAL_CFLAGS	+= -Wno-unused-parameter
 LOCAL_CFLAGS	+= -Wno-missing-field-initializers	# warns on this: SwipeAction	ret = {}
 LOCAL_CFLAGS	+= -Wno-multichar	# used in internal Android headers:  DISPLAY_EVENT_VSYNC = 'vsyn',
 LOCAL_CPPFLAGS  += -Wno-invalid-offsetof
-LOCAL_CPPFLAGS  += -std=c++11
+LOCAL_CPPFLAGS  += -std=c++17
 LOCAL_CPPFLAGS  += -frtti
 
 ifeq ($(OVR_DEBUG),1)

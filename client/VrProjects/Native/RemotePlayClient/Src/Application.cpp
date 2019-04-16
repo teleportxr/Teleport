@@ -143,7 +143,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 			if(!mVideoSurfaceProgram.IsValid()) {
 				OVR_FAIL("Failed to build video surface shader program");
-				return;
 			}
 		}
 
@@ -282,7 +281,7 @@ bool Application::InitializeController()
 		}
 	}
 
-	if(mControllerID != -1) {
+	if((int)mControllerID != -1) {
 		OVR_LOG("Found GearVR controller (ID: %x)", mControllerID);
 
 		ovrInputTrackedRemoteCapabilities trackedInputCaps;
@@ -348,13 +347,12 @@ void Application::OnFrameAvailable()
 void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, void*)
 {
 	switch(severity) {
-		case avs::LogSeverity::Critical:
-			OVR_FAIL("%s", msg);
-			break;
 		case avs::LogSeverity::Error:
 		case avs::LogSeverity::Warning:
 			OVR_WARN("%s", msg);
 			break;
+		case avs::LogSeverity::Critical:
+			OVR_FAIL("%s", msg);
 		default:
 			OVR_LOG("%s", msg);
 			break;

@@ -10,9 +10,11 @@ Clone the repository with submodules:
 
 1. Visual Studio 2017 (with Visual C++ tools for CMake)
 2. Android Studio
-3. Unreal Engine 4.20 (launcher version)
+3. Unreal Engine 4.22 incorporating the patch to move SceneCaptureSource from USceneCaptureComponent2D to USceneCaptureComponent
 4. NVIDIA CUDA Toolkit 9 with patch.
 5. NVIDIA Video Codec SDK
+6. Recent CMake, and get ninja.exe and put it in C:\Program Files\CMake\bin
+7. edit local.properties to contain cmake.dir=C\:\\Program Files\\CMake
 	
 ## Building UE4 plugin
 
