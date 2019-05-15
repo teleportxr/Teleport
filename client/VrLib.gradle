@@ -6,8 +6,9 @@ class VrLibPlugin implements Plugin<Project> {
 
     project.task( "cleanWorkAround" ) {
       description "Workaround for .externalNativeBuild not being deleted on clean"
-    } << {
-      project.delete project.file( ".externalNativeBuild" )
+        doLast {
+            project.delete project.file(".externalNativeBuild")
+        }
     }
 
     project.android {

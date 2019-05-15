@@ -1,4 +1,4 @@
-// (C) Copyright 2018 Simul.co
+// (C) Copyright 2018-2019 Simul Software Ltd
 
 #pragma once
 

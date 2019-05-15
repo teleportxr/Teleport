@@ -8,6 +8,7 @@
 #include "Simul/Platform/CrossPlatform/View.h"
 #include "Simul/Platform/CrossPlatform/Mesh.h"
 #include "Simul/Platform/CrossPlatform/GpuProfiler.h"
+#include "Simul/Platform/CrossPlatform/Macros.h"
 #include "Simul/Platform/CrossPlatform/Camera.h"
 #include "Simul/Platform/CrossPlatform/DeviceContext.h"
 #include "Simul/Platform/CrossPlatform/CommandLineParams.h"
@@ -17,6 +18,8 @@
 #include "Config.h"
 
 #include <random>
+#include <libavstream/surfaces/surface_dx11.hpp>
+
 
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
@@ -42,6 +45,24 @@ void apply_material()
 #include <shellapi.h>
 #include "ClientRenderer.h"
 
+
+struct TextureImpl :public Texture
+{
+	TextureImpl(simul::crossplatform::Texture *t)
+		:texture(t)
+	{
+	}
+	simul::crossplatform::Texture *texture = nullptr;
+	avs::SurfaceBackendInterface* createSurface() const override
+	{
+		return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
+	}
+};
+
+struct ShaderImpl :public Shader
+{
+};
+
 ClientRenderer::ClientRenderer():
 	renderPlatform(nullptr)
 	,hdrFramebuffer(nullptr)
@@ -54,15 +75,14 @@ ClientRenderer::ClientRenderer():
 	,diffuseCubemapTexture(nullptr)
 	,framenumber(0)
 	,sessionClient(this)
+	, RenderMode(0)
 {
+	textures.resize(NumStreams);
 }
 
 ClientRenderer::~ClientRenderer()
 {	
 	InvalidateDeviceObjects(); 
-	delete meshRenderer;
-	del(hDRRenderer,nullptr);
-	del(hdrFramebuffer,nullptr);
 }
 
 void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
@@ -106,7 +126,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	cameraConstants.RestoreDeviceObjects(renderPlatform);
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
-	sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
+	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
 }
 
 // This allows live-recompile of shaders. 
@@ -256,12 +276,19 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 			cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", specularTexture);
-			cubemapClearEffect->Apply(deviceContext, "cubemap_clear", 0);
-			renderPlatform->DrawQuad(deviceContext);
-			cubemapClearEffect->Unapply(deviceContext);
+			TextureHandle th = textures[0];
+			Texture &tx = *th;
+			TextureImpl *ti = static_cast<TextureImpl*>(&tx);
+			if (ti)
+			{
+				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+				cubemapClearEffect->Apply(deviceContext, RenderMode==1?"show_texture":"normal_view", 0);
+				renderPlatform->DrawQuad(deviceContext);
+				cubemapClearEffect->Unapply(deviceContext);
+			}
 		}
 
-		RenderOpaqueTest(deviceContext);
+	//	RenderOpaqueTest(deviceContext);
 
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -271,7 +298,7 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 	float s = 2.0f/ float(specularTexture->mips);
 	for (int i = 0; i < specularTexture->mips; i++)
 	{
-		float lod = i;
+		float lod = (float)i;
 		float x = -1.0f + 0.5f*s+ i*s;
 	//	renderPlatform->DrawCubemap(deviceContext, specularTexture, x, -.5, s, 1.0f, 1.0f, lod);
 	}
@@ -282,23 +309,30 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 	SIMUL_COMBINED_PROFILE_END(deviceContext)
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 	cpuProfiler.EndFrame();
-	const char *txt=renderPlatform->GetGpuProfiler()->GetDebugText();
+/*	const char *txt=renderPlatform->GetGpuProfiler()->GetDebugText();
 	renderPlatform->Print(deviceContext,0,0,txt);
 	txt=cpuProfiler.GetDebugText();
-	renderPlatform->Print(deviceContext,w/2,0,txt);
+	renderPlatform->Print(deviceContext,w/2,0,txt);*/
 	frame_number++;
 }
 
 void ClientRenderer::InvalidateDeviceObjects()
 {
+	for (auto i : textures)
+	{
+		TextureImpl *ti = (TextureImpl*)i.get();
+		if (ti)
+		{
+			SAFE_DELETE(ti->texture);
+		}
+	}
+	textures.clear();
 	if(transparentEffect)
 	{
 		transparentEffect->InvalidateDeviceObjects();
 		delete transparentEffect;
 		transparentEffect=nullptr;
 	}
-	delete cubemapClearEffect;
-	cubemapClearEffect = nullptr;
 	if(hDRRenderer)
 		hDRRenderer->InvalidateDeviceObjects();
 	if(renderPlatform)
@@ -307,12 +341,16 @@ void ClientRenderer::InvalidateDeviceObjects()
 		hdrFramebuffer->InvalidateDeviceObjects();
 	if(meshRenderer)
 		meshRenderer->InvalidateDeviceObjects();
-	delete transparentMesh;
-	transparentMesh=nullptr;
-	delete diffuseCubemapTexture;
-	diffuseCubemapTexture=nullptr;
-	delete specularTexture;
-	specularTexture = nullptr;
+	SAFE_DELETE(transparentMesh);
+	SAFE_DELETE(diffuseCubemapTexture);
+	SAFE_DELETE(specularTexture);
+	SAFE_DELETE(meshRenderer);
+	SAFE_DELETE(hDRRenderer);
+	SAFE_DELETE(hdrFramebuffer);
+	SAFE_DELETE(transparentEffect);
+	SAFE_DELETE(cubemapClearEffect);
+	SAFE_DELETE(diffuseCubemapTexture);
+	SAFE_DELETE(specularTexture);
 }
 
 void ClientRenderer::RemoveView(int)
@@ -325,18 +363,79 @@ bool ClientRenderer::OnDeviceRemoved()
 	return true;
 }
 
-void ClientRenderer::OnVideoStreamChanged(uint port, uint width, uint height)
+void ClientRenderer::CreateTexture(TextureHandle &th,int width, int height, avs::SurfaceFormat format)
 {
-    WARN("VIDEO STREAM CHANGED: %d %d %d", port, width, height);
+	if (!(th))
+		th.reset(new TextureImpl(nullptr));
+	Texture *t = th.get();
+	TextureImpl *ti=(TextureImpl*)t;
+	if(!ti->texture)
+		ti->texture = renderPlatform->CreateTexture();
+	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height, simul::crossplatform::RGBA_8_UNORM, true, true, false);
+}
 
-	//const ovrJava* java = app->GetJava();
+void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint height)
+{
+    WARN("VIDEO STREAM CHANGED: %d %d %d", remotePort, width, height);
+
+	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
+	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
+	if (!source.configure(NumStreams, remotePort+1, "192.168.3.6", remotePort, sourceParams))
+	{
+		LOG("Failed to configure network source node");
+		return;
+	}
+
+	decoderParams.codec = avs::VideoCodec::HEVC;
+	decoderParams.deferDisplay = true;
+	avs::DeviceHandle dev;
+	dev.handle = renderPlatform->AsD3D11Device();
+	dev.type = avs::DeviceType::Direct3D11;
+
+	pipeline.reset();
+	// Top of the pipeline, we have the network source.
+	pipeline.add(&source);
+
+	for (auto t : textures)
+	{
+		TextureImpl* ti= (TextureImpl*)(t.get());
+		if (ti)
+		{
+			SAFE_DELETE(ti->texture);
+		}
+	}
+	/* Now for each stream, we add both a DECODER and a SURFACE node. e.g. for two streams:
+					 /->decoder -> surface
+			source -<
+					 \->decoder	-> surface
+	*/
+	for (size_t i = 0; i < NumStreams; ++i)
+	{
+		CreateTexture(textures[i],width, height, SurfaceFormats[i]);
+
+		if (!decoder[i].configure(dev, width, height, decoderParams, i))
+		{
+			throw std::runtime_error("Failed to configure decoder node");
+		}
+		if (!surface[i].configure(textures[i]->createSurface()))
+		{
+			throw std::runtime_error("Failed to configure output surface node");
+		}
+
+		pipeline.link({ &decoder[i], &surface[i] });
+		avs::Node::link(source, decoder[i]);
+	}
+	// We will add a GEOMETRY PIPE:
+	{
+
+	}
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 
 void ClientRenderer::OnVideoStreamClosed()
 {
     WARN("VIDEO STREAM CLOSED");
-
+	pipeline.deconfigure();
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
 }
@@ -353,10 +452,32 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
-	controllerState.mTrackpadX=mouseCameraInput.right_left_input;
-	controllerState.mTrackpadY=mouseCameraInput.up_down_input;
+	controllerState.mTrackpadX=0.5f;
+	controllerState.mTrackpadY=0.5f;
 	controllerState.mTrackpadStatus=true;
-	sessionClient.Frame(controllerState);
+	// Handle networked session.
+	if (sessionClient.IsConnected())
+	{
+		vec3 forward=-camera.GetOrientation().Tz();
+		//std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
+		// The camera has Z backward, X right, Y up.
+		// But we want orientation relative to X right, Y forward, Z up.
+		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f,0.0f, 0.0f));
+		auto q = camera.GetOrientation().GetQuaternion();
+		auto q_rel=q / q0;
+		sessionClient.Frame(q_rel,controllerState);
+		pipeline.process();
+	}
+	else
+	{
+		ENetAddress remoteEndpoint;
+		if (sessionClient.Discover(REMOTEPLAY_DISCOVERY_PORT, remoteEndpoint))
+		{
+			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
+		}
+	}
+
+	sessionClient.Frame(camera.GetOrientation().GetQuaternion(), controllerState);
 }
 
 void ClientRenderer::OnMouse(bool bLeftButtonDown
@@ -378,10 +499,17 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 {
 	switch (wParam) 
 	{ 
+		case 'K':
+			sessionClient.Disconnect(0);
+			break;
 		case VK_LEFT: 
 		case VK_RIGHT: 
 		case VK_UP: 
 		case VK_DOWN:
+			break;
+		case 'M':
+			RenderMode++;
+			RenderMode= RenderMode%2;
 			break;
 		case 'R':
 			RecompileShaders();

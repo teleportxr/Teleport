@@ -32,14 +32,15 @@ This is ShooterGame project modified to work with RemotePlay.
 3. Build `UnrealDemo` UE4 project in `Development Editor` configuration.
 4. Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 5. Go to Edit->Editor Preferences, General->Performance and disable " "Use Less CPU When in Background"
+6. Put r.ShaderDevelopmentMode=1 in your ConsoleVariables.ini
 
 ## Building GearVR client application
 
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
 2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client/VrProjects/Native/RemotePlayClient/assets` directory.
 3. Connect your Android device to your PC and make sure that ADB debugging is enabled and the PC is authorized.
-4. Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
-5. In Android Studio open  client\VrProjects\Native\RemotePlayClient\Projects\Android
+4. (old method) Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
+5. New method: In Android Studio open RemotePlay/build.gradle.
 
 ## Running
 

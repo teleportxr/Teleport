@@ -2,6 +2,8 @@
 
 #include <string>
 #include <iostream>
+#include <random>
+
 
 #include "SessionClient.h"
 #pragma comment(lib,"enet")
@@ -11,33 +13,33 @@
 #pragma comment (lib, "AdvApi32.lib")
 #pragma comment(lib, "winmm.lib")
 
-extern void ClientLog( const char * fileTag, int lineno, const char * format_str, ... )
+void ClientLog(const char *fileTag, int lineno,const char *msg_type,const char * format_str, ...)
 {
-	int size=(int)strlen(format_str)+100;
+	int size = (int)strlen(format_str) + 100;
 	static std::string str;
 	va_list ap;
-	int n=-1;
-	while(n<0||n>=size)
+	int n = -1;
+	while (n < 0 || n >= size)
 	{
 		str.resize(size);
 		va_start(ap, format_str);
 		//n = vsnprintf_s((char *)str.c_str(), size, size,format_str, ap);
-		n = vsnprintf((char *)str.c_str(), size,format_str, ap);
+		n = vsnprintf((char *)str.c_str(), size, format_str, ap);
 		va_end(ap);
-		if(n> -1 && n < size)
+		if (n > -1 && n < size)
 		{
 			str.resize(n);
 		}
 		if (n > -1)
-			size=n+1;
+			size = n + 1;
 		else
-			size*=2;
+			size *= 2;
 	}
-	std::cerr<<__FILE__<<"("<<__LINE__<<"): warning B0001: "<<str.c_str()<<std::endl;
+	std::cerr << fileTag << "(" << lineno << "): "<< msg_type<<": " << str.c_str() << std::endl;
 }
 
 enum RemotePlaySessionChannel {
-	RPCH_Control  = 0,
+	RPCH_Control = 0,
 	RPCH_HeadPose = 1,
 	RPCH_NumChannels,
 };
@@ -49,37 +51,122 @@ struct RemotePlayInputState {
 	float trackpadAxisY;
 };
 
+#pragma pack(push, 1) 
+struct ServiceDiscoveryResponse {
+	uint32_t clientID;
+	uint16_t remotePort;
+};
+#pragma pack(pop)
+
 SessionClient::SessionClient(SessionCommandInterface* commandInterface)
 	: mCommandInterface(commandInterface)
-	, mClientHost(nullptr)
-	, mServerPeer(nullptr)
-	, mPrevControllerState({})
 {
-	if(enet_initialize() != 0)
+	if (enet_initialize() != 0)
 	{
 		FAIL("Failed to initialize ENET library");
 	}
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::uniform_int_distribution<> dis(1);
+
+	mClientID = static_cast<uint32_t>(dis(gen));
 }
 
 SessionClient::~SessionClient()
 {
 	Disconnect(0);
+	if (mServiceDiscoverySocket)
+	{
+		enet_socket_destroy(mServiceDiscoverySocket);
+		mServiceDiscoverySocket = 0;
+	}
 }
 
-bool SessionClient::Connect(const char* ipAddress, uint16_t port, uint timeout)
+bool SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
 {
-	ENetAddress address;
-	enet_address_set_host_ip(&address, ipAddress);
-	address.port = port;
+	bool serverDiscovered = false;
 
+	ENetAddress  broadcastAddress = { ENET_HOST_BROADCAST, discoveryPort };
+
+	if (!mServiceDiscoverySocket)
+	{
+		mServiceDiscoverySocket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);// PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		if (mServiceDiscoverySocket <= 0)
+		{
+			FAIL("Failed to create service discovery UDP socket");
+			return false;
+		}
+
+		int flagEnable = 1;
+		enet_socket_set_option(mServiceDiscoverySocket, ENET_SOCKOPT_REUSEADDR, 1);
+		enet_socket_set_option(mServiceDiscoverySocket, ENET_SOCKOPT_BROADCAST, 1);
+		// We don't want to block, just check for packets.
+		enet_socket_set_option(mServiceDiscoverySocket, ENET_SOCKOPT_NONBLOCK, 1);
+
+	/*	ENetAddress bindAddress = { ENET_HOST_ANY, discoveryPort };
+		if (enet_socket_bind(mServiceDiscoverySocket, &bindAddress) != 0)
+		{
+			FAIL("Failed to bind to service discovery UDP socket");
+			enet_socket_destroy(mServiceDiscoverySocket);
+			mServiceDiscoverySocket = 0;
+			return false;
+		}*/
+	}
+	ENetBuffer buffer = { sizeof(mClientID) ,(void*)&mClientID };
+	ServiceDiscoveryResponse response = {};
+	ENetAddress  responseAddress = { 0xffffffff, 0 };
+	ENetBuffer responseBuffer = { sizeof(response),&response };
+	// Send our client id to the server on the discovery port.
+	enet_socket_send(mServiceDiscoverySocket, &broadcastAddress,&buffer, 1);
+	{
+		static size_t bytesRecv;
+		do
+		{
+			// This will change responseAddress from 0xffffffff into the address of the server
+			bytesRecv = enet_socket_receive(mServiceDiscoverySocket,&responseAddress,&responseBuffer, 1);
+
+			if (bytesRecv == sizeof(response) && mClientID == response.clientID)
+			{
+				remote.host = responseAddress.host;
+				remote.port = response.remotePort;
+				serverDiscovered = true;
+			}
+		} while (bytesRecv > 0 && !serverDiscovered);
+	}
+
+	if (serverDiscovered)
+	{
+		char remoteIP[20];
+		enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
+		LOG("Discovered session server: %s:%d", remoteIP, remote.port);
+
+		enet_socket_destroy(mServiceDiscoverySocket);
+		mServiceDiscoverySocket = 0;
+	}
+	return serverDiscovered;
+}
+
+bool SessionClient::Connect(const char* remoteIP, uint16_t remotePort, uint timeout)
+{
+	ENetAddress remote;
+	enet_address_set_host_ip(&remote, remoteIP);
+	remote.port = remotePort;
+
+	return Connect(remote, timeout);
+}
+
+bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
+{
 	mClientHost = enet_host_create(nullptr, 1, RPCH_NumChannels, 0, 0);
-	if(!mClientHost) {
+	if (!mClientHost)
+	{
 		FAIL("Failed to create ENET client host");
 		return false;
 	}
 
-	mServerPeer = enet_host_connect(mClientHost, &address, RPCH_NumChannels, 0);
-	if(!mServerPeer) {
+	mServerPeer = enet_host_connect(mClientHost, &remote, RPCH_NumChannels, 0);
+	if (!mServerPeer)
+	{
 		WARN("Failed to initiate connection to the server");
 		enet_host_destroy(mClientHost);
 		mClientHost = nullptr;
@@ -87,8 +174,13 @@ bool SessionClient::Connect(const char* ipAddress, uint16_t port, uint timeout)
 	}
 
 	ENetEvent event;
-	if(enet_host_service(mClientHost, &event, timeout) > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
-		LOG("Connected to session server: %s:%d", ipAddress, port);
+	if (enet_host_service(mClientHost, &event, timeout) > 0 && event.type == ENET_EVENT_TYPE_CONNECT)
+	{
+		mServerEndpoint = remote;
+
+		char remoteIP[20];
+		enet_address_get_host_ip(&mServerEndpoint, remoteIP, sizeof(remoteIP));
+		LOG("Connected to session server: %s:%d", remoteIP, remote.port);
 		return true;
 	}
 
@@ -102,54 +194,65 @@ bool SessionClient::Connect(const char* ipAddress, uint16_t port, uint timeout)
 
 void SessionClient::Disconnect(uint timeout)
 {
-	if(mClientHost && mServerPeer) {
-		if (timeout == 0) {
+	if (mClientHost && mServerPeer)
+	{
+		if (timeout == 0)
+		{
 			enet_peer_disconnect_now(mServerPeer, 0);
-		} else {
+		}
+		else {
 			enet_peer_disconnect(mServerPeer, 0);
 
 			bool isPeerConnected = true;
 			ENetEvent event;
-			while (isPeerConnected && enet_host_service(mClientHost, &event, timeout) > 0) {
-				switch (event.type) {
-					case ENET_EVENT_TYPE_RECEIVE:
-						enet_packet_destroy(event.packet);
-						break;
-					case ENET_EVENT_TYPE_DISCONNECT:
-						isPeerConnected = false;
-						break;
+			while (isPeerConnected && enet_host_service(mClientHost, &event, timeout) > 0)
+			{
+				switch (event.type)
+				{
+				case ENET_EVENT_TYPE_RECEIVE:
+					enet_packet_destroy(event.packet);
+					break;
+				case ENET_EVENT_TYPE_DISCONNECT:
+					isPeerConnected = false;
+					break;
+				default:
+					break;
 				}
 			}
 
-			if (isPeerConnected) {
+			if (isPeerConnected)
+			{
 				enet_peer_reset(mServerPeer);
 			}
 		}
 		mServerPeer = nullptr;
 	}
 
-	if(mClientHost) {
+	if (mClientHost)
+	{
 		enet_host_destroy(mClientHost);
 		mClientHost = nullptr;
 	}
 }
 
-void SessionClient::Frame( const ControllerState& controllerState)
+void SessionClient::Frame(const float HeadPose[4],const ControllerState& controllerState)
 {
-	if(mClientHost && mServerPeer) {
-
-		//SendHeadPose(vrFrame.Tracking.HeadPose);
+	if (mClientHost && mServerPeer)
+	{
+		SendHeadPose(HeadPose);
 		SendInput(controllerState);
 
 		ENetEvent event;
-		while(enet_host_service(mClientHost, &event, 0) > 0) {
-			switch(event.type) {
-				case ENET_EVENT_TYPE_RECEIVE:
-					DispatchEvent(event);
-					break;
-				case ENET_EVENT_TYPE_DISCONNECT:
-					Disconnect(0);
-					return;
+		while (enet_host_service(mClientHost, &event, 0) > 0)
+		{
+			switch (event.type)
+			{
+			case ENET_EVENT_TYPE_RECEIVE:
+				DispatchEvent(event);
+				break;
+			case ENET_EVENT_TYPE_DISCONNECT:
+				Disconnect(0);
+				return;
 			}
 		}
 	}
@@ -157,15 +260,34 @@ void SessionClient::Frame( const ControllerState& controllerState)
 	mPrevControllerState = controllerState;
 }
 
+bool SessionClient::IsConnected() const
+{
+	return mServerPeer != nullptr;
+}
+
+std::string SessionClient::GetServerIP() const
+{
+	if (IsConnected())
+	{
+		char remoteIP[20];
+		enet_address_get_host_ip(&mServerEndpoint, remoteIP, sizeof(remoteIP));
+		return std::string(remoteIP);
+	}
+	else {
+		return std::string{};
+	}
+}
+
 void SessionClient::DispatchEvent(const ENetEvent& event)
 {
-	switch(event.channelID) {
-		case RPCH_Control:
-			ParseCommandPacket(event.packet);
-			break;
-		default:
-			WARN("Received packet on output-only channel: %d", event.channelID);
-			break;
+	switch (event.channelID)
+	{
+	case RPCH_Control:
+		ParseCommandPacket(event.packet);
+		break;
+	default:
+		WARN("Received packet on output-only channel: %d", event.channelID);
+		break;
 	}
 
 	enet_packet_destroy(event.packet);
@@ -176,28 +298,30 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 	// TODO: Sanitize!
 	const std::string command(reinterpret_cast<const char*>(packet->data), packet->dataLength);
 	WARN("CMD: %s", command.c_str());
-	if(command[0] == 'v') {
+	if (command[0] == 'v')
+	{
 		int port, width, height;
 		sscanf(command.c_str(), "v %d %d %d", &port, &width, &height);
-		if(width == 0 && height == 0) {
+		if (width == 0 && height == 0)
+		{
 			mCommandInterface->OnVideoStreamClosed();
 		}
-		else {
+		else
+		{
 			mCommandInterface->OnVideoStreamChanged(port, width, height);
 		}
 	}
-	else {
+	else
+	{
 		WARN("Invalid command: %c", command[0]);
 	}
 }
 
-/*void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
+void SessionClient::SendHeadPose(const const float quat[4])
 {
-	// TODO: Use compact representation with only 3 float values for wire format.
-	const ovrQuatf orientation = pose.Pose.Orientation;
-	ENetPacket* packet = enet_packet_create(&orientation, sizeof(orientation), 0);
+	ENetPacket* packet = enet_packet_create(quat, 4*sizeof(float), 0);
 	enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
-}*/
+}
 
 void SessionClient::SendInput(const ControllerState& controllerState)
 {
@@ -206,8 +330,9 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 	const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
 	auto updateButtonState = [&inputState, &controllerState, buttonsDiffMask](uint32_t button)
 	{
-		if(buttonsDiffMask & button) {
-			if(controllerState.mButtons & button) inputState.buttonsPressed |= button;
+		if (buttonsDiffMask & button)
+		{
+			if (controllerState.mButtons & button) inputState.buttonsPressed |= button;
 			else inputState.buttonsReleased |= button;
 		}
 	};
@@ -215,25 +340,28 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 	// We need to update trackpad axis on the server whenever:
 	// (1) User is currently touching the trackpad.
 	// (2) User was touching the trackpad previous frame.
-	bool updateTrackpadAxis =	controllerState.mTrackpadStatus
-							  || controllerState.mTrackpadStatus != mPrevControllerState.mTrackpadStatus;
+	bool updateTrackpadAxis = controllerState.mTrackpadStatus
+		|| controllerState.mTrackpadStatus != mPrevControllerState.mTrackpadStatus;
 
-	bool stateDirty =  updateTrackpadAxis || buttonsDiffMask > 0;
-	if(stateDirty) {
+	bool stateDirty = updateTrackpadAxis || buttonsDiffMask > 0;
+	if (stateDirty)
+	{
 		enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
 
-	//	updateButtonState(ovrButton_A);
-	//	updateButtonState(ovrButton_Enter); // FIXME: Currently not getting down event for this button.
-	//	updateButtonState(ovrButton_Back);
+		//	updateButtonState(ovrButton_A);
+		//	updateButtonState(ovrButton_Enter); // FIXME: Currently not getting down event for this button.
+		//	updateButtonState(ovrButton_Back);
 
-		// Trackpad axis should be non-zero only if the user is currently touching the trackpad.
-		if(controllerState.mTrackpadStatus) {
+			// Trackpad axis should be non-zero only if the user is currently touching the trackpad.
+		if (controllerState.mTrackpadStatus)
+		{
 			// Remap axis value to [-1,1] range.
 			inputState.trackpadAxisX = 2.0f * controllerState.mTrackpadX - 1.0f;
 			inputState.trackpadAxisY = 2.0f * controllerState.mTrackpadY - 1.0f;
 
 			// If this update does not include button information send it unreliably to improve latency.
-			if(buttonsDiffMask == 0) {
+			if (buttonsDiffMask == 0)
+			{
 				packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
 			}
 		}

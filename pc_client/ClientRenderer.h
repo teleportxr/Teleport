@@ -8,6 +8,28 @@
 #include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
 #include "SessionClient.h"
 
+#include <libavstream/libavstream.hpp>
+#include <libavstream/surfaces/surface_interface.hpp>
+struct Texture
+{
+	virtual ~Texture() = default;
+	virtual avs::SurfaceBackendInterface* createSurface() const = 0;
+};
+using TextureHandle = std::shared_ptr<Texture>;
+
+struct Shader
+{
+	virtual ~Shader() = default;
+};
+using ShaderHandle = std::shared_ptr<Shader>;
+
+struct RendererStats
+{
+	uint64_t frameCounter;
+	double lastFrameTime;
+	double lastFPS;
+};
+
 class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, public SessionCommandInterface
 {
 	int frame_number;
@@ -66,4 +88,28 @@ public:
 		, int xPos
 		, int yPos);
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
+
+	void CreateTexture(TextureHandle &th,int width, int height, avs::SurfaceFormat format);
+
+	static constexpr size_t   NumStreams = 2;
+	static constexpr uint32_t NominalJitterBufferLength = 0;
+	static constexpr uint32_t MaxJitterBufferLength = 50;
+
+	static constexpr avs::SurfaceFormat SurfaceFormats[2] = {
+		avs::SurfaceFormat::ARGB,
+		avs::SurfaceFormat::ARGB,
+	};
+
+
+	std::vector<TextureHandle> textures;
+	avs::Context context;
+
+	avs::NetworkSource source;
+	avs::Decoder decoder[NumStreams];
+	avs::Surface surface[NumStreams];
+
+	avs::NetworkSourceParams sourceParams = {};
+	avs::DecoderParams decoderParams = {};
+	avs::Pipeline pipeline;
+	int RenderMode;
 };

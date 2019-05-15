@@ -6,6 +6,8 @@
 #include "Simul/Base/EnvironmentVariables.h"
 #include "Simul/Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Simul/Platform/CrossPlatform/RenderPlatform.h"
+#include "Simul/Platform/CrossPlatform/DisplaySurfaceManager.h"
+#include "Simul/Platform/CrossPlatform/DisplaySurface.h"
 #include "Simul/Platform/DirectX11/RenderPlatform.h"
 #include "Simul/Platform/DirectX11/Direct3D11Manager.h"
 #include "ClientRenderer.h"
@@ -15,9 +17,11 @@ VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #endif
 
 simul::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
+simul::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 simul::crossplatform::RenderPlatform *renderPlatform = nullptr;
 simul::dx11::RenderPlatform renderPlatformDx11;
 simul::dx11::Direct3D11Manager direct3D11Manager;
+simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 ClientRenderer clientRenderer;
 #define MAX_LOADSTRING 100
 
@@ -31,6 +35,7 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void InitRenderer(HWND);
+void ShutdownRenderer();
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -64,7 +69,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
     }
-
+	ShutdownRenderer();
     return (int) msg.wParam;
 }
 
@@ -107,13 +112,20 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+void ShutdownRenderer()
+{
+	clientRenderer.InvalidateDeviceObjects();
+}
+
 void InitRenderer(HWND hWnd)
 {
 	gdi = &direct3D11Manager;
+	dsmi = &displaySurfaceManager;
 	renderPlatform =&renderPlatformDx11;
+	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" to direct3D11Manager to use d3d debugging:
-	gdi->Initialize(false, false,false);
-	std::string simul_env=simul::base::EnvironmentVariables::GetSimulEnvironmentVariable("SIMUL");
+	gdi->Initialize(true, false,false);
+	std::string simul_env = "C:/Simul/4.2/Simul";// simul::base::EnvironmentVariables::GetSimulEnvironmentVariable("SIMUL");
 	// Create an instance of our simple clientRenderer class defined above:
 	{
 		// Whether run from the project directory or from the executable location, we want to be
@@ -126,7 +138,7 @@ void InitRenderer(HWND hWnd)
 		// Or from the Simul directory -e.g. by automatic builds:
 
 		renderPlatform->PushTexturePath("Media/Textures");
-
+	
 		renderPlatform->PushShaderPath("Shaders");		// working directory
 		renderPlatform->PushShaderPath("Platform/CrossPlatform/SFX/");
 		renderPlatform->PushShaderPath("../../../../Platform/CrossPlatform/SFX");
@@ -156,8 +168,8 @@ void InitRenderer(HWND hWnd)
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	clientRenderer.Init(renderPlatform);
-	gdi->AddWindow(hWnd);
-	gdi->SetRenderer(hWnd,&clientRenderer,-1);
+	dsmi->AddWindow(hWnd);
+	dsmi->SetRenderer(hWnd,&clientRenderer,-1);
 }
 
 #define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))
@@ -214,13 +226,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_PAINT:
         {
-            PAINTSTRUCT ps;
+//            PAINTSTRUCT ps;
 			if(gdi)
 			{
 				double fTime=0.0;
 				float time_step=0.01f;
+				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
+				clientRenderer.ResizeView(0, w->viewport.w, w->viewport.h);
 				clientRenderer.OnFrameMove(fTime,time_step);
-				gdi->Render(hWnd);
+				dsmi->Render(hWnd);
+				displaySurfaceManager.EndFrame();
 			}
            // HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: Add any drawing code that uses hdc here...

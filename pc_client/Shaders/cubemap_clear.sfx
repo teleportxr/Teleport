@@ -1,22 +1,46 @@
 //  Copyright (c) 2015-2017 Simul Software Ltd. All rights reserved.
 #include "shader_platform.sl"
-#include "../SL/common.sl"
-#include "../SL/render_states.sl"
-#include "../SL/states.sl"
-#include "../SL/camera_constants.sl"
+#include "common.sl"
+#include "render_states.sl"
+#include "states.sl"
+#include "camera_constants.sl"
 
 uniform TextureCube cubemapTexture;
+uniform Texture2D plainTexture;
 
-shader vec4 PS_CubemapClear(posTexVertexOutput IN) : SV_TARGET
+shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
 {
-	vec3 view = TexCoordsToView(IN.texCoords);
-	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState,-view,0);
+	const float PI = 3.1415926536;
+	const float TwoPI = 2.0 * PI;
+	vec3 view	= TexCoordsToView(IN.texCoords);
+	float phi	= atan2(view.y, -view.x) / TwoPI;
+	float theta	= acos(-view.z) / PI;
+	vec2  uv	= fract(vec2(phi, theta));
+	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, uv, 0);// cubemapTexture.SampleLevel(cubeSamplerState, -view, 0);
     return lookup;
+}
+
+shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
+{
+	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, IN.texCoords, 0);
+	return lookup;
 }
 
 VertexShader vs = CompileShader(vs_4_0, VS_SimpleFullscreen());
 
-technique cubemap_clear
+technique normal_view
+{
+	pass p0
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(DisableDepth, 0);
+		SetBlendState(DontBlend,vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(vs);
+		SetPixelShader(CompileShader(ps_4_0, PS_NormalView()));
+	}
+}
+technique show_texture
 {
     pass p0
     {
@@ -25,6 +49,6 @@ technique cubemap_clear
 		SetBlendState(DontBlend,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
         SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_4_0,PS_CubemapClear()));
+		SetPixelShader(CompileShader(ps_4_0, PS_ShowTexture()));
     }
 }

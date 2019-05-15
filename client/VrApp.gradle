@@ -11,7 +11,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.android.tools.build:gradle:3.1.2'
+    classpath 'com.android.tools.build:gradle:3.4.0'
   }
 }
 
@@ -95,8 +95,9 @@ class VrAppPlugin implements Plugin<Project> {
     // FIXME: The Task.leftShift(Closure) method has been deprecated and is scheduled to be removed in Gradle 5.0. Please use Task.doLast(Action) instead.
     project.task( "cleanWorkAround" ) {
 	  description "Workaround for .externalNativeBuild not being deleted on clean"
-    } << {
-	  project.delete project.file( ".externalNativeBuild" )
+        doLast{
+	        project.delete project.file( ".externalNativeBuild" )
+        }
     }
 
     project.android {
@@ -197,37 +198,43 @@ class VrAppPlugin implements Plugin<Project> {
 
   project.afterEvaluate {
 
-      Task initDeviceList = project.task( "initDeviceList()" ) << {
-        project.ext.deviceMap = [ : ]
-        if (project.hasProperty( "should_install" ) || !project.hasProperty( "disable_sig_check" ) ) {
-            AndroidDebugBridge.initIfNeeded( false )
-            AndroidDebugBridge bridge = AndroidDebugBridge.createBridge( project.android.getAdbExe().absolutePath, false )
+      Task initDeviceList = project.task( "initDeviceList()" ) {
+          doLast {
+              project.ext.deviceMap = [:]
+              if (project.hasProperty("should_install") || !project.hasProperty("disable_sig_check")) {
+                  AndroidDebugBridge.initIfNeeded(false)
+                  AndroidDebugBridge bridge = AndroidDebugBridge.createBridge(project.android.getAdbExe().absolutePath, false)
 
-            long timeOut = 30000 // 30 sec
-            int sleepTime = 1000
-            while ( !bridge.hasInitialDeviceList() && timeOut > 0 ) {
-                sleep( sleepTime )
-                timeOut -= sleepTime
-            }
-            if ( timeOut <= 0 && !bridge.hasInitialDeviceList() ) {
-                throw new RuntimeException( "Timeout getting device list.", null )
-            }
+                  long timeOut = 30000 // 30 sec
+                  int sleepTime = 1000
+                  while (!bridge.hasInitialDeviceList() && timeOut > 0) {
+                      sleep(sleepTime)
+                      timeOut -= sleepTime
+                  }
+                  if (timeOut <= 0 && !bridge.hasInitialDeviceList()) {
+                      throw new RuntimeException("Timeout getting device list.", null)
+                  }
 
-            // if a device is connected both physically and over the network, only include the physical ID
-            if ( project.hasProperty( "should_install" ) == true ) {
-                  bridge.devices.split { it.getProperty( "ro.serialno" ) != it.serialNumber }.each {
-                   it.collectEntries( project.deviceMap, { [ ( it.getProperty( "ro.serialno" )) : it ] } )
-                }
-            }
-        }
+                  // if a device is connected both physically and over the network, only include the physical ID
+                  if (project.hasProperty("should_install") == true) {
+                      bridge.devices.split {
+                          it.getProperty("ro.serialno") != it.serialNumber
+                      }.each {
+                          it.collectEntries(project.deviceMap, {
+                              [(it.getProperty("ro.serialno")): it]
+                          })
+                      }
+                  }
+              }
+          }
       }
-
       project.task( "stopApk", dependsOn: initDeviceList ) {
           description "Stops app if currently running on device"
-      } << {
-          project.deviceMap.each { deviceSerial, device ->
-          stopApk( device, android.defaultConfig.applicationId )
-        }
+          doLast {
+              project.deviceMap.each { deviceSerial, device ->
+                  stopApk(device, android.defaultConfig.applicationId)
+              }
+          }
       }
 
       project.task ( "OSigPreCheck", dependsOn: initDeviceList ) {
@@ -236,73 +243,77 @@ class VrAppPlugin implements Plugin<Project> {
             project.deviceMap.size() != 0 &&
             project.hasProperty( "disable_sig_check" ) == false
           }
-      } << {
-          def iterator = project.deviceMap.entrySet().iterator()
-          while ( iterator.hasNext() ) { 
-            def deviceElem = iterator.next()
-            if ( !deviceElem.value.isOnline() ) {
-              iterator.remove()
-              continue
-            }
-            String deviceSerial = deviceElem.key
-            IDevice device = deviceElem.value
-            if ( !checkOsig( device, deviceSerial, project.fileTree( dir: "../assets" ).plus( project.fileTree( dir: "assets" ) ) ) &&
-                 !checkOsig( device, deviceSerial, project.fileTree( dir: "../../assets" ).plus( project.fileTree( dir: "assets" ) ) ) ) {
-                throw new RuntimeException( "Missing oculussig_${deviceSerial}. You can generate this file at http://developer.oculus.com/osig/", null )
+          doLast {
+              def iterator = project.deviceMap.entrySet().iterator()
+              while (iterator.hasNext()) {
+                  def deviceElem = iterator.next()
+                  if (!deviceElem.value.isOnline()) {
+                      iterator.remove()
+                      continue
+                  }
+                  String deviceSerial = deviceElem.key
+                  IDevice device = deviceElem.value
+                  if (!checkOsig(device, deviceSerial, project.fileTree(dir: "../assets").plus(project.fileTree(dir: "assets"))) &&
+                          !checkOsig(device, deviceSerial, project.fileTree(dir: "../../assets").plus(project.fileTree(dir: "assets")))) {
+                      throw new RuntimeException("Missing oculussig_${deviceSerial}. You can generate this file at http://developer.oculus.com/osig/", null)
+                  }
               }
           }
-
       }
 
       project.android.applicationVariants.all { variant ->
 
-        Task OSigPostCheck = project.task( "OSigPostCheck${variant.name.capitalize()}", dependsOn: variant.assemble ) {
+        Task OSigPostCheck = project.task( "OSigPostCheck${variant.name.capitalize()}", dependsOn: variant.assembleProvider ) {
           description "Checks for Oculus Signature files in the output apk"
           onlyIf {
             project.deviceMap.size() != 0 &&
             project.hasProperty( "disable_sig_check" ) == false
           }
           dependsOn project.OSigPreCheck
-        } << { variant.outputs.each { output ->
-            def sigfiles = project.zipTree( output.outputFile ).matching{ include "assets/oculussig*" }
-            def iterator = project.deviceMap.entrySet().iterator()
-            while ( iterator.hasNext() ) { 
-              def deviceElem = iterator.next()
-              if ( !deviceElem.value.isOnline() ) {
-                iterator.remove()
-                continue
-              }
-              String deviceSerial = deviceElem.key
-              IDevice device = deviceElem.value
-              checkOsig( device, deviceSerial, sigfiles )
+            doLast {
+                variant.outputs.each { output ->
+                    def sigfiles = project.zipTree(output.outputFile).matching {
+                        include "assets/oculussig*"
+                    }
+                    def iterator = project.deviceMap.entrySet().iterator()
+                    while (iterator.hasNext()) {
+                        def deviceElem = iterator.next()
+                        if (!deviceElem.value.isOnline()) {
+                            iterator.remove()
+                            continue
+                        }
+                        String deviceSerial = deviceElem.key
+                        IDevice device = deviceElem.value
+                        checkOsig(device, deviceSerial, sigfiles)
+                    }
+                }
             }
-          }
         }
-
         Task installAndRun = project.task( "installAndRun${variant.name.capitalize()}" ) {
-          dependsOn variant.assemble
+          dependsOn variant.assembleProvider
           dependsOn OSigPostCheck
           onlyIf { project.hasProperty( "should_install" ) }
           description "Installs and runs the APK file"
-        } << { variant.outputs.each { output ->
-            if ( output.outputFile.exists() )
-            {
-              if ( project.deviceMap.size() == 0 ) {
-                project.logger.quiet "Install requested, but no devices found."
-              } else {
-                project.deviceMap.each { deviceSerial, device ->
-                  installApk( device, output.outputFile, project.android.defaultConfig.applicationId )
-                  if ( project.hasProperty( "clear_logcat" ) ) {
-                    clearAdbLog( device ) 
-                  }
+            doLast {
+                variant.outputs.each { output ->
+                    if (output.outputFile.exists()) {
+                        if (project.deviceMap.size() == 0) {
+                            project.logger.quiet "Install requested, but no devices found."
+                        } else {
+                            project.deviceMap.each { deviceSerial, device ->
+                                installApk(device, output.outputFile, project.android.defaultConfig.applicationId)
+                                if (project.hasProperty("clear_logcat")) {
+                                    clearAdbLog(device)
+                                }
                   runApk( device, new File("${output.processManifest.manifestOutputDirectory}/AndroidManifest.xml") )
                 }
               }
             }
           }
         }
-        variant.assemble.dependsOn project.OSigPreCheck
-        variant.assemble.finalizedBy installAndRun
+            }
+          variant.assembleProvider.configure { dependsOn(project.OSigPreCheck) }
+          //variant.assembleProvider.configure { finalizedBy(project.OSigPreCheck) }
       }
     }
   }
@@ -318,14 +329,14 @@ class GenDebugKeystore extends DefaultTask {
         if ( !project.file("android.debug.keystore").exists() ) {
             def pythonCmd = 'python'
             if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                pythonCmd = "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_keystore.py.bat"
+                pythonCmd = "${project.rootProject.projectDir}/client/bin/scripts/build/ovrbuild_keystore.py.bat"
                 project.exec {
                     commandLine pythonCmd
                 }
             } else {
                 project.exec {
                     commandLine pythonCmd,
-                    "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_keystore.py"
+                    "${project.rootProject.projectDir}/client/bin/scripts/build/ovrbuild_keystore.py"
                 }
             }
         }
