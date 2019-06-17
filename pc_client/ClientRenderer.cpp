@@ -233,7 +233,7 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularTexture);
 }
 
-void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,int h)
+void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame)
 {
 	simul::crossplatform::DeviceContext	deviceContext;
 	deviceContext.setDefaultRenderTargets(renderTexture,
@@ -380,6 +380,7 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
+	// Configure for num video streams + 1 geometry stream
 	if (!source.configure(NumStreams, remotePort+1, "192.168.3.6", remotePort, sourceParams))
 	{
 		LOG("Failed to configure network source node");
@@ -426,9 +427,13 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 		avs::Node::link(source, decoder[i]);
 	}
 	// We will add a GEOMETRY PIPE:
+#ifdef TEST_FIX
 	{
-
+		geometryDecoder.configure(NumStreams);
+		geometryTarget.configure(&meshCreator);
+		pipeline.link({ &source, &geometryDecoder, &geometryTarget });
 	}
+#endif
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 
@@ -467,6 +472,10 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		auto q_rel=q / q0;
 		sessionClient.Frame(q_rel,controllerState);
 		pipeline.process();
+		const avs::NetworkSourceCounters Counters = source.getCounterValues();
+		std::cout<<"Packets received: "<<Counters.networkPacketsReceived
+			<<"Packets dropped: " <<Counters.networkPacketsDropped
+			<<", BYTES: "<<Counters.bytesReceived<<std::endl;
 	}
 	else
 	{

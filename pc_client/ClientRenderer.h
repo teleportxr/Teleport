@@ -7,9 +7,11 @@
 #include "Simul/Platform/CrossPlatform/SL/CppSl.hs"
 #include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
 #include "SessionClient.h"
+#include "MeshCreator.h"
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
+#include <libavstream/geometrydecoder.hpp>
 struct Texture
 {
 	virtual ~Texture() = default;
@@ -75,7 +77,7 @@ public:
 	void RenderOpaqueTest(simul::crossplatform::DeviceContext &deviceContext);
 	/// Render an example transparent object.
 	void RenderTransparentTest(simul::crossplatform::DeviceContext &deviceContext);
-	void Render(int view_id,void* context,void* renderTexture,int w,int h) override;
+	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame) override;
 	void Init(simul::crossplatform::RenderPlatform *r);
 	void InvalidateDeviceObjects();
 	void RemoveView(int);
@@ -91,7 +93,7 @@ public:
 
 	void CreateTexture(TextureHandle &th,int width, int height, avs::SurfaceFormat format);
 
-	static constexpr size_t   NumStreams = 2;
+	static constexpr size_t   NumStreams =1;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
 
@@ -100,6 +102,7 @@ public:
 		avs::SurfaceFormat::ARGB,
 	};
 
+	MeshCreator meshCreator;
 
 	std::vector<TextureHandle> textures;
 	avs::Context context;
@@ -107,6 +110,9 @@ public:
 	avs::NetworkSource source;
 	avs::Decoder decoder[NumStreams];
 	avs::Surface surface[NumStreams];
+
+	avs::GeometryDecoder geometryDecoder;
+	avs::GeometryTarget geometryTarget;
 
 	avs::NetworkSourceParams sourceParams = {};
 	avs::DecoderParams decoderParams = {};
