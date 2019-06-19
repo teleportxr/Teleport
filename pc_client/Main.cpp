@@ -99,7 +99,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // Store instance handle in our global variable
 
    HWND hWnd = CreateWindowW(szWindowClass,L"Client", WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+      CW_USEDEFAULT, 0, 800, 500, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
@@ -226,7 +226,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_PAINT:
         {
-//            PAINTSTRUCT ps;
 			if(gdi)
 			{
 				double fTime=0.0;
@@ -237,9 +236,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				dsmi->Render(hWnd);
 				displaySurfaceManager.EndFrame();
 			}
-           // HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-           // EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:

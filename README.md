@@ -18,21 +18,13 @@ Clone the repository with submodules:
 	
 ## Building UE4 plugin
 
-1. Build `libavstream` in `x64-Release` configuration, either with Visual Studio or using standalone CMake. The resulting binaries should end up in `libavstream/build/x64-Release` directory.
-2. Deploy `libavstream` to `UnrealPlugin` project by running `deploy.ps1` script with PowerShell:
-`.\deploy.ps1 -Config x64-Release -Project UnrealPlugin`
-3. Build `UnrealPlugin` UE4 project in `Development Editor` configuration.
-
-## Building UE4 demo project
-
-This is ShooterGame project modified to work with RemotePlay.
-
-1. Make sure you have built the UE4 plugin project first.
-2. Copy `plugins/UnrealPlugin/Plugins/RemotePlay` to `plugins/UnrealDemo/Plugins/RemotePlay`. Delete `Binaries` & `Intermediate` directories if present.
-3. Build `UnrealDemo` UE4 project in `Development Editor` configuration.
-4. Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
-5. Go to Edit->Editor Preferences, General->Performance and disable " "Use Less CPU When in Background"
+1. Using CMakeGUI, create a Visual Studio 2017 x64 build in the Libraries/libavstream subdirectory of plugins/UnrealDemo/Plugins/RemotePlay. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MD and /MDd options: Unreal uses the dynamic runtimes so this is needed for compatibility.
+2. Create the Cmake libavstream project and add it to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build is configured to compile in Development Editor solution config.
+3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG)
+4. Build `UnrealDemo` UE4 project in `Development Editor` configuration.
+5. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background"
 6. Put r.ShaderDevelopmentMode=1 in your ConsoleVariables.ini
+7. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
 ## Building GearVR client application
 

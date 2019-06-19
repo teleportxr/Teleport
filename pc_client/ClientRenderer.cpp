@@ -2,6 +2,7 @@
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 
 #include "Simul/Base/EnvironmentVariables.h"
+#include "Simul/Base/StringFunctions.h"
 #include "Simul/Platform/CrossPlatform/BaseFramebuffer.h"
 #include "Simul/Platform/CrossPlatform/Material.h"
 #include "Simul/Platform/CrossPlatform/HDRRenderer.h"
@@ -62,6 +63,14 @@ struct TextureImpl :public Texture
 struct ShaderImpl :public Shader
 {
 };
+
+void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
+{
+	if (severity > avs::LogSeverity::Warning)
+		std::cerr << msg;
+	else
+		std::cout << msg ;
+}
 
 ClientRenderer::ClientRenderer():
 	renderPlatform(nullptr)
@@ -127,6 +136,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
 	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
+
+	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 }
 
 // This allows live-recompile of shaders. 
@@ -313,6 +324,25 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 	renderPlatform->Print(deviceContext,0,0,txt);
 	txt=cpuProfiler.GetDebugText();
 	renderPlatform->Print(deviceContext,w/2,0,txt);*/
+	{
+		const avs::NetworkSourceCounters counters = source.getCounterValues();
+		//ImGui::Text("Frame #: %d", renderStats.frameCounter);
+		//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
+		int y = 0;
+		int dy = 18;
+		renderPlatform->Print(deviceContext, w / 2, y += dy, sessionClient.IsConnected()? simul::base::QuickFormat("Connected to: %s"
+			,sessionClient.GetServerIP().c_str()):"Not connected",vec4(1.f,1.f,1.f,1.f));
+		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Jitter Buffer Length: %.2f ", counters.jitterBufferLength )); 
+		renderPlatform->Print(deviceContext,w/2,y+=dy, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
+		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network Packet orphans: %d", counters.m_packetMapOrphans));
+		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Max age: %d", counters.m_maxAge));
+		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
+		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
+		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
+		//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
+		//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
+		//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
+	}
 	frame_number++;
 }
 
@@ -381,7 +411,7 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams, remotePort+1, "192.168.3.6", remotePort, sourceParams))
+	if (!source.configure(NumStreams+1, remotePort+1, "127.0.0.1", remotePort, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
@@ -413,8 +443,8 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 	for (size_t i = 0; i < NumStreams; ++i)
 	{
 		CreateTexture(textures[i],width, height, SurfaceFormats[i]);
-
-		if (!decoder[i].configure(dev, width, height, decoderParams, i))
+		// Video streams are 50+...
+		if (!decoder[i].configure(dev, width, height, decoderParams, (int)(50+i)))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}
@@ -427,11 +457,11 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 		avs::Node::link(source, decoder[i]);
 	}
 	// We will add a GEOMETRY PIPE:
-#ifdef TEST_FIX
+#ifndef TEST_FIX
 	{
-		geometryDecoder.configure(NumStreams);
-		geometryTarget.configure(&meshCreator);
-		pipeline.link({ &source, &geometryDecoder, &geometryTarget });
+		avsGeometryDecoder.configure(100,&geometryDecoder);
+		avsGeometryTarget.configure(&meshCreator);
+		pipeline.link({ &source, &avsGeometryDecoder, &avsGeometryTarget });
 	}
 #endif
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
@@ -472,10 +502,15 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		auto q_rel=q / q0;
 		sessionClient.Frame(q_rel,controllerState);
 		pipeline.process();
-		const avs::NetworkSourceCounters Counters = source.getCounterValues();
-		std::cout<<"Packets received: "<<Counters.networkPacketsReceived
-			<<"Packets dropped: " <<Counters.networkPacketsDropped
-			<<", BYTES: "<<Counters.bytesReceived<<std::endl;
+
+		static short c = 0;
+		if (!c--)
+		{
+			const avs::NetworkSourceCounters Counters = source.getCounterValues();
+			std::cout << "Network packets dropped: " << 100.0f*Counters.networkDropped << "%"
+				<< "\nDecoder packets dropped: " << 100.0f*Counters.decoderDropped << "%"
+				<< std::endl;
+		}
 	}
 	else
 	{

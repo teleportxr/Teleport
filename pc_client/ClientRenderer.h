@@ -8,6 +8,7 @@
 #include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
 #include "SessionClient.h"
 #include "MeshCreator.h"
+#include "GeometryDecoder.h"
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
@@ -101,7 +102,7 @@ public:
 		avs::SurfaceFormat::ARGB,
 		avs::SurfaceFormat::ARGB,
 	};
-
+	GeometryDecoder geometryDecoder;
 	MeshCreator meshCreator;
 
 	std::vector<TextureHandle> textures;
@@ -111,8 +112,8 @@ public:
 	avs::Decoder decoder[NumStreams];
 	avs::Surface surface[NumStreams];
 
-	avs::GeometryDecoder geometryDecoder;
-	avs::GeometryTarget geometryTarget;
+	avs::GeometryDecoder avsGeometryDecoder;
+	avs::GeometryTarget avsGeometryTarget;
 
 	avs::NetworkSourceParams sourceParams = {};
 	avs::DecoderParams decoderParams = {};

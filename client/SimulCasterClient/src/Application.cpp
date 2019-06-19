@@ -326,7 +326,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 	decoderParams.prependStartCodes = false;
 	decoderParams.deferDisplay = false;
-	if(!mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams,0))
+	if(!mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams, 50))
 	{
 		OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
 		mNetworkSource.deconfigure();
