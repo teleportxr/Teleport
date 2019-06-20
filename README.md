@@ -26,6 +26,8 @@ Clone the repository with submodules:
 6. Put r.ShaderDevelopmentMode=1 in your ConsoleVariables.ini
 7. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
+## Building the PC Client
+
 ## Building GearVR client application
 
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
