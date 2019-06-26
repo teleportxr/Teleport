@@ -16,17 +16,23 @@ Clone the repository with submodules:
 6. Recent CMake, and get ninja.exe and put it in C:\Program Files\CMake\bin
 7. edit local.properties to contain cmake.dir=C\:\\Program Files\\CMake
 	
+## Building the PC Client
+
+1. Using CMakeGUI, set src: C:/Simul/RemotePlay and bin: C:/Simul/RemotePlay/build/x64
+2. Set Simul Directory and uncheck BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME
+3. Check out libavstream submodule to master (if needed)
+4. Configure for Visual Studio 15 2017 with x64 with default native compiler
+5. Generate, open and build the visual studio project
+
 ## Building UE4 plugin
 
-1. Using CMakeGUI, create a Visual Studio 2017 x64 build in the Libraries/libavstream subdirectory of plugins/UnrealDemo/Plugins/RemotePlay. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MD and /MDd options: Unreal uses the dynamic runtimes so this is needed for compatibility.
+1. Using CMakeGUI, create a Visual Studio 2017 x64 build in the Libraries/libavstream subdirectory of plugins/UnrealDemo/Plugins/RemotePlay. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MD and /MDd options and BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME are checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
 2. Create the Cmake libavstream project and add it to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build is configured to compile in Development Editor solution config.
-3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG)
-4. Build `UnrealDemo` UE4 project in `Development Editor` configuration.
+3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG). Ensure that the .dll is building as well.
+4. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch. Open and build the UE4 project in `Development Editor` configuration.
 5. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background"
-6. Put r.ShaderDevelopmentMode=1 in your ConsoleVariables.ini
+6. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
 7. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
-
-## Building the PC Client
 
 ## Building GearVR client application
 

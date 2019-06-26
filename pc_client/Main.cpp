@@ -125,7 +125,7 @@ void InitRenderer(HWND hWnd)
 	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" to direct3D11Manager to use d3d debugging:
 	gdi->Initialize(true, false,false);
-	std::string simul_env = "C:/Simul/4.2/Simul";// simul::base::EnvironmentVariables::GetSimulEnvironmentVariable("SIMUL");
+	std::string simul_env = "D:/Simul/4.2/Simul"; //simul::base::EnvironmentVariables::GetSimulEnvironmentVariable("SIMUL");
 	// Create an instance of our simple clientRenderer class defined above:
 	{
 		// Whether run from the project directory or from the executable location, we want to be
@@ -139,7 +139,8 @@ void InitRenderer(HWND hWnd)
 
 		renderPlatform->PushTexturePath("Media/Textures");
 	
-		renderPlatform->PushShaderPath("Shaders");		// working directory
+		renderPlatform->PushShaderPath("Shaders");					// working directory C:\Simul\RemotePlay\pc_client
+		renderPlatform->PushShaderPath("pc_client/Shaders");		// working directory C:\Simul\RemotePlay
 		renderPlatform->PushShaderPath("Platform/CrossPlatform/SFX/");
 		renderPlatform->PushShaderPath("../../../../Platform/CrossPlatform/SFX");
 		renderPlatform->PushShaderPath("../../Platform/CrossPlatform/SFX");

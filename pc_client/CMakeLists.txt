@@ -19,7 +19,7 @@ set(srcs
 	GeometryDecoder.h
 )
 include_directories(${SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include)
-link_directories("${SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/build/lib/${CONFIG_NAME}" ${CMAKE_SOURCE_DIR}/../libavstream/build_static/${CONFIG_NAME} ${CMAKE_SOURCE_DIR}/../thirdparty/enet/build_static/${CONFIG_NAME})
+link_directories("${SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/build/lib/${CONFIG_NAME}" "${SIMUL}/lib/x64/v141/Static ${CONFIG_NAME}" ${CMAKE_SOURCE_DIR}/../libavstream/build_static/${CONFIG_NAME} ${CMAKE_SOURCE_DIR}/../thirdparty/enet/build_static/${CONFIG_NAME} ${CMAKE_SOURCE_DIR}/build/x64/lib)
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)

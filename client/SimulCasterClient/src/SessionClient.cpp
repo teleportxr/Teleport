@@ -210,6 +210,10 @@ void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame, const ControllerSta
         {
             switch(event.type)
             {
+                case ENET_EVENT_TYPE_NONE:
+                    return;
+                case ENET_EVENT_TYPE_CONNECT:
+                    return;
                 case ENET_EVENT_TYPE_RECEIVE:
                     DispatchEvent(event);
                     break;
