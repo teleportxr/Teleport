@@ -254,6 +254,14 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 		w,
 		h
 	);
+	static simul::base::Timer timer;
+	static float last_t = 0.0f;
+	timer.UpdateTime();
+	if (last_t != 0.0f)
+	{
+		framerate=1000.0f/(timer.TimeSum -last_t);
+	}
+	last_t = timer.TimeSum;
 	deviceContext.platform_context	= context;
 	deviceContext.renderPlatform	=renderPlatform;
 	deviceContext.viewStruct.view_id=view_id;
@@ -332,7 +340,12 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 		int dy = 18;
 		renderPlatform->Print(deviceContext, w / 2, y += dy, sessionClient.IsConnected()? simul::base::QuickFormat("Connected to: %s"
 			,sessionClient.GetServerIP().c_str()):"Not connected",vec4(1.f,1.f,1.f,1.f));
-		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Jitter Buffer Length: %.2f ", counters.jitterBufferLength )); 
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Framerate: %4.4f", framerate));
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
+		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Jitter Buffer Length: %d ", counters.jitterBufferLength ));
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Jitter Buffer Push: %d ", counters.jitterBufferPush));
+		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Jitter Buffer Pop: %d ", counters.jitterBufferPop )); 
 		renderPlatform->Print(deviceContext,w/2,y+=dy, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network Packet orphans: %d", counters.m_packetMapOrphans));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Max age: %d", counters.m_maxAge));

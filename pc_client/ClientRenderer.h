@@ -64,6 +64,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	int framenumber;
 	SessionClient sessionClient;
 	ControllerState controllerState;
+	float framerate = 0.0f;
 public:
 	ClientRenderer();
 	~ClientRenderer();
