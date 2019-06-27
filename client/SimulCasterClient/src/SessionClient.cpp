@@ -223,7 +223,6 @@ void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame, const ControllerSta
             }
         }
     }
-
     mPrevControllerState = controllerState;
 }
 

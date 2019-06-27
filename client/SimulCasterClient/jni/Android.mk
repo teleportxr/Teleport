@@ -15,6 +15,7 @@ LOCAL_SRC_FILES			:= \
     ../src/VideoDecoderProxy.cpp
 
 LOCAL_C_INCLUDES += ../libavstream/include
+LOCAL_C_INCLUDES += 3rdParty/enet/Include
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -26,4 +27,4 @@ $(call import-module,VrAppSupport/VrLocale/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrModel/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrSound/Projects/Android/jni)
 $(call import-module,../libavstream/jni)
-$(call import-module,3rdParty/enet/Projects/AndroidPrebuilt/jni)
+$(call import-module,3rdParty/enet/jni)
