@@ -336,7 +336,13 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
 
 	mPipeline.link({&mNetworkSource, &mDecoder, &mSurface});
-	mPipelineConfigured = true;
+
+    //TODO: We will add a GEOMETRY PIPE:
+	avsGeometryDecoder.configure(100,&geometryDecoder);
+	avsGeometryTarget.configure(&meshCreator);
+    mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
+
+    mPipelineConfigured = true;
 }
 
 void Application::OnVideoStreamClosed()

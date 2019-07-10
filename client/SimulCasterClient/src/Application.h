@@ -15,6 +15,10 @@
 #include "SessionClient.h"
 #include "VideoDecoderProxy.h"
 
+#include "MeshCreator.h"
+#include "GeometryDecoder.h"
+#include <libavstream/geometrydecoder.hpp>
+
 namespace OVR {
 	class ovrLocale;
 }
@@ -54,6 +58,11 @@ private:
 	avs::Surface mSurface;
 	avs::NetworkSource mNetworkSource;
     bool mPipelineConfigured;
+
+    GeometryDecoder geometryDecoder;
+	MeshCreator meshCreator;
+	avs::GeometryDecoder avsGeometryDecoder;
+	avs::GeometryTarget avsGeometryTarget;
 
 	OVR::ovrSoundEffectContext* mSoundEffectContext;
 	OVR::OvrGuiSys::SoundEffectPlayer* mSoundEffectPlayer;

@@ -137,6 +137,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	transparentMesh=renderPlatform->CreateMesh();
 	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
 
+	meshCreator = new MeshCreator(renderPlatform);
+
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 }
 
@@ -307,7 +309,7 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 			}
 		}
 
-	//	RenderOpaqueTest(deviceContext);
+		//RenderOpaqueTest(deviceContext);
 
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -394,6 +396,7 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(cubemapClearEffect);
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularTexture);
+	SAFE_DELETE(meshCreator);
 }
 
 void ClientRenderer::RemoveView(int)
@@ -470,10 +473,10 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 		avs::Node::link(source, decoder[i]);
 	}
 	// We will add a GEOMETRY PIPE:
-#ifndef TEST_FIX
+#ifdef TEST_FIX
 	{
 		avsGeometryDecoder.configure(100,&geometryDecoder);
-		avsGeometryTarget.configure(&meshCreator);
+		avsGeometryTarget.configure(meshCreator);
 		pipeline.link({ &source, &avsGeometryDecoder, &avsGeometryTarget });
 	}
 #endif

@@ -12,7 +12,9 @@ LOCAL_SRC_FILES			:= \
     ../src/Application.cpp \
     ../src/SessionClient.cpp \
     ../src/VideoStreamClient.cpp \
-    ../src/VideoDecoderProxy.cpp
+    ../src/VideoDecoderProxy.cpp \
+    ../src/GeometryDecoder.cpp \
+    ../src/MeshCreator.cpp
 
 LOCAL_C_INCLUDES += ../libavstream/include
 LOCAL_C_INCLUDES += 3rdParty/enet/Include
