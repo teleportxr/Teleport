@@ -10,16 +10,23 @@
 class MeshCreator final : public avs::GeometryTargetBackendInterface
 {
 public:
-	MeshCreator(simul::crossplatform::RenderPlatform* renderPlatfrom);
+	MeshCreator();
 	~MeshCreator();
 
 
 	// Inherited via GeometryTargetBackendInterface
 	void ensureVertices(unsigned long long shape_uid, int startVertex, int vertexCount, const avs::vec3 * vertices) override;
+	void ensureNormals(unsigned long long shape_uid, int startNormal, int normalCount, const avs::vec3* normals) override;
+	void ensureTangents(unsigned long long shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents) override;
+	void ensureTexCoord0(unsigned long long shape_uid, int startTexCoord0, int texCoordCount0, const avs::vec2* texCoords0) override;
+	void ensureTexCoord1(unsigned long long shape_uid, int startTexCoord1, int texCoordCount1, const avs::vec2* texCoords1) override;
+	void ensureColors(unsigned long long shape_uid, int startColor, int colorCount, const avs::vec4* colors) override;
+	void ensureJoints(unsigned long long shape_uid, int startJoint, int jointCount, const avs::vec4* joints) override;
+	void ensureWeights(unsigned long long shape_uid, int startWeight, int weightCount, const avs::vec4* weights) override;
 	void ensureFaces(unsigned long long shape_uid, int startVertex, int vertexCount, const avs::int3 * faces) override;
 	void ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, const unsigned int* indices) override;
 
-	void Create();
+	void Create(simul::crossplatform::RenderPlatform* renderPlatform);
 
 	void BeginDraw(simul::crossplatform::DeviceContext& deviceContext, simul::crossplatform::ShadingMode shadingMode = simul::crossplatform::ShadingMode::SHADING_MODE_SHADED);
 	void Draw(simul::crossplatform::DeviceContext& deviceContext, int meshIndex = 0);
@@ -31,24 +38,22 @@ public:
 	simul::crossplatform::ShadingMode m_ShadingMode;
 
 private:
-	simul::crossplatform::RenderPlatform* m_RP;
-
-	avs::uid shape_uid;
+	avs::uid shape_uid = -1;
 	std::unique_ptr<simul::crossplatform::Mesh> m_Mesh;
 	
-	//Provide the Submesh with a default material upon creation.
-	simul::crossplatform::Material* m_Material;
-	
-	unsigned int numVertices = 0;
-	unsigned int numIndices = 0;
+	int					m_VertexCount	= 0;
+	int					m_IndexCount	= 0;
+	int					m_PolygonCount	= 0;
 
-	int					lPolygonVertexCount		= 0;
-	const float*		lVertices				= nullptr;
-	const float*		lNormals				= nullptr;
-	const float*		lUVs					= nullptr;
-	int					lPolygonCount			= 0;
-	const unsigned int* lIndices				= nullptr;
-	//const unsigned short* sIndices;
+	std::unique_ptr<float[]>			m_Vertices		= nullptr;
+	std::unique_ptr<float[]>			m_Normals		= nullptr;
+	std::unique_ptr<float[]>			m_Tangents		= nullptr;
+	std::unique_ptr<float[]>			m_UV0s			= nullptr;
+	std::unique_ptr<float[]>			m_UV1s			= nullptr;
+	std::unique_ptr<float[]>			m_Colors		= nullptr;
+	std::unique_ptr<float[]>			m_Joints		= nullptr;
+	std::unique_ptr<float[]>			m_Weights		= nullptr;
+	std::unique_ptr<unsigned int[]>		m_Indices		= nullptr;
 
 	inline bool SetAndCheckShapeUID(const avs::uid& uid)
 	{
@@ -57,14 +62,15 @@ private:
 			shape_uid = uid;
 			return true;
 		}
-		else if (shape_uid!= uid)
+		else if (shape_uid == uid)
 		{
-			return false;
+			return true;
 		}
 		else
 			return false;
-
 	}
+
+#define CHECK_SHAPE_UID(x) if (!SetAndCheckShapeUID(x)) { SIMUL_BREAK_ONCE("Invalid shape_uid.\n"); return; }
 
 	static unsigned int s_TotalSubMeshes;
 };

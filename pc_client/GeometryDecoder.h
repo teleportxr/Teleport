@@ -17,37 +17,26 @@ public:
 private:
 	struct DecodedGeometry
 	{
-		std::map<avs::uid, size_t> primitiveArraysSizes;
 		std::map<avs::uid, std::vector<avs::PrimitiveArray>> primitiveArrays;
-		std::vector<avs::Accessor> accessors;
-		std::vector<avs::BufferView> bufferViews;
-		std::vector<avs::GeometryBuffer> buffers;
-
-		size_t primitiveArraysMapSize;
-		size_t accessorsSize;
-		size_t bufferViewsSize;
-		size_t buffersSize;
+		std::map<avs::uid, avs::Accessor> accessors;
+		std::map<avs::uid, avs::BufferView> bufferViews;
+		std::map<avs::uid, avs::GeometryBuffer> buffers;
+		std::map<avs::uid, std::vector<uint8_t>> bufferDatas;
 
 		~DecodedGeometry()
 		{
-			primitiveArraysMapSize = 0;
-			accessorsSize = 0;
-			bufferViewsSize = 0;
-			buffersSize = 0;
-			
+			for (auto& primitiveArray : primitiveArrays)
+				primitiveArray.second.clear();
+			primitiveArrays.clear();
+
 			accessors.clear();
 			bufferViews.clear();
 			buffers.clear();
 
-			primitiveArraysSizes.clear();
-
-			for (std::map<avs::uid, std::vector<avs::PrimitiveArray>>::iterator it = primitiveArrays.begin(); it != primitiveArrays.end(); it++)
-				it->second.clear();
-
-			primitiveArrays.clear();
+			for (auto& bufferData : bufferDatas)
+				bufferData.second.clear();
+			bufferDatas.clear();
 		}
 	};
-	
-	std::vector<DecodedGeometry> m_DecodedGeometries;
 };
 

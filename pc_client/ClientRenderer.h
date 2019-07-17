@@ -104,7 +104,7 @@ public:
 		avs::SurfaceFormat::ARGB,
 	};
 	GeometryDecoder geometryDecoder;
-	MeshCreator* meshCreator = nullptr;
+	MeshCreator meshCreator;
 
 	std::vector<TextureHandle> textures;
 	avs::Context context;
