@@ -316,7 +316,8 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 	sourceParams.maxJitterBufferLength = 0;
 
-	if(!mNetworkSource.configure(1, port+1, mSession.GetServerIP().c_str(), port, sourceParams)) {
+
+	if(!mNetworkSource.configure(NumStreams + (GeoStream?1:0), port+1, mSession.GetServerIP().c_str(), port, sourceParams)) {
 		OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
 		return;
 	}
@@ -337,12 +338,15 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 
 	mPipeline.link({&mNetworkSource, &mDecoder, &mSurface});
 
-    //TODO: We will add a GEOMETRY PIPE:
-	avsGeometryDecoder.configure(100,&geometryDecoder);
-	avsGeometryTarget.configure(&meshCreator);
-    mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
+   //TODO: We will add a GEOMETRY PIPE:
+   if(GeoStream)
+   {
+        avsGeometryDecoder.configure(100, &geometryDecoder);
+	    avsGeometryTarget.configure(&meshCreator);
+        mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
+   }
 
-    mPipelineConfigured = true;
+   mPipelineConfigured = true;
 }
 
 void Application::OnVideoStreamClosed()

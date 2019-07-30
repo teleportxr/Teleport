@@ -424,7 +424,7 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams+1, remotePort+1, "127.0.0.1", remotePort, sourceParams))
+	if (!source.configure(NumStreams+(GeoStream?1:0), remotePort+1, "127.0.0.1", remotePort, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
@@ -470,13 +470,12 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 		avs::Node::link(source, decoder[i]);
 	}
 	// We will add a GEOMETRY PIPE:
-#ifndef TEST_FIX
+	if(GeoStream)
 	{
 		avsGeometryDecoder.configure(100,&geometryDecoder);
 		avsGeometryTarget.configure(&meshCreator);
 		pipeline.link({ &source, &avsGeometryDecoder, &avsGeometryTarget });
 	}
-#endif
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 

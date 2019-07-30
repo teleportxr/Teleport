@@ -96,6 +96,7 @@ public:
 	void CreateTexture(TextureHandle &th,int width, int height, avs::SurfaceFormat format);
 
 	static constexpr size_t   NumStreams =1;
+	static constexpr bool     GeoStream  =true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
 
@@ -103,8 +104,6 @@ public:
 		avs::SurfaceFormat::ARGB,
 		avs::SurfaceFormat::ARGB,
 	};
-	GeometryDecoder geometryDecoder;
-	MeshCreator meshCreator;
 
 	std::vector<TextureHandle> textures;
 	avs::Context context;
@@ -113,6 +112,8 @@ public:
 	avs::Decoder decoder[NumStreams];
 	avs::Surface surface[NumStreams];
 
+	GeometryDecoder geometryDecoder;
+	MeshCreator meshCreator;
 	avs::GeometryDecoder avsGeometryDecoder;
 	avs::GeometryTarget avsGeometryTarget;
 
