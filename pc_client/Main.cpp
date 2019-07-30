@@ -116,7 +116,9 @@ void ShutdownRenderer()
 {
 	clientRenderer.InvalidateDeviceObjects();
 }
-
+#define STRINGIFY(a) STRINGIFY2(a)
+#define STRINGIFY2(a) #a
+	
 void InitRenderer(HWND hWnd)
 {
 	gdi = &direct3D11Manager;
@@ -125,7 +127,7 @@ void InitRenderer(HWND hWnd)
 	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" to direct3D11Manager to use d3d debugging:
 	gdi->Initialize(true, false,false);
-	std::string simul_env = "D:/Simul/4.2/Simul"; //simul::base::EnvironmentVariables::GetSimulEnvironmentVariable("SIMUL");
+	std::string simul_env = STRINGIFY(SIMUL);
 	// Create an instance of our simple clientRenderer class defined above:
 	{
 		// Whether run from the project directory or from the executable location, we want to be
