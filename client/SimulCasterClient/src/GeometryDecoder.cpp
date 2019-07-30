@@ -53,7 +53,7 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
             avs::uid indices_accessor = Next8B;
             avs::uid material = Next8B;
             PrimitiveMode primitiveMode = (PrimitiveMode)Next4B;
-            Attribute* attributes;
+            Attribute attributes[8];
 
             std::vector<Attribute> _attrib;
             _attrib.reserve(attributeCount);

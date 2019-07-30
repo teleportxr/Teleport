@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(pc_client)
 file(GLOB shaders "Shaders/*.sfx" "Shaders/*.sl")
+set( SIMUL "C:/Simul/4.2/Simul" CACHE STRING "Set the location of the Simul root directory. Usually the main source folder." )
 set(srcs
 	ClientRenderer.cpp
 	Main.cpp
@@ -23,6 +24,8 @@ link_directories("${SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/build
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DSIMUL=${SIMUL}")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DSIMUL=${SIMUL}")
 else()
 	message(FATAL_ERROR "Unsupported platform!")
 endif()
@@ -41,4 +44,4 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
-target_link_libraries(pc_client libavstream enet)
+target_link_libraries(pc_client libavstream enet effects11_MT directxtex_MT )

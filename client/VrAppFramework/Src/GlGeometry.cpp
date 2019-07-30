@@ -48,11 +48,10 @@ void PackVertexAttribute( Array< uint8_t > & packed, const Array< _attrib_type_ 
 	}
 }
 
-void GlGeometry::Create( const VertexAttribs & attribs, const Array< TriangleIndex > & indices, GLenum usage)
+void GlGeometry::Create( const VertexAttribs & attribs, const Array< TriangleIndex > & indices )
 {
 	vertexCount = attribs.position.GetSizeI();
 	indexCount = indices.GetSizeI();
-	bufferUsage = usage;
 
 	glGenBuffers( 1, &vertexBuffer );
 	glGenBuffers( 1, &indexBuffer );
@@ -71,10 +70,10 @@ void GlGeometry::Create( const VertexAttribs & attribs, const Array< TriangleInd
 	PackVertexAttribute( packed, attribs.jointIndices,	VERTEX_ATTRIBUTE_LOCATION_JOINT_INDICES,	GL_INT,		4 );
 	PackVertexAttribute( packed, attribs.jointWeights,	VERTEX_ATTRIBUTE_LOCATION_JOINT_WEIGHTS,	GL_FLOAT,	4 );
 
-	glBufferData( GL_ARRAY_BUFFER, packed.GetSize() * sizeof( packed[0] ), packed.GetDataPtr(), usage );
+	glBufferData( GL_ARRAY_BUFFER, packed.GetSize() * sizeof( packed[0] ), packed.GetDataPtr(), GL_STATIC_DRAW );
 
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, indexBuffer );
-	glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.GetSizeI() * sizeof( indices[0] ), indices.GetDataPtr(), bufferUsage );
+	glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.GetSizeI() * sizeof( indices[0] ), indices.GetDataPtr(), GL_STATIC_DRAW );
 
 	glBindVertexArray( 0 );
 
@@ -114,7 +113,7 @@ void GlGeometry::Update( const VertexAttribs & attribs, const bool updateBounds 
 	PackVertexAttribute( packed, attribs.jointIndices,	VERTEX_ATTRIBUTE_LOCATION_JOINT_INDICES,	GL_INT,		4 );
 	PackVertexAttribute( packed, attribs.jointWeights,	VERTEX_ATTRIBUTE_LOCATION_JOINT_WEIGHTS,	GL_FLOAT,	4 );
 
-	glBufferData( GL_ARRAY_BUFFER, packed.GetSize() * sizeof( packed[0] ), packed.GetDataPtr(), bufferUsage );
+	glBufferData( GL_ARRAY_BUFFER, packed.GetSize() * sizeof( packed[0] ), packed.GetDataPtr(), GL_STATIC_DRAW );
 
 	if ( updateBounds )
 	{

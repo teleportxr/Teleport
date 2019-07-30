@@ -32,8 +32,8 @@ struct VertexAttribs
 	Array< Vector4f > jointWeights;
 };
 
-//typedef unsigned short TriangleIndex;
-typedef unsigned int TriangleIndex;
+typedef unsigned short TriangleIndex;
+//typedef unsigned int TriangleIndex;
 
 class GlGeometry
 {
@@ -57,7 +57,7 @@ public:
 				localBounds( Bounds3f::Init ){ Create( attribs, indices ); }
 
 	// Create the VAO and vertex and index buffers from arrays of data.
-	void	Create( const VertexAttribs & attribs, const Array< TriangleIndex > & indices, GLenum usage = GL_STATIC_DRAW);
+	void	Create( const VertexAttribs & attribs, const Array< TriangleIndex > & indices );
 	void	Update( const VertexAttribs & attribs, const bool updateBounds = true );
 
 	// Free the buffers and VAO, assuming that they are strictly for this geometry.
@@ -80,7 +80,6 @@ public:
 	int			vertexCount;
 	int 		indexCount;
 	Bounds3f	localBounds;
-	GLenum      bufferUsage = GL_STATIC_DRAW;
 };
 
 // Build it in a -1 to 1 range, which will be scaled to the appropriate

@@ -249,6 +249,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 
+    auto ctr=mNetworkSource.getCounterValues();
+    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d    \nDecoder Packets Dropped: %d", ctr.networkPacketsDropped, ctr.decoderDropped );
+
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
 	res.SwapInterval = app->GetSwapInterval();
