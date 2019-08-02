@@ -6,12 +6,12 @@ using namespace OVR;
 
 MeshCreator::MeshCreator()
 {
-    m_Mesh.shape_uid = -1;
+    m_Mesh.shape_uid = (avs::uid)-1;
 }
 
 MeshCreator::~MeshCreator()
 {
-    m_Mesh.shape_uid = -1;
+    m_Mesh.shape_uid = (avs::uid)-1;
     m_Mesh.geometry.Free();
 }
 void MeshCreator::ensureVertices(unsigned long long shape_uid, int startVertex, int vertexCount, const vec3* vertices)
@@ -55,20 +55,6 @@ void MeshCreator::ensureFaces(unsigned long long shape_uid, int startVertex, int
         return;
     }
 }
-void MeshCreator::ensureNormals(unsigned long long shape_uid, int startNormal, int normalCount, const avs::vec3* normals)
-{};
-void MeshCreator::ensureTangents(unsigned long long shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents)
-{};
-void MeshCreator::ensureTexCoord0(unsigned long long shape_uid, int startTexCoord0, int texCoordCount0, const avs::vec2* texCoords0)
-{};
-void MeshCreator::ensureTexCoord1(unsigned long long shape_uid, int startTexCoord1, int texCoordCount1, const avs::vec2* texCoords1)
-{};
-void MeshCreator::ensureColors(unsigned long long shape_uid, int startColor, int colorCount, const avs::vec4* colors)
-{};
-void MeshCreator::ensureJoints(unsigned long long shape_uid, int startJoint, int jointCount, const avs::vec4* joints)
-{};
-void MeshCreator::ensureWeights(unsigned long long shape_uid, int startWeight, int weightCount, const avs::vec4* weights)
-{};
 void MeshCreator::ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, const unsigned int* indices)
 {
     if(!SetAndCheckShapeUID(shape_uid))
