@@ -8,6 +8,7 @@
 
 namespace scr
 {
+	//Interface for Pipeline
 	class Pipeline
 	{
 	public:
@@ -146,28 +147,26 @@ namespace scr
 		const ColourBlendingState& m_ColourBlendingState;
 
 	public:
-		Pipeline(const std::vector<Shader&>& shaders,
+		virtual ~Pipeline()	{};
+
+		virtual void Create(const std::vector<Shader&>& shaders,
 			const VertexBufferLayout& layout,
 			const TopologyType& topology,
 			const ViewportAndScissor& viewportAndScissor,
 			const RasterizationState& rasterization,
 			const MultisamplingState& multisample,
 			const DepthStencilingState& depthStenciling,
-			const ColourBlendingState& colourBlending)
-			:m_Shaders(shaders), m_VertexLayout(layout), m_Topology(topology), 
-			m_ViewportAndScissor(viewportAndScissor), m_RasterizationState(rasterization), 
-			m_MultisamplingState(multisample), m_DepthStencilingState(depthStenciling), 
-			m_ColourBlendingState(colourBlending)
-		{
-			LinkShaders(m_Shaders);
-		}
-		
-		~Pipeline()	{};
+			const ColourBlendingState& colourBlending) = 0;
+			/*:m_Shaders(shaders), m_VertexLayout(layout), m_Topology(topology),
+			m_ViewportAndScissor(viewportAndScissor), m_RasterizationState(rasterization),
+			m_MultisamplingState(multisample), m_DepthStencilingState(depthStenciling),
+			m_ColourBlendingState(colourBlending)*/ 
 
 		virtual void LinkShaders(const std::vector<Shader&>& shaders) = 0;
 		
 		virtual void Bind() = 0;
 		virtual void Unbind() = 0;
 
+		virtual void Draw(TopologyType topology, size_t indexBufferCount) = 0;
 	};
 }

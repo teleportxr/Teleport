@@ -15,13 +15,6 @@ namespace scr
 		size_t m_Count;
 
 	public:
-		IndexBuffer(size_t size, const uint32_t* data)
-			:m_Size(size), m_Data(data)
-		{
-			assert(m_Size % sizeof(uint32_t) == 0);
-			m_Count = size / sizeof(uint32_t);
-		};
-
 		virtual ~IndexBuffer()
 		{
 			m_Size = 0;
@@ -30,7 +23,7 @@ namespace scr
 			m_Count = 0;
 		};
 
-		virtual void Create() = 0;
+		virtual void Create(size_t size, const uint32_t* data) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() = 0;

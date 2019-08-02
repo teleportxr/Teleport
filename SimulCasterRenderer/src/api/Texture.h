@@ -2,9 +2,11 @@
 #pragma once
  
 #include "../Common.h"
+#include "Sampler.h"
 
 namespace scr
 {
+	//Interface for Texture
 	class Texture
 	{
 	public:
@@ -99,10 +101,9 @@ namespace scr
 		size_t m_Size;
 		const uint8_t* m_Data;
 
+		const Sampler* m_Sampler;
+
 	public:
-		Texture(Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, size_t size, const uint8_t* data)
-			:m_Type(type), m_Format(format), m_SampleCount(sampleCount), m_Width(width), m_Height(height), m_Depth(depth), m_BitsPerPixel(bitsPerPixel), m_Size(size), m_Data(data)
-		{};
 			
 		virtual ~Texture()
 		{
@@ -118,7 +119,7 @@ namespace scr
 			m_Data = nullptr;
 		}
 
-		virtual void Create() = 0;
+		virtual void Create(Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() = 0;
@@ -126,8 +127,8 @@ namespace scr
 
 		virtual void GenerateMips() = 0;
 
+		inline void UseSampler(const Sampler& sampler) { m_Sampler = &sampler; }
+
 		friend class FrameBuffer;
 	};
-
-	//Sampler!!
 }

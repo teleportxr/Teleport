@@ -14,16 +14,17 @@ namespace scr
 		const void* m_Data;
 
 	public:
-		UniformBuffer(size_t size, const void* data, uint32_t bindingLocation)
-			:m_Size(size), m_Data(data), m_BindingLocation(bindingLocation) {};
-
 		virtual ~UniformBuffer()
 		{
 			m_Size = 0;
 			m_Data = nullptr;
 		}
 
-		virtual void Create() = 0;
+		//Binding Locations for UBOs
+		//Camera = 0;
+		//Model = 1;
+		//Light = 2;
+		virtual void Create(size_t size, const void* data, uint32_t bindingLocation) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() = 0;

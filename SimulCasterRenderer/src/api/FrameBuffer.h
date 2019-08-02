@@ -14,20 +14,13 @@ namespace scr
 		Texture::SampleCount m_SampleCount;
 		uint32_t m_Width, m_Height;
 
-		std::vector<std::unique_ptr<Texture>> m_ColourTextures = { nullptr };
-		std::unique_ptr<Texture> m_DepthTexture = nullptr;
+		std::vector<Texture*> m_ColourTextures;
+		Texture* m_DepthTexture;
 
-		std::unique_ptr<FrameBuffer> m_ResolvedFrameBuffer = nullptr;
+		std::unique_ptr<FrameBuffer> m_ResolvedFrameBuffer;
 
 	public:
-		FrameBuffer(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height)
-			:m_Format(format), m_SampleCount(sampleCount), m_Width(width), m_Height(height)
-		{
-			if (m_SampleCount > Texture::SampleCount::SAMPLE_COUNT_1_BIT)
-				m_ResolvedFrameBuffer = std::make_unique<FrameBuffer>(format, Texture::SampleCount::SAMPLE_COUNT_1_BIT, m_Width, m_Height);
-		};
-		
-		virtual void Create() = 0;
+		virtual void Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() = 0;
@@ -35,25 +28,25 @@ namespace scr
 
 		virtual void Resolve() = 0;
 		virtual void UpdateFrameBufferSize(uint32_t width, uint32_t height) = 0;
-		virtual void Clear(float colour[4], float depth, float stencil) = 0;
+		virtual void Clear(float colour_r, float colour_g, float colour_b, float colour_a, float depth, float stencil) = 0;
 
-		void AddColourAttachment(const Texture& colourTexture, uint32_t attachmentIndex, bool overrideTexture = false)
+		void AddColourAttachment(Texture& colourTexture, uint32_t attachmentIndex, bool overrideTexture = false)
 		{
 			if (!CheckTextureCompatibility(colourTexture))
 				SCR_COUT("Incompatible texture.");
 			
 			if (m_ColourTextures.at(attachmentIndex) == nullptr || overrideTexture)
-				m_ColourTextures.at(attachmentIndex) = std::make_unique<Texture>(colourTexture);
+				m_ColourTextures.at(attachmentIndex) = &colourTexture;
 			else
 				SCR_COUT("Can't add colour texture attachment.");
 		};
-		void AddDepthAttachment(const Texture& depthTexture, bool overrideTexture = false)
+		void AddDepthAttachment(Texture& depthTexture, bool overrideTexture = false)
 		{
 			if (!CheckTextureCompatibility(depthTexture))
 				SCR_COUT("Incompatible texture.");
 
 			if (m_DepthTexture == nullptr || overrideTexture)
-				m_DepthTexture = std::make_unique<Texture>(depthTexture);
+				m_DepthTexture = &depthTexture;
 			else
 				SCR_COUT("Can't add depth texture attachment");
 		};

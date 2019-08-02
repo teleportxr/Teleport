@@ -21,7 +21,6 @@ namespace scr
 			VEC3,
 			VEC4
 		};
-
 		struct VertexAttribute
 		{
 			uint32_t location;

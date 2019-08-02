@@ -5,6 +5,7 @@
 
 namespace scr
 {
+	//Interface for Shader
 	class Shader
 	{
 	public:
@@ -28,9 +29,6 @@ namespace scr
 		Stage m_Stage;
 
 	public:
-		Shader(const char* filepath, const char* entryPoint, Stage stage) 
-		:m_Filepath(filepath), m_EntryPoint(entryPoint), m_Stage(stage) {};
-
 		virtual ~Shader()
 		{
 			m_Filepath = nullptr;
@@ -38,6 +36,7 @@ namespace scr
 			Stage m_Stage = Stage::SHADER_STAGE_UNKNOWN;
 		}
 
+		virtual void Create(const char* filepath, const char* entryPoint, Stage stage) = 0;
 		virtual void Compile() = 0;
 	};
 }

@@ -16,8 +16,5 @@ namespace scr
 		Material(Texture& diffuse, Texture& normal, Texture& combined);
 
 		void Bind();
-
-		void Create();
-		void Destroy();
 	};
 }
