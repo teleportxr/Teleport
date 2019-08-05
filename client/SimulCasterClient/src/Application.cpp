@@ -9,6 +9,7 @@
 #include "OVR_Locale.h"
 
 #include <enet/enet.h>
+#include <sstream>
 
 #if defined( OVR_OS_WIN32 )
 #include "../res_pc/resource.h"
@@ -250,7 +251,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 
     auto ctr=mNetworkSource.getCounterValues();
-    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d    \nDecoder Packets Dropped: %d", ctr.networkPacketsDropped, ctr.decoderDropped );
+    static float frameRate=1.0f;
+    if(vrFrame.DeltaSeconds>0.0f)
+    {
+        frameRate*=0.99f;
+        frameRate+=0.01f/vrFrame.DeltaSeconds;
+    }
+
+    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d    \nDecoder Packets Dropped: %d\nFramerate: %4.4f"
+            , ctr.networkPacketsDropped, ctr.decoderPacketsDropped
+            ,frameRate);
 
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -368,15 +378,45 @@ void Application::OnFrameAvailable()
 
 void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, void*)
 {
-	switch(severity) {
+	switch(severity)
+	{
 		case avs::LogSeverity::Error:
 		case avs::LogSeverity::Warning:
-			OVR_WARN("%s", msg);
-			break;
+		if(msg)
+        {
+            static std::ostringstream ostr;
+            while((*msg)!=0&&(*msg)!='\n')
+            {
+                ostr<<(*msg);
+                msg++;
+            }
+            if(*msg=='\n')
+            {
+                OVR_WARN("%s", ostr.str().c_str());
+                ostr.str("");
+                ostr.clear();
+            }
+            break;
+        }
 		case avs::LogSeverity::Critical:
 			OVR_FAIL("%s", msg);
 		default:
-			OVR_LOG("%s", msg);
+            if(msg)
+            {
+                static std::ostringstream ostr;
+                while((*msg)!=0&&(*msg)!='\n')
+                {
+                    ostr<<(*msg);
+                    msg++;
+                }
+                if(*msg=='\n')
+                {
+                    OVR_LOG("%s", ostr.str().c_str());
+					ostr.str("");
+                    ostr.clear();
+                }
+                break;
+            }
 			break;
 	}
 }

@@ -103,7 +103,7 @@ bool SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
     if(serverDiscovered) {
         char remoteIP[20];
         enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
-        OVR_LOG("Discovered session server: %s:%d", remoteIP, remote.port);
+        OVR_WARN("Discovered session server: %s:%d", remoteIP, remote.port);
 
         close(mServiceDiscoverySocket);
         mServiceDiscoverySocket = 0;
