@@ -95,8 +95,8 @@ public:
 
 	void CreateTexture(TextureHandle &th,int width, int height, avs::SurfaceFormat format);
 
-	static constexpr size_t   NumStreams =1;
-	static constexpr bool     GeoStream  =true;
+	static constexpr size_t NumStreams = 1;
+	static constexpr bool GeoStream  = true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
 
