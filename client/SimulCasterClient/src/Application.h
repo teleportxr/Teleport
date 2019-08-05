@@ -59,8 +59,8 @@ private:
 	avs::NetworkSource mNetworkSource;
     bool mPipelineConfigured;
 
-    static constexpr size_t   NumStreams =1;
-    static constexpr bool     GeoStream  =true;
+    static constexpr size_t   NumStreams = 1;
+    static constexpr bool     GeoStream  = false;
 
     GeometryDecoder geometryDecoder;
 	MeshCreator meshCreator;
