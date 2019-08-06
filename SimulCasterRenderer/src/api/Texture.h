@@ -10,6 +10,12 @@ namespace scr
 	class Texture
 	{
 	public:
+		enum class Slot : uint32_t
+		{
+			DIFFUSE,	//Slot 0: DIFFUSE	RGBA Colour Texture
+			NORMAL,		//Slot 1: NORMAL	R: Tangent, G: Bi-normals and B: Normals
+			COMBINED	//Slot 2: COMBINED	R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
+		};
 		enum class Type : uint32_t
 		{
 			TEXTURE_UNKNOWN = 0,
@@ -94,6 +100,7 @@ namespace scr
 	protected:
 		uint32_t m_Width, m_Height, m_Depth, m_BitsPerPixel;
 
+		Slot m_Slot;
 		Type m_Type;
 		Format m_Format;
 		SampleCount m_SampleCount;
@@ -117,9 +124,11 @@ namespace scr
 
 			m_Size = 0;
 			m_Data = nullptr;
+
+			m_Sampler = nullptr;
 		}
 
-		virtual void Create(Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) = 0;
+		virtual void Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() = 0;
@@ -127,7 +136,11 @@ namespace scr
 
 		virtual void GenerateMips() = 0;
 
-		inline void UseSampler(const Sampler& sampler) { m_Sampler = &sampler; }
+		inline const Sampler* GetSampler() const { return m_Sampler; }
+		inline void UseSampler(const Sampler* sampler) { m_Sampler = sampler; }
+
+		virtual bool ResourceInUse(int timeout) = 0;
+		std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;
 
 		friend class FrameBuffer;
 	};

@@ -30,6 +30,16 @@ namespace scr
 		virtual void Bind() = 0;
 		virtual void Unbind() = 0;
 
-		virtual void Update(size_t offset, size_t size, const void* data) = 0;
+		//Update the UBO's data that is to be later submitted.
+		void Update(size_t offset, size_t size, const void* data)
+		{
+			assert(m_Size >= offset + size);
+			memcpy((void*)((uint64_t)m_Data + (uint64_t)offset), data, size);
+		}
+		//Submits the stored UBO data to the GPU.
+		virtual void Submit() = 0;
+
+		virtual bool ResourceInUse(int timeout) = 0;
+		std::function<bool(UniformBuffer*, int)> ResourceInUseCallback = &UniformBuffer::ResourceInUse;
 	};
 }

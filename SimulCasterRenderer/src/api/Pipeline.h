@@ -5,6 +5,7 @@
 #include "Shader.h"
 #include "VertexBufferLayout.h"
 #include "Texture.h"
+#include "../crossplatform/DescriptorSet.h"
 
 namespace scr
 {
@@ -167,6 +168,8 @@ namespace scr
 		virtual void Bind() = 0;
 		virtual void Unbind() = 0;
 
+		//Calls UniformBuffer::Submit() and Texture::Bind() on the respective ojects
+		virtual void BindDescriptorSets(const std::vector<DescriptorSet>& descriptorSets) = 0;
 		virtual void Draw(TopologyType topology, size_t indexBufferCount) = 0;
 	};
 }

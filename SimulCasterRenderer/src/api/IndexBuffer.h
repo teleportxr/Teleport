@@ -30,5 +30,8 @@ namespace scr
 		virtual void Unbind() = 0;
 
 		inline size_t GetCount() const { return m_Count; }
+
+		virtual bool ResourceInUse(int timeout) = 0;
+		std::function<bool(IndexBuffer*, int)> ResourceInUseCallback = &IndexBuffer::ResourceInUse;
 	};
 }

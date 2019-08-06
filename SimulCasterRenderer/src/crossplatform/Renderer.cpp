@@ -40,7 +40,7 @@ void Renderer::Execute()
 
 	m_Pipeline->Bind();
 
-	m_Camera->UpdateView();
+	m_Camera->UpdateCameraUBO();
 	
 	for (auto& light : m_Lights)
 		light->UpdateLightUBO();
@@ -50,7 +50,9 @@ void Renderer::Execute()
 	{
 		Object* obj = m_Objects.front();
 
-		obj->Bind();
+		obj->BindGeometries();
+		obj->UpdateModelUBO();
+		m_Pipeline->BindDescriptorSets({ m_Camera->GetDescriptorSet(), m_Lights[0]->GetDescriptorSet(), obj->GetDescriptorSet(), obj->GetMaterial().GetDescriptorSet() });
 		m_Pipeline->Draw(Pipeline::TopologyType::TRIANGLE_LIST, obj->GetIndexBufferCount());
 
 		m_Objects.pop_front();

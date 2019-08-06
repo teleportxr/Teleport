@@ -24,6 +24,8 @@ set( src_crossplatform
 	src/crossplatform/basic_linear_algebra.h
 	src/crossplatform/Camera.cpp
 	src/crossplatform/Camera.h
+	src/crossplatform/DescriptorSet.cpp
+	src/crossplatform/DescriptorSet.h
 	src/crossplatform/Light.cpp
 	src/crossplatform/Light.h
 	src/crossplatform/Material.cpp
