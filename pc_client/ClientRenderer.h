@@ -13,18 +13,12 @@
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
 #include <libavstream/geometrydecoder.hpp>
-struct Texture
+struct AVSTexture
 {
-	virtual ~Texture() = default;
+	virtual ~AVSTexture() = default;
 	virtual avs::SurfaceBackendInterface* createSurface() const = 0;
 };
-using TextureHandle = std::shared_ptr<Texture>;
-
-struct Shader
-{
-	virtual ~Shader() = default;
-};
-using ShaderHandle = std::shared_ptr<Shader>;
+using AVSTextureHandle = std::shared_ptr<AVSTexture>;
 
 struct RendererStats
 {
@@ -93,7 +87,7 @@ public:
 		, int yPos);
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
 
-	void CreateTexture(TextureHandle &th,int width, int height, avs::SurfaceFormat format);
+	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);
 
 	static constexpr size_t NumStreams = 1;
 	static constexpr bool GeoStream  = true;
@@ -105,7 +99,7 @@ public:
 		avs::SurfaceFormat::ARGB,
 	};
 
-	std::vector<TextureHandle> textures;
+	std::vector<AVSTextureHandle> avsTextures;
 	avs::Context context;
 
 	avs::NetworkSource source;

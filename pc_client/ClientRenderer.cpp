@@ -47,9 +47,9 @@ void apply_material()
 #include "ClientRenderer.h"
 
 
-struct TextureImpl :public Texture
+struct AVSTextureImpl :public AVSTexture
 {
-	TextureImpl(simul::crossplatform::Texture *t)
+	AVSTextureImpl(simul::crossplatform::Texture *t)
 		:texture(t)
 	{
 	}
@@ -58,10 +58,6 @@ struct TextureImpl :public Texture
 	{
 		return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
 	}
-};
-
-struct ShaderImpl :public Shader
-{
 };
 
 void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
@@ -86,7 +82,7 @@ ClientRenderer::ClientRenderer():
 	,sessionClient(this)
 	, RenderMode(0)
 {
-	textures.resize(NumStreams);
+	avsTextures.resize(NumStreams);
 }
 
 ClientRenderer::~ClientRenderer()
@@ -295,9 +291,9 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 			cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", specularTexture);
-			TextureHandle th = textures[0];
-			Texture &tx = *th;
-			TextureImpl *ti = static_cast<TextureImpl*>(&tx);
+			AVSTextureHandle th = avsTextures[0];
+			AVSTexture &tx = *th;
+			AVSTextureImpl *ti = static_cast<AVSTextureImpl*>(&tx);
 			if (ti)
 			{
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
@@ -361,15 +357,15 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 
 void ClientRenderer::InvalidateDeviceObjects()
 {
-	for (auto i : textures)
+	for (auto i : avsTextures)
 	{
-		TextureImpl *ti = (TextureImpl*)i.get();
+		AVSTextureImpl *ti = (AVSTextureImpl*)i.get();
 		if (ti)
 		{
 			SAFE_DELETE(ti->texture);
 		}
 	}
-	textures.clear();
+	avsTextures.clear();
 	if(transparentEffect)
 	{
 		transparentEffect->InvalidateDeviceObjects();
@@ -406,12 +402,12 @@ bool ClientRenderer::OnDeviceRemoved()
 	return true;
 }
 
-void ClientRenderer::CreateTexture(TextureHandle &th,int width, int height, avs::SurfaceFormat format)
+void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format)
 {
 	if (!(th))
-		th.reset(new TextureImpl(nullptr));
-	Texture *t = th.get();
-	TextureImpl *ti=(TextureImpl*)t;
+		th.reset(new AVSTextureImpl(nullptr));
+	AVSTexture *t = th.get();
+	AVSTextureImpl *ti=(AVSTextureImpl*)t;
 	if(!ti->texture)
 		ti->texture = renderPlatform->CreateTexture();
 	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height, simul::crossplatform::RGBA_8_UNORM, true, true, false);
@@ -440,9 +436,9 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 	// Top of the pipeline, we have the network source.
 	pipeline.add(&source);
 
-	for (auto t : textures)
+	for (auto t : avsTextures)
 	{
-		TextureImpl* ti= (TextureImpl*)(t.get());
+		AVSTextureImpl* ti= (AVSTextureImpl*)(t.get());
 		if (ti)
 		{
 			SAFE_DELETE(ti->texture);
@@ -455,13 +451,13 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 	*/
 	for (size_t i = 0; i < NumStreams; ++i)
 	{
-		CreateTexture(textures[i],width, height, SurfaceFormats[i]);
+		CreateTexture(avsTextures[i],width, height, SurfaceFormats[i]);
 		// Video streams are 50+...
 		if (!decoder[i].configure(dev, width, height, decoderParams, (int)(50+i)))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}
-		if (!surface[i].configure(textures[i]->createSurface()))
+		if (!surface[i].configure(avsTextures[i]->createSurface()))
 		{
 			throw std::runtime_error("Failed to configure output surface node");
 		}
