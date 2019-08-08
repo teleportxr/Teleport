@@ -28,17 +28,51 @@ template<typename T> void get(T* target,const uint8_t *data, size_t count)
 	memcpy(target, data, count*sizeof(T));
 }
 
-avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
+avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface* target)
 {
-	// NO m_GALU Header or tail!
-	std::vector<uint8_t> _buffer;
-	_buffer.resize(bufferSizeInBytes);
-	memcpy(_buffer.data(), (uint8_t*)buffer, bufferSizeInBytes);
+	// No m_GALU on the header or tail of the incoming buffer!
+	m_BufferSize = bufferSizeInBytes;
+	m_BufferOffset = 0;
+	m_Buffer.clear();
+	m_Buffer.resize(m_BufferSize);
+	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
 
-	size_t offset = 0;
-	#define Next8B get<uint64_t>(_buffer.data(), &offset)
-	#define Next4B get<uint32_t>(_buffer.data(), &offset)
+	switch (type)
+	{
+	case GeometryPayloadType::Mesh:
+	{
+		return decodeMesh(target);
+		break;
+	}
+	case GeometryPayloadType::Material:
+	{
+		return decodeMaterial(target);
+		break;
+	}
+	case GeometryPayloadType::MaterialInstance:
+	{
+		return decodeMaterialInstance(target);
+		break;
+	}
+	case GeometryPayloadType::Texture:
+	{
+		return decodeTexture(target);
+		break;
+	}
+	case GeometryPayloadType::Animation:
+	{
+		return decodeAnimation(target);
+		break;
+	}
+	default:
+	{ 
+		avs::Result::GeometryDecoder_InvaildPayload;
+	}
+	};
+}
 
+avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
+{
 	//Parse buffer and fill struct DecodedGeometry
 	DecodedGeometry dg = {};
 	avs::uid uid;
@@ -142,15 +176,15 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 		
 		dg.buffers[key]= { 0, nullptr };
 		dg.buffers[key].byteLength = Next8B;
-		assert(bufferSizeInBytes >= offset + dg.buffers[key].byteLength);
+		assert(m_BufferSize >= m_BufferOffset + dg.buffers[key].byteLength);
 
 		dg.bufferDatas[key].push_back({});
 		dg.bufferDatas[key].resize(dg.buffers[key].byteLength);
 
-		memcpy((void*)dg.bufferDatas[key].data(), (_buffer.data() + offset), dg.buffers[key].byteLength);
+		memcpy((void*)dg.bufferDatas[key].data(), (m_Buffer.data() + m_BufferOffset), dg.buffers[key].byteLength);
 		dg.buffers[key].data = dg.bufferDatas[key].data();
 
-		offset += dg.buffers[key].byteLength;
+		m_BufferOffset += dg.buffers[key].byteLength;
 	}
 
 	//Push data to GeometryTargetBackendInterface
@@ -196,6 +230,22 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 			target->ensureIndices(it->first, 0, (int)dg.accessors[primitive.indices_accessor].count, (const unsigned int*)dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
 		}
 	}
-
 	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& target)
+{
+	return avs::Result::GeometryDecoder_Incomplete;
+}
+avs::Result GeometryDecoder::decodeMaterialInstance(GeometryTargetBackendInterface*& target)
+{
+	return avs::Result::GeometryDecoder_Incomplete;
+}
+avs::Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target)
+{
+	return avs::Result::GeometryDecoder_Incomplete;
+}
+avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& target)
+{
+	return avs::Result::GeometryDecoder_Incomplete;
 }

@@ -23,12 +23,12 @@ namespace scr
 		virtual void Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void Bind() = 0;
-		virtual void Unbind() = 0;
+		virtual void Bind() const = 0;
+		virtual void Unbind() const = 0;
 
 		virtual void Resolve() = 0;
 		virtual void UpdateFrameBufferSize(uint32_t width, uint32_t height) = 0;
-		virtual void Clear(float colour_r, float colour_g, float colour_b, float colour_a, float depth, float stencil) = 0;
+		virtual void Clear(float colour_r, float colour_g, float colour_b, float colour_a, float depth, uint32_t stencil) = 0;
 
 		void AddColourAttachment(Texture& colourTexture, uint32_t attachmentIndex, bool overrideTexture = false)
 		{

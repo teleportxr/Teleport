@@ -14,7 +14,7 @@ namespace scr
 	private:
 		bool m_Static;
 
-		std::vector<VertexBuffer>& m_VBOs;
+		VertexBuffer& m_VBO;
 		IndexBuffer& m_IBO;
 		Material& m_Material;
 		
@@ -28,15 +28,24 @@ namespace scr
 		static bool s_UninitialisedUBO;
 		std::unique_ptr<UniformBuffer> m_UBO;
 
-	public:
-		Object(bool staticModel, std::vector<VertexBuffer>& vbos, IndexBuffer& ibo, vec3& translation, quat& rotation, vec3& scale, Material& material);
+		DescriptorSetLayout m_SetLayout;
+		DescriptorSet m_Set;
 
-		void Bind();
+	public:
+		Object(bool staticModel, VertexBuffer& vbo, IndexBuffer& ibo, vec3& translation, quat& rotation, vec3& scale, Material& material);
+
+		void BindGeometries();
+		void UpdateModelUBO();
+
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
 		inline const vec3& GetTranslation() const  { return m_Translation; }
 		inline const quat& GetRotation() const { return m_Rotation; }
 		inline const vec3& GetScale() const { return m_Scale; }
+
+		inline const Material& GetMaterial() const { return m_Material; }
 		inline size_t GetIndexBufferCount() const { return m_IBO.GetCount(); }
+
+		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
 	};
 }

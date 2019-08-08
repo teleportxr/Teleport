@@ -18,6 +18,7 @@
 #include "MeshCreator.h"
 #include "GeometryDecoder.h"
 #include <libavstream/geometrydecoder.hpp>
+#include "SCR_Class_GL_Impl/SCR_Class_GL_Impl.h"
 
 namespace OVR {
 	class ovrLocale;

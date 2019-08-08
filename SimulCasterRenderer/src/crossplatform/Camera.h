@@ -4,6 +4,7 @@
 #include "../Common.h"
 #include "../api/UniformBuffer.h"
 #include "basic_linear_algebra.h"
+#include "DescriptorSet.h"
 
 namespace scr
 {
@@ -30,6 +31,9 @@ namespace scr
 		static bool s_UninitialisedUBO;
 		std::unique_ptr<UniformBuffer> m_UBO;
 
+		DescriptorSetLayout m_SetLayout;
+		DescriptorSet m_Set;
+
 	public:
 		Camera(ProjectionType type, const vec3& position, const quat& orientation);
 
@@ -43,6 +47,7 @@ namespace scr
 		void UpdateProjection(float left, float right, float bottom, float top, float near, float far);
 
 		void UpdateCameraUBO();
+		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
 
 		inline const vec3& GetPosition() const { return m_CameraData.m_Position; }
 	};

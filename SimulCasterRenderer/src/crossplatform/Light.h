@@ -40,6 +40,9 @@ namespace scr
 		
 		static bool s_UninitialisedUBO;
 		std::unique_ptr<UniformBuffer> m_UBO;
+
+		DescriptorSetLayout m_SetLayout;
+		DescriptorSet m_Set;
 		
 		uint32_t m_ShadowMapSize = 256;
 		std::unique_ptr<FrameBuffer>m_ShadowMapFBO = nullptr; 
@@ -55,6 +58,8 @@ namespace scr
 		void UpdateSpotAngle(float spotAngle);
 
 		void UpdateLightUBO();
+
+		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
 
 		inline std::unique_ptr<FrameBuffer>& GetShadowMapFBO() { return m_ShadowMapFBO; }
 

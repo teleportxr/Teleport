@@ -212,10 +212,10 @@ namespace scr
 
 		void Transpose()
 		{
-			a = a;
+			/*a = a;
 			f = f;
 			k = k;
-			p = p;
+			p = p;*/
 
 			float temp_b = b;
 			float temp_c = c;

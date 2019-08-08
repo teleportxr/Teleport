@@ -5,7 +5,7 @@ include $(CLEAR_VARS)
 include ../cflags.mk
 
 LOCAL_MODULE			:= ovrapp
-LOCAL_STATIC_LIBRARIES	:= vrsound vrmodel vrlocale vrgui vrappframework libovrkernel enet libavstream
+LOCAL_STATIC_LIBRARIES	:= vrsound vrmodel vrlocale vrgui vrappframework libovrkernel enet libavstream SimulCasterRenderer
 LOCAL_SHARED_LIBRARIES	:= vrapi
 
 LOCAL_SRC_FILES			:= \
@@ -14,9 +14,19 @@ LOCAL_SRC_FILES			:= \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \
     ../src/GeometryDecoder.cpp \
-    ../src/MeshCreator.cpp
+    ../src/MeshCreator.cpp \
+    ../src/SCR_Class_GL_Impl/GL_FrameBuffer.cpp \
+    ../src/SCR_Class_GL_Impl/GL_IndexBuffer.cpp \
+    ../src/SCR_Class_GL_Impl/GL_Pipeline.cpp \
+    ../src/SCR_Class_GL_Impl/GL_Sampler.cpp \
+    ../src/SCR_Class_GL_Impl/GL_Shader.cpp \
+    ../src/SCR_Class_GL_Impl/GL_Texture.cpp \
+    ../src/SCR_Class_GL_Impl/GL_UniformBuffer.cpp \
+    ../src/SCR_Class_GL_Impl/GL_VertexBuffer.cpp
+
 
 LOCAL_C_INCLUDES += ../libavstream/include
+LOCAL_C_INCLUDES += ../SimulCasterRenderer/src
 LOCAL_C_INCLUDES += 3rdParty/enet/Include
 
 include $(BUILD_SHARED_LIBRARY)
@@ -29,4 +39,5 @@ $(call import-module,VrAppSupport/VrLocale/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrModel/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrSound/Projects/Android/jni)
 $(call import-module,../libavstream/jni)
+$(call import-module,../SimulCasterRenderer/jni)
 $(call import-module,3rdParty/enet/jni)

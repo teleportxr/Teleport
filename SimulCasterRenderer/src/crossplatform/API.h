@@ -15,6 +15,7 @@ namespace scr
 			D3D11,
 			D3D12,
 			OPENGL,
+			OPENGLES,
 			VULKAN
 		};
 
@@ -23,6 +24,6 @@ namespace scr
 
 	public:
 		static inline void SetAPI(APIType api) { s_API = api; }
-		static inline const APIType GetAPI() { return s_API; }
+		static inline const APIType& GetAPI() { return s_API; }
 	};
 }

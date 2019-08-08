@@ -12,7 +12,22 @@ public:
 	GeometryDecoder();
 	~GeometryDecoder();
 	// Inherited via GeometryDecoderBackendInterface
-	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface * target) override;
+	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target) override;
+
+private:
+	avs::Result decodeMesh(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeMaterial(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeMaterialInstance(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeTexture(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeAnimation(avs::GeometryTargetBackendInterface*& target);
+
+	//Use for the #define Next8B and #define Next4B macros
+	std::vector<uint8_t> m_Buffer;
+	size_t m_BufferSize= 0;
+	size_t m_BufferOffset = 0;
+
+#define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
+#define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
 
 private:
 	struct DecodedGeometry

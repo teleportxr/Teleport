@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <algorithm>
+#include <functional>
 
 //Debug
 #define SCR_CERR_BREAK(msg) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw();

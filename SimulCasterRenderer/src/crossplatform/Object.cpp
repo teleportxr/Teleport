@@ -6,8 +6,8 @@ using namespace scr;
 
 bool Object::s_UninitialisedUBO = false;
 
-Object::Object(bool staticModel, std::vector<VertexBuffer>& vbos, IndexBuffer& ibo, vec3& translation, quat& rotation, vec3& scale, Material& material)
-	:m_Static(staticModel), m_VBOs(vbos), m_IBO(ibo), m_Material(material), m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
+Object::Object(bool staticModel, VertexBuffer& vbo, IndexBuffer& ibo, vec3& translation, quat& rotation, vec3& scale, Material& material)
+	:m_Static(staticModel), m_VBO(vbo), m_IBO(ibo), m_Material(material), m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
 {
 	if (s_UninitialisedUBO)
 	{
@@ -16,17 +16,21 @@ Object::Object(bool staticModel, std::vector<VertexBuffer>& vbos, IndexBuffer& i
 		s_UninitialisedUBO = true;
 	}
 	UpdateModelMatrix(translation, rotation, scale);
+
+	m_SetLayout.AddBinding(1, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
+
+	m_Set = DescriptorSet({ m_SetLayout });
+	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 1, "u_ObjectUBO", { m_UBO.get(), 0, sizeof(ModelData) });
 };
 
-void Object::Bind()
+void Object::BindGeometries()
 {
-	for (auto& vbo : m_VBOs)
-	{
-		vbo.Bind();
-	}
+	m_VBO.Bind();
 	m_IBO.Bind();
+}
+void Object::UpdateModelUBO()
+{
 	m_UBO->Update(0, sizeof(ModelData), &m_ModelData);
-	m_Material.Bind();
 }
 
 void Object::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
