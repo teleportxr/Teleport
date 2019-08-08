@@ -66,7 +66,7 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	}
 	default:
 	{ 
-		avs::Result::GeometryDecoder_InvaildPayload;
+		return avs::Result::GeometryDecoder_InvaildPayload;
 	}
 	};
 }

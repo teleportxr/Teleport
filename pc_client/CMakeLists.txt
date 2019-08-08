@@ -42,5 +42,5 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
-#target_link_libraries(pc_client libavstream enet effects11_MT directxtex_MT SimulCasterRenderer)
-target_link_libraries(pc_client libavstream enet SimulCasterRenderer)
+target_link_libraries(pc_client libavstream enet effects11_MT directxtex_MT SimulCasterRenderer)
+#target_link_libraries(pc_client libavstream enet SimulCasterRenderer)
