@@ -26,6 +26,8 @@ set( src_crossplatform
 	src/crossplatform/Camera.h
 	src/crossplatform/DescriptorSet.cpp
 	src/crossplatform/DescriptorSet.h
+	src/crossplatform/GeometryDecoder.cpp
+	src/crossplatform/GeometryDecoder.h
 	src/crossplatform/Light.cpp
 	src/crossplatform/Light.h
 	src/crossplatform/Material.cpp
@@ -36,11 +38,18 @@ set( src_crossplatform
 	src/crossplatform/Renderer.h
 	src/crossplatform/ResourceManager.h
 	)
+
+include_directories(../libavstream/include)
 set( src_public ${src_root} ${src_api} ${src_crossplatform} )
-#message(STATUS "hdr_public" ${hdr_public})
+
 #source_group("src" src FILES ${src_root} )
 #source_group("src\\api" src FILES ${src_api} )
 #source_group("src\\crossplatform" src FILES ${src_crossplatform} )
 
-add_library( SimulCasterRenderer STATIC ${src_public} )  
+#For MT runtime
+add_static_library( SimulCasterRenderer STATIC ${src_public} )  
+
+#For MD runtime
+#add_library( SimulCasterRenderer STATIC ${src_public} ) 
+
 #target_compile_features(libavstream PRIVATE cxx_std_17)

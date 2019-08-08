@@ -8,7 +8,7 @@
 #include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
 #include "SessionClient.h"
 #include "MeshCreator.h"
-#include "GeometryDecoder.h"
+#include "crossplatform/GeometryDecoder.h"
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
