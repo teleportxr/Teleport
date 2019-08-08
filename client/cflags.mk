@@ -16,9 +16,9 @@ LOCAL_CPPFLAGS  += -std=c++17
 LOCAL_CPPFLAGS  += -frtti
 
 ifeq ($(OVR_DEBUG),1)
-  LOCAL_CFLAGS += -DOVR_BUILD_DEBUG=1 -O0 -g
+  LOCAL_CFLAGS += -DOVR_BUILD_DEBUG=1 -DDEBUG -D_DEBUG -O0 -g
 else
-  LOCAL_CFLAGS += -O3
+  LOCAL_CFLAGS += -DNDEBUG -O3
 endif
 
 # Explicitly compile for the ARM and not the Thumb instruction set.

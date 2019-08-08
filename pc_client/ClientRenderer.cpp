@@ -257,7 +257,7 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 	static simul::base::Timer timer;
 	static float last_t = 0.0f;
 	timer.UpdateTime();
-	if (last_t != 0.0f)
+	if (last_t != 0.0f&&timer.TimeSum!= last_t)
 	{
 		framerate=1000.0f/(timer.TimeSum -last_t);
 	}
@@ -343,6 +343,7 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Framerate: %4.4f", framerate));
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Bandwidth: %4.4f", counters.bandwidthKPS));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Jitter Buffer Length: %d ", counters.jitterBufferLength ));
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Jitter Buffer Push: %d ", counters.jitterBufferPush));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Jitter Buffer Pop: %d ", counters.jitterBufferPop )); 
