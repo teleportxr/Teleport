@@ -21,7 +21,7 @@ Light::Light(Type type, const vec3& position, const vec3& direction, const vec4&
 	m_SetLayout.AddBinding(2, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	m_Set = DescriptorSet({ m_SetLayout });
-	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 2, { m_UBO.get(), 0, (s_MaxLights * sizeof(LightData)) });
+	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 2, "u_LightsUBO", { m_UBO.get(), 0, (s_MaxLights * sizeof(LightData)) });
 
 	assert(s_MaxLights > s_NumOfLights);
 	m_LightID = s_NumOfLights;

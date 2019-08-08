@@ -20,7 +20,7 @@ Object::Object(bool staticModel, VertexBuffer& vbo, IndexBuffer& ibo, vec3& tran
 	m_SetLayout.AddBinding(1, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
 	m_Set = DescriptorSet({ m_SetLayout });
-	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 1, { m_UBO.get(), 0, sizeof(ModelData) });
+	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 1, "u_ObjectUBO", { m_UBO.get(), 0, sizeof(ModelData) });
 };
 
 void Object::BindGeometries()

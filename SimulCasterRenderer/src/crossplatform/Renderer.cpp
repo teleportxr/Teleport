@@ -53,7 +53,7 @@ void Renderer::Execute()
 		obj->BindGeometries();
 		obj->UpdateModelUBO();
 		m_Pipeline->BindDescriptorSets({ m_Camera->GetDescriptorSet(), m_Lights[0]->GetDescriptorSet(), obj->GetDescriptorSet(), obj->GetMaterial().GetDescriptorSet() });
-		m_Pipeline->Draw(Pipeline::TopologyType::TRIANGLE_LIST, obj->GetIndexBufferCount());
+		m_Pipeline->Draw(obj->GetIndexBufferCount());
 
 		m_Objects.pop_front();
 	}

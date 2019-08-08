@@ -19,9 +19,10 @@ DescriptorSet::~DescriptorSet()
 	m_Sets.clear();
 }
 
-void DescriptorSet::AddBuffer(uint32_t descriptorSetIndex, DescriptorSetLayout::DescriptorType descriptorType, uint32_t bindingIndex, const DescriptorBufferInfo& bufferInfo, uint32_t dstArrayElement)
+void DescriptorSet::AddBuffer(uint32_t descriptorSetIndex, DescriptorSetLayout::DescriptorType descriptorType, uint32_t bindingIndex, const char* descriptorName, const DescriptorBufferInfo& bufferInfo, uint32_t dstArrayElement)
 {
 	WriteDescriptorSet wds;
+	wds.descriptorName = descriptorName;
 	wds.dstSet = descriptorSetIndex;
 	wds.dstBinding = bindingIndex;
 	wds.dstArrayElement = 0;
@@ -32,9 +33,10 @@ void DescriptorSet::AddBuffer(uint32_t descriptorSetIndex, DescriptorSetLayout::
 
 	m_WriteDescriptorSets.push_back(wds);
 }
-void DescriptorSet::AddImage(uint32_t descriptorSetIndex, DescriptorSetLayout::DescriptorType descriptorType, uint32_t bindingIndex, const DescriptorImageInfo& imageInfo, uint32_t dstArrayElement)
+void DescriptorSet::AddImage(uint32_t descriptorSetIndex, DescriptorSetLayout::DescriptorType descriptorType, uint32_t bindingIndex, const char* descriptorName, const DescriptorImageInfo& imageInfo, uint32_t dstArrayElement)
 {
 	WriteDescriptorSet wds;
+	wds.descriptorName = descriptorName;
 	wds.dstSet = descriptorSetIndex;
 	wds.dstBinding = bindingIndex;
 	wds.dstArrayElement = 0;
@@ -45,21 +47,3 @@ void DescriptorSet::AddImage(uint32_t descriptorSetIndex, DescriptorSetLayout::D
 
 	m_WriteDescriptorSets.push_back(wds);
 }
-
-/*void DescriptorSet::Update()
-{
-	for (auto& wds : m_WriteDescriptorSets)
-	{
-		if (wds.pBufferInfo != nullptr)
-		{
-			wds.pBufferInfo->buffer->Update(wds.pBufferInfo->offset, wds.pBufferInfo->range, nullptr);
-		}
-		else if (wds.pImageInfo != nullptr)
-		{
-			wds.pImageInfo->texture->UseSampler(wds.pImageInfo->sampler);
-			wds.pImageInfo->texture->Bind();
-		}
-		else
-			SCR_COUT_BREAK("Invalid WriteDescriptorSet.")
-	}
-}*/

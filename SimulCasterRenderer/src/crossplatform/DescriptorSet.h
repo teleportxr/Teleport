@@ -47,7 +47,7 @@ namespace scr
 		}
 		inline DescriptorSetLayoutBinding& FindDescriptorSetLayout(uint32_t bindingIndex)
 		{
-			size_t index = -1;
+			size_t index = (size_t)-1;
 			for (size_t i = 0; i < m_SetLayoutBindings.size(); i++)
 			{
 				if (m_SetLayoutBindings[i].binding == bindingIndex)
@@ -56,7 +56,7 @@ namespace scr
 					break;
 				}
 			}
-			if (index == -1)
+			if (index == (size_t)-1)
 			{
 				SCR_COUT_BREAK("Could not find DescriptorSetLayoutBinding at binding index: " << bindingIndex << ".");
 				throw;
@@ -81,6 +81,7 @@ namespace scr
 		};
 		struct WriteDescriptorSet
 		{
+			const char* descriptorName;
 			uint32_t dstSet;
 			uint32_t dstBinding;
 			uint32_t dstArrayElement;
@@ -99,9 +100,9 @@ namespace scr
 		DescriptorSet(const std::vector<DescriptorSetLayout>& descriptorSetLayouts);
 		~DescriptorSet();
 
-		void AddBuffer(uint32_t descriptorSetIndex, DescriptorSetLayout::DescriptorType descriptorType, uint32_t bindingIndex, const DescriptorBufferInfo& bufferInfo, uint32_t dstArrayElement = 0);
-		void AddImage(uint32_t descriptorSetIndex, DescriptorSetLayout::DescriptorType descriptorType, uint32_t bindingIndex, const DescriptorImageInfo& imageInfo, uint32_t dstArrayElement = 0);
+		void AddBuffer(uint32_t descriptorSetIndex, DescriptorSetLayout::DescriptorType descriptorType, uint32_t bindingIndex, const char* descriptorName, const DescriptorBufferInfo& bufferInfo, uint32_t dstArrayElement = 0);
+		void AddImage(uint32_t descriptorSetIndex, DescriptorSetLayout::DescriptorType descriptorType, uint32_t bindingIndex, const char* descriptorName, const DescriptorImageInfo& imageInfo, uint32_t dstArrayElement = 0);
 
-		//void Update();
+		const std::vector<WriteDescriptorSet>& GetWriteDescriptorSet() const {return m_WriteDescriptorSets;}
 	};
 }

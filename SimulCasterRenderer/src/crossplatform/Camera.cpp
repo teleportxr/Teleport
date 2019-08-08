@@ -23,7 +23,7 @@ Camera::Camera(ProjectionType type, const vec3& position, const quat& orientatio
 	m_SetLayout.AddBinding(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
 	m_Set = DescriptorSet({ m_SetLayout });
-	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 0, { m_UBO.get(), 0, sizeof(CameraData) });
+	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 0, "u_CameraUBO", { m_UBO.get(), 0, sizeof(CameraData) });
 }
 
 void Camera::UpdatePosition(const vec3& position)

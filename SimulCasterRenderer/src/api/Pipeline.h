@@ -28,7 +28,7 @@ namespace scr
 			float minDepth, maxDepth;
 
 			uint32_t offsetX, offsetY;
-			uint32_t ententX, ententY;
+			uint32_t extentX, extentY;
 		};
 		enum class PolygonMode :uint32_t
 		{
@@ -50,7 +50,7 @@ namespace scr
 		};
 		struct RasterizationState
 		{
-			bool depthClampEnable;			//Controls whether to clamp the fragment’s depth values as described in Depth Test.	    Vulkan Specific: Are these available in other Graphics APIs? 
+			bool depthClampEnable;			//Controls whether to clamp the fragmentï¿½s depth values as described in Depth Test.	    Vulkan Specific: Are these available in other Graphics APIs? 
 			bool rasterizerDiscardEnable;	//Controls whether primitives are discarded immediately before the rasterization stage. Vulkan Specific: Are these available in other Graphics APIs? 
 			PolygonMode polygonMode;
 			CullMode cullMode;
@@ -124,7 +124,7 @@ namespace scr
 			SUBTRACT,
 			REVERSE_SUBTRACT,
 			MIN,
-			MAXs,
+			MAX,
 		};
 		struct ColourBlendingState
 		{
@@ -132,25 +132,25 @@ namespace scr
 			BlendFactor srcColorBlendFactor;
 			BlendFactor dstColorBlendFactor;
 			BlendOp colorBlendOp;
-			BlendOp srcAlphaBlendFactor;
-			BlendOp dstAlphaBlendFactor;
+			BlendFactor srcAlphaBlendFactor;
+			BlendFactor dstAlphaBlendFactor;
 			BlendOp alphaBlendOp;
 		};
 
 	protected:
-		const std::vector<Shader&>& m_Shaders;
-		const VertexBufferLayout& m_VertexLayout;
-		const TopologyType& m_Topology;
-		const ViewportAndScissor& m_ViewportAndScissor;
-		const RasterizationState& m_RasterizationState;
-		const MultisamplingState& m_MultisamplingState;
-		const DepthStencilingState& m_DepthStencilingState;
-		const ColourBlendingState& m_ColourBlendingState;
+		std::vector<Shader*> m_Shaders;
+		VertexBufferLayout m_VertexLayout;
+		TopologyType m_Topology;
+		ViewportAndScissor m_ViewportAndScissor;
+		RasterizationState m_RasterizationState;
+		MultisamplingState m_MultisamplingState;
+		DepthStencilingState m_DepthStencilingState;
+		ColourBlendingState m_ColourBlendingState;
 
 	public:
 		virtual ~Pipeline()	{};
 
-		virtual void Create(const std::vector<Shader&>& shaders,
+		virtual void Create(const std::vector<Shader*>& shaders,
 			const VertexBufferLayout& layout,
 			const TopologyType& topology,
 			const ViewportAndScissor& viewportAndScissor,
@@ -158,18 +158,14 @@ namespace scr
 			const MultisamplingState& multisample,
 			const DepthStencilingState& depthStenciling,
 			const ColourBlendingState& colourBlending) = 0;
-			/*:m_Shaders(shaders), m_VertexLayout(layout), m_Topology(topology),
-			m_ViewportAndScissor(viewportAndScissor), m_RasterizationState(rasterization),
-			m_MultisamplingState(multisample), m_DepthStencilingState(depthStenciling),
-			m_ColourBlendingState(colourBlending)*/ 
 
-		virtual void LinkShaders(const std::vector<Shader&>& shaders) = 0;
+		virtual void LinkShaders() = 0;
 		
-		virtual void Bind() = 0;
-		virtual void Unbind() = 0;
+		virtual void Bind() const = 0;
+		virtual void Unbind() const = 0;
 
 		//Calls UniformBuffer::Submit() and Texture::Bind() on the respective ojects
 		virtual void BindDescriptorSets(const std::vector<DescriptorSet>& descriptorSets) = 0;
-		virtual void Draw(TopologyType topology, size_t indexBufferCount) = 0;
+		virtual void Draw(size_t indexBufferCount) = 0;
 	};
 }

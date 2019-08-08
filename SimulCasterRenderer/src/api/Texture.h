@@ -128,16 +128,17 @@ namespace scr
 			m_Sampler = nullptr;
 		}
 
+		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bitsPerPixel will be the same for all faces.
 		virtual void Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void Bind() = 0;
-		virtual void Unbind() = 0;
+		virtual void Bind() const = 0;
+		virtual void Unbind() const = 0;
 
+		virtual void UseSampler(const Sampler* sampler) = 0;
 		virtual void GenerateMips() = 0;
 
 		inline const Sampler* GetSampler() const { return m_Sampler; }
-		inline void UseSampler(const Sampler* sampler) { m_Sampler = sampler; }
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;
