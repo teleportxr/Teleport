@@ -34,6 +34,7 @@ set( src_crossplatform
 	src/crossplatform/Object.h
 	src/crossplatform/Renderer.cpp
 	src/crossplatform/Renderer.h
+	src/crossplatform/ResourceManager.h
 	)
 set( src_public ${src_root} ${src_api} ${src_crossplatform} )
 #message(STATUS "hdr_public" ${hdr_public})
