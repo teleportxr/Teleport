@@ -13,6 +13,44 @@
 #pragma comment (lib, "AdvApi32.lib")
 #pragma comment(lib, "winmm.lib")
 
+//Example: b1 == 192, b2 == 168, b3 == 0, b4 == 100
+struct IPv4
+{
+	unsigned char b1, b2, b3, b4;
+};
+
+bool getMyIP(IPv4 & myIP)
+{
+	char szBuffer[1024];
+
+	WSADATA wsaData;
+	WORD wVersionRequested = MAKEWORD(2, 0);
+	if (::WSAStartup(wVersionRequested, &wsaData) != 0)
+		return false;
+
+	if (gethostname(szBuffer, sizeof(szBuffer)) == SOCKET_ERROR)
+	{
+		WSACleanup();
+		return false;
+	}
+
+	struct hostent *host = gethostbyname(szBuffer);
+	if (host == NULL)
+	{
+		WSACleanup();
+		return false;
+	}
+
+	//Obtain the computer's IP
+	myIP.b1 = ((struct in_addr *)(host->h_addr))->S_un.S_un_b.s_b1;
+	myIP.b2 = ((struct in_addr *)(host->h_addr))->S_un.S_un_b.s_b2;
+	myIP.b3 = ((struct in_addr *)(host->h_addr))->S_un.S_un_b.s_b3;
+	myIP.b4 = ((struct in_addr *)(host->h_addr))->S_un.S_un_b.s_b4;
+
+	WSACleanup();
+	return true;
+}
+
 void ClientLog(const char *fileTag, int lineno,const char *msg_type,const char * format_str, ...)
 {
 	int size = (int)strlen(format_str) + 100;
@@ -103,14 +141,17 @@ bool SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
 		// We don't want to block, just check for packets.
 		enet_socket_set_option(mServiceDiscoverySocket, ENET_SOCKOPT_NONBLOCK, 1);
 
-	/*	ENetAddress bindAddress = { ENET_HOST_ANY, discoveryPort };
+		// Here we BIND the socket to the local address that we want to be identified with.
+		// e.g. our OWN local IP.
+		ENetAddress bindAddress = { ENET_HOST_ANY, discoveryPort };
+		enet_address_set_host(&(bindAddress), "127.0.0.1");
 		if (enet_socket_bind(mServiceDiscoverySocket, &bindAddress) != 0)
 		{
 			FAIL("Failed to bind to service discovery UDP socket");
 			enet_socket_destroy(mServiceDiscoverySocket);
 			mServiceDiscoverySocket = 0;
 			return false;
-		}*/
+		}
 	}
 	ENetBuffer buffer = { sizeof(mClientID) ,(void*)&mClientID };
 	ServiceDiscoveryResponse response = {};
