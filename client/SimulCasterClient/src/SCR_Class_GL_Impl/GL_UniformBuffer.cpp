@@ -4,17 +4,13 @@
 using namespace scr;
 using namespace OVR;
 
-GL_UniformBuffer::GL_UniformBuffer(OVR::GlBuffer &ubo)
-    :m_UBO(ubo)
-{
-}
-
 void GL_UniformBuffer::Create(size_t size, const void* data, uint32_t bindingLocation)
 {
     m_BindingLocation = bindingLocation;
     m_Size = size;
     m_Data = data;
 
+    m_UBO = GlBuffer();
     m_UBO.Create(GLBUFFER_TYPE_UNIFORM, size, data);
 
     Bind();

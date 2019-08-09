@@ -7,7 +7,7 @@
 #include "Simul/Platform/CrossPlatform/SL/CppSl.hs"
 #include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
 #include "SessionClient.h"
-#include "MeshCreator.h"
+#include "crossplatform/ResourceCreator.h"
 #include "crossplatform/GeometryDecoder.h"
 
 #include <libavstream/libavstream.hpp>
@@ -136,7 +136,7 @@ public:
 	avs::Surface surface[NumStreams];
 
 	GeometryDecoder geometryDecoder;
-	MeshCreator meshCreator;
+	ResourceCreator resourceCreator;
 	avs::GeometryDecoder avsGeometryDecoder;
 	avs::GeometryTarget avsGeometryTarget;
 

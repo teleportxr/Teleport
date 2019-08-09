@@ -9,10 +9,10 @@ namespace scr
 	class GL_IndexBuffer final : public IndexBuffer
 	{
 	private:
-		OVR::GlGeometry& m_Geometry;
+		OVR::GlGeometry m_Geometry;
 
 	public:
-		GL_IndexBuffer(OVR::GlGeometry& geometry);
+		GL_IndexBuffer() {}
 
 		void Create(size_t size, const uint32_t* data) override;
 		void Destroy() override;

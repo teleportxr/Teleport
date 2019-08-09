@@ -58,7 +58,7 @@ namespace scr
 			}
 			if (index == (size_t)-1)
 			{
-				SCR_COUT_BREAK("Could not find DescriptorSetLayoutBinding at binding index: " << bindingIndex << ".");
+				SCR_COUT_BREAK("Could not find DescriptorSetLayoutBinding at binding index: " << bindingIndex << ".", -1);
 				throw;
 			}
 			return m_SetLayoutBindings[index];

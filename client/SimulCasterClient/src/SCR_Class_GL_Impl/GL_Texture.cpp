@@ -4,11 +4,6 @@
 using namespace scr;
 using namespace OVR;
 
-GL_Texture::GL_Texture(OVR::GlTexture& texture)
-    :m_Texture(texture)
-{
-}
-
 void GL_Texture::Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data)
 {
     m_Width = width;
@@ -28,6 +23,8 @@ void GL_Texture::Create(Slot slot, Type type, Format format, SampleCount sampleC
     assert(TypeToGLTarget(m_Type) != 0);
     assert(ToGLFormat(m_Format) != 0);
     assert(ToBaseGLFormat(m_Format) != 0);
+
+    m_Texture = GlTexture();
 
     glGenTextures(1, &m_Texture.texture);
     glBindTexture(TypeToGLTarget(m_Type), m_Texture.texture);

@@ -10,10 +10,10 @@ namespace scr
 class GL_UniformBuffer final : public UniformBuffer
 	{
 	private:
-		OVR::GlBuffer& m_UBO;
+		OVR::GlBuffer m_UBO;
 
 	public:
-		GL_UniformBuffer(OVR::GlBuffer& ubo);
+		GL_UniformBuffer() {}
 
 		//Binding Locations for UBOs
 		//Camera = 0;

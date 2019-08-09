@@ -11,6 +11,7 @@ set( src_api
 	src/api/FrameBuffer.h
 	src/api/IndexBuffer.h
 	src/api/Pipeline.h
+	src/api/RenderPlatform.h
 	src/api/Sampler.h
 	src/api/Shader.h
 	src/api/Texture.h
@@ -36,11 +37,20 @@ set( src_crossplatform
 	src/crossplatform/Object.h
 	src/crossplatform/Renderer.cpp
 	src/crossplatform/Renderer.h
+	src/crossplatform/ResourceCreator.cpp
+	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h
 	)
 
+#Include its root directory
 include_directories(src)
+#Include libavstream
 include_directories(../libavstream/include)
+#Include OpenGL ES 3.0
+include_directories(../client/VrApi/Include) 
+include_directories(../client/VrAppFramework/Include) 
+include_directories(../client/LibOVRKernel/Src) 
+
 set( src_public ${src_root} ${src_api} ${src_crossplatform} )
 
 #source_group("src" src FILES ${src_root} )

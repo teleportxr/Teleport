@@ -4,16 +4,12 @@
 using namespace scr;
 using namespace OVR;
 
-GL_VertexBuffer::GL_VertexBuffer(OVR::GlGeometry& geometry)
-    :m_Geometry(geometry)
-{
-}
-
 void GL_VertexBuffer::Create(size_t size, const void* data)
 {
     m_Size = size;
     m_Data = data;
 
+    //TODO: Deal with GlGeometry
     glGenBuffers(1, &m_Geometry.vertexBuffer);
     Bind();
     glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
@@ -35,8 +31,8 @@ void GL_VertexBuffer::Unbind() const
 }
 void GL_VertexBuffer::CreateVAO(const VertexBufferLayout* layout)
 {
-    if(m_Layout == nullptr || layout == nullptr)
-        SCR_COUT_BREAK("Can not create VAO. No VertexBufferLayout has been submitted");
+   if(m_Layout == nullptr || layout == nullptr)
+        SCR_COUT_BREAK("Can not create VAO. No VertexBufferLayout has been submitted", -1);
 
     CalculateCount();
 
@@ -51,6 +47,7 @@ void GL_VertexBuffer::CreateVAO(const VertexBufferLayout* layout)
         switch (attrib.type)
         {
             case VertexBufferLayout::Type::FLOAT:   type = GL_FLOAT;        break;
+            case VertexBufferLayout::Type::DOUBLE:  type = 0;               SCR_COUT_BREAK("OpenGL ES 3.0 does not support GL_DOUBLE", -1);;
             case VertexBufferLayout::Type::INT:     type = GL_INT;          break;
             case VertexBufferLayout::Type::UINT:    type = GL_UNSIGNED_INT; break;
         }

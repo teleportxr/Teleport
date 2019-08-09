@@ -500,7 +500,7 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 	if(GeoStream)
 	{
 		avsGeometryDecoder.configure(100,&geometryDecoder);
-		avsGeometryTarget.configure(&meshCreator);
+		avsGeometryTarget.configure(&resourceCreator);
 		pipeline.link({ &source, &avsGeometryDecoder, &avsGeometryTarget });
 	}
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());

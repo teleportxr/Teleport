@@ -10,6 +10,8 @@ namespace scr
 	class GL_Sampler final : public Sampler
 	{
 	public:
+		GL_Sampler() {}
+
 		void Create(Filter filterMinMag[2], Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy) override;
 		void Destroy() override;
 		

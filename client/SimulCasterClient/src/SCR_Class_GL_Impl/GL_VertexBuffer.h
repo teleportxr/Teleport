@@ -10,10 +10,10 @@ namespace scr
 	class GL_VertexBuffer final : public VertexBuffer
 	{
 	private:
-		OVR::GlGeometry& m_Geometry;
+		OVR::GlGeometry m_Geometry;
 
 	public:
-		GL_VertexBuffer(OVR::GlGeometry& geometry);
+        GL_VertexBuffer() {}
 
 		void Create(size_t size, const void* data) override;
 		void Destroy() override;
@@ -24,7 +24,7 @@ namespace scr
 		bool ResourceInUse(int timeout) override {return true;}
 
 		//Assume an interleaved VBO;
-		void CreateVAO(const VertexBufferLayout* layout = nullptr);
+		void CreateVAO(const VertexBufferLayout* layout);
 
 	private:
 		void CalculateCount();

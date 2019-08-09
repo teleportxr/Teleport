@@ -16,6 +16,8 @@ namespace scr
 	    std::unique_ptr<OVR::ovrEyeBuffers> m_EyeBuffers;
 
 	public:
+		GL_FrameBuffer() {}
+
 		void Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height) override;
 		void Destroy() override;
 

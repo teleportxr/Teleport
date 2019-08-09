@@ -11,12 +11,13 @@ namespace scr
 		enum class Type : uint32_t
 		{
 			FLOAT,
+			DOUBLE,
 			UINT,
 			INT
 		};
 		enum class ComponentCount : uint32_t
 		{
-			SINGLE = 1,
+			SCALAR = 1,
 			VEC2,
 			VEC3,
 			VEC4

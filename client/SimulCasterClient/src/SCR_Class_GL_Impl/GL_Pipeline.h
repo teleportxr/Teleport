@@ -9,10 +9,10 @@ namespace scr
 	class GL_Pipeline final : public Pipeline
 	{
 	private:
-		OVR::GlProgram& m_Program;
+		OVR::GlProgram m_Program;
 
 	public:
-		GL_Pipeline(OVR::GlProgram& program);
+		GL_Pipeline() {}
 
 		void Create(const std::vector<Shader*>& shaders,
 			const VertexBufferLayout& layout,

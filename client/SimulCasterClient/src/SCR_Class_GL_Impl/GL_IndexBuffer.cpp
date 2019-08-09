@@ -4,11 +4,6 @@
 using namespace scr;
 using namespace OVR;
 
-GL_IndexBuffer::GL_IndexBuffer(OVR::GlGeometry& geometry)
-    :m_Geometry(geometry)
-{
-}
-
 void GL_IndexBuffer::Create(size_t size, const uint32_t* data)
 {
     m_Size = size;
@@ -17,6 +12,7 @@ void GL_IndexBuffer::Create(size_t size, const uint32_t* data)
     assert(size % 4 == 0);
     m_Count = size / sizeof(uint32_t);
 
+    //TODO: Deal with GlGeometry
     glGenBuffers(1, &m_Geometry.indexBuffer);
     Bind();
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, (const void*)data, GL_STATIC_DRAW);

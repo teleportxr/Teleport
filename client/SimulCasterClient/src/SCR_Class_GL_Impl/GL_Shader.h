@@ -9,6 +9,7 @@ namespace scr
 	class GL_Shader final : public Shader
 	{
 	public:
+		GL_Shader() {}
 
 		void Create(const char* sourceCode, const char* entryPoint, Stage stage) override;
 		void Compile() override;

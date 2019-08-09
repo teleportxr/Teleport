@@ -1,3 +1,4 @@
+// (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 #include <libavstream/mesh.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>

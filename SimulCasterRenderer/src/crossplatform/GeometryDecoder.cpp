@@ -30,7 +30,7 @@ template<typename T> void get(T* target,const uint8_t *data, size_t count)
 
 avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface* target)
 {
-	// No m_GALU on the header or tail of the incoming buffer!
+	// No m_GALU on the header or tail on the incoming buffer!
 	m_BufferSize = bufferSizeInBytes;
 	m_BufferOffset = 0;
 	m_Buffer.clear();

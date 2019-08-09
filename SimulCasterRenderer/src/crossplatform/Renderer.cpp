@@ -36,7 +36,7 @@ void Renderer::SubmitObject(Object& object)
 void Renderer::Execute()
 {
 	m_FrameBuffer->Bind();
-	m_FrameBuffer->Clear(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
+	m_FrameBuffer->Clear(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0);
 
 	m_Pipeline->Bind();
 

@@ -14,8 +14,6 @@ set(srcs
 	SessionClient.h
 	stdafx.h
 	targetver.h
-	MeshCreator.cpp
-	MeshCreator.h
 )
 include_directories(${SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src)
 link_directories("${SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/build/lib/${CONFIG_NAME}" "${SIMUL}/lib/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/lib/x64/v140/Static ${CONFIG_NAME}"${CMAKE_SOURCE_DIR}/../libavstream/build_static/${CONFIG_NAME} ${CMAKE_SOURCE_DIR}/../thirdparty/enet/build_static/${CONFIG_NAME} ${CMAKE_SOURCE_DIR}/build/x64/lib ${CMAKE_SOURCE_DIR}/build/x64/SimulCasterRenderer/Release)

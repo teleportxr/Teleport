@@ -11,10 +11,10 @@ namespace scr
 	class GL_Texture final : public Texture
 	{
 	private:
-		OVR::GlTexture& m_Texture;
+		OVR::GlTexture m_Texture;
 
 	public:
-		GL_Texture(OVR::GlTexture& texture);
+		GL_Texture() {}
 
 		void Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
 		void Destroy() override;

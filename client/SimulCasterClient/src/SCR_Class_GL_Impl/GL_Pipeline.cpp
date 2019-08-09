@@ -4,11 +4,6 @@
 using namespace scr;
 using namespace OVR;
 
-GL_Pipeline::GL_Pipeline(OVR::GlProgram& program)
-    :m_Program(program)
-{
-}
-
 void GL_Pipeline::Create(const std::vector<Shader*>& shaders,
             const VertexBufferLayout& layout,
             const TopologyType& topology,
