@@ -1,11 +1,11 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "../Common.h"
+#include "Common.h"
 #include "Shader.h"
 #include "VertexBufferLayout.h"
 #include "Texture.h"
-#include "../crossplatform/DescriptorSet.h"
+#include "crossplatform/DescriptorSet.h"
 
 namespace scr
 {

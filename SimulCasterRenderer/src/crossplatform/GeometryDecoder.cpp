@@ -66,7 +66,7 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	}
 	default:
 	{ 
-		return avs::Result::GeometryDecoder_InvaildPayload;
+		return avs::Result::GeometryDecoder_InvalidPayload;
 	}
 	};
 }
@@ -176,7 +176,10 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		
 		dg.buffers[key]= { 0, nullptr };
 		dg.buffers[key].byteLength = Next8B;
-		assert(m_BufferSize >= m_BufferOffset + dg.buffers[key].byteLength);
+		if(m_BufferSize >= m_BufferOffset + dg.buffers[key].byteLength)
+		{
+			return avs::Result::GeometryDecoder_InvalidBufferSize;
+		}
 
 		dg.bufferDatas[key].push_back({});
 		dg.bufferDatas[key].resize(dg.buffers[key].byteLength);

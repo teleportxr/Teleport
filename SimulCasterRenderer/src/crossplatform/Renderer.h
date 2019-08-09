@@ -1,8 +1,8 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "../api/Pipeline.h"
-#include "../api/FrameBuffer.h"
+#include "api/Pipeline.h"
+#include "api/FrameBuffer.h"
 #include "Camera.h"
 #include "Light.h"
 #include "Object.h"

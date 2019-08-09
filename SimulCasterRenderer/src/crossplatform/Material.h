@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "../api/Texture.h"
+#include "api/Texture.h"
 #include "DescriptorSet.h"
 
 namespace scr

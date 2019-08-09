@@ -39,6 +39,7 @@ set( src_crossplatform
 	src/crossplatform/ResourceManager.h
 	)
 
+include_directories(src)
 include_directories(../libavstream/include)
 set( src_public ${src_root} ${src_api} ${src_crossplatform} )
 

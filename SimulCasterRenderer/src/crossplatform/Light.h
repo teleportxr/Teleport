@@ -1,13 +1,13 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "../Common.h"
+#include "Common.h"
 
 #include "API.h"
 #include "Camera.h"
 
-#include "../api/FrameBuffer.h"
-#include "../api/UniformBuffer.h"
+#include "api/FrameBuffer.h"
+#include "api/UniformBuffer.h"
 
 namespace scr
 {

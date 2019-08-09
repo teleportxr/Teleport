@@ -1,10 +1,10 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "../api/Shader.h"
-#include "../api/Texture.h"
-#include "../api/UniformBuffer.h"
-#include "../Common.h"
+#include "api/Shader.h"
+#include "api/Texture.h"
+#include "api/UniformBuffer.h"
+#include "Common.h"
 
 namespace scr
 {

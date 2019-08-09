@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "../Common.h"
+#include "Common.h"
 
 namespace scr
 {

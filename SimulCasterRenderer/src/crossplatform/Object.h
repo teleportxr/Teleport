@@ -1,9 +1,9 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "../api/VertexBuffer.h"
-#include "../api/IndexBuffer.h"
-#include "../api/UniformBuffer.h"
+#include "api/VertexBuffer.h"
+#include "api/IndexBuffer.h"
+#include "api/UniformBuffer.h"
 #include "Material.h"
 #include "basic_linear_algebra.h"
 
