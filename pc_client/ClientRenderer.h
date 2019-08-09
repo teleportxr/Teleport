@@ -13,6 +13,23 @@
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
 #include <libavstream/geometrydecoder.hpp>
+
+#include "crossplatform/ResourceManager.h"
+
+namespace avs
+{
+	typedef LARGE_INTEGER Timestamp;
+}
+
+namespace scr
+{
+	class IndexBuffer;
+	class Shader;
+	class Texture;
+	class UniformBuffer;
+	class VertexBuffer;
+}
+
 struct AVSTexture
 {
 	virtual ~AVSTexture() = default;
@@ -59,6 +76,15 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	SessionClient sessionClient;
 	ControllerState controllerState;
 	float framerate = 0.0f;
+
+	avs::Timestamp platformStartTimestamp; //Timestamp of when the system started.
+	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
+	
+	ResourceManager<scr::IndexBuffer*> indexBufferManager;
+	ResourceManager<scr::Shader*> shaderManager;
+	ResourceManager<scr::Texture*> textureManager;
+	ResourceManager<scr::UniformBuffer*> uniformBufferManager;
+	ResourceManager<scr::VertexBuffer*> vertexBufferManager;
 public:
 	ClientRenderer();
 	~ClientRenderer();
@@ -88,6 +114,9 @@ public:
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
 
 	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);
+
+	//Update the state of objects on the ClientRenderer.
+	void Update();
 
 	static constexpr size_t NumStreams = 1;
 	static constexpr bool GeoStream  = true;

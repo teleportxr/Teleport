@@ -21,6 +21,13 @@
 #include <random>
 #include <libavstream/surfaces/surface_dx11.hpp>
 
+#include "libavstream/platforms/platform_windows.hpp"
+#include "crossplatform/ResourceManager.h"
+#include "api/IndexBuffer.h"
+#include "api/Shader.h"
+#include "api/Texture.h"
+#include "api/UniformBuffer.h"
+#include "api/VertexBuffer.h"
 
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
@@ -69,20 +76,29 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 }
 
 ClientRenderer::ClientRenderer():
-	renderPlatform(nullptr)
-	,hdrFramebuffer(nullptr)
-	,hDRRenderer(nullptr)
-	,meshRenderer(nullptr)
-	,transparentMesh(nullptr)
-	,transparentEffect(nullptr)
-	,cubemapClearEffect(nullptr)
-	,specularTexture(nullptr)
-	,diffuseCubemapTexture(nullptr)
-	,framenumber(0)
-	,sessionClient(this)
-	, RenderMode(0)
+	renderPlatform(nullptr),
+	hdrFramebuffer(nullptr),
+	hDRRenderer(nullptr),
+	meshRenderer(nullptr),
+	transparentMesh(nullptr),
+	transparentEffect(nullptr),
+	cubemapClearEffect(nullptr),
+	specularTexture(nullptr),
+	diffuseCubemapTexture(nullptr),
+	framenumber(0),
+	sessionClient(this),
+	RenderMode(0),
+	indexBufferManager(ResourceManager<scr::IndexBuffer*>(&scr::IndexBuffer::Destroy)),
+	shaderManager(ResourceManager<scr::Shader*>(nullptr)),
+	textureManager(ResourceManager<scr::Texture*>(&scr::Texture::Destroy)),
+	uniformBufferManager(ResourceManager<scr::UniformBuffer*>(&scr::UniformBuffer::Destroy)),
+	vertexBufferManager(ResourceManager<scr::VertexBuffer*>(&scr::VertexBuffer::Destroy))
 {
 	avsTextures.resize(NumStreams);
+
+	//Initalise time stamping for state update.
+	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
+	previousTimestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 }
 
 ClientRenderer::~ClientRenderer()
@@ -412,6 +428,20 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 	if(!ti->texture)
 		ti->texture = renderPlatform->CreateTexture();
 	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height, simul::crossplatform::RGBA_8_UNORM, true, true, false);
+}
+
+void ClientRenderer::Update()
+{
+	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
+	uint32_t timeElapsed = (timestamp - previousTimestamp);
+
+	indexBufferManager.Update(timeElapsed);
+	shaderManager.Update(timeElapsed);
+	textureManager.Update(timeElapsed);
+	uniformBufferManager.Update(timeElapsed);
+	vertexBufferManager.Update(timeElapsed);
+
+	previousTimestamp = timestamp;
 }
 
 void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint height)

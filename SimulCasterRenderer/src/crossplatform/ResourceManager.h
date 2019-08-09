@@ -20,8 +20,8 @@ public:
 	//Add a resource to the resource manager.
 	//	id : Unique identifier of the resource.
 	//	newResource : The resource.
-	//	postUseLifetime : Seconds the resource should be kept alive after the last object has stopped using it.
-	void Add(uid id, T&& newResource, float postUseLifetime = 30);
+	//	postUseLifetime : Milliseconds the resource should be kept alive after the last object has stopped using it.
+	void Add(uid id, T&& newResource, uint32_t postUseLifetime = 30000);
 
 	//Returns whether the manager contains the resource.
 	bool Has(uid id) const;
@@ -42,17 +42,17 @@ public:
 	void ClearCareful(std::vector<uid> excludeList);
 
 	//Process the ResourceManager for this tick; allowing it to free any resources that have not been used for a while.
-	//	delta : The amount of time that has passed since the last update.
-	void Update(float delta);
+	//	deltaTimestamp : Milliseconds that have passed since the last update.
+	void Update(uint32_t deltaTimestamp);
 private:
 	//Struct to keep the resource and its metadata together.
 	struct ResourceData
 	{
-		float postUseLifetime; //Seconds the resource should be kept alive after the last object has stopped using it.
+		uint32_t postUseLifetime; //Milliseconds the resource should be kept alive after the last object has stopped using it.
 
 		T resource;
 		unsigned int claimCount; //Amount of objects claiming use of this resource.
-		float timeSinceLastUse; //Seconds since the data was last used by the session.
+		uint32_t timeSinceLastUse; //Milliseconds since the data was last used by the session.
 	};
 
 	//Increases readability by obfuscating the full iterator definition.
@@ -82,7 +82,7 @@ ResourceManager<T>::~ResourceManager()
 }
 
 template<class T>
-void ResourceManager<T>::Add(uid id, T && newItem, float postUseLifetime)
+void ResourceManager<T>::Add(uid id, T && newItem, uint32_t postUseLifetime)
 {
 	cachedItems[id] = {postUseLifetime, std::move(newItem), 0, 0};
 }
@@ -168,7 +168,7 @@ void ResourceManager<T>::ClearCareful(std::vector<uid> excludeList)
 }
 
 template<class T>
-void ResourceManager<T>::Update(float delta)
+void ResourceManager<T>::Update(uint32_t deltaTimestamp)
 {
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
@@ -176,7 +176,7 @@ void ResourceManager<T>::Update(float delta)
 		//Increment time spent unused, if the resource manager is the only object pointing to the resource.
 		if(it->second.claimCount == 0)
 		{
-			it->second.timeSinceLastUse += delta;
+			it->second.timeSinceLastUse += deltaTimestamp;
 
 			//Delete the resource, if it has been too long since the object was last used.
 			if(it->second.timeSinceLastUse >= it->second.postUseLifetime * lifetimeFactor)

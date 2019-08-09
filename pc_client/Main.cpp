@@ -231,6 +231,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
 			if(gdi)
 			{
+				/*
+				 * This is being called too frequently; i.e. in the draw functionality.
+				 * But the windows message loop is constantly receiving WM_PAINT messages because BeginPaint and EndPaint aren't being used.
+				 * But using them is causing the window to not be refreshed, and right now fixing it isn't top priority.
+				 */
+				clientRenderer.Update();
+
 				double fTime=0.0;
 				float time_step=0.01f;
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
