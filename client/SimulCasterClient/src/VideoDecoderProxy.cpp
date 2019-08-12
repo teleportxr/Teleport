@@ -101,6 +101,7 @@ avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInByt
 
     jobject jbuffer = mEnv->NewDirectByteBuffer(const_cast<void*>(buffer), bufferSizeInBytes);
     jboolean isReadyToDisplay = mEnv->CallBooleanMethod(mVideoDecoder, jni.decodeMethod, jbuffer, payaloadType);
+    mEnv->DeleteLocalRef(jbuffer);
     return isReadyToDisplay ? avs::Result::DecoderBackend_ReadyToDisplay : avs::Result::OK;
 }
 

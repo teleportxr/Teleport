@@ -102,7 +102,8 @@ ClientRenderer::ClientRenderer():
 }
 
 ClientRenderer::~ClientRenderer()
-{	
+{
+	pipeline.deconfigure();
 	InvalidateDeviceObjects(); 
 }
 
