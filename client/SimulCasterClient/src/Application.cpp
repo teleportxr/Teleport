@@ -77,12 +77,21 @@ Application::Application()
 	, mVideoSurfaceTexture(nullptr)
     , mSession(this)
 	, mControllerID(-1)
+    , indexBufferManager(ResourceManager<scr::IndexBuffer*>(&scr::IndexBuffer::Destroy))
+    , shaderManager(ResourceManager<scr::Shader*>(nullptr))
+    , textureManager(ResourceManager<scr::Texture*>(&scr::Texture::Destroy))
+    , uniformBufferManager(ResourceManager<scr::UniformBuffer*>(&scr::UniformBuffer::Destroy))
+    , vertexBufferManager(ResourceManager<scr::VertexBuffer*>(&scr::VertexBuffer::Destroy))
+
 {
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
 
 	if(enet_initialize() != 0) {
 		OVR_FAIL("Failed to initialize ENET library");
 	}
+
+    resourceCreator.SetRenderPlatform(scr::API::APIType::OPENGLES);
+    resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
 }
 
 Application::~Application()
@@ -355,7 +364,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
    if(GeoStream)
    {
         avsGeometryDecoder.configure(100, &geometryDecoder);
-	    avsGeometryTarget.configure(&meshCreator);
+	    avsGeometryTarget.configure(&resourceCreator);
         mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
    }
 

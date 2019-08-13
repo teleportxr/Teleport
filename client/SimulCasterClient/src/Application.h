@@ -15,7 +15,7 @@
 #include "SessionClient.h"
 #include "VideoDecoderProxy.h"
 
-#include "MeshCreator.h"
+#include "ResourceCreator.h"
 #include "GeometryDecoder.h"
 #include <libavstream/geometrydecoder.hpp>
 #include "SCR_Class_GL_Impl/GL_RenderPlatform.h"
@@ -61,10 +61,16 @@ private:
     bool mPipelineConfigured;
 
     static constexpr size_t   NumStreams = 1;
-    static constexpr bool     GeoStream  = false;
+    static constexpr bool     GeoStream  = true;
+
+	ResourceManager<scr::IndexBuffer*> indexBufferManager;
+	ResourceManager<scr::Shader*> shaderManager;
+	ResourceManager<scr::Texture*> textureManager;
+	ResourceManager<scr::UniformBuffer*> uniformBufferManager;
+	ResourceManager<scr::VertexBuffer*> vertexBufferManager;
 
     GeometryDecoder geometryDecoder;
-	MeshCreator meshCreator;
+	ResourceCreator resourceCreator;
 	avs::GeometryDecoder avsGeometryDecoder;
 	avs::GeometryTarget avsGeometryTarget;
 

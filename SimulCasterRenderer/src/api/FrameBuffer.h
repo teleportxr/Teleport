@@ -17,9 +17,14 @@ namespace scr
 		std::vector<Texture*> m_ColourTextures;
 		Texture* m_DepthTexture;
 
-		std::unique_ptr<FrameBuffer> m_ResolvedFrameBuffer;
+		std::unique_ptr<FrameBuffer> m_ResolvedFrameBuffer = nullptr;
 
 	public:
+		virtual ~FrameBuffer()
+		{
+			m_ResolvedFrameBuffer.reset();
+		}
+
 		virtual void Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height) = 0;
 		virtual void Destroy() = 0;
 

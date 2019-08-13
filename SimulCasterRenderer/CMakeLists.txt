@@ -46,10 +46,16 @@ set( src_crossplatform
 include_directories(src)
 #Include libavstream
 include_directories(../libavstream/include)
-#Include OpenGL ES 3.0
-include_directories(../client/VrApi/Include) 
-include_directories(../client/VrAppFramework/Include) 
-include_directories(../client/LibOVRKernel/Src) 
+
+if(WIN32)
+	#Include Simul API
+	include_directories(../pc_client/SCR_Class_PC_Impl) 
+elseif(ANDROID)
+	#Include OpenGL ES 3.0
+	include_directories(../client/VrApi/Include) 
+	include_directories(../client/VrAppFramework/Include) 
+	include_directories(../client/LibOVRKernel/Src)
+endif()
 
 set( src_public ${src_root} ${src_api} ${src_crossplatform} )
 

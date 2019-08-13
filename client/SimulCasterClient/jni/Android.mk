@@ -13,8 +13,6 @@ LOCAL_SRC_FILES			:= \
     ../src/SessionClient.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \
-    ../src/GeometryDecoder.cpp \
-    ../src/MeshCreator.cpp \
     ../src/SCR_Class_GL_Impl/GL_FrameBuffer.cpp \
     ../src/SCR_Class_GL_Impl/GL_IndexBuffer.cpp \
     ../src/SCR_Class_GL_Impl/GL_Pipeline.cpp \

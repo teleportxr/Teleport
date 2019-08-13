@@ -176,7 +176,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		
 		dg.buffers[key]= { 0, nullptr };
 		dg.buffers[key].byteLength = Next8B;
-		if(m_BufferSize >= m_BufferOffset + dg.buffers[key].byteLength)
+		if(m_BufferSize <= m_BufferOffset + dg.buffers[key].byteLength)
 		{
 			return avs::Result::GeometryDecoder_InvalidBufferSize;
 		}
@@ -231,6 +231,9 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 
 			//Indices
 			target->ensureIndices(it->first, 0, (int)dg.accessors[primitive.indices_accessor].count, (const unsigned int*)dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
+			avs::Result result = target->Assemble();
+			if (result != avs::Result::OK)
+				return result;
 		}
 	}
 	return avs::Result::OK;

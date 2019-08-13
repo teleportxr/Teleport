@@ -95,6 +95,8 @@ ClientRenderer::ClientRenderer():
 	vertexBufferManager(ResourceManager<scr::VertexBuffer*>(&scr::VertexBuffer::Destroy))
 {
 	avsTextures.resize(NumStreams);
+	resourceCreator.SetRenderPlatform(scr::API::APIType::D3D11);
+	resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
 
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
