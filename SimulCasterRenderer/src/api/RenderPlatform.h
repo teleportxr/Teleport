@@ -1,0 +1,30 @@
+// (C) Copyright 2018-2019 Simul Software Ltd
+
+#include "Common.h"
+
+#include "FrameBuffer.h"
+#include "IndexBuffer.h"
+#include "Pipeline.h"
+#include "Sampler.h"
+#include "Shader.h"
+#include "Texture.h"
+#include "UniformBuffer.h"
+#include "VertexBuffer.h"
+
+namespace scr
+{
+	class RenderPlatform
+	{
+	public:
+		virtual ~RenderPlatform() {}
+
+		virtual std::shared_ptr<FrameBuffer>	InstantiateFrameBuffer() = 0;
+		virtual std::shared_ptr<IndexBuffer>	InstantiateIndexBuffer() = 0;
+		virtual std::shared_ptr<Pipeline>		InstantiatePipeline() = 0;
+		virtual std::shared_ptr<Sampler>		InstantiateSampler() = 0;
+		virtual std::shared_ptr<Shader>			InstantiateShader() = 0;
+		virtual std::shared_ptr<Texture>		InstantiateTexture() = 0;
+		virtual std::shared_ptr<UniformBuffer>	InstantiateUniformBuffer() = 0;
+		virtual std::shared_ptr<VertexBuffer>	InstantiateVertexBuffer() = 0;
+	};
+}
