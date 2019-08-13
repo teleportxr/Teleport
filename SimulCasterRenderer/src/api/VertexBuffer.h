@@ -12,8 +12,8 @@ namespace scr
 		size_t m_Size;
 		const void* m_Data;
 
-		size_t m_Count;
-		size_t m_Stride;
+		size_t m_Count = 0;
+		size_t m_Stride = 0;
 		std::unique_ptr<VertexBufferLayout> m_Layout;
 
 	public:
@@ -34,6 +34,7 @@ namespace scr
 			{
 				m_Stride += static_cast<size_t>(attrib.compenentCount);
 			}
+			m_Stride *= 4;
 		}
 
 		virtual void Create(size_t size, const void* data) = 0;

@@ -176,7 +176,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		
 		dg.buffers[key]= { 0, nullptr };
 		dg.buffers[key].byteLength = Next8B;
-		if(m_BufferSize <= m_BufferOffset + dg.buffers[key].byteLength)
+		if(m_BufferSize < m_BufferOffset + dg.buffers[key].byteLength)
 		{
 			return avs::Result::GeometryDecoder_InvalidBufferSize;
 		}
