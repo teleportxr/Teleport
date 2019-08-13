@@ -44,8 +44,8 @@ void VideoStreamClient::StopReceiving()
 void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
 {
     avs::NetworkSourceParams params = {};
-    params.socketBufferSize = 16 * 1024 * 1024; // 16MiB socket buffer size
-    params.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
+    params.socketBufferSize = 64 * 1024 * 1024; // 16MiB socket buffer size
+    //params.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 
     avs::NetworkSource networkSource;
     if(!networkSource.configure(1, port+1, address.c_str(), port, params))

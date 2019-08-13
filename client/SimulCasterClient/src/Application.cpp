@@ -265,7 +265,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
         frameRate*=0.99f;
         frameRate+=0.01f/vrFrame.DeltaSeconds;
     }
-#ifdef _DEBUG
+#if 1
     auto ctr=mNetworkSource.getCounterValues();
     mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d    \nDecoder Packets Dropped: %d\nFramerate: %4.4f\nBandwidth: %4.4f"
             , ctr.networkPacketsDropped, ctr.decoderPacketsDropped
@@ -334,8 +334,8 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
     OVR_WARN("VIDEO STREAM CHANGED: %d %d %d", port, width, height);
 
 	avs::NetworkSourceParams sourceParams = {};
-	sourceParams.socketBufferSize = 16 * 1024 * 1024; // 16MiB socket buffer size
-	sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
+	sourceParams.socketBufferSize = 64 * 1024 * 1024; // 64MiB socket buffer size
+	//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 	sourceParams.maxJitterBufferLength = 0;
 
 

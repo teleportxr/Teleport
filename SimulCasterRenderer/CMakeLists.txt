@@ -2,7 +2,7 @@ cmake_minimum_required( VERSION 3.8 )
 project( SimulCasterRenderer )
 
 # Build options
-
+set(DEBUG_CONFIGURATIONS Debug)
 # Source
 set( src_root
 	src/Common.h
