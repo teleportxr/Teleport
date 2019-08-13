@@ -6,7 +6,7 @@
 namespace scr
 {
 	//Interface for VertexBuffer
-	class VertexBuffer
+	class VertexBuffer : public APIObject
 	{
 	protected:
 		size_t m_Size;
@@ -17,6 +17,7 @@ namespace scr
 		std::unique_ptr<VertexBufferLayout> m_Layout;
 
 	public:
+		VertexBuffer(RenderPlatform *r) :APIObject(r) {}
 		virtual ~VertexBuffer()
 		{
 			m_Size = 0;
@@ -32,7 +33,7 @@ namespace scr
 			m_Layout = std::make_unique<VertexBufferLayout>(layout);
 			for (auto& attrib : layout.m_Attributes)
 			{
-				m_Stride += static_cast<size_t>(attrib.compenentCount);
+				m_Stride += static_cast<size_t>(attrib.componentCount);
 			}
 			m_Stride *= 4;
 		}

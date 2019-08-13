@@ -12,7 +12,7 @@ namespace pc_client
 	private:
 
 	public:
-		PC_FrameBuffer() {}
+		PC_FrameBuffer(scr::RenderPlatform *r):scr::FrameBuffer(r) {}
 
 		void Create(scr::Texture::Format format, scr::Texture::SampleCount sampleCount, uint32_t width, uint32_t height) override;
 		void Destroy() override;

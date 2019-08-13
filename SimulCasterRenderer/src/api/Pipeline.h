@@ -10,7 +10,7 @@
 namespace scr
 {
 	//Interface for Pipeline
-	class Pipeline
+	class Pipeline:public APIObject
 	{
 	public:
 		enum class TopologyType : uint32_t
@@ -148,6 +148,7 @@ namespace scr
 		ColourBlendingState m_ColourBlendingState;
 
 	public:
+		Pipeline(RenderPlatform *r) :APIObject(r) {}
 		virtual ~Pipeline()	{};
 
 		virtual void Create(const std::vector<Shader*>& shaders,

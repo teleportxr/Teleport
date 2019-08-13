@@ -9,7 +9,7 @@ namespace pc_client
 	class PC_Sampler final : public scr::Sampler
 	{
 	public:
-		PC_Sampler() {}
+		PC_Sampler(scr::RenderPlatform *r):scr::Sampler(r) {}
 
 		void Create(scr::Sampler::Filter filterMinMag[2], scr::Sampler::Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy) override;
 		void Destroy() override;

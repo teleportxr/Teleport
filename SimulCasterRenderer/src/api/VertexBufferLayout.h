@@ -25,7 +25,7 @@ namespace scr
 		struct VertexAttribute
 		{
 			uint32_t location;
-			ComponentCount compenentCount;
+			ComponentCount componentCount;
 			Type type;
 		};
 

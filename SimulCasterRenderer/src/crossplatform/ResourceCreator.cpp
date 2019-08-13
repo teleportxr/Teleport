@@ -91,7 +91,7 @@ void ResourceCreator::ensureWeights(unsigned long long shape_uid, int startWeigh
 	m_Weights = weights;
 }
 
-void ResourceCreator::ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, const unsigned int* indices)
+void ResourceCreator::ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices)
 {
 	CHECK_SHAPE_UID(shape_uid);
 
@@ -104,7 +104,7 @@ void ResourceCreator::ensureIndices(unsigned long long shape_uid, int startIndex
 	
 	m_IndexCount = indexCount;
 	m_Indices = indices;
-
+	m_IndexSize = indexSize;
 }
 
 avs::Result ResourceCreator::Assemble()
@@ -157,7 +157,7 @@ avs::Result ResourceCreator::Assemble()
 	vbo->Create(m_InterleavedVBOSize, (const void*)m_InterleavedVBO.get());
 
 	std::shared_ptr<scr::IndexBuffer> ibo = m_pRenderPlatform->InstantiateIndexBuffer();
-	ibo->Create(m_IndexCount, m_Indices);
+	ibo->Create(m_IndexCount, m_IndexSize, m_Indices);
 
 	m_VertexBufferManager->Add(shape_uid, vbo.get(), m_PostUseLifetime);
 	m_IndexBufferManager->Add(shape_uid, ibo.get(), m_PostUseLifetime);

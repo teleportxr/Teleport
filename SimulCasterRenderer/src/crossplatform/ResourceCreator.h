@@ -49,7 +49,7 @@ private:
 	void ensureColors(unsigned long long shape_uid, int startColor, int colorCount, const avs::vec4* colors) override;
 	void ensureJoints(unsigned long long shape_uid, int startJoint, int jointCount, const avs::vec4* joints) override;
 	void ensureWeights(unsigned long long shape_uid, int startWeight, int weightCount, const avs::vec4* weights) override;
-	void ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, const unsigned int* indices) override;
+	void ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices) override;
 	avs::Result Assemble() override;
 
 	inline bool SetAndCheckShapeUID(const avs::uid& uid)
@@ -86,6 +86,7 @@ private:
 	size_t m_VertexCount	= 0;
 	size_t m_IndexCount		= 0;
 	size_t m_PolygonCount	= 0;
+	size_t m_IndexSize		= 0;
 
 	const avs::vec3* m_Vertices		= nullptr;
 	const avs::vec3* m_Normals		= nullptr;
@@ -95,7 +96,7 @@ private:
 	const avs::vec4* m_Colors		= nullptr;
 	const avs::vec4* m_Joints		= nullptr;
 	const avs::vec4* m_Weights		= nullptr;
-	const unsigned int* m_Indices	= nullptr;
+	const unsigned char* m_Indices	= nullptr;
 	
 	size_t m_InterleavedVBOSize = 0;
 	std::unique_ptr<float[]> m_InterleavedVBO = nullptr;

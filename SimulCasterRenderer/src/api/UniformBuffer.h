@@ -6,7 +6,7 @@
 namespace scr
 {
 	//Interface for UniformBuffer
-	class UniformBuffer
+	class UniformBuffer : public APIObject
 	{
 	protected:
 		uint32_t m_BindingLocation;
@@ -14,6 +14,7 @@ namespace scr
 		const void* m_Data;
 
 	public:
+		UniformBuffer(scr::RenderPlatform *r) :APIObject(r) {}
 		virtual ~UniformBuffer()
 		{
 			m_Size = 0;

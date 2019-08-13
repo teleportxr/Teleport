@@ -6,7 +6,7 @@
 namespace scr
 {
 	//Interface for Sampler
-	class Sampler
+	class Sampler : public APIObject
 	{
 	public:
 		enum class Filter : uint32_t
@@ -33,6 +33,7 @@ namespace scr
 		float m_MaxAnisotropy;
 
 	public:
+		Sampler(RenderPlatform *r) :APIObject(r) {}
 		virtual ~Sampler() {};
 
 		virtual void Create(Filter filterMinMag[2], Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy) = 0;

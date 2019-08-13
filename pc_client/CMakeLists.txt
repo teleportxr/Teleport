@@ -23,6 +23,7 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_Pipeline.cpp
 	SCR_Class_PC_Impl/PC_Pipeline.h
 	SCR_Class_PC_Impl/PC_RenderPlatform.h
+	SCR_Class_PC_Impl/PC_RenderPlatform.cpp
 	SCR_Class_PC_Impl/PC_Sampler.cpp
 	SCR_Class_PC_Impl/PC_Sampler.h
 	SCR_Class_PC_Impl/PC_Shader.cpp

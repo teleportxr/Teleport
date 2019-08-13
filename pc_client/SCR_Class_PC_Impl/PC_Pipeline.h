@@ -10,7 +10,7 @@ namespace pc_client
 	private:
 
 	public:
-		PC_Pipeline() {}
+		PC_Pipeline(scr::RenderPlatform *r):scr::Pipeline(r) {}
 
 		void Create(const std::vector<scr::Shader*>& shaders,
 			const scr::VertexBufferLayout& layout,

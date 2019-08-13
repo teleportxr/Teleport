@@ -11,6 +11,7 @@ void PC_FrameBuffer::Create(Texture::Format format, Texture::SampleCount sampleC
    m_SampleCount = sampleCount;
    m_Format = format;
 }
+
 void PC_FrameBuffer::Destroy()
 {
 }

@@ -48,8 +48,7 @@ include_directories(src)
 include_directories(../libavstream/include)
 
 if(WIN32)
-	#Include Simul API
-	include_directories(../pc_client/SCR_Class_PC_Impl) 
+# Removed circular dependency
 elseif(ANDROID)
 	#Include OpenGL ES 3.0
 	include_directories(../client/VrApi/Include) 
