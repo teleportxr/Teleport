@@ -9,6 +9,7 @@
 #include "SessionClient.h"
 #include "crossplatform/ResourceCreator.h"
 #include "crossplatform/GeometryDecoder.h"
+#include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
@@ -21,13 +22,14 @@ namespace avs
 	typedef LARGE_INTEGER Timestamp;
 }
 
-namespace scr
+namespace pc_client
 {
 	class IndexBuffer;
 	class Shader;
 	class Texture;
 	class UniformBuffer;
 	class VertexBuffer;
+	class PC_RenderPlatform;
 }
 
 struct AVSTexture
@@ -52,6 +54,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	static const bool reverseDepth = true;
 	/// A pointer to RenderPlatform, so that we can use the simul::crossplatform API.
 	simul::crossplatform::RenderPlatform *renderPlatform;
+	pc_client::PC_RenderPlatform PcClientRenderPlatform;
 	/// A framebuffer to store the colour and depth textures for the view.
 	simul::crossplatform::BaseFramebuffer	*hdrFramebuffer;
 	/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.

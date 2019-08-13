@@ -10,35 +10,12 @@ ResourceCreator::~ResourceCreator()
 {
 }
 
-void ResourceCreator::SetRenderPlatform(scr::API::APIType api)
+void ResourceCreator::SetRenderPlatform(scr::RenderPlatform *r)
 {
-	m_API.SetAPI(api);
-	
-#if defined(_WIN32) || defined(WIN32) || defined (_WIN64) || defined(WIN64)
-	switch (m_API.GetAPI())
-	{
-	case scr::API::APIType::UNKNOWN:	m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::D3D11:		m_pRenderPlatform = std::make_unique<scr::PC_RenderPlatform>(); break;
-	case scr::API::APIType::D3D12:		m_pRenderPlatform = std::make_unique<scr::PC_RenderPlatform>(); break;
-	case scr::API::APIType::OPENGL:		m_pRenderPlatform = std::make_unique<scr::PC_RenderPlatform>(); break;
-	case scr::API::APIType::OPENGLES:	m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::VULKAN:		m_pRenderPlatform = std::make_unique<scr::PC_RenderPlatform>(); break;
+	m_API.SetAPI(r->GetAPI());
+	m_pRenderPlatform.reset( r);
 
-	default:							m_pRenderPlatform = nullptr; break;
-	}
-#elif defined(__ANDROID__)
-	switch (m_API.GetAPI())
-	{
-	case scr::API::APIType::UNKNOWN:	m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::D3D11:		m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::D3D12:		m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::OPENGL:		m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::OPENGLES:	m_pRenderPlatform = std::make_unique<scr::GL_RenderPlatform>(); break;
-	case scr::API::APIType::VULKAN:		m_pRenderPlatform = nullptr; break;
-
-	default:							m_pRenderPlatform = nullptr; break;
-	}
-#endif
+	// Removed circular dependencies.
 
 }
 

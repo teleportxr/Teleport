@@ -3,9 +3,9 @@
 
 #include <api/IndexBuffer.h>
 
-namespace scr
+namespace pc_client
 {
-	class PC_IndexBuffer final : public IndexBuffer
+	class PC_IndexBuffer  : public scr::IndexBuffer
 	{
 	private:
 

@@ -3,15 +3,15 @@
 
 #include <api/Sampler.h>
 
-namespace scr
+namespace pc_client
 {
 	//Interface for Sampler
-	class PC_Sampler final : public Sampler
+	class PC_Sampler final : public scr::Sampler
 	{
 	public:
 		PC_Sampler() {}
 
-		void Create(Filter filterMinMag[2], Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy) override;
+		void Create(scr::Sampler::Filter filterMinMag[2], scr::Sampler::Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy) override;
 		void Destroy() override;
 		
 		void Bind() const override;

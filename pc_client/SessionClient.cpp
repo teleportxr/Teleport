@@ -144,7 +144,7 @@ bool SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
 		// Here we BIND the socket to the local address that we want to be identified with.
 		// e.g. our OWN local IP.
 		ENetAddress bindAddress = { ENET_HOST_ANY, discoveryPort };
-		enet_address_set_host(&(bindAddress), "192.168.3.21");
+		enet_address_set_host(&(bindAddress), "127.0.0.1");
 		if (enet_socket_bind(mServiceDiscoverySocket, &bindAddress) != 0)
 		{
 			FAIL("Failed to bind to service discovery UDP socket");

@@ -26,7 +26,7 @@ namespace scr
 			quat m_Orientation;
 			vec3 m_Position;
 			float _pad;
-		}m_CameraData;
+		} m_CameraData;
 
 		static bool s_UninitialisedUBO;
 		std::unique_ptr<UniformBuffer> m_UBO;

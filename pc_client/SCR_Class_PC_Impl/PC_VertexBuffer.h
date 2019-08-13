@@ -4,9 +4,9 @@
 #include <api/VertexBuffer.h>
 #include <api/VertexBufferLayout.h>
 
-namespace scr
+namespace pc_client
 {
-	class PC_VertexBuffer final : public VertexBuffer
+	class PC_VertexBuffer final : public scr::VertexBuffer
 	{
 	private:
 

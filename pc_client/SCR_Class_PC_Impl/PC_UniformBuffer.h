@@ -3,9 +3,9 @@
 
 #include <api/UniformBuffer.h>
 
-namespace scr
+namespace pc_client
 {
-class PC_UniformBuffer final : public UniformBuffer
+class PC_UniformBuffer final : public scr::UniformBuffer
 	{
 	private:
 

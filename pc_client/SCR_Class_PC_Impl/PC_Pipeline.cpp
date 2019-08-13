@@ -1,6 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "PC_Pipeline.h"
 
+using namespace pc_client;
 using namespace scr;
 
 void PC_Pipeline::Create(const std::vector<Shader*>& shaders,

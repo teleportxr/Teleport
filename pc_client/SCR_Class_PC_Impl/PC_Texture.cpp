@@ -1,6 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "PC_Texture.h"
 
+using namespace pc_client;
 using namespace scr;
 
 void PC_Texture::Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data)

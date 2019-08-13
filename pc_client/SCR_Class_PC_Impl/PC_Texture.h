@@ -5,23 +5,23 @@
 #include <api/Texture.h>
 #include <api/Sampler.h>
 
-namespace scr
+namespace pc_client
 {
-	class PC_Texture final : public Texture
+	class PC_Texture final : public scr::Texture
 	{
 	private:
 
 	public:
 		PC_Texture() {}
 
-		void Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
+		void Create(scr::Texture::Slot slot, scr::Texture::Type type, scr::Texture::Format format, scr::Texture::SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
 		void Destroy() override;
 
 		void Bind() const override;
 		void Unbind() const override;
 
 		void GenerateMips() override;
-		void UseSampler(const Sampler* sampler) override;
+		void UseSampler(const scr::Sampler* sampler) override;
 		bool ResourceInUse(int timeout) override {return true;}
 
 	private:

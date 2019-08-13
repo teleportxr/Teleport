@@ -1,6 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "PC_FrameBuffer.h"
 
+using namespace pc_client;
 using namespace scr;
 
 void PC_FrameBuffer::Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height)
