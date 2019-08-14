@@ -128,10 +128,16 @@ avs::Result ResourceCreator::Assemble()
         return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 
-	std::shared_ptr<VertexBufferLayout> layout;
+	std::shared_ptr<VertexBufferLayout> layout(new VertexBufferLayout);
 	if (m_Vertices)	{ layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	}
-	if (m_Normals)	{ layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);		}
-	if (m_Tangents)	{ layout->AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		}
+	if (m_Normals||m_TangentNormals)
+	{
+		layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
+	}
+	if (m_Tangents||m_TangentNormals)
+	{
+		layout->AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+	}
 	if (m_UV0s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
 	if (m_UV1s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
 	if (m_Colors)	{ layout->AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		}
@@ -148,8 +154,46 @@ avs::Result ResourceCreator::Assemble()
 	{
 		size_t intraStrideOffset = 0;
 		if(m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Vertices + i, sizeof(vec3));intraStrideOffset +=3;}
-		if(m_Normals)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Normals + i, sizeof(vec3));	intraStrideOffset +=3;}
-		if(m_Tangents)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Tangents + i, sizeof(vec4));intraStrideOffset +=4;}
+		if (m_TangentNormals)
+		{
+			vec3 normal;
+			vec4 tangent;
+			char *nt =(char*)( m_TangentNormals + (m_TangentNormalSize*i));
+			// tangentx tangentz
+			if (m_TangentNormalSize == 8)
+			{
+				Vec4<char> &x8 = *((avs::Vec4<char>*)(nt));
+				tangent.x = x8.x / 127.0f;
+				tangent.y = x8.y / 127.0f;
+				tangent.z = x8.z / 127.0f;
+				tangent.w = x8.w / 127.0f;
+				Vec4<char> &n8=*((avs::Vec4<char>*)(nt+4));
+				normal.x = n8.x / 127.0f;
+				normal.y = n8.y / 127.0f;
+				normal.z = n8.z / 127.0f;
+			}
+			else
+			{
+				Vec4<short> &x8 = *((avs::Vec4<short>*)(nt));
+				tangent.x = x8.x / 32767.0f;
+				tangent.y = x8.y / 32767.0f;
+				tangent.z = x8.z / 32767.0f;
+				tangent.w = x8.w / 32767.0f;
+				Vec4<short> &n8 = *((avs::Vec4<short>*)(nt + 8));
+				normal.x = n8.x / 32767.0f;
+				normal.y = n8.y / 32767.0f;
+				normal.z = n8.z / 32767.0f;
+			}
+			memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset,&normal, sizeof(vec3));
+			intraStrideOffset += 3;
+			memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset,&tangent , sizeof(vec4));
+			intraStrideOffset += 4;
+		}
+		else
+		{
+			if (m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Normals + i, sizeof(vec3));	intraStrideOffset += 3; }
+			if (m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Tangents + i, sizeof(vec4)); intraStrideOffset += 4; }
+		}
 		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV0s + i, sizeof(vec2));	intraStrideOffset +=2;}
 		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV1s + i, sizeof(vec2));	intraStrideOffset +=2;}
 		if(m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Colors + i, sizeof(vec4));	intraStrideOffset +=4;}

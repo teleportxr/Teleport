@@ -88,11 +88,11 @@ ClientRenderer::ClientRenderer():
 	framenumber(0),
 	sessionClient(this),
 	RenderMode(0),
-	indexBufferManager(ResourceManager<scr::IndexBuffer*>(&scr::IndexBuffer::Destroy)),
-	shaderManager(ResourceManager<scr::Shader*>(nullptr)),
-	textureManager(ResourceManager<scr::Texture*>(&scr::Texture::Destroy)),
-	uniformBufferManager(ResourceManager<scr::UniformBuffer*>(&scr::UniformBuffer::Destroy)),
-	vertexBufferManager(ResourceManager<scr::VertexBuffer*>(&scr::VertexBuffer::Destroy))
+	indexBufferManager(ResourceManager<std::shared_ptr<scr::IndexBuffer>>(&scr::IndexBuffer::Destroy)),
+	shaderManager(ResourceManager< std::shared_ptr<scr::Shader>>(nullptr)),
+	textureManager(ResourceManager< std::shared_ptr<scr::Texture>>(&scr::Texture::Destroy)),
+	uniformBufferManager(ResourceManager< std::shared_ptr<scr::UniformBuffer>>(&scr::UniformBuffer::Destroy)),
+	vertexBufferManager(ResourceManager< std::shared_ptr<scr::VertexBuffer>>(&scr::VertexBuffer::Destroy))
 {
 	avsTextures.resize(NumStreams);
 	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);

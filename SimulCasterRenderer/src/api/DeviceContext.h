@@ -58,6 +58,7 @@ namespace scr
 		DeviceContextCreateInfo m_CI;
 
 	public:
+		DeviceContext(RenderPlatform *r) :APIObject(r) {}
 		virtual ~DeviceContext() = default;
 
 		virtual void Create(DeviceContextCreateInfo* pDeviceContextCreateInfo) = 0;

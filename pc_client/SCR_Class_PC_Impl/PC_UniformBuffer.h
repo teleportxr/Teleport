@@ -16,7 +16,8 @@ class PC_UniformBuffer final : public scr::UniformBuffer
 		//Camera = 0;
 		//Model = 1;
 		//Light = 2;
-		void Create(size_t size, const void* data, uint32_t bindingLocation) override;
+		// Inherited via UniformBuffer
+		void Create(UniformBufferCreateInfo * pUniformBuffer) override;
 		void Destroy() override;
 
 		void Bind() const override;
@@ -24,5 +25,6 @@ class PC_UniformBuffer final : public scr::UniformBuffer
 
 		void Submit() const override;
         bool ResourceInUse(int timeout) override {return true;}
-	};
+
+};
 }

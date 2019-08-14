@@ -209,8 +209,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					else  if (accessor.type == avs::Accessor::DataType::VEC4)
 						tnSize = 16;
 					target->ensureTangentNormals(it->first, 0, (int)accessor.count, tnSize, (const uint8_t*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
-					continue;
 				}
+					continue;
 				case AttributeSemantic::NORMAL:
 					target->ensureNormals(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
@@ -279,7 +279,7 @@ avs::Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& targ
 
 		texture.width = static_cast<uint32_t>(Next8B);
 		texture.height = static_cast<uint32_t>(Next8B);
-		texture.bitsPerPixel = static_cast<uint32_t>(Next8B);
+		texture.bytesPerPixel = static_cast<uint32_t>(Next8B);
 
 		size_t textureSize = Next8B;
 

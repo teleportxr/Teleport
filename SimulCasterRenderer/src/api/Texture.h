@@ -15,7 +15,7 @@ namespace scr
 			DIFFUSE,	//Slot 0: DIFFUSE	RGBA Colour Texture
 			NORMAL,		//Slot 1: NORMAL	R: Tangent, G: Bi-normals and B: Normals
 			COMBINED,	//Slot 2: COMBINED	R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
-			UNKNOWN = 65536
+			UNKNOWN = 65536,
 		};
 		enum class Type : uint32_t
 		{

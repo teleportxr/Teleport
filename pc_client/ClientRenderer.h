@@ -83,11 +83,11 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	avs::Timestamp platformStartTimestamp; //Timestamp of when the system started.
 	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
 	
-	ResourceManager<scr::IndexBuffer*> indexBufferManager;
-	ResourceManager<scr::Shader*> shaderManager;
-	ResourceManager<scr::Texture*> textureManager;
-	ResourceManager<scr::UniformBuffer*> uniformBufferManager;
-	ResourceManager<scr::VertexBuffer*> vertexBufferManager;
+	ResourceManager<std::shared_ptr<scr::IndexBuffer>> indexBufferManager;
+	ResourceManager<std::shared_ptr<scr::Shader>> shaderManager;
+	ResourceManager<std::shared_ptr<scr::Texture>> textureManager;
+	ResourceManager<std::shared_ptr<scr::UniformBuffer>> uniformBufferManager;
+	ResourceManager<std::shared_ptr<scr::VertexBuffer>> vertexBufferManager;
 public:
 	ClientRenderer();
 	~ClientRenderer();
