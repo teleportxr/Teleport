@@ -12,10 +12,10 @@ namespace scr
 	public:
 		enum class Slot : uint32_t
 		{
-			UNKNOWN = -1,
 			DIFFUSE,	//Slot 0: DIFFUSE	RGBA Colour Texture
 			NORMAL,		//Slot 1: NORMAL	R: Tangent, G: Bi-normals and B: Normals
-			COMBINED	//Slot 2: COMBINED	R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
+			COMBINED,	//Slot 2: COMBINED	R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
+			UNKNOWN = 65536
 		};
 		enum class Type : uint32_t
 		{
@@ -107,13 +107,12 @@ namespace scr
 			Type type;
 			Format format;
 			SampleCountBit sampleCount;
+			size_t size;
+			const uint8_t* data;
 		};
 
 	protected:
 		TextureCreateInfo m_CI;
-
-		size_t m_Size;
-		const uint8_t* m_Data;
 
 		const Sampler* m_Sampler;
 
@@ -129,15 +128,14 @@ namespace scr
 			m_CI.type = Type::TEXTURE_UNKNOWN;
 			m_CI.format = Format::FORMAT_UNKNOWN;
 			m_CI.sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
-
-			m_Size = 0;
-			m_Data = nullptr;
+			m_CI.size = 0;
+			m_CI.data = nullptr;
 
 			m_Sampler = nullptr;
 		}
 
 		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bytesPerPixel will be the same for all faces.
-		virtual void Create(TextureCreateInfo* pTextureCreateInfo, size_t size, const uint8_t* data) = 0;
+		virtual void Create(TextureCreateInfo* pTextureCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() const = 0;

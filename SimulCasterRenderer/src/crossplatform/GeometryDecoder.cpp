@@ -202,14 +202,15 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					target->ensureVertices(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TANGENTNORMALXZ:
+				{
 					size_t tnSize = 0;
 					if (accessor.type == avs::Accessor::DataType::VEC2)
 						tnSize = 8;
 					else  if (accessor.type == avs::Accessor::DataType::VEC4)
 						tnSize = 16;
 					target->ensureTangentNormals(it->first, 0, (int)accessor.count, tnSize, (const uint8_t*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
-					
 					continue;
+				}
 				case AttributeSemantic::NORMAL:
 					target->ensureNormals(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
@@ -236,7 +237,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 
 			//Indices
 			size_t componentSize = avs::GetComponentSize(dg.accessors[primitive.indices_accessor].componentType);
-			target->ensureIndices(it->first, dg.accessors[primitive.indices_accessor].byteOffset/ componentSize, (int)dg.accessors[primitive.indices_accessor].count, (int)componentSize,dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
+			target->ensureIndices(it->first, (int)(dg.accessors[primitive.indices_accessor].byteOffset / componentSize), (int)dg.accessors[primitive.indices_accessor].count, (int)componentSize,dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
 			avs::Result result = target->Assemble();
 			if (result != avs::Result::OK)
 				return result;
@@ -276,9 +277,9 @@ avs::Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& targ
 		avs::Texture texture;
 		avs::uid tex_uid = Next8B;
 
-		texture.width = Next8B;
-		texture.height = Next8B;
-		texture.bytesPerPixel = Next8B;
+		texture.width = static_cast<uint32_t>(Next8B);
+		texture.height = static_cast<uint32_t>(Next8B);
+		texture.bitsPerPixel = static_cast<uint32_t>(Next8B);
 
 		size_t textureSize = Next8B;
 
@@ -286,7 +287,7 @@ avs::Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& targ
 
 		for(size_t j = 0; j < textureSize; i++)
 		{
-			pixelData[j] = Next8B;
+			pixelData[j] = static_cast<uint32_t>(Next8B);
 		}
 
 		texture.data = pixelData;
