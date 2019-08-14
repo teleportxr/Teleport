@@ -12,11 +12,14 @@ Material::Material(MaterialCreateInfo* pMaterialCreateInfo)
 	//Set up UB
 	if (s_UninitialisedUB)
 	{
+		const float zero[sizeof(MaterialData)] = { 0 };
+
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 2;
+		ub_ci.size = sizeof(MaterialData);
+		ub_ci.data = zero;
 
-		const float zero[sizeof(MaterialData)] = { 0 };
-		m_UB->Create(&ub_ci, sizeof(MaterialData), zero);
+		m_UB->Create(&ub_ci);
 		s_UninitialisedUB = true;
 	}
 
