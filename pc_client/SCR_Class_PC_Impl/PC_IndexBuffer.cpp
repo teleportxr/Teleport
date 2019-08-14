@@ -7,18 +7,6 @@
 using namespace pc_client;
 using namespace scr;
 
-void PC_IndexBuffer::Create(size_t numIndices, size_t stride, const unsigned char* data)
-{
-    m_Data = data;
-    m_Count = numIndices;
-
-	auto *rp = static_cast<PC_RenderPlatform*> (renderPlatform);
-	auto *srp = rp->GetSimulRenderPlatform();
-
-	m_SimulBuffer=srp->CreateBuffer();
-
-	m_SimulBuffer->EnsureIndexBuffer(srp,(int) m_Count, (int)stride, data);
-}
 void PC_IndexBuffer::Destroy()
 {
 	delete m_SimulBuffer;
@@ -29,4 +17,18 @@ void PC_IndexBuffer::Bind() const
 }
 void PC_IndexBuffer::Unbind() const
 {
+}
+
+void pc_client::PC_IndexBuffer::Create(IndexBufferCreateInfo * pIndexBufferCreateInfo, size_t numIndices, size_t stride, const uint8_t * data)
+{
+	m_CI = *pIndexBufferCreateInfo;
+	m_Data = data;
+	m_IndexCount = numIndices;
+
+	auto *rp = static_cast<PC_RenderPlatform*> (renderPlatform);
+	auto *srp = rp->GetSimulRenderPlatform();
+
+	m_SimulBuffer = srp->CreateBuffer();
+
+	m_SimulBuffer->EnsureIndexBuffer(srp, (int)m_IndexCount, (int)stride, data);
 }

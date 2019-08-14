@@ -11,10 +11,12 @@ namespace pc_client
 	public:
 		PC_Sampler(scr::RenderPlatform *r):scr::Sampler(r) {}
 
-		void Create(scr::Sampler::Filter filterMinMag[2], scr::Sampler::Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy) override;
 		void Destroy() override;
 		
 		void Bind() const override;
 		void Unbind() const override;
+
+		// Inherited via Sampler
+		void Create(SamplerCreateInfo * pSamplerCreateInfo) override;
 	};
 }

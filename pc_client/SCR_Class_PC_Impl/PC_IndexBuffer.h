@@ -20,12 +20,14 @@ namespace pc_client
 	public:
 		PC_IndexBuffer(scr::RenderPlatform *r):scr::IndexBuffer(r) {}
 
-		void Create(size_t numIndices, size_t stride, const unsigned char* data) override;
 		void Destroy() override;
 
 		void Bind() const override;
 		void Unbind() const override;
 
 		bool ResourceInUse(int timeout) override {return true;}
+
+		// Inherited via IndexBuffer
+		void Create(IndexBufferCreateInfo * pIndexBufferCreateInfo, size_t numIndices, size_t stride, const uint8_t * data) override;
 	};
 }

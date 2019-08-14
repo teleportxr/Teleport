@@ -119,37 +119,6 @@ int GetByteSize(const scr::VertexBufferLayout::VertexAttribute &attr)
 	return unit_size * (int)attr.componentCount;
 }
 
-void PC_VertexBuffer::Create(size_t size, const void* data)
-{
-    m_Size = size;
-    m_Data = data;
-	size_t num_vertices = m_Size / m_Stride;
-	auto *rp = static_cast<PC_RenderPlatform*> (renderPlatform);
-	auto *srp = rp->GetSimulRenderPlatform();
-	m_SimulBuffer=srp->CreateBuffer();
-	simul::crossplatform::Layout layout;
-	size_t numAttr = m_Layout->m_Attributes.size();
-	simul::crossplatform::LayoutDesc *desc=new simul::crossplatform::LayoutDesc[numAttr];
-	// e.g.
-	//	{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-	int byteOffset = 0;
-	for (size_t i = 0; i < numAttr; i++)
-	{
-		auto &attr = m_Layout->m_Attributes[i];
-		auto s=(avs::AttributeSemantic)i;
-		desc[i].semanticName = GetAttributeSemantic(s);
-		desc[i].semanticIndex = GetAttributeSemanticIndex((avs::AttributeSemantic)i);
-		desc[i].format = GetAttributeFormat(attr);
-		desc[i].inputSlot = (int)i;
-		desc[i].alignedByteOffset = byteOffset;
-		byteOffset += GetByteSize(attr);
-		desc[i].perInstance = false;
-		desc[i].instanceDataStepRate = 0;
-	}
-
-	layout.SetDesc(desc, (int)m_Layout->m_Attributes.size());
-	m_SimulBuffer->EnsureVertexBuffer(srp,(int) num_vertices, &layout, data);
-}
 
 void PC_VertexBuffer::Destroy()
 {
@@ -162,4 +131,38 @@ void PC_VertexBuffer::Bind() const
 
 void PC_VertexBuffer::Unbind() const
 {
+}
+
+void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCreateInfo, size_t size, const void * data)
+{
+	m_Size = size;
+	m_Data = data;
+	m_CI = *pVertexBufferCreateInfo;
+	
+	size_t num_vertices = m_Size / m_CI.layout->m_Stride;
+	auto *rp = static_cast<PC_RenderPlatform*> (renderPlatform);
+	auto *srp = rp->GetSimulRenderPlatform();
+	m_SimulBuffer = srp->CreateBuffer();
+	simul::crossplatform::Layout layout;
+	size_t numAttr = m_CI.layout->m_Attributes.size();
+	simul::crossplatform::LayoutDesc *desc = new simul::crossplatform::LayoutDesc[numAttr];
+	// e.g.
+	//	{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
+	int byteOffset = 0;
+	for (size_t i = 0; i < numAttr; i++)
+	{
+		auto &attr = m_CI.layout->m_Attributes[i];
+		auto s = (avs::AttributeSemantic)i;
+		desc[i].semanticName = GetAttributeSemantic(s);
+		desc[i].semanticIndex = GetAttributeSemanticIndex((avs::AttributeSemantic)i);
+		desc[i].format = GetAttributeFormat(attr);
+		desc[i].inputSlot = (int)i;
+		desc[i].alignedByteOffset = byteOffset;
+		byteOffset += GetByteSize(attr);
+		desc[i].perInstance = false;
+		desc[i].instanceDataStepRate = 0;
+	}
+
+	layout.SetDesc(desc, (int)m_CI.layout->m_Attributes.size());
+	m_SimulBuffer->EnsureVertexBuffer(srp, (int)num_vertices, &layout, data);
 }

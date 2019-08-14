@@ -10,7 +10,7 @@
 namespace scr
 {
 	//Interface for Effect
-	class Effect
+	class Effect : APIObject
 	{
 	public:
 		enum class TopologyType : uint32_t
@@ -153,6 +153,7 @@ namespace scr
 		EffectCreateInfo m_CI;
 
 	public:
+		Effect(RenderPlatform *r) :APIObject(r) {}
 		virtual ~Effect() = default;
 
 		virtual void Create(EffectCreateInfo* pEffectCreateInfo) = 0;

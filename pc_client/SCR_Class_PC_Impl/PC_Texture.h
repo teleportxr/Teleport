@@ -14,7 +14,6 @@ namespace pc_client
 	public:
 		PC_Texture(scr::RenderPlatform *r):scr::Texture(r) {}
 
-		void Create(Slot slot, Type type, Format format, SampleCountBit sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
 		void Destroy() override;
 
 		void Bind() const override;
@@ -24,6 +23,7 @@ namespace pc_client
 		void UseSampler(const scr::Sampler* sampler) override;
 		bool ResourceInUse(int timeout) override {return true;}
 
-	private:
+		// Inherited via Texture
+		void Create(TextureCreateInfo * pTextureCreateInfo, size_t size, const uint8_t * data) override;
 	};
 }

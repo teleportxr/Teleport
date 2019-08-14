@@ -11,7 +11,9 @@ namespace pc_client
 	public:
 		PC_Shader(scr::RenderPlatform *r):scr::Shader(r) {}
 
-		void Create(const char* sourceCode, const char* entryPoint, Stage stage) override;
 		void Compile() override;
+
+		// Inherited via Shader
+		void Create(ShaderCreateInfo * pShaderCreateInfo) override;
 	};
 }

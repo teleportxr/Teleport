@@ -207,13 +207,14 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					target->ensureVertices(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TANGENTNORMALXZ:
+				{
 					size_t tnSize = 0;
 					if (accessor.type == avs::Accessor::DataType::VEC2)
 						tnSize = 8;
 					else  if (accessor.type == avs::Accessor::DataType::VEC4)
 						tnSize = 16;
 					target->ensureTangentNormals(it->first, 0, (int)accessor.count, tnSize, (const uint8_t*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
-					
+				}
 					continue;
 				case AttributeSemantic::NORMAL:
 					target->ensureNormals(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
