@@ -42,27 +42,22 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	case GeometryPayloadType::Mesh:
 	{
 		return decodeMesh(target);
-		break;
 	}
 	case GeometryPayloadType::Material:
 	{
 		return decodeMaterial(target);
-		break;
 	}
 	case GeometryPayloadType::MaterialInstance:
 	{
 		return decodeMaterialInstance(target);
-		break;
 	}
 	case GeometryPayloadType::Texture:
 	{
 		return decodeTexture(target);
-		break;
 	}
 	case GeometryPayloadType::Animation:
 	{
 		return decodeAnimation(target);
-		break;
 	}
 	default:
 	{ 
@@ -283,7 +278,7 @@ avs::Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& targ
 
 		texture.width = Next8B;
 		texture.height = Next8B;
-		texture.bitsPerPixel = Next8B;
+		texture.bytesPerPixel = Next8B;
 
 		size_t textureSize = Next8B;
 

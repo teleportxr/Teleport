@@ -102,7 +102,7 @@ namespace scr
 			uint32_t width;
 			uint32_t height;
 			uint32_t depth;
-			uint32_t bitsPerPixel;
+			uint32_t bytesPerPixel;
 			Slot slot;
 			Type type;
 			Format format;
@@ -124,7 +124,7 @@ namespace scr
 			m_CI.width = 0;
 			m_CI.height = 0; 
 			m_CI.depth = 0;
-			m_CI.bitsPerPixel = 0;
+			m_CI.bytesPerPixel = 0;
 			m_CI.slot = Slot::UNKNOWN;
 			m_CI.type = Type::TEXTURE_UNKNOWN;
 			m_CI.format = Format::FORMAT_UNKNOWN;
@@ -136,7 +136,7 @@ namespace scr
 			m_Sampler = nullptr;
 		}
 
-		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bitsPerPixel will be the same for all faces.
+		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bytesPerPixel will be the same for all faces.
 		virtual void Create(TextureCreateInfo* pTextureCreateInfo, size_t size, const uint8_t* data) = 0;
 		virtual void Destroy() = 0;
 
