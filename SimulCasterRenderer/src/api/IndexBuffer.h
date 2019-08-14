@@ -17,15 +17,13 @@ namespace scr
 		};
 
 	protected:
-		const uint8_t* m_Data;
-
 		IndexBufferCreateInfo m_CI;
-
+		
 		size_t m_Size;
-		const uint32_t* m_Data;
-
-		size_t m_IndexCount;
-
+		const uint8_t* m_Data;
+	
+		size_t m_IndexCount = 0;
+	
 	public:
 		IndexBuffer(RenderPlatform *r) :APIObject(r) {}
 		virtual ~IndexBuffer()
@@ -37,7 +35,7 @@ namespace scr
 			m_CI.usage = BufferUsageBit::UNKNOWN_BIT;
 		};
 
-		virtual void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo, size_t numIndices, size_t stride, const uint32_t* data) = 0;
+		virtual void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo, size_t numIndices, size_t stride, const uint8_t* data) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() const = 0;

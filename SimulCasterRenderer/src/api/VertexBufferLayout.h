@@ -46,7 +46,7 @@ namespace scr
 		{
 			for (auto& attrib : m_Attributes)
 			{
-				m_Stride += static_cast<size_t>(attrib.compenentCount);
+				m_Stride += static_cast<size_t>(attrib.componentCount);
 			}
 			m_Stride *= 4;
 		}
