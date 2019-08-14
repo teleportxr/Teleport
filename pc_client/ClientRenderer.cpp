@@ -438,11 +438,11 @@ void ClientRenderer::Update()
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	uint32_t timeElapsed = (timestamp - previousTimestamp);
 
-	indexBufferManager.Update(timeElapsed);
+	/*indexBufferManager.Update(timeElapsed);
 	shaderManager.Update(timeElapsed);
 	textureManager.Update(timeElapsed);
 	uniformBufferManager.Update(timeElapsed);
-	vertexBufferManager.Update(timeElapsed);
+	vertexBufferManager.Update(timeElapsed);*/
 
 	previousTimestamp = timestamp;
 }

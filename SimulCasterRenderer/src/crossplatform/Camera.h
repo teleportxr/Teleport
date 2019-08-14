@@ -16,9 +16,14 @@ namespace scr
 			ORTHOGRAPHIC,
 			PERSPECTIVE
 		};
+		struct CameraCreateInfo
+		{
+			ProjectionType type;
+			quat orientation;
+			vec3 position;
+		};
 
 	private:
-		ProjectionType m_Type;
 		struct CameraData //Layout conformant to GLSL std140
 		{
 			mat4 m_ProjectionMatrix;
@@ -26,16 +31,18 @@ namespace scr
 			quat m_Orientation;
 			vec3 m_Position;
 			float _pad;
-		}m_CameraData;
+		} m_CameraData;
 
-		static bool s_UninitialisedUBO;
-		std::unique_ptr<UniformBuffer> m_UBO;
+		CameraCreateInfo m_CI;
+
+		static bool s_UninitialisedUB;
+		std::unique_ptr<UniformBuffer> m_UB;
 
 		DescriptorSetLayout m_SetLayout;
 		DescriptorSet m_Set;
 
 	public:
-		Camera(ProjectionType type, const vec3& position, const quat& orientation);
+		Camera(CameraCreateInfo* pCameraCreateInfo);
 
 		void UpdatePosition(const vec3& position);
 		void UpdateOrientation(const quat& orientation);

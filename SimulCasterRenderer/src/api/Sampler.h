@@ -11,6 +11,7 @@ namespace scr
 	public:
 		enum class Filter : uint32_t
 		{
+			UNKNOWN,
 			NEAREST,
 			LINEAR,
 			MIPMAP_NEAREST,
@@ -18,37 +19,49 @@ namespace scr
 		};
 		enum class Wrap :uint32_t
 		{
+			UNKNOWN,
 			REPEAT,
 			MIRRORED_REPEAT,
 			CLAMP_TO_EDGE,
 			CLAMP_TO_BORDER,
 			MIRROR_CLAMP_TO_EDGE
 		};
+		struct SamplerCreateInfo
+		{
+			Filter minFilter;
+			Filter magFilter;
+			Wrap wrapU;
+			Wrap wrapV;
+			Wrap wrapW;
+			float minLod;
+			float maxLod;
+			bool anisotropyEnable;
+			float maxAnisotropy;
+		};
+	
 	protected:
-		Filter m_MinFilter, m_MagFilter;
-		Wrap m_WrapU, m_WrapV, m_WrapW;
-		float m_MinLod, m_MaxLod;
-
-		bool m_AnisotropyEnable;
-		float m_MaxAnisotropy;
+		SamplerCreateInfo m_CI;
 
 	public:
-		virtual ~Sampler() {};
+		virtual ~Sampler() 
+		{
+			m_CI.minFilter = Filter::UNKNOWN;
+			m_CI.magFilter = Filter::UNKNOWN;
+			m_CI.wrapU = Wrap::UNKNOWN;
+			m_CI.wrapV = Wrap::UNKNOWN;
+			m_CI.wrapW = Wrap::UNKNOWN;
+			m_CI.minLod = 0.0f;
+			m_CI.maxLod = 0.0f;
+			m_CI.anisotropyEnable = false;
+			m_CI.maxAnisotropy = 0.0f;
+		};
 
-		virtual void Create(Filter filterMinMag[2], Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy) = 0;
+		virtual void Create(SamplerCreateInfo* pSamplerCreateInfo) = 0;
 		virtual void Destroy() = 0;
 		
 		virtual void Bind() const  = 0;
 		virtual void Unbind() const = 0;
 
-		inline const Filter& GetMinFilter() const { return m_MinFilter; }
-		inline const Filter& GetMagFilter() const { return m_MagFilter; }
-		inline const Wrap& GetWrapU() const { return m_WrapU; }
-		inline const Wrap& GetWrapV() const { return m_WrapV; }
-		inline const Wrap& GetWrapW() const { return m_WrapW; }
-		inline const float& GetMinLOD() const { return m_MinLod; }
-		inline const float& GetMaxLOD() const { return m_MaxLod; }
-		inline const bool& GetAnisotropyEnable() const {return m_AnisotropyEnable; }
-		inline const float& GetMaxAnisotropy() const { return  m_MaxAnisotropy; }
+		inline const SamplerCreateInfo& GetSamplerCreateInfo() const { return m_CI; }
 	};
 }

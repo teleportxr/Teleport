@@ -3,7 +3,7 @@
 
 using namespace scr;
 
-void PC_FrameBuffer::Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height)
+void PC_FrameBuffer::Create(Texture::Format format, Texture::SampleCountBit sampleCount, uint32_t width, uint32_t height)
 {
    m_Width = width;
    m_Height = height;

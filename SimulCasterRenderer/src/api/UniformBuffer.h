@@ -5,11 +5,20 @@
 
 namespace scr
 {
+
+
 	//Interface for UniformBuffer
 	class UniformBuffer
 	{
+	public:
+		struct UniformBufferCreateInfo
+		{
+			uint32_t bindingLocation;
+		};
+
 	protected:
-		uint32_t m_BindingLocation;
+		UniformBufferCreateInfo m_CI;
+
 		size_t m_Size;
 		const void* m_Data;
 
@@ -18,13 +27,16 @@ namespace scr
 		{
 			m_Size = 0;
 			m_Data = nullptr;
+
+			m_CI.bindingLocation = 0;
 		}
 
-		//Binding Locations for UBOs
+		//Binding Locations for UBs from 0 - 9
 		//Camera = 0;
-		//Model = 1;
+		//ModelTransform = 1;
 		//Light = 2;
-		virtual void Create(size_t size, const void* data, uint32_t bindingLocation) = 0;
+		//Material = 3;
+		virtual void Create(UniformBufferCreateInfo* pUniformBuffer, size_t size, const void* data) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() const = 0;

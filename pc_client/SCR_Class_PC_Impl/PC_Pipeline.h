@@ -1,16 +1,16 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/Pipeline.h>
+#include <api/Effect.h>
 
 namespace scr
 {
-	class PC_Pipeline final : public Pipeline
+	class PC_Effect final : public Effect
 	{
 	private:
 
 	public:
-		PC_Pipeline() {}
+		PC_Effect() {}
 
 		void Create(const std::vector<Shader*>& shaders,
 			const VertexBufferLayout& layout,

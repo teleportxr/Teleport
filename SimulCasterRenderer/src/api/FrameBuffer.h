@@ -8,11 +8,28 @@ namespace scr
 	//Interface for FrameBuffer
 	class FrameBuffer
 	{
+	public:
+		struct ClearColous
+		{
+			float colour_r;
+			float colour_g;
+			float colour_b;
+			float colour_a;
+			float depth;
+			uint32_t stencil;
+		};
+		struct FrameBufferCreateInfo
+		{
+			Texture::Type type;
+			Texture::Format format;
+			Texture::SampleCountBit sampleCount;
+			uint32_t width;
+			uint32_t height;
+			ClearColous clearColours;
+		};
+
 	protected:
-		Texture::Type m_Type = Texture::Type::TEXTURE_2D;
-		Texture::Format m_Format;
-		Texture::SampleCount m_SampleCount;
-		uint32_t m_Width, m_Height;
+		FrameBufferCreateInfo m_CI;
 
 		std::vector<Texture*> m_ColourTextures;
 		Texture* m_DepthTexture;
@@ -22,10 +39,18 @@ namespace scr
 	public:
 		virtual ~FrameBuffer()
 		{
+			m_CI.type = Texture::Type::TEXTURE_UNKNOWN;
+			m_CI.format = Texture::Format::FORMAT_UNKNOWN;
+			m_CI.sampleCount = Texture::SampleCountBit::SAMPLE_COUNT_1_BIT;
+			m_CI.width = 0;
+			m_CI.height = 0;
+
+			m_ColourTextures.clear(); 
+			m_DepthTexture = nullptr;
 			m_ResolvedFrameBuffer.reset();
 		}
 
-		virtual void Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height) = 0;
+		virtual void Create(FrameBufferCreateInfo* pFrameBufferCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() const = 0;
@@ -33,7 +58,7 @@ namespace scr
 
 		virtual void Resolve() = 0;
 		virtual void UpdateFrameBufferSize(uint32_t width, uint32_t height) = 0;
-		virtual void Clear(float colour_r, float colour_g, float colour_b, float colour_a, float depth, uint32_t stencil) = 0;
+		virtual void SetClear(ClearColous* pClearColours) = 0;
 
 		void AddColourAttachment(Texture& colourTexture, uint32_t attachmentIndex, bool overrideTexture = false)
 		{
@@ -59,14 +84,14 @@ namespace scr
 	private:
 		bool CheckTextureCompatibility(const Texture& texture)
 		{
-			if (m_Type != texture.m_Type ||
-				m_Format != texture.m_Format ||
-				m_SampleCount != texture.m_SampleCount)
+			if (m_CI.type != texture.m_CI.type ||
+				m_CI.format != texture.m_CI.format ||
+				m_CI.sampleCount != texture.m_CI.sampleCount)
 				return false;
 
-			if (m_Width != texture.m_Width || m_Height != texture.m_Height)
+			if (m_CI.width != texture.m_CI.width || m_CI.height != texture.m_CI.height)
 			{
-				UpdateFrameBufferSize(texture.m_Width, texture.m_Height);
+				UpdateFrameBufferSize(texture.m_CI.width, texture.m_CI.height);
 				return true;
 			}
 			else

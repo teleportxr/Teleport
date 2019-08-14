@@ -14,7 +14,7 @@ namespace scr
 	public:
 		PC_FrameBuffer() {}
 
-		void Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height) override;
+		void Create(Texture::Format format, Texture::SampleCountBit sampleCount, uint32_t width, uint32_t height) override;
 		void Destroy() override;
 
 		void Bind() const override;

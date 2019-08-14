@@ -23,24 +23,29 @@ namespace scr
 			SHADER_STAGE_DOMAIN = SHADER_STAGE_TESSELLATION_EVALUATION,
 			SHADER_STAGE_PIXEL = SHADER_STAGE_FRAGMENT,
 		};
+		struct ShaderCreateInfo
+		{
+			const char* sourceCode;
+			const char* filepath;
+			const char* entryPoint;
+			Shader::Stage stage;
+		};
+	
 	protected:
-		const char* m_SourceCode;
-		const char* m_EntryPoint; 
-		Stage m_Stage;
+		ShaderCreateInfo m_CI;
 
 	public:
 		virtual ~Shader()
 		{
-			m_SourceCode = nullptr;
-			m_EntryPoint = nullptr;
-			m_Stage = Stage::SHADER_STAGE_UNKNOWN;
+			m_CI.sourceCode = nullptr;
+			m_CI.filepath = nullptr;
+			m_CI.entryPoint = nullptr;
+			m_CI.stage = Stage::SHADER_STAGE_UNKNOWN;
 		}
 
-		virtual void Create(const char* sourceCode, const char* entryPoint, Stage stage) = 0;
+		virtual void Create(ShaderCreateInfo* pShaderCreateInfo) = 0;
 		virtual void Compile() = 0;
 
-		inline const char* GetSourceCode() const {return m_SourceCode;}
-		inline const char* GetEntryPoint() const {return m_EntryPoint;}
-		inline const Stage& GetStage() const {return m_Stage;}
+		inline const ShaderCreateInfo& GetShaderCreateInfo() const {return m_CI;}
 	};
 }

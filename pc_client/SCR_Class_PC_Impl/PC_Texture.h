@@ -14,7 +14,7 @@ namespace scr
 	public:
 		PC_Texture() {}
 
-		void Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
+		void Create(Slot slot, Type type, Format format, SampleCountBit sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
 		void Destroy() override;
 
 		void Bind() const override;

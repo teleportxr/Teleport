@@ -9,8 +9,8 @@
 
 namespace scr
 {
-	//Interface for Pipeline
-	class Pipeline
+	//Interface for Effect
+	class Effect
 	{
 	public:
 		enum class TopologyType : uint32_t
@@ -59,7 +59,7 @@ namespace scr
 		struct MultisamplingState
 		{
 			bool samplerShadingEnable;
-			Texture::SampleCount rasterizationSamples;
+			Texture::SampleCountBit rasterizationSamples;
 		};
 		enum class CompareOp : uint32_t
 		{
@@ -95,7 +95,7 @@ namespace scr
 			bool depthTestEnable;
 			bool depthWriteEnable;
 			CompareOp depthCompareOp;
-			
+
 			bool stencilTestEnable;
 			StencilCompareOpState frontCompareOp;
 			StencilCompareOpState backCompareOp;
@@ -105,7 +105,7 @@ namespace scr
 			float maxDepthBounds;
 
 		};
-		enum class BlendFactor : uint32_t 
+		enum class BlendFactor : uint32_t
 		{
 			ZERO,
 			ONE,
@@ -137,35 +137,29 @@ namespace scr
 			BlendOp alphaBlendOp;
 		};
 
+		struct EffectCreateInfo
+		{
+			std::vector<Shader*> m_Shaders;
+			VertexBufferLayout m_VertexLayout;
+			TopologyType m_Topology;
+			ViewportAndScissor m_ViewportAndScissor;
+			RasterizationState m_RasterizationState;
+			MultisamplingState m_MultisamplingState;
+			DepthStencilingState m_DepthStencilingState;
+			ColourBlendingState m_ColourBlendingState;
+		};
+
 	protected:
-		std::vector<Shader*> m_Shaders;
-		VertexBufferLayout m_VertexLayout;
-		TopologyType m_Topology;
-		ViewportAndScissor m_ViewportAndScissor;
-		RasterizationState m_RasterizationState;
-		MultisamplingState m_MultisamplingState;
-		DepthStencilingState m_DepthStencilingState;
-		ColourBlendingState m_ColourBlendingState;
+		EffectCreateInfo m_CI;
 
 	public:
-		virtual ~Pipeline()	{};
+		virtual ~Effect() = default;
 
-		virtual void Create(const std::vector<Shader*>& shaders,
-			const VertexBufferLayout& layout,
-			const TopologyType& topology,
-			const ViewportAndScissor& viewportAndScissor,
-			const RasterizationState& rasterization,
-			const MultisamplingState& multisample,
-			const DepthStencilingState& depthStenciling,
-			const ColourBlendingState& colourBlending) = 0;
+		virtual void Create(EffectCreateInfo* pEffectCreateInfo) = 0;
 
 		virtual void LinkShaders() = 0;
-		
+
 		virtual void Bind() const = 0;
 		virtual void Unbind() const = 0;
-
-		//Calls UniformBuffer::Submit() and Texture::Bind() on the respective ojects
-		virtual void BindDescriptorSets(const std::vector<DescriptorSet>& descriptorSets) = 0;
-		virtual void Draw(size_t indexBufferCount) = 0;
 	};
 }

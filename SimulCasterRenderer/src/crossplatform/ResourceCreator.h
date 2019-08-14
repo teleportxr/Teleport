@@ -22,11 +22,11 @@ public:
 	void SetRenderPlatform(scr::API::APIType api);
 
 	inline void AssociateResourceManagers(
-		ResourceManager<scr::IndexBuffer*>* indexBufferManager,
-		ResourceManager<scr::Shader*>* shaderManager,
-		ResourceManager<scr::Texture*>* textureManager,
-		ResourceManager<scr::UniformBuffer*>* uniformBufferManager,
-		ResourceManager<scr::VertexBuffer*>* vertexBufferManager)
+		ResourceManager<std::shared_ptr<scr::IndexBuffer>>* indexBufferManager,
+		ResourceManager<std::shared_ptr<scr::Shader>>* shaderManager,
+		ResourceManager<std::shared_ptr<scr::Texture>>* textureManager,
+		ResourceManager<std::shared_ptr<scr::UniformBuffer>>* uniformBufferManager,
+		ResourceManager<std::shared_ptr<scr::VertexBuffer>>* vertexBufferManager)
 	{
 		m_IndexBufferManager = indexBufferManager;
 		m_ShaderManager = shaderManager;
@@ -45,7 +45,7 @@ private:
 	void ensureColors(unsigned long long shape_uid, int startColor, int colorCount, const avs::vec4* colors) override;
 	void ensureJoints(unsigned long long shape_uid, int startJoint, int jointCount, const avs::vec4* joints) override;
 	void ensureWeights(unsigned long long shape_uid, int startWeight, int weightCount, const avs::vec4* weights) override;
-	void ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, const unsigned int* indices) override;
+	void ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices) override;
 	avs::Result Assemble() override;
 
 	inline bool SetAndCheckShapeUID(const avs::uid& uid)
@@ -73,11 +73,11 @@ private:
 	std::unique_ptr<scr::RenderPlatform> m_pRenderPlatform;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
-	ResourceManager<scr::IndexBuffer*>*	m_IndexBufferManager;
-	ResourceManager<scr::Shader*>*		m_ShaderManager;
-	ResourceManager<scr::Texture*>*		m_TextureManager;
-	ResourceManager<scr::UniformBuffer*>* m_UniformBufferManager;
-	ResourceManager<scr::VertexBuffer*>*	m_VertexBufferManager;
+	ResourceManager<std::shared_ptr<scr::IndexBuffer>>*	m_IndexBufferManager;
+	ResourceManager<std::shared_ptr<scr::Shader>>*		m_ShaderManager;
+	ResourceManager<std::shared_ptr<scr::Texture>>*		m_TextureManager;
+	ResourceManager<std::shared_ptr<scr::UniformBuffer>>* m_UniformBufferManager;
+	ResourceManager<std::shared_ptr<scr::VertexBuffer>>*	m_VertexBufferManager;
 
 	size_t m_VertexCount	= 0;
 	size_t m_IndexCount		= 0;
@@ -91,9 +91,6 @@ private:
 	const avs::vec4* m_Colors		= nullptr;
 	const avs::vec4* m_Joints		= nullptr;
 	const avs::vec4* m_Weights		= nullptr;
-	const unsigned int* m_Indices	= nullptr;
-	
-	size_t m_InterleavedVBOSize = 0;
-	std::unique_ptr<float[]> m_InterleavedVBO = nullptr;
+	const unsigned char* m_Indices	= nullptr;
 };
 
