@@ -6,7 +6,7 @@
 namespace scr
 {
 	//Interface for Sampler
-	class Sampler
+	class Sampler : public APIObject
 	{
 	public:
 		enum class Filter : uint32_t
@@ -43,6 +43,7 @@ namespace scr
 		SamplerCreateInfo m_CI;
 
 	public:
+		Sampler(RenderPlatform *r) :APIObject(r) {}
 		virtual ~Sampler() 
 		{
 			m_CI.minFilter = Filter::UNKNOWN;

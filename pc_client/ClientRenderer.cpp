@@ -95,7 +95,7 @@ ClientRenderer::ClientRenderer():
 	vertexBufferManager(ResourceManager<scr::VertexBuffer*>(&scr::VertexBuffer::Destroy))
 {
 	avsTextures.resize(NumStreams);
-	resourceCreator.SetRenderPlatform(scr::API::APIType::D3D11);
+	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);
 	resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
 
 	//Initalise time stamping for state update.
@@ -112,6 +112,7 @@ ClientRenderer::~ClientRenderer()
 void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 {
 	renderPlatform=r;
+	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	hDRRenderer		=new crossplatform::HdrRenderer();
 
 	hdrFramebuffer=renderPlatform->CreateFramebuffer();

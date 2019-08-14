@@ -23,6 +23,7 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_Pipeline.cpp
 	SCR_Class_PC_Impl/PC_Pipeline.h
 	SCR_Class_PC_Impl/PC_RenderPlatform.h
+	SCR_Class_PC_Impl/PC_RenderPlatform.cpp
 	SCR_Class_PC_Impl/PC_Sampler.cpp
 	SCR_Class_PC_Impl/PC_Sampler.h
 	SCR_Class_PC_Impl/PC_Shader.cpp
@@ -61,4 +62,4 @@ endif()
 
 target_link_libraries(pc_client libavstream enet SimulCasterRenderer)
 #target_link_libraries(pc_client debug effects11_MTd directxtex_MTd )
-#target_link_libraries(pc_client optimized effects11_MT directxtex_MT)
+target_link_libraries(pc_client optimized effects11_MT directxtex_MT)

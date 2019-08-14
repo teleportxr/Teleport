@@ -12,22 +12,42 @@
 #include "PC_UniformBuffer.h"
 #include "PC_VertexBuffer.h"
 
-
-namespace scr
+namespace simul
 {
-    class PC_RenderPlatform final : public RenderPlatform
+	namespace crossplatform
+	{
+		class RenderPlatform;
+	}
+}
+
+namespace pc_client
+{
+    class PC_RenderPlatform final : public scr::RenderPlatform
     {
+		simul::crossplatform::RenderPlatform *renderPlatform;
     public:
-        PC_RenderPlatform() {}
+        PC_RenderPlatform():scr::RenderPlatform() {}
         ~PC_RenderPlatform() {}
 
-		std::shared_ptr<FrameBuffer>	InstantiateFrameBuffer()	{ return std::make_shared<PC_FrameBuffer>(); }
-		std::shared_ptr<IndexBuffer>	InstantiateIndexBuffer()	{ return std::make_shared<PC_IndexBuffer>(); }
-		std::shared_ptr<Pipeline>		InstantiatePipeline()		{ return std::make_shared<PC_Pipeline>(); }
-		std::shared_ptr<Sampler>		InstantiateSampler()		{ return std::make_shared<PC_Sampler>(); }
-		std::shared_ptr<Shader>			InstantiateShader()			{ return std::make_shared<PC_Shader>(); }
-		std::shared_ptr<Texture>		InstantiateTexture()		{ return std::make_shared<PC_Texture>(); }
-		std::shared_ptr<UniformBuffer>	InstantiateUniformBuffer()	{ return std::make_shared<PC_UniformBuffer>(); }
-		std::shared_ptr<VertexBuffer>	InstantiateVertexBuffer()	{ return std::make_shared<PC_VertexBuffer>(); }
-    };
+		std::shared_ptr<scr::FrameBuffer>	InstantiateFrameBuffer()	;
+		std::shared_ptr<scr::IndexBuffer>	InstantiateIndexBuffer()	;
+		std::shared_ptr<scr::Pipeline>		InstantiatePipeline()		;
+		std::shared_ptr<scr::Sampler>		InstantiateSampler()		;
+		std::shared_ptr<scr::Shader>		InstantiateShader()			;
+		std::shared_ptr<scr::Texture>		InstantiateTexture()		;
+		std::shared_ptr<scr::UniformBuffer>	InstantiateUniformBuffer()	;
+		std::shared_ptr<scr::VertexBuffer>	InstantiateVertexBuffer()	;
+
+		// Inherited via RenderPlatform
+		virtual scr::API::APIType GetAPI() const override
+		{
+			return scr::API::APIType::UNKNOWN;
+		}
+
+		void SetSimulRenderPlatform(simul::crossplatform::RenderPlatform *r);
+		simul::crossplatform::RenderPlatform *GetSimulRenderPlatform()
+		{
+			return renderPlatform;
+		}
+	};
 }

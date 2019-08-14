@@ -4,14 +4,22 @@
 #include <api/VertexBuffer.h>
 #include <api/VertexBufferLayout.h>
 
-namespace scr
+namespace simul
 {
-	class PC_VertexBuffer final : public VertexBuffer
+	namespace crossplatform
+	{
+		class Buffer;
+	}
+}
+
+namespace pc_client
+{
+	class PC_VertexBuffer final : public scr::VertexBuffer
 	{
 	private:
-
+		simul::crossplatform::Buffer *m_SimulBuffer;
 	public:
-        PC_VertexBuffer() {}
+        PC_VertexBuffer(scr::RenderPlatform *r):scr::VertexBuffer(r) {}
 
 		void Create(size_t size, const void* data) override;
 		void Destroy() override;

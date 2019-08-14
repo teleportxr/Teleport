@@ -3,14 +3,14 @@
 
 #include <api/UniformBuffer.h>
 
-namespace scr
+namespace pc_client
 {
-class PC_UniformBuffer final : public UniformBuffer
+class PC_UniformBuffer final : public scr::UniformBuffer
 	{
 	private:
 
 	public:
-		PC_UniformBuffer() {}
+		PC_UniformBuffer(scr::RenderPlatform *r):scr::UniformBuffer(r) {}
 
 		//Binding Locations for UBOs
 		//Camera = 0;

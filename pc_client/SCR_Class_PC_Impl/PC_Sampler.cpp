@@ -2,6 +2,7 @@
 
 #include "PC_Sampler.h"
 
+using namespace pc_client;
 using namespace scr;
 
 void PC_Sampler::Create(Filter filterMinMag[2], Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy)
@@ -17,6 +18,7 @@ void PC_Sampler::Create(Filter filterMinMag[2], Wrap wrapUVW[3], float minLod, f
     m_AnisotropyEnable = anisotropyEnable;
     m_MaxAnisotropy = maxAnisotropy;
 }
+
 void PC_Sampler::Destroy()
 {
     //NULL

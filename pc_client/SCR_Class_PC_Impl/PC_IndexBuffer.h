@@ -3,16 +3,24 @@
 
 #include <api/IndexBuffer.h>
 
-namespace scr
+namespace simul
 {
-	class PC_IndexBuffer final : public IndexBuffer
+	namespace crossplatform
+	{
+		class Buffer;
+	}
+}
+
+namespace pc_client
+{
+	class PC_IndexBuffer  : public scr::IndexBuffer
 	{
 	private:
-
+		simul::crossplatform::Buffer *m_SimulBuffer;
 	public:
-		PC_IndexBuffer() {}
+		PC_IndexBuffer(scr::RenderPlatform *r):scr::IndexBuffer(r) {}
 
-		void Create(size_t size, const uint32_t* data) override;
+		void Create(size_t numIndices, size_t stride, const unsigned char* data) override;
 		void Destroy() override;
 
 		void Bind() const override;

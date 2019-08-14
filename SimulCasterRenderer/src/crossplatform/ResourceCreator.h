@@ -5,11 +5,15 @@
 
 #include "API.h"
 #include "ResourceManager.h"
+#include "api/RenderPlatform.h"
 
+#if 0
+// Removed circular dependencies.
 #if defined(_WIN32) || defined(WIN32) || defined (_WIN64) || defined(WIN64)
 #include "../../pc_client/SCR_Class_PC_Impl/PC_RenderPlatform.h" //Access to the PC_Client's Simul's DX11 and DX12 implementation of SCR;
 #elif defined(__ANDROID__)
 #include "../../client/SimulCasterClient/src/SCR_Class_GL_Impl/GL_RenderPlatform.h" //Access to the Android OpenGL ES 3.0 implementation of SCR;
+#endif
 #endif
 
 /*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.*/
@@ -19,7 +23,7 @@ public:
 	ResourceCreator();
 	~ResourceCreator();
 	
-	void SetRenderPlatform(scr::API::APIType api);
+	void SetRenderPlatform(scr::RenderPlatform *r);
 
 	inline void AssociateResourceManagers(
 		ResourceManager<std::shared_ptr<scr::IndexBuffer>>* indexBufferManager,
@@ -82,6 +86,7 @@ private:
 	size_t m_VertexCount	= 0;
 	size_t m_IndexCount		= 0;
 	size_t m_PolygonCount	= 0;
+	size_t m_IndexSize		= 0;
 
 	const avs::vec3* m_Vertices		= nullptr;
 	const avs::vec3* m_Normals		= nullptr;

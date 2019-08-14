@@ -19,11 +19,16 @@
 #define SCR_CERR(msg)				 std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl;
 
 #define SCR_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
-#define SCR_COUT(msg)				 std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl;
 
-//Common Enums
 namespace scr
 {
+	class RenderPlatform;
+	class APIObject
+	{
+	protected:
+		RenderPlatform *renderPlatform;
+		APIObject(RenderPlatform *r) :renderPlatform(r) {}
+	};
 	enum BufferUsageBit : uint32_t
 	{
 		UNKNOWN_BIT = 0x00000000,

@@ -4,33 +4,35 @@
 
 Clone the repository with submodules:
 
-    git clone --recurse-submodules https://github.com/simul/RemotePlay.git
+    git clone --recurse-submodules git@github.com:simul/RemotePlay.git
 
 ## Prerequisites
 
 1. Visual Studio 2017 (with Visual C++ tools for CMake)
 2. Android Studio
 3. Unreal Engine 4.22 incorporating the patch to move SceneCaptureSource from USceneCaptureComponent2D to USceneCaptureComponent
-4. NVIDIA CUDA Toolkit 9 with patch.
+4. NVIDIA CUDA Toolkit 10.
 5. NVIDIA Video Codec SDK
 6. Recent CMake, and get ninja.exe and put it in C:\Program Files\CMake\bin
 7. edit local.properties to contain cmake.dir=C\:\\Program Files\\CMake
-	
+
 ## Building the PC Client
 
 1. Using CMakeGUI, set src: C:/Simul/RemotePlay and bin: C:/Simul/RemotePlay/build/x64
-2. Set Simul Directory and uncheck BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME
-3. Check out libavstream submodule to master (if needed)
-4. Configure for Visual Studio 15 2017 with x64 with default native compiler
-5. Generate, open and build the visual studio project
+2. Set Simul Directory and uncheck BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME.
+3. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
+4. Check out libavstream submodule to master (if needed)
+5. Configure for Visual Studio 15 2017 with x64 with default native compiler
+6. Generate, open and build the visual studio project
 
 ## Building UE4 plugin
 
-1. Using CMakeGUI, create a Visual Studio 2017 x64 build in the Libraries/libavstream subdirectory of plugins/UnrealDemo/Plugins/RemotePlay. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MD and /MDd options and BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME are checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
-2. Create the Cmake libavstream project and add it to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build is configured to compile in Development Editor solution config.
-3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG). Ensure that the .dll is building as well.
+1. Using CMakeGUI, create a Visual Studio 2017 x64 build in the Libraries/libavstream subdirectory of plugins/UnrealDemo/Plugins/RemotePlay. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MD and /MDd options and BUILD_SHARED_LIBS is NOT checked, and USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
+2. Create the Cmake libavstream project and add it to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config.
+3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG).
+4. Repeat steps 1-3 for thirdparty/enet.
 4. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch. Open and build the UE4 project in `Development Editor` configuration.
-5. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background"
+5. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
 6. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
 7. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 

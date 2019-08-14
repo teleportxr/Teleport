@@ -6,7 +6,7 @@
 namespace scr
 {
 	//Interface for Shader
-	class Shader
+	class Shader : public APIObject
 	{
 	public:
 		enum class Stage : uint32_t
@@ -35,6 +35,7 @@ namespace scr
 		ShaderCreateInfo m_CI;
 
 	public:
+		Shader(scr::RenderPlatform *r) :APIObject(r) {}
 		virtual ~Shader()
 		{
 			m_CI.sourceCode = nullptr;

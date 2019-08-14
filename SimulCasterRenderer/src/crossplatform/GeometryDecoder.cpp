@@ -230,7 +230,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			}
 
 			//Indices
-			target->ensureIndices(it->first, 0, (int)dg.accessors[primitive.indices_accessor].count, 2, (const unsigned char*)dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
+			size_t componentSize = avs::GetComponentSize(dg.accessors[primitive.indices_accessor].componentType);
+			target->ensureIndices(it->first, dg.accessors[primitive.indices_accessor].byteOffset/ componentSize, (int)dg.accessors[primitive.indices_accessor].count, (int)componentSize,dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
 			avs::Result result = target->Assemble();
 			if (result != avs::Result::OK)
 				return result;
@@ -239,18 +240,56 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	return avs::Result::OK;
 }
 
+///MISSING PASSING DATA TO TARGET
 avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& target)
 {
-	return avs::Result::GeometryDecoder_Incomplete;
+	size_t materialAmount = Next8B;
+
+	for(size_t i = 0; i < materialAmount; i++)
+	{
+		avs::Material material;
+		avs::uid mat_uid = Next8B;
+		material.diffuse_uid = Next8B;
+		material.normal_uid = Next8B;
+		material.mro_uid = Next8B;
+	}
+	
+	return avs::Result::OK;
 }
 avs::Result GeometryDecoder::decodeMaterialInstance(GeometryTargetBackendInterface*& target)
 {
 	return avs::Result::GeometryDecoder_Incomplete;
 }
+
+///MISSING PASSING DATA TO TARGET
 avs::Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target)
 {
-	return avs::Result::GeometryDecoder_Incomplete;
+	size_t textureAmount = Next8B;
+
+	for(size_t i = 0; i < textureAmount; i++)
+	{
+		avs::Texture texture;
+		avs::uid tex_uid = Next8B;
+
+		texture.width = Next8B;
+		texture.height = Next8B;
+		texture.bitsPerPixel = Next8B;
+
+		size_t textureSize = Next8B;
+
+		unsigned char *pixelData = new unsigned char[textureSize];
+
+		for(size_t j = 0; j < textureSize; i++)
+		{
+			pixelData[j] = Next8B;
+		}
+
+		texture.data = pixelData;
+	}
+
+	return avs::Result::OK;
 }
+
 avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& target)
 {
 	return avs::Result::GeometryDecoder_Incomplete;

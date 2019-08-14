@@ -8,7 +8,7 @@ namespace scr
 
 
 	//Interface for UniformBuffer
-	class UniformBuffer
+	class UniformBuffer : public APIObject
 	{
 	public:
 		struct UniformBufferCreateInfo
@@ -23,6 +23,7 @@ namespace scr
 		const void* m_Data;
 
 	public:
+		UniformBuffer(scr::RenderPlatform *r) :APIObject(r) {}
 		virtual ~UniformBuffer()
 		{
 			m_Size = 0;

@@ -10,35 +10,12 @@ ResourceCreator::~ResourceCreator()
 {
 }
 
-void ResourceCreator::SetRenderPlatform(scr::API::APIType api)
+void ResourceCreator::SetRenderPlatform(scr::RenderPlatform *r)
 {
-	m_API.SetAPI(api);
-	
-#if defined(_WIN32) || defined(WIN32) || defined (_WIN64) || defined(WIN64)
-	switch (m_API.GetAPI())
-	{
-	case scr::API::APIType::UNKNOWN:	m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::D3D11:		m_pRenderPlatform = std::make_unique<scr::PC_RenderPlatform>(); break;
-	case scr::API::APIType::D3D12:		m_pRenderPlatform = std::make_unique<scr::PC_RenderPlatform>(); break;
-	case scr::API::APIType::OPENGL:		m_pRenderPlatform = std::make_unique<scr::PC_RenderPlatform>(); break;
-	case scr::API::APIType::OPENGLES:	m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::VULKAN:		m_pRenderPlatform = std::make_unique<scr::PC_RenderPlatform>(); break;
+	m_API.SetAPI(r->GetAPI());
+	m_pRenderPlatform.reset( r);
 
-	default:							m_pRenderPlatform = nullptr; break;
-	}
-#elif defined(__ANDROID__)
-	switch (m_API.GetAPI())
-	{
-	case scr::API::APIType::UNKNOWN:	m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::D3D11:		m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::D3D12:		m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::OPENGL:		m_pRenderPlatform = nullptr; break;
-	case scr::API::APIType::OPENGLES:	m_pRenderPlatform = std::make_unique<scr::GL_RenderPlatform>(); break;
-	case scr::API::APIType::VULKAN:		m_pRenderPlatform = nullptr; break;
-
-	default:							m_pRenderPlatform = nullptr; break;
-	}
-#endif
+	// Removed circular dependencies.
 
 }
 
@@ -127,7 +104,7 @@ void ResourceCreator::ensureIndices(unsigned long long shape_uid, int startIndex
 	
 	m_IndexCount = indexCount;
 	m_Indices = indices;
-
+	m_IndexSize = indexSize;
 }
 
 avs::Result ResourceCreator::Assemble()
@@ -184,10 +161,11 @@ avs::Result ResourceCreator::Assemble()
 	std::shared_ptr<scr::VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
 	vb->Create(&vb_ci, interleavedVBSize, (const void*)interleavedVB.get());
 
+	
 	IndexBuffer::IndexBufferCreateInfo ib_ci;
 	ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
 	std::shared_ptr<scr::IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
-	ib->Create(&ib_ci, m_IndexCount, (uint32_t*)m_Indices);
+	ib->Create(&ib_ci, m_IndexCount, m_IndexSize, m_Indices);
 
 	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
 	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);

@@ -1,4 +1,5 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
+#pragma once
 
 #include "Common.h"
 
@@ -10,6 +11,7 @@
 #include "Texture.h"
 #include "UniformBuffer.h"
 #include "VertexBuffer.h"
+#include "crossplatform/API.h"
 
 namespace scr
 {
@@ -17,6 +19,8 @@ namespace scr
 	{
 	public:
 		virtual ~RenderPlatform() {}
+
+		virtual API::APIType GetAPI() const = 0;
 
 		virtual std::shared_ptr<FrameBuffer>	InstantiateFrameBuffer() = 0;
 		virtual std::shared_ptr<IndexBuffer>	InstantiateIndexBuffer() = 0;

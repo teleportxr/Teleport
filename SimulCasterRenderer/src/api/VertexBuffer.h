@@ -6,7 +6,7 @@
 namespace scr
 {
 	//Interface for VertexBuffer
-	class VertexBuffer
+	class VertexBuffer : public APIObject
 	{
 	public:
 		struct VertexBufferCreateInfo
@@ -24,6 +24,7 @@ namespace scr
 		size_t m_VertexCount = 0;
 
 	public:
+		VertexBuffer(RenderPlatform *r) :APIObject(r) {}
 		virtual ~VertexBuffer()
 		{
 			m_Size = 0;

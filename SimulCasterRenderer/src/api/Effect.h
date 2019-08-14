@@ -50,7 +50,7 @@ namespace scr
 		};
 		struct RasterizationState
 		{
-			bool depthClampEnable;			//Controls whether to clamp the fragment�s depth values as described in Depth Test.	    Vulkan Specific: Are these available in other Graphics APIs? 
+			bool depthClampEnable;			//Controls whether to clamp the fragment's depth values as described in Depth Test.	    Vulkan Specific: Are these available in other Graphics APIs? 
 			bool rasterizerDiscardEnable;	//Controls whether primitives are discarded immediately before the rasterization stage. Vulkan Specific: Are these available in other Graphics APIs? 
 			PolygonMode polygonMode;
 			CullMode cullMode;

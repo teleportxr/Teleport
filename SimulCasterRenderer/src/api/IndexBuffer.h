@@ -8,7 +8,7 @@ namespace scr
 
 
 	//Interface for IndexBuffer
-	class IndexBuffer
+	class IndexBuffer :public APIObject
 	{
 	public:
 		struct IndexBufferCreateInfo
@@ -17,6 +17,8 @@ namespace scr
 		};
 
 	protected:
+		const uint8_t* m_Data;
+
 		IndexBufferCreateInfo m_CI;
 
 		size_t m_Size;
@@ -25,9 +27,9 @@ namespace scr
 		size_t m_IndexCount;
 
 	public:
+		IndexBuffer(RenderPlatform *r) :APIObject(r) {}
 		virtual ~IndexBuffer()
 		{
-			m_Size = 0;
 			m_Data = nullptr;
 
 			m_IndexCount = 0;
@@ -35,7 +37,7 @@ namespace scr
 			m_CI.usage = BufferUsageBit::UNKNOWN_BIT;
 		};
 
-		virtual void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo, size_t size, const uint32_t* data) = 0;
+		virtual void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo, size_t numIndices, size_t stride, const uint32_t* data) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void Bind() const = 0;

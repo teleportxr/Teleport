@@ -6,7 +6,7 @@
 namespace scr
 {
 	//Interface for FrameBuffer
-	class FrameBuffer
+	class FrameBuffer :public APIObject
 	{
 	public:
 		struct ClearColous
@@ -37,6 +37,7 @@ namespace scr
 		std::unique_ptr<FrameBuffer> m_ResolvedFrameBuffer = nullptr;
 
 	public:
+		FrameBuffer(RenderPlatform *r) :APIObject(r) {}
 		virtual ~FrameBuffer()
 		{
 			m_CI.type = Texture::Type::TEXTURE_UNKNOWN;
