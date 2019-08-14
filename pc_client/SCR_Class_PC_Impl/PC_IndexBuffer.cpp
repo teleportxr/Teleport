@@ -19,16 +19,14 @@ void PC_IndexBuffer::Unbind() const
 {
 }
 
-void pc_client::PC_IndexBuffer::Create(IndexBufferCreateInfo * pIndexBufferCreateInfo, size_t numIndices, size_t stride, const uint8_t * data)
+void pc_client::PC_IndexBuffer::Create(IndexBufferCreateInfo * pIndexBufferCreateInfo)
 {
 	m_CI = *pIndexBufferCreateInfo;
-	m_Data = data;
-	m_IndexCount = numIndices;
 
 	auto *rp = static_cast<PC_RenderPlatform*> (renderPlatform);
 	auto *srp = rp->GetSimulRenderPlatform();
 
 	m_SimulBuffer = srp->CreateBuffer();
 
-	m_SimulBuffer->EnsureIndexBuffer(srp, (int)m_IndexCount, (int)stride, data);
+	m_SimulBuffer->EnsureIndexBuffer(srp, (int)m_CI.indexCount, (int)m_CI.stride, m_CI.data);
 }

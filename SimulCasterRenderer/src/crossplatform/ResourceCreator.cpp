@@ -35,6 +35,7 @@ void ResourceCreator::ensureNormals(unsigned long long shape_uid, int startNorma
 
 	m_Normals = normals;
 }
+
 void ResourceCreator::ensureTangentNormals(unsigned long long shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn)
 {
 	CHECK_SHAPE_UID(shape_uid);
@@ -42,7 +43,6 @@ void ResourceCreator::ensureTangentNormals(unsigned long long shape_uid, int sta
 	m_TangentNormalSize = tnSize;
 	m_TangentNormals = tn;
 }
-
 
 void ResourceCreator::ensureTangents(unsigned long long shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents)
 {
@@ -207,17 +207,22 @@ avs::Result ResourceCreator::Assemble()
 		return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 
+	std::shared_ptr<scr::VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
 	VertexBuffer::VertexBufferCreateInfo vb_ci;
 	vb_ci.layout = std::move(layout);
 	vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
-	std::shared_ptr<scr::VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
-	vb->Create(&vb_ci, interleavedVBSize, (const void*)interleavedVB.get());
+	vb_ci.size = interleavedVBSize;
+	vb_ci.data = (const void*)interleavedVB.get();
+	vb->Create(&vb_ci);
 
 	
+	std::shared_ptr<scr::IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
 	IndexBuffer::IndexBufferCreateInfo ib_ci;
 	ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
-	std::shared_ptr<scr::IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
-	ib->Create(&ib_ci, m_IndexCount, m_IndexSize, m_Indices);
+	ib_ci.indexCount = m_IndexCount;
+	ib_ci.stride = m_IndexSize;
+	ib_ci.data = m_Indices;
+	ib->Create(&ib_ci);
 
 	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
 	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);

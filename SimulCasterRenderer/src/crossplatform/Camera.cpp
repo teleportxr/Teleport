@@ -11,11 +11,14 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 {
 	if (s_UninitialisedUB)
 	{
+		const float zero[sizeof(CameraData)] = { 0 };
+
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 0;
-		
-		const float zero[sizeof(CameraData)] = { 0 };
-		m_UB->Create(&ub_ci, sizeof(CameraData), zero);
+		ub_ci.size = sizeof(CameraData);
+		ub_ci.data = zero;
+
+		m_UB->Create(&ub_ci);
 		s_UninitialisedUB = true;
 	}
 	

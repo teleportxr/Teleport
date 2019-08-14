@@ -19,9 +19,7 @@ void PC_UniformBuffer::Submit() const
 {
 }
 
-void pc_client::PC_UniformBuffer::Create(UniformBufferCreateInfo * pUniformBuffer, size_t size, const void * data)
+void pc_client::PC_UniformBuffer::Create(UniformBufferCreateInfo * pUniformBuffer)
 {
 	m_CI = *pUniformBuffer;
-	m_Size = size;
-	m_Data = data;
 }

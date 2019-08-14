@@ -19,11 +19,11 @@ void PC_Texture::Unbind() const
 void PC_Texture::UseSampler(const Sampler* sampler)
 {
 }
-void pc_client::PC_Texture::Create(TextureCreateInfo * pTextureCreateInfo, size_t size, const uint8_t * data)
+void pc_client::PC_Texture::Create(TextureCreateInfo * pTextureCreateInfo)
 {
 	m_CI = *pTextureCreateInfo;
-	m_Size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;
-	m_Data = data;
+	//m_CI.size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;
+	//m_Data = data;
 }
 void PC_Texture::GenerateMips()
 {

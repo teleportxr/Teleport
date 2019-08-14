@@ -11,11 +11,14 @@ Transform::Transform()
 {
 	if (s_UninitialisedUB)
 	{
+		const float zero[sizeof(TransformData)] = { 0 };
+		
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 1;
+		ub_ci.size = sizeof(TransformData);
+		ub_ci.data = zero;
 
-		const float zero[sizeof(TransformData)] = { 0 };
-		m_UB->Create(&ub_ci, sizeof(TransformData), zero);
+		m_UB->Create(&ub_ci);
 		s_UninitialisedUB = true;
 	}
 

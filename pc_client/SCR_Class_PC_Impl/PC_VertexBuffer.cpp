@@ -133,13 +133,11 @@ void PC_VertexBuffer::Unbind() const
 {
 }
 
-void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCreateInfo, size_t size, const void * data)
+void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCreateInfo)
 {
-	m_Size = size;
-	m_Data = data;
 	m_CI = *pVertexBufferCreateInfo;
 	
-	size_t num_vertices = m_Size / m_CI.layout->m_Stride;
+	size_t num_vertices = m_CI.size / m_CI.layout->m_Stride;
 	auto *rp = static_cast<PC_RenderPlatform*> (renderPlatform);
 	auto *srp = rp->GetSimulRenderPlatform();
 	m_SimulBuffer = srp->CreateBuffer();
@@ -164,5 +162,5 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCr
 	}
 
 	layout.SetDesc(desc, (int)m_CI.layout->m_Attributes.size());
-	m_SimulBuffer->EnsureVertexBuffer(srp, (int)num_vertices, &layout, data);
+	m_SimulBuffer->EnsureVertexBuffer(srp, (int)num_vertices, &layout, m_CI.data);
 }

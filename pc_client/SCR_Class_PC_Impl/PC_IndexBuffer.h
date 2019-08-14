@@ -28,6 +28,6 @@ namespace pc_client
 		bool ResourceInUse(int timeout) override {return true;}
 
 		// Inherited via IndexBuffer
-		void Create(IndexBufferCreateInfo * pIndexBufferCreateInfo, size_t numIndices, size_t stride, const uint8_t * data) override;
+		void Create(IndexBufferCreateInfo * pIndexBufferCreateInfo) override;
 	};
 }

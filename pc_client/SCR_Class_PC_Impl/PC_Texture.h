@@ -24,6 +24,6 @@ namespace pc_client
 		bool ResourceInUse(int timeout) override {return true;}
 
 		// Inherited via Texture
-		void Create(TextureCreateInfo * pTextureCreateInfo, size_t size, const uint8_t * data) override;
+		void Create(TextureCreateInfo * pTextureCreateInfo) override;
 	};
 }

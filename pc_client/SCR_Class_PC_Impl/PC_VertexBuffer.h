@@ -29,6 +29,6 @@ namespace pc_client
 		bool ResourceInUse(int timeout) override {return true;}
 
 		// Inherited via VertexBuffer
-		void Create(VertexBufferCreateInfo * pVertexBufferCreateInfo, size_t size, const void * data) override;
+		void Create(VertexBufferCreateInfo * pVertexBufferCreateInfo) override;
 	};
 }

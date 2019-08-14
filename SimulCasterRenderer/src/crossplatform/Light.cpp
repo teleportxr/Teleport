@@ -13,11 +13,14 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 {
 	if (s_UninitialisedUB)
 	{
+		const float zero[s_MaxLights * sizeof(LightData)] = { 0 };
+
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 2;
+		ub_ci.size = s_MaxLights * sizeof(LightData);
+		ub_ci.data = zero;
 
-		const float zero[s_MaxLights * sizeof(LightData)] = { 0 };
-		m_UB->Create(&ub_ci, s_MaxLights * sizeof(LightData), zero);
+		m_UB->Create(&ub_ci);
 		s_UninitialisedUB = true;
 	}
 

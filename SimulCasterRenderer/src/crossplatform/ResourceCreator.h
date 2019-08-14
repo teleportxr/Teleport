@@ -78,11 +78,11 @@ private:
 	std::unique_ptr<scr::RenderPlatform> m_pRenderPlatform;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
-	ResourceManager<std::shared_ptr<scr::IndexBuffer> >*	m_IndexBufferManager;
-	ResourceManager< std::shared_ptr<scr::Shader>>*			m_ShaderManager;
-	ResourceManager< std::shared_ptr<scr::Texture>>*		m_TextureManager;
-	ResourceManager< std::shared_ptr<scr::UniformBuffer>>* m_UniformBufferManager;
-	ResourceManager< std::shared_ptr<scr::VertexBuffer>>*	m_VertexBufferManager;
+	ResourceManager<std::shared_ptr<scr::IndexBuffer>>*		m_IndexBufferManager;
+	ResourceManager<std::shared_ptr<scr::Shader>>*			m_ShaderManager;
+	ResourceManager<std::shared_ptr<scr::Texture>>*			m_TextureManager;
+	ResourceManager<std::shared_ptr<scr::UniformBuffer>>*	m_UniformBufferManager;
+	ResourceManager<std::shared_ptr<scr::VertexBuffer>>*	m_VertexBufferManager;
 
 	size_t m_VertexCount	= 0;
 	size_t m_IndexCount		= 0;

@@ -17,7 +17,7 @@ class PC_UniformBuffer final : public scr::UniformBuffer
 		//Model = 1;
 		//Light = 2;
 		// Inherited via UniformBuffer
-		void Create(UniformBufferCreateInfo * pUniformBuffer, size_t size, const void * data) override;
+		void Create(UniformBufferCreateInfo * pUniformBuffer) override;
 		void Destroy() override;
 
 		void Bind() const override;
