@@ -35,6 +35,14 @@ void ResourceCreator::ensureNormals(unsigned long long shape_uid, int startNorma
 
 	m_Normals = normals;
 }
+void ResourceCreator::ensureTangentNormals(unsigned long long shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn)
+{
+	CHECK_SHAPE_UID(shape_uid);
+	assert(tnCount == m_VertexCount);
+	m_TangentNormalSize = tnSize;
+	m_TangentNormals = tn;
+}
+
 
 void ResourceCreator::ensureTangents(unsigned long long shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents)
 {
@@ -122,14 +130,14 @@ avs::Result ResourceCreator::Assemble()
 
 	VertexBufferLayout layout;
 	size_t stride = 0;
-	if (m_Vertices)	{ layout.AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	stride += 3; }
-	if (m_Normals)	{ layout.AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);		stride += 3; }
-	if (m_Tangents)	{ layout.AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		stride += 4; }
-	if (m_UV0s)		{ layout.AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	stride += 2; }
-	if (m_UV1s)		{ layout.AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	stride += 2; }
-	if (m_Colors)	{ layout.AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		stride += 4; }
-	if (m_Joints)	{ layout.AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	stride += 4; }
-	if (m_Weights)	{ layout.AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	stride += 4; }
+	if (m_Vertices) { layout.AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	stride += 3; }
+	if (m_Normals) { layout.AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);		stride += 3; }
+	if (m_Tangents) { layout.AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		stride += 4; }
+	if (m_UV0s) { layout.AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	stride += 2; }
+	if (m_UV1s) { layout.AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	stride += 2; }
+	if (m_Colors) { layout.AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		stride += 4; }
+	if (m_Joints) { layout.AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	stride += 4; }
+	if (m_Weights) { layout.AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	stride += 4; }
 
 	m_InterleavedVBOSize = 4 * stride * m_VertexCount;
 	m_InterleavedVBO = std::make_unique<float[]>(m_InterleavedVBOSize);

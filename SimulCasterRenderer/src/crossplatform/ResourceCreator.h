@@ -43,6 +43,7 @@ private:
 	// Inherited via GeometryTargetBackendInterface
 	void ensureVertices(unsigned long long shape_uid, int startVertex, int vertexCount, const avs::vec3* vertices) override;
 	void ensureNormals(unsigned long long shape_uid, int startNormal, int normalCount, const avs::vec3* normals) override;
+	void ensureTangentNormals(unsigned long long shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn) override;
 	void ensureTangents(unsigned long long shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents) override;
 	void ensureTexCoord0(unsigned long long shape_uid, int startTexCoord0, int texCoordCount0, const avs::vec2* texCoords0) override;
 	void ensureTexCoord1(unsigned long long shape_uid, int startTexCoord1, int texCoordCount1, const avs::vec2* texCoords1) override;
@@ -97,7 +98,10 @@ private:
 	const avs::vec4* m_Joints		= nullptr;
 	const avs::vec4* m_Weights		= nullptr;
 	const unsigned char* m_Indices	= nullptr;
-	
+
+	const uint8_t *m_TangentNormals =nullptr;
+	size_t m_TangentNormalSize = 0;
+
 	size_t m_InterleavedVBOSize = 0;
 	std::unique_ptr<float[]> m_InterleavedVBO = nullptr;
 };

@@ -200,31 +200,41 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			{
 				//Vertices
 				Attribute attrib = primitive.attributes[i];
+				const Accessor &accessor = dg.accessors[attrib.accessor];
 				switch (attrib.semantic)
 				{
 				case AttributeSemantic::POSITION:
-					target->ensureVertices(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec3*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureVertices(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					continue;
+				case AttributeSemantic::TANGENTNORMALXZ:
+					size_t tnSize = 0;
+					if (accessor.type == avs::Accessor::DataType::VEC2)
+						tnSize = 8;
+					else  if (accessor.type == avs::Accessor::DataType::VEC4)
+						tnSize = 16;
+					target->ensureTangentNormals(it->first, 0, (int)accessor.count, tnSize, (const uint8_t*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					
 					continue;
 				case AttributeSemantic::NORMAL:
-					target->ensureNormals(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec3*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureNormals(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TANGENT:
-					target->ensureTangents(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec4*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureTangents(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
-					target->ensureTexCoord0(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec2*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureTexCoord0(it->first, 0, (int)accessor.count, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TEXCOORD_1:
-					target->ensureTexCoord1(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec2*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureTexCoord1(it->first, 0, (int)accessor.count, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::COLOR_0:
-					target->ensureColors(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec4*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureColors(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::JOINTS_0:
-					target->ensureJoints(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec4*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureJoints(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::WEIGHTS_0:
-					target->ensureWeights(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec4*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				}
 			}
