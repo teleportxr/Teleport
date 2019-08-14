@@ -101,8 +101,5 @@ private:
 
 	const uint8_t *m_TangentNormals =nullptr;
 	size_t m_TangentNormalSize = 0;
-
-	size_t m_InterleavedVBOSize = 0;
-	std::unique_ptr<float[]> m_InterleavedVBO = nullptr;
 };
 

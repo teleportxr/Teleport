@@ -6,43 +6,46 @@ using namespace scr;
 
 uint32_t Light::s_NumOfLights = 0;
 const uint32_t Light::s_MaxLights = 64;
-bool Light::s_UninitialisedUBO = false;
+bool Light::s_UninitialisedUB = false;
 
-Light::Light(Type type, const vec3& position, const vec3& direction, const vec4& colour, float power, float spotAngle)
-	:m_Type(type)
+Light::Light(LightCreateInfo* pLightCreateInfo)
+	:m_CI(*pLightCreateInfo)
 {
-	if (s_UninitialisedUBO)
+	if (s_UninitialisedUB)
 	{
+		UniformBuffer::UniformBufferCreateInfo ub_ci;
+		ub_ci.bindingLocation = 2;
+
 		const float zero[s_MaxLights * sizeof(LightData)] = { 0 };
-		m_UBO->Create(s_MaxLights * sizeof(LightData), zero, 2);
-		s_UninitialisedUBO = true;
+		m_UB->Create(&ub_ci, s_MaxLights * sizeof(LightData), zero);
+		s_UninitialisedUB = true;
 	}
 
 	m_SetLayout.AddBinding(2, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	m_Set = DescriptorSet({ m_SetLayout });
-	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 2, "u_LightsUBO", { m_UBO.get(), 0, (s_MaxLights * sizeof(LightData)) });
+	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 2, "u_LightsUB", { m_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
 
 	assert(s_MaxLights > s_NumOfLights);
 	m_LightID = s_NumOfLights;
 	s_NumOfLights++;
 
-	UpdatePosition(position);
-	UpdateDirection(direction);
-	UpdateColour(colour);
-	UpdatePower(power);
-	UpdateSpotAngle(spotAngle);
+	UpdatePosition(m_CI.position);
+	UpdateDirection(m_CI.direction);
+	UpdateColour(m_CI.colour);
+	UpdatePower(m_CI.power);
+	UpdateSpotAngle(m_CI.spotAngle);
 
-	switch (m_Type)
+	switch (m_CI.type)
 	{
 	case Light::Type::POINT:
-		break;
+		Point(); break;
 	case Light::Type::DIRECTIONAL:
-		break;
+		Directional(); break;
 	case Light::Type::SPOT:
-		break;
+		Spot(); break;
 	case Light::Type::AREA:
-		break;
+		Area();  break;
 	default:
 		break;
 	}
@@ -50,28 +53,54 @@ Light::Light(Type type, const vec3& position, const vec3& direction, const vec4&
 
 void Light::Point()
 {
-	m_ShadowCamera = std::make_unique<Camera>(Camera::ProjectionType::PERSPECTIVE, m_LightData.m_Position, quat(0.0f, m_LightData.m_Direction));
+	Camera::CameraCreateInfo c_ci;
+	c_ci.type = Camera::ProjectionType::PERSPECTIVE; 
+	c_ci.position = m_LightData.m_Position;
+	c_ci.orientation = quat(0.0f, m_LightData.m_Direction);
+
+	m_ShadowCamera = std::make_unique<Camera>(&c_ci);
 	m_ShadowCamera->UpdateProjection(HALF_PI * 0.5f, 1.0f, 0.01f, 300.0f);
 
-	m_ShadowMapFBO->Create(Texture::Format::DEPTH_COMPONENT32, Texture::SampleCount::SAMPLE_COUNT_1_BIT, m_ShadowMapSize, m_ShadowMapSize);
+	CreateShadowMap();
 }
 void Light::Directional()
 {
-	m_ShadowCamera = std::make_unique<Camera>(Camera::ProjectionType::ORTHOGRAPHIC, m_LightData.m_Position, quat(0.0f, m_LightData.m_Direction));
+	Camera::CameraCreateInfo c_ci;
+	c_ci.type = Camera::ProjectionType::ORTHOGRAPHIC;
+	c_ci.position = m_LightData.m_Position;
+	c_ci.orientation = quat(0.0f, m_LightData.m_Direction);
+
+	m_ShadowCamera = std::make_unique<Camera>(&c_ci);
 	m_ShadowCamera->UpdateProjection(0.0f, static_cast<float>(m_ShadowMapSize), 0.0f, static_cast<float>(m_ShadowMapSize), -1.0f, 1.0f);
 
-	m_ShadowMapFBO->Create(Texture::Format::DEPTH_COMPONENT32, Texture::SampleCount::SAMPLE_COUNT_1_BIT, m_ShadowMapSize, m_ShadowMapSize);
+	CreateShadowMap();
 }
 void Light::Spot()
 {
-	m_ShadowCamera = std::make_unique<Camera>(Camera::ProjectionType::PERSPECTIVE, m_LightData.m_Position, quat(0.0f, m_LightData.m_Direction));
+	Camera::CameraCreateInfo c_ci;
+	c_ci.type = Camera::ProjectionType::PERSPECTIVE;
+	c_ci.position = m_LightData.m_Position;
+	c_ci.orientation = quat(0.0f, m_LightData.m_Direction);
+
+	m_ShadowCamera = std::make_unique<Camera>(&c_ci);
 	m_ShadowCamera->UpdateProjection(m_LightData.m_SpotAngle, 1.0f, 0.01f, 300.0f);
 
-	m_ShadowMapFBO->Create(Texture::Format::DEPTH_COMPONENT32, Texture::SampleCount::SAMPLE_COUNT_1_BIT, m_ShadowMapSize, m_ShadowMapSize);
+	CreateShadowMap();
 }
 void Light::Area()
 {
 	//NULL
+}
+
+void Light::CreateShadowMap()
+{
+	FrameBuffer::FrameBufferCreateInfo fb_ci;
+	fb_ci.format = Texture::Format::DEPTH_COMPONENT32;
+	fb_ci.type = Texture::Type::TEXTURE_2D;
+	fb_ci.sampleCount = Texture::SampleCountBit::SAMPLE_COUNT_1_BIT;
+	fb_ci.width = m_ShadowMapSize;
+	fb_ci.height = m_ShadowMapSize;
+	m_ShadowMapFBO->Create(&fb_ci);
 }
 
 void Light::UpdatePosition(const vec3& position) 
@@ -96,5 +125,5 @@ void Light::UpdateSpotAngle(float spotAngle)
 }
 void Light::UpdateLightUBO()
 {
-	m_UBO->Update(m_LightID * sizeof(LightData), sizeof(LightData), &m_LightData);
+	m_UB->Update(m_LightID * sizeof(LightData), sizeof(LightData), &m_LightData);
 }

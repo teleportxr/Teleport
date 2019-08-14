@@ -128,47 +128,65 @@ avs::Result ResourceCreator::Assemble()
         return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 
-	VertexBufferLayout layout;
-	size_t stride = 0;
-	if (m_Vertices) { layout.AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	stride += 3; }
-	if (m_Normals) { layout.AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);		stride += 3; }
-	if (m_Tangents) { layout.AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		stride += 4; }
-	if (m_UV0s) { layout.AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	stride += 2; }
-	if (m_UV1s) { layout.AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	stride += 2; }
-	if (m_Colors) { layout.AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		stride += 4; }
-	if (m_Joints) { layout.AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	stride += 4; }
-	if (m_Weights) { layout.AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	stride += 4; }
+	std::shared_ptr<VertexBufferLayout> layout;
+	if (m_Vertices)	{ layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	}
+	if (m_Normals)	{ layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);		}
+	if (m_Tangents)	{ layout->AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		}
+	if (m_UV0s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
+	if (m_UV1s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
+	if (m_Colors)	{ layout->AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);		}
+	if (m_Joints)	{ layout->AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
+	if (m_Weights)	{ layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
+	layout->CalculateStride();
 
-	m_InterleavedVBOSize = 4 * stride * m_VertexCount;
-	m_InterleavedVBO = std::make_unique<float[]>(m_InterleavedVBOSize);
+	size_t interleavedVBSize = 0;
+	std::unique_ptr<float[]> interleavedVB = nullptr;
+	interleavedVBSize = layout->m_Stride * m_VertexCount;
+	interleavedVB = std::make_unique<float[]>(interleavedVBSize);
+
 	for (size_t i = 0; i < m_VertexCount; i++)
 	{
 		size_t intraStrideOffset = 0;
-		if(m_Vertices)	{memcpy(m_InterleavedVBO.get() + (stride * i) + intraStrideOffset, m_Vertices + i, sizeof(vec3));	intraStrideOffset +=3;}
-		if(m_Normals)	{memcpy(m_InterleavedVBO.get() + (stride * i) + intraStrideOffset, m_Normals + i, sizeof(vec3));	intraStrideOffset +=3;}
-		if(m_Tangents)	{memcpy(m_InterleavedVBO.get() + (stride * i) + intraStrideOffset, m_Tangents + i, sizeof(vec4));	intraStrideOffset +=4;}
-		if(m_UV0s)		{memcpy(m_InterleavedVBO.get() + (stride * i) + intraStrideOffset, m_UV0s + i, sizeof(vec2));		intraStrideOffset +=2;}
-		if(m_UV1s)		{memcpy(m_InterleavedVBO.get() + (stride * i) + intraStrideOffset, m_UV1s + i, sizeof(vec2));		intraStrideOffset +=2;}
-		if(m_Colors)	{memcpy(m_InterleavedVBO.get() + (stride * i) + intraStrideOffset, m_Colors + i, sizeof(vec4));		intraStrideOffset +=4;}
-		if(m_Joints)	{memcpy(m_InterleavedVBO.get() + (stride * i) + intraStrideOffset, m_Joints + i, sizeof(vec4));		intraStrideOffset +=4;}
-		if(m_Weights)	{memcpy(m_InterleavedVBO.get() + (stride * i) + intraStrideOffset, m_Weights + i, sizeof(vec4));	intraStrideOffset +=4;}
+		if(m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Vertices + i, sizeof(vec3));intraStrideOffset +=3;}
+		if(m_Normals)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Normals + i, sizeof(vec3));	intraStrideOffset +=3;}
+		if(m_Tangents)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Tangents + i, sizeof(vec4));intraStrideOffset +=4;}
+		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV0s + i, sizeof(vec2));	intraStrideOffset +=2;}
+		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV1s + i, sizeof(vec2));	intraStrideOffset +=2;}
+		if(m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Colors + i, sizeof(vec4));	intraStrideOffset +=4;}
+		if(m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Joints + i, sizeof(vec4));	intraStrideOffset +=4;}
+		if(m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Weights + i, sizeof(vec4));	intraStrideOffset +=4;}
 	}
 
-	if (m_InterleavedVBOSize == 0 || m_InterleavedVBO == nullptr || m_IndexCount == 0 || m_Indices == nullptr)
+	if (interleavedVBSize == 0 || interleavedVB == nullptr || m_IndexCount == 0 || m_Indices == nullptr)
 	{
 		SCR_CERR("Unable to construct vertex and index buffers.");
 		return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 
-	std::shared_ptr<scr::VertexBuffer> vbo = m_pRenderPlatform->InstantiateVertexBuffer();
-	vbo->SetLayout(layout);
-	vbo->Create(m_InterleavedVBOSize, (const void*)m_InterleavedVBO.get());
+	VertexBuffer::VertexBufferCreateInfo vb_ci;
+	vb_ci.layout = std::move(layout);
+	vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
+	std::shared_ptr<scr::VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
+	vb->Create(&vb_ci, interleavedVBSize, (const void*)interleavedVB.get());
 
-	std::shared_ptr<scr::IndexBuffer> ibo = m_pRenderPlatform->InstantiateIndexBuffer();
-	ibo->Create(m_IndexCount, m_IndexSize, m_Indices);
+	
+	IndexBuffer::IndexBufferCreateInfo ib_ci;
+	ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
+	std::shared_ptr<scr::IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
+	ib->Create(&ib_ci, m_IndexCount, m_IndexSize, m_Indices);
 
-	m_VertexBufferManager->Add(shape_uid, vbo.get(), m_PostUseLifetime);
-	m_IndexBufferManager->Add(shape_uid, ibo.get(), m_PostUseLifetime);
+	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
+	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);
+
+	m_Vertices = nullptr;
+	m_Normals = nullptr;
+	m_Tangents = nullptr;
+	m_UV0s = nullptr;
+	m_UV1s = nullptr;
+	m_Colors = nullptr;
+	m_Joints = nullptr;
+	m_Weights = nullptr;
+	m_Indices = nullptr;
 
     return avs::Result::OK;
 }

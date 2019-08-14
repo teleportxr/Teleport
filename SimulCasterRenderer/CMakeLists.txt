@@ -8,9 +8,10 @@ set( src_root
 	src/Common.h
 	)
 set( src_api
+	src/api/DeviceContext.h
+	src/api/Effect.h
 	src/api/FrameBuffer.h
 	src/api/IndexBuffer.h
-	src/api/Pipeline.h
 	src/api/RenderPlatform.h
 	src/api/Sampler.h
 	src/api/Shader.h
@@ -20,6 +21,8 @@ set( src_api
 	src/api/VertexBufferLayout.h
 	)
 set( src_crossplatform
+	src/crossplatform/Actor.cpp
+	src/crossplatform/Actor.h
 	src/crossplatform/API.cpp
 	src/crossplatform/API.h
 	src/crossplatform/basic_linear_algebra.h
@@ -33,10 +36,8 @@ set( src_crossplatform
 	src/crossplatform/Light.h
 	src/crossplatform/Material.cpp
 	src/crossplatform/Material.h
-	src/crossplatform/Object.cpp
-	src/crossplatform/Object.h
-	src/crossplatform/Renderer.cpp
-	src/crossplatform/Renderer.h
+	src/crossplatform/Mesh.cpp
+	src/crossplatform/Mesh.h
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h

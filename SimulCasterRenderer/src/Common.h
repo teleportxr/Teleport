@@ -30,4 +30,15 @@ namespace scr
 		RenderPlatform *renderPlatform;
 		APIObject(RenderPlatform *r) :renderPlatform(r) {}
 	};
+	enum BufferUsageBit : uint32_t
+	{
+		UNKNOWN_BIT = 0x00000000,
+		STREAM_BIT	= 0x00000001,
+		STATIC_BIT	= 0x00000002,
+		DYNAMIC_BIT = 0x00000004,
+		READ_BIT	= 0x00000008,
+		WRITE_BIT	= 0x00000010,
+		COPY_BIT	= 0x00000020,
+		DRAW_BIT	= 0x00000040
+	};
 }

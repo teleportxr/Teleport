@@ -14,7 +14,7 @@ namespace pc_client
 	public:
 		PC_Texture(scr::RenderPlatform *r):scr::Texture(r) {}
 
-		void Create(scr::Texture::Slot slot, scr::Texture::Type type, scr::Texture::Format format, scr::Texture::SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
+		void Create(Slot slot, Type type, Format format, SampleCountBit sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
 		void Destroy() override;
 
 		void Bind() const override;

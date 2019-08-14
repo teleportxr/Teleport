@@ -35,6 +35,7 @@ namespace scr
 
 	public:
 		std::vector<VertexAttribute> m_Attributes;
+		size_t m_Stride = 0; //Value in Bytes
 
 		inline void AddAttribute(const VertexAttribute& attribute)
 		{
@@ -44,6 +45,14 @@ namespace scr
 		inline void AddAttribute(uint32_t location, ComponentCount count, Type type)
 		{
 			m_Attributes.push_back({ location, count, type });
+		}
+		inline void CalculateStride()
+		{
+			for (auto& attrib : m_Attributes)
+			{
+				m_Stride += static_cast<size_t>(attrib.componentCount);
+			}
+			m_Stride *= 4;
 		}
 	};
 }

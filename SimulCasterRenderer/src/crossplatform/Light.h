@@ -21,14 +21,21 @@ namespace scr
 			SPOT,
 			AREA
 		};
+		struct LightCreateInfo
+		{
+			Type type;
+			const vec3& position;
+			const vec3& direction;
+			const vec4& colour;
+			float power;
+			float spotAngle;
+		};
 	
 	private:
-
 		static uint32_t s_NumOfLights;
 		const static uint32_t s_MaxLights;
 		uint32_t m_LightID;
 
-		Type m_Type;
 		struct LightData //Layout conformant to GLSL std140
 		{
 			vec4 m_Colour;
@@ -37,9 +44,11 @@ namespace scr
 			vec3 m_Direction;
 			float m_SpotAngle;
 		}m_LightData;
+
+		LightCreateInfo m_CI;
 		
-		static bool s_UninitialisedUBO;
-		std::unique_ptr<UniformBuffer> m_UBO;
+		static bool s_UninitialisedUB;
+		std::unique_ptr<UniformBuffer> m_UB;
 
 		DescriptorSetLayout m_SetLayout;
 		DescriptorSet m_Set;
@@ -49,7 +58,7 @@ namespace scr
 		std::unique_ptr<Camera> m_ShadowCamera = nullptr;
 
 	public:
-		Light(Type type, const vec3& position, const vec3& direction, const vec4& colour, float power, float spotAngle);
+		Light(LightCreateInfo* pLightCreateInfo);
 
 		void UpdatePosition(const vec3& position);
 		void UpdateDirection(const vec3& direction);
@@ -68,5 +77,6 @@ namespace scr
 		void Directional();
 		void Spot();
 		void Area();
+		void CreateShadowMap();
 	};
 }
