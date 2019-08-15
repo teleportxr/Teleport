@@ -136,9 +136,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	vs.projection=crossplatform::DEPTH_REVERSE;
 
 	memset(keydown,0,sizeof(keydown));
-	// Use these in practice:
-	//
-	GenerateCubemaps();
 
 	// These are for example:
 	hDRRenderer->RestoreDeviceObjects(renderPlatform);
@@ -168,29 +165,6 @@ void ClientRenderer::RecompileShaders()
 	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
 }
 
-void ClientRenderer::GenerateCubemaps()
-{
-	crossplatform::Texture *hdrTexture = renderPlatform->CreateTexture("textures/glacier.hdr");
-	delete specularTexture;
-	specularTexture = renderPlatform->CreateTexture("specularTexture");
-	specularTexture->ensureTextureArraySizeAndFormat(renderPlatform, 1024, 1024, 1, 8, crossplatform::PixelFormat::RGBA_16_FLOAT, true, true, true);
-	// plonk the hdr into the cubemap.
-	auto &deviceContext = renderPlatform->GetImmediateContext();
-	renderPlatform->LatLongTextureToCubemap(deviceContext, specularTexture, hdrTexture);
-	delete hdrTexture;
-	delete diffuseCubemapTexture;
-	diffuseCubemapTexture = renderPlatform->CreateTexture("diffuseCubemapTexture");
-	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 32, 32, 1, 1, crossplatform::PixelFormat::RGBA_16_FLOAT, true, true, true);
-
-	crossplatform::SphericalHarmonics  sphericalHarmonics;
-
-	// Now we will calculate spherical harmonics.
-	sphericalHarmonics.RestoreDeviceObjects(renderPlatform);
-	sphericalHarmonics.RenderMipsByRoughness(deviceContext, specularTexture);
-	sphericalHarmonics.CalcSphericalHarmonics(deviceContext, specularTexture);
-	// And using the harmonics, render a diffuse map:
-	sphericalHarmonics.RenderEnvmap(deviceContext, diffuseCubemapTexture, -1, 0.0f);
-}
 
 // We only ever create one view in this example, but in general, this should return a new value each time it's called.
 int ClientRenderer::AddView(/*external_framebuffer*/)
@@ -329,14 +303,6 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 		hdrFramebuffer->DeactivateDepth(deviceContext);
 
 	}
-	//renderPlatform->DrawTexture(deviceContext, 125, 125, 225, 225, diffuseCubemapTexture, vec4(0.5, 0.5, 0.0, 0.5));
-	float s = 2.0f/ float(specularTexture->mips);
-	for (int i = 0; i < specularTexture->mips; i++)
-	{
-		float lod = (float)i;
-		float x = -1.0f + 0.5f*s+ i*s;
-	//	renderPlatform->DrawCubemap(deviceContext, specularTexture, x, -.5, s, 1.0f, 1.0f, lod);
-	}
 
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.44f);
@@ -450,6 +416,7 @@ void ClientRenderer::Update()
 
 void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint height)
 {
+	height *= 2;
     WARN("VIDEO STREAM CHANGED: %d %d %d", remotePort, width, height);
 
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
@@ -600,7 +567,6 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'R':
 			RecompileShaders();
-			GenerateCubemaps();
 			break;
 		default: 
 			int  k=tolower(wParam);

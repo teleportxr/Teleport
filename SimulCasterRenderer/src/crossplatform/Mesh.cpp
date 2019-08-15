@@ -5,4 +5,6 @@ using namespace scr;
 
 Mesh::Mesh(MeshCreateInfo* pMeshCreateInfo)
 	:m_CI(*pMeshCreateInfo)
-{}
+{
+
+}

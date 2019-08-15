@@ -29,9 +29,8 @@ LOCAL_SRC_FILES  := 	../src/crossplatform/Actor.cpp			\
 						../src/crossplatform/Light.cpp			\
 						../src/crossplatform/Material.cpp		\
 						../src/crossplatform/Mesh.cpp			\
-						../src/crossplatform/Renderer.cpp		\
 						../src/crossplatform/ResourceCreator.cpp\
-	
+
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions

@@ -16,8 +16,11 @@ shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
 	float phi	= atan2(view.y, -view.x) / TwoPI;
 	float theta	= acos(-view.z) / PI;
 	vec2  uv	= fract(vec2(phi, theta));
-	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, uv, 0);// cubemapTexture.SampleLevel(cubeSamplerState, -view, 0);
-    return lookup;
+	uv.y *= 0.5;
+	vec4 lookup = 1.0*plainTexture.SampleLevel(wrapSamplerState, uv, 0).rgba;
+	vec4 depth_lookup = 1.0*plainTexture.SampleLevel(wrapSamplerState, vec2(uv.x,uv.y+0.5), 0).rgba;
+	// cubemapTexture.SampleLevel(cubeSamplerState, -view, 0);
+    return lookup*depth_lookup;
 }
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
