@@ -14,7 +14,7 @@ namespace pc_client
 	public:
 		PC_FrameBuffer(scr::RenderPlatform *r):scr::FrameBuffer(r) {}
 
-		void Create(scr::Texture::Format format, scr::Texture::SampleCount sampleCount, uint32_t width, uint32_t height) override;
+		// Inherited via FrameBuffer
 		void Destroy() override;
 
 		void Bind() const override;
@@ -22,6 +22,8 @@ namespace pc_client
 
 		void Resolve() override;
 		void UpdateFrameBufferSize(uint32_t width, uint32_t height) override;
-		void Clear(float colour_r, float colour_g, float colour_b, float colour_a, float depth, uint32_t stencil) override;
+
+		void Create(FrameBufferCreateInfo * pFrameBufferCreateInfo) override;
+		void SetClear(ClearColous * pClearColours) override;
 	};
 }

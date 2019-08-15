@@ -5,17 +5,19 @@
 #include <api/VertexBufferLayout.h>
 #include <GlGeometry.h>
 
-namespace scr
+namespace scc
 {
-	class GL_VertexBuffer final : public VertexBuffer
+	class GL_VertexBuffer final : public scr::VertexBuffer
 	{
 	private:
-		OVR::GlGeometry m_Geometry;
+		GLuint m_VertexID;
+		GLuint m_VertexArrayID;
 
 	public:
-        GL_VertexBuffer() {}
+        GL_VertexBuffer(scr::RenderPlatform* r)
+        	:scr::VertexBuffer(r) {}
 
-		void Create(size_t size, const void* data) override;
+		void Create(VertexBufferCreateInfo* pVertexBufferCreateInfo) override;
 		void Destroy() override;
 
 		void Bind() const override;
@@ -23,10 +25,11 @@ namespace scr
 
 		bool ResourceInUse(int timeout) override {return true;}
 
-		//Assume an interleaved VBO;
-		void CreateVAO(const VertexBufferLayout* layout);
+		inline const GLuint& GetVertexID() const { return m_VertexID; }
+		inline const GLuint& GetVertexArrayID() const { return m_VertexArrayID; }
 
 	private:
-		void CalculateCount();
+		//Assume an interleaved VBO;
+		void CreateVAO();
 	};
 }

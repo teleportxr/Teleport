@@ -1,35 +1,24 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_Texture.h"
 
+using namespace scc;
 using namespace scr;
 using namespace OVR;
 
-void GL_Texture::Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data)
+void GL_Texture::Create(TextureCreateInfo* pTextureCreateInfo)
 {
-    m_Width = width;
-    m_Height = height;
-    m_Depth = depth;
-    m_BitsPerPixel = bitsPerPixel;
+    m_CI = *pTextureCreateInfo;
 
-    m_Slot = slot;
-    m_Type = type;
-    m_Format = format;
-    m_SampleCount = sampleCount;
-
-    m_Size = m_Width * m_Height * m_Depth * m_BitsPerPixel;
-    m_Data = data;
-
-
-    assert(TypeToGLTarget(m_Type) != 0);
-    assert(ToGLFormat(m_Format) != 0);
-    assert(ToBaseGLFormat(m_Format) != 0);
+    assert(TypeToGLTarget(m_CI.type) != 0);
+    assert(ToGLFormat(m_CI.format) != 0);
+    assert(ToBaseGLFormat(m_CI.format) != 0);
 
     m_Texture = GlTexture();
 
     glGenTextures(1, &m_Texture.texture);
-    glBindTexture(TypeToGLTarget(m_Type), m_Texture.texture);
+    glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
 
-    switch (m_Type) {
+    switch (m_CI.type) {
         case Type::TEXTURE_UNKNOWN:
         {
             return;
@@ -41,18 +30,18 @@ void GL_Texture::Create(Slot slot, Type type, Format format, SampleCount sampleC
         }
         case Type::TEXTURE_2D:
         {
-            glTexImage2D(TypeToGLTarget(m_Type), 0, ToGLFormat(m_Format), m_Width, m_Height, 0, ToBaseGLFormat(m_Format), GL_UNSIGNED_BYTE, m_Data);
+            glTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.data);
             break;
         }
         case Type::TEXTURE_3D:
         {
-            glTexImage3D(TypeToGLTarget(m_Type), 0, ToGLFormat(m_Format), m_Width, m_Height, m_Depth, 0, ToBaseGLFormat(m_Format), GL_UNSIGNED_BYTE, m_Data);
+            glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.data);
             break;
         }
         case Type::TEXTURE_1D_ARRAY:
         case Type::TEXTURE_2D_ARRAY:
         {
-            glTexImage3D(TypeToGLTarget(m_Type), 0, ToGLFormat(m_Format), m_Width, m_Height, m_Depth, 0, ToBaseGLFormat(m_Format), GL_UNSIGNED_BYTE, m_Data);
+            glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.data);
             break;
         }
         case Type::TEXTURE_2D_MULTISAMPLE:
@@ -70,10 +59,10 @@ void GL_Texture::Create(Slot slot, Type type, Format format, SampleCount sampleC
             size_t offset = 0;
             for(uint32_t i = 0; i < 6; i++)
             {
-                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToGLFormat(m_Format), m_Width, m_Height, 0, ToBaseGLFormat(m_Format), GL_UNSIGNED_BYTE, m_Data + offset);
-                offset += m_Size;
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.data + offset);
+                offset += m_CI.size;
             }
-            m_Size *= 6;
+            m_CI.size *= 6;
         }
         case Type::TEXTURE_CUBE_MAP_ARRAY:
         {
@@ -90,12 +79,12 @@ void GL_Texture::Destroy()
 
 void GL_Texture::Bind() const
 {
-    glActiveTexture(GL_TEXTURE0 + static_cast<unsigned int>(m_Slot));
-    glBindTexture(TypeToGLTarget(m_Type), m_Texture.texture);
+    glActiveTexture(GL_TEXTURE0 + static_cast<unsigned int>(m_CI.slot));
+    glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
 }
 void GL_Texture::Unbind() const
 {
-    glBindTexture((unsigned int)m_Type, 0);
+    glBindTexture((unsigned int)m_CI.type, 0);
 }
 
 void GL_Texture::UseSampler(const Sampler* sampler)
@@ -104,15 +93,15 @@ void GL_Texture::UseSampler(const Sampler* sampler)
     const GL_Sampler* glSampler = dynamic_cast<const GL_Sampler*>(m_Sampler);
 
     Bind();
-    glTexParameteri(TypeToGLTarget(m_Type), GL_TEXTURE_WRAP_S, glSampler->ToGLWrapType(glSampler->GetWrapU()));
-    glTexParameteri(TypeToGLTarget(m_Type), GL_TEXTURE_WRAP_T, glSampler->ToGLWrapType(glSampler->GetWrapV()));
-    glTexParameteri(TypeToGLTarget(m_Type), GL_TEXTURE_WRAP_R, glSampler->ToGLWrapType(glSampler->GetWrapW()));
+    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_WRAP_S, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapU));
+    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_WRAP_T, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapV));
+    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_WRAP_R, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapW));
 
-    glTexParameteri(TypeToGLTarget(m_Type), GL_TEXTURE_MIN_FILTER, glSampler->ToGLFilterType(glSampler->GetMinFilter()));
-    glTexParameteri(TypeToGLTarget(m_Type), GL_TEXTURE_MAG_FILTER, glSampler->ToGLFilterType(glSampler->GetMagFilter()));
+    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_MIN_FILTER, glSampler->ToGLFilterType(glSampler->GetSamplerCreateInfo().minFilter));
+    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_MAG_FILTER, glSampler->ToGLFilterType(glSampler->GetSamplerCreateInfo().magFilter));
 
-    if(glSampler->GetMinFilter() == Sampler::Filter::MIPMAP_LINEAR
-        || glSampler->GetMinFilter() == Sampler::Filter::MIPMAP_NEAREST)
+    if(glSampler->GetSamplerCreateInfo().minFilter == Sampler::Filter::MIPMAP_LINEAR
+        || glSampler->GetSamplerCreateInfo().minFilter == Sampler::Filter::MIPMAP_NEAREST)
     {
         GenerateMips();
     }
@@ -120,7 +109,7 @@ void GL_Texture::UseSampler(const Sampler* sampler)
 }
 void GL_Texture::GenerateMips()
 {
-    glGenerateMipmap(TypeToGLTarget(m_Type));
+    glGenerateMipmap(TypeToGLTarget(m_CI.type));
 }
 
 GLenum GL_Texture::TypeToGLTarget(Type type) const

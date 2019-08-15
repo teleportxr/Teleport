@@ -5,20 +5,21 @@
 #include <api/Texture.h>
 #include <EyeBuffers.h>
 
-namespace scr
+namespace scc
 {
 	//Implementation of FrameBuffer wrapping over ovrEyeBuffers
-	class GL_FrameBuffer final : public FrameBuffer
+class GL_FrameBuffer final : public scr::FrameBuffer
 	{
 	private:
 	    int eyeNum = 0;
         OVR::ovrEyeBufferParms m_EyeBuffersParms;
-	    std::unique_ptr<OVR::ovrEyeBuffers> m_EyeBuffers;
+	    OVR::ovrEyeBuffers m_EyeBuffers;
 
 	public:
-		GL_FrameBuffer() {}
+		GL_FrameBuffer(scr::RenderPlatform* r)
+			:scr::FrameBuffer(r) {}
 
-		void Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height) override;
+		void Create(FrameBufferCreateInfo* pFrameBufferCreateInfo) override;
 		void Destroy() override;
 
 		void Bind() const override;
@@ -26,6 +27,11 @@ namespace scr
 
 		void Resolve() override;
 		void UpdateFrameBufferSize(uint32_t width, uint32_t height) override;
-		void Clear(float colour_r, float colour_g, float colour_b, float colour_a, float depth, uint32_t stencil) override;
+		void SetClear(ClearColous* pClearColours) override;
+
+
+		void BeginFrame();
+		void EndFrame();
+		inline OVR::ovrEyeBuffers& GetOVREyeBuffers() {return m_EyeBuffers;}
 	};
 }

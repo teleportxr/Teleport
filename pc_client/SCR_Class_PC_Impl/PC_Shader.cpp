@@ -4,13 +4,12 @@
 using namespace pc_client;
 using namespace scr;
 
-void PC_Shader::Create(const char* sourceCode, const char* entryPoint, Stage stage)
-{
-    m_SourceCode = sourceCode;
-    m_EntryPoint = entryPoint;
-    m_Stage = stage;
-}
 void PC_Shader::Compile()
 {
     //NULL;
+}
+
+void pc_client::PC_Shader::Create(ShaderCreateInfo * pShaderCreateInfo)
+{
+	m_CI = *pShaderCreateInfo;
 }

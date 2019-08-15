@@ -5,7 +5,7 @@
 
 #include "PC_FrameBuffer.h"
 #include "PC_IndexBuffer.h"
-#include "PC_Pipeline.h"
+#include "PC_Effect.h"
 #include "PC_Sampler.h"
 #include "PC_Shader.h"
 #include "PC_Texture.h"
@@ -31,7 +31,7 @@ namespace pc_client
 
 		std::shared_ptr<scr::FrameBuffer>	InstantiateFrameBuffer()	;
 		std::shared_ptr<scr::IndexBuffer>	InstantiateIndexBuffer()	;
-		std::shared_ptr<scr::Pipeline>		InstantiatePipeline()		;
+		std::shared_ptr<scr::Effect>		InstantiateEffect()			;
 		std::shared_ptr<scr::Sampler>		InstantiateSampler()		;
 		std::shared_ptr<scr::Shader>		InstantiateShader()			;
 		std::shared_ptr<scr::Texture>		InstantiateTexture()		;

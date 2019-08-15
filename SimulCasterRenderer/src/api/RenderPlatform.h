@@ -5,7 +5,7 @@
 
 #include "FrameBuffer.h"
 #include "IndexBuffer.h"
-#include "Pipeline.h"
+#include "Effect.h"
 #include "Sampler.h"
 #include "Shader.h"
 #include "Texture.h"
@@ -24,7 +24,7 @@ namespace scr
 
 		virtual std::shared_ptr<FrameBuffer>	InstantiateFrameBuffer() = 0;
 		virtual std::shared_ptr<IndexBuffer>	InstantiateIndexBuffer() = 0;
-		virtual std::shared_ptr<Pipeline>		InstantiatePipeline() = 0;
+		virtual std::shared_ptr<Effect>			InstantiateEffect() = 0;
 		virtual std::shared_ptr<Sampler>		InstantiateSampler() = 0;
 		virtual std::shared_ptr<Shader>			InstantiateShader() = 0;
 		virtual std::shared_ptr<Texture>		InstantiateTexture() = 0;

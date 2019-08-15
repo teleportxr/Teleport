@@ -9,8 +9,8 @@
 
 namespace scr
 {
-	//Interface for Pipeline
-	class Pipeline:public APIObject
+	//Interface for Effect
+	class Effect : APIObject
 	{
 	public:
 		enum class TopologyType : uint32_t
@@ -59,7 +59,7 @@ namespace scr
 		struct MultisamplingState
 		{
 			bool samplerShadingEnable;
-			Texture::SampleCount rasterizationSamples;
+			Texture::SampleCountBit rasterizationSamples;
 		};
 		enum class CompareOp : uint32_t
 		{
@@ -95,7 +95,7 @@ namespace scr
 			bool depthTestEnable;
 			bool depthWriteEnable;
 			CompareOp depthCompareOp;
-			
+
 			bool stencilTestEnable;
 			StencilCompareOpState frontCompareOp;
 			StencilCompareOpState backCompareOp;
@@ -105,7 +105,7 @@ namespace scr
 			float maxDepthBounds;
 
 		};
-		enum class BlendFactor : uint32_t 
+		enum class BlendFactor : uint32_t
 		{
 			ZERO,
 			ONE,
@@ -137,36 +137,33 @@ namespace scr
 			BlendOp alphaBlendOp;
 		};
 
+		struct EffectCreateInfo
+		{
+			std::vector<Shader*> shaders;
+			VertexBufferLayout vertexLayout;
+			TopologyType topology;
+			ViewportAndScissor viewportAndScissor;
+			RasterizationState rasterizationState;
+			MultisamplingState multisamplingState;
+			DepthStencilingState depthStencilingState;
+			ColourBlendingState colourBlendingState;
+		};
+
 	protected:
-		std::vector<Shader*> m_Shaders;
-		VertexBufferLayout m_VertexLayout;
-		TopologyType m_Topology;
-		ViewportAndScissor m_ViewportAndScissor;
-		RasterizationState m_RasterizationState;
-		MultisamplingState m_MultisamplingState;
-		DepthStencilingState m_DepthStencilingState;
-		ColourBlendingState m_ColourBlendingState;
+		EffectCreateInfo m_CI;
 
 	public:
-		Pipeline(RenderPlatform *r) :APIObject(r) {}
-		virtual ~Pipeline()	{};
+		Effect(RenderPlatform *r) :APIObject(r) {}
+		virtual ~Effect() = default;
 
-		virtual void Create(const std::vector<Shader*>& shaders,
-			const VertexBufferLayout& layout,
-			const TopologyType& topology,
-			const ViewportAndScissor& viewportAndScissor,
-			const RasterizationState& rasterization,
-			const MultisamplingState& multisample,
-			const DepthStencilingState& depthStenciling,
-			const ColourBlendingState& colourBlending) = 0;
+		virtual void Create(EffectCreateInfo* pEffectCreateInfo) = 0;
 
-		virtual void LinkShaders() = 0;
-		
+		inline const EffectCreateInfo& GetEffectCreateInfo() const { return m_CI;}
+
+	protected:
 		virtual void Bind() const = 0;
 		virtual void Unbind() const = 0;
-
-		//Calls UniformBuffer::Submit() and Texture::Bind() on the respective ojects
-		virtual void BindDescriptorSets(const std::vector<DescriptorSet>& descriptorSets) = 0;
-		virtual void Draw(size_t indexBufferCount) = 0;
+		
+		virtual void LinkShaders() = 0;
 	};
 }

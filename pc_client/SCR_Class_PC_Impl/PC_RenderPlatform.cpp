@@ -1,3 +1,4 @@
+// (C) Copyright 2018-2019 Simul Software Ltd
 #include "PC_RenderPlatform.h"
 
 using namespace pc_client;
@@ -16,9 +17,9 @@ std::shared_ptr<scr::IndexBuffer>	PC_RenderPlatform::InstantiateIndexBuffer()
 {
 	return std::make_shared<PC_IndexBuffer>(this);
 }
-std::shared_ptr<scr::Pipeline>		PC_RenderPlatform::InstantiatePipeline()
+std::shared_ptr<scr::Effect>		PC_RenderPlatform::InstantiateEffect()
 {
-	return std::make_shared<PC_Pipeline>(this);
+	return std::make_shared<PC_Effect>(this);
 }
 std::shared_ptr<scr::Sampler>		PC_RenderPlatform::InstantiateSampler()
 {

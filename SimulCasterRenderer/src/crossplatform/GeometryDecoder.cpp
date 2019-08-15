@@ -42,27 +42,22 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	case GeometryPayloadType::Mesh:
 	{
 		return decodeMesh(target);
-		break;
 	}
 	case GeometryPayloadType::Material:
 	{
 		return decodeMaterial(target);
-		break;
 	}
 	case GeometryPayloadType::MaterialInstance:
 	{
 		return decodeMaterialInstance(target);
-		break;
 	}
 	case GeometryPayloadType::Texture:
 	{
 		return decodeTexture(target);
-		break;
 	}
 	case GeometryPayloadType::Animation:
 	{
 		return decodeAnimation(target);
-		break;
 	}
 	default:
 	{ 
@@ -200,38 +195,49 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			{
 				//Vertices
 				Attribute attrib = primitive.attributes[i];
+				const Accessor &accessor = dg.accessors[attrib.accessor];
 				switch (attrib.semantic)
 				{
 				case AttributeSemantic::POSITION:
-					target->ensureVertices(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec3*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureVertices(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					continue;
+				case AttributeSemantic::TANGENTNORMALXZ:
+				{
+					size_t tnSize = 0;
+					if (accessor.type == avs::Accessor::DataType::VEC2)
+						tnSize = 8;
+					else  if (accessor.type == avs::Accessor::DataType::VEC4)
+						tnSize = 16;
+					target->ensureTangentNormals(it->first, 0, (int)accessor.count, tnSize, (const uint8_t*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+				}
 					continue;
 				case AttributeSemantic::NORMAL:
-					target->ensureNormals(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec3*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureNormals(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TANGENT:
-					target->ensureTangents(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec4*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureTangents(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
-					target->ensureTexCoord0(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec2*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureTexCoord0(it->first, 0, (int)accessor.count, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TEXCOORD_1:
-					target->ensureTexCoord1(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec2*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureTexCoord1(it->first, 0, (int)accessor.count, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::COLOR_0:
-					target->ensureColors(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec4*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureColors(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::JOINTS_0:
-					target->ensureJoints(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec4*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureJoints(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::WEIGHTS_0:
-					target->ensureWeights(it->first, 0, (int)dg.accessors[attrib.accessor].count, (const avs::vec4*)dg.buffers[dg.bufferViews[dg.accessors[attrib.accessor].bufferView].buffer].data);
+					target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				}
 			}
 
 			//Indices
 			size_t componentSize = avs::GetComponentSize(dg.accessors[primitive.indices_accessor].componentType);
-			target->ensureIndices(it->first, dg.accessors[primitive.indices_accessor].byteOffset/ componentSize, (int)dg.accessors[primitive.indices_accessor].count, (int)componentSize,dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
+			target->ensureIndices(it->first, (int)(dg.accessors[primitive.indices_accessor].byteOffset / componentSize), (int)dg.accessors[primitive.indices_accessor].count, (int)componentSize,dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
 			avs::Result result = target->Assemble();
 			if (result != avs::Result::OK)
 				return result;
@@ -240,18 +246,56 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	return avs::Result::OK;
 }
 
+///MISSING PASSING DATA TO TARGET
 avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& target)
 {
-	return avs::Result::GeometryDecoder_Incomplete;
+	size_t materialAmount = Next8B;
+
+	for(size_t i = 0; i < materialAmount; i++)
+	{
+		avs::Material material;
+		avs::uid mat_uid = Next8B;
+		material.diffuse_uid = Next8B;
+		material.normal_uid = Next8B;
+		material.mro_uid = Next8B;
+	}
+	
+	return avs::Result::OK;
 }
 avs::Result GeometryDecoder::decodeMaterialInstance(GeometryTargetBackendInterface*& target)
 {
 	return avs::Result::GeometryDecoder_Incomplete;
 }
+
+///MISSING PASSING DATA TO TARGET
 avs::Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target)
 {
-	return avs::Result::GeometryDecoder_Incomplete;
+	size_t textureAmount = Next8B;
+
+	for(size_t i = 0; i < textureAmount; i++)
+	{
+		avs::Texture texture;
+		avs::uid tex_uid = Next8B;
+
+		texture.width = static_cast<uint32_t>(Next8B);
+		texture.height = static_cast<uint32_t>(Next8B);
+		texture.bytesPerPixel = static_cast<uint32_t>(Next8B);
+
+		size_t textureSize = Next8B;
+
+		unsigned char *pixelData = new unsigned char[textureSize];
+
+		for(size_t j = 0; j < textureSize; i++)
+		{
+			pixelData[j] = static_cast<uint32_t>(Next8B);
+		}
+
+		texture.data = pixelData;
+	}
+
+	return avs::Result::OK;
 }
+
 avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& target)
 {
 	return avs::Result::GeometryDecoder_Incomplete;
