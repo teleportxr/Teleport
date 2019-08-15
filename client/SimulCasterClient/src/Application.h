@@ -63,12 +63,7 @@ private:
     static constexpr size_t   NumStreams = 1;
     static constexpr bool     GeoStream  = true;
 
-	ResourceManager<scr::IndexBuffer*> indexBufferManager;
-	ResourceManager<scr::Shader*> shaderManager;
-	ResourceManager<scr::Texture*> textureManager;
-	ResourceManager<scr::UniformBuffer*> uniformBufferManager;
-	ResourceManager<scr::VertexBuffer*> vertexBufferManager;
-
+	scc::GL_RenderPlatform renderPlatform;
     GeometryDecoder geometryDecoder;
 	ResourceCreator resourceCreator;
 	avs::GeometryDecoder avsGeometryDecoder;
@@ -93,4 +88,10 @@ private:
 	ovrVector2f mTrackpadDim;
 
 	int mNumPendingFrames = 0;
+
+    ResourceManager<std::shared_ptr<scr::IndexBuffer>> mIndexBufferManager;
+    ResourceManager<std::shared_ptr<scr::Shader>> mShaderManager;
+    ResourceManager<std::shared_ptr<scr::Texture>> mTextureManager;
+    ResourceManager<std::shared_ptr<scr::UniformBuffer>> mUniformBufferManager;
+    ResourceManager<std::shared_ptr<scr::VertexBuffer>> mVertexBufferManager;
 };

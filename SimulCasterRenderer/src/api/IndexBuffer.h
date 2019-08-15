@@ -35,12 +35,13 @@ namespace scr
 		virtual void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void Bind() const = 0;
-		virtual void Unbind() const = 0;
-
 		inline size_t GetIndexCount() const { return m_CI.indexCount; }
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(IndexBuffer*, int)> ResourceInUseCallback = &IndexBuffer::ResourceInUse;
+
+	protected:
+		virtual void Bind() const = 0;
+		virtual void Unbind() const = 0;
 	};
 }

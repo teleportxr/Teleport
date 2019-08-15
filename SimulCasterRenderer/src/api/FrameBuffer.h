@@ -54,13 +54,15 @@ namespace scr
 		virtual void Create(FrameBufferCreateInfo* pFrameBufferCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void Bind() const = 0;
-		virtual void Unbind() const = 0;
-
 		virtual void Resolve() = 0;
 		virtual void UpdateFrameBufferSize(uint32_t width, uint32_t height) = 0;
 		virtual void SetClear(ClearColous* pClearColours) = 0;
 
+	protected:
+		virtual void Bind() const = 0;
+		virtual void Unbind() const = 0;
+	
+	public:
 		void AddColourAttachment(Texture& colourTexture, uint32_t attachmentIndex, bool overrideTexture = false)
 		{
 			if (!CheckTextureCompatibility(colourTexture))

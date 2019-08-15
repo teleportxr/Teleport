@@ -6,24 +6,25 @@
 #include <api/Sampler.h>
 #include <GlTexture.h>
 
-namespace scr
+namespace scc
 {
-	class GL_Texture final : public Texture
+class GL_Texture final : public scr::Texture
 	{
 	private:
 		OVR::GlTexture m_Texture;
 
 	public:
-		GL_Texture() {}
+		GL_Texture(scr::RenderPlatform* r)
+			:scr::Texture(r) {}
 
-		void Create(Slot slot, Type type, Format format, SampleCount sampleCount, uint32_t width, uint32_t height, uint32_t depth, uint32_t bitsPerPixel, const uint8_t* data) override;
+		void Create(TextureCreateInfo* pTextureCreateInfo) override;
 		void Destroy() override;
 
 		void Bind() const override;
 		void Unbind() const override;
 
 		void GenerateMips() override;
-		void UseSampler(const Sampler* sampler) override;
+		void UseSampler(const scr::Sampler* sampler) override;
 		bool ResourceInUse(int timeout) override {return true;}
 
 	private:

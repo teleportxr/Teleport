@@ -3,15 +3,16 @@
 
 #include <api/Shader.h>
 
-namespace scr
+namespace scc
 {
 	//Interface for Shader
-	class GL_Shader final : public Shader
+class GL_Shader final : public scr::Shader
 	{
 	public:
-		GL_Shader() {}
+		GL_Shader(scr::RenderPlatform *r)
+			:scr::Shader(r) {}
 
-		void Create(const char* sourceCode, const char* entryPoint, Stage stage) override;
+		void Create(ShaderCreateInfo* pShaderCreateInfo) override;
 		void Compile() override;
 	};
 }

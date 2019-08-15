@@ -46,7 +46,7 @@ namespace scr
 	//struct Mesh_MultiMaterial_TransformInputCommand : public InputCommand {};
 	//struct Mesh_Material_MultiTransformInputCommand : public InputCommand {};
 
-	class DeviceContext
+	class DeviceContext : public APIObject
 	{
 	public:
 		struct DeviceContextCreateInfo
@@ -58,13 +58,14 @@ namespace scr
 		DeviceContextCreateInfo m_CI;
 
 	public:
-		DeviceContext(RenderPlatform *r) :APIObject(r) {}
+		DeviceContext(RenderPlatform *r) 
+			: APIObject(r) {}
 		virtual ~DeviceContext() = default;
 
 		virtual void Create(DeviceContextCreateInfo* pDeviceContextCreateInfo) = 0;
 
-		virtual void Draw(InputCommand*) = 0;
-		virtual void DispatchCompute(InputCommand*) = 0;
+		virtual void Draw(InputCommand* pInputCommand) = 0;
+		virtual void DispatchCompute(InputCommand* pInputCommand) = 0;
 
 		virtual void BeginFrame() = 0;
 		virtual void EndFrame() = 0;

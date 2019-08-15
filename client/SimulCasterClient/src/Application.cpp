@@ -77,11 +77,11 @@ Application::Application()
 	, mVideoSurfaceTexture(nullptr)
     , mSession(this)
 	, mControllerID(-1)
-    , indexBufferManager(ResourceManager<scr::IndexBuffer*>(&scr::IndexBuffer::Destroy))
-    , shaderManager(ResourceManager<scr::Shader*>(nullptr))
-    , textureManager(ResourceManager<scr::Texture*>(&scr::Texture::Destroy))
-    , uniformBufferManager(ResourceManager<scr::UniformBuffer*>(&scr::UniformBuffer::Destroy))
-    , vertexBufferManager(ResourceManager<scr::VertexBuffer*>(&scr::VertexBuffer::Destroy))
+    , mIndexBufferManager(ResourceManager<std::shared_ptr<scr::IndexBuffer>>(&scr::IndexBuffer::Destroy))
+    , mShaderManager(ResourceManager<std::shared_ptr<scr::Shader>>(nullptr))
+    , mTextureManager(ResourceManager<std::shared_ptr<scr::Texture>>(&scr::Texture::Destroy))
+    , mUniformBufferManager(ResourceManager<std::shared_ptr<scr::UniformBuffer>>(&scr::UniformBuffer::Destroy))
+    , mVertexBufferManager(ResourceManager<std::shared_ptr<scr::VertexBuffer>>(&scr::VertexBuffer::Destroy))
 
 {
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
@@ -90,8 +90,8 @@ Application::Application()
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
-    resourceCreator.SetRenderPlatform(scr::API::APIType::OPENGLES);
-    resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
+    resourceCreator.SetRenderPlatform(dynamic_cast<scr::RenderPlatform*>(&renderPlatform));
+    resourceCreator.AssociateResourceManagers(&mIndexBufferManager, &mShaderManager, &mTextureManager, &mUniformBufferManager, &mVertexBufferManager);
 }
 
 Application::~Application()

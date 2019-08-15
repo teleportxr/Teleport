@@ -4,17 +4,18 @@
 #include <api/IndexBuffer.h>
 #include <GlGeometry.h>
 
-namespace scr
+namespace scc
 {
-	class GL_IndexBuffer final : public IndexBuffer
+class GL_IndexBuffer final : public scr::IndexBuffer
 	{
 	private:
 		OVR::GlGeometry m_Geometry;
 
 	public:
-		GL_IndexBuffer() {}
+		GL_IndexBuffer(scr::RenderPlatform* r)
+			:scr::IndexBuffer(r) {}
 
-		void Create(size_t size, const uint32_t* data) override;
+		void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo) override;
 		void Destroy() override;
 
 		void Bind() const override;

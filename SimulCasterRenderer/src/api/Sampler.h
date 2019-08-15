@@ -59,10 +59,11 @@ namespace scr
 
 		virtual void Create(SamplerCreateInfo* pSamplerCreateInfo) = 0;
 		virtual void Destroy() = 0;
-		
+	
+		inline const SamplerCreateInfo& GetSamplerCreateInfo() const { return m_CI; }
+
+	protected:
 		virtual void Bind() const  = 0;
 		virtual void Unbind() const = 0;
-
-		inline const SamplerCreateInfo& GetSamplerCreateInfo() const { return m_CI; }
 	};
 }

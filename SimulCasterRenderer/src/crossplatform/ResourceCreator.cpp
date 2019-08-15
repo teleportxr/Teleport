@@ -207,16 +207,15 @@ avs::Result ResourceCreator::Assemble()
 		return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 
-	std::shared_ptr<scr::VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
+	std::shared_ptr<VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
 	VertexBuffer::VertexBufferCreateInfo vb_ci;
 	vb_ci.layout = std::move(layout);
 	vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
 	vb_ci.size = interleavedVBSize;
 	vb_ci.data = (const void*)interleavedVB.get();
 	vb->Create(&vb_ci);
-
 	
-	std::shared_ptr<scr::IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
+	std::shared_ptr<IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
 	IndexBuffer::IndexBufferCreateInfo ib_ci;
 	ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
 	ib_ci.indexCount = m_IndexCount;

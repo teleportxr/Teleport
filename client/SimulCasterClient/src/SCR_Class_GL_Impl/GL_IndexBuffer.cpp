@@ -1,23 +1,23 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_IndexBuffer.h"
 
+using namespace scc;
 using namespace scr;
 using namespace OVR;
 
-void GL_IndexBuffer::Create(size_t size, const uint32_t* data)
+void GL_IndexBuffer::Create(IndexBufferCreateInfo* pIndexBufferCreateInfo)
 {
-    m_Size = size;
-    m_Data = data;
-    
+    m_CI = *pIndexBufferCreateInfo;
+
+    size_t size = m_CI.indexCount * m_CI.stride;
     assert(size % 4 == 0);
-    m_Count = size / sizeof(uint32_t);
 
     //TODO: Deal with GlGeometry
     glGenBuffers(1, &m_Geometry.indexBuffer);
     Bind();
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, (const void*)data, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, (const void*)m_CI.data, GL_STATIC_DRAW);
 
-    m_Geometry.indexCount = (int)m_Count;
+    m_Geometry.indexCount = (int)m_CI.indexCount;
 }
 void GL_IndexBuffer::Destroy()
 {

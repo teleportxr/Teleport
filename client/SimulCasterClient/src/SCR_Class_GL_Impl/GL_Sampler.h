@@ -4,15 +4,16 @@
 #include <api/Sampler.h>
 #include <OVR_GlUtils.h>
 
-namespace scr
+namespace scc
 {
 	//Interface for Sampler
-	class GL_Sampler final : public Sampler
+class GL_Sampler final : public scr::Sampler
 	{
 	public:
-		GL_Sampler() {}
+		GL_Sampler(scr::RenderPlatform* r)
+			:scr::Sampler(r) {}
 
-		void Create(Filter filterMinMag[2], Wrap wrapUVW[3], float minLod, float maxLod, bool anisotropyEnable, float maxAnisotropy) override;
+		void Create(SamplerCreateInfo* pSamplerCreateInfo) override;
 		void Destroy() override;
 		
 		void Bind() const override;

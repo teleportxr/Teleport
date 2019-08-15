@@ -1,22 +1,20 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_FrameBuffer.h"
 
+using namespace scc;
 using namespace scr;
 using namespace OVR;
 
-void GL_FrameBuffer::Create(Texture::Format format, Texture::SampleCount sampleCount, uint32_t width, uint32_t height)
+void GL_FrameBuffer::Create(FrameBufferCreateInfo* pFrameBufferCreateInfo)
 {
-   m_Width = width;
-   m_Height = height;
-   m_SampleCount = sampleCount;
-   m_Format = format;
+   m_CI = *pFrameBufferCreateInfo;
 
    colorFormat_t colourFormat = COLOR_8888;
    depthFormat_t depthFormat = DEPTH_24;
 
-   m_EyeBuffersParms.resolutionWidth = width;
-   m_EyeBuffersParms.resolutionHeight = height;
-   m_EyeBuffersParms.multisamples = (int)sampleCount;
+   m_EyeBuffersParms.resolutionWidth = m_CI.width;
+   m_EyeBuffersParms.resolutionHeight = m_CI.height;
+   m_EyeBuffersParms.multisamples = (int)m_CI.sampleCount;
    m_EyeBuffersParms.colorFormat = colourFormat;
    m_EyeBuffersParms.depthFormat = depthFormat;
 
@@ -47,10 +45,10 @@ void GL_FrameBuffer::Resolve()
 }
 void GL_FrameBuffer::UpdateFrameBufferSize(uint32_t width, uint32_t height)
 {}
-void GL_FrameBuffer::Clear(float colour_r, float colour_g, float colour_b, float colour_a, float depth, uint32_t stencil)
+void GL_FrameBuffer::SetClear(ClearColous* pClearColours)
 {
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-   glClearColor(colour_r, colour_g, colour_b, colour_a);
-   glClearDepthf(depth);
-   glClearStencil(stencil);
+   glClearColor(pClearColours->colour_r, pClearColours->colour_g, pClearColours->colour_b, pClearColours->colour_a);
+   glClearDepthf(pClearColours->depth);
+   glClearStencil(pClearColours->stencil);
 }

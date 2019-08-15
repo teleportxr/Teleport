@@ -139,14 +139,14 @@ namespace scr
 
 		struct EffectCreateInfo
 		{
-			std::vector<Shader*> m_Shaders;
-			VertexBufferLayout m_VertexLayout;
-			TopologyType m_Topology;
-			ViewportAndScissor m_ViewportAndScissor;
-			RasterizationState m_RasterizationState;
-			MultisamplingState m_MultisamplingState;
-			DepthStencilingState m_DepthStencilingState;
-			ColourBlendingState m_ColourBlendingState;
+			std::vector<Shader*> shaders;
+			VertexBufferLayout vertexLayout;
+			TopologyType topology;
+			ViewportAndScissor viewportAndScissor;
+			RasterizationState rasterizationState;
+			MultisamplingState multisamplingState;
+			DepthStencilingState depthStencilingState;
+			ColourBlendingState colourBlendingState;
 		};
 
 	protected:
@@ -158,9 +158,10 @@ namespace scr
 
 		virtual void Create(EffectCreateInfo* pEffectCreateInfo) = 0;
 
-		virtual void LinkShaders() = 0;
-
+	protected:
 		virtual void Bind() const = 0;
 		virtual void Unbind() const = 0;
+		
+		virtual void LinkShaders() = 0;
 	};
 }

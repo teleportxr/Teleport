@@ -5,21 +5,22 @@
 #include <GlBuffer.h>
 #include <OVR_GlUtils.h>
 
-namespace scr
+namespace scc
 {
-class GL_UniformBuffer final : public UniformBuffer
+class GL_UniformBuffer final : public scr::UniformBuffer
 	{
 	private:
 		OVR::GlBuffer m_UBO;
 
 	public:
-		GL_UniformBuffer() {}
+		GL_UniformBuffer(scr::RenderPlatform *r)
+			:scr::UniformBuffer(r) {}
 
 		//Binding Locations for UBOs
 		//Camera = 0;
 		//Model = 1;
 		//Light = 2;
-		void Create(size_t size, const void* data, uint32_t bindingLocation) override;
+		void Create(UniformBufferCreateInfo* pUniformBufferCreateInfo) override;
 		void Destroy() override;
 
 		void Bind() const override;
