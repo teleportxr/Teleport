@@ -13,7 +13,7 @@ class GL_FrameBuffer final : public scr::FrameBuffer
 	private:
 	    int eyeNum = 0;
         OVR::ovrEyeBufferParms m_EyeBuffersParms;
-	    std::unique_ptr<OVR::ovrEyeBuffers> m_EyeBuffers;
+	    OVR::ovrEyeBuffers m_EyeBuffers;
 
 	public:
 		GL_FrameBuffer(scr::RenderPlatform* r)
@@ -28,5 +28,10 @@ class GL_FrameBuffer final : public scr::FrameBuffer
 		void Resolve() override;
 		void UpdateFrameBufferSize(uint32_t width, uint32_t height) override;
 		void SetClear(ClearColous* pClearColours) override;
+
+
+		void BeginFrame();
+		void EndFrame();
+		inline OVR::ovrEyeBuffers& GetOVREyeBuffers() {return m_EyeBuffers;}
 	};
 }

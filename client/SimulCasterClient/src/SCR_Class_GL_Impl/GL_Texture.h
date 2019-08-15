@@ -27,6 +27,8 @@ class GL_Texture final : public scr::Texture
 		void UseSampler(const scr::Sampler* sampler) override;
 		bool ResourceInUse(int timeout) override {return true;}
 
+		inline OVR::GlTexture& GetGlTexture() { return  m_Texture;}
+
 	private:
 		GLenum TypeToGLTarget(Type type) const;
 		GLenum ToBaseGLFormat(Format format) const;

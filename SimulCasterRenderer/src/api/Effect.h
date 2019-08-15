@@ -158,6 +158,8 @@ namespace scr
 
 		virtual void Create(EffectCreateInfo* pEffectCreateInfo) = 0;
 
+		inline const EffectCreateInfo& GetEffectCreateInfo() const { return m_CI;}
+
 	protected:
 		virtual void Bind() const = 0;
 		virtual void Unbind() const = 0;

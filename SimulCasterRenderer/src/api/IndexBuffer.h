@@ -35,7 +35,7 @@ namespace scr
 		virtual void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
-		inline size_t GetIndexCount() const { return m_CI.indexCount; }
+		inline const IndexBufferCreateInfo& GetIndexBufferCreateInfo() const { return m_CI; }
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(IndexBuffer*, int)> ResourceInUseCallback = &IndexBuffer::ResourceInUse;

@@ -31,7 +31,7 @@ namespace pc_client
 
 		std::shared_ptr<scr::FrameBuffer>	InstantiateFrameBuffer()	;
 		std::shared_ptr<scr::IndexBuffer>	InstantiateIndexBuffer()	;
-		std::shared_ptr<scr::Effect>		InstantiateEffect()		;
+		std::shared_ptr<scr::Effect>		InstantiateEffect()			;
 		std::shared_ptr<scr::Sampler>		InstantiateSampler()		;
 		std::shared_ptr<scr::Shader>		InstantiateShader()			;
 		std::shared_ptr<scr::Texture>		InstantiateTexture()		;

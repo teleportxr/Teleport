@@ -10,7 +10,8 @@ namespace scc
 	class GL_VertexBuffer final : public scr::VertexBuffer
 	{
 	private:
-		OVR::GlGeometry m_Geometry;
+		GLuint m_VertexID;
+		GLuint m_VertexArrayID;
 
 	public:
         GL_VertexBuffer(scr::RenderPlatform* r)
@@ -23,6 +24,9 @@ namespace scc
 		void Unbind() const override;
 
 		bool ResourceInUse(int timeout) override {return true;}
+
+		inline const GLuint& GetVertexID() const { return m_VertexID; }
+		inline const GLuint& GetVertexArrayID() const { return m_VertexArrayID; }
 
 	private:
 		//Assume an interleaved VBO;

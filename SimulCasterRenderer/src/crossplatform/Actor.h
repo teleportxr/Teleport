@@ -28,7 +28,7 @@ namespace scr
 	public:
 		Transform();
 
-		void UpdateModelUBO();
+		void UpdateModelUBO() const;
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
 		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
@@ -53,8 +53,8 @@ namespace scr
 
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
-		inline const Mesh* GetMesh() const { return m_CI.mesh; }
-		inline const Material* GetMaterial() const { return m_CI.material; }
-		inline const Transform* GetTransform() const { return m_CI.transform; }
+		inline Mesh* GetMesh() { return m_CI.mesh; }
+		inline Material* GetMaterial() { return m_CI.material; }
+		inline Transform* GetTransform() { return m_CI.transform; }
 	};
 }

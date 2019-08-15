@@ -22,7 +22,8 @@ class GL_Effect final : public scr::Effect
 
 		void LinkShaders() override;
 
-	private:
+		inline OVR::GlProgram& GetGlPlatform() {return m_Program;}
+
 		GLenum ToGLTopology(TopologyType topology) const;
         GLenum ToGLCullMode(CullMode cullMode) const;
         GLenum ToGLCompareOp(CompareOp op) const;

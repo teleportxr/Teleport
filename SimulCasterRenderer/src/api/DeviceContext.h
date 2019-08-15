@@ -11,7 +11,7 @@ namespace scr
 	enum InputCommandStructureType : uint32_t
 	{
 		INPUT_COMMAND,
-		MESH_MATERIAL_TRANSFORM_INPUT_COMMAND
+		INPUT_COMMAND_MESH_MATERIAL_TRANSFORM
 	};
 
 	struct InputCommand
@@ -20,18 +20,20 @@ namespace scr
 		FrameBuffer*				pFBs; 
 		uint32_t					frameBufferCount;
 		Camera*						pCamera;
+
+        virtual ~InputCommand() = default;
 	};
 	typedef InputCommand InputCommandCreateInfo;
 
-	struct Mesh_Material_Transform_InputCommand : public InputCommand
+	struct InputCommand_Mesh_Material_Transform : public InputCommand
 	{
-		const Mesh*			pMesh;
-		const Material*		pMaterial;
-		const Transform*	pTransform;
+		Mesh*			pMesh;
+		Material*		pMaterial;
+		Transform*	pTransform;
 
-		Mesh_Material_Transform_InputCommand(InputCommandCreateInfo* pInputCommandCreateInfo, const Actor* pActor)
+		InputCommand_Mesh_Material_Transform(InputCommandCreateInfo* pInputCommandCreateInfo, Actor* pActor)
 		{
-			type = MESH_MATERIAL_TRANSFORM_INPUT_COMMAND;
+			type = INPUT_COMMAND_MESH_MATERIAL_TRANSFORM;
 			pFBs = pInputCommandCreateInfo->pFBs;
 			frameBufferCount = pInputCommandCreateInfo->frameBufferCount;
 			pCamera = pInputCommandCreateInfo->pCamera;

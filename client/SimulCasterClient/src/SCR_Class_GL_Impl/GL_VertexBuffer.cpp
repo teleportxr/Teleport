@@ -9,32 +9,33 @@ void GL_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCreateInfo)
 {
     m_CI = *pVertexBufferCreateInfo;
 
-    //TODO: Deal with GlGeometry
-    glGenBuffers(1, &m_Geometry.vertexBuffer);
-    Bind();
+    glGenBuffers(1, &m_VertexID);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_VertexID);
     glBufferData(GL_ARRAY_BUFFER, m_CI.size, m_CI.data, GL_STATIC_DRAW);
 
-    m_Geometry.vertexCount = static_cast<int>(m_CI.vertexCount);
-
     CreateVAO();
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 void GL_VertexBuffer::Destroy()
 {
-    glDeleteBuffers(1, &m_Geometry.vertexBuffer);
+    glDeleteBuffers(1, &m_VertexID);
 }
 
 void GL_VertexBuffer::Bind() const
 {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_Geometry.vertexBuffer);
+    glBindVertexArray(m_VertexArrayID);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_VertexID);
 }
 void GL_VertexBuffer::Unbind() const
 {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 void GL_VertexBuffer::CreateVAO()
 {
-    glGenVertexArrays(1, &m_Geometry.vertexArrayObject);
-    glBindVertexArray(m_Geometry.vertexArrayObject);
+    glGenVertexArrays(1, &m_VertexArrayID);
+    glBindVertexArray(m_VertexArrayID);
     Bind();
 
     size_t offset = 0;

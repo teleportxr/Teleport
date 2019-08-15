@@ -6,7 +6,7 @@
 namespace scr
 {
 	//Interface for FrameBuffer
-	class FrameBuffer :public APIObject
+	class FrameBuffer : public APIObject
 	{
 	public:
 		struct ClearColous

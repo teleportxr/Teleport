@@ -28,5 +28,7 @@ class GL_UniformBuffer final : public scr::UniformBuffer
 
 		void Submit() const override;
         bool ResourceInUse(int timeout) override {return true;}
+
+        inline OVR::GlBuffer& GetGlBuffer() { return m_UBO; }
 	};
 }

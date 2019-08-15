@@ -9,7 +9,7 @@ namespace scc
 class GL_IndexBuffer final : public scr::IndexBuffer
 	{
 	private:
-		OVR::GlGeometry m_Geometry;
+		GLuint m_IndexID;
 
 	public:
 		GL_IndexBuffer(scr::RenderPlatform* r)
@@ -22,5 +22,7 @@ class GL_IndexBuffer final : public scr::IndexBuffer
 		void Unbind() const override;
 
 		bool ResourceInUse(int timeout) override {return true;}
+
+		inline const GLuint& GetIndexID() const { return m_IndexID; }
 	};
 }

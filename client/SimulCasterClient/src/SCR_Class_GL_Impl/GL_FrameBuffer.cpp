@@ -18,27 +18,36 @@ void GL_FrameBuffer::Create(FrameBufferCreateInfo* pFrameBufferCreateInfo)
    m_EyeBuffersParms.colorFormat = colourFormat;
    m_EyeBuffersParms.depthFormat = depthFormat;
 
-   m_EyeBuffers = std::make_unique<ovrEyeBuffers>();
-   m_EyeBuffers->Initialize(m_EyeBuffersParms, true);
+   m_EyeBuffers.Initialize(m_EyeBuffersParms, true);
 }
 void GL_FrameBuffer::Destroy()
 {
-   m_EyeBuffers->~ovrEyeBuffers();
+   m_EyeBuffers.~ovrEyeBuffers();
 }
 
 void GL_FrameBuffer::Bind() const
 {
-   m_EyeBuffers->BeginFrame();
-   m_EyeBuffers->BeginRenderingEye(eyeNum);
+   //NULL
 }
 void GL_FrameBuffer::Unbind() const
 {
+   //NULL
 }
-
 void GL_FrameBuffer::Resolve()
 {
-   m_EyeBuffers->EndRenderingEye(eyeNum);
-   m_EyeBuffers->EndFrame();
+   //NULL
+}
+
+void GL_FrameBuffer::BeginFrame()
+{
+   m_EyeBuffers.BeginFrame();
+   m_EyeBuffers.BeginRenderingEye(eyeNum);
+}
+
+void GL_FrameBuffer::EndFrame()
+{
+   m_EyeBuffers.EndRenderingEye(eyeNum);
+   m_EyeBuffers.EndFrame();
 
    eyeNum = (eyeNum + 1) % 2;
 

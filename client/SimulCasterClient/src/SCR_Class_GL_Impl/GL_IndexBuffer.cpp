@@ -12,21 +12,19 @@ void GL_IndexBuffer::Create(IndexBufferCreateInfo* pIndexBufferCreateInfo)
     size_t size = m_CI.indexCount * m_CI.stride;
     assert(size % 4 == 0);
 
-    //TODO: Deal with GlGeometry
-    glGenBuffers(1, &m_Geometry.indexBuffer);
+    glGenBuffers(1, &m_IndexID);
     Bind();
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, (const void*)m_CI.data, GL_STATIC_DRAW);
-
-    m_Geometry.indexCount = (int)m_CI.indexCount;
+    Unbind();
 }
 void GL_IndexBuffer::Destroy()
 {
-    glDeleteBuffers(1, &m_Geometry.indexBuffer);
+    glDeleteBuffers(1, &m_IndexID);
 }
 
 void GL_IndexBuffer::Bind() const
 {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_Geometry.indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IndexID);
 }
 void GL_IndexBuffer::Unbind() const
 {
