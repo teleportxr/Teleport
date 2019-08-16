@@ -10,13 +10,12 @@ ResourceCreator::~ResourceCreator()
 {
 }
 
-void ResourceCreator::SetRenderPlatform(scr::RenderPlatform *r)
+void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 {
 	m_API.SetAPI(r->GetAPI());
-	m_pRenderPlatform.reset( r);
+	m_pRenderPlatform = r;
 
 	// Removed circular dependencies.
-
 }
 
 void ResourceCreator::ensureVertices(unsigned long long shape_uid, int startVertex, int vertexCount, const avs::vec3* vertices)

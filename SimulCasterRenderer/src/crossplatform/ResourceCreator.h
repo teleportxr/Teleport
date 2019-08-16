@@ -75,7 +75,7 @@ public:
 private:
 	scr::API m_API;
 	avs::uid shape_uid = (avs::uid)-1;
-	std::unique_ptr<scr::RenderPlatform> m_pRenderPlatform;
+	scr::RenderPlatform* m_pRenderPlatform;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
 	ResourceManager<std::shared_ptr<scr::IndexBuffer>>*		m_IndexBufferManager;
