@@ -267,7 +267,7 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 	
 	hdrFramebuffer->Activate(deviceContext);
-	hdrFramebuffer->Clear(deviceContext,0.1f,0.1f,0.12f,0.f,reverseDepth?0.f:1.f);
+	hdrFramebuffer->Clear(deviceContext,0.0f,0.0f,1.0f,0.f,reverseDepth?0.f:1.f);
 
 	transparentEffect->UnbindTextures(deviceContext);
 	// The following block renders to the hdrFramebuffer's rendertarget:

@@ -18,7 +18,7 @@ namespace scr
 			const void* data;
 		};
 
-	protected:
+    protected:
 		VertexBufferCreateInfo m_CI;
 	
 	public:
@@ -36,12 +36,13 @@ namespace scr
 		virtual void Create(VertexBufferCreateInfo* pVertexBufferCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void Bind() const = 0;
-		virtual void Unbind() const = 0;
-		
 		inline size_t GetVertexCount() const { return m_CI.vertexCount; }
 
 		virtual bool ResourceInUse(int timeout)= 0;
 		std::function<bool(VertexBuffer*, int)> ResourceInUseCallback = &VertexBuffer::ResourceInUse;
+
+	protected:
+		virtual void Bind() const = 0;
+		virtual void Unbind() const = 0;
 	};
 }

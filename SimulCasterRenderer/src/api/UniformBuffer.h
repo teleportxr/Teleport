@@ -5,8 +5,6 @@
 
 namespace scr
 {
-
-
 	//Interface for UniformBuffer
 	class UniformBuffer : public APIObject
 	{
@@ -38,9 +36,6 @@ namespace scr
 		virtual void Create(UniformBufferCreateInfo* pUniformBuffer) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void Bind() const = 0;
-		virtual void Unbind() const = 0;
-
 		//Update the UBO's data that is to be later submitted.
 		void Update(size_t offset, size_t size, const void* data)
 		{
@@ -52,5 +47,9 @@ namespace scr
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(UniformBuffer*, int)> ResourceInUseCallback = &UniformBuffer::ResourceInUse;
+
+	protected:
+		virtual void Bind() const = 0;
+		virtual void Unbind() const = 0;
 	};
 }

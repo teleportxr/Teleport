@@ -13,9 +13,11 @@ LOCAL_SRC_FILES			:= \
     ../src/SessionClient.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \
+    ../src/SCR_Class_GL_Impl/GL_DeviceContext.cpp \
+    ../src/SCR_Class_GL_Impl/GL_Effect.cpp \
     ../src/SCR_Class_GL_Impl/GL_FrameBuffer.cpp \
     ../src/SCR_Class_GL_Impl/GL_IndexBuffer.cpp \
-    ../src/SCR_Class_GL_Impl/GL_Pipeline.cpp \
+    ../src/SCR_Class_GL_Impl/GL_RenderPlatform.cpp \
     ../src/SCR_Class_GL_Impl/GL_Sampler.cpp \
     ../src/SCR_Class_GL_Impl/GL_Shader.cpp \
     ../src/SCR_Class_GL_Impl/GL_Texture.cpp \
@@ -26,6 +28,10 @@ LOCAL_SRC_FILES			:= \
 LOCAL_C_INCLUDES += ../libavstream/include
 LOCAL_C_INCLUDES += ../SimulCasterRenderer/src
 LOCAL_C_INCLUDES += 3rdParty/enet/Include
+
+LOCAL_CFLAGS += -D__ANDROID__
+LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable
+LOCAL_CPP_FEATURES += exceptions
 
 include $(BUILD_SHARED_LIBRARY)
 

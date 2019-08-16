@@ -10,14 +10,14 @@ namespace scr
 	public:
 		enum class Type : uint32_t
 		{
-			FLOAT
-			, DOUBLE
-			, UINT
-			, USHORT
-			, UBYTE
-			, INT
-			, SHORT
-			, BYTE
+			FLOAT,
+			DOUBLE,
+			UINT,
+			USHORT,
+			UBYTE,
+			INT,
+			SHORT,
+			BYTE
 		};
 		enum class ComponentCount : uint32_t
 		{

@@ -314,7 +314,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 			requestedProgramVersion, GLSL_PROGRAM_VERSION );
 		programVersion = GLSL_PROGRAM_VERSION;
 	}
-#if defined( OVR_OS_ANDROID )
+#if 0//defined( OVR_OS_ANDROID )
 	// ----IMAGE_EXTERNAL_WORKAROUND
 	// GL_OES_EGL_image_external extension support issues:
 	// -- Both Adreno and Mali drivers do not maintain support for base GL_OES_EGL_image_external

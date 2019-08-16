@@ -32,34 +32,54 @@ jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* 
 #endif
 
 namespace shaders {
-
+// We NEED these extensions to update the texture without uploading it every frame.
 static const char* VideoSurface_OPTIONS = R"(
-	#extension GL_OES_EGL_image_external : enable
-	#extension GL_OES_EGL_image_external_essl3 : enable
+	#extension GL_OES_EGL_image_external_essl3 : require
 )";
 
 static const char* VideoSurface_VS = R"(
     attribute vec4 position;
     varying highp vec3 vSampleVec;
+    varying highp vec3 vEyespacePos;
+    varying highp mat3 vModelViewOrientationMatrixT;
 
     void main() {
+
+        highp mat3 ViewOrientationMatrix=mat3(sm.ViewMatrix[VIEW_ID]);
+        highp mat3 ModelOrientationMatrix=mat3(ModelMatrix);
+        vModelViewOrientationMatrixT=transpose(ViewOrientationMatrix * ModelOrientationMatrix);
+
 		// Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
 		vSampleVec  = normalize(vec3(-position.z, position.y, position.x));
-        gl_Position = TransformVertex(position);
+        highp vec4 eye_pos= ( sm.ViewMatrix[VIEW_ID] * ( ModelMatrix * position ));
+        gl_Position     = (sm.ProjectionMatrix[VIEW_ID] * eye_pos);
+        vEyespacePos    =eye_pos.xyz;
     }
 )";
 
 static const char* VideoSurface_FS = R"(
-	const highp float PI    = 3.141592;
+	const highp float PI    = 3.1415926536;
 	const highp float TwoPI = 2.0 * PI;
 
     uniform samplerExternalOES videoFrameTexture;
 	varying highp vec3 vSampleVec;
+    varying highp vec3 vEyespacePos;
+    varying highp mat3 vModelViewOrientationMatrixT;
 
-	void main() {
+	void main()
+    {
+        highp float c=1.0;
+        highp float s=0.0;
+        highp mat3 OffsetRotationMatrix=mat3(c,s,0.0,-s,c,0.0,0.0,0.0,1.0);
+        highp vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
+
 		highp float phi   = atan(vSampleVec.z, vSampleVec.x) / TwoPI;
 		highp float theta = acos(vSampleVec.y) / PI;
 		highp vec2  uv    = fract(vec2(phi, theta));
+        uv.y/=2.0;
+        highp vec2 uv_d     =vec2(uv.x,uv.y+0.5);
+		highp float depth = texture2D(videoFrameTexture, uv_d).r;
+        //uv+=offset;
 		gl_FragColor = texture2D(videoFrameTexture, uv);
 		//gl_FragColor = pow(2.0*texture2D(videoFrameTexture, uv),vec4(0.44,0.44,0.44,1.0));
 	}
@@ -77,11 +97,11 @@ Application::Application()
 	, mVideoSurfaceTexture(nullptr)
     , mSession(this)
 	, mControllerID(-1)
-    , indexBufferManager(ResourceManager<scr::IndexBuffer*>(&scr::IndexBuffer::Destroy))
-    , shaderManager(ResourceManager<scr::Shader*>(nullptr))
-    , textureManager(ResourceManager<scr::Texture*>(&scr::Texture::Destroy))
-    , uniformBufferManager(ResourceManager<scr::UniformBuffer*>(&scr::UniformBuffer::Destroy))
-    , vertexBufferManager(ResourceManager<scr::VertexBuffer*>(&scr::VertexBuffer::Destroy))
+    , mIndexBufferManager(ResourceManager<std::shared_ptr<scr::IndexBuffer>>(&scr::IndexBuffer::Destroy))
+    , mShaderManager(ResourceManager<std::shared_ptr<scr::Shader>>(nullptr))
+    , mTextureManager(ResourceManager<std::shared_ptr<scr::Texture>>(&scr::Texture::Destroy))
+    , mUniformBufferManager(ResourceManager<std::shared_ptr<scr::UniformBuffer>>(&scr::UniformBuffer::Destroy))
+    , mVertexBufferManager(ResourceManager<std::shared_ptr<scr::VertexBuffer>>(&scr::VertexBuffer::Destroy))
 
 {
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
@@ -90,8 +110,8 @@ Application::Application()
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
-    resourceCreator.SetRenderPlatform(scr::API::APIType::OPENGLES);
-    resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
+    resourceCreator.SetRenderPlatform(dynamic_cast<scr::RenderPlatform*>(&renderPlatform));
+    resourceCreator.AssociateResourceManagers(&mIndexBufferManager, &mShaderManager, &mTextureManager, &mUniformBufferManager, &mVertexBufferManager);
 }
 
 Application::~Application()
@@ -151,6 +171,10 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			mVideoSurfaceProgram = GlProgram::Build(nullptr, shaders::VideoSurface_VS,
 													shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS,
 													uniformParms, 1);
+			//mVideoSurfaceProgram= GlProgram::Build( nullptr, shaders::VideoSurface_VS
+			//		, shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS
+			//		, uniformParms, 1
+			//		, GlProgram::GLSL_PROGRAM_VERSION, false /* abort on error */, true /* use deprecated interface */ );
 
 			if(!mVideoSurfaceProgram.IsValid()) {
 				OVR_FAIL("Failed to build video surface shader program");

@@ -138,9 +138,6 @@ namespace scr
 		virtual void Create(TextureCreateInfo* pTextureCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void Bind() const = 0;
-		virtual void Unbind() const = 0;
-
 		virtual void UseSampler(const Sampler* sampler) = 0;
 		virtual void GenerateMips() = 0;
 
@@ -150,5 +147,9 @@ namespace scr
 		std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;
 
 		friend class FrameBuffer;
+
+	protected:
+		virtual void Bind() const = 0;
+		virtual void Unbind() const = 0;
 	};
 }

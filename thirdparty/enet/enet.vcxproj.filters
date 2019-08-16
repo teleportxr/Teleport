@@ -1,71 +1,72 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{df446561-fb6a-4695-ae03-772218764b9a}</UniqueIdentifier>
-      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{36a3848e-6bd0-46b5-b4c2-9a1e9eb12cf6}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl</Extensions>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="host.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\callbacks.c">
+      <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="list.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\compress.c">
+      <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="callbacks.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\host.c">
+      <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="compress.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\list.c">
+      <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="packet.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\packet.c">
+      <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="peer.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\peer.c">
+      <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="protocol.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\protocol.c">
+      <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="unix.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\unix.c">
+      <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="win32.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="C:\Simul\RemotePlay\thirdparty\enet\win32.c">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\enet\enet.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\callbacks.h">
+      <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\enet\list.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\enet.h">
+      <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\enet\callbacks.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\list.h">
+      <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\enet\protocol.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\protocol.h">
+      <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\enet\time.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\time.h">
+      <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\enet\types.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\types.h">
+      <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\enet\unix.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\unix.h">
+      <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\enet\utility.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\utility.h">
+      <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\enet\win32.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="C:\Simul\RemotePlay\thirdparty\enet\include\enet\win32.h">
+      <Filter>include</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Simul\RemotePlay\thirdparty\enet\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{036302C5-BE2D-3F50-9F3E-719D1BD22EC9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source">
+      <UniqueIdentifier>{2E29D66C-2FD1-381E-AFAF-B155D14B5125}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

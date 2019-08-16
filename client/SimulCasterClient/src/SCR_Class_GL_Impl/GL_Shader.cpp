@@ -1,13 +1,12 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_Shader.h"
 
+using namespace scc;
 using namespace scr;
 
-void GL_Shader::Create(const char* sourceCode, const char* entryPoint, Stage stage)
+void GL_Shader::Create(ShaderCreateInfo* pShaderCreateInfo)
 {
-    m_SourceCode = sourceCode;
-    m_EntryPoint = entryPoint;
-    m_Stage = stage;
+    m_CI = *pShaderCreateInfo;
 }
 void GL_Shader::Compile()
 {

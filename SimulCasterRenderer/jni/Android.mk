@@ -33,7 +33,7 @@ LOCAL_SRC_FILES  := 	../src/crossplatform/Actor.cpp			\
 
 
 LOCAL_CFLAGS += -D__ANDROID__
-LOCAL_CPPFLAGS += -Wc++17-extensions
+LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable
 LOCAL_CPP_FEATURES += exceptions
 include $(BUILD_STATIC_LIBRARY)		# start building based on everything since CLEAR_VARS
 
