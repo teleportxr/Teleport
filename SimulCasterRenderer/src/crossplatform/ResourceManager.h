@@ -1,3 +1,4 @@
+// (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
 #include <string> //std::string
