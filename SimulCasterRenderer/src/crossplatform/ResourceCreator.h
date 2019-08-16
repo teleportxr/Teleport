@@ -53,6 +53,9 @@ private:
 	void ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices) override;
 	avs::Result Assemble() override;
 
+	virtual void passTexture(avs::uid texture_uid, const avs::Texture & texture) override;
+	virtual void passMaterial(avs::uid material_uid, const avs::Material & material) override;
+
 	inline bool SetAndCheckShapeUID(const avs::uid& uid)
 	{
 		if (shape_uid == (avs::uid)-1)
