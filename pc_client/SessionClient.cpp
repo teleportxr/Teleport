@@ -76,9 +76,11 @@ void ClientLog(const char *fileTag, int lineno,const char *msg_type,const char *
 	std::cerr << fileTag << "(" << lineno << "): "<< msg_type<<": " << str.c_str() << std::endl;
 }
 
-enum RemotePlaySessionChannel {
-	RPCH_Control = 0,
-	RPCH_HeadPose = 1,
+enum RemotePlaySessionChannel
+{
+	RPCH_HANDSHAKE = 0,
+	RPCH_Control = 1,
+	RPCH_HeadPose = 2,
 	RPCH_NumChannels,
 };
 
@@ -350,6 +352,11 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		else
 		{
 			mCommandInterface->OnVideoStreamChanged(port, width, height);
+
+			//Handshake the changing of the video stream, so that the server is aware the client is ready to receive resources.
+			const bool isReady = true;
+			ENetPacket *packet = enet_packet_create(&isReady, sizeof(bool), 0);
+			enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 		}
 	}
 	else
