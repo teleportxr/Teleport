@@ -17,6 +17,7 @@ public:
 
 private:
 	avs::Result decodeMesh(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeNode(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeMaterial(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeMaterialInstance(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeTexture(avs::GeometryTargetBackendInterface*& target);
@@ -29,7 +30,9 @@ private:
 
 #define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
 #define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
+#define NextB get<uint8_t>(m_Buffer.data(), &m_BufferOffset)
 #define NextFloat get<float>(m_Buffer.data(), &m_BufferOffset)
+#define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  
 
 private:
 	struct DecodedGeometry
