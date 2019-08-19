@@ -45,6 +45,8 @@ private:
 
 	void SendHeadPose(const float quat[4]);
 	void SendInput(const ControllerState& controllerState);
+	//Tell server we are ready to receive geometry payloads.
+	void SendHandshake();
 
     uint32_t mClientID = 0;
 	ENetSocket mServiceDiscoverySocket = 0;
@@ -55,5 +57,7 @@ private:
     ENetAddress mServerEndpoint;
 
     ControllerState mPrevControllerState = {};
+
+	bool isReadyToReceivePayloads = false;
 };
 

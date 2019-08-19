@@ -352,11 +352,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		else
 		{
 			mCommandInterface->OnVideoStreamChanged(port, width, height);
-
-			//Handshake the changing of the video stream, so that the server is aware the client is ready to receive resources.
-			const bool isReady = true;
-			ENetPacket *packet = enet_packet_create(&isReady, sizeof(bool), 0);
-			enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
+			SendHandshake();
 		}
 	}
 	else
@@ -417,4 +413,11 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 		ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), packetFlags);
 		enet_peer_send(mServerPeer, RPCH_Control, packet);
 	}
+}
+
+void SessionClient::SendHandshake()
+{
+	isReadyToReceivePayloads = true;
+	ENetPacket *packet = enet_packet_create(&isReadyToReceivePayloads, sizeof(bool), 0);
+	enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 }
