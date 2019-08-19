@@ -18,6 +18,7 @@
 #include "SessionClient.h"
 #include "Config.h"
 
+#include <algorithm>
 #include <random>
 #include <libavstream/surfaces/surface_dx11.hpp>
 
@@ -136,9 +137,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	vs.projection=crossplatform::DEPTH_REVERSE;
 
 	memset(keydown,0,sizeof(keydown));
-	// Use these in practice:
-	//
-	GenerateCubemaps();
 
 	// These are for example:
 	hDRRenderer->RestoreDeviceObjects(renderPlatform);
@@ -146,8 +144,11 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 	errno=0;
 	RecompileShaders();
+
 	solidConstants.RestoreDeviceObjects(renderPlatform);
 	solidConstants.LinkToEffect(transparentEffect,"SolidConstants");
+	cubemapConstants.RestoreDeviceObjects(renderPlatform);
+	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
 	cameraConstants.RestoreDeviceObjects(renderPlatform);
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
@@ -168,29 +169,6 @@ void ClientRenderer::RecompileShaders()
 	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
 }
 
-void ClientRenderer::GenerateCubemaps()
-{
-	crossplatform::Texture *hdrTexture = renderPlatform->CreateTexture("textures/glacier.hdr");
-	delete specularTexture;
-	specularTexture = renderPlatform->CreateTexture("specularTexture");
-	specularTexture->ensureTextureArraySizeAndFormat(renderPlatform, 1024, 1024, 1, 8, crossplatform::PixelFormat::RGBA_16_FLOAT, true, true, true);
-	// plonk the hdr into the cubemap.
-	auto &deviceContext = renderPlatform->GetImmediateContext();
-	renderPlatform->LatLongTextureToCubemap(deviceContext, specularTexture, hdrTexture);
-	delete hdrTexture;
-	delete diffuseCubemapTexture;
-	diffuseCubemapTexture = renderPlatform->CreateTexture("diffuseCubemapTexture");
-	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 32, 32, 1, 1, crossplatform::PixelFormat::RGBA_16_FLOAT, true, true, true);
-
-	crossplatform::SphericalHarmonics  sphericalHarmonics;
-
-	// Now we will calculate spherical harmonics.
-	sphericalHarmonics.RestoreDeviceObjects(renderPlatform);
-	sphericalHarmonics.RenderMipsByRoughness(deviceContext, specularTexture);
-	sphericalHarmonics.CalcSphericalHarmonics(deviceContext, specularTexture);
-	// And using the harmonics, render a diffuse map:
-	sphericalHarmonics.RenderEnvmap(deviceContext, diffuseCubemapTexture, -1, 0.0f);
-}
 
 // We only ever create one view in this example, but in general, this should return a new value each time it's called.
 int ClientRenderer::AddView(/*external_framebuffer*/)
@@ -293,7 +271,7 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 	
 	hdrFramebuffer->Activate(deviceContext);
-	hdrFramebuffer->Clear(deviceContext,0.1f,0.1f,0.12f,0.f,reverseDepth?0.f:1.f);
+	hdrFramebuffer->Clear(deviceContext,0.0f,0.0f,1.0f,0.f,reverseDepth?0.f:1.f);
 
 	transparentEffect->UnbindTextures(deviceContext);
 	// The following block renders to the hdrFramebuffer's rendertarget:
@@ -308,7 +286,10 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 		deviceContext.viewStruct.Init();
 
 		{
+			cubemapConstants.depthOffsetScale = depthOffsetScale;
+			cubemapConstants.colourOffsetScale = colourOffsetScale;
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+			cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 			cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", specularTexture);
 			AVSTextureHandle th = avsTextures[0];
@@ -328,14 +309,6 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
 
-	}
-	//renderPlatform->DrawTexture(deviceContext, 125, 125, 225, 225, diffuseCubemapTexture, vec4(0.5, 0.5, 0.0, 0.5));
-	float s = 2.0f/ float(specularTexture->mips);
-	for (int i = 0; i < specularTexture->mips; i++)
-	{
-		float lod = (float)i;
-		float x = -1.0f + 0.5f*s+ i*s;
-	//	renderPlatform->DrawCubemap(deviceContext, specularTexture, x, -.5, s, 1.0f, 1.0f, lod);
 	}
 
 	hdrFramebuffer->Deactivate(deviceContext);
@@ -448,14 +421,15 @@ void ClientRenderer::Update()
 	previousTimestamp = timestamp;
 }
 
-void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint height)
+void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 {
-    WARN("VIDEO STREAM CHANGED: %d %d %d", remotePort, width, height);
+    WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
+																	,setupCommand.depth_width,setupCommand.depth_height	);
 
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams+(GeoStream?1:0), remotePort+1, "127.0.0.1", remotePort, sourceParams))
+	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "127.0.0.1", setupCommand.port, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
@@ -484,11 +458,23 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 			source -<
 					 \->decoder	-> surface
 	*/
+	size_t stream_width =std::max(setupCommand.video_width,setupCommand.depth_width);
+	size_t stream_height = setupCommand.video_height + setupCommand.depth_height;
+	colourOffsetScale.x=0;
+	colourOffsetScale.y = 0;
+	colourOffsetScale.z = 1.0f;
+	colourOffsetScale.w = float(setupCommand.video_height) / float(stream_height);
+	
+	depthOffsetScale.x = 0;
+	depthOffsetScale.y = float(setupCommand.video_height) / float(stream_height);
+	depthOffsetScale.z = float(setupCommand.depth_width) / float(stream_width);
+	depthOffsetScale.w = float(setupCommand.depth_height) / float(stream_height);
+
 	for (size_t i = 0; i < NumStreams; ++i)
 	{
-		CreateTexture(avsTextures[i],width, height, SurfaceFormats[i]);
+		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
 		// Video streams are 50+...
-		if (!decoder[i].configure(dev, width, height, decoderParams, (int)(50+i)))
+		if (!decoder[i].configure(dev, stream_width, stream_height, decoderParams, (int)(50+i)))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}
@@ -600,7 +586,6 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'R':
 			RecompileShaders();
-			GenerateCubemaps();
 			break;
 		default: 
 			int  k=tolower(wParam);

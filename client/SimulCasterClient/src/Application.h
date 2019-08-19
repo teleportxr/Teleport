@@ -41,7 +41,7 @@ public:
 	bool InitializeController();
 
 	/* Begin SessionCommandInterface */
-	virtual void OnVideoStreamChanged(uint port, uint width, uint height) override;
+	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) override;
 	virtual void OnVideoStreamClosed() override;
 	/* End SessionCommandInterface */
 
@@ -69,6 +69,13 @@ private:
 	avs::GeometryDecoder avsGeometryDecoder;
 	avs::GeometryTarget avsGeometryTarget;
 
+	struct RenderConstants
+	{
+		avs::vec4 colourOffsetScale;
+		avs::vec4 depthOffsetScale;
+	};
+	RenderConstants renderConstants;
+
 	OVR::ovrSoundEffectContext* mSoundEffectContext;
 	OVR::OvrGuiSys::SoundEffectPlayer* mSoundEffectPlayer;
 
@@ -81,10 +88,13 @@ private:
 	OVR::GlProgram mVideoSurfaceProgram;
 	OVR::GlTexture mVideoTexture;
 	OVR::SurfaceTexture* mVideoSurfaceTexture;
-
+    ovrMobile *mOvrMobile;
 	SessionClient mSession;
 
+	std::vector<float> mRefreshRates;
+
 	ovrDeviceID mControllerID;
+	int mControllerIndex;
 	ovrVector2f mTrackpadDim;
 
 	int mNumPendingFrames = 0;

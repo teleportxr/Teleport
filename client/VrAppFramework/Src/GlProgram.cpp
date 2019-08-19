@@ -314,7 +314,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 			requestedProgramVersion, GLSL_PROGRAM_VERSION );
 		programVersion = GLSL_PROGRAM_VERSION;
 	}
-#if defined( OVR_OS_ANDROID )
+#if 0//defined( OVR_OS_ANDROID )
 	// ----IMAGE_EXTERNAL_WORKAROUND
 	// GL_OES_EGL_image_external extension support issues:
 	// -- Both Adreno and Mali drivers do not maintain support for base GL_OES_EGL_image_external
@@ -482,11 +482,11 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 #ifdef OVR_BUILD_DEBUG
 		if ( p.Uniforms[i].Location < 0 || p.Uniforms[i].Binding < 0 )
 		{
-			OVR_LOG( "GlProgram::Build. Invalid shader parm: %s", parms[i].Name );
+			OVR_WARN( "GlProgram::Build. Invalid shader parm: %s", parms[i].Name );
 		}
 #endif
-
-		OVR_ASSERT( p.Uniforms[i].Location >= 0 && p.Uniforms[i].Binding >= 0 );
+        // Roderick: don't kill the whole app while testing.
+		//OVR_ASSERT( p.Uniforms[i].Location >= 0 && p.Uniforms[i].Binding >= 0 );
 	}
 
 	// implicit texture and image_external bindings

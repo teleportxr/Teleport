@@ -15,11 +15,15 @@ extern void ClientLog( const char * fileTag, int lineno,const char *msg_type, co
 #define FAIL( ... ) {ClientLog( __FILE__, __LINE__, "error",__VA_ARGS__ );exit(0);}
 
 typedef unsigned int uint;
+namespace avs
+{
+	struct SetupCommand;
+}
 
 class SessionCommandInterface
 {
 public:
-	virtual void OnVideoStreamChanged(uint port, uint width, uint height) = 0;
+	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) = 0;
 	virtual void OnVideoStreamClosed() = 0;
 };
 
@@ -42,9 +46,12 @@ public:
 private:
 	void DispatchEvent(const ENetEvent& event);
 	void ParseCommandPacket(ENetPacket* packet);
+	void ParseTextCommand(const char *txt_utf8);
 
 	void SendHeadPose(const float quat[4]);
 	void SendInput(const ControllerState& controllerState);
+	//Tell server we are ready to receive geometry payloads.
+	void SendHandshake();
 
     uint32_t mClientID = 0;
 	ENetSocket mServiceDiscoverySocket = 0;
@@ -55,5 +62,7 @@ private:
     ENetAddress mServerEndpoint;
 
     ControllerState mPrevControllerState = {};
+
+	bool isReadyToReceivePayloads = false;
 };
 
