@@ -42,6 +42,7 @@ static const char* VideoSurface_VS = R"(
     varying highp vec3 vSampleVec;
     varying highp vec3 vEyespacePos;
     varying highp mat3 vModelViewOrientationMatrixT;
+    varying highp float vEyeOffset;
 
     void main() {
 
@@ -54,6 +55,8 @@ static const char* VideoSurface_VS = R"(
         highp vec4 eye_pos= ( sm.ViewMatrix[VIEW_ID] * ( ModelMatrix * position ));
         gl_Position     = (sm.ProjectionMatrix[VIEW_ID] * eye_pos);
         vEyespacePos    =eye_pos.xyz;
+
+		vEyeOffset		=0.08*(float(VIEW_ID)-0.5);
     }
 )";
 
@@ -61,27 +64,48 @@ static const char* VideoSurface_FS = R"(
 	const highp float PI    = 3.1415926536;
 	const highp float TwoPI = 2.0 * PI;
 
+	uniform highp vec4 colourOffsetScale;
+	uniform highp vec4 depthOffsetScale;
     uniform samplerExternalOES videoFrameTexture;
+
 	varying highp vec3 vSampleVec;
     varying highp vec3 vEyespacePos;
     varying highp mat3 vModelViewOrientationMatrixT;
+    varying highp float vEyeOffset;
+    highp vec2 WorldspaceDirToUV(highp vec3 wsDir)
+    {
+		highp float phi   = atan(wsDir.z, wsDir.x) / TwoPI;
+		highp float theta = acos(wsDir.y) / PI;
+		highp vec2  uv    = fract(vec2(phi, theta));
+        return uv;
+    }
+    highp vec2 OffsetScale(highp vec2 uv,highp vec4 offsc)
+    {
+        return uv * offsc.zw + offsc.xy;
+    }
 
 	void main()
     {
-        highp float c=1.0;
-        highp float s=0.0;
-        highp mat3 OffsetRotationMatrix=mat3(c,s,0.0,-s,c,0.0,0.0,0.0,1.0);
-        highp vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
+	    highp vec4 colourOffsetScaleX=vec4(0.0,0.0,1.0,0.6667);
+	    highp vec4 depthOffsetScaleX=vec4(0.0,0.6667,0.5,0.3333);
+        highp vec2  uv_d=WorldspaceDirToUV(vSampleVec);
 
-		highp float phi   = atan(vSampleVec.z, vSampleVec.x) / TwoPI;
-		highp float theta = acos(vSampleVec.y) / PI;
-		highp vec2  uv    = fract(vec2(phi, theta));
-        uv.y/=2.0;
-        highp vec2 uv_d     =vec2(uv.x,uv.y+0.5);
-		highp float depth = texture2D(videoFrameTexture, uv_d).r;
-        //uv+=offset;
-		gl_FragColor = texture2D(videoFrameTexture, uv);
-		//gl_FragColor = pow(2.0*texture2D(videoFrameTexture, uv),vec4(0.44,0.44,0.44,1.0));
+		highp float depth = texture2D(videoFrameTexture, OffsetScale(uv_d,depthOffsetScale)).r;
+
+        // offset angle is atan(4cm/distance)
+        // depth received is distance/50metres.
+
+        highp float dist_m=max(1.0,50.0*depth);
+        highp float angle=(vEyeOffset/dist_m);
+        // so distance
+        highp float c=1.0;//cos(angle);
+        highp float s=angle;//sin(angle);
+
+        highp mat3 OffsetRotationMatrix=mat3(c,0.0,s,0.0,1.0,0.0,-s,0.0,c);
+        highp vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
+		highp vec3 colourSampleVec  = normalize(vec3(-worldspace_dir.z, worldspace_dir.y, worldspace_dir.x));
+        highp vec2 uv=WorldspaceDirToUV(colourSampleVec);
+		gl_FragColor = 0.3*depthOffsetScale+0.3*colourOffsetScale+texture2D(videoFrameTexture, OffsetScale(uv,colourOffsetScale));
 	}
 )";
 
@@ -95,6 +119,7 @@ Application::Application()
 	, mGuiSys(OvrGuiSys::Create())
 	, mLocale(nullptr)
 	, mVideoSurfaceTexture(nullptr)
+	,mOvrMobile(nullptr)
     , mSession(this)
 	, mControllerID(-1)
     , mIndexBufferManager(ResourceManager<std::shared_ptr<scr::IndexBuffer>>(&scr::IndexBuffer::Destroy))
@@ -103,7 +128,11 @@ Application::Application()
     , mUniformBufferManager(ResourceManager<std::shared_ptr<scr::UniformBuffer>>(&scr::UniformBuffer::Destroy))
     , mVertexBufferManager(ResourceManager<std::shared_ptr<scr::VertexBuffer>>(&scr::VertexBuffer::Destroy))
 
+
 {
+    memset(&renderConstants,0,sizeof(RenderConstants));
+    renderConstants.colourOffsetScale={0.0f,0.0f,1.0f,0.6667f};
+    renderConstants.depthOffsetScale={0.0f,0.6667f,0.5f,0.3333f};
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
 
 	if(enet_initialize() != 0) {
@@ -118,6 +147,8 @@ Application::~Application()
 {
 	mPipeline.deconfigure();
 
+	mOvrMobile=nullptr;
+	mRefreshRates.clear();
 	delete mVideoSurfaceTexture;
 	mVideoSurfaceDef.geo.Free();
 	GlProgram::Free(mVideoSurfaceProgram);
@@ -141,7 +172,7 @@ void Application::Configure(ovrSettings& settings )
 	settings.EyeBufferParms.multisamples = 1;
 
 	settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
-	settings.RenderMode = RENDERMODE_MONO;
+	settings.RenderMode = RENDERMODE_STEREO;
 }
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
@@ -154,6 +185,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	{
 		const ovrJava* java = app->GetJava();
 
+		mOvrMobile=app->GetOvrMobile();
+
 		mSoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
 		mSoundEffectContext->Initialize(&app->GetFileSys());
 		mSoundEffectPlayer = new OvrGuiSys::ovrDummySoundEffectPlayer();
@@ -165,12 +198,16 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mGuiSys->Init(this->app, *mSoundEffectPlayer, fontName.ToCStr(), &app->GetDebugLines());
 
 		{
-			const ovrProgramParm uniformParms[] = {
-					{ "videoFrameTexture", ovrProgramParmType::TEXTURE_SAMPLED },
-			};
+            //-------------------------------------------------------------------------
+            static ovrProgramParm uniformParms[] =	// both TextureMvpProgram and CubeMapPanoProgram use the same parm mapping
+                                          {
+                                                  { "colourOffsetScale",	ovrProgramParmType::FLOAT_VECTOR4 },
+                                                  { "depthOffsetScale",		ovrProgramParmType::FLOAT_VECTOR4 },
+                                                  { "videoFrameTexture",	ovrProgramParmType::TEXTURE_SAMPLED },
+                                          };
 			mVideoSurfaceProgram = GlProgram::Build(nullptr, shaders::VideoSurface_VS,
 													shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS,
-													uniformParms, 1);
+                                                    uniformParms, sizeof( uniformParms ) / sizeof( ovrProgramParm ));
 			//mVideoSurfaceProgram= GlProgram::Build( nullptr, shaders::VideoSurface_VS
 			//		, shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS
 			//		, uniformParms, 1
@@ -191,7 +228,13 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
 		mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
 		mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
-        mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &mVideoTexture;
+
+		int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
+		mRefreshRates.resize(num_refresh_rates);
+		vrapi_GetSystemPropertyFloatArray(java,VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,mRefreshRates.data(),num_refresh_rates);
+
+		if(num_refresh_rates>0)
+			vrapi_SetDisplayRefreshRate(mOvrMobile,mRefreshRates[num_refresh_rates-1]);
 	}
 }
 
@@ -241,7 +284,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     {
 		ovrInputStateTrackedRemote ovrState;
 		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
-		if(vrapi_GetCurrentInputState(app->GetOvrMobile(), mControllerID, &ovrState.Header) >= 0)
+		if(vrapi_GetCurrentInputState(mOvrMobile, mControllerID, &ovrState.Header) >= 0)
 		{
 			controllerState.mButtons = ovrState.Buttons;
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
@@ -315,6 +358,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 
 	// Append video surface
+    mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
+    mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
+    mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &mVideoTexture;
 	res.Surfaces.PushBack(ovrDrawSurface(&mVideoSurfaceDef));
 
 	// Append GuiSys surfaces.
@@ -328,7 +374,7 @@ bool Application::InitializeController()
 {
 	ovrInputCapabilityHeader inputCapsHeader;
 	for(uint32_t i = 0;
-		vrapi_EnumerateInputDevices(app->GetOvrMobile(), i, &inputCapsHeader) == 0; ++i) {
+		vrapi_EnumerateInputDevices(mOvrMobile, i, &inputCapsHeader) == 0; ++i) {
 		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote) {
 			mControllerID = inputCapsHeader.DeviceID;
 			break;
@@ -340,7 +386,7 @@ bool Application::InitializeController()
 
 		ovrInputTrackedRemoteCapabilities trackedInputCaps;
 		trackedInputCaps.Header = inputCapsHeader;
-		vrapi_GetInputDeviceCapabilities(app->GetOvrMobile(), &trackedInputCaps.Header);
+		vrapi_GetInputDeviceCapabilities(mOvrMobile, &trackedInputCaps.Header);
 		mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
 		mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
 		return true;
@@ -348,14 +394,14 @@ bool Application::InitializeController()
 	return false;
 }
 
-void Application::OnVideoStreamChanged(uint port, uint width, uint height)
+void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 {
 	if(mPipelineConfigured) {
 		// TODO: Fix!
 		return;
 	}
 
-    OVR_WARN("VIDEO STREAM CHANGED: %d %d %d", port, width, height);
+    OVR_WARN("VIDEO STREAM CHANGED: %d %d %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height);
 
 	avs::NetworkSourceParams sourceParams = {};
 	sourceParams.socketBufferSize = 64 * 1024 * 1024; // 64MiB socket buffer size
@@ -363,7 +409,7 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	sourceParams.maxJitterBufferLength = 0;
 
 
-	if(!mNetworkSource.configure(NumStreams + (GeoStream?1:0), port+1, mSession.GetServerIP().c_str(), port, sourceParams)) {
+	if(!mNetworkSource.configure(NumStreams + (GeoStream?1:0), setupCommand.port+1, mSession.GetServerIP().c_str(), setupCommand.port, sourceParams)) {
 		OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
 		return;
 	}
@@ -373,12 +419,24 @@ void Application::OnVideoStreamChanged(uint port, uint width, uint height)
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 	decoderParams.prependStartCodes = false;
 	decoderParams.deferDisplay = false;
-	if(!mDecoder.configure(avs::DeviceHandle(), width, height, decoderParams, 50))
+	size_t stream_width=std::max(setupCommand.video_width,setupCommand.depth_width);
+	size_t stream_height=setupCommand.video_height+setupCommand.depth_height;
+	if(!mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50))
 	{
 		OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
 		mNetworkSource.deconfigure();
 		return;
 	}
+
+    renderConstants.colourOffsetScale.x=0;
+    renderConstants.colourOffsetScale.y = 0;
+    renderConstants.colourOffsetScale.z = 1.0f;
+    renderConstants.colourOffsetScale.w = float(setupCommand.video_height) / float(stream_height);
+
+    renderConstants.depthOffsetScale.x = 0;
+    renderConstants.depthOffsetScale.y = float(setupCommand.video_height) / float(stream_height);
+    renderConstants.depthOffsetScale.z = float(setupCommand.depth_width) / float(stream_width);
+    renderConstants.depthOffsetScale.w = float(setupCommand.depth_height) / float(stream_height);
 
 	mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
 

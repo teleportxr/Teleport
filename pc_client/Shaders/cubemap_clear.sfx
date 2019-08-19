@@ -4,9 +4,15 @@
 #include "render_states.sl"
 #include "states.sl"
 #include "camera_constants.sl"
+#include "cubemap_constants.sl"
 
 uniform TextureCube cubemapTexture;
 uniform Texture2D plainTexture;
+ 
+vec2 OffsetScale(vec2 uv, vec4 offsc)
+{
+	return uv * offsc.zw + offsc.xy;
+}
 
 shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
 {
@@ -16,11 +22,11 @@ shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
 	float phi	= atan2(view.y, -view.x) / TwoPI;
 	float theta	= acos(-view.z) / PI;
 	vec2  uv	= fract(vec2(phi, theta));
-	uv.y *= 0.5;
-	vec4 lookup = 1.0*plainTexture.SampleLevel(wrapSamplerState, uv, 0).rgba;
-	vec4 depth_lookup = 1.0*plainTexture.SampleLevel(wrapSamplerState, vec2(uv.x,uv.y+0.5), 0).rgba;
-	// cubemapTexture.SampleLevel(cubeSamplerState, -view, 0);
-    return lookup;
+	
+	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv,colourOffsetScale), 0).rgba;
+	vec4 depth_lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
+	
+    return lookup*depth_lookup;
 }
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET

@@ -18,6 +18,7 @@
 #include "SessionClient.h"
 #include "Config.h"
 
+#include <algorithm>
 #include <random>
 #include <libavstream/surfaces/surface_dx11.hpp>
 
@@ -143,8 +144,11 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 	errno=0;
 	RecompileShaders();
+
 	solidConstants.RestoreDeviceObjects(renderPlatform);
 	solidConstants.LinkToEffect(transparentEffect,"SolidConstants");
+	cubemapConstants.RestoreDeviceObjects(renderPlatform);
+	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
 	cameraConstants.RestoreDeviceObjects(renderPlatform);
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
@@ -282,7 +286,10 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 		deviceContext.viewStruct.Init();
 
 		{
+			cubemapConstants.depthOffsetScale = depthOffsetScale;
+			cubemapConstants.colourOffsetScale = colourOffsetScale;
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+			cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 			cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", specularTexture);
 			AVSTextureHandle th = avsTextures[0];
@@ -414,15 +421,15 @@ void ClientRenderer::Update()
 	previousTimestamp = timestamp;
 }
 
-void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint height)
+void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 {
-	height *= 2;
-    WARN("VIDEO STREAM CHANGED: %d %d %d", remotePort, width, height);
+    WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
+																	,setupCommand.depth_width,setupCommand.depth_height	);
 
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams+(GeoStream?1:0), remotePort+1, "127.0.0.1", remotePort, sourceParams))
+	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "127.0.0.1", setupCommand.port, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
@@ -451,11 +458,23 @@ void ClientRenderer::OnVideoStreamChanged(uint remotePort, uint width, uint heig
 			source -<
 					 \->decoder	-> surface
 	*/
+	size_t stream_width =std::max(setupCommand.video_width,setupCommand.depth_width);
+	size_t stream_height = setupCommand.video_height + setupCommand.depth_height;
+	colourOffsetScale.x=0;
+	colourOffsetScale.y = 0;
+	colourOffsetScale.z = 1.0f;
+	colourOffsetScale.w = float(setupCommand.video_height) / float(stream_height);
+	
+	depthOffsetScale.x = 0;
+	depthOffsetScale.y = float(setupCommand.video_height) / float(stream_height);
+	depthOffsetScale.z = float(setupCommand.depth_width) / float(stream_width);
+	depthOffsetScale.w = float(setupCommand.depth_height) / float(stream_height);
+
 	for (size_t i = 0; i < NumStreams; ++i)
 	{
-		CreateTexture(avsTextures[i],width, height, SurfaceFormats[i]);
+		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
 		// Video streams are 50+...
-		if (!decoder[i].configure(dev, width, height, decoderParams, (int)(50+i)))
+		if (!decoder[i].configure(dev, stream_width, stream_height, decoderParams, (int)(50+i)))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}

@@ -4,8 +4,11 @@
 #include <iostream>
 #include <random>
 
-
 #include "SessionClient.h"
+
+#include "libavstream/common.hpp"
+#include <ws2tcpip.h>
+
 #pragma comment(lib,"enet")
 #pragma comment(lib,"libavstream.lib")
 #pragma comment(lib, "Ws2_32.lib")
@@ -32,6 +35,19 @@ bool getMyIP(IPv4 & myIP)
 	{
 		WSACleanup();
 		return false;
+	}
+
+	{
+		struct addrinfo *result = NULL;
+		struct addrinfo *ptr = NULL;
+		struct addrinfo hints;
+		struct sockaddr_in  *sockaddr_ipv4;
+		ZeroMemory(&hints, sizeof(hints));
+		hints.ai_flags = AI_NUMERICHOST;
+		hints.ai_family = AF_UNSPEC;
+		char nodeName[1024];
+		char serviceName[1024];
+		getaddrinfo(szBuffer, nullptr, &hints, &result);
 	}
 
 	struct hostent *host = gethostbyname(szBuffer);
@@ -243,7 +259,8 @@ void SessionClient::Disconnect(uint timeout)
 		{
 			enet_peer_disconnect_now(mServerPeer, 0);
 		}
-		else {
+        else
+        {
 			enet_peer_disconnect(mServerPeer, 0);
 
 			bool isPeerConnected = true;
@@ -316,7 +333,8 @@ std::string SessionClient::GetServerIP() const
 		enet_address_get_host_ip(&mServerEndpoint, remoteIP, sizeof(remoteIP));
 		return std::string(remoteIP);
 	}
-	else {
+    else
+    {
 		return std::string{};
 	}
 }
@@ -338,26 +356,54 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 
 void SessionClient::ParseCommandPacket(ENetPacket* packet)
 {
-	// TODO: Sanitize!
-	const std::string command(reinterpret_cast<const char*>(packet->data), packet->dataLength);
-	WARN("CMD: %s", command.c_str());
-	if (command[0] == 'v')
+	avs::CommandPayloadType commandPayloadType = *((avs::CommandPayloadType*)packet->data);
+	size_t cmdSize = avs::GetCommandSize(commandPayloadType);
+	switch (commandPayloadType)
+	{
+		case avs::CommandPayloadType::Text:
+		{
+			const char *txt_utf8 = (const char *)(packet->data + cmdSize);
+			assert(txt_utf8[packet->dataLength - cmdSize - 1] == (char)0);
+			ParseTextCommand(txt_utf8);
+		}
+		break;
+		case avs::CommandPayloadType::Setup:
+		{
+			const avs::SetupCommand &setupCommand = *((const avs::SetupCommand*)packet->data);
+			mCommandInterface->OnVideoStreamChanged(setupCommand);
+		}
+		break;
+		default:
+			break;
+	};
+}
+
+void SessionClient::ParseTextCommand(const char *txt_utf8)
+{
+	WARN("CMD: %s", txt_utf8);
+	if (txt_utf8[0] == 'v')
 	{
 		int port, width, height;
-		sscanf(command.c_str(), "v %d %d %d", &port, &width, &height);
+		sscanf_s(txt_utf8, "v %d %d %d", &port, &width, &height);
 		if (width == 0 && height == 0)
 		{
 			mCommandInterface->OnVideoStreamClosed();
 		}
 		else
 		{
-			mCommandInterface->OnVideoStreamChanged(port, width, height);
+			avs::SetupCommand setupCommand;
+			setupCommand.port = port;
+			setupCommand.video_width = width;
+			setupCommand.video_height = height/2;
+			setupCommand.depth_width = width;
+			setupCommand.depth_height = height/2;
+			mCommandInterface->OnVideoStreamChanged(setupCommand);
 			SendHandshake();
 		}
 	}
 	else
 	{
-		WARN("Invalid command: %c", command[0]);
+		WARN("Invalid text command: %c", txt_utf8[0]);
 	}
 }
 
