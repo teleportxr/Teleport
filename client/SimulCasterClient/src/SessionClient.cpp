@@ -12,6 +12,10 @@
 
 #include "SessionClient.h"
 
+#define LOG OVR_LOG
+#define FAIL OVR_FAIL
+#define WARN OVR_WARN
+
 enum RemotePlaySessionChannel
 {
     RPCH_HANDSHAKE = 0,
@@ -279,6 +283,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		{
 			const avs::SetupCommand &setupCommand = *((const avs::SetupCommand*)packet->data);
 			mCommandInterface->OnVideoStreamChanged(setupCommand);
+            SendHandshake();
 		}
 		break;
 		default:

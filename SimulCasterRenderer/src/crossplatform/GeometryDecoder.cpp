@@ -1,4 +1,5 @@
 #include "GeometryDecoder.h"
+#include <iostream>
 
 using namespace avs;
 
@@ -239,6 +240,9 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 				case AttributeSemantic::WEIGHTS_0:
 					target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
+				default:
+				    std::cerr<<"Unknown attribute semantic\n";
+				    continue;
 				}
 			}
 
