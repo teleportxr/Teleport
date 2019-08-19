@@ -53,8 +53,9 @@ private:
 	void ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices) override;
 	avs::Result Assemble() override;
 
-	virtual void passTexture(avs::uid texture_uid, const avs::Texture & texture) override;
-	virtual void passMaterial(avs::uid material_uid, const avs::Material & material) override;
+	void passTexture(avs::uid texture_uid, const avs::Texture & texture) override;
+	void passMaterial(avs::uid material_uid, const avs::Material & material) override;
+	void passNode(avs::uid node_uid, avs::DataNode& node) override;
 
 	inline bool SetAndCheckShapeUID(const avs::uid& uid)
 	{
@@ -104,5 +105,7 @@ private:
 
 	const uint8_t *m_TangentNormals =nullptr;
 	size_t m_TangentNormalSize = 0;
+
+	std::map<avs::uid, std::shared_ptr<avs::DataNode>> nodes;
 };
 

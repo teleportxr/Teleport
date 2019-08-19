@@ -272,3 +272,17 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	//scr::Material scrMaterial(&materialInfo);
 }
+
+void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
+{
+	// It may just be an update of a node's transform and/or children 
+	if (nodes.find(node_uid) == nodes.end())
+	{
+		nodes[node_uid] = std::make_shared<avs::DataNode>(std::move(node));
+	}
+	else
+	{
+		nodes[node_uid]->childrenUids = node.childrenUids;
+		nodes[node_uid]->transform = node.transform;
+	}
+}
