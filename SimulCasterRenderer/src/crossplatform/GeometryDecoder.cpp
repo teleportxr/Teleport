@@ -23,9 +23,16 @@ template<typename T> size_t get(const T* &data)
 	data++;
 	return t;
 }
+
 template<typename T> void get(T* target,const uint8_t *data, size_t count)
 {
 	memcpy(target, data, count*sizeof(T));
+}
+
+template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffset, size_t count)
+{
+	memcpy(target, data + dataOffset, count * sizeof(T));
+	dataOffset += count;
 }
 
 avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface* target)
@@ -75,7 +82,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	size_t meshCount = Next8B;
 	for (size_t i = 0; i < meshCount; i++)
 	{
-		uid = Next8B;
+		uid = Next8B; 
 		size_t primitiveArraysSize = Next8B;
 		for (size_t j = 0; j < primitiveArraysSize; j++)
 		{
@@ -246,18 +253,48 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	return avs::Result::OK;
 }
 
-///MISSING PASSING DATA TO TARGET
 avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& target)
 {
 	size_t materialAmount = Next8B;
 
 	for(size_t i = 0; i < materialAmount; i++)
 	{
-		avs::Material material;
+		Material material;
+		
 		avs::uid mat_uid = Next8B;
-		material.diffuse_uid = Next8B;
-		material.normal_uid = Next8B;
-		material.mro_uid = Next8B;
+
+		size_t nameLength = Next8B;
+
+		material.name.resize(nameLength);
+		copy<char>(material.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+		
+		material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
+		material.pbrMetallicRoughness.baseColorTexture.texCoord = Next8B;
+		material.pbrMetallicRoughness.baseColorFactor.x = NextFloat;
+		material.pbrMetallicRoughness.baseColorFactor.y = NextFloat;
+		material.pbrMetallicRoughness.baseColorFactor.z = NextFloat;
+		material.pbrMetallicRoughness.baseColorFactor.w = NextFloat;
+
+		material.pbrMetallicRoughness.metallicRoughnessTexture.index = Next8B;
+		material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = Next8B;
+		material.pbrMetallicRoughness.metallicFactor = NextFloat;
+		material.pbrMetallicRoughness.roughnessFactor = NextFloat;
+
+		material.normalTexture.index = Next8B;
+		material.normalTexture.texCoord = Next8B;
+		material.normalTexture.scale = NextFloat;
+
+		material.occlusionTexture.index = Next8B;
+		material.occlusionTexture.texCoord = Next8B;
+		material.occlusionTexture.strength = NextFloat;
+
+		material.emissiveTexture.index = Next8B;
+		material.emissiveTexture.texCoord = Next8B;
+		material.emissiveFactor.x = NextFloat;
+		material.emissiveFactor.y = NextFloat;
+		material.emissiveFactor.z = NextFloat;
+
+		target->passMaterial(mat_uid, material);
 	}
 	
 	return avs::Result::OK;
@@ -267,33 +304,37 @@ avs::Result GeometryDecoder::decodeMaterialInstance(GeometryTargetBackendInterfa
 	return avs::Result::GeometryDecoder_Incomplete;
 }
 
-///MISSING PASSING DATA TO TARGET
-avs::Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target)
+Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 {
 	size_t textureAmount = Next8B;
-
 	for(size_t i = 0; i < textureAmount; i++)
 	{
-		avs::Texture texture;
-		avs::uid tex_uid = Next8B;
+		Texture texture;
+		uid texture_uid = Next8B;
 
-		texture.width = static_cast<uint32_t>(Next8B);
-		texture.height = static_cast<uint32_t>(Next8B);
-		texture.bytesPerPixel = static_cast<uint32_t>(Next8B);
+		size_t nameLength = Next8B;
+		texture.name.resize(nameLength);
+		copy<char>(texture.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+
+		texture.width = Next4B;
+		texture.height = Next4B;
+		texture.depth = Next4B;
+		texture.bytesPerPixel = Next4B;
+		texture.arrayCount = Next4B;
+		texture.mipCount = Next4B;
+		texture.format = static_cast<avs::TextureFormat>(Next4B);
 
 		size_t textureSize = Next8B;
 
-		unsigned char *pixelData = new unsigned char[textureSize];
+		texture.data = new unsigned char[textureSize];
+		copy<unsigned char>(texture.data, m_Buffer.data(), m_BufferOffset, textureSize);
 
-		for(size_t j = 0; j < textureSize; i++)
-		{
-			pixelData[j] = static_cast<uint32_t>(Next8B);
-		}
+		texture.sampler_uid = Next8B;
 
-		texture.data = pixelData;
+		target->passTexture(texture_uid, texture);
 	}
 
-	return avs::Result::OK;
+	return Result::OK;
 }
 
 avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& target)

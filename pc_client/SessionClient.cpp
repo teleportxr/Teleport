@@ -76,9 +76,11 @@ void ClientLog(const char *fileTag, int lineno,const char *msg_type,const char *
 	std::cerr << fileTag << "(" << lineno << "): "<< msg_type<<": " << str.c_str() << std::endl;
 }
 
-enum RemotePlaySessionChannel {
-	RPCH_Control = 0,
-	RPCH_HeadPose = 1,
+enum RemotePlaySessionChannel
+{
+	RPCH_HANDSHAKE = 0,
+	RPCH_Control = 1,
+	RPCH_HeadPose = 2,
 	RPCH_NumChannels,
 };
 
@@ -350,6 +352,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		else
 		{
 			mCommandInterface->OnVideoStreamChanged(port, width, height);
+			SendHandshake();
 		}
 	}
 	else
@@ -358,7 +361,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 	}
 }
 
-void SessionClient::SendHeadPose(const const float quat[4])
+void SessionClient::SendHeadPose(const float quat[4])
 {
 	ENetPacket* packet = enet_packet_create(quat, 4*sizeof(float), 0);
 	enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
@@ -410,4 +413,11 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 		ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), packetFlags);
 		enet_peer_send(mServerPeer, RPCH_Control, packet);
 	}
+}
+
+void SessionClient::SendHandshake()
+{
+	isReadyToReceivePayloads = true;
+	ENetPacket *packet = enet_packet_create(&isReadyToReceivePayloads, sizeof(bool), 0);
+	enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 }

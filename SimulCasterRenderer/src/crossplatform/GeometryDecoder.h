@@ -29,6 +29,7 @@ private:
 
 #define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
 #define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
+#define NextFloat get<float>(m_Buffer.data(), &m_BufferOffset)
 
 private:
 	struct DecodedGeometry
