@@ -5,6 +5,7 @@
 
 #include "API.h"
 #include "ResourceManager.h"
+#include "ActorManager.h"
 #include "api/RenderPlatform.h"
 
 #if 0
@@ -25,6 +26,11 @@ public:
 	
 	void SetRenderPlatform(scr::RenderPlatform *r);
 
+	inline void AssociateActorManager(scr::ActorManager* actorManager)
+	{
+		m_pActorManager = actorManager;
+	}
+
 	inline void AssociateResourceManagers(
 		ResourceManager<std::shared_ptr<scr::IndexBuffer>>* indexBufferManager,
 		ResourceManager<std::shared_ptr<scr::Shader>>* shaderManager,
@@ -41,21 +47,28 @@ public:
 
 private:
 	// Inherited via GeometryTargetBackendInterface
-	void ensureVertices(unsigned long long shape_uid, int startVertex, int vertexCount, const avs::vec3* vertices) override;
-	void ensureNormals(unsigned long long shape_uid, int startNormal, int normalCount, const avs::vec3* normals) override;
-	void ensureTangentNormals(unsigned long long shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn) override;
-	void ensureTangents(unsigned long long shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents) override;
-	void ensureTexCoord0(unsigned long long shape_uid, int startTexCoord0, int texCoordCount0, const avs::vec2* texCoords0) override;
-	void ensureTexCoord1(unsigned long long shape_uid, int startTexCoord1, int texCoordCount1, const avs::vec2* texCoords1) override;
-	void ensureColors(unsigned long long shape_uid, int startColor, int colorCount, const avs::vec4* colors) override;
-	void ensureJoints(unsigned long long shape_uid, int startJoint, int jointCount, const avs::vec4* joints) override;
-	void ensureWeights(unsigned long long shape_uid, int startWeight, int weightCount, const avs::vec4* weights) override;
-	void ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices) override;
+	void ensureVertices(avs::uid shape_uid, int startVertex, int vertexCount, const avs::vec3* vertices) override;
+	void ensureNormals(avs::uid shape_uid, int startNormal, int normalCount, const avs::vec3* normals) override;
+	void ensureTangentNormals(avs::uid shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn) override;
+	void ensureTangents(avs::uid shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents) override;
+	void ensureTexCoord0(avs::uid shape_uid, int startTexCoord0, int texCoordCount0, const avs::vec2* texCoords0) override;
+	void ensureTexCoord1(avs::uid shape_uid, int startTexCoord1, int texCoordCount1, const avs::vec2* texCoords1) override;
+	void ensureColors(avs::uid shape_uid, int startColor, int colorCount, const avs::vec4* colors) override;
+	void ensureJoints(avs::uid shape_uid, int startJoint, int jointCount, const avs::vec4* joints) override;
+	void ensureWeights(avs::uid shape_uid, int startWeight, int weightCount, const avs::vec4* weights) override;
+	void ensureIndices(avs::uid shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices) override;
+	void passMaterialUID(avs::uid shape_uid, avs::uid _material_uid) override;
 	avs::Result Assemble() override;
 
-	void passTexture(avs::uid texture_uid, const avs::Texture & texture) override;
-	void passMaterial(avs::uid material_uid, const avs::Material & material) override;
+	//Material and Texture
+	void passTexture(avs::uid texture_uid, const avs::Texture& texture) override;
+	void passMaterial(avs::uid material_uid, const avs::Material& material) override;
+
+	//Transforms
 	void passNode(avs::uid node_uid, avs::DataNode& node) override;
+
+	//Actor
+	void CreateActor(std::pair<avs::uid, avs::uid>& meshMaterialPair, avs::uid transform_uid) override;
 
 	inline bool SetAndCheckShapeUID(const avs::uid& uid)
 	{
@@ -88,6 +101,8 @@ private:
 	ResourceManager<std::shared_ptr<scr::UniformBuffer>>*	m_UniformBufferManager;
 	ResourceManager<std::shared_ptr<scr::VertexBuffer>>*	m_VertexBufferManager;
 
+	scr::ActorManager* m_pActorManager;
+
 	size_t m_VertexCount	= 0;
 	size_t m_IndexCount		= 0;
 	size_t m_PolygonCount	= 0;
@@ -105,6 +120,8 @@ private:
 
 	const uint8_t *m_TangentNormals =nullptr;
 	size_t m_TangentNormalSize = 0;
+
+	static std::vector<std::pair<avs::uid, avs::uid>> m_MeshMaterialUIDPairs;
 
 	std::map<avs::uid, std::shared_ptr<avs::DataNode>> nodes;
 };

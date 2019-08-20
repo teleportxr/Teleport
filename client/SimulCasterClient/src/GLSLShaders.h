@@ -3,37 +3,89 @@
 namespace shaders {
 
     static const char* VideoSurface_OPTIONS = R"(
-	#extension GL_OES_EGL_image_external : enable
-	#extension GL_OES_EGL_image_external_essl3 : enable
+	#extension GL_OES_EGL_image_external_essl3 : require
 )";
+
     static const char* VideoSurface_VS = R"(
-    attribute vec4 position;
-    varying highp vec3 vSampleVec;
+	precision highp float;
+
+    layout(location = 0) in vec4 position;
+
+    layout(location = 0) out vec3 vSampleVec;
+    layout(location = 1) out vec3 vEyespacePos;
+    layout(location = 2) out mat3 vModelViewOrientationMatrixT;
+    layout(location = 5) out float vEyeOffset;
 
     void main() {
+
+        mat3 ViewOrientationMatrix=mat3(sm.ViewMatrix[VIEW_ID]);
+        mat3 ModelOrientationMatrix=mat3(ModelMatrix);
+        vModelViewOrientationMatrixT=transpose(ViewOrientationMatrix * ModelOrientationMatrix);
+
 		// Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
 		vSampleVec  = normalize(vec3(-position.z, position.y, position.x));
-        gl_Position = TransformVertex(position);
+        vec4 eye_pos= ( sm.ViewMatrix[VIEW_ID] * ( ModelMatrix * position ));
+        gl_Position     = (sm.ProjectionMatrix[VIEW_ID] * eye_pos);
+        vEyespacePos    =eye_pos.xyz;
+
+		vEyeOffset		=0.08*(float(VIEW_ID)-0.5);
     }
 )";
+
     static const char* VideoSurface_FS = R"(
-	const highp float PI    = 3.141592;
-	const highp float TwoPI = 2.0 * PI;
+	precision highp float;
 
+	const float PI    = 3.1415926536;
+	const float TwoPI = 2.0 * PI;
+
+	uniform vec4 colourOffsetScale;
+	uniform vec4 depthOffsetScale;
     uniform samplerExternalOES videoFrameTexture;
-	varying highp vec3 vSampleVec;
 
-	void main() {
-		highp float phi   = atan(vSampleVec.z, vSampleVec.x) / TwoPI;
-		highp float theta = acos(vSampleVec.y) / PI;
-		highp vec2  uv    = fract(vec2(phi, theta));
-		gl_FragColor = texture2D(videoFrameTexture, uv);
-		//gl_FragColor = pow(2.0*texture2D(videoFrameTexture, uv),vec4(0.44,0.44,0.44,1.0));
+    layout(location = 0) in vec3 vSampleVec;
+    layout(location = 1) in vec3 vEyespacePos;
+    layout(location = 2) in mat3 vModelViewOrientationMatrixT;
+    layout(location = 5) in float vEyeOffset;
+
+    vec2 WorldspaceDirToUV(vec3 wsDir)
+    {
+		float phi   = atan(wsDir.z, wsDir.x) / TwoPI;
+		float theta = acos(wsDir.y) / PI;
+		vec2  uv    = fract(vec2(phi, theta));
+        return uv;
+    }
+    vec2 OffsetScale(vec2 uv, vec4 offsc)
+    {
+        return uv * offsc.zw + offsc.xy;
+    }
+
+	void main()
+    {
+		vec4 colourOffsetScaleX=vec4(0.0,0.0,1.0,0.6667);
+		vec4 depthOffsetScaleX=vec4(0.0,0.6667,0.5,0.3333);
+		vec2  uv_d=WorldspaceDirToUV(vSampleVec);
+
+		float depth = texture2D(videoFrameTexture, OffsetScale(uv_d,depthOffsetScale)).r;
+
+        // offset angle is atan(4cm/distance)
+        // depth received is distance/50metres.
+
+        float dist_m=max(1.0,50.0*depth);
+        float angle=(vEyeOffset/dist_m);
+        // so distance
+        float c=1.0;//cos(angle);
+        float s=angle;//sin(angle);
+
+        mat3 OffsetRotationMatrix=mat3(c,0.0,s,0.0,1.0,0.0,-s,0.0,c);
+        vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
+		vec3 colourSampleVec  = normalize(vec3(-worldspace_dir.z, worldspace_dir.y, worldspace_dir.x));
+        vec2 uv=WorldspaceDirToUV(colourSampleVec);
+		gl_FragColor = 0.3*depthOffsetScale+0.3*colourOffsetScale+texture2D(videoFrameTexture, OffsetScale(uv,colourOffsetScale));
 	}
 )";
 
     static const char* FlatColour_VS = R"(
-#version 310 es
+//#version 310 es
 precision highp float;
 
 //From Application VIA
@@ -60,7 +112,7 @@ void main()
 }
 )";
     static const char* FlatColour_FS = R"(
-#version 310 es
+//#version 310 es
 precision highp float;
 
 //To Output Framebuffer
@@ -76,7 +128,7 @@ void main
 )";
 
     static const char* FlatTexture_VS = R"(
-#version 310 es
+//#version 310 es
 precision highp float;
 
 //From Application VIA
@@ -111,7 +163,7 @@ void main()
 	v_UV1		= a_UV1;
 )";
     static const char* FlatTexture_FS = R"(
-#version 310 es
+//#version 310 es
 precision highp float;
 
 //To Output Framebuffer
@@ -126,7 +178,7 @@ void main
 )";
 
     static const char* BasicPBR_VS = R"(
-#version 310 es
+//#version 310 es
 precision highp float;
 
 //From Application VIA
@@ -185,7 +237,7 @@ void main()
 }
 )";
     static const char* BasicPBR_FS = R"(
-#version 310 es
+//#version 310 es
 precision highp float;
 
 //To Output Framebuffer

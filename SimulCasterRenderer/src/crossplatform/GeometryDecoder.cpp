@@ -243,6 +243,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 				case AttributeSemantic::WEIGHTS_0:
 					target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
+				case AttributeSemantic::COUNT:
+					continue;
 				}
 			}
 
