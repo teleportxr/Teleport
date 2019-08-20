@@ -30,6 +30,7 @@ private:
 
 #define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
 #define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
+#define Next2B get<uint16_t>(m_Buffer.data(), &m_BufferOffset)
 #define NextB get<uint8_t>(m_Buffer.data(), &m_BufferOffset)
 #define NextFloat get<float>(m_Buffer.data(), &m_BufferOffset)
 #define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  

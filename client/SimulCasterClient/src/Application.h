@@ -94,7 +94,7 @@ private:
 	std::vector<float> mRefreshRates;
 
 	ovrDeviceID mControllerID;
-	int mControllerIndex;
+	//int mControllerIndex;
 	ovrVector2f mTrackpadDim;
 
 	int mNumPendingFrames = 0;

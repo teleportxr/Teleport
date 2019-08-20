@@ -23,12 +23,7 @@
 #include <libavstream/surfaces/surface_dx11.hpp>
 
 #include "libavstream/platforms/platform_windows.hpp"
-#include "crossplatform/ResourceManager.h"
-#include "api/IndexBuffer.h"
-#include "api/Shader.h"
-#include "api/Texture.h"
-#include "api/UniformBuffer.h"
-#include "api/VertexBuffer.h"
+
 
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
@@ -98,6 +93,7 @@ ClientRenderer::ClientRenderer():
 	avsTextures.resize(NumStreams);
 	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);
 	resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
+	resourceCreator.AssociateActorManager(&actorManager);
 
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
@@ -474,7 +470,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 	{
 		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
 		// Video streams are 50+...
-		if (!decoder[i].configure(dev, stream_width, stream_height, decoderParams, (int)(50+i)))
+		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, (int)(50+i)))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}

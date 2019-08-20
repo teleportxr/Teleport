@@ -7,6 +7,7 @@
 
 #include "GuiSys.h"
 #include "OVR_Locale.h"
+#include "GLSLShaders.h"
 
 #include <enet/enet.h>
 #include <sstream>
@@ -30,86 +31,6 @@ jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* 
 } // extern "C"
 
 #endif
-
-namespace shaders {
-// We NEED these extensions to update the texture without uploading it every frame.
-static const char* VideoSurface_OPTIONS = R"(
-	#extension GL_OES_EGL_image_external_essl3 : require
-)";
-
-static const char* VideoSurface_VS = R"(
-    attribute vec4 position;
-    varying highp vec3 vSampleVec;
-    varying highp vec3 vEyespacePos;
-    varying highp mat3 vModelViewOrientationMatrixT;
-    varying highp float vEyeOffset;
-
-    void main() {
-
-        highp mat3 ViewOrientationMatrix=mat3(sm.ViewMatrix[VIEW_ID]);
-        highp mat3 ModelOrientationMatrix=mat3(ModelMatrix);
-        vModelViewOrientationMatrixT=transpose(ViewOrientationMatrix * ModelOrientationMatrix);
-
-		// Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
-		vSampleVec  = normalize(vec3(-position.z, position.y, position.x));
-        highp vec4 eye_pos= ( sm.ViewMatrix[VIEW_ID] * ( ModelMatrix * position ));
-        gl_Position     = (sm.ProjectionMatrix[VIEW_ID] * eye_pos);
-        vEyespacePos    =eye_pos.xyz;
-
-		vEyeOffset		=0.08*(float(VIEW_ID)-0.5);
-    }
-)";
-
-static const char* VideoSurface_FS = R"(
-	const highp float PI    = 3.1415926536;
-	const highp float TwoPI = 2.0 * PI;
-
-	uniform highp vec4 colourOffsetScale;
-	uniform highp vec4 depthOffsetScale;
-    uniform samplerExternalOES videoFrameTexture;
-
-	varying highp vec3 vSampleVec;
-    varying highp vec3 vEyespacePos;
-    varying highp mat3 vModelViewOrientationMatrixT;
-    varying highp float vEyeOffset;
-    highp vec2 WorldspaceDirToUV(highp vec3 wsDir)
-    {
-		highp float phi   = atan(wsDir.z, wsDir.x) / TwoPI;
-		highp float theta = acos(wsDir.y) / PI;
-		highp vec2  uv    = fract(vec2(phi, theta));
-        return uv;
-    }
-    highp vec2 OffsetScale(highp vec2 uv,highp vec4 offsc)
-    {
-        return uv * offsc.zw + offsc.xy;
-    }
-
-	void main()
-    {
-	    highp vec4 colourOffsetScaleX=vec4(0.0,0.0,1.0,0.6667);
-	    highp vec4 depthOffsetScaleX=vec4(0.0,0.6667,0.5,0.3333);
-        highp vec2  uv_d=WorldspaceDirToUV(vSampleVec);
-
-		highp float depth = texture2D(videoFrameTexture, OffsetScale(uv_d,depthOffsetScale)).r;
-
-        // offset angle is atan(4cm/distance)
-        // depth received is distance/50metres.
-
-        highp float dist_m=max(1.0,50.0*depth);
-        highp float angle=(vEyeOffset/dist_m);
-        // so distance
-        highp float c=1.0;//cos(angle);
-        highp float s=angle;//sin(angle);
-
-        highp mat3 OffsetRotationMatrix=mat3(c,0.0,s,0.0,1.0,0.0,-s,0.0,c);
-        highp vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
-		highp vec3 colourSampleVec  = normalize(vec3(-worldspace_dir.z, worldspace_dir.y, worldspace_dir.x));
-        highp vec2 uv=WorldspaceDirToUV(colourSampleVec);
-		gl_FragColor = 0.3*depthOffsetScale+0.3*colourOffsetScale+texture2D(videoFrameTexture, OffsetScale(uv,colourOffsetScale));
-	}
-)";
-
-} // shaders
 
 Application::Application()
     : mDecoder(avs::DecoderBackend::Custom)
@@ -206,13 +127,9 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
                                                   { "videoFrameTexture",	ovrProgramParmType::TEXTURE_SAMPLED },
                                           };
 			mVideoSurfaceProgram = GlProgram::Build(nullptr, shaders::VideoSurface_VS,
-													shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS,
-                                                    uniformParms, sizeof( uniformParms ) / sizeof( ovrProgramParm ));
-			//mVideoSurfaceProgram= GlProgram::Build( nullptr, shaders::VideoSurface_VS
-			//		, shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS
-			//		, uniformParms, 1
-			//		, GlProgram::GLSL_PROGRAM_VERSION, false /* abort on error */, true /* use deprecated interface */ );
-
+                                                    shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS,
+													uniformParms, sizeof( uniformParms ) / sizeof( ovrProgramParm ),
+													310);
 			if(!mVideoSurfaceProgram.IsValid()) {
 				OVR_FAIL("Failed to build video surface shader program");
 			}

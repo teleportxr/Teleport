@@ -2,10 +2,10 @@
 #pragma once
 
 #include "Common.h"
-#include "Shader.h"
 #include "VertexBufferLayout.h"
 #include "Texture.h"
 #include "crossplatform/DescriptorSet.h"
+#include "crossplatform/ShaderSystem.h"
 
 namespace scr
 {
@@ -139,7 +139,13 @@ namespace scr
 
 		struct EffectCreateInfo
 		{
-			std::vector<Shader*> shaders;
+			const char* effectName; //Opaque, Transparent, Emissive
+		};
+		struct EffectPassCreateInfo
+		{
+			const char* effectPassName;
+			ShaderSystem::PassVariables passVariables;
+			ShaderSystem::Pipeline pipeline;
 			VertexBufferLayout vertexLayout;
 			TopologyType topology;
 			ViewportAndScissor viewportAndScissor;
@@ -151,19 +157,22 @@ namespace scr
 
 	protected:
 		EffectCreateInfo m_CI;
+		std::map<const char*, EffectPassCreateInfo> m_EffectPasses;
 
 	public:
 		Effect(RenderPlatform *r) :APIObject(r) {}
 		virtual ~Effect() = default;
 
 		virtual void Create(EffectCreateInfo* pEffectCreateInfo) = 0;
+		virtual void CreatePass(EffectPassCreateInfo* pEffectPassCreateInfo) = 0;
 
 		inline const EffectCreateInfo& GetEffectCreateInfo() const { return m_CI;}
+		inline const EffectPassCreateInfo& GetEffectPassCreateInfo(const char* effectPassName) const { return m_EffectPasses.at(effectPassName);}
 
 	protected:
-		virtual void Bind() const = 0;
-		virtual void Unbind() const = 0;
+		virtual void Bind(const char* effectPassName) const = 0;
+		virtual void Unbind(const char* effectPassName) const = 0;
 		
-		virtual void LinkShaders() = 0;
+		virtual void LinkShaders(const char* effectPassName) = 0;
 	};
 }

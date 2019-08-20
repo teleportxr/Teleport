@@ -36,6 +36,7 @@ namespace scr
 
 	class Actor
 	{
+	public:
 		struct ActorCreateInfo
 		{
 			bool staticMesh;	//Will the mesh move throughout the scence?
