@@ -41,6 +41,7 @@ set( src_crossplatform
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h
+	src/crossplatform/ShaderSystem.h
 	)
 
 #Include its root directory

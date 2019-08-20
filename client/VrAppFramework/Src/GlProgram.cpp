@@ -329,13 +329,13 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 	// GL_OES_EGL_image_external_essl3 with v300. In the case where multiview is not
 	// fully supported, we force the shader version to v100 in order to maintain support
 	// for image_external with the Mali T760+Android-L drivers.
-	if ( !UseMultiview && (
+	/*if ( !UseMultiview && (
 			( fragmentDirectives != NULL && strstr( fragmentDirectives, "GL_OES_EGL_image_external" ) != NULL ) ||
 			( strstr( fragmentSrc, "GL_OES_EGL_image_external" ) != NULL ) ) )
 	{
 		OVR_LOG( "GlProgram: Program GLSL version v100 due to GL_OES_EGL_image_external use." );
 		programVersion = 100;
-	}
+	}*/
 	// ----IMAGE_EXTERNAL_WORKAROUND
 #endif
 	p.VertexShader = CompileShader( GL_VERTEX_SHADER, vertexDirectives, vertexSrc, programVersion );

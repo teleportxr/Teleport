@@ -23,6 +23,7 @@ void EndFrame()
 }
 void GL_DeviceContext::ParseInputCommand(InputCommand* pInputCommand)
 {
+   /*
     //Set up for DescriptorSet binding
     std::vector<DescriptorSet> descriptorSets;
     Effect* effect = nullptr;
@@ -68,6 +69,7 @@ void GL_DeviceContext::ParseInputCommand(InputCommand* pInputCommand)
         }
     }
     BindDescriptorSets(descriptorSets, effect);
+    */
 
 }
 

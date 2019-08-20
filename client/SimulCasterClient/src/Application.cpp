@@ -34,13 +34,18 @@ jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* 
 namespace shaders {
 
 static const char* VideoSurface_OPTIONS = R"(
-	#extension GL_OES_EGL_image_external : enable
+	//#extension GL_OES_EGL_image_external : enable
 	#extension GL_OES_EGL_image_external_essl3 : enable
 )";
 
 static const char* VideoSurface_VS = R"(
-    attribute vec4 position;
+    layout(location = 0) in vec4 position;
     varying highp vec3 vSampleVec;
+
+    layout(binding = 10) uniform temp
+    {
+    	highp vec4 u_Temp;
+    };
 
     void main() {
 		// Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
@@ -149,8 +154,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 					{ "videoFrameTexture", ovrProgramParmType::TEXTURE_SAMPLED },
 			};
 			mVideoSurfaceProgram = GlProgram::Build(nullptr, shaders::VideoSurface_VS,
-													shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS,
-													uniformParms, 1);
+                                                    shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS,
+													uniformParms, 1, 310);
 
 			if(!mVideoSurfaceProgram.IsValid()) {
 				OVR_FAIL("Failed to build video surface shader program");

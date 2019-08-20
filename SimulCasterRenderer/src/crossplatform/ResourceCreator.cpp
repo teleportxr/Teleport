@@ -29,7 +29,7 @@ void ResourceCreator::ensureVertices(unsigned long long shape_uid, int startVert
 void ResourceCreator::ensureNormals(unsigned long long shape_uid, int startNormal, int normalCount, const avs::vec3* normals)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (normalCount != m_VertexCount)
+	if (normalCount != (int)m_VertexCount)
 		return;
 
 	m_Normals = normals;
@@ -46,7 +46,7 @@ void ResourceCreator::ensureTangentNormals(unsigned long long shape_uid, int sta
 void ResourceCreator::ensureTangents(unsigned long long shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (tangentCount != m_VertexCount)
+	if (tangentCount != (int)m_VertexCount)
 		return;
 
 	m_Tangents = tangents;
@@ -55,7 +55,7 @@ void ResourceCreator::ensureTangents(unsigned long long shape_uid, int startTang
 void ResourceCreator::ensureTexCoord0(unsigned long long shape_uid, int startTexCoord0, int texCoordCount0, const avs::vec2* texCoords0)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (texCoordCount0 != m_VertexCount)
+	if (texCoordCount0 != (int)m_VertexCount)
 		return;
 
 	m_UV0s = texCoords0;
@@ -64,7 +64,7 @@ void ResourceCreator::ensureTexCoord0(unsigned long long shape_uid, int startTex
 void ResourceCreator::ensureTexCoord1(unsigned long long shape_uid, int startTexCoord1, int texCoordCount1, const avs::vec2* texCoords1)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (texCoordCount1 != m_VertexCount)
+	if (texCoordCount1 != (int)m_VertexCount)
 		return;
 
 	m_UV1s = texCoords1;
@@ -73,7 +73,7 @@ void ResourceCreator::ensureTexCoord1(unsigned long long shape_uid, int startTex
 void ResourceCreator::ensureColors(unsigned long long shape_uid, int startColor, int colorCount, const avs::vec4* colors)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (colorCount != m_VertexCount)
+	if (colorCount != (int)m_VertexCount)
 		return;
 
 	m_Colors = colors;
@@ -82,7 +82,7 @@ void ResourceCreator::ensureColors(unsigned long long shape_uid, int startColor,
 void ResourceCreator::ensureJoints(unsigned long long shape_uid, int startJoint, int jointCount, const avs::vec4* joints)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (jointCount != m_VertexCount)
+	if (jointCount != (int)m_VertexCount)
 		return;
 
 	m_Joints = joints;
@@ -91,10 +91,9 @@ void ResourceCreator::ensureJoints(unsigned long long shape_uid, int startJoint,
 void ResourceCreator::ensureWeights(unsigned long long shape_uid, int startWeight, int weightCount, const avs::vec4* weights)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (weightCount != m_VertexCount)
+	if (weightCount != (int)m_VertexCount)
 		return;
 
-	size_t bufferSize = m_VertexCount * sizeof(avs::vec4);
 	m_Weights = weights;
 }
 
