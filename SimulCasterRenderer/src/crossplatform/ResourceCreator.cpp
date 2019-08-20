@@ -117,7 +117,7 @@ void ResourceCreator::ensureIndices(avs::uid shape_uid, int startIndex, int inde
 	m_Indices = indices;
 	m_IndexSize = indexSize;
 }
-void ResourceCreator::passMaterialUID(avs::uid shape_uid, avs::uid _material_uid)
+void ResourceCreator::ensureMaterialUID(avs::uid shape_uid, avs::uid _material_uid)
 {
 	CHECK_SHAPE_UID(shape_uid);
 	m_MeshMaterialUIDPairs.push_back({ shape_uid, _material_uid });
@@ -295,7 +295,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	// It may just be an update of a node's transform and/or children 
 	if (nodes.find(node_uid) == nodes.end())
 	{
-		nodes[node_uid] = std::make_shared<avs::DataNode>(std::move(node));
+		nodes[node_uid] = std::make_shared<avs::DataNode>(node);
 	}
 	else
 	{

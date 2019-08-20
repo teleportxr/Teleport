@@ -99,6 +99,7 @@ private:
 
 	int mNumPendingFrames = 0;
 
+	scr::ActorManager mActorManger;
     ResourceManager<std::shared_ptr<scr::IndexBuffer>> mIndexBufferManager;
     ResourceManager<std::shared_ptr<scr::Shader>> mShaderManager;
     ResourceManager<std::shared_ptr<scr::Texture>> mTextureManager;

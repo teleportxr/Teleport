@@ -62,6 +62,7 @@ Application::Application()
 
     resourceCreator.SetRenderPlatform(dynamic_cast<scr::RenderPlatform*>(&renderPlatform));
     resourceCreator.AssociateResourceManagers(&mIndexBufferManager, &mShaderManager, &mTextureManager, &mUniformBufferManager, &mVertexBufferManager);
+    resourceCreator.AssociateActorManager(&mActorManger);
 }
 
 Application::~Application()

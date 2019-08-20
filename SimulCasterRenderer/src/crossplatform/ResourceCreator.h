@@ -57,7 +57,7 @@ private:
 	void ensureJoints(avs::uid shape_uid, int startJoint, int jointCount, const avs::vec4* joints) override;
 	void ensureWeights(avs::uid shape_uid, int startWeight, int weightCount, const avs::vec4* weights) override;
 	void ensureIndices(avs::uid shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices) override;
-	void passMaterialUID(avs::uid shape_uid, avs::uid _material_uid) override;
+	void ensureMaterialUID(avs::uid shape_uid, avs::uid _material_uid) override;
 	avs::Result Assemble() override;
 
 	//Material and Texture

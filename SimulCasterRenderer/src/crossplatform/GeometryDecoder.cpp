@@ -251,6 +251,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			//Indices
 			size_t componentSize = avs::GetComponentSize(dg.accessors[primitive.indices_accessor].componentType);
 			target->ensureIndices(it->first, (int)(dg.accessors[primitive.indices_accessor].byteOffset / componentSize), (int)dg.accessors[primitive.indices_accessor].count, (int)componentSize,dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
+			target->ensureMaterialUID(it->first, primitive.material);
 			avs::Result result = target->Assemble();
 			if (result != avs::Result::OK)
 				return result;
