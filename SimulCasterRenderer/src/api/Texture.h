@@ -103,6 +103,9 @@ namespace scr
 			uint32_t height;
 			uint32_t depth;
 			uint32_t bytesPerPixel;
+			uint32_t arrayCount;
+			uint32_t mipCount;
+
 			Slot slot;
 			Type type;
 			Format format;

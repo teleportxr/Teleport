@@ -1,5 +1,7 @@
 #include "ResourceCreator.h"
 
+#include "Material.h"
+
 using namespace avs;
 
 ResourceCreator::ResourceCreator()
@@ -151,11 +153,11 @@ avs::Result ResourceCreator::Assemble()
 	for (size_t i = 0; i < m_VertexCount; i++)
 	{
 		size_t intraStrideOffset = 0;
-		if(m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Vertices + i, sizeof(vec3));intraStrideOffset +=3;}
+		if(m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Vertices + i, sizeof(avs::vec3));intraStrideOffset +=3;}
 		if (m_TangentNormals)
 		{
-			vec3 normal;
-			vec4 tangent;
+			avs::vec3 normal;
+			avs::vec4 tangent;
 			char *nt =(char*)( m_TangentNormals + (m_TangentNormalSize*i));
 			// tangentx tangentz
 			if (m_TangentNormalSize == 8)
@@ -182,21 +184,21 @@ avs::Result ResourceCreator::Assemble()
 				normal.y = n8.y / 32767.0f;
 				normal.z = n8.z / 32767.0f;
 			}
-			memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset,&normal, sizeof(vec3));
+			memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset,&normal, sizeof(avs::vec3));
 			intraStrideOffset += 3;
-			memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset,&tangent , sizeof(vec4));
+			memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset,&tangent , sizeof(avs::vec4));
 			intraStrideOffset += 4;
 		}
 		else
 		{
-			if (m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Normals + i, sizeof(vec3));	intraStrideOffset += 3; }
-			if (m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Tangents + i, sizeof(vec4)); intraStrideOffset += 4; }
+			if (m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Normals + i, sizeof(avs::vec3));	intraStrideOffset += 3; }
+			if (m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Tangents + i, sizeof(avs::vec4)); intraStrideOffset += 4; }
 		}
-		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV0s + i, sizeof(vec2));	intraStrideOffset +=2;}
-		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV1s + i, sizeof(vec2));	intraStrideOffset +=2;}
-		if(m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Colors + i, sizeof(vec4));	intraStrideOffset +=4;}
-		if(m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Joints + i, sizeof(vec4));	intraStrideOffset +=4;}
-		if(m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Weights + i, sizeof(vec4));	intraStrideOffset +=4;}
+		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV0s + i, sizeof(avs::vec2));	intraStrideOffset +=2;}
+		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV1s + i, sizeof(avs::vec2));	intraStrideOffset +=2;}
+		if(m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Colors + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
+		if(m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Joints + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
+		if(m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Weights + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
 	}
 
 	if (interleavedVBSize == 0 || interleavedVB == nullptr || m_IndexCount == 0 || m_Indices == nullptr)
@@ -235,4 +237,51 @@ avs::Result ResourceCreator::Assemble()
 	m_Indices = nullptr;
 
     return avs::Result::OK;
+}
+
+void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture & texture)
+{
+	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
+	
+	scr::Texture::TextureCreateInfo texInfo =
+	{
+		texture.width,
+		texture.height,
+		texture.depth,
+		texture.bytesPerPixel,
+		texture.arrayCount,
+		texture.mipCount,
+		scr::Texture::Slot::UNKNOWN,
+		scr::Texture::Type::TEXTURE_2D,
+		scr::Texture::Format::FORMAT_UNKNOWN,
+		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+		texture.width * texture.height * 4, //Width * Height * Channels
+		texture.data
+	};
+
+	scrTexture->Create(&texInfo);
+	
+	m_TextureManager->Add(texture_uid, std::move(scrTexture));
+}
+
+
+void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
+{
+	scr::Material::MaterialCreateInfo materialInfo;
+
+	//scr::Material scrMaterial(&materialInfo);
+}
+
+void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
+{
+	// It may just be an update of a node's transform and/or children 
+	if (nodes.find(node_uid) == nodes.end())
+	{
+		nodes[node_uid] = std::make_shared<avs::DataNode>(std::move(node));
+	}
+	else
+	{
+		nodes[node_uid]->childrenUids = node.childrenUids;
+		nodes[node_uid]->transform = node.transform;
+	}
 }

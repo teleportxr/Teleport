@@ -10,6 +10,7 @@
 #include "crossplatform/ResourceCreator.h"
 #include "crossplatform/GeometryDecoder.h"
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
+#include "Shaders/cubemap_constants.sl"
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
@@ -65,6 +66,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::MeshRenderer *meshRenderer;
 	simul::crossplatform::Effect *transparentEffect;
 	simul::crossplatform::Effect *cubemapClearEffect;
+	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	simul::crossplatform::ConstantBuffer<SolidConstants> solidConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
@@ -74,6 +76,10 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::Camera			camera;
 	simul::crossplatform::MouseCameraState	mouseCameraState;
 	simul::crossplatform::MouseCameraInput	mouseCameraInput;
+	// determined by the stream setup command:
+	vec4 colourOffsetScale;
+	vec4 depthOffsetScale;
+
 	bool keydown[256];
 	int framenumber;
 	SessionClient sessionClient;
@@ -92,7 +98,7 @@ public:
 	ClientRenderer();
 	~ClientRenderer();
 	// Implement SessionCommandInterface
-	void OnVideoStreamChanged(uint port, uint width, uint height) override;
+	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) override;
 	void OnVideoStreamClosed() override;
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
