@@ -102,6 +102,7 @@ private:
 	scr::ActorManager mActorManger;
     ResourceManager<std::shared_ptr<scr::IndexBuffer>> mIndexBufferManager;
     ResourceManager<std::shared_ptr<scr::Shader>> mShaderManager;
+	ResourceManager<scr::Material> mMaterialManager;
     ResourceManager<std::shared_ptr<scr::Texture>> mTextureManager;
     ResourceManager<std::shared_ptr<scr::UniformBuffer>> mUniformBufferManager;
     ResourceManager<std::shared_ptr<scr::VertexBuffer>> mVertexBufferManager;

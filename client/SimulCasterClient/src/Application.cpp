@@ -40,14 +40,15 @@ Application::Application()
 	, mGuiSys(OvrGuiSys::Create())
 	, mLocale(nullptr)
 	, mVideoSurfaceTexture(nullptr)
-	,mOvrMobile(nullptr)
+	, mOvrMobile(nullptr)
     , mSession(this)
 	, mControllerID(-1)
-    , mIndexBufferManager(ResourceManager<std::shared_ptr<scr::IndexBuffer>>(&scr::IndexBuffer::Destroy))
-    , mShaderManager(ResourceManager<std::shared_ptr<scr::Shader>>(nullptr))
-    , mTextureManager(ResourceManager<std::shared_ptr<scr::Texture>>(&scr::Texture::Destroy))
-    , mUniformBufferManager(ResourceManager<std::shared_ptr<scr::UniformBuffer>>(&scr::UniformBuffer::Destroy))
-    , mVertexBufferManager(ResourceManager<std::shared_ptr<scr::VertexBuffer>>(&scr::VertexBuffer::Destroy))
+    , mIndexBufferManager(&scr::IndexBuffer::Destroy)
+    , mShaderManager(nullptr)
+    , mMaterialManager(nullptr)
+    , mTextureManager(&scr::Texture::Destroy)
+    , mUniformBufferManager(&scr::UniformBuffer::Destroy)
+    , mVertexBufferManager(&scr::VertexBuffer::Destroy)
 
 
 {
@@ -61,7 +62,7 @@ Application::Application()
 	}
 
     resourceCreator.SetRenderPlatform(dynamic_cast<scr::RenderPlatform*>(&renderPlatform));
-    resourceCreator.AssociateResourceManagers(&mIndexBufferManager, &mShaderManager, &mTextureManager, &mUniformBufferManager, &mVertexBufferManager);
+    resourceCreator.AssociateResourceManagers(&mIndexBufferManager, &mShaderManager, &mMaterialManager, &mTextureManager, &mUniformBufferManager, &mVertexBufferManager);
     resourceCreator.AssociateActorManager(&mActorManger);
 }
 
