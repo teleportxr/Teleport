@@ -269,7 +269,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		texture.mipCount,
 		scr::Texture::Slot::UNKNOWN,
 		scr::Texture::Type::TEXTURE_2D,
-		scr::Texture::Format::FORMAT_UNKNOWN,
+		scr::Texture::Format::RGBA8, //Assumed
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
 		texture.width * texture.height * 4, //Width * Height * Channels
 		texture.data
@@ -280,14 +280,89 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 	m_TextureManager->Add(texture_uid, std::move(scrTexture));
 }
 
-
+///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
+	///NOTE: Need to check if an index is set for that texture in the avs::Material.
+	///NOTE: Need to check if a texture is returned.
 	scr::Material::MaterialCreateInfo materialInfo;
+	materialInfo.diffuse.texture = nullptr;
+	materialInfo.normal.texture = nullptr;
+	materialInfo.combined.texture = nullptr;
 
-	std::shared_ptr<scr::Material> scrMaterial = std::make_unique<scr::Material>(&materialInfo);
+	if(material.pbrMetallicRoughness.baseColorTexture.index != 0)
+	{
+		const std::shared_ptr<scr::Texture> *diffuseTexture = m_TextureManager->Claim(material.pbrMetallicRoughness.baseColorTexture.index);
 
-	m_pActorManager->AddMaterial(material_uid, scrMaterial);
+		if(diffuseTexture)
+		{
+			materialInfo.diffuse.texture = &**diffuseTexture;
+
+			materialInfo.diffuse.texCoordsScalar[0] = {1, 1};
+			materialInfo.diffuse.texCoordsScalar[1] = {1, 1};
+			materialInfo.diffuse.texCoordsScalar[2] = {1, 1};
+			materialInfo.diffuse.texCoordsScalar[3] = {1, 1};
+
+			materialInfo.diffuse.textureOutputScalar =
+			{
+				material.pbrMetallicRoughness.baseColorFactor.x,
+				material.pbrMetallicRoughness.baseColorFactor.y,
+				material.pbrMetallicRoughness.baseColorFactor.z,
+				material.pbrMetallicRoughness.baseColorFactor.w,
+			};
+		}
+		else
+		{
+			///REQUEST RESEND OF TEXTURE
+		}
+	}
+
+	if(material.normalTexture.index != 0)
+	{
+		const std::shared_ptr<scr::Texture> *normalTexture = m_TextureManager->Claim(material.normalTexture.index);
+
+		if(normalTexture)
+		{
+			materialInfo.normal.texture = &**normalTexture;
+
+			materialInfo.normal.texCoordsScalar[0] = {1, 1};
+			materialInfo.normal.texCoordsScalar[1] = {1, 1};
+			materialInfo.normal.texCoordsScalar[2] = {1, 1};
+			materialInfo.normal.texCoordsScalar[3] = {1, 1};
+
+			materialInfo.normal.textureOutputScalar = {1, 1, 1, 1};
+		}
+		else
+		{
+			///REQUEST RESEND OF TEXTURE
+		}
+	}
+
+	if(material.occlusionTexture.index != 0)
+	{
+		const std::shared_ptr<scr::Texture> *occlusionTexture = m_TextureManager->Claim(material.normalTexture.index);
+
+		if(occlusionTexture)
+		{
+			materialInfo.combined.texture = &**occlusionTexture;
+
+			materialInfo.combined.texCoordsScalar[0] = {1, 1};
+			materialInfo.combined.texCoordsScalar[1] = {1, 1};
+			materialInfo.combined.texCoordsScalar[2] = {1, 1};
+			materialInfo.combined.texCoordsScalar[3] = {1, 1};
+
+			materialInfo.combined.textureOutputScalar = {1, 1, 1, 1};
+		}
+		else
+		{
+			///REQUEST RESEND OF TEXTURE
+		}
+	}
+
+	///This needs an actual value.
+	materialInfo.effect = nullptr;
+
+	materialManager->Add(material_uid, &materialInfo);
 }
 
 void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)

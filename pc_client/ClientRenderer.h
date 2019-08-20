@@ -38,6 +38,11 @@ namespace pc_client
 	class PC_RenderPlatform;
 }
 
+namespace scr
+{
+	class Material;
+}
+
 struct AVSTexture
 {
 	virtual ~AVSTexture() = default;
@@ -97,6 +102,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	scr::ActorManager actorManager;
 	ResourceManager<std::shared_ptr<scr::IndexBuffer>> indexBufferManager;
 	ResourceManager<std::shared_ptr<scr::Shader>> shaderManager;
+	ResourceManager<scr::Material> materialManager;
 	ResourceManager<std::shared_ptr<scr::Texture>> textureManager;
 	ResourceManager<std::shared_ptr<scr::UniformBuffer>> uniformBufferManager;
 	ResourceManager<std::shared_ptr<scr::VertexBuffer>> vertexBufferManager;

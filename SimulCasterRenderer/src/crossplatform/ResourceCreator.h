@@ -8,6 +8,11 @@
 #include "ActorManager.h"
 #include "api/RenderPlatform.h"
 
+namespace scr
+{
+	class Material;
+}
+
 #if 0
 // Removed circular dependencies.
 #if defined(_WIN32) || defined(WIN32) || defined (_WIN64) || defined(WIN64)
@@ -34,12 +39,14 @@ public:
 	inline void AssociateResourceManagers(
 		ResourceManager<std::shared_ptr<scr::IndexBuffer>>* indexBufferManager,
 		ResourceManager<std::shared_ptr<scr::Shader>>* shaderManager,
+		ResourceManager<scr::Material> *materialManager,
 		ResourceManager<std::shared_ptr<scr::Texture>>* textureManager,
 		ResourceManager<std::shared_ptr<scr::UniformBuffer>>* uniformBufferManager,
 		ResourceManager<std::shared_ptr<scr::VertexBuffer>>* vertexBufferManager)
 	{
 		m_IndexBufferManager = indexBufferManager;
 		m_ShaderManager = shaderManager;
+		this->materialManager = materialManager;
 		m_TextureManager = textureManager;
 		m_UniformBufferManager = uniformBufferManager;
 		m_VertexBufferManager = vertexBufferManager;
@@ -96,6 +103,7 @@ private:
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
 	ResourceManager<std::shared_ptr<scr::IndexBuffer>>*		m_IndexBufferManager;
+	ResourceManager<scr::Material>							*materialManager;
 	ResourceManager<std::shared_ptr<scr::Shader>>*			m_ShaderManager;
 	ResourceManager<std::shared_ptr<scr::Texture>>*			m_TextureManager;
 	ResourceManager<std::shared_ptr<scr::UniformBuffer>>*	m_UniformBufferManager;
