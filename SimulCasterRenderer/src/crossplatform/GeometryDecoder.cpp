@@ -326,6 +326,8 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.emissiveFactor.y = NextFloat;
 		material.emissiveFactor.z = NextFloat;
 
+		decodeTexture(target);
+
 		target->passMaterial(mat_uid, material);
 	}
 	
