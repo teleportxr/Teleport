@@ -4,13 +4,20 @@
 #include "PC_Sampler.h"
 #include <api/Texture.h>
 #include <api/Sampler.h>
+namespace simul
+{
+	namespace crossplatform
+	{
+		class Buffer;
+	}
+}
 
 namespace pc_client
 {
 	class PC_Texture final : public scr::Texture
 	{
 	private:
-
+		simul::crossplatform::Texture* m_SimulTexture;
 	public:
 		PC_Texture(scr::RenderPlatform *r):scr::Texture(r) {}
 
