@@ -283,8 +283,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
-	///NOTE: Need to check if an index is set for that texture in the avs::Material.
-	///NOTE: Need to check if a texture is returned.
+	///Claims textures without ever unclaiming the textures.
 	scr::Material::MaterialCreateInfo materialInfo;
 	materialInfo.diffuse.texture = nullptr;
 	materialInfo.normal.texture = nullptr;
