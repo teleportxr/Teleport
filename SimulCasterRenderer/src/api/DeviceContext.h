@@ -29,7 +29,7 @@ namespace scr
 	{
 		Mesh*			pMesh;
 		Material*		pMaterial;
-		Transform*	pTransform;
+		Transform*		pTransform;
 
 		InputCommand_Mesh_Material_Transform(InputCommandCreateInfo* pInputCommandCreateInfo, Actor* pActor)
 		{

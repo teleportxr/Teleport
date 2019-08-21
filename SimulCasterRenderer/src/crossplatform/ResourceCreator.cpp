@@ -43,7 +43,7 @@ void ResourceCreator::ensureNormals(avs::uid shape_uid, int startNormal, int nor
 void ResourceCreator::ensureTangentNormals(avs::uid shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	assert(tnCount == m_VertexCount);
+	assert(tnCount == (int)m_VertexCount);
 	m_TangentNormalSize = tnSize;
 	m_TangentNormals = tn;
 }
@@ -231,14 +231,14 @@ avs::Result ResourceCreator::Assemble()
 	ib_ci.data = m_Indices;
 	ib->Create(&ib_ci);
 
-	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
-	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);
-
 	Mesh::MeshCreateInfo mesh_ci;
 	mesh_ci.vb = vb.get();
 	mesh_ci.ib = ib.get();
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
 	m_pActorManager->AddMesh(shape_uid, mesh);
+
+	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
+	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);
 
 	m_Vertices = nullptr;
 	m_Normals = nullptr;
@@ -361,7 +361,8 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	///This needs an actual value.
 	materialInfo.effect = nullptr;
-
+	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(&materialInfo);
+	m_pActorManager->AddMaterial(material_uid, scr_material);
 	materialManager->Add(material_uid, &materialInfo);
 }
 

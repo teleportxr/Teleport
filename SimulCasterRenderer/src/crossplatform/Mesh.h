@@ -11,8 +11,8 @@ namespace scr
 	public:
 		struct MeshCreateInfo
 		{
-			const VertexBuffer* vb;
-			const IndexBuffer* ib;
+			VertexBuffer* vb;
+			IndexBuffer* ib;
 		};
 
 	protected:

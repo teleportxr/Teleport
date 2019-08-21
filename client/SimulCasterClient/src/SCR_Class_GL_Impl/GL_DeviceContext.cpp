@@ -4,6 +4,10 @@
 using namespace scc;
 using namespace scr;
 
+void GL_DeviceContext::Create(DeviceContextCreateInfo* pDeviceContextCreateInfo)
+{
+    m_CI = *pDeviceContextCreateInfo;
+}
 
 void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 {
@@ -13,11 +17,11 @@ void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
 {
 
 }
-void BeginFrame()
+void GL_DeviceContext::BeginFrame()
 {
 
 }
-void EndFrame()
+void GL_DeviceContext::EndFrame()
 {
 
 }

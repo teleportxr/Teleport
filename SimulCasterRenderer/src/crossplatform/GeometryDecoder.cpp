@@ -50,10 +50,6 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	{
 		return decodeMesh(target);
 	}
-	case GeometryPayloadType::Node:
-	{
-		return decodeNode(target);
-	}
 	case GeometryPayloadType::Material:
 	{
 		return decodeMaterial(target);
@@ -69,6 +65,10 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	case GeometryPayloadType::Animation:
 	{
 		return decodeAnimation(target);
+	}
+	case GeometryPayloadType::Node:
+	{
+		return decodeNode(target);
 	}
 	default:
 	{ 
@@ -260,31 +260,6 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& target)
-{
-	uint32_t nodeCount = Next8B;
-	for (uint32_t i = 0; i < nodeCount; ++i)
-	{
-		avs::uid uid = Next8B;
-
-		avs::DataNode node;
-
-		node.transform = NextChunk(avs::Transform);
-
-		node.data_uid = Next8B;
-
-		node.data_type = static_cast<NodeDataType>(NextB);
-
-		uint32_t childCount = Next8B;
-		for (uint32_t j = 0; j < childCount; ++j)
-		{
-			node.childrenUids.push_back(Next8B);
-		}
-		target->passNode(uid, node);
-	}
-	return avs::Result::OK;
-}
-
 avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& target)
 {
 	size_t materialAmount = Next8B;
@@ -375,4 +350,29 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& target)
 {
 	return avs::Result::GeometryDecoder_Incomplete;
+}
+
+avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& target)
+{
+	uint32_t nodeCount = Next8B;
+	for (uint32_t i = 0; i < nodeCount; ++i)
+	{
+		avs::uid uid = Next8B;
+
+		avs::DataNode node;
+
+		node.transform = NextChunk(avs::Transform);
+
+		node.data_uid = Next8B;
+
+		node.data_type = static_cast<NodeDataType>(NextB);
+
+		uint32_t childCount = Next8B;
+		for (uint32_t j = 0; j < childCount; ++j)
+		{
+			node.childrenUids.push_back(Next8B);
+		}
+		target->passNode(uid, node);
+	}
+	return avs::Result::OK;
 }

@@ -16,7 +16,8 @@ namespace scr
 		std::map<avs::uid, std::shared_ptr<Mesh>> m_Meshes;
 		std::map<avs::uid, std::shared_ptr<Material>> m_Materials;
 		std::map<avs::uid, std::shared_ptr<Transform>> m_Transforms;
-		
+
+	public:
 		std::map<avs::uid, std::shared_ptr<Actor>> m_Actors;
 
 	public:

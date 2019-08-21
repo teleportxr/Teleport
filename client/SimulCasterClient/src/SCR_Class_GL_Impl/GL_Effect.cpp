@@ -24,9 +24,9 @@ void GL_Effect::LinkShaders(const char* effectPassName)
     {
         for(size_t i = 0; i < pipeline.m_ShaderCount; i++)
         {
-            if(pipeline.m_Shaders->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_VERTEX)
+            if(pipeline.m_Shaders[i].GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_VERTEX)
                 vertex = &(pipeline.m_Shaders[i]);
-            if(pipeline.m_Shaders->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_FRAGMENT)
+            else if(pipeline.m_Shaders[i].GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_FRAGMENT)
                 fragment = &(pipeline.m_Shaders[i]);
             else
                 continue;
@@ -40,7 +40,7 @@ void GL_Effect::LinkShaders(const char* effectPassName)
 
     assert(vertex != nullptr && fragment != nullptr);
 
-    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, nullptr, 0);
+    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, nullptr, 0, 310);
 }
 
 void GL_Effect::Bind(const char* effectPassName) const
@@ -128,7 +128,7 @@ void GL_Effect::Unbind(const char* effectPassName) const
     //NULL
 }
 
-GLenum GL_Effect::ToGLTopology(TopologyType topology) const
+GLenum GL_Effect::ToGLTopology(TopologyType topology)
 {
     switch (topology)
     {
@@ -141,7 +141,7 @@ GLenum GL_Effect::ToGLTopology(TopologyType topology) const
     }
 };
 
-GLenum GL_Effect::ToGLCullMode(CullMode cullMode) const
+GLenum GL_Effect::ToGLCullMode(CullMode cullMode)
 {
     switch (cullMode)
     {
@@ -152,7 +152,17 @@ GLenum GL_Effect::ToGLCullMode(CullMode cullMode) const
     }
 };
 
-GLenum GL_Effect::ToGLCompareOp(CompareOp op) const
+GLenum GL_Effect::ToGLPolygonMode(PolygonMode polygonMode)
+{
+    switch (polygonMode)
+    {
+        case PolygonMode::FILL:      return GL_FILL;
+        case PolygonMode::LINE:      return GL_LINES;
+        case PolygonMode::POINT:     return GL_POINTS;
+    }
+}
+
+GLenum GL_Effect::ToGLCompareOp(CompareOp op)
 {
     switch(op)
     {
@@ -167,7 +177,7 @@ GLenum GL_Effect::ToGLCompareOp(CompareOp op) const
     }
 };
 
-GLenum GL_Effect::ToGLStencilCompareOp(StencilCompareOp op) const
+GLenum GL_Effect::ToGLStencilCompareOp(StencilCompareOp op)
 {
     switch (op) {
         case StencilCompareOp::KEEP:                    return GL_KEEP;
@@ -181,7 +191,7 @@ GLenum GL_Effect::ToGLStencilCompareOp(StencilCompareOp op) const
     }
 };
 
-GLenum GL_Effect::ToGLBlendFactor(BlendFactor factor) const
+GLenum GL_Effect::ToGLBlendFactor(BlendFactor factor)
 {
     switch(factor)
     {
@@ -197,7 +207,7 @@ GLenum GL_Effect::ToGLBlendFactor(BlendFactor factor) const
         case BlendFactor::ONE_MINUS_DST_ALPHA: return GL_ONE_MINUS_DST_ALPHA;
     }
 };
-GLenum GL_Effect::ToGLBlendOp(BlendOp op) const
+GLenum GL_Effect::ToGLBlendOp(BlendOp op)
 {
     switch (op) {
         case BlendOp::ADD:                  return GL_FUNC_ADD;

@@ -31,6 +31,7 @@ namespace scr
 		void UpdateModelUBO() const;
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
+		inline const mat4& GetTransformMatrix() const { return  m_TransformData.m_ModelMatrix; }
 		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
 	};
 

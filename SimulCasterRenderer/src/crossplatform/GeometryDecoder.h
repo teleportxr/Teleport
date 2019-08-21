@@ -17,11 +17,11 @@ public:
 
 private:
 	avs::Result decodeMesh(avs::GeometryTargetBackendInterface*& target);
-	avs::Result decodeNode(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeMaterial(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeMaterialInstance(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeTexture(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeAnimation(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeNode(avs::GeometryTargetBackendInterface*& target);
 
 	//Use for the #define Next8B and #define Next4B macros
 	std::vector<uint8_t> m_Buffer;

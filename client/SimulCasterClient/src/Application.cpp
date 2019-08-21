@@ -49,8 +49,9 @@ Application::Application()
     , mTextureManager(&scr::Texture::Destroy)
     , mUniformBufferManager(&scr::UniformBuffer::Destroy)
     , mVertexBufferManager(&scr::VertexBuffer::Destroy)
-
-
+    , mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
+    , mFlatColourEffect(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
+    , mDummyTexture(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
 {
     memset(&renderConstants,0,sizeof(RenderConstants));
     renderConstants.colourOffsetScale={0.0f,0.0f,1.0f,0.6667f};
@@ -63,7 +64,11 @@ Application::Application()
 
     resourceCreator.SetRenderPlatform(dynamic_cast<scr::RenderPlatform*>(&renderPlatform));
     resourceCreator.AssociateResourceManagers(&mIndexBufferManager, &mShaderManager, &mMaterialManager, &mTextureManager, &mUniformBufferManager, &mVertexBufferManager);
-    resourceCreator.AssociateActorManager(&mActorManger);
+    resourceCreator.AssociateActorManager(&mActorManager);
+
+    scr::Effect::EffectCreateInfo ci;
+    ci.effectName = "flatColour";
+    mFlatColourEffect.Create(&ci);
 }
 
 Application::~Application()
@@ -120,8 +125,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
 		mGuiSys->Init(this->app, *mSoundEffectPlayer, fontName.ToCStr(), &app->GetDebugLines());
 
+        //VideoSurfaceProgram
 		{
-            //-------------------------------------------------------------------------
             static ovrProgramParm uniformParms[] =	// both TextureMvpProgram and CubeMapPanoProgram use the same parm mapping
                                           {
                                                   { "colourOffsetScale",	ovrProgramParmType::FLOAT_VECTOR4 },
@@ -136,6 +141,121 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 				OVR_FAIL("Failed to build video surface shader program");
 			}
 		}
+		//FlatColourEffect and Material
+        {
+            scr::ShaderSystem::PassVariables pv;
+            pv.mask = false;
+            pv.reverseDepth = false;
+            pv.msaa = false;
+
+            scc::GL_Shader shaders[2] = {
+                    scc::GL_Shader(dynamic_cast<scr::RenderPlatform*>(&renderPlatform)),
+                    scc::GL_Shader(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))};
+            scr::Shader::ShaderCreateInfo sci[2];
+            sci[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+            sci[0].entryPoint = "main";
+            sci[0].filepath = nullptr;
+            sci[0].sourceCode = shaders::FlatColour_VS;
+            sci[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+            sci[1].entryPoint = "main";
+            sci[1].filepath = nullptr;
+            sci[1].sourceCode = shaders::FlatColour_FS;
+            shaders[0].Create(&sci[0]);
+            shaders[1].Create(&sci[1]);
+            scr::ShaderSystem::GraphicsPipeline gp (shaders, 2);
+
+            scr::VertexBufferLayout vbl;
+            vbl.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC4, scr::VertexBufferLayout::Type::FLOAT);
+
+            scr::Effect::ViewportAndScissor vs = {};
+            vs.x = 0.0f;
+            vs.y = 0.0f;
+            vs.width = 0.0f;
+            vs.height = 0.0f;
+            vs.minDepth = 1.0f;
+            vs.maxDepth = 0.0f;
+            vs.offsetX = 0;
+            vs.offsetY = 0;
+            vs.extentX = (uint32_t)vs.x;
+            vs.extentY = (uint32_t)vs.y;
+
+            scr::Effect::RasterizationState rs = {};
+            rs.depthClampEnable = false;
+            rs.rasterizerDiscardEnable = false;
+            rs.cullMode = scr::Effect::CullMode::BACK_BIT;
+            rs.frontFace = scr::Effect::FrontFace::COUNTER_CLOCKWISE;
+
+            scr::Effect::MultisamplingState ms = {};
+            ms.samplerShadingEnable = false;
+            ms.rasterizationSamples = scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT;
+
+            scr::Effect::StencilCompareOpState scos = {};
+            scos.stencilFailOp = scr::Effect::StencilCompareOp::KEEP;
+            scos.stencilPassDepthFailOp = scr::Effect::StencilCompareOp::KEEP;
+            scos.passOp = scr::Effect::StencilCompareOp::KEEP;
+            scos.compareOp = scr::Effect::CompareOp::NEVER;
+            scr::Effect::DepthStencilingState dss = {};
+            dss.depthTestEnable = true;
+            dss.depthWriteEnable = false;
+            dss.depthCompareOp = scr::Effect::CompareOp::LESS;
+            dss.stencilTestEnable = false;
+            dss.frontCompareOp = scos;
+            dss.backCompareOp = scos;
+            dss.depthBoundTestEnable = false;
+            dss.minDepthBounds = 0.0f;
+            dss.maxDepthBounds = 1.0f;
+
+            scr::Effect::ColourBlendingState cbs = {};
+            cbs.blendEnable = true;
+            cbs.srcColorBlendFactor = scr::Effect::BlendFactor::SRC_ALPHA;
+            cbs.dstColorBlendFactor = scr::Effect::BlendFactor::ONE_MINUS_SRC_ALPHA;
+            cbs.colorBlendOp = scr::Effect::BlendOp ::ADD;
+			cbs.srcAlphaBlendFactor = scr::Effect::BlendFactor::ONE;
+			cbs.dstAlphaBlendFactor = scr::Effect::BlendFactor::ZERO;
+			cbs.alphaBlendOp = scr::Effect::BlendOp ::ADD;
+
+            scr::Effect::EffectPassCreateInfo ci;
+            ci.effectPassName = "standard";
+            ci.passVariables = pv;
+            ci.pipeline = gp;
+            ci.vertexLayout = vbl;
+            ci.topology = scr::Effect::TopologyType::TRIANGLE_LIST;
+            ci.viewportAndScissor = vs;
+            ci.rasterizationState = rs;
+            ci.multisamplingState = ms;
+            ci.depthStencilingState = dss;
+            ci.colourBlendingState = cbs;
+            mFlatColourEffect.CreatePass(&ci);
+            mFlatColourEffect.LinkShaders("standard");
+
+            scr::Texture::TextureCreateInfo t_ci = {};
+            t_ci.width = 1;
+            t_ci.height = 1;
+            t_ci.depth = 1;
+            t_ci.bytesPerPixel = 4;
+            t_ci.arrayCount = 1;
+            t_ci.mipCount = 1;
+            t_ci.slot = scr::Texture::Slot ::DIFFUSE;
+            t_ci.type = scr::Texture::Type ::TEXTURE_2D;
+            t_ci.format = scr::Texture::Format ::RGBA8;
+            t_ci.sampleCount = scr::Texture::SampleCountBit ::SAMPLE_COUNT_1_BIT;
+            t_ci.size = 0;
+            t_ci.data = nullptr;
+            mDummyTexture.Create(&t_ci);
+            scr::Material::MaterialParameter mp;
+            mp.texture = dynamic_cast<scr::Texture*>(&mDummyTexture);
+            mp.textureOutputScalar = scr::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+            mp.texCoordsScalar[0] = scr::vec2(1.0f, 1.0f);
+            mp.texCoordsScalar[1] = scr::vec2(1.0f, 1.0f);
+            mp.texCoordsScalar[2] = scr::vec2(1.0f, 1.0f);
+            mp.texCoordsScalar[3] = scr::vec2(1.0f, 1.0f);
+            scr::Material::MaterialCreateInfo m_ci;
+            m_ci.effect = dynamic_cast<scr::Effect*>(&mFlatColourEffect);
+            m_ci.diffuse = mp;
+            m_ci.normal = mp;
+            m_ci.combined = mp;
+            mFlatColourMaterial = std::make_shared<scr::Material>(&m_ci);
+        }
 
 		mDecoder.setBackend(new VideoDecoderProxy(java->Env, this, avs::VideoCodec::HEVC));
 
@@ -236,7 +356,83 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Process stream pipeline
 	mPipeline.process();
 
-	ovrFrameResult res;
+	//Build frame
+    ovrFrameResult res;
+
+	scr::InputCommandCreateInfo ci;
+	ci.type = scr::INPUT_COMMAND_MESH_MATERIAL_TRANSFORM;
+	ci.pFBs = nullptr;
+	ci.frameBufferCount = 0;
+	ci.pCamera = nullptr;
+
+	for(auto& actor : mActorManager.m_Actors)
+    {
+	    scr::InputCommand_Mesh_Material_Transform ic_mmm(&ci, actor.second.get());
+	    ic_mmm.pMaterial = mFlatColourMaterial.get();
+
+	    if(mOVRActors.find(actor.first) == mOVRActors.end())
+        {
+            auto gl_effect = dynamic_cast<scc::GL_Effect *>(ic_mmm.pMaterial->GetMaterialCreateInfo().effect);
+            auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("standard");
+            auto gl_vb = dynamic_cast<scc::GL_VertexBuffer *>(ic_mmm.pMesh->GetMeshCreateInfo().vb);
+            auto gl_ib = dynamic_cast<scc::GL_IndexBuffer *>(ic_mmm.pMesh->GetMeshCreateInfo().ib);
+            gl_vb->CreateVAO(gl_ib->GetIndexID());
+
+            GlGeometry geo;
+            geo.vertexBuffer = gl_vb->GetVertexID();
+            geo.indexBuffer = gl_ib->GetIndexID();
+            geo.vertexArrayObject = gl_vb->GetVertexArrayID();
+            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("stardard").topology);
+            geo.vertexCount = (int) gl_vb->GetVertexCount();
+            geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
+            geo.IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
+                            gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT
+                                                                          : GL_UNSIGNED_BYTE;
+
+            ovrSurfaceDef ovr_Actor;
+            std::string _actorName = std::to_string(actor.first);
+            ovr_Actor.surfaceName = OVR::String(_actorName.c_str());
+            ovr_Actor.numInstances = 1;
+            ovr_Actor.geo = geo;
+
+            ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
+            ovr_Actor.graphicsCommand.GpuState.blendMode = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.colorBlendOp);
+            ovr_Actor.graphicsCommand.GpuState.blendSrc = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcColorBlendFactor);
+            ovr_Actor.graphicsCommand.GpuState.blendDst = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstColorBlendFactor);
+            ovr_Actor.graphicsCommand.GpuState.blendModeAlpha = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.alphaBlendOp);
+            ovr_Actor.graphicsCommand.GpuState.blendSrcAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcAlphaBlendFactor);
+            ovr_Actor.graphicsCommand.GpuState.blendDstAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
+            ovr_Actor.graphicsCommand.GpuState.depthFunc = scc::GL_Effect::ToGLCompareOp(gl_effectPass.depthStencilingState.depthCompareOp);
+            ovr_Actor.graphicsCommand.GpuState.frontFace = gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
+            ovr_Actor.graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
+            ovr_Actor.graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
+            ovr_Actor.graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;
+            ovr_Actor.graphicsCommand.GpuState.depthMaskEnable = false;
+            ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[0] = true;
+            ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[1] = true;
+            ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[2] = true;
+            ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[3] = true;
+            ovr_Actor.graphicsCommand.GpuState.polygonOffsetEnable = false;
+            ovr_Actor.graphicsCommand.GpuState.cullEnable = true;
+            ovr_Actor.graphicsCommand.GpuState.lineWidth = 1.0f;
+            ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
+            ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
+
+            mOVRActors[actor.first] = ovr_Actor;
+        }
+	    else
+	    {
+	        //NULL
+	    }
+
+		OVR::Matrix4f transform;
+		scr::mat4 scr_Transform = ic_mmm.pTransform->GetTransformMatrix();
+		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
+		ovrDrawSurface ovr_ActorDrawSurface(transform, &mOVRActors[actor.first]);
+
+        res.Surfaces.PushBack(ovr_ActorDrawSurface);
+	}
+
 
 	mScene.Frame(vrFrame);
 	mScene.GetFrameMatrices(vrFrame.FovX, vrFrame.FovY, res.FrameMatrices);
@@ -253,7 +449,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     }
 #if 1
     auto ctr=mNetworkSource.getCounterValues();
-    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d    \nDecoder Packets Dropped: %d\nFramerate: %4.4f\nBandwidth: %4.4f"
+    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f"
             , ctr.networkPacketsDropped, ctr.decoderPacketsDropped
             ,frameRate,ctr.bandwidthKPS);
 #endif
