@@ -382,7 +382,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             geo.vertexBuffer = gl_vb->GetVertexID();
             geo.indexBuffer = gl_ib->GetIndexID();
             geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("stardard").topology);
+            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effectPass.topology);
             geo.vertexCount = (int) gl_vb->GetVertexCount();
             geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
             geo.IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
@@ -390,7 +390,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
                                                                           : GL_UNSIGNED_BYTE;
 
             ovrSurfaceDef ovr_Actor;
-            std::string _actorName = std::to_string(actor.first);
+            //std::string _actorName = std::to_string(actor.first);
+            std::string _actorName = "CubeTest";
             ovr_Actor.surfaceName = OVR::String(_actorName.c_str());
             ovr_Actor.numInstances = 1;
             ovr_Actor.geo = geo;

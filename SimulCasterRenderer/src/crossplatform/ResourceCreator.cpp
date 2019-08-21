@@ -386,32 +386,33 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	if (m_pActorManager->GetTransform(node_uid) != nullptr) //Check the transform has already been added, if so update transform.
 	{
 		m_pActorManager->GetTransform(node_uid)->UpdateModelMatrix(translation, rotation, scale);
+		return;
 	}
 	else
 	{
 		std::shared_ptr<scr::Transform> transform = std::make_shared<scr::Transform>();
 		transform->UpdateModelMatrix(translation, rotation, scale);
 		m_pActorManager->AddTransform(node_uid, transform);
-	}
 
-	switch (node.data_type)
-	{
-	case NodeDataType::Mesh:
-		{
-			size_t i = 0;
-			for (auto& meshMaterialPair : m_MeshMaterialUIDPairs)
-			{
-				if (meshMaterialPair.first == node.data_uid) //data_uid == shape_uid
-					break;
-				else
-					i++;
-			}
-			CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
-		}
-	case NodeDataType::Camera:
-		return;
-	case NodeDataType::Scene:
-		return;
+	    switch (node.data_type)
+	    {
+	    case NodeDataType::Mesh:
+	    	{
+	    		size_t i = 0;
+	    		for (auto& meshMaterialPair : m_MeshMaterialUIDPairs)
+	    		{
+	    			if (meshMaterialPair.first == node.data_uid) //data_uid == shape_uid
+	    				break;
+	    			else
+	    				i++;
+	    		}
+	    		CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
+	    	}
+	    case NodeDataType::Camera:
+	    	return;
+	    case NodeDataType::Scene:
+	    	return;
+	}
 	}
 	
 }
