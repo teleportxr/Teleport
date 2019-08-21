@@ -11,7 +11,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "VRMenuEventHandler.h"
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 #include "OVR_Input.h"
 #include "VrCommon.h"
@@ -41,7 +41,7 @@ VRMenuEventHandler::~VRMenuEventHandler()
 //==============================
 // VRMenuEventHandler::Frame
 void VRMenuEventHandler::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
-        menuHandle_t const & rootHandle, Posef const & menuPose, Matrix4f const & traceMat, Array< VRMenuEvent > & events )
+        menuHandle_t const & rootHandle, Posef const & menuPose, Matrix4f const & traceMat, std::vector< VRMenuEvent > & events )
 {
 	VRMenuObject * root = guiSys.GetVRMenuMgr().ToObject( rootHandle );
 	if ( root == NULL )
@@ -70,7 +70,7 @@ void VRMenuEventHandler::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFram
 /*
 	if ( hit != NULL )
 	{
-		guiSys.GetApp()->ShowInfoText( 0.0f, "%s", hit->GetText().ToCStr() );
+		guiSys.GetApp()->ShowInfoText( 0.0f, "%s", hit->GetText().c_str() );
 	}
 */
 	bool focusChanged = ( hitHandle != FocusedHandle );
@@ -82,7 +82,7 @@ void VRMenuEventHandler::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFram
 		{
 			// setup event for item losing the focus
 			VRMenuEvent event( VRMENU_EVENT_FOCUS_LOST, EVENT_DISPATCH_TARGET, FocusedHandle, Vector3f( 0.0f ), result, "" );
-			events.PushBack( event );
+			events.push_back( event );
 		}
 		if ( hit != NULL )
 		{
@@ -91,7 +91,7 @@ void VRMenuEventHandler::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFram
 				// set up event for item gaining the focus
 				VRMenuEvent event( VRMENU_EVENT_FOCUS_GAINED, EVENT_DISPATCH_FOCUS, hitHandle, 
 									oldFocus != nullptr ? oldFocus->GetHandle() : menuHandle_t(), Vector3f( 0.0f ), result, "" );
-				events.PushBack( event );
+				events.push_back( event );
 			}
 		}
 		FocusedHandle = hitHandle;
@@ -100,24 +100,24 @@ void VRMenuEventHandler::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFram
 	if ( ( vrFrame.Input.buttonPressed & BUTTON_SWIPE_UP ) != 0 )
 	{
 		VRMenuEvent event( VRMENU_EVENT_SWIPE_UP, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( 0.0f ), result, "" );
-		events.PushBack( event );
+		events.push_back( event );
 	}
 	if ( ( vrFrame.Input.buttonPressed & BUTTON_SWIPE_DOWN ) != 0 )
 	{
 		VRMenuEvent event( VRMENU_EVENT_SWIPE_DOWN, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( 0.0f ), result, "" );
-		events.PushBack( event );
+		events.push_back( event );
 
 	}
 	if ( ( vrFrame.Input.buttonPressed & BUTTON_SWIPE_FORWARD ) != 0 )
 	{
 		VRMenuEvent event( VRMENU_EVENT_SWIPE_FORWARD, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( 0.0f ), result, "" );
-		events.PushBack( event );
+		events.push_back( event );
 
 	}
 	if ( ( vrFrame.Input.buttonPressed & BUTTON_SWIPE_BACK ) != 0 )
 	{
 		VRMenuEvent event( VRMENU_EVENT_SWIPE_BACK, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( 0.0f ), result, "" );
-		events.PushBack( event );
+		events.push_back( event );
 	}
 
 	bool touchPressed = ( vrFrame.Input.buttonPressed & ( BUTTON_TOUCH | BUTTON_A ) ) != 0;
@@ -162,19 +162,19 @@ void VRMenuEventHandler::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFram
 	if ( touchPressed )
 	{
 		VRMenuEvent event( VRMENU_EVENT_TOUCH_DOWN, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( 0.0f ), result, "" );
-		events.PushBack( event );
+		events.push_back( event );
 	}
 	if ( touchReleased )
 	{
 		if ( ignoreTouchRelease )
 		{
 			VRMenuEvent event( VRMENU_EVENT_SWIPE_COMPLETE, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( vrFrame.Input.touchRelative, 0.0f ), result, "" );
-			events.PushBack( event );
+			events.push_back( event );
 		}
 		else
 		{
 			VRMenuEvent event( VRMENU_EVENT_TOUCH_UP, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( vrFrame.Input.touchRelative, 0.0f ), result, "" );
-			events.PushBack( event );
+			events.push_back( event );
 		}		
 	}
 	if ( touchDown )
@@ -182,70 +182,70 @@ void VRMenuEventHandler::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFram
 		if ( vrFrame.Input.touchRelative.LengthSq() > MATH_FLOAT_SMALLEST_NON_DENORMAL )
 		{
 			VRMenuEvent event( VRMENU_EVENT_TOUCH_RELATIVE, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( vrFrame.Input.touchRelative, 0.0f ), result, "" );
-			events.PushBack( event );
+			events.push_back( event );
 		}
 		VRMenuEvent event( VRMENU_EVENT_TOUCH_ABSOLUTE, EVENT_DISPATCH_FOCUS, FocusedHandle, Vector3f( vrFrame.Input.touch, 0.0f ), result, "" );
-		events.PushBack( event );
+		events.push_back( event );
 	}
 
 	{
 		// always post the frame event to the root
 		VRMenuEvent event( VRMENU_EVENT_FRAME_UPDATE, EVENT_DISPATCH_BROADCAST, menuHandle_t(), Vector3f( 0.0f ), result, "" );
-		events.PushBack( event );
+		events.push_back( event );
 	}
 }
 
 //==============================
 // VRMenuEventHandler::InitComponents
-void VRMenuEventHandler::InitComponents( Array< VRMenuEvent > & events )
+void VRMenuEventHandler::InitComponents( std::vector< VRMenuEvent > & events )
 {
 	VRMenuEvent event( VRMENU_EVENT_INIT, EVENT_DISPATCH_BROADCAST, menuHandle_t(), Vector3f( 0.0f ), HitTestResult(), "" );
-	events.PushBack( event );
+	events.push_back( event );
 }
 
 //==============================
 // VRMenuEventHandler::Opening
-void VRMenuEventHandler::Opening( Array< VRMenuEvent > & events )
+void VRMenuEventHandler::Opening( std::vector< VRMenuEvent > & events )
 {
 	OVR_LOG( "Opening" );
 	// broadcast the opening event
 	VRMenuEvent event( VRMENU_EVENT_OPENING, EVENT_DISPATCH_BROADCAST, menuHandle_t(), Vector3f( 0.0f ), HitTestResult(), "" );
-	events.PushBack( event );
+	events.push_back( event );
 }
 
 //==============================
 // VRMenuEventHandler::Opened
-void VRMenuEventHandler::Opened( Array< VRMenuEvent > & events )
+void VRMenuEventHandler::Opened( std::vector< VRMenuEvent > & events )
 {
 	OVR_LOG( "Opened" );
 	// broadcast the opened event
 	VRMenuEvent event( VRMENU_EVENT_OPENED, EVENT_DISPATCH_BROADCAST, menuHandle_t(), Vector3f( 0.0f ), HitTestResult(), "" );
-	events.PushBack( event );
+	events.push_back( event );
 }
 
 //==============================
 // VRMenuEventHandler::Closing
-void VRMenuEventHandler::Closing( Array< VRMenuEvent > & events )
+void VRMenuEventHandler::Closing( std::vector< VRMenuEvent > & events )
 {
 	OVR_LOG( "Closing" );
 	// broadcast the closing event
 	VRMenuEvent event( VRMENU_EVENT_CLOSING, EVENT_DISPATCH_BROADCAST, menuHandle_t(), Vector3f( 0.0f ), HitTestResult(), "" );
-	events.PushBack( event );
+	events.push_back( event );
 }
 
 //==============================
 // VRMenuEventHandler::Closed
-void VRMenuEventHandler::Closed( Array< VRMenuEvent > & events )
+void VRMenuEventHandler::Closed( std::vector< VRMenuEvent > & events )
 {
 	OVR_LOG( "Closed" );
 	// broadcast the closed event
 	VRMenuEvent closedEvent( VRMENU_EVENT_CLOSED, EVENT_DISPATCH_BROADCAST, menuHandle_t(), Vector3f( 0.0f ), HitTestResult(), "" );
-	events.PushBack( closedEvent );
+	events.push_back( closedEvent );
 
 	if ( FocusedHandle.IsValid() )
 	{
 		VRMenuEvent focusLostEvent( VRMENU_EVENT_FOCUS_LOST, EVENT_DISPATCH_TARGET, FocusedHandle, Vector3f( 0.0f ), HitTestResult(), "" );
-		events.PushBack( focusLostEvent );
+		events.push_back( focusLostEvent );
 		FocusedHandle.Release();
 		OVR_LOG( "Released FocusHandle" );
 	}
@@ -277,32 +277,32 @@ static inline void LogEventType( VRMenuEvent const & event, char const * fmt, ..
 //==============================
 // FindTargetPath
 static void FindTargetPath( OvrGuiSys & guiSys, 
-        menuHandle_t const curHandle, Array< menuHandle_t > & targetPath ) 
+        menuHandle_t const curHandle, std::vector< menuHandle_t > & targetPath ) 
 {
 	VRMenuObject * obj = guiSys.GetVRMenuMgr().ToObject( curHandle );
 	if ( obj != NULL )
 	{
 		FindTargetPath( guiSys, obj->GetParentHandle(), targetPath );
-		targetPath.PushBack( curHandle );
+		targetPath.push_back( curHandle );
 	}
 }
 
 //==============================
 // FindTargetPath
 static void FindTargetPath( OvrGuiSys & guiSys, menuHandle_t const rootHandle, 
-        menuHandle_t const curHandle, Array< menuHandle_t > & targetPath ) 
+        menuHandle_t const curHandle, std::vector< menuHandle_t > & targetPath ) 
 {
 	FindTargetPath( guiSys, curHandle, targetPath );
-	if ( targetPath.GetSizeI() == 0 )
+	if ( targetPath.size() == 0 )
 	{
-		targetPath.PushBack( rootHandle );   // ensure at least root is in the path
+		targetPath.push_back( rootHandle );   // ensure at least root is in the path
 	}
 }
 
 //==============================
 // VRMenuEventHandler::HandleEvents
 void VRMenuEventHandler::HandleEvents( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
-		menuHandle_t const rootHandle, Array< VRMenuEvent > const & events ) const
+		menuHandle_t const rootHandle, std::vector< VRMenuEvent > const & events ) const
 {
 	VRMenuObject * root = guiSys.GetVRMenuMgr().ToObject( rootHandle );
 	if ( root == NULL )
@@ -311,15 +311,14 @@ void VRMenuEventHandler::HandleEvents( OvrGuiSys & guiSys, ovrFrameInput const &
 	}
 
 	// find the list of all objects that are in the focused path
-	Array< menuHandle_t > focusPath;
-	focusPath.Reserve( 256 );
+	std::vector< menuHandle_t > focusPath;
+	focusPath.reserve( 256 );
 	FindTargetPath( guiSys, rootHandle, FocusedHandle, focusPath );
     
-	Array< menuHandle_t > targetPath;
+	std::vector< menuHandle_t > targetPath;
 
-	for ( int i = 0; i < events.GetSizeI(); ++i )
+	for ( VRMenuEvent const & event : events )
 	{
-		VRMenuEvent const & event = events[i];
 		switch ( event.DispatchType )
 		{
 			case EVENT_DISPATCH_BROADCAST:
@@ -333,9 +332,9 @@ void VRMenuEventHandler::HandleEvents( OvrGuiSys & guiSys, ovrFrameInput const &
 				DispatchToPath( guiSys, vrFrame, event, focusPath, false );
 				break;
 			case EVENT_DISPATCH_TARGET:
-				if ( targetPath.GetSizeI() == 0 || event.TargetHandle != targetPath.Back() )
+				if ( targetPath.size() == 0 || event.TargetHandle != targetPath.back() )
 				{
-					targetPath.Clear();
+					targetPath.clear();
 					FindTargetPath( guiSys, rootHandle, event.TargetHandle, targetPath );
 				}
 				DispatchToPath( guiSys, vrFrame, event, targetPath, false );
@@ -354,19 +353,21 @@ bool VRMenuEventHandler::DispatchToComponents( OvrGuiSys & guiSys, ovrFrameInput
 {
 	OVR_ASSERT_WITH_TAG( receiver != NULL, "VrMenu" );
 
-	Array< VRMenuComponent* > const & list = receiver->GetComponentList();
-	for ( int i = 0; i < list.GetSizeI(); ++i )
+	std::vector< VRMenuComponent* > const & list = receiver->GetComponentList();
+	int componentIndex = 0;
+	for ( VRMenuComponent* menuComponent : list )
 	{
-		if ( list[i]->HandlesEvent( VRMenuEventFlags_t( event.EventType ) ) )
+		if ( menuComponent->HandlesEvent( VRMenuEventFlags_t( event.EventType ) ) )
 		{
-			LogEventType( event, "DispatchEvent: to '%s'", receiver->GetText().ToCStr() );
+			LogEventType( event, "DispatchEvent: to '%s'", receiver->GetText().c_str() );
 
-			if ( list[i]->OnEvent( guiSys, vrFrame, receiver, event ) == MSG_STATUS_CONSUMED )
+			if ( menuComponent->OnEvent( guiSys, vrFrame, receiver, event ) == MSG_STATUS_CONSUMED )
 			{
-				LogEventType( event, "DispatchEvent: receiver '%s', component %i consumed event.", receiver->GetText().ToCStr(), i );
+				LogEventType( event, "DispatchEvent: receiver '%s', component %i consumed event.", receiver->GetText().c_str(), componentIndex );
 				return true;    // consumed by component
 			}
 		}
+		componentIndex++;
 	}
 	return false;
 }
@@ -374,10 +375,10 @@ bool VRMenuEventHandler::DispatchToComponents( OvrGuiSys & guiSys, ovrFrameInput
 //==============================
 // VRMenuEventHandler::DispatchToPath
 bool VRMenuEventHandler::DispatchToPath( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
-        VRMenuEvent const & event, Array< menuHandle_t > const & path, bool const log ) const
+        VRMenuEvent const & event, std::vector< menuHandle_t > const & path, bool const log ) const
 {
 	// send to the focus path only -- this list should be parent -> child order
-	for ( int i = 0; i < path.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( path.size() ); ++i )
 	{
 		VRMenuObject * obj = guiSys.GetVRMenuMgr().ToObject( path[i] );
 		char const * const indent = "                                                                ";
@@ -387,14 +388,14 @@ bool VRMenuEventHandler::DispatchToPath( OvrGuiSys & guiSys, ovrFrameInput const
 			if ( log )
 			{
 				OVR_LOG( "%sDispatchToPath: %s, object '%s' consumed event.", &indent[64 - i * 2],
-						VRMenuEvent::EventTypeNames[event.EventType], ( obj != NULL ? obj->GetText().ToCStr() : "<null>" ) );
+						VRMenuEvent::EventTypeNames[event.EventType], ( obj != NULL ? obj->GetText().c_str() : "<null>" ) );
 			}	
 			return true;    // consumed by a component
 		}
 		if ( log )
 		{
 			OVR_LOG( "%sDispatchToPath: %s, object '%s' passed event.", &indent[64 - i * 2],
-					VRMenuEvent::EventTypeNames[event.EventType], obj != NULL ? obj->GetText().ToCStr() : "<null>" );
+					VRMenuEvent::EventTypeNames[event.EventType], obj != NULL ? obj->GetText().c_str() : "<null>" );
 		}
 	}
 	return false;

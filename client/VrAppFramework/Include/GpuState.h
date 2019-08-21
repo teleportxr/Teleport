@@ -12,7 +12,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_GPUSTATE_h )
 #define OVR_GPUSTATE_h
 
-#include "Kernel/OVR_Types.h"
+#include "OVR_Types.h"
 #include "OVR_GlUtils.h"
 
 #if !defined( GL_FILL )

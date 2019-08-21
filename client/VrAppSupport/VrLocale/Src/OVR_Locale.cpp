@@ -17,47 +17,17 @@ of patent rights can be found in the PATENTS file in the same directory.
 
 #include <sys/stat.h>
 
+#include <vector>
+#include <unordered_map>
+
 #include "tinyxml2.h"
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_Hash.h"
-#include "Kernel/OVR_MemBuffer.h"
-#include "Kernel/OVR_JSON.h"
-#include "Kernel/OVR_LogUtils.h"
-#include "Android/JniUtils.h"
 #include "OVR_FileSys.h"
+#include "OVR_UTF8Util.h"
 
 namespace OVR {
 
 char const *	ovrLocale::LOCALIZED_KEY_PREFIX = "@string/";
 size_t const	ovrLocale::LOCALIZED_KEY_PREFIX_LEN = OVR_strlen( LOCALIZED_KEY_PREFIX );
-
-// DJB2 string hash function
-static unsigned long DJB2Hash( char const * str )
-{
-    unsigned long hash = 5381;
-    int c;
-
-	for ( c = *str; c != 0; str++, c = *str )
-    //while ( c = *str++ )
-	{
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-	}
-    return hash;
-}
-
-//==============================================================
-// Hash functor for OVR::String
-
-template< class C >
-class OvrStringHash
-{
-public:
-	UPInt operator()( const C & data ) const
-	{
-		return DJB2Hash( data.ToCStr() );
-	}
-};
 
 //==============================================================
 // ovrLocaleInternal
@@ -75,9 +45,9 @@ public:
 	virtual ~ovrLocaleInternal();
 
 	// returns the language code for this locale object
-	virtual char const *	GetName() const { return Name.ToCStr(); }
+	virtual char const *	GetName() const { return Name.c_str(); }
 
-	virtual char const *	GetLanguageCode() const { return LanguageCode.ToCStr(); }
+	virtual char const *	GetLanguageCode() const { return LanguageCode.c_str(); }
 
 	virtual bool			IsSystemDefaultLocale() const;
 
@@ -85,7 +55,7 @@ public:
 
 	virtual bool			AddStringsFromAndroidFormatXMLBuffer( char const * name, char const * buffer, size_t const size );
 
-	virtual bool			GetString( char const * key, char const * defaultStr, String & out ) const;
+	virtual bool			GetString( char const * key, char const * defaultStr, std::string & out ) const;
 
 	virtual void			ReplaceLocalizedText( char const * inText, char * out, size_t const outSize ) const;
 
@@ -95,16 +65,14 @@ private:
 	jobject									activityObject;
 #endif
 
-	typedef OvrStringHash< String >			HashFunctor;
-
-	String									Name;			// user-specified locale name
-	String									LanguageCode;	// system-specific locale name
-	OVR::Hash< String, int, HashFunctor >	StringHash;
-	Array< String	>						Strings;
+	std::string								Name;			// user-specified locale name
+	std::string								LanguageCode;	// system-specific locale name
+	std::vector< std::string >				Strings;
+	std::unordered_map< std::string, int >	StringHash;
 
 private:
 #if defined( OVR_OS_ANDROID )
-	bool					GetStringJNI( char const * key, char const * defaultOut, String & out ) const;
+	bool					GetStringJNI( char const * key, char const * defaultOut, std::string & out ) const;
 #endif
 };
 
@@ -140,14 +108,14 @@ ovrLocaleInternal::~ovrLocaleInternal()
 bool ovrLocaleInternal::IsSystemDefaultLocale() const
 {
 #if defined( OVR_OS_ANDROID )
-	return OVR_stricmp( LanguageCode.ToCStr(), "en" ) == 0;
+	return OVR_stricmp( LanguageCode.c_str(), "en" ) == 0;
 #else
 	// FIXME: Implement
 	return true;
 #endif
 }
 
-static void GetValueFromNode( String & v, tinyxml2::XMLNode const * node )
+static void GetValueFromNode( std::string & v, tinyxml2::XMLNode const * node )
 {
 	tinyxml2::XMLNode const * child = node->FirstChild();
 	if ( child != nullptr )
@@ -195,10 +163,10 @@ bool ovrLocaleInternal::AddStringsFromAndroidFormatXMLBuffer( char const * name,
 
 		tinyxml2::XMLAttribute const * nameAttr = curElement->FindAttribute( "name" );
 
-		String key = nameAttr->Value();
+		std::string key = nameAttr->Value();
 
-		String value;
-		String decodedValue;
+		std::string value;
+		std::string decodedValue;
 
 		tinyxml2::XMLNode const * childNode = curElement->FirstChild();
 		if ( childNode != nullptr )
@@ -211,7 +179,7 @@ bool ovrLocaleInternal::AddStringsFromAndroidFormatXMLBuffer( char const * name,
 		}
 
 		// fix special encodings. Use GetFirstCharAt() and GetNextChar() to handle UTF-8.
-		const char * in = value.ToCStr();
+		const char * in = value.c_str();
 		uint32_t curChar = UTF8Util::DecodeNextChar( &in );
 		while( curChar != 0 )
 		{
@@ -230,7 +198,7 @@ bool ovrLocaleInternal::AddStringsFromAndroidFormatXMLBuffer( char const * name,
 				{
 					curChar = '\r';
 				}
-				else 
+				else
 				{
 					if ( nextChar != '<' &&
 					 nextChar != '>' &&
@@ -239,14 +207,14 @@ bool ovrLocaleInternal::AddStringsFromAndroidFormatXMLBuffer( char const * name,
 					 nextChar != '&' )
 					{
 						OVR_LOG( "Unknown escape sequence '\\%x'", nextChar );
-						decodedValue.AppendChar( curChar );
+						decodedValue += std::uint8_t( curChar );
 					}
 					curChar = nextChar;
 				}
 			}
 			else if ( curChar == '%' )
 			{
-				// if we find "%%", skip over the second '%' char because the localization pipeline bot is erroneously 
+				// if we find "%%", skip over the second '%' char because the localization pipeline bot is erroneously
 				// outputting doubled % format specifiers.
 				const char * prev = in;
 				uint32_t nextChar = UTF8Util::DecodeNextChar( &in );
@@ -257,21 +225,19 @@ bool ovrLocaleInternal::AddStringsFromAndroidFormatXMLBuffer( char const * name,
 				}
 			}
 
-			decodedValue.AppendChar( curChar );
-
+			decodedValue += std::uint8_t( curChar );
 			curChar = UTF8Util::DecodeNextChar( &in );
 		}
-		//OVR_LOG( "Name: '%s' = '%s'\n", key.ToCStr(), value.ToCStr() );
+		//OVR_LOG( "Name: '%s' = '%s'\n", key.c_str(), value.c_str() );
 
-		int index = -1;
-		if ( !StringHash.Get( key, &index ) )
+		if ( StringHash.find( key ) == StringHash.end() )
 		{
-			StringHash.Add( key, Strings.GetSizeI() );
-			Strings.PushBack( decodedValue );
+			StringHash[key] = static_cast< int >( Strings.size() );
+			Strings.push_back( decodedValue );
 		}
 	}
 
-	OVR_LOG( "Added %i strings from '%s'", Strings.GetSizeI(), name );
+	OVR_LOG( "Added %i strings from '%s'", static_cast< int >( Strings.size() ), name );
 
 	return true;
 }
@@ -280,19 +246,19 @@ bool ovrLocaleInternal::AddStringsFromAndroidFormatXMLBuffer( char const * name,
 // ovrLocaleInternal::LoadStringsFromAndroidFormatXMLFile
 bool ovrLocaleInternal::LoadStringsFromAndroidFormatXMLFile( ovrFileSys & fileSys, char const * fileName )
 {
-	MemBufferT< uint8_t > buffer;
+	std::vector< uint8_t > buffer;
 	if ( !fileSys.ReadFile( fileName, buffer ) )
 	{
 		return false;
 	}
-	return AddStringsFromAndroidFormatXMLBuffer( fileName, reinterpret_cast< char const * > ( static_cast< uint8_t const * >( buffer) ), buffer.GetSize() );
+	return AddStringsFromAndroidFormatXMLBuffer( fileName, reinterpret_cast< char const * > ( static_cast< uint8_t const * >( buffer.data() ) ), buffer.size() );
 }
 
 #if defined( OVR_OS_ANDROID )
 //==============================
 // ovrLocale::GetStringJNI
 // Get's a localized UTF-8-encoded string from the Android application's string table.
-bool ovrLocaleInternal::GetStringJNI( char const * key, char const * defaultOut, String & out ) const
+bool ovrLocaleInternal::GetStringJNI( char const * key, char const * defaultOut, std::string & out ) const
 {
 
 	//OVR_LOG( "Localizing key '%s'", key );
@@ -301,7 +267,7 @@ bool ovrLocaleInternal::GetStringJNI( char const * key, char const * defaultOut,
 	if ( strstr( key, LOCALIZED_KEY_PREFIX ) != key )
 	{
 		out = defaultOut;
-		OVR_LOG( "no prefix, localized to '%s'", out.ToCStr() );
+		OVR_LOG( "no prefix, localized to '%s'", out.c_str() );
 		return true;
 	}
 
@@ -320,14 +286,14 @@ bool ovrLocaleInternal::GetStringJNI( char const * key, char const * defaultOut,
 		if ( !jni.ExceptionOccurred() )
 		{
 			out = resultStr;
-			if ( out.IsEmpty() )
+			if ( out.empty() )
 			{
 				out = defaultOut;
-				OVR_LOG( "key not found, localized to '%s'", out.ToCStr() );
+				OVR_LOG( "key not found, localized to '%s'", out.c_str() );
 				return false;
 			}
 
-			//OVR_LOG( "localized to '%s'", out.ToCStr() );
+			//OVR_LOG( "localized to '%s'", out.c_str() );
 			return true;
 		}
 		OVR_WARN( "Exception calling VrLocale.getLocalizedString" );
@@ -345,7 +311,7 @@ bool ovrLocaleInternal::GetStringJNI( char const * key, char const * defaultOut,
 
 //==============================
 // ovrLocaleInternal::GetString
-bool ovrLocaleInternal::GetString( char const * key, char const * defaultStr, String & out ) const
+bool ovrLocaleInternal::GetString( char const * key, char const * defaultStr, std::string & out ) const
 {
 	if ( key == NULL )
 	{
@@ -354,13 +320,13 @@ bool ovrLocaleInternal::GetString( char const * key, char const * defaultStr, St
 
 	if ( strstr( key, LOCALIZED_KEY_PREFIX ) == key )
 	{
-		if ( Strings.GetSizeI() > 0 )
+		if ( Strings.size() > 0 )
 		{
-			String realKey( key + LOCALIZED_KEY_PREFIX_LEN );
-			int index = -1;
-			if ( StringHash.Get( realKey, &index ) )
+			std::string realKey( key + LOCALIZED_KEY_PREFIX_LEN );
+			auto it = StringHash.find( realKey );
+			if ( it != StringHash.end() )
 			{
-				out = Strings[index];
+				out = Strings[ it->second ];
 				return true;
 			}
 		}
@@ -434,11 +400,11 @@ void ovrLocaleInternal::ReplaceLocalizedText( char const * inText, char * out, s
 		last = cur;
 
 		// get the localized text
-		String localized;
+		std::string localized;
 		GetString( atString, atString, localized );
 
 		// copy localized text into the output buffer
-		if ( !CopyChars( out, outSize, outOfs, localized.ToCStr(), OVR_strlen( localized.ToCStr() ) ) )
+		if ( !CopyChars( out, outSize, outOfs, localized.c_str(), OVR_strlen( localized.c_str() ) ) )
 		{
 			return;
 		}
@@ -566,7 +532,7 @@ void ovrLocale::Destroy( ovrLocale * & localePtr )
 // - Deletes any character that is not a space, letter or number.
 // - Turn spaces into underscores.
 // - Ignore contiguous spaces.
-String ovrLocale::MakeStringIdFromUTF8( char const * str )
+std::string ovrLocale::MakeStringIdFromUTF8( char const * str )
 {
 	enum eLastOutputType
 	{
@@ -576,7 +542,7 @@ String ovrLocale::MakeStringIdFromUTF8( char const * str )
 		LO_MAX
 	};
 	eLastOutputType lastOutputType = LO_MAX;
-	String out = LOCALIZED_KEY_PREFIX;
+	std::string out = LOCALIZED_KEY_PREFIX;
 	char const * ptr = str;
 	if ( strstr( str, LOCALIZED_KEY_PREFIX ) == str )
 	{
@@ -596,28 +562,28 @@ String ovrLocale::MakeStringIdFromUTF8( char const * str )
 			{
 				// string identifiers in Android cannot start with a number because they
 				// are also encoded as Java identifiers, so output an underscore first.
-				out.AppendChar( '_' );
+				out += '_' ;
 			}
-			out.AppendChar( c );
+			out += std::uint8_t(c);
 			lastOutputType = LO_DIGIT;
 		}
 		else if ( ( c >= 'a' && c <= 'z' ) )
 		{
 			// just output the character
-			out.AppendChar( c );
+			out += std::uint8_t(c);
 			lastOutputType = LO_LETTER;
 		}
 		else if ( ( c >= 'A' && c <= 'Z' ) )
 		{
 			// just output the character as lowercase
-			out.AppendChar( c + 32 );
+			out += (std::uint8_t(c) + 32);
 			lastOutputType = LO_LETTER;
 		}
 		else if ( c == 0x20 )
 		{
 			if ( lastOutputType != LO_SPACE )
 			{
-				out.AppendChar( '_' );
+				out += '_' ;
 				lastOutputType = LO_SPACE;
 			}
 			continue;
@@ -633,7 +599,7 @@ String ovrLocale::MakeStringIdFromUTF8( char const * str )
 // - Deletes any character that is not a space, letter or number.
 // - Turn spaces into underscores.
 // - Ignore contiguous spaces.
-String ovrLocale::MakeStringIdFromANSI( char const * str )
+std::string ovrLocale::MakeStringIdFromANSI( char const * str )
 {
 	enum eLastOutputType
 	{
@@ -644,7 +610,7 @@ String ovrLocale::MakeStringIdFromANSI( char const * str )
 		LO_MAX
 	};
 	eLastOutputType lastOutputType = LO_MAX;
-	String out = LOCALIZED_KEY_PREFIX;
+	std::string out = LOCALIZED_KEY_PREFIX;
 	char const * ptr = strstr( str, LOCALIZED_KEY_PREFIX ) == str ? str + LOCALIZED_KEY_PREFIX_LEN : str;
 	OVR::UPInt n = OVR_strlen( ptr );
 	for ( unsigned int i = 0; i < n; ++i )
@@ -656,28 +622,28 @@ String ovrLocale::MakeStringIdFromANSI( char const * str )
 			{
 				// string identifiers in Android cannot start with a number because they
 				// are also encoded as Java identifiers, so output an underscore first.
-				out.AppendChar( '_' );
+				out += '_';
 			}
-			out.AppendChar( c );
+			out += std::uint8_t(c);
 			lastOutputType = LO_DIGIT;
 		}
 		else if ( ( c >= 'a' && c <= 'z' ) )
 		{
 			// just output the character
-			out.AppendChar( c );
+			out += std::uint8_t(c);
 			lastOutputType = LO_LETTER;
 		}
 		else if ( ( c >= 'A' && c <= 'Z' ) )
 		{
 			// just output the character as lowercase
-			out.AppendChar( c + 32 );
+			out += std::uint8_t(c) + 32;
 			lastOutputType = LO_LETTER;
 		}
 		else if ( c == 0x20 )
 		{
 			if ( lastOutputType != LO_SPACE )
 			{
-				out.AppendChar( '_' );
+				out += '_';
 				lastOutputType = LO_SPACE;
 			}
 			continue;
@@ -691,21 +657,21 @@ String ovrLocale::MakeStringIdFromANSI( char const * str )
 // private_GetXliffFormattedString
 // Supports up to 9 arguments and %s format only
 // inXliffStr is intentionally not passed by reference because "va_start has undefined behavior with reference types"
-static String private_GetXliffFormattedString( const StringDataPtr inXliffStr, ... )
+static std::string private_GetXliffFormattedString( const char * inXliffStr, ... )
 {
 	// format spec looks like: %1$s - we expect at least 3 chars after %
 	const int MIN_NUM_EXPECTED_FORMAT_CHARS = 3;
 
 	// If the passed in string is shorter than minimum expected xliff formatting, just return it
-	if ( static_cast< int >( inXliffStr.GetSize() ) <= MIN_NUM_EXPECTED_FORMAT_CHARS )
+	if ( OVR_strlen( inXliffStr ) <= MIN_NUM_EXPECTED_FORMAT_CHARS )
 	{
-		return inXliffStr.ToCStr();
+		return std::string(inXliffStr);
 	}
 
 	// Buffer that holds formatted return string
-	StringBuffer retStrBuffer;
+	std::string retStrBuffer;
 
-	char const * p = inXliffStr.ToCStr();
+	char const * p = inXliffStr;
 	for ( ; ; )
 	{
 		uint32_t charCode = UTF8Util::DecodeNextChar( &p );
@@ -717,18 +683,18 @@ static String private_GetXliffFormattedString( const StringDataPtr inXliffStr, .
 		{
 			// We found the start of the format specifier
 			// Now check that there are at least three more characters which contain the format specification
-			Array< uint32_t > formatSpec;
+			std::vector< uint32_t > formatSpec;
 			for ( int count = 0; count < MIN_NUM_EXPECTED_FORMAT_CHARS; ++count )
 			{
 				uint32_t formatCharCode = UTF8Util::DecodeNextChar( &p );
-				formatSpec.PushBack( formatCharCode );
+				formatSpec.push_back( formatCharCode );
 			}
 
-			OVR_ASSERT( formatSpec.GetSizeI() >= MIN_NUM_EXPECTED_FORMAT_CHARS );
+			OVR_ASSERT( static_cast< int >( formatSpec.size() ) >= MIN_NUM_EXPECTED_FORMAT_CHARS );
 
-			uint32_t desiredArgIdxChar = formatSpec.At( 0 );
-			uint32_t dollarThing = formatSpec.At( 1 );
-			uint32_t specifier = formatSpec.At( 2 );
+			uint32_t desiredArgIdxChar = formatSpec[ 0 ];
+			uint32_t dollarThing = formatSpec[ 1 ];
+			uint32_t specifier = formatSpec[ 2 ];
 
 			// Checking if it has supported xliff format specifier
 			if ( ( desiredArgIdxChar >= '1' && desiredArgIdxChar <= '9' ) &&
@@ -747,7 +713,7 @@ static String private_GetXliffFormattedString( const StringDataPtr inXliffStr, .
 					const char * tempArg = va_arg( args, const char* );
 					if ( j == ( desiredArgIdxint - 1 ) ) // found desired argument
 					{
-						retStrBuffer.AppendFormat( "%s", tempArg );
+						retStrBuffer += tempArg;
 						break;
 					}
 				}
@@ -756,56 +722,56 @@ static String private_GetXliffFormattedString( const StringDataPtr inXliffStr, .
 			}
 			else
 			{
-				OVR_LOG( "%s has invalid xliff format - has unsupported format specifier.", inXliffStr.ToCStr() );
-				return inXliffStr.ToCStr();
+				OVR_LOG( "%s has invalid xliff format - has unsupported format specifier.", inXliffStr );
+				return std::string(inXliffStr);
 			}
 		}
 		else
 		{
-			retStrBuffer.AppendChar( charCode );
+			retStrBuffer += std::uint8_t( charCode );
 		}
 	}
 
-	return String( retStrBuffer );
+	return retStrBuffer;
 }
 
 //==============================
 // ovrLocale::GetXliffFormattedString
-String ovrLocale::GetXliffFormattedString( const String & inXliffStr, const char * arg1 )
+std::string ovrLocale::GetXliffFormattedString( const std::string & inXliffStr, const char * arg1 )
 {
-	return private_GetXliffFormattedString( StringDataPtr(inXliffStr), arg1 );
+	return private_GetXliffFormattedString( inXliffStr.c_str(), arg1 );
 }
 
 //==============================
 // ovrLocale::GetXliffFormattedString
-String ovrLocale::GetXliffFormattedString( const String & inXliffStr, const char * arg1, const char * arg2 )
+std::string ovrLocale::GetXliffFormattedString( const std::string & inXliffStr, const char * arg1, const char * arg2 )
 {
-	return private_GetXliffFormattedString( StringDataPtr(inXliffStr), arg1, arg2 );
+	return private_GetXliffFormattedString( inXliffStr.c_str(), arg1, arg2 );
 }
 
 //==============================
 // ovrLocale::GetXliffFormattedString
-OVR::String ovrLocale::GetXliffFormattedString( const String & inXliffStr, const char * arg1, const char * arg2, const char * arg3 )
+std::string ovrLocale::GetXliffFormattedString( const std::string & inXliffStr, const char * arg1, const char * arg2, const char * arg3 )
 {
-	return private_GetXliffFormattedString( StringDataPtr(inXliffStr), arg1, arg2, arg3 );
+	return private_GetXliffFormattedString( inXliffStr.c_str(), arg1, arg2, arg3 );
 }
 
 //==============================
 // ovrLocale::ToString
-String ovrLocale::ToString( char const * fmt, float const f )
+std::string ovrLocale::ToString( char const * fmt, float const f )
 {
 	char buffer[128];
 	OVR_sprintf( buffer, 128, fmt, f );
-	return String( buffer );
+	return std::string( buffer );
 }
 
 //==============================
 // ovrLocale::ToString
-String ovrLocale::ToString( char const * fmt, int const i )
+std::string ovrLocale::ToString( char const * fmt, int const i )
 {
 	char buffer[128];
 	OVR_sprintf( buffer, 128, fmt, i );
-	return String( buffer );
+	return std::string( buffer );
 }
 
 

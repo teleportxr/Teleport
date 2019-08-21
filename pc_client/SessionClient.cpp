@@ -371,6 +371,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		{
 			const avs::SetupCommand &setupCommand = *((const avs::SetupCommand*)packet->data);
 			mCommandInterface->OnVideoStreamChanged(setupCommand);
+			SendHandshake();
 		}
 		break;
 		default:

@@ -15,14 +15,12 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "ModelFile.h"
 
 #include <math.h>
+#include <vector>
 
-#include "Kernel/OVR_Alg.h"
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_String_Utils.h"
-#include "Kernel/OVR_JSON.h"
-#include "Kernel/OVR_BinaryFile.h"
+#include "OVR_Math.h"
+#include "OVR_JSON.h"
 
+#include "OVR_BinaryFile2.h"		// common implementation for OVR_BinaryFile outside of Kernel
 #include "OVR_LogTimer.h"			// for LOGCPUTIME
 
 #include "unzip.h"

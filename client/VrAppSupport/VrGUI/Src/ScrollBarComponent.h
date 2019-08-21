@@ -43,7 +43,7 @@ public:
 	// Get the scrollbar parms and the pointer to the scrollbar component constructed
 	static	void		GetScrollBarParms( OvrGuiSys & guiSys, VRMenu & menu, float scrollBarWidth, const VRMenuId_t parentId, const VRMenuId_t rootId, const VRMenuId_t xformId,
 									const VRMenuId_t baseId, const VRMenuId_t thumbId, const Posef & rootLocalPose, const Posef & xformPose, const int startElementIndex, 
-									const int numElements, const bool verticalBar, const Vector4f & thumbBorder, Array< const VRMenuObjectParms* > & parms );
+									const int numElements, const bool verticalBar, const Vector4f & thumbBorder, std::vector< const VRMenuObjectParms* > & parms );
 	void				UpdateScrollBar( OvrVRMenuMgr & menuMgr, VRMenuObject * self, const int numElements );
 	void				SetScrollFrac( OvrVRMenuMgr & menuMgr, VRMenuObject * self, const float frac );
 	void				SetScrollState( VRMenuObject * self, const eScrollBarState state );

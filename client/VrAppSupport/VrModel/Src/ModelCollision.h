@@ -12,9 +12,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef MODELCOLLISION_H
 #define MODELCOLLISION_H
 
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_Array.h"
+#include "OVR_Math.h"
+
+#include <vector>
+#include <string>
 
 namespace OVR
 {
@@ -22,7 +23,7 @@ namespace OVR
 class CollisionPolytope
 {
 public:
-	void	Add( const Planef & p ) { Planes.PushBack( p ); }
+	void	Add( const Planef & p ) { Planes.push_back( p ); }
 
 	// Returns true if the given point is inside this polytope.
 	bool	TestPoint( const Vector3f & p ) const;
@@ -36,8 +37,8 @@ public:
 	bool	PopOut( Vector3f & p ) const;
 
 public:
-	String			Name;
-	Array< Planef > Planes;
+	std::string				Name;
+	std::vector< Planef > 	Planes;
 };
 
 class ModelCollision
@@ -55,7 +56,7 @@ public:
 	bool	PopOut( Vector3f & p ) const;
 
 public:
-	Array< CollisionPolytope > Polytopes;
+	std::vector< CollisionPolytope > Polytopes;
 };
 
 Vector3f SlideMove(

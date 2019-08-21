@@ -343,25 +343,6 @@ static inline ovrMatrix4f ovrMatrix4f_CreateFromQuaternion( const ovrQuatf * q )
 	return out;
 }
 
-
-static inline ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
-{
-	ovrQuatf r;
-	r.w= p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z;
-	r.x= p.w * q.x + p.x * q.w + p.y * q.z - p.z * q.y;
-	r.y= p.w * q.y + p.y * q.w + p.z * q.x - p.x * q.z;
-	r.z= p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x;
-	return r;
-}
-
-static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
-{
-	ovrQuatf iq=q;
-	iq.x*=-1.f;
-	iq.y*=-1.f;
-	iq.z*=-1.f;
-	return QuaternionMultiply(p,iq);
-}
 /// Convert a standard projection matrix into a TexCoordsFromTanAngles matrix for
 /// the primary time warp surface.
 static inline ovrMatrix4f ovrMatrix4f_TanAngleMatrixFromProjection( const ovrMatrix4f * projection )
@@ -485,25 +466,6 @@ static inline ovrMatrix4f ovrMatrix4f_TanAngleMatrixForCubeMap( const ovrMatrix4
     return ovrMatrix4f_Inverse( &m );
 }
 
-/// Utility function to calculate external velocity for smooth stick yaw turning.
-/// To reduce judder in FPS style experiences when the application framerate is
-/// lower than the vsync rate, the rotation from a joypad can be applied to the
-/// view space distorted eye vectors before applying the time warp.
-static inline ovrMatrix4f ovrMatrix4f_CalculateExternalVelocity( const ovrMatrix4f * viewMatrix, const float yawRadiansPerSecond )
-{
-	const float angle = yawRadiansPerSecond * ( -1.0f / 60.0f );
-	const float sinHalfAngle = sinf( angle * 0.5f );
-	const float cosHalfAngle = cosf( angle * 0.5f );
-
-	// Yaw is always going to be around the world Y axis
-	ovrQuatf quat;
-	quat.x = viewMatrix->M[0][1] * sinHalfAngle;
-	quat.y = viewMatrix->M[1][1] * sinHalfAngle;
-	quat.z = viewMatrix->M[2][1] * sinHalfAngle;
-	quat.w = cosHalfAngle;
-	return ovrMatrix4f_CreateFromQuaternion( &quat );
-}
-
 /// Utility function to rotate a point about a pivot
 static inline ovrVector3f ovrVector3f_RotateAboutPivot( const ovrQuatf * rotation, const ovrVector3f * pivot, const ovrVector3f * point )
 {
@@ -617,10 +579,10 @@ static inline ovrFrameParms vrapi_DefaultFrameParms( const ovrJava * java, const
 	parms.LayerCount = 1;
 	parms.SwapInterval = 1;
 	parms.ExtraLatencyMode = VRAPI_EXTRA_LATENCY_MODE_OFF;
-	parms.ExternalVelocity.M[0][0] = 1.0f;
-	parms.ExternalVelocity.M[1][1] = 1.0f;
-	parms.ExternalVelocity.M[2][2] = 1.0f;
-	parms.ExternalVelocity.M[3][3] = 1.0f;
+	parms.Reserved.M[0][0] = 1.0f;
+	parms.Reserved.M[1][1] = 1.0f;
+	parms.Reserved.M[2][2] = 1.0f;
+	parms.Reserved.M[3][3] = 1.0f;
 	parms.PerformanceParms = vrapi_DefaultPerformanceParms();
 	parms.Java = *java;
 
@@ -894,9 +856,9 @@ static inline ovrLayerLoadingIcon2 vrapi_DefaultLayerLoadingIcon2()
 
 static inline float vrapi_GetInterpupillaryDistance( const ovrTracking2 * tracking2 )
 {
-	const ovrMatrix4f leftView = tracking2->Eye[0].ViewMatrix;
-	const ovrMatrix4f rightView = tracking2->Eye[1].ViewMatrix;
-	const ovrVector3f delta = { rightView.M[0][3] - leftView.M[0][3], rightView.M[1][3] - leftView.M[1][3], rightView.M[2][3] - leftView.M[2][3] };
+	const ovrMatrix4f leftPose = ovrMatrix4f_Inverse( &tracking2->Eye[0].ViewMatrix );   // convert to world
+	const ovrMatrix4f rightPose = ovrMatrix4f_Inverse( &tracking2->Eye[1].ViewMatrix );
+	const ovrVector3f delta = { rightPose.M[0][3] - leftPose.M[0][3], rightPose.M[1][3] - leftPose.M[1][3], rightPose.M[2][3] - leftPose.M[2][3] };
 	return sqrtf( delta.x * delta.x + delta.y * delta.y + delta.z * delta.z );
 }
 
@@ -916,16 +878,6 @@ static inline ovrMatrix4f vrapi_GetViewMatrixFromPose( const ovrPosef * pose )
 {
 	const ovrMatrix4f transform = vrapi_GetTransformFromPose( pose );
 	return ovrMatrix4f_Inverse( &transform );
-}
-
-/// Utility function to get the eye view matrix based on the center eye view matrix and the IPD.
-static inline ovrMatrix4f vrapi_GetEyeViewMatrix(	const ovrMatrix4f * centerEyeViewMatrix,
-													const float interpupillaryDistance,
-													const int eye )
-{
-	const float eyeOffset = ( eye ? -0.5f : 0.5f ) * interpupillaryDistance;
-	const ovrMatrix4f eyeOffsetMatrix = ovrMatrix4f_CreateTranslation( eyeOffset, 0.0f, 0.0f );
-	return ovrMatrix4f_Multiply( &eyeOffsetMatrix, centerEyeViewMatrix );
 }
 
 #endif	// OVR_VrApi_Helpers_h

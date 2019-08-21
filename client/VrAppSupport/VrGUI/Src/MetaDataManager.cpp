@@ -12,12 +12,14 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "MetaDataManager.h"
 
-#include "Kernel/OVR_JSON.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_JSON.h"
+#include "OVR_LogUtils.h"
 
 #include "VrCommon.h"
 #include "PackageFiles.h"
 
+#include <algorithm>
+#include <locale>
 
 namespace OVR {
 
@@ -34,150 +36,161 @@ const char * const TAGS = "tags";
 const char * const CATEGORY = "category";
 const char * const URL_INNER = "url";
 
-static bool OvrMetaDatumIdComparator( const OvrMetaDatum * a, const OvrMetaDatum * b)
-{
-	return a->Id < b->Id;
-}
-
-void OvrMetaData::InitFromDirectory( const char * relativePath, const Array< String > & searchPaths, const OvrMetaDataFileExtensions & fileExtensions )
+void OvrMetaData::InitFromDirectory( const char * relativePath, const std::vector< std::string > & searchPaths, const OvrMetaDataFileExtensions & fileExtensions )
 {
 	OVR_LOG( "OvrMetaData::InitFromDirectory( %s )", relativePath );
 
 	// Find all the files - checks all search paths
-	StringHash< String > uniqueFileList = RelativeDirectoryFileList( searchPaths, relativePath );
-	Array<String> fileList;
-	for ( StringHash< String >::ConstIterator iter = uniqueFileList.Begin(); iter != uniqueFileList.End(); ++iter )
+	std::unordered_map< std::string, std::string > uniqueFileList = RelativeDirectoryFileList( searchPaths, relativePath );
+	std::vector<std::string> fileList;
+	for ( auto iter = uniqueFileList.begin(); iter != uniqueFileList.end(); ++iter )
 	{
-		fileList.PushBack( iter->First );
+#if defined( OVR_BUILD_DEBUG )
+		/// We map the lowercase variant (for searching) as a key to the real MixedCase actual file name
+		/// make sure we use the real MixedCase name hence forth ( aka ->second )
+		OVR_LOG( "OvrMetaData  fileList[ '%s' ] = '%s'", iter->first.c_str(), iter->second.c_str() );
+#endif
+		fileList.push_back( iter->second );
 	}
 	SortStringArray( fileList );
 	Category currentCategory;
 	currentCategory.CategoryTag = ExtractFileBase( relativePath );
-	// The label is the same as the tag by default. 
+	// The label is the same as the tag by default.
 	//Will be replaced if definition found in loaded metadata
 	currentCategory.LocaleKey = currentCategory.CategoryTag;
 
-	OVR_LOG( "OvrMetaData start category: %s", currentCategory.CategoryTag.ToCStr() );
-	Array< String > subDirs;
+	OVR_LOG( "OvrMetaData start category: %s", currentCategory.CategoryTag.c_str() );
+	std::vector< std::string > subDirs;
 	// Grab the categories and loose files
-	for ( int i = 0; i < fileList.GetSizeI(); i++ )
+	for ( const std::string & s : fileList )
 	{
-		const String & s = fileList[ i ];
-		const String fileBase = ExtractFileBase( s );
+		OVR_LOG( "OvrMetaData category: %s file: %s", currentCategory.CategoryTag.c_str(), s.c_str() );
+
+		const std::string fileBase = ExtractFileBase( s );
 		// subdirectory - add category
-		if ( MatchesExtension( s.ToCStr(), "/" ) )
+		if ( MatchesExtension( s.c_str(), "/" ) )
 		{
-			subDirs.PushBack( s );
+			subDirs.push_back( s );
 			continue;
 		}
-		
+
 		// See if we want this loose-file
-		if ( !ShouldAddFile( s.ToCStr(), fileExtensions ) )
+		if ( !ShouldAddFile( s.c_str(), fileExtensions ) )
 		{
 			continue;
 		}
 
 		// Add loose file
-		const int dataIndex = MetaData.GetSizeI();
-		OvrMetaDatum * datum = CreateMetaDatum( fileBase.ToCStr() );
+		const int dataIndex = static_cast< int >( MetaData.size() );
+		OvrMetaDatum * datum = CreateMetaDatum( fileBase.c_str() );
 		if ( datum )
 		{
 			datum->Id = dataIndex;
-			datum->Tags.PushBack( currentCategory.CategoryTag );
-			if ( GetFullPath( searchPaths, s.ToCStr(), datum->Url ) )
+			datum->Tags.push_back( currentCategory.CategoryTag );
+			if ( GetFullPath( searchPaths, s.c_str(), datum->Url ) )
 			{
-				StringHash< int >::ConstIterator iter = UrlToIndex.FindCaseInsensitive( datum->Url );
-				if ( iter == UrlToIndex.End() )
+				// always use the lowercase version of the URL to search the map
+				std::string lowerCaseUrl = datum->Url.c_str();
+				auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+				loc.tolower( &lowerCaseUrl[0], &lowerCaseUrl[0] + lowerCaseUrl.length() );
+
+				auto datumIter = UrlToIndex.find( lowerCaseUrl );
+				if ( datumIter == UrlToIndex.end() )
 				{
-					UrlToIndex.Add( datum->Url, dataIndex );
-					MetaData.PushBack( datum );
-					OVR_LOG( "OvrMetaData adding datum %s with index %d to %s", datum->Url.ToCStr(), dataIndex, currentCategory.CategoryTag.ToCStr() );
+					// always use the lowercase version of the URL as map key
+					UrlToIndex[ lowerCaseUrl ] = dataIndex;
+					MetaData.push_back( datum );
+					OVR_LOG( "OvrMetaData adding datum %s with index %d to %s", datum->Url.c_str(), dataIndex, currentCategory.CategoryTag.c_str() );
 					// Register with category
-					currentCategory.DatumIndicies.PushBack( dataIndex );
+					currentCategory.DatumIndicies.push_back( dataIndex );
 				}
 				else
 				{
-					OVR_WARN( "OvrMetaData::InitFromDirectory found duplicate url %s", datum->Url.ToCStr() );
+					OVR_WARN( "OvrMetaData::InitFromDirectory found duplicate url %s", datum->Url.c_str() );
 				}
 			}
 			else
 			{
-				OVR_WARN( "OvrMetaData::InitFromDirectory failed to find %s", s.ToCStr() );
+				OVR_WARN( "OvrMetaData::InitFromDirectory failed to find %s", s.c_str() );
 			}
 		}
 	}
 
-	if ( !currentCategory.DatumIndicies.IsEmpty() )
+	if ( !currentCategory.DatumIndicies.empty() )
 	{
-		Categories.PushBack( currentCategory );
+		Categories.push_back( currentCategory );
 	}
 
 	// Recurse into subdirs
-	for ( int i = 0; i < subDirs.GetSizeI(); ++i )
+	for ( const std::string & subDir : subDirs )
 	{
-		const String & subDir = subDirs.At( i );
-		InitFromDirectory( subDir.ToCStr(), searchPaths, fileExtensions );
+		InitFromDirectory( subDir.c_str(), searchPaths, fileExtensions );
 	}
 }
 
-void OvrMetaData::InitFromFileList( const Array< String > & fileList, const OvrMetaDataFileExtensions & fileExtensions )
+void OvrMetaData::InitFromFileList( const std::vector< std::string > & fileList, const OvrMetaDataFileExtensions & fileExtensions )
 {
 	// Create unique categories
-	StringHash< int > uniqueCategoryList;
-	for ( int i = 0; i < fileList.GetSizeI(); ++i )
+	std::unordered_map< std::string, int > uniqueCategoryList;
+	for ( int i = 0; i < static_cast< int >( fileList.size() ); ++i )
 	{
-		const String & filePath = fileList.At( i );
-		const String categoryTag = ExtractDirectory( fileList.At( i ) );
-		StringHash< int >::ConstIterator iter = uniqueCategoryList.Find( categoryTag );
+		const std::string & filePath = fileList[ i ];
+		const std::string categoryTag = ExtractDirectory( fileList[ i ] );
+		auto iter = uniqueCategoryList.find( categoryTag );
 		int catIndex = -1;
-		if ( iter == uniqueCategoryList.End() )
+		if ( iter == uniqueCategoryList.end() )
 		{
-			OVR_LOG( " category: %s", categoryTag.ToCStr() );
+			OVR_LOG( " category: %s", categoryTag.c_str() );
 			Category cat;
 			cat.CategoryTag = categoryTag;
-			// The label is the same as the tag by default. 
+			// The label is the same as the tag by default.
 			// Will be replaced if definition found in loaded metadata
 			cat.LocaleKey = cat.CategoryTag;
-			catIndex = Categories.GetSizeI();
-			Categories.PushBack( cat );
-			uniqueCategoryList.Add( categoryTag, catIndex );
+			catIndex = static_cast< int >( Categories.size() );
+			Categories.push_back( cat );
+			uniqueCategoryList[ categoryTag ] = catIndex;
 		}
 		else
 		{
-			catIndex = iter->Second;
+			catIndex = iter->second;
 		}
 
 		OVR_ASSERT( catIndex > -1 );
-		Category & currentCategory = Categories.At( catIndex );
+		Category & currentCategory = Categories.at( catIndex );
 
 		// See if we want this loose-file
-		if ( !ShouldAddFile( filePath.ToCStr(), fileExtensions ) )
+		if ( !ShouldAddFile( filePath.c_str(), fileExtensions ) )
 		{
 			continue;
 		}
 
 		// Add loose file
-		const int dataIndex = MetaData.GetSizeI();
-		OvrMetaDatum * datum = CreateMetaDatum( filePath.ToCStr() );
+		const int dataIndex = static_cast< int >( MetaData.size() );
+		OvrMetaDatum * datum = CreateMetaDatum( filePath.c_str() );
 		if ( datum != NULL )
 		{
 			datum->Id = dataIndex;
 			datum->Url = filePath;
-			datum->Tags.PushBack( currentCategory.CategoryTag );
+			datum->Tags.push_back( currentCategory.CategoryTag );
 
-			StringHash< int >::ConstIterator datumIter = UrlToIndex.FindCaseInsensitive( datum->Url );
-			if ( datumIter == UrlToIndex.End() )
+			// always use the lowercase version of the URL 
+			std::string lowerCaseUrl = datum->Url.c_str();
+			auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+			loc.tolower( &lowerCaseUrl[0], &lowerCaseUrl[0] + lowerCaseUrl.length() );
+			auto datumIter = UrlToIndex.find( lowerCaseUrl );
+			if ( datumIter == UrlToIndex.end() )
 			{
-				UrlToIndex.Add( datum->Url, dataIndex );
-				MetaData.PushBack( datum );
-				OVR_LOG( "OvrMetaData::InitFromFileList adding datum %s with index %d to %s", datum->Url.ToCStr(),
-					dataIndex, currentCategory.CategoryTag.ToCStr() );
+				// keep the lowercase version in the map for insensitive find
+				UrlToIndex[ lowerCaseUrl ] = dataIndex;
+				MetaData.push_back( datum );
+				OVR_LOG( "OvrMetaData::InitFromFileList adding datum %s with index %d to %s", datum->Url.c_str(),
+					dataIndex, currentCategory.CategoryTag.c_str() );
 				// Register with category
-				currentCategory.DatumIndicies.PushBack( dataIndex );
+				currentCategory.DatumIndicies.push_back( dataIndex );
 			}
 			else
 			{
-				OVR_WARN( "OvrMetaData::InitFromFileList found duplicate url %s", datum->Url.ToCStr() );
+				OVR_WARN( "OvrMetaData::InitFromFileList found duplicate url %s", datum->Url.c_str() );
 			}
 		}
 	}
@@ -185,9 +198,8 @@ void OvrMetaData::InitFromFileList( const Array< String > & fileList, const OvrM
 
 void OvrMetaData::RenameCategory( const char * currentTag, const char * newName )
 {
-	for ( int i = 0; i < Categories.GetSizeI(); ++i )
+	for ( Category & cat : Categories )
 	{
-		Category & cat = Categories.At( i );
 		if ( cat.CategoryTag == currentTag )
 		{
 			cat.LocaleKey = newName;
@@ -196,7 +208,7 @@ void OvrMetaData::RenameCategory( const char * currentTag, const char * newName 
 	}
 }
 
-// Set a category label after construction 
+// Set a category label after construction
 bool OvrMetaData::RenameCategoryTag( const char * currentTag, const char * newName )
 {
 	Category * category = GetCategory( currentTag );
@@ -204,15 +216,14 @@ bool OvrMetaData::RenameCategoryTag( const char * currentTag, const char * newNa
 	{
 		return false;
 	}
-	for ( int j = 0; j < MetaData.GetSizeI(); ++j )
+	for ( OvrMetaDatum * datum : MetaData )
 	{
-		OvrMetaDatum * datum = MetaData.At( j );
-		Array< String >& tags = datum->Tags;
-		for ( int t = 0; t < tags.GetSizeI(); ++t )
+		std::vector< std::string >& tags = datum->Tags;
+		for ( int t = 0; t < static_cast< int >( tags.size() ); ++t )
 		{
-			if ( tags.At( t ) == currentTag )
+			if ( tags.at( t ) == currentTag )
 			{
-				tags.At( t ) = newName;
+				tags.at( t ) = newName;
 				break;
 			}
 		}
@@ -221,35 +232,35 @@ bool OvrMetaData::RenameCategoryTag( const char * currentTag, const char * newNa
 	return true;
 }
 
-JSON * LoadPackageMetaFile( const char * metaFile )
+std::shared_ptr<JSON> LoadPackageMetaFile( const char * metaFile )
 {
 	int bufferLength = 0;
 	void * 	buffer = NULL;
-	String assetsMetaFile = "assets/";
+	std::string assetsMetaFile = "assets/";
 	assetsMetaFile += metaFile;
-	ovr_ReadFileFromApplicationPackage( assetsMetaFile.ToCStr(), bufferLength, buffer );
+	ovr_ReadFileFromApplicationPackage( assetsMetaFile.c_str(), bufferLength, buffer );
 	if ( !buffer )
 	{
-		OVR_WARN( "LoadPackageMetaFile failed to read %s", assetsMetaFile.ToCStr() );
+		OVR_WARN( "LoadPackageMetaFile failed to read %s", assetsMetaFile.c_str() );
 	}
 	return JSON::Parse( static_cast< const char * >( buffer ) );
 }
 
-JSON * OvrMetaData::CreateOrGetStoredMetaFile( const char * appFileStoragePath, const char * metaFile )
+std::shared_ptr<JSON> OvrMetaData::CreateOrGetStoredMetaFile( const char * appFileStoragePath, const char * metaFile )
 {
 	FilePath = appFileStoragePath;
 	FilePath += metaFile;
 
-	OVR_LOG( "CreateOrGetStoredMetaFile FilePath: %s", FilePath.ToCStr() );
+	OVR_LOG( "CreateOrGetStoredMetaFile FilePath: %s", FilePath.c_str() );
 
-	JSON * dataFile = JSON::Load( FilePath.ToCStr() );
+	std::shared_ptr<JSON> dataFile = JSON::Load( FilePath.c_str() );
 	if ( dataFile == NULL )
 	{
 		// If this is the first run, or we had an error loading the file, we copy the meta file from assets to app's cache
 		WriteMetaFile( metaFile );
 
 		// try loading it again
-		dataFile = JSON::Load( FilePath.ToCStr() );
+		dataFile = JSON::Load( FilePath.c_str() );
 		if ( dataFile == NULL )
 		{
 			OVR_WARN( "OvrMetaData failed to load JSON meta file: %s", metaFile );
@@ -257,7 +268,7 @@ JSON * OvrMetaData::CreateOrGetStoredMetaFile( const char * appFileStoragePath, 
 	}
 	else
 	{
-		OVR_LOG( "OvrMetaData::CreateOrGetStoredMetaFile found %s", FilePath.ToCStr() );
+		OVR_LOG( "OvrMetaData::CreateOrGetStoredMetaFile found %s", FilePath.c_str() );
 	}
 	return dataFile;
 }
@@ -266,16 +277,16 @@ void OvrMetaData::WriteMetaFile( const char * metaFile ) const
 {
 	OVR_LOG( "Writing metafile from apk" );
 
-	if ( FILE * newMetaFile = fopen( FilePath.ToCStr(), "w" ) )
+	if ( FILE * newMetaFile = fopen( FilePath.c_str(), "w" ) )
 	{
 		int bufferLength = 0;
 		void * 	buffer = NULL;
-		String assetsMetaFile = "assets/";
+		std::string assetsMetaFile = "assets/";
 		assetsMetaFile += metaFile;
-		ovr_ReadFileFromApplicationPackage( assetsMetaFile.ToCStr(), bufferLength, buffer );
+		ovr_ReadFileFromApplicationPackage( assetsMetaFile.c_str(), bufferLength, buffer );
 		if ( !buffer )
 		{
-			OVR_WARN( "OvrMetaData failed to read %s", assetsMetaFile.ToCStr() );
+			OVR_WARN( "OvrMetaData failed to read %s", assetsMetaFile.c_str() );
 		}
 		else
 		{
@@ -290,31 +301,31 @@ void OvrMetaData::WriteMetaFile( const char * metaFile ) const
 	}
 	else
 	{
-		OVR_FAIL( "OvrMetaData failed to create %s - check app permissions", FilePath.ToCStr() );
+		OVR_FAIL( "OvrMetaData failed to create %s - check app permissions", FilePath.c_str() );
 	}
 }
 
-void OvrMetaData::InitFromDirectoryMergeMeta( const char * relativePath, const Array< String > & searchPaths,
+void OvrMetaData::InitFromDirectoryMergeMeta( const char * relativePath, const std::vector< std::string > & searchPaths,
 	const OvrMetaDataFileExtensions & fileExtensions, const char * metaFile, const char * packageName )
 {
 	OVR_LOG( "OvrMetaData::InitFromDirectoryMergeMeta" );
 
-	String appFileStoragePath = "/data/data/";
+	std::string appFileStoragePath = "/data/data/";
 	appFileStoragePath += packageName;
 	appFileStoragePath += "/files/";
 
 	FilePath = appFileStoragePath + metaFile;
 
-	OVR_ASSERT( HasPermission( FilePath.ToCStr(), permissionFlags_t( PERMISSION_READ ) ) );
+	OVR_ASSERT( HasPermission( FilePath.c_str(), permissionFlags_t( PERMISSION_READ ) ) );
 
-	JSON * dataFile = CreateOrGetStoredMetaFile( appFileStoragePath.ToCStr(), metaFile );
+	std::shared_ptr<JSON> dataFile = CreateOrGetStoredMetaFile( appFileStoragePath.c_str(), metaFile );
 
 	InitFromDirectory( relativePath, searchPaths, fileExtensions );
 	ProcessMetaData( dataFile, searchPaths, metaFile );
 }
 
-void OvrMetaData::InitFromFileListMergeMeta( const Array< String > & fileList, const Array< String > & searchPaths,
-	const OvrMetaDataFileExtensions & fileExtensions, const char * appFileStoragePath, const char * metaFile, JSON * storedMetaData )
+void OvrMetaData::InitFromFileListMergeMeta( const std::vector< std::string > & fileList, const std::vector< std::string > & searchPaths,
+	const OvrMetaDataFileExtensions & fileExtensions, const char * appFileStoragePath, const char * metaFile, std::shared_ptr<JSON> storedMetaData )
 {
 	OVR_LOG( "OvrMetaData::InitFromFileListMergeMeta" );
 
@@ -322,54 +333,52 @@ void OvrMetaData::InitFromFileListMergeMeta( const Array< String > & fileList, c
 	ProcessMetaData( storedMetaData, searchPaths, metaFile );
 }
 
-void OvrMetaData::InsertCategoryList( const int startIndex, const Array< Category > & categoryList )
+void OvrMetaData::InsertCategoryList( const int startIndex, const std::vector< Category > & categoryList )
 {
-	// Merge in the remote categories 
+	// Merge in the remote categories
 	// if any duplicates exist, their order is based on the new list
-	Array< Category > finalCategoryList;
+	std::vector< Category > finalCategoryList;
 
-	StringHash< bool > newCategorySet; 
-	for ( int i = 0; i < categoryList.GetSizeI(); ++i )
+	std::unordered_map< std::string, bool > newCategorySet; 
+	for ( const Category & newCategory : categoryList )
 	{
-		const Category & newCategory = categoryList.At( i );
-		newCategorySet.Add( newCategory.CategoryTag, true );
+		newCategorySet[ newCategory.CategoryTag ] = true ;
 	}
 
 	// Remove any duplicates in the existing categories
-	for ( int i = 0; i < Categories.GetSizeI(); ++i )
+	for ( const Category & existingCategory : Categories )
 	{
-		const Category & existingCategory = Categories.At( i );
-		StringHash< bool >::ConstIterator iter = newCategorySet.Find( existingCategory.CategoryTag );
-		if ( iter == newCategorySet.End() )
+		auto iter = newCategorySet.find( existingCategory.CategoryTag );
+		if ( iter == newCategorySet.end() )
 		{
-			finalCategoryList.PushBack( existingCategory );
+			finalCategoryList.push_back( existingCategory );
 		}
 	}
 
 	// Insert the new category list starting at the startIndex if possible - otherwise just append
-	for ( int remoteIndex = 0; remoteIndex < categoryList.GetSizeI(); ++remoteIndex )
+	for ( int remoteIndex = 0; remoteIndex < static_cast< int >( categoryList.size() ); ++remoteIndex )
 	{
-		const Category & newCategory = categoryList.At( remoteIndex );
+		const Category & newCategory = categoryList[ remoteIndex ];
 
 		const int targetIndex = startIndex + remoteIndex;
-		OVR_LOG( "OvrMetaData::InsertCategoryList merging %s into category index %d", newCategory.CategoryTag.ToCStr(), targetIndex );
-		if ( startIndex >= 0 && startIndex < Categories.GetSizeI() )
+		OVR_LOG( "OvrMetaData::InsertCategoryList merging %s into category index %d", newCategory.CategoryTag.c_str(), targetIndex );
+		if ( startIndex >= 0 && startIndex < static_cast< int >( Categories.size() ) )
 		{
-			finalCategoryList.InsertAt( targetIndex, newCategory );
+			finalCategoryList.insert( finalCategoryList.cbegin() + targetIndex, newCategory );
 		}
 		else
 		{
-			finalCategoryList.PushBack( newCategory );
+			finalCategoryList.push_back( newCategory );
 		}
 	}
 
-	Alg::Swap( Categories, finalCategoryList );
+	std::swap( Categories, finalCategoryList );
 }
 
 void OvrMetaData::ProcessRemoteMetaFile( const char * metaFileString, const int startIndex )
 {
 	char const * errorMsg = NULL;
-	JSON * remoteMetaFile = JSON::Parse( metaFileString, &errorMsg );
+	std::shared_ptr<JSON> remoteMetaFile = JSON::Parse( metaFileString, &errorMsg );
 	if ( remoteMetaFile != NULL )
 	{
 		// First grab the version
@@ -378,62 +387,58 @@ void OvrMetaData::ProcessRemoteMetaFile( const char * metaFileString, const int 
 
 		if ( remoteVersion <= Version ) // We already have this metadata, don't need to process further
 		{
-			remoteMetaFile->Release();
 			return;
 		}
 
 		Version = remoteVersion;
 
-		Array< Category > remoteCategories;
-		StringHash< OvrMetaDatum * > remoteMetaData;
-		ExtractCategories( remoteMetaFile , remoteCategories );
-		ExtractRemoteMetaData( remoteMetaFile , remoteMetaData );
+		std::vector< Category > remoteCategories;
+		std::unordered_map< std::string, OvrMetaDatum * > remoteMetaData;
+		ExtractCategories( remoteMetaFile, remoteCategories );
+		ExtractRemoteMetaData( remoteMetaFile, remoteMetaData );
 		
 		InsertCategoryList( startIndex, remoteCategories );
-	
+
 		// Append the remote data
 		ReconcileMetaData( remoteMetaData );
-		
+
 		// Recreate indices which may have changed after reconciliation
 		RegenerateCategoryIndices();
 
-		remoteMetaFile->Release();
-
 		// Serialize the new metadata
-		JSON * dataFile = MetaDataToJson();
+		std::shared_ptr<JSON> dataFile = MetaDataToJson();
 		if ( dataFile == NULL )
 		{
 			OVR_FAIL( "OvrMetaData::ProcessMetaData failed to generate JSON meta file" );
 		}
 
-		dataFile->Save( FilePath.ToCStr() );
+		dataFile->Save( FilePath.c_str() );
 
-		OVR_LOG( "OvrMetaData::ProcessRemoteMetaFile updated %s", FilePath.ToCStr() );
-		dataFile->Release();
+		OVR_LOG( "OvrMetaData::ProcessRemoteMetaFile updated %s", FilePath.c_str() );
 	}
-	else 
+	else
 	{
 		OVR_LOG( "Meta file parse error '%s'", errorMsg != NULL ? "<NULL>" : errorMsg );
 	}
 }
 
-void OvrMetaData::ProcessMetaData( JSON * dataFile, const Array< String > & searchPaths, const char * metaFile )
+void OvrMetaData::ProcessMetaData( std::shared_ptr<JSON> dataFile, const std::vector< std::string > & searchPaths, const char * metaFile )
 {
 	if ( dataFile != NULL )
 	{
 		// Grab the version from the loaded data
 		ExtractVersion( dataFile, Version );
 
-		Array< Category > storedCategories;
-		StringHash< OvrMetaDatum * > storedMetaData;
+		std::vector< Category > storedCategories;
+		std::unordered_map< std::string, OvrMetaDatum * > storedMetaData;
 		ExtractCategories( dataFile, storedCategories );
 
 		// Read in package data first
-		JSON * packageMeta = LoadPackageMetaFile( metaFile );
+		std::shared_ptr<JSON> packageMeta = LoadPackageMetaFile( metaFile );
 		if ( packageMeta )
 		{
 			// If we failed to find a version in the serialized data, need to set it from the assets version
-			if ( Version < 0.0 ) 
+			if ( Version < 0.0 )
 			{
 				ExtractVersion( packageMeta, Version );
 				if ( Version < 0.0 )
@@ -443,7 +448,6 @@ void OvrMetaData::ProcessMetaData( JSON * dataFile, const Array< String > & sear
 			}
 			ExtractCategories( packageMeta, storedCategories );
 			ExtractMetaData( packageMeta, searchPaths, storedMetaData );
-			packageMeta->Release();
 		}
 		else
 		{
@@ -456,30 +460,28 @@ void OvrMetaData::ProcessMetaData( JSON * dataFile, const Array< String > & sear
 		// Reconcile the stored data vs the data read in
 		ReconcileCategories( storedCategories );
 		ReconcileMetaData( storedMetaData );
-	
+
 		// Recreate indices which may have changed after reconciliation
 		RegenerateCategoryIndices();
 
-		// Delete any newly empty categories except Favorites 
-		if ( !Categories.IsEmpty() )
+		// Delete any newly empty categories except Favorites
+		if ( !Categories.empty() )
 		{
-			Array< Category > finalCategories;
-			finalCategories.PushBack( Categories.At( 0 ) );
-			for ( int catIndex = 1; catIndex < Categories.GetSizeI(); ++catIndex )
+			std::vector< Category > finalCategories;
+			finalCategories.push_back( Categories.at( 0 ) );
+			for ( Category & cat : Categories )
 			{
-				Category & cat = Categories.At( catIndex );
-				if ( !cat.DatumIndicies.IsEmpty() )
+				if ( !cat.DatumIndicies.empty() )
 				{
-					finalCategories.PushBack( cat );
+					finalCategories.push_back( cat );
 				}
 				else
 				{
-					OVR_WARN( "OvrMetaData::ProcessMetaData discarding empty %s", cat.CategoryTag.ToCStr() );
+					OVR_WARN( "OvrMetaData::ProcessMetaData discarding empty %s", cat.CategoryTag.c_str() );
 				}
 			}
-			Alg::Swap( finalCategories, Categories );
+			std::swap( finalCategories, Categories );
 		}
-		dataFile->Release();
 	}
 	else
 	{
@@ -493,15 +495,14 @@ void OvrMetaData::ProcessMetaData( JSON * dataFile, const Array< String > & sear
 		OVR_FAIL( "OvrMetaData::ProcessMetaData failed to generate JSON meta file" );
 	}
 
-	dataFile->Save( FilePath.ToCStr() );
+	dataFile->Save( FilePath.c_str() );
 
-	OVR_LOG( "OvrMetaData::ProcessMetaData created %s", FilePath.ToCStr() );
-	dataFile->Release();
+	OVR_LOG( "OvrMetaData::ProcessMetaData created %s", FilePath.c_str() );
 }
 
-void OvrMetaData::ReconcileMetaData( StringHash< OvrMetaDatum * > & storedMetaData )
+void OvrMetaData::ReconcileMetaData( std::unordered_map< std::string, OvrMetaDatum * > & storedMetaData )
 {
-	if ( storedMetaData.IsEmpty() )
+	if ( storedMetaData.empty() )
 	{
 		return;
 	}
@@ -509,49 +510,54 @@ void OvrMetaData::ReconcileMetaData( StringHash< OvrMetaDatum * > & storedMetaDa
 
 	// Now for any remaining stored data - check if it's remote and just add it, sorted by the
 	// assigned Id
-	Array< OvrMetaDatum * > sortedEntries;
-	StringHash< OvrMetaDatum * >::Iterator storedIter = storedMetaData.Begin();
-	for ( ; storedIter != storedMetaData.End(); ++storedIter )
+	std::vector< OvrMetaDatum * > sortedEntries;
+	auto storedIter = storedMetaData.begin();
+	for ( ; storedIter != storedMetaData.end(); ++storedIter )
 	{
-		OvrMetaDatum * storedDatum = storedIter->Second;
+		OvrMetaDatum * storedDatum = storedIter->second;
 		if ( IsRemote( storedDatum ) )
 		{
-			OVR_LOG( "ReconcileMetaData metadata adding remote %s", storedDatum->Url.ToCStr() );
-			sortedEntries.PushBack( storedDatum );
+			OVR_LOG( "ReconcileMetaData metadata adding remote %s", storedDatum->Url.c_str() );
+			sortedEntries.push_back( storedDatum );
 		}
 	}
-	Alg::QuickSortSlicedSafe( sortedEntries, 0, sortedEntries.GetSize(), OvrMetaDatumIdComparator);
-	Array< OvrMetaDatum * >::Iterator sortedIter = sortedEntries.Begin();
-	for ( ; sortedIter != sortedEntries.End(); ++sortedIter )
+	std::sort(
+			sortedEntries.begin(),
+			sortedEntries.end(),
+			[=]( const OvrMetaDatum * a, const OvrMetaDatum * b) { return a->Id < b->Id; } );
+	for ( const auto & entry : sortedEntries )
 	{
-		MetaData.PushBack( *sortedIter );
+		MetaData.push_back( entry );
 	}
-	storedMetaData.Clear();
+	storedMetaData.clear();
 }
 
-void OvrMetaData::DedupMetaData( Array< OvrMetaDatum * > & existingData, StringHash< OvrMetaDatum * > & newData )
+void OvrMetaData::DedupMetaData( std::vector< OvrMetaDatum * > & existingData, std::unordered_map< std::string, OvrMetaDatum * > & newData )
 {
     // Fix the read in meta data using the stored
-    for ( int i = 0; i < existingData.GetSizeI(); ++i )
+    for ( int i = 0; i < static_cast< int >( existingData.size() ); ++i )
     {
-        OvrMetaDatum * metaDatum = existingData.At( i );
+        OvrMetaDatum * metaDatum = existingData[ i ];
 
-        StringHash< OvrMetaDatum * >::Iterator iter = newData.FindCaseInsensitive( metaDatum->Url );
-
-        if ( iter != newData.End() )
+		// always use the lowercase version of the URL 
+		std::string lowerCaseUrl = metaDatum->Url.c_str();
+		auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+		loc.tolower( &lowerCaseUrl[0], &lowerCaseUrl[0] + lowerCaseUrl.length() );
+		auto iter = newData.find( lowerCaseUrl );
+        if ( iter != newData.end() )
         {
-            OvrMetaDatum * storedDatum = iter->Second;
-            OVR_LOG( "DedupMetaData metadata for %s", storedDatum->Url.ToCStr() );
-            Alg::Swap( storedDatum->Tags, metaDatum->Tags );
+            OvrMetaDatum * storedDatum = iter->second;
+            OVR_LOG( "DedupMetaData metadata for %s", storedDatum->Url.c_str() );
+            std::swap( storedDatum->Tags, metaDatum->Tags );
             SwapExtendedData( storedDatum, metaDatum );
-            newData.Remove( iter->First );
+            newData.erase( iter );
         }
     }
 }
 
-void OvrMetaData::ReconcileCategories( Array< Category > & storedCategories )
+void OvrMetaData::ReconcileCategories( std::vector< Category > & storedCategories )
 {
-	if ( storedCategories.IsEmpty() )
+	if ( storedCategories.empty() )
 	{
 		return;
 	}
@@ -560,50 +566,47 @@ void OvrMetaData::ReconcileCategories( Array< Category > & storedCategories )
 	// We want Favorites always at the top
 	// Followed by user created categories
 	// Finally we want to maintain the order of the retail categories (defined in assets/meta.json)
-	Array< Category > finalCategories;
+	std::vector< Category > finalCategories;
 
-	Category favorites = storedCategories.At( 0 );
+	Category favorites = storedCategories.at( 0 );
 	if ( favorites.CategoryTag != FAVORITES_TAG )
 	{
 		OVR_WARN( "OvrMetaData::ReconcileCategories failed to find expected category order -- missing assets/meta.json?" );
 	}
 
-	finalCategories.PushBack( favorites );
+	finalCategories.push_back( favorites );
 
-	StringHash< bool > StoredCategoryMap; // using as set
-	for ( int i = 0; i < storedCategories.GetSizeI(); ++i )
+	std::unordered_map< std::string, bool > StoredCategoryMap; // using as set
+	for ( const Category & storedCategory : storedCategories )
 	{
-		const Category & storedCategory = storedCategories.At( i );
-		OVR_LOG( "OvrMetaData::ReconcileCategories storedCategory: %s", storedCategory.CategoryTag.ToCStr() );
-		StoredCategoryMap.Add( storedCategory.CategoryTag, true );
+		OVR_LOG( "OvrMetaData::ReconcileCategories storedCategory: %s", storedCategory.CategoryTag.c_str() );
+		StoredCategoryMap[ storedCategory.CategoryTag ] = true;
 	}
 
 	// Now add the read in categories if they differ
-	for ( int i = 0; i < Categories.GetSizeI(); ++i )
+	for ( const Category & readInCategory : Categories )
 	{
-		const Category & readInCategory = Categories.At( i );
-		StringHash< bool >::ConstIterator iter = StoredCategoryMap.Find( readInCategory.CategoryTag );
+		auto iter = StoredCategoryMap.find( readInCategory.CategoryTag );
 
-		if ( iter == StoredCategoryMap.End() )
+		if ( iter == StoredCategoryMap.end() )
 		{
-			OVR_LOG( "OvrMetaData::ReconcileCategories adding %s", readInCategory.CategoryTag.ToCStr() );
-			finalCategories.PushBack( readInCategory );
+			OVR_LOG( "OvrMetaData::ReconcileCategories adding %s", readInCategory.CategoryTag.c_str() );
+			finalCategories.push_back( readInCategory );
 		}
 	}
 
 	// Finally fill in the stored in categories after user made ones
-	for ( int i = 1; i < storedCategories.GetSizeI(); ++i )
+	for ( const Category & storedCat : storedCategories )
 	{
-		const  Category & storedCat = storedCategories.At( i );
-		OVR_LOG( "OvrMetaData::ReconcileCategories adding stored category %s", storedCat.CategoryTag.ToCStr() );
-		finalCategories.PushBack( storedCat );
+		OVR_LOG( "OvrMetaData::ReconcileCategories adding stored category %s", storedCat.CategoryTag.c_str() );
+		finalCategories.push_back( storedCat );
 	}
 
 	// Now replace Categories
-	Alg::Swap( Categories, finalCategories );
+	std::swap( Categories, finalCategories );
 }
 
-void OvrMetaData::ExtractVersion( JSON * dataFile, double & outVersion ) const
+void OvrMetaData::ExtractVersion( std::shared_ptr<JSON> dataFile, double & outVersion ) const
 {
 	if ( dataFile == NULL )
 	{
@@ -617,7 +620,7 @@ void OvrMetaData::ExtractVersion( JSON * dataFile, double & outVersion ) const
 	}
 }
 
-void OvrMetaData::ExtractCategories( JSON * dataFile, Array< Category > & outCategories ) const
+void OvrMetaData::ExtractCategories( std::shared_ptr<JSON> dataFile, std::vector< Category > & outCategories ) const
 {
 	if ( dataFile == NULL )
 	{
@@ -628,7 +631,7 @@ void OvrMetaData::ExtractCategories( JSON * dataFile, Array< Category > & outCat
 
 	if ( categories.IsArray() )
 	{
-		while ( const JSON * nextElement = categories.GetNextArrayElement() )
+		while ( const std::shared_ptr<JSON> nextElement = categories.GetNextArrayElement() )
 		{
 			const JsonReader category( nextElement );
 			if ( category.IsObject() )
@@ -639,9 +642,8 @@ void OvrMetaData::ExtractCategories( JSON * dataFile, Array< Category > & outCat
 
 				// Check if we already have this category
 				bool exists = false;
-				for ( int i = 0; i < outCategories.GetSizeI(); ++i )
+				for ( const Category & existingCat : outCategories )
 				{
-					const Category & existingCat = outCategories.At( i );
 					if ( extractedCategory.CategoryTag == existingCat.CategoryTag )
 					{
 						exists = true;
@@ -651,15 +653,15 @@ void OvrMetaData::ExtractCategories( JSON * dataFile, Array< Category > & outCat
 
 				if ( !exists )
 				{
-					OVR_LOG( "Extracting category: %s", extractedCategory.CategoryTag.ToCStr() );
-					outCategories.PushBack( extractedCategory );
+					OVR_LOG( "Extracting category: %s", extractedCategory.CategoryTag.c_str() );
+					outCategories.push_back( extractedCategory );
 				}
 			}
 		}
 	}
 }
 
-void OvrMetaData::ExtractMetaData( JSON * dataFile, const Array< String > & searchPaths, StringHash< OvrMetaDatum * > & outMetaData ) const
+void OvrMetaData::ExtractMetaData( std::shared_ptr<JSON> dataFile, const std::vector< std::string > & searchPaths, std::unordered_map< std::string, OvrMetaDatum * > & outMetaData ) const
 {
 	if ( dataFile == NULL )
 	{
@@ -669,8 +671,8 @@ void OvrMetaData::ExtractMetaData( JSON * dataFile, const Array< String > & sear
 	const JsonReader data( dataFile->GetItemByName( DATA ) );
 	if ( data.IsArray() )
 	{
-		int jsonIndex = MetaData.GetSizeI();
-		while ( const JSON * nextElement = data.GetNextArrayElement() )
+		int jsonIndex = static_cast< int >( MetaData.size() );
+		while ( const std::shared_ptr<JSON> nextElement = data.GetNextArrayElement() )
 		{
 			const JsonReader datum( nextElement );
 			if ( datum.IsObject() )
@@ -685,34 +687,34 @@ void OvrMetaData::ExtractMetaData( JSON * dataFile, const Array< String > & sear
 				const JsonReader tags( datum.GetChildByName( TAGS ) );
 				if ( tags.IsArray() )
 				{
-					while ( const JSON * tagElement = tags.GetNextArrayElement() )
+					while ( const std::shared_ptr<JSON> tagElement = tags.GetNextArrayElement() )
 					{
 						const JsonReader tag( tagElement );
 						if ( tag.IsObject() )
 						{
-							metaDatum->Tags.PushBack( tag.GetChildStringByName( CATEGORY ) );
+							metaDatum->Tags.push_back( tag.GetChildStringByName( CATEGORY ) );
 						}
 					}
 				}
 
-				OVR_ASSERT( !metaDatum->Tags.IsEmpty() );
+				OVR_ASSERT( !metaDatum->Tags.empty() );
 
-				const String relativeUrl( datum.GetChildStringByName( URL_INNER ) );
+				const std::string relativeUrl( datum.GetChildStringByName( URL_INNER ) );
 				metaDatum->Url = relativeUrl;
 				bool foundPath = false;
 				const bool isRemote = IsRemote( metaDatum );
-				
+
 				// Get the absolute path if this is a local file
 				if ( !isRemote )
 				{
-					foundPath = GetFullPath( searchPaths, relativeUrl.ToCStr(), metaDatum->Url );
+					foundPath = GetFullPath( searchPaths, relativeUrl.c_str(), metaDatum->Url );
 					if ( !foundPath )
 					{
 						// if we fail to find the file, check for encrypted extension (TODO: Might put this into a virtual function if necessary, benign for now)
-						foundPath = GetFullPath( searchPaths, String( relativeUrl + ".x" ).ToCStr(), metaDatum->Url );
+						foundPath = GetFullPath( searchPaths, std::string( relativeUrl + ".x" ).c_str(), metaDatum->Url );
 					}
 				}
-				
+
 				// if we fail to find the local file or it's a remote file, the Url is left as read in from the stored data
 				if ( isRemote || !foundPath )
 				{
@@ -720,23 +722,28 @@ void OvrMetaData::ExtractMetaData( JSON * dataFile, const Array< String > & sear
 				}
 
 				ExtractExtendedData( datum, *metaDatum );
-				OVR_LOG( "OvrMetaData::ExtractMetaData adding datum %s", metaDatum->Url.ToCStr() );
+				OVR_LOG( "OvrMetaData::ExtractMetaData adding datum %s", metaDatum->Url.c_str() );
 
-				StringHash< OvrMetaDatum * >::Iterator iter = outMetaData.FindCaseInsensitive( metaDatum->Url );
-				if ( iter == outMetaData.End() )
+				// always use the lowercase version of the URL 
+				std::string lowerCaseUrl = metaDatum->Url.c_str();
+				auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+				loc.tolower( &lowerCaseUrl[0], &lowerCaseUrl[0] + lowerCaseUrl.length() );
+				auto iter = outMetaData.find( lowerCaseUrl );
+				if ( iter == outMetaData.end() )
 				{
-					outMetaData.Add( metaDatum->Url, metaDatum );
+					// Always index by lowercase version of the URL
+					outMetaData[ lowerCaseUrl ] = metaDatum;
 				}
 				else
 				{
-					iter->Second = metaDatum;
+					iter->second = metaDatum;
 				}
 			}
 		}
 	}
 }
 
-void OvrMetaData::ExtractRemoteMetaData( JSON * dataFile, StringHash< OvrMetaDatum * > & outMetaData ) const
+void OvrMetaData::ExtractRemoteMetaData( std::shared_ptr<JSON> dataFile, std::unordered_map< std::string, OvrMetaDatum * > & outMetaData ) const
 {
 	if ( dataFile == NULL )
 	{
@@ -746,8 +753,8 @@ void OvrMetaData::ExtractRemoteMetaData( JSON * dataFile, StringHash< OvrMetaDat
 	const JsonReader data( dataFile->GetItemByName( DATA ) );
 	if ( data.IsArray() )
 	{
-		int jsonIndex = MetaData.GetSizeI();
-		while ( const JSON * nextElement = data.GetNextArrayElement() )
+		int jsonIndex = static_cast< int >( MetaData.size() );
+		while ( const std::shared_ptr<JSON> nextElement = data.GetNextArrayElement() )
 		{
 			const JsonReader jsonDatum( nextElement );
 			if ( jsonDatum.IsObject() )
@@ -761,29 +768,33 @@ void OvrMetaData::ExtractRemoteMetaData( JSON * dataFile, StringHash< OvrMetaDat
 				const JsonReader tags( jsonDatum.GetChildByName( TAGS ) );
 				if ( tags.IsArray() )
 				{
-					while ( const JSON * tagElement = tags.GetNextArrayElement() )
+					while ( const std::shared_ptr<JSON> tagElement = tags.GetNextArrayElement() )
 					{
 						const JsonReader tag( tagElement );
 						if ( tag.IsObject() )
 						{
-							metaDatum->Tags.PushBack( tag.GetChildStringByName( CATEGORY ) );
+							metaDatum->Tags.push_back( tag.GetChildStringByName( CATEGORY ) );
 						}
 					}
 				}
 
-				OVR_ASSERT( !metaDatum->Tags.IsEmpty() );
+				OVR_ASSERT( !metaDatum->Tags.empty() );
 
 				metaDatum->Url = jsonDatum.GetChildStringByName( URL_INNER );
 				ExtractExtendedData( jsonDatum, *metaDatum );
 
-				StringHash< OvrMetaDatum * >::Iterator iter = outMetaData.FindCaseInsensitive( metaDatum->Url );
-				if ( iter == outMetaData.End() )
+				// always use the lowercase version of the URL 
+				std::string lowerCaseUrl = metaDatum->Url.c_str();
+				auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+				loc.tolower( &lowerCaseUrl[0], &lowerCaseUrl[0] + lowerCaseUrl.length() );
+				auto iter = outMetaData.find( lowerCaseUrl );
+				if ( iter == outMetaData.end() )
 				{
-					outMetaData.Add( metaDatum->Url, metaDatum );
+					outMetaData[ lowerCaseUrl ] = metaDatum;
 				}
 				else
 				{
-					iter->Second = metaDatum;
+					iter->second = metaDatum;
 				}
 			}
 		}
@@ -794,130 +805,126 @@ void OvrMetaData::ExtractRemoteMetaData( JSON * dataFile, StringHash< OvrMetaDat
 void OvrMetaData::Serialize()
 {
 	// Serialize the new metadata
-	JSON * dataFile = MetaDataToJson();
+	std::shared_ptr<JSON> dataFile = MetaDataToJson();
 	if ( dataFile == NULL )
 	{
 		OVR_FAIL( "OvrMetaData::Serialize failed to generate JSON meta file" );
 	}
 
-	dataFile->Save( FilePath.ToCStr() );
+	dataFile->Save( FilePath.c_str() );
 
-	OVR_LOG( "OvrMetaData::Serialize updated %s", FilePath.ToCStr() );
-	dataFile->Release();
+	OVR_LOG( "OvrMetaData::Serialize updated %s", FilePath.c_str() );
 }
 
 void OvrMetaData::RegenerateCategoryIndices()
 {
-	for ( int catIndex = 0; catIndex < Categories.GetSizeI(); ++catIndex )
+	for ( Category & cat : Categories )
 	{
-		Category & cat = Categories.At( catIndex );
-		cat.DatumIndicies.Clear();
+		cat.DatumIndicies.clear();
 	}
 
 	// Delete any data only tagged as "Favorite" - this is a fix for user created "Favorite" folder which is a special case
 	// Not doing this will show photos already favorited that the user cannot unfavorite
-	for ( int metaDataIndex = 0; metaDataIndex < MetaData.GetSizeI(); ++metaDataIndex )
+	for ( int metaDataIndex = 0; metaDataIndex < static_cast< int >( MetaData.size() ); ++metaDataIndex )
 	{
-		OvrMetaDatum & metaDatum = *MetaData.At( metaDataIndex );
-		Array< String > & tags = metaDatum.Tags;
+		OvrMetaDatum & metaDatum = *MetaData.at( metaDataIndex );
+		std::vector< std::string > & tags = metaDatum.Tags;
 
-		OVR_ASSERT( metaDatum.Tags.GetSizeI() > 0 );
-		if ( tags.GetSizeI() == 1 )
+		OVR_ASSERT( metaDatum.Tags.size() > 0 );
+		if ( tags.size() == 1 )
 		{
-			if ( tags.At( 0 ) == FAVORITES_TAG )
+			if ( tags.at( 0 ) == FAVORITES_TAG )
 			{
-				OVR_LOG( "Removing broken metadatum %s", metaDatum.Url.ToCStr() );
-				MetaData.RemoveAtUnordered( metaDataIndex );
+				OVR_LOG( "Removing broken metadatum %s", metaDatum.Url.c_str() );
+				MetaData.erase( MetaData.cbegin() + metaDataIndex );
 			}
 		}
 	}
 
 	// Fix the indices
-	for ( int metaDataIndex = 0; metaDataIndex < MetaData.GetSizeI(); ++metaDataIndex )
+	for ( int metaDataIndex = 0; metaDataIndex < static_cast< int >( MetaData.size() ); ++metaDataIndex )
 	{
-		OvrMetaDatum & datum = *MetaData.At( metaDataIndex );
-		Array< String > & tags = datum.Tags;
+		OvrMetaDatum & datum = *MetaData.at( metaDataIndex );
+		std::vector< std::string > & tags = datum.Tags;
 
-		OVR_ASSERT( tags.GetSizeI() > 0 );
+		OVR_ASSERT( tags.size() > 0 );
 
-		if ( tags.GetSizeI() == 1 )
+		if ( tags.size() == 1 )
 		{
-			OVR_ASSERT( tags.At( 0 ) != FAVORITES_TAG );
+			OVR_ASSERT( tags[ 0 ] != FAVORITES_TAG );
 		}
 
-		if ( tags.At( 0 ) == FAVORITES_TAG && tags.GetSizeI() > 1 )
+		if ( tags[ 0 ] == FAVORITES_TAG && tags.size() > 1 )
 		{
-			Alg::Swap( tags.At( 0 ), tags.At( 1 ) );
+			std::swap( tags[ 0 ], tags[ 1 ] );
 		}
 
-		for ( int tagIndex = 0; tagIndex < tags.GetSizeI(); ++tagIndex )
+		for ( const std::string & tag : tags )
 		{
-			const String & tag = tags[ tagIndex ];
-			if ( !tag.IsEmpty() )
+			if ( !tag.empty() )
 			{
 				if ( Category * category = GetCategory( tag ) )
 				{
-					OVR_LOG( "OvrMetaData inserting index %d for datum %s to %s", metaDataIndex, datum.Url.ToCStr(), category->CategoryTag.ToCStr() );
+					OVR_LOG( "OvrMetaData inserting index %d for datum %s to %s", metaDataIndex, datum.Url.c_str(), category->CategoryTag.c_str() );
 
 					// fix the metadata index itself
 					datum.Id = metaDataIndex;
-					
+
 					// Update the category with the new index
-					category->DatumIndicies.PushBack( metaDataIndex );
+					category->DatumIndicies.push_back( metaDataIndex );
 					category->Dirty = true;
 				}
 				else
 				{
 					OVR_WARN( "OvrMetaData::RegenerateCategoryIndices failed to find category with tag %s for datum %s at index %d",
-						tag.ToCStr(), datum.Url.ToCStr(), metaDataIndex );
+						tag.c_str(), datum.Url.c_str(), metaDataIndex );
 				}
 			}
 		}
 	}
 }
 
-JSON * OvrMetaData::MetaDataToJson() const
+std::shared_ptr<JSON> OvrMetaData::MetaDataToJson() const
 {
-	JSON * DataFile = JSON::CreateObject();
+	std::shared_ptr<JSON> DataFile = JSON::CreateObject();
 
 	// Add version
 	DataFile->AddNumberItem( VERSION, Version );
 
 	// Add categories
-	JSON * newCategoriesObject = JSON::CreateArray();
+	std::shared_ptr<JSON> newCategoriesObject = JSON::CreateArray();
 
-	for ( int c = 0; c < Categories.GetSizeI(); ++c )
+	for ( const Category & cat : Categories )
 	{
-		if ( JSON * catObject = JSON::CreateObject() )
+		if ( std::shared_ptr<JSON> catObject = JSON::CreateObject() )
 		{
-			const Category & cat = Categories.At( c );
-			catObject->AddStringItem( TAG, cat.CategoryTag.ToCStr() );
-			catObject->AddStringItem( LABEL, cat.LocaleKey.ToCStr() );
-			OVR_LOG( "OvrMetaData::MetaDataToJson adding category %s", cat.CategoryTag.ToCStr() );
+			catObject->AddStringItem( TAG, cat.CategoryTag.c_str() );
+			catObject->AddStringItem( LABEL, cat.LocaleKey.c_str() );
+			OVR_LOG( "OvrMetaData::MetaDataToJson adding category %s", cat.CategoryTag.c_str() );
 			newCategoriesObject->AddArrayElement( catObject );
 		}
 	}
 	DataFile->AddItem( CATEGORIES, newCategoriesObject );
 
 	// Add meta data
-	JSON * newDataObject = JSON::CreateArray();
+	std::shared_ptr<JSON> newDataObject = JSON::CreateArray();
 
-	for ( int i = 0; i < MetaData.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( MetaData.size() ); ++i )
 	{
-		const OvrMetaDatum & metaDatum = *MetaData.At( i );
+		const OvrMetaDatum & metaDatum = *MetaData.at( i );
 
-		if ( JSON * datumObject = JSON::CreateObject() )
+		if ( std::shared_ptr<JSON> datumObject = JSON::CreateObject() )
 		{
 			ExtendedDataToJson( metaDatum, datumObject );
-			datumObject->AddStringItem( URL_INNER, metaDatum.Url.ToCStr() );
-			OVR_LOG( "OvrMetaData::MetaDataToJson adding datum url %s", metaDatum.Url.ToCStr() );
-			if ( JSON * newTagsObject = JSON::CreateArray() )
+			datumObject->AddStringItem( URL_INNER, metaDatum.Url.c_str() );
+			OVR_LOG( "OvrMetaData::MetaDataToJson adding datum url %s", metaDatum.Url.c_str() );
+			if ( std::shared_ptr<JSON> newTagsObject = JSON::CreateArray() )
 			{
-				for ( int t = 0; t < metaDatum.Tags.GetSizeI(); ++t )
+				for ( const auto & tag : metaDatum.Tags )
 				{
-					if ( JSON * tagObject = JSON::CreateObject() )
+					if ( std::shared_ptr<JSON> tagObject = JSON::CreateObject() )
 					{
-						tagObject->AddStringItem( CATEGORY, metaDatum.Tags.At( t ).ToCStr() );
+						tagObject->AddStringItem( CATEGORY, tag.c_str() );
 						newTagsObject->AddArrayElement( tagObject );
 					}
 				}
@@ -932,12 +939,15 @@ JSON * OvrMetaData::MetaDataToJson() const
 	return DataFile;
 }
 
-TagAction OvrMetaData::ToggleTag( OvrMetaDatum * metaDatum, const String & newTag )
+TagAction OvrMetaData::ToggleTag( OvrMetaDatum * metaDatum, const std::string & newTag )
 {
-	JSON * DataFile = JSON::Load( FilePath.ToCStr() );
-	if ( DataFile == NULL )
+	OVR_LOG( "ToggleTag tag: %s on %s", newTag.c_str(), metaDatum->Url.c_str() );
+
+	std::shared_ptr<JSON> DataFile = JSON::Load( FilePath.c_str() );
+	if ( DataFile == nullptr )
 	{
-		OVR_FAIL( "OvrMetaData failed to load JSON meta file: %s", FilePath.ToCStr() );
+		OVR_LOG( "OvrMetaData failed to load JSON meta file: %s", FilePath.c_str() );
+		return TAG_ERROR;
 	}
 
 	OVR_ASSERT( DataFile );
@@ -945,84 +955,85 @@ TagAction OvrMetaData::ToggleTag( OvrMetaDatum * metaDatum, const String & newTa
 
 	// First update the local data
 	TagAction action = TAG_ERROR;
-	for ( int t = 0; t < metaDatum->Tags.GetSizeI(); ++t )
+	for ( int t = 0; t < static_cast< int >( metaDatum->Tags.size() ); ++t )
 	{
-		if ( metaDatum->Tags.At( t ) == newTag )
+		if ( metaDatum->Tags.at( t ) == newTag )
 		{
 			// Handle case which leaves us with no tags - ie. broken state
-			if ( metaDatum->Tags.GetSizeI() < 2 )
+			if ( metaDatum->Tags.size() < 2 )
 			{
-				OVR_WARN( "ToggleTag attempt to remove only tag: %s on %s", newTag.ToCStr(), metaDatum->Url.ToCStr() );
+				OVR_WARN( "ToggleTag attempt to remove only tag: %s on %s", newTag.c_str(), metaDatum->Url.c_str() );
 				return TAG_ERROR;
 			}
-			OVR_LOG( "ToggleTag TAG_REMOVED tag: %s on %s", newTag.ToCStr(), metaDatum->Url.ToCStr() );
+			OVR_LOG( "ToggleTag TAG_REMOVED tag: %s on %s", newTag.c_str(), metaDatum->Url.c_str() );
 			action = TAG_REMOVED;
-			metaDatum->Tags.RemoveAt( t );
+			metaDatum->Tags.erase( metaDatum->Tags.cbegin() + t );
 			break;
 		}
 	}
 
 	if ( action == TAG_ERROR )
 	{
-		OVR_LOG( "ToggleTag TAG_ADDED tag: %s on %s", newTag.ToCStr(), metaDatum->Url.ToCStr() );
-		metaDatum->Tags.PushBack( newTag );
+		OVR_LOG( "ToggleTag TAG_ADDED tag: %s on %s", newTag.c_str(), metaDatum->Url.c_str() );
+		metaDatum->Tags.push_back( newTag );
 		action = TAG_ADDED;
 	}
 
 	// Then serialize 
-	JSON * newTagsObject = JSON::CreateArray();
+	std::shared_ptr<JSON> newTagsObject = JSON::CreateArray();
 	OVR_ASSERT( newTagsObject );
 
 	newTagsObject->Name = TAGS;
 
-	for ( int t = 0; t < metaDatum->Tags.GetSizeI(); ++t )
+	for ( const auto & tag : metaDatum->Tags )
 	{
-		if ( JSON * tagObject = JSON::CreateObject() )
+		if ( std::shared_ptr<JSON> tagObject = JSON::CreateObject() )
 		{
-			tagObject->AddStringItem( CATEGORY, metaDatum->Tags.At( t ).ToCStr() );
+			tagObject->AddStringItem( CATEGORY, tag.c_str() );
 			newTagsObject->AddArrayElement( tagObject );
 		}
 	}
 
-	if ( JSON * data = DataFile->GetItemByName( DATA ) )
+	if ( std::shared_ptr<JSON> data = DataFile->GetItemByName( DATA ) )
 	{
-		if ( JSON * datum = data->GetItemByIndex( metaDatum->Id ) )
+		if ( std::shared_ptr<JSON> datum = data->GetItemByIndex( metaDatum->Id ) )
 		{
-			if ( JSON * tags = datum->GetItemByName( TAGS ) )
+			if ( std::shared_ptr<JSON> tags = datum->GetItemByName( TAGS ) )
 			{
-				tags->ReplaceNodeWith( newTagsObject );
-				tags->Release();
-				DataFile->Save( FilePath.ToCStr() );
+				OVR_LOG( "ToggleTag tag: %s on %s - found node to replace", newTag.c_str(), metaDatum->Url.c_str() );
+				datum->ReplaceNodeWith( TAGS, newTagsObject );
+				OVR_LOG( "ToggleTag tag: %s on %s - node replaced", newTag.c_str(), metaDatum->Url.c_str() );
+				DataFile->Save( FilePath.c_str() );
+				OVR_LOG( "ToggleTag tag: %s on %s - file saved", newTag.c_str(), metaDatum->Url.c_str() );
 			}
 		}
 	}
-	DataFile->Release();
 	return action;
 }
 
-void OvrMetaData::AddCategory( const String & name )
+void OvrMetaData::AddCategory( const std::string & name )
 {
 	Category cat;
 	cat.CategoryTag = name;
 	cat.LocaleKey = name;
-	Categories.PushBack( cat );
+	Categories.push_back( cat );
 }
 
-void OvrMetaData::InsertCategoryAt( const int index, const String & name )
+void OvrMetaData::InsertCategoryAt( const int index, const std::string & name )
 {
-	if ( Categories.IsEmpty() )
+	if ( Categories.empty() )
 	{
 		AddCategory( name );
 	}
 	else
 	{
-		Category & targetCategory = Categories.At( index );
+		Category & targetCategory = Categories.at( index );
 		if ( targetCategory.CategoryTag != name )
 		{
 			Category cat;
 			cat.CategoryTag = name;
 			cat.LocaleKey = name;
-			Categories.InsertAt( index, cat );
+			Categories.insert( Categories.cbegin() + index, cat );
 		}
 		else
 		{
@@ -1032,12 +1043,10 @@ void OvrMetaData::InsertCategoryAt( const int index, const String & name )
 	}
 }
 
-OvrMetaData::Category * OvrMetaData::GetCategory( const String & categoryName )
+OvrMetaData::Category * OvrMetaData::GetCategory( const std::string & categoryName )
 {
-	const int numCategories = Categories.GetSizeI();
-	for ( int i = 0; i < numCategories; ++i )
+	for ( Category & category : Categories )
 	{
-		Category & category = Categories.At( i );
 		if ( category.CategoryTag == categoryName )
 		{
 			return &category;
@@ -1048,21 +1057,19 @@ OvrMetaData::Category * OvrMetaData::GetCategory( const String & categoryName )
 
 const OvrMetaDatum & OvrMetaData::GetMetaDatum( const int index ) const
 {
-	OVR_ASSERT( index >= 0 && index < MetaData.GetSizeI() );
-	return *MetaData.At( index );
+	OVR_ASSERT( index >= 0 && index < static_cast< int >( MetaData.size() ) );
+	return *MetaData.at( index );
 }
 
 
-bool OvrMetaData::GetMetaData( const Category & category, Array< const OvrMetaDatum * > & outMetaData ) const
+bool OvrMetaData::GetMetaData( const Category & category, std::vector< const OvrMetaDatum * > & outMetaData ) const
 {
-	const int numPanos = category.DatumIndicies.GetSizeI();
-	for ( int i = 0; i < numPanos; ++i )
+	for ( const int metaDataIndex : category.DatumIndicies )
 	{
-		const int metaDataIndex = category.DatumIndicies.At( i );
-		OVR_ASSERT( metaDataIndex >= 0 && metaDataIndex < MetaData.GetSizeI() );
-		//const OvrMetaDatum * panoData = &MetaData.At( metaDataIndex );
-		//OVR_LOG( "Getting MetaData %d title %s from category %s", metaDataIndex, panoData->Title.ToCStr(), category.CategoryName.ToCStr() );
-		outMetaData.PushBack( MetaData.At( metaDataIndex ) );
+		OVR_ASSERT( metaDataIndex >= 0 && metaDataIndex < static_cast< int >( MetaData.size() ) );
+		//const OvrMetaDatum * panoData = &MetaData.at( metaDataIndex );
+		//OVR_LOG( "Getting MetaData %d title %s from category %s", metaDataIndex, panoData->Title.c_str(), category.CategoryName.c_str() );
+		outMetaData.push_back( MetaData.at( metaDataIndex ) );
 	}
 	return true;
 }
@@ -1070,21 +1077,19 @@ bool OvrMetaData::GetMetaData( const Category & category, Array< const OvrMetaDa
 bool OvrMetaData::ShouldAddFile( const char * filename, const OvrMetaDataFileExtensions & fileExtensions ) const
 {
 	const size_t pathLen = OVR_strlen( filename );
-	for ( int index = 0; index < fileExtensions.BadExtensions.GetSizeI(); ++index )
+	for ( const std::string& ext : fileExtensions.BadExtensions )
 	{
-		const String & ext = fileExtensions.BadExtensions.At( index );
-		const int extLen = ext.GetLengthI();
-		if ( pathLen > static_cast<size_t>( extLen ) && OVR_stricmp( filename + pathLen - extLen, ext.ToCStr() ) == 0 )
+		const size_t extLen = ext.length();
+		if ( pathLen > extLen && OVR_stricmp( filename + pathLen - extLen, ext.c_str() ) == 0 )
 		{
 			return false;
 		}
 	}
 
-	for ( int index = 0; index < fileExtensions.GoodExtensions.GetSizeI(); ++index )
+	for ( const std::string & ext : fileExtensions.GoodExtensions )
 	{
-		const String & ext = fileExtensions.GoodExtensions.At( index );
-		const int extLen = ext.GetLengthI();
-		if ( pathLen > static_cast<size_t>( extLen ) && OVR_stricmp( filename + pathLen - extLen, ext.ToCStr() ) == 0 )
+		const size_t extLen = ext.length();
+		if ( pathLen > extLen && OVR_stricmp( filename + pathLen - extLen, ext.c_str() ) == 0 )
 		{
 			return true;
 		}
@@ -1093,11 +1098,11 @@ bool OvrMetaData::ShouldAddFile( const char * filename, const OvrMetaDataFileExt
 	return false;
 }
 
-void OvrMetaData::SetCategoryDatumIndicies( const int index, const Array< int >& datumIndicies )
+void OvrMetaData::SetCategoryDatumIndicies( const int index, const std::vector< int >& datumIndicies )
 {
-	OVR_ASSERT( index < Categories.GetSizeI() );
+	OVR_ASSERT( index < static_cast< int >( Categories.size() ) );
 
-	if ( index < Categories.GetSizeI() )
+	if ( index < static_cast< int >( Categories.size() ) )
 	{
 		Categories[index].DatumIndicies = datumIndicies;
 	}
@@ -1107,12 +1112,12 @@ void OvrMetaData::DumpToLog( bool const verbose ) const
 {
 	if ( verbose )
 	{
-		for ( int i = 0; i < MetaData.GetSizeI(); ++i )
+		for ( int i = 0; i < static_cast< int >( MetaData.size() ); ++i )
 		{
-			OVR_LOG_WITH_TAG( "MetaData", "Url: %s", MetaData[i]->Url.ToCStr() );
+			OVR_LOG_WITH_TAG( "MetaData", "Url: %s", MetaData[i]->Url.c_str() );
 		}
 	}
-	OVR_LOG_WITH_TAG( "MetaData", "Total: %i urls", MetaData.GetSizeI() );
+	OVR_LOG_WITH_TAG( "MetaData", "Total: %i urls", static_cast< int >( MetaData.size() ) );
 }
 
 }

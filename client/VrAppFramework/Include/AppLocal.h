@@ -15,7 +15,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "GlSetup.h"
 #include "PointTracker.h"
 #include "VrFrameBuilder.h"
-#include "Kernel/OVR_Threads.h"
+
+#include <thread>
 
 namespace OVR {
 
@@ -46,7 +47,7 @@ public:
 
 	virtual void				FinishActivity( const ovrAppFinishType type );
 
-	virtual bool				ShowSystemUI( const ovrSystemUIType type );
+	virtual bool				ShowConfirmQuitSystemUI();
 	virtual void				FatalError( const ovrAppFatalError error, const char * fileName, const unsigned int lineNumber,
 											const char * messageFormat, ... );
 	virtual void				ShowDependencyError();
@@ -162,11 +163,11 @@ private:
 
 	jmethodID			finishActivityMethodId;
 
-	String				IntentURI;					// URI app was launched with
-	String				IntentJSON;					// extra JSON data app was launched with
-	String				IntentFromPackage;			// package that sent us the launch intent
+	std::string			IntentURI;					// URI app was launched with
+	std::string			IntentJSON;					// extra JSON data app was launched with
+	std::string			IntentFromPackage;			// package that sent us the launch intent
 
-	String				PackageName;				// package name 
+	std::string			PackageName;				// package name 
 
 	Matrix4f			LastViewMatrix;
 
@@ -181,7 +182,7 @@ private:
 
 	ovrSurfaceRender	SurfaceRender;
 
-	Thread				VrThread;					// thread
+	std::thread			VrThread;					// thread
 	int32_t				ExitCode;					// returned from JoinVrThread
 
 #if defined( OVR_OS_ANDROID )
@@ -223,8 +224,7 @@ private:
 	void				DrawBlackFrame( const int frameFlags = 0 );
 	void				DrawLoadingIcon( ovrTextureSwapChain * swapChain, const float spinSpeed = 1.0f, const float spinScale = 16.0f );
 
-	static threadReturn_t ThreadStarter( Thread *, void * parm );
-	void *				VrThreadFunction();
+	void				VrThreadFunction();
 
 	// Process commands forwarded from other threads.
 	// Commands can be processed even when the window surfaces

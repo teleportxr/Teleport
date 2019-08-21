@@ -13,6 +13,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #define OVR_SwipeHintComponent_h
 
 #include "VRMenuComponent.h"
+#include "OVR_Math.h"
 
 namespace OVR {
 
@@ -33,7 +34,7 @@ namespace OVR {
 
 			double	Value( double domain ) const
 			{
-				const double f = OVR::Alg::Clamp( ( domain - startDomain ) / ( endDomain - startDomain ), 0.0, 1.0 );
+				const double f = clamp<double>( ( domain - startDomain ) / ( endDomain - startDomain ), 0.0, 1.0 );
 				return startValue * ( 1.0 - f ) + endValue * f;
 			}
 

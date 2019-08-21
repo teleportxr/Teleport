@@ -16,7 +16,6 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "VRMenu.h"
 #include "PackageFiles.h"
 #include "App.h"
-#include "Kernel/OVR_String_Utils.h"
 
 namespace OVR
 {
@@ -52,18 +51,18 @@ namespace OVR
 
 		// Create Menu item for scroll hint root
 		VRMenuId_t swipeHintId( menuId );
-		Array< VRMenuObjectParms const * > parms;
-		VRMenuObjectParms parm( VRMENU_CONTAINER, Array< VRMenuComponent* >(), VRMenuSurfaceParms(),
+		std::vector< VRMenuObjectParms const * > parms;
+		VRMenuObjectParms parm( VRMENU_CONTAINER, std::vector< VRMenuComponent* >(), VRMenuSurfaceParms(),
 								"swipe hint root", pose, Vector3f( 1.0f ), VRMenuFontParms(),
 								swipeHintId, VRMenuObjectFlags_t( VRMENUOBJECT_DONT_HIT_ALL ),
 								VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
-		parms.PushBack( &parm );
+		parms.push_back( &parm );
 		rootMenu->AddItems( guiSys, parms, rootHandle, false );
-		parms.Clear();
+		parms.clear();
 
 		menuHandle_t scrollHintHandle = rootMenu->HandleForId( menuManager, swipeHintId );
 		OVR_ASSERT( scrollHintHandle.IsValid() );
-		GLuint swipeHintTexture = LoadTextureFromUri( guiSys.GetApp()->GetFileSys(), StringUtils::Va( "apk:///%s", img ), TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), imgWidth, imgHeight );
+		GLuint swipeHintTexture = LoadTextureFromUri( guiSys.GetApp()->GetFileSys(), (std::string( "apk:///" ) + img).c_str(), TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), imgWidth, imgHeight );
 		VRMenuSurfaceParms swipeHintSurfParms( "", swipeHintTexture, imgWidth, imgHeight, SURFACE_TEXTURE_DIFFUSE,
 												0, 0, 0, SURFACE_TEXTURE_MAX,
 												0, 0, 0, SURFACE_TEXTURE_MAX );
@@ -74,21 +73,21 @@ namespace OVR
 			swipePose.Translation.y = ( imgHeight * ( i + 2 ) ) * 0.5f * direction.y * VRMenuObject::DEFAULT_TEXEL_SCALE;
 			swipePose.Translation.z = 0.01f * ( float )i;
 
-			Array< VRMenuComponent* > hintArrowComps;
+			std::vector< VRMenuComponent* > hintArrowComps;
 			OvrSwipeHintComponent* hintArrowComp = new OvrSwipeHintComponent(false, 1.3333f, 0.4f + (float)i * 0.13333f, 5.0f);
-			hintArrowComps.PushBack( hintArrowComp );
+			hintArrowComps.push_back( hintArrowComp );
 			hintArrowComp->Show( vrapi_GetTimeInSeconds() );
 
 			VRMenuObjectParms * swipeIconLeftParms = new VRMenuObjectParms( VRMENU_STATIC, hintArrowComps,
 				swipeHintSurfParms, "", swipePose, Vector3f( 1.0f ), fontParms, VRMenuId_t(),
 				VRMenuObjectFlags_t( VRMENUOBJECT_FLAG_NO_DEPTH ) | VRMenuObjectFlags_t( VRMENUOBJECT_DONT_HIT_ALL ),
 				VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
-			parms.PushBack( swipeIconLeftParms );
+			parms.push_back( swipeIconLeftParms );
 		}
 
 		rootMenu->AddItems( guiSys, parms, scrollHintHandle, false );
 		DeletePointerArray( parms );
-		parms.Clear();
+		parms.clear();
 
 		return scrollHintHandle;
 	}
@@ -179,7 +178,7 @@ namespace OVR
 			{
 				double normTime = time / TotalTime;
 				alpha *= static_cast<float>( sin( MATH_FLOAT_PI * 2.0 * normTime ) );
-				alpha = OVR::Alg::Max( alpha, 0.0f );
+				alpha = std::max<float>( alpha, 0.0f );
 			}
 		}
 

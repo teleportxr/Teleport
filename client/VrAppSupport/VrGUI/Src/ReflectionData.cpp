@@ -9,9 +9,6 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 *************************************************************************************/
 
-// This must be included before private is redefined to public or we'll get link errors
-#include "Kernel/OVR_System.h"
-
 // this is necessary so that offsetof() can work for private class members
 #define _ALLOW_KEYWORD_MACROS
 #undef private
@@ -181,9 +178,9 @@ void * Create_ovrSoundLimiter( void * placementBuffer )
 	return CreateObject< ovrSoundLimiter >( placementBuffer ); 
 }
 
-void * Create_OVR_String( void * placementBuffer )
+void * Create_string( void * placementBuffer )
 {
-	return CreateObject< OVR::String >( placementBuffer );
+	return CreateObject< std::string >( placementBuffer );
 }
 
 void * Create_bool( void * placementBuffer )
@@ -209,16 +206,16 @@ void * Create_int( void * placementBuffer )
 template< class ItemClass >
 void ResizeArray( void * arrayPtr, const int newSize )
 {
-	Array< ItemClass > & a = *static_cast< Array< ItemClass >* >( arrayPtr );
-	a.Resize( newSize );
+	std::vector< ItemClass > & a = *static_cast< std::vector< ItemClass >* >( arrayPtr );
+	a.resize( newSize );
 }
 
 template< class ItemClass >
 void ResizePtrArray( void * arrayPtr, const int newSize )
 {
-	Array< ItemClass > & a = *static_cast< Array< ItemClass >* >( arrayPtr );
-	int oldSize = a.GetSizeI();
-	a.Resize( newSize );
+	std::vector< ItemClass > & a = *static_cast< std::vector< ItemClass >* >( arrayPtr );
+	int oldSize = static_cast< int >( a.size() );
+	a.resize( newSize );
 
 	if ( newSize > oldSize )
 	{
@@ -245,39 +242,39 @@ void SetArrayElement( void * objPtr, const int index, ElementClass * elementPtr 
 	a[index] = *elementPtr;
 }
 
-void Resize_OVR_Array_VRMenuComponent_Ptr( void * objPtr, const int newSize ) 
+void Resize_std_vector_VRMenuComponent_Ptr( void * objPtr, const int newSize ) 
 { 
 	ResizePtrArray< VRMenuComponent* >( objPtr, newSize );
 }
 
-void SetArrayElementFn_OVR_Array_VRMenuComponent_Ptr( void * objPtr, const int index, void * elementPtr )
+void SetArrayElementFn_std_vector_VRMenuComponent_Ptr( void * objPtr, const int index, void * elementPtr )
 {
-	SetArrayElementPtr< OVR::Array< VRMenuComponent* >, VRMenuComponent* >( objPtr, index, static_cast< VRMenuComponent* >( elementPtr ) );
+	SetArrayElementPtr< std::vector< VRMenuComponent* >, VRMenuComponent* >( objPtr, index, static_cast< VRMenuComponent* >( elementPtr ) );
 }
 
-void Resize_OVR_Array_VRMenuSurfaceParms( void * objPtr, const int newSize ) 
+void Resize_std_vector_VRMenuSurfaceParms( void * objPtr, const int newSize ) 
 {
 	ResizeArray< VRMenuSurfaceParms >( objPtr, newSize );
 }
 
-void Resize_OVR_Array_VRMenuObjectParms_Ptr( void * objPtr, const int newSize ) 
+void Resize_std_vector_VRMenuObjectParms_Ptr( void * objPtr, const int newSize ) 
 { 
 	ResizePtrArray< VRMenuObjectParms* >( objPtr, newSize );
 }
 
-void SetArrayElementFn_OVR_Array_VRMenuObjectParms_Ptr( void * objPtr, const int index, void * elementPtr )
+void SetArrayElementFn_std_vector_VRMenuObjectParms_Ptr( void * objPtr, const int index, void * elementPtr )
 {
-	SetArrayElementPtr< OVR::Array< VRMenuObjectParms* >, VRMenuObjectParms* >( objPtr, index, static_cast< VRMenuObjectParms* >( elementPtr ) );
+	SetArrayElementPtr< std::vector< VRMenuObjectParms* >, VRMenuObjectParms* >( objPtr, index, static_cast< VRMenuObjectParms* >( elementPtr ) );
 }
 
-void SetArrayElementFn_OVR_Array_VRMenuSurfaceParms( void * objPtr, const int index, void * elementPtr )
+void SetArrayElementFn_std_vector_VRMenuSurfaceParms( void * objPtr, const int index, void * elementPtr )
 {
-	SetArrayElement< OVR::Array< VRMenuSurfaceParms >, VRMenuSurfaceParms >( objPtr, index, static_cast< VRMenuSurfaceParms* >( elementPtr ) );
+	SetArrayElement< std::vector< VRMenuSurfaceParms >, VRMenuSurfaceParms >( objPtr, index, static_cast< VRMenuSurfaceParms* >( elementPtr ) );
 }
 
-void SetArrayElementFn_String( void * objPtr, const int index, void * elementPtr )
+void SetArrayElementFn_string( void * objPtr, const int index, void * elementPtr )
 {
-	static_cast< String* >( objPtr )[index] = *static_cast< String* >( elementPtr );
+	static_cast< std::string* >( objPtr )[index] = *static_cast< std::string* >( elementPtr );
 }
 
 void SetArrayElementFn_int( void * objPtr, const int index, void * elementPtr )
@@ -354,8 +351,8 @@ ovrMemberInfo Posef_Reflection[] =
 
 ovrMemberInfo VRMenuSurfaceParms_Reflection[] =
 {
-	{ "SurfaceName",	"String",						NULL, ovrTypeOperator::NONE,	offsetof( VRMenuSurfaceParms, SurfaceName ),	0 },
-	{ "ImageNames",		"String[]",						NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuSurfaceParms, ImageNames ),		VRMENUSURFACE_IMAGE_MAX },
+	{ "SurfaceName",	"string",						NULL, ovrTypeOperator::NONE,	offsetof( VRMenuSurfaceParms, SurfaceName ),	0 },
+	{ "ImageNames",		"string[]",						NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuSurfaceParms, ImageNames ),		VRMENUSURFACE_IMAGE_MAX },
 	{ "ImageTexId",		"GLuint[]",						NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuSurfaceParms, ImageTexId ),		VRMENUSURFACE_IMAGE_MAX },
 	{ "ImageWidth",		"int[]",						NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuSurfaceParms, ImageWidth ),		VRMENUSURFACE_IMAGE_MAX },	
 	{ "ImageHeight",	"int[]",						NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuSurfaceParms, ImageHeight ),	VRMENUSURFACE_IMAGE_MAX },
@@ -391,9 +388,9 @@ ovrMemberInfo VRMenuObjectParms_Reflection[] =
 	{ "Type",			"eVRMenuObjectType",					NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Type ), 0 },
 	{ "Flags",			"BitFlagsT< eVRMenuObjectFlags >",		NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Flags ), 0 },
 	{ "InitFlags",		"BitFlagsT< eVRMenuObjectInitFlags >",	NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, InitFlags ), 0 },
-	{ "Components",		"OVR::Array< VRMenuComponent* >",		NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuObjectParms, Components ), 0 },
-	{ "SurfaceParms",	"OVR::Array< VRMenuSurfaceParms >",		NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuObjectParms, SurfaceParms ), 0 },
-	{ "Text",			"String",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Text ), 0 },
+	{ "Components",		"std::vector< VRMenuComponent* >",		NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuObjectParms, Components ), 0 },
+	{ "SurfaceParms",	"std::vector< VRMenuSurfaceParms >",	NULL, ovrTypeOperator::ARRAY,	offsetof( VRMenuObjectParms, SurfaceParms ), 0 },
+	{ "Text",			"string",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Text ), 0 },
 	{ "LocalPose",		"Posef",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, LocalPose ), 0 },
 	{ "LocalScale",		"Vector3f",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, LocalScale ), 0 },
 	{ "TextLocalPose",	"Posef",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, TextLocalPose ), 0 },
@@ -404,9 +401,9 @@ ovrMemberInfo VRMenuObjectParms_Reflection[] =
 	{ "Id",				"TypesafeNumberT< long long, eVRMenuId, INVALID_MENU_ID >",	NULL, ovrTypeOperator::NONE, offsetof( VRMenuObjectParms, Id ), 0 },
 	{ "ParentId",		"TypesafeNumberT< long long, eVRMenuId, INVALID_MENU_ID >",	NULL, ovrTypeOperator::NONE, offsetof( VRMenuObjectParms, ParentId ), 0 },
 	{ "Contents",		"BitFlagsT< eContentFlags >",			NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Contents ), 0 },
-	{ "Name",			"String",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Name ), 0 },
-	{ "ParentName",		"String",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, ParentName ), 0 },
-	{ "Tag",			"String",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Tag ), 0 },
+	{ "Name",			"string",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Name ), 0 },
+	{ "ParentName",		"string",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, ParentName ), 0 },
+	{ "Tag",			"string",								NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Tag ), 0 },
 	{ "TexelCoords",	"bool",									NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, TexelCoords ), 0 },
 	{ "Selected",		"bool",									NULL, ovrTypeOperator::NONE,	offsetof( VRMenuObjectParms, Selected ), 0 },
 	{ }
@@ -435,7 +432,7 @@ ovrMemberInfo SineFader_Reflection[] =
 ovrMemberInfo VRMenuComponent_Reflection[] =
 {
 	{ "EventFlags",	"BitFlagsT< eVRMenuEventType, uint64_t >",	NULL, ovrTypeOperator::NONE, offsetof( VRMenuComponent, EventFlags ) },
-	{ "Name",		"String",									NULL, ovrTypeOperator::NONE, offsetof( VRMenuComponent, Name ) },
+	{ "Name",		"string",									NULL, ovrTypeOperator::NONE, offsetof( VRMenuComponent, Name ) },
 	{ }
 };
 
@@ -503,7 +500,7 @@ ovrTypeInfo TypeInfoList[] =
 	{ "BitFlagsT< eContentFlags >",				NULL, sizeof( BitFlagsT< eContentFlags > ),					eContentFlags_Enums,			ParseBitFlags,	NULL,	NULL,	NULL,	ovrArrayType::NONE,	false,	NULL },
 	{ "BitFlagsT< eVRMenuEventType, uint64_t >",NULL, sizeof( BitFlagsT< eVRMenuEventType, uint64_t > ),	VRMenuEventType_Enums,			ParseBitFlags,	NULL,	NULL,	NULL,	ovrArrayType::NONE,	false,	NULL },
 
-	{ "String",			NULL,	sizeof( OVR::String ),	NULL, ParseString,		Create_OVR_String,	NULL,	NULL,	ovrArrayType::NONE,	false,	NULL },
+	{ "string",			NULL,	sizeof( std::string ),	NULL, ParseString,		Create_string,		NULL,	NULL,	ovrArrayType::NONE,	false,	NULL },
 	{ "Vector2i",		NULL,	sizeof( Vector2i ),		NULL, ParseIntVector,	NULL,				NULL,	NULL,	ovrArrayType::NONE,	false,	Vector2i_Reflection },
 	{ "Vector2f",		NULL,	sizeof( Vector2f ),		NULL, ParseFloatVector,	NULL,				NULL,	NULL,	ovrArrayType::NONE,	false,	Vector2f_Reflection },
 	{ "Vector3f",		NULL,	sizeof( Vector3f ),		NULL, ParseFloatVector,	NULL,				NULL,	NULL,	ovrArrayType::NONE,	false,	Vector3f_Reflection },
@@ -513,11 +510,11 @@ ovrTypeInfo TypeInfoList[] =
 
 	{ "TypesafeNumberT< long long, eVRMenuId, INVALID_MENU_ID >",	NULL,	sizeof( TypesafeNumberT< long long, eVRMenuId, INVALID_MENU_ID > ), NULL, ParseTypesafeNumber_long_long,	NULL,	NULL,	NULL, ovrArrayType::NONE,	false, TypesafeNumberT_longlong_eVRMenuId_INVALID_MENU_ID },
 
-	{ "OVR::Array< VRMenuComponent* >",		NULL,	sizeof( OVR::Array< VRMenuComponent* > ),	NULL, ParseArray, NULL, Resize_OVR_Array_VRMenuComponent_Ptr,	SetArrayElementFn_OVR_Array_VRMenuComponent_Ptr,	ovrArrayType::OVR_POINTER,	false, NULL },
-	{ "OVR::Array< VRMenuSurfaceParms >",	NULL,	sizeof( OVR::Array< VRMenuSurfaceParms > ), NULL, ParseArray, NULL, Resize_OVR_Array_VRMenuSurfaceParms,	SetArrayElementFn_OVR_Array_VRMenuSurfaceParms,		ovrArrayType::OVR_OBJECT,	false, NULL },
-	{ "OVR::Array< VRMenuObjectParms* >",	NULL,	sizeof( OVR::Array< VRMenuObjectParms*> ),	NULL, ParseArray, NULL, Resize_OVR_Array_VRMenuObjectParms_Ptr,	SetArrayElementFn_OVR_Array_VRMenuObjectParms_Ptr,	ovrArrayType::OVR_POINTER,	false, NULL },
+	{ "std::vector< VRMenuComponent* >",	NULL,	sizeof( std::vector< VRMenuComponent* > ),	NULL, ParseArray, NULL, Resize_std_vector_VRMenuComponent_Ptr,	SetArrayElementFn_std_vector_VRMenuComponent_Ptr,	ovrArrayType::OVR_POINTER,	false, NULL },
+	{ "std::vector< VRMenuSurfaceParms >",	NULL,	sizeof( std::vector< VRMenuSurfaceParms > ),NULL, ParseArray, NULL, Resize_std_vector_VRMenuSurfaceParms,	SetArrayElementFn_std_vector_VRMenuSurfaceParms,	ovrArrayType::OVR_OBJECT,	false, NULL },
+	{ "std::vector< VRMenuObjectParms* >",	NULL,	sizeof( std::vector< VRMenuObjectParms* > ),NULL, ParseArray, NULL, Resize_std_vector_VRMenuObjectParms_Ptr,SetArrayElementFn_std_vector_VRMenuObjectParms_Ptr,	ovrArrayType::OVR_POINTER,	false, NULL },
 	
-	{ "String[]",				NULL,	sizeof( OVR::String ),			NULL, ParseArray, NULL, NULL, SetArrayElementFn_String,					ovrArrayType::C_OBJECT, false, NULL },
+	{ "string[]",				NULL,	sizeof( std::string ),			NULL, ParseArray, NULL, NULL, SetArrayElementFn_string,					ovrArrayType::C_OBJECT, false, NULL },
 	{ "int[]",					NULL,	sizeof( int ),					NULL, ParseArray, NULL, NULL, SetArrayElementFn_int,					ovrArrayType::C_OBJECT, false, NULL },
 	{ "GLuint[]",				NULL,	sizeof( GLuint ),				NULL, ParseArray, NULL, NULL, SetArrayElementFn_GLuint,					ovrArrayType::C_OBJECT, false, NULL },
 	{ "eSurfaceTextureType[]",	NULL,	sizeof( eSurfaceTextureType ),	NULL, ParseArray, NULL, NULL, SetArrayElementFn_eSurfaceTextureType,	ovrArrayType::C_OBJECT, false, NULL },

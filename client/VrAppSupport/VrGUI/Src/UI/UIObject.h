@@ -33,9 +33,9 @@ public:
 
 	void 								SetMenuObject( UIMenu * menu, VRMenuObject * vrMenuObject, UIObject * vrMenuObjectParent = NULL );
 
-	UPInt								GetNumChildren() const { return Children.GetSize(); }
+	UPInt								GetNumChildren() const { return static_cast< UPInt >( Children.size() ); }
 	UIObject *							GetChildForIndex( UPInt index ) const { return Children[ index ]; }
-	const Array<UIObject *> &			GetChildren() const { return Children; }
+	const std::vector<UIObject *> &		GetChildren() const { return Children; }
 	void 								RemoveChild( UIObject *child );
 
 	VRMenuId_t							GetId() const { return Id;  }
@@ -121,7 +121,7 @@ public:
 	Bounds3f            				GetTextLocalBounds( BitmapFont const & font ) const;
 
 	void								AddComponent( VRMenuComponent * component );
-	Array< VRMenuComponent* > const & 	GetComponentList() const;
+	std::vector< VRMenuComponent* > const & GetComponentList() const;
 
 	void 								WrapChildrenHorizontal();
 
@@ -147,7 +147,7 @@ protected:
 	UIRectf								Margin;
 	UIRectf								Padding;
 
-	Array<UIObject *>					Children;
+	std::vector<UIObject *>				Children;
 
 private:
 	// private assignment operator to prevent copying

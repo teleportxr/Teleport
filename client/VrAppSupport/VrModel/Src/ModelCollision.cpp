@@ -13,10 +13,6 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include <math.h>
 
-#include "Kernel/OVR_Alg.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_String.h"
-
 namespace OVR {
 
 //-----------------------------------------------------------------------------
@@ -27,7 +23,7 @@ const float COLLISION_EPSILON = 0.01f;
 
 bool CollisionPolytope::TestPoint( const Vector3f & p ) const
 {
-    for ( int i = 0; i < Planes.GetSizeI(); i++ )
+    for ( int i = 0; i < static_cast< int >( Planes.size() ); i++ )
 	{
         if ( Planes[i].TestSide( p ) > 0.0f )
         {
@@ -45,7 +41,7 @@ bool CollisionPolytope::TestRay( const Vector3f & start, const Vector3f & dir, f
     float cdot1 = 0.0f;
 	float cdot2 = 0.0f;
 
-    for ( int i = 0; i < Planes.GetSizeI(); i++ )
+    for ( int i = 0; i < static_cast< int >( Planes.size() ); i++ )
     {
         const float dot1 = Planes[i].TestSide( start );
         if ( dot1 > 0.0f )
@@ -98,7 +94,7 @@ bool CollisionPolytope::PopOut( Vector3f & p ) const
 {
 	float minDist = FLT_MAX;
 	int crossing = -1;
-	for ( int i = 0; i < Planes.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Planes.size() ); i++ )
 	{
 	    float dist = Planes[i].TestSide( p );
 		if ( dist > 0.0f )
@@ -122,7 +118,7 @@ bool CollisionPolytope::PopOut( Vector3f & p ) const
 
 bool ModelCollision::TestPoint( const Vector3f & p ) const
 {
-	for ( int i = 0; i < Polytopes.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Polytopes.size() ); i++ )
 	{
 		if ( Polytopes[i].TestPoint( p ) )
 		{
@@ -135,7 +131,7 @@ bool ModelCollision::TestPoint( const Vector3f & p ) const
 bool ModelCollision::TestRay( const Vector3f & start, const Vector3f & dir, float & length, Planef * plane ) const
 {
 	bool clipped = false;
-	for ( int i = 0; i < Polytopes.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Polytopes.size() ); i++ )
 	{
 		Planef clipPlane;
 		float clipLength = length;
@@ -157,7 +153,7 @@ bool ModelCollision::TestRay( const Vector3f & start, const Vector3f & dir, floa
 
 bool ModelCollision::PopOut( Vector3f & p ) const
 {
-	for ( int i = 0; i < Polytopes.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Polytopes.size() ); i++ )
 	{
 		if ( Polytopes[i].PopOut( p ) )
 		{
@@ -215,7 +211,7 @@ Vector3f SlideMove(
 		}
 	}
 
-	if ( groundCollisionModel.Polytopes.GetSizeI() != 0 )
+	if ( static_cast< int >( groundCollisionModel.Polytopes.size() ) != 0 )
 	{
 		// Check for collisions at foot level, which allows following terrain.
 		float downDistance = 10.0f;

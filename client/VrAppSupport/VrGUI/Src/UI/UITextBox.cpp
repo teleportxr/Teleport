@@ -35,7 +35,7 @@ void UITextBox::AddToMenu( UIMenu * menu, UIObject * parent )
 	Vector3f defaultScale( 1.0f );
 	VRMenuFontParms fontParms( HORIZONTAL_LEFT, VERTICAL_CENTER_FIXEDHEIGHT, false, false, false, 1.0f );
 	
-	VRMenuObjectParms parms( VRMENU_BUTTON, Array< VRMenuComponent* >(), VRMenuSurfaceParms(),
+	VRMenuObjectParms parms( VRMENU_BUTTON, std::vector< VRMenuComponent* >(), VRMenuSurfaceParms(),
 			"", pose, defaultScale, fontParms, menu->AllocId(),
 			VRMenuObjectFlags_t(), VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
 
@@ -51,21 +51,21 @@ void UITextBox::AddToMenu( UIMenu * menu, UIObject * parent )
 	object->AddComponent( TextBoxComponent );
 }
 
-void UITextBox::AddText( const String & text )
+void UITextBox::AddText( const std::string & text )
 {
 	Text += text;
-	if ( Text.GetLengthI() > MaxChars )
+	if ( static_cast< int >( Text.length() ) > MaxChars )
 	{
-		Text.Remove( MaxChars , Text.GetLengthI() - MaxChars );
+		Text.erase( MaxChars , Text.length() - MaxChars );
 	}
 	UpdateText();
 }
 
 void UITextBox::RemoveLastChar()
 {
-	if ( !Text.IsEmpty() )
+	if ( !Text.empty() )
 	{
-		Text = Text.Left( Text.GetLength() - 1 );
+		Text = Text.substr( 0, Text.length() - 1 );
 		UpdateText();
 	}
 }
@@ -73,14 +73,14 @@ void UITextBox::RemoveLastChar()
 void UITextBox::SetText( const char * text )
 {
 	Text = text;
-	if ( Text.GetLengthI() > MaxChars )
+	if ( static_cast< int >( Text.length() ) > MaxChars )
 	{
-		Text.Remove( MaxChars , Text.GetLengthI() - MaxChars );
+		Text.erase( MaxChars , Text.length() - MaxChars );
 	}
 	UpdateText();
 }
 
-const String & UITextBox::GetText() const
+const std::string & UITextBox::GetText() const
 {
 	return Text;
 }
@@ -120,13 +120,13 @@ void UITextBox::UpdateText()
 	OVR_ASSERT( object );
 	VRMenuFontParms fontParms = object->GetFontParms();
 	float width = ( GetDimensions().x * DEFAULT_TEXEL_SCALE ) - ( 2.0f * Border.x );
-	String cutText = Text + Cursor; //always add space for the caret even if we aren't going to show it
+	std::string cutText = Text + Cursor; //always add space for the caret even if we aren't going to show it
 	float extraOffset = GuiSys.GetDefaultFont().GetLastFitChars( cutText, width, fontParms.Scale );
 	if ( !ShowCursor )
 	{
-		cutText.Remove( cutText.GetLength() - 1 );
+		cutText.erase( cutText.length() - 1 );
 	}
-	object->SetText( cutText.ToCStr() );
+	object->SetText( cutText.c_str() );
 
 	Vector3f offset = Vector3f::ZERO;
 	offset.x = TextOffset + Border.x + extraOffset;

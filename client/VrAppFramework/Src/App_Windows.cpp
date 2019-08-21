@@ -14,12 +14,11 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #if defined( OVR_OS_WIN32 )
 
-#include "Android/JniUtils.h"
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_System.h"
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_TypesafeNumber.h"
-#include "Kernel/OVR_JSON.h"
+#include "JniUtils.h"
+#include "OVR_Types.h"
+#include "OVR_Math.h"
+#include "OVR_TypesafeNumber.h"
+#include "OVR_JSON.h"
 
 #include "VrApi.h"
 

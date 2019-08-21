@@ -23,15 +23,14 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "UI/UIImage.h"
 #include "UI/UIButton.h"
 
-#include "Kernel/OVR_Deque.h"
-
+#include <deque>
 
 namespace OVR {
 
 class VrAppInterface;
 class UINotification;
 
-typedef Deque< String > NotificationsDequeue;
+typedef std::deque< std::string > NotificationsDequeue;
 
 //==============================================================
 // UINotificationComponent
@@ -71,12 +70,12 @@ public:
 						~UINotification();
 
 	void 				AddToMenu( UIMenu *menu, const char* iconTextureName,  const char* backgroundTintTextureName, UIObject *parent = NULL );
-	void				QueueNotification( const String& description, bool showImmediately = false );//will interrupt any currently displaying notice
+	void				QueueNotification( const std::string& description, bool showImmediately = false );//will interrupt any currently displaying notice
 
 
 private:
 
-	void 				SetDescription( const String &description );
+	void 				SetDescription( const std::string &description );
 	void 				Update( float deltaSeconds );
 
 	NotificationsDequeue		NotificationsQueue;

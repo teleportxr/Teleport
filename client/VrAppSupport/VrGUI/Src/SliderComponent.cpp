@@ -17,6 +17,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "GuiSys.h"
 #include "OVR_Input.h"
 #include "App.h"
+#include "OVR_Math.h"
 
 namespace OVR {
 
@@ -126,7 +127,7 @@ eMsgStatus OvrSliderComponent::OnFrameUpdate( OvrGuiSys & guiSys, ovrFrameInput 
 
 	if ( BubbleFadeOutTime > 0.0 )
 	{
-		if ( vrapi_GetTimeInSeconds() >= BubbleFadeOutTime )
+		if ( vrFrame.RealTimeInSeconds >= BubbleFadeOutTime )
 		{
 			BubbleFadeOutTime = -1.0;
 			BubbleFader.StartFadeOut();
@@ -188,7 +189,7 @@ eMsgStatus OvrSliderComponent::OnTouchUp( OvrGuiSys & guiSys, ovrFrameInput cons
 	OVR_UNUSED( self );
 	OVR_UNUSED( event );
 
-	BubbleFadeOutTime = vrapi_GetTimeInSeconds() + 1.5;
+	BubbleFadeOutTime = vrFrame.RealTimeInSeconds + 1.5;
 
 	//LOG( "event.FloatValue = ( %.8f, %.8f )", event.FloatValue.x, event.FloatValue.y );
 	// project on to the normalized slide delta so that the movement on the pad matches the orientation of the slider
@@ -228,7 +229,7 @@ eMsgStatus OvrSliderComponent::OnTouchUp( OvrGuiSys & guiSys, ovrFrameInput cons
 		{
 			SliderFrac = ( cur - 1.0f ) * ( 1.0f / range );
 		}
-		SliderFrac = Alg::Clamp( SliderFrac, 0.0f, 1.0f );
+		SliderFrac = clamp<float>( SliderFrac, 0.0f, 1.0f );
 
 		SetCaretPoseFromFrac( guiSys.GetVRMenuMgr(), self, SliderFrac );
 	
@@ -297,11 +298,11 @@ void OvrSliderComponent::GetStringValue( char * valueStr, int maxLen ) const
 	OVR_sprintf( valueStr, maxLen, "%i", curValue );
 }
 
-String GetSliderImage( OvrSliderComponent::imageInfo_t const & info, bool vertical )
+std::string GetSliderImage( OvrSliderComponent::imageInfo_t const & info, bool vertical )
 {
 	char buff[256];
 	OVR_sprintf( buff, sizeof( buff ), info.ImageName, vertical ? "vert" : "horz" );
-	return String( buff );
+	return std::string( buff );
 }
 
 Vector3f MakePosition( float const fwdDist, float const upDist, float const leftDist )
@@ -330,7 +331,7 @@ void OvrSliderComponent::GetVerticalSliderParms( VRMenu & menu,
 		VRMenuId_t const scrubberId, VRMenuId_t const bubbleId, VRMenuId_t const fillId,
 		float const sliderFrac, float const minValue, float const maxValue, 
 		float const sensitivityScale, 
-		Array< VRMenuObjectParms const* > & parms )
+		std::vector< VRMenuObjectParms const* > & parms )
 {
 	Vector3f const fwd( 0.0f, 0.0f, -1.0f );
 	Vector3f const right( 1.0f, 0.0f, 0.0f );
@@ -346,9 +347,9 @@ void OvrSliderComponent::GetVerticalSliderParms( VRMenu & menu,
 
 	// add parms for the root object that holds all the slider components
 	{
-		Array< VRMenuComponent* > comps;
-		comps.PushBack( new OvrSliderComponent( menu, sliderFrac, localSlideDelta, minValue, maxValue, sensitivityScale, rootId, scrubberId, VRMenuId_t(), bubbleId, fillId ) );
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		comps.push_back( new OvrSliderComponent( menu, sliderFrac, localSlideDelta, minValue, maxValue, sensitivityScale, rootId, scrubberId, VRMenuId_t(), bubbleId, fillId ) );
+		std::vector< VRMenuSurfaceParms > surfParms;
 		char const * text = "slider_root";
 		Vector3f scale( 1.0f );
 		Posef pose( MakePose( Quatf(), 0.0f, ( baseImage.h * 0.5f ) - ( iconImage.h * 0.5f ), 0.0f ) );
@@ -361,16 +362,16 @@ void OvrSliderComponent::GetVerticalSliderParms( VRMenu & menu,
 				surfParms, text, pose, scale, textPose, textScale, fontParms, rootId, 
 				objectFlags, initFlags );
 		itemParms->ParentId = parentId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 
 	// add parms for the base image that underlays the whole slider
 	{
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
-		VRMenuSurfaceParms baseParms( "base", GetSliderImage( baseImage, vertical ).ToCStr(), SURFACE_TEXTURE_DIFFUSE,
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
+		VRMenuSurfaceParms baseParms( "base", GetSliderImage( baseImage, vertical ).c_str(), SURFACE_TEXTURE_DIFFUSE,
 				NULL, SURFACE_TEXTURE_MAX, NULL, SURFACE_TEXTURE_MAX );
-		surfParms.PushBack( baseParms );
+		surfParms.push_back( baseParms );
 		char const * text = "base";
 		Vector3f scale( 1.0f );
 		Posef pose( MakePose( Quatf(), BASE_FWD_OFFSET, 0.0f, 0.0f ) );
@@ -384,16 +385,16 @@ void OvrSliderComponent::GetVerticalSliderParms( VRMenu & menu,
 				surfParms, text, pose, scale, textPose, textScale, fontParms, VRMenuId_t(), 
 				objectFlags, initFlags );
 		itemParms->ParentId = rootId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 
 	// add parms for the track image
 	{
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
-		VRMenuSurfaceParms baseParms( "track", GetSliderImage( trackImage, vertical ).ToCStr(), SURFACE_TEXTURE_DIFFUSE,
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
+		VRMenuSurfaceParms baseParms( "track", GetSliderImage( trackImage, vertical ).c_str(), SURFACE_TEXTURE_DIFFUSE,
 				NULL, SURFACE_TEXTURE_MAX, NULL, SURFACE_TEXTURE_MAX );
-		surfParms.PushBack( baseParms );
+		surfParms.push_back( baseParms );
 		char const * text = "track";
 		Vector3f scale( 1.0f );
 		Posef pose( MakePose( Quatf(), BASE_FWD_OFFSET - FWD_INC * 1, -TRACK_UP_OFFSET, 0.0f ) );
@@ -406,16 +407,16 @@ void OvrSliderComponent::GetVerticalSliderParms( VRMenu & menu,
 				surfParms, text, pose, scale, textPose, textScale, fontParms, VRMenuId_t(), 
 				objectFlags, initFlags );
 		itemParms->ParentId = rootId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 
 	// add parms for the filled track image
 	{
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
-		VRMenuSurfaceParms baseParms( "track_full", GetSliderImage( trackFullImage, vertical ).ToCStr(), SURFACE_TEXTURE_DIFFUSE,
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
+		VRMenuSurfaceParms baseParms( "track_full", GetSliderImage( trackFullImage, vertical ).c_str(), SURFACE_TEXTURE_DIFFUSE,
 				NULL, SURFACE_TEXTURE_MAX, NULL, SURFACE_TEXTURE_MAX );
-		surfParms.PushBack( baseParms );
+		surfParms.push_back( baseParms );
 		char const * text = "track_full";
 		Vector3f scale( 1.0f );
 		Posef pose( MakePose( Quatf(), BASE_FWD_OFFSET - FWD_INC * 2, -TRACK_UP_OFFSET, 0.0f ) );
@@ -428,16 +429,16 @@ void OvrSliderComponent::GetVerticalSliderParms( VRMenu & menu,
 				surfParms, text, pose, scale, textPose, textScale, fontParms, fillId, 
 				objectFlags, initFlags );
 		itemParms->ParentId = rootId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 
 	// add parms for the scrubber
 	{
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
-		VRMenuSurfaceParms baseParms( "scrubber", GetSliderImage( scrubberImage, vertical ).ToCStr(), SURFACE_TEXTURE_DIFFUSE,
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
+		VRMenuSurfaceParms baseParms( "scrubber", GetSliderImage( scrubberImage, vertical ).c_str(), SURFACE_TEXTURE_DIFFUSE,
 				NULL, SURFACE_TEXTURE_MAX, NULL, SURFACE_TEXTURE_MAX );
-		surfParms.PushBack( baseParms );
+		surfParms.push_back( baseParms );
 		char const * text = "scrubber";
 		Vector3f scale( 1.0f );
 		Posef pose( MakePose( Quatf(), BASE_FWD_OFFSET - FWD_INC * 3, -TRACK_UP_OFFSET, 0.0f ) );
@@ -450,16 +451,16 @@ void OvrSliderComponent::GetVerticalSliderParms( VRMenu & menu,
 				surfParms, text, pose, scale, textPose, textScale, fontParms, scrubberId, 
 				objectFlags, initFlags );
 		itemParms->ParentId = rootId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 
 	// add parms for the bubble
 	{
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
-		VRMenuSurfaceParms baseParms( "bubble", GetSliderImage( bubbleImage, vertical ).ToCStr(), SURFACE_TEXTURE_DIFFUSE,
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
+		VRMenuSurfaceParms baseParms( "bubble", GetSliderImage( bubbleImage, vertical ).c_str(), SURFACE_TEXTURE_DIFFUSE,
 				NULL, SURFACE_TEXTURE_MAX, NULL, SURFACE_TEXTURE_MAX );
-		surfParms.PushBack( baseParms );
+		surfParms.push_back( baseParms );
 		char const * text = NULL;
 		Vector3f scale( 1.0f );
 		//Posef pose( Quatf(), right * ( trackImage.w + SLIDER_BUBBLE_CENTER ) + fwd * ( BASE_FWD_OFFSET - ( FWD_INC * 4 ) ) );
@@ -477,7 +478,7 @@ void OvrSliderComponent::GetVerticalSliderParms( VRMenu & menu,
 				surfParms, text, pose, scale, textPose, textScale, fontParms, bubbleId, 
 				objectFlags, initFlags );
 		itemParms->ParentId = scrubberId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 }
 

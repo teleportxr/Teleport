@@ -16,9 +16,9 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <stdlib.h>
 
 #include "OVR_GlUtils.h"
-#include "Kernel/OVR_LogUtils.h"
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_String_Utils.h"
+#include "OVR_LogUtils.h"
+
+#include <string>
 
 namespace OVR
 {
@@ -132,6 +132,16 @@ GlProgram BuildProgram( const char * vertexSrc, const char * fragmentSrc, const 
 	return BuildProgram( NULL, vertexSrc, NULL, fragmentSrc, programVersion );
 }
 
+GlProgram BuildProgramNoMultiview( const char * vertexDirectives, const char * vertexSrc,
+		const char * fragmentDirectives, const char * fragmentSrc )
+{
+	const bool useMultiview = UseMultiview;
+	GlProgram::SetUseMultiview( false );
+	GlProgram prog = BuildProgram( vertexDirectives, vertexSrc, fragmentDirectives, fragmentSrc );
+	GlProgram::SetUseMultiview( useMultiview );
+	return prog;
+}
+
 void DeleteProgram( GlProgram & prog )
 {
 	GlProgram::Free( prog );
@@ -200,7 +210,7 @@ static GLuint CompileShader( GLenum shaderType, const char * directives, const c
 		OVR_WARN( "GlProgram: #version in source is not supported. Specify at program build time." );
 	}
 
-	OVR::String srcString;
+	std::string srcString;
 
 #if defined( OVR_OS_ANDROID )
 	// Valid versions for GL ES:
@@ -211,27 +221,27 @@ static GLuint CompileShader( GLenum shaderType, const char * directives, const c
 #else
 	const char * versionModifier = "";
 #endif
-	srcString = StringUtils::Va( "#version %d %s\n", programVersion, versionModifier );
+	srcString = std::string("#version ") + std::to_string(programVersion) + std::string(" ") + versionModifier + std::string("\n");
 
 	if ( directives != NULL )
 	{
-		srcString.AppendString( directives );
+		srcString += directives;
 	}
 
-	srcString.AppendString( StringUtils::Va( "#define DISABLE_MULTIVIEW %d\n", ( UseMultiview ) ? 0 : 1 ) );
+	srcString += std::string("#define DISABLE_MULTIVIEW ") + std::to_string( UseMultiview  ? 0 : 1 ) + std::string("\n");
 
 	if ( shaderType == GL_VERTEX_SHADER )
 	{
-		srcString.AppendString( VertexHeader );
+		srcString += VertexHeader;
 	}
 	else if ( shaderType == GL_FRAGMENT_SHADER )
 	{
-		srcString.AppendString( FragmentHeader );
+		srcString += FragmentHeader;
 	}
 
-	srcString.AppendString( postVersion );
+	srcString += postVersion ;
 
-	src = srcString.ToCStr();
+	src = srcString.c_str();
 
 	GLuint shader = glCreateShader( shaderType );
 
@@ -314,7 +324,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 			requestedProgramVersion, GLSL_PROGRAM_VERSION );
 		programVersion = GLSL_PROGRAM_VERSION;
 	}
-#if 0//defined( OVR_OS_ANDROID )
+#if defined( OVR_OS_ANDROID )
 	// ----IMAGE_EXTERNAL_WORKAROUND
 	// GL_OES_EGL_image_external extension support issues:
 	// -- Both Adreno and Mali drivers do not maintain support for base GL_OES_EGL_image_external
@@ -324,11 +334,12 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 	// P0003: Warning: Extension 'GL_OES_EGL_image_external' not supported
 	// P0003: Warning: Extension 'GL_OES_EGL_image_external_essl3' not supported
 	// L0001: Expected token '{', found 'identifier' (samplerExternalOES)
-	// 
-	// Currently, it appears that drivers which fully support multiview also support 
+	//
+	// Currently, it appears that drivers which fully support multiview also support
 	// GL_OES_EGL_image_external_essl3 with v300. In the case where multiview is not
 	// fully supported, we force the shader version to v100 in order to maintain support
 	// for image_external with the Mali T760+Android-L drivers.
+#if 0
 	if ( !UseMultiview && (
 			( fragmentDirectives != NULL && strstr( fragmentDirectives, "GL_OES_EGL_image_external" ) != NULL ) ||
 			( strstr( fragmentSrc, "GL_OES_EGL_image_external" ) != NULL ) ) )
@@ -336,6 +347,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 		OVR_LOG( "GlProgram: Program GLSL version v100 due to GL_OES_EGL_image_external use." );
 		programVersion = 100;
 	}
+#endif
 	// ----IMAGE_EXTERNAL_WORKAROUND
 #endif
 	p.VertexShader = CompileShader( GL_VERTEX_SHADER, vertexDirectives, vertexSrc, programVersion );
@@ -482,11 +494,11 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 #ifdef OVR_BUILD_DEBUG
 		if ( p.Uniforms[i].Location < 0 || p.Uniforms[i].Binding < 0 )
 		{
-			OVR_WARN( "GlProgram::Build. Invalid shader parm: %s", parms[i].Name );
+			OVR_LOG( "GlProgram::Build. Invalid shader parm: %s", parms[i].Name );
 		}
 #endif
-        // Roderick: don't kill the whole app while testing.
-		//OVR_ASSERT( p.Uniforms[i].Location >= 0 && p.Uniforms[i].Binding >= 0 );
+
+		OVR_ASSERT( p.Uniforms[i].Location >= 0 && p.Uniforms[i].Binding >= 0 );
 	}
 
 	// implicit texture and image_external bindings

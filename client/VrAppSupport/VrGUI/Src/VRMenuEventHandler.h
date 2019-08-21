@@ -33,16 +33,16 @@ public:
 
 	void			Frame( OvrGuiSys & guiSys, const ovrFrameInput & vrFrame,
                             menuHandle_t const & rootHandle, Posef const & menuPose, Matrix4f const & traceMat,
-							Array< VRMenuEvent > & events );
+							std::vector< VRMenuEvent > & events );
 
 	void			HandleEvents( OvrGuiSys & guiSys, const ovrFrameInput & vrFrame,
-							menuHandle_t const rootHandle, Array< VRMenuEvent > const & events ) const;
+							menuHandle_t const rootHandle, std::vector< VRMenuEvent > const & events ) const;
 
-	void			InitComponents( Array< VRMenuEvent > & events );
-	void			Opening( Array< VRMenuEvent > & events );
-	void			Opened( Array< VRMenuEvent > & events );
-	void			Closing( Array< VRMenuEvent > & events );
-	void			Closed( Array< VRMenuEvent > & events );
+	void			InitComponents( std::vector< VRMenuEvent > & events );
+	void			Opening( std::vector< VRMenuEvent > & events );
+	void			Opened( std::vector< VRMenuEvent > & events );
+	void			Closing( std::vector< VRMenuEvent > & events );
+	void			Closed( std::vector< VRMenuEvent > & events );
 
 	menuHandle_t	GetFocusedHandle() const { return FocusedHandle; }
 
@@ -57,7 +57,7 @@ private:
     bool            DispatchToComponents( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
                             VRMenuEvent const & event, VRMenuObject * receiver ) const;
     bool            DispatchToPath( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
-                            VRMenuEvent const & event, Array< menuHandle_t > const & path, bool const log ) const;
+                            VRMenuEvent const & event, std::vector< menuHandle_t > const & path, bool const log ) const;
 	bool            BroadcastEvent( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
                             VRMenuEvent const & event, VRMenuObject * receiver ) const;
 };

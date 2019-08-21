@@ -9,7 +9,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 *************************************************************************************/
 
-#include "VrApi_Types.h"
+#include "VrApi_Types.h"	// ovrJava
 
 namespace OVR {
 

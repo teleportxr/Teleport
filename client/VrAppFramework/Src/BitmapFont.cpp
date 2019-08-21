@@ -24,11 +24,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <math.h>
 #include <sys/stat.h>
 
-#include "Kernel/OVR_UTF8Util.h"
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_JSON.h"
-#include "OVR_GlUtils.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_UTF8Util.h"
+#include "OVR_JSON.h"
+#include "OVR_LogUtils.h"
+#include "OVR_Math.h"
 
 #include "GlProgram.h"
 #include "GlTexture.h"
@@ -37,6 +36,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "PackageFiles.h"
 #include "OVR_FileSys.h"
 #include "OVR_Uri.h"
+#include "OVR_GlUtils.h"
 
 namespace OVR {
 static char const * FontSingleTextureVertexShaderSrc =
@@ -147,9 +147,9 @@ public:
 	FontGlyphType const &		GlyphForCharCode( uint32_t const charCode ) const;
 	ovrFontWeight				GetFontWeight( int const index ) const;
 
-	String						FontName;		// name of the font (not necessarily the file name)
-	String						CommandLine;	// command line used to generate this font
-	String						ImageFileName;	// the file name of the font image
+	std::string					FontName;		// name of the font (not necessarily the file name)
+	std::string					CommandLine;	// command line used to generate this font
+	std::string					ImageFileName;	// the file name of the font image
 	float						NaturalWidth;	// width of the font image before downsampling to SDF
 	float						NaturalHeight;	// height of the font image before downsampling to SDF
 	float						HorizontalPad;	// horizontal padding for all glyphs
@@ -162,9 +162,9 @@ public:
 	float						MaxAscent;		// maximum ascent of any character
 	float						MaxDescent;		// maximum descent of any character
 	float						EdgeWidth;		// adjust the edge falloff. Helps with fonts that have smaller glyph sizes in the texture (CJK)
-	OVR::Array< FontGlyphType >	Glyphs;			// info about each glyph in the font
-	OVR::Array< int32_t >		CharCodeMap;	// index by character code to get the index of a glyph for the character
-	Array< ovrFontWeight >		FontWeights;
+	std::vector< FontGlyphType >	Glyphs;		// info about each glyph in the font
+	std::vector< int32_t >		CharCodeMap;	// index by character code to get the index of a glyph for the character
+	std::vector< ovrFontWeight >	FontWeights;
 
 private:
 	bool						LoadFromBuffer( void const * buffer, size_t const bufferSize );
@@ -204,12 +204,12 @@ public:
 									float & ascent, float & descent, float & fontHeight,
 									float * lineWidths, int const maxLines, int & numLines ) const;
 
-	virtual void			TruncateText( String & inOutText, int const maxLines ) const;
+	virtual void			TruncateText( std::string & inOutText, int const maxLines ) const;
 
-	bool					WordWrapText( String & inOutText, const float widthMeters, const float fontScale = 1.0f ) const;
-	bool					WordWrapText( String & inOutText, const float widthMeters, OVR::Array< OVR::String > wholeStrsList, const float fontScale = 1.0f ) const;
-	float					GetLastFitChars( String & inOutText, const float widthMeters, const float fontScale = 1.0f ) const;
-	float					GetFirstFitChars( String & inOutText, const float widthMeters, const int numLines, const float fontScale = 1.0f ) const;
+	bool					WordWrapText( std::string & inOutText, const float widthMeters, const float fontScale = 1.0f ) const;
+	bool					WordWrapText( std::string & inOutText, const float widthMeters, std::vector< std::string > wholeStrsList, const float fontScale = 1.0f ) const;
+	float					GetLastFitChars( std::string & inOutText, const float widthMeters, const float fontScale = 1.0f ) const;
+	float					GetFirstFitChars( std::string & inOutText, const float widthMeters, const int numLines, const float fontScale = 1.0f ) const;
 
 	// Returns a newly allocated GlGeometry for the text, allowing it to be sorted
 	// or transformed with more control than the global BitmapFontSurface.
@@ -241,8 +241,7 @@ private:
 
 private:
 	bool					LoadImage( ovrFileSys & fileSys, char const * uri );
-	bool   					LoadImageFromBuffer( char const * imageName, unsigned char const * buffer,
-									size_t const bufferSize, bool const isASTC );
+	bool   					LoadImageFromBuffer( char const * imageName, std::vector< unsigned char > & buffer, bool const isASTC );
 	bool					LoadFontInfo( char const * glyphFileName );
 	bool					LoadFontInfoFromBuffer( unsigned char const * buffer, size_t const bufferSize );
 };
@@ -569,8 +568,8 @@ static void UpdateFormat( FontInfoType const & fontInfo, fontParms_t const & fon
 	if ( format.Weight != format.LastWeight && format.Weight != 0xffffffff )
 	{
 		ovrFontWeight const & w = fontInfo.GetFontWeight( format.Weight );
-		vertexParms[1] = (uint8_t)( OVR::Alg::Clamp( fontParms.ColorCenter + fontInfo.CenterOffset + w.ColorCenterOffset, 0.0f, 1.0f ) * 255 );
-		vertexParms[0] = (uint8_t)( OVR::Alg::Clamp( fontParms.AlphaCenter + fontInfo.CenterOffset + w.AlphaCenterOffset, 0.0f, 1.0f ) * 255 );
+		vertexParms[1] = (uint8_t)( clamp<float>( fontParms.ColorCenter + fontInfo.CenterOffset + w.ColorCenterOffset, 0.0f, 1.0f ) * 255 );
+		vertexParms[0] = (uint8_t)( clamp<float>( fontParms.AlphaCenter + fontInfo.CenterOffset + w.AlphaCenterOffset, 0.0f, 1.0f ) * 255 );
 	}
 }
 
@@ -586,8 +585,12 @@ VertexBlockType DrawTextToVertexBlock( BitmapFont const & font, fontParms_t cons
 	}
 	if ( text == NULL || text[0] == '\0' )
 	{
+#if defined( OVR_BUILD_DEBUG )
+		OVR_LOG( "DrawTextToVertexBlock: null or empty text!" );
+#endif
 		return VertexBlockType();	// nothing to do here, move along
 	}
+
 
 	// TODO: multiple line support -- we would need to calculate the horizontal width
 	// for each string ending in \n
@@ -601,12 +604,20 @@ VertexBlockType DrawTextToVertexBlock( BitmapFont const & font, fontParms_t cons
 	float lineWidths[MAX_LINES];
 	int numLines;
 	AsLocal( font ).CalcTextMetrics( text, len, width, height, ascent, descent, fontHeight, lineWidths, MAX_LINES, numLines );
-//	OVR_LOG( "BitmapFontSurfaceLocal::DrawText3D( \"%s\" %s %s ) : width = %.2f, height = %.2f, numLines = %i, fh = %.2f",
-//			text, ( fontParms.AlignVert == VERTICAL_CENTER ) ? "cv" : ( ( fontParms.AlignVert == VERTICAL_BOTTOM ) ? "bv" : "tv" ),
-// 			( fontParms.AlignHoriz == HORIZONTAL_CENTER ) ? "ch" : ( ( fontParms.AlignVert == HORIZONTAL_LEFT ) ? "lh" : "rh" ),
-//			width, height, numLines, AsLocal( font ).GetFontInfo().FontHeight );
+
+#if defined( OVR_BUILD_DEBUG )
+///	OVR_LOG( "BitmapFontSurfaceLocal::DrawText3D( \"%s\" %s %s ) : width = %.2f, height = %.2f, numLines = %i, fh = %.2f",
+///			text, 
+///			( fontParms.AlignVert == VERTICAL_CENTER ) ? "cv" : ( ( fontParms.AlignVert == VERTICAL_CENTER_FIXEDHEIGHT ) ? "cvfh" : "tv" ),
+/// 			( fontParms.AlignHoriz == HORIZONTAL_CENTER ) ? "ch" : ( ( fontParms.AlignHoriz == HORIZONTAL_LEFT ) ? "lh" : "rh" ),
+///			width, height, numLines, AsLocal( font ).GetFontInfo().FontHeight );
+#endif
+
 	if ( len == 0 )
 	{
+#if defined( OVR_BUILD_DEBUG )
+		OVR_LOG( "DrawTextToVertexBlock: zero-length text after metrics!" );
+#endif
 		return VertexBlockType();
 	}
 
@@ -695,11 +706,11 @@ VertexBlockType DrawTextToVertexBlock( BitmapFont const & font, fontParms_t cons
 
 	uint8_t vertexParms[4] =
 	{
-			(uint8_t)( OVR::Alg::Clamp( fontParms.AlphaCenter + fontInfo.CenterOffset + weightOffset, 0.0f, 1.0f ) * 255 ),
-			(uint8_t)( OVR::Alg::Clamp( fontParms.ColorCenter + fontInfo.CenterOffset + weightOffset, 0.0f, 1.0f ) * 255 ),
+			(uint8_t)( clamp<float>( fontParms.AlphaCenter + fontInfo.CenterOffset + weightOffset, 0.0f, 1.0f ) * 255 ),
+			(uint8_t)( clamp<float>( fontParms.ColorCenter + fontInfo.CenterOffset + weightOffset, 0.0f, 1.0f ) * 255 ),
 			//(uint8_t)( 0 ),
-			(uint8_t)( OVR::Alg::Clamp( distanceScale, 1.0f, 255.0f ) ),
-			(uint8_t)( OVR::Alg::Clamp( edgeWidth / 16.0f, 0.0f, 1.0f ) * 255.0f )
+			(uint8_t)( clamp<float>( distanceScale, 1.0f, 255.0f ) ),
+			(uint8_t)( clamp<float>( edgeWidth / 16.0f, 0.0f, 1.0f ) * 255.0f )
 	};
 
 	ovrFormat format( ColorToABGR( color ) );
@@ -792,12 +803,16 @@ VertexBlockType DrawTextToVertexBlock( BitmapFont const & font, fontParms_t cons
 		*toNextLine -= lineInc;
 	}
 
+#if defined( OVR_BUILD_DEBUG )
+///	OVR_LOG( "DrawTextToVertexBlock: drawn %d vertices lineInc = ", vb.NumVerts );
+#endif
+
 	return vb;
 }
 
 ovrFontWeight FontInfoType::GetFontWeight( const int index ) const
 {
-	if ( index < 0 || index >= FontWeights.GetSizeI() )
+	if ( index < 0 || static_cast<const size_t>( index ) >= FontWeights.size() )
 	{
 		return ovrFontWeight();
 	}
@@ -891,7 +906,7 @@ public:
 	virtual void		Finish( Matrix4f const & viewMatrix );
 
 	// add the VBO to the surface render list
-	virtual void 		AppendSurfaceList( BitmapFont const & font, Array< ovrDrawSurface > & surfaceList ) const;
+	virtual void 		AppendSurfaceList( BitmapFont const & font, std::vector< ovrDrawSurface > & surfaceList ) const;
 
 	virtual bool		IsInitialized() const { return Initialized; }
 
@@ -910,7 +925,7 @@ private:
 	int             CurIndex;   // reset every Render()
 	bool			Initialized;
 
-	Array< VertexBlockType >	    VertexBlocks;	// each pointer in the array points to an allocated block ov
+	std::vector< VertexBlockType >	    VertexBlocks;	// each pointer in the array points to an allocated block ov
 };
 
 //==================================================================================================
@@ -921,12 +936,15 @@ private:
 // FontInfoType::Load
 bool FontInfoType::Load( ovrFileSys & fileSys, char const * uri )
 {
-	MemBufferT< uint8_t > buffer;
+	std::vector< uint8_t > buffer;
 	if ( !fileSys.ReadFile( uri, buffer ) )
 	{
+		OVR_LOG( "FontInfoType::Load ReadFile FAIL uri = '%s' ", uri );
 		return false;
 	}
-	bool result = LoadFromBuffer( buffer, buffer.GetSize() );
+	OVR_LOG( "FontInfoType::Load ReadFile OK buffer size = '%d' ", (int)buffer.size() );
+
+	bool result = LoadFromBuffer( buffer.data(), buffer.size() );
 	// enable the block below to rewrite the font
 /*
 	if ( result )
@@ -934,6 +952,8 @@ bool FontInfoType::Load( ovrFileSys & fileSys, char const * uri )
 		Save( "c:/temp/" );
 	}
 */
+
+	OVR_LOG( "FontInfoType::Load ReadFile DONE result = '%d' ", (int)result );
 	return result;
 }
 
@@ -942,10 +962,11 @@ bool FontInfoType::Load( ovrFileSys & fileSys, char const * uri )
 bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize )
 {
 	char const * errorMsg = NULL;
-	OVR::JSON * jsonRoot = OVR::JSON::Parse( reinterpret_cast< char const * >( buffer ), &errorMsg );
+	std::shared_ptr<OVR::JSON> jsonRoot = OVR::JSON::Parse( reinterpret_cast< char const * >( buffer ), &errorMsg );
 	if ( jsonRoot == NULL )
 	{
 		OVR_WARN( "JSON Error: %s", ( errorMsg != NULL ) ? errorMsg : "<NULL>" );
+		OVR_LOG( "FontInfoType::LoadFromBuffer FAIL JSON ERROR = '%s' ", ( errorMsg != NULL ) ? errorMsg : "<NULL>" );
 		return false;
 	}
 
@@ -960,7 +981,7 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 	const JsonReader jsonGlyphs( jsonRoot );
 	if ( !jsonGlyphs.IsObject() )
 	{
-		jsonRoot->Release();
+		OVR_LOG( "FontInfoType::LoadFromBuffer FAIL ==> jsonGlyphs.IsObject() = FALSE " );
 		return false;
 	}
 
@@ -968,7 +989,7 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 	int Version = static_cast<int>( jsonGlyphs.GetChildFloatByName( "Version" ) );
 	if ( Version != FNT_FILE_VERSION )
 	{
-		jsonRoot->Release();
+		OVR_LOG( "FontInfoType::LoadFromBuffer FAIL ==> Version != FNT_FILE_VERSION " );
 		return false;
 	}
 
@@ -979,7 +1000,7 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 	if ( numGlyphs < 0 || numGlyphs > MAX_GLYPHS )
 	{
 		OVR_ASSERT( numGlyphs > 0 && numGlyphs <= MAX_GLYPHS );
-		jsonRoot->Release();
+		OVR_LOG( "FontInfoType::LoadFromBuffer FAIL ==> numGlyphs < 0 || numGlyphs > MAX_GLYPHS " );
 		return false;
 	}
 
@@ -998,21 +1019,21 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 	EdgeWidth = jsonGlyphs.GetChildFloatByName( "EdgeWidth", 32.0f );
 
 #if defined( OVR_BUILD_DEBUG )
-	OVR_LOG( "FontName = %s", FontName.ToCStr() );
-	OVR_LOG( "CommandLine = %s", CommandLine.ToCStr() );
+	OVR_LOG( "FontName = %s", FontName.c_str() );
+	OVR_LOG( "CommandLine = %s", CommandLine.c_str() );
 	OVR_LOG( "HorizontalPad = %.4f", HorizontalPad );
 	OVR_LOG( "VerticalPad = %.4f", VerticalPad );
 	OVR_LOG( "FontHeight = %.4f", FontHeight );
 	OVR_LOG( "CenterOffset = %.4f", CenterOffset );
 	OVR_LOG( "TweakScale = %.4f", TweakScale );
 	OVR_LOG( "EdgeWidth = %.4f", EdgeWidth );
-	OVR_LOG( "ImageFileName = %s", ImageFileName.ToCStr() );
+	OVR_LOG( "ImageFileName = %s", ImageFileName.c_str() );
 	OVR_LOG( "Loading %i glyphs.", numGlyphs );
 #endif
 
 /// HACK: this is hard-coded until we do not have a dependcy on reading the font from Home
 /// TODO: I believe this can now be removed.
-	if ( OVR_stricmp( FontName.ToCStr(), "korean.fnt" ) == 0 )
+	if ( OVR_stricmp( FontName.c_str(), "korean.fnt" ) == 0 )
 	{
 		TweakScale = 0.75f;
 		CenterOffset = -0.02f;
@@ -1022,6 +1043,11 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 	const JsonReader jsonWeightArray( jsonGlyphs.GetChildByName( "Weights" ) );
 	if ( jsonWeightArray.IsValid() )
 	{
+
+#if defined( OVR_BUILD_DEBUG )
+		OVR_LOG( "jsonWeightArray valid" );
+#endif
+
 		for ( int i = 0; !jsonWeightArray.IsEndOfArray(); ++i )
 		{
 			const JsonReader jsonWeight( jsonWeightArray.GetNextArrayElement() );
@@ -1030,12 +1056,19 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 				ovrFontWeight w;
 				w.AlphaCenterOffset = jsonWeight.GetChildFloatByName( "AlphaCenterOffset" );
 				w.ColorCenterOffset = jsonWeight.GetChildFloatByName( "ColorCenterOffset" );
-				FontWeights.PushBack( w );
+				FontWeights.push_back( w );
+#if defined( OVR_BUILD_DEBUG )
+///				OVR_LOG( "FontWeights[%d] --> AlphaCenterOffset=%.3f ColorCenterOffset=%.3f", i, w.AlphaCenterOffset, w.ColorCenterOffset );
+#endif
 			}
 		}
 	}
 
-	Glyphs.Resize( numGlyphs );
+#if defined( OVR_BUILD_DEBUG )
+	OVR_LOG( "jsonWeightArray DONE" );
+#endif
+
+	Glyphs.resize( numGlyphs );
 	const JsonReader jsonGlyphArray( jsonGlyphs.GetChildByName( "Glyphs" ) );
 
 	double oWidth = 0.0;
@@ -1043,7 +1076,7 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 
 	if ( jsonGlyphArray.IsArray() )
 	{
-		for ( int i = 0; i < Glyphs.GetSizeI() && !jsonGlyphArray.IsEndOfArray(); i++ )
+		for ( int i = 0; i < static_cast<int>(Glyphs.size()) && !jsonGlyphArray.IsEndOfArray(); i++ )
 		{
 			const JsonReader jsonGlyph( jsonGlyphArray.GetNextArrayElement() );
 			if ( jsonGlyph.IsObject() )
@@ -1085,10 +1118,18 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 					MaxDescent = descent;
 				}
 
-				maxCharCode = Alg::Max( maxCharCode, g.CharCode );
+#if defined( OVR_BUILD_DEBUG )
+///				OVR_LOG( "Glyphs[%d] --> X=%.3f Y=%.3f CharCode=%d", i, g.X, g.Y, g.CharCode );
+#endif
+
+				maxCharCode = std::max< int32_t >( maxCharCode, g.CharCode );
 			}
 		}
 	}
+
+#if defined( OVR_BUILD_DEBUG )
+	OVR_LOG( "jsonGlyphArray DONE maxCharCode =%d", maxCharCode );
+#endif
 
 	float const DEFAULT_TEXT_SCALE = 0.0025f;
 
@@ -1112,32 +1153,28 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 	}
 
 	// resize the array to the maximum glyph value
-	CharCodeMap.Resize( maxCharCode + 1 );
+	CharCodeMap.resize( maxCharCode + 1 );
 
 	// init to empty value
-	for ( int i = 0; i < CharCodeMap.GetSizeI(); ++i )
-	{
-		CharCodeMap[ i ] = -1;
-	}
+	CharCodeMap.assign( CharCodeMap.size(), -1 );
 
-	for ( int i = 0; i < Glyphs.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Glyphs.size() ); ++i )
 	{
 		FontGlyphType const & g = Glyphs[i];
 		CharCodeMap[g.CharCode] = i;
 	}
 
-	jsonRoot->Release();
-
+	OVR_LOG( "FontInfoType load SUCCESS" );
 	return true;
 }
 
 class ovrGlyphSort
 {
 public:
-	void SortGlyphIndicesByCharacterCode( Array< FontGlyphType > const & glyphs, Array< int > & glyphIndices )
+	void SortGlyphIndicesByCharacterCode( std::vector< FontGlyphType > const & glyphs, std::vector< int > & glyphIndices )
 	{
 		Glyphs = &glyphs;
-		qsort( glyphIndices.GetDataPtr(), glyphIndices.GetSize(), sizeof( int ), CompareByCharacterCode );
+		qsort( glyphIndices.data(), glyphIndices.size(), sizeof( int ), CompareByCharacterCode );
 		Glyphs = nullptr;
 	}
 
@@ -1159,18 +1196,18 @@ private:
 		return 0;
 	}
 
-	static Array< FontGlyphType > const *	Glyphs;
+	static std::vector< FontGlyphType > const *	Glyphs;
 };
 
-Array< FontGlyphType > const *	ovrGlyphSort::Glyphs = nullptr;
+std::vector< FontGlyphType > const *	ovrGlyphSort::Glyphs = nullptr;
 
 bool FontInfoType::Save( char const * path )
 {
-	JSON * joFont = JSON::CreateObject();
-	joFont->AddStringItem( "FontName", FontName.ToCStr() );
-	joFont->AddStringItem( "CommandLine", CommandLine.ToCStr() );
+	std::shared_ptr<JSON> joFont = JSON::CreateObject();
+	joFont->AddStringItem( "FontName", FontName.c_str() );
+	joFont->AddStringItem( "CommandLine", CommandLine.c_str() );
 	joFont->AddNumberItem( "Version", FNT_FILE_VERSION );
-	joFont->AddStringItem( "ImageFileName", ImageFileName.ToCStr() );
+	joFont->AddStringItem( "ImageFileName", ImageFileName.c_str() );
 	joFont->AddNumberItem( "NaturalWidth", NaturalWidth );
 	joFont->AddNumberItem( "NaturalHeight", NaturalHeight );
 	joFont->AddNumberItem( "HorizontalPad", HorizontalPad );
@@ -1179,11 +1216,11 @@ bool FontInfoType::Save( char const * path )
 	joFont->AddNumberItem( "CenterOffset", CenterOffset );
 	joFont->AddNumberItem( "TweakScale", TweakScale );
 	joFont->AddNumberItem( "EdgeWidth", EdgeWidth );
-	joFont->AddNumberItem( "NumGlyphs", Glyphs.GetSizeI() );
+	joFont->AddNumberItem( "NumGlyphs", Glyphs.size() );
 
-	Array< int > glyphIndices;
-	glyphIndices.Resize( Glyphs.GetSizeI() );
-	for ( int i = 0; i < Glyphs.GetSizeI(); ++i )
+	std::vector< int > glyphIndices;
+	glyphIndices.resize( Glyphs.size() );
+	for ( int i = 0; i < static_cast< int >( Glyphs.size() ); ++i )
 	{
 		glyphIndices[i] = i;
 	}
@@ -1191,15 +1228,14 @@ bool FontInfoType::Save( char const * path )
 	ovrGlyphSort sort;
 	sort.SortGlyphIndicesByCharacterCode( Glyphs, glyphIndices );
 
-	JSON * joGlyphsArray = JSON::CreateArray();
+	std::shared_ptr<JSON> joGlyphsArray = JSON::CreateArray();
 	joFont->AddItem( "Glyphs", joGlyphsArray );
 	// add all glyphs
-	for ( int i = 0; i < glyphIndices.GetSizeI(); ++i )
+	for ( const int & index : glyphIndices )
 	{
-		int const index = glyphIndices[i];
 		FontGlyphType const & g = Glyphs[index];
 
-		JSON * joGlyph = JSON::CreateObject();
+		std::shared_ptr<JSON> joGlyph = JSON::CreateObject();
 		joGlyph->AddNumberItem( "CharCode", g.CharCode );
 		joGlyph->AddNumberItem( "X", g.X );	// now in natural units because the JSON writer loses precision
 		joGlyph->AddNumberItem( "Y", g.Y );		// now in natural units because the JSON writer loses precision
@@ -1213,11 +1249,10 @@ bool FontInfoType::Save( char const * path )
 	}
 
 	char filePath[1024];
-	ovrPathUtils::AppendUriPath( path, FontName.ToCStr(), filePath, sizeof( filePath ) );
+	ovrPathUtils::AppendUriPath( path, FontName.c_str(), filePath, sizeof( filePath ) );
 	OVR_LOG( "Writing font file '%s'\n...", filePath );
 	joFont->Save( filePath );
 
-	joFont->Release();
 	return true;
 }
 
@@ -1227,15 +1262,15 @@ FontGlyphType const & FontInfoType::GlyphForCharCode( uint32_t const charCode ) 
 {
 	auto lookupGlyph = [this] ( uint32_t const ch )
 	{
-		return ch >= CharCodeMap.GetSize() ? -1 : CharCodeMap[ch];
+		return ch >= CharCodeMap.size() ? -1 : CharCodeMap[ch];
 	};
 
-	int glyphIndex = lookupGlyph( charCode );//charCode >= CharCodeMap.GetSize() ? -1 : CharCodeMap[charCode];
-	if ( glyphIndex < 0 || glyphIndex >= Glyphs.GetSizeI() )
+	int glyphIndex = lookupGlyph( charCode );//charCode >= CharCodeMap.size() ? -1 : CharCodeMap[charCode];
+	if ( glyphIndex < 0 || glyphIndex >= static_cast< int >( Glyphs.size() ) )
 	{
-#if defined( OVR_BUILD_DEBUG )		
+#if defined( OVR_BUILD_DEBUG )
 		OVR_WARN( "FontInfoType::GlyphForCharCode FAILED TO FIND GLYPH FOR CHARACTER! charCode %u => %i [mapsize=%zu] [glyphsize=%i]",
-			charCode, glyphIndex, CharCodeMap.GetSize(), Glyphs.GetSizeI() );
+			charCode, glyphIndex, CharCodeMap.size(), static_cast< int >( Glyphs.size() ) );
 #endif
 
 		switch( charCode )
@@ -1245,7 +1280,7 @@ FontGlyphType const & FontInfoType::GlyphForCharCode( uint32_t const charCode ) 
 				static FontGlyphType emptyGlyph;
 				return emptyGlyph;
 			}
-			// Some fonts don't include special punctuation marks but translators are apt to use absolutely 
+			// Some fonts don't include special punctuation marks but translators are apt to use absolutely
 			// every obscure character there is.
 			// Alternatively this could be done when the text is loaded from the string resource, but at that point
 			// we do not necessarily know if the font contains the special characters.
@@ -1260,17 +1295,17 @@ FontGlyphType const & FontInfoType::GlyphForCharCode( uint32_t const charCode ) 
 				return GlyphForCharCode( '-' );
 			}
 			default:
-			{	
+			{
 				// if we have a glyph for "replacement character" U+FFFD, use that, otherwise use "black diamond" U+25C6.
 				// If that doesn't exists, use "halfwidth black square" U+FFED, and if that doesn't exist, use the asterisk.
 				glyphIndex = lookupGlyph( 0xFFFD );
-				if ( glyphIndex < 0 || glyphIndex >= Glyphs.GetSizeI() )
+				if ( glyphIndex < 0 || glyphIndex >= static_cast< int >( Glyphs.size() ) )
 				{
 					glyphIndex = lookupGlyph( 0x25C6 );
-					if ( glyphIndex < 0 || glyphIndex >= Glyphs.GetSizeI() )
+					if ( glyphIndex < 0 || glyphIndex >= static_cast< int >( Glyphs.size() ) )
 					{
 						glyphIndex = lookupGlyph( 0xFFED );
-						if ( glyphIndex < 0 || glyphIndex >= Glyphs.GetSizeI() )
+						if ( glyphIndex < 0 || glyphIndex >= static_cast< int >( Glyphs.size() ) )
 						{
 #if 0 // enable to make unknown characters obvious
 							static const char unknownGlyphs[] = { '!', '@', '#', '$', '%', '^', '&', '*', '(', ')' };
@@ -1288,7 +1323,7 @@ FontGlyphType const & FontInfoType::GlyphForCharCode( uint32_t const charCode ) 
 		}
 	}
 
-	OVR_ASSERT( glyphIndex >= 0 && glyphIndex < Glyphs.GetSizeI() );
+	OVR_ASSERT( glyphIndex >= 0 && glyphIndex < static_cast< int >( Glyphs.size() ) );
 	return Glyphs[glyphIndex];
 }
 
@@ -1319,13 +1354,18 @@ bool BitmapFontLocal::Load( ovrFileSys & fileSys, char const * uri )
 	char host[128];
 	int port;
 	char path[1024];
+
+	OVR_LOG( "Load Uri = %s", uri );
+
 	if ( !ovrUri::ParseUri( uri, scheme, sizeof( scheme ), NULL, 0, NULL, 0, host, sizeof( host ), port, path, sizeof( path ), NULL, 0, NULL, 0 ) )
 	{
+		OVR_LOG( "ParseUri FAILED Uri = %s", uri );
 		return false;
 	}
 
 	if ( !FontInfo.Load( fileSys, uri ) )
 	{
+		OVR_LOG( "FontInfo.Load FAILED Uri = %s", uri );
 		return false;
 	}
 
@@ -1333,13 +1373,13 @@ bool BitmapFontLocal::Load( ovrFileSys & fileSys, char const * uri )
 	{
 		OVR_LOG( "FontInfo file Uri = %s", uri );
 		OVR_LOG( "FontInfo file path = %s", path );
-		String imageBaseName = FontInfo.ImageFileName.GetFilename();
-		OVR_LOG( "image base name = %s", imageBaseName.ToCStr() );
+		std::string imageBaseName = OVR::ExtractFile( FontInfo.ImageFileName );
+		OVR_LOG( "image base name = %s", imageBaseName.c_str() );
 
 		ovrPathUtils::StripFilename( path, imagePath, sizeof( imagePath ) );
 		OVR_LOG( "FontInfo base path = %s", imagePath );
 
-		ovrPathUtils::AppendUriPath( imagePath, sizeof( imagePath ), imageBaseName.ToCStr() );
+		ovrPathUtils::AppendUriPath( imagePath, sizeof( imagePath ), imageBaseName.c_str() );
 		OVR_LOG( "imagePath = %s", imagePath );
 	}
 
@@ -1348,6 +1388,7 @@ bool BitmapFontLocal::Load( ovrFileSys & fileSys, char const * uri )
 	OVR_LOG( "imageUri = %s", imageUri );
 	if ( !LoadImage( fileSys, imageUri ) )
 	{
+		OVR_LOG( "BitmapFont image load FAILED: imageUri = '%s' uri = '%s'", imageUri, uri );
 		return false;
 	}
 
@@ -1362,6 +1403,10 @@ bool BitmapFontLocal::Load( ovrFileSys & fileSys, char const * uri )
 						fontUniformParms, sizeof( fontUniformParms ) / sizeof( ovrProgramParm ) );
 	}
 
+#if defined( OVR_BUILD_DEBUG )
+	OVR_LOG( "BitmapFont for uri = %s load SUCCESS", uri );
+#endif
+
 	return true;
 }
 
@@ -1369,12 +1414,12 @@ bool BitmapFontLocal::Load( ovrFileSys & fileSys, char const * uri )
 // BitmapFontLocal::Load
 bool BitmapFontLocal::LoadImage( ovrFileSys & fileSys, char const * uri )
 {
-	MemBufferT< uint8_t > imageBuffer;
+	std::vector< uint8_t > imageBuffer;
 	if ( !fileSys.ReadFile( uri, imageBuffer ) )
 	{
 		return false;
 	}
-	bool success = LoadImageFromBuffer( uri, imageBuffer, imageBuffer.GetSize(), ExtensionMatches( uri, ".astc" ) );
+	bool success = LoadImageFromBuffer( uri, imageBuffer, ExtensionMatches( uri, ".astc" ) );
 	if ( !success )
 	{
 		OVR_LOG( "BitmapFontLocal::LoadImage: failed to load image '%s'", uri );
@@ -1384,17 +1429,17 @@ bool BitmapFontLocal::LoadImage( ovrFileSys & fileSys, char const * uri )
 
 //==============================
 // BitmapFontLocal::LoadImageFromBuffer
-bool BitmapFontLocal::LoadImageFromBuffer( char const * imageName, unsigned char const * buffer, size_t bufferSize, bool const isASTC )
+bool BitmapFontLocal::LoadImageFromBuffer( char const * imageName, std::vector< unsigned char > & buffer, bool const isASTC )
 {
 	DeleteTexture( FontTexture );
 
 	if ( isASTC )
 	{
-		FontTexture = LoadASTCTextureFromMemory( buffer, bufferSize, 1, false );
+		FontTexture = LoadASTCTextureFromMemory( buffer.data(), buffer.size(), 1, false );
 	}
 	else
 	{
-		FontTexture = LoadTextureFromBuffer( imageName, MemBuffer( (void *)buffer, static_cast<int>( bufferSize ) ),
+		FontTexture = LoadTextureFromBuffer( imageName, buffer,
     			TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), ImageWidth, ImageHeight );
 	}
 	if ( FontTexture.IsValid() == false )
@@ -1430,34 +1475,36 @@ void BitmapFontLocal::GetGlyphMetrics( const uint32_t charCode, float &width,
 
 //==============================
 // BitmapFontLocal::WordWrapText
-bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters, const float fontScale ) const
+bool BitmapFontLocal::WordWrapText( std::string & inOutText, const float widthMeters, const float fontScale ) const
 {
-	return WordWrapText( inOutText, widthMeters, OVR::Array< OVR::String >(), fontScale );
+	return WordWrapText( inOutText, widthMeters, std::vector< std::string >(), fontScale );
 }
 
 //==============================
 // BitmapFontLocal::WordWrapText
-bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters, OVR::Array< OVR::String > wholeStrsList, const float fontScale ) const
+bool BitmapFontLocal::WordWrapText( std::string & inOutText, const float widthMeters, std::vector< std::string > wholeStrsList, const float fontScale ) const
 {
-	char const * source = inOutText.ToCStr();
+	char const * source = inOutText.c_str();
 	if ( *source == '\0' )
 	{
 		//OVR_LOG( "Tried to word-wrap NULL text!" );
 		return false;
 	}
 
-	//OVR_LOG( "Word-wrapping '%s'", source );
+#if defined( OVR_BUILD_DEBUG )
+///	OVR_LOG( "Word-wrapping '%s' ... ", source );
+#endif
 
 	// we will change characters in the new string and can potentially add line breaks after some characters
 	// so it may grow larger than the original string.
 	// While determining the length of the string, find any characters that may potentially have a line
 	// break added after them and increase the string length by 1 for each.
-	auto IsPostLineBreakChar = [] ( uint32_t const ch ) 
+	auto IsPostLineBreakChar = [] ( uint32_t const ch )
 	{
 		// array of characters after which we can add line breaks.
 		uint32_t const postLineBreakChars[] =
 		{
-			',', '.', ':', ';', '>', '!', '?', ')', ']', '-', '=', '+', '*', '\\', '/', 
+			',', '.', ':', ';', '>', '!', '?', ')', ']', '-', '=', '+', '*', '\\', '/',
 			0x3002,	// Chinese 'full-stop
 			'\0' // list terminator
 		};
@@ -1479,14 +1526,14 @@ bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters,
 		char const * prev = cur;
 		uint32_t const charCode = UTF8Util::DecodeNextChar( &cur );
 		ptrdiff_t const numBytes = cur - prev;
-		
+
 		if ( charCode == '\0' )
 		{
 			break;
 		}
 
 		lengthInBytes += static_cast< int >( numBytes );
-		
+
 		if ( IsPostLineBreakChar( charCode ) )
 		{
 			++lengthInBytes;	// add one byte for '\n'
@@ -1536,13 +1583,13 @@ bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters,
 		intptr_t const charCodeSize = cur - pre;
 		// determine if the string is Chinese, Japanese or Korean.
 		isCJK |= ( charCode >= 0x4E00 && charCode <= 0x9FAF ) || ( charCode >= 0x3000 && charCode <= 0x30FF );
-		
+
 		// replace tabs with a space
 		if ( charCode == '\t' )
 		{
 			charCode = ' ';
 		}
-		
+
 		if ( charCode == ' ' )
 		{
 			lastLineBreakOfs = destOffset;
@@ -1567,7 +1614,7 @@ bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters,
 		{
 			lineWidth = 0.0;
 			lineWidthAtLastBreak = 0.0;
-			// output a linefeed 
+			// output a linefeed
 			UTF8Util::EncodeChar( dest, &destOffset, '\n' );
 			continue;
 		}
@@ -1587,7 +1634,7 @@ bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters,
 				if ( lastLineBreakOfs < 0 && lastPostLineBreakOfs < 0 )
 				{
 					// we're unable to wrap based on punctuation or whitespace, so we must break at some
-					// arbitrary character. This is fine for Chinese, but not for western languages. It's 
+					// arbitrary character. This is fine for Chinese, but not for western languages. It's
 					// also relatively rare for western languages since they use spaces between each word.
 					/*if ( !isCJK )
 					{
@@ -1619,7 +1666,7 @@ bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters,
 					ptrdiff_t numBytesToSkip = afterDestBreakPoint - destBreakPoint;
 					if ( numBytesToSkip > 1 )
 					{
-						memcpy( dest + bestBreakOfs + 1, dest + bestBreakOfs + numBytesToSkip, lengthInBytes - bestBreakOfs );	
+						memcpy( dest + bestBreakOfs + 1, dest + bestBreakOfs + numBytesToSkip, lengthInBytes - bestBreakOfs );
 						destOffset -= numBytesToSkip - 1;
 					}
 				}
@@ -1638,7 +1685,7 @@ bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters,
 
 			lastLineBreakOfs = -1;
 			lastPostLineBreakOfs = -1;
-			
+
 			// subtract the width after the last whitespace so that we don't lose any accumulated width.
 			lineWidth -= lineWidthAtLastBreak;
 		}
@@ -1671,12 +1718,16 @@ bool BitmapFontLocal::WordWrapText( String & inOutText, const float widthMeters,
 	inOutText = dest;
 	delete [] dest;
 
+#if defined( OVR_BUILD_DEBUG )
+///	OVR_LOG( "Word-wrapping '%s' -> '%s' DONE", source, inOutText.c_str() );
+#endif
+
 	return true;
 }
 
-float BitmapFontLocal::GetFirstFitChars( String & inOutText, const float widthMeters, const int numLines, const float fontScale ) const
+float BitmapFontLocal::GetFirstFitChars( std::string & inOutText, const float widthMeters, const int numLines, const float fontScale ) const
 {
-	if ( inOutText.IsEmpty() )
+	if ( inOutText.empty() )
 	{
 		return 0;
 	}
@@ -1685,17 +1736,17 @@ float BitmapFontLocal::GetFirstFitChars( String & inOutText, const float widthMe
 	float lineWidth = 0.0f;
 	int remainingLines = numLines;
 
-	for ( int32_t pos = 0; pos < inOutText.GetLengthI(); ++pos )
+	for ( int32_t pos = 0; pos < static_cast< int32_t >( inOutText.length() ); ++pos )
 	{
-		uint32_t charCode = inOutText.GetCharAt( pos );
+		uint32_t charCode = OVR::UTF8Util::GetCharAt( pos, inOutText.c_str() );
 		if ( charCode == '\n' )
 		{
 			remainingLines--;
 			if ( remainingLines == 0 )
 			{
-				inOutText = inOutText.Substring( 0, pos );
+				inOutText = inOutText.substr( 0, pos );
 				return widthMeters - lineWidth;
-			}			
+			}
 		}
 		else if ( charCode != '\0' )
 		{
@@ -1703,7 +1754,7 @@ float BitmapFontLocal::GetFirstFitChars( String & inOutText, const float widthMe
 			lineWidth += glyph.AdvanceX * xScale;
 			if ( lineWidth > widthMeters )
 			{
-				inOutText = inOutText.Substring( 0, pos - 1 ); // -1 to not include current char that didn't fit.
+				inOutText = inOutText.substr( 0, pos - 1 ); // -1 to not include current char that didn't fit.
 				return widthMeters - ( lineWidth - glyph.AdvanceX * xScale );
 			}
 		}
@@ -1712,9 +1763,9 @@ float BitmapFontLocal::GetFirstFitChars( String & inOutText, const float widthMe
 	return 0;
 }
 
-float BitmapFontLocal::GetLastFitChars( String & inOutText, const float widthMeters, const float fontScale ) const
+float BitmapFontLocal::GetLastFitChars( std::string & inOutText, const float widthMeters, const float fontScale ) const
 {
-	if ( inOutText.IsEmpty() )
+	if ( inOutText.empty() )
 	{
 		return 0;
 	}
@@ -1722,14 +1773,14 @@ float BitmapFontLocal::GetLastFitChars( String & inOutText, const float widthMet
 	float const xScale = FontInfo.ScaleFactorX * fontScale;
 	float lineWidth = 0.0f;
 
-	for ( int32_t pos = inOutText.GetLengthI( ) - 1; pos >= 0; --pos )
+	for ( int32_t pos = static_cast< int32_t >( inOutText.length() ) - 1; pos >= 0; --pos )
 	{
-		uint32_t charCode = inOutText.GetCharAt( pos );
+		uint32_t charCode = OVR::UTF8Util::GetCharAt( pos, inOutText.c_str() );
 		FontGlyphType const & glyph = GlyphForCharCode( charCode );
 		lineWidth += glyph.AdvanceX * xScale;
 		if ( lineWidth > widthMeters )
 		{
-			inOutText = inOutText.Right( inOutText.GetLengthI() - pos - 1 ); // -1 to not include current char that didn't fit.
+			inOutText = inOutText.substr(pos + 1, inOutText.length() ); // +1 to not include current char that didn't fit.
 			return widthMeters - ( lineWidth - glyph.AdvanceX * xScale );
 		}
 	}
@@ -1757,6 +1808,11 @@ float BitmapFontLocal::CalcTextWidth( char const * text ) const
 		width += g.AdvanceX * FontInfo.ScaleFactorX;
 		while ( CheckForFormatEscape( &p, color, weight ) );
 	}
+
+#if defined( OVR_BUILD_DEBUG )
+///	OVR_LOG( "CalcTextWidth '%s' = %.3f ", text, width );
+#endif
+
 	return width;
 }
 
@@ -1814,7 +1870,7 @@ void BitmapFontLocal::CalcTextMetrics( char const * text, size_t & len, float & 
 			numLines++;
 			if ( numLines < maxLines )
 			{
-				// if we're not out of array space, advance and zero the width				
+				// if we're not out of array space, advance and zero the width
 				lineWidths[numLines] = 0.0f;
 				maxLineAscent = 0.0f;
 				maxLineDescent = 0.0f;
@@ -1832,7 +1888,7 @@ void BitmapFontLocal::CalcTextMetrics( char const * text, size_t & len, float & 
 		FontGlyphType const & g = GlyphForCharCode( charCode );
 
 		if ( numLines < maxLines )
-		{			
+		{
 			lineWidths[numLines] += g.AdvanceX * FontInfo.ScaleFactorX;
 		}
 
@@ -1877,15 +1933,15 @@ void BitmapFontLocal::CalcTextMetrics( char const * text, size_t & len, float & 
 
 //==============================
 // BitmapFontLocal::TruncateText
-void BitmapFontLocal::TruncateText( String & inOutText, int const maxLines ) const
+void BitmapFontLocal::TruncateText( std::string & inOutText, int const maxLines ) const
 {
-	char const * p = inOutText.ToCStr();
+	char const * p = inOutText.c_str();
 
 	if ( p == nullptr || p[0] == '\0' )
 	{
 		return;
 	}
-	
+
 	uint32_t color;
 	uint32_t weight;
 
@@ -1900,7 +1956,7 @@ void BitmapFontLocal::TruncateText( String & inOutText, int const maxLines ) con
 			lineCount++;
 			if ( lineCount == maxLines - 1 )
 			{
-				inOutText = inOutText.Substring( 0, len + 1 );
+				inOutText = inOutText.substr( 0, len + 1 );
 				inOutText += "...";
 				break;
 			}
@@ -1911,6 +1967,11 @@ void BitmapFontLocal::TruncateText( String & inOutText, int const maxLines ) con
 			break;
 		}
 	}
+
+#if defined( OVR_BUILD_DEBUG )
+///	OVR_LOG( "TruncateText '%s' -> '%s' ", p, inOutText.c_str() );
+#endif
+
 }
 
 //==================================================================================================
@@ -1996,6 +2057,10 @@ Vector3f BitmapFontSurfaceLocal::DrawText3D( BitmapFont const & font, fontParms_
 		Vector3f const & pos, Vector3f const & normal, Vector3f const & up,
 		float scale, Vector4f const & color, char const * text )
 {
+#if defined( OVR_BUILD_DEBUG )
+///	OVR_LOG( "DrawText3D -> '%s'", text == NULL ? "<null>" : text );
+#endif
+
 	if ( text == NULL || text[0] == '\0' )
 	{
 		return Vector3f::ZERO;	// nothing to do here, move along
@@ -2004,7 +2069,7 @@ Vector3f BitmapFontSurfaceLocal::DrawText3D( BitmapFont const & font, fontParms_
 	VertexBlockType vb = DrawTextToVertexBlock( font, parms, pos, normal, up, scale, color, text, &toNextLine );
 
 	// add the new vertex block to the array of vertex blocks
-	VertexBlocks.PushBack( vb );
+	VertexBlocks.push_back( vb );
 
 	return toNextLine;
 }
@@ -2084,7 +2149,7 @@ void BitmapFontSurfaceLocal::Finish( Matrix4f const & viewMatrix )
 	// sort vertex blocks indices based on distance to pivot
 	int const MAX_VERTEX_BLOCKS = 256;
 	vbSort_t vbSort[MAX_VERTEX_BLOCKS];
-	int const n = VertexBlocks.GetSizeI();
+	int const n = VertexBlocks.size();
 	for ( int i = 0; i < n; ++i )
 	{
 		vbSort[i].VertexBlockIndex = i;
@@ -2102,7 +2167,7 @@ void BitmapFontSurfaceLocal::Finish( Matrix4f const & viewMatrix )
 	// To add multiple-font-per-surface support, we need to add a 3rd component to s and t,
 	// then get the font for each vertex block, and set the texture index on each vertex in
 	// the third texture coordinate.
-	for ( int i = 0; i < VertexBlocks.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( VertexBlocks.size() ); ++i )
 	{
 		VertexBlockType & vb = VertexBlocks[vbSort[i].VertexBlockIndex];
 		Matrix4f transform;
@@ -2151,7 +2216,7 @@ void BitmapFontSurfaceLocal::Finish( Matrix4f const & viewMatrix )
 	}
 	// remove all elements from the vertex block (but don't free the memory since it's likely to be
 	// needed on the next frame.
-	VertexBlocks.Clear();
+	VertexBlocks.clear();
 
 	glBindVertexArray( FontSurfaceDef.geo.vertexArrayObject );
 	glBindBuffer( GL_ARRAY_BUFFER, FontSurfaceDef.geo.vertexBuffer );
@@ -2162,7 +2227,7 @@ void BitmapFontSurfaceLocal::Finish( Matrix4f const & viewMatrix )
 
 //==============================
 // BitmapFontSurfaceLocal::AppendSurfaceList
-void BitmapFontSurfaceLocal::AppendSurfaceList( BitmapFont const & font, Array< ovrDrawSurface > & surfaceList ) const
+void BitmapFontSurfaceLocal::AppendSurfaceList( BitmapFont const & font, std::vector< ovrDrawSurface > & surfaceList ) const
 {
 	if ( FontSurfaceDef.geo.indexCount == 0 )
 	{
@@ -2176,7 +2241,7 @@ void BitmapFontSurfaceLocal::AppendSurfaceList( BitmapFont const & font, Array< 
 
 	drawSurf.surface = &FontSurfaceDef;
 
-	surfaceList.PushBack( drawSurf );
+	surfaceList.push_back( drawSurf );
 }
 
 void BitmapFontSurfaceLocal::SetCullEnabled( const bool enabled )

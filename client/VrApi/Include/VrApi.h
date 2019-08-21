@@ -157,7 +157,7 @@ while ( !exit )
 				&layer.Header
 			};
 
-			ovrSubmitFrameDescription2 frameDesc = {};
+			ovrSubmitFrameDescription2 frameDesc = { 0 };
 			frameDesc.FrameIndex = frameIndex;
 			frameDesc.DisplayTime = predictedDisplayTime;
 			frameDesc.LayerCount = 1;
@@ -584,7 +584,11 @@ OVR_VRAPI_EXPORT ovrTracking vrapi_GetPredictedTracking( ovrMobile * ovr, double
 /// images from being abrubtly warped across the screen.
 ///
 /// Can be called from any thread while in VR mode.
-OVR_VRAPI_EXPORT void vrapi_RecenterPose( ovrMobile * ovr );
+
+// vrapi_RecenterPose() is being deprecated because it is supported at the user
+// level via system interaction, and at the app level, the app is free to use
+// any means it likes to control the mapping of virtual space to physical space.
+OVR_VRAPI_DEPRECATED( OVR_VRAPI_EXPORT void vrapi_RecenterPose( ovrMobile * ovr ) );
 
 //-----------------------------------------------------------------
 // Tracking Transform
@@ -620,12 +624,37 @@ OVR_VRAPI_EXPORT void vrapi_RecenterPose( ovrMobile * ovr );
 /// the VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_FLOOR_LEVEL transform.
 /// To determine the current tracking transform, applications can fetch the
 /// VRAPI_TRACKING_TRANSFORM_CURRENT transform.
-OVR_VRAPI_EXPORT ovrPosef  vrapi_GetTrackingTransform( ovrMobile * ovr, ovrTrackingTransform whichTransform );
+
+/// The TrackingTransform API has been deprecated because it was superceded by the
+/// TrackingSpace API. The key difference in the TrackingSpace API is that LOCAL
+/// and LOCAL_FLOOR spaces are mutable, so user/system recentering is transparently
+/// applied without app intervention.
+OVR_VRAPI_DEPRECATED( OVR_VRAPI_EXPORT ovrPosef  vrapi_GetTrackingTransform( ovrMobile * ovr, ovrTrackingTransform whichTransform ) );
 
 /// Sets the transform used convert between tracking coordinates and a canonical
 /// application-defined space.
 /// Only the yaw component of the orientation is used.
-OVR_VRAPI_EXPORT void vrapi_SetTrackingTransform( ovrMobile * ovr, ovrPosef pose );
+OVR_VRAPI_DEPRECATED( OVR_VRAPI_EXPORT void vrapi_SetTrackingTransform( ovrMobile * ovr, ovrPosef pose ) );
+
+
+/// Returns the current tracking space
+OVR_VRAPI_EXPORT ovrTrackingSpace vrapi_GetTrackingSpace( ovrMobile * ovr );
+
+/// Set the tracking space. There are currently two options:
+///   * VRAPI_TRACKING_SPACE_LOCAL (default)
+///         The local tracking space's origin is at the nominal head position
+///         with +y up, and -z forward. This space is volatile and will change
+///         when system recentering occurs.
+///   * VRAPI_TRACKING_SPACE_LOCAL_FLOOR
+///         The local floor tracking space is the same as the local tracking
+///         space, except its origin is translated down to the floor. The local
+///         floor space differs from the local space only in its y translation.
+///         This space is volatile and will change when system recentering occurs.
+OVR_VRAPI_EXPORT ovrResult vrapi_SetTrackingSpace( ovrMobile * ovr, ovrTrackingSpace whichSpace );
+
+/// Returns pose of the requested space relative to the current space.
+/// The returned value is not affected by the current tracking transform.
+OVR_VRAPI_EXPORT ovrPosef vrapi_LocateTrackingSpace( ovrMobile * ovr, ovrTrackingSpace target );
 
 //-----------------------------------------------------------------
 // Guardian System
@@ -670,6 +699,12 @@ OVR_VRAPI_EXPORT ovrResult vrapi_GetBoundaryVisible( ovrMobile * ovr, bool * vis
 //
 //-----------------------------------------------------------------
 
+/// Texture Swap Chain lifetime is explicitly controlled by the application via calls
+/// to vrapi_CreateTextureSwapChain* or vrapi_CreateAndroidSurfaceSwapChain and
+/// vrapi_DestroyTextureSwapChain. Swap Chains are associated with the VrApi instance,
+/// not the VrApi ovrMobile. Therefore, calls to vrapi_EnterVrMode and vrapi_LeaveVrMode
+/// will not destroy or cause the Swap Chain to become invalid.
+
 /// Create a texture swap chain that can be passed to vrapi_SubmitFrame.
 /// Must be called from a thread with a valid OpenGL ES context current.
 ///
@@ -701,7 +736,14 @@ OVR_VRAPI_EXPORT ovrTextureSwapChain * vrapi_CreateTextureSwapChain( ovrTextureT
 /// the default size of the image buffers.
 /// Note that the image producer may override the buffer size, in which case the default values provided
 /// here will not be used (ie both video decompression or camera preview override the size automatically).
+///
+/// If isProtected is true, the surface swapchain will be created as a protected surface, ie for supporting
+/// secure video playback.
+///
+/// NOTE: These paths are not currently supported under Vulkan.
 OVR_VRAPI_EXPORT ovrTextureSwapChain * vrapi_CreateAndroidSurfaceSwapChain( int width, int height );
+OVR_VRAPI_EXPORT ovrTextureSwapChain * vrapi_CreateAndroidSurfaceSwapChain2( int width, int height, bool isProtected );
+
 
 /// Destroy the given texture swap chain.
 /// Must be called from a thread with the same OpenGL ES context current when vrapi_CreateTextureSwapChain was called.
@@ -717,9 +759,11 @@ OVR_VRAPI_EXPORT unsigned int vrapi_GetTextureSwapChainHandle( ovrTextureSwapCha
 /// Get the Android Surface object associated with the swap chain.
 OVR_VRAPI_EXPORT jobject vrapi_GetTextureSwapChainAndroidSurface( ovrTextureSwapChain * chain );
 
+
 //-----------------------------------------------------------------
 // Frame Submission
 //-----------------------------------------------------------------
+
 
 /// Accepts new eye images plus poses that will be used for future warps.
 /// The parms are copied, and are not referenced after the function returns.

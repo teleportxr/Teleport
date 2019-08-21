@@ -39,7 +39,7 @@ namespace OVR {
 
 		Id = VolumeSliderId;
 
-		Array< VRMenuObjectParms const * > sliderParms;
+		std::vector< VRMenuObjectParms const * > sliderParms;
 
 		OvrSliderComponent::imageInfo_t iconImage 				= { "res/raw/nav_brightness_on.png", 80, 80 };
 		OvrSliderComponent::imageInfo_t sliderBaseImage 		= { "res/raw/slider_base_%s_small.png", 71, 242 };
@@ -57,7 +57,7 @@ namespace OVR {
 
 		menuHandle_t parentHandle = ( parent == NULL ) ? menu->GetVRMenu()->GetRootHandle() : parent->GetHandle();
 		Menu->GetVRMenu()->AddItems( GuiSys, sliderParms, parentHandle, false );
-		sliderParms.Clear();
+		sliderParms.clear();
 
 		if ( parent == NULL )
 		{
@@ -65,8 +65,8 @@ namespace OVR {
 		}
 		else
 		{
-			Array<UIObject *> & children = const_cast< Array<UIObject *> & >( Parent->GetChildren() );
-			children.PushBack( this );
+			std::vector<UIObject *> & children = const_cast< std::vector<UIObject *> & >( Parent->GetChildren() );
+			children.push_back( this );
 			Handle = parent->GetMenuObject()->ChildHandleForId( GuiSys.GetVRMenuMgr(), Id );
 		}
 

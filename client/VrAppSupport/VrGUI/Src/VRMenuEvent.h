@@ -104,7 +104,7 @@ public:
 	menuHandle_t		OtherHandle;  // varies dependent on event type
     Vector3f            FloatValue;
     HitTestResult		HitResult;
-	String				Message;
+	std::string			Message;
 };
 
 } // namespace OVR

@@ -11,9 +11,11 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 *************************************************************************************/
 
 #include "ScrollManager.h"
-#include "Kernel/OVR_Alg.h"
 #include "OVR_Input.h"
 #include "VrCommon.h"
+
+#include <algorithm>				// for min, max
+#include "OVR_Math.h"
 
 namespace OVR {
 
@@ -170,16 +172,16 @@ void OvrScrollManager::Frame( float deltaSeconds, unsigned int controllerState )
 		{
 			if ( Velocity > 0.0f )
 			{
-				Position = Alg::Clamp( Position, -ScrollBehavior.Padding, MaxPosition );
+				Position = clamp<float>( Position, -ScrollBehavior.Padding, MaxPosition );
 			}
 			else
 			{
-				Position = Alg::Clamp( Position, 0.0f, MaxPosition + ScrollBehavior.Padding );
+				Position = clamp<float>( Position, 0.0f, MaxPosition + ScrollBehavior.Padding );
 			}
 		}
 		else
 		{
-			Position = Alg::Clamp( Position, -ScrollBehavior.Padding, MaxPosition + ScrollBehavior.Padding );
+			Position = clamp<float>( Position, -ScrollBehavior.Padding, MaxPosition + ScrollBehavior.Padding );
 		}
 	}
 }
@@ -226,7 +228,7 @@ void OvrScrollManager::TouchUp()
 	return;
 }
 
-void OvrScrollManager::TouchRelative( Vector3f touchPos )
+void OvrScrollManager::TouchRelative( Vector3f touchPos, const double timeInSeconds )
 {
 	if ( !TouchIsDown )
 	{
@@ -274,7 +276,7 @@ void OvrScrollManager::TouchRelative( Vector3f touchPos )
 
 		float const DISTANCE_RAMP = 150.0f;
 		float const ramp = fabsf( touchVal ) / DISTANCE_RAMP;
-		Deltas.Append( delta_t( curMove * DISTANCE_SCALE * ramp, vrapi_GetTimeInSeconds() ) );
+		Deltas.Append( delta_t( curMove * DISTANCE_SCALE * ramp, timeInSeconds ) );
 	}
 
 	LastTouchPosistion = touchPos;

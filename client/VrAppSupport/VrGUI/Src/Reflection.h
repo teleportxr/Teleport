@@ -12,9 +12,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_Reflection_h )
 #define OVR_Reflection_h
 
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_Lexer.h"
-#include "Kernel/OVR_Array.h"
+#include <vector>
+#include <string>
+#include "OVR_Types.h"
+#include "OVR_Lexer2.h"
 
 namespace OVR {
 
@@ -40,11 +41,11 @@ public:
 
 	operator bool () const { return Result == ovrLexer::LEX_RESULT_OK; }
 
-	char const *	GetErrorText() const { return Error.ToCStr(); }
+	char const *	GetErrorText() const { return Error.c_str(); }
 
 private:
 	ovrLexer::ovrResult	Result;
-	String				Error;
+	std::string			Error;
 };
 
 ovrParseResult ExpectPunctuation( const char * name, ovrLexer & lex, const char * expected );
@@ -75,8 +76,8 @@ typedef void (*SetArrayElementFn_t)( void * objPtr, const int index, void * elem
 enum class ovrArrayType : char
 {
 	NONE,
-	OVR_OBJECT,		// OVR::Array< T* >
-	OVR_POINTER,	// OVR::Array< T >
+	OVR_OBJECT,		// std::vector< T* >
+	OVR_POINTER,	// std::vector< T >
 	C_OBJECT,		// T[]
 	C_POINTER		// T*[]
 };
@@ -142,15 +143,15 @@ public:
 	virtual ~ovrReflectionOverload() { }
 
 	ovrOverloadType	GetType() const { return Type; }
-	char const *	GetScope() const { return Scope.ToCStr(); }
-	char const *	GetName() const { return Name.ToCStr(); }
+	char const *	GetScope() const { return Scope.c_str(); }
+	char const *	GetName() const { return Name.c_str(); }
 	
 	virtual bool	OverloadsMemberVar() const { return false; }
 
 private:
 	ovrOverloadType	Type;
-	String			Scope;
-	String			Name;
+	std::string		Scope;
+	std::string		Name;
 };
 
 class ovrReflectionOverload_FloatDefaultValue : public ovrReflectionOverload
@@ -163,7 +164,7 @@ public:
 	}
 
 	float			GetValue() const { return Value; }
-	virtual bool	OverloadsMemberVar() const OVR_OVERRIDE { return true; }
+	virtual bool	OverloadsMemberVar() const override { return true; }
 
 private:	
 	float	Value;
@@ -184,7 +185,7 @@ public:
 	ovrMemberInfo const *			FindMemberReflectionInfo( ovrMemberInfo const * arrayOfMemberType, const char * memberName );
 	ovrTypeInfo const *				FindTypeInfo( char const * typeName );
 
-	void							AddOverload( ovrReflectionOverload * o ) { Overloads.PushBack( o ); }
+	void							AddOverload( ovrReflectionOverload * o ) { Overloads.push_back( o ); }
 	ovrReflectionOverload const *	FindOverload( char const * scope ) const;
 
 protected:
@@ -192,8 +193,8 @@ protected:
 
 
 private:
-	Array< ovrTypeInfo const * >	TypeInfoLists;
-	Array< ovrReflectionOverload* >	Overloads;
+	std::vector< ovrTypeInfo const * >		TypeInfoLists;
+	std::vector< ovrReflectionOverload* >	Overloads;
 
 	// can only be allocated and deleted by ovrReflection::Create and ovrReflection::Destroy
 	ovrReflection() { };	

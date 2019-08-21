@@ -84,7 +84,7 @@ public:
 	void				AddCell( UIObject * cellObject );
 	void				HighlightCells( unsigned int stopIndex );
 	void				SetCurrentValue( unsigned int value );
-	unsigned int		GetCellsCount() const { return static_cast<unsigned int>( Cells.GetSize() ); }
+	unsigned int		GetCellsCount() const { return static_cast<unsigned int>( Cells.size() ); }
 
 private:
 	void				OnCellSelect( UICellComponent & cell );
@@ -94,7 +94,7 @@ private:
 private:
 	UIDiscreteSlider &	DiscreteSlider;
 
-	Array< UIObject * >	Cells;
+	std::vector< UIObject * >	Cells;
 
 	unsigned int		CurrentValue;
 

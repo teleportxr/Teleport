@@ -14,7 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 namespace OVR
 {
@@ -40,6 +40,10 @@ ovrMessageQueue::ovrMessageQueue( int maxMessages_ ) :
 
 ovrMessageQueue::~ovrMessageQueue()
 {
+#if defined( OVR_BUILD_DEBUG )
+	OVR_LOG( "%p:~ovrMessageQueue: destroying ... ", this );
+#endif
+
 	// Free any messages remaining on the queue.
 	for ( ; ; )
 	{
@@ -53,13 +57,34 @@ ovrMessageQueue::~ovrMessageQueue()
 
 	// Free the queue itself.
 	delete[] messages;
+
+#if defined( OVR_BUILD_DEBUG )
+	OVR_LOG( "%p:~ovrMessageQueue: destroying ... DONE", this );
+#endif
 }
 
 void ovrMessageQueue::Shutdown()
 {
 	OVR_LOG( "%p:ovrMessageQueue shutdown", this );
 	shutdown = true;
+
+	if ( debug )
+	{
+		OVR_LOG( "%p:Shutdown() : notifying on processed", this );
+	}
+	processed.notify_all();
+
+	if ( debug )
+	{
+		OVR_LOG( "%p:Shutdown() : notifying on posted", this );
+	}
+	posted.notify_all();
 }
+
+
+#if defined( OVR_OS_WIN32 ) && defined( PostMessage )
+#undef PostMessage
+#endif
 
 // Thread safe, callable by any thread.
 // The msg text is copied off before return, the caller can free
@@ -78,31 +103,50 @@ bool ovrMessageQueue::PostMessage( const char * msg, bool sync, bool abortIfFull
 		OVR_LOG( "%p:PostMessage( %s )", this, msg );
 	}
 
-	mutex.DoLock();
-	if ( tail - head >= maxMessages )
+	// mutex lock scope
 	{
-		mutex.Unlock();
-		if ( abortIfFull )
+		std::unique_lock< std::mutex > lk( message_mutex );
+		if ( tail - head >= maxMessages )
 		{
-			OVR_LOG( "ovrMessageQueue overflow" );
-			for ( int i = head; i < tail; i++ )
+			if ( abortIfFull )
 			{
-				OVR_LOG( "%s", messages[i % maxMessages].string );
+				OVR_LOG( "ovrMessageQueue overflow" );
+				for ( int i = head; i < tail; i++ )
+				{
+					OVR_LOG( "%s", messages[i % maxMessages].string );
+				}
+				OVR_FAIL( "Message buffer overflowed" );
 			}
-			OVR_FAIL( "Message buffer overflowed" );
+			return false;
 		}
-		return false;
+		const int index = tail % maxMessages;
+		messages[index].string = OVR_strdup( msg );
+		messages[index].synced = sync;
+		tail++;
+
+		if ( debug )
+		{
+			OVR_LOG( "%p:PostMessage( '%s' ) : notifying on posted", this, msg );
+		}
+
+		posted.notify_all();
+
+		if ( debug )
+		{
+			OVR_LOG( "%p:PostMessage( '%s' ) : sleep waiting on processed", this, msg );
+		}
+
+		// wait scope
+		if ( sync )
+		{
+			processed.wait( lk );
+		}
 	}
-	const int index = tail % maxMessages;
-	messages[index].string = OVR_strdup( msg );
-	messages[index].synced = sync;
-	tail++;
-	posted.NotifyAll();
-	if ( sync )
+
+	if ( debug )
 	{
-		processed.Wait( &mutex );
+		OVR_LOG( "%p:PostMessage( '%s' ) : awoke after waiting on processed", this, msg );
 	}
-	mutex.Unlock();
 
 	return true;
 }
@@ -173,27 +217,26 @@ const char * ovrMessageQueue::GetNextMessage()
 {
 	NotifyMessageProcessed();
 
-	mutex.DoLock();
-	if ( tail <= head )
 	{
-		mutex.Unlock();
-		return NULL;
+		std::unique_lock< std::mutex > lk( message_mutex );
+		if ( tail > head )
+		{
+			const int index = head % maxMessages;
+			const char * msg = messages[index].string;
+			synced = messages[index].synced;
+			messages[index].string = NULL;
+			messages[index].synced = false;
+			head++;
+
+			if ( debug )
+			{
+				OVR_LOG( "%p:GetNextMessage() : %s", this, msg );
+			}
+			return msg;
+		}
 	}
 
-	const int index = head % maxMessages;
-	const char * msg = messages[index].string;
-	synced = messages[index].synced;
-	messages[index].string = NULL;
-	messages[index].synced = false;
-	head++;
-	mutex.Unlock();
-
-	if ( debug )
-	{
-		OVR_LOG( "%p:GetNextMessage() : %s", this, msg );
-	}
-
-	return msg;
+	return nullptr;
 }
 
 // Returns immediately if there is already a message in the queue.
@@ -201,33 +244,45 @@ void ovrMessageQueue::SleepUntilMessage()
 {
 	NotifyMessageProcessed();
 
-	mutex.DoLock();
-	if ( tail > head )
+	// Guard
 	{
-		mutex.Unlock();
-		return;
+		std::unique_lock< std::mutex > lk( message_mutex );
+		if ( tail > head )
+		{
+			if ( debug )
+			{
+				OVR_LOG( "%p:SleepUntilMessage() : tail > head", this );
+			}
+			return;
+		}
+
+		if ( debug )
+		{
+			OVR_LOG( "%p:SleepUntilMessage() : sleep waiting on posted", this );
+		}
+
+		// Wait
+		posted.wait( lk );
 	}
+
 
 	if ( debug )
 	{
-		OVR_LOG( "%p:SleepUntilMessage() : sleep", this );
+		OVR_LOG( "%p:SleepUntilMessage() : awoke after waiting on posted", this );
 	}
 
-	posted.Wait( & mutex );
-	mutex.Unlock();
-
-	if ( debug )
-	{
-		OVR_LOG( "%p:SleepUntilMessage() : awoke", this );
-	}
 }
 
 void ovrMessageQueue::NotifyMessageProcessed()
 {
-	if ( synced )
+	bool wasSynced = true;
+	if ( synced.compare_exchange_strong( wasSynced, false ) )
 	{
-		processed.NotifyAll();
-		synced = false;
+		if ( debug )
+		{
+			OVR_LOG( "%p:NotifyMessageProcessed() : notifying on processed", this );
+		}
+		processed.notify_all();
 	}
 }
 
@@ -241,6 +296,10 @@ void ovrMessageQueue::ClearMessages()
 	{
 		OVR_LOG( "%p:ClearMessages: discarding %s", this, msg );
 		free( (void *)msg );
+	}
+	if ( debug )
+	{
+		OVR_LOG( "%p:ClearMessages() COMPLETE", this );
 	}
 }
 

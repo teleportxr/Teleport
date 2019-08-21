@@ -11,16 +11,17 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "OVR_FileSys.h"
 
+#include <vector>
+
 #include "OVR_Stream_Impl.h"
-#include "Kernel/OVR_UTF8Util.h"
-#include "Kernel/OVR_Array.h"
+#include "OVR_UTF8Util.h"
 #include <cctype>	// for isdigit, isalpha
 #include "OVR_Uri.h"
 #include "PathUtils.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 #if defined( OVR_OS_ANDROID )
-#	include "Android/JniUtils.h"
+#	include "JniUtils.h"
 #elif defined( OVR_OS_WIN32 )
 #	include <direct.h>
 #	include <io.h>
@@ -40,14 +41,14 @@ public:
 
 	virtual ovrStream *		OpenStream( char const * uri, ovrStreamMode const mode );
 	virtual void			CloseStream( ovrStream * & stream );
-	virtual bool			ReadFile( char const * uri, MemBufferT< uint8_t > & outBuffer );
+	virtual bool			ReadFile( char const * uri, std::vector< uint8_t > & outBuffer );
 	virtual bool			FileExists( char const * uri );
-	virtual bool			GetLocalPathForURI( char const * uri, String &outputPath );
+	virtual bool			GetLocalPathForURI( char const * uri, std::string &outputPath );
 
 	virtual void			Shutdown();
 
 private:
-	Array< ovrUriScheme* >	Schemes;
+	std::vector< ovrUriScheme* >	Schemes;
 	JavaVM *				Jvm{ nullptr };
 	jobject					ActivityObject{ 0 };
 
@@ -104,10 +105,10 @@ ovrFileSysLocal::ovrFileSysLocal( ovrJava const & javaContext ) : Jvm( javaConte
 
 	// not sure if this is necessary... shouldn't the application always have permission to open its own scheme?
 /*
-	String outPath;
+	std::string outPath;
 	const bool validCacheDir = StoragePaths->GetPathIfValidPermission(
 			EST_INTERNAL_STORAGE, EFT_CACHE, "", permissionFlags_t( PERMISSION_WRITE ) | PERMISSION_READ, outPath );
-	ovr_OpenApplicationPackage( temp, validCacheDir ? outPath.ToCStr() : NULL );
+	ovr_OpenApplicationPackage( temp, validCacheDir ? outPath.c_str() : NULL );
 */
 	char curPackageUri[OVR_MAX_URI_LEN];
 	OVR_sprintf( curPackageUri, sizeof( curPackageUri ), "file://%s", curPackageCodePath );
@@ -148,19 +149,19 @@ ovrFileSysLocal::ovrFileSysLocal( ovrJava const & javaContext ) : Jvm( javaConte
 		}
 	}
 
-	Schemes.PushBack( scheme );
+	Schemes.push_back( scheme );
 
 	// add the host for font assets by opening a stream and trying to load res/raw/font_location.txt from the System Activites apk.
 	// If this file exists then
 	{
-		MemBufferT< uint8_t > buffer;
+		std::vector< uint8_t > buffer;
 		char fileName[256];
 		OVR::OVR_sprintf( fileName, sizeof( fileName ), "apk://%s/res/raw/font_location.txt", PUI_PACKAGE_NAME );
 		char fontPackageName[1024];		
 		bool success = ReadFile( fileName, buffer );
-		if ( success && buffer.GetSize() > 0 )
+		if ( success && buffer.size() > 0 )
 		{
-			OVR::OVR_strncpy( fontPackageName, sizeof( fontPackageName ), ( char const * )( static_cast< uint8_t const * >( buffer ) ), buffer.GetSize() );
+			OVR::OVR_strncpy( fontPackageName, sizeof( fontPackageName ), ( char const * )( static_cast< uint8_t const * >( buffer.data() ) ), buffer.size() );
 			OVR_LOG( "Found font package name '%s'", fontPackageName );
 		} else {
 			// default to the SystemActivities apk.
@@ -235,7 +236,7 @@ ovrFileSysLocal::ovrFileSysLocal( ovrJava const & javaContext ) : Jvm( javaConte
 			OVR_ASSERT( false );
 		}
 
-        Schemes.PushBack(scheme);
+        Schemes.push_back(scheme);
     }
     else
     {
@@ -270,7 +271,7 @@ ovrFileSysLocal::ovrFileSysLocal( ovrJava const & javaContext ) : Jvm( javaConte
 		AddRelativePathToHost( scheme, "font", curWorkingDir, "../../../../../../VrAppSupport/VrGUI");
 		scheme->AddHostSourceUri( "font", dataUri );
 
-		Schemes.PushBack( scheme );	
+		Schemes.push_back( scheme );	
 	}
 #else
 #error Unsupported platform!
@@ -357,7 +358,7 @@ void ovrFileSysLocal::CloseStream( ovrStream * & stream )
 
 //==============================
 // ovrFileSysLocal::ReadFile
-bool ovrFileSysLocal::ReadFile( char const * uri, MemBufferT< uint8_t > & outBuffer )
+bool ovrFileSysLocal::ReadFile( char const * uri, std::vector< uint8_t > & outBuffer )
 {
 	ovrStream * stream = OpenStream( uri, OVR_STREAM_MODE_READ );
 	if ( stream == NULL )
@@ -384,7 +385,7 @@ bool ovrFileSysLocal::FileExists( char const * uri )
 
 //==============================
 // ovrFileSysLocal::GetLocalPathForURI
-bool ovrFileSysLocal::GetLocalPathForURI( char const * uri, String &outputPath )
+bool ovrFileSysLocal::GetLocalPathForURI( char const * uri, std::string &outputPath )
 {
 	// parse the Uri to find the scheme
 	char scheme[OVR_MAX_SCHEME_LEN];
@@ -419,7 +420,7 @@ bool ovrFileSysLocal::GetLocalPathForURI( char const * uri, String &outputPath )
 // ovrFileSysLocal::FindSchemeIndexForName
 int ovrFileSysLocal::FindSchemeIndexForName( char const * schemeName ) const
 {
-	for ( int i = 0; i < Schemes.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< const int >( Schemes.size() ); ++i )
 	{
 		if ( OVR_stricmp( Schemes[i]->GetSchemeName(), schemeName ) == 0 )
 		{
@@ -441,13 +442,13 @@ ovrUriScheme * ovrFileSysLocal::FindSchemeForName( char const * name ) const
 // ovrFileSysLocal::Shutdown
 void ovrFileSysLocal::Shutdown()
 {
-	for ( int i = 0; i < Schemes.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< const int >( Schemes.size() ); ++i )
 	{
 		Schemes[i]->Shutdown();
 		delete Schemes[i];
 		Schemes[i] = NULL;
 	}
-	Schemes.Clear();
+	Schemes.clear();
 }
 
 //==============================================================================================

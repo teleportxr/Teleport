@@ -11,8 +11,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_Input_h
 #define OVR_Input_h
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_Math.h"
+#include "OVR_Types.h"
+#include "OVR_Math.h"
 #include "VrApi.h"
 
 namespace OVR
@@ -366,13 +366,15 @@ struct VrDeviceStatus
 	VrDeviceStatus() :
 		HeadPhonesPluggedState( OVR_HEADSET_PLUGGED_UNKNOWN ),
 		DeviceIsDocked( false ),
-		HeadsetIsMounted( false )
+		HeadsetIsMounted( false ),
+		RecenterCount( 0 )
 	{
 	}
 
 	ovrHeadSetPluggedState HeadPhonesPluggedState;					// headphones plugged state (unknown, plugged, unplugged)
 	bool				DeviceIsDocked;								// true if device is docked in headset
 	bool				HeadsetIsMounted;							// true if headset is mounted
+	int					RecenterCount;
 };
 
 // Passed to an application each frame.
@@ -381,6 +383,7 @@ class ovrFrameInput
 public:
 		ovrFrameInput() :
 			PredictedDisplayTimeInSeconds( 0.0 ),
+			RealTimeInSeconds( 0.0 ),
 			DeltaSeconds( 0.0f ),
 			FrameNumber( 0 ),
 			FovX( 0.0f ),
@@ -397,6 +400,8 @@ public:
 	// To make accurate journal playback possible, applications should
 	// use this time instead of geting system time directly.
 	double			PredictedDisplayTimeInSeconds;
+
+	double			RealTimeInSeconds;
 
 	// The amount of time in seconds that has passed since the last frame,
 	// usable for movement scaling.
@@ -424,7 +429,7 @@ public:
 	float			EyeHeight;
 	float			IPD;
 
-	ovrMatrix4f		TexCoordsFromTanAngles;
+	Matrix4f		TexCoordsFromTanAngles;
 
 	ovrTextureSwapChain *	ColorTextureSwapChain[2];
 

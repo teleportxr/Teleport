@@ -12,6 +12,26 @@
 
 #include "SessionClient.h"
 
+
+static inline ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
+{
+    ovrQuatf r;
+    r.w= p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z;
+    r.x= p.w * q.x + p.x * q.w + p.y * q.z - p.z * q.y;
+    r.y= p.w * q.y + p.y * q.w + p.z * q.x - p.x * q.z;
+    r.z= p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x;
+    return r;
+}
+
+static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
+{
+    ovrQuatf iq=q;
+    iq.x*=-1.f;
+    iq.y*=-1.f;
+    iq.z*=-1.f;
+    return QuaternionMultiply(p,iq);
+}
+
 #define LOG OVR_LOG
 #define FAIL OVR_FAIL
 #define WARN OVR_WARN

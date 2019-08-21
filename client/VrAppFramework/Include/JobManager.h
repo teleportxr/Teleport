@@ -12,9 +12,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_JobManager_h )
 #define OVR_JobManager_h
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_Threads.h"
+#include <vector>
+#include <thread>
+
+#include "OVR_Types.h"
 
 namespace OVR
 {
@@ -54,14 +55,14 @@ public:
 	ovrJob( char const * name );
 	virtual ~ovrJob() { }
 
-	threadReturn_t			DoWork( ovrJobThreadContext const & jtc );
+	void					DoWork( ovrJobThreadContext const & jtc );
 
 	char const *			GetName() const { return &Name[0]; }
 
 	virtual	uint32_t		GetTypeId() const = 0;
 
 private:
-	virtual threadReturn_t	DoWork_Impl( ovrJobThreadContext const & jtc ) = 0;
+	virtual void			DoWork_Impl( ovrJobThreadContext const & jtc ) = 0;
 
 private:
 	char					Name[128];
@@ -122,7 +123,7 @@ public:
 
 	virtual void	EnqueueJob( ovrJob * job ) = 0;
 
-	virtual void	ServiceJobs( OVR::Array< ovrJobResult > & finishedJobs ) = 0;
+	virtual void	ServiceJobs( std::vector< ovrJobResult > & finishedJobs ) = 0;
 
 	virtual bool 	IsExiting() const = 0;
 };

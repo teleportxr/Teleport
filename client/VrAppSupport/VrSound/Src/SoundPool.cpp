@@ -10,7 +10,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 *************************************************************************************/
 
 #include "SoundPool.h"
-#include "Android/JniUtils.h"
+#include "JniUtils.h"
 
 #if defined( OVR_OS_WIN32 )
 #include "Windows/AudioPlayer.h"
@@ -47,8 +47,7 @@ ovrSoundPool::~ovrSoundPool()
 {
 #if defined( OVR_OS_ANDROID )
 	jni.CallVoidMethod( pooler, releaseMethod );
-	// TODO: check for exceptions? Maybe this should be in LibOVRKernel as a
-	// call wrapper.
+	// TODO: check for exceptions?
 	jni.DeleteGlobalRef( pooler );
 #else
 	delete AudioPlayer;

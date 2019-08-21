@@ -12,8 +12,9 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef MODELDEF_H
 #define MODELDEF_H
 
-#include "Kernel/OVR_System.h"	// Array
-#include "Kernel/OVR_String.h"	// String
+#include <vector>
+#include <string>
+
 #include "GlProgram.h"			// GlProgram
 #include "GlTexture.h"
 #include "ModelCollision.h"
@@ -54,7 +55,7 @@ enum ModelJointAnimation
 struct ModelJoint
 {
 	int					index;
-	String				name;
+	std::string			name;
 	Matrix4f			transform;
 	ModelJointAnimation	animation;
 	Vector3f			parameters;
@@ -64,10 +65,10 @@ struct ModelJoint
 
 struct ModelTag
 {
-	String		name;
-	Matrix4f	matrix;
-	Vector4i	jointIndices;
-	Vector4f	jointWeights;
+	std::string		name;
+	Matrix4f		matrix;
+	Vector4i		jointIndices;
+	Vector4f		jointWeights;
 };
 
 struct ModelBuffer
@@ -78,7 +79,7 @@ struct ModelBuffer
 	{
 	}
 
-	String						name;
+	std::string					name;
 	size_t						byteLength;
 	uint8_t *					bufferData;
 };
@@ -94,7 +95,7 @@ struct ModelBufferView
 	{
 	}
 
-	String						name;
+	std::string					name;
 	const ModelBuffer *			buffer;
 	size_t						byteOffset;
 	size_t						byteLength;
@@ -135,7 +136,7 @@ public:
 
 	uint8_t *						BufferData() const;
 
-	String							name;
+	std::string						name;
 	const ModelBufferView *			bufferView;
 	size_t							byteOffset;
 	int								componentType;
@@ -154,7 +155,7 @@ public:
 
 struct ModelTexture
 {
-	String							name;
+	std::string						name;
 	GlTexture						texid;				// texture id. will need to be freed when the object destroys itself.
 };
 
@@ -169,7 +170,7 @@ struct ModelSampler
 	{
 	}
 
-	String							name;
+	std::string						name;
 	int								magFilter;
 	int								minFilter;
 	int								wrapS;
@@ -184,7 +185,7 @@ struct ModelTextureWrapper
 	{
 	}
 
-	String							name;
+	std::string						name;
 	const ModelTexture *			image;
 	const ModelSampler *			sampler;
 };
@@ -218,7 +219,7 @@ struct ModelMaterial
 	{
 	}
 
-	String							name;
+	std::string						name;
 	const ModelTextureWrapper *		baseColorTextureWrapper;
 	const ModelTextureWrapper *		metallicRoughnessTextureWrapper;
 	const ModelTextureWrapper *		normalTextureWrapper;
@@ -250,9 +251,9 @@ struct ModelSurface
 
 struct Model
 {
-	String							name;
-	Array< ModelSurface >			surfaces;
-	Array< float >					weights;
+	std::string						name;
+	std::vector< ModelSurface >		surfaces;
+	std::vector< float >			weights;
 };
 
 typedef enum
@@ -302,7 +303,7 @@ struct ModelCamera
 	{
 	}
 
-	String							name;
+	std::string						name;
 	ModelCameraType					type;
 	ModelPerspectiveCameraData		perspective;
 	ModelOthographicCameraData		orthographic;
@@ -329,21 +330,21 @@ public:
 	void							SetLocalTransform( const Matrix4f matrix );
 	void							RecalculateGlobalTransform( ModelFile & modelFile );
 
-	String							name;
-	String							jointName;
+	std::string						name;
+	std::string						jointName;
 	Quatf							rotation;
 	Vector3f						translation;
 	Vector3f						scale;
 	
 	
-	Array< int >					children;
+	std::vector< int >				children;
 	int								parentIndex;
 	int								skinIndex;
 	const ModelCamera *				camera;
 	Model *							model;
 
 	// old ovrscene animation system
-	Array< ModelJoint >				JointsOvrScene;
+	std::vector< ModelJoint >		JointsOvrScene;
 
 private:
 	Matrix4f						localTransform;
@@ -426,9 +427,9 @@ struct ModelAnimation
 	{
 	}
 
-	String							name;
-	Array< ModelAnimationSampler >	samplers;
-	Array< ModelAnimationChannel >	channels;
+	std::string								name;
+	std::vector< ModelAnimationSampler >	samplers;
+	std::vector< ModelAnimationChannel >	channels;
 };
 
 struct ModelSkin
@@ -437,11 +438,11 @@ struct ModelSkin
 	{
 	}
 
-	String							name;
+	std::string						name;
 	int								skeletonRootIndex;
-	Array< int> 					jointIndexes;
+	std::vector< int> 				jointIndexes;
 	const ModelAccessor *			inverseBindMatricesAccessor;
-	Array< Matrix4f >				inverseBindMatrices;
+	std::vector< Matrix4f >			inverseBindMatrices;
 };
 
 struct ModelSubScene
@@ -451,8 +452,8 @@ struct ModelSubScene
 	{
 	}
 
-	String							name;
-	Array< int >					nodes;
+	std::string						name;
+	std::vector< int >				nodes;
 	bool							visible;
 };
 
@@ -477,10 +478,10 @@ public:
 	void							RecalculateMatrix();
 	const ModelNode *				GetNode() const { return node; }
 
-	void							AddNodesToEmitList( Array< ModelNodeState * > & emitList );
+	void							AddNodesToEmitList( std::vector< ModelNodeState * > & emitList );
 
 	// old ovrscene animation system
-	Array< Matrix4f >				JointMatricesOvrScene;
+	std::vector< Matrix4f >				JointMatricesOvrScene;
 
 	const ModelNode *				node;
 	ModelState *					state;
@@ -525,7 +526,7 @@ public:
 
 	void							GenerateStateFromSubScene( const ModelSubScene * _subScene );
 	bool							visible;
-	Array< int >					nodeStates;
+	std::vector< int >				nodeStates;
 
 private:
 	const ModelSubScene *			subScene;
@@ -547,9 +548,9 @@ public:
 	void							CalculateAnimationFrameAndFraction( const ModelAnimationTimeType type, float timeInSeconds );
 
 	long long						DontRenderForClientUid;	// skip rendering the model if the current scene's client uid matches this
-	Array< ModelNodeState >			nodeStates;
-	Array< ModelAnimationTimeLineState > animationTimelineStates;
-	Array< ModelSubSceneState >		subSceneStates;
+	std::vector< ModelNodeState >			nodeStates;
+	std::vector< ModelAnimationTimeLineState > animationTimelineStates;
+	std::vector< ModelSubSceneState >		subSceneStates;
 
 	const ModelFile *				mf;
 private:
@@ -628,8 +629,8 @@ struct ModelGlPrograms
 
 struct ModelGeo
 {
-	Array<Vector3f> positions;
-	Array<TriangleIndex> indices;
+	std::vector<Vector3f> positions;
+	std::vector<TriangleIndex> indices;
 };
 
 } // namespace OVR

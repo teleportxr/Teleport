@@ -35,7 +35,9 @@ sounds.
 #if !defined( OVR_SoundAssetMapping_h )
 #define OVR_SoundAssetMapping_h
 
-#include "Kernel/OVR_StringHash.h"
+#include <string>
+#include <unordered_map>
+#include "OVR_JSON.h"
 
 namespace OVR {
 
@@ -48,13 +50,13 @@ public:
 
 	void	LoadSoundAssets( class ovrFileSys * fileSy );
 	bool	HasSound( const char * soundName ) const;
-	bool	GetSound( const char * soundName, String & outSound ) const;
+	bool	GetSound( const char * soundName, std::string & outSound ) const;
 	
 private:
-	void	LoadSoundAssetsFromJsonObject( const String & url, JSON * dataFile );
-	void	LoadSoundAssetsFromPackage( const String & url, const char * jsonFile );
+	void	LoadSoundAssetsFromJsonObject( const std::string & url, std::shared_ptr<JSON> dataFile );
+	void	LoadSoundAssetsFromPackage( const std::string & url, const char * jsonFile );
 
-	StringHash< String >  SoundMap;	// Maps hashed sound name to sound asset URL
+	std::unordered_map< std::string, std::string >  SoundMap;	// Maps hashed sound name to sound asset URL
 };
 
 }

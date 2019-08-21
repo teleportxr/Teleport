@@ -36,13 +36,13 @@ public:
 	Bounds3f						GetBounds() const;
 
 public:
-	String							FileName;
+	std::string						FileName;
 	bool							UsingSrgbTextures;
 
 	float							animationStartTime;
 	float							animationEndTime;
 
-	Array< ModelTag >				Tags;
+	std::vector< ModelTag >			Tags;
 
 	// This is used by the movement code
 	ModelCollision					Collisions;
@@ -51,20 +51,20 @@ public:
 	// This is typically used for gaze selection.
 	ModelTrace						TraceModel;
 
-	Array< ModelBuffer >			Buffers;
-	Array< ModelBufferView >		BufferViews;
-	Array< ModelAccessor >			Accessors;
-	Array< ModelTexture >			Textures;
-	Array< ModelSampler >			Samplers;
-	Array< ModelTextureWrapper >	TextureWrappers;
-	Array< ModelMaterial >			Materials;
-	Array< Model >					Models;
-	Array< ModelCamera >			Cameras;
-	Array< ModelNode >				Nodes;
-	Array< ModelAnimation >			Animations;
-	Array< ModelAnimationTimeLine >	AnimationTimeLines;
-	Array< ModelSkin >				Skins;
-	Array< ModelSubScene >			SubScenes;
+	std::vector< ModelBuffer >				Buffers;
+	std::vector< ModelBufferView >			BufferViews;
+	std::vector< ModelAccessor >			Accessors;
+	std::vector< ModelTexture >				Textures;
+	std::vector< ModelSampler >				Samplers;
+	std::vector< ModelTextureWrapper >		TextureWrappers;
+	std::vector< ModelMaterial >			Materials;
+	std::vector< Model >					Models;
+	std::vector< ModelCamera >				Cameras;
+	std::vector< ModelNode >				Nodes;
+	std::vector< ModelAnimation >			Animations;
+	std::vector< ModelAnimationTimeLine >	AnimationTimeLines;
+	std::vector< ModelSkin >				Skins;
+	std::vector< ModelSubScene >			SubScenes;
 };
 
 // Pass in the programs that will be used for the model materials.

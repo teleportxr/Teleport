@@ -11,7 +11,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_GlBuffer_h
 #define OVR_GlBuffer_h
 
-#include "Kernel/OVR_Types.h"
+#include "OVR_Types.h"
 
 namespace OVR {
 

@@ -9,9 +9,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 *************************************************************************************/
 
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_JSON.h"
-#include "Kernel/OVR_StringHash.h"
+#include "OVR_JSON.h"
 #include "UIMenu.h"
 #include "UITexture.h"
 #include "UIButton.h"
@@ -20,6 +18,11 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "OVR_FileSys.h"
 #include "UIKeyboard.h"
 #include <memory>
+#include <vector>
+#include <string>
+#include <unordered_map>
+#include <algorithm>
+#include <locale>
 
 using namespace OVR;
 
@@ -52,13 +55,13 @@ namespace
 			{
 			}
 
-			String DisplayCharacter;
-			String DisplayShiftCharacter;
-			String Action;
-			String ActionShift;
-			String ActionArgument;
-			String Texture;
-			String TexturePressed;
+			std::string DisplayCharacter;
+			std::string DisplayShiftCharacter;
+			std::string Action;
+			std::string ActionShift;
+			std::string ActionArgument;
+			std::string Texture;
+			std::string TexturePressed;
 			float Width { 0 }; // percent
 			float FontScale { 1 };
 			bool Toggle { false };
@@ -70,15 +73,15 @@ namespace
 		{
 			float Height { 10 }; // percent
 			float Offset { 0 };
-			Array <Key> Keys;
+			std::vector<Key> Keys;
 		};
 		struct Keyboard
 		{
-			String Name;
-			Array <KbdRow> KeyRows;
+			std::string Name;
+			std::vector<KbdRow> KeyRows;
 			const UIButton * ShiftButton { nullptr };
 
-			StringHash <UITexture> TextureTable;
+			std::unordered_map<std::string, UITexture> TextureTable;
 
 			UITexture * DefaultTexture { nullptr };
 			UITexture * DefaultPressedTexture { nullptr };
@@ -90,12 +93,12 @@ namespace
 		bool BuildKeyboardData( OVR::OvrGuiSys & GuiSys, const char * keyboardPath, Keyboard * keyboard );
 		bool BuildKeyboardUI( Keyboard * keyboard, const Vector3f & positionOffset );
 		void LoadKeyboard( OVR::OvrGuiSys & GuiSys, const char * keyboardPath, const Vector3f & positionOffset );
-		void SwitchToKeyboard( const String & name );
+		void SwitchToKeyboard( const std::string & name );
 
 		UIMenu * Menu { nullptr };
 
 		//storing pointers, UI classes don't like to be copied.
-		StringHash<Keyboard *> Keyboards;
+		std::unordered_map<std::string, Keyboard *> Keyboards;
 		Keyboard * CurrentKeyboard { nullptr };
 		KeyPressEventT EventHandler;
 		void * UserData { nullptr };
@@ -114,23 +117,23 @@ namespace
 
 	UIKeyboardLocal::~UIKeyboardLocal()
 	{
-		for ( auto iter = Keyboards.Begin(); iter != Keyboards.End(); ++iter )
+		for ( auto iter = Keyboards.begin(); iter != Keyboards.end(); ++iter )
 		{
-			delete ( iter->Second );
+			delete ( iter->second );
 		}
 	}
 
 	bool UIKeyboardLocal::BuildKeyboardData( OVR::OvrGuiSys & GuiSys, const char * keyboardPath,
 											 Keyboard * keyboard )
 	{
-		MemBufferT< uint8_t > buffer;
+		std::vector< uint8_t > buffer;
 		if ( !GuiSys.GetApp()->GetFileSys().ReadFile( keyboardPath, buffer ) )
 		{
 			OVR_ASSERT( false );
 			return false;
 		}
 
-		JSON *kbdJson = JSON::Parse( reinterpret_cast< char * >( static_cast< uint8_t * >( buffer ) ) );
+		auto kbdJson = JSON::Parse( reinterpret_cast< char * >( static_cast< uint8_t * >( buffer.data() ) ) );
 		OVR_ASSERT( kbdJson );
 		if ( !kbdJson )
 		{
@@ -145,8 +148,8 @@ namespace
 		}
 
 		keyboard->Name = kbdJsonReader.GetChildStringByName( "name", "" );
-		OVR_ASSERT( !keyboard->Name.IsEmpty() ); //keyboard has to have a name
-		if ( keyboard->Name.IsEmpty() )
+		OVR_ASSERT( !keyboard->Name.empty() ); //keyboard has to have a name
+		if ( keyboard->Name.empty() )
 		{
 			return false;
 		}
@@ -162,61 +165,72 @@ namespace
 			//our containers don't support move only types anyway. So take the pain
 			struct TextureStringPair
 			{
-				String Name;
-				String Path;
+				std::string Name;
+				std::string Path;
 			};
-			Array <TextureStringPair> TextureData;
+			std::vector<TextureStringPair> TextureData;
 			while ( !textures.IsEndOfArray() )
 			{
 				const JsonReader texture( textures.GetNextArrayElement() );
 				OVR_ASSERT( texture.IsObject() );
 				if ( texture.IsObject() )
 				{
-					String name = texture.GetChildStringByName( "name" );
-					String texturePath = texture.GetChildStringByName( "texture" );
-					OVR_ASSERT( !texturePath.IsEmpty() && !name.IsEmpty() );
-					if ( !texturePath.IsEmpty() && !name.IsEmpty() )
+					std::string name = texture.GetChildStringByName( "name" );
+					std::string texturePath = texture.GetChildStringByName( "texture" );
+					OVR_ASSERT( !texturePath.empty() && !name.empty() );
+					if ( !texturePath.empty() && !name.empty() )
 					{
-						keyboard->TextureTable.Add( name, UITexture() );
-						TextureData.PushBack( TextureStringPair { name, texturePath } );
+						std::string lowerCaseS = name.c_str();
+						auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+						loc.tolower( &lowerCaseS[0], &lowerCaseS[0] + lowerCaseS.length() );
+
+						keyboard->TextureTable[lowerCaseS] = UITexture();
+						TextureData.push_back( TextureStringPair { name, texturePath } );
 					}
 				}
 			}
 			for ( const auto &tex : TextureData )
 			{
-				MemBufferT< uint8_t > texBuffer;
-				if ( !GuiSys.GetApp()->GetFileSys().ReadFile( tex.Path.ToCStr(), texBuffer ) )
+				std::vector< uint8_t > texBuffer;
+				if ( !GuiSys.GetApp()->GetFileSys().ReadFile( tex.Path.c_str(), texBuffer ) )
 				{
 					OVR_ASSERT( false );
 					return false;
 				}
 
-				keyboard->TextureTable.GetCaseInsensitive( tex.Name )->LoadTextureFromBuffer(
-					tex.Path.ToCStr(), MemBuffer( texBuffer, static_cast<int>( texBuffer.GetSize() ) ) );
-
+				std::string lowerCaseS = tex.Name.c_str();
+				auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+				loc.tolower( &lowerCaseS[0], &lowerCaseS[0] + lowerCaseS.length() );
+				keyboard->TextureTable[lowerCaseS].LoadTextureFromBuffer(
+					tex.Path.c_str(), texBuffer );
 			}
 		}
 		{
-			String defTexture = kbdJsonReader.GetChildStringByName( "default_texture", "" );
-			String defPresTexture = kbdJsonReader.GetChildStringByName( "default_pressed_texture", "" );
-			OVR_ASSERT( !defTexture.IsEmpty() );
-			if ( defTexture.IsEmpty() )
+			std::string defTexture = kbdJsonReader.GetChildStringByName( "default_texture", "" );
+			std::string defPresTexture = kbdJsonReader.GetChildStringByName( "default_pressed_texture", "" );
+
+			OVR_ASSERT( !defTexture.empty() );
+			if ( defTexture.empty() )
 			{
 				return false;
 			}
 
-			keyboard->DefaultTexture = keyboard->TextureTable.GetCaseInsensitive( defTexture );
-			keyboard->DefaultPressedTexture = keyboard->TextureTable.GetCaseInsensitive(
-				defPresTexture );
+			auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+			loc.tolower( &defTexture[0], &defTexture[0] + defTexture.length() );
+			loc.tolower( &defPresTexture[0], &defPresTexture[0] + defPresTexture.length() );
 
-			OVR_ASSERT( keyboard->DefaultTexture ); //we have to have at least a default texture
-			if ( !keyboard->DefaultTexture )
+			if ( keyboard->TextureTable.find( defTexture ) == keyboard->TextureTable.end()  )
 			{
 				return false;
 			}
-			if ( !keyboard->DefaultPressedTexture )
+			keyboard->DefaultTexture = &( keyboard->TextureTable[ defTexture ] );
+			if ( keyboard->TextureTable.find( defPresTexture ) == keyboard->TextureTable.end() )
 			{
 				keyboard->DefaultPressedTexture = keyboard->DefaultTexture;
+			}
+			else
+			{
+				keyboard->DefaultPressedTexture = &( keyboard->TextureTable[ defPresTexture ] );
 			}
 		}
 
@@ -236,15 +250,15 @@ namespace
 					OVR_ASSERT( keys.IsArray() );
 					if ( keys.IsArray() )
 					{
-						keyboard->KeyRows.PushBack( KbdRow() );
-						KbdRow &keyRow = keyboard->KeyRows.Back();
+						keyboard->KeyRows.push_back( KbdRow() );
+						KbdRow &keyRow = keyboard->KeyRows.back();
 						keyRow.Height = height;
 						keyRow.Offset = offset;
 						while ( !keys.IsEndOfArray() )
 						{
 							const JsonReader key( keys.GetNextArrayElement() );
-							keyRow.Keys.PushBack( Key( GuiSys ) );
-							Key &akey = keyRow.Keys.Back();
+							keyRow.Keys.push_back( Key( GuiSys ) );
+							Key &akey = keyRow.Keys.back();
 							akey.Parent = this;
 
 							akey.Width = key.GetChildFloatByName( "width", 10.0f ) / 100.0f;
@@ -255,11 +269,11 @@ namespace
 							akey.DisplayCharacter = key.GetChildStringByName( "display_character",
 																			  " " );
 							akey.DisplayShiftCharacter = key.GetChildStringByName(
-								"display_shift_character", akey.DisplayCharacter.ToCStr() );
+								"display_shift_character", akey.DisplayCharacter.c_str() );
 							akey.Action = key.GetChildStringByName( "action",
-																	akey.DisplayCharacter.ToCStr() );
+																	akey.DisplayCharacter.c_str() );
 							akey.ActionShift = key.GetChildStringByName( "action_shift",
-																		 akey.DisplayShiftCharacter.ToCStr() );
+																		 akey.DisplayShiftCharacter.c_str() );
 							akey.ActionArgument = key.GetChildStringByName( "action_argument", "" );
 							akey.Texture = key.GetChildStringByName( "texture", "" );
 							akey.TexturePressed = key.GetChildStringByName( "texture_pressed", "" );
@@ -268,7 +282,6 @@ namespace
 				}
 			}
 		}
-		kbdJson->Release();
 
 		return true;
 	}
@@ -286,22 +299,26 @@ namespace
 				button.AddToMenu( Menu );
 				UITexture *texture = keyboard->DefaultTexture;
 				UITexture *texturePressed = keyboard->DefaultPressedTexture;
-				if ( !key.Texture.IsEmpty() )
+				if ( !key.Texture.empty() )
 				{
-					UITexture *overrideTexture = keyboard->TextureTable.GetCaseInsensitive(
-						key.Texture );
-					if ( overrideTexture )
+					std::string lowerCaseS = key.Texture.c_str();
+					auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+					loc.tolower( &lowerCaseS[0], &lowerCaseS[0] + lowerCaseS.length() );
+					auto it = keyboard->TextureTable.find( lowerCaseS );
+					if ( it != keyboard->TextureTable.end() )
 					{
-						texture = overrideTexture;
+						texture = &( it->second );
 					}
 				}
-				if ( !key.TexturePressed.IsEmpty() )
+				if ( !key.TexturePressed.empty() )
 				{
-					UITexture *overrideTexture = keyboard->TextureTable.GetCaseInsensitive(
-						key.TexturePressed );
-					if ( overrideTexture )
+					std::string lowerCaseS = key.TexturePressed.c_str();
+					auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+					loc.tolower( &lowerCaseS[0], &lowerCaseS[0] + lowerCaseS.length() );
+					auto it = keyboard->TextureTable.find( lowerCaseS );
+					if ( it != keyboard->TextureTable.end() )
 					{
-						texturePressed = overrideTexture;
+						texture = &( it->second );
 					}
 				}
 
@@ -316,7 +333,7 @@ namespace
 				button.SetVisible( false );
 				button.SetLocalPosition(
 					xOffset + Vector3f( key.Width * keyboard->Dimensions.x / 2.0f, 0, 0 ) );
-				button.SetText( key.DisplayCharacter.ToCStr() );
+				button.SetText( key.DisplayCharacter.c_str() );
 				if ( key.Toggle )
 					button.SetAsToggleButton( *texturePressed, Vector4f( 0.5f, 1, 1, 1 ) );
 				//Tend to move gaze fairly quickly when using onscreen keyboard, causes a lot of mistypes when keyboard action is on keyup instead of keydown because of this.
@@ -372,26 +389,30 @@ namespace
 			return;
 		}
 
-		Keyboard ** existingKeyboard = Keyboards.GetCaseInsensitive( keyboard->Name );
-		if ( existingKeyboard )
+		std::string lowerCaseS = keyboard->Name.c_str();
+		auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+		loc.tolower( &lowerCaseS[0], &lowerCaseS[0] + lowerCaseS.length() );
+		auto it = Keyboards.find( lowerCaseS );
+		if ( it != Keyboards.end() )
 		{
 			delete keyboard;
 		}
-		Keyboards.Set( keyboard->Name, keyboard );
+
+		Keyboards[ lowerCaseS ] = keyboard;
 		if ( !CurrentKeyboard )
 			SwitchToKeyboard( keyboard->Name );
 	}
 
 	bool UIKeyboardLocal::Init( OVR::OvrGuiSys &GuiSys, const char * keyboardSet, const Vector3f & positionOffset )
 	{
-		MemBufferT< uint8_t > buffer;
+		std::vector< uint8_t > buffer;
 		if ( !GuiSys.GetApp()->GetFileSys().ReadFile( keyboardSet, buffer ) )
 		{
 			OVR_ASSERT( false );
 			return false;
 		}
 
-		JSON *kbdSetJson = JSON::Parse( reinterpret_cast< char * >( static_cast< uint8_t * >( buffer ) ) );
+		auto kbdSetJson = JSON::Parse( reinterpret_cast< char * >( static_cast< uint8_t * >( buffer.data() ) ) );
 		OVR_ASSERT( kbdSetJson );
 		if ( !kbdSetJson )
 			return false;
@@ -405,9 +426,9 @@ namespace
 
 		while ( !kbdSetJsonReader.IsEndOfArray() )
 		{
-			String keyboardPath = kbdSetJsonReader.GetNextArrayString();
-			OVR_ASSERT( !keyboardPath.IsEmpty() );
-			LoadKeyboard( GuiSys, keyboardPath.ToCStr(), positionOffset );
+			std::string keyboardPath = kbdSetJsonReader.GetNextArrayString();
+			OVR_ASSERT( !keyboardPath.empty() );
+			LoadKeyboard( GuiSys, keyboardPath.c_str(), positionOffset );
 		}
 
 		if ( !CurrentKeyboard ) //didn't get even one keyboard loaded
@@ -425,8 +446,8 @@ namespace
 		if ( CurrentKeyboard->ShiftButton )
 			shiftState = CurrentKeyboard->ShiftButton->IsPressed();
 
-		const String * action = &key->Action;
-		if ( shiftState && !key->ActionShift.IsEmpty() )
+		const std::string * action = &key->Action;
+		if ( shiftState && !key->ActionShift.empty() )
 			action = &key->ActionShift;
 
 		if ( *action == CommandShift )
@@ -435,14 +456,14 @@ namespace
 		}
 		else if ( *action == CommandChangeKeyboard )
 		{
-			SwitchToKeyboard( key->ActionArgument.ToCStr() );
+			SwitchToKeyboard( key->ActionArgument.c_str() );
 		}
 		else if ( EventHandler )
 		{
 			if ( *action == CommandBackspace )
-				EventHandler( KeyEventType::Backspace, String(), UserData );
+				EventHandler( KeyEventType::Backspace, std::string(), UserData );
 			else if ( *action == CommandReturn )
-				EventHandler( KeyEventType::Return, String(), UserData );
+				EventHandler( KeyEventType::Return, std::string(), UserData );
 			else
 				EventHandler( KeyEventType::Text, *action, UserData );
 		}
@@ -460,20 +481,27 @@ namespace
 		{
 			for ( auto &key : keyRow.Keys )
 			{
-				if ( shiftState && !key.DisplayShiftCharacter.IsEmpty() )
-					key.Button.SetText( key.DisplayShiftCharacter.ToCStr() );
+				if ( shiftState && !key.DisplayShiftCharacter.empty() )
+					key.Button.SetText( key.DisplayShiftCharacter.c_str() );
 				else
-					key.Button.SetText( key.DisplayCharacter.ToCStr() );
+					key.Button.SetText( key.DisplayCharacter.c_str() );
 			}
 		}
 	}
 
-	void UIKeyboardLocal::SwitchToKeyboard( const String& name )
+	void UIKeyboardLocal::SwitchToKeyboard( const std::string& name )
 	{
-		Keyboard ** newKeyboard = Keyboards.GetCaseInsensitive( name );
-		OVR_ASSERT( newKeyboard );
-		if ( !newKeyboard )
+		std::string lowerCaseS = name.c_str();
+		auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+		loc.tolower( &lowerCaseS[0], &lowerCaseS[0] + lowerCaseS.length() );
+
+		auto it = Keyboards.find( lowerCaseS );
+		if ( it == Keyboards.end() )
+		{
+			OVR_LOG( "UIKeyboardLocal::SwitchToKeyboard ... could not find = '%s' !", lowerCaseS.c_str() );
+			OVR_ASSERT( false );
 			return;
+		}
 
 		if ( CurrentKeyboard )
 		{
@@ -485,7 +513,7 @@ namespace
 				}
 			}
 		}
-		CurrentKeyboard = *newKeyboard;
+		CurrentKeyboard = it->second;
 		OVR_ASSERT( CurrentKeyboard );
 		for ( auto &keyRow : CurrentKeyboard->KeyRows )
 		{
@@ -519,19 +547,19 @@ namespace
 		{
 			if ( keyCode == OVR_KEY_BACKSPACE )
 			{
-				EventHandler( KeyEventType::Backspace, String(), UserData );
+				EventHandler( KeyEventType::Backspace, std::string(), UserData );
 				return true;
 			}
 			else if ( keyCode == OVR_KEY_RETURN )
 			{
-				EventHandler( KeyEventType::Return, String(), UserData );
+				EventHandler( KeyEventType::Return, std::string(), UserData );
 				return true;
 			}
 			char ascii = GetAsciiForKeyCode( ( ovrKeyCode )keyCode, PhysicalShiftDown[0] || PhysicalShiftDown[1] );
 			if ( ascii )
 			{
-				String action;
-				action.AppendChar( ascii );
+				std::string action;
+				action += ascii;
 				EventHandler( KeyEventType::Text, action, UserData );
 				return true;
 			}

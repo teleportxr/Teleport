@@ -12,9 +12,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "PackageFiles.h"
 
-#include "Kernel/OVR_LogUtils.h"
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_Threads.h"
+#include "OVR_LogUtils.h"
 
 #include "unzip.h"
 
@@ -24,7 +22,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if defined( OVR_OS_ANDROID )
 #include <unistd.h>
 #endif
-#include "ScopedMutex.h"
+
+#include <thread>
+#include <mutex>
+#include <functional>
 
 namespace OVR
 {
@@ -87,11 +88,11 @@ void ovr_CloseOtherApplicationPackage( void * & zipFile )
 	zipFile = 0;
 }
 
-static OVR::Mutex PackageFileMutex;
+static std::mutex PackageFileMutex;
 
 bool ovr_OtherPackageFileExists( void* zipFile, const char * nameInZip )
 {
-	ovrScopedMutex mutex( PackageFileMutex );
+	std::lock_guard<std::mutex> mutex( PackageFileMutex );
 
 	const int locateRet = unzLocateFile( zipFile, nameInZip, 2 /* case insensitive */ );
 	if ( locateRet != UNZ_OK )
@@ -112,29 +113,9 @@ bool ovr_OtherPackageFileExists( void* zipFile, const char * nameInZip )
 	return true;
 }
 
-static bool ovr_ReadFileFromOtherApplicationPackageInternal( void * zipFile, const char * nameInZip, int & length, void * & buffer, const bool useMalloc )
+static bool ovr_ReadFileFromOtherApplicationPackageInternal( void * zipFile, const char * nameInZip, int & length, void * & buffer, 
+		std::function< void* ( const size_t size ) > allocBuffer, std::function< void ( void * buffer ) > freeBuffer )
 {
-	auto allocBuffer = [] ( const size_t size, const bool useMalloc )
-	{
-		if ( useMalloc )
-		{
-			return malloc( size );
-		}
-		return (void*)( new unsigned char [size] );
-	};
-
-	auto freeBuffer = [] ( void * buffer, const bool useMalloc )
-	{
-		if ( useMalloc )
-		{
-			free( buffer );
-		}
-		else
-		{
-			delete [] (unsigned char*)buffer;
-		}
-	};
-
 	length = 0;
 	buffer = NULL;
 	if ( zipFile == 0 )
@@ -142,7 +123,7 @@ static bool ovr_ReadFileFromOtherApplicationPackageInternal( void * zipFile, con
 		return false;
 	}
 
-	ovrScopedMutex mutex( PackageFileMutex );
+	std::lock_guard<std::mutex> mutex( PackageFileMutex );
 
 	const int locateRet = unzLocateFile( zipFile, nameInZip, 2 /* case insensitive */ );
 
@@ -185,14 +166,14 @@ static bool ovr_ReadFileFromOtherApplicationPackageInternal( void * zipFile, con
 				}
 				else
 				{
-					buffer = allocBuffer( length, useMalloc );
+					buffer = allocBuffer( length );
 					const int r = read( fd, buffer, length );
 					close( fd );
 					if ( r != length )
 					{
 						OVR_LOG( "Cached file for %s only read %i != %i", nameInZip,
 								r, length );
-						freeBuffer( buffer, useMalloc );
+						freeBuffer( buffer );
 						// Fall through to normal load.
 					}
 					else
@@ -218,13 +199,13 @@ static bool ovr_ReadFileFromOtherApplicationPackageInternal( void * zipFile, con
 	}
 
 	length = info.uncompressed_size;
-	buffer = allocBuffer( length, useMalloc );
+	buffer = allocBuffer( length );
 
 	const int readRet = unzReadCurrentFile( zipFile, buffer, length );
 	if ( readRet != length )
 	{
 		OVR_WARN( "Error reading file '%s' from apk!", nameInZip );
-		freeBuffer( buffer, useMalloc );
+		freeBuffer( buffer );
 		length = 0;
 		buffer = NULL;
 		return false;
@@ -272,21 +253,41 @@ static bool ovr_ReadFileFromOtherApplicationPackageInternal( void * zipFile, con
 	return true;
 }
 
-bool ovr_ReadFileFromOtherApplicationPackage( void * zipFile, const char * nameInZip, MemBufferT< uint8_t > & outBuffer )
+bool ovr_ReadFileFromOtherApplicationPackage( void * zipFile, const char * nameInZip, std::vector< uint8_t > & outBuffer )
 {
+	// Dummy parameters
 	int length = 0;
-	void * buffer = NULL;
-	// allocate using new / delete
-	bool const success = ovr_ReadFileFromOtherApplicationPackageInternal( zipFile, nameInZip, length, buffer, false );
+	void * buffer = nullptr;
 
-	outBuffer.TakeOwnershipOfBuffer( buffer, length );
-	return success;
+	// allocate using buffer resize
+	auto allocBuffer = [&] ( const size_t size )
+	{
+		outBuffer.resize(size);
+		return outBuffer.data();
+	};
+
+	auto freeBuffer = [&] ( void * buffer )
+	{
+		outBuffer.resize(0);
+	};
+
+	return ovr_ReadFileFromOtherApplicationPackageInternal( zipFile, nameInZip, length, buffer, allocBuffer, freeBuffer );
 }
 
 bool ovr_ReadFileFromOtherApplicationPackage( void * zipFile, const char * nameInZip, int & length, void * & buffer )
 {
 	// allocate using malloc / free
-	return ovr_ReadFileFromOtherApplicationPackageInternal( zipFile, nameInZip, length, buffer, true );
+	auto allocBuffer = [] ( const size_t size )
+	{
+		return malloc( size );
+	};
+
+	auto freeBuffer = [] ( void * buffer )
+	{
+		free( buffer );
+	};
+
+	return ovr_ReadFileFromOtherApplicationPackageInternal( zipFile, nameInZip, length, buffer, allocBuffer, freeBuffer );
 }
 
 //--------------------------------------------------------------
@@ -323,22 +324,10 @@ bool ovr_ReadFileFromApplicationPackage( const char * nameInZip, int & length, v
 	return ovr_ReadFileFromOtherApplicationPackage( packageZipFile, nameInZip, length, buffer );
 }
 
-bool ovr_ReadFileFromApplicationPackage( const char * nameInZip, MemBufferFile & memBufferFile )
+bool ovr_ReadFileFromApplicationPackage( const char * nameInZip, std::vector< uint8_t > & buffer )
 {
-	memBufferFile.FreeData();
 
-	int length = 0;
-	void * buffer = NULL;
-
-	if ( !ovr_ReadFileFromOtherApplicationPackage( packageZipFile, nameInZip, length, buffer ) )
-	{
-		return false;
-	}
-
-	memBufferFile.Buffer = buffer;
-	memBufferFile.Length = length;
-
-	return true;
+	return ovr_ReadFileFromOtherApplicationPackage( packageZipFile, nameInZip, buffer );
 }
 
 } // namespace OVR

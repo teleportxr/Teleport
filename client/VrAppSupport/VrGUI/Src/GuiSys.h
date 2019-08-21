@@ -86,7 +86,7 @@ public:
 	virtual void			Frame( ovrFrameInput const & vrFrame,
 									Matrix4f const & centerViewMatrix, Matrix4f const & traceMat ) = 0;
 
-	virtual void			AppendSurfaceList( Matrix4f const & centerViewMatrix, Array< ovrDrawSurface > * surfaceList ) const = 0;
+	virtual void			AppendSurfaceList( Matrix4f const & centerViewMatrix, std::vector< ovrDrawSurface > * surfaceList ) const = 0;
 
 	// called when the app menu is up and a key event is received. Return true if the menu consumed
 	// the event.
@@ -108,7 +108,7 @@ public:
 	virtual VRMenu *		GetMenu( char const * menuName ) const = 0;
 
 	// Return a list of all the menu names
-	virtual Array< String > GetAllMenuNames() const = 0;
+	virtual std::vector< std::string > GetAllMenuNames() const = 0;
 
 	// Opens a menu and places it in the active list
 	virtual void			OpenMenu( char const * name ) = 0; 

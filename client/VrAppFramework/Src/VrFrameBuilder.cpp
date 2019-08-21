@@ -10,18 +10,18 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 *************************************************************************************/
 
 #include "VrFrameBuilder.h"
-#include "Kernel/OVR_LogUtils.h"
-#include "Android/JniUtils.h"
-#include "Kernel/OVR_Alg.h"
+#include "OVR_LogUtils.h"
+#include "JniUtils.h"
 #include "VrApi.h"
-#include "VrApi_Input.h"
 #include "VrApi_Helpers.h"
-#include "Kernel/OVR_String.h"
 #include "OVR_Input.h"
+#include "OVR_Math.h"
 
 #if defined ( OVR_OS_ANDROID )
+#include "VrApi_Input.h"
 #include <android/input.h>
 #endif
+
 
 namespace OVR
 {
@@ -244,7 +244,6 @@ void VrFrameBuilder::AddKeyEventToFrame( ovrKeyCode const keyCode, KeyEventType 
 
 void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobile * ovr,
 									const ovrJava & java,
-									const ovrTrackingTransform trackingTransform,
 									const long long enteredVrModeFrameNumber )
 {
 	const VrInput lastVrInput = vrFrame.Input;
@@ -285,7 +284,7 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 		{
 			ovrInputStateHeadset headsetInputState;
 			headsetInputState.Header.ControllerType = ovrControllerType_Headset;
-			result = vrapi_GetCurrentInputState( ovr, i, &headsetInputState.Header );
+			result = vrapi_GetCurrentInputState( ovr, cap.DeviceID, &headsetInputState.Header );
 			if ( result == ovrSuccess )
 			{
 				backButtonDownThisFrame |= headsetInputState.Buttons & ovrButton_Back;
@@ -312,7 +311,7 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 
 			ovrInputStateTrackedRemote trackedRemoteState;
 			trackedRemoteState.Header.ControllerType = ovrControllerType_TrackedRemote;
-			result = vrapi_GetCurrentInputState( ovr, i, &trackedRemoteState.Header );
+			result = vrapi_GetCurrentInputState( ovr, cap.DeviceID, &trackedRemoteState.Header );
 			if ( result == ovrSuccess )
 			{
 				backButtonDownThisFrame |= trackedRemoteState.Buttons & ovrButton_Back;
@@ -347,17 +346,13 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 						}
 					}
 
-
 					if ( remoteCapabilities.ControllerCapabilities & ovrControllerCaps_ModelOculusTouch )
 					{
-						// to match the Rift, the menu button returns ovrButton_Enter
-						backButtonDownThisFrame |= trackedRemoteState.Buttons & ovrButton_Enter;
-
 						// to match design, the b button and the y button will also be treated as back buttons for the app framework apps when using the Oculus Touch controllers.
 						backButtonDownThisFrame |= trackedRemoteState.Buttons & ovrButton_B;
 						backButtonDownThisFrame |= trackedRemoteState.Buttons & ovrButton_Y;
 
-						setTouched = trackedRemoteState.Buttons & ovrButton_A || trackedRemoteState.Buttons & ovrButton_Trigger || ( trackedRemoteState.TrackpadStatus && TreatRemoteTouchpadTouchedAsButtonDown[trackedRemoteIndex] );
+						setTouched = trackedRemoteState.Buttons & ovrButton_A || trackedRemoteState.Buttons & ovrButton_X || trackedRemoteState.Buttons & ovrButton_Trigger || ( trackedRemoteState.TrackpadStatus && TreatRemoteTouchpadTouchedAsButtonDown[trackedRemoteIndex] );
 
 						injectLeftStick = true;
 					}
@@ -413,7 +408,7 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 		{
 			ovrInputStateGamepad gamepadState;
 			gamepadState.Header.ControllerType = ovrControllerType_Gamepad;
-			result = vrapi_GetCurrentInputState( ovr, i, &gamepadState.Header );
+			result = vrapi_GetCurrentInputState( ovr, cap.DeviceID, &gamepadState.Header );
 			if ( result == ovrSuccess )
 			{
 				backButtonDownThisFrame |= gamepadState.Buttons & ovrButton_Back;
@@ -590,7 +585,7 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 		{
 			down = false;
 			RStick.ResetLastStick();
-		} 
+		}
 		else if ( injectLeftStick )
 		{
 			if ( LStick.CurrStickState ) // if LStick is used
@@ -628,7 +623,7 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 			if ( keyCode == OVR_KEY_CLOSE_BRACKET )
 			{
 				vrFrame.Input.buttonState |= BUTTON_SWIPE_FORWARD;
-			} 
+			}
 			else if ( keyCode == OVR_KEY_OPEN_BRACKET )
 			{
 				vrFrame.Input.buttonState |= BUTTON_SWIPE_BACK;
@@ -680,11 +675,12 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 	}
 
 	vrFrame.Tracking = vrapi_GetPredictedTracking2( ovr, predictedDisplayTime );
-	vrFrame.DeltaSeconds = Alg::Clamp( (float)( predictedDisplayTime - vrFrame.PredictedDisplayTimeInSeconds ), 0.0f, 0.1f );
+	vrFrame.DeltaSeconds = clamp<float>( (float)( predictedDisplayTime - vrFrame.PredictedDisplayTimeInSeconds ), 0.0f, 0.1f );
 	vrFrame.PredictedDisplayTimeInSeconds = predictedDisplayTime;
+	vrFrame.RealTimeInSeconds = vrapi_GetTimeInSeconds();
 
-	const ovrPosef trackingPose = vrapi_GetTrackingTransform( ovr, trackingTransform );
-	const ovrPosef eyeLevelTrackingPose = vrapi_GetTrackingTransform( ovr, VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL );
+	const ovrPosef trackingPose = vrapi_LocateTrackingSpace( ovr, vrapi_GetTrackingSpace( ovr ) );
+	const ovrPosef eyeLevelTrackingPose = vrapi_LocateTrackingSpace( ovr, VRAPI_TRACKING_SPACE_LOCAL );
 	vrFrame.EyeHeight = vrapi_GetEyeHeight( &eyeLevelTrackingPose, &trackingPose );
 
 	vrFrame.IPD = vrapi_GetInterpupillaryDistance( &vrFrame.Tracking );
@@ -693,6 +689,7 @@ void VrFrameBuilder::AdvanceVrFrame( const ovrInputEvents & inputEvents, ovrMobi
 	vrFrame.DeviceStatus.HeadPhonesPluggedState		= HeadPhonesPluggedState;
 	vrFrame.DeviceStatus.DeviceIsDocked				= ( vrapi_GetSystemStatusInt( &java, VRAPI_SYS_STATUS_DOCKED ) != VRAPI_FALSE );
 	vrFrame.DeviceStatus.HeadsetIsMounted			= ( vrapi_GetSystemStatusInt( &java, VRAPI_SYS_STATUS_MOUNTED ) != VRAPI_FALSE );
+	vrFrame.DeviceStatus.RecenterCount				= vrapi_GetSystemStatusInt( &java, VRAPI_SYS_STATUS_RECENTER_COUNT );
 }
 
 }	// namespace OVR

@@ -53,7 +53,7 @@ void UIButton::AddToMenu( UIMenu *menu, UIObject *parent )
 	Vector3f defaultScale( 1.0f );
 	VRMenuFontParms fontParms( HORIZONTAL_CENTER, VERTICAL_CENTER, false, false, false, 1.0f );
 	
-	VRMenuObjectParms parms( VRMENU_BUTTON, Array< VRMenuComponent* >(), VRMenuSurfaceParms(),
+	VRMenuObjectParms parms( VRMENU_BUTTON, std::vector< VRMenuComponent* >(), VRMenuSurfaceParms(),
 			"", pose, defaultScale, fontParms, menu->AllocId(),
 			VRMenuObjectFlags_t(), VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
 
@@ -237,7 +237,7 @@ eMsgStatus UIButtonComponent::OnEvent_Impl( OvrGuiSys & guiSys, ovrFrameInput co
 				}
 			}
         	Button->UpdateButtonState();
-			DownSoundLimiter.PlaySoundEffect( guiSys, TouchDownSnd.ToCStr(), 0.1 );
+			DownSoundLimiter.PlaySoundEffect( guiSys, TouchDownSnd.c_str(), 0.1 );
             return MSG_STATUS_ALIVE;
 		case VRMENU_EVENT_TOUCH_UP:
 			if ( !Button->ToggleButton )
@@ -249,7 +249,7 @@ eMsgStatus UIButtonComponent::OnEvent_Impl( OvrGuiSys & guiSys, ovrFrameInput co
 			{
 				Button->OnClick();
 			}
-			UpSoundLimiter.PlaySoundEffect( guiSys, TouchUpSnd.ToCStr(), 0.1 );
+			UpSoundLimiter.PlaySoundEffect( guiSys, TouchUpSnd.c_str(), 0.1 );
             return MSG_STATUS_ALIVE;
         default:
             OVR_ASSERT( !"Event flags mismatch!" );

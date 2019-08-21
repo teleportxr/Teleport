@@ -7,6 +7,7 @@
 
 #include "GuiSys.h"
 #include "OVR_Locale.h"
+#include "OVR_LogUtils.h"
 
 #include <enet/enet.h>
 #include <sstream>
@@ -105,7 +106,7 @@ static const char* VideoSurface_FS = R"(
         highp vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
 		highp vec3 colourSampleVec  = normalize(vec3(-worldspace_dir.z, worldspace_dir.y, worldspace_dir.x));
         highp vec2 uv=WorldspaceDirToUV(colourSampleVec);
-		gl_FragColor = 0.3*depthOffsetScale+0.3*colourOffsetScale+texture2D(videoFrameTexture, OffsetScale(uv,colourOffsetScale));
+		gl_FragColor = 0.003*depthOffsetScale+0.003*colourOffsetScale+texture2D(videoFrameTexture, OffsetScale(uv,colourOffsetScale));
 	}
 )";
 
@@ -170,16 +171,13 @@ void Application::Configure(ovrSettings& settings )
 	settings.EyeBufferParms.colorFormat = COLOR_8888;
 	settings.EyeBufferParms.depthFormat = DEPTH_16;
 	settings.EyeBufferParms.multisamples = 1;
-
-	settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
+	settings.TrackingSpace=VRAPI_TRACKING_SPACE_LOCAL;
+	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 	settings.RenderMode = RENDERMODE_STEREO;
 }
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
 {
-	OVR_UNUSED(intentFromPackage);
-	OVR_UNUSED(intentJSON);
-	OVR_UNUSED(intentURI);
 
 	if(intentType == INTENT_LAUNCH)
 	{
@@ -193,9 +191,9 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 		mLocale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
 
-		String fontName;
+		std::string fontName;
 		GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
-		mGuiSys->Init(this->app, *mSoundEffectPlayer, fontName.ToCStr(), &app->GetDebugLines());
+		mGuiSys->Init(this->app, *mSoundEffectPlayer, fontName.c_str(), &app->GetDebugLines());
 
 		{
             //-------------------------------------------------------------------------
@@ -268,7 +266,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		// If nothing consumed the key and it's a short-press of the back key, then exit the application to OculusHome.
 		if(keyCode == OVR_KEY_BACK && eventType == KEY_EVENT_SHORT_PRESS)
 		{
-			app->ShowSystemUI(VRAPI_SYS_UI_CONFIRM_QUIT_MENU);
+		    app->ShowConfirmQuitSystemUI();
 			continue;
 		}
 	}
@@ -332,7 +330,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
         frameRate*=0.99f;
         frameRate+=0.01f/vrFrame.DeltaSeconds;
     }
-#if 1
+#if 0
     auto ctr=mNetworkSource.getCounterValues();
     mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d    \nDecoder Packets Dropped: %d\nFramerate: %4.4f\nBandwidth: %4.4f"
             , ctr.networkPacketsDropped, ctr.decoderPacketsDropped
@@ -361,7 +359,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
     mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
     mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &mVideoTexture;
-	res.Surfaces.PushBack(ovrDrawSurface(&mVideoSurfaceDef));
+	res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 
 	// Append GuiSys surfaces.
 	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);

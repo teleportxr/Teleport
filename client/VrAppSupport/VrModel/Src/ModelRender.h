@@ -11,13 +11,12 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_ModelRender_h
 #define OVR_ModelRender_h
 
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_String.h"
-
+#include "OVR_Math.h"
 #include "OVR_GlUtils.h"
 #include "SurfaceRender.h"
 #include "ModelFile.h"
+
+#include <vector>
 
 namespace OVR
 {
@@ -25,9 +24,9 @@ namespace OVR
 // Application specific surfaces from the emit list are also added to the sorted surface list.
 // The surface list is sorted such that opaque surfaces come first, sorted front-to-back,
 // and transparent surfaces come last, sorted back-to-front.
-void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
-							const Array<ModelNodeState *> & emitNodes,
-							const Array<ovrDrawSurface> & emitSurfaces,
+void BuildModelSurfaceList(	std::vector<ovrDrawSurface> & surfaceList,
+							const std::vector<ModelNodeState *> & emitNodes,
+							const std::vector<ovrDrawSurface> & emitSurfaces,
 							const Matrix4f & viewMatrix,
 							const Matrix4f & projectionMatrix );
 

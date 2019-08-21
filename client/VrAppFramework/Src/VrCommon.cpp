@@ -11,6 +11,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "VrCommon.h"
 
+#include <algorithm>
+
 #if defined( OVR_OS_ANDROID )
 #include <dirent.h>
 #include <unistd.h>
@@ -20,12 +22,12 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <sys/types.h>
 #include <fcntl.h>
 
-#include "Kernel/OVR_MemBuffer.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 #if defined( OVR_OS_WIN32 )
 typedef unsigned short mode_t;
 #include <io.h>
+#include <locale>
 #endif
 
 namespace OVR {
@@ -39,25 +41,15 @@ void LogMatrix( const char * title, const Matrix4f & m )
 	}
 }
 
-static int StringCompareNoCase( const void *a, const void * b )
+void SortStringArray( std::vector<std::string> & strings )
 {
-	const String *sa = ( String * )a;
-	const String *sb = ( String * )b;
-	return sa->CompareNoCase( *sb );
-}
-
-void SortStringArray( Array<String> & strings )
-{
-	if ( strings.GetSize() > 1 )
-	{
-		qsort( ( void * )&strings[ 0 ], strings.GetSize(), sizeof( String ), StringCompareNoCase );
-	}
+	std::sort( strings.begin(), strings.end() );
 }
 
 // if pathToAppend is an empty string, this just adds a slash
-void AppendPath( String & startPath, const char * pathToAppend )
+void AppendPath( std::string & startPath, const char * pathToAppend )
 {
-	int const len = startPath.GetLengthI();
+	size_t const len = startPath.length();
 	if ( len == 0 )
 	{
 		startPath = pathToAppend;
@@ -76,20 +68,25 @@ void AppendPath( String & startPath, const char * pathToAppend )
 // Returns all files in all search paths, as unique relative paths.
 // Subdirectories will have a trailing slash.
 // All files and directories that start with . are skipped.
-StringHash< String > RelativeDirectoryFileList( const Array< String > & searchPaths, const char * RelativeDirPath )
+std::unordered_map< std::string, std::string > RelativeDirectoryFileList( const std::vector< std::string > & searchPaths, const char * RelativeDirPath )
 {
 	//Check each of the mirrors in searchPaths and build up a list of unique strings
-	StringHash< String >	uniqueStrings;
+	std::unordered_map< std::string, std::string > uniqueStrings;
+	std::string relativeDirPathString = std::string( RelativeDirPath );
 
-	const int numSearchPaths = searchPaths.GetSizeI();
+#if defined( OVR_BUILD_DEBUG )
+	OVR_LOG( "RelativeDirectoryFileList searchPaths=%d relative='%s'", (int)searchPaths.size(), relativeDirPathString.c_str() );
+#endif
+
+	const int numSearchPaths = static_cast< const int >( searchPaths.size() );
 	for ( int index = 0; index < numSearchPaths; ++index )
 	{
 #if defined( OVR_OS_WIN32 )
-		String fullPath( searchPaths[index] );
+		std::string fullPath( searchPaths[index] );
 		AppendPath( fullPath, RelativeDirPath );
 		AppendPath( fullPath, "*.*" );
 		__finddata64_t fileInfo;
-		intptr_t handle = _findfirst64( fullPath.ToCStr(), &fileInfo );
+		intptr_t handle = _findfirst64( fullPath.c_str(), &fileInfo );
 		if ( handle == -1 )
 		{
 			continue;
@@ -101,19 +98,22 @@ StringHash< String > RelativeDirectoryFileList( const Array< String > & searchPa
 			{
 				continue;
 			}
-			String s( RelativeDirPath );
+			std::string s( RelativeDirPath );
 			AppendPath( s, fileInfo.name );
 			if ( ( fileInfo.attrib & _A_SUBDIR ) != 0 )
 			{
 				AppendPath( s, "" );	// this will add a /
 			}
-			uniqueStrings.SetCaseInsensitive( s, s );
+			std::string lowerCaseS = s.c_str();
+			auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+			loc.tolower( &lowerCaseS[0], &lowerCaseS[0] + lowerCaseS.length() );
+			uniqueStrings[ lowerCaseS ] = s;
 		} while( _findnext64( handle, &fileInfo ) != -1 );
 
 		_findclose( handle );
 #else
-		const String fullPath = searchPaths[index] + String( RelativeDirPath );
-		DIR * dir = opendir( fullPath.ToCStr() );
+		const std::string fullPath = searchPaths[index] + relativeDirPathString;
+		DIR * dir = opendir( fullPath.c_str() );
 		if ( dir != NULL )
 		{
 			struct dirent * entry;
@@ -125,16 +125,28 @@ StringHash< String > RelativeDirectoryFileList( const Array< String > & searchPa
 				}
 				if ( entry->d_type == DT_DIR )
 				{
-					String s( RelativeDirPath );
+					std::string s = relativeDirPathString;
 					s += entry->d_name;
 					s += "/";
-					uniqueStrings.SetCaseInsensitive( s, s );
+#if defined( OVR_BUILD_DEBUG )
+					OVR_LOG( "RelativeDirectoryFileList adding - %s", s.c_str() );
+#endif
+
+					std::string lowerCaseS = s.c_str();
+					std::transform( lowerCaseS.begin(), lowerCaseS.end(), lowerCaseS.begin(), ::tolower );
+					uniqueStrings[ lowerCaseS ] = s;
 				}
 				else if ( entry->d_type == DT_REG )
 				{
-					String s( RelativeDirPath );
+					std::string s = relativeDirPathString;
 					s += entry->d_name;
-					uniqueStrings.SetCaseInsensitive( s, s );
+#if defined( OVR_BUILD_DEBUG )
+					OVR_LOG( "RelativeDirectoryFileList adding - %s", s.c_str() );
+#endif
+
+					std::string lowerCaseS = s.c_str();
+					std::transform( lowerCaseS.begin(), lowerCaseS.end(), lowerCaseS.begin(), ::tolower );
+					uniqueStrings[ lowerCaseS ] = s;
 				}
 			}
 			closedir( dir );
@@ -149,14 +161,14 @@ StringHash< String > RelativeDirectoryFileList( const Array< String > & searchPa
 // Returns all files in the directory, already prepended by root.
 // Subdirectories will have a trailing slash.
 // All files and directories that start with . are skipped.
-Array<String> DirectoryFileList( const char * dirPath )
+std::vector<std::string> DirectoryFileList( const char * dirPath )
 {
-	Array<String>	strings;
+	std::vector<std::string>	strings;
 #if defined( OVR_OS_WIN32 )
-	String fullPath( dirPath );
+	std::string fullPath( dirPath );
 	AppendPath( fullPath, "*.*" );
 	__finddata64_t fileInfo;
-	intptr_t handle = _findfirst64( fullPath.ToCStr(), &fileInfo );
+	intptr_t handle = _findfirst64( fullPath.c_str(), &fileInfo );
 	if ( handle != -1 )
 	{
 		do
@@ -165,13 +177,13 @@ Array<String> DirectoryFileList( const char * dirPath )
 			{
 				continue;
 			}
-			String s( dirPath );
+			std::string s( dirPath );
 			AppendPath( s, fileInfo.name );
 			if ( ( fileInfo.attrib & _A_SUBDIR ) != 0 )
 			{
 				AppendPath( s, "" ); // this will add a /
 			}
-			strings.PushBack( s );
+			strings.push_back( s );
 		} while( _findnext64( handle, &fileInfo ) != -1 );
 
 		_findclose( handle );
@@ -189,16 +201,16 @@ Array<String> DirectoryFileList( const char * dirPath )
 			}
 			if ( entry->d_type == DT_DIR )
 			{
-				String s( dirPath );
+				std::string s( dirPath );
 				s += entry->d_name;
 				s += "/";
-				strings.PushBack( s );
+				strings.push_back( s );
 			}
 			else if ( entry->d_type == DT_REG )
 			{
-				String s( dirPath );
+				std::string s( dirPath );
 				s += entry->d_name;
-				strings.PushBack( s );
+				strings.push_back( s );
 			}
 		}
 		closedir( dir );
@@ -214,14 +226,14 @@ bool HasPermission( const char * fileOrDirName, const permissionFlags_t flags )
 {
 	OVR_ASSERT( flags.GetValue() != 0 );
 
-	String s( fileOrDirName );
-	int len = static_cast<int>( s.GetSize() );
+	std::string s( fileOrDirName );
+	int len = static_cast<int>( s.length() );
 	if ( s[ len - 1 ] != '/' )
 	{	// directory ends in a slash
 		int	end = len - 1;
 		for ( ; end > 0 && s[ end ] != '/'; end-- )
 			;
-		s = String( &s[ 0 ], end );
+		s = std::string( &s[ 0 ], end );
 	}
 
 	int mode = 0;
@@ -238,9 +250,9 @@ bool HasPermission( const char * fileOrDirName, const permissionFlags_t flags )
 	{
 		mode |= X_OK;
 	}
-	return access( s.ToCStr(), mode ) == 0;
+	return access( s.c_str(), mode ) == 0;
 #else
-	return _access( s.ToCStr(), mode ) == 0;
+	return _access( s.c_str(), mode ) == 0;
 #endif
 }
 
@@ -277,12 +289,12 @@ bool MatchesExtension( const char * fileName, const char * ext )
 	return ( 0 == strcmp( &fileName[ sLen - extLen ], ext ) );
 }
 
-String ExtractFileBase( const String & s )
+std::string ExtractFileBase( const std::string & s )
 {
-	const int l = static_cast<int>( s.GetSize() );
+	const int l = static_cast<int>( s.length() );
 	if ( l == 0 )
 	{
-		return String( "" );
+		return std::string( "" );
 	}
 
 	int	end;
@@ -304,15 +316,15 @@ String ExtractFileBase( const String & s )
 		;
 	start++;
 
-	return String( &s[ start ], end - start );
+	return std::string( &s[ start ], end - start );
 }
 
-String ExtractFile( const String & s )
+std::string ExtractFile( const std::string & s )
 {
-	const int l = static_cast<int>( s.GetSize() );
+	const int l = static_cast<int>( s.length() );
 	if ( l == 0 )
 	{
-		return String( "" );
+		return std::string( "" );
 	}
 
 	int	end = l;
@@ -326,15 +338,15 @@ String ExtractFile( const String & s )
 		;
 	start++;
 
-	return String( &s[ start ], end - start );
+	return std::string( &s[ start ], end - start );
 }
 
-String ExtractDirectory( const String & s )
+std::string ExtractDirectory( const std::string & s )
 {
-	const int l = static_cast<int>( s.GetSize() );
+	const int l = static_cast<int>( s.length() );
 	if ( l == 0 )
 	{
-		return String( "" );
+		return std::string( "" );
 	}
 
 	int	end;
@@ -356,7 +368,7 @@ String ExtractDirectory( const String & s )
 		;
 	start++;
 
-	return String( &s[ start ], end - start );
+	return std::string( &s[ start ], end - start );
 }
 
 void MakePath( const char * dirPath, permissionFlags_t permissions )

@@ -11,10 +11,9 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "ModelFileLoading.h"
 
-#include "Kernel/OVR_MappedFile.h"
-
 #include "PackageFiles.h"
 #include "OVR_FileSys.h"
+#include "OVR_MappedFile.h"
 
 namespace OVR {
 
@@ -31,23 +30,23 @@ ModelFile::ModelFile() :
 
 ModelFile::~ModelFile()
 {
-	OVR_LOG( "Destroying ModelFileModel %s", FileName.ToCStr() );
+	OVR_LOG( "Destroying ModelFileModel %s", FileName.c_str() );
 
-	for ( int i = 0; i < Textures.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Textures.size() ); i++ )
 	{
 		FreeTexture( Textures[i].texid );
 	}
 
-	for ( int i = 0; i < Models.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Models.size() ); i++ )
 	{
-		for ( int j = 0; j < Models[i].surfaces.GetSizeI(); j++ )
+		for ( int j = 0; j < static_cast< int >( Models[i].surfaces.size() ); j++ )
 		{
 			const_cast< GlGeometry * >( &( Models[i].surfaces[j].surfaceDef.geo ) )->Free();
 			Models[i].surfaces[j].surfaceDef.graphicsCommand.uniformJoints.Destroy();
 		}
 	}
 
-	for ( int i = 0; i < Buffers.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Buffers.size() ); i++ )
 	{
 		delete Buffers[i].bufferData;
 	}
@@ -55,12 +54,12 @@ ModelFile::~ModelFile()
 
 ovrSurfaceDef * ModelFile::FindNamedSurface( const char * name ) const
 {
-	for ( int i = 0; i < Models.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Models.size() ); i++ )
 	{
-		for ( int j = 0; j < Models[i].surfaces.GetSizeI(); j++ )
+		for ( int j = 0; j < static_cast< int >( Models[i].surfaces.size() ); j++ )
 		{
 			const ovrSurfaceDef & sd = Models[i].surfaces[j].surfaceDef;
-			if ( sd.surfaceName.CompareNoCase( name ) == 0 )
+			if ( OVR_stricmp( sd.surfaceName.c_str(), name ) == 0 )
 			{
 				return const_cast< ovrSurfaceDef* >( &sd );
 			}
@@ -71,10 +70,10 @@ ovrSurfaceDef * ModelFile::FindNamedSurface( const char * name ) const
 
 const ModelTexture * ModelFile::FindNamedTexture( const char * name ) const
 {
-	for ( int i = 0; i < Textures.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Textures.size() ); i++ )
 	{
 		const ModelTexture & st = Textures[i];
-		if ( st.name.CompareNoCase( name ) == 0 )
+		if ( OVR_stricmp( st.name.c_str(), name ) == 0 )
 		{
 			return &st;
 		}
@@ -84,12 +83,12 @@ const ModelTexture * ModelFile::FindNamedTexture( const char * name ) const
 
 const ModelJoint * ModelFile::FindNamedJoint( const char *name ) const
 {
-	for ( int i = 0; i < Nodes.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Nodes.size() ); i++ )
 	{
-		for ( int j = 0; j < Nodes[i].JointsOvrScene.GetSizeI(); j++ )
+		for ( int j = 0; j < static_cast< int >( Nodes[i].JointsOvrScene.size() ); j++ )
 		{
 			const ModelJoint & joint = Nodes[i].JointsOvrScene[j];
-			if ( joint.name.CompareNoCase( name ) == 0 )
+			if ( OVR_stricmp( joint.name.c_str(), name ) == 0 )
 			{
 				return &joint;
 			}
@@ -100,10 +99,10 @@ const ModelJoint * ModelFile::FindNamedJoint( const char *name ) const
 
 const ModelTag * ModelFile::FindNamedTag( const char *name ) const
 {
-	for ( int i = 0; i < Tags.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Tags.size() ); i++ )
 	{
 		const ModelTag & tag = Tags[i];
-		if ( tag.name.CompareNoCase( name ) == 0 )
+		if ( OVR_stricmp( tag.name.c_str(), name ) == 0 )
 		{
 			OVR_LOG( "Found named tag %s", name );
 			return &tag;
@@ -117,9 +116,9 @@ Bounds3f ModelFile::GetBounds() const
 {
 	Bounds3f modelBounds;
 	modelBounds.Clear();
-	for ( int i = 0; i < Models.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Models.size() ); i++ )
 	{
-		for ( int j = 0; j < Models[i].surfaces.GetSizeI(); j++ )
+		for ( int j = 0; j < static_cast< int >( Models[i].surfaces.size() ); j++ )
 		{
 			const ovrSurfaceDef & sd = Models[i].surfaces[j].surfaceDef;
 			modelBounds.AddPoint( sd.geo.localBounds.b[0] );
@@ -144,11 +143,11 @@ void LoadModelFileTexture( ModelFile & model, const char * textureName,
 {
 	ModelTexture tex;
 	tex.name = textureName;
-	tex.name.StripExtension();
+	tex.name = tex.name.substr(0, tex.name.rfind("."));
     int width;
     int height;
-	tex.texid = LoadTextureFromBuffer( textureName, MemBuffer( buffer, size ),
-			materialParms.UseSrgbTextureFormats ? TextureFlags_t( TEXTUREFLAG_USE_SRGB ) : TextureFlags_t(),
+	tex.texid = LoadTextureFromBuffer( textureName, (const uint8_t *)buffer, size,
+			(materialParms.UseSrgbTextureFormats ? TextureFlags_t( TEXTUREFLAG_USE_SRGB ) : TextureFlags_t()),
 			width, height );
 
 	// OVR_LOG( ( tex.texid.target == GL_TEXTURE_CUBE_MAP ) ? "GL_TEXTURE_CUBE_MAP: %s" : "GL_TEXTURE_2D: %s", textureName );
@@ -160,7 +159,7 @@ void LoadModelFileTexture( ModelFile & model, const char * textureName,
 		MakeTextureClamped( tex.texid );
 	}
 
-	model.Textures.PushBack( tex );
+	model.Textures.push_back( tex );
 }
 
 static ModelFile * LoadZippedModelFile( unzFile zfp, const char * fileName,
@@ -436,13 +435,13 @@ ModelFile * LoadModelFileFromApplicationPackage( const char * nameInZip,
 
 ModelFile * LoadModelFile( ovrFileSys & fileSys, const char * uri, const ModelGlPrograms & programs, const MaterialParms & materialParms )
 {
-	MemBufferT< uint8_t > buffer;
+	std::vector< uint8_t > buffer;
 	if ( !fileSys.ReadFile( uri, buffer ) )
 	{
 		OVR_WARN( "Failed to load model uri '%s'", uri );
 		return nullptr;
 	}
-	ModelFile * scene = LoadModelFileFromMemory( uri, buffer, static_cast<int>( buffer.GetSize() ), programs, materialParms );
+	ModelFile * scene = LoadModelFileFromMemory( uri, buffer.data(), static_cast<int>( buffer.size() ), programs, materialParms );
 	return scene;
 }
 
@@ -471,7 +470,7 @@ void ModelNode::RecalculateGlobalTransform( ModelFile & modelFile )
 		globalTransform = modelFile.Nodes[parentIndex].GetGlobalTransform() * localTransform;
 	}
 
-	for ( int i = 0; i < children.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( children.size() ); i++ )
 	{
 		modelFile.Nodes[children[i]].RecalculateGlobalTransform( modelFile );
 	}
@@ -571,7 +570,7 @@ void ModelState::CalculateAnimationFrameAndFraction( const ModelAnimationTimeTyp
 	break;
 	}
 
-	for ( int i = 0; i < animationTimelineStates.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( animationTimelineStates.size() ); i++ )
 	{
 		animationTimelineStates[i].CalculateFrameAndFraction( timeInSeconds );
 	}
@@ -589,7 +588,7 @@ void ModelNodeState::GenerateStateFromNode( const ModelNode * _node, ModelState 
 	localTransform = node->GetLocalTransform();
 	globalTransform = node->GetGlobalTransform();
 
-	JointMatricesOvrScene.Resize( node->JointsOvrScene.GetSizeI() );
+	JointMatricesOvrScene.resize( node->JointsOvrScene.size() );
 }
 
 void ModelNodeState::CalculateLocalTransform()
@@ -613,16 +612,16 @@ void ModelNodeState::RecalculateMatrix()
 		globalTransform = state->nodeStates[node->parentIndex].globalTransform * localTransform;
 	}
 
-	for ( int i = 0; i < node->children.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( node->children.size() ); i++ )
 	{
 		state->nodeStates[node->children[i]].RecalculateMatrix();
 	}
 }
 
-void ModelNodeState::AddNodesToEmitList( Array< ModelNodeState * > & emitList )
+void ModelNodeState::AddNodesToEmitList( std::vector< ModelNodeState * > & emitList )
 {
-	emitList.PushBack( this );
-	for ( int i = 0; i < node->children.GetSizeI(); i++ )
+	emitList.push_back( this );
+	for ( int i = 0; i < static_cast< int >( node->children.size() ); i++ )
 	{
 		state->nodeStates[node->children[i]].AddNodesToEmitList( emitList );
 	}
@@ -633,8 +632,8 @@ void ModelSubSceneState::GenerateStateFromSubScene( const ModelSubScene * _subSc
 	subScene = _subScene;
 	visible = subScene->visible;
 
-	nodeStates.Resize( subScene->nodes.GetSizeI() );
-	for ( int i = 0; i < subScene->nodes.GetSizeI(); i++ )
+	nodeStates.resize( subScene->nodes.size() );
+	for ( int i = 0; i < static_cast< int >( subScene->nodes.size() ); i++ )
 	{
 		nodeStates[i] = subScene->nodes[i];
 	}
@@ -642,26 +641,26 @@ void ModelSubSceneState::GenerateStateFromSubScene( const ModelSubScene * _subSc
 
 void ModelState::GenerateStateFromModelFile( const ModelFile * _mf )
 {
-	subSceneStates.Clear();
+	subSceneStates.clear();
 	modelMatrix = Matrix4f::Identity();
 
 	mf = _mf;
 	DontRenderForClientUid = 0;
 
-	nodeStates.Resize( mf->Nodes.GetSizeI() );
-	for ( int i = 0; i < mf->Nodes.GetSizeI(); i++ )
+	nodeStates.resize( mf->Nodes.size() );
+	for ( int i = 0; i < static_cast< int >( mf->Nodes.size() ); i++ )
 	{
 		nodeStates[i].GenerateStateFromNode( &mf->Nodes[i], this );
 	}
 
-	animationTimelineStates.Resize( mf->AnimationTimeLines.GetSizeI() );
-	for ( int i = 0; i < mf->AnimationTimeLines.GetSizeI(); i++ )
+	animationTimelineStates.resize( mf->AnimationTimeLines.size() );
+	for ( int i = 0; i < static_cast< int >( mf->AnimationTimeLines.size() ); i++ )
 	{
 		animationTimelineStates[i].timeline = &mf->AnimationTimeLines[i];
 	}
 
-	subSceneStates.Resize( mf->SubScenes.GetSizeI() );
-	for ( int i = 0; i < mf->SubScenes.GetSizeI(); i++ )
+	subSceneStates.resize( mf->SubScenes.size() );
+	for ( int i = 0; i < static_cast< int >( mf->SubScenes.size() ); i++ )
 	{
 		subSceneStates[i].GenerateStateFromSubScene( &mf->SubScenes[i] );
 	}
@@ -670,9 +669,9 @@ void ModelState::GenerateStateFromModelFile( const ModelFile * _mf )
 void ModelState::SetMatrix( const Matrix4f matrix )
 {
 	modelMatrix = matrix;
-	for ( int i = 0; i < subSceneStates.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( subSceneStates.size() ); i++ )
 	{
-		for ( int j = 0; j < subSceneStates[i].nodeStates.GetSizeI(); j++ )
+		for ( int j = 0; j < static_cast< int >( subSceneStates[i].nodeStates.size() ); j++ )
 		{
 			nodeStates[subSceneStates[i].nodeStates[j]].RecalculateMatrix();
 		}

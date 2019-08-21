@@ -29,7 +29,7 @@ public:
 
 	void 				AddToMenu( UIMenu *menu, bool showDescriptionLabel, bool showCancelButton, UIObject *parent = NULL );
 	void 				SetProgress( const float progress );
-	void 				SetDescription( const String &description );
+	void 				SetDescription( const std::string & description );
 	void				SetOnCancel( void ( *callback )( UIButton *, void * ), void *object );
 	float				GetProgress() const { return Progress; }
 	void				SetProgressImageZOffset( float offset );

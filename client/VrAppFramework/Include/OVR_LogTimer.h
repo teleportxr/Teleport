@@ -12,7 +12,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_LogTimer )
 #define OVR_LogTimer
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 #include "SystemClock.h"
 
 // Declaring a variable with this class will report the time elapsed when it

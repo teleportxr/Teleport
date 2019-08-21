@@ -10,14 +10,14 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 *************************************************************************************/
 
 #include "Framebuffer.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 #include "VrApi.h"
 
 #define MALI_SEPARATE_DEPTH_BUFFERS		1
 
 namespace OVR
 {
-ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTextureFormat depthFormat,
+ovrFramebuffer::ovrFramebuffer( const int64_t colorFormat, const int64_t depthFormat,
 								const int width, const int height, const int multisamples,
 								const bool resolveDepth, const bool useMultiview_ ) :
 		UseMultiview( useMultiview_ ),
@@ -57,7 +57,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 
 		// Create the color texture set and associated color buffer.
 		{
-			ColorTextureSwapChain = vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D_ARRAY, colorFormat, width, height, 1, true );
+			ColorTextureSwapChain = vrapi_CreateTextureSwapChain3( VRAPI_TEXTURE_TYPE_2D_ARRAY, colorFormat, width, height, 1, 3 );
 			OVR_ASSERT( ColorTextureSwapChain != NULL );
 			TextureSwapChainLength = vrapi_GetTextureSwapChainLength( ColorTextureSwapChain );
 			OVR_ASSERT( TextureSwapChainLength );
@@ -65,33 +65,20 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 		}
 
 		// Create the depth texture set and associated depth buffer.
-		if ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE )
+
+		// FIXME: we should only need one depth buffer but the Mali driver
+		// does not like sharing the depth buffer between multiple frame buffers
+		DepthBuffers = new GLuint[TextureSwapChainLength];
+		for ( int i = 0; i < ( MALI_SEPARATE_DEPTH_BUFFERS ? TextureSwapChainLength : 1 ); i++ )
 		{
-			// GL_DEPTH_COMPONENT16 is the only strictly legal thing in unextended GL ES 2.0
-			// The GL_OES_depth24 extension allows GL_DEPTH_COMPONENT24_OES.
-			// The GL_OES_packed_depth_stencil extension allows GL_DEPTH24_STENCIL8_OES.
-			GLenum glInternalFormat;
-			switch ( depthFormat )
-			{
-				case VRAPI_TEXTURE_FORMAT_DEPTH_16:				glInternalFormat = GL_DEPTH_COMPONENT16; break;
-				case VRAPI_TEXTURE_FORMAT_DEPTH_24:				glInternalFormat = GL_DEPTH_COMPONENT24; break;
-				case VRAPI_TEXTURE_FORMAT_DEPTH_24_STENCIL_8:	glInternalFormat = GL_DEPTH24_STENCIL8; break;
-				default: OVR_FAIL( "Unknown depthFormat %i", depthFormat );
-			}
-			// FIXME: we should only need one depth buffer but the Mali driver
-			// does not like sharing the depth buffer between multiple frame buffers
-			DepthBuffers = new GLuint[TextureSwapChainLength];
-			for ( int i = 0; i < ( MALI_SEPARATE_DEPTH_BUFFERS ? TextureSwapChainLength : 1 ); i++ )
-			{
-				glGenTextures( 1, &DepthBuffers[i] );
-				glBindTexture( GL_TEXTURE_2D_ARRAY, DepthBuffers[i] );
-				glTexStorage3D( GL_TEXTURE_2D_ARRAY, 1, glInternalFormat, width, height, 2 );
-				glTexParameteri( GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-				glTexParameteri( GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-				glTexParameteri( GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-				glTexParameteri( GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-				glBindTexture( GL_TEXTURE_2D_ARRAY, 0 );
-			}
+			glGenTextures( 1, &DepthBuffers[i] );
+			glBindTexture( GL_TEXTURE_2D_ARRAY, DepthBuffers[i] );
+			glTexStorage3D( GL_TEXTURE_2D_ARRAY, 1, (GLenum)depthFormat, width, height, 2 );
+			glTexParameteri( GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+			glTexParameteri( GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+			glTexParameteri( GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+			glTexParameteri( GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+			glBindTexture( GL_TEXTURE_2D_ARRAY, 0 );
 		}
 
 		// Create the framebuffer.
@@ -100,7 +87,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 		for ( int i = 0; i < TextureSwapChainLength; i++ )
 		{
 			const GLuint colorTexture = vrapi_GetTextureSwapChainHandle( ColorTextureSwapChain, i );
-			const GLuint depthTexture = ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE ) ? DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0] : 0;
+			const GLuint depthTexture = DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0];
 
 			if ( extensionsOpenGL.EXT_texture_border_clamp )
 			{
@@ -119,11 +106,10 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 			{
 				glFramebufferTextureMultisampleMultiviewOVR_( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorTexture,
 															 0, multisamples, 0 /* baseViewIndex */, 2 /* numViews */ );
-				if ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE )
-				{
-					glFramebufferTextureMultisampleMultiviewOVR_( GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture,
+
+				glFramebufferTextureMultisampleMultiviewOVR_( GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture,
 															0, multisamples, 0 /* baseViewIndex */, 2 /* numViews */ );
-				}
+
 				GLenum renderStatus = glCheckFramebufferStatus( GL_DRAW_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
@@ -145,11 +131,8 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				glFramebufferTextureMultiviewOVR_( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorTexture, 0,
 												  0 /* baseViewIndex */, 2 /* numViews */ );
 
-				if ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE )
-				{
-					glFramebufferTextureMultiviewOVR_( GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0], 0,
+				glFramebufferTextureMultiviewOVR_( GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0], 0,
 													  0 /* baseViewIndex */, 2 /* numViews */ );
-				}
 
 				GLenum renderStatus = glCheckFramebufferStatus( GL_DRAW_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
@@ -199,7 +182,7 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 
 		// Create the color texture set and associated color buffer.
 		{
-			ColorTextureSwapChain = vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D, colorFormat, width, height, 1, true );
+			ColorTextureSwapChain = vrapi_CreateTextureSwapChain3( VRAPI_TEXTURE_TYPE_2D, colorFormat, width, height, 1, 3 );
 			OVR_ASSERT( ColorTextureSwapChain != NULL );
 			TextureSwapChainLength = vrapi_GetTextureSwapChainLength( ColorTextureSwapChain );
 			OVR_ASSERT( TextureSwapChainLength );
@@ -207,22 +190,10 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 
 			if ( multisampleMode == MSAA_BLIT )
 			{
-				GLenum glInternalFormat;
-				switch ( colorFormat )
-				{
-					case VRAPI_TEXTURE_FORMAT_565:			glInternalFormat = GL_RGB565; break;
-					case VRAPI_TEXTURE_FORMAT_5551:			glInternalFormat = GL_RGB5_A1; break;
-					case VRAPI_TEXTURE_FORMAT_4444:			glInternalFormat = GL_RGBA4; break;
-					case VRAPI_TEXTURE_FORMAT_8888:			glInternalFormat = GL_RGBA8; break;
-					case VRAPI_TEXTURE_FORMAT_8888_sRGB:	glInternalFormat = GL_SRGB8_ALPHA8; break;
-					case VRAPI_TEXTURE_FORMAT_RGBA16F:		glInternalFormat = GL_RGBA16F; break;
-					default: OVR_FAIL( "Unknown colorFormat %i", colorFormat );
-				}
-
 				// Create a multi-sampled render buffer.
 				glGenRenderbuffers( 1, &ColorBuffer );
 				glBindRenderbuffer( GL_RENDERBUFFER, ColorBuffer );
-				glRenderbufferStorageMultisample( GL_RENDERBUFFER, multisamples, glInternalFormat, width, height );
+				glRenderbufferStorageMultisample( GL_RENDERBUFFER, multisamples, (GLenum)colorFormat, width, height );
 				GLint actualMultisamples = 0;
 				glGetIntegerv( GL_SAMPLES, &actualMultisamples );
 				OVR_LOG( "multisamples: requested = %d actual = %d", multisamples, actualMultisamples );
@@ -231,52 +202,37 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 		}
 
 		// Create the depth texture set and associated depth buffer.
-		if ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE )
+		if ( resolveDepth )
 		{
-			if ( resolveDepth )
-			{
-				DepthTextureSwapChain = vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D, depthFormat, width, height, 1, true );
-				OVR_ASSERT( DepthTextureSwapChain != NULL );
-				const int depthChainLength = vrapi_GetTextureSwapChainLength( DepthTextureSwapChain );
-				OVR_ASSERT( depthChainLength == TextureSwapChainLength );
-				OVR_UNUSED( depthChainLength );
-			}
+			DepthTextureSwapChain = vrapi_CreateTextureSwapChain3( VRAPI_TEXTURE_TYPE_2D, depthFormat, width, height, 1, 3 );
+			OVR_ASSERT( DepthTextureSwapChain != NULL );
+			const int depthChainLength = vrapi_GetTextureSwapChainLength( DepthTextureSwapChain );
+			OVR_ASSERT( depthChainLength == TextureSwapChainLength );
+			OVR_UNUSED( depthChainLength );
+		}
 
-			if ( !resolveDepth || multisampleMode == MSAA_BLIT )
+		if ( !resolveDepth || multisampleMode == MSAA_BLIT )
+		{
+			// FIXME: we should only need one depth buffer but the Mali driver
+			// does not like sharing the depth buffer between multiple frame buffers
+			DepthBuffers = new GLuint[TextureSwapChainLength];
+			for ( int i = 0; i < ( MALI_SEPARATE_DEPTH_BUFFERS ? TextureSwapChainLength : 1 ); i++ )
 			{
-				// GL_DEPTH_COMPONENT16 is the only strictly legal thing in unextended GL ES 2.0
-				// The GL_OES_depth24 extension allows GL_DEPTH_COMPONENT24_OES.
-				// The GL_OES_packed_depth_stencil extension allows GL_DEPTH24_STENCIL8_OES.
-				GLenum glInternalFormat;
-				switch ( depthFormat )
+				glGenRenderbuffers( 1, &DepthBuffers[i] );
+				glBindRenderbuffer( GL_RENDERBUFFER, DepthBuffers[i] );
+				if ( multisampleMode == MSAA_RENDER_TO_TEXTURE )
 				{
-					case VRAPI_TEXTURE_FORMAT_DEPTH_16:				glInternalFormat = GL_DEPTH_COMPONENT16; break;
-					case VRAPI_TEXTURE_FORMAT_DEPTH_24:				glInternalFormat = GL_DEPTH_COMPONENT24; break;
-					case VRAPI_TEXTURE_FORMAT_DEPTH_24_STENCIL_8:	glInternalFormat = GL_DEPTH24_STENCIL8; break;
-					default: OVR_FAIL( "Unknown depthFormat %i", depthFormat );
+					glRenderbufferStorageMultisampleEXT_( GL_RENDERBUFFER, multisamples, (GLenum)depthFormat, width, height );
 				}
-
-				// FIXME: we should only need one depth buffer but the Mali driver
-				// does not like sharing the depth buffer between multiple frame buffers
-				DepthBuffers = new GLuint[TextureSwapChainLength];
-				for ( int i = 0; i < ( MALI_SEPARATE_DEPTH_BUFFERS ? TextureSwapChainLength : 1 ); i++ )
+				else if ( multisampleMode == MSAA_BLIT )
 				{
-					glGenRenderbuffers( 1, &DepthBuffers[i] );
-					glBindRenderbuffer( GL_RENDERBUFFER, DepthBuffers[i] );
-					if ( multisampleMode == MSAA_RENDER_TO_TEXTURE )
-					{
-						glRenderbufferStorageMultisampleEXT_( GL_RENDERBUFFER, multisamples, glInternalFormat, width, height );
-					}
-					else if ( multisampleMode == MSAA_BLIT )
-					{
-						glRenderbufferStorageMultisample( GL_RENDERBUFFER, multisamples, glInternalFormat, width, height );
-					}
-					else
-					{
-						glRenderbufferStorage( GL_RENDERBUFFER, glInternalFormat, width, height );
-					}
-					glBindRenderbuffer( GL_RENDERBUFFER, 0 );
+					glRenderbufferStorageMultisample( GL_RENDERBUFFER, multisamples, (GLenum)depthFormat, width, height );
 				}
+				else
+				{
+					glRenderbufferStorage( GL_RENDERBUFFER, (GLenum)depthFormat, width, height );
+				}
+				glBindRenderbuffer( GL_RENDERBUFFER, 0 );
 			}
 		}
 
@@ -308,10 +264,8 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				glGenFramebuffers( 1, &RenderFrameBuffers[i] );
 				glBindFramebuffer( GL_FRAMEBUFFER, RenderFrameBuffers[i] );
 				glFramebufferTexture2DMultisampleEXT_( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0, multisamples );
-				if ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE )
-				{
-					glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0] );
-				}
+				glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0] );
+
 				GLenum renderStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
@@ -330,10 +284,8 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				glGenFramebuffers( 1, &RenderFrameBuffers[i] );
 				glBindFramebuffer( GL_FRAMEBUFFER, RenderFrameBuffers[i] );
 				glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ColorBuffer );
-				if ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE )
-				{
-					glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0] );
-				}
+				glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0] );
+
 				GLenum renderStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
@@ -345,17 +297,16 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				glGenFramebuffers( 1, &ResolveFrameBuffers[i] );
 				glBindFramebuffer( GL_FRAMEBUFFER, ResolveFrameBuffers[i] );
 				glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0 );
-				if ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE )
+
+				if ( resolveDepth )
 				{
-					if ( resolveDepth )
-					{
-						glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0 );
-					}
-					else
-					{
-						// No attachment.
-					}
+					glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0 );
 				}
+				else
+				{
+					// No attachment.
+				}
+
 				GLenum resolveStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 				if ( resolveStatus != GL_FRAMEBUFFER_COMPLETE )
 				{
@@ -371,17 +322,16 @@ ovrFramebuffer::ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTex
 				glGenFramebuffers( 1, &RenderFrameBuffers[i] );
 				glBindFramebuffer( GL_FRAMEBUFFER, RenderFrameBuffers[i] );
 				glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0 );
-				if ( depthFormat != VRAPI_TEXTURE_FORMAT_NONE )
+
+				if ( resolveDepth )
 				{
-					if ( resolveDepth )
-					{
-						glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0 );
-					}
-					else
-					{
-						glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0] );
-					}
+					glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0 );
 				}
+				else
+				{
+					glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, DepthBuffers[MALI_SEPARATE_DEPTH_BUFFERS ? i : 0] );
+				}
+
 				GLenum renderStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 				if ( renderStatus != GL_FRAMEBUFFER_COMPLETE )
 				{

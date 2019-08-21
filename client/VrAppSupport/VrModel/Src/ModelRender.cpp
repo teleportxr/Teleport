@@ -14,7 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <stdlib.h>
 #include <algorithm>
 #include "OVR_GlUtils.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 namespace OVR
 {
@@ -134,7 +134,7 @@ struct bsort_t
 {
 	float						key;
 	Matrix4f					modelMatrix;
-	const Array< Matrix4f > *	joints;
+	const std::vector< Matrix4f > *	joints;
 	const ovrSurfaceDef *		surface;
 	bool						transparent;
 
@@ -163,9 +163,9 @@ struct bsort_t
 	};
 };
 
-void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
-							const Array<ModelNodeState *> & emitNodes,
-							const Array<ovrDrawSurface> & emitSurfaces,
+void BuildModelSurfaceList(	std::vector<ovrDrawSurface> & surfaceList,
+							const std::vector<ModelNodeState *> & emitNodes,
+							const std::vector<ovrDrawSurface> & emitSurfaces,
 							const Matrix4f & viewMatrix,
 							const Matrix4f & projectionMatrix )
 {
@@ -178,7 +178,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 	int	numSurfaces = 0;
 	int	cullCount = 0;
 
-	for ( int nodeNum = 0; nodeNum < emitNodes.GetSizeI(); nodeNum++ )
+	for ( int nodeNum = 0; nodeNum < static_cast< int >( emitNodes.size() ); nodeNum++ )
 	{
 		const ModelNodeState & nodeState = *emitNodes[nodeNum];
 		if ( nodeState.GetNode() != NULL && nodeState.GetNode()->model != NULL )
@@ -193,7 +193,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 			if ( nodeState.GetNode()->model != nullptr )
 			{
 				const Model & modelDef = *nodeState.GetNode()->model;
-				for ( int surfaceNum = 0; surfaceNum < modelDef.surfaces.GetSizeI(); surfaceNum++ )
+				for ( int surfaceNum = 0; surfaceNum < static_cast< int >( modelDef.surfaces.size() ); surfaceNum++ )
 				{
 					const ovrSurfaceDef & surfaceDef = modelDef.surfaces[surfaceNum].surfaceDef;
 					const float sort = BoundsSortCullKey( surfaceDef.geo.localBounds, vpMatrix * nodeState.GetGlobalTransform() );
@@ -203,7 +203,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 						{
 							if ( LogRenderSurfaces )
 							{
-								OVR_LOG( "Culled %s", surfaceDef.surfaceName.ToCStr() );
+								OVR_LOG( "Culled %s", surfaceDef.surfaceName.c_str() );
 							}
 							cullCount++;
 							continue;
@@ -212,7 +212,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 						{
 							if ( LogRenderSurfaces )
 							{
-								OVR_LOG( "Skipped Culling of %s", surfaceDef.surfaceName.ToCStr() );
+								OVR_LOG( "Skipped Culling of %s", surfaceDef.surfaceName.c_str() );
 							}
 						}
 					}
@@ -223,10 +223,10 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 					}
 
 					// Update the Joint Uniform Buffer
-					if ( nodeState.JointMatricesOvrScene.GetSize() > 0 )
+					if ( nodeState.JointMatricesOvrScene.size() > 0 )
 					{
 						static Matrix4f transposedJoints[MAX_JOINTS];
-						const int numJoints = Alg::Min( nodeState.JointMatricesOvrScene.GetSizeI(), MAX_JOINTS );
+						const int numJoints = std::min( static_cast< int >( nodeState.JointMatricesOvrScene.size() ), MAX_JOINTS );
 
 						for ( int j = 0; j < numJoints; j++ )
 						{
@@ -241,7 +241,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 						const ModelSkin & skin = nodeState.state->mf->Skins[nodeState.node->skinIndex];
 						
 						static Matrix4f transposedJoints[MAX_JOINTS];
-						const int numJoints = Alg::Min( skin.jointIndexes.GetSizeI(), MAX_JOINTS );
+						const int numJoints = std::min( static_cast< int >( skin.jointIndexes.size() ), MAX_JOINTS );
 
 						Matrix4f inverseGlobalSkeletonTransform;
 						if ( skin.skeletonRootIndex >= 0 )
@@ -260,7 +260,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 							Matrix4f::Multiply( &tempTransform, inverseGlobalSkeletonTransform, globalTransform );
 							Matrix4f localJointTransform;
 
-							if ( skin.inverseBindMatrices.GetSizeI() > 0 )
+							if ( skin.inverseBindMatrices.size() > 0 )
 							{
 								Matrix4f::Multiply( &localJointTransform, tempTransform, skin.inverseBindMatrices[j] );
 							}
@@ -286,7 +286,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 		}
 	}
 
-	for ( int i = 0; i < emitSurfaces.GetSizeI(); i++  )
+	for ( int i = 0; i < static_cast< int >( emitSurfaces.size() ); i++  )
 	{
 		const ovrDrawSurface & drawSurf = emitSurfaces[i];
 		const ovrSurfaceDef & surfaceDef = *drawSurf.surface;
@@ -295,7 +295,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 		{
 			if ( LogRenderSurfaces )
 			{
-				OVR_LOG( "Culled %s", surfaceDef.surfaceName.ToCStr() );
+				OVR_LOG( "Culled %s", surfaceDef.surfaceName.c_str() );
 			}
 			cullCount++;
 			continue;
@@ -322,7 +322,7 @@ void BuildModelSurfaceList(	Array<ovrDrawSurface> & surfaceList,
 	std::stable_sort( bsort, bsort+numSurfaces );
 
 	// ----TODO_DRAWEYEVIEW : don't overwrite surfaces which may have already been added to the surfaceList.
-	surfaceList.Resize( numSurfaces );
+	surfaceList.resize( numSurfaces );
 	for ( int i = 0; i < numSurfaces; i++ )
 	{
 		surfaceList[i].modelMatrix = bsort[i].modelMatrix;

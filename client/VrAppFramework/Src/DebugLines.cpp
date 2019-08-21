@@ -14,7 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <stdlib.h>
 
 #include "OVR_GlUtils.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 #include "GlGeometry.h"
 #include "GlProgram.h"
@@ -54,7 +54,7 @@ public:
 		ovrSurfaceDef 		Surf;
 		ovrDrawSurface 		DrawSurf;
 		VertexAttribs 		Attr;
-		Array<long long> 	EndFrame;
+		std::vector<long long> 	EndFrame;
 	};
 
 	typedef unsigned short LineIndex_t;
@@ -68,7 +68,7 @@ public:
 	virtual void		Shutdown();
 
 	virtual void		BeginFrame( const long long frameNum );
-	virtual void		AppendSurfaceList( Array<ovrDrawSurface> & surfaceList );
+	virtual void		AppendSurfaceList( std::vector<ovrDrawSurface> & surfaceList );
 
 	virtual void		AddLine(	const Vector3f & start, const Vector3f & end,
 								const Vector4f & startColor, const Vector4f & endColor,
@@ -132,12 +132,12 @@ void OvrDebugLinesLocal::Init()
 	// the indices will never change once we've set them up, we just won't necessarily
 	// use all of the index buffer to render.
 	const int MAX_INDICES = MAX_DEBUG_LINES * 2;
-	Array<LineIndex_t> indices;
-	indices.Reserve( MAX_INDICES );
+	std::vector<LineIndex_t> indices;
+	indices.reserve( MAX_INDICES );
 
 	for ( LineIndex_t i = 0; i < MAX_INDICES; ++i )
 	{
-		indices.PushBack(i);
+		indices.push_back(i);
 	}
 
 	for ( int i = 0; i < 2; i++ )
@@ -172,19 +172,19 @@ void OvrDebugLinesLocal::Shutdown()
 
 //==============================
 // OvrDebugLinesLocal::AppendSurfaceList
-void OvrDebugLinesLocal::AppendSurfaceList( Array< ovrDrawSurface > & surfaceList )
+void OvrDebugLinesLocal::AppendSurfaceList( std::vector< ovrDrawSurface > & surfaceList )
 {
 	for ( int j = 0; j < 2; j++ )
 	{
 		DebugLines_t & dl = j == 0 ? NonDepthTested : DepthTested;
-		int verts = dl.Attr.position.GetSizeI();
+		int verts = dl.Attr.position.size();
 		if ( verts == 0 )
 		{
 			continue;
 		}
 		dl.Surf.geo.Update( dl.Attr );
 		dl.Surf.geo.indexCount = verts;
-		surfaceList.PushBack( dl.DrawSurf );
+		surfaceList.push_back( dl.DrawSurf );
 	}
 }
 
@@ -197,11 +197,11 @@ void OvrDebugLinesLocal::AddLine( const Vector3f & start, const Vector3f & end,
 {
 	//OVR_LOG( "OvrDebugLinesLocal::AddDebugLine" );
 	DebugLines_t & dl = depthTest ? DepthTested : NonDepthTested;
-	dl.Attr.position.PushBack( start );
-	dl.Attr.position.PushBack( end );
-	dl.Attr.color.PushBack( startColor );
-	dl.Attr.color.PushBack( endColor );
-	dl.EndFrame.PushBack( endFrame );
+	dl.Attr.position.push_back( start );
+	dl.Attr.position.push_back( end );
+	dl.Attr.color.push_back( startColor );
+	dl.Attr.color.push_back( endColor );
+	dl.EndFrame.push_back( endFrame );
     //OVR_ASSERT( DepthTested.EndFrame.GetSizeI() < MAX_DEBUG_LINES );
     //OVR_ASSERT( NonDepthTested.EndFrame.GetSizeI() < MAX_DEBUG_LINES );
 }
@@ -304,13 +304,17 @@ void OvrDebugLinesLocal::BeginFrame( const long long frameNum )
 // OvrDebugLinesLocal::RemoveExpired
 void OvrDebugLinesLocal::RemoveExpired( const long long frameNum, DebugLines_t & lines )
 {
-	for ( int i = lines.EndFrame.GetSizeI() - 1; i >= 0; --i )
+	for ( int i = lines.EndFrame.size() - 1; i >= 0; --i )
 	{
 		if ( frameNum >= lines.EndFrame[i] )
 		{
-			lines.Attr.position.RemoveMultipleAt( i * 2, 2 );
-			lines.Attr.color.RemoveMultipleAt( i * 2, 2 );
-			lines.EndFrame.RemoveAt( i );
+			lines.Attr.position.erase(
+				lines.Attr.position.cbegin() + (i * 2), 
+				lines.Attr.position.cbegin() + (i * 2) + 2 );
+			lines.Attr.color.erase(
+				lines.Attr.color.cbegin() + (i * 2),
+				lines.Attr.color.cbegin() + (i * 2) + 2 );
+			lines.EndFrame.erase( lines.EndFrame.cbegin() + i );
 		}
 	}
 }
