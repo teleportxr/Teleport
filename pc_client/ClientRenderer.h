@@ -7,16 +7,21 @@
 #include "Simul/Platform/CrossPlatform/SL/CppSl.hs"
 #include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
 #include "SessionClient.h"
-#include "crossplatform/ResourceCreator.h"
-#include "crossplatform/GeometryDecoder.h"
-#include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
 #include "Shaders/cubemap_constants.sl"
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
 #include <libavstream/geometrydecoder.hpp>
 
+#include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
+#include "crossplatform/ResourceCreator.h"
 #include "crossplatform/ResourceManager.h"
+#include "crossplatform/GeometryDecoder.h"
+#include "api/IndexBuffer.h"
+#include "api/Shader.h"
+#include "api/Texture.h"
+#include "api/UniformBuffer.h"
+#include "api/VertexBuffer.h"
 
 namespace avs
 {
@@ -31,6 +36,11 @@ namespace pc_client
 	class UniformBuffer;
 	class VertexBuffer;
 	class PC_RenderPlatform;
+}
+
+namespace scr
+{
+	class Material;
 }
 
 struct AVSTexture
@@ -89,8 +99,10 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	avs::Timestamp platformStartTimestamp; //Timestamp of when the system started.
 	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
 	
+	scr::ActorManager actorManager;
 	ResourceManager<std::shared_ptr<scr::IndexBuffer>> indexBufferManager;
 	ResourceManager<std::shared_ptr<scr::Shader>> shaderManager;
+	ResourceManager<scr::Material> materialManager;
 	ResourceManager<std::shared_ptr<scr::Texture>> textureManager;
 	ResourceManager<std::shared_ptr<scr::UniformBuffer>> uniformBufferManager;
 	ResourceManager<std::shared_ptr<scr::VertexBuffer>> vertexBufferManager;

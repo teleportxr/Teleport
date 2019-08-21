@@ -1,5 +1,6 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 
+#include <iostream>
 #include <VrApi_Types.h>
 #include <Kernel/OVR_LogUtils.h>
 #include <OVR_Input.h>
@@ -303,7 +304,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		{
 			const avs::SetupCommand &setupCommand = *((const avs::SetupCommand*)packet->data);
 			mCommandInterface->OnVideoStreamChanged(setupCommand);
-            SendHandshake();
+			SendHandshake();
 		}
 		break;
 		default:

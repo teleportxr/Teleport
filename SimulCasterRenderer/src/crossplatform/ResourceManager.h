@@ -85,7 +85,7 @@ ResourceManager<T>::~ResourceManager()
 template<class T>
 void ResourceManager<T>::Add(uid id, T && newItem, uint32_t postUseLifetime)
 {
-	cachedItems[id] = {postUseLifetime, std::move(newItem), 0, 0};
+	cachedItems.emplace(id, ResourceData{postUseLifetime, std::move(newItem), 0, 0});
 }
 
 template<class T>

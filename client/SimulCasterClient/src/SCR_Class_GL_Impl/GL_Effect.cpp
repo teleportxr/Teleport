@@ -9,113 +9,124 @@ void GL_Effect::Create(EffectCreateInfo* pEffectCreateInfo)
 {
     m_CI = *pEffectCreateInfo;
 }
-
-void GL_Effect::LinkShaders()
+void GL_Effect::CreatePass(EffectPassCreateInfo* pEffectCreateInfo)
 {
-    size_t vertexShaderIndex = (size_t)-1;
-    size_t fragmentShaderIndex = (size_t)-1;
-
-    size_t i = 0;
-    for(auto& shader : m_CI.shaders)
-    {
-        if(shader->GetShaderCreateInfo().stage == Shader::Stage::SHADER_STAGE_VERTEX)
-        {
-            vertexShaderIndex = i;
-        }
-        else if(shader->GetShaderCreateInfo().stage == Shader::Stage::SHADER_STAGE_FRAGMENT)
-        {
-            fragmentShaderIndex = i;
-        }
-        i++;
-
-    }
-
-    assert(vertexShaderIndex != - 1 && fragmentShaderIndex != -1);
-
-    m_Program = GlProgram::Build(m_CI.shaders[vertexShaderIndex]->GetShaderCreateInfo().sourceCode, m_CI.shaders[fragmentShaderIndex]->GetShaderCreateInfo().sourceCode, nullptr, 0);
+    m_EffectPasses[pEffectCreateInfo->effectPassName] = *pEffectCreateInfo;
 }
 
-void GL_Effect::Bind() const
+void GL_Effect::LinkShaders(const char* effectPassName)
 {
+    Shader* vertex = nullptr;
+    Shader* fragment = nullptr;
+
+    ShaderSystem::Pipeline& pipeline = m_EffectPasses.at(effectPassName).pipeline;
+    if(pipeline.m_Type == ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS)
+    {
+        for(size_t i = 0; i < pipeline.m_ShaderCount; i++)
+        {
+            if(pipeline.m_Shaders->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_VERTEX)
+                vertex = &(pipeline.m_Shaders[i]);
+            if(pipeline.m_Shaders->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_FRAGMENT)
+                fragment = &(pipeline.m_Shaders[i]);
+            else
+                continue;
+        }
+    }
+    else
+    {
+        SCR_CERR("Current OpenGL ES 3.0 implementation does not support compute shaders.");
+        return;
+    }
+
+    assert(vertex != nullptr && fragment != nullptr);
+
+    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, nullptr, 0);
+}
+
+void GL_Effect::Bind(const char* effectPassName) const
+{
+    /*EffectPassCreateInfo& epci = m_EffectPasses[effectPassName];
+
+
     //!Viewport and Scissor State!
     glEnable(GL_DEPTH_TEST | GL_SCISSOR_TEST);
-    glViewport((GLint)m_CI.viewportAndScissor.x, (GLint)m_CI.viewportAndScissor.y, (GLint)m_CI.viewportAndScissor.width, (GLint)m_CI.viewportAndScissor.height);
-    glDepthRangef(m_CI.viewportAndScissor.minDepth, m_CI.viewportAndScissor.maxDepth);
-    glScissor(m_CI.viewportAndScissor.offsetX, m_CI.viewportAndScissor.offsetY, m_CI.viewportAndScissor.extentX, m_CI.viewportAndScissor.extentY);
+    glViewport((GLint)epci.viewportAndScissor.x, (GLint)epci.viewportAndScissor.y, (GLint)epci.viewportAndScissor.width, (GLint)epci.viewportAndScissor.height);
+    glDepthRangef(epci.viewportAndScissor.minDepth, epci.viewportAndScissor.maxDepth);
+    glScissor(epci.viewportAndScissor.offsetX, epci.viewportAndScissor.offsetY, epci.viewportAndScissor.extentX, epci.viewportAndScissor.extentY);
 
     //!Rasterization State!
     glEnable(GL_CULL_FACE);
-    glFrontFace(m_CI.rasterizationState.frontFace == FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW);
-    glCullFace(ToGLCullMode(m_CI.rasterizationState.cullMode));
+    glFrontFace(epci.rasterizationState.frontFace == FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW);
+    glCullFace(ToGLCullMode(epci.rasterizationState.cullMode));
 
-    if(m_CI.rasterizationState.rasterizerDiscardEnable)
+    if(epci.rasterizationState.rasterizerDiscardEnable)
         glEnable(GL_RASTERIZER_DISCARD);
     else
         glDisable(GL_RASTERIZER_DISCARD);
 
     //TODO: Not supported in current OpenGL ES 3.0 loader!
-    /*if(m_CI.rasterizationState.depthClampEnable);
-        glEnable(GL_DEPTH_CLAMP);
-    else
-        glDisable(GL_DEPTH_CLAMP);*/
+    //if(epci.rasterizationState.depthClampEnable);
+    //    glEnable(GL_DEPTH_CLAMP);
+    //else
+    //    glDisable(GL_DEPTH_CLAMP);
 
     //!Multisample Sample State!
     //TODO: Not supported in current OpenGL ES 3.0 loader! GL_EXT_multisample_compatibility?
 
     //!Depth Stenciling State!
-    if(m_CI.depthStencilingState.depthTestEnable)
+    if(epci.depthStencilingState.depthTestEnable)
         glEnable(GL_DEPTH_TEST);
     else
         glDisable(GL_DEPTH_TEST);
 
-    if(m_CI.depthStencilingState.depthWriteEnable)
+    if(epci.depthStencilingState.depthWriteEnable)
         glDepthMask(GL_TRUE);
     else
         glDepthMask(GL_FALSE);
 
-    glDepthFunc(ToGLCompareOp(m_CI.depthStencilingState.depthCompareOp));
+    glDepthFunc(ToGLCompareOp(epci.depthStencilingState.depthCompareOp));
 
     //TODO: Not supported in current OpenGL ES 3.0 loader! GL_EXT_depth_bounds_test
-    /*if(m_CI.depthStencilingState.depthBoundTestEnable) {
-        glEnable(DEPTH_BOUNDS_TEST_EXT)
-        glDepthBoundEXT(m_CI.depthStencilingState.minDepthBounds, m_CI.depthStencilingState.maxDepthBounds);
-    }
-    else
-        glDisable(DEPTH_BOUNDS_TEST_EXT)*/
+    //if(epci.depthStencilingState.depthBoundTestEnable) {
+    //    glEnable(DEPTH_BOUNDS_TEST_EXT)
+    //    glDepthBoundEXT(epci.depthStencilingState.minDepthBounds, epci.depthStencilingState.maxDepthBounds);
+    //}
+    //else
+    //   glDisable(DEPTH_BOUNDS_TEST_EXT)
 
-    if(m_CI.depthStencilingState.stencilTestEnable)
+    if(epci.depthStencilingState.stencilTestEnable)
         glEnable(GL_STENCIL_TEST);
     else
         glDisable(GL_STENCIL_TEST);
 
     glStencilOpSeparate(GL_FRONT,
-            ToGLStencilCompareOp(m_CI.depthStencilingState.frontCompareOp.stencilFailOp),
-            ToGLStencilCompareOp(m_CI.depthStencilingState.frontCompareOp.stencilPassDepthFailOp),
-            ToGLStencilCompareOp(m_CI.depthStencilingState.frontCompareOp.passOp));
+            ToGLStencilCompareOp(epci.depthStencilingState.frontCompareOp.stencilFailOp),
+            ToGLStencilCompareOp(epci.depthStencilingState.frontCompareOp.stencilPassDepthFailOp),
+            ToGLStencilCompareOp(epci.depthStencilingState.frontCompareOp.passOp));
 
     glStencilOpSeparate(GL_BACK,
-            ToGLStencilCompareOp(m_CI.depthStencilingState.backCompareOp.stencilFailOp),
-            ToGLStencilCompareOp(m_CI.depthStencilingState.backCompareOp.stencilPassDepthFailOp),
-            ToGLStencilCompareOp(m_CI.depthStencilingState.backCompareOp.passOp));
+            ToGLStencilCompareOp(epci.depthStencilingState.backCompareOp.stencilFailOp),
+            ToGLStencilCompareOp(epci.depthStencilingState.backCompareOp.stencilPassDepthFailOp),
+            ToGLStencilCompareOp(epci.depthStencilingState.backCompareOp.passOp));
 
     //!Colour Blending State!
-    if(m_CI.colourBlendingState.blendEnable)
+    if(epci.colourBlendingState.blendEnable)
         glEnable(GL_BLEND);
     else
         glDisable(GL_BLEND);
 
-    glBlendEquationSeparate(ToGLBlendOp(m_CI.colourBlendingState.colorBlendOp), ToGLBlendOp(m_CI.colourBlendingState.alphaBlendOp));
+    glBlendEquationSeparate(ToGLBlendOp(epci.colourBlendingState.colorBlendOp), ToGLBlendOp(epci.colourBlendingState.alphaBlendOp));
 
     glBlendFuncSeparate(
-            ToGLBlendFactor(m_CI.colourBlendingState.srcColorBlendFactor),
-            ToGLBlendFactor(m_CI.colourBlendingState.dstColorBlendFactor),
-            ToGLBlendFactor(m_CI.colourBlendingState.srcAlphaBlendFactor),
-            ToGLBlendFactor(m_CI.colourBlendingState.dstAlphaBlendFactor));
+            ToGLBlendFactor(epci.colourBlendingState.srcColorBlendFactor),
+            ToGLBlendFactor(epci.colourBlendingState.dstColorBlendFactor),
+            ToGLBlendFactor(epci.colourBlendingState.srcAlphaBlendFactor),
+            ToGLBlendFactor(epci.colourBlendingState.dstAlphaBlendFactor));*/
 }
-void GL_Effect::Unbind() const
-{}
-
-
+void GL_Effect::Unbind(const char* effectPassName) const
+{
+    //NULL
+}
 
 GLenum GL_Effect::ToGLTopology(TopologyType topology) const
 {

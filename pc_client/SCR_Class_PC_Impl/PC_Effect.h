@@ -14,8 +14,9 @@ namespace pc_client
 		PC_Effect(scr::RenderPlatform *r) :scr::Effect(r) {}
 		// Inherited via Effect
 		virtual void Create(EffectCreateInfo * pEffectCreateInfo) override;
-		virtual void LinkShaders() override;
-		virtual void Bind() const override;
-		virtual void Unbind() const override;
+		virtual void CreatePass(EffectPassCreateInfo* pEffectPassCreateInfo) override;
+		virtual void LinkShaders(const char* effectPassName) override;
+		virtual void Bind(const char* effectPassName) const override;
+		virtual void Unbind(const char* effectPassName) const override;
 	};
 }

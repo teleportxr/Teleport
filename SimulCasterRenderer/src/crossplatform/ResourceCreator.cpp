@@ -1,8 +1,11 @@
+// (C) Copyright 2018-2019 Simul Software Ltd
 #include "ResourceCreator.h"
 
 #include "Material.h"
 
 using namespace avs;
+
+std::vector<std::pair<avs::uid, avs::uid>> ResourceCreator::m_MeshMaterialUIDPairs;
 
 ResourceCreator::ResourceCreator()
 {
@@ -20,7 +23,7 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 	// Removed circular dependencies.
 }
 
-void ResourceCreator::ensureVertices(unsigned long long shape_uid, int startVertex, int vertexCount, const avs::vec3* vertices)
+void ResourceCreator::ensureVertices(avs::uid shape_uid, int startVertex, int vertexCount, const avs::vec3* vertices)
 {
 	CHECK_SHAPE_UID(shape_uid);
 
@@ -28,7 +31,7 @@ void ResourceCreator::ensureVertices(unsigned long long shape_uid, int startVert
 	m_Vertices = vertices;
 }
 
-void ResourceCreator::ensureNormals(unsigned long long shape_uid, int startNormal, int normalCount, const avs::vec3* normals)
+void ResourceCreator::ensureNormals(avs::uid shape_uid, int startNormal, int normalCount, const avs::vec3* normals)
 {
 	CHECK_SHAPE_UID(shape_uid);
 	if ((size_t)normalCount != m_VertexCount)
@@ -37,7 +40,7 @@ void ResourceCreator::ensureNormals(unsigned long long shape_uid, int startNorma
 	m_Normals = normals;
 }
 
-void ResourceCreator::ensureTangentNormals(unsigned long long shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn)
+void ResourceCreator::ensureTangentNormals(avs::uid shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn)
 {
 	CHECK_SHAPE_UID(shape_uid);
 	assert((size_t)tnCount == m_VertexCount);
@@ -45,62 +48,61 @@ void ResourceCreator::ensureTangentNormals(unsigned long long shape_uid, int sta
 	m_TangentNormals = tn;
 }
 
-void ResourceCreator::ensureTangents(unsigned long long shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents)
+void ResourceCreator::ensureTangents(avs::uid shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if ((size_t)tangentCount != m_VertexCount)
+	if (tangentCount != (int)m_VertexCount)
 		return;
 
 	m_Tangents = tangents;
 }
 
-void ResourceCreator::ensureTexCoord0(unsigned long long shape_uid, int startTexCoord0, int texCoordCount0, const avs::vec2* texCoords0)
+void ResourceCreator::ensureTexCoord0(avs::uid shape_uid, int startTexCoord0, int texCoordCount0, const avs::vec2* texCoords0)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if ((size_t)texCoordCount0 != m_VertexCount)
+	if (texCoordCount0 != (int)m_VertexCount)
 		return;
 
 	m_UV0s = texCoords0;
 }
 
-void ResourceCreator::ensureTexCoord1(unsigned long long shape_uid, int startTexCoord1, int texCoordCount1, const avs::vec2* texCoords1)
+void ResourceCreator::ensureTexCoord1(avs::uid shape_uid, int startTexCoord1, int texCoordCount1, const avs::vec2* texCoords1)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if ((size_t)texCoordCount1 != m_VertexCount)
+	if (texCoordCount1 != (int)m_VertexCount)
 		return;
 
 	m_UV1s = texCoords1;
 }
 
-void ResourceCreator::ensureColors(unsigned long long shape_uid, int startColor, int colorCount, const avs::vec4* colors)
+void ResourceCreator::ensureColors(avs::uid shape_uid, int startColor, int colorCount, const avs::vec4* colors)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if ((size_t)colorCount != m_VertexCount)
+	if (colorCount != (int)m_VertexCount)
 		return;
 
 	m_Colors = colors;
 }
 
-void ResourceCreator::ensureJoints(unsigned long long shape_uid, int startJoint, int jointCount, const avs::vec4* joints)
+void ResourceCreator::ensureJoints(avs::uid shape_uid, int startJoint, int jointCount, const avs::vec4* joints)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if ((size_t)jointCount != m_VertexCount)
+	if (jointCount != (int)m_VertexCount)
 		return;
 
 	m_Joints = joints;
 }
 
-void ResourceCreator::ensureWeights(unsigned long long shape_uid, int startWeight, int weightCount, const avs::vec4* weights)
+void ResourceCreator::ensureWeights(avs::uid shape_uid, int startWeight, int weightCount, const avs::vec4* weights)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if ((size_t)weightCount != m_VertexCount)
+	if (weightCount != (int)m_VertexCount)
 		return;
 
-//	size_t bufferSize = m_VertexCount * sizeof(avs::vec4);
 	m_Weights = weights;
 }
 
-void ResourceCreator::ensureIndices(unsigned long long shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices)
+void ResourceCreator::ensureIndices(avs::uid shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices)
 {
 	CHECK_SHAPE_UID(shape_uid);
 
@@ -114,6 +116,11 @@ void ResourceCreator::ensureIndices(unsigned long long shape_uid, int startIndex
 	m_IndexCount = indexCount;
 	m_Indices = indices;
 	m_IndexSize = indexSize;
+}
+void ResourceCreator::ensureMaterialUID(avs::uid shape_uid, avs::uid _material_uid)
+{
+	CHECK_SHAPE_UID(shape_uid);
+	m_MeshMaterialUIDPairs.push_back({ shape_uid, _material_uid });
 }
 
 avs::Result ResourceCreator::Assemble()
@@ -227,6 +234,12 @@ avs::Result ResourceCreator::Assemble()
 	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
 	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);
 
+	Mesh::MeshCreateInfo mesh_ci;
+	mesh_ci.vb = vb.get();
+	mesh_ci.ib = ib.get();
+	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
+	m_pActorManager->AddMesh(shape_uid, mesh);
+
 	m_Vertices = nullptr;
 	m_Normals = nullptr;
 	m_Tangents = nullptr;
@@ -236,6 +249,8 @@ avs::Result ResourceCreator::Assemble()
 	m_Joints = nullptr;
 	m_Weights = nullptr;
 	m_Indices = nullptr;
+
+	shape_uid = (avs::uid) -1;
 
     return avs::Result::OK;
 }
@@ -254,7 +269,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture & tex
 		texture.mipCount,
 		scr::Texture::Slot::UNKNOWN,
 		scr::Texture::Type::TEXTURE_2D,
-		scr::Texture::Format::FORMAT_UNKNOWN,
+		scr::Texture::Format::RGBA8, //Assumed
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
 		texture.width * texture.height * 4, //Width * Height * Channels
 		texture.data
@@ -265,10 +280,147 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture & tex
 	m_TextureManager->Add(texture_uid, std::move(scrTexture));
 }
 
-
+///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
+	///Claims textures without ever unclaiming the textures.
 	scr::Material::MaterialCreateInfo materialInfo;
+	materialInfo.diffuse.texture = nullptr;
+	materialInfo.normal.texture = nullptr;
+	materialInfo.combined.texture = nullptr;
 
-	//scr::Material scrMaterial(&materialInfo);
+	if(material.pbrMetallicRoughness.baseColorTexture.index != 0)
+	{
+		const std::shared_ptr<scr::Texture> *diffuseTexture = m_TextureManager->Claim(material.pbrMetallicRoughness.baseColorTexture.index);
+
+		if(diffuseTexture)
+		{
+			materialInfo.diffuse.texture = &**diffuseTexture;
+
+			materialInfo.diffuse.texCoordsScalar[0] = {1, 1};
+			materialInfo.diffuse.texCoordsScalar[1] = {1, 1};
+			materialInfo.diffuse.texCoordsScalar[2] = {1, 1};
+			materialInfo.diffuse.texCoordsScalar[3] = {1, 1};
+
+			materialInfo.diffuse.textureOutputScalar =
+			{
+				material.pbrMetallicRoughness.baseColorFactor.x,
+				material.pbrMetallicRoughness.baseColorFactor.y,
+				material.pbrMetallicRoughness.baseColorFactor.z,
+				material.pbrMetallicRoughness.baseColorFactor.w,
+			};
+		}
+		else
+		{
+			///REQUEST RESEND OF TEXTURE
+		}
+	}
+
+	if(material.normalTexture.index != 0)
+	{
+		const std::shared_ptr<scr::Texture> *normalTexture = m_TextureManager->Claim(material.normalTexture.index);
+
+		if(normalTexture)
+		{
+			materialInfo.normal.texture = &**normalTexture;
+
+			materialInfo.normal.texCoordsScalar[0] = {1, 1};
+			materialInfo.normal.texCoordsScalar[1] = {1, 1};
+			materialInfo.normal.texCoordsScalar[2] = {1, 1};
+			materialInfo.normal.texCoordsScalar[3] = {1, 1};
+
+			materialInfo.normal.textureOutputScalar = {1, 1, 1, 1};
+		}
+		else
+		{
+			///REQUEST RESEND OF TEXTURE
+		}
+	}
+
+	if(material.occlusionTexture.index != 0)
+	{
+		const std::shared_ptr<scr::Texture> *occlusionTexture = m_TextureManager->Claim(material.normalTexture.index);
+
+		if(occlusionTexture)
+		{
+			materialInfo.combined.texture = &**occlusionTexture;
+
+			materialInfo.combined.texCoordsScalar[0] = {1, 1};
+			materialInfo.combined.texCoordsScalar[1] = {1, 1};
+			materialInfo.combined.texCoordsScalar[2] = {1, 1};
+			materialInfo.combined.texCoordsScalar[3] = {1, 1};
+
+			materialInfo.combined.textureOutputScalar = {1, 1, 1, 1};
+		}
+		else
+		{
+			///REQUEST RESEND OF TEXTURE
+		}
+	}
+
+	///This needs an actual value.
+	materialInfo.effect = nullptr;
+
+	materialManager->Add(material_uid, &materialInfo);
+}
+
+void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
+{
+	// It may just be an update of a node's transform and/or children 
+	if (nodes.find(node_uid) == nodes.end())
+	{
+		nodes[node_uid] = std::make_shared<avs::DataNode>(node);
+	}
+	else
+	{
+		nodes[node_uid]->childrenUids = node.childrenUids;
+		nodes[node_uid]->transform = node.transform;
+	}
+
+	scr::vec3 translation = scr::vec3(node.transform.position.x, node.transform.position.y, node.transform.position.z);
+	scr::quat rotation = scr::quat(node.transform.rotation.w, node.transform.rotation.x, node.transform.rotation.y, node.transform.rotation.z);
+	scr::vec3 scale = scr::vec3(node.transform.scale.x, node.transform.scale.y, node.transform.scale.z);
+
+	if (m_pActorManager->GetTransform(node_uid) != nullptr) //Check the transform has already been added, if so update transform.
+	{
+		m_pActorManager->GetTransform(node_uid)->UpdateModelMatrix(translation, rotation, scale);
+	}
+	else
+	{
+		std::shared_ptr<scr::Transform> transform = std::make_shared<scr::Transform>();
+		transform->UpdateModelMatrix(translation, rotation, scale);
+		m_pActorManager->AddTransform(node_uid, transform);
+	}
+
+	switch (node.data_type)
+	{
+	case NodeDataType::Mesh:
+		{
+			size_t i = 0;
+			for (auto& meshMaterialPair : m_MeshMaterialUIDPairs)
+			{
+				if (meshMaterialPair.first == node.data_uid) //data_uid == shape_uid
+					break;
+				else
+					i++;
+			}
+			CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
+		}
+	case NodeDataType::Camera:
+		return;
+	case NodeDataType::Scene:
+		return;
+	}
+	
+}
+
+void ResourceCreator::CreateActor(std::pair<avs::uid, avs::uid>& meshMaterialPair, avs::uid transform_uid)
+{
+	scr::Actor::ActorCreateInfo actor_ci;
+	actor_ci.staticMesh = true;
+	actor_ci.animatedMesh = false;
+	actor_ci.mesh = m_pActorManager->GetMesh(meshMaterialPair.first).get();
+	actor_ci.material = m_pActorManager->GetMaterial(meshMaterialPair.second).get();
+	actor_ci.transform = m_pActorManager->GetTransform(transform_uid).get();
+	m_pActorManager->CreateActor(GenerateUid(), &actor_ci);
 }

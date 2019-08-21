@@ -16,11 +16,12 @@ class GL_Effect final : public scr::Effect
 			:scr::Effect(r) {}
 
 		void Create(EffectCreateInfo* pEffectCreateInfo) override;
+		void CreatePass(EffectPassCreateInfo* pEffectCreateInfo) override;
 
-		void Bind() const override;
-		void Unbind() const override;
+		void Bind(const char* effectPassName) const override;
+		void Unbind(const char* effectPassName) const override;
 
-		void LinkShaders() override;
+		void LinkShaders(const char* effectPassName) override;
 
 		inline OVR::GlProgram& GetGlPlatform() {return m_Program;}
 

@@ -23,12 +23,8 @@
 #include <libavstream/surfaces/surface_dx11.hpp>
 
 #include "libavstream/platforms/platform_windows.hpp"
-#include "crossplatform/ResourceManager.h"
-#include "api/IndexBuffer.h"
-#include "api/Shader.h"
-#include "api/Texture.h"
-#include "api/UniformBuffer.h"
-#include "api/VertexBuffer.h"
+
+#include "crossplatform/Material.h"
 
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
@@ -89,15 +85,17 @@ ClientRenderer::ClientRenderer():
 	framenumber(0),
 	sessionClient(this),
 	RenderMode(0),
-	indexBufferManager(ResourceManager<std::shared_ptr<scr::IndexBuffer>>(&scr::IndexBuffer::Destroy)),
-	shaderManager(ResourceManager< std::shared_ptr<scr::Shader>>(nullptr)),
-	textureManager(ResourceManager< std::shared_ptr<scr::Texture>>(&scr::Texture::Destroy)),
-	uniformBufferManager(ResourceManager< std::shared_ptr<scr::UniformBuffer>>(&scr::UniformBuffer::Destroy)),
-	vertexBufferManager(ResourceManager< std::shared_ptr<scr::VertexBuffer>>(&scr::VertexBuffer::Destroy))
+	indexBufferManager(&scr::IndexBuffer::Destroy),
+	shaderManager(nullptr),
+	materialManager(nullptr),
+	textureManager(&scr::Texture::Destroy),
+	uniformBufferManager(&scr::UniformBuffer::Destroy),
+	vertexBufferManager(&scr::VertexBuffer::Destroy)
 {
 	avsTextures.resize(NumStreams);
 	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);
-	resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
+	resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &materialManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
+	resourceCreator.AssociateActorManager(&actorManager);
 
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
@@ -414,6 +412,7 @@ void ClientRenderer::Update()
 
 	indexBufferManager.Update(timeElapsed);
 	shaderManager.Update(timeElapsed);
+	materialManager.Update(timeElapsed);
 	textureManager.Update(timeElapsed);
 	uniformBufferManager.Update(timeElapsed);
 	vertexBufferManager.Update(timeElapsed);
@@ -474,7 +473,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 	{
 		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
 		// Video streams are 50+...
-		if (!decoder[i].configure(dev, stream_width, stream_height, decoderParams, (int)(50+i)))
+		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, (int)(50+i)))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}

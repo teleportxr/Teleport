@@ -250,11 +250,11 @@ namespace scr
 				(0), (0), -((zFar + zNear) / (zFar - zNear)), -((2 * zFar * zNear) / (zFar - zNear)),
 				(0), (0), (-1), (0));
 		};
-		static mat4 Orthographic(float left, float right, float bottom, float top, float near, float far) 
+		static mat4 Orthographic(float left, float right, float bottom, float top, float _near, float _far) 
 		{
 			return mat4((2 / (right - left)), (0), (0), (-(right + left) / (right - left)),
 				(0), (2 / (top - bottom)), (0), (-(top + bottom) / (top - bottom)),
-				(0), (0), (-2 / (far - near)), (-(far + near) / (far - near)),
+				(0), (0), (-2 / (_far - _near)), (-(_far + _near) / (_far - _near)),
 				(0), (0), (0), (1));
 		};
 		
