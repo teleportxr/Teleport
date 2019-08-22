@@ -61,7 +61,7 @@ namespace scr
 		void UpdateMaterialUB();
 
 		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
-		inline const Effect* GetEffectConst() const { return m_CI.effect; }
-		inline Effect* GetEffect() { return m_CI.effect; }
+		inline const MaterialCreateInfo& GetMaterialCreateInfoConst() const { return m_CI; }
+		inline MaterialCreateInfo GetMaterialCreateInfo() { return m_CI; }
 	};
 }

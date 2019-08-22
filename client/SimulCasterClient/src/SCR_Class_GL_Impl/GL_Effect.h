@@ -25,11 +25,12 @@ class GL_Effect final : public scr::Effect
 
 		inline OVR::GlProgram& GetGlPlatform() {return m_Program;}
 
-		GLenum ToGLTopology(TopologyType topology) const;
-        GLenum ToGLCullMode(CullMode cullMode) const;
-        GLenum ToGLCompareOp(CompareOp op) const;
-        GLenum ToGLStencilCompareOp(StencilCompareOp op) const;
-        GLenum ToGLBlendFactor(BlendFactor factor) const;
-        GLenum ToGLBlendOp(BlendOp op) const;
+		static GLenum ToGLTopology(TopologyType topology);
+        static GLenum ToGLCullMode(CullMode cullMode);
+		static GLenum ToGLPolygonMode(PolygonMode polygonMode);
+        static GLenum ToGLCompareOp(CompareOp op);
+        static GLenum ToGLStencilCompareOp(StencilCompareOp op);
+        static GLenum ToGLBlendFactor(BlendFactor factor);
+        static GLenum ToGLBlendOp(BlendOp op);
 	};
 }

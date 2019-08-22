@@ -219,6 +219,7 @@ avs::Result ResourceCreator::Assemble()
 	VertexBuffer::VertexBufferCreateInfo vb_ci;
 	vb_ci.layout = std::move(layout);
 	vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
+	vb_ci.vertexCount = m_VertexCount;
 	vb_ci.size = interleavedVBSize;
 	vb_ci.data = (const void*)interleavedVB.get();
 	vb->Create(&vb_ci);
@@ -231,14 +232,14 @@ avs::Result ResourceCreator::Assemble()
 	ib_ci.data = m_Indices;
 	ib->Create(&ib_ci);
 
-	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
-	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);
-
 	Mesh::MeshCreateInfo mesh_ci;
-	mesh_ci.vb = vb.get();
-	mesh_ci.ib = ib.get();
+	mesh_ci.vb = vb;
+	mesh_ci.ib = ib;
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
 	m_pActorManager->AddMesh(shape_uid, mesh);
+
+	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
+	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);
 
 	m_Vertices = nullptr;
 	m_Normals = nullptr;
@@ -255,7 +256,7 @@ avs::Result ResourceCreator::Assemble()
     return avs::Result::OK;
 }
 
-void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture & texture)
+void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& texture)
 {
 	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	
@@ -360,7 +361,8 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	///This needs an actual value.
 	materialInfo.effect = nullptr;
-
+	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(&materialInfo);
+	m_pActorManager->AddMaterial(material_uid, scr_material);
 	materialManager->Add(material_uid, &materialInfo);
 }
 

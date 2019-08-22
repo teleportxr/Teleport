@@ -99,11 +99,28 @@ private:
 
 	int mNumPendingFrames = 0;
 
-	scr::ActorManager mActorManger;
+	scr::ActorManager mActorManager;
     ResourceManager<std::shared_ptr<scr::IndexBuffer>> mIndexBufferManager;
     ResourceManager<std::shared_ptr<scr::Shader>> mShaderManager;
 	ResourceManager<scr::Material> mMaterialManager;
     ResourceManager<std::shared_ptr<scr::Texture>> mTextureManager;
     ResourceManager<std::shared_ptr<scr::UniformBuffer>> mUniformBufferManager;
     ResourceManager<std::shared_ptr<scr::VertexBuffer>> mVertexBufferManager;
+
+    //Clientside Renderering Objects
+    scc::GL_DeviceContext mDeviceContext;
+    scc::GL_Effect mFlatColourEffect;
+    scc::GL_Texture mDummyTexture;
+    std::shared_ptr<scr::Material> mFlatColourMaterial;
+    std::map<avs::uid, OVR::ovrSurfaceDef> mOVRActors;
+    inline void RemoveInvalidOVRActors()
+	{
+		for(std::map<avs::uid, OVR::ovrSurfaceDef>::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
+		{
+			if(mActorManager.m_Actors.find(it->first) == mActorManager.m_Actors.end())
+			{
+				mOVRActors.erase(it);
+			}
+		}
+	}
 };

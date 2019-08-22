@@ -11,7 +11,7 @@ namespace scc
 	{
 	private:
 		GLuint m_VertexID;
-		GLuint m_VertexArrayID;
+		GLuint m_VertexArrayID = 0;
 
 	public:
         GL_VertexBuffer(scr::RenderPlatform* r)
@@ -28,8 +28,8 @@ namespace scc
 		inline const GLuint& GetVertexID() const { return m_VertexID; }
 		inline const GLuint& GetVertexArrayID() const { return m_VertexArrayID; }
 
-	private:
+	public:
 		//Assume an interleaved VBO;
-		void CreateVAO();
+		void CreateVAO(GLuint indexBufferID);
 	};
 }

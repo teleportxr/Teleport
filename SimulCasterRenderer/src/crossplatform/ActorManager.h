@@ -16,7 +16,8 @@ namespace scr
 		std::map<avs::uid, std::shared_ptr<Mesh>> m_Meshes;
 		std::map<avs::uid, std::shared_ptr<Material>> m_Materials;
 		std::map<avs::uid, std::shared_ptr<Transform>> m_Transforms;
-		
+
+	public:
 		std::map<avs::uid, std::shared_ptr<Actor>> m_Actors;
 
 	public:
@@ -55,6 +56,18 @@ namespace scr
 		void CreateActor(avs::uid actor_uid, Actor::ActorCreateInfo* pActorCreateInfo)
 		{
 			m_Actors[actor_uid] = std::make_shared<Actor>(pActorCreateInfo);
+		}
+
+		//Remove actors, if the vb or ib is invalid.
+		void RemoveInvalidActors()
+		{
+			std::map<avs::uid, std::shared_ptr<Actor>>::iterator it;
+			for(it = m_Actors.begin(); it != m_Actors.end(); it++)
+			{
+				if(it->second->GetMesh()->GetMeshCreateInfo().vb.get() == nullptr
+				 || it->second->GetMesh()->GetMeshCreateInfo().ib.get() == nullptr)
+					m_Actors.erase(it);
+			}
 		}
 	};
 }

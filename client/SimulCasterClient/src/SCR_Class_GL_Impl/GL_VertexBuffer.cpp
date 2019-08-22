@@ -10,12 +10,9 @@ void GL_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCreateInfo)
     m_CI = *pVertexBufferCreateInfo;
 
     glGenBuffers(1, &m_VertexID);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_VertexID);
+    glBindBuffer(GL_ARRAY_BUFFER, m_VertexID);
     glBufferData(GL_ARRAY_BUFFER, m_CI.size, m_CI.data, GL_STATIC_DRAW);
-
-    CreateVAO();
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 void GL_VertexBuffer::Destroy()
 {
@@ -25,17 +22,21 @@ void GL_VertexBuffer::Destroy()
 void GL_VertexBuffer::Bind() const
 {
     glBindVertexArray(m_VertexArrayID);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_VertexID);
+    glBindBuffer(GL_ARRAY_BUFFER, m_VertexID);
 }
 void GL_VertexBuffer::Unbind() const
 {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
-void GL_VertexBuffer::CreateVAO()
+void GL_VertexBuffer::CreateVAO(GLuint indexBufferID)
 {
     glGenVertexArrays(1, &m_VertexArrayID);
     glBindVertexArray(m_VertexArrayID);
+    //IBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    //VBO and Layout
     Bind();
 
     size_t offset = 0;

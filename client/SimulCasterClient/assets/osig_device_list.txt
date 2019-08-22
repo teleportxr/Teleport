@@ -1,0 +1,3 @@
+Oculus Signature File Device List:
+Samsung Galaxy S9	oculussig_226a46d8370c7ece
+Samsung Galaxy S8	oculussig_ce12171cc261011c05

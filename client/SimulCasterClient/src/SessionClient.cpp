@@ -33,10 +33,6 @@ static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
     return QuaternionMultiply(p,iq);
 }
 
-#define LOG OVR_LOG
-#define FAIL OVR_FAIL
-#define WARN OVR_WARN
-
 enum RemotePlaySessionChannel
 {
     RPCH_HANDSHAKE = 0,

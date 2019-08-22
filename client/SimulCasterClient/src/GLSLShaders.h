@@ -108,21 +108,22 @@ layout(std140, binding = 1) uniform TransformUB
 
 void main()
 {
-	gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
+	//gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
+    gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0) ;
 }
 )";
     static const char* FlatColour_FS = R"(
 //#version 310 es
 precision highp float;
 
-//To Output Framebuffer
-layout(location = 0) out vec4 colour;
+//To Output Framebuffer - Use gl_FragColor
+//layout(location = 0) out vec4 colour;
 
 const vec4 inputColour = vec4(1.0, 0.0, 1.0, 1.0);
 
-void main
+void main()
 {
-    colour = inputColour;
+    gl_FragColor = inputColour;
 }
 
 )";
@@ -166,14 +167,14 @@ void main()
 //#version 310 es
 precision highp float;
 
-//To Output Framebuffer
-layout(location = 0) out vec4 colour;
+//To Output Framebuffer - Use gl_FragColor
+//layout(location = 0) out vec4 colour;
 
 layout(binding = 10)  uniform sampler2D u_Texture;
 
-void main
+void main()
 {
-    colour = texture(u_Texture, v_UV0);
+    gl_FragColor = texture(u_Texture, v_UV0);
 }
 )";
 
@@ -240,8 +241,8 @@ void main()
 //#version 310 es
 precision highp float;
 
-//To Output Framebuffer
-layout(location = 0) out vec4 colour;
+//To Output Framebuffer - Use gl_FragColor
+//layout(location = 0) out vec4 colour;
 
 //From Vertex Varying
 layout(location = 0)  in vec3 v_Position;
@@ -439,6 +440,7 @@ void main()
 
 		Lo += Le + BRDF(N, Wo, Wi, H) * radiance * cosineFactor;
 	}
+    gl_FragColor = Lo; //Gamma Correction?
 }
 )";
 

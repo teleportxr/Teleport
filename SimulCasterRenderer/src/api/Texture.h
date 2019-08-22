@@ -7,7 +7,7 @@
 namespace scr
 {
 	//Interface for Texture
-	class Texture: public APIObject
+	class Texture : APIObject
 	{
 	public:
 		enum class Slot : uint32_t
@@ -119,10 +119,10 @@ namespace scr
 	protected:
 		TextureCreateInfo m_CI;
 
-		const Sampler* m_Sampler;
+		const Sampler* m_Sampler = nullptr;
 
 	public:
-		Texture(RenderPlatform *r) :APIObject(r) {}
+		Texture(RenderPlatform *r) : APIObject(r) {}
 		virtual ~Texture()
 		{
 			m_CI.width = 0;

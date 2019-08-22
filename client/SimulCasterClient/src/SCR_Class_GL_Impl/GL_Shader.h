@@ -6,7 +6,7 @@
 namespace scc
 {
 	//Interface for Shader
-class GL_Shader final : public scr::Shader
+	class GL_Shader final : public scr::Shader
 	{
 	public:
 		GL_Shader(scr::RenderPlatform *r)
