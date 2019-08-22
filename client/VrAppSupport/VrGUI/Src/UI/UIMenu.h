@@ -15,6 +15,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "VRMenu.h"
 #include "GuiSys.h"
 
+#include <string>
+
 namespace OVR {
 
 class UIMenu
@@ -49,7 +51,7 @@ public:
 	void								SetOnKeyEventFunction( OnKeyEventFunctionT onKeyEventFunction, void * usrPtr = nullptr );
 private:
 	OvrGuiSys &							GuiSys;
-    String								MenuName;
+    std::string							MenuName;
 	VRMenu *							Menu;
 
 	bool								MenuOpen;

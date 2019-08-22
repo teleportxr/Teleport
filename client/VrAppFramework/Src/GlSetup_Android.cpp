@@ -10,11 +10,11 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 ************************************************************************************/
 
 #include "GlSetup.h"
-#include "Kernel/OVR_Types.h"
+#include "OVR_Types.h"
 
 #if defined( OVR_OS_ANDROID )
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 // TODO: remove when new glext is available
 #if !defined( EGL_OPENGL_ES3_BIT_KHR )
@@ -48,23 +48,23 @@ static void LogStringWords( const char * allExtensions )
 	}
 }
 
-#if 0
+#if defined( OVR_BUILD_DEBUG )
 
 static void DumpEglConfigs( const EGLDisplay display )
 {
 	static const int MAX_CONFIGS = 1024;
-	EGLConfig 	configs[MAX_CONFIGS];
-	EGLint  	numConfigs = 0;
+	EGLConfig configs[MAX_CONFIGS];
+	EGLint numConfigs = 0;
 
 	if ( EGL_FALSE == eglGetConfigs( display,
 			configs, MAX_CONFIGS, &numConfigs ) )
 	{
-		WARN( "eglGetConfigs() failed" );
+		OVR_WARN( "eglGetConfigs() failed" );
 		return;
 	}
 
-	LOG( "ES2 configs:" );
-	LOG( "  Config R G B A DP S M W P REND SURF" );
+	OVR_LOG( "EGL configs:" );
+	OVR_LOG( "  Config R G B A DP S M W P REND SURF" );
 	for ( int i = 0; i < numConfigs; i++ )
 	{
 		EGLint	red = 0;
@@ -85,26 +85,26 @@ static void DumpEglConfigs( const EGLDisplay display )
 		// EGL_SURFACE_TYPE is a bit field
 		EGLint	surface = 0;
 		eglGetConfigAttrib( display, configs[i], EGL_SURFACE_TYPE , &surface );
-		EGLint window = (surface & EGL_WINDOW_BIT) != 0;
-		EGLint pbuffer = (surface & EGL_PBUFFER_BIT) != 0;
+		EGLint window = ( surface & EGL_WINDOW_BIT ) != 0;
+		EGLint pbuffer = ( surface & EGL_PBUFFER_BIT ) != 0;
 
 		// EGL_RENDERABLE_TYPE is a bit field
 		EGLint	renderable = 0;
-		eglGetConfigAttrib( display, configs[i], EGL_RENDERABLE_TYPE , &renderable );
+		eglGetConfigAttrib( display, configs[i], EGL_RENDERABLE_TYPE, &renderable );
 
-		LOG( "%8i %i %i %i %i %2i %i %i %i %i 0x%02x 0x%02x", (int)configs[i], red, green, blue, alpha,
-				depth, stencil, multisamples, window, pbuffer, renderable, surface);
+		OVR_LOG( "%p %i %i %i %i %2i %i %i %i %i 0x%02x 0x%02x", configs[i], red, green, blue, alpha,
+				depth, stencil, multisamples, window, pbuffer, renderable, surface );
 	}
 }
-
 #endif
 
 // Returns NULL if no config is found.
 static EGLConfig ChooseColorConfig( const EGLDisplay display, const int redBits,
 		const int greenBits, const int blueBits, const int depthBits, const int samples, const bool pbuffer )
 {
-
-//	DumpEglConfigs( display );
+#if defined( OVR_BUILD_DEBUG )
+	DumpEglConfigs( display );
+#endif
 
 	// We do NOT want to use eglChooseConfig, because the Android EGL code pushes in
 	// multisample flags behind our back if the user has selected the "force 4x MSAA"
@@ -193,13 +193,6 @@ glSetup_t GL_Setup( const EGLContext shareContext,
 	EGLint minorVersion;
 	eglInitialize( egl.display, &majorVersion, &minorVersion );
 	OVR_LOG( "eglInitialize gives majorVersion %i, minorVersion %i", majorVersion, minorVersion);
-
-#if defined( OVR_HAS_OPENGL_LOADER )
-	if ( !GLES3::LoadGLFunctions() )
-	{
-		OVR_FAIL( "Failed to load GLES3 core entry points!" );
-	}
-#endif
 
 	const char * eglVendorString = eglQueryString( egl.display, EGL_VENDOR );
 	OVR_LOG( "EGL_VENDOR: %s", eglVendorString );

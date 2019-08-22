@@ -12,15 +12,13 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "FolderBrowser.h"
 
-#include "Kernel/OVR_Threads.h"
 #include <stdio.h>
 #include "App.h"
 #include "VRMenuMgr.h"
 #include "GuiSys.h"
 #include "DefaultComponent.h"
 #include "VrCommon.h"
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_String_Utils.h"
+#include "OVR_Math.h"
 #include "stb_image.h"
 #include "PackageFiles.h"
 #include "AnimComponents.h"
@@ -28,6 +26,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "VRMenuObject.h"
 #include "ScrollBarComponent.h"
 #include "SwipeHintComponent.h"
+#include "OVR_Math.h"
 
 namespace OVR {
 
@@ -51,7 +50,7 @@ const int 	HIDE_SCROLLBAR_UNTIL_ITEM_COUNT		= 1; // <= 0 makes scroll bar always
 // Helper class that guarantees unique ids for VRMenuIds
 class OvrUniqueId
 {
-public: 
+public:
 	explicit OvrUniqueId( int startId )
 		: currentId( startId )
 	{}
@@ -72,7 +71,7 @@ VRMenuId_t OvrFolderBrowser::ID_CENTER_ROOT( uniqueId.Get( 1 ) );
 
 //==============================
 // OvrFolderBrowserRootComponent
-// This component is attached to the root parent of the folder browsers and gets to consume input first 
+// This component is attached to the root parent of the folder browsers and gets to consume input first
 class OvrFolderBrowserRootComponent : public VRMenuComponent
 {
 public:
@@ -91,7 +90,7 @@ public:
 	}
 
 	virtual int		GetTypeId() const
-	{ 
+	{
 		return TYPE_ID;
 	}
 
@@ -106,7 +105,7 @@ public:
 		const float maxHeight = deltaHeight * validNumFolders;
 		const float positionRatio = foldersRootObject->GetLocalPosition().y / maxHeight;
 		int idx = static_cast<int>( nearbyintf( positionRatio * validNumFolders ) );
-		idx = Alg::Clamp( idx, 0, FolderBrowser.GetNumFolders() - 1 );
+		idx = clamp<int>( idx, 0, FolderBrowser.GetNumFolders() - 1 );
 
 		// Remapping index with in valid folders to index in entire Folder array
 		const int numValidFolders = GetFolderBrowserValidFolderCount();
@@ -115,7 +114,7 @@ public:
 		for ( ; remapedIdx < numValidFolders; ++remapedIdx )
 		{
 			OvrFolderBrowser::FolderView * folder = FolderBrowser.GetFolderView( remapedIdx );
-			if ( folder && !folder->Panels.IsEmpty() )
+			if ( folder && !folder->Panels.empty() )
 			{
 				if ( counter == idx )
 				{
@@ -125,7 +124,7 @@ public:
 			}
 		}
 
-		return Alg::Clamp( remapedIdx, 0, FolderBrowser.GetNumFolders() - 1 );
+		return clamp<int>( remapedIdx, 0, FolderBrowser.GetNumFolders() - 1 );
 	}
 
 	void SetActiveFolder( int folderIdx )
@@ -185,7 +184,7 @@ private:
 				VRMenuObject * folderObject = guiSys.GetVRMenuMgr().ToObject( currentFolder->Handle );
 				if ( folderObject != NULL )
 				{
-					if ( currentFolder->Panels.GetSizeI() > 0 )
+					if ( currentFolder->Panels.size() > 0 )
 					{
 						folderObject->SetLocalPosition( ( DOWN * FolderBrowser.GetPanelHeight() * static_cast<float>( ValidFoldersCount ) ) );
 						++ValidFoldersCount;
@@ -248,7 +247,7 @@ private:
 			const Vector3f & position = child->GetLocalPosition();
 			Vector4f color = child->GetColor();
 			color.w = 0.0f;
-			const bool showFolder = FolderBrowser.HasNoMedia() || ( folder->Panels.GetSizeI() > 0 );
+			const bool showFolder = FolderBrowser.HasNoMedia() || ( folder->Panels.size() > 0 );
 
 			VRMenuObjectFlags_t flags = child->GetFlags();
 			const float absolutePosition = fabsf( rootOffset - fabsf( position.y ) );
@@ -258,14 +257,14 @@ private:
 				float ratio = absolutePosition / alphaSpace;
 				float ratioSq = ratio * ratio;
 				float finalAlpha = 1.0f - ratioSq;
-				color.w = Alg::Clamp( finalAlpha, 0.0f, 1.0f );
+				color.w = clamp<float>( finalAlpha, 0.0f, 1.0f );
 
 				// If we're showing the category for the first time, load the thumbs
 				// Only queue up if velocity is below threshold to avoid queuing categories flying past view
 				//const float scrollVelocity = ScrollMgr.GetVelocity();
 				if ( !folder->Visible /*&& ( fabsf( scrollVelocity ) < 0.09f )*/ )
 				{
-					OVR_LOG( "Revealing %s - loading thumbs", folder->CategoryTag.ToCStr() );
+					OVR_LOG( "Revealing %s - loading thumbs", folder->CategoryTag.c_str() );
 					folder->Visible = true;
 					// This loads entire category - instead we load specific thumbs in SwipeComponent
 				}
@@ -283,7 +282,7 @@ private:
 				// If we're just about to hide the folderview, unload the thumbnails
 				if ( folder->Visible )
 				{
-					OVR_LOG( "Hiding %s - unloading thumbs", folder->CategoryTag.ToCStr() );
+					OVR_LOG( "Hiding %s - unloading thumbs", folder->CategoryTag.c_str() );
 					folder->Visible = false;
 					folder->UnloadThumbnails( guiSys, FolderBrowser.GetDefaultThumbnailTextureId(), FolderBrowser.GetThumbWidth(), FolderBrowser.GetThumbHeight() );
 				}
@@ -308,7 +307,7 @@ private:
 				showScrollUpIndicator = ( ScrollMgr.GetPosition() >  0.8f );
 				showBottomIndicator = ( ScrollMgr.GetPosition() < ( ( ValidFoldersCount - 1 ) - 0.8f ) );
 
-				finalCol.w = Alg::Clamp( timeDiff, 5.0f, 6.0f ) - 5.0f;
+				finalCol.w = clamp<float>( timeDiff, 5.0f, 6.0f ) - 5.0f;
 			}
 		}
 
@@ -383,12 +382,12 @@ private:
 			return MSG_STATUS_CONSUMED;
 		}
 
-		FolderBrowser.TouchRelative(event.FloatValue);
+		FolderBrowser.TouchRelative( event.FloatValue );
 		Vector2f currentTouchPosition( event.FloatValue.x, event.FloatValue.y );
 		TotalTouchDistance += ( currentTouchPosition - StartTouchPosition ).LengthSq();
 		if ( ValidFoldersCount > 1 )
 		{
-			ScrollMgr.TouchRelative(event.FloatValue);
+			ScrollMgr.TouchRelative( event.FloatValue, vrFrame.RealTimeInSeconds );
 		}
 
 		return MSG_STATUS_ALIVE;
@@ -407,7 +406,7 @@ private:
 		for ( int i = 0; i < folderCount; ++i )
 		{
 			const OvrFolderBrowser::FolderView * currentFolder = FolderBrowser.GetFolderView( i );
-			if ( currentFolder && currentFolder->Panels.GetSizeI() > 0 )
+			if ( currentFolder && currentFolder->Panels.size() > 0 )
 			{
 				++validFoldersCount;
 			}
@@ -430,7 +429,7 @@ const float OvrFolderBrowserRootComponent::ACTIVE_DEPTH_OFFSET = 3.4f;
 
 //==============================================================
 // OvrFolderRootComponent
-// Component attached to the root object of each folder 
+// Component attached to the root object of each folder
 class OvrFolderRootComponent : public VRMenuComponent
 {
 public:
@@ -530,12 +529,12 @@ public:
 
 	void SetRotationByIndex( const int panelIndex )
 	{
-		OVR_ASSERT( panelIndex >= 0 && panelIndex < ( *FolderPtr ).Panels.GetSizeI() );
+		OVR_ASSERT( panelIndex >= 0 && panelIndex < static_cast< int >( ( *FolderPtr ).Panels.size() ) );
 		ScrollMgr.SetPosition( static_cast< float >( panelIndex ) );
 	}
 
-	void SetAccumulatedRotation( const float rot )	
-	{ 
+	void SetAccumulatedRotation( const float rot )
+	{
 		ScrollMgr.SetPosition( rot );
 		ScrollMgr.SetVelocity( 0.0f );
 	}
@@ -547,7 +546,7 @@ public:
 	int GetNextPanelIndex( const int step ) const
 	{
 		const OvrFolderBrowser::FolderView & folder = *FolderPtr;
-		const int numPanels = folder.Panels.GetSizeI();
+		const int numPanels = static_cast< int >( folder.Panels.size() );
 
 		int nextPanelIndex = CurrentPanelIndex() + step;
 		if ( nextPanelIndex >= numPanels )
@@ -576,7 +575,7 @@ private:
 		}
 
 		OvrFolderBrowser::FolderView & folder = *FolderPtr;
-		const int numPanels = folder.Panels.GetSizeI();
+		const int numPanels = static_cast< int >( folder.Panels.size() );
 		eScrollDirectionLockType touchDirLock = FolderBrowser.GetTouchDirectionLock();
 		eScrollDirectionLockType conrollerDirLock = FolderBrowser.GetControllerDirectionLock();
 
@@ -623,7 +622,7 @@ private:
     	}
 
 		const float position = ScrollMgr.GetPosition();
-		
+
 		// Send the position to the ScrollBar
 		VRMenuObject * scrollBarObject = guiSys.GetVRMenuMgr().ToObject( folder.ScrollBarHandle );
 		OVR_ASSERT( scrollBarObject != NULL );
@@ -642,16 +641,16 @@ private:
 			scrollBar->SetScrollFrac(  guiSys.GetVRMenuMgr(), scrollBarObject, position );
 		}
 
-		// hide the scrollbar if not active 
+		// hide the scrollbar if not active
 		const float velocity = ScrollMgr.GetVelocity();
 		if ( ( numPanels > 1 && TouchDown ) || fabsf( velocity ) >= 0.01f )
 		{
 			scrollBar->SetScrollState( scrollBarObject, OvrScrollBarComponent::SCROLL_STATE_FADE_IN );
 		}
 		else if ( !TouchDown && ( !isActiveFolder || fabsf( velocity ) < 0.01f ) )
-		{			
+		{
 			scrollBar->SetScrollState( scrollBarObject, OvrScrollBarComponent::SCROLL_STATE_FADE_OUT );
-		}	
+		}
 
     	const float curRot = position * ( MATH_FLOAT_TWOPI / FolderBrowser.GetCircumferencePanelSlots() );
 		Quatf rot( UP, curRot );
@@ -665,7 +664,7 @@ private:
 		const int extraPanels = FolderBrowser.GetNumSwipePanels() / 2;
 		for ( int i = 0; i < numPanels; ++i )
 		{
-			OvrFolderBrowser::PanelView * panel = folder.Panels.At( i );
+			OvrFolderBrowser::PanelView * panel = folder.Panels.at( i );
 			OVR_ASSERT( panel->Handle.IsValid() );
 			VRMenuObject * panelObject = guiSys.GetVRMenuMgr().ToObject( panel->Handle );
 			OVR_ASSERT( panelObject );
@@ -674,7 +673,7 @@ private:
 			if ( i >= curPanelIndex - extraPanels && i <= curPanelIndex + extraPanels )
 			{
 				flags &= ~( VRMenuObjectFlags_t( VRMENUOBJECT_DONT_RENDER ) | VRMENUOBJECT_DONT_HIT_ALL );
-				
+
 				if ( !panel->Visible && folder.Visible )
 				{
 					panel->Visible = true;
@@ -698,7 +697,7 @@ private:
 				}
 			}
 			else
-			{				
+			{
 				flags |= VRMenuObjectFlags_t( VRMENUOBJECT_DONT_RENDER ) | VRMENUOBJECT_DONT_HIT_ALL;
 				if ( panel->Visible )
 				{
@@ -729,7 +728,7 @@ private:
     		    		return OnTouchUp_Impl( guiSys, vrFrame, self, upEvent );
     		}
     		case VRMENU_EVENT_TOUCH_RELATIVE:
-    			ScrollMgr.TouchRelative( event.FloatValue );
+    			ScrollMgr.TouchRelative( event.FloatValue, vrFrame.RealTimeInSeconds );
     			break;
     		default:
     			OVR_ASSERT( !"Event flags mismatch!" ); // the constructor is specifying a flag that's not handled
@@ -769,7 +768,7 @@ OvrFolderBrowser::OvrFolderBrowser(
 		float panelWidth,
 		float panelHeight,
 		float radius_,
-		unsigned numSwipePanels, 
+		unsigned numSwipePanels,
 		unsigned thumbWidth,
 		unsigned thumbHeight )
 	: VRMenu( MENU_NAME )
@@ -791,7 +790,6 @@ OvrFolderBrowser::OvrFolderBrowser(
 	, LastControllerInputTimeStamp( 0.0f )
 	, IsTouchDownPosistionTracked( false )
 	, TouchDirectionLocked( NO_LOCK )
-	, ThumbnailLoadingThread( Thread::CreateParams( & ThumbnailThread, this, 128 * 1024, -1, Thread::NotRunning, Thread::BelowNormalPriority) )
 {
 	//  Load up thumbnail alpha from panel.tga
 	if ( ThumbPanelBG == NULL )
@@ -810,13 +808,14 @@ OvrFolderBrowser::OvrFolderBrowser(
 			panel = "res/raw/panel.tga";
 		}
 
-		ovr_ReadFileFromApplicationPackage( panel, bufferLength, buffer );
-
-		int panelW = 0;
-		int panelH = 0;
-		ThumbPanelBG = stbi_load_from_memory( ( stbi_uc const * )buffer, bufferLength, &panelW, &panelH, NULL, 4 );
-
-		OVR_ASSERT( ThumbPanelBG != 0 && panelW == ThumbWidth && panelH == ThumbHeight );
+		if(ovr_ReadFileFromApplicationPackage( panel, bufferLength, buffer ))
+		{
+			int panelW = 0;
+			int panelH = 0;
+			ThumbPanelBG = stbi_load_from_memory((stbi_uc const *) buffer, bufferLength, &panelW,
+												 &panelH, NULL, 4);
+			OVR_ASSERT( ThumbPanelBG != 0 && panelW == ThumbWidth && panelH == ThumbHeight );
+		}
 	}
 
 	// load up the default panel textures once
@@ -833,7 +832,7 @@ OvrFolderBrowser::OvrFolderBrowser(
 			panelSrc[ 0 ]  = "apk:///res/raw/panel.tga";
 			panelSrc[ 1 ]  = "apk:///res/raw/panel_hi.tga";
 		}
-		
+
 		for ( int t = 0; t < 2; ++t )
 		{
 			int width = 0;
@@ -847,11 +846,7 @@ OvrFolderBrowser::OvrFolderBrowser(
 		}
 	}
 
-	if ( ! ThumbnailLoadingThread.Start() )
-	{
-		OVR_FAIL( "Thumbnail thread start failed." );
-	}
-	ThumbnailLoadingThread.SetThreadName( "FolderBrowser" );
+	ThumbnailLoadingThread = std::thread( &OvrFolderBrowser::ThumbnailThread, this );
 
 	PanelWidth = panelWidth * VRMenuObject::DEFAULT_TEXEL_SCALE;
 	PanelHeight = panelHeight * VRMenuObject::DEFAULT_TEXEL_SCALE;
@@ -861,8 +856,8 @@ OvrFolderBrowser::OvrFolderBrowser(
 	CircumferencePanelSlots = ( int )( floor( circumference / PanelWidth ) );
 	VisiblePanelsArcAngle = (( float )( NumSwipePanels + 1 ) / CircumferencePanelSlots ) * MATH_FLOAT_TWOPI;
 
-	Array< VRMenuComponent* > comps;
-	comps.PushBack( new OvrFolderBrowserRootComponent( *this ) );
+	std::vector< VRMenuComponent* > comps;
+	comps.push_back( new OvrFolderBrowserRootComponent( *this ) );
 	Init( guiSys, 0.0f, VRMenuFlags_t(), comps );
 }
 
@@ -875,16 +870,20 @@ OvrFolderBrowser::~OvrFolderBrowser()
 {
 	OVR_LOG( "OvrFolderBrowser::~OvrFolderBrowser" );
 	// Wake up thumbnail thread if needed and shut it down
-	ThumbnailThreadMutex.DoLock();
-	ThumbnailThreadState.SetState( THUMBNAIL_THREAD_SHUTDOWN );
-	ThumbnailThreadCondition.NotifyAll();
-	ThumbnailThreadMutex.Unlock();
-	BackgroundCommands.ClearMessages();
-	
-	int numFolders = Folders.GetSizeI();
-	for ( int i = 0; i < numFolders; ++i )
+	ThumbnailThreadState.store( THUMBNAIL_THREAD_SHUTDOWN );
+	ThumbnailThreadCondition.notify_all();
+
+	OVR_LOG( "OvrFolderBrowser::~OvrFolderBrowser - shutting down msg queue ..." );
+	BackgroundCommands.Shutdown();
+
+	if ( ThumbnailLoadingThread.joinable() )
 	{
-		FolderView * folder = Folders.At( i );
+		OVR_LOG( "OvrFolderBrowser::~OvrFolderBrowser - joining ThumbnailLoadingThread ..." );
+		ThumbnailLoadingThread.join();
+	}
+
+	for ( FolderView * folder : Folders )
+	{
 		if ( folder )
 		{
 			folder->FreeThumbnailTextures( DefaultPanelTextureIds[ 0 ] );
@@ -979,7 +978,7 @@ void OvrFolderBrowser::Frame_Impl( OvrGuiSys & guiSys, ovrFrameInput const & vrF
 		}
 	}
 }
-    
+
 VRMenuId_t OvrFolderBrowser::NextId()
 {
     return VRMenuId_t( uniqueId.Get( 1 ) );
@@ -992,32 +991,30 @@ void OvrFolderBrowser::Open_Impl( OvrGuiSys & guiSys )
 		return;
 	}
 
-	// Rebuild favorites if not empty 
+	// Rebuild favorites if not empty
 	OnBrowserOpen( guiSys );
 
 	// Wake up thumbnail thread
-	ThumbnailThreadMutex.DoLock();
-	ThumbnailThreadState.SetState( THUMBNAIL_THREAD_WORK );
-	ThumbnailThreadCondition.NotifyAll(); 
-	ThumbnailThreadMutex.Unlock();
+	ThumbnailThreadState.store( THUMBNAIL_THREAD_WORK );
+	ThumbnailThreadCondition.notify_all();
 }
 
 void OvrFolderBrowser::Close_Impl( OvrGuiSys & guiSys )
 {
-	ThumbnailThreadState.SetState( THUMBNAIL_THREAD_PAUSE );
+	ThumbnailThreadState.store( THUMBNAIL_THREAD_PAUSE );
 }
 
 void OvrFolderBrowser::OneTimeInit( OvrGuiSys & guiSys )
 {
 	const OvrStoragePaths & storagePaths = guiSys.GetApp()->GetStoragePaths();
 	storagePaths.GetPathIfValidPermission( EST_PRIMARY_EXTERNAL_STORAGE, EFT_CACHE, "", permissionFlags_t( PERMISSION_WRITE ), AppCachePath );
-	OVR_ASSERT( !AppCachePath.IsEmpty() );
+	OVR_ASSERT( !AppCachePath.empty() );
 
 	storagePaths.PushBackSearchPathIfValid( EST_SECONDARY_EXTERNAL_STORAGE, EFT_ROOT, "RetailMedia/", ThumbSearchPaths );
 	storagePaths.PushBackSearchPathIfValid( EST_SECONDARY_EXTERNAL_STORAGE, EFT_ROOT, "", ThumbSearchPaths );
 	storagePaths.PushBackSearchPathIfValid( EST_PRIMARY_EXTERNAL_STORAGE, EFT_ROOT, "RetailMedia/", ThumbSearchPaths );
 	storagePaths.PushBackSearchPathIfValid( EST_PRIMARY_EXTERNAL_STORAGE, EFT_ROOT, "", ThumbSearchPaths );
-	OVR_ASSERT( !ThumbSearchPaths.IsEmpty() );
+	OVR_ASSERT( !ThumbSearchPaths.empty() );
 
 	// move the root up to eye height
 	OvrVRMenuMgr & menuManager = guiSys.GetVRMenuMgr();
@@ -1030,8 +1027,8 @@ void OvrFolderBrowser::OneTimeInit( OvrGuiSys & guiSys )
 		root->SetLocalPosition( pos );
 	}
 
-	Array< VRMenuComponent* > comps;
-	Array< VRMenuObjectParms const * > parms;
+	std::vector< VRMenuComponent* > comps;
+	std::vector< VRMenuObjectParms const * > parms;
 
 	// Folders root folder
 	FoldersRootId = VRMenuId_t( uniqueId.Get( 1 ) );
@@ -1047,10 +1044,10 @@ void OvrFolderBrowser::OneTimeInit( OvrGuiSys & guiSys )
 		VRMenuObjectFlags_t(),
 		VRMenuObjectInitFlags_t()
 		);
-	parms.PushBack( &foldersRootParms );
+	parms.push_back( &foldersRootParms );
 	AddItems( guiSys, parms, GetRootHandle(), false );
-	parms.Clear();
-	comps.Clear();
+	parms.clear();
+	comps.clear();
 
 	// Build scroll up/down hints attached to root
 	VRMenuId_t scrollSuggestionRootId( uniqueId.Get( 1 ) );
@@ -1067,9 +1064,9 @@ void OvrFolderBrowser::OneTimeInit( OvrGuiSys & guiSys )
 		VRMenuObjectFlags_t(),
 		VRMenuObjectInitFlags_t()
 		);
-	parms.PushBack( &scrollSuggestionParms );
+	parms.push_back( &scrollSuggestionParms );
 	AddItems( guiSys, parms, GetRootHandle(), false );
-	parms.Clear();
+	parms.clear();
 
 	ScrollSuggestionRootHandle = root->ChildHandleForId( menuManager, scrollSuggestionRootId );
 	OVR_ASSERT( ScrollSuggestionRootHandle.IsValid() );
@@ -1103,11 +1100,11 @@ void OvrFolderBrowser::BuildDirtyMenu( OvrGuiSys & guiSys, OvrMetaData & metaDat
 {
 	OvrVRMenuMgr & menuManager = guiSys.GetVRMenuMgr();
 
-	Array< VRMenuComponent* > comps;
-	Array< const VRMenuObjectParms * > parms;
-	
-	const Array< OvrMetaData::Category > & categories = metaData.GetCategories();
-	const int numCategories = categories.GetSizeI();
+	std::vector< VRMenuComponent* > comps;
+	std::vector< const VRMenuObjectParms * > parms;
+
+	const std::vector< OvrMetaData::Category > & categories = metaData.GetCategories();
+	const int numCategories = static_cast< int >( categories.size() );
 
 	// load folders and position
 	for ( int catIndex = 0; catIndex < numCategories; ++catIndex )
@@ -1116,23 +1113,23 @@ void OvrFolderBrowser::BuildDirtyMenu( OvrGuiSys & guiSys, OvrMetaData & metaDat
 		OvrMetaData::Category & currentCategory = metaData.GetCategory( catIndex );
 		if ( currentCategory.Dirty ) // Only build if dirty
 		{
-			OVR_LOG( "Loading folder %i named %s", catIndex, currentCategory.CategoryTag.ToCStr() );
+			OVR_LOG( "Loading folder %i named %s", catIndex, currentCategory.CategoryTag.c_str() );
 			FolderView * folder = GetFolderView( currentCategory.CategoryTag );
 
 			// if building for the first time
 			if ( folder == NULL )
 			{
 				// Create internal folder struct
-				String localizedCategoryName;
+				std::string localizedCategoryName;
 
 				// Get localized tag (folder title)
-				localizedCategoryName = GetCategoryTitle( guiSys, currentCategory.CategoryTag.ToCStr(), currentCategory.LocaleKey.ToCStr() );
+				localizedCategoryName = GetCategoryTitle( guiSys, currentCategory.CategoryTag.c_str(), currentCategory.LocaleKey.c_str() );
 				
 				folder = CreateFolderView( localizedCategoryName, currentCategory.CategoryTag );
-				Folders.PushBack( folder );
+				Folders.push_back( folder );
 
-				const int folderIndex = Folders.GetSizeI() - 1; // Can't rely on catIndex due to duplicate folders
-	
+				const int folderIndex = static_cast< int >( Folders.size() ) - 1; // Can't rely on catIndex due to duplicate folders
+
 				BuildFolderView( guiSys, currentCategory, folder, metaData, FoldersRootId, folderIndex );
 
 				UpdateFolderTitle( guiSys, folder );
@@ -1148,14 +1145,14 @@ void OvrFolderBrowser::BuildDirtyMenu( OvrGuiSys & guiSys, OvrMetaData & metaDat
 					const OvrMetaData::Category & cat = metaData.GetCategory( existingIndex );
 					if ( cat.CategoryTag == currentCategory.CategoryTag )
 					{
-						Array< const OvrMetaDatum * > folderMetaData;
+						std::vector< const OvrMetaDatum * > folderMetaData;
 						if ( metaData.GetMetaData( cat, folderMetaData ) )
 						{
 							RebuildFolderView( guiSys, metaData, existingIndex, folderMetaData );
 						}
 						else
 						{
-							OVR_LOG( "Failed to get any metaData for folder %i named %s", existingIndex, currentCategory.CategoryTag.ToCStr() );
+							OVR_LOG( "Failed to get any metaData for folder %i named %s", existingIndex, currentCategory.CategoryTag.c_str() );
 						}
 						break;
 					}
@@ -1167,7 +1164,7 @@ void OvrFolderBrowser::BuildDirtyMenu( OvrGuiSys & guiSys, OvrMetaData & metaDat
 			currentCategory.Dirty = false;
 
 			// Set up initial positions - 0 in center, the rest ascending in order below it
-			MediaCount += folder->Panels.GetSizeI();
+			MediaCount += static_cast< int >( folder->Panels.size() );
 			VRMenuObject * folderObject = menuManager.ToObject( folder->Handle );
 			OVR_ASSERT( folderObject != NULL );
 			folderObject->SetLocalPosition( ( DOWN * PanelHeight * static_cast<float>( catIndex ) ) + folderObject->GetLocalPosition() );
@@ -1179,28 +1176,28 @@ void OvrFolderBrowser::BuildDirtyMenu( OvrGuiSys & guiSys, OvrMetaData & metaDat
 	// Show no media menu if no media found
 	if ( MediaCount == 0 )
 	{
-		String title;
-		String imageFile;
-		String message;
+		std::string title;
+		std::string imageFile;
+		std::string message;
 		OnMediaNotFound( guiSys, title, imageFile, message );
 
 		// Create a folder if we didn't create at least one to display no media info
-		if ( Folders.GetSizeI() < 1 )
+		if ( Folders.size() < 1 )
 		{
-			const String noMediaTag( "No Media" );
+			const std::string noMediaTag( "No Media" );
 			const_cast< OvrMetaData & >( metaData ).AddCategory( noMediaTag );
 			OvrMetaData::Category & noMediaCategory = metaData.GetCategory( 0 );
 			FolderView * noMediaView = new FolderView( noMediaTag, noMediaTag );
 			BuildFolderView( guiSys, noMediaCategory, noMediaView, metaData, FoldersRootId, 0 );
-			Folders.PushBack( noMediaView );
+			Folders.push_back( noMediaView );
 		}
 
-		// Set title 
+		// Set title
 		const FolderView * folder = GetFolderView( 0 );
 		OVR_ASSERT ( folder != NULL );
 		VRMenuObject * folderTitleObject = menuManager.ToObject( folder->TitleHandle );
 		OVR_ASSERT( folderTitleObject != NULL );
-		folderTitleObject->SetText( title.ToCStr() );
+		folderTitleObject->SetText( title.c_str() );
 		folderTitleObject->SetVisible( true );
 
 		// Add no media panel
@@ -1210,17 +1207,17 @@ void OvrFolderBrowser::BuildDirtyMenu( OvrGuiSys & guiSys, OvrMetaData & metaDat
 		const Posef textPose( Quatf(), Vector3f( 0.0f, -0.3f, 0.0f ) );
 
 		VRMenuSurfaceParms panelSurfParms( "panelSurface",
-			imageFile.ToCStr(), SURFACE_TEXTURE_DIFFUSE,
+			imageFile.c_str(), SURFACE_TEXTURE_DIFFUSE,
 			NULL, SURFACE_TEXTURE_MAX,
 			NULL, SURFACE_TEXTURE_MAX );
 
-		VRMenuObjectParms * p = new VRMenuObjectParms( VRMENU_STATIC, Array< VRMenuComponent* >(),
-			panelSurfParms, message.ToCStr(), panelPose, panelScale, textPose, Vector3f( 1.3f ), fontParms, VRMenuId_t(),
+		VRMenuObjectParms * p = new VRMenuObjectParms( VRMENU_STATIC, std::vector< VRMenuComponent* >(),
+			panelSurfParms, message.c_str(), panelPose, panelScale, textPose, Vector3f( 1.3f ), fontParms, VRMenuId_t(),
 			VRMenuObjectFlags_t( VRMENUOBJECT_DONT_HIT_ALL ), VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
 
-		parms.PushBack( p );
+		parms.push_back( p );
 		AddItems( guiSys, parms, folder->SwipeHandle, true ); // PARENT: folder.TitleRootHandle
-		parms.Clear();
+		parms.clear();
 
 		NoMedia = true;
 
@@ -1237,10 +1234,10 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 
 	OvrVRMenuMgr & menuManager = guiSys.GetVRMenuMgr();
 
-	Array< const VRMenuObjectParms * > parms;
+	std::vector< const VRMenuObjectParms * > parms;
 	const VRMenuFontParms fontParms( HORIZONTAL_CENTER, VERTICAL_CENTER, false, false, true, 0.525f, 0.45f, 1.0f );
 
-	const int numPanels = category.DatumIndicies.GetSizeI();
+	const int numPanels = static_cast< int >( category.DatumIndicies.size() );
 
 	VRMenuObject * root = menuManager.ToObject( GetRootHandle() );
 	OVR_ASSERT( root != NULL );
@@ -1248,14 +1245,14 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 
 	// Create OvrFolderRootComponent for folder root
 	const VRMenuId_t folderId( uniqueId.Get( 1 ) );
-	OVR_LOG( "Building Folder %s id: %lld with %d panels", category.CategoryTag.ToCStr(), folderId.Get(), numPanels );
-	Array< VRMenuComponent* > comps;
-	comps.PushBack( new OvrFolderRootComponent( *this, folder ) );
+	OVR_LOG( "Building Folder %s id: %lld with %d panels", category.CategoryTag.c_str(), folderId.Get(), numPanels );
+	std::vector< VRMenuComponent* > comps;
+	comps.push_back( new OvrFolderRootComponent( *this, folder ) );
 	VRMenuObjectParms folderParms(
 		VRMENU_CONTAINER,
 		comps,
 		VRMenuSurfaceParms(),
-		( folder->LocalizedName + " root" ).ToCStr(),
+		( folder->LocalizedName + " root" ).c_str(),
 		Posef(),
 		Vector3f( 1.0f ),
 		fontParms,
@@ -1263,9 +1260,9 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 		VRMenuObjectFlags_t(),
 		VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION )
 		);
-	parms.PushBack( &folderParms );
+	parms.push_back( &folderParms );
 	AddItems( guiSys, parms, foldersRootHandle, false ); // PARENT: Root
-	parms.Clear();
+	parms.clear();
 
 	// grab the folder handle and make sure it was created
 	folder->Handle = HandleForId( menuManager, folderId );
@@ -1282,14 +1279,14 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 	const VRMenuId_t scrollThumbId( uniqueId.Get( 1 ) );
 
 	// Set the border of the thumb image for 9-slicing
-	const Vector4f scrollThumbBorder( 0.0f, 0.0f, 0.0f, 0.0f );	
+	const Vector4f scrollThumbBorder( 0.0f, 0.0f, 0.0f, 0.0f );
 	const Vector3f xFormPos = DOWN * static_cast<float>( ThumbHeight ) * VRMenuObject::DEFAULT_TEXEL_SCALE * ScrollBarSpacingScale;
 
 	// Build the scrollbar
 	OvrScrollBarComponent::GetScrollBarParms( guiSys, *this, SCROLL_BAR_LENGTH, folderId, scrollRootId, scrollXFormId, scrollBaseId, scrollThumbId,
-		scrollBarPose, Posef( Quatf(), xFormPos ), 0, numPanels, false, scrollThumbBorder, parms );	
+		scrollBarPose, Posef( Quatf(), xFormPos ), 0, numPanels, false, scrollThumbBorder, parms );
 	AddItems( guiSys, parms, folder->Handle, false ); // PARENT: folder->Handle
-	parms.Clear();
+	parms.clear();
 
 	// Cache off the handle and verify successful creation
 	folder->ScrollBarHandle = folderObject->ChildHandleForId( menuManager, scrollRootId );
@@ -1309,33 +1306,33 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 
   	// Add OvrFolderSwipeComponent to folder - manages panel swiping
 	VRMenuId_t swipeFolderId( uniqueId.Get( 1 ) );
-	Array< VRMenuComponent* > swipeComps;
-	swipeComps.PushBack( CreateFolderBrowserSwipeComponent( *this, folder ) );
+	std::vector< VRMenuComponent* > swipeComps;
+	swipeComps.push_back( CreateFolderBrowserSwipeComponent( *this, folder ) );
 	VRMenuObjectParms swipeParms(
-		VRMENU_CONTAINER, 
+		VRMENU_CONTAINER,
 		swipeComps,
 		VRMenuSurfaceParms(), 
-		( folder->LocalizedName + " swipe" ).ToCStr(),
+		( folder->LocalizedName + " swipe" ).c_str(),
 		Posef(), 
 		Vector3f( 1.0f ), 
 		fontParms,
 		swipeFolderId,
-		VRMenuObjectFlags_t( VRMENUOBJECT_NO_GAZE_HILIGHT ), 
-		VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) 
+		VRMenuObjectFlags_t( VRMENUOBJECT_NO_GAZE_HILIGHT ),
+		VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION )
 		);
-	parms.PushBack( &swipeParms );
+	parms.push_back( &swipeParms );
 	AddItems( guiSys, parms, folder->Handle, false ); // PARENT: folder->Handle
-	parms.Clear();
+	parms.clear();
 
 	// grab the SwipeHandle handle and make sure it was created
 	folder->SwipeHandle = folderObject->ChildHandleForId( menuManager, swipeFolderId );
 	VRMenuObject * swipeObject = menuManager.ToObject( folder->SwipeHandle );
 	OVR_ASSERT( swipeObject != NULL );
-	
+
 	// build a collision primitive that encompasses all of the panels for a raw (including the empty space between them)
 	// so that we can always send our swipe messages to the correct row based on gaze.
-	Array< Vector3f > vertices( CircumferencePanelSlots * 2 );
-	Array< TriangleIndex > indices( CircumferencePanelSlots * 6 );
+	std::vector< Vector3f > vertices( CircumferencePanelSlots * 2 );
+	std::vector< TriangleIndex > indices( CircumferencePanelSlots * 6 );
 	int curIndex = 0;
 	TriangleIndex curVertex = 0;
 	for ( int i = 0; i < CircumferencePanelSlots; ++i )
@@ -1372,25 +1369,24 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 	indices[curIndex + 5] = curVertex - 1;
 
 	// create and set the collision primitive on the swipe object
-	OvrTriCollisionPrimitive * cp = new OvrTriCollisionPrimitive( vertices, indices, Array< Vector2f >(), ContentFlags_t( CONTENT_SOLID ) );
+	OvrTriCollisionPrimitive * cp = new OvrTriCollisionPrimitive( vertices, indices, std::vector< Vector2f >(), ContentFlags_t( CONTENT_SOLID ) );
 	swipeObject->SetCollisionPrimitive( cp );
 
-	if ( !category.DatumIndicies.IsEmpty() )
+	if ( !category.DatumIndicies.empty() )
 	{
-        // Grab panel parms 
+        // Grab panel parms
 		LoadFolderViewPanels( guiSys, metaData, category, folderIndex, *folder, parms );
-		if ( !parms.IsEmpty() )
+		if ( !parms.empty() )
 		{
 			// Add panels to swipehandle
 			AddItems( guiSys, parms, folder->SwipeHandle, false );
 			DeletePointerArray( parms );
-			parms.Clear();
+			parms.clear();
 		}
 
 		// Assign handles to panels
-		for ( int i = 0; i < folder->Panels.GetSizeI(); ++i )
+		for ( PanelView* panel : folder->Panels )
 		{
-			PanelView* panel = folder->Panels.At( i );
 			panel->Handle = swipeObject->ChildHandleForId( menuManager, panel->MenuId );
 		}
 	}
@@ -1399,9 +1395,9 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 	VRMenuId_t folderTitleRootId( uniqueId.Get( 1 ) );
 	VRMenuObjectParms titleRootParms(
 		VRMENU_CONTAINER,
-		Array< VRMenuComponent* >(),
+		std::vector< VRMenuComponent* >(),
 		VRMenuSurfaceParms(),
-		( folder->LocalizedName + " title root" ).ToCStr(),
+		( folder->LocalizedName + " title root" ).c_str(),
 		Posef(),
 		Vector3f( 1.0f ),
 		fontParms,
@@ -1409,9 +1405,9 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 		VRMenuObjectFlags_t(),
 		VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION )
 		);
-	parms.PushBack( &titleRootParms );
+	parms.push_back( &titleRootParms );
 	AddItems( guiSys, parms, folder->Handle, false ); // PARENT: folder->Handle
-	parms.Clear();
+	parms.clear();
 
 	// grab the title root handle and make sure it was created
 	folder->TitleRootHandle = folderObject->ChildHandleForId( menuManager, folderTitleRootId );
@@ -1421,20 +1417,20 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 
 	VRMenuId_t folderTitleId( uniqueId.Get( 1 ) );
 	Posef titlePose( Quatf(), FWD * Radius + UP * PanelHeight * FolderTitleSpacingScale );
-	VRMenuObjectParms titleParms( 
-		VRMENU_STATIC, 
-		Array< VRMenuComponent* >(),
+	VRMenuObjectParms titleParms(
+		VRMENU_STATIC,
+		std::vector< VRMenuComponent* >(),
 		VRMenuSurfaceParms(),
 		"no title",
-		titlePose, 
-		Vector3f( 1.25f ), 
+		titlePose,
+		Vector3f( 1.25f ),
 		fontParms,
 		folderTitleId,
-		VRMenuObjectFlags_t( VRMENUOBJECT_DONT_HIT_TEXT ), 
+		VRMenuObjectFlags_t( VRMENUOBJECT_DONT_HIT_TEXT ),
 		VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
-	parms.PushBack( &titleParms );
+	parms.push_back( &titleParms );
 	AddItems( guiSys, parms, folder->TitleRootHandle, true ); // PARENT: folder->TitleRootHandle
-	parms.Clear();
+	parms.clear();
 
 	// grab folder title handle and make sure it was created
 	folder->TitleHandle = folderTitleRootObject->ChildHandleForId( menuManager, folderTitleId );
@@ -1443,10 +1439,10 @@ void OvrFolderBrowser::BuildFolderView( OvrGuiSys & guiSys, OvrMetaData::Categor
 	OVR_ASSERT( folderTitleObject != NULL );
 }
 
-void OvrFolderBrowser::RebuildFolderView( OvrGuiSys & guiSys, OvrMetaData & metaData, const int folderIndex, const Array< const OvrMetaDatum * > & data )
+void OvrFolderBrowser::RebuildFolderView( OvrGuiSys & guiSys, OvrMetaData & metaData, const int folderIndex, const std::vector< const OvrMetaDatum * > & data )
 {
-	if ( folderIndex >= 0 && Folders.GetSizeI() > folderIndex )
-	{		
+	if ( folderIndex >= 0 && static_cast< int >( Folders.size() ) > folderIndex )
+	{
 		OvrVRMenuMgr & menuManager = guiSys.GetVRMenuMgr();
 
 		FolderView * folder = GetFolderView( folderIndex );
@@ -1460,40 +1456,40 @@ void OvrFolderBrowser::RebuildFolderView( OvrGuiSys & guiSys, OvrMetaData & meta
 		OVR_ASSERT( swipeObject );
 
 		swipeObject->FreeChildren( menuManager );
-		folder->Panels.Clear();
+		folder->Panels.clear();
 
-		const int numPanels = data.GetSizeI();
-		Array< const VRMenuObjectParms * > outParms;
-		Array< int > newDatumIndicies;
+		const int numPanels = static_cast< int >( data.size() );
+		std::vector< const VRMenuObjectParms * > outParms;
+		std::vector< int > newDatumIndicies;
 		for ( int panelIndex = 0; panelIndex < numPanels; ++panelIndex )
 		{
-			const OvrMetaDatum * panelData = data.At( panelIndex );
+			const OvrMetaDatum * panelData = data.at( panelIndex );
 			if ( panelData )
 			{
-				AddPanelToFolder( guiSys, data.At( panelIndex ), folderIndex, *folder, outParms );
-				if ( !outParms.IsEmpty() )
+				AddPanelToFolder( guiSys, data.at( panelIndex ), folderIndex, *folder, outParms );
+				if ( !outParms.empty() )
 				{
 					AddItems( guiSys, outParms, folder->SwipeHandle, false );
 					DeletePointerArray( outParms );
-					outParms.Clear();
+					outParms.clear();
 				}
 
 				// Assign handle to panel
-				PanelView* panel = folder->Panels.At( panelIndex );
+				PanelView* panel = folder->Panels.at( panelIndex );
 				panel->Handle = swipeObject->ChildHandleForId( menuManager, panel->MenuId );
-				newDatumIndicies.PushBack( panelData->Id );
+				newDatumIndicies.push_back( panelData->Id );
 			}
 		}
 
 		metaData.SetCategoryDatumIndicies( folderIndex, newDatumIndicies );
 
 		OvrFolderSwipeComponent * swipeComp = swipeObject->GetComponentById< OvrFolderSwipeComponent >();
-		OVR_ASSERT( swipeComp );		
+		OVR_ASSERT( swipeComp );
 		UpdateFolderTitle( guiSys, folder );
 
 		// Recalculate accumulated rotation in the swipe component based on ratio of where user left off before adding/removing favorites
 		const float currentMaxRotation = folder->MaxRotation > 0.0f ? folder->MaxRotation : 1.0f;
-		const float positionRatio = Alg::Clamp( swipeComp->GetAccumulatedRotation() / currentMaxRotation, 0.0f, 1.0f );
+		const float positionRatio = clamp<float>( swipeComp->GetAccumulatedRotation() / currentMaxRotation, 0.0f, 1.0f );
 		folder->MaxRotation = CalcFolderMaxRotation( folder );
 		swipeComp->SetAccumulatedRotation( folder->MaxRotation * positionRatio );
 
@@ -1514,12 +1510,12 @@ void OvrFolderBrowser::UpdateFolderTitle( OvrGuiSys & guiSys, const FolderView *
 {
 	if ( folder != NULL )
 	{
-		const int numPanels = folder->Panels.GetSizeI();
+		const int numPanels = static_cast< int >( folder->Panels.size() );
 
-		String folderTitle = folder->LocalizedName;
+		std::string folderTitle = folder->LocalizedName;
 		VRMenuObject * folderTitleObject = guiSys.GetVRMenuMgr().ToObject( folder->TitleHandle );
 		OVR_ASSERT( folderTitleObject != NULL );
-		folderTitleObject->SetText( folderTitle.ToCStr() );
+		folderTitleObject->SetText( folderTitle.c_str() );
 
 		VRMenuObjectFlags_t flags = folderTitleObject->GetFlags();
 		if ( numPanels > 0 )
@@ -1537,37 +1533,37 @@ void OvrFolderBrowser::UpdateFolderTitle( OvrGuiSys & guiSys, const FolderView *
 	}
 }
 
-threadReturn_t OvrFolderBrowser::ThumbnailThread( Thread *thread, void * v )
+void OvrFolderBrowser::ThumbnailThread()
 {
-	thread->SetThreadName( "FolderBrowser" );
-
-	OvrFolderBrowser * folderBrowser = (OvrFolderBrowser *)v;
+	// thread->SetThreadName( "FolderBrowser" );
 
 	for ( ;; )
 	{
-		folderBrowser->BackgroundCommands.SleepUntilMessage();
+		BackgroundCommands.SleepUntilMessage();
 
-		switch ( folderBrowser->ThumbnailThreadState.GetState() )
+		switch ( ThumbnailThreadState.load() )
 		{
 		case THUMBNAIL_THREAD_WORK:
 			break;
 		case THUMBNAIL_THREAD_PAUSE:
 		{
 			OVR_LOG( "OvrFolderBrowser::ThumbnailThread PAUSED" );
-			folderBrowser->ThumbnailThreadMutex.DoLock();
-			while ( folderBrowser->ThumbnailThreadState.GetState() == THUMBNAIL_THREAD_PAUSE )
 			{
-				folderBrowser->ThumbnailThreadCondition.Wait( &folderBrowser->ThumbnailThreadMutex );
+				while ( ThumbnailThreadState.load() == THUMBNAIL_THREAD_PAUSE )
+				{
+					std::unique_lock< std::mutex > lk( ThumbnailThreadMutex );
+					ThumbnailThreadCondition.wait( lk );
+				}
 			}
-			folderBrowser->ThumbnailThreadMutex.Unlock();
+			OVR_LOG( "OvrFolderBrowser::ThumbnailThread PAUSED DONE" );
 			continue;
 		}
 		case THUMBNAIL_THREAD_SHUTDOWN:
 			OVR_LOG( "OvrFolderBrowser::ThumbnailThread shutting down" );
-			return NULL;
+			return;
 		}
 
-		const char * msg = folderBrowser->BackgroundCommands.GetNextMessage();
+		const char * msg = BackgroundCommands.GetNextMessage();
 		OVR_LOG( "BackgroundCommands: %s", msg );
 
 		if ( MatchesHead( "load ", msg ) )
@@ -1579,25 +1575,25 @@ threadReturn_t OvrFolderBrowser::ThumbnailThread( Thread *thread, void * v )
 			OVR_ASSERT( folderId >= 0 && panelId >= 0 );
 
 			// Do we still need to load this?
-			const FolderView * folder = folderBrowser->GetFolderView( folderId );
+			const FolderView * folder = GetFolderView( folderId );
 			// ThumbnailsLoaded is set to false when the category goes out of view - do not load the thumbnail
-			if ( folder && folder->Visible ) 
+			if ( folder && folder->Visible )
 			{
-				if ( panelId >= 0 && panelId < folder->Panels.GetSizeI() )
+				if ( panelId >= 0 && panelId < static_cast< int >( folder->Panels.size() ) )
 				{
-					const PanelView * panel = folder->Panels.At( panelId );
+					const PanelView * panel = folder->Panels.at( panelId );
 					if ( panel && panel->Visible )
 					{
 						const char * fileName = strstr( msg, ":" ) + 1;
 
-						const String fullPath( fileName );
+						const std::string fullPath( fileName );
 
 						int		width;
 						int		height;
-						unsigned char * data = folderBrowser->LoadThumbnail( fileName, width, height );
+						unsigned char * data = LoadThumbnail( fileName, width, height );
 						if ( data != NULL )
 						{
-							folderBrowser->TextureCommands.PostPrintf( "thumb %i %i %p %i %i",
+							TextureCommands.PostPrintf( "thumb %i %i %p %i %i",
 								folderId, panelId, data, width, height );
 						}
 						else
@@ -1619,18 +1615,18 @@ threadReturn_t OvrFolderBrowser::ThumbnailThread( Thread *thread, void * v )
 			sscanf( msg, "httpThumb %s %s %d %d", panoUrl, cacheDestination, &folderId, &panelId );
 
 			// Do we still need to load this?
-			const FolderView * folder = folderBrowser->GetFolderView( folderId );
+			const FolderView * folder = GetFolderView( folderId );
 			// ThumbnailsLoaded is set to false when the category goes out of view - do not load the thumbnail
 			if ( folder && folder->Visible )
 			{
-				if ( panelId >= 0 && panelId < folder->Panels.GetSizeI() )
+				if ( panelId >= 0 && panelId < static_cast< int >( folder->Panels.size() ) )
 				{
-					const PanelView * panel = folder->Panels.At( panelId );
+					const PanelView * panel = folder->Panels.at( panelId );
 					if ( panel && panel->Visible )
 					{
 						int		width;
 						int		height;
-						unsigned char * data = folderBrowser->RetrieveRemoteThumbnail(
+						unsigned char * data = RetrieveRemoteThumbnail(
 							panoUrl,
 							cacheDestination,
 							folderId,
@@ -1640,7 +1636,7 @@ threadReturn_t OvrFolderBrowser::ThumbnailThread( Thread *thread, void * v )
 
 						if ( data != NULL )
 						{
-							folderBrowser->TextureCommands.PostPrintf( "thumb %i %i %p %i %i",
+							TextureCommands.PostPrintf( "thumb %i %i %p %i %i",
 								folderId, panelId, data, width, height );
 						}
 						else
@@ -1663,7 +1659,7 @@ threadReturn_t OvrFolderBrowser::ThumbnailThread( Thread *thread, void * v )
 
 // THUMBFIX: call this to load final thumbnail onto the panel
 void OvrFolderBrowser::LoadThumbnailToTexture( OvrGuiSys & guiSys, const char * thumbnailCommand )
-{	
+{
 	int folderId;
 	int panelId;
 	unsigned char * data;
@@ -1685,7 +1681,7 @@ void OvrFolderBrowser::LoadThumbnailToTexture( OvrGuiSys & guiSys, const char * 
 		return;
 	}
 
-	Array<PanelView*> * panels = &folder->Panels;
+	std::vector<PanelView*> * panels = &folder->Panels;
 	if ( panels == NULL )
 	{
 		OVR_WARN( "OvrFolderBrowser::LoadThumbnailToTexture failed to get panels array from folder" );
@@ -1696,10 +1692,10 @@ void OvrFolderBrowser::LoadThumbnailToTexture( OvrGuiSys & guiSys, const char * 
 	PanelView * panel = NULL;
 
 	// find panel using panelId
-	const int numPanels = panels->GetSizeI();
+	const int numPanels = static_cast< int >( panels->size() );
 	for ( int index = 0; index < numPanels; ++index )
 	{
-		PanelView* currentPanel = panels->At( index );
+		PanelView* currentPanel = panels->at( index );
 		if ( currentPanel->Id == panelId )
 		{
 			panel = currentPanel;
@@ -1741,28 +1737,28 @@ void OvrFolderBrowser::LoadThumbnailToTexture( OvrGuiSys & guiSys, const char * 
 }
 
 void OvrFolderBrowser::LoadFolderViewPanels( OvrGuiSys & guiSys, const OvrMetaData & metaData, const OvrMetaData::Category & category, const int folderIndex, FolderView & folder,
-		Array< VRMenuObjectParms const * >& outParms )
+		std::vector< VRMenuObjectParms const * >& outParms )
 {
-	// Build panels 
-	Array< const OvrMetaDatum * > categoryPanos;
+	// Build panels
+	std::vector< const OvrMetaDatum * > categoryPanos;
 	metaData.GetMetaData( category, categoryPanos );
-	const int numPanos = categoryPanos.GetSizeI();
-	OVR_LOG( "Building %d panels for %s", numPanos, category.CategoryTag.ToCStr() );
+	const int numPanos = static_cast< int >( categoryPanos.size() );
+	OVR_LOG( "Building %d panels for %s", numPanos, category.CategoryTag.c_str() );
 	for ( int panoIndex = 0; panoIndex < numPanos; panoIndex++ )
 	{
-		AddPanelToFolder( guiSys, const_cast< OvrMetaDatum * const >( categoryPanos.At( panoIndex ) ), folderIndex, folder, outParms );
+		AddPanelToFolder( guiSys, const_cast< OvrMetaDatum * const >( categoryPanos.at( panoIndex ) ), folderIndex, folder, outParms );
 	}
 }
 
-void OvrFolderBrowser::AddPanelToFolder( OvrGuiSys & guiSys, const OvrMetaDatum * panoData, const int folderIndex, FolderView & folder, Array< VRMenuObjectParms const * >& outParms )
+void OvrFolderBrowser::AddPanelToFolder( OvrGuiSys & guiSys, const OvrMetaDatum * panoData, const int folderIndex, FolderView & folder, std::vector< VRMenuObjectParms const * >& outParms )
 {
 	OVR_ASSERT( panoData );
 
-	const int panelIndex = folder.Panels.GetSizeI();
+	const int panelIndex = static_cast< int >( folder.Panels.size() );
 	PanelView * panel = CreatePanelView( panelIndex );
     panel->MenuId = NextId();
 
-	// This is the only place these indices are ever set. 
+	// This is the only place these indices are ever set.
 	panoData->FolderIndex = folderIndex;
 	panoData->PanelId = panelIndex;
 
@@ -1779,7 +1775,7 @@ void OvrFolderBrowser::AddPanelToFolder( OvrGuiSys & guiSys, const OvrMetaDatum 
 	// Add panel VRMenuObjectParms to be added to our menu
 	AddPanelMenuObject( guiSys, panoData, swipeObject, panel->MenuId, &folder, folderIndex, panel, panelPose, panelScale, outParms );
 
-	folder.Panels.PushBack( panel );
+	folder.Panels.push_back( panel );
 }
 
 void OvrFolderBrowser::QueueAsyncThumbnailLoad( const OvrMetaDatum * panoData, const int folderIndex, const int panelId )
@@ -1791,7 +1787,7 @@ void OvrFolderBrowser::QueueAsyncThumbnailLoad( const OvrMetaDatum * panoData, c
 		return;
 	}
 
-	if ( folderIndex < 0 || folderIndex >= Folders.GetSizeI() )
+	if ( folderIndex < 0 || folderIndex >= static_cast< int >( Folders.size() ) )
 	{
 		OVR_WARN( "OvrFolderBrowser::QueueAsyncThumbnailLoad error invalid folder index: %d", folderIndex );
 		return;
@@ -1805,43 +1801,43 @@ void OvrFolderBrowser::QueueAsyncThumbnailLoad( const OvrMetaDatum * panoData, c
 	}
 	else
 	{
-		const int numPanels = folder->Panels.GetSizeI();
+		const int numPanels = static_cast< int >( folder->Panels.size() );
 		if ( panelId < 0 || panelId >= numPanels )
 		{
 			OVR_WARN( "OvrFolderBrowser::QueueAsyncThumbnailLoad error invalid panel id: %d", panelId );
 			return;
 		}
 	}
-	
+
 	// Create or load thumbnail - request built up here to be processed ThumbnailThread
-	const String panoUrl = ThumbUrl( panoData );
-	const String thumbName = ThumbName( panoUrl );
-	String finalThumb;
+	const std::string panoUrl = ThumbUrl( panoData );
+	const std::string thumbName = ThumbName( panoUrl );
+	std::string finalThumb;
 	char relativeThumbPath[ 1024 ];
-	ToRelativePath( ThumbSearchPaths, panoUrl.ToCStr(), relativeThumbPath, sizeof( relativeThumbPath ) );
+	ToRelativePath( ThumbSearchPaths, panoUrl.c_str(), relativeThumbPath, sizeof( relativeThumbPath ) );
 
 	char appCacheThumbPath[ 1024 ];
-	OVR_sprintf( appCacheThumbPath, sizeof( appCacheThumbPath ), "%s%s", AppCachePath.ToCStr(), ThumbName( relativeThumbPath ).ToCStr() );
+	OVR_sprintf( appCacheThumbPath, sizeof( appCacheThumbPath ), "%s%s", AppCachePath.c_str(), ThumbName( relativeThumbPath ).c_str() );
 
 	// if this url doesn't exist locally
-	if ( !FileExists( panoUrl.ToCStr() ) )
+	if ( !FileExists( panoUrl.c_str() ) )
 	{
 		// Check app cache to see if we already downloaded it
 		if ( FileExists( appCacheThumbPath ) )
 		{
 			finalThumb = appCacheThumbPath;
 		}
-		else // download and cache it 
+		else // download and cache it
 		{
-			BackgroundCommands.PostPrintf( "httpThumb %s %s %d %d", panoUrl.ToCStr(), appCacheThumbPath, folderIndex, panelId );
+			BackgroundCommands.PostPrintf( "httpThumb %s %s %d %d", panoUrl.c_str(), appCacheThumbPath, folderIndex, panelId );
 			return;
 		}
 	}
 	
-	if ( finalThumb.IsEmpty() )
+	if ( finalThumb.empty() )
 	{
 		// Try search paths next to image for retail photos
-		if ( !GetFullPath( ThumbSearchPaths, thumbName.ToCStr(), finalThumb ) )
+		if ( !GetFullPath( ThumbSearchPaths, thumbName.c_str(), finalThumb ) )
 		{
 			// Try app cache for cached user pano thumbs
 			if ( FileExists( appCacheThumbPath ) )
@@ -1850,30 +1846,30 @@ void OvrFolderBrowser::QueueAsyncThumbnailLoad( const OvrMetaDatum * panoData, c
 			}
 			else
 			{
-				const String altThumbPath = AlternateThumbName( panoUrl );
-				if ( altThumbPath.IsEmpty() || !GetFullPath( ThumbSearchPaths, altThumbPath.ToCStr(), finalThumb ) )
+				const std::string altThumbPath = AlternateThumbName( panoUrl );
+				if ( altThumbPath.empty() || !GetFullPath( ThumbSearchPaths, altThumbPath.c_str(), finalThumb ) )
 				{
-					int pathLen = panoUrl.GetLengthI();
-					if ( pathLen > 2 && OVR_stricmp( panoUrl.ToCStr() + pathLen - 2, ".x" ) == 0 )
+					int pathLen = static_cast< int > ( panoUrl.length() );
+					if ( pathLen > 2 && OVR_stricmp( panoUrl.c_str() + pathLen - 2, ".x" ) == 0 )
 					{
 						OVR_WARN( "Thumbnails cannot be generated from encrypted images." );
-						return; // No thumb & can't create 
+						return; // No thumb & can't create
 					}
 				}
 			}
 		}
 	}
 
-	if ( !finalThumb.IsEmpty() )
+	if ( !finalThumb.empty() )
 	{
 		char cmd[ 1024 ];
-		OVR_sprintf( cmd, 1024, "load %i %i:%s", folderIndex, panelId, finalThumb.ToCStr() );
+		OVR_sprintf( cmd, 1024, "load %i %i:%s", folderIndex, panelId, finalThumb.c_str() );
 		OVR_LOG( "Thumb cmd: %s", cmd );
 		BackgroundCommands.PostString( cmd );
 	}
 	else
 	{
-		OVR_WARN( "Failed to find thumbnail for %s - will be created when selected", panoUrl.ToCStr() );
+		OVR_WARN( "Failed to find thumbnail for %s - will be created when selected", panoUrl.c_str() );
 	}
 }
 
@@ -1887,12 +1883,12 @@ void OvrFolderBrowser::AddPanelMenuObject(
 		PanelView * panel,
 		Posef panelPose,
 		Vector3f panelScale,
-		Array< VRMenuObjectParms const * >& outParms )
+		std::vector< VRMenuObjectParms const * >& outParms )
 {
 	// Load a panel
-	Array< VRMenuComponent* > panelComps;
-	panelComps.PushBack( new OvrPanel_OnUp( this, panoData, folderIndex, panel->Id ) );
-	panelComps.PushBack( new OvrDefaultComponent( Vector3f( 0.0f, 0.0f, 0.05f ), 1.05f, 0.25f, 0.25f, Vector4f( 0.f ) ) );
+	std::vector< VRMenuComponent* > panelComps;
+	panelComps.push_back( new OvrPanel_OnUp( this, panoData, folderIndex, panel->Id ) );
+	panelComps.push_back( new OvrDefaultComponent( Vector3f( 0.0f, 0.0f, 0.05f ), 1.05f, 0.25f, 0.25f, Vector4f( 0.f ) ) );
 
 	// single-pass multitexture
 	VRMenuSurfaceParms panelSurfParms(
@@ -1913,7 +1909,7 @@ void OvrFolderBrowser::AddPanelMenuObject(
 	// Title text placed below thumbnail
 	const Posef textPose( Quatf(), Vector3f( 0.0f, -PanelHeight * PanelTextSpacingScale, 0.0f ) );
 
-	String panelTitle = GetPanelTitle( guiSys, *panoData );
+	std::string panelTitle = GetPanelTitle( guiSys, *panoData );
 	// GetPanelTitle should ALWAYS return a localized string
 	//guiSys.GetApp()->GetLocale()->GetString( panoTitle, panoTitle, panelTitle );
 
@@ -1922,7 +1918,7 @@ void OvrFolderBrowser::AddPanelMenuObject(
 			VRMENU_BUTTON,
 			panelComps,
 			panelSurfParms,
-			panelTitle.ToCStr(),
+			panelTitle.c_str(),
 			panelPose,
 			panelScale,
 			textPose,
@@ -1931,7 +1927,7 @@ void OvrFolderBrowser::AddPanelMenuObject(
 			id,
 			VRMenuObjectFlags_t( VRMENUOBJECT_DONT_HIT_TEXT ) | VRMENUOBJECT_RENDER_HIERARCHY_ORDER,
 			VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
-    outParms.PushBack( p );	
+    outParms.push_back( p );
 }
 
 bool OvrFolderBrowser::ApplyThumbAntialiasing( unsigned char * inOutBuffer, int width, int height ) const
@@ -1965,44 +1961,43 @@ bool OvrFolderBrowser::ApplyThumbAntialiasing( unsigned char * inOutBuffer, int 
 
 const OvrFolderBrowser::FolderView * OvrFolderBrowser::GetFolderView( int index ) const
 {
-	if ( Folders.IsEmpty() )
+	if ( Folders.empty() )
 	{
 		return NULL;
 	}
 
-	if ( index < 0 || index >= Folders.GetSizeI() )
+	if ( index < 0 || index >= static_cast< int >( Folders.size() ) )
 	{
 		return NULL;
 	}
 
-	return Folders.At( index );
+	return Folders.at( index );
 }
 
 OvrFolderBrowser::FolderView * OvrFolderBrowser::GetFolderView( int index )
 {
-	if ( Folders.IsEmpty() )
+	if ( Folders.empty() )
 	{
 		return NULL;
 	}
 
-	if ( index < 0 || index >= Folders.GetSizeI() )
+	if ( index < 0 || index >= static_cast< int >( Folders.size() ) )
 	{
 		return NULL;
 	}
 
-	return Folders.At( index );
+	return Folders.at( index );
 }
 
-OvrFolderBrowser::FolderView * OvrFolderBrowser::GetFolderView( const String & categoryTag )
+OvrFolderBrowser::FolderView * OvrFolderBrowser::GetFolderView( const std::string & categoryTag )
 {
-	if ( Folders.IsEmpty() )
+	if ( Folders.empty() )
 	{
 		return NULL;
 	}
 
-	for ( int i = 0; i < Folders.GetSizeI(); ++i )
+	for ( FolderView * currentFolder : Folders )
 	{
-		FolderView * currentFolder = Folders.At( i );
 		if ( currentFolder->CategoryTag == categoryTag )
 		{
 			return currentFolder;
@@ -2020,7 +2015,7 @@ bool OvrFolderBrowser::RotateCategory( OvrGuiSys & guiSys, const CategoryDirecti
 
 void OvrFolderBrowser::SetCategoryRotation( OvrGuiSys & guiSys, const int folderIndex, const int panelIndex )
 {
-	OVR_ASSERT( folderIndex >= 0 && folderIndex < Folders.GetSizeI() );
+	OVR_ASSERT( folderIndex >= 0 && folderIndex < static_cast< int >( Folders.size() ) );
 	const FolderView * folder = GetFolderView( folderIndex );
 	if ( folder != NULL )
 	{
@@ -2077,7 +2072,7 @@ const OvrMetaDatum* OvrFolderBrowser::GetNextFileInCategory( OvrGuiSys & guiSys,
 		return NULL;
 	}
 
-	const int numPanels = folder->Panels.GetSizeI();
+	const int numPanels = static_cast< int >( folder->Panels.size() );
 
 	if ( numPanels == 0 )
 	{
@@ -2088,8 +2083,8 @@ const OvrMetaDatum* OvrFolderBrowser::GetNextFileInCategory( OvrGuiSys & guiSys,
 	if ( swipeComp )
 	{
 		const int nextPanelIndex = swipeComp->GetNextPanelIndex( step );
-	
-		const PanelView * panel = folder->Panels.At( nextPanelIndex );
+
+		const PanelView * panel = folder->Panels.at( nextPanelIndex );
 		VRMenuObject * panelObject = guiSys.GetVRMenuMgr().ToObject( panel->Handle );
 		if ( panelObject )
 		{
@@ -2111,7 +2106,7 @@ float OvrFolderBrowser::CalcFolderMaxRotation( const FolderView * folder ) const
 		OVR_ASSERT( false );
 		return 0.0f;
 	}
-	int numPanels = Alg::Clamp( folder->Panels.GetSizeI() - 1, 0, INT_MAX );
+	int numPanels = clamp<int>( static_cast< int >( folder->Panels.size() ) - 1, 0, INT_MAX );
 	return static_cast< float >( numPanels );
 }
 
@@ -2142,7 +2137,7 @@ bool OvrFolderBrowser::GazingAtMenu( Matrix4f const & view ) const
 
 		const float cosHalf = cosf( VisiblePanelsArcAngle );
 		const float dot = viewForwardFlat.Dot( -FWD * GetMenuPose().Rotation );
-		
+
 		if ( dot >= cosHalf )
 		{
 			return true;
@@ -2212,7 +2207,7 @@ void OvrFolderBrowser::TouchRelative( Vector3f touchPos )
 	}
 }
 
-OvrFolderBrowser::FolderView::FolderView( const String & name, const String & tag ) 
+OvrFolderBrowser::FolderView::FolderView( const std::string & name, const std::string & tag ) 
 	: CategoryTag( tag )
 	, LocalizedName( name )
 	, FolderIndex( -1 )
@@ -2232,9 +2227,8 @@ void OvrFolderBrowser::FolderView::UnloadThumbnails( OvrGuiSys & guiSys, const G
 {
 	FreeThumbnailTextures( defaultTextureId );
 
-	for ( int i = 0; i < Panels.GetSizeI(); ++i )
+	for ( PanelView * panel : Panels )
 	{
-		PanelView * panel = Panels.At( i );
 		if ( panel )
 		{
 			panel->LoadDefaultThumbnail( guiSys, defaultTextureId, thumbWidth, thumbHeight );
@@ -2244,9 +2238,8 @@ void OvrFolderBrowser::FolderView::UnloadThumbnails( OvrGuiSys & guiSys, const G
 
 void OvrFolderBrowser::FolderView::FreeThumbnailTextures( const GLuint defaultTextureId )
 {
-	for ( int i = 0; i < Panels.GetSizeI(); ++i )
+	for ( PanelView * panel : Panels )
 	{
-		PanelView * panel = Panels.At( i );
 		if ( panel && ( panel->TextureId != defaultTextureId ) )
 		{
 			glDeleteTextures( 1, &panel->TextureId  );
@@ -2258,11 +2251,11 @@ void OvrFolderBrowser::FolderView::FreeThumbnailTextures( const GLuint defaultTe
 void OvrFolderBrowser::PanelView::LoadDefaultThumbnail( OvrGuiSys & guiSys, const GLuint defaultTextureId, const int thumbWidth, const int thumbHeight )
 {
 	VRMenuObject * panelObject = guiSys.GetVRMenuMgr().ToObject( Handle );
-	
+
 	if ( panelObject )
 	{
 		OVR_LOG( "Setting thumb to default texture %d", defaultTextureId );
-		panelObject->SetSurfaceTexture( 0, 0, SURFACE_TEXTURE_DIFFUSE, 
+		panelObject->SetSurfaceTexture( 0, 0, SURFACE_TEXTURE_DIFFUSE,
 			defaultTextureId, thumbWidth, thumbHeight );
 	}
 

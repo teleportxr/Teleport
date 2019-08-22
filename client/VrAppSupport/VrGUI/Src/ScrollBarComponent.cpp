@@ -15,6 +15,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "VRMenuMgr.h"
 #include "GuiSys.h"
 #include "PackageFiles.h"
+#include "OVR_Math.h"
 
 namespace OVR {
 
@@ -97,7 +98,7 @@ void OvrScrollBarComponent::SetScrollFrac( OvrVRMenuMgr & menuMgr, VRMenuObject 
 	}
 
 	// Updating thumb position
-	float clampedPos = Alg::Clamp( pos, 0.0f, (float)(NumOfItems - 1) );
+	float clampedPos = clamp<float>( pos, 0.0f, (float)(NumOfItems - 1) );
 	float thumbPos = LinearRangeMapFloat( clampedPos, 0.0f, (float)(NumOfItems - 1), 0.0f, ( ScrollBarCurrentbaseLength - currentThumbLength ) );
 	thumbPos -= ( ScrollBarCurrentbaseLength - currentThumbLength ) * 0.5f;
 	thumbPos += thumbPosOffset;
@@ -171,7 +172,7 @@ enum eScrollBarImage
 	SCROLLBAR_IMAGE_MAX
 };
 
-String GetImage( eScrollBarImage const type, const bool vertical )
+std::string GetImage( eScrollBarImage const type, const bool vertical )
 {
 	static char const * images[ SCROLLBAR_IMAGE_MAX ] =
 	{
@@ -181,12 +182,12 @@ String GetImage( eScrollBarImage const type, const bool vertical )
 
 	char buff[ 256 ];
 	OVR_sprintf( buff, sizeof( buff ), images[ type ], vertical ? "vert" : "horz" );
-	return String( buff );
+	return std::string( buff );
 }
 
 void OvrScrollBarComponent::GetScrollBarParms( OvrGuiSys & guiSys, VRMenu & menu, float scrollBarLength, const VRMenuId_t parentId, const VRMenuId_t rootId, const VRMenuId_t xformId,
 	const VRMenuId_t baseId, const VRMenuId_t thumbId, const Posef & rootLocalPose, const Posef & xformPose, const int startElementIndex, 
-	const int numElements, const bool verticalBar, const Vector4f & thumbBorder, Array< const VRMenuObjectParms* > & parms )
+	const int numElements, const bool verticalBar, const Vector4f & thumbBorder, std::vector< const VRMenuObjectParms* > & parms )
 {
 	// Build up the scrollbar parms
 	OvrScrollBarComponent * scrollComponent = new OvrScrollBarComponent( rootId, baseId, thumbId, startElementIndex, numElements );
@@ -194,9 +195,9 @@ void OvrScrollBarComponent::GetScrollBarParms( OvrGuiSys & guiSys, VRMenu & menu
 
 	// parms for the root object that holds all the scrollbar components
 	{
-		Array< VRMenuComponent* > comps;
-		comps.PushBack( scrollComponent );
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		comps.push_back( scrollComponent );
+		std::vector< VRMenuSurfaceParms > surfParms;
 		char const * text = "scrollBarRoot";
 		Vector3f scale( 1.0f );
 		Posef pose( rootLocalPose );
@@ -210,13 +211,13 @@ void OvrScrollBarComponent::GetScrollBarParms( OvrGuiSys & guiSys, VRMenu & menu
 			surfParms, text, pose, scale, textPose, textScale, fontParms, rootId,
 			objectFlags, initFlags );
 		itemParms->ParentId = parentId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 
 	// add parms for the object that serves as a transform 
 	{
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
 		char const * text = "scrollBarTransform";
 		Vector3f scale( 1.0f );
 		Posef pose( xformPose );
@@ -230,13 +231,13 @@ void OvrScrollBarComponent::GetScrollBarParms( OvrGuiSys & guiSys, VRMenu & menu
 			surfParms, text, pose, scale, textPose, textScale, fontParms, xformId,
 			objectFlags, initFlags );
 		itemParms->ParentId = rootId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 
 	// add parms for the base image that underlays the whole scrollbar
 	{
 		int sbWidth, sbHeight = 0;
-		GLuint sbTexture = OVR::LoadTextureFromUri( guiSys.GetApp()->GetFileSys(), GetImage( SCROLLBAR_IMAGE_BASE, verticalBar ).ToCStr(), TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), sbWidth, sbHeight );
+		GLuint sbTexture = OVR::LoadTextureFromUri( guiSys.GetApp()->GetFileSys(), GetImage( SCROLLBAR_IMAGE_BASE, verticalBar ).c_str(), TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), sbWidth, sbHeight );
 		if ( verticalBar )
 		{
 			scrollComponent->SetScrollBarBaseWidth( static_cast<float>( sbWidth ) );
@@ -248,14 +249,14 @@ void OvrScrollBarComponent::GetScrollBarParms( OvrGuiSys & guiSys, VRMenu & menu
 			scrollComponent->SetScrollBarBaseHeight( static_cast<float>( sbHeight ) );
 		}
 
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
 		char const * text = "scrollBase";
 		VRMenuSurfaceParms baseParms( text,
 				sbTexture, sbWidth, sbHeight, SURFACE_TEXTURE_DIFFUSE,
 				0, 0, 0, SURFACE_TEXTURE_MAX,
 				0, 0, 0, SURFACE_TEXTURE_MAX );
-		surfParms.PushBack( baseParms );
+		surfParms.push_back( baseParms );
 		Vector3f scale( 1.0f );
 		Posef pose( Quatf(), Vector3f( 0.0f ) );
 		Posef textPose( Quatf(), Vector3f( 0.0f ) );
@@ -268,25 +269,25 @@ void OvrScrollBarComponent::GetScrollBarParms( OvrGuiSys & guiSys, VRMenu & menu
 			surfParms, text, pose, scale, textPose, textScale, fontParms, baseId,
 			objectFlags, initFlags );
 		itemParms->ParentId = xformId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 
 	// add parms for the thumb image of the scrollbar
 	{
 		int stWidth, stHeight = 0;
-		GLuint stTexture = OVR::LoadTextureFromUri( guiSys.GetApp()->GetFileSys(), GetImage( SCROLLBAR_IMAGE_THUMB, verticalBar ).ToCStr(), TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), stWidth, stHeight );
+		GLuint stTexture = OVR::LoadTextureFromUri( guiSys.GetApp()->GetFileSys(), GetImage( SCROLLBAR_IMAGE_THUMB, verticalBar ).c_str(), TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), stWidth, stHeight );
 		scrollComponent->SetScrollBarThumbWidth(  (float)( stWidth ) );
 		scrollComponent->SetScrollBarThumbHeight( (float)( stHeight ) );
 
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
 		char const * text = "scrollThumb";
 		VRMenuSurfaceParms thumbParms( text,
 				stTexture, stWidth, stHeight, SURFACE_TEXTURE_DIFFUSE,
 				0, 0, 0, SURFACE_TEXTURE_MAX,
 				0, 0, 0, SURFACE_TEXTURE_MAX );
 		//thumbParms.Border = thumbBorder;
-		surfParms.PushBack( thumbParms );
+		surfParms.push_back( thumbParms );
 		Vector3f scale( 1.0f );
 		Posef pose( Quatf(), -FWD * THUMB_FROM_BASE_OFFSET );
 		// Since we use left aligned anchors on the base and thumb, we offset the root once to center the scrollbar
@@ -301,7 +302,7 @@ void OvrScrollBarComponent::GetScrollBarParms( OvrGuiSys & guiSys, VRMenu & menu
 			surfParms, text, pose, scale, textPose, textScale, fontParms, thumbId,
 			objectFlags, initFlags );
 		itemParms->ParentId = xformId;
-		parms.PushBack( itemParms );
+		parms.push_back( itemParms );
 	}
 }
 

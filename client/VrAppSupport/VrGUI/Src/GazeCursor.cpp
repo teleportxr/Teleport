@@ -12,13 +12,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "GazeCursor.h"
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_String_Utils.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_Types.h"
+#include "OVR_LogUtils.h"
 #include "OVR_GlUtils.h"
 
-#include "VrApi.h"
 #include "GlTexture.h"
 #include "GlProgram.h"
 #include "GlGeometry.h"
@@ -85,7 +82,7 @@ public:
 	virtual	void				Frame( Matrix4f const & viewMatrix, Matrix4f const & traceMatrix, float const deltaTime );
 
 	// Generates the gaze cursor surfaces and appends to the surface render list.
-	virtual void				AppendSurfaceList( Array< ovrDrawSurface > & surfaceList ) const;
+	virtual void				AppendSurfaceList( std::vector< ovrDrawSurface > & surfaceList ) const;
 
 	// Returns the current info about the gaze cursor.
 	virtual OvrGazeCursorInfo	GetInfo() const;
@@ -397,7 +394,7 @@ void OvrGazeCursorLocal::Frame( Matrix4f const & viewMatrix, Matrix4f const & tr
 
 //==============================
 // OvrGazeCursorLocal::AppendSurfaceList
-void OvrGazeCursorLocal::AppendSurfaceList( Array< ovrDrawSurface > & surfaceList ) const
+void OvrGazeCursorLocal::AppendSurfaceList( std::vector< ovrDrawSurface > & surfaceList ) const
 {
 	//OVR_LOG( "OvrGazeCursorLocal::AppendSurfaceList" );
 
@@ -417,10 +414,10 @@ void OvrGazeCursorLocal::AppendSurfaceList( Array< ovrDrawSurface > & surfaceLis
 		return;
 	}
 
-	surfaceList.PushBack( ovrDrawSurface( &ZPassCursorSurface ) );
+	surfaceList.push_back( ovrDrawSurface( &ZPassCursorSurface ) );
 	ZPassCursorSurface.graphicsCommand.UniformData[1].Data = (void *)&CursorTexture;
 
-	surfaceList.PushBack( ovrDrawSurface( &ZFailCursorSurface ) );
+	surfaceList.push_back( ovrDrawSurface( &ZFailCursorSurface ) );
 	ZFailCursorSurface.graphicsCommand.UniformData[1].Data = (void *)&CursorTexture;
 }
 
@@ -491,14 +488,14 @@ GlGeometry CreateCursorGeometry( VertexAttribs & attr, int const numTrails, int 
 		const float alpha = 1.0f - ( ghost / (float)maxTrails );
 		for ( int vertexIndex = 0; vertexIndex < 4; vertexIndex++ )
 		{
-			attr.position.PushBack( Vector3f( 0.0f, 0.0f, 0.0f ) );
-			attr.uv0.PushBack( GazeCursorUV0s[ vertexIndex ] );
-			attr.color.PushBack( Vector4f( 1.0f, 1.0f, 1.0f, alpha ) );
+			attr.position.push_back( Vector3f( 0.0f, 0.0f, 0.0f ) );
+			attr.uv0.push_back( GazeCursorUV0s[ vertexIndex ] );
+			attr.color.push_back( Vector4f( 1.0f, 1.0f, 1.0f, alpha ) );
 		}
 	}
 
-	Array< TriangleIndex > indices;
-	indices.Resize( numTrails * 6 );
+	std::vector< TriangleIndex > indices;
+	indices.resize( numTrails * 6 );
 	for ( int ghost = 0; ghost < numTrails; ++ghost )
 	{
 		// push 6 indices for each quad "ghost"

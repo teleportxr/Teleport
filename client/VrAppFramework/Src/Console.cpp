@@ -11,10 +11,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "Console.h"
 
-#include "Android/JniUtils.h"
-#include "Kernel/OVR_LogUtils.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_String.h"			// for ReadFreq()
+#include <vector>
+
+#include "JniUtils.h"
+#include "OVR_LogUtils.h"
 
 //#define ALLOW_RELEASE_CONSOLE
 
@@ -23,12 +23,12 @@ namespace OVR {
 class OvrConsole
 {
 public:
-	void RegisterConsoleFunction( const char * name, consoleFn_t function )
+	void RegisterConsoleFunction( const char * name, consoleFn_t inFunction )
 	{
 		//OVR_LOG( "Registering console function '%s'", name );
-		for ( int i = 0 ; i < ConsoleFunctions.GetSizeI(); ++i )
+		for ( const OvrConsoleFunction & functions : ConsoleFunctions )
 		{
-			if ( OVR_stricmp( ConsoleFunctions[i].GetName(), name ) == 0 )
+			if ( OVR_stricmp( functions.GetName(), name ) == 0 )
 			{
 				OVR_LOG_WITH_TAG( "OvrConsole", "Console function '%s' is already registered!!", name );
 				OVR_ASSERT( false );	// why are you registering the same function twice??
@@ -36,12 +36,12 @@ public:
 			}
 		}
 		OVR_LOG( "Registered console function '%s'", name );
-		ConsoleFunctions.PushBack( OvrConsoleFunction( name, function ) );
+		ConsoleFunctions.push_back( OvrConsoleFunction( name, inFunction ) );
 	}
 
 	void UnRegisterConsoleFunctions()
 	{
-		ConsoleFunctions.ClearAndRelease();
+		ConsoleFunctions.clear();
 	}
 
 	void ExecuteConsoleFunction( intptr_t appPtr, char const * commandStr ) const
@@ -63,13 +63,13 @@ public:
 		}
 
 		OVR_LOG( "ExecuteConsoleFunction( %s, %s )", cmdName, parms );
-		for ( int i = 0 ; i < ConsoleFunctions.GetSizeI(); ++i )
+		for ( const OvrConsoleFunction & function : ConsoleFunctions )
 		{
-			OVR_LOG( "Checking console function '%s'", ConsoleFunctions[i].GetName() );
-			if ( OVR_stricmp( ConsoleFunctions[i].GetName(), cmdName ) == 0 )
+			OVR_LOG( "Checking console function '%s'", function.GetName() );
+			if ( OVR_stricmp( function.GetName(), cmdName ) == 0 )
 			{
 				OVR_LOG( "Executing console function '%s'", cmdName );
-				ConsoleFunctions[i].Execute( reinterpret_cast< void* >( appPtr ), parms );
+				function.Execute( reinterpret_cast< void* >( appPtr ), parms );
 				return;
 			}
 		}
@@ -103,7 +103,7 @@ private:
 		consoleFn_t		Function;
 	};
 
-	Array< OvrConsoleFunction >	ConsoleFunctions;
+	std::vector< OvrConsoleFunction >	ConsoleFunctions;
 };
 
 OvrConsole * Console = NULL;

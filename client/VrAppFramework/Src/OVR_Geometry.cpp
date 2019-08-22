@@ -12,8 +12,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <math.h>
 #include <algorithm>				// for min, max
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_Math.h"
+#include "OVR_Types.h"
+#include "OVR_Math.h"
 
 namespace OVR
 {

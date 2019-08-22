@@ -8,7 +8,7 @@ Authors     :
 Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 *************************************************************************************/
-#include "Kernel/OVR_Types.h"
+#include "OVR_Types.h"
 #include "SystemClock.h"
 #include <time.h>
 

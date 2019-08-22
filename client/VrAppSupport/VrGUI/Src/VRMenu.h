@@ -14,12 +14,14 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_VRMenu_h )
 #define OVR_VRMenu_h
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 #include "VRMenuObject.h"
 #include "SoundLimiter.h"
 #include "GazeCursor.h"
 #include "OVR_Input.h"
+
+#include <string>
 
 namespace OVR {
 
@@ -77,12 +79,12 @@ public:
 									float const menuDistance, VRMenuFlags_t const & flags );
 
 	void					Init( OvrGuiSys & guiSys, float const menuDistance, 
-									VRMenuFlags_t const & flags, Array< VRMenuComponent* > comps = Array< VRMenuComponent * >() );
+									VRMenuFlags_t const & flags, std::vector< VRMenuComponent* > comps = std::vector< VRMenuComponent * >() );
 	void					InitWithItems( OvrGuiSys & guiSys, float const menuDistance, 
-									VRMenuFlags_t const & flags, Array< VRMenuObjectParms const * > & itemParms );
+									VRMenuFlags_t const & flags, std::vector< VRMenuObjectParms const * > & itemParms );
 
 	void					AddItems( OvrGuiSys & guiSys, 
-										OVR::Array< VRMenuObjectParms const * > & itemParms,
+										std::vector< VRMenuObjectParms const * > & itemParms,
 										menuHandle_t parentHandle, bool const recenter );
 	void					Shutdown( OvrGuiSys & guiSys );
 	void					Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f const & viewMatrix, Matrix4f const & traceMat );
@@ -124,8 +126,8 @@ public:
 
 	VRMenuId_t				IdForName( OvrGuiSys const & guiSys, char const * name ) const;
 
-	char const *			GetName() const { return Name.ToCStr(); }
-	bool					IsMenu( char const * menuName ) const { return OVR_stricmp( Name.ToCStr(), menuName ) == 0; }
+	char const *			GetName() const { return Name.c_str(); }
+	bool					IsMenu( char const * menuName ) const { return OVR_stricmp( Name.c_str(), menuName ) == 0; }
 
 	// Use an arbitrary view matrix. This is used when updating the menus and passing the current matrix
 	void					RepositionMenu( Matrix4f const & viewMatrix );
@@ -165,9 +167,9 @@ private:
 	ovrSoundLimiter			CloseSoundLimiter;	// prevents the menu close sound from playing too often
 
 	VRMenuEventHandler *	EventHandler;
-	Array< VRMenuEvent >	PendingEvents;		// events pending since the last frame
+	std::vector< VRMenuEvent >	PendingEvents;		// events pending since the last frame
 
-	String                  Name;				// name of the menu
+	std::string                 Name;				// name of the menu
 
 	VRMenuFlags_t			Flags;				// various flags that dictate menu behavior
 	float					MenuDistance;		// distance from eyes
@@ -178,7 +180,7 @@ private:
 private:
 	// return true to continue with normal initialization (adding items) or false to skip.
 	virtual bool	Init_Impl( OvrGuiSys & guiSys, float const menuDistance, 
-							VRMenuFlags_t const & flags, Array< VRMenuObjectParms const * > & itemParms );
+							VRMenuFlags_t const & flags, std::vector< VRMenuObjectParms const * > & itemParms );
 	// called once from Frame() after all child items have received the init event.
 	virtual void	PostInit_Impl( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame );
 	virtual void	Shutdown_Impl( OvrGuiSys & guiSys );

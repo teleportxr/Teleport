@@ -12,7 +12,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVRPACKAGEFILES_H
 #define OVRPACKAGEFILES_H
 
-#include "Kernel/OVR_MemBuffer.h"
+#include <vector>
 
 // The application package is the moral equivalent of the filesystem, so
 // I don't feel too bad about making it globally accessible, versus requiring
@@ -54,7 +54,7 @@ bool			ovr_OtherPackageFileExists( void * zipFile, const char * nameInZip );
 
 // Returns NULL buffer if the file is not found.
 bool			ovr_ReadFileFromOtherApplicationPackage( void * zipFile, const char * nameInZip, int & length, void * & buffer );
-bool			ovr_ReadFileFromOtherApplicationPackage( void * zipFile, const char * nameInZip, MemBufferT< uint8_t > & buffer );
+bool			ovr_ReadFileFromOtherApplicationPackage( void * zipFile, const char * nameInZip, std::vector< uint8_t > & buffer );
 
 
 //--------------------------------------------------------------
@@ -83,7 +83,7 @@ bool			ovr_PackageFileExists( const char * nameInZip );
 bool			ovr_ReadFileFromApplicationPackage( const char * nameInZip, int & length, void * & buffer );
 
 // Returns an empty MemBufferFile if the file is not found.
-bool			ovr_ReadFileFromApplicationPackage( const char * nameInZip, MemBufferFile & memBufferFile );
+bool			ovr_ReadFileFromApplicationPackage( const char * nameInZip, std::vector< uint8_t > & buffer );
 
 
 }	// namespace OVR

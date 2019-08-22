@@ -16,12 +16,12 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <math.h>
 #include <stdlib.h>
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_Alg.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_Types.h"
+#include "OVR_LogUtils.h"
+#include "OVR_Math.h"
+
 
 namespace OVR {
-
 
 #pragma pack(1)
 struct OVR_PVR_HEADER
@@ -122,8 +122,8 @@ unsigned char * QuarterImageSize( const unsigned char * src, const int width, co
 		}
 	}
 
-	const int newWidth = OVR::Alg::Max( 1, width >> 1 );
-	const int newHeight = OVR::Alg::Max( 1, height >> 1 );
+	const int newWidth = std::max<int>( 1, width >> 1 );
+	const int newHeight = std::max<int>( 1, height >> 1 );
 	unsigned char * out = (unsigned char *)malloc( newWidth * newHeight * 4 );
 	unsigned char * out_p = out;
 	for ( int y = 0; y < newHeight; y++ )
@@ -273,10 +273,10 @@ unsigned char * ScaleImageRGBANonLinear( const unsigned char * src, const int wi
 				}
 			}
 
-			scaled[ ( y * newWidth + x ) * 4 + 0 ] = (unsigned char) Alg::Clamp( fR, 0.0f, 255.0f );
-			scaled[ ( y * newWidth + x ) * 4 + 1 ] = (unsigned char) Alg::Clamp( fG, 0.0f, 255.0f );
-			scaled[ ( y * newWidth + x ) * 4 + 2 ] = (unsigned char) Alg::Clamp( fB, 0.0f, 255.0f );
-			scaled[ ( y * newWidth + x ) * 4 + 3 ] = (unsigned char) Alg::Clamp( fA, 0.0f, 255.0f );
+			scaled[ ( y * newWidth + x ) * 4 + 0 ] = (unsigned char) clamp<float>( fR, 0.0f, 255.0f );
+			scaled[ ( y * newWidth + x ) * 4 + 1 ] = (unsigned char) clamp<float>( fG, 0.0f, 255.0f );
+			scaled[ ( y * newWidth + x ) * 4 + 2 ] = (unsigned char) clamp<float>( fB, 0.0f, 255.0f );
+			scaled[ ( y * newWidth + x ) * 4 + 3 ] = (unsigned char) clamp<float>( fA, 0.0f, 255.0f );
 		}
 	}
 

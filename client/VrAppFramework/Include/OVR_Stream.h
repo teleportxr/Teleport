@@ -12,8 +12,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_STREAM_H )
 #define OVR_STREAM_H
 
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_MemBuffer.h"
+#include <string>
+#include <vector>
 
 namespace OVR {
 
@@ -44,7 +44,7 @@ public:
 	// Closes the currently open stream.
 	void				Close();
 
-	bool				GetLocalPathFromUri( const char *uri, String &outputPath );
+	bool				GetLocalPathFromUri( const char *uri, std::string &outputPath );
 	
 	// Reads the specified number of bytes from the stream into outBuffer. 
 	// outBytesRead will contain the number of bytes read into outBuffer.
@@ -52,10 +52,10 @@ public:
 	// - If the number of bytes read is too large for the buffer, the buffer is filled and false is returned. 
 	// - If the number of bytes in the file is less than the number requested, the buffer is filled with the
 	//   remaining bytes and false is returned.
-	bool				Read( MemBufferT< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead );
+	bool				Read( std::vector< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead );
 	
 	// Allocates a buffer large enough to fit the stream resource and reads the stream into it.
-	bool				ReadFile( char const * uri, MemBufferT< uint8_t > & outBuffer );
+	bool				ReadFile( char const * uri, std::vector< uint8_t > & outBuffer );
 
 	// Writes the specified number of bytes to the stream.
 	// - If writing fails, false is returned.
@@ -79,15 +79,15 @@ protected:
 
 private:
 	ovrUriScheme const &	Scheme;
-	String					Uri;
+	std::string				Uri;
 	ovrStreamMode			Mode;
 
 private:
-	virtual bool			GetLocalPathFromUri_Internal( const char *uri, String &outputPath ) = 0;
+	virtual bool			GetLocalPathFromUri_Internal( const char *uri, std::string &outputPath ) = 0;
 	virtual bool			Open_Internal( char const * Uri, ovrStreamMode const mode ) = 0;
 	virtual void			Close_Internal() = 0;
-	virtual bool			Read_Internal( MemBufferT< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead ) = 0;
-	virtual bool			ReadFile_Internal( MemBufferT< uint8_t > & outBuffer ) = 0;
+	virtual bool			Read_Internal( std::vector< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead ) = 0;
+	virtual bool			ReadFile_Internal( std::vector< uint8_t > & outBuffer ) = 0;
 	virtual bool			Write_Internal( void const * inBuffer, size_t const bytesToWrite ) = 0;
 	virtual size_t			Tell_Internal() const = 0;
 	virtual size_t			Length_Internal() const = 0;

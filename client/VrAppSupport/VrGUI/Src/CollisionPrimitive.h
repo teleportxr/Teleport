@@ -13,8 +13,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_CollisionPrimitive_h )
 #define OVR_CollisionPrimitive_h
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_BitFlags.h"
+#include <vector>
+
+#include "OVR_Types.h"
+#include "OVR_BitFlags.h"
 #include "GlGeometry.h" // For TriangleIndex
 
 namespace OVR {
@@ -97,13 +99,13 @@ class OvrTriCollisionPrimitive : public OvrCollisionPrimitive
 {
 public:
 	OvrTriCollisionPrimitive();
-	OvrTriCollisionPrimitive( Array< Vector3f > const & vertices, Array< TriangleIndex > const & indices, 
-			Array< Vector2f > const & uvs, ContentFlags_t const contents );
+	OvrTriCollisionPrimitive( std::vector< Vector3f > const & vertices, std::vector< TriangleIndex > const & indices, 
+			std::vector< Vector2f > const & uvs, ContentFlags_t const contents );
 
 	virtual	~OvrTriCollisionPrimitive();
 
-	void				Init( Array< Vector3f > const & vertices, Array< TriangleIndex > const & indices,
-								Array< Vector2f > const & uvs, ContentFlags_t const contents );
+	void				Init( std::vector< Vector3f > const & vertices, std::vector< TriangleIndex > const & indices,
+								std::vector< Vector2f > const & uvs, ContentFlags_t const contents );
 
 	virtual  bool		IntersectRay( Vector3f const & start, Vector3f const & dir, Posef const & pose,
 								Vector3f const & scale, ContentFlags_t const testContents,
@@ -119,9 +121,9 @@ public:
 								bool const showNormals ) const OVR_OVERRIDE;
 
 private:
-	Array< Vector3f >		Vertices;	// vertices for all triangles
-	Array< TriangleIndex >	Indices;	// indices indicating which vertices make up each triangle
-	Array< Vector2f >		UVs;		// uvs for each vertex
+	std::vector< Vector3f >			Vertices;	// vertices for all triangles
+	std::vector< TriangleIndex >	Indices;	// indices indicating which vertices make up each triangle
+	std::vector< Vector2f >			UVs;		// uvs for each vertex
 };
 
 } // namespace OVR

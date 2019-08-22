@@ -11,9 +11,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_SurfaceRender_h
 #define OVR_SurfaceRender_h
 
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_String.h"
+#include <vector>
+#include <string>
+
+#include "OVR_Math.h"
 
 #include "OVR_GlUtils.h"
 #include "GlTexture.h"
@@ -32,7 +33,7 @@ struct ovrSurfaceDef
 	// Name from the model file, can be used to control surfaces with code.
 	// May be multiple semi-colon separated names if multiple source meshes
 	// were merged into one surface.
-	String				surfaceName;
+	std::string			surfaceName;
 
 	// There is a space savings to be had with triangle strips
 	// if primitive restart is supported, but it is a net speed
@@ -109,7 +110,7 @@ public:
 
 	// Draws a list of surfaces in order.
 	// Any sorting or culling should be performed before calling.
-	ovrDrawCounters			RenderSurfaceList( const Array<ovrDrawSurface> & surfaceList,
+	ovrDrawCounters			RenderSurfaceList( const std::vector<ovrDrawSurface> & surfaceList,
 											   const Matrix4f & viewMatrix,
 											   const Matrix4f & projectionMatrix,
 											   const int eye );

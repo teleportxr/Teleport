@@ -8,6 +8,7 @@
 #include "GuiSys.h"
 #include "OVR_Locale.h"
 #include "GLSLShaders.h"
+#include "OVR_LogUtils.h"
 
 #include <enet/enet.h>
 #include <sstream>
@@ -98,16 +99,13 @@ void Application::Configure(ovrSettings& settings )
 	settings.EyeBufferParms.colorFormat = COLOR_8888;
 	settings.EyeBufferParms.depthFormat = DEPTH_16;
 	settings.EyeBufferParms.multisamples = 1;
-
-	settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
+	settings.TrackingSpace=VRAPI_TRACKING_SPACE_LOCAL;
+	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 	settings.RenderMode = RENDERMODE_STEREO;
 }
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
 {
-	OVR_UNUSED(intentFromPackage);
-	OVR_UNUSED(intentJSON);
-	OVR_UNUSED(intentURI);
 
 	if(intentType == INTENT_LAUNCH)
 	{
@@ -121,9 +119,9 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 		mLocale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
 
-		String fontName;
+		std::string fontName;
 		GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
-		mGuiSys->Init(this->app, *mSoundEffectPlayer, fontName.ToCStr(), &app->GetDebugLines());
+		mGuiSys->Init(this->app, *mSoundEffectPlayer, fontName.c_str(), &app->GetDebugLines());
 
         //VideoSurfaceProgram
 		{
@@ -307,7 +305,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		// If nothing consumed the key and it's a short-press of the back key, then exit the application to OculusHome.
 		if(keyCode == OVR_KEY_BACK && eventType == KEY_EVENT_SHORT_PRESS)
 		{
-			app->ShowSystemUI(VRAPI_SYS_UI_CONFIRM_QUIT_MENU);
+		    app->ShowConfirmQuitSystemUI();
 			continue;
 		}
 	}
@@ -369,8 +367,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     {
 	    scr::InputCommand_Mesh_Material_Transform ic_mmm(&ci, actor.second.get());
 	    ic_mmm.pMaterial = mFlatColourMaterial.get();
-
-	    if(mOVRActors.find(actor.first) == mOVRActors.end())
+        if(ic_mmm.pMesh!=nullptr&&mOVRActors.find(actor.first) == mOVRActors.end())
         {
             auto gl_effect = dynamic_cast<scc::GL_Effect *>(ic_mmm.pMaterial->GetMaterialCreateInfo().effect);
             auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("standard");
@@ -382,7 +379,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             geo.vertexBuffer = gl_vb->GetVertexID();
             geo.indexBuffer = gl_ib->GetIndexID();
             geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effectPass.topology);
+            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("stardard").topology);
             geo.vertexCount = (int) gl_vb->GetVertexCount();
             geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
             geo.IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
@@ -390,9 +387,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
                                                                           : GL_UNSIGNED_BYTE;
 
             ovrSurfaceDef ovr_Actor;
-            //std::string _actorName = std::to_string(actor.first);
-            std::string _actorName = "CubeTest";
-            ovr_Actor.surfaceName = OVR::String(_actorName.c_str());
+            std::string _actorName = std::to_string(actor.first);
+            ovr_Actor.surfaceName = std::string(_actorName.c_str());
             ovr_Actor.numInstances = 1;
             ovr_Actor.geo = geo;
 
@@ -431,7 +427,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
 		ovrDrawSurface ovr_ActorDrawSurface(transform, &mOVRActors[actor.first]);
 
-        res.Surfaces.PushBack(ovr_ActorDrawSurface);
+        res.Surfaces.push_back(ovr_ActorDrawSurface);
 	}
 
 
@@ -448,12 +444,26 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
         frameRate*=0.99f;
         frameRate+=0.01f/vrFrame.DeltaSeconds;
     }
-#if 1
-    auto ctr=mNetworkSource.getCounterValues();
-    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f"
-            , ctr.networkPacketsDropped, ctr.decoderPacketsDropped
-            ,frameRate,ctr.bandwidthKPS);
+	if(!mSession.IsConnected())
+	{
+		mGuiSys->ShowInfoText(
+				1.0f,
+				"Waiting for connection\nFramerate: %4.4f", frameRate);
+	}
+    else
+	{
+#ifdef _DEBUG
+        auto ctr=mNetworkSource.getCounterValues();
+		mGuiSys->ShowInfoText(
+				1.0f,
+				"Network Packets Dropped: %d    \nDecoder Packets Dropped: %d\nFramerate: %4.4f\nBandwidth: %4.4f",
+				ctr.networkPacketsDropped, ctr.decoderPacketsDropped, frameRate, ctr.bandwidthKPS);
+#else
+        mGuiSys->ShowInfoText(
+                1.0f,
+                "Framerate: %4.4f", frameRate);
 #endif
+	}
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
 	res.SwapInterval = app->GetSwapInterval();
@@ -477,7 +487,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
     mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
     mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &mVideoTexture;
-	res.Surfaces.PushBack(ovrDrawSurface(&mVideoSurfaceDef));
+	res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 
 	// Append GuiSys surfaces.
 	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);

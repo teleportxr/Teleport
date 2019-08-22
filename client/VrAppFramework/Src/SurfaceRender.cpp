@@ -13,13 +13,15 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include <stdlib.h>
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 #include "OVR_GlUtils.h"
 #include "GlTexture.h"
 #include "GlProgram.h"
 #include "GlBuffer.h"
 #include "VrCommon.h"
+
+#include <algorithm>
 
 //#define OVR_USE_PERF_TIMER
 #include "OVR_PerfTimer.h"
@@ -242,7 +244,7 @@ OVR_PERF_ACCUMULATOR( SurfaceRender_UpdateUniforms );
 OVR_PERF_ACCUMULATOR( SurfaceRender_geo_Draw );
 
 // Renders a list of pointers to models in order.
-ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const Array<ovrDrawSurface> & surfaceList,
+ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const std::vector<ovrDrawSurface> & surfaceList,
 													 const Matrix4f & viewMatrix,
 													 const Matrix4f & projectionMatrix,
 													 const int eye )
@@ -269,9 +271,8 @@ ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const Array<ovrDrawSurface>
 	ovrDrawCounters counters;
 
 	// Loop through all the surfaces
-	for ( int surfaceNum = 0; surfaceNum < surfaceList.GetSizeI(); surfaceNum++ )
+	for ( const ovrDrawSurface & drawSurface : surfaceList )
 	{
-		const ovrDrawSurface & drawSurface = surfaceList[ surfaceNum ];
 		const ovrSurfaceDef & surfaceDef = *drawSurface.surface;
 		const ovrGraphicsCommand & cmd = surfaceDef.graphicsCommand;
 
@@ -279,7 +280,7 @@ ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const Array<ovrDrawSurface>
 		{
 			ChangeGpuState( currentGpuState, cmd.GpuState );
 			currentGpuState = cmd.GpuState;
-			//GL_CheckErrors( surfaceDef.surfaceName.ToCStr() );
+			//GL_CheckErrors( surfaceDef.surfaceName.c_str() );
 
 			// update the program object
 			if ( cmd.Program.Program != currentProgramObject )
@@ -423,7 +424,7 @@ ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const Array<ovrDrawSurface>
 									/// FIXME: setting glUniformMatrix4fv transpose to GL_TRUE for an array of matrices
 									/// produces garbage using the Adreno 420 OpenGL ES 3.0 driver.
 									static Matrix4f transposedJoints[MAX_JOINTS];
-									const int numJoints = Alg::Min( cmd.UniformData[i].Count, MAX_JOINTS );
+									const int numJoints = std::min< int >( cmd.UniformData[i].Count, MAX_JOINTS );
 									for ( int j = 0; j < numJoints; j++ )
 									{
 										transposedJoints[j] = static_cast< Matrix4f * >( cmd.UniformData[i].Data )[j].Transposed();
@@ -609,7 +610,7 @@ ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const Array<ovrDrawSurface>
 
 		if ( LogRenderSurfaces )
 		{
-			OVR_LOG( "Drawing %s", surfaceDef.surfaceName.ToCStr() );
+			OVR_LOG( "Drawing %s", surfaceDef.surfaceName.c_str() );
 		}
 
 		// Bind all the vertex and element arrays
@@ -626,7 +627,7 @@ ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const Array<ovrDrawSurface>
 			}
 		}
 
-		GL_CheckErrors( surfaceDef.surfaceName.ToCStr() );
+		GL_CheckErrors( surfaceDef.surfaceName.c_str() );
 	}
 
 	// set the gpu state back to the default

@@ -47,7 +47,7 @@ OVR_VRAPI_EXPORT ovrResult vrapi_GetInstanceExtensionsVulkan( char * extensionNa
 OVR_VRAPI_EXPORT ovrResult vrapi_GetDeviceExtensionsVulkan( char * extensionNames, uint32_t * extensionNamesSize );
 
 /// Initialization parameters unique to Vulkan.
-typedef struct
+typedef struct ovrSystemCreateInfoVulkan_
 {
 	VkInstance			Instance;
 	VkPhysicalDevice	PhysicalDevice;
@@ -66,6 +66,10 @@ OVR_VRAPI_EXPORT void vrapi_DestroySystemVulkan();
 
 /// Get the VkImage at the given index within the chain.
 OVR_VRAPI_EXPORT VkImage vrapi_GetTextureSwapChainBufferVulkan( ovrTextureSwapChain * chain, int index );
+
+/// Get the foveation VkImage and corresponding size at the given index within the chain.
+/// In case of failure, this returns a null image handle and zero width and height.
+OVR_VRAPI_EXPORT ovrResult vrapi_GetTextureSwapChainBufferFoveationVulkan( ovrTextureSwapChain * chain, int index, VkImage * image, uint32_t * imageWidth, uint32_t * imageHeight );
 
 #if defined( __cplusplus )
 }	// extern "C"

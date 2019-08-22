@@ -34,7 +34,7 @@ void ResourceCreator::ensureVertices(avs::uid shape_uid, int startVertex, int ve
 void ResourceCreator::ensureNormals(avs::uid shape_uid, int startNormal, int normalCount, const avs::vec3* normals)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (normalCount != (int)m_VertexCount)
+	if ((size_t)normalCount != m_VertexCount)
 		return;
 
 	m_Normals = normals;
@@ -43,7 +43,7 @@ void ResourceCreator::ensureNormals(avs::uid shape_uid, int startNormal, int nor
 void ResourceCreator::ensureTangentNormals(avs::uid shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	assert(tnCount == (int)m_VertexCount);
+	assert((size_t)tnCount == m_VertexCount);
 	m_TangentNormalSize = tnSize;
 	m_TangentNormals = tn;
 }
@@ -283,8 +283,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
-	///NOTE: Need to check if an index is set for that texture in the avs::Material.
-	///NOTE: Need to check if a texture is returned.
+	///Claims textures without ever unclaiming the textures.
 	scr::Material::MaterialCreateInfo materialInfo;
 	materialInfo.diffuse.texture = nullptr;
 	materialInfo.normal.texture = nullptr;
@@ -386,33 +385,32 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	if (m_pActorManager->GetTransform(node_uid) != nullptr) //Check the transform has already been added, if so update transform.
 	{
 		m_pActorManager->GetTransform(node_uid)->UpdateModelMatrix(translation, rotation, scale);
-		return;
 	}
 	else
 	{
 		std::shared_ptr<scr::Transform> transform = std::make_shared<scr::Transform>();
 		transform->UpdateModelMatrix(translation, rotation, scale);
 		m_pActorManager->AddTransform(node_uid, transform);
-
-	    switch (node.data_type)
-	    {
-	    case NodeDataType::Mesh:
-	    	{
-	    		size_t i = 0;
-	    		for (auto& meshMaterialPair : m_MeshMaterialUIDPairs)
-	    		{
-	    			if (meshMaterialPair.first == node.data_uid) //data_uid == shape_uid
-	    				break;
-	    			else
-	    				i++;
-	    		}
-	    		CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
-	    	}
-	    case NodeDataType::Camera:
-	    	return;
-	    case NodeDataType::Scene:
-	    	return;
 	}
+
+	switch (node.data_type)
+	{
+	case NodeDataType::Mesh:
+		{
+			size_t i = 0;
+			for (auto& meshMaterialPair : m_MeshMaterialUIDPairs)
+			{
+				if (meshMaterialPair.first == node.data_uid) //data_uid == shape_uid
+					break;
+				else
+					i++;
+			}
+			CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
+		}
+	case NodeDataType::Camera:
+		return;
+	case NodeDataType::Scene:
+		return;
 	}
 	
 }

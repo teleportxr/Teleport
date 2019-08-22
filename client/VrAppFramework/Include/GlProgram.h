@@ -14,7 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "GpuState.h"
 #include "GlTexture.h"
 #include "GlBuffer.h"
-#include "Kernel/OVR_Math.h"
+#include "OVR_Math.h"
 
 namespace OVR
 {
@@ -238,6 +238,9 @@ GlProgram	BuildProgram( const char * vertexSrc, const char * fragmentSrc, const 
 GlProgram	BuildProgram( const char * vertexDirectives, const char * vertexSrc,
 						  const char * fragmentDirectives, const char * fragmentSrc,
 						  const int programVersion = GlProgram::GLSL_PROGRAM_VERSION );
+
+GlProgram	BuildProgramNoMultiview( const char * vertexDirectives, const char * vertexSrc,
+						  const char * fragmentDirectives, const char * fragmentSrc );
 
 void		DeleteProgram( GlProgram & prog );
 // ----DEPRECATED_GLPROGRAM

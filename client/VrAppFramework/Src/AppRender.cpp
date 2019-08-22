@@ -23,6 +23,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "OVR_PerfTimer.h"
 
 #include <algorithm>				// for min, max
+#include "OVR_Math.h"
 
 namespace OVR
 {
@@ -39,7 +40,7 @@ static int ClipPolygonToPlane( Vector4f * dstPoints, const Vector4f * srcPoints,
 		const float d1 = srcPoints[p1].w * planeDir * planeDist - srcPoints[p1][planeAxis];
 		const float delta = d0 - d1;
 		const float fraction = fabsf( delta ) > MATH_FLOAT_SMALLEST_NON_DENORMAL ? ( d0 / delta ) : 1.0f;
-		const float clamped = Alg::Clamp( fraction, 0.0f, 1.0f );
+		const float clamped = clamp<float>( fraction, 0.0f, 1.0f );
 
 		dstPoints[p0 * 2 + 0] = srcPoints[p0];
 		dstPoints[p0 * 2 + 1] = srcPoints[p0] + ( srcPoints[p1] - srcPoints[p0] ) * clamped;
@@ -128,8 +129,8 @@ static ovrRectf TextureRectForBounds( const Bounds3f & bounds, const Matrix4f & 
 
 	for ( int i = 0; i < 3; i++ )
 	{
-		clippedBounds.GetMins()[i] = Alg::Clamp( clippedBounds.GetMins()[i], 0.0f, 1.0f );
-		clippedBounds.GetMaxs()[i] = Alg::Clamp( clippedBounds.GetMaxs()[i], 0.0f, 1.0f );
+		clippedBounds.GetMins()[i] = clamp<float>( clippedBounds.GetMins()[i], 0.0f, 1.0f );
+		clippedBounds.GetMaxs()[i] = clamp<float>( clippedBounds.GetMaxs()[i], 0.0f, 1.0f );
 	}
 
 	ovrRectf rect;
@@ -141,13 +142,13 @@ static ovrRectf TextureRectForBounds( const Bounds3f & bounds, const Matrix4f & 
 	return rect;
 }
 
-static Bounds3f BoundsForSurfaceList( const OVR::Array< ovrDrawSurface > & surfaceList )
+static Bounds3f BoundsForSurfaceList( const std::vector< ovrDrawSurface > & surfaceList )
 {
 	Bounds3f surfaceBounds( Bounds3f::Init );
-	for ( int i = 0; i < surfaceList.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( surfaceList.size() ); i++ )
 	{
 		const ovrDrawSurface * surf = &surfaceList[i];
-		if ( surf == NULL || surf->surface == NULL )
+		if ( surf == nullptr || surf->surface == nullptr )
 		{
 			continue;
 		}
@@ -155,7 +156,7 @@ static Bounds3f BoundsForSurfaceList( const OVR::Array< ovrDrawSurface > & surfa
 		const Vector3f size = surf->surface->geo.localBounds.GetSize();
 		if ( size.x == 0.0f && size.y == 0.0f && size.z == 0.0f )
 		{
-			OVR_WARN( "surface[%s]->cullingBounds = (%f %f %f)-(%f %f %f)", surf->surface->surfaceName.ToCStr(),
+			OVR_WARN( "surface[%s]->cullingBounds = (%f %f %f)-(%f %f %f)", surf->surface->surfaceName.c_str(),
 				surf->surface->geo.localBounds.GetMins().x, surf->surface->geo.localBounds.GetMins().y, surf->surface->geo.localBounds.GetMins().z,
 				surf->surface->geo.localBounds.GetMaxs().x, surf->surface->geo.localBounds.GetMaxs().y, surf->surface->geo.localBounds.GetMaxs().z );
 			OVR_ASSERT( false );

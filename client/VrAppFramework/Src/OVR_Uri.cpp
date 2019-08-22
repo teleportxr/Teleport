@@ -11,8 +11,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "OVR_Uri.h"
 #include <cctype>
-#include "Kernel/OVR_LogUtils.h"
-#include "Kernel/OVR_UTF8Util.h"
+#include "OVR_LogUtils.h"
+#include "OVR_UTF8Util.h"
 
 // If enabled, allow URI's missing a scheme to be considered valid. This is valuable
 // if we want to allow for old paths to work by defaulting the scheme.

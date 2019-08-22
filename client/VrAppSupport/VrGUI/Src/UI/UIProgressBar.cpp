@@ -14,6 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "UI/UIButton.h"
 #include "VRMenuMgr.h"
 #include "App.h"
+#include "OVR_Math.h"
 
 namespace OVR {
 
@@ -41,7 +42,7 @@ void UIProgressBar::AddToMenu( UIMenu *menu, bool showDescriptionLabel, bool sho
 	Vector3f defaultScale( 1.0f );
 	VRMenuFontParms fontParms( HORIZONTAL_LEFT, VERTICAL_CENTER, false, false, false, 1.0f );
 
-	VRMenuObjectParms parms( VRMENU_BUTTON, Array< VRMenuComponent* >(), VRMenuSurfaceParms(),
+	VRMenuObjectParms parms( VRMENU_BUTTON, std::vector< VRMenuComponent* >(), VRMenuSurfaceParms(),
 			"", pose, defaultScale, fontParms, menu->AllocId(),
 			VRMenuObjectFlags_t(), VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
 
@@ -111,7 +112,7 @@ void UIProgressBar::AddToMenu( UIMenu *menu, bool showDescriptionLabel, bool sho
 
 void UIProgressBar::SetProgress( const float progress )
 {
-	Progress = Alg::Clamp( progress, 0.0f, 1.0f );
+	Progress = clamp<float>( progress, 0.0f, 1.0f );
 	float ScrubBarWidth = ProgressBackground.GetDimensions().x;
 	float seekwidth = ScrubBarWidth * Progress;
 
@@ -123,7 +124,7 @@ void UIProgressBar::SetProgress( const float progress )
 	}
 	else
 	{
-		seekwidth = Alg::Max( 4.0f, seekwidth );
+		seekwidth = std::max( 4.0f, seekwidth );
 	}
 
 	Vector3f pos = ProgressImage.GetLocalPosition();
@@ -133,7 +134,7 @@ void UIProgressBar::SetProgress( const float progress )
 	ProgressImage.RegenerateSurfaceGeometry( 0, false );
 }
 
-void UIProgressBar::SetDescription( const String &description )
+void UIProgressBar::SetDescription( const std::string &description )
 {
 	if ( DescriptionLabel.GetMenuObject() ) {
 		DescriptionLabel.SetText( description );

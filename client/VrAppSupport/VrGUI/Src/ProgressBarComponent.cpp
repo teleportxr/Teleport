@@ -105,7 +105,7 @@ void OvrProgressBarComponent::GetProgressBarParms( VRMenu & menu, const int widt
 		const VRMenuId_t thumbId, const VRMenuId_t animId,
 		const Posef & rootLocalPose, const Posef & xformPose,
 		const char * baseImage, const char * barImage, const char * animImage,
-		Array< const VRMenuObjectParms* > & outParms )
+		std::vector< const VRMenuObjectParms* > & outParms )
 {
 	// Build up the Progressbar parms
 	OvrProgressBarComponent * ProgressComponent = new OvrProgressBarComponent( rootId, baseId, thumbId, animId );
@@ -117,9 +117,9 @@ void OvrProgressBarComponent::GetProgressBarParms( VRMenu & menu, const int widt
 
 	// parms for the root object that holds all the Progressbar components
 	{
-		Array< VRMenuComponent* > comps;
-		comps.PushBack( ProgressComponent );
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		comps.push_back( ProgressComponent );
+		std::vector< VRMenuSurfaceParms > surfParms;
 		char const * text = "ProgressBarRoot";
 		Vector3f scale( 1.0f );
 		Posef pose( rootLocalPose );
@@ -133,13 +133,13 @@ void OvrProgressBarComponent::GetProgressBarParms( VRMenu & menu, const int widt
 			surfParms, text, pose, scale, textPose, textScale, fontParms, rootId,
 			objectFlags, initFlags );
 		itemParms->ParentId = parentId;
-		outParms.PushBack( itemParms );
+		outParms.push_back( itemParms );
 	}
 
 	// add parms for the object that serves as a transform 
 	{
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
 		char const * text = "ProgressBarTransform";
 		Vector3f scale( 1.0f );
 		Posef pose( xformPose );
@@ -153,18 +153,18 @@ void OvrProgressBarComponent::GetProgressBarParms( VRMenu & menu, const int widt
 			surfParms, text, pose, scale, textPose, textScale, fontParms, xformId,
 			objectFlags, initFlags );
 		itemParms->ParentId = rootId;
-		outParms.PushBack( itemParms );
+		outParms.push_back( itemParms );
 	}
 
 	// add parms for the base image that underlays the whole Progressbar
 	{
 		const char * text = "ProgressBase";
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
 		VRMenuSurfaceParms baseParms( text,
 				baseImage, SURFACE_TEXTURE_DIFFUSE,
 				NULL, SURFACE_TEXTURE_MAX, NULL, SURFACE_TEXTURE_MAX );
-		surfParms.PushBack( baseParms );
+		surfParms.push_back( baseParms );
 		Vector3f scale( 1.0f );
 		Posef pose( Quatf(), Vector3f( 0.0f ) );
 		Posef textPose( Quatf(), Vector3f( 0.0f ) );
@@ -177,19 +177,19 @@ void OvrProgressBarComponent::GetProgressBarParms( VRMenu & menu, const int widt
 			surfParms, text, pose, scale, textPose, textScale, fontParms, baseId,
 			objectFlags, initFlags );
 		itemParms->ParentId = xformId;
-		outParms.PushBack( itemParms );
+		outParms.push_back( itemParms );
 	}
 
 	// add parms for the thumb image of the Progressbar
 	{
 		const char * text = "ProgressThumb";
-		Array< VRMenuComponent* > comps;
-		Array< VRMenuSurfaceParms > surfParms;
+		std::vector< VRMenuComponent* > comps;
+		std::vector< VRMenuSurfaceParms > surfParms;
 		VRMenuSurfaceParms thumbParms( text,
 				barImage, SURFACE_TEXTURE_DIFFUSE,
 				NULL, SURFACE_TEXTURE_MAX, NULL, SURFACE_TEXTURE_MAX  );
 		//thumbParms.Border = thumbBorder;
-		surfParms.PushBack( thumbParms );
+		surfParms.push_back( thumbParms );
 		Vector3f scale( 1.0f );
 		Posef pose( Quatf(), -FWD * THUMB_FROM_BASE_OFFSET );
 		// Since we use left aligned anchors on the base and thumb, we offset the root once to center the Progressbar
@@ -204,7 +204,7 @@ void OvrProgressBarComponent::GetProgressBarParms( VRMenu & menu, const int widt
 			surfParms, text, pose, scale, textPose, textScale, fontParms, thumbId,
 			objectFlags, initFlags );
 		itemParms->ParentId = xformId;
-		outParms.PushBack( itemParms );
+		outParms.push_back( itemParms );
 	}
 
 	// add parms for the progress animation

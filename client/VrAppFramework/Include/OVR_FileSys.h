@@ -12,9 +12,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_FILESYS_H )
 #define OVR_FILESYS_H
 
-#include "VrApi_Types.h"
-#include "Kernel/OVR_String.h"
+#include "VrApi_Types.h"	// ovrJava
 #include "OVR_Stream.h"
+
+#include <vector>
 
 namespace OVR {
 
@@ -39,11 +40,11 @@ public:
 	// Closes the specified stream.
 	virtual void			CloseStream( ovrStream * & stream ) = 0;
 
-	virtual bool			ReadFile( char const * uri, MemBufferT< uint8_t > & outBuffer ) = 0;
+	virtual bool			ReadFile( char const * uri, std::vector< uint8_t > & outBuffer ) = 0;
 
 	virtual bool			FileExists( char const * uri ) = 0;
 	// Gets the local path for the specified URI. File must exist. Returns false if path is not accessible directly by the file system.
-	virtual bool			GetLocalPathForURI( char const * uri, String &outputPath ) = 0;
+	virtual bool			GetLocalPathForURI( char const * uri, std::string &outputPath ) = 0;
 };
 
 } // namespace OVR

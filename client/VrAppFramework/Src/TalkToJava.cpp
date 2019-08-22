@@ -14,8 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include <stdlib.h>
 #include <string.h>
 
-#include "Android/JniUtils.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 #if defined( OVR_OS_ANDROID )
 namespace OVR
@@ -27,34 +26,18 @@ void TalkToJava::Init( JavaVM & javaVM_, TalkToJavaInterface & javaIF_ )
 	Interface = &javaIF_;
 
 	// spawn the VR thread
-	if ( TtjThread.Start() == false )
-	{
-		OVR_FAIL( "TtjThread start failed." );
-	}
+	TtjThread =	std::thread( &TalkToJava::TtjThreadFunction, this );
 }
 
 TalkToJava::~TalkToJava()
 {
-	if ( TtjThread.GetThreadState() != Thread::NotRunning )
+	if ( TtjThread.joinable() )
 	{
 		// Get the background thread to kill itself.
 		OVR_LOG( "TtjMessageQueue.PostPrintf( quit )" );
 		TtjMessageQueue.PostPrintf( "quit" );
-		if ( TtjThread.Join() == false )
-		{
-			OVR_WARN( "failed to join TtjThread" );
-		}
+		TtjThread.join();
 	}
-}
-
-// Shim to call a C++ object from an OVR::Thread::Start.
-threadReturn_t TalkToJava::ThreadStarter( Thread * thread, void * parm )
-{
-	thread->SetThreadName( "OVR::TalkToJava" );
-
-	((TalkToJava *)parm)->TtjThreadFunction();
-
-	return NULL;
 }
 
 /*

@@ -12,8 +12,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_DebugLines_h )
 #define OVR_DebugLines_h
 
-#include "Kernel/OVR_Math.h"
+#include <vector>
+#include "OVR_Math.h"
 #include "SurfaceRender.h"
+
 
 namespace OVR {
 
@@ -31,7 +33,7 @@ public:
 	virtual	void		    Shutdown() = 0;
 
 	virtual	void		    BeginFrame( const long long frameNum ) = 0;
-	virtual void			AppendSurfaceList( Array< ovrDrawSurface > & surfaceList ) = 0;
+	virtual void			AppendSurfaceList( std::vector< ovrDrawSurface > & surfaceList ) = 0;
 
 	virtual	void		    AddLine( const Vector3f & start, const Vector3f & end, 
 						    		const Vector4f & startColor, const Vector4f & endColor,

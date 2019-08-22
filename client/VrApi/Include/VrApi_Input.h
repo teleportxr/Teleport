@@ -12,7 +12,6 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_VrApi_Input_h
 #define OVR_VrApi_Input_h
 
-
 #include <stddef.h>
 #include <stdint.h>
 #include "VrApi_Config.h"
@@ -206,6 +205,7 @@ typedef struct ovrInputGamepadCapabilities_
 	uint64_t			Reserved[20];
 } ovrInputGamepadCapabilities;
 
+
 /// The buffer data for playing haptics
 typedef struct ovrHapticBuffer_
 {
@@ -263,9 +263,9 @@ typedef struct ovrInputStateTrackedRemote_
 	float GripTrigger;
 
 	/// added in API version 1.1.15.0
-	// Analog values from -1.0 - 1.0
 	uint32_t Touches;
 	uint32_t Reserved5a;
+	// Analog values from -1.0 - 1.0
 	// The value is set to 0.0 on Joystick, if the magnitude of the vector is < 0.1f
 	ovrVector2f Joystick;
 	// JoystickNoDeadZone does change the raw values of the data.
@@ -314,6 +314,7 @@ typedef struct ovrInputStateGamepad_
 	// Reserved for future use.
 	uint64_t			Reserved[20];
 } ovrInputStateGamepad;
+
 
 #if defined( __cplusplus )
 extern "C" {
@@ -395,6 +396,5 @@ OVR_VRAPI_EXPORT ovrResult vrapi_SetRemoteEmulation( ovrMobile * ovr, const bool
 #if defined( __cplusplus )
 }   // extern "C"
 #endif
-
 
 #endif	// OVR_VrApi_Input_h

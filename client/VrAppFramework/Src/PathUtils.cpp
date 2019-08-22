@@ -12,12 +12,14 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "PathUtils.h"
 
 #include <stdio.h>
-#include "Android/JniUtils.h"
+#include "JniUtils.h"
 #include "VrCommon.h"
 #include "App.h"
 
 #include "VrApi.h"				// for vrapi_GetSystemPropertyString
 #include "VrApi_SystemUtils.h"	// for vrapi_ShowFatalError
+
+#include "OVR_UTF8Util.h"
 
 #if defined( OVR_OS_WIN32 )
 #include <direct.h>
@@ -49,7 +51,7 @@ static const char * FolderStorageMethodName[EST_COUNT][EFT_COUNT] =
 
 static const char * FolderStorageSignature = "(Landroid/app/Activity;)Ljava/lang/String;";
 
-static String GetDir( ovrStorageType storageType, ovrFolderType folderType, jclass VrActivityClass, const ovrJava * java )
+static std::string GetDir( ovrStorageType storageType, ovrFolderType folderType, jclass VrActivityClass, const ovrJava * java )
 {
 	OVR_ASSERT( storageType < EST_COUNT );
 	OVR_ASSERT( folderType < EFT_COUNT );
@@ -73,18 +75,18 @@ static String GetDir( ovrStorageType storageType, ovrFolderType folderType, jcla
 			if ( javaString != NULL )
 			{
 				JavaUTFChars returnString( java->Env, javaString );
-				return returnString.ToStr();
+				return std::string( returnString.ToStr() );
 			}
 		}
 		// it is a fatal error if Java doesn't return a valid string
 		java->Env->ExceptionClear();
 		// FIXME: Should the app be handling this explicitly?
-		StringBuffer errorMessage;
-		errorMessage.AppendFormat( "Failed to get storage for %s", methodName );
-		vrapi_ShowFatalError( java, "failOutOfStorage", errorMessage.ToCStr(), __FILE__, __LINE__ );
+		std::string errorMessage("Failed to get storage for ");
+		errorMessage += methodName;
+		vrapi_ShowFatalError( java, "failOutOfStorage", errorMessage.c_str(), __FILE__, __LINE__ );
 	}
 
-	return String();
+	return std::string();
 #elif defined( OVR_OS_WIN32  )
 	if ( folderType == EFT_CACHE )
 	{
@@ -113,12 +115,12 @@ static String GetDir( ovrStorageType storageType, ovrFolderType folderType, jcla
 
 			MakePath( cacheDirCanonical, permissionFlags_t( PERMISSION_WRITE ) | PERMISSION_READ );
 
-			return String( cacheDirCanonical );
+			return std::string( cacheDirCanonical );
 		}
 		else
 		{
 			OVR_LOG( "Unable to locate cache directory" );
-			return String();
+			return std::string();
 		}
 	}
 	else
@@ -126,10 +128,10 @@ static String GetDir( ovrStorageType storageType, ovrFolderType folderType, jcla
 		char curWorkingDir[ MAX_PATH ];
 		_getcwd( curWorkingDir, sizeof( curWorkingDir ) );
 
-		return String( curWorkingDir );
+		return std::string( curWorkingDir );
 	}
 #else
-	return String();
+	return std::string();
 #endif
 }
 
@@ -147,7 +149,7 @@ OvrStoragePaths::OvrStoragePaths( JNIEnv * jni, jobject activityObj )
 	{
 		for ( int j = 0; j < EFT_COUNT; j++ )
 		{
-			StorageFolderPaths[i][j] = GetDir( static_cast<ovrStorageType>( i ), static_cast<ovrFolderType>( j ), VrActivityClass, &java );
+			StorageFolderPaths[i][j] = std::string( GetDir( static_cast<ovrStorageType>( i ), static_cast<ovrFolderType>( j ), VrActivityClass, &java ) );
 		}
 	}
 
@@ -155,33 +157,33 @@ OvrStoragePaths::OvrStoragePaths( JNIEnv * jni, jobject activityObj )
 	{
 		for ( int j = 0; j < EFT_COUNT; j++ )
 		{
-			OVR_LOG( "StorageFolderPaths[%i][%i] = %s", i, j, StorageFolderPaths[i][j].ToCStr() );
+			OVR_LOG( "StorageFolderPaths[%i][%i] = %s", i, j, StorageFolderPaths[i][j].c_str() );
 		}
 	}
 }
 
-void OvrStoragePaths::PushBackSearchPathIfValid( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, Array<String> & searchPaths ) const
+void OvrStoragePaths::PushBackSearchPathIfValid( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, std::vector<std::string> & searchPaths ) const
 {
 	PushBackSearchPathIfValidPermission( toStorage, toFolder, subfolder, permissionFlags_t( PERMISSION_READ ), searchPaths );
 }
 
-void OvrStoragePaths::PushBackSearchPathIfValidPermission( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, permissionFlags_t permission, Array<String> & searchPaths ) const
+void OvrStoragePaths::PushBackSearchPathIfValidPermission( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, permissionFlags_t permission, std::vector<std::string> & searchPaths ) const
 {
-	String checkPath;
+	std::string checkPath;
 	if ( GetPathIfValidPermission( toStorage, toFolder, subfolder, permission, checkPath ) )
 	{
-		searchPaths.PushBack( checkPath );
+		searchPaths.push_back( checkPath );
 	}
 }
 
-bool OvrStoragePaths::GetPathIfValidPermission( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, permissionFlags_t permission, String & outPath ) const
+bool OvrStoragePaths::GetPathIfValidPermission( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, permissionFlags_t permission, std::string & outPath ) const
 {
-	if ( StorageFolderPaths[ toStorage ][ toFolder ].GetSize() > 0 )
+	if ( StorageFolderPaths[ toStorage ][ toFolder ].length() > 0 )
 	{
-		String checkPath = StorageFolderPaths[ toStorage ][ toFolder ] + subfolder;
-		if ( HasPermission( checkPath.ToCStr(), permission ) )
+		std::string checkPath = StorageFolderPaths[ toStorage ][ toFolder ] + std::string( subfolder );
+		if ( HasPermission( checkPath.c_str(), permission ) )
 		{
-			outPath = checkPath;
+			outPath = std::string( checkPath.c_str() );
 			return true;
 		}
 		else
@@ -198,7 +200,7 @@ bool OvrStoragePaths::GetPathIfValidPermission( ovrStorageType toStorage, ovrFol
 
 bool OvrStoragePaths::HasStoragePath( const ovrStorageType toStorage, const ovrFolderType toFolder ) const
 {
-	return ( StorageFolderPaths[ toStorage ][ toFolder ].GetSize() > 0 );
+	return ( StorageFolderPaths[ toStorage ][ toFolder ].length() > 0 );
 }
 
 long long OvrStoragePaths::GetAvailableInternalMemoryInBytes( JNIEnv * jni, jobject activityObj ) const
@@ -223,27 +225,27 @@ long long OvrStoragePaths::GetAvailableInternalMemoryInBytes( JNIEnv * jni, jobj
 #endif
 }
 
-String GetFullPath( const Array<String>& searchPaths, const String & relativePath )
+std::string GetFullPath( const std::vector<std::string>& searchPaths, const std::string & relativePath )
 {
-	if ( FileExists( relativePath.ToCStr() ) )
+	if ( FileExists( relativePath.c_str() ) )
 	{
 		return relativePath;
 	}
 
-	const int numSearchPaths = searchPaths.GetSizeI();
+	const int numSearchPaths = static_cast< const int >( searchPaths.size() );
 	for ( int index = 0; index < numSearchPaths; ++index )
 	{
-		const String fullPath = searchPaths.At( index ) + String( relativePath );
-		if ( FileExists( fullPath.ToCStr() ) )
+		const std::string fullPath = searchPaths[ index ] + relativePath;
+		if ( FileExists( fullPath.c_str() ) )
 		{
 			return fullPath;
 		}
 	}
 
-	return String();
+	return std::string();
 }
 
-bool GetFullPath( const Array<String>& searchPaths, char const * relativePath, char * outPath, const int outMaxLen )
+bool GetFullPath( const std::vector<std::string>& searchPaths, char const * relativePath, char * outPath, const int outMaxLen )
 {
 	OVR_ASSERT( outPath != NULL && outMaxLen >= 1 );
 
@@ -253,9 +255,9 @@ bool GetFullPath( const Array<String>& searchPaths, char const * relativePath, c
 		return true;
 	}
 
-	for ( int i = 0; i < searchPaths.GetSizeI(); ++i )
+	for ( const auto & searchPath : searchPaths )
 	{
-		OVR_sprintf( outPath, outMaxLen, "%s%s", searchPaths[i].ToCStr(), relativePath );
+		OVR_sprintf( outPath, outMaxLen, "%s%s", searchPath.c_str(), relativePath );
 		if ( FileExists( outPath ) )
 		{
 			return true;	// outpath is now set to the full path
@@ -266,7 +268,7 @@ bool GetFullPath( const Array<String>& searchPaths, char const * relativePath, c
 	return false;
 }
 
-bool GetFullPath( const Array<String>& searchPaths, char const * relativePath, String & outPath )
+bool GetFullPath( const std::vector<std::string>& searchPaths, char const * relativePath, std::string & outPath )
 {
 	char largePath[1024];
 	bool result = GetFullPath( searchPaths, relativePath, largePath, sizeof( largePath ) );
@@ -277,13 +279,13 @@ bool GetFullPath( const Array<String>& searchPaths, char const * relativePath, S
 	return result;
 }
 
-bool ToRelativePath( const Array<String>& searchPaths, char const * fullPath, char * outPath, const int outMaxLen )
+bool ToRelativePath( const std::vector<std::string>& searchPaths, char const * fullPath, char * outPath, const int outMaxLen )
 {
 	// check if the path starts with any of the search paths
-	const int n = searchPaths.GetSizeI();
+	const int n = static_cast< const int >( searchPaths.size() );
 	for ( int i = 0; i < n; ++i )
 	{
-		char const * path = searchPaths[i].ToCStr();
+		char const * path = searchPaths[i].c_str();
 		if ( strstr( fullPath, path ) == fullPath )
 		{
 			size_t len = OVR_strlen( path );
@@ -295,7 +297,7 @@ bool ToRelativePath( const Array<String>& searchPaths, char const * fullPath, ch
 	return false;
 }
 
-bool ToRelativePath( const Array<String>& searchPaths, char const * fullPath, String & outPath )
+bool ToRelativePath( const std::vector<std::string>& searchPaths, char const * fullPath, std::string & outPath )
 {
 	char largePath[1024];
 	bool result = ToRelativePath( searchPaths, fullPath, largePath, sizeof( largePath ) );

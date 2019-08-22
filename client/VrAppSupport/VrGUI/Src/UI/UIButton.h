@@ -52,8 +52,8 @@ private:
 
     bool			TouchDown;
 
-	OVR::String		TouchDownSnd { "touch_down" };
-	OVR::String		TouchUpSnd { "touch_up" };
+	std::string		TouchDownSnd { "touch_down" };
+	std::string		TouchUpSnd { "touch_up" };
 
 private:
 	// private assignment operator to prevent copying

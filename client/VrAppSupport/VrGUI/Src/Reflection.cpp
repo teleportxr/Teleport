@@ -11,9 +11,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "Reflection.h"
 #include "ReflectionData.h"
-#include "Kernel/OVR_Lexer.h"
-#include "Kernel/OVR_LogUtils.h"
-#include "Kernel/OVR_TypesafeNumber.h"
+#include "OVR_LogUtils.h"
+#include "OVR_TypesafeNumber.h"
 #include "OVR_Locale.h"
 #if defined( OVR_OS_WIN32 )
 #include <malloc.h>
@@ -232,7 +231,7 @@ ovrParseResult ParseBitFlags( ovrReflection & /*refl*/, ovrLocale const & /*loca
 
 ovrParseResult ParseString( ovrReflection & /*refl*/, ovrLocale const & locale, const char * name, ovrLexer & lex, ovrTypeInfo const * /*atomicInfo*/, void * outPtr, size_t const /*arraySize*/ )
 {
-	String & out = *static_cast< String* >( outPtr );
+	std::string & out = *static_cast< std::string* >( outPtr );
 	size_t const MAX_TOKEN = 1024;
 	char token[MAX_TOKEN];
 
@@ -247,7 +246,7 @@ ovrParseResult ParseString( ovrReflection & /*refl*/, ovrLocale const & locale, 
 	if ( keyPtr != nullptr )
 	{
 		intptr_t const keyIndex = keyPtr - token;
-		String temp;
+		std::string temp;
 		locale.GetString( keyPtr, keyPtr, temp );
 		token[keyIndex] = '\0';
 		out += token;
@@ -331,6 +330,14 @@ ovrParseResult::ovrParseResult( ovrLexer::ovrResult const result, char const * f
 	va_start( argPtr, fmt );
 	OVR_vsprintf( buffer, sizeof( buffer ), fmt, argPtr );
 	va_end( argPtr );
+
+#if defined( OVR_BUILD_DEBUG )
+	if ( result != ovrLexer::LEX_RESULT_OK )
+	{
+		OVR_LOG( "ovrParseResult Error = %s ", &buffer[0] );
+	}
+#endif
+
 	Error = buffer;
 }
 
@@ -470,14 +477,14 @@ ovrParseResult ParseArray( ovrReflection & refl, ovrLocale const & locale, const
 	}
 }
 
-void BuildScope( ovrReflection & refl, ovrTypeInfo const * typeInfo, String & scope )
+void BuildScope( ovrReflection & refl, ovrTypeInfo const * typeInfo, std::string & scope )
 {
 	ovrTypeInfo const * parentTypeInfo = refl.FindTypeInfo( typeInfo->ParentTypeName );
 	if ( parentTypeInfo != nullptr )
 	{
 		BuildScope( refl, parentTypeInfo, scope );
 	}
-	if ( !scope.IsEmpty() )
+	if ( !scope.empty() )
 	{
 		scope += "::";
 	}
@@ -486,9 +493,8 @@ void BuildScope( ovrReflection & refl, ovrTypeInfo const * typeInfo, String & sc
 
 ovrReflectionOverload const * ovrReflection::FindOverload( char const * scope ) const
 {
-	for ( int i = 0; i < Overloads.GetSizeI(); ++i )
+	for ( ovrReflectionOverload const * o : Overloads )
 	{
-		ovrReflectionOverload const * o = Overloads[i];
 		if ( OVR_strcmp( o->GetScope(), scope ) == 0 )
 		{
 			return o;
@@ -500,9 +506,9 @@ ovrReflectionOverload const * ovrReflection::FindOverload( char const * scope ) 
 ovrParseResult ParseObject( ovrReflection & refl, ovrLocale const & locale, const char * name, ovrLexer & lex, 
 		ovrTypeInfo const * objectTypeInfo, void * objPtr, const size_t /*arraySize*/ )
 {
-	String scope;
+	std::string scope;
 	BuildScope( refl, objectTypeInfo, scope );
-	ovrReflectionOverload const * o = refl.FindOverload( scope.ToCStr() );
+	ovrReflectionOverload const * o = refl.FindOverload( scope.c_str() );
 	if ( o != nullptr && o->OverloadsMemberVar() )
 	{
 		ovrMemberInfo const * overloadedMemberVar = refl.FindMemberReflectionInfo( objectTypeInfo->MemberInfo, o->GetName() );
@@ -617,17 +623,17 @@ void ovrReflection::Init()
 
 void ovrReflection::Shutdown()
 {
-	for ( int i = 0; i < Overloads.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Overloads.size() ); ++i )
 	{
 		delete Overloads[i];
 		Overloads[i] = nullptr;
 	}
-	Overloads.Clear();
+	Overloads.clear();
 }
 
 void ovrReflection::AddTypeInfoList( ovrTypeInfo const * list )
 {
-	TypeInfoLists.PushBack( list );
+	TypeInfoLists.push_back( list );
 }
 
 ovrMemberInfo const * ovrReflection::FindMemberReflectionInfoRecursive( ovrTypeInfo const * objectTypeInfo, const char * memberName )
@@ -668,20 +674,22 @@ ovrMemberInfo const * ovrReflection::FindMemberReflectionInfo( ovrMemberInfo con
 
 ovrTypeInfo const * ovrReflection::FindTypeInfo( char const * typeName )
 {
-	OVR_ASSERT( TypeInfoLists.GetSizeI() > 0 );
+	OVR_ASSERT( TypeInfoLists.size() > 0 );
 	if ( typeName == nullptr || typeName[0] == '\0' )
 	{
 		return nullptr;
 	}
 
-	for ( int i = 0; i < TypeInfoLists.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( TypeInfoLists.size() ); ++i )
 	{
+		// OVR_LOG( "FindTypeInfo searching for %s ...", typeName );
 		ovrTypeInfo const * ti = StaticFindTypeInfo( TypeInfoLists[i], typeName );
 		if ( ti != nullptr )
 		{
 			return ti;
 		}
 	}
+	OVR_LOG( "FindTypeInfo for '%s' could not be found! ERROR", typeName );
 	OVR_ASSERT( false );
 	return nullptr;
 }

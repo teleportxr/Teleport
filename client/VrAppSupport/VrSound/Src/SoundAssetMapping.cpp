@@ -11,9 +11,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 *************************************************************************************/
 #include "SoundAssetMapping.h"
 
-#include "Kernel/OVR_JSON.h"
-#include "Kernel/OVR_LogUtils.h"
-#include "Kernel/OVR_String_Utils.h"
+#include "OVR_JSON.h"
+#include "OVR_LogUtils.h"
 
 #include "PathUtils.h"
 #include "PackageFiles.h"
@@ -28,20 +27,20 @@ static const char * APP_SOUNDS = "assets/sound_assets.json";
 void ovrSoundAssetMapping::LoadSoundAssets( ovrFileSys * fileSys )
 {
 #if defined( OVR_OS_ANDROID )
-	Array<String> searchPaths;
-	searchPaths.PushBack( "/storage/extSdCard/" );	// FIXME: This does not work for Android-M
-	searchPaths.PushBack( "/sdcard/" );
+	std::vector<std::string> searchPaths;
+	searchPaths.push_back( "/storage/extSdCard/" );	// FIXME: This does not work for Android-M
+	searchPaths.push_back( "/sdcard/" );
 
 	// First look for sound definition using SearchPaths for dev
-	String foundPath;
+	std::string foundPath;
 	if ( GetFullPath( searchPaths, DEV_SOUNDS_RELATIVE, foundPath ) )
 	{
-		JSON * dataFile = JSON::Load( foundPath.ToCStr() );
+		std::shared_ptr<JSON> dataFile = JSON::Load( foundPath.c_str() );
 		if ( dataFile == NULL )
 		{
-			OVR_FAIL( "ovrSoundAssetMapping::LoadSoundAssets failed to load JSON meta file: %s", foundPath.ToCStr() );
+			OVR_FAIL( "ovrSoundAssetMapping::LoadSoundAssets failed to load JSON meta file: %s", foundPath.c_str() );
 		}
-		foundPath.StripTrailing( "sound_assets.json" );
+		foundPath = foundPath.substr( 0, foundPath.length() - std::string("sound_assets.json").length() );
 		LoadSoundAssetsFromJsonObject( foundPath, dataFile );
 	}
 	else // if that fails, we are in release - load sounds from vrappframework/res/raw and the assets folder
@@ -60,20 +59,20 @@ void ovrSoundAssetMapping::LoadSoundAssets( ovrFileSys * fileSys )
 	const size_t soundAssetCount = sizeof( soundAssets ) / sizeof( soundAssets[0] );
 	for ( size_t soundAssetIndex = 0; soundAssetIndex < soundAssetCount; soundAssetIndex++ )
 	{
-		const String filename = StringUtils::Va( "apk:///%s", soundAssets[soundAssetIndex] );
-		MemBufferT< uint8_t > buffer;
-		if ( fileSys != nullptr && fileSys->ReadFile( filename.ToCStr(), buffer ) )
+		const std::string filename = std::string( "apk:///" ) + soundAssets[soundAssetIndex];
+		std::vector< uint8_t > buffer;
+		if ( fileSys != nullptr && fileSys->ReadFile( filename.c_str(), buffer ) )
 		{
-			String foundPath = filename;
-			foundPath.StripTrailing( "sound_assets.json" );
+			std::string foundPath = filename;
+			foundPath = foundPath.substr( 0, foundPath.length() - std::string( "sound_assets.json" ).length() );
 			const char * perror = nullptr;
-			JSON * dataFile = JSON::Parse( reinterpret_cast< char const * >( static_cast< uint8_t const * >( buffer ) ), &perror );
-			LoadSoundAssetsFromJsonObject( foundPath, dataFile );	// this releases the JSON memory...
+			std::shared_ptr<JSON> dataFile = JSON::Parse( reinterpret_cast< char const * >( static_cast< uint8_t const * >( buffer.data() ) ), &perror );
+			LoadSoundAssetsFromJsonObject( foundPath, dataFile );
 		}
 	}
 #endif
 
-	if ( SoundMap.IsEmpty() )
+	if ( SoundMap.empty() )
 	{
 		OVR_LOG( "SoundManger - failed to load any sound definition files!" );
 	}
@@ -81,16 +80,16 @@ void ovrSoundAssetMapping::LoadSoundAssets( ovrFileSys * fileSys )
 
 bool ovrSoundAssetMapping::HasSound( const char * soundName ) const
 {
-	StringHash< String >::ConstIterator soundMapping = SoundMap.Find( soundName );
-	return ( soundMapping != SoundMap.End() );
+	auto soundMapping = SoundMap.find( soundName );
+	return ( soundMapping != SoundMap.end() );
 }
 
-bool ovrSoundAssetMapping::GetSound( const char * soundName, String & outSound ) const
+bool ovrSoundAssetMapping::GetSound( const char * soundName, std::string & outSound ) const
 {
-	StringHash< String >::ConstIterator soundMapping = SoundMap.Find( soundName );
-	if ( soundMapping != SoundMap.End() )
+	auto soundMapping = SoundMap.find( soundName );
+	if ( soundMapping != SoundMap.end() )
 	{
-		outSound = soundMapping->Second;
+		outSound = soundMapping->second;
 		return true;
 	}
 	else
@@ -101,7 +100,7 @@ bool ovrSoundAssetMapping::GetSound( const char * soundName, String & outSound )
 	return false;
 }
 
-void ovrSoundAssetMapping::LoadSoundAssetsFromPackage( const String & url, const char * jsonFile )
+void ovrSoundAssetMapping::LoadSoundAssetsFromPackage( const std::string & url, const char * jsonFile )
 {
 	int bufferLength = 0;
 	void * 	buffer = NULL;
@@ -111,7 +110,7 @@ void ovrSoundAssetMapping::LoadSoundAssetsFromPackage( const String & url, const
 		OVR_FAIL( "ovrSoundAssetMapping::LoadSoundAssetsFromPackage failed to read %s", jsonFile );
 	}
 
-	JSON * dataFile = JSON::Parse( reinterpret_cast< char * >( buffer ) );
+	auto dataFile = JSON::Parse( reinterpret_cast< char * >( buffer ) );
 	if ( !dataFile )
 	{
 		OVR_FAIL( "ovrSoundAssetMapping::LoadSoundAssetsFromPackage failed json parse on %s", jsonFile );
@@ -121,39 +120,36 @@ void ovrSoundAssetMapping::LoadSoundAssetsFromPackage( const String & url, const
 	LoadSoundAssetsFromJsonObject( url, dataFile );
 }
 
-void ovrSoundAssetMapping::LoadSoundAssetsFromJsonObject( const String & url, JSON * dataFile )
+void ovrSoundAssetMapping::LoadSoundAssetsFromJsonObject( const std::string & url, std::shared_ptr<JSON> dataFile )
 {
 	OVR_ASSERT( dataFile );
 
 	// Read in sounds - add to map
-	JSON* sounds = dataFile->GetItemByName( "Sounds" );
+	auto sounds = dataFile->GetItemByName( "Sounds" );
 	OVR_ASSERT( sounds );
 	
 	const unsigned numSounds = sounds->GetItemCount();
 
 	for ( unsigned i = 0; i < numSounds; ++i )
 	{
-		const JSON* sound = sounds->GetItemByIndex( i );
+		auto sound = sounds->GetItemByIndex( i );
 		OVR_ASSERT( sound );
 
-		String fullPath( url );
-		fullPath.AppendString( sound->GetStringValue().ToCStr() );
+		std::string fullPath( url );
+		fullPath += sound->GetStringValue().c_str();
 
 		// Do we already have this sound?
-		StringHash< String >::ConstIterator soundMapping = SoundMap.Find( sound->Name );
-		if ( soundMapping != SoundMap.End() )
+		auto soundMapping = SoundMap.find( sound->Name );
+		if ( soundMapping != SoundMap.end() )
 		{
-			OVR_LOG( "SoundManger - adding Duplicate sound %s with asset %s", sound->Name.ToCStr(), fullPath.ToCStr() );
-			SoundMap.Set( sound->Name, fullPath );
+			OVR_LOG( "SoundManger - adding Duplicate sound %s with asset %s", sound->Name.c_str(), fullPath.c_str() );
 		}
 		else // add new sound
 		{
-			OVR_LOG( "SoundManger read in: %s -> %s", sound->Name.ToCStr(), fullPath.ToCStr() );
-			SoundMap.Add( sound->Name, fullPath );
+			OVR_LOG( "SoundManger read in: %s -> %s", sound->Name.c_str(), fullPath.c_str() );
 		}
+		SoundMap[ sound->Name ] = fullPath;
 	}
-
-	dataFile->Release();
 }
 
 }

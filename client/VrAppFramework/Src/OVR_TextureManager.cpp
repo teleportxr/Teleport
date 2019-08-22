@@ -14,11 +14,11 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "OVR_TextureManager.h"
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_LogUtils.h"
-#include "Kernel/OVR_Hash.h"
+#include <vector>
+#include <unordered_map>
+
+#include "OVR_Types.h"
+#include "OVR_LogUtils.h"
 
 #include "OVR_FileSys.h"
 #include "PackageFiles.h"
@@ -48,33 +48,6 @@ void ovrManagedTexture::Free()
 //==============================================================================================
 // ovrTextureManagerImpl
 //==============================================================================================
-
-// DJB2 string hash function
-static unsigned long DJB2Hash( char const * str )
-{
-    unsigned long hash = 5381;
-    int c;
-
-	for ( c = *str; c != 0; str++, c = *str )
-    //while ( c = *str++ )
-	{
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-	}
-    return hash;
-}
-
-//==============================================================
-// Hash functor for OVR::String
-
-template< class C >
-class ovrUriHash
-{
-public:
-	UPInt operator()( const C & data ) const 
-	{
-		return DJB2Hash( data.ToCStr() );
-	}
-};
 
 //==============================================================
 // ovrTextureManagerImpl
@@ -112,12 +85,12 @@ public:
 	virtual void				PrintStats() const OVR_OVERRIDE;
 
 private:
-	Array< ovrManagedTexture >	Textures;
-	Array< int >				FreeTextures;
-	bool						Initialized;
+	std::vector< ovrManagedTexture >	Textures;
+	std::vector< int >					FreeTextures;
+	bool								Initialized;
 
 #if defined( USE_HASH )
-	OVR::Hash< String, int, ovrUriHash< String > >	UriHash;
+	std::unordered_map< std::string, int >	UriHash;
 #endif
 
 	mutable int					NumUriLoads;
@@ -169,7 +142,7 @@ ovrTextureManagerImpl::~ovrTextureManagerImpl()
 void ovrTextureManagerImpl::Init()
 {
 #if defined( USE_HASH )
-	UriHash.SetCapacity( 512 );
+	UriHash.reserve( 512 );
 #endif
 	Initialized = true;
 }
@@ -178,18 +151,18 @@ void ovrTextureManagerImpl::Init()
 // ovrTextureManagerImpl::
 void ovrTextureManagerImpl::Shutdown()
 {
-	for ( int i = 0; i < Textures.GetSizeI(); ++i )
+	for ( auto & texture : Textures )
 	{
-		if ( Textures[i].IsValid() )
+		if ( texture.IsValid() )
 		{
-			Textures[i].Free();
+			texture.Free();
 		}
 	}
 
-	Textures.Resize( 0 );
-	FreeTextures.Resize( 0 );
+	Textures.resize( 0 );
+	FreeTextures.resize( 0 );
 #if defined( USE_HASH )
-	UriHash.Clear();
+	UriHash.clear();
 #endif
 
 	Initialized = false;
@@ -287,7 +260,7 @@ textureHandle_t ovrTextureManagerImpl::LoadTexture( ovrFileSys & fileSys, char c
 		idx = IndexForHandle( handle );
 		Textures[idx] = ovrManagedTexture( handle, uri, tex );
 #if defined( USE_HASH )
-		UriHash.Add( String( uri ), idx );
+		UriHash[ std::string( uri ) ] = idx;
 #endif
 
 		NumActualUriLoads++;
@@ -313,13 +286,12 @@ textureHandle_t	ovrTextureManagerImpl::LoadTexture( char const * uri, void const
 
 	int width = 0;
 	int height = 0;
-	// NOTE: MemBuffer doesn't delete on destruction
-	MemBuffer buff( static_cast< uint8_t const * >( buffer ), static_cast< int >( bufferSize ) );
-	GlTexture tex = LoadTextureFromBuffer( uri, buff, TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), width, height );
+	// NOTE: buffer ownership handled by caller
+	GlTexture tex = LoadTextureFromBuffer( uri, static_cast< uint8_t const *  >( buffer ), bufferSize, TextureFlags_t( TEXTUREFLAG_NO_DEFAULT ), width, height );
 
 	if ( !tex.IsValid() )
 	{
-		OVR_LOG( "LoadTextureFromBuffer( '%s', %p, %" PRIu64 " ) failed!", uri, buffer, static_cast< uint64_t >( bufferSize ) );
+		OVR_LOG( "LoadTextureFromBuffer( '%s', %p, %u ) failed!", uri, buffer, static_cast< uint32_t >( bufferSize ) );
 		return textureHandle_t();
 	}
 
@@ -335,7 +307,7 @@ textureHandle_t	ovrTextureManagerImpl::LoadTexture( char const * uri, void const
 #if defined( USE_HASH )
 		{
 			OVR_PERF_TIMER( LoadTexture_FromBuffer_Hash );
-			UriHash.Add( String( uri ), idx );
+			UriHash[ std::string( uri ) ] = idx;
 		}
 #endif
 
@@ -390,7 +362,7 @@ textureHandle_t	ovrTextureManagerImpl::LoadRGBATexture( char const * uri, void c
 #if defined( USE_HASH )
 		{
 			OVR_PERF_TIMER( LoadRGBATexture_uri_Hash );
-			UriHash.Add( String( uri ), idx );
+			UriHash[ std::string( uri ) ] = idx;
 		}
 #endif
 		NumActualBufferLoads++;
@@ -475,13 +447,13 @@ void ovrTextureManagerImpl::FreeTexture( textureHandle_t const handle )
 	if ( idx >= 0 )
 	{
 #if defined( USE_HASH )
-		if ( Textures[idx].GetUri().IsEmpty() )
+		if ( Textures[idx].GetUri().empty() )
 		{
-			UriHash.Remove( Textures[idx].GetUri() );
+			UriHash.erase( Textures[idx].GetUri() );
 		}
 #endif
 		Textures[idx].Free();
-		FreeTextures.PushBack( idx );
+		FreeTextures.push_back( idx );
 	}
 }
 
@@ -497,20 +469,20 @@ int ovrTextureManagerImpl::FindTextureIndex( char const * uri ) const
 	// texture file loads to be eliminated during perf testing for purposes
 	// of comparison	
 #if 0
-	if ( Textures.GetSizeI() > 0 )
+	if ( Textures.size() > 0 )
 	{
 		return 0;
 	}
 #endif
 
 #if defined( USE_HASH )
-	int index = -1;
-	if ( UriHash.Get( String( uri ), &index ) )
+	auto it = UriHash.find( std::string( uri ) );
+	if ( it != UriHash.end() )
 	{
-		return index;
+		return it->second;
 	}
 #else
-	for ( int i = 0; i < Textures.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Textures.size() ); ++i )
 	{
 		if ( Textures[i].IsValid() && OVR_stricmp( uri, Textures[i].GetUri() ) == 0 )
 		{
@@ -518,7 +490,7 @@ int ovrTextureManagerImpl::FindTextureIndex( char const * uri ) const
 			return i;
 		}
 	}
-	NumStringCompares += Textures.GetSizeI();
+	NumStringCompares += static_cast< int >( Textures.size() );
 #endif
 	return -1;
 }
@@ -530,11 +502,11 @@ int ovrTextureManagerImpl::FindTextureIndex( int const iconId ) const
 	OVR_PERF_TIMER( FindTextureIndex_iconId );
 
 	NumSearches++;
-	if ( Textures.GetSizeI() > 0 )
+	if ( Textures.size() > 0 )
 	{
 		return 0;
 	}
-	for ( int i = 0; i < Textures.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Textures.size() ); ++i )
 	{
 		if ( Textures[i].IsValid() && Textures[i].GetIconId() == iconId )
 		{
@@ -542,7 +514,7 @@ int ovrTextureManagerImpl::FindTextureIndex( int const iconId ) const
 			return i;
 		}
 	}
-	NumCompares += Textures.GetSizeI();
+	NumCompares += static_cast< int >( Textures.size() );
 	return -1;
 }
 
@@ -563,16 +535,16 @@ textureHandle_t ovrTextureManagerImpl::AllocTexture()
 {
 	OVR_PERF_TIMER( AllocTexture );
 
-	if ( FreeTextures.GetSizeI() > 0 )
+	if ( FreeTextures.size() > 0 )
 	{
-		int idx = FreeTextures[FreeTextures.GetSizeI() - 1];
-		FreeTextures.PopBack();
+		int idx = FreeTextures[static_cast< int >( FreeTextures.size() ) - 1];
+		FreeTextures.pop_back();
 		Textures[idx] = ovrManagedTexture();
 		return textureHandle_t( idx );
 	}
 
-	int idx = Textures.GetSizeI();
-	Textures.PushBack( ovrManagedTexture() );
+	int idx = static_cast< int >( Textures.size() );
+	Textures.push_back( ovrManagedTexture() );
 
 	return textureHandle_t( idx );
 }

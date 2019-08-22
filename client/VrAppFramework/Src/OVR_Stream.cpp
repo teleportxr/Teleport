@@ -13,7 +13,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "OVR_Stream_Impl.h"
 #include <stdio.h>
 #include "OVR_Uri.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
+#include "OVR_UTF8Util.h"
 #include "PackageFiles.h"
 #include "PathUtils.h"
 
@@ -133,7 +134,7 @@ bool ovrStream::Open( char const * uri, ovrStreamMode const mode )
 {
 	if ( IsOpen() )
 	{
-		OVR_LOG( "ovrStream::Open: tried to open Uri '%s' when Uri '%s' is already open", uri, Uri.ToCStr() );
+		OVR_LOG( "ovrStream::Open: tried to open Uri '%s' when Uri '%s' is already open", uri, Uri.c_str() );
 		OVR_ASSERT( !IsOpen() );
 		return false;
 	}
@@ -159,14 +160,14 @@ void ovrStream::Close()
 
 //==============================
 // ovrStream::GetLocalPathFromUri
-bool ovrStream::GetLocalPathFromUri( const char *uri, String &outputPath )
+bool ovrStream::GetLocalPathFromUri( const char *uri, std::string &outputPath )
 {
 	return GetLocalPathFromUri_Internal( uri, outputPath );
 }
 
 //==============================
 // ovrStream::Read
-bool ovrStream::Read( MemBufferT< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead ) 
+bool ovrStream::Read( std::vector< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead ) 
 {
 	if ( !IsOpen() )
 	{
@@ -186,7 +187,7 @@ bool ovrStream::Read( MemBufferT< uint8_t > & outBuffer, size_t const bytesToRea
 
 //==============================
 // ovrStream::ReadFile
-bool ovrStream::ReadFile( char const * uri, MemBufferT< uint8_t > & outBuffer )
+bool ovrStream::ReadFile( char const * uri, std::vector< uint8_t > & outBuffer )
 {
 	OVR_ASSERT( IsOpen() );
 	
@@ -231,7 +232,7 @@ size_t ovrStream::Length() const
 // ovrStream::GetUri
 char const * ovrStream::GetUri() const 
 { 
-	return Uri.ToCStr(); 
+	return Uri.c_str(); 
 }
 
 //==============================
@@ -283,7 +284,7 @@ bool ovrUriScheme_File::OpenHost_Internal( char const * hostName, char const * u
 	{
 		return false;
 	}
-	Hosts.PushBack( host );
+	Hosts.push_back( host );
 	return true;
 }
 
@@ -309,12 +310,12 @@ void ovrUriScheme_File::Shutdown_Internal()
 // ovrUriScheme_File::FindHostIndexByHostName
 int ovrUriScheme_File::FindHostIndexByHostName( char const * hostName ) const
 {
-	if ( ( hostName == NULL || hostName[0] == '\0' ) && Hosts.GetSizeI() > 0 )
+	if ( ( hostName == NULL || hostName[0] == '\0' ) && Hosts.size() > 0 )
 	{
 		return 0;
 	}
 
-	for ( int i = 0; i < Hosts.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Hosts.size() ); ++i )
 	{
 		OVR_ASSERT( Hosts[i] != NULL );
 		if ( OVR_strcmp( Hosts[i]->GetHostName(), hostName ) == 0 )
@@ -368,7 +369,7 @@ void ovrUriScheme_File::ovrFileHost::Close()
 // ovrUriScheme_File::ovrFileHost::AddSourceUri
 void ovrUriScheme_File::ovrFileHost::AddSourceUri( char const * sourceUri )
 {
-	SourceUris.PushBack( String( sourceUri ) );
+	SourceUris.push_back( std::string( sourceUri ) );
 }
 
 //==============================================================================================
@@ -391,7 +392,7 @@ ovrStream_File::~ovrStream_File()
 
 //==============================
 // ovrStream_File::GetLocalPathFromUri_Internal
-bool ovrStream_File::GetLocalPathFromUri_Internal( const char *uri, String &outputPath )
+bool ovrStream_File::GetLocalPathFromUri_Internal( const char *uri, std::string &outputPath )
 { 
 	// require a fully-qualified Uri for now?
 	char schemeName[128];
@@ -578,18 +579,18 @@ void	ovrStream_File::Close_Internal()
 
 //==============================
 // ovrStream_File::Read_Internal
-bool ovrStream_File::Read_Internal( MemBufferT< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead )
+bool ovrStream_File::Read_Internal( std::vector< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead )
 {
 	size_t numRead;
 #if defined( OVR_OS_ANDROID )
-	numRead = fread( outBuffer, bytesToRead, 1, F );
+	numRead = fread( outBuffer.data(), bytesToRead, 1, F );
 #else
-	numRead = fread_s( outBuffer, outBuffer.GetSize(), bytesToRead, 1, F );
+	numRead = fread_s( outBuffer.data(), outBuffer.size(), bytesToRead, 1, F );
 #endif
 	outBytesRead = numRead * bytesToRead;
 	if ( numRead != 1 )
 	{
-		OVR_LOG( "Tried to read %zu bytes from file '%s', but only read %zu bytes.", bytesToRead, Uri.ToCStr(), outBytesRead );
+		OVR_LOG( "Tried to read %zu bytes from file '%s', but only read %zu bytes.", bytesToRead, Uri.c_str(), outBytesRead );
 		return false;
 	}
 	return true;
@@ -597,12 +598,12 @@ bool ovrStream_File::Read_Internal( MemBufferT< uint8_t > & outBuffer, size_t co
 
 //==============================
 // ovrStream_File::ReadFile_Internal
-bool ovrStream_File::ReadFile_Internal( MemBufferT< uint8_t > & outBuffer )
+bool ovrStream_File::ReadFile_Internal( std::vector< uint8_t > & outBuffer )
 {
-	MemBufferT< uint8_t > buffer( Length() );
+	std::vector< uint8_t > buffer( Length() );
 	outBuffer = buffer;
 	size_t bytesRead = 0;
-	return Read_Internal( outBuffer, outBuffer.GetSize(), bytesRead );
+	return Read_Internal( outBuffer, outBuffer.size(), bytesRead );
 }
 
 //==============================
@@ -612,7 +613,7 @@ bool ovrStream_File::Write_Internal( void const * inBuffer, size_t const bytesTo
 	size_t recsWritten = fwrite( inBuffer, bytesToWrite, 1, F );
 	if ( recsWritten != 1 )
 	{
-		OVR_LOG( "Failed to write %zu bytes to file '%s'", bytesToWrite, Uri.ToCStr() );
+		OVR_LOG( "Failed to write %zu bytes to file '%s'", bytesToWrite, Uri.c_str() );
 		return false;
 	}
 	return true;
@@ -698,7 +699,7 @@ bool ovrUriScheme_Apk::OpenHost_Internal( char const * hostName, char const * so
 	{
 		return false;
 	}
-	Hosts.PushBack( host );
+	Hosts.push_back( host );
 	return true;
 }
 
@@ -718,12 +719,12 @@ void ovrUriScheme_Apk::CloseHost_Internal( char const * hostName )
 // ovrUriScheme_Apk::FindHostIndexByHostName
 int ovrUriScheme_Apk::FindHostIndexByHostName( char const * hostName ) const
 {
-	if ( ( hostName == NULL || hostName[0] == '\0' ) && Hosts.GetSizeI() > 0 )
+	if ( ( hostName == NULL || hostName[0] == '\0' ) && Hosts.size() > 0 )
 	{
 		return 0;
 	}
 
-	for ( int i = 0; i < Hosts.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Hosts.size() ); ++i )
 	{
 		OVR_ASSERT( Hosts[i] != NULL );
 		if ( OVR_strcmp( Hosts[i]->GetHostName(), hostName ) == 0 )
@@ -772,7 +773,7 @@ bool ovrUriScheme_Apk::ovrApkHost::Open()
 	char query[1024];
 	char fragment[1024];
 
-	bool const valid = ovrUri::ParseUri( SourceUri.ToCStr(), scheme, sizeof( scheme ), 
+	bool const valid = ovrUri::ParseUri( SourceUri.c_str(), scheme, sizeof( scheme ), 
 			username, sizeof( username ), password, sizeof( password ),
 			hostName, sizeof( hostName ), port, 
 			path, sizeof( path ), 
@@ -786,7 +787,7 @@ bool ovrUriScheme_Apk::ovrApkHost::Open()
 	ZipFile = ovr_OpenOtherApplicationPackage( path );
 	if ( ZipFile == NULL )
 	{
-		OVR_LOG( "Failed to open apk: '%s'", SourceUri.ToCStr() );
+		OVR_LOG( "Failed to open apk: '%s'", SourceUri.c_str() );
 		return false;
 	}
 	return true;
@@ -809,13 +810,13 @@ void ovrUriScheme_Apk::ovrApkHost::Close()
 void ovrUriScheme_Apk::Shutdown_Internal() 
 {
 	// close all hosts
-	for ( int i = 0; i < Hosts.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Hosts.size() ); ++i )
 	{
 		Hosts[i]->Close();
 		delete Hosts[i];
 		Hosts[i] = NULL;
 	}
-	Hosts.Clear();
+	Hosts.clear();
 }
 
 
@@ -839,7 +840,7 @@ ovrStream_Apk::~ovrStream_Apk()
 
 //==============================
 // ovrStream_Apk::GetLocalPathFromUri_Internal
-bool ovrStream_Apk::GetLocalPathFromUri_Internal( const char *uri, String &outputPath )
+bool ovrStream_Apk::GetLocalPathFromUri_Internal( const char *uri, std::string &outputPath )
 { 
 	// can't get path to file inside of zip
 	return false;
@@ -896,7 +897,7 @@ void ovrStream_Apk::Close_Internal()
 
 //==============================
 // ovrStream_Apk::Read_Internal
-bool ovrStream_Apk::Read_Internal( MemBufferT< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead )
+bool ovrStream_Apk::Read_Internal( std::vector< uint8_t > & outBuffer, size_t const bytesToRead, size_t & outBytesRead )
 {
 	OVR_ASSERT( false );	// TODO: cannot read partial files from an apk yet
 	return false;
@@ -904,7 +905,7 @@ bool ovrStream_Apk::Read_Internal( MemBufferT< uint8_t > & outBuffer, size_t con
 
 //==============================
 // ovrStream_Apk::ReadFile_Internal
-bool ovrStream_Apk::ReadFile_Internal( MemBufferT< uint8_t > & outBuffer )
+bool ovrStream_Apk::ReadFile_Internal( std::vector< uint8_t > & outBuffer )
 {
 	char hostName[ovrFileSys::OVR_MAX_HOST_NAME_LEN];
 	int port;
@@ -921,20 +922,7 @@ bool ovrStream_Apk::ReadFile_Internal( MemBufferT< uint8_t > & outBuffer )
 	// inside of zip files, the leading slash will cause the file to not be found, so skip it
 	char const * pathStart = ( path[0] == '/' ) ? path + 1 : path;
 
-	int length = 0;
-	void * buffer = NULL;
-	bool success = ovr_ReadFileFromOtherApplicationPackage( zipFile, pathStart, length, buffer );
-	if ( success )
-	{
-		outBuffer.TakeOwnershipOfBuffer( buffer, length );
-		return true;
-	}
-	if ( buffer != NULL )
-	{
-		free( buffer );
-		buffer = NULL;
-	}
-	return false;
+	return ovr_ReadFileFromOtherApplicationPackage( zipFile, pathStart, outBuffer );
 }
 
 //==============================

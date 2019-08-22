@@ -11,8 +11,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "KeyState.h"
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_Types.h"
+#include "OVR_LogUtils.h"
 #include "SystemClock.h"
 
 namespace OVR {

@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 
 namespace shaders {
-
+// We NEED these extensions to update the texture without uploading it every frame.
     static const char* VideoSurface_OPTIONS = R"(
 	#extension GL_OES_EGL_image_external_essl3 : require
 )";
@@ -80,7 +80,7 @@ namespace shaders {
         vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
 		vec3 colourSampleVec  = normalize(vec3(-worldspace_dir.z, worldspace_dir.y, worldspace_dir.x));
         vec2 uv=WorldspaceDirToUV(colourSampleVec);
-		gl_FragColor = 0.3*depthOffsetScale+0.3*colourOffsetScale+texture2D(videoFrameTexture, OffsetScale(uv,colourOffsetScale));
+		gl_FragColor = 0.003*depthOffsetScale+0.003*colourOffsetScale+texture2D(videoFrameTexture, OffsetScale(uv,colourOffsetScale));
 	}
 )";
 

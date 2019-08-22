@@ -11,8 +11,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_Geometry_h
 #define OVR_Geometry_h
 
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_Math.h"
+#include <vector>
+#include "OVR_Math.h"
 
 #include "GlProgram.h"
 
@@ -21,19 +21,18 @@ namespace OVR
 
 struct VertexAttribs
 {
-	Array< Vector3f > position;
-	Array< Vector3f > normal;
-	Array< Vector3f > tangent;
-	Array< Vector3f > binormal;
-	Array< Vector4f > color;
-	Array< Vector2f > uv0;
-	Array< Vector2f > uv1;
-	Array< Vector4i > jointIndices;
-	Array< Vector4f > jointWeights;
+	std::vector< Vector3f > position;
+	std::vector< Vector3f > normal;
+	std::vector< Vector3f > tangent;
+	std::vector< Vector3f > binormal;
+	std::vector< Vector4f > color;
+	std::vector< Vector2f > uv0;
+	std::vector< Vector2f > uv1;
+	std::vector< Vector4i > jointIndices;
+	std::vector< Vector4f > jointWeights;
 };
 
-typedef unsigned short TriangleIndex;
-//typedef unsigned int TriangleIndex;
+typedef uint16_t TriangleIndex;
 
 class GlGeometry
 {
@@ -47,7 +46,7 @@ public:
 				indexCount( 0 ),
 				localBounds( Bounds3f::Init ) {}
 
-			GlGeometry( const VertexAttribs & attribs, const Array< TriangleIndex > & indices ) :
+			GlGeometry( const VertexAttribs & attribs, const std::vector< TriangleIndex > & indices ) :
 				vertexBuffer( 0 ),
 				indexBuffer( 0 ),
 				vertexArrayObject( 0 ),
@@ -57,7 +56,7 @@ public:
 				localBounds( Bounds3f::Init ){ Create( attribs, indices ); }
 
 	// Create the VAO and vertex and index buffers from arrays of data.
-	void	Create( const VertexAttribs & attribs, const Array< TriangleIndex > & indices );
+	void	Create( const VertexAttribs & attribs, const std::vector< TriangleIndex > & indices );
 	void	Update( const VertexAttribs & attribs, const bool updateBounds = true );
 
 	// Free the buffers and VAO, assuming that they are strictly for this geometry.
@@ -67,8 +66,11 @@ public:
 	void	Free();
 
 public:
-	static const int32_t MAX_GEOMETRY_VERTICES	= 1 << ( sizeof( TriangleIndex ) * 8 );
-	static const int32_t MAX_GEOMETRY_INDICES	= 1024 * 1024 * 3;
+	static constexpr int32_t MAX_GEOMETRY_VERTICES = 1 << ( sizeof( TriangleIndex ) * 8 );
+	static constexpr int32_t MAX_GEOMETRY_INDICES = 1024 * 1024 * 3;
+
+	static constexpr inline int32_t GetMaxGeometryVertices() { return MAX_GEOMETRY_VERTICES; }
+	static constexpr inline int32_t GetMaxGeometryIndices() { return MAX_GEOMETRY_INDICES; }
 
 	static unsigned IndexType;		// GL_UNSIGNED_SHORT, GL_UNSIGNED_INT, etc.
 

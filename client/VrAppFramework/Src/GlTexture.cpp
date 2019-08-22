@@ -15,9 +15,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "GlTexture.h"
 
 #include "OVR_GlUtils.h"
-#include "Kernel/OVR_LogUtils.h"
-
-#include "VrApi.h"
+#include "OVR_LogUtils.h"
+#include "OVR_UTF8Util.h"
 
 #include "stb_image.h"
 #include "PackageFiles.h"
@@ -27,6 +26,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "OVR_PerfTimer.h"
 
 #include <algorithm>
+#include <fstream>
+#include <locale>
 
 #include <math.h>
 
@@ -60,6 +61,46 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #define GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR 0x93DC
 #define GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR 0x93DD
 #endif
+
+static void ScanFilePath( const char* url, const char** pfilename, const char** pext )
+{
+    const char *filename = url;
+    const char *lastDot = nullptr;
+
+    uint32_t charVal = OVR::UTF8Util::DecodeNextChar( &url );
+
+    while ( charVal != 0 )
+    {
+        if ( ( charVal == '/') || ( charVal == '\\' ) )
+        {
+            filename = url;
+            lastDot  = nullptr;
+        }
+        else if ( charVal == '.' )
+        {
+            lastDot = url - 1;
+        }
+
+        charVal = OVR::UTF8Util::DecodeNextChar( &url );
+    }
+
+    if ( pfilename )
+    {
+    	*pfilename = filename;
+    }
+
+    if ( pext )
+    {
+        *pext = lastDot;
+    }
+}
+
+static std::string GetExtension( const std::string & s )
+{
+    const char* ext = nullptr;
+    ScanFilePath( s.c_str(), nullptr, &ext );
+    return std::string( ext );
+}
 
 namespace OVR {
 
@@ -207,7 +248,7 @@ static int GetASTCTextureSize( const eTextureFormat format, const int w, const i
 	};
 
 	int const NUM_ASTC_FORMATS = ( Texture_ASTC_End - Texture_ASTC_Start ) >> 8;
-	blockDims_t const blockDims[NUM_ASTC_FORMATS] = 
+	blockDims_t const blockDims[NUM_ASTC_FORMATS] =
 	{
 		{ 4, 4, 1 },
 		{ 5, 4, 1 },
@@ -399,7 +440,7 @@ static GlTexture CreateGlTexture( const char * fileName, const eTextureFormat fo
 			glBindTexture( GL_TEXTURE_2D, 0 );
 			return GlTexture( texId, GL_TEXTURE_2D, width, height );
 		}
-		
+
 		if ( IsCompressedFormat( format ) )
 		{
 			OVR_PERF_TIMER( CreateGlTexture_CompressedTexImage2D );
@@ -689,7 +730,7 @@ GlTexture LoadASTCTextureFromMemory( uint8_t const * buffer, const size_t buffer
 		OVR_LOG( "Unhandled ASTC block size: %i x %i", header->blockDim_x, header->blockDim_y );
 		return GlTexture();
 	}
-	return CreateGlTexture("memory-ASTC", format, w, h, buffer + sizeof(struct astcHeader), 
+	return CreateGlTexture("memory-ASTC", format, w, h, buffer + sizeof(struct astcHeader),
 		bufferSize - sizeof(struct astcHeader), 1, useSrgbFormat, false);
 }
 /*
@@ -816,7 +857,7 @@ GlTexture LoadTexturePVR( const char * fileName, const unsigned char * buffer, c
 		case 23:					format = Texture_ETC2_RGBA;	break;
 		case 578721384203708274llu:	format = Texture_RGBA;		break;
 		default:
-			OVR_LOG( "%s: Unknown PVR texture format %" PRIu64 ", size %ix%i", fileName, header.PixelFormat, width, height );
+			OVR_LOG( "%s: Unknown PVR texture format %u, size %ix%i", fileName, static_cast< uint32_t >( header.PixelFormat ), width, height );
 			return GlTexture( 0, 0, 0 );
 	}
 
@@ -828,7 +869,7 @@ GlTexture LoadTexturePVR( const char * fileName, const unsigned char * buffer, c
 		return GlTexture( 0, 0, 0 );
 	}
 
-	const UInt32 mipCount = ( noMipMaps ) ? 1 : OVR::Alg::Max( static_cast<UInt32>( 1u ), header.MipMapCount );
+	const UInt32 mipCount = ( noMipMaps ) ? 1 : std::max< UInt32 >( static_cast<UInt32>( 1u ), header.MipMapCount );
 
 	width = header.Width;
 	height = header.Height;
@@ -857,23 +898,38 @@ unsigned char * LoadPVRBuffer( const char * fileName, int & width, int & height 
 	width = 0;
 	height = 0;
 
-	MemBufferFile bufferFile( fileName );
+	std::vector< uint8_t > buffer;
+	std::ifstream is;
+	is.open( fileName, std::ios::binary | std::ios::in );
+	if ( !is.is_open() )
+	{
+		return nullptr;
+	}
+	// get size
+    is.seekg( 0, is.end );
+    size_t file_size = (size_t)is.tellg();
+    is.seekg( 0, is.beg );	
+    // allocate buffer
+    buffer.resize(file_size);
+	// read all file
+	if ( !is.read( reinterpret_cast< char * >( buffer.data() ), file_size ) )
+	{
+		return nullptr;
+	}
+	// close
+	is.close();
 
-	MemBuffer buffer = bufferFile.ToMemBuffer();
-
-	if ( buffer.Length < ( int )( sizeof( OVR_PVR_HEADER ) ) )
+	if ( buffer.size() < sizeof( OVR_PVR_HEADER ) )
 	{
 		OVR_LOG( "Invalid PVR file" );
-		buffer.FreeData();
-		return NULL;
+		return nullptr;
 	}
 
-	const OVR_PVR_HEADER & header = *( OVR_PVR_HEADER * )buffer.Buffer;
+	const OVR_PVR_HEADER & header = *( OVR_PVR_HEADER * )buffer.data();
 	if ( header.Version != 0x03525650 )
 	{
 		OVR_LOG( "Invalid PVR file version" );
-		buffer.FreeData();
-		return NULL;
+		return nullptr;
 	}
 
 	eTextureFormat format = Texture_None;
@@ -881,28 +937,25 @@ unsigned char * LoadPVRBuffer( const char * fileName, int & width, int & height 
 	{
  		case 578721384203708274llu:	format = Texture_RGBA;		break;
 		default:
-			OVR_LOG( "Unknown PVR texture format %" PRIu64 ", size %ix%i", header.PixelFormat, width, height );
-			buffer.FreeData();
-			return NULL;
+			OVR_LOG( "Unknown PVR texture format %u, size %ix%i", static_cast< uint32_t >( header.PixelFormat ), width, height );
+			return nullptr;
 	}
 
 	// skip the metadata
-	const UInt32 startTex = sizeof( OVR_PVR_HEADER ) + header.MetaDataSize;
-	if ( ( startTex < sizeof( OVR_PVR_HEADER ) ) || ( startTex >= static_cast< size_t >( buffer.Length ) ) )
+	size_t startTex = sizeof( OVR_PVR_HEADER ) + header.MetaDataSize;
+	if ( ( startTex < sizeof( OVR_PVR_HEADER ) ) || ( startTex >= buffer.size() ) )
 	{
 		OVR_LOG( "Invalid PVR header sizes" );
-		buffer.FreeData();
-		return NULL;
+		return nullptr;
 	}
 
 	size_t mipSize = GetOvrTextureSize( format, header.Width, header.Height );
-	
-	const int outBufferSizeBytes = buffer.Length - startTex;
 
+	// NOTE: cast to int before subtracting!!!!
+	const int outBufferSizeBytes = static_cast< int >( buffer.size() ) - static_cast< int >( startTex );
 	if ( outBufferSizeBytes < 0 || mipSize > static_cast< size_t >( outBufferSizeBytes ) )
 	{
-		buffer.FreeData();
-		return NULL;
+		return nullptr;
 	}
 
 	width = header.Width;
@@ -910,9 +963,7 @@ unsigned char * LoadPVRBuffer( const char * fileName, int & width, int & height 
 
 	// skip the metadata
 	unsigned char * outBuffer = ( unsigned char * )malloc( outBufferSizeBytes );
-	memcpy( outBuffer, ( unsigned char * )buffer.Buffer + startTex, outBufferSizeBytes );
-	buffer.FreeData();
-	
+	memcpy( outBuffer, ( unsigned char * )buffer.data() + startTex, outBufferSizeBytes );
 	return outBuffer;
 }
 
@@ -939,13 +990,13 @@ UInt32 numberOfArrayElements
 UInt32 numberOfFaces
 UInt32 numberOfMipmapLevels
 UInt32 bytesOfKeyValueData
-  
+
 for each keyValuePair that fits in bytesOfKeyValueData
     UInt32   keyAndValueByteSize
     Byte     keyAndValue[keyAndValueByteSize]
     Byte     valuePadding[3 - ((keyAndValueByteSize + 3) % 4)]
 end
-  
+
 for each mipmap_level in numberOfMipmapLevels*
     UInt32 imageSize;
     for each array_element in numberOfArrayElements*
@@ -1046,7 +1097,7 @@ GlTexture LoadTextureKTX( const char * fileName, const unsigned char * buffer, c
 	width = header.pixelWidth;
 	height = header.pixelHeight;
 
-	const UInt32 mipCount = ( noMipMaps ) ? 1 : OVR::Alg::Max( static_cast<UInt32>( 1u ), header.numberOfMipmapLevels );
+	const UInt32 mipCount = ( noMipMaps ) ? 1 : std::max< UInt32 >( static_cast<UInt32>( 1u ), header.numberOfMipmapLevels );
 
 	if ( header.numberOfFaces == 1 )
 	{
@@ -1069,7 +1120,9 @@ GlTexture LoadTextureKTX( const char * fileName, const unsigned char * buffer, c
 unsigned char * LoadImageToRGBABuffer( const char * fileName, const unsigned char * inBuffer, const size_t inBufferLen,
 		int & width, int & height )
 {
-	const String ext = String( fileName ).GetExtension().ToLower();
+	std::string ext = GetExtension( fileName );
+	auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+	loc.tolower( &ext[0], &ext[0] + ext.length() );
 
 	width = 0;
 	height = 0;
@@ -1105,20 +1158,28 @@ static int MipLevelsForSize( int width, int height )
 	return levels;
 }
 
-GlTexture LoadTextureFromBuffer( const char * fileName, const MemBuffer & buffer,
+GlTexture LoadTextureFromBuffer( const char * fileName, const uint8_t * buffer, size_t bufferSize,
 		const TextureFlags_t & flags, int & width, int & height )
 {
-	const String ext = String( fileName ).GetExtension().ToLower();
+	std::string ext = GetExtension( fileName );
+	auto & loc = std::use_facet<std::ctype<char>>( std::locale() );
+	loc.tolower( &ext[0], &ext[0] + ext.length() );
 
-	// LOG( "Loading texture buffer %s (%s), length %i", fileName, ext.ToCStr(), buffer.Length );
+	// LOG( "Loading texture buffer %s (%s), length %i", fileName, ext.c_str(), buffer.Length );
 
 	GlTexture texId;
 	width = 0;
 	height = 0;
 
-	if ( fileName == NULL || buffer.Buffer == NULL || buffer.Length < 1 )
+	if ( fileName == nullptr || buffer == nullptr || bufferSize < 1 )
 	{
 		// can't load anything from an empty buffer
+#if defined( OVR_BUILD_DEBUG )
+		OVR_LOG( "LoadTextureFromBuffer - can't load from empties: fileName = %s buffer = %p bufferSize = %d",
+			fileName == nullptr ? "<null>" : fileName, 
+			buffer == nullptr ? 0 : buffer,
+			static_cast<int>(bufferSize) );
+#endif
 	}
 	else if (	ext == ".jpg" || ext == ".tga" ||
 				ext == ".png" || ext == ".bmp" ||
@@ -1127,7 +1188,7 @@ GlTexture LoadTextureFromBuffer( const char * fileName, const MemBuffer & buffer
 	{
 		// Uncompressed files loaded by stb_image
 		int comp;
-		stbi_uc * image = stbi_load_from_memory( (unsigned char *)buffer.Buffer, buffer.Length, &width, &height, &comp, 4 );
+		stbi_uc * image = stbi_load_from_memory( buffer, bufferSize, &width, &height, &comp, 4 );
 		if ( image != NULL )
 		{
 			// Optionally outline the border alpha.
@@ -1164,21 +1225,21 @@ GlTexture LoadTextureFromBuffer( const char * fileName, const MemBuffer & buffer
 	}
 	else if ( ext == ".pvr" )
 	{
-		texId = LoadTexturePVR( fileName, (const unsigned char *)buffer.Buffer, buffer.Length,
+		texId = LoadTexturePVR( fileName, buffer, bufferSize,
 						( flags & TEXTUREFLAG_USE_SRGB ),
 						( flags & TEXTUREFLAG_NO_MIPMAPS ),
 						width, height );
 	}
 	else if ( ext == ".ktx" )
 	{
-		texId = LoadTextureKTX( fileName, (const unsigned char *)buffer.Buffer, buffer.Length,
+		texId = LoadTextureKTX( fileName, buffer, bufferSize,
 						( flags & TEXTUREFLAG_USE_SRGB ),
 						( flags & TEXTUREFLAG_NO_MIPMAPS ),
 						width, height );
 	}
 	else if ( ext == ".astc" )
 	{
-		texId = LoadASTCTextureFromMemory( (const unsigned char*)buffer.Buffer, buffer.Length, 4, flags & TEXTUREFLAG_USE_SRGB );
+		texId = LoadASTCTextureFromMemory( buffer, bufferSize, 4, flags & TEXTUREFLAG_USE_SRGB );
 	}
 	else if ( ext == ".pkm" )
 	{
@@ -1186,7 +1247,7 @@ GlTexture LoadTextureFromBuffer( const char * fileName, const MemBuffer & buffer
 	}
 	else
 	{
-		OVR_LOG( "unsupported file extension '%s', for file '%s'", ext.ToCStr(), fileName );
+		OVR_LOG( "unsupported file extension '%s', for file '%s'", ext.c_str(), fileName );
 	}
 
 	// Create a default texture if the load failed
@@ -1207,8 +1268,17 @@ GlTexture LoadTextureFromBuffer( const char * fileName, const MemBuffer & buffer
 					255,255,255, 255,255,255, 255,255,255, 255,255,255, 255,255,255, 255,255,255, 255,255,255, 255,255,255
 			};
 			texId = LoadRGBTextureFromMemory( defaultTexture, 8, 8, flags & TEXTUREFLAG_USE_SRGB );
+#if defined( OVR_BUILD_DEBUG )
+			OVR_LOG( "FAILD to load '%s' -> using default via LoadRGBTextureFromMemory", fileName );
+#endif
 		}
 	}
+#if defined( OVR_BUILD_DEBUG )
+	else
+	{
+		OVR_LOG( "Finish loading '%s' -> SUCCESS", fileName );
+	}
+#endif
 
 	return texId;
 }
@@ -1223,18 +1293,14 @@ GlTexture LoadTextureFromOtherApplicationPackage( void * zipFile, const char * n
 		return GlTexture( 0, 0, 0 );
 	}
 
-	void * 	buffer;
-	int		bufferLength;
-
-	ovr_ReadFileFromOtherApplicationPackage( zipFile, nameInZip, bufferLength, buffer );
-	if ( !buffer )
+	std::vector< uint8_t > buffer;
+	ovr_ReadFileFromOtherApplicationPackage( zipFile, nameInZip, buffer );
+	if ( buffer.size() == 0 )
 	{
 		return GlTexture( 0, 0, 0 );
 	}
-	GlTexture texId = LoadTextureFromBuffer( nameInZip, MemBuffer( buffer, bufferLength ),
-			flags, width, height );
-	free( buffer );
-	return texId;
+
+	return LoadTextureFromBuffer( nameInZip, buffer, flags, width, height );
 }
 
 GlTexture LoadTextureFromApplicationPackage( const char * nameInZip,
@@ -1243,17 +1309,16 @@ GlTexture LoadTextureFromApplicationPackage( const char * nameInZip,
 	return LoadTextureFromOtherApplicationPackage( ovr_GetApplicationPackageFile(), nameInZip, flags, width, height );
 }
 
-GlTexture LoadTextureFromUri( class ovrFileSys & fileSys, const char * uri, 
+GlTexture LoadTextureFromUri( class ovrFileSys & fileSys, const char * uri,
 					const TextureFlags_t & flags, int & width, int & height )
 {
-	MemBufferT< uint8_t > buffer;
+	std::vector< uint8_t > buffer;
 	if ( !fileSys.ReadFile( uri, buffer ) )
 	{
 		return GlTexture();
 	}
 
-	return LoadTextureFromBuffer( uri, MemBuffer( buffer, static_cast< int >( buffer.GetSize() ) ),
-			flags, width, height );
+	return LoadTextureFromBuffer( uri, buffer, flags, width, height );
 }
 
 void FreeTexture( GlTexture texId )

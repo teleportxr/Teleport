@@ -10,12 +10,85 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 *************************************************************************************/
 
 #include "ModelFileLoading.h"
+#include "OVR_Std.h"
+#include "GlGeometry.h"
 
 namespace OVR
 {
 
+namespace StringUtils
+{
+	//
+	// Convert a string to a common type.
+	//
+
+	template< typename _type_ > inline size_t StringTo( _type_ & value, const char * string ) { return 0; }
+
+	template< typename _type_ > inline size_t StringTo( _type_ * valueArray, const int count, const char * string )
+	{
+		size_t length = 0;
+		length += strspn( string + length, "{ \t\n\r" );
+		for ( int i = 0; i < count; i++ )
+		{
+			length += StringTo< _type_ >( valueArray[i], string + length );
+		}
+		length += strspn( string + length, "} \t\n\r" );
+		return length;
+	}
+
+	template< typename _type_ > inline size_t StringTo( std::vector< _type_ > & valueArray, const char * string )
+	{
+		size_t length = 0;
+		length += strspn( string + length, "{ \t\n\r" );
+		for ( ; ; )
+		{
+			_type_ value;
+			size_t s = StringTo< _type_ >( value, string + length );
+			if ( s == 0 ) break;
+			valueArray.push_back( value );
+			length += s;
+		}
+		length += strspn( string + length, "} \t\n\r" );
+		return length;
+	}
+
+	// specializations
+
+	template<> inline size_t StringTo( short &          value, const char * str ) { char * endptr; value = (short) strtol( str, &endptr, 10 ); return endptr - str; }
+	template<> inline size_t StringTo( unsigned short & value, const char * str ) { char * endptr; value = (unsigned short) strtoul( str, &endptr, 10 ); return endptr - str; }
+	template<> inline size_t StringTo( int &            value, const char * str ) { char * endptr; value = strtol( str, &endptr, 10 ); return endptr - str; }
+	template<> inline size_t StringTo( unsigned int &   value, const char * str ) { char * endptr; value = strtoul( str, &endptr, 10 ); return endptr - str; }
+	template<> inline size_t StringTo( float &          value, const char * str ) { char * endptr; value = strtof( str, &endptr ); return endptr - str; }
+	template<> inline size_t StringTo( double &         value, const char * str ) { char * endptr; value = strtod( str, &endptr ); return endptr - str; }
+
+	template<> inline size_t StringTo( Vector2f & value, const char * string ) { return StringTo( &value.x, 2, string ); }
+	template<> inline size_t StringTo( Vector2d & value, const char * string ) { return StringTo( &value.x, 2, string ); }
+	template<> inline size_t StringTo( Vector2i & value, const char * string ) { return StringTo( &value.x, 2, string ); }
+
+	template<> inline size_t StringTo( Vector3f & value, const char * string ) { return StringTo( &value.x, 3, string ); }
+	template<> inline size_t StringTo( Vector3d & value, const char * string ) { return StringTo( &value.x, 3, string ); }
+	template<> inline size_t StringTo( Vector3i & value, const char * string ) { return StringTo( &value.x, 3, string ); }
+
+	template<> inline size_t StringTo( Vector4f & value, const char * string ) { return StringTo( &value.x, 4, string ); }
+	template<> inline size_t StringTo( Vector4d & value, const char * string ) { return StringTo( &value.x, 4, string ); }
+	template<> inline size_t StringTo( Vector4i & value, const char * string ) { return StringTo( &value.x, 4, string ); }
+
+	template<> inline size_t StringTo( Matrix4f & value, const char * string ) { return StringTo( &value.M[0][0], 16, string ); }
+	template<> inline size_t StringTo( Matrix4d & value, const char * string ) { return StringTo( &value.M[0][0], 16, string ); }
+
+	template<> inline size_t StringTo( Quatf &    value, const char * string ) { return StringTo( &value.x, 4, string ); }
+	template<> inline size_t StringTo( Quatd &    value, const char * string ) { return StringTo( &value.x, 4, string ); }
+
+	template<> inline size_t StringTo( Planef &   value, const char * string ) { return StringTo( &value.N.x, 4, string ); }
+	template<> inline size_t StringTo( Planed &   value, const char * string ) { return StringTo( &value.N.x, 4, string ); }
+
+	template<> inline size_t StringTo( Bounds3f & value, const char * string ) { return StringTo( value.b, 2, string ); }
+	template<> inline size_t StringTo( Bounds3d & value, const char * string ) { return StringTo( value.b, 2, string ); }
+
+} // StringUtils
+
 template< typename _type_ >
-void ReadModelArray( Array< _type_ > & out, const char * string, const BinaryReader & bin, const int numElements )
+void ReadModelArray( std::vector< _type_ > & out, const char * string, const BinaryReader & bin, const int numElements )
 {
 	if ( string != nullptr && string[0] != '\0' && numElements > 0 )
 	{
@@ -32,48 +105,51 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 	const ModelGlPrograms & programs, const MaterialParms & materialParms,
 	ModelGeo * outModelGeo )
 {
-	OVR_LOG( "parsing %s", modelFile.FileName.ToCStr() );
+	OVR_LOG( "parsing %s", modelFile.FileName.c_str() );
 	OVR_UNUSED( modelsJsonLength );
 
 	const BinaryReader bin( ( const UByte * )modelsBin, modelsBinLength );
 
 	if ( modelsBin != nullptr && bin.ReadUInt32() != 0x6272766F )
 	{
-		OVR_WARN( "LoadModelFile_OvrScene_Json: bad binary file for %s", modelFile.FileName.ToCStr() );
+		OVR_WARN( "LoadModelFile_OvrScene_Json: bad binary file for %s", modelFile.FileName.c_str() );
 		return false;
 	}
 
 	const char * error = nullptr;
-	JSON * json = JSON::Parse( modelsJson, &error );
+	auto json = JSON::Parse( modelsJson, &error );
 	if ( json == nullptr )
 	{
-		OVR_WARN( "LoadModelFile_OvrScene_Json: Error loading %s : %s", modelFile.FileName.ToCStr(), error );
+		OVR_WARN( "LoadModelFile_OvrScene_Json: Error loading %s : %s", modelFile.FileName.c_str(), error );
 		return false;
 	}
 
-	if ( modelFile.SubScenes.GetSizeI() > 0
-		|| modelFile.Nodes.GetSizeI() > 0
-		|| modelFile.Models.GetSize() > 0 )
+	if ( modelFile.SubScenes.size() > 0
+		|| modelFile.Nodes.size() > 0
+		|| modelFile.Models.size() > 0 )
 	{
-		OVR_WARN( "LoadModelFile_OvrScene_Json: model already has data, replacing with %s", modelFile.FileName.ToCStr() );
-		modelFile.SubScenes.Clear();
-		modelFile.Nodes.Clear();
-		modelFile.Models.Clear();
+		OVR_WARN( "LoadModelFile_OvrScene_Json: model already has data, replacing with %s", modelFile.FileName.c_str() );
+		modelFile.SubScenes.clear();
+		modelFile.Nodes.clear();
+		modelFile.Models.clear();
 	}
 
 	const JsonReader models( json );
 	if ( models.IsObject() )
 	{
 		// For OvrScene we will generate just one subScene, node, and model to place the surfaces on.
-		const UPInt modelIndex = modelFile.Models.AllocBack();
+		const UPInt modelIndex = static_cast< UPInt >( modelFile.Models.size() );
+		modelFile.Models.emplace_back( Model() );
 		modelFile.Models[modelIndex].name = "DefaultModelName";
-		const UPInt nodeIndex = modelFile.Nodes.AllocBack();
+		const UPInt nodeIndex = static_cast< UPInt >( modelFile.Nodes.size() );
+		modelFile.Nodes.emplace_back( ModelNode() );
 		modelFile.Nodes[nodeIndex].name = "DefaultNodeName";
 		modelFile.Nodes[nodeIndex].model = &modelFile.Models[modelIndex];
-		const UPInt sceneIndex = modelFile.SubScenes.AllocBack();
+		const UPInt sceneIndex = static_cast< UPInt >( modelFile.SubScenes.size() );
+		modelFile.SubScenes.emplace_back( ModelSubScene() );
 		modelFile.SubScenes[sceneIndex].name = "DefaultSceneName";
 		modelFile.SubScenes[sceneIndex].visible = true;
-		modelFile.SubScenes[sceneIndex].nodes.PushBack( (int)nodeIndex );
+		modelFile.SubScenes[sceneIndex].nodes.push_back( (int)nodeIndex );
 
 		//
 		// Render Model
@@ -95,7 +171,7 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 				TEXTURE_OCCLUSION_TRANSPARENT
 			};
 
-			Array< GlTexture > glTextures;
+			std::vector< GlTexture > glTextures;
 
 			const JsonReader texture_array( render_model.GetChildByName( "textures" ) );
 			if ( texture_array.IsArray() )
@@ -105,27 +181,27 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 					const JsonReader texture( texture_array.GetNextArrayElement() );
 					if ( texture.IsObject() )
 					{
-						const String name = texture.GetChildStringByName( "name" );
+						const std::string name = texture.GetChildStringByName( "name" );
 
 						// Try to match the texture names with the already loaded texture
 						// and create a default texture if the texture file is missing.
 						int i = 0;
-						for ( ; i < modelFile.Textures.GetSizeI(); i++ )
+						for ( ; i < static_cast< int >( modelFile.Textures.size() ); i++ )
 						{
-							if ( modelFile.Textures[i].name.CompareNoCase( name ) == 0 )
+							if ( OVR_stricmp( modelFile.Textures[i].name.c_str(), name.c_str() ) == 0 )
 							{
 								break;
 							}
 						}
-						if ( i == modelFile.Textures.GetSizeI() )
+						if ( i == static_cast< int >( modelFile.Textures.size() ) )
 						{
-							OVR_LOG( "texture %s defaulted", name.ToCStr() );
+							OVR_LOG( "texture %s defaulted", name.c_str() );
 							// Create a default texture.
-							LoadModelFileTexture( modelFile, name.ToCStr(), nullptr, 0, materialParms );
+							LoadModelFileTexture( modelFile, name.c_str(), nullptr, 0, materialParms );
 						}
-						glTextures.PushBack( modelFile.Textures[i].texid );
+						glTextures.push_back( modelFile.Textures[i].texid );
 
-						const String usage = texture.GetChildStringByName( "usage" );
+						const std::string usage = texture.GetChildStringByName( "usage" );
 						if ( usage == "diffuse" )
 						{
 							if ( materialParms.EnableDiffuseAniso == true )
@@ -142,7 +218,7 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 							}
 						}
 						/*
-						const String occlusion = texture.GetChildStringByName( "occlusion" );
+						const std::string occlusion = texture.GetChildStringByName( "occlusion" );
 
 						TextureOcclusion textureOcclusion = TEXTURE_OCCLUSION_OPAQUE;
 						if ( occlusion == "opaque" )			{ textureOcclusion = TEXTURE_OCCLUSION_OPAQUE; }
@@ -165,12 +241,13 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 					const JsonReader joint( joint_array.GetNextArrayElement() );
 					if ( joint.IsObject() )
 					{
-						const UPInt index = modelFile.Nodes[nodeIndex].JointsOvrScene.AllocBack();
+						const UPInt index = static_cast< UPInt >( modelFile.Nodes[nodeIndex].JointsOvrScene.size() );
+						modelFile.Nodes[nodeIndex].JointsOvrScene.emplace_back( ModelJoint() );
 						modelFile.Nodes[nodeIndex].JointsOvrScene[index].index = static_cast<int>( index );
 						modelFile.Nodes[nodeIndex].JointsOvrScene[index].name = joint.GetChildStringByName( "name" );
-						StringUtils::StringTo( modelFile.Nodes[nodeIndex].JointsOvrScene[index].transform, joint.GetChildStringByName( "transform" ).ToCStr() );
+						StringUtils::StringTo( modelFile.Nodes[nodeIndex].JointsOvrScene[index].transform, joint.GetChildStringByName( "transform" ).c_str() );
 						modelFile.Nodes[nodeIndex].JointsOvrScene[index].animation = MODEL_JOINT_ANIMATION_NONE;
-						const String animation = joint.GetChildStringByName( "animation" );
+						const std::string animation = joint.GetChildStringByName( "animation" );
 						if ( animation == "none" ) { modelFile.Nodes[nodeIndex].JointsOvrScene[index].animation = MODEL_JOINT_ANIMATION_NONE; }
 						else if ( animation == "rotate" ) { modelFile.Nodes[nodeIndex].JointsOvrScene[index].animation = MODEL_JOINT_ANIMATION_ROTATE; }
 						else if ( animation == "sway" ) { modelFile.Nodes[nodeIndex].JointsOvrScene[index].animation = MODEL_JOINT_ANIMATION_SWAY; }
@@ -191,18 +268,19 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 			const JsonReader tag_array( render_model.GetChildByName( "tags" ) );
 			if ( tag_array.IsArray() )
 			{
-				modelFile.Tags.Clear();
+				modelFile.Tags.clear();
 
 				while ( !tag_array.IsEndOfArray() )
 				{
 					const JsonReader tag( tag_array.GetNextArrayElement() );
 					if ( tag.IsObject() )
 					{
-						const UPInt index = modelFile.Tags.AllocBack();
+						const UPInt index = static_cast< UPInt >( modelFile.Tags.size() );
+						modelFile.Tags.emplace_back( ModelTag() );
 						modelFile.Tags[index].name = tag.GetChildStringByName( "name" );
-						StringUtils::StringTo( modelFile.Tags[index].matrix, tag.GetChildStringByName( "matrix" ).ToCStr() );
-						StringUtils::StringTo( modelFile.Tags[index].jointIndices, tag.GetChildStringByName( "jointIndices" ).ToCStr() );
-						StringUtils::StringTo( modelFile.Tags[index].jointWeights, tag.GetChildStringByName( "jointWeights" ).ToCStr() );
+						StringUtils::StringTo( modelFile.Tags[index].matrix, tag.GetChildStringByName( "matrix" ).c_str() );
+						StringUtils::StringTo( modelFile.Tags[index].jointIndices, tag.GetChildStringByName( "jointIndices" ).c_str() );
+						StringUtils::StringTo( modelFile.Tags[index].jointWeights, tag.GetChildStringByName( "jointWeights" ).c_str() );
 					}
 				}
 			}
@@ -230,7 +308,7 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 						{
 							while ( !source.IsEndOfArray() )
 							{
-								if ( modelSurface.surfaceDef.surfaceName.GetLength() )
+								if ( modelSurface.surfaceDef.surfaceName.length() )
 								{
 									modelSurface.surfaceDef.surfaceName += ";";
 								}
@@ -238,7 +316,7 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 							}
 						}
 
-						LOGV( "surface %s", modelSurface.surfaceDef.surfaceName.ToCStr() );
+						LOGV( "surface %s", modelSurface.surfaceDef.surfaceName.c_str() );
 
 						//
 						// Surface Material
@@ -261,7 +339,7 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 						const JsonReader material( surface.GetChildByName( "material" ) );
 						if ( material.IsObject() )
 						{
-							const String type = material.GetChildStringByName( "type" );
+							const std::string type = material.GetChildStringByName( "type" );
 
 							if ( type == "opaque" ) { materialType = MATERIAL_TYPE_OPAQUE; }
 							else if ( type == "perforated" ) { materialType = MATERIAL_TYPE_PERFORATED; }
@@ -279,12 +357,12 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 						// Surface Bounds
 						//
 
-						StringUtils::StringTo( modelSurface.surfaceDef.geo.localBounds, surface.GetChildStringByName( "bounds" ).ToCStr() );
+						StringUtils::StringTo( modelSurface.surfaceDef.geo.localBounds, surface.GetChildStringByName( "bounds" ).c_str() );
 
 						TriangleIndex indexOffset = 0;
 						if ( outModelGeo != nullptr )
 						{
-							indexOffset = static_cast< TriangleIndex >( ( *outModelGeo ).positions.GetSize() );
+							indexOffset = static_cast< TriangleIndex >( ( *outModelGeo ).positions.size() );
 						}
 						//
 						// Vertices
@@ -295,24 +373,24 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 						const JsonReader vertices( surface.GetChildByName( "vertices" ) );
 						if ( vertices.IsObject() )
 						{
-							const int vertexCount = Alg::Min( vertices.GetChildInt32ByName( "vertexCount" ), GlGeometry::MAX_GEOMETRY_VERTICES );
+							const int vertexCount = std::min<int>( vertices.GetChildInt32ByName( "vertexCount" ), GlGeometry::GetMaxGeometryVertices() );
 							// OVR_LOG( "%5d vertices", vertexCount );
 
-							ReadModelArray( attribs.position, vertices.GetChildStringByName( "position" ).ToCStr(), bin, vertexCount );
-							ReadModelArray( attribs.normal, vertices.GetChildStringByName( "normal" ).ToCStr(), bin, vertexCount );
-							ReadModelArray( attribs.tangent, vertices.GetChildStringByName( "tangent" ).ToCStr(), bin, vertexCount );
-							ReadModelArray( attribs.binormal, vertices.GetChildStringByName( "binormal" ).ToCStr(), bin, vertexCount );
-							ReadModelArray( attribs.color, vertices.GetChildStringByName( "color" ).ToCStr(), bin, vertexCount );
-							ReadModelArray( attribs.uv0, vertices.GetChildStringByName( "uv0" ).ToCStr(), bin, vertexCount );
-							ReadModelArray( attribs.uv1, vertices.GetChildStringByName( "uv1" ).ToCStr(), bin, vertexCount );
-							ReadModelArray( attribs.jointIndices, vertices.GetChildStringByName( "jointIndices" ).ToCStr(), bin, vertexCount );
-							ReadModelArray( attribs.jointWeights, vertices.GetChildStringByName( "jointWeights" ).ToCStr(), bin, vertexCount );
+							ReadModelArray( attribs.position, vertices.GetChildStringByName( "position" ).c_str(), bin, vertexCount );
+							ReadModelArray( attribs.normal, vertices.GetChildStringByName( "normal" ).c_str(), bin, vertexCount );
+							ReadModelArray( attribs.tangent, vertices.GetChildStringByName( "tangent" ).c_str(), bin, vertexCount );
+							ReadModelArray( attribs.binormal, vertices.GetChildStringByName( "binormal" ).c_str(), bin, vertexCount );
+							ReadModelArray( attribs.color, vertices.GetChildStringByName( "color" ).c_str(), bin, vertexCount );
+							ReadModelArray( attribs.uv0, vertices.GetChildStringByName( "uv0" ).c_str(), bin, vertexCount );
+							ReadModelArray( attribs.uv1, vertices.GetChildStringByName( "uv1" ).c_str(), bin, vertexCount );
+							ReadModelArray( attribs.jointIndices, vertices.GetChildStringByName( "jointIndices" ).c_str(), bin, vertexCount );
+							ReadModelArray( attribs.jointWeights, vertices.GetChildStringByName( "jointWeights" ).c_str(), bin, vertexCount );
 
 							if ( outModelGeo != nullptr )
 							{
-								for ( int i = 0; i < attribs.position.GetSizeI(); ++i )
+								for ( int i = 0; i < static_cast< int >( attribs.position.size() ); ++i )
 								{
-									( *outModelGeo ).positions.PushBack( attribs.position[i] );
+									( *outModelGeo ).positions.push_back( attribs.position[i] );
 								}
 							}
 						}
@@ -321,22 +399,22 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 						// Triangles
 						//
 
-						Array< TriangleIndex > indices;
+						std::vector< TriangleIndex > indices;
 
 						const JsonReader triangles( surface.GetChildByName( "triangles" ) );
 						if ( triangles.IsObject() )
 						{
-							const int indexCount = Alg::Min( triangles.GetChildInt32ByName( "indexCount" ), GlGeometry::MAX_GEOMETRY_INDICES );
+							const int indexCount = std::min<int>( triangles.GetChildInt32ByName( "indexCount" ), GlGeometry::GetMaxGeometryIndices() );
 							// OVR_LOG( "%5d indices", indexCount );
 
-							ReadModelArray( indices, triangles.GetChildStringByName( "indices" ).ToCStr(), bin, indexCount );
+							ReadModelArray( indices, triangles.GetChildStringByName( "indices" ).c_str(), bin, indexCount );
 						}
 
 						if ( outModelGeo != nullptr )
 						{
-							for ( int i = 0; i < indices.GetSizeI(); ++i )
+							for ( int i = 0; i < static_cast< int >( indices.size() ); ++i )
 							{
-								( *outModelGeo ).indices.PushBack( indices[i] + indexOffset );
+								( *outModelGeo ).indices.push_back( indices[i] + indexOffset );
 							}
 						}
 
@@ -347,9 +425,9 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 						modelSurface.surfaceDef.geo.Create( attribs, indices );
 
 						// Create the uniform buffer for storing the joint matrices.
-						if ( modelFile.Nodes[nodeIndex].JointsOvrScene.GetSizeI() > 0 )
+						if ( modelFile.Nodes[nodeIndex].JointsOvrScene.size() > 0 )
 						{
-							modelSurface.surfaceDef.graphicsCommand.uniformJoints.Create( GLBUFFER_TYPE_UNIFORM, modelFile.Nodes[nodeIndex].JointsOvrScene.GetSize() * sizeof( Matrix4f ), nullptr );
+							modelSurface.surfaceDef.graphicsCommand.uniformJoints.Create( GLBUFFER_TYPE_UNIFORM, modelFile.Nodes[nodeIndex].JointsOvrScene.size() * sizeof( Matrix4f ), nullptr );
 						}
 
 						const char * materialTypeString = "opaque";
@@ -382,20 +460,20 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 							materialTypeString = "additive";
 						}
 
-						const bool skinned = ( attribs.jointIndices.GetSize() == attribs.position.GetSize() &&
-							attribs.jointWeights.GetSize() == attribs.position.GetSize() );
+						const bool skinned = ( attribs.jointIndices.size() == attribs.position.size() &&
+							attribs.jointWeights.size() == attribs.position.size() );
 
-						if ( diffuseTextureIndex >= 0 && diffuseTextureIndex < glTextures.GetSizeI() )
+						if ( diffuseTextureIndex >= 0 && diffuseTextureIndex < static_cast< int >( glTextures.size() ) )
 						{
 							modelSurface.surfaceDef.graphicsCommand.uniformTextures[0] = glTextures[diffuseTextureIndex];
 
-							if ( emissiveTextureIndex >= 0 && emissiveTextureIndex < glTextures.GetSizeI() )
+							if ( emissiveTextureIndex >= 0 && emissiveTextureIndex < static_cast< int >( glTextures.size() ) )
 							{
 								modelSurface.surfaceDef.graphicsCommand.uniformTextures[1] = glTextures[emissiveTextureIndex];
 
-								if ( normalTextureIndex >= 0 && normalTextureIndex < glTextures.GetSizeI() &&
-									specularTextureIndex >= 0 && specularTextureIndex < glTextures.GetSizeI() &&
-									reflectionTextureIndex >= 0 && reflectionTextureIndex < glTextures.GetSizeI() )
+								if ( normalTextureIndex >= 0 && normalTextureIndex < static_cast< int >( glTextures.size() ) &&
+									specularTextureIndex >= 0 && specularTextureIndex < static_cast< int >( glTextures.size() ) &&
+									reflectionTextureIndex >= 0 && reflectionTextureIndex < static_cast< int >( glTextures.size() ) )
 								{
 									// reflection mapped material;
 									modelSurface.surfaceDef.graphicsCommand.uniformTextures[2] = glTextures[normalTextureIndex];
@@ -470,7 +548,7 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 								}
 							}
 						}
-						else if ( attribs.color.GetSizeI() > 0 )
+						else if ( attribs.color.size() > 0 )
 						{
 							// vertex color material
 							modelSurface.surfaceDef.graphicsCommand.numUniformTextures = 0;
@@ -524,7 +602,7 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 							LOGV( "polygon offset material" );
 						}
 
-						modelFile.Models[modelIndex].surfaces.PushBack( modelSurface );
+						modelFile.Models[modelIndex].surfaces.push_back( modelSurface );
 					}
 				}
 			}
@@ -541,13 +619,14 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 
 			while ( !collision_model.IsEndOfArray() )
 			{
-				const UPInt index = modelFile.Collisions.Polytopes.AllocBack();
+				const UPInt index = static_cast< UPInt >( modelFile.Collisions.Polytopes.size() );
+				modelFile.Collisions.Polytopes.emplace_back( CollisionPolytope() );
 
 				const JsonReader polytope( collision_model.GetNextArrayElement() );
 				if ( polytope.IsObject() )
 				{
 					modelFile.Collisions.Polytopes[index].Name = polytope.GetChildStringByName( "name" );
-					StringUtils::StringTo( modelFile.Collisions.Polytopes[index].Planes, polytope.GetChildStringByName( "planes" ).ToCStr() );
+					StringUtils::StringTo( modelFile.Collisions.Polytopes[index].Planes, polytope.GetChildStringByName( "planes" ).c_str() );
 				}
 			}
 		}
@@ -563,13 +642,14 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 
 			while ( !ground_collision_model.IsEndOfArray() )
 			{
-				const UPInt index = modelFile.GroundCollisions.Polytopes.AllocBack();
+				const UPInt index = static_cast< UPInt >( modelFile.GroundCollisions.Polytopes.size() );
+				modelFile.GroundCollisions.Polytopes.emplace_back( CollisionPolytope() );
 
 				const JsonReader polytope( ground_collision_model.GetNextArrayElement() );
 				if ( polytope.IsObject() )
 				{
 					modelFile.GroundCollisions.Polytopes[index].Name = polytope.GetChildStringByName( "name" );
-					StringUtils::StringTo( modelFile.GroundCollisions.Polytopes[index].Planes, polytope.GetChildStringByName( "planes" ).ToCStr() );
+					StringUtils::StringTo( modelFile.GroundCollisions.Polytopes[index].Planes, polytope.GetChildStringByName( "planes" ).c_str() );
 				}
 			}
 		}
@@ -597,11 +677,11 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 				OVR_FAIL( "Invalid model data" );
 			}
 
-			StringUtils::StringTo( traceModel.header.bounds, raytrace_model.GetChildStringByName( "bounds" ).ToCStr() );
+			StringUtils::StringTo( traceModel.header.bounds, raytrace_model.GetChildStringByName( "bounds" ).c_str() );
 
-			ReadModelArray( traceModel.vertices, raytrace_model.GetChildStringByName( "vertices" ).ToCStr(), bin, traceModel.header.numVertices );
-			ReadModelArray( traceModel.uvs, raytrace_model.GetChildStringByName( "uvs" ).ToCStr(), bin, traceModel.header.numUvs );
-			ReadModelArray( traceModel.indices, raytrace_model.GetChildStringByName( "indices" ).ToCStr(), bin, traceModel.header.numIndices );
+			ReadModelArray( traceModel.vertices, raytrace_model.GetChildStringByName( "vertices" ).c_str(), bin, traceModel.header.numVertices );
+			ReadModelArray( traceModel.uvs, raytrace_model.GetChildStringByName( "uvs" ).c_str(), bin, traceModel.header.numUvs );
+			ReadModelArray( traceModel.indices, raytrace_model.GetChildStringByName( "indices" ).c_str(), bin, traceModel.header.numIndices );
 
 			if ( !bin.ReadArray( traceModel.nodes, traceModel.header.numNodes ) )
 			{
@@ -610,7 +690,8 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 				{
 					while ( !nodes_array.IsEndOfArray() )
 					{
-						const UPInt index = traceModel.nodes.AllocBack();
+						const UPInt index = static_cast< UPInt >( traceModel.nodes.size() );
+						traceModel.nodes.emplace_back( kdtree_node_t() );
 
 						const JsonReader node( nodes_array.GetNextArrayElement() );
 						if ( node.IsObject() )
@@ -629,23 +710,23 @@ bool LoadModelFile_OvrScene_Json( ModelFile & modelFile,
 				{
 					while ( !leafs_array.IsEndOfArray() )
 					{
-						const UPInt index = traceModel.leafs.AllocBack();
+						const UPInt index = static_cast< UPInt >( traceModel.leafs.size() );
+						traceModel.leafs.emplace_back( kdtree_leaf_t() );
 
 						const JsonReader leaf( leafs_array.GetNextArrayElement() );
 						if ( leaf.IsObject() )
 						{
-							StringUtils::StringTo( traceModel.leafs[index].triangles, RT_KDTREE_MAX_LEAF_TRIANGLES, leaf.GetChildStringByName( "triangles" ).ToCStr() );
-							StringUtils::StringTo( traceModel.leafs[index].ropes, 6, leaf.GetChildStringByName( "ropes" ).ToCStr() );
-							StringUtils::StringTo( traceModel.leafs[index].bounds, leaf.GetChildStringByName( "bounds" ).ToCStr() );
+							StringUtils::StringTo( traceModel.leafs[index].triangles, RT_KDTREE_MAX_LEAF_TRIANGLES, leaf.GetChildStringByName( "triangles" ).c_str() );
+							StringUtils::StringTo( traceModel.leafs[index].ropes, 6, leaf.GetChildStringByName( "ropes" ).c_str() );
+							StringUtils::StringTo( traceModel.leafs[index].bounds, leaf.GetChildStringByName( "bounds" ).c_str() );
 						}
 					}
 				}
 			}
 
-			ReadModelArray( traceModel.overflow, raytrace_model.GetChildStringByName( "overflow" ).ToCStr(), bin, traceModel.header.numOverflow );
+			ReadModelArray( traceModel.overflow, raytrace_model.GetChildStringByName( "overflow" ).c_str(), bin, traceModel.header.numOverflow );
 		}
 	}
-	json->Release();
 
 	if ( !bin.IsAtEnd() )
 	{

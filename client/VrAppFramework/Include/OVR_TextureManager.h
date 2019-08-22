@@ -12,9 +12,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_TextureManager_h )
 #define OVR_TextureManager_h
 
-#include "Kernel/OVR_TypesafeNumber.h"
-#include "Kernel/OVR_String.h"
+#include "OVR_TypesafeNumber.h"
 #include "GlTexture.h"
+
+#include <string>
 
 namespace OVR {
 
@@ -25,7 +26,7 @@ enum ovrTextureHandle
 
 typedef TypesafeNumberT< int, ovrTextureHandle, INVALID_TEXTURE_HANDLE > textureHandle_t;
 
-class ovrManagedTexture 
+class ovrManagedTexture
 {
 public:
 	enum ovrTextureSource
@@ -61,7 +62,7 @@ public:
 	textureHandle_t		GetHandle() const { return Handle; }
 	GlTexture const &	GetTexture() const { return Texture; }
 	ovrTextureSource	GetSource() const { return Source; }
-	String const &		GetUri() const { return Uri; }
+	std::string const &	GetUri() const { return Uri; }
 	int					GetIconId() const { return IconId; }
 	bool				IsValid() const { return Texture.IsValid(); }
 
@@ -69,7 +70,7 @@ private:
 	textureHandle_t		Handle;		// handle of the texture
 	GlTexture			Texture;	// the GL texture handle
 	ovrTextureSource	Source;		// where this texture came from
-	String				Uri;		// name of the uri, if the texture was loaded from a uri
+	std::string			Uri;		// name of the uri, if the texture was loaded from a uri
 	int					IconId;		// id of the icon, if loaded from an icon
 };
 
@@ -78,7 +79,7 @@ class ovrTextureManager
 public:
 	enum ovrTextureWrap
 	{
-		WRAP_DEFAULT,	
+		WRAP_DEFAULT,
 		WRAP_CLAMP,
 		WRAP_REPEAT
 	};
@@ -103,18 +104,18 @@ public:
 	virtual	void				Init() = 0;
 	virtual	void				Shutdown() = 0;
 
-	virtual	textureHandle_t		LoadTexture( class ovrFileSys & fileSys, char const * uri, 
+	virtual	textureHandle_t		LoadTexture( class ovrFileSys & fileSys, char const * uri,
 										ovrTextureFilter const filterType = FILTER_DEFAULT,
 										ovrTextureWrap const wrapType = WRAP_DEFAULT ) = 0;
-	virtual textureHandle_t		LoadTexture( char const * uri, void const * buffer, size_t const bufferSize, 
+	virtual textureHandle_t		LoadTexture( char const * uri, void const * buffer, size_t const bufferSize,
 										ovrTextureFilter const filterType = FILTER_DEFAULT,
 										ovrTextureWrap const wrapType = WRAP_DEFAULT ) = 0;
-	virtual textureHandle_t		LoadRGBATexture( char const * uri, void const * imageData, 
+	virtual textureHandle_t		LoadRGBATexture( char const * uri, void const * imageData,
 										int const imageWidth, int const imageHeight,
-										ovrTextureFilter const filterType = FILTER_DEFAULT, 
+										ovrTextureFilter const filterType = FILTER_DEFAULT,
 										ovrTextureWrap const wrapType = WRAP_DEFAULT ) = 0;
-	virtual	textureHandle_t		LoadRGBATexture( int const iconId, void const * imageData, 
-										int const imageWidth, int const imageHeight, 
+	virtual	textureHandle_t		LoadRGBATexture( int const iconId, void const * imageData,
+										int const imageWidth, int const imageHeight,
 										ovrTextureFilter const filterType = FILTER_DEFAULT,
 										ovrTextureWrap const wrapType = WRAP_DEFAULT ) = 0;
 
@@ -122,7 +123,7 @@ public:
 
 	virtual ovrManagedTexture	GetTexture( textureHandle_t const handle ) const = 0;
 	virtual GlTexture			GetGlTexture( textureHandle_t const handle ) const = 0;
-	
+
 	virtual textureHandle_t		GetTextureHandle( char const * uri ) const = 0;
 	virtual textureHandle_t		GetTextureHandle( int const iconId ) const = 0;
 

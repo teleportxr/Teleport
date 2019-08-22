@@ -11,10 +11,13 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_PathUtils_h
 #define OVR_PathUtils_h
 
+#include <vector>
+#include <string>
+
 #include <inttypes.h>
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_BitFlags.h"
+#include "OVR_BitFlags.h"
+
+#include "OVR_Types.h"
 
 // FIXME: most of VrCommon.h and all of PathUtils.h should be merged into a FileUtils.h
 
@@ -66,27 +69,27 @@ class OvrStoragePaths
 {
 public:
 				OvrStoragePaths( JNIEnv * jni, jobject activityObj );
-	void		PushBackSearchPathIfValid( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, Array<String> & searchPaths ) const;
-	void		PushBackSearchPathIfValidPermission( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, permissionFlags_t permission, Array<String> & searchPaths ) const;
-	bool		GetPathIfValidPermission( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, permissionFlags_t permission, String & outPath ) const;
+	void		PushBackSearchPathIfValid( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, std::vector<std::string> & searchPaths ) const;
+	void		PushBackSearchPathIfValidPermission( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, permissionFlags_t permission, std::vector<std::string> & searchPaths ) const;
+	bool		GetPathIfValidPermission( ovrStorageType toStorage, ovrFolderType toFolder, const char * subfolder, permissionFlags_t permission, std::string & outPath ) const;
 	bool		HasStoragePath( const ovrStorageType toStorage, const ovrFolderType toFolder ) const;
 	long long 	GetAvailableInternalMemoryInBytes( JNIEnv * jni, jobject activityObj ) const;
 
 private:
 	// contains all the folder paths for future reference
-	String 			StorageFolderPaths[EST_COUNT][EFT_COUNT];
+	std::string 	StorageFolderPaths[EST_COUNT][EFT_COUNT];
 	jclass			VrActivityClass;
 	jmethodID		InternalCacheMemoryID;
 };
 
-String	GetFullPath		( const Array< String > & searchPaths, const String & relativePath );
+std::string	GetFullPath		( const std::vector< std::string > & searchPaths, const std::string & relativePath );
 
 // Return false if it fails to find the relativePath in any of the search locations
-bool	GetFullPath		( const Array< String > & searchPaths, char const * relativePath, 	char * outPath, 	const int outMaxLen );
-bool	GetFullPath		( const Array< String > & searchPaths, char const * relativePath, 	String & outPath 						);
+bool		GetFullPath		( const std::vector< std::string > & searchPaths, char const * relativePath, 	char * outPath, 	const int outMaxLen );
+bool		GetFullPath		( const std::vector< std::string > & searchPaths, char const * relativePath, 	std::string & outPath					);
 
-bool	ToRelativePath	( const Array< String > & searchPaths, char const * fullPath, 		char * outPath, 	const int outMaxLen );
-bool	ToRelativePath	( const Array< String > & searchPaths, char const * fullPath, 		String & outPath 						);
+bool		ToRelativePath	( const std::vector< std::string > & searchPaths, char const * fullPath, 		char * outPath, 	const int outMaxLen );
+bool		ToRelativePath	( const std::vector< std::string > & searchPaths, char const * fullPath, 		std::string & outPath					);
 
 //==============================================================
 // ovrPathUtils

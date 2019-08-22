@@ -84,7 +84,7 @@ VRMenuId_t UIMenu::AllocId()
 void UIMenu::Open()
 {
 	OVR_LOG( "Open" );
-	GuiSys.OpenMenu( MenuName.ToCStr() );
+	GuiSys.OpenMenu( MenuName.c_str() );
 	MenuOpen = true;
 }
 

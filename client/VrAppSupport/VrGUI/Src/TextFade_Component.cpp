@@ -69,7 +69,7 @@ eMsgStatus OvrTextFade_Component::OnEvent_Impl( OvrGuiSys & guiSys, ovrFrameInpu
 eMsgStatus OvrTextFade_Component::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
 											VRMenuObject * self, VRMenuEvent const & event )
 {
-	double t = vrapi_GetTimeInSeconds();
+	double t = vrFrame.RealTimeInSeconds;
 	if ( StartFadeInTime >= 0.0f && t >= StartFadeInTime )
 	{
 		TextAlphaFader.StartFadeIn();
@@ -113,7 +113,7 @@ eMsgStatus OvrTextFade_Component::FocusGained( OvrGuiSys & guiSys, ovrFrameInput
 {
 
 	StartFadeOutTime = -1.0;
-	StartFadeInTime = FADE_DELAY + vrapi_GetTimeInSeconds();
+	StartFadeInTime = FADE_DELAY + vrFrame.RealTimeInSeconds;
 
 	return MSG_STATUS_ALIVE;
 }
@@ -123,7 +123,7 @@ eMsgStatus OvrTextFade_Component::FocusGained( OvrGuiSys & guiSys, ovrFrameInput
 eMsgStatus OvrTextFade_Component::FocusLost( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
 												VRMenuObject * self, VRMenuEvent const & event )
 {
-	StartFadeOutTime = FADE_DELAY + vrapi_GetTimeInSeconds();
+	StartFadeOutTime = FADE_DELAY + vrFrame.RealTimeInSeconds;
 	StartFadeInTime = -1.0;
 
 	return MSG_STATUS_ALIVE;

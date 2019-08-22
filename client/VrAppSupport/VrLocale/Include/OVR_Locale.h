@@ -17,9 +17,12 @@ of patent rights can be found in the PATENTS file in the same directory.
 #define OVR_LOCALE_H_
 
 #include <stdint.h>
-#include "Kernel/OVR_String.h"
+#include <string>
 
-// TODO: remove String from this interface to reduce dependencies on LibOVRKernel.
+#include "OVR_Types.h"
+#include "OVR_JSON.h"
+#include "OVR_LogUtils.h"
+#include "JniUtils.h"
 
 namespace OVR {
 
@@ -35,25 +38,25 @@ public:
 	// static methods
 	//----------------------------------------------------------
 	// creates a locale object for the system's current locale.
-	static ovrLocale *	Create( JNIEnv & jni, jobject activity, char const * name, ovrFileSys * fileSys = nullptr );
+	static ovrLocale *		Create( JNIEnv & jni, jobject activity, char const * name, ovrFileSys * fileSys = nullptr );
 
 	// frees the local object
-	static void			Destroy( ovrLocale * & localePtr );
+	static void				Destroy( ovrLocale * & localePtr );
 
 	// Takes a UTF8 string and returns an identifier that can be used as an Android string id.
-	static String		MakeStringIdFromUTF8( char const * str );
+	static std::string		MakeStringIdFromUTF8( char const * str );
 
 	// Takes an ANSI string and returns an identifier that can be used as an Android string id. 
-	static String		MakeStringIdFromANSI( char const * str );
+	static std::string		MakeStringIdFromANSI( char const * str );
 
 	// Localization : Returns xliff formatted string
 	// These are set to const char * to make sure that's all that's passed in - we support up to 9, add more functions as needed
-	static String		GetXliffFormattedString( const String & inXliffStr, const char * arg1 );
-	static String		GetXliffFormattedString( const String & inXliffStr, const char * arg1, const char * arg2 );
-	static String		GetXliffFormattedString( const String & inXliffStr, const char * arg1, const char * arg2, const char * arg3 );
+	static std::string		GetXliffFormattedString( const std::string & inXliffStr, const char * arg1 );
+	static std::string		GetXliffFormattedString( const std::string & inXliffStr, const char * arg1, const char * arg2 );
+	static std::string		GetXliffFormattedString( const std::string & inXliffStr, const char * arg1, const char * arg2, const char * arg3 );
 
-	static String		ToString( char const * fmt, float const f );
-	static String		ToString( char const * fmt, int const i );
+	static std::string		ToString( char const * fmt, float const f );
+	static std::string		ToString( char const * fmt, int const i );
 
 	//----------------------------------------------------------
 	// public virtual interface methods
@@ -75,7 +78,7 @@ public:
 
 	// returns the localized string associated with the passed key. Returns false if the
 	// key was not found. If the key was not found, out will be set to the defaultStr.
-	virtual bool			GetString( char const * key, char const * defaultStr, String & out ) const = 0;
+	virtual bool			GetString( char const * key, char const * defaultStr, std::string & out ) const = 0;
 
 	// Takes a string with potentially multiple "@string/*" keys and outputs the string to the out buffer
 	// with the keys replaced by the localized text.

@@ -41,12 +41,7 @@ public:
 class OvrSceneView
 {
 public:
-	enum ovrSceneFlags
-	{
-		SCENE_FLAG_IGNORE_JOYSTICK_UNTIL_DEADZONE = ( 1 << 0 )
-	};
-
-							OvrSceneView( const int flags = 0 );
+							OvrSceneView();
 
 	// The default view will be located at the origin, looking down the -Z axis,
 	// with +X to the right and +Y up.
@@ -86,12 +81,12 @@ public:
 	// Populate frameMatrices with the view and projection matrices for the scene.
 	void					GetFrameMatrices( const float fovDegreesX, const float fovDegreesY, ovrFrameMatrices & frameMatrices ) const;
 	// Generates a sorted surface list for the scene (including emit surfaces).
-	void					GenerateFrameSurfaceList( const ovrFrameMatrices & matrices, Array< ovrDrawSurface > & surfaceList ) const;
+	void					GenerateFrameSurfaceList( const ovrFrameMatrices & matrices, std::vector< ovrDrawSurface > & surfaceList ) const;
 
 	// Systems that want to manage individual surfaces instead of complete models
 	// can add surfaces to this list during Frame().  They will be drawn for
 	// both eyes, then the list will be cleared.
-	Array<ovrDrawSurface> &	GetEmitList() { return EmitSurfaces; }
+	std::vector<ovrDrawSurface> &	GetEmitList() { return EmitSurfaces; }
 
 	float					GetEyeYaw() const { return EyeYaw; }
 	float					GetEyePitch() const { return EyePitch; }
@@ -124,8 +119,6 @@ public:
 
 	float					GetEyeHeight() const;
 
-	ovrMatrix4f				GetExternalVelocity() const;
-
 	// When head tracking is reset, any joystick offsets should be cleared
 	// so the viewer is looking ehere the application wants.
 	void					ClearStickAngles();
@@ -144,10 +137,10 @@ private:
 
 	// Entries can be NULL.
 	// None of these will be directly freed by OvrSceneView.
-	Array<ModelInScene *>	Models;
+	std::vector<ModelInScene *>	Models;
 
 	// Externally generated surfaces
-	Array<ovrDrawSurface>	EmitSurfaces;
+	std::vector<ovrDrawSurface>	EmitSurfaces;
 
 	GlProgram				ProgVertexColor;
 	GlProgram				ProgSingleTexture;
@@ -202,16 +195,14 @@ private:
 	Vector3f				FootPos;
 
 	// Calculated in Frame()
-	ovrMatrix4f				CenterEyeTransform;
-	ovrMatrix4f				CenterEyeViewMatrix;
+	Matrix4f				CenterEyeTransform;
+	Matrix4f				CenterEyeViewMatrix;
 	float					EyeYaw;				// Rotation around Y, CCW positive when looking at RHS (X,Z) plane.
 	float					EyePitch;			// Pitch. If sensor is plugged in, only read from sensor.
 	float					EyeRoll;			// Roll, only read from sensor.
 	ovrTracking2			CurrentTracking;
 
 	float					YawMod;
-
-	int						SceneFlags;
 };
 
 // It probably isn't worth keeping these shared here, each user

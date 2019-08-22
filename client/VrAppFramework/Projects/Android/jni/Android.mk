@@ -15,17 +15,24 @@ LOCAL_ARM_NEON  := true				# compile with neon support enabled
 include $(LOCAL_PATH)/../../../../cflags.mk
 
 LOCAL_C_INCLUDES := \
-  $(LOCAL_PATH)/../../../../LibOVRKernel/Src \
   $(LOCAL_PATH)/../../../../VrApi/Include \
+  $(LOCAL_PATH)/../../../../1stParty/OVR/Include \
   $(LOCAL_PATH)/../../../Include
 
-# We export the includes for LibOVRKernel and VrApi because don't do explicit imports of
-# those libraries because they may be pre-built or dynamic. Other projects that
-# link to VrAppFramework will get the LibOVRKernel and VrApi include paths this way with
+# We export the includes for VrApi because we don't do explicit imports of
+# that library since it may be pre-built or dynamic. Other projects that
+# link to VrAppFramework will get the VrApi include paths this way with
 # doing an import.
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
+LOCAL_EXPORT_C_INCLUDES :=  $(LOCAL_PATH)/../../../../VrApi/Include \
+  $(LOCAL_PATH)/../../../Include
 
-LOCAL_SRC_FILES  := ../../../Src/BitmapFont.cpp \
+
+LOCAL_SRC_FILES  := \
+                    ../../../Src/OVR_BinaryFile2.cpp \
+                    ../../../Src/OVR_Lexer2.cpp \
+                    ../../../Src/OVR_MappedFile.cpp \
+                    ../../../Src/OVR_UTF8Util.cpp \
+                    ../../../Src/BitmapFont.cpp \
                     ../../../Src/ImageData.cpp \
                     ../../../Src/GlSetup.cpp \
                     ../../../Src/GlSetup_Android.cpp \
@@ -61,6 +68,8 @@ LOCAL_SRC_FILES  := ../../../Src/BitmapFont.cpp \
                     ../../../Src/OVR_TextureManager.cpp \
                     ../../../Src/SystemClock.cpp
 
+# OpenGL ES 3.0
+LOCAL_EXPORT_LDLIBS := -lGLESv3
 # GL platform interface
 LOCAL_EXPORT_LDLIBS += -lEGL
 # native multimedia
@@ -69,19 +78,12 @@ LOCAL_EXPORT_LDLIBS += -lOpenMAXAL
 LOCAL_EXPORT_LDLIBS += -llog
 # native windows
 LOCAL_EXPORT_LDLIBS += -landroid
-# For minizip
-LOCAL_EXPORT_LDLIBS += -lz
 # audio
 LOCAL_EXPORT_LDLIBS += -lOpenSLES
 
-LOCAL_STATIC_LIBRARIES += libovrkernel minizip stb openglloader
-LOCAL_SHARED_LIBRARIES := vrapi
+LOCAL_STATIC_LIBRARIES += minizip stb
 
 include $(BUILD_STATIC_LIBRARY)		# start building based on everything since CLEAR_VARS
 
 $(call import-module,3rdParty/minizip/build/android/jni)
 $(call import-module,3rdParty/stb/build/android/jni)
-$(call import-module,1stParty/OpenGL_Loader/Projects/Android/jni)
-
-# Note: Even though we depend on LibOVRKernel, we don't explicitly import it since our
-# dependents may want either a prebuilt or from-source LibOVRKernel.
