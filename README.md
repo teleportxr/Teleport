@@ -46,7 +46,7 @@ Clone the repository with submodules:
 6. On the top right, click the Sync Project with Gradle Files button (has a shark icon) to load the config for your device.
 7. In Android Studio, go to Build->Generate Signed Bundle / APK and generate a key named android.debug.keystore in your RemotePlay/client/SimulCasterClient directory.
 8. Go to File->Project Structure->Modules->SimulCasterClient->Signing Configs and in debug config, put in the details of the key you created. 
-9. Hit the build icon to compile and then you should be able to run.
+9. Click the build icon to compile and then you should be able to run.
 
 ## Running
 
