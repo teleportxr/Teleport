@@ -113,4 +113,14 @@ private:
     scc::GL_Texture mDummyTexture;
     std::shared_ptr<scr::Material> mFlatColourMaterial;
     std::map<avs::uid, OVR::ovrSurfaceDef> mOVRActors;
+    inline void RemoveInvalidOVRActors()
+	{
+		for(std::map<avs::uid, OVR::ovrSurfaceDef>::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
+		{
+			if(mActorManager.m_Actors.find(it->first) == mActorManager.m_Actors.end())
+			{
+				mOVRActors.erase(it);
+			}
+		}
+	}
 };

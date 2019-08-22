@@ -57,5 +57,17 @@ namespace scr
 		{
 			m_Actors[actor_uid] = std::make_shared<Actor>(pActorCreateInfo);
 		}
+
+		//Remove actors, if the vb or ib is invalid.
+		void RemoveInvalidActors()
+		{
+			std::map<avs::uid, std::shared_ptr<Actor>>::iterator it;
+			for(it = m_Actors.begin(); it != m_Actors.end(); it++)
+			{
+				if(it->second->GetMesh()->GetMeshCreateInfo().vb.get() == nullptr
+				 || it->second->GetMesh()->GetMeshCreateInfo().ib.get() == nullptr)
+					m_Actors.erase(it);
+			}
+		}
 	};
 }

@@ -219,6 +219,7 @@ avs::Result ResourceCreator::Assemble()
 	VertexBuffer::VertexBufferCreateInfo vb_ci;
 	vb_ci.layout = std::move(layout);
 	vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
+	vb_ci.vertexCount = m_VertexCount;
 	vb_ci.size = interleavedVBSize;
 	vb_ci.data = (const void*)interleavedVB.get();
 	vb->Create(&vb_ci);
@@ -232,8 +233,8 @@ avs::Result ResourceCreator::Assemble()
 	ib->Create(&ib_ci);
 
 	Mesh::MeshCreateInfo mesh_ci;
-	mesh_ci.vb = vb.get();
-	mesh_ci.ib = ib.get();
+	mesh_ci.vb = vb;
+	mesh_ci.ib = ib;
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
 	m_pActorManager->AddMesh(shape_uid, mesh);
 

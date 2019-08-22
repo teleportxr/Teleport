@@ -357,22 +357,76 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Build frame
     ovrFrameResult res;
 
-	scr::InputCommandCreateInfo ci;
-	ci.type = scr::INPUT_COMMAND_MESH_MATERIAL_TRANSFORM;
-	ci.pFBs = nullptr;
-	ci.frameBufferCount = 0;
-	ci.pCamera = nullptr;
+	mScene.Frame(vrFrame);
+	mScene.GetFrameMatrices(vrFrame.FovX, vrFrame.FovY, res.FrameMatrices);
+	mScene.GenerateFrameSurfaceList(res.FrameMatrices, res.Surfaces);
 
-	for(auto& actor : mActorManager.m_Actors)
+	// Update GUI systems after the app frame, but before rendering anything.
+	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
+
+    static float frameRate=1.0f;
+    if(vrFrame.DeltaSeconds>0.0f)
     {
-	    scr::InputCommand_Mesh_Material_Transform ic_mmm(&ci, actor.second.get());
-	    ic_mmm.pMaterial = mFlatColourMaterial.get();
-        if(ic_mmm.pMesh!=nullptr&&mOVRActors.find(actor.first) == mOVRActors.end())
+        frameRate*=0.99f;
+        frameRate+=0.01f/vrFrame.DeltaSeconds;
+    }
+#if 1
+    auto ctr=mNetworkSource.getCounterValues();
+    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f"
+            , ctr.networkPacketsDropped, ctr.decoderPacketsDropped
+            ,frameRate,ctr.bandwidthKPS);
+#endif
+	res.FrameIndex   = vrFrame.FrameNumber;
+	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
+	res.SwapInterval = app->GetSwapInterval();
+
+	res.FrameFlags = 0;
+	res.LayerCount = 0;
+
+	ovrLayerProjection2& worldLayer = res.Layers[res.LayerCount++].Projection;
+
+	worldLayer = vrapi_DefaultLayerProjection2();
+	worldLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+	worldLayer.HeadPose = vrFrame.Tracking.HeadPose;
+	for(int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
+	{
+		worldLayer.Textures[eye].ColorSwapChain = vrFrame.ColorTextureSwapChain[eye];
+		worldLayer.Textures[eye].SwapChainIndex = vrFrame.TextureSwapChainIndex;
+		worldLayer.Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
+	}
+
+	// Append video surface
+    mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
+    mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
+    mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &mVideoTexture;
+	res.Surfaces.PushBack(ovrDrawSurface(&mVideoSurfaceDef));
+
+	// Append GuiSys surfaces.
+	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
+
+    GL_CheckErrors("Frame: Pre-SCR");
+
+	//Append SCR Actors to surfaces.
+    scr::InputCommandCreateInfo ci;
+    ci.type = scr::INPUT_COMMAND_MESH_MATERIAL_TRANSFORM;
+    ci.pFBs = nullptr;
+    ci.frameBufferCount = 0;
+    ci.pCamera = nullptr;
+
+    //Remove Invalid scr and ovr actors.
+    mActorManager.RemoveInvalidActors();
+    RemoveInvalidOVRActors();
+    for(auto& actor : mActorManager.m_Actors)
+    {
+        scr::InputCommand_Mesh_Material_Transform ic_mmm(&ci, actor.second.get());
+        ic_mmm.pMaterial = mFlatColourMaterial.get();
+
+        if(mOVRActors.find(actor.first) == mOVRActors.end())
         {
-            auto gl_effect = dynamic_cast<scc::GL_Effect *>(ic_mmm.pMaterial->GetMaterialCreateInfo().effect);
+            auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmm.pMaterial->GetMaterialCreateInfo().effect);
             auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("standard");
-            auto gl_vb = dynamic_cast<scc::GL_VertexBuffer *>(ic_mmm.pMesh->GetMeshCreateInfo().vb);
-            auto gl_ib = dynamic_cast<scc::GL_IndexBuffer *>(ic_mmm.pMesh->GetMeshCreateInfo().ib);
+            auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().vb.get());
+            auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().ib.get());
             gl_vb->CreateVAO(gl_ib->GetIndexID());
 
             GlGeometry geo;
@@ -417,82 +471,21 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
             mOVRActors[actor.first] = ovr_Actor;
         }
-	    else
-	    {
-	        //NULL
-	    }
+        else
+        {
+            //NULL
+        }
 
-		OVR::Matrix4f transform;
-		scr::mat4 scr_Transform = ic_mmm.pTransform->GetTransformMatrix();
-		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
-		ovrDrawSurface ovr_ActorDrawSurface(transform, &mOVRActors[actor.first]);
+        OVR::Matrix4f transform;
+        scr::mat4 scr_Transform = ic_mmm.pTransform->GetTransformMatrix();
+        memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
+        ovrDrawSurface ovr_ActorDrawSurface(transform, &mOVRActors[actor.first]);
 
         res.Surfaces.push_back(ovr_ActorDrawSurface);
-	}
-
-
-	mScene.Frame(vrFrame);
-	mScene.GetFrameMatrices(vrFrame.FovX, vrFrame.FovY, res.FrameMatrices);
-	mScene.GenerateFrameSurfaceList(res.FrameMatrices, res.Surfaces);
-
-	// Update GUI systems after the app frame, but before rendering anything.
-	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
-
-    static float frameRate=1.0f;
-    if(vrFrame.DeltaSeconds>0.0f)
-    {
-        frameRate*=0.99f;
-        frameRate+=0.01f/vrFrame.DeltaSeconds;
     }
-	if(!mSession.IsConnected())
-	{
-		mGuiSys->ShowInfoText(
-				1.0f,
-				"Waiting for connection\nFramerate: %4.4f", frameRate);
-	}
-    else
-	{
-#ifdef _DEBUG
-        auto ctr=mNetworkSource.getCounterValues();
-		mGuiSys->ShowInfoText(
-				1.0f,
-				"Network Packets Dropped: %d    \nDecoder Packets Dropped: %d\nFramerate: %4.4f\nBandwidth: %4.4f",
-				ctr.networkPacketsDropped, ctr.decoderPacketsDropped, frameRate, ctr.bandwidthKPS);
-#else
-        mGuiSys->ShowInfoText(
-                1.0f,
-                "Framerate: %4.4f", frameRate);
-#endif
-	}
-	res.FrameIndex   = vrFrame.FrameNumber;
-	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
-	res.SwapInterval = app->GetSwapInterval();
+    GL_CheckErrors("Frame: Post-SCR");
 
-	res.FrameFlags = 0;
-	res.LayerCount = 0;
-
-	ovrLayerProjection2& worldLayer = res.Layers[res.LayerCount++].Projection;
-
-	worldLayer = vrapi_DefaultLayerProjection2();
-	worldLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
-	worldLayer.HeadPose = vrFrame.Tracking.HeadPose;
-	for(int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
-	{
-		worldLayer.Textures[eye].ColorSwapChain = vrFrame.ColorTextureSwapChain[eye];
-		worldLayer.Textures[eye].SwapChainIndex = vrFrame.TextureSwapChainIndex;
-		worldLayer.Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
-	}
-
-	// Append video surface
-    mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
-    mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
-    mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &mVideoTexture;
-	res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
-
-	// Append GuiSys surfaces.
-	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
-
-	GL_CheckErrors("Frame");
+	//GL_CheckErrors("Frame");
 	return res;
 }
 
