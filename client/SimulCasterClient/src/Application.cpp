@@ -399,7 +399,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
     mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
     mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &mVideoTexture;
-	res.Surfaces.PushBack(ovrDrawSurface(&mVideoSurfaceDef));
+	res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 
 	// Append GuiSys surfaces.
 	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
