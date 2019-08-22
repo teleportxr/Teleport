@@ -7,7 +7,7 @@
 namespace scr
 {
 	//Interface for Texture
-	class Texture : APIObject
+	class Texture : public APIObject
 	{
 	public:
 		enum class Slot : uint32_t
