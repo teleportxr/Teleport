@@ -31,10 +31,10 @@ Clone the repository with submodules:
 2. Create the Cmake libavstream project and add it to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config.
 3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG).
 4. Repeat steps 1-3 for thirdparty/enet.
-4. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch. Open and build the UE4 project in `Development Editor` configuration.
-5. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
-6. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
-7. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
+5. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch. Open and build the UE4 project in `Development Editor` configuration.
+6. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
+7. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
+8. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
 ## Building GearVR client application
 
@@ -43,6 +43,10 @@ Clone the repository with submodules:
 3. Connect your Android device to your PC and make sure that ADB debugging is enabled and the PC is authorized.
 4. (old method) Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
 5. New method: In Android Studio open RemotePlay/build.gradle.
+6. On the top right, click the Sync Project with Gradle Files button (has a shark icon) to load the config for your device.
+7. In Android Studio, go to Build->Generate Signed Bundle / APK and generate a key named android.debug.keystore in your RemotePlay/client/SimulCasterClient directory.
+8. Go to File->Project Structure->Modules->SimulCasterClient->Signing Configs and in debug config, put in the details of the key you created. 
+9. Hit the build icon to compile and then you should be able to run.
 
 ## Running
 
