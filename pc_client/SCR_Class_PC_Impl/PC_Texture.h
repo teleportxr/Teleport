@@ -9,6 +9,7 @@ namespace simul
 	namespace crossplatform
 	{
 		class Buffer;
+		class Texture;
 	}
 }
 
