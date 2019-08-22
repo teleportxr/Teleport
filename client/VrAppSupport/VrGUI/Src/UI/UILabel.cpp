@@ -35,7 +35,7 @@ void UILabel::AddToMenu( UIMenu *menu, UIObject *parent )
 {
 	const Posef pose( Quatf( Vector3f( 0.0f, 1.0f, 0.0f ), 0.0f ), Vector3f( 0.0f, 0.0f, 0.0f ) );
 
-	VRMenuObjectParms parms( VRMENU_STATIC, Array< VRMenuComponent* >(), VRMenuSurfaceParms(),
+	VRMenuObjectParms parms( VRMENU_STATIC, std::vector< VRMenuComponent* >(), VRMenuSurfaceParms(),
 			"", pose, Vector3f( 1.0f ), FontParms, menu->AllocId(),
 			VRMenuObjectFlags_t(), VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
 
@@ -94,11 +94,11 @@ void UILabel::SetText( const char *text )
 	CalculateTextOffset();
 }
 
-void UILabel::SetText( const String &text )
+void UILabel::SetText( const std::string &text )
 {
 	VRMenuObject * object = GetMenuObject();
 	OVR_ASSERT( object );
-	object->SetText( text.ToCStr() );
+	object->SetText( text.c_str() );
 	CalculateTextOffset();
 }
 
@@ -165,7 +165,7 @@ void UILabel::CalculateTextDimensions()
 	float descent;
 	float fontHeight;
 
-	GuiSys.GetDefaultFont().CalcTextMetrics( GetText().ToCStr(), len, w, h,
+	GuiSys.GetDefaultFont().CalcTextMetrics( GetText().c_str(), len, w, h,
 		ascent, descent, fontHeight, lineWidths, MAX_LINES, numLines );
 
 	// NOTE: despite being 3 scalars, text scaling only uses the x component since
@@ -237,7 +237,7 @@ void UILabel::SetTextWordWrapped( char const * text, class BitmapFont const & fo
 	object->SetTextWordWrapped( text, font, widthInMeters );
 }
 
-const String & UILabel::GetText() const
+const std::string & UILabel::GetText() const
 {
 	VRMenuObject * object = GetMenuObject();
 	OVR_ASSERT( object );

@@ -50,7 +50,7 @@ public:
 								VRMenuId_t const scrubberId, VRMenuId_t const bubbleId, VRMenuId_t const fillId,
 								float const sliderFrac, float const minValue, float const maxValue, 
 								float const sensitvityScale, 
-								Array< VRMenuObjectParms const* > & parms );
+								std::vector< VRMenuObjectParms const* > & parms );
 
 	virtual char const *GetTypeName() const { return TYPE_NAME; }
 	virtual int			GetTypeId() const { return TYPE_ID; }

@@ -34,7 +34,7 @@ void ResourceCreator::ensureVertices(avs::uid shape_uid, int startVertex, int ve
 void ResourceCreator::ensureNormals(avs::uid shape_uid, int startNormal, int normalCount, const avs::vec3* normals)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	if (normalCount != (int)m_VertexCount)
+	if ((size_t)normalCount != m_VertexCount)
 		return;
 
 	m_Normals = normals;
@@ -43,7 +43,7 @@ void ResourceCreator::ensureNormals(avs::uid shape_uid, int startNormal, int nor
 void ResourceCreator::ensureTangentNormals(avs::uid shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn)
 {
 	CHECK_SHAPE_UID(shape_uid);
-	assert(tnCount == (int)m_VertexCount);
+	assert((size_t)tnCount == m_VertexCount);
 	m_TangentNormalSize = tnSize;
 	m_TangentNormals = tn;
 }
@@ -283,8 +283,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
-	///NOTE: Need to check if an index is set for that texture in the avs::Material.
-	///NOTE: Need to check if a texture is returned.
+	///Claims textures without ever unclaiming the textures.
 	scr::Material::MaterialCreateInfo materialInfo;
 	materialInfo.diffuse.texture = nullptr;
 	materialInfo.normal.texture = nullptr;

@@ -11,11 +11,9 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "GlGeometry.h"
 
-#include "Kernel/OVR_Alg.h"
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_Array.h"
+#include "OVR_Math.h"
 #include "OVR_GlUtils.h"
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 /*
  * These are all built inside VertexArrayObjects, so no GL state other
@@ -28,16 +26,16 @@ namespace OVR
 unsigned GlGeometry::IndexType = ( sizeof( TriangleIndex ) == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 
 template< typename _attrib_type_ >
-void PackVertexAttribute( Array< uint8_t > & packed, const Array< _attrib_type_ > & attrib,
+void PackVertexAttribute( std::vector< uint8_t > & packed, const std::vector< _attrib_type_ > & attrib,
 				const int glLocation, const int glType, const int glComponents )
 {
-	if ( attrib.GetSize() > 0 )
+	if ( attrib.size() > 0 )
 	{
-		const size_t offset = packed.GetSize();
-		const size_t size = attrib.GetSize() * sizeof( attrib[0] );
+		const size_t offset = packed.size();
+		const size_t size = attrib.size() * sizeof( attrib[0] );
 
-		packed.Resize( offset + size );
-		memcpy( &packed[offset], attrib.GetDataPtr(), size );
+		packed.resize( offset + size );
+		memcpy( &packed[offset], attrib.data(), size );
 
 		glEnableVertexAttribArray( glLocation );
 		glVertexAttribPointer( glLocation, glComponents, glType, false, sizeof( attrib[0] ), (void *)( offset ) );
@@ -48,10 +46,10 @@ void PackVertexAttribute( Array< uint8_t > & packed, const Array< _attrib_type_ 
 	}
 }
 
-void GlGeometry::Create( const VertexAttribs & attribs, const Array< TriangleIndex > & indices )
+void GlGeometry::Create( const VertexAttribs & attribs, const std::vector< TriangleIndex > & indices )
 {
-	vertexCount = attribs.position.GetSizeI();
-	indexCount = indices.GetSizeI();
+	vertexCount = attribs.position.size();
+	indexCount = indices.size();
 
 	glGenBuffers( 1, &vertexBuffer );
 	glGenBuffers( 1, &indexBuffer );
@@ -59,7 +57,7 @@ void GlGeometry::Create( const VertexAttribs & attribs, const Array< TriangleInd
 	glBindVertexArray( vertexArrayObject );
 	glBindBuffer( GL_ARRAY_BUFFER, vertexBuffer );
 
-	Array< uint8_t > packed;
+	std::vector< uint8_t > packed;
 	PackVertexAttribute( packed, attribs.position,		VERTEX_ATTRIBUTE_LOCATION_POSITION,			GL_FLOAT,	3 );
 	PackVertexAttribute( packed, attribs.normal,		VERTEX_ATTRIBUTE_LOCATION_NORMAL,			GL_FLOAT,	3 );
 	PackVertexAttribute( packed, attribs.tangent,		VERTEX_ATTRIBUTE_LOCATION_TANGENT,			GL_FLOAT,	3 );
@@ -70,10 +68,10 @@ void GlGeometry::Create( const VertexAttribs & attribs, const Array< TriangleInd
 	PackVertexAttribute( packed, attribs.jointIndices,	VERTEX_ATTRIBUTE_LOCATION_JOINT_INDICES,	GL_INT,		4 );
 	PackVertexAttribute( packed, attribs.jointWeights,	VERTEX_ATTRIBUTE_LOCATION_JOINT_WEIGHTS,	GL_FLOAT,	4 );
 
-	glBufferData( GL_ARRAY_BUFFER, packed.GetSize() * sizeof( packed[0] ), packed.GetDataPtr(), GL_STATIC_DRAW );
+	glBufferData( GL_ARRAY_BUFFER, packed.size() * sizeof( packed[0] ), packed.data(), GL_STATIC_DRAW );
 
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, indexBuffer );
-	glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.GetSizeI() * sizeof( indices[0] ), indices.GetDataPtr(), GL_STATIC_DRAW );
+	glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof( indices[0] ), indices.data(), GL_STATIC_DRAW );
 
 	glBindVertexArray( 0 );
 
@@ -96,13 +94,13 @@ void GlGeometry::Create( const VertexAttribs & attribs, const Array< TriangleInd
 
 void GlGeometry::Update( const VertexAttribs & attribs, const bool updateBounds )
 {
-	vertexCount = attribs.position.GetSizeI();
+	vertexCount = attribs.position.size();
 
 	glBindVertexArray( vertexArrayObject );
 
 	glBindBuffer( GL_ARRAY_BUFFER, vertexBuffer );
 
-	Array< uint8_t > packed;
+	std::vector< uint8_t > packed;
 	PackVertexAttribute( packed, attribs.position,		VERTEX_ATTRIBUTE_LOCATION_POSITION,			GL_FLOAT,	3 );
 	PackVertexAttribute( packed, attribs.normal,		VERTEX_ATTRIBUTE_LOCATION_NORMAL,			GL_FLOAT,	3 );
 	PackVertexAttribute( packed, attribs.tangent,		VERTEX_ATTRIBUTE_LOCATION_TANGENT,			GL_FLOAT,	3 );
@@ -113,7 +111,7 @@ void GlGeometry::Update( const VertexAttribs & attribs, const bool updateBounds 
 	PackVertexAttribute( packed, attribs.jointIndices,	VERTEX_ATTRIBUTE_LOCATION_JOINT_INDICES,	GL_INT,		4 );
 	PackVertexAttribute( packed, attribs.jointWeights,	VERTEX_ATTRIBUTE_LOCATION_JOINT_WEIGHTS,	GL_FLOAT,	4 );
 
-	glBufferData( GL_ARRAY_BUFFER, packed.GetSize() * sizeof( packed[0] ), packed.GetDataPtr(), GL_STATIC_DRAW );
+	glBufferData( GL_ARRAY_BUFFER, packed.size() * sizeof( packed[0] ), packed.data(), GL_STATIC_DRAW );
 
 	if ( updateBounds )
 	{
@@ -146,9 +144,9 @@ GlGeometry BuildTesselatedQuad( const TriangleIndex horizontal, const TriangleIn
 	const int vertexCount = ( horizontal + 1 ) * ( vertical + 1 );
 
 	VertexAttribs attribs;
-	attribs.position.Resize( vertexCount );
-	attribs.uv0.Resize( vertexCount );
-	attribs.color.Resize( vertexCount );
+	attribs.position.resize( vertexCount );
+	attribs.uv0.resize( vertexCount );
+	attribs.color.resize( vertexCount );
 
 	for ( int y = 0; y <= vertical; y++ )
 	{
@@ -174,8 +172,8 @@ GlGeometry BuildTesselatedQuad( const TriangleIndex horizontal, const TriangleIn
 		}
 	}
 
-	Array< TriangleIndex > indices;
-	indices.Resize( horizontal * vertical * 6 * ( twoSided ? 2 : 1 ) );
+	std::vector< TriangleIndex > indices;
+	indices.resize( horizontal * vertical * 6 * ( twoSided ? 2 : 1 ) );
 
 	// If this is to be used to draw a linear format texture, like
 	// a surface texture, it is better for cache performance that
@@ -227,9 +225,9 @@ GlGeometry BuildTesselatedCylinder( const float radius, const float height, cons
 	const int vertexCount = ( horizontal + 1 ) * ( vertical + 1 );
 
 	VertexAttribs attribs;
-	attribs.position.Resize( vertexCount );
-	attribs.uv0.Resize( vertexCount );
-	attribs.color.Resize( vertexCount );
+	attribs.position.resize( vertexCount );
+	attribs.uv0.resize( vertexCount );
+	attribs.color.resize( vertexCount );
 
 	for ( int y = 0; y <= vertical; ++y )
 	{
@@ -255,8 +253,8 @@ GlGeometry BuildTesselatedCylinder( const float radius, const float height, cons
 		}
 	}
 
-	Array< TriangleIndex > indices;
-	indices.Resize( horizontal * vertical * 6 );
+	std::vector< TriangleIndex > indices;
+	indices.resize( horizontal * vertical * 6 );
 
 	// If this is to be used to draw a linear format texture, like
 	// a surface texture, it is better for cache performance that
@@ -293,9 +291,9 @@ GlGeometry BuildVignette( const float xFraction, const float yFraction )
 	const int vertexCount = 6 * 6;
 
 	VertexAttribs attribs;
-	attribs.position.Resize( vertexCount );
-	attribs.uv0.Resize( vertexCount );
-	attribs.color.Resize( vertexCount );
+	attribs.position.resize( vertexCount );
+	attribs.uv0.resize( vertexCount );
+	attribs.color.resize( vertexCount );
 
 	for ( int y = 0; y < 6; y++ )
 	{
@@ -317,8 +315,8 @@ GlGeometry BuildVignette( const float xFraction, const float yFraction )
 		}
 	}
 
-	Array< TriangleIndex > indices;
-	indices.Resize( 24 * 6 );
+	std::vector< TriangleIndex > indices;
+	indices.resize( 24 * 6 );
 
 	int index = 0;
 	for ( TriangleIndex x = 0; x < 5; x++ )
@@ -364,9 +362,9 @@ GlGeometry BuildDome( const float latRads, const float uScale, const float vScal
 	const int vertexCount = ( horizontal + 1 ) * ( vertical + 1 );
 
 	VertexAttribs attribs;
-	attribs.position.Resize( vertexCount );
-	attribs.uv0.Resize( vertexCount );
-	attribs.color.Resize( vertexCount );
+	attribs.position.resize( vertexCount );
+	attribs.uv0.resize( vertexCount );
+	attribs.color.resize( vertexCount );
 
 	for ( int y = 0; y <= vertical; y++ )
 	{
@@ -401,8 +399,8 @@ GlGeometry BuildDome( const float latRads, const float uScale, const float vScal
 		}
 	}
 
-	Array< TriangleIndex > indices;
-	indices.Resize( horizontal * vertical * 6 );
+	std::vector< TriangleIndex > indices;
+	indices.resize( horizontal * vertical * 6 );
 
 	int index = 0;
 	for ( TriangleIndex x = 0; x < horizontal; x++ )
@@ -435,9 +433,9 @@ GlGeometry BuildGlobe( const float uScale /*= 1.0f*/, const float vScale /*= 1.0
 	const int vertexCount = ( horizontal + 1 ) * ( vertical + 1 );
 
 	VertexAttribs attribs;
-	attribs.position.Resize( vertexCount );
-	attribs.uv0.Resize( vertexCount );
-	attribs.color.Resize( vertexCount );
+	attribs.position.resize( vertexCount );
+	attribs.uv0.resize( vertexCount );
+	attribs.color.resize( vertexCount );
 
 	for ( int y = 0; y <= vertical; y++ )
 	{
@@ -494,8 +492,8 @@ GlGeometry BuildGlobe( const float uScale /*= 1.0f*/, const float vScale /*= 1.0
 		}
 	}
 
-	Array< TriangleIndex > indices;
-	indices.Resize( horizontal * vertical * 6 );
+	std::vector< TriangleIndex > indices;
+	indices.resize( horizontal * vertical * 6 );
 
 	int index = 0;
 	for ( TriangleIndex x = 0; x < horizontal; x++ )
@@ -524,9 +522,9 @@ GlGeometry BuildSpherePatch( const float fov )
 	const int vertexCount = (horizontal + 1) * (vertical + 1);
 
 	VertexAttribs attribs;
-	attribs.position.Resize( vertexCount );
-	attribs.uv0.Resize( vertexCount );
-	attribs.color.Resize( vertexCount );
+	attribs.position.resize( vertexCount );
+	attribs.uv0.resize( vertexCount );
+	attribs.color.resize( vertexCount );
 
 	for ( int y = 0; y <= vertical; y++ )
 	{
@@ -554,8 +552,8 @@ GlGeometry BuildSpherePatch( const float fov )
 		}
 	}
 
-	Array< TriangleIndex > indices;
-	indices.Resize( horizontal * vertical * 6 );
+	std::vector< TriangleIndex > indices;
+	indices.resize( horizontal * vertical * 6 );
 
 	int index = 0;
 	for ( TriangleIndex x = 0; x < horizontal; x++ )
@@ -578,7 +576,7 @@ GlGeometry BuildSpherePatch( const float fov )
 GlGeometry BuildUnitCubeLines()
 {
 	VertexAttribs attribs;
-	attribs.position.Resize( 8 );
+	attribs.position.resize( 8 );
 
 	for ( int i = 0; i < 8; i++) {
 		attribs.position[i][0] = static_cast<float>( i & 1 );
@@ -588,8 +586,8 @@ GlGeometry BuildUnitCubeLines()
 
 	const TriangleIndex staticIndices[24] = { 0,1, 1,3, 3,2, 2,0, 4,5, 5,7, 7,6, 6,4, 0,4, 1,5, 3,7, 2,6 };
 
-	Array< TriangleIndex > indices;
-	indices.Resize( 24 );
+	std::vector< TriangleIndex > indices;
+	indices.resize( 24 );
 	memcpy( &indices[0], staticIndices, 24 * sizeof( indices[0] ) );
 
 	GlGeometry g = GlGeometry( attribs, indices );

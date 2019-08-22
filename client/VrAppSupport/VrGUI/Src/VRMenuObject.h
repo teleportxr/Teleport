@@ -13,16 +13,18 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_VRMenuObject_h )
 #define OVR_VRMenuObject_h
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_TypesafeNumber.h"
-#include "Kernel/OVR_BitFlags.h"
+#include <vector>
+#include <string>
+
+#include "OVR_Types.h"
+#include "OVR_Math.h"
+#include "OVR_TypesafeNumber.h"
+#include "OVR_BitFlags.h"
 #include "OVR_GlUtils.h"	// GLuint
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 #include "CollisionPrimitive.h"
 #include "BitmapFont.h" // HorizontalJustification & VerticalJustification
+#include "OVR_Lexer2.h"	// ovrLexer
 
 namespace OVR {
 
@@ -32,20 +34,18 @@ class OvrGuiSys;
 class ovrReflection;
 class ovrLocale;
 class ovrParseResult;
-class ovrLexer;
 
 //==============================
 // DeletePointerArray
 // helper function for cleaning up an array of pointers
 template< typename T > 
-void DeletePointerArray( Array< T* > & a )
+void DeletePointerArray( std::vector< T* > & a )
 {
-	for ( int i = 0; i < a.GetSizeI(); ++i )
+	for ( T * item : a )
 	{
-		delete a[i];
-		a[i] = NULL;
+		delete item;
 	}
-	a.Clear();
+	a.clear();
 }
 
 enum eGUIProgramType
@@ -185,7 +185,7 @@ public:
 	}
 
 	explicit VRMenuSurfaceParms( char const * surfaceName ) :
-		SurfaceName( surfaceName ),
+		SurfaceName( surfaceName != nullptr ? surfaceName : "" ),
 		ImageNames(),
 		Contents( CONTENT_SOLID ),
 		Color( 1.0f ),
@@ -205,7 +205,7 @@ public:
 			eSurfaceTextureType textureType1,
 			char const * imageName2,
 			eSurfaceTextureType textureType2 ) :
-		SurfaceName( surfaceName ),
+		SurfaceName( surfaceName != nullptr ? surfaceName : "" ),
 		ImageNames(),
 		Contents( CONTENT_SOLID ),
 		Color( 1.0f ),
@@ -217,13 +217,13 @@ public:
 
 	{
 		InitSurfaceProperties();
-		ImageNames[VRMENUSURFACE_IMAGE_0] = imageName0;
+		ImageNames[VRMENUSURFACE_IMAGE_0] = imageName0 != nullptr ? imageName0 : "";
 		TextureTypes[VRMENUSURFACE_IMAGE_0] = textureType0;
 
-		ImageNames[VRMENUSURFACE_IMAGE_1] = imageName1;
+		ImageNames[VRMENUSURFACE_IMAGE_1] = imageName1 != nullptr ? imageName1 : "";
 		TextureTypes[VRMENUSURFACE_IMAGE_1] = textureType1;
 
-		ImageNames[VRMENUSURFACE_IMAGE_2] = imageName2;
+		ImageNames[VRMENUSURFACE_IMAGE_2] = imageName2 != nullptr ? imageName2 : "";
 		TextureTypes[VRMENUSURFACE_IMAGE_2] = textureType2;
 	}
 	VRMenuSurfaceParms( char const * surfaceName,
@@ -234,7 +234,7 @@ public:
 			char const * imageName2,
 			eSurfaceTextureType textureType2,
 			Vector2f const & anchors ) :
-		SurfaceName( surfaceName ),
+		SurfaceName( surfaceName != nullptr ? surfaceName : "" ),
 		ImageNames(),
 		Contents( CONTENT_SOLID ),
 		Color( 1.0f ),
@@ -246,13 +246,13 @@ public:
 
 	{
 		InitSurfaceProperties();
-		ImageNames[VRMENUSURFACE_IMAGE_0] = imageName0;
+		ImageNames[VRMENUSURFACE_IMAGE_0] = imageName0 != nullptr ? imageName0 : "";
 		TextureTypes[VRMENUSURFACE_IMAGE_0] = textureType0;
 
-		ImageNames[VRMENUSURFACE_IMAGE_1] = imageName1;
+		ImageNames[VRMENUSURFACE_IMAGE_1] = imageName1 != nullptr ? imageName1 : "";
 		TextureTypes[VRMENUSURFACE_IMAGE_1] = textureType1;
 
-		ImageNames[VRMENUSURFACE_IMAGE_2] = imageName2;
+		ImageNames[VRMENUSURFACE_IMAGE_2] = imageName2 != nullptr ? imageName2 : "";
 		TextureTypes[VRMENUSURFACE_IMAGE_2] = textureType2;
 	}
 	VRMenuSurfaceParms( char const * surfaceName,
@@ -290,7 +290,7 @@ public:
 			int width2,
 			int height2,
 			eSurfaceTextureType textureType2 ) :
-		SurfaceName( surfaceName ),
+		SurfaceName( surfaceName != nullptr ? surfaceName : "" ),
 		ImageNames(),
 		Contents( CONTENT_SOLID ),
 		Color( 1.0f ),
@@ -318,8 +318,8 @@ public:
 		ImageHeight[VRMENUSURFACE_IMAGE_2] = height2;
     }
 
-    String              SurfaceName;		// for debugging only
-	String              ImageNames[VRMENUSURFACE_IMAGE_MAX];
+    std::string			SurfaceName;		// for debugging only
+	std::string			ImageNames[VRMENUSURFACE_IMAGE_MAX];
 	GLuint				ImageTexId[VRMENUSURFACE_IMAGE_MAX];
 	int					ImageWidth[VRMENUSURFACE_IMAGE_MAX];
 	int					ImageHeight[VRMENUSURFACE_IMAGE_MAX];
@@ -499,7 +499,7 @@ public:
 	static VRMenuObjectParms * Create() { return new VRMenuObjectParms(); }
 
 	VRMenuObjectParms(	eVRMenuObjectType const type,
-			Array< VRMenuComponent* > const & components,
+			std::vector< VRMenuComponent* > const & components,
 			VRMenuSurfaceParms const & surfaceParms,
 			char const * text,
 			Posef const & localPose,
@@ -526,12 +526,12 @@ public:
 		, TexelCoords( false )
 		, Selected( false )
 	{
-		SurfaceParms.PushBack( surfaceParms );
+		SurfaceParms.push_back( surfaceParms );
 	}
 
     // same as above with additional text local parms
 	VRMenuObjectParms(	eVRMenuObjectType const type,
-			Array< VRMenuComponent* > const & components,
+			std::vector< VRMenuComponent* > const & components,
 			VRMenuSurfaceParms const & surfaceParms,
 			char const * text,
 			Posef const & localPose,
@@ -560,13 +560,13 @@ public:
 		, TexelCoords( false )
 		, Selected( false )
     {
-		SurfaceParms.PushBack( surfaceParms );
+		SurfaceParms.push_back( surfaceParms );
     }
 
     // takes an array of surface parms
 	VRMenuObjectParms(	eVRMenuObjectType const type,
-			Array< VRMenuComponent* > const & components,
-			Array< VRMenuSurfaceParms > const & surfaceParms,
+			std::vector< VRMenuComponent* > const & components,
+			std::vector< VRMenuSurfaceParms > const & surfaceParms,
 			char const * text,
 			Posef const & localPose,
 			Vector3f const & localScale,
@@ -599,9 +599,9 @@ public:
 	eVRMenuObjectType		    Type;							// type of menu object
 	VRMenuObjectFlags_t		    Flags;							// bit flags
 	VRMenuObjectInitFlags_t	    InitFlags;						// intialization-only flags (not referenced beyond object initialization)
-    Array< VRMenuComponent* >   Components;						// list of pointers to components
-	Array< VRMenuSurfaceParms >	SurfaceParms;					// list of surface parameters for the object. Each parm will result in one surface, and surfaces will render in the same order as this list.
-	String      			    Text;							// text to display on this object (if any)
+    std::vector< VRMenuComponent* >   	Components;				// list of pointers to components
+	std::vector< VRMenuSurfaceParms >	SurfaceParms;			// list of surface parameters for the object. Each parm will result in one surface, and surfaces will render in the same order as this list.
+	std::string      			Text;							// text to display on this object (if any)
 	Posef					    LocalPose;						// local-space position and orientation
 	Vector3f				    LocalScale;						// local-space scale
     Posef                       TextLocalPose;                  // offset of text, local to surface
@@ -613,9 +613,9 @@ public:
 	VRMenuId_t					ParentId;						// id of object that should be made this object's parent.
 	ContentFlags_t				Contents;						// collision contents for the menu object
 
-	String						Name;							// for easier parenting
-	String						ParentName;
-	String						Tag;
+	std::string					Name;							// for easier parenting
+	std::string					ParentName;
+	std::string					Tag;
 	bool						TexelCoords;					// if true, pose translation units are in texels
 	bool						Selected;						// true to start selected
 
@@ -735,7 +735,7 @@ public:
 	Vector4f					ClipUVs;			// x,y are min clip uvs, z,w are max clip uvs
 	Vector2f					OffsetUVs;			// offset for UV
 	Vector3f					FadeDirection;		// Fades vertices based on direction - default is zero vector which indicates off
-	String						SurfaceName;		// for debugging only
+	std::string						SurfaceName;		// for debugging only
 	Bounds3f					LocalBounds;		// local bounds
 };
 
@@ -797,7 +797,7 @@ public:
 	bool							GetVisible() const { return Visible; }
 	void							SetVisible( bool const v ) { Visible = v; }
 
-	String const &					GetName() const { return SurfaceName; }
+	std::string const &					GetName() const { return SurfaceName; }
 
 	void							BuildDrawSurface( OvrVRMenuMgr const & menuMgr,
 										Matrix4f const & modelMatrix,
@@ -826,7 +826,7 @@ private:
 	Vector4f						ClipUVs;			// UV boundaries for fragment clipping
 	Vector2f						OffsetUVs;			// UV offsets
 	Vector4f						CropUV;				// Crop range in UV space
-	String      					SurfaceName;		// name of the surface for debugging
+	std::string      					SurfaceName;		// name of the surface for debugging
 	ContentFlags_t					Contents;
 	bool							Visible;			// must be true to render -- used to animate between different surfaces
 
@@ -853,7 +853,7 @@ private:
 class ovrComponentList
 {
 public:
-	ovrComponentList() { }	// OVR::Array<> requires a default constructor because ummm... yeah.
+	ovrComponentList() { }	// std::vector<> requires a default constructor because ummm... yeah.
 
 	ovrComponentList( menuHandle_t const ownerHandle )
 		: OwnerHandle( ownerHandle )
@@ -865,21 +865,21 @@ public:
 	void						AddComponent( VRMenuComponent * component )
 	{
 		// never add a component twice
-		for ( int i = 0; i < Components.GetSizeI(); ++i )
+		for ( auto * c : Components )
 		{
-			if ( Components[i] == component )
+			if ( c == component )
 			{
 				return;
 			}
 		}
-		Components.PushBack( component );
+		Components.push_back( component );
 	}
 
-	Array< VRMenuComponent * > &GetComponents() { return Components; }
+	std::vector< VRMenuComponent * > &GetComponents() { return Components; }
 
 private:
 	menuHandle_t				OwnerHandle;	// object that owns the components
-	Array< VRMenuComponent* >	Components;		// components to delete
+	std::vector< VRMenuComponent* >	Components;		// components to delete
 };
 	
 
@@ -941,7 +941,7 @@ public:
 	void				AddComponent( VRMenuComponent * component );
 	void				DeleteComponent( OvrGuiSys & guiSys, VRMenuComponent * component );
 
-	Array< VRMenuComponent* > const & GetComponentList() const { return Components; }
+	std::vector< VRMenuComponent* > const & GetComponentList() const { return Components; }
 
 	VRMenuComponent *	GetComponentById_Impl( int const typeId, const char * name ) const;
 	VRMenuComponent *	GetComponentByTypeName_Impl( const char * typeName ) const;
@@ -990,7 +990,7 @@ public:
 		}
 	}
 
-	OVR::String const &	GetText() const { return Text; }
+	std::string const &	GetText() const { return Text; }
 	void				SetText( char const * text );
 	void				SetTextWordWrapped( char const * text, class BitmapFont const & font, float const widthInMeters );
 
@@ -1000,7 +1000,7 @@ public:
 	// NOTE: this will not send the VRMENU_EVENT_SELECTED or VRMENU_EVENT_DESELECTED event.
 	// For that, use VRMenu::SetSelected()
 	void				SetSelected( bool const b ) { Selected = b; }
-	int					NumChildren() const { return Children.GetSizeI(); }
+	int					NumChildren() const { return static_cast< int >( Children.size() ); }
 	menuHandle_t		GetChildHandleForIndex( int const index ) const { return Children[index]; }
 
 	Posef const &		GetLocalPose() const { return LocalPose; }
@@ -1031,7 +1031,7 @@ public:
 
 	Bounds3f			GetLocalBounds( BitmapFont const & font ) const;
     Bounds3f            GetTextLocalBounds( BitmapFont const & font ) const;
-	Bounds3f			CalcLocalBoundsForText( BitmapFont const & font, String & text ) const;
+	Bounds3f			CalcLocalBoundsForText( BitmapFont const & font, std::string & text ) const;
 
 	Bounds3f const &	GetCullBounds() const { return CullBounds; }
 	void				SetCullBounds( Bounds3f const & bounds ) const { CullBounds = bounds; }
@@ -1045,8 +1045,8 @@ public:
     Vector4f const &	GetTextColor() const { return TextColor; }
     void				SetTextColor( Vector4f const & c ) { TextColor = c; }
 
-	String const &		GetName() const { return Name; }
-	String const &		GetTag() const { return Tag; }
+	std::string const &		GetName() const { return Name; }
+	std::string const &		GetTag() const { return Tag; }
 	VRMenuId_t			GetId() const { return Id; }
 	VRMenuObject *		ChildForId( OvrVRMenuMgr const & menuMgr, VRMenuId_t const id ) const;
 	menuHandle_t		ChildHandleForId( OvrVRMenuMgr const & menuMgr, VRMenuId_t const id ) const;
@@ -1111,7 +1111,7 @@ public:
 	//--------------------------------------------------------------
 	VRMenuSurface const &			GetSurface( int const s ) const { return Surfaces[s]; }
 	VRMenuSurface &					GetSurface( int const s ) { return Surfaces[s]; }
-	Array< VRMenuSurface > const &	GetSurfaces() const { return Surfaces; }
+	std::vector< VRMenuSurface > const &	GetSurfaces() const { return Surfaces; }
 
 	void							BuildDrawSurface( OvrVRMenuMgr const & menuMgr,
 											Matrix4f const & modelMatrix,
@@ -1125,7 +1125,7 @@ public:
 											bool const skipAdditivePass,
 											VRMenuRenderFlags_t const & flags,
 											Bounds3f const & worldBounds,
-											Array< ovrDrawSurface > & surfaceList ) const;
+											std::vector< ovrDrawSurface > & surfaceList ) const;
 
 	//--------------------------------------------------------------
 	// transformation (used by VRMenuMgr)
@@ -1145,7 +1145,7 @@ public:
 	// reflection
 	//--------------------------------------------------------------
 	static ovrParseResult			ParseItemParms( ovrReflection & refl, ovrLocale const & locale, char const * fileName, 
-											MemBufferT< uint8_t > const & buffer, OVR::Array<VRMenuObjectParms const *> & itemParms );
+											std::vector< uint8_t > const & buffer, std::vector<VRMenuObjectParms const *> & itemParms );
 
 private:
 	eVRMenuObjectType			Type;			// type of this object
@@ -1153,8 +1153,8 @@ private:
 	menuHandle_t				ParentHandle;	// handle of this object's parent
 	VRMenuId_t					Id;				// opaque id that the creator of the menu can use to identify a menu object
 	VRMenuObjectFlags_t			Flags;			// various bit flags
-	OVR::String					Name;			// name of this object (can be empty)
-	OVR::String					Tag;			// tags are like names but are always child-relative.
+	std::string					Name;			// name of this object (can be empty)
+	std::string					Tag;			// tags are like names but are always child-relative.
 	Posef						LocalPose;		// local-space position and orientation
 	Vector3f					LocalScale;		// local-space scale of this item
     Posef                       HilightPose;    // additional pose applied when hilighted
@@ -1162,14 +1162,14 @@ private:
 	mutable float				WrapScale;		// scale used when wrapping text fails
     Posef                       TextLocalPose;  // local-space position and orientation of text, local to this node (i.e. after LocalPose / LocalScale are applied)
     Vector3f                    TextLocalScale; // local-space scale of the text at this node
-	mutable OVR::String			Text;			// text to display on this object - this is mutable but only changes if word wrapping is required
-	Array< menuHandle_t >		Children;		// array of direct children of this object
-	Array< VRMenuComponent* >	Components;		// array of components on this object
+	mutable std::string			Text;			// text to display on this object - this is mutable but only changes if word wrapping is required
+	std::vector< menuHandle_t >		Children;		// array of direct children of this object
+	std::vector< VRMenuComponent* >	Components;		// array of components on this object
 	OvrCollisionPrimitive *		CollisionPrimitive;		// collision surface, if any
 	ContentFlags_t				Contents;		// content flags for this object
 
 	// may be cleaner to put texture and geometry in a separate surface structure
-	Array< VRMenuSurface >		Surfaces;
+	std::vector< VRMenuSurface >	Surfaces;
 	Vector4f					Color;				// color modulation
     Vector4f                    TextColor;          // color modulation for text
 	Vector2f					ColorTableOffset;	// offset for color-ramp shader fx

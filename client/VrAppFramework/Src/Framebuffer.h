@@ -12,7 +12,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #define OVR_Framebuffer_h
 
 #include "OVR_GlUtils.h"	// GLuint
-#include "VrApi_Types.h"
+#include "VrApi_Types.h"	// ovrTextureSwapChain
 
 namespace OVR
 {
@@ -20,7 +20,7 @@ namespace OVR
 class ovrFramebuffer
 {
 public:
-							ovrFramebuffer( const ovrTextureFormat colorFormat, const ovrTextureFormat depthFormat,
+							ovrFramebuffer( const int64_t colorFormat, const int64_t depthFormat,
 											const int width, const int height, const int multisamples,
 											const bool resolveDepth, const bool useMultiview );
 							~ovrFramebuffer();

@@ -59,7 +59,7 @@ public:
 	virtual void				Finish( Matrix4f const & viewMatrix ) = 0;
 
 	virtual void 				AppendSurfaceList( Matrix4f const & centerViewMatrix, 
-										Array< ovrDrawSurface > & surfaceList ) const = 0;
+										std::vector< ovrDrawSurface > & surfaceList ) const = 0;
 
     virtual GlProgram const *   GetGUIGlProgram( eGUIProgramType const programType ) const = 0;
 

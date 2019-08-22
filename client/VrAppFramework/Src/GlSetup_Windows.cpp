@@ -10,14 +10,14 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 ************************************************************************************/
 
 #include "GlSetup.h"
-#include "Kernel/OVR_Types.h"
+#include "OVR_Types.h"
 
 #if defined( OVR_OS_WIN32 )
 
 #include <string.h>
 #include <stdlib.h>
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 #include "OVR_Input.h"
 #include "AppLocal.h"
 

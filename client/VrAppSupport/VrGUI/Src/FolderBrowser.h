@@ -13,11 +13,17 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_FolderBrowser_h )
 #define OVR_FolderBrowser_h
 
+#include <vector>
+#include <string>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+
 #include "VRMenu.h"
 #include "MessageQueue.h"
 #include "MetaDataManager.h"
 #include "ScrollManager.h"
-#include "Kernel/OVR_Lockless.h"
 #include "VRMenuComponent.h"
 
 namespace OVR {
@@ -76,7 +82,7 @@ public:
 
 	struct FolderView
 	{
-		FolderView( const String & name, const String & tag );
+		FolderView( const std::string & name, const std::string & tag );
 
 		// private assignment operator to prevent copying
 		FolderView &	operator = ( FolderView & );
@@ -86,8 +92,8 @@ public:
 		void UnloadThumbnails( OvrGuiSys & guiSys, const GLuint defaultTextureId, const int thumbWidth, const int thumbHeight );
 		void FreeThumbnailTextures( const GLuint defaultTextureId );
 
-		const String			CategoryTag;
-		const String			LocalizedName;		// Store for rebuild of title
+		const std::string		CategoryTag;
+		const std::string		LocalizedName;		// Store for rebuild of title
 		int						FolderIndex;
 		menuHandle_t			Handle;				// Handle to main root - parent to both Title and Panels
 		menuHandle_t			TitleRootHandle;	// Handle to the folder title root
@@ -96,7 +102,7 @@ public:
 		menuHandle_t			ScrollBarHandle;	// Handle to the scrollbar object
 		float					MaxRotation;		// Used by SwipeComponent 
 		volatile bool			Visible;			// Set in main thread and queried in thumbnail thread
-		Array<PanelView *>		Panels;
+		std::vector<PanelView *>		Panels;
 	};
 
 	static char const *			MENU_NAME;
@@ -116,7 +122,7 @@ public:
 	// User returns true if consumed
 	virtual bool				OnTouchUpNoFocused( OvrGuiSys & /*guiSys*/ )		{ return false; }
 
-	FolderView *				GetFolderView( const String & categoryTag );
+	FolderView *				GetFolderView( const std::string & categoryTag );
 	FolderView *				GetFolderView( int index );
 	ovrMessageQueue &			GetTextureCommands()							{ return TextureCommands;  }
 	void						SetPanelTextSpacingScale( const float scale )	{ PanelTextSpacingScale = scale; }
@@ -149,7 +155,7 @@ public:
 
 	// Accessors
 	const FolderView *			GetFolderView( int index ) const;
-	int							GetNumFolders() const					{ return Folders.GetSizeI(); }
+	int							GetNumFolders() const					{ return static_cast< int >( Folders.size() ); }
 	int							GetCircumferencePanelSlots() const		{ return CircumferencePanelSlots; }
 	float						GetRadius() const						{ return Radius; }
 	float 						GetPanelHeight() const					{ return PanelHeight; }
@@ -190,10 +196,10 @@ protected:
 	// Subclass protected interface
 
 	// Called from the base class when building a cateory.
-	virtual String				GetCategoryTitle( OvrGuiSys & guiSys, const char * tag, const char * key ) const = 0;
+	virtual std::string			GetCategoryTitle( OvrGuiSys & guiSys, const char * tag, const char * key ) const = 0;
 
 	// Called from the base class when building a panel
-	virtual String				GetPanelTitle( OvrGuiSys & guiSys, const OvrMetaDatum & panelData ) const = 0;
+	virtual std::string			GetPanelTitle( OvrGuiSys & guiSys, const OvrMetaDatum & panelData ) const = 0;
 
 	// Called when a panel is activated
 	virtual void				OnPanelActivated( OvrGuiSys & guiSys, const OvrMetaDatum * panelData ) = 0;
@@ -202,13 +208,13 @@ protected:
 	virtual	unsigned char *		LoadThumbnail( const char * filename, int & width, int & height ) = 0;
 
 	// Returns the proper thumbnail URL
-	virtual String				ThumbUrl( const OvrMetaDatum * item ) { return item->Url; }
+	virtual std::string			ThumbUrl( const OvrMetaDatum * item ) { return item->Url; }
 
 	// Adds thumbnail extension to a file to find/create its thumbnail
-	virtual String				ThumbName( const String & s ) = 0;
+	virtual std::string			ThumbName( const std::string & s ) = 0;
 
 	// Media not found - have subclass set the title, image and caption to display
-	virtual void				OnMediaNotFound( OvrGuiSys & guiSys, String & title, String & imageFile, String & message ) = 0;
+	virtual void				OnMediaNotFound( OvrGuiSys & guiSys, std::string & title, std::string & imageFile, std::string & message ) = 0;
 
 	// Optional interface
 	//
@@ -222,7 +228,7 @@ protected:
 			int & /*outHeight*/ ) { return NULL; }
 
 	// If we fail to load one type of thumbnail, try an alternative
-	virtual String				AlternateThumbName( const String & /*thumbNameAlt*/ ) { return String(); }
+	virtual std::string			AlternateThumbName( const std::string & /*thumbNameAlt*/ ) { return std::string(); }
 
 	// Called on opening menu
 	virtual void				OnBrowserOpen( OvrGuiSys & /*guiSys*/ ) {}
@@ -238,7 +244,7 @@ protected:
 	void						RebuildFolderView( OvrGuiSys & guiSys,
 													OvrMetaData & metaData,
 													const int folderIndex,
-													const Array< const OvrMetaDatum * > & data );
+													const std::vector< const OvrMetaDatum * > & data );
 
     virtual void                AddPanelMenuObject( OvrGuiSys & guiSys,
 													const OvrMetaDatum * panoData,
@@ -249,9 +255,9 @@ protected:
                                                     PanelView * panel,
                                                     Posef panelPose,
                                                     Vector3f panelScale,
-                                                    Array< VRMenuObjectParms const * >& outParms );
+                                                    std::vector< VRMenuObjectParms const * >& outParms );
 
-    virtual FolderView *        CreateFolderView( String localizedCategoryName, String categoryTag )
+    virtual FolderView *        CreateFolderView( std::string localizedCategoryName, std::string categoryTag )
     {
     	return new FolderView( localizedCategoryName, categoryTag );
     }
@@ -271,7 +277,7 @@ protected:
 	int							MediaCount; // Used to determine if no media was loaded
 
 private:
-	static threadReturn_t		ThumbnailThread( Thread * thread, void * v );
+	void				ThumbnailThread();
 	void				LoadThumbnailToTexture( OvrGuiSys & guiSys, const char * thumbnailCommand );
 
 	friend class OvrPanel_OnUp;
@@ -292,13 +298,13 @@ private:
 										const OvrMetaData::Category & category,
 										const int folderIndex,
 										FolderView & folder,
-										Array< VRMenuObjectParms const * > & outParms );
+										std::vector< VRMenuObjectParms const * > & outParms );
 
 	void				AddPanelToFolder( OvrGuiSys & guiSys,
 										const OvrMetaDatum * panoData,
 										const int folderIndex,
 										FolderView & folder,
-										Array< VRMenuObjectParms const * >& outParms );
+										std::vector< VRMenuObjectParms const * >& outParms );
 
 	void				DisplaceFolder( int index, const Vector3f & direction, float distance, bool startOffSelf = false );
 	void				UpdateFolderTitle( OvrGuiSys & guiSys, const FolderView * folder  );
@@ -324,7 +330,7 @@ private:
 	bool				NoMedia;
 	bool				AllowPanelTouchUp;
 
-	Array< FolderView * >	Folders;
+	std::vector< FolderView * >	Folders;
 
 	menuHandle_t 		ScrollSuggestionRootHandle;
 
@@ -340,15 +346,15 @@ private:
 		THUMBNAIL_THREAD_PAUSE,
 		THUMBNAIL_THREAD_SHUTDOWN
 	};
-	LocklessUpdater< eThumbnailThreadState > ThumbnailThreadState;
-	OVR::Mutex				ThumbnailThreadMutex;
-	OVR::WaitCondition		ThumbnailThreadCondition;
+	std::atomic< eThumbnailThreadState > 	ThumbnailThreadState;
+	std::mutex								ThumbnailThreadMutex;
+	std::condition_variable					ThumbnailThreadCondition;
 
-	Array< String >		ThumbSearchPaths;
-	String				AppCachePath;
+	std::vector< std::string >		ThumbSearchPaths;
+	std::string						AppCachePath;
 
 	// Keep a reference to Panel texture used for AA alpha when creating thumbnails
-	static unsigned char *		ThumbPanelBG;
+	static unsigned char *			ThumbPanelBG;
 	
 	// Default panel textures (base and highlight) - loaded once 
 	GlTexture						DefaultPanelTextureIds[ 2 ];
@@ -363,7 +369,7 @@ private:
 	Vector3f 						TouchDownPosistion; // First event in touch relative is considered as touch down position
 	eScrollDirectionLockType		TouchDirectionLocked;
 
-	Thread									ThumbnailLoadingThread;
+	std::thread						ThumbnailLoadingThread;
 };
 
 

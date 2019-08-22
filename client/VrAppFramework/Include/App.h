@@ -18,11 +18,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_App_h
 #define OVR_App_h
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_LogUtils.h"
-#include "VrApi_Types.h"
-#include "VrApi_Helpers.h"
-#include "VrApi_SystemUtils.h"
+#include "OVR_Types.h"
+#include "OVR_LogUtils.h"
 #include "OVR_GlUtils.h"
 #include "GlProgram.h"
 #include "GlTexture.h"
@@ -33,6 +30,11 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "OVR_Input.h"
 #include "TalkToJava.h"
 #include "Console.h"
+
+#include "VrApi_Types.h"
+#include "VrApi_Helpers.h"
+
+#include <string>
 
 namespace OVR
 {
@@ -69,7 +71,7 @@ enum ovrRenderMode
 struct ovrWindowCreationParms
 {
 	unsigned int	IconResourceId;
-	String			Title;
+	std::string			Title;
 };
 #endif
 
@@ -86,7 +88,7 @@ struct ovrSettings
 	int					GpuLevel;
 	int					MainThreadTid;
 	int					RenderThreadTid;
-	ovrTrackingTransform TrackingTransform;			// Default is VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_FLOOR_LEVEL
+	ovrTrackingSpace	TrackingSpace;				// Default is VRAPI_TRACKING_SPACE_LOCAL_FLOOR
 	ovrEyeBufferParms	EyeBufferParms;
 	ovrRenderMode		RenderMode;					// Default is RENDERMODE_STEREO.
 #if defined( OVR_OS_WIN32 )
@@ -126,7 +128,7 @@ public:
 	double						DisplayTime;
 	int							SwapInterval;
 	ovrFrameMatrices			FrameMatrices;		// view and projection transforms
-	Array< ovrDrawSurface > 	Surfaces;			// list of surfaces to render
+	std::vector<ovrDrawSurface>	Surfaces;			// list of surfaces to render
 	bool						ClearColorBuffer;	// true if the app wants to color buffer cleared
 	bool						ClearDepthBuffer;	// true if the app wants the depth buffer cleared
 	Vector4f					ClearColor;			// color to clear the depth buffer to
@@ -248,7 +250,7 @@ public:
 	virtual void				FinishActivity( const ovrAppFinishType type ) = 0;
 
 	// Switch to System UI, display Fatal Errors.
-	virtual bool				ShowSystemUI( const ovrSystemUIType type ) = 0;
+	virtual bool				ShowConfirmQuitSystemUI() = 0;
 	virtual void				FatalError( const ovrAppFatalError error, const char * fileName, const unsigned int lineNumber,
 											const char * messageFormat, ... ) = 0;
 	virtual void				ShowDependencyError() = 0;

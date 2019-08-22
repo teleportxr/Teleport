@@ -13,29 +13,24 @@
 
 #include "SessionClient.h"
 
-void ClientLog(const char *fileTag, int lineno,const char *msg_type,const char * format_str, ...)
+
+static inline ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
 {
-    int size = (int)strlen(format_str) + 100;
-    static std::string str;
-    va_list ap;
-    int n = -1;
-    while (n < 0 || n >= size)
-    {
-        str.resize(size);
-        va_start(ap, format_str);
-        //n = vsnprintf_s((char *)str.c_str(), size, size,format_str, ap);
-        n = vsnprintf((char *)str.c_str(), size, format_str, ap);
-        va_end(ap);
-        if (n > -1 && n < size)
-        {
-            str.resize(n);
-        }
-        if (n > -1)
-            size = n + 1;
-        else
-            size *= 2;
-    }
-    std::cerr << fileTag << "(" << lineno << "): "<< msg_type<<": " << str.c_str() << std::endl;
+    ovrQuatf r;
+    r.w= p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z;
+    r.x= p.w * q.x + p.x * q.w + p.y * q.z - p.z * q.y;
+    r.y= p.w * q.y + p.y * q.w + p.z * q.x - p.x * q.z;
+    r.z= p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x;
+    return r;
+}
+
+static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
+{
+    ovrQuatf iq=q;
+    iq.x*=-1.f;
+    iq.y*=-1.f;
+    iq.z*=-1.f;
+    return QuaternionMultiply(p,iq);
 }
 
 enum RemotePlaySessionChannel

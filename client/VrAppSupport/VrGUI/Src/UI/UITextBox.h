@@ -58,11 +58,11 @@ public:
 
 	void 								AddToMenu( UIMenu *menu, UIObject *parent = NULL );
 
-	void								AddText( const String& text );
+	void								AddText( const std::string& text );
 	void								RemoveLastChar( );
-	const String & 						GetText( ) const;
+	const std::string & 				GetText( ) const;
 	void								SetText( const char *text );
-	void								SetText( const String &text ) { SetText( text.ToCStr( ) ); }
+	void								SetText( const std::string &text ) { SetText( text.c_str( ) ); }
 
 	Vector4f const &					GetTextColor( ) const;
 	void								SetTextColor( const Vector4f & c );
@@ -78,7 +78,7 @@ private:
 
 	UITextBoxComponent *				TextBoxComponent { nullptr };
 
-	String								Text;
+	std::string							Text;
 	UITexture							Background;
 	Vector2f							Border { 0.005f, 0.002f }; //5mm border by default on sides, 2mm on top and bottom
 	float								TextOffset { 0 };

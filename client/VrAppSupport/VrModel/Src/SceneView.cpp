@@ -12,10 +12,12 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "SceneView.h"
 #include "ModelRender.h"
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 #include "VrApi.h"
 #include "VrApi_Helpers.h"
+
+#include <algorithm>
 
 namespace OVR
 {
@@ -444,14 +446,14 @@ static Quatf AnimationInterpolateQuatf( float * buffer, int frame, float fractio
 void ModelInScene::AnimateJoints( const double timeInSeconds )
 {
 	// old ovrscene animation method
-	for ( int i = 0; i < State.subSceneStates.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( State.subSceneStates.size() ); i++ )
 	{
-		for ( int j = 0; j < State.subSceneStates[i].nodeStates.GetSizeI(); j++ )
+		for ( int j = 0; j < static_cast< int >( State.subSceneStates[i].nodeStates.size() ); j++ )
 		{
 			ModelNodeState * nodeState = &State.nodeStates[State.subSceneStates[i].nodeStates[j]];
 			if ( nodeState->GetNode() != nullptr )
 			{
-				for ( int k = 0; k < nodeState->GetNode()->JointsOvrScene.GetSizeI(); k++ )
+				for ( int k = 0; k < static_cast< int >( nodeState->GetNode()->JointsOvrScene.size() ); k++ )
 				{
 					const ModelJoint * joint = &nodeState->GetNode()->JointsOvrScene[k];
 					if ( joint->animation == MODEL_JOINT_ANIMATION_NONE )
@@ -500,14 +502,14 @@ void ModelInScene::AnimateJoints( const double timeInSeconds )
 	
 	// new animation method.
 	{
-		if ( State.animationTimelineStates.GetSizeI() > 0 )
+		if ( State.animationTimelineStates.size() > 0 )
 		{
 			State.CalculateAnimationFrameAndFraction( MODEL_ANIMATION_TIME_TYPE_LOOP_FORWARD, (float)timeInSeconds );
 
-			for ( int i = 0; i < State.mf->Animations.GetSizeI(); i++ )
+			for ( int i = 0; i < static_cast< int >( State.mf->Animations.size() ); i++ )
 			{
 				const ModelAnimation & animation = State.mf->Animations[i];
-				for ( int j = 0; j < animation.channels.GetSizeI(); j++ )
+				for ( int j = 0; j < static_cast< int >( animation.channels.size() ); j++ )
 				{
 					const ModelAnimationChannel & channel = animation.channels[j];
 					ModelNodeState & nodeState = State.nodeStates[channel.nodeIndex];
@@ -532,18 +534,18 @@ void ModelInScene::AnimateJoints( const double timeInSeconds )
 					}
 					else if ( channel.path == MODEL_ANIMATION_PATH_WEIGHTS )
 					{
-						OVR_WARN("Weights animation not currently supported on channel %d '%s'", j, animation.name.ToCStr() );
+						OVR_WARN("Weights animation not currently supported on channel %d '%s'", j, animation.name.c_str() );
 					}
 					else
 					{
-						OVR_WARN( "Bad animation path on channel %d '%s'", j, animation.name.ToCStr() );
+						OVR_WARN( "Bad animation path on channel %d '%s'", j, animation.name.c_str() );
 					}
 
 					nodeState.CalculateLocalTransform();
 				}
 			}
 
-			for ( int i = 0; i < State.nodeStates.GetSizeI(); i++ )
+			for ( int i = 0; i < static_cast< int >( State.nodeStates.size() ); i++ )
 			{
 				State.nodeStates[i].RecalculateMatrix();
 			}
@@ -555,7 +557,7 @@ void ModelInScene::AnimateJoints( const double timeInSeconds )
 
 //-------------------------------------------------------------------------------------
 
-OvrSceneView::OvrSceneView( const int flags ) :
+OvrSceneView::OvrSceneView() :
 	FreeWorldModelOnChange( false ),
 	LoadedPrograms( false ),
 	Paused( false ),
@@ -575,11 +577,10 @@ OvrSceneView::OvrSceneView( const int flags ) :
 	EyeYaw( 0.0f ),
 	EyePitch( 0.0f ),
 	EyeRoll( 0.0f ),
-	YawMod( -1.0f ),
-	SceneFlags( flags )
+	YawMod( -1.0f )
 {
-	CenterEyeTransform = ovrMatrix4f_CreateIdentity();
-	CenterEyeViewMatrix = ovrMatrix4f_CreateIdentity();
+	CenterEyeTransform = Matrix4f::Identity();
+	CenterEyeViewMatrix = Matrix4f::Identity();
 }
 
 ModelGlPrograms OvrSceneView::GetDefaultGLPrograms()
@@ -666,14 +667,14 @@ void OvrSceneView::LoadWorldModel( const char * sceneFileName, const MaterialPar
 
 void OvrSceneView::SetWorldModel( ModelFile & world )
 {
-	OVR_LOG( "OvrSceneView::SetWorldModel( %s )", world.FileName.ToCStr() );
+	OVR_LOG( "OvrSceneView::SetWorldModel( %s )", world.FileName.c_str() );
 
-	if ( FreeWorldModelOnChange && Models.GetSizeI() > 0 )
+	if ( FreeWorldModelOnChange && static_cast< int >( Models.size() ) > 0 )
 	{
 		delete WorldModel.Definition;
 		FreeWorldModelOnChange = false;
 	}
-	Models.Clear();
+	Models.clear();
 
 	WorldModel.SetModelFile( &world );
 	AddModel( &WorldModel );
@@ -715,7 +716,7 @@ Bounds3f OvrSceneView::GetBounds() const
 
 int OvrSceneView::AddModel( ModelInScene * model )
 {
-	const int modelsSize = Models.GetSizeI();
+	const int modelsSize = static_cast< int >( Models.size() );
 
 	// scan for a NULL entry
 	for ( int i = 0; i < modelsSize; ++i )
@@ -727,9 +728,9 @@ int OvrSceneView::AddModel( ModelInScene * model )
 		}
 	}
 
-	Models.PushBack( model );
+	Models.push_back( model );
 
-	return Models.GetSizeI() - 1;
+	return static_cast< int >( Models.size() ) - 1;
 }
 
 void OvrSceneView::RemoveModelIndex( int index )
@@ -747,7 +748,7 @@ void OvrSceneView::GetFrameMatrices( const float fovDegreesX, const float fovDeg
 	}
 }
 
-void OvrSceneView::GenerateFrameSurfaceList( const ovrFrameMatrices & frameMatrices, Array< ovrDrawSurface > & surfaceList ) const
+void OvrSceneView::GenerateFrameSurfaceList( const ovrFrameMatrices & frameMatrices, std::vector< ovrDrawSurface > & surfaceList ) const
 {
 	Matrix4f symmetricEyeProjectionMatrix = frameMatrices.EyeProjection[0];
 	symmetricEyeProjectionMatrix.M[0][0] = frameMatrices.EyeProjection[0].M[0][0] / ( fabsf( frameMatrices.EyeProjection[0].M[0][2] ) + 1.0f );
@@ -756,8 +757,8 @@ void OvrSceneView::GenerateFrameSurfaceList( const ovrFrameMatrices & frameMatri
 	const float moveBackDistance = 0.5f * InterPupillaryDistance * symmetricEyeProjectionMatrix.M[0][0];
 	Matrix4f centerEyeCullViewMatrix = Matrix4f::Translation( 0, 0, -moveBackDistance ) * frameMatrices.CenterView;
 
-	Array< ModelNodeState * > emitNodes;
-	for ( int i = 0; i < Models.GetSizeI(); i++ )
+	std::vector< ModelNodeState * > emitNodes;
+	for ( int i = 0; i < static_cast< int >( Models.size() ); i++ )
 	{
 		if ( Models[i] != NULL )
 		{
@@ -766,12 +767,12 @@ void OvrSceneView::GenerateFrameSurfaceList( const ovrFrameMatrices & frameMatri
 			{
 				continue;
 			}
-			for ( int j = 0; j < state.subSceneStates.GetSizeI(); j++ )
+			for ( int j = 0; j < static_cast< int >( state.subSceneStates.size() ); j++ )
 			{
 				ModelSubSceneState & subSceneState = state.subSceneStates[j];
 				if ( subSceneState.visible )
 				{
-					for ( int k = 0; k < subSceneState.nodeStates.GetSizeI(); k++ )
+					for ( int k = 0; k < static_cast< int >( subSceneState.nodeStates.size() ); k++ )
 					{
 						state.nodeStates[subSceneState.nodeStates[k]].AddNodesToEmitList( emitNodes );
 					}
@@ -819,7 +820,34 @@ Matrix4f OvrSceneView::GetCenterEyeViewMatrix() const
 
 Matrix4f OvrSceneView::GetEyeViewMatrix( const int eye ) const
 {
-	return vrapi_GetEyeViewMatrix( &CenterEyeViewMatrix, InterPupillaryDistance, eye );
+	// World space head rotation
+	const Matrix4f head_rotation = Matrix4f( CurrentTracking.HeadPose.Pose.Orientation );
+
+	// Convert the eye view to world-space and remove translation
+	Matrix4f eye_view_rot = CurrentTracking.Eye[eye].ViewMatrix;
+	eye_view_rot.M[0][3] = 0;
+	eye_view_rot.M[1][3] = 0;
+	eye_view_rot.M[2][3] = 0;
+	const Matrix4f eye_rotation = eye_view_rot.Inverted();
+
+	// Compute the rotation tranform from head to eye (in case of rotated screens)
+	const Matrix4f head_rot_inv = head_rotation.Inverted();
+	Matrix4f head_eye_rotation = head_rot_inv * eye_rotation;
+
+	// Add the IPD translation from head to eye
+	const float eye_shift = ( ( eye == 0 ) ? -0.5f : 0.5f ) * InterPupillaryDistance;
+	const Matrix4f head_eye_translation = Matrix4f::Translation( eye_shift, 0.0f, 0.0f );
+
+	// The full transform from head to eye in world
+	const Matrix4f head_eye_transform = head_eye_translation * head_eye_rotation;
+
+	// Compute the new eye-pose using the input center eye view
+	const Matrix4f center_eye_pose_m = CenterEyeViewMatrix.Inverted();   // convert to world
+	const Matrix4f eye_pose_m = center_eye_pose_m * head_eye_transform;
+
+	// Convert to view matrix
+	Matrix4f eye_view = eye_pose_m.Inverted();
+	return eye_view;
 }
 
 Matrix4f OvrSceneView::GetEyeProjectionMatrix( const int eye, const float fovDegreesX, const float fovDegreesY ) const
@@ -845,24 +873,12 @@ float OvrSceneView::GetEyeHeight() const
 	return EyeHeight;
 }
 
-ovrMatrix4f OvrSceneView::GetExternalVelocity() const
-{
-	if ( YawMod > 0.0f )
-	{
-		return Matrix4f::Identity();
-	}
-	else
-	{
-		return ovrMatrix4f_CalculateExternalVelocity( &CenterEyeViewMatrix, YawVelocity );
-	}
-}
-
 // This is called by Frame(), but it must be explicitly called when FootPos is
 // updated, or calls to GetCenterEyePosition() won't reflect changes until the
 // following frame.
 void OvrSceneView::UpdateCenterEye()
 {
-	ovrMatrix4f input;
+	Matrix4f input;
 	if ( YawMod > 0.0f )
 	{
 		input = Matrix4f::Translation( GetNeutralHeadCenter() ) *
@@ -876,9 +892,9 @@ void OvrSceneView::UpdateCenterEye()
 			Matrix4f::RotationX( StickPitch );
 	}
 
-	const ovrMatrix4f transform = vrapi_GetTransformFromPose( &CurrentTracking.HeadPose.Pose );
-	CenterEyeTransform = ovrMatrix4f_Multiply( &input, &transform );
-	CenterEyeViewMatrix = ovrMatrix4f_Inverse( &CenterEyeTransform );
+	const Matrix4f transform = vrapi_GetTransformFromPose( (ovrPosef *)&CurrentTracking.HeadPose );
+	CenterEyeTransform = ovrMatrix4f_Multiply( (ovrMatrix4f *)&input, (ovrMatrix4f *)&transform );
+	CenterEyeViewMatrix = ovrMatrix4f_Inverse( (ovrMatrix4f *)&CenterEyeTransform );
 }
 
 void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
@@ -897,22 +913,6 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	//
 	// Player view angles
 	//
-	bool joystickValid[2];
-	joystickValid[0] = !( vrFrame.Input.sticks[0][0] == -1.0f && vrFrame.Input.sticks[0][1] == 1.0f );
-	joystickValid[1] = !( vrFrame.Input.sticks[1][0] == -1.0f && vrFrame.Input.sticks[1][1] == 1.0f );
-
-	float clampedSticks[2][2] = { };
-	const bool validateSticks = ( SceneFlags & SCENE_FLAG_IGNORE_JOYSTICK_UNTIL_DEADZONE ) != 0;
-	if ( joystickValid[0] || !validateSticks )
-	{
-		clampedSticks[0][0] = vrFrame.Input.sticks[0][0];
-		clampedSticks[0][1] = vrFrame.Input.sticks[0][1];
-	}
-	if ( joystickValid[1] || !validateSticks )
-	{
-		clampedSticks[1][0] = vrFrame.Input.sticks[1][0];
-		clampedSticks[1][1] = vrFrame.Input.sticks[1][1];
-	}
 
 	// Turn based on the look stick
 	// Because this can be predicted ahead by async TimeWarp, we apply
@@ -927,14 +927,14 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	{
 		StickYaw -= 2.0f * MATH_FLOAT_PI;
 	}
-	YawVelocity = angleSpeed * clampedSticks[1][0];
+	YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
 
 	// Only if there is no head tracking, allow right stick up/down to adjust pitch,
 	// which can be useful for debugging without having to dock the device.
 	if ( ( vrFrame.Tracking.Status & VRAPI_TRACKING_STATUS_ORIENTATION_TRACKED ) == 0 ||
 		 ( vrFrame.Tracking.Status & VRAPI_TRACKING_STATUS_HMD_CONNECTED ) == 0 )
 	{
-		StickPitch -= angleSpeed * clampedSticks[1][1] * dt;
+		StickPitch -= angleSpeed * vrFrame.Input.sticks[1][1] * dt;
 	}
 	else
 	{
@@ -966,9 +966,9 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	// Allow up / down movement if there is no floor collision model or in 'free move' mode.
 	const bool upDown = ( WorldModel.Definition == NULL || FreeMove ) && ( ( vrFrame.Input.buttonState & BUTTON_RIGHT_TRIGGER ) != 0 );
 	const Vector3f gamepadMove(
-			clampedSticks[0][0],
-			upDown ? -clampedSticks[0][1] : 0.0f,
-			upDown ? 0.0f : clampedSticks[0][1] );
+		vrFrame.Input.sticks[0][0],
+			upDown ? -vrFrame.Input.sticks[0][1] : 0.0f,
+			upDown ? 0.0f : vrFrame.Input.sticks[0][1] );
 
 	// Perform player movement if there is input.
 	if ( gamepadMove.LengthSq() > 0.0f )
@@ -977,7 +977,7 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 		const Vector3f orientationVector = yawRotate.Transform( gamepadMove );
 
 		// Don't let move get too crazy fast
-		const float moveDistance = OVR::Alg::Min<float>( MoveSpeed * (float)dt, 1.0f );
+		const float moveDistance = std::min<float>( MoveSpeed * (float)dt, 1.0f );
 		if ( WorldModel.Definition != NULL && !FreeMove )
 		{
 			FootPos = SlideMove( FootPos, GetEyeHeight(), orientationVector, moveDistance,
@@ -1003,7 +1003,7 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 
 	if ( !Paused )
 	{
-		for ( int i = 0; i < Models.GetSizeI(); i++ )
+		for ( int i = 0; i < static_cast< int >( Models.size() ); i++ )
 		{
 			if ( Models[i] != NULL )
 			{
@@ -1013,7 +1013,7 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	}
 
 	// External systems can add surfaces to this list before drawing.
-	EmitSurfaces.Resize( 0 );
+	EmitSurfaces.resize( 0 );
 }
 
 }	// namespace OVR

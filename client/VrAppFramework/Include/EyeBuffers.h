@@ -13,7 +13,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "OVR_GlUtils.h"		// GLuint
 #include "OVR_LogTimer.h"		// LogGpuTime
-#include "VrApi_Types.h"
+#include "VrApi_Types.h"		// ovrTextureSwapChain
 
 namespace OVR
 {
@@ -33,7 +33,6 @@ enum colorFormat_t
 
 enum depthFormat_t
 {
-	DEPTH_0,		// useful for overlay planes
 	DEPTH_16,
 	DEPTH_24,
 	DEPTH_24_STENCIL_8

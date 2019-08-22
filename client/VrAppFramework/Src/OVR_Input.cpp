@@ -11,7 +11,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "OVR_Input.h"
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 #if defined( OVR_OS_ANDROID )
 #include <android/keycodes.h>
 #else

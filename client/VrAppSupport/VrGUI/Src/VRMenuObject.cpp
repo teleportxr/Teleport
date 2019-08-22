@@ -24,6 +24,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "OVR_TextureManager.h"
 #include "OVR_Locale.h"
 #include "Reflection.h"
+#include "OVR_Math.h"
 
 //#define OVR_USE_PERF_TIMER
 #include "OVR_PerfTimer.h"
@@ -65,7 +66,7 @@ bool VRMenuSurfaceTexture::LoadTexture( OvrGuiSys & guiSys, eSurfaceTextureType 
 		textureHandle_t const h = guiSys.GetTextureManager().LoadTexture( guiSys.GetApp()->GetFileSys(), imageName );
 		Texture = guiSys.GetTextureManager().GetGlTexture( h );
 #else
-		MemBufferT< uint8_t > buffer;
+		std::vector< uint8_t > buffer;
 		if ( guiSys.GetApp()->GetFileSys().ReadFile( imageName, buffer ) )
 		{
 			int w;
@@ -237,10 +238,10 @@ void VRMenuSurface::CreateImageGeometry( int const textureWidth, int const textu
 	const TriangleIndex vertical = vertsY - 1;
 
 	VertexAttribs attribs;
-	attribs.position.Resize( vertexCount );
-	attribs.uv0.Resize( vertexCount );
-	attribs.uv1.Resize( vertexCount );
-	attribs.color.Resize( vertexCount );
+	attribs.position.resize( vertexCount );
+	attribs.uv0.resize( vertexCount );
+	attribs.uv1.resize( vertexCount );
+	attribs.color.resize( vertexCount );
 
 	Vector4f color( 1.0f, 1.0f, 1.0f, 1.0f );
 
@@ -262,8 +263,8 @@ void VRMenuSurface::CreateImageGeometry( int const textureWidth, int const textu
 		}
 	}
 
-	Array< TriangleIndex > indices;
-	indices.Resize( horizontal * vertical * 6 );
+	std::vector< TriangleIndex > indices;
+	indices.resize( horizontal * vertical * 6 );
 
 	// If this is to be used to draw a linear format texture, like
 	// a surface texture, it is better for cache performance that
@@ -355,20 +356,20 @@ void VRMenuObject::BuildDrawSurface( OvrVRMenuMgr const & menuMgr,
 		bool const skipAdditivePass,
 		VRMenuRenderFlags_t const & flags,
 		Bounds3f const & localBounds,
-		Array< ovrDrawSurface > & surfaceList ) const
+		std::vector< ovrDrawSurface > & surfaceList ) const
 {
 	int n;
 	if ( surfaceIndex < 0 )
 	{
 		// this means we're only submitting an instanced text surface
 		n = 1;
-		surfaceList.Resize( surfaceList.GetSize() + 1 );
+		surfaceList.resize( surfaceList.size() + 1 );
 	}
 	else
 	{
 		// add one draw surface
 		n = ( flags & VRMenuRenderFlags_t( VRMENU_RENDER_SUBMIT_TEXT_SURFACE ) ) != 0 ? 2 : 1;
-		surfaceList.Resize( surfaceList.GetSizeI() + n );
+		surfaceList.resize( surfaceList.size() + n );
 
 		Surfaces[surfaceIndex].BuildDrawSurface( menuMgr,
 			modelMatrix,
@@ -381,7 +382,7 @@ void VRMenuObject::BuildDrawSurface( OvrVRMenuMgr const & menuMgr,
 			skipAdditivePass,
 			flags,
 			localBounds,
-			surfaceList[surfaceList.GetSize() - n] );
+			surfaceList[surfaceList.size() - n] );
 		n--;
 	}
 
@@ -389,8 +390,8 @@ void VRMenuObject::BuildDrawSurface( OvrVRMenuMgr const & menuMgr,
 	{
 		OVR_ASSERT( TextSurface != nullptr );
 		TextSurface->SurfaceDef.graphicsCommand.uniformValues[0][3] = color.w;
-		surfaceList[surfaceList.GetSizeI() - n].modelMatrix = TextSurface->ModelMatrix;
-		surfaceList[surfaceList.GetSizeI() - n].surface = &TextSurface->SurfaceDef;
+		surfaceList[surfaceList.size() - n].modelMatrix = TextSurface->ModelMatrix;
+		surfaceList[surfaceList.size() - n].surface = &TextSurface->SurfaceDef;
 	}
 }
 
@@ -660,11 +661,11 @@ void VRMenuSurface::CreateFromSurfaceParms( OvrGuiSys & guiSys, VRMenuSurfacePar
 		bool isValid = false;
 		for ( int i = 0; i < VRMENUSURFACE_IMAGE_MAX; ++i )
 		{
-			if ( !parms.ImageNames[i].IsEmpty() &&
+			if ( !parms.ImageNames[i].empty() &&
 				( parms.TextureTypes[i] >= SURFACE_TEXTURE_DIFFUSE && parms.TextureTypes[i] < SURFACE_TEXTURE_MAX ) )
 			{
 				isValid = true;
-				Textures[i].LoadTexture( guiSys, parms.TextureTypes[i], parms.ImageNames[i].ToCStr(), true );
+				Textures[i].LoadTexture( guiSys, parms.TextureTypes[i], parms.ImageNames[i].c_str(), true );
 			}
 			else if ( ( parms.ImageTexId[i] != 0 ) &&
  				( parms.TextureTypes[i] >= SURFACE_TEXTURE_DIFFUSE && parms.TextureTypes[i] < SURFACE_TEXTURE_MAX ) )
@@ -676,7 +677,7 @@ void VRMenuSurface::CreateFromSurfaceParms( OvrGuiSys & guiSys, VRMenuSurfacePar
 		OVR_PERF_ACCUMULATE( VerifyImageParms );
 		if ( !isValid )
 		{
-			//OVR_LOG( "VRMenuSurfaceParms '%s' - no valid images - skipping", parms.SurfaceName.ToCStr() );
+			//OVR_LOG( "VRMenuSurfaceParms '%s' - no valid images - skipping", parms.SurfaceName.c_str() );
 			return;
 		}
 	}
@@ -932,19 +933,24 @@ VRMenuObject::VRMenuObject( VRMenuObjectParms const & parms,
 // VRMenuObject::~VRMenuObject
 VRMenuObject::~VRMenuObject()
 {
-	if ( CollisionPrimitive != NULL )
+	if ( CollisionPrimitive != nullptr )
 	{
 		delete CollisionPrimitive;
-		CollisionPrimitive = NULL;
+		CollisionPrimitive = nullptr;
 	}
 
+
 	// all components must be dynamically allocated
-	for ( int i = 0; i < Components.GetSizeI(); ++i )
+	// this is critical
+	for ( int i = 0; i < static_cast< int >( Components.size() ); ++i )
 	{
-		delete Components[i];
-		Components[i] = NULL;
+		if ( Components[i] )
+		{
+			delete Components[i];
+		}
+		Components[i] = nullptr;
 	}
-	Components.Clear();
+	Components.clear();
 	Handle.Release();
 	ParentHandle.Release();
 	FreeTextSurface();
@@ -958,16 +964,16 @@ OVR_PERF_ACCUMULATOR( VRMenuObjectInit );
 void VRMenuObject::Init( OvrGuiSys & guiSys, VRMenuObjectParms const & parms )
 {
 	OVR_PERF_TIMER( VRMenuObjectInit );
-	for ( int i = 0; i < parms.SurfaceParms.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >(  parms.SurfaceParms.size() ); ++i )
 	{
-		int idx = static_cast< int >( Surfaces.AllocBack() );
+		int idx = AllocSurface();
 		Surfaces[idx].CreateFromSurfaceParms( guiSys, parms.SurfaceParms[i] );
 	}
 
 	// bounds are nothing submitted for rendering
 	CullBounds = Bounds3f( 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f );
 	FontParms = parms.FontParms;
-	for ( int i = 0; i < parms.Components.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( parms.Components.size() ); ++i )
 	{
 		AddComponent( parms.Components[i] );
 	}
@@ -980,7 +986,7 @@ void VRMenuObject::Init( OvrGuiSys & guiSys, VRMenuObjectParms const & parms )
 		TextLocalPose.Translation = { TextLocalPose.Translation.x * DEFAULT_TEXEL_SCALE, 
 				TextLocalPose.Translation.y * DEFAULT_TEXEL_SCALE, 
 				TextLocalPose.Translation.z };
-		if ( Surfaces.GetSizeI() > 0 )
+		if ( Surfaces.size() > 0 )
 		{
 			Vector2f dims = Surfaces[0].GetDims();
 			LocalScale = Vector3f(	LocalScale.x / dims.x,
@@ -998,11 +1004,11 @@ void VRMenuObject::Init( OvrGuiSys & guiSys, VRMenuObjectParms const & parms )
 // VRMenuObject::FreeChildren
 void VRMenuObject::FreeChildren( OvrVRMenuMgr & menuMgr )
 {
-	for ( int i = 0; i < Children.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Children.size() ); ++i )
 	{
 		menuMgr.FreeObject( Children[i] );
 	}
-	Children.Resize( 0 );
+	Children.resize( 0 );
 	// NOTE! bounds will be incorrect now until submitted for rendering
 }
 
@@ -1010,7 +1016,7 @@ void VRMenuObject::FreeChildren( OvrVRMenuMgr & menuMgr )
 // VRMenuObject::IsDescendant
 bool VRMenuObject::IsDescendant( OvrVRMenuMgr & menuMgr, menuHandle_t const handle ) const
 {
-	for ( int i = 0; i < Children.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Children.size() ); ++i )
 	{
 		if ( Children[i] == handle )
 		{
@@ -1018,7 +1024,7 @@ bool VRMenuObject::IsDescendant( OvrVRMenuMgr & menuMgr, menuHandle_t const hand
 		}
 	}
 
-	for ( int i = 0; i < Children.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Children.size() ); ++i )
 	{
 		VRMenuObject * child = menuMgr.ToObject( Children[i] );
 		if ( child != NULL )
@@ -1038,7 +1044,7 @@ bool VRMenuObject::IsDescendant( OvrVRMenuMgr & menuMgr, menuHandle_t const hand
 // VRMenuObject::AddChild
 void VRMenuObject::AddChild( OvrVRMenuMgr & menuMgr, menuHandle_t const handle )
 {
-	Children.PushBack( handle );
+	Children.push_back( handle );
 
 	VRMenuObject * child = menuMgr.ToObject( handle );
 	if ( child != NULL )
@@ -1052,11 +1058,11 @@ void VRMenuObject::AddChild( OvrVRMenuMgr & menuMgr, menuHandle_t const handle )
 // VRMenuObject::RemoveChild
 void VRMenuObject::RemoveChild( OvrVRMenuMgr & menuMgr, menuHandle_t const handle )
 {
-	for ( int i = 0; i < Children.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Children.size() ); ++i )
 	{
 		if ( Children[i] == handle )
 		{
-			Children.RemoveAtUnordered( i );
+			Children.erase( Children.cbegin() + i );
 			return;
 		}
 	}
@@ -1066,12 +1072,12 @@ void VRMenuObject::RemoveChild( OvrVRMenuMgr & menuMgr, menuHandle_t const handl
 // VRMenuObject::FreeChild
 void VRMenuObject::FreeChild( OvrVRMenuMgr & menuMgr, menuHandle_t const handle )
 {
-	for ( int i = 0; i < Children.GetSizeI(); ++i)
+	for ( int i = 0; i < static_cast< int >( Children.size() ); ++i)
 	{
 		menuHandle_t childHandle = Children[i];
 		if ( childHandle == handle )
 		{
-			Children.RemoveAtUnordered( i );
+			Children.erase( Children.cbegin() + i );
 			menuMgr.FreeObject( childHandle );
 			return;
 		}
@@ -1082,7 +1088,7 @@ void VRMenuObject::FreeChild( OvrVRMenuMgr & menuMgr, menuHandle_t const handle 
 // VRMenuObject::Frame
 void VRMenuObject::Frame( OvrVRMenuMgr & menuMgr, Matrix4f const & viewMatrix )
 {
-	for ( int i = 0; i < Children.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Children.size() ); ++i )
 	{
 		VRMenuObject * child = menuMgr.ToObject( Children[i] );
 		if ( child != NULL )
@@ -1147,14 +1153,14 @@ bool VRMenuObject::IntersectRay( Vector3f const & localStart, Vector3f const & l
 	if ( GetType() != VRMENU_CONTAINER && ( Flags & VRMENUOBJECT_DONT_RENDER_SURFACE ) == 0 )
 	{
 		int numSurfaces = 0;
-		for ( int i = 0; i < Surfaces.GetSizeI(); ++i )
+		for ( const auto & surface : Surfaces )
 		{
-			if ( Surfaces[i].IsRenderable() )
+			if ( surface.IsRenderable() )
 			{
 				numSurfaces++;
 
 				OvrCollisionResult localResult;
-				if ( Surfaces[i].IntersectRay( localStart, localDir, scale, testContents, localResult ) )
+				if ( surface.IntersectRay( localStart, localDir, scale, testContents, localResult ) )
 				{
 					if ( localResult.t < result.t )
 					{
@@ -1201,13 +1207,13 @@ bool VRMenuObject::HitTest_r( OvrGuiSys const & guiSys, Posef const & parentPose
 	Vector3f localStart = modelPose.Rotation.Inverted().Rotate( rayStart - modelPose.Translation );
 	Vector3f localDir = modelPose.Rotation.Inverted().Rotate( rayDir ).Normalized();
 /*
-    LOG_WITH_TAG( "Spam", "Hit test vs '%s', start: (%.2f, %.2f, %.2f ) cull bounds( %.2f, %.2f, %.2f ) -> ( %.2f, %.2f, %.2f )", GetText().ToCStr(),
+    LOG_WITH_TAG( "Spam", "Hit test vs '%s', start: (%.2f, %.2f, %.2f ) cull bounds( %.2f, %.2f, %.2f ) -> ( %.2f, %.2f, %.2f )", GetText().c_str(),
             localStart.x, localStart.y, localStart.z,
             CullBounds.b[0].x, CullBounds.b[0].y, CullBounds.b[0].z,
             CullBounds.b[1].x, CullBounds.b[1].y, CullBounds.b[1].z );
 */
 	// test against cull bounds if we have children  ... otherwise cullBounds == localBounds
-	if ( Children.GetSizeI() > 0 )
+	if ( Children.size() > 0 )
 	{
 		if ( CullBounds.IsInverted() )
 		{
@@ -1263,7 +1269,7 @@ bool VRMenuObject::HitTest_r( OvrGuiSys const & guiSys, Posef const & parentPose
 			}
 
 			// also check vs. the text bounds if there is any text
-			if ( !Text.IsEmpty() && GetType() != VRMENU_CONTAINER && ( Flags & VRMENUOBJECT_DONT_HIT_TEXT ) == 0 )
+			if ( !Text.empty() && GetType() != VRMENU_CONTAINER && ( Flags & VRMENUOBJECT_DONT_HIT_TEXT ) == 0 )
 			{
 				float textT0;
 				float textT1;
@@ -1280,7 +1286,7 @@ bool VRMenuObject::HitTest_r( OvrGuiSys const & guiSys, Posef const & parentPose
 	}
 
 	// test against children
-	for ( int i = 0; i < Children.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Children.size() ); ++i )
 	{
 		VRMenuObject * child = static_cast< VRMenuObject* >( guiSys.GetVRMenuMgr().ToObject( Children[i] ) );
 		if ( child != NULL )
@@ -1313,9 +1319,9 @@ Bounds3f VRMenuObject::GetLocalBounds( BitmapFont const & font ) const {
 	Bounds3f bounds;
 	bounds.Clear();
 	Vector3f const localScale = GetLocalScale();
-	for ( int i = 0; i < Surfaces.GetSizeI(); i++ )
+	for ( const auto & surface : Surfaces )
 	{
-		Bounds3f const & surfaceBounds = Surfaces[i].GetLocalBounds() * localScale;
+		Bounds3f const & surfaceBounds = surface.GetLocalBounds() * localScale;
 		bounds = Bounds3f::Union( bounds, surfaceBounds );
 	}
 
@@ -1331,7 +1337,7 @@ Bounds3f VRMenuObject::GetLocalBounds( BitmapFont const & font ) const {
 	}
 
 	// also union the text bounds, as long as we're not a container (containers don't render anything)
-	if ( !Text.IsEmpty() && GetType() != VRMENU_CONTAINER )
+	if ( !Text.empty() && GetType() != VRMENU_CONTAINER )
 	{
 		bounds = Bounds3f::Union( bounds, GetTextLocalBounds( font ) );
 	}
@@ -1370,7 +1376,7 @@ Bounds3f VRMenuObject::GetTextLocalBounds( BitmapFont const & font ) const
 		}
 
 		// also union the text bounds
-		if ( Text.IsEmpty() )
+		if ( Text.empty() )
 		{
 			TextMetrics = textMetrics_t();
 		}
@@ -1380,10 +1386,10 @@ Bounds3f VRMenuObject::GetTextLocalBounds( BitmapFont const & font ) const
 
 			int const MAX_LINES = 16;
 			float lineWidths[MAX_LINES];
-			int requestedLines = Alg::Clamp( FontParms.MaxLines, 1, 16 );
+			int requestedLines = clamp<int>( FontParms.MaxLines, 1, 16 );
 			int numLines = 0;			
 
-			font.CalcTextMetrics( Text.ToCStr(), len, TextMetrics.w, TextMetrics.h,
+			font.CalcTextMetrics( Text.c_str(), len, TextMetrics.w, TextMetrics.h,
 					TextMetrics.ascent, TextMetrics.descent, TextMetrics.fontHeight, lineWidths, requestedLines, numLines );
 
 			// for the time being if we exceed the number of lines we truncate the last few lines and add a ... 
@@ -1414,7 +1420,7 @@ Bounds3f VRMenuObject::GetTextLocalBounds( BitmapFont const & font ) const
 			fp.TrackRoll = FontParms.TrackRoll;
 			fp.ColorCenter = FontParms.ColorCenter;
 			fp.AlphaCenter = FontParms.AlphaCenter;
-			TextSurface->SurfaceDef = font.TextSurface( Text.ToCStr(), scale, TextColor, FontParms.AlignHoriz, FontParms.AlignVert, &fp );
+			TextSurface->SurfaceDef = font.TextSurface( Text.c_str(), scale, TextColor, FontParms.AlignHoriz, FontParms.AlignVert, &fp );
 		}
 	}
 
@@ -1481,9 +1487,9 @@ Bounds3f VRMenuObject::GetTextLocalBounds( BitmapFont const & font ) const
 
 //==============================
 // VRMenuObject::CalcLocalBoundsForText
-Bounds3f VRMenuObject::CalcLocalBoundsForText( BitmapFont const & font, String & text ) const
+Bounds3f VRMenuObject::CalcLocalBoundsForText( BitmapFont const & font, std::string & text ) const
 {
-	if ( text.IsEmpty() )
+	if ( text.empty() )
 	{
 		return Bounds3f();
 	}
@@ -1500,7 +1506,7 @@ Bounds3f VRMenuObject::CalcLocalBoundsForText( BitmapFont const & font, String &
 	int const MAX_LINES = 16;
 	float lineWidths[MAX_LINES];
 	int numLines = 0;
-	int requestedLines = Alg::Clamp( FontParms.MaxLines, 1, 16 );
+	int requestedLines = clamp<int>( FontParms.MaxLines, 1, 16 );
 
 	float w;
 	float h;
@@ -1514,7 +1520,7 @@ Bounds3f VRMenuObject::CalcLocalBoundsForText( BitmapFont const & font, String &
 		font.WordWrapText( text, FontParms.WrapWidth * localScale.x * textLocalScale.x, localScale.x * textLocalScale.x * FontParms.Scale );
 	}
 
-	font.CalcTextMetrics( text.ToCStr(), len, w, h, ascent, descent, fontHeight, lineWidths, requestedLines, numLines );
+	font.CalcTextMetrics( text.c_str(), len, w, h, ascent, descent, fontHeight, lineWidths, requestedLines, numLines );
 
 	// for the time being if we exceed the number of lines we truncate the last few lines and add a ... 
 	// to indicate more text is there we'll do this until we support scrolling	
@@ -1605,7 +1611,7 @@ void VRMenuObject::AddComponent( VRMenuComponent * component )
 		OVR_ASSERT_WITH_TAG( componentIndex < 0, "VRMenu" );
 		return;
 	}
-	Components.PushBack( component );
+	Components.push_back( component );
 }
 
 //==============================
@@ -1627,17 +1633,17 @@ void VRMenuObject::DeleteComponent( OvrGuiSys & guiSys, VRMenuComponent * compon
 // VRMenuObject::FreeComponents
 void VRMenuObject::FreeComponents( ovrComponentList & list )
 {
-	Array< VRMenuComponent* > & comps = list.GetComponents();
-	for ( int i = comps.GetSizeI() - 1; i >= 0; --i )
+	std::vector< VRMenuComponent* > & comps = list.GetComponents();
+	for ( int i = static_cast< int >( comps.size() ) - 1; i >= 0; --i )
 	{
 		VRMenuComponent * component = comps[i];
 		comps[i] = nullptr;
 
-		for ( int j = 0; j < Components.GetSizeI(); ++j )
+		for ( int j = 0; j < static_cast< int >( Components.size() ); ++j )
 		{
 			if ( Components[j] == component )
 			{
-				Components.RemoveAt( j );
+				Components.erase( Components.cbegin() + j );
 				break;
 			}
 		}
@@ -1650,7 +1656,7 @@ void VRMenuObject::FreeComponents( ovrComponentList & list )
 // VRMenuObject::GetComponentIndex
 int VRMenuObject::GetComponentIndex( VRMenuComponent * component ) const
 {
-	for ( int i = 0; i < Components.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Components.size() ); ++i )
 	{
 		if ( Components[i] == component )
 		{
@@ -1664,8 +1670,8 @@ int VRMenuObject::GetComponentIndex( VRMenuComponent * component ) const
 // VRMenuObject::GetComponentById
 VRMenuComponent * VRMenuObject::GetComponentById_Impl( int const id, const char * name ) const
 {
-	Array< VRMenuComponent* > const & comps = GetComponentList();
-	for ( int c = 0; c < comps.GetSizeI(); ++c )
+	std::vector< VRMenuComponent* > const & comps = GetComponentList();
+	for ( int c = 0; c < static_cast< int >( comps.size() ); ++c )
 	{
 		if ( VRMenuComponent * comp = comps[ c ] )
 		{
@@ -1690,8 +1696,8 @@ VRMenuComponent * VRMenuObject::GetComponentById_Impl( int const id, const char 
 // VRMenuObject::GetComponentByTypeName
 VRMenuComponent * VRMenuObject::GetComponentByTypeName_Impl( const char * typeName ) const
 {
-	Array< VRMenuComponent* > const & comps = GetComponentList();
-	for ( int c = 0; c < comps.GetSizeI(); ++c )
+	std::vector< VRMenuComponent* > const & comps = GetComponentList();
+	for ( int c = 0; c < static_cast< int >( comps.size() ); ++c )
 	{
 		if ( VRMenuComponent * comp = comps[ c ] )
 		{
@@ -1819,7 +1825,7 @@ menuHandle_t VRMenuObject::ChildHandleForName( OvrVRMenuMgr const & menuMgr, cha
 		VRMenuObject const * child = static_cast< VRMenuObject* >( menuMgr.ToObject( GetChildHandleForIndex( i ) ) );
 		if ( child != NULL )
 		{
-			if ( OVR_stricmp( child->GetName().ToCStr(), name ) == 0 )
+			if ( OVR_stricmp( child->GetName().c_str(), name ) == 0 )
 			{
 				return child->GetHandle();
 			}
@@ -1851,7 +1857,7 @@ menuHandle_t VRMenuObject::ChildHandleForTag( OvrVRMenuMgr const & menuMgr, char
 		VRMenuObject const * child = static_cast< VRMenuObject* >( menuMgr.ToObject( GetChildHandleForIndex( i ) ) );
 		if ( child != NULL )
 		{
-			if ( OVR_stricmp( child->GetTag().ToCStr(), tag ) == 0 )
+			if ( OVR_stricmp( child->GetTag().c_str(), tag ) == 0 )
 			{
 				return child->GetHandle();
 			}
@@ -1887,9 +1893,9 @@ Vector3f VRMenuObject::GetTextLocalScale() const
 void  VRMenuObject::SetSurfaceTexture( OvrGuiSys & guiSys, int const surfaceIndex, int const textureIndex,
                                         eSurfaceTextureType const type, char const * imageName )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return;
 	}
 	Surfaces[surfaceIndex].LoadTexture( guiSys, textureIndex, type, imageName );
@@ -1900,9 +1906,9 @@ void  VRMenuObject::SetSurfaceTexture( OvrGuiSys & guiSys, int const surfaceInde
 void  VRMenuObject::SetSurfaceTexture( int const surfaceIndex, int const textureIndex,
         eSurfaceTextureType const type, GLuint const texId, int const width, int const height )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return;
 	}
 	Surfaces[surfaceIndex].LoadTexture( textureIndex, type, texId, width, height );
@@ -1913,9 +1919,9 @@ void  VRMenuObject::SetSurfaceTexture( int const surfaceIndex, int const texture
 void VRMenuObject::SetSurfaceTexture( int const surfaceIndex, int const textureIndex,
 		eSurfaceTextureType const type, GlTexture const & texture )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return;
 	}
 	Surfaces[surfaceIndex].LoadTexture( textureIndex, type, texture.texture, texture.Width, texture.Height );
@@ -1927,9 +1933,9 @@ void  VRMenuObject::SetSurfaceTextureTakeOwnership( int const surfaceIndex, int 
 	eSurfaceTextureType const type, GLuint const texId,
 	int const width, int const height )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return;
 	}
 	Surfaces[ surfaceIndex ].LoadTexture( textureIndex, type, texId, width, height );
@@ -1941,9 +1947,9 @@ void  VRMenuObject::SetSurfaceTextureTakeOwnership( int const surfaceIndex, int 
 void VRMenuObject::SetSurfaceTextureTakeOwnership( int const surfaceIndex, int const textureIndex,
 		eSurfaceTextureType const type, GlTexture const & texture )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return;
 	}
 	Surfaces[ surfaceIndex ].LoadTexture( textureIndex, type, texture.texture, texture.Width, texture.Height );
@@ -1954,9 +1960,9 @@ void VRMenuObject::SetSurfaceTextureTakeOwnership( int const surfaceIndex, int c
 // VRMenuObject::RegenerateSurfaceGeometry
 void VRMenuObject::RegenerateSurfaceGeometry( int const surfaceIndex, const bool freeSurfaceGeometry )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return;
 	}
 
@@ -1972,9 +1978,9 @@ void VRMenuObject::RegenerateSurfaceGeometry( int const surfaceIndex, const bool
 // VRMenuObject::GetSurfaceDims
 Vector2f const & VRMenuObject::GetSurfaceDims( int const surfaceIndex ) const
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return Vector2f::ZERO;
 	}
 
@@ -1985,9 +1991,9 @@ Vector2f const & VRMenuObject::GetSurfaceDims( int const surfaceIndex ) const
 // VRMenuObject::SetSurfaceDims
 void VRMenuObject::SetSurfaceDims( int const surfaceIndex, Vector2f const &dims )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return;
 	}
 
@@ -1998,9 +2004,9 @@ void VRMenuObject::SetSurfaceDims( int const surfaceIndex, Vector2f const &dims 
 // VRMenuObject::GetSurfaceBorder
 Vector4f const & VRMenuObject::GetSurfaceBorder( int const surfaceIndex )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return Vector4f::ZERO;
 	}
 
@@ -2011,9 +2017,9 @@ Vector4f const & VRMenuObject::GetSurfaceBorder( int const surfaceIndex )
 // VRMenuObject::SetSurfaceBorder
 void VRMenuObject::SetSurfaceBorder( int const surfaceIndex, Vector4f const & border )
 {
-	if ( surfaceIndex < 0 || surfaceIndex >= Surfaces.GetSizeI() )
+	if ( surfaceIndex < 0 || surfaceIndex >= static_cast< int >( Surfaces.size() ) )
 	{
-		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < Surfaces.GetSizeI(), "VrMenu" );
+		OVR_ASSERT_WITH_TAG( surfaceIndex >= 0 && surfaceIndex < static_cast< int >( Surfaces.size() ), "VrMenu" );
 		return;
 	}
 
@@ -2051,7 +2057,7 @@ int VRMenuObject::FindSurfaceWithTextureType( eSurfaceTextureType const type, bo
 //  VRMenuObject::FindSurfaceWithTextureType
 int VRMenuObject::FindSurfaceWithTextureType( eSurfaceTextureType const type, bool const singular, bool const visibleOnly ) const
 {
-	for ( int i = 0; i < Surfaces.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( Surfaces.size() ); ++i )
 	{
 		VRMenuSurface const & surf = Surfaces[i];
 		if ( visibleOnly && !surf.GetVisible() )
@@ -2121,14 +2127,16 @@ bool VRMenuObject::GetSurfaceVisible( int const surfaceIndex ) const
 // VRMenuObject::NumSurfaces
 int VRMenuObject::NumSurfaces() const
 {
-	return Surfaces.GetSizeI();
+	return static_cast< int >( Surfaces.size() );
 }
 
 //==============================
 // VRMenuObject::AllocSurface
 int VRMenuObject::AllocSurface()
 {
-	return static_cast<int>( Surfaces.AllocBack() );
+	int newIndex = static_cast< int >( Surfaces.size() );
+	Surfaces.emplace_back( VRMenuSurface() );
+	return newIndex;
 }
 
 
@@ -2173,15 +2181,15 @@ void VRMenuObject::TransformByParent( Posef const & parentPose,
 // VRMenuObject::GetWorldTransform
 void VRMenuObject::GetWorldTransform( OvrVRMenuMgr & menuMgr, Posef const & menuPose, Posef & outPose, Vector3f & outScale, Vector4f & outColor ) const
 {
-	Array< VRMenuObject const* > objects;
-	objects.PushBack( this );
+	std::vector< VRMenuObject const* > objects;
+	objects.push_back( this );
 
 	// collect all of the parents
 	menuHandle_t parentHandle = ParentHandle;
 	while( parentHandle.IsValid() )
 	{
 		VRMenuObject * obj = menuMgr.ToObject( parentHandle );
-		objects.PushBack(  obj );
+		objects.push_back(  obj );
 		parentHandle = obj->GetParentHandle();
 	}
 
@@ -2190,7 +2198,7 @@ void VRMenuObject::GetWorldTransform( OvrVRMenuMgr & menuMgr, Posef const & menu
 	outPose = menuPose; // start as identity
 	outScale = Vector3f( 1.0f );
 	outColor = Vector4f( 1.0f );
-	for ( int i = objects.GetSizeI() - 1; i >= 0; --i )
+	for ( int i = static_cast< int >( objects.size() ) - 1; i >= 0; --i )
 	{
 		VRMenuObject const * obj = objects[i];
 		TransformByParent( outPose, outScale, outColor, obj->GetLocalPose(), obj->GetLocalScale(),
@@ -2249,7 +2257,7 @@ static void DumpText( char const * token, char const * text, int const size )
 //==============================
 // VRMenuObject::ParseItemParms
 ovrParseResult VRMenuObject::ParseItemParms( ovrReflection & refl, ovrLocale const & locale, char const * fileName, 
-		MemBufferT< uint8_t > const & buffer, OVR::Array<VRMenuObjectParms const *> & itemParms )
+		std::vector< uint8_t > const & buffer, std::vector<VRMenuObjectParms const *> & itemParms )
 {
 	ovrLexer lex( buffer, ":;|[],()/*\\#" );
 	
@@ -2268,7 +2276,7 @@ ovrParseResult VRMenuObject::ParseItemParms( ovrReflection & refl, ovrLocale con
 			res = lex.NextToken( token, sizeof( token ) );
 			if ( res != ovrLexer::LEX_RESULT_OK )
 			{
-				DumpText( token, (const char*)( static_cast< uint8_t const * >( buffer ) ), (int)buffer.GetSize() );
+				DumpText( token, (const char*)( static_cast< uint8_t const * >( buffer.data() ) ), (int)buffer.size() );
 				return ovrParseResult( res, "Expected key word after #." );
 			}
 			if ( OVR_strcmp( token, "pragma" ) == 0 )
@@ -2287,8 +2295,8 @@ ovrParseResult VRMenuObject::ParseItemParms( ovrReflection & refl, ovrLocale con
 					}
 
 					// parse overload parameters
-					String scope;
-					String name;
+					std::string scope;
+					std::string name;
 					for ( ; ; )
 					{
 						char nameToken[128];
@@ -2317,7 +2325,7 @@ ovrParseResult VRMenuObject::ParseItemParms( ovrReflection & refl, ovrLocale con
 						{
 							return ovrParseResult( res, "Expected ':'" );
 						}
-						if ( !scope.IsEmpty() )
+						if ( !scope.empty() )
 						{
 							scope += "::";
 						}
@@ -2337,7 +2345,7 @@ ovrParseResult VRMenuObject::ParseItemParms( ovrReflection & refl, ovrLocale con
 						return ovrParseResult( res, "Expected ')'." );
 					}
 
-					refl.AddOverload( new ovrReflectionOverload_FloatDefaultValue( scope.ToCStr(), name.ToCStr(), value ) );
+					refl.AddOverload( new ovrReflectionOverload_FloatDefaultValue( scope.c_str(), name.c_str(), value ) );
 				}
 			}
 			else
@@ -2348,8 +2356,8 @@ ovrParseResult VRMenuObject::ParseItemParms( ovrReflection & refl, ovrLocale con
 		}
 		else if ( OVR_strcmp( token, "itemParms" ) == 0 )
 		{
-			Array< VRMenuObjectParms const * > parms;
-			ovrTypeInfo const * typeInfo = refl.FindTypeInfo( "OVR::Array< VRMenuObjectParms* >" );
+			std::vector< VRMenuObjectParms const * > parms;
+			ovrTypeInfo const * typeInfo = refl.FindTypeInfo( "std::vector< VRMenuObjectParms* >" );
 			if ( typeInfo != nullptr )
 			{
 				ovrParseResult parseRes = ParseArray( refl, locale, fileName, lex, typeInfo, &parms, 0 );
@@ -2360,8 +2368,8 @@ ovrParseResult VRMenuObject::ParseItemParms( ovrReflection & refl, ovrLocale con
 				}
 			}
 
-			itemParms.Append( parms );
-			parms.Resize( 0 );
+			itemParms.insert( itemParms.cend(), parms.cbegin(), parms.cend() );
+			parms.resize( 0 );
 
 		}
 		else

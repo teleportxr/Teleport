@@ -79,18 +79,18 @@ VRMenu * VRMenu::Create( char const * menuName )
 
 //==============================
 // VRMenu::Init
-void VRMenu::Init( OvrGuiSys & guiSys, float const menuDistance, VRMenuFlags_t const & flags, Array< VRMenuComponent * > comps /*= Array< VRMenuComponent* >()*/ )
+void VRMenu::Init( OvrGuiSys & guiSys, float const menuDistance, VRMenuFlags_t const & flags, std::vector< VRMenuComponent * > comps /*= std::vector< VRMenuComponent* >()*/ )
 {
 	OVR_ASSERT( !RootHandle.IsValid() );
-	OVR_ASSERT( !Name.IsEmpty() );
+	OVR_ASSERT( !Name.empty() );
 
 	Flags = flags;
 	MenuDistance = menuDistance;
 
 	// create an empty root item
 	VRMenuObjectParms rootParms( VRMENU_CONTAINER, comps,
-            VRMenuSurfaceParms( "root" ), "Root", 
-			Posef(), Vector3f( 1.0f, 1.0f, 1.0f ), VRMenuFontParms(), 
+            VRMenuSurfaceParms( "root" ), "Root",
+			Posef(), Vector3f( 1.0f, 1.0f, 1.0f ), VRMenuFontParms(),
 			GetRootId(), VRMenuObjectFlags_t(), VRMenuObjectInitFlags_t() );
 	RootHandle = guiSys.GetVRMenuMgr().CreateObject( rootParms );
 	VRMenuObject * root = guiSys.GetVRMenuMgr().ToObject( RootHandle );
@@ -104,7 +104,7 @@ void VRMenu::Init( OvrGuiSys & guiSys, float const menuDistance, VRMenuFlags_t c
 	ComponentsInitialized = false;
 }
 
-void VRMenu::InitWithItems( OvrGuiSys & guiSys, float const menuDistance, VRMenuFlags_t const & flags, Array< VRMenuObjectParms const * > & itemParms )
+void VRMenu::InitWithItems( OvrGuiSys & guiSys, float const menuDistance, VRMenuFlags_t const & flags, std::vector< VRMenuObjectParms const * > & itemParms )
 {
 	Init( guiSys, menuDistance, flags );
 
@@ -124,9 +124,9 @@ public:
 		Parms( parms )
 	{
 	}
-	ChildParmsPair() : 
-		Parms( NULL ) 
-	{ 
+	ChildParmsPair() :
+		Parms( NULL )
+	{
 	}
 
 	menuHandle_t				Handle;
@@ -141,8 +141,8 @@ OVR_PERF_ACCUMULATOR_EXTERN( SelectProgramType );
 //==============================
 // VRMenu::AddItems
 void VRMenu::AddItems( OvrGuiSys & guiSys,
-        OVR::Array< VRMenuObjectParms const * > & itemParms,
-        menuHandle_t parentHandle_, bool const recenter ) 
+        std::vector< VRMenuObjectParms const * > & itemParms,
+        menuHandle_t parentHandle_, bool const recenter )
 {
 	OVR_PERF_TIMER( AddItems );
 
@@ -156,42 +156,47 @@ void VRMenu::AddItems( OvrGuiSys & guiSys,
 	OVR_ASSERT( root != NULL );
 
 #if defined( OVR_USE_PERF_TIMER )
-	double const createStartTime = vrapi_GetTimeInSeconds();
+	double const createStartTime = SystemClock::GetTimeInSeconds();
 	double createObjectTotal = 0.0;
 #endif
 
-	Array< ChildParmsPair > pairs;
+	std::vector< ChildParmsPair > pairs;
 
 	Vector3f nextItemPos( 0.0f );
 	int childIndex = 0;
-	for ( int i = 0; i < itemParms.GetSizeI(); ++i )
+	for ( int i = 0; i < static_cast< int >( itemParms.size() ); ++i )
 	{
-        VRMenuObjectParms const * parms = itemParms[i];
+    	VRMenuObjectParms const * parms = itemParms[i];
+
+#if defined( OVR_BUILD_DEBUG )
+		OVR_LOG( "## Menu[%d] Id=%d Text=%s", i, static_cast< int >( parms->Id.Get() ), parms->Text.c_str() );
+#endif
+
 #if defined( OVR_BUILD_DEBUG )
 		// assure all ids are different
-		for ( int j = 0; j < itemParms.GetSizeI(); ++j )
+		for ( int j = 0; j < static_cast< int >( itemParms.size() ); ++j )
 		{
 			if ( j != i && parms->Id != VRMenuId_t() && parms->Id == itemParms[j]->Id )
 			{
 				OVR_LOG( "Duplicate menu object ids for '%s' and '%s'!",
-						parms->Text.ToCStr(), itemParms[j]->Text.ToCStr() );
+						parms->Text.c_str(), itemParms[j]->Text.c_str() );
 			}
 		}
 #endif
 
 #if defined( OVR_USE_PERF_TIMER )
-		double const createObjectStartTime = vrapi_GetTimeInSeconds();
+		double const createObjectStartTime = SystemClock::GetTimeInSeconds();
 #endif
 		menuHandle_t handle = guiSys.GetVRMenuMgr().CreateObject( *parms );
 #if defined( OVR_USE_PERF_TIMER )
-		createObjectTotal += vrapi_GetTimeInSeconds() - createObjectStartTime;
+		createObjectTotal += SystemClock::GetTimeInSeconds() - createObjectStartTime;
 #endif
 
 		if ( handle.IsValid() && root != NULL )
 		{
-			if ( parms->ParentId != root->GetId() && ( parms->ParentId.IsValid() || !parms->ParentName.IsEmpty() ) )
+			if ( parms->ParentId != root->GetId() && ( parms->ParentId.IsValid() || !parms->ParentName.empty() ) )
 			{
-				pairs.PushBack( ChildParmsPair( handle, parms ) );
+				pairs.push_back( ChildParmsPair( handle, parms ) );
 			}
 			root->AddChild( guiSys.GetVRMenuMgr(), handle );
 			VRMenuObject * obj = guiSys.GetVRMenuMgr().ToObject( root->GetChildHandleForIndex( childIndex++ ) );
@@ -216,7 +221,7 @@ void VRMenu::AddItems( OvrGuiSys & guiSys,
 	}
 
 #if defined( OVR_USE_PERF_TIMER )
-	OVR_LOG( "AddItems create took %f seconds", vrapi_GetTimeInSeconds() - createStartTime );
+	OVR_LOG( "AddItems create took %f seconds", SystemClock::GetTimeInSeconds() - createStartTime );
 	OVR_LOG( "Creating Objects took %f seconds", createObjectTotal );
 #endif
 
@@ -224,16 +229,14 @@ void VRMenu::AddItems( OvrGuiSys & guiSys,
 		OVR_PERF_TIMER( Reparenting );
 
 		// reparent
-		Array< menuHandle_t > reparented;
-		for ( int i = 0; i < pairs.GetSizeI(); ++i )
+		std::vector< menuHandle_t > reparented;
+		for ( ChildParmsPair const & pair : pairs )
 		{
-			ChildParmsPair const & pair = pairs[i];
-
 			menuHandle_t handle;
 
-			if ( !pair.Parms->ParentName.IsEmpty() )
+			if ( !pair.Parms->ParentName.empty() )
 			{
-				handle = HandleForName( guiSys.GetVRMenuMgr(), pair.Parms->ParentName.ToCStr() );
+				handle = HandleForName( guiSys.GetVRMenuMgr(), pair.Parms->ParentName.c_str() );
 			}
 			else if ( pair.Parms->ParentId.IsValid() )
 			{
@@ -305,14 +308,14 @@ void VRMenu::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f 
 {
 	OVR_PERF_TIMER( VRMenu_Frame );
 
-	Array< VRMenuEvent > events;
-	events.Reserve( 1024 );
+	std::vector< VRMenuEvent > events;
+	events.reserve( 1024 );
 	// copy any pending events
-	for ( int i = 0; i < PendingEvents.GetSizeI(); ++i )
+	for ( const auto & pendingEvent : PendingEvents )
 	{
-		events.PushBack( PendingEvents[i] );
+		events.push_back( pendingEvent );
 	}
-	PendingEvents.Resize( 0 );
+	PendingEvents.resize( 0 );
 
 	if ( !ComponentsInitialized )
 	{
@@ -332,7 +335,7 @@ void VRMenu::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f 
 				if ( CurMenuState == MENUSTATE_OPEN )
 				{
 					// we're already open, so just set next to OPEN, too so we don't do any transition
-					NextMenuState = MENUSTATE_OPEN;	
+					NextMenuState = MENUSTATE_OPEN;
 				}
 				else
 				{
@@ -345,7 +348,7 @@ void VRMenu::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f 
 				{
 					OVR_ASSERT( CurMenuState != NextMenuState ); // logic below is dependent on this!!
 					if ( CurMenuState != MENUSTATE_OPENING ) { OVR_LOG( "Instant open" ); }
-					OpenSoundLimiter.PlayMenuSound( guiSys, Name.ToCStr(), "sv_release_active", 0.1 );
+					OpenSoundLimiter.PlayMenuSound( guiSys, Name.c_str(), "sv_release_active", 0.1 );
 					EventHandler->Opened( events );				
 				}
 				break;
@@ -354,7 +357,7 @@ void VRMenu::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f 
 				if ( CurMenuState == MENUSTATE_CLOSED )
 				{
 					// we're already closed, so just set next to CLOSED, too so we don't do any transition
-					NextMenuState = MENUSTATE_CLOSED;	
+					NextMenuState = MENUSTATE_CLOSED;
 				}
 				else
 				{
@@ -365,7 +368,7 @@ void VRMenu::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f 
 				{
 					OVR_ASSERT( CurMenuState != NextMenuState ); // logic below is dependent on this!!
 					if ( CurMenuState != MENUSTATE_CLOSING ) { OVR_LOG( "Instant close" ); }
-					CloseSoundLimiter.PlayMenuSound( guiSys, Name.ToCStr(), "sv_deselect", 0.1 );
+					CloseSoundLimiter.PlayMenuSound( guiSys, Name.c_str(), "sv_deselect", 0.1 );
 					EventHandler->Closed( events );
 					Close_Impl( guiSys );
 				}
@@ -396,7 +399,7 @@ void VRMenu::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f 
         case MENUSTATE_CLOSED:
 	        // handle remaining events -- note focus path is empty right now, but this may still broadcast messages to controls
 		    EventHandler->HandleEvents( guiSys, vrFrame, RootHandle, events );	
-			OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame, Name.ToCStr() );
+			OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame, Name.c_str() );
 		    return;
         default:
             OVR_ASSERT( !"Unhandled menu state!" );
@@ -417,21 +420,21 @@ void VRMenu::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f 
 	{
 		OVR_PERF_TIMER( VRMenu_Frame_EventHandler_Frame );
 		EventHandler->Frame( guiSys, vrFrame, RootHandle, MenuPose, traceMat, events );
-		OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame_EventHandler_Frame, Name.ToCStr() );
+		OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame_EventHandler_Frame, Name.c_str() );
 	}
 	{
 		OVR_PERF_TIMER( VRMenu_Frame_EventHandler_HandleEvents );
 		EventHandler->HandleEvents( guiSys, vrFrame, RootHandle, events );
-		OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame_EventHandler_HandleEvents, Name.ToCStr() );
+		OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame_EventHandler_HandleEvents, Name.c_str() );
 	}
 
-	VRMenuObject * root = guiSys.GetVRMenuMgr().ToObject( RootHandle );		
+	VRMenuObject * root = guiSys.GetVRMenuMgr().ToObject( RootHandle );
 	if ( root != NULL )
 	{
 		OVR_PERF_TIMER( VRMenu_Frame_SubmitForRendering );
 		VRMenuRenderFlags_t renderFlags;
 		guiSys.GetVRMenuMgr().SubmitForRendering( guiSys, centerViewMatrix, RootHandle, MenuPose, renderFlags );
-		OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame_SubmitForRendering, Name.ToCStr() );
+		OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame_SubmitForRendering, Name.c_str() );
 	}
 
 	if ( !PostInitialized )
@@ -440,7 +443,7 @@ void VRMenu::Frame( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, Matrix4f 
 		PostInitialized = true;
 	}
 
-	OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame, Name.ToCStr() );
+	OVR_PERF_TIMER_STOP_MSG( VRMenu_Frame, Name.c_str() );
 }
 
 //==============================
@@ -469,7 +472,7 @@ bool VRMenu::OnKeyEvent( OvrGuiSys & guiSys, int const keyCode, const int repeat
 #if defined( OVR_OS_ANDROID )
 						// FIXME: we REALLY should require clients of VrGUI to do this themselves and not make this a default behavior
 						// in part because it's a hidden behavior switched on by confusing flags.
-						guiSys.GetApp()->ShowSystemUI( VRAPI_SYS_UI_CONFIRM_QUIT_MENU );
+						guiSys.GetApp()->ShowConfirmQuitSystemUI();
 #endif
 						return true;
 					}
@@ -496,10 +499,10 @@ bool VRMenu::OnKeyEvent( OvrGuiSys & guiSys, int const keyCode, const int repeat
 void VRMenu::Open( OvrGuiSys & guiSys )
 {
 	OVR_LOG( "VRMenu::Open - '%s', pre - c: %s n: %s", GetName(), MenuStateNames[CurMenuState], MenuStateNames[NextMenuState] );
-	if ( CurMenuState == MENUSTATE_OPENING ) 
-	{ 
+	if ( CurMenuState == MENUSTATE_OPENING )
+	{
 		// this is a NOP, never allow transitioning back to the same state
-		return; 
+		return;
 	}
 	NextMenuState = MENUSTATE_OPENING;
 	guiSys.MakeActive( this );
@@ -512,9 +515,9 @@ void VRMenu::Close( OvrGuiSys & guiSys, bool const instant )
 {
 	OVR_LOG( "VRMenu::Close - %s, pre - c: %s n: %s", GetName(), MenuStateNames[CurMenuState], MenuStateNames[NextMenuState] );
 	if ( CurMenuState == MENUSTATE_CLOSING )
-	{ 
+	{
 		// this is a NOP, never allow transitioning back to the same state
-		return; 
+		return;
 	}
 	NextMenuState = instant ? MENUSTATE_CLOSED : MENUSTATE_CLOSING;
 	OVR_LOG( "VRMenu::Close - %s, post - c: %s n: %s", GetName(), MenuStateNames[CurMenuState], MenuStateNames[NextMenuState] );
@@ -578,7 +581,7 @@ Posef VRMenu::CalcMenuPosition( Matrix4f const & viewMatrix ) const
 	const Vector3f viewPos( GetViewMatrixPosition( viewMatrix ) );
 	const Vector3f viewFwd( GetViewMatrixForward( viewMatrix ) );
 
-	// spawn directly in front 
+	// spawn directly in front
 	Quatf rotation( -viewFwd, 0.0f );
 	Quatf viewRot( invViewMatrix );
 	Quatf fullRotation = rotation * viewRot;
@@ -619,7 +622,7 @@ Posef VRMenu::CalcMenuPositionOnHorizon( Matrix4f const & viewMatrix ) const
 
 //==============================
 // VRMenu::OnItemEvent
-void VRMenu::OnItemEvent( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, 
+void VRMenu::OnItemEvent( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
 		VRMenuId_t const itemId, VRMenuEvent const & event )
 {
 	OnItemEvent_Impl( guiSys, vrFrame, itemId, event );
@@ -627,8 +630,8 @@ void VRMenu::OnItemEvent( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
 
 //==============================
 // VRMenu::Init_Impl
-bool VRMenu::Init_Impl( OvrGuiSys & guiSys, float const menuDistance, 
-		VRMenuFlags_t const & flags, Array< VRMenuObjectParms const * > & itemParms )
+bool VRMenu::Init_Impl( OvrGuiSys & guiSys, float const menuDistance,
+		VRMenuFlags_t const & flags, std::vector< VRMenuObjectParms const * > & itemParms )
 {
 	return true;
 }
@@ -653,7 +656,7 @@ void VRMenu::Frame_Impl( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame )
 
 //==============================
 // VRMenu::OnKeyEvent_Impl
-bool VRMenu::OnKeyEvent_Impl( OvrGuiSys & guiSys, int const keyCode, const int repeatCount, 
+bool VRMenu::OnKeyEvent_Impl( OvrGuiSys & guiSys, int const keyCode, const int repeatCount,
 		KeyEventType const eventType )
 {
 	return false;
@@ -673,7 +676,7 @@ void VRMenu::Close_Impl( OvrGuiSys & guiSys )
 
 //==============================
 // VRMenu::OnItemEvent_Impl
-void VRMenu::OnItemEvent_Impl( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, 
+void VRMenu::OnItemEvent_Impl( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame,
 		VRMenuId_t const itemId, VRMenuEvent const & event )
 {
 }
@@ -684,7 +687,7 @@ menuHandle_t VRMenu::GetFocusedHandle() const
 {
 	if ( EventHandler != NULL )
 	{
-		return EventHandler->GetFocusedHandle(); 
+		return EventHandler->GetFocusedHandle();
 	}
 	return menuHandle_t();
 }
@@ -713,9 +716,9 @@ void VRMenu::SetSelected( VRMenuObject * obj, bool const selected )
 		if ( obj->IsSelected() != selected )
 		{
 			obj->SetSelected( selected );
-			VRMenuEvent ev( selected ? VRMENU_EVENT_SELECTED : VRMENU_EVENT_DESELECTED, EVENT_DISPATCH_TARGET, 
+			VRMenuEvent ev( selected ? VRMENU_EVENT_SELECTED : VRMENU_EVENT_DESELECTED, EVENT_DISPATCH_TARGET,
 					obj->GetHandle(), Vector3f( 0.0f ), HitTestResult(), "" );
-			PendingEvents.PushBack( ev ); 
+			PendingEvents.push_back( ev );
 		}
 	}
 }
@@ -730,13 +733,13 @@ void VRMenu::SetSelected( OvrGuiSys & guiSys, VRMenuId_t const itemId, bool cons
 
 //==============================
 // VRMenu::InitFromReflectionData
-bool VRMenu::InitFromReflectionData( OvrGuiSys & guiSys, ovrFileSys & fileSys, ovrReflection & refl, 
+bool VRMenu::InitFromReflectionData( OvrGuiSys & guiSys, ovrFileSys & fileSys, ovrReflection & refl,
 	ovrLocale const & locale, char const * fileNames[], float const menuDistance, VRMenuFlags_t const & flags )
 {
-	Array< VRMenuObjectParms const * > itemParms;
+	std::vector< VRMenuObjectParms const * > itemParms;
 	for ( int i = 0; fileNames[i] != nullptr; ++i )
 	{
-		MemBufferT< uint8_t > parmBuffer;
+		std::vector< uint8_t > parmBuffer;
 		if ( !fileSys.ReadFile( fileNames[i], parmBuffer ) )
 		{
 			DeletePointerArray( itemParms );
@@ -744,11 +747,12 @@ bool VRMenu::InitFromReflectionData( OvrGuiSys & guiSys, ovrFileSys & fileSys, o
 			return false;
 		}
 
-		size_t newSize = parmBuffer.GetSize() + 1;
-		uint8_t * temp = new uint8_t[newSize];
-		memcpy( temp, static_cast< uint8_t* >( parmBuffer ), parmBuffer.GetSize() );
-		temp[parmBuffer.GetSize()] = 0;
-		parmBuffer.TakeOwnershipOfBuffer( *(void**)&temp, newSize );
+		// Add a null terminator
+		parmBuffer.push_back( '\0' );
+
+#if defined( OVR_BUILD_DEBUG )
+///		OVR_LOG( "Loaded reflection file:\n==============\n%s\n=================\n", &parmBuffer[0] );
+#endif
 
 		ovrParseResult parseResult = VRMenuObject::ParseItemParms( refl, locale, fileNames[i], parmBuffer, itemParms );
 		if ( !parseResult )
@@ -757,11 +761,10 @@ bool VRMenu::InitFromReflectionData( OvrGuiSys & guiSys, ovrFileSys & fileSys, o
 			OVR_LOG( "%s", parseResult.GetErrorText() );
 			return false;
 		}
-	} 
+	}
 
 	InitWithItems( guiSys, menuDistance, flags, itemParms );
 	return true;
 }
 
 } // namespace OVR
-

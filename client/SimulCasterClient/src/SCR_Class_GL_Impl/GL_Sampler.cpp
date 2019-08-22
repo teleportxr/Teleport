@@ -31,6 +31,8 @@ GLenum GL_Sampler::ToGLFilterType(Filter filter) const
         case Filter::LINEAR:            return GL_LINEAR;
         case Filter::MIPMAP_NEAREST:    return GL_NEAREST_MIPMAP_NEAREST;
         case Filter::MIPMAP_LINEAR:     return GL_LINEAR_MIPMAP_NEAREST;
+        default:
+            exit(1);
     }
 };
 GLenum GL_Sampler::ToGLWrapType(Wrap wrap) const
@@ -42,5 +44,7 @@ GLenum GL_Sampler::ToGLWrapType(Wrap wrap) const
         case Wrap::CLAMP_TO_EDGE:           return GL_CLAMP_TO_EDGE;
         case Wrap::CLAMP_TO_BORDER:         return GL_CLAMP_TO_BORDER;
         case Wrap::MIRROR_CLAMP_TO_EDGE:    return 0; //GL_MIRROR_CLAMP_TO_EDGE;
+        default:
+            exit(1);
     }
 };

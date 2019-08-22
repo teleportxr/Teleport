@@ -12,8 +12,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( UIKeyboard_h )
 #define UIKeyboard_h
 
-#include "Kernel/OVR_Math.h"
+#include "OVR_Math.h"
 #include "UIMenu.h"
+
+#include <string>
 
 namespace OVR
 {
@@ -28,7 +30,7 @@ namespace OVR
 			Backspace,
 			Return
 		};
-		using KeyPressEventT = void( *)( const KeyEventType, const String &, void * );
+		using KeyPressEventT = void( *)( const KeyEventType, const std::string &, void * );
 
 		UIKeyboard( const UIKeyboard & ) = delete;
 		UIKeyboard & operator=( const UIKeyboard & ) = delete;

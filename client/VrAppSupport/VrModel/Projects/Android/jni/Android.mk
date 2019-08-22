@@ -16,9 +16,12 @@ LOCAL_ARM_NEON  := true				# compile with neon support enabled
 
 include $(LOCAL_PATH)/../../../../../cflags.mk
 
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../Src
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../Src \
+    $(LOCAL_PATH)/../../../../../VrApi/Include \
+    $(LOCAL_PATH)/../../../../../1stParty/OVR/Include
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/../../../Src
+
 
 LOCAL_SRC_FILES := 	../../../Src/ModelFile.cpp \
 					../../../Src/ModelFile_glTF.cpp \
@@ -29,7 +32,7 @@ LOCAL_SRC_FILES := 	../../../Src/ModelFile.cpp \
 					../../../Src/SceneView.cpp
 
 LOCAL_STATIC_LIBRARIES := vrappframework
-					
+
 include $(BUILD_STATIC_LIBRARY)		# start building based on everything since CLEAR_VARS
 
 $(call import-module,VrAppFramework/Projects/Android/jni)

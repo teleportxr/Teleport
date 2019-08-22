@@ -13,9 +13,9 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_MetaDataManager_h )
 #define OVR_MetaDataManager_h
 
-#include "Kernel/OVR_Array.h"
-#include "Kernel/OVR_String.h"
-#include "Kernel/OVR_StringHash.h"
+#include <vector>
+#include <string>
+#include <unordered_map>
 
 namespace OVR {
 class JSON;
@@ -24,11 +24,11 @@ class JsonReader;
 // OvrMetaData
 struct OvrMetaDatum
 {
-	mutable int				FolderIndex;	// index of the folder this meta data appears in (not serialized!)
-	mutable int				PanelId;		// panel id associated with this meta data (not serialized!)
-	int						Id;				// index into the array read from the JSON (not serialized!)
-	Array< String >			Tags;
-	String					Url;
+	mutable int					FolderIndex;	// index of the folder this meta data appears in (not serialized!)
+	mutable int					PanelId;		// panel id associated with this meta data (not serialized!)
+	int							Id;				// index into the array read from the JSON (not serialized!)
+	std::vector< std::string >	Tags;
+	std::string					Url;
 
 protected:
 	OvrMetaDatum() {}
@@ -43,8 +43,8 @@ enum TagAction
 
 struct OvrMetaDataFileExtensions
 {
-	Array< String > GoodExtensions;
-	Array< String > BadExtensions;
+	std::vector< std::string > GoodExtensions;
+	std::vector< std::string > BadExtensions;
 };
 
 class OvrMetaData
@@ -55,10 +55,10 @@ public:
 		Category()
 			: Dirty( true )
 		{}
-		String 			CategoryTag;
-		String 			LocaleKey;
-		Array< int > 	DatumIndicies;
-		bool 			Dirty;
+		std::string 		CategoryTag;
+		std::string 		LocaleKey;
+		std::vector< int > 	DatumIndicies;
+		bool 				Dirty;
 	};
 
 	OvrMetaData()
@@ -68,23 +68,23 @@ public:
 	virtual ~OvrMetaData() { }
 
 	// Init meta data from contents on disk
-	void					InitFromDirectory( const char * relativePath, const Array< String > & searchPaths, const OvrMetaDataFileExtensions & fileExtensions );
+	void					InitFromDirectory( const char * relativePath, const std::vector< std::string > & searchPaths, const OvrMetaDataFileExtensions & fileExtensions );
 
 	// Init meta data from a passed in list of files
-	void					InitFromFileList( const Array< String > & fileList, const OvrMetaDataFileExtensions & fileExtensions );
+	void					InitFromFileList( const std::vector< std::string > & fileList, const OvrMetaDataFileExtensions & fileExtensions );
 
 	// Check specific paths for media and reconcile against stored/new metadata (Maintained for SDK)
-	void					InitFromDirectoryMergeMeta( const char * relativePath, const Array< String > & searchPaths,
+	void					InitFromDirectoryMergeMeta( const char * relativePath, const std::vector< std::string > & searchPaths,
 		const OvrMetaDataFileExtensions & fileExtensions, const char * metaFile, const char * packageName );
 
 	// File list passed in and we reconcile against stored/new metadata
-	void					InitFromFileListMergeMeta( const Array< String > & fileList, const Array< String > & searchPaths,
-		const OvrMetaDataFileExtensions & fileExtensions, const char * appFileStoragePath, const char * metaFile, JSON * storedMetaData );
+	void					InitFromFileListMergeMeta( const std::vector< std::string > & fileList, const std::vector< std::string > & searchPaths,
+		const OvrMetaDataFileExtensions & fileExtensions, const char * appFileStoragePath, const char * metaFile, std::shared_ptr<JSON> storedMetaData );
 
 	void					ProcessRemoteMetaFile( const char * metaFileString, const int startInsertionIndex /* index to insert remote categories*/ );
 
 	// Extracts metadata from passed in JSON dataFile and merges it with the base one in assets if needed
-	void					ProcessMetaData( JSON * dataFile, const Array< String > & searchPaths, const char * metaFile );
+	void					ProcessMetaData( std::shared_ptr<JSON> dataFile, const std::vector< std::string > & searchPaths, const char * metaFile );
 
 	// Rename a category after construction 
 	void					RenameCategory( const char * currentTag, const char * newName );
@@ -93,20 +93,20 @@ public:
 	bool					RenameCategoryTag( const char * currentTag, const char * newName );
 
 	// Adds or removes tag and returns action taken
-	TagAction				ToggleTag( OvrMetaDatum * data, const String & tag );
+	TagAction				ToggleTag( OvrMetaDatum * data, const std::string & tag );
 
 	// Returns metaData file if one is found, otherwise creates one using the default meta.json in the assets folder
-	JSON *					CreateOrGetStoredMetaFile( const char * appFileStoragePath, const char * metaFile );
-	void					AddCategory( const String & name );
-	void					InsertCategoryAt( const int index, const String & name );
+	std::shared_ptr<JSON>	CreateOrGetStoredMetaFile( const char * appFileStoragePath, const char * metaFile );
+	void					AddCategory( const std::string & name );
+	void					InsertCategoryAt( const int index, const std::string & name );
 
-	const Array< Category > &			GetCategories() const 							{ return Categories; }
-	const Array< OvrMetaDatum * > &		GetMetaData() const 							{ return MetaData; }
-	const Category & 					GetCategory( const int index ) const 			{ return Categories.At( index ); }
-	Category & 							GetCategory( const int index )   				{ return Categories.At( index ); }
+	const std::vector< Category > &		GetCategories() const 							{ return Categories; }
+	const std::vector< OvrMetaDatum * > &	GetMetaData() const 						{ return MetaData; }
+	const Category & 					GetCategory( const int index ) const 			{ return Categories[ index ]; }
+	Category & 							GetCategory( const int index )   				{ return Categories[ index ]; }
 	const OvrMetaDatum &				GetMetaDatum( const int index ) const;
-	bool 								GetMetaData( const Category & category, Array< const OvrMetaDatum * > & outMetaData ) const;
-	void								SetCategoryDatumIndicies( const int index, const Array< int >& datumIndicies );
+	bool 								GetMetaData( const Category & category, std::vector< const OvrMetaDatum * > & outMetaData ) const;
+	void								SetCategoryDatumIndicies( const int index, const std::vector< int >& datumIndicies );
 	void								DumpToLog( bool const verbose ) const;
 	void								PrintCategories() const;
     void								RegenerateCategoryIndices();
@@ -115,42 +115,42 @@ protected:
 	// Overload to fill extended data during initialization
 	virtual OvrMetaDatum *	CreateMetaDatum( const char* fileName ) const = 0;
 	virtual	void			ExtractExtendedData( const JsonReader & jsonDatum, OvrMetaDatum & outDatum ) const = 0;
-	virtual	void			ExtendedDataToJson( const OvrMetaDatum & datum, JSON * outDatumObject ) const = 0;
+	virtual	void			ExtendedDataToJson( const OvrMetaDatum & datum, std::shared_ptr<JSON> outDatumObject ) const = 0;
 	virtual void			SwapExtendedData( OvrMetaDatum * left, OvrMetaDatum * right ) const = 0;
 	
 	// Optional protected interface
 	virtual bool			IsRemote( const OvrMetaDatum * /*datum*/ ) const { return true; } 
 
 	// Removes duplicate entries from newData
-    virtual void            DedupMetaData( Array< OvrMetaDatum * > & existingData, StringHash< OvrMetaDatum * > & newData );
+    virtual void            DedupMetaData( std::vector< OvrMetaDatum * > & existingData, std::unordered_map< std::string, OvrMetaDatum * > & newData );
 
-	void					InsertCategoryList( const int startIndex, const Array< Category > & categoryList );
+	void					InsertCategoryList( const int startIndex, const std::vector< Category > & categoryList );
 
 	double						GetVersion()												{ return Version; }
 	void						SetVersion( const double val )								{ Version = val; }
-	Array< OvrMetaDatum * > &	GetMetaData()												{ return MetaData; }
-	void						SetMetaData( const Array< OvrMetaDatum * > & newData )		{ MetaData = newData; }
+	std::vector< OvrMetaDatum * > &	GetMetaData()												{ return MetaData; }
+	void						SetMetaData( const std::vector< OvrMetaDatum * > & newData )		{ MetaData = newData; }
 
-	Category * 				GetCategory( const String & categoryName );
+	Category * 				GetCategory( const std::string & categoryName );
 
-	void					ReconcileMetaData( StringHash< OvrMetaDatum * > & storedMetaData );
-	void					ReconcileCategories( Array< Category > & storedCategories );
+	void					ReconcileMetaData( std::unordered_map< std::string, OvrMetaDatum * > & storedMetaData );
+	void					ReconcileCategories( std::vector< Category > & storedCategories );
 
-	JSON *					MetaDataToJson() const;
+	std::shared_ptr<JSON>	MetaDataToJson() const;
 	void					WriteMetaFile( const char * metaFile ) const;
 	bool 					ShouldAddFile( const char * filename, const OvrMetaDataFileExtensions & fileExtensions ) const;
-	void					ExtractVersion( JSON * dataFile, double & outVersion ) const;
-	void					ExtractCategories( JSON * dataFile, Array< Category > & outCategories ) const;
-	void					ExtractMetaData( JSON * dataFile, const Array< String > & searchPaths, StringHash< OvrMetaDatum * > & outMetaData ) const;
-	void					ExtractRemoteMetaData( JSON * dataFile, StringHash< OvrMetaDatum * > & outMetaData ) const;
+	void					ExtractVersion( std::shared_ptr<JSON> dataFile, double & outVersion ) const;
+	void					ExtractCategories( std::shared_ptr<JSON> dataFile, std::vector< Category > & outCategories ) const;
+	void					ExtractMetaData( std::shared_ptr<JSON> dataFile, const std::vector< std::string > & searchPaths, std::unordered_map< std::string, OvrMetaDatum * > & outMetaData ) const;
+	void					ExtractRemoteMetaData( std::shared_ptr<JSON> dataFile, std::unordered_map< std::string, OvrMetaDatum * > & outMetaData ) const;
 	void					Serialize();
 
 private:
-	String 					FilePath;
-	Array< Category >		Categories;
-	Array< OvrMetaDatum * >	MetaData;
-	StringHash< int >		UrlToIndex;
-	double					Version;
+	std::string 					FilePath;
+	std::vector< Category >			Categories;
+	std::vector< OvrMetaDatum * >	MetaData;
+	std::unordered_map< std::string, int >	UrlToIndex;
+	double							Version;
 };
 
 }

@@ -14,7 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #if defined( OVR_OS_ANDROID )
 
-#include "Android/JniUtils.h"
+#include "JniUtils.h"
 
 #include "VrApi.h"
 #include "VrApi_Helpers.h"

@@ -13,8 +13,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( Ovr_GazeCursor_h )
 #define Ovr_GazeCursor_h
 
-#include "Kernel/OVR_TypesafeNumber.h"
-#include "Kernel/OVR_Math.h"
+#include <vector>
+
+#include "OVR_TypesafeNumber.h"
+#include "OVR_Math.h"
 #include "SurfaceRender.h"
 
 namespace OVR {
@@ -78,7 +80,7 @@ public:
 	virtual	void				Frame( Matrix4f const & viewMatrix, Matrix4f const & traceMatrix, float const deltaTime ) = 0;
 
 	// Generates the gaze cursor draw surface list and appends to the surface list.
-	virtual void				AppendSurfaceList( Array< ovrDrawSurface > & surfaceList ) const = 0;
+	virtual void				AppendSurfaceList( std::vector< ovrDrawSurface > & surfaceList ) const = 0;
 
 	// Returns the current info about the gaze cursor.
 	virtual OvrGazeCursorInfo	GetInfo() const = 0;

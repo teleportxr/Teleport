@@ -14,8 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "VRMenuMgr.h"
 #include "GuiSys.h"
 #include "App.h"
-#include "Kernel/OVR_String_Utils.h"
-
+#include "OVR_Math.h"
 
 namespace OVR {
 
@@ -62,15 +61,15 @@ void UINotification::AddToMenu( UIMenu *menu, const char* iconTextureName,  cons
 
 	VRMenuFontParms fontParms( HORIZONTAL_CENTER, VERTICAL_CENTER, false, false, false, 1.0f );
 
-	VRMenuObjectParms parms( VRMENU_STATIC, Array< VRMenuComponent* >(), VRMenuSurfaceParms(),
+	VRMenuObjectParms parms( VRMENU_STATIC, std::vector< VRMenuComponent* >(), VRMenuSurfaceParms(),
 			"", pose, defaultScale, fontParms, menu->AllocId(),
 			VRMenuObjectFlags_t(), VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
 
 	AddToMenuWithParms( menu, parent, parms );
 
 	//textures
-	IconTexture.LoadTextureFromUri( GuiSys.GetApp()->GetFileSys(), StringUtils::Va( "apk:///%s", iconTextureName ) );
-	BackgroundTintTexture.LoadTextureFromUri( GuiSys.GetApp()->GetFileSys(), StringUtils::Va( "apk:///%s", backgroundTintTextureName ) );
+	IconTexture.LoadTextureFromUri( GuiSys.GetApp()->GetFileSys(), (std::string("apk:///") + iconTextureName).c_str() );
+	BackgroundTintTexture.LoadTextureFromUri( GuiSys.GetApp()->GetFileSys(), (std::string("apk:///") + backgroundTintTextureName).c_str() );
 
 	//The Container
 	BackgroundImage.AddToMenu( menu, this );
@@ -107,7 +106,7 @@ void UINotification::AddToMenu( UIMenu *menu, const char* iconTextureName,  cons
 	SetVisible(false);
 }
 
-void UINotification::QueueNotification( const String& description, bool showImmediately/* = false*/)
+void UINotification::QueueNotification( const std::string& description, bool showImmediately/* = false*/)
 {
 	if ( showImmediately )
 	{
@@ -121,22 +120,22 @@ void UINotification::QueueNotification( const String& description, bool showImme
 			TimeLeft = DURATION_CONTINUE_TIME;
 		}
 
-		NotificationsQueue.PushBack(description);
+		NotificationsQueue.push_back(description);
 	}
 }
 
 
-void UINotification::SetDescription( const String &description )
+void UINotification::SetDescription( const std::string &description )
 {
 	if ( DescriptionLabel.GetMenuObject() )
 	{
-		DescriptionLabel.SetTextWordWrapped( description.ToCStr(), GuiSys.GetDefaultFont(), 1.0f );
+		DescriptionLabel.SetTextWordWrapped( description.c_str(), GuiSys.GetDefaultFont(), 1.0f );
 		DescriptionLabel.CalculateTextDimensions();
 		Bounds3f textBounds = DescriptionLabel.GetTextLocalBounds( GuiSys.GetDefaultFont() ) * VRMenuObject::TEXELS_PER_METER;
 		BackgroundImage.SetDimensions( Vector2f( textBounds.GetSize().x, textBounds.GetSize().y + BORDER_SPACING * 2.0f ) ); //y is only what matters on this line
 		BackgroundImage.WrapChildrenHorizontal();
 
-		bool noMoreInQueue = NotificationsQueue.GetSize() == 0;
+		bool noMoreInQueue = NotificationsQueue.size() == 0;
 		FadeInDuration = GetVisible() ? FADE_IN_CONTINUE_TIME : FADE_IN_FIRST_TIME;
 		FadeOutDuration = noMoreInQueue ? FADE_OUT_LAST_TIME  : FADE_OUT_CONTINUE_TIME;
 		VisibleDuration = noMoreInQueue ? DURATION_LAST_TIME  : DURATION_CONTINUE_TIME;
@@ -155,9 +154,10 @@ void UINotification::Update( float deltaSeconds )
 		//done, hide or show next one
 		TimeLeft = 0;
 
-		if ( NotificationsQueue.GetSize() > 0 )
+		if ( NotificationsQueue.size() > 0 )
 		{
-			SetDescription( NotificationsQueue.PopFront() );
+			SetDescription( NotificationsQueue.front() );
+			NotificationsQueue.pop_front();
 		}
 		else
 		{
@@ -169,7 +169,7 @@ void UINotification::Update( float deltaSeconds )
 		//fading out
 		float alpha = ( TimeLeft / FadeOutDuration );
 		Vector4f color = GetColor();
-		color.w = Alg::Clamp( alpha, 0.0f, 1.0f );
+		color.w = clamp<float>( alpha, 0.0f, 1.0f );
 		SetColor( color );
 	}
 	else if ( ( VisibleDuration - TimeLeft) < FadeInDuration  )
@@ -177,7 +177,7 @@ void UINotification::Update( float deltaSeconds )
 		//fade in
 		float alpha = ( VisibleDuration - TimeLeft ) / FadeInDuration;
 		Vector4f color = GetColor();
-		color.w = Alg::Clamp( alpha, 0.0f, 1.0f);
+		color.w = clamp<float>( alpha, 0.0f, 1.0f);
 		SetColor( color );
 	}
 	else

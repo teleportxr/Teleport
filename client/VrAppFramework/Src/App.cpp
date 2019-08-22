@@ -11,6 +11,9 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "App.h"
 
+#include <thread>
+#include <chrono>
+
 #if defined( OVR_OS_ANDROID )
 #include <jni.h>
 #include <android/native_window_jni.h>	// for native window JNI
@@ -20,19 +23,19 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include <math.h>
 
-#include "Kernel/OVR_System.h"
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_TypesafeNumber.h"
-#include "Kernel/OVR_JSON.h"
-#include "Android/JniUtils.h"
+#include "OVR_Math.h"
+#include "OVR_JSON.h"
+#include "JniUtils.h"
 
 #include "stb_image.h"
 #include "stb_image_write.h"
 
 #include "VrApi.h"
 #include "VrApi_Helpers.h"
-#include "VrApi_Input.h"
 #include "VrApi_SystemUtils.h"
+#if defined( OVR_OS_ANDROID )
+#include "VrApi_Input.h"
+#endif
 
 
 #include "GlSetup.h"
@@ -75,19 +78,6 @@ void ComposeIntentMessage( char const * packageName, char const * uri, char cons
 			uri == NULL || uri[0] == '\0' ? EMPTY_INTENT_STR : uri,
 			jsonText == NULL || jsonText[0] == '\0' ? "" : jsonText );
 }
-
-// Initialize and shutdown the app framework version of LibOVR.
-static struct InitShutdown
-{
-	InitShutdown()
-	{
-		OVR::System::Init( OVR::Log::ConfigureDefaultLog( OVR::LogMask_All ) );
-	}
-	~InitShutdown()
-	{
-		OVR::System::Destroy();
-	}
-} GlobalInitShutdown;
 
 namespace OVR
 {
@@ -148,7 +138,7 @@ void WaitForDebuggerToAttach()
 	while ( waitForDebugger )
 	{
 		// put your breakpoint on the sleep to wait
-		Thread::MSleep( 100 );
+		std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 	}
 }
 
@@ -198,7 +188,6 @@ AppLocal::AppLocal( JNIEnv & jni_, jobject activityObject_, VrAppInterface & int
 	, InputEvents()
 	, TheVrFrame()
 	, EnteredVrModeFrame( 0 )
-	, VrThread( &ThreadStarter, this, 512 * 1024 )
 	, ExitCode( 0 )
 	, RecenterYawFrameStart( 0 )
 	, DebugLines( NULL )
@@ -247,7 +236,7 @@ AppLocal::AppLocal( JNIEnv & jni_, jobject activityObject_, VrAppInterface & int
 	VrSettings.UseProtectedFramebuffer = false;
 	VrSettings.Use16BitFramebuffer = false;
 	VrSettings.SwapInterval = 1;
-	VrSettings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_FLOOR_LEVEL;
+	VrSettings.TrackingSpace = VRAPI_TRACKING_SPACE_LOCAL_FLOOR;
 	VrSettings.RenderMode = RENDERMODE_STEREO;
 
 	// Default ovrModeParms
@@ -283,10 +272,10 @@ AppLocal::AppLocal( JNIEnv & jni_, jobject activityObject_, VrAppInterface & int
 
 		ovr_GetPackageCodePath( &jni_, Java.ActivityObject, temp, sizeof( temp ) );
 
-		String	outPath;
+		std::string	outPath;
 		const bool validCacheDir = StoragePaths->GetPathIfValidPermission(
 				EST_INTERNAL_STORAGE, EFT_CACHE, "", permissionFlags_t( PERMISSION_WRITE ) | PERMISSION_READ, outPath );
-		ovr_OpenApplicationPackage( temp, validCacheDir ? outPath.ToCStr() : NULL );
+		ovr_OpenApplicationPackage( temp, validCacheDir ? outPath.c_str() : NULL );
 	}
 #endif
 }
@@ -302,10 +291,7 @@ void AppLocal::StartVrThread()
 {
 	OVR_LOG( "StartVrThread" );
 
-	if ( VrThread.Start() == false )
-	{
-		OVR_FAIL( "VrThread.Start() failed" );
-	}
+	VrThread = std::thread( &AppLocal::VrThreadFunction, this );
 
 	// Wait for the thread to be up and running.
 	MessageQueue.SendPrintf( "sync " );
@@ -317,9 +303,13 @@ void AppLocal::StopVrThread()
 
 	MessageQueue.PostPrintf( "quit " );
 
-	if ( VrThread.Join() == false )
+	if ( VrThread.joinable() )
 	{
-		OVR_WARN( "VrThread failed to terminate." );
+		VrThread.join();
+	}
+	else
+	{
+		OVR_WARN( "VrThread failed to join on terminate." );
 	}
 }
 
@@ -327,9 +317,16 @@ void * AppLocal::JoinVrThread()
 {
 	OVR_LOG( "JoinVrThread" );
 
-	VrThread.Join();
+	if ( VrThread.joinable() )
+	{
+		VrThread.join();
+	}
+	else
+	{
+		OVR_WARN( "VrThread failed to join." );
+	}
 
-	return VrThread.GetExitCode();
+	return nullptr;
 }
 
 ovrMessageQueue & AppLocal::GetMessageQueue()
@@ -467,7 +464,7 @@ void AppLocal::ShowDependencyError()
 #endif
 
 	// Android specific
-	OVR::String imageName = "dependency_error_";
+	std::string imageName = "dependency_error_";
 
 	// call into Java directly here to get the language code
 	char const * localeCode = "en";
@@ -501,11 +498,11 @@ void AppLocal::ShowDependencyError()
 
 	void * imageBuffer = NULL;
 	int imageSize = 0;
-	if ( !FindEmbeddedImage( imageName.ToCStr(), &imageBuffer, &imageSize ) )
+	if ( !FindEmbeddedImage( imageName.c_str(), &imageBuffer, &imageSize ) )
 	{
 		// try to default to English
 		imageName = "dependency_error_en.png";
-		if ( !FindEmbeddedImage( imageName.ToCStr(), &imageBuffer, &imageSize ) )
+		if ( !FindEmbeddedImage( imageName.c_str(), &imageBuffer, &imageSize ) )
 		{
 			OVR_FAIL( "Failed to load error message texture!" );
 		}
@@ -524,7 +521,7 @@ void AppLocal::ShowDependencyError()
 			OVR_ASSERT( width == height );
 
 			// Only 1 mip level needed.
-			ErrorTextureSwapChain = vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D, VRAPI_TEXTURE_FORMAT_8888, width, height, 1, false );
+			ErrorTextureSwapChain = vrapi_CreateTextureSwapChain3( VRAPI_TEXTURE_TYPE_2D, GL_RGBA8, width, height, 1, 1 );
 			ErrorTextureSize = width;
 
 			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( ErrorTextureSwapChain, 0 ) );
@@ -538,9 +535,9 @@ void AppLocal::ShowDependencyError()
 	ErrorMessageEndTime = SystemClock::GetTimeInSeconds() + SHOW_ERROR_MSG_SECONDS;
 }
 
-bool AppLocal::ShowSystemUI( const ovrSystemUIType uiType )
+bool AppLocal::ShowConfirmQuitSystemUI()
 {
-	if ( vrapi_ShowSystemUI( &Java, uiType ) )
+	if ( vrapi_ShowSystemUI( &Java, VRAPI_SYS_UI_CONFIRM_QUIT_MENU ) )
 	{
 		// Push black images to the screen to eliminate any frames of lost head tracking.
 		DrawBlackFrame( VRAPI_FRAME_FLAG_FINAL );
@@ -553,7 +550,7 @@ bool AppLocal::ShowSystemUI( const ovrSystemUIType uiType )
 	}
 
 	OVR_LOG( "*************************************************************************" );
-	OVR_LOG( "Failed to Show System UI %d.", uiType );
+	OVR_LOG( "Failed to Show Confirm Quit System UI" );
 	OVR_LOG( "*************************************************************************" );
 	return false;
 }
@@ -648,7 +645,7 @@ void AppLocal::InitGlObjects()
 	const int displayPixelsWide = GetSystemProperty( VRAPI_SYS_PROP_DISPLAY_PIXELS_WIDE );
 	const int displayPixelsHigh = GetSystemProperty( VRAPI_SYS_PROP_DISPLAY_PIXELS_HIGH );
 	glSetup = GL_Setup( displayPixelsWide / 2, displayPixelsHigh / 2, false,
-						VrSettings.WindowParms.Title.ToCStr(), VrSettings.WindowParms.IconResourceId,
+						VrSettings.WindowParms.Title.c_str(), VrSettings.WindowParms.IconResourceId,
 						this );
 #endif
 
@@ -687,7 +684,7 @@ void AppLocal::InitGlObjects()
 			OVR_ASSERT( width == height );
 
 			// Only 1 mip level needed.
-			LoadingIconTextureChain = vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D, VRAPI_TEXTURE_FORMAT_8888, width, height, 1, false );
+			LoadingIconTextureChain = vrapi_CreateTextureSwapChain3( VRAPI_TEXTURE_TYPE_2D, GL_RGBA8, width, height, 1, 1 );
 
 			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( LoadingIconTextureChain, 0 ) );
 			glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image );
@@ -778,9 +775,8 @@ void AppLocal::EnterVrMode()
 	OvrMobile = vrapi_EnterVrMode( &VrSettings.ModeParms );
 
 	// Set the coordinate system to use.
-	ovrPosef trackingTransformPose = vrapi_GetTrackingTransform( OvrMobile, VrSettings.TrackingTransform );
-	vrapi_SetTrackingTransform( OvrMobile, trackingTransformPose );
-	OVR_LOG( "Setting tracking transform (%d)", VrSettings.TrackingTransform );
+	vrapi_SetTrackingSpace( OvrMobile, VrSettings.TrackingSpace );
+	OVR_LOG( "Setting tracking space (%d)", VrSettings.TrackingSpace );
 
 	// Set the initial clock and application performance threads.
 	vrapi_SetClockLevels( GetOvrMobile(), VrSettings.CpuLevel, VrSettings.GpuLevel );
@@ -827,10 +823,10 @@ void AppLocal::EnterVrMode()
 	// Notify the application that we are in VR mode.
 	OVR_LOG( "VrAppInterface::EnteredVrMode()" );
 	OVR_LOG( "intentType: %d", IntentType );
-	OVR_LOG( "intentFromPackage: %s", IntentFromPackage.ToCStr() );
-	OVR_LOG( "intentJSON: %s", IntentJSON.ToCStr() );
-	OVR_LOG( "intentURI: %s", IntentURI.ToCStr() );
-	appInterface->EnteredVrMode( IntentType, IntentFromPackage.ToCStr(), IntentJSON.ToCStr(), IntentURI.ToCStr() );
+	OVR_LOG( "intentFromPackage: %s", IntentFromPackage.c_str() );
+	OVR_LOG( "intentJSON: %s", IntentJSON.c_str() );
+	OVR_LOG( "intentURI: %s", IntentURI.c_str() );
+	appInterface->EnteredVrMode( IntentType, IntentFromPackage.c_str(), IntentJSON.c_str(), IntentURI.c_str() );
 
 	IntentType = INTENT_OLD;
 
@@ -1086,10 +1082,9 @@ static void GetInputEvents( ovrInputEvents & inputEvents )
  * Continuously renders frames when active, checking for commands
  * from the main thread between frames.
  */
-void * AppLocal::VrThreadFunction()
+void AppLocal::VrThreadFunction()
 {
 	// Set the name that will show up in systrace
-	VrThread.SetThreadName( "OVR::VrThread" );
 
 	// Initialize the VR thread
 	{
@@ -1141,6 +1136,8 @@ void * AppLocal::VrThreadFunction()
 		// Init the adb 'console' and register console functions
 		InitConsole( Java );
 		RegisterConsoleFunction( "print", OVR::DebugPrint );
+
+		OVR_LOG( "AppLocal::VrThreadFunction - init DONE" );
 	}
 
 	while( !( VrThreadSynced && ReadyToExit ) )
@@ -1190,9 +1187,6 @@ void * AppLocal::VrThreadFunction()
 		}
 
 #if defined( OVR_OS_WIN32 )
-		// NOTE: Currently we're only disabling input when the app does not
-		// have focus. We need to review what pc lifecycle should look like.
-		if ( GetSystemStatus( VRAPI_SYS_STATUS_HAS_FOCUS ) != VRAPI_FALSE )
 		{
 			// Handle PC specific controller input.
 			GetInputEvents( InputEvents );
@@ -1202,7 +1196,7 @@ void * AppLocal::VrThreadFunction()
 		{
 			OVR_PERF_TIMER( VrThreadFunction_Loop_AdvanceVrFrame );
 			// Update ovrFrameInput.
-			TheVrFrame.AdvanceVrFrame( InputEvents, OvrMobile, *GetJava(), VrSettings.TrackingTransform, EnteredVrModeFrame );
+			TheVrFrame.AdvanceVrFrame( InputEvents, OvrMobile, *GetJava(), EnteredVrModeFrame );
 			InputEvents.NumKeyEvents = 0;
 		}
 
@@ -1259,7 +1253,6 @@ void * AppLocal::VrThreadFunction()
 		// Draw the eye views.
 		DrawEyeViews( res );
 
-
 		//SPAM( "FRAME END" );
 	}
 
@@ -1304,15 +1297,6 @@ void * AppLocal::VrThreadFunction()
 
 		OVR_LOG( "AppLocal::VrThreadFunction - exit" );
 	}
-
-	return &ExitCode;
-}
-
-// Shim to call a C++ object from an OVR::Thread::Start.
-threadReturn_t AppLocal::ThreadStarter( Thread *, void * parm )
-{
-	threadReturn_t result = ((AppLocal *)parm)->VrThreadFunction();
-	return result;
 }
 
 OvrDebugLines & AppLocal::GetDebugLines() 
@@ -1419,7 +1403,7 @@ ovrMobile * AppLocal::GetOvrMobile()
 
 const char * AppLocal::GetPackageName() const
 {
-	return PackageName.ToCStr();
+	return PackageName.c_str();
 }
 
 bool AppLocal::GetInstalledPackagePath( char const * packageName, char * outPackagePath, size_t const outMaxSize ) const 
@@ -1454,7 +1438,9 @@ void AppLocal::RecenterYaw( const bool showBlack )
 	{
 		DrawBlackFrame();
 	}
-	vrapi_RecenterPose( OvrMobile );
+	// Note: vrapi_RecenterPose() has been deprecated
+	// Generally, the system is expected to handle user-requested recenters
+	// and apps are expected to handle any app-provoked recentering on their own.
 
 	RecenterLastViewMatrix();
 }

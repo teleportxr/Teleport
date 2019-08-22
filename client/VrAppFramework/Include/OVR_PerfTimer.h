@@ -12,7 +12,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #if !defined( OVR_PerfTimer_h )
 #define OVR_PerfTimer_h
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 #include "SystemClock.h"
 
 namespace OVR

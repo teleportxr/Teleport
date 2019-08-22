@@ -33,7 +33,7 @@ typedef void * jobject;
 #endif
 
 /// Java details about an activity
-typedef struct
+typedef struct ovrJava_
 {
 	JavaVM *	Vm;					//< Java Virtual Machine
 	JNIEnv *	Env;				//< Thread specific environment
@@ -57,6 +57,7 @@ typedef signed int ovrResult;
 typedef enum ovrSuccessResult_
 {
 	ovrSuccess						= 0,
+	ovrSuccess_BoundaryInvalid		= 1001,
 } ovrSuccessResult;
 
 typedef enum ovrErrorResult_
@@ -136,14 +137,14 @@ typedef struct ovrRectf_
 OVR_VRAPI_ASSERT_TYPE_SIZE( ovrRectf, 16 );
 
 /// True or false.
-typedef enum
+typedef enum ovrBooleanResult_
 {
 	VRAPI_FALSE = 0,
 	VRAPI_TRUE	= 1
 } ovrBooleanResult;
 
 /// One of the user's eyes.
-typedef enum
+typedef enum ovrEye_
 {
 	VRAPI_EYE_LEFT	= 0,
 	VRAPI_EYE_RIGHT	= 1,
@@ -155,7 +156,7 @@ typedef enum
 //-----------------------------------------------------------------
 
 /// Defines a layout for ovrInitParms, ovrModeParms, or ovrFrameParms.
-typedef enum
+typedef enum ovrStructureType_
 {
 	VRAPI_STRUCTURE_TYPE_INIT_PARMS			= 1,
 	VRAPI_STRUCTURE_TYPE_MODE_PARMS			= 2,
@@ -168,7 +169,7 @@ typedef enum
 //-----------------------------------------------------------------
 
 /// A VR-capable device.
-typedef enum
+typedef enum ovrDeviceType_
 {
 	VRAPI_DEVICE_TYPE_GEARVR_START			= 0,
 
@@ -180,13 +181,14 @@ typedef enum
 	VRAPI_DEVICE_TYPE_S8					= 5,
 	VRAPI_DEVICE_TYPE_NOTE8					= 6,
 	VRAPI_DEVICE_TYPE_NOTE7_FE				= 7,			//< Fan Edition
-	VRAPI_DEVICE_TYPE_A5_2018				= 8,			//< A8
-	VRAPI_DEVICE_TYPE_A7_2018				= 9,			//< A8 Plus
+	VRAPI_DEVICE_TYPE_A8					= 8,
+	VRAPI_DEVICE_TYPE_A8_PLUS				= 9,
 	VRAPI_DEVICE_TYPE_S9					= 10,
 	VRAPI_DEVICE_TYPE_S9_PLUS				= 11,
-	VRAPI_DEVICE_TYPE_A8_STAR 				= 12,			//< A8 Star
+	VRAPI_DEVICE_TYPE_A8_STAR 				= 12,
 	VRAPI_DEVICE_TYPE_NOTE9           		= 13,
-
+	VRAPI_DEVICE_TYPE_A9_2018				= 14,
+	VRAPI_DEVICE_TYPE_S10					= 15,
 	VRAPI_DEVICE_TYPE_GEARVR_END			= 63,
 
 	// Standalone Devices
@@ -200,11 +202,12 @@ typedef enum
 	VRAPI_DEVICE_TYPE_OCULUSQUEST_END		= 319,
 
 
+
 	VRAPI_DEVICE_TYPE_UNKNOWN				= -1,
 } ovrDeviceType;
 
 /// A headset, which typically includes optics and tracking hardware, but not necessarily the device itself.
-typedef enum
+typedef enum ovrHeadsetType_
 {
 	VRAPI_HEADSET_TYPE_R320					= 0,			//< Note4 Innovator
 	VRAPI_HEADSET_TYPE_R321					= 1,			//< S6 Innovator
@@ -219,11 +222,12 @@ typedef enum
 
 	VRAPI_HEADSET_TYPE_OCULUSQUEST			= 256,
 
+
 	VRAPI_HEADSET_TYPE_UNKNOWN				= -1,
 } ovrHeadsetType;
 
 /// A geographic region authorized for certain hardware and content.
-typedef enum
+typedef enum ovrDeviceRegion_
 {
 	VRAPI_DEVICE_REGION_UNSPECIFIED	= 0,
 	VRAPI_DEVICE_REGION_JAPAN		= 1,
@@ -231,14 +235,14 @@ typedef enum
 } ovrDeviceRegion;
 
 /// The maximum resolution and framerate supported by a video decoder.
-typedef enum
+typedef enum ovrVideoDecoderLimit_
 {
 	VRAPI_VIDEO_DECODER_LIMIT_4K_30FPS	= 0,
 	VRAPI_VIDEO_DECODER_LIMIT_4K_60FPS	= 1,
 } ovrVideoDecoderLimit;
 
 /// System configuration properties.
-typedef enum
+typedef enum ovrSystemProperty_
 {
 	VRAPI_SYS_PROP_DEVICE_TYPE								= 0,
 	VRAPI_SYS_PROP_MAX_FULLSPEED_FRAMEBUFFER_SAMPLES		= 1,
@@ -301,6 +305,7 @@ typedef enum
 	/// Returns VRAPI_TRUE if Multiview rendering support is available for this system,
 	/// otherwise VRAPI_FALSE.
 	VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE						= 128,
+
 	/// Returns VRAPI_TRUE if submission of SRGB Layers is supported for this system,
 	/// otherwise VRAPI_FALSE.
 	VRAPI_SYS_PROP_SRGB_LAYER_SOURCE_AVAILABLE				= 129,
@@ -311,18 +316,19 @@ typedef enum
 } ovrSystemProperty;
 
 /// Configurable VrApi properties.
-typedef enum
+typedef enum ovrProperty_
 {
 	VRAPI_FOVEATION_LEVEL				= 15,		//< Used by apps that want to control swapchain foveation levels.
 	VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER	= 17,		//< Used to determine if a controller recenter should also reorient the headset.
 	VRAPI_LATCH_BACK_BUTTON_ENTIRE_FRAME		= 18,		//< Used to determine if the 'short press' back button should lasts an entire frame.
 	VRAPI_BLOCK_REMOTE_BUTTONS_WHEN_NOT_EMULATING_HMT	=19,//< Used to not send the remote back button java events to the apps.
 	VRAPI_EAT_NATIVE_GAMEPAD_EVENTS		= 20,				//< Used to tell the runtime not to eat gamepad events.  If this is false on a native app, the app must be listening for the events.
+	VRAPI_ACTIVE_INPUT_DEVICE_ID		= 24,		//< Used by apps to query which input device is most 'active' or primary, a -1 means no active input device
 } ovrProperty;
 
 
 /// Specifies left or right handedness.
-typedef enum
+typedef enum ovrHandedness_
 {
 	VRAPI_HAND_UNKNOWN	= 0,
 	VRAPI_HAND_LEFT		= 1,
@@ -330,7 +336,7 @@ typedef enum
 } ovrHandedness;
 
 /// System status bits.
-typedef enum
+typedef enum ovrSystemStatus_
 {
 	VRAPI_SYS_STATUS_DOCKED							= 0,	//< Device is docked.
 	VRAPI_SYS_STATUS_MOUNTED						= 1,	//< Device is mounted.
@@ -352,6 +358,7 @@ typedef enum
 
 	VRAPI_SYS_STATUS_RECENTER_COUNT					= 13,	//< Returns the current HMD recenter count. Defaults to 0.
 	VRAPI_SYS_STATUS_SYSTEM_UX_ACTIVE				= 14,	//< Returns VRAPI_TRUE if a system UX layer is active
+	VRAPI_SYS_STATUS_USER_RECENTER_COUNT			= 15,	//< Returns the current HMD recenter count for user initiated recenters only. Defaults to 0.
 
 	VRAPI_SYS_STATUS_FRONT_BUFFER_PROTECTED			= 128,	//< VRAPI_TRUE if the front buffer is allocated in TrustZone memory.
 	VRAPI_SYS_STATUS_FRONT_BUFFER_565				= 129,	//< VRAPI_TRUE if the front buffer is 16-bit 5:6:5
@@ -364,7 +371,7 @@ typedef enum
 //-----------------------------------------------------------------
 
 /// Possible results of initialization.
-typedef enum
+typedef enum ovrInitializeStatus_
 {
 	VRAPI_INITIALIZE_SUCCESS				=  0,
 	VRAPI_INITIALIZE_UNKNOWN_ERROR			= -1,
@@ -373,11 +380,11 @@ typedef enum
 } ovrInitializeStatus;
 
 /// Supported graphics APIs.
-typedef enum
+typedef enum ovrGraphicsAPI_
 {
-	VRAPI_GRAPHICS_API_TYPE_ES		 = 0x10000,
-	VRAPI_GRAPHICS_API_OPENGL_ES_2   = ( VRAPI_GRAPHICS_API_TYPE_ES | 0x0200 ),		//< OpenGL ES 2.x context
-	VRAPI_GRAPHICS_API_OPENGL_ES_3   = ( VRAPI_GRAPHICS_API_TYPE_ES | 0x0300 ),		//< OpenGL ES 3.x context
+	VRAPI_GRAPHICS_API_TYPE_OPENGL_ES = 0x10000,
+	VRAPI_GRAPHICS_API_OPENGL_ES_2   = ( VRAPI_GRAPHICS_API_TYPE_OPENGL_ES | 0x0200 ),		//< OpenGL ES 2.x context
+	VRAPI_GRAPHICS_API_OPENGL_ES_3   = ( VRAPI_GRAPHICS_API_TYPE_OPENGL_ES | 0x0300 ),		//< OpenGL ES 3.x context
 
 	VRAPI_GRAPHICS_API_TYPE_OPENGL	 = 0x20000,
 	VRAPI_GRAPHICS_API_OPENGL_COMPAT = ( VRAPI_GRAPHICS_API_TYPE_OPENGL | 0x0100 ), //< OpenGL Compatibility Profile
@@ -389,7 +396,7 @@ typedef enum
 } ovrGraphicsAPI;
 
 /// Configuration details specified at initialization.
-typedef struct
+typedef struct ovrInitParms_
 {
 	ovrStructureType	Type;
 	int					ProductVersion;
@@ -409,7 +416,7 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrInitParms, 48 );
 //-----------------------------------------------------------------
 
 /// \note the first two flags use the first two bytes for backwards compatibility on little endian systems.
-typedef enum
+typedef enum ovrModeFlags_
 {
 	/// If set, warn and allow the app to continue at 30 FPS when throttling occurs.
 	/// If not set, display the level 2 error message which requires the user to undock.
@@ -450,7 +457,7 @@ typedef enum
 } ovrModeFlags;
 
 /// Configuration details that stay constant between a vrapi_EnterVrMode()/vrapi_LeaveVrMode() pair.
-typedef struct
+typedef struct ovrModeParms_
 {
 	ovrStructureType	Type;
 
@@ -464,7 +471,7 @@ typedef struct
 	/// packageName, systemService, etc.
 	ovrJava				Java;
 
-	OVR_VRAPI_PADDING_32_BIT( 4 );
+	OVR_VRAPI_PADDING_32_BIT( 4 )
 
 	/// Display to use for asynchronous time warp rendering.
 	/// Using EGL this is an EGLDisplay.
@@ -484,7 +491,7 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_32_BIT( ovrModeParms, 48 );
 OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrModeParms, 56 );
 
 /// Vulkan-specific mode paramaters.
-typedef struct
+typedef struct ovrModeParmsVulkan_
 {
 	ovrModeParms		ModeParms;
 
@@ -515,7 +522,7 @@ typedef struct ovrRigidBodyPosef_
 	ovrVector3f		LinearVelocity;
 	ovrVector3f		AngularAcceleration;
 	ovrVector3f		LinearAcceleration;
-	OVR_VRAPI_PADDING( 4 );
+	OVR_VRAPI_PADDING( 4 )
 	double			TimeInSeconds;			//< Absolute time of this pose.
 	double			PredictionInSeconds;	//< Seconds this pose was predicted ahead.
 } ovrRigidBodyPosef;
@@ -523,10 +530,12 @@ typedef struct ovrRigidBodyPosef_
 OVR_VRAPI_ASSERT_TYPE_SIZE( ovrRigidBodyPosef, 96 );
 
 /// Bit flags describing the current status of sensor tracking.
-typedef enum
+typedef enum ovrTrackingStatus_
 {
 	VRAPI_TRACKING_STATUS_ORIENTATION_TRACKED	= 1 << 0,	//< Orientation is currently tracked.
 	VRAPI_TRACKING_STATUS_POSITION_TRACKED		= 1 << 1,	//< Position is currently tracked.
+	VRAPI_TRACKING_STATUS_ORIENTATION_VALID		= 1 << 2,	//< Orientation reported is valid.
+	VRAPI_TRACKING_STATUS_POSITION_VALID		= 1 << 3,	//< Position reported is valid.
 	VRAPI_TRACKING_STATUS_HMD_CONNECTED			= 1 << 7	//< HMD is available & connected.
 } ovrTrackingStatus;
 
@@ -536,7 +545,7 @@ typedef struct ovrTracking2_
 	/// Sensor status described by ovrTrackingStatus flags.
 	unsigned int		Status;
 
-	OVR_VRAPI_PADDING( 4 );
+	OVR_VRAPI_PADDING( 4 )
 
 	/// Predicted head configuration at the requested absolute time.
 	/// The pose describes the head orientation and center eye position.
@@ -556,7 +565,7 @@ typedef struct ovrTracking_
 	/// Sensor status described by ovrTrackingStatus flags.
 	unsigned int		Status;
 
-	OVR_VRAPI_PADDING( 4 );
+	OVR_VRAPI_PADDING( 4 )
 
 	/// Predicted head configuration at the requested absolute time.
 	/// The pose describes the head orientation and center eye position.
@@ -566,7 +575,7 @@ typedef struct ovrTracking_
 OVR_VRAPI_ASSERT_TYPE_SIZE( ovrTracking, 104 );
 
 /// Specifies a reference frame for motion tracking data.
-typedef enum
+typedef enum ovrTrackingTransform_
 {
 	VRAPI_TRACKING_TRANSFORM_IDENTITY					= 0,
 	VRAPI_TRACKING_TRANSFORM_CURRENT					= 1,
@@ -574,8 +583,17 @@ typedef enum
 	VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_FLOOR_LEVEL	= 3,
 } ovrTrackingTransform;
 
+typedef enum ovrTrackingSpace_
+{
+	VRAPI_TRACKING_SPACE_LOCAL				= 0,	// Eye level origin - controlled by system recentering
+	VRAPI_TRACKING_SPACE_LOCAL_FLOOR		= 1,	// Floor level origin - controlled by system recentering
+	VRAPI_TRACKING_SPACE_LOCAL_TILTED		= 2,	// Tilted pose for "bed mode" - controlled by system recentering
+	VRAPI_TRACKING_SPACE_STAGE				= 3,	// Floor level origin - controlled by Guardian setup
+	VRAPI_TRACKING_SPACE_LOCAL_FIXED_YAW	= 7,	// Position of local space, but yaw stays constant
+} ovrTrackingSpace;
+
 /// Tracked device type id used to simplify interaction checks with Guardian
-typedef enum
+typedef enum ovrTrackedDeviceTypeId_
 {
 	VRAPI_TRACKED_DEVICE_NONE 			= -1,
 	VRAPI_TRACKED_DEVICE_HMD 			= 0,	//< Headset
@@ -588,16 +606,16 @@ typedef enum
 typedef struct ovrBoundaryTriggerResult_
 {
 	/// Closest point on the boundary surface.
-	ovrVector3f				closestPoint;
+	ovrVector3f				ClosestPoint;
 
 	/// Normal of the closest point on the boundary surface.
-	ovrVector3f				closestPointNormal;
+	ovrVector3f				ClosestPointNormal;
 
 	/// Distance to the closest guardian boundary surface.
-	float					closestDistance;
+	float					ClosestDistance;
 
 	/// True if the boundary system is being triggered. Note that due to fade in/out effects this may not exactly match visibility.
-	bool 					isTriggering;
+	bool 					IsTriggering;
 } ovrBoundaryTriggerResult;
 
 OVR_VRAPI_ASSERT_TYPE_SIZE( ovrBoundaryTriggerResult, 32 );
@@ -607,7 +625,7 @@ OVR_VRAPI_ASSERT_TYPE_SIZE( ovrBoundaryTriggerResult, 32 );
 //-----------------------------------------------------------------
 
 /// A texture type, such as 2D, array, or cubemap.
-typedef enum
+typedef enum ovrTextureType_
 {
 	VRAPI_TEXTURE_TYPE_2D			= 0,	//< 2D textures.
 	VRAPI_TEXTURE_TYPE_2D_ARRAY		= 2,	//< Texture array.
@@ -617,7 +635,7 @@ typedef enum
 
 /// A texture format.
 /// DEPRECATED in favor of passing platform-specific formats to vrapi_CreateTextureSwapChain3.
-typedef enum
+typedef enum ovrTextureFormat_
 {
 	VRAPI_TEXTURE_FORMAT_NONE				= 0,
 	VRAPI_TEXTURE_FORMAT_565				= 1,
@@ -629,11 +647,12 @@ typedef enum
 	VRAPI_TEXTURE_FORMAT_DEPTH_16			= 7,
 	VRAPI_TEXTURE_FORMAT_DEPTH_24			= 8,
 	VRAPI_TEXTURE_FORMAT_DEPTH_24_STENCIL_8	= 9,
+	VRAPI_TEXTURE_FORMAT_RG16				= 10,
 
 } ovrTextureFormat;
 
 /// Built-in convenience swapchains.
-typedef enum
+typedef enum ovrDefaultTextureSwapChain_
 {
 	VRAPI_DEFAULT_TEXTURE_SWAPCHAIN					= 0x1,
 	VRAPI_DEFAULT_TEXTURE_SWAPCHAIN_LOADING_ICON	= 0x2
@@ -646,7 +665,7 @@ typedef struct ovrTextureSwapChain ovrTextureSwapChain;
 //-----------------------------------------------------------------
 
 /// Per-frame configuration options.
-typedef enum
+typedef enum ovrFrameFlags_
 {
 	// enum 1 << 0 used to be VRAPI_FRAME_FLAG_INHIBIT_SRGB_FRAMEBUFFER. See per-layer
 	// flag VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER.
@@ -674,11 +693,14 @@ typedef enum
 } ovrFrameFlags;
 
 /// Per-frame configuration options that apply to a particular layer.
-typedef enum
+typedef enum ovrFrameLayerFlags_
 {
 	/// enum 1 << 0 used to be VRAPI_FRAME_LAYER_FLAG_WRITE_ALPHA.
 
-	/// Correct for chromatic aberration. Quality/perf trade-off.
+	/// NOTE: On Oculus standalone devices, chromatic aberration correction is enabled
+	/// by default.
+	/// For Gear VR devices, this must be explicitly enabled by specifying the layer
+	/// flag as it is a quality / performance trade off.
 	VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION						= 1 << 1,
 	/// Used for some HUDs, but generally considered bad practice.
 	VRAPI_FRAME_LAYER_FLAG_FIXED_TO_VIEW										= 1 << 2,
@@ -704,10 +726,15 @@ typedef enum
 	VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER								= 1 << 8,
 
 
+	/// Allow Layer to use an expensive filtering mode. Only useful for 2D layers that are high
+	/// resolution (e.g. a remote desktop layer), typically double or more the target resolution.
+	VRAPI_FRAME_LAYER_FLAG_FILTER_EXPENSIVE										= 1 << 19,
+
+
 } ovrFrameLayerFlags;
 
 /// The user's eye (left or right) that can see a layer.
-typedef enum
+typedef enum ovrFrameLayerEye_
 {
 	VRAPI_FRAME_LAYER_EYE_LEFT		= 0,
 	VRAPI_FRAME_LAYER_EYE_RIGHT		= 1,
@@ -715,7 +742,7 @@ typedef enum
 } ovrFrameLayerEye;
 
 /// Selects an operation for alpha blending two images.
-typedef enum
+typedef enum ovrFrameLayerBlend_
 {
 	VRAPI_FRAME_LAYER_BLEND_ZERO					= 0,
 	VRAPI_FRAME_LAYER_BLEND_ONE						= 1,
@@ -726,7 +753,7 @@ typedef enum
 } ovrFrameLayerBlend;
 
 /// Extra latency mode pipelines app CPU work a frame ahead of VR composition.
-typedef enum
+typedef enum ovrExtraLatencyMode_
 {
 	VRAPI_EXTRA_LATENCY_MODE_OFF		= 0,
 	VRAPI_EXTRA_LATENCY_MODE_ON			= 1,
@@ -739,7 +766,7 @@ typedef enum
 
 /// \deprecated The vrapi_SubmitFrame2 path with flexible layer types
 /// should be used instead.
-typedef enum
+typedef enum ovrFrameLayerType_
 {
 	VRAPI_FRAME_LAYER_TYPE_MAX	= 4
 } ovrFrameLayerType;
@@ -748,7 +775,7 @@ typedef enum
 /// \note Any layer textures that are dynamic must be triple buffered.
 /// \deprecated The vrapi_SubmitFrame2 path with flexible layer types
 /// should be used instead.
-typedef struct
+typedef struct ovrFrameLayerTexture_
 {
 	/// Because OpenGL ES does not support clampToBorder, it is the
 	/// application's responsibility to make sure that all mip levels
@@ -772,7 +799,7 @@ typedef struct
 	/// This is a sub-rectangle of the [(0,0)-(1,1)] texture coordinate range.
 	ovrRectf				TextureRect;
 
-	OVR_VRAPI_PADDING( 4 );
+	OVR_VRAPI_PADDING( 4 )
 
 	/// The tracking state for which ModelViewMatrix is correct.
 	/// It is ok to update the orientation for each eye, which
@@ -782,7 +809,7 @@ typedef struct
 	ovrRigidBodyPosef		HeadPose;
 
 	/// \unused parameter.
-	unsigned long long		Reserved;
+	unsigned char			Pad[8];
 } ovrFrameLayerTexture;
 
 OVR_VRAPI_ASSERT_TYPE_SIZE_32_BIT( ovrFrameLayerTexture, 200 );
@@ -791,7 +818,7 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrFrameLayerTexture, 208 );
 /// Per-frame state of a compositor layer.
 /// \deprecated The vrapi_SubmitFrame2 path with flexible layer types
 /// should be used instead.
-typedef struct
+typedef struct ovrFrameLayer_
 {
 	/// Image used for each eye.
 	ovrFrameLayerTexture	Textures[VRAPI_FRAME_LAYER_EYE_MAX];
@@ -804,7 +831,7 @@ typedef struct
 	float					ColorScale;
 
 	/// padding for deprecated variable.
-	OVR_VRAPI_PADDING( 4 );
+	OVR_VRAPI_PADDING( 4 )
 
 	/// Layer blend function.
 	ovrFrameLayerBlend		SrcBlend;
@@ -812,6 +839,9 @@ typedef struct
 
 	/// Combination of ovrFrameLayerFlags flags.
 	int						Flags;
+
+	/// explicit padding for x86
+	OVR_VRAPI_PADDING_32_BIT( 4 )
 } ovrFrameLayer;
 
 OVR_VRAPI_ASSERT_TYPE_SIZE_32_BIT( ovrFrameLayer, 432 );
@@ -820,7 +850,7 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrFrameLayer, 448 );
 /// Configuration parameters that affect system performance and scheduling behavior.
 /// \deprecated The vrapi_SubmitFrame2 path with flexible layer types
 /// should be used instead.
-typedef struct
+typedef struct ovrPerformanceParms_
 {
 	/// These are fixed clock levels in the range [0, 3].
 	int						CpuLevel;
@@ -836,11 +866,11 @@ OVR_VRAPI_ASSERT_TYPE_SIZE( ovrPerformanceParms, 16 );
 /// Per-frame details.
 /// \deprecated The vrapi_SubmitFrame2 path with flexible layer types
 /// should be used instead.
-typedef struct
+typedef struct ovrFrameParms_
 {
 	ovrStructureType		Type;
 
-	OVR_VRAPI_PADDING( 4 );
+	OVR_VRAPI_PADDING( 4 )
 
 	/// Layers composited in the time warp.
 	ovrFrameLayer	 		Layers[VRAPI_FRAME_LAYER_TYPE_MAX];
@@ -863,18 +893,11 @@ typedef struct
 	/// Latency Mode.
 	ovrExtraLatencyMode		ExtraLatencyMode;
 
-	/// \deprecated
-	/// Rotation from a joypad can be added on generated frames to reduce
-	/// judder in FPS style experiences when the application framerate is
-	/// lower than the V-sync rate.
-	/// This will be applied to the view space distorted
-	/// eye vectors before applying the rest of the time warp.
-	/// This will only be added when the same ovrFrameParms is used for
-	/// more than one V-sync.
-	ovrMatrix4f				ExternalVelocity;
+	/// \unused parameter.
+	ovrMatrix4f				Reserved;
 
-	/// Unused parameter.
-	void *					Reserved;
+	/// \unused parameter.
+	void *					Reserved1;
 
 	/// CPU/GPU performance parameters.
 	ovrPerformanceParms		PerformanceParms;
@@ -914,8 +937,7 @@ typedef struct ovrLayerHeader2_
 	ovrVector4f			ColorScale;
 	ovrFrameLayerBlend	SrcBlend;
 	ovrFrameLayerBlend	DstBlend;
-
-	/// Unused parameter.
+	/// \unused parameter.
 	void *				Reserved;
 } ovrLayerHeader2;
 
@@ -924,10 +946,11 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrLayerHeader2, 40 );
 
 /// ovrLayerProjection2 provides support for a typical world view layer.
 /// \note Any layer textures that are dynamic must be triple buffered.
-typedef struct
+typedef struct ovrLayerProjection2_
 {
 	/// Header.Type must be VRAPI_LAYER_TYPE_PROJECTION2.
 	ovrLayerHeader2			Header;
+	OVR_VRAPI_PADDING_32_BIT( 4 )
 
 	ovrRigidBodyPosef		HeadPose;
 
@@ -959,10 +982,11 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrLayerProjection2, 328 );
 /// extents. No guarantees are made about whether fragments will be shaded outside the rect, so it is
 /// important that the subrect have a transparent border.
 ///
-typedef struct
+typedef struct ovrLayerCylinder2_
 {
 	/// Header.Type must be VRAPI_LAYER_TYPE_CYLINDER2.
 	ovrLayerHeader2			Header;
+	OVR_VRAPI_PADDING_32_BIT( 4 )
 
 	ovrRigidBodyPosef		HeadPose;
 
@@ -1013,10 +1037,11 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrLayerCylinder2, 456 );
 /// mapping to retain high resolution for one direction while signficantly reducing
 /// the required size of the cube map.
 ///
-typedef struct
+typedef struct ovrLayerCube2_
 {
 	/// Header.Type must be VRAPI_LAYER_TYPE_CUBE2.
 	ovrLayerHeader2			Header;
+	OVR_VRAPI_PADDING_32_BIT( 4 )
 
 	ovrRigidBodyPosef		HeadPose;
 	ovrMatrix4f				TexCoordsFromTanAngles;
@@ -1029,6 +1054,9 @@ typedef struct
 		ovrTextureSwapChain * ColorSwapChain;
 		int					SwapChainIndex;
 	} Textures[VRAPI_FRAME_LAYER_EYE_MAX];
+#ifdef __i386__
+	uint32_t			Padding;
+#endif
 } ovrLayerCube2;
 
 OVR_VRAPI_ASSERT_TYPE_SIZE_32_BIT( ovrLayerCube2, 232 );
@@ -1050,10 +1078,11 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrLayerCube2, 248 );
 /// extents. No guarantees are made about whether fragments will be shaded outside the rect, so it is
 /// important that the subrect have a transparent border.
 ///
-typedef struct
+typedef struct ovrLayerEquirect2_
 {
 	/// Header.Type must be VRAPI_LAYER_TYPE_EQUIRECT2.
 	ovrLayerHeader2			Header;
+	OVR_VRAPI_PADDING_32_BIT( 4 )
 
 	ovrRigidBodyPosef		HeadPose;
 	ovrMatrix4f				TexCoordsFromTanAngles;
@@ -1079,7 +1108,7 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrLayerEquirect2, 392 );
 
 /// ovrLayerLoadingIcon2 provides support for a monoscopic spinning layer.
 ///
-typedef struct
+typedef struct ovrLayerLoadingIcon2_
 {
 	/// Header.Type must be VRAPI_LAYER_TYPE_LOADING_ICON2.
 	ovrLayerHeader2			Header;
@@ -1098,7 +1127,7 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrLayerLoadingIcon2, 64 );
 
 /// Union that combines ovrLayer types in a way that allows them
 /// to be used in a polymorphic way.
-typedef union
+typedef union ovrLayer_Union2_
 {
 	ovrLayerHeader2			Header;
 	ovrLayerProjection2		Projection;
@@ -1116,7 +1145,7 @@ typedef struct ovrSubmitFrameDescription2_
 	uint64_t			FrameIndex;
 	double 				DisplayTime;
 	/// \unused parameter.
-	unsigned long long	Reserved;
+	unsigned char		Pad[8];
 	uint32_t			LayerCount;
 	const ovrLayerHeader2 *	const * Layers;
 } ovrSubmitFrameDescription2;
@@ -1129,10 +1158,11 @@ OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrSubmitFrameDescription2, 48 );
 //-----------------------------------------------------------------
 
 /// Identifies a VR-related application thread.
-typedef enum
+typedef enum ovrPerfThreadType_
 {
 	VRAPI_PERF_THREAD_TYPE_MAIN			= 0,
 	VRAPI_PERF_THREAD_TYPE_RENDERER		= 1,
 } ovrPerfThreadType;
+
 
 #endif	// OVR_VrApi_Types_h

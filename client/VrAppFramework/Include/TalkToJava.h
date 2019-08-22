@@ -24,7 +24,8 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
  */
 
 #include "MessageQueue.h"
-#include "Kernel/OVR_Threads.h" 
+#include "JniUtils.h"
+#include <thread> 
 
 namespace OVR
 {
@@ -53,7 +54,6 @@ public:
 		Interface( NULL ),
 		Jvm( NULL ),
 		Jni( NULL ),
-		TtjThread( & ThreadStarter, this ),
 		TtjMessageQueue( 1000 ) // no need to be stingy with queue size
 		{}
 
@@ -67,7 +67,6 @@ public:
 	ovrMessageQueue	& GetMessageQueue() { return TtjMessageQueue; };
 
 private:
-	static threadReturn_t ThreadStarter( Thread * thread, void * parm );
 	void		TtjThreadFunction();
 	void		Command( const char *msg );
 
@@ -75,7 +74,7 @@ private:
 
 	JavaVM *		Jvm;
 	JNIEnv *		Jni;
-	Thread 			TtjThread;
+	std::thread		TtjThread;
 	ovrMessageQueue	TtjMessageQueue;
 };
 

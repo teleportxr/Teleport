@@ -11,7 +11,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "GlSetup.h"
 
-#include "Kernel/OVR_LogUtils.h"
+#include "OVR_LogUtils.h"
 
 namespace OVR {
 

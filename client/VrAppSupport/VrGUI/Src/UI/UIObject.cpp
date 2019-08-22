@@ -15,7 +15,6 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "VRMenuMgr.h"
 #include "GuiSys.h"
 #include "App.h"
-#include "Kernel/OVR_String_Utils.h"
 
 namespace OVR {
 
@@ -62,7 +61,7 @@ UIObject::~UIObject()
 void UIObject::RemoveChild( UIObject *child )
 {
 	int index = -1;
-	for ( int i = 0; i < Children.GetSizeI(); i++ )
+	for ( int i = 0; i < static_cast< int >( Children.size() ); i++ )
 	{
 		if ( Children[ i ] == child )
 		{
@@ -74,7 +73,7 @@ void UIObject::RemoveChild( UIObject *child )
 	if ( index != -1 )
 	{
 		Children[ index ]->Parent = NULL;
-		Children.RemoveAt( index );
+		Children.erase( Children.cbegin() + index );
 	}
 }
 
@@ -96,12 +95,12 @@ void UIObject::AddToMenuWithParms( UIMenu *menu, UIObject *parent, VRMenuObjectP
 
 	Id = parms.Id;
 
-    Array< VRMenuObjectParms const * > parmArray;
-	parmArray.PushBack( &parms );
+    std::vector< VRMenuObjectParms const * > parmArray;
+	parmArray.push_back( &parms );
 
 	menuHandle_t parentHandle = ( parent == NULL ) ? menu->GetVRMenu()->GetRootHandle() : parent->GetHandle();
     Menu->GetVRMenu()->AddItems( GuiSys, parmArray, parentHandle, false );
-    parmArray.Clear();
+    parmArray.clear();
 
     if ( parent == NULL )
     {
@@ -109,7 +108,7 @@ void UIObject::AddToMenuWithParms( UIMenu *menu, UIObject *parent, VRMenuObjectP
     }
     else
     {
-    	Parent->Children.PushBack( this );
+    	Parent->Children.push_back( this );
     	Handle = parent->GetMenuObject()->ChildHandleForId( GuiSys.GetVRMenuMgr(), Id );
     }
 }
@@ -1052,7 +1051,7 @@ void UIObject::AddComponent( VRMenuComponent * component )
 	}
 }
 
-Array< VRMenuComponent* > const & UIObject::GetComponentList() const
+std::vector< VRMenuComponent* > const & UIObject::GetComponentList() const
 {
 	VRMenuObject * object = GetMenuObject();
 	OVR_ASSERT( object );
@@ -1062,39 +1061,39 @@ Array< VRMenuComponent* > const & UIObject::GetComponentList() const
 	}
 	else
 	{
-		static Array< VRMenuComponent *> array;
+		static std::vector< VRMenuComponent *> array;
 		return array;
 	}
 }
 
 void UIObject::WrapChildrenHorizontal()
 {
-	const Array<UIObject *> & children = GetChildren();
+	const std::vector<UIObject *> & children = GetChildren();
 
 	// calculate the sum of the widths of all the children
 	float totalWidth = 0.0f;
-	for ( UPInt i = 0; i < children.GetSize(); i++ )
+	for ( auto * child : children )
 	{
-		if ( children[ i ]->GetVisible() )
+		if ( child->GetVisible() )
 		{
-			const UIRectf 	paddedRect = children[ i ]->GetPaddedRect();
-			const float 	objectWidth = paddedRect.GetSize().w * DEFAULT_TEXEL_SCALE * children[ i ]->GetLocalScale().x;
+			const UIRectf 	paddedRect = child->GetPaddedRect();
+			const float 	objectWidth = paddedRect.GetSize().w * DEFAULT_TEXEL_SCALE * child->GetLocalScale().x;
 			totalWidth += objectWidth;
 		}
 	}
 
 	// reposition children centered horizontally
 	float pos = totalWidth * -0.5f;
-	for ( UPInt i = 0; i < children.GetSize(); i++ )
+	for ( auto * child : children )
 	{
-		if ( children[ i ]->GetVisible() )
+		if ( child->GetVisible() )
 		{
-			const UIRectf 	paddedRect = children[ i ]->GetPaddedRect();
-			const float 	objectWidth = paddedRect.GetSize().w * DEFAULT_TEXEL_SCALE * children[ i ]->GetLocalScale().x;
+			const UIRectf 	paddedRect = child->GetPaddedRect();
+			const float 	objectWidth = paddedRect.GetSize().w * DEFAULT_TEXEL_SCALE * child->GetLocalScale().x;
 
-			Vector3f localPos = children[ i ]->GetLocalPosition();
+			Vector3f localPos = child->GetLocalPosition();
 			localPos.x = pos + objectWidth * 0.5f;
-			children[ i ]->SetLocalPosition( localPos );
+			child->SetLocalPosition( localPos );
 
 			pos += objectWidth;
 		}

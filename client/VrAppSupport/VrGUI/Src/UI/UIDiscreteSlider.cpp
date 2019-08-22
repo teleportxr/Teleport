@@ -43,7 +43,7 @@ void UIDiscreteSlider::AddToMenu( UIMenu *menu, UIObject *parent )
 	Vector3f defaultScale( 1.0f );
 	VRMenuFontParms fontParms( HORIZONTAL_CENTER, VERTICAL_CENTER, false, false, false, 1.0f );
 	
-	VRMenuObjectParms parms( VRMENU_CONTAINER, Array< VRMenuComponent* >(), VRMenuSurfaceParms(),
+	VRMenuObjectParms parms( VRMENU_CONTAINER, std::vector< VRMenuComponent* >(), VRMenuSurfaceParms(),
 			"Container", pose, defaultScale, fontParms, menu->AllocId(),
 			VRMenuObjectFlags_t(), VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
 
@@ -77,7 +77,7 @@ void UIDiscreteSlider::AddCells( unsigned int maxValue, unsigned int startValue,
 
 		cellOffset += pixelCellSpacing;
 
-		VRMenuObjectParms cellParms( VRMENU_BUTTON, Array< VRMenuComponent* >(), VRMenuSurfaceParms(),
+		VRMenuObjectParms cellParms( VRMENU_BUTTON, std::vector< VRMenuComponent* >(), VRMenuSurfaceParms(),
 			"", pose, defaultScale, fontParms, Menu->AllocId(),
 			VRMenuObjectFlags_t(), VRMenuObjectInitFlags_t( VRMENUOBJECT_INIT_FORCE_POSITION ) );
 
@@ -164,10 +164,9 @@ void UIDiscreteSliderComponent::OnCellFocusOff( UICellComponent & cell )
 
 void UIDiscreteSliderComponent::HighlightCells( unsigned int stopIndex )
 {
-	for ( unsigned int cellIndex = 0; cellIndex < Cells.GetSize(); ++cellIndex )
+	unsigned int cellIndex = 0;	
+	for ( UIObject * cell : Cells )
 	{
-		UIObject * cell = Cells.At( cellIndex );
-		
 		if ( cellIndex <= stopIndex )
 		{
 			cell->SetImage( 0, SURFACE_TEXTURE_DIFFUSE, DiscreteSlider.CellOnTexture );
@@ -178,19 +177,20 @@ void UIDiscreteSliderComponent::HighlightCells( unsigned int stopIndex )
 			cell->SetImage( 0, SURFACE_TEXTURE_DIFFUSE, DiscreteSlider.CellOffTexture );
 			cell->SetColor( DiscreteSlider.CellOffColor );
 		}
+		cellIndex++;
 	}
 }
 
 void UIDiscreteSliderComponent::SetCurrentValue( unsigned int value )
 {
-	if ( value <= Cells.GetSize() )
+	if ( value <= Cells.size() )
 	{
 		CurrentValue = value;
 		HighlightCells( value );
 	}
 	else
 	{
-		OVR_WARN( "UIDiscreteSliderComponent::SetCurrentValue - %d outside range %d -> %zu", value, 0, Cells.GetSize() );
+		OVR_WARN( "UIDiscreteSliderComponent::SetCurrentValue - %d outside range %d -> %zu", value, 0, Cells.size() );
 	}
 }
 
@@ -207,7 +207,7 @@ UIDiscreteSliderComponent::UIDiscreteSliderComponent( UIDiscreteSlider & discret
 
 void UIDiscreteSliderComponent::AddCell( UIObject * cellObject )
 {
-	Cells.PushBack( cellObject );
+	Cells.push_back( cellObject );
 }
 
 OVR::eMsgStatus UIDiscreteSliderComponent::OnEvent_Impl( OvrGuiSys & guiSys, ovrFrameInput const & vrFrame, VRMenuObject * self, VRMenuEvent const & event )

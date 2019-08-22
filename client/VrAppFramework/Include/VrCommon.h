@@ -12,10 +12,13 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #ifndef OVR_VrCommon_h
 #define OVR_VrCommon_h
 
-#include "Kernel/OVR_Types.h"
-#include "Kernel/OVR_Math.h"
-#include "Kernel/OVR_StringHash.h"
-#include "Kernel/OVR_BitFlags.h"
+#include <vector>
+#include <string>
+#include <unordered_map>
+
+#include "OVR_Types.h"
+#include "OVR_Math.h"
+#include "OVR_BitFlags.h"
 #include "PathUtils.h"
 
 #ifdef OVR_OS_WIN32
@@ -70,26 +73,26 @@ bool IsFolder( const char * folderName );
 // Returns true if ext is the end of fileName
 bool MatchesExtension( const char * fileName, const char * ext );
 
-void SortStringArray( Array<String> & strings );
+void SortStringArray( std::vector<std::string> & strings );
 
-void AppendPath( String & startPath, const char * pathToAppend );
+void AppendPath( std::string & startPath, const char * pathToAppend );
 
-StringHash< String > RelativeDirectoryFileList( const Array< String > & searchPaths, const char * RelativeDirPath );
+std::unordered_map< std::string, std::string > RelativeDirectoryFileList( const std::vector< std::string > & searchPaths, const char * RelativeDirPath );
 
 // DirPath should by a directory with a trailing slash.
 // Returns all files in the directory, already prepended by root.
 // Subdirectories will have a trailing slash.
 // All files and directories that start with . are skipped.
-Array<String> DirectoryFileList( const char * DirPath );
+std::vector<std::string> DirectoryFileList( const char * DirPath );
 
 // Returns the last token in path s with slashes and file extension stripped
-String ExtractFileBase( const String & s );
+std::string ExtractFileBase( const std::string & s );
 
 // Returns the filename with extension from a passed in path
-String ExtractFile( const String & s );
+std::string ExtractFile( const std::string & s );
 
 // Returns the directory name before the fileName - stripping out parent directories and file
-String ExtractDirectory( const String & s );
+std::string ExtractDirectory( const std::string & s );
 
 // Creates all the intermediate directories if they don't exist
 void MakePath( const char * dirPath, permissionFlags_t permissions );
