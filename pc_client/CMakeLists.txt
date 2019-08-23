@@ -64,4 +64,4 @@ endif()
 
 target_link_libraries(pc_client libavstream enet SimulCasterRenderer)
 #target_link_libraries(pc_client debug effects11_MTd directxtex_MTd )
-target_link_libraries(pc_client optimized effects11_MT directxtex_MT)
+#target_link_libraries(pc_client optimized effects11_MT directxtex_MT)
