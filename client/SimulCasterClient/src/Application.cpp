@@ -370,11 +370,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
         frameRate*=0.99f;
         frameRate+=0.01f/vrFrame.DeltaSeconds;
     }
-#if 1
+#if 0
     auto ctr=mNetworkSource.getCounterValues();
-    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f"
+    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Actors: SCR: %d | OVR: %d"
             , ctr.networkPacketsDropped, ctr.decoderPacketsDropped
-            ,frameRate,ctr.bandwidthKPS);
+            ,frameRate,ctr.bandwidthKPS, (uint64_t)mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size());
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -404,9 +404,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Append GuiSys surfaces.
 	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
 
-    GL_CheckErrors("Frame: Pre-SCR");
 
 	//Append SCR Actors to surfaces.
+    GL_CheckErrors("Frame: Pre-SCR");
     scr::InputCommandCreateInfo ci;
     ci.type = scr::INPUT_COMMAND_MESH_MATERIAL_TRANSFORM;
     ci.pFBs = nullptr;
@@ -414,8 +414,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     ci.pCamera = nullptr;
 
     //Remove Invalid scr and ovr actors.
-    mActorManager.RemoveInvalidActors();
-    RemoveInvalidOVRActors();
+    //mActorManager.RemoveInvalidActors();
+    //RemoveInvalidOVRActors();
     for(auto& actor : mActorManager.m_Actors)
     {
         scr::InputCommand_Mesh_Material_Transform ic_mmm(&ci, actor.second.get());
@@ -423,51 +423,58 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
         if(mOVRActors.find(actor.first) == mOVRActors.end())
         {
-            auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmm.pMaterial->GetMaterialCreateInfo().effect);
-            auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("standard");
-            auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().vb.get());
-            auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().ib.get());
-            gl_vb->CreateVAO(gl_ib->GetIndexID());
+            const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmm.pMaterial->GetMaterialCreateInfo().effect);
+            const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("standard");
+            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().vb.get());
+            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().ib.get());
+            //gl_vb->CreateVAO(gl_ib->GetIndexID());
 
-            GlGeometry geo;
-            geo.vertexBuffer = gl_vb->GetVertexID();
+            std::vector<Vector3f> vertices(gl_vb->GetVertexCount());
+            memcpy(vertices.data(), gl_vb->GetVertexCreateInfo().data, gl_vb->GetVertexCreateInfo().size);
+            std::vector<uint16_t> indices((int)gl_ib->GetIndexBufferCreateInfo().indexCount);
+            memcpy(indices.data(), gl_ib->GetIndexBufferCreateInfo().data, gl_ib->GetIndexBufferCreateInfo().indexCount * 2);
+
+            VertexAttribs va = {};
+            va.position = vertices;
+
+            GlGeometry geo(va, indices);
+            /*geo.vertexBuffer = gl_vb->GetVertexID();
             geo.indexBuffer = gl_ib->GetIndexID();
             geo.vertexArrayObject = gl_vb->GetVertexArrayID();
             geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("stardard").topology);
             geo.vertexCount = (int) gl_vb->GetVertexCount();
-            geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
-            geo.IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
-                            gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT
-                                                                          : GL_UNSIGNED_BYTE;
+            geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;*/
+            //Can't set static member: GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
 
-            ovrSurfaceDef ovr_Actor;
+            ovrSurfaceDef ovr_Actor = {};
             std::string _actorName = std::to_string(actor.first);
             ovr_Actor.surfaceName = std::string(_actorName.c_str());
             ovr_Actor.numInstances = 1;
-            ovr_Actor.geo = geo;
+            ovr_Actor.geo = geo; //BuildGlobe(1.0F, 1.0F, 100.0F);
 
-            ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
-            ovr_Actor.graphicsCommand.GpuState.blendMode = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.colorBlendOp);
-            ovr_Actor.graphicsCommand.GpuState.blendSrc = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcColorBlendFactor);
-            ovr_Actor.graphicsCommand.GpuState.blendDst = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstColorBlendFactor);
-            ovr_Actor.graphicsCommand.GpuState.blendModeAlpha = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.alphaBlendOp);
-            ovr_Actor.graphicsCommand.GpuState.blendSrcAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcAlphaBlendFactor);
-            ovr_Actor.graphicsCommand.GpuState.blendDstAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
-            ovr_Actor.graphicsCommand.GpuState.depthFunc = scc::GL_Effect::ToGLCompareOp(gl_effectPass.depthStencilingState.depthCompareOp);
-            ovr_Actor.graphicsCommand.GpuState.frontFace = gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
-            ovr_Actor.graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
-            ovr_Actor.graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
-            ovr_Actor.graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;
-            ovr_Actor.graphicsCommand.GpuState.depthMaskEnable = false;
-            ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[0] = true;
-            ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[1] = true;
-            ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[2] = true;
-            ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[3] = true;
-            ovr_Actor.graphicsCommand.GpuState.polygonOffsetEnable = false;
-            ovr_Actor.graphicsCommand.GpuState.cullEnable = true;
-            ovr_Actor.graphicsCommand.GpuState.lineWidth = 1.0f;
-            ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
-            ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
+           ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
+
+           ovr_Actor.graphicsCommand.GpuState.blendMode = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.colorBlendOp);
+           ovr_Actor.graphicsCommand.GpuState.blendSrc = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcColorBlendFactor);
+           ovr_Actor.graphicsCommand.GpuState.blendDst = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstColorBlendFactor);
+           ovr_Actor.graphicsCommand.GpuState.blendModeAlpha = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.alphaBlendOp);
+           ovr_Actor.graphicsCommand.GpuState.blendSrcAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcAlphaBlendFactor);
+           ovr_Actor.graphicsCommand.GpuState.blendDstAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
+           ovr_Actor.graphicsCommand.GpuState.depthFunc = scc::GL_Effect::ToGLCompareOp(gl_effectPass.depthStencilingState.depthCompareOp);
+           ovr_Actor.graphicsCommand.GpuState.frontFace = gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
+           ovr_Actor.graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
+           ovr_Actor.graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
+           ovr_Actor.graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;
+           ovr_Actor.graphicsCommand.GpuState.depthMaskEnable = false;
+           ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[0] = true;
+           ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[1] = true;
+           ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[2] = true;
+           ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[3] = true;
+           ovr_Actor.graphicsCommand.GpuState.polygonOffsetEnable = false;
+           ovr_Actor.graphicsCommand.GpuState.cullEnable = false;
+           ovr_Actor.graphicsCommand.GpuState.lineWidth = 1.0F;
+           ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
+           ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
 
             mOVRActors[actor.first] = ovr_Actor;
         }
@@ -476,8 +483,12 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             //NULL
         }
 
+        float heightOffset = -80.0F;
+        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
+        scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
+        scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix *ic_mmm.pTransform->GetTransformMatrix();
+
         OVR::Matrix4f transform;
-        scr::mat4 scr_Transform = ic_mmm.pTransform->GetTransformMatrix();
         memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
         ovrDrawSurface ovr_ActorDrawSurface(transform, &mOVRActors[actor.first]);
 

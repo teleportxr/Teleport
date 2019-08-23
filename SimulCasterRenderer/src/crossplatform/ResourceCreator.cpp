@@ -392,33 +392,32 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 		std::shared_ptr<scr::Transform> transform = std::make_shared<scr::Transform>();
 		transform->UpdateModelMatrix(translation, rotation, scale);
 		m_pActorManager->AddTransform(node_uid, transform);
-	}
 
-	switch (node.data_type)
-	{
-	case NodeDataType::Mesh:
-		{
-			size_t i = 0;
-			for (auto& meshMaterialPair : m_MeshMaterialUIDPairs)
-			{
-				if (meshMaterialPair.first == node.data_uid) //data_uid == shape_uid
-					break;
-				else
-					i++;
-			}
-			CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
-		}
-	case NodeDataType::Camera:
-		return;
-	case NodeDataType::Scene:
-		return;
+	    switch (node.data_type)
+	    {
+	    case NodeDataType::Mesh:
+	    	{
+	    		size_t i = 0;
+	    		for (auto& meshMaterialPair : m_MeshMaterialUIDPairs)
+	    		{
+	    			if (meshMaterialPair.first == node.data_uid) //data_uid == shape_uid
+	    				break;
+	    			else
+	    				i++;
+	    		}
+	    		CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
+	    	}
+	    case NodeDataType::Camera:
+	    	return;
+	    case NodeDataType::Scene:
+	    	return;
+	    }
 	}
-	
 }
 
 void ResourceCreator::CreateActor(std::pair<avs::uid, avs::uid>& meshMaterialPair, avs::uid transform_uid)
 {
-	scr::Actor::ActorCreateInfo actor_ci;
+	scr::Actor::ActorCreateInfo actor_ci = {};
 	actor_ci.staticMesh = true;
 	actor_ci.animatedMesh = false;
 	actor_ci.mesh = m_pActorManager->GetMesh(meshMaterialPair.first).get();
