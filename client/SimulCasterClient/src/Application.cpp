@@ -370,7 +370,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
         frameRate*=0.99f;
         frameRate+=0.01f/vrFrame.DeltaSeconds;
     }
-#if 1
+#if 0
     auto ctr=mNetworkSource.getCounterValues();
     mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Streamed Actors: %d"
             , ctr.networkPacketsDropped, ctr.decoderPacketsDropped

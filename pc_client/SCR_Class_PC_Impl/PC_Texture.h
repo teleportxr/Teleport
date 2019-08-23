@@ -33,5 +33,10 @@ namespace pc_client
 
 		// Inherited via Texture
 		void Create(TextureCreateInfo * pTextureCreateInfo) override;
+
+		simul::crossplatform::Texture* GetSimulTexture()
+		{
+			return m_SimulTexture;
+		}
 	};
 }

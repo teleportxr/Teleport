@@ -15,6 +15,14 @@ template<class T>
 class ResourceManager
 {
 public:
+	//Struct to keep the resource and its metadata together.
+	struct ResourceData
+	{
+		std::shared_ptr<T> resource;
+		uint32_t postUseLifetime; //Milliseconds the resource should be kept alive after the last object has stopped using it.
+		uint32_t timeSinceLastUse; //Milliseconds since the data was last used by the session.
+	};
+
 	//Create a resource manager with the class specific function to free it from memory before destroying the resource.
 	ResourceManager(std::function<void(T&)> freeResourceFunction = nullptr);
 	~ResourceManager();
@@ -28,6 +36,9 @@ public:
 	//Returns whether the manager contains the resource.
 	bool Has(uid id) const;
 	
+	/// Returns the internal cache.
+	std::unordered_map<uid, ResourceData>& GetCache();
+
 	//Set the factor to adjust the lifetime of resources before freeing them; i.e. 0.5 would halve the lifetime of a resource in the manager.
 	void SetLifetimeFactor(float lifetimeFactor);
 
@@ -45,13 +56,6 @@ public:
 	//	deltaTimestamp : Milliseconds that have passed since the last update.
 	void Update(uint32_t deltaTimestamp);
 private:
-	//Struct to keep the resource and its metadata together.
-	struct ResourceData
-	{
-		std::shared_ptr<T> resource;
-		uint32_t postUseLifetime; //Milliseconds the resource should be kept alive after the last object has stopped using it.
-		uint32_t timeSinceLastUse; //Milliseconds since the data was last used by the session.
-	};
 
 	//Increases readability by obfuscating the full iterator definition.
 	typedef typename std::unordered_map<uid, ResourceManager<T>::ResourceData>::iterator mapIterator_t;
@@ -89,6 +93,12 @@ template<class T>
 bool ResourceManager<T>::Has(uid id) const
 {
 	return cachedItems.find(id) != cachedItems.end();
+}
+
+template<class T>
+inline std::unordered_map<uid, typename ResourceManager<T>::ResourceData>& ResourceManager<T>::GetCache()
+{
+	return cachedItems;
 }
 
 template<class T>

@@ -86,7 +86,7 @@ void PC_Texture::Create(TextureCreateInfo * pTextureCreateInfo)
 	m_CI = *pTextureCreateInfo;
 	//m_CI.size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;
 	//m_Data = data;
-	/*auto* rp = static_cast<PC_RenderPlatform*> (renderPlatform);
+	auto* rp = static_cast<PC_RenderPlatform*> (renderPlatform);
 	auto* srp = rp->GetSimulRenderPlatform();
 	m_SimulTexture = srp->CreateTexture();
 	auto pixelFormat = ToSimulPixelFormat(pTextureCreateInfo->format);
@@ -94,7 +94,8 @@ void PC_Texture::Create(TextureCreateInfo * pTextureCreateInfo)
 	bool rt = false;
 	bool ds = false;
 	int num_samp = 1;
-	m_SimulTexture->ensureTexture2DSizeAndFormat(srp, pTextureCreateInfo->width, pTextureCreateInfo->height, pixelFormat, computable, rt, ds, num_samp);*/
+	m_SimulTexture->ensureTexture2DSizeAndFormat(srp, pTextureCreateInfo->width, pTextureCreateInfo->height, pixelFormat, computable, rt, ds, num_samp);
+	m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel);
 }
 
 void PC_Texture::GenerateMips()

@@ -26,6 +26,8 @@
 
 #include "crossplatform/Material.h"
 
+#include "SCR_Class_PC_Impl/PC_Texture.h"
+
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
 
@@ -236,7 +238,7 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularTexture);
 }
 
-void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame)
+void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
 {
 	simul::crossplatform::DeviceContext	deviceContext;
 	deviceContext.setDefaultRenderTargets(renderTexture,
@@ -249,37 +251,37 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 	static simul::base::Timer timer;
 	static float last_t = 0.0f;
 	timer.UpdateTime();
-	if (last_t != 0.0f&&timer.TimeSum!= last_t)
+	if (last_t != 0.0f && timer.TimeSum != last_t)
 	{
-		framerate=1000.0f/(timer.TimeSum -last_t);
+		framerate = 1000.0f / (timer.TimeSum - last_t);
 	}
 	last_t = timer.TimeSum;
-	deviceContext.platform_context	= context;
-	deviceContext.renderPlatform	=renderPlatform;
-	deviceContext.viewStruct.view_id=view_id;
-	deviceContext.viewStruct.depthTextureStyle	=crossplatform::PROJECTION;
-	simul::crossplatform::SetGpuProfilingInterface(deviceContext,renderPlatform->GetGpuProfiler());
-	simul::base::SetProfilingInterface(GET_THREAD_ID(),&cpuProfiler);
+	deviceContext.platform_context = context;
+	deviceContext.renderPlatform = renderPlatform;
+	deviceContext.viewStruct.view_id = view_id;
+	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
+	simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
+	simul::base::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	cpuProfiler.SetMaxLevel(5);
 	cpuProfiler.StartFrame();
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "all")
 
-	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
-	
+		crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
+
 	hdrFramebuffer->Activate(deviceContext);
-	hdrFramebuffer->Clear(deviceContext,0.0f,0.0f,1.0f,0.f,reverseDepth?0.f:1.f);
+	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.0f, 1.0f, 0.f, reverseDepth ? 0.f : 1.f);
 
 	transparentEffect->UnbindTextures(deviceContext);
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	{
-		deviceContext.viewStruct.view=camera.MakeViewMatrix();
-		float aspect=(float)viewport.w/(float)viewport.h;
-		if(reverseDepth)
-			deviceContext.viewStruct.proj=camera.MakeDepthReversedProjectionMatrix(aspect);
+		deviceContext.viewStruct.view = camera.MakeViewMatrix();
+		float aspect = (float)viewport.w / (float)viewport.h;
+		if (reverseDepth)
+			deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
 		else
-			deviceContext.viewStruct.proj=camera.MakeProjectionMatrix(aspect);
+			deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
 		// MUST call init each frame.
 		deviceContext.viewStruct.Init();
 
@@ -291,24 +293,38 @@ void ClientRenderer::Render(int view_id,void* context,void* renderTexture,int w,
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 			cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", specularTexture);
 			AVSTextureHandle th = avsTextures[0];
-			AVSTexture &tx = *th;
-			AVSTextureImpl *ti = static_cast<AVSTextureImpl*>(&tx);
+			AVSTexture& tx = *th;
+			AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 			if (ti)
 			{
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-				cubemapClearEffect->Apply(deviceContext, RenderMode==1?"show_texture":"normal_view", 0);
+				cubemapClearEffect->Apply(deviceContext, RenderMode == 1 ? "show_texture" : "normal_view", 0);
 				renderPlatform->DrawQuad(deviceContext);
 				cubemapClearEffect->Unapply(deviceContext);
 			}
 		}
-
 		//RenderOpaqueTest(deviceContext);
 
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
 
 	}
-
+	{
+		auto& textures = resourceCreator.GetTextureManager()->GetCache();
+		static int tw = 32;
+		int x = 0, y = 0;
+		for (auto t : textures)
+		{
+			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
+			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
+			x += tw;
+			if (x > hdrFramebuffer->GetWidth() - tw)
+			{
+				x = 0;
+				y += tw;
+			}
+		}
+	}
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.44f);
 

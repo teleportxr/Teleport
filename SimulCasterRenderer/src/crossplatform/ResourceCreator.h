@@ -95,6 +95,10 @@ private:
 #define CHECK_SHAPE_UID(x) if (!SetAndCheckShapeUID(x)) { SCR_COUT("Invalid shape_uid.\n"); return; }
 
 public:
+	ResourceManager<scr::Texture>* GetTextureManager()
+	{
+		return m_TextureManager;
+	}
 
 private:
 	scr::API m_API;
