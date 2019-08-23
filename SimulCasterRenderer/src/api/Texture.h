@@ -7,7 +7,7 @@
 namespace scr
 {
 	//Interface for Texture
-	class Texture : APIObject
+	class Texture : public APIObject
 	{
 	public:
 		enum class Slot : uint32_t
@@ -44,11 +44,13 @@ namespace scr
 			RGBA8UI,									
 			RGBA8I,										
 			RGBA8_SNORM,								
-			RGBA8,										
+			RGBA8,
+
+			RGB10_A2UI,
+			RGB10_A2,
 			
-			R11F_G11F_B10F,								
-			RGB10_A2UI,									
-			RGB10_A2,									
+			RGB32F,
+			R11F_G11F_B10F,										
 			
 			RG32F,										
 			RG32UI,										

@@ -27,6 +27,7 @@ Transform::Transform()
 	m_Set = DescriptorSet({ m_SetLayout });
 	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 1, "u_ActorUBO", { m_UB.get(), 0, sizeof(TransformData) });
 }
+
 void Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
 {
 	m_Translation = translation;
@@ -34,6 +35,7 @@ void Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation,
 	m_Scale = scale;
 	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 }
+
 void Transform::UpdateModelUBO() const
 {
 	m_UB->Update(0, sizeof(TransformData), &m_TransformData);
