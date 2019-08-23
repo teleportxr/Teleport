@@ -372,9 +372,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
     }
 #if 1
     auto ctr=mNetworkSource.getCounterValues();
-    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f"
+    mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Streamed Actors: %d"
             , ctr.networkPacketsDropped, ctr.decoderPacketsDropped
-            ,frameRate,ctr.bandwidthKPS);
+            ,frameRate,ctr.bandwidthKPS, (uint64_t)mActorManager.m_Actors.size());
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -433,7 +433,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             geo.vertexBuffer = gl_vb->GetVertexID();
             geo.indexBuffer = gl_ib->GetIndexID();
             geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("stardard").topology);
+            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("standard").topology);
             geo.vertexCount = (int) gl_vb->GetVertexCount();
             geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
             geo.IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
@@ -441,8 +441,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
                                                                           : GL_UNSIGNED_BYTE;
 
             ovrSurfaceDef ovr_Actor;
-            std::string _actorName = std::to_string(actor.first);
-            ovr_Actor.surfaceName = std::string(_actorName.c_str());
+            std::string _actorName = std::string("Cube Test - UID: ") + std::to_string(actor.first);
+            ovr_Actor.surfaceName = _actorName;
             ovr_Actor.numInstances = 1;
             ovr_Actor.geo = geo;
 
