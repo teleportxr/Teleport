@@ -71,7 +71,7 @@ namespace scr
 		struct DescriptorImageInfo 
 		{
 			const Sampler*	sampler;
-			const Texture*	texture;
+			const std::shared_ptr<Texture> texture;
 		};
 		struct DescriptorBufferInfo 
 		{

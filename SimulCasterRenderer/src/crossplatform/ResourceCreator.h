@@ -37,16 +37,16 @@ public:
 	}
 
 	inline void AssociateResourceManagers(
-		ResourceManager<std::shared_ptr<scr::IndexBuffer>>* indexBufferManager,
-		ResourceManager<std::shared_ptr<scr::Shader>>* shaderManager,
+		ResourceManager<scr::IndexBuffer> *indexBufferManager,
+		ResourceManager<scr::Shader> *shaderManager,
 		ResourceManager<scr::Material> *materialManager,
-		ResourceManager<std::shared_ptr<scr::Texture>>* textureManager,
-		ResourceManager<std::shared_ptr<scr::UniformBuffer>>* uniformBufferManager,
-		ResourceManager<std::shared_ptr<scr::VertexBuffer>>* vertexBufferManager)
+		ResourceManager<scr::Texture> *textureManager,
+		ResourceManager<scr::UniformBuffer> *uniformBufferManager,
+		ResourceManager<scr::VertexBuffer> *vertexBufferManager)
 	{
 		m_IndexBufferManager = indexBufferManager;
 		m_ShaderManager = shaderManager;
-		this->materialManager = materialManager;
+		m_MaterialManager = materialManager;
 		m_TextureManager = textureManager;
 		m_UniformBufferManager = uniformBufferManager;
 		m_VertexBufferManager = vertexBufferManager;
@@ -102,12 +102,12 @@ private:
 	scr::RenderPlatform* m_pRenderPlatform;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
-	ResourceManager<std::shared_ptr<scr::IndexBuffer>>*		m_IndexBufferManager;
-	ResourceManager<scr::Material>							*materialManager;
-	ResourceManager<std::shared_ptr<scr::Shader>>*			m_ShaderManager;
-	ResourceManager<std::shared_ptr<scr::Texture>>*			m_TextureManager;
-	ResourceManager<std::shared_ptr<scr::UniformBuffer>>*	m_UniformBufferManager;
-	ResourceManager<std::shared_ptr<scr::VertexBuffer>>*	m_VertexBufferManager;
+	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;
+	ResourceManager<scr::Material> *m_MaterialManager;
+	ResourceManager<scr::Shader> *m_ShaderManager;
+	ResourceManager<scr::Texture> *m_TextureManager;
+	ResourceManager<scr::UniformBuffer> *m_UniformBufferManager;
+	ResourceManager<scr::VertexBuffer> *m_VertexBufferManager;
 
 	scr::ActorManager* m_pActorManager;
 

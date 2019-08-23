@@ -100,12 +100,12 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
 	
 	scr::ActorManager actorManager;
-	ResourceManager<std::shared_ptr<scr::IndexBuffer>> indexBufferManager;
-	ResourceManager<std::shared_ptr<scr::Shader>> shaderManager;
+	ResourceManager<scr::IndexBuffer> indexBufferManager;
+	ResourceManager<scr::Shader> shaderManager;
 	ResourceManager<scr::Material> materialManager;
-	ResourceManager<std::shared_ptr<scr::Texture>> textureManager;
-	ResourceManager<std::shared_ptr<scr::UniformBuffer>> uniformBufferManager;
-	ResourceManager<std::shared_ptr<scr::VertexBuffer>> vertexBufferManager;
+	ResourceManager<scr::Texture> textureManager;
+	ResourceManager<scr::UniformBuffer> uniformBufferManager;
+	ResourceManager<scr::VertexBuffer> vertexBufferManager;
 public:
 	ClientRenderer();
 	~ClientRenderer();
