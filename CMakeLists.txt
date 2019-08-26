@@ -13,14 +13,14 @@ SET(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG")
 
 set(CONFIG_NAME $<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
-message(STATUS "CONFIG_NAME ${CONFIG_NAME}")
+#message(STATUS "CONFIG_NAME ${CONFIG_NAME}")
 
 function(set_target_runtime targname rt)
 	# Default to statically-linked runtime.
 	if("${rt}" STREQUAL "")
 		set(rt "static")
 	endif()
-	message(STATUS "rt ${rt}")
+	#message(STATUS "rt ${rt}")
 	if(${rt} STREQUAL "static")
 		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
 	else()	

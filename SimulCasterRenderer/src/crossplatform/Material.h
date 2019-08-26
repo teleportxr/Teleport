@@ -8,12 +8,12 @@
 
 namespace scr
 {
-	class Material
+	class Material :public APIObject
 	{
 	public:
 		struct MaterialParameter
 		{
-			std::shared_ptr<Texture> texture;	//Texture Reference.
+			Texture *texture;	//Texture Reference.
 			vec2 texCoordsScalar[4];			//Scales the texture co-ordinates for tiling; one per channel .
 			vec4 textureOutputScalar;			//Scales the output of the texture per channel.
 		};
@@ -56,7 +56,7 @@ namespace scr
 		DescriptorSet m_Set;
 	
 	public:
-		Material(MaterialCreateInfo* pMaterialCreateInfo);
+		Material(RenderPlatform* r,MaterialCreateInfo* pMaterialCreateInfo);
 
 		void UpdateMaterialUB();
 
