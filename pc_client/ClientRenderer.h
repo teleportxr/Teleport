@@ -74,7 +74,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	// A simple example mesh to draw as transparent
 	simul::crossplatform::Mesh *transparentMesh;
 	simul::crossplatform::MeshRenderer *meshRenderer;
-	simul::crossplatform::Effect *transparentEffect;
+	simul::crossplatform::Effect *pbrEffect;
 	simul::crossplatform::Effect *cubemapClearEffect;
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	simul::crossplatform::ConstantBuffer<SolidConstants> solidConstants;
@@ -99,13 +99,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	avs::Timestamp platformStartTimestamp; //Timestamp of when the system started.
 	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
 	
-	scr::ActorManager actorManager;
-	ResourceManager<scr::IndexBuffer> indexBufferManager;
-	ResourceManager<scr::Shader> shaderManager;
-	ResourceManager<scr::Material> materialManager;
-	ResourceManager<scr::Texture> textureManager;
-	ResourceManager<scr::UniformBuffer> uniformBufferManager;
-	ResourceManager<scr::VertexBuffer> vertexBufferManager;
+	scr::ResourceManagers resourceManagers;
 public:
 	ClientRenderer();
 	~ClientRenderer();
@@ -114,7 +108,7 @@ public:
 	void OnVideoStreamClosed() override;
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
-	void GenerateCubemaps();
+	void RenderLocalActors(simul::crossplatform::DeviceContext &);
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
 	void RenderOpaqueTest(simul::crossplatform::DeviceContext &deviceContext);
@@ -165,4 +159,5 @@ public:
 	avs::DecoderParams decoderParams = {};
 	avs::Pipeline pipeline;
 	int RenderMode;
+	std::shared_ptr<scr::Material> mFlatColourMaterial;
 };

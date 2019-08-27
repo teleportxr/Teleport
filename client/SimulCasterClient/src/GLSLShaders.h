@@ -92,7 +92,7 @@ precision highp float;
 layout(location = 0) in vec3 a_Position;
 
 //From Application SR
-layout(std140, binding = 0) uniform CameraUB
+/*layout(std140, binding = 0) uniform CameraUB
 {
 	mat4 u_ProjectionMatrix;
 	mat4 u_ViewMatrix;
@@ -104,7 +104,7 @@ layout(std140, binding = 0) uniform CameraUB
 layout(std140, binding = 1) uniform TransformUB
 {
 	mat4 u_ModelMatrix;
-}model;
+}model;*/
 
 void main()
 {

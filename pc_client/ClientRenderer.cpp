@@ -81,24 +81,18 @@ ClientRenderer::ClientRenderer():
 	hDRRenderer(nullptr),
 	meshRenderer(nullptr),
 	transparentMesh(nullptr),
-	transparentEffect(nullptr),
+	pbrEffect(nullptr),
 	cubemapClearEffect(nullptr),
 	specularTexture(nullptr),
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
 	sessionClient(this),
-	RenderMode(0),
-	indexBufferManager(&scr::IndexBuffer::Destroy),
-	shaderManager(nullptr),
-	materialManager(nullptr),
-	textureManager(&scr::Texture::Destroy),
-	uniformBufferManager(&scr::UniformBuffer::Destroy),
-	vertexBufferManager(&scr::VertexBuffer::Destroy)
+	RenderMode(0)
 {
 	avsTextures.resize(NumStreams);
 	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);
-	resourceCreator.AssociateResourceManagers(&indexBufferManager, &shaderManager, &materialManager, &textureManager, &uniformBufferManager, &vertexBufferManager);
-	resourceCreator.AssociateActorManager(&actorManager);
+	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager);
+	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
 
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
@@ -147,7 +141,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	RecompileShaders();
 
 	solidConstants.RestoreDeviceObjects(renderPlatform);
-	solidConstants.LinkToEffect(transparentEffect,"SolidConstants");
+	solidConstants.LinkToEffect(pbrEffect,"SolidConstants");
 	cubemapConstants.RestoreDeviceObjects(renderPlatform);
 	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
 	cameraConstants.RestoreDeviceObjects(renderPlatform);
@@ -164,9 +158,9 @@ void ClientRenderer::RecompileShaders()
 	renderPlatform->RecompileShaders();
 	hDRRenderer->RecompileShaders();
 	meshRenderer->RecompileShaders();
-	delete transparentEffect;
+	delete pbrEffect;
 	delete cubemapClearEffect;
-	transparentEffect = renderPlatform->CreateEffect("solid");
+	pbrEffect = renderPlatform->CreateEffect("solid");
 	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
 }
 
@@ -189,7 +183,7 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 /// Render an example transparent object.
 void ClientRenderer::RenderOpaqueTest(crossplatform::DeviceContext &deviceContext)
 {
-	if(!transparentEffect)
+	if(!pbrEffect)
 		return;
 	generator.seed(12);
 	static float spd=20.0f;
@@ -223,7 +217,7 @@ base::DefaultProfiler cpuProfiler;
 /// Render an example transparent object.
 void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceContext)
 {
-	if (!transparentEffect)
+	if (!pbrEffect)
 		return;
 	// Vertical position
 	static float z = 500.0f;
@@ -274,7 +268,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	hdrFramebuffer->Activate(deviceContext);
 	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.0f, 1.0f, 0.f, reverseDepth ? 0.f : 1.f);
 
-	transparentEffect->UnbindTextures(deviceContext);
+	pbrEffect->UnbindTextures(deviceContext);
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	{
 		deviceContext.viewStruct.view = camera.MakeViewMatrix();
@@ -320,7 +314,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		for (auto t : textures)
 		{
 			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
-			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture(),vec4(1.0f,0,0,1.0f));
+			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
 			x += tw;
 			if (x > hdrFramebuffer->GetWidth() - tw)
 			{
@@ -329,6 +323,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			}
 		}
 	}
+	RenderLocalActors(deviceContext);
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.44f);
 
@@ -367,6 +362,49 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	frame_number++;
 }
 
+
+void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
+{
+	for (auto& actor : resourceManagers.mActorManager.m_Actors)
+	{
+		const scr::Transform* tr = actor.second->GetTransform();
+		const scr::Mesh* mesh = actor.second->GetMesh();
+		const scr::Material* material = actor.second->GetMaterial();
+
+		const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb.get());
+		const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(mesh->GetMeshCreateInfo().ib.get());
+
+		const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
+
+		const scr::Material::MaterialCreateInfo& m = material->GetMaterialCreateInfoConst();
+
+		simul::crossplatform::LayoutDesc desc[] =
+		{
+			{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
+			//{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 12, false, 0 },
+			//{ "TEXCOORD", 1, crossplatform::RGB_32_FLOAT, 0, 20, false, 0 },
+		};
+		simul::crossplatform::Layout* layout = renderPlatform->CreateLayout(
+												sizeof(desc)/sizeof(simul::crossplatform::LayoutDesc)
+												,desc);
+		cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+		pbrEffect->SetConstantBuffer(deviceContext, &solidConstants);
+		pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+		pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
+ 		renderPlatform->SetLayout(deviceContext, layout);
+		 
+		renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
+		renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
+		renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
+		pbrEffect->Unapply(deviceContext);
+
+		float heightOffset = -80.0F;
+		scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
+		scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
+		scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix;// *ic_mmm.pTransform->GetTransformMatrix();
+		delete layout;
+	}
+}
 void ClientRenderer::InvalidateDeviceObjects()
 {
 	for (auto i : avsTextures)
@@ -378,11 +416,11 @@ void ClientRenderer::InvalidateDeviceObjects()
 		}
 	}
 	avsTextures.clear();
-	if(transparentEffect)
+	if(pbrEffect)
 	{
-		transparentEffect->InvalidateDeviceObjects();
-		delete transparentEffect;
-		transparentEffect=nullptr;
+		pbrEffect->InvalidateDeviceObjects();
+		delete pbrEffect;
+		pbrEffect=nullptr;
 	}
 	if(hDRRenderer)
 		hDRRenderer->InvalidateDeviceObjects();
@@ -398,7 +436,7 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(meshRenderer);
 	SAFE_DELETE(hDRRenderer);
 	SAFE_DELETE(hdrFramebuffer);
-	SAFE_DELETE(transparentEffect);
+	SAFE_DELETE(pbrEffect);
 	SAFE_DELETE(cubemapClearEffect);
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularTexture);
@@ -430,19 +468,15 @@ void ClientRenderer::Update()
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	uint32_t timeElapsed = (timestamp - previousTimestamp);
 
-	indexBufferManager.Update(timeElapsed);
-	shaderManager.Update(timeElapsed);
-	materialManager.Update(timeElapsed);
-	textureManager.Update(timeElapsed);
-	uniformBufferManager.Update(timeElapsed);
-	vertexBufferManager.Update(timeElapsed);
+	// disabled because it deletes objects that are in use!
+	//resourceManagers.Update(timeElapsed);
 
 	previousTimestamp = timestamp;
 }
 
 void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 {
-    WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
+	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
 
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
@@ -517,7 +551,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 
 void ClientRenderer::OnVideoStreamClosed()
 {
-    WARN("VIDEO STREAM CLOSED");
+	WARN("VIDEO STREAM CLOSED");
 	pipeline.deconfigure();
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
@@ -575,8 +609,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 void ClientRenderer::OnMouse(bool bLeftButtonDown
 			,bool bRightButtonDown
 			,bool bMiddleButtonDown
-            ,int nMouseWheelDelta
-            ,int xPos
+			,int nMouseWheelDelta
+			,int xPos
 			,int yPos )
 {
 	mouseCameraInput.MouseButtons
