@@ -1,3 +1,6 @@
 [submodule "libavstream"]
 	path = libavstream
 	url = git@github.com:simul/libavstream.git
+[submodule "thirdparty/basis_universal"]
+	path = thirdparty/basis_universal
+	url = https://github.com/BinomialLLC/basis_universal.git

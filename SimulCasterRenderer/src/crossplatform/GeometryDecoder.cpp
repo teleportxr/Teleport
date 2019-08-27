@@ -336,10 +336,9 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 		texture.mipCount = Next4B;
 		texture.format = static_cast<avs::TextureFormat>(Next4B);
 
-		size_t textureSize = Next8B;
-
-		texture.data = new unsigned char[textureSize];
-		copy<unsigned char>(texture.data, m_Buffer.data(), m_BufferOffset, textureSize);
+		texture.dataSize = Next4B;
+		texture.data = new unsigned char[texture.dataSize];
+		copy<unsigned char>(texture.data, m_Buffer.data(), m_BufferOffset, texture.dataSize);
 
 		texture.sampler_uid = Next8B;
 

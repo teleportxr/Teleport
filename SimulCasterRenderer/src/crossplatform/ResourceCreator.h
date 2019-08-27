@@ -8,9 +8,18 @@
 #include "ActorManager.h"
 #include "api/RenderPlatform.h"
 
+#include "transcoder/basisu_transcoder.h"
+
 namespace scr
 {
 	class Material;
+}
+
+namespace basist
+{
+	class etc1_global_selector_codebook;
+	class basisu_transcoder;
+	enum transcoder_texture_format;
 }
 
 #if 0
@@ -104,6 +113,10 @@ private:
 	scr::API m_API;
 	avs::uid shape_uid = (avs::uid)-1;
 	scr::RenderPlatform* m_pRenderPlatform;
+
+	basist::etc1_global_selector_codebook basis_codeBook;
+	basist::basisu_transcoder basis_transcoder;
+	basist::transcoder_texture_format basis_textureFormat;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
 	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;

@@ -319,7 +319,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		int x = 0, y = 0;
 		for (auto t : textures)
 		{
-			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
+			std::shared_ptr<pc_client::PC_Texture> pct = std::dynamic_pointer_cast<pc_client::PC_Texture>(t.second.resource);
 			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture(),vec4(1.0f,0,0,1.0f));
 			x += tw;
 			if (x > hdrFramebuffer->GetWidth() - tw)
