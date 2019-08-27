@@ -3,7 +3,7 @@
 #include "PC_RenderPlatform.h"
 #include "Simul/Platform/CrossPlatform/RenderPlatform.h"
 #include "Simul/Platform/CrossPlatform/Texture.h"
-
+#include "Log.h"
 using namespace pc_client;
 using namespace scr;
 
@@ -68,6 +68,8 @@ simul::crossplatform::PixelFormat ToSimulPixelFormat(scr::Texture::Format f)
 
 void PC_Texture::Destroy()
 {
+	delete m_SimulTexture;
+	m_SimulTexture = nullptr;
 }
 
 void PC_Texture::Bind() const
@@ -94,6 +96,11 @@ void PC_Texture::Create(TextureCreateInfo * pTextureCreateInfo)
 	bool rt = false;
 	bool ds = false;
 	int num_samp = 1;
+	if(pTextureCreateInfo->size !=(size_t)(pTextureCreateInfo->width*pTextureCreateInfo->height* pTextureCreateInfo->bytesPerPixel))
+	{
+		WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo->width , pTextureCreateInfo->height, pTextureCreateInfo->bytesPerPixel, pTextureCreateInfo->size);
+		return;
+	}
 	m_SimulTexture->ensureTexture2DSizeAndFormat(srp, pTextureCreateInfo->width, pTextureCreateInfo->height, pixelFormat, computable, rt, ds, num_samp);
 	m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel);
 }

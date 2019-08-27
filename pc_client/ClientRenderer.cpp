@@ -17,6 +17,7 @@
 
 #include "SessionClient.h"
 #include "Config.h"
+#include "Log.h"
 
 #include <algorithm>
 #include <random>
@@ -301,6 +302,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->Apply(deviceContext, RenderMode == 1 ? "show_texture" : "normal_view", 0);
 				renderPlatform->DrawQuad(deviceContext);
 				cubemapClearEffect->Unapply(deviceContext);
+
+
+				renderPlatform->DrawTexture(deviceContext,0, 0, hdrFramebuffer->GetWidth()/2, hdrFramebuffer->GetHeight()/2, ti->texture);
 			}
 		}
 		//RenderOpaqueTest(deviceContext);
@@ -316,7 +320,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		for (auto t : textures)
 		{
 			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
-			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
+			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture(),vec4(1.0f,0,0,1.0f));
 			x += tw;
 			if (x > hdrFramebuffer->GetWidth() - tw)
 			{
