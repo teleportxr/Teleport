@@ -31,6 +31,42 @@ namespace basist
 #endif
 #endif
 
+namespace scr
+{
+    struct ResourceManagers
+    {
+        ResourceManagers() :
+                mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
+                mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
+                mUniformBufferManager(&scr::UniformBuffer::Destroy),
+                mVertexBufferManager(&scr::VertexBuffer::Destroy)
+        {
+        }
+
+        ~ResourceManagers()
+        {
+        }
+
+        void Update(uint32_t timeElapsed)
+        {
+            mIndexBufferManager.Update(timeElapsed);
+            mShaderManager.Update(timeElapsed);
+            mMaterialManager.Update(timeElapsed);
+            mTextureManager.Update(timeElapsed);
+            mUniformBufferManager.Update(timeElapsed);
+            mVertexBufferManager.Update(timeElapsed);
+        }
+
+        scr::ActorManager                                    mActorManager;
+        ResourceManager<std::shared_ptr<scr::IndexBuffer>>   mIndexBufferManager;
+        ResourceManager<std::shared_ptr<scr::Shader>>        mShaderManager;
+        ResourceManager< std::shared_ptr<scr::Material>>                       mMaterialManager;
+        ResourceManager<std::shared_ptr<scr::Texture>>       mTextureManager;
+        ResourceManager<std::shared_ptr<scr::UniformBuffer>> mUniformBufferManager;
+        ResourceManager<std::shared_ptr<scr::VertexBuffer>>  mVertexBufferManager;
+    };
+}
+
 /*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.*/
 class ResourceCreator final : public avs::GeometryTargetBackendInterface
 {
@@ -46,16 +82,16 @@ public:
 	}
 
 	inline void AssociateResourceManagers(
-		ResourceManager<scr::IndexBuffer> *indexBufferManager,
-		ResourceManager<scr::Shader> *shaderManager,
-		ResourceManager<scr::Material> *materialManager,
-		ResourceManager<scr::Texture> *textureManager,
-		ResourceManager<scr::UniformBuffer> *uniformBufferManager,
-		ResourceManager<scr::VertexBuffer> *vertexBufferManager)
+		ResourceManager<std::shared_ptr<scr::IndexBuffer>>* indexBufferManager,
+		ResourceManager<std::shared_ptr<scr::Shader>>* shaderManager,
+		ResourceManager< std::shared_ptr<scr::Material>> *materialManager,
+		ResourceManager<std::shared_ptr<scr::Texture>>* textureManager,
+		ResourceManager<std::shared_ptr<scr::UniformBuffer>>* uniformBufferManager,
+		ResourceManager<std::shared_ptr<scr::VertexBuffer>>* vertexBufferManager)
 	{
 		m_IndexBufferManager = indexBufferManager;
 		m_ShaderManager = shaderManager;
-		m_MaterialManager = materialManager;
+		m_materialManager = materialManager;
 		m_TextureManager = textureManager;
 		m_UniformBufferManager = uniformBufferManager;
 		m_VertexBufferManager = vertexBufferManager;
@@ -104,7 +140,7 @@ private:
 #define CHECK_SHAPE_UID(x) if (!SetAndCheckShapeUID(x)) { SCR_COUT("Invalid shape_uid.\n"); return; }
 
 public:
-	ResourceManager<scr::Texture>* GetTextureManager()
+	ResourceManager<std::shared_ptr<scr::Texture>>* GetTextureManager()
 	{
 		return m_TextureManager;
 	}
@@ -119,12 +155,12 @@ private:
 	basist::transcoder_texture_format basis_textureFormat;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
-	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;
-	ResourceManager<scr::Material> *m_MaterialManager;
-	ResourceManager<scr::Shader> *m_ShaderManager;
-	ResourceManager<scr::Texture> *m_TextureManager;
-	ResourceManager<scr::UniformBuffer> *m_UniformBufferManager;
-	ResourceManager<scr::VertexBuffer> *m_VertexBufferManager;
+	ResourceManager<std::shared_ptr<scr::IndexBuffer>>*		m_IndexBufferManager;
+	ResourceManager< std::shared_ptr<scr::Material>>*							m_materialManager;
+	ResourceManager<std::shared_ptr<scr::Shader>>*			m_ShaderManager;
+	ResourceManager<std::shared_ptr<scr::Texture>>*			m_TextureManager;
+	ResourceManager<std::shared_ptr<scr::UniformBuffer>>*	m_UniformBufferManager;
+	ResourceManager<std::shared_ptr<scr::VertexBuffer>>*	m_VertexBufferManager;
 
 	scr::ActorManager* m_pActorManager;
 

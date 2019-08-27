@@ -28,20 +28,32 @@ class Application : public OVR::VrAppInterface, public SessionCommandInterface, 
 {
 public:
 	Application();
-	virtual	~Application();
 
-	virtual void Configure(OVR::ovrSettings& settings) override;
-	virtual void EnteredVrMode(const OVR::ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI) override;
+	virtual    ~Application();
+
+	virtual void Configure(OVR::ovrSettings &settings) override;
+
+	virtual void EnteredVrMode(
+			const OVR::ovrIntentType intentType, const char *intentFromPackage,
+			const char *intentJSON, const char *intentURI) override;
+
 	virtual void LeavingVrMode() override;
-	virtual bool OnKeyEvent(const int keyCode, const int repeatCount, const OVR::KeyEventType eventType);
-	virtual OVR::ovrFrameResult Frame(const OVR::ovrFrameInput& vrFrame) override;
 
-	class OVR::ovrLocale& GetLocale() { return *mLocale; }
+	virtual bool
+	OnKeyEvent(const int keyCode, const int repeatCount, const OVR::KeyEventType eventType);
+
+	virtual OVR::ovrFrameResult Frame(const OVR::ovrFrameInput &vrFrame) override;
+
+	class OVR::ovrLocale &GetLocale()
+	{
+		return *mLocale;
+	}
 
 	bool InitializeController();
 
 	/* Begin SessionCommandInterface */
 	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) override;
+
 	virtual void OnVideoStreamClosed() override;
 	/* End SessionCommandInterface */
 
@@ -50,63 +62,56 @@ public:
 	/* End DecodeEventInterface */
 
 private:
-	static void avsMessageHandler(avs::LogSeverity severity, const char* msg, void*);
+	static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
 
-	avs::Context mContext;
+	avs::Context  mContext;
 	avs::Pipeline mPipeline;
 
-	avs::Decoder mDecoder;
-	avs::Surface mSurface;
+	avs::Decoder       mDecoder;
+	avs::Surface       mSurface;
 	avs::NetworkSource mNetworkSource;
-    bool mPipelineConfigured;
+	bool               mPipelineConfigured;
 
-    static constexpr size_t   NumStreams = 1;
-    static constexpr bool     GeoStream  = true;
+	static constexpr size_t NumStreams = 1;
+	static constexpr bool   GeoStream  = true;
 
 	scc::GL_RenderPlatform renderPlatform;
-    GeometryDecoder geometryDecoder;
-	ResourceCreator resourceCreator;
-	avs::GeometryDecoder avsGeometryDecoder;
-	avs::GeometryTarget avsGeometryTarget;
+	GeometryDecoder        geometryDecoder;
+	ResourceCreator        resourceCreator;
+	avs::GeometryDecoder   avsGeometryDecoder;
+	avs::GeometryTarget    avsGeometryTarget;
 
 	struct RenderConstants
 	{
 		avs::vec4 colourOffsetScale;
 		avs::vec4 depthOffsetScale;
 	};
-	RenderConstants renderConstants;
+	RenderConstants        renderConstants;
 
-	OVR::ovrSoundEffectContext* mSoundEffectContext;
-	OVR::OvrGuiSys::SoundEffectPlayer* mSoundEffectPlayer;
+	OVR::ovrSoundEffectContext        *mSoundEffectContext;
+	OVR::OvrGuiSys::SoundEffectPlayer *mSoundEffectPlayer;
 
-	OVR::OvrGuiSys* mGuiSys;
-	OVR::ovrLocale* mLocale;
+	OVR::OvrGuiSys *mGuiSys;
+	OVR::ovrLocale *mLocale;
 
 	OVR::OvrSceneView mScene;
 
-    OVR::ovrSurfaceDef mVideoSurfaceDef;
-	OVR::GlProgram mVideoSurfaceProgram;
-	OVR::GlTexture mVideoTexture;
-	OVR::SurfaceTexture* mVideoSurfaceTexture;
-    ovrMobile *mOvrMobile;
+	OVR::ovrSurfaceDef mVideoSurfaceDef;
+	OVR::GlProgram     mVideoSurfaceProgram;
+	OVR::GlTexture     mVideoTexture;
+	OVR::SurfaceTexture *mVideoSurfaceTexture;
+	ovrMobile     *mOvrMobile;
 	SessionClient mSession;
 
 	std::vector<float> mRefreshRates;
 
 	ovrDeviceID mControllerID;
-	int mControllerIndex;
+	//int         mControllerIndex;
 	ovrVector2f mTrackpadDim;
 
 	int mNumPendingFrames = 0;
 
-	scr::ActorManager mActorManager;
-    ResourceManager<std::shared_ptr<scr::IndexBuffer>> mIndexBufferManager;
-    ResourceManager<std::shared_ptr<scr::Shader>> mShaderManager;
-	ResourceManager<scr::Material> mMaterialManager;
-    ResourceManager<std::shared_ptr<scr::Texture>> mTextureManager;
-    ResourceManager<std::shared_ptr<scr::UniformBuffer>> mUniformBufferManager;
-    ResourceManager<std::shared_ptr<scr::VertexBuffer>> mVertexBufferManager;
-
+	scr::ResourceManagers resourceManagers;
     //Clientside Renderering Objects
     scc::GL_DeviceContext mDeviceContext;
     scc::GL_Effect mFlatColourEffect;
@@ -117,7 +122,7 @@ private:
 	{
 		for(std::map<avs::uid, OVR::ovrSurfaceDef>::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
 		{
-			if(mActorManager.m_Actors.find(it->first) == mActorManager.m_Actors.end())
+			if(resourceManagers.mActorManager.m_Actors.find(it->first) == resourceManagers.mActorManager.m_Actors.end())
 			{
 				mOVRActors.erase(it);
 			}

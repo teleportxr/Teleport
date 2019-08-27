@@ -28,6 +28,16 @@ namespace pc_client
 
 		bool ResourceInUse(int timeout) override {return true;}
 
+		simul::crossplatform::Buffer *GetSimulVertexBuffer()
+		{
+			return m_SimulBuffer;
+		}
+
+		const simul::crossplatform::Buffer* GetSimulVertexBuffer() const
+		{
+			return m_SimulBuffer;
+		}
+
 		// Inherited via VertexBuffer
 		void Create(VertexBufferCreateInfo * pVertexBufferCreateInfo) override;
 	};

@@ -27,6 +27,15 @@ namespace pc_client
 
 		bool ResourceInUse(int timeout) override {return true;}
 
+		simul::crossplatform::Buffer* GetSimulIndexBuffer()
+		{
+			return m_SimulBuffer;
+		}
+		const simul::crossplatform::Buffer* GetSimulIndexBuffer() const
+		{
+			return m_SimulBuffer;
+		}
+
 		// Inherited via IndexBuffer
 		void Create(IndexBufferCreateInfo * pIndexBufferCreateInfo) override;
 	};

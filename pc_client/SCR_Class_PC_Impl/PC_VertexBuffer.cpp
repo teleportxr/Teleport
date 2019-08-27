@@ -144,7 +144,7 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCr
 	simul::crossplatform::Layout layout;
 	size_t numAttr = m_CI.layout->m_Attributes.size();
 	simul::crossplatform::LayoutDesc *desc = new simul::crossplatform::LayoutDesc[numAttr];
-	// e.g.
+	// e.g. 
 	//	{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
 	int byteOffset = 0;
 	for (size_t i = 0; i < numAttr; i++)
