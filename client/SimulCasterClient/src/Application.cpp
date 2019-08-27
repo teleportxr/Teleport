@@ -430,18 +430,22 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             //gl_vb->CreateVAO(gl_ib->GetIndexID());
 
             std::vector<Vector3f> vertices(gl_vb->GetVertexCount());
-            memcpy(vertices.data(), gl_vb->GetVertexCreateInfo().data, gl_vb->GetVertexCreateInfo().size);
+            memcpy(vertices.data(), gl_vb->GetVertexBufferCreateInfo().data, gl_vb->GetVertexBufferCreateInfo().size);
             std::vector<uint16_t> indices((int)gl_ib->GetIndexBufferCreateInfo().indexCount);
-            memcpy(indices.data(), gl_ib->GetIndexBufferCreateInfo().data, gl_ib->GetIndexBufferCreateInfo().indexCount * 2);
+            memcpy(indices.data(), gl_ib->GetIndexBufferCreateInfo().data, gl_ib->GetIndexBufferCreateInfo().indexCount * gl_ib->GetIndexBufferCreateInfo().stride);
+
+            for(Vector3f& vertex : vertices)
+                OVR_WARN("%f, %f, %f", vertex.x, vertex.y, vertex.z);
 
             VertexAttribs va = {};
             va.position = vertices;
 
             GlGeometry geo(va, indices);
+            GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
             /*geo.vertexBuffer = gl_vb->GetVertexID();
             geo.indexBuffer = gl_ib->GetIndexID();
             geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("stardard").topology);
+            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("standard").topology);
             geo.vertexCount = (int) gl_vb->GetVertexCount();
             geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;*/
             //Can't set static member: GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;

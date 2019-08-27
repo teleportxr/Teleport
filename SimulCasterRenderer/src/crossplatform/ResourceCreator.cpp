@@ -153,15 +153,17 @@ avs::Result ResourceCreator::Assemble()
 	if (m_Weights)	{ layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
 	layout->CalculateStride();
 
-	size_t interleavedVBSize = 0;
-	std::unique_ptr<float[]> interleavedVB = nullptr;
-	interleavedVBSize = layout->m_Stride * m_VertexCount;
-	interleavedVB = std::make_unique<float[]>(interleavedVBSize);
+	size_t interleavedVBSize = layout->m_Stride * m_VertexCount;
+	size_t indicesSize = m_IndexCount * m_IndexSize;
+
+	std::unique_ptr<float[]> interleavedVB = std::make_unique<float[]>(interleavedVBSize);
+	std::unique_ptr<uint8_t[]> _indices = std::make_unique<uint8_t[]>(indicesSize);
+	memcpy(_indices.get(), m_Indices, indicesSize);
 
 	for (size_t i = 0; i < m_VertexCount; i++)
 	{
 		size_t intraStrideOffset = 0;
-		if(m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Vertices + i, sizeof(avs::vec3));intraStrideOffset +=3;}
+		if(m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Vertices + i, sizeof(avs::vec3));intraStrideOffset +=3;}
 		if (m_TangentNormals)
 		{
 			avs::vec3 normal;
@@ -192,21 +194,21 @@ avs::Result ResourceCreator::Assemble()
 				normal.y = n8.y / 32767.0f;
 				normal.z = n8.z / 32767.0f;
 			}
-			memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset,&normal, sizeof(avs::vec3));
+			memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset,&normal, sizeof(avs::vec3));
 			intraStrideOffset += 3;
-			memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset,&tangent , sizeof(avs::vec4));
+			memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset,&tangent , sizeof(avs::vec4));
 			intraStrideOffset += 4;
 		}
 		else
 		{
-			if (m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Normals + i, sizeof(avs::vec3));	intraStrideOffset += 3; }
-			if (m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Tangents + i, sizeof(avs::vec4)); intraStrideOffset += 4; }
+			if (m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Normals + i, sizeof(avs::vec3));	intraStrideOffset += 3; }
+			if (m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Tangents + i, sizeof(avs::vec4)); intraStrideOffset += 4; }
 		}
-		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV0s + i, sizeof(avs::vec2));	intraStrideOffset +=2;}
-		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_UV1s + i, sizeof(avs::vec2));	intraStrideOffset +=2;}
-		if(m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Colors + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
-		if(m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Joints + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
-		if(m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride * i) + intraStrideOffset, m_Weights + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
+		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_UV0s + i, sizeof(avs::vec2));	intraStrideOffset +=2;}
+		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_UV1s + i, sizeof(avs::vec2));	intraStrideOffset +=2;}
+		if(m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Colors + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
+		if(m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Joints + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
+		if(m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Weights + i, sizeof(avs::vec4));	intraStrideOffset +=4;}
 	}
 
 	if (interleavedVBSize == 0 || interleavedVB == nullptr || m_IndexCount == 0 || m_Indices == nullptr)
@@ -229,7 +231,7 @@ avs::Result ResourceCreator::Assemble()
 	ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
 	ib_ci.indexCount = m_IndexCount;
 	ib_ci.stride = m_IndexSize;
-	ib_ci.data = m_Indices;
+	ib_ci.data = _indices.get();
 	ib->Create(&ib_ci);
 
 	Mesh::MeshCreateInfo mesh_ci;

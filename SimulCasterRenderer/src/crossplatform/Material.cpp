@@ -49,9 +49,9 @@ Material::Material(MaterialCreateInfo* pMaterialCreateInfo)
 	m_SetLayout.AddBinding(3, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	m_Set = DescriptorSet({ m_SetLayout });
-	m_Set.AddImage(0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse",  { m_CI.diffuse.texture->GetSampler(), m_CI.diffuse.texture });
-	m_Set.AddImage(0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",   { m_CI.normal.texture->GetSampler(), m_CI.normal.texture });
-	m_Set.AddImage(0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture->GetSampler(), m_CI.combined.texture });
+	m_Set.AddImage(0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse",  { m_CI.diffuse.texture != nullptr ? m_CI.diffuse.texture->GetSampler() : nullptr, m_CI.diffuse.texture });
+	m_Set.AddImage( 0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",  { m_CI.normal.texture  != nullptr ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
+	m_Set.AddImage(0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture != nullptr ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });
 	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 3, "u_MaterialData", { m_UB.get(), 0, sizeof(MaterialData) });
 }
 
