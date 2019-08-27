@@ -623,7 +623,7 @@ ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const std::vector<ovrDrawSu
 			}
 			else
 			{
-				glDrawElements( surfaceDef.geo.primitiveType, surfaceDef.geo.indexCount, surfaceDef.geo.IndexType, NULL );
+				glDrawElements( surfaceDef.geo.primitiveType, surfaceDef.geo.indexCount, GL_UNSIGNED_SHORT, NULL );
 			}
 		}
 
