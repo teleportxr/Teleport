@@ -27,7 +27,7 @@ namespace scc
 
 		inline const GLuint& GetVertexID() const { return m_VertexID; }
 		inline const GLuint& GetVertexArrayID() const { return m_VertexArrayID; }
-		inline const VertexBufferCreateInfo& GetVertexCreateInfo() const {return m_CI;}
+		inline const VertexBufferCreateInfo& GetVertexBufferCreateInfo() const {return m_CI;}
 
 	public:
 		//Assume an interleaved VBO;

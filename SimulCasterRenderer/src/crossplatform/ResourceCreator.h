@@ -166,7 +166,7 @@ private:
 	const avs::vec4* m_Weights		= nullptr;
 	const unsigned char* m_Indices	= nullptr;
 
-	const uint8_t *m_TangentNormals =nullptr;
+	const uint8_t* m_TangentNormals = nullptr;
 	size_t m_TangentNormalSize = 0;
 
 	static std::vector<std::pair<avs::uid, avs::uid>> m_MeshMaterialUIDPairs;
