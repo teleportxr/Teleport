@@ -71,6 +71,7 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	{
 		return decodeNode(target);
 	}
+
 	default:
 	{ 
 		return avs::Result::GeometryDecoder_InvalidPayload;

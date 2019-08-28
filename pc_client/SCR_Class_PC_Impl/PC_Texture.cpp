@@ -102,7 +102,7 @@ void PC_Texture::Create(TextureCreateInfo * pTextureCreateInfo)
 		return;
 	}
 	m_SimulTexture->ensureTexture2DSizeAndFormat(srp, pTextureCreateInfo->width, pTextureCreateInfo->height, pixelFormat, computable, rt, ds, num_samp);
-	m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel);
+	m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, (int)(pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel));
 }
 
 void PC_Texture::GenerateMips()
