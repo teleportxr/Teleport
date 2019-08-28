@@ -20,17 +20,18 @@ Clone the repository with submodules:
 
 1. Using CMakeGUI, set src: C:/Simul/RemotePlay and bin: C:/Simul/RemotePlay/build/x64
 2. Set Simul Directory and uncheck BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME.
-3. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
-4. Check out libavstream submodule to master (if needed)
-5. Configure for Visual Studio 15 2017 with x64 with default native compiler
-6. Generate, open and build the visual studio project
+3. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes. Also Check "STATIC" - option from Basis Universal.
+4. set BUILD_AS_LIBRARY to checked - option from Basis Universal module.
+5. Check out libavstream submodule to master (if needed)
+6. Configure for Visual Studio 15 2017 with x64 with default native compiler
+7. Generate, open and build the visual studio project
 
 ## Building UE4 plugin
 
 1. Using CMakeGUI, create a Visual Studio 2017 x64 build in the Libraries/libavstream subdirectory of plugins/UnrealDemo/Plugins/RemotePlay. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MD and /MDd options and BUILD_SHARED_LIBS is NOT checked, and USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
 2. Create the Cmake libavstream project and add it to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config.
 3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG).
-4. Repeat steps 1-3 for thirdparty/enet.
+4. Repeat steps 1-3 for thirdparty/enet and thirdparty/basis_universal. For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes. Ensure BUILD_AS_LIBRARY is checked for Basis.
 5. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch. Open and build the UE4 project in `Development Editor` configuration.
 6. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
 7. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
