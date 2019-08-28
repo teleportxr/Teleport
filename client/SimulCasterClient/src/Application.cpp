@@ -364,11 +364,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		frameRate*=0.99f;
 		frameRate+=0.01f/vrFrame.DeltaSeconds;
 	}
-#if 0
+#if 1
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Streamed Actors: %d"
+	mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped
-			,frameRate,ctr.bandwidthKPS, (uint64_t)mActorManager.m_Actors.size());
+			,frameRate,ctr.bandwidthKPS, (uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size());
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -421,7 +421,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("standard");
 			const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().vb.get());
 			const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().ib.get());
-			//gl_vb->CreateVAO(gl_ib->GetIndexID());
+			gl_vb->CreateVAO(gl_ib->GetIndexID());
 
             std::vector<Vector3f> vertices(gl_vb->GetVertexCount());
             memcpy(vertices.data(), gl_vb->GetVertexBufferCreateInfo().data, gl_vb->GetVertexBufferCreateInfo().size);

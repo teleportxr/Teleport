@@ -33,9 +33,7 @@ void GL_VertexBuffer::CreateVAO(GLuint indexBufferID)
 {
     glGenVertexArrays(1, &m_VertexArrayID);
     glBindVertexArray(m_VertexArrayID);
-    //IBO
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
     //VBO and Layout
     Bind();
 
@@ -59,7 +57,9 @@ void GL_VertexBuffer::CreateVAO(GLuint indexBufferID)
 
         offset += 4 * (int)attrib.componentCount;
     }
-
-    Unbind();
+    //IBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    //Unbind();
     glBindVertexArray(0);
 }
