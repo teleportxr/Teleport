@@ -275,6 +275,22 @@ scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format
 	}
 }
 
+//Returns a SCR compression format from a basis universal transcoder format.
+scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_texture_format format)
+{
+	switch(format)
+	{
+		case basist::transcoder_texture_format::cTFBC1: return scr::Texture::CompressionFormat::BC1;
+		case basist::transcoder_texture_format::cTFBC3: return scr::Texture::CompressionFormat::BC3;
+		case basist::transcoder_texture_format::cTFBC4: return scr::Texture::CompressionFormat::BC4;
+		case basist::transcoder_texture_format::cTFBC5: return scr::Texture::CompressionFormat::BC5;
+		case basist::transcoder_texture_format::cTFETC1: return scr::Texture::CompressionFormat::ETC1;
+		case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
+		case basist::transcoder_texture_format::cTFPVRTC1_4_OPAQUE_ONLY: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
+		case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+	}
+}
+
 void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& texture)
 {
 	scr::Texture::TextureCreateInfo texInfo =
@@ -290,7 +306,8 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		textureFormatFromAVSTextureFormat(texture.format),
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
 		0,
-		nullptr
+		nullptr,
+		scr::Texture::CompressionFormat::UNCOMPRESSED
 	};
 
 	if(basis_transcoder.start_transcoding(texture.data, texture.dataSize))
@@ -307,6 +324,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 
 			texInfo.size = outDataSize;
 			texInfo.data = outData;
+			texInfo.compression = toSCRCompressionFormat(basis_textureFormat);
 		}
 		else
 		{
