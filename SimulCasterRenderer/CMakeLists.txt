@@ -49,6 +49,8 @@ set( src_crossplatform
 include_directories(src)
 #Include libavstream
 include_directories(../libavstream/include)
+#Include Basis Universal
+include_directories(../thirdparty/basis_universal)
 
 if(WIN32)
 # Removed circular dependency

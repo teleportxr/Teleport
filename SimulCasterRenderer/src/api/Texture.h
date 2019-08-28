@@ -99,6 +99,21 @@ namespace scr
 			SAMPLE_COUNT_32_BIT = 0x00000020,
 			SAMPLE_COUNT_64_BIT = 0x00000040,
 		};
+		
+		//All compression formats a texture can be compressed in.
+		enum class CompressionFormat: uint32_t
+		{
+			UNCOMPRESSED,
+			BC1,
+			BC3,
+			BC4,
+			BC5,
+			ETC1,
+			ETC2,
+			PVRTC1_4_OPAQUE_ONLY,
+			BC7_M6_OPAQUE_ONLY
+		};
+		
 		struct TextureCreateInfo
 		{
 			uint32_t width;
@@ -114,6 +129,8 @@ namespace scr
 			SampleCountBit sampleCount;
 			size_t size;
 			const uint8_t* data;
+
+			CompressionFormat compression; //The format the texture is compressed in.
 		};
 
 	protected:

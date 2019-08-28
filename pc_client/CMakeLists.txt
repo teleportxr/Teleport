@@ -39,9 +39,6 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_VertexBuffer.cpp
 	SCR_Class_PC_Impl/PC_VertexBuffer.h
 )
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src)
-link_directories("${SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/build/lib/${CONFIG_NAME}" "${SIMUL}/lib/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/lib/x64/v140/Static ${CONFIG_NAME}" ${CMAKE_SOURCE_DIR}/../libavstream/build_static/${CONFIG_NAME} ${CMAKE_SOURCE_DIR}/../thirdparty/enet/build_static/${CONFIG_NAME} ${CMAKE_SOURCE_DIR}/build/x64/lib ${CMAKE_SOURCE_DIR}/build/x64/SimulCasterRenderer/Release )
-
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DSIMUL=${SIMUL}")
@@ -52,6 +49,11 @@ endif()
 
 source_group("Shaders" src FILES ${shaders} )
 add_static_executable( pc_client WIN32 ${srcs} ${scr_pc_impl} ${shaders} )
+
+target_include_directories(pc_client PRIVATE 
+	${CMAKE_CURRENT_SOURCE_DIR} ${SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src ../thirdparty/basis_universal)
+target_link_directories(pc_client PRIVATE "${SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/build/lib/${CONFIG_NAME}"
+	"${SIMUL}/lib/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/lib/x64/v140/Static ${CONFIG_NAME}" )
 
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
@@ -64,6 +66,6 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
-target_link_libraries(pc_client libavstream enet SimulCasterRenderer)
+target_link_libraries(pc_client libavstream enet SimulCasterRenderer basisu)
 
 target_link_libraries(pc_client debug effects11_MTd optimized effects11_MT debug directxtex_MTd optimized directxtex_MT)

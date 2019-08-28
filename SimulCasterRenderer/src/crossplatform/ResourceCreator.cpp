@@ -8,7 +8,9 @@ using namespace avs;
 std::vector<std::pair<avs::uid, avs::uid>> ResourceCreator::m_MeshMaterialUIDPairs;
 
 ResourceCreator::ResourceCreator()
+	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_transcoder(&basis_codeBook), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
 {
+	basist::basisu_transcoder_init();
 }
 
 ResourceCreator::~ResourceCreator()
@@ -258,10 +260,41 @@ avs::Result ResourceCreator::Assemble()
     return avs::Result::OK;
 }
 
+//Returns a scr::Texture::Format from a avs::TextureFormat.
+scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format)
+{
+	switch(format)
+	{
+		case avs::TextureFormat::INVALID: return scr::Texture::Format::FORMAT_UNKNOWN;
+		case avs::TextureFormat::G8: return scr::Texture::Format::R8;
+		case avs::TextureFormat::BGRA8: return scr::Texture::Format::RGBA8;
+		case avs::TextureFormat::BGRE8: return scr::Texture::Format::RGBA8;
+		case avs::TextureFormat::RGBA16: return scr::Texture::Format::RGBA16;
+		case avs::TextureFormat::RGBE8: return scr::Texture::Format::RGBA8;
+		case avs::TextureFormat::RGBA16F: return scr::Texture::Format::RGBA16F;
+		case avs::TextureFormat::RGBA8: return scr::Texture::Format::RGBA8;
+		case avs::TextureFormat::MAX: return scr::Texture::Format::FORMAT_UNKNOWN;
+	}
+}
+
+//Returns a SCR compression format from a basis universal transcoder format.
+scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_texture_format format)
+{
+	switch(format)
+	{
+		case basist::transcoder_texture_format::cTFBC1: return scr::Texture::CompressionFormat::BC1;
+		case basist::transcoder_texture_format::cTFBC3: return scr::Texture::CompressionFormat::BC3;
+		case basist::transcoder_texture_format::cTFBC4: return scr::Texture::CompressionFormat::BC4;
+		case basist::transcoder_texture_format::cTFBC5: return scr::Texture::CompressionFormat::BC5;
+		case basist::transcoder_texture_format::cTFETC1: return scr::Texture::CompressionFormat::ETC1;
+		case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
+		case basist::transcoder_texture_format::cTFPVRTC1_4_OPAQUE_ONLY: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
+		case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+	}
+}
+
 void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& texture)
 {
-	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
-	
 	scr::Texture::TextureCreateInfo texInfo =
 	{
 		texture.width,
@@ -271,13 +304,44 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		texture.arrayCount,
 		texture.mipCount,
 		scr::Texture::Slot::UNKNOWN,
-		scr::Texture::Type::TEXTURE_2D,
-		scr::Texture::Format::RGBA8, //Assumed
-		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-		texture.width * texture.height * 4, //Width * Height * Channels
-		texture.data
+		scr::Texture::Type::TEXTURE_2D, //Assumed
+		textureFormatFromAVSTextureFormat(texture.format),
+		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
+		0,
+		nullptr,
+		scr::Texture::CompressionFormat::UNCOMPRESSED
 	};
 
+	if(basis_transcoder.start_transcoding(texture.data, texture.dataSize))
+	{
+		uint32_t basisWidth, basisHeight, basisBlocks;
+
+		basis_transcoder.get_image_level_desc(texture.data, texture.dataSize, 0, 0, basisWidth, basisHeight, basisBlocks);
+		uint32_t outDataSize = basist::basis_get_bytes_per_block(basis_textureFormat) * basisBlocks;
+
+		unsigned char* outData = new unsigned char[outDataSize];
+		if(basis_transcoder.transcode_image_level(texture.data, texture.dataSize, 0, 0, outData, basisBlocks, basis_textureFormat))
+		{
+			delete[] texture.data;
+
+			texInfo.size = outDataSize;
+			texInfo.data = outData;
+			texInfo.compression = toSCRCompressionFormat(basis_textureFormat);
+		}
+		else
+		{
+			delete[] outData;
+		}
+	}
+
+	//The data is uncompressed if we failed to transcode it.
+	if(!texInfo.data)
+	{
+		texInfo.size = texture.dataSize;
+		texInfo.data = texture.data;
+	}
+
+	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(&texInfo);
 	
 	m_TextureManager->Add(texture_uid, std::move(scrTexture));
