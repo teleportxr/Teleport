@@ -160,7 +160,7 @@ void ClientRenderer::RecompileShaders()
 	meshRenderer->RecompileShaders();
 	delete pbrEffect;
 	delete cubemapClearEffect;
-	pbrEffect = renderPlatform->CreateEffect("solid");
+	pbrEffect = renderPlatform->CreateEffect("pbr");
 	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
 }
 
@@ -388,6 +388,9 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 												sizeof(desc)/sizeof(simul::crossplatform::LayoutDesc)
 												,desc);
 		cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+		cameraConstants.worldViewProj = deviceContext.viewStruct.viewProj;
+		cameraConstants.world = mat4::identity();
+		cameraConstants.viewPosition = vec3(0,0,0);
 		pbrEffect->SetConstantBuffer(deviceContext, &solidConstants);
 		pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 		pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
