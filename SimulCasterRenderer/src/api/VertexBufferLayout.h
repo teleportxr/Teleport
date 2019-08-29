@@ -10,7 +10,6 @@ namespace scr
 	public:
 		enum class Type : uint32_t
 		{
-			HALF,
 			FLOAT,
 			DOUBLE,
 			UINT,
@@ -64,7 +63,6 @@ namespace scr
 			case Type::UINT:
 			case Type::INT:
 				return 4;
-			case Type::HALF:
 			case Type::USHORT:
 			case Type::SHORT:
 				return 2;

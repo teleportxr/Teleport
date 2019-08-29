@@ -96,8 +96,6 @@ private:
 	void ensureTangents(avs::uid shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents) override;
 	void ensureTexCoord0(avs::uid shape_uid, int startTexCoord0, int texCoordCount0, int offset, const avs::vec2* texCoords0) override;
 	void ensureTexCoord1(avs::uid shape_uid, int startTexCoord1, int texCoordCount1, int offset, const avs::vec2* texCoords1) override;
-	void ensureTexCoord0_Half(avs::uid shape_uid, int startTexCoord0, int texCoordCount0, int offset, const avs::hvec2* texCoords0) override;
-	void ensureTexCoord1_Half(avs::uid shape_uid, int startTexCoord1, int texCoordCount1, int offset, const avs::hvec2* texCoords1) override;
 	void ensureColors(avs::uid shape_uid, int startColor, int colorCount, const avs::vec4* colors) override;
 	void ensureJoints(avs::uid shape_uid, int startJoint, int jointCount, const avs::vec4* joints) override;
 	void ensureWeights(avs::uid shape_uid, int startWeight, int weightCount, const avs::vec4* weights) override;
@@ -166,8 +164,6 @@ private:
 	const avs::vec4* m_Tangents		= nullptr;
 	const avs::vec2* m_UV0s			= nullptr;
 	const avs::vec2* m_UV1s			= nullptr;
-	const avs::hvec2* m_Half_UV0s	= nullptr;
-	const avs::hvec2* m_Half_UV1s	= nullptr;
 	const avs::vec4* m_Colors		= nullptr;
 	const avs::vec4* m_Joints		= nullptr;
 	const avs::vec4* m_Weights		= nullptr;

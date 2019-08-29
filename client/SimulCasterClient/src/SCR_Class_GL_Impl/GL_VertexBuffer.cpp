@@ -43,7 +43,6 @@ void GL_VertexBuffer::CreateVAO(GLuint indexBufferID)
         GLenum type;
         switch (attrib.type)
         {
-            case VertexBufferLayout::Type::HALF:    type = GL_HALF_FLOAT;       break;
             case VertexBufferLayout::Type::FLOAT:   type = GL_FLOAT;            break;
             case VertexBufferLayout::Type::DOUBLE:  type = 0;                   SCR_COUT_BREAK("OpenGL ES 3.0 does not support GL_DOUBLE", -1);;
             case VertexBufferLayout::Type::UINT:    type = GL_UNSIGNED_INT;     break;

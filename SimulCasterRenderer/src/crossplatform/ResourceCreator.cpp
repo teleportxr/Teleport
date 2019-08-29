@@ -76,36 +76,6 @@ void ResourceCreator::ensureTexCoord1(avs::uid shape_uid, int startTexCoord1, in
 
 	m_UV1s = texCoords1;
 }
-void ResourceCreator::ensureTexCoord0_Half(avs::uid shape_uid, int startTexCoord0, int texCoordCount0, int offset, const avs::hvec2* texCoords0)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if (texCoordCount0 != (int)m_VertexCount)
-		return;
-	//Extract from interleaved UV buffer
-	std::vector<avs::hvec2> uv0;
-	for (size_t i = 0; i < m_VertexCount; i++)
-		uv0.push_back(texCoords0[i * 2]);
-
-	size_t uv0BufferSize = uv0.size() * sizeof(avs::hvec2);
-	m_Half_UV0s = (const avs::hvec2*)malloc(uv0BufferSize);
-	memcpy((void*)m_Half_UV0s, uv0.data(), uv0BufferSize);
-}
-
-void ResourceCreator::ensureTexCoord1_Half(avs::uid shape_uid, int startTexCoord1, int texCoordCount1, int offset, const avs::hvec2* texCoords1)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if (texCoordCount1 != (int)m_VertexCount)
-		return;
-
-	//Extract from interleaved UV buffer
-	std::vector<avs::hvec2> uv1;
-	for (size_t i = 0; i < m_VertexCount; i++)
-		uv1.push_back(texCoords1[(i * 2) + 1]);
-
-	size_t uv1BufferSize = uv1.size() * sizeof(avs::hvec2);
-	m_Half_UV1s = (const avs::hvec2*)malloc(uv1BufferSize);
-	memcpy((void*)m_Half_UV1s, uv1.data(), uv1BufferSize);
-}
 
 void ResourceCreator::ensureColors(avs::uid shape_uid, int startColor, int colorCount, const avs::vec4* colors)
 {
@@ -180,8 +150,6 @@ avs::Result ResourceCreator::Assemble()
 	}
 	if (m_UV0s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
 	if (m_UV1s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
-	if (m_Half_UV0s){ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::HALF);	}
-	if (m_Half_UV1s){ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::HALF);	}
 	if (m_Colors)	{ layout->AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
 	if (m_Joints)	{ layout->AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
 	if (m_Weights)	{ layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
@@ -240,8 +208,6 @@ avs::Result ResourceCreator::Assemble()
 		}
 		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_UV0s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
 		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_UV1s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
-		if(m_Half_UV0s)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Half_UV0s + i, sizeof(avs::hvec2));		intraStrideOffset +=1;}
-		if(m_Half_UV1s)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Half_UV1s + i, sizeof(avs::hvec2));		intraStrideOffset +=1;}
 		if(m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Colors + i, sizeof(avs::vec4));			intraStrideOffset +=4;}
 		if(m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Joints + i, sizeof(avs::vec4));			intraStrideOffset +=4;}
 		if(m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Weights + i, sizeof(avs::vec4));		intraStrideOffset +=4;}

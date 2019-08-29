@@ -118,7 +118,7 @@ void GL_DeviceContext::BindDescriptorSets(const std::vector<DescriptorSet>& desc
             DescriptorSetLayout::DescriptorType type = wds.descriptorType;
             if(type == DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER)
             {
-                dynamic_cast<const GL_Texture*>(wds.pImageInfo->texture)->Bind();
+                dynamic_cast<const GL_Texture*>(wds.pImageInfo->texture.get())->Bind();
             }
             else if(type == DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER)
             {
