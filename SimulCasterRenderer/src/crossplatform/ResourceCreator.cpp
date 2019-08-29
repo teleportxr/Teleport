@@ -8,7 +8,7 @@ using namespace avs;
 std::vector<std::pair<avs::uid, avs::uid>> ResourceCreator::m_MeshMaterialUIDPairs;
 
 ResourceCreator::ResourceCreator()
-	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_transcoder(&basis_codeBook), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
+	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
 {
 	basist::basisu_transcoder_init();
 }
@@ -345,6 +345,9 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		nullptr,
 		scr::Texture::CompressionFormat::UNCOMPRESSED
 	};
+
+	//We need a new transcoder for every .basis file.
+	basist::basisu_transcoder basis_transcoder(&basis_codeBook);
 
 	if(basis_transcoder.start_transcoding(texture.data, texture.dataSize))
 	{

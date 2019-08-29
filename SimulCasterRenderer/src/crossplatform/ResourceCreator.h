@@ -15,13 +15,6 @@ namespace scr
 	class Material;
 }
 
-namespace basist
-{
-	class etc1_global_selector_codebook;
-	class basisu_transcoder;
-	enum transcoder_texture_format;
-}
-
 #if 0
 // Removed circular dependencies.
 #if defined(_WIN32) || defined(WIN32) || defined (_WIN64) || defined(WIN64)
@@ -153,7 +146,6 @@ private:
 	scr::RenderPlatform* m_pRenderPlatform;
 
 	basist::etc1_global_selector_codebook basis_codeBook;
-	basist::basisu_transcoder basis_transcoder;
 	basist::transcoder_texture_format basis_textureFormat;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
