@@ -138,7 +138,7 @@ layout(location = 3) in vec2 a_UV0;
 layout(location = 4) in vec2 a_UV1;
 
 //From Application SR
-layout(std140, binding = 0) uniform CameraUB
+/*layout(std140, binding = 0) uniform CameraUB
 {
 	mat4 u_ProjectionMatrix;
 	mat4 u_ViewMatrix;
@@ -150,7 +150,7 @@ layout(std140, binding = 0) uniform CameraUB
 layout(std140, binding = 1) uniform TransformUB
 {
 	mat4 u_ModelMatrix;
-}model;
+}model;*/
 
 //To Fragment Varying
 layout(location = 7)  out vec2 v_UV0;
@@ -158,10 +158,12 @@ layout(location = 8)  out vec2 v_UV1;
 
 void main()
 {
-	gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
+	//gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
+    gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
 
 	v_UV0		= a_UV0;
 	v_UV1		= a_UV1;
+}
 )";
     static const char* FlatTexture_FS = R"(
 //#version 310 es
@@ -170,11 +172,16 @@ precision highp float;
 //To Output Framebuffer - Use gl_FragColor
 //layout(location = 0) out vec4 colour;
 
-layout(binding = 10)  uniform sampler2D u_Texture;
+//layout(binding = 10)  uniform sampler2D u_Texture;
+
+//From Vertex Varying
+layout(location = 7)  in vec2 v_UV0;
+layout(location = 8)  in vec2 v_UV1;
 
 void main()
 {
-    gl_FragColor = texture(u_Texture, v_UV0);
+    //gl_FragColor = texture(u_Texture, v_UV0);
+    gl_FragColor = vec4(v_UV0.x, v_UV0.y, 0.0, 1.0);
 }
 )";
 

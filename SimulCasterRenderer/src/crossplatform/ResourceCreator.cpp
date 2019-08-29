@@ -324,6 +324,7 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 		case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
 		case basist::transcoder_texture_format::cTFPVRTC1_4_OPAQUE_ONLY: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
 		case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+		case basist::transcoder_texture_format::cTFTotalTextureFormats: return scr::Texture::CompressionFormat::UNCOMPRESSED;
 	}
 }
 
@@ -505,7 +506,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	    			else
 	    				i++;
 	    		}
-	    		CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
+				CreateActor(m_MeshMaterialUIDPairs[i].first, {m_MeshMaterialUIDPairs[i].second}, node_uid);
 	    	}
 	    case NodeDataType::Camera:
 	    	return;
@@ -515,13 +516,13 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	}
 }
 
-void ResourceCreator::CreateActor(std::pair<avs::uid, avs::uid>& meshMaterialPair, avs::uid transform_uid)
+void ResourceCreator::CreateActor(avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, avs::uid transform_uid)
 {
 	scr::Actor::ActorCreateInfo actor_ci = {};
 	actor_ci.staticMesh = true;
 	actor_ci.animatedMesh = false;
-	actor_ci.mesh = m_pActorManager->GetMesh(meshMaterialPair.first).get();
-	actor_ci.material = m_pActorManager->GetMaterial(meshMaterialPair.second).get();
+	actor_ci.mesh = m_pActorManager->GetMesh(mesh_uid).get();
+	actor_ci.material = m_pActorManager->GetMaterial(material_uids[0]).get();
 	actor_ci.transform = m_pActorManager->GetTransform(transform_uid).get();
 	m_pActorManager->CreateActor(GenerateUid(), &actor_ci);
 }

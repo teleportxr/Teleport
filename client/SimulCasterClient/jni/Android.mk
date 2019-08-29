@@ -31,6 +31,7 @@ LOCAL_C_INCLUDES += ../VrAppSupport/VrSound/Include
 LOCAL_C_INCLUDES += ../VrAppSupport/VrGUI/Src
 LOCAL_C_INCLUDES += ../VrAppSupport/VrLocale/Include
 LOCAL_C_INCLUDES += ../libavstream/include
+LOCAL_C_INCLUDES += ../thirdparty/basis_universal
 LOCAL_C_INCLUDES += ../SimulCasterRenderer/src
 LOCAL_C_INCLUDES += 3rdParty/enet/Include
 
@@ -47,5 +48,6 @@ $(call import-module,VrAppSupport/VrLocale/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrModel/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrSound/Projects/Android/jni)
 $(call import-module,../libavstream/jni)
+
 $(call import-module,../SimulCasterRenderer/jni)
 $(call import-module,3rdParty/enet/jni)

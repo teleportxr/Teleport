@@ -231,16 +231,16 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					//target->ensureTangents(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
-					if (accessor.componentType == avs::Accessor::ComponentType::FLOAT)
-						target->ensureTexCoord0(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
-					else
-						target->ensureTexCoord0_Half(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::hvec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//if (accessor.componentType == avs::Accessor::ComponentType::FLOAT)
+						//target->ensureTexCoord0(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//else
+						//target->ensureTexCoord0_Half(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::hvec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;
 				case AttributeSemantic::TEXCOORD_1:
-					if (accessor.componentType == avs::Accessor::ComponentType::FLOAT)
-						target->ensureTexCoord1(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
-					else
-						target->ensureTexCoord1_Half(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::hvec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//if (accessor.componentType == avs::Accessor::ComponentType::FLOAT)
+						//target->ensureTexCoord1(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//else
+						//target->ensureTexCoord1_Half(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::hvec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
 					continue;;
 				case AttributeSemantic::COLOR_0:
 					//target->ensureColors(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);

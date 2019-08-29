@@ -149,6 +149,7 @@ GLenum GL_Texture::ToBaseGLFormat(Format format) const
         case Format::RGBA8:
             return GL_RGBA;
 
+        case Format::RGB32F:
         case Format::R11F_G11F_B10F:
         case Format::RGB10_A2UI:
         case Format::RGB10_A2:
@@ -197,7 +198,7 @@ GLenum GL_Texture::ToBaseGLFormat(Format format) const
         case Format::FLOAT_32_UNSIGNED_INT_24_8_REV:
             return GL_RGBA;
     }
-};
+}
 
 GLenum GL_Texture::ToGLFormat(Format format) const
 {
@@ -217,6 +218,7 @@ GLenum GL_Texture::ToGLFormat(Format format) const
         case Format::RGBA8_SNORM:       return GL_RGBA8_SNORM;
         case Format::RGBA8:             return GL_RGBA8;
 
+        case Format::RGB32F:            return GL_RGB32F;
         case Format::R11F_G11F_B10F:    return GL_R11F_G11F_B10F;
         case Format::RGB10_A2UI:        return GL_RGB10_A2UI;
         case Format::RGB10_A2:          return GL_RGB10_A2;
@@ -260,4 +262,4 @@ GLenum GL_Texture::ToGLFormat(Format format) const
         case Format::FLOAT_32_UNSIGNED_INT_24_8_REV:    return GL_FLOAT_32_UNSIGNED_INT_24_8_REV;
 
     }
-};
+}
