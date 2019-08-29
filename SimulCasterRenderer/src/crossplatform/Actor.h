@@ -43,7 +43,7 @@ namespace scr
 			bool staticMesh;	//Will the mesh move throughout the scence?
 			bool animatedMesh;	//Will the mesh deform?
 			Mesh* mesh;
-			Material* material;
+			std::vector<Material*> materials;
 			Transform* transform;
 		};
 
@@ -56,7 +56,7 @@ namespace scr
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
 		inline Mesh* GetMesh() { return m_CI.mesh; }
-		inline Material* GetMaterial() { return m_CI.material; }
+		inline const std::vector<Material*> GetMaterials() { return m_CI.materials; }
 		inline Transform* GetTransform() { return m_CI.transform; }
 	};
 }

@@ -13,7 +13,7 @@ namespace scr
 	public:
 		struct MaterialParameter
 		{
-			Texture *texture;	//Texture Reference.
+			std::shared_ptr<Texture> texture;	//Texture Reference.
 			vec2 texCoordsScalar[4];			//Scales the texture co-ordinates for tiling; one per channel .
 			vec4 textureOutputScalar;			//Scales the output of the texture per channel.
 		};
@@ -47,7 +47,7 @@ namespace scr
 			vec2 combinedTexCoordsScalar_G;
 			vec2 combinedTexCoordsScalar_B;
 			vec2 combinedTexCoordsScalar_A;
-		}m_MaterialData;
+		} m_MaterialData;
 
 		static bool s_UninitialisedUB;
 		std::unique_ptr<UniformBuffer> m_UB;

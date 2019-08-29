@@ -8,7 +8,7 @@ using namespace avs;
 std::vector<std::pair<avs::uid, avs::uid>> ResourceCreator::m_MeshMaterialUIDPairs;
 
 ResourceCreator::ResourceCreator()
-	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_transcoder(&basis_codeBook), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
+	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
 {
 	basist::basisu_transcoder_init();
 }
@@ -276,8 +276,8 @@ avs::Result ResourceCreator::Assemble()
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
 	m_pActorManager->AddMesh(shape_uid, mesh);
 
-	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
-	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);
+	m_VertexBufferManager->Add(shape_uid, vb, m_PostUseLifetime);
+	m_IndexBufferManager->Add(shape_uid, ib, m_PostUseLifetime);
 
 	m_Vertices = nullptr;
 	m_Normals = nullptr;
@@ -347,6 +347,9 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		scr::Texture::CompressionFormat::UNCOMPRESSED
 	};
 
+	//We need a new transcoder for every .basis file.
+	basist::basisu_transcoder basis_transcoder(&basis_codeBook);
+
 	if(basis_transcoder.start_transcoding(texture.data, texture.dataSize))
 	{
 		uint32_t basisWidth, basisHeight, basisBlocks;
@@ -379,7 +382,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(&texInfo);
 	
-	m_TextureManager->Add(texture_uid, std::move(scrTexture));
+	m_TextureManager->Add(texture_uid, scrTexture);
 }
 
 ///Most of these sets need actual values, rather than default initalisers.
@@ -393,11 +396,11 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	if(material.pbrMetallicRoughness.baseColorTexture.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> *diffuseTexture = m_TextureManager->Claim(material.pbrMetallicRoughness.baseColorTexture.index);
+		const std::shared_ptr<scr::Texture> diffuseTexture = m_TextureManager->Get(material.pbrMetallicRoughness.baseColorTexture.index);
 
 		if(diffuseTexture)
 		{
-			materialInfo.diffuse.texture = &**diffuseTexture;
+			materialInfo.diffuse.texture = diffuseTexture;
 
 			materialInfo.diffuse.texCoordsScalar[0] = {1, 1};
 			materialInfo.diffuse.texCoordsScalar[1] = {1, 1};
@@ -420,11 +423,11 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	if(material.normalTexture.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> *normalTexture = m_TextureManager->Claim(material.normalTexture.index);
+		const std::shared_ptr<scr::Texture> normalTexture = m_TextureManager->Get(material.normalTexture.index);
 
 		if(normalTexture)
 		{
-			materialInfo.normal.texture = &**normalTexture;
+			materialInfo.normal.texture = normalTexture;
 
 			materialInfo.normal.texCoordsScalar[0] = {1, 1};
 			materialInfo.normal.texCoordsScalar[1] = {1, 1};
@@ -441,11 +444,11 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	if(material.occlusionTexture.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> *occlusionTexture = m_TextureManager->Claim(material.normalTexture.index);
+		const std::shared_ptr<scr::Texture> occlusionTexture = m_TextureManager->Get(material.normalTexture.index);
 
 		if(occlusionTexture)
 		{
-			materialInfo.combined.texture = &**occlusionTexture;
+			materialInfo.combined.texture = occlusionTexture;
 
 			materialInfo.combined.texCoordsScalar[0] = {1, 1};
 			materialInfo.combined.texCoordsScalar[1] = {1, 1};
@@ -463,8 +466,8 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 	///This needs an actual value.
 	materialInfo.effect = nullptr;
 	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(m_pRenderPlatform,&materialInfo);
+	m_MaterialManager->Add(material_uid, scr_material);
 	m_pActorManager->AddMaterial(material_uid, scr_material);
-	m_materialManager->Add(material_uid, std::move(scr_material));
 }
 
 void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
@@ -506,7 +509,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	    			else
 	    				i++;
 	    		}
-				CreateActor(m_MeshMaterialUIDPairs[i].first, {m_MeshMaterialUIDPairs[i].second}, node_uid);
+	    		CreateActor(node.data_uid,node.materials, node_uid);
 	    	}
 	    case NodeDataType::Camera:
 	    	return;
@@ -522,7 +525,11 @@ void ResourceCreator::CreateActor(avs::uid mesh_uid, const std::vector<avs::uid>
 	actor_ci.staticMesh = true;
 	actor_ci.animatedMesh = false;
 	actor_ci.mesh = m_pActorManager->GetMesh(mesh_uid).get();
-	actor_ci.material = m_pActorManager->GetMaterial(material_uids[0]).get();
+	actor_ci.materials.clear();
+	for (avs::uid m_uid : material_uids)
+	{
+		actor_ci.materials.push_back(m_pActorManager->GetMaterial(m_uid).get());
+	}
 	actor_ci.transform = m_pActorManager->GetTransform(transform_uid).get();
 	m_pActorManager->CreateActor(GenerateUid(), &actor_ci);
 }

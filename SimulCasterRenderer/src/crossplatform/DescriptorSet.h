@@ -70,8 +70,8 @@ namespace scr
 	private:
 		struct DescriptorImageInfo 
 		{
-			const Sampler*	sampler;
-			const Texture* texture;
+			std::shared_ptr<const Sampler>	sampler;
+			std::shared_ptr<const Texture> texture;
 		};
 		struct DescriptorBufferInfo 
 		{

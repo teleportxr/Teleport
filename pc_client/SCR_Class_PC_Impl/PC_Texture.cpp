@@ -79,7 +79,7 @@ void PC_Texture::Unbind() const
 {
 }
 
-void PC_Texture::UseSampler(const Sampler* sampler)
+void PC_Texture::UseSampler(std::shared_ptr<const Sampler> sampler)
 {
 }
 

@@ -44,7 +44,7 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 	vec4 opos		=vec4(IN.position.xyz,1.0);
     OUT.wpos		=mul(world, opos).xyz;
 	OUT.view		=normalize(OUT.wpos.xyz- viewPosition);
-    OUT.clip_pos	=mul( opos,worldViewProj);
+    OUT.clip_pos	=mul(opos,worldViewProj);
 	OUT.texCoords	=vec2(0,0);
 #ifdef SFX_OPENGL
     OUT.normal.xyz	=mul(mat3(world),vec3(0,0,1.0));

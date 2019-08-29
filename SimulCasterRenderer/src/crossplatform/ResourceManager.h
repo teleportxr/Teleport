@@ -18,9 +18,8 @@ public:
 	//Struct to keep the resource and its metadata together.
 	struct ResourceData
 	{
+		std::shared_ptr<T> resource;
 		uint32_t postUseLifetime; //Milliseconds the resource should be kept alive after the last object has stopped using it.
-		T resource;
-		unsigned int claimCount; //Amount of objects claiming use of this resource.
 		uint32_t timeSinceLastUse; //Milliseconds since the data was last used by the session.
 	};
 
@@ -32,7 +31,7 @@ public:
 	//	id : Unique identifier of the resource.
 	//	newResource : The resource.
 	//	postUseLifetime : Milliseconds the resource should be kept alive after the last object has stopped using it.
-	void Add(uid id, T&& newResource, uint32_t postUseLifetime = 30000);
+	void Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime = 30000);
 
 	//Returns whether the manager contains the resource.
 	bool Has(uid id) const;
@@ -43,11 +42,9 @@ public:
 	//Set the factor to adjust the lifetime of resources before freeing them; i.e. 0.5 would halve the lifetime of a resource in the manager.
 	void SetLifetimeFactor(float lifetimeFactor);
 
-	//Claim usage of a resource, while retrieving a pointer to the resource; returns nullptr if the resource was not found.
-	//You must use Unclaim once you are finished with a resource, so that the resource manager may clean up the resource when it is no longer needed.
-	const T* Claim(uid id);
-	//Unclaim the resource, so it may be freed after a set amount of time.
-	void Unclaim(uid id);
+	//Returns a shared pointer to the resource; returns nullptr if the resource was not found.
+	//Resets time since last use of the resource.
+	std::shared_ptr<T> Get(uid id);
 
 	//Clear, and free memory of, all resources.
 	void Clear();
@@ -87,9 +84,9 @@ ResourceManager<T>::~ResourceManager()
 }
 
 template<class T>
-void ResourceManager<T>::Add(uid id, T && newItem, uint32_t postUseLifetime)
+void ResourceManager<T>::Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime)
 {
-	cachedItems.emplace(id, ResourceData{postUseLifetime, std::move(newItem), 0, 0});
+	cachedItems.emplace(id, ResourceData{newItem, postUseLifetime, 0});
 }
 
 template<class T>
@@ -111,7 +108,7 @@ void ResourceManager<T>::SetLifetimeFactor(float lifetimeFactor)
 }
 
 template<class T>
-const T* ResourceManager<T>::Claim(uid id)
+std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 {
 	try
 	{
@@ -119,9 +116,8 @@ const T* ResourceManager<T>::Claim(uid id)
 		ResourceData& data = cachedItems.at(id);
 
 		data.timeSinceLastUse = 0;
-		++data.claimCount;
 
-		return &data.resource;
+		return data.resource;
 	}
 	//Return nullptr if the value doesn't exist.
 	catch(std::out_of_range oor)
@@ -131,17 +127,11 @@ const T* ResourceManager<T>::Claim(uid id)
 }
 
 template<class T>
-void ResourceManager<T>::Unclaim(uid id)
-{
-	--cachedItems[id].claimCount;
-}
-
-template<class T>
 void ResourceManager<T>::Clear()
 {
 	for(auto &[id, data] : cachedItems)
 	{
-		FreeResource(data.resource);
+		FreeResource(*data.resource);
 	}
 
 	cachedItems.clear();
@@ -185,7 +175,7 @@ void ResourceManager<T>::Update(uint32_t deltaTimestamp)
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
 	{
 		//Increment time spent unused, if the resource manager is the only object pointing to the resource.
-		if(it->second.claimCount == 0)
+		if(it->second.resource.use_count() == 1)
 		{
 			it->second.timeSinceLastUse += deltaTimestamp;
 
@@ -218,6 +208,6 @@ void ResourceManager<T>::FreeResource(T & resource)
 template<class T>
 typename ResourceManager<T>::mapIterator_t ResourceManager<T>::RemoveResource(typename ResourceManager<T>::mapIterator_t it)
 {
-	FreeResource(it->second.resource);
+	FreeResource(*it->second.resource);
 	return cachedItems.erase(it);
 }

@@ -368,15 +368,23 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	for (auto& actor : resourceManagers.mActorManager.m_Actors)
 	{
 		const scr::Transform* tr = actor.second->GetTransform();
+		if (!tr)
+			continue;
 		const scr::Mesh* mesh = actor.second->GetMesh();
-		const scr::Material* material = actor.second->GetMaterial();
-
+		if (!mesh)
+			continue;
+		const std::vector<scr::Material*> materials = actor.second->GetMaterials();
+		if (!materials.size())
+			continue;
+		scr::Transform *transform=actor.second->GetTransform();
+		if (!transform)
+			continue;
 		const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb.get());
 		const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(mesh->GetMeshCreateInfo().ib.get());
 
 		const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
 
-		const scr::Material::MaterialCreateInfo& m = material->GetMaterialCreateInfoConst();
+		const scr::Material::MaterialCreateInfo& m = materials[0]->GetMaterialCreateInfoConst();
 
 		simul::crossplatform::LayoutDesc desc[] =
 		{
@@ -384,12 +392,14 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			//{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 12, false, 0 },
 			//{ "TEXCOORD", 1, crossplatform::RGB_32_FLOAT, 0, 20, false, 0 },
 		};
-		simul::crossplatform::Layout* layout = renderPlatform->CreateLayout(
+		simul::crossplatform::Layout* layout= renderPlatform->CreateLayout(
 												sizeof(desc)/sizeof(simul::crossplatform::LayoutDesc)
 												,desc);
 		cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-		cameraConstants.worldViewProj = deviceContext.viewStruct.viewProj;
-		cameraConstants.world = mat4::identity();
+		mat4 model;
+		model=((const float*)& (transform->GetTransformMatrix()));
+		mat4::mul(cameraConstants.worldViewProj ,model,*((mat4*)&deviceContext.viewStruct.viewProj));
+		cameraConstants.world = model;
 		cameraConstants.viewPosition = vec3(0,0,0);
 		pbrEffect->SetConstantBuffer(deviceContext, &solidConstants);
 		pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
