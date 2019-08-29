@@ -8,7 +8,7 @@ using namespace avs;
 std::vector<std::pair<avs::uid, avs::uid>> ResourceCreator::m_MeshMaterialUIDPairs;
 
 ResourceCreator::ResourceCreator()
-	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_transcoder(&basis_codeBook), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
+	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
 {
 	basist::basisu_transcoder_init();
 }
@@ -195,6 +195,7 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 		case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
 		case basist::transcoder_texture_format::cTFPVRTC1_4_OPAQUE_ONLY: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
 		case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+		case basist::transcoder_texture_format::cTFTotalTextureFormats: return scr::Texture::CompressionFormat::UNCOMPRESSED;
 		default:
 			exit(1);
 	}
@@ -218,6 +219,9 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		nullptr,
 		scr::Texture::CompressionFormat::UNCOMPRESSED
 	};
+
+	//We need a new transcoder for every .basis file.
+	basist::basisu_transcoder basis_transcoder(&basis_codeBook);
 
 	if(basis_transcoder.start_transcoding(texture.data, texture.dataSize))
 	{

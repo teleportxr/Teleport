@@ -17,19 +17,10 @@ namespace scr
 
 namespace basist
 {
-	class etc1_global_selector_codebook;
-	class basisu_transcoder;
-	enum transcoder_texture_format;
+    class etc1_global_selector_codebook;
+    class basisu_transcoder;
+    enum transcoder_texture_format;
 }
-
-#if 0
-// Removed circular dependencies.
-#if defined(_WIN32) || defined(WIN32) || defined (_WIN64) || defined(WIN64)
-#include "../../pc_client/SCR_Class_PC_Impl/PC_RenderPlatform.h" //Access to the PC_Client's Simul's DX11 and DX12 implementation of SCR;
-#elif defined(__ANDROID__)
-#include "../../client/SimulCasterClient/src/SCR_Class_GL_Impl/GL_RenderPlatform.h" //Access to the Android OpenGL ES 3.0 implementation of SCR;
-#endif
-#endif
 
 namespace scr
 {
@@ -125,7 +116,6 @@ private:
 	scr::RenderPlatform* m_pRenderPlatform;
 
 	basist::etc1_global_selector_codebook basis_codeBook;
-	basist::basisu_transcoder basis_transcoder;
 	basist::transcoder_texture_format basis_textureFormat;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
