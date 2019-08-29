@@ -60,7 +60,7 @@ namespace scr
         scr::ActorManager                                    mActorManager;
         ResourceManager<std::shared_ptr<scr::IndexBuffer>>   mIndexBufferManager;
         ResourceManager<std::shared_ptr<scr::Shader>>        mShaderManager;
-        ResourceManager< std::shared_ptr<scr::Material>>                       mMaterialManager;
+        ResourceManager<std::shared_ptr<scr::Material>>			mMaterialManager;
         ResourceManager<std::shared_ptr<scr::Texture>>       mTextureManager;
         ResourceManager<std::shared_ptr<scr::UniformBuffer>> mUniformBufferManager;
         ResourceManager<std::shared_ptr<scr::VertexBuffer>>  mVertexBufferManager;
@@ -120,7 +120,7 @@ private:
 	void passNode(avs::uid node_uid, avs::DataNode& node) override;
 
 	//Actor
-	void CreateActor(std::pair<avs::uid, avs::uid>& meshMaterialPair, avs::uid transform_uid) override;
+	void CreateActor(avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, avs::uid transform_uid) override;
 
 	inline bool SetAndCheckShapeUID(const avs::uid& uid)
 	{

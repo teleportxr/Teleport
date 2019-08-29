@@ -368,15 +368,21 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	for (auto& actor : resourceManagers.mActorManager.m_Actors)
 	{
 		const scr::Transform* tr = actor.second->GetTransform();
+		if (!tr)
+			continue;
 		const scr::Mesh* mesh = actor.second->GetMesh();
-		const scr::Material* material = actor.second->GetMaterial();
+		if (!mesh)
+			continue;
+		const std::vector<scr::Material*> materials = actor.second->GetMaterials();
+		if (!materials.size())
+			continue;
 
 		const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb.get());
 		const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(mesh->GetMeshCreateInfo().ib.get());
 
 		const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
 
-		const scr::Material::MaterialCreateInfo& m = material->GetMaterialCreateInfoConst();
+		const scr::Material::MaterialCreateInfo& m = materials[0]->GetMaterialCreateInfoConst();
 
 		simul::crossplatform::LayoutDesc desc[] =
 		{
@@ -472,7 +478,7 @@ void ClientRenderer::Update()
 	uint32_t timeElapsed = (timestamp - previousTimestamp);
 
 	// disabled because it deletes objects that are in use!
-	//resourceManagers.Update(timeElapsed);
+	resourceManagers.Update(timeElapsed);
 
 	previousTimestamp = timestamp;
 }

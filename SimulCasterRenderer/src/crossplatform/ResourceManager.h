@@ -185,6 +185,8 @@ void ResourceManager<T>::Update(uint32_t deltaTimestamp)
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
 	{
 		//Increment time spent unused, if the resource manager is the only object pointing to the resource.
+
+		// claimCount is never decremented, but often stays initialized at zero, resulting in broken pointers
 		if(it->second.claimCount == 0)
 		{
 			it->second.timeSinceLastUse += deltaTimestamp;

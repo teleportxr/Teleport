@@ -119,69 +119,40 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	size_t accessorsSize = Next8B;
 	for (size_t j = 0; j < accessorsSize; j++)
 	{
+		avs::uid acc_uid= Next8B;
 		Accessor::DataType type = (Accessor::DataType)Next4B;
 		Accessor::ComponentType componentType = (Accessor::ComponentType)Next4B;
 		size_t count = Next8B;
 		avs::uid bufferView = Next8B;
 		size_t byteOffset = Next8B;
 
-		size_t primitiveArrayAttributeCount = dg.primitiveArrays[uid][primitiveArrayIndex].attributeCount;
 		if (isIndexAccessor) //For Indices Only
 		{
-			dg.accessors[dg.primitiveArrays[uid][primitiveArrayIndex].indices_accessor] = { type, componentType, count, bufferView, byteOffset };
+			dg.accessors[acc_uid] = { type, componentType, count, bufferView, byteOffset };
 			isIndexAccessor = false;
 		}
 		else
 		{
-			dg.accessors[dg.primitiveArrays[uid][primitiveArrayIndex].attributes[k].accessor] = { type, componentType, count, bufferView, byteOffset };
-			k++;
-			if (k < primitiveArrayAttributeCount == false)
-			{
-				
-				isIndexAccessor = true;
-				primitiveArrayIndex++;
-				k = 0;
-			}
+			dg.accessors[acc_uid] = { type, componentType, count, bufferView, byteOffset };
 		}
 		
 	}
-
-	std::map<avs::uid, avs::Accessor>::reverse_iterator rit_accessor = dg.accessors.rbegin();
-	std::map<avs::uid, avs::Accessor>::iterator it_accessor = dg.accessors.begin();
 	size_t bufferViewsSize = Next8B;
 	for (size_t j = 0; j < bufferViewsSize; j++)
 	{
+		avs::uid bv_uid = Next8B;
 		avs::uid buffer = Next8B;
 		size_t byteOffset = Next8B;
 		size_t byteLength = Next8B;
 		size_t byteStride = Next8B;
-
-		avs::uid key = 0;
-		if (j == 0)
-			key = dg.accessors[rit_accessor->first].bufferView;
-		else
-		{
-			key = dg.accessors[it_accessor->first].bufferView;
-			it_accessor++;
-		}
 		
-		dg.bufferViews[key] = { buffer, byteOffset, byteLength, byteStride };
+		dg.bufferViews[bv_uid] = { buffer, byteOffset, byteLength, byteStride };
 	}
 
-	std::map<avs::uid, avs::BufferView>::reverse_iterator rit_bufferView = dg.bufferViews.rbegin();
-	std::map<avs::uid, avs::BufferView>::iterator it_bufferView = dg.bufferViews.begin();
 	size_t buffersSize = Next8B;
 	for (size_t j = 0; j < buffersSize; j++)
 	{
-		avs::uid key = 0;
-		if (j == 0)
-			key = dg.bufferViews[rit_bufferView->first].buffer;
-		else
-		{
-			key = dg.bufferViews[it_bufferView->first].buffer;
-			it_bufferView++;
-		}
-		
+		avs::uid key = Next8B;
 		dg.buffers[key]= { 0, nullptr };
 		dg.buffers[key].byteLength = Next8B;
 		if(m_BufferSize < m_BufferOffset + dg.buffers[key].byteLength)
@@ -368,6 +339,12 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.data_uid = Next8B;
 
 		node.data_type = static_cast<NodeDataType>(NextB);
+		
+		uint32_t materialCount = Next8B;
+		for (uint32_t j = 0; j < materialCount; ++j)
+		{
+			node.materials.push_back(Next8B);
+		}
 
 		uint32_t childCount = Next8B;
 		for (uint32_t j = 0; j < childCount; ++j)

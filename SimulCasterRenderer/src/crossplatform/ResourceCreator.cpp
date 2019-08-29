@@ -471,7 +471,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	    			else
 	    				i++;
 	    		}
-	    		CreateActor(m_MeshMaterialUIDPairs[i], node_uid);
+	    		CreateActor(node.data_uid,node.materials, node_uid);
 	    	}
 	    case NodeDataType::Camera:
 	    	return;
@@ -481,13 +481,17 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	}
 }
 
-void ResourceCreator::CreateActor(std::pair<avs::uid, avs::uid>& meshMaterialPair, avs::uid transform_uid)
+void ResourceCreator::CreateActor(avs::uid mesh_uid, const std::vector<avs::uid> &material_uids, avs::uid transform_uid)
 {
 	scr::Actor::ActorCreateInfo actor_ci = {};
 	actor_ci.staticMesh = true;
 	actor_ci.animatedMesh = false;
-	actor_ci.mesh = m_pActorManager->GetMesh(meshMaterialPair.first).get();
-	actor_ci.material = m_pActorManager->GetMaterial(meshMaterialPair.second).get();
+	actor_ci.mesh = m_pActorManager->GetMesh(mesh_uid).get();
+	actor_ci.materials.clear();
+	for (avs::uid m_uid : material_uids)
+	{
+		actor_ci.materials.push_back(m_pActorManager->GetMaterial(m_uid).get());
+	}
 	actor_ci.transform = m_pActorManager->GetTransform(transform_uid).get();
 	m_pActorManager->CreateActor(GenerateUid(), &actor_ci);
 }
