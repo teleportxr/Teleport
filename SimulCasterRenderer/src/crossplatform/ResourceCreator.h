@@ -90,20 +90,7 @@ public:
 
 private:
 	// Inherited via GeometryTargetBackendInterface
-	void ensureVertices(avs::uid shape_uid, int startVertex, int vertexCount, const avs::vec3* vertices) override;
-	void ensureNormals(avs::uid shape_uid, int startNormal, int normalCount, const avs::vec3* normals) override;
-	void ensureTangentNormals(avs::uid shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn) override;
-	void ensureTangents(avs::uid shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents) override;
-	void ensureTexCoord0(avs::uid shape_uid, int startTexCoord0, int texCoordCount0, int offset, const avs::vec2* texCoords0) override;
-	void ensureTexCoord1(avs::uid shape_uid, int startTexCoord1, int texCoordCount1, int offset, const avs::vec2* texCoords1) override;
-	void ensureTexCoord0_Half(avs::uid shape_uid, int startTexCoord0, int texCoordCount0, int offset, const avs::hvec2* texCoords0) override;
-	void ensureTexCoord1_Half(avs::uid shape_uid, int startTexCoord1, int texCoordCount1, int offset, const avs::hvec2* texCoords1) override;
-	void ensureColors(avs::uid shape_uid, int startColor, int colorCount, const avs::vec4* colors) override;
-	void ensureJoints(avs::uid shape_uid, int startJoint, int jointCount, const avs::vec4* joints) override;
-	void ensureWeights(avs::uid shape_uid, int startWeight, int weightCount, const avs::vec4* weights) override;
-	void ensureIndices(avs::uid shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices) override;
-	void ensureMaterialUID(avs::uid shape_uid, avs::uid _material_uid) override;
-	avs::Result Assemble() override;
+	avs::Result Assemble(avs::ResourceCreate *) override;
 
 	//Material and Texture
 	void passTexture(avs::uid texture_uid, const avs::Texture& texture) override;
@@ -115,22 +102,8 @@ private:
 	//Actor
 	void CreateActor(avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, avs::uid transform_uid) override;
 
-	inline bool SetAndCheckShapeUID(const avs::uid& uid)
-	{
-		if (shape_uid == (avs::uid)-1)
-		{
-			shape_uid = uid;
-			return true;
-		}
-		else if (shape_uid == uid)
-		{
-			return true;
-		}
-		else
-			return false;
-	}
 
-#define CHECK_SHAPE_UID(x) if (!SetAndCheckShapeUID(x)) { SCR_COUT("Invalid shape_uid.\n"); return; }
+#define CHECK_SHAPE_UID(x) if (!SetAndCheckShapeUID(x)) { SCR_CERR("Invalid shape_uid.\n"); return; }
 
 public:
 	ResourceManager<scr::Texture>* GetTextureManager()
@@ -140,7 +113,6 @@ public:
 
 private:
 	scr::API m_API;
-	avs::uid shape_uid = (avs::uid)-1;
 	scr::RenderPlatform* m_pRenderPlatform;
 
 	basist::etc1_global_selector_codebook basis_codeBook;
@@ -155,26 +127,6 @@ private:
 	ResourceManager<scr::VertexBuffer> *m_VertexBufferManager;
 
 	scr::ActorManager* m_pActorManager;
-
-	size_t m_VertexCount	= 0;
-	size_t m_IndexCount		= 0;
-	size_t m_PolygonCount	= 0;
-	size_t m_IndexSize		= 0;
-
-	const avs::vec3* m_Vertices		= nullptr;
-	const avs::vec3* m_Normals		= nullptr;
-	const avs::vec4* m_Tangents		= nullptr;
-	const avs::vec2* m_UV0s			= nullptr;
-	const avs::vec2* m_UV1s			= nullptr;
-	const avs::hvec2* m_Half_UV0s	= nullptr;
-	const avs::hvec2* m_Half_UV1s	= nullptr;
-	const avs::vec4* m_Colors		= nullptr;
-	const avs::vec4* m_Joints		= nullptr;
-	const avs::vec4* m_Weights		= nullptr;
-	const unsigned char* m_Indices	= nullptr;
-
-	const uint8_t* m_TangentNormals = nullptr;
-	size_t m_TangentNormalSize = 0;
 
 	static std::vector<std::pair<avs::uid, avs::uid>> m_MeshMaterialUIDPairs;
 
