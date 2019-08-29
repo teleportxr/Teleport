@@ -58,12 +58,12 @@ namespace scr
         }
 
         scr::ActorManager                                    mActorManager;
-        ResourceManager<std::shared_ptr<scr::IndexBuffer>>   mIndexBufferManager;
-        ResourceManager<std::shared_ptr<scr::Shader>>        mShaderManager;
-        ResourceManager<std::shared_ptr<scr::Material>>			mMaterialManager;
-        ResourceManager<std::shared_ptr<scr::Texture>>       mTextureManager;
-        ResourceManager<std::shared_ptr<scr::UniformBuffer>> mUniformBufferManager;
-        ResourceManager<std::shared_ptr<scr::VertexBuffer>>  mVertexBufferManager;
+        ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
+        ResourceManager<scr::Shader>        mShaderManager;
+        ResourceManager<scr::Material>		mMaterialManager;
+        ResourceManager<scr::Texture>       mTextureManager;
+        ResourceManager<scr::UniformBuffer> mUniformBufferManager;
+        ResourceManager<scr::VertexBuffer>  mVertexBufferManager;
     };
 }
 
@@ -82,16 +82,16 @@ public:
 	}
 
 	inline void AssociateResourceManagers(
-		ResourceManager<std::shared_ptr<scr::IndexBuffer>>* indexBufferManager,
-		ResourceManager<std::shared_ptr<scr::Shader>>* shaderManager,
-		ResourceManager< std::shared_ptr<scr::Material>> *materialManager,
-		ResourceManager<std::shared_ptr<scr::Texture>>* textureManager,
-		ResourceManager<std::shared_ptr<scr::UniformBuffer>>* uniformBufferManager,
-		ResourceManager<std::shared_ptr<scr::VertexBuffer>>* vertexBufferManager)
+		ResourceManager<scr::IndexBuffer> *indexBufferManager,
+		ResourceManager<scr::Shader> *shaderManager,
+		ResourceManager<scr::Material> *materialManager,
+		ResourceManager<scr::Texture> *textureManager,
+		ResourceManager<scr::UniformBuffer> *uniformBufferManager,
+		ResourceManager<scr::VertexBuffer> *vertexBufferManager)
 	{
 		m_IndexBufferManager = indexBufferManager;
 		m_ShaderManager = shaderManager;
-		m_materialManager = materialManager;
+		m_MaterialManager = materialManager;
 		m_TextureManager = textureManager;
 		m_UniformBufferManager = uniformBufferManager;
 		m_VertexBufferManager = vertexBufferManager;
@@ -142,7 +142,7 @@ private:
 #define CHECK_SHAPE_UID(x) if (!SetAndCheckShapeUID(x)) { SCR_COUT("Invalid shape_uid.\n"); return; }
 
 public:
-	ResourceManager<std::shared_ptr<scr::Texture>>* GetTextureManager()
+	ResourceManager<scr::Texture>* GetTextureManager()
 	{
 		return m_TextureManager;
 	}
@@ -157,12 +157,12 @@ private:
 	basist::transcoder_texture_format basis_textureFormat;
 	
 	uint32_t m_PostUseLifetime = 30000; //30,000ms = 30s
-	ResourceManager<std::shared_ptr<scr::IndexBuffer>>*		m_IndexBufferManager;
-	ResourceManager< std::shared_ptr<scr::Material>>*							m_materialManager;
-	ResourceManager<std::shared_ptr<scr::Shader>>*			m_ShaderManager;
-	ResourceManager<std::shared_ptr<scr::Texture>>*			m_TextureManager;
-	ResourceManager<std::shared_ptr<scr::UniformBuffer>>*	m_UniformBufferManager;
-	ResourceManager<std::shared_ptr<scr::VertexBuffer>>*	m_VertexBufferManager;
+	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;
+	ResourceManager<scr::Material> *m_MaterialManager;
+	ResourceManager<scr::Shader> *m_ShaderManager;
+	ResourceManager<scr::Texture> *m_TextureManager;
+	ResourceManager<scr::UniformBuffer> *m_UniformBufferManager;
+	ResourceManager<scr::VertexBuffer> *m_VertexBufferManager;
 
 	scr::ActorManager* m_pActorManager;
 

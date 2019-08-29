@@ -39,7 +39,7 @@ namespace scr
 			pCamera = pInputCommandCreateInfo->pCamera;
 
 			pMesh = pActor->GetMesh();
-			pMaterial = pActor->GetMaterial();
+			pMaterial = pActor->GetMaterials()[0];
 			pTransform = pActor->GetTransform();
 		};
 	};

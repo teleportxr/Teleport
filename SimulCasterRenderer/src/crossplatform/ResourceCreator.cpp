@@ -276,8 +276,8 @@ avs::Result ResourceCreator::Assemble()
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
 	m_pActorManager->AddMesh(shape_uid, mesh);
 
-	m_VertexBufferManager->Add(shape_uid, std::move(vb), m_PostUseLifetime);
-	m_IndexBufferManager->Add(shape_uid, std::move(ib), m_PostUseLifetime);
+	m_VertexBufferManager->Add(shape_uid, vb, m_PostUseLifetime);
+	m_IndexBufferManager->Add(shape_uid, ib, m_PostUseLifetime);
 
 	m_Vertices = nullptr;
 	m_Normals = nullptr;
@@ -378,7 +378,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(&texInfo);
 	
-	m_TextureManager->Add(texture_uid, std::move(scrTexture));
+	m_TextureManager->Add(texture_uid, scrTexture);
 }
 
 ///Most of these sets need actual values, rather than default initalisers.
@@ -392,11 +392,11 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	if(material.pbrMetallicRoughness.baseColorTexture.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> *diffuseTexture = m_TextureManager->Claim(material.pbrMetallicRoughness.baseColorTexture.index);
+		const std::shared_ptr<scr::Texture> diffuseTexture = m_TextureManager->Get(material.pbrMetallicRoughness.baseColorTexture.index);
 
 		if(diffuseTexture)
 		{
-			materialInfo.diffuse.texture = &**diffuseTexture;
+			materialInfo.diffuse.texture = diffuseTexture;
 
 			materialInfo.diffuse.texCoordsScalar[0] = {1, 1};
 			materialInfo.diffuse.texCoordsScalar[1] = {1, 1};
@@ -419,11 +419,11 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	if(material.normalTexture.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> *normalTexture = m_TextureManager->Claim(material.normalTexture.index);
+		const std::shared_ptr<scr::Texture> normalTexture = m_TextureManager->Get(material.normalTexture.index);
 
 		if(normalTexture)
 		{
-			materialInfo.normal.texture = &**normalTexture;
+			materialInfo.normal.texture = normalTexture;
 
 			materialInfo.normal.texCoordsScalar[0] = {1, 1};
 			materialInfo.normal.texCoordsScalar[1] = {1, 1};
@@ -440,11 +440,11 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	if(material.occlusionTexture.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> *occlusionTexture = m_TextureManager->Claim(material.normalTexture.index);
+		const std::shared_ptr<scr::Texture> occlusionTexture = m_TextureManager->Get(material.normalTexture.index);
 
 		if(occlusionTexture)
 		{
-			materialInfo.combined.texture = &**occlusionTexture;
+			materialInfo.combined.texture = occlusionTexture;
 
 			materialInfo.combined.texCoordsScalar[0] = {1, 1};
 			materialInfo.combined.texCoordsScalar[1] = {1, 1};
@@ -462,8 +462,8 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 	///This needs an actual value.
 	materialInfo.effect = nullptr;
 	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(m_pRenderPlatform,&materialInfo);
+	m_MaterialManager->Add(material_uid, scr_material);
 	m_pActorManager->AddMaterial(material_uid, scr_material);
-	m_materialManager->Add(material_uid, std::move(scr_material));
 }
 
 void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)

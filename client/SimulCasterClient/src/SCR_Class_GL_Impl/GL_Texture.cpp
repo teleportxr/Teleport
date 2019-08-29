@@ -87,10 +87,10 @@ void GL_Texture::Unbind() const
     glBindTexture((unsigned int)m_CI.type, 0);
 }
 
-void GL_Texture::UseSampler(const Sampler* sampler)
+void GL_Texture::UseSampler(std::shared_ptr<const Sampler> sampler)
 {
     m_Sampler = sampler;
-    const GL_Sampler* glSampler = dynamic_cast<const GL_Sampler*>(m_Sampler);
+    const GL_Sampler* glSampler = dynamic_cast<const GL_Sampler*>(m_Sampler.get());
 
     Bind();
     glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_WRAP_S, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapU));
@@ -132,8 +132,6 @@ GLenum GL_Texture::TypeToGLTarget(Type type) const
 GLenum GL_Texture::ToBaseGLFormat(Format format) const
 {
     switch(format) {
-        case Format::FORMAT_UNKNOWN:
-            return 0;
 
         case Format::RGBA32F:
         case Format::RGBA32UI:
@@ -196,13 +194,16 @@ GLenum GL_Texture::ToBaseGLFormat(Format format) const
         case Format::UNSIGNED_INT_24_8:
         case Format::FLOAT_32_UNSIGNED_INT_24_8_REV:
             return GL_RGBA;
+        case Format::FORMAT_UNKNOWN:
+        default:
+            SCR_COUT("Unknown texture format");
+            return 0;
     }
 };
 
 GLenum GL_Texture::ToGLFormat(Format format) const
 {
     switch(format) {
-        case Format::FORMAT_UNKNOWN: return 0;
 
         case Format::RGBA32F:           return GL_RGBA32F;
         case Format::RGBA32UI:          return GL_RGBA32UI;
@@ -258,6 +259,10 @@ GLenum GL_Texture::ToGLFormat(Format format) const
 
         case Format::UNSIGNED_INT_24_8:                 return GL_UNSIGNED_INT_24_8;
         case Format::FLOAT_32_UNSIGNED_INT_24_8_REV:    return GL_FLOAT_32_UNSIGNED_INT_24_8_REV;
+        case Format::FORMAT_UNKNOWN:
+        default:
+            SCR_CERR("Unknown format");
+            return 0;
 
     }
 };

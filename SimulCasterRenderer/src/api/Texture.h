@@ -136,7 +136,7 @@ namespace scr
 	protected:
 		TextureCreateInfo m_CI;
 
-		const Sampler* m_Sampler = nullptr;
+		std::shared_ptr<const Sampler> m_Sampler = nullptr;
 
 	public:
 		Texture(RenderPlatform *r) : APIObject(r) {}
@@ -152,18 +152,16 @@ namespace scr
 			m_CI.sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
 			m_CI.size = 0;
 			m_CI.data = nullptr;
-
-			m_Sampler = nullptr;
 		}
 
 		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bytesPerPixel will be the same for all faces.
 		virtual void Create(TextureCreateInfo* pTextureCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void UseSampler(const Sampler* sampler) = 0;
+		virtual void UseSampler(std::shared_ptr<const Sampler> ) = 0;
 		virtual void GenerateMips() = 0;
 
-		inline const Sampler* GetSampler() const { return m_Sampler; }
+		inline std::shared_ptr<const Sampler> GetSampler() const { return m_Sampler; }
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;
