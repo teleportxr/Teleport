@@ -25,111 +25,12 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 	// Removed circular dependencies.
 }
 
-void ResourceCreator::ensureVertices(avs::uid shape_uid, int startVertex, int vertexCount, const avs::vec3* vertices)
-{
-	CHECK_SHAPE_UID(shape_uid);
 
-	m_VertexCount = vertexCount;
-	m_Vertices = vertices;
-}
-
-void ResourceCreator::ensureNormals(avs::uid shape_uid, int startNormal, int normalCount, const avs::vec3* normals)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if ((size_t)normalCount != m_VertexCount)
-		return;
-
-	m_Normals = normals;
-}
-
-void ResourceCreator::ensureTangentNormals(avs::uid shape_uid, int startNormal, int tnCount, size_t tnSize, const uint8_t* tn)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	assert((size_t)tnCount == m_VertexCount);
-	m_TangentNormalSize = tnSize;
-	m_TangentNormals = tn;
-}
-
-void ResourceCreator::ensureTangents(avs::uid shape_uid, int startTangent, int tangentCount, const avs::vec4* tangents)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if (tangentCount != (int)m_VertexCount)
-		return;
-
-	m_Tangents = tangents;
-}
-
-void ResourceCreator::ensureTexCoord0(avs::uid shape_uid, int startTexCoord0, int texCoordCount0, int offset, const avs::vec2* texCoords0)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if (texCoordCount0 != (int)m_VertexCount)
-		return;
-
-	m_UV0s = texCoords0;
-}
-
-void ResourceCreator::ensureTexCoord1(avs::uid shape_uid, int startTexCoord1, int texCoordCount1, int offset, const avs::vec2* texCoords1)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if (texCoordCount1 != (int)m_VertexCount)
-		return;
-
-	m_UV1s = texCoords1;
-}
-
-void ResourceCreator::ensureColors(avs::uid shape_uid, int startColor, int colorCount, const avs::vec4* colors)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if (colorCount != (int)m_VertexCount)
-		return;
-
-	m_Colors = colors;
-}
-
-void ResourceCreator::ensureJoints(avs::uid shape_uid, int startJoint, int jointCount, const avs::vec4* joints)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if (jointCount != (int)m_VertexCount)
-		return;
-
-	m_Joints = joints;
-}
-
-void ResourceCreator::ensureWeights(avs::uid shape_uid, int startWeight, int weightCount, const avs::vec4* weights)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	if (weightCount != (int)m_VertexCount)
-		return;
-
-	m_Weights = weights;
-}
-
-void ResourceCreator::ensureIndices(avs::uid shape_uid, int startIndex, int indexCount, int indexSize, const unsigned char* indices)
-{
-	CHECK_SHAPE_UID(shape_uid);
-
-	if (indexCount % 3 > 0)
-	{
-		SCR_CERR_BREAK("indexCount is not a multiple of 3.\n", -1);
-		return;
-	}
-	m_PolygonCount = indexCount / 3;
-	
-	m_IndexCount = indexCount;
-	m_Indices = indices;
-	m_IndexSize = indexSize;
-}
-void ResourceCreator::ensureMaterialUID(avs::uid shape_uid, avs::uid _material_uid)
-{
-	CHECK_SHAPE_UID(shape_uid);
-	m_MeshMaterialUIDPairs.push_back({ shape_uid, _material_uid });
-}
-
-avs::Result ResourceCreator::Assemble()
+avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 {
 	using namespace scr;
 
-	if(m_VertexBufferManager->Has(shape_uid) ||	m_IndexBufferManager->Has(shape_uid))
+	if(m_VertexBufferManager->Has(resourceCreate->mesh_uid) ||	m_IndexBufferManager->Has(resourceCreate->mesh_uid))
 		return avs::Result::OK;
 
 	if (!m_pRenderPlatform)
@@ -139,12 +40,12 @@ avs::Result ResourceCreator::Assemble()
 	}
 
 	std::shared_ptr<VertexBufferLayout> layout(new VertexBufferLayout);
-	if (m_Vertices)	{ layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	}
-	if (m_Normals||m_TangentNormals)
+	if (resourceCreate->m_Vertices)	{ layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	}
+	if (resourceCreate->m_Normals|| resourceCreate->m_TangentNormals)
 	{
 		layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
 	}
-	if (m_Tangents||m_TangentNormals)
+	if (resourceCreate->m_Tangents|| resourceCreate->m_TangentNormals)
 	{
 		layout->AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
 	}
@@ -155,24 +56,24 @@ avs::Result ResourceCreator::Assemble()
 	if (m_Weights)	{ layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
 	layout->CalculateStride();
 
-	size_t interleavedVBSize = layout->m_Stride * m_VertexCount;
-	size_t indicesSize = m_IndexCount * m_IndexSize;
+	size_t interleavedVBSize = layout->m_Stride * resourceCreate->m_VertexCount;
+	size_t indicesSize = resourceCreate->m_IndexCount * resourceCreate->m_IndexSize;
 
 	std::unique_ptr<float[]> interleavedVB = std::make_unique<float[]>(interleavedVBSize);
 	std::unique_ptr<uint8_t[]> _indices = std::make_unique<uint8_t[]>(indicesSize);
-	memcpy(_indices.get(), m_Indices, indicesSize);
+	memcpy(_indices.get(), resourceCreate->m_Indices, indicesSize);
 
-	for (size_t i = 0; i < m_VertexCount; i++)
+	for (size_t i = 0; i < resourceCreate->m_VertexCount; i++)
 	{
 		size_t intraStrideOffset = 0;
-		if(m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Vertices + i, sizeof(avs::vec3));intraStrideOffset +=3;}
-		if (m_TangentNormals)
+		if(resourceCreate->m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Vertices + i, sizeof(avs::vec3));intraStrideOffset +=3;}
+		if (resourceCreate->m_TangentNormals)
 		{
 			avs::vec3 normal;
 			avs::vec4 tangent;
-			char *nt =(char*)( m_TangentNormals + (m_TangentNormalSize*i));
+			char *nt =(char*)(resourceCreate->m_TangentNormals + (resourceCreate->m_TangentNormalSize*i));
 			// tangentx tangentz
-			if (m_TangentNormalSize == 8)
+			if (resourceCreate->m_TangentNormalSize == 8)
 			{
 				Vec4<char> &x8 = *((avs::Vec4<char>*)(nt));
 				tangent.x = x8.x / 127.0f;
@@ -203,8 +104,8 @@ avs::Result ResourceCreator::Assemble()
 		}
 		else
 		{
-			if (m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Normals + i, sizeof(avs::vec3));	intraStrideOffset += 3; }
-			if (m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Tangents + i, sizeof(avs::vec4));	intraStrideOffset += 4; }
+			if (resourceCreate->m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Normals + i, sizeof(avs::vec3));	intraStrideOffset += 3; }
+			if (resourceCreate->m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Tangents + i, sizeof(avs::vec4));	intraStrideOffset += 4; }
 		}
 		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_UV0s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
 		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_UV1s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
@@ -213,7 +114,7 @@ avs::Result ResourceCreator::Assemble()
 		if(m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Weights + i, sizeof(avs::vec4));		intraStrideOffset +=4;}
 	}
 
-	if (interleavedVBSize == 0 || interleavedVB == nullptr || m_IndexCount == 0 || m_Indices == nullptr)
+	if (interleavedVBSize == 0 || interleavedVB == nullptr || resourceCreate->m_IndexCount == 0 || resourceCreate->m_Indices == nullptr)
 	{
 		SCR_CERR("Unable to construct vertex and index buffers.");
 		return avs::Result::GeometryDecoder_ClientRendererError;
@@ -223,7 +124,7 @@ avs::Result ResourceCreator::Assemble()
 	VertexBuffer::VertexBufferCreateInfo vb_ci;
 	vb_ci.layout = std::move(layout);
 	vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
-	vb_ci.vertexCount = m_VertexCount;
+	vb_ci.vertexCount = resourceCreate->m_VertexCount;
 	vb_ci.size = interleavedVBSize;
 	vb_ci.data = (const void*)interleavedVB.get();
 	vb->Create(&vb_ci);
@@ -231,8 +132,8 @@ avs::Result ResourceCreator::Assemble()
 	std::shared_ptr<IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
 	IndexBuffer::IndexBufferCreateInfo ib_ci;
 	ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
-	ib_ci.indexCount = m_IndexCount;
-	ib_ci.stride = m_IndexSize;
+	ib_ci.indexCount = resourceCreate->m_IndexCount;
+	ib_ci.stride = resourceCreate->m_IndexSize;
 	ib_ci.data = _indices.get();
 	ib->Create(&ib_ci);
 
@@ -240,22 +141,20 @@ avs::Result ResourceCreator::Assemble()
 	mesh_ci.vb = vb;
 	mesh_ci.ib = ib;
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
-	m_pActorManager->AddMesh(shape_uid, mesh);
+	m_pActorManager->AddMesh(resourceCreate->mesh_uid, mesh);
 
-	m_VertexBufferManager->Add(shape_uid, vb, m_PostUseLifetime);
-	m_IndexBufferManager->Add(shape_uid, ib, m_PostUseLifetime);
+	m_VertexBufferManager->Add(resourceCreate->mesh_uid, vb, m_PostUseLifetime);
+	m_IndexBufferManager->Add(resourceCreate->mesh_uid, ib, m_PostUseLifetime);
 
-	m_Vertices = nullptr;
-	m_Normals = nullptr;
-	m_Tangents = nullptr;
-	m_UV0s = nullptr;
-	m_UV1s = nullptr;
-	m_Colors = nullptr;
-	m_Joints = nullptr;
-	m_Weights = nullptr;
-	m_Indices = nullptr;
-
-	shape_uid = (avs::uid) -1;
+	resourceCreate->m_Vertices = nullptr;
+	resourceCreate->m_Normals = nullptr;
+	resourceCreate->m_Tangents = nullptr;
+	resourceCreate->m_UV0s = nullptr;
+	resourceCreate->m_UV1s = nullptr;
+	resourceCreate->m_Colors = nullptr;
+	resourceCreate->m_Joints = nullptr;
+	resourceCreate->m_Weights = nullptr;
+	resourceCreate->m_Indices = nullptr;
 
     return avs::Result::OK;
 }
@@ -274,6 +173,8 @@ scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format
 		case avs::TextureFormat::RGBA16F: return scr::Texture::Format::RGBA16F;
 		case avs::TextureFormat::RGBA8: return scr::Texture::Format::RGBA8;
 		case avs::TextureFormat::MAX: return scr::Texture::Format::FORMAT_UNKNOWN;
+		default:
+			exit(1);
 	}
 }
 
@@ -291,6 +192,8 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 		case basist::transcoder_texture_format::cTFPVRTC1_4_OPAQUE_ONLY: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
 		case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
 		case basist::transcoder_texture_format::cTFTotalTextureFormats: return scr::Texture::CompressionFormat::UNCOMPRESSED;
+		default:
+			exit(1);
 	}
 }
 
@@ -485,7 +388,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	}
 }
 
-void ResourceCreator::CreateActor(avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, avs::uid transform_uid)
+void ResourceCreator::CreateActor(avs::uid mesh_uid, const std::vector<avs::uid> &material_uids, avs::uid transform_uid)
 {
 	scr::Actor::ActorCreateInfo actor_ci = {};
 	actor_ci.staticMesh = true;
