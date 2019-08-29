@@ -423,29 +423,20 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().ib.get());
 			gl_vb->CreateVAO(gl_ib->GetIndexID());
 
-            std::vector<Vector3f> vertices(gl_vb->GetVertexCount());
-            memcpy(vertices.data(), gl_vb->GetVertexBufferCreateInfo().data, gl_vb->GetVertexBufferCreateInfo().size);
-            std::vector<uint16_t> indices((int)gl_ib->GetIndexBufferCreateInfo().indexCount);
-            memcpy(indices.data(), gl_ib->GetIndexBufferCreateInfo().data, gl_ib->GetIndexBufferCreateInfo().indexCount * gl_ib->GetIndexBufferCreateInfo().stride);
-
-			VertexAttribs va = {};
-			va.position = vertices;
-
-			GlGeometry geo(va, indices);
-            GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
-			/*geo.vertexBuffer = gl_vb->GetVertexID();
+			GlGeometry geo;
+            geo.vertexBuffer = gl_vb->GetVertexID();
 			geo.indexBuffer = gl_ib->GetIndexID();
 			geo.vertexArrayObject = gl_vb->GetVertexArrayID();
 			geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("standard").topology);
 			geo.vertexCount = (int) gl_vb->GetVertexCount();
-			geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;*/
-			//Can't set static member: GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
+			geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
+			GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
 
 			ovrSurfaceDef ovr_Actor = {};
-			std::string _actorName = std::string("Cube Test - UID: ") + std::to_string(actor.first);
+			std::string _actorName = std::string("ActorUID: ") + std::to_string(actor.first);
 			ovr_Actor.surfaceName = _actorName;
 			ovr_Actor.numInstances = 1;
-			ovr_Actor.geo = geo; //BuildGlobe(1.0F, 1.0F, 100.0F);
+			ovr_Actor.geo = geo;
 
 		   ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
 

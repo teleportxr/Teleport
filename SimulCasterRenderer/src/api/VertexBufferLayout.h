@@ -10,6 +10,7 @@ namespace scr
 	public:
 		enum class Type : uint32_t
 		{
+			HALF,
 			FLOAT,
 			DOUBLE,
 			UINT,
@@ -50,9 +51,27 @@ namespace scr
 		{
 			for (auto& attrib : m_Attributes)
 			{
-				m_Stride += static_cast<size_t>(attrib.componentCount);
+				m_Stride += static_cast<size_t>(attrib.componentCount) * GetAttributeTypeSize(attrib.type);
 			}
-			m_Stride *= 4;
+		}
+		inline size_t GetAttributeTypeSize(Type type)
+		{
+			switch (type)
+			{
+			case Type::DOUBLE:
+				return 8;
+			case Type::FLOAT:
+			case Type::UINT:
+			case Type::INT:
+				return 4;
+			case Type::HALF:
+			case Type::USHORT:
+			case Type::SHORT:
+				return 2;
+			case Type::UBYTE:
+			case Type::BYTE:
+				return 1;
+			}
 		}
 	};
 }
