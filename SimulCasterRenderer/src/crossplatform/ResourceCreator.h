@@ -48,7 +48,7 @@ namespace scr
             mVertexBufferManager.Update(timeElapsed);
         }
 
-        scr::ActorManager                                    mActorManager;
+        scr::ActorManager                   mActorManager;
         ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
         ResourceManager<scr::Shader>        mShaderManager;
         ResourceManager<scr::Material>		mMaterialManager;

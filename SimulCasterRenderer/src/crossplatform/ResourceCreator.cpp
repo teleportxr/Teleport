@@ -49,11 +49,11 @@ avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 	{
 		layout->AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
 	}
-	if (m_UV0s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
-	if (m_UV1s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
-	if (m_Colors)	{ layout->AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
-	if (m_Joints)	{ layout->AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
-	if (m_Weights)	{ layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
+	if (resourceCreate->m_UV0s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
+	if (resourceCreate->m_UV1s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
+	if (resourceCreate->m_Colors)	{ layout->AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
+	if (resourceCreate->m_Joints)	{ layout->AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
+	if (resourceCreate->m_Weights)	{ layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
 	layout->CalculateStride();
 
 	size_t interleavedVBSize = layout->m_Stride * resourceCreate->m_VertexCount;
@@ -107,11 +107,11 @@ avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 			if (resourceCreate->m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Normals + i, sizeof(avs::vec3));	intraStrideOffset += 3; }
 			if (resourceCreate->m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Tangents + i, sizeof(avs::vec4));	intraStrideOffset += 4; }
 		}
-		if(m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_UV0s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
-		if(m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_UV1s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
-		if(m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Colors + i, sizeof(avs::vec4));			intraStrideOffset +=4;}
-		if(m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Joints + i, sizeof(avs::vec4));			intraStrideOffset +=4;}
-		if(m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, m_Weights + i, sizeof(avs::vec4));		intraStrideOffset +=4;}
+		if(resourceCreate->m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_UV0s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
+		if(resourceCreate->m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_UV1s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
+		if(resourceCreate->m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Colors + i, sizeof(avs::vec4));			intraStrideOffset +=4;}
+		if(resourceCreate->m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Joints + i, sizeof(avs::vec4));			intraStrideOffset +=4;}
+		if(resourceCreate->m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Weights + i, sizeof(avs::vec4));		intraStrideOffset +=4;}
 	}
 
 	if (interleavedVBSize == 0 || interleavedVB == nullptr || resourceCreate->m_IndexCount == 0 || resourceCreate->m_Indices == nullptr)
