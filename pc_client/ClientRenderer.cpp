@@ -398,14 +398,14 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 		mat4 model;
 		model=((const float*)& (transform->GetTransformMatrix()));
-		mat4::mul(cameraConstants.worldViewProj ,model,*((mat4*)&deviceContext.viewStruct.viewProj));
+		mat4::mul(cameraConstants.worldViewProj ,*((mat4*)&deviceContext.viewStruct.viewProj), model);
 		cameraConstants.world = model;
 		cameraConstants.viewPosition = vec3(0,0,0);
 		pbrEffect->SetConstantBuffer(deviceContext, &solidConstants);
 		pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 		pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
  		renderPlatform->SetLayout(deviceContext, layout);
-		 
+		renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 		renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
 		renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
 		renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);

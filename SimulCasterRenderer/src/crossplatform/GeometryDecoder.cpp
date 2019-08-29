@@ -175,15 +175,22 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	{
 		for (auto& primitive : it->second)
 		{
+			ResourceCreate resourceCreate;
+			resourceCreate.mesh_uid = it->first;
+			uint32_t vertexCount = 0;
 			for (size_t i = 0; i < primitive.attributeCount; i++)
 			{
 				//Vertices
-				Attribute attrib = primitive.attributes[i];
-				const Accessor &accessor = dg.accessors[attrib.accessor];
+				Attribute attrib				= primitive.attributes[i];
+				const Accessor &accessor		= dg.accessors[attrib.accessor];
+				const BufferView &bufferView	= dg.bufferViews[accessor.bufferView];
+				const GeometryBuffer& buffer	= dg.buffers[bufferView.buffer];
+				const uint8_t* data				= buffer.data + bufferView.byteOffset;
 				switch (attrib.semantic)
 				{
 				case AttributeSemantic::POSITION:
-					target->ensureVertices(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					resourceCreate.m_VertexCount = vertexCount=accessor.count;
+					resourceCreate.m_Vertices = (const avs::vec3*)buffer.data;
 					continue;
 				case AttributeSemantic::TANGENTNORMALXZ:
 				{
@@ -192,35 +199,51 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 						tnSize = 8;
 					else  if (accessor.type == avs::Accessor::DataType::VEC4)
 						tnSize = 16;
-					//target->ensureTangentNormals(it->first, 0, (int)accessor.count, tnSize, (const uint8_t*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//target->ensureTangentNormals(it->first, 0, (int)accessor.count, tnSize, (const uint8_t*)buffer.data);
 				}
 					continue;
 				case AttributeSemantic::NORMAL:
-					//target->ensureNormals(it->first, 0, (int)accessor.count, (const avs::vec3*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//target->ensureNormals(mesh_uid, 0, (int)accessor.count, (const avs::vec3*)buffer.data);
 					continue;
 				case AttributeSemantic::TANGENT:
-					//target->ensureTangents(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//target->ensureTangents(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
 					if (accessor.componentType == avs::Accessor::ComponentType::FLOAT)
-						target->ensureTexCoord0(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					{
+						resourceCreate.m_UV0s = (const avs::vec2*)(data);
+						assert(accessor.count == vertexCount);
+						//target->ensureTexCoord0(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, );
+					}
 					else
-						target->ensureTexCoord0_Half(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::hvec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					{
+						resourceCreate.m_Half_UV0s = (const avs::hvec2*)(data);
+						assert(accessor.count == vertexCount);
+						//target->ensureTexCoord0_Half(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, (const avs::hvec2*)buffer.data);
+					}
 					continue;
 				case AttributeSemantic::TEXCOORD_1:
 					if (accessor.componentType == avs::Accessor::ComponentType::FLOAT)
-						target->ensureTexCoord1(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::vec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					{
+						resourceCreate.m_UV1s = (const avs::vec2*)(data);
+						assert(accessor.count == vertexCount);
+						//target->ensureTexCoord1(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, (const avs::vec2*)buffer.data);
+					}
 					else
-						target->ensureTexCoord1_Half(it->first, 0, (int)accessor.count, dg.bufferViews[accessor.bufferView].byteOffset, (const avs::hvec2*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					{
+						resourceCreate.m_Half_UV1s = (const avs::hvec2*)(data);
+						assert(accessor.count == vertexCount);
+						//target->ensureTexCoord1_Half(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, (const avs::hvec2*)buffer.data);
+					}
 					continue;;
 				case AttributeSemantic::COLOR_0:
-					//target->ensureColors(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//target->ensureColors(mesh_uid, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
 					continue;
 				case AttributeSemantic::JOINTS_0:
-					//target->ensureJoints(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//target->ensureJoints(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
 					continue;
 				case AttributeSemantic::WEIGHTS_0:
-					//target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)dg.buffers[dg.bufferViews[accessor.bufferView].buffer].data);
+					//target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
 					continue;
 				default:
 				    std::cerr<<"Unknown attribute semantic\n";
@@ -229,10 +252,18 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			}
 
 			//Indices
-			size_t componentSize = avs::GetComponentSize(dg.accessors[primitive.indices_accessor].componentType);
-			target->ensureIndices(it->first, (int)(dg.accessors[primitive.indices_accessor].byteOffset / componentSize), (int)dg.accessors[primitive.indices_accessor].count, (int)componentSize,dg.buffers[dg.bufferViews[dg.accessors[primitive.indices_accessor].bufferView].buffer].data);
-			target->ensureMaterialUID(it->first, primitive.material);
-			avs::Result result = target->Assemble();
+			const Accessor& indicesAccessor = dg.accessors[primitive.indices_accessor];
+			const BufferView& indicesBufferView = dg.bufferViews[indicesAccessor.bufferView];
+			const GeometryBuffer& indicesBuffer = dg.buffers[indicesBufferView.buffer];
+			size_t componentSize = avs::GetComponentSize(indicesAccessor.componentType);
+			resourceCreate.m_Indices = (indicesBuffer.data + indicesAccessor.byteOffset);
+			resourceCreate.m_IndexSize = componentSize;
+			resourceCreate.m_IndexCount = indicesAccessor.count;
+			//resourceCreate.m_PolygonCount = 0;
+			//target->ensureIndices(it->first, (int)(indicesAccessor.byteOffset / componentSize), (int)indicesAccessor.count, (int)componentSize, indicesBuffer.data);
+			//target->ensureMaterialUID(it->first, primitive.material);
+			//resourceCreate.ma
+			avs::Result result = target->Assemble(&resourceCreate);
 			if (result != avs::Result::OK)
 				return result;
 		}
