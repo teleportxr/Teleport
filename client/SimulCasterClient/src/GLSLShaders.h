@@ -172,7 +172,7 @@ precision highp float;
 //To Output Framebuffer - Use gl_FragColor
 //layout(location = 0) out vec4 colour;
 
-//layout(binding = 10)  uniform sampler2D u_Texture;
+layout(binding = 10) uniform sampler2D u_Texture;
 
 //From Vertex Varying
 layout(location = 7)  in vec2 v_UV0;
@@ -180,8 +180,8 @@ layout(location = 8)  in vec2 v_UV1;
 
 void main()
 {
-    //gl_FragColor = texture(u_Texture, v_UV0);
-    gl_FragColor = vec4(v_UV1.x, v_UV1.y, 0.0, 1.0);
+    gl_FragColor = texture(u_Texture, v_UV0);
+    //gl_FragColor = vec4(v_UV0.x, v_UV0.y, 0.0, 1.0);
 }
 )";
 
