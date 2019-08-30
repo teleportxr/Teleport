@@ -146,17 +146,20 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			sci[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
 			sci[0].entryPoint = "main";
 			sci[0].filepath = nullptr;
-			sci[0].sourceCode = shaders::FlatColour_VS;
+			sci[0].sourceCode = shaders::FlatTexture_VS;
 			sci[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
 			sci[1].entryPoint = "main";
 			sci[1].filepath = nullptr;
-			sci[1].sourceCode = shaders::FlatColour_FS;
+			sci[1].sourceCode = shaders::FlatTexture_FS;
 			shaders[0].Create(&sci[0]);
 			shaders[1].Create(&sci[1]);
 			scr::ShaderSystem::GraphicsPipeline gp (shaders, 2);
 
 			scr::VertexBufferLayout vbl;
 			vbl.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC4, scr::VertexBufferLayout::Type::FLOAT);
+			vbl.AddAttribute(3, scr::VertexBufferLayout::ComponentCount::VEC2, scr::VertexBufferLayout::Type::FLOAT);
+			vbl.AddAttribute(4, scr::VertexBufferLayout::ComponentCount::VEC2, scr::VertexBufferLayout::Type::FLOAT);
+			vbl.CalculateStride();
 
 			scr::Effect::ViewportAndScissor vs = {};
 			vs.x = 0.0f;
@@ -174,7 +177,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			rs.depthClampEnable = false;
 			rs.rasterizerDiscardEnable = false;
 			rs.cullMode = scr::Effect::CullMode::BACK_BIT;
-			rs.frontFace = scr::Effect::FrontFace::COUNTER_CLOCKWISE;
+			rs.frontFace = scr::Effect::FrontFace::CLOCKWISE;
 
 			scr::Effect::MultisamplingState ms = {};
 			ms.samplerShadingEnable = false;
@@ -588,7 +591,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             std::string _actorName = std::string("ActorUID: ") + std::to_string(actor.first);
             ovr_Actor.surfaceName = _actorName;
             ovr_Actor.numInstances = 1;
-            ovr_Actor.geo = geo;
+            ovr_Actor.geo = geo;//BuildGlobe();
 
             ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
 
@@ -609,7 +612,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[2] = true;
             ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[3] = true;
             ovr_Actor.graphicsCommand.GpuState.polygonOffsetEnable = false;
-            ovr_Actor.graphicsCommand.GpuState.cullEnable = false;
+            ovr_Actor.graphicsCommand.GpuState.cullEnable = true;
             ovr_Actor.graphicsCommand.GpuState.lineWidth = 1.0F;
             ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
             ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
@@ -617,10 +620,9 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             mOVRActors[actor.first] = ovr_Actor;
         }
 
-        float heightOffset = -80.0F;
-        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
-        scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
-        scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix *ic_mmm.pTransform->GetTransformMatrix();
+        float heightOffset = -0.80F;
+        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-0.80F, -1.42F + heightOffset, 4.80F));
+        scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmm.pTransform->GetTransformMatrix();
 
         OVR::Matrix4f transform;
         memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
