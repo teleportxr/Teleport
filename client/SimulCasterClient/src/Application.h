@@ -115,7 +115,7 @@ private:
     //Clientside Renderering Objects
     scc::GL_DeviceContext mDeviceContext;
     scc::GL_Effect mFlatColourEffect;
-    scc::GL_Texture mDummyTexture;
+    std::shared_ptr<scc::GL_Texture> mDummyTexture;
     std::shared_ptr<scr::Material> mFlatColourMaterial;
     std::map<avs::uid, OVR::ovrSurfaceDef> mOVRActors;
     inline void RemoveInvalidOVRActors()
@@ -128,4 +128,5 @@ private:
 			}
 		}
 	}
+	void RenderLocalActors(OVR::ovrFrameResult& res);
 };
