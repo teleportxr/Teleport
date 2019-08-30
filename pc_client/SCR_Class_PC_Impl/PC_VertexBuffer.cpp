@@ -99,6 +99,22 @@ simul::crossplatform::PixelFormat GetAttributeFormat(const scr::VertexBufferLayo
 				break;
 			};
 		}
+		case scr::VertexBufferLayout::Type::HALF:
+		{
+			switch (attr.componentCount)
+			{
+			case scr::VertexBufferLayout::ComponentCount::SCALAR:
+				return simul::crossplatform::PixelFormat::R_16_FLOAT;
+			case scr::VertexBufferLayout::ComponentCount::VEC2:
+				return simul::crossplatform::PixelFormat::RG_16_FLOAT;
+			case scr::VertexBufferLayout::ComponentCount::VEC3:
+				return simul::crossplatform::PixelFormat::RGB_16_FLOAT;
+			case scr::VertexBufferLayout::ComponentCount::VEC4:
+				return simul::crossplatform::PixelFormat::RGBA_16_FLOAT;
+			default:
+				break;
+			};
+		}
 		default:
 			break;
 	};
@@ -150,7 +166,7 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCr
 	for (size_t i = 0; i < numAttr; i++)
 	{
 		auto &attr = m_CI.layout->m_Attributes[i];
-		auto s = (avs::AttributeSemantic)i;
+		avs::AttributeSemantic s =(avs::AttributeSemantic) attr.location;
 		desc[i].semanticName = GetAttributeSemantic(s);
 		desc[i].semanticIndex = GetAttributeSemanticIndex((avs::AttributeSemantic)i);
 		desc[i].format = GetAttributeFormat(attr);

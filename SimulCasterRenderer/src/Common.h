@@ -13,6 +13,7 @@
 #include <memory>
 #include <algorithm>
 #include <functional>
+#include <libavstream/geometry/mesh_interface.hpp>
 
 //Debug
 #define SCR_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
