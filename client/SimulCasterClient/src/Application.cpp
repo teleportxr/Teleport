@@ -36,6 +36,7 @@ jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* 
 Application::Application()
 	: mDecoder(avs::DecoderBackend::Custom)
 	, mPipelineConfigured(false)
+	, resourceCreator(basist::transcoder_texture_format::cTFETC2)
 	, mSoundEffectContext(nullptr)
 	, mSoundEffectPlayer(nullptr)
 	, mGuiSys(OvrGuiSys::Create())

@@ -7,8 +7,8 @@ using namespace avs;
 
 std::vector<std::pair<avs::uid, avs::uid>> ResourceCreator::m_MeshMaterialUIDPairs;
 
-ResourceCreator::ResourceCreator()
-	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
+ResourceCreator::ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat)
+	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(transcoderTextureFormat)
 {
 	basist::basisu_transcoder_init();
 }
