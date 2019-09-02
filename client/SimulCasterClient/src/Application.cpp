@@ -447,19 +447,20 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 	for(auto& actor : resourceManagers.mActorManager.m_Actors)
     {
-        scr::InputCommand_Mesh_Material_Transform ic_mmm(&ci, actor.second.get());
-        ic_mmm.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffects);
+        scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.get());
+        ic_mmt.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffects);
 
         if(mOVRActors.find(actor.first) == mOVRActors.end())
         {
-            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().vb.get());
-            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().ib.get());
+            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().vb.get());
+            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().ib.get());
             gl_vb->CreateVAO(gl_ib->GetIndexID());
             auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
 
-            const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmm.pMaterial->GetMaterialCreateInfo().effect);
+            const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmt.pMaterial->GetMaterialCreateInfo().effect);
             const auto gl_effectPass = BuildEffect("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS);
-            const auto temp_Texture = dynamic_cast<scc::GL_Texture*>(ic_mmm.pMaterial->GetMaterialCreateInfo().diffuse.texture.get());
+
+            const auto temp_Texture = dynamic_cast<scc::GL_Texture*>(ic_mmt.pMaterial->GetMaterialCreateInfo().diffuse.texture.get());
             scr::Sampler::SamplerCreateInfo sci  = {};
             sci.wrapU = scr::Sampler::Wrap::CLAMP_TO_EDGE;
             sci.wrapV = scr::Sampler::Wrap::CLAMP_TO_EDGE;
@@ -482,7 +483,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             std::string _actorName = std::string("ActorUID: ") + std::to_string(actor.first);
             ovr_Actor.surfaceName = _actorName;
             ovr_Actor.numInstances = 1;
-            ovr_Actor.geo = geo;//BuildGlobe();
+            ovr_Actor.geo = geo;
 
             ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
 
@@ -514,8 +515,16 @@ void Application::RenderLocalActors(ovrFrameResult& res)
         }
 
         float heightOffset = -0.80F;
+        scr::Transform scr_UE4_Camera_Transform;
+        avs::Transform avs_UE4_Camera_Transform = mDecoder.getCameraTransform();
+        scr_UE4_Camera_Transform = avs_UE4_Camera_Transform;
+        scr_UE4_Camera_Transform.m_Translation * -1;
+        scr_UE4_Camera_Transform.m_Translation.y += heightOffset;
+
+
         scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-0.80F, -1.42F + heightOffset, 4.80F)); //TO BE updated from the video frame.
-        scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmm.pTransform->GetTransformMatrix();
+        //scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr_UE4_Camera_Transform.m_Translation);
+        scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform->GetTransformMatrix();
 
         OVR::Matrix4f transform;
         memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));

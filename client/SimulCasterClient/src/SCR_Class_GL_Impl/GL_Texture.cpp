@@ -14,6 +14,9 @@ void GL_Texture::Create(TextureCreateInfo* pTextureCreateInfo)
     assert(ToBaseGLFormat(m_CI.format) != 0);
 
     m_Texture = GlTexture();
+    m_Texture.target = TypeToGLTarget(m_CI.type);
+    m_Texture.Width = m_CI.width;
+    m_Texture.Height = m_CI.height;
 
     glGenTextures(1, &m_Texture.texture);
     glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
@@ -389,15 +392,12 @@ GLenum GL_Texture::ToGLCompressedFormat(CompressionFormat format, uint32_t bytes
                 return 0;
         case Texture::CompressionFormat::BC3:
             if(GL_EXT_texture_compression_s3tc)
-                return bytesPerPixel == 4 ? GL_COMPRESSED_RGBA_S3TC_DXT3_EXT : 0;
+                return bytesPerPixel == 4 ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : 0;
             else
                 return 0;
         case Texture::CompressionFormat::BC4:
             return 0;
         case Texture::CompressionFormat::BC5:
-            if(GL_EXT_texture_compression_s3tc)
-                return bytesPerPixel == 4 ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : 0;
-            else
                 return 0;
         case Texture::CompressionFormat::ETC1:
             if(GL_OES_compressed_ETC1_RGB8_texture)
@@ -407,7 +407,10 @@ GLenum GL_Texture::ToGLCompressedFormat(CompressionFormat format, uint32_t bytes
         case Texture::CompressionFormat::ETC2:
             return bytesPerPixel == 4 ? GL_COMPRESSED_RGBA8_ETC2_EAC : bytesPerPixel == 3 ? GL_COMPRESSED_RGB8_ETC2 : 0;
         case Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY:
-            return 0;
+            if(GL_IMG_texture_compression_pvrtc)
+                return bytesPerPixel == 4 ? GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG : bytesPerPixel == 3 ? GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG : 0;
+            else
+                return 0;
         case Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY:
             return 0;
     }

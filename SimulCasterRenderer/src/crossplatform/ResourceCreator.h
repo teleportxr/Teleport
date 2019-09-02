@@ -131,5 +131,6 @@ private:
 	static std::vector<std::pair<avs::uid, avs::uid>> m_MeshMaterialUIDPairs;
 
 	std::map<avs::uid, std::shared_ptr<avs::DataNode>> nodes;
+
 };
 
