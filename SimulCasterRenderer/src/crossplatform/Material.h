@@ -62,6 +62,6 @@ namespace scr
 
 		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfoConst() const { return m_CI; }
-		inline MaterialCreateInfo GetMaterialCreateInfo() { return m_CI; }
+		inline MaterialCreateInfo& GetMaterialCreateInfo() { return m_CI; }
 	};
 }

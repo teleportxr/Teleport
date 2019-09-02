@@ -7,8 +7,8 @@ using namespace avs;
 
 std::vector<std::pair<avs::uid, avs::uid>> ResourceCreator::m_MeshMaterialUIDPairs;
 
-ResourceCreator::ResourceCreator()
-	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(basist::transcoder_texture_format::cTFBC1)
+ResourceCreator::ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat)
+	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(transcoderTextureFormat)
 {
 	basist::basisu_transcoder_init();
 }
@@ -199,23 +199,23 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 
 void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& texture)
 {
-	scr::Texture::TextureCreateInfo texInfo =
-	{
-		texture.width,
-		texture.height,
-		texture.depth,
-		texture.bytesPerPixel,
-		texture.arrayCount,
-		texture.mipCount,
-		scr::Texture::Slot::UNKNOWN,
-		scr::Texture::Type::TEXTURE_2D, //Assumed
-		textureFormatFromAVSTextureFormat(texture.format),
-		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
-		0,
-		nullptr,
-		scr::Texture::CompressionFormat::UNCOMPRESSED
-	};
-
+    scr::Texture::TextureCreateInfo texInfo =
+    {
+         texture.width,
+         texture.height,
+         texture.depth,
+         texture.bytesPerPixel,
+         texture.arrayCount,
+         texture.mipCount,
+         scr::Texture::Slot::UNKNOWN,
+         scr::Texture::Type::TEXTURE_2D, //Assumed
+         textureFormatFromAVSTextureFormat(texture.format),
+         scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
+         0,
+         nullptr,
+         scr::Texture::CompressionFormat::UNCOMPRESSED
+     };
+   
 	//We need a new transcoder for every .basis file.
 	basist::basisu_transcoder basis_transcoder(&basis_codeBook);
 

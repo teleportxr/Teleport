@@ -40,7 +40,12 @@ void GL_Effect::LinkShaders(const char* effectPassName)
 
     assert(vertex != nullptr && fragment != nullptr);
 
-    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, nullptr, 0, 310);
+    //TO BE REMOVED
+    ovrProgramParm uniformParms[] ={
+            {"u_Texture", ovrProgramParmType::TEXTURE_SAMPLED}
+    };
+
+    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, uniformParms, sizeof( uniformParms ) / sizeof( ovrProgramParm ), 310);
 }
 
 void GL_Effect::Bind(const char* effectPassName) const

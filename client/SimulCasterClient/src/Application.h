@@ -112,11 +112,11 @@ private:
 	int mNumPendingFrames = 0;
 
 	scr::ResourceManagers resourceManagers;
+
     //Clientside Renderering Objects
     scc::GL_DeviceContext mDeviceContext;
-    scc::GL_Effect mFlatColourEffect;
-    std::shared_ptr<scc::GL_Texture> mDummyTexture;
-    std::shared_ptr<scr::Material> mFlatColourMaterial;
+    scc::GL_Effect mEffects;
+	std::shared_ptr<scr::Sampler> mSampler = renderPlatform.InstantiateSampler();
     std::map<avs::uid, OVR::ovrSurfaceDef> mOVRActors;
     inline void RemoveInvalidOVRActors()
 	{
@@ -129,4 +129,5 @@ private:
 		}
 	}
 	void RenderLocalActors(OVR::ovrFrameResult& res);
+    const scr::Effect::EffectPassCreateInfo& BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource);
 };

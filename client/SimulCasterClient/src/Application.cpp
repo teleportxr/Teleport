@@ -36,6 +36,7 @@ jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* 
 Application::Application()
 	: mDecoder(avs::DecoderBackend::Custom)
 	, mPipelineConfigured(false)
+	, resourceCreator(basist::transcoder_texture_format::cTFETC2)
 	, mSoundEffectContext(nullptr)
 	, mSoundEffectPlayer(nullptr)
 	, mGuiSys(OvrGuiSys::Create())
@@ -45,7 +46,7 @@ Application::Application()
 	, mSession(this)
 	, mControllerID(-1)
 	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
-	, mFlatColourEffect(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
+	, mEffects(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
 {
 	memset(&renderConstants,0,sizeof(RenderConstants));
 	renderConstants.colourOffsetScale={0.0f,0.0f,1.0f,0.6667f};
@@ -61,8 +62,8 @@ Application::Application()
 	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
 
 	scr::Effect::EffectCreateInfo ci;
-	ci.effectName = "flatColour";
-	mFlatColourEffect.Create(&ci);
+	ci.effectName = "StandardEffects";
+	mEffects.Create(&ci);
 }
 
 Application::~Application()
@@ -132,123 +133,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 				OVR_FAIL("Failed to build video surface shader program");
 			}
 		}
-		//FlatColourEffect and Material
-		{
-			scr::ShaderSystem::PassVariables pv;
-			pv.mask = false;
-			pv.reverseDepth = false;
-			pv.msaa = false;
-
-			scc::GL_Shader shaders[2] = {
-					scc::GL_Shader(dynamic_cast<scr::RenderPlatform*>(&renderPlatform)),
-					scc::GL_Shader(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))};
-			scr::Shader::ShaderCreateInfo sci[2];
-			sci[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-			sci[0].entryPoint = "main";
-			sci[0].filepath = nullptr;
-			sci[0].sourceCode = shaders::FlatColour_VS;
-			sci[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-			sci[1].entryPoint = "main";
-			sci[1].filepath = nullptr;
-			sci[1].sourceCode = shaders::FlatColour_FS;
-			shaders[0].Create(&sci[0]);
-			shaders[1].Create(&sci[1]);
-			scr::ShaderSystem::GraphicsPipeline gp (shaders, 2);
-
-			scr::VertexBufferLayout vbl;
-			vbl.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC4, scr::VertexBufferLayout::Type::FLOAT);
-
-			scr::Effect::ViewportAndScissor vs = {};
-			vs.x = 0.0f;
-			vs.y = 0.0f;
-			vs.width = 0.0f;
-			vs.height = 0.0f;
-			vs.minDepth = 1.0f;
-			vs.maxDepth = 0.0f;
-			vs.offsetX = 0;
-			vs.offsetY = 0;
-			vs.extentX = (uint32_t)vs.x;
-			vs.extentY = (uint32_t)vs.y;
-
-			scr::Effect::RasterizationState rs = {};
-			rs.depthClampEnable = false;
-			rs.rasterizerDiscardEnable = false;
-			rs.cullMode = scr::Effect::CullMode::BACK_BIT;
-			rs.frontFace = scr::Effect::FrontFace::COUNTER_CLOCKWISE;
-
-			scr::Effect::MultisamplingState ms = {};
-			ms.samplerShadingEnable = false;
-			ms.rasterizationSamples = scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT;
-
-			scr::Effect::StencilCompareOpState scos = {};
-			scos.stencilFailOp = scr::Effect::StencilCompareOp::KEEP;
-			scos.stencilPassDepthFailOp = scr::Effect::StencilCompareOp::KEEP;
-			scos.passOp = scr::Effect::StencilCompareOp::KEEP;
-			scos.compareOp = scr::Effect::CompareOp::NEVER;
-			scr::Effect::DepthStencilingState dss = {};
-			dss.depthTestEnable = true;
-			dss.depthWriteEnable = false;
-			dss.depthCompareOp = scr::Effect::CompareOp::LESS;
-			dss.stencilTestEnable = false;
-			dss.frontCompareOp = scos;
-			dss.backCompareOp = scos;
-			dss.depthBoundTestEnable = false;
-			dss.minDepthBounds = 0.0f;
-			dss.maxDepthBounds = 1.0f;
-
-			scr::Effect::ColourBlendingState cbs = {};
-			cbs.blendEnable = true;
-			cbs.srcColorBlendFactor = scr::Effect::BlendFactor::SRC_ALPHA;
-			cbs.dstColorBlendFactor = scr::Effect::BlendFactor::ONE_MINUS_SRC_ALPHA;
-			cbs.colorBlendOp = scr::Effect::BlendOp ::ADD;
-			cbs.srcAlphaBlendFactor = scr::Effect::BlendFactor::ONE;
-			cbs.dstAlphaBlendFactor = scr::Effect::BlendFactor::ZERO;
-			cbs.alphaBlendOp = scr::Effect::BlendOp ::ADD;
-
-			scr::Effect::EffectPassCreateInfo ci;
-			ci.effectPassName = "standard";
-			ci.passVariables = pv;
-			ci.pipeline = gp;
-			ci.vertexLayout = vbl;
-			ci.topology = scr::Effect::TopologyType::TRIANGLE_LIST;
-			ci.viewportAndScissor = vs;
-			ci.rasterizationState = rs;
-			ci.multisamplingState = ms;
-			ci.depthStencilingState = dss;
-			ci.colourBlendingState = cbs;
-			mFlatColourEffect.CreatePass(&ci);
-			mFlatColourEffect.LinkShaders("standard");
-
-			scr::Texture::TextureCreateInfo t_ci = {};
-			t_ci.width = 1;
-			t_ci.height = 1;
-			t_ci.depth = 1;
-			t_ci.bytesPerPixel = 4;
-			t_ci.arrayCount = 1;
-			t_ci.mipCount = 1;
-			t_ci.slot = scr::Texture::Slot ::DIFFUSE;
-			t_ci.type = scr::Texture::Type ::TEXTURE_2D;
-			t_ci.format = scr::Texture::Format ::RGBA8;
-			t_ci.sampleCount = scr::Texture::SampleCountBit ::SAMPLE_COUNT_1_BIT;
-			t_ci.size = 0;
-			t_ci.data = nullptr;
-			mDummyTexture = std::make_shared<scc::GL_Texture>(&renderPlatform);
-			mDummyTexture->Create(&t_ci);
-			scr::Material::MaterialParameter mp;
-			mp.texture.reset(mDummyTexture.get());
-			mp.textureOutputScalar = scr::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-			mp.texCoordsScalar[0] = scr::vec2(1.0f, 1.0f);
-			mp.texCoordsScalar[1] = scr::vec2(1.0f, 1.0f);
-			mp.texCoordsScalar[2] = scr::vec2(1.0f, 1.0f);
-			mp.texCoordsScalar[3] = scr::vec2(1.0f, 1.0f);
-			scr::Material::MaterialCreateInfo m_ci;
-			m_ci.effect = dynamic_cast<scr::Effect*>(&mFlatColourEffect);
-			m_ci.diffuse = mp;
-			m_ci.normal = mp;
-			m_ci.combined = mp;
-			mFlatColourMaterial = std::make_shared<scr::Material>(&renderPlatform,&m_ci);
-		}
-
 		mDecoder.setBackend(new VideoDecoderProxy(java->Env, this, avs::VideoCodec::HEVC));
 
 		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
@@ -564,22 +448,34 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 	for(auto& actor : resourceManagers.mActorManager.m_Actors)
     {
-        scr::InputCommand_Mesh_Material_Transform ic_mmm(&ci, actor.second.get());
-        ic_mmm.pMaterial = mFlatColourMaterial.get();
+        scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.get());
+        ic_mmt.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffects);
 
         if(mOVRActors.find(actor.first) == mOVRActors.end())
         {
-            const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmm.pMaterial->GetMaterialCreateInfo().effect);
-            const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("standard");
-            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().vb.get());
-            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmm.pMesh->GetMeshCreateInfo().ib.get());
+            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().vb.get());
+            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().ib.get());
             gl_vb->CreateVAO(gl_ib->GetIndexID());
+            auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
+
+            const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmt.pMaterial->GetMaterialCreateInfo().effect);
+            const auto gl_effectPass = BuildEffect("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS);
+
+            const auto temp_Texture = dynamic_cast<scc::GL_Texture*>(ic_mmt.pMaterial->GetMaterialCreateInfo().diffuse.texture.get());
+            scr::Sampler::SamplerCreateInfo sci  = {};
+            sci.wrapU = scr::Sampler::Wrap::CLAMP_TO_EDGE;
+            sci.wrapV = scr::Sampler::Wrap::CLAMP_TO_EDGE;
+            sci.wrapW = scr::Sampler::Wrap::CLAMP_TO_EDGE;
+            sci.minFilter = scr::Sampler::Filter::LINEAR;
+            sci.magFilter = scr::Sampler::Filter::LINEAR;
+            mSampler->Create(&sci);
+            temp_Texture->UseSampler(mSampler);
 
             GlGeometry geo;
             geo.vertexBuffer = gl_vb->GetVertexID();
             geo.indexBuffer = gl_ib->GetIndexID();
             geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effect->GetEffectPassCreateInfo("standard").topology);
+            geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effectPass.topology);
             geo.vertexCount = (int) gl_vb->GetVertexCount();
             geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
             GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
@@ -609,18 +505,27 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[2] = true;
             ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[3] = true;
             ovr_Actor.graphicsCommand.GpuState.polygonOffsetEnable = false;
-            ovr_Actor.graphicsCommand.GpuState.cullEnable = false;
+            ovr_Actor.graphicsCommand.GpuState.cullEnable = true;
             ovr_Actor.graphicsCommand.GpuState.lineWidth = 1.0F;
             ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
             ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
 
+            ovr_Actor.graphicsCommand.UniformData[0].Data = &(temp_Texture->GetGlTexture());
+
             mOVRActors[actor.first] = ovr_Actor;
         }
 
-        float heightOffset = -80.0F;
-        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
-        scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
-        scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix *ic_mmm.pTransform->GetTransformMatrix();
+        float heightOffset = -0.80F;
+        scr::Transform scr_UE4_Camera_Transform;
+        avs::Transform avs_UE4_Camera_Transform = mDecoder.getCameraTransform();
+        scr_UE4_Camera_Transform = avs_UE4_Camera_Transform;
+        scr_UE4_Camera_Transform.m_Translation * -1;
+        scr_UE4_Camera_Transform.m_Translation.y += heightOffset;
+
+
+        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-0.80F, -1.42F + heightOffset, 4.80F)); //TO BE updated from the video frame.
+        //scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr_UE4_Camera_Transform.m_Translation);
+        scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform->GetTransformMatrix();
 
         OVR::Matrix4f transform;
         memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
@@ -628,4 +533,98 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
         res.Surfaces.push_back(ovr_ActorDrawSurface);
     }
+}
+
+const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource)
+{
+	if(mEffects.HasEffectPass(effectPassName))
+		return mEffects.GetEffectPassCreateInfo(effectPassName);
+
+    scr::ShaderSystem::PassVariables pv;
+    pv.mask = false;
+    pv.reverseDepth = false;
+    pv.msaa = false;
+
+    scc::GL_Shader shaders[2] = {
+            scc::GL_Shader(dynamic_cast<scr::RenderPlatform*>(&renderPlatform)),
+            scc::GL_Shader(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))};
+    scr::Shader::ShaderCreateInfo sci[2];
+    sci[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+    sci[0].entryPoint = "main";
+    sci[0].filepath = nullptr;
+    sci[0].sourceCode = vertexSource;
+    sci[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+    sci[1].entryPoint = "main";
+    sci[1].filepath = nullptr;
+    sci[1].sourceCode = fragmentSource;
+    shaders[0].Create(&sci[0]);
+    shaders[1].Create(&sci[1]);
+    scr::ShaderSystem::GraphicsPipeline gp (shaders, 2);
+
+    //scr::VertexBufferLayout
+    vbl->CalculateStride();
+
+    scr::Effect::ViewportAndScissor vs = {};
+    vs.x = 0.0f;
+    vs.y = 0.0f;
+    vs.width = 0.0f;
+    vs.height = 0.0f;
+    vs.minDepth = 1.0f;
+    vs.maxDepth = 0.0f;
+    vs.offsetX = 0;
+    vs.offsetY = 0;
+    vs.extentX = (uint32_t)vs.x;
+    vs.extentY = (uint32_t)vs.y;
+
+    scr::Effect::RasterizationState rs = {};
+    rs.depthClampEnable = false;
+    rs.rasterizerDiscardEnable = false;
+    rs.cullMode = scr::Effect::CullMode::BACK_BIT;
+    rs.frontFace = scr::Effect::FrontFace::CLOCKWISE;
+
+    scr::Effect::MultisamplingState ms = {};
+    ms.samplerShadingEnable = false;
+    ms.rasterizationSamples = scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT;
+
+    scr::Effect::StencilCompareOpState scos = {};
+    scos.stencilFailOp = scr::Effect::StencilCompareOp::KEEP;
+    scos.stencilPassDepthFailOp = scr::Effect::StencilCompareOp::KEEP;
+    scos.passOp = scr::Effect::StencilCompareOp::KEEP;
+    scos.compareOp = scr::Effect::CompareOp::NEVER;
+    scr::Effect::DepthStencilingState dss = {};
+    dss.depthTestEnable = true;
+    dss.depthWriteEnable = false;
+    dss.depthCompareOp = scr::Effect::CompareOp::LESS;
+    dss.stencilTestEnable = false;
+    dss.frontCompareOp = scos;
+    dss.backCompareOp = scos;
+    dss.depthBoundTestEnable = false;
+    dss.minDepthBounds = 0.0f;
+    dss.maxDepthBounds = 1.0f;
+
+    scr::Effect::ColourBlendingState cbs = {};
+    cbs.blendEnable = true;
+    cbs.srcColorBlendFactor = scr::Effect::BlendFactor::SRC_ALPHA;
+    cbs.dstColorBlendFactor = scr::Effect::BlendFactor::ONE_MINUS_SRC_ALPHA;
+    cbs.colorBlendOp = scr::Effect::BlendOp ::ADD;
+    cbs.srcAlphaBlendFactor = scr::Effect::BlendFactor::ONE;
+    cbs.dstAlphaBlendFactor = scr::Effect::BlendFactor::ZERO;
+    cbs.alphaBlendOp = scr::Effect::BlendOp ::ADD;
+
+    scr::Effect::EffectPassCreateInfo ci;
+    ci.effectPassName = effectPassName;
+    ci.passVariables = pv;
+    ci.pipeline = gp;
+    ci.vertexLayout = *vbl;
+    ci.topology = scr::Effect::TopologyType::TRIANGLE_LIST;
+    ci.viewportAndScissor = vs;
+    ci.rasterizationState = rs;
+    ci.multisamplingState = ms;
+    ci.depthStencilingState = dss;
+    ci.colourBlendingState = cbs;
+
+    mEffects.CreatePass(&ci);
+    mEffects.LinkShaders(effectPassName);
+
+    return mEffects.GetEffectPassCreateInfo(effectPassName);
 }

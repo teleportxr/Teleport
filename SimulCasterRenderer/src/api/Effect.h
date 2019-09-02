@@ -168,6 +168,15 @@ namespace scr
 
 		inline const EffectCreateInfo& GetEffectCreateInfo() const { return m_CI;}
 		inline const EffectPassCreateInfo& GetEffectPassCreateInfo(const char* effectPassName) const { return m_EffectPasses.at(effectPassName);}
+		inline bool HasEffectPass(const char* effectPassName)
+		{
+			if(m_EffectPasses.empty())
+			    return false;
+		    else if(m_EffectPasses.find(effectPassName) != m_EffectPasses.end())
+				return true;
+			else
+				return false;
+		}
 
 	protected:
 		virtual void Bind(const char* effectPassName) const = 0;

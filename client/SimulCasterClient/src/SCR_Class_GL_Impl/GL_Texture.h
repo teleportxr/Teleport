@@ -29,9 +29,11 @@ class GL_Texture final : public scr::Texture
 
 		inline OVR::GlTexture& GetGlTexture() { return  m_Texture;}
 
-	private:
+
+private:
 		GLenum TypeToGLTarget(Type type) const;
 		GLenum ToBaseGLFormat(Format format) const;
 		GLenum ToGLFormat(Format format) const;
-	};
+		GLenum ToGLCompressedFormat(CompressionFormat format, uint32_t bytesPerPixel) const;
+};
 }

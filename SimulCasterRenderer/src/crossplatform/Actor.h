@@ -5,16 +5,18 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "basic_linear_algebra.h"
+#include <libavstream/geometry/mesh_interface.hpp>
 
 namespace scr
 {
 	class Transform
 	{
-	private:
+	public:
 		vec3 m_Translation;
 		quat m_Rotation;
 		vec3 m_Scale;
 
+	private:
 		struct TransformData
 		{
 			mat4 m_ModelMatrix;
@@ -24,6 +26,25 @@ namespace scr
 
 		DescriptorSetLayout m_SetLayout;
 		DescriptorSet m_Set;
+	
+	public:
+		Transform& operator= (avs::Transform& transform)
+		{
+			m_Translation.x = transform.position.x;
+			m_Translation.y = transform.position.y;
+			m_Translation.z = transform.position.z;
+
+			m_Rotation.s = transform.rotation.w;
+			m_Rotation.i = transform.rotation.x;
+			m_Rotation.j = transform.rotation.y;
+			m_Rotation.k = transform.rotation.z;
+
+			m_Scale.x = transform.scale.x;
+			m_Scale.y = transform.scale.y;
+			m_Scale.z = transform.scale.z;
+			
+			return *this;
+		}
 
 	public:
 		Transform();
@@ -40,7 +61,7 @@ namespace scr
 	public:
 		struct ActorCreateInfo
 		{
-			bool staticMesh;	//Will the mesh move throughout the scence?
+			bool staticMesh;	//Will the mesh move throughout the scene?
 			bool animatedMesh;	//Will the mesh deform?
 			Mesh* mesh;
 			std::vector<Material*> materials;

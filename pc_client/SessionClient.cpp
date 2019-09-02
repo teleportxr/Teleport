@@ -117,7 +117,7 @@ bool SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
 {
 	bool serverDiscovered = false;
 
-	ENetAddress  broadcastAddress = { ENET_HOST_BROADCAST, discoveryPort };
+	ENetAddress broadcastAddress = { ENET_HOST_BROADCAST, discoveryPort };
 
 	if (!mServiceDiscoverySocket)
 	{

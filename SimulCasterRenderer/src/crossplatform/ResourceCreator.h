@@ -62,7 +62,7 @@ namespace scr
 class ResourceCreator final : public avs::GeometryTargetBackendInterface
 {
 public:
-	ResourceCreator();
+	ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat);
 	~ResourceCreator();
 	
 	void SetRenderPlatform(scr::RenderPlatform *r);
@@ -131,5 +131,6 @@ private:
 	static std::vector<std::pair<avs::uid, avs::uid>> m_MeshMaterialUIDPairs;
 
 	std::map<avs::uid, std::shared_ptr<avs::DataNode>> nodes;
+
 };
 

@@ -87,6 +87,7 @@ ClientRenderer::ClientRenderer():
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
 	sessionClient(this),
+	resourceCreator(basist::transcoder_texture_format::cTFBC1),
 	RenderMode(0)
 {
 	avsTextures.resize(NumStreams);
