@@ -250,7 +250,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 #if 1
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d"
+	mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped
 			,frameRate,ctr.bandwidthKPS, (uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size());
 #endif
@@ -279,20 +279,17 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &mVideoTexture;
 	res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 
-	// Append GuiSys surfaces.
-	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
-
-
 	//Append SCR Actors to surfaces.
 	GL_CheckErrors("Frame: Pre-SCR");
 	//Remove Invalid scr and ovr actors.
 		//mActorManager.RemoveInvalidActors();
 		//RemoveInvalidOVRActors();
 	RenderLocalActors(res);
-
 	GL_CheckErrors("Frame: Post-SCR");
 
-	//GL_CheckErrors("Frame");
+    // Append GuiSys surfaces. This should always be the last item to append the render list.
+    mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
+
 	return res;
 }
 
@@ -449,7 +446,9 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 	for(auto& actor : resourceManagers.mActorManager.m_Actors)
     {
         scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.get());
-        ic_mmt.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffects);
+        if(!ic_mmt.pMesh || !ic_mmt.pMaterial || !ic_mmt.pTransform)
+            continue;
+
 
         if(mOVRActors.find(actor.first) == mOVRActors.end())
         {
@@ -458,6 +457,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             gl_vb->CreateVAO(gl_ib->GetIndexID());
             auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
 
+            ic_mmt.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffects);
             const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmt.pMaterial->GetMaterialCreateInfo().effect);
             const auto gl_effectPass = BuildEffect("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS);
 
@@ -519,12 +519,11 @@ void Application::RenderLocalActors(ovrFrameResult& res)
         scr::Transform scr_UE4_Camera_Transform;
         avs::Transform avs_UE4_Camera_Transform = mDecoder.getCameraTransform();
         scr_UE4_Camera_Transform = avs_UE4_Camera_Transform;
-        scr_UE4_Camera_Transform.m_Translation * -1;
-        scr_UE4_Camera_Transform.m_Translation.y += heightOffset;
+        scr::vec3 camPos = scr_UE4_Camera_Transform.m_Translation * -0.01;
+        camPos.z += heightOffset;
 
-
-        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-0.80F, -1.42F + heightOffset, 4.80F)); //TO BE updated from the video frame.
-        //scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr_UE4_Camera_Transform.m_Translation);
+        //scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-0.80F, -1.42F + heightOffset, 4.80F)); //TO BE updated from the video frame.
+        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation({camPos.y, camPos.z, -camPos.x});
         scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform->GetTransformMatrix();
 
         OVR::Matrix4f transform;

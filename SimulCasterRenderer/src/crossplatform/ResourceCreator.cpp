@@ -393,12 +393,12 @@ void ResourceCreator::CreateActor(avs::uid mesh_uid, const std::vector<avs::uid>
 	scr::Actor::ActorCreateInfo actor_ci = {};
 	actor_ci.staticMesh = true;
 	actor_ci.animatedMesh = false;
-	actor_ci.mesh = m_pActorManager->GetMesh(mesh_uid).get();
+	actor_ci.mesh = m_pActorManager->GetMesh(mesh_uid);
 	actor_ci.materials.clear();
 	for (avs::uid m_uid : material_uids)
 	{
-		actor_ci.materials.push_back(m_pActorManager->GetMaterial(m_uid).get());
+		actor_ci.materials.push_back(m_pActorManager->GetMaterial(m_uid));
 	}
-	actor_ci.transform = m_pActorManager->GetTransform(transform_uid).get();
+	actor_ci.transform = m_pActorManager->GetTransform(transform_uid);
 	m_pActorManager->CreateActor(GenerateUid(), &actor_ci);
 }

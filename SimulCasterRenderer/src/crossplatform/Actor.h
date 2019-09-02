@@ -63,9 +63,9 @@ namespace scr
 		{
 			bool staticMesh;	//Will the mesh move throughout the scene?
 			bool animatedMesh;	//Will the mesh deform?
-			Mesh* mesh;
-			std::vector<Material*> materials;
-			Transform* transform;
+			std::shared_ptr<Mesh> mesh;
+			std::vector<std::shared_ptr<Material>> materials;
+			std::shared_ptr<Transform> transform;
 		};
 
 	private:
@@ -76,8 +76,8 @@ namespace scr
 
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
-		inline Mesh* GetMesh() { return m_CI.mesh; }
-		inline const std::vector<Material*> GetMaterials() { return m_CI.materials; }
-		inline Transform* GetTransform() { return m_CI.transform; }
+		inline std::shared_ptr<Mesh> GetMesh() { return m_CI.mesh; }
+		inline const std::vector<std::shared_ptr<Material>> GetMaterials() const { return m_CI.materials; }
+		inline std::shared_ptr<Transform> GetTransform() { return m_CI.transform; }
 	};
 }
