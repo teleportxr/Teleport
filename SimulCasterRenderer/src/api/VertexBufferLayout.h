@@ -17,7 +17,8 @@ namespace scr
 			UBYTE,
 			INT,
 			SHORT,
-			BYTE
+			BYTE,
+			HALF
 		};
 		enum class ComponentCount : uint32_t
 		{
@@ -69,8 +70,6 @@ namespace scr
 			case Type::UBYTE:
 			case Type::BYTE:
 				return 1;
-			default:
-				exit(1);
 			}
 		}
 	};

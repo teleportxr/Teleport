@@ -303,6 +303,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			}
 		}
 		//RenderOpaqueTest(deviceContext);
+		RenderLocalActors(deviceContext);
 
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -324,7 +325,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			}
 		}
 	}
-	RenderLocalActors(deviceContext);
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.44f);
 
@@ -390,8 +390,8 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		simul::crossplatform::LayoutDesc desc[] =
 		{
 			{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-			//{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 12, false, 0 },
-			//{ "TEXCOORD", 1, crossplatform::RGB_32_FLOAT, 0, 20, false, 0 },
+			{ "TEXCOORD", 0, crossplatform::RG_16_FLOAT, 0, 12, false, 0 },
+			{ "TEXCOORD", 1, crossplatform::RG_16_FLOAT, 0, 16, false, 0 },
 		};
 		simul::crossplatform::Layout* layout= renderPlatform->CreateLayout(
 												sizeof(desc)/sizeof(simul::crossplatform::LayoutDesc)

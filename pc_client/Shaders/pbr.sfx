@@ -20,8 +20,8 @@ uniform Texture3D inscatterVolumeTexture;
 struct vertexInput
 {
     vec3 position		: POSITION;
-    vec2 texCoords		: TEXCOORD0;
-    vec3 normal			: TEXCOORD1;
+    half2 texCoords0		: TEXCOORD0;
+    half2 texCoords1		: TEXCOORD1;
 };
 
 struct vertexInputP
@@ -31,11 +31,12 @@ struct vertexInputP
 struct vertexOutput
 {
     vec4 hPosition		: SV_POSITION;
-    vec2 texCoords		: TEXCOORD0;
-    vec3 normal			: TEXCOORD1;
-    vec3 wpos			: TEXCOORD2;
-    vec3 view			: TEXCOORD3;
-    vec4 clip_pos		: TEXCOORD4;
+    vec2 texCoords0		: TEXCOORD0;
+    vec2 texCoords1		: TEXCOORD1;
+    vec3 normal			: TEXCOORD2;
+    vec3 wpos			: TEXCOORD3;
+    vec3 view			: TEXCOORD4;
+    vec4 clip_pos		: TEXCOORD5;
 };
 
 shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
@@ -45,7 +46,8 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
     OUT.wpos		=mul(world, opos).xyz;
 	OUT.view		=normalize(OUT.wpos.xyz- viewPosition);
     OUT.clip_pos	=mul(opos,worldViewProj);
-	OUT.texCoords	=vec2(0,0);
+	OUT.texCoords0	=vec2(0,0);
+	OUT.texCoords1	=vec2(0,0);
 #ifdef SFX_OPENGL
     OUT.normal.xyz	=mul(mat3(world),vec3(0,0,1.0));
 #else
@@ -62,11 +64,12 @@ shader vertexOutput VS_Solid(vertexInput IN)
     OUT.wpos		=mul(world, opos).xyz;
 	OUT.view		=normalize(OUT.wpos.xyz- viewPosition);
     OUT.clip_pos	=mul( opos,worldViewProj);
-	OUT.texCoords	=IN.texCoords;
+	OUT.texCoords0	=IN.texCoords0;
+	OUT.texCoords1	=IN.texCoords1;
 #ifdef SFX_OPENGL
-    OUT.normal.xyz	=mul(mat3(world),IN.normal);
+    OUT.normal.xyz	=vec3(0,0,1);//mul(mat3(world),IN.normal);
 #else
-    OUT.normal.xyz	=mul(world,vec4(IN.normal,0.0)).xyz;
+    OUT.normal.xyz	=vec3(0,0,1);//mul(world,vec4(IN.normal,0.0)).xyz;
 #endif
 	OUT.hPosition	=OUT.clip_pos;
     return OUT;
@@ -146,6 +149,8 @@ shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
     vec3 normal		=normalize(IN.normal);
 	vec3 view		= normalize(IN.wpos.xyz - viewPosition);
     vec3 c			=PBR(normal, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), albedo, vec3(1,1,1),roughness);
+	//c.rg=IN.texCoords0;
+	c.rg=saturate(IN.texCoords1);
     vec4 u			=vec4(c.rgb,1.0);
 	return u;
 }
@@ -217,7 +222,7 @@ shader vec4 PS_Transparent(vertexOutput IN) : SV_TARGET
 	return c;
 }
 
-VertexShader vs_solid = CompileShader(vs_4_0, VS_Solid_PosOnly());
+VertexShader vs_solid = CompileShader(vs_4_0, VS_Solid());
 PixelShader ps_solid = CompileShader(ps_4_0, PS_Solid());
 technique solid
 {
