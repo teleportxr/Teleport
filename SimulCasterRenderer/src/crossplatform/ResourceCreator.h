@@ -62,7 +62,7 @@ namespace scr
 class ResourceCreator final : public avs::GeometryTargetBackendInterface
 {
 public:
-	ResourceCreator();
+	ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat);
 	~ResourceCreator();
 	
 	void SetRenderPlatform(scr::RenderPlatform *r);
