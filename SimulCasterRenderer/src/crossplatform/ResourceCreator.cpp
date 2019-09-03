@@ -5,8 +5,6 @@
 
 using namespace avs;
 
-std::vector<std::pair<avs::uid, avs::uid>> ResourceCreator::m_MeshMaterialUIDPairs;
-
 ResourceCreator::ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat)
 	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(transcoderTextureFormat)
 {
@@ -122,7 +120,7 @@ avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 
 	std::shared_ptr<VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
 	VertexBuffer::VertexBufferCreateInfo vb_ci;
-	vb_ci.layout = std::move(layout);
+	vb_ci.layout = layout;
 	vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
 	vb_ci.vertexCount = resourceCreate->m_VertexCount;
 	vb_ci.size = interleavedVBSize;
@@ -137,14 +135,15 @@ avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 	ib_ci.data = _indices.get();
 	ib->Create(&ib_ci);
 
+	m_VertexBufferManager->Add(resourceCreate->mesh_uid, vb, m_PostUseLifetime);
+	m_IndexBufferManager->Add(resourceCreate->mesh_uid, ib, m_PostUseLifetime);
+
 	Mesh::MeshCreateInfo mesh_ci;
 	mesh_ci.vb = vb;
 	mesh_ci.ib = ib;
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
 	m_pActorManager->AddMesh(resourceCreate->mesh_uid, mesh);
 
-	m_VertexBufferManager->Add(resourceCreate->mesh_uid, vb, m_PostUseLifetime);
-	m_IndexBufferManager->Add(resourceCreate->mesh_uid, ib, m_PostUseLifetime);
 
 	resourceCreate->m_Vertices = nullptr;
 	resourceCreate->m_Normals = nullptr;
@@ -334,7 +333,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	///This needs an actual value.
 	materialInfo.effect = nullptr;
-	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(m_pRenderPlatform,&materialInfo);
+	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(m_pRenderPlatform, &materialInfo);
 	m_MaterialManager->Add(material_uid, scr_material);
 	m_pActorManager->AddMaterial(material_uid, scr_material);
 }
@@ -370,14 +369,6 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	    {
 	    case NodeDataType::Mesh:
 	    	{
-	    		size_t i = 0;
-	    		for (auto& meshMaterialPair : m_MeshMaterialUIDPairs)
-	    		{
-	    			if (meshMaterialPair.first == node.data_uid) //data_uid == shape_uid
-	    				break;
-	    			else
-	    				i++;
-	    		}
 	    		CreateActor(node.data_uid,node.materials, node_uid);
 	    	}
 	    case NodeDataType::Camera:
@@ -394,11 +385,18 @@ void ResourceCreator::CreateActor(avs::uid mesh_uid, const std::vector<avs::uid>
 	actor_ci.staticMesh = true;
 	actor_ci.animatedMesh = false;
 	actor_ci.mesh = m_pActorManager->GetMesh(mesh_uid);
+	actor_ci.transform = m_pActorManager->GetTransform(transform_uid);
+
 	actor_ci.materials.clear();
+	actor_ci.materials.reserve(material_uids.size());
 	for (avs::uid m_uid : material_uids)
 	{
 		actor_ci.materials.push_back(m_pActorManager->GetMaterial(m_uid));
 	}
-	actor_ci.transform = m_pActorManager->GetTransform(transform_uid);
-	m_pActorManager->CreateActor(GenerateUid(), &actor_ci);
+
+	avs::uid actor_uid = GenerateUid();
+	m_pActorManager->CreateActor(actor_uid, &actor_ci);
+
+	if(!m_pActorManager->m_Actors[actor_uid]->IsComplete())
+	    SCR_COUT("Incomplete Actor: " << actor_uid << "created.");
 }

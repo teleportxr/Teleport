@@ -51,3 +51,17 @@ void Actor::UpdateModelMatrix(const vec3& translation, const quat& rotation, con
 {
 	m_CI.transform->UpdateModelMatrix(translation, rotation, scale);
 }
+
+bool Actor::IsComplete() const {
+	if (m_CI.mesh == nullptr || m_CI.transform == nullptr || m_CI.materials.empty())
+	{
+		return false;
+	}
+	//Only checks the first material in the array! Should we check all, or the first one just a 'default'?
+	else if(m_CI.materials[0] == nullptr) 
+	{
+		return false;
+	}
+	else
+		return true;
+}

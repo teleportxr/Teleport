@@ -1,5 +1,7 @@
 #include "GeometryDecoder.h"
 #include <iostream>
+#include <Common.h>
+
 
 using namespace avs;
 
@@ -96,18 +98,16 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			avs::uid indices_accessor = Next8B;
 			avs::uid material = Next8B;
 			PrimitiveMode primitiveMode = (PrimitiveMode)Next4B;
-			Attribute attributes[(size_t)AttributeSemantic::COUNT];
 
-			std::vector<Attribute> _attrib;
-			_attrib.reserve(attributeCount);
+			std::vector<Attribute> attributes;
+			attributes.reserve(attributeCount);
 			for (size_t k = 0; k < attributeCount; k++)
 			{
 				AttributeSemantic semantic = (AttributeSemantic)Next4B;
 				Next4B;
 				avs::uid accessor = Next8B;
-				_attrib.push_back({ semantic, accessor });
+				attributes.push_back({ semantic, accessor });
 			}
-			memcpy(attributes, _attrib.data(), attributeCount * sizeof(Attribute));
 
 			dg.primitiveArrays[uid].push_back({ attributeCount, attributes, indices_accessor, material, primitiveMode });
 		}
@@ -170,27 +170,27 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	}
 
 	//Push data to GeometryTargetBackendInterface
-	for (std::map<avs::uid, std::vector<avs::PrimitiveArray>>::iterator it = dg.primitiveArrays.begin();
+	for (std::map<avs::uid, std::vector<PrimitiveArray2>>::iterator it = dg.primitiveArrays.begin();
 		it != dg.primitiveArrays.end(); it++)
 	{
-		for (auto& primitive : it->second)
+		for (const auto& primitive : it->second)
 		{
 			ResourceCreate resourceCreate;
 			resourceCreate.mesh_uid = it->first;
-			uint32_t vertexCount = 0;
+			size_t vertexCount = 0;
 			for (size_t i = 0; i < primitive.attributeCount; i++)
 			{
 				//Vertices
-				Attribute attrib				= primitive.attributes[i];
-				const Accessor &accessor		= dg.accessors[attrib.accessor];
-				const BufferView &bufferView	= dg.bufferViews[accessor.bufferView];
+				const Attribute& attrib			= primitive.attributes[i];
+				const Accessor& accessor		= dg.accessors[attrib.accessor];
+				const BufferView& bufferView	= dg.bufferViews[accessor.bufferView];
 				const GeometryBuffer& buffer	= dg.buffers[bufferView.buffer];
 				const uint8_t* data				= buffer.data + bufferView.byteOffset;
 				switch (attrib.semantic)
 				{
 				case AttributeSemantic::POSITION:
-					resourceCreate.m_VertexCount = vertexCount=accessor.count;
-					resourceCreate.m_Vertices = (const avs::vec3*)buffer.data;
+					resourceCreate.m_VertexCount = vertexCount = accessor.count;
+					resourceCreate.m_Vertices = (const avs::vec3*)(data);
 					continue;
 				case AttributeSemantic::TANGENTNORMALXZ:
 				{
@@ -209,18 +209,14 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					//target->ensureTangents(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
-					
-						resourceCreate.m_UV0s = (const avs::vec2*)(data);
-						assert(accessor.count == vertexCount);
-						//target->ensureTexCoord0(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, );
-					
+					resourceCreate.m_UV0s = (const avs::vec2*)(data);
+					assert(accessor.count == vertexCount);
+					//target->ensureTexCoord0(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, );
 					continue;
 				case AttributeSemantic::TEXCOORD_1:
-					
-						resourceCreate.m_UV1s = (const avs::vec2*)(data);
-						assert(accessor.count == vertexCount);
-						//target->ensureTexCoord1(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, (const avs::vec2*)buffer.data);
-					
+					resourceCreate.m_UV1s = (const avs::vec2*)(data);
+					assert(accessor.count == vertexCount);
+					//target->ensureTexCoord1(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, (const avs::vec2*)buffer.data);
 					continue;;
 				case AttributeSemantic::COLOR_0:
 					//target->ensureColors(mesh_uid, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
@@ -232,7 +228,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					//target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
 					continue;
 				default:
-				    std::cerr<<"Unknown attribute semantic\n";
+				    SCR_CERR("Unknown attribute semantic: " << (uint32_t)attrib.semantic);
 				    continue;
 				}
 			}
@@ -246,9 +242,6 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			resourceCreate.m_IndexSize = componentSize;
 			resourceCreate.m_IndexCount = indicesAccessor.count;
 			//resourceCreate.m_PolygonCount = 0;
-			//target->ensureIndices(it->first, (int)(indicesAccessor.byteOffset / componentSize), (int)indicesAccessor.count, (int)componentSize, indicesBuffer.data);
-			//target->ensureMaterialUID(it->first, primitive.material);
-			//resourceCreate.ma
 			avs::Result result = target->Assemble(&resourceCreate);
 			if (result != avs::Result::OK)
 				return result;

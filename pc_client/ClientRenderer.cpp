@@ -368,16 +368,16 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 {
 	for (auto& actor : resourceManagers.mActorManager.m_Actors)
 	{
-		const scr::Transform* tr = actor.second->GetTransform();
+		const std::shared_ptr<scr::Transform> tr = actor.second->GetTransform();
 		if (!tr)
 			continue;
-		const scr::Mesh* mesh = actor.second->GetMesh();
+		const std::shared_ptr<scr::Mesh> mesh = actor.second->GetMesh();
 		if (!mesh)
 			continue;
-		const std::vector<scr::Material*> materials = actor.second->GetMaterials();
+		const std::vector<std::shared_ptr<scr::Material>> materials = actor.second->GetMaterials();
 		if (!materials.size())
 			continue;
-		scr::Transform *transform=actor.second->GetTransform();
+		std::shared_ptr<scr::Transform> transform = actor.second->GetTransform();
 		if (!transform)
 			continue;
 		const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb.get());
@@ -390,8 +390,8 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		simul::crossplatform::LayoutDesc desc[] =
 		{
 			{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-			{ "TEXCOORD", 0, crossplatform::RG_16_FLOAT, 0, 12, false, 0 },
-			{ "TEXCOORD", 1, crossplatform::RG_16_FLOAT, 0, 16, false, 0 },
+			{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 12, false, 0 },
+			{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 20, false, 0 },
 		};
 		simul::crossplatform::Layout* layout= renderPlatform->CreateLayout(
 												sizeof(desc)/sizeof(simul::crossplatform::LayoutDesc)

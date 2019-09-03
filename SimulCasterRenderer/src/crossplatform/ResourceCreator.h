@@ -26,11 +26,11 @@ namespace scr
 {
     struct ResourceManagers
     {
-        ResourceManagers() :
-                mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
-                mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
-                mUniformBufferManager(&scr::UniformBuffer::Destroy),
-                mVertexBufferManager(&scr::VertexBuffer::Destroy)
+        ResourceManagers()
+            :mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
+            mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
+            mUniformBufferManager(&scr::UniformBuffer::Destroy),
+            mVertexBufferManager(&scr::VertexBuffer::Destroy)
         {
         }
 
@@ -48,7 +48,7 @@ namespace scr
             mVertexBufferManager.Update(timeElapsed);
         }
 
-        scr::ActorManager                   mActorManager;
+        scr::ActorManager  					mActorManager;
         ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
         ResourceManager<scr::Shader>        mShaderManager;
         ResourceManager<scr::Material>		mMaterialManager;
@@ -103,8 +103,6 @@ private:
 	void CreateActor(avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, avs::uid transform_uid) override;
 
 
-#define CHECK_SHAPE_UID(x) if (!SetAndCheckShapeUID(x)) { SCR_CERR("Invalid shape_uid.\n"); return; }
-
 public:
 	ResourceManager<scr::Texture>* GetTextureManager()
 	{
@@ -128,9 +126,6 @@ private:
 
 	scr::ActorManager* m_pActorManager;
 
-	static std::vector<std::pair<avs::uid, avs::uid>> m_MeshMaterialUIDPairs;
-
 	std::map<avs::uid, std::shared_ptr<avs::DataNode>> nodes;
-
 };
 

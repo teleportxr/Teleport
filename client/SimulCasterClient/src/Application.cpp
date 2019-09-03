@@ -61,9 +61,19 @@ Application::Application()
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager);
 	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
 
+	//Default Effects
 	scr::Effect::EffectCreateInfo ci;
 	ci.effectName = "StandardEffects";
 	mEffects.Create(&ci);
+
+	//Default Sampler
+    scr::Sampler::SamplerCreateInfo sci  = {};
+    sci.wrapU = scr::Sampler::Wrap::CLAMP_TO_EDGE;
+    sci.wrapV = scr::Sampler::Wrap::CLAMP_TO_EDGE;
+    sci.wrapW = scr::Sampler::Wrap::CLAMP_TO_EDGE;
+    sci.minFilter = scr::Sampler::Filter::LINEAR;
+    sci.magFilter = scr::Sampler::Filter::LINEAR;
+    mSampler->Create(&sci);
 }
 
 Application::~Application()
@@ -445,11 +455,10 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 	for(auto& actor : resourceManagers.mActorManager.m_Actors)
     {
-        scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.get());
-        if(!ic_mmt.pMesh || !ic_mmt.pMaterial || !ic_mmt.pTransform)
+		if(!actor.second->IsComplete())
             continue;
 
-
+        scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.get());
         if(mOVRActors.find(actor.first) == mOVRActors.end())
         {
             const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().vb.get());
@@ -462,13 +471,6 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             const auto gl_effectPass = BuildEffect("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS);
 
             const auto temp_Texture = dynamic_cast<scc::GL_Texture*>(ic_mmt.pMaterial->GetMaterialCreateInfo().diffuse.texture.get());
-            scr::Sampler::SamplerCreateInfo sci  = {};
-            sci.wrapU = scr::Sampler::Wrap::CLAMP_TO_EDGE;
-            sci.wrapV = scr::Sampler::Wrap::CLAMP_TO_EDGE;
-            sci.wrapW = scr::Sampler::Wrap::CLAMP_TO_EDGE;
-            sci.minFilter = scr::Sampler::Filter::LINEAR;
-            sci.magFilter = scr::Sampler::Filter::LINEAR;
-            mSampler->Create(&sci);
             temp_Texture->UseSampler(mSampler);
 
             GlGeometry geo;

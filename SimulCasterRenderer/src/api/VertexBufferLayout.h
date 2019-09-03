@@ -18,7 +18,6 @@ namespace scr
 			INT,
 			SHORT,
 			BYTE,
-			HALF
 		};
 		enum class ComponentCount : uint32_t
 		{

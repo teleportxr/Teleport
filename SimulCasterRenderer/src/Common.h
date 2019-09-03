@@ -22,6 +22,12 @@
 #define SCR_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
 #define SCR_COUT(msg)				 std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl;
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#define FILE_LINE (std::string(__FILE__) + std::string("(") +  std::to_string(__LINE__) + std::string("):")).c_str()
+#define SCR_ANDROID_LOG(...) __android_log_print(ANDROID_LOG_INFO, "SCR", __VA_ARGS__);
+#endif
+
 namespace scr
 {
 	class RenderPlatform;

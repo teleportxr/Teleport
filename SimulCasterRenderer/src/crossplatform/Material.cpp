@@ -7,7 +7,7 @@ using namespace scr;
 bool Material::s_UninitialisedUB = false;
 
 Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
-	:APIObject(rp),m_CI (*pMaterialCreateInfo)
+	:APIObject(rp), m_CI (*pMaterialCreateInfo)
 {
 	//Set up UB
 	if (s_UninitialisedUB)

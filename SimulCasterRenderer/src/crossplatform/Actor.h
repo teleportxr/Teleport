@@ -75,6 +75,7 @@ namespace scr
 		Actor(ActorCreateInfo* pActorCreateInfo);
 
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
+		bool IsComplete() const;
 
 		inline std::shared_ptr<Mesh> GetMesh() { return m_CI.mesh; }
 		inline const std::vector<std::shared_ptr<Material>> GetMaterials() const { return m_CI.materials; }

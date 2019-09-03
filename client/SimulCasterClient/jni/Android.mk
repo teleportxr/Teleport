@@ -36,7 +36,7 @@ LOCAL_C_INCLUDES += ../SimulCasterRenderer/src
 LOCAL_C_INCLUDES += 3rdParty/enet/Include
 
 LOCAL_CFLAGS += -D__ANDROID__
-LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable
+LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable -Wno-abstract-final-class
 LOCAL_CPP_FEATURES += exceptions
 
 include $(BUILD_SHARED_LIBRARY)

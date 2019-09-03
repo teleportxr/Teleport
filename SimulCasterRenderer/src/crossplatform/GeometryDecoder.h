@@ -36,9 +36,17 @@ private:
 #define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  
 
 private:
+	struct PrimitiveArray2
+	{
+		size_t attributeCount;
+		std::vector<avs::Attribute> attributes;
+		avs::uid indices_accessor;
+		avs::uid material;
+		avs::PrimitiveMode primitiveMode;
+	};
 	struct DecodedGeometry
 	{
-		std::map<avs::uid, std::vector<avs::PrimitiveArray>> primitiveArrays;
+		std::map<avs::uid, std::vector<PrimitiveArray2>> primitiveArrays;
 		std::map<avs::uid, avs::Accessor> accessors;
 		std::map<avs::uid, avs::BufferView> bufferViews;
 		std::map<avs::uid, avs::GeometryBuffer> buffers;

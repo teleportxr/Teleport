@@ -8,7 +8,7 @@
 
 namespace scr
 {
-	class Material :public APIObject
+	class Material : public APIObject
 	{
 	public:
 		struct MaterialParameter
@@ -56,7 +56,7 @@ namespace scr
 		DescriptorSet m_Set;
 	
 	public:
-		Material(RenderPlatform* r,MaterialCreateInfo* pMaterialCreateInfo);
+		Material(RenderPlatform* r, MaterialCreateInfo* pMaterialCreateInfo);
 
 		void UpdateMaterialUB();
 
