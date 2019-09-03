@@ -19,7 +19,7 @@ shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
 	const float PI = 3.1415926536;
 	const float TwoPI = 2.0 * PI;
 	vec3 view	= TexCoordsToView(IN.texCoords);
-	float phi	= atan2(view.y, -view.x) / TwoPI;
+	float phi	= atan2(-view.x, -view.y) / TwoPI;
 	float theta	= acos(-view.z) / PI;
 	vec2  uv	= fract(vec2(phi, theta));
 	

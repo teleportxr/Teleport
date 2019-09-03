@@ -439,7 +439,10 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 
 void SessionClient::SendHandshake()
 {
-	isReadyToReceivePayloads = true;
-	ENetPacket *packet = enet_packet_create(&isReadyToReceivePayloads, sizeof(bool), 0);
+	avs::Handshake handshake;
+	handshake.isReadyToReceivePayloads=true;
+	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
+	handshake.MetresPerUnit = 1.0f;
+	ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
 	enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 }
