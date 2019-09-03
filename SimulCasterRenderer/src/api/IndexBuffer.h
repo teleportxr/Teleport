@@ -13,10 +13,10 @@ namespace scr
 	public:
 		struct IndexBufferCreateInfo
 		{
-			BufferUsageBit usage;
-			size_t indexCount;
-			size_t stride;
-			const uint8_t* data;
+			BufferUsageBit usage=BufferUsageBit::UNKNOWN_BIT;
+			size_t indexCount=0;
+			size_t stride=0;
+			const uint8_t* data=nullptr;
 		};
 
 	protected:

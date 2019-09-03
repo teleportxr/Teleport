@@ -366,6 +366,12 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 
 void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
 {
+	avs::Transform transform=decoder[0].getCameraTransform();
+	vec3 pos = (const float*)& transform.position;
+	camera.SetPosition(pos);
+	//camera.SetOrientationAsQuaternion((const float*)&transform.rotation);
+	deviceContext.viewStruct.view = camera.MakeViewMatrix();
+	deviceContext.viewStruct.Init();
 	for (auto& actor : resourceManagers.mActorManager.m_Actors)
 	{
 		const std::shared_ptr<scr::Transform> tr = actor.second->GetTransform();
@@ -391,7 +397,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		{
 			{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
 			{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 12, false, 0 },
-			{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 20, false, 0 },
+			{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 24, false, 0 },
 		};
 		simul::crossplatform::Layout* layout= renderPlatform->CreateLayout(
 												sizeof(desc)/sizeof(simul::crossplatform::LayoutDesc)
@@ -617,7 +623,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 	}
 
-	sessionClient.Frame(camera.GetOrientation().GetQuaternion(), controllerState);
+	//sessionClient.Frame(camera.GetOrientation().GetQuaternion(), controllerState);
 }
 
 void ClientRenderer::OnMouse(bool bLeftButtonDown

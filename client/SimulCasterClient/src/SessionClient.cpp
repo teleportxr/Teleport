@@ -344,7 +344,7 @@ void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
     ovrQuatf RootPose={0.0f,0.707f,0.f,0.707f};
     ovrQuatf RelPose=RelativeQuaternion(HeadPoseOVR,RootPose);
     // Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
-    ovrQuatf HeadPose={-RelPose.z, RelPose.x,RelPose.y, RelPose.w };
+    ovrQuatf HeadPose={RelPose.x, RelPose.y,RelPose.z, RelPose.w };
     ENetPacket* packet = enet_packet_create(&HeadPose, sizeof(HeadPose), 0);
     enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
 }
@@ -400,7 +400,10 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 
 void SessionClient::SendHandshake()
 {
-    isReadyToReceivePayloads = true;
-    ENetPacket *packet = enet_packet_create(&isReadyToReceivePayloads, sizeof(bool), 0);
+    avs::Handshake handshake;
+    handshake.isReadyToReceivePayloads=true;
+    handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
+    handshake.MetresPerUnit = 1.0f;
+    ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
     enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 }
