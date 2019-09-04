@@ -252,6 +252,12 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 
+	//Get the Capture Position
+	scr::Transform scr_UE4_captureTransform;
+	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
+	scr_UE4_captureTransform = avs_UE4_captureTransform;
+	capturePosition = scr_UE4_captureTransform.m_Translation;
+
 	static float frameRate=1.0f;
 	if(vrFrame.DeltaSeconds>0.0f)
 	{
@@ -259,10 +265,15 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		frameRate+=0.01f/vrFrame.DeltaSeconds;
 	}
 #if 1
+	ovrQuatf headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.2f, %1.2f, %1.2f\n"
+	mGuiSys->ShowInfoText( 1.0f , "Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Head Orientation: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped
-			,frameRate,ctr.bandwidthKPS, (uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size(), capturePosition.x, capturePosition.y, capturePosition.z);
+			,frameRate, ctr.bandwidthKPS,
+			(uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size(),
+			capturePosition.x, capturePosition.y, capturePosition.z,
+            headPose.w, headPose.x, headPose.y, headPose.z
+			);
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -518,10 +529,6 @@ void Application::RenderLocalActors(ovrFrameResult& res)
         }
 
         float heightOffset = -0.80F;
-        scr::Transform scr_UE4_Camera_Transform;
-        avs::Transform avs_UE4_Camera_Transform = mDecoder.getCameraTransform();
-        scr_UE4_Camera_Transform = avs_UE4_Camera_Transform;
-        capturePosition = scr_UE4_Camera_Transform.m_Translation;
         scr::vec3 camPos = capturePosition * -1;
         camPos.y += heightOffset;
 
