@@ -114,6 +114,7 @@ private:
 	scr::ResourceManagers resourceManagers;
 
     //Clientside Renderering Objects
+    scr::vec3 capturePosition;
     scc::GL_DeviceContext mDeviceContext;
     scc::GL_Effect mEffects;
 	std::shared_ptr<scr::Sampler> mSampler = renderPlatform.InstantiateSampler();

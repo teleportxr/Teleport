@@ -268,43 +268,11 @@ namespace scr
 		};
 		static mat4 Rotation(const quat& orientation) 
 		{
-			vec3 axis = vec3(orientation.i, orientation.j, orientation.k);
-			float angle = 2 * acosf(orientation.s);
-			if (angle > 0)
-			{
-				axis * (1.0f / sinf(angle / 2.0f));
-			}
-			
-			mat4 result(1);
-			float c_angle = static_cast<float>(cos(angle));
-			float s_angle = static_cast<float>(sin(angle));
-			float omcos = static_cast<float>(1 - c_angle);
-
-			float x = axis.x;
-			float y = axis.y;
-			float z = axis.z;
-
-			result.a = x * x * omcos + c_angle;
-			result.e = x * y * omcos + z * s_angle;
-			result.i = x * z * omcos - y * s_angle;
-			result.m = 0;
-
-			result.b = y * x * omcos - z * s_angle;
-			result.f = y * y * omcos + c_angle;
-			result.j = y * z * omcos + x * s_angle;
-			result.n = 0;
-
-			result.c = z * x * omcos + y * s_angle;
-			result.g = z * y * omcos - x * s_angle;
-			result.k = z * z * omcos + c_angle;
-			result.o = 0;
-
-			result.d = 0;
-			result.h = 0;
-			result.l = 0;
-			result.p = 1;
-
-			return result;
+			return mat4(
+				(powf(orientation.s, 2) + powf(orientation.i, 2) - powf(orientation.j, 2) - powf(orientation.k, 2)), 2 * (orientation.i * orientation.j - orientation.k * orientation.s), 2 * (orientation.i*orientation.k + orientation.j * orientation.s), 0,
+				2 * (orientation.i * orientation.j + orientation.k * orientation.s), (powf(orientation.s, 2) - powf(orientation.i, 2) + powf(orientation.j, 2) - powf(orientation.k, 2)), 2 * (orientation.j*orientation.k - orientation.i * orientation.s), 0,
+				2 * (orientation.i * orientation.k - orientation.j * orientation.s), 2 * (orientation.j * orientation.k + orientation.i * orientation.s), (powf(orientation.s, 2) - powf(orientation.i, 2) - powf(orientation.j, 2) + powf(orientation.k, 2)), 0,
+				0, 0, 0, 1);
 		};
 		static mat4 Rotation(float angle, const vec3& axis)
 		{
