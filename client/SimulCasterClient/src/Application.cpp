@@ -260,9 +260,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 #if 1
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n"
+	mGuiSys->ShowInfoText( 1.0f , "Network Packets Dropped: %d\n Decoder Packets Dropped: %d\n Framerate: %4.4f\n Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.2f, %1.2f, %1.2f\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped
-			,frameRate,ctr.bandwidthKPS, (uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size());
+			,frameRate,ctr.bandwidthKPS, (uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size(), capturePosition.x, capturePosition.y, capturePosition.z);
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -507,7 +507,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[2] = true;
             ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[3] = true;
             ovr_Actor.graphicsCommand.GpuState.polygonOffsetEnable = false;
-            ovr_Actor.graphicsCommand.GpuState.cullEnable = true;
+            ovr_Actor.graphicsCommand.GpuState.cullEnable = gl_effectPass.rasterizationState.cullMode == scr::Effect::CullMode::NONE ? false : true;
             ovr_Actor.graphicsCommand.GpuState.lineWidth = 1.0F;
             ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
             ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
@@ -521,11 +521,11 @@ void Application::RenderLocalActors(ovrFrameResult& res)
         scr::Transform scr_UE4_Camera_Transform;
         avs::Transform avs_UE4_Camera_Transform = mDecoder.getCameraTransform();
         scr_UE4_Camera_Transform = avs_UE4_Camera_Transform;
-        scr::vec3 camPos = scr_UE4_Camera_Transform.m_Translation * -0.01;
-        camPos.z += heightOffset;
+        capturePosition = scr_UE4_Camera_Transform.m_Translation;
+        scr::vec3 camPos = capturePosition * -1;
+        camPos.y += heightOffset;
 
-        //scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-0.80F, -1.42F + heightOffset, 4.80F)); //TO BE updated from the video frame.
-        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation({camPos.y, camPos.z, -camPos.x});
+        scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(camPos);
         scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform->GetTransformMatrix();
 
         OVR::Matrix4f transform;
@@ -580,8 +580,8 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* ef
     scr::Effect::RasterizationState rs = {};
     rs.depthClampEnable = false;
     rs.rasterizerDiscardEnable = false;
-    rs.cullMode = scr::Effect::CullMode::BACK_BIT;
-    rs.frontFace = scr::Effect::FrontFace::CLOCKWISE;
+    rs.cullMode = scr::Effect::CullMode::NONE;
+    rs.frontFace = scr::Effect::FrontFace::COUNTER_CLOCKWISE;
 
     scr::Effect::MultisamplingState ms = {};
     ms.samplerShadingEnable = false;

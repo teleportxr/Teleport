@@ -341,10 +341,10 @@ void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
 {
     // TODO: Use compact representation with only 3 float values for wire format.
     const ovrQuatf HeadPoseOVR = pose.Pose.Orientation;
-    ovrQuatf RootPose={0.0f,0.707f,0.f,0.707f};
-    ovrQuatf RelPose=RelativeQuaternion(HeadPoseOVR,RootPose);
+    ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
+    ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR,RootPose);
     // Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
-    ovrQuatf HeadPose={RelPose.x, RelPose.y,RelPose.z, RelPose.w };
+    ovrQuatf HeadPose = { RelPose.x, RelPose.y,RelPose.z, RelPose.w };
     ENetPacket* packet = enet_packet_create(&HeadPose, sizeof(HeadPose), 0);
     enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
 }
@@ -402,7 +402,7 @@ void SessionClient::SendHandshake()
 {
     avs::Handshake handshake;
     handshake.isReadyToReceivePayloads=true;
-    handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
+    handshake.axesStandard = avs::AxesStandard::GlStyle;
     handshake.MetresPerUnit = 1.0f;
     ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
     enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
