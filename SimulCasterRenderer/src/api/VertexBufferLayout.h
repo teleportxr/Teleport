@@ -69,6 +69,7 @@ namespace scr
 				return 2;
 			case Type::UBYTE:
 			case Type::BYTE:
+			default:
 				return 1;
 			}
 		}

@@ -2,11 +2,13 @@
 #include "shader_platform.sl"
 #include "../SL/common.sl"
 #include "../SL/render_states.sl"
-#include "../SL/solid_constants.sl"
 #include "../SL/camera_constants.sl"
 #include "../SL/depth.sl"
+#include "pbr_constants.sl"
 
 uniform Texture2D diffuseTexture;
+uniform Texture2D normalTexture;
+uniform Texture2D combinedTexture;
 uniform TextureCube diffuseCubemap;
 uniform TextureCube specularCubemap;
 
@@ -20,6 +22,8 @@ uniform Texture3D inscatterVolumeTexture;
 struct vertexInput
 {
     vec3 position		: POSITION;
+	vec3 normal	 : NORMAL;
+	vec4 tangent: TANGENT;
     vec2 texCoords0		: TEXCOORD0;
     vec2 texCoords1		: TEXCOORD1;
 };
@@ -34,9 +38,10 @@ struct vertexOutput
     vec2 texCoords0		: TEXCOORD0;
     vec2 texCoords1		: TEXCOORD1;
     vec3 normal			: TEXCOORD2;
-    vec3 wpos			: TEXCOORD3;
-    vec3 view			: TEXCOORD4;
-    vec4 clip_pos		: TEXCOORD5;
+	vec4 tangent		 : TEXCOORD3;
+    vec3 wpos			: TEXCOORD4;
+    vec3 view			: TEXCOORD5;
+    vec4 clip_pos		: TEXCOORD6;
 };
 
 shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
@@ -50,8 +55,10 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 	OUT.texCoords1	=vec2(0,0);
 #ifdef SFX_OPENGL
     OUT.normal.xyz	=mul(mat3(world),vec3(0,0,1.0));
+	OUT.tangent.xyz = mul(mat3(world), vec3(0, 0, 1.0));
 #else
     OUT.normal.xyz	=mul(world,vec4(vec3(0,0,1.0),0.0)).xyz;
+	OUT.tangent.xyz =mul(world,vec4(vec3(0, 0, 1.0), 0.0)).xyz;
 #endif
 	OUT.hPosition	=OUT.clip_pos;
     return OUT;
@@ -67,9 +74,13 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	OUT.texCoords0	=IN.texCoords0;
 	OUT.texCoords1	=IN.texCoords1;
 #ifdef SFX_OPENGL
-    OUT.normal.xyz	=vec3(0,0,1);//mul(mat3(world),IN.normal);
+	OUT.normal.xyz = mul(mat3(world), IN.normal);
+	OUT.tangent.xyz = mul(mat3(world), IN.tangent);
 #else
-    OUT.normal.xyz	=vec3(0,0,1);//mul(world,vec4(IN.normal,0.0)).xyz;
+	//OUT.normal.xyz = mul(world, vec4(IN.normal, 0.0)).xyz;
+	//OUT.tangent.xyz = mul(world, IN.tangent).xyz;
+	OUT.normal = IN.normal;
+	OUT.tangent = IN.tangent;
 #endif
 	OUT.hPosition	=OUT.clip_pos;
     return OUT;
@@ -146,11 +157,14 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseCol
 
 shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 {
-    vec3 normal		=normalize(IN.normal);
-	vec3 view		= normalize(IN.wpos.xyz - viewPosition);
-    vec3 c			=PBR(normal, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), albedo, vec3(1,1,1),roughness);
+    vec3 normal			= normalize(IN.normal);
+	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
+	vec3 diffuseColour	= diffuseOutputScalar.rgb * diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
+	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
+	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgra;
+    vec3 c				= PBR(normalLookup, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), diffuseColour, vec3(1,1,1),roughness);
 	//c.rg=IN.texCoords0;
-    vec4 u			=vec4(normal.rgb,1.0);
+    vec4 u				=vec4(c.rgb,1.0);
 	return u;
 }
 
