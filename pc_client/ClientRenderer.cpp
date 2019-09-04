@@ -84,6 +84,9 @@ ClientRenderer::ClientRenderer():
 	pbrEffect(nullptr),
 	cubemapClearEffect(nullptr),
 	specularTexture(nullptr),
+	dummyDiffuse(nullptr),
+	dummyNormal(nullptr),
+	dummyCombined(nullptr),
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
 	sessionClient(this),
@@ -138,11 +141,28 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	hDRRenderer->RestoreDeviceObjects(renderPlatform);
 	meshRenderer->RestoreDeviceObjects(renderPlatform);
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
+
+
+	// dummy textures for materials:
+	dummyDiffuse = renderPlatform->CreateTexture();
+	dummyNormal = renderPlatform->CreateTexture();
+	dummyCombined = renderPlatform->CreateTexture();
+	dummyDiffuse->ensureTexture2DSizeAndFormat(renderPlatform, 1, 1, crossplatform::PixelFormat::BGRA_8_UNORM);
+	uint32_t white = 0xFFFFFFFF;
+	dummyDiffuse->setTexels(renderPlatform->GetImmediateContext(), &white, 0, 1);
+
+	dummyNormal->ensureTexture2DSizeAndFormat(renderPlatform, 1, 1, crossplatform::PixelFormat::BGRA_8_UNORM);
+	uint32_t blue = 0x00FF0000;
+	dummyNormal->setTexels(renderPlatform->GetImmediateContext(), &blue, 0, 1);
+
+	dummyCombined->ensureTexture2DSizeAndFormat(renderPlatform, 1, 1, crossplatform::PixelFormat::BGRA_8_UNORM);
+	dummyCombined->setTexels(renderPlatform->GetImmediateContext(), &white, 0, 1);
+
 	errno=0;
 	RecompileShaders();
 
-	solidConstants.RestoreDeviceObjects(renderPlatform);
-	solidConstants.LinkToEffect(pbrEffect,"SolidConstants");
+	pbrConstants.RestoreDeviceObjects(renderPlatform);
+	pbrConstants.LinkToEffect(pbrEffect,"pbrConstants");
 	cubemapConstants.RestoreDeviceObjects(renderPlatform);
 	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
 	cameraConstants.RestoreDeviceObjects(renderPlatform);
@@ -208,7 +228,7 @@ void ClientRenderer::RenderOpaqueTest(crossplatform::DeviceContext &deviceContex
 		// scale.
 		static float sc[]={1.0f,1.0f,1.0f,1.0f};
 		model.ScaleRows(sc);
-		solidConstants.reverseDepth		=deviceContext.viewStruct.frustum.reverseDepth;
+		pbrConstants.reverseDepth		=deviceContext.viewStruct.frustum.reverseDepth;
 		mat4 m = mat4::identity();
 		meshRenderer->Render(deviceContext, transparentMesh,*(mat4*)&model,diffuseCubemapTexture,specularTexture);
 	}
@@ -226,10 +246,10 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 	// scale.
 	static float sc[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	model.ScaleRows(sc);
-	solidConstants.reverseDepth = deviceContext.viewStruct.frustum.reverseDepth;
+	pbrConstants.reverseDepth = deviceContext.viewStruct.frustum.reverseDepth;
 	// Some arbitrary light values 
-	solidConstants.lightIrradiance = vec3(12, 12, 12);
-	solidConstants.lightDir = vec3(0, 0, 1);
+	pbrConstants.lightIrradiance = vec3(12, 12, 12);
+	pbrConstants.lightDir = vec3(0, 0, 1);
 	mat4 m = mat4::identity();
 	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularTexture);
 }
@@ -299,7 +319,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->Unapply(deviceContext);
 
 
-				renderPlatform->DrawTexture(deviceContext,0, 0, hdrFramebuffer->GetWidth()/2, hdrFramebuffer->GetHeight()/2, ti->texture);
+				//renderPlatform->DrawTexture(deviceContext,0, 0, hdrFramebuffer->GetWidth()/2, hdrFramebuffer->GetHeight()/2, ti->texture);
 			}
 		}
 		//RenderOpaqueTest(deviceContext);
@@ -324,6 +344,10 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				y += tw;
 			}
 		}
+		y += tw;
+		renderPlatform->DrawTexture(deviceContext, x+=tw, y, tw, tw, dummyDiffuse);
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, dummyNormal);
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, dummyCombined);
 	}
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.44f);
@@ -396,8 +420,10 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		simul::crossplatform::LayoutDesc desc[] =
 		{
 			{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-			{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 12, false, 0 },
-			{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 24, false, 0 },
+			{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
+			{ "TANGENT", 0, crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
+			{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
+			{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
 		};
 		simul::crossplatform::Layout* layout= renderPlatform->CreateLayout(
 												sizeof(desc)/sizeof(simul::crossplatform::LayoutDesc)
@@ -408,7 +434,23 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		mat4::mul(cameraConstants.worldViewProj ,*((mat4*)&deviceContext.viewStruct.viewProj), model);
 		cameraConstants.world = model;
 		cameraConstants.viewPosition = vec3(0,0,0);
-		pbrEffect->SetConstantBuffer(deviceContext, &solidConstants);
+
+		scr::Material &mat = *materials[0];
+		{
+			auto& mcr = mat.GetMaterialCreateInfo();
+			const scr::Material::MaterialData& md = mat.GetMaterialData();
+			memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
+			auto* d = ((pc_client::PC_Texture*) & (*mcr.diffuse.texture));
+			auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
+			auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
+
+
+			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("diffuseTexture"),	d?d->GetSimulTexture():dummyDiffuse);
+			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("normalTexture"),	n?n->GetSimulTexture():dummyNormal);
+			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("combinedTexture"),c?c->GetSimulTexture():dummyCombined);
+		}
+
+		pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 		pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 		pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
  		renderPlatform->SetLayout(deviceContext, layout);
@@ -453,13 +495,15 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(transparentMesh);
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularTexture);
+	SAFE_DELETE(dummyDiffuse);
+	SAFE_DELETE(dummyNormal);
+	SAFE_DELETE(dummyCombined);
 	SAFE_DELETE(meshRenderer);
 	SAFE_DELETE(hDRRenderer);
 	SAFE_DELETE(hdrFramebuffer);
 	SAFE_DELETE(pbrEffect);
 	SAFE_DELETE(cubemapClearEffect);
 	SAFE_DELETE(diffuseCubemapTexture);
-	SAFE_DELETE(specularTexture);
 }
 
 void ClientRenderer::RemoveView(int)
@@ -589,8 +633,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
-	controllerState.mTrackpadX=0.5f;
-	controllerState.mTrackpadY=0.5f;
+	controllerState.mTrackpadX=0.5f+0.5f*(mouseCameraInput.right_left_input);
+	controllerState.mTrackpadY=0.5f + 0.5f * (mouseCameraInput.forward_back_input);
 	controllerState.mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())

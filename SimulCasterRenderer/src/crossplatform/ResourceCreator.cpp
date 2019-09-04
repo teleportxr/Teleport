@@ -39,6 +39,7 @@ avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 
 	std::shared_ptr<VertexBufferLayout> layout(new VertexBufferLayout);
 	if (resourceCreate->m_Vertices)	{ layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	}
+
 	if (resourceCreate->m_Normals|| resourceCreate->m_TangentNormals)
 	{
 		layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
@@ -83,7 +84,7 @@ avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 				normal.y = n8.y / 127.0f;
 				normal.z = n8.z / 127.0f;
 			}
-			else
+			else // 16
 			{
 				Vec4<short> &x8 = *((avs::Vec4<short>*)(nt));
 				tangent.x = x8.x / 32767.0f;
@@ -165,8 +166,8 @@ scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format
 	{
 		case avs::TextureFormat::INVALID: return scr::Texture::Format::FORMAT_UNKNOWN;
 		case avs::TextureFormat::G8: return scr::Texture::Format::R8;
-		case avs::TextureFormat::BGRA8: return scr::Texture::Format::RGBA8;
-		case avs::TextureFormat::BGRE8: return scr::Texture::Format::RGBA8;
+		case avs::TextureFormat::BGRA8: return scr::Texture::Format::BGRA8;
+		case avs::TextureFormat::BGRE8: return scr::Texture::Format::BGRA8;
 		case avs::TextureFormat::RGBA16: return scr::Texture::Format::RGBA16;
 		case avs::TextureFormat::RGBE8: return scr::Texture::Format::RGBA8;
 		case avs::TextureFormat::RGBA16F: return scr::Texture::Format::RGBA16F;

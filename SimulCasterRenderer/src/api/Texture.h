@@ -45,6 +45,7 @@ namespace scr
 			RGBA8I,										
 			RGBA8_SNORM,								
 			RGBA8,
+			BGRA8,
 
 			RGB10_A2UI,
 			RGB10_A2,

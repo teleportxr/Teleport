@@ -8,6 +8,7 @@
 #include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
 #include "SessionClient.h"
 #include "Shaders/cubemap_constants.sl"
+#include "Shaders/pbr_constants.sl"
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
@@ -77,10 +78,13 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::Effect *pbrEffect;
 	simul::crossplatform::Effect *cubemapClearEffect;
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
-	simul::crossplatform::ConstantBuffer<SolidConstants> solidConstants;
+	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularTexture;
+	simul::crossplatform::Texture* dummyDiffuse;
+	simul::crossplatform::Texture* dummyNormal;
+	simul::crossplatform::Texture* dummyCombined;
 	/// A camera instance to generate view and proj matrices and handle mouse control.
 	/// In practice you will have your own solution for this.
 	simul::crossplatform::Camera			camera;

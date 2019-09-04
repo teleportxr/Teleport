@@ -195,10 +195,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 				case AttributeSemantic::TANGENTNORMALXZ:
 				{
 					size_t tnSize = 0;
-					if (accessor.type == avs::Accessor::DataType::VEC2)
-						tnSize = 8;
-					else  if (accessor.type == avs::Accessor::DataType::VEC4)
-						tnSize = 16;
+					tnSize = avs::GetComponentSize(accessor.componentType) * avs::GetDataTypeSize(accessor.type);
 					resourceCreate.m_TangentNormalSize = tnSize;
 					resourceCreate.m_TangentNormals= (const uint8_t*)buffer.data;
 				}
