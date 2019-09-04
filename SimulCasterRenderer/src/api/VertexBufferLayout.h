@@ -12,6 +12,7 @@ namespace scr
 		{
 			FLOAT,
 			DOUBLE,
+			HALF,
 			UINT,
 			USHORT,
 			UBYTE,

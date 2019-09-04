@@ -199,11 +199,12 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 						tnSize = 8;
 					else  if (accessor.type == avs::Accessor::DataType::VEC4)
 						tnSize = 16;
-					//target->ensureTangentNormals(it->first, 0, (int)accessor.count, tnSize, (const uint8_t*)buffer.data);
+					resourceCreate.m_TangentNormalSize = tnSize;
+					resourceCreate.m_TangentNormals= (const uint8_t*)buffer.data;
 				}
 					continue;
 				case AttributeSemantic::NORMAL:
-					//target->ensureNormals(mesh_uid, 0, (int)accessor.count, (const avs::vec3*)buffer.data);
+					//resourceCreate.m_Normals(mesh_uid, 0, (int)accessor.count, (const avs::vec3*)buffer.data);
 					continue;
 				case AttributeSemantic::TANGENT:
 					//target->ensureTangents(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
