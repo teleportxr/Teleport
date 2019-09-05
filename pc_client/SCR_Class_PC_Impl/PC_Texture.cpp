@@ -14,25 +14,26 @@ simul::crossplatform::PixelFormat ToSimulPixelFormat(scr::Texture::Format f)
 	switch (f)
 	{
 	case scr::Texture::Format::RGBA32F:						return RGBA_32_FLOAT;
-	case scr::Texture::Format::RGBA32UI:						return RGBA_32_UINT;
+	case scr::Texture::Format::RGBA32UI:					return RGBA_32_UINT;
 	case scr::Texture::Format::RGBA32I:						return RGBA_32_INT;
 	case scr::Texture::Format::RGBA16F:						return RGBA_16_FLOAT;
-	case scr::Texture::Format::RGBA16UI:						return RGBA_16_UINT;
+	case scr::Texture::Format::RGBA16UI:					return RGBA_16_UINT;
 	case scr::Texture::Format::RGBA16I:						return RGBA_16_INT;
-	case scr::Texture::Format::RGBA16_SNORM:					return RGBA_16_SNORM;
+	case scr::Texture::Format::RGBA16_SNORM:				return RGBA_16_SNORM;
 	case scr::Texture::Format::RGBA16:						return RGBA_16_UNORM;
 	case scr::Texture::Format::RGBA8UI:						return RGBA_8_UINT;
 	case scr::Texture::Format::RGBA8I:						return RGBA_8_INT;
 	case scr::Texture::Format::RGBA8_SNORM:					return RGBA_8_SNORM;
-	case scr::Texture::Format::RGBA8:							return RGBA_8_UNORM;
+	case scr::Texture::Format::RGBA8:						return RGBA_8_UNORM;
+	case scr::Texture::Format::BGRA8:						return BGRA_8_UNORM;
 	case scr::Texture::Format::RGB10_A2UI:					return RGB_10_A2_UINT;
-	case scr::Texture::Format::RGB10_A2:						return RGB_10_A2_INT;
+	case scr::Texture::Format::RGB10_A2:					return RGB_10_A2_INT;
 	case scr::Texture::Format::RGB32F:						return RGB_32_FLOAT;
 	case scr::Texture::Format::R11F_G11F_B10F:				return RGB_11_11_10_FLOAT;
-	case scr::Texture::Format::RG32F:							return RG_32_FLOAT;
+	case scr::Texture::Format::RG32F:						return RG_32_FLOAT;
 	case scr::Texture::Format::RG32UI:						return RG_32_UINT;
 	case scr::Texture::Format::RG32I:							 
-	case scr::Texture::Format::RG16F:							return RG_16_FLOAT;
+	case scr::Texture::Format::RG16F:						return RG_16_FLOAT;
 	case scr::Texture::Format::RG16UI:						return RG_16_UINT;
 	case scr::Texture::Format::RG16I:
 	case scr::Texture::Format::RG16_SNORM:					
@@ -40,10 +41,10 @@ simul::crossplatform::PixelFormat ToSimulPixelFormat(scr::Texture::Format f)
 	case scr::Texture::Format::RG8UI:							
 	case scr::Texture::Format::RG8I:
 	case scr::Texture::Format::RG8:							return RG_8_UNORM; 
-	case scr::Texture::Format::R32F:							return R_32_FLOAT;
-	case scr::Texture::Format::R32UI:							return R_32_UINT;
-	case scr::Texture::Format::R32I:							return R_32_INT;
-	case scr::Texture::Format::R16F:							return R_16_FLOAT;
+	case scr::Texture::Format::R32F:						return R_32_FLOAT;
+	case scr::Texture::Format::R32UI:						return R_32_UINT;
+	case scr::Texture::Format::R32I:						return R_32_INT;
+	case scr::Texture::Format::R16F:						return R_16_FLOAT;
 	case scr::Texture::Format::R16UI:								
 	case scr::Texture::Format::R16I:								
 	case scr::Texture::Format::R16_SNORM :

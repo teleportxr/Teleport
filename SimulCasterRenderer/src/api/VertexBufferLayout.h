@@ -12,6 +12,7 @@ namespace scr
 		{
 			FLOAT,
 			DOUBLE,
+			HALF,
 			UINT,
 			USHORT,
 			UBYTE,
@@ -68,6 +69,7 @@ namespace scr
 				return 2;
 			case Type::UBYTE:
 			case Type::BYTE:
+			default:
 				return 1;
 			}
 		}

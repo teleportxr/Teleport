@@ -24,10 +24,6 @@ namespace scr
 			MaterialParameter combined;	//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
 			Effect* effect;				//Effect associated with this material: opaque, transparent, emissive, etc.
 		};
-
-	protected:
-		MaterialCreateInfo m_CI;
-
 		struct MaterialData //Layout conformant to GLSL std140
 		{
 			vec4 diffuseOutputScalar;
@@ -47,7 +43,12 @@ namespace scr
 			vec2 combinedTexCoordsScalar_G;
 			vec2 combinedTexCoordsScalar_B;
 			vec2 combinedTexCoordsScalar_A;
-		} m_MaterialData;
+		};
+
+	protected:
+		MaterialData m_MaterialData;
+		MaterialCreateInfo m_CI;
+
 
 		static bool s_UninitialisedUB;
 		std::unique_ptr<UniformBuffer> m_UB;
@@ -63,5 +64,6 @@ namespace scr
 		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfoConst() const { return m_CI; }
 		inline MaterialCreateInfo& GetMaterialCreateInfo() { return m_CI; }
+		inline const MaterialData& GetMaterialData() { return m_MaterialData; }
 	};
 }
