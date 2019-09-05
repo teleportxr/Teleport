@@ -528,12 +528,14 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             mOVRActors[actor.first] = ovr_Actor;
         }
 
-        float heightOffset = -0.80F;
+        float heightOffset = -0.85F;
         scr::vec3 camPos = capturePosition * -1;
         camPos.y += heightOffset;
 
+		//Change of Basis matrix
+        scr::mat4 cob = scr::mat4({0, 1, 0, 0}, {0, 0, 1, 0}, {-1, 0, 0, 0 }, {0, 0, 0, 1});
         scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(camPos);
-        scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform->GetTransformMatrix();
+        scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform->GetTransformMatrix() * cob;
 
         OVR::Matrix4f transform;
         memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
@@ -541,6 +543,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
         res.Surfaces.push_back(ovr_ActorDrawSurface);
     }
+
 }
 
 const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource)
@@ -587,8 +590,9 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* ef
     scr::Effect::RasterizationState rs = {};
     rs.depthClampEnable = false;
     rs.rasterizerDiscardEnable = false;
-    rs.cullMode = scr::Effect::CullMode::NONE;
-    rs.frontFace = scr::Effect::FrontFace::COUNTER_CLOCKWISE;
+    rs.polygonMode = scr::Effect::PolygonMode::FILL;
+    rs.cullMode = scr::Effect::CullMode::BACK_BIT;
+    rs.frontFace = scr::Effect::FrontFace::CLOCKWISE;
 
     scr::Effect::MultisamplingState ms = {};
     ms.samplerShadingEnable = false;
