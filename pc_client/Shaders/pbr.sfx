@@ -47,7 +47,7 @@ struct vertexOutput
 shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 {
     vertexOutput OUT;
-	vec4 opos		=vec4(IN.position.xyz,1.0);
+	vec4 opos		=vec4(IN.position.yxz,1.0);
     OUT.wpos		=mul(world, opos).xyz;
 	OUT.view		=normalize(OUT.wpos.xyz- viewPosition);
     OUT.clip_pos	=mul(opos,worldViewProj);
@@ -67,7 +67,7 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 shader vertexOutput VS_Solid(vertexInput IN)
 {
     vertexOutput OUT;
-	vec4 opos		=vec4(IN.position.xyz,1.0);
+	vec4 opos		=vec4(IN.position.yxz,1.0);
     OUT.wpos		=mul(world, opos).xyz;
 	OUT.view		=normalize(OUT.wpos.xyz- viewPosition);
     OUT.clip_pos	=mul( opos,worldViewProj);
@@ -77,10 +77,10 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	OUT.normal.xyz = mul(mat3(world), IN.normal);
 	OUT.tangent.xyz = mul(mat3(world), IN.tangent);
 #else
-	//OUT.normal.xyz = mul(world, vec4(IN.normal, 0.0)).xyz;
-	//OUT.tangent.xyz = mul(world, IN.tangent).xyz;
-	OUT.normal = IN.normal;
-	OUT.tangent = IN.tangent;
+	OUT.normal.xyz = mul(world, vec4(IN.normal.yxz, 0.0)).xyz;
+	OUT.tangent.xyz = mul(world, IN.tangent.yxz).xyz;
+	//OUT.normal = IN.normal;
+	//OUT.tangent = IN.tangent;
 #endif
 	OUT.hPosition	=OUT.clip_pos;
     return OUT;

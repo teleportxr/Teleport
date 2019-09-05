@@ -365,8 +365,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
 		int y = 0;
 		int dy = 18;
+		vec4 white(1.f, 1.f, 1.f, 1.f);
 		renderPlatform->Print(deviceContext, w / 2, y += dy, sessionClient.IsConnected()? simul::base::QuickFormat("Connected to: %s"
-			,sessionClient.GetServerIP().c_str()):"Not connected",vec4(1.f,1.f,1.f,1.f));
+			,sessionClient.GetServerIP().c_str()):"Not connected",white);
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Framerate: %4.4f", framerate));
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
@@ -380,6 +381,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
+		avs::Transform transform = decoder[0].getCameraTransform();
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", transform.position.x, transform.position.y, transform.position.z),white);
+
 		//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 		//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
 		//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
@@ -645,7 +649,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		// But we want orientation relative to X right, Y forward, Z up.
 		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f,0.0f, 0.0f));
 		auto q = camera.GetOrientation().GetQuaternion();
-		auto q_rel=q0/q;
+		auto q_rel=q/q0;
 		sessionClient.Frame(q_rel,controllerState);
 		pipeline.process();
 
