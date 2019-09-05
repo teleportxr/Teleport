@@ -130,5 +130,5 @@ private:
 		}
 	}
 	void RenderLocalActors(OVR::ovrFrameResult& res);
-    const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource, const std::vector<scr::DescriptorSet>& descriptorSets);
+    const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource, const std::vector<scr::ShaderResource>& shaderResources);
 };

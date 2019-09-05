@@ -2,7 +2,7 @@
 #pragma once
 
 #include <api/DeviceContext.h>
-#include <crossplatform/DescriptorSet.h>
+#include <crossplatform/ShaderResource.h>
 
 #include "GL_Effect.h"
 #include "GL_FrameBuffer.h"
@@ -29,7 +29,7 @@ class GL_DeviceContext final : public scr::DeviceContext
 
     private:
     	void ParseInputCommand(scr::InputCommand* pInputCommand);
-        void BindDescriptorSets(const std::vector<scr::DescriptorSet>& descriptorSets, scr::Effect* pEffect);
+        void BindDescriptorSets(const std::vector<scr::ShaderResource>& shaderResources, scr::Effect* pEffect);
 
     private:
     	GLenum m_Topology;

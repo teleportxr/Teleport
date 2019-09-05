@@ -4,7 +4,7 @@
 #include "Common.h"
 #include "VertexBufferLayout.h"
 #include "Texture.h"
-#include "crossplatform/DescriptorSet.h"
+#include "crossplatform/ShaderResource.h"
 #include "crossplatform/ShaderSystem.h"
 
 namespace scr
@@ -182,6 +182,6 @@ namespace scr
 		virtual void Bind(const char* effectPassName) const = 0;
 		virtual void Unbind(const char* effectPassName) const = 0;
 		
-		virtual void LinkShaders(const char* effectPassName, const std::vector<DescriptorSet>& descriptorSets) = 0;
+		virtual void LinkShaders(const char* effectPassName, const std::vector<ShaderResource>& shaderResources) = 0;
 	};
 }

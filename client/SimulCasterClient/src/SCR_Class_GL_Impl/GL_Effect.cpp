@@ -16,7 +16,7 @@ void GL_Effect::CreatePass(EffectPassCreateInfo* pEffectCreateInfo)
     m_EffectPasses[pEffectCreateInfo->effectPassName] = *pEffectCreateInfo;
 }
 
-void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<DescriptorSet>& descriptorSets)
+void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<ShaderResource>& shaderResources)
 {
     Shader* vertex = nullptr;
     Shader* fragment = nullptr;
@@ -43,12 +43,12 @@ void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<Descri
     assert(vertex != nullptr && fragment != nullptr);
 
     std::vector<ovrProgramParm> uniformParms;
-    for(const auto& descSets : descriptorSets )
+    for(const auto& shaderResource : shaderResources )
     {
-        for(const auto& resource : descSets.GetWriteDescriptorSet())
+        for(const auto& resource : shaderResource.GetWriteShaderResources())
         {
-            const char* name = resource.descriptorName;
-            ovrProgramParmType type = ToOVRProgramParmType(resource.descriptorType);
+            const char* name = resource.shaderResourceName;
+            ovrProgramParmType type = ToOVRProgramParmType(resource.shaderResourceType);
             assert(type != ovrProgramParmType::MAX);
             uniformParms.push_back({name, type});
         }
@@ -232,20 +232,20 @@ GLenum GL_Effect::ToGLBlendOp(BlendOp op)
     }
 };
 
-ovrProgramParmType GL_Effect::ToOVRProgramParmType(DescriptorSetLayout::DescriptorType type)
+ovrProgramParmType GL_Effect::ToOVRProgramParmType(ShaderResourceLayout::ShaderResourceType type)
 {
     switch(type)
     {
-        case DescriptorSetLayout::DescriptorType::SAMPLER:                  return ovrProgramParmType::MAX;
-        case DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER:   return ovrProgramParmType::TEXTURE_SAMPLED;
-        case DescriptorSetLayout::DescriptorType::SAMPLED_IMAGE:            return ovrProgramParmType::MAX;
-        case DescriptorSetLayout::DescriptorType::STORAGE_IMAGE:            return ovrProgramParmType::MAX;
-        case DescriptorSetLayout::DescriptorType::UNIFORM_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
-        case DescriptorSetLayout::DescriptorType::STORAGE_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
-        case DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER:           return ovrProgramParmType::BUFFER_UNIFORM;
-        case DescriptorSetLayout::DescriptorType::STORAGE_BUFFER:           return ovrProgramParmType::MAX;
-        case DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER_DYNAMIC:   return ovrProgramParmType::BUFFER_UNIFORM;
-        case DescriptorSetLayout::DescriptorType::STORAGE_BUFFER_DYNAMIC:   return ovrProgramParmType::MAX;
-        case DescriptorSetLayout::DescriptorType::INPUT_ATTACHMENT:         return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::SAMPLER:                  return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER:   return ovrProgramParmType::TEXTURE_SAMPLED;
+        case ShaderResourceLayout::ShaderResourceType::SAMPLED_IMAGE:            return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE:            return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::UNIFORM_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER:           return ovrProgramParmType::BUFFER_UNIFORM;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER:           return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER_DYNAMIC:   return ovrProgramParmType::BUFFER_UNIFORM;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER_DYNAMIC:   return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::INPUT_ATTACHMENT:         return ovrProgramParmType::MAX;
     }
 };

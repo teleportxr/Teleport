@@ -2,7 +2,7 @@
 #pragma once
 
 #include "api/Texture.h"
-#include "DescriptorSet.h"
+#include "ShaderResource.h"
 #include "api/Effect.h"
 #include "basic_linear_algebra.h"
 
@@ -53,15 +53,15 @@ namespace scr
 		static bool s_UninitialisedUB;
 		std::shared_ptr<UniformBuffer> m_UB;
 
-		DescriptorSetLayout m_SetLayout;
-		DescriptorSet m_Set;
+		ShaderResourceLayout m_ShaderResourceLayout;
+		ShaderResource m_ShaderResource;
 	
 	public:
 		Material(RenderPlatform* r, MaterialCreateInfo* pMaterialCreateInfo);
 
 		void UpdateMaterialUB();
 
-		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
+		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfoConst() const { return m_CI; }
 		inline MaterialCreateInfo& GetMaterialCreateInfo() { return m_CI; }
 		inline const MaterialData& GetMaterialData() { return m_MaterialData; }

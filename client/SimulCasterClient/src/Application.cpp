@@ -483,12 +483,12 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
 
             //Material
-            std::vector<scr::DescriptorSet> materialDescSet;
-            materialDescSet.push_back(ic_mmt.pMaterial->GetDescriptorSet());
+            std::vector<scr::ShaderResource> materialShaderResources;
+			materialShaderResources.push_back(ic_mmt.pMaterial->GetShaderResource());
 
             materialCI.effect = dynamic_cast<scr::Effect*>(&mEffects);
             const auto gl_effect = &mEffects;
-            const auto gl_effectPass = BuildEffectPass("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS, materialDescSet);
+            const auto gl_effectPass = BuildEffectPass("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS, materialShaderResources);
 
             const auto diffuse_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.diffuse.texture.get());
             const auto normal_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.normal.texture.get());
@@ -543,17 +543,17 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
             //Update Uniforms
             size_t i = 0;
-            for(auto& ds : materialDescSet)
+            for(auto& sr : materialShaderResources)
             {
-            	for(auto& resource : ds.GetWriteDescriptorSet())
+            	for(auto& resource : sr.GetWriteShaderResources())
             	{
-					scr::DescriptorSetLayout::DescriptorType type = resource.descriptorType;
-					if(type == scr::DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER)
+					scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
+					if(type == scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
 					{
 						if(resource.imageInfo.texture.get())
 					        ovr_Actor.graphicsCommand.UniformData[i].Data = &(dynamic_cast<scc::GL_Texture*>(resource.imageInfo.texture.get())->GetGlTexture());
 					}
-					else if(type == scr::DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER)
+					else if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
 					{
                         if(resource.bufferInfo.buffer.get())
 					        ovr_Actor.graphicsCommand.UniformData[i].Data = &(dynamic_cast<scc::GL_UniformBuffer*>(resource.bufferInfo.buffer.get())->GetGlBuffer());
@@ -588,7 +588,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 }
 
-const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource, const std::vector<scr::DescriptorSet>& descriptorSets)
+const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource,  const std::vector<scr::ShaderResource>& shaderResources)
 {
 	if(mEffects.HasEffectPass(effectPassName))
 		return mEffects.GetEffectPassCreateInfo(effectPassName);
@@ -678,7 +678,7 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
     ci.colourBlendingState = cbs;
 
     mEffects.CreatePass(&ci);
-    mEffects.LinkShaders(effectPassName, descriptorSets);
+    mEffects.LinkShaders(effectPassName, shaderResources);
 
     return mEffects.GetEffectPassCreateInfo(effectPassName);
 }

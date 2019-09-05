@@ -27,12 +27,12 @@ LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 LOCAL_SRC_FILES  := 	../src/crossplatform/Actor.cpp			\
     					../src/crossplatform/API.cpp			\
 						../src/crossplatform/Camera.cpp			\
-						../src/crossplatform/DescriptorSet.cpp	\
 						../src/crossplatform/GeometryDecoder.cpp\
 						../src/crossplatform/Light.cpp			\
 						../src/crossplatform/Material.cpp		\
 						../src/crossplatform/Mesh.cpp			\
 						../src/crossplatform/ResourceCreator.cpp\
+						../src/crossplatform/ShaderResource.cpp\
 
 
 LOCAL_CFLAGS += -D__ANDROID__

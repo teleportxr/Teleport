@@ -21,7 +21,7 @@ class GL_Effect final : public scr::Effect
 		void Bind(const char* effectPassName) const override;
 		void Unbind(const char* effectPassName) const override;
 
-		void LinkShaders(const char* effectPassName, const std::vector<scr::DescriptorSet>& descriptorSets) override;
+		void LinkShaders(const char* effectPassName, const std::vector<scr::ShaderResource>& shaderResources) override;
 
 		inline OVR::GlProgram& GetGlPlatform() {return m_Program;}
 
@@ -32,6 +32,6 @@ class GL_Effect final : public scr::Effect
         static GLenum ToGLStencilCompareOp(StencilCompareOp op);
         static GLenum ToGLBlendFactor(BlendFactor factor);
         static GLenum ToGLBlendOp(BlendOp op);
-		static OVR::ovrProgramParmType ToOVRProgramParmType(scr::DescriptorSetLayout::DescriptorType type);
+		static OVR::ovrProgramParmType ToOVRProgramParmType(scr::ShaderResourceLayout::ShaderResourceType type);
 	};
 }
