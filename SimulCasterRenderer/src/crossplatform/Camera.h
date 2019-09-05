@@ -36,7 +36,7 @@ namespace scr
 		CameraCreateInfo m_CI;
 
 		static bool s_UninitialisedUB;
-		std::unique_ptr<UniformBuffer> m_UB;
+		std::shared_ptr<UniformBuffer> m_UB;
 
 		DescriptorSetLayout m_SetLayout;
 		DescriptorSet m_Set;

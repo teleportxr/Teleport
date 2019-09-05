@@ -5,6 +5,8 @@ using namespace scc;
 using namespace scr;
 using namespace OVR;
 
+#define OPENGLES_310 310
+
 void GL_Effect::Create(EffectCreateInfo* pEffectCreateInfo)
 {
     m_CI = *pEffectCreateInfo;
@@ -14,7 +16,7 @@ void GL_Effect::CreatePass(EffectPassCreateInfo* pEffectCreateInfo)
     m_EffectPasses[pEffectCreateInfo->effectPassName] = *pEffectCreateInfo;
 }
 
-void GL_Effect::LinkShaders(const char* effectPassName)
+void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<DescriptorSet>& descriptorSets)
 {
     Shader* vertex = nullptr;
     Shader* fragment = nullptr;
@@ -40,12 +42,19 @@ void GL_Effect::LinkShaders(const char* effectPassName)
 
     assert(vertex != nullptr && fragment != nullptr);
 
-    //TO BE REMOVED
-    ovrProgramParm uniformParms[] ={
-            {"u_Texture", ovrProgramParmType::TEXTURE_SAMPLED}
-    };
+    std::vector<ovrProgramParm> uniformParms;
+    for(const auto& descSets : descriptorSets )
+    {
+        for(const auto& resource : descSets.GetWriteDescriptorSet())
+        {
+            const char* name = resource.descriptorName;
+            ovrProgramParmType type = ToOVRProgramParmType(resource.descriptorType);
+            assert(type != ovrProgramParmType::MAX);
+            uniformParms.push_back({name, type});
+        }
+    }
 
-    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, uniformParms, sizeof( uniformParms ) / sizeof( ovrProgramParm ), 310);
+    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, uniformParms.data(), (int)uniformParms.size(), OPENGLES_310);
 }
 
 void GL_Effect::Bind(const char* effectPassName) const
@@ -220,5 +229,23 @@ GLenum GL_Effect::ToGLBlendOp(BlendOp op)
         case BlendOp::REVERSE_SUBTRACT:     return GL_FUNC_REVERSE_SUBTRACT;
         case BlendOp::MIN:                  return GL_MIN;
         case BlendOp::MAX:                  return GL_MAX;
+    }
+};
+
+ovrProgramParmType GL_Effect::ToOVRProgramParmType(DescriptorSetLayout::DescriptorType type)
+{
+    switch(type)
+    {
+        case DescriptorSetLayout::DescriptorType::SAMPLER:                  return ovrProgramParmType::MAX;
+        case DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER:   return ovrProgramParmType::TEXTURE_SAMPLED;
+        case DescriptorSetLayout::DescriptorType::SAMPLED_IMAGE:            return ovrProgramParmType::MAX;
+        case DescriptorSetLayout::DescriptorType::STORAGE_IMAGE:            return ovrProgramParmType::MAX;
+        case DescriptorSetLayout::DescriptorType::UNIFORM_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
+        case DescriptorSetLayout::DescriptorType::STORAGE_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
+        case DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER:           return ovrProgramParmType::BUFFER_UNIFORM;
+        case DescriptorSetLayout::DescriptorType::STORAGE_BUFFER:           return ovrProgramParmType::MAX;
+        case DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER_DYNAMIC:   return ovrProgramParmType::BUFFER_UNIFORM;
+        case DescriptorSetLayout::DescriptorType::STORAGE_BUFFER_DYNAMIC:   return ovrProgramParmType::MAX;
+        case DescriptorSetLayout::DescriptorType::INPUT_ATTACHMENT:         return ovrProgramParmType::MAX;
     }
 };

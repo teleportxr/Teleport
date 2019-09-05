@@ -342,7 +342,7 @@ void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
     // TODO: Use compact representation with only 3 float values for wire format.
     const ovrQuatf HeadPoseOVR = pose.Pose.Orientation;
     ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
-    ovrQuatf RelPose = RelativeQuaternion(RootPose,HeadPoseOVR);
+    ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR, RootPose);
     // Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
     ovrQuatf HeadPose = { RelPose.x, RelPose.y,RelPose.z, RelPose.w };
     ENetPacket* packet = enet_packet_create(&HeadPose, sizeof(HeadPose), 0);

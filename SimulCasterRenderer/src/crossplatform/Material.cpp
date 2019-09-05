@@ -15,7 +15,7 @@ Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
 		const float zero[sizeof(MaterialData)] = { 0 };
 
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
-		ub_ci.bindingLocation = 2;
+		ub_ci.bindingLocation = 3;
 		ub_ci.size = sizeof(MaterialData);
 		ub_ci.data = zero;
 
@@ -41,6 +41,8 @@ Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
 	m_MaterialData.combinedTexCoordsScalar_B	= m_CI.combined.texCoordsScalar[2];
 	m_MaterialData.combinedTexCoordsScalar_A	= m_CI.combined.texCoordsScalar[3];
 
+	//UpdateMaterialUB();
+
 	//Set up Descriptor Set for Textures and UB
 	//UB from 0 - 9, Texture/Samplers 10+
 	m_SetLayout.AddBinding(10, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
@@ -52,7 +54,7 @@ Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
 	m_Set.AddImage(0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse",  { m_CI.diffuse.texture != nullptr ? m_CI.diffuse.texture->GetSampler() : nullptr, m_CI.diffuse.texture });
 	m_Set.AddImage(0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",   { m_CI.normal.texture != nullptr ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
 	m_Set.AddImage(0, DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture != nullptr ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });
-	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 3, "u_MaterialData", { m_UB.get(), 0, sizeof(MaterialData) });
+	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 3, "u_MaterialData", { m_UB, 0, sizeof(MaterialData) });
 }
 
 void Material::UpdateMaterialUB()

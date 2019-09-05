@@ -25,7 +25,7 @@ Transform::Transform()
 	m_SetLayout.AddBinding(1, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
 	m_Set = DescriptorSet({ m_SetLayout });
-	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 1, "u_ActorUBO", { m_UB.get(), 0, sizeof(TransformData) });
+	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 1, "u_ActorUBO", { m_UB, 0, sizeof(TransformData) });
 }
 
 void Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)

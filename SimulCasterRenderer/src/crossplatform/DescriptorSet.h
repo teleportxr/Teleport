@@ -23,7 +23,7 @@ namespace scr
 			STORAGE_BUFFER,
 			UNIFORM_BUFFER_DYNAMIC,
 			STORAGE_BUFFER_DYNAMIC,
-			INPUT_ATTACHMENT = 10
+			INPUT_ATTACHMENT
 		};
 		struct DescriptorSetLayoutBinding
 		{
@@ -70,14 +70,14 @@ namespace scr
 	private:
 		struct DescriptorImageInfo 
 		{
-			std::shared_ptr<const Sampler>	sampler;
-			std::shared_ptr<const Texture> texture;
+			std::shared_ptr<Sampler> sampler;
+			std::shared_ptr<Texture> texture;
 		};
 		struct DescriptorBufferInfo 
 		{
-			const UniformBuffer*	buffer;
-			size_t					offset;
-			size_t					range;
+			std::shared_ptr<UniformBuffer> buffer;
+			size_t						   offset;
+			size_t						   range;
 		};
 		struct WriteDescriptorSet
 		{
@@ -87,8 +87,8 @@ namespace scr
 			uint32_t dstArrayElement;
 			uint32_t descriptorCount;
 			DescriptorSetLayout::DescriptorType descriptorType;
-			const DescriptorImageInfo* pImageInfo;
-			const DescriptorBufferInfo* pBufferInfo;
+			DescriptorImageInfo imageInfo;
+			DescriptorBufferInfo bufferInfo;
 
 		};
 

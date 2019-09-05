@@ -472,18 +472,33 @@ void Application::RenderLocalActors(ovrFrameResult& res)
         scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.get());
         if(mOVRActors.find(actor.first) == mOVRActors.end())
         {
-            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().vb.get());
-            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().ib.get());
+        	//From Actor
+        	const scr::Mesh::MeshCreateInfo& meshCI = ic_mmt.pMesh->GetMeshCreateInfo();
+        	scr::Material::MaterialCreateInfo& materialCI = ic_mmt.pMaterial->GetMaterialCreateInfo();
+
+        	//Mesh
+            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(meshCI.vb.get());
+            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(meshCI.ib.get());
             gl_vb->CreateVAO(gl_ib->GetIndexID());
             auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
 
-            ic_mmt.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffects);
-            const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmt.pMaterial->GetMaterialCreateInfo().effect);
-            const auto gl_effectPass = BuildEffect("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS);
+            //Material
+            std::vector<scr::DescriptorSet> materialDescSet;
+            materialDescSet.push_back(ic_mmt.pMaterial->GetDescriptorSet());
 
-            const auto temp_Texture = dynamic_cast<scc::GL_Texture*>(ic_mmt.pMaterial->GetMaterialCreateInfo().diffuse.texture.get());
-            temp_Texture->UseSampler(mSampler);
+            materialCI.effect = dynamic_cast<scr::Effect*>(&mEffects);
+            const auto gl_effect = &mEffects;
+            const auto gl_effectPass = BuildEffectPass("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS, materialDescSet);
 
+            const auto diffuse_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.diffuse.texture.get());
+            const auto normal_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.normal.texture.get());
+            const auto combined_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.combined.texture.get());
+            diffuse_Texture->UseSampler(mSampler);
+			normal_Texture->UseSampler(mSampler);
+			combined_Texture->UseSampler(mSampler);
+
+            //----Set OVR Actor----//
+            //Construct Mesh
             GlGeometry geo;
             geo.vertexBuffer = gl_vb->GetVertexID();
             geo.indexBuffer = gl_ib->GetIndexID();
@@ -493,14 +508,17 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
             GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
 
+            //Initialise OVR Actor
             ovrSurfaceDef ovr_Actor = {};
             std::string _actorName = std::string("ActorUID: ") + std::to_string(actor.first);
             ovr_Actor.surfaceName = _actorName;
             ovr_Actor.numInstances = 1;
             ovr_Actor.geo = geo;
 
+            //Set Shader Program
             ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
 
+            //Set Rendering Set
             ovr_Actor.graphicsCommand.GpuState.blendMode = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.colorBlendOp);
             ovr_Actor.graphicsCommand.GpuState.blendSrc = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcColorBlendFactor);
             ovr_Actor.graphicsCommand.GpuState.blendDst = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstColorBlendFactor);
@@ -523,11 +541,35 @@ void Application::RenderLocalActors(ovrFrameResult& res)
             ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
             ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
 
-            ovr_Actor.graphicsCommand.UniformData[0].Data = &(temp_Texture->GetGlTexture());
+            //Update Uniforms
+            size_t i = 0;
+            for(auto& ds : materialDescSet)
+            {
+            	for(auto& resource : ds.GetWriteDescriptorSet())
+            	{
+					scr::DescriptorSetLayout::DescriptorType type = resource.descriptorType;
+					if(type == scr::DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER)
+					{
+						if(resource.imageInfo.texture.get())
+					        ovr_Actor.graphicsCommand.UniformData[i].Data = &(dynamic_cast<scc::GL_Texture*>(resource.imageInfo.texture.get())->GetGlTexture());
+					}
+					else if(type == scr::DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER)
+					{
+                        if(resource.bufferInfo.buffer.get())
+					        ovr_Actor.graphicsCommand.UniformData[i].Data = &(dynamic_cast<scc::GL_UniformBuffer*>(resource.bufferInfo.buffer.get())->GetGlBuffer());
+					}
+					else
+					{
+						//NULL
+					}
+					i++;
+				}
+			}
 
             mOVRActors[actor.first] = ovr_Actor;
         }
 
+        //----OVR Actor Set Transforms----//
         float heightOffset = -0.85F;
         scr::vec3 camPos = capturePosition * -1;
         camPos.y += heightOffset;
@@ -546,7 +588,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 }
 
-const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource)
+const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource, const std::vector<scr::DescriptorSet>& descriptorSets)
 {
 	if(mEffects.HasEffectPass(effectPassName))
 		return mEffects.GetEffectPassCreateInfo(effectPassName);
@@ -636,7 +678,7 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* ef
     ci.colourBlendingState = cbs;
 
     mEffects.CreatePass(&ci);
-    mEffects.LinkShaders(effectPassName);
+    mEffects.LinkShaders(effectPassName, descriptorSets);
 
     return mEffects.GetEffectPassCreateInfo(effectPassName);
 }

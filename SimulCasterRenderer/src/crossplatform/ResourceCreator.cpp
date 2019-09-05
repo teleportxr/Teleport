@@ -19,8 +19,6 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 {
 	m_API.SetAPI(r->GetAPI());
 	m_pRenderPlatform = r;
-
-	// Removed circular dependencies.
 }
 
 

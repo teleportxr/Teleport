@@ -22,7 +22,7 @@ namespace scr
 			mat4 m_ModelMatrix;
 		} m_TransformData;
 		static bool s_UninitialisedUB;
-		std::unique_ptr<UniformBuffer> m_UB;
+		std::shared_ptr<UniformBuffer> m_UB;
 
 		DescriptorSetLayout m_SetLayout;
 		DescriptorSet m_Set;

@@ -28,8 +28,8 @@ void DescriptorSet::AddBuffer(uint32_t descriptorSetIndex, DescriptorSetLayout::
 	wds.dstArrayElement = 0;
 	wds.descriptorCount = m_Sets[descriptorSetIndex].FindDescriptorSetLayout(bindingIndex).count;
 	wds.descriptorType = descriptorType;
-	wds.pImageInfo = nullptr;
-	wds.pBufferInfo = &bufferInfo;
+	wds.imageInfo = { nullptr, nullptr };
+	wds.bufferInfo = bufferInfo;
 
 	m_WriteDescriptorSets.push_back(wds);
 }
@@ -42,8 +42,8 @@ void DescriptorSet::AddImage(uint32_t descriptorSetIndex, DescriptorSetLayout::D
 	wds.dstArrayElement = 0;
 	wds.descriptorCount = m_Sets[descriptorSetIndex].FindDescriptorSetLayout(bindingIndex).count;
 	wds.descriptorType = descriptorType;
-	wds.pImageInfo = &imageInfo;
-	wds.pBufferInfo = nullptr;
+	wds.imageInfo = imageInfo;
+	wds.bufferInfo = { nullptr, 0, 0 };
 
 	m_WriteDescriptorSets.push_back(wds);
 }

@@ -182,6 +182,6 @@ namespace scr
 		virtual void Bind(const char* effectPassName) const = 0;
 		virtual void Unbind(const char* effectPassName) const = 0;
 		
-		virtual void LinkShaders(const char* effectPassName) = 0;
+		virtual void LinkShaders(const char* effectPassName, const std::vector<DescriptorSet>& descriptorSets) = 0;
 	};
 }
