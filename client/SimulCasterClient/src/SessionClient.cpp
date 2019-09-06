@@ -41,11 +41,13 @@ enum RemotePlaySessionChannel
     RPCH_NumChannels,
 };
 
-struct RemotePlayInputState {
+struct RemotePlayInputState{
     uint32_t buttonsPressed;
     uint32_t buttonsReleased;
     float trackpadAxisX;
     float trackpadAxisY;
+    float joystickAxisX;
+    float joystickAxisY;
 };
 
 struct ServiceDiscoveryResponse {
@@ -342,7 +344,7 @@ void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
     // TODO: Use compact representation with only 3 float values for wire format.
     const ovrQuatf HeadPoseOVR = pose.Pose.Orientation;
     ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
-    ovrQuatf RelPose = RelativeQuaternion(RootPose,HeadPoseOVR);
+    ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR,RootPose);
     // Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
     ovrQuatf HeadPose = { RelPose.x, RelPose.y,RelPose.z, RelPose.w };
     ENetPacket* packet = enet_packet_create(&HeadPose, sizeof(HeadPose), 0);
@@ -364,7 +366,8 @@ void SessionClient::SendInput(const ControllerState& controllerState)
                 inputState.buttonsReleased |= button;
         }
     };
-
+    inputState.joystickAxisX=controllerState.mJoystickAxisX;
+    inputState.joystickAxisY=controllerState.mJoystickAxisY;
     // We need to update trackpad axis on the server whenever:
     // (1) User is currently touching the trackpad.
     // (2) User was touching the trackpad previous frame.
@@ -372,7 +375,8 @@ void SessionClient::SendInput(const ControllerState& controllerState)
                               || controllerState.mTrackpadStatus != mPrevControllerState.mTrackpadStatus;
 
     bool stateDirty =  updateTrackpadAxis || buttonsDiffMask > 0;
-    if(stateDirty)
+    // If there's a joystick, we must send an update every frame.
+    //if(stateDirty)
     {
         enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
 

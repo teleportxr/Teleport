@@ -80,6 +80,8 @@ struct RemotePlayInputState {
 	uint32_t buttonsReleased;
 	float trackpadAxisX;
 	float trackpadAxisY;
+	float joystickAxisX;
+	float joystickAxisY;
 };
 
 #pragma pack(push, 1) 
@@ -410,7 +412,7 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 		|| controllerState.mTrackpadStatus != mPrevControllerState.mTrackpadStatus;
 
 	bool stateDirty = updateTrackpadAxis || buttonsDiffMask > 0;
-	if (stateDirty)
+	//if (stateDirty)
 	{
 		enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
 
@@ -431,6 +433,8 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 				packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
 			}
 		}
+		inputState.joystickAxisX = controllerState.mJoystickX ;
+		inputState.joystickAxisY = controllerState.mJoystickY;
 
 		ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), packetFlags);
 		enet_peer_send(mServerPeer, RPCH_Control, packet);

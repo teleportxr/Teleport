@@ -9,4 +9,6 @@ struct ControllerState {
     bool  mTrackpadStatus;
     float mTrackpadX;
     float mTrackpadY;
+	float mJoystickX;
+	float mJoystickY;
 };

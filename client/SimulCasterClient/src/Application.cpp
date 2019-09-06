@@ -215,6 +215,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
 			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
 			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
+			controllerState.mJoystickAxisX=ovrState.Joystick.x;
+			controllerState.mJoystickAxisY=ovrState.Joystick.y;
 		}
 	}
 
@@ -267,12 +269,13 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 #if 1
 	ovrQuatf headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 1.0f , "Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Head Orientation: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
+	mGuiSys->ShowInfoText( 1.0f, OVR::Vector3f(0,.5f,0),OVR::Vector4f(1.f,1.f,0.f,0.5f),"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Head Orientation: %1.3f, {%1.3f, %1.3f, %1.3f}\n Trackpad: %3.1f %3.1f\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped
 			,frameRate, ctr.bandwidthKPS,
 			(uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size(),
 			capturePosition.x, capturePosition.y, capturePosition.z,
             headPose.w, headPose.x, headPose.y, headPose.z
+            ,controllerState.mTrackpadX,controllerState.mTrackpadY
 			);
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
@@ -319,22 +322,27 @@ bool Application::InitializeController()
 	ovrInputCapabilityHeader inputCapsHeader;
 	for(uint32_t i = 0;
 		vrapi_EnumerateInputDevices(mOvrMobile, i, &inputCapsHeader) == 0; ++i) {
-		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote) {
-			mControllerID = inputCapsHeader.DeviceID;
-			break;
+		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote)
+		{
+			if ((int) inputCapsHeader.DeviceID != -1)
+			{
+				mControllerID = inputCapsHeader.DeviceID;
+				OVR_LOG("Found controller (ID: %d)", mControllerID);
+
+				ovrInputTrackedRemoteCapabilities trackedInputCaps;
+				trackedInputCaps.Header = inputCapsHeader;
+				vrapi_GetInputDeviceCapabilities(mOvrMobile, &trackedInputCaps.Header);
+				OVR_LOG("Controller Capabilities: %ud", trackedInputCaps.ControllerCapabilities);
+				OVR_LOG("Button Capabilities: %ud", trackedInputCaps.ButtonCapabilities);
+				OVR_LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
+				OVR_LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
+				mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
+				mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
+				return true;
+			}
 		}
 	}
 
-	if((int)mControllerID != -1) {
-		OVR_LOG("Found GearVR controller (ID: %x)", mControllerID);
-
-		ovrInputTrackedRemoteCapabilities trackedInputCaps;
-		trackedInputCaps.Header = inputCapsHeader;
-		vrapi_GetInputDeviceCapabilities(mOvrMobile, &trackedInputCaps.Header);
-		mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
-		mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
-		return true;
-	}
 	return false;
 }
 

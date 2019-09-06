@@ -333,6 +333,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		auto& textures = resourceCreator.GetTextureManager()->GetCache();
 		static int tw = 32;
 		int x = 0, y = 0;
+		if(sessionClient.IsConnected())
 		for (auto t : textures)
 		{
 			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
@@ -537,7 +538,7 @@ void ClientRenderer::Update()
 	uint32_t timeElapsed = (timestamp - previousTimestamp);
 
 	// disabled because it deletes objects that are in use!
-	//resourceManagers.Update(timeElapsed);
+	resourceManagers.Update(timeElapsed);
 
 	previousTimestamp = timestamp;
 }
@@ -637,8 +638,10 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
-	controllerState.mTrackpadX=0.5f+0.5f*(mouseCameraInput.right_left_input);
-	controllerState.mTrackpadY=0.5f -0.5f * (mouseCameraInput.forward_back_input);
+	controllerState.mTrackpadX=0.5f;
+	controllerState.mTrackpadY=0.5f;
+	controllerState.mJoystickX =(mouseCameraInput.right_left_input);
+	controllerState.mJoystickY =(mouseCameraInput.forward_back_input);
 	controllerState.mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())
