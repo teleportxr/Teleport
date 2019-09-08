@@ -8,6 +8,7 @@
 
 uniform TextureCube cubemapTexture;
 uniform Texture2D plainTexture;
+uniform RWTexture2DArray<uchar4> RWTextureTargetArray;
  
 vec2 OffsetScale(vec2 uv, vec4 offsc)
 {
@@ -29,10 +30,52 @@ shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
     return lookup*depth_lookup;
 }
 
+shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
+{
+	const float PI = 3.1415926536;
+	const float TwoPI = 2.0 * PI;
+	vec3 view = TexCoordsToView(IN.texCoords);
+	view.xy = -view.yx;
+	view.z *= -1.0;
+	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
+	vec4 depth_lookup = 1.0;// plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
+
+	return lookup * lookup.a;
+}
+
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
 {
 	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, IN.texCoords, 0);
 	return lookup;
+}
+
+[numthreads(16, 16, 1)]
+shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
+{
+	uint3 ThreadID = uint3(g.xy * 16 + t.xy,g.z);
+	uint InputW, InputH;
+	plainTexture.GetDimensions(InputW, InputH);
+	uint OutputW, OutputH, OutputD;
+	RWTextureTargetArray.GetDimensions(OutputW, OutputH, OutputD);
+	int3 pos = int3(ThreadID);
+	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
+	float4 SceneColor = plainTexture.Load(int3(pos.xy+sourceOffset+ OutputW*FaceOffsets[ThreadID.z],0));
+	RWTextureTargetArray[pos] = SceneColor;
+}
+
+[numthreads(16, 16, 1)]
+shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
+{
+	uint3 ThreadID = uint3(g.xy * 16 + t.xy, g.z);
+	uint InputW, InputH;
+	plainTexture.GetDimensions(InputW, InputH);
+	uint OutputW, OutputH, OutputD;
+	RWTextureTargetArray.GetDimensions(OutputW, OutputH, OutputD);
+	int3 pos = int3(ThreadID);
+	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
+	float4 SceneColor	= plainTexture.Load(int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0));
+	float4 Depth		= plainTexture.Load(int3(pos.xy/2 + sourceOffset + OutputW * FaceOffsets[ThreadID.z], 0));
+	RWTextureTargetArray[pos] = float4(SceneColor.rgba);
 }
 
 VertexShader vs = CompileShader(vs_4_0, VS_SimpleFullscreen());
@@ -61,3 +104,29 @@ technique show_texture
 		SetPixelShader(CompileShader(ps_4_0, PS_ShowTexture()));
     }
 }
+technique use_cubemap
+{
+    pass p0
+    {
+		SetRasterizerState( RenderNoCull );
+		SetDepthStencilState( DisableDepth, 0 );
+		SetBlendState(DontBlend,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
+        SetGeometryShader(NULL);
+		SetVertexShader(vs);
+		SetPixelShader(CompileShader(ps_4_0, PS_UseCubemap()));
+    }
+}
+technique recompose
+{
+	pass p0
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_Recompose()));
+	}
+}
+technique recompose_with_depth_alpha
+	{
+		pass p0
+		{
+			SetComputeShader(CompileShader(cs_5_0, CS_RecomposeWithDepthAlpha()));
+		}
+	}

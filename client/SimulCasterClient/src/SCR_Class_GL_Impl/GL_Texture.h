@@ -8,7 +8,7 @@
 
 namespace scc
 {
-class GL_Texture final : public scr::Texture
+	class GL_Texture final : public scr::Texture
 	{
 	private:
 		OVR::GlTexture m_Texture;
