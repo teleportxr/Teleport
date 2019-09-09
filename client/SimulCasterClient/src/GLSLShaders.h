@@ -40,7 +40,7 @@ namespace shaders {
 
 	uniform vec4 colourOffsetScale;
 	uniform vec4 depthOffsetScale;
-    uniform samplerExternalOES videoFrameTexture;
+    uniform samplerCube cubemapTexture;
 
     layout(location = 0) in vec3 vSampleVec;
     layout(location = 1) in vec3 vEyespacePos;
@@ -65,7 +65,7 @@ namespace shaders {
 		vec4 depthOffsetScaleX=vec4(0.0,0.6667,0.5,0.3333);
 		vec2  uv_d=WorldspaceDirToUV(vSampleVec);
 
-		float depth = texture2D(videoFrameTexture, OffsetScale(uv_d,depthOffsetScale)).r;
+		float depth = 1.0;//texture2D(videoFrameTexture, OffsetScale(uv_d,depthOffsetScale)).r;
 
         // offset angle is atan(4cm/distance)
         // depth received is distance/50metres.
@@ -80,7 +80,7 @@ namespace shaders {
         vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
 		vec3 colourSampleVec  = normalize(vec3(-worldspace_dir.z, worldspace_dir.y, worldspace_dir.x));
         vec2 uv=WorldspaceDirToUV(colourSampleVec);
-		gl_FragColor = 0.003*depthOffsetScale+0.003*colourOffsetScale+texture2D(videoFrameTexture, OffsetScale(uv,colourOffsetScale));
+		gl_FragColor = 0.003*depthOffsetScale+0.003*colourOffsetScale+texture(cubemapTexture, vSampleVec);
 	}
 )";
 
@@ -174,7 +174,31 @@ precision highp float;
 //To Output Framebuffer - Use gl_FragColor
 //layout(location = 0) out vec4 colour;
 
-layout(binding = 10) uniform sampler2D u_Texture;
+layout(binding = 10) uniform sampler2D u_Diffuse;
+layout(binding = 11) uniform sampler2D u_Normal;
+layout(binding = 12) uniform sampler2D u_Combined;
+
+//Layout conformant to GLSL std140
+layout(std140/*, binding = 3*/) uniform u_MaterialData
+{
+	vec4 diffuseOutputScalar;
+	vec2 diffuseTexCoordsScalar_R;
+	vec2 diffuseTexCoordsScalar_G;
+	vec2 diffuseTexCoordsScalar_B;
+	vec2 diffuseTexCoordsScalar_A;
+
+	vec4 normalOutputScalar;
+	vec2 normalTexCoordsScalar_R;
+	vec2 normalTexCoordsScalar_G;
+	vec2 normalTexCoordsScalar_B;
+	vec2 normalTexCoordsScalar_A;
+
+	vec4 combinedOutputScalar;
+	vec2 combinedTexCoordsScalar_R;
+	vec2 combinedTexCoordsScalar_G;
+	vec2 combinedTexCoordsScalar_B;
+	vec2 combinedTexCoordsScalar_A;
+} u_MD;
 
 //From Vertex Varying
 layout(location = 7)  in vec2 v_UV0;
@@ -182,8 +206,11 @@ layout(location = 8)  in vec2 v_UV1;
 
 void main()
 {
-    gl_FragColor = texture(u_Texture, v_UV0).bgra;
-    //gl_FragColor = vec4(v_UV0.x, v_UV0.y, 0.0, 1.0);
+    vec4 temp = u_MD.diffuseOutputScalar;
+    vec4 diffuse = texture(u_Diffuse, v_UV0).bgra;
+    vec4 normal = texture(u_Normal, v_UV0).bgra;
+    vec4 combined = texture(u_Combined, v_UV0).bgra;
+    gl_FragColor = 1.00 * diffuse + 0.01 * normal + 0.01 * combined + 0.01 * temp;
 }
 )";
 

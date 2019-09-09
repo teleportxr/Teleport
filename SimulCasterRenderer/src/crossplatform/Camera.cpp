@@ -26,10 +26,10 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	UpdateOrientation(m_CI.orientation);
 	UpdateView();
 
-	m_SetLayout.AddBinding(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
+	m_ShaderResourceLayout.AddBinding(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
-	m_Set = DescriptorSet({ m_SetLayout });
-	m_Set.AddBuffer(0, DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER, 0, "u_CameraData", { m_UB.get(), 0, sizeof(CameraData) });
+	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
+	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", { m_UB, 0, sizeof(CameraData) });
 }
 
 void Camera::UpdatePosition(const vec3& position)

@@ -77,7 +77,7 @@ void GL_DeviceContext::ParseInputCommand(InputCommand* pInputCommand)
 
 }
 
-void GL_DeviceContext::BindDescriptorSets(const std::vector<DescriptorSet>& descriptorSets, Effect* pEffect)
+void GL_DeviceContext::BindDescriptorSets(const std::vector<ShaderResource>& shaderResources, Effect* pEffect)
 {
     //TODO: Move to OpenGL ES 3.2 for explicit in-shader UniformBlockBinding with the 'binding = X' layout qualifier!
 
@@ -87,20 +87,20 @@ void GL_DeviceContext::BindDescriptorSets(const std::vector<DescriptorSet>& desc
     //Set Uniforms for textures and UBOs!
     GLuint& program = dynamic_cast<GL_Effect*>(pEffect)->GetGlPlatform().Program;
     glUseProgram(program);
-    for(auto& ds : descriptorSets)
+    for(auto& sr : shaderResources)
     {
-        for(auto& wds : ds.GetWriteDescriptorSet())
+        for(auto& wsr : sr.GetWriteShaderResources())
         {
-            DescriptorSetLayout::DescriptorType type = wds.descriptorType;
-            if(type == DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER)
+            ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
+            if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
             {
-                GLint location = glGetUniformLocation(program, wds.descriptorName);
-                glUniform1i(location, wds.dstBinding);
+                GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
+                glUniform1i(location, wsr.dstBinding);
             }
-            else if(type == DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER)
+            else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
             {
-                GLuint location = glGetUniformBlockIndex(program, wds.descriptorName);
-                glUniformBlockBinding(program, location, wds.dstBinding);
+                GLuint location = glGetUniformBlockIndex(program, wsr.shaderResourceName);
+                glUniformBlockBinding(program, location, wsr.dstBinding);
             }
             else
             {
@@ -111,18 +111,18 @@ void GL_DeviceContext::BindDescriptorSets(const std::vector<DescriptorSet>& desc
     glUseProgram(0);
 
     //Bind Resources
-    for(auto& ds : descriptorSets)
+    for(auto& sr : shaderResources)
     {
-        for(auto& wds : ds.GetWriteDescriptorSet())
+        for(auto& wsr : sr.GetWriteShaderResources())
         {
-            DescriptorSetLayout::DescriptorType type = wds.descriptorType;
-            if(type == DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER)
+            ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
+            if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
             {
-                dynamic_cast<const GL_Texture*>(wds.pImageInfo->texture.get())->Bind();
+                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->Bind();
             }
-            else if(type == DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER)
+            else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
             {
-                dynamic_cast<const GL_UniformBuffer*>(wds.pBufferInfo->buffer)->Submit();
+                dynamic_cast<const GL_UniformBuffer*>(wsr.bufferInfo.buffer.get())->Submit();
             }
             else
             {

@@ -36,6 +36,7 @@ extern ovrOpenGLExtensions extensionsOpenGL;
 #include <EGL/eglext.h>
 #ifdef __gl2_h_
 	#include <GLES3/gl3.h>
+	#include <GLES3/gl32.h>
 	#include <GLES3/gl3ext.h>
 	static const int GL_ES_VERSION = 3;	// This will be passed to EglSetup() by App.cpp
 #else

@@ -113,7 +113,9 @@ void Application::Configure(ovrSettings& settings )
 std::string Application::LoadTextFile(const char *filename)
 {
 	std::vector< uint8_t > outBuffer;
-	if(app->GetFileSys().ReadFile(filename, outBuffer))
+	std::string str="apk:///assets/";
+	str+=filename;
+	if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
 	{
 		return std::string((const char *)outBuffer.data());
 	}
@@ -147,7 +149,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 										  {
 												  {"colourOffsetScale", ovrProgramParmType::FLOAT_VECTOR4},
 												  {"depthOffsetScale",  ovrProgramParmType::FLOAT_VECTOR4},
-												  {"videoFrameTexture", ovrProgramParmType::TEXTURE_SAMPLED},
+												  {"cubemapTexture", ovrProgramParmType::TEXTURE_SAMPLED},
 										  };
 			mVideoSurfaceProgram = GlProgram::Build(
 					nullptr, shaders::VideoSurface_VS,
@@ -166,15 +168,11 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 				mVideoSurfaceTexture->GetTextureId(), GL_TEXTURE_EXTERNAL_OES, 0, 0);
 		mCubemapTexture = renderPlatform.InstantiateTexture();
 		{
+			CopyCubemapSrc=LoadTextFile("CopyCubemap.glsl");
 			mCopyCubemapEffect=renderPlatform.InstantiateEffect();
 			scr::Effect::EffectCreateInfo effectCreateInfo={};
 			effectCreateInfo.effectName="CopyCubemap";
 			mCopyCubemapEffect->Create(&effectCreateInfo);
-			scr::Effect::EffectPassCreateInfo effectPassCreateInfo;
-			effectPassCreateInfo.effectPassName="CopyCubemap";
-			//effectPassCreateInfo.pipeline=cp;
-
-			mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
 
 			scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo={};
 			pipelineCreateInfo.m_Count=1;
@@ -182,13 +180,19 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			pipelineCreateInfo.m_ShaderCreateInfo[0].stage=scr::Shader::Stage::SHADER_STAGE_COMPUTE;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint="main";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath="CopyCubemap.glsl";
-			CopyCubemapSrc=LoadTextFile("CopyCubemap.glsl");
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode=CopyCubemapSrc.c_str();
-			scr::ShaderSystem::Pipeline gp (&renderPlatform,&pipelineCreateInfo);
-
-			mCopyCubemapEffect->LinkShaders("CopyCubemap");
+			scr::ShaderSystem::Pipeline cp(&renderPlatform,&pipelineCreateInfo);
 
 
+			scr::Effect::EffectPassCreateInfo effectPassCreateInfo;
+			effectPassCreateInfo.effectPassName="CopyCubemap";
+			effectPassCreateInfo.pipeline=cp;
+
+			mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
+
+			std::vector<scr::ShaderResource> shaderResources;
+
+			mCopyCubemapEffect->LinkShaders("CopyCubemap",shaderResources);
 		}
 
 		mVideoSurfaceDef.surfaceName = "VideoSurface";
@@ -339,11 +343,18 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		worldLayer.Textures[eye].SwapChainIndex = vrFrame.TextureSwapChainIndex;
 		worldLayer.Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
 	}
+	{
+		//mCopyCubemapEffect
+		scr::InputCommandCreateInfo inputCommandCreateInfo={};
+		//inputCommandCreateInfo.type=;
+		scr::InputCommand inputCommand();
+		//mDeviceContext.DispatchCompute(&inputCommand);
+	}
 
 	// Append video surface
 	mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
 	mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
-	mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &mVideoTexture;
+	mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture*)mCubemapTexture.get())->GetGlTexture());
 	res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 
 	//Append SCR Actors to surfaces.
@@ -547,14 +558,22 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 		scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.get());
 		if(mOVRActors.find(actor.first) == mOVRActors.end())
 		{
-			const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().vb.get());
-			const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(ic_mmt.pMesh->GetMeshCreateInfo().ib.get());
+        	//From Actor
+        	const scr::Mesh::MeshCreateInfo& meshCI = ic_mmt.pMesh->GetMeshCreateInfo();
+        	scr::Material::MaterialCreateInfo& materialCI = ic_mmt.pMaterial->GetMaterialCreateInfo();
+
+        	//Mesh
+            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(meshCI.vb.get());
+            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(meshCI.ib.get());
 			gl_vb->CreateVAO(gl_ib->GetIndexID());
 			auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
 
-			ic_mmt.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffect);
-			const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmt.pMaterial->GetMaterialCreateInfo().effect);
+            //Material
+            std::vector<scr::ShaderResource> materialShaderResources;
+			materialShaderResources.push_back(ic_mmt.pMaterial->GetShaderResource());
 
+            materialCI.effect = dynamic_cast<scr::Effect*>(&mEffect);
+            const auto gl_effect = &mEffect;
 			scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
 			{
 				pipelineCreateInfo.m_Count=2;
@@ -570,11 +589,20 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 			}
 
-			const auto gl_effectPass = BuildEffect("textured", layout, &pipelineCreateInfo);
+			const auto gl_effectPass = BuildEffectPass("textured", layout, &pipelineCreateInfo, materialShaderResources);
 
 			const auto temp_Texture = dynamic_cast<scc::GL_Texture*>(ic_mmt.pMaterial->GetMaterialCreateInfo().diffuse.texture.get());
 			temp_Texture->UseSampler(mSampler);
 
+            const auto diffuse_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.diffuse.texture.get());
+            const auto normal_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.normal.texture.get());
+            const auto combined_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.combined.texture.get());
+            diffuse_Texture->UseSampler(mSampler);
+			normal_Texture->UseSampler(mSampler);
+			combined_Texture->UseSampler(mSampler);
+
+            //----Set OVR Actor----//
+            //Construct Mesh
 			GlGeometry geo;
 			geo.vertexBuffer = gl_vb->GetVertexID();
 			geo.indexBuffer = gl_ib->GetIndexID();
@@ -584,14 +612,17 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 			geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
 			GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
 
+            //Initialise OVR Actor
 			ovrSurfaceDef ovr_Actor = {};
 			std::string _actorName = std::string("ActorUID: ") + std::to_string(actor.first);
 			ovr_Actor.surfaceName = _actorName;
 			ovr_Actor.numInstances = 1;
 			ovr_Actor.geo = geo;
 
+            //Set Shader Program
 			ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
 
+            //Set Rendering Set
 			ovr_Actor.graphicsCommand.GpuState.blendMode = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.colorBlendOp);
 			ovr_Actor.graphicsCommand.GpuState.blendSrc = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcColorBlendFactor);
 			ovr_Actor.graphicsCommand.GpuState.blendDst = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstColorBlendFactor);
@@ -614,11 +645,35 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 			ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
 			ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
 
-			ovr_Actor.graphicsCommand.UniformData[0].Data = &(temp_Texture->GetGlTexture());
+            //Update Uniforms
+            size_t i = 0;
+            for(auto& sr : materialShaderResources)
+            {
+            	for(auto& resource : sr.GetWriteShaderResources())
+            	{
+					scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
+					if(type == scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
+					{
+						if(resource.imageInfo.texture.get())
+					        ovr_Actor.graphicsCommand.UniformData[i].Data = &(dynamic_cast<scc::GL_Texture*>(resource.imageInfo.texture.get())->GetGlTexture());
+					}
+					else if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
+					{
+                        if(resource.bufferInfo.buffer.get())
+					        ovr_Actor.graphicsCommand.UniformData[i].Data = &(dynamic_cast<scc::GL_UniformBuffer*>(resource.bufferInfo.buffer.get())->GetGlBuffer());
+					}
+					else
+					{
+						//NULL
+					}
+					i++;
+				}
+			}
 
 			mOVRActors[actor.first] = ovr_Actor;
 		}
 
+        //----OVR Actor Set Transforms----//
 		float heightOffset = -0.85F;
 		scr::vec3 camPos = capturePosition * -1;
 		camPos.y += heightOffset;
@@ -637,7 +692,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 }
 
-const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo )
+const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)
 {
 	if (mEffect.HasEffectPass(effectPassName))
 		return mEffect.GetEffectPassCreateInfo(effectPassName);
@@ -712,8 +767,9 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* ef
 	ci.depthStencilingState = dss;
 	ci.colourBlendingState = cbs;
 
-	mEffect.CreatePass(&ci);
-	mEffect.LinkShaders(effectPassName);
+    mEffect.CreatePass(&ci);
+
+    mEffect.LinkShaders(effectPassName, shaderResources);
 
 	return mEffect.GetEffectPassCreateInfo(effectPassName);
 }
