@@ -269,10 +269,12 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		{
 			materialInfo.diffuse.texture = diffuseTexture;
 
-			materialInfo.diffuse.texCoordsScalar[0] = {1, 1};
-			materialInfo.diffuse.texCoordsScalar[1] = {1, 1};
-			materialInfo.diffuse.texCoordsScalar[2] = {1, 1};
-			materialInfo.diffuse.texCoordsScalar[3] = {1, 1};
+			scr::vec2 tiling = {material.pbrMetallicRoughness.baseColorTexture.tiling.x, material.pbrMetallicRoughness.baseColorTexture.tiling.y};
+
+			materialInfo.diffuse.texCoordsScalar[0] = tiling;
+			materialInfo.diffuse.texCoordsScalar[1] = tiling;
+			materialInfo.diffuse.texCoordsScalar[2] = tiling;
+			materialInfo.diffuse.texCoordsScalar[3] = tiling;
 
 			materialInfo.diffuse.textureOutputScalar =
 			{
@@ -296,10 +298,12 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		{
 			materialInfo.normal.texture = normalTexture;
 
-			materialInfo.normal.texCoordsScalar[0] = {1, 1};
-			materialInfo.normal.texCoordsScalar[1] = {1, 1};
-			materialInfo.normal.texCoordsScalar[2] = {1, 1};
-			materialInfo.normal.texCoordsScalar[3] = {1, 1};
+			scr::vec2 tiling = {material.normalTexture.tiling.x, material.normalTexture.tiling.y};
+
+			materialInfo.normal.texCoordsScalar[0] = tiling;
+			materialInfo.normal.texCoordsScalar[1] = tiling;
+			materialInfo.normal.texCoordsScalar[2] = tiling;
+			materialInfo.normal.texCoordsScalar[3] = tiling;
 
 			materialInfo.normal.textureOutputScalar = {1, 1, 1, 1};
 		}
@@ -317,10 +321,12 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		{
 			materialInfo.combined.texture = occlusionTexture;
 
-			materialInfo.combined.texCoordsScalar[0] = {1, 1};
-			materialInfo.combined.texCoordsScalar[1] = {1, 1};
-			materialInfo.combined.texCoordsScalar[2] = {1, 1};
-			materialInfo.combined.texCoordsScalar[3] = {1, 1};
+			scr::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
+
+			materialInfo.combined.texCoordsScalar[0] = tiling;
+			materialInfo.combined.texCoordsScalar[1] = tiling;
+			materialInfo.combined.texCoordsScalar[2] = tiling;
+			materialInfo.combined.texCoordsScalar[3] = tiling;
 
 			materialInfo.combined.textureOutputScalar = {1, 1, 1, 1};
 		}
