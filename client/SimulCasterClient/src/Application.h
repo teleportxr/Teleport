@@ -105,6 +105,7 @@ private:
 	OVR::SurfaceTexture *mVideoSurfaceTexture;
 	std::shared_ptr<scr::Texture> mCubemapTexture;
 	std::shared_ptr<scr::Effect> mCopyCubemapEffect;
+	std::string CopyCubemapSrc;
 	ovrMobile			*mOvrMobile;
 	SessionClient mSession;
 
@@ -121,7 +122,7 @@ private:
 	//Clientside Renderering Objects
 	scr::vec3 capturePosition;
 	scc::GL_DeviceContext mDeviceContext;
-	scc::GL_Effect mEffects;
+	scc::GL_Effect mEffect;
 	std::shared_ptr<scr::Sampler> mSampler = renderPlatform.InstantiateSampler();
 	std::map<avs::uid, OVR::ovrSurfaceDef> mOVRActors;
 	inline void RemoveInvalidOVRActors()
@@ -136,5 +137,7 @@ private:
 	}
 	void CopyToCubemaps();
 	void RenderLocalActors(OVR::ovrFrameResult& res);
-	const scr::Effect::EffectPassCreateInfo& BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource);
+	const scr::Effect::EffectPassCreateInfo& BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo );
+
+	std::string LoadTextFile(const char *filename);
 };

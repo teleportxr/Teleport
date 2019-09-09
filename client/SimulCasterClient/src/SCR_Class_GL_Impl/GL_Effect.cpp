@@ -24,10 +24,10 @@ void GL_Effect::LinkShaders(const char* effectPassName)
     {
         for(size_t i = 0; i < pipeline.m_ShaderCount; i++)
         {
-            if(pipeline.m_Shaders[i].GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_VERTEX)
-                vertex = &(pipeline.m_Shaders[i]);
-            else if(pipeline.m_Shaders[i].GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_FRAGMENT)
-                fragment = &(pipeline.m_Shaders[i]);
+            if(pipeline.m_Shaders[i]->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_VERTEX)
+                vertex = pipeline.m_Shaders[i].get();
+            else if(pipeline.m_Shaders[i]->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_FRAGMENT)
+                fragment = pipeline.m_Shaders[i].get();
             else
                 continue;
         }

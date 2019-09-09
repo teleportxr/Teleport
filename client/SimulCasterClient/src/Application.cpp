@@ -9,6 +9,8 @@
 #include "OVR_Locale.h"
 #include "GLSLShaders.h"
 #include "OVR_LogUtils.h"
+#include "OVR_FileSys.h"
+
 
 #include <enet/enet.h>
 #include <sstream>
@@ -47,7 +49,7 @@ Application::Application()
 	, mSession(this)
 	, mControllerID(0)
 	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
-	, mEffects(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
+	, mEffect(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
 {
 	memset(&renderConstants,0,sizeof(RenderConstants));
 	renderConstants.colourOffsetScale={0.0f,0.0f,1.0f,0.6667f};
@@ -65,7 +67,7 @@ Application::Application()
 	//Default Effects
 	scr::Effect::EffectCreateInfo ci;
 	ci.effectName = "StandardEffects";
-	mEffects.Create(&ci);
+	mEffect.Create(&ci);
 
 	//Default Sampler
 	scr::Sampler::SamplerCreateInfo sci  = {};
@@ -108,6 +110,15 @@ void Application::Configure(ovrSettings& settings )
 	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 	settings.RenderMode = RENDERMODE_STEREO;
 }
+std::string Application::LoadTextFile(const char *filename)
+{
+	std::vector< uint8_t > outBuffer;
+	if(app->GetFileSys().ReadFile(filename, outBuffer))
+	{
+		return std::string((const char *)outBuffer.data());
+	}
+	return "";
+}
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
 {
@@ -115,6 +126,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	if(intentType == INTENT_LAUNCH)
 	{
 		const ovrJava *java = app->GetJava();
+
+		OVR_LOG("%s",glGetString(GL_VERSION));
 
 		mOvrMobile = app->GetOvrMobile();
 
@@ -154,13 +167,27 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mCubemapTexture = renderPlatform.InstantiateTexture();
 		{
 			mCopyCubemapEffect=renderPlatform.InstantiateEffect();
-			scr::Effect::EffectCreateInfo effectCreateInfo;
+			scr::Effect::EffectCreateInfo effectCreateInfo={};
 			effectCreateInfo.effectName="CopyCubemap";
 			mCopyCubemapEffect->Create(&effectCreateInfo);
 			scr::Effect::EffectPassCreateInfo effectPassCreateInfo;
 			effectPassCreateInfo.effectPassName="CopyCubemap";
+			//effectPassCreateInfo.pipeline=cp;
 
 			mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
+
+			scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo={};
+			pipelineCreateInfo.m_Count=1;
+			pipelineCreateInfo.m_PipelineType=scr::ShaderSystem::PipelineType::PIPELINE_TYPE_COMPUTE;
+			pipelineCreateInfo.m_ShaderCreateInfo[0].stage=scr::Shader::Stage::SHADER_STAGE_COMPUTE;
+			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint="main";
+			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath="CopyCubemap.glsl";
+			CopyCubemapSrc=LoadTextFile("CopyCubemap.glsl");
+			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode=CopyCubemapSrc.c_str();
+			scr::ShaderSystem::Pipeline gp (&renderPlatform,&pipelineCreateInfo);
+
+			mCopyCubemapEffect->LinkShaders("CopyCubemap");
+
 
 		}
 
@@ -525,9 +552,25 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 			gl_vb->CreateVAO(gl_ib->GetIndexID());
 			auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
 
-			ic_mmt.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffects);
+			ic_mmt.pMaterial->GetMaterialCreateInfo().effect = dynamic_cast<scr::Effect*>(&mEffect);
 			const auto gl_effect = dynamic_cast<scc::GL_Effect*>(ic_mmt.pMaterial->GetMaterialCreateInfo().effect);
-			const auto gl_effectPass = BuildEffect("textured", layout, shaders::FlatTexture_VS, shaders::FlatTexture_FS);
+
+			scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
+			{
+				pipelineCreateInfo.m_Count=2;
+				pipelineCreateInfo.m_PipelineType=scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
+				pipelineCreateInfo.m_ShaderCreateInfo[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "main";
+				pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = nullptr;
+				pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = shaders::FlatTexture_VS;
+				pipelineCreateInfo.m_ShaderCreateInfo[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+				pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "main";
+				pipelineCreateInfo.m_ShaderCreateInfo[1].filepath = nullptr;
+				pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = shaders::FlatTexture_FS;
+
+			}
+
+			const auto gl_effectPass = BuildEffect("textured", layout, &pipelineCreateInfo);
 
 			const auto temp_Texture = dynamic_cast<scc::GL_Texture*>(ic_mmt.pMaterial->GetMaterialCreateInfo().diffuse.texture.get());
 			temp_Texture->UseSampler(mSampler);
@@ -594,31 +637,17 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 }
 
-const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const char* vertexSource, const char* fragmentSource)
+const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo )
 {
-	if(mEffects.HasEffectPass(effectPassName))
-		return mEffects.GetEffectPassCreateInfo(effectPassName);
+	if (mEffect.HasEffectPass(effectPassName))
+		return mEffect.GetEffectPassCreateInfo(effectPassName);
 
 	scr::ShaderSystem::PassVariables pv;
-	pv.mask = false;
-	pv.reverseDepth = false;
-	pv.msaa = false;
+	pv.mask          = false;
+	pv.reverseDepth  = false;
+	pv.msaa          = false;
 
-	scc::GL_Shader shaders[2] = {
-			scc::GL_Shader(dynamic_cast<scr::RenderPlatform*>(&renderPlatform)),
-			scc::GL_Shader(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))};
-	scr::Shader::ShaderCreateInfo sci[2];
-	sci[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-	sci[0].entryPoint = "main";
-	sci[0].filepath = nullptr;
-	sci[0].sourceCode = vertexSource;
-	sci[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-	sci[1].entryPoint = "main";
-	sci[1].filepath = nullptr;
-	sci[1].sourceCode = fragmentSource;
-	shaders[0].Create(&sci[0]);
-	shaders[1].Create(&sci[1]);
-	scr::ShaderSystem::GraphicsPipeline gp (shaders, 2);
+	scr::ShaderSystem::Pipeline gp (&renderPlatform,pipelineCreateInfo);
 
 	//scr::VertexBufferLayout
 	vbl->CalculateStride();
@@ -683,8 +712,8 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffect(const char* ef
 	ci.depthStencilingState = dss;
 	ci.colourBlendingState = cbs;
 
-	mEffects.CreatePass(&ci);
-	mEffects.LinkShaders(effectPassName);
+	mEffect.CreatePass(&ci);
+	mEffect.LinkShaders(effectPassName);
 
-	return mEffects.GetEffectPassCreateInfo(effectPassName);
+	return mEffect.GetEffectPassCreateInfo(effectPassName);
 }

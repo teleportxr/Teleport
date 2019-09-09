@@ -33,6 +33,7 @@ LOCAL_SRC_FILES  := 	../src/crossplatform/Actor.cpp			\
 						../src/crossplatform/Material.cpp		\
 						../src/crossplatform/Mesh.cpp			\
 						../src/crossplatform/ResourceCreator.cpp\
+						../src/crossplatform/ShaderSystem.cpp\
 
 
 LOCAL_CFLAGS += -D__ANDROID__

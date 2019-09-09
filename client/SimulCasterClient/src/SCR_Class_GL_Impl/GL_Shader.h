@@ -8,11 +8,13 @@ namespace scc
 	//Interface for Shader
 	class GL_Shader final : public scr::Shader
 	{
+		GLuint glShader;
+		std::string source;
 	public:
 		GL_Shader(scr::RenderPlatform *r)
 			:scr::Shader(r) {}
 
-		void Create(ShaderCreateInfo* pShaderCreateInfo) override;
+		void Create(const ShaderCreateInfo* pShaderCreateInfo) override;
 		void Compile() override;
 	};
 }
