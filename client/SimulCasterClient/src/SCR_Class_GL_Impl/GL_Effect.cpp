@@ -34,7 +34,43 @@ void GL_Effect::LinkShaders(const char* effectPassName)
     }
     else
     {
-        SCR_CERR("Current OpenGL ES 3.0 implementation does not support compute shaders.");
+		//Compile compute shader
+		const auto &sc=pipeline.m_Shaders[0]->GetShaderCreateInfo();
+		GLuint id = glCreateShader(GL_COMPUTE_SHADER);
+		glShaderSource(id, 1, &sc.sourceCode, nullptr);
+		glCompileShader(id);
+		GLint isCompiled = 0;
+		glGetShaderiv(id, GL_COMPILE_STATUS, &isCompiled);
+		if (isCompiled == GL_FALSE)
+		{
+			GLint maxLength = 0;
+			glGetShaderiv(id, GL_INFO_LOG_LENGTH, &maxLength);
+			// The maxLength includes the NULL character
+			std::vector<GLchar> errorLog(maxLength);
+			glGetShaderInfoLog(id, maxLength, &maxLength, &errorLog[0]);
+			glDeleteShader(id);
+			return;
+		}
+
+		//Build compute program
+		GLuint program = glCreateProgram();
+		glAttachShader(program, id);
+		glLinkProgram(program);
+		GLint isLinked = 0;
+		glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
+		if (isLinked == GL_FALSE)
+		{
+			GLint maxLength = 0;
+			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
+			// The maxLength includes the NULL character
+			std::vector<GLchar> infoLog(maxLength);
+			glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
+			glDeleteProgram(program);
+			return;
+		}
+		glValidateProgram(program);
+		glDeleteShader(id);
+		m_Program= program;
         return;
     }
 
