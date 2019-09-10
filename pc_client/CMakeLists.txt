@@ -32,6 +32,8 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_Sampler.h
 	SCR_Class_PC_Impl/PC_Shader.cpp
 	SCR_Class_PC_Impl/PC_Shader.h
+	SCR_Class_PC_Impl/PC_ShaderStorageBuffer.cpp
+	SCR_Class_PC_Impl/PC_ShaderStorageBuffer.h
 	SCR_Class_PC_Impl/PC_Texture.cpp
 	SCR_Class_PC_Impl/PC_Texture.h
 	SCR_Class_PC_Impl/PC_UniformBuffer.cpp
