@@ -54,7 +54,7 @@ Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse",  { m_CI.diffuse.texture != nullptr ? m_CI.diffuse.texture->GetSampler() : nullptr, m_CI.diffuse.texture });
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",   { m_CI.normal.texture != nullptr ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture != nullptr ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", { m_UB, 0, sizeof(MaterialData) });
+	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", { m_UB.get(), 0, sizeof(MaterialData) });
 }
 
 void Material::UpdateMaterialUB()

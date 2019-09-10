@@ -371,10 +371,9 @@ void SessionClient::SendInput(const ControllerState& controllerState)
     // We need to update trackpad axis on the server whenever:
     // (1) User is currently touching the trackpad.
     // (2) User was touching the trackpad previous frame.
-    bool updateTrackpadAxis =    controllerState.mTrackpadStatus
-                              || controllerState.mTrackpadStatus != mPrevControllerState.mTrackpadStatus;
+    //bool updateTrackpadAxis =    controllerState.mTrackpadStatus || controllerState.mTrackpadStatus != mPrevControllerState.mTrackpadStatus;
 
-    bool stateDirty =  updateTrackpadAxis || buttonsDiffMask > 0;
+    //bool stateDirty =  updateTrackpadAxis || buttonsDiffMask > 0;
     // If there's a joystick, we must send an update every frame.
     //if(stateDirty)
     {

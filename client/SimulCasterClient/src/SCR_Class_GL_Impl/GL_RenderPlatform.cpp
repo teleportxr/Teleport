@@ -24,6 +24,10 @@ std::shared_ptr<Shader> GL_RenderPlatform::InstantiateShader()
 {
     return std::make_shared<GL_Shader>(this);
 }
+std::shared_ptr<ShaderStorageBuffer> GL_RenderPlatform::InstantiateShaderStorageBuffer()
+{
+    return std::make_shared<GL_ShaderStorageBuffer>(this);
+}
 std::shared_ptr<Texture> GL_RenderPlatform::InstantiateTexture()
 {
     return std::make_shared<GL_Texture>(this);

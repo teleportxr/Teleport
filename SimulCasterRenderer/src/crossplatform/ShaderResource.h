@@ -4,6 +4,7 @@
 #include "api/Shader.h"
 #include "api/Texture.h"
 #include "api/UniformBuffer.h"
+#include "api/ShaderStorageBuffer.h"
 #include "Common.h"
 
 namespace scr
@@ -75,9 +76,9 @@ namespace scr
 		};
 		struct ShaderResourceBufferInfo
 		{
-			std::shared_ptr<UniformBuffer> buffer;
-			size_t						   offset;
-			size_t						   range;
+			void* buffer; //Used for both UB and SSB.
+			size_t offset;
+			size_t range;
 		};
 		struct WriteShaderResource
 		{
@@ -100,8 +101,8 @@ namespace scr
 		ShaderResource(const std::vector<ShaderResourceLayout>& shaderResourceLayouts);
 		~ShaderResource();
 
-		void AddBuffer(uint32_t descriptorSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceBufferInfo& bufferInfo, uint32_t dstArrayElement = 0);
-		void AddImage(uint32_t descriptorSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement = 0);
+		void AddBuffer(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceBufferInfo& bufferInfo, uint32_t dstArrayElement = 0);
+		void AddImage(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement = 0);
 
 		const std::vector<WriteShaderResource>& GetWriteShaderResources() const {return m_WriteShaderResources;}
 	};

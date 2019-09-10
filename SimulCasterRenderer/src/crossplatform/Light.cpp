@@ -27,7 +27,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	m_ShaderResourceLayout.AddBinding(2, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { m_UB, 0, (s_MaxLights * sizeof(LightData)) });
+	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { m_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
 
 	assert(s_MaxLights > s_NumOfLights);
 	m_LightID = s_NumOfLights;

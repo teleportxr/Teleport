@@ -29,7 +29,6 @@ namespace scc
 
 		inline OVR::GlTexture& GetGlTexture() { return m_Texture;}
 
-
 private:
 		GLenum TypeToGLTarget(Type type) const;
 		GLenum ToBaseGLFormat(Format format) const;

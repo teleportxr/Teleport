@@ -101,9 +101,11 @@ private:
 
 	OVR::ovrSurfaceDef	mVideoSurfaceDef;
 	OVR::GlProgram		mVideoSurfaceProgram;
-	OVR::GlTexture		mVideoTexture;
-	OVR::SurfaceTexture *mVideoSurfaceTexture;
+	OVR::SurfaceTexture* mVideoSurfaceTexture;
+    std::shared_ptr<scr::Texture> mVideoTexture;
 	std::shared_ptr<scr::Texture> mCubemapTexture;
+    std::shared_ptr<scr::UniformBuffer> mCubemapUB = renderPlatform.InstantiateUniformBuffer();
+    std::vector<scr::ShaderResource> mCubemapComputeShaderResources;
 	std::shared_ptr<scr::Effect> mCopyCubemapEffect;
 	std::string CopyCubemapSrc;
 	ovrMobile			*mOvrMobile;

@@ -7,6 +7,7 @@
 #include "GL_Effect.h"
 #include "GL_FrameBuffer.h"
 #include "GL_IndexBuffer.h"
+#include "GL_ShaderStorageBuffer.h"
 #include "GL_Texture.h"
 #include "GL_UniformBuffer.h"
 #include "GL_VertexBuffer.h"
@@ -28,8 +29,7 @@ class GL_DeviceContext final : public scr::DeviceContext
         void EndFrame() override;
 
     private:
-    	void ParseInputCommand(scr::InputCommand* pInputCommand);
-        void BindDescriptorSets(const std::vector<scr::ShaderResource>& shaderResources, scr::Effect* pEffect);
+        void BindShaderResources(const std::vector<scr::ShaderResource>& shaderResources, scr::Effect* pEffect);
 
     private:
     	GLenum m_Topology;

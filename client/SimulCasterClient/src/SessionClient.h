@@ -61,6 +61,6 @@ private:
 
     ControllerState mPrevControllerState = {};
 
-    bool isReadyToReceivePayloads = false;
+    //bool isReadyToReceivePayloads = false;
 };
 

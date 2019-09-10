@@ -7,7 +7,6 @@
 
 #include "GuiSys.h"
 #include "OVR_Locale.h"
-#include "GLSLShaders.h"
 #include "OVR_LogUtils.h"
 #include "OVR_FileSys.h"
 
@@ -112,7 +111,7 @@ void Application::Configure(ovrSettings& settings )
 }
 std::string Application::LoadTextFile(const char *filename)
 {
-	std::vector< uint8_t > outBuffer;
+	std::vector<uint8_t> outBuffer;
 	std::string str="apk:///assets/";
 	str+=filename;
 	if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
@@ -152,8 +151,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 												  {"cubemapTexture", ovrProgramParmType::TEXTURE_SAMPLED},
 										  };
 			mVideoSurfaceProgram = GlProgram::Build(
-					nullptr, shaders::VideoSurface_VS,
-					shaders::VideoSurface_OPTIONS, shaders::VideoSurface_FS,
+					nullptr, LoadTextFile("shaders/VideoSurface.vert").c_str(),
+					nullptr, LoadTextFile("shaders/VideoSurface.frag").c_str(),
 					uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm),
 					310);
 			if (!mVideoSurfaceProgram.IsValid())
@@ -164,11 +163,12 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mDecoder.setBackend(new VideoDecoderProxy(java->Env, this, avs::VideoCodec::HEVC));
 
 		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
-		mVideoTexture        = GlTexture(
-				mVideoSurfaceTexture->GetTextureId(), GL_TEXTURE_EXTERNAL_OES, 0, 0);
-		mCubemapTexture = renderPlatform.InstantiateTexture();
+		mVideoTexture        = renderPlatform.InstantiateTexture();
+		((scc::GL_Texture*)(mVideoTexture.get()))->GetGlTexture() = GlTexture(mVideoSurfaceTexture->GetTextureId(), GL_TEXTURE_EXTERNAL_OES, 0, 0);
+
+		mCubemapTexture 	 = renderPlatform.InstantiateTexture();
 		{
-			CopyCubemapSrc=LoadTextFile("CopyCubemap.glsl");
+			CopyCubemapSrc=LoadTextFile("shaders/CopyCubemap.comp");
 			mCopyCubemapEffect=renderPlatform.InstantiateEffect();
 			scr::Effect::EffectCreateInfo effectCreateInfo={};
 			effectCreateInfo.effectName="CopyCubemap";
@@ -179,7 +179,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			pipelineCreateInfo.m_PipelineType=scr::ShaderSystem::PipelineType::PIPELINE_TYPE_COMPUTE;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].stage=scr::Shader::Stage::SHADER_STAGE_COMPUTE;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint="main";
-			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath="CopyCubemap.glsl";
+			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath="shaders/CopyCubemap.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode=CopyCubemapSrc.c_str();
 			scr::ShaderSystem::Pipeline cp(&renderPlatform,&pipelineCreateInfo);
 
@@ -190,9 +190,17 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 			mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
 
-			std::vector<scr::ShaderResource> shaderResources;
+            scr::ShaderResourceLayout layout;
+            layout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
+            layout.AddBinding(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
+            layout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
+            scr::ShaderResource sr({layout});
+            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 0, "destTex", {mSampler, mCubemapTexture});
+            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
+            sr.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+			mCubemapComputeShaderResources.push_back(sr);
 
-			mCopyCubemapEffect->LinkShaders("CopyCubemap",shaderResources);
+			mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
 		}
 
 		mVideoSurfaceDef.surfaceName = "VideoSurface";
@@ -344,11 +352,10 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		worldLayer.Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
 	}
 	{
-		//mCopyCubemapEffect
+		scr::uvec3 size  = {mCubemapTexture->GetTextureCreateInfo().width, mCubemapTexture->GetTextureCreateInfo().width, 1};
 		scr::InputCommandCreateInfo inputCommandCreateInfo={};
-		//inputCommandCreateInfo.type=;
-		scr::InputCommand inputCommand;
-		//mDeviceContext.DispatchCompute(&inputCommand);
+		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapEffect, mCubemapComputeShaderResources);
+		mDeviceContext.DispatchCompute(&inputCommand);
 	}
 
 	// Append video surface
@@ -456,22 +463,30 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
    }
    {
 	   scr::Texture::TextureCreateInfo textureCreateInfo =
-												{
-														setupCommand.colour_cubemap_size,
-														setupCommand.colour_cubemap_size,
-														1,
-														4,
-														1,
-														1,
-														scr::Texture::Slot::UNKNOWN,
-														scr::Texture::Type::TEXTURE_CUBE_MAP,
-														scr::Texture::Format::RGBA8,
-														scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-														0,
-														nullptr,
-														scr::Texture::CompressionFormat::UNCOMPRESSED
-												};
+				{
+						setupCommand.colour_cubemap_size,
+						setupCommand.colour_cubemap_size,
+						1,
+						4,
+						1,
+						1,
+						scr::Texture::Slot::UNKNOWN,
+						scr::Texture::Type::TEXTURE_CUBE_MAP,
+						scr::Texture::Format::RGBA8,
+						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+						0,
+						nullptr,
+						scr::Texture::CompressionFormat::UNCOMPRESSED
+				};
    		mCubemapTexture->Create(&textureCreateInfo);
+
+   		scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo =
+				{
+   					2,
+   					sizeof(scr::vec2),
+					nullptr
+				};
+   		mCubemapUB->Create(&uniformBufferCreateInfo);
    }
 
    mPipelineConfigured = true;
@@ -581,11 +596,11 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				pipelineCreateInfo.m_ShaderCreateInfo[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
 				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "main";
 				pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = nullptr;
-				pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = shaders::FlatTexture_VS;
+				pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = LoadTextFile("shaders/FlatTexture.vert").c_str();
 				pipelineCreateInfo.m_ShaderCreateInfo[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
 				pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "main";
 				pipelineCreateInfo.m_ShaderCreateInfo[1].filepath = nullptr;
-				pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = shaders::FlatTexture_FS;
+				pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/FlatTexture.frag").c_str();
 
 			}
 
@@ -659,8 +674,8 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 					}
 					else if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
 					{
-                        if(resource.bufferInfo.buffer.get())
-					        ovr_Actor.graphicsCommand.UniformData[i].Data = &(dynamic_cast<scc::GL_UniformBuffer*>(resource.bufferInfo.buffer.get())->GetGlBuffer());
+                        if(resource.bufferInfo.buffer)
+					        ovr_Actor.graphicsCommand.UniformData[i].Data = &(((scc::GL_UniformBuffer*)(resource.bufferInfo.buffer))->GetGlBuffer());
 					}
 					else
 					{

@@ -75,7 +75,7 @@ void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<Shader
 		}
 		glValidateProgram(program);
 		glDeleteShader(id);
-		m_Program.Program= program;
+		m_Program.Program = program;
         return;
     }
 

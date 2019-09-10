@@ -15,6 +15,7 @@ set( src_api
 	src/api/RenderPlatform.h
 	src/api/Sampler.h
 	src/api/Shader.h
+	src/api/ShaderStorageBuffer.h
 	src/api/Texture.h
 	src/api/UniformBuffer.h
 	src/api/VertexBuffer.h

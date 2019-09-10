@@ -48,6 +48,8 @@ namespace scr
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(UniformBuffer*, int)> ResourceInUseCallback = &UniformBuffer::ResourceInUse;
 
+		inline UniformBufferCreateInfo& GetUniformBufferCreateInfo() {return m_CI;}
+
 	protected:
 		virtual void Bind() const = 0;
 		virtual void Unbind() const = 0;

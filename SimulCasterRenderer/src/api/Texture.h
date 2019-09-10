@@ -163,6 +163,7 @@ namespace scr
 		virtual void GenerateMips() = 0;
 
 		inline std::shared_ptr<Sampler> GetSampler() { return m_Sampler; }
+		inline const TextureCreateInfo GetTextureCreateInfo() const { return m_CI;}
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;
