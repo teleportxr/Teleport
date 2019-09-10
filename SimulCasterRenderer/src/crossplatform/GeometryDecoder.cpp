@@ -300,7 +300,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.emissiveFactor.z = NextFloat;
 
 		size_t extensionAmount = Next8B;
-		for(int i = 0; i < extensionAmount; i++)
+		for(size_t i = 0; i < extensionAmount; i++)
 		{
 			std::unique_ptr<MaterialExtension> newExtension;
 			MaterialExtensionIdentifier id = static_cast<MaterialExtensionIdentifier>(Next4B);

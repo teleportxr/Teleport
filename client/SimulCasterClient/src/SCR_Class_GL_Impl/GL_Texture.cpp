@@ -149,8 +149,8 @@ void GL_Texture::Unbind() const
 
 void GL_Texture::UseSampler(const std::shared_ptr<Sampler>& sampler)
 {
-    if(!this)
-        return;
+    /*if(!this)
+        return;*/
 
     m_Sampler = sampler;
     const GL_Sampler* glSampler = dynamic_cast<const GL_Sampler*>(m_Sampler.get());

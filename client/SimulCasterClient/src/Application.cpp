@@ -347,7 +347,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		//mCopyCubemapEffect
 		scr::InputCommandCreateInfo inputCommandCreateInfo={};
 		//inputCommandCreateInfo.type=;
-		scr::InputCommand inputCommand();
+		scr::InputCommand inputCommand;
 		//mDeviceContext.DispatchCompute(&inputCommand);
 	}
 
