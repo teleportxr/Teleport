@@ -483,7 +483,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
    		scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo =
 				{
    					2,
-   					sizeof(scr::vec2),
+   					6 * sizeof(scr::vec4), //glsl std140
 					nullptr
 				};
    		mCubemapUB->Create(&uniformBufferCreateInfo);
