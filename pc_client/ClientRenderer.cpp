@@ -282,9 +282,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	cpuProfiler.SetMaxLevel(5);
 	cpuProfiler.StartFrame();
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "all")
+	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 
-		crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
+	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
 	hdrFramebuffer->Activate(deviceContext);
 	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.0f, 1.0f, 0.f, reverseDepth ? 0.f : 1.f);
@@ -353,7 +353,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.44f);
 
-	SIMUL_COMBINED_PROFILE_END(deviceContext)
+	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 	cpuProfiler.EndFrame();
 /*	const char *txt=renderPlatform->GetGpuProfiler()->GetDebugText();
