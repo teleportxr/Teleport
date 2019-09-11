@@ -109,17 +109,6 @@ void Application::Configure(ovrSettings& settings )
 	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 	settings.RenderMode = RENDERMODE_STEREO;
 }
-std::string Application::LoadTextFile(const char *filename)
-{
-	std::vector<uint8_t> outBuffer;
-	std::string str="apk:///assets/";
-	str+=filename;
-	if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
-	{
-		return std::string((const char *)outBuffer.data());
-	}
-	return "";
-}
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
 {
@@ -150,9 +139,11 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 												  {"depthOffsetScale",  ovrProgramParmType::FLOAT_VECTOR4},
 												  {"cubemapTexture", ovrProgramParmType::TEXTURE_SAMPLED},
 										  };
+			std::string videoSurfaceVert = LoadTextFile("shaders/VideoSurface.vert");
+			std::string videoSurfaceFrag = LoadTextFile("shaders/VideoSurface.frag");
 			mVideoSurfaceProgram = GlProgram::Build(
-					nullptr, LoadTextFile("shaders/VideoSurface.vert").c_str(),
-					nullptr, LoadTextFile("shaders/VideoSurface.frag").c_str(),
+					nullptr, videoSurfaceVert.c_str(),
+					nullptr, videoSurfaceFrag.c_str(),
 					uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm),
 					310);
 			if (!mVideoSurfaceProgram.IsValid())
@@ -787,4 +778,16 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
     mEffect.LinkShaders(effectPassName, shaderResources);
 
 	return mEffect.GetEffectPassCreateInfo(effectPassName);
+}
+
+std::string Application::LoadTextFile(const char *filename)
+{
+    std::vector<uint8_t> outBuffer;
+    std::string str="apk:///assets/";
+    str+=filename;
+    if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
+    {
+        return std::string((const char *)outBuffer.data());
+    }
+    return "";
 }

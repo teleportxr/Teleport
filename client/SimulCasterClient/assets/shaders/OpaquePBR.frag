@@ -60,13 +60,30 @@ layout(std140, binding = 3) uniform MaterialData //Layout conformant to GLSL std
 layout(binding = 10) uniform sampler2D u_Diffuse;
 layout(binding = 11) uniform sampler2D u_Normal;
 layout(binding = 12) uniform sampler2D u_Combined;
+layout(binding = 13) uniform samplerCube u_DiffuseCubemap;
+layout(binding = 14) uniform samplerCube u_SpecularCubemap;
+
+float saturate(float _val)
+{
+    return min(1.0, max(0.0, _val));
+}
+
+vec3 GetEnvironmentDiffuse(vec3 dir)
+{
+    return texture(u_DiffuseCubemap, dir).rgb;
+}
+
+vec3 GetEnvironmentSpecular(vec3 dir, float lod)
+{
+    return textureLod(u_DiffuseCubemap, dir, lod).rgb;
+}
 
 vec4 GetDiffuse()
 {
     return vec4(
-    u_DiffuseOutputScalar.r * texture(u_Diffuse, v_UV0 * u_DiffuseTexCoordsScalar_R).r,
-    u_DiffuseOutputScalar.g * texture(u_Diffuse, v_UV0 * u_DiffuseTexCoordsScalar_G).g,
     u_DiffuseOutputScalar.b * texture(u_Diffuse, v_UV0 * u_DiffuseTexCoordsScalar_B).b,
+    u_DiffuseOutputScalar.g * texture(u_Diffuse, v_UV0 * u_DiffuseTexCoordsScalar_G).g,
+    u_DiffuseOutputScalar.r * texture(u_Diffuse, v_UV0 * u_DiffuseTexCoordsScalar_R).r,
     u_DiffuseOutputScalar.a * texture(u_Diffuse, v_UV0 * u_DiffuseTexCoordsScalar_A).a
     );
 }
@@ -74,15 +91,15 @@ vec4 GetDiffuse()
 vec3 GetNormals()
 {
     vec3 normalMap = vec3(
-    u_NormalOutputScalar.r * texture(u_Normal, v_UV0 * u_NormalTexCoordsScalar_R).r,
+    u_NormalOutputScalar.b * texture(u_Normal, v_UV0 * u_NormalTexCoordsScalar_B).b,
     u_NormalOutputScalar.g * texture(u_Normal, v_UV0 * u_NormalTexCoordsScalar_G).g,
-    u_NormalOutputScalar.b * texture(u_Normal, v_UV0 * u_NormalTexCoordsScalar_B).b
+    u_NormalOutputScalar.r * texture(u_Normal, v_UV0 * u_NormalTexCoordsScalar_R).r
     );
     normalMap = normalize(v_TBN * (normalMap * 2.0 - 1.0));
     return normalMap;
 }
 
-float GetAO()
+float GetMetallic()
 {
     return u_CombinedOutputScalar.r * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_R).r;
 }
@@ -90,13 +107,23 @@ float GetRoughness()
 {
     return u_CombinedOutputScalar.g * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_G).g;
 }
-float GetMetallic()
+float GetAO()
 {
     return u_CombinedOutputScalar.b * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_B).b;
 }
 float GetSpecular()
 {
     return u_CombinedOutputScalar.a * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_A).a;
+}
+
+vec3 BRDFApprox(vec3 specularColour, float roughness, float n_v)
+{
+    const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022);
+    const vec4 c1 = vec4(1, 0.0425, 1.04, -0.04);
+    vec4 r = roughness * c0 + c1;
+    float a004 = min(r.x * r.x, exp2(-9.28 * n_v)) * r.x + r.y;
+    vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
+    return specularColour * AB.x + AB.y;
 }
 
 //Constants
@@ -119,7 +146,7 @@ vec3 Lambertian(vec3 diffuseColour)
 //Fresnel-Schlick
 vec3 F(vec3 R0, vec3 h, vec3 wi)
 {
-    return R0 + (1.0 - R0) * pow((1.0 - abs(dot(h, wi))), 5.0);
+    return R0 + (1.0 - R0) * pow((1.0 - saturate(dot(h, wi))), 5.0);
 }
 //SchlickGGX
 float GSub(vec3 n, vec3 w, float a, bool directLight)
@@ -141,26 +168,41 @@ float G(vec3 n, vec3 wi, vec3 wo, float a2, bool directLight)
 //GGX
 float D(vec3 n, vec3 h, float a2)
 {
-    float temp = pow(abs(dot(n, h)), 2.0) * (a2 - 1.0) + 1.0;
+    float temp = pow(saturate(dot(n, h)), 2.0) * (a2 - 1.0) + 1.0;
     return a2 / (PI * temp * temp);
 }
 
-vec3 BRDF(vec3 N, vec3 Wo, vec3 Wi, vec3 H) //Return a RGB value;
+vec3 BRDF(vec3 N, vec3 Wo, vec3 Wi, vec3 H, vec3 lightColour) //Return a RGB value;
 {
+    vec3 Diffuse	= vec3(0,0,0);
+    vec3 Specular	= vec3(0,0,0);
+
     //Calculate basic parameters
-    vec3 diffuse = GetDiffuse().rgb;
-    float metallic = GetMetallic();
-    float a2 = GetRoughness() * GetRoughness();
+    float roughnessE = GetRoughness() * GetRoughness();
+    float roughnessL = max(0.01, roughnessE);
+    vec3 R = reflect(Wo, N);
+
+    //Environment Light Calculation
+    vec3 environment = mix(GetEnvironmentSpecular(R, roughnessE * 11.0), GetEnvironmentDiffuse(R), saturate((roughnessE - 0.25) / 0.75));
 
     //Diffuse
-    vec3 Diffuse = Lambertian(diffuse);
+    Diffuse += GetDiffuse().rgb * GetEnvironmentDiffuse(R);
+    Diffuse += lightColour * GetDiffuse().rgb * saturate(dot(N, Wi));
 
     //Specular
+    vec3 environmentSpecularColour = EnvironmentBRDFApprox(u_SpecularColour, roughnessE, saturate(dot(N, Wo)));
+    Specular += environmentSpecularColour * environment;
+
+    float metallic = GetMetallic();
     vec3 R0 = mix(diffuse, u_SpecularColour, metallic); //Mix R0 based on metallic look up.
-    float D = D(N, H, a2);
+    float D = D(N, H, roughnessL);
     vec3 F = F(R0, H, Wi);
-    float G = G(N, Wi, Wo, a2, true);
-    vec3 Specular = D * F * G * (1.0 / 4.0 * abs(dot(Wo, N)) * abs(dot(Wi, N)));
+    float G = G(N, Wi, Wo, roughnessL, true);
+    Specular = lightColour * D * F * G * (1.0 / 4.0 * saturate(dot(Wo, N)) * saturate(dot(Wi, N)));
+
+    //Ambient Occlusion
+    float ao = GetAO();
+    specular *= saturate(pow(dot(N, Wo) + ao, roughnessE) - 1.0 + ao);
 
     vec3 kS = F;
     vec3 kD = vec3(1.0, 1.0, 1.0) - kS;
@@ -196,9 +238,8 @@ void main()
         //Because the radiance is only non-zero in the direction Wi,
         //We can replace radiance with irradinace;
         vec3 radiance = irradiance;
-        float cosineFactor = abs(dot(Wi, N));
 
-        Lo += Le + BRDF(N, Wo, Wi, H) * radiance * cosineFactor;
+        Lo += Le + BRDF(N, Wo, Wi, H, radiance);
     }
     gl_FragColor = Lo; //Gamma Correction?
 }
