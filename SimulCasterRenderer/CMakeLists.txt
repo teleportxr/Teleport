@@ -15,6 +15,7 @@ set( src_api
 	src/api/RenderPlatform.h
 	src/api/Sampler.h
 	src/api/Shader.h
+	src/api/ShaderStorageBuffer.h
 	src/api/Texture.h
 	src/api/UniformBuffer.h
 	src/api/VertexBuffer.h
@@ -29,8 +30,6 @@ set( src_crossplatform
 	src/crossplatform/basic_linear_algebra.h
 	src/crossplatform/Camera.cpp
 	src/crossplatform/Camera.h
-	src/crossplatform/DescriptorSet.cpp
-	src/crossplatform/DescriptorSet.h
 	src/crossplatform/GeometryDecoder.cpp
 	src/crossplatform/GeometryDecoder.h
 	src/crossplatform/Light.cpp
@@ -42,6 +41,8 @@ set( src_crossplatform
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h
+	src/crossplatform/ShaderResource.cpp
+	src/crossplatform/ShaderResource.h
 	src/crossplatform/ShaderSystem.h
 	)
 

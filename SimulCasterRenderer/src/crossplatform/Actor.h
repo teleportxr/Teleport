@@ -22,10 +22,10 @@ namespace scr
 			mat4 m_ModelMatrix;
 		} m_TransformData;
 		static bool s_UninitialisedUB;
-		std::unique_ptr<UniformBuffer> m_UB;
+		std::shared_ptr<UniformBuffer> m_UB;
 
-		DescriptorSetLayout m_SetLayout;
-		DescriptorSet m_Set;
+		ShaderResourceLayout m_ShaderResourceLayout;
+		ShaderResource m_ShaderResource;
 	
 	public:
 		Transform& operator= (avs::Transform& transform)
@@ -53,7 +53,7 @@ namespace scr
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
 		inline const mat4& GetTransformMatrix() const { return  m_TransformData.m_ModelMatrix; }
-		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
+		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
 	};
 
 	class Actor

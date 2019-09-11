@@ -11,25 +11,8 @@ void GL_DeviceContext::Create(DeviceContextCreateInfo* pDeviceContextCreateInfo)
 
 void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 {
-    glDrawElements(m_Topology, m_IndexCount, m_Type, nullptr);
-}
-void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
-{
-
-}
-void GL_DeviceContext::BeginFrame()
-{
-
-}
-void GL_DeviceContext::EndFrame()
-{
-
-}
-void GL_DeviceContext::ParseInputCommand(InputCommand* pInputCommand)
-{
-   /*
     //Set up for DescriptorSet binding
-    std::vector<DescriptorSet> descriptorSets;
+    std::vector<ShaderResource> descriptorSets;
     Effect* effect = nullptr;
 
     //Default Init
@@ -47,60 +30,83 @@ void GL_DeviceContext::ParseInputCommand(InputCommand* pInputCommand)
         }
         case INPUT_COMMAND_MESH_MATERIAL_TRANSFORM:
         {
-            InputCommand_Mesh_Material_Transform* ic_mmm = dynamic_cast<InputCommand_Mesh_Material_Transform*>(pInputCommand);
+            InputCommand_Mesh_Material_Transform* ic_mmt = dynamic_cast<InputCommand_Mesh_Material_Transform*>(pInputCommand);
 
             //Mesh
-            dynamic_cast<const GL_VertexBuffer*>(ic_mmm->pMesh->GetMeshCreateInfo().vb)->Bind();
+            dynamic_cast<const GL_VertexBuffer*>(ic_mmt->pMesh->GetMeshCreateInfo().vb.get())->Bind();
 
-            const GL_IndexBuffer* gl_IndexBuffer = dynamic_cast<const GL_IndexBuffer*>(ic_mmm->pMesh->GetMeshCreateInfo().ib);
+            const GL_IndexBuffer* gl_IndexBuffer = dynamic_cast<const GL_IndexBuffer*>(ic_mmt->pMesh->GetMeshCreateInfo().ib.get());
             gl_IndexBuffer->Bind();
             m_IndexCount = static_cast<GLsizei>(gl_IndexBuffer->GetIndexBufferCreateInfo().indexCount);
             size_t stride = gl_IndexBuffer->GetIndexBufferCreateInfo().stride;
             m_Type = stride == 4 ? GL_UNSIGNED_INT : stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
 
             //Material
-            descriptorSets.push_back(ic_mmm->pMaterial->GetDescriptorSet());
-            effect = ic_mmm->pMaterial->GetEffect();
-            dynamic_cast<GL_Effect*>(effect)->LinkShaders();
-            dynamic_cast<const GL_Effect*>(effect)->Bind();
-            m_Topology = dynamic_cast<const GL_Effect*>(effect)->ToGLTopology(effect->GetEffectCreateInfo().topology);
+            const char* effectPassName = "";
+            descriptorSets.push_back(ic_mmt->pMaterial->GetShaderResource());
+            effect = ic_mmt->pMaterial->GetMaterialCreateInfo().effect;
+            dynamic_cast<const GL_Effect*>(effect)->Bind(effectPassName);
+            m_Topology = dynamic_cast<const GL_Effect*>(effect)->ToGLTopology(effect->GetEffectPassCreateInfo(effectPassName).topology);
 
             //Transform
-            descriptorSets.push_back(ic_mmm->pTransform->GetDescriptorSet());
-            ic_mmm->pTransform->UpdateModelUBO();
+            descriptorSets.push_back(ic_mmt->pTransform->GetDescriptorSet());
+            ic_mmt->pTransform->UpdateModelUBO();
 
             break;
         }
+        case INPUT_COMMAND_COMPUTE:
+        {
+            SCR_COUT("Invalid Input Command");
+        }
     }
-    BindDescriptorSets(descriptorSets, effect);
-    */
+    BindShaderResources(descriptorSets, effect);
+    glDrawElements(m_Topology, m_IndexCount, m_Type, nullptr);
+}
+void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
+{
+    const InputCommand_Compute& ic_c = *(dynamic_cast<InputCommand_Compute*>(pInputCommand));
+
+    BindShaderResources(ic_c.m_ShaderResources, ic_c.m_pComputeEffect.get());
+    const uvec3& size = ic_c.m_WorkGroupSize;
+    glDispatchCompute(size.x, size.y, size.z);
+    glMemoryBarrier(GL_UNIFORM_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+}
+void GL_DeviceContext::BeginFrame()
+{
 
 }
+void GL_DeviceContext::EndFrame()
+{
 
-void GL_DeviceContext::BindDescriptorSets(const std::vector<DescriptorSet>& descriptorSets, Effect* pEffect)
+}
+void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& shaderResources, Effect* pEffect)
 {
     //TODO: Move to OpenGL ES 3.2 for explicit in-shader UniformBlockBinding with the 'binding = X' layout qualifier!
 
     if(!pEffect)
         return; //SCR_CERR_BREAK("Invalid effect. Can not bind descriptor sets!", -1);
 
-    //Set Uniforms for textures and UBOs!
+    //Set Uniforms for textures and UBs!
     GLuint& program = dynamic_cast<GL_Effect*>(pEffect)->GetGlPlatform().Program;
     glUseProgram(program);
-    for(auto& ds : descriptorSets)
+    for(auto& sr : shaderResources)
     {
-        for(auto& wds : ds.GetWriteDescriptorSet())
+        for(auto& wsr : sr.GetWriteShaderResources())
         {
-            DescriptorSetLayout::DescriptorType type = wds.descriptorType;
-            if(type == DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER)
+            ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
+            if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
             {
-                GLint location = glGetUniformLocation(program, wds.descriptorName);
-                glUniform1i(location, wds.dstBinding);
+                GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
+                glUniform1i(location, wsr.dstBinding);
             }
-            else if(type == DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER)
+            else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
             {
-                GLuint location = glGetUniformBlockIndex(program, wds.descriptorName);
-                glUniformBlockBinding(program, location, wds.dstBinding);
+                GLuint location = glGetUniformBlockIndex(program, wsr.shaderResourceName);
+                glUniformBlockBinding(program, location, wsr.dstBinding);
+            }
+            else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
+            {
+                //NULL
             }
             else
             {
@@ -108,21 +114,24 @@ void GL_DeviceContext::BindDescriptorSets(const std::vector<DescriptorSet>& desc
             }
         }
     }
-    glUseProgram(0);
 
     //Bind Resources
-    for(auto& ds : descriptorSets)
+    for(auto& sr : shaderResources)
     {
-        for(auto& wds : ds.GetWriteDescriptorSet())
+        for(auto& wsr : sr.GetWriteShaderResources())
         {
-            DescriptorSetLayout::DescriptorType type = wds.descriptorType;
-            if(type == DescriptorSetLayout::DescriptorType::COMBINED_IMAGE_SAMPLER)
+            ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
+            if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
             {
-                dynamic_cast<const GL_Texture*>(wds.pImageInfo->texture.get())->Bind();
+                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->Bind();
             }
-            else if(type == DescriptorSetLayout::DescriptorType::UNIFORM_BUFFER)
+            else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
             {
-                dynamic_cast<const GL_UniformBuffer*>(wds.pBufferInfo->buffer)->Submit();
+                ((const GL_UniformBuffer*)(wsr.bufferInfo.buffer))->Submit();
+            }
+            else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
+            {
+                ((GL_ShaderStorageBuffer*)(wsr.bufferInfo.buffer))->Access();
             }
             else
             {

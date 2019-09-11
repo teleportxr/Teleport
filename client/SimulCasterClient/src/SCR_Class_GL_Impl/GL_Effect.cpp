@@ -1,9 +1,12 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_Effect.h"
+#include <OVR_GlUtils.h>
 
 using namespace scc;
 using namespace scr;
 using namespace OVR;
+
+#define OPENGLES_310 310
 
 void GL_Effect::Create(EffectCreateInfo* pEffectCreateInfo)
 {
@@ -14,7 +17,7 @@ void GL_Effect::CreatePass(EffectPassCreateInfo* pEffectCreateInfo)
     m_EffectPasses[pEffectCreateInfo->effectPassName] = *pEffectCreateInfo;
 }
 
-void GL_Effect::LinkShaders(const char* effectPassName)
+void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<ShaderResource>& shaderResources)
 {
     Shader* vertex = nullptr;
     Shader* fragment = nullptr;
@@ -24,28 +27,73 @@ void GL_Effect::LinkShaders(const char* effectPassName)
     {
         for(size_t i = 0; i < pipeline.m_ShaderCount; i++)
         {
-            if(pipeline.m_Shaders[i].GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_VERTEX)
-                vertex = &(pipeline.m_Shaders[i]);
-            else if(pipeline.m_Shaders[i].GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_FRAGMENT)
-                fragment = &(pipeline.m_Shaders[i]);
+            if(pipeline.m_Shaders[i]->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_VERTEX)
+                vertex = pipeline.m_Shaders[i].get();
+            else if(pipeline.m_Shaders[i]->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_FRAGMENT)
+                fragment = pipeline.m_Shaders[i].get();
             else
                 continue;
         }
     }
     else
     {
-        SCR_CERR("Current OpenGL ES 3.0 implementation does not support compute shaders.");
+		//Compile compute shader
+		const auto &sc=pipeline.m_Shaders[0]->GetShaderCreateInfo();
+		GLuint id = glCreateShader(GL_COMPUTE_SHADER);
+		glShaderSource(id, 1, &sc.sourceCode, nullptr);
+		glCompileShader(id);
+		GLint isCompiled = 0;
+		glGetShaderiv(id, GL_COMPILE_STATUS, &isCompiled);
+		if (isCompiled == GL_FALSE)
+		{
+			GLint maxLength = 0;
+			glGetShaderiv(id, GL_INFO_LOG_LENGTH, &maxLength);
+			// The maxLength includes the NULL character
+			std::vector<GLchar> errorLog(maxLength);
+			glGetShaderInfoLog(id, maxLength, &maxLength, &errorLog[0]);
+			std::cerr<<(const char*)errorLog.data()<<std::endl;
+			glDeleteShader(id);
+			return;
+		}
+
+		//Build compute program
+		GLuint program = glCreateProgram();
+		glAttachShader(program, id);
+		glLinkProgram(program);
+		GLint isLinked = 0;
+		glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
+		if (isLinked == GL_FALSE)
+		{
+			GLint maxLength = 0;
+			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
+			// The maxLength includes the NULL character
+			std::vector<GLchar> infoLog(maxLength);
+			glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
+			std::cerr<<(const char*)infoLog.data()<<std::endl;
+			glDeleteProgram(program);
+			return;
+		}
+		glValidateProgram(program);
+		glDeleteShader(id);
+		m_Program.Program = program;
         return;
     }
 
     assert(vertex != nullptr && fragment != nullptr);
 
-    //TO BE REMOVED
-    ovrProgramParm uniformParms[] ={
-            {"u_Texture", ovrProgramParmType::TEXTURE_SAMPLED}
-    };
+    std::vector<ovrProgramParm> uniformParms;
+    for(const auto& shaderResource : shaderResources )
+    {
+        for(const auto& resource : shaderResource.GetWriteShaderResources())
+        {
+            const char* name = resource.shaderResourceName;
+            ovrProgramParmType type = ToOVRProgramParmType(resource.shaderResourceType);
+            assert(type != ovrProgramParmType::MAX);
+            uniformParms.push_back({name, type});
+        }
+    }
 
-    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, uniformParms, sizeof( uniformParms ) / sizeof( ovrProgramParm ), 310);
+    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, uniformParms.data(), (int)uniformParms.size(), OPENGLES_310);
 }
 
 void GL_Effect::Bind(const char* effectPassName) const
@@ -220,5 +268,23 @@ GLenum GL_Effect::ToGLBlendOp(BlendOp op)
         case BlendOp::REVERSE_SUBTRACT:     return GL_FUNC_REVERSE_SUBTRACT;
         case BlendOp::MIN:                  return GL_MIN;
         case BlendOp::MAX:                  return GL_MAX;
+    }
+};
+
+ovrProgramParmType GL_Effect::ToOVRProgramParmType(ShaderResourceLayout::ShaderResourceType type)
+{
+    switch(type)
+    {
+        case ShaderResourceLayout::ShaderResourceType::SAMPLER:                  return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER:   return ovrProgramParmType::TEXTURE_SAMPLED;
+        case ShaderResourceLayout::ShaderResourceType::SAMPLED_IMAGE:            return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE:            return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::UNIFORM_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER:           return ovrProgramParmType::BUFFER_UNIFORM;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER:           return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER_DYNAMIC:   return ovrProgramParmType::BUFFER_UNIFORM;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER_DYNAMIC:   return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::INPUT_ATTACHMENT:         return ovrProgramParmType::MAX;
     }
 };

@@ -21,6 +21,7 @@ LOCAL_SRC_FILES			:= \
     ../src/SCR_Class_GL_Impl/GL_RenderPlatform.cpp \
     ../src/SCR_Class_GL_Impl/GL_Sampler.cpp \
     ../src/SCR_Class_GL_Impl/GL_Shader.cpp \
+    ../src/SCR_Class_GL_Impl/GL_ShaderStorageBuffer.cpp \
     ../src/SCR_Class_GL_Impl/GL_Texture.cpp \
     ../src/SCR_Class_GL_Impl/GL_UniformBuffer.cpp \
     ../src/SCR_Class_GL_Impl/GL_VertexBuffer.cpp

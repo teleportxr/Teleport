@@ -48,10 +48,10 @@ namespace scr
 		LightCreateInfo m_CI;
 		
 		static bool s_UninitialisedUB;
-		std::unique_ptr<UniformBuffer> m_UB;
+		std::shared_ptr<UniformBuffer> m_UB;
 
-		DescriptorSetLayout m_SetLayout;
-		DescriptorSet m_Set;
+		ShaderResourceLayout m_ShaderResourceLayout;
+		ShaderResource m_ShaderResource;
 		
 		uint32_t m_ShadowMapSize = 256;
 		std::unique_ptr<FrameBuffer>m_ShadowMapFBO = nullptr; 
@@ -68,7 +68,7 @@ namespace scr
 
 		void UpdateLightUBO();
 
-		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
+		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
 
 		inline std::unique_ptr<FrameBuffer>& GetShadowMapFBO() { return m_ShadowMapFBO; }
 

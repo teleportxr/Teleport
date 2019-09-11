@@ -4,7 +4,7 @@
 #include "Common.h"
 #include "api/UniformBuffer.h"
 #include "basic_linear_algebra.h"
-#include "DescriptorSet.h"
+#include "ShaderResource.h"
 
 namespace scr
 {
@@ -36,10 +36,10 @@ namespace scr
 		CameraCreateInfo m_CI;
 
 		static bool s_UninitialisedUB;
-		std::unique_ptr<UniformBuffer> m_UB;
+		std::shared_ptr<UniformBuffer> m_UB;
 
-		DescriptorSetLayout m_SetLayout;
-		DescriptorSet m_Set;
+		ShaderResourceLayout m_ShaderResourceLayout;
+		ShaderResource m_ShaderResource;
 
 	public:
 		Camera(CameraCreateInfo* pCameraCreateInfo);
@@ -54,7 +54,7 @@ namespace scr
 		void UpdateProjection(float left, float right, float bottom, float top, float near, float far);
 
 		void UpdateCameraUBO();
-		inline const DescriptorSet& GetDescriptorSet() const { return m_Set; }
+		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
 
 		inline const vec3& GetPosition() const { return m_CameraData.m_Position; }
 	};

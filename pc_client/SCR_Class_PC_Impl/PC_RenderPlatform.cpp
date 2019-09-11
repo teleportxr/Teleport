@@ -9,35 +9,39 @@ void PC_RenderPlatform::SetSimulRenderPlatform(simul::crossplatform::RenderPlatf
 	renderPlatform = r;
 }
 
-std::shared_ptr<scr::FrameBuffer>	PC_RenderPlatform::InstantiateFrameBuffer()
+std::shared_ptr<scr::FrameBuffer>			PC_RenderPlatform::InstantiateFrameBuffer()
 {
 	return std::make_shared<PC_FrameBuffer>(this);
 }
-std::shared_ptr<scr::IndexBuffer>	PC_RenderPlatform::InstantiateIndexBuffer()
+std::shared_ptr<scr::IndexBuffer>			PC_RenderPlatform::InstantiateIndexBuffer()
 {
 	return std::make_shared<PC_IndexBuffer>(this);
 }
-std::shared_ptr<scr::Effect>		PC_RenderPlatform::InstantiateEffect()
+std::shared_ptr<scr::Effect>				PC_RenderPlatform::InstantiateEffect()
 {
 	return std::make_shared<PC_Effect>(this);
 }
-std::shared_ptr<scr::Sampler>		PC_RenderPlatform::InstantiateSampler()
+std::shared_ptr<scr::Sampler>				PC_RenderPlatform::InstantiateSampler()
 {
 	return std::make_shared<PC_Sampler>(this);
 }
-std::shared_ptr<scr::Shader>		PC_RenderPlatform::InstantiateShader()
+std::shared_ptr<scr::Shader>				PC_RenderPlatform::InstantiateShader()
 {
 	return std::make_shared<PC_Shader>(this);
 }
-std::shared_ptr<scr::Texture>		PC_RenderPlatform::InstantiateTexture()
+std::shared_ptr<scr::ShaderStorageBuffer>	PC_RenderPlatform::InstantiateShaderStorageBuffer()
+{
+	return std::shared_ptr<PC_ShaderStorageBuffer>();
+}
+std::shared_ptr<scr::Texture>				PC_RenderPlatform::InstantiateTexture()
 {
 	return std::make_shared<PC_Texture>(this);
 }
-std::shared_ptr<scr::UniformBuffer>	PC_RenderPlatform::InstantiateUniformBuffer()
+std::shared_ptr<scr::UniformBuffer>			PC_RenderPlatform::InstantiateUniformBuffer()
 {
 	return std::make_shared<PC_UniformBuffer>(this);
 }
-std::shared_ptr<scr::VertexBuffer>	PC_RenderPlatform::InstantiateVertexBuffer()
+std::shared_ptr<scr::VertexBuffer>			PC_RenderPlatform::InstantiateVertexBuffer()
 {
 	return std::make_shared<PC_VertexBuffer>(this);
 }

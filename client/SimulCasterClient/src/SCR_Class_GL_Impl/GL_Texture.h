@@ -8,7 +8,7 @@
 
 namespace scc
 {
-class GL_Texture final : public scr::Texture
+	class GL_Texture final : public scr::Texture
 	{
 	private:
 		OVR::GlTexture m_Texture;
@@ -24,11 +24,10 @@ class GL_Texture final : public scr::Texture
 		void Unbind() const override;
 
 		void GenerateMips() override;
-		void UseSampler(std::shared_ptr<const scr::Sampler> sampler) override;
+		void UseSampler(const std::shared_ptr<scr::Sampler>& sampler) override;
 		bool ResourceInUse(int timeout) override {return true;}
 
-		inline OVR::GlTexture& GetGlTexture() { return  m_Texture;}
-
+		inline OVR::GlTexture& GetGlTexture() { return m_Texture;}
 
 private:
 		GLenum TypeToGLTarget(Type type) const;

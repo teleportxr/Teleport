@@ -14,6 +14,6 @@ namespace pc_client
 		void Compile() override;
 
 		// Inherited via Shader
-		void Create(ShaderCreateInfo * pShaderCreateInfo) override;
+		void Create(const ShaderCreateInfo* pShaderCreateInfo) override;
 	};
 }

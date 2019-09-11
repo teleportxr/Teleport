@@ -19,8 +19,6 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 {
 	m_API.SetAPI(r->GetAPI());
 	m_pRenderPlatform = r;
-
-	// Removed circular dependencies.
 }
 
 
@@ -315,13 +313,13 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		}
 	}
 
-	if(material.occlusionTexture.index != 0)
+	if(material.pbrMetallicRoughness.metallicRoughnessTexture.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> occlusionTexture = m_TextureManager->Get(material.normalTexture.index);
+		const std::shared_ptr<scr::Texture> metallicRoughnessTexture = m_TextureManager->Get(material.pbrMetallicRoughness.metallicRoughnessTexture.index);
 
-		if(occlusionTexture)
+		if(metallicRoughnessTexture)
 		{
-			materialInfo.combined.texture = occlusionTexture;
+			materialInfo.combined.texture = metallicRoughnessTexture;
 
 			scr::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
 

@@ -3,6 +3,7 @@
 #include "Common.h"
 
 #include "api/FrameBuffer.h"
+#include "api/ShaderStorageBuffer.h"
 #include "crossplatform/Camera.h"
 #include "crossplatform/Actor.h"
 
@@ -11,7 +12,8 @@ namespace scr
 	enum InputCommandStructureType : uint32_t
 	{
 		INPUT_COMMAND,
-		INPUT_COMMAND_MESH_MATERIAL_TRANSFORM
+		INPUT_COMMAND_MESH_MATERIAL_TRANSFORM,
+		INPUT_COMMAND_COMPUTE
 	};
 
 	struct InputCommand
@@ -43,10 +45,32 @@ namespace scr
 			pTransform = pActor->GetTransform();
 		};
 	};
-
 	//struct MultiMesh_Material_TransformInputCommand : public InputCommand {};
 	//struct Mesh_MultiMaterial_TransformInputCommand : public InputCommand {};
 	//struct Mesh_Material_MultiTransformInputCommand : public InputCommand {};
+
+	struct InputCommand_Compute : public InputCommand
+	{
+		uvec3												m_WorkGroupSize;
+		std::shared_ptr<Effect>								m_pComputeEffect;
+		std::vector<ShaderResource>							m_ShaderResources;
+
+		InputCommand_Compute(InputCommandCreateInfo* pInputCommandCreateInfo,
+			const uvec3& workGroupSize,
+			const std::shared_ptr<Effect>& computeEffect,
+			const std::vector<ShaderResource>& shaderResources)
+		{
+			type = INPUT_COMMAND_COMPUTE;
+			pFBs = pInputCommandCreateInfo->pFBs;
+			frameBufferCount = pInputCommandCreateInfo->frameBufferCount;
+			pCamera = pInputCommandCreateInfo->pCamera;
+
+			m_WorkGroupSize = workGroupSize;
+			m_pComputeEffect = computeEffect;
+			m_ShaderResources = shaderResources;
+		};
+	};
+
 
 	class DeviceContext : public APIObject
 	{

@@ -147,8 +147,11 @@ void GL_Texture::Unbind() const
     glBindTexture((unsigned int)m_CI.type, 0);
 }
 
-void GL_Texture::UseSampler(std::shared_ptr<const Sampler> sampler)
+void GL_Texture::UseSampler(const std::shared_ptr<Sampler>& sampler)
 {
+    /*if(!this)
+        return;*/
+
     m_Sampler = sampler;
     const GL_Sampler* glSampler = dynamic_cast<const GL_Sampler*>(m_Sampler.get());
 
@@ -205,6 +208,7 @@ GLenum GL_Texture::ToBaseGLFormat(Format format) const
         case Format::RGBA8I:
         case Format::RGBA8_SNORM:
         case Format::RGBA8:
+        case Format::BGRA8:
             return GL_RGBA;
 
         case Format::RGB32F:
@@ -290,6 +294,8 @@ GLenum GL_Texture::ToGLFormat(Format format) const {
             return GL_RGBA8_SNORM;
         case Format::RGBA8:
             return GL_RGBA8;
+        case Format::BGRA8:
+            return GL_BGRA_EXT; //TO DO: Look into this extenstion!
 
         case Format::RGB32F:
             return GL_RGB32F;

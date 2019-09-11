@@ -84,6 +84,7 @@ ClientRenderer::ClientRenderer():
 	pbrEffect(nullptr),
 	cubemapClearEffect(nullptr),
 	specularTexture(nullptr),
+	videoAsCubemapTexture(nullptr),
 	dummyDiffuse(nullptr),
 	dummyNormal(nullptr),
 	dummyCombined(nullptr),
@@ -142,7 +143,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	meshRenderer->RestoreDeviceObjects(renderPlatform);
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
-
+	videoAsCubemapTexture = renderPlatform->CreateTexture();
 	// dummy textures for materials:
 	dummyDiffuse = renderPlatform->CreateTexture();
 	dummyNormal = renderPlatform->CreateTexture();
@@ -300,26 +301,42 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
 		// MUST call init each frame.
 		deviceContext.viewStruct.Init();
+		AVSTextureHandle th = avsTextures[0];
+		AVSTexture& tx = *th;
+		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+		if (ti)
+		{
+			{
+				cubemapConstants.sourceOffset = int2(0, 0);
+				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoAsCubemapTexture);
 
+				cubemapClearEffect->Apply(deviceContext, "recompose_with_depth_alpha", 0);
+				renderPlatform->DispatchCompute(deviceContext, videoAsCubemapTexture->width / 16, videoAsCubemapTexture->width / 16, 6);
+				cubemapClearEffect->Unapply(deviceContext);
+				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+				cubemapClearEffect->UnbindTextures(deviceContext);
+
+			}
+		}
 		{
 			cubemapConstants.depthOffsetScale = depthOffsetScale;
 			cubemapConstants.colourOffsetScale = colourOffsetScale;
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-			cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", specularTexture);
-			AVSTextureHandle th = avsTextures[0];
-			AVSTexture& tx = *th;
-			AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+			cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", videoAsCubemapTexture);
 			if (ti)
 			{
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-				cubemapClearEffect->Apply(deviceContext, RenderMode == 1 ? "show_texture" : "normal_view", 0);
+				cubemapClearEffect->Apply(deviceContext, "use_cubemap", 0);
 				renderPlatform->DrawQuad(deviceContext);
 				cubemapClearEffect->Unapply(deviceContext);
 
 
-				//renderPlatform->DrawTexture(deviceContext,0, 0, hdrFramebuffer->GetWidth()/2, hdrFramebuffer->GetHeight()/2, ti->texture);
+				renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
 			}
 		}
 		//RenderOpaqueTest(deviceContext);
@@ -500,6 +517,7 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(transparentMesh);
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularTexture);
+	SAFE_DELETE(videoAsCubemapTexture);
 	SAFE_DELETE(dummyDiffuse);
 	SAFE_DELETE(dummyNormal);
 	SAFE_DELETE(dummyCombined);
@@ -575,13 +593,19 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 			SAFE_DELETE(ti->texture);
 		}
 	}
+
 	/* Now for each stream, we add both a DECODER and a SURFACE node. e.g. for two streams:
 					 /->decoder -> surface
 			source -<
 					 \->decoder	-> surface
 	*/
 	size_t stream_width =std::max(setupCommand.video_width,setupCommand.depth_width);
-	size_t stream_height = setupCommand.video_height + setupCommand.depth_height;
+	size_t stream_height = setupCommand.video_height;
+
+	videoAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.colour_cubemap_size, setupCommand.colour_cubemap_size, 1, 1,
+		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+
+
 	colourOffsetScale.x=0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;

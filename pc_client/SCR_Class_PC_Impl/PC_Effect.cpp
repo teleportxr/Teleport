@@ -8,7 +8,7 @@ void pc_client::PC_Effect::CreatePass(EffectPassCreateInfo * pEffectPassCreateIn
 {
 }
 
-void pc_client::PC_Effect::LinkShaders(const char* effectPassName)
+void pc_client::PC_Effect::LinkShaders(const char* effectPassName, const std::vector<scr::ShaderResource>& shaderResources)
 {
 }
 

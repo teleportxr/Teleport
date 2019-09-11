@@ -372,9 +372,10 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
 			avs::SetupCommand setupCommand;
 			setupCommand.port = port;
 			setupCommand.video_width = width;
-			setupCommand.video_height = height/2;
+			setupCommand.video_height = height;
 			setupCommand.depth_width = width;
 			setupCommand.depth_height = height/2;
+			setupCommand.compose_cube = 1;
 			mCommandInterface->OnVideoStreamChanged(setupCommand);
 			SendHandshake();
 		}

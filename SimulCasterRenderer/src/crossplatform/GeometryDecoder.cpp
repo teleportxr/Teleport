@@ -299,6 +299,23 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.emissiveFactor.y = NextFloat;
 		material.emissiveFactor.z = NextFloat;
 
+		size_t extensionAmount = Next8B;
+		for(size_t i = 0; i < extensionAmount; i++)
+		{
+			std::unique_ptr<MaterialExtension> newExtension;
+			MaterialExtensionIdentifier id = static_cast<MaterialExtensionIdentifier>(Next4B);
+
+			switch(id)
+			{
+				case MaterialExtensionIdentifier::SIMPLE_GRASS_WIND:
+					newExtension = std::make_unique<SimpleGrassWindExtension>();
+					newExtension->deserialise(m_Buffer, m_BufferOffset);
+					break;
+			}
+
+			material.extensions[id] = std::move(newExtension);
+		}
+
 		decodeTexture(target);
 
 		target->passMaterial(mat_uid, material);

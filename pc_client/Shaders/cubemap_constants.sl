@@ -5,6 +5,7 @@
 SIMUL_CONSTANT_BUFFER(CubemapConstants, 4)
 uniform vec4 colourOffsetScale;
 uniform vec4 depthOffsetScale;
+uniform int2 sourceOffset;
 SIMUL_CONSTANT_BUFFER_END
 
 

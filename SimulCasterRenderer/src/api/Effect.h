@@ -4,7 +4,8 @@
 #include "Common.h"
 #include "VertexBufferLayout.h"
 #include "Texture.h"
-#include "crossplatform/DescriptorSet.h"
+#include "Shader.h"
+#include "crossplatform/ShaderResource.h"
 #include "crossplatform/ShaderSystem.h"
 
 namespace scr
@@ -178,10 +179,10 @@ namespace scr
 				return false;
 		}
 
+		virtual void LinkShaders(const char* effectPassName, const std::vector<ShaderResource>& shaderResources) = 0;
+
 	protected:
 		virtual void Bind(const char* effectPassName) const = 0;
 		virtual void Unbind(const char* effectPassName) const = 0;
-		
-		virtual void LinkShaders(const char* effectPassName) = 0;
 	};
 }

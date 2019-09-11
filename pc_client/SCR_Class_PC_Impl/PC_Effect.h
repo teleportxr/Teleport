@@ -15,7 +15,7 @@ namespace pc_client
 		// Inherited via Effect
 		virtual void Create(EffectCreateInfo * pEffectCreateInfo) override;
 		virtual void CreatePass(EffectPassCreateInfo* pEffectPassCreateInfo) override;
-		virtual void LinkShaders(const char* effectPassName) override;
+		virtual void LinkShaders(const char* effectPassName, const std::vector<scr::ShaderResource>& shaderResources) override;
 		virtual void Bind(const char* effectPassName) const override;
 		virtual void Unbind(const char* effectPassName) const override;
 	};

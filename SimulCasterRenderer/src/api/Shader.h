@@ -44,7 +44,7 @@ namespace scr
 			m_CI.stage = Stage::SHADER_STAGE_UNKNOWN;
 		}
 
-		virtual void Create(ShaderCreateInfo* pShaderCreateInfo) = 0;
+		virtual void Create(const ShaderCreateInfo* pShaderCreateInfo) = 0;
 		virtual void Compile() = 0;
 
 		inline const ShaderCreateInfo& GetShaderCreateInfo() const {return m_CI;}

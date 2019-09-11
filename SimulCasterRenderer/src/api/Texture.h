@@ -137,7 +137,7 @@ namespace scr
 	protected:
 		TextureCreateInfo m_CI;
 
-		std::shared_ptr<const Sampler> m_Sampler = nullptr;
+		std::shared_ptr<Sampler> m_Sampler = nullptr;
 
 	public:
 		Texture(RenderPlatform *r) : APIObject(r) {}
@@ -159,10 +159,11 @@ namespace scr
 		virtual void Create(TextureCreateInfo* pTextureCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void UseSampler(std::shared_ptr<const Sampler> ) = 0;
+		virtual void UseSampler(const std::shared_ptr<Sampler>& sampler) = 0;
 		virtual void GenerateMips() = 0;
 
-		inline std::shared_ptr<const Sampler> GetSampler() const { return m_Sampler; }
+		inline std::shared_ptr<Sampler> GetSampler() { return m_Sampler; }
+		inline const TextureCreateInfo GetTextureCreateInfo() const { return m_CI;}
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;
