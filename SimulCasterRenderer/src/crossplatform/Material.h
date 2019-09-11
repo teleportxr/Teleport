@@ -4,11 +4,12 @@
 #include "api/Texture.h"
 #include "ShaderResource.h"
 #include "api/Effect.h"
+#include "api/RenderPlatform.h"
 #include "basic_linear_algebra.h"
 
 namespace scr
 {
-	class Material : public APIObject
+	class Material
 	{
 	public:
 		struct MaterialParameter
@@ -19,6 +20,7 @@ namespace scr
 		};
 		struct MaterialCreateInfo
 		{
+			RenderPlatform* renderPlatform;
 			MaterialParameter diffuse;	//RGBA Colour Texture
 			MaterialParameter normal;	//R: Tangent, G: Bi-normals and B: Normals
 			MaterialParameter combined;	//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
@@ -57,7 +59,7 @@ namespace scr
 		ShaderResource m_ShaderResource;
 	
 	public:
-		Material(RenderPlatform* r, MaterialCreateInfo* pMaterialCreateInfo);
+		Material(MaterialCreateInfo* pMaterialCreateInfo);
 
 		void UpdateMaterialUB();
 

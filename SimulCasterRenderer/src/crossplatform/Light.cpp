@@ -6,7 +6,7 @@ using namespace scr;
 
 uint32_t Light::s_NumOfLights = 0;
 const uint32_t Light::s_MaxLights = 64;
-bool Light::s_UninitialisedUB = false;
+bool Light::s_UninitialisedUB = true;
 
 Light::Light(LightCreateInfo* pLightCreateInfo)
 	:m_CI(*pLightCreateInfo)
@@ -20,8 +20,9 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 		ub_ci.size = s_MaxLights * sizeof(LightData);
 		ub_ci.data = zero;
 
+		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
-		s_UninitialisedUB = true;
+		s_UninitialisedUB = false;
 	}
 
 	m_ShaderResourceLayout.AddBinding(2, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);

@@ -4,10 +4,10 @@
 
 using namespace scr;
 
-bool Material::s_UninitialisedUB = false;
+bool Material::s_UninitialisedUB = true;
 
-Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
-	:APIObject(rp), m_CI (*pMaterialCreateInfo)
+Material::Material(MaterialCreateInfo* pMaterialCreateInfo)
+	:m_CI(*pMaterialCreateInfo)
 {
 	//Set up UB
 	if (s_UninitialisedUB)
@@ -19,8 +19,9 @@ Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
 		ub_ci.size = sizeof(MaterialData);
 		ub_ci.data = zero;
 
+		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
-		s_UninitialisedUB = true;
+		s_UninitialisedUB = false;
 	}
 
 	m_MaterialData.diffuseOutputScalar			= m_CI.diffuse.textureOutputScalar;

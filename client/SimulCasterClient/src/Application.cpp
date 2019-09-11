@@ -301,10 +301,13 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 
 	//Get the Capture Position
-	scr::Transform scr_UE4_captureTransform;
+	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&renderPlatform)};
+	scr::Transform scr_UE4_captureTransform(&tci);
 	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
 	capturePosition = scr_UE4_captureTransform.m_Translation;
+	scrCamera.UpdatePosition(capturePosition);
+	scrCamera.UpdateCameraUBO();
 
 	static float frameRate=1.0f;
 	if(vrFrame.DeltaSeconds>0.0f)

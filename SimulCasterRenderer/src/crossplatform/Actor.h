@@ -12,6 +12,11 @@ namespace scr
 	class Transform
 	{
 	public:
+		struct TransformCreateInfo
+		{
+			RenderPlatform* renderPlatform;
+		};
+
 		vec3 m_Translation;
 		quat m_Rotation;
 		vec3 m_Scale;
@@ -21,6 +26,9 @@ namespace scr
 		{
 			mat4 m_ModelMatrix;
 		} m_TransformData;
+
+		TransformCreateInfo m_CI;
+
 		static bool s_UninitialisedUB;
 		std::shared_ptr<UniformBuffer> m_UB;
 
@@ -47,7 +55,7 @@ namespace scr
 		}
 
 	public:
-		Transform();
+		Transform(TransformCreateInfo* pTransformCreateInfo);
 
 		void UpdateModelUBO() const;
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);

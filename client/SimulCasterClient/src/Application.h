@@ -123,6 +123,15 @@ private:
 
 	//Clientside Renderering Objects
 	scr::vec3 capturePosition;
+	scr::Camera::CameraCreateInfo cci = {
+			(scr::RenderPlatform*)(&renderPlatform),
+			scr::Camera::ProjectionType::PERSPECTIVE,
+			scr::quat(1.0f, 0.0f, 0.0f, 0.0f),
+			capturePosition
+	};
+	scr::Camera scrCamera = scr::Camera(&cci);
+
+
 	scc::GL_DeviceContext mDeviceContext;
 	scc::GL_Effect mEffect;
 	std::shared_ptr<scr::Sampler> mSampler = renderPlatform.InstantiateSampler();
@@ -140,6 +149,5 @@ private:
 	void CopyToCubemaps();
 	void RenderLocalActors(OVR::ovrFrameResult& res);
     const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources);
-
 	std::string LoadTextFile(const char *filename);
 };
