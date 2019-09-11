@@ -9,7 +9,7 @@ void PC_Shader::Compile()
     //NULL;
 }
 
-void pc_client::PC_Shader::Create(const ShaderCreateInfo* pShaderCreateInfo)
+void PC_Shader::Create(const scr::Shader::ShaderCreateInfo * pShaderCreateInfo)
 {
 	m_CI = *pShaderCreateInfo;
 }

@@ -2,22 +2,29 @@
 #extension GL_OES_EGL_image_external_essl3 : require
 precision highp float;
 
-layout(rgba8, binding = 0) uniform highp image2DArray destTex;
+layout(rgba8, binding = 0) uniform writeonly lowp imageCube destTex;
 layout(binding = 1) uniform highp samplerExternalOES videoFrameTexture;
 layout(std140, binding = 2) uniform cubemapUB
 {
-    ivec2 offset[6];
+    ivec2 sourceOffset;
+    uint faceSize;
 };
 
-layout (local_size_x = 16, local_size_y = 16) in;
-
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main() {
-    for(int i = 0; i < 6; i++)
+    ivec2 FaceOffsets[6] ;
+    FaceOffsets[0]=ivec2(0,0);
+    FaceOffsets[1]=ivec2(1,0);
+    FaceOffsets[2]=ivec2(2,0);
+    FaceOffsets[3]=ivec2(0,1);
+    FaceOffsets[4]=ivec2(1,1);
+    FaceOffsets[5]=ivec2(2,1);
+    //for(int i = 0; i < 6; i++)
     {
-        ivec2 loadPos = ivec2(gl_GlobalInvocationID.xy) + offset[i];
-        texelFetch(videoFrameTexture, loadPos, 0);
-
+        ivec2 loadPos = ivec2(gl_GlobalInvocationID.xy) + FaceOffsets[gl_GlobalInvocationID.z];
+        vec4 lookup=texelFetch(videoFrameTexture, loadPos, 0);
+        lookup.b=1.0;
         ivec3 storePos = ivec3(gl_GlobalInvocationID.xyz);
-        imageStore(destTex, storePos, vec4(1.0, 0.0, 0.0, 0.0));
+        imageStore(destTex, storePos, lookup);
     }
 }

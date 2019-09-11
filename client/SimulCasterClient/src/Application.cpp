@@ -116,6 +116,7 @@ std::string Application::LoadTextFile(const char *filename)
 	str+=filename;
 	if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
 	{
+		outBuffer.push_back(uint8_t(0));
 		return std::string((const char *)outBuffer.data());
 	}
 	return "";
@@ -150,9 +151,11 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 												  {"depthOffsetScale",  ovrProgramParmType::FLOAT_VECTOR4},
 												  {"cubemapTexture", ovrProgramParmType::TEXTURE_SAMPLED},
 										  };
-			mVideoSurfaceProgram = GlProgram::Build(
-					nullptr, LoadTextFile("shaders/VideoSurface.vert").c_str(),
-					nullptr, LoadTextFile("shaders/VideoSurface.frag").c_str(),
+			std::string vert=LoadTextFile("shaders/VideoSurface.vert");
+			std::string frag=LoadTextFile("shaders/VideoSurface.frag");
+
+			//OVR_LOG("\nfrag\n%s",frag.c_str());
+			mVideoSurfaceProgram = GlProgram::Build(nullptr, vert.c_str(),nullptr, frag.c_str(),
 					uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm),
 					310);
 			if (!mVideoSurfaceProgram.IsValid())
@@ -164,8 +167,18 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
 		mVideoTexture        = renderPlatform.InstantiateTexture();
-		((scc::GL_Texture*)(mVideoTexture.get()))->GetGlTexture() = GlTexture(mVideoSurfaceTexture->GetTextureId(), GL_TEXTURE_EXTERNAL_OES, 0, 0);
+		//((scc::GL_Texture*)(mVideoTexture.get()))->GetGlTexture() = GlTexture(mVideoSurfaceTexture->GetTextureId(), GL_TEXTURE_EXTERNAL_OES, 0, 0);
+		{
+			scr::Texture::TextureCreateInfo textureCreateInfo={};
+			textureCreateInfo.externalResource = true;
+			textureCreateInfo.slot=scr::Texture::Slot::NORMAL;
+			textureCreateInfo.format=scr::Texture::Format::RGBA8;
+			textureCreateInfo.type=scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
+			mVideoSurfaceTexture->GetTextureId();
+			mVideoTexture->Create(&textureCreateInfo);
+			((scc::GL_Texture*)(mVideoTexture.get()))->SetExternalGlTexture(mVideoSurfaceTexture->GetTextureId());
 
+		}
 		mCubemapTexture 	 = renderPlatform.InstantiateTexture();
 		{
 			CopyCubemapSrc=LoadTextFile("shaders/CopyCubemap.comp");
@@ -191,13 +204,13 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
 
             scr::ShaderResourceLayout layout;
-            layout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
+            layout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
             layout.AddBinding(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
-            layout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
+            //layout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
             scr::ShaderResource sr({layout});
-            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 0, "destTex", {mSampler, mCubemapTexture});
+            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {mSampler, mCubemapTexture});
             sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
-            sr.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+            //sr.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 			mCubemapComputeShaderResources.push_back(sr);
 
 			mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
@@ -254,13 +267,13 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 
 	// Try to find remote controller
-	if((int)mControllerID == -1) {
+	if((int)mControllerID == 0) {
 		InitializeController();
 	}
 
 	// Query controller input state.
 	ControllerState controllerState = {};
-	if((int)mControllerID != -1)
+	if((int)mControllerID != 0)
 	{
 		ovrInputStateTrackedRemote ovrState;
 		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
@@ -351,18 +364,17 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		worldLayer.Textures[eye].SwapChainIndex = vrFrame.TextureSwapChainIndex;
 		worldLayer.Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
 	}
-	{
-		scr::uvec3 size  = {mCubemapTexture->GetTextureCreateInfo().width, mCubemapTexture->GetTextureCreateInfo().width, 1};
-		scr::InputCommandCreateInfo inputCommandCreateInfo={};
-		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapEffect, mCubemapComputeShaderResources);
-		mDeviceContext.DispatchCompute(&inputCommand);
-	}
 
+	GL_CheckErrors("Frame: Pre-Cubemap");
+	CopyToCubemaps();
 	// Append video surface
 	mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
 	mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
-	mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture*)mCubemapTexture.get())->GetGlTexture());
-	res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
+	if(mCubemapTexture->IsValid())
+	{
+		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
+		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
+	}
 
 	//Append SCR Actors to surfaces.
 	GL_CheckErrors("Frame: Pre-SCR");
@@ -479,6 +491,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 						scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
    		mCubemapTexture->Create(&textureCreateInfo);
+	   GL_CheckErrors("mCubemapTexture:Create");
 
    		scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo =
 				{
@@ -487,6 +500,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 					nullptr
 				};
    		mCubemapUB->Create(&uniformBufferCreateInfo);
+	   GL_CheckErrors("mCubemapUB:Create");
    }
 
    mPipelineConfigured = true;
@@ -550,11 +564,28 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, 
 			break;
 	}
 }
-
+#include <algorithm>
 void Application::CopyToCubemaps()
 {
 	//mCubemapTexture
-	// Here we need a compute shader to copy from the video texture into the cubemap/s.
+	// Here we need a compute shader to copy from the video texture into the  cubemap/s.
+	auto &tc=mCubemapTexture->GetTextureCreateInfo();
+	if(mCubemapTexture->IsValid())
+	{
+		GLint max_u,max_v,max_w;
+		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,0,&max_u);
+		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,1,&max_v);
+		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,2,&max_w);
+		scr::uvec3 size  = {tc.width/8, tc.width/8, 6};
+		size.x=std::min(size.x,(uint32_t)max_u);
+		size.y=std::min(size.y,(uint32_t)max_v);
+		size.z=std::min(size.z,(uint32_t)max_w);
+		scr::InputCommandCreateInfo inputCommandCreateInfo={};
+		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapEffect, mCubemapComputeShaderResources);
+		mDeviceContext.DispatchCompute(&inputCommand);
+		GL_CheckErrors("Frame: CopyToCubemaps");
+	}
+
 }
 
 void Application::RenderLocalActors(ovrFrameResult& res)

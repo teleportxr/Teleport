@@ -1,6 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_Effect.h"
 #include <OVR_GlUtils.h>
+#include <OVR_LogUtils.h>
 
 using namespace scc;
 using namespace scr;
@@ -51,7 +52,8 @@ void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<Shader
 			// The maxLength includes the NULL character
 			std::vector<GLchar> errorLog(maxLength);
 			glGetShaderInfoLog(id, maxLength, &maxLength, &errorLog[0]);
-			std::cerr<<(const char*)errorLog.data()<<std::endl;
+			OVR_FAIL("%s",(const char*)errorLog.data());
+			OVR_DEBUG_BREAK;
 			glDeleteShader(id);
 			return;
 		}
@@ -67,9 +69,10 @@ void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<Shader
 			GLint maxLength = 0;
 			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
 			// The maxLength includes the NULL character
-			std::vector<GLchar> infoLog(maxLength);
-			glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
-			std::cerr<<(const char*)infoLog.data()<<std::endl;
+			std::vector<GLchar> errorLog(maxLength);
+			glGetProgramInfoLog(program, maxLength, &maxLength, &errorLog[0]);
+			OVR_FAIL("%s",(const char*)errorLog.data());
+			OVR_DEBUG_BREAK;
 			glDeleteProgram(program);
 			return;
 		}

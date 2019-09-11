@@ -1,6 +1,6 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_DeviceContext.h"
-
+#include <OVR_GlUtils.h>
 using namespace scc;
 using namespace scr;
 
@@ -62,14 +62,17 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
     BindShaderResources(descriptorSets, effect);
     glDrawElements(m_Topology, m_IndexCount, m_Type, nullptr);
 }
+
 void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
 {
     const InputCommand_Compute& ic_c = *(dynamic_cast<InputCommand_Compute*>(pInputCommand));
-
     BindShaderResources(ic_c.m_ShaderResources, ic_c.m_pComputeEffect.get());
     const uvec3& size = ic_c.m_WorkGroupSize;
+    OVR::GL_CheckErrors("DispatchCompute: 1");
     glDispatchCompute(size.x, size.y, size.z);
+    OVR::GL_CheckErrors("DispatchCompute: 2");
     glMemoryBarrier(GL_UNIFORM_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    OVR::GL_CheckErrors("DispatchCompute: 3");
 }
 void GL_DeviceContext::BeginFrame()
 {
@@ -89,6 +92,7 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
     //Set Uniforms for textures and UBs!
     GLuint& program = dynamic_cast<GL_Effect*>(pEffect)->GetGlPlatform().Program;
     glUseProgram(program);
+	OVR::GL_CheckErrors("BindShaderResources: 0");
     for(auto& sr : shaderResources)
     {
         for(auto& wsr : sr.GetWriteShaderResources())
@@ -97,12 +101,31 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
             if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
             {
                 GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
+			/*	OVR::GL_CheckErrors("BindShaderResources: 1");
+                {
+                    GLsizei length;
+                    GLint size;
+                    GLenum type;
+                    GLchar name[100];
+                    glGetActiveUniform(	program,
+                                           location,
+                           100,
+                            &length,
+                            &size,
+                            &type,
+                            name);
+                    OVR_LOG("%d %s", type,name);
+
+                }*/
+
                 glUniform1i(location, wsr.dstBinding);
+                OVR::GL_CheckErrors("BindShaderResources: 2");
             }
-            else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
+            if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
             {
                 GLuint location = glGetUniformBlockIndex(program, wsr.shaderResourceName);
                 glUniformBlockBinding(program, location, wsr.dstBinding);
+                OVR::GL_CheckErrors("BindShaderResources: 3");
             }
             else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
             {
@@ -121,17 +144,23 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
         for(auto& wsr : sr.GetWriteShaderResources())
         {
             ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
-            if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
+            if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE)
+            {
+                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->BindForWrite(wsr.dstBinding);
+            }
+            else if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
             {
                 dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->Bind();
             }
             else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
             {
                 ((const GL_UniformBuffer*)(wsr.bufferInfo.buffer))->Submit();
+				OVR::GL_CheckErrors("BindShaderResources: 4");
             }
             else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
             {
                 ((GL_ShaderStorageBuffer*)(wsr.bufferInfo.buffer))->Access();
+				OVR::GL_CheckErrors("BindShaderResources: 5");
             }
             else
             {
