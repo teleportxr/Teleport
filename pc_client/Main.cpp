@@ -149,7 +149,7 @@ void InitRenderer(HWND hWnd)
 		renderPlatform->PushShaderPath("../../Platform/CrossPlatform/SFX");
 		renderPlatform->PushShaderPath((simul_env+"/Platform/CrossPlatform/SFX").c_str());
 		renderPlatform->PushShaderPath((simul_env+"/Platform/CrossPlatform/SL").c_str());
-		renderPlatform->SetShaderBinaryPath("shaderbin");
+		renderPlatform->PushShaderBinaryPath("shaderbin");
 		if (strcmp(renderPlatform->GetName(), "DirectX 11") == 0)
 		{
 			renderPlatform->PushShaderPath("../../../../Platform/DirectX11/HLSL");
@@ -157,7 +157,7 @@ void InitRenderer(HWND hWnd)
 			renderPlatform->PushShaderPath("Platform/DirectX11/HLSL/");
 			renderPlatform->PushShaderPath((simul_env+"/Platform/DirectX11/HLSL").c_str());
 			if(simul_env.length())
-				renderPlatform->SetShaderBinaryPath((simul_env+"/Media/shaderbin").c_str());
+				renderPlatform->PushShaderBinaryPath((simul_env+"/Media/shaderbin").c_str());
 		}
 		if (strcmp(renderPlatform->GetName(), "DirectX 12") == 0)
 		{
@@ -166,7 +166,7 @@ void InitRenderer(HWND hWnd)
 			renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
 			// Must do this before RestoreDeviceObjects so the rootsig can be found
 			if(simul_env.length())
-				renderPlatform->SetShaderBinaryPath("../../Platform/DirectX12/shaderbin");
+				renderPlatform->PushShaderBinaryPath("../../Platform/DirectX12/shaderbin");
 		}
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
