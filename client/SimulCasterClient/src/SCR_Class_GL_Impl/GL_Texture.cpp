@@ -4,6 +4,13 @@
 using namespace scc;
 using namespace scr;
 using namespace OVR;
+void GL_Texture::SetExternalGlTexture(GLuint tex_id)
+{
+    m_Texture.texture=tex_id;
+    m_Texture.target=GL_TEXTURE_EXTERNAL_OES;
+    m_Texture.Height=m_CI.height;
+    m_Texture.Width=m_CI.width;
+}
 
 void GL_Texture::Create(TextureCreateInfo* pTextureCreateInfo)
 {
@@ -18,9 +25,12 @@ void GL_Texture::Create(TextureCreateInfo* pTextureCreateInfo)
     m_Texture.Width = m_CI.width;
     m_Texture.Height = m_CI.height;
 
+    if(pTextureCreateInfo->externalResource)
+        return;
     glGenTextures(1, &m_Texture.texture);
     glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
 
+	GL_CheckErrors("GL_Texture:Create 0");
     if(m_CI.compression == Texture::CompressionFormat::UNCOMPRESSED)
     {
         //Uncompressed Data
@@ -64,19 +74,37 @@ void GL_Texture::Create(TextureCreateInfo* pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_CUBE_MAP: {
-                size_t offset = 0;
-                for (uint32_t i = 0; i < 6; i++) {
-                    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToGLFormat(m_CI.format),
-                                 m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format),
-                                 GL_UNSIGNED_BYTE, m_CI.data + offset);
-                    offset += m_CI.size;
-                }
-                m_CI.size *= 6;
+            	if(m_CI.data)
+				{
+					size_t           offset = 0;
+					for (
+							uint32_t i      = 0; i < 6; i++)
+					{
+						glTexImage2D(
+								GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToGLFormat(m_CI.format),
+								m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format),
+								GL_UNSIGNED_BYTE, m_CI.data + offset);
+						offset += m_CI.size;
+					}
+
+					m_CI.size *= 6;
+				}
+            	else
+				{
+					GL_CheckErrors("GL_Texture:Create 1");
+					GLenum glInternalFormat=ToGLFormat(m_CI.format);
+					glTexStorage2D(GL_TEXTURE_CUBE_MAP, m_CI.arrayCount, glInternalFormat, m_CI.width, m_CI.width);
+					GL_CheckErrors("GL_Texture:Create 2");
+				}
+				return;
             }
             case Type::TEXTURE_CUBE_MAP_ARRAY: {
                 SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_CUBE_MAP_ARRAY");
                 return;
             }
+            default:
+				SCR_CERR_BREAK("Unsupported texture type",1);
+            	return;
         }
     }
     else
@@ -129,19 +157,34 @@ void GL_Texture::Create(TextureCreateInfo* pTextureCreateInfo)
                 SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_CUBE_MAP_ARRAY for compressed textures");
                 return;
             }
+			default:
+			SCR_CERR_BREAK("Unsupported texture type",1);
+				return;
         }
     }
 }
+
 void GL_Texture::Destroy()
 {
-    glDeleteTextures(1, &m_Texture.texture);
+    if(!m_CI.externalResource)
+        glDeleteTextures(1, &m_Texture.texture);
 }
 
 void GL_Texture::Bind() const
 {
     glActiveTexture(GL_TEXTURE0 + static_cast<unsigned int>(m_CI.slot));
-    glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
+    GLenum gl_target=TypeToGLTarget(m_CI.type);
+
+    glBindTexture(gl_target, m_Texture.texture);
+    OVR::GL_CheckErrors("GL_Texture::Bind");
 }
+
+void GL_Texture::BindForWrite(uint32_t slot) const
+{
+    glBindImageTexture(slot,m_Texture.texture,0,GL_TRUE,0,GL_WRITE_ONLY,GL_RGBA8);
+	OVR::GL_CheckErrors("GL_Texture::BindForWrite");
+}
+
 void GL_Texture::Unbind() const
 {
     glBindTexture((unsigned int)m_CI.type, 0);
@@ -150,7 +193,7 @@ void GL_Texture::Unbind() const
 void GL_Texture::UseSampler(const std::shared_ptr<Sampler>& sampler)
 {
     /*if(!this)
-        return;*/
+        return; */
 
     m_Sampler = sampler;
     const GL_Sampler* glSampler = dynamic_cast<const GL_Sampler*>(m_Sampler.get());
@@ -170,6 +213,7 @@ void GL_Texture::UseSampler(const std::shared_ptr<Sampler>& sampler)
     }
     Unbind();
 }
+
 void GL_Texture::GenerateMips()
 {
     glGenerateMipmap(TypeToGLTarget(m_CI.type));
@@ -179,9 +223,14 @@ GLenum GL_Texture::TypeToGLTarget(Type type) const
 {
     switch (type)
     {
-        case Type::TEXTURE_UNKNOWN: return 0;
-        case Type::TEXTURE_1D: return 0; //GL_TEXTURE_1D;
-        case Type::TEXTURE_2D: return GL_TEXTURE_2D;
+        case Type::TEXTURE_UNKNOWN:
+        	exit(1);
+        case Type::TEXTURE_1D:
+            return 0; //GL_TEXTURE_1D;
+        case Type::TEXTURE_2D:
+            return GL_TEXTURE_2D;
+        case Type::TEXTURE_2D_EXTERNAL_OES:
+            return GL_TEXTURE_EXTERNAL_OES;
         case Type::TEXTURE_3D: return GL_TEXTURE_3D;
         case Type::TEXTURE_1D_ARRAY: return 0; //GL_TEXTURE_1D_ARRAY;
         case Type::TEXTURE_2D_ARRAY: return GL_TEXTURE_2D_ARRAY;
@@ -189,6 +238,8 @@ GLenum GL_Texture::TypeToGLTarget(Type type) const
         case Type::TEXTURE_2D_MULTISAMPLE_ARRAY: return GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
         case Type::TEXTURE_CUBE_MAP: return GL_TEXTURE_CUBE_MAP;
         case Type::TEXTURE_CUBE_MAP_ARRAY: return 0; //TEXTURE_CUBE_MAP_ARRAY;
+        default:
+			exit(1);
     }
 }
 
@@ -261,9 +312,9 @@ GLenum GL_Texture::ToBaseGLFormat(Format format) const
             return GL_RGBA;
         case Format::FORMAT_UNKNOWN:
             return 0;
-        /*default:
+        default:
             SCR_COUT("Unknown texture format");
-            return 0;*/
+            return 0;
     }
 }
 
@@ -295,7 +346,7 @@ GLenum GL_Texture::ToGLFormat(Format format) const {
         case Format::RGBA8:
             return GL_RGBA8;
         case Format::BGRA8:
-            return GL_BGRA_EXT; //TO DO: Look into this extenstion!
+            return GL_BGRA_EXT; //TO DO: Look into this extension!
 
         case Format::RGB32F:
             return GL_RGB32F;
@@ -378,9 +429,9 @@ GLenum GL_Texture::ToGLFormat(Format format) const {
             return GL_FLOAT_32_UNSIGNED_INT_24_8_REV;
         case Format::FORMAT_UNKNOWN:
             return 0;
-            /* default:
+            default:
                  SCR_CERR("Unknown format");
-                 return 0;*/
+                 return 0;
 
     }
 }

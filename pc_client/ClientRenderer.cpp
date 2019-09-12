@@ -339,8 +339,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
 			}
 		}
-		//RenderOpaqueTest(deviceContext);
-		RenderLocalActors(deviceContext);
+//		RenderLocalActors(deviceContext);
 
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -439,17 +438,20 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 
 		const scr::Material::MaterialCreateInfo& m = materials[0]->GetMaterialCreateInfoConst();
 
-		simul::crossplatform::LayoutDesc desc[] =
+		if (!layout)
 		{
-			{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-			{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
-			{ "TANGENT", 0, crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
-			{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
-			{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
-		};
-		simul::crossplatform::Layout* layout= renderPlatform->CreateLayout(
-												sizeof(desc)/sizeof(simul::crossplatform::LayoutDesc)
-												,desc);
+			simul::crossplatform::LayoutDesc desc[] =
+			{
+				{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
+				{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
+				{ "TANGENT", 0, crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
+				{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
+				{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
+			};
+			layout = renderPlatform->CreateLayout(
+				sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
+				, desc);
+		}
 		cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 		mat4 model;
 		model=((const float*)& (transform->GetTransformMatrix()));
@@ -480,17 +482,19 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
 		renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
 		renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
+		layout->Unapply(deviceContext);
 		pbrEffect->Unapply(deviceContext);
 
 		float heightOffset = -80.0F;
 		scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
 		scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
 		scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix;// *ic_mmm.pTransform->GetTransformMatrix();
-		delete layout;
 	}
 }
 void ClientRenderer::InvalidateDeviceObjects()
 {
+	delete layout;
+	layout = nullptr;
 	for (auto i : avsTextures)
 	{
 		AVSTextureImpl *ti = (AVSTextureImpl*)i.get();

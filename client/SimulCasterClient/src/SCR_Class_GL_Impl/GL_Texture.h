@@ -21,6 +21,7 @@ namespace scc
 		void Destroy() override;
 
 		void Bind() const override;
+		void BindForWrite(uint32_t slot) const override;
 		void Unbind() const override;
 
 		void GenerateMips() override;
@@ -29,6 +30,7 @@ namespace scc
 
 		inline OVR::GlTexture& GetGlTexture() { return m_Texture;}
 
+		void SetExternalGlTexture(GLuint tex_id);
 private:
 		GLenum TypeToGLTarget(Type type) const;
 		GLenum ToBaseGLFormat(Format format) const;

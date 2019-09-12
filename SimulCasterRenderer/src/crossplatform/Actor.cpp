@@ -12,12 +12,10 @@ Transform::Transform(TransformCreateInfo* pTransformCreateInfo)
 {
 	if (s_UninitialisedUB)
 	{
-		const float zero[sizeof(TransformData)] = { 0 };
-		
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 1;
 		ub_ci.size = sizeof(TransformData);
-		ub_ci.data = zero;
+		ub_ci.data = &m_TransformData;
 
 		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
@@ -38,16 +36,11 @@ void Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation,
 	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 }
 
-void Transform::UpdateModelUBO() const
-{
-	m_UB->Update(0, sizeof(TransformData), &m_TransformData);
-}
-
 //Actor
 Actor::Actor(ActorCreateInfo* pActorCreateInfo)
 	:m_CI(*pActorCreateInfo)
 {
-};
+}
 
 void Actor::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
 {
