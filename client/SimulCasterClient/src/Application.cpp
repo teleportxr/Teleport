@@ -340,7 +340,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	ovrQuatf headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 	auto ctr=mNetworkSource.getCounterValues();
 	//OVR::Vector3f(2.0f,0,0),OVR::Vector4f(1.f,1.f,0.f,0.5f),
-	mGuiSys->ShowInfoText( 1.0f, "\n\n\n\n\nPackets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Head Orientation: %1.3f, {%1.3f, %1.3f, %1.3f}\n Trackpad: %3.1f %3.1f\n"
+	mGuiSys->ShowInfoText( 1.0f, "Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Head Orientation: %1.3f, {%1.3f, %1.3f, %1.3f}\n Trackpad: %3.1f %3.1f\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped
 			,frameRate, ctr.bandwidthKPS,
 			(uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size(),
@@ -348,6 +348,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			headPose.w, headPose.x, headPose.y, headPose.z
 			,controllerState.mTrackpadX,controllerState.mTrackpadY
 			);
+	mGuiSys->ShowInfoText(1.0f, "Orphan Packets %d", ctr.m_packetMapOrphans);
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -724,7 +725,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 		}
 
         //----OVR Actor Set Transforms----//
-		float heightOffset = -0.85F;
+		float heightOffset = -0.0F;
 		scr::vec3 camPos = capturePosition * -1;
 		camPos.y += heightOffset;
 
@@ -831,6 +832,8 @@ std::string Application::LoadTextFile(const char *filename)
     str+=filename;
     if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
     {
+        if(outBuffer.back() != '\0')
+            outBuffer.push_back('\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
         return std::string((const char *)outBuffer.data());
     }
     return "";
