@@ -39,19 +39,21 @@ layout(location = 10) out vec4 v_Joint;
 layout(location = 11) out vec4 v_Weights;
 layout(location = 12) out vec3 v_CameraPosition;
 
+
 void main()
 {
-    gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
+    //gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
+    gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
 
-    v_Position 	= mat3(model.u_ModelMatrix) * a_Position;
-    v_Normal	= normalize(mat3(model.u_ModelMatrix) * a_Normal);
-    v_Tangent	= normalize(mat3(model.u_ModelMatrix) * a_Tangent.xyz);
-    v_Binormal	= normalize(cross(v_Normal, v_Tangent));
-    v_TBN		= mat3(v_Tangent, v_Binormal, v_Normal);
-    v_UV0		= a_UV0;
-    v_UV1		= a_UV1;
-    v_Color		= a_Color;
-    v_Joint		= a_Joint;
-    v_Weights	= a_Weights;
-    v_CameraPosition = cam.u_Position;
+    v_Position 	        = mat3(ModelMatrix) * a_Position;
+    v_Normal	        = normalize(mat3(ModelMatrix) * a_Normal);
+    v_Tangent	        = normalize(mat3(ModelMatrix) * a_Tangent.xyz);
+    v_Binormal	        = normalize(cross(v_Normal, v_Tangent));
+    v_TBN		        = mat3(v_Tangent, v_Binormal, v_Normal);
+    v_UV0		        = a_UV0;
+    v_UV1		        = a_UV1;
+    v_Color		        = a_Color;
+    v_Joint		        = a_Joint;
+    v_Weights	        = a_Weights;
+    v_CameraPosition    = cam.u_Position;
 }

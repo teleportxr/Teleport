@@ -3,7 +3,6 @@
 
 #include "Common.h"
 
-#include "API.h"
 #include "Camera.h"
 
 #include "api/FrameBuffer.h"
@@ -23,6 +22,7 @@ namespace scr
 		};
 		struct LightCreateInfo
 		{
+			RenderPlatform* renderPlatform;
 			Type type;
 			const vec3& position;
 			const vec3& direction;

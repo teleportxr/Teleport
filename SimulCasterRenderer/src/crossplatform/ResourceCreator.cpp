@@ -338,7 +338,8 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	///This needs an actual value.
 	materialInfo.effect = nullptr;
-	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(m_pRenderPlatform, &materialInfo);
+	materialInfo.renderPlatform = m_pRenderPlatform;
+	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(&materialInfo);
 	m_MaterialManager->Add(material_uid, scr_material);
 	m_pActorManager->AddMaterial(material_uid, scr_material);
 }
@@ -366,7 +367,8 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	}
 	else
 	{
-		std::shared_ptr<scr::Transform> transform = std::make_shared<scr::Transform>();
+		scr::Transform::TransformCreateInfo tci = { m_pRenderPlatform };
+		std::shared_ptr<scr::Transform> transform = std::make_shared<scr::Transform>(&tci);
 		transform->UpdateModelMatrix(translation, rotation, scale);
 		m_pActorManager->AddTransform(node_uid, transform);
 

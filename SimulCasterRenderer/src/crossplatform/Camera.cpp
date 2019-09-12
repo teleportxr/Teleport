@@ -4,12 +4,12 @@
 
 using namespace scr;
 
-bool Camera::s_UninitialisedUB = false;
+bool Camera::s_UninitialisedUB = true;
 
 Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	:m_CI(*pCameraCreateInfo)
 {
-	if (s_UninitialisedUB)
+	if (false)//s_UninitialisedUB)
 	{
 
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
@@ -17,8 +17,9 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 		ub_ci.size = sizeof(CameraData);
 		ub_ci.data =  &m_CameraData;
 
+		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
-		s_UninitialisedUB = true;
+		s_UninitialisedUB = false;
 	}
 	
 	UpdatePosition(m_CI.position);

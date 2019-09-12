@@ -5,6 +5,7 @@
 #include "api/UniformBuffer.h"
 #include "basic_linear_algebra.h"
 #include "ShaderResource.h"
+#include "api/RenderPlatform.h"
 
 namespace scr
 {
@@ -18,6 +19,7 @@ namespace scr
 		};
 		struct CameraCreateInfo
 		{
+			RenderPlatform* renderPlatform;
 			ProjectionType type;
 			quat orientation;
 			vec3 position;

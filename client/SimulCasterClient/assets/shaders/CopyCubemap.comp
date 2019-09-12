@@ -12,7 +12,8 @@ layout(std140, binding = 2) uniform cubemapUB
 } cub;
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-void main() {
+void main()
+{
     ivec2 FaceOffsets[6] ;
     FaceOffsets[0]=ivec2(0,0);
     FaceOffsets[1]=ivec2(1,0);
@@ -20,14 +21,10 @@ void main() {
     FaceOffsets[3]=ivec2(0,1);
     FaceOffsets[4]=ivec2(1,1);
     FaceOffsets[5]=ivec2(2,1);
-    //for(int i = 0; i < 6; i++)
-    {
-        ivec2 faceOffset=FaceOffsets[gl_GlobalInvocationID.z];
-        ivec2 loadPos = ivec2(gl_GlobalInvocationID.xy)+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
-        vec4 lookup=texelFetch(videoFrameTexture, loadPos, 0);
-        //lookup.rg+=vec2(faceOffset)*vec2(0.5,0.5);
-        //lookup.b+=float(cub.faceSize)/1024.0;
-        ivec3 storePos = ivec3(gl_GlobalInvocationID.xyz);
-        imageStore(destTex, storePos, lookup);
-    }
+
+    ivec2 faceOffset=FaceOffsets[gl_GlobalInvocationID.z];
+    ivec2 loadPos = ivec2(gl_GlobalInvocationID.xy)+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
+    vec4 lookup=texelFetch(videoFrameTexture, loadPos, 0);
+    ivec3 storePos = ivec3(gl_GlobalInvocationID.xyz);
+    imageStore(destTex, storePos, lookup);
 }

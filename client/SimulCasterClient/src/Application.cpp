@@ -110,18 +110,6 @@ void Application::Configure(ovrSettings& settings )
 	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 	settings.RenderMode = RENDERMODE_STEREO;
 }
-std::string Application::LoadTextFile(const char *filename)
-{
-	std::vector<uint8_t> outBuffer;
-	std::string str="apk:///assets/";
-	str+=filename;
-	if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
-	{
-		outBuffer.push_back(uint8_t(0));
-		return std::string((const char *)outBuffer.data());
-	}
-	return "";
-}
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
 {
@@ -152,11 +140,11 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 												  {"depthOffsetScale",  ovrProgramParmType::FLOAT_VECTOR4},
 												  {"cubemapTexture", ovrProgramParmType::TEXTURE_SAMPLED},
 										  };
-			std::string vert=LoadTextFile("shaders/VideoSurface.vert");
-			std::string frag=LoadTextFile("shaders/VideoSurface.frag");
-
-			//OVR_LOG("\nfrag\n%s",frag.c_str());
-			mVideoSurfaceProgram = GlProgram::Build(nullptr, vert.c_str(),nullptr, frag.c_str(),
+			std::string videoSurfaceVert = LoadTextFile("shaders/VideoSurface.vert");
+			std::string videoSurfaceFrag = LoadTextFile("shaders/VideoSurface.frag");
+			mVideoSurfaceProgram = GlProgram::Build(
+					nullptr, videoSurfaceVert.c_str(),
+					nullptr, videoSurfaceFrag.c_str(),
 					uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm),
 					310);
 			if (!mVideoSurfaceProgram.IsValid())
@@ -335,10 +323,12 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 
 	//Get the Capture Position
-	scr::Transform scr_UE4_captureTransform;
+	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&renderPlatform)};
+	scr::Transform scr_UE4_captureTransform(&tci);
 	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
 	capturePosition = scr_UE4_captureTransform.m_Translation;
+	scrCamera.UpdatePosition(capturePosition);
 
 	static float frameRate=1.0f;
 	if(vrFrame.DeltaSeconds>0.0f)
@@ -486,6 +476,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		avsGeometryTarget.configure(&resourceCreator);
 		mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
    }
+   //Build Video Cubemap
    {
 	   scr::Texture::TextureCreateInfo textureCreateInfo =
 				{
@@ -504,7 +495,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 						scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
    		mCubemapTexture->Create(&textureCreateInfo);
-	   GL_CheckErrors("mCubemapTexture:Create");
+	   //GL_CheckErrors("mCubemapTexture:Create");
 
 
    }
@@ -573,8 +564,7 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, 
 #include <algorithm>
 void Application::CopyToCubemaps()
 {
-	//mCubemapTexture
-	// Here we need a compute shader to copy from the video texture into the  cubemap/s.
+	// Here the compute shader to copy from the video texture into the cubemap/s.
 	auto &tc=mCubemapTexture->GetTextureCreateInfo();
 	if(mCubemapTexture->IsValid())
 	{
@@ -583,17 +573,18 @@ void Application::CopyToCubemaps()
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,1,&max_v);
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,2,&max_w);
 		scr::uvec3 size  = {tc.width/8, tc.width/8, 6};
+
 		size.x=std::min(size.x,(uint32_t)max_u);
 		size.y=std::min(size.y,(uint32_t)max_v);
 		size.z=std::min(size.z,(uint32_t)max_w);
+
 		scr::InputCommandCreateInfo inputCommandCreateInfo={};
 		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapEffect, mCubemapComputeShaderResources);
 		cubemapUB.faceSize=mCubemapTexture->GetTextureCreateInfo().width;
 		cubemapUB.sourceOffset={0,0};
 
-
 		//OVR_WARN("CubemapUB: %d %d %d",cubemapUB.sourceOffset.x,cubemapUB.sourceOffset.y,cubemapUB.faceSize);
-//		CubemapUB*ub=(CubemapUB*)mCubemapUB->GetUniformBufferCreateInfo().data;
+        //CubemapUB* ub=(CubemapUB*)mCubemapUB->GetUniformBufferCreateInfo().data;
 		//OVR_WARN("mCubemapUB: %llx %d %d %d",(unsigned long long int)ub,ub->sourceOffset.x,ub->sourceOffset.y,ub->faceSize);
 		mDeviceContext.DispatchCompute(&inputCommand);
 		GL_CheckErrors("Frame: CopyToCubemaps");
@@ -831,4 +822,16 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
     mEffect.LinkShaders(effectPassName, shaderResources);
 
 	return mEffect.GetEffectPassCreateInfo(effectPassName);
+}
+
+std::string Application::LoadTextFile(const char *filename)
+{
+    std::vector<uint8_t> outBuffer;
+    std::string str="apk:///assets/";
+    str+=filename;
+    if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
+    {
+        return std::string((const char *)outBuffer.data());
+    }
+    return "";
 }

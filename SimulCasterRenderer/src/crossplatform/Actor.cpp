@@ -5,19 +5,21 @@
 using namespace scr;
 
 //Transform
-bool Transform::s_UninitialisedUB = false;
+bool Transform::s_UninitialisedUB = true;
 
-Transform::Transform()
+Transform::Transform(TransformCreateInfo* pTransformCreateInfo)
+	:m_CI(*pTransformCreateInfo)
 {
-	if (s_UninitialisedUB)
+	if (false)//s_UninitialisedUB)
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 1;
 		ub_ci.size = sizeof(TransformData);
 		ub_ci.data = &m_TransformData;
 
+		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
-		s_UninitialisedUB = true;
+		s_UninitialisedUB = false;
 	}
 
 	m_ShaderResourceLayout.AddBinding(1, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
