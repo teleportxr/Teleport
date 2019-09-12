@@ -339,7 +339,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
 			}
 		}
-//		RenderLocalActors(deviceContext);
+		RenderLocalActors(deviceContext);
 
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
