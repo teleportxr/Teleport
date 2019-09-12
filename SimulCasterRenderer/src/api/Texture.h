@@ -168,7 +168,7 @@ namespace scr
 		virtual void Create(TextureCreateInfo* pTextureCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
-		virtual void UseSampler(const std::shared_ptr<Sampler>& smapler) = 0;
+		virtual void UseSampler(const std::shared_ptr<Sampler>& sampler) = 0;
 		virtual void GenerateMips() = 0;
 
 		inline std::shared_ptr<Sampler> GetSampler() { return m_Sampler; }
