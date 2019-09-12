@@ -43,7 +43,8 @@ namespace scr
 			float m_Power;		 //Strength or Power of the light in Watts equilavent to Radiant Flux in Radiometry.
 			vec3 m_Direction;
 			float m_SpotAngle;
-		}m_LightData;
+		};
+		LightData m_LightData;
 
 		LightCreateInfo m_CI;
 		

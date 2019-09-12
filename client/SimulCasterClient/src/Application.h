@@ -65,6 +65,13 @@ public:
 	/* End DecodeEventInterface */
 
 private:
+	struct CubemapUB
+	{
+		scr::ivec2 sourceOffset;
+		uint32_t   faceSize;
+		float _pad = 0;
+	};
+	CubemapUB cubemapUB;
 	static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
 
 	avs::Context  mContext;
@@ -104,7 +111,7 @@ private:
 	OVR::SurfaceTexture* mVideoSurfaceTexture;
     std::shared_ptr<scr::Texture> mVideoTexture;
 	std::shared_ptr<scr::Texture> mCubemapTexture;
-    std::shared_ptr<scr::UniformBuffer> mCubemapUB = renderPlatform.InstantiateUniformBuffer();
+    std::shared_ptr<scr::UniformBuffer> mCubemapUB ;
     std::vector<scr::ShaderResource> mCubemapComputeShaderResources;
 	std::shared_ptr<scr::Effect> mCopyCubemapEffect;
 	std::string CopyCubemapSrc;

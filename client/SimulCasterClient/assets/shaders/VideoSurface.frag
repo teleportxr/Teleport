@@ -45,5 +45,6 @@ void main()
     vec3 worldspace_dir = vModelViewOrientationMatrixT*(OffsetRotationMatrix*vEyespacePos.xyz);
     vec3 colourSampleVec  = normalize(vec3(-worldspace_dir.z, worldspace_dir.y, worldspace_dir.x));
     vec2 uv=WorldspaceDirToUV(colourSampleVec);
-    gl_FragColor = 0.003*depthOffsetScale+0.003*colourOffsetScale+texture(cubemapTexture, vSampleVec);
+    vec3 vSampleVecCorrected=vec3(vSampleVec.x,vSampleVec.z,vSampleVec.y);
+    gl_FragColor = 0.003*depthOffsetScale+0.003*colourOffsetScale+texture(cubemapTexture, vSampleVecCorrected);
 }

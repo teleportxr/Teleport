@@ -17,7 +17,6 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 
     //Default Init
     dynamic_cast<GL_FrameBuffer *>(pInputCommand->pFBs)[0].BeginFrame();
-    pInputCommand->pCamera->UpdateCameraUBO();
     descriptorSets.push_back(pInputCommand->pCamera->GetDescriptorSet());
 
     //Switch for types
@@ -50,7 +49,6 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 
             //Transform
             descriptorSets.push_back(ic_mmt->pTransform->GetDescriptorSet());
-            ic_mmt->pTransform->UpdateModelUBO();
 
             break;
         }
@@ -101,30 +99,34 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
             if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
             {
                 GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
-			/*	OVR::GL_CheckErrors("BindShaderResources: 1");
-                {
-                    GLsizei length;
-                    GLint size;
-                    GLenum type;
-                    GLchar name[100];
-                    glGetActiveUniform(	program,
-                                           location,
-                           100,
-                            &length,
-                            &size,
-                            &type,
-                            name);
-                    OVR_LOG("%d %s", type,name);
-
-                }*/
+				OVR::GL_CheckErrors("BindShaderResources: 1");
 
                 glUniform1i(location, wsr.dstBinding);
                 OVR::GL_CheckErrors("BindShaderResources: 2");
             }
             if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
             {
-                GLuint location = glGetUniformBlockIndex(program, wsr.shaderResourceName);
-                glUniformBlockBinding(program, location, wsr.dstBinding);
+//				GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
+                GLuint blockIndex = glGetUniformBlockIndex(program, wsr.shaderResourceName);
+		/*		{
+					GLsizei length;
+					GLint   size;
+					GLenum  type;
+					GLchar  name[100];
+					for(GLuint l=0;l<3;l++)
+					{
+						glGetActiveUniform(
+							program,
+							l,
+							100,
+							&length,
+							&size,
+							&type,
+							name);
+					OVR_WARN("%d %d %s", l, type, name);
+					}
+				}*/
+                glUniformBlockBinding(program, blockIndex, wsr.dstBinding);
                 OVR::GL_CheckErrors("BindShaderResources: 3");
             }
             else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)

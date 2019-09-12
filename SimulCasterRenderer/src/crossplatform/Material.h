@@ -59,8 +59,6 @@ namespace scr
 	public:
 		Material(RenderPlatform* r, MaterialCreateInfo* pMaterialCreateInfo);
 
-		void UpdateMaterialUB();
-
 		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfoConst() const { return m_CI; }
 		inline MaterialCreateInfo& GetMaterialCreateInfo() { return m_CI; }

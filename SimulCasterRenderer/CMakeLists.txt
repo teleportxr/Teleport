@@ -18,6 +18,7 @@ set( src_api
 	src/api/ShaderStorageBuffer.h
 	src/api/Texture.h
 	src/api/UniformBuffer.h
+	src/api/UniformBuffer.cpp
 	src/api/VertexBuffer.h
 	src/api/VertexBufferLayout.h
 	)

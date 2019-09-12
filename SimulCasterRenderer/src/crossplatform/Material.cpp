@@ -12,12 +12,10 @@ Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
 	//Set up UB
 	if (s_UninitialisedUB)
 	{
-		const float zero[sizeof(MaterialData)] = { 0 };
-
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 3;
 		ub_ci.size = sizeof(MaterialData);
-		ub_ci.data = zero;
+		ub_ci.data = &m_MaterialData;
 
 		m_UB->Create(&ub_ci);
 		s_UninitialisedUB = true;
@@ -55,9 +53,4 @@ Material::Material(RenderPlatform *rp, MaterialCreateInfo* pMaterialCreateInfo)
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",   { m_CI.normal.texture != nullptr ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture != nullptr ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });
 	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", { m_UB.get(), 0, sizeof(MaterialData) });
-}
-
-void Material::UpdateMaterialUB()
-{
-	m_UB->Update(0, sizeof(MaterialData), &m_MaterialData);
 }
