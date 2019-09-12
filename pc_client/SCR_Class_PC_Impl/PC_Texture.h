@@ -25,6 +25,7 @@ namespace pc_client
 		void Destroy() override;
 
 		void Bind() const override;
+		void BindForWrite(uint32_t slot) const override;
 		void Unbind() const override;
 
 		void GenerateMips() override;

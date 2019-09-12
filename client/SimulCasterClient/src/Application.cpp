@@ -329,7 +329,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
 	capturePosition = scr_UE4_captureTransform.m_Translation;
 	scrCamera.UpdatePosition(capturePosition);
-	scrCamera.UpdateCameraUBO();
 
 	static float frameRate=1.0f;
 	if(vrFrame.DeltaSeconds>0.0f)
@@ -477,6 +476,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		avsGeometryTarget.configure(&resourceCreator);
 		mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
    }
+   //Build Video Cubemap
    {
 	   scr::Texture::TextureCreateInfo textureCreateInfo =
 				{
@@ -495,7 +495,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 						scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
    		mCubemapTexture->Create(&textureCreateInfo);
-	   GL_CheckErrors("mCubemapTexture:Create");
+	   //GL_CheckErrors("mCubemapTexture:Create");
 
 
    }
@@ -564,8 +564,7 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, 
 #include <algorithm>
 void Application::CopyToCubemaps()
 {
-	//mCubemapTexture
-	// Here we need a compute shader to copy from the video texture into the  cubemap/s.
+	// Here the compute shader to copy from the video texture into the cubemap/s.
 	auto &tc=mCubemapTexture->GetTextureCreateInfo();
 	if(mCubemapTexture->IsValid())
 	{
@@ -574,17 +573,18 @@ void Application::CopyToCubemaps()
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,1,&max_v);
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,2,&max_w);
 		scr::uvec3 size  = {tc.width/8, tc.width/8, 6};
+
 		size.x=std::min(size.x,(uint32_t)max_u);
 		size.y=std::min(size.y,(uint32_t)max_v);
 		size.z=std::min(size.z,(uint32_t)max_w);
+
 		scr::InputCommandCreateInfo inputCommandCreateInfo={};
 		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapEffect, mCubemapComputeShaderResources);
 		cubemapUB.faceSize=mCubemapTexture->GetTextureCreateInfo().width;
 		cubemapUB.sourceOffset={0,0};
 
-
 		//OVR_WARN("CubemapUB: %d %d %d",cubemapUB.sourceOffset.x,cubemapUB.sourceOffset.y,cubemapUB.faceSize);
-//		CubemapUB*ub=(CubemapUB*)mCubemapUB->GetUniformBufferCreateInfo().data;
+        //CubemapUB* ub=(CubemapUB*)mCubemapUB->GetUniformBufferCreateInfo().data;
 		//OVR_WARN("mCubemapUB: %llx %d %d %d",(unsigned long long int)ub,ub->sourceOffset.x,ub->sourceOffset.y,ub->faceSize);
 		mDeviceContext.DispatchCompute(&inputCommand);
 		GL_CheckErrors("Frame: CopyToCubemaps");

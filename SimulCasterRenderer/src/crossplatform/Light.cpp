@@ -12,7 +12,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	:m_CI(*pLightCreateInfo)
 {
 	//m_LightData.resize(s_MaxLights);
-	if (s_UninitialisedUB)
+	if (false)//s_UninitialisedUB)
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 2;

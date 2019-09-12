@@ -10,7 +10,7 @@ bool Transform::s_UninitialisedUB = true;
 Transform::Transform(TransformCreateInfo* pTransformCreateInfo)
 	:m_CI(*pTransformCreateInfo)
 {
-	if (s_UninitialisedUB)
+	if (false)//s_UninitialisedUB)
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 1;

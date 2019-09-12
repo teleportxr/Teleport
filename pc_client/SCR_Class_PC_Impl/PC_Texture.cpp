@@ -76,6 +76,9 @@ void PC_Texture::Destroy()
 void PC_Texture::Bind() const
 {
 }
+void PC_Texture::BindForWrite(uint32_t slot) const
+{
+}
 void PC_Texture::Unbind() const
 {
 }

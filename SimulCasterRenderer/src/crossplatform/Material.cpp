@@ -10,7 +10,7 @@ Material::Material(MaterialCreateInfo* pMaterialCreateInfo)
 	:m_CI(*pMaterialCreateInfo)
 {
 	//Set up UB
-	if (s_UninitialisedUB)
+	if (false)//s_UninitialisedUB)
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 3;

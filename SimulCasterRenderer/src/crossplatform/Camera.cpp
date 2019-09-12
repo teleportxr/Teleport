@@ -9,7 +9,7 @@ bool Camera::s_UninitialisedUB = true;
 Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	:m_CI(*pCameraCreateInfo)
 {
-	if (s_UninitialisedUB)
+	if (false)//s_UninitialisedUB)
 	{
 
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
