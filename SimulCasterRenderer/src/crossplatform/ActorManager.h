@@ -58,15 +58,16 @@ namespace scr
 			m_Actors[actor_uid] = std::make_shared<Actor>(pActorCreateInfo);
 		}
 
-		//Remove actors, if the vb or ib is invalid.
+		//Remove actors, if the vb or ib is invalid
+		// Roderick: this is backwards: vb/ib should only be invalidated if it has no actors referring to it...
 		void RemoveInvalidActors()
 		{
 			std::map<avs::uid, std::shared_ptr<Actor>>::iterator it;
 			for(it = m_Actors.begin(); it != m_Actors.end(); it++)
 			{
-				if(it->second->GetMesh()->GetMeshCreateInfo().vb.get() == nullptr
+			/*	if(it->second->GetMesh()->GetMeshCreateInfo().vb.get() == nullptr
 				 || it->second->GetMesh()->GetMeshCreateInfo().ib.get() == nullptr)
-					m_Actors.erase(it);
+					m_Actors.erase(it);*/
 			}
 		}
 	};

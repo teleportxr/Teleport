@@ -22,11 +22,11 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 }
 
 
-avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
+avs::Result ResourceCreator::Assemble(avs::MeshCreate* meshCreate)
 {
 	using namespace scr;
 
-	if(m_VertexBufferManager->Has(resourceCreate->mesh_uid) ||	m_IndexBufferManager->Has(resourceCreate->mesh_uid))
+	if(m_VertexBufferManager->Has(meshCreate->mesh_uid) ||	m_IndexBufferManager->Has(meshCreate->mesh_uid))
 		return avs::Result::OK;
 
 	if (!m_pRenderPlatform)
@@ -34,126 +34,146 @@ avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 		SCR_CERR("No valid render platform was found.");
         return avs::Result::GeometryDecoder_ClientRendererError;
 	}
-
-	std::shared_ptr<VertexBufferLayout> layout(new VertexBufferLayout);
-	if (resourceCreate->m_Vertices)	{ layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);	}
-
-	if (resourceCreate->m_Normals|| resourceCreate->m_TangentNormals)
-	{
-		layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
-	}
-	if (resourceCreate->m_Tangents|| resourceCreate->m_TangentNormals)
-	{
-		layout->AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
-	}
-	if (resourceCreate->m_UV0s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
-	if (resourceCreate->m_UV1s)		{ layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);	}
-	if (resourceCreate->m_Colors)	{ layout->AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
-	if (resourceCreate->m_Joints)	{ layout->AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
-	if (resourceCreate->m_Weights)	{ layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);	}
-	layout->CalculateStride();
-
-	size_t interleavedVBSize = layout->m_Stride * resourceCreate->m_VertexCount;
-	size_t indicesSize = resourceCreate->m_IndexCount * resourceCreate->m_IndexSize;
-
-	std::unique_ptr<float[]> interleavedVB = std::make_unique<float[]>(interleavedVBSize);
-	std::unique_ptr<uint8_t[]> _indices = std::make_unique<uint8_t[]>(indicesSize);
-	memcpy(_indices.get(), resourceCreate->m_Indices, indicesSize);
-
-	for (size_t i = 0; i < resourceCreate->m_VertexCount; i++)
-	{
-		size_t intraStrideOffset = 0;
-		if(resourceCreate->m_Vertices)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Vertices + i, sizeof(avs::vec3));intraStrideOffset +=3;}
-		if (resourceCreate->m_TangentNormals)
-		{
-			avs::vec3 normal;
-			avs::vec4 tangent;
-			char *nt =(char*)(resourceCreate->m_TangentNormals + (resourceCreate->m_TangentNormalSize*i));
-			// tangentx tangentz
-			if (resourceCreate->m_TangentNormalSize == 8)
-			{
-				Vec4<char> &x8 = *((avs::Vec4<char>*)(nt));
-				tangent.x = x8.x / 127.0f;
-				tangent.y = x8.y / 127.0f;
-				tangent.z = x8.z / 127.0f;
-				tangent.w = x8.w / 127.0f;
-				Vec4<char> &n8=*((avs::Vec4<char>*)(nt+4));
-				normal.x = n8.x / 127.0f;
-				normal.y = n8.y / 127.0f;
-				normal.z = n8.z / 127.0f;
-			}
-			else // 16
-			{
-				Vec4<short> &x8 = *((avs::Vec4<short>*)(nt));
-				tangent.x = x8.x / 32767.0f;
-				tangent.y = x8.y / 32767.0f;
-				tangent.z = x8.z / 32767.0f;
-				tangent.w = x8.w / 32767.0f;
-				Vec4<short> &n8 = *((avs::Vec4<short>*)(nt + 8));
-				normal.x = n8.x / 32767.0f;
-				normal.y = n8.y / 32767.0f;
-				normal.z = n8.z / 32767.0f;
-			}
-			memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset,&normal, sizeof(avs::vec3));
-			intraStrideOffset += 3;
-			memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset,&tangent , sizeof(avs::vec4));
-			intraStrideOffset += 4;
-		}
-		else
-		{
-			if (resourceCreate->m_Normals) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Normals + i, sizeof(avs::vec3));	intraStrideOffset += 3; }
-			if (resourceCreate->m_Tangents) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Tangents + i, sizeof(avs::vec4));	intraStrideOffset += 4; }
-		}
-		if(resourceCreate->m_UV0s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_UV0s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
-		if(resourceCreate->m_UV1s)		{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_UV1s + i, sizeof(avs::vec2));			intraStrideOffset +=2;}
-		if(resourceCreate->m_Colors)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Colors + i, sizeof(avs::vec4));			intraStrideOffset +=4;}
-		if(resourceCreate->m_Joints)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Joints + i, sizeof(avs::vec4));			intraStrideOffset +=4;}
-		if(resourceCreate->m_Weights)	{memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, resourceCreate->m_Weights + i, sizeof(avs::vec4));		intraStrideOffset +=4;}
-	}
-
-	if (interleavedVBSize == 0 || interleavedVB == nullptr || resourceCreate->m_IndexCount == 0 || resourceCreate->m_Indices == nullptr)
-	{
-		SCR_CERR("Unable to construct vertex and index buffers.");
-		return avs::Result::GeometryDecoder_ClientRendererError;
-	}
-
-	std::shared_ptr<VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
-	VertexBuffer::VertexBufferCreateInfo vb_ci;
-	vb_ci.layout = layout;
-	vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
-	vb_ci.vertexCount = resourceCreate->m_VertexCount;
-	vb_ci.size = interleavedVBSize;
-	vb_ci.data = (const void*)interleavedVB.get();
-	vb->Create(&vb_ci);
-	
-	std::shared_ptr<IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
-	IndexBuffer::IndexBufferCreateInfo ib_ci;
-	ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
-	ib_ci.indexCount = resourceCreate->m_IndexCount;
-	ib_ci.stride = resourceCreate->m_IndexSize;
-	ib_ci.data = _indices.get();
-	ib->Create(&ib_ci);
-
-	m_VertexBufferManager->Add(resourceCreate->mesh_uid, vb, m_PostUseLifetime);
-	m_IndexBufferManager->Add(resourceCreate->mesh_uid, ib, m_PostUseLifetime);
-
 	Mesh::MeshCreateInfo mesh_ci;
-	mesh_ci.vb = vb;
-	mesh_ci.ib = ib;
+	mesh_ci.vb.resize(meshCreate->m_NumElements);
+	mesh_ci.ib.resize(meshCreate->m_NumElements);
+
+	for (size_t i = 0; i < meshCreate->m_NumElements; i++)
+	{
+		MeshElementCreate* meshElementCreate = &(meshCreate->m_MeshElementCreate[i]);
+		std::shared_ptr<VertexBufferLayout> layout(new VertexBufferLayout);
+		if (meshElementCreate->m_Vertices) { layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT); }
+
+		if (meshElementCreate->m_Normals || meshElementCreate->m_TangentNormals)
+		{
+			layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
+		}
+		if (meshElementCreate->m_Tangents || meshElementCreate->m_TangentNormals)
+		{
+			layout->AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+		}
+		if (meshElementCreate->m_UV0s)
+		{
+			layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);
+		}
+		if (meshElementCreate->m_UV1s)
+		{
+			layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);
+		}
+		if (meshElementCreate->m_Colors)
+		{
+			layout->AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+		}
+		if (meshElementCreate->m_Joints)
+		{
+			layout->AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+		}
+		if (meshElementCreate->m_Weights)
+		{
+			layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+		}
+		layout->CalculateStride();
+
+		size_t interleavedVBSize = layout->m_Stride * meshElementCreate->m_VertexCount;
+		size_t indicesSize = meshElementCreate->m_IndexCount * meshElementCreate->m_IndexSize;
+
+		std::unique_ptr<float[]> interleavedVB = std::make_unique<float[]>(interleavedVBSize);
+		std::unique_ptr<uint8_t[]> _indices = std::make_unique<uint8_t[]>(indicesSize);
+		memcpy(_indices.get(), meshElementCreate->m_Indices, indicesSize);
+		
+		for (size_t i = 0; i < meshElementCreate->m_VertexCount; i++)
+		{
+			size_t intraStrideOffset = 0;
+			if (meshElementCreate->m_Vertices)
+			{
+				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Vertices + i, sizeof(avs::vec3)); intraStrideOffset += 3;
+			}
+			if (meshElementCreate->m_TangentNormals)
+			{
+				avs::vec3 normal;
+				avs::vec4 tangent;
+				char* nt = (char*)(meshElementCreate->m_TangentNormals + (meshElementCreate->m_TangentNormalSize * i));
+				// tangentx tangentz
+				if (meshElementCreate->m_TangentNormalSize == 8)
+				{
+					Vec4<char>& x8 = *((avs::Vec4<char>*)(nt));
+					tangent.x = x8.x / 127.0f;
+					tangent.y = x8.y / 127.0f;
+					tangent.z = x8.z / 127.0f;
+					tangent.w = x8.w / 127.0f;
+					Vec4<char>& n8 = *((avs::Vec4<char>*)(nt + 4));
+					normal.x = n8.x / 127.0f;
+					normal.y = n8.y / 127.0f;
+					normal.z = n8.z / 127.0f;
+				}
+				else // 16
+				{
+					Vec4<short>& x8 = *((avs::Vec4<short>*)(nt));
+					tangent.x = x8.x / 32767.0f;
+					tangent.y = x8.y / 32767.0f;
+					tangent.z = x8.z / 32767.0f;
+					tangent.w = x8.w / 32767.0f;
+					Vec4<short>& n8 = *((avs::Vec4<short>*)(nt + 8));
+					normal.x = n8.x / 32767.0f;
+					normal.y = n8.y / 32767.0f;
+					normal.z = n8.z / 32767.0f;
+				}
+				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, &normal, sizeof(avs::vec3));
+				intraStrideOffset += 3;
+				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, &tangent, sizeof(avs::vec4));
+				intraStrideOffset += 4;
+			}
+			else
+			{
+				if (meshElementCreate->m_Normals)
+				{
+					memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Normals + i, sizeof(avs::vec3));
+					intraStrideOffset += 3;
+				}
+				if (meshElementCreate->m_Tangents)
+				{
+					memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Tangents + i, sizeof(avs::vec4));
+					intraStrideOffset += 4;
+				}
+			}
+			if (meshElementCreate->m_UV0s) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_UV0s + i, sizeof(avs::vec2));			intraStrideOffset += 2; }
+			if (meshElementCreate->m_UV1s) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_UV1s + i, sizeof(avs::vec2));			intraStrideOffset += 2; }
+			if (meshElementCreate->m_Colors) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Colors + i, sizeof(avs::vec4));			intraStrideOffset += 4; }
+			if (meshElementCreate->m_Joints) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Joints + i, sizeof(avs::vec4));			intraStrideOffset += 4; }
+			if (meshElementCreate->m_Weights) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Weights + i, sizeof(avs::vec4));		intraStrideOffset += 4; }
+		}
+
+		if (interleavedVBSize == 0 || interleavedVB == nullptr || meshElementCreate->m_IndexCount == 0 || meshElementCreate->m_Indices == nullptr)
+		{
+			SCR_CERR("Unable to construct vertex and index buffers.");
+			return avs::Result::GeometryDecoder_ClientRendererError;
+		}
+
+		std::shared_ptr<VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
+		VertexBuffer::VertexBufferCreateInfo vb_ci;
+		vb_ci.layout = layout;
+		vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
+		vb_ci.vertexCount = meshElementCreate->m_VertexCount;
+		vb_ci.size = interleavedVBSize;
+		vb_ci.data = (const void*)interleavedVB.get();
+		vb->Create(&vb_ci);
+
+		std::shared_ptr<IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
+		IndexBuffer::IndexBufferCreateInfo ib_ci;
+		ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
+		ib_ci.indexCount = meshElementCreate->m_IndexCount;
+		ib_ci.stride = meshElementCreate->m_IndexSize;
+		ib_ci.data = _indices.get();
+		ib->Create(&ib_ci);
+
+		m_VertexBufferManager->Add(meshElementCreate->vb_uid, vb, m_PostUseLifetime);
+		m_IndexBufferManager->Add(meshElementCreate->ib_uid, ib, m_PostUseLifetime);
+
+		mesh_ci.vb[i] = vb;
+		mesh_ci.ib[i] = ib;
+	}
 	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
-	m_pActorManager->AddMesh(resourceCreate->mesh_uid, mesh);
-
-
-	resourceCreate->m_Vertices = nullptr;
-	resourceCreate->m_Normals = nullptr;
-	resourceCreate->m_Tangents = nullptr;
-	resourceCreate->m_UV0s = nullptr;
-	resourceCreate->m_UV1s = nullptr;
-	resourceCreate->m_Colors = nullptr;
-	resourceCreate->m_Joints = nullptr;
-	resourceCreate->m_Weights = nullptr;
-	resourceCreate->m_Indices = nullptr;
-
+	m_pActorManager->AddMesh(meshCreate->mesh_uid, mesh);
     return avs::Result::OK;
 }
 

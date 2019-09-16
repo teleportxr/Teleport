@@ -336,7 +336,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->Unapply(deviceContext);
 
 
-				renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
 			}
 		}
 		RenderLocalActors(deviceContext);
@@ -344,6 +343,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
 
+		if(ti)
+			renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
 	}
 	{
 		auto& textures = resourceCreator.GetTextureManager()->GetCache();
@@ -414,7 +415,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	avs::Transform transform=decoder[0].getCameraTransform();
 	vec3 pos = (const float*)& transform.position;
 	camera.SetPosition(pos);
-	//camera.SetOrientationAsQuaternion((const float*)&transform.rotation);
+
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
 	for (auto& actor : resourceManagers.mActorManager.m_Actors)
@@ -431,64 +432,65 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		std::shared_ptr<scr::Transform> transform = actor.second->GetTransform();
 		if (!transform)
 			continue;
-		const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb.get());
-		const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(mesh->GetMeshCreateInfo().ib.get());
-
-		const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
-
-		const scr::Material::MaterialCreateInfo& m = materials[0]->GetMaterialCreateInfoConst();
-
-		if (!layout)
+		size_t element = 0;
+		for (const std::shared_ptr<scr::Material>& m : materials)
 		{
-			simul::crossplatform::LayoutDesc desc[] =
+			const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb[element].get());
+			const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(mesh->GetMeshCreateInfo().ib[element].get());
+
+			const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
+			if (!layout)
 			{
-				{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-				{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
-				{ "TANGENT", 0, crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
-				{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
-				{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
-			};
-			layout = renderPlatform->CreateLayout(
-				sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
-				, desc);
+				simul::crossplatform::LayoutDesc desc[] =
+				{
+					{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
+					{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
+					{ "TANGENT", 0, crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
+					{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
+					{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
+				};
+				layout = renderPlatform->CreateLayout(
+					sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
+					, desc);
+			}
+			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+			mat4 model;
+			model = ((const float*) & (transform->GetTransformMatrix()));
+			mat4::mul(cameraConstants.worldViewProj, *((mat4*)& deviceContext.viewStruct.viewProj), model);
+			cameraConstants.world = model;
+			cameraConstants.viewPosition = vec3(0, 0, 0);
+
+			scr::Material& mat = *m;
+			{
+				auto& mcr = mat.GetMaterialCreateInfo();
+				const scr::Material::MaterialData& md = mat.GetMaterialData();
+				memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
+				auto* d = ((pc_client::PC_Texture*) & (*mcr.diffuse.texture));
+				auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
+				auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
+
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : dummyDiffuse);
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : dummyNormal);
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() : dummyCombined);
+			}
+
+			pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
+			pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+			pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
+			renderPlatform->SetLayout(deviceContext, layout);
+			renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
+			renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
+			renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
+			renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
+			layout->Unapply(deviceContext);
+			pbrEffect->Unapply(deviceContext);
+
+			float heightOffset = -80.0F;
+			scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
+			scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
+			scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix;// *ic_mmm.pTransform->GetTransformMatrix();
+			element++;
 		}
-		cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-		mat4 model;
-		model=((const float*)& (transform->GetTransformMatrix()));
-		mat4::mul(cameraConstants.worldViewProj ,*((mat4*)&deviceContext.viewStruct.viewProj), model);
-		cameraConstants.world = model;
-		cameraConstants.viewPosition = vec3(0,0,0);
-
-		scr::Material &mat = *materials[0];
-		{
-			auto& mcr = mat.GetMaterialCreateInfo();
-			const scr::Material::MaterialData& md = mat.GetMaterialData();
-			memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
-			auto* d = ((pc_client::PC_Texture*) & (*mcr.diffuse.texture));
-			auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
-			auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
-
-
-			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("diffuseTexture"),	d?d->GetSimulTexture():dummyDiffuse);
-			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("normalTexture"),	n?n->GetSimulTexture():dummyNormal);
-			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("combinedTexture"),c?c->GetSimulTexture():dummyCombined);
-		}
-
-		pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
-		pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-		pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
- 		renderPlatform->SetLayout(deviceContext, layout);
-		renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
-		renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
-		renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
-		renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
-		layout->Unapply(deviceContext);
-		pbrEffect->Unapply(deviceContext);
-
-		float heightOffset = -80.0F;
-		scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
-		scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
-		scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix;// *ic_mmm.pTransform->GetTransformMatrix();
 	}
 }
 void ClientRenderer::InvalidateDeviceObjects()

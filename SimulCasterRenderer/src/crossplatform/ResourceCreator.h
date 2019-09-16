@@ -90,7 +90,7 @@ public:
 
 private:
 	// Inherited via GeometryTargetBackendInterface
-	avs::Result Assemble(avs::ResourceCreate *) override;
+	avs::Result Assemble(avs::MeshCreate*) override;
 
 	//Material and Texture
 	void passTexture(avs::uid texture_uid, const avs::Texture& texture) override;
