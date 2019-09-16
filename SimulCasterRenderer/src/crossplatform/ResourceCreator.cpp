@@ -183,10 +183,9 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 		mesh_ci.vb[i] = vb;
 		mesh_ci.ib[i] = ib;
 	}
-	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
 	if(!m_MeshManager->Has(meshCreate->mesh_uid))
 	{
-		CompleteMesh(meshCreate->mesh_uid, {vb, ib});
+		CompleteMesh(meshCreate->mesh_uid, mesh_ci);
 	}
 
     return avs::Result::OK;
