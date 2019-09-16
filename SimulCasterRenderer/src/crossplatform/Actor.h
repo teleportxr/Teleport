@@ -57,6 +57,7 @@ namespace scr
 		}
 
 	public:
+		Transform();
 		Transform(const TransformCreateInfo& pTransformCreateInfo);
 		Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 translation, quat rotation, vec3 scale);
 

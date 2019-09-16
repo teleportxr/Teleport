@@ -290,13 +290,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		newMaterial->materialInfo.diffuse.texCoordsScalar[2] = tiling;
 		newMaterial->materialInfo.diffuse.texCoordsScalar[3] = tiling;
 
-		newMaterial->materialInfo.diffuse.textureOutputScalar =
-		{
-			material.pbrMetallicRoughness.baseColorFactor.x,
-			material.pbrMetallicRoughness.baseColorFactor.y,
-			material.pbrMetallicRoughness.baseColorFactor.z,
-			material.pbrMetallicRoughness.baseColorFactor.w,
-		};
+		newMaterial->materialInfo.diffuse.textureOutputScalar = material.pbrMetallicRoughness.baseColorFactor;
 	}
 
 	if(material.normalTexture.index != 0)
@@ -320,7 +314,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		newMaterial->materialInfo.normal.texCoordsScalar[2] = tiling;
 		newMaterial->materialInfo.normal.texCoordsScalar[3] = tiling;
 
-		newMaterial->materialInfo.normal.textureOutputScalar = {1, 1, 1, 1};
+		newMaterial->materialInfo.normal.textureOutputScalar = scr::vec4{1, 1, 1, 1};
 	}
 
 	if(material.pbrMetallicRoughness.metallicRoughnessTexture.index != 0)
@@ -344,7 +338,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		newMaterial->materialInfo.combined.texCoordsScalar[2] = tiling;
 		newMaterial->materialInfo.combined.texCoordsScalar[3] = tiling;
 
-		newMaterial->materialInfo.combined.textureOutputScalar = {1, 1, 1, 1};
+		newMaterial->materialInfo.combined.textureOutputScalar = scr::vec4{1, 1, 1, 1};
 	}
 
 	///This needs an actual value.
@@ -390,14 +384,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 
 void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid> &material_uids, avs::Transform &&transform)
 {
-	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>
-		(
-			IncompleteActor
-			{
-				node_uid,
-				{true, false, nullptr, {}, {{m_pRenderPlatform}}} //Does a transform even need a render platform?
-			}
-		);
+	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>();
 
 	std::vector<avs::uid> missingResources;
 

@@ -58,6 +58,9 @@ public:
 	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) override;
 
 	virtual void OnVideoStreamClosed() override;
+
+	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
+	virtual bool OnActorLeftBounds(avs::uid actor_uid) override;
 	/* End SessionCommandInterface */
 
 	/* Begin DecodeEventInterface */
@@ -140,7 +143,7 @@ private:
 	{
 		for(std::map<avs::uid, OVR::ovrSurfaceDef>::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
 		{
-			if(resourceManagers.mActorManager.m_Actors.find(it->first) == resourceManagers.mActorManager.m_Actors.end())
+			if(resourceManagers.mActorManager.GetActorList().find(it->first) == resourceManagers.mActorManager.GetActorList().end())
 			{
 				mOVRActors.erase(it);
 			}

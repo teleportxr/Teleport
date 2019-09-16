@@ -7,6 +7,10 @@ using namespace scr;
 //Transform
 bool Transform::s_UninitialisedUB = true;
 
+Transform::Transform()
+	:Transform(TransformCreateInfo{nullptr}, vec3(), quat(), vec3())
+{}
+
 Transform::Transform(const TransformCreateInfo& pTransformCreateInfo)
 	:Transform(pTransformCreateInfo, vec3(), quat(), vec3())
 {}

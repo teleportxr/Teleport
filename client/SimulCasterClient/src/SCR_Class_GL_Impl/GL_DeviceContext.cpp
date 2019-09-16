@@ -48,7 +48,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             m_Topology = dynamic_cast<const GL_Effect*>(effect)->ToGLTopology(effect->GetEffectPassCreateInfo(effectPassName).topology);
 
             //Transform
-            descriptorSets.push_back(ic_mmt->pTransform->GetDescriptorSet());
+            descriptorSets.push_back(ic_mmt->pTransform.GetDescriptorSet());
 
             break;
         }

@@ -136,9 +136,12 @@ namespace scr
 			return vec4(a * x, a * y, a * z, a * w);
 		}
 
-		vec4 operator=(const avs::vec4 &vec)
+		void operator=(const avs::vec4 &vec)
 		{
-			return {vec.x, vec.y, vec.z, vec.w};
+			x = vec.x;
+			y = vec.y;
+			z = vec.z;
+			w = vec.w;
 		}
 	};
 	struct quat
