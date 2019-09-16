@@ -17,7 +17,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 
     //Default Init
     dynamic_cast<GL_FrameBuffer *>(pInputCommand->pFBs)[0].BeginFrame();
-    descriptorSets.push_back(pInputCommand->pCamera->GetDescriptorSet());
+    descriptorSets.push_back(pInputCommand->pCamera->GetShaderResource());
 
     //Switch for types
     switch (pInputCommand->type)
@@ -48,7 +48,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             m_Topology = dynamic_cast<const GL_Effect*>(effect)->ToGLTopology(effect->GetEffectPassCreateInfo(effectPassName).topology);
 
             //Transform
-            descriptorSets.push_back(ic_mmt->pTransform->GetDescriptorSet());
+            descriptorSets.push_back(ic_mmt->pTransform.GetDescriptorSet());
 
             break;
         }

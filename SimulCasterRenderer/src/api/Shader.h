@@ -25,9 +25,9 @@ namespace scr
 		};
 		struct ShaderCreateInfo
 		{
-			const char* sourceCode;
-			const char* filepath;
-			const char* entryPoint;
+			std::string sourceCode;
+			std::string filepath;
+			std::string entryPoint;
 			Shader::Stage stage;
 		};
 	
@@ -38,9 +38,9 @@ namespace scr
 		Shader(scr::RenderPlatform *r) :APIObject(r) {}
 		virtual ~Shader()
 		{
-			m_CI.sourceCode = nullptr;
-			m_CI.filepath = nullptr;
-			m_CI.entryPoint = nullptr;
+			m_CI.sourceCode.clear();
+			m_CI.filepath.clear();
+			m_CI.entryPoint.clear();
 			m_CI.stage = Stage::SHADER_STAGE_UNKNOWN;
 		}
 

@@ -12,7 +12,7 @@ layout(location = 6) in vec4 a_Joint;
 layout(location = 7) in vec4 a_Weights;
 
 //From Application SR
-layout(std140, binding = 0) uniform CameraUB
+layout(std140, binding = 0) uniform u_CameraData
 {
     mat4 u_ProjectionMatrix;
     mat4 u_ViewMatrix;
@@ -21,10 +21,10 @@ layout(std140, binding = 0) uniform CameraUB
     float _pad;
 }cam;
 
-layout(std140, binding = 1) uniform TransformUB
+/*layout(std140, binding = 1) uniform TransformUB
 {
     mat4 u_ModelMatrix;
-}model;
+}model;*/
 
 //To Fragment Varying
 layout(location = 0)  out vec3 v_Position;

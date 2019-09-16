@@ -50,12 +50,16 @@ namespace scr
 			m_Scale.x = transform.scale.x;
 			m_Scale.y = transform.scale.y;
 			m_Scale.z = transform.scale.z;
+
+			m_TransformData.m_ModelMatrix = mat4::Translation(m_Translation) * mat4::Rotation(m_Rotation) * mat4::Scale(m_Scale);
 			
 			return *this;
 		}
 
 	public:
-		Transform(TransformCreateInfo* pTransformCreateInfo);
+		Transform();
+		Transform(const TransformCreateInfo& pTransformCreateInfo);
+		Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 translation, quat rotation, vec3 scale);
 
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
@@ -72,20 +76,21 @@ namespace scr
 			bool animatedMesh;	//Will the mesh deform?
 			std::shared_ptr<Mesh> mesh;
 			std::vector<std::shared_ptr<Material>> materials;
-			std::shared_ptr<Transform> transform;
+			Transform transform;
 		};
+
+		bool isVisible = true;
 
 	private:
 		ActorCreateInfo m_CI;
 
 	public:
-		Actor(ActorCreateInfo* pActorCreateInfo);
+		Actor(const ActorCreateInfo &pActorCreateInfo);
 
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
-		bool IsComplete() const;
 
 		inline std::shared_ptr<Mesh> GetMesh() { return m_CI.mesh; }
 		inline const std::vector<std::shared_ptr<Material>> GetMaterials() const { return m_CI.materials; }
-		inline std::shared_ptr<Transform> GetTransform() { return m_CI.transform; }
+		inline Transform& GetTransform() { return m_CI.transform; }
 	};
 }

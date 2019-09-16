@@ -12,9 +12,9 @@ void GL_Texture::SetExternalGlTexture(GLuint tex_id)
     m_Texture.Width=m_CI.width;
 }
 
-void GL_Texture::Create(TextureCreateInfo* pTextureCreateInfo)
+void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 {
-    m_CI = *pTextureCreateInfo;
+    m_CI = pTextureCreateInfo;
 
     assert(TypeToGLTarget(m_CI.type) != 0);
     assert(ToGLFormat(m_CI.format) != 0);
@@ -25,7 +25,7 @@ void GL_Texture::Create(TextureCreateInfo* pTextureCreateInfo)
     m_Texture.Width = m_CI.width;
     m_Texture.Height = m_CI.height;
 
-    if(pTextureCreateInfo->externalResource)
+    if(pTextureCreateInfo.externalResource)
         return;
     glGenTextures(1, &m_Texture.texture);
     glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
