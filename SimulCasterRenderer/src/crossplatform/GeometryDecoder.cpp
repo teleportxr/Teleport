@@ -201,20 +201,20 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 				}
 					continue;
 				case AttributeSemantic::NORMAL:
-					//resourceCreate.m_Normals(mesh_uid, 0, (int)accessor.count, (const avs::vec3*)buffer.data);
+					resourceCreate.m_Normals = (const avs::vec3*)(data);
+					assert(accessor.count / 8 == vertexCount);
 					continue;
 				case AttributeSemantic::TANGENT:
-					//target->ensureTangents(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
+					resourceCreate.m_Tangents = (const avs::vec4*)(data);
+					assert(accessor.count / 8 == vertexCount);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
 					resourceCreate.m_UV0s = (const avs::vec2*)(data);
 					assert(accessor.count == vertexCount);
-					//target->ensureTexCoord0(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, );
 					continue;
 				case AttributeSemantic::TEXCOORD_1:
 					resourceCreate.m_UV1s = (const avs::vec2*)(data);
 					assert(accessor.count == vertexCount);
-					//target->ensureTexCoord1(mesh_uid, 0, (int)accessor.count, bufferView.byteOffset, (const avs::vec2*)buffer.data);
 					continue;;
 				case AttributeSemantic::COLOR_0:
 					//target->ensureColors(mesh_uid, 0, (int)accessor.count, (const avs::vec4*)buffer.data);

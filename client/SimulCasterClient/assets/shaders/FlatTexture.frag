@@ -9,7 +9,7 @@ layout(binding = 11) uniform sampler2D u_Normal;
 layout(binding = 12) uniform sampler2D u_Combined;
 
 //Layout conformant to GLSL std140
-layout(std140/*, binding = 3*/) uniform u_MaterialData
+layout(std140, binding = 3) uniform u_MaterialData
 {
     vec4 diffuseOutputScalar;
     vec2 diffuseTexCoordsScalar_R;
@@ -28,11 +28,15 @@ layout(std140/*, binding = 3*/) uniform u_MaterialData
     vec2 combinedTexCoordsScalar_G;
     vec2 combinedTexCoordsScalar_B;
     vec2 combinedTexCoordsScalar_A;
+
+    vec3 u_SpecularColour;
+    float _pad;
 } u_MD;
 
 //From Vertex Varying
 layout(location = 7)  in vec2 v_UV0;
 layout(location = 8)  in vec2 v_UV1;
+layout(location = 9)  in vec3 v_CameraPosition;
 
 void main()
 {

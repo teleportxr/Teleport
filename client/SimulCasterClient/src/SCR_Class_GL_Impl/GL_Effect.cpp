@@ -41,7 +41,8 @@ void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<Shader
 		//Compile compute shader
 		const auto &sc=pipeline.m_Shaders[0]->GetShaderCreateInfo();
 		GLuint id = glCreateShader(GL_COMPUTE_SHADER);
-		glShaderSource(id, 1, &sc.sourceCode, nullptr);
+		const char* source = sc.sourceCode.c_str();
+		glShaderSource(id, 1, &source, nullptr);
 		glCompileShader(id);
 		GLint isCompiled = 0;
 		glGetShaderiv(id, GL_COMPILE_STATUS, &isCompiled);
@@ -95,8 +96,27 @@ void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<Shader
             uniformParms.push_back({name, type});
         }
     }
+    const char* vertSrc = nullptr;
+    const char* fragSrc = nullptr;
+    const size_t maxStringLiteralSize = 4096;
+    bool vertHeapAlloc = vertex->GetShaderCreateInfo().sourceCode.size() > maxStringLiteralSize;
+    bool fragHeapAlloc = fragment->GetShaderCreateInfo().sourceCode.size() > maxStringLiteralSize;
 
-    m_Program = GlProgram::Build(vertex->GetShaderCreateInfo().sourceCode, fragment->GetShaderCreateInfo().sourceCode, uniformParms.data(), (int)uniformParms.size(), OPENGLES_310);
+    if(vertHeapAlloc)
+        vertSrc = new char[vertex->GetShaderCreateInfo().sourceCode.size()];
+    if(fragHeapAlloc)
+        fragSrc = new char[fragment->GetShaderCreateInfo().sourceCode.size()];
+
+    vertSrc = vertex->GetShaderCreateInfo().sourceCode.c_str();
+    fragSrc = fragment->GetShaderCreateInfo().sourceCode.c_str();
+
+    m_Program = GlProgram::Build(vertSrc, fragSrc, uniformParms.data(), (int)uniformParms.size(), OPENGLES_310);
+
+    if(vertHeapAlloc)
+        delete[] vertSrc;
+    if(fragHeapAlloc)
+        delete[] fragSrc;
+
 }
 
 void GL_Effect::Bind(const char* effectPassName) const

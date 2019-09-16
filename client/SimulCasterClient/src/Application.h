@@ -111,7 +111,7 @@ private:
 	OVR::SurfaceTexture* mVideoSurfaceTexture;
     std::shared_ptr<scr::Texture> mVideoTexture;
 	std::shared_ptr<scr::Texture> mCubemapTexture;
-    std::shared_ptr<scr::UniformBuffer> mCubemapUB ;
+    std::shared_ptr<scr::UniformBuffer> mCubemapUB;
     std::vector<scr::ShaderResource> mCubemapComputeShaderResources;
 	std::shared_ptr<scr::Effect> mCopyCubemapEffect;
 	std::string CopyCubemapSrc;
@@ -130,14 +130,7 @@ private:
 
 	//Clientside Renderering Objects
 	scr::vec3 capturePosition;
-	scr::Camera::CameraCreateInfo cci = {
-			(scr::RenderPlatform*)(&renderPlatform),
-			scr::Camera::ProjectionType::PERSPECTIVE,
-			scr::quat(1.0f, 0.0f, 0.0f, 0.0f),
-			capturePosition
-	};
-	scr::Camera scrCamera = scr::Camera(&cci);
-
+	std::shared_ptr<scr::Camera> scrCamera;
 
 	scc::GL_DeviceContext mDeviceContext;
 	scc::GL_Effect mEffect;

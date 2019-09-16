@@ -28,13 +28,13 @@ struct Light //Layout conformant to GLSL std140
     vec3 u_Direction;
     float u_SpotAngle;
 };
-layout(std140, binding = 2) uniform LightData
+layout(std140, binding = 2) uniform u_LightData
 {
     Light[MaxLights] u_Lights;
 };
 
 //Material
-layout(std140, binding = 3) uniform MaterialData //Layout conformant to GLSL std140
+layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL std140
 {
     vec4 u_DiffuseOutputScalar;
     vec2 u_DiffuseTexCoordsScalar_R;
@@ -63,6 +63,7 @@ layout(binding = 12) uniform sampler2D u_Combined;
 layout(binding = 13) uniform samplerCube u_DiffuseCubemap;
 layout(binding = 14) uniform samplerCube u_SpecularCubemap;
 
+//Helper Functions
 float saturate(float _val)
 {
     return min(1.0, max(0.0, _val));
@@ -76,6 +77,16 @@ vec3 GetEnvironmentDiffuse(vec3 dir)
 vec3 GetEnvironmentSpecular(vec3 dir, float lod)
 {
     return textureLod(u_DiffuseCubemap, dir, lod).rgb;
+}
+
+vec3 EnvironmentBRDFApprox(vec3 specularColour, float roughness, float n_v)
+{
+    const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+    const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+    vec4 r = roughness * c0 + c1;
+    float a004 = min(r.x * r.x, exp2(-9.28 * n_v)) * r.x + r.y;
+    vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
+    return specularColour * AB.x + AB.y;
 }
 
 vec4 GetDiffuse()
@@ -114,16 +125,6 @@ float GetAO()
 float GetSpecular()
 {
     return u_CombinedOutputScalar.a * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_A).a;
-}
-
-vec3 BRDFApprox(vec3 specularColour, float roughness, float n_v)
-{
-    const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022);
-    const vec4 c1 = vec4(1, 0.0425, 1.04, -0.04);
-    vec4 r = roughness * c0 + c1;
-    float a004 = min(r.x * r.x, exp2(-9.28 * n_v)) * r.x + r.y;
-    vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
-    return specularColour * AB.x + AB.y;
 }
 
 //Constants
@@ -194,7 +195,7 @@ vec3 BRDF(vec3 N, vec3 Wo, vec3 Wi, vec3 H, vec3 lightColour) //Return a RGB val
     Specular += environmentSpecularColour * environment;
 
     float metallic = GetMetallic();
-    vec3 R0 = mix(diffuse, u_SpecularColour, metallic); //Mix R0 based on metallic look up.
+    vec3 R0 = mix(Diffuse, u_SpecularColour, metallic); //Mix R0 based on metallic look up.
     float D = D(N, H, roughnessL);
     vec3 F = F(R0, H, Wi);
     float G = G(N, Wi, Wo, roughnessL, true);
@@ -202,7 +203,7 @@ vec3 BRDF(vec3 N, vec3 Wo, vec3 Wi, vec3 H, vec3 lightColour) //Return a RGB val
 
     //Ambient Occlusion
     float ao = GetAO();
-    specular *= saturate(pow(dot(N, Wo) + ao, roughnessE) - 1.0 + ao);
+    Specular *= saturate(pow(dot(N, Wo) + ao, roughnessE) - 1.0 + ao);
 
     vec3 kS = F;
     vec3 kD = vec3(1.0, 1.0, 1.0) - kS;
@@ -241,5 +242,6 @@ void main()
 
         Lo += Le + BRDF(N, Wo, Wi, H, radiance);
     }
-    gl_FragColor = Lo; //Gamma Correction?
+    //gl_FragColor = vec4(Lo, 1.0); //Gamma Correction?
+    gl_FragColor = GetDiffuse() + 0.01 * vec4(GetNormals(), 1) + 0.01 * vec4(GetMetallic(), 0, 0, 1) + 0.01 * vec4(GetEnvironmentDiffuse(Wo), 1) + 0.01 * vec4(GetEnvironmentSpecular(Wo, 0.0), 1);
 }

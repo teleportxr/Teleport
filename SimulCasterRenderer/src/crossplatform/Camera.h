@@ -55,7 +55,7 @@ namespace scr
 		void UpdateProjection(float horizontalFOV, float aspectRatio, float zNear, float zFar);
 		void UpdateProjection(float left, float right, float bottom, float top, float near, float far);
 
-		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
+		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 
 		inline const vec3& GetPosition() const { return m_CameraData.m_Position; }
 	};
