@@ -31,9 +31,10 @@ namespace scr
 	{
 		std::shared_ptr<Mesh>			pMesh;
 		std::shared_ptr<Material>		pMaterial;
-		std::shared_ptr<Transform>		pTransform;
+		Transform						&pTransform;
 
 		InputCommand_Mesh_Material_Transform(InputCommandCreateInfo* pInputCommandCreateInfo, Actor* pActor)
+			:pTransform(pActor->GetTransform())
 		{
 			type = INPUT_COMMAND_MESH_MATERIAL_TRANSFORM;
 			pFBs = pInputCommandCreateInfo->pFBs;
@@ -42,7 +43,6 @@ namespace scr
 
 			pMesh = pActor->GetMesh();
 			pMaterial = pActor->GetMaterials()[0];
-			pTransform = pActor->GetTransform();
 		};
 	};
 	//struct MultiMesh_Material_TransformInputCommand : public InputCommand {};

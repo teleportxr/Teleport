@@ -55,6 +55,8 @@ namespace scr
 			:x(0), y(0), z(0) {};
 		vec3(float x, float y, float z)
 			:x(x), y(y), z(z) {};
+		vec3(const avs::vec3 &vec)
+			:x(vec.x), y(vec.y), z(vec.z) {}
 
 		inline float Length()
 		{
@@ -88,6 +90,11 @@ namespace scr
 		{
 			return vec3(a * x, a * y, a * z);
 		}
+
+		vec3 operator=(const avs::vec3 &vec)
+		{
+			return {vec.x, vec.y, vec.z};
+		}
 	};
 	struct vec4
 	{
@@ -97,6 +104,8 @@ namespace scr
 			:x(0), y(0), z(0), w(0) {};
 		vec4(float x, float y, float z, float w)
 			:x(x), y(y), z(z), w(w) {};
+		vec4(const avs::vec4 &vec)
+			:x(vec.x), y(vec.y), z(vec.z), w(vec.w) {}
 
 		inline float Length()
 		{
@@ -126,6 +135,11 @@ namespace scr
 		{
 			return vec4(a * x, a * y, a * z, a * w);
 		}
+
+		vec4 operator=(const avs::vec4 &vec)
+		{
+			return {vec.x, vec.y, vec.z, vec.w};
+		}
 	};
 	struct quat
 	{
@@ -146,6 +160,8 @@ namespace scr
 			k = scaledAxis.z;
 			Normalise();
 		}
+		quat(avs::vec4 vec)
+			:s(vec.w), i(vec.x), j(vec.y), k(vec.z) {}
 
 		quat Conjugate()
 		{
@@ -187,6 +203,11 @@ namespace scr
 				(+(s * other.y) + (k * other.x) - (i * other.z)),
 				(+(s * other.z) + (i * other.y) - (j * other.x))
 			);
+		}
+
+		quat operator=(const vec4 &vec)
+		{
+			return {vec.w, vec.x, vec.y, vec.z};
 		}
 	};
 	struct mat4

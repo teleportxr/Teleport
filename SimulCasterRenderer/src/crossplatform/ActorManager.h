@@ -12,62 +12,103 @@ namespace scr
 {
 	class ActorManager
 	{
+	public:
+		struct LiveActor
+		{
+			std::shared_ptr<Actor> actor = nullptr;
+			uint32_t timeSinceLastVisible = 0; //Miliseconds the actor has been invisible.
+		};
+
+		uint32_t actorLifetime = 2000; //Milliseconds the manager waits before removing invisible actors.
+
+		void CreateActor(avs::uid actor_uid, const Actor::ActorCreateInfo& pActorCreateInfo)
+		{
+			m_Actors[actor_uid] = {std::make_shared<Actor>(pActorCreateInfo), 0};
+		}
+
+		void RemoveActor(avs::uid actor_uid)
+		{
+			m_Actors.erase(actor_uid);
+		}
+
+		bool HasActor(avs::uid actor_uid) const
+		{
+			return m_Actors.find(actor_uid) != m_Actors.end();
+		}
+
+		std::shared_ptr<Actor> GetActor(avs::uid actor_uid) const
+		{
+			if(HasActor(actor_uid))
+			{
+				return m_Actors.at(actor_uid).actor;
+			}
+
+			return nullptr;
+		}
+
+		//Causes the actor to become visible.
+		bool ShowActor(avs::uid actor_uid)
+		{
+			if(HasActor(actor_uid))
+			{
+				m_Actors[actor_uid].actor->isVisible = true;
+				return true;
+			}
+
+			return false;
+		}
+
+		//Causes the actor to become invisible.
+		bool HideActor(avs::uid actor_uid)
+		{
+			if(HasActor(actor_uid))
+			{
+				m_Actors[actor_uid].actor->isVisible = false;
+				return true;
+			}
+
+			return false;
+		}
+
+		//Tick the actor manager along, and remove any actors that have been invisible for too long.
+		void Update(uint32_t deltaTimestamp)
+		{
+			for(auto it = m_Actors.begin(); it != m_Actors.end();)
+			{
+				if(it->second.actor->isVisible)
+				{
+					//If the actor is visible, then reset their timer and continue.
+					it->second.timeSinceLastVisible = 0;
+					it++;
+				}
+				else
+				{
+					it->second.timeSinceLastVisible += deltaTimestamp;
+
+					if(it->second.timeSinceLastVisible >= actorLifetime)
+					{
+						//Erase an actor if they have been invisible for too long.
+						it = m_Actors.erase(it);
+					}
+					else
+					{
+						it++;
+					}
+				}
+			}
+		}
+
+		//Clear actor manager of all actors.
+		void Clear()
+		{
+			m_Actors.clear();
+		}
+
+		const std::map<avs::uid, LiveActor>& GetActorList()
+		{
+			return m_Actors;
+		}
 	private:
-		std::map<avs::uid, std::shared_ptr<Mesh>> m_Meshes;
-		std::map<avs::uid, std::shared_ptr<Material>> m_Materials;
-		std::map<avs::uid, std::shared_ptr<Transform>> m_Transforms;
-
-	public:
-		std::map<avs::uid, std::shared_ptr<Actor>> m_Actors;
-
-	public:
-		inline void AddMesh(avs::uid mesh_uid, std::shared_ptr<Mesh>& mesh) { m_Meshes[mesh_uid] = mesh; }
-		inline void AddMaterial(avs::uid material_uid, std::shared_ptr<Material>& material) { m_Materials[material_uid] = material; }
-		inline void AddTransform(avs::uid transform_uid, std::shared_ptr<Transform>& transform) { m_Transforms[transform_uid] = transform; }
-		
-		inline const std::shared_ptr<Mesh> GetMesh(avs::uid uid) const
-		{
-			if(m_Meshes.find(uid) != m_Meshes.end())
-			{
-				return m_Meshes.at(uid);
-			}
-			else
-				return nullptr;
-		}
-		inline const std::shared_ptr<Material> GetMaterial(avs::uid uid) const
-		{
-			if(m_Materials.find(uid) != m_Materials.end())
-			{
-				return m_Materials.at(uid);
-			}
-			else
-				return nullptr;
-		}
-		inline const std::shared_ptr<Transform> GetTransform(avs::uid uid) const
-		{
-			if(m_Transforms.find(uid) != m_Transforms.end())
-			{
-				return m_Transforms.at(uid);
-			}
-			else
-				return nullptr;
-		}
-
-		void CreateActor(avs::uid actor_uid, Actor::ActorCreateInfo* pActorCreateInfo)
-		{
-			m_Actors[actor_uid] = std::make_shared<Actor>(pActorCreateInfo);
-		}
-
-		//Remove actors, if the vb or ib is invalid.
-		void RemoveInvalidActors()
-		{
-			std::map<avs::uid, std::shared_ptr<Actor>>::iterator it;
-			for(it = m_Actors.begin(); it != m_Actors.end(); it++)
-			{
-				if(it->second->GetMesh()->GetMeshCreateInfo().vb.get() == nullptr
-				 || it->second->GetMesh()->GetMeshCreateInfo().ib.get() == nullptr)
-					m_Actors.erase(it);
-			}
-		}
+		std::map<avs::uid, LiveActor> m_Actors;
 	};
 }

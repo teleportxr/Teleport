@@ -21,6 +21,17 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 	m_pRenderPlatform = r;
 }
 
+std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
+{
+	std::vector<avs::uid> resourceRequests = std::move(m_ResourceRequests);
+	m_ResourceRequests.clear();
+
+	//Remove duplicates.
+	std::sort(resourceRequests.begin(), resourceRequests.end());
+	resourceRequests.erase(std::unique(resourceRequests.begin(), resourceRequests.end()), resourceRequests.end());
+
+	return resourceRequests;
+}
 
 avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 {
@@ -134,15 +145,13 @@ avs::Result ResourceCreator::Assemble(avs::ResourceCreate *resourceCreate)
 	ib_ci.data = _indices.get();
 	ib->Create(&ib_ci);
 
-	m_VertexBufferManager->Add(resourceCreate->mesh_uid, vb, m_PostUseLifetime);
-	m_IndexBufferManager->Add(resourceCreate->mesh_uid, ib, m_PostUseLifetime);
+	m_VertexBufferManager->Add(resourceCreate->mesh_uid, vb);
+	m_IndexBufferManager->Add(resourceCreate->mesh_uid, ib);
 
-	Mesh::MeshCreateInfo mesh_ci;
-	mesh_ci.vb = vb;
-	mesh_ci.ib = ib;
-	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(&mesh_ci);
-	m_pActorManager->AddMesh(resourceCreate->mesh_uid, mesh);
-
+	if(!m_MeshManager->Has(resourceCreate->mesh_uid))
+	{
+		CompleteMesh(resourceCreate->mesh_uid, {vb, ib});
+	}
 
 	resourceCreate->m_Vertices = nullptr;
 	resourceCreate->m_Normals = nullptr;
@@ -246,20 +255,19 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		texInfo.data = texture.data;
 	}
 
-	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
-	scrTexture->Create(&texInfo);
-	
-	m_TextureManager->Add(texture_uid, scrTexture);
+	CompleteTexture(texture_uid, texInfo);
 }
 
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
-	///Claims textures without ever unclaiming the textures.
-	scr::Material::MaterialCreateInfo materialInfo;
-	materialInfo.diffuse.texture = nullptr;
-	materialInfo.normal.texture = nullptr;
-	materialInfo.combined.texture = nullptr;
+	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
+	std::vector<avs::uid> missingResources;
+	
+	newMaterial->materialInfo.renderPlatform = m_pRenderPlatform;
+	newMaterial->materialInfo.diffuse.texture = nullptr;
+	newMaterial->materialInfo.normal.texture = nullptr;
+	newMaterial->materialInfo.combined.texture = nullptr;
 
 	if(material.pbrMetallicRoughness.baseColorTexture.index != 0)
 	{
@@ -267,27 +275,28 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 		if(diffuseTexture)
 		{
-			materialInfo.diffuse.texture = diffuseTexture;
-
-			scr::vec2 tiling = {material.pbrMetallicRoughness.baseColorTexture.tiling.x, material.pbrMetallicRoughness.baseColorTexture.tiling.y};
-
-			materialInfo.diffuse.texCoordsScalar[0] = tiling;
-			materialInfo.diffuse.texCoordsScalar[1] = tiling;
-			materialInfo.diffuse.texCoordsScalar[2] = tiling;
-			materialInfo.diffuse.texCoordsScalar[3] = tiling;
-
-			materialInfo.diffuse.textureOutputScalar =
-			{
-				material.pbrMetallicRoughness.baseColorFactor.x,
-				material.pbrMetallicRoughness.baseColorFactor.y,
-				material.pbrMetallicRoughness.baseColorFactor.z,
-				material.pbrMetallicRoughness.baseColorFactor.w,
-			};
+			newMaterial->materialInfo.diffuse.texture = diffuseTexture;
 		}
 		else
 		{
-			///REQUEST RESEND OF TEXTURE
+			missingResources.push_back(material.pbrMetallicRoughness.baseColorTexture.index);
+			newMaterial->textureSlots.emplace(material.pbrMetallicRoughness.baseColorTexture.index, newMaterial->materialInfo.diffuse.texture);
 		}
+
+		scr::vec2 tiling = {material.pbrMetallicRoughness.baseColorTexture.tiling.x, material.pbrMetallicRoughness.baseColorTexture.tiling.y};
+
+		newMaterial->materialInfo.diffuse.texCoordsScalar[0] = tiling;
+		newMaterial->materialInfo.diffuse.texCoordsScalar[1] = tiling;
+		newMaterial->materialInfo.diffuse.texCoordsScalar[2] = tiling;
+		newMaterial->materialInfo.diffuse.texCoordsScalar[3] = tiling;
+
+		newMaterial->materialInfo.diffuse.textureOutputScalar =
+		{
+			material.pbrMetallicRoughness.baseColorFactor.x,
+			material.pbrMetallicRoughness.baseColorFactor.y,
+			material.pbrMetallicRoughness.baseColorFactor.z,
+			material.pbrMetallicRoughness.baseColorFactor.w,
+		};
 	}
 
 	if(material.normalTexture.index != 0)
@@ -296,21 +305,22 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 		if(normalTexture)
 		{
-			materialInfo.normal.texture = normalTexture;
-
-			scr::vec2 tiling = {material.normalTexture.tiling.x, material.normalTexture.tiling.y};
-
-			materialInfo.normal.texCoordsScalar[0] = tiling;
-			materialInfo.normal.texCoordsScalar[1] = tiling;
-			materialInfo.normal.texCoordsScalar[2] = tiling;
-			materialInfo.normal.texCoordsScalar[3] = tiling;
-
-			materialInfo.normal.textureOutputScalar = {1, 1, 1, 1};
+			newMaterial->materialInfo.normal.texture = normalTexture;
 		}
 		else
 		{
-			///REQUEST RESEND OF TEXTURE
+			missingResources.push_back(material.normalTexture.index);
+			newMaterial->textureSlots.emplace(material.normalTexture.index, newMaterial->materialInfo.normal.texture);
 		}
+
+		scr::vec2 tiling = {material.normalTexture.tiling.x, material.normalTexture.tiling.y};
+
+		newMaterial->materialInfo.normal.texCoordsScalar[0] = tiling;
+		newMaterial->materialInfo.normal.texCoordsScalar[1] = tiling;
+		newMaterial->materialInfo.normal.texCoordsScalar[2] = tiling;
+		newMaterial->materialInfo.normal.texCoordsScalar[3] = tiling;
+
+		newMaterial->materialInfo.normal.textureOutputScalar = {1, 1, 1, 1};
 	}
 
 	if(material.pbrMetallicRoughness.metallicRoughnessTexture.index != 0)
@@ -319,64 +329,56 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 		if(metallicRoughnessTexture)
 		{
-			materialInfo.combined.texture = metallicRoughnessTexture;
-
-			scr::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
-
-			materialInfo.combined.texCoordsScalar[0] = tiling;
-			materialInfo.combined.texCoordsScalar[1] = tiling;
-			materialInfo.combined.texCoordsScalar[2] = tiling;
-			materialInfo.combined.texCoordsScalar[3] = tiling;
-
-			materialInfo.combined.textureOutputScalar = {1, 1, 1, 1};
+			newMaterial->materialInfo.combined.texture = metallicRoughnessTexture;
 		}
 		else
 		{
-			///REQUEST RESEND OF TEXTURE
+			missingResources.push_back(material.pbrMetallicRoughness.metallicRoughnessTexture.index);
+			newMaterial->textureSlots.emplace(material.pbrMetallicRoughness.metallicRoughnessTexture.index, newMaterial->materialInfo.combined.texture);
 		}
+
+		scr::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
+
+		newMaterial->materialInfo.combined.texCoordsScalar[0] = tiling;
+		newMaterial->materialInfo.combined.texCoordsScalar[1] = tiling;
+		newMaterial->materialInfo.combined.texCoordsScalar[2] = tiling;
+		newMaterial->materialInfo.combined.texCoordsScalar[3] = tiling;
+
+		newMaterial->materialInfo.combined.textureOutputScalar = {1, 1, 1, 1};
 	}
 
 	///This needs an actual value.
-	materialInfo.effect = nullptr;
-	materialInfo.renderPlatform = m_pRenderPlatform;
-	std::shared_ptr<scr::Material> scr_material = std::make_shared<scr::Material>(&materialInfo);
-	m_MaterialManager->Add(material_uid, scr_material);
-	m_pActorManager->AddMaterial(material_uid, scr_material);
+	newMaterial->materialInfo.effect = nullptr;
+
+	if(missingResources.size() == 0)
+	{
+		CompleteMaterial(material_uid, newMaterial->materialInfo);
+	}
+	else
+	{
+		m_ResourceRequests.insert(std::end(m_ResourceRequests), std::begin(missingResources), std::end(missingResources));
+
+		newMaterial->id = material_uid;
+		for(avs::uid uid : missingResources)
+		{
+			m_WaitingForResources[uid].push_back(newMaterial);
+		}
+	}
 }
 
 void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 {
-	// It may just be an update of a node's transform and/or children 
-	if (nodes.find(node_uid) == nodes.end())
+	if (m_pActorManager->HasActor(node_uid)) //Check the actor has already been added, if so update transform.
 	{
-		nodes[node_uid] = std::make_shared<avs::DataNode>(node);
+		m_pActorManager->GetActor(node_uid)->GetTransform().UpdateModelMatrix(node.transform.position, node.transform.rotation, node.transform.scale);
 	}
 	else
 	{
-		nodes[node_uid]->childrenUids = node.childrenUids;
-		nodes[node_uid]->transform = node.transform;
-	}
-
-	scr::vec3 translation = scr::vec3(node.transform.position.x, node.transform.position.y, node.transform.position.z);
-	scr::quat rotation = scr::quat(node.transform.rotation.w, node.transform.rotation.x, node.transform.rotation.y, node.transform.rotation.z);
-	scr::vec3 scale = scr::vec3(node.transform.scale.x, node.transform.scale.y, node.transform.scale.z);
-
-	if (m_pActorManager->GetTransform(node_uid) != nullptr) //Check the transform has already been added, if so update transform.
-	{
-		m_pActorManager->GetTransform(node_uid)->UpdateModelMatrix(translation, rotation, scale);
-	}
-	else
-	{
-		scr::Transform::TransformCreateInfo tci = { m_pRenderPlatform };
-		std::shared_ptr<scr::Transform> transform = std::make_shared<scr::Transform>(&tci);
-		transform->UpdateModelMatrix(translation, rotation, scale);
-		m_pActorManager->AddTransform(node_uid, transform);
-
-	    switch (node.data_type)
+		switch (node.data_type)
 	    {
 	    case NodeDataType::Mesh:
 	    	{
-	    		CreateActor(node.data_uid,node.materials, node_uid);
+	    		CreateActor(node_uid, node.data_uid,node.materials, avs::Transform{node.transform.position, node.transform.rotation, node.transform.scale});
 	    	}
 	    case NodeDataType::Camera:
 	    	return;
@@ -386,24 +388,134 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	}
 }
 
-void ResourceCreator::CreateActor(avs::uid mesh_uid, const std::vector<avs::uid> &material_uids, avs::uid transform_uid)
+void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid> &material_uids, avs::Transform &&transform)
 {
-	scr::Actor::ActorCreateInfo actor_ci = {};
-	actor_ci.staticMesh = true;
-	actor_ci.animatedMesh = false;
-	actor_ci.mesh = m_pActorManager->GetMesh(mesh_uid);
-	actor_ci.transform = m_pActorManager->GetTransform(transform_uid);
+	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>
+		(
+			IncompleteActor
+			{
+				node_uid,
+				{true, false, nullptr, {}, {{m_pRenderPlatform}}} //Does a transform even need a render platform?
+			}
+		);
 
-	actor_ci.materials.clear();
-	actor_ci.materials.reserve(material_uids.size());
-	for (avs::uid m_uid : material_uids)
+	std::vector<avs::uid> missingResources;
+
+	newActor->actorInfo.staticMesh = true;
+	newActor->actorInfo.animatedMesh = false;
+	newActor->actorInfo.transform = transform;
+
+	newActor->actorInfo.mesh = m_MeshManager->Get(mesh_uid);
+	if(!newActor->actorInfo.mesh)
 	{
-		actor_ci.materials.push_back(m_pActorManager->GetMaterial(m_uid));
+		missingResources.push_back(mesh_uid);
 	}
 
-	avs::uid actor_uid = GenerateUid();
-	m_pActorManager->CreateActor(actor_uid, &actor_ci);
+	newActor->actorInfo.materials.reserve(material_uids.size());
+	for (avs::uid m_uid : material_uids)
+	{
+		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(m_uid);
 
-	if(!m_pActorManager->m_Actors[actor_uid]->IsComplete())
-	    SCR_COUT("Incomplete Actor: " << actor_uid << "created.");
+		if(material)
+		{
+			newActor->actorInfo.materials.push_back(material);
+		}
+		else
+		{
+			missingResources.push_back(m_uid);
+		}
+	}
+
+	//Complete actor now, if we aren't missing any resources.
+	if(missingResources.size() == 0)
+	{
+		CompleteActor(node_uid, newActor->actorInfo);
+	}
+	else
+	{
+		m_ResourceRequests.insert(std::end(m_ResourceRequests), std::begin(missingResources), std::end(missingResources));
+
+		newActor->id = node_uid;
+		for(avs::uid uid : missingResources)
+		{
+			m_WaitingForResources[uid].push_back(newActor);
+		}
+	}
+}
+
+void ResourceCreator::CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo)
+{
+	std::shared_ptr<scr::Mesh> mesh = std::make_shared<scr::Mesh>(meshInfo);
+	m_MeshManager->Add(mesh_uid, mesh);
+
+	//Add mesh to actors waiting for mesh.
+	for(auto it = m_WaitingForResources[mesh_uid].begin(); it != m_WaitingForResources[mesh_uid].end(); it++)
+	{
+		std::weak_ptr<IncompleteActor> actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
+
+		actorInfo.lock()->actorInfo.mesh = mesh;
+
+		//If only this mesh is pointing to the actor, then it is complete.
+		if(it->use_count() == 1)
+		{
+			CompleteActor(actorInfo.lock()->id, actorInfo.lock()->actorInfo);
+		}
+	}
+
+	//Resource has arrived, so we are no longer waiting for it.
+	m_WaitingForResources.erase(mesh_uid);
+}
+
+void ResourceCreator::CompleteTexture(avs::uid texture_uid, const scr::Texture::TextureCreateInfo& textureInfo)
+{
+	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
+	scrTexture->Create(textureInfo);
+
+	m_TextureManager->Add(texture_uid, scrTexture);
+
+	//Add texture to materials waiting for texture.
+	for(auto it = m_WaitingForResources[texture_uid].begin(); it != m_WaitingForResources[texture_uid].end(); it++)
+	{
+		std::weak_ptr<IncompleteMaterial> materialInfo = std::static_pointer_cast<IncompleteMaterial>(*it);
+
+		materialInfo.lock()->textureSlots.at(texture_uid) = scrTexture;
+
+		//If only this texture is pointing to the material, then it is complete.
+		if(it->use_count() == 1)
+		{
+			CompleteMaterial(materialInfo.lock()->id, materialInfo.lock()->materialInfo);
+		}
+	}
+
+	//Resource has arrived, so we are no longer waiting for it.
+	m_WaitingForResources.erase(texture_uid);
+}
+
+void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Material::MaterialCreateInfo& materialInfo)
+{
+	std::shared_ptr<scr::Material> material = std::make_shared<scr::Material>(materialInfo);
+	m_MaterialManager->Add(material_uid, material);
+
+	//Add material to actors waiting for material.
+	for(auto it = m_WaitingForResources[material_uid].begin(); it != m_WaitingForResources[material_uid].end(); it++)
+	{
+		const std::weak_ptr<IncompleteActor>& actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
+
+		actorInfo.lock()->actorInfo.materials.push_back(material);
+
+		//If only this material is pointing to the actor, then it is complete.
+		if(it->use_count() == 1)
+		{
+			CompleteActor(actorInfo.lock()->id, actorInfo.lock()->actorInfo);
+		}
+	}
+
+	//Resource has arrived, so we are no longer waiting for it.
+	m_WaitingForResources.erase(material_uid);
+}
+
+void ResourceCreator::CompleteActor(avs::uid actor_uid, const scr::Actor::ActorCreateInfo& actorInfo)
+{
+	///We're using the node_uid as the actor_uid as we are currently generating an actor per node/transform anyway; this way the server can tell the client to remove an actor.
+	m_pActorManager->CreateActor(actor_uid, actorInfo);
 }

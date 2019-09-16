@@ -7,8 +7,12 @@ using namespace scr;
 //Transform
 bool Transform::s_UninitialisedUB = true;
 
-Transform::Transform(TransformCreateInfo* pTransformCreateInfo)
-	:m_CI(*pTransformCreateInfo)
+Transform::Transform(const TransformCreateInfo& pTransformCreateInfo)
+	:Transform(pTransformCreateInfo, vec3(), quat(), vec3())
+{}
+
+Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 translation, quat rotation, vec3 scale)
+	:m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
 {
 	if (false)//s_UninitialisedUB)
 	{
@@ -24,8 +28,10 @@ Transform::Transform(TransformCreateInfo* pTransformCreateInfo)
 
 	m_ShaderResourceLayout.AddBinding(1, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
-	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_ActorUBO", { m_UB.get(), 0, sizeof(TransformData) });
+	m_ShaderResource = ShaderResource({m_ShaderResourceLayout});
+	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_ActorUBO", {m_UB.get(), 0, sizeof(TransformData)});
+
+	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 }
 
 void Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
@@ -37,26 +43,12 @@ void Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation,
 }
 
 //Actor
-Actor::Actor(ActorCreateInfo* pActorCreateInfo)
-	:m_CI(*pActorCreateInfo)
+Actor::Actor(const ActorCreateInfo& pActorCreateInfo)
+	:m_CI(pActorCreateInfo)
 {
 }
 
 void Actor::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
 {
-	m_CI.transform->UpdateModelMatrix(translation, rotation, scale);
-}
-
-bool Actor::IsComplete() const {
-	if (m_CI.mesh == nullptr || m_CI.transform == nullptr || m_CI.materials.empty())
-	{
-		return false;
-	}
-	//Only checks the first material in the array! Should we check all, or the first one just a 'default'?
-	else if(m_CI.materials[0] == nullptr) 
-	{
-		return false;
-	}
-	else
-		return true;
+	m_CI.transform.UpdateModelMatrix(translation, rotation, scale);
 }

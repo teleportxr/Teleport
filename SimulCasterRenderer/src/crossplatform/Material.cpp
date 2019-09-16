@@ -6,8 +6,8 @@ using namespace scr;
 
 bool Material::s_UninitialisedUB = true;
 
-Material::Material(MaterialCreateInfo* pMaterialCreateInfo)
-	:m_CI(*pMaterialCreateInfo)
+Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
+	:m_CI(pMaterialCreateInfo)
 {
 	//Set up UB
 	if (s_UninitialisedUB)
