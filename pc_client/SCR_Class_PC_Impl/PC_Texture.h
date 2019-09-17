@@ -33,7 +33,7 @@ namespace pc_client
 		bool ResourceInUse(int timeout) override {return true;}
 
 		// Inherited via Texture
-		void Create(TextureCreateInfo * pTextureCreateInfo) override;
+		void Create(const TextureCreateInfo& pTextureCreateInfo) override;
 
 		simul::crossplatform::Texture* GetSimulTexture()
 		{

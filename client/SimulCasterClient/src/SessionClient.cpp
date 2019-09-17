@@ -13,6 +13,7 @@
 
 #include "SessionClient.h"
 
+#include "ResourceCreator.h"
 
 static inline ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
 {
@@ -38,6 +39,7 @@ enum RemotePlaySessionChannel
     RPCH_HANDSHAKE = 0,
     RPCH_Control = 1,
     RPCH_HeadPose = 2,
+    RPCH_Request = 3,
     RPCH_NumChannels,
 };
 
@@ -55,8 +57,8 @@ struct ServiceDiscoveryResponse {
     uint16_t remotePort;
 } __attribute__((packed));
 
-SessionClient::SessionClient(SessionCommandInterface* commandInterface)
-    : mCommandInterface(commandInterface)
+SessionClient::SessionClient(SessionCommandInterface* commandInterface, ResourceCreator& resourceCreator)
+    : mCommandInterface(commandInterface), mResourceCreator(resourceCreator)
 {
     struct timespec timeNow;
     clock_gettime(CLOCK_REALTIME, &timeNow);
@@ -230,6 +232,8 @@ void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame, const ControllerSta
     {
         SendHeadPose(vrFrame.Tracking.HeadPose);
         SendInput(controllerState);
+        SendResourceRequests();
+
         ENetEvent event;
         while(enet_host_service(mClientHost, &event, 0) > 0)
         {
@@ -305,6 +309,25 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			SendHandshake();
 		}
 		break;
+		case avs::CommandPayloadType::ActorBounds:
+        {
+            const avs::ActorBoundsCommand command = *((const avs::ActorBoundsCommand*)packet->data);
+
+            if(command.enteredBounds)
+            {
+                if(!mCommandInterface->OnActorEnteredBounds(command.actor_uid))
+                {
+                    //Request the actor from the server, because the user can't show an actor it doesn't have the data for.
+                    mResourceRequests.push_back(command.actor_uid);
+                }
+            }
+            else
+            {
+                mCommandInterface->OnActorLeftBounds(command.actor_uid);
+            }
+        }
+
+            break;
 		default:
 			break;
 	};
@@ -398,6 +421,26 @@ void SessionClient::SendInput(const ControllerState& controllerState)
         }
         ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), packetFlags);
         enet_peer_send(mServerPeer, RPCH_Control, packet);
+    }
+}
+
+void SessionClient::SendResourceRequests()
+{
+    std::vector<avs::uid> resourceRequests = mResourceCreator.TakeResourceRequests();
+
+    //Append session client's resource requests.
+    resourceRequests.insert(resourceRequests.end(), mResourceRequests.begin(), mResourceRequests.end());
+    mResourceRequests.clear();
+
+    if(resourceRequests.size() != 0)
+    {
+        size_t resourceAmount = resourceRequests.size();
+        ENetPacket* packet = enet_packet_create(&resourceAmount, sizeof(size_t), ENET_PACKET_FLAG_RELIABLE);
+
+        enet_packet_resize(packet, sizeof(size_t) + sizeof(avs::uid) * resourceAmount);
+        memcpy(packet->data + sizeof(size_t), resourceRequests.data(), sizeof(avs::uid) * resourceAmount);
+
+        enet_peer_send(mServerPeer, RPCH_Request, packet);
     }
 }
 

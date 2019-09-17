@@ -88,34 +88,34 @@ void PC_Texture::UseSampler(const std::shared_ptr<Sampler>& sampler)
 {
 }
 
-void PC_Texture::Create(TextureCreateInfo * pTextureCreateInfo)
+void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 {
-	m_CI = *pTextureCreateInfo;
+	m_CI = pTextureCreateInfo;
 	//m_CI.size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;
 	//m_Data = data;
 	auto* rp = static_cast<PC_RenderPlatform*> (renderPlatform);
 	auto* srp = rp->GetSimulRenderPlatform();
 	m_SimulTexture = srp->CreateTexture();
-	auto pixelFormat = ToSimulPixelFormat(pTextureCreateInfo->format);
+	auto pixelFormat = ToSimulPixelFormat(pTextureCreateInfo.format);
 	bool computable = false;
 	bool rt = false;
 	bool ds = false;
 	int num_samp = 1;
-	if(pTextureCreateInfo->compression==scr::Texture::CompressionFormat::UNCOMPRESSED && pTextureCreateInfo->size !=(size_t)(pTextureCreateInfo->width*pTextureCreateInfo->height* pTextureCreateInfo->bytesPerPixel))
+	if(pTextureCreateInfo.compression==scr::Texture::CompressionFormat::UNCOMPRESSED && pTextureCreateInfo.size != static_cast<size_t>(pTextureCreateInfo.width) * pTextureCreateInfo.height * pTextureCreateInfo.bytesPerPixel)
 	{
-		WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo->width , pTextureCreateInfo->height, pTextureCreateInfo->bytesPerPixel, pTextureCreateInfo->size);
+		WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel, pTextureCreateInfo.size);
 		return;
 	}
 	simul::crossplatform::TextureCreate textureCreate;
-	textureCreate.w = pTextureCreateInfo->width;
-	textureCreate.l = pTextureCreateInfo->height;
+	textureCreate.w = pTextureCreateInfo.width;
+	textureCreate.l = pTextureCreateInfo.height;
 	textureCreate.f = pixelFormat;
 	textureCreate.computable = computable;
 	textureCreate.make_rt = rt;
 	textureCreate.setDepthStencil = ds;
 	textureCreate.numOfSamples = num_samp;
-	textureCreate.compressionFormat = (simul::crossplatform::CompressionFormat)pTextureCreateInfo->compression;
-	textureCreate.initialData = pTextureCreateInfo->data;
+	textureCreate.compressionFormat = (simul::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
+	textureCreate.initialData = pTextureCreateInfo.data;
 	m_SimulTexture->EnsureTexture(srp, &textureCreate);
 	//m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, (int)(pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel));
 }

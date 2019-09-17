@@ -19,7 +19,7 @@ namespace scr
 		MeshCreateInfo m_CI;
 
 	public:
-		Mesh(MeshCreateInfo* pMeshCreateInfo);
+		Mesh(const MeshCreateInfo& pMeshCreateInfo);
 
 		inline const MeshCreateInfo& GetMeshCreateInfo() const { return m_CI; }
 	};

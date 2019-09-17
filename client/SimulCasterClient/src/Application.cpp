@@ -46,7 +46,7 @@ Application::Application()
 	, mVideoSurfaceTexture(nullptr)
 	, mCubemapTexture(nullptr)
 	, mOvrMobile(nullptr)
-	, mSession(this)
+	, mSession(this, resourceCreator)
 	, mControllerID(0)
 	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
 	, mEffect(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
@@ -61,7 +61,7 @@ Application::Application()
 	}
 
 	resourceCreator.SetRenderPlatform(dynamic_cast<scr::RenderPlatform*>(&renderPlatform));
-	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager);
+	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager);
 	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
 
 	//Default Effects
@@ -167,7 +167,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			textureCreateInfo.format=scr::Texture::Format::RGBA8;
 			textureCreateInfo.type=scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
 
-			mVideoTexture->Create(&textureCreateInfo);
+			mVideoTexture->Create(textureCreateInfo);
 			((scc::GL_Texture*)(mVideoTexture.get()))->SetExternalGlTexture(mVideoSurfaceTexture->GetTextureId());
 
 		}
@@ -330,7 +330,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	//Get the Capture Position
 	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&renderPlatform)};
-	scr::Transform scr_UE4_captureTransform(&tci);
+	scr::Transform scr_UE4_captureTransform(tci);
 	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
 	capturePosition = scr_UE4_captureTransform.m_Translation;
@@ -348,7 +348,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->ShowInfoText( 1.0f, OVR::Vector3f(2.0f,0,0),OVR::Vector4f(1.f,1.f,0.f,0.5f), "Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Head Orientation: %1.3f, {%1.3f, %1.3f, %1.3f}\n Trackpad: %3.1f %3.1f\n Orphan Packets: %d\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
 			frameRate, ctr.bandwidthKPS,
-			(uint64_t)resourceManagers.mActorManager.m_Actors.size(), (uint64_t)mOVRActors.size(),
+			(uint64_t)resourceManagers.mActorManager.GetActorList().size(), (uint64_t)mOVRActors.size(),
 			capturePosition.x, capturePosition.y, capturePosition.z,
 			headPose.w, headPose.x, headPose.y, headPose.z,
 			controllerState.mTrackpadX,controllerState.mTrackpadY,
@@ -515,6 +515,16 @@ void Application::OnVideoStreamClosed()
 	mPipelineConfigured = false;
 }
 
+bool Application::OnActorEnteredBounds(avs::uid actor_uid)
+{
+    return resourceManagers.mActorManager.ShowActor(actor_uid);
+}
+
+bool Application::OnActorLeftBounds(avs::uid actor_uid)
+{
+    return resourceManagers.mActorManager.HideActor(actor_uid);
+}
+
 void Application::OnFrameAvailable()
 {
 	++mNumPendingFrames;
@@ -611,12 +621,14 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 	lightCubemapShaderResource.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {mCubemapTexture->GetSampler(), mCubemapTexture});
 	lightCubemapShaderResource.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {mCubemapTexture->GetSampler(), mCubemapTexture});
 
-	for(auto& actor : resourceManagers.mActorManager.m_Actors)
+	for(auto& actor : resourceManagers.mActorManager.GetActorList())
 	{
-		if(!actor.second->IsComplete())
-			continue;
+		if(!actor.second.actor->isVisible)
+		{
+            continue;
+        }
 
-		scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.get());
+		scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.actor.get());
 		if(mOVRActors.find(actor.first) == mOVRActors.end())
 		{
         	//From Actor
@@ -749,7 +761,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 		//Change of Basis matrix
 		scr::mat4 cob = scr::mat4({0, 1, 0, 0}, {0, 0, 1, 0}, {-1, 0, 0, 0 }, {0, 0, 0, 1});
 		scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(camPos);
-		scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform->GetTransformMatrix() * cob;
+		scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform.GetTransformMatrix() * cob;
 
 		OVR::Matrix4f transform;
 		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));

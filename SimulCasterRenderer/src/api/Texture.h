@@ -165,7 +165,7 @@ namespace scr
 
 
 		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bytesPerPixel will be the same for all faces.
-		virtual void Create(TextureCreateInfo* pTextureCreateInfo) = 0;
+		virtual void Create(const TextureCreateInfo& pTextureCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void UseSampler(const std::shared_ptr<Sampler>& sampler) = 0;

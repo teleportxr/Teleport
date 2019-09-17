@@ -13,19 +13,25 @@ typedef unsigned int uint;
 namespace avs
 {
 	struct SetupCommand;
+	typedef unsigned long long uid;
 }
+
+class ResourceCreator;
 
 class SessionCommandInterface
 {
 public:
 	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) = 0;
 	virtual void OnVideoStreamClosed() = 0;
+
+	virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
+	virtual bool OnActorLeftBounds(avs::uid actor_uid) = 0;
 };
 
 class SessionClient
 {
 public:
-	SessionClient(SessionCommandInterface* commandInterface);
+	SessionClient(SessionCommandInterface* commandInterface, ResourceCreator& resourceCreator);
 	~SessionClient();
 
     bool Discover(uint16_t discoveryPort, ENetAddress& remote);
@@ -44,7 +50,8 @@ private:
 	void ParseTextCommand(const char *txt_utf8);
 
 	void SendHeadPose(const float quat[4]);
-	void SendInput(const ControllerState& controllerState);
+	void SendInput(const ControllerState &controllerState);
+	void SendResourceRequests();
 	//Tell server we are ready to receive geometry payloads.
 	void SendHandshake();
 
@@ -52,6 +59,7 @@ private:
 	ENetSocket mServiceDiscoverySocket = 0;
 
     SessionCommandInterface* const mCommandInterface;
+	ResourceCreator &mResourceCreator;
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;
     ENetAddress mServerEndpoint;
@@ -59,5 +67,6 @@ private:
     ControllerState mPrevControllerState = {};
 
 	bool isReadyToReceivePayloads = false;
+	std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
 };
 

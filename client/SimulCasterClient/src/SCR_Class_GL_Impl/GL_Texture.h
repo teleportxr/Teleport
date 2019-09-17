@@ -17,7 +17,7 @@ namespace scc
 		GL_Texture(scr::RenderPlatform* r)
 			:scr::Texture(r) {}
 
-		void Create(TextureCreateInfo* pTextureCreateInfo) override;
+		void Create(const TextureCreateInfo& pTextureCreateInfo) override;
 		void Destroy() override;
 
 		void Bind() const override;

@@ -112,6 +112,9 @@ public:
 	// Implement SessionCommandInterface
 	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) override;
 	void OnVideoStreamClosed() override;
+
+	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
+	virtual bool OnActorLeftBounds(avs::uid actor_uid) override;
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
 	void RenderLocalActors(simul::crossplatform::DeviceContext &);

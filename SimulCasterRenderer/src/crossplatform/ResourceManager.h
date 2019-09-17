@@ -31,7 +31,7 @@ public:
 	//	id : Unique identifier of the resource.
 	//	newResource : The resource.
 	//	postUseLifetime : Milliseconds the resource should be kept alive after the last object has stopped using it.
-	void Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime = 30000);
+	void Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime = 1000);
 
 	//Returns whether the manager contains the resource.
 	bool Has(uid id) const;
