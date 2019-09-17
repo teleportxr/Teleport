@@ -194,7 +194,7 @@ vec3 BRDF(vec3 N, vec3 Wo, vec3 Wi, vec3 H, vec3 lightColour) //Return a RGB val
     float D = D(N, H, roughnessL);
     vec3 F = F(R0, H, Wi);
     float G = G(N, Wi, Wo, roughnessL, true);
-    Specular = lightColour * D * F * G * (1.0 / 4.0 * saturate(dot(Wo, N)) * saturate(dot(Wi, N)));
+    Specular += lightColour * D * F * G * (1.0 / 4.0 * saturate(dot(Wo, N)) * saturate(dot(Wi, N)));
 
     //Ambient Occlusion
     float ao = GetAO();
