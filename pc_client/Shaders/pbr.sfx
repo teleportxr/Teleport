@@ -163,7 +163,7 @@ shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgra;
     vec3 c				= PBR(normalLookup, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), diffuseColour, vec3(1,1,1),roughness);
-	//c.rg=IN.texCoords0;
+	//c.rgb=frac(IN.texCoords0.xyy);
     vec4 u				=vec4(c.rgb,1.0);
 	return u;
 }

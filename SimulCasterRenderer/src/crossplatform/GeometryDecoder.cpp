@@ -190,7 +190,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 				const Accessor& accessor		= dg.accessors[attrib.accessor];
 				const BufferView& bufferView	= dg.bufferViews[accessor.bufferView];
 				const GeometryBuffer& buffer	= dg.buffers[bufferView.buffer];
-				const uint8_t* data = buffer.data;// +bufferView.byteOffset;
+				const uint8_t* data				= buffer.data+bufferView.byteOffset;
 				switch (attrib.semantic)
 				{
 				case AttributeSemantic::POSITION:

@@ -611,161 +611,199 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 	ci.frameBufferCount = 0;
 	ci.pCamera = scrCamera.get();
 
-	for(auto& actor : resourceManagers.mActorManager.GetActorList())
+	for(auto& a : resourceManagers.mActorManager.GetActorList())
 	{
-		if(!actor.second.actor->isVisible)
+		auto &liveActor=a.second;
+		auto &actor=liveActor.actor;
+		if(!actor->isVisible)
 		{
             continue;
         }
+		size_t num_elements=actor->GetMaterials().size();
 
-		scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.actor.get());
-		if(mOVRActors.find(actor.first) == mOVRActors.end())
+		//scr::InputCommand_Mesh_Material_Transform ic_mmt(&ci, actor.second.actor.get());
+		if(mOVRActors.find(a.first) == mOVRActors.end())
 		{
-        	//From Actor
-        	const scr::Mesh::MeshCreateInfo& meshCI = ic_mmt.pMesh->GetMeshCreateInfo();
-        	scr::Material::MaterialCreateInfo& materialCI = ic_mmt.pMaterial->GetMaterialCreateInfo();
-
-        	//Mesh
-            const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(meshCI.vb.get());
-            const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(meshCI.ib.get());
-			gl_vb->CreateVAO(gl_ib->GetIndexID());
-			auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
-
-            //Material
-            std::vector<scr::ShaderResource> pbrShaderResources;
-            pbrShaderResources.push_back(ci.pCamera->GetShaderResource());
-			pbrShaderResources.push_back(ic_mmt.pMaterial->GetShaderResource());
-
-            materialCI.effect = dynamic_cast<scr::Effect*>(&mEffect);
-            const auto gl_effect = &mEffect;
-			scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
+			std::shared_ptr<OVRActor> pOvrActor=mOVRActors[a.first];
+			pOvrActor->ovrSurfaceDefs.reserve(num_elements);
+			for(size_t i=0;i<num_elements;i++)
 			{
-				pipelineCreateInfo.m_Count=2;
-				pipelineCreateInfo.m_PipelineType=scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-				pipelineCreateInfo.m_ShaderCreateInfo[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "main";
-				pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/OpaquePBR.vert";
-				pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = LoadTextFile("shaders/OpaquePBR.vert");
-				pipelineCreateInfo.m_ShaderCreateInfo[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-				pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "main";
-				pipelineCreateInfo.m_ShaderCreateInfo[1].filepath = "shaders/OpaquePBR.frag";
-				pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/OpaquePBR.frag");
+				//From Actor
+				const scr::Mesh::MeshCreateInfo   &meshCI     = actor->GetMesh()->GetMeshCreateInfo();
+				scr::Material::MaterialCreateInfo &materialCI = actor->GetMaterials()[i]->GetMaterialCreateInfo();
 
-			}
+				//Mesh.
+				// The first instance of vb/ib should be adequate to get the information needed.
+				const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer *>(meshCI.vb[i].get());
+				const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer *>(meshCI.ib[i].get());
+				gl_vb->CreateVAO(gl_ib->GetIndexID());
+				auto layout = gl_vb->GetVertexBufferCreateInfo().layout.get();
 
-			const auto gl_effectPass = BuildEffectPass("OpaquePBR", layout, &pipelineCreateInfo, pbrShaderResources);
+				//Material
+				std::vector<scr::ShaderResource> pbrShaderResources;
+				pbrShaderResources.push_back(ci.pCamera->GetShaderResource());
+				pbrShaderResources.push_back(actor->GetMaterials()[i]->GetShaderResource());
 
-			const auto temp_Texture = dynamic_cast<scc::GL_Texture*>(ic_mmt.pMaterial->GetMaterialCreateInfo().diffuse.texture.get());
-			temp_Texture->UseSampler(mSampler);
-
-            const auto diffuse_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.diffuse.texture.get());
-            const auto normal_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.normal.texture.get());
-            const auto combined_Texture = dynamic_cast<scc::GL_Texture*>(materialCI.combined.texture.get());
-            diffuse_Texture->UseSampler(mSampler);
-			normal_Texture->UseSampler(mSampler);
-			combined_Texture->UseSampler(mSampler);
-
-            //----Set OVR Actor----//
-            //Construct Mesh
-			GlGeometry geo;
-			geo.vertexBuffer = gl_vb->GetVertexID();
-			geo.indexBuffer = gl_ib->GetIndexID();
-			geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-			geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effectPass.topology);
-			geo.vertexCount = (int) gl_vb->GetVertexCount();
-			geo.indexCount = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
-			GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
-
-            //Initialise OVR Actor
-			ovrSurfaceDef ovr_Actor = {};
-			std::string _actorName = std::string("ActorUID: ") + std::to_string(actor.first);
-			ovr_Actor.surfaceName = _actorName;
-			ovr_Actor.numInstances = 1;
-			ovr_Actor.geo = geo;
-
-            //Set Shader Program
-			ovr_Actor.graphicsCommand.Program = gl_effect->GetGlPlatform();
-
-            //Set Rendering Set
-			ovr_Actor.graphicsCommand.GpuState.blendMode = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.colorBlendOp);
-			ovr_Actor.graphicsCommand.GpuState.blendSrc = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcColorBlendFactor);
-			ovr_Actor.graphicsCommand.GpuState.blendDst = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstColorBlendFactor);
-			ovr_Actor.graphicsCommand.GpuState.blendModeAlpha = scc::GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.alphaBlendOp);
-			ovr_Actor.graphicsCommand.GpuState.blendSrcAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcAlphaBlendFactor);
-			ovr_Actor.graphicsCommand.GpuState.blendDstAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
-			ovr_Actor.graphicsCommand.GpuState.depthFunc = scc::GL_Effect::ToGLCompareOp(gl_effectPass.depthStencilingState.depthCompareOp);
-			ovr_Actor.graphicsCommand.GpuState.frontFace = gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
-			ovr_Actor.graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
-			ovr_Actor.graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
-			ovr_Actor.graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;
-			ovr_Actor.graphicsCommand.GpuState.depthMaskEnable = false;
-			ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[0] = true;
-			ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[1] = true;
-			ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[2] = true;
-			ovr_Actor.graphicsCommand.GpuState.colorMaskEnable[3] = true;
-			ovr_Actor.graphicsCommand.GpuState.polygonOffsetEnable = false;
-			ovr_Actor.graphicsCommand.GpuState.cullEnable = gl_effectPass.rasterizationState.cullMode == scr::Effect::CullMode::NONE ? false : true;
-			ovr_Actor.graphicsCommand.GpuState.lineWidth = 1.0F;
-			ovr_Actor.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
-			ovr_Actor.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
-
-            //Update Uniforms and Textures
-            size_t i = 0;
-            assert(pbrShaderResources.size() <= OVR::ovrUniform::MAX_UNIFORMS);
-            for(auto& sr : pbrShaderResources)
-            {
-            	for(auto& resource : sr.GetWriteShaderResources())
-            	{
-					scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
-					if(type == scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
-					{
-						if(resource.imageInfo.texture.get())
-						{
-                            auto gl_texture = dynamic_cast<scc::GL_Texture *>(resource.imageInfo.texture.get());
-						    ovr_Actor.graphicsCommand.UniformData[i].Data = &(gl_texture->GetGlTexture());
-
-                        }
-					}
-					else if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
-					{
-                        if(resource.bufferInfo.buffer)
-                        {
-							auto gl_uniformBuffer = (scc::GL_UniformBuffer*)(resource.bufferInfo.buffer);
-							gl_uniformBuffer->Submit();
-							ovr_Actor.graphicsCommand.UniformData[i].Data = &(gl_uniformBuffer->GetGlBuffer());
-						}
-					}
-					else
-					{
-						//NULL
-					}
-					i++;
+				materialCI.effect = dynamic_cast<scr::Effect *>(&mEffect);
+				const auto                            gl_effect = &mEffect;
+				scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
+				{
+					pipelineCreateInfo.m_Count                          = 2;
+					pipelineCreateInfo.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
+					pipelineCreateInfo.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+					pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "main";
+					pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
+					pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = LoadTextFile(
+							"shaders/OpaquePBR.vert");
+					pipelineCreateInfo.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+					pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "main";
+					pipelineCreateInfo.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
+					pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = LoadTextFile(
+							"shaders/OpaquePBR.frag");
 				}
+
+				const auto gl_effectPass = BuildEffectPass(
+						"OpaquePBR", layout, &pipelineCreateInfo, pbrShaderResources);
+
+				const auto temp_Texture = dynamic_cast<scc::GL_Texture *>(actor->GetMaterials()[i]->GetMaterialCreateInfo().diffuse.texture.get());
+				temp_Texture->UseSampler(mSampler);
+
+				const auto diffuse_Texture  = dynamic_cast<scc::GL_Texture *>(materialCI.diffuse.texture.get());
+				const auto normal_Texture   = dynamic_cast<scc::GL_Texture *>(materialCI.normal.texture.get());
+				const auto combined_Texture = dynamic_cast<scc::GL_Texture *>(materialCI.combined.texture.get());
+				diffuse_Texture->UseSampler(mSampler);
+				normal_Texture->UseSampler(mSampler);
+				combined_Texture->UseSampler(mSampler);
+
+				//----Set OVR Actor----//
+				//Construct Mesh
+				GlGeometry geo;
+				geo.vertexBuffer      = gl_vb->GetVertexID();
+				geo.indexBuffer       = gl_ib->GetIndexID();
+				geo.vertexArrayObject = gl_vb->GetVertexArrayID();
+				geo.primitiveType     = scc::GL_Effect::ToGLTopology(gl_effectPass.topology);
+				geo.vertexCount       = (int) gl_vb->GetVertexCount();
+				geo.indexCount        = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
+				GlGeometry::IndexType =
+						gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
+						gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT
+																	  : GL_UNSIGNED_BYTE;
+
+				//Initialise OVR Actor
+				std::shared_ptr<ovrSurfaceDef> ovr_surface_def(new ovrSurfaceDef);
+				std::string   _actorName = std::string("ActorUID: ") + std::to_string(a.first);
+				ovr_surface_def->surfaceName  = _actorName;
+				ovr_surface_def->numInstances = 1;
+				ovr_surface_def->geo          = geo;
+
+				//Set Shader Program
+				ovr_surface_def->graphicsCommand.Program = gl_effect->GetGlPlatform();
+
+				//Set Rendering Set
+				ovr_surface_def->graphicsCommand.GpuState.blendMode      = scc::GL_Effect::ToGLBlendOp(
+						gl_effectPass.colourBlendingState.colorBlendOp);
+				ovr_surface_def->graphicsCommand.GpuState.blendSrc       = scc::GL_Effect::ToGLBlendFactor(
+						gl_effectPass.colourBlendingState.srcColorBlendFactor);
+				ovr_surface_def->graphicsCommand.GpuState.blendDst       = scc::GL_Effect::ToGLBlendFactor(
+						gl_effectPass.colourBlendingState.dstColorBlendFactor);
+				ovr_surface_def->graphicsCommand.GpuState.blendModeAlpha = scc::GL_Effect::ToGLBlendOp(
+						gl_effectPass.colourBlendingState.alphaBlendOp);
+				ovr_surface_def->graphicsCommand.GpuState.blendSrcAlpha  = scc::GL_Effect::ToGLBlendFactor(
+						gl_effectPass.colourBlendingState.srcAlphaBlendFactor);
+				ovr_surface_def->graphicsCommand.GpuState.blendDstAlpha  = scc::GL_Effect::ToGLBlendFactor(
+						gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
+				ovr_surface_def->graphicsCommand.GpuState.depthFunc      = scc::GL_Effect::ToGLCompareOp(
+						gl_effectPass.depthStencilingState.depthCompareOp);
+				ovr_surface_def->graphicsCommand.GpuState.frontFace =
+						gl_effectPass.rasterizationState.frontFace ==
+						scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
+				ovr_surface_def->graphicsCommand.GpuState.polygonMode     = scc::GL_Effect::ToGLPolygonMode(
+						gl_effectPass.rasterizationState.polygonMode);
+				ovr_surface_def->graphicsCommand.GpuState.blendEnable     = gl_effectPass.colourBlendingState.blendEnable
+																	 ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE
+																	 : OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
+				ovr_surface_def->graphicsCommand.GpuState.depthEnable     = gl_effectPass.depthStencilingState.depthTestEnable;
+				ovr_surface_def->graphicsCommand.GpuState.depthMaskEnable = false;
+				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[0] = true;
+				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[1] = true;
+				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[2] = true;
+				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[3] = true;
+				ovr_surface_def->graphicsCommand.GpuState.polygonOffsetEnable = false;
+				ovr_surface_def->graphicsCommand.GpuState.cullEnable =
+						gl_effectPass.rasterizationState.cullMode == scr::Effect::CullMode::NONE
+						? false : true;
+				ovr_surface_def->graphicsCommand.GpuState.lineWidth = 1.0F;
+				ovr_surface_def->graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
+				ovr_surface_def->graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
+
+				//Update Uniforms and Textures
+				size_t j = 0;
+				assert(pbrShaderResources.size() <= OVR::ovrUniform::MAX_UNIFORMS);
+				for (
+					auto &sr : pbrShaderResources)
+				{
+					for (
+						auto &resource : sr.GetWriteShaderResources())
+					{
+						scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
+						if (type ==
+							scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
+						{
+							if (resource.imageInfo.texture.get())
+							{
+								auto gl_texture = dynamic_cast<scc::GL_Texture *>(resource.imageInfo.texture.get());
+								ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_texture->GetGlTexture());
+
+							}
+						}
+						else if (type ==
+								 scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
+						{
+							if (resource.bufferInfo.buffer)
+							{
+								auto gl_uniformBuffer = (scc::GL_UniformBuffer *) (resource.bufferInfo.buffer);
+								gl_uniformBuffer->Submit();
+								ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
+							}
+						}
+						else
+						{
+							//NULL
+						}
+						j++;
+					}
+				}
+				pOvrActor->ovrSurfaceDefs.push_back(ovr_surface_def);
 			}
-
-			mOVRActors[actor.first] = ovr_Actor;
 		}
+		std::shared_ptr<OVRActor> pOvrActor=mOVRActors[a.first];
+		for(size_t i=0;i<num_elements;i++)
+		{
+			//----OVR Actor Set Transforms----//
+			float     heightOffset = -0.0F;
+			scr::vec3 camPos       = capturePosition * -1;
+			camPos.y += heightOffset;
 
-        //----OVR Actor Set Transforms----//
-		float heightOffset = -0.0F;
-		scr::vec3 camPos = capturePosition * -1;
-		camPos.y += heightOffset;
+			//Change of Basis matrix
+			scr::mat4 cob               = scr::mat4(
+					{0, 1, 0, 0}, {0, 0, 1, 0}, {-1, 0, 0, 0}, {0, 0, 0, 1});
+			scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(camPos);
+			scr::mat4 scr_Transform     =
+							  inv_ue4ViewMatrix * actor->GetTransform().GetTransformMatrix() *
+							  cob;
 
-		//Change of Basis matrix
-		scr::mat4 cob = scr::mat4({0, 1, 0, 0}, {0, 0, 1, 0}, {-1, 0, 0, 0 }, {0, 0, 0, 1});
-		scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(camPos);
-		scr::mat4 scr_Transform = inv_ue4ViewMatrix * ic_mmt.pTransform.GetTransformMatrix() * cob;
+			OVR::Matrix4f transform;
+			memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
+			ovrDrawSurface ovr_ActorDrawSurface(transform, pOvrActor->ovrSurfaceDefs[i].get());
 
-		OVR::Matrix4f transform;
-		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
-		ovrDrawSurface ovr_ActorDrawSurface(transform, &mOVRActors[actor.first]);
-
-		res.Surfaces.push_back(ovr_ActorDrawSurface);
+			res.Surfaces.push_back(ovr_ActorDrawSurface);
+		}
 	}
 
 }
 
-const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)
+const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
+		, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)
 {
 	if (mEffect.HasEffectPass(effectPassName))
 		return mEffect.GetEffectPassCreateInfo(effectPassName);

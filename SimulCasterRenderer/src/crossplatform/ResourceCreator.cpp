@@ -53,8 +53,10 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 	{
 		MeshElementCreate* meshElementCreate = &(meshCreate->m_MeshElementCreate[i]);
 		std::shared_ptr<VertexBufferLayout> layout(new VertexBufferLayout);
-		if (meshElementCreate->m_Vertices) { layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT); }
-
+		if (meshElementCreate->m_Vertices)
+		{
+			layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
+		}
 		if (meshElementCreate->m_Normals || meshElementCreate->m_TangentNormals)
 		{
 			layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);

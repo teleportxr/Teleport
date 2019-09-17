@@ -90,7 +90,6 @@ namespace scr
 			ShaderResourceLayout::ShaderResourceType shaderResourceType;
 			ShaderResourceImageInfo imageInfo;
 			ShaderResourceBufferInfo bufferInfo;
-
 		};
 
 		std::map<uint32_t, ShaderResourceLayout> m_ShaderResourceLayouts;

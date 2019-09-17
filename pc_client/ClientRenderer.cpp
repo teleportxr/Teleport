@@ -307,7 +307,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		if (ti)
 		{
 			{
-				cubemapConstants.sourceOffset = int2(0, 0);
+				cubemapConstants.sourceOffset = int2(0, 2 * videoAsCubemapTexture->width);
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -318,7 +318,19 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->Unapply(deviceContext);
 				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
 				cubemapClearEffect->UnbindTextures(deviceContext);
+			}
+			{
+			/*	cubemapConstants.sourceOffset = int2(3*videoAsCubemapTexture->width/2, 2*videoAsCubemapTexture->width);
+				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoAsCubemapTexture);
 
+				cubemapClearEffect->Apply(deviceContext, "recompose_with_depth_alpha", 0);
+				renderPlatform->DispatchCompute(deviceContext, videoAsCubemapTexture->width / 16, videoAsCubemapTexture->width / 16, 6);
+				cubemapClearEffect->Unapply(deviceContext);
+				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+				cubemapClearEffect->UnbindTextures(deviceContext);*/
 			}
 		}
 		{
@@ -349,7 +361,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	{
 		auto& textures = resourceManagers.mTextureManager.GetCache();
 		static int tw = 32;
-		int x = 0, y = 0;
+		int x = 0, y = hdrFramebuffer->GetHeight()-64;
 		for (auto t : textures)
 		{
 			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
@@ -457,7 +469,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			}
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			mat4 model;
-		model=((const float*)& (transform.GetTransformMatrix()));
+			model=((const float*)& (transform.GetTransformMatrix()));
 			mat4::mul(cameraConstants.worldViewProj, *((mat4*)& deviceContext.viewStruct.viewProj), model);
 			cameraConstants.world = model;
 			cameraConstants.viewPosition = vec3(0, 0, 0);
@@ -581,7 +593,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		LOG("Failed to configure network source node");
 		return;
 	}
-
+	source.setDebugStream(setupCommand.debug_stream);
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.deferDisplay = true;
 	avs::DeviceHandle dev;
