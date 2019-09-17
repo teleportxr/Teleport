@@ -322,7 +322,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->UnbindTextures(deviceContext);
 			}
 			{
-				cubemapConstants.sourceOffset = int2(3*videoAsCubemapTexture->width/2, 2*videoAsCubemapTexture->width);
+				cubemapConstants.sourceOffset = int2(3 * videoAsCubemapTexture->width / 2, 2 * videoAsCubemapTexture->width);
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -334,7 +334,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->UnbindTextures(deviceContext);
 			}
 			{
-				cubemapConstants.sourceOffset = int2(3 * videoAsCubemapTexture->width / 2, 2 * videoAsCubemapTexture->width);
+				cubemapConstants.sourceOffset = int2(3 * videoAsCubemapTexture->width / 2 + 128, 2 * videoAsCubemapTexture->width);
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -359,8 +359,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->Apply(deviceContext, "use_cubemap", 0);
 				renderPlatform->DrawQuad(deviceContext);
 				cubemapClearEffect->Unapply(deviceContext);
-
-
 			}
 		}
 		RenderLocalActors(deviceContext);
@@ -561,7 +559,6 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(hdrFramebuffer);
 	SAFE_DELETE(pbrEffect);
 	SAFE_DELETE(cubemapClearEffect);
-	SAFE_DELETE(diffuseCubemapTexture);
 }
 
 void ClientRenderer::RemoveView(int)
