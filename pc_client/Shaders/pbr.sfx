@@ -152,7 +152,7 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseCol
 	specular *= saturate(pow(n_v + ao, roughnessE) - 1. + ao);
 
 	vec3 colour = diffuse+specular;
-	return colour;
+	return diffuse;
 }
 
 shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
