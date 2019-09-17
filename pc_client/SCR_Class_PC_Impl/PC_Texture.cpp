@@ -101,9 +101,9 @@ void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	bool rt = false;
 	bool ds = false;
 	int num_samp = 1;
-	if(pTextureCreateInfo.compression==scr::Texture::CompressionFormat::UNCOMPRESSED && pTextureCreateInfo.size != static_cast<size_t>(pTextureCreateInfo.width) * pTextureCreateInfo.height * pTextureCreateInfo.bytesPerPixel)
+	if(pTextureCreateInfo.compression==scr::Texture::CompressionFormat::UNCOMPRESSED && pTextureCreateInfo.mipSizes[0] != static_cast<size_t>(pTextureCreateInfo.width) * pTextureCreateInfo.height * pTextureCreateInfo.bytesPerPixel)
 	{
-		WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel, pTextureCreateInfo.size);
+		WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel, pTextureCreateInfo.mipSizes[0]);
 		return;
 	}
 	simul::crossplatform::TextureCreate textureCreate;
@@ -115,7 +115,7 @@ void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	textureCreate.setDepthStencil = ds;
 	textureCreate.numOfSamples = num_samp;
 	textureCreate.compressionFormat = (simul::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
-	textureCreate.initialData = pTextureCreateInfo.data;
+	textureCreate.initialData = pTextureCreateInfo.mips[0];
 	m_SimulTexture->EnsureTexture(srp, &textureCreate);
 	//m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, (int)(pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel));
 }

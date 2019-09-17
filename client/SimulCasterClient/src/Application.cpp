@@ -555,8 +555,8 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 						scr::Texture::Type::TEXTURE_CUBE_MAP,
 						scr::Texture::Format::RGBA8,
 						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-						0,
-						nullptr,
+                        {},
+                        {},
 						scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
 	   mCubemapTexture->Create(textureCreateInfo);
@@ -576,8 +576,8 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 						scr::Texture::Type::TEXTURE_CUBE_MAP,
 						scr::Texture::Format::RGBA8,
 						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-						0,
-						nullptr,
+						{},
+						{},
 						scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
 		mCubemapLightingTexture->Create(textureCreateInfo);

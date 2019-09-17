@@ -235,19 +235,19 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 {
     scr::Texture::TextureCreateInfo texInfo =
     {
-         texture.width,
-         texture.height,
-         texture.depth,
-         texture.bytesPerPixel,
-         texture.arrayCount,
-         texture.mipCount,
-         scr::Texture::Slot::UNKNOWN,
-         scr::Texture::Type::TEXTURE_2D, //Assumed
-         textureFormatFromAVSTextureFormat(texture.format),
-         scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
-         0,
-         nullptr,
-         scr::Texture::CompressionFormat::UNCOMPRESSED
+		texture.width,
+		texture.height,
+		texture.depth,
+		texture.bytesPerPixel,
+		texture.arrayCount,
+		texture.mipCount,
+		scr::Texture::Slot::UNKNOWN,
+		scr::Texture::Type::TEXTURE_2D, //Assumed
+		textureFormatFromAVSTextureFormat(texture.format),
+		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
+		{},
+		{},
+		toSCRCompressionFormat(basis_textureFormat)
      };
    
 	//We need a new transcoder for every .basis file.
@@ -255,31 +255,35 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 
 	if(basis_transcoder.start_transcoding(texture.data, texture.dataSize))
 	{
-		uint32_t basisWidth, basisHeight, basisBlocks;
+		texInfo.mipCount = basis_transcoder.get_total_image_levels(texture.data, texture.dataSize, 0);
 
-		basis_transcoder.get_image_level_desc(texture.data, texture.dataSize, 0, 0, basisWidth, basisHeight, basisBlocks);
-		uint32_t outDataSize = basist::basis_get_bytes_per_block(basis_textureFormat) * basisBlocks;
-
-		unsigned char* outData = new unsigned char[outDataSize];
-		if(basis_transcoder.transcode_image_level(texture.data, texture.dataSize, 0, 0, outData, basisBlocks, basis_textureFormat))
+		for(uint32_t mipIndex = 0; mipIndex < texInfo.mipCount; mipIndex++)
 		{
-			delete[] texture.data;
+			uint32_t basisWidth, basisHeight, basisBlocks;
 
-			texInfo.size = outDataSize;
-			texInfo.data = outData;
-			texInfo.compression = toSCRCompressionFormat(basis_textureFormat);
+			basis_transcoder.get_image_level_desc(texture.data, texture.dataSize, 0, mipIndex, basisWidth, basisHeight, basisBlocks);
+			uint32_t outDataSize = basist::basis_get_bytes_per_block(basis_textureFormat) * basisBlocks;
+
+			unsigned char* outData = new unsigned char[outDataSize];
+			if(basis_transcoder.transcode_image_level(texture.data, texture.dataSize, 0, mipIndex, outData, basisBlocks, basis_textureFormat))
+			{
+				texInfo.mipSizes.push_back(outDataSize);
+				texInfo.mips.push_back(outData);
+			}
+			else
+			{
+				delete[] outData;
+			}
 		}
-		else
-		{
-			delete[] outData;
-		}
+
+		delete[] texture.data;
 	}
 
 	//The data is uncompressed if we failed to transcode it.
-	if(!texInfo.data)
+	if(texInfo.mips.size() == 0)
 	{
-		texInfo.size = texture.dataSize;
-		texInfo.data = texture.data;
+		texInfo.mipSizes.push_back(texture.dataSize);
+		texInfo.mips.push_back(texture.data);
 	}
 
 	CompleteTexture(texture_uid, texInfo);
