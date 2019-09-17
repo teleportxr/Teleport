@@ -129,12 +129,15 @@ private:
 	scr::ResourceManagers resourceManagers;
 
 	//Clientside Renderering Objects
+	scc::GL_DeviceContext mDeviceContext;
+	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
+
 	scr::vec3 capturePosition;
 	std::shared_ptr<scr::Camera> scrCamera;
 
-	scc::GL_DeviceContext mDeviceContext;
 	scc::GL_Effect mEffect;
 	std::shared_ptr<scr::Sampler> mSampler = renderPlatform.InstantiateSampler();
+
 	std::map<avs::uid, OVR::ovrSurfaceDef> mOVRActors;
 	inline void RemoveInvalidOVRActors()
 	{

@@ -38,6 +38,7 @@ layout(location = 9)  out vec4 v_Color;
 layout(location = 10) out vec4 v_Joint;
 layout(location = 11) out vec4 v_Weights;
 layout(location = 12) out vec3 v_CameraPosition;
+layout(location = 13) out vec3 v_ModelSpacePosition;
 
 
 void main()
@@ -45,9 +46,9 @@ void main()
     //gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
     gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
 
-    v_Position 	        = mat3(ModelMatrix) * a_Position;
-    v_Normal	        = normalize(mat3(ModelMatrix) * a_Normal);
-    v_Tangent	        = normalize(mat3(ModelMatrix) * a_Tangent.xyz);
+    v_Position 	        = (ModelMatrix * vec4(a_Position, 1.0)).xyz;
+    v_Normal	        = normalize((ModelMatrix * vec4(a_Normal, 1.0)).xyz);
+    v_Tangent	        = normalize((ModelMatrix * a_Tangent).xyz);
     v_Binormal	        = normalize(cross(v_Normal, v_Tangent));
     v_TBN		        = mat3(v_Tangent, v_Binormal, v_Normal);
     v_UV0		        = a_UV0;
@@ -56,4 +57,9 @@ void main()
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;
     v_CameraPosition    = cam.u_Position;
+    mat4 cob = mat4(vec4(0.0, 1.0, 0.0, 0.0),
+                    vec4(0.0, 0.0, 1.0, 0.0),
+                    vec4(-1.0, 0.0, 0.0, 0.0),
+                    vec4(0.0, 0.0, 0.0, 1.0));
+    v_ModelSpacePosition = (transpose(cob) * vec4(a_Position, 1.0)).xyz;
 }

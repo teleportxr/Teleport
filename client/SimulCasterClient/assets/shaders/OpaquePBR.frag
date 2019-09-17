@@ -16,6 +16,7 @@ layout(location = 9)  in vec4 v_Color;
 layout(location = 10) in vec4 v_Joint;
 layout(location = 11) in vec4 v_Weights;
 layout(location = 12) in vec3 v_CameraPosition;
+layout(location = 13) in vec3 v_ModelSpacePosition;
 
 //From Application SR
 //Lights
@@ -63,22 +64,22 @@ layout(binding = 12) uniform sampler2D u_Combined;
 layout(binding = 13) uniform samplerCube u_DiffuseCubemap;
 layout(binding = 14) uniform samplerCube u_SpecularCubemap;
 
+//Constants
+const float PI = 3.1415926535;
+
 //Helper Functions
 float saturate(float _val)
 {
     return min(1.0, max(0.0, _val));
 }
-
 vec3 GetEnvironmentDiffuse(vec3 dir)
 {
-    return texture(u_DiffuseCubemap, dir).rgb;
+    return texture(u_DiffuseCubemap, dir.zxy).rgb;
 }
-
 vec3 GetEnvironmentSpecular(vec3 dir, float lod)
 {
-    return textureLod(u_DiffuseCubemap, dir, lod).rgb;
+    return textureLod(u_SpecularCubemap, dir.zxy, lod).rgb;
 }
-
 vec3 EnvironmentBRDFApprox(vec3 specularColour, float roughness, float n_v)
 {
     const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
@@ -88,7 +89,6 @@ vec3 EnvironmentBRDFApprox(vec3 specularColour, float roughness, float n_v)
     vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
     return specularColour * AB.x + AB.y;
 }
-
 vec4 GetDiffuse()
 {
     return vec4(
@@ -98,7 +98,6 @@ vec4 GetDiffuse()
     u_DiffuseOutputScalar.a * texture(u_Diffuse, v_UV0 * u_DiffuseTexCoordsScalar_A).a
     );
 }
-
 vec3 GetNormals()
 {
     vec3 normalMap = vec3(
@@ -109,29 +108,25 @@ vec3 GetNormals()
     normalMap = normalize(v_TBN * (normalMap * 2.0 - 1.0));
     return normalMap;
 }
-
-float GetMetallic()
-{
-    return u_CombinedOutputScalar.r * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_R).r;
-}
 float GetRoughness()
+{
+    return u_CombinedOutputScalar.b * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_B).b;
+}
+float GetMetallic()
 {
     return u_CombinedOutputScalar.g * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_G).g;
 }
 float GetAO()
 {
-    return u_CombinedOutputScalar.b * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_B).b;
+    return u_CombinedOutputScalar.r * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_R).r;
 }
 float GetSpecular()
 {
     return u_CombinedOutputScalar.a * texture(u_Combined, v_UV0 * u_CombinedTexCoordsScalar_A).a;
 }
 
-//Constants
-const float PI = 3.1415926535;
-
 //BRDF Reflection Model to add from UE4:
-//Diffuse: Burley, OrenNayar, Gotanda
+//Diffuse: Burley, OrenNayar, Gotandas
 //Specular: Dist.: Blinn, Bechmann, GGXaniso
 //Specular: Vis.: Implicit, Neumann, Kelemen, Schlick, Smith, SmithJointAprrox.
 //Specular: Fresnel: None, Fresnel.
@@ -214,7 +209,15 @@ vec3 BRDF(vec3 N, vec3 Wo, vec3 Wi, vec3 H, vec3 lightColour) //Return a RGB val
 
 void main()
 {
-    vec3 Lo;				//Exitance Radiance from the surface in the direction of the camera.
+    //Debug light
+	Light d_Light;
+	d_Light.u_Colour = vec4(1, 1, 1 ,1);
+	d_Light.u_Position = vec3(1.3, 1.8, -7.6);
+	d_Light.u_Power = 120.0;		
+	d_Light.u_Direction = vec3(0.0, -0.391, -0.921);
+	d_Light.u_SpotAngle = 2.0 * PI;
+	
+	vec3 Lo;				//Exitance Radiance from the surface in the direction of the camera.
     vec3 Le = vec3(0.0);	//Emissive Radiance from the surface in the direction of the camera, if any.
 
     //Primary non-light dependent
@@ -222,18 +225,18 @@ void main()
     vec3 Wo = normalize(-v_Position + v_CameraPosition);
 
     //Loop over lights to calculate Lo (accumulation of L in the direction Wo)
-    for(int i = 0; i < MaxLights; i++)
+    for(int i = 0; i < 1/*MaxLights*/; i++)
     {
-        if(u_Lights[i].u_Power == 0.0)
+        if(d_Light.u_Power == 0.0)
         continue;
 
         //Primary light dependent
-        vec3 Wi = normalize(-v_Position + u_Lights[i].u_Position);
+        vec3 Wi = normalize(-v_Position + d_Light.u_Position);
         vec3 H = normalize(Wo + Wi);
 
         //Calucate irradance from the light over the sphere of directions.
-        float distanceToLight = length(-v_Position + u_Lights[i].u_Position);
-        vec3 SPD = vec3(u_Lights[i].u_Colour.r / 3.0 * u_Lights[i].u_Power,	u_Lights[i].u_Colour.g / 3.0 * u_Lights[i].u_Power, u_Lights[i].u_Colour.b / 3.0 * u_Lights[i].u_Power);
+        float distanceToLight = length(-v_Position + d_Light.u_Position);
+        vec3 SPD = d_Light.u_Colour.xyz * d_Light.u_Power;
         vec3 irradiance = SPD / (4.0 * PI * pow(distanceToLight, 2.0));
 
         //Because the radiance is only non-zero in the direction Wi,
@@ -242,6 +245,5 @@ void main()
 
         Lo += Le + BRDF(N, Wo, Wi, H, radiance);
     }
-    //gl_FragColor = vec4(Lo, 1.0); //Gamma Correction?
-    gl_FragColor = GetDiffuse() + 0.01 * vec4(GetNormals(), 1) + 0.01 * vec4(GetMetallic(), 0, 0, 1) + 0.01 * vec4(GetEnvironmentDiffuse(Wo), 1) + 0.01 * vec4(GetEnvironmentSpecular(Wo, 0.0), 1);
+    gl_FragColor = vec4(pow(Lo, vec3(1.0/2.2)), 1.0); //Gamma Correction!
 }
