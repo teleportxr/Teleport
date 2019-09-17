@@ -400,6 +400,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	    case NodeDataType::Mesh:
 	    	{
 	    		CreateActor(node_uid, node.data_uid,node.materials, avs::Transform{node.transform.position, node.transform.rotation, node.transform.scale});
+	    		return;
 	    	}
 	    case NodeDataType::Camera:
 	    	return;
@@ -433,7 +434,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const st
 		if(material)
 		{
 			newActor->actorInfo.materials.push_back(material);
-	}
+		}
 		else
 		{
 			missingResources.push_back(m_uid);

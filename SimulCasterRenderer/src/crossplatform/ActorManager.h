@@ -27,9 +27,9 @@ namespace scr
 		}
 
 		void RemoveActor(avs::uid actor_uid)
-			{
+		{
 			m_Actors.erase(actor_uid);
-			}
+		}
 
 		bool HasActor(avs::uid actor_uid) const
 		{
@@ -80,7 +80,7 @@ namespace scr
 					//If the actor is visible, then reset their timer and continue.
 					it->second.timeSinceLastVisible = 0;
 					it++;
-			}
+				}
 				else
 				{
 					it->second.timeSinceLastVisible += deltaTimestamp;
@@ -89,7 +89,7 @@ namespace scr
 					{
 						//Erase an actor if they have been invisible for too long.
 						it = m_Actors.erase(it);
-		}
+					}
 					else
 					{
 						it++;
