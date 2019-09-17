@@ -72,7 +72,7 @@ struct ovrProgramParm
 struct ovrUniform
 {
 	// can be made as high as 16
-	static const int MAX_UNIFORMS = 8;
+	static const int MAX_UNIFORMS = 16 + 12; //Texture Slots + Uniform Blocks in Fragment Shader AJR
 
 	ovrUniform() :
 	  Location( -1 )
