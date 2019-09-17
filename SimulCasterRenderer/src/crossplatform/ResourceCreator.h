@@ -147,7 +147,7 @@ private:
 	basist::etc1_global_selector_codebook basis_codeBook;
 	basist::transcoder_texture_format basis_textureFormat;
 	
-	uint32_t m_PostUseLifetime = 1000; //30,000ms = 30s
+//s	uint32_t m_PostUseLifetime = 1000; //30,000ms = 30s
 	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;
 	ResourceManager<scr::Material> *m_MaterialManager;
 	ResourceManager<scr::Shader> *m_ShaderManager;

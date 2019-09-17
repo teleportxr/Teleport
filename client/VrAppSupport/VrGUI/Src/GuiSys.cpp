@@ -793,7 +793,7 @@ bool OvrGuiSysLocal::OnKeyEvent( int const keyCode, const int repeatCount, KeyEv
 
 void OvrGuiSysLocal::ShowInfoText( float const duration, const char * fmt, ... )
 {
-	char buffer[1024];
+	char buffer[2048];
 	va_list args;
 	va_start( args, fmt );
 	vsnprintf( buffer, sizeof( buffer ), fmt, args );
@@ -807,7 +807,7 @@ void OvrGuiSysLocal::ShowInfoText( float const duration, const char * fmt, ... )
 
 void OvrGuiSysLocal::ShowInfoText( float const duration, Vector3f const & offset, Vector4f const & color, const char * fmt, ... )
 {
-	char buffer[1024];
+	char buffer[2048];
 	va_list args;
 	va_start( args, fmt );
 	vsnprintf( buffer, sizeof( buffer ), fmt, args );

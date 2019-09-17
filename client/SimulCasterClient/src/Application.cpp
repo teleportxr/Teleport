@@ -344,13 +344,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 #if 1
 	ovrQuatf headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
+	ovrVector3f headPos=vrFrame.Tracking.HeadPose.Pose.Position;
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 1.0f, OVR::Vector3f(2.0f,0,0),OVR::Vector4f(1.f,1.f,0.f,0.5f), "Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Head Orientation: %1.3f, {%1.3f, %1.3f, %1.3f}\n Trackpad: %3.1f %3.1f\n Orphan Packets: %d\n"
+	mGuiSys->ShowInfoText( 1.0f,"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n"
+							 "Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\nPos: %3.3f %3.3f %3.3f \nTrackpad: %3.1f %3.1f\n Orphans: %d\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
 			frameRate, ctr.bandwidthKPS,
 			(uint64_t)resourceManagers.mActorManager.GetActorList().size(), (uint64_t)mOVRActors.size(),
 			capturePosition.x, capturePosition.y, capturePosition.z,
 			headPose.w, headPose.x, headPose.y, headPose.z,
+			headPos.x,headPos.y,headPos.z,
 			controllerState.mTrackpadX,controllerState.mTrackpadY,
 			ctr.m_packetMapOrphans);
 #endif
@@ -437,7 +440,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 	OVR_WARN("VIDEO STREAM CHANGED: %d %d %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height);
 
 	avs::NetworkSourceParams sourceParams = {};
-	sourceParams.socketBufferSize = 64 * 1024 * 1024; // 64MiB socket buffer size
+	sourceParams.socketBufferSize = 4*64 * 1024 * 1024; // 4* 64MiB socket buffer size
 	//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 	sourceParams.maxJitterBufferLength = 0;
 
@@ -446,7 +449,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
 		return;
 	}
-
+	mNetworkSource.setDebugStream(setupCommand.debug_stream);
 	avs::DecoderParams decoderParams = {};
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
@@ -777,8 +780,8 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 						j++;
 						resourceCount++;
 						assert(resourceCount <= OVR::ovrUniform::MAX_UNIFORMS);
-						assert(textureCount <= maxFragTextureSlots);
-						assert(uniformCount <= maxFragUniformBlocks);
+						assert(textureCount <= (size_t)maxFragTextureSlots);
+						assert(uniformCount <= (size_t)maxFragUniformBlocks);
 					}
 				}
 				pOvrActor->ovrSurfaceDefs.push_back(ovr_surface_def);
@@ -807,7 +810,6 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 			res.Surfaces.push_back(ovr_ActorDrawSurface);
 		}
 	}
-
 }
 
 const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
