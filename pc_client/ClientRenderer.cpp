@@ -84,6 +84,7 @@ ClientRenderer::ClientRenderer():
 	pbrEffect(nullptr),
 	cubemapClearEffect(nullptr),
 	specularCubemapTexture(nullptr),
+	lightingAsCubemapTexture(nullptr),
 	videoAsCubemapTexture(nullptr),
 	dummyDiffuse(nullptr),
 	dummyNormal(nullptr),
@@ -146,6 +147,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	videoAsCubemapTexture = renderPlatform->CreateTexture();
 	specularCubemapTexture = renderPlatform->CreateTexture();
 	diffuseCubemapTexture = renderPlatform->CreateTexture();
+	lightingAsCubemapTexture = renderPlatform->CreateTexture();
 	// dummy textures for materials:
 	dummyDiffuse = renderPlatform->CreateTexture();
 	dummyNormal = renderPlatform->CreateTexture();
@@ -257,6 +259,20 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture);
 }
 
+
+void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContext, simul::crossplatform::Texture *srcTexture, simul::crossplatform::Texture* targetTexture, int mips,int2 sourceOffset)
+{
+	cubemapConstants.sourceOffset = sourceOffset ;
+	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, 0);
+	cubemapClearEffect->Apply(deviceContext, "recompose", 0);
+	renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
+	cubemapClearEffect->Unapply(deviceContext);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+	cubemapClearEffect->UnbindTextures(deviceContext);
+}
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
 {
 	simul::crossplatform::DeviceContext	deviceContext;
@@ -308,43 +324,27 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 		if (ti)
 		{
+			int W = videoAsCubemapTexture->width;
+			int w = 128;
 			{
-				cubemapConstants.sourceOffset = int2(0, 2 * videoAsCubemapTexture->width);
+				cubemapConstants.sourceOffset = int2(0, 2 * W);
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoAsCubemapTexture);
 
 				cubemapClearEffect->Apply(deviceContext, "recompose_with_depth_alpha", 0);
-				renderPlatform->DispatchCompute(deviceContext, videoAsCubemapTexture->width / 16, videoAsCubemapTexture->width / 16, 6);
+				renderPlatform->DispatchCompute(deviceContext, W / 16, W / 16, 6);
 				cubemapClearEffect->Unapply(deviceContext);
 				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
 				cubemapClearEffect->UnbindTextures(deviceContext);
 			}
-			{
-				cubemapConstants.sourceOffset = int2(3 * videoAsCubemapTexture->width / 2, 2 * videoAsCubemapTexture->width);
-				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", specularCubemapTexture,-1,0);
-				cubemapClearEffect->Apply(deviceContext, "recompose", 0);
-				renderPlatform->DispatchCompute(deviceContext, specularCubemapTexture->width / 16, specularCubemapTexture->width / 16, 6);
-				cubemapClearEffect->Unapply(deviceContext);
-				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
-				cubemapClearEffect->UnbindTextures(deviceContext);
-			}
-			{
-				cubemapConstants.sourceOffset = int2(3 * videoAsCubemapTexture->width / 2 + 128, 2 * videoAsCubemapTexture->width);
-				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", diffuseCubemapTexture, -1, 0);
-				cubemapClearEffect->Apply(deviceContext, "recompose", 0);
-				renderPlatform->DispatchCompute(deviceContext, diffuseCubemapTexture->width / 16, diffuseCubemapTexture->width / 16, 6);
-				cubemapClearEffect->Unapply(deviceContext);
-				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
-				cubemapClearEffect->UnbindTextures(deviceContext);
-			}
+			int2 sourceOffset(3 * W / 2, 2 * W);
+			Recompose(deviceContext, ti->texture, specularCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
+			sourceOffset.x += 2 * 3;
+			Recompose(deviceContext, ti->texture, diffuseCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
+			sourceOffset.x += 2 * 3;
+			Recompose(deviceContext, ti->texture, lightingAsCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
 		}
 		{
 			cubemapConstants.depthOffsetScale = depthOffsetScale;
@@ -550,6 +550,7 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(transparentMesh);
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularCubemapTexture);
+	SAFE_DELETE(lightingAsCubemapTexture);
 	SAFE_DELETE(videoAsCubemapTexture);
 	SAFE_DELETE(dummyDiffuse);
 	SAFE_DELETE(dummyNormal);
@@ -637,6 +638,8 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	lightingAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
+		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true); 
 	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 

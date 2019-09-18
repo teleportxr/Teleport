@@ -82,6 +82,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularCubemapTexture;
+	simul::crossplatform::Texture* lightingAsCubemapTexture;
 	simul::crossplatform::Texture* videoAsCubemapTexture;
 	simul::crossplatform::Texture* dummyDiffuse;
 	simul::crossplatform::Texture* dummyNormal;
@@ -106,6 +107,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
 	
 	scr::ResourceManagers resourceManagers;
+	void Recompose(simul::crossplatform::DeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 public:
 	ClientRenderer();
 	~ClientRenderer();
