@@ -84,7 +84,7 @@ ClientRenderer::ClientRenderer():
 	pbrEffect(nullptr),
 	cubemapClearEffect(nullptr),
 	specularCubemapTexture(nullptr),
-	lightingAsCubemapTexture(nullptr),
+	lightingCubemapTexture(nullptr),
 	videoAsCubemapTexture(nullptr),
 	dummyDiffuse(nullptr),
 	dummyNormal(nullptr),
@@ -147,7 +147,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	videoAsCubemapTexture = renderPlatform->CreateTexture();
 	specularCubemapTexture = renderPlatform->CreateTexture();
 	diffuseCubemapTexture = renderPlatform->CreateTexture();
-	lightingAsCubemapTexture = renderPlatform->CreateTexture();
+	lightingCubemapTexture = renderPlatform->CreateTexture();
 	// dummy textures for materials:
 	dummyDiffuse = renderPlatform->CreateTexture();
 	dummyNormal = renderPlatform->CreateTexture();
@@ -344,7 +344,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			sourceOffset.x += w * 3;
 			Recompose(deviceContext, ti->texture, diffuseCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
 			sourceOffset.x += w * 3;
-			Recompose(deviceContext, ti->texture, lightingAsCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
+			Recompose(deviceContext, ti->texture, lightingCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
 		}
 		{
 			cubemapConstants.depthOffsetScale = depthOffsetScale;
@@ -498,8 +498,9 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : dummyDiffuse);
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : dummyNormal);
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() : dummyCombined);
-				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
 				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
+				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+				pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 			}
 
 			pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
@@ -551,7 +552,7 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(transparentMesh);
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularCubemapTexture);
-	SAFE_DELETE(lightingAsCubemapTexture);
+	SAFE_DELETE(lightingCubemapTexture);
 	SAFE_DELETE(videoAsCubemapTexture);
 	SAFE_DELETE(dummyDiffuse);
 	SAFE_DELETE(dummyNormal);
@@ -639,7 +640,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	lightingAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
+	lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true); 
 	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
