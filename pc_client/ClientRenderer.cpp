@@ -341,9 +341,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			}
 			int2 sourceOffset(3 * W / 2, 2 * W);
 			Recompose(deviceContext, ti->texture, specularCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
-			sourceOffset.x += 2 * 3;
+			sourceOffset.x += w * 3;
 			Recompose(deviceContext, ti->texture, diffuseCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
-			sourceOffset.x += 2 * 3;
+			sourceOffset.x += w * 3;
 			Recompose(deviceContext, ti->texture, lightingAsCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
 		}
 		{
@@ -366,9 +366,10 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
 
-		if(ti)
+		if(ti&&show_video)
 			renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
 	}
+	if(show_textures)
 	{
 		auto& textures = resourceManagers.mTextureManager.GetCache();
 		static int tw = 32;
@@ -768,7 +769,15 @@ void ClientRenderer::OnMouse(bool bLeftButtonDown
 void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 {
 	switch (wParam) 
-	{ 
+	{
+		case 'V':
+			if(!bKeyDown)
+				show_video = !show_video;
+			break;
+		case 'T':
+			if (!bKeyDown)
+				show_textures = !show_textures;
+			break;
 		case 'K':
 			sessionClient.Disconnect(0);
 			break;
