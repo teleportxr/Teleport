@@ -104,5 +104,12 @@ namespace scr
 		void AddImage(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement = 0);
 
 		const std::vector<WriteShaderResource>& GetWriteShaderResources() const {return m_WriteShaderResources;}
+		std::vector<WriteShaderResource>& GetWriteShaderResources() {return m_WriteShaderResources;}
+		ShaderResource GetShaderResourcesBySet(size_t shaderResourceSetIndex);
+
+		ShaderResource operator[](size_t shaderResourceSetIndex)
+		{
+			return GetShaderResourcesBySet(shaderResourceSetIndex);
+		}
 	};
 }

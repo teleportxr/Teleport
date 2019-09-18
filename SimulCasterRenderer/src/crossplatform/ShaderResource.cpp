@@ -47,3 +47,22 @@ void ShaderResource::AddImage(uint32_t shaderResourceLayoutIndex, ShaderResource
 
 	m_WriteShaderResources.push_back(wsr);
 }
+
+ShaderResource ShaderResource::GetShaderResourcesBySet(size_t shaderResourceSetIndex)
+{
+	ShaderResourceLayout& shaderResourceLayout = m_ShaderResourceLayouts.find(shaderResourceSetIndex)->second;
+	const std::vector<WriteShaderResource>& this_wsrs= this->GetWriteShaderResources();
+
+	ShaderResource result({shaderResourceLayout});
+	result.GetWriteShaderResources().clear();
+	for (auto& this_wsr : this_wsrs)
+	{
+		if (this_wsr.dstSet == shaderResourceSetIndex)
+		{
+			result.GetWriteShaderResources().push_back(this_wsr);
+		}
+		else
+			continue;
+	}
+	return result;
+}

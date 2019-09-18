@@ -45,6 +45,7 @@ Application::Application()
 	, mLocale(nullptr)
 	, mVideoSurfaceTexture(nullptr)
 	, mCubemapTexture(nullptr)
+	, mCubemapLightingTexture(nullptr)
 	, mOvrMobile(nullptr)
 	, mSession(this, resourceCreator)
 	, mControllerID(0)
@@ -171,7 +172,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			((scc::GL_Texture*)(mVideoTexture.get()))->SetExternalGlTexture(mVideoSurfaceTexture->GetTextureId());
 
 		}
-		mCubemapTexture 	 = renderPlatform.InstantiateTexture();
+		mCubemapTexture 	    = renderPlatform.InstantiateTexture();
+        mCubemapLightingTexture = renderPlatform.InstantiateTexture();
 		{
 			CopyCubemapSrc=LoadTextFile("shaders/CopyCubemap.comp");
 			mCopyCubemapEffect=renderPlatform.InstantiateEffect();
@@ -286,7 +288,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
         lightingCubemapLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
         scr::ShaderResource mLightCubemapShaderResources({lightingCubemapLayout});
 		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {mCubemapTexture->GetSampler() ? mCubemapTexture->GetSampler() : mSampler, mCubemapTexture});
-		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {mCubemapTexture->GetSampler() ? mCubemapTexture->GetSampler() : mSampler, mCubemapTexture});
+		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {mCubemapLightingTexture->GetSampler() ? mCubemapLightingTexture->GetSampler() : mSampler, mCubemapLightingTexture});
 
 		int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
 		mRefreshRates.resize(num_refresh_rates);
@@ -673,8 +675,8 @@ void Application::CopyToCubemaps()
 		size.z=std::min(size.z,(uint32_t)max_w);
 
 		scr::InputCommandCreateInfo inputCommandCreateInfo={};
-		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapEffect, {mCubemapComputeShaderResources[0]});
-		cubemapUB.faceSize=mCubemapTexture->GetTextureCreateInfo().width;
+		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapEffect, {mCubemapComputeShaderResources[0][0]});
+		cubemapUB.faceSize=tc.width;
 		cubemapUB.sourceOffset={0,0};
 
 		//OVR_WARN("CubemapUB: %d %d %d",cubemapUB.sourceOffset.x,cubemapUB.sourceOffset.y,cubemapUB.faceSize);
@@ -684,10 +686,10 @@ void Application::CopyToCubemaps()
 		GL_CheckErrors("Frame: CopyToCubemaps - Main");
 
 		//Lighting Cubemaps
-        inputCommand.m_ShaderResources =  {mCubemapComputeShaderResources[1]};
-        int32_t mainCubeWidth = static_cast<int32_t>(mCubemapTexture->GetTextureCreateInfo().width);
-        cubemapUB.faceSize= mCubemapLightingTexture->GetTextureCreateInfo().width;
-        cubemapUB.sourceOffset={(3 * mainCubeWidth)/2, 2 * mainCubeWidth};
+        inputCommand.m_ShaderResources =  {mCubemapComputeShaderResources[0][1]};
+        uint32_t mainCubeWidth = tc.width;
+        cubemapUB.faceSize= mainCubeWidth / 8;
+        cubemapUB.sourceOffset={(int32_t)((7 * mainCubeWidth)/4), (int32_t)(2 * mainCubeWidth)};
 
 		mDeviceContext.DispatchCompute(&inputCommand);
 		GL_CheckErrors("Frame: CopyToCubemaps - Lighting");
