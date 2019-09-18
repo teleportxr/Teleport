@@ -10,7 +10,6 @@ void GL_IndexBuffer::Create(IndexBufferCreateInfo* pIndexBufferCreateInfo)
     m_CI = *pIndexBufferCreateInfo;
 
     size_t size = m_CI.indexCount * m_CI.stride;
-    assert(size % 4 == 0);
 
     glGenBuffers(1, &m_IndexID);
     Bind();

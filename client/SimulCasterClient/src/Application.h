@@ -116,8 +116,10 @@ private:
 	OVR::SurfaceTexture *mVideoSurfaceTexture;
 	std::shared_ptr<scr::Texture>       mVideoTexture;
 	std::shared_ptr<scr::Texture>       mCubemapTexture;
+	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
 	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
+	scr::ShaderResource                 mLightCubemapShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::string                         CopyCubemapSrc;
 	ovrMobile                           *mOvrMobile;
@@ -144,9 +146,9 @@ private:
 	std::shared_ptr<scr::Sampler> mSampler = renderPlatform.InstantiateSampler();
 	struct OVRActor
 	{
-		std::vector<std::shared_ptr<OVR::ovrSurfaceDef> > ovrSurfaceDefs;
+		std::vector<std::shared_ptr<OVR::ovrSurfaceDef>> ovrSurfaceDefs;
 	};
-	std::map<avs::uid, std::shared_ptr<OVRActor> > mOVRActors;
+	std::map<avs::uid, std::shared_ptr<OVRActor>> mOVRActors;
 	inline void RemoveInvalidOVRActors()
 	{
 		/*for(std::map<avs::uid, std::shared_ptr<OVRActor> >::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)

@@ -103,8 +103,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			attributes.reserve(attributeCount);
 			for (size_t k = 0; k < attributeCount; k++)
 			{
-				AttributeSemantic semantic = (AttributeSemantic)Next4B;
-				Next4B;
+				AttributeSemantic semantic = (AttributeSemantic)Next8B;
 				avs::uid accessor = Next8B;
 				attributes.push_back({ semantic, accessor });
 			}
@@ -322,8 +321,6 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 
 			material.extensions[id] = std::move(newExtension);
 		}
-
-		decodeTexture(target);
 
 		target->passMaterial(mat_uid, material);
 	}
