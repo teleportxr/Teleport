@@ -406,13 +406,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 #if 1
 	ovrQuatf headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
+	ovrVector3f headPos=vrFrame.Tracking.HeadPose.Pose.Position;
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 1.0f, /*OVR::Vector3f(2.0f,0,0),OVR::Vector4f(1.f,1.f,0.f,0.5f),*/"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Head Orientation: %1.3f, {%1.3f, %1.3f, %1.3f}\n Trackpad: %3.1f %3.1f\n Orphan Packets: %d\n"
+	mGuiSys->ShowInfoText( 1.0f,"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n"
+							 "Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\nPos: %3.3f %3.3f %3.3f \nTrackpad: %3.1f %3.1f\n Orphans: %d\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
 			frameRate, ctr.bandwidthKPS,
 			(uint64_t)resourceManagers.mActorManager.GetActorList().size(), (uint64_t)mOVRActors.size(),
 			capturePosition.x, capturePosition.y, capturePosition.z,
 			headPose.w, headPose.x, headPose.y, headPose.z,
+			headPos.x,headPos.y,headPos.z,
 			controllerState.mTrackpadX,controllerState.mTrackpadY,
 			ctr.m_packetMapOrphans);
 #endif
@@ -499,7 +502,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 	OVR_WARN("VIDEO STREAM CHANGED: %d %d %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height);
 
 	avs::NetworkSourceParams sourceParams = {};
-	sourceParams.socketBufferSize = 64 * 1024 * 1024; // 64MiB socket buffer size
+	sourceParams.socketBufferSize = 4*64 * 1024 * 1024; // 4* 64MiB socket buffer size
 	//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 	sourceParams.maxJitterBufferLength = 0;
 
@@ -508,7 +511,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
 		return;
 	}
-
+	mNetworkSource.setDebugStream(setupCommand.debug_stream);
 	avs::DecoderParams decoderParams = {};
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
@@ -707,13 +710,13 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 	for(auto& a : resourceManagers.mActorManager.GetActorList())
 	{
-		auto& liveActor = a.second;
-		auto& actor = liveActor.actor;
+		auto &liveActor=a.second;
+		auto &actor=liveActor.actor;
 		if(!actor->isVisible)
 		{
             continue;
         }
-		size_t num_elements = actor->GetMaterials().size();
+		size_t num_elements=actor->GetMaterials().size();
 
 		if(mOVRActors.find(a.first) == mOVRActors.end())
 		{
@@ -721,16 +724,16 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 			std::shared_ptr<OVRActor> pOvrActor = std::make_shared<OVRActor>();
 			pOvrActor->ovrSurfaceDefs.reserve(num_elements);
 
-			for(size_t i = 0; i < num_elements; i++)
+			for(size_t i=0;i<num_elements;i++)
 			{
 				//From Actor
-				const scr::Mesh::MeshCreateInfo& meshCI = actor->GetMesh()->GetMeshCreateInfo();
-				scr::Material::MaterialCreateInfo& materialCI = actor->GetMaterials()[i]->GetMaterialCreateInfo();
+				const scr::Mesh::MeshCreateInfo   &meshCI     = actor->GetMesh()->GetMeshCreateInfo();
+				scr::Material::MaterialCreateInfo &materialCI = actor->GetMaterials()[i]->GetMaterialCreateInfo();
 
 				//Mesh.
 				// The first instance of vb/ib should be adequate to get the information needed.
-				const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(meshCI.vb[i].get());
-				const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(meshCI.ib[i].get());
+				const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer *>(meshCI.vb[i].get());
+				const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer *>(meshCI.ib[i].get());
 				gl_vb->CreateVAO(gl_ib->GetIndexID());
 
 				//Material
@@ -739,14 +742,14 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				pbrShaderResources.push_back(actor->GetMaterials()[i]->GetShaderResource());
 				pbrShaderResources.push_back(mLightCubemapShaderResources);
 
-				materialCI.effect = dynamic_cast<scr::Effect*>(&mEffect);
-				const auto gl_effect = &mEffect;
+				materialCI.effect = dynamic_cast<scr::Effect *>(&mEffect);
+				const auto                            gl_effect = &mEffect;
 				const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("OpaquePBR");
 				if(materialCI.diffuse.texture || materialCI.normal.texture || materialCI.combined.texture)
 				{
-                    materialCI.diffuse.texture->UseSampler(mSampler);
-                    materialCI.normal.texture->UseSampler(mSampler);
-                    materialCI.combined.texture->UseSampler(mSampler);
+				materialCI.diffuse.texture->UseSampler(mSampler);
+				materialCI.normal.texture->UseSampler(mSampler);
+				materialCI.combined.texture->UseSampler(mSampler);
                 }
 
 				//----Set OVR Actor----//
@@ -781,7 +784,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				ovr_surface_def->graphicsCommand.GpuState.frontFace = gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
 				ovr_surface_def->graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
 				ovr_surface_def->graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE: OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
-				ovr_surface_def->graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;
+				ovr_surface_def->graphicsCommand.GpuState.depthEnable     = gl_effectPass.depthStencilingState.depthTestEnable;
 				ovr_surface_def->graphicsCommand.GpuState.depthMaskEnable = false;
 				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[0] = true;
 				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[1] = true;
@@ -830,8 +833,8 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 						j++;
 						resourceCount++;
 						assert(resourceCount <= OVR::ovrUniform::MAX_UNIFORMS);
-						assert(textureCount <= maxFragTextureSlots);
-						assert(uniformCount <= maxFragUniformBlocks);
+						assert(textureCount <= (size_t)maxFragTextureSlots);
+						assert(uniformCount <= (size_t)maxFragUniformBlocks);
 					}
 				}
 				pOvrActor->ovrSurfaceDefs.push_back(ovr_surface_def);
@@ -840,13 +843,13 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 		}
 
 		//The OVR actor has been found/created
-		std::shared_ptr<OVRActor> pOvrActor = mOVRActors[a.first];
+		std::shared_ptr<OVRActor> pOvrActor=mOVRActors[a.first];
 		assert(pOvrActor);
-		for(size_t i = 0; i < num_elements; i++)
+		for(size_t i=0;i<num_elements;i++)
 		{
 			//----OVR Actor Set Transforms----//
-			float heightOffset = -0.0F;
-			scr::vec3 camPos = capturePosition * -1;
+			float     heightOffset = -0.0F;
+			scr::vec3 camPos       = capturePosition * -1;
 			camPos.y += heightOffset;
 
 			//Change of Basis matrix

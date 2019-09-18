@@ -112,8 +112,11 @@ std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 {
 	try
 	{
-		//Will throw if no resource has the passed id.
-		ResourceData& data = cachedItems.at(id);
+		auto it=cachedItems.find(id);
+		if(it==cachedItems.end())
+			return nullptr;
+
+		ResourceData& data = it->second;
 
 		data.timeSinceLastUse = 0;
 

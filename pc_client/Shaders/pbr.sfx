@@ -11,6 +11,7 @@ uniform Texture2D normalTexture;
 uniform Texture2D combinedTexture;
 uniform TextureCube diffuseCubemap;
 uniform TextureCube specularCubemap;
+uniform TextureCube lightingCubemap;
 
 //////////////////////////
 uniform TextureCube nearFarTextureCube;
@@ -133,8 +134,8 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseCol
 	float n_l		= saturate(dot(normal, lightDir));
 	vec3 envSpecularColour = EnvBRDFApprox(specularColour, roughnessE, n_v);
 
-	vec3 env3	=diffuseCubemap.Sample(cubeSamplerState,refl.xyz).rgb;
-	vec3 env	=specularCubemap.SampleLevel(cubeSamplerState,refl.xyz,roughnessE*11.0).rgb;
+	vec3 env3	=diffuseCubemap.SampleLevel(cubeSamplerState,refl.xyz,0).rgb;
+	vec3 env	=specularCubemap.SampleLevel(cubeSamplerState,refl.xyz,0*roughnessE*11.0).rgb;
 	env			=mix(env, env3, saturate((roughnessE - 0.25) / 0.75));
 
 	diffuse		+=diffuseColour * diffuseCubemap.Sample(cubeSamplerState, normal.xyz).rgb;;
@@ -152,7 +153,7 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseCol
 	specular *= saturate(pow(n_v + ao, roughnessE) - 1. + ao);
 
 	vec3 colour = diffuse+specular;
-	return diffuse;
+	return env3;
 }
 
 shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
