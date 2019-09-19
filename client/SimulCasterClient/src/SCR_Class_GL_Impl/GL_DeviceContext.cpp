@@ -17,7 +17,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 
     //Default Init
     dynamic_cast<GL_FrameBuffer *>(pInputCommand->pFBs)[0].BeginFrame();
-    descriptorSets.push_back(pInputCommand->pCamera->GetDescriptorSet());
+    descriptorSets.push_back(pInputCommand->pCamera->GetShaderResource());
 
     //Switch for types
     switch (pInputCommand->type)
@@ -32,9 +32,10 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             InputCommand_Mesh_Material_Transform* ic_mmt = dynamic_cast<InputCommand_Mesh_Material_Transform*>(pInputCommand);
 
             //Mesh
-            dynamic_cast<const GL_VertexBuffer*>(ic_mmt->pMesh->GetMeshCreateInfo().vb.get())->Bind();
+            const GL_VertexBuffer *gl_vertexbuffer=static_cast<const GL_VertexBuffer*>(ic_mmt->pVertexBuffer.get());
+            gl_vertexbuffer->Bind();
 
-            const GL_IndexBuffer* gl_IndexBuffer = dynamic_cast<const GL_IndexBuffer*>(ic_mmt->pMesh->GetMeshCreateInfo().ib.get());
+            const GL_IndexBuffer* gl_IndexBuffer = static_cast<const GL_IndexBuffer*>(ic_mmt->pIndexBuffer.get());
             gl_IndexBuffer->Bind();
             m_IndexCount = static_cast<GLsizei>(gl_IndexBuffer->GetIndexBufferCreateInfo().indexCount);
             size_t stride = gl_IndexBuffer->GetIndexBufferCreateInfo().stride;
@@ -45,10 +46,10 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             descriptorSets.push_back(ic_mmt->pMaterial->GetShaderResource());
             effect = ic_mmt->pMaterial->GetMaterialCreateInfo().effect;
             dynamic_cast<const GL_Effect*>(effect)->Bind(effectPassName);
-            m_Topology = dynamic_cast<const GL_Effect*>(effect)->ToGLTopology(effect->GetEffectPassCreateInfo(effectPassName).topology);
+            m_Topology = static_cast<const GL_Effect*>(effect)->ToGLTopology(effect->GetEffectPassCreateInfo(effectPassName).topology);
 
             //Transform
-            descriptorSets.push_back(ic_mmt->pTransform->GetDescriptorSet());
+            descriptorSets.push_back(ic_mmt->pTransform.GetDescriptorSet());
 
             break;
         }

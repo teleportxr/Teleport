@@ -7,7 +7,7 @@ layout(location = 3) in vec2 a_UV0;
 layout(location = 4) in vec2 a_UV1;
 
 //From Application SR
-/*layout(std140, binding = 0) uniform CameraUB
+layout(std140, binding = 0) uniform CameraUB
 {
 	mat4 u_ProjectionMatrix;
 	mat4 u_ViewMatrix;
@@ -16,7 +16,7 @@ layout(location = 4) in vec2 a_UV1;
 	float _pad;
 }cam;
 
-layout(std140, binding = 1) uniform TransformUB
+/*layout(std140, binding = 1) uniform TransformUB
 {
 	mat4 u_ModelMatrix;
 }model;*/
@@ -24,6 +24,7 @@ layout(std140, binding = 1) uniform TransformUB
 //To Fragment Varying
 layout(location = 7)  out vec2 v_UV0;
 layout(location = 8)  out vec2 v_UV1;
+layout(location = 9)  out vec3 v_CameraPosition;
 
 void main()
 {
@@ -34,4 +35,5 @@ void main()
     v_UV0.y		= 1.0 - a_UV0.y;
     v_UV1		= a_UV1;
     v_UV1.y		= 1.0 - a_UV1.y;
+    v_CameraPosition = cam.u_Position;
 }

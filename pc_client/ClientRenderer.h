@@ -81,7 +81,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
-	simul::crossplatform::Texture *specularTexture;
+	simul::crossplatform::Texture *specularCubemapTexture;
+	simul::crossplatform::Texture* lightingCubemapTexture;
 	simul::crossplatform::Texture* videoAsCubemapTexture;
 	simul::crossplatform::Texture* dummyDiffuse;
 	simul::crossplatform::Texture* dummyNormal;
@@ -106,12 +107,18 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
 	
 	scr::ResourceManagers resourceManagers;
+	void Recompose(simul::crossplatform::DeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
+	bool show_video = false;
+	bool show_textures = false;
 public:
 	ClientRenderer();
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) override;
 	void OnVideoStreamClosed() override;
+
+	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
+	virtual bool OnActorLeftBounds(avs::uid actor_uid) override;
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
 	void RenderLocalActors(simul::crossplatform::DeviceContext &);

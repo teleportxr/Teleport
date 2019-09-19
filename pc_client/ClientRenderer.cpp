@@ -83,20 +83,21 @@ ClientRenderer::ClientRenderer():
 	transparentMesh(nullptr),
 	pbrEffect(nullptr),
 	cubemapClearEffect(nullptr),
-	specularTexture(nullptr),
+	specularCubemapTexture(nullptr),
+	lightingCubemapTexture(nullptr),
 	videoAsCubemapTexture(nullptr),
 	dummyDiffuse(nullptr),
 	dummyNormal(nullptr),
 	dummyCombined(nullptr),
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
-	sessionClient(this),
 	resourceCreator(basist::transcoder_texture_format::cTFBC1),
+	sessionClient(this, resourceCreator),
 	RenderMode(0)
 {
 	avsTextures.resize(NumStreams);
 	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);
-	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager);
+	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager);
 	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
 
 	//Initalise time stamping for state update.
@@ -144,6 +145,9 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
 	videoAsCubemapTexture = renderPlatform->CreateTexture();
+	specularCubemapTexture = renderPlatform->CreateTexture();
+	diffuseCubemapTexture = renderPlatform->CreateTexture();
+	lightingCubemapTexture = renderPlatform->CreateTexture();
 	// dummy textures for materials:
 	dummyDiffuse = renderPlatform->CreateTexture();
 	dummyNormal = renderPlatform->CreateTexture();
@@ -231,7 +235,7 @@ void ClientRenderer::RenderOpaqueTest(crossplatform::DeviceContext &deviceContex
 		model.ScaleRows(sc);
 		pbrConstants.reverseDepth		=deviceContext.viewStruct.frustum.reverseDepth;
 		mat4 m = mat4::identity();
-		meshRenderer->Render(deviceContext, transparentMesh,*(mat4*)&model,diffuseCubemapTexture,specularTexture);
+		meshRenderer->Render(deviceContext, transparentMesh,*(mat4*)&model,diffuseCubemapTexture, specularCubemapTexture);
 	}
 }
 
@@ -252,9 +256,23 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 	pbrConstants.lightIrradiance = vec3(12, 12, 12);
 	pbrConstants.lightDir = vec3(0, 0, 1);
 	mat4 m = mat4::identity();
-	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularTexture);
+	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture);
 }
 
+
+void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContext, simul::crossplatform::Texture *srcTexture, simul::crossplatform::Texture* targetTexture, int mips,int2 sourceOffset)
+{
+	cubemapConstants.sourceOffset = sourceOffset ;
+	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, 0);
+	cubemapClearEffect->Apply(deviceContext, "recompose", 0);
+	renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
+	cubemapClearEffect->Unapply(deviceContext);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+	cubemapClearEffect->UnbindTextures(deviceContext);
+}
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
 {
 	simul::crossplatform::DeviceContext	deviceContext;
@@ -306,20 +324,27 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 		if (ti)
 		{
+			int W = videoAsCubemapTexture->width;
+			int w = 128;
 			{
-				cubemapConstants.sourceOffset = int2(0, 0);
+				cubemapConstants.sourceOffset = int2(0, 2 * W);
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoAsCubemapTexture);
 
 				cubemapClearEffect->Apply(deviceContext, "recompose_with_depth_alpha", 0);
-				renderPlatform->DispatchCompute(deviceContext, videoAsCubemapTexture->width / 16, videoAsCubemapTexture->width / 16, 6);
+				renderPlatform->DispatchCompute(deviceContext, W / 16, W / 16, 6);
 				cubemapClearEffect->Unapply(deviceContext);
 				cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
 				cubemapClearEffect->UnbindTextures(deviceContext);
-
 			}
+			int2 sourceOffset(3 * W / 2, 2 * W);
+			Recompose(deviceContext, ti->texture, specularCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
+			sourceOffset.x += w * 3;
+			Recompose(deviceContext, ti->texture, diffuseCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
+			sourceOffset.x += w * 3;
+			Recompose(deviceContext, ti->texture, lightingCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
 		}
 		{
 			cubemapConstants.depthOffsetScale = depthOffsetScale;
@@ -334,9 +359,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->Apply(deviceContext, "use_cubemap", 0);
 				renderPlatform->DrawQuad(deviceContext);
 				cubemapClearEffect->Unapply(deviceContext);
-
-
-				renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
 			}
 		}
 		RenderLocalActors(deviceContext);
@@ -344,12 +366,14 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
 
+		if(ti&&show_video)
+			renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
 	}
+	if(show_textures)
 	{
-		auto& textures = resourceCreator.GetTextureManager()->GetCache();
+		auto& textures = resourceManagers.mTextureManager.GetCache();
 		static int tw = 32;
-		int x = 0, y = 0;
-		if(sessionClient.IsConnected())
+		int x = 0, y = hdrFramebuffer->GetHeight()-64;
 		for (auto t : textures)
 		{
 			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
@@ -414,81 +438,88 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	avs::Transform transform=decoder[0].getCameraTransform();
 	vec3 pos = (const float*)& transform.position;
 	camera.SetPosition(pos);
-	//camera.SetOrientationAsQuaternion((const float*)&transform.rotation);
+
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
-	for (auto& actor : resourceManagers.mActorManager.m_Actors)
+	for (const auto& actorData : resourceManagers.mActorManager.GetActorList())
 	{
-		const std::shared_ptr<scr::Transform> tr = actor.second->GetTransform();
-		if (!tr)
+		//Don't draw the actor, if they are invisible.
+		if(!actorData.second.actor->isVisible)
+		{
 			continue;
-		const std::shared_ptr<scr::Mesh> mesh = actor.second->GetMesh();
+		}
+
+		const scr::Transform &transform = actorData.second.actor->GetTransform();
+
+		const std::shared_ptr<scr::Mesh> mesh = actorData.second.actor->GetMesh();
 		if (!mesh)
 			continue;
-		const std::vector<std::shared_ptr<scr::Material>> materials = actor.second->GetMaterials();
+		const std::vector<std::shared_ptr<scr::Material>> materials = actorData.second.actor->GetMaterials();
 		if (!materials.size())
 			continue;
-		std::shared_ptr<scr::Transform> transform = actor.second->GetTransform();
-		if (!transform)
-			continue;
-		const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb.get());
-		const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(mesh->GetMeshCreateInfo().ib.get());
 
-		const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
-
-		const scr::Material::MaterialCreateInfo& m = materials[0]->GetMaterialCreateInfoConst();
-
-		if (!layout)
+		size_t element = 0;
+		for (const std::shared_ptr<scr::Material>& m : materials)
 		{
-			simul::crossplatform::LayoutDesc desc[] =
+			const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb[element].get());
+			const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(mesh->GetMeshCreateInfo().ib[element].get());
+
+			const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
+			if (!layout)
 			{
-				{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-				{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
-				{ "TANGENT", 0, crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
-				{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
-				{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
-			};
-			layout = renderPlatform->CreateLayout(
-				sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
-				, desc);
+				simul::crossplatform::LayoutDesc desc[] =
+				{
+					{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
+					{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
+					{ "TANGENT", 0, crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
+					{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
+					{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
+				};
+				layout = renderPlatform->CreateLayout(
+					sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
+					, desc);
+			}
+			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+			mat4 model;
+			model=((const float*)& (transform.GetTransformMatrix()));
+			mat4::mul(cameraConstants.worldViewProj, *((mat4*)& deviceContext.viewStruct.viewProj), model);
+			cameraConstants.world = model;
+			cameraConstants.viewPosition = vec3(0, 0, 0);
+
+			scr::Material& mat = *m;
+			{
+				auto& mcr = mat.GetMaterialCreateInfo();
+				const scr::Material::MaterialData& md = mat.GetMaterialData();
+				memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
+				auto* d = ((pc_client::PC_Texture*) & (*mcr.diffuse.texture));
+				auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
+				auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
+
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : dummyDiffuse);
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : dummyNormal);
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() : dummyCombined);
+				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
+				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+				pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
+			}
+
+			pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
+			pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+			pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
+			renderPlatform->SetLayout(deviceContext, layout);
+			renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
+			renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
+			renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
+			renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
+			layout->Unapply(deviceContext);
+			pbrEffect->Unapply(deviceContext);
+
+			float heightOffset = -80.0F;
+			scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
+			scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
+			scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix;// *ic_mmm.pTransform->GetTransformMatrix();
+			element++;
 		}
-		cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-		mat4 model;
-		model=((const float*)& (transform->GetTransformMatrix()));
-		mat4::mul(cameraConstants.worldViewProj ,*((mat4*)&deviceContext.viewStruct.viewProj), model);
-		cameraConstants.world = model;
-		cameraConstants.viewPosition = vec3(0,0,0);
-
-		scr::Material &mat = *materials[0];
-		{
-			auto& mcr = mat.GetMaterialCreateInfo();
-			const scr::Material::MaterialData& md = mat.GetMaterialData();
-			memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
-			auto* d = ((pc_client::PC_Texture*) & (*mcr.diffuse.texture));
-			auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
-			auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
-
-
-			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("diffuseTexture"),	d?d->GetSimulTexture():dummyDiffuse);
-			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("normalTexture"),	n?n->GetSimulTexture():dummyNormal);
-			pbrEffect->SetTexture(deviceContext,pbrEffect->GetShaderResource("combinedTexture"),c?c->GetSimulTexture():dummyCombined);
-		}
-
-		pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
-		pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-		pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
- 		renderPlatform->SetLayout(deviceContext, layout);
-		renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
-		renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
-		renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
-		renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
-		layout->Unapply(deviceContext);
-		pbrEffect->Unapply(deviceContext);
-
-		float heightOffset = -80.0F;
-		scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
-		scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
-		scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix;// *ic_mmm.pTransform->GetTransformMatrix();
 	}
 }
 void ClientRenderer::InvalidateDeviceObjects()
@@ -520,7 +551,8 @@ void ClientRenderer::InvalidateDeviceObjects()
 		meshRenderer->InvalidateDeviceObjects();
 	SAFE_DELETE(transparentMesh);
 	SAFE_DELETE(diffuseCubemapTexture);
-	SAFE_DELETE(specularTexture);
+	SAFE_DELETE(specularCubemapTexture);
+	SAFE_DELETE(lightingCubemapTexture);
 	SAFE_DELETE(videoAsCubemapTexture);
 	SAFE_DELETE(dummyDiffuse);
 	SAFE_DELETE(dummyNormal);
@@ -530,7 +562,6 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(hdrFramebuffer);
 	SAFE_DELETE(pbrEffect);
 	SAFE_DELETE(cubemapClearEffect);
-	SAFE_DELETE(diffuseCubemapTexture);
 }
 
 void ClientRenderer::RemoveView(int)
@@ -559,7 +590,6 @@ void ClientRenderer::Update()
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	uint32_t timeElapsed = (timestamp - previousTimestamp);
 
-	// disabled because it deletes objects that are in use!
 	resourceManagers.Update(timeElapsed);
 
 	previousTimestamp = timestamp;
@@ -578,7 +608,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		LOG("Failed to configure network source node");
 		return;
 	}
-
+	source.setDebugStream(setupCommand.debug_stream);
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.deferDisplay = true;
 	avs::DeviceHandle dev;
@@ -608,7 +638,12 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 
 	videoAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.colour_cubemap_size, setupCommand.colour_cubemap_size, 1, 1,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-
+	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
+		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
+		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true); 
+	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 6,
+		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 
 	colourOffsetScale.x=0;
 	colourOffsetScale.y = 0;
@@ -652,8 +687,20 @@ void ClientRenderer::OnVideoStreamClosed()
 	pipeline.deconfigure();
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
+
+	//GGMP: Temporary measure, so I can test if resources are being removed, or not.
+	resourceManagers.Clear();
 }
 
+bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
+{
+	return resourceManagers.mActorManager.ShowActor(actor_uid);
+}
+
+bool ClientRenderer::OnActorLeftBounds(avs::uid actor_uid)
+{
+	return resourceManagers.mActorManager.HideActor(actor_uid);
+}
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
 {
@@ -723,7 +770,15 @@ void ClientRenderer::OnMouse(bool bLeftButtonDown
 void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 {
 	switch (wParam) 
-	{ 
+	{
+		case 'V':
+			if(!bKeyDown)
+				show_video = !show_video;
+			break;
+		case 'T':
+			if (!bKeyDown)
+				show_textures = !show_textures;
+			break;
 		case 'K':
 			sessionClient.Disconnect(0);
 			break;

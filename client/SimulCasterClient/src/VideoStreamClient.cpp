@@ -71,9 +71,9 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
         {
             const avs::NetworkSourceCounters counters = networkSource.getCounterValues();
             OVR_WARN("NP: %lu/%lu | DP: %lu/%lu | BYTES: %lu",
-                     counters.networkPacketsReceived, counters.networkPacketsDropped,
-                 counters.decoderPacketsReceived, counters.decoderPacketsDropped,
-                 counters.bytesReceived
+                     (unsigned long)counters.networkPacketsReceived, (unsigned long)counters.networkPacketsDropped,
+                     (unsigned long)counters.decoderPacketsReceived, (unsigned long)counters.decoderPacketsDropped,
+                     (unsigned long)counters.bytesReceived
             );
             lastTimestamp = timestamp;
         }

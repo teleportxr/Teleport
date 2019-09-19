@@ -31,7 +31,7 @@ public:
 	//	id : Unique identifier of the resource.
 	//	newResource : The resource.
 	//	postUseLifetime : Milliseconds the resource should be kept alive after the last object has stopped using it.
-	void Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime = 30000);
+	void Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime = 1000);
 
 	//Returns whether the manager contains the resource.
 	bool Has(uid id) const;
@@ -112,8 +112,11 @@ std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 {
 	try
 	{
-		//Will throw if no resource has the passed id.
-		ResourceData& data = cachedItems.at(id);
+		auto it=cachedItems.find(id);
+		if(it==cachedItems.end())
+			return nullptr;
+
+		ResourceData& data = it->second;
 
 		data.timeSinceLastUse = 0;
 

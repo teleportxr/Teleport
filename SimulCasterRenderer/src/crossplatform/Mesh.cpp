@@ -3,8 +3,8 @@
 
 using namespace scr;
 
-Mesh::Mesh(MeshCreateInfo* pMeshCreateInfo)
-	:m_CI(*pMeshCreateInfo)
+Mesh::Mesh(const MeshCreateInfo& pMeshCreateInfo)
+	:m_CI(pMeshCreateInfo)
 {
 
 }

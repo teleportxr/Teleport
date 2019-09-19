@@ -9,7 +9,7 @@ bool Camera::s_UninitialisedUB = true;
 Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	:m_CI(*pCameraCreateInfo)
 {
-	if (false)//s_UninitialisedUB)
+	if (s_UninitialisedUB)
 	{
 
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
@@ -24,6 +24,7 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	
 	UpdatePosition(m_CI.position);
 	UpdateOrientation(m_CI.orientation);
+
 	UpdateView();
 
 	m_ShaderResourceLayout.AddBinding(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);

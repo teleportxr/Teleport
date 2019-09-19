@@ -32,7 +32,7 @@ class Application : public OVR::VrAppInterface, public SessionCommandInterface, 
 public:
 	Application();
 
-	virtual	~Application();
+	virtual    ~Application();
 
 	virtual void Configure(OVR::ovrSettings &settings) override;
 
@@ -58,6 +58,10 @@ public:
 	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) override;
 
 	virtual void OnVideoStreamClosed() override;
+
+	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
+
+	virtual bool OnActorLeftBounds(avs::uid actor_uid) override;
 	/* End SessionCommandInterface */
 
 	/* Begin DecodeEventInterface */
@@ -69,36 +73,37 @@ private:
 	{
 		scr::ivec2 sourceOffset;
 		uint32_t   faceSize;
-		float _pad = 0;
+		float      _pad = 0;
 	};
 	CubemapUB cubemapUB;
+
 	static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
 
 	avs::Context  mContext;
 	avs::Pipeline mPipeline;
 
-	avs::Decoder	   mDecoder;
-	avs::Surface	   mSurface;
+	avs::Decoder       mDecoder;
+	avs::Surface       mSurface;
 	avs::NetworkSource mNetworkSource;
-	bool			   mPipelineConfigured;
+	bool               mPipelineConfigured;
 
 	static constexpr size_t NumStreams = 1;
 	static constexpr bool   GeoStream  = true;
 
-	scc::GL_RenderPlatform	renderPlatform;
-	GeometryDecoder			geometryDecoder;
-	ResourceCreator			resourceCreator;
-	avs::GeometryDecoder	avsGeometryDecoder;
-	avs::GeometryTarget		avsGeometryTarget;
+	scc::GL_RenderPlatform renderPlatform;
+	GeometryDecoder        geometryDecoder;
+	ResourceCreator        resourceCreator;
+	avs::GeometryDecoder   avsGeometryDecoder;
+	avs::GeometryTarget    avsGeometryTarget;
 
 	struct RenderConstants
 	{
 		avs::vec4 colourOffsetScale;
 		avs::vec4 depthOffsetScale;
 	};
-	RenderConstants		renderConstants;
+	RenderConstants        renderConstants;
 
-	OVR::ovrSoundEffectContext		*mSoundEffectContext;
+	OVR::ovrSoundEffectContext        *mSoundEffectContext;
 	OVR::OvrGuiSys::SoundEffectPlayer *mSoundEffectPlayer;
 
 	OVR::OvrGuiSys *mGuiSys;
@@ -106,17 +111,19 @@ private:
 
 	OVR::OvrSceneView mScene;
 
-	OVR::ovrSurfaceDef	mVideoSurfaceDef;
-	OVR::GlProgram		mVideoSurfaceProgram;
-	OVR::SurfaceTexture* mVideoSurfaceTexture;
-    std::shared_ptr<scr::Texture> mVideoTexture;
-	std::shared_ptr<scr::Texture> mCubemapTexture;
-    std::shared_ptr<scr::UniformBuffer> mCubemapUB ;
-    std::vector<scr::ShaderResource> mCubemapComputeShaderResources;
-	std::shared_ptr<scr::Effect> mCopyCubemapEffect;
-	std::string CopyCubemapSrc;
-	ovrMobile			*mOvrMobile;
-	SessionClient mSession;
+	OVR::ovrSurfaceDef mVideoSurfaceDef;
+	OVR::GlProgram     mVideoSurfaceProgram;
+	OVR::SurfaceTexture *mVideoSurfaceTexture;
+	std::shared_ptr<scr::Texture>       mVideoTexture;
+	std::shared_ptr<scr::Texture>       mCubemapTexture;
+	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
+	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
+	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
+	scr::ShaderResource                 mLightCubemapShaderResources;
+	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
+	std::string                         CopyCubemapSrc;
+	ovrMobile                           *mOvrMobile;
+	SessionClient                       mSession;
 
 	std::vector<float> mRefreshRates;
 
@@ -124,34 +131,33 @@ private:
 	//int		 mControllerIndex;
 	ovrVector2f mTrackpadDim;
 
-	int mNumPendingFrames = 0;
+	int mNumPendingFrames                  = 0;
 
 	scr::ResourceManagers resourceManagers;
 
 	//Clientside Renderering Objects
-	scr::vec3 capturePosition;
-	scr::Camera::CameraCreateInfo cci = {
-			(scr::RenderPlatform*)(&renderPlatform),
-			scr::Camera::ProjectionType::PERSPECTIVE,
-			scr::quat(1.0f, 0.0f, 0.0f, 0.0f),
-			capturePosition
-	};
-	scr::Camera scrCamera = scr::Camera(&cci);
-
-
 	scc::GL_DeviceContext mDeviceContext;
-	scc::GL_Effect mEffect;
+	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
+
+	scr::vec3                    capturePosition;
+	std::shared_ptr<scr::Camera> scrCamera;
+
+	scc::GL_Effect                mEffect;
 	std::shared_ptr<scr::Sampler> mSampler = renderPlatform.InstantiateSampler();
-	std::map<avs::uid, OVR::ovrSurfaceDef> mOVRActors;
+	struct OVRActor
+	{
+		std::vector<std::shared_ptr<OVR::ovrSurfaceDef>> ovrSurfaceDefs;
+	};
+	std::map<avs::uid, std::shared_ptr<OVRActor>> mOVRActors;
 	inline void RemoveInvalidOVRActors()
 	{
-		for(std::map<avs::uid, OVR::ovrSurfaceDef>::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
+		/*for(std::map<avs::uid, std::shared_ptr<OVRActor> >::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
 		{
-			if(resourceManagers.mActorManager.m_Actors.find(it->first) == resourceManagers.mActorManager.m_Actors.end())
+			if(resourceManagers.mActorManager.GetActorList().find(it->first) == resourceManagers.mActorManager.GetActorList().end())
 			{
 				mOVRActors.erase(it);
 			}
-		}
+		}*/
 	}
 	void CopyToCubemaps();
 	void RenderLocalActors(OVR::ovrFrameResult& res);

@@ -18,17 +18,22 @@ extern void ClientLog( const char * fileTag, int lineno, const char * fmt, ... )
 #define FAIL( ... ) //{ClientLog( __FILE__, __LINE__, __VA_ARGS__ );exit(0);}
 
 typedef unsigned int uint;
+class ResourceCreator;
+
 class SessionCommandInterface
 {
 public:
     virtual void OnVideoStreamChanged(const avs::SetupCommand &) = 0;
     virtual void OnVideoStreamClosed() = 0;
+
+    virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
+    virtual bool OnActorLeftBounds(avs::uid actor_uid) = 0;
 };
 
 class SessionClient
 {
 public:
-    SessionClient(SessionCommandInterface* commandInterface);
+    SessionClient(SessionCommandInterface* commandInterface, ResourceCreator& resourceCreator);
     ~SessionClient();
 
     bool Discover(uint16_t discoveryPort, ENetAddress& remote);
@@ -48,6 +53,7 @@ private:
 
     void SendHeadPose(const ovrRigidBodyPosef& pose);
     void SendInput(const ControllerState& controllerState);
+    void SendResourceRequests();
     //Tell server we are ready to receive geometry payloads.
     void SendHandshake();
 
@@ -55,6 +61,7 @@ private:
     int mServiceDiscoverySocket = 0;
 
     SessionCommandInterface* const mCommandInterface;
+    ResourceCreator& mResourceCreator;
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;
     ENetAddress mServerEndpoint;
@@ -62,5 +69,6 @@ private:
     ControllerState mPrevControllerState = {};
 
     //bool isReadyToReceivePayloads = false;
+    std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
 };
 

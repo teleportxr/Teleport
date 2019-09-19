@@ -129,8 +129,8 @@ namespace scr
 			Type type;
 			Format format;
 			SampleCountBit sampleCount;
-			size_t size;
-			const uint8_t* data;
+			std::vector<size_t> mipSizes;
+			std::vector<const uint8_t*> mips;
 
 			CompressionFormat compression; //The format the texture is compressed in.
 
@@ -154,8 +154,14 @@ namespace scr
 			m_CI.type = Type::TEXTURE_UNKNOWN;
 			m_CI.format = Format::FORMAT_UNKNOWN;
 			m_CI.sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
-			m_CI.size = 0;
-			m_CI.data = nullptr;
+			m_CI.mipSizes.clear();
+
+			//Free mip data.
+			for(size_t mipLevel = 0; mipLevel < m_CI.mips.size(); mipLevel++)
+			{
+				delete[] m_CI.mips[mipLevel];
+			}
+			m_CI.mips.clear();
 		}
 
 		bool IsValid() const
@@ -165,7 +171,7 @@ namespace scr
 
 
 		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bytesPerPixel will be the same for all faces.
-		virtual void Create(TextureCreateInfo* pTextureCreateInfo) = 0;
+		virtual void Create(const TextureCreateInfo& pTextureCreateInfo) = 0;
 		virtual void Destroy() = 0;
 
 		virtual void UseSampler(const std::shared_ptr<Sampler>& sampler) = 0;

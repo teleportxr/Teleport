@@ -29,20 +29,23 @@ namespace scr
 
 	struct InputCommand_Mesh_Material_Transform : public InputCommand
 	{
-		std::shared_ptr<Mesh>			pMesh;
-		std::shared_ptr<Material>		pMaterial;
-		std::shared_ptr<Transform>		pTransform;
+		std::shared_ptr<scr::VertexBuffer>			pVertexBuffer;
+		std::shared_ptr<scr::IndexBuffer>			pIndexBuffer;
+		std::shared_ptr<Material>					pMaterial;
+		const Transform								&pTransform;
 
-		InputCommand_Mesh_Material_Transform(InputCommandCreateInfo* pInputCommandCreateInfo, Actor* pActor)
+		InputCommand_Mesh_Material_Transform(InputCommandCreateInfo* pInputCommandCreateInfo, const Transform	&transform
+		,std::shared_ptr<scr::VertexBuffer> vb,std::shared_ptr<scr::IndexBuffer> ib,std::shared_ptr<Material> m)
+			:pTransform(transform)
 		{
 			type = INPUT_COMMAND_MESH_MATERIAL_TRANSFORM;
 			pFBs = pInputCommandCreateInfo->pFBs;
 			frameBufferCount = pInputCommandCreateInfo->frameBufferCount;
 			pCamera = pInputCommandCreateInfo->pCamera;
+			pIndexBuffer=ib;
 
-			pMesh = pActor->GetMesh();
-			pMaterial = pActor->GetMaterials()[0];
-			pTransform = pActor->GetTransform();
+			pVertexBuffer=vb;
+			pMaterial = m;
 		};
 	};
 	//struct MultiMesh_Material_TransformInputCommand : public InputCommand {};
