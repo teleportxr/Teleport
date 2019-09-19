@@ -43,15 +43,11 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_2D: {
-                glTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width,
-                             m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE,
-                             m_CI.mips[0]);
+                glTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);
                 break;
             }
             case Type::TEXTURE_3D: {
-                glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width,
-                             m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format),
-                             GL_UNSIGNED_BYTE, m_CI.mips[0]);
+                glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);
                 break;
             }
             case Type::TEXTURE_1D_ARRAY:
@@ -60,9 +56,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_2D_ARRAY: {
-                glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width,
-                             m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format),
-                             GL_UNSIGNED_BYTE, m_CI.mips[0]);
+                glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);
                 break;
             }
             case Type::TEXTURE_2D_MULTISAMPLE: {
@@ -73,20 +67,16 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE_ARRAY");
                 return;
             }
-            case Type::TEXTURE_CUBE_MAP: {
+            case Type::TEXTURE_CUBE_MAP:
+            {
             	if(m_CI.mips.size() != 0)
 				{
-					size_t           offset = 0;
-					for (
-							uint32_t i      = 0; i < 6; i++)
+					size_t offset = 0;
+					for (uint32_t i = 0; i < 6; i++)
 					{
-						glTexImage2D(
-								GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToGLFormat(m_CI.format),
-								m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format),
-								GL_UNSIGNED_BYTE, m_CI.mips[0] + offset);
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0] + offset);
 						offset += m_CI.mipSizes[0];
 					}
-
 					m_CI.mipSizes[0] *= 6;
 				}
             	else
@@ -120,13 +110,11 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_2D: {
-                glCompressedTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel),
-                        m_CI.width, m_CI.height, 0, (GLsizei)m_CI.mipSizes[0], m_CI.mips[0]);
+                glCompressedTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, 0, (GLsizei)m_CI.mipSizes[0], m_CI.mips[0]);
                 break;
             }
             case Type::TEXTURE_3D: {
-                glCompressedTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel),
-                                       m_CI.width, m_CI.height, m_CI.depth, 0, (GLsizei)m_CI.mipSizes[0], m_CI.mips[0]);
+                glCompressedTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, m_CI.depth, 0, (GLsizei)m_CI.mipSizes[0], m_CI.mips[0]);
                 break;
             }
             case Type::TEXTURE_1D_ARRAY: {
@@ -148,8 +136,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
             case Type::TEXTURE_CUBE_MAP: {
                 size_t offset = 0;
                 for (uint32_t i = 0; i < 6; i++) {
-                    glCompressedTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel),
-                                           m_CI.width, m_CI.height, 0, (GLsizei)m_CI.mipSizes[0] / 6, m_CI.mips[0] + offset);
+                    glCompressedTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, 0, (GLsizei)m_CI.mipSizes[0] / 6, m_CI.mips[0] + offset);
                     offset += m_CI.mipSizes[0] / 6;
                 }
             }
@@ -158,7 +145,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
 			default:
-			SCR_CERR_BREAK("Unsupported texture type",1);
+			    SCR_CERR_BREAK("Unsupported texture type",1);
 				return;
         }
     }
@@ -172,11 +159,10 @@ void GL_Texture::Destroy()
 
 void GL_Texture::Bind() const
 {
-    glActiveTexture(GL_TEXTURE0 + static_cast<unsigned int>(m_CI.slot));
-    GLenum gl_target=TypeToGLTarget(m_CI.type);
+    if(m_CI.slot != Slot::UNKNOWN)
+        glActiveTexture(GL_TEXTURE0 + static_cast<unsigned int>(m_CI.slot));
 
-    glBindTexture(gl_target, m_Texture.texture);
-    OVR::GL_CheckErrors("GL_Texture::Bind");
+    glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
 }
 
 void GL_Texture::BindForWrite(uint32_t slot) const
@@ -187,14 +173,11 @@ void GL_Texture::BindForWrite(uint32_t slot) const
 
 void GL_Texture::Unbind() const
 {
-    glBindTexture((unsigned int)m_CI.type, 0);
+    glBindTexture(TypeToGLTarget(m_CI.type), 0);
 }
 
 void GL_Texture::UseSampler(const std::shared_ptr<Sampler>& sampler)
 {
-    /*if(!this)
-        return; */
-
     m_Sampler = sampler;
     const GL_Sampler* glSampler = dynamic_cast<const GL_Sampler*>(m_Sampler.get());
 
@@ -223,21 +206,17 @@ GLenum GL_Texture::TypeToGLTarget(Type type) const
 {
     switch (type)
     {
-        case Type::TEXTURE_UNKNOWN:
-        	exit(1);
-        case Type::TEXTURE_1D:
-            return 0; //GL_TEXTURE_1D;
-        case Type::TEXTURE_2D:
-            return GL_TEXTURE_2D;
-        case Type::TEXTURE_2D_EXTERNAL_OES:
-            return GL_TEXTURE_EXTERNAL_OES;
-        case Type::TEXTURE_3D: return GL_TEXTURE_3D;
-        case Type::TEXTURE_1D_ARRAY: return 0; //GL_TEXTURE_1D_ARRAY;
-        case Type::TEXTURE_2D_ARRAY: return GL_TEXTURE_2D_ARRAY;
-        case Type::TEXTURE_2D_MULTISAMPLE: return GL_TEXTURE_2D_MULTISAMPLE;
-        case Type::TEXTURE_2D_MULTISAMPLE_ARRAY: return GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
-        case Type::TEXTURE_CUBE_MAP: return GL_TEXTURE_CUBE_MAP;
-        case Type::TEXTURE_CUBE_MAP_ARRAY: return 0; //TEXTURE_CUBE_MAP_ARRAY;
+        case Type::TEXTURE_UNKNOWN:                 exit(1);
+        case Type::TEXTURE_1D:                      return 0; //GL_TEXTURE_1D;
+        case Type::TEXTURE_2D:                      return GL_TEXTURE_2D;
+        case Type::TEXTURE_2D_EXTERNAL_OES:         return GL_TEXTURE_EXTERNAL_OES;
+        case Type::TEXTURE_3D:                      return GL_TEXTURE_3D;
+        case Type::TEXTURE_1D_ARRAY:                return 0; //GL_TEXTURE_1D_ARRAY;
+        case Type::TEXTURE_2D_ARRAY:                return GL_TEXTURE_2D_ARRAY;
+        case Type::TEXTURE_2D_MULTISAMPLE:          return GL_TEXTURE_2D_MULTISAMPLE;
+        case Type::TEXTURE_2D_MULTISAMPLE_ARRAY:    return GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
+        case Type::TEXTURE_CUBE_MAP:                return GL_TEXTURE_CUBE_MAP;
+        case Type::TEXTURE_CUBE_MAP_ARRAY:          return 0; //TEXTURE_CUBE_MAP_ARRAY;
         default:
 			exit(1);
     }
@@ -346,7 +325,7 @@ GLenum GL_Texture::ToGLFormat(Format format) const {
         case Format::RGBA8:
             return GL_RGBA8;
         case Format::BGRA8:
-            return GL_BGRA_EXT; //TO DO: Look into this extension!
+            return GL_RGBA8; //TODO: Look into this extension "GL_APPLE_texture_format_BGRA8888" for GLenum GL_BGRA_EXT. Otherwise, we can swizzle this in the shader!
 
         case Format::RGB32F:
             return GL_RGB32F;

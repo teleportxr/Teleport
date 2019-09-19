@@ -9,7 +9,7 @@
 #include "OVR_Locale.h"
 #include "OVR_LogUtils.h"
 #include "OVR_FileSys.h"
-
+#include "OVR_GlUtils.h"
 
 #include <enet/enet.h>
 #include <sstream>
@@ -34,6 +34,101 @@ jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* 
 } // extern "C"
 
 #endif
+
+static void GL_APIENTRY android_opengles_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* msg, const void* data)
+{
+	const char* _source;
+	const char* _type;
+	const char* _severity;
+
+	switch (source){
+		case GL_DEBUG_SOURCE_API:
+		_source = "API";
+		break;
+
+		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+		_source = "WINDOW SYSTEM";
+		break;
+
+		case GL_DEBUG_SOURCE_SHADER_COMPILER:
+		_source = "SHADER COMPILER";
+		break;
+
+		case GL_DEBUG_SOURCE_THIRD_PARTY:
+		_source = "THIRD PARTY";
+		break;
+
+		case GL_DEBUG_SOURCE_APPLICATION:
+		_source = "APPLICATION";
+		break;
+
+		case GL_DEBUG_SOURCE_OTHER:
+		_source = "UNKNOWN";
+		break;
+
+		default:
+		_source = "UNKNOWN";
+		break;
+		}
+
+		switch (type) {
+		case GL_DEBUG_TYPE_ERROR:
+		_type = "ERROR";
+		break;
+
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+		_type = "DEPRECATED BEHAVIOR";
+		break;
+
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+		_type = "UNDEFINED BEHAVIOR";
+		break;
+
+		case GL_DEBUG_TYPE_PORTABILITY:
+		_type = "PORTABILITY";
+		break;
+
+		case GL_DEBUG_TYPE_PERFORMANCE:
+		_type = "PERFORMANCE";
+		break;
+
+		case GL_DEBUG_TYPE_OTHER:
+		_type = "OTHER";
+		break;
+
+		case GL_DEBUG_TYPE_MARKER:
+		_type = "MARKER";
+		break;
+
+		default:
+		_type = "UNKNOWN";
+		break;
+		}
+
+		switch (severity) {
+		case GL_DEBUG_SEVERITY_HIGH:
+		_severity = "HIGH";
+		break;
+
+		case GL_DEBUG_SEVERITY_MEDIUM:
+		_severity = "MEDIUM";
+		break;
+
+		case GL_DEBUG_SEVERITY_LOW:
+		_severity = "LOW";
+		break;
+
+		case GL_DEBUG_SEVERITY_NOTIFICATION:
+		_severity = "NOTIFICATION";
+		break;
+
+		default:
+		_severity = "UNKNOWN";
+		break;
+	}
+
+	OVR_WARN("ERROR: OpenGLES!: %d: %s of %s, severity, raised from %s: %s", id, _type, _severity, _source, msg);
+}
 
 Application::Application()
 	: mDecoder(avs::DecoderBackend::Custom)
@@ -123,6 +218,17 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragTextureSlots);
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &maxFragUniformBlocks);
 		OVR_LOG("Fragment Texture Slots: %d, Fragment Uniform Blocks: %d", maxFragTextureSlots, maxFragUniformBlocks);
+
+		//Debug Callback
+        GLint flags;
+        glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+        if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
+        {
+            glEnable(GL_DEBUG_OUTPUT);
+            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+            glDebugMessageCallback(android_opengles_debug_callback, nullptr);
+            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+        }
 
 		mOvrMobile = app->GetOvrMobile();
 
@@ -262,7 +368,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		scr::ShaderResourceLayout vertLayout;
 		vertLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
 		scr::ShaderResourceLayout fragLayout;
-		fragLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 		fragLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 		fragLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 		fragLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
@@ -272,7 +377,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 		scr::ShaderResource pbrShaderResource({vertLayout, fragLayout});
 		pbrShaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", {});
-		pbrShaderResource.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightData", {});
 		pbrShaderResource.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", {});
 		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse", {});
 		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal", {});
@@ -314,7 +418,8 @@ bool Application::OnKeyEvent(const int keyCode, const int repeatCount, const Key
 
 ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
-	// process input events first because this mirrors the behavior when OnKeyEvent was
+    GL_CheckErrors("Frame: Start");
+    // process input events first because this mirrors the behavior when OnKeyEvent was
 	// a virtual function on VrAppInterface and was called by VrAppFramework.
 	for(int i = 0; i < vrFrame.Input.NumKeyEvents; i++)
 	{
@@ -540,41 +645,43 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 
 	mPipeline.link({&mNetworkSource, &mDecoder, &mSurface});
 
-   if(GeoStream)
-   {
-		avsGeometryDecoder.configure(100, &geometryDecoder);
-		avsGeometryTarget.configure(&resourceCreator);
-		mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
-   }
-   //Build Video Cubemap
-   {
-	   scr::Texture::TextureCreateInfo textureCreateInfo =
-				{
-						setupCommand.colour_cubemap_size,
-						setupCommand.colour_cubemap_size,
-						1,
-						4,
-						1,
-						1,
-						scr::Texture::Slot::UNKNOWN,
-						scr::Texture::Type::TEXTURE_CUBE_MAP,
-						scr::Texture::Format::RGBA8,
-						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-                        {},
-                        {},
-						scr::Texture::CompressionFormat::UNCOMPRESSED
-				};
-	   mCubemapTexture->Create(textureCreateInfo);
-	   mCubemapTexture->UseSampler(mSampler);
-   }
-   //Build Lighting Cubemap
+    if(GeoStream)
+    {
+ 		avsGeometryDecoder.configure(100, &geometryDecoder);
+ 		avsGeometryTarget.configure(&resourceCreator);
+ 		mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
+    }
+    //GL_CheckErrors("Pre-Build Cubemap");
+    //Build Video Cubemap
+	{
+		scr::Texture::TextureCreateInfo textureCreateInfo =
+ 				{
+ 						setupCommand.colour_cubemap_size,
+ 						setupCommand.colour_cubemap_size,
+ 						1,
+ 						4,
+ 						1,
+ 						1,
+ 						scr::Texture::Slot::UNKNOWN,
+ 						scr::Texture::Type::TEXTURE_CUBE_MAP,
+ 						scr::Texture::Format::RGBA8,
+ 						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+ 						{},
+						{},
+ 						scr::Texture::CompressionFormat::UNCOMPRESSED
+ 				};
+ 		mCubemapTexture->Create(textureCreateInfo);
+ 		mCubemapTexture->UseSampler(mSampler);
+    }
+    //GL_CheckErrors("Built Video Cubemap");
+    //Build Lighting Cubemap
 	{
 		scr::Texture::TextureCreateInfo textureCreateInfo //TODO: Check this against the incoming texture from the video stream
 				{
-						setupCommand.colour_cubemap_size / 8, //Should be 128?
+						setupCommand.colour_cubemap_size / 8,
 						setupCommand.colour_cubemap_size / 8,
 						1,
-						4, //Assume 4BPP and RGBA format
+						4,
 						1,
 						1,
 						scr::Texture::Slot::UNKNOWN,
@@ -588,8 +695,9 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		mCubemapLightingTexture->Create(textureCreateInfo);
 		mCubemapLightingTexture->UseSampler(mSampler);
 	}
+    //GL_CheckErrors("Built Lighting Cubemap");
 
-   mPipelineConfigured = true;
+    mPipelineConfigured = true;
 }
 
 void Application::OnVideoStreamClosed()
@@ -743,14 +851,14 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				pbrShaderResources.push_back(mLightCubemapShaderResources);
 
 				materialCI.effect = dynamic_cast<scr::Effect *>(&mEffect);
-				const auto                            gl_effect = &mEffect;
+				const auto gl_effect = &mEffect;
 				const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("OpaquePBR");
-				if(materialCI.diffuse.texture || materialCI.normal.texture || materialCI.combined.texture)
-				{
-				materialCI.diffuse.texture->UseSampler(mSampler);
-				materialCI.normal.texture->UseSampler(mSampler);
-				materialCI.combined.texture->UseSampler(mSampler);
-                }
+				if(materialCI.diffuse.texture)
+					materialCI.diffuse.texture->UseSampler(mSampler);
+				if(materialCI.normal.texture)
+					materialCI.normal.texture->UseSampler(mSampler);
+				if(materialCI.combined.texture)
+					materialCI.combined.texture->UseSampler(mSampler);
 
 				//----Set OVR Actor----//
 				//Construct Mesh
@@ -765,7 +873,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 				//Initialise OVR Actor
 				std::shared_ptr<ovrSurfaceDef> ovr_surface_def(new ovrSurfaceDef);
-				std::string   _actorName = std::string("ActorUID: ") + std::to_string(a.first);
+				std::string _actorName = std::string("ActorUID: ") + std::to_string(a.first);
 				ovr_surface_def->surfaceName  = _actorName;
 				ovr_surface_def->numInstances = 1;
 				ovr_surface_def->geo          = geo;
@@ -800,27 +908,27 @@ void Application::RenderLocalActors(ovrFrameResult& res)
            		size_t resourceCount = 0;
            		GLint textureCount = 0, uniformCount = 0;
 				size_t j=0;
-				for (auto &sr : pbrShaderResources)
+				for (auto& sr : pbrShaderResources)
 				{
-					for (auto &resource : sr.GetWriteShaderResources())
+					for (auto& resource : sr.GetWriteShaderResources())
 					{
 						scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
-						if (type ==
-							scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
+						if (type == scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
 						{
 							if (resource.imageInfo.texture.get())
 							{
-								auto gl_texture = dynamic_cast<scc::GL_Texture *>(resource.imageInfo.texture.get());
+								auto gl_texture = dynamic_cast<scc::GL_Texture*>(resource.imageInfo.texture.get());
 								ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_texture->GetGlTexture());
+                                GLenum gltarget = ((OVR::GlTexture*)(ovr_surface_def->graphicsCommand.UniformData[j].Data))->target;
+                                OVR_WARN("Texture target, %d", gltarget);
 								textureCount++;
 							}
 						}
-						else if (type ==
-								 scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
+						else if (type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
 						{
 							if (resource.bufferInfo.buffer)
 							{
-								auto gl_uniformBuffer = (scc::GL_UniformBuffer *) (resource.bufferInfo.buffer);
+								auto gl_uniformBuffer = (scc::GL_UniformBuffer*)(resource.bufferInfo.buffer);
 								gl_uniformBuffer->Submit();
 								ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
 								uniformCount++;
@@ -833,8 +941,8 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 						j++;
 						resourceCount++;
 						assert(resourceCount <= OVR::ovrUniform::MAX_UNIFORMS);
-						assert(textureCount <= (size_t)maxFragTextureSlots);
-						assert(uniformCount <= (size_t)maxFragUniformBlocks);
+						assert(textureCount <= maxFragTextureSlots);
+						assert(uniformCount <= maxFragUniformBlocks);
 					}
 				}
 				pOvrActor->ovrSurfaceDefs.push_back(ovr_surface_def);

@@ -224,16 +224,18 @@ glSetup_t GL_Setup( const EGLContext shareContext,
 		// We want the application context to be lower priority than the TimeWarp context.
 		EGLint contextAttribs[] = {
 				EGL_CONTEXT_CLIENT_VERSION, version,
+				EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR,
 				EGL_NONE, EGL_NONE,
-				EGL_NONE };
+				EGL_NONE};
+		//Added EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR AJR
 
 		// Don't set EGL_CONTEXT_PRIORITY_LEVEL_IMG at all if set to EGL_CONTEXT_PRIORITY_MEDIUM_IMG,
 		// It is the caller's responsibility to use that if the driver doesn't support it.
 		if ( contextPriority != EGL_CONTEXT_PRIORITY_MEDIUM_IMG )
 		{
-			contextAttribs[2] = EGL_CONTEXT_PRIORITY_LEVEL_IMG;
-			contextAttribs[3] = contextPriority;
-		}
+			contextAttribs[4] = EGL_CONTEXT_PRIORITY_LEVEL_IMG;
+			contextAttribs[5] = contextPriority;
+		} //Changed contextAtrrib[] indices AJR
 
 		egl.context = eglCreateContext( egl.display, egl.config, shareContext, contextAttribs );
 		if ( egl.context != EGL_NO_CONTEXT )

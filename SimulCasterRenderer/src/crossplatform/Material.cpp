@@ -40,7 +40,11 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 	m_MaterialData.combinedTexCoordsScalar_B	= m_CI.combined.texCoordsScalar[2];
 	m_MaterialData.combinedTexCoordsScalar_A	= m_CI.combined.texCoordsScalar[3];
 
-	//UpdateMaterialUB();
+	m_MaterialData.u_SpecularColour 			= vec3(1, 1 ,1);
+
+	m_MaterialData.u_DiffuseTexCoordIndex		= m_CI.diffuse.texCoordIndex;
+	m_MaterialData.u_NormalTexCoordIndex		= m_CI.normal.texCoordIndex;
+	m_MaterialData.u_CombinedTexCoordIndex		= m_CI.combined.texCoordIndex;
 
 	//Set up Descriptor Set for Textures and UB
 	//UB from 0 - 9, Texture/Samplers 10+

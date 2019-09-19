@@ -15,8 +15,9 @@ namespace scr
 		struct MaterialParameter
 		{
 			std::shared_ptr<Texture> texture;	//Texture Reference.
-			vec2 texCoordsScalar[4];			//Scales the texture co-ordinates for tiling; one per channel .
+			vec2 texCoordsScalar[4];			//Scales the texture co-ordinates for tiling; one per channel.
 			vec4 textureOutputScalar;			//Scales the output of the texture per channel.
+			float texCoordIndex;				//Selects which texture co-ordinates to use in sampling.
 		};
 		struct MaterialCreateInfo
 		{
@@ -45,6 +46,14 @@ namespace scr
 			vec2 combinedTexCoordsScalar_G;
 			vec2 combinedTexCoordsScalar_B;
 			vec2 combinedTexCoordsScalar_A;
+
+			vec3 u_SpecularColour;
+			float _pad;
+
+			float u_DiffuseTexCoordIndex;
+			float u_NormalTexCoordIndex;
+			float u_CombinedTexCoordIndex;
+			float _pad2;
 		};
 
 	protected:
