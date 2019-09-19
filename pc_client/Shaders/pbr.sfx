@@ -138,9 +138,9 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseCol
 	vec3 env	=specularCubemap.SampleLevel(cubeSamplerState,refl.xyz,0*roughnessE*11.0).rgb;
 	env			=mix(env, env3, saturate((roughnessE - 0.25) / 0.75));
 
-	diffuse		+=diffuseColour * diffuseCubemap.Sample(cubeSamplerState, normal.xyz).rgb;;
+	diffuse		+=diffuseColour * diffuseCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
 	specular	+=envSpecularColour * env;
-
+	lightColour = lightingCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
 	diffuse		+=lightColour *diffuseColour * saturate(n_l);
 
 	vec3 lightF		=FresnelTerm(specularColour, v_h);
@@ -163,7 +163,7 @@ shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 	vec3 diffuseColour	= diffuseOutputScalar.rgb * diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
 	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgra;
-    vec3 c				= PBR(normalLookup, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), diffuseColour, vec3(1,1,1),roughness);
+    vec3 c				= PBR(normalLookup, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), diffuseColour, vec3(1.0, 1.0, 1.0), roughness);
 	//c.rgb=frac(IN.texCoords0.xyy);
     vec4 u				=vec4(c.rgb,1.0);
 	return u;
