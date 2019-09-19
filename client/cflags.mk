@@ -27,7 +27,7 @@ ifeq ($(OVR_DEBUG),1)
     endif
   endif
 else
-  LOCAL_CFLAGS += -DNDEBUG -O0
+  LOCAL_CFLAGS += -DNDEBUG -O4
 endif
 
 # Explicitly compile for the ARM and not the Thumb instruction set.

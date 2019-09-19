@@ -351,8 +351,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::Setup:
 		{
 			const avs::SetupCommand &setupCommand = *((const avs::SetupCommand*)packet->data);
-			mCommandInterface->OnVideoStreamChanged(setupCommand);
-			SendHandshake();
+			avs::Handshake handshake;
+			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake);
+			SendHandshake(handshake);
 		}
 		break;
 		case avs::CommandPayloadType::ActorBounds:
@@ -399,8 +400,9 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
 			setupCommand.depth_width = width;
 			setupCommand.depth_height = height/2;
 			setupCommand.compose_cube = 1;
-			mCommandInterface->OnVideoStreamChanged(setupCommand);
-			SendHandshake();
+			avs::Handshake handshake;
+			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake);
+			SendHandshake(handshake);
 		}
 	}
 	else
@@ -485,12 +487,8 @@ void SessionClient::SendResourceRequests()
 	}
 }
 
-void SessionClient::SendHandshake()
+void SessionClient::SendHandshake(const avs::Handshake &handshake)
 {
-	avs::Handshake handshake;
-	handshake.isReadyToReceivePayloads=true;
-	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
-	handshake.MetresPerUnit = 1.0f;
 	ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
 	enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 }

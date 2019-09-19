@@ -13,6 +13,7 @@ typedef unsigned int uint;
 namespace avs
 {
 	struct SetupCommand;
+	struct Handshake;
 	typedef unsigned long long uid;
 }
 
@@ -21,7 +22,7 @@ class ResourceCreator;
 class SessionCommandInterface
 {
 public:
-	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand) = 0;
+	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake) = 0;
 	virtual void OnVideoStreamClosed() = 0;
 
 	virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
@@ -53,7 +54,7 @@ private:
 	void SendInput(const ControllerState &controllerState);
 	void SendResourceRequests();
 	//Tell server we are ready to receive geometry payloads.
-	void SendHandshake();
+	void SendHandshake(const avs::Handshake& handshake);
 
     uint32_t mClientID = 0;
 	ENetSocket mServiceDiscoverySocket = 0;

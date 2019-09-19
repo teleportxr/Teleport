@@ -134,13 +134,13 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseCol
 	float n_l		= saturate(dot(normal, lightDir));
 	vec3 envSpecularColour = EnvBRDFApprox(specularColour, roughnessE, n_v);
 
-	vec3 env3	=diffuseCubemap.SampleLevel(cubeSamplerState,refl.xyz,0).rgb;
-	vec3 env	=specularCubemap.SampleLevel(cubeSamplerState,refl.xyz,0*roughnessE*11.0).rgb;
+	vec3 env3	=diffuseCubemap.SampleLevel(cubeSamplerState, normal.xyz,0).rgb;
+	vec3 env	=specularCubemap.SampleLevel(cubeSamplerState,-refl.xyz,roughnessE*11.0).rgb;
 	env			=mix(env, env3, saturate((roughnessE - 0.25) / 0.75));
 
-	diffuse		+=diffuseColour * diffuseCubemap.Sample(cubeSamplerState, normal.xyz).rgb;;
+	diffuse		+=diffuseColour * env3;
 	specular	+=envSpecularColour * env;
-
+	lightColour = lightingCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
 	diffuse		+=lightColour *diffuseColour * saturate(n_l);
 
 	vec3 lightF		=FresnelTerm(specularColour, v_h);
@@ -153,16 +153,16 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseCol
 	specular *= saturate(pow(n_v + ao, roughnessE) - 1. + ao);
 
 	vec3 colour = diffuse+specular;
-	return env3;
+	return env;
 }
 
 shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 {
 	vec3 tangentx		= normalize(IN.tangent);
-	vec3 tangenty		= cross(IN.normal, tangentx);
+	vec3 tangenty		= normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
 	vec3 normalLookup = normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
-	vec3 normal = normalize(mul(TangentMatrix, normalLookup));
+	vec3 normal = normalize(mul( normalLookup, TangentMatrix));
 
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
 	vec3 diffuseColour	= diffuseOutputScalar.rgb * diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;

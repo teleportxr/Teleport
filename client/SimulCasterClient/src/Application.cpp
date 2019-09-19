@@ -492,7 +492,7 @@ bool Application::InitializeController()
 	return false;
 }
 
-void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
+void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
 	if(mPipelineConfigured) {
 		// TODO: Fix!
@@ -591,6 +591,10 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 	}
 
    mPipelineConfigured = true;
+
+   handshake.framerate=60;
+	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
+	handshake.maxBandwidth==handshake.udpBufferSize;
 }
 
 void Application::OnVideoStreamClosed()
