@@ -151,14 +151,27 @@ private:
 	std::map<avs::uid, std::shared_ptr<OVRActor>> mOVRActors;
 	inline void RemoveInvalidOVRActors()
 	{
-		/*for(std::map<avs::uid, std::shared_ptr<OVRActor> >::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
+		for(std::map<avs::uid, std::shared_ptr<OVRActor>>::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
 		{
 			if(resourceManagers.mActorManager.GetActorList().find(it->first) == resourceManagers.mActorManager.GetActorList().end())
 			{
 				mOVRActors.erase(it);
 			}
-		}*/
+		}
 	}
+	inline void ClearOVRActors()
+    {
+	    for(auto it = mOVRActors.begin(); it != mOVRActors.end(); it++)
+        {
+	        for(std::shared_ptr<OVR::ovrSurfaceDef> ovrSurfaceDef : it->second->ovrSurfaceDefs)
+            {
+	            ovrSurfaceDef->geo.Free();
+	            OVR::GlProgram::Free(ovrSurfaceDef->graphicsCommand.Program);
+            }
+	        it->second->ovrSurfaceDefs.clear();
+        }
+        mOVRActors.clear();
+    }
 	void CopyToCubemaps();
 	void RenderLocalActors(OVR::ovrFrameResult& res);
     const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources);

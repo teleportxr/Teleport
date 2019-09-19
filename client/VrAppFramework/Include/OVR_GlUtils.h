@@ -36,7 +36,6 @@ extern ovrOpenGLExtensions extensionsOpenGL;
 #include <EGL/eglext.h>
 #ifdef __gl2_h_
 	#include <GLES3/gl3.h>
-	#include <GLES3/gl32.h>
 	#include <GLES3/gl3ext.h>
 	static const int GL_ES_VERSION = 3;	// This will be passed to EglSetup() by App.cpp
 #else
@@ -44,6 +43,11 @@ extern ovrOpenGLExtensions extensionsOpenGL;
 	static const int GL_ES_VERSION = 2;	// This will be passed to EglSetup() by App.cpp
 #endif
 #include <GLES2/gl2ext.h>
+
+//OpenGLES 3.2
+#if __ANDROID_API__ >= 24
+#include <GLES3/gl32.h>
+#endif
 
 // We need to detect the API level because Google tweaked some of the GL headers in version 21+
 #include <android/api-level.h>
