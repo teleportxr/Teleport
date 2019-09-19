@@ -502,7 +502,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 	OVR_WARN("VIDEO STREAM CHANGED: %d %d %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height);
 
 	avs::NetworkSourceParams sourceParams = {};
-	sourceParams.socketBufferSize = 4*64 * 1024 * 1024; // 4* 64MiB socket buffer size
+	sourceParams.socketBufferSize = 3 * 1024 * 1024; // 4* 64MiB socket buffer size
 	//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 	sourceParams.maxJitterBufferLength = 0;
 
@@ -512,6 +512,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand)
 		return;
 	}
 	mNetworkSource.setDebugStream(setupCommand.debug_stream);
+	mNetworkSource.setDoChecksums(setupCommand.do_checksums);
 	avs::DecoderParams decoderParams = {};
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
@@ -833,8 +834,8 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 						j++;
 						resourceCount++;
 						assert(resourceCount <= OVR::ovrUniform::MAX_UNIFORMS);
-						assert(textureCount <= (size_t)maxFragTextureSlots);
-						assert(uniformCount <= (size_t)maxFragUniformBlocks);
+						assert(textureCount <= maxFragTextureSlots);
+						assert(uniformCount <= maxFragUniformBlocks);
 					}
 				}
 				pOvrActor->ovrSurfaceDefs.push_back(ovr_surface_def);

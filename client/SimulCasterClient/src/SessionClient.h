@@ -11,12 +11,6 @@
 #include "Input.h"
 
 
-extern void ClientLog( const char * fileTag, int lineno, const char * fmt, ... );
-
-#define LOG( ... ) 	//ClientLog( __FILE__, __LINE__, __VA_ARGS__ )
-#define WARN( ... ) //ClientLog( __FILE__, __LINE__, __VA_ARGS__ )
-#define FAIL( ... ) //{ClientLog( __FILE__, __LINE__, __VA_ARGS__ );exit(0);}
-
 typedef unsigned int uint;
 class ResourceCreator;
 

@@ -78,8 +78,8 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	OUT.normal.xyz = mul(mat3(world), IN.normal);
 	OUT.tangent.xyz = mul(mat3(world), IN.tangent);
 #else
-	OUT.normal.xyz = mul(world, vec4(IN.normal.yxz, 0.0)).xyz;
-	OUT.tangent.xyz = mul(world, IN.tangent.yxz).xyz;
+	OUT.normal = mul(world, vec4(IN.normal.yxz, 0.0)).xyz;
+	OUT.tangent = vec4(mul(world, IN.tangent.yxz).xyz,0.0);
 	//OUT.normal = IN.normal;
 	//OUT.tangent = IN.tangent;
 #endif
@@ -158,12 +158,16 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseCol
 
 shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 {
-    vec3 normal			= normalize(IN.normal);
+	vec3 tangentx		= normalize(IN.tangent);
+	vec3 tangenty		= cross(IN.normal, tangentx);
+	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
+	vec3 normalLookup = normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
+	vec3 normal = normalize(mul(TangentMatrix, normalLookup));
+
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
 	vec3 diffuseColour	= diffuseOutputScalar.rgb * diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
-	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgra;
-    vec3 c				= PBR(normalLookup, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), diffuseColour, vec3(1,1,1),roughness);
+    vec3 c				= PBR(normal, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), diffuseColour, vec3(1,1,1),roughness);
 	//c.rgb=frac(IN.texCoords0.xyy);
     vec4 u				=vec4(c.rgb,1.0);
 	return u;
