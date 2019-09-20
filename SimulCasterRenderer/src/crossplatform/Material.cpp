@@ -48,14 +48,14 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 
 	//Set up Descriptor Set for Textures and UB
 	//UB from 0 - 9, Texture/Samplers 10+
+	m_ShaderResourceLayout.AddBinding(3, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 	m_ShaderResourceLayout.AddBinding(10, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 	m_ShaderResourceLayout.AddBinding(11, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 	m_ShaderResourceLayout.AddBinding(12, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(3, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse",  { m_CI.diffuse.texture != nullptr ? m_CI.diffuse.texture->GetSampler() : nullptr, m_CI.diffuse.texture });
-	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",   { m_CI.normal.texture != nullptr ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
-	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture != nullptr ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });
 	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", { m_UB.get(), 0, sizeof(MaterialData) });
+	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse",  { m_CI.diffuse.texture ? m_CI.diffuse.texture->GetSampler() : nullptr, m_CI.diffuse.texture });
+	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",   { m_CI.normal.texture ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
+	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });
 }
