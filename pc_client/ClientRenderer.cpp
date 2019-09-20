@@ -602,6 +602,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
+	sourceParams.socketBufferSize = 200000;	//200k like Oculus Quest
 	// Configure for num video streams + 1 geometry stream
 	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "127.0.0.1", setupCommand.port, sourceParams))
 	{
@@ -682,8 +683,8 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.framerate = 60;
-	handshake.maxBandwidth = 200;
 	handshake.udpBufferSize = source.getSystemBufferSize();
+	handshake.maxBandwidth = handshake.framerate*handshake.udpBufferSize;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 

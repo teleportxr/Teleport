@@ -411,7 +411,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	ovrQuatf headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 	ovrVector3f headPos=vrFrame.Tracking.HeadPose.Pose.Position;
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 1.0f,"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n"
+	mGuiSys->ShowInfoText( 0.017f,"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d\n Capture Position: %1.3f, %1.3f, %1.3f\n"
 							 "Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\nPos: %3.3f %3.3f %3.3f \nTrackpad: %3.1f %3.1f\n Orphans: %d\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
 			frameRate, ctr.bandwidthKPS,
@@ -596,11 +596,11 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 	}
     //GL_CheckErrors("Built Lighting Cubemap");
 
-   mPipelineConfigured = true;
+	mPipelineConfigured = true;
 
-   handshake.framerate=60;
+	handshake.framerate=60;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
-	handshake.maxBandwidth==handshake.udpBufferSize;
+	handshake.maxBandwidth=handshake.udpBufferSize*(size_t)handshake.framerate;
 }
 
 void Application::OnVideoStreamClosed()
