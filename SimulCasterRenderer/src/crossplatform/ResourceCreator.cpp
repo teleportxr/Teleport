@@ -94,18 +94,18 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 		std::unique_ptr<uint8_t[]> _indices = std::make_unique<uint8_t[]>(indicesSize);
 		memcpy(_indices.get(), meshElementCreate->m_Indices, indicesSize);
 		
-		for (size_t i = 0; i < meshElementCreate->m_VertexCount; i++)
+		for (size_t j = 0; j < meshElementCreate->m_VertexCount; j++)
 		{
 			size_t intraStrideOffset = 0;
 			if (meshElementCreate->m_Vertices)
 			{
-				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Vertices + i, sizeof(avs::vec3)); intraStrideOffset += 3;
+				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate->m_Vertices + j, sizeof(avs::vec3)); intraStrideOffset += 3;
 			}
 			if (meshElementCreate->m_TangentNormals)
 			{
 				avs::vec3 normal;
 				avs::vec4 tangent;
-				char* nt = (char*)(meshElementCreate->m_TangentNormals + (meshElementCreate->m_TangentNormalSize * i));
+				char* nt = (char*)(meshElementCreate->m_TangentNormals + (meshElementCreate->m_TangentNormalSize * j));
 				// tangentx tangentz
 				if (meshElementCreate->m_TangentNormalSize == 8)
 				{
@@ -131,29 +131,59 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 					normal.y = n8.y / 32767.0f;
 					normal.z = n8.z / 32767.0f;
 				}
-				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, &normal, sizeof(avs::vec3));
+				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, &normal, sizeof(avs::vec3));
 				intraStrideOffset += 3;
-				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, &tangent, sizeof(avs::vec4));
+				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, &tangent, sizeof(avs::vec4));
 				intraStrideOffset += 4;
 			}
 			else
 			{
 				if (meshElementCreate->m_Normals)
 				{
-					memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Normals + i, sizeof(avs::vec3));
+					memcpy(interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate->m_Normals + j, sizeof(avs::vec3));
 					intraStrideOffset += 3;
 				}
 				if (meshElementCreate->m_Tangents)
 				{
-					memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Tangents + i, sizeof(avs::vec4));
+					memcpy(interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate->m_Tangents + j, sizeof(avs::vec4));
 					intraStrideOffset += 4;
 				}
 			}
-			if (meshElementCreate->m_UV0s) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_UV0s + i, sizeof(avs::vec2));			intraStrideOffset += 2; }
-			if (meshElementCreate->m_UV1s) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_UV1s + i, sizeof(avs::vec2));			intraStrideOffset += 2; }
-			if (meshElementCreate->m_Colors) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Colors + i, sizeof(avs::vec4));			intraStrideOffset += 4; }
-			if (meshElementCreate->m_Joints) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Joints + i, sizeof(avs::vec4));			intraStrideOffset += 4; }
-			if (meshElementCreate->m_Weights) { memcpy(interleavedVB.get() + (layout->m_Stride / 4 * i) + intraStrideOffset, meshElementCreate->m_Weights + i, sizeof(avs::vec4));		intraStrideOffset += 4; }
+			if (meshElementCreate->m_UV0s)
+			{
+				memcpy(
+						interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset,
+						meshElementCreate->m_UV0s + j, sizeof(avs::vec2));
+				intraStrideOffset += 2;
+			}
+			if (meshElementCreate->m_UV1s)
+			{
+				memcpy(
+						interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset,
+						meshElementCreate->m_UV1s + j, sizeof(avs::vec2));
+				intraStrideOffset += 2;
+			}
+			if (meshElementCreate->m_Colors)
+			{
+				memcpy(
+						interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset,
+						meshElementCreate->m_Colors + j, sizeof(avs::vec4));
+				intraStrideOffset += 4;
+			}
+			if (meshElementCreate->m_Joints)
+			{
+				memcpy(
+						interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset,
+						meshElementCreate->m_Joints + j, sizeof(avs::vec4));
+				intraStrideOffset += 4;
+			}
+			if (meshElementCreate->m_Weights)
+			{
+				memcpy(
+						interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset,
+						meshElementCreate->m_Weights + j, sizeof(avs::vec4));
+				intraStrideOffset += 4;
+			}
 		}
 
 		if (interleavedVBSize == 0 || interleavedVB == nullptr || meshElementCreate->m_IndexCount == 0 || meshElementCreate->m_Indices == nullptr)

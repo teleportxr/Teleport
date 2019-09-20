@@ -498,7 +498,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 		}
 #endif
 
-		OVR_ASSERT( p.Uniforms[i].Location >= 0 && p.Uniforms[i].Binding >= 0 );
+		//OVR_ASSERT( p.Uniforms[i].Location >= 0 && p.Uniforms[i].Binding >= 0 );
 	}
 
 	// implicit texture and image_external bindings

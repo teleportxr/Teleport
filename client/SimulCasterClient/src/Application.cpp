@@ -53,6 +53,7 @@ Application::Application()
 	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
 	, mEffect(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
 {
+	pthread_setname_np(pthread_self(), "SimulCaster_Application");
 	memset(&renderConstants,0,sizeof(RenderConstants));
 	renderConstants.colourOffsetScale={0.0f,0.0f,1.0f,0.6667f};
 	renderConstants.depthOffsetScale={0.0f,0.6667f,0.5f,0.3333f};
@@ -793,11 +794,12 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				ovr_surface_def->graphicsCommand.GpuState.blendSrcAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcAlphaBlendFactor);
 				ovr_surface_def->graphicsCommand.GpuState.blendDstAlpha = scc::GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
 				ovr_surface_def->graphicsCommand.GpuState.depthFunc = scc::GL_Effect::ToGLCompareOp(gl_effectPass.depthStencilingState.depthCompareOp);
+
 				ovr_surface_def->graphicsCommand.GpuState.frontFace = gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
 				ovr_surface_def->graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
 				ovr_surface_def->graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE: OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
 				ovr_surface_def->graphicsCommand.GpuState.depthEnable     = gl_effectPass.depthStencilingState.depthTestEnable;
-				ovr_surface_def->graphicsCommand.GpuState.depthMaskEnable = false;
+				ovr_surface_def->graphicsCommand.GpuState.depthMaskEnable = true;
 				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[0] = true;
 				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[1] = true;
 				ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[2] = true;
@@ -869,7 +871,6 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 			OVR::Matrix4f transform;
 			memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
-
 			res.Surfaces.emplace_back(transform, pOvrActor->ovrSurfaceDefs[i].get());
 		}
 	}
@@ -921,7 +922,7 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
 	scos.compareOp = scr::Effect::CompareOp::NEVER;
 	scr::Effect::DepthStencilingState dss = {};
 	dss.depthTestEnable = true;
-	dss.depthWriteEnable = false;
+	dss.depthWriteEnable = true;
 	dss.depthCompareOp = scr::Effect::CompareOp::LESS;
 	dss.stencilTestEnable = false;
 	dss.frontCompareOp = scos;

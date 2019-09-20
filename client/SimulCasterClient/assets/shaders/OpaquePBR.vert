@@ -47,12 +47,12 @@ void main()
     gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
 
     v_Position 	        = (ModelMatrix * vec4(a_Position, 1.0)).xyz;
-    v_Normal	        = normalize((ModelMatrix * vec4(a_Normal, 1.0)).xyz);
-    v_Tangent	        = normalize((ModelMatrix * a_Tangent).xyz);
+    v_Normal	        = a_Normal;//normalize((ModelMatrix * vec4(a_Normal, 0.0)).xyz);
+    v_Tangent	        = normalize((ModelMatrix * vec4(a_Tangent.xyz,0.0)).xyz);
     v_Binormal	        = normalize(cross(v_Normal, v_Tangent));
     v_TBN		        = mat3(v_Tangent, v_Binormal, v_Normal);
-    v_UV0		        = a_UV0;
-    v_UV1		        = a_UV1;
+    v_UV0		        = vec2(a_UV0.x,1.0-a_UV0.y);
+    v_UV1		        = vec2(a_UV1.x,1.0-a_UV1.y);
     v_Color		        = a_Color;
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;

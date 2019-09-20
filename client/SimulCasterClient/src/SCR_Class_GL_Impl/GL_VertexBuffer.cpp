@@ -43,20 +43,44 @@ void GL_VertexBuffer::CreateVAO(GLuint indexBufferID)
         GLenum type;
         switch (attrib.type)
         {
-            case VertexBufferLayout::Type::HALF:    type = GL_HALF_FLOAT;       break;
-            case VertexBufferLayout::Type::FLOAT:   type = GL_FLOAT;            break;
-            case VertexBufferLayout::Type::DOUBLE:  type = 0;                   SCR_COUT_BREAK("OpenGL ES 3.0 does not support GL_DOUBLE", -1);;
-            case VertexBufferLayout::Type::UINT:    type = GL_UNSIGNED_INT;     break;
-            case VertexBufferLayout::Type::USHORT:  type = GL_UNSIGNED_SHORT;   break;
-            case VertexBufferLayout::Type::UBYTE:   type = GL_UNSIGNED_BYTE;    break;
-            case VertexBufferLayout::Type::INT:     type = GL_INT;              break;
-            case VertexBufferLayout::Type::SHORT:   type = GL_SHORT;            break;
-            case VertexBufferLayout::Type::BYTE:    type = GL_BYTE;             break;
-        }
+			case VertexBufferLayout::Type::HALF:
+				type = GL_HALF_FLOAT;
+				break;
+			case VertexBufferLayout::Type::FLOAT:
+				type = GL_FLOAT;
+				break;
+			case VertexBufferLayout::Type::DOUBLE:
+				type = 0;
+				SCR_COUT_BREAK("OpenGL ES 3.0 does not support GL_DOUBLE", -1);
+				break;
+			case VertexBufferLayout::Type::UINT:
+				type = GL_UNSIGNED_INT;
+				break;
+			case VertexBufferLayout::Type::USHORT:
+				type = GL_UNSIGNED_SHORT;
+				break;
+			case VertexBufferLayout::Type::UBYTE:
+				type = GL_UNSIGNED_BYTE;
+				break;
+			case VertexBufferLayout::Type::INT:
+				type = GL_INT;
+				break;
+			case VertexBufferLayout::Type::SHORT:
+				type = GL_SHORT;
+				break;
+			case VertexBufferLayout::Type::BYTE:
+				type = GL_BYTE;
+				break;
+			default:
+				SCR_COUT_BREAK("OpenGL ES 3.0 does not support this type", -1);
+				break;
+
+		}
         glEnableVertexAttribArray(attrib.location);
+        size_t this_size=4 * (int)attrib.componentCount;
         glVertexAttribPointer(attrib.location, (GLint)attrib.componentCount, type, GL_FALSE, (GLsizei)m_CI.layout->m_Stride, (void*)offset);
 
-        offset += 4 * (int)attrib.componentCount;
+        offset += this_size;
     }
     //IBO
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);

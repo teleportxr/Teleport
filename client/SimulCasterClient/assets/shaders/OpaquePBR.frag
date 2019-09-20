@@ -106,8 +106,8 @@ vec3 GetNormals()
     vec2 texcoord= (u_NormalTexCoordIndex > 0.0 ? v_UV1 : v_UV0)*u_NormalTexCoordsScalar_R;
     vec3 normalLookup=texture(u_Normal, texcoord).bgr;
     vec3 tangetSpaceNormalMap = normalLookup*u_NormalOutputScalar.bgr;
-    vec3 normalMap = normalize(v_TBN * (tangetSpaceNormalMap ));
-    return normalLookup;
+    vec3 normalMap = normalize( tangetSpaceNormalMap *v_TBN);
+    return normalMap;
 }
 
 float GetRoughness()
@@ -248,5 +248,7 @@ void main()
         Lo += Le + BRDF(N, Wo, Wi, H, radiance);
     }
     vec3 R = reflect(Wo, N);
-    gl_FragColor = 0.01*vec4(pow(Lo, vec3(1.0/2.2)), 1.0) + vec4(GetNormals(),1.0);//Gamma Correction!
+    vec4 l=vec4(0,0,0,0);
+    vec4 h=vec4(1.0,1.0,1.0,1.0);
+    gl_FragColor = clamp(0.0001*vec4(pow(Lo, vec3(1.0/2.2)), 1.0) + vec4(v_UV0,0.0,1.0),l,h);
 }
