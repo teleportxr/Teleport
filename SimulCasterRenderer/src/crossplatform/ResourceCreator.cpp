@@ -292,6 +292,34 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
+	//Setup Dummy textures once.
+	if(!m_DummyDiffuse || !m_DummyNormal || !m_DummyCombined)
+	{
+		m_DummyDiffuse = m_pRenderPlatform->InstantiateTexture();
+		m_DummyNormal = m_pRenderPlatform->InstantiateTexture();
+		m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
+
+		scr::Texture::TextureCreateInfo tci =
+				{
+						1, 1, 1, 4, 1, 1,
+						scr::Texture::Slot::UNKNOWN,
+						scr::Texture::Type::TEXTURE_2D,
+						scr::Texture::Format::BGRA8,
+						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+						{4},
+						{0x00000000},
+						scr::Texture::CompressionFormat::UNCOMPRESSED,
+						false
+				};
+
+		tci.mips[0] = (const uint8_t *) &diffuseBGRA;
+		m_DummyDiffuse->Create(tci);
+		tci.mips[0] = (const uint8_t *) &normalBGRA;
+		m_DummyNormal->Create(tci);
+		tci.mips[0] = (const uint8_t *) &combinedBGRA;
+		m_DummyCombined->Create(tci);
+	}
+
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
 	std::vector<avs::uid> missingResources;
 
@@ -300,11 +328,11 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 	newMaterial->materialInfo.normal.texture = nullptr;
 	newMaterial->materialInfo.combined.texture = nullptr;
 
-	if(material.pbrMetallicRoughness.baseColorTexture.index != 0)
+	if (material.pbrMetallicRoughness.baseColorTexture.index != 0)
 	{
 		const std::shared_ptr<scr::Texture> diffuseTexture = m_TextureManager->Get(material.pbrMetallicRoughness.baseColorTexture.index);
 
-		if(diffuseTexture)
+		if (diffuseTexture)
 		{
 			newMaterial->materialInfo.diffuse.texture = diffuseTexture;
 		}
@@ -314,7 +342,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 			newMaterial->textureSlots.emplace(material.pbrMetallicRoughness.baseColorTexture.index, newMaterial->materialInfo.diffuse.texture);
 		}
 
-			scr::vec2 tiling = {material.pbrMetallicRoughness.baseColorTexture.tiling.x, material.pbrMetallicRoughness.baseColorTexture.tiling.y};
+		scr::vec2 tiling = { material.pbrMetallicRoughness.baseColorTexture.tiling.x, material.pbrMetallicRoughness.baseColorTexture.tiling.y };
 
 		newMaterial->materialInfo.diffuse.texCoordsScalar[0] = tiling;
 		newMaterial->materialInfo.diffuse.texCoordsScalar[1] = tiling;
@@ -324,7 +352,17 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		newMaterial->materialInfo.diffuse.textureOutputScalar = material.pbrMetallicRoughness.baseColorFactor;
 
 		newMaterial->materialInfo.diffuse.texCoordIndex = (float)material.pbrMetallicRoughness.baseColorTexture.texCoord;
-		}
+	}
+	else
+	{
+		newMaterial->materialInfo.diffuse.texture = m_DummyDiffuse; 
+		newMaterial->materialInfo.diffuse.texCoordsScalar[0] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.texCoordsScalar[1] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.texCoordsScalar[2] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.texCoordsScalar[3] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.textureOutputScalar = scr::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.texCoordIndex = 0.0f;
+	}
 
 	if(material.normalTexture.index != 0)
 	{
@@ -349,6 +387,16 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 		newMaterial->materialInfo.normal.textureOutputScalar = scr::vec4{1, 1, 1, 1};
 		newMaterial->materialInfo.normal.texCoordIndex = (float)material.normalTexture.texCoord;
+	}
+	else
+	{
+		newMaterial->materialInfo.normal.texture = m_DummyNormal;
+		newMaterial->materialInfo.normal.texCoordsScalar[0] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.normal.texCoordsScalar[1] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.normal.texCoordsScalar[2] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.normal.texCoordsScalar[3] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.normal.textureOutputScalar = scr::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		newMaterial->materialInfo.normal.texCoordIndex = 0.0f;
 	}
 
 	if(material.pbrMetallicRoughness.metallicRoughnessTexture.index != 0)
@@ -375,6 +423,16 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		newMaterial->materialInfo.combined.textureOutputScalar = scr::vec4{1, 1, 1, 1};
 
 		newMaterial->materialInfo.combined.texCoordIndex = (float)material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
+	}
+	else
+	{
+		newMaterial->materialInfo.combined.texture = m_DummyCombined;
+		newMaterial->materialInfo.combined.texCoordsScalar[0] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.combined.texCoordsScalar[1] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.combined.texCoordsScalar[2] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.combined.texCoordsScalar[3] = scr::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.combined.textureOutputScalar = scr::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		newMaterial->materialInfo.combined.texCoordIndex = 0.0f;
 	}
 
 	///This needs an actual value.

@@ -823,8 +823,6 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 							{
 								auto gl_texture = dynamic_cast<scc::GL_Texture *>(resource.imageInfo.texture.get());
 								ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_texture->GetGlTexture());
-                                GLenum gltarget = ((OVR::GlTexture*)(ovr_surface_def->graphicsCommand.UniformData[j].Data))->target;
-                                //OVR_WARN("Texture target, %d", gltarget);
 								textureCount++;
 							}
 						}

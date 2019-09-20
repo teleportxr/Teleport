@@ -248,5 +248,5 @@ void main()
         Lo += Le + BRDF(N, Wo, Wi, H, radiance);
     }
     vec3 R = reflect(Wo, N);
-    gl_FragColor = 0.01*vec4(pow(Lo, vec3(1.0/2.2)), 1.0) +texture(u_Diffuse,v_UV0);//Gamma Correction!
+    gl_FragColor = 0.01*vec4(pow(Lo, vec3(1.0/2.2)), 1.0) + vec4(GetNormals(),1.0);//Gamma Correction!
 }

@@ -142,10 +142,17 @@ private:
 	void CompleteActor(avs::uid node_uid, const scr::Actor::ActorCreateInfo& actorInfo);
 
 	scr::API m_API;
-	scr::RenderPlatform* m_pRenderPlatform;
+	scr::RenderPlatform* m_pRenderPlatform = nullptr;
 
 	basist::etc1_global_selector_codebook basis_codeBook;
 	basist::transcoder_texture_format basis_textureFormat;
+
+	std::shared_ptr<scr::Texture> m_DummyDiffuse;
+	std::shared_ptr<scr::Texture> m_DummyNormal;
+	std::shared_ptr<scr::Texture> m_DummyCombined;
+	const uint32_t diffuseBGRA = 0xFFFFFFFF;
+	const uint32_t normalBGRA = 0xFF0000FF;
+	const uint32_t combinedBGRA = 0xFFFFFFFF;
 	
 //s	uint32_t m_PostUseLifetime = 1000; //30,000ms = 30s
 	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;
