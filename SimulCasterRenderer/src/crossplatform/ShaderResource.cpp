@@ -33,6 +33,7 @@ void ShaderResource::AddBuffer(uint32_t shaderResourceLayoutIndex, ShaderResourc
 
 	m_WriteShaderResources.push_back(wsr);
 }
+
 void ShaderResource::AddImage(uint32_t shaderResourceLayoutIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement)
 {
 	WriteShaderResource wsr;

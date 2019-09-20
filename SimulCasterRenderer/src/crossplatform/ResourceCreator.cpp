@@ -349,7 +349,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 		newMaterial->materialInfo.normal.textureOutputScalar = scr::vec4{1, 1, 1, 1};
 		newMaterial->materialInfo.normal.texCoordIndex = (float)material.normalTexture.texCoord;
-		}
+	}
 
 	if(material.pbrMetallicRoughness.metallicRoughnessTexture.index != 0)
 	{
@@ -365,7 +365,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 			newMaterial->textureSlots.emplace(material.pbrMetallicRoughness.metallicRoughnessTexture.index, newMaterial->materialInfo.combined.texture);
 		}
 
-			scr::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
+		scr::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
 
 		newMaterial->materialInfo.combined.texCoordsScalar[0] = tiling;
 		newMaterial->materialInfo.combined.texCoordsScalar[1] = tiling;
@@ -375,7 +375,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		newMaterial->materialInfo.combined.textureOutputScalar = scr::vec4{1, 1, 1, 1};
 
 		newMaterial->materialInfo.combined.texCoordIndex = (float)material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
-		}
+	}
 
 	///This needs an actual value.
 	newMaterial->materialInfo.effect = nullptr;

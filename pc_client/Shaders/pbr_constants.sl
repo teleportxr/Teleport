@@ -29,6 +29,14 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	vec2 combinedTexCoordsScalar_G;
 	vec2 combinedTexCoordsScalar_B;
 	vec2 combinedTexCoordsScalar_A;
+
+	vec3 u_SpecularColour;
+	float _pad;
+
+	float u_DiffuseTexCoordIndex;
+	float u_NormalTexCoordIndex;
+	float u_CombinedTexCoordIndex;
+	float _pad2;
 SIMUL_CONSTANT_BUFFER_END
 
 #endif

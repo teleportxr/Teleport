@@ -96,23 +96,20 @@ vec3 EnvironmentBRDFApprox(vec3 specularColour, float roughness, float n_v)
 }
 vec4 GetDiffuse()
 {
-    return vec4(
-    u_DiffuseOutputScalar.b * texture(u_Diffuse, (u_DiffuseTexCoordIndex > 0.0 ? v_UV1 : v_UV0) * u_DiffuseTexCoordsScalar_B).b,
-    u_DiffuseOutputScalar.g * texture(u_Diffuse, (u_DiffuseTexCoordIndex > 0.0 ? v_UV1 : v_UV0) * u_DiffuseTexCoordsScalar_G).g,
-    u_DiffuseOutputScalar.r * texture(u_Diffuse, (u_DiffuseTexCoordIndex > 0.0 ? v_UV1 : v_UV0) * u_DiffuseTexCoordsScalar_R).r,
-    u_DiffuseOutputScalar.a * texture(u_Diffuse, (u_DiffuseTexCoordIndex > 0.0 ? v_UV1 : v_UV0) * u_DiffuseTexCoordsScalar_A).a
-    );
+    vec2 texcoord= (u_DiffuseTexCoordIndex > 0.0 ? v_UV1 : v_UV0)*u_DiffuseTexCoordsScalar_B;
+    vec4 diffuseLookup=texture(u_Diffuse, texcoord).bgra;
+    return u_DiffuseOutputScalar.bgra*diffuseLookup;
 }
+
 vec3 GetNormals()
 {
-    vec3 normalMap = vec3(
-    u_NormalOutputScalar.b * texture(u_Normal, (u_NormalTexCoordIndex > 0.0 ? v_UV1 : v_UV0) * u_NormalTexCoordsScalar_B).b,
-    u_NormalOutputScalar.g * texture(u_Normal, (u_NormalTexCoordIndex > 0.0 ? v_UV1 : v_UV0) * u_NormalTexCoordsScalar_G).g,
-    u_NormalOutputScalar.r * texture(u_Normal, (u_NormalTexCoordIndex > 0.0 ? v_UV1 : v_UV0) * u_NormalTexCoordsScalar_R).r
-    );
-    normalMap = normalize(v_TBN * (normalMap * 2.0 - 1.0));
-    return normalMap;
+    vec2 texcoord= (u_NormalTexCoordIndex > 0.0 ? v_UV1 : v_UV0)*u_NormalTexCoordsScalar_R;
+    vec3 normalLookup=texture(u_Normal, texcoord).bgr;
+    vec3 tangetSpaceNormalMap = normalLookup*u_NormalOutputScalar.bgr;
+    vec3 normalMap = normalize(v_TBN * (tangetSpaceNormalMap ));
+    return normalLookup;
 }
+
 float GetRoughness()
 {
     return u_CombinedOutputScalar.b * texture(u_Combined, (u_CombinedTexCoordIndex > 0.0 ? v_UV1 : v_UV0) * u_CombinedTexCoordsScalar_B).b;
@@ -218,7 +215,7 @@ void main()
 	Light d_Light;
 	d_Light.u_Colour = vec4(1, 1, 1 ,1);
 	d_Light.u_Position = vec3(1.3, 1.8, -7.6);
-	d_Light.u_Power = 120.0;		
+	d_Light.u_Power = 120.0;
 	d_Light.u_Direction = vec3(0.0, -0.391, -0.921);
 	d_Light.u_SpotAngle = 2.0 * PI;
 	
@@ -245,11 +242,11 @@ void main()
         vec3 irradiance = SPD / (4.0 * PI * pow(distanceToLight, 2.0));
 
         //Because the radiance is only non-zero in the direction Wi,
-        //We can replace radiance with irradinace;
+        //We can replace radiance with irradiance;
         vec3 radiance = irradiance;
 
         Lo += Le + BRDF(N, Wo, Wi, H, radiance);
     }
     vec3 R = reflect(Wo, N);
-    gl_FragColor = vec4(pow(Lo, vec3(1.0/2.2)), 1.0) + vec4(GetEnvironmentDiffuse(R), 1.0);//Gamma Correction!
+    gl_FragColor = 0.01*vec4(pow(Lo, vec3(1.0/2.2)), 1.0) +texture(u_Diffuse,v_UV0);//Gamma Correction!
 }

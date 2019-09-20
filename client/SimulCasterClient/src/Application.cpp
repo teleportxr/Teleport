@@ -73,9 +73,9 @@ Application::Application()
 
 	//Default Sampler
 	scr::Sampler::SamplerCreateInfo sci  = {};
-	sci.wrapU = scr::Sampler::Wrap::CLAMP_TO_EDGE;
-	sci.wrapV = scr::Sampler::Wrap::CLAMP_TO_EDGE;
-	sci.wrapW = scr::Sampler::Wrap::CLAMP_TO_EDGE;
+	sci.wrapU = scr::Sampler::Wrap::REPEAT;
+	sci.wrapV = scr::Sampler::Wrap::REPEAT;
+	sci.wrapW = scr::Sampler::Wrap::REPEAT;
 	sci.minFilter = scr::Sampler::Filter::LINEAR;
 	sci.magFilter = scr::Sampler::Filter::LINEAR;
 	mSampler->Create(&sci);
@@ -421,6 +421,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			headPos.x,headPos.y,headPos.z,
 			controllerState.mTrackpadX,controllerState.mTrackpadY,
 			ctr.m_packetMapOrphans);
+
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -757,11 +758,11 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				const auto                            gl_effect = &mEffect;
 				const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("OpaquePBR");
 				if(materialCI.diffuse.texture)
-				materialCI.diffuse.texture->UseSampler(mSampler);
+					materialCI.diffuse.texture->UseSampler(mSampler);
 				if(materialCI.normal.texture)
-				materialCI.normal.texture->UseSampler(mSampler);
+					materialCI.normal.texture->UseSampler(mSampler);
 				if(materialCI.combined.texture)
-				materialCI.combined.texture->UseSampler(mSampler);
+					materialCI.combined.texture->UseSampler(mSampler);
 
 				//----Set OVR Actor----//
 				//Construct Mesh
@@ -823,7 +824,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 								auto gl_texture = dynamic_cast<scc::GL_Texture *>(resource.imageInfo.texture.get());
 								ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_texture->GetGlTexture());
                                 GLenum gltarget = ((OVR::GlTexture*)(ovr_surface_def->graphicsCommand.UniformData[j].Data))->target;
-                                OVR_WARN("Texture target, %d", gltarget);
+                                //OVR_WARN("Texture target, %d", gltarget);
 								textureCount++;
 							}
 						}
