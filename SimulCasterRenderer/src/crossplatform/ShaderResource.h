@@ -59,7 +59,8 @@ namespace scr
 			}
 			if (index == (size_t)-1)
 			{
-				SCR_COUT_BREAK("Could not find DescriptorSetLayoutBinding at binding index: " << bindingIndex << ".", -1);
+				SCR_LOG("Warning: Layout %d not found in the %d layout bindings.",bindingIndex,(int)m_LayoutBindings.size());
+				SCR_CERR_BREAK("Could not find DescriptorSetLayoutBinding at binding index: " << bindingIndex << ".", -1);
 				throw;
 			}
 			return m_LayoutBindings[index];
@@ -68,7 +69,7 @@ namespace scr
 
 	class ShaderResource
 	{
-	private:
+	public:
 		struct ShaderResourceImageInfo
 		{
 			std::shared_ptr<Sampler> sampler;
@@ -91,6 +92,7 @@ namespace scr
 			ShaderResourceImageInfo imageInfo;
 			ShaderResourceBufferInfo bufferInfo;
 		};
+	private:
 
 		std::map<uint32_t, ShaderResourceLayout> m_ShaderResourceLayouts;
 		std::vector<WriteShaderResource> m_WriteShaderResources;
@@ -100,6 +102,7 @@ namespace scr
 		ShaderResource(const std::vector<ShaderResourceLayout>& shaderResourceLayouts);
 		~ShaderResource();
 
+		void SetLayouts(const std::vector<ShaderResourceLayout>& shaderResourceLayouts);
 		void AddBuffer(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceBufferInfo& bufferInfo, uint32_t dstArrayElement = 0);
 		void AddImage(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement = 0);
 

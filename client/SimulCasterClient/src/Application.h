@@ -76,6 +76,7 @@ private:
 		float      _pad = 0;
 	};
 	CubemapUB cubemapUB;
+	CubemapUB cubemapUB2;
 
 	static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
 
@@ -116,8 +117,11 @@ private:
 	OVR::SurfaceTexture *mVideoSurfaceTexture;
 	std::shared_ptr<scr::Texture>       mVideoTexture;
 	std::shared_ptr<scr::Texture>       mCubemapTexture;
+	std::shared_ptr<scr::Texture>       mDiffuseTexture;
+	std::shared_ptr<scr::Texture>       mSpecularTexture;
 	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
+	std::shared_ptr<scr::UniformBuffer> mCubemapUB2;
 	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
 	scr::ShaderResource                 mLightCubemapShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;

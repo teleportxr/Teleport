@@ -129,14 +129,16 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	// Automatic vertical fov - depends on window shape:
 	camera.SetVerticalFieldOfViewDegrees(0.f);
-
+	
 	crossplatform::CameraViewStruct vs;
 	vs.exposure=1.f;
-	vs.farZ=300000.f;
-	vs.nearZ=1.f;
+	vs.farZ=3000.f;
+	vs.nearZ=0.01f;
 	vs.gamma=0.44f;
-	vs.InfiniteFarPlane=false;
+	vs.InfiniteFarPlane=true;
 	vs.projection=crossplatform::DEPTH_REVERSE;
+	
+	camera.SetCameraViewStruct(vs);
 
 	memset(keydown,0,sizeof(keydown));
 
@@ -158,7 +160,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	dummyDiffuse->setTexels(renderPlatform->GetImmediateContext(), &white, 0, 1);
 
 	dummyNormal->ensureTexture2DSizeAndFormat(renderPlatform, 1, 1, crossplatform::PixelFormat::BGRA_8_UNORM);
-	uint32_t blue = 0x00FF0000;
+	// UNORM, so 127.
+	uint32_t blue = 0x007F0000;
 	dummyNormal->setTexels(renderPlatform->GetImmediateContext(), &blue, 0, 1);
 
 	dummyCombined->ensureTexture2DSizeAndFormat(renderPlatform, 1, 1, crossplatform::PixelFormat::BGRA_8_UNORM);
@@ -265,12 +268,18 @@ void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContex
 {
 	cubemapConstants.sourceOffset = sourceOffset ;
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
-	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, 0);
-	cubemapClearEffect->Apply(deviceContext, "recompose", 0);
-	renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
-	cubemapClearEffect->Unapply(deviceContext);
+	cubemapConstants.targetSize = targetTexture->width;
+	for (int m = 0; m < mips; m++)
+	{
+		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, m);
+		cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+		cubemapClearEffect->Apply(deviceContext, "recompose", 0);
+		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
+		cubemapClearEffect->Unapply(deviceContext);
+		cubemapConstants.sourceOffset.y += 2 * cubemapConstants.targetSize;
+		cubemapConstants.targetSize /= 2;
+	}
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
@@ -341,11 +350,11 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->UnbindTextures(deviceContext);
 			}
 			int2 sourceOffset(3 * W / 2, 2 * W);
-			Recompose(deviceContext, ti->texture, specularCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
+			Recompose(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, sourceOffset);
 			sourceOffset.x += w * 3;
-			Recompose(deviceContext, ti->texture, diffuseCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
+			Recompose(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, sourceOffset);
 			sourceOffset.x += w * 3;
-			Recompose(deviceContext, ti->texture, lightingCubemapTexture, videoAsCubemapTexture->mips, sourceOffset);
+			Recompose(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, sourceOffset);
 		}
 		{
 			cubemapConstants.depthOffsetScale = depthOffsetScale;
@@ -387,9 +396,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			}
 		}
 		y += tw;
-		renderPlatform->DrawTexture(deviceContext, x+=tw, y, tw, tw, dummyDiffuse);
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, dummyNormal);
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, dummyCombined);
+		renderPlatform->DrawTexture(deviceContext, x+=tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyDiffuse.get())))->GetSimulTexture());
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyNormal.get())))->GetSimulTexture());
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyCombined.get())))->GetSimulTexture());
 	}
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.44f);
@@ -460,10 +469,13 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			continue;
 
 		size_t element = 0;
+		const auto &CI=mesh->GetMeshCreateInfo();
 		for (const std::shared_ptr<scr::Material>& m : materials)
 		{
-			const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(mesh->GetMeshCreateInfo().vb[element].get());
-			const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(mesh->GetMeshCreateInfo().ib[element].get());
+			if (element >= CI.ib.size())
+				break;
+			const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(CI.vb[element].get());
+			const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(CI.ib[element].get());
 
 			const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
 			if (!layout)
@@ -485,7 +497,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			model=((const float*)& (transform.GetTransformMatrix()));
 			mat4::mul(cameraConstants.worldViewProj, *((mat4*)& deviceContext.viewStruct.viewProj), model);
 			cameraConstants.world = model;
-			cameraConstants.viewPosition = vec3(0, 0, 0);
+			cameraConstants.viewPosition = pos;
 
 			scr::Material& mat = *m;
 			{

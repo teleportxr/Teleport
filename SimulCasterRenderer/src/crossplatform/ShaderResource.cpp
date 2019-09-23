@@ -6,6 +6,11 @@ using namespace scr;
 
 ShaderResource::ShaderResource(const std::vector<ShaderResourceLayout>& shaderResourceLayouts)
 {
+	SetLayouts(shaderResourceLayouts);
+}
+
+void ShaderResource::SetLayouts(const std::vector<ShaderResourceLayout>& shaderResourceLayouts)
+{
 	uint32_t shaderResourceKey = 0;
 	for (auto& shaderResourceLayout : shaderResourceLayouts)
 	{

@@ -6,6 +6,7 @@ set(DEBUG_CONFIGURATIONS Debug)
 # Source
 set( src_root
 	src/Common.h
+	src/Common.cpp
 	)
 set( src_api
 	src/api/DeviceContext.h

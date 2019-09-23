@@ -352,6 +352,7 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 		texture.arrayCount = Next4B;
 		texture.mipCount = Next4B;
 		texture.format = static_cast<avs::TextureFormat>(Next4B);
+		texture.compression = static_cast<avs::TextureCompression>(Next4B);
 
 		texture.dataSize = Next4B;
 		texture.data = new unsigned char[texture.dataSize];

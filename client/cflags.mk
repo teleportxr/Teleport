@@ -15,6 +15,7 @@ LOCAL_CFLAGS	+= -Wno-multichar	# used in internal Android headers:  DISPLAY_EVEN
 LOCAL_CPPFLAGS  += -Wno-invalid-offsetof
 LOCAL_CPPFLAGS  += -std=c++17
 LOCAL_CPPFLAGS  += -frtti
+LOCAL_CPPFLAGS += -fsigned-char
 
 ifeq ($(OVR_DEBUG),1)
   LOCAL_CFLAGS += -DOVR_BUILD_DEBUG=1 -DDEBUG -D_DEBUG -O0 -g

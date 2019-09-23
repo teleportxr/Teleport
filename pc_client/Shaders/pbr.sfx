@@ -39,7 +39,7 @@ struct vertexOutput
     vec2 texCoords0		: TEXCOORD0;
     vec2 texCoords1		: TEXCOORD1;
     vec3 normal			: TEXCOORD2;
-	vec4 tangent		 : TEXCOORD3;
+	vec3 tangent		 : TEXCOORD3;
     vec3 wpos			: TEXCOORD4;
     vec3 view			: TEXCOORD5;
     vec4 clip_pos		: TEXCOORD6;
@@ -69,7 +69,7 @@ shader vertexOutput VS_Solid(vertexInput IN)
 {
     vertexOutput OUT;
 	vec4 opos		=vec4(IN.position.yxz,1.0);
-    OUT.wpos		=mul(world, opos).xyz;
+    OUT.wpos		=mul( opos, world).xyz;
 	OUT.view		=normalize(OUT.wpos.xyz- viewPosition);
     OUT.clip_pos	=mul( opos,worldViewProj);
 	OUT.texCoords0	=IN.texCoords0;
@@ -120,39 +120,39 @@ vec3 FresnelTerm(vec3 specularColour, float v_h)
 
 vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseColour,vec3 specularColour,float roughness)
 {
-	float roughnessE	=roughness * roughness;
-	float roughnessL	=max(.01, roughnessE);
-	vec3 refl			=reflect(viewDir, normal);
+	float roughnessE		=roughness * roughness;
+	float roughnessL		=max(.01, roughnessE);
+	vec3 refl				=reflect(viewDir, normal);
 
-	vec3 diffuse	= vec3(0,0,0);
-	vec3 specular	= vec3(0,0,0);
+	vec3 diffuse			= vec3(0,0,0);
+	vec3 specular			= vec3(0,0,0);
 
-	vec3 halfVec	= normalize(viewDir + lightDir);
-	float v_h		= saturate(dot(viewDir, halfVec));
-	float n_h		= saturate(dot(normal, halfVec));
-	float n_v		= saturate(dot(normal, viewDir));
-	float n_l		= saturate(dot(normal, lightDir));
-	vec3 envSpecularColour = EnvBRDFApprox(specularColour, roughnessE, n_v);
+	vec3 halfVec			= normalize(viewDir + lightDir);
+	float v_h				= saturate(dot(viewDir, halfVec));
+	float n_h				= saturate(dot(normal, halfVec));
+	float n_v				= saturate(dot(normal, viewDir));
+	float n_l				= saturate(dot(normal, lightDir));
+	vec3 envSpecularColour	= EnvBRDFApprox(specularColour, roughnessE, n_v);
 
-	vec3 env3	=diffuseCubemap.SampleLevel(cubeSamplerState, normal.xyz,0).rgb;
-	vec3 env	=specularCubemap.SampleLevel(cubeSamplerState,-refl.xyz,roughnessE*11.0).rgb;
-	env			=mix(env, env3, saturate((roughnessE - 0.25) / 0.75));
+	vec3 diffuse_env		=diffuseCubemap.SampleLevel(cubeSamplerState, normal.xyz,0).rgb;
+	vec3 env				=specularCubemap.SampleLevel(cubeSamplerState,normal.xyz, 4.0).rgb;
+	//env					=mix(env, diffuse_env, saturate((roughnessE - 0.25) / 0.75));
 
-	diffuse		+=diffuseColour * env3;
-	specular	+=envSpecularColour * env;
-	lightColour = lightingCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
-	diffuse		+=lightColour *diffuseColour * saturate(n_l);
+	diffuse					+=diffuseColour * diffuse_env;
+	specular				+=envSpecularColour * env;
+	lightColour				= lightingCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
+	diffuse					+=lightColour *diffuseColour * saturate(n_l);
 
-	vec3 lightF		=FresnelTerm(specularColour, v_h);
-	float lightD	=DistributionTerm(roughnessL, n_h);
-	float lightV	=VisibilityTerm(roughnessL, n_v, n_l);
-	specular		+=lightColour * lightF * (lightD * lightV * SIMUL_PI_F * n_l);
+	vec3 lightF				=FresnelTerm(specularColour, v_h);
+	float lightD			=DistributionTerm(roughnessL, n_h);
+	float lightV			=VisibilityTerm(roughnessL, n_v, n_l);
+	specular				+=lightColour * lightF * (lightD * lightV * SIMUL_PI_F * n_l);
 
-	float ao = 1;// SceneAO(pos, normal, localToWorld);
+	float ao				= 1;// SceneAO(pos, normal, localToWorld);
 	//diffuse *= ao;
-	specular *= saturate(pow(n_v + ao, roughnessE) - 1. + ao);
+	specular				*= saturate(pow(n_v + ao, roughnessE) - 1. + ao);
 
-	vec3 colour = diffuse+specular;
+	vec3 colour				= diffuse+specular;
 	return env;
 }
 
@@ -161,15 +161,15 @@ shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 	vec3 tangentx		= normalize(IN.tangent);
 	vec3 tangenty		= normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
-	vec3 normalLookup = normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
-	vec3 normal = normalize(mul( normalLookup, TangentMatrix));
+	vec3 normalLookup	= 2.0*(normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr-vec3(0.5,0.5,0.5));
+	vec3 normal			= normalize(mul( normalLookup, TangentMatrix));
 
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
 	vec3 diffuseColour	= diffuseOutputScalar.rgb * diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgra;
     vec3 c				= PBR(normal, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), diffuseColour, vec3(1,1,1),roughness);
 	//c.rgb=frac(IN.texCoords0.xyy);
-    vec4 u				=vec4(IN.texCoords0.xy,0,1.0);
+    vec4 u				=vec4(c.rgb,1.0);
 	return u;
 }
 
@@ -246,7 +246,7 @@ technique solid
 {
     pass base 
     {
-		SetRasterizerState(RenderNoCull);
+		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);

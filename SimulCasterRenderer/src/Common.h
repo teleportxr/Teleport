@@ -22,10 +22,14 @@
 #define SCR_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
 #define SCR_COUT(msg)				 std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl;
 
+extern void log_print(const char* source,const char *format, ...);
+
 #if defined(__ANDROID__)
 #include <android/log.h>
 #define FILE_LINE (std::string(__FILE__) + std::string("(") +  std::to_string(__LINE__) + std::string("):")).c_str()
-#define SCR_ANDROID_LOG(...) __android_log_print(ANDROID_LOG_INFO, "SCR", __VA_ARGS__);
+#define SCR_LOG(...) __android_log_print(ANDROID_LOG_INFO, "SCR", __VA_ARGS__);
+#else
+#define SCR_LOG(fmt,...) log_print( "SCR", fmt, __VA_ARGS__);
 #endif
 
 namespace scr

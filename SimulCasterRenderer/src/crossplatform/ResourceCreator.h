@@ -117,6 +117,9 @@ public:
 
 	void passNode(avs::uid node_uid, avs::DataNode& node) override;
 
+	std::shared_ptr<scr::Texture> m_DummyDiffuse;
+	std::shared_ptr<scr::Texture> m_DummyNormal;
+	std::shared_ptr<scr::Texture> m_DummyCombined;
 private:
 	struct IncompleteResource
 	{
@@ -147,11 +150,8 @@ private:
 	basist::etc1_global_selector_codebook basis_codeBook;
 	basist::transcoder_texture_format basis_textureFormat;
 
-	std::shared_ptr<scr::Texture> m_DummyDiffuse;
-	std::shared_ptr<scr::Texture> m_DummyNormal;
-	std::shared_ptr<scr::Texture> m_DummyCombined;
 	const uint32_t diffuseBGRA = 0xFFFFFFFF;
-	const uint32_t normalBGRA = 0xFF0000FF;
+	const uint32_t normalBGRA = 0xFFFF7F7F;
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
 	
 //s	uint32_t m_PostUseLifetime = 1000; //30,000ms = 30s

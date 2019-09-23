@@ -146,6 +146,7 @@ namespace scr
 		Texture(RenderPlatform *r) : APIObject(r) {m_CI={};}
 		virtual ~Texture()
 		{
+			/* RK: Purpose of all this unclear..
 			m_CI.width = 0;
 			m_CI.height = 0; 
 			m_CI.depth = 0;
@@ -154,7 +155,7 @@ namespace scr
 			m_CI.type = Type::TEXTURE_UNKNOWN;
 			m_CI.format = Format::FORMAT_UNKNOWN;
 			m_CI.sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
-			m_CI.mipSizes.clear();
+			m_CI.mipSizes.clear();*/
 
 			//Free mip data.
 			for(size_t mipLevel = 0; mipLevel < m_CI.mips.size(); mipLevel++)

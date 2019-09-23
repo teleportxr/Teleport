@@ -239,6 +239,8 @@ static GLuint CompileShader( GLenum shaderType, const char * directives, const c
 		srcString += FragmentHeader;
 	}
 
+	srcString += "#line 1 ";
+	srcString+="0\n";
 	srcString += postVersion ;
 
 	src = srcString.c_str();

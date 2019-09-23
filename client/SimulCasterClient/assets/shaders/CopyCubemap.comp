@@ -23,7 +23,7 @@ void main()
     FaceOffsets[5]=ivec2(2,1);
 
     ivec2 faceOffset=FaceOffsets[gl_GlobalInvocationID.z];
-    ivec2 loadPos = ivec2(gl_GlobalInvocationID.xy)+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
+    ivec2 loadPos = ivec2(gl_GlobalInvocationID.xy)+cub.sourceOffset+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
     vec4 lookup=texelFetch(videoFrameTexture, loadPos, 0);
     ivec3 storePos = ivec3(gl_GlobalInvocationID.xyz);
     imageStore(destTex, storePos, lookup);

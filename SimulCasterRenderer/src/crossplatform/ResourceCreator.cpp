@@ -33,6 +33,15 @@ std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
 	return resourceRequests;
 }
 
+struct VB
+{
+	avs::vec3 a_Position;
+	avs::vec3 a_Normal;
+	avs::vec4 a_Tangent;
+	avs::vec2 a_UV0;
+	avs::vec2 a_UV1;
+
+};
 avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 {
 	using namespace scr;
@@ -93,7 +102,7 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 		std::unique_ptr<float[]> interleavedVB = std::make_unique<float[]>(interleavedVBSize);
 		std::unique_ptr<uint8_t[]> _indices = std::make_unique<uint8_t[]>(indicesSize);
 		memcpy(_indices.get(), meshElementCreate->m_Indices, indicesSize);
-		
+
 		for (size_t j = 0; j < meshElementCreate->m_VertexCount; j++)
 		{
 			size_t intraStrideOffset = 0;
@@ -109,27 +118,27 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 				// tangentx tangentz
 				if (meshElementCreate->m_TangentNormalSize == 8)
 				{
-					Vec4<char>& x8 = *((avs::Vec4<char>*)(nt));
-					tangent.x = x8.x / 127.0f;
-					tangent.y = x8.y / 127.0f;
-					tangent.z = x8.z / 127.0f;
-					tangent.w = x8.w / 127.0f;
-					Vec4<char>& n8 = *((avs::Vec4<char>*)(nt + 4));
-					normal.x = n8.x / 127.0f;
-					normal.y = n8.y / 127.0f;
-					normal.z = n8.z / 127.0f;
+					Vec4<signed char>& x8 = *((avs::Vec4<signed char>*)(nt));
+					tangent.x = float(x8.x) / 127.0f;
+					tangent.y = float(x8.y) / 127.0f;
+					tangent.z = float(x8.z) / 127.0f;
+					tangent.w = float(x8.w) / 127.0f;
+					Vec4<signed char>& n8 = *((avs::Vec4<signed char>*)(nt + 4));
+					normal.x = float(n8.x) / 127.0f;
+					normal.y = float(n8.y) / 127.0f;
+					normal.z = float(n8.z) / 127.0f;
 				}
 				else // 16
 				{
 					Vec4<short>& x8 = *((avs::Vec4<short>*)(nt));
-					tangent.x = x8.x / 32767.0f;
-					tangent.y = x8.y / 32767.0f;
-					tangent.z = x8.z / 32767.0f;
-					tangent.w = x8.w / 32767.0f;
+					tangent.x = float(x8.x) / 32767.0f;
+					tangent.y = float(x8.y) / 32767.0f;
+					tangent.z = float(x8.z) / 32767.0f;
+					tangent.w = float(x8.w) / 32767.0f;
 					Vec4<short>& n8 = *((avs::Vec4<short>*)(nt + 8));
-					normal.x = n8.x / 32767.0f;
-					normal.y = n8.y / 32767.0f;
-					normal.z = n8.z / 32767.0f;
+					normal.x = float(n8.x) / 32767.0f;
+					normal.y = float(n8.y) / 32767.0f;
+					normal.z = float(n8.z) / 32767.0f;
 				}
 				memcpy(interleavedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, &normal, sizeof(avs::vec3));
 				intraStrideOffset += 3;
@@ -190,6 +199,12 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 		{
 			SCR_CERR("Unable to construct vertex and index buffers.");
 			return avs::Result::GeometryDecoder_ClientRendererError;
+		}
+		//VB *_vb=(VB*)interleavedVB.get();
+		//for(int k=0;k<meshElementCreate->m_VertexCount;k++)
+		{
+			//VB &this_v=_vb[k];
+			//SCR_ANDROID_LOG("%3.3f %3.3f %3.3f :%3.3f %3.3f %3.3f",this_v.a_Position.x,this_v.a_Position.y,this_v.a_Position.z,this_v.a_Normal.x,this_v.a_Normal.y,this_v.a_Normal.z);
 		}
 
 		std::shared_ptr<VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
@@ -263,8 +278,8 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 
 void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& texture)
 {
-    scr::Texture::TextureCreateInfo texInfo =
-    {
+	scr::Texture::TextureCreateInfo texInfo =
+	{
 		texture.width,
 		texture.height,
 		texture.depth,
@@ -277,39 +292,42 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
 		{},
 		{},
-		toSCRCompressionFormat(basis_textureFormat)
+		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_textureFormat) : scr::Texture::CompressionFormat::UNCOMPRESSED
      };
    
 	//We need a new transcoder for every .basis file.
 	basist::basisu_transcoder basis_transcoder(&basis_codeBook);
 
-	if(basis_transcoder.start_transcoding(texture.data, texture.dataSize))
+	if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
-		texInfo.mipCount = basis_transcoder.get_total_image_levels(texture.data, texture.dataSize, 0);
-
-		for(uint32_t mipIndex = 0; mipIndex < texInfo.mipCount; mipIndex++)
+		if (basis_transcoder.start_transcoding(texture.data, texture.dataSize))
 		{
-			uint32_t basisWidth, basisHeight, basisBlocks;
+			texInfo.mipCount = basis_transcoder.get_total_image_levels(texture.data, texture.dataSize, 0);
 
-			basis_transcoder.get_image_level_desc(texture.data, texture.dataSize, 0, mipIndex, basisWidth, basisHeight, basisBlocks);
-			uint32_t outDataSize = basist::basis_get_bytes_per_block(basis_textureFormat) * basisBlocks;
+			for (uint32_t mipIndex = 0; mipIndex < texInfo.mipCount; mipIndex++)
+			{
+				uint32_t basisWidth, basisHeight, basisBlocks;
 
-			unsigned char* outData = new unsigned char[outDataSize];
-			if(basis_transcoder.transcode_image_level(texture.data, texture.dataSize, 0, mipIndex, outData, basisBlocks, basis_textureFormat))
-			{
-				texInfo.mipSizes.push_back(outDataSize);
-				texInfo.mips.push_back(outData);
+				basis_transcoder.get_image_level_desc(texture.data, texture.dataSize, 0, mipIndex, basisWidth, basisHeight, basisBlocks);
+				uint32_t outDataSize = basist::basis_get_bytes_per_block(basis_textureFormat) * basisBlocks;
+
+				unsigned char* outData = new unsigned char[outDataSize];
+				if (basis_transcoder.transcode_image_level(texture.data, texture.dataSize, 0, mipIndex, outData, basisBlocks, basis_textureFormat))
+				{
+					texInfo.mipSizes.push_back(outDataSize);
+					texInfo.mips.push_back(outData);
+				}
+				else
+				{
+					delete[] outData;
+				}
 			}
-			else
-			{
-				delete[] outData;
-			}
+
+			delete[] texture.data;
 		}
-
-		delete[] texture.data;
 	}
 
-	//The data is uncompressed if we failed to transcode it.
+	//The data is uncompressed if we failed to transcode it or if it was never supposed to be compressed.
 	if(texInfo.mips.size() == 0)
 	{
 		texInfo.mipSizes.push_back(texture.dataSize);
@@ -342,12 +360,21 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 						false
 				};
 
-		tci.mips[0] = (const uint8_t *) &diffuseBGRA;
+		uint32_t *diffuse=new uint32_t[1];
+		*diffuse = diffuseBGRA;
+		tci.mips[0] = (uint8_t*)diffuse;
 		m_DummyDiffuse->Create(tci);
-		tci.mips[0] = (const uint8_t *) &normalBGRA;
+
+		uint32_t* normal = new uint32_t[1];
+		*normal = normalBGRA;
+		tci.mips[0] = (uint8_t*)normal;
 		m_DummyNormal->Create(tci);
-		tci.mips[0] = (const uint8_t *) &combinedBGRA;
+
+		uint32_t* combine = new uint32_t[1];
+		*combine = combinedBGRA;
+		tci.mips[0] = (uint8_t*)combine;
 		m_DummyCombined->Create(tci);
+
 	}
 
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();

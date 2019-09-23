@@ -107,15 +107,15 @@ void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 		return;
 	}
 	simul::crossplatform::TextureCreate textureCreate;
-	textureCreate.w = pTextureCreateInfo.width;
-	textureCreate.l = pTextureCreateInfo.height;
-	textureCreate.f = pixelFormat;
-	textureCreate.computable = computable;
-	textureCreate.make_rt = rt;
-	textureCreate.setDepthStencil = ds;
-	textureCreate.numOfSamples = num_samp;
+	textureCreate.w					= pTextureCreateInfo.width;
+	textureCreate.l					= pTextureCreateInfo.height;
+	textureCreate.f					= pixelFormat;
+	textureCreate.computable		= computable;
+	textureCreate.make_rt			= rt;
+	textureCreate.setDepthStencil	= ds;
+	textureCreate.numOfSamples		= num_samp;
 	textureCreate.compressionFormat = (simul::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
-	textureCreate.initialData = pTextureCreateInfo.mips[0];
+	textureCreate.initialData		= pTextureCreateInfo.mips[0];
 	m_SimulTexture->EnsureTexture(srp, &textureCreate);
 	//m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, (int)(pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel));
 }
