@@ -376,8 +376,12 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		hdrFramebuffer->DeactivateDepth(deviceContext);
 
-		if(ti&&show_video)
-			renderPlatform->DrawTexture(deviceContext, 0, 0, hdrFramebuffer->GetWidth() / 2, hdrFramebuffer->GetHeight() / 2, ti->texture);
+		if (ti && show_video)
+		{
+			int W = hdrFramebuffer->GetWidth();
+			int H = hdrFramebuffer->GetHeight();
+			renderPlatform->DrawTexture(deviceContext, 0,0, W,H , ti->texture);
+		}
 	}
 	if(show_textures)
 	{
@@ -446,7 +450,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
 {
 	avs::Transform transform=decoder[0].getCameraTransform();
-	vec3 pos = (const float*)& transform.position;
+	vec3 pos = (const float*)&transform.position;
 	camera.SetPosition(pos);
 
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
@@ -601,7 +605,7 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 void ClientRenderer::Update()
 {
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-	uint32_t timeElapsed = (timestamp - previousTimestamp);
+	uint32_t timeElapsed = (timestamp - previousTimestamp)/1000;//ns to ms
 
 	resourceManagers.Update(timeElapsed);
 
