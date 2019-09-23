@@ -251,6 +251,9 @@ scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format
 		case avs::TextureFormat::RGBE8: return scr::Texture::Format::RGBA8;
 		case avs::TextureFormat::RGBA16F: return scr::Texture::Format::RGBA16F;
 		case avs::TextureFormat::RGBA8: return scr::Texture::Format::RGBA8;
+		case avs::TextureFormat::D16F: return scr::Texture::Format::DEPTH_COMPONENT16;
+		case avs::TextureFormat::D24F: return scr::Texture::Format::DEPTH_COMPONENT24;
+		case avs::TextureFormat::D32F: return scr::Texture::Format::DEPTH_COMPONENT32F;
 		case avs::TextureFormat::MAX: return scr::Texture::Format::FORMAT_UNKNOWN;
 		default:
 			exit(1);
@@ -530,6 +533,10 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	    	return;
 	    case NodeDataType::Scene:
 	    	return;
+	    case NodeDataType ::ShadowMap:
+	        return;
+	    default:
+	        SCR_LOG("Unknown NodeDataType: %d", node.data_type)
 	    }
 	}
 }
