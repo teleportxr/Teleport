@@ -310,7 +310,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
             handshake.isReadyToReceivePayloads=true;
             handshake.axesStandard = avs::AxesStandard::GlStyle;
             handshake.MetresPerUnit = 1.0f;
-            handshake.needsControllers = true;
+            handshake.usingHands = true;
 			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake);
 			SendHandshake(handshake);
 		}

@@ -524,7 +524,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	{
 	    switch (node.data_type)
 	    {
-		case NodeDataType::Controller:
+		case NodeDataType::Hand:
 			m_pActorManager->handUIDs.push_back(node_uid);
 		case NodeDataType::Mesh:
 	    	CreateActor(node_uid, node.data_uid, node.materials, avs::Transform{node.transform.position, node.transform.rotation, node.transform.scale});
