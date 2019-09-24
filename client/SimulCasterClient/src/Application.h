@@ -135,6 +135,8 @@ private:
 	//int		 mControllerIndex;
 	ovrVector2f mTrackpadDim;
 
+	const scr::quat HAND_ROTATION_DIFFERENCE {0.923879504, -0.382683426, 0, 0}; //Adjustment to the controller's rotation to get the desired rotation.
+
 	int mNumPendingFrames                  = 0;
 
 	scr::ResourceManagers resourceManagers;
