@@ -525,18 +525,21 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	    switch (node.data_type)
 	    {
 	    case NodeDataType::Mesh:
-	    	{
-	    		CreateActor(node_uid, node.data_uid,node.materials, avs::Transform{node.transform.position, node.transform.rotation, node.transform.scale});
-	    		return;
-	    	}
+	    {
+	    	CreateActor(node_uid, node.data_uid,node.materials, avs::Transform{node.transform.position, node.transform.rotation, node.transform.scale});
+	    	return;
+	    }
 	    case NodeDataType::Camera:
 	    	return;
 	    case NodeDataType::Scene:
 	    	return;
-	    case NodeDataType ::ShadowMap:
+	    case NodeDataType::ShadowMap:
+		{
+			CreateLight(node_uid, node);
 	        return;
+		}
 	    default:
-	        SCR_LOG("Unknown NodeDataType: %d", node.data_type)
+	        SCR_LOG("Unknown NodeDataType: %c", node.data_type)
 	    }
 	}
 }
@@ -587,6 +590,19 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const st
 			m_WaitingForResources[uid].push_back(newActor);
 		}
 	}
+}
+
+void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
+{
+	scr::Light::LightCreateInfo lci;
+	lci.renderPlatform = m_pRenderPlatform;
+	lci.type = scr::Light::Type::DIRECTIONAL;
+	lci.position = scr::vec3(node.transform.position);
+	lci.orientation = scr::quat(node.transform.rotation);
+	lci.shadowMapTexture = m_TextureManager->Get(node.data_uid);
+
+	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
+	m_LightManager->Add(node_uid, light);
 }
 
 void ResourceCreator::CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo)

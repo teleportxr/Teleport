@@ -179,15 +179,21 @@ namespace scr
 			k /= length;
 			return *this;
 		}
-		vec3 ToVec3(const quat& other)
+		void ToAxisAngle(vec3& outAxis, float& outAngle)
 		{
-			vec3 result = vec3(other.i, other.j, other.k);
-			float theta = 2 * acosf(other.s);
+			vec3 result = vec3(i, j, k);
+			float theta = 2 * acosf(s);
 			if (theta > 0)
 			{
 				result * (1.0f / sinf(theta / 2.0f));
 			}
-			return result;
+			outAxis = result;
+			outAngle = theta;
+		}
+		vec3 GetIJK()
+		{
+			vec3 result = { i, j, k };
+			return result.Normalise();
 		}
 		quat operator*(const quat& other) const
 		{

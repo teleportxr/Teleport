@@ -97,7 +97,7 @@ ClientRenderer::ClientRenderer():
 {
 	avsTextures.resize(NumStreams);
 	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);
-	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager);
+	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
 	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
 
 	//Initalise time stamping for state update.

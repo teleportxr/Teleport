@@ -4,131 +4,93 @@
 
 using namespace scr;
 
-uint32_t Light::s_NumOfLights = 0;
-const uint32_t Light::s_MaxLights = 64;
+const uint32_t Light::s_MaxLights = 8; 
+std::vector<Light::LightData> Light::s_LightData = {};
 bool Light::s_UninitialisedUB = true;
 
 Light::Light(LightCreateInfo* pLightCreateInfo)
 	:m_CI(*pLightCreateInfo)
 {
-	//m_LightData.resize(s_MaxLights);
-	if (false)//s_UninitialisedUB)
+	if (s_UninitialisedUB)
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 2;
-		ub_ci.size = sizeof(LightData);//s_MaxLights
-		ub_ci.data = &m_LightData;
+		ub_ci.size = sizeof(LightData) * s_MaxLights;
+		ub_ci.data = &s_LightData;
 
 		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
 		s_UninitialisedUB = false;
 	}
 
+	if(!(s_MaxLights >= s_LightData.size() + 1))
+	{
+		SCR_LOG("Exceeded maximum number of lights(%d). No LightData will created.", s_MaxLights);
+		return;
+	}
+	m_IsValid = true;
+
+	s_LightData.push_back({});
+	m_LightID = s_LightData.size() - 1;
+
+	//Default values
+	s_LightData[m_LightID].colour = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	s_LightData[m_LightID].power = 100; //i.e 100W
+	UpdateLightSpaceTransform();
+
+	m_ShadowMapSampler = m_CI.renderPlatform->InstantiateSampler();
+	Sampler::SamplerCreateInfo sci;
+	sci.minFilter = Sampler::Filter::LINEAR;
+	sci.magFilter = Sampler::Filter::LINEAR;
+	sci.wrapU = Sampler::Wrap::CLAMP_TO_EDGE;
+	sci.wrapV = Sampler::Wrap::CLAMP_TO_EDGE;
+	sci.wrapW = Sampler::Wrap::CLAMP_TO_EDGE;
+	sci.minLod = 0;
+	sci.maxLod = 0;
+	sci.anisotropyEnable = false;
+	sci.maxAnisotropy = 1.0f;
+	m_ShadowMapSampler->Create(&sci);
+	
+	m_CI.shadowMapTexture->UseSampler(m_ShadowMapSampler);
+
 	m_ShaderResourceLayout.AddBinding(2, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+	m_ShaderResourceLayout.AddBinding(19, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+	m_ShaderResourceLayout.AddBinding(20, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+	m_ShaderResourceLayout.AddBinding(21, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+	m_ShaderResourceLayout.AddBinding(22, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+	m_ShaderResourceLayout.AddBinding(23, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+	m_ShaderResourceLayout.AddBinding(24, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+	m_ShaderResourceLayout.AddBinding(25, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+	m_ShaderResourceLayout.AddBinding(26, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
 	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { m_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
-
-	assert(s_MaxLights > s_NumOfLights);
-	m_LightID = s_NumOfLights;
-	s_NumOfLights++;
-
-	UpdatePosition(m_CI.position);
-	UpdateDirection(m_CI.direction);
-	UpdateColour(m_CI.colour);
-	UpdatePower(m_CI.power);
-	UpdateSpotAngle(m_CI.spotAngle);
-
-	switch (m_CI.type)
-	{
-	case Light::Type::POINT:
-		Point(); break;
-	case Light::Type::DIRECTIONAL:
-		Directional();
-		break;
-	case Light::Type::SPOT:
-		Spot();
-		break;
-	case Light::Type::AREA:
-		Area();
-		break;
-	default:
-		break;
-	}
-}
-
-void Light::Point()
-{
-	Camera::CameraCreateInfo c_ci;
-	c_ci.type = Camera::ProjectionType::PERSPECTIVE; 
-	c_ci.position = m_LightData.m_Position;
-	c_ci.orientation = quat(0.0f, m_LightData.m_Direction);
-
-	m_ShadowCamera = std::make_unique<Camera>(&c_ci);
-	m_ShadowCamera->UpdateProjection(HALF_PI * 0.5f, 1.0f, 0.01f, 300.0f);
-
-	CreateShadowMap();
-}
-void Light::Directional()
-{
-	Camera::CameraCreateInfo c_ci;
-	c_ci.type = Camera::ProjectionType::ORTHOGRAPHIC;
-	c_ci.position = m_LightData.m_Position;
-	c_ci.orientation = quat(0.0f, m_LightData.m_Direction);
-
-	m_ShadowCamera = std::make_unique<Camera>(&c_ci);
-	m_ShadowCamera->UpdateProjection(0.0f, static_cast<float>(m_ShadowMapSize), 0.0f, static_cast<float>(m_ShadowMapSize), -1.0f, 1.0f);
-
-	CreateShadowMap();
-}
-void Light::Spot()
-{
-	Camera::CameraCreateInfo c_ci;
-	c_ci.type = Camera::ProjectionType::PERSPECTIVE;
-	c_ci.position = m_LightData.m_Position;
-	c_ci.orientation = quat(0.0f, m_LightData.m_Direction);
-
-	m_ShadowCamera = std::make_unique<Camera>(&c_ci);
-	m_ShadowCamera->UpdateProjection(m_LightData.m_SpotAngle, 1.0f, 0.01f, 300.0f);
-
-	CreateShadowMap();
-}
-void Light::Area()
-{
-	//NULL
-}
-
-void Light::CreateShadowMap()
-{
-	FrameBuffer::FrameBufferCreateInfo fb_ci;
-	fb_ci.format = Texture::Format::DEPTH_COMPONENT32;
-	fb_ci.type = Texture::Type::TEXTURE_2D;
-	fb_ci.sampleCount = Texture::SampleCountBit::SAMPLE_COUNT_1_BIT;
-	fb_ci.width = m_ShadowMapSize;
-	fb_ci.height = m_ShadowMapSize;
-	m_ShadowMapFBO->Create(&fb_ci);
+	
+	std::string shaderResourceName = std::string("u_ShadowMap") + std::to_string(m_LightID);
+	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});
 }
 
 void Light::UpdatePosition(const vec3& position) 
 {
-	m_LightData.m_Position = position; 
+	m_CI.position = position;
+	UpdateLightSpaceTransform();
 }
-void Light::UpdateDirection(const vec3& direction)
+void Light::UpdateOrientation(const quat& orientation)
 { 
-	m_LightData.m_Direction = direction; 
+	m_CI.orientation = orientation;
+	UpdateLightSpaceTransform();
 }
-void Light::UpdateColour(const vec4& colour) 
+void Light::UpdateLightSpaceTransform()
 {
-	m_LightData.m_Colour = colour; 
-}
-void Light::UpdatePower(float power) 
-{ 
-	m_LightData.m_Power = power; 
-}
-void Light::UpdateSpotAngle(float spotAngle) 
-{ 
-	m_LightData.m_Power = spotAngle; 
-}
-void Light::UpdateLightUBO()
-{
+	if (IsValid())
+	{
+		vec3 defaultDirection = { 0.0f, 0.0f, -1.0f };
+		vec3 rotatedDirection = ((m_CI.orientation * defaultDirection) * m_CI.orientation.Conjugate()).GetIJK();
+		
+		s_LightData[m_LightID].position = m_CI.position;
+		s_LightData[m_LightID].direction = rotatedDirection;
+		s_LightData[m_LightID].lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation);
+	}
+	else
+		return;
 }

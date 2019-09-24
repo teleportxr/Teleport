@@ -3,7 +3,7 @@
 
 #include "Common.h"
 
-#include "Camera.h"
+#include "Actor.h"
 
 #include "api/FrameBuffer.h"
 #include "api/UniformBuffer.h"
@@ -24,60 +24,49 @@ namespace scr
 		{
 			RenderPlatform* renderPlatform;
 			Type type;
-			const vec3& position;
-			const vec3& direction;
-			const vec4& colour;
-			float power;
-			float spotAngle;
+			vec3 position;
+			quat orientation;
+			std::shared_ptr<Texture> shadowMapTexture;
 		};
 	
 	private:
-		static uint32_t s_NumOfLights;
-		const static uint32_t s_MaxLights;
-		uint32_t m_LightID;
+		LightCreateInfo m_CI;
 
 		struct LightData //Layout conformant to GLSL std140
 		{
-			vec4 m_Colour;
-			vec3 m_Position;
-			float m_Power;		 //Strength or Power of the light in Watts equilavent to Radiant Flux in Radiometry.
-			vec3 m_Direction;
-			float m_SpotAngle;
+			vec4 colour;
+			vec3 position;
+			float power;		 //Strength or Power of the light in Watts equilavent to Radiant Flux in Radiometry.
+			vec3 direction;
+			float _pad;
+			mat4 lightSpaceTransform;
 		};
-		LightData m_LightData;
-
-		LightCreateInfo m_CI;
-		
 		static bool s_UninitialisedUB;
 		std::shared_ptr<UniformBuffer> m_UB;
 
+		static const uint32_t s_MaxLights;
+		static std::vector<LightData> s_LightData;
+		uint32_t m_LightID;
+		bool m_IsValid = false;
+
+		std::shared_ptr<Sampler> m_ShadowMapSampler;
+
 		ShaderResourceLayout m_ShaderResourceLayout;
 		ShaderResource m_ShaderResource;
-		
-		uint32_t m_ShadowMapSize = 256;
-		std::unique_ptr<FrameBuffer>m_ShadowMapFBO = nullptr; 
-		std::unique_ptr<Camera> m_ShadowCamera = nullptr;
 
 	public:
 		Light(LightCreateInfo* pLightCreateInfo);
+		~Light() = default;
 
 		void UpdatePosition(const vec3& position);
-		void UpdateDirection(const vec3& direction);
-		void UpdateColour(const vec4& colour);
-		void UpdatePower(float power);
-		void UpdateSpotAngle(float spotAngle);
-
-		void UpdateLightUBO();
+		void UpdateOrientation(const quat& orientation);
 
 		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
-
-		inline std::unique_ptr<FrameBuffer>& GetShadowMapFBO() { return m_ShadowMapFBO; }
+		inline std::shared_ptr<Texture>& GetShadowMapTexture() { return m_CI.shadowMapTexture; }
+		inline const std::vector<LightData>& GetLightData() const { return s_LightData; }
+		inline bool IsValid() { return m_IsValid; }
 
 	private:
-		void Point();
-		void Directional();
-		void Spot();
-		void Area();
-		void CreateShadowMap();
+		void UpdateLightSpaceTransform();
 	};
 }
