@@ -503,8 +503,14 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
         {
             std::shared_ptr<scr::Actor> hand = resourceManagers.mActorManager.GetActor(handID);
 
+            //Break if the client doesn't have the hand actor yet.
+            if(!hand)
+            {
+                break;
+            }
+
             //Hands are only visible, if there is a hand for them to position relative to.
-            if(handID > remoteStates.size())
+            if(handIndex > remoteStates.size())
             {
                 hand->isVisible = false;
                 continue;
