@@ -542,10 +542,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	//Append SCR Actors to surfaces.
 	GL_CheckErrors("Frame: Pre-SCR");
-	//Remove Invalid scr and ovr actors.
-		//mActorManager.RemoveInvalidActors();
-		//RemoveInvalidOVRActors();
-		uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
+	RemoveInvalidOVRActors();
+	uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
 	resourceManagers.Update(time_elapsed);
 	RenderLocalActors(res);
 	GL_CheckErrors("Frame: Post-SCR");

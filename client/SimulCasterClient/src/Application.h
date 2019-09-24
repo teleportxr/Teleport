@@ -153,6 +153,16 @@ private:
 	struct OVRActor
 	{
 		std::vector<std::shared_ptr<OVR::ovrSurfaceDef>> ovrSurfaceDefs;
+
+		~OVRActor()
+		{
+			for(std::shared_ptr<OVR::ovrSurfaceDef> ovrSurfaceDef : ovrSurfaceDefs)
+			{
+				ovrSurfaceDef->geo.Free();
+				OVR::GlProgram::Free(ovrSurfaceDef->graphicsCommand.Program);
+			}
+			ovrSurfaceDefs.clear();
+		}
 	};
 	std::map<avs::uid, std::shared_ptr<OVRActor>> mOVRActors;
 	inline void RemoveInvalidOVRActors()
@@ -167,16 +177,7 @@ private:
 	}
 	inline void ClearOVRActors()
     {
-	    for(auto it = mOVRActors.begin(); it != mOVRActors.end(); it++)
-        {
-	        for(std::shared_ptr<OVR::ovrSurfaceDef> ovrSurfaceDef : it->second->ovrSurfaceDefs)
-            {
-	            ovrSurfaceDef->geo.Free();
-	            OVR::GlProgram::Free(ovrSurfaceDef->graphicsCommand.Program);
-            }
-	        it->second->ovrSurfaceDefs.clear();
-        }
-        mOVRActors.clear();
+	    mOVRActors.clear();
     }
 	void CopyToCubemaps();
 	void RenderLocalActors(OVR::ovrFrameResult& res);
