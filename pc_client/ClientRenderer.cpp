@@ -628,7 +628,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	}
 	source.setDebugStream(setupCommand.debug_stream);
 	decoderParams.codec = avs::VideoCodec::HEVC;
-	decoderParams.deferDisplay = true;
+	decoderParams.deferDisplay = false;
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type = avs::DeviceType::Direct3D11;
