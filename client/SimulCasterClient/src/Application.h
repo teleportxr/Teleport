@@ -135,6 +135,8 @@ private:
 	//int		 mControllerIndex;
 	ovrVector2f mTrackpadDim;
 
+	const scr::quat HAND_ROTATION_DIFFERENCE {0.923879504, -0.382683426, 0, 0}; //Adjustment to the controller's rotation to get the desired rotation.
+
 	int mNumPendingFrames                  = 0;
 
 	scr::ResourceManagers resourceManagers;
@@ -151,6 +153,16 @@ private:
 	struct OVRActor
 	{
 		std::vector<std::shared_ptr<OVR::ovrSurfaceDef>> ovrSurfaceDefs;
+
+		~OVRActor()
+		{
+			for(std::shared_ptr<OVR::ovrSurfaceDef> ovrSurfaceDef : ovrSurfaceDefs)
+			{
+				ovrSurfaceDef->geo.Free();
+				OVR::GlProgram::Free(ovrSurfaceDef->graphicsCommand.Program);
+			}
+			ovrSurfaceDefs.clear();
+		}
 	};
 	std::map<avs::uid, std::shared_ptr<OVRActor>> mOVRActors;
 	inline void RemoveInvalidOVRActors()
@@ -165,16 +177,7 @@ private:
 	}
 	inline void ClearOVRActors()
     {
-	    for(auto it = mOVRActors.begin(); it != mOVRActors.end(); it++)
-        {
-	        for(std::shared_ptr<OVR::ovrSurfaceDef> ovrSurfaceDef : it->second->ovrSurfaceDefs)
-            {
-	            ovrSurfaceDef->geo.Free();
-	            OVR::GlProgram::Free(ovrSurfaceDef->graphicsCommand.Program);
-            }
-	        it->second->ovrSurfaceDefs.clear();
-        }
-        mOVRActors.clear();
+	    mOVRActors.clear();
     }
 	void CopyToCubemaps();
 	void RenderLocalActors(OVR::ovrFrameResult& res);

@@ -20,6 +20,7 @@ namespace scr
 		};
 
 		uint32_t actorLifetime = 2000; //Milliseconds the manager waits before removing invisible actors.
+		std::vector<avs::uid> handUIDs; //UIDs of the actors that are used as hands.
 		
 		void CreateActor(avs::uid actor_uid, const Actor::ActorCreateInfo& pActorCreateInfo)
 		{

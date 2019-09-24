@@ -538,6 +538,11 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 			CreateLight(node_uid, node);
 	        return;
 		}
+		case NodeDataType::Hand:
+		{
+			m_pActorManager->handUIDs.push_back(node_uid);
+			return;
+		}
 	    default:
 	        SCR_LOG("Unknown NodeDataType: %c", node.data_type)
 	    }

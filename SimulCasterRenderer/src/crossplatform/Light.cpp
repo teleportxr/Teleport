@@ -25,7 +25,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 
 	if(!(s_MaxLights >= s_LightData.size() + 1))
 	{
-		SCR_LOG("Exceeded maximum number of lights(%d). No LightData will created.", s_MaxLights);
+		SCR_LOG("Exceeded maximum number of lights(%d). No LightData will be created.", s_MaxLights);
 		return;
 	}
 	m_IsValid = true;

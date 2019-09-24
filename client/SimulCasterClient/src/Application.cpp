@@ -476,12 +476,74 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 	}
 
+	//Move the hands before they are drawn.
+    {
+        std::vector<ovrTracking> remoteStates;
+
+        uint32_t deviceIndex = 0;
+        ovrInputCapabilityHeader capsHeader;
+        //Poll controller state from the Oculus API.
+        while( vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader ) >= 0 )
+        {
+            if ( capsHeader.Type == ovrControllerType_TrackedRemote )
+            {
+                ovrTracking remoteState;
+                if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
+                {
+                    remoteStates.push_back(remoteState);
+                }
+            }
+
+            ++deviceIndex;
+        }
+
+        int handIndex = 0;
+        //Update hands to current position, and orientation.
+        for(avs::uid handID : resourceManagers.mActorManager.handUIDs)
+        {
+            std::shared_ptr<scr::Actor> hand = resourceManagers.mActorManager.GetActor(handID);
+
+            //Break if the client doesn't have the hand actor yet.
+            if(!hand)
+            {
+                break;
+            }
+
+            //Hands are only visible, if there is a hand for them to position relative to.
+            if(handIndex > remoteStates.size())
+            {
+                hand->isVisible = false;
+                continue;
+            }
+            hand->isVisible = true;
+
+            hand->UpdateModelMatrix
+            (
+               scr::vec3
+               {
+                   remoteStates[handIndex].HeadPose.Pose.Position.x + headPos.x,
+                   remoteStates[handIndex].HeadPose.Pose.Position.y + headPos.y,
+                   remoteStates[handIndex].HeadPose.Pose.Position.z + headPos.z
+               },
+               scr::quat
+               {
+                   remoteStates[handIndex].HeadPose.Pose.Orientation.w,
+                   remoteStates[handIndex].HeadPose.Pose.Orientation.x,
+                   remoteStates[handIndex].HeadPose.Pose.Orientation.y,
+                   remoteStates[handIndex].HeadPose.Pose.Orientation.z
+               }
+               * HAND_ROTATION_DIFFERENCE,
+               hand->GetTransform().m_Scale
+            );
+
+            ++handIndex;
+        }
+    }
+
 	//Append SCR Actors to surfaces.
 	GL_CheckErrors("Frame: Pre-SCR");
-	//Remove Invalid scr and ovr actors.
-		//mActorManager.RemoveInvalidActors();
-		//RemoveInvalidOVRActors();
-		uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
+	RemoveInvalidOVRActors();
+	uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
 	resourceManagers.Update(time_elapsed);
 	RenderLocalActors(res);
 	GL_CheckErrors("Frame: Post-SCR");
