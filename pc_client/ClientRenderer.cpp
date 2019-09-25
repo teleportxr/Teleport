@@ -96,7 +96,6 @@ ClientRenderer::ClientRenderer():
 	RenderMode(0)
 {
 	avsTextures.resize(NumStreams);
-	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
 	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
 
@@ -115,6 +114,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 {
 	renderPlatform=r;
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
+	resourceCreator.SetRenderPlatform(&PcClientRenderPlatform);
 	hDRRenderer		=new crossplatform::HdrRenderer();
 
 	hdrFramebuffer=renderPlatform->CreateFramebuffer();

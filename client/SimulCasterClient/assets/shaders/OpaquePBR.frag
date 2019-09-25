@@ -211,7 +211,7 @@ void main()
 	vec3 Lo;				//Exitance Radiance from the surface in the direction of the camera.
     vec3 Le = vec3(0.0);	//Emissive Radiance from the surface in the direction of the camera, if any.
 
-    vec4 combinedLookup = u_CombinedOutputScalar * texture(u_Combined, v_UV_diffuse);
+    vec4 combinedLookup = /*u_CombinedOutputScalar **/ texture(u_Combined, v_UV_diffuse);
     //Primary non-light dependent
     float roughnessE = GetRoughness(combinedLookup);
     roughnessE *= roughnessE;
@@ -261,5 +261,5 @@ void main()
     }
 	vec3 output_radiance = PBR(N, Wo,diffuseColour, diffuse_light,specular_light,combinedLookup,roughnessE);
     //vec3 R = reflect(Wo, N);
-    gl_FragColor = 0.001 * Gamma(vec4(output_radiance.rgb,1.0)) + vec4(diffuseColour,1);
+    gl_FragColor = 0.001 * Gamma(vec4(output_radiance.rgb,1.0)) + u_CombinedOutputScalar;//combinedLookup;
 }

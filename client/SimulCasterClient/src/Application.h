@@ -167,11 +167,15 @@ private:
 	std::map<avs::uid, std::shared_ptr<OVRActor>> mOVRActors;
 	inline void RemoveInvalidOVRActors()
 	{
-		for(std::map<avs::uid, std::shared_ptr<OVRActor>>::iterator it = mOVRActors.begin(); it != mOVRActors.end(); it++)
+		for(std::map<avs::uid, std::shared_ptr<OVRActor>>::iterator it = mOVRActors.begin(); it != mOVRActors.end();)
 		{
 			if(resourceManagers.mActorManager.GetActorList().find(it->first) == resourceManagers.mActorManager.GetActorList().end())
 			{
-				mOVRActors.erase(it);
+				it = mOVRActors.erase(it);
+			}
+			else
+			{
+				++it;
 			}
 		}
 	}

@@ -19,6 +19,38 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 {
 	m_API.SetAPI(r->GetAPI());
 	m_pRenderPlatform = r;
+
+	m_DummyDiffuse = m_pRenderPlatform->InstantiateTexture();
+	m_DummyNormal = m_pRenderPlatform->InstantiateTexture();
+	m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
+
+	scr::Texture::TextureCreateInfo tci =
+	{
+		1, 1, 1, 4, 1, 1,
+		scr::Texture::Slot::UNKNOWN,
+		scr::Texture::Type::TEXTURE_2D,
+		scr::Texture::Format::BGRA8,
+		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+		{4},
+		{0x00000000},
+		scr::Texture::CompressionFormat::UNCOMPRESSED,
+		false
+	};
+
+	uint32_t* diffuse = new uint32_t[1];
+	*diffuse = diffuseBGRA;
+	tci.mips[0] = (uint8_t*)diffuse;
+	m_DummyDiffuse->Create(tci);
+
+	uint32_t* normal = new uint32_t[1];
+	*normal = normalBGRA;
+	tci.mips[0] = (uint8_t*)normal;
+	m_DummyNormal->Create(tci);
+
+	uint32_t* combine = new uint32_t[1];
+	*combine = combinedBGRA;
+	tci.mips[0] = (uint8_t*)combine;
+	m_DummyCombined->Create(tci);
 }
 
 std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
@@ -516,7 +548,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 		for(avs::uid uid : missingResources)
 		{
 			m_WaitingForResources[uid].push_back(newMaterial);
-	}
+	    }
 	}
 }
 
@@ -530,27 +562,22 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	{
 	    switch (node.data_type)
 	    {
-	    case NodeDataType::Mesh:
-	    {
-	    	CreateActor(node_uid, node.data_uid,node.materials, node.transform);
-	    	return;
-	    }
-	    case NodeDataType::Camera:
-	    	return;
-	    case NodeDataType::Scene:
-	    	return;
-	    case NodeDataType::ShadowMap:
-		{
-			CreateLight(node_uid, node);
-	        return;
-		}
+	    ///GGMP: This is intended to continue into Mesh; I'd rather not copy+paste the CreateActor function call.
 		case NodeDataType::Hand:
-		{
 			m_pActorManager->handUIDs.push_back(node_uid);
-			return;
-		}
+	    case NodeDataType::Mesh:
+	    	CreateActor(node_uid, node.data_uid,node.materials, node.transform);
+	    	break;
+	    case NodeDataType::Camera:
+	    	break;
+	    case NodeDataType::Scene:
+	    	break;
+	    case NodeDataType::ShadowMap:
+			CreateLight(node_uid, node);
+	        break;
 	    default:
 	        SCR_LOG("Unknown NodeDataType: %c", node.data_type)
+	        break;
 	    }
 	}
 }
