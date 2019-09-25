@@ -30,7 +30,7 @@ GLenum GL_Sampler::ToGLFilterType(Filter filter) const
         case Filter::NEAREST:           return GL_NEAREST;
         case Filter::LINEAR:            return GL_LINEAR;
         case Filter::MIPMAP_NEAREST:    return GL_NEAREST_MIPMAP_NEAREST;
-        case Filter::MIPMAP_LINEAR:     return GL_LINEAR_MIPMAP_NEAREST;
+        case Filter::MIPMAP_LINEAR:     return GL_LINEAR_MIPMAP_LINEAR;
         default:
             exit(1);
     }

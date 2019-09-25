@@ -74,6 +74,8 @@ namespace scr
 		{
 			std::shared_ptr<Sampler> sampler;
 			std::shared_ptr<Texture> texture;
+			uint32_t mip=(uint32_t)-1;
+			uint32_t layer=(uint32_t)-1;
 		};
 		struct ShaderResourceBufferInfo
 		{
@@ -105,6 +107,7 @@ namespace scr
 		void SetLayouts(const std::vector<ShaderResourceLayout>& shaderResourceLayouts);
 		void AddBuffer(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceBufferInfo& bufferInfo, uint32_t dstArrayElement = 0);
 		void AddImage(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement = 0);
+		void SetImageInfo(uint32_t shaderResourceSetIndex, size_t index, const ShaderResourceImageInfo& imageInfo);
 
 		const std::vector<WriteShaderResource>& GetWriteShaderResources() const {return m_WriteShaderResources;}
 		std::vector<WriteShaderResource>& GetWriteShaderResources() {return m_WriteShaderResources;}

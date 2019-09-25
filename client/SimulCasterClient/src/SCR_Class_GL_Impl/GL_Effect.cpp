@@ -110,7 +110,10 @@ void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<Shader
     vertSrc = vertex->GetShaderCreateInfo().sourceCode.c_str();
     fragSrc = fragment->GetShaderCreateInfo().sourceCode.c_str();
 
-    m_Program = GlProgram::Build(vertSrc, fragSrc, uniformParms.data(), (int)uniformParms.size(), OPENGLES_310);
+    static std::string vertDir="";
+	static std::string fragDir="";//#extension GL_EXT_shader_texture_lod : require\n";
+
+    m_Program = GlProgram::Build( vertDir.c_str(), vertSrc, fragDir.c_str(), fragSrc, uniformParms.data(), (int)uniformParms.size(), OPENGLES_310);
 
     if(vertHeapAlloc)
         delete[] vertSrc;
@@ -214,6 +217,8 @@ GLenum GL_Effect::ToGLTopology(TopologyType topology)
         case TopologyType::TRIANGLE_LIST:  return GL_TRIANGLES;
         case TopologyType::TRIANGLE_STRIP: return GL_TRIANGLE_STRIP;
         case TopologyType::TRIANGLE_FAN:   return GL_TRIANGLE_FAN;
+		default:
+			exit(1);
     }
 };
 
@@ -225,6 +230,8 @@ GLenum GL_Effect::ToGLCullMode(CullMode cullMode)
     case CullMode::FRONT_BIT:          return GL_FRONT;
     case CullMode::BACK_BIT:           return GL_BACK;
     case CullMode::FRONT_AND_BACK:     return GL_FRONT_AND_BACK;
+		default:
+			exit(1);
     }
 };
 
@@ -235,6 +242,8 @@ GLenum GL_Effect::ToGLPolygonMode(PolygonMode polygonMode)
         case PolygonMode::FILL:      return GL_FILL;
         case PolygonMode::LINE:      return GL_LINES;
         case PolygonMode::POINT:     return GL_POINTS;
+		default:
+			exit(1);
     }
 }
 
@@ -250,6 +259,8 @@ GLenum GL_Effect::ToGLCompareOp(CompareOp op)
         case CompareOp::NOT_EQUAL:        return GL_NOTEQUAL;
         case CompareOp::GREATER_OR_EQUAL: return GL_GEQUAL;
         case CompareOp::ALWAYS:           return GL_ALWAYS;
+		default:
+			exit(1);
     }
 };
 
@@ -264,6 +275,8 @@ GLenum GL_Effect::ToGLStencilCompareOp(StencilCompareOp op)
         case StencilCompareOp::INVERT:                  return GL_INVERT;
         case StencilCompareOp::INCREMENT_AND_WRAP:      return GL_INCR_WRAP;
         case StencilCompareOp::DECREMENT_AND_WRAP:      return GL_DECR_WRAP;
+		default:
+			exit(1);
     }
 };
 
@@ -281,6 +294,8 @@ GLenum GL_Effect::ToGLBlendFactor(BlendFactor factor)
         case BlendFactor::ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA;
         case BlendFactor::DST_ALPHA:           return GL_DST_ALPHA;
         case BlendFactor::ONE_MINUS_DST_ALPHA: return GL_ONE_MINUS_DST_ALPHA;
+        default:
+        	exit(1);
     }
 };
 GLenum GL_Effect::ToGLBlendOp(BlendOp op)
@@ -291,6 +306,8 @@ GLenum GL_Effect::ToGLBlendOp(BlendOp op)
         case BlendOp::REVERSE_SUBTRACT:     return GL_FUNC_REVERSE_SUBTRACT;
         case BlendOp::MIN:                  return GL_MIN;
         case BlendOp::MAX:                  return GL_MAX;
+		default:
+			exit(1);
     }
 };
 
@@ -309,5 +326,7 @@ ovrProgramParmType GL_Effect::ToOVRProgramParmType(ShaderResourceLayout::ShaderR
         case ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER_DYNAMIC:   return ovrProgramParmType::BUFFER_UNIFORM;
         case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER_DYNAMIC:   return ovrProgramParmType::MAX;
         case ShaderResourceLayout::ShaderResourceType::INPUT_ATTACHMENT:         return ovrProgramParmType::MAX;
+		default:
+			exit(1);
     }
 };

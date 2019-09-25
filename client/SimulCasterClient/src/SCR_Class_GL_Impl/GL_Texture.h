@@ -20,8 +20,8 @@ namespace scc
 		void Create(const TextureCreateInfo& pTextureCreateInfo) override;
 		void Destroy() override;
 
-		void Bind() const override;
-		void BindForWrite(uint32_t slot) const override;
+		void Bind(uint32_t mip,uint32_t layer) const override;
+		void BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const override;
 		void Unbind() const override;
 
 		void GenerateMips() override;

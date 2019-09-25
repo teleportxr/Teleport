@@ -151,7 +151,7 @@ private:
 	basist::transcoder_texture_format basis_textureFormat;
 
 	const uint32_t diffuseBGRA = 0xFFFFFFFF;
-	const uint32_t normalBGRA = 0xFFFF7F7F;
+	const uint32_t normalBGRA = 0xFF7F7FFF;
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
 	
 //s	uint32_t m_PostUseLifetime = 1000; //30,000ms = 30s

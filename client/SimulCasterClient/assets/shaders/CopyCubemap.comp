@@ -8,7 +8,8 @@ layout(std140, binding = 2) uniform cubemapUB
 {
     ivec2 sourceOffset;
     uint faceSize;
-    uint _pad;
+    uint mip;
+    uint face;
 } cub;
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -21,10 +22,18 @@ void main()
     FaceOffsets[3]=ivec2(0,1);
     FaceOffsets[4]=ivec2(1,1);
     FaceOffsets[5]=ivec2(2,1);
-
-    ivec2 faceOffset=FaceOffsets[gl_GlobalInvocationID.z];
-    ivec2 loadPos = ivec2(gl_GlobalInvocationID.xy)+cub.sourceOffset+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
-    vec4 lookup=texelFetch(videoFrameTexture, loadPos, 0);
-    ivec3 storePos = ivec3(gl_GlobalInvocationID.xyz);
-    imageStore(destTex, storePos, lookup);
+    uvec3 invocationId=gl_GlobalInvocationID;
+    invocationId.z+=cub.face;
+    if(invocationId.x>=cub.faceSize||invocationId.y>=cub.faceSize)
+        return;
+    if(invocationId.z>=uint(6))
+        return;
+    ivec2 faceOffset=FaceOffsets[invocationId.z];
+    ivec2 loadPos   = ivec2(invocationId.xy)+cub.sourceOffset+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
+    vec4 lookup     =texelFetch(videoFrameTexture, loadPos, 0);
+    ivec3 storePos  = ivec3(invocationId.xyz);
+    //lookup.r+=1.0;//float((invocationId.z/uint(2))%uint(2));
+    //lookup.b+=float(invocationId.z%uint(2));
+    //lookup.g+=float(invocationId.z/uint(3));
+    imageStore(destTex, storePos.xyz, lookup);
 }

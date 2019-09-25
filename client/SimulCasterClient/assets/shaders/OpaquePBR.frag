@@ -160,9 +160,9 @@ vec3 PBR(vec3 N, vec3 Wo, vec3 diffuseColour ,vec3 diffuse_light,vec3 specular_l
     vec3 Specular	= vec3(0,0,0);
 
     vec3 R = reflect(-Wo, N);
-    vec3 env_diffuse = textureLod(u_DiffuseCubemap, N.zxy,0.0).rgb;
+    vec3 env_diffuse = textureLod(u_DiffuseCubemap, N.zxy,1.0).rgb;
 
-    vec3 env_specular=textureLod(u_SpecularCubemap, R.zxy, 0.0).rgb;//roughnessE * 11.0
+    vec3 env_specular=textureLod(u_SpecularCubemap, N.zxy,3.0).rgb;//roughnessE * 11.0
 
     //Environment Light Calculation
     vec3 environment = mix(env_specular, env_diffuse, saturate((roughnessE - 0.25) / 0.75));
@@ -182,8 +182,9 @@ vec3 PBR(vec3 N, vec3 Wo, vec3 diffuseColour ,vec3 diffuse_light,vec3 specular_l
     Specular *= saturate(pow(dot(N, Wo) + ao, roughnessE) - 1.0 + ao);
 
 	// factor diffuse by kD ???
-    return env_diffuse;// Diffuse + Specular; //kS is already included in the Specular calculations.
+    return env_specular;// Diffuse + Specular; //kS is already included in the Specular calculations.
 }
+
 vec4 Gamma(vec4 a)
 {
     return pow(a,vec4(.45,.45,.45,1.0));

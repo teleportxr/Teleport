@@ -21,3 +21,30 @@ void main() {
 
     vEyeOffset		=0.08*(float(VIEW_ID)-0.5);
 }
+
+/*
+void main()
+{
+    vec2 poss[4];
+    poss[0]			=vec2(1.0, 0.0);
+    poss[1]			=vec2(1.0, 1.0);
+    poss[2]			=vec2(0.0, 0.0);
+    poss[3]			=vec2(0.0, 1.0);
+    vec2 pos		=poss[gl_VertexID];
+
+    gl_Position	=vec4(pos,0.0,1.0);
+
+    mat3 ViewOrientationMatrix=mat3(sm.ViewMatrix[VIEW_ID]);
+    mat3 ModelOrientationMatrix=mat3(ModelMatrix);
+    vModelViewOrientationMatrixT=transpose(ViewOrientationMatrix * ModelOrientationMatrix);
+
+    // Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
+    vSampleVec  = normalize(vec3(-position.z, position.y, position.x));
+    vec4 eye_pos= ( sm.ViewMatrix[VIEW_ID] * ( ModelMatrix * position ));
+    // gl_Position     = (sm.ProjectionMatrix[VIEW_ID] * eye_pos);
+    vEyespacePos    =eye_pos.xyz;
+
+    vEyeOffset		=0.08*(float(VIEW_ID)-0.5);
+}
+
+*/

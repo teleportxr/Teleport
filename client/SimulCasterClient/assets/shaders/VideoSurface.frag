@@ -29,7 +29,7 @@ void main()
     vec4 colourOffsetScaleX=vec4(0.0,0.0,1.0,0.6667);
     vec4 depthOffsetScaleX=vec4(0.0,0.6667,0.5,0.3333);
 
-    float depth = texture(cubemapTexture, vSampleVec).a;
+    float depth = textureLod(cubemapTexture, vSampleVec,5.0).a;
 
     // offset angle is atan(4cm/distance)
     // depth received is distance/50metres.
@@ -45,5 +45,6 @@ void main()
     vec3 colourSampleVec  = normalize(vec3(-worldspace_dir.z, worldspace_dir.y, worldspace_dir.x));
     vec2 uv=WorldspaceDirToUV(colourSampleVec);
     vec3 vSampleVecCorrected=vec3(vSampleVec.x,vSampleVec.z,vSampleVec.y);
-    gl_FragColor = pow(texture(cubemapTexture, vSampleVecCorrected),vec4(.44,.44,.44,1.0));
+    gl_FragColor = pow(textureLod(cubemapTexture, vSampleVecCorrected, 2.0),vec4(.44,.44,.44,1.0));
+    //8.0*abs(vSampleVec.z)
 }

@@ -352,7 +352,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 						1, 1, 1, 4, 1, 1,
 						scr::Texture::Slot::UNKNOWN,
 						scr::Texture::Type::TEXTURE_2D,
-						scr::Texture::Format::BGRA8,
+						scr::Texture::Format::RGBA8,
 						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
 						{4},
 						{0x00000000},

@@ -149,11 +149,11 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
             ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
             if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE)
             {
-                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->BindForWrite(wsr.dstBinding);
+                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->BindForWrite(wsr.dstBinding,wsr.imageInfo.mip,wsr.imageInfo.layer);
             }
             else if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
             {
-                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->Bind();
+                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->Bind(wsr.imageInfo.mip,wsr.imageInfo.layer);
             }
             else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
             {

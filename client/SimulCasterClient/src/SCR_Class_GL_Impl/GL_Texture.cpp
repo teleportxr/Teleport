@@ -82,7 +82,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 				{
 					GL_CheckErrors("GL_Texture:Create 1");
 					GLenum glInternalFormat=ToGLFormat(m_CI.format);
-					glTexStorage2D(GL_TEXTURE_CUBE_MAP, m_CI.arrayCount, glInternalFormat, m_CI.width, m_CI.width);
+					glTexStorage2D(GL_TEXTURE_CUBE_MAP, m_CI.mipCount, glInternalFormat, m_CI.width, m_CI.width);
 					GL_CheckErrors("GL_Texture:Create 2");
 				}
 				return;
@@ -91,6 +91,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_CUBE_MAP_ARRAY");
                 return;
             }
+            case Type::TEXTURE_2D_EXTERNAL_OES:
             default:
 				SCR_CERR_BREAK("Unsupported texture type",1);
             	return;
@@ -156,17 +157,35 @@ void GL_Texture::Destroy()
         glDeleteTextures(1, &m_Texture.texture);
 }
 
-void GL_Texture::Bind() const
+void GL_Texture::Bind(uint32_t mip,uint32_t layer) const
 {
     if(m_CI.slot != Slot::UNKNOWN)
         glActiveTexture(GL_TEXTURE0 + static_cast<unsigned int>(m_CI.slot));
 
+    GLenum tt=TypeToGLTarget(m_CI.type);
+    if(tt==GL_TEXTURE_2D ||tt==GL_TEXTURE_CUBE_MAP)
+    {
+        if (mip == (uint32_t) 0xffffffff)
+        {
+            glTexParameteri(tt, GL_TEXTURE_MAX_LEVEL, 1000);
+            glTexParameteri(tt, GL_TEXTURE_BASE_LEVEL, 0);
+        }
+        else
+        {
+            glTexParameteri(tt, GL_TEXTURE_MAX_LEVEL, mip);
+            glTexParameteri(tt, GL_TEXTURE_BASE_LEVEL, mip);
+        }
+    }
+
     glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
 }
 
-void GL_Texture::BindForWrite(uint32_t slot) const
+void GL_Texture::BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const
 {
-    glBindImageTexture(slot,m_Texture.texture,0,GL_TRUE,0,GL_WRITE_ONLY,GL_RGBA8);
+	if(mip==(uint32_t)-1)
+		mip=0;
+	bool layered=(layer==(uint32_t)-1);
+    glBindImageTexture(slot,m_Texture.texture,mip,layered?GL_TRUE:GL_FALSE,layered?0:layer,GL_WRITE_ONLY,GL_RGBA8);
 	OVR::GL_CheckErrors("GL_Texture::BindForWrite");
 }
 
@@ -180,18 +199,24 @@ void GL_Texture::UseSampler(const std::shared_ptr<Sampler>& sampler)
     m_Sampler = sampler;
     const GL_Sampler* glSampler = dynamic_cast<const GL_Sampler*>(m_Sampler.get());
 
-    Bind();
-    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_WRAP_S, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapU));
-    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_WRAP_T, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapV));
-    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_WRAP_R, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapW));
+    Bind((GLuint )-1,(GLuint)-1);
+    GLenum tt=TypeToGLTarget(m_CI.type);
+    glTexParameteri(tt, GL_TEXTURE_WRAP_S, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapU));
+    glTexParameteri(tt, GL_TEXTURE_WRAP_T, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapV));
+    glTexParameteri(tt, GL_TEXTURE_WRAP_R, glSampler->ToGLWrapType(glSampler->GetSamplerCreateInfo().wrapW));
 
-    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_MIN_FILTER, glSampler->ToGLFilterType(glSampler->GetSamplerCreateInfo().minFilter));
-    glTexParameteri(TypeToGLTarget(m_CI.type), GL_TEXTURE_MAG_FILTER, glSampler->ToGLFilterType(glSampler->GetSamplerCreateInfo().magFilter));
+    if(tt==GL_TEXTURE_2D || tt==GL_TEXTURE_CUBE_MAP)
+	{
+		scr::Sampler::Filter minf=glSampler->GetSamplerCreateInfo().minFilter;
+		scr::Sampler::Filter magf=glSampler->GetSamplerCreateInfo().magFilter;
+    	glTexParameteri(tt, GL_TEXTURE_MIN_FILTER, glSampler->ToGLFilterType(minf));
+    	glTexParameteri(tt, GL_TEXTURE_MAG_FILTER, glSampler->ToGLFilterType(magf));
+	}
 
     if(glSampler->GetSamplerCreateInfo().minFilter == Sampler::Filter::MIPMAP_LINEAR
         || glSampler->GetSamplerCreateInfo().minFilter == Sampler::Filter::MIPMAP_NEAREST)
     {
-        GenerateMips();
+       // GenerateMips();
     }
     Unbind();
 }

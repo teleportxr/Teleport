@@ -105,7 +105,7 @@ namespace scr
 		//All compression formats a texture can be compressed in.
 		enum class CompressionFormat: uint32_t
 		{
-			UNCOMPRESSED,
+			UNCOMPRESSED=0,
 			BC1,
 			BC3,
 			BC4,
@@ -187,8 +187,8 @@ namespace scr
 		friend class FrameBuffer;
 
 	protected:
-		virtual void Bind() const = 0;
-		virtual void BindForWrite(uint32_t slot) const =0;
+		virtual void Bind(uint32_t mip,uint32_t layer) const = 0;
+		virtual void BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const =0;
 		virtual void Unbind() const = 0;
 	};
 }

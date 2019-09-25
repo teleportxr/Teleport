@@ -11,6 +11,7 @@ LOCAL_SHARED_LIBRARIES	:= vrapi
 
 LOCAL_SRC_FILES			:= \
     ../src/Application.cpp \
+    ../src/GLESDebug.cpp \
     ../src/SessionClient.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \

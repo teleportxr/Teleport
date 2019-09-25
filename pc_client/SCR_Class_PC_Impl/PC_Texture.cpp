@@ -25,7 +25,7 @@ simul::crossplatform::PixelFormat ToSimulPixelFormat(scr::Texture::Format f)
 	case scr::Texture::Format::RGBA8I:						return RGBA_8_INT;
 	case scr::Texture::Format::RGBA8_SNORM:					return RGBA_8_SNORM;
 	case scr::Texture::Format::RGBA8:						return RGBA_8_UNORM;
-	case scr::Texture::Format::BGRA8:						return BGRA_8_UNORM;
+	case scr::Texture::Format::BGRA8:						return RGBA_8_UNORM;	// Because GL doesn't support  BGRA!!!
 	case scr::Texture::Format::RGB10_A2UI:					return RGB_10_A2_UINT;
 	case scr::Texture::Format::RGB10_A2:					return RGB_10_A2_INT;
 	case scr::Texture::Format::RGB32F:						return RGB_32_FLOAT;
@@ -73,10 +73,11 @@ void PC_Texture::Destroy()
 	m_SimulTexture = nullptr;
 }
 
-void PC_Texture::Bind() const
+void PC_Texture::Bind(uint32_t, uint32_t) const
 {
 }
-void PC_Texture::BindForWrite(uint32_t slot) const
+
+void PC_Texture::BindForWrite(uint32_t slot, uint32_t, uint32_t) const
 {
 }
 
