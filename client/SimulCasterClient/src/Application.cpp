@@ -497,7 +497,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             ++deviceIndex;
         }
 
-        int handIndex = 0;
+        size_t handIndex = 0;
         //Update hands to current position, and orientation.
         for(avs::uid handID : resourceManagers.mActorManager.handUIDs)
         {
