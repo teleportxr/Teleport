@@ -855,7 +855,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				pbrShaderResources.push_back(mLightCubemapShaderResources);
 
 				materialCI.effect = dynamic_cast<scr::Effect *>(&mEffect);
-				const auto                            gl_effect = &mEffect;
+				const auto gl_effect = &mEffect;
 				const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo("OpaquePBR");
 				if(materialCI.diffuse.texture)
 					materialCI.diffuse.texture->UseSampler(mSampler);

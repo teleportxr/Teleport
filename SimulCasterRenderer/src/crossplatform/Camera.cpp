@@ -5,6 +5,7 @@
 using namespace scr;
 
 bool Camera::s_UninitialisedUB = true;
+std::shared_ptr<UniformBuffer> Camera::s_UB = nullptr;
 
 Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	:m_CI(*pCameraCreateInfo)
@@ -17,8 +18,8 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 		ub_ci.size = sizeof(CameraData);
 		ub_ci.data =  &m_CameraData;
 
-		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
-		m_UB->Create(&ub_ci);
+		s_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
+		s_UB->Create(&ub_ci);
 		s_UninitialisedUB = false;
 	}
 	
@@ -30,7 +31,7 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	m_ShaderResourceLayout.AddBinding(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", { m_UB.get(), 0, sizeof(CameraData) });
+	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", { s_UB.get(), 0, sizeof(CameraData) });
 }
 
 void Camera::UpdatePosition(const vec3& position)

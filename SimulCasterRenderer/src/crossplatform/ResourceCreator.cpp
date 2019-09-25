@@ -308,6 +308,8 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		if (basis_transcoder.start_transcoding(texture.data, texture.dataSize))
 		{
 			texInfo.mipCount = basis_transcoder.get_total_image_levels(texture.data, texture.dataSize, 0);
+			texInfo.mipSizes.reserve(texInfo.mipCount);
+			texInfo.mips.reserve(texInfo.mipCount);
 
 			for (uint32_t mipIndex = 0; mipIndex < texInfo.mipCount; mipIndex++)
 			{
@@ -357,13 +359,13 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 						scr::Texture::Type::TEXTURE_2D,
 						scr::Texture::Format::BGRA8,
 						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-						{4},
+						{1},
 						{0x00000000},
 						scr::Texture::CompressionFormat::UNCOMPRESSED,
 						false
 				};
 
-		uint32_t *diffuse=new uint32_t[1];
+		uint32_t *diffuse = new uint32_t[1];
 		*diffuse = diffuseBGRA;
 		tci.mips[0] = (uint8_t*)diffuse;
 		m_DummyDiffuse->Create(tci);
@@ -380,8 +382,12 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 	}
 
+	static const size_t textureSlotSize = 3; //For pbrMetallicRoughness.baseColorTexture, normalTexture, pbrMetallicRoughness.metallicRoughnessTexture 
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
 	std::vector<avs::uid> missingResources;
+	newMaterial->textureSlots.reserve(textureSlotSize);
+	missingResources.reserve(textureSlotSize);
+
 
 	newMaterial->materialInfo.renderPlatform = m_pRenderPlatform;
 	newMaterial->materialInfo.diffuse.texture = nullptr;

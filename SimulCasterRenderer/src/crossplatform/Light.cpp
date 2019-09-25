@@ -6,7 +6,9 @@ using namespace scr;
 
 const uint32_t Light::s_MaxLights = 8; 
 std::vector<Light::LightData> Light::s_LightData = {};
+
 bool Light::s_UninitialisedUB = true;
+std::shared_ptr<UniformBuffer> Light::s_UB = nullptr;
 
 Light::Light(LightCreateInfo* pLightCreateInfo)
 	:m_CI(*pLightCreateInfo)
@@ -18,8 +20,8 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 		ub_ci.size = sizeof(LightData) * s_MaxLights;
 		ub_ci.data = &s_LightData;
 
-		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
-		m_UB->Create(&ub_ci);
+		s_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
+		s_UB->Create(&ub_ci);
 		s_UninitialisedUB = false;
 	}
 
@@ -64,7 +66,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	m_ShaderResourceLayout.AddBinding(26, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { m_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
+	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { s_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
 	
 	std::string shaderResourceName = std::string("u_ShadowMap") + std::to_string(m_LightID);
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});

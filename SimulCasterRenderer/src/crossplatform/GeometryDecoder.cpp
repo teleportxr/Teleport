@@ -377,12 +377,14 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.data_type = static_cast<NodeDataType>(NextB);
 		
 		uint64_t materialCount = Next8B;
+		node.materials.reserve(materialCount);
 		for (uint64_t j = 0; j < materialCount; ++j)
 		{
 			node.materials.push_back(Next8B);
 		}
 
 		uint64_t childCount = Next8B;
+		node.materials.reserve(childCount);
 		for (uint64_t j = 0; j < childCount; ++j)
 		{
 			node.childrenUids.push_back(Next8B);
