@@ -486,9 +486,11 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(CI.ib[element].get());
 
 			const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
+			simul::crossplatform::Layout* layout = nullptr;
 			if (!layout)
 			{
-				simul::crossplatform::LayoutDesc desc[] =
+				layout =(const_cast<pc_client::PC_VertexBuffer*>( vb))->GetLayout();
+		/*		simul::crossplatform::LayoutDesc desc[] =
 				{
 					{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
 					{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
@@ -498,7 +500,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 				};
 				layout = renderPlatform->CreateLayout(
 					sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
-					, desc);
+					, desc);*/
 			}
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			mat4 model;
@@ -546,7 +548,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 }
 void ClientRenderer::InvalidateDeviceObjects()
 {
-	delete layout;
+	//delete layout;
 	layout = nullptr;
 	for (auto i : avsTextures)
 	{
