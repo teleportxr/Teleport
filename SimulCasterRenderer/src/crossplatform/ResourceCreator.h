@@ -87,7 +87,7 @@ public:
 	ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat);
 	~ResourceCreator();
 	
-	void SetRenderPlatform(scr::RenderPlatform *r);
+	void Initialise(scr::RenderPlatform *r);
 	//Returns the resources the ResourceCreator needs, and clears the list.
 	std::vector<avs::uid> TakeResourceRequests();
 

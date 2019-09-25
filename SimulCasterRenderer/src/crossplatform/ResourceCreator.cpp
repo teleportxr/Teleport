@@ -15,11 +15,12 @@ ResourceCreator::~ResourceCreator()
 {
 }
 
-void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
+void ResourceCreator::Initialise(scr::RenderPlatform* r)
 {
 	m_API.SetAPI(r->GetAPI());
 	m_pRenderPlatform = r;
 
+	//Setup Dummy textures.
 	m_DummyDiffuse = m_pRenderPlatform->InstantiateTexture();
 	m_DummyNormal = m_pRenderPlatform->InstantiateTexture();
 	m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
@@ -31,7 +32,7 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 		scr::Texture::Type::TEXTURE_2D,
 		scr::Texture::Format::BGRA8,
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-		{4},
+		{1},
 		{0x00000000},
 		scr::Texture::CompressionFormat::UNCOMPRESSED,
 		false
@@ -377,7 +378,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
-	//Setup Dummy textures once.
+	
 	if(!m_DummyDiffuse || !m_DummyNormal || !m_DummyCombined)
 	{
 		m_DummyDiffuse = m_pRenderPlatform->InstantiateTexture();
