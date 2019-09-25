@@ -6,6 +6,7 @@
 #include "API.h"
 #include "ResourceManager.h"
 #include "ActorManager.h"
+#include "Light.h"
 #include "api/RenderPlatform.h"
 
 #include "transcoder/basisu_transcoder.h"
@@ -31,7 +32,8 @@ namespace scr
             mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
             mUniformBufferManager(&scr::UniformBuffer::Destroy),
             mVertexBufferManager(&scr::VertexBuffer::Destroy),
-			mMeshManager(nullptr)
+			mMeshManager(nullptr),
+			mLightManager(nullptr)
         {
         }
 
@@ -49,6 +51,7 @@ namespace scr
             mUniformBufferManager.Update(timeElapsed);
             mVertexBufferManager.Update(timeElapsed);
 			mMeshManager.Update(timeElapsed);
+			//mLightManager.Update(timeElapsed);
         }
 
 		void Clear()
@@ -61,7 +64,8 @@ namespace scr
 			mTextureManager.Clear();
 			mUniformBufferManager.Clear();
 			mVertexBufferManager.Clear();
-			mMeshManager.Clear();
+			mMeshManager.Clear(); 
+			mLightManager.Clear();
 		}
 
         scr::ActorManager  					mActorManager;
@@ -72,6 +76,7 @@ namespace scr
         ResourceManager<scr::UniformBuffer> mUniformBufferManager;
         ResourceManager<scr::VertexBuffer>  mVertexBufferManager;
 		ResourceManager<scr::Mesh>			mMeshManager;
+		ResourceManager<scr::Light>			mLightManager;
     };
 }
 
@@ -98,7 +103,8 @@ public:
 		ResourceManager<scr::Texture> *textureManager,
 		ResourceManager<scr::UniformBuffer> *uniformBufferManager,
 		ResourceManager<scr::VertexBuffer> *vertexBufferManager,
-		ResourceManager<scr::Mesh> *meshManager)
+		ResourceManager<scr::Mesh> *meshManager,
+		ResourceManager<scr::Light> *lightManager)
 	{
 		m_IndexBufferManager = indexBufferManager;
 		m_ShaderManager = shaderManager;
@@ -107,6 +113,7 @@ public:
 		m_UniformBufferManager = uniformBufferManager;
 		m_VertexBufferManager = vertexBufferManager;
 		m_MeshManager = meshManager;
+		m_LightManager = lightManager;
 	}
 
 	// Inherited via GeometryTargetBackendInterface
@@ -137,7 +144,8 @@ private:
 		scr::Actor::ActorCreateInfo actorInfo;
 	};
 
-	void CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, avs::Transform &&transform) override;
+	void CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, const avs::Transform &transform) override;
+	void CreateLight(avs::uid node_uid, avs::DataNode& node);
 
 	void CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo);
 	void CompleteTexture(avs::uid texture_uid, const scr::Texture::TextureCreateInfo& textureInfo);
@@ -162,6 +170,7 @@ private:
 	ResourceManager<scr::UniformBuffer> *m_UniformBufferManager;
 	ResourceManager<scr::VertexBuffer> *m_VertexBufferManager;
 	ResourceManager<scr::Mesh> *m_MeshManager;
+	ResourceManager<scr::Light> *m_LightManager;
 
 	scr::ActorManager* m_pActorManager;
 

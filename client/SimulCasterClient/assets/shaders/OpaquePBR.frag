@@ -20,19 +20,20 @@ layout(location = 13) in vec3 v_ModelSpacePosition;
 
 //From Application SR
 //Lights
-const int MaxLights = 64;
+const int MaxLights = 8;
 struct Light //Layout conformant to GLSL std140
 {
     vec4 u_Colour;
     vec3 u_Position;
     float u_Power;		 //Strength or Power of the light in Watts equilavent to Radiant Flux in Radiometry.
     vec3 u_Direction;
-    float u_SpotAngle;
+	float _pad3;
+	mat4 u_LightSpaceTransform;
 };
-/*layout(std140, binding = 2) uniform u_LightData
+layout(std140, binding = 2) uniform u_LightData
 {
     Light[MaxLights] u_Lights;
-};*/
+};
 
 //Material
 layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL std140
@@ -70,6 +71,15 @@ layout(binding = 13) uniform samplerCube u_DiffuseCubemap;
 layout(binding = 14) uniform samplerCube u_SpecularCubemap;
 layout(binding = 15) uniform samplerCube u_LightsCubemap;
 layout(binding = 16) uniform samplerCube u_RoughSpecularCubemap;
+
+layout(binding = 19) uniform sampler2D u_ShadowMap0;
+layout(binding = 20) uniform sampler2D u_ShadowMap1;
+layout(binding = 21) uniform sampler2D u_ShadowMap2;
+layout(binding = 22) uniform sampler2D u_ShadowMap3;
+layout(binding = 23) uniform sampler2D u_ShadowMap4;
+layout(binding = 24) uniform sampler2D u_ShadowMap5;
+layout(binding = 25) uniform sampler2D u_ShadowMap6;
+layout(binding = 26) uniform sampler2D u_ShadowMap7;
 
 //Constants
 const float PI = 3.1415926535;
@@ -204,9 +214,8 @@ void main()
 	Light d_Light;
 	d_Light.u_Colour = vec4(1, 1, 1 ,1);
 	d_Light.u_Position = vec3(1.3, 1.8, -7.6);
-	d_Light.u_Power = 120.0;
+	d_Light.u_Power = 100.0;
 	d_Light.u_Direction = vec3(0.0, -0.391, -0.921);
-	d_Light.u_SpotAngle = 2.0 * PI;
 	
 	vec3 Lo;				//Exitance Radiance from the surface in the direction of the camera.
     vec3 Le = vec3(0.0);	//Emissive Radiance from the surface in the direction of the camera, if any.

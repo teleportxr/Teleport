@@ -46,26 +46,34 @@ private:
 	};
 	struct DecodedGeometry
 	{
-		std::map<avs::uid, std::vector<PrimitiveArray2>> primitiveArrays;
-		std::map<avs::uid, avs::Accessor> accessors;
-		std::map<avs::uid, avs::BufferView> bufferViews;
-		std::map<avs::uid, avs::GeometryBuffer> buffers;
-		std::map<avs::uid, std::vector<uint8_t>> bufferDatas;
-
+		std::unordered_map<avs::uid, std::vector<PrimitiveArray2>> primitiveArrays;
+		std::unordered_map<avs::uid, avs::Accessor> accessors;
+		std::unordered_map<avs::uid, avs::BufferView> bufferViews;
+		std::unordered_map<avs::uid, avs::GeometryBuffer> buffers;
+		void clear()
+		{
+			primitiveArrays.clear();
+			accessors.clear();
+			bufferViews.clear();
+			buffers.clear();
+		}
 		~DecodedGeometry()
 		{
 			for (auto& primitiveArray : primitiveArrays)
+			{
+				for (auto& primitive : primitiveArray.second)
+				{
+					primitive.attributes.clear();
+				}
 				primitiveArray.second.clear();
+			}
 			primitiveArrays.clear();
 
 			accessors.clear();
 			bufferViews.clear();
 			buffers.clear();
-
-			for (auto& bufferData : bufferDatas)
-				bufferData.second.clear();
-			bufferDatas.clear();
 		}
 	};
+	DecodedGeometry dg = {};
 };
 

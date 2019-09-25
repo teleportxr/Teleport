@@ -36,7 +36,7 @@ namespace scr
 		ShaderResource m_ShaderResource;
 	
 	public:
-		Transform& operator= (avs::Transform& transform)
+		Transform& operator= (const avs::Transform& transform)
 		{
 			m_Translation.x = transform.position.x;
 			m_Translation.y = transform.position.y;

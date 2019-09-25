@@ -84,7 +84,7 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 {
 	//Parse buffer and fill struct DecodedGeometry
-	DecodedGeometry dg = {};
+	dg.clear();
 	avs::uid uid;
 
 	size_t meshCount = Next8B;
@@ -159,18 +159,12 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			return avs::Result::GeometryDecoder_InvalidBufferSize;
 		}
 
-		dg.bufferDatas[key].push_back({});
-		dg.bufferDatas[key].resize(dg.buffers[key].byteLength);
-
-		memcpy((void*)dg.bufferDatas[key].data(), (m_Buffer.data() + m_BufferOffset), dg.buffers[key].byteLength);
-		dg.buffers[key].data = dg.bufferDatas[key].data();
-
+		dg.buffers[key].data = (m_Buffer.data() + m_BufferOffset);
 		m_BufferOffset += dg.buffers[key].byteLength;
 	}
 
 	//Push data to GeometryTargetBackendInterface
-	for (std::map<avs::uid, std::vector<PrimitiveArray2>>::iterator it = dg.primitiveArrays.begin();
-		it != dg.primitiveArrays.end(); it++)
+	for (std::unordered_map<avs::uid, std::vector<PrimitiveArray2>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
 	{
 		size_t index = 0;
 		MeshCreate meshCreate;
@@ -355,8 +349,7 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 		texture.compression = static_cast<avs::TextureCompression>(Next4B);
 
 		texture.dataSize = Next4B;
-		texture.data = new unsigned char[texture.dataSize];
-		copy<unsigned char>(texture.data, m_Buffer.data(), m_BufferOffset, texture.dataSize);
+		texture.data = (m_Buffer.data() + m_BufferOffset);
 
 		texture.sampler_uid = Next8B;
 
@@ -373,27 +366,24 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& ta
 
 avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& target)
 {
-	uint32_t nodeCount = Next8B;
-	for (uint32_t i = 0; i < nodeCount; ++i)
+	uint64_t nodeCount = Next8B;
+	for (uint64_t i = 0; i < nodeCount; ++i)
 	{
 		avs::uid uid = Next8B;
 
 		avs::DataNode node;
-
 		node.transform = NextChunk(avs::Transform);
-
 		node.data_uid = Next8B;
-
 		node.data_type = static_cast<NodeDataType>(NextB);
 		
-		uint32_t materialCount = Next8B;
-		for (uint32_t j = 0; j < materialCount; ++j)
+		uint64_t materialCount = Next8B;
+		for (uint64_t j = 0; j < materialCount; ++j)
 		{
 			node.materials.push_back(Next8B);
 		}
 
-		uint32_t childCount = Next8B;
-		for (uint32_t j = 0; j < childCount; ++j)
+		uint64_t childCount = Next8B;
+		for (uint64_t j = 0; j < childCount; ++j)
 		{
 			node.childrenUids.push_back(Next8B);
 		}

@@ -28,15 +28,15 @@ namespace scr
 		};
 		struct SamplerCreateInfo
 		{
-			Filter minFilter;
-			Filter magFilter;
-			Wrap wrapU;
-			Wrap wrapV;
-			Wrap wrapW;
-			float minLod;
-			float maxLod;
-			bool anisotropyEnable;
-			float maxAnisotropy;
+			Filter	minFilter;
+			Filter	magFilter;
+			Wrap	wrapU;
+			Wrap	wrapV;
+			Wrap	wrapW;
+			float	minLod;
+			float	maxLod;
+			bool	anisotropyEnable;
+			float	maxAnisotropy;
 		};
 	
 	protected:

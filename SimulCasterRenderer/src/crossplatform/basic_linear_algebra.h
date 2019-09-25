@@ -17,6 +17,8 @@ namespace scr
 			:x(0), y(0) {};
 		vec2(float x, float y)
 			:x(x), y(y) {};
+		vec2(const avs::vec2 &vec)
+			:x(vec.x), y(vec.y) {};
 
 		inline float Length() 
 		{ 
@@ -179,15 +181,21 @@ namespace scr
 			k /= length;
 			return *this;
 		}
-		vec3 ToVec3(const quat& other)
+		void ToAxisAngle(vec3& outAxis, float& outAngle)
 		{
-			vec3 result = vec3(other.i, other.j, other.k);
-			float theta = 2 * acosf(other.s);
+			vec3 result = vec3(i, j, k);
+			float theta = 2 * acosf(s);
 			if (theta > 0)
 			{
 				result * (1.0f / sinf(theta / 2.0f));
 			}
-			return result;
+			outAxis = result;
+			outAngle = theta;
+		}
+		vec3 GetIJK()
+		{
+			vec3 result = { i, j, k };
+			return result.Normalise();
 		}
 		quat operator*(const quat& other) const
 		{
@@ -234,7 +242,7 @@ namespace scr
 			: a(a.x), b(a.y), c(a.z), d(a.w), e(b.x), f(b.y), g(b.z), h(b.w),
 			i(c.x), j(c.y), k(c.z), l(c.w), m(d.x), n(d.y), o(d.z), p(d.w) {}
 
-		void Transpose()
+		mat4 Transpose()
 		{
 			/*a = a;
 			f = f;
@@ -261,6 +269,8 @@ namespace scr
 			j = temp_g;
 			n = temp_h;
 			o = temp_l;
+
+			return *this;
 		}
 		mat4 Identity()
 		{
@@ -342,10 +352,10 @@ namespace scr
 		
 		inline vec4 Mat4Vec4Multi(const vec4& input, const mat4& transform)
 		{
-			float x = input.x;
-			float y = input.y;
-			float z = input.z;
-			float w = input.w;
+			const float& x = input.x;
+			const float& y = input.y;
+			const float& z = input.z;
+			const float& w = input.w;
 			vec4 transform_i(transform.a, transform.e, transform.i, transform.m);
 			vec4 transform_j(transform.b, transform.f, transform.j, transform.n);
 			vec4 transform_k(transform.c, transform.g, transform.k, transform.o);
@@ -367,7 +377,7 @@ namespace scr
 			vec4 output_i = transform * input_i;
 			vec4 output_j = transform * input_j;
 			vec4 output_k = transform * input_k;
-			vec4 output_l = transform * input_l;
+			vec4  output_l = transform * input_l;
 			mat4 output(output_i, output_j, output_k, output_l);
 			output.Transpose();
 			return output;

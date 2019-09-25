@@ -32,6 +32,15 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	GL_CheckErrors("GL_Texture:Create 0");
     if(m_CI.compression == Texture::CompressionFormat::UNCOMPRESSED)
     {
+        //Shadow Map
+        if(ToGLFormat(m_CI.format) == GL_DEPTH_COMPONENT16)
+        {
+            //Can't use FP16 != 16UI
+            //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, m_CI.width, m_CI.height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, m_CI.mips[0]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, m_CI.width, m_CI.height, 0, GL_RED, GL_HALF_FLOAT, m_CI.mips[0]);
+            return;
+        }
+
         //Uncompressed Data
         switch (m_CI.type) {
             case Type::TEXTURE_UNKNOWN: {
