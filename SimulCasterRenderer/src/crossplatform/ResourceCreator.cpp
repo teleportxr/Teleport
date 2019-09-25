@@ -378,6 +378,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
+	static const size_t textureSlotSize = 3;
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
 	std::vector<avs::uid> missingResources;
 	newMaterial->textureSlots.reserve(textureSlotSize);
