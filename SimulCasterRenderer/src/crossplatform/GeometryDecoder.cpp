@@ -159,18 +159,12 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			return avs::Result::GeometryDecoder_InvalidBufferSize;
 		}
 
-		dg.bufferDatas[key].push_back({});
-		dg.bufferDatas[key].resize(dg.buffers[key].byteLength);
-
-		memcpy((void*)dg.bufferDatas[key].data(), (m_Buffer.data() + m_BufferOffset), dg.buffers[key].byteLength);
-		dg.buffers[key].data = dg.bufferDatas[key].data();
-
+		dg.buffers[key].data = (m_Buffer.data() + m_BufferOffset);
 		m_BufferOffset += dg.buffers[key].byteLength;
 	}
 
 	//Push data to GeometryTargetBackendInterface
-	for (std::map<avs::uid, std::vector<PrimitiveArray2>>::iterator it = dg.primitiveArrays.begin();
-		it != dg.primitiveArrays.end(); it++)
+	for (std::map<avs::uid, std::vector<PrimitiveArray2>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
 	{
 		size_t index = 0;
 		MeshCreate meshCreate;
@@ -379,11 +373,8 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		avs::uid uid = Next8B;
 
 		avs::DataNode node;
-
 		node.transform = NextChunk(avs::Transform);
-
 		node.data_uid = Next8B;
-
 		node.data_type = static_cast<NodeDataType>(NextB);
 		
 		uint32_t materialCount = Next8B;

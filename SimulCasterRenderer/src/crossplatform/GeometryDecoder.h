@@ -50,21 +50,22 @@ private:
 		std::map<avs::uid, avs::Accessor> accessors;
 		std::map<avs::uid, avs::BufferView> bufferViews;
 		std::map<avs::uid, avs::GeometryBuffer> buffers;
-		std::map<avs::uid, std::vector<uint8_t>> bufferDatas;
 
 		~DecodedGeometry()
 		{
 			for (auto& primitiveArray : primitiveArrays)
+			{
+				for (auto& primitive : primitiveArray.second)
+				{
+					primitive.attributes.clear();
+				}
 				primitiveArray.second.clear();
+			}
 			primitiveArrays.clear();
 
 			accessors.clear();
 			bufferViews.clear();
 			buffers.clear();
-
-			for (auto& bufferData : bufferDatas)
-				bufferData.second.clear();
-			bufferDatas.clear();
 		}
 	};
 };

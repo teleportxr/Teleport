@@ -67,7 +67,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { m_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
 	
 	std::string shaderResourceName = std::string("u_ShadowMap") + std::to_string(m_LightID);
-	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});
+	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});
 }
 
 void Light::UpdatePosition(const vec3& position) 
@@ -85,10 +85,10 @@ void Light::UpdateLightSpaceTransform()
 	if (IsValid())
 	{
 		vec3 defaultDirection = { 0.0f, 0.0f, -1.0f };
-		vec3 rotatedDirection = ((m_CI.orientation * defaultDirection) * m_CI.orientation.Conjugate()).GetIJK();
+		vec3& rotatedDirection = 
 		
 		s_LightData[m_LightID].position = m_CI.position;
-		s_LightData[m_LightID].direction = rotatedDirection;
+		s_LightData[m_LightID].direction = ((m_CI.orientation * defaultDirection) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
 		s_LightData[m_LightID].lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation);
 	}
 	else

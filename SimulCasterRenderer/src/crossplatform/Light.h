@@ -46,7 +46,7 @@ namespace scr
 
 		static const uint32_t s_MaxLights;
 		static std::vector<LightData> s_LightData;
-		uint32_t m_LightID;
+		size_t m_LightID;
 		bool m_IsValid = false;
 
 		std::shared_ptr<Sampler> m_ShadowMapSampler;

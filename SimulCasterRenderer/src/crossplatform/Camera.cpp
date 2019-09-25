@@ -43,7 +43,8 @@ void Camera::UpdateOrientation(const quat& orientation)
 }
 void Camera::UpdateView()
 {
-	m_CameraData.m_ViewMatrix = mat4::Rotation(m_CameraData.m_Orientation) * mat4::Translation(m_CameraData.m_Position);
+	//Inverse for a translation matrix is a -position input. Inverse for a rotation matrix is its transpose.
+	m_CameraData.m_ViewMatrix = mat4::Translation((m_CameraData.m_Position * -1)) * mat4::Rotation(m_CameraData.m_Orientation).Transpose();
 }
 void Camera::UpdateProjection(float horizontalFOV, float aspectRatio, float zNear, float zFar)
 {
