@@ -15,11 +15,12 @@ ResourceCreator::~ResourceCreator()
 {
 }
 
-void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
+void ResourceCreator::Initialise(scr::RenderPlatform* r)
 {
 	m_API.SetAPI(r->GetAPI());
 	m_pRenderPlatform = r;
 
+	//Setup Dummy textures.
 	m_DummyDiffuse = m_pRenderPlatform->InstantiateTexture();
 	m_DummyNormal = m_pRenderPlatform->InstantiateTexture();
 	m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
@@ -31,7 +32,7 @@ void ResourceCreator::SetRenderPlatform(scr::RenderPlatform* r)
 		scr::Texture::Type::TEXTURE_2D,
 		scr::Texture::Format::BGRA8,
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-		{4},
+		{1},
 		{0x00000000},
 		scr::Texture::CompressionFormat::UNCOMPRESSED,
 		false
@@ -340,6 +341,8 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		if (basis_transcoder.start_transcoding(texture.data, texture.dataSize))
 		{
 			texInfo.mipCount = basis_transcoder.get_total_image_levels(texture.data, texture.dataSize, 0);
+			texInfo.mipSizes.reserve(texInfo.mipCount);
+			texInfo.mips.reserve(texInfo.mipCount);
 
 			for (uint32_t mipIndex = 0; mipIndex < texInfo.mipCount; mipIndex++)
 			{
@@ -375,45 +378,11 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
-	//Setup Dummy textures once.
-	if(!m_DummyDiffuse || !m_DummyNormal || !m_DummyCombined)
-	{
-		m_DummyDiffuse = m_pRenderPlatform->InstantiateTexture();
-		m_DummyNormal = m_pRenderPlatform->InstantiateTexture();
-		m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
-
-		scr::Texture::TextureCreateInfo tci =
-				{
-						1, 1, 1, 4, 1, 1,
-						scr::Texture::Slot::UNKNOWN,
-						scr::Texture::Type::TEXTURE_2D,
-						scr::Texture::Format::RGBA8,
-						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-						{4},
-						{0x00000000},
-						scr::Texture::CompressionFormat::UNCOMPRESSED,
-						false
-				};
-
-		uint32_t *diffuse=new uint32_t[1];
-		*diffuse = diffuseBGRA;
-		tci.mips[0] = (uint8_t*)diffuse;
-		m_DummyDiffuse->Create(tci);
-
-		uint32_t* normal = new uint32_t[1];
-		*normal = normalBGRA;
-		tci.mips[0] = (uint8_t*)normal;
-		m_DummyNormal->Create(tci);
-
-		uint32_t* combine = new uint32_t[1];
-		*combine = combinedBGRA;
-		tci.mips[0] = (uint8_t*)combine;
-		m_DummyCombined->Create(tci);
-
-	}
-
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
 	std::vector<avs::uid> missingResources;
+	newMaterial->textureSlots.reserve(textureSlotSize);
+	missingResources.reserve(textureSlotSize);
+
 
 	newMaterial->materialInfo.renderPlatform = m_pRenderPlatform;
 	newMaterial->materialInfo.diffuse.texture = nullptr;

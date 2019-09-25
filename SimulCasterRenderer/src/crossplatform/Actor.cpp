@@ -6,6 +6,7 @@ using namespace scr;
 
 //Transform
 bool Transform::s_UninitialisedUB = true;
+std::shared_ptr<UniformBuffer> Transform::s_UB = nullptr;
 
 Transform::Transform()
 	:Transform(TransformCreateInfo{nullptr}, vec3(), quat(), vec3())
@@ -25,15 +26,15 @@ Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 trans
 		ub_ci.size = sizeof(TransformData);
 		ub_ci.data = &m_TransformData;
 
-		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
-		m_UB->Create(&ub_ci);
+		s_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
+		s_UB->Create(&ub_ci);
 		s_UninitialisedUB = false;
 	}
 
 	m_ShaderResourceLayout.AddBinding(1, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
 	m_ShaderResource = ShaderResource({m_ShaderResourceLayout});
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_ActorUBO", {m_UB.get(), 0, sizeof(TransformData)});
+	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_ActorUBO", {s_UB.get(), 0, sizeof(TransformData)});
 
 	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 }

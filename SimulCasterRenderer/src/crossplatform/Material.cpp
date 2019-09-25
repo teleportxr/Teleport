@@ -5,6 +5,7 @@
 using namespace scr;
 
 bool Material::s_UninitialisedUB = true;
+std::shared_ptr<UniformBuffer> Material::s_UB = nullptr;
 
 Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 	:m_CI(pMaterialCreateInfo)
@@ -17,8 +18,8 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 		ub_ci.size = sizeof(MaterialData);
 		ub_ci.data = &m_MaterialData;
 
-		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
-		m_UB->Create(&ub_ci);
+		s_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
+		s_UB->Create(&ub_ci);
 		s_UninitialisedUB = false;
 	}
 
@@ -54,7 +55,7 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 	m_ShaderResourceLayout.AddBinding(12, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", { m_UB.get(), 0, sizeof(MaterialData) });
+	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", { s_UB.get(), 0, sizeof(MaterialData) });
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse",  { m_CI.diffuse.texture ? m_CI.diffuse.texture->GetSampler() : nullptr, m_CI.diffuse.texture });
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",   { m_CI.normal.texture ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
 	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });

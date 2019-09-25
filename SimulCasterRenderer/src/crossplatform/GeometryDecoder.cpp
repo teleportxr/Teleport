@@ -92,6 +92,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	{
 		uid = Next8B; 
 		size_t primitiveArraysSize = Next8B;
+		dg.primitiveArrays[uid].reserve(primitiveArraysSize);
+
 		for (size_t j = 0; j < primitiveArraysSize; j++)
 		{
 			size_t attributeCount = Next8B;
@@ -113,8 +115,6 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	}
 
 	bool isIndexAccessor = true;
-//	size_t primitiveArrayIndex = 0;
-//	size_t k = 0;
 	size_t accessorsSize = Next8B;
 	for (size_t j = 0; j < accessorsSize; j++)
 	{
@@ -377,12 +377,14 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.data_type = static_cast<NodeDataType>(NextB);
 		
 		uint64_t materialCount = Next8B;
+		node.materials.reserve(materialCount);
 		for (uint64_t j = 0; j < materialCount; ++j)
 		{
 			node.materials.push_back(Next8B);
 		}
 
 		uint64_t childCount = Next8B;
+		node.materials.reserve(childCount);
 		for (uint64_t j = 0; j < childCount; ++j)
 		{
 			node.childrenUids.push_back(Next8B);

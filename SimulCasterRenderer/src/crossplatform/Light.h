@@ -42,7 +42,7 @@ namespace scr
 			mat4 lightSpaceTransform;
 		};
 		static bool s_UninitialisedUB;
-		std::shared_ptr<UniformBuffer> m_UB;
+		static std::shared_ptr<UniformBuffer> s_UB;
 
 		static const uint32_t s_MaxLights;
 		static std::vector<LightData> s_LightData;

@@ -38,7 +38,7 @@ namespace scr
 		CameraCreateInfo m_CI;
 
 		static bool s_UninitialisedUB;
-		std::shared_ptr<UniformBuffer> m_UB;
+		static std::shared_ptr<UniformBuffer> s_UB;
 
 		ShaderResourceLayout m_ShaderResourceLayout;
 		ShaderResource m_ShaderResource;
