@@ -146,7 +146,7 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 			{
 				avs::vec3 normal;
 				avs::vec4 tangent;
-			char* nt = (char*)(meshElementCreate->m_TangentNormals);
+				char* nt = (char*)(meshElementCreate->m_TangentNormals);
 				// tangentx tangentz
 				if (meshElementCreate->m_TangentNormalSize == 8)
 				{
@@ -173,15 +173,15 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate * meshCreate)
 					normal.z = float(n8.z) / 32767.0f;
 				}
 
-			size_t size = sizeof(avs::vec3) * meshElementCreate->m_VertexCount;
-			assert(groupedVBSize >= vertexBufferOffset + size);
-			memcpy(groupedVB.get() + vertexBufferOffset, &normal, size);
-			vertexBufferOffset += size;
+				size_t size = sizeof(avs::vec3);// *meshElementCreate->m_VertexCount;
+				assert(groupedVBSize >= vertexBufferOffset + size);
+				memcpy(groupedVB.get() + vertexBufferOffset, &normal, size);
+				vertexBufferOffset += size;
 
-			size = sizeof(avs::vec4) * meshElementCreate->m_VertexCount;
-			assert(groupedVBSize >= vertexBufferOffset + size);
-			memcpy(groupedVB.get() + vertexBufferOffset, &tangent, size);
-			vertexBufferOffset += size;
+				size = sizeof(avs::vec4);// *meshElementCreate->m_VertexCount;
+				assert(groupedVBSize >= vertexBufferOffset + size);
+				memcpy(groupedVB.get() + vertexBufferOffset, &tangent, size);
+				vertexBufferOffset += size;
 			}
 			else
 			{
@@ -380,8 +380,8 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 {
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
 	std::vector<avs::uid> missingResources;
-	newMaterial->textureSlots.reserve(textureSlotSize);
-	missingResources.reserve(textureSlotSize);
+	//newMaterial->textureSlots.reserve(textureSlotSize);
+	//missingResources.reserve(textureSlotSize);
 
 
 	newMaterial->materialInfo.renderPlatform = m_pRenderPlatform;
