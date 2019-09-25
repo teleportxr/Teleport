@@ -69,6 +69,7 @@ layout(binding = 12) uniform sampler2D u_Combined;
 layout(binding = 13) uniform samplerCube u_DiffuseCubemap;
 layout(binding = 14) uniform samplerCube u_SpecularCubemap;
 layout(binding = 15) uniform samplerCube u_LightsCubemap;
+layout(binding = 16) uniform samplerCube u_RoughSpecularCubemap;
 
 //Constants
 const float PI = 3.1415926535;
@@ -152,18 +153,25 @@ float D(vec3 n, vec3 h, float a2)
     return a2 / (PI * temp * temp);
 }
 
-vec3 PBR(vec3 N, vec3 Wo, vec3 diffuseColour ,vec3 diffuse_light,vec3 specular_light,vec4 combinedLookup,float roughnessE ) //Return a RGB value;
+float MipFromRoughness(float roughness, float CubemapMaxMip)
+{
+    return (log2(roughness * 1.2) + 3.0);
+}
+
+
+vec3 PBR(vec3 N, vec3 Wo, vec3 diffuseColour ,vec3 diffuse_light,vec3 specular_light,vec4 combinedLookup,float roughness,float roughnessE ) //Return a RGB value;
 {
 	//Calculate basic parameters
-
+    float roughness_mip=MipFromRoughness(roughness,5.0);
     vec3 Diffuse	= vec3(0,0,0);
     vec3 Specular	= vec3(0,0,0);
 
     vec3 R = reflect(-Wo, N);
     vec3 env_diffuse = textureLod(u_DiffuseCubemap, N.zxy,1.0).rgb;
 
-    vec3 env_specular=textureLod(u_SpecularCubemap, N.zxy,3.0).rgb;//roughnessE * 11.0
-
+    vec3 env_specular=textureLod(u_SpecularCubemap, N.zxy,1.0).rgb;//roughnessE * 11.0
+    vec3 env_rough_specular=textureLod(u_RoughSpecularCubemap, N.zxy,0.0).rgb;//roughnessE * 11.0
+   // env_specular=mix(env_specular,env_rough_specular,(roughness_mip-2.0));
     //Environment Light Calculation
     vec3 environment = mix(env_specular, env_diffuse, saturate((roughnessE - 0.25) / 0.75));
 
@@ -182,7 +190,7 @@ vec3 PBR(vec3 N, vec3 Wo, vec3 diffuseColour ,vec3 diffuse_light,vec3 specular_l
     Specular *= saturate(pow(dot(N, Wo) + ao, roughnessE) - 1.0 + ao);
 
 	// factor diffuse by kD ???
-    return env_specular;// Diffuse + Specular; //kS is already included in the Specular calculations.
+    return vec3(roughness_mip,roughness_mip,0);// Diffuse + Specular; //kS is already included in the Specular calculations.
 }
 
 vec4 Gamma(vec4 a)
@@ -203,10 +211,10 @@ void main()
 	vec3 Lo;				//Exitance Radiance from the surface in the direction of the camera.
     vec3 Le = vec3(0.0);	//Emissive Radiance from the surface in the direction of the camera, if any.
 
-    vec4 combinedLookup = u_CombinedOutputScalar * texture(u_Combined, v_UV_diffuse);
+    vec4 combinedLookup = texture(u_Combined, v_UV_normal);//u_CombinedOutputScalar *
     //Primary non-light dependent
-    float roughnessE = GetRoughness(combinedLookup);
-    roughnessE *= roughnessE;
+    float roughness = GetRoughness(combinedLookup);
+    float roughnessE =roughness*roughness;
     float roughnessL = max(0.01, roughnessE);
 
     vec3 normalLookup=texture(u_Normal, v_UV_normal).bgr;
@@ -251,7 +259,7 @@ void main()
 		diffuse_light += Le ;
 		//specular_light += Le;
     }
-	vec3 output_radiance = PBR(N, Wo,diffuseColour, diffuse_light,specular_light,combinedLookup,roughnessE);
+	vec3 output_radiance = PBR(N, Wo,diffuseColour, diffuse_light,specular_light,combinedLookup,roughness,roughnessE);
     //vec3 R = reflect(Wo, N);
-    gl_FragColor = Gamma(vec4(output_radiance.rgb,1.0));
+    gl_FragColor = Gamma(vec4(combinedLookup.rgb,1.0));
 }

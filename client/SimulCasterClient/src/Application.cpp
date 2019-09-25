@@ -308,6 +308,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
         lightingCubemapLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
         lightingCubemapLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 		lightingCubemapLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+		lightingCubemapLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
         mLightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
 		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {mDiffuseTexture->GetSampler(), mDiffuseTexture});
@@ -470,9 +471,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Append video surface
 	mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
 	mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
-	if(mDiffuseTexture->IsValid())
+	if(mCubemapTexture->IsValid())
 	{
-		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mDiffuseTexture.get())->GetGlTexture());
+		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
 		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 	}
 
