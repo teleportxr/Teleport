@@ -63,7 +63,7 @@ Application::Application()
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
-	resourceCreator.SetRenderPlatform(dynamic_cast<scr::RenderPlatform*>(&renderPlatform));
+	resourceCreator.Initialise(dynamic_cast<scr::RenderPlatform*>(&renderPlatform));
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
 	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
 
