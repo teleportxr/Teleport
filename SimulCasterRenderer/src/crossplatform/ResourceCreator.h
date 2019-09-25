@@ -144,7 +144,7 @@ private:
 		scr::Actor::ActorCreateInfo actorInfo;
 	};
 
-	void CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, avs::Transform &&transform) override;
+	void CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, const avs::Transform &transform) override;
 	void CreateLight(avs::uid node_uid, avs::DataNode& node);
 
 	void CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo);

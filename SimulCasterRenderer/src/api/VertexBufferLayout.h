@@ -27,6 +27,11 @@ namespace scr
 			VEC3,
 			VEC4
 		};
+		enum class PackingStyle : uint32_t
+		{
+			GROUPED,		//e.g. VVVVNNNNCCCC
+			INTERLEAVED		//e.g. VNCVNCVNCVNC
+		};
 		struct VertexAttribute
 		{
 			uint32_t location;
@@ -35,6 +40,7 @@ namespace scr
 		};
 
 	public:
+		PackingStyle m_PackingStyle;
 		std::vector<VertexAttribute> m_Attributes;
 		size_t m_Stride = 0; //Value in Bytes
 

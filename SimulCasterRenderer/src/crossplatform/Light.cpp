@@ -85,8 +85,7 @@ void Light::UpdateLightSpaceTransform()
 	if (IsValid())
 	{
 		vec3 defaultDirection = { 0.0f, 0.0f, -1.0f };
-		vec3& rotatedDirection = 
-		
+
 		s_LightData[m_LightID].position = m_CI.position;
 		s_LightData[m_LightID].direction = ((m_CI.orientation * defaultDirection) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
 		s_LightData[m_LightID].lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation);

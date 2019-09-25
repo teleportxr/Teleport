@@ -349,8 +349,7 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 		texture.compression = static_cast<avs::TextureCompression>(Next4B);
 
 		texture.dataSize = Next4B;
-		texture.data = new unsigned char[texture.dataSize];
-		copy<unsigned char>(texture.data, m_Buffer.data(), m_BufferOffset, texture.dataSize);
+		texture.data = (m_Buffer.data() + m_BufferOffset);
 
 		texture.sampler_uid = Next8B;
 
@@ -367,8 +366,8 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& ta
 
 avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& target)
 {
-	uint32_t nodeCount = Next8B;
-	for (uint32_t i = 0; i < nodeCount; ++i)
+	uint64_t nodeCount = Next8B;
+	for (uint64_t i = 0; i < nodeCount; ++i)
 	{
 		avs::uid uid = Next8B;
 
@@ -377,14 +376,14 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);
 		
-		uint32_t materialCount = Next8B;
-		for (uint32_t j = 0; j < materialCount; ++j)
+		uint64_t materialCount = Next8B;
+		for (uint64_t j = 0; j < materialCount; ++j)
 		{
 			node.materials.push_back(Next8B);
 		}
 
-		uint32_t childCount = Next8B;
-		for (uint32_t j = 0; j < childCount; ++j)
+		uint64_t childCount = Next8B;
+		for (uint64_t j = 0; j < childCount; ++j)
 		{
 			node.childrenUids.push_back(Next8B);
 		}
