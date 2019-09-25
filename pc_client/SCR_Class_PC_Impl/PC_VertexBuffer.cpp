@@ -136,9 +136,16 @@ int GetByteSize(const scr::VertexBufferLayout::VertexAttribute &attr)
 }
 
 
+PC_VertexBuffer::PC_VertexBuffer(scr::RenderPlatform* r) :scr::VertexBuffer(r),m_layout(nullptr),m_SimulBuffer(nullptr)
+{
+}
+
 void PC_VertexBuffer::Destroy()
 {
 	delete m_SimulBuffer;
+	m_SimulBuffer = nullptr;
+	delete m_layout;
+	m_layout = nullptr;
 }
 
 void PC_VertexBuffer::Bind() const
@@ -183,7 +190,21 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCr
 		desc[i].perInstance = false;
 		desc[i].instanceDataStepRate = 0;
 	}
-
-	layout.SetDesc(desc, (int)m_CI.layout->m_Attributes.size(), m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
-	m_SimulBuffer->EnsureVertexBuffer(srp, (int)num_vertices, &layout, m_CI.data);
+	delete m_layout;
+	{
+		simul::crossplatform::LayoutDesc desc[] =
+				{
+					{ "POSITION", 0, simul::crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
+					{ "NORMAL", 0, simul::crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
+					{ "TANGENT", 0, simul::crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
+					{ "TEXCOORD", 0, simul::crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
+					{ "TEXCOORD", 1, simul::crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
+				};
+		m_layout = srp->CreateLayout(
+					sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
+					, desc,true);
+	}
+	//m_layout = srp->CreateLayout( (int)m_CI.layout->m_Attributes.size(), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);// , m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
+	//m_layout->SetDesc(desc, (int)m_CI.layout->m_Attributes.size(), m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
+	m_SimulBuffer->EnsureVertexBuffer(srp, (int)num_vertices, m_layout, m_CI.data);
 }

@@ -490,6 +490,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			if (!layout)
 			{
 				layout =(const_cast<pc_client::PC_VertexBuffer*>( vb))->GetLayout();
+
 		/*		simul::crossplatform::LayoutDesc desc[] =
 				{
 					{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
@@ -548,8 +549,6 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 }
 void ClientRenderer::InvalidateDeviceObjects()
 {
-	//delete layout;
-	layout = nullptr;
 	for (auto i : avsTextures)
 	{
 		AVSTextureImpl *ti = (AVSTextureImpl*)i.get();
