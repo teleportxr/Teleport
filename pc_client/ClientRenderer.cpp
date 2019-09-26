@@ -87,9 +87,6 @@ ClientRenderer::ClientRenderer():
 	roughSpecularCubemapTexture(nullptr),
 	lightingCubemapTexture(nullptr),
 	videoAsCubemapTexture(nullptr),
-	dummyDiffuse(nullptr),
-	dummyNormal(nullptr),
-	dummyCombined(nullptr),
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
 	resourceCreator(basist::transcoder_texture_format::cTFBC1),
@@ -153,22 +150,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	roughSpecularCubemapTexture = renderPlatform->CreateTexture();
 	diffuseCubemapTexture = renderPlatform->CreateTexture();
 	lightingCubemapTexture = renderPlatform->CreateTexture();
-	// dummy textures for materials:
-	dummyDiffuse = renderPlatform->CreateTexture();
-	dummyNormal = renderPlatform->CreateTexture();
-	dummyCombined = renderPlatform->CreateTexture();
-	dummyDiffuse->ensureTexture2DSizeAndFormat(renderPlatform, 1, 1, crossplatform::PixelFormat::BGRA_8_UNORM);
-	uint32_t white = 0xFFFFFFFF;
-	dummyDiffuse->setTexels(renderPlatform->GetImmediateContext(), &white, 0, 1);
-
-	dummyNormal->ensureTexture2DSizeAndFormat(renderPlatform, 1, 1, crossplatform::PixelFormat::BGRA_8_UNORM);
-	// UNORM, so 127.
-	uint32_t blue = 0x007F0000;
-	dummyNormal->setTexels(renderPlatform->GetImmediateContext(), &blue, 0, 1);
-
-	dummyCombined->ensureTexture2DSizeAndFormat(renderPlatform, 1, 1, crossplatform::PixelFormat::BGRA_8_UNORM);
-	dummyCombined->setTexels(renderPlatform->GetImmediateContext(), &white, 0, 1);
-
 	errno=0;
 	RecompileShaders();
 
@@ -443,6 +424,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		avs::Transform transform = decoder[0].getCameraTransform();
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", transform.position.x, transform.position.y, transform.position.z),white);
 
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager.GetActorList().size(),resourceManagers.mMeshManager.GetCache().size()), white);
+
 		//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 		//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
 		//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
@@ -519,9 +502,9 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 				auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
 				auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
 
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : dummyDiffuse);
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : dummyNormal);
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() : dummyCombined);
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : nullptr);
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : nullptr);
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() :nullptr);
 				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
 				pbrEffect->SetTexture(deviceContext, "roughSpecularCubemap", roughSpecularCubemapTexture);
 				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture); 
@@ -578,9 +561,6 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(roughSpecularCubemapTexture);
 	SAFE_DELETE(lightingCubemapTexture);
 	SAFE_DELETE(videoAsCubemapTexture);
-	SAFE_DELETE(dummyDiffuse);
-	SAFE_DELETE(dummyNormal);
-	SAFE_DELETE(dummyCombined);
 	SAFE_DELETE(meshRenderer);
 	SAFE_DELETE(hDRRenderer);
 	SAFE_DELETE(hdrFramebuffer);

@@ -23,7 +23,7 @@ uniform Texture3D inscatterVolumeTexture;
 
 float GetRoughness(vec4 combinedLookup)
 {
-	return combinedLookup.b;
+	return combinedLookup.r;
 }
 
 float GetMetallic(vec4 combinedLookup)
@@ -33,7 +33,7 @@ float GetMetallic(vec4 combinedLookup)
 
 float GetAO(vec4 combinedLookup)
 {
-	return combinedLookup.r;
+	return combinedLookup.b;
 }
 
 float GetSpecular(vec4 combinedLookup)
@@ -133,13 +133,17 @@ float DistributionTerm(float roughness, float n_h)
 	return m2 / (d * d * SIMUL_PI_F);
 }
 
+//SPECULAR
+//Fresnel-Schlick
+vec3 fresnel_schlick(vec3 R0, vec3 h, vec3 wi)
+{
+	return R0 + (1.0 - R0) * pow((1.0 - saturate(dot(h, wi))), 5.0);
+}
 vec3 FresnelTerm(vec3 specularColour, float v_h)
 {
-	vec3 fresnel = specularColour + (1. - specularColour) * pow((1. - v_h), 5.);
+	vec3 fresnel = specularColour + (vec3(1.0,1.0,1.0)- specularColour) * pow((1.0 - v_h), 5.);
 	return fresnel;
 }
-
-
 
 float MipFromRoughness(float roughness, float CubemapMaxMip)
 {
@@ -151,47 +155,54 @@ float MipFromRoughness(float roughness, float CubemapMaxMip)
 	return (log2(roughness * 1.2) + 3.0);
 }
 
-vec3 PBR(vec3 normal,vec3 viewDir,vec3 lightDir,vec3 lightColour,vec3 diffuseColour,vec3 specularColour,float roughness)
+vec3 PBR(vec3 normal,vec3 viewDir,vec3 diffuseColour,float roughness
+,float metallic,float ao)
 {
-	float roughnessE		=roughness * roughness;
-	float roughnessL		=max(.01, roughnessE);
+	// Constant normal incidence Fresnel factor for all dielectrics.
+	vec3 Fdielectric		=vec3(0.04,0.04,0.04);
+	// Fresnel reflectance at normal incidence (for metals use albedo color).
+	vec3 F0					= lerp(Fdielectric, diffuseColour, metallic);
 
-	float roughness_mip = MipFromRoughness(roughness, 6.0);
-	vec3 refl				=reflect(viewDir, normal);
+	float roughnessE		= roughness * roughness;
+	float roughnessL		= max(.01, roughnessE);
 
-	vec3 diffuse			= vec3(0,0,0);
-	vec3 specular			= vec3(0,0,0);
+	float roughness_mip		= MipFromRoughness(roughness, 5.0);
+	vec3 refl				= reflect(viewDir, normal);
 
-	vec3 halfVec			= normalize(viewDir + lightDir);
-	float v_h				= saturate(dot(viewDir, halfVec));
-	float n_h				= saturate(dot(normal, halfVec));
 	float n_v				= saturate(dot(normal, viewDir));
-	float n_l				= saturate(dot(normal, lightDir));
-	vec3 envSpecularColour	= EnvBRDFApprox(specularColour, roughnessE, n_v);
+	// Angle between surface normal and outgoing light direction.
+	float cosLo				= saturate( dot(normal,- viewDir));
 
-	vec3 diffuse_env		=diffuseCubemap.SampleLevel(cubeSamplerState, normal.xyz,6.5).rgb;
-	vec3 env				=specularCubemap.SampleLevel(cubeSamplerState,refl.xyz, roughness_mip).rgb;
-	vec3 rough_env			=roughSpecularCubemap.SampleLevel(cubeSamplerState, refl.xyz, saturate(roughness_mip-3.0)).rgb;
+	vec3 diffuse_env		= roughSpecularCubemap.SampleLevel(cubeSamplerState, normal.xyz,0.0).rgb;
+	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,refl.xyz, roughness_mip).rgb;
+	vec3 rough_env			= roughSpecularCubemap.SampleLevel(cubeSamplerState, refl.xyz, saturate(roughness_mip-3.0)).rgb;
 
 	env						=lerp(env,rough_env,saturate(roughness_mip-2.0));
 	//env					=mix(env, diffuse_env, saturate((roughnessE - 0.25) / 0.75));
 
-	diffuse					+=diffuseColour * diffuse_env;
-	specular				+=envSpecularColour * env;
-	lightColour				= lightingCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
-	diffuse					+=lightColour *diffuseColour * saturate(n_l);
+	vec3 envSpecularColour = EnvBRDFApprox(diffuseColour, roughnessE, n_v);
+	vec3 specular			=envSpecularColour * env;
+	vec3 lightColour		= lightingCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
 
-	vec3 lightF				=FresnelTerm(specularColour, v_h);
-	float lightD			=DistributionTerm(roughnessL, n_h);
-	float lightV			=VisibilityTerm(roughnessL, n_v, n_l);
-	specular				+=lightColour * lightF * (lightD * lightV * SIMUL_PI_F * n_l);
+	// Angle between surface normal and outgoing light direction.
+	vec3 F					=FresnelTerm(F0, cosLo);
+	vec3 kS					= F;
+	 //Metallic materials will have no diffuse output.
 
-	float ao				= 1;// SceneAO(pos, normal, localToWorld);
-	//diffuse *= ao;
-	specular				*= saturate(pow(n_v + ao, roughnessE) - 1. + ao);
+	vec3 kD					= lerp(vec3(1.0, 1.0, 1.0) - kS, vec3(0.0,0.0,0.0), metallic);
 
+	//float lightD			=DistributionTerm(roughnessL, n_h);
+	//float lightV			=VisibilityTerm(roughnessL, n_v, n_l);
+	//specular				+=lightColour * F * (lightD * lightV * SIMUL_PI_F * n_l);
+
+	//float ao				= SceneAO(pos, normal, localToWorld);
+	specular				*= kS*saturate(pow(n_v + ao, roughnessE) - 1. + ao);
+	
+	vec3 diffuse			= kD*diffuseColour * diffuse_env;
+	diffuse *= ao;
+	//diffuse					+=lightColour *diffuseColour * saturate(n_l);
 	vec3 colour				= diffuse+specular;
-	return env;
+	return colour;
 }
 
 shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
@@ -205,9 +216,13 @@ shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
 	vec3 diffuseColour	= diffuseOutputScalar.rgb * diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgra;
-    vec3 c				= PBR(normal, view, vec3(0,-.7,.7), vec3(0.5,.48,.45), diffuseColour, vec3(1,1,1),GetRoughness(combinedLookup));
-	//c.rgb=frac(IN.texCoords0.xyy);
-    vec4 u				=vec4(c.rgb,1.0);
+
+	float roughness		=GetRoughness(combinedLookup);
+	float metallic		=GetMetallic(combinedLookup);
+	float ao			=GetAO(combinedLookup);
+	vec3 c				=PBR(normal, view, diffuseColour, roughness, metallic,ao);
+	//c.gb += 0.03;
+	vec4 u				=vec4(c.rgb,1.0);
 	return u;
 }
 

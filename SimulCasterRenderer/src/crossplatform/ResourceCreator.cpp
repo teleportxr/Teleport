@@ -30,9 +30,9 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r)
 		1, 1, 1, 4, 1, 1,
 		scr::Texture::Slot::UNKNOWN,
 		scr::Texture::Type::TEXTURE_2D,
-		scr::Texture::Format::BGRA8,
+		scr::Texture::Format::RGBA8,
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-		{1},
+		{4},
 		{0x00000000},
 		scr::Texture::CompressionFormat::UNCOMPRESSED,
 		false

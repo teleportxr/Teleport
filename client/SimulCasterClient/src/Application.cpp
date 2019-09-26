@@ -511,7 +511,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             }
 
             //Hands are only visible, if there is a hand for them to position relative to.
-            if(handIndex > remoteStates.size())
+            if(handIndex >= remoteStates.size())
             {
                 hand->isVisible = false;
                 continue;
