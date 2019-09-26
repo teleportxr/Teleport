@@ -87,7 +87,7 @@ public:
 	ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat);
 	~ResourceCreator();
 	
-	void Initialise(scr::RenderPlatform *r);
+	void Initialise(scr::RenderPlatform *r, scr::VertexBufferLayout::PackingStyle packingStyle);
 	//Returns the resources the ResourceCreator needs, and clears the list.
 	std::vector<avs::uid> TakeResourceRequests();
 
@@ -154,6 +154,7 @@ private:
 
 	scr::API m_API;
 	scr::RenderPlatform* m_pRenderPlatform = nullptr;
+	scr::VertexBufferLayout::PackingStyle m_PackingStyle;
 
 	basist::etc1_global_selector_codebook basis_codeBook;
 	basist::transcoder_texture_format basis_textureFormat;

@@ -112,7 +112,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 {
 	renderPlatform=r;
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
-	resourceCreator.Initialise(&PcClientRenderPlatform);
+	resourceCreator.Initialise(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	hDRRenderer		=new crossplatform::HdrRenderer();
 
 	hdrFramebuffer=renderPlatform->CreateFramebuffer();

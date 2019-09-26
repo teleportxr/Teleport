@@ -73,7 +73,7 @@ void ShaderResource::SetImageInfo(uint32_t shaderResourceLayoutIndex, size_t ind
 	}
 }
 
-ShaderResource ShaderResource::GetShaderResourcesBySet(size_t shaderResourceSetIndex)
+ShaderResource ShaderResource::GetShaderResourcesBySet(uint32_t shaderResourceSetIndex)
 {
 	ShaderResourceLayout& shaderResourceLayout = m_ShaderResourceLayouts.find(shaderResourceSetIndex)->second;
 	const std::vector<WriteShaderResource>& this_wsrs= this->GetWriteShaderResources();
