@@ -761,6 +761,10 @@ void Application::OnVideoStreamClosed()
 	mPipeline.deconfigure();
 	mPipeline.reset();
 	mPipelineConfigured = false;
+
+	//GGMP: We need a more robust system of the client telling the server what data it has, and the server sending what the client needs.
+	resourceManagers.mActorManager.Clear();
+	mOVRActors.clear();
 }
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)
