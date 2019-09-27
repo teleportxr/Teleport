@@ -444,7 +444,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	//Get HMD Position/Orientation
 	ovrVector3f headPos =vrFrame.Tracking.HeadPose.Pose.Position;
-	ovrQuatf headOrient = vrFrame.Tracking.HeadPose.Pose.Orientation;
+	//ovrQuatf headOrient = vrFrame.Tracking.HeadPose.Pose.Orientation;
 	scr::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
 
 	//Get the Capture Position
@@ -466,7 +466,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	ovrQuatf X0={1.0f,0.f,0.f,0.0f};
 	ovrQuatf headPoseC={-headPose.x,-headPose.y,-headPose.z,headPose.w};
 	ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPose,X0),headPoseC);
-#if 0
+#if 1
 	//Orient: %1.3f, {%1.3f, %1.3f, %1.3f}
     //Pos: %3.3f %3.3f %3.3f
 	auto ctr=mNetworkSource.getCounterValues();
