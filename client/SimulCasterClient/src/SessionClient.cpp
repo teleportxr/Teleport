@@ -317,19 +317,35 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		break;
 		case avs::CommandPayloadType::ActorBounds:
         {
-            const avs::ActorBoundsCommand command = *((const avs::ActorBoundsCommand*)packet->data);
+            size_t commandSize = sizeof(avs::ActorBoundsCommand);
 
-            if(command.enteredBounds)
+            avs::ActorBoundsCommand command;
+            memcpy(&command, packet->data, commandSize);
+
+            size_t enteredSize = sizeof(avs::uid) * command.actorsShowAmount;
+            size_t leftSize = sizeof(avs::uid) * command.actorsHideAmount;
+
+            std::vector<avs::uid> enteredActors(command.actorsShowAmount);
+            std::vector<avs::uid> leftActors(command.actorsHideAmount);
+
+            memcpy(enteredActors.data(), packet->data + commandSize, enteredSize);
+            memcpy(leftActors.data(), packet->data + commandSize + enteredSize, leftSize);
+
+            std::vector<avs::uid> missingActors;
+            //Tell the renderer to show the actors that have entered the streamable bounds, and create resend requests for actors it does not have the data on.
+            for(avs::uid actor_uid : enteredActors)
             {
-                if(!mCommandInterface->OnActorEnteredBounds(command.actor_uid))
+                if(!mCommandInterface->OnActorEnteredBounds(actor_uid))
                 {
-                    //Request the actor from the server, because the user can't show an actor it doesn't have the data for.
-                    mResourceRequests.push_back(command.actor_uid);
+                    missingActors.push_back(actor_uid);
                 }
             }
-            else
+            mResourceRequests.insert(mResourceRequests.end(), missingActors.begin(), missingActors.end());
+
+            //Tell renderer to hide actors that have left bounds.
+            for(avs::uid actor_uid : leftActors)
             {
-                mCommandInterface->OnActorLeftBounds(command.actor_uid);
+                mCommandInterface->OnActorLeftBounds(actor_uid);
             }
         }
 
