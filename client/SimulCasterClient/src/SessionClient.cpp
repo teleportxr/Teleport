@@ -15,7 +15,7 @@
 
 #include "ResourceCreator.h"
 
-static inline ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
+ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
 {
     ovrQuatf r;
     r.w= p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z;

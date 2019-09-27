@@ -10,6 +10,7 @@
 #include "OVR_LogUtils.h"
 #include "OVR_FileSys.h"
 #include "OVR_GlUtils.h"
+#include "OVR_Math.h"
 #include "GLESDebug.h"
 
 #include <enet/enet.h>
@@ -143,17 +144,24 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 		//VideoSurfaceProgram
 		{
+			{
+				mVideoUB = renderPlatform.InstantiateUniformBuffer();
+				scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(VideoUB), &videoUB};
+				mVideoUB->Create(&uniformBufferCreateInfo);
+			}
 			static ovrProgramParm uniformParms[] =    // both TextureMvpProgram and CubeMapPanoProgram use the same parm mapping
 										  {
-												  {"colourOffsetScale", ovrProgramParmType::FLOAT_VECTOR4},
-												  {"depthOffsetScale",  ovrProgramParmType::FLOAT_VECTOR4},
-												  {"cubemapTexture", ovrProgramParmType::TEXTURE_SAMPLED},
+												  {"colourOffsetScale"	, ovrProgramParmType::FLOAT_VECTOR4},
+												  {"depthOffsetScale"	, ovrProgramParmType::FLOAT_VECTOR4},
+												  {"cubemapTexture"		, ovrProgramParmType::TEXTURE_SAMPLED},
+												  {"videoFrameTexture"	, ovrProgramParmType::TEXTURE_SAMPLED},
+												  {"videoUB"			, ovrProgramParmType::BUFFER_UNIFORM},
 										  };
 			std::string videoSurfaceVert = LoadTextFile("shaders/VideoSurface.vert");
 			std::string videoSurfaceFrag = LoadTextFile("shaders/VideoSurface.frag");
 			mVideoSurfaceProgram = GlProgram::Build(
 					nullptr, videoSurfaceVert.c_str(),
-					nullptr, videoSurfaceFrag.c_str(),
+					"#extension GL_OES_EGL_image_external_essl3 : require\n", videoSurfaceFrag.c_str(),
 					uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm),
 					310);
 			if (!mVideoSurfaceProgram.IsValid())
@@ -166,7 +174,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
 		mVideoTexture        = renderPlatform.InstantiateTexture();
 		mCubemapUB = renderPlatform.InstantiateUniformBuffer();
-		mCubemapUB2 = renderPlatform.InstantiateUniformBuffer();
 		{
 			scr::Texture::TextureCreateInfo textureCreateInfo={};
 			textureCreateInfo.externalResource = true;
@@ -187,32 +194,38 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		{
 			CopyCubemapSrc     = LoadTextFile("shaders/CopyCubemap.comp");
 			mCopyCubemapEffect = renderPlatform.InstantiateEffect();
+			mCopyCubemapWithDepthEffect = renderPlatform.InstantiateEffect();
 			scr::Effect::EffectCreateInfo effectCreateInfo = {};
 			effectCreateInfo.effectName = "CopyCubemap";
 			mCopyCubemapEffect->Create(&effectCreateInfo);
+
+			effectCreateInfo.effectName = "CopyCubemapWithDepth";
+			mCopyCubemapWithDepthEffect->Create(&effectCreateInfo);
 
 			scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.m_Count = 1;
 			pipelineCreateInfo.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_COMPUTE;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_COMPUTE;
-			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "main";
+			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_only";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/CopyCubemap.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = CopyCubemapSrc;
 			scr::ShaderSystem::Pipeline cp(&renderPlatform, &pipelineCreateInfo);
 
-
 			scr::Effect::EffectPassCreateInfo effectPassCreateInfo;
 			effectPassCreateInfo.effectPassName = "CopyCubemap";
 			effectPassCreateInfo.pipeline = cp;
-
 			mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
+
+			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_depth";
+			scr::ShaderSystem::Pipeline cp2(&renderPlatform, &pipelineCreateInfo);
+
+			effectPassCreateInfo.effectPassName = "ColourAndDepth";
+			effectPassCreateInfo.pipeline = cp2;
+			mCopyCubemapWithDepthEffect->CreatePass(&effectPassCreateInfo);
+
 			{
 				scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(CubemapUB), &cubemapUB};
 				mCubemapUB->Create(&uniformBufferCreateInfo);
-			}
-			{
-				scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(CubemapUB), &cubemapUB2};
-				mCubemapUB2->Create(&uniformBufferCreateInfo);
 			}
 			GL_CheckErrors("mCubemapUB:Create");
 
@@ -234,6 +247,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			mCubemapComputeShaderResources.push_back(sr);
 
 			mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
+			mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{});
 		}
 
 		mVideoSurfaceDef.surfaceName = "VideoSurface";
@@ -338,6 +352,8 @@ bool Application::OnKeyEvent(const int keyCode, const int repeatCount, const Key
 	return false;
 }
 
+extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
+
 ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
     GL_CheckErrors("Frame: Start");
@@ -434,8 +450,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 #if 1
 	//Orient: %1.3f, {%1.3f, %1.3f, %1.3f}
     //Pos: %3.3f %3.3f %3.3f
-	ovrQuatf headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
+	Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 	ovrVector3f headPos=vrFrame.Tracking.HeadPose.Pose.Position;
+	ovrQuatf X0={1.0f,0.f,0.f,0.0f};
+	ovrQuatf headPoseC={-headPose.x,-headPose.y,-headPose.z,headPose.w};
+	ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPose,X0),headPoseC);
 	auto ctr=mNetworkSource.getCounterValues();
 	mGuiSys->ShowInfoText( 0.017f,"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d | Lights: %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Trackpad: %3.1f %3.1f | Orphans: %d \nVideo Frames %d\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
@@ -472,9 +491,17 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Append video surface
 	mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
 	mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
+	mVideoUB->Submit();
+	mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_UniformBuffer *)  mVideoUB.get())->GetGlBuffer());
 	if(mCubemapTexture->IsValid())
 	{
+		static float w=1.04f; //half separation.
+		scr::vec4 right_eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
+		scr::vec4 left_eye ={-right_eye.x,-right_eye.y,-right_eye.z,0.0f};
+		videoUB.eyeOffsets[0]=left_eye;		// left eye
+		videoUB.eyeOffsets[1]=right_eye;	// right eye.
 		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
+		mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
 		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 	}
 
@@ -788,17 +815,18 @@ void Application::CopyToCubemaps()
 		size.z=std::min(size.z,(uint32_t)max_w);
 
 		scr::InputCommandCreateInfo inputCommandCreateInfo={};
-		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapEffect, {mCubemapComputeShaderResources[0][0]});
-		cubemapUB.faceSize=tc.width;
-		cubemapUB.sourceOffset={0,0};
-		cubemapUB.mip             = 0;
-		cubemapUB.face             = 0;
+		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapWithDepthEffect, {mCubemapComputeShaderResources[0][0]});
+		cubemapUB.faceSize			=tc.width;
+		cubemapUB.sourceOffset		={0,0};
+		cubemapUB.mip             	=0;
+		cubemapUB.face             	=0;
 
 		mDeviceContext.DispatchCompute(&inputCommand);
 		GL_CheckErrors("Frame: CopyToCubemaps - Main");
 		cubemapUB.faceSize = 128;
 		cubemapUB.sourceOffset.x= (int32_t) ((3 *  tc.width) / 2);
 		//Lighting Cubemaps
+		inputCommand.m_pComputeEffect=mCopyCubemapEffect;
 		uint32_t mip_y=0;
 #if 1
 		{

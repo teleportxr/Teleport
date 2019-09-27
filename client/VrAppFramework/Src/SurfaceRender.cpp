@@ -454,8 +454,11 @@ ovrDrawCounters ovrSurfaceRender::RenderSurfaceList( const std::vector<ovrDrawSu
 									currentTextures[parmBinding] = texture.texture;
 									glActiveTexture( GL_TEXTURE0 + parmBinding );
 									glBindTexture( texture.target ? texture.target : GL_TEXTURE_2D, texture.texture );
-									glTexParameteri(texture.target, GL_TEXTURE_BASE_LEVEL, 0);
-									glTexParameteri( texture.target, GL_TEXTURE_MAX_LEVEL, 1000 );
+									if(texture.target==GL_TEXTURE_2D||texture.target==GL_TEXTURE_CUBE_MAP)
+									{
+										glTexParameteri(texture.target, GL_TEXTURE_BASE_LEVEL, 0);
+										glTexParameteri(texture.target, GL_TEXTURE_MAX_LEVEL, 1000);
+									}
 								}
 							}
 						}

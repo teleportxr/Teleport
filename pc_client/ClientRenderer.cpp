@@ -33,6 +33,13 @@ std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
 
 using namespace simul;
+const int specularSize = 128;
+const int diffuseSize = 64;
+const int lightSize = 64;
+int2 specularOffset(0,0);
+int2 diffuseOffset(3* specularSize/2, specularSize*2);
+int2 roughOffset(3* specularSize,0);
+int2 lightOffset(3 * specularSize+3 * specularSize / 2, specularSize * 2);
 
 void set_float4(float f[4], float a, float b, float c, float d)
 {
@@ -266,6 +273,7 @@ void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContex
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
+
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
 {
 	simul::crossplatform::DeviceContext	deviceContext;
@@ -318,7 +326,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		if (ti)
 		{
 			int W = videoAsCubemapTexture->width;
-			int w = 128;
 			{
 				cubemapConstants.sourceOffset = int2(0, 2 * W);
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
@@ -333,16 +340,13 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->UnbindTextures(deviceContext);
 			}
 			int2 sourceOffset(3 * W / 2, 2 * W);
-			Recompose(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, sourceOffset);
-			sourceOffset.x += w * 3;
-			Recompose(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, sourceOffset);
-			sourceOffset.x += w * 3;
-			Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture, specularCubemapTexture->mips, sourceOffset);
-			sourceOffset.x += w * 3;
-			Recompose(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, sourceOffset);
+			Recompose(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, sourceOffset+diffuseOffset);
+			Recompose(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, sourceOffset + specularOffset);
+			Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture, specularCubemapTexture->mips, sourceOffset+roughOffset);
+			Recompose(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, sourceOffset+lightOffset);
 		}
 		{
-			cubemapConstants.depthOffsetScale = depthOffsetScale;
+			cubemapConstants.depthOffsetScale = vec4(0,0,0,0);
 			cubemapConstants.colourOffsetScale = colourOffsetScale;
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
@@ -395,10 +399,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 	cpuProfiler.EndFrame();
-/*	const char *txt=renderPlatform->GetGpuProfiler()->GetDebugText();
-	renderPlatform->Print(deviceContext,0,0,txt);
-	txt=cpuProfiler.GetDebugText();
-	renderPlatform->Print(deviceContext,w/2,0,txt);*/
 	{
 		const avs::NetworkSourceCounters counters = source.getCounterValues();
 		//ImGui::Text("Frame #: %d", renderStats.frameCounter);
@@ -638,27 +638,22 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 			source -<
 					 \->decoder	-> surface
 	*/
-	size_t stream_width =std::max(setupCommand.video_width,setupCommand.depth_width);
+	size_t stream_width = setupCommand.video_width;
 	size_t stream_height = setupCommand.video_height;
 
 	videoAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.colour_cubemap_size, setupCommand.colour_cubemap_size, 1, 1,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 3,	crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	roughSpecularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 1,
+	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, specularSize, specularSize, 1, 3,	crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	roughSpecularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, specularSize, specularSize, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, lightSize, lightSize, 1, 1,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true); 
-	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, 128, 128, 1, 1,
+	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, diffuseSize, diffuseSize, 1, 1,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 
 	colourOffsetScale.x=0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(setupCommand.video_height) / float(stream_height);
-	
-	depthOffsetScale.x = 0;
-	depthOffsetScale.y = float(setupCommand.video_height) / float(stream_height);
-	depthOffsetScale.z = float(setupCommand.depth_width) / float(stream_width);
-	depthOffsetScale.w = float(setupCommand.depth_height) / float(stream_height);
 
 	for (size_t i = 0; i < NumStreams; ++i)
 	{

@@ -202,6 +202,7 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 diffuseColour,float roughness
 	diffuse *= ao;
 	//diffuse					+=lightColour *diffuseColour * saturate(n_l);
 	vec3 colour				= diffuse+specular;
+	//colour.gb += .1;
 	return colour;
 }
 
