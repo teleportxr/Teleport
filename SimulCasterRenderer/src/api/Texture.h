@@ -143,7 +143,7 @@ namespace scr
 		std::shared_ptr<Sampler> m_Sampler = nullptr;
 
 	public:
-		Texture(RenderPlatform *r) : APIObject(r) {m_CI={};}
+		Texture(const RenderPlatform*const r) : APIObject(r) {m_CI={};}
 		virtual ~Texture()
 		{
 			/* RK: Purpose of all this unclear..

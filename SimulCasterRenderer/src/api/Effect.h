@@ -161,7 +161,7 @@ namespace scr
 		std::map<const char*, EffectPassCreateInfo> m_EffectPasses;
 
 	public:
-		Effect(RenderPlatform *r) : APIObject(r) {}
+		Effect(const RenderPlatform*const r) : APIObject(r) {}
 		virtual ~Effect() = default;
 
 		virtual void Create(EffectCreateInfo* pEffectCreateInfo) = 0;

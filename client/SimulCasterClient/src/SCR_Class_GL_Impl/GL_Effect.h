@@ -12,7 +12,7 @@ class GL_Effect final : public scr::Effect
 		OVR::GlProgram m_Program;
 
 	public:
-		GL_Effect(scr::RenderPlatform* r)
+		GL_Effect(const scr::RenderPlatform*const r)
 			:scr::Effect(r) {}
 
 		void Create(EffectCreateInfo* pEffectCreateInfo) override;

@@ -13,7 +13,7 @@ class GL_UniformBuffer final : public scr::UniformBuffer
 		OVR::GlBuffer m_UBO;
 
 	public:
-		GL_UniformBuffer(scr::RenderPlatform *r)
+		GL_UniformBuffer(const scr::RenderPlatform*const r)
 			:scr::UniformBuffer(r) {}
 
 		//Binding Locations for UBOs

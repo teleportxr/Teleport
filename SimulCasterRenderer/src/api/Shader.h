@@ -35,7 +35,7 @@ namespace scr
 		ShaderCreateInfo m_CI;
 
 	public:
-		Shader(scr::RenderPlatform *r) :APIObject(r) {}
+		Shader(const scr::RenderPlatform*const r) :APIObject(r) {}
 		virtual ~Shader()
 		{
 			m_CI.sourceCode.clear();

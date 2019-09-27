@@ -18,7 +18,7 @@ namespace pc_client
 	private:
 		simul::crossplatform::Buffer *m_SimulBuffer;
 	public:
-		PC_IndexBuffer(scr::RenderPlatform *r):scr::IndexBuffer(r) {}
+		PC_IndexBuffer(const scr::RenderPlatform*const r):scr::IndexBuffer(r) {}
 
 		void Destroy() override;
 

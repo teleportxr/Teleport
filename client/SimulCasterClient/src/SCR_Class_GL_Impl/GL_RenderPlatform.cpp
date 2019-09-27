@@ -4,39 +4,39 @@
 using namespace scc;
 using namespace scr;
 
-std::shared_ptr<FrameBuffer> GL_RenderPlatform::InstantiateFrameBuffer()
+std::shared_ptr<FrameBuffer> GL_RenderPlatform::InstantiateFrameBuffer() const
 {
     return std::make_shared<GL_FrameBuffer>(this);
 }
-std::shared_ptr<IndexBuffer> GL_RenderPlatform::InstantiateIndexBuffer()
+std::shared_ptr<IndexBuffer> GL_RenderPlatform::InstantiateIndexBuffer() const
 {
     return std::make_shared<GL_IndexBuffer>(this);
 }
-std::shared_ptr<Effect> GL_RenderPlatform::InstantiateEffect()
+std::shared_ptr<Effect> GL_RenderPlatform::InstantiateEffect() const
 {
     return std::make_shared<GL_Effect>(this);
 }
-std::shared_ptr<Sampler> GL_RenderPlatform::InstantiateSampler()
+std::shared_ptr<Sampler> GL_RenderPlatform::InstantiateSampler() const
 {
     return std::make_shared<GL_Sampler>(this);
 }
-std::shared_ptr<Shader> GL_RenderPlatform::InstantiateShader()
+std::shared_ptr<Shader> GL_RenderPlatform::InstantiateShader() const
 {
     return std::make_shared<GL_Shader>(this);
 }
-std::shared_ptr<ShaderStorageBuffer> GL_RenderPlatform::InstantiateShaderStorageBuffer()
+std::shared_ptr<ShaderStorageBuffer> GL_RenderPlatform::InstantiateShaderStorageBuffer() const
 {
     return std::make_shared<GL_ShaderStorageBuffer>(this);
 }
-std::shared_ptr<Texture> GL_RenderPlatform::InstantiateTexture()
+std::shared_ptr<Texture> GL_RenderPlatform::InstantiateTexture() const
 {
     return std::make_shared<GL_Texture>(this);
 }
-std::shared_ptr<UniformBuffer> GL_RenderPlatform::InstantiateUniformBuffer()
+std::shared_ptr<UniformBuffer> GL_RenderPlatform::InstantiateUniformBuffer() const
 {
     return std::make_shared<GL_UniformBuffer>(this);
 }
-std::shared_ptr<VertexBuffer>	GL_RenderPlatform::InstantiateVertexBuffer()
+std::shared_ptr<VertexBuffer>	GL_RenderPlatform::InstantiateVertexBuffer() const
 {
     return std::make_shared<GL_VertexBuffer>(this);
 }

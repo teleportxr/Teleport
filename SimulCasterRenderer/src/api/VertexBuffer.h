@@ -22,7 +22,7 @@ namespace scr
 		VertexBufferCreateInfo m_CI;
 	
 	public:
-		VertexBuffer(RenderPlatform *r) :APIObject(r) {}
+		VertexBuffer(const RenderPlatform*const r) :APIObject(r) {}
 		virtual ~VertexBuffer()
 		{
 			m_CI.layout = nullptr;

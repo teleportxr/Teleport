@@ -23,7 +23,7 @@ void pc_client::PC_IndexBuffer::Create(IndexBufferCreateInfo * pIndexBufferCreat
 {
 	m_CI = *pIndexBufferCreateInfo;
 
-	auto *rp = static_cast<PC_RenderPlatform*> (renderPlatform);
+	const PC_RenderPlatform*const rp = static_cast<const PC_RenderPlatform *const>(renderPlatform);
 	auto *srp = rp->GetSimulRenderPlatform();
 
 	m_SimulBuffer = srp->CreateBuffer();

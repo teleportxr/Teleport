@@ -374,7 +374,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	}
 	if(show_textures)
 	{
-		auto& textures = resourceManagers.mTextureManager.GetCache();
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		auto& textures = resourceManagers.mTextureManager.GetCache(cacheLock);
 		static int tw = 32;
 		int x = 0, y = hdrFramebuffer->GetHeight()-64;
 		for (auto t : textures)
@@ -424,7 +425,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		avs::Transform transform = decoder[0].getCameraTransform();
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", transform.position.x, transform.position.y, transform.position.z),white);
 
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager.GetActorList().size(),resourceManagers.mMeshManager.GetCache().size()), white);
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager.GetActorList().size(),resourceManagers.mMeshManager.GetCache(cacheLock).size()), white);
 
 		//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 		//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
@@ -595,6 +597,7 @@ void ClientRenderer::Update()
 	uint32_t timeElapsed = (timestamp - previousTimestamp)/1000;//ns to ms
 
 	resourceManagers.Update(timeElapsed);
+	resourceCreator.Update(timeElapsed);
 
 	previousTimestamp = timestamp;
 }
@@ -614,6 +617,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 		return;
 	}
 	source.setDebugStream(setupCommand.debug_stream);
+	source.setDoChecksums(setupCommand.do_checksums);
 	decoderParams.deferDisplay = false;
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	avs::DeviceHandle dev;

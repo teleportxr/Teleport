@@ -43,7 +43,7 @@ namespace scr
 		SamplerCreateInfo m_CI;
 
 	public:
-		Sampler(RenderPlatform *r)
+		Sampler(const RenderPlatform*const r)
 			:APIObject(r) {}
 		virtual ~Sampler() 
 		{

@@ -9,7 +9,7 @@ namespace pc_client
 	class PC_Shader final : public scr::Shader
 	{
 	public:
-		PC_Shader(scr::RenderPlatform *r):scr::Shader(r) {}
+		PC_Shader(const scr::RenderPlatform*const r):scr::Shader(r) {}
 
 		void Compile() override;
 

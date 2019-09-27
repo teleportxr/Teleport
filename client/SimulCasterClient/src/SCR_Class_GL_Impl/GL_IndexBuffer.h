@@ -12,7 +12,7 @@ class GL_IndexBuffer final : public scr::IndexBuffer
 		GLuint m_IndexID;
 
 	public:
-		GL_IndexBuffer(scr::RenderPlatform* r)
+		GL_IndexBuffer(const scr::RenderPlatform*const r)
 			:scr::IndexBuffer(r) {}
 
 		void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo) override;

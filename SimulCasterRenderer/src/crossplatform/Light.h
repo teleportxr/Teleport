@@ -22,7 +22,7 @@ namespace scr
 		};
 		struct LightCreateInfo
 		{
-			RenderPlatform* renderPlatform;
+			const RenderPlatform* renderPlatform;
 			Type type;
 			vec3 position;
 			quat orientation;
