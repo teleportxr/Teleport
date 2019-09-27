@@ -150,6 +150,7 @@ private:
 	struct IncompleteActor : IncompleteResource
 	{
 		scr::Actor::ActorCreateInfo actorInfo;
+		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; // <ID of the material, list of indexes the material should be placed into actor material list.
 	};
 
 	struct UntranscodedTexture

@@ -655,18 +655,19 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const st
 		missingResources.push_back(mesh_uid);
 	}
 
-	newActor->actorInfo.materials.reserve(material_uids.size());
-	for (avs::uid m_uid : material_uids)
+	newActor->actorInfo.materials.resize(material_uids.size());
+	for(int i = 0; i < material_uids.size(); i++)
 	{
-		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(m_uid);
+		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(material_uids[i]);
 
 		if(material)
 		{
-			newActor->actorInfo.materials.push_back(material);
+			newActor->actorInfo.materials[i] = material;
 		}
 		else
 		{
-			missingResources.push_back(m_uid);
+			missingResources.push_back(material_uids[i]);
+			newActor->materialSlots[material_uids[i]].push_back(i);
 		}
 	}
 
@@ -759,7 +760,10 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 	{
 		const std::weak_ptr<IncompleteActor>& actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
 
-		actorInfo.lock()->actorInfo.materials.push_back(material);
+		for(size_t materialIndex : actorInfo.lock()->materialSlots.at(material_uid))
+		{
+			actorInfo.lock()->actorInfo.materials[materialIndex] = material;
+		}		
 
 		//If only this material is pointing to the actor, then it is complete.
 		if(it->use_count() == 1)
