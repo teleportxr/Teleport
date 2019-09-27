@@ -156,7 +156,9 @@ private:
 	std::shared_ptr<scr::Camera> scrCamera;
 
 	scc::GL_Effect                mEffect;
-	std::shared_ptr<scr::Sampler> mSampler = renderPlatform.InstantiateSampler();
+	std::shared_ptr<scr::Sampler> mSampler;
+	std::shared_ptr<scr::Sampler> mSamplerCubeMipMap;
+
 	struct OVRActor
 	{
 		std::vector<std::shared_ptr<OVR::ovrSurfaceDef>> ovrSurfaceDefs;

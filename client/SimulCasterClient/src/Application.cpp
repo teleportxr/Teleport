@@ -87,9 +87,15 @@ Application::Application()
 	sci.wrapU = scr::Sampler::Wrap::REPEAT;
 	sci.wrapV = scr::Sampler::Wrap::REPEAT;
 	sci.wrapW = scr::Sampler::Wrap::REPEAT;
-	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
+	sci.minFilter = scr::Sampler::Filter::LINEAR;
 	sci.magFilter = scr::Sampler::Filter::LINEAR;
+
+	mSampler = renderPlatform.InstantiateSampler();
 	mSampler->Create(&sci);
+
+	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
+	mSamplerCubeMipMap = renderPlatform.InstantiateSampler();
+	mSamplerCubeMipMap->Create(&sci);
 }
 
 Application::~Application()
@@ -245,7 +251,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
             layout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
 
             scr::ShaderResource sr({layout, layout});
-            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {mSampler, mCubemapTexture,0,uint32_t(-1)});
+            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {mSamplerCubeMipMap, mCubemapTexture,0,uint32_t(-1)});
             sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
             sr.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
@@ -702,7 +708,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 						scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
 	   mCubemapTexture->Create(textureCreateInfo);
-	   mCubemapTexture->UseSampler(mSampler);
+	   mCubemapTexture->UseSampler(mSamplerCubeMipMap);
    }
     //GL_CheckErrors("Built Video Cubemap");
    //Build Lighting Cubemap
@@ -735,10 +741,10 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		textureCreateInfo.height=specularSize;
 		mSpecularTexture->Create(textureCreateInfo);
 		mRoughSpecularTexture->Create(textureCreateInfo);
-		mDiffuseTexture->UseSampler(mSampler);
-		mSpecularTexture->UseSampler(mSampler);
-		mRoughSpecularTexture->UseSampler(mSampler);
-		mCubemapLightingTexture->UseSampler(mSampler);
+		mDiffuseTexture->UseSampler(mSamplerCubeMipMap);
+		mSpecularTexture->UseSampler(mSamplerCubeMipMap);
+		mRoughSpecularTexture->UseSampler(mSamplerCubeMipMap);
+		mCubemapLightingTexture->UseSampler(mSamplerCubeMipMap);
 	}
     //GL_CheckErrors("Built Lighting Cubemap");
 
@@ -919,7 +925,7 @@ void Application::CopyToCubemaps()
 			for (uint32_t m = 0; m < 6; m++)
 			{
 				inputCommand.m_WorkGroupSize={(mip_size+1)/8,(mip_size+1)/8,6};
-				mCubemapComputeShaderResources[0][1].SetImageInfo(0, {mSampler, mSpecularTexture, m});
+				mCubemapComputeShaderResources[0][1].SetImageInfo(0, {mSamplerCubeMipMap, mSpecularTexture, m});
 				cubemapUB.sourceOffset.y       = (int32_t) (2 * tc.width) + mip_y;
 				cubemapUB.faceSize = mip_size;
 				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
@@ -1199,6 +1205,7 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
 	ci.colourBlendingState = cbs;
 
     mEffect.CreatePass(&ci);
+
 
     mEffect.LinkShaders(effectPassName, shaderResources);
 
