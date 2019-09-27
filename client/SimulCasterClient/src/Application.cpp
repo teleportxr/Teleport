@@ -444,7 +444,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	//Get HMD Position/Orientation
 	ovrVector3f headPos =vrFrame.Tracking.HeadPose.Pose.Position;
-	ovrQuatf headOrient = vrFrame.Tracking.HeadPose.Pose.Orientation;
+	//ovrQuatf headOrient = vrFrame.Tracking.HeadPose.Pose.Orientation;
 	scr::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
 
 	//Get the Capture Position
