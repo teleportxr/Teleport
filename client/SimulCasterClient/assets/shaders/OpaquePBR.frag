@@ -189,11 +189,11 @@ vec3 PBR(vec3 normal, vec3 viewDir, vec3 diffuseColour, float roughness,float me
 
     float n_v				= saturate(dot(normal, viewDir));
     float cosLo				= saturate( dot(normal,- viewDir));
-    vec3 env_diffuse = textureLod(u_RoughSpecularCubemap, normal.zxy,0.0).rgb;
 
-    vec3 env_specular=textureLod(u_SpecularCubemap, normal.zxy,0.0).rgb;//roughnessE * 11.0
-    vec3 env_rough_specular=textureLod(u_RoughSpecularCubemap, normal.zxy,0.0).rgb;//roughnessE * 11.0
-   // env_specular=mix(env_specular,env_rough_specular,(roughness_mip-2.0));
+    vec3 env_specular=textureLod(u_SpecularCubemap, refl.zxy,roughness_mip).rgb;//roughnessE * 11.0
+    vec3 env_rough_specular=textureLod(u_RoughSpecularCubemap, refl.zxy,max(0.0,roughness_mip-3.0)).rgb;//roughnessE * 11.0
+    vec3 env_diffuse = 0.0001*textureLod(u_DiffuseCubemap, normal.zxy,0.0).rgb+env_rough_specular.rgb;
+  // env_specular=mix(env_specular,env_rough_specular,(roughness_mip-2.0));
     //Environment Light Calculation
     vec3 environment = mix(env_specular, env_diffuse, saturate((roughnessE - 0.25) / 0.75));
 
@@ -281,6 +281,7 @@ void main()
 
     float ao = GetAO(combinedLookup);
 	vec3 output_radiance = PBR(normal, viewDir, diffuseColour, roughness, metallic, ao);
-    //vec3 refl = reflect(Wo, normal);
+    output_radiance*=0.0001;
+    output_radiance+=diffuseColour.rgb;
     gl_FragColor = Gamma(vec4(output_radiance.rgb,1.0));
 }
