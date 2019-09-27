@@ -404,7 +404,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
 			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
 			controllerState.mJoystickAxisX=ovrState.Joystick.x;
-			controllerState.mJoystickAxisY=ovrState.Joystick.y;
+			controllerState.mJoystickAxisY=ovrState.Joystick.y * -1;
 		}
 	}
 
@@ -442,12 +442,17 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 
+	//Get HMD Position/Orientation
+	ovrVector3f headPos =vrFrame.Tracking.HeadPose.Pose.Position;
+	ovrQuatf headOrient = vrFrame.Tracking.HeadPose.Pose.Orientation;
+	scr::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
+
 	//Get the Capture Position
 	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&renderPlatform)};
 	scr::Transform scr_UE4_captureTransform(tci);
 	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
-	capturePosition = scr_UE4_captureTransform.m_Translation;
+	capturePosition = scr_UE4_captureTransform.m_Translation - scr_OVR_headPos;
 	scrCamera->UpdatePosition(capturePosition);
 
 	static float frameRate=1.0f;
@@ -456,24 +461,24 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		frameRate*=0.99f;
 		frameRate+=0.01f/vrFrame.DeltaSeconds;
 	}
-#if 1
-	//Orient: %1.3f, {%1.3f, %1.3f, %1.3f}
-    //Pos: %3.3f %3.3f %3.3f
+
 	Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
-	ovrVector3f headPos=vrFrame.Tracking.HeadPose.Pose.Position;
 	ovrQuatf X0={1.0f,0.f,0.f,0.0f};
 	ovrQuatf headPoseC={-headPose.x,-headPose.y,-headPose.z,headPose.w};
 	ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPose,X0),headPoseC);
+#if 0
+	//Orient: %1.3f, {%1.3f, %1.3f, %1.3f}
+    //Pos: %3.3f %3.3f %3.3f
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 0.017f,"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d | Lights: %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Trackpad: %3.1f %3.1f | Orphans: %d \nVideo Frames %d\n"
+	mGuiSys->ShowInfoText( 0.017f,"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d | Lights: %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n Pos: %3.3f %3.3f %3.3f\n Trackpad: %3.1f %3.1f | Orphans: %d\n"
 			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
 			frameRate, ctr.bandwidthKPS,
 			(uint64_t)resourceManagers.mActorManager.GetActorList().size(), (uint64_t)mOVRActors.size(), resourceManagers.mLightManager.GetCache().size(),
 			capturePosition.x, capturePosition.y, capturePosition.z,
-			/*headPose.w, headPose.x, headPose.y, headPose.z,
-			headPos.x,headPos.y,headPos.z,*/
+			headOrient.w, headOrient.x, headOrient.y, headOrient.z,
+			headPos.x,headPos.y,headPos.z,
 			controllerState.mTrackpadX,controllerState.mTrackpadY,
-			ctr.m_packetMapOrphans, mNumPendingFrames);
+			ctr.m_packetMapOrphans);
 
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
@@ -974,7 +979,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				if(i>=meshCI.vb.size()||i>=meshCI.ib.size())
 				{
 					OVR_LOG("Skipping empty element in mesh.");
-					break;
+					break; //This break; isn't working correctly
 				}
 				//Mesh.
 				// The first instance of vb/ib should be adequate to get the information needed.
@@ -1096,10 +1101,9 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 		{
 			if(i>=pOvrActor->ovrSurfaceDefs.size())
 			{
-				OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
+				//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
 				break;
 			}
-			OVR_LOG("BlendDst is %d",(int)pOvrActor->ovrSurfaceDefs[i]->graphicsCommand.GpuState.blendDst);
 			//----OVR Actor Set Transforms----//
 			float     heightOffset = -0.0F;
 			scr::vec3 camPos       = capturePosition * -1;
