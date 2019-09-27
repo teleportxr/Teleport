@@ -161,6 +161,8 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         2 -> PayloadType.VPS
         3 -> PayloadType.SPS
         4 -> PayloadType.PPS
+        5 -> PayloadType.OtherNALUnit
+        6 -> PayloadType.AccessUnit
         else -> PayloadType.OtherNALUnit
     }
 }

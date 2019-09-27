@@ -38,10 +38,19 @@ void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<Shader
     }
     else
     {
+    	std::string src="#version 310 es\n";
 		//Compile compute shader
 		const auto &sc=pipeline.m_Shaders[0]->GetShaderCreateInfo();
+		if(sc.entryPoint.length())
+		{
+			src+="#define ";
+			src+=sc.entryPoint;
+			src+=" main\n";
+		}
+		src+=sc.sourceCode;
+
 		GLuint id = glCreateShader(GL_COMPUTE_SHADER);
-		const char* source = sc.sourceCode.c_str();
+		const char* source = src.c_str();
 		glShaderSource(id, 1, &source, nullptr);
 		glCompileShader(id);
 		GLint isCompiled = 0;

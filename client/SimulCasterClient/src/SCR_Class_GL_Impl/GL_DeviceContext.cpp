@@ -73,14 +73,17 @@ void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
     glMemoryBarrier(GL_UNIFORM_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     OVR::GL_CheckErrors("DispatchCompute: 3");
 }
+
 void GL_DeviceContext::BeginFrame()
 {
 
 }
+
 void GL_DeviceContext::EndFrame()
 {
 
 }
+
 void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& shaderResources, Effect* pEffect)
 {
     //TODO: Move to OpenGL ES 3.2 for explicit in-shader UniformBlockBinding with the 'binding = X' layout qualifier!

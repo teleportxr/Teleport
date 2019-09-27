@@ -1,4 +1,3 @@
-#version 310 es
 #extension GL_OES_EGL_image_external_essl3 : require
 precision highp float;
 
@@ -13,7 +12,7 @@ layout(std140, binding = 2) uniform cubemapUB
 } cub;
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-void main()
+void colour_only()
 {
     ivec2 FaceOffsets[6] ;
     FaceOffsets[0]=ivec2(0,0);
@@ -30,10 +29,36 @@ void main()
         return;
     ivec2 faceOffset=FaceOffsets[invocationId.z];
     ivec2 loadPos   = ivec2(invocationId.xy)+cub.sourceOffset+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
-    vec4 lookup     =texelFetch(videoFrameTexture, loadPos, 0);
+    vec4 lookup     = texelFetch(videoFrameTexture, loadPos, 0);
     ivec3 storePos  = ivec3(invocationId.xyz);
     //lookup.r+=1.0;//float((invocationId.z/uint(2))%uint(2));
     //lookup.b+=float(invocationId.z%uint(2));
     //lookup.g+=float(invocationId.z/uint(3));
     imageStore(destTex, storePos.xyz, lookup);
+}
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void colour_and_depth()
+{
+    ivec2 FaceOffsets[6] ;
+    FaceOffsets[0]=ivec2(0,0);
+    FaceOffsets[1]=ivec2(1,0);
+    FaceOffsets[2]=ivec2(2,0);
+    FaceOffsets[3]=ivec2(0,1);
+    FaceOffsets[4]=ivec2(1,1);
+    FaceOffsets[5]=ivec2(2,1);
+    uvec3 invocationId=gl_GlobalInvocationID;
+    invocationId.z+=cub.face;
+    if(invocationId.x>=cub.faceSize||invocationId.y>=cub.faceSize)
+        return;
+    if(invocationId.z>=uint(6))
+        return;
+    ivec2 faceOffset    =FaceOffsets[invocationId.z];
+    ivec2 loadPos       = ivec2(invocationId.xy)+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
+    ivec2 loadDepthPos  = loadPos/2+ivec2(0,cub.faceSize)*2;
+    vec4 lookup         =texelFetch(videoFrameTexture, loadPos, 0);
+    vec4 lookupDepth     =texelFetch(videoFrameTexture, loadDepthPos, 0);
+    ivec3 storePos  = ivec3(invocationId.xyz);
+    imageStore(destTex, storePos.xyz, vec4(lookup.rgb,lookupDepth.r));
 }

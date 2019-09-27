@@ -90,7 +90,7 @@ avs::Result VideoDecoderProxy::unregisterSurface(const avs::SurfaceBackendInterf
     return avs::Result::OK;
 }
 
-avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payaloadType)
+avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payloadType)
 {
     if(!mInitialized) {
         return avs::Result::DecoderBackend_NotInitialized;
@@ -100,7 +100,7 @@ avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInByt
     }
 
     jobject jbuffer = mEnv->NewDirectByteBuffer(const_cast<void*>(buffer), bufferSizeInBytes);
-    jboolean isReadyToDisplay = mEnv->CallBooleanMethod(mVideoDecoder, jni.decodeMethod, jbuffer, payaloadType);
+    jboolean isReadyToDisplay = mEnv->CallBooleanMethod(mVideoDecoder, jni.decodeMethod, jbuffer, payloadType);
     mEnv->DeleteLocalRef(jbuffer);
     return isReadyToDisplay ? avs::Result::DecoderBackend_ReadyToDisplay : avs::Result::OK;
 }
@@ -115,7 +115,8 @@ avs::Result VideoDecoderProxy::display()
     }
 
     jboolean displayResult = mEnv->CallBooleanMethod(mVideoDecoder, jni.displayMethod);
-    return displayResult ? avs::Result::DecoderBackend_DisplayFailed : avs::Result::OK;
+    // Switched around. true return means OK!!
+    return displayResult ?  avs::Result::OK:avs::Result::DecoderBackend_DisplayFailed ;
 }
 
 void VideoDecoderProxy::NotifyFrameAvailable()

@@ -77,7 +77,11 @@ private:
 		uint32_t    face = 0;
 	};
 	CubemapUB cubemapUB;
-	CubemapUB cubemapUB2;
+	struct VideoUB
+	{
+		scr::vec4 eyeOffsets[2];
+	};
+	VideoUB videoUB;
 
 	static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
 
@@ -123,10 +127,11 @@ private:
 	std::shared_ptr<scr::Texture>       mRoughSpecularTexture;
 	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
-	std::shared_ptr<scr::UniformBuffer> mCubemapUB2;
+	std::shared_ptr<scr::UniformBuffer> mVideoUB;
 	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
 	scr::ShaderResource                 mLightCubemapShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
+	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
 	std::string                         CopyCubemapSrc;
 	ovrMobile                           *mOvrMobile;
 	SessionClient                       mSession;

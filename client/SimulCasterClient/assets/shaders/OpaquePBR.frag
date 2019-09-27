@@ -181,9 +181,9 @@ vec3 PBR(vec3 normal, vec3 viewDir, vec3 diffuseColour, float roughness,float me
     float roughnessE =roughness*roughness;
     float roughnessL		= max(.01, roughnessE);
 
-    float roughness_mip=MipFromRoughness(roughness,5.0);
-    vec3 Diffuse	= vec3(0,0,0);
-    vec3 Specular	= vec3(0,0,0);
+    float roughness_mip     =MipFromRoughness(roughness,5.0);
+    vec3 Diffuse	        = vec3(0,0,0);
+    vec3 Specular	         = vec3(0,0,0);
 
     vec3 refl = reflect(viewDir, normal);
 
@@ -211,7 +211,7 @@ vec3 PBR(vec3 normal, vec3 viewDir, vec3 diffuseColour, float roughness,float me
    // Specular *= saturate(pow(dot(normal, -viewDir) + ao, roughnessE) - 1.0 + ao);
 
 	// factor diffuse by kD ???
-    return vec3(roughness_mip,roughness_mip,0);// Diffuse + Specular; //kS is already included in the Specular calculations.
+    return env_diffuse; //kS is already included in the Specular calculations.
 }
 
 vec4 Gamma(vec4 a)
