@@ -282,5 +282,6 @@ void main()
     float ao = GetAO(combinedLookup);
 	vec3 output_radiance = PBR(normal, viewDir, diffuseColour, roughness, metallic, ao);
     //vec3 refl = reflect(Wo, normal);
-    gl_FragColor = Gamma(vec4(combinedLookup.rgb,1.0));
+    gl_FragColor = vec4(0.5 * Gamma(vec4(diffuseColour,1.0)).rgb, 1.0) + 0.001 * (vec4(diffuseColour,1) + vec4(normalLookup,1) + combinedLookup);
+
 }

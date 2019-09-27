@@ -1,3 +1,4 @@
+
 //#version 310 es
 precision highp float;
 
@@ -80,7 +81,7 @@ void main()
     v_Tangent	        = normalize((ModelMatrix * vec4(a_Tangent.xyz,0.0)).xyz);
     v_Binormal	        = normalize(cross(v_Normal, v_Tangent));
     v_TBN		        = mat3(v_Tangent, v_Binormal, v_Normal);
-    vec2 UV0		        = vec2(1.0-a_UV0.x,a_UV0.y);
+    vec2 UV0		        = vec2(a_UV0.x,a_UV0.y);
     vec2 UV1		        = vec2(a_UV1.x,a_UV1.y);
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
