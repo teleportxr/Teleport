@@ -91,6 +91,7 @@ Application::~Application()
 	delete mVideoSurfaceTexture;
 	mVideoSurfaceDef.geo.Free();
 	GlProgram::Free(mVideoSurfaceProgram);
+	GlProgram::Free(mEffect.GetGlPlatform());
 
 	delete mSoundEffectPlayer;
 	delete mSoundEffectContext;
