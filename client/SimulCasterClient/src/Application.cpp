@@ -466,7 +466,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	ovrQuatf X0={1.0f,0.f,0.f,0.0f};
 	ovrQuatf headPoseC={-headPose.x,-headPose.y,-headPose.z,headPose.w};
 	ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPose,X0),headPoseC);
-#if 0
+#if 1
 	//Orient: %1.3f, {%1.3f, %1.3f, %1.3f}
     //Pos: %3.3f %3.3f %3.3f
 	auto ctr=mNetworkSource.getCounterValues();
@@ -475,7 +475,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			frameRate, ctr.bandwidthKPS,
 			(uint64_t)resourceManagers.mActorManager.GetActorList().size(), (uint64_t)mOVRActors.size(), resourceManagers.mLightManager.GetCache().size(),
 			capturePosition.x, capturePosition.y, capturePosition.z,
-			headOrient.w, headOrient.x, headOrient.y, headOrient.z,
+						   headPose.w, headPose.x, headPose.y, headPose.z,
 			headPos.x,headPos.y,headPos.z,
 			controllerState.mTrackpadX,controllerState.mTrackpadY,
 			ctr.m_packetMapOrphans);
