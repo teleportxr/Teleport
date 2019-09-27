@@ -54,7 +54,7 @@ void colour_and_depth()
         return;
     if(invocationId.z>=uint(6))
         return;
-    ivec2 faceOffset=FaceOffsets[invocationId.z];
+    ivec2 faceOffset    =FaceOffsets[invocationId.z];
     ivec2 loadPos       = ivec2(invocationId.xy)+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
     ivec2 loadDepthPos  = loadPos/2+ivec2(0,cub.faceSize)*2;
     vec4 lookup         =texelFetch(videoFrameTexture, loadPos, 0);

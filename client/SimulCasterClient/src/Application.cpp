@@ -37,6 +37,15 @@ jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* 
 
 #endif
 
+const int specularSize = 128;
+const int diffuseSize = 64;
+const int lightSize = 64;
+scr::ivec2 specularOffset={0,0};
+scr::ivec2 diffuseOffset={3* specularSize/2, specularSize*2};
+scr::ivec2 roughOffset={3* specularSize,0};
+scr::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
+
+
 Application::Application()
 	: mDecoder(avs::DecoderBackend::Custom)
 	, mPipelineConfigured(false)
@@ -495,7 +504,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_UniformBuffer *)  mVideoUB.get())->GetGlBuffer());
 	if(mCubemapTexture->IsValid())
 	{
-		static float w=1.04f; //half separation.
+		static float w=.04f; //half separation.
 		scr::vec4 right_eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
 		scr::vec4 left_eye ={-right_eye.x,-right_eye.y,-right_eye.z,0.0f};
 		videoUB.eyeOffsets[0]=left_eye;		// left eye
@@ -619,10 +628,10 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		return;
 	}
 
-	OVR_WARN("VIDEO STREAM CHANGED: %d %d %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height);
+	OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height,setupCommand.colour_cubemap_size);
 
 	avs::NetworkSourceParams sourceParams = {};
-	sourceParams.socketBufferSize = 3 * 1024 * 1024; // 4* 64MiB socket buffer size
+	sourceParams.socketBufferSize = 3 * 1024 * 1024; // 3 Mb socket buffer size
 	//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 	sourceParams.maxJitterBufferLength = 0;
 
@@ -709,9 +718,15 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 						scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
 		textureCreateInfo.mipCount=1;
+		textureCreateInfo.width=diffuseSize;
+		textureCreateInfo.height=diffuseSize;
 		mDiffuseTexture->Create(textureCreateInfo);
+		textureCreateInfo.width=lightSize;
+		textureCreateInfo.height=lightSize;
 		mCubemapLightingTexture->Create(textureCreateInfo);
 		textureCreateInfo.mipCount=3;
+		textureCreateInfo.width=specularSize;
+		textureCreateInfo.height=specularSize;
 		mSpecularTexture->Create(textureCreateInfo);
 		mRoughSpecularTexture->Create(textureCreateInfo);
 		mDiffuseTexture->UseSampler(mSampler);
@@ -823,23 +838,23 @@ void Application::CopyToCubemaps()
 
 		mDeviceContext.DispatchCompute(&inputCommand);
 		GL_CheckErrors("Frame: CopyToCubemaps - Main");
-		cubemapUB.faceSize = 128;
-		cubemapUB.sourceOffset.x= (int32_t) ((3 *  tc.width) / 2);
+		cubemapUB.faceSize = 0;
+		scr::ivec2 offset0={(int32_t) ((3 *  tc.width) / 2),(int32_t) (2 * tc.width)};
 		//Lighting Cubemaps
 		inputCommand.m_pComputeEffect=mCopyCubemapEffect;
-		uint32_t mip_y=0;
+		int32_t mip_y=0;
 #if 1
 		{
 			static uint32_t face= 0;
 			mip_y = 0;
-			uint32_t         mip_size = 128;
+			int32_t mip_size=specularSize;
 			uint32_t M=mDiffuseTexture->GetTextureCreateInfo().mipCount;
+			scr::ivec2 offset={offset0.x+diffuseOffset.x,offset0.y+diffuseOffset.y};
 			for (uint32_t m        = 0; m < M; m++)
 			{
 					inputCommand.m_WorkGroupSize = {(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount ,6};
-					mCubemapComputeShaderResources[0].SetImageInfo(1, 0, {
-							mDiffuseTexture->GetSampler(), mDiffuseTexture, m});
-					cubemapUB.sourceOffset.y       = (int32_t) (2 * tc.width) + mip_y;
+					mCubemapComputeShaderResources[0].SetImageInfo(1, 0, {mDiffuseTexture->GetSampler(), mDiffuseTexture, m});
+					cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
 					cubemapUB.faceSize             = mip_size;
 					cubemapUB.mip                  = m;
 					cubemapUB.face				   = 0;
@@ -853,41 +868,40 @@ void Application::CopyToCubemaps()
 			face++;
 			face=face%6;
 		}
-		cubemapUB.sourceOffset.x+= 3*128;
+
 		{
 			mip_y=0;
-			uint32_t mip_size=128;
+			int32_t mip_size=specularSize;
 			uint32_t M=mSpecularTexture->GetTextureCreateInfo().mipCount;
+			scr::ivec2 offset={offset0.x+specularOffset.x,offset0.y+specularOffset.y};
 			for(uint32_t m=0;m<M;m++)
 			{
 				inputCommand.m_WorkGroupSize={(mip_size+1)/ThreadCount,(mip_size+1)/ThreadCount,6};
 				mCubemapComputeShaderResources[0].SetImageInfo(1 ,0, {mSpecularTexture->GetSampler(), mSpecularTexture, m});
-				cubemapUB.sourceOffset.y = (int32_t) (2 *  tc.width) + mip_y;
-				cubemapUB.faceSize = mip_size;
-				cubemapUB.mip             = m;
+				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
+				cubemapUB.faceSize 				= mip_size;
+				cubemapUB.mip             		= m;
 				cubemapUB.face				   = 0;
 				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
 				mDeviceContext.DispatchCompute(&inputCommand);
 				mip_y+=2*mip_size;
 				mip_size/=2;
 			}
-		}
-		cubemapUB.sourceOffset.x+= 3*128;
-		{
+
 			mip_y=0;
-			uint32_t mip_size=128;
-			uint32_t M=mRoughSpecularTexture->GetTextureCreateInfo().mipCount;
+			mip_size=specularSize;
+			M=mRoughSpecularTexture->GetTextureCreateInfo().mipCount;
 			for(uint32_t m=0;m<M;m++)
 			{
 				inputCommand.m_WorkGroupSize={(mip_size+1)/ThreadCount,(mip_size+1)/ThreadCount,6};
 				mCubemapComputeShaderResources[0].SetImageInfo(1 ,0, {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture, m});
-				cubemapUB.sourceOffset.y = (int32_t) (2 *  tc.width) + mip_y;
+				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
 				cubemapUB.faceSize = mip_size;
 				cubemapUB.mip             = m;
 				cubemapUB.face				   = 0;
 				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
 				mDeviceContext.DispatchCompute(&inputCommand);
-				mip_y+=2*mip_size;
+				mip_y					+=2*mip_size;
 				mip_size/=2;
 			}
 		}
