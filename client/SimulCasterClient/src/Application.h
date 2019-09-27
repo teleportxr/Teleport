@@ -163,11 +163,6 @@ private:
 
 		~OVRActor()
 		{
-			for(std::shared_ptr<OVR::ovrSurfaceDef> ovrSurfaceDef : ovrSurfaceDefs)
-			{
-				ovrSurfaceDef->geo.Free();
-				OVR::GlProgram::Free(ovrSurfaceDef->graphicsCommand.Program);
-			}
 			ovrSurfaceDefs.clear();
 		}
 	};
