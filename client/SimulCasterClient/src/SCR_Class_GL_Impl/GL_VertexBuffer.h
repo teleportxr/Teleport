@@ -14,7 +14,7 @@ namespace scc
 		GLuint m_VertexArrayID = 0;
 
 	public:
-        GL_VertexBuffer(scr::RenderPlatform* r)
+        GL_VertexBuffer(const scr::RenderPlatform*const r)
         	:scr::VertexBuffer(r) {}
 
 		void Create(VertexBufferCreateInfo* pVertexBufferCreateInfo) override;

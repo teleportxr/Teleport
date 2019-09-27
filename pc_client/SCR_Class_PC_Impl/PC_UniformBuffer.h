@@ -10,7 +10,7 @@ class PC_UniformBuffer final : public scr::UniformBuffer
 	private:
 
 	public:
-		PC_UniformBuffer(scr::RenderPlatform *r):scr::UniformBuffer(r) {}
+		PC_UniformBuffer(const scr::RenderPlatform*const r):scr::UniformBuffer(r) {}
 
 		//Binding Locations for UBOs
 		//Camera = 0;

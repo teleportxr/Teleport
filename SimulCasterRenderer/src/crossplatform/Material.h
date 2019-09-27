@@ -21,7 +21,7 @@ namespace scr
 		};
 		struct MaterialCreateInfo
 		{
-			RenderPlatform* renderPlatform;
+			const RenderPlatform* renderPlatform;
 			MaterialParameter diffuse;	//RGBA Colour Texture
 			MaterialParameter normal;	//R: Tangent, G: Bi-normals and B: Normals
 			MaterialParameter combined;	//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular

@@ -94,7 +94,7 @@ void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	m_CI = pTextureCreateInfo;
 	//m_CI.size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;
 	//m_Data = data;
-	auto* rp = static_cast<PC_RenderPlatform*> (renderPlatform);
+	const auto*const rp = static_cast<const PC_RenderPlatform*const> (renderPlatform);
 	auto* srp = rp->GetSimulRenderPlatform();
 	m_SimulTexture = srp->CreateTexture();
 	auto pixelFormat = ToSimulPixelFormat(pTextureCreateInfo.format);

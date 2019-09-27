@@ -14,7 +14,7 @@ namespace scc
 		OVR::GlTexture m_Texture;
 
 	public:
-		GL_Texture(scr::RenderPlatform* r)
+		GL_Texture(const scr::RenderPlatform*const r)
 			:scr::Texture(r) {}
 
 		void Create(const TextureCreateInfo& pTextureCreateInfo) override;

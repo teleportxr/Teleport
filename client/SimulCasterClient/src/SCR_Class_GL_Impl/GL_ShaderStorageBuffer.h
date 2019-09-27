@@ -12,7 +12,7 @@ namespace scc
         GLuint m_ShaderStorageID;
 
     public:
-        GL_ShaderStorageBuffer(scr::RenderPlatform* r)
+        GL_ShaderStorageBuffer(const scr::RenderPlatform*const r)
                 :scr::ShaderStorageBuffer(r) {}
 
         void Create(ShaderStorageBufferCreateInfo* pShaderStorageBufferCreateInfo) override;

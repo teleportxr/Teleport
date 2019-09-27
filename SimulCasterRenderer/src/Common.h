@@ -38,8 +38,8 @@ namespace scr
 	class APIObject
 	{
 	protected:
-		RenderPlatform* renderPlatform;
-		APIObject(RenderPlatform *r) 
+		const RenderPlatform*const renderPlatform;
+		APIObject(const RenderPlatform*const r) 
 			: renderPlatform(r) {}
 	};
 	enum BufferUsageBit : uint32_t

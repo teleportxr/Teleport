@@ -23,14 +23,14 @@ namespace scr
 
 		virtual API::APIType GetAPI() const = 0;
 
-		virtual std::shared_ptr<FrameBuffer>			InstantiateFrameBuffer() = 0;
-		virtual std::shared_ptr<IndexBuffer>			InstantiateIndexBuffer() = 0;
-		virtual std::shared_ptr<Effect>					InstantiateEffect() = 0;
-		virtual std::shared_ptr<Sampler>				InstantiateSampler() = 0;
-		virtual std::shared_ptr<Shader>					InstantiateShader() = 0;
-		virtual std::shared_ptr<ShaderStorageBuffer>	InstantiateShaderStorageBuffer() = 0;
-		virtual std::shared_ptr<Texture>				InstantiateTexture() = 0;
-		virtual std::shared_ptr<UniformBuffer>			InstantiateUniformBuffer() = 0;
-		virtual std::shared_ptr<VertexBuffer>			InstantiateVertexBuffer() = 0;
+		virtual std::shared_ptr<FrameBuffer>			InstantiateFrameBuffer() const = 0;
+		virtual std::shared_ptr<IndexBuffer>			InstantiateIndexBuffer() const = 0;
+		virtual std::shared_ptr<Effect>					InstantiateEffect() const = 0;
+		virtual std::shared_ptr<Sampler>				InstantiateSampler() const = 0;
+		virtual std::shared_ptr<Shader>					InstantiateShader() const = 0;
+		virtual std::shared_ptr<ShaderStorageBuffer>	InstantiateShaderStorageBuffer() const = 0;
+		virtual std::shared_ptr<Texture>				InstantiateTexture() const = 0;
+		virtual std::shared_ptr<UniformBuffer>			InstantiateUniformBuffer() const = 0;
+		virtual std::shared_ptr<VertexBuffer>			InstantiateVertexBuffer() const = 0;
 	};
 }

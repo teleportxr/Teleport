@@ -23,7 +23,7 @@ namespace scr
 		IndexBufferCreateInfo m_CI;
 	
 	public:
-		IndexBuffer(RenderPlatform *r) :APIObject(r) {}
+		IndexBuffer(const RenderPlatform*const r) :APIObject(r) {}
 		virtual ~IndexBuffer()
 		{
 			m_CI.usage = BufferUsageBit::UNKNOWN_BIT;

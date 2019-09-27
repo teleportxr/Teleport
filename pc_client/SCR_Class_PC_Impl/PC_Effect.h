@@ -11,7 +11,7 @@ namespace pc_client
 	private:
 
 	public:
-		PC_Effect(scr::RenderPlatform *r) :scr::Effect(r) {}
+		PC_Effect(const scr::RenderPlatform*const r) :scr::Effect(r) {}
 		// Inherited via Effect
 		virtual void Create(EffectCreateInfo * pEffectCreateInfo) override;
 		virtual void CreatePass(EffectPassCreateInfo* pEffectPassCreateInfo) override;

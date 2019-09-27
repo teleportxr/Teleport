@@ -12,7 +12,7 @@ namespace pc_client
 	private:
 
 	public:
-		PC_FrameBuffer(scr::RenderPlatform *r):scr::FrameBuffer(r) {}
+		PC_FrameBuffer(const scr::RenderPlatform *r):scr::FrameBuffer(r) {}
 
 		// Inherited via FrameBuffer
 		void Destroy() override;

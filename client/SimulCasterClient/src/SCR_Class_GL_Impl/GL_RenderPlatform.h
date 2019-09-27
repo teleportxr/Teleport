@@ -24,15 +24,15 @@ class GL_RenderPlatform final : public scr::RenderPlatform
         	:scr::RenderPlatform() {}
         ~GL_RenderPlatform() {}
 
-		std::shared_ptr<scr::FrameBuffer>			InstantiateFrameBuffer() override;
-		std::shared_ptr<scr::IndexBuffer>			InstantiateIndexBuffer() override;
-		std::shared_ptr<scr::Effect>				InstantiateEffect() override;
-		std::shared_ptr<scr::Sampler>				InstantiateSampler() override;
-		std::shared_ptr<scr::Shader>				InstantiateShader() override;
-		std::shared_ptr<scr::ShaderStorageBuffer> 	InstantiateShaderStorageBuffer() override;
-		std::shared_ptr<scr::Texture>				InstantiateTexture() override;
-		std::shared_ptr<scr::UniformBuffer>			InstantiateUniformBuffer() override;
-		std::shared_ptr<scr::VertexBuffer>			InstantiateVertexBuffer() override;
+		std::shared_ptr<scr::FrameBuffer>			InstantiateFrameBuffer() const override;
+		std::shared_ptr<scr::IndexBuffer>			InstantiateIndexBuffer() const override;
+		std::shared_ptr<scr::Effect>				InstantiateEffect() const override;
+		std::shared_ptr<scr::Sampler>				InstantiateSampler() const override;
+		std::shared_ptr<scr::Shader>				InstantiateShader() const override;
+		std::shared_ptr<scr::ShaderStorageBuffer> 	InstantiateShaderStorageBuffer() const override;
+		std::shared_ptr<scr::Texture>				InstantiateTexture() const override;
+		std::shared_ptr<scr::UniformBuffer>			InstantiateUniformBuffer() const override;
+		std::shared_ptr<scr::VertexBuffer>			InstantiateVertexBuffer() const override;
 
 		scr::API::APIType GetAPI() const override
 		{
