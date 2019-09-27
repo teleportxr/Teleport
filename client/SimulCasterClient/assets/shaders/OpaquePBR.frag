@@ -189,9 +189,9 @@ vec3 PBR(vec3 normal, vec3 viewDir, vec3 diffuseColour, float roughness,float me
 
     float n_v				= saturate(dot(normal, viewDir));
     float cosLo				= saturate( dot(normal,- viewDir));
-    vec3 env_diffuse = textureLod(u_DiffuseCubemap, normal.zxy,1.0).rgb;
+    vec3 env_diffuse = textureLod(u_RoughSpecularCubemap, normal.zxy,0.0).rgb;
 
-    vec3 env_specular=textureLod(u_SpecularCubemap, normal.zxy,1.0).rgb;//roughnessE * 11.0
+    vec3 env_specular=textureLod(u_SpecularCubemap, normal.zxy,0.0).rgb;//roughnessE * 11.0
     vec3 env_rough_specular=textureLod(u_RoughSpecularCubemap, normal.zxy,0.0).rgb;//roughnessE * 11.0
    // env_specular=mix(env_specular,env_rough_specular,(roughness_mip-2.0));
     //Environment Light Calculation
@@ -211,7 +211,7 @@ vec3 PBR(vec3 normal, vec3 viewDir, vec3 diffuseColour, float roughness,float me
    // Specular *= saturate(pow(dot(normal, -viewDir) + ao, roughnessE) - 1.0 + ao);
 
 	// factor diffuse by kD ???
-    return env_diffuse; //kS is already included in the Specular calculations.
+    return env_specular; //kS is already included in the Specular calculations.
 }
 
 vec4 Gamma(vec4 a)
@@ -282,5 +282,5 @@ void main()
     float ao = GetAO(combinedLookup);
 	vec3 output_radiance = PBR(normal, viewDir, diffuseColour, roughness, metallic, ao);
     //vec3 refl = reflect(Wo, normal);
-    gl_FragColor = Gamma(vec4(combinedLookup.rgb,1.0));
+    gl_FragColor = Gamma(vec4(output_radiance.rgb,1.0));
 }

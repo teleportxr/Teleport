@@ -26,14 +26,12 @@ void colour_only()
     if(invocationId.x>=cub.faceSize||invocationId.y>=cub.faceSize)
         return;
     if(invocationId.z>=uint(6))
-        return;
+       return;
     ivec2 faceOffset=FaceOffsets[invocationId.z];
     ivec2 loadPos   = ivec2(invocationId.xy)+cub.sourceOffset+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
     vec4 lookup     = texelFetch(videoFrameTexture, loadPos, 0);
     ivec3 storePos  = ivec3(invocationId.xyz);
-    //lookup.r+=1.0;//float((invocationId.z/uint(2))%uint(2));
-    //lookup.b+=float(invocationId.z%uint(2));
-    //lookup.g+=float(invocationId.z/uint(3));
+   // lookup.r+=1.0;//float((invocationId.z/uint(2))%uint(2));
     imageStore(destTex, storePos.xyz, lookup);
 }
 

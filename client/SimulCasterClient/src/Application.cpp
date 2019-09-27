@@ -852,7 +852,7 @@ void Application::CopyToCubemaps()
 		{
 			static uint32_t face= 0;
 			mip_y = 0;
-			int32_t mip_size=specularSize;
+			int32_t mip_size=diffuseSize;
 			uint32_t M=mDiffuseTexture->GetTextureCreateInfo().mipCount;
 			scr::ivec2 offset={offset0.x+diffuseOffset.x,offset0.y+diffuseOffset.y};
 			for (uint32_t m        = 0; m < M; m++)
@@ -860,7 +860,7 @@ void Application::CopyToCubemaps()
 					inputCommand.m_WorkGroupSize = {(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount ,6};
 					mCubemapComputeShaderResources[0].SetImageInfo(1, 0, {mDiffuseTexture->GetSampler(), mDiffuseTexture, m});
 					cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
-					cubemapUB.faceSize             = mip_size;
+					cubemapUB.faceSize 				= uint32_t(mip_size);
 					cubemapUB.mip                  = m;
 					cubemapUB.face				   = 0;
 					inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
@@ -884,24 +884,25 @@ void Application::CopyToCubemaps()
 				inputCommand.m_WorkGroupSize={(mip_size+1)/ThreadCount,(mip_size+1)/ThreadCount,6};
 				mCubemapComputeShaderResources[0].SetImageInfo(1 ,0, {mSpecularTexture->GetSampler(), mSpecularTexture, m});
 				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
-				cubemapUB.faceSize 				= mip_size;
+				cubemapUB.faceSize 				= uint32_t(mip_size);
 				cubemapUB.mip             		= m;
-				cubemapUB.face				   = 0;
-				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
+				cubemapUB.face					= 0;
+				inputCommand.m_ShaderResources	= {mCubemapComputeShaderResources[0][1]};
 				mDeviceContext.DispatchCompute(&inputCommand);
-				mip_y+=2*mip_size;
+				mip_y							+=2*mip_size;
 				mip_size/=2;
 			}
 
 			mip_y=0;
 			mip_size=specularSize;
 			M=mRoughSpecularTexture->GetTextureCreateInfo().mipCount;
+			offset={offset0.x+roughOffset.x,offset0.y+roughOffset.y};
 			for(uint32_t m=0;m<M;m++)
 			{
 				inputCommand.m_WorkGroupSize={(mip_size+1)/ThreadCount,(mip_size+1)/ThreadCount,6};
 				mCubemapComputeShaderResources[0].SetImageInfo(1 ,0, {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture, m});
 				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
-				cubemapUB.faceSize = mip_size;
+				cubemapUB.faceSize 				= uint32_t(mip_size);
 				cubemapUB.mip             = m;
 				cubemapUB.face				   = 0;
 				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
