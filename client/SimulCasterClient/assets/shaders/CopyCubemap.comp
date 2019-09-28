@@ -39,6 +39,11 @@ void colour_only()
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void colour_and_depth()
 {
+    vec4 DepthMask[4] ;
+    DepthMask[0]=vec4(1.0,0.0,0.0,0.0); //0,0);
+    DepthMask[1]=vec4(0.0,1.0,0.0,0.0); //1,0);
+    DepthMask[2]=vec4(0.0,0.0,1.0,0.0); //0,1);
+    DepthMask[3]=vec4(0.0,0.0,0.0,1.0); //1,1);
     ivec2 FaceOffsets[6] ;
     FaceOffsets[0]=ivec2(0,0);
     FaceOffsets[1]=ivec2(1,0);
@@ -46,6 +51,7 @@ void colour_and_depth()
     FaceOffsets[3]=ivec2(0,1);
     FaceOffsets[4]=ivec2(1,1);
     FaceOffsets[5]=ivec2(2,1);
+    // encoded with DepthValue =  float4(SceneColor00.a,SceneColor10.a,SceneColor01.a,SceneColor11.a) / 20.0;
     uvec3 invocationId=gl_GlobalInvocationID;
     invocationId.z+=cub.face;
     if(invocationId.x>=cub.faceSize||invocationId.y>=cub.faceSize)
@@ -54,9 +60,13 @@ void colour_and_depth()
         return;
     ivec2 faceOffset    =FaceOffsets[invocationId.z];
     ivec2 loadPos       = ivec2(invocationId.xy)+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
-    ivec2 loadDepthPos  = loadPos/2+ivec2(0,cub.faceSize)*2;
+    ivec2 loadDepthPos  = loadPos/2;
+    ivec2 offsetToPos   =loadPos-loadDepthPos;
+    loadDepthPos        +=ivec2(0,cub.faceSize)*2;
     vec4 lookup         =texelFetch(videoFrameTexture, loadPos, 0);
     vec4 lookupDepth     =texelFetch(videoFrameTexture, loadDepthPos, 0);
+    vec4 dMask          =DepthMask[offsetToPos.x+2*offsetToPos.y];
+    float d             =dot(lookupDepth,dMask);
     ivec3 storePos  = ivec3(invocationId.xyz);
     imageStore(destTex, storePos.xyz, vec4(lookup.rgb,lookupDepth.r));
 }

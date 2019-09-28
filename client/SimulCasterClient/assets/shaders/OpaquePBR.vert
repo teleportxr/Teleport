@@ -88,6 +88,7 @@ void main()
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;
     v_CameraPosition    = cam.u_Position;
+    // sm.ViewMatrix[VIEW_ID]._
     mat4 cob = mat4(vec4(0.0, 1.0, 0.0, 0.0),
                     vec4(0.0, 0.0, 1.0, 0.0),
                     vec4(-1.0, 0.0, 0.0, 0.0),

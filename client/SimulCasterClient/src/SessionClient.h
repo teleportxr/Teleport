@@ -9,6 +9,7 @@
 #include <common_p.hpp>
 
 #include "Input.h"
+#include "basic_linear_algebra.h"
 
 
 typedef unsigned int uint;
@@ -24,6 +25,12 @@ public:
     virtual bool OnActorLeftBounds(avs::uid actor_uid) = 0;
 };
 
+struct HeadPose
+{
+    scr::vec4 orientation;
+    scr::vec3 position;
+};
+
 class SessionClient
 {
 public:
@@ -35,7 +42,7 @@ public:
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
 
-    void Frame(const OVR::ovrFrameInput& vrFrame, const ControllerState& controllerState);
+    void Frame(const HeadPose& headPose,bool poseValid, const ControllerState& controllerState);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -45,7 +52,7 @@ private:
     void ParseCommandPacket(ENetPacket* packet);
     void ParseTextCommand(const char *txt_utf8);
 
-    void SendHeadPose(const ovrRigidBodyPosef& pose);
+    void SendHeadPose(const HeadPose& headPose);
     void SendInput(const ControllerState& controllerState);
     void SendResourceRequests();
     //Tell server we are ready to receive geometry payloads.

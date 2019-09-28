@@ -152,13 +152,16 @@ private:
 	scc::GL_DeviceContext mDeviceContext;
 	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
 
-	scr::vec3                    capturePosition;
+	scr::vec3                    cameraPosition;	// in real space.
+	scr::vec3					oculusOrigin;		// in metres. The headPose will be relative to this.
+
 	std::shared_ptr<scr::Camera> scrCamera;
 
 	scc::GL_Effect                mEffect;
 	std::shared_ptr<scr::Sampler> mSampler;
 	std::shared_ptr<scr::Sampler> mSamplerCubeMipMap;
 
+	bool receivedInitialPos=false;
 	struct OVRActor
 	{
 		std::vector<std::shared_ptr<OVR::ovrSurfaceDef>> ovrSurfaceDefs;

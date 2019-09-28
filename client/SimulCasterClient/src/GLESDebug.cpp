@@ -97,9 +97,9 @@ void GL_APIENTRY android_opengles_debug_callback(GLenum source, GLenum type, GLu
 			_severity = "UNKNOWN";
 			break;
 	}
-
-	OVR_WARN("ERROR: OpenGLES!: %d: %s of %s severity, raised from %s: %s", id, _type, _severity,
-			 _source, msg);
+	char txt[1000];
+	sprintf(txt,msg,data);
+	OVR_WARN("ERROR: OpenGLES!: %d: %s of %s severity, raised from %s: %s", id, _type, _severity,_source, txt);
 }
 
 void scc::SetupGLESDebug()

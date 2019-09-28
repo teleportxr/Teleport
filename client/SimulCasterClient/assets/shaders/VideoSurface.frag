@@ -38,7 +38,7 @@ void main()
     // offset angle is atan(4cm/distance)
     // depth received is distance/50metres.
 
-    float dist_m=max(1.0,20.0*depth);
+    float dist_m=max(0.2,20.0*depth);
 
     vec3 pos_m=dist_m*vDirection;
     pos_m+=vEyeOffset;

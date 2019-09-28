@@ -81,6 +81,19 @@ namespace scr
 		{
 			return vec3(x + other.x, y + other.y, z + other.z);
 		}
+		const vec3 &operator+= (const vec3& other)
+		{
+			x +=other.x;
+			y +=other.y;
+			z +=other.z;
+			return *this;
+		}
+
+		vec3 operator- () const
+		{
+			return vec3(-x , -y , -z );
+		}
+
 
 		vec3 operator- (const vec3& other) const
 		{
@@ -350,7 +363,7 @@ namespace scr
 			return result;
 		};
 		
-		inline vec4 Mat4Vec4Multi(const vec4& input, const mat4& transform)
+		inline vec4 Mat4Vec4Multi(const vec4& input, const mat4& transform) const
 		{
 			const float& x = input.x;
 			const float& y = input.y;
@@ -363,12 +376,12 @@ namespace scr
 			vec4 output(transform_i * x + transform_j * y + transform_k * z + transform_l * w);
 			return output;
 		}
-		inline vec4 operator* (const vec4& input)
+		inline vec4 operator* (const vec4& input) const
 		{
 			return Mat4Vec4Multi(input, *this);
 		}
 
-		inline mat4 Mat4Mat4Multi(mat4& transform, const mat4& input)
+		inline mat4 Mat4Mat4Multi(const mat4& transform, const mat4& input) const
 		{
 			vec4 input_i(input.a, input.e, input.i, input.m);
 			vec4 input_j(input.b, input.f, input.j, input.n);
@@ -382,7 +395,7 @@ namespace scr
 			output.Transpose();
 			return output;
 		}
-		inline mat4 operator* (const mat4& input)
+		inline mat4 operator* (const mat4& input) const
 		{
 			return Mat4Mat4Multi(*this, input);
 		}

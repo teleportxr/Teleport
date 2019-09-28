@@ -227,11 +227,12 @@ void SessionClient::Disconnect(uint timeout)
     }
 }
 
-void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame, const ControllerState& controllerState)
+void SessionClient::Frame(const HeadPose& headPose, bool poseValid,const ControllerState& controllerState)
 {
     if(mClientHost && mServerPeer)
     {
-        SendHeadPose(vrFrame.Tracking.HeadPose);
+    	if(poseValid)
+	        SendHeadPose(headPose);
         SendInput(controllerState);
         SendResourceRequests();
 
@@ -373,15 +374,17 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
     }
 }
 
-void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
+void SessionClient::SendHeadPose(const HeadPose& pose)
 {
     // TODO: Use compact representation with only 3 float values for wire format.
-    const ovrQuatf HeadPoseOVR = pose.Pose.Orientation;
+    const ovrQuatf HeadPoseOVR = *((const ovrQuatf*)&pose.orientation);
+    HeadPose headPose2;
     ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
     ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR,RootPose);
     // Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
-    ovrQuatf HeadPose = { RelPose.x, RelPose.y,RelPose.z, RelPose.w };
-    ENetPacket* packet = enet_packet_create(&HeadPose, sizeof(HeadPose), 0);
+    headPose2.orientation = scr::vec4(RelPose.x, RelPose.y,RelPose.z, RelPose.w);
+    headPose2.position=*((scr::vec3*)&pose.position);
+    ENetPacket* packet = enet_packet_create(&headPose2, sizeof(HeadPose), 0);
     enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
 }
 

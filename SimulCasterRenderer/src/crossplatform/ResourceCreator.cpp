@@ -477,7 +477,7 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 ///Most of these sets need actual values, rather than default initalisers.
 void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
 {
-	const size_t textureSlotSize = 3; //For pbrMetallicRoughness.baseColorTexture, normalTexture, pbrMetallicRoughness.metallicRoughnessTexture
+//	const size_t textureSlotSize = 3; //For pbrMetallicRoughness.baseColorTexture, normalTexture, pbrMetallicRoughness.metallicRoughnessTexture
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
 	std::vector<avs::uid> missingResources;
 	//newMaterial->textureSlots.reserve(textureSlotSize);
@@ -616,7 +616,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 }
 
 void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
-	{
+{
 	if (m_pActorManager->HasActor(node_uid)) //Check the actor has already been added, if so update transform.
 	{
 		m_pActorManager->GetActor(node_uid)->GetTransform().UpdateModelMatrix(node.transform.position, node.transform.rotation, node.transform.scale);
@@ -639,7 +639,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 			CreateLight(node_uid, node);
 	        break;
 	    default:
-	        SCR_LOG("Unknown NodeDataType: %c", node.data_type)
+	        SCR_LOG("Unknown NodeDataType: %c", (int)node.data_type)
 	        break;
 	    }
 	}
