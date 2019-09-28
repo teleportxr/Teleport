@@ -87,7 +87,7 @@ namespace scr
 		DeviceContextCreateInfo m_CI;
 
 	public:
-		DeviceContext(RenderPlatform *r) 
+		DeviceContext(const RenderPlatform*const r)
 			: APIObject(r) {}
 		virtual ~DeviceContext() = default;
 

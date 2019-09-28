@@ -136,7 +136,7 @@ int GetByteSize(const scr::VertexBufferLayout::VertexAttribute &attr)
 }
 
 
-PC_VertexBuffer::PC_VertexBuffer(scr::RenderPlatform* r) :scr::VertexBuffer(r),m_layout(nullptr),m_SimulBuffer(nullptr)
+PC_VertexBuffer::PC_VertexBuffer(const scr::RenderPlatform*const r) :scr::VertexBuffer(r),m_layout(nullptr),m_SimulBuffer(nullptr)
 {
 }
 
@@ -161,7 +161,7 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCr
 	m_CI = *pVertexBufferCreateInfo;
 	
 	size_t num_vertices = m_CI.size / m_CI.layout->m_Stride;
-	auto *rp = static_cast<PC_RenderPlatform*> (renderPlatform);
+	const auto *const rp = static_cast<const PC_RenderPlatform* const> (renderPlatform);
 	auto *srp = rp->GetSimulRenderPlatform();
 	m_SimulBuffer = srp->CreateBuffer();
 	size_t numAttr = m_CI.layout->m_Attributes.size();

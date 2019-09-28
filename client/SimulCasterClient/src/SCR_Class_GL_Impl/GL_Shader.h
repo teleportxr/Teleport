@@ -11,7 +11,7 @@ namespace scc
 		GLuint glShader;
 		std::string source;
 	public:
-		GL_Shader(scr::RenderPlatform *r)
+		GL_Shader(const scr::RenderPlatform*const r)
 			:scr::Shader(r) {}
 
 		void Create(const ShaderCreateInfo* pShaderCreateInfo) override;

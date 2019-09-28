@@ -16,7 +16,7 @@ class GL_FrameBuffer final : public scr::FrameBuffer
 	    OVR::ovrEyeBuffers m_EyeBuffers;
 
 	public:
-		GL_FrameBuffer(scr::RenderPlatform* r)
+		GL_FrameBuffer(const scr::RenderPlatform*const r)
 			:scr::FrameBuffer(r) {}
 
 		void Create(FrameBufferCreateInfo* pFrameBufferCreateInfo) override;

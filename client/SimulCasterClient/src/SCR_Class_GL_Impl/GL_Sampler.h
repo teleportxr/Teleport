@@ -10,7 +10,7 @@ namespace scc
 class GL_Sampler final : public scr::Sampler
 	{
 	public:
-		GL_Sampler(scr::RenderPlatform* r)
+		GL_Sampler(const scr::RenderPlatform*const r)
 			:scr::Sampler(r) {}
 
 		void Create(SamplerCreateInfo* pSamplerCreateInfo) override;

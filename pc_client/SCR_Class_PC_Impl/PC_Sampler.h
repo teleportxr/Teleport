@@ -9,7 +9,7 @@ namespace pc_client
 	class PC_Sampler final : public scr::Sampler
 	{
 	public:
-		PC_Sampler(scr::RenderPlatform *r):scr::Sampler(r) {}
+		PC_Sampler(const scr::RenderPlatform*const r):scr::Sampler(r) {}
 
 		void Destroy() override;
 		

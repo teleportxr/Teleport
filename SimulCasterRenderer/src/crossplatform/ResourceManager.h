@@ -6,6 +6,7 @@
 #include <functional> //std::function
 #include <vector> //std::vector
 #include <memory> //Smart pointers
+#include <mutex> //Thread safety.
 
 typedef unsigned long long uid; //Unique identifier for a resource.
 
@@ -36,8 +37,9 @@ public:
 	//Returns whether the manager contains the resource.
 	bool Has(uid id) const;
 	
-	/// Returns the internal cache.
-	std::unordered_map<uid, ResourceData>& GetCache();
+	//Returns the internal cache.
+	//	cacheLock : A lock which must live for the same duration of the map, or will break thread-safety. 
+	std::unordered_map<uid, ResourceData>& GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock);
 
 	//Set the factor to adjust the lifetime of resources before freeing them; i.e. 0.5 would halve the lifetime of a resource in the manager.
 	void SetLifetimeFactor(float lifetimeFactor);
@@ -64,6 +66,8 @@ private:
 	std::function<void(T&)> freeResourceFunction; //A functional reference to the function that frees this resource.
 	std::unordered_map<uid, ResourceData> cachedItems = std::unordered_map<uid, ResourceData>(); //Hashmap of the stored resources.
 
+	mutable std::mutex mutex_cachedItems; //Mutex for thread-safety of cachedItems.
+
 	//Frees the resource using the function that was passed to the resource manager on construction
 	void FreeResource(T & resource);
 	//Remove, and free the memory of, the item the iterator is pointing to.
@@ -86,18 +90,21 @@ ResourceManager<T>::~ResourceManager()
 template<class T>
 void ResourceManager<T>::Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime)
 {
+	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	cachedItems.emplace(id, ResourceData{newItem, postUseLifetime, 0});
 }
 
 template<class T>
 bool ResourceManager<T>::Has(uid id) const
 {
+	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	return cachedItems.find(id) != cachedItems.end();
 }
 
 template<class T>
-inline std::unordered_map<uid, typename ResourceManager<T>::ResourceData>& ResourceManager<T>::GetCache()
+inline std::unordered_map<uid, typename ResourceManager<T>::ResourceData>& ResourceManager<T>::GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock)
 {
+	cacheLock = std::make_unique<std::lock_guard<std::mutex>>(mutex_cachedItems);
 	return cachedItems;
 }
 
@@ -110,28 +117,23 @@ void ResourceManager<T>::SetLifetimeFactor(float lifetimeFactor)
 template<class T>
 std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 {
-	try
-	{
-		auto it=cachedItems.find(id);
-		if(it==cachedItems.end())
-			return nullptr;
+	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 
-		ResourceData& data = it->second;
-
-		data.timeSinceLastUse = 0;
-
-		return data.resource;
-	}
-	//Return nullptr if the value doesn't exist.
-	catch(std::out_of_range oor)
-	{
+	auto it=cachedItems.find(id);
+	if(it==cachedItems.end())
 		return nullptr;
-	}
+
+	ResourceData& data = it->second;
+
+	data.timeSinceLastUse = 0;
+
+	return data.resource;
 }
 
 template<class T>
 void ResourceManager<T>::Clear()
 {
+	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	for(auto &[id, data] : cachedItems)
 	{
 		FreeResource(*data.resource);
@@ -143,6 +145,7 @@ void ResourceManager<T>::Clear()
 template<class T>
 void ResourceManager<T>::ClearCareful(std::vector<uid> excludeList)
 {
+	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
 	{
 		bool isExcluded = false; //We don't remove the resource if it is excluded.
@@ -174,6 +177,7 @@ void ResourceManager<T>::ClearCareful(std::vector<uid> excludeList)
 template<class T>
 void ResourceManager<T>::Update(uint32_t deltaTimestamp)
 {
+	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
 	{

@@ -30,15 +30,15 @@ namespace pc_client
         PC_RenderPlatform():scr::RenderPlatform() {}
         ~PC_RenderPlatform() {}
 
-		std::shared_ptr<scr::FrameBuffer>			InstantiateFrameBuffer()		;
-		std::shared_ptr<scr::IndexBuffer>			InstantiateIndexBuffer()		;
-		std::shared_ptr<scr::Effect>				InstantiateEffect()				;
-		std::shared_ptr<scr::Sampler>				InstantiateSampler()			;
-		std::shared_ptr<scr::Shader>				InstantiateShader()				;
-		std::shared_ptr<scr::ShaderStorageBuffer>	InstantiateShaderStorageBuffer();
-		std::shared_ptr<scr::Texture>				InstantiateTexture()			;
-		std::shared_ptr<scr::UniformBuffer>			InstantiateUniformBuffer()		;
-		std::shared_ptr<scr::VertexBuffer>			InstantiateVertexBuffer()		;
+		std::shared_ptr<scr::FrameBuffer>			InstantiateFrameBuffer() const override;
+		std::shared_ptr<scr::IndexBuffer>			InstantiateIndexBuffer() const override;
+		std::shared_ptr<scr::Effect>				InstantiateEffect() const override;
+		std::shared_ptr<scr::Sampler>				InstantiateSampler() const override;
+		std::shared_ptr<scr::Shader>				InstantiateShader() const override;
+		std::shared_ptr<scr::ShaderStorageBuffer>	InstantiateShaderStorageBuffer() const override;
+		std::shared_ptr<scr::Texture>				InstantiateTexture() const override;
+		std::shared_ptr<scr::UniformBuffer>			InstantiateUniformBuffer() const override;
+		std::shared_ptr<scr::VertexBuffer>			InstantiateVertexBuffer() const override;
 
 		// Inherited via RenderPlatform
 		virtual scr::API::APIType GetAPI() const override
@@ -47,7 +47,7 @@ namespace pc_client
 		}
 
 		void SetSimulRenderPlatform(simul::crossplatform::RenderPlatform *r);
-		simul::crossplatform::RenderPlatform *GetSimulRenderPlatform()
+		simul::crossplatform::RenderPlatform *GetSimulRenderPlatform() const
 		{
 			return renderPlatform;
 		}

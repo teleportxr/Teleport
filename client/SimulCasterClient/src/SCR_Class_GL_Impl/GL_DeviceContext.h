@@ -17,7 +17,7 @@ namespace scc
 class GL_DeviceContext final : public scr::DeviceContext
     {
 	public:
-    GL_DeviceContext(scr::RenderPlatform *r)
+    GL_DeviceContext(const scr::RenderPlatform*const r)
         :scr::DeviceContext(r) {}
 
         void Create(DeviceContextCreateInfo* pDeviceContextCreateInfo) override;

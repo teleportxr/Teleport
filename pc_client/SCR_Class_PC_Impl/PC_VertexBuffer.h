@@ -21,7 +21,7 @@ namespace pc_client
 		simul::crossplatform::Buffer *m_SimulBuffer;
 		simul::crossplatform::Layout *m_layout;
 	public:
-		PC_VertexBuffer(scr::RenderPlatform* r);
+		PC_VertexBuffer(const scr::RenderPlatform*const r);
 
 		simul::crossplatform::Layout* GetLayout()
 		{

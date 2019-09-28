@@ -508,8 +508,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	ovrQuatf headPoseC={-headPose.x,-headPose.y,-headPose.z,headPose.w};
 	ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPose,X0),headPoseC);
 #if 1
-	//Orient: %1.3f, {%1.3f, %1.3f, %1.3f}
-    //Pos: %3.3f %3.3f %3.3f
+    std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto ctr=mNetworkSource.getCounterValues();
 	if(mSession.IsConnected())
 	{
@@ -528,7 +527,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 				cameraPosition.x, cameraPosition.y, cameraPosition.z,
 				headPose.w, headPose.x, headPose.y, headPose.z,
 				headPos.x, headPos.y, headPos.z,
-				controllerState.mTrackpadX, controllerState.mTrackpadY,
 				ctr.m_packetMapOrphans);
 	}
 	else
@@ -647,6 +645,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	RemoveInvalidOVRActors();
 	uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
 	resourceManagers.Update(time_elapsed);
+	resourceCreator.Update(time_elapsed);
 	RenderLocalActors(res);
 	GL_CheckErrors("Frame: Post-SCR");
 
@@ -814,6 +813,10 @@ void Application::OnVideoStreamClosed()
 	mPipeline.deconfigure();
 	mPipeline.reset();
 	mPipelineConfigured = false;
+
+	//GGMP: We need a more robust system of the client telling the server what data it has, and the server sending what the client needs.
+	resourceManagers.mActorManager.Clear();
+	mOVRActors.clear();
 }
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)
