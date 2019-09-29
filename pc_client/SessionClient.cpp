@@ -339,6 +339,11 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 
 void SessionClient::ParseCommandPacket(ENetPacket* packet)
 {
+	if (!packet || !packet->data)
+	{
+		WARN("Received empty packet ");
+		return;
+	}
 	avs::CommandPayloadType commandPayloadType = *((avs::CommandPayloadType*)packet->data);
 	size_t cmdSize = avs::GetCommandSize(commandPayloadType);
 	switch (commandPayloadType)
@@ -348,6 +353,11 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			const char *txt_utf8 = (const char *)(packet->data + cmdSize);
 			assert(txt_utf8[packet->dataLength - cmdSize - 1] == (char)0);
 			ParseTextCommand(txt_utf8);
+		}
+		break; 
+		case avs::CommandPayloadType::AcknowledgeHandshake:
+		{
+			handshakeAcknowledged = true;
 		}
 		break;
 		case avs::CommandPayloadType::Setup:
@@ -469,12 +479,16 @@ void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
 
 void SessionClient::SendHeadPose(const HeadPose &h)
 {
+	if (!handshakeAcknowledged)
+		return;
 	ENetPacket* packet = enet_packet_create(&h, sizeof(HeadPose), 0);
 	enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
 }
 
 void SessionClient::SendInput(const ControllerState& controllerState)
 {
+	if (!handshakeAcknowledged)
+		return;
 	RemotePlayInputState inputState = {};
 
 	const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
@@ -545,6 +559,7 @@ void SessionClient::SendResourceRequests()
 
 void SessionClient::SendHandshake(const avs::Handshake &handshake)
 {
-	ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
+	handshakeAcknowledged = false;
+	ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 }

@@ -40,7 +40,7 @@ int2 specularOffset(0,0);
 int2 diffuseOffset(3* specularSize/2, specularSize*2);
 int2 roughOffset(3* specularSize,0);
 int2 lightOffset(3 * specularSize+3 * specularSize / 2, specularSize * 2);
-
+static bool strict = false;
 void set_float4(float f[4], float a, float b, float c, float d)
 {
 	f[0] = a;
@@ -347,7 +347,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		}
 		{
 			cubemapConstants.depthOffsetScale = vec4(0,0,0,0);
-			cubemapConstants.offsetFromVideo = vec3(camera.GetPosition())-videoPos;
+			cubemapConstants.offsetFromVideo = strict?vec3(0,0,0):(vec3(camera.GetPosition())-videoPos);
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -643,7 +643,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	size_t stream_height = setupCommand.video_height;
 
 	videoAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.colour_cubemap_size, setupCommand.colour_cubemap_size, 1, 1,
-		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+		crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, specularSize, specularSize, 1, 3,	crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	roughSpecularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, specularSize, specularSize, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, lightSize, lightSize, 1, 1,
@@ -725,7 +725,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	static float spd = 0.2f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
-							,spd
+							, strict ?spd*100.0f:spd
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
@@ -769,9 +769,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		headPose.position = *((avs::vec3*) & pos);
 		sessionClient.Frame(headPose,decoder->hasValidTransform(),controllerState);
 		// headPose sent, now reset camera pos...
-		if (decoder->hasValidTransform())
+		if (strict&&decoder->hasValidTransform())
 		{
-		//	camera.SetPosition(videoPos);
+			camera.SetPosition(videoPos);
 		}
 		pipeline.process();
 

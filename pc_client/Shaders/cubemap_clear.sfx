@@ -34,21 +34,22 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 {
 	const float PI = 3.1415926536;
 	const float TwoPI = 2.0 * PI;
-	vec3 view = TexCoordsToView(IN.texCoords);
-	view.xy = -view.yx;
-	view.z *= -1.0;
+	vec3 view_orig = TexCoordsToView(IN.texCoords);
+	view_orig.xy = -view_orig.yx;
+	view_orig.z *= -1.0;
 
-	vec4 initialLookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0.0);
-	float depth = initialLookup.a;
-	float dist_m = max(0.2, 20.0 * depth);
-	
-    vec3 pos_m	=dist_m* view;
-    pos_m		+=vec3(offsetFromVideo.yx, offsetFromVideo.z);
-
-	vec3 view2 = normalize(pos_m);
-	vec4 finalLookup = cubemapTexture.SampleLevel(cubeSamplerState, view2, 0).rgba;
-
-	return finalLookup;// *lookup.a;
+	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
+	vec3 view = view_orig;
+	for (int i = 0; i < 1; i++)
+	{
+		float depth = initialLookup.a;
+		float dist_m = max(0.2, 20.0 * depth);
+		vec3 pos_m = dist_m * view_orig;
+		pos_m += vec3(offsetFromVideo.yx, offsetFromVideo.z) * step(-0.8, -depth); 
+		view = normalize(pos_m);
+		lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
+	}
+	return lookup;
 }
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
@@ -86,19 +87,19 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 	plainTexture.GetDimensions(InputW, InputH);
 	uint OutputW, OutputH, OutputD;
 	RWTextureTargetArray.GetDimensions(OutputW, OutputH, OutputD);
-	int3 pos = int3(ThreadID);
-	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
-	int3 loadPos = int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0);
+	int3 pos			= int3(ThreadID);
+	int2 FaceOffsets[]	= { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
+	int3 loadPos		= int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0);
 	float4 SceneColor = plainTexture.Load(loadPos);
 
 	int2 loadDepthPos	= loadPos / 2;
 	int2 offsetToPos	= pos.xy % 2;// -loadDepthPos * 2;
 	loadDepthPos		+= int2(0, OutputW) * 2;	// underneath the main cube in the video texture.
-	vec3 dMask = DepthMask[offsetToPos.x];// +2 * offsetToPos.y ];
+	vec3 dMask			= DepthMask[offsetToPos.x];// +2 * offsetToPos.y ];
 	vec3 lookupDepth	= plainTexture.Load(int3(loadDepthPos, 0)).rgb;
 
 	float d = dot(lookupDepth, dMask);
-		SceneColor.a		= d;
+	SceneColor.a		= d;
 	RWTextureTargetArray[pos] = SceneColor;// float4(SceneColor.rgba);
 }
 

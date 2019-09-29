@@ -339,9 +339,11 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 
 			//Copy resources the client will need from the packet.
             size_t resourceListSize = sizeof(avs::uid) * setupCommand.resourceCount;
-            std::vector<avs::uid> resourcesClientNeeds(setupCommand.resourceCount);
-            memcpy(resourcesClientNeeds.data(), packet->data + commandSize, resourceListSize);
-
+			std::vector<avs::uid> resourcesClientNeeds(setupCommand.resourceCount);
+            if(resourceListSize)
+			{
+				memcpy(resourcesClientNeeds.data(), packet->data + commandSize, resourceListSize);
+			}
             avs::Handshake handshake;
             handshake.isReadyToReceivePayloads=true;
             handshake.axesStandard = avs::AxesStandard::GlStyle;
