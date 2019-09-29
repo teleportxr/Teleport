@@ -4,10 +4,12 @@
 
 #include <string>
 #include <enet/enet.h>
+#include <libavstream/common.hpp>
 
 #include "Input.h"
 #include "Config.h"
 #include "Log.h"
+#include "crossplatform/basic_linear_algebra.h"
 
 typedef unsigned int uint;
 namespace avs
@@ -16,6 +18,12 @@ namespace avs
 	struct Handshake;
 	typedef unsigned long long uid;
 }
+
+struct HeadPose
+{
+	scr::vec4 orientation;
+	scr::vec3 position;
+};
 
 class ResourceCreator;
 
@@ -40,7 +48,7 @@ public:
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
 
-    void Frame(const float HeadPose[4],const ControllerState &controllerState);
+    void Frame(const HeadPose &headPose,bool pose_valid,const ControllerState &controllerState);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -50,7 +58,7 @@ private:
 	void ParseCommandPacket(ENetPacket* packet);
 	void ParseTextCommand(const char *txt_utf8);
 
-	void SendHeadPose(const float quat[4]);
+	void SendHeadPose(const HeadPose& h);
 	void SendInput(const ControllerState &controllerState);
 	void SendResourceRequests();
 	//Tell server we are ready to receive geometry payloads.

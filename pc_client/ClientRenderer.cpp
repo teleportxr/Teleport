@@ -440,7 +440,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 {
 	avs::Transform transform=decoder[0].getCameraTransform();
 	vec3 pos = (const float*)&transform.position;
-	camera.SetPosition(pos);
+	//camera.SetPosition(pos);
 
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
@@ -524,10 +524,6 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			layout->Unapply(deviceContext);
 			pbrEffect->Unapply(deviceContext);
 
-			float heightOffset = -80.0F;
-			scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(scr::vec3(-480.0F, -80.0F, -142.0F + heightOffset));
-			scr::mat4 changeOfBasis = scr::mat4(scr::vec4(0.0F, 1.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 1.0F, 0.0F), scr::vec4(-1.0F, 0.0F, 0.0F, 0.0F), scr::vec4(0.0F, 0.0F, 0.0F, 1.0F));
-			scr::mat4 scr_Transform = changeOfBasis * inv_ue4ViewMatrix;// *ic_mmm.pTransform->GetTransformMatrix();
 			element++;
 		}
 	}
@@ -606,7 +602,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 {
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
-
+	receivedInitialPos = false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 2000000;	//200k like Oculus Quest
@@ -736,9 +732,21 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
 		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f,0.0f, 0.0f));
+		if (!receivedInitialPos && decoder->hasValidTransform())
+		{
+			// Oculus Origin means where the headset's zero is in real space.
+			oculusOrigin = decoder->getCameraTransform().position;
+			receivedInitialPos = true;
+			vec3 pos = (const float*)&oculusOrigin;
+			camera.SetPosition(pos);
+		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
-		sessionClient.Frame(q_rel,controllerState);
+		HeadPose headPose;
+		headPose.orientation = *((avs::vec4*) & q_rel);
+		vec3 pos = camera.GetPosition();
+		headPose.position = *((avs::vec3*) & pos);
+		sessionClient.Frame(headPose,decoder->hasValidTransform(),controllerState);
 		pipeline.process();
 
 		static short c = 0;

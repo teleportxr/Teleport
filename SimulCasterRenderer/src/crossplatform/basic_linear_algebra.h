@@ -106,10 +106,13 @@ namespace scr
 			return vec3(a * x, a * y, a * z);
 		}
 
-		vec3 operator=(const avs::vec3 &vec)
+		const vec3& operator=(const avs::vec3& vec)
 		{
-			return {vec.x, vec.y, vec.z};
-		}
+			x = vec.x;
+			y = vec.y;
+			z = vec.z;
+			return *this;
+		};
 	};
 	struct vec4
 	{
@@ -151,23 +154,26 @@ namespace scr
 			return vec4(a * x, a * y, a * z, a * w);
 		}
 
-		void operator=(const avs::vec4 &vec)
+		const vec4 &operator=(const avs::vec4 &vec)
 		{
 			x = vec.x;
 			y = vec.y;
 			z = vec.z;
 			w = vec.w;
+			return *this;
 		}
 	};
 	struct quat
 	{
-		float s, i, j, k;
+		float i, j, k, s;
 
 		quat()
-			:s(0), i(0), j(0), k(0) {}
+			:i(0), j(0), k(0), s(0) {}
 
-		quat(float s, float i, float j, float k)
-			: s(s), i(i), j(j), k(k) {}
+		quat(float i, float j, float k,float s)
+			:  i(i), j(j), k(k), s(s)
+		{
+		}
 		
 		quat(float angle, const vec3& axis)
 		{
@@ -183,7 +189,7 @@ namespace scr
 
 		quat Conjugate()
 		{
-			return quat(this->s, -this->i, -this->j, -this->k);
+			return quat(-this->i, -this->j, -this->k,this->s);
 		}
 		quat Normalise()
 		{
@@ -229,9 +235,13 @@ namespace scr
 			);
 		}
 
-		quat operator=(const vec4 &vec)
+		const quat &operator=(const vec4 &vec)
 		{
-			return {vec.w, vec.x, vec.y, vec.z};
+			s = vec.w;
+			i = vec.x;
+			j = vec.y;
+			k = vec.z;
+			return *this;
 		}
 	};
 	struct mat4

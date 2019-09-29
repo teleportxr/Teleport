@@ -275,11 +275,12 @@ void SessionClient::Disconnect(uint timeout)
 	}
 }
 
-void SessionClient::Frame(const float HeadPose[4],const ControllerState& controllerState)
+void SessionClient::Frame(const HeadPose &headPose,bool pose_valid,const ControllerState& controllerState)
 {
 	if (mClientHost && mServerPeer)
 	{
-		SendHeadPose(HeadPose);
+		if(pose_valid)
+			SendHeadPose(headPose);
 		SendInput(controllerState);
 		SendResourceRequests();
 
@@ -427,9 +428,9 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
 	}
 }
 
-void SessionClient::SendHeadPose(const float quat[4])
+void SessionClient::SendHeadPose(const HeadPose &h)
 {
-	ENetPacket* packet = enet_packet_create(quat, 4*sizeof(float), 0);
+	ENetPacket* packet = enet_packet_create(&h, sizeof(HeadPose), 0);
 	enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
 }
 

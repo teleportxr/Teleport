@@ -277,7 +277,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		scr::Camera::CameraCreateInfo c_ci = {
 				(scr::RenderPlatform*)(&renderPlatform),
 				scr::Camera::ProjectionType::PERSPECTIVE,
-				scr::quat(1.0f, 0.0f, 0.0f, 0.0f),
+				scr::quat(0.0f, 0.0f, 0.0f, 1.0f),
 				cameraPosition
 		};
 		scrCamera = std::make_shared<scr::Camera>(&c_ci);
@@ -515,7 +515,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		mGuiSys->ShowInfoText(
 				0.017f, "Packets Dropped: Network %d | Decoder %d\n"
 						"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
-						"Actors: SCR %d | OVR %d | Lights: %d\n"
+						"Actors: SCR %d | OVR %d \n"
 						"Camera Position: %1.3f, %1.3f, %1.3f\n"
 						"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
 						"Pos: %3.3f %3.3f %3.3f\n"
@@ -523,7 +523,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 				ctr.decoderPacketsDropped,
 				frameRate, ctr.bandwidthKPS,
 				(uint64_t) resourceManagers.mActorManager.GetActorList().size(),
-				(uint64_t) mOVRActors.size(), resourceManagers.mLightManager.GetCache().size(),
+				(uint64_t) mOVRActors.size(),
 				cameraPosition.x, cameraPosition.y, cameraPosition.z,
 				headPose.w, headPose.x, headPose.y, headPose.z,
 				headPos.x, headPos.y, headPos.z,

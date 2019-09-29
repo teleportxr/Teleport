@@ -170,4 +170,6 @@ public:
 	avs::Pipeline pipeline;
 	int RenderMode;
 	std::shared_ptr<scr::Material> mFlatColourMaterial;
+	bool receivedInitialPos = false;
+	avs::vec3 oculusOrigin;
 };
