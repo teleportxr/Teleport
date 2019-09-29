@@ -111,7 +111,7 @@ public:
 	ClientRenderer();
 	~ClientRenderer();
 	// Implement SessionCommandInterface
-	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) override;
 	void OnVideoStreamClosed() override;
 
 	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
