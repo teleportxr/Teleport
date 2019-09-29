@@ -598,7 +598,7 @@ void ClientRenderer::Update()
 	previousTimestamp = timestamp;
 }
 
-void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
+void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds)
 {
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
@@ -678,6 +678,16 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 		avsGeometryTarget.configure(&resourceCreator);
 		pipeline.link({ &source, &avsGeometryDecoder, &avsGeometryTarget });
 	}
+
+	if(shouldClearEverything)
+	{
+		resourceManagers.Clear();
+	}
+	else
+	{
+		resourceManagers.ClearCareful(resourcesClientNeeds);
+	}
+
 	handshake.isReadyToReceivePayloads = true;
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
 	handshake.MetresPerUnit = 1.0f;
@@ -693,9 +703,6 @@ void ClientRenderer::OnVideoStreamClosed()
 	pipeline.deconfigure();
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
-
-	//GGMP: Temporary measure, so I can test if resources are being removed, or not.
-	resourceManagers.Clear();
 }
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)

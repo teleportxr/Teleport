@@ -72,6 +72,21 @@ namespace scr
 			mLightManager.Clear();
 		}
 
+		void ClearCareful(std::vector<uid>& excludeList)
+		{
+			mIndexBufferManager.ClearCareful(excludeList);
+			mShaderManager.ClearCareful(excludeList);
+			mMaterialManager.ClearCareful(excludeList);
+			mTextureManager.ClearCareful(excludeList);
+			mUniformBufferManager.ClearCareful(excludeList);
+			mVertexBufferManager.ClearCareful(excludeList);
+			mMeshManager.ClearCareful(excludeList);
+			mLightManager.ClearCareful(excludeList);
+
+			//Last as it will likely be the largest.
+			mActorManager.ClearCareful(excludeList);
+		}
+
         scr::ActorManager  					mActorManager;
         ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
         ResourceManager<scr::Shader>        mShaderManager;

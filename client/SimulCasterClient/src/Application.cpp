@@ -684,7 +684,7 @@ bool Application::InitializeController()
 	return false;
 }
 
-void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
+void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds)
 {
 	if(mPipelineConfigured) {
 		// TODO: Fix!
@@ -718,7 +718,6 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		mNetworkSource.deconfigure();
 		return;
 	}
-	resourceManagers.Clear();
 	renderConstants.colourOffsetScale.x =0;
 	renderConstants.colourOffsetScale.y = 0;
 	renderConstants.colourOffsetScale.z = 1.0f;
@@ -801,7 +800,17 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 
 	mPipelineConfigured = true;
 
-	handshake.framerate=60;
+    if(shouldClearEverything)
+    {
+        resourceManagers.Clear();
+        mOVRActors.clear();
+    }
+    else
+    {
+        resourceManagers.ClearCareful(resourcesClientNeeds);
+    }
+
+    handshake.framerate=60;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
 	handshake.maxBandwidth=handshake.udpBufferSize*(size_t)handshake.framerate;
 }
@@ -813,10 +822,6 @@ void Application::OnVideoStreamClosed()
 	mPipeline.deconfigure();
 	mPipeline.reset();
 	mPipelineConfigured = false;
-
-	//GGMP: We need a more robust system of the client telling the server what data it has, and the server sending what the client needs.
-	resourceManagers.mActorManager.Clear();
-	mOVRActors.clear();
 }
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)

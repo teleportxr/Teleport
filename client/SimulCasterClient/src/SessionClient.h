@@ -18,7 +18,7 @@ class ResourceCreator;
 class SessionCommandInterface
 {
 public:
-    virtual void OnVideoStreamChanged(const avs::SetupCommand &,avs::Handshake &handshake) = 0;
+    virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) = 0;
     virtual void OnVideoStreamClosed() = 0;
 
     virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
@@ -58,6 +58,7 @@ private:
     //Tell server we are ready to receive geometry payloads.
     void SendHandshake(const avs::Handshake &handshake);
 
+    avs::uid lastServer_id = 0; //UID of the server we last connected to.
     uint32_t mClientID = 0;
     int mServiceDiscoverySocket = 0;
 

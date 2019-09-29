@@ -351,9 +351,23 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		break;
 		case avs::CommandPayloadType::Setup:
 		{
-			const avs::SetupCommand &setupCommand = *((const avs::SetupCommand*)packet->data);
+			size_t commandSize = sizeof(avs::SetupCommand);
+
+			//Copy command out of packet.
+			avs::SetupCommand setupCommand;
+			memcpy(&setupCommand, packet->data, commandSize);
+
+			//Copy resources the client will need from the packet.
+			size_t resourceListSize = sizeof(avs::uid) * setupCommand.resourceCount;
+			std::vector<avs::uid> resourcesClientNeeds(setupCommand.resourceCount);
+			memcpy(resourcesClientNeeds.data(), packet->data + commandSize, resourceListSize);
+
 			avs::Handshake handshake;
-			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake);
+			mCommandInterface->OnVideoStreamChanged(setupCommand, handshake, setupCommand.server_id != lastServer_id, resourcesClientNeeds);
+			//Add the unfound resources to the resource request list.
+			mResourceRequests.insert(mResourceRequests.end(), resourcesClientNeeds.begin(), resourcesClientNeeds.end());
+
+			lastServer_id = setupCommand.server_id;
 			SendHandshake(handshake);
 		}
 		break;
@@ -418,7 +432,8 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
 			setupCommand.depth_height = height/2;
 			setupCommand.compose_cube = 1;
 			avs::Handshake handshake;
-			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake);
+			std::vector<avs::uid> dummyList;
+			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake, true, dummyList);
 			SendHandshake(handshake);
 		}
 	}

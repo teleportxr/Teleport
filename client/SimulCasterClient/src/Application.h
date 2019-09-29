@@ -55,7 +55,7 @@ public:
 	bool InitializeController();
 
 	/* Begin SessionCommandInterface */
-	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake) override;
+	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) override;
 
 	virtual void OnVideoStreamClosed() override;
 

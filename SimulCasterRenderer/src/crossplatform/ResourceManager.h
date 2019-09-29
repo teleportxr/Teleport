@@ -7,6 +7,7 @@
 #include <vector> //std::vector
 #include <memory> //Smart pointers
 #include <mutex> //Thread safety.
+#include <algorithm> //std::remove
 
 typedef unsigned long long uid; //Unique identifier for a resource.
 
@@ -51,8 +52,8 @@ public:
 	//Clear, and free memory of, all resources.
 	void Clear();
 	//Clear, and free memory of, all resources; bar from resources on the list.
-	//	excludeList : Elements to not clear from the manager.
-	void ClearCareful(std::vector<uid> excludeList);
+	//	excludeList : Elements to not clear from the manager; removes UID if it finds the element.
+	void ClearCareful(std::vector<uid>& excludeList);
 
 	//Process the ResourceManager for this tick; allowing it to free any resources that have not been used for a while.
 	//	deltaTimestamp : Milliseconds that have passed since the last update.
@@ -143,7 +144,7 @@ void ResourceManager<T>::Clear()
 }
 
 template<class T>
-void ResourceManager<T>::ClearCareful(std::vector<uid> excludeList)
+void ResourceManager<T>::ClearCareful(std::vector<uid>& excludeList)
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
@@ -165,6 +166,7 @@ void ResourceManager<T>::ClearCareful(std::vector<uid> excludeList)
 		if(isExcluded)
 		{
 			++it;
+			excludeList.erase(std::remove(excludeList.begin(), excludeList.end(), excludeList[i - 1]), excludeList.end());
 		}
 		//Remove the resource if it is not.
 		else
