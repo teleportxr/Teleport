@@ -438,8 +438,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 
 void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
 {
-	avs::Transform transform=decoder[0].getCameraTransform();
-	vec3 pos = (const float*)&transform.position;
+	//avs::Transform transform=decoder[0].getCameraTransform();
+	//vec3 pos = (const float*)&transform.position;
 	//camera.SetPosition(pos);
 
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
@@ -493,7 +493,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			model=((const float*)& (transform.GetTransformMatrix()));
 			mat4::mul(cameraConstants.worldViewProj, *((mat4*)& deviceContext.viewStruct.viewProj), model);
 			cameraConstants.world = model;
-			cameraConstants.viewPosition = pos;
+			cameraConstants.viewPosition = camera.GetPosition();
 
 			scr::Material& mat = *m;
 			{
@@ -715,7 +715,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.up_down_input		=(float)keydown['t']-(float)keydown['g'];
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
-							,20.f
+							,2.f
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
