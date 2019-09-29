@@ -172,4 +172,5 @@ public:
 	std::shared_ptr<scr::Material> mFlatColourMaterial;
 	bool receivedInitialPos = false;
 	avs::vec3 oculusOrigin;
+	vec3 videoPos;
 };

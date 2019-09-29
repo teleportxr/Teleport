@@ -24,7 +24,7 @@ shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
 	float theta	= acos(-view.z) / PI;
 	vec2  uv	= fract(vec2(phi, theta));
 	
-	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv,colourOffsetScale), 0).rgba;
+	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
 	vec4 depth_lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
 	
     return lookup*depth_lookup;
@@ -37,10 +37,18 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	vec3 view = TexCoordsToView(IN.texCoords);
 	view.xy = -view.yx;
 	view.z *= -1.0;
-	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
-	vec4 depth_lookup = 1.0;// plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
 
-	return lookup;// *lookup.a;
+	vec4 initialLookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0.0);
+	float depth = initialLookup.a;
+	float dist_m = max(0.2, 20.0 * depth);
+	
+    vec3 pos_m	=dist_m* view;
+    pos_m		+=vec3(offsetFromVideo.yx, offsetFromVideo.z);
+
+	vec3 view2 = normalize(pos_m);
+	vec4 finalLookup = cubemapTexture.SampleLevel(cubeSamplerState, view2, 0).rgba;
+
+	return finalLookup;// *lookup.a;
 }
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
@@ -69,16 +77,29 @@ shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 {
 	uint3 ThreadID = uint3(g.xy * 16 + t.xy, g.z);
+	vec3 DepthMask[4];
+	DepthMask[0] = vec3(1.0, 0.0, 0.0); //0,0);
+	DepthMask[1] = vec3(0.0, 1.0, 0.0); //1,0);
+	DepthMask[2] = vec3(0.0, 0.0, 1.0); //0,1);
+	DepthMask[3] = vec3(0.0, 0.5, 0.5); //1,1);
 	uint InputW, InputH;
 	plainTexture.GetDimensions(InputW, InputH);
 	uint OutputW, OutputH, OutputD;
 	RWTextureTargetArray.GetDimensions(OutputW, OutputH, OutputD);
 	int3 pos = int3(ThreadID);
 	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
-	float4 SceneColor	= plainTexture.Load(int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0));
-	float4 Depth		= plainTexture.Load(int3(pos.xy/2 + sourceOffset + OutputW/2* FaceOffsets[ThreadID.z], 0));
-	SceneColor.a = Depth.x;
-	RWTextureTargetArray[pos] = float4(SceneColor.rgba);
+	int3 loadPos = int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0);
+	float4 SceneColor = plainTexture.Load(loadPos);
+
+	int2 loadDepthPos	= loadPos / 2;
+	int2 offsetToPos	= pos.xy % 2;// -loadDepthPos * 2;
+	loadDepthPos		+= int2(0, OutputW) * 2;	// underneath the main cube in the video texture.
+	vec3 dMask = DepthMask[offsetToPos.x];// +2 * offsetToPos.y ];
+	vec3 lookupDepth	= plainTexture.Load(int3(loadDepthPos, 0)).rgb;
+
+	float d = dot(lookupDepth, dMask);
+		SceneColor.a		= d;
+	RWTextureTargetArray[pos] = SceneColor;// float4(SceneColor.rgba);
 }
 
 VertexShader vs = CompileShader(vs_4_0, VS_SimpleFullscreen());

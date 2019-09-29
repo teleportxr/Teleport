@@ -43,7 +43,7 @@ void colour_and_depth()
     DepthMask[0]=vec4(1.0,0.0,0.0,0.0); //0,0);
     DepthMask[1]=vec4(0.0,1.0,0.0,0.0); //1,0);
     DepthMask[2]=vec4(0.0,0.0,1.0,0.0); //0,1);
-    DepthMask[3]=vec4(0.0,0.0,0.0,1.0); //1,1);
+    DepthMask[3]=vec4(0.0,0.5,0.5,0.0); //1,1);
     ivec2 FaceOffsets[6] ;
     FaceOffsets[0]=ivec2(0,0);
     FaceOffsets[1]=ivec2(1,0);
@@ -61,7 +61,7 @@ void colour_and_depth()
     ivec2 faceOffset    =FaceOffsets[invocationId.z];
     ivec2 loadPos       = ivec2(invocationId.xy)+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
     ivec2 loadDepthPos  = loadPos/2;
-    ivec2 offsetToPos   =loadPos-loadDepthPos;
+    ivec2 offsetToPos   =loadPos*2-loadDepthPos;
     loadDepthPos        +=ivec2(0,cub.faceSize)*2;
     vec4 lookup         =texelFetch(videoFrameTexture, loadPos, 0);
     vec4 lookupDepth     =texelFetch(videoFrameTexture, loadDepthPos, 0);

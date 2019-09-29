@@ -3,7 +3,8 @@
 #define CUBEMAP_CONSTANTS_SL
 
 SIMUL_CONSTANT_BUFFER(CubemapConstants, 4)
-uniform vec4 colourOffsetScale;
+uniform vec3 offsetFromVideo;
+uniform int _pad;
 uniform vec4 depthOffsetScale;
 uniform int2 sourceOffset;
 uniform int targetSize;

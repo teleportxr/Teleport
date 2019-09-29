@@ -347,7 +347,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		}
 		{
 			cubemapConstants.depthOffsetScale = vec4(0,0,0,0);
-			cubemapConstants.colourOffsetScale = colourOffsetScale;
+			cubemapConstants.offsetFromVideo = vec3(camera.GetPosition())-videoPos;
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -460,7 +460,8 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		const std::vector<std::shared_ptr<scr::Material>> materials = actorData.second.actor->GetMaterials();
 		if (!materials.size())
 			continue;
-
+		if (sessionClient.IsConnected())
+			sessionClient.SendConfirmActor(actorData.first);
 		size_t element = 0;
 		const auto &CI=mesh->GetMeshCreateInfo();
 		for (const std::shared_ptr<scr::Material>& m : materials)
@@ -705,6 +706,7 @@ bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
 
 bool ClientRenderer::OnActorLeftBounds(avs::uid actor_uid)
 {
+	sessionClient.SendWantToDropActor(actor_uid);
 	return resourceManagers.mActorManager.HideActor(actor_uid);
 }
 
@@ -713,9 +715,10 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.forward_back_input	=(float)keydown['w']-(float)keydown['s'];
 	mouseCameraInput.right_left_input	=(float)keydown['d']-(float)keydown['a'];
 	mouseCameraInput.up_down_input		=(float)keydown['t']-(float)keydown['g'];
+	static float spd = 0.2f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
-							,2.f
+							,spd
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
@@ -732,13 +735,24 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
 		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f,0.0f, 0.0f));
-		if (!receivedInitialPos && decoder->hasValidTransform())
+		if (decoder->hasValidTransform())
 		{
+			avs::vec3 vpos = decoder->getCameraTransform().position;
+			videoPos = *((vec3*)(&vpos));
 			// Oculus Origin means where the headset's zero is in real space.
-			oculusOrigin = decoder->getCameraTransform().position;
-			receivedInitialPos = true;
-			vec3 pos = (const float*)&oculusOrigin;
-			camera.SetPosition(pos);
+			if (!receivedInitialPos)
+			{
+				oculusOrigin = vpos;
+				vec3 pos = (const float*)& oculusOrigin;
+				camera.SetPosition(pos);
+				receivedInitialPos = true;
+			}
+			else
+			{
+				vec3 pos = camera.GetPosition();
+				pos.z = decoder->getCameraTransform().position.z;
+				camera.SetPosition(pos);
+			}
 		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
@@ -747,6 +761,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
 		sessionClient.Frame(headPose,decoder->hasValidTransform(),controllerState);
+		// headPose sent, now reset camera pos...
+		if (decoder->hasValidTransform())
+		{
+		//	camera.SetPosition(videoPos);
+		}
 		pipeline.process();
 
 		static short c = 0;
