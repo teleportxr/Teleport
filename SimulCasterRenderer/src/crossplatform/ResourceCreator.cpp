@@ -656,7 +656,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const st
 	}
 
 	newActor->actorInfo.materials.resize(material_uids.size());
-	for(int i = 0; i < material_uids.size(); i++)
+	for(size_t i = 0; i < material_uids.size(); i++)
 	{
 		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(material_uids[i]);
 

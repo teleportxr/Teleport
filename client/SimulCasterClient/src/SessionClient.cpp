@@ -40,6 +40,7 @@ enum RemotePlaySessionChannel
     RPCH_Control = 1,
     RPCH_HeadPose = 2,
     RPCH_Request = 3,
+	RPCH_ClientMessage=4,
     RPCH_NumChannels,
 };
 
@@ -226,6 +227,30 @@ void SessionClient::Disconnect(uint timeout)
         mClientHost = nullptr;
     }
 }
+
+void SessionClient::SendConfirmActor(avs::uid uid)
+{
+	avs::ActorStatusClientMessage msg;
+	msg.actor_uid = uid;
+	msg.actorStatus = avs::ActorStatus::Drawn;
+	SendClientMessage(msg);
+}
+
+void SessionClient::SendWantToDropActor(avs::uid uid)
+{
+	avs::ActorStatusClientMessage msg;
+	msg.actor_uid = uid;
+	msg.actorStatus = avs::ActorStatus::WantToRelease;
+	SendClientMessage(msg);
+}
+
+void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
+{
+	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);
+	ENetPacket* packet = enet_packet_create(&msg, sz,ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+}
+
 
 void SessionClient::Frame(const HeadPose& headPose, bool poseValid,const ControllerState& controllerState)
 {

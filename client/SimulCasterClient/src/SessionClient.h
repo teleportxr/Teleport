@@ -42,6 +42,10 @@ public:
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
 
+    void SendConfirmActor(avs::uid uid);
+    void SendWantToDropActor(avs::uid uid);
+    void SendClientMessage(const avs::ClientMessage &msg);
+
     void Frame(const HeadPose& headPose,bool poseValid, const ControllerState& controllerState);
 
     bool IsConnected() const;

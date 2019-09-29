@@ -407,6 +407,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		if(vrapi_GetCurrentInputState(mOvrMobile, mControllerID, &ovrState.Header) >= 0)
 		{
 			controllerState.mButtons = ovrState.Buttons;
+			if(controllerState.mButtons)
+					mShowInfo=!mShowInfo;
+
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
 //			float last_x=controllerState.mTrackpadX;
 //			float last_y=controllerState.mTrackpadY;
@@ -512,7 +515,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	auto ctr=mNetworkSource.getCounterValues();
 	if(mSession.IsConnected())
 	{
-		mGuiSys->ShowInfoText(
+		if(mShowInfo)
+			mGuiSys->ShowInfoText(
 				0.017f, "Packets Dropped: Network %d | Decoder %d\n"
 						"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
 						"Actors: SCR %d | OVR %d \n"
@@ -831,6 +835,8 @@ bool Application::OnActorEnteredBounds(avs::uid actor_uid)
 
 bool Application::OnActorLeftBounds(avs::uid actor_uid)
 {
+	if (mSession.IsConnected())
+		mSession.SendWantToDropActor(actor_uid);
     return resourceManagers.mActorManager.HideActor(actor_uid);
 }
 
@@ -1038,6 +1044,8 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 		if(mOVRActors.find(a.first) == mOVRActors.end())
 		{
+			if (mSession.IsConnected())
+				mSession.SendConfirmActor(a.first);
 			mOVRActors[a.first]; //Create
 			std::shared_ptr<OVRActor> pOvrActor = std::make_shared<OVRActor>();
 			//pOvrActor->ovrSurfaceDefs.reserve(num_elements);

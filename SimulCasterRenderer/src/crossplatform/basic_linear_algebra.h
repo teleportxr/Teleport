@@ -185,7 +185,7 @@ namespace scr
 			Normalise();
 		}
 		quat(avs::vec4 vec)
-			:s(vec.w), i(vec.x), j(vec.y), k(vec.z) {}
+			:i(vec.x), j(vec.y), k(vec.z),s(vec.w) {}
 
 		quat Conjugate()
 		{

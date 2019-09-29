@@ -194,4 +194,5 @@ private:
 	void RenderLocalActors(OVR::ovrFrameResult& res);
     const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources);
 	std::string LoadTextFile(const char *filename);
+	bool mShowInfo=false;
 };
