@@ -484,11 +484,19 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
 
-	if(!receivedInitialPos&&mDecoder.hasValidTransform())
+	if(mDecoder.hasValidTransform())
 	{
-		// Oculus Origin means where the headset's zero is in real space.
-		oculusOrigin=scr_UE4_captureTransform.m_Translation;
-		receivedInitialPos=true;
+	    if (!receivedInitialPos)
+	    {
+            // Oculus Origin means where the headset's zero is in real space.
+            oculusOrigin = scr_UE4_captureTransform.m_Translation;
+            receivedInitialPos = true;
+        }
+	}
+	else
+	{
+        scr_UE4_captureTransform = avs::Transform();
+        oculusOrigin = scr_UE4_captureTransform.m_Translation;
 	}
 
 	cameraPosition = oculusOrigin+ scr_OVR_headPos;
