@@ -761,6 +761,12 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 				camera.SetPosition(pos);
 			}
 		}
+		else
+		{
+			camera.SetPositionAsXYZ(0.f, 0.f, 5.f);
+			vec3 look(0.f, 1.f, 0.f), up(0.f, 0.f, 1.f);
+			camera.LookInDirection(look, up);
+		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
 		HeadPose headPose;
