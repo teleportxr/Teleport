@@ -40,7 +40,6 @@ int2 specularOffset(0,0);
 int2 diffuseOffset(3* specularSize/2, specularSize*2);
 int2 roughOffset(3* specularSize,0);
 int2 lightOffset(3 * specularSize+3 * specularSize / 2, specularSize * 2);
-static bool strict = false;
 void set_float4(float f[4], float a, float b, float c, float d)
 {
 	f[0] = a;
@@ -165,6 +164,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	cubemapConstants.RestoreDeviceObjects(renderPlatform);
 	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
 	cameraConstants.RestoreDeviceObjects(renderPlatform);
+	cameraPositionBuffer.RestoreDeviceObjects(renderPlatform,8,true);
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
 	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
@@ -272,6 +272,7 @@ void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContex
 	}
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
+
 }
 
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
@@ -310,6 +311,15 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.0f, 1.0f, 0.f, reverseDepth ? 0.f : 1.f);
 
 	pbrEffect->UnbindTextures(deviceContext);
+
+	// 
+	vec3 true_pos = camera.GetPosition();
+	if (render_from_video_centre)
+	{
+		Sleep(200);
+		camera.SetPosition(videoPos);
+	}
+
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	{
 		deviceContext.viewStruct.view = camera.MakeViewMatrix();
@@ -344,16 +354,27 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			Recompose(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, sourceOffset + specularOffset);
 			Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture, specularCubemapTexture->mips, sourceOffset+roughOffset);
 			Recompose(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, sourceOffset+lightOffset);
+			{
+				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+				cameraPositionBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("RWCameraPosition"));
+				cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - (3 * 8));
+				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+				cubemapClearEffect->Apply(deviceContext, "extract_camera_position", 0);
+				renderPlatform->DispatchCompute(deviceContext, 1, 1, 1);
+				cubemapClearEffect->Unapply(deviceContext);
+				cubemapClearEffect->UnbindTextures(deviceContext);
+			}
 		}
 		{
 			cubemapConstants.depthOffsetScale = vec4(0,0,0,0);
-			cubemapConstants.offsetFromVideo = strict?vec3(0,0,0):(vec3(camera.GetPosition())-videoPos);
+			cubemapConstants.offsetFromVideo = vec3(camera.GetPosition())-videoPos;
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 			cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", videoAsCubemapTexture);
 			if (ti)
 			{
+				cameraPositionBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("CameraPosition"));
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 				cubemapClearEffect->Apply(deviceContext, "use_cubemap", 0);
 				renderPlatform->DrawQuad(deviceContext);
@@ -371,6 +392,12 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			int H = hdrFramebuffer->GetHeight();
 			renderPlatform->DrawTexture(deviceContext, 0,0, W,H , ti->texture);
 		}
+	}
+	vec4 white(1.f, 1.f, 1.f, 1.f);
+	if (render_from_video_centre)
+	{
+		camera.SetPosition(true_pos);
+		renderPlatform->Print(deviceContext, w-16, h-16, "C", white);
 	}
 	if(show_textures)
 	{
@@ -400,13 +427,13 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 	cpuProfiler.EndFrame();
+	if(show_osd)
 	{
 		const avs::NetworkSourceCounters counters = source.getCounterValues();
 		//ImGui::Text("Frame #: %d", renderStats.frameCounter);
 		//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
 		int y = 0;
 		int dy = 18;
-		vec4 white(1.f, 1.f, 1.f, 1.f);
 		renderPlatform->Print(deviceContext, w / 2, y += dy, sessionClient.IsConnected()? simul::base::QuickFormat("Connected to: %s"
 			,sessionClient.GetServerIP().c_str()):"Not connected",white);
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Framerate: %4.4f", framerate));
@@ -725,7 +752,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	static float spd = 0.2f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
-							, strict ?spd*100.0f:spd
+							,spd
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
@@ -774,11 +801,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
 		sessionClient.Frame(headPose,decoder->hasValidTransform(),controllerState);
-		// headPose sent, now reset camera pos...
-		if (strict&&decoder->hasValidTransform())
-		{
-			camera.SetPosition(videoPos);
-		}
 		pipeline.process();
 
 		static short c = 0;
@@ -825,6 +847,14 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			if(!bKeyDown)
 				show_video = !show_video;
 			break;
+		case 'O':
+			if (!bKeyDown)
+				show_osd = !show_osd;
+			break;
+		case 'C':
+			if (!bKeyDown)
+				render_from_video_centre = !render_from_video_centre;
+			break; 
 		case 'T':
 			if (!bKeyDown)
 				show_textures = !show_textures;

@@ -80,6 +80,7 @@ private:
 	struct VideoUB
 	{
 		scr::vec4 eyeOffsets[2];
+		ovrMatrix4f invViewProj[2];
 	};
 	VideoUB videoUB;
 

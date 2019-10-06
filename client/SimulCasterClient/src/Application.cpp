@@ -267,8 +267,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		}
 
 		mVideoSurfaceDef.surfaceName = "VideoSurface";
-		mVideoSurfaceDef.geo = BuildGlobe();//1.f,1.f,1000.f);
-		//BBuildTesselatedQuad( 2, 2,true );
+		mVideoSurfaceDef.geo = BuildGlobe(1.f,1.f,500.f);
+								//BuildTesselatedQuad( 1, 1,true );
 		mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
 		mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
 		mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
@@ -570,8 +570,23 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	GL_CheckErrors("Frame: Pre-Cubemap");
 	CopyToCubemaps();
 	// Append video surface
-	mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
-	mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
+	{
+		ovrMatrix4f eye0=res.FrameMatrices.EyeView[ 0 ];
+		eye0.M[0][3]=0.0f;
+		eye0.M[1][3]=0.0f;
+		eye0.M[2][3]=0.0f;
+		ovrMatrix4f viewProj0=res.FrameMatrices.EyeProjection[ 0 ]*eye0;
+		ovrMatrix4f viewProjT0=ovrMatrix4f_Transpose( &viewProj0 );
+		videoUB.invViewProj[0]=ovrMatrix4f_Inverse( &viewProjT0 );
+		ovrMatrix4f eye1=res.FrameMatrices.EyeView[ 1 ];
+		eye1.M[0][3]=0.0f;
+		eye1.M[1][3]=0.0f;
+		eye1.M[2][3]=0.0f;
+		ovrMatrix4f viewProj1=res.FrameMatrices.EyeProjection[ 1 ]*eye1;
+		ovrMatrix4f viewProjT1=ovrMatrix4f_Transpose( &viewProj1 );
+		videoUB.invViewProj[1]=ovrMatrix4f_Inverse( &viewProjT1 );
+
+	}
 	mVideoUB->Submit();
 	mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_UniformBuffer *)  mVideoUB.get())->GetGlBuffer());
 	if(mCubemapTexture->IsValid())
