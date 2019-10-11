@@ -39,24 +39,24 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	vec3 view_orig = TexCoordsToView(IN.texCoords);
 	view_orig.xy = -view_orig.yx;
 	view_orig.z *= -1.0;
-
+	vec3 offsetFromVideo2=cameraPosition-CameraPosition[0];
 	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
-	vec3 view = view_orig;
+	/*vec3 view = view_orig;
 	for (int i = 0; i < 5; i++)
 	{
 		float depth = lookup.a;
 		float dist_m = max(0.2, 20.0 * depth);
 		vec3 pos_m = dist_m * view_orig;
-		pos_m += vec3(offsetFromVideo.yx, offsetFromVideo.z) * step(-0.8, -depth);
+		pos_m += vec3(offsetFromVideo2.yx, offsetFromVideo2.z) * step(-0.8, -depth);
 
 		// But this does not intersect at depth. We want the vector from the original centre, of 
 
 		// original radius to hit point
 		float R = dist_m;
-		float F = length(offsetFromVideo);
+		float F = length(offsetFromVideo2);
 		if (F > 0)
 		{
-			float D = -dot(normalize(offsetFromVideo), view_orig);
+			float D = -dot(normalize(offsetFromVideo2), view_orig);
 			float b = F * D;
 			float c = F * F - R * R;
 			float U = -b + sqrt(b * b - c);
@@ -65,8 +65,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 			view = normalize(pos_m);
 			lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
 		}
-	}
-	lookup+=CameraPosition[0];
+	}*/
 	return lookup;
 }
 

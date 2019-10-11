@@ -20,6 +20,7 @@ uniform Texture2D loss2dTexture;
 uniform Texture2D shadowTexture;
 uniform Texture3D inscatterVolumeTexture;
 //////////////////////////
+uniform StructuredBuffer<vec4> videoCameraPositionBuffer;
 
 float GetRoughness(vec4 combinedLookup)
 {
@@ -90,9 +91,14 @@ shader vertexOutput VS_Solid(vertexInput IN)
 {
     vertexOutput OUT;
 	vec4 opos		=vec4(IN.position.yxz,1.0);
-    OUT.wpos		=mul( opos, world).xyz;
-	OUT.view		=normalize(OUT.wpos.xyz- viewPosition);
-    OUT.clip_pos	=mul( opos,worldViewProj);
+    vec4 wpos		=mul(opos, world);
+
+	wpos.xyz		-= videoCameraPositionBuffer[0].xyz;
+	OUT.view		=normalize(wpos.xyz-viewPosition);
+	vec4 viewspace_pos = mul( view, vec4(wpos.xyz, 0.0));
+	OUT.clip_pos	=mul(proj,vec4(viewspace_pos.xyz,1.0));
+	  OUT.wpos = wpos.xyz;
+	//OUT.clip_pos	=mul( opos, worldViewProj);
 	OUT.texCoords0	=IN.texCoords0;
 	OUT.texCoords1	=IN.texCoords1;
 #ifdef SFX_OPENGL

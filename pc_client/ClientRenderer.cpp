@@ -119,6 +119,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	renderPlatform=r;
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	resourceCreator.Initialise(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+
 	hDRRenderer		=new crossplatform::HdrRenderer();
 
 	hdrFramebuffer=renderPlatform->CreateFramebuffer();
@@ -145,7 +146,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	camera.SetCameraViewStruct(vs);
 
 	memset(keydown,0,sizeof(keydown));
-
 	// These are for example:
 	hDRRenderer->RestoreDeviceObjects(renderPlatform);
 	meshRenderer->RestoreDeviceObjects(renderPlatform);
@@ -195,9 +195,13 @@ int ClientRenderer::AddView(/*external_framebuffer*/)
 }
 void ClientRenderer::ResizeView(int view_id,int W,int H)
 {
-	hDRRenderer->SetBufferSize(W,H);
-	hdrFramebuffer->SetWidthAndHeight(W,H);
-	hdrFramebuffer->SetAntialiasing(1);
+	if(hDRRenderer)
+		hDRRenderer->SetBufferSize(W,H);
+	if(hdrFramebuffer)
+	{
+		hdrFramebuffer->SetWidthAndHeight(W,H);
+		hdrFramebuffer->SetAntialiasing(1);
+	}
 }
 
 /// Render an example transparent object.
@@ -368,6 +372,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		{
 			cubemapConstants.depthOffsetScale = vec4(0,0,0,0);
 			cubemapConstants.offsetFromVideo = vec3(camera.GetPosition())-videoPos;
+			cubemapConstants.cameraPosition = vec3(camera.GetPosition()) ;
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -521,7 +526,11 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			model=((const float*)& (transform.GetTransformMatrix()));
 			mat4::mul(cameraConstants.worldViewProj, *((mat4*)& deviceContext.viewStruct.viewProj), model);
 			cameraConstants.world = model;
+			cameraConstants.view = deviceContext.viewStruct.view;
+			cameraConstants.proj = deviceContext.viewStruct.proj;
+			cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
 			cameraConstants.viewPosition = camera.GetPosition();
+			cameraPositionBuffer.Apply(deviceContext, cubemapClearEffect, pbrEffect->GetShaderResource("videoCameraPositionBuffer"));
 
 			scr::Material& mat = *m;
 			{

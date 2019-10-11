@@ -21,7 +21,7 @@ namespace pc_client
 		simul::crossplatform::Texture* m_SimulTexture;
 	public:
 		PC_Texture(const scr::RenderPlatform*const r):scr::Texture(r) {}
-
+		virtual ~PC_Texture();
 		void Destroy() override;
 
 		void Bind(uint32_t mip,uint32_t index) const override;
