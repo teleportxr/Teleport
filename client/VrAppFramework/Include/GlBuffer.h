@@ -18,6 +18,7 @@ namespace OVR {
 enum GlBufferType_t
 {
 	GLBUFFER_TYPE_UNIFORM,
+	GLBUFFER_TYPE_STORAGE,
 };
 
 class GlBuffer

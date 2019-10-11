@@ -60,6 +60,7 @@ enum class ovrProgramParmType : char
 	FLOAT_MATRIX4,		// Matrix4f (always inverted for GL)
 	TEXTURE_SAMPLED,	// GlTexture
 	BUFFER_UNIFORM,		// read-only uniform buffer (GLSL: uniform)
+	BUFFER_STORAGE,		// read-write storage buffer (GLSL: buffer)
 	MAX
 };
 

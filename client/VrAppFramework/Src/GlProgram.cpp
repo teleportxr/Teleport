@@ -487,6 +487,12 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 			p.Uniforms[i].Binding = p.numUniformBufferBindings++;
 			glUniformBlockBinding( p.Program, p.Uniforms[i].Location, p.Uniforms[i].Binding );
 		}
+		else if ( parms[i].Type == ovrProgramParmType::BUFFER_STORAGE )
+		{
+			p.Uniforms[i].Location = glGetUniformBlockIndex( p.Program, parms[i].Name );
+			p.Uniforms[i].Binding = p.numUniformBufferBindings++;
+			glUniformBlockBinding( p.Program, p.Uniforms[i].Location, p.Uniforms[i].Binding );
+		}
 		else
 		{
 			p.Uniforms[i].Location = static_cast<int16_t>( glGetUniformLocation( p.Program, parms[i].Name ) );
