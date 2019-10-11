@@ -75,6 +75,7 @@ enum RemotePlaySessionChannel
 	RPCH_Control = 1,
 	RPCH_HeadPose = 2,
 	RPCH_Request = 3,
+	RPCH_ClientMessage = 4,
 	RPCH_NumChannels,
 };
 
@@ -275,11 +276,12 @@ void SessionClient::Disconnect(uint timeout)
 	}
 }
 
-void SessionClient::Frame(const float HeadPose[4],const ControllerState& controllerState)
+void SessionClient::Frame(const HeadPose &headPose,bool pose_valid,const ControllerState& controllerState)
 {
 	if (mClientHost && mServerPeer)
 	{
-		SendHeadPose(HeadPose);
+		if(pose_valid)
+			SendHeadPose(headPose);
 		SendInput(controllerState);
 		SendResourceRequests();
 
@@ -337,6 +339,11 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 
 void SessionClient::ParseCommandPacket(ENetPacket* packet)
 {
+	if (!packet || !packet->data)
+	{
+		WARN("Received empty packet ");
+		return;
+	}
 	avs::CommandPayloadType commandPayloadType = *((avs::CommandPayloadType*)packet->data);
 	size_t cmdSize = avs::GetCommandSize(commandPayloadType);
 	switch (commandPayloadType)
@@ -347,12 +354,31 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			assert(txt_utf8[packet->dataLength - cmdSize - 1] == (char)0);
 			ParseTextCommand(txt_utf8);
 		}
+		break; 
+		case avs::CommandPayloadType::AcknowledgeHandshake:
+		{
+			handshakeAcknowledged = true;
+		}
 		break;
 		case avs::CommandPayloadType::Setup:
 		{
-			const avs::SetupCommand &setupCommand = *((const avs::SetupCommand*)packet->data);
+			size_t commandSize = sizeof(avs::SetupCommand);
+
+			//Copy command out of packet.
+			avs::SetupCommand setupCommand;
+			memcpy(&setupCommand, packet->data, commandSize);
+
+			//Copy resources the client will need from the packet.
+			size_t resourceListSize = sizeof(avs::uid) * setupCommand.resourceCount;
+			std::vector<avs::uid> resourcesClientNeeds(setupCommand.resourceCount);
+			memcpy(resourcesClientNeeds.data(), packet->data + commandSize, resourceListSize);
+
 			avs::Handshake handshake;
-			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake);
+			mCommandInterface->OnVideoStreamChanged(setupCommand, handshake, setupCommand.server_id != lastServer_id, resourcesClientNeeds);
+			//Add the unfound resources to the resource request list.
+			mResourceRequests.insert(mResourceRequests.end(), resourcesClientNeeds.begin(), resourcesClientNeeds.end());
+
+			lastServer_id = setupCommand.server_id;
 			SendHandshake(handshake);
 		}
 		break;
@@ -417,7 +443,8 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
 			setupCommand.depth_height = height/2;
 			setupCommand.compose_cube = 1;
 			avs::Handshake handshake;
-			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake);
+			std::vector<avs::uid> dummyList;
+			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake, true, dummyList);
 			SendHandshake(handshake);
 		}
 	}
@@ -427,14 +454,41 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
 	}
 }
 
-void SessionClient::SendHeadPose(const float quat[4])
+void SessionClient::SendConfirmActor(avs::uid uid)
 {
-	ENetPacket* packet = enet_packet_create(quat, 4*sizeof(float), 0);
+	avs::ActorStatusClientMessage msg;
+	msg.actor_uid = uid;
+	msg.actorStatus = avs::ActorStatus::Drawn;
+	SendClientMessage(msg);
+}
+
+void SessionClient::SendWantToDropActor(avs::uid uid)
+{
+	avs::ActorStatusClientMessage msg;
+	msg.actor_uid = uid;
+	msg.actorStatus = avs::ActorStatus::WantToRelease;
+	SendClientMessage(msg);
+}
+
+void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
+{
+	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);
+	ENetPacket* packet = enet_packet_create(&msg, sz,ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+}
+
+void SessionClient::SendHeadPose(const HeadPose &h)
+{
+	if (!handshakeAcknowledged)
+		return;
+	ENetPacket* packet = enet_packet_create(&h, sizeof(HeadPose), 0);
 	enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
 }
 
 void SessionClient::SendInput(const ControllerState& controllerState)
 {
+	if (!handshakeAcknowledged)
+		return;
 	RemotePlayInputState inputState = {};
 
 	const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
@@ -505,6 +559,7 @@ void SessionClient::SendResourceRequests()
 
 void SessionClient::SendHandshake(const avs::Handshake &handshake)
 {
-	ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
+	handshakeAcknowledged = false;
+	ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 }

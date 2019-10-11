@@ -4,10 +4,12 @@
 
 #include <string>
 #include <enet/enet.h>
+#include <libavstream/common.hpp>
 
 #include "Input.h"
 #include "Config.h"
 #include "Log.h"
+#include "crossplatform/basic_linear_algebra.h"
 
 typedef unsigned int uint;
 namespace avs
@@ -17,12 +19,18 @@ namespace avs
 	typedef unsigned long long uid;
 }
 
+struct HeadPose
+{
+	scr::vec4 orientation;
+	scr::vec3 position;
+};
+
 class ResourceCreator;
 
 class SessionCommandInterface
 {
 public:
-	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake) = 0;
+	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) = 0;
 	virtual void OnVideoStreamClosed() = 0;
 
 	virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
@@ -40,7 +48,11 @@ public:
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
 
-    void Frame(const float HeadPose[4],const ControllerState &controllerState);
+	void SendConfirmActor(avs::uid uid);
+	void SendWantToDropActor(avs::uid uid);
+	void SendClientMessage(const avs::ClientMessage &msg);
+
+    void Frame(const HeadPose &headPose,bool pose_valid,const ControllerState &controllerState);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -50,12 +62,13 @@ private:
 	void ParseCommandPacket(ENetPacket* packet);
 	void ParseTextCommand(const char *txt_utf8);
 
-	void SendHeadPose(const float quat[4]);
+	void SendHeadPose(const HeadPose& h);
 	void SendInput(const ControllerState &controllerState);
 	void SendResourceRequests();
 	//Tell server we are ready to receive geometry payloads.
 	void SendHandshake(const avs::Handshake& handshake);
 
+	avs::uid lastServer_id = 0; //UID of the server we last connected to.
     uint32_t mClientID = 0;
 	ENetSocket mServiceDiscoverySocket = 0;
 
@@ -68,6 +81,7 @@ private:
     ControllerState mPrevControllerState = {};
 
 	bool isReadyToReceivePayloads = false;
+	bool handshakeAcknowledged = false;
 	std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
 };
 

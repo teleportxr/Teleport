@@ -81,6 +81,19 @@ namespace scr
 		{
 			return vec3(x + other.x, y + other.y, z + other.z);
 		}
+		const vec3 &operator+= (const vec3& other)
+		{
+			x +=other.x;
+			y +=other.y;
+			z +=other.z;
+			return *this;
+		}
+
+		vec3 operator- () const
+		{
+			return vec3(-x , -y , -z );
+		}
+
 
 		vec3 operator- (const vec3& other) const
 		{
@@ -93,10 +106,13 @@ namespace scr
 			return vec3(a * x, a * y, a * z);
 		}
 
-		vec3 operator=(const avs::vec3 &vec)
+		const vec3& operator=(const avs::vec3& vec)
 		{
-			return {vec.x, vec.y, vec.z};
-		}
+			x = vec.x;
+			y = vec.y;
+			z = vec.z;
+			return *this;
+		};
 	};
 	struct vec4
 	{
@@ -138,23 +154,26 @@ namespace scr
 			return vec4(a * x, a * y, a * z, a * w);
 		}
 
-		void operator=(const avs::vec4 &vec)
+		const vec4 &operator=(const avs::vec4 &vec)
 		{
 			x = vec.x;
 			y = vec.y;
 			z = vec.z;
 			w = vec.w;
+			return *this;
 		}
 	};
 	struct quat
 	{
-		float s, i, j, k;
+		float i, j, k, s;
 
 		quat()
-			:s(0), i(0), j(0), k(0) {}
+			:i(0), j(0), k(0), s(0) {}
 
-		quat(float s, float i, float j, float k)
-			: s(s), i(i), j(j), k(k) {}
+		quat(float i, float j, float k,float s)
+			:  i(i), j(j), k(k), s(s)
+		{
+		}
 		
 		quat(float angle, const vec3& axis)
 		{
@@ -166,11 +185,11 @@ namespace scr
 			Normalise();
 		}
 		quat(avs::vec4 vec)
-			:s(vec.w), i(vec.x), j(vec.y), k(vec.z) {}
+			:i(vec.x), j(vec.y), k(vec.z),s(vec.w) {}
 
 		quat Conjugate()
 		{
-			return quat(this->s, -this->i, -this->j, -this->k);
+			return quat(-this->i, -this->j, -this->k,this->s);
 		}
 		quat Normalise()
 		{
@@ -216,9 +235,13 @@ namespace scr
 			);
 		}
 
-		quat operator=(const vec4 &vec)
+		const quat &operator=(const vec4 &vec)
 		{
-			return {vec.w, vec.x, vec.y, vec.z};
+			s = vec.w;
+			i = vec.x;
+			j = vec.y;
+			k = vec.z;
+			return *this;
 		}
 	};
 	struct mat4
@@ -350,7 +373,7 @@ namespace scr
 			return result;
 		};
 		
-		inline vec4 Mat4Vec4Multi(const vec4& input, const mat4& transform)
+		inline vec4 Mat4Vec4Multi(const vec4& input, const mat4& transform) const
 		{
 			const float& x = input.x;
 			const float& y = input.y;
@@ -363,12 +386,12 @@ namespace scr
 			vec4 output(transform_i * x + transform_j * y + transform_k * z + transform_l * w);
 			return output;
 		}
-		inline vec4 operator* (const vec4& input)
+		inline vec4 operator* (const vec4& input) const
 		{
 			return Mat4Vec4Multi(input, *this);
 		}
 
-		inline mat4 Mat4Mat4Multi(mat4& transform, const mat4& input)
+		inline mat4 Mat4Mat4Multi(const mat4& transform, const mat4& input) const
 		{
 			vec4 input_i(input.a, input.e, input.i, input.m);
 			vec4 input_j(input.b, input.f, input.j, input.n);
@@ -382,7 +405,7 @@ namespace scr
 			output.Transpose();
 			return output;
 		}
-		inline mat4 operator* (const mat4& input)
+		inline mat4 operator* (const mat4& input) const
 		{
 			return Mat4Mat4Multi(*this, input);
 		}

@@ -40,6 +40,7 @@ enum RemotePlaySessionChannel
     RPCH_Control = 1,
     RPCH_HeadPose = 2,
     RPCH_Request = 3,
+	RPCH_ClientMessage=4,
     RPCH_NumChannels,
 };
 
@@ -227,11 +228,36 @@ void SessionClient::Disconnect(uint timeout)
     }
 }
 
-void SessionClient::Frame(const OVR::ovrFrameInput& vrFrame, const ControllerState& controllerState)
+void SessionClient::SendConfirmActor(avs::uid uid)
+{
+	avs::ActorStatusClientMessage msg;
+	msg.actor_uid = uid;
+	msg.actorStatus = avs::ActorStatus::Drawn;
+	SendClientMessage(msg);
+}
+
+void SessionClient::SendWantToDropActor(avs::uid uid)
+{
+	avs::ActorStatusClientMessage msg;
+	msg.actor_uid = uid;
+	msg.actorStatus = avs::ActorStatus::WantToRelease;
+	SendClientMessage(msg);
+}
+
+void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
+{
+	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);
+	ENetPacket* packet = enet_packet_create(&msg, sz,ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+}
+
+
+void SessionClient::Frame(const HeadPose& headPose, bool poseValid,const ControllerState& controllerState)
 {
     if(mClientHost && mServerPeer)
     {
-        SendHeadPose(vrFrame.Tracking.HeadPose);
+    	if(poseValid)
+	        SendHeadPose(headPose);
         SendInput(controllerState);
         SendResourceRequests();
 
@@ -305,14 +331,30 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		break;
 		case avs::CommandPayloadType::Setup:
 		{
-			const avs::SetupCommand &setupCommand = *((const avs::SetupCommand*)packet->data);
+            size_t commandSize = sizeof(avs::SetupCommand);
+
+			//Copy command out of packet.
+            avs::SetupCommand setupCommand;
+            memcpy(&setupCommand, packet->data, commandSize);
+
+			//Copy resources the client will need from the packet.
+            size_t resourceListSize = sizeof(avs::uid) * setupCommand.resourceCount;
+			std::vector<avs::uid> resourcesClientNeeds(setupCommand.resourceCount);
+            if(resourceListSize)
+			{
+				memcpy(resourcesClientNeeds.data(), packet->data + commandSize, resourceListSize);
+			}
             avs::Handshake handshake;
             handshake.isReadyToReceivePayloads=true;
             handshake.axesStandard = avs::AxesStandard::GlStyle;
             handshake.MetresPerUnit = 1.0f;
             handshake.usingHands = true;
-			mCommandInterface->OnVideoStreamChanged(setupCommand,handshake);
-			SendHandshake(handshake);
+            mCommandInterface->OnVideoStreamChanged(setupCommand, handshake, setupCommand.server_id != lastServer_id, resourcesClientNeeds);
+            //Add the unfound resources to the resource request list.
+			mResourceRequests.insert(mResourceRequests.end(), resourcesClientNeeds.begin(), resourcesClientNeeds.end());
+
+            lastServer_id = setupCommand.server_id;
+            SendHandshake(handshake);
 		}
 		break;
 		case avs::CommandPayloadType::ActorBounds:
@@ -373,15 +415,17 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
     }
 }
 
-void SessionClient::SendHeadPose(const ovrRigidBodyPosef& pose)
+void SessionClient::SendHeadPose(const HeadPose& pose)
 {
     // TODO: Use compact representation with only 3 float values for wire format.
-    const ovrQuatf HeadPoseOVR = pose.Pose.Orientation;
+    const ovrQuatf HeadPoseOVR = *((const ovrQuatf*)&pose.orientation);
+    HeadPose headPose2;
     ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
     ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR,RootPose);
     // Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
-    ovrQuatf HeadPose = { RelPose.x, RelPose.y,RelPose.z, RelPose.w };
-    ENetPacket* packet = enet_packet_create(&HeadPose, sizeof(HeadPose), 0);
+    headPose2.orientation = scr::vec4(RelPose.x, RelPose.y,RelPose.z, RelPose.w);
+    headPose2.position=*((scr::vec3*)&pose.position);
+    ENetPacket* packet = enet_packet_create(&headPose2, sizeof(HeadPose), 0);
     enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
 }
 

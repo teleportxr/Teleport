@@ -475,11 +475,17 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 	{
 		OVR_ASSERT( parms[i].Type != ovrProgramParmType::MAX );
 		p.Uniforms[i].Type = parms[i].Type;
+#ifdef OVR_BUILD_DEBUG
+		OVR_WARN( "GlProgram::Build. parms[%d].Type %d", i, int(parms[i].Type ));
+#endif
 		if ( parms[i].Type == ovrProgramParmType::TEXTURE_SAMPLED )
 		{
 			p.Uniforms[i].Location = static_cast<int16_t>( glGetUniformLocation( p.Program, parms[i].Name ) );
 			p.Uniforms[i].Binding = p.numTextureBindings++;
 			glUniform1i( p.Uniforms[i].Location, p.Uniforms[i].Binding );
+#ifdef OVR_BUILD_DEBUG
+			OVR_WARN( "GlProgram::Build. bound %s with location %d and binding %d", parms[i].Name,p.Uniforms[i].Location,p.Uniforms[i].Binding );
+#endif
 		}
 		else if ( parms[i].Type == ovrProgramParmType::BUFFER_UNIFORM )
 		{
@@ -502,7 +508,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 #ifdef OVR_BUILD_DEBUG
 		if ( p.Uniforms[i].Location < 0 || p.Uniforms[i].Binding < 0 )
 		{
-			OVR_LOG( "GlProgram::Build. Invalid shader parm: %s", parms[i].Name );
+			OVR_WARN( "GlProgram::Build. Invalid shader parm: %s", parms[i].Name );
 		}
 #endif
 

@@ -9,6 +9,7 @@
 #include <common_p.hpp>
 
 #include "Input.h"
+#include "basic_linear_algebra.h"
 
 
 typedef unsigned int uint;
@@ -17,11 +18,17 @@ class ResourceCreator;
 class SessionCommandInterface
 {
 public:
-    virtual void OnVideoStreamChanged(const avs::SetupCommand &,avs::Handshake &handshake) = 0;
+    virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) = 0;
     virtual void OnVideoStreamClosed() = 0;
 
     virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
     virtual bool OnActorLeftBounds(avs::uid actor_uid) = 0;
+};
+
+struct HeadPose
+{
+    scr::vec4 orientation;
+    scr::vec3 position;
 };
 
 class SessionClient
@@ -35,7 +42,11 @@ public:
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
 
-    void Frame(const OVR::ovrFrameInput& vrFrame, const ControllerState& controllerState);
+    void SendConfirmActor(avs::uid uid);
+    void SendWantToDropActor(avs::uid uid);
+    void SendClientMessage(const avs::ClientMessage &msg);
+
+    void Frame(const HeadPose& headPose,bool poseValid, const ControllerState& controllerState);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -45,12 +56,13 @@ private:
     void ParseCommandPacket(ENetPacket* packet);
     void ParseTextCommand(const char *txt_utf8);
 
-    void SendHeadPose(const ovrRigidBodyPosef& pose);
+    void SendHeadPose(const HeadPose& headPose);
     void SendInput(const ControllerState& controllerState);
     void SendResourceRequests();
     //Tell server we are ready to receive geometry payloads.
     void SendHandshake(const avs::Handshake &handshake);
 
+    avs::uid lastServer_id = 0; //UID of the server we last connected to.
     uint32_t mClientID = 0;
     int mServiceDiscoverySocket = 0;
 

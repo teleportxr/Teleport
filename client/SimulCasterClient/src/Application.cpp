@@ -267,8 +267,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		}
 
 		mVideoSurfaceDef.surfaceName = "VideoSurface";
-		mVideoSurfaceDef.geo = BuildGlobe();//1.f,1.f,1000.f);
-		//BBuildTesselatedQuad( 2, 2,true );
+		mVideoSurfaceDef.geo = BuildGlobe(1.f,1.f,500.f);
+								//BuildTesselatedQuad( 1, 1,true );
 		mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
 		mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
 		mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
@@ -277,8 +277,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		scr::Camera::CameraCreateInfo c_ci = {
 				(scr::RenderPlatform*)(&renderPlatform),
 				scr::Camera::ProjectionType::PERSPECTIVE,
-				scr::quat(1.0f, 0.0f, 0.0f, 0.0f),
-				capturePosition
+				scr::quat(0.0f, 0.0f, 0.0f, 1.0f),
+				cameraPosition
 		};
 		scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
@@ -329,7 +329,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", {});
 		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {});
 		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {});
-		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {});
+		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {});
 
 		BuildEffectPass("OpaquePBR", &layout, &pipelineCreateInfo, {pbrShaderResource});
 
@@ -343,8 +343,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
         mLightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
 		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {mDiffuseTexture->GetSampler(), mDiffuseTexture});
 		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {mSpecularTexture->GetSampler(), mSpecularTexture});
-		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_LightsCubemap", {mCubemapLightingTexture->GetSampler(), mCubemapLightingTexture});
-		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture});
+		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture});
+		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_LightsCubemap", {mCubemapLightingTexture->GetSampler(), mCubemapLightingTexture});
 
 		int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
 		mRefreshRates.resize(num_refresh_rates);
@@ -407,18 +407,44 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		if(vrapi_GetCurrentInputState(mOvrMobile, mControllerID, &ovrState.Header) >= 0)
 		{
 			controllerState.mButtons = ovrState.Buttons;
+			if(controllerState.mButtons)
+					mShowInfo=!mShowInfo;
+
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
+//			float last_x=controllerState.mTrackpadX;
+//			float last_y=controllerState.mTrackpadY;
 			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
 			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
 			controllerState.mJoystickAxisX=ovrState.Joystick.x;
 			controllerState.mJoystickAxisY=ovrState.Joystick.y * -1;
+			if(controllerState.mTrackpadStatus)
+			{
+				float          dx = controllerState.mTrackpadX - 0.5f;
+				float          dy = controllerState.mTrackpadY - 0.5f;
+				ModelCollision collisionModel;
+				ModelCollision groundCollisionModel;
+
+				//					 collisionModel, groundCollisionModel );
+				ovrFrameInput *f = const_cast<ovrFrameInput *>(&vrFrame);
+				f->Input.sticks[0][0] += dx;
+				f->Input.sticks[0][1] += dy;
+				//f->Input.sticks[1][0] += dx;
+				//f->Input.sticks[1][1] += dy;
+			}
+//ovr_re
 		}
 	}
+	ovrVector3f footPos=mScene.GetFootPos();
 
 	// Handle networked session.
 	if(mSession.IsConnected())
 	{
-		mSession.Frame(vrFrame, controllerState);
+		HeadPose headPose;
+		headPose.orientation=*((scr::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
+		headPose.position=*((scr::vec3*)(&vrFrame.Tracking.HeadPose.Pose.Position));
+		headPose.position+=*((scr::vec3*)(&footPos));
+		headPose.position+=oculusOrigin;
+		mSession.Frame(headPose, mDecoder.hasValidTransform(),controllerState);
 	}
 	else
 	{
@@ -450,8 +476,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 
 	//Get HMD Position/Orientation
-	ovrVector3f headPos =vrFrame.Tracking.HeadPose.Pose.Position;
-	//ovrQuatf headOrient = vrFrame.Tracking.HeadPose.Pose.Orientation;
+	scr::vec3 headPos =*((const scr::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
+	headPos+=*((scr::vec3*)&footPos);
+
 	scr::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
 
 	//Get the Capture Position
@@ -459,8 +486,26 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	scr::Transform scr_UE4_captureTransform(tci);
 	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
-	capturePosition = scr_UE4_captureTransform.m_Translation - scr_OVR_headPos;
-	scrCamera->UpdatePosition(capturePosition);
+
+	if(mDecoder.hasValidTransform())
+	{
+	    if (!receivedInitialPos)
+	    {
+            // Oculus Origin means where the headset's zero is in real space.
+            oculusOrigin = scr_UE4_captureTransform.m_Translation;
+            receivedInitialPos = true;
+        }
+	}
+	else
+	{
+        scr_UE4_captureTransform = avs::Transform();
+        oculusOrigin = scr_UE4_captureTransform.m_Translation;
+	}
+
+	cameraPosition = oculusOrigin+ scr_OVR_headPos;
+	scr::vec3 camera_from_videoCentre=cameraPosition-scr_UE4_captureTransform.m_Translation;
+	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
+	scrCamera->UpdatePosition(scr_OVR_headPos);
 
 	static float frameRate=1.0f;
 	if(vrFrame.DeltaSeconds>0.0f)
@@ -476,14 +521,31 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 #if 1
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto ctr=mNetworkSource.getCounterValues();
-	mGuiSys->ShowInfoText( 0.017f,"Packets Dropped: Network %d | Decoder %d\n Framerate: %4.4f Bandwidth(kbps): %4.4f\n Actors: SCR %d | OVR %d | Lights: %d\n Capture Position: %1.3f, %1.3f, %1.3f\n Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n Pos: %3.3f %3.3f %3.3f\n Orphans: %d\n"
-			, ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
-			frameRate, ctr.bandwidthKPS,
-			(uint64_t)resourceManagers.mActorManager.GetActorList().size(), (uint64_t)mOVRActors.size(), resourceManagers.mLightManager.GetCache(cacheLock).size(),
-			capturePosition.x, capturePosition.y, capturePosition.z,
-			headPose.w, headPose.x, headPose.y, headPose.z,
-			headPos.x,headPos.y,headPos.z,
-			ctr.m_packetMapOrphans);
+	if(mSession.IsConnected())
+	{
+		if(mShowInfo)
+			mGuiSys->ShowInfoText(
+				0.017f, "Packets Dropped: Network %d | Decoder %d\n"
+						"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
+						"Actors: SCR %d | OVR %d \n"
+						"Camera Position: %1.3f, %1.3f, %1.3f\n"
+						"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
+						"Pos: %3.3f %3.3f %3.3f\n"
+						"Trackpad: %3.1f %3.1f | Orphans: %d\n", ctr.networkPacketsDropped,
+				ctr.decoderPacketsDropped,
+				frameRate, ctr.bandwidthKPS,
+				(uint64_t) resourceManagers.mActorManager.GetActorList().size(),
+				(uint64_t) mOVRActors.size(),
+				cameraPosition.x, cameraPosition.y, cameraPosition.z,
+				headPose.w, headPose.x, headPose.y, headPose.z,
+				headPos.x, headPos.y, headPos.z,
+				ctr.m_packetMapOrphans);
+	}
+	else
+		{
+			mGuiSys->ShowInfoText(0.017f,"Disconnected");
+		};
+
 
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
@@ -508,15 +570,32 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	GL_CheckErrors("Frame: Pre-Cubemap");
 	CopyToCubemaps();
 	// Append video surface
-	mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &renderConstants.colourOffsetScale;
-	mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &renderConstants.depthOffsetScale;
+	{
+		ovrMatrix4f eye0=res.FrameMatrices.EyeView[ 0 ];
+		eye0.M[0][3]=0.0f;
+		eye0.M[1][3]=0.0f;
+		eye0.M[2][3]=0.0f;
+		ovrMatrix4f viewProj0=res.FrameMatrices.EyeProjection[ 0 ]*eye0;
+		ovrMatrix4f viewProjT0=ovrMatrix4f_Transpose( &viewProj0 );
+		videoUB.invViewProj[0]=ovrMatrix4f_Inverse( &viewProjT0 );
+		ovrMatrix4f eye1=res.FrameMatrices.EyeView[ 1 ];
+		eye1.M[0][3]=0.0f;
+		eye1.M[1][3]=0.0f;
+		eye1.M[2][3]=0.0f;
+		ovrMatrix4f viewProj1=res.FrameMatrices.EyeProjection[ 1 ]*eye1;
+		ovrMatrix4f viewProjT1=ovrMatrix4f_Transpose( &viewProj1 );
+		videoUB.invViewProj[1]=ovrMatrix4f_Inverse( &viewProjT1 );
+
+	}
 	mVideoUB->Submit();
 	mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_UniformBuffer *)  mVideoUB.get())->GetGlBuffer());
 	if(mCubemapTexture->IsValid())
 	{
-		static float w=.04f; //half separation.
-		scr::vec4 right_eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
-		scr::vec4 left_eye ={-right_eye.x,-right_eye.y,-right_eye.z,0.0f};
+		float w=vrFrame.IPD/2.0f;//.04f; //half separation.
+		scr::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
+		scr::vec3 &v=camera_from_videoCentre;
+		scr::vec4 right_eye ={v.x+eye.x,v.y+eye.y,v.z+eye.z,0.0f};
+		scr::vec4 left_eye ={v.x-eye.x,v.y-eye.y,v.z-eye.z,0.0f};
 		videoUB.eyeOffsets[0]=left_eye;		// left eye
 		videoUB.eyeOffsets[1]=right_eye;	// right eye.
 		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
@@ -632,13 +711,13 @@ bool Application::InitializeController()
 	return false;
 }
 
-void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
+void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds)
 {
 	if(mPipelineConfigured) {
 		// TODO: Fix!
 		return;
 	}
-
+	receivedInitialPos=false;
 	OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height,setupCommand.colour_cubemap_size);
 
 	avs::NetworkSourceParams sourceParams = {};
@@ -666,7 +745,6 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		mNetworkSource.deconfigure();
 		return;
 	}
-
 	renderConstants.colourOffsetScale.x =0;
 	renderConstants.colourOffsetScale.y = 0;
 	renderConstants.colourOffsetScale.z = 1.0f;
@@ -749,7 +827,17 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 
 	mPipelineConfigured = true;
 
-	handshake.framerate=60;
+    if(shouldClearEverything)
+    {
+        resourceManagers.Clear();
+        mOVRActors.clear();
+    }
+    else
+    {
+        resourceManagers.ClearCareful(resourcesClientNeeds);
+    }
+
+    handshake.framerate=60;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
 	handshake.maxBandwidth=handshake.udpBufferSize*(size_t)handshake.framerate;
 }
@@ -770,6 +858,8 @@ bool Application::OnActorEnteredBounds(avs::uid actor_uid)
 
 bool Application::OnActorLeftBounds(avs::uid actor_uid)
 {
+	if (mSession.IsConnected())
+		mSession.SendWantToDropActor(actor_uid);
     return resourceManagers.mActorManager.HideActor(actor_uid);
 }
 
@@ -858,7 +948,7 @@ void Application::CopyToCubemaps()
 		{
 			static uint32_t face= 0;
 			mip_y = 0;
-			int32_t mip_size=specularSize;
+			int32_t mip_size=diffuseSize;
 			uint32_t M=mDiffuseTexture->GetTextureCreateInfo().mipCount;
 			scr::ivec2 offset={offset0.x+diffuseOffset.x,offset0.y+diffuseOffset.y};
 			for (uint32_t m        = 0; m < M; m++)
@@ -866,7 +956,7 @@ void Application::CopyToCubemaps()
 					inputCommand.m_WorkGroupSize = {(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount ,6};
 					mCubemapComputeShaderResources[0].SetImageInfo(1, 0, {mDiffuseTexture->GetSampler(), mDiffuseTexture, m});
 					cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
-					cubemapUB.faceSize             = mip_size;
+					cubemapUB.faceSize 				= uint32_t(mip_size);
 					cubemapUB.mip                  = m;
 					cubemapUB.face				   = 0;
 					inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
@@ -881,38 +971,43 @@ void Application::CopyToCubemaps()
 		}
 
 		{
-			mip_y=0;
-			int32_t mip_size=specularSize;
-			uint32_t M=mSpecularTexture->GetTextureCreateInfo().mipCount;
-			scr::ivec2 offset={offset0.x+specularOffset.x,offset0.y+specularOffset.y};
-			for(uint32_t m=0;m<M;m++)
+			mip_y = 0;
+			int32_t          mip_size = specularSize;
+			uint32_t         M        = mSpecularTexture->GetTextureCreateInfo().mipCount;
+			scr::ivec2       offset   = {
+					offset0.x + specularOffset.x, offset0.y + specularOffset.y};
+			for (uint32_t m        = 0; m < M; m++)
 			{
-				inputCommand.m_WorkGroupSize={(mip_size+1)/ThreadCount,(mip_size+1)/ThreadCount,6};
-				mCubemapComputeShaderResources[0].SetImageInfo(1 ,0, {mSpecularTexture->GetSampler(), mSpecularTexture, m});
-				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
-				cubemapUB.faceSize 				= mip_size;
-				cubemapUB.mip             		= m;
-				cubemapUB.face				   = 0;
+				inputCommand.m_WorkGroupSize = {
+						(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount, 6};
+				mCubemapComputeShaderResources[0].SetImageInfo(
+						1, 0, {mSpecularTexture->GetSampler(), mSpecularTexture, m});
+				cubemapUB.sourceOffset         = {offset.x, offset.y + mip_y};
+				cubemapUB.faceSize             = uint32_t(mip_size);
+				cubemapUB.mip                  = m;
+				cubemapUB.face                 = 0;
 				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
 				mDeviceContext.DispatchCompute(&inputCommand);
-				mip_y+=2*mip_size;
-				mip_size/=2;
+				mip_y += 2 * mip_size;
+				mip_size /= 2;
 			}
-
-			mip_y=0;
-			mip_size=specularSize;
-			M=mRoughSpecularTexture->GetTextureCreateInfo().mipCount;
+		}
+		{
+			mip_y = 0;
+			int32_t          mip_size = specularSize;
+			uint32_t         M        = mSpecularTexture->GetTextureCreateInfo().mipCount;
+			scr::ivec2       offset   = {	offset0.x + roughOffset.x, offset0.y + roughOffset.y};
 			for(uint32_t m=0;m<M;m++)
 			{
 				inputCommand.m_WorkGroupSize={(mip_size+1)/ThreadCount,(mip_size+1)/ThreadCount,6};
 				mCubemapComputeShaderResources[0].SetImageInfo(1 ,0, {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture, m});
 				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
-				cubemapUB.faceSize = mip_size;
-				cubemapUB.mip             = m;
-				cubemapUB.face				   = 0;
-				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
+				cubemapUB.faceSize 				= uint32_t(mip_size);
+				cubemapUB.mip             		= m;
+				cubemapUB.face					= 0;
+				inputCommand.m_ShaderResources	= {mCubemapComputeShaderResources[0][1]};
 				mDeviceContext.DispatchCompute(&inputCommand);
-				mip_y					+=2*mip_size;
+				mip_y							+=2*mip_size;
 				mip_size/=2;
 			}
 		}
@@ -948,7 +1043,6 @@ void Application::CopyToCubemaps()
 				mip_y += 2 * mip_size;
 				mip_size /= 2;
 			}
-		}
 #endif
 		GL_CheckErrors("Frame: CopyToCubemaps - Lighting");
 	}
@@ -973,6 +1067,8 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 		if(mOVRActors.find(a.first) == mOVRActors.end())
 		{
+			if (mSession.IsConnected())
+				mSession.SendConfirmActor(a.first);
 			mOVRActors[a.first]; //Create
 			std::shared_ptr<OVRActor> pOvrActor = std::make_shared<OVRActor>();
 			//pOvrActor->ovrSurfaceDefs.reserve(num_elements);
@@ -1111,14 +1207,17 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				break;
 			}
 			//----OVR Actor Set Transforms----//
+
+			// Because we're using OVR's rendering, we must position the actor's relative to the oculus origin.
 			float     heightOffset = -0.0F;
-			scr::vec3 camPos       = capturePosition * -1;
-			camPos.y += heightOffset;
+			scr::vec3 offsetToOculusOrigin       = -oculusOrigin;//-cameraPosition ;
+			offsetToOculusOrigin.y += heightOffset;
 
 			//Change of Basis matrix
 			scr::mat4 cob = scr::mat4({0, 1, 0, 0}, {0, 0, 1, 0}, {-1, 0, 0, 0}, {0, 0, 0, 1});
-			scr::mat4 inv_ue4ViewMatrix = scr::mat4::Translation(camPos);
-			scr::mat4 scr_Transform = inv_ue4ViewMatrix * actor->GetTransform().GetTransformMatrix() * cob;
+			scr::mat4 transformToOculusOrigin = scr::mat4::Translation(offsetToOculusOrigin);
+			//
+			scr::mat4 scr_Transform = transformToOculusOrigin *actor->GetTransform().GetTransformMatrix() * cob;
 
 			OVR::Matrix4f transform;
 			memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));

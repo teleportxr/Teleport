@@ -7,8 +7,10 @@
 #include "cubemap_constants.sl"
 
 uniform TextureCube cubemapTexture;
-uniform Texture2D plainTexture;
+uniform Texture2D<float4> plainTexture;
 uniform RWTexture2DArray<uchar4> RWTextureTargetArray;
+uniform RWStructuredBuffer<vec4> RWCameraPosition;
+uniform StructuredBuffer<vec4> CameraPosition;
  
 vec2 OffsetScale(vec2 uv, vec4 offsc)
 {
@@ -24,7 +26,7 @@ shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
 	float theta	= acos(-view.z) / PI;
 	vec2  uv	= fract(vec2(phi, theta));
 	
-	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv,colourOffsetScale), 0).rgba;
+	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
 	vec4 depth_lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
 	
     return lookup*depth_lookup;
@@ -34,13 +36,37 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 {
 	const float PI = 3.1415926536;
 	const float TwoPI = 2.0 * PI;
-	vec3 view = TexCoordsToView(IN.texCoords);
-	view.xy = -view.yx;
-	view.z *= -1.0;
-	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
-	vec4 depth_lookup = 1.0;// plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
+	vec3 view_orig = TexCoordsToView(IN.texCoords);
+	view_orig.xy = -view_orig.yx;
+	view_orig.z *= -1.0;
+	vec3 offsetFromVideo2=cameraPosition-CameraPosition[0];
+	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
+	/*vec3 view = view_orig;
+	for (int i = 0; i < 5; i++)
+	{
+		float depth = lookup.a;
+		float dist_m = max(0.2, 20.0 * depth);
+		vec3 pos_m = dist_m * view_orig;
+		pos_m += vec3(offsetFromVideo2.yx, offsetFromVideo2.z) * step(-0.8, -depth);
 
-	return lookup;// *lookup.a;
+		// But this does not intersect at depth. We want the vector from the original centre, of 
+
+		// original radius to hit point
+		float R = dist_m;
+		float F = length(offsetFromVideo2);
+		if (F > 0)
+		{
+			float D = -dot(normalize(offsetFromVideo2), view_orig);
+			float b = F * D;
+			float c = F * F - R * R;
+			float U = -b + sqrt(b * b - c);
+			pos_m += (U - R) * view_orig;
+
+			view = normalize(pos_m);
+			lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
+		}
+	}*/
+	return lookup;
 }
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
@@ -65,20 +91,66 @@ shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	RWTextureTargetArray[pos] = SceneColor;
 }
 
+groupshared uint4 accumulate_position[32];
+// From the encoded binary at bottom-right
+[numthreads(32, 1, 1)]
+shader void CS_ExtractCameraPosition(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
+{
+	uint2 ThreadID	= uint2(g.xy * 32 + t.xy);
+	uint2 pos		= sourceOffset+4*ThreadID.xy;
+	uint2 pos_x		= pos +uint2(2,2);
+	uint2 pos_y		= pos +uint2(2,10);
+	uint2 pos_z		= pos +uint2(2,18);
+	// The offset is to the X component. The thread index gives us the bit mask.
+	float4 lookupX	= plainTexture.Load(int3(pos_x.xy, 0));
+	float4 lookupY	= plainTexture.Load(int3(pos_y.xy, 0));
+	float4 lookupZ	= plainTexture.Load(int3(pos_z.xy, 0));
+	// Convert the green component to a 0 or 1 uint. shift to get the binary.
+	int bitX		=(int)(lookupX.g+0.5)<<uint(ThreadID.x);
+	int bitY		=(int)(lookupY.g+0.5)<<uint(ThreadID.x);
+	int bitZ		=(int)(lookupZ.g+0.5)<<uint(ThreadID.x);
+	int4 bits		=uint4(bitX,bitY,bitZ,0);
+	accumulate_position[ThreadID.x] = bits;
+	GroupMemoryBarrierWithGroupSync();
+	// Now join all the bits together.
+	if(ThreadID.x==0)
+	{
+		uint4 all_bits=uint4(0,0,0,0);
+		for(int i=0;i<32;i++)
+		{
+			all_bits|=accumulate_position[i];
+		}
+		RWCameraPosition[0] = asfloat(all_bits);//asfloat(accumulate_position[4]);// float4(SceneColor.rgba);
+	}
+}
+
 [numthreads(16, 16, 1)]
 shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 {
 	uint3 ThreadID = uint3(g.xy * 16 + t.xy, g.z);
+	vec3 DepthMask[4];
+	DepthMask[0] = vec3(1.0, 0.0, 0.0); //0,0);
+	DepthMask[1] = vec3(0.0, 1.0, 0.0); //1,0);
+	DepthMask[2] = vec3(0.0, 0.0, 1.0); //0,1);
+	DepthMask[3] = vec3(0.0, 0.5, 0.5); //1,1);
 	uint InputW, InputH;
 	plainTexture.GetDimensions(InputW, InputH);
 	uint OutputW, OutputH, OutputD;
 	RWTextureTargetArray.GetDimensions(OutputW, OutputH, OutputD);
-	int3 pos = int3(ThreadID);
-	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
-	float4 SceneColor	= plainTexture.Load(int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0));
-	float4 Depth		= plainTexture.Load(int3(pos.xy/2 + sourceOffset + OutputW/2* FaceOffsets[ThreadID.z], 0));
-	SceneColor.a = Depth.x;
-	RWTextureTargetArray[pos] = float4(SceneColor.rgba);
+	int3 pos			= int3(ThreadID);
+	int2 FaceOffsets[]	= { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
+	int3 loadPos		= int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0);
+	float4 SceneColor = plainTexture.Load(loadPos);
+
+	int2 loadDepthPos	= loadPos / 2;
+	int2 offsetToPos	= pos.xy % 2;// -loadDepthPos * 2;
+	loadDepthPos		+= int2(0, OutputW) * 2;	// underneath the main cube in the video texture.
+	vec3 dMask			= DepthMask[offsetToPos.x];// +2 * offsetToPos.y ];
+	vec3 lookupDepth	= plainTexture.Load(int3(loadDepthPos, 0)).rgb;
+
+	float d = dot(lookupDepth, dMask);
+	SceneColor.a		= d;
+	RWTextureTargetArray[pos] = SceneColor;// float4(SceneColor.rgba);
 }
 
 VertexShader vs = CompileShader(vs_4_0, VS_SimpleFullscreen());
@@ -124,6 +196,13 @@ technique recompose
 	pass p0
 	{
 		SetComputeShader(CompileShader(cs_5_0, CS_Recompose()));
+	}
+}
+technique extract_camera_position
+{
+	pass p0
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_ExtractCameraPosition()));
 	}
 }
 technique recompose_with_depth_alpha

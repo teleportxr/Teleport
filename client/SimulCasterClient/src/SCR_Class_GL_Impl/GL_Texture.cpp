@@ -176,7 +176,7 @@ void GL_Texture::Bind(uint32_t mip,uint32_t layer) const
     {
         if (mip == (uint32_t) 0xffffffff)
         {
-            glTexParameteri(tt, GL_TEXTURE_MAX_LEVEL, 1000);
+            glTexParameteri(tt, GL_TEXTURE_MAX_LEVEL, this->m_CI.mipCount-1);
             glTexParameteri(tt, GL_TEXTURE_BASE_LEVEL, 0);
         }
         else
@@ -186,7 +186,7 @@ void GL_Texture::Bind(uint32_t mip,uint32_t layer) const
         }
     }
 
-    glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
+    glBindTexture(tt, m_Texture.texture);
 }
 
 void GL_Texture::BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const

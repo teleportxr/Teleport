@@ -72,6 +72,21 @@ namespace scr
 			mLightManager.Clear();
 		}
 
+		void ClearCareful(std::vector<uid>& excludeList)
+		{
+			mIndexBufferManager.ClearCareful(excludeList);
+			mShaderManager.ClearCareful(excludeList);
+			mMaterialManager.ClearCareful(excludeList);
+			mTextureManager.ClearCareful(excludeList);
+			mUniformBufferManager.ClearCareful(excludeList);
+			mVertexBufferManager.ClearCareful(excludeList);
+			mMeshManager.ClearCareful(excludeList);
+			mLightManager.ClearCareful(excludeList);
+
+			//Last as it will likely be the largest.
+			mActorManager.ClearCareful(excludeList);
+		}
+
         scr::ActorManager  					mActorManager;
         ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
         ResourceManager<scr::Shader>        mShaderManager;
@@ -150,6 +165,7 @@ private:
 	struct IncompleteActor : IncompleteResource
 	{
 		scr::Actor::ActorCreateInfo actorInfo;
+		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; // <ID of the material, list of indexes the material should be placed into actor material list.
 	};
 
 	struct UntranscodedTexture

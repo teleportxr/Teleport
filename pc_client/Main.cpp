@@ -10,6 +10,7 @@
 #include "Simul/Platform/CrossPlatform/DisplaySurfaceManager.h"
 #include "Simul/Platform/CrossPlatform/DisplaySurface.h"
 #include "Simul/Platform/DirectX11/RenderPlatform.h"
+#include "Simul/Base/Timer.h"
 #include "Simul/Platform/DirectX11/Direct3D11Manager.h"
 #include "ClientRenderer.h"
 #ifdef _MSC_VER
@@ -240,7 +241,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				clientRenderer.Update();
 
 				double fTime=0.0;
-				float time_step=0.01f;
+				static simul::base::Timer t;
+				
+				float time_step=t.UpdateTime()/1000.0f;
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer.ResizeView(0, w->viewport.w, w->viewport.h);
 				clientRenderer.OnFrameMove(fTime,time_step);

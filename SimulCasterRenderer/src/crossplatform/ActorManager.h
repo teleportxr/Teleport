@@ -105,6 +105,39 @@ namespace scr
 			m_Actors.clear();
 		}
 
+		//Clear, and free memory of, all resources; bar from resources on the list.
+		//	excludeList : Elements to not clear from the manager; removes UID if it finds the element.
+		void ClearCareful(std::vector<uid>& excludeList)
+		{
+			for(auto it = m_Actors.begin(); it != m_Actors.end();)
+			{
+				bool isExcluded = false; //We don't remove the resource if it is excluded.
+				unsigned int i = 0;
+				while(i < excludeList.size() && !isExcluded)
+				{
+					//The resource is excluded if its uid appears in the exclude list.
+					if(excludeList[i] == it->first)
+					{
+						isExcluded = true;
+					}
+
+					++i;
+				}
+
+				//Increment the iterator if it is excluded.
+				if(isExcluded)
+				{
+					++it;
+					excludeList.erase(std::remove(excludeList.begin(), excludeList.end(), excludeList[i - 1]), excludeList.end());
+				}
+				//Remove the resource if it is not.
+				else
+				{
+					it = m_Actors.erase(it);
+				}
+			}
+		}
+
 		const std::map<avs::uid, LiveActor>& GetActorList()
 		{
 			return m_Actors;

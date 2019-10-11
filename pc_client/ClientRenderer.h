@@ -80,6 +80,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
+	simul::crossplatform::StructuredBuffer<vec4>			cameraPositionBuffer;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularCubemapTexture;
 	simul::crossplatform::Texture* roughSpecularCubemapTexture;
@@ -106,12 +107,14 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	scr::ResourceManagers resourceManagers;
 	void Recompose(simul::crossplatform::DeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 	bool show_video = false;
+	bool show_osd = true;
+	bool render_from_video_centre = false;
 	bool show_textures = false;
 public:
 	ClientRenderer();
 	~ClientRenderer();
 	// Implement SessionCommandInterface
-	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) override;
 	void OnVideoStreamClosed() override;
 
 	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
@@ -170,4 +173,7 @@ public:
 	avs::Pipeline pipeline;
 	int RenderMode;
 	std::shared_ptr<scr::Material> mFlatColourMaterial;
+	bool receivedInitialPos = false;
+	avs::vec3 oculusOrigin;
+	vec3 videoPos;
 };

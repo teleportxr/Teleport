@@ -55,7 +55,7 @@ public:
 	bool InitializeController();
 
 	/* Begin SessionCommandInterface */
-	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake) override;
+	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) override;
 
 	virtual void OnVideoStreamClosed() override;
 
@@ -80,6 +80,7 @@ private:
 	struct VideoUB
 	{
 		scr::vec4 eyeOffsets[2];
+		ovrMatrix4f invViewProj[2];
 	};
 	VideoUB videoUB;
 
@@ -142,7 +143,7 @@ private:
 	//int		 mControllerIndex;
 	ovrVector2f mTrackpadDim;
 
-	const scr::quat HAND_ROTATION_DIFFERENCE {0.923879504, -0.382683426, 0, 0}; //Adjustment to the controller's rotation to get the desired rotation.
+	const scr::quat HAND_ROTATION_DIFFERENCE { -0.382683426, 0, 0,0.923879504}; //Adjustment to the controller's rotation to get the desired rotation.
 
 	int mNumPendingFrames                  = 0;
 
@@ -152,13 +153,16 @@ private:
 	scc::GL_DeviceContext mDeviceContext;
 	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
 
-	scr::vec3                    capturePosition;
+	scr::vec3                    cameraPosition;	// in real space.
+	scr::vec3					oculusOrigin;		// in metres. The headPose will be relative to this.
+
 	std::shared_ptr<scr::Camera> scrCamera;
 
 	scc::GL_Effect                mEffect;
 	std::shared_ptr<scr::Sampler> mSampler;
 	std::shared_ptr<scr::Sampler> mSamplerCubeMipMap;
 
+	bool receivedInitialPos=false;
 	struct OVRActor
 	{
 		std::vector<std::shared_ptr<OVR::ovrSurfaceDef>> ovrSurfaceDefs;
@@ -191,4 +195,5 @@ private:
 	void RenderLocalActors(OVR::ovrFrameResult& res);
     const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources);
 	std::string LoadTextFile(const char *filename);
+	bool mShowInfo=false;
 };
