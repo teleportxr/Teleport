@@ -80,7 +80,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
-	simul::crossplatform::StructuredBuffer<vec4>			cameraPositionBuffer;
+	simul::crossplatform::StructuredBuffer<vec4>		cameraPositionBuffer;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularCubemapTexture;
 	simul::crossplatform::Texture* roughSpecularCubemapTexture;

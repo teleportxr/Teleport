@@ -20,6 +20,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "GlProgram.h"
 #include "GlBuffer.h"
 #include "VrCommon.h"
+#include <GLES3/gl32.h>
 
 #include <algorithm>
 

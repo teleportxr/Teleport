@@ -11,8 +11,10 @@ namespace scr
 	public:
 		enum class Access : uint32_t
 		{
+			NONE = 0,
 			READ_BIT = 0x00000001,
-			WRITE_BIT = 0x00000002
+			WRITE_BIT = 0x00000002,
+			READ_WRITE_BIT = 0x00000003
 		};
 		struct ShaderStorageBufferCreateInfo
 		{

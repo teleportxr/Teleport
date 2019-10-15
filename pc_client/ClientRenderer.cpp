@@ -730,7 +730,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	handshake.MetresPerUnit = 1.0f;
 	handshake.framerate = 60;
 	handshake.udpBufferSize = (uint32_t)source.getSystemBufferSize();
-	handshake.maxBandwidth = handshake.framerate*handshake.udpBufferSize;
+	handshake.maxBandwidthKpS = handshake.framerate*handshake.udpBufferSize;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 

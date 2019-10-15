@@ -57,6 +57,7 @@ Application::Application()
 	, mVideoSurfaceTexture(nullptr)
 	, mCubemapTexture(nullptr)
 	, mCubemapLightingTexture(nullptr)
+	,mCameraPositionBuffer(nullptr)
 	, mOvrMobile(nullptr)
 	, mSession(this, resourceCreator)
 	, mControllerID(0)
@@ -207,16 +208,31 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mRoughSpecularTexture = renderPlatform.InstantiateTexture();
 
 		mCubemapLightingTexture = renderPlatform.InstantiateTexture();
+		mCameraPositionBuffer	=renderPlatform.InstantiateShaderStorageBuffer();
+		{
+			scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
+					3,
+					scr::ShaderStorageBuffer::Access::NONE,
+					8*4*sizeof(float),
+					(void*)&mCameraPositions
+			};
+			mCameraPositionBuffer->Create(&shaderStorageBufferCreateInfo);
+		}
 		{
 			CopyCubemapSrc     = LoadTextFile("shaders/CopyCubemap.comp");
 			mCopyCubemapEffect = renderPlatform.InstantiateEffect();
 			mCopyCubemapWithDepthEffect = renderPlatform.InstantiateEffect();
+			mExtractCameraPositionEffect=renderPlatform.InstantiateEffect();
+
 			scr::Effect::EffectCreateInfo effectCreateInfo = {};
 			effectCreateInfo.effectName = "CopyCubemap";
 			mCopyCubemapEffect->Create(&effectCreateInfo);
 
 			effectCreateInfo.effectName = "CopyCubemapWithDepth";
 			mCopyCubemapWithDepthEffect->Create(&effectCreateInfo);
+
+			effectCreateInfo.effectName = "ExtractCameraPosition";
+			mExtractCameraPositionEffect->Create(&effectCreateInfo);
 
 			scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.m_Count = 1;
@@ -240,6 +256,17 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			mCopyCubemapWithDepthEffect->CreatePass(&effectPassCreateInfo);
 
 			{
+				ExtractPositionSrc     = LoadTextFile("shaders/ExtractPosition.comp");
+				pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/ExtractPosition.comp";
+				pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractPositionSrc;
+				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_camera_position";
+				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_camera_position";
+				scr::ShaderSystem::Pipeline cp3(&renderPlatform, &pipelineCreateInfo);
+				effectPassCreateInfo.effectPassName = "ExtractPosition";
+				effectPassCreateInfo.pipeline = cp3;
+				mExtractCameraPositionEffect->CreatePass(&effectPassCreateInfo);
+
+
 				scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(CubemapUB), &cubemapUB};
 				mCubemapUB->Create(&uniformBufferCreateInfo);
 			}
@@ -249,8 +276,9 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
             layout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
             layout.AddBinding(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
             layout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
+			layout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, scr::Shader::Stage::SHADER_STAGE_COMPUTE);
 
-            scr::ShaderResource sr({layout, layout});
+            scr::ShaderResource sr({layout, layout, layout});
             sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {mSamplerCubeMipMap, mCubemapTexture,0,uint32_t(-1)});
             sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
             sr.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
@@ -259,11 +287,16 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
             sr.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
             sr.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
+			sr.AddImage(2, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
+			sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+			sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 3, "CameraPosition", {mCameraPositionBuffer.get()});
+
 
 			mCubemapComputeShaderResources.push_back(sr);
 
 			mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
 			mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{});
+			mExtractCameraPositionEffect->LinkShaders("ExtractPosition",{});
 		}
 
 		mVideoSurfaceDef.surfaceName = "VideoSurface";
@@ -839,7 +872,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 
     handshake.framerate=60;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
-	handshake.maxBandwidth=handshake.udpBufferSize*(size_t)handshake.framerate;
+	handshake.maxBandwidthKpS=(handshake.udpBufferSize*(size_t)handshake.framerate/1000);
 }
 
 void Application::OnVideoStreamClosed()
@@ -1045,7 +1078,17 @@ void Application::CopyToCubemaps()
 			}
 #endif
 		GL_CheckErrors("Frame: CopyToCubemaps - Lighting");
+		{
+			scr::uvec3 size  = {1,1,1};
+			cubemapUB.sourceOffset		={0,0};
+			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractCameraPositionEffect, {mCubemapComputeShaderResources[0][2]});
+			cubemapUB.faceSize			=tc.width;
+			cubemapUB.sourceOffset		={(int32_t)mVideoTexture->GetTextureCreateInfo().width - (32 * 4), (int32_t)mVideoTexture->GetTextureCreateInfo().height - (3 * 8)};
+
+			//mDeviceContext.DispatchCompute(&inputCommand);
 	}
+
+}
 }
 
 void Application::RenderLocalActors(ovrFrameResult& res)

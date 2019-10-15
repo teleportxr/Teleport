@@ -51,7 +51,7 @@ void colour_and_depth()
     FaceOffsets[3]=ivec2(0,1);
     FaceOffsets[4]=ivec2(1,1);
     FaceOffsets[5]=ivec2(2,1);
-    // encoded with DepthValue =  float4(SceneColor00.a,SceneColor10.a,SceneColor01.a,SceneColor11.a) / 20.0;
+    // encoded with DepthValue =  vec4(SceneColor00.a,SceneColor10.a,SceneColor01.a,SceneColor11.a) / 20.0;
     uvec3 invocationId=gl_GlobalInvocationID;
     invocationId.z+=cub.face;
     if(invocationId.x>=cub.faceSize||invocationId.y>=cub.faceSize)

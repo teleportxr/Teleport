@@ -129,11 +129,19 @@ private:
 	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
 	std::shared_ptr<scr::UniformBuffer> mVideoUB;
+	std::shared_ptr<scr::ShaderStorageBuffer> mCameraPositionBuffer;
 	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
 	scr::ShaderResource                 mLightCubemapShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
+	std::shared_ptr<scr::Effect>        mExtractCameraPositionEffect;
+
+
 	std::string                         CopyCubemapSrc;
+	std::string                         ExtractPositionSrc;
+
+	scr::vec4 mCameraPositions[8];
+
 	ovrMobile                           *mOvrMobile;
 	SessionClient                       mSession;
 
@@ -161,6 +169,7 @@ private:
 	scc::GL_Effect                mEffect;
 	std::shared_ptr<scr::Sampler> mSampler;
 	std::shared_ptr<scr::Sampler> mSamplerCubeMipMap;
+
 
 	bool receivedInitialPos=false;
 	struct OVRActor
@@ -195,5 +204,5 @@ private:
 	void RenderLocalActors(OVR::ovrFrameResult& res);
     const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources);
 	std::string LoadTextFile(const char *filename);
-	bool mShowInfo=false;
+	bool mShowInfo=true;
 };

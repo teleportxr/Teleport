@@ -41,7 +41,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	view_orig.z *= -1.0;
 	vec3 offsetFromVideo2=cameraPosition-CameraPosition[0];
 	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
-	/*vec3 view = view_orig;
+	vec3 view = view_orig;
 	for (int i = 0; i < 5; i++)
 	{
 		float depth = lookup.a;
@@ -65,7 +65,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 			view = normalize(pos_m);
 			lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
 		}
-	}*/
+	}
 	return lookup;
 }
 

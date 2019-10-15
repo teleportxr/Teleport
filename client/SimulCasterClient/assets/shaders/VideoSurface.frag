@@ -13,6 +13,12 @@ layout(location = 5) in vec3 vEyeOffset;
 layout(location = 6) in vec3 vDirection;
 layout(location = 7) in vec2 vTexCoords;
 
+layout(std430,binding=3) buffer RWCameraPosition_ssbo
+{
+    vec4 RWCameraPosition[8];
+};
+
+
 vec2 WorldspaceDirToUV(vec3 wsDir)
 {
     float phi   = atan(wsDir.z, wsDir.x) / TwoPI;
@@ -40,7 +46,7 @@ void main()
     for (int i = 0; i < 1; i++)
     {
         float depth = lookup.a;
-        float dist_m=max(0.2,20.0*depth);
+        float dist_m=max(0.5,20.0*depth);
         vec3 pos_m=dist_m*vDirection;
         pos_m+=vEyeOffset* step(-0.9, -depth);
 
@@ -61,6 +67,6 @@ void main()
         }
     }
 //finalLookup.rgb+=fract(vEyeOffset);
-    gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
+    gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0)) + RWCameraPosition[0];
     //8.0*abs(vSampleVec.z)
 }

@@ -1,0 +1,50 @@
+#extension GL_OES_EGL_image_external_essl3 : require
+precision highp float;
+
+layout(rgba8, binding = 0) uniform writeonly lowp imageCube destTex;
+layout(binding = 1) uniform highp samplerExternalOES videoFrameTexture;
+layout(std140, binding = 2) uniform cubemapUB
+{
+    ivec2 sourceOffset;
+    uint faceSize;
+    uint mip;
+    uint face;
+} cub;
+
+layout(std430,binding=3) buffer RWCameraPosition_ssbo
+{
+    vec4 RWCameraPosition[8];
+};
+
+shared uvec4 accumulate_position[32];
+// From the encoded binary at bottom-right
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+void extract_camera_position()
+{
+    uvec2 ThreadID  =gl_GlobalInvocationID.xy;
+    uvec2 pos		= uvec2(cub.sourceOffset)+uint(4)*ThreadID.xy;
+    uvec2 pos_x		= pos +uvec2(uint(2),uint(2));
+    uvec2 pos_y		= pos +uvec2(uint(2),uint(10));
+    uvec2 pos_z		= pos +uvec2(uint(2),uint(18));
+    // The offset is to the X component. The thread index gives us the bit mask.
+    vec4 lookupX	= texelFetch(videoFrameTexture, ivec2(pos_x.xy), 0);
+    vec4 lookupY	= texelFetch(videoFrameTexture, ivec2(pos_y.xy), 0);
+    vec4 lookupZ	= texelFetch(videoFrameTexture, ivec2(pos_z.xy), 0);
+    // Convert the green component to a 0 or 1 uint. shift to get the binary.
+    uint bitX		=(uint(lookupX.g+0.5))<<uint(ThreadID.x);
+    uint bitY		=(uint(lookupY.g+0.5))<<uint(ThreadID.x);
+    uint bitZ		=(uint(lookupZ.g+0.5))<<uint(ThreadID.x);
+    uvec4 bits		=uvec4(bitX,bitY,bitZ,0);
+    accumulate_position[ThreadID.x] = bits;
+    barrier();
+    // Now join all the bits together.
+    if(ThreadID.x==uint(0))
+    {
+        uvec4 all_bits=uvec4(0,0,0,0);
+        for(int i=0;i<32;i++)
+        {
+            all_bits|=accumulate_position[i];
+        }
+        RWCameraPosition[0] = uintBitsToFloat(all_bits);//asfloat(accumulate_position[4]);// vec4(SceneColor.rgba);
+    }
+}
