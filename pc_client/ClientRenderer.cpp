@@ -621,7 +621,7 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 	AVSTextureImpl *ti=(AVSTextureImpl*)t;
 	if(!ti->texture)
 		ti->texture = renderPlatform->CreateTexture();
-	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height, simul::crossplatform::RGBA_8_UNORM, true, true, false);
+	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height, simul::crossplatform::RGB_10_A2_UINT, true, true, false);
 }
 
 void ClientRenderer::Update()
@@ -653,6 +653,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	source.setDoChecksums(setupCommand.do_checksums);
 	decoderParams.deferDisplay = false;
 	decoderParams.codec = avs::VideoCodec::HEVC;
+	decoderParams.use10BitDecoding = setupCommand.use_10_bit_decoding;
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type = avs::DeviceType::Direct3D11;
@@ -810,7 +811,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
 		sessionClient.Frame(headPose,decoder->hasValidTransform(),controllerState);
-		pipeline.process();
+		avs::Result result = pipeline.process();
 
 		static short c = 0;
 		if (!c--)

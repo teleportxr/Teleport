@@ -152,7 +152,7 @@ public:
 	static constexpr uint32_t MaxJitterBufferLength = 50;
 
 	static constexpr avs::SurfaceFormat SurfaceFormats[2] = {
-		avs::SurfaceFormat::ARGB,
+		avs::SurfaceFormat::ARGB10,
 		avs::SurfaceFormat::ARGB,
 	};
 
