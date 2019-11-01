@@ -621,7 +621,7 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 	AVSTextureImpl *ti=(AVSTextureImpl*)t;
 	if(!ti->texture)
 		ti->texture = renderPlatform->CreateTexture();
-	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height, simul::crossplatform::RGB_10_A2_UINT, true, true, false);
+	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height, simul::crossplatform::RGBA_8_UNORM, true, true, false);
 }
 
 void ClientRenderer::Update()
