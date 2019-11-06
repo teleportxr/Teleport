@@ -651,8 +651,8 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	}
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
-	decoderParams.deferDisplay = true;
-	decoderParams.decodeFrequency = avs::DecodeFrequency::AccessUnit;
+	decoderParams.deferDisplay = false;
+	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.use10BitDecoding = setupCommand.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = setupCommand.use_yuv_444_decoding;
@@ -777,7 +777,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	if (sessionClient.IsConnected())
 	{
 		vec3 forward=-camera.GetOrientation().Tz();
-		std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
+		//std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
 		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f,0.0f, 0.0f));
