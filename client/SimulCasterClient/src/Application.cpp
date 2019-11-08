@@ -711,7 +711,7 @@ bool Application::InitializeController()
 	return false;
 }
 
-void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds)
+void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
 	if(mPipelineConfigured) {
 		// TODO: Fix!
@@ -834,7 +834,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
     }
     else
     {
-        resourceManagers.ClearCareful(resourcesClientNeeds);
+        resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
     }
 
     handshake.framerate=60;
@@ -858,9 +858,7 @@ bool Application::OnActorEnteredBounds(avs::uid actor_uid)
 
 bool Application::OnActorLeftBounds(avs::uid actor_uid)
 {
-	if (mSession.IsConnected())
-		mSession.SendWantToDropActor(actor_uid);
-    return resourceManagers.mActorManager.HideActor(actor_uid);
+	return resourceManagers.mActorManager.HideActor(actor_uid);
 }
 
 void Application::OnFrameAvailable()
@@ -1067,8 +1065,6 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 		if(mOVRActors.find(a.first) == mOVRActors.end())
 		{
-			if (mSession.IsConnected())
-				mSession.SendConfirmActor(a.first);
 			mOVRActors[a.first]; //Create
 			std::shared_ptr<OVRActor> pOvrActor = std::make_shared<OVRActor>();
 			//pOvrActor->ovrSurfaceDefs.reserve(num_elements);

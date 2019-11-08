@@ -276,7 +276,6 @@ void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContex
 	}
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
-
 }
 
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
@@ -492,8 +491,6 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		const std::vector<std::shared_ptr<scr::Material>> materials = actorData.second.actor->GetMaterials();
 		if (!materials.size())
 			continue;
-		if (sessionClient.IsConnected())
-			sessionClient.SendConfirmActor(actorData.first);
 		size_t element = 0;
 		const auto &CI=mesh->GetMeshCreateInfo();
 		for (const std::shared_ptr<scr::Material>& m : materials)
@@ -635,7 +632,7 @@ void ClientRenderer::Update()
 	previousTimestamp = timestamp;
 }
 
-void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds)
+void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
@@ -725,7 +722,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	}
 	else
 	{
-		resourceManagers.ClearCareful(resourcesClientNeeds);
+		resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
 	}
 
 	handshake.isReadyToReceivePayloads = true;
@@ -752,7 +749,6 @@ bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
 
 bool ClientRenderer::OnActorLeftBounds(avs::uid actor_uid)
 {
-	sessionClient.SendWantToDropActor(actor_uid);
 	return resourceManagers.mActorManager.HideActor(actor_uid);
 }
 

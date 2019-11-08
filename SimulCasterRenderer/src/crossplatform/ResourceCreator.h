@@ -72,7 +72,7 @@ namespace scr
 			mLightManager.Clear();
 		}
 
-		void ClearCareful(std::vector<uid>& excludeList)
+		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
 		{
 			mIndexBufferManager.ClearCareful(excludeList);
 			mShaderManager.ClearCareful(excludeList);
@@ -84,7 +84,7 @@ namespace scr
 			mLightManager.ClearCareful(excludeList);
 
 			//Last as it will likely be the largest.
-			mActorManager.ClearCareful(excludeList);
+			mActorManager.ClearCareful(excludeList, outExistingActors);
 		}
 
         scr::ActorManager  					mActorManager;
@@ -109,6 +109,10 @@ public:
 	void Initialise(scr::RenderPlatform *r, scr::VertexBufferLayout::PackingStyle packingStyle);
 	//Returns the resources the ResourceCreator needs, and clears the list.
 	std::vector<avs::uid> TakeResourceRequests();
+	//Returns a list of resource IDs corresponding to the resources the client has received, and clears the list.
+	std::vector<avs::uid> TakeReceivedResources();
+	//Returns the actors that have been finished since the call, and clears the list.
+	std::vector<avs::uid> TakeCompletedActors();
 
 	//Updates any processes that need to happen on a regular basis; should be called at least once per second.
 	//	deltaTime : Milliseconds that has passed since the last call to Update();
@@ -140,7 +144,7 @@ public:
 	}
 
 	// Inherited via GeometryTargetBackendInterface
-	avs::Result Assemble(avs::MeshCreate*) override;
+	avs::Result Assemble(const avs::MeshCreate& meshCreate) override;
 
 	void passTexture(avs::uid texture_uid, const avs::Texture& texture) override;
 	void passMaterial(avs::uid material_uid, const avs::Material& material) override;
@@ -217,8 +221,10 @@ private:
 
 	scr::ActorManager* m_pActorManager;
 
-	std::vector<avs::uid> m_ResourceRequests;
-	std::unordered_map<avs::uid, std::vector<std::shared_ptr<IncompleteResource>>> m_WaitingForResources; //<ID of Missing Resource, Thing Waiting For Resource>
+	std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
+	std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.
+	std::vector<avs::uid> m_CompletedActors; //List of IDs of actors that have been fully received, and have yet to be confirmed to the server.
+	std::unordered_map<avs::uid, std::vector<std::shared_ptr<IncompleteResource>>> m_WaitingForResources; //<ID of Missing Resource, List Of Things Waiting For Resource>
 
 	void BasisThread_TranscodeTextures();
 };

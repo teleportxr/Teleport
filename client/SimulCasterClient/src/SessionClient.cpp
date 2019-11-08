@@ -228,29 +228,12 @@ void SessionClient::Disconnect(uint timeout)
     }
 }
 
-void SessionClient::SendConfirmActor(avs::uid uid)
-{
-	avs::ActorStatusClientMessage msg;
-	msg.actor_uid = uid;
-	msg.actorStatus = avs::ActorStatus::Drawn;
-	SendClientMessage(msg);
-}
-
-void SessionClient::SendWantToDropActor(avs::uid uid)
-{
-	avs::ActorStatusClientMessage msg;
-	msg.actor_uid = uid;
-	msg.actorStatus = avs::ActorStatus::WantToRelease;
-	SendClientMessage(msg);
-}
-
 void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
 {
 	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);
 	ENetPacket* packet = enet_packet_create(&msg, sz,ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
 }
-
 
 void SessionClient::Frame(const HeadPose& headPose, bool poseValid,const ControllerState& controllerState)
 {
@@ -260,6 +243,8 @@ void SessionClient::Frame(const HeadPose& headPose, bool poseValid,const Control
 	        SendHeadPose(headPose);
         SendInput(controllerState);
         SendResourceRequests();
+		SendReceivedResources();
+        SendActorUpdates();
 
         ENetEvent event;
         while(enet_host_service(mClientHost, &event, 0) > 0)
@@ -349,9 +334,14 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
             handshake.axesStandard = avs::AxesStandard::GlStyle;
             handshake.MetresPerUnit = 1.0f;
             handshake.usingHands = true;
-            mCommandInterface->OnVideoStreamChanged(setupCommand, handshake, setupCommand.server_id != lastServer_id, resourcesClientNeeds);
+
+            std::vector<avs::uid> outActors;
+            mCommandInterface->OnVideoStreamChanged(setupCommand, handshake, setupCommand.server_id != lastServer_id, resourcesClientNeeds, outActors);
             //Add the unfound resources to the resource request list.
 			mResourceRequests.insert(mResourceRequests.end(), resourcesClientNeeds.begin(), resourcesClientNeeds.end());
+
+            //Confirm the actors the client already has.
+            mReceivedActors.insert(mReceivedActors.end(), outActors.begin(), outActors.end());
 
             lastServer_id = setupCommand.server_id;
             SendHandshake(handshake);
@@ -374,12 +364,16 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
             memcpy(leftActors.data(), packet->data + commandSize + enteredSize, leftSize);
 
             std::vector<avs::uid> missingActors;
-            //Tell the renderer to show the actors that have entered the streamable bounds, and create resend requests for actors it does not have the data on.
-            for(avs::uid actor_uid : enteredActors)
+            //Tell the renderer to show the actors that have entered the streamable bounds; create resend requests for actors it does not have the data on, and confirm actors it does have the data for.
+			for(avs::uid actor_uid : enteredActors)
             {
                 if(!mCommandInterface->OnActorEnteredBounds(actor_uid))
                 {
                     missingActors.push_back(actor_uid);
+                }
+                else
+                {
+                    mReceivedActors.push_back(actor_uid);
                 }
             }
             mResourceRequests.insert(mResourceRequests.end(), missingActors.begin(), missingActors.end());
@@ -389,6 +383,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
             {
                 mCommandInterface->OnActorLeftBounds(actor_uid);
             }
+            mLostActors.insert(mLostActors.end(), leftActors.begin(), leftActors.end());
         }
 
             break;
@@ -497,6 +492,53 @@ void SessionClient::SendResourceRequests()
 
         enet_peer_send(mServerPeer, RPCH_Request, packet);
     }
+}
+
+void SessionClient::SendReceivedResources()
+{
+	std::vector<avs::uid> receivedResources = mResourceCreator.TakeReceivedResources();
+
+	if(receivedResources.size() != 0)
+	{
+		avs::ReceivedResourcesMessage message(receivedResources.size());
+
+		size_t messageSize = sizeof(avs::ReceivedResourcesMessage);
+		size_t receivedResourcesSize = sizeof(avs::uid) * receivedResources.size();
+
+		ENetPacket* packet = enet_packet_create(&message, messageSize, ENET_PACKET_FLAG_RELIABLE);
+		enet_packet_resize(packet, messageSize + receivedResourcesSize);
+		memcpy(packet->data + messageSize, receivedResources.data(), receivedResourcesSize);
+
+		enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+	}
+}
+
+void SessionClient::SendActorUpdates()
+{
+	//Insert completed actors.
+	{
+		std::vector<avs::uid> completedActors = mResourceCreator.TakeCompletedActors();
+		mReceivedActors.insert(mReceivedActors.end(), completedActors.begin(), completedActors.end());
+	}
+
+	if(mReceivedActors.size() != 0 || mLostActors.size() != 0)
+	{
+		avs::ActorStatusMessage message(mReceivedActors.size(), mLostActors.size());
+
+		size_t messageSize = sizeof(avs::ActorStatusMessage);
+		size_t receivedSize = sizeof(avs::uid) * mReceivedActors.size();
+		size_t lostSize = sizeof(avs::uid) * mLostActors.size();
+
+		ENetPacket* packet = enet_packet_create(&message, messageSize, ENET_PACKET_FLAG_RELIABLE);
+		enet_packet_resize(packet, messageSize + receivedSize + lostSize);
+		memcpy(packet->data + messageSize, mReceivedActors.data(), receivedSize);
+		memcpy(packet->data + messageSize + receivedSize, mLostActors.data(), lostSize);
+
+		enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+
+		mReceivedActors.clear();
+		mLostActors.clear();
+	}
 }
 
 void SessionClient::SendHandshake(const avs::Handshake &handshake)
