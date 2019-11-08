@@ -149,7 +149,7 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 	vec3 lookupDepth	= plainTexture.Load(int3(loadDepthPos, 0)).rgb;
 
 	float d = dot(lookupDepth, dMask);
-	// RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder. 
+	// Aidan: RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder. 
 	SceneColor.r *= SceneColor.r;
 	SceneColor.g *= SceneColor.g;
 	SceneColor.b *= SceneColor.b;

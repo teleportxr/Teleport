@@ -68,5 +68,9 @@ void colour_and_depth()
     vec4 dMask          =DepthMask[offsetToPos.x+2*offsetToPos.y];
     float d             =dot(lookupDepth,dMask);
     ivec3 storePos  = ivec3(invocationId.xyz);
+    // Aidan: RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder. 
+    lookup.r *= lookup.r;
+    lookup.g *= lookup.g;
+    lookup.b *= lookup.b;
     imageStore(destTex, storePos.xyz, vec4(lookup.rgb,lookupDepth.r));
 }
