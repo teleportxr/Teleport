@@ -648,16 +648,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             (
                scr::vec3
                {
-                   remoteStates[handIndex].HeadPose.Pose.Position.x + headPos.x,
-                   remoteStates[handIndex].HeadPose.Pose.Position.y + headPos.y,
-                   remoteStates[handIndex].HeadPose.Pose.Position.z + headPos.z
+                   remoteStates[handIndex].HeadPose.Pose.Position.x + cameraPosition.x,
+                   remoteStates[handIndex].HeadPose.Pose.Position.y + cameraPosition.y,
+                   remoteStates[handIndex].HeadPose.Pose.Position.z + cameraPosition.z
                },
                scr::quat
                {
-                   remoteStates[handIndex].HeadPose.Pose.Orientation.w,
                    remoteStates[handIndex].HeadPose.Pose.Orientation.x,
                    remoteStates[handIndex].HeadPose.Pose.Orientation.y,
-                   remoteStates[handIndex].HeadPose.Pose.Orientation.z
+                   remoteStates[handIndex].HeadPose.Pose.Orientation.z,
+				   remoteStates[handIndex].HeadPose.Pose.Orientation.w
                }
                * HAND_ROTATION_DIFFERENCE,
                hand->GetTransform().m_Scale
