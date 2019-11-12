@@ -231,7 +231,7 @@ namespace scr
 				(+(s * other.x) + (j * other.z) - (k * other.y)),	//I
 				(+(s * other.y) + (k * other.x) - (i * other.z)),	//J
 				(+(s * other.z) + (i * other.y) - (j * other.x)),	//K
-                (-(i * other.x) - (j * other.y) - (k * other.z))	//S
+				(-(i * other.x) - (j * other.y) - (k * other.z))	//S
 			);
 		}
 

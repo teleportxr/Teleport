@@ -657,7 +657,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
                    remoteStates[handIndex].HeadPose.Pose.Orientation.x,
                    remoteStates[handIndex].HeadPose.Pose.Orientation.y,
                    remoteStates[handIndex].HeadPose.Pose.Orientation.z,
-				   remoteStates[handIndex].HeadPose.Pose.Orientation.w
+                   remoteStates[handIndex].HeadPose.Pose.Orientation.w
                }
                * HAND_ROTATION_DIFFERENCE,
                hand->GetTransform().m_Scale
