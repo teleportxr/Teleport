@@ -74,17 +74,20 @@ namespace scr
 
 		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
 		{
-			mIndexBufferManager.ClearCareful(excludeList);
-			mShaderManager.ClearCareful(excludeList);
 			mMaterialManager.ClearCareful(excludeList);
 			mTextureManager.ClearCareful(excludeList);
-			mUniformBufferManager.ClearCareful(excludeList);
-			mVertexBufferManager.ClearCareful(excludeList);
 			mMeshManager.ClearCareful(excludeList);
 			mLightManager.ClearCareful(excludeList);
 
 			//Last as it will likely be the largest.
 			mActorManager.ClearCareful(excludeList, outExistingActors);
+
+			///As the UIDs of these aren't(?) stored on the server; the server can't confirm their existence.
+			///If they don't exist on the server, then the mesh won't and they'll be cleared; if they do then they need to stay.
+			//mIndexBufferManager.ClearCareful(excludeList);
+			//mShaderManager.ClearCareful(excludeList);
+			//mUniformBufferManager.ClearCareful(excludeList);
+			//mVertexBufferManager.ClearCareful(excludeList);
 		}
 
         scr::ActorManager  					mActorManager;
