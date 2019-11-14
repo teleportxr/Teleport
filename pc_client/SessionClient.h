@@ -50,7 +50,7 @@ public:
 
 	void SendClientMessage(const avs::ClientMessage &msg);
 
-    void Frame(const HeadPose &headPose,bool pose_valid,const ControllerState &controllerState);
+    void Frame(const HeadPose &headPose,bool pose_valid,const ControllerState &controllerState, bool requestKeyframe);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -65,6 +65,8 @@ private:
 	void SendResourceRequests();
 	void SendReceivedResources();
 	void SendActorUpdates();
+	void SendKeyframeRequest();
+
 	//Tell server we are ready to receive geometry payloads.
 	void SendHandshake(const avs::Handshake& handshake);
 

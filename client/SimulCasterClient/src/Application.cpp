@@ -444,7 +444,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		headPose.position=*((scr::vec3*)(&vrFrame.Tracking.HeadPose.Pose.Position));
 		headPose.position+=*((scr::vec3*)(&footPos));
 		headPose.position+=oculusOrigin;
-		mSession.Frame(headPose, mDecoder.hasValidTransform(),controllerState);
+		mSession.Frame(headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
 	}
 	else
 	{
