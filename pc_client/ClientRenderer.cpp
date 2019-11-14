@@ -808,7 +808,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
-		sessionClient.Frame(headPose, decoder->hasValidTransform(),controllerState);
+		sessionClient.Frame(headPose, decoder->hasValidTransform(),controllerState, decoder->idrRequired());
 		avs::Result result = pipeline.process();
 
 		static short c = 0;
