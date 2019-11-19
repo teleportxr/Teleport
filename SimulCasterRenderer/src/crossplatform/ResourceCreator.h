@@ -45,6 +45,7 @@ namespace scr
         {
         }
 
+		//Clear any resources that have not been used longer than their expiry time.
         void Update(uint32_t timeElapsed)
         {
 			mActorManager.Update(timeElapsed);
@@ -58,6 +59,7 @@ namespace scr
 			//mLightManager.Update(timeElapsed);
         }
 
+		//Clear all resources.
 		void Clear()
 		{
 			mActorManager.Clear();
@@ -72,6 +74,9 @@ namespace scr
 			mLightManager.Clear();
 		}
 
+		//Clear all resources that aren't in the exclude list.
+		//	excludeList : List of resources that should be spared from clearing of resource managers.
+		//	outExistingActors : List of actors in the excludeList that existed on the client.
 		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
 		{
 			mMaterialManager.ClearCareful(excludeList);

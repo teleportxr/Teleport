@@ -317,6 +317,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			ParseTextCommand(txt_utf8);
 		}
 		break;
+        case avs::CommandPayloadType::AcknowledgeHandshake:
+            handshakeAcknowledged = true;
+            break;
 		case avs::CommandPayloadType::Setup:
 		{
             size_t commandSize = sizeof(avs::SetupCommand);
@@ -415,6 +418,8 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
 
 void SessionClient::SendHeadPose(const HeadPose& pose)
 {
+    if(!handshakeAcknowledged) return;
+
     // TODO: Use compact representation with only 3 float values for wire format.
     const ovrQuatf HeadPoseOVR = *((const ovrQuatf*)&pose.orientation);
     HeadPose headPose2;
@@ -429,6 +434,8 @@ void SessionClient::SendHeadPose(const HeadPose& pose)
 
 void SessionClient::SendInput(const ControllerState& controllerState)
 {
+    if(!handshakeAcknowledged) return;
+
     RemotePlayInputState inputState = {};
 
     const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
@@ -552,6 +559,7 @@ void SessionClient::SendKeyframeRequest()
 
 void SessionClient::SendHandshake(const avs::Handshake &handshake)
 {
+    handshakeAcknowledged = false;
     ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
     enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
 }
