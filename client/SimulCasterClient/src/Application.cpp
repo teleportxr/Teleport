@@ -407,8 +407,12 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		if(vrapi_GetCurrentInputState(mOvrMobile, mControllerID, &ovrState.Header) >= 0)
 		{
 			controllerState.mButtons = ovrState.Buttons;
-			if(controllerState.mButtons)
-					mShowInfo=!mShowInfo;
+
+			//Flip show debug information, if the grip trigger was released.
+			if((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_GripTrigger) != 0 && (controllerState.mButtons & ovrButton::ovrButton_GripTrigger) == 0)
+			{
+                mShowInfo = !mShowInfo;
+            }
 
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
 //			float last_x=controllerState.mTrackpadX;
@@ -454,6 +458,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
 	}
+	mLastPrimaryControllerState = controllerState;
 
 	// Update video texture if we have any pending decoded frames.
 	while(mNumPendingFrames > 0)
@@ -648,9 +653,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             (
                scr::vec3
                {
-                   remoteStates[handIndex].HeadPose.Pose.Position.x + cameraPosition.x,
-                   remoteStates[handIndex].HeadPose.Pose.Position.y + cameraPosition.y,
-                   remoteStates[handIndex].HeadPose.Pose.Position.z + cameraPosition.z
+                   remoteStates[handIndex].HeadPose.Pose.Position.x + oculusOrigin.x,
+                   remoteStates[handIndex].HeadPose.Pose.Position.y + oculusOrigin.y,
+                   remoteStates[handIndex].HeadPose.Pose.Position.z + oculusOrigin.z
                },
                scr::quat
                {

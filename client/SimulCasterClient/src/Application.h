@@ -142,6 +142,7 @@ private:
 	ovrDeviceID mControllerID;
 	//int		 mControllerIndex;
 	ovrVector2f mTrackpadDim;
+    ControllerState mLastPrimaryControllerState; //State of the primary controller on the last frame.
 
 	const scr::quat HAND_ROTATION_DIFFERENCE {-0.382683426, 0, 0, 0.923879504}; //Adjustment to the controller's rotation to get the desired rotation.
 
