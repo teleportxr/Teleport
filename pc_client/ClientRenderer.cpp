@@ -639,7 +639,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	receivedInitialPos = false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
-	sourceParams.socketBufferSize = 2000000;	//200k like Oculus Quest
+	sourceParams.socketBufferSize = 212992;	//200k like Oculus Quest
 	// Configure for num video streams + 1 geometry stream
 	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "127.0.0.1", setupCommand.port, sourceParams))
 	{
@@ -758,7 +758,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.forward_back_input	=(float)keydown['w']-(float)keydown['s'];
 	mouseCameraInput.right_left_input	=(float)keydown['d']-(float)keydown['a'];
 	mouseCameraInput.up_down_input		=(float)keydown['t']-(float)keydown['g'];
-	static float spd = 0.2f;
+	static float spd = 2.0f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
 							,spd
