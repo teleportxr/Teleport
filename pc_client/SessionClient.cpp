@@ -73,10 +73,11 @@ enum RemotePlaySessionChannel
 {
 	RPCH_HANDSHAKE = 0,
 	RPCH_Control = 1,
-	RPCH_HeadPose = 2,
-	RPCH_Resource_Request = 3,
-	RPCH_Keyframe_Request = 4,
-	RPCH_ClientMessage = 5,
+	RPCH_DisplayInfo = 2,
+	RPCH_HeadPose = 3,
+	RPCH_Resource_Request = 4,
+	RPCH_Keyframe_Request = 5,
+	RPCH_ClientMessage = 6,
 	RPCH_NumChannels,
 };
 
@@ -277,7 +278,7 @@ void SessionClient::Disconnect(uint timeout)
 	}
 }
 
-void SessionClient::Frame(const HeadPose &headPose,bool pose_valid,const ControllerState& controllerState, bool requestKeyframe)
+void SessionClient::Frame(const DisplayInfo &displayInfo, const HeadPose &headPose,bool pose_valid,const ControllerState& controllerState, bool requestKeyframe)
 {
 	if (mClientHost && mServerPeer)
 	{
@@ -473,6 +474,14 @@ void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
 	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);
 	ENetPacket* packet = enet_packet_create(&msg, sz,ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+}
+
+void SessionClient::SendDisplayInfo (const DisplayInfo &displayInfo)
+{
+	if (!handshakeAcknowledged)
+		return;
+	ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(DisplayInfo), 0);
+	enet_peer_send(mServerPeer, RPCH_DisplayInfo, packet);
 }
 
 void SessionClient::SendHeadPose(const HeadPose &h)
