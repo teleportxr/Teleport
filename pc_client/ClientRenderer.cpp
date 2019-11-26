@@ -729,6 +729,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.FOV = 90.0f;
+	handshake.isVR = false;
 	handshake.framerate = 60;
 	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
 	handshake.maxBandwidth = handshake.udpBufferSize * handshake.framerate;

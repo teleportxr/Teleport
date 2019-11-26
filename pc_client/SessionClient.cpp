@@ -270,9 +270,9 @@ void SessionClient::Frame(const DisplayInfo &displayInfo, const HeadPose &headPo
 {
 	if (mClientHost && mServerPeer)
 	{
+		SendDisplayInfo(displayInfo);
 		if(pose_valid)
 			SendHeadPose(headPose);
-		SendDisplayInfo(displayInfo);
 		SendInput(controllerState);
 		SendResourceRequests();
 		SendReceivedResources();

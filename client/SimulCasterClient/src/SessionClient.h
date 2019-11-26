@@ -29,7 +29,6 @@ struct DisplayInfo
 {
     uint32_t width;
     uint32_t height;
-    bool isVR = false;
 };
 
 struct HeadPose
