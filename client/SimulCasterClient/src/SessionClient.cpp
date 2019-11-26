@@ -40,9 +40,9 @@ enum RemotePlaySessionChannel
     RPCH_Control = 1,
     RPCH_DisplayInfo = 2,
     RPCH_HeadPose = 3,
-    RPCH_Resource_Request = 3,
-    RPCH_Keyframe_Request = 4,
-	RPCH_ClientMessage=5,
+    RPCH_Resource_Request = 4,
+    RPCH_Keyframe_Request = 5,
+	RPCH_ClientMessage=6,
     RPCH_NumChannels,
 };
 
