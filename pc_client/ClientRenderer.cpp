@@ -805,7 +805,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
-		DisplayInfo displayInfo = { hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight(), false };
+		DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
 		HeadPose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
