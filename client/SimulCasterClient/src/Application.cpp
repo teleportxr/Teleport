@@ -443,7 +443,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Handle networked session.
 	if(mSession.IsConnected())
 	{
-		DisplayInfo displayInfo = {1440, 1600, true};
+		DisplayInfo displayInfo = {1440, 1600};
 		HeadPose headPose;
 		headPose.orientation=*((scr::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		headPose.position=*((scr::vec3*)(&vrFrame.Tracking.HeadPose.Pose.Position));
@@ -843,7 +843,9 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
         resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
     }
 
-    handshake.framerate=60;
+    handshake.framerate = 60;
+    handshake.FOV = 110;
+    handshake.isVR = true;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
 	handshake.maxBandwidth=handshake.udpBufferSize*(size_t)handshake.framerate;
 }
