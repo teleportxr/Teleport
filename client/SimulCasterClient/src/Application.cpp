@@ -443,12 +443,13 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Handle networked session.
 	if(mSession.IsConnected())
 	{
+		DisplayInfo displayInfo = {1440, 1600, true};
 		HeadPose headPose;
 		headPose.orientation=*((scr::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		headPose.position=*((scr::vec3*)(&vrFrame.Tracking.HeadPose.Pose.Position));
 		headPose.position+=*((scr::vec3*)(&footPos));
 		headPose.position+=oculusOrigin;
-		mSession.Frame(headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
+		mSession.Frame(displayInfo, headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
 	}
 	else
 	{

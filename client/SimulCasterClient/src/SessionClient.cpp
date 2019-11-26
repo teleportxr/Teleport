@@ -38,7 +38,8 @@ enum RemotePlaySessionChannel
 {
     RPCH_HANDSHAKE = 0,
     RPCH_Control = 1,
-    RPCH_HeadPose = 2,
+    RPCH_DisplayInfo = 2,
+    RPCH_HeadPose = 3,
     RPCH_Resource_Request = 3,
     RPCH_Keyframe_Request = 4,
 	RPCH_ClientMessage=5,
@@ -236,10 +237,11 @@ void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
 	enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
 }
 
-void SessionClient::Frame(const HeadPose& headPose, bool poseValid,const ControllerState& controllerState, bool requestKeyframe)
+void SessionClient::Frame(const DisplayInfo& displayInfo, const HeadPose& headPose, bool poseValid,const ControllerState& controllerState, bool requestKeyframe)
 {
     if(mClientHost && mServerPeer)
     {
+        SendDisplayInfo(displayInfo);
     	if(poseValid)
 	        SendHeadPose(headPose);
         SendInput(controllerState);
@@ -414,6 +416,14 @@ void SessionClient::ParseTextCommand(const char *txt_utf8)
     {
 		OVR_WARN("Invalid text command: %c", txt_utf8[0]);
     }
+}
+
+void SessionClient::SendDisplayInfo(const DisplayInfo& displayInfo)
+{
+    if(!handshakeAcknowledged) return;
+
+    ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(DisplayInfo), 0);
+    enet_peer_send(mServerPeer, RPCH_DisplayInfo, packet);
 }
 
 void SessionClient::SendHeadPose(const HeadPose& pose)

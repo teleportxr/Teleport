@@ -284,6 +284,7 @@ void SessionClient::Frame(const DisplayInfo &displayInfo, const HeadPose &headPo
 	{
 		if(pose_valid)
 			SendHeadPose(headPose);
+		SendDisplayInfo(displayInfo);
 		SendInput(controllerState);
 		SendResourceRequests();
 		SendReceivedResources();
