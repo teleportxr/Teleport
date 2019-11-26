@@ -440,8 +440,12 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		if(vrapi_GetCurrentInputState(mOvrMobile, mControllerID, &ovrState.Header) >= 0)
 		{
 			controllerState.mButtons = ovrState.Buttons;
-			if(controllerState.mButtons)
+
+			//Flip show debug information, if the grip trigger was released.
+			if((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_GripTrigger) != 0 && (controllerState.mButtons & ovrButton::ovrButton_GripTrigger) == 0)
+			{
 					mShowInfo=!mShowInfo;
+            }
 
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
 //			float last_x=controllerState.mTrackpadX;
@@ -472,12 +476,13 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Handle networked session.
 	if(mSession.IsConnected())
 	{
+		DisplayInfo displayInfo = {1440, 1600, true};
 		HeadPose headPose;
 		headPose.orientation=*((scr::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		headPose.position=*((scr::vec3*)(&vrFrame.Tracking.HeadPose.Pose.Position));
 		headPose.position+=*((scr::vec3*)(&footPos));
 		headPose.position+=oculusOrigin;
-		mSession.Frame(headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
+		mSession.Frame(displayInfo, headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
 	}
 	else
 	{
@@ -487,6 +492,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
 	}
+	mLastPrimaryControllerState = controllerState;
 
 	// Update video texture if we have any pending decoded frames.
 	while(mNumPendingFrames > 0)
@@ -872,7 +878,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 
     handshake.framerate=60;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
-	handshake.maxBandwidthKpS=(handshake.udpBufferSize*(size_t)handshake.framerate/1000);
+	handshake.maxBandwidthKpS = handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
 }
 
 void Application::OnVideoStreamClosed()

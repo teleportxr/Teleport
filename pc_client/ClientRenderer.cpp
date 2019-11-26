@@ -628,7 +628,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	receivedInitialPos = false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
-	sourceParams.socketBufferSize = 2000000;	//200k like Oculus Quest
+	sourceParams.socketBufferSize = 212992;	//200k like Oculus Quest
 	// Configure for num video streams + 1 geometry stream
 	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "51.179.137.9", setupCommand.port, sourceParams))
 	{
@@ -717,9 +717,10 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	handshake.isReadyToReceivePayloads = true;
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
 	handshake.MetresPerUnit = 1.0f;
+	handshake.FOV = 90.0f;
 	handshake.framerate = 60;
-	handshake.udpBufferSize = (uint32_t)source.getSystemBufferSize();
-	handshake.maxBandwidthKpS = handshake.framerate*handshake.udpBufferSize;
+	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
+	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 
@@ -746,7 +747,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.forward_back_input	=(float)keydown['w']-(float)keydown['s'];
 	mouseCameraInput.right_left_input	=(float)keydown['d']-(float)keydown['a'];
 	mouseCameraInput.up_down_input		=(float)keydown['t']-(float)keydown['g'];
-	static float spd = 0.2f;
+	static float spd = 2.0f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
 							,spd
@@ -793,11 +794,12 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
+		DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
 		HeadPose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
-		sessionClient.Frame(headPose, decoder->hasValidTransform(),controllerState, decoder->idrRequired());
+		sessionClient.Frame(displayInfo, headPose, decoder->hasValidTransform(),controllerState, decoder->idrRequired());
 		avs::Result result = pipeline.process();
 
 		static short c = 0;

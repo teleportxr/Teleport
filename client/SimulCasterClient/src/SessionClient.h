@@ -25,6 +25,13 @@ public:
     virtual bool OnActorLeftBounds(avs::uid actor_uid) = 0;
 };
 
+struct DisplayInfo
+{
+    uint32_t width;
+    uint32_t height;
+    bool isVR = false;
+};
+
 struct HeadPose
 {
     scr::vec4 orientation;
@@ -44,7 +51,7 @@ public:
 
     void SendClientMessage(const avs::ClientMessage &msg);
 
-    void Frame(const HeadPose& headPose,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
+    void Frame(const DisplayInfo& displayInfo, const HeadPose& headPose,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -54,6 +61,7 @@ private:
     void ParseCommandPacket(ENetPacket* packet);
     void ParseTextCommand(const char *txt_utf8);
 
+    void SendDisplayInfo(const DisplayInfo& displayInfo);
     void SendHeadPose(const HeadPose& headPose);
     void SendInput(const ControllerState& controllerState);
     void SendResourceRequests();
@@ -75,6 +83,7 @@ private:
 
     ControllerState mPrevControllerState = {};
 
+	bool handshakeAcknowledged = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
     std::vector<avs::uid> mReceivedActors; //Actors that have entered bounds, are about to be drawn, and need to be confirmed to the server.
     std::vector<avs::uid> mLostActors; //Actor that have left bounds, are about to be hidden, and need to be confirmed to the server.
