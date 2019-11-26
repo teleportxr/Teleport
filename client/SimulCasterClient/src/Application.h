@@ -55,7 +55,7 @@ public:
 	bool InitializeController();
 
 	/* Begin SessionCommandInterface */
-	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) override;
+	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors) override;
 
 	virtual void OnVideoStreamClosed() override;
 
@@ -151,7 +151,7 @@ private:
 	//int		 mControllerIndex;
 	ovrVector2f mTrackpadDim;
 
-	const scr::quat HAND_ROTATION_DIFFERENCE { -0.382683426, 0, 0,0.923879504}; //Adjustment to the controller's rotation to get the desired rotation.
+	const scr::quat HAND_ROTATION_DIFFERENCE {-0.382683426, 0, 0, 0.923879504}; //Adjustment to the controller's rotation to get the desired rotation.
 
 	int mNumPendingFrames                  = 0;
 

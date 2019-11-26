@@ -219,19 +219,19 @@ namespace scr
 		quat operator*(const quat& other) const
 		{
 			return quat(
-				((s * other.s) - (i * other.i) - (j * other.j) - (k * other.k)),
-				((s * other.i) + (i * other.s) + (j * other.k) - (k * other.j)),
-				((s * other.j) - (i * other.k) + (j * other.s) + (k * other.i)),
-				((s * other.k) + (i * other.j) - (j * other.i) + (k * other.s))
+				((s * other.i) + (i * other.s) + (j * other.k) - (k * other.j)),	//I
+				((s * other.j) - (i * other.k) + (j * other.s) + (k * other.i)),	//J
+				((s * other.k) + (i * other.j) - (j * other.i) + (k * other.s)),	//K
+				((s * other.s) - (i * other.i) - (j * other.j) - (k * other.k))		//S
 			);
 		}
 		quat operator*(const vec3& other) const
 		{
 			return quat(
-				(-(i * other.x) - (j * other.y) - (k * other.z)),
-				(+(s * other.x) + (j * other.z) - (k * other.y)),
-				(+(s * other.y) + (k * other.x) - (i * other.z)),
-				(+(s * other.z) + (i * other.y) - (j * other.x))
+				(+(s * other.x) + (j * other.z) - (k * other.y)),	//I
+				(+(s * other.y) + (k * other.x) - (i * other.z)),	//J
+				(+(s * other.z) + (i * other.y) - (j * other.x)),	//K
+				(-(i * other.x) - (j * other.y) - (k * other.z))	//S
 			);
 		}
 

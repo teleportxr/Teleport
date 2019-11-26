@@ -18,7 +18,7 @@ class ResourceCreator;
 class SessionCommandInterface
 {
 public:
-    virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds) = 0;
+    virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors) = 0;
     virtual void OnVideoStreamClosed() = 0;
 
     virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
@@ -42,11 +42,9 @@ public:
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
 
-    void SendConfirmActor(avs::uid uid);
-    void SendWantToDropActor(avs::uid uid);
     void SendClientMessage(const avs::ClientMessage &msg);
 
-    void Frame(const HeadPose& headPose,bool poseValid, const ControllerState& controllerState);
+    void Frame(const HeadPose& headPose,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -59,6 +57,9 @@ private:
     void SendHeadPose(const HeadPose& headPose);
     void SendInput(const ControllerState& controllerState);
     void SendResourceRequests();
+	void SendReceivedResources();
+	void SendActorUpdates();
+	void SendKeyframeRequest();
     //Tell server we are ready to receive geometry payloads.
     void SendHandshake(const avs::Handshake &handshake);
 
@@ -74,7 +75,8 @@ private:
 
     ControllerState mPrevControllerState = {};
 
-    //bool isReadyToReceivePayloads = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
+    std::vector<avs::uid> mReceivedActors; //Actors that have entered bounds, are about to be drawn, and need to be confirmed to the server.
+    std::vector<avs::uid> mLostActors; //Actor that have left bounds, are about to be hidden, and need to be confirmed to the server.
 };
 

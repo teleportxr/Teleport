@@ -107,7 +107,8 @@ namespace scr
 
 		//Clear, and free memory of, all resources; bar from resources on the list.
 		//	excludeList : Elements to not clear from the manager; removes UID if it finds the element.
-		void ClearCareful(std::vector<uid>& excludeList)
+		//	outExistingActors : List of actors in the exclude list that were actually in the actor manager.
+		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
 		{
 			for(auto it = m_Actors.begin(); it != m_Actors.end();)
 			{
@@ -118,6 +119,7 @@ namespace scr
 					//The resource is excluded if its uid appears in the exclude list.
 					if(excludeList[i] == it->first)
 					{
+						outExistingActors.push_back(excludeList[i]);
 						isExcluded = true;
 					}
 

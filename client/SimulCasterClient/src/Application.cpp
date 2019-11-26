@@ -477,7 +477,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		headPose.position=*((scr::vec3*)(&vrFrame.Tracking.HeadPose.Pose.Position));
 		headPose.position+=*((scr::vec3*)(&footPos));
 		headPose.position+=oculusOrigin;
-		mSession.Frame(headPose, mDecoder.hasValidTransform(),controllerState);
+		mSession.Frame(headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
 	}
 	else
 	{
@@ -681,16 +681,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             (
                scr::vec3
                {
-                   remoteStates[handIndex].HeadPose.Pose.Position.x + headPos.x,
-                   remoteStates[handIndex].HeadPose.Pose.Position.y + headPos.y,
-                   remoteStates[handIndex].HeadPose.Pose.Position.z + headPos.z
+                   remoteStates[handIndex].HeadPose.Pose.Position.x + cameraPosition.x,
+                   remoteStates[handIndex].HeadPose.Pose.Position.y + cameraPosition.y,
+                   remoteStates[handIndex].HeadPose.Pose.Position.z + cameraPosition.z
                },
                scr::quat
                {
-                   remoteStates[handIndex].HeadPose.Pose.Orientation.w,
                    remoteStates[handIndex].HeadPose.Pose.Orientation.x,
                    remoteStates[handIndex].HeadPose.Pose.Orientation.y,
-                   remoteStates[handIndex].HeadPose.Pose.Orientation.z
+                   remoteStates[handIndex].HeadPose.Pose.Orientation.z,
+                   remoteStates[handIndex].HeadPose.Pose.Orientation.w
                }
                * HAND_ROTATION_DIFFERENCE,
                hand->GetTransform().m_Scale
@@ -744,7 +744,7 @@ bool Application::InitializeController()
 	return false;
 }
 
-void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds)
+void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
 	if(mPipelineConfigured) {
 		// TODO: Fix!
@@ -867,7 +867,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
     }
     else
     {
-        resourceManagers.ClearCareful(resourcesClientNeeds);
+        resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
     }
 
     handshake.framerate=60;
@@ -891,9 +891,7 @@ bool Application::OnActorEnteredBounds(avs::uid actor_uid)
 
 bool Application::OnActorLeftBounds(avs::uid actor_uid)
 {
-	if (mSession.IsConnected())
-		mSession.SendWantToDropActor(actor_uid);
-    return resourceManagers.mActorManager.HideActor(actor_uid);
+	return resourceManagers.mActorManager.HideActor(actor_uid);
 }
 
 void Application::OnFrameAvailable()
@@ -1110,8 +1108,6 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 
 		if(mOVRActors.find(a.first) == mOVRActors.end())
 		{
-			if (mSession.IsConnected())
-				mSession.SendConfirmActor(a.first);
 			mOVRActors[a.first]; //Create
 			std::shared_ptr<OVRActor> pOvrActor = std::make_shared<OVRActor>();
 			//pOvrActor->ovrSurfaceDefs.reserve(num_elements);

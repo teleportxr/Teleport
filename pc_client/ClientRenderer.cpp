@@ -276,7 +276,6 @@ void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContex
 	}
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
-
 }
 
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
@@ -455,7 +454,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
 		avs::Transform transform = decoder[0].getCameraTransform();
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", transform.position.x, transform.position.y, transform.position.z),white);
+		vec3 campos=camera.GetPosition();
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", campos.x, campos.y, campos.z),white);
 
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager.GetActorList().size(),resourceManagers.mMeshManager.GetCache(cacheLock).size()), white);
@@ -492,8 +492,6 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		const std::vector<std::shared_ptr<scr::Material>> materials = actorData.second.actor->GetMaterials();
 		if (!materials.size())
 			continue;
-		if (sessionClient.IsConnected())
-			sessionClient.SendConfirmActor(actorData.first);
 		size_t element = 0;
 		const auto &CI=mesh->GetMeshCreateInfo();
 		for (const std::shared_ptr<scr::Material>& m : materials)
@@ -508,18 +506,6 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 			if (!layout)
 			{
 				layout =(const_cast<pc_client::PC_VertexBuffer*>( vb))->GetLayout();
-
-		/*		simul::crossplatform::LayoutDesc desc[] =
-				{
-					{ "POSITION", 0, crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-					{ "NORMAL", 0, crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
-					{ "TANGENT", 0, crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
-					{ "TEXCOORD", 0, crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
-					{ "TEXCOORD", 1, crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
-				};
-				layout = renderPlatform->CreateLayout(
-					sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
-					, desc);*/
 			}
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			mat4 model;
@@ -635,7 +621,7 @@ void ClientRenderer::Update()
 	previousTimestamp = timestamp;
 }
 
-void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds)
+void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
@@ -644,7 +630,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 2000000;	//200k like Oculus Quest
 	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "127.0.0.1", setupCommand.port, sourceParams))
+	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "51.179.137.9", setupCommand.port, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
@@ -652,7 +638,10 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
 	decoderParams.deferDisplay = false;
+	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 	decoderParams.codec = avs::VideoCodec::HEVC;
+	decoderParams.use10BitDecoding = setupCommand.use_10_bit_decoding;
+	decoderParams.useYUV444ChromaFormat = setupCommand.use_yuv_444_decoding;
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type = avs::DeviceType::Direct3D11;
@@ -722,7 +711,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	}
 	else
 	{
-		resourceManagers.ClearCareful(resourcesClientNeeds);
+		resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
 	}
 
 	handshake.isReadyToReceivePayloads = true;
@@ -749,7 +738,6 @@ bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
 
 bool ClientRenderer::OnActorLeftBounds(avs::uid actor_uid)
 {
-	sessionClient.SendWantToDropActor(actor_uid);
 	return resourceManagers.mActorManager.HideActor(actor_uid);
 }
 
@@ -774,10 +762,10 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	if (sessionClient.IsConnected())
 	{
 		vec3 forward=-camera.GetOrientation().Tz();
-		//std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
+		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
-		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f,0.0f, 0.0f));
+		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f, 0.0f, 0.0f));
 		if (decoder->hasValidTransform())
 		{
 			avs::vec3 vpos = decoder->getCameraTransform().position;
@@ -794,7 +782,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 			{
 				vec3 pos = camera.GetPosition();
 				pos.z = decoder->getCameraTransform().position.z;
-				camera.SetPosition(pos);
+				//camera.SetPosition(pos);
 			}
 		}
 		else
@@ -809,8 +797,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
-		sessionClient.Frame(headPose,decoder->hasValidTransform(),controllerState);
-		pipeline.process();
+		sessionClient.Frame(headPose, decoder->hasValidTransform(),controllerState, decoder->idrRequired());
+		avs::Result result = pipeline.process();
 
 		static short c = 0;
 		if (!c--)

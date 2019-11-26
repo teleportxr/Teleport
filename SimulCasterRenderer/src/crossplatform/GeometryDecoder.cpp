@@ -241,7 +241,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			meshElementCreate.m_ElementIndex = index;
 			index++;
 		}
-		avs::Result result = target->Assemble(&meshCreate);
+		avs::Result result = target->Assemble(meshCreate);
 		if (result != avs::Result::OK)
 			return result;
 	}
