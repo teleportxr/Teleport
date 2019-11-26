@@ -731,8 +731,8 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	handshake.FOV = 90.0f;
 	handshake.isVR = false;
 	handshake.framerate = 60;
-	handshake.udpBufferSize = (uint32_t)source.getSystemBufferSize();
-	handshake.maxBandwidth = handshake.framerate*handshake.udpBufferSize;
+	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
+	handshake.maxBandwidth = handshake.udpBufferSize * handshake.framerate;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 
@@ -806,7 +806,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
-		DisplayInfo displayInfo = { hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight() };
+		DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
 		HeadPose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();

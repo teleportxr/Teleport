@@ -34,18 +34,6 @@ static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
     return QuaternionMultiply(p,iq);
 }
 
-enum RemotePlaySessionChannel
-{
-    RPCH_HANDSHAKE = 0,
-    RPCH_Control = 1,
-    RPCH_DisplayInfo = 2,
-    RPCH_HeadPose = 3,
-    RPCH_Resource_Request = 4,
-    RPCH_Keyframe_Request = 5,
-	RPCH_ClientMessage=6,
-    RPCH_NumChannels,
-};
-
 struct RemotePlayInputState{
     uint32_t buttonsPressed;
     uint32_t buttonsReleased;
@@ -152,13 +140,13 @@ bool SessionClient::Connect(const char* remoteIP, uint16_t remotePort, uint time
 
 bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 {
-    mClientHost = enet_host_create(nullptr, 1, RPCH_NumChannels, 0, 0);
+    mClientHost = enet_host_create(nullptr, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
     if(!mClientHost) {
         OVR_FAIL("Failed to create ENET client host");
         return false;
     }
 
-    mServerPeer = enet_host_connect(mClientHost, &remote, RPCH_NumChannels, 0);
+    mServerPeer = enet_host_connect(mClientHost, &remote, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0);
     if(!mServerPeer) {
         OVR_WARN("Failed to initiate connection to the server");
         enet_host_destroy(mClientHost);
@@ -234,7 +222,7 @@ void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
 {
 	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);
 	ENetPacket* packet = enet_packet_create(&msg, sz,ENET_PACKET_FLAG_RELIABLE);
-	enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 }
 
 void SessionClient::Frame(const DisplayInfo& displayInfo, const HeadPose& headPose, bool poseValid,const ControllerState& controllerState, bool requestKeyframe)
@@ -295,7 +283,7 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 {
     switch(event.channelID)
     {
-        case RPCH_Control:
+        case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control):
             ParseCommandPacket(event.packet);
             break;
         default:
@@ -423,7 +411,7 @@ void SessionClient::SendDisplayInfo(const DisplayInfo& displayInfo)
     if(!handshakeAcknowledged) return;
 
     ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(DisplayInfo), 0);
-    enet_peer_send(mServerPeer, RPCH_DisplayInfo, packet);
+    enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo), packet);
 }
 
 void SessionClient::SendHeadPose(const HeadPose& pose)
@@ -439,7 +427,7 @@ void SessionClient::SendHeadPose(const HeadPose& pose)
     headPose2.orientation = scr::vec4(RelPose.x, RelPose.y,RelPose.z, RelPose.w);
     headPose2.position=*((scr::vec3*)&pose.position);
     ENetPacket* packet = enet_packet_create(&headPose2, sizeof(HeadPose), 0);
-    enet_peer_send(mServerPeer, RPCH_HeadPose, packet);
+    enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose), packet);
 }
 
 void SessionClient::SendInput(const ControllerState& controllerState)
@@ -490,7 +478,7 @@ void SessionClient::SendInput(const ControllerState& controllerState)
             }
         }
         ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), packetFlags);
-        enet_peer_send(mServerPeer, RPCH_Control, packet);
+        enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
     }
 }
 
@@ -510,7 +498,7 @@ void SessionClient::SendResourceRequests()
         enet_packet_resize(packet, sizeof(size_t) + sizeof(avs::uid) * resourceAmount);
         memcpy(packet->data + sizeof(size_t), resourceRequests.data(), sizeof(avs::uid) * resourceAmount);
 
-        enet_peer_send(mServerPeer, RPCH_Resource_Request, packet);
+        enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
     }
 }
 
@@ -529,7 +517,7 @@ void SessionClient::SendReceivedResources()
 		enet_packet_resize(packet, messageSize + receivedResourcesSize);
 		memcpy(packet->data + messageSize, receivedResources.data(), receivedResourcesSize);
 
-		enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 	}
 }
 
@@ -554,7 +542,7 @@ void SessionClient::SendActorUpdates()
 		memcpy(packet->data + messageSize, mReceivedActors.data(), receivedSize);
 		memcpy(packet->data + messageSize + receivedSize, mLostActors.data(), lostSize);
 
-		enet_peer_send(mServerPeer, RPCH_ClientMessage, packet);
+		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 
 		mReceivedActors.clear();
 		mLostActors.clear();
@@ -564,12 +552,12 @@ void SessionClient::SendActorUpdates()
 void SessionClient::SendKeyframeRequest()
 {
     ENetPacket* packet = enet_packet_create(0x0, sizeof(size_t), ENET_PACKET_FLAG_RELIABLE);
-    enet_peer_send(mServerPeer, RPCH_Keyframe_Request, packet);
+    enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_KeyframeRequest), packet);
 }
 
 void SessionClient::SendHandshake(const avs::Handshake &handshake)
 {
     handshakeAcknowledged = false;
     ENetPacket *packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
-    enet_peer_send(mServerPeer, RPCH_HANDSHAKE, packet);
+    enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Handshake), packet);
 }

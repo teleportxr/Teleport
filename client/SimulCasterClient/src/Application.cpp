@@ -847,7 +847,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
     handshake.FOV = 110;
     handshake.isVR = true;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
-	handshake.maxBandwidth=handshake.udpBufferSize*(size_t)handshake.framerate;
+	handshake.maxBandwidth = handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
 }
 
 void Application::OnVideoStreamClosed()
