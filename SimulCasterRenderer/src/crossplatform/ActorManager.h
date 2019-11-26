@@ -103,6 +103,7 @@ namespace scr
 		void Clear()
 		{
 			m_Actors.clear();
+			handUIDs.clear();
 		}
 
 		//Clear, and free memory of, all resources; bar from resources on the list.
