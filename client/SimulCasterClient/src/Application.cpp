@@ -849,7 +849,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
     handshake.FOV = 110;
     handshake.isVR = true;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
-	handshake.maxBandwidth = handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
+	handshake.maxBandwidthKpS = handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
 }
 
 void Application::OnVideoStreamClosed()
@@ -1220,7 +1220,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 			offsetToOculusOrigin.y += heightOffset;
 
 			//Change of Basis matrix
-			scr::mat4 cob = scr::mat4({0, 1, 0, 0}, {0, 0, 1, 0}, {-1, 0, 0, 0}, {0, 0, 0, 1});
+			scr::mat4 cob = scr::mat4({0, 1, 0, 0}, {0, 0, 1, 0}, {1, 0, 0, 0}, {0, 0, 0, 1});
 			scr::mat4 transformToOculusOrigin = scr::mat4::Translation(offsetToOculusOrigin);
 			//
 			scr::mat4 scr_Transform = transformToOculusOrigin *actor->GetTransform().GetTransformMatrix() * cob;
@@ -1264,7 +1264,7 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
 	rs.depthClampEnable = false;
 	rs.rasterizerDiscardEnable = false;
 	rs.polygonMode = scr::Effect::PolygonMode::FILL;
-	rs.cullMode = scr::Effect::CullMode::BACK_BIT;
+	rs.cullMode = scr::Effect::CullMode::NONE;
 	rs.frontFace = scr::Effect::FrontFace::CLOCKWISE;
 
 	scr::Effect::MultisamplingState ms = {};
