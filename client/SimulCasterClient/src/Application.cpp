@@ -532,6 +532,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		if(mShowInfo)
 			mGuiSys->ShowInfoText(
 				0.017f, "Packets Dropped: Network %d | Decoder %d\n"
+						"Incomplete Decoder Packets: %d\n"
 						"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
 						"Actors: SCR %d | OVR %d \n"
 						"Camera Position: %1.3f, %1.3f, %1.3f\n"
@@ -539,6 +540,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 						"Pos: %3.3f %3.3f %3.3f\n"
 						"Trackpad: %3.1f %3.1f | Orphans: %d\n", ctr.networkPacketsDropped,
 				ctr.decoderPacketsDropped,
+				ctr.incompleteDPsReceived,
 				frameRate, ctr.bandwidthKPS,
 				(uint64_t) resourceManagers.mActorManager.GetActorList().size(),
 				(uint64_t) mOVRActors.size(),

@@ -453,6 +453,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
+		renderPlatform->Print(deviceContext, w/2,y+=dy,simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDPsReceived));
 		avs::Transform transform = decoder[0].getCameraTransform();
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", transform.position.x, transform.position.y, transform.position.z),white);
 
@@ -732,7 +733,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	handshake.isVR = false;
 	handshake.framerate = 60;
 	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
-	handshake.maxBandwidth = handshake.udpBufferSize * handshake.framerate;
+	//handshake.maxBandwidth = handshake.udpBufferSize * handshake.framerate;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 
