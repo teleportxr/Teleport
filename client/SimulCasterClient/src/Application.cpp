@@ -1071,15 +1071,15 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 		{
             continue;
         }
-		size_t num_elements=actor->GetMaterials().size();
+        size_t materialAmount = actor->GetMaterials().size();
 
 		if(mOVRActors.find(a.first) == mOVRActors.end())
 		{
 			mOVRActors[a.first]; //Create
 			std::shared_ptr<OVRActor> pOvrActor = std::make_shared<OVRActor>();
-			//pOvrActor->ovrSurfaceDefs.reserve(num_elements);
+			//pOvrActor->ovrSurfaceDefs.reserve(materialAmount);
 
-			for(size_t i=0;i<num_elements;i++)
+			for(size_t i=0;i<materialAmount;i++)
 			{
 				//From Actor
 				const scr::Mesh::MeshCreateInfo   &meshCI     = actor->GetMesh()->GetMeshCreateInfo();
@@ -1179,8 +1179,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 						{
 							if (resource.bufferInfo.buffer)
 							{
-								auto gl_uniformBuffer = (scc::GL_UniformBuffer *) (resource.bufferInfo.buffer);
-								gl_uniformBuffer->Submit();
+                                scc::GL_UniformBuffer* gl_uniformBuffer = static_cast<scc::GL_UniformBuffer*>(resource.bufferInfo.buffer);
 								ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
 								uniformCount++;
 							}
@@ -1205,7 +1204,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 		// Now update its transform:
 		std::shared_ptr<OVRActor> pOvrActor=mOVRActors[a.first];
 		assert(pOvrActor);
-		for(size_t i=0;i<num_elements;i++)
+		for(size_t i=0;i<materialAmount;i++)
 		{
 			if(i>=pOvrActor->ovrSurfaceDefs.size())
 			{
