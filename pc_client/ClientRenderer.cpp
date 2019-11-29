@@ -453,6 +453,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
 		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
+		renderPlatform->Print(deviceContext, w/2,y+=dy,simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDPsReceived));
 		avs::Transform transform = decoder[0].getCameraTransform();
 		vec3 campos=camera.GetPosition();
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", campos.x, campos.y, campos.z),white);

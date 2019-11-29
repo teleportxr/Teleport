@@ -217,12 +217,12 @@ shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 	vec3 tangentx		= normalize(IN.tangent);
 	vec3 tangenty		= normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
-	vec3 normalLookup	= 2.0*(normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr-vec3(0.5,0.5,0.5));
+	vec3 normalLookup	= 2.0*(normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).bgr-vec3(0.5,0.5,0.5));
 	vec3 normal			= normalize(mul( normalLookup, TangentMatrix));
 
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
-	vec3 diffuseColour	= diffuseOutputScalar.rgb * diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgr;
-	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy).bgra;
+	vec3 diffuseColour	= diffuseOutputScalar.rgb * diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R).bgr;
+	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R).bgra;
 
 	float roughness		=GetRoughness(combinedLookup);
 	float metallic		=GetMetallic(combinedLookup);
