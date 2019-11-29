@@ -174,24 +174,16 @@ private:
 		}
 	};
 	std::map<avs::uid, std::shared_ptr<OVRActor>> mOVRActors;
-	inline void RemoveInvalidOVRActors()
-	{
-		for(std::map<avs::uid, std::shared_ptr<OVRActor>>::iterator it = mOVRActors.begin(); it != mOVRActors.end();)
-		{
-			if(resourceManagers.mActorManager.GetActorList().find(it->first) == resourceManagers.mActorManager.GetActorList().end())
-			{
-				it = mOVRActors.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
-	}
-	inline void ClearOVRActors()
-    {
-	    mOVRActors.clear();
-    }
+
+	//Creates a native actor with the passed id, and actor information.
+	//  actorID : ID of the native actor to be created; same as SCR actor.
+	//  actorInfo : Information to use to create the native actor.
+	void CreateNativeActor(avs::uid actorID, std::shared_ptr<scr::Actor> actorInfo);
+	//Destroys the native actor with the passed ID.
+	void DestroyNativeActor(avs::uid actorID);
+	//Destroys all native actors.
+	void ClearNativeActors();
+
 	void CopyToCubemaps();
 	void RenderLocalActors(OVR::ovrFrameResult& res);
     const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources);

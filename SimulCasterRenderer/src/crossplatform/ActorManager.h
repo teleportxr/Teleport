@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <functional>
 
 #include <libavstream/geometry/mesh_interface.hpp>
 #include "ResourceManager.h"
@@ -21,30 +22,35 @@ namespace scr
 
 		uint32_t actorLifetime = 2000; //Milliseconds the manager waits before removing invisible actors.
 		std::vector<avs::uid> handUIDs; //UIDs of the actors that are used as hands.
-		
+
+		std::function<void(avs::uid actorID, std::shared_ptr<Actor> actorInfo)> nativeActorCreator; //Function that creates a native actor.
+		std::function<void(avs::uid actorID)> nativeActorDestroyer; //Function that destroys a native actor.
+		std::function<void(void)> nativeActorClearer; //Function that clears the list of native actors.
+
 		void CreateActor(avs::uid actor_uid, const Actor::ActorCreateInfo& pActorCreateInfo)
 		{
-			m_Actors[actor_uid] = {std::make_shared<Actor>(pActorCreateInfo), 0};
+			actorMap[actor_uid] = {std::make_shared<Actor>(pActorCreateInfo), 0};
+			if(nativeActorCreator) nativeActorCreator(actor_uid, actorMap[actor_uid].actor);
 		}
 
 		void RemoveActor(avs::uid actor_uid)
 		{
-			m_Actors.erase(actor_uid);
+			RemoveActor_Internal(actor_uid);
 		}
 
 		bool HasActor(avs::uid actor_uid) const
 		{
-			return m_Actors.find(actor_uid) != m_Actors.end();
+			return actorMap.find(actor_uid) != actorMap.end();
 		}
 
 		std::shared_ptr<Actor> GetActor(avs::uid actor_uid) const
 		{
 			if(HasActor(actor_uid))
 			{
-				return m_Actors.at(actor_uid).actor;
+				return actorMap.at(actor_uid).actor;
 			}
 
-				return nullptr;
+			return nullptr;
 		}
 
 		//Causes the actor to become visible.
@@ -52,7 +58,7 @@ namespace scr
 		{
 			if(HasActor(actor_uid))
 			{
-				m_Actors[actor_uid].actor->isVisible = true;
+				actorMap[actor_uid].actor->isVisible = true;
 				return true;
 			}
 
@@ -64,9 +70,9 @@ namespace scr
 		{
 			if(HasActor(actor_uid))
 			{
-				m_Actors[actor_uid].actor->isVisible = false;
+				actorMap[actor_uid].actor->isVisible = false;
 				return true;
-		}
+			}
 
 			return false;
 		}
@@ -74,7 +80,7 @@ namespace scr
 		//Tick the actor manager along, and remove any actors that have been invisible for too long.
 		void Update(uint32_t deltaTimestamp)
 		{
-			for(auto it = m_Actors.begin(); it != m_Actors.end();)
+			for(auto it = actorMap.begin(); it != actorMap.end();)
 			{
 				if(it->second.actor->isVisible)
 				{
@@ -89,7 +95,7 @@ namespace scr
 					if(it->second.timeSinceLastVisible >= actorLifetime)
 					{
 						//Erase an actor if they have been invisible for too long.
-						it = m_Actors.erase(it);
+						it = RemoveActor_Internal(it);
 					}
 					else
 					{
@@ -102,8 +108,9 @@ namespace scr
 		//Clear actor manager of all actors.
 		void Clear()
 		{
-			m_Actors.clear();
+			actorMap.clear();
 			handUIDs.clear();
+			if(nativeActorClearer) nativeActorClearer();
 		}
 
 		//Clear, and free memory of, all resources; bar from resources on the list.
@@ -111,7 +118,7 @@ namespace scr
 		//	outExistingActors : List of actors in the exclude list that were actually in the actor manager.
 		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
 		{
-			for(auto it = m_Actors.begin(); it != m_Actors.end();)
+			for(auto it = actorMap.begin(); it != actorMap.end();)
 			{
 				bool isExcluded = false; //We don't remove the resource if it is excluded.
 				unsigned int i = 0;
@@ -136,16 +143,35 @@ namespace scr
 				//Remove the resource if it is not.
 				else
 				{
-					it = m_Actors.erase(it);
+					it = RemoveActor_Internal(it);
 				}
 			}
 		}
 
 		const std::map<avs::uid, LiveActor>& GetActorList()
 		{
-			return m_Actors;
+			return actorMap;
 		}
 	private:
-		std::map<avs::uid, LiveActor> m_Actors;
+		std::map<avs::uid, LiveActor> actorMap; //<ID of the actor, struct of the information on the living actor>.
+
+		//Removes actor with passed ID; use the version with the iterator parameter where possible.
+		//	actorID : ID of the actor to be removed.
+		void RemoveActor_Internal(avs::uid actorID)
+		{
+			RemoveActor_Internal(actorMap.find(actorID));
+		}
+
+		//Removes actor at iterator, and returns iterator to next item in the list.
+		//	currentItem : Iterator pointing to the item in the list that is to be removed.
+		std::map<avs::uid, LiveActor>::iterator RemoveActor_Internal(std::map<avs::uid, LiveActor>::iterator currentItem)
+		{
+			avs::uid actorID = currentItem->first;
+
+			std::map<avs::uid, LiveActor>::iterator nextItem = actorMap.erase(currentItem);
+			if(nativeActorDestroyer) nativeActorDestroyer(actorID);
+
+			return nextItem;
+		}
 	};
 }
