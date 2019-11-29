@@ -637,6 +637,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	}
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
+	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
 	decoderParams.deferDisplay = false;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 	decoderParams.codec = avs::VideoCodec::HEVC;

@@ -564,13 +564,14 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		if(mShowInfo)
 			mGuiSys->ShowInfoText(
-				0.017f, "Packets Dropped: Network %d | Decoder %d\n"
+				0.017f, "Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 						"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
 						"Actors: SCR %d | OVR %d \n"
 						"Camera Position: %1.3f, %1.3f, %1.3f\n"
 						"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
 						"Pos: %3.3f %3.3f %3.3f\n"
-						"Trackpad: %3.1f %3.1f | Orphans: %d\n", ctr.networkPacketsDropped,
+						"Orphans: %d\n",mDecoder.getTotalFramesProcessed(),
+						ctr.networkPacketsDropped,
 				ctr.decoderPacketsDropped,
 				frameRate, ctr.bandwidthKPS,
 				(uint64_t) resourceManagers.mActorManager.GetActorList().size(),
@@ -770,6 +771,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		return;
 	}
 	mNetworkSource.setDebugStream(setupCommand.debug_stream);
+	mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
 	mNetworkSource.setDoChecksums(setupCommand.do_checksums);
 	avs::DecoderParams decoderParams = {};
 	decoderParams.codec = avs::VideoCodec::HEVC;
@@ -1091,10 +1093,10 @@ void Application::CopyToCubemaps()
 			cubemapUB.faceSize			=tc.width;
 			cubemapUB.sourceOffset		={(int32_t)mVideoTexture->GetTextureCreateInfo().width - (32 * 4), (int32_t)mVideoTexture->GetTextureCreateInfo().height - (3 * 8)};
 
-			//mDeviceContext.DispatchCompute(&inputCommand);
-	}
+			mDeviceContext.DispatchCompute(&inputCommand);
+		}
 
-}
+	}
 }
 
 void Application::RenderLocalActors(ovrFrameResult& res)

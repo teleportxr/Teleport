@@ -13,6 +13,15 @@ layout(location = 5) in vec3 vEyeOffset;
 layout(location = 6) in vec3 vDirection;
 layout(location = 7) in vec2 vTexCoords;
 
+layout(std140, binding = 2) uniform videoUB
+{
+    vec4 eyeOffsets[2];
+    mat4 invViewProj[2];
+    vec3 cameraPosition;
+    int _pad2;
+} vid;
+
+
 layout(std430,binding=3) buffer RWCameraPosition_ssbo
 {
     vec4 RWCameraPosition[8];
@@ -41,6 +50,7 @@ void main()
     clip_pos.y+=2.0*vTexCoords.y;
    //vec3 view=normalize((clip_pos*vInvViewProj).xyz);
 
+    vec3 offsetFromVideo2=vid.cameraPosition-RWCameraPosition[0].xyz;
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
     vec3 colourSampleVec=vSampleVec;
     for (int i = 0; i < 1; i++)
