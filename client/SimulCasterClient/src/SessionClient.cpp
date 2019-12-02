@@ -377,9 +377,11 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
             //Tell renderer to hide actors that have left bounds.
             for(avs::uid actor_uid : leftActors)
             {
-                mCommandInterface->OnActorLeftBounds(actor_uid);
+                if(mCommandInterface->OnActorLeftBounds(actor_uid))
+                {
+                    mLostActors.push_back(actor_uid);
+                }
             }
-            mLostActors.insert(mLostActors.end(), leftActors.begin(), leftActors.end());
         }
 
             break;
