@@ -573,9 +573,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 						"Incomplete Decoder Packets: %d\n"
 						"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
 						"Actors: SCR %d | OVR %d \n"
-						"Camera Position: %1.3f, %1.3f, %1.3f\n"
-						"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
-						"Pos: %3.3f %3.3f %3.3f\n"
+						//"Camera Position: %1.3f, %1.3f, %1.3f\n"
+						//"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
+						//"Pos: %3.3f %3.3f %3.3f\n"
 						"Orphans: %d\n",mDecoder.getTotalFramesProcessed(),
 						ctr.networkPacketsDropped,
 				ctr.decoderPacketsDropped,
@@ -583,9 +583,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 				frameRate, ctr.bandwidthKPS,
 				(uint64_t) resourceManagers.mActorManager.GetActorList().size(),
 				(uint64_t) mOVRActors.size(),
-				cameraPosition.x, cameraPosition.y, cameraPosition.z,
-				headPose.w, headPose.x, headPose.y, headPose.z,
-				headPos.x, headPos.y, headPos.z,
+				//cameraPosition.x, cameraPosition.y, cameraPosition.z,
+				//headPose.w, headPose.x, headPose.y, headPose.z,
+				//headPos.x, headPos.y, headPos.z,
 				ctr.m_packetMapOrphans);
 	}
 	else
