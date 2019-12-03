@@ -50,23 +50,24 @@ void main()
     clip_pos.y+=2.0*vTexCoords.y;
    //vec3 view=normalize((clip_pos*vInvViewProj).xyz);
 
-    vec3 offsetFromVideo2=vid.cameraPosition-RWCameraPosition[0].xyz;
+    vec3 offsetFromVideo2=vid.cameraPosition+vEyeOffset-RWCameraPosition[0].xyz;
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
+    vec3 view = vSampleVec;
     vec3 colourSampleVec=vSampleVec;
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < 5; i++)
     {
         float depth = lookup.a;
-        float dist_m=max(0.5,20.0*depth);
+        float dist_m=max(0.2,20.0*depth);
         vec3 pos_m=dist_m*vDirection;
-        pos_m+=vEyeOffset* step(-0.9, -depth);
+        pos_m+=offsetFromVideo2* step(-0.8, -depth);
 
         // But this does not intersect at depth. We want the vector from the original centre, of
 
         // original radius to hit point
         float R = dist_m;
-        float F = length(vEyeOffset);
+        float F = length(offsetFromVideo2);
         {
-            float D = -dot(normalize(vEyeOffset), vDirection);
+            float D = -dot(normalize(offsetFromVideo2), vDirection);
             float b = F * D;
             float c = F * F - R * R;
             float U = -b + sqrt(b * b - c);
@@ -77,6 +78,6 @@ void main()
         }
     }
 //finalLookup.rgb+=fract(vEyeOffset);
-    gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0)) + RWCameraPosition[0];
+    gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));//+ max(vec4(0,0,0,0),vec4(normalize(offsetFromVideo2.xyz),0));
     //8.0*abs(vSampleVec.z)
 }

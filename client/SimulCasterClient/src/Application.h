@@ -81,6 +81,8 @@ private:
 	{
 		scr::vec4 eyeOffsets[2];
 		ovrMatrix4f invViewProj[2];
+		scr::vec3 cameraPosition;
+		int pad_;
 	};
 	VideoUB videoUB;
 

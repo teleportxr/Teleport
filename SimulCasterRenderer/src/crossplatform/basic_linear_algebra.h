@@ -88,6 +88,13 @@ namespace scr
 			z +=other.z;
 			return *this;
 		}
+		const vec3 &operator*= (float a)
+		{
+			x *=a;
+			y *=a;
+			z *=a;
+			return *this;
+		}
 
 		vec3 operator- () const
 		{

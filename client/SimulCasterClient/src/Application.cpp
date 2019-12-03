@@ -196,17 +196,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
 		mVideoTexture        = renderPlatform.InstantiateTexture();
 		mCubemapUB = renderPlatform.InstantiateUniformBuffer();
-		{
-			scr::Texture::TextureCreateInfo textureCreateInfo={};
-			textureCreateInfo.externalResource = true;
-			textureCreateInfo.slot=scr::Texture::Slot::NORMAL;
-			textureCreateInfo.format=scr::Texture::Format::RGBA8;
-			textureCreateInfo.type=scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
-
-			mVideoTexture->Create(textureCreateInfo);
-			((scc::GL_Texture*)(mVideoTexture.get()))->SetExternalGlTexture(mVideoSurfaceTexture->GetTextureId());
-
-		}
 		mCubemapTexture 	    = renderPlatform.InstantiateTexture();
         mDiffuseTexture = renderPlatform.InstantiateTexture();
 		mSpecularTexture = renderPlatform.InstantiateTexture();
@@ -478,15 +467,42 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 	ovrVector3f footPos=mScene.GetFootPos();
 
+	//Get HMD Position/Orientation
+	scr::vec3 headPos =*((const scr::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
+	headPos+=*((scr::vec3*)&footPos);
+	//headPos*=10.0f;
+	scr::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
+
+	//Get the Capture Position
+	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&renderPlatform)};
+	scr::Transform scr_UE4_captureTransform(tci);
+	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
+	scr_UE4_captureTransform = avs_UE4_captureTransform;
+
+	if(mDecoder.hasValidTransform())
+	{
+		if (!receivedInitialPos)
+		{
+			// Oculus Origin means where the headset's zero is in real space.
+			oculusOrigin = scr_UE4_captureTransform.m_Translation;
+			receivedInitialPos = true;
+		}
+	}
+	else
+	{
+		scr_UE4_captureTransform = avs::Transform();
+		oculusOrigin = scr_UE4_captureTransform.m_Translation;
+	}
+
+	cameraPosition = oculusOrigin+scr_OVR_headPos;
+
 	// Handle networked session.
 	if(mSession.IsConnected())
 	{
 		DisplayInfo displayInfo = {1440, 1600};
 		HeadPose headPose;
 		headPose.orientation=*((scr::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
-		headPose.position=*((scr::vec3*)(&vrFrame.Tracking.HeadPose.Pose.Position));
-		headPose.position+=*((scr::vec3*)(&footPos));
-		headPose.position+=oculusOrigin;
+		headPose.position=cameraPosition;
 		mSession.Frame(displayInfo, headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
 	}
 	else
@@ -518,35 +534,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
-
-	//Get HMD Position/Orientation
-	scr::vec3 headPos =*((const scr::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
-	headPos+=*((scr::vec3*)&footPos);
-
-	scr::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
-
-	//Get the Capture Position
-	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&renderPlatform)};
-	scr::Transform scr_UE4_captureTransform(tci);
-	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
-	scr_UE4_captureTransform = avs_UE4_captureTransform;
-
-	if(mDecoder.hasValidTransform())
-	{
-	    if (!receivedInitialPos)
-	    {
-            // Oculus Origin means where the headset's zero is in real space.
-            oculusOrigin = scr_UE4_captureTransform.m_Translation;
-            receivedInitialPos = true;
-        }
-	}
-	else
-	{
-        scr_UE4_captureTransform = avs::Transform();
-        oculusOrigin = scr_UE4_captureTransform.m_Translation;
-	}
-
-	cameraPosition = oculusOrigin+ scr_OVR_headPos;
 	scr::vec3 camera_from_videoCentre=cameraPosition-scr_UE4_captureTransform.m_Translation;
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
 	scrCamera->UpdatePosition(scr_OVR_headPos);
@@ -573,7 +560,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 						"Incomplete Decoder Packets: %d\n"
 						"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
 						"Actors: SCR %d | OVR %d \n"
-						//"Camera Position: %1.3f, %1.3f, %1.3f\n"
+						"Camera Position: %1.3f, %1.3f, %1.3f\n"
 						//"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
 						//"Pos: %3.3f %3.3f %3.3f\n"
 						"Orphans: %d\n",mDecoder.getTotalFramesProcessed(),
@@ -583,7 +570,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 				frameRate, ctr.bandwidthKPS,
 				(uint64_t) resourceManagers.mActorManager.GetActorList().size(),
 				(uint64_t) mOVRActors.size(),
-				//cameraPosition.x, cameraPosition.y, cameraPosition.z,
+				cameraPosition.x, cameraPosition.y, cameraPosition.z,
 				//headPose.w, headPose.x, headPose.y, headPose.z,
 				//headPos.x, headPos.y, headPos.z,
 				ctr.m_packetMapOrphans);
@@ -632,9 +619,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		ovrMatrix4f viewProj1=res.FrameMatrices.EyeProjection[ 1 ]*eye1;
 		ovrMatrix4f viewProjT1=ovrMatrix4f_Transpose( &viewProj1 );
 		videoUB.invViewProj[1]=ovrMatrix4f_Inverse( &viewProjT1 );
-
 	}
-	mVideoUB->Submit();
 	mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_UniformBuffer *)  mVideoUB.get())->GetGlBuffer());
 	if(mCubemapTexture->IsValid())
 	{
@@ -642,13 +627,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		scr::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
 		scr::vec3 &v=camera_from_videoCentre;
 		scr::vec4 right_eye ={v.x+eye.x,v.y+eye.y,v.z+eye.z,0.0f};
-		scr::vec4 left_eye ={v.x-eye.x,v.y-eye.y,v.z-eye.z,0.0f};
+		scr::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
 		videoUB.eyeOffsets[0]=left_eye;		// left eye
-		videoUB.eyeOffsets[1]=right_eye;	// right eye.
+		videoUB.eyeOffsets[1]=eye;	// right eye.
+		videoUB.cameraPosition=cameraPosition;
+
 		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
 		mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
 		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 	}
+	mVideoUB->Submit();
 
 	//Move the hands before they are drawn.
     {
@@ -791,6 +779,19 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
 		mNetworkSource.deconfigure();
 		return;
+	}
+	{
+		scr::Texture::TextureCreateInfo textureCreateInfo={};
+		textureCreateInfo.externalResource = true;
+		textureCreateInfo.slot=scr::Texture::Slot::NORMAL;
+		textureCreateInfo.format=scr::Texture::Format::RGBA8;
+		textureCreateInfo.type=scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
+		textureCreateInfo.height=setupCommand.video_height;
+		textureCreateInfo.width=setupCommand.video_width;
+
+		mVideoTexture->Create(textureCreateInfo);
+		((scc::GL_Texture*)(mVideoTexture.get()))->SetExternalGlTexture(mVideoSurfaceTexture->GetTextureId());
+
 	}
 	renderConstants.colourOffsetScale.x =0;
 	renderConstants.colourOffsetScale.y = 0;
