@@ -88,7 +88,7 @@ namespace scr
 			mActorManager.ClearCareful(excludeList, outExistingActors);
 
 			///As the UIDs of these aren't(?) stored on the server; the server can't confirm their existence.
-			///If they don't exist on the server, then the mesh won't and they'll be cleared; if they do then they need to stay.
+			///If the mesh is cleared, then these will be cleared.
 			//mIndexBufferManager.ClearCareful(excludeList);
 			//mShaderManager.ClearCareful(excludeList);
 			//mUniformBufferManager.ClearCareful(excludeList);
