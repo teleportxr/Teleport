@@ -15,9 +15,8 @@
 #include "Simul/Platform/CrossPlatform/CommandLineParams.h"
 #include "Simul/Platform/CrossPlatform/SphericalHarmonics.h"
 
-#include "SessionClient.h"
 #include "Config.h"
-#include "Log.h"
+#include "PCDiscoveryService.h"
 
 #include <algorithm>
 #include <random>
@@ -26,6 +25,8 @@
 #include "libavstream/platforms/platform_windows.hpp"
 
 #include "crossplatform/Material.h"
+#include "crossplatform/Log.h"
+#include "crossplatform/SessionClient.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
@@ -96,7 +97,7 @@ ClientRenderer::ClientRenderer():
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
 	resourceCreator(basist::transcoder_texture_format::cTFBC1),
-	sessionClient(this, resourceCreator),
+	sessionClient(this, std::make_unique<PCDiscoveryService>(), resourceCreator),
 	RenderMode(0)
 {
 	avsTextures.resize(NumStreams);
@@ -759,8 +760,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,14000.f);
 	controllerState.mTrackpadX=0.5f;
 	controllerState.mTrackpadY=0.5f;
-	controllerState.mJoystickX =(mouseCameraInput.right_left_input);
-	controllerState.mJoystickY =(mouseCameraInput.forward_back_input);
+	controllerState.mJoystickAxisX =(mouseCameraInput.right_left_input);
+	controllerState.mJoystickAxisY =(mouseCameraInput.forward_back_input);
 	controllerState.mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())

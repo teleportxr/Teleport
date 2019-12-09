@@ -1,8 +1,8 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
-
 #include "Application.h"
+
+#include "AndroidDiscoveryService.h"
 #include "Config.h"
-#include "Input.h"
 #include "VideoSurface.h"
 
 #include "GuiSys.h"
@@ -45,6 +45,24 @@ scr::ivec2 diffuseOffset={3* specularSize/2, specularSize*2};
 scr::ivec2 roughOffset={3* specularSize,0};
 scr::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
 
+ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
+{
+	ovrQuatf r;
+	r.w= p.w * q.w - p.x * q.x - p.y * q.y - p.z * q.z;
+	r.x= p.w * q.x + p.x * q.w + p.y * q.z - p.z * q.y;
+	r.y= p.w * q.y + p.y * q.w + p.z * q.x - p.x * q.z;
+	r.z= p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x;
+	return r;
+}
+
+static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
+{
+	ovrQuatf iq=q;
+	iq.x*=-1.f;
+	iq.y*=-1.f;
+	iq.z*=-1.f;
+	return QuaternionMultiply(p,iq);
+}
 
 Application::Application()
 	: mDecoder(avs::DecoderBackend::Custom)
@@ -57,9 +75,9 @@ Application::Application()
 	, mVideoSurfaceTexture(nullptr)
 	, mCubemapTexture(nullptr)
 	, mCubemapLightingTexture(nullptr)
-	,mCameraPositionBuffer(nullptr)
+	, mCameraPositionBuffer(nullptr)
 	, mOvrMobile(nullptr)
-	, mSession(this, resourceCreator)
+	, mSession(this, std::make_unique<AndroidDiscoveryService>(), resourceCreator)
 	, mControllerID(0)
 	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
 	, mEffect(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
@@ -503,6 +521,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		HeadPose headPose;
 		headPose.orientation=*((scr::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		headPose.position=cameraPosition;
+
+		// TODO: Use compact representation with only 3 float values for wire format.
+		const ovrQuatf HeadPoseOVR = *((const ovrQuatf*)&headPose.orientation);
+		HeadPose headPose2;
+		ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
+		ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR,RootPose);
+		// Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
+		headPose2.orientation = scr::vec4(RelPose.x, RelPose.y,RelPose.z, RelPose.w);
+		headPose2.position=*((scr::vec3*)&headPose.position);
+
 		mSession.Frame(displayInfo, headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
 	}
 	else
@@ -890,6 +918,10 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
     handshake.isVR = true;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
+	handshake.isReadyToReceivePayloads=true;
+	handshake.axesStandard = avs::AxesStandard::GlStyle;
+	handshake.MetresPerUnit = 1.0f;
+	handshake.usingHands = true;
 }
 
 void Application::OnVideoStreamClosed()

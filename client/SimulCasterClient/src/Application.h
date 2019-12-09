@@ -12,7 +12,7 @@
 #include "SoundEffectContext.h"
 #include "GuiSys.h"
 
-#include "SessionClient.h"
+#include "crossplatform/SessionClient.h"
 #include "VideoDecoderProxy.h"
 
 #include "ResourceCreator.h"

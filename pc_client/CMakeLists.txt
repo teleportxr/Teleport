@@ -5,17 +5,14 @@ set( SIMUL "C:/Simul/4.2/Simul" CACHE STRING "Set the location of the Simul root
 set(srcs
 	ClientRenderer.cpp
 	Main.cpp
-	SessionClient.cpp
+	PCDiscoveryService.cpp
 	stdafx.cpp
-	Log.cpp
 	ClientRenderer.h
 	Config.h
-	Input.h
 	Resource.h
-	SessionClient.h
+	PCDiscoveryService.h
 	stdafx.h
 	targetver.h
-	Log.h
 )
 set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_DeviceContext.cpp

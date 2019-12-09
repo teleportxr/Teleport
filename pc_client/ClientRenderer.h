@@ -6,7 +6,6 @@
 #include "Simul/Platform/CrossPlatform/MeshRenderer.h"
 #include "Simul/Platform/CrossPlatform/SL/CppSl.hs"
 #include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
-#include "SessionClient.h"
 #include "Shaders/cubemap_constants.sl"
 #include "Shaders/pbr_constants.sl"
 
@@ -15,6 +14,7 @@
 #include <libavstream/geometrydecoder.hpp>
 
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
+#include "crossplatform/SessionClient.h"
 #include "crossplatform/ResourceCreator.h"
 #include "crossplatform/ResourceManager.h"
 #include "crossplatform/GeometryDecoder.h"

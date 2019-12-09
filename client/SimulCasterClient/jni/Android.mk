@@ -10,9 +10,9 @@ LOCAL_STATIC_LIBRARIES	:=  vrsound vrmodel vrlocale vrgui vrappframework libovrk
 LOCAL_SHARED_LIBRARIES	:= vrapi
 
 LOCAL_SRC_FILES			:= \
+    ../src/AndroidDiscoveryService.cpp \
     ../src/Application.cpp \
     ../src/GLESDebug.cpp \
-    ../src/SessionClient.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \
     ../src/SCR_Class_GL_Impl/GL_DeviceContext.cpp \
