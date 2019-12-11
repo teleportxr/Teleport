@@ -266,7 +266,7 @@ void SessionClient::Disconnect(uint timeout)
 	}
 }
 
-void SessionClient::Frame(const DisplayInfo &displayInfo, const HeadPose &headPose,bool pose_valid,const ControllerState& controllerState, bool requestKeyframe)
+void SessionClient::Frame(const avs::DisplayInfo &displayInfo, const HeadPose &headPose,bool pose_valid,const ControllerState& controllerState, bool requestKeyframe)
 {
 	if (mClientHost && mServerPeer)
 	{
@@ -467,11 +467,11 @@ void SessionClient::SendClientMessage(const avs::ClientMessage &msg)
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 }
 
-void SessionClient::SendDisplayInfo (const DisplayInfo &displayInfo)
+void SessionClient::SendDisplayInfo (const avs::DisplayInfo &displayInfo)
 {
 	if (!handshakeAcknowledged)
 		return;
-	ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(DisplayInfo), 0);
+	ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(avs::DisplayInfo), 0);
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo), packet);
 }
 

@@ -19,12 +19,6 @@ namespace avs
 	typedef unsigned long long uid;
 }
 
-struct DisplayInfo
-{
-	uint32_t width;
-	uint32_t height;
-};
-
 struct HeadPose
 {
 	scr::vec4 orientation;
@@ -56,7 +50,7 @@ public:
 
 	void SendClientMessage(const avs::ClientMessage &msg);
 
-    void Frame(const DisplayInfo& DisplayInfo, const HeadPose &headPose,bool pose_valid,const ControllerState &controllerState, bool requestKeyframe);
+    void Frame(const avs::DisplayInfo& displayInfo, const HeadPose &headPose,bool pose_valid,const ControllerState &controllerState, bool requestKeyframe);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -66,7 +60,7 @@ private:
 	void ParseCommandPacket(ENetPacket* packet);
 	void ParseTextCommand(const char *txt_utf8);
 
-	void SendDisplayInfo(const DisplayInfo& displayInfo);
+	void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
 	void SendHeadPose(const HeadPose& h);
 	void SendInput(const ControllerState &controllerState);
 	void SendResourceRequests();
