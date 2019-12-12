@@ -1,0 +1,311 @@
+#include "GeometryStore.h"
+
+#include <stdexcept>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+
+template<class T>
+std::vector<avs::uid> getVectorOfIDs(std::map<avs::uid, T> resourceMap)
+{
+	std::vector<avs::uid> ids(resourceMap.size());
+
+	size_t i = 0;
+	for(const auto& it : resourceMap)
+	{
+		ids[i++] = it.first;
+	}
+
+	return ids;
+}
+
+template<class T>
+bool getResource(std::map<avs::uid, T> resourceMap, avs::uid id, T& outResource) noexcept(false)
+{
+	//Assuming an incorrect resource should not happen, or at least not frequently.
+	try
+	{
+		outResource = resourceMap.at(id);
+
+		return true;
+	}
+	catch(std::out_of_range oor)
+	{
+		return false;
+	}
+}
+
+GeometryStore::GeometryStore()
+{
+	basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
+
+	const uint32_t THREAD_AMOUNT = 16;
+	basisCompressorParams.m_pJob_pool = new basisu::job_pool(THREAD_AMOUNT);
+
+	basisCompressorParams.m_quality_level = 1;
+	basisCompressorParams.m_compression_level = 1;
+}
+
+GeometryStore::~GeometryStore()
+{
+	delete basisCompressorParams.m_pJob_pool;
+}
+
+void GeometryStore::setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
+{
+	basisCompressorParams.m_quality_level = compressionStrength;
+	basisCompressorParams.m_compression_level = compressionQuality;
+}
+
+std::vector<avs::uid> GeometryStore::getNodeIDs() const
+{
+	return getVectorOfIDs(nodes);
+}
+
+bool GeometryStore::getNode(avs::uid nodeID, avs::DataNode& outNode) const
+{
+	return getResource(nodes, nodeID, outNode);
+}
+
+const std::map<avs::uid, avs::DataNode>& GeometryStore::getNodes() const
+{
+	return nodes;
+}
+
+std::vector<avs::uid> GeometryStore::getMeshIDs() const
+{
+	return getVectorOfIDs(meshes);
+}
+
+bool GeometryStore::getMesh(avs::uid meshID, avs::Mesh& outMesh) const
+{
+	return getResource(meshes, meshID, outMesh);
+}
+
+std::vector<avs::uid> GeometryStore::getTextureIDs() const
+{
+	return getVectorOfIDs(textures);
+}
+
+bool GeometryStore::getTexture(avs::uid textureID, avs::Texture& outTexture) const
+{
+	return getResource(textures, textureID, outTexture);
+}
+
+std::vector<avs::uid> GeometryStore::getMaterialIDs() const
+{
+	return getVectorOfIDs(materials);
+}
+
+bool GeometryStore::getMaterial(avs::uid materialID, avs::Material& outMaterial) const
+{
+	return getResource(materials, materialID, outMaterial);
+}
+
+std::vector<avs::uid> GeometryStore::getShadowMapIDs() const
+{
+	return getVectorOfIDs(shadowMaps);
+}
+
+bool GeometryStore::getShadowMap(avs::uid shadowID, avs::Texture& outShadowMap) const
+{
+	return getResource(shadowMaps, shadowID, outShadowMap);
+}
+
+const std::vector<avs::LightNodeResources>& GeometryStore::getLightNodes() const
+{
+	return lightNodes;
+}
+
+const std::vector<avs::uid>& GeometryStore::getHandIDs() const
+{
+	return handIDs;
+}
+
+void GeometryStore::setHandIDs(avs::uid firstHandID, avs::uid secondHandID)
+{
+	handIDs = {firstHandID, secondHandID};
+}
+
+bool GeometryStore::hasNode(avs::uid id) const
+{
+	return nodes.find(id) != nodes.end();
+}
+
+bool GeometryStore::hasMesh(avs::uid id) const
+{
+	return meshes.find(id) != meshes.end();
+}
+
+bool GeometryStore::hasMaterial(avs::uid id) const
+{
+	return materials.find(id) != materials.end();
+}
+
+bool GeometryStore::hasTexture(avs::uid id) const
+{
+	return textures.find(id) != textures.end();
+}
+
+bool GeometryStore::hasShadowMap(avs::uid id) const
+{
+	return shadowMaps.find(id) != shadowMaps.end();
+}
+
+void GeometryStore::storeNode(avs::uid id, avs::DataNode&& newNode)
+{
+	nodes[id] = newNode;
+
+	if(newNode.data_type == avs::NodeDataType::ShadowMap) lightNodes.emplace_back(avs::LightNodeResources{id, newNode.data_uid});
+}
+
+void GeometryStore::storeMesh(avs::uid id, avs::Mesh&& newMesh)
+{
+	meshes[id] = newMesh;
+}
+
+void GeometryStore::storeMaterial(avs::uid id, avs::Material&& newMaterial)
+{
+	materials[id] = newMaterial;
+}
+
+void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::time_t lastModified, std::string basisFileLocation)
+{
+#define FILE_SYSTEM_EXPERIMENTAL
+#ifdef FILE_SYSTEM_EXPERIMENTAL
+	using namespace std::experimental;
+#else
+	using namespace std;
+#endif
+
+	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
+	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
+	{
+		newTexture.compression = avs::TextureCompression::BASIS_COMPRESSED;
+
+		bool validBasisFileExists = false;
+		filesystem::path filePath = basisFileLocation;
+		if(filesystem::exists(filePath))
+		{
+			//Read last write time, and covert to std::time_t.
+			filesystem::file_time_type rawBasisTime = filesystem::last_write_time(filePath);
+			std::time_t basisLastModified = filesystem::file_time_type::clock::to_time_t(rawBasisTime);
+
+			//The file is valid if the basis file is younger than the texture file.
+			validBasisFileExists = basisLastModified >= lastModified;
+		}
+
+		//Read from disk if the file exists.
+		if(validBasisFileExists)
+		{
+			std::ifstream basisReader(basisFileLocation, std::ifstream::in | std::ifstream::binary);
+
+			newTexture.dataSize = static_cast<uint32_t>(std::experimental::filesystem::file_size(filePath));
+			newTexture.data = new unsigned char[newTexture.dataSize];
+			basisReader.read(reinterpret_cast<char*>(newTexture.data), newTexture.dataSize);
+
+			basisReader.close();
+		}
+		//Otherwise, queue the texture for compression.
+		else
+		{
+			//Copy data from source, so it isn't lost.
+			unsigned char* dataCopy = new unsigned char[newTexture.dataSize];
+			memcpy(dataCopy, newTexture.data, newTexture.dataSize);
+			newTexture.data = dataCopy;
+
+			texturesToCompress.emplace(id, PrecompressedTexture{basisFileLocation, newTexture.data, newTexture.dataSize});
+		}
+	}
+	else
+	{
+		newTexture.compression = avs::TextureCompression::UNCOMPRESSED;
+		
+		unsigned char* dataCopy = new unsigned char[newTexture.dataSize];
+		memcpy(dataCopy, newTexture.data, newTexture.dataSize);
+		newTexture.data = dataCopy;
+
+		/*if(newTexture.dataSize > 1048576)
+		{
+			LOG("Texture \"%s\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: %dB(%.2fMB)", newTexture.name, newTexture.dataSize, newTexture.dataSize / 1048576.0f);
+		}*/
+	}
+
+	textures[id] = newTexture;
+}
+
+void GeometryStore::storeShadowMap(avs::uid id, avs::Texture&& newShadowMap)
+{
+	shadowMaps[id] = newShadowMap;
+}
+
+size_t GeometryStore::getAmountOfTexturesWaitingForCompression() const
+{
+	return texturesToCompress.size();
+}
+
+const avs::Texture* GeometryStore::getNextCompressedTexture() const
+{
+	//No textures to compress.
+	if(texturesToCompress.size() == 0) return nullptr;
+
+	auto compressionPair = texturesToCompress.begin();
+	auto foundTexture = textures.find(compressionPair->first);
+	assert(foundTexture != textures.end());
+
+	return &foundTexture->second;
+}
+
+void GeometryStore::compressNextTexture()
+{
+	//No textures to compress.
+	if(texturesToCompress.size() == 0) return;
+
+	auto compressionPair = texturesToCompress.begin();
+	auto& foundTexture = textures.find(compressionPair->first);
+	assert(foundTexture != textures.end());
+
+	avs::Texture& newTexture = foundTexture->second;
+	PrecompressedTexture& compressionData = compressionPair->second;
+
+	basisu::image image(newTexture.width, newTexture.height);
+	basisu::color_rgba_vec& imageData = image.get_pixels();
+	memcpy(imageData.data(), compressionData.rawData, compressionData.dataSize);
+
+	basisCompressorParams.m_source_images.clear();
+	basisCompressorParams.m_source_images.push_back(image);
+
+	basisCompressorParams.m_write_output_basis_files = true;
+	basisCompressorParams.m_out_filename = compressionData.basisFilePath;
+
+	basisCompressorParams.m_mip_gen = true;
+	basisCompressorParams.m_mip_smallest_dimension = 4; //Appears to be the smallest texture size that SimulFX handles.
+
+	basisu::basis_compressor basisCompressor;
+
+	if(basisCompressor.init(basisCompressorParams))
+	{
+		basisu::basis_compressor::error_code result = basisCompressor.process();
+
+		if(result == basisu::basis_compressor::error_code::cECSuccess)
+		{
+			basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
+
+			delete[] newTexture.data;
+
+			newTexture.dataSize = basisCompressor.get_basis_file_size();
+			newTexture.data = new unsigned char[newTexture.dataSize];
+			memcpy(newTexture.data, basisTex.data(), newTexture.dataSize);
+		}
+		else
+		{
+			std::cout << "Failed to compress texture: " << newTexture.name << ".\n";
+		}
+	}
+	else
+	{
+		std::cout << "Failed to initialise basis compressor for texture: " << newTexture.name << ".\n";
+	}
+
+	texturesToCompress.erase(texturesToCompress.begin());
+}
