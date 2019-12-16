@@ -247,7 +247,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer.ResizeView(0, w->viewport.w, w->viewport.h);
 				clientRenderer.OnFrameMove(fTime,time_step);
+				errno=0;
 				dsmi->Render(hWnd);
+				errno=0;
 				displaySurfaceManager.EndFrame();
 			}
         }

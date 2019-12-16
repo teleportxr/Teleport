@@ -631,7 +631,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 212992;	//200k like Oculus Quest
 	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "51.179.137.9", setupCommand.port, sourceParams))
+	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port+1, "127.0.0.1", setupCommand.port, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;

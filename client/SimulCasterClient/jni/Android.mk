@@ -50,6 +50,7 @@ $(call import-module,VrAppSupport/VrLocale/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrModel/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrSound/Projects/Android/jni)
 $(call import-module,../libavstream/jni)
+$(call import-module,../libavstream/thirdparty/srt/build_android/jni)
 
 $(call import-module,../SimulCasterRenderer/jni)
 $(call import-module,3rdParty/enet/jni)

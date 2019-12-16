@@ -18,7 +18,7 @@ Clone the repository with submodules:
 
 ## Building the PC Client
 
-1. Using CMakeGUI, set src: C:/Simul/RemotePlay and bin: C:/Simul/RemotePlay/build/x64
+1. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/build/x64
 2. Set Simul Directory and uncheck BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME.
 3. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes. Also Check "STATIC" - option from Basis Universal.
 4. set BUILD_AS_LIBRARY to checked - option from Basis Universal module.
@@ -28,8 +28,8 @@ Clone the repository with submodules:
 
 ## Building UE4 plugin
 
-1. Using CMakeGUI, create a Visual Studio 2017 x64 build in the Libraries/libavstream subdirectory of plugins/UnrealDemo/Plugins/RemotePlay. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MD and /MDd options and BUILD_SHARED_LIBS is NOT checked, and USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
-2. Create the Cmake libavstream project and add it to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config.
+1. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries. In the Advanced config settings, ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility. Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build.
+2. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config.
 3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG).
 4. Repeat steps 1-3 for thirdparty/enet and thirdparty/basis_universal. For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes. Ensure BUILD_AS_LIBRARY is checked for Basis.
 5. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch. Open and build the UE4 project in `Development Editor` configuration.
@@ -37,7 +37,7 @@ Clone the repository with submodules:
 7. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
 8. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
-## Building GearVR client application
+## Building Android client application
 
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
 2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client/VrProjects/Native/RemotePlayClient/assets` directory.

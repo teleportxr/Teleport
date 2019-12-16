@@ -72,6 +72,7 @@ set( src_public ${src_root} ${src_api} ${src_crossplatform} )
 
 #For MT runtime
 add_static_library( SimulCasterRenderer STATIC ${src_public} )  
+set_target_properties( SimulCasterRenderer PROPERTIES FOLDER Client)
 
 #For MD runtime
 #add_library( SimulCasterRenderer STATIC ${src_public} ) 
