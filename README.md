@@ -28,11 +28,17 @@ Clone the repository with submodules:
 
 ## Building UE4 plugin
 
-1. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries. In the Advanced config settings, ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility. Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build.
-2. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config.
-3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG).
-4. Repeat steps 1-3 for thirdparty/enet and thirdparty/basis_universal. For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes. Ensure BUILD_AS_LIBRARY is checked for Basis.
-5. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch. Open and build the UE4 project in `Development Editor` configuration.
+1. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries. In the Advanced config settings, ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility. Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build. For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes. Ensure BUILD_AS_LIBRARY is checked for Basis. Remove RelWithDebInfo and MinSizeRelease configurations.
+2. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch.
+3. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config. The projects needed are:
+    cuda_kernels
+    libavstream
+    basisu
+    enet
+    srt_virtual
+    srt_static
+3. Build the projects, this creates static libraries for UnrealDemo to link.
+4. Open and build the UE4 project in `Development Editor` configuration.
 6. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
 7. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
 8. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
