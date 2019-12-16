@@ -82,3 +82,46 @@ For best performance when testing with UE4 demo project run the packaged game in
 | UDP      | 10500 | Session control & player input
 | UDP      | 10501 | Video stream
 | UDP      | 10600 | Local network server discovery
+
+
+## Building srt for Android
+This is only necessary if we change NDK or modify srt in some way. Set up Ubuntu Linux subsystem for Windows, then from a bash shell:
+cd ~
+sudo cp -r /mnt/c/Users/[Username]/.ssh .
+apt-get install git
+sudo apt-get install git
+sudo apt-get update
+eval $(ssh-agent -s)
+ssh-add ~/.ssh/id_rsa
+
+mkdir SRT
+cd SRT
+git clone git@github.com:simul/srt.git
+apt-get install cmake
+sudo apt-get install cmake
+sudo apt-get install tclsh
+sudo apt install unzip
+sudo apt-get install zip
+sudo apt-get install patchelf
+sudo apt install gcc
+sudo apt install make
+sudo apt install git
+sudo apt install clang
+sudo apt install g++
+sudo apt install gcc
+
+chmod +x mkall
+chmod +x mkssl
+chmod +x mksrt
+chmod +x prepare_build 
+chmod +x packjni 
+
+unzip android-ndk-r20b-linux-x86_64.zip
+
+./mkall > log.txt
+./packjni
+
+zip -r arm64-v8a.zip arm64-v8a
+zip -r armeabi-v7a.zip armeabi-v7a
+zip -r x86.zip x86
+zip -r x86_64.zip x86_64
