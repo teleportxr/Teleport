@@ -15,9 +15,8 @@
 #include "Simul/Platform/CrossPlatform/CommandLineParams.h"
 #include "Simul/Platform/CrossPlatform/SphericalHarmonics.h"
 
-#include "SessionClient.h"
 #include "Config.h"
-#include "Log.h"
+#include "PCDiscoveryService.h"
 
 #include <algorithm>
 #include <random>
@@ -26,6 +25,8 @@
 #include "libavstream/platforms/platform_windows.hpp"
 
 #include "crossplatform/Material.h"
+#include "crossplatform/Log.h"
+#include "crossplatform/SessionClient.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
@@ -96,7 +97,7 @@ ClientRenderer::ClientRenderer():
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
 	resourceCreator(basist::transcoder_texture_format::cTFBC1),
-	sessionClient(this, resourceCreator),
+	sessionClient(this, std::make_unique<PCDiscoveryService>(), resourceCreator),
 	RenderMode(0)
 {
 	avsTextures.resize(NumStreams);
@@ -716,6 +717,8 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 		resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
 	}
 
+	handshake.startDisplayInfo.width = hdrFramebuffer->GetWidth();
+	handshake.startDisplayInfo.height = hdrFramebuffer->GetHeight();
 	handshake.isReadyToReceivePayloads = true;
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
 	handshake.MetresPerUnit = 1.0f;
@@ -759,8 +762,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,14000.f);
 	controllerState.mTrackpadX=0.5f;
 	controllerState.mTrackpadY=0.5f;
-	controllerState.mJoystickX =(mouseCameraInput.right_left_input);
-	controllerState.mJoystickY =(mouseCameraInput.forward_back_input);
+	controllerState.mJoystickAxisX =(mouseCameraInput.right_left_input);
+	controllerState.mJoystickAxisY =(mouseCameraInput.forward_back_input);
 	controllerState.mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())
@@ -797,7 +800,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
-		DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
+		avs::DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
 		HeadPose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();

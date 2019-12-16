@@ -3,17 +3,24 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <memory>
 
-#include <OVR_Input.h>
 #include <enet/enet.h>
-#include <common_p.hpp>
+#include "libavstream/common.hpp"
 
 #include "Input.h"
+#include "DiscoveryService.h"
 #include "basic_linear_algebra.h"
-
 
 typedef unsigned int uint;
 class ResourceCreator;
+
+struct HeadPose
+{
+    scr::vec4 orientation;
+    scr::vec3 position;
+};
 
 class SessionCommandInterface
 {
@@ -25,22 +32,10 @@ public:
     virtual bool OnActorLeftBounds(avs::uid actor_uid) = 0;
 };
 
-struct DisplayInfo
-{
-    uint32_t width;
-    uint32_t height;
-};
-
-struct HeadPose
-{
-    scr::vec4 orientation;
-    scr::vec3 position;
-};
-
 class SessionClient
 {
 public:
-    SessionClient(SessionCommandInterface* commandInterface, ResourceCreator& resourceCreator);
+    SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService, ResourceCreator& resourceCreator);
     ~SessionClient();
 
     bool Discover(uint16_t discoveryPort, ENetAddress& remote);
@@ -50,7 +45,7 @@ public:
 
     void SendClientMessage(const avs::ClientMessage &msg);
 
-    void Frame(const DisplayInfo& displayInfo, const HeadPose& headPose,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
+    void Frame(const avs::DisplayInfo& displayInfo, const HeadPose& headPose,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -60,31 +55,30 @@ private:
     void ParseCommandPacket(ENetPacket* packet);
     void ParseTextCommand(const char *txt_utf8);
 
-    void SendDisplayInfo(const DisplayInfo& displayInfo);
+    void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
     void SendHeadPose(const HeadPose& headPose);
     void SendInput(const ControllerState& controllerState);
     void SendResourceRequests();
-	void SendReceivedResources();
-	void SendActorUpdates();
-	void SendKeyframeRequest();
+    void SendReceivedResources();
+    void SendActorUpdates();
+    void SendKeyframeRequest();
     //Tell server we are ready to receive geometry payloads.
     void SendHandshake(const avs::Handshake &handshake);
 
     avs::uid lastServer_id = 0; //UID of the server we last connected to.
-    uint32_t mClientID = 0;
-    int mServiceDiscoverySocket = 0;
 
     SessionCommandInterface* const mCommandInterface;
+    std::unique_ptr<DiscoveryService> discoveryService;
     ResourceCreator& mResourceCreator;
+
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;
     ENetAddress mServerEndpoint;
 
     ControllerState mPrevControllerState = {};
 
-	bool handshakeAcknowledged = false;
+    bool handshakeAcknowledged = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
     std::vector<avs::uid> mReceivedActors; //Actors that have entered bounds, are about to be drawn, and need to be confirmed to the server.
     std::vector<avs::uid> mLostActors; //Actor that have left bounds, are about to be hidden, and need to be confirmed to the server.
 };
-

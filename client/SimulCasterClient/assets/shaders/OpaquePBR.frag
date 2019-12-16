@@ -249,7 +249,7 @@ void main()
     float roughnessE =roughness*roughness;
     float roughnessL = max(0.01, roughnessE);
 
-    vec3 normalLookup=texture(u_Normal, v_UV_normal).bgr;
+    vec3 normalLookup=texture(u_Normal, v_UV_normal * u_NormalTexCoordsScalar_R).bgr;
     vec3 tangetSpaceNormalMap = 2.0*(normalLookup-vec3(0.5,0.5,0.5));//*u_NormalOutputScalar.bgr;
     vec3 normal = normalize( v_TBN*tangetSpaceNormalMap );
 

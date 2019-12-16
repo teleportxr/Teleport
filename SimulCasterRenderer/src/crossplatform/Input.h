@@ -1,4 +1,4 @@
-// (C) Copyright 2018 Simul.co
+// (C) Copyright 2018-2019 Simul Software Ltd
 
 #pragma once
 
@@ -9,6 +9,6 @@ struct ControllerState {
     bool  mTrackpadStatus;
     float mTrackpadX;
     float mTrackpadY;
-    float mJoystickAxisX;
-    float mJoystickAxisY;
+	float mJoystickAxisX;
+	float mJoystickAxisY;
 };

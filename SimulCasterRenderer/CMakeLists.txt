@@ -32,10 +32,14 @@ set( src_crossplatform
 	src/crossplatform/basic_linear_algebra.h
 	src/crossplatform/Camera.cpp
 	src/crossplatform/Camera.h
+	src/crossplatform/DiscoveryService.h
 	src/crossplatform/GeometryDecoder.cpp
 	src/crossplatform/GeometryDecoder.h
+	src/crossplatform/Input.h
 	src/crossplatform/Light.cpp
 	src/crossplatform/Light.h
+	src/crossplatform/Log.cpp
+	src/crossplatform/Log.h
 	src/crossplatform/Material.cpp
 	src/crossplatform/Material.h
 	src/crossplatform/Mesh.cpp
@@ -43,6 +47,8 @@ set( src_crossplatform
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h
+	src/crossplatform/SessionClient.cpp
+	src/crossplatform/SessionClient.h
 	src/crossplatform/ShaderResource.cpp
 	src/crossplatform/ShaderResource.h
 	src/crossplatform/ShaderSystem.h
@@ -54,6 +60,8 @@ include_directories(src)
 include_directories(../libavstream/include)
 #Include Basis Universal
 include_directories(../thirdparty/basis_universal)
+#Include enet
+include_directories(../thirdparty/enet/include)
 
 if(WIN32)
 # Removed circular dependency
