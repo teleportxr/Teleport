@@ -22,6 +22,16 @@ option(ENABLE_APPS "" OFF)
 option(ENABLE_SHARED "" OFF) 
 option(ENABLE_STATIC "" ON)
 
+#openssl
+
+set(LIB_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libcrypto64MTd.lib)
+set(LIB_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libcrypto64MT.lib)
+set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libssl64MTd.lib)
+set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libssl64MT.lib )
+
+set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
+
+
 #defaults for basisu
 if(REMOTEPLAY_SERVER)
 	option(STATIC "" OFF)
