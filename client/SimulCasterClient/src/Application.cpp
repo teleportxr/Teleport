@@ -919,7 +919,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
     handshake.FOV = 110;
     handshake.isVR = true;
 	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
-	handshake.maxBandwidthKpS = handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
+	handshake.maxBandwidthKpS = 10*handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
 	handshake.isReadyToReceivePayloads=true;
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
 	handshake.MetresPerUnit = 1.0f;
