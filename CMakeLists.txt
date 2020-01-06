@@ -1,19 +1,48 @@
 cmake_minimum_required(VERSION 3.8)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(RemotePlay)
-set( SIMUL "C:/Simul/4.2/Simul" CACHE STRING "Simul folder" )
+set(REMOTEPLAY_SIMUL "C:/Simul/4.2/Simul" CACHE STRING "Simul folder" )
+option(REMOTEPLAY_SERVER "Build for server? If true, client will not be built." OFF)
+set (CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "")
 
 set(CMAKE_CXX_STANDARD 17 )
 set(CMAKE_CXX_STANDARD_REQUIRED ON )
 set(CMAKE_CXX_EXTENSIONS ON )
-set(CMAKE_CXX_FLAGS_RELEASE "/Od /Ob0 /Zi")
-set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Ob0 /Od /RTC1")
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
 SET(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG")
 
 set(CONFIG_NAME $<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
 #message(STATUS "CONFIG_NAME ${CONFIG_NAME}")
+
+#defaults for srt:
+set(PTHREAD_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/srt/submodules/pthread-win32)
+set(PTHREAD_LIBRARY ${CMAKE_SOURCE_DIR}/thirdparty/srt/submodules/pthread-win32/bin/x64_MSVC2015.Release/pthread_lib.lib)
+option(ENABLE_APPS "" OFF)
+option(ENABLE_SHARED "" OFF) 
+option(ENABLE_STATIC "" ON)
+
+#openssl
+
+set(LIB_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libcrypto64MTd.lib)
+set(LIB_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libcrypto64MT.lib)
+set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libssl64MTd.lib)
+set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libssl64MT.lib )
+
+set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
+
+
+#defaults for basisu
+if(REMOTEPLAY_SERVER)
+	option(STATIC "" OFF)
+	set(CMAKE_CXX_FLAGS_RELEASE "/Od /Ob0 /Zi")
+	set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Ob0 /Od /RTC1")
+else()
+	option(STATIC "" ON)
+	set(CMAKE_CXX_FLAGS_RELEASE "/MT /Od /Ob0 /Zi")
+	set(CMAKE_CXX_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1")
+endif()
+option(BUILD_AS_LIBRARY "" ON) 
 
 function(set_target_runtime targname rt)
 	# Default to statically-linked runtime.
@@ -51,9 +80,17 @@ function(add_static_executable targname)
 	SetDefaults( ${targname} )
 endfunction()
 
-add_subdirectory(pc_client)
+if(NOT REMOTEPLAY_SERVER)
+	add_subdirectory(pc_client)
+	add_subdirectory(SimulCasterRenderer)
+endif()
 add_subdirectory(libavstream)
 add_subdirectory(thirdparty/enet)
+set_target_properties( enet PROPERTIES FOLDER thirdparty/enet)
 add_subdirectory(thirdparty/basis_universal)
-add_subdirectory(SimulCasterRenderer)
+set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
+add_subdirectory(thirdparty/srt)
+set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
+set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
+set_target_properties( haicrypt_virtual PROPERTIES FOLDER thirdparty/srt)
 add_subdirectory(SimulCasterServer)

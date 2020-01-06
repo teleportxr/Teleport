@@ -630,9 +630,10 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	receivedInitialPos = false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
-	sourceParams.socketBufferSize = 212992;	//200k like Oculus Quest
+	sourceParams.socketBufferSize = 1212992;	//200k like Oculus Quest
+	sourceParams.requiredLatencyMs=setupCommand.requiredLatencyMs;
 	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port +1, "51.179.137.9", setupCommand.port, sourceParams))
+	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port+1, "127.0.0.1", setupCommand.port, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
@@ -717,6 +718,8 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 		resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
 	}
 
+	handshake.startDisplayInfo.width = hdrFramebuffer->GetWidth();
+	handshake.startDisplayInfo.height = hdrFramebuffer->GetHeight();
 	handshake.isReadyToReceivePayloads = true;
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
 	handshake.MetresPerUnit = 1.0f;
@@ -798,7 +801,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
-		DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
+		avs::DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
 		HeadPose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();

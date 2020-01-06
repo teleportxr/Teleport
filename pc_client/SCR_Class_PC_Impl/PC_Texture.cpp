@@ -66,6 +66,7 @@ simul::crossplatform::PixelFormat ToSimulPixelFormat(scr::Texture::Format f)
 		return UNKNOWN;
 	};
 }
+
 PC_Texture::~PC_Texture()
 {
 	Destroy();

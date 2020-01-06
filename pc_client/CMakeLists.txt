@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(pc_client)
 file(GLOB shaders "Shaders/*.sfx" "Shaders/*.sl")
-set( SIMUL "C:/Simul/4.2/Simul" CACHE STRING "Set the location of the Simul root directory. Usually the main source folder." )
 set(srcs
 	ClientRenderer.cpp
 	Main.cpp
@@ -40,8 +39,8 @@ set(scr_pc_impl
 )
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DSIMUL=${SIMUL}")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DSIMUL=${SIMUL}")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DSIMUL=${REMOTEPLAY_SIMUL}")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DSIMUL=${REMOTEPLAY_SIMUL}")
 else()
 	message(FATAL_ERROR "Unsupported platform!")
 endif()
@@ -50,14 +49,14 @@ source_group("Shaders" src FILES ${shaders} )
 add_static_executable( pc_client WIN32 ${srcs} ${scr_pc_impl} ${shaders} )
 
 target_include_directories(pc_client PRIVATE 
-	${CMAKE_CURRENT_SOURCE_DIR} ${SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src ../thirdparty/basis_universal)
-target_link_directories(pc_client PRIVATE "${SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/build/lib/${CONFIG_NAME}"
-	"${SIMUL}/lib/x64/v141/Static ${CONFIG_NAME}" "${SIMUL}/lib/x64/v140/Static ${CONFIG_NAME}" )
+	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src ../thirdparty/basis_universal)
+target_link_directories(pc_client PRIVATE "${REMOTEPLAY_SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${REMOTEPLAY_SIMUL}/build/lib/${CONFIG_NAME}"
+	"${REMOTEPLAY_SIMUL}/lib/x64/v141/Static ${CONFIG_NAME}" "${REMOTEPLAY_SIMUL}/lib/x64/v140/Static ${CONFIG_NAME}" )
 
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 set_target_properties( pc_client PROPERTIES FOLDER Client)
-target_include_directories(pc_client PRIVATE ${SIMUL}/..) 
+target_include_directories(pc_client PRIVATE ${REMOTEPLAY_SIMUL}/..) 
 target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include )
 target_compile_features(pc_client PRIVATE cxx_std_17)
 

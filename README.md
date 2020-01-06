@@ -18,7 +18,7 @@ Clone the repository with submodules:
 
 ## Building the PC Client
 
-1. Using CMakeGUI, set src: C:/Simul/RemotePlay and bin: C:/Simul/RemotePlay/build/x64
+1. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/build/x64
 2. Set Simul Directory and uncheck BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME.
 3. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes. Also Check "STATIC" - option from Basis Universal.
 4. set BUILD_AS_LIBRARY to checked - option from Basis Universal module.
@@ -28,16 +28,22 @@ Clone the repository with submodules:
 
 ## Building UE4 plugin
 
-1. Using CMakeGUI, create a Visual Studio 2017 x64 build in the Libraries/libavstream subdirectory of plugins/UnrealDemo/Plugins/RemotePlay. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MD and /MDd options and BUILD_SHARED_LIBS is NOT checked, and USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
-2. Create the Cmake libavstream project and add it to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config.
-3. Build libavstream, this creates libavstream.lib inplugins\UnrealDemo\Plugins\RemotePlay\Libraries\libavstream\lib\(CONFIG).
-4. Repeat steps 1-3 for thirdparty/enet and thirdparty/basis_universal. For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes. Ensure BUILD_AS_LIBRARY is checked for Basis.
-5. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch. Open and build the UE4 project in `Development Editor` configuration.
+1. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries. In the Advanced config settings, ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility. Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build. For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes. Ensure BUILD_AS_LIBRARY is checked for Basis. Remove RelWithDebInfo and MinSizeRelease configurations.
+2. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch.
+3. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config. The projects needed are:
+    cuda_kernels
+    libavstream
+    basisu
+    enet
+    srt_virtual
+    srt_static
+3. Build the projects, this creates static libraries for UnrealDemo to link.
+4. Open and build the UE4 project in `Development Editor` configuration.
 6. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
 7. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
 8. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
-## Building GearVR client application
+## Building Android client application
 
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
 2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client/VrProjects/Native/RemotePlayClient/assets` directory.
@@ -76,3 +82,47 @@ For best performance when testing with UE4 demo project run the packaged game in
 | UDP      | 10500 | Session control & player input
 | UDP      | 10501 | Video stream
 | UDP      | 10600 | Local network server discovery
+
+
+## Building srt for Android
+This is only necessary if we change NDK or modify srt in some way. Set up Ubuntu Linux subsystem for Windows, then from a bash shell:
+
+    cd ~
+    sudo cp -r /mnt/c/Users/[Username]/.ssh .
+    apt-get install git
+    sudo apt-get install git
+    sudo apt-get update
+    eval $(ssh-agent -s)
+    ssh-add ~/.ssh/id_rsa
+
+    mkdir SRT
+    cd SRT
+    git clone git@github.com:simul/srt.git
+    apt-get install cmake
+    sudo apt-get install cmake
+    sudo apt-get install tclsh
+    sudo apt install unzip
+    sudo apt-get install zip
+    sudo apt-get install patchelf
+    sudo apt install gcc
+    sudo apt install make
+    sudo apt install git
+    sudo apt install clang
+    sudo apt install g++
+    sudo apt install gcc
+
+    chmod +x mkall
+    chmod +x mkssl
+    chmod +x mksrt
+    chmod +x prepare_build 
+    chmod +x packjni 
+
+    unzip android-ndk-r20b-linux-x86_64.zip
+
+    ./mkall > log.txt
+    ./packjni
+
+    zip -r arm64-v8a.zip arm64-v8a
+    zip -r armeabi-v7a.zip armeabi-v7a
+    zip -r x86.zip x86
+    zip -r x86_64.zip x86_64
