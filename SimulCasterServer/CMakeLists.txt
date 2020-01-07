@@ -8,6 +8,10 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
+	src/GeometryEncoder.cpp
+	src/GeometryEncoder.h
+	src/GeometryRequester.cpp
+	src/GeometryRequester.h
 	src/GeometryStore.cpp
 	src/GeometryStore.h
 )

@@ -171,11 +171,11 @@ void GeometryStore::storeMaterial(avs::uid id, avs::Material&& newMaterial)
 
 void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::time_t lastModified, std::string basisFileLocation)
 {
-#define FILE_SYSTEM_EXPERIMENTAL
-#ifdef FILE_SYSTEM_EXPERIMENTAL
-	using namespace std::experimental;
+	//We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
+#if _MSC_VER < 1920
+	namespace filesystem = std::experimental::filesystem;
 #else
-	using namespace std;
+	namespace filesystem = std::filesystem;
 #endif
 
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
@@ -187,9 +187,11 @@ void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::ti
 		filesystem::path filePath = basisFileLocation;
 		if(filesystem::exists(filePath))
 		{
-			//Read last write time, and covert to std::time_t.
+			//Read last write time.
 			filesystem::file_time_type rawBasisTime = filesystem::last_write_time(filePath);
-			std::time_t basisLastModified = filesystem::file_time_type::clock::to_time_t(rawBasisTime);
+
+			//Convert to std::time_t; imprecise, but good enough.
+			std::time_t basisLastModified = std::chrono::system_clock::to_time_t(rawBasisTime);
 
 			//The file is valid if the basis file is younger than the texture file.
 			validBasisFileExists = basisLastModified >= lastModified;
@@ -200,7 +202,7 @@ void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::ti
 		{
 			std::ifstream basisReader(basisFileLocation, std::ifstream::in | std::ifstream::binary);
 
-			newTexture.dataSize = static_cast<uint32_t>(std::experimental::filesystem::file_size(filePath));
+			newTexture.dataSize = static_cast<uint32_t>(filesystem::file_size(filePath));
 			newTexture.data = new unsigned char[newTexture.dataSize];
 			basisReader.read(reinterpret_cast<char*>(newTexture.data), newTexture.dataSize);
 
@@ -225,10 +227,10 @@ void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::ti
 		memcpy(dataCopy, newTexture.data, newTexture.dataSize);
 		newTexture.data = dataCopy;
 
-		/*if(newTexture.dataSize > 1048576)
+		if(newTexture.dataSize > 1048576)
 		{
-			LOG("Texture \"%s\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: %dB(%.2fMB)", newTexture.name, newTexture.dataSize, newTexture.dataSize / 1048576.0f);
-		}*/
+			std::cout << "Texture \"" << newTexture.name << "\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: " << newTexture.dataSize << "B(" << newTexture.dataSize / 1048576.0f << "MB).\n";
+		}
 	}
 
 	textures[id] = newTexture;
