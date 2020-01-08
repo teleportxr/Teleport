@@ -1,7 +1,5 @@
 #include "PCDiscoveryService.h"
 
-#pragma comment(lib, "winmm.lib") //Needed on Windows for time functions used by enet.
-
 #include <random>
 
 #include "crossplatform/Log.h"

@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 
+using namespace SCServer;
+
 template<class T>
 std::vector<avs::uid> getVectorOfIDs(std::map<avs::uid, T> resourceMap)
 {

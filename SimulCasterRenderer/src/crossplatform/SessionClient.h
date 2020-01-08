@@ -53,7 +53,6 @@ public:
 private:
     void DispatchEvent(const ENetEvent& event);
     void ParseCommandPacket(ENetPacket* packet);
-    void ParseTextCommand(const char *txt_utf8);
 
     void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
     void SendHeadPose(const HeadPose& headPose);

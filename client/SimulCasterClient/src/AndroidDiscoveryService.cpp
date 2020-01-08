@@ -1,30 +1,32 @@
 #include "AndroidDiscoveryService.h"
 
-#include <ctime>
+#include <random>
 
 #include "crossplatform/Log.h"
 
-struct ServiceDiscoveryResponse {
+#pragma pack(push, 1)
+struct ServiceDiscoveryResponse
+{
     uint32_t clientID;
     uint16_t remotePort;
-} __attribute__((packed));
+};
+#pragma pack(pop)
 
 AndroidDiscoveryService::AndroidDiscoveryService()
 {
-    struct timespec timeNow;
-    clock_gettime(CLOCK_REALTIME, &timeNow);
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<> dis(1);
 
-    // Generate random client ID
-    const unsigned int timeNowMs = static_cast<unsigned int>(timeNow.tv_sec * 1000 + timeNow.tv_nsec / 1000000);
-    srand(timeNowMs);
-    clientID = static_cast<uint32_t>(rand());
+    clientID = static_cast<uint32_t>(dis(gen));
 }
 
 AndroidDiscoveryService::~AndroidDiscoveryService()
 {
     if(serviceDiscoverySocket)
     {
-        close(serviceDiscoverySocket);
+        enet_socket_destroy(serviceDiscoverySocket);
+        serviceDiscoverySocket = 0;
     }
 }
 
@@ -48,9 +50,10 @@ bool AndroidDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remo
 
         struct sockaddr_in bindAddress = { AF_INET, htons(discoveryPort) };
         if(bind(serviceDiscoverySocket, (struct sockaddr*)&bindAddress, sizeof(bindAddress)) == -1) {
-            FAIL("Failed to bind to service discovery UDP socket");
-            close(serviceDiscoverySocket);
+            enet_socket_destroy(serviceDiscoverySocket);
             serviceDiscoverySocket = 0;
+
+            FAIL("Failed to bind to service discovery UDP socket");
             return false;
         }
     }
@@ -82,7 +85,7 @@ bool AndroidDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remo
         enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
         WARN("Discovered session server: %s:%d", remoteIP, remote.port);
 
-        close(serviceDiscoverySocket);
+        enet_socket_destroy(serviceDiscoverySocket);
         serviceDiscoverySocket = 0;
     }
     return serverDiscovered;

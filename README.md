@@ -47,18 +47,19 @@ Clone the repository with submodules:
     * Remove RelWithDebInfo and MinSizeRelease configurations.
 3. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch.
 4. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config. The projects needed are:
-    * cuda_kernels
     * libavstream
     * basisu
     * enet
     * srt_virtual
     * srt_static
 	* haicrypt_virtual
-5. Build the projects, this creates static libraries for UnrealDemo to link.
-6. Open and build the UE4 project in `Development Editor` configuration.
-7. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
-8. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
-9. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
+	
+5. Ensure cuda_kernels project in libavstream solution is at least toolset Visual Studio 2019.
+6. Build the projects, this creates static libraries for UnrealDemo to link.
+7. Open and build the UE4 project in `Development Editor` configuration.
+8. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
+9. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
+10. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
 ## Building Android client application
 

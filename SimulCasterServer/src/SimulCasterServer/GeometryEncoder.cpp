@@ -5,11 +5,10 @@
 
 #include "libavstream/common.hpp"
 
+using namespace SCServer;
+
 GeometryEncoder::GeometryEncoder()
 	:geometryBufferCutoffSize(1048576) /*1MB*/
-{}
-
-GeometryEncoder::~GeometryEncoder()
 {}
 
 //Clear a passed vector of UIDs that are believed to have already been sent to the client.

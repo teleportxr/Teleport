@@ -4,6 +4,8 @@
 
 #include "GeometryStore.h"
 
+using namespace SCServer;
+
 //Remove duplicates, and 0s, from passed vector of UIDs.
 void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 {

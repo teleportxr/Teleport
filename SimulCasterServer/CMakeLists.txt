@@ -8,12 +8,14 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
-	src/GeometryEncoder.cpp
-	src/GeometryEncoder.h
-	src/GeometryRequester.cpp
-	src/GeometryRequester.h
-	src/GeometryStore.cpp
-	src/GeometryStore.h
+	src/SimulCasterServer/GeometryEncoder.cpp
+	src/SimulCasterServer/GeometryEncoder.h
+	src/SimulCasterServer/GeometryRequester.cpp
+	src/SimulCasterServer/GeometryRequester.h
+	src/SimulCasterServer/GeometryStore.cpp
+	src/SimulCasterServer/GeometryStore.h
+	src/SimulCasterServer/NetworkPipeline.cpp
+	src/SimulCasterServer/NetworkPipeline.h
 )
 
 #Whether to build dynamic runtime libraries.

@@ -198,14 +198,11 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 void SessionClient::ParseCommandPacket(ENetPacket* packet)
 {
 	avs::CommandPayloadType commandPayloadType = *((avs::CommandPayloadType*)packet->data);
-	size_t cmdSize = avs::GetCommandSize(commandPayloadType);
 	switch(commandPayloadType)
 	{
-		case avs::CommandPayloadType::Text:
+		case avs::CommandPayloadType::Shutdown:
 		{
-			const char* txt_utf8 = (const char*)(packet->data + cmdSize);
-			assert(txt_utf8[packet->dataLength - cmdSize - 1] == (char)0);
-			ParseTextCommand(txt_utf8);
+			mCommandInterface->OnVideoStreamClosed();
 		}
 		break;
 		case avs::CommandPayloadType::AcknowledgeHandshake:
@@ -285,24 +282,6 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		default:
 			break;
 	};
-}
-
-void SessionClient::ParseTextCommand(const char* txt_utf8)
-{
-	WARN("CMD: %s", txt_utf8);
-	if(txt_utf8[0] == 'v')
-	{
-		int port, width, height;
-		sscanf(txt_utf8, "v %d %d %d", &port, &width, &height);
-		if(width == 0 && height == 0)
-		{
-			mCommandInterface->OnVideoStreamClosed();
-		}
-	}
-	else
-	{
-		WARN("Invalid text command: %c", txt_utf8[0]);
-	}
 }
 
 void SessionClient::SendDisplayInfo (const avs::DisplayInfo &displayInfo)
