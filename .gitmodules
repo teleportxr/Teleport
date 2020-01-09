@@ -10,6 +10,3 @@
 [submodule "thirdparty/srt"]
 	path = thirdparty/srt
 	url = git@github.com:simul/srt.git
-[submodule "thirdparty/efp"]
-	path = thirdparty/efp
-	url = https://github.com/simul/efp
