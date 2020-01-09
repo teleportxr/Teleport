@@ -7,9 +7,7 @@ namespace SCServer
 	class GeometryEncoder: public avs::GeometryEncoderBackendInterface
 	{
 	public:
-		int32_t geometryBufferCutoffSize;
-
-		GeometryEncoder();
+		GeometryEncoder(const struct CasterSettings& settings);
 		~GeometryEncoder() = default;
 
 		// Inherited via GeometryEncoderBackendInterface
@@ -39,6 +37,8 @@ namespace SCServer
 			memcpy(buffer.data() + pos, &data, sizeof(T));
 		}
 	private:
+		const struct CasterSettings& settings;
+
 		void putPayload(avs::GeometryPayloadType t);
 		static unsigned char GALU_code[];
 

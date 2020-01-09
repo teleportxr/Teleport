@@ -56,7 +56,7 @@ void NetworkPipeline::initialise(avs::Queue* ColorQueue, avs::Queue* DepthQueue,
 	}
 	geometryPipes[0]->sourceQueue = GeometryQueue;
 
-	int NumInputs = videoPipes.size() + geometryPipes.size();
+	size_t NumInputs = videoPipes.size() + geometryPipes.size();
 	if(!networkSink->configure(NumInputs, nullptr, localPort, remoteIP, remotePort))
 	{
 		std::cout << "Failed to configure network sink!\n";

@@ -39,9 +39,9 @@ namespace SCServer
 		//Returns a list of all light nodes that need to be streamed to the client.
 		const std::vector<avs::LightNodeResources>& getLightNodes() const;
 
-		//Returns a list of IDs belonging to the nodes that represent the player's hands.
-		const std::vector<avs::uid>& getHandIDs() const;
-		void setHandIDs(avs::uid firstHandID, avs::uid secondHandID);
+		//Returns a list of pointer-ID pairs belonging to the nodes that represent the player's hands.
+		const std::vector<std::pair<void*, avs::uid>>& getHands() const;
+		void setHands(std::pair<void*, avs::uid> firstHand, std::pair<void*, avs::uid> secondHand);
 
 		//Returns whether there is a node stored with the passed id.
 		bool hasNode(avs::uid id) const;
@@ -88,6 +88,6 @@ namespace SCServer
 
 		std::vector<avs::LightNodeResources> lightNodes; //List of all light nodes; prevents having to search for them every geometry tick.
 
-		std::vector<avs::uid> handIDs; //IDs of the nodes that represent the hands that are in use.
+		std::vector<std::pair<void*, avs::uid>> hands; //IDs of the nodes that represent the hands that are in use.
 	};
 }

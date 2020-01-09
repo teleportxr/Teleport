@@ -5,11 +5,9 @@
 
 #include "libavstream/common.hpp"
 
-using namespace SCServer;
+#include "CasterSettings.h"
 
-GeometryEncoder::GeometryEncoder()
-	:geometryBufferCutoffSize(1048576) /*1MB*/
-{}
+using namespace SCServer;
 
 //Clear a passed vector of UIDs that are believed to have already been sent to the client.
 //	outUIDs : Vector of all UIDs of resources that could potentially need to be sent across.
@@ -32,6 +30,10 @@ size_t GetNewUIDs(std::vector<avs::uid> & outUIDs, avs::GeometryRequesterBackend
 
 	return outUIDs.size();
 }
+
+GeometryEncoder::GeometryEncoder(const CasterSettings& settings)
+	:settings(settings)
+{}
 
 unsigned char GeometryEncoder::GALU_code[] = { 0x01,0x00,0x80,0xFF };
 
@@ -438,7 +440,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometrySourceBackendInt
 bool GeometryEncoder::attemptQueueData()
 {
 	//If queueing the data will cause the queuedBuffer to exceed the cutoff size.
-	if(buffer.size() + queuedBuffer.size() > geometryBufferCutoffSize)
+	if(buffer.size() + queuedBuffer.size() > settings.geometryBufferCutoffSize)
 	{
 		//Never leave queuedBuffer empty, if there is something to queue up (even if it is too large).
 		if(queuedBuffer.size() == 0)

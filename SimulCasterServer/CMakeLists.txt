@@ -8,12 +8,16 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
+	src/SimulCasterServer/CasterContext.h
+	src/SimulCasterServer/CasterSettings.h
+	src/SimulCasterServer/ClientMessaging.cpp
+	src/SimulCasterServer/ClientMessaging.h
 	src/SimulCasterServer/GeometryEncoder.cpp
 	src/SimulCasterServer/GeometryEncoder.h
-	src/SimulCasterServer/GeometryRequester.cpp
-	src/SimulCasterServer/GeometryRequester.h
 	src/SimulCasterServer/GeometryStore.cpp
 	src/SimulCasterServer/GeometryStore.h
+	src/SimulCasterServer/GeometryStreamingService.cpp
+	src/SimulCasterServer/GeometryStreamingService.h
 	src/SimulCasterServer/NetworkPipeline.cpp
 	src/SimulCasterServer/NetworkPipeline.h
 )

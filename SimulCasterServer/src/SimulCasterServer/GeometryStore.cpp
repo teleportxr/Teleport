@@ -119,14 +119,14 @@ const std::vector<avs::LightNodeResources>& GeometryStore::getLightNodes() const
 	return lightNodes;
 }
 
-const std::vector<avs::uid>& GeometryStore::getHandIDs() const
+const std::vector<std::pair<void*, avs::uid>>& GeometryStore::getHands() const
 {
-	return handIDs;
+	return hands;
 }
 
-void GeometryStore::setHandIDs(avs::uid firstHandID, avs::uid secondHandID)
+void GeometryStore::setHands(std::pair<void*, avs::uid> firstHand, std::pair<void*, avs::uid> secondHand)
 {
-	handIDs = {firstHandID, secondHandID};
+	hands = {firstHand, secondHand};
 }
 
 bool GeometryStore::hasNode(avs::uid id) const
