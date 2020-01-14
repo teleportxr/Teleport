@@ -26,21 +26,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-  signingConfigs {
-      debug {
-          storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
-          storePassword 'android'
-          keyAlias = 'android'
-          keyPassword 'android'
-      }
-      release {
-          storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
-          storePassword 'android'
-          keyAlias = 'android'
-          keyPassword 'android'
-      }
-  }
-    project.archivesBaseName = "simulcasterclient"
+  project.archivesBaseName = "simulcasterclient"
   defaultConfig {
     applicationId "co.Simul.simulcasterclient"
 

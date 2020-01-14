@@ -14,34 +14,52 @@ Clone the repository with submodules:
 4. NVIDIA CUDA Toolkit 10.
 5. NVIDIA Video Codec SDK
 6. Recent CMake, and get ninja.exe and put it in C:\Program Files\CMake\bin
-7. edit local.properties to contain cmake.dir=C\:\\Program Files\\CMake
+7. Edit local.properties to contain cmake.dir=C\:\\Program Files\\CMake
 
 ## Building the PC Client
 
-1. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/build/x64
-2. Set Simul Directory and uncheck BUILD_SHARED_LIBS and USE_DYNAMIC_RUNTIME.
-3. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes. Also Check "STATIC" - option from Basis Universal.
-4. set BUILD_AS_LIBRARY to checked - option from Basis Universal module.
-5. Check out libavstream submodule to master (if needed)
-6. Configure for Visual Studio 15 2017 with x64 with default native compiler
-7. Generate, open and build the visual studio project
+1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
+2. Check out libavstream submodule to master (if needed)
+3. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/build/x64
+4. Configure for x64 platform with default native compiler
+5. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
+6. Set Simul Directory.
+7. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
+8. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
+9. Uncheck 'ENABLE_ENCRYPTION' option from srt.
+10. Check 'STATIC' and 'BUILD_AS_LIBRARY' options from Basis Universal.
+11. Generate, open and build the Visual Studio project.
 
 ## Building UE4 plugin
 
-1. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries. In the Advanced config settings, ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility. Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build. For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes. Ensure BUILD_AS_LIBRARY is checked for Basis. Remove RelWithDebInfo and MinSizeRelease configurations.
-2. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch.
-3. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config. The projects needed are:
-    cuda_kernels
-    libavstream
-    basisu
-    enet
-    srt_virtual
-    srt_static
-3. Build the projects, this creates static libraries for UnrealDemo to link.
-4. Open and build the UE4 project in `Development Editor` configuration.
-6. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
-7. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
-8. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
+1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
+    * You will need to target pthread_lib to the same toolset as your Unreal.
+    * You may need to disable Whole Program Optimisation.
+2. Using CMakeGUI: 
+    * Set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries.
+    * Your platform, and toolset, **must** match your Unreal Engine configuration.
+    * Enable **Advanced** view in CMake-GUI, if you can't find any of the following settings. 
+    * Ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
+    * Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build.
+    * For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes.
+    * Ensure BUILD_AS_LIBRARY is checked for Basis.
+    * Uncheck ENABLE_ENCRYPTION.
+    * Remove RelWithDebInfo and MinSizeRelease configurations.
+3. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch.
+4. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config. The projects needed are:
+    * libavstream
+    * basisu
+    * enet
+    * srt_virtual
+    * srt_static
+	* haicrypt_virtual
+	
+5. Ensure cuda_kernels project in libavstream solution is at least toolset Visual Studio 2019.
+6. Build the projects, this creates static libraries for UnrealDemo to link.
+7. Open and build the UE4 project in `Development Editor` configuration.
+8. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
+9. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
+10. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
 ## Building Android client application
 

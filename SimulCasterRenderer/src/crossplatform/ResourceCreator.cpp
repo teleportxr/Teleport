@@ -117,7 +117,7 @@ avs::Result ResourceCreator::Assemble(const avs::MeshCreate& meshCreate)
 		SCR_CERR("No valid render platform was found.");
         return avs::Result::GeometryDecoder_ClientRendererError;
 	}
-	Mesh::MeshCreateInfo mesh_ci;
+	scr::Mesh::MeshCreateInfo mesh_ci;
 	mesh_ci.vb.resize(meshCreate.m_NumElements);
 	mesh_ci.ib.resize(meshCreate.m_NumElements);
 
@@ -462,7 +462,6 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		{},
 		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_textureFormat) : scr::Texture::CompressionFormat::UNCOMPRESSED
      };
-   
 	
 	if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
@@ -835,7 +834,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					}
 					else
 					{
-						SCR_LOG("Texture \"%s\" failed to transcode mipmap level %d.", transcoding.name.c_str(), mipIndex);
+						SCR_COUT("Texture \"" + transcoding.name + "\" failed to transcode mipmap level " + std::to_string(mipIndex) + ".");
 						delete[] outData;
 					}
 				}
@@ -847,14 +846,14 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				}
 				else
 				{
-					SCR_LOG("Texture \"%s\" failed to transcode, but was a valid basis file.", transcoding.name.c_str());
+					SCR_COUT("Texture \"" + transcoding.name + "\" failed to transcode, but was a valid basis file.");
 				}
 
 				delete[] transcoding.data;
 			}
 			else
 			{
-				SCR_LOG("Texture \"%s\" failed to start transcoding.", transcoding.name.c_str())
+				SCR_COUT("Texture \"" + transcoding.name + "\" failed to start transcoding.");
 			}
 
 			texturesToTranscode.erase(texturesToTranscode.begin());

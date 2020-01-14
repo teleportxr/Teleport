@@ -16,12 +16,6 @@
 typedef unsigned int uint;
 class ResourceCreator;
 
-struct HeadPose
-{
-    scr::vec4 orientation;
-    scr::vec3 position;
-};
-
 class SessionCommandInterface
 {
 public:
@@ -45,7 +39,7 @@ public:
 
     void SendClientMessage(const avs::ClientMessage &msg);
 
-    void Frame(const avs::DisplayInfo& displayInfo, const HeadPose& headPose,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
+    void Frame(const avs::DisplayInfo& displayInfo, const avs::HeadPose& headPose,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -53,10 +47,9 @@ public:
 private:
     void DispatchEvent(const ENetEvent& event);
     void ParseCommandPacket(ENetPacket* packet);
-    void ParseTextCommand(const char *txt_utf8);
 
     void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
-    void SendHeadPose(const HeadPose& headPose);
+    void SendHeadPose(const avs::HeadPose& headPose);
     void SendInput(const ControllerState& controllerState);
     void SendResourceRequests();
     void SendReceivedResources();
@@ -65,7 +58,7 @@ private:
     //Tell server we are ready to receive geometry payloads.
     void SendHandshake(const avs::Handshake &handshake);
 
-    avs::uid lastServer_id = 0; //UID of the server we last connected to.
+    avs::uid lastServerID = 0; //UID of the server we last connected to.
 
     SessionCommandInterface* const mCommandInterface;
     std::unique_ptr<DiscoveryService> discoveryService;

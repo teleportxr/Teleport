@@ -6,7 +6,7 @@ class PCDiscoveryService: public DiscoveryService
 {
 public:
 	PCDiscoveryService();
-	~PCDiscoveryService();
+	virtual ~PCDiscoveryService();
 
 	virtual bool Discover(uint16_t discoveryPort, ENetAddress& remote) override;
 };

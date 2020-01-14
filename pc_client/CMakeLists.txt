@@ -64,6 +64,6 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
-target_link_libraries(pc_client libavstream enet SimulCasterRenderer basisu)
+target_link_libraries(pc_client libavstream enet SimulCasterRenderer basisu winmm)
 
 target_link_libraries(pc_client debug effects11_MTd optimized effects11_MT debug directxtex_MTd optimized directxtex_MT)
