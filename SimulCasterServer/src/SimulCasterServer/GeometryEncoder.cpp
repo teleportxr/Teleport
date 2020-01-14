@@ -229,7 +229,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface * s
 
 		put(uid);
 		avs::Transform transform = node.transform;
-		avs::ConvertTransform(avs::AxesStandard::UnrealStyle, req->axesStandard, transform);
+		avs::ConvertTransform(avs::AxesStandard::UnrealStyle, req->getAxesStandard(), transform);
 
 		put(transform);
 		put(node.data_uid);

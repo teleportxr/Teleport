@@ -518,18 +518,18 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	if(mSession.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
-		HeadPose headPose;
-		headPose.orientation=*((scr::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
-		headPose.position=cameraPosition;
+		avs::HeadPose headPose;
+		headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
+		headPose.position = {cameraPosition.x, cameraPosition.y, cameraPosition.z};
 
 		// TODO: Use compact representation with only 3 float values for wire format.
 		const ovrQuatf HeadPoseOVR = *((const ovrQuatf*)&headPose.orientation);
-		HeadPose headPose2;
+		avs::HeadPose headPose2;
 		ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
 		ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR,RootPose);
 		// Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
-		headPose2.orientation = scr::vec4(RelPose.x, RelPose.y,RelPose.z, RelPose.w);
-		headPose2.position=*((scr::vec3*)&headPose.position);
+		headPose2.orientation = avs::vec4{RelPose.x, RelPose.y,RelPose.z, RelPose.w};
+		headPose2.position = *((avs::vec3*)&headPose.position);
 
 		mSession.Frame(displayInfo, headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
 	}

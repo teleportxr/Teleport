@@ -1,18 +1,10 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "SessionClient.h"
 
+#include "libavstream/common.hpp"
+
 #include "ResourceCreator.h"
 #include "Log.h"
-
-struct RemotePlayInputState
-{
-	uint32_t buttonsPressed;
-	uint32_t buttonsReleased;
-	float trackpadAxisX;
-	float trackpadAxisY;
-	float joystickAxisX;
-	float joystickAxisY;
-};
 
 SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService, ResourceCreator& resourceCreator)
 	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService)), mResourceCreator(resourceCreator)
@@ -117,6 +109,8 @@ void SessionClient::Disconnect(uint timeout)
 		enet_host_destroy(mClientHost);
 		mClientHost = nullptr;
 	}
+
+	handshakeAcknowledged = false;
 }
 
 void SessionClient::SendClientMessage(const avs::ClientMessage& msg)
@@ -126,19 +120,20 @@ void SessionClient::SendClientMessage(const avs::ClientMessage& msg)
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 }
 
-void SessionClient::Frame(const avs::DisplayInfo &displayInfo, const HeadPose &headPose,bool poseValid,const ControllerState& controllerState, bool requestKeyframe)
+void SessionClient::Frame(const avs::DisplayInfo &displayInfo, const avs::HeadPose &headPose,bool poseValid,const ControllerState& controllerState, bool requestKeyframe)
 {
 	if(mClientHost && mServerPeer)
 	{
-		SendDisplayInfo(displayInfo);
-		if(poseValid)
-			SendHeadPose(headPose);
-		SendInput(controllerState);
-		SendResourceRequests();
-		SendReceivedResources();
-		SendActorUpdates();
-		if(requestKeyframe)
-			SendKeyframeRequest();
+		if(handshakeAcknowledged)
+		{
+			SendDisplayInfo(displayInfo);
+			if(poseValid) SendHeadPose(headPose);
+			SendInput(controllerState);
+			SendResourceRequests();
+			SendReceivedResources();
+			SendActorUpdates();
+			if(requestKeyframe) SendKeyframeRequest();
+		}
 
 		ENetEvent event;
 		while(enet_host_service(mClientHost, &event, 0) > 0)
@@ -226,14 +221,14 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 
 			avs::Handshake handshake;
 			std::vector<avs::uid> outActors;
-			mCommandInterface->OnVideoStreamChanged(setupCommand, handshake, setupCommand.server_id != lastServer_id, resourcesClientNeeds, outActors);
+			mCommandInterface->OnVideoStreamChanged(setupCommand, handshake, setupCommand.server_id != lastServerID, resourcesClientNeeds, outActors);
 			//Add the unfound resources to the resource request list.
 			mResourceRequests.insert(mResourceRequests.end(), resourcesClientNeeds.begin(), resourcesClientNeeds.end());
 
 			//Confirm the actors the client already has.
 			mReceivedActors.insert(mReceivedActors.end(), outActors.begin(), outActors.end());
 
-			lastServer_id = setupCommand.server_id;
+			lastServerID = setupCommand.server_id;
 			SendHandshake(handshake);
 		}
 		break;
@@ -286,25 +281,19 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 
 void SessionClient::SendDisplayInfo (const avs::DisplayInfo &displayInfo)
 {
-	if (!handshakeAcknowledged)
-		return;
 	ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(avs::DisplayInfo), 0);
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo), packet);
 }
 
-void SessionClient::SendHeadPose(const HeadPose& pose)
+void SessionClient::SendHeadPose(const avs::HeadPose& pose)
 {
-	if(!handshakeAcknowledged) return;
-
-	ENetPacket* packet = enet_packet_create(&pose, sizeof(HeadPose), 0);
+	ENetPacket* packet = enet_packet_create(&pose, sizeof(avs::HeadPose), 0);
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose), packet);
 }
 
 void SessionClient::SendInput(const ControllerState& controllerState)
 {
-	if(!handshakeAcknowledged) return;
-
-	RemotePlayInputState inputState = {};
+	avs::InputState inputState = {};
 
 	const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
 	/*auto updateButtonState = [&inputState, &controllerState, buttonsDiffMask](uint32_t button)
@@ -427,7 +416,6 @@ void SessionClient::SendKeyframeRequest()
 
 void SessionClient::SendHandshake(const avs::Handshake& handshake)
 {
-	handshakeAcknowledged = false;
 	ENetPacket* packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Handshake), packet);
 }

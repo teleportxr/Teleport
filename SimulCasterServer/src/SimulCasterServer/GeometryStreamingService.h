@@ -25,7 +25,7 @@ namespace SCServer
 		virtual void requestResource(avs::uid resourceID) override;
 		virtual void confirmResource(avs::uid resourceID) override;
 
-		virtual void getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) override;
+		virtual void getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const override;
 
 		virtual void startStreaming(CasterContext* context);
 		//Stop streaming to client.
@@ -41,6 +41,11 @@ namespace SCServer
 		virtual void tick(float deltaTime);
 
 		virtual void reset();
+
+		virtual avs::AxesStandard getAxesStandard() const
+		{
+			return casterContext->axesStandard;
+		}
 	protected:
 		GeometryStore* geometryStore;
 
@@ -77,6 +82,6 @@ namespace SCServer
 		std::unordered_map<avs::uid, void*> hiddenActors; //Actors that are currently hidden on the server; <ActorID, Pointer to Actor>.
 
 		//Recursively obtains the resources from the mesh node, and its child nodes.
-		void GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources);
+		void GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const;
 	};
 }

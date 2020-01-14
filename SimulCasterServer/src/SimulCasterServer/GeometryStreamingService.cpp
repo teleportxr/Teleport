@@ -48,7 +48,7 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 	sentResources[resource_uid] = true;
 }
 
-void GeometryStreamingService::getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources)
+void GeometryStreamingService::getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const
 {
 	for(auto actorPair : streamedActorIDs)
 	{
@@ -124,7 +124,7 @@ void GeometryStreamingService::addHandsToStream()
 	for(std::pair<void*, avs::uid> pointerIDHand : hands)
 	{
 		streamedActorIDs.emplace(pointerIDHand);
-		streamedActors[pointerIDHand.second] = pointerIDHand.first;
+		//streamedActors[pointerIDHand.second] = pointerIDHand.first;
 	}
 }
 
@@ -195,7 +195,7 @@ bool GeometryStreamingService::isStreamingActor(void* actor)
 	return streamedActorIDs.find(actor) != streamedActorIDs.end();
 }
 
-void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources)
+void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const
 {
 	avs::DataNode thisNode;
 	geometryStore->getNode(node_uid, thisNode);

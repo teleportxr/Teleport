@@ -50,4 +50,26 @@ namespace SCServer
 
 		bool willDisableMainCamera;
 	};
+
+	struct CasterNetworkSettings
+	{
+		int32_t localPort;
+		const wchar_t* remoteIP;
+		int32_t remotePort;
+		int32_t clientBandwidthLimit;
+		int32_t clientBufferSize;
+		int32_t requiredLatencyMs;
+	};
+
+	struct CasterEncoderSettings
+	{
+		int32_t frameWidth;
+		int32_t frameHeight;
+		int32_t depthWidth;
+		int32_t depthHeight;
+		bool wllWriteDepthTexture;
+		bool enableStackDepth;
+		bool enableDecomposeCube;
+		float maxDepth;
+	};
 }
