@@ -124,7 +124,6 @@ void GeometryStreamingService::addHandsToStream()
 	for(std::pair<void*, avs::uid> pointerIDHand : hands)
 	{
 		streamedActorIDs.emplace(pointerIDHand);
-		//streamedActors[pointerIDHand.second] = pointerIDHand.first;
 	}
 }
 
