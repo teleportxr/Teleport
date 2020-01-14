@@ -53,6 +53,7 @@ Clone the repository with submodules:
     * srt_virtual
     * srt_static
 	* haicrypt_virtual
+    * SimulCasterServer 
 	
 5. Ensure cuda_kernels project in libavstream solution is at least toolset Visual Studio 2019.
 6. Build the projects, this creates static libraries for UnrealDemo to link.
