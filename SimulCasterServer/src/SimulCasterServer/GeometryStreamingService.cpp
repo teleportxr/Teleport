@@ -196,29 +196,27 @@ bool GeometryStreamingService::isStreamingActor(void* actor)
 
 void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const
 {
-	avs::DataNode thisNode;
-	geometryStore->getNode(node_uid, thisNode);
-	if(thisNode.data_uid == 0) return;
+	avs::DataNode* thisNode = geometryStore->getNode(node_uid);
+	if(!thisNode || thisNode->data_uid == 0) return;
 
 	avs::MeshNodeResources meshNode;
 	meshNode.node_uid = node_uid;
-	meshNode.mesh_uid = thisNode.data_uid;
+	meshNode.mesh_uid = thisNode->data_uid;
 
-	for(avs::uid material_uid : thisNode.materials)
+	for(avs::uid material_uid : thisNode->materials)
 	{
-		avs::Material thisMaterial;
-		geometryStore->getMaterial(material_uid, thisMaterial);
+		avs::Material* thisMaterial = geometryStore->getMaterial(material_uid);
 
 		avs::MaterialResources material;
 		material.material_uid = material_uid;
 
 		material.texture_uids =
 		{
-			thisMaterial.pbrMetallicRoughness.baseColorTexture.index,
-			thisMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index,
-			thisMaterial.normalTexture.index,
-			thisMaterial.occlusionTexture.index,
-			thisMaterial.emissiveTexture.index
+			thisMaterial->pbrMetallicRoughness.baseColorTexture.index,
+			thisMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index,
+			thisMaterial->normalTexture.index,
+			thisMaterial->occlusionTexture.index,
+			thisMaterial->emissiveTexture.index
 		};
 
 		UniqueUIDsOnly(material.texture_uids);
@@ -226,7 +224,7 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vect
 		meshNode.materials.push_back(material);
 	}
 
-	for(avs::uid childNode_uid : thisNode.childrenUids)
+	for(avs::uid childNode_uid : thisNode->childrenUids)
 	{
 		GetMeshNodeResources(childNode_uid, outMeshResources);
 	}

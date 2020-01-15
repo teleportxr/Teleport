@@ -155,13 +155,12 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface * 
 		avs::uid uid = missingUIDs[h];
 		put(uid);
 
-		avs::Mesh mesh;
-		src->getMesh(uid, mesh);
+		avs::Mesh* mesh = src->getMesh(uid);
 
-		put(mesh.primitiveArrays.size());
+		put(mesh->primitiveArrays.size());
 
 		std::set<avs::uid> accessors;
-		for(avs::PrimitiveArray primitiveArray : mesh.primitiveArrays)
+		for(avs::PrimitiveArray primitiveArray : mesh->primitiveArrays)
 		{
 			put(primitiveArray.attributeCount);
 			put(primitiveArray.indices_accessor);
@@ -179,7 +178,7 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface * 
 		std::set<avs::uid> bufferViews;
 		for(avs::uid accessorID : accessors)
 		{
-			avs::Accessor accessor = mesh.accessors[accessorID];
+			avs::Accessor accessor = mesh->accessors[accessorID];
 			put(accessorID);
 			put(accessor.type);
 			put(accessor.componentType);
@@ -193,7 +192,7 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface * 
 		std::set<avs::uid> buffers;
 		for(avs::uid bufferViewID : bufferViews)
 		{
-			avs::BufferView bufferView = mesh.bufferViews[bufferViewID];
+			avs::BufferView bufferView = mesh->bufferViews[bufferViewID];
 			put(bufferViewID);
 			put(bufferView.buffer);
 			put(bufferView.byteOffset);
@@ -205,7 +204,7 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface * 
 		put(buffers.size());
 		for(avs::uid bufferID : buffers)
 		{
-			avs::GeometryBuffer buffer = mesh.buffers[bufferID];
+			avs::GeometryBuffer buffer = mesh->buffers[bufferID];
 			put(bufferID);
 			put(buffer.byteLength);
 			put(buffer.data, buffer.byteLength);
@@ -224,23 +223,22 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface * s
 	put(missingUIDs.size());
 	for (const avs::uid &uid : missingUIDs) 
 	{
-		avs::DataNode node;
-		src->getNode(uid, node);
+		avs::DataNode* node = src->getNode(uid);
 
 		put(uid);
-		avs::Transform transform = node.transform;
+		avs::Transform transform = node->transform;
 		avs::ConvertTransform(avs::AxesStandard::UnrealStyle, req->getAxesStandard(), transform);
 
 		put(transform);
-		put(node.data_uid);
-		put(node.data_type); 
-		put(node.materials.size());
-		for (const auto& id : node.materials)
+		put(node->data_uid);
+		put(node->data_type); 
+		put(node->materials.size());
+		for (const auto& id : node->materials)
 		{
 			put(id);
 		}
-		put(node.childrenUids.size());
-		for (const auto& id : node.childrenUids)
+		put(node->childrenUids.size());
+		for (const auto& id : node->childrenUids)
 		{
 			put(id);
 		}
@@ -272,66 +270,66 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometrySourceBackendInterface
 	//Push amount of materials.
 	for(avs::uid uid : missingUIDs)
 	{
-		avs::Material outMaterial;
+		avs::Material* material = src->getMaterial(uid);
 
-		if(src->getMaterial(uid, outMaterial))
+		if(material)
 		{
 			putPayload(avs::GeometryPayloadType::Material);
 			put((size_t)1);
 			put(uid);
 
-			size_t nameLength = outMaterial.name.length();
+			size_t nameLength = material->name.length();
 
 			//Push name length.
 			put(nameLength);
 			//Push name.
-			put((uint8_t*)outMaterial.name.data(), nameLength);
+			put((uint8_t*)material->name.data(), nameLength);
 
 			//Push base colour, and factor.
-			put(outMaterial.pbrMetallicRoughness.baseColorTexture.index);
-			put(outMaterial.pbrMetallicRoughness.baseColorTexture.texCoord);
-			put(outMaterial.pbrMetallicRoughness.baseColorTexture.tiling.x);
-			put(outMaterial.pbrMetallicRoughness.baseColorTexture.tiling.y);
-			put(outMaterial.pbrMetallicRoughness.baseColorFactor.x);
-			put(outMaterial.pbrMetallicRoughness.baseColorFactor.y);
-			put(outMaterial.pbrMetallicRoughness.baseColorFactor.z);
-			put(outMaterial.pbrMetallicRoughness.baseColorFactor.w);
+			put(material->pbrMetallicRoughness.baseColorTexture.index);
+			put(material->pbrMetallicRoughness.baseColorTexture.texCoord);
+			put(material->pbrMetallicRoughness.baseColorTexture.tiling.x);
+			put(material->pbrMetallicRoughness.baseColorTexture.tiling.y);
+			put(material->pbrMetallicRoughness.baseColorFactor.x);
+			put(material->pbrMetallicRoughness.baseColorFactor.y);
+			put(material->pbrMetallicRoughness.baseColorFactor.z);
+			put(material->pbrMetallicRoughness.baseColorFactor.w);
 
 			//Push metallic roughness, and factors.
-			put(outMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index);
-			put(outMaterial.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
-			put(outMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x);
-			put(outMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y);
-			put(outMaterial.pbrMetallicRoughness.metallicFactor);
-			put(outMaterial.pbrMetallicRoughness.roughnessFactor);
+			put(material->pbrMetallicRoughness.metallicRoughnessTexture.index);
+			put(material->pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
+			put(material->pbrMetallicRoughness.metallicRoughnessTexture.tiling.x);
+			put(material->pbrMetallicRoughness.metallicRoughnessTexture.tiling.y);
+			put(material->pbrMetallicRoughness.metallicFactor);
+			put(material->pbrMetallicRoughness.roughnessFactor);
 
 			//Push normal map, and scale.
-			put(outMaterial.normalTexture.index);
-			put(outMaterial.normalTexture.texCoord);
-			put(outMaterial.normalTexture.tiling.x);
-			put(outMaterial.normalTexture.tiling.y);
-			put(outMaterial.normalTexture.scale);
+			put(material->normalTexture.index);
+			put(material->normalTexture.texCoord);
+			put(material->normalTexture.tiling.x);
+			put(material->normalTexture.tiling.y);
+			put(material->normalTexture.scale);
 
 			//Push occlusion texture, and strength.
-			put(outMaterial.occlusionTexture.index);
-			put(outMaterial.occlusionTexture.texCoord);
-			put(outMaterial.occlusionTexture.tiling.x);
-			put(outMaterial.occlusionTexture.tiling.y);
-			put(outMaterial.occlusionTexture.strength);
+			put(material->occlusionTexture.index);
+			put(material->occlusionTexture.texCoord);
+			put(material->occlusionTexture.tiling.x);
+			put(material->occlusionTexture.tiling.y);
+			put(material->occlusionTexture.strength);
 
 			//Push emissive texture, and factor.
-			put(outMaterial.emissiveTexture.index);
-			put(outMaterial.emissiveTexture.texCoord);
-			put(outMaterial.emissiveTexture.tiling.x);
-			put(outMaterial.emissiveTexture.tiling.y);
-			put(outMaterial.emissiveFactor.x);
-			put(outMaterial.emissiveFactor.y);
-			put(outMaterial.emissiveFactor.z);
+			put(material->emissiveTexture.index);
+			put(material->emissiveTexture.texCoord);
+			put(material->emissiveTexture.tiling.x);
+			put(material->emissiveTexture.tiling.y);
+			put(material->emissiveFactor.x);
+			put(material->emissiveFactor.y);
+			put(material->emissiveFactor.z);
 
 			//Push extension amount.
-			put(outMaterial.extensions.size());
+			put(material->extensions.size());
 			//Push extensions.
-			for(const auto &extensionPair : outMaterial.extensions)
+			for(const auto &extensionPair : material->extensions)
 			{
 				extensionPair.second->serialise(buffer);
 			}
@@ -339,11 +337,11 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometrySourceBackendInterface
 			//UIDs used by textures in material.
 			std::vector<avs::uid> materialTexture_uids =
 			{
-				outMaterial.pbrMetallicRoughness.baseColorTexture.index,
-				outMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index,
-				outMaterial.normalTexture.index,
-				outMaterial.occlusionTexture.index,
-				outMaterial.emissiveTexture.index
+				material->pbrMetallicRoughness.baseColorTexture.index,
+				material->pbrMetallicRoughness.metallicRoughnessTexture.index,
+				material->normalTexture.index,
+				material->occlusionTexture.index,
+				material->emissiveTexture.index
 			};
 
 			//Array needs to be sorted for std::unique; we won't have many elements anyway.
@@ -383,14 +381,12 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometrySourceBackendInt
 {
 	for(avs::uid uid : missingUIDs)
 	{
-		avs::Texture outTexture;
-		bool textureIsFound = false;
-		if(isShadowMap)
-			textureIsFound = src->getShadowMap(uid, outTexture);
-		else
-			textureIsFound = src->getTexture(uid, outTexture);
+		avs::Texture* texture;
+		
+		if(isShadowMap) texture = src->getShadowMap(uid);
+		else texture = src->getTexture(uid);
 
-		if(textureIsFound)
+		if(texture)
 		{
 			size_t oldBufferSize = buffer.size();
 
@@ -401,33 +397,33 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometrySourceBackendInt
 			//Push identifier.
 			put(uid);
 
-			size_t nameLength = outTexture.name.length();
+			size_t nameLength = texture->name.length();
 
 			//Push name length.
 			put(nameLength);
 			//Push name.
-			put((uint8_t*)outTexture.name.data(), nameLength);
+			put((uint8_t*)texture->name.data(), nameLength);
 
 			//Push dimensions.
-			put(outTexture.width);
-			put(outTexture.height);
+			put(texture->width);
+			put(texture->height);
 
 			//Push additional information.
-			put(outTexture.depth);
-			put(outTexture.bytesPerPixel);
-			put(outTexture.arrayCount);
-			put(outTexture.mipCount);
+			put(texture->depth);
+			put(texture->bytesPerPixel);
+			put(texture->arrayCount);
+			put(texture->mipCount);
 
 			//Push format.
-			put(outTexture.format);
-			put(outTexture.compression);
+			put(texture->format);
+			put(texture->compression);
 
 			//Push size, and data.
-			put(outTexture.dataSize);
-			put(outTexture.data, outTexture.dataSize);
+			put(texture->dataSize);
+			put(texture->data, texture->dataSize);
 
 			//Push sampler identifier.
-			put(outTexture.sampler_uid);
+			put(texture->sampler_uid);
 
 			//Flag we have encoded the texture.
 			req->encodedResource(uid);

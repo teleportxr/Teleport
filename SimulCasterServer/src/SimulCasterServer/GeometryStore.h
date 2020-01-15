@@ -21,20 +21,25 @@ namespace SCServer
 		void setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality);
 
 		virtual std::vector<avs::uid> getNodeIDs() const override;
-		virtual bool getNode(avs::uid nodeID, avs::DataNode& outNode) const override;
+		virtual avs::DataNode* getNode(avs::uid nodeID) override;
+		virtual const avs::DataNode* getNode(avs::uid nodeID) const override;
 		virtual const std::map<avs::uid, avs::DataNode>& getNodes() const override;
 
 		virtual std::vector<avs::uid> getMeshIDs() const override;
-		virtual bool getMesh(avs::uid meshID, avs::Mesh& outMesh) const override;
+		virtual avs::Mesh* getMesh(avs::uid meshID) override;
+		virtual const avs::Mesh* getMesh(avs::uid meshID) const override;
 
 		virtual std::vector<avs::uid> getTextureIDs() const override;
-		virtual bool getTexture(avs::uid textureID, avs::Texture& outTexture) const override;
+		virtual avs::Texture* getTexture(avs::uid textureID) override;
+		virtual const avs::Texture* getTexture(avs::uid textureID) const override;
 
 		virtual std::vector<avs::uid> getMaterialIDs() const override;
-		virtual bool getMaterial(avs::uid materialID, avs::Material& outMaterial) const override;
+		virtual avs::Material* getMaterial(avs::uid materialID) override;
+		virtual const avs::Material* getMaterial(avs::uid materialID) const override;
 
 		virtual std::vector<avs::uid> getShadowMapIDs() const override;
-		virtual bool getShadowMap(avs::uid shadowID, avs::Texture& outShadowMap) const override;
+		virtual avs::Texture* getShadowMap(avs::uid shadowID) override;
+		virtual const avs::Texture* getShadowMap(avs::uid shadowID) const override;
 
 		//Returns a list of all light nodes that need to be streamed to the client.
 		const std::vector<avs::LightNodeResources>& getLightNodes() const;

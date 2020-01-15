@@ -22,18 +22,31 @@ std::vector<avs::uid> getVectorOfIDs(std::map<avs::uid, T> resourceMap)
 }
 
 template<class T>
-bool getResource(std::map<avs::uid, T> resourceMap, avs::uid id, T& outResource) noexcept(false)
+T* getResource(std::map<avs::uid, T>& resourceMap, avs::uid id)
 {
 	//Assuming an incorrect resource should not happen, or at least not frequently.
 	try
 	{
-		outResource = resourceMap.at(id);
-
-		return true;
+		return &resourceMap.at(id);
 	}
 	catch(std::out_of_range oor)
 	{
-		return false;
+		return nullptr;
+	}
+}
+
+//Const version.
+template<class T>
+const T* getResource(const std::map<avs::uid, T>& resourceMap, avs::uid id)
+{
+	//Assuming an incorrect resource should not happen, or at least not frequently.
+	try
+	{
+		return &resourceMap.at(id);
+	}
+	catch(std::out_of_range oor)
+	{
+		return nullptr;
 	}
 }
 
@@ -64,9 +77,14 @@ std::vector<avs::uid> GeometryStore::getNodeIDs() const
 	return getVectorOfIDs(nodes);
 }
 
-bool GeometryStore::getNode(avs::uid nodeID, avs::DataNode& outNode) const
+avs::DataNode* GeometryStore::getNode(avs::uid nodeID)
 {
-	return getResource(nodes, nodeID, outNode);
+	return getResource(nodes, nodeID);
+}
+
+const avs::DataNode* GeometryStore::getNode(avs::uid nodeID) const
+{
+	return getResource(nodes, nodeID);
 }
 
 const std::map<avs::uid, avs::DataNode>& GeometryStore::getNodes() const
@@ -79,9 +97,14 @@ std::vector<avs::uid> GeometryStore::getMeshIDs() const
 	return getVectorOfIDs(meshes);
 }
 
-bool GeometryStore::getMesh(avs::uid meshID, avs::Mesh& outMesh) const
+avs::Mesh* GeometryStore::getMesh(avs::uid meshID)
 {
-	return getResource(meshes, meshID, outMesh);
+	return getResource(meshes, meshID);
+}
+
+const avs::Mesh* GeometryStore::getMesh(avs::uid meshID) const
+{
+	return getResource(meshes, meshID);
 }
 
 std::vector<avs::uid> GeometryStore::getTextureIDs() const
@@ -89,9 +112,14 @@ std::vector<avs::uid> GeometryStore::getTextureIDs() const
 	return getVectorOfIDs(textures);
 }
 
-bool GeometryStore::getTexture(avs::uid textureID, avs::Texture& outTexture) const
+avs::Texture* GeometryStore::getTexture(avs::uid textureID)
 {
-	return getResource(textures, textureID, outTexture);
+	return getResource(textures, textureID);
+}
+
+const avs::Texture* GeometryStore::getTexture(avs::uid textureID) const
+{
+	return getResource(textures, textureID);
 }
 
 std::vector<avs::uid> GeometryStore::getMaterialIDs() const
@@ -99,9 +127,14 @@ std::vector<avs::uid> GeometryStore::getMaterialIDs() const
 	return getVectorOfIDs(materials);
 }
 
-bool GeometryStore::getMaterial(avs::uid materialID, avs::Material& outMaterial) const
+avs::Material* GeometryStore::getMaterial(avs::uid materialID)
 {
-	return getResource(materials, materialID, outMaterial);
+	return getResource(materials, materialID);
+}
+
+const avs::Material* GeometryStore::getMaterial(avs::uid materialID) const
+{
+	return getResource(materials, materialID);
 }
 
 std::vector<avs::uid> GeometryStore::getShadowMapIDs() const
@@ -109,9 +142,14 @@ std::vector<avs::uid> GeometryStore::getShadowMapIDs() const
 	return getVectorOfIDs(shadowMaps);
 }
 
-bool GeometryStore::getShadowMap(avs::uid shadowID, avs::Texture& outShadowMap) const
+avs::Texture* GeometryStore::getShadowMap(avs::uid shadowID)
 {
-	return getResource(shadowMaps, shadowID, outShadowMap);
+	return getResource(shadowMaps, shadowID);
+}
+
+const avs::Texture* GeometryStore::getShadowMap(avs::uid shadowID) const
+{
+	return getResource(shadowMaps, shadowID);
 }
 
 const std::vector<avs::LightNodeResources>& GeometryStore::getLightNodes() const
