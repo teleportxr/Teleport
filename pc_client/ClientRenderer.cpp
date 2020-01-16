@@ -630,7 +630,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	receivedInitialPos = false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
-	sourceParams.socketBufferSize = 1212992;	//200k like Oculus Quest
+	sourceParams.socketBufferSize = 1212992;
 	sourceParams.requiredLatencyMs=setupCommand.requiredLatencyMs;
 	// Configure for num video streams + 1 geometry stream
 	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port+1, "127.0.0.1", setupCommand.port, sourceParams))
@@ -802,7 +802,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
 		avs::DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
-		HeadPose headPose;
+		avs::HeadPose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
