@@ -15,6 +15,8 @@ Clone the repository with submodules:
 5. NVIDIA Video Codec SDK
 6. Recent CMake, and get ninja.exe and put it in C:\Program Files\CMake\bin
 7. edit local.properties to contain cmake.dir=C\:\\Program Files\\CMake
+8. Ubuntu on Windows
+8. Nasm, to build OpenSSL. Get it from https://www.nasm.us/.
 
 ## Building the PC Client
 
