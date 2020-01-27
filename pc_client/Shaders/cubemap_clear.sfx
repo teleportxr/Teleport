@@ -48,7 +48,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 		float depth = lookup.a;
 		dist_m = max(0.2, 20.0 * depth);
 		vec3 pos_m = dist_m * view_orig;
-		pos_m += vec3(offsetFromVideo2.yx, offsetFromVideo2.z) *0;//*step(-0.99, -depth);
+		pos_m += vec3(offsetFromVideo2.yx, offsetFromVideo2.z) ;//*step(-0.99, -depth);
 
 		// But this does not intersect at depth. We want the vector from the original centre, of 
 
@@ -67,7 +67,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 			lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
 		}
 	}
-	return lookup;// dist_m/20.0;
+	return  lookup;
 }
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET

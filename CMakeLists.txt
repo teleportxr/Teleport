@@ -3,6 +3,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(RemotePlay)
 set(REMOTEPLAY_SIMUL "C:/Simul/4.2/Simul" CACHE STRING "Simul folder" )
 option(REMOTEPLAY_SERVER "Build for server? If true, client will not be built." OFF)
+option(REMOTEPLAY_UNITY "Build for unity?" OFF)
+set(REMOTEPLAY_UNITY_TARGET_DIR "${CMAKE_BINARY_DIR}/../Assets/external-sdk/Teleport/Plugins/x86_64" CACHE STRING "")
 set (CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "")
 
 set(CMAKE_CXX_STANDARD 17 )
@@ -31,7 +33,14 @@ set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libssl64MT.lib
 
 set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
 
-
+if(REMOTEPLAY_UNITY)
+	#set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${REMOTEPLAY_UNITY_TARGET_DIR} )
+	#set( EXECUTABLE_OUTPUT_PATH ${REMOTEPLAY_UNITY_TARGET_DIR} )
+	#set( LIBRARY_OUTPUT_PATH ${REMOTEPLAY_UNITY_TARGET_DIR} )
+	#set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${REMOTEPLAY_UNITY_TARGET_DIR} )
+	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${REMOTEPLAY_UNITY_TARGET_DIR} )
+	#set( CMAKE_PDB_OUTPUT_DIRECTORY ${REMOTEPLAY_UNITY_TARGET_DIR} )
+endif()
 #defaults for basisu
 if(REMOTEPLAY_SERVER)
 	option(STATIC "" OFF)
@@ -86,6 +95,7 @@ else()
 	add_subdirectory(pc_client)
 	add_subdirectory(SimulCasterRenderer)
 endif()
+
 add_subdirectory(libavstream)
 add_subdirectory(thirdparty/enet)
 set_target_properties( enet PROPERTIES FOLDER thirdparty/enet)

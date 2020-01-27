@@ -34,7 +34,11 @@ else()
 endif()
 
 #Create static library with source files from group.
+if(REMOTEPLAY_UNITY)
+add_library(SimulCasterServer SHARED ${src})
+else()
 add_library(SimulCasterServer STATIC ${src})
+endif()
 
 #Include its root directory
 target_include_directories(SimulCasterServer PUBLIC src)
@@ -44,3 +48,5 @@ target_include_directories(SimulCasterServer PUBLIC ../libavstream/include)
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/basis_universal)
 #Include enet
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/enet/include)
+
+target_link_libraries( SimulCasterServer libavstream enet basisu efp Winmm.lib)

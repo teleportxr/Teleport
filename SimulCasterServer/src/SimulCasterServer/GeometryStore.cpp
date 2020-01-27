@@ -208,7 +208,28 @@ void GeometryStore::storeMaterial(avs::uid id, avs::Material&& newMaterial)
 {
 	materials[id] = newMaterial;
 }
+#if defined ( _WIN32 )
+#include <sys/stat.h>
+#endif
 
+std::time_t GetFileWriteTime ( const std::filesystem::path& filename )
+{
+    #if defined ( _WIN32 )
+    {
+        struct _stat64 fileInfo;
+        if ( _wstati64 ( filename.wstring ().c_str (), &fileInfo ) != 0 )
+        {
+            throw std::runtime_error ( "Failed to get last write time." );
+        }
+        return fileInfo.st_mtime;
+    }
+    #else
+    {
+        auto fsTime = std::filesystem::last_write_time ( filename );
+        return decltype ( fsTime )::clock::to_time_t ( fsTime );
+    }
+    #endif
+}
 void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::time_t lastModified, std::string basisFileLocation)
 {
 	//We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
@@ -231,7 +252,7 @@ void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::ti
 			filesystem::file_time_type rawBasisTime = filesystem::last_write_time(filePath);
 
 			//Convert to std::time_t; imprecise, but good enough.
-			std::time_t basisLastModified = std::chrono::system_clock::to_time_t(rawBasisTime);
+			std::time_t basisLastModified = GetFileWriteTime(filePath);//std::chrono::system_clock::to_time_t(rawBasisTime);
 
 			//The file is valid if the basis file is younger than the texture file.
 			validBasisFileExists = basisLastModified >= lastModified;
