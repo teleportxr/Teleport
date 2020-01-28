@@ -8,7 +8,7 @@
 using namespace SCServer;
 
 template<class T>
-std::vector<avs::uid> getVectorOfIDs(std::map<avs::uid, T> resourceMap)
+std::vector<avs::uid> getVectorOfIDs(const std::map<avs::uid, T>& resourceMap)
 {
 	std::vector<avs::uid> ids(resourceMap.size());
 
@@ -252,11 +252,8 @@ void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::ti
 			filesystem::file_time_type rawBasisTime = filesystem::last_write_time(filePath);
 
 			//Convert to std::time_t; imprecise, but good enough.
-#if _MSC_VER < 1920
-			std::time_t basisLastModified = std::chrono::system_clock::to_time_t(rawBasisTime);
-#else
-			std::time_t basisLastModified = GetFileWriteTime(filePath);//std::chrono::system_clock::to_time_t(rawBasisTime);
-#endif
+			//std::time_t basisLastModified = GetFileWriteTime(filePath);//std::chrono::system_clock::to_time_t(rawBasisTime);
+			std::time_t basisLastModified = rawBasisTime.time_since_epoch().count();
 
 			//The file is valid if the basis file is younger than the texture file.
 			validBasisFileExists = basisLastModified >= lastModified;

@@ -16,7 +16,7 @@ namespace SCServer
 	class GeometryStreamingService: public avs::GeometryRequesterBackendInterface
 	{
 	public:
-		GeometryStreamingService(const struct CasterSettings& settings);
+		GeometryStreamingService(const struct CasterSettings* settings);
 		virtual ~GeometryStreamingService();
 
 		virtual bool hasResource(avs::uid resourceID) const override;
@@ -26,6 +26,11 @@ namespace SCServer
 		virtual void confirmResource(avs::uid resourceID) override;
 
 		virtual void getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const override;
+
+		virtual avs::AxesStandard getAxesStandard() const override
+		{
+			return casterContext->axesStandard;
+		}
 
 		virtual void startStreaming(CasterContext* context);
 		//Stop streaming to client.
@@ -41,11 +46,6 @@ namespace SCServer
 		virtual void tick(float deltaTime);
 
 		virtual void reset();
-
-		virtual avs::AxesStandard getAxesStandard() const
-		{
-			return casterContext->axesStandard;
-		}
 	protected:
 		GeometryStore* geometryStore;
 
@@ -64,7 +64,7 @@ namespace SCServer
 			return hiddenActors;
 		}
 	private:
-		const struct CasterSettings& settings;		
+		const struct CasterSettings* settings;		
 
 		std::unordered_map<avs::uid, bool> sentResources; //Tracks the resources sent to the user; <resource identifier, doesClientHave>.
 		std::unordered_map<avs::uid, float> unconfirmedResourceTimes; //Tracks time since an unconfirmed resource was sent; <resource identifier, time since sent>.

@@ -31,7 +31,7 @@ size_t GetNewUIDs(std::vector<avs::uid> & outUIDs, avs::GeometryRequesterBackend
 	return outUIDs.size();
 }
 
-GeometryEncoder::GeometryEncoder(const CasterSettings& settings)
+GeometryEncoder::GeometryEncoder(const CasterSettings* settings)
 	:settings(settings)
 {}
 
@@ -436,7 +436,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometrySourceBackendInt
 bool GeometryEncoder::attemptQueueData()
 {
 	//If queueing the data will cause the queuedBuffer to exceed the cutoff size.
-	if(buffer.size() + queuedBuffer.size() > settings.geometryBufferCutoffSize)
+	if(buffer.size() + queuedBuffer.size() > settings->geometryBufferCutoffSize)
 	{
 		//Never leave queuedBuffer empty, if there is something to queue up (even if it is too large).
 		if(queuedBuffer.size() == 0)

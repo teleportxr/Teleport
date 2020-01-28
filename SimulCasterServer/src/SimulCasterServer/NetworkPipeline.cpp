@@ -13,7 +13,7 @@ namespace
 	constexpr int networkPipelineSocketBufferSize = 16 * 1024 * 1024; // 16MiB
 }
 
-SCServer::NetworkPipeline::NetworkPipeline(const SCServer::CasterSettings& settings)
+NetworkPipeline::NetworkPipeline(const SCServer::CasterSettings* settings)
 	:settings(settings)
 {}
 
@@ -23,7 +23,7 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 
 	avs::NetworkSinkParams SinkParams = {};
 	SinkParams.socketBufferSize = networkPipelineSocketBufferSize;
-	SinkParams.throttleToRateKpS = std::min(settings.throttleKpS, static_cast<int64_t>(inNetworkSettings.clientBandwidthLimit));// Assuming 60Hz on the other size. k per sec
+	SinkParams.throttleToRateKpS = std::min(settings->throttleKpS, static_cast<int64_t>(inNetworkSettings.clientBandwidthLimit));// Assuming 60Hz on the other size. k per sec
 	SinkParams.socketBufferSize = inNetworkSettings.clientBufferSize;
 	SinkParams.requiredLatencyMs = inNetworkSettings.requiredLatencyMs;
 
@@ -116,10 +116,10 @@ void NetworkPipeline::process()
 		std::cout << "DP: " << counters.decoderPacketsQueued << " | NP: " << counters.networkPacketsSent << " | BYTES: " << counters.bytesSent << std::endl;
 		lastTimestamp = timestamp;
 	}
-	networkSink->setDebugStream(settings.debugStream);
-	networkSink->setDebugNetworkPackets(settings.enableDebugNetworkPackets);
-	networkSink->setDoChecksums(settings.enableChecksums);
-	networkSink->setEstimatedDecodingFrequency(settings.estimatedDecodingFrequency);
+	networkSink->setDebugStream(settings->debugStream);
+	networkSink->setDebugNetworkPackets(settings->enableDebugNetworkPackets);
+	networkSink->setDoChecksums(settings->enableChecksums);
+	networkSink->setEstimatedDecodingFrequency(settings->estimatedDecodingFrequency);
 #endif // WITH_REMOTEPLAY_STATS
 }
 

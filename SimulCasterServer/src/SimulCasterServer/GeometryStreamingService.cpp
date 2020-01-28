@@ -15,7 +15,7 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
-GeometryStreamingService::GeometryStreamingService(const CasterSettings& settings)
+GeometryStreamingService::GeometryStreamingService(const CasterSettings* settings)
 	:settings(settings), geometryEncoder(settings)
 {}
 
@@ -72,13 +72,21 @@ void GeometryStreamingService::startStreaming(SCServer::CasterContext* context)
 	avsPipeline->link({avsGeometrySource.get(), avsGeometryEncoder.get(), casterContext->GeometryQueue.get()});
 }
 
-void SCServer::GeometryStreamingService::stopStreaming()
+void GeometryStreamingService::stopStreaming()
 {
 	if(avsPipeline) avsPipeline->deconfigure();
 	if(avsGeometrySource) avsGeometrySource->deconfigure();
 	if(avsGeometryEncoder) avsGeometryEncoder->deconfigure();
 	avsPipeline.reset();
 	casterContext = nullptr;
+
+	for(auto idActorPair : hiddenActors)
+	{
+		if(idActorPair.second)
+		{
+			showActor_Internal(idActorPair.second);
+		}
+	}
 
 	reset();
 }
@@ -130,7 +138,7 @@ void GeometryStreamingService::addHandsToStream()
 void GeometryStreamingService::tick(float deltaTime)
 {
 	// Might not be initialized... YET
-	if(!avsPipeline) return;
+	if(!avsPipeline || !settings->enableGeometryStreaming) return;
 
 	// We can now be confident that all streamable geometries have been initialized, so we will do internal setup.
 	// Each frame we manage a view of which streamable geometries should or shouldn't be rendered on our client.
@@ -140,9 +148,9 @@ void GeometryStreamingService::tick(float deltaTime)
 	{
 		it->second += deltaTime;
 
-		if(it->second > settings.confirmationWaitTime)
+		if(it->second > settings->confirmationWaitTime)
 		{
-			std::cout << "Resource with UID " << it->first << " was not confirmed within " << settings.confirmationWaitTime << " seconds, and will be resent.\n";
+			std::cout << "Resource with UID " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
 
 			sentResources[it->first] = false;
 			it = unconfirmedResourceTimes.erase(it);

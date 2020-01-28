@@ -11,13 +11,14 @@
 
 using namespace SCServer;
 
-ClientMessaging::ClientMessaging(std::shared_ptr<DiscoveryService>& discoveryService, GeometryStreamingService& geometryStreamingService, const struct CasterSettings& settings,
-								 std::function<void(avs::HeadPose&)> setHeadPose, std::function<void(avs::InputState&)> processNewInput, std::function<void(void)> onDisconnect,
+ClientMessaging::ClientMessaging(const CasterSettings* settings, std::shared_ptr<DiscoveryService> discoveryService, std::shared_ptr<GeometryStreamingService> geometryStreamingService,
+								 std::function<void(const avs::HeadPose*)> setHeadPose, std::function<void(const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
 								 const int32_t& disconnectTimeout)
-	:discoveryService(discoveryService), geometryStreamingService(geometryStreamingService), settings(settings),
+	:settings(settings), discoveryService(discoveryService), geometryStreamingService(geometryStreamingService),
 	setHeadPose(setHeadPose), processNewInput(processNewInput), onDisconnect(onDisconnect),
 	disconnectTimeout(disconnectTimeout),
-	host(nullptr), peer(nullptr)
+	host(nullptr), peer(nullptr),
+	casterContext(nullptr), captureComponent(nullptr)
 {}
 
 void ClientMessaging::initialise(CasterContext* context, CaptureComponent* capture)
@@ -26,7 +27,7 @@ void ClientMessaging::initialise(CasterContext* context, CaptureComponent* captu
 	captureComponent = capture;
 }
 
-void ClientMessaging::startSession(int32_t listenPort)
+bool ClientMessaging::startSession(int32_t listenPort)
 {
 	ENetAddress ListenAddress;
 	ListenAddress.host = ENET_HOST_ANY;
@@ -38,6 +39,8 @@ void ClientMessaging::startSession(int32_t listenPort)
 	{
 		std::cout << "Session: Failed to create ENET server host!\n";
 	}
+
+	return host;
 }
 
 void ClientMessaging::stopSession()
@@ -82,12 +85,12 @@ void ClientMessaging::tick(float deltaTime)
 	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;
 
-	const float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f / settings.geometryTicksPerSecond;
+	const float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f / settings->geometryTicksPerSecond;
 
 	//Only tick the geometry streaming service a set amount of times per second.
 	if(timeSinceLastGeometryStream >= TIME_BETWEEN_GEOMETRY_TICKS)
 	{
-		geometryStreamingService.tick(TIME_BETWEEN_GEOMETRY_TICKS);
+		geometryStreamingService->tick(TIME_BETWEEN_GEOMETRY_TICKS);
 
 		//Tell the client to change the visibility of actors that have changed whether they are within streamable bounds.
 		if(!actorsEnteredBounds.empty() || !actorsLeftBounds.empty())
@@ -128,6 +131,7 @@ void ClientMessaging::handleEvents()
 				enet_address_get_host_ip(&event.peer->address, address, sizeof(address));
 
 				peer = event.peer;
+				///TODO: This work allow multi-connect with Unity, or otherwise; change it to allow multiple connections.
 				discoveryService->shutdown();
 
 				std::cout << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
@@ -149,13 +153,13 @@ void ClientMessaging::handleEvents()
 	}
 }
 
-void ClientMessaging::gainedActor(avs::uid actorID)
+void ClientMessaging::actorEnteredBounds(avs::uid actorID)
 {
 	actorsEnteredBounds.push_back(actorID);
 	actorsLeftBounds.erase(std::remove(actorsLeftBounds.begin(), actorsLeftBounds.end(), actorID), actorsLeftBounds.end());
 }
 
-void ClientMessaging::lostActor(avs::uid actorID)
+void ClientMessaging::actorLeftBounds(avs::uid actorID)
 {
 	actorsLeftBounds.push_back(actorID);
 	actorsEnteredBounds.erase(std::remove(actorsEnteredBounds.begin(), actorsEnteredBounds.end(), actorID), actorsEnteredBounds.end());
@@ -180,6 +184,51 @@ bool ClientMessaging::sendCommand(const avs::Command& avsCommand) const
 	assert(packet);
 
 	return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
+}
+
+bool ClientMessaging::sendSetupCommand(avs::SetupCommand&& setupCommand)
+{
+	std::vector<avs::uid> resourcesClientNeeds;
+
+	//Get resources the client will need to check it has.
+	std::vector<avs::MeshNodeResources> outMeshResources;
+	std::vector<avs::LightNodeResources> outLightResources;
+	geometryStreamingService->getResourcesToStream(outMeshResources, outLightResources);
+
+	for(const avs::MeshNodeResources& meshResource : outMeshResources)
+	{
+		resourcesClientNeeds.push_back(meshResource.node_uid);
+		resourcesClientNeeds.push_back(meshResource.mesh_uid);
+
+		for(const avs::MaterialResources& material : meshResource.materials)
+		{
+			resourcesClientNeeds.push_back(material.material_uid);
+
+			for(avs::uid texture_uid : material.texture_uids)
+			{
+				resourcesClientNeeds.push_back(texture_uid);
+			}
+		}
+	}
+	for(const avs::LightNodeResources& lightResource : outLightResources)
+	{
+		resourcesClientNeeds.push_back(lightResource.node_uid);
+		resourcesClientNeeds.push_back(lightResource.shadowmap_uid);
+	}
+
+	//Remove duplicates, and UIDs of 0.
+	std::sort(resourcesClientNeeds.begin(), resourcesClientNeeds.end());
+	resourcesClientNeeds.erase(std::unique(resourcesClientNeeds.begin(), resourcesClientNeeds.end()), resourcesClientNeeds.end());
+	resourcesClientNeeds.erase(std::remove(resourcesClientNeeds.begin(), resourcesClientNeeds.end(), 0), resourcesClientNeeds.end());
+
+	//If the client needs a resource it will tell us; we don't want to stream the data if the client already has it.
+	for(avs::uid resourceID : resourcesClientNeeds)
+	{
+		geometryStreamingService->confirmResource(resourceID);
+	}
+
+	setupCommand.resourceCount = resourcesClientNeeds.size();
+	return sendCommand<avs::uid>(setupCommand, resourcesClientNeeds);
 }
 
 std::string ClientMessaging::getClientIP() const
@@ -256,7 +305,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 
 	if(handshake.usingHands)
 	{
-		geometryStreamingService.addHandsToStream();
+		geometryStreamingService->addHandsToStream();
 	}
 
 	casterContext->axesStandard = handshake.axesStandard;
@@ -278,7 +327,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 			networkSettings.localPort + 1,
 			static_cast<int32_t>(handshake.maxBandwidthKpS),
 			static_cast<int32_t>(handshake.udpBufferSize),
-			settings.requiredLatencyMs
+			settings->requiredLatencyMs
 		};
 
 		casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));
@@ -292,11 +341,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	cameraInfo.isVR = handshake.isVR;
 
 	captureComponent->startStreaming(casterContext);
-
-	if(settings.enableGeometryStreaming)
-	{
-		geometryStreamingService.startStreaming(casterContext);
-	}
+	geometryStreamingService->startStreaming(casterContext);
 
 	avs::AcknowledgeHandshakeCommand ack;
 	sendCommand(ack);
@@ -315,7 +360,7 @@ void ClientMessaging::receiveInput(const ENetPacket* packet)
 	avs::InputState inputState;
 	memcpy(&inputState, packet->data, packet->dataLength);
 
-	processNewInput(inputState);
+	processNewInput(&inputState);
 }
 
 void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
@@ -345,7 +390,7 @@ void ClientMessaging::receiveHeadPose(const ENetPacket* packet)
 	avs::HeadPose headPose;
 	memcpy(&headPose, packet->data, packet->dataLength);
 
-	setHeadPose(headPose);
+	setHeadPose(&headPose);
 }
 
 void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
@@ -358,7 +403,7 @@ void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 
 	for(avs::uid id : resourceRequests)
 	{
-		geometryStreamingService.requestResource(id);
+		geometryStreamingService->requestResource(id);
 	}
 }
 
@@ -395,12 +440,12 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 
 			for(avs::uid actorID : drawn)
 			{
-				geometryStreamingService.hideActor(actorID);
+				geometryStreamingService->hideActor(actorID);
 			}
 
 			for(avs::uid actorID : toRelease)
 			{
-				geometryStreamingService.showActor(actorID);
+				geometryStreamingService->showActor(actorID);
 			}
 
 			break;
@@ -417,7 +462,7 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 
 			for(avs::uid id : confirmedResources)
 			{
-				geometryStreamingService.confirmResource(id);
+				geometryStreamingService->confirmResource(id);
 			}
 
 			break;

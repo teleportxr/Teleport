@@ -37,9 +37,15 @@ endif()
 
 #Create static library with source files from group.
 if(REMOTEPLAY_UNITY)
-add_library(SimulCasterServer SHARED ${src})
+	set(src_plugin
+		src/SimulCasterServer/UnityPlugin/Export.h
+		src/SimulCasterServer/UnityPlugin/InteropStructures.h
+		src/SimulCasterServer/UnityPlugin/PluginMain.cpp
+	)
+
+	add_library(SimulCasterServer SHARED ${src} ${src_plugin})
 else()
-add_library(SimulCasterServer STATIC ${src})
+	add_library(SimulCasterServer STATIC ${src})
 endif()
 
 #Include its root directory

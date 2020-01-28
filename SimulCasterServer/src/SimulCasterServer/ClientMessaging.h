@@ -18,20 +18,20 @@ namespace SCServer
 	class ClientMessaging
 	{
 	public:
-		ClientMessaging(std::shared_ptr<DiscoveryService>& discoveryService, GeometryStreamingService& geometryStreamingService, const CasterSettings& settings,
-						std::function<void(avs::HeadPose&)> setHeadPose, std::function<void(avs::InputState&)> processNewInput, std::function<void(void)> onDisconnect,
+		ClientMessaging(const struct CasterSettings* settings, std::shared_ptr<DiscoveryService> discoveryService, std::shared_ptr<GeometryStreamingService> geometryStreamingService,
+						std::function<void(const avs::HeadPose*)> setHeadPose, std::function<void(const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
 						const int32_t& disconnectTimeout);
 
 		void initialise(CasterContext* context, class CaptureComponent* capture);
 
-		void startSession(int32_t listenPort);
+		bool startSession(int32_t listenPort);
 		void stopSession();
 
 		void tick(float deltaTime);
 		void handleEvents();
 
-		void gainedActor(avs::uid actorID);
-		void lostActor(avs::uid actorID);
+		void actorEnteredBounds(avs::uid actorID);
+		void actorLeftBounds(avs::uid actorID);
 
 		bool hasHost() const;
 		bool hasPeer() const;
@@ -54,16 +54,18 @@ namespace SCServer
 			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 		}
 
+		bool sendSetupCommand(avs::SetupCommand&& setupCommand);
+
 		std::string getClientIP() const;
 		uint16_t getClientPort() const;
 		uint16_t getServerPort() const;
 	private:
-		std::shared_ptr<DiscoveryService>& discoveryService;
-		GeometryStreamingService& geometryStreamingService;
-		const CasterSettings& settings;
+		const CasterSettings* settings;
+		std::shared_ptr<DiscoveryService> discoveryService;
+		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
 
-		std::function<void(avs::HeadPose&)> setHeadPose; //Delegate called when a head pose is received.
-		std::function<void(avs::InputState&)> processNewInput; //Delegate called when new input is received.
+		std::function<void(const avs::HeadPose*)> setHeadPose; //Delegate called when a head pose is received.
+		std::function<void(const avs::InputState*)> processNewInput; //Delegate called when new input is received.
 		std::function<void(void)> onDisconnect; //Delegate called when the peer disconnects.
 
 		const int32_t& disconnectTimeout;

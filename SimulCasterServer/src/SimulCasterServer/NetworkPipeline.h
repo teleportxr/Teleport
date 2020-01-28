@@ -16,7 +16,7 @@ namespace SCServer
 	class NetworkPipeline
 	{
 	public:
-		NetworkPipeline(const CasterSettings& settings);
+		NetworkPipeline(const CasterSettings* settings);
 		virtual ~NetworkPipeline() = default;
 
 		void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue);
@@ -40,7 +40,7 @@ namespace SCServer
 			avs::Packetizer packetizer;
 		};
 
-		const CasterSettings& settings;
+		const CasterSettings* settings;
 
 		std::unique_ptr<avs::Pipeline> pipeline;
 		std::vector<std::unique_ptr<VideoPipe>> videoPipes;
