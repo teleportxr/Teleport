@@ -252,7 +252,11 @@ void GeometryStore::storeTexture(avs::uid id, avs::Texture&& newTexture, std::ti
 			filesystem::file_time_type rawBasisTime = filesystem::last_write_time(filePath);
 
 			//Convert to std::time_t; imprecise, but good enough.
+#if _MSC_VER < 1920
+			std::time_t basisLastModified = std::chrono::system_clock::to_time_t(rawBasisTime);
+#else
 			std::time_t basisLastModified = GetFileWriteTime(filePath);//std::chrono::system_clock::to_time_t(rawBasisTime);
+#endif
 
 			//The file is valid if the basis file is younger than the texture file.
 			validBasisFileExists = basisLastModified >= lastModified;

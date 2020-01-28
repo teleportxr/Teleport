@@ -22,6 +22,8 @@ set(src
 	src/SimulCasterServer/GeometryStreamingService.h
 	src/SimulCasterServer/NetworkPipeline.cpp
 	src/SimulCasterServer/NetworkPipeline.h
+	src/SimulCasterServer/Export.cpp
+	src/SimulCasterServer/Export.h
 )
 
 #Whether to build dynamic runtime libraries.
