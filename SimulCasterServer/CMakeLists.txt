@@ -44,6 +44,11 @@ if(REMOTEPLAY_UNITY)
 	)
 
 	add_library(SimulCasterServer SHARED ${src} ${src_plugin})
+	set_target_properties( SimulCasterServer PROPERTIES 
+		VS_DEBUGGER_COMMAND "${REMOTEPLAY_UNITY_EDITOR_PATH}"
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-projectPath \"${REMOTEPLAY_UNITY_PROJECT_DIR}\""
+		VS_DEBUGGER_ENVIRONMENT ""
+		)
 else()
 	add_library(SimulCasterServer STATIC ${src})
 endif()

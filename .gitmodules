@@ -4,9 +4,6 @@
 [submodule "thirdparty/basis_universal"]
 	path = thirdparty/basis_universal
 	url = git@github.com:simul/basis_universal.git
-[submodule "thirdparty/openssl"]
-	path = thirdparty/openssl
-	url = git@github.com:openssl/openssl.git
 [submodule "thirdparty/srt"]
 	path = thirdparty/srt
 	url = git@github.com:simul/srt.git

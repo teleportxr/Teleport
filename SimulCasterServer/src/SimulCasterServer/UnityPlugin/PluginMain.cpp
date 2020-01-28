@@ -40,7 +40,7 @@ namespace
 	static std::function<void(const avs::InputState*)> processNewInput;
 	static std::function<void(void)> onDisconnect;
 	static int32_t connectionTimeout = 5;
-	static int32_t serverID = 0;
+	static avs::uid serverID = 0;
 }
 
 class PluginDiscoveryService: public SCServer::DiscoveryService

@@ -5,6 +5,8 @@ set(REMOTEPLAY_SIMUL "C:/Simul/4.2/Simul" CACHE STRING "Simul folder" )
 option(REMOTEPLAY_SERVER "Build for server? If true, client will not be built." OFF)
 option(REMOTEPLAY_UNITY "Build for Unity?" OFF)
 set(REMOTEPLAY_UNITY_TARGET_DIR "${CMAKE_BINARY_DIR}/../Assets/external-sdk/Teleport/Plugins/x86_64" CACHE PATH "")
+set(REMOTEPLAY_UNITY_PROJECT_DIR "${CMAKE_BINARY_DIR}/.." CACHE PATH "")
+set(REMOTEPLAY_UNITY_EDITOR_PATH "C:/Program Files/Unity 2018/Editor/Unity.exe" CACHE PATH "")
 set (CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "")
 
 set(CMAKE_CXX_STANDARD 17 )
