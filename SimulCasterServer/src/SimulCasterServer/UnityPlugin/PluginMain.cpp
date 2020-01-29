@@ -113,6 +113,7 @@ public:
 			std::wstring desiredIP(casterSettings->clientIP);
 
 			bool sendResponse = true;
+			///TODO: Get desired IP from Unity. Strings don't seem to like being passed inside a class that is referenced by pointer.
 			/*if(desiredIP.length() != 0)
 			{
 				std::string clientIP(20, ' ');
@@ -306,7 +307,7 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 		newClient.casterContext.ColorQueue->configure(16);
 		newClient.casterContext.GeometryQueue->configure(16);
 
-		//TODO: Initialise clientMessaging.
+		///TODO: Initialise clientMessaging.
 		//clientServices.at(clientID).clientMessaging.initialise(casterContext, captureComponent);
 	}
 	else
