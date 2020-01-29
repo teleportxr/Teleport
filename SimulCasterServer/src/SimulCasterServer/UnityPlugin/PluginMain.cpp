@@ -504,9 +504,9 @@ bool SendSetupCommand(avs::uid clientID, avs::SetupCommand&& setupCommand)
 }
 
 TELEPORT_EXPORT
-std::string GetClientIP(avs::uid clientID)
+char* GetClientIP(avs::uid clientID)
 {
-	return clientServices.at(clientID).clientMessaging.getClientIP();
+	return clientServices.at(clientID).clientMessaging.getClientIP().data();
 }
 
 TELEPORT_EXPORT

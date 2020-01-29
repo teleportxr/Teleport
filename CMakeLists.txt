@@ -1,13 +1,29 @@
 cmake_minimum_required(VERSION 3.8)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-project(RemotePlay)
-set(REMOTEPLAY_SIMUL "C:/Simul/4.2/Simul" CACHE STRING "Simul folder" )
+
+if(REMOTEPLAY_UNITY)
+	project(RemotePlay_Unity)
+else()
+	project(RemotePlay)
+endif()
+
+set(REMOTEPLAY_SIMUL "C:/Simul/4.2/Simul" CACHE PATH "Simul folder" )
 option(REMOTEPLAY_SERVER "Build for server? If true, client will not be built." OFF)
 option(REMOTEPLAY_UNITY "Build for Unity?" OFF)
-set(REMOTEPLAY_UNITY_TARGET_DIR "${CMAKE_BINARY_DIR}/../Assets/external-sdk/Teleport/Plugins/x86_64" CACHE PATH "")
+set(REMOTEPLAY_UNITY_PLUGINS_DIR "${CMAKE_BINARY_DIR}/../Assets/external-sdk/Teleport/Plugins/x86_64" CACHE PATH "")
 set(REMOTEPLAY_UNITY_PROJECT_DIR "${CMAKE_BINARY_DIR}/.." CACHE PATH "")
-set(REMOTEPLAY_UNITY_EDITOR_PATH "C:/Program Files/Unity 2018/Editor/Unity.exe" CACHE PATH "")
+set(REMOTEPLAY_UNITY_EDITOR_PATH "C:/Program Files/Unity 2018/Editor/Unity.exe" CACHE FILEPATH "")
 set (CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "")
+
+#Override srt encryption to be off.
+set(ENABLE_ENCRYPTION OFF CACHE BOOL "Enable encryption in SRT")
+
+#Hide Basis Universal STATIC option, and set to opposite of USE_DYNAMIC_RUNTIME.
+if(USE_DYNAMIC_RUNTIME)
+	set(STATIC OFF CACHE INTERNAL "Static linking for Basis Universal" FORCE)
+else()
+	set(STATIC ON CACHE INTERNAL "Static linking for Basis Universal" FORCE)
+endif()
 
 set(CMAKE_CXX_STANDARD 17 )
 set(CMAKE_CXX_STANDARD_REQUIRED ON )
