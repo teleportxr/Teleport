@@ -5,6 +5,7 @@
 #include "enet/enet.h"
 #include "libavstream/common.hpp"
 
+#include "SimulCasterServer/CasterSettings.h"
 #include "SimulCasterServer/CaptureDelegates.h"
 #include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/DiscoveryService.h"
@@ -42,7 +43,7 @@ namespace
 
 	static std::map<avs::uid, ClientData> clientServices;
 
-	static const SCServer::CasterSettings* casterSettings;
+	static SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
 	static std::function<void(void* actorPtr)> onShowActor;
 	static std::function<void(void* actorPtr)> onHideActor;
@@ -93,7 +94,7 @@ public:
 		enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_BROADCAST, 1);
 		enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_REUSEADDR, 1);
 
-		ENetAddress address{ENET_HOST_ANY, discoveryPort};
+		address = {ENET_HOST_ANY, discoveryPort};
 		if(enet_socket_bind(discoverySocket, &address) != 0)
 		{
 			printf_s("Failed to bind discovery socket on port: %d\n", address.port);
@@ -119,34 +120,45 @@ public:
 			return;
 		}
 
-		ENetAddress address{ENET_HOST_ANY, discoveryPort};
-
+		//List of clientIDs we want to attempt to connect to.
 		std::set<uint32_t> newClients;
 
-		uint32_t clientID = 0;
-		ENetBuffer buffer = {sizeof(clientID), &clientID};
+		uint32_t clientID = 0; //Newly received ID.
+		ENetBuffer buffer = {sizeof(clientID), &clientID}; //Buffer to retrieve client ID with.
+
+		//Retrieve all packets received since last call, and add any new clients.
 		while(enet_socket_receive(discoverySocket, &address, &buffer, 1) != 0)
-		{
-			std::wstring desiredIP(casterSettings->clientIP);
-
-			bool sendResponse = true;
-			///TODO: Get desired IP from Unity. Strings don't seem to like being passed inside a class that is referenced by pointer.
-			/*if(desiredIP.length() != 0)
-			{
-				std::string clientIP(20, ' ');
-				enet_address_get_host_ip(&address, clientIP.data(), 20);
-
-				sendResponse = desiredIP.compare({clientIP.begin(), clientIP.end()}) == 0;
-			}*/
-
-			newClients.insert(clientID);
-		}
-
-		for(uint32_t id : newClients)
 		{
 			//Skip clients we have already added.
 			if(clientServices.find(clientID) != clientServices.end()) continue;
 
+			std::wstring desiredIP(casterSettings.clientIP);
+
+			//Ignore connections from clients with the wrong IP, if a desired IP has been set.
+			if(desiredIP.length() != 0)
+			{
+				//Retrieve IP of client that sent message, and covert to string.
+				char clientIPRaw[20];
+				enet_address_get_host_ip(&address, clientIPRaw, 20);
+
+				//Trying to use the pointer to the string's data results in an incorrect size, and incorrect iterators.
+				std::string clientIP = clientIPRaw;
+
+				//Create new wide-string with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
+				if(desiredIP.compare(0, clientIP.size(), {clientIP.begin(), clientIP.end()}) == 0)
+				{
+					newClients.insert(clientID);
+				}
+			}
+			else
+			{
+				newClients.insert(clientID);
+			}
+		}
+
+		//Send response, containing port to connect on, to all clients we want to host.
+		for(uint32_t id : newClients)
+		{
 			ServiceDiscoveryResponse response = {clientID, servicePort};
 
 			buffer = {sizeof(ServiceDiscoveryResponse), &response};
@@ -165,6 +177,7 @@ private:
 #pragma pack(pop)
 
 	ENetSocket discoverySocket;
+	ENetAddress address;
 
 	uint16_t discoveryPort = 0;
 	uint16_t servicePort = 0;
@@ -174,7 +187,7 @@ class PluginGeometryStreamingService : public SCServer::GeometryStreamingService
 {
 public:
 	PluginGeometryStreamingService()
-		:SCServer::GeometryStreamingService(casterSettings)
+		:SCServer::GeometryStreamingService(&casterSettings)
 	{
 		this->geometryStore = &::geometryStore;
 	}
@@ -213,9 +226,9 @@ private:
 
 ///PLUGIN-SPECIFIC START
 TELEPORT_EXPORT
-void SetCasterSettings(const SCServer::CasterSettings* settings)
+void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
 {
-	casterSettings = settings;
+	casterSettings = newSettings;
 }
 
 TELEPORT_EXPORT
@@ -255,12 +268,11 @@ void SetConnectionTimeout(int32_t timeout)
 }
 
 TELEPORT_EXPORT
-void Initialise(const SCServer::CasterSettings* settings, void(*showActor)(void*), void(*hideActor)(void*),
+void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
 				void(*headPoseSetter)(const avs::HeadPose*), void(*newInputProcessing)(const avs::InputState*), void(*disconnect)(void))
 {
 	serverID = avs::GenerateUid();
 
-	SetCasterSettings(settings);
 	SetShowActorDelegate(showActor);
 	SetHideActorDelegate(hideActor);
 	SetHeadPoseSetterDelegate(headPoseSetter);
@@ -288,8 +300,6 @@ void Shutdown()
 	}
 	clientServices.clear();
 
-	casterSettings = nullptr;
-
 	onShowActor = nullptr;
 	onHideActor = nullptr;
 
@@ -306,7 +316,7 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 	{
 		SCServer::CasterContext(),
 		newStreamingService,
-		SCServer::ClientMessaging(casterSettings, discoveryService, newStreamingService, setHeadPose, processNewInput, onDisconnect, connectionTimeout)
+		SCServer::ClientMessaging(&casterSettings, discoveryService, newStreamingService, setHeadPose, processNewInput, onDisconnect, connectionTimeout)
 	};
 
 	if(newClientData.clientMessaging.startSession(listenPort))
@@ -371,13 +381,13 @@ void StartStreaming(avs::uid clientID)
 	setupCommand.colour_cubemap_size = encoderSettings.frameWidth / 3;
 	setupCommand.compose_cube = encoderSettings.enableDecomposeCube;
 	setupCommand.port = clientServices.at(clientID).clientMessaging.getServerPort() + 1;
-	setupCommand.debug_stream = casterSettings->debugStream;
-	setupCommand.debug_network_packets = casterSettings->enableDebugNetworkPackets;
-	setupCommand.do_checksums = casterSettings->enableChecksums ? 1 : 0;
+	setupCommand.debug_stream = casterSettings.debugStream;
+	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
+	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
 	setupCommand.server_id = serverID;
-	setupCommand.use_10_bit_decoding = casterSettings->use10BitEncoding;
-	setupCommand.use_yuv_444_decoding = casterSettings->useYUV444Decoding;
-	setupCommand.requiredLatencyMs = casterSettings->requiredLatencyMs;
+	setupCommand.use_10_bit_decoding = casterSettings.use10BitEncoding;
+	setupCommand.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
+	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
 
 	///TODO: Initialise actors in range.
 
