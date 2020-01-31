@@ -6,7 +6,6 @@
 #include "enet/enet.h"
 #include "libavstream/common.hpp" //InputState
 
-#include "CaptureComponent.h"
 #include "DiscoveryService.h"
 
 using namespace SCServer;
@@ -18,13 +17,13 @@ ClientMessaging::ClientMessaging(const CasterSettings* settings, std::shared_ptr
 	setHeadPose(setHeadPose), processNewInput(processNewInput), onDisconnect(onDisconnect),
 	disconnectTimeout(disconnectTimeout),
 	host(nullptr), peer(nullptr),
-	casterContext(nullptr), captureComponent(nullptr)
+	casterContext(nullptr)
 {}
 
-void ClientMessaging::initialise(CasterContext* context, CaptureComponent* capture)
+void ClientMessaging::initialise(CasterContext* context, CaptureDelegates captureDelegates)
 {
 	casterContext = context;
-	captureComponent = capture;
+	captureComponentDelegates = captureDelegates;
 }
 
 bool ClientMessaging::startSession(int32_t listenPort)
@@ -334,13 +333,13 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->DepthQueue.get(), casterContext->GeometryQueue.get());
 	}
 
-	CameraInfo& cameraInfo = captureComponent->getClientCameraInfo();
+	CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
 	cameraInfo.width = static_cast<float>(handshake.startDisplayInfo.width);
 	cameraInfo.height = static_cast<float>(handshake.startDisplayInfo.height);
 	cameraInfo.fov = handshake.FOV;
 	cameraInfo.isVR = handshake.isVR;
 
-	captureComponent->startStreaming(casterContext);
+	captureComponentDelegates.startStreaming(casterContext);
 	geometryStreamingService->startStreaming(casterContext);
 
 	avs::AcknowledgeHandshakeCommand ack;
@@ -374,7 +373,7 @@ void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
 	avs::DisplayInfo displayInfo;
 	memcpy(&displayInfo, packet->data, packet->dataLength);
 
-	CameraInfo& cameraInfo = captureComponent->getClientCameraInfo();
+	CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
 	cameraInfo.width = static_cast<float>(displayInfo.width);
 	cameraInfo.height = static_cast<float>(displayInfo.height);
 }
@@ -409,9 +408,9 @@ void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 
 void ClientMessaging::receiveKeyframeRequest(const ENetPacket* packet)
 {
-	if(captureComponent)
+	if(captureComponentDelegates.requestKeyframe)
 	{
-		captureComponent->requestKeyframe();
+		captureComponentDelegates.requestKeyframe();
 	}
 	else
 	{

@@ -8,7 +8,7 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
-	src/SimulCasterServer/CaptureComponent.h
+	src/SimulCasterServer/CaptureDelegates.h
 	src/SimulCasterServer/CasterContext.h
 	src/SimulCasterServer/CasterSettings.h
 	src/SimulCasterServer/ClientMessaging.cpp

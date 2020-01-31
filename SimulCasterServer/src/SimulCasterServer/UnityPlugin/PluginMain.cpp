@@ -5,6 +5,7 @@
 #include "enet/enet.h"
 #include "libavstream/common.hpp"
 
+#include "SimulCasterServer/CaptureDelegates.h"
 #include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/DiscoveryService.h"
 #include "SimulCasterServer/GeometryStore.h"
@@ -16,10 +17,20 @@
 using namespace SCServer;
 
 class PluginDiscoveryService;
-struct ClientData;
+class PluginGeometryStreamingService;
 
 TELEPORT_EXPORT
 void StartSession(avs::uid clientID, int32_t listenPort);
+
+struct ClientData
+{
+	SCServer::CasterContext casterContext;
+
+	std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService;
+	SCServer::ClientMessaging clientMessaging;
+
+	bool isStreaming = false;
+};
 
 namespace
 {
@@ -53,21 +64,24 @@ public:
 
 	virtual bool initialise(uint16_t discoveryPort = 0, uint16_t servicePort = 0) override
 	{
-		if(discoveryPort == 0 && this->discoveryPort == 0)
+		if(discoveryPort == 0) discoveryPort = this->discoveryPort;
+		else this->discoveryPort = discoveryPort;
+
+		if(discoveryPort == 0)
 		{
 			printf_s("Discovery port is not set.\n");
 			return false;
 		}
 
-		if(servicePort == 0 && this->servicePort == 0)
+		if(servicePort == 0) servicePort = this->servicePort;
+		else this->servicePort = servicePort;
+
+		if(servicePort == 0)
 		{
 			printf_s("Service port is not set.\n");
 			return false;
 		}
-
-		this->discoveryPort = discoveryPort;
-		this->servicePort = servicePort;
-
+		
 		discoverySocket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);
 		if(discoverySocket <= 0)
 		{
@@ -104,11 +118,14 @@ public:
 			printf_s("Attempted to call tick on client discovery service without initalising!");
 			return;
 		}
+
 		ENetAddress address{ENET_HOST_ANY, discoveryPort};
+
+		std::set<uint32_t> newClients;
 
 		uint32_t clientID = 0;
 		ENetBuffer buffer = {sizeof(clientID), &clientID};
-		if(enet_socket_receive(discoverySocket, &address, &buffer, 1) != 0)
+		while(enet_socket_receive(discoverySocket, &address, &buffer, 1) != 0)
 		{
 			std::wstring desiredIP(casterSettings->clientIP);
 
@@ -122,16 +139,15 @@ public:
 				sendResponse = desiredIP.compare({clientIP.begin(), clientIP.end()}) == 0;
 			}*/
 
-#pragma pack(push, 1) 
-			struct ServiceDiscoveryResponse
-			{
-				uint32_t clientID;
-				uint16_t remotePort;
-			} response;
-#pragma pack(pop)
+			newClients.insert(clientID);
+		}
 
-			response.clientID = clientID;
-			response.remotePort = servicePort;
+		for(uint32_t id : newClients)
+		{
+			//Skip clients we have already added.
+			if(clientServices.find(clientID) != clientServices.end()) continue;
+
+			ServiceDiscoveryResponse response = {clientID, servicePort};
 
 			buffer = {sizeof(ServiceDiscoveryResponse), &response};
 			enet_socket_send(discoverySocket, &address, &buffer, 1);
@@ -140,6 +156,14 @@ public:
 		}
 	}
 private:
+#pragma pack(push, 1) 
+	struct ServiceDiscoveryResponse
+	{
+		uint32_t clientID;
+		uint16_t remotePort;
+	};
+#pragma pack(pop)
+
 	ENetSocket discoverySocket;
 
 	uint16_t discoveryPort = 0;
@@ -185,16 +209,6 @@ private:
 	{
 		if(onHideActor) onHideActor(actorPtr);
 	}
-};
-
-struct ClientData
-{
-	SCServer::CasterContext casterContext;
-
-	std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService;
-	SCServer::ClientMessaging clientMessaging;
-
-	bool isStreaming = false;
 };
 
 ///PLUGIN-SPECIFIC START
@@ -300,15 +314,22 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 		clientServices.emplace(clientID, std::move(newClientData));
 
 		ClientData& newClient = clientServices.at(clientID);
-		newClient.casterContext.NetworkPipeline = std::make_unique<SCServer::NetworkPipeline>(casterSettings);
 		newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
 		newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
 
 		newClient.casterContext.ColorQueue->configure(16);
 		newClient.casterContext.GeometryQueue->configure(16);
 
-		///TODO: Initialise clientMessaging.
-		//clientServices.at(clientID).clientMessaging.initialise(casterContext, captureComponent);
+		///TODO: Initialise real delegates for capture component.
+		SCServer::CaptureDelegates delegates;
+		delegates.startStreaming = [](SCServer::CasterContext* context){};
+		delegates.requestKeyframe = [](){};
+		delegates.getClientCameraInfo = []()->SCServer::CameraInfo&
+		{
+			return SCServer::CameraInfo();
+		};
+
+		newClient.clientMessaging.initialise(&newClient.casterContext, delegates);
 	}
 	else
 	{
@@ -360,8 +381,7 @@ void StartStreaming(avs::uid clientID)
 
 	///TODO: Initialise actors in range.
 
-	///TODO: Need to initalise clientMessaging before the handshake can be received.
-	//client.clientMessaging.sendSetupCommand(std::move(setupCommand));
+	client.clientMessaging.sendSetupCommand(std::move(setupCommand));
 
 	client.isStreaming = true;
 }
@@ -370,6 +390,7 @@ TELEPORT_EXPORT
 void StopStreaming(avs::uid clientID)
 {
 	clientServices.at(clientID).geometryStreamingService->stopStreaming();
+	clientServices.at(clientID).isStreaming = false;
 }
 
 TELEPORT_EXPORT
@@ -377,17 +398,21 @@ void Tick(float deltaTime)
 {
 	for(auto& idClientPair : clientServices)
 	{
+		idClientPair.second.clientMessaging.handleEvents();
+
 		if(idClientPair.second.clientMessaging.hasPeer())
 		{
 			idClientPair.second.clientMessaging.tick(deltaTime);
 
-			if(idClientPair.second.isStreaming == false && idClientPair.second.clientMessaging.hasPeer())
+			if(idClientPair.second.isStreaming == false)
 			{
 				StartStreaming(idClientPair.first);
 			}
 		}
-
-		idClientPair.second.clientMessaging.handleEvents();
+		else if(idClientPair.second.isStreaming)
+		{
+			StopSession(idClientPair.first);
+		}
 	}
 	
 	discoveryService->tick();

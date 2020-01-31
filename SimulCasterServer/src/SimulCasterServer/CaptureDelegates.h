@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "libavstream/common.hpp"
 
 namespace SCServer
@@ -16,16 +18,12 @@ namespace SCServer
 		bool isVR = false;
 	};
 
-	class CaptureComponent
+	struct CaptureDelegates
 	{
-	public:
-		virtual ~CaptureComponent() = default;
+		std::function<void(SCServer::CasterContext* context)> startStreaming;
 
-		virtual void startStreaming(SCServer::CasterContext* context) = 0;
-		virtual void stopStreaming() = 0;
+		std::function<void(void)> requestKeyframe;
 
-		virtual void requestKeyframe() = 0;
-
-		virtual SCServer::CameraInfo& getClientCameraInfo() = 0;
+		std::function<SCServer::CameraInfo&(void)> getClientCameraInfo;
 	};
 }

@@ -3,13 +3,14 @@
 #include <functional>
 #include <vector>
 
-#include "GeometryStreamingService.h"
+#include "CaptureDelegates.h"
 #include "CasterSettings.h"
+#include "GeometryStreamingService.h"
 
-typedef struct _ENetHost   ENetHost;
-typedef struct _ENetPeer   ENetPeer;
+typedef struct _ENetHost ENetHost;
+typedef struct _ENetPeer ENetPeer;
 typedef struct _ENetPacket ENetPacket;
-typedef struct _ENetEvent  ENetEvent;
+typedef struct _ENetEvent ENetEvent;
 
 namespace SCServer
 {
@@ -22,7 +23,7 @@ namespace SCServer
 						std::function<void(const avs::HeadPose*)> setHeadPose, std::function<void(const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
 						const int32_t& disconnectTimeout);
 
-		void initialise(CasterContext* context, class CaptureComponent* capture);
+		void initialise(CasterContext* context, CaptureDelegates captureDelegates);
 
 		bool startSession(int32_t listenPort);
 		void stopSession();
@@ -71,7 +72,7 @@ namespace SCServer
 		const int32_t& disconnectTimeout;
 
 		CasterContext* casterContext;
-		CaptureComponent* captureComponent;
+		CaptureDelegates captureComponentDelegates;
 
 		ENetHost* host;
 		ENetPeer* peer;
