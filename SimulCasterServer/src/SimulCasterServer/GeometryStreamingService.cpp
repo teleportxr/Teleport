@@ -101,7 +101,7 @@ void GeometryStreamingService::hideActor(avs::uid actorID)
 	}
 	else
 	{
-		std::cout << "Tried to hide non-streamed actor with UID of " << actorID <<"!\n";
+		std::cout << "Tried to hide non-streamed actor with ID of " << actorID <<"!\n";
 	}
 }
 
@@ -115,7 +115,7 @@ void GeometryStreamingService::showActor(avs::uid actorID)
 	}
 	else
 	{
-		std::cout << "Tried to show non-hidden actor with UID of " << actorID << "!\n";
+		std::cout << "Tried to show non-hidden actor with ID of " << actorID << "!\n";
 	}
 }
 
@@ -150,7 +150,7 @@ void GeometryStreamingService::tick(float deltaTime)
 
 		if(it->second > settings->confirmationWaitTime)
 		{
-			std::cout << "Resource with UID " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
+			std::cout << "Resource with ID " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
 
 			sentResources[it->first] = false;
 			it = unconfirmedResourceTimes.erase(it);

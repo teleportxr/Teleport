@@ -448,25 +448,25 @@ avs::uid GenerateID()
 
 ///GeometryStreamingService START
 TELEPORT_EXPORT
-void addActor(avs::uid clientID, void* newActor, avs::uid actorID)
+void AddActor(avs::uid clientID, void* newActor, avs::uid actorID)
 {
 	clientServices.at(clientID).geometryStreamingService->addActor(newActor, actorID);
 }
 
 TELEPORT_EXPORT
-avs::uid removeActor(avs::uid clientID, void* oldActor)
+avs::uid RemoveActor(avs::uid clientID, void* oldActor)
 {
 	return clientServices.at(clientID).geometryStreamingService->removeActor(oldActor);
 }
 
 TELEPORT_EXPORT
-avs::uid getActorID(avs::uid clientID, void* actor)
+avs::uid GetActorID(avs::uid clientID, void* actor)
 {
 	return clientServices.at(clientID).geometryStreamingService->getActorID(actor);
 }
 
 TELEPORT_EXPORT
-bool isStreamingActor(avs::uid clientID, void* actor)
+bool IsStreamingActor(avs::uid clientID, void* actor)
 {
 	return clientServices.at(clientID).geometryStreamingService->isStreamingActor(actor);
 }
