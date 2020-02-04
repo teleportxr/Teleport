@@ -1,5 +1,6 @@
 #include <functional>
 #include <iostream>
+#include <queue>
 #include <vector>
 
 #include "enet/enet.h"
@@ -53,6 +54,8 @@ namespace
 	static std::function<void(void)> onDisconnect;
 	static int32_t connectionTimeout = 5;
 	static avs::uid serverID = 0;
+
+	static std::queue<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
 }
 
 class PluginDiscoveryService: public SCServer::DiscoveryService
@@ -340,6 +343,8 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 		};
 
 		newClient.clientMessaging.initialise(&newClient.casterContext, delegates);
+
+		unlinkedClientIDs.push(clientID);
 	}
 	else
 	{
@@ -434,6 +439,22 @@ void Reset()
 	for(auto& clientIDInfoPair : clientServices)
 	{
 		clientIDInfoPair.second.geometryStreamingService->reset();
+	}
+}
+
+TELEPORT_EXPORT
+avs::uid GetUnlinkedClientID()
+{
+	if(unlinkedClientIDs.size() != 0)
+	{
+		avs::uid clientID = unlinkedClientIDs.front();
+		unlinkedClientIDs.pop();
+
+		return clientID;
+	}
+	else
+	{
+		return 0;
 	}
 }
 ///PLUGIN-SPECIFC END
@@ -531,12 +552,6 @@ TELEPORT_EXPORT
 bool SendCommandWithList(avs::uid clientID, const avs::Command& avsCommand, std::vector<avs::uid>& appendedList)
 {
 	return clientServices.at(clientID).clientMessaging.sendCommand(avsCommand, appendedList);
-}
-
-TELEPORT_EXPORT
-bool SendSetupCommand(avs::uid clientID, avs::SetupCommand&& setupCommand)
-{
-	return clientServices.at(clientID).clientMessaging.sendSetupCommand(std::move(setupCommand));
 }
 
 TELEPORT_EXPORT
