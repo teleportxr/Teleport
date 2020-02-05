@@ -43,7 +43,10 @@ public:
 
     bool IsConnected() const;
     std::string GetServerIP() const;
+    
+	bool receivedInitialPos = false;
 
+    avs::vec3 GetInitialPos() const;
 private:
     void DispatchEvent(const ENetEvent& event);
     void ParseCommandPacket(ENetPacket* packet);
@@ -74,4 +77,6 @@ private:
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
     std::vector<avs::uid> mReceivedActors; //Actors that have entered bounds, are about to be drawn, and need to be confirmed to the server.
     std::vector<avs::uid> mLostActors; //Actor that have left bounds, are about to be hidden, and need to be confirmed to the server.
+
+    avs::vec3 initialPos;
 };

@@ -8,7 +8,6 @@
 
 #include "SimulCasterServer/CasterSettings.h"
 #include "SimulCasterServer/CaptureDelegates.h"
-#include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/DiscoveryService.h"
 #include "SimulCasterServer/GeometryStore.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
@@ -17,23 +16,11 @@
 #include "InteropStructures.h"
 
 using namespace SCServer;
-
-class PluginDiscoveryService;
-class PluginGeometryStreamingService;
-
 TELEPORT_EXPORT
 void StartSession(avs::uid clientID, int32_t listenPort);
 
-struct ClientData
-{
-	SCServer::CasterContext casterContext;
 
-	std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService;
-	SCServer::ClientMessaging clientMessaging;
-
-	bool isStreaming = false;
-};
-
+#include "SimulCasterServer/ClientData.h"
 namespace
 {
 	static const uint16_t DISCOVERY_PORT = 10607;
@@ -49,13 +36,13 @@ namespace
 	static std::function<void(void* actorPtr)> onShowActor;
 	static std::function<void(void* actorPtr)> onHideActor;
 
-	static std::function<void(const avs::HeadPose*)> setHeadPose;
-	static std::function<void(const avs::InputState*)> processNewInput;
+	static SetHeadPoseFn setHeadPose;
+	static ProcessNewInputFn processNewInput;
 	static std::function<void(void)> onDisconnect;
 	static int32_t connectionTimeout = 5;
 	static avs::uid serverID = 0;
 
-	static std::queue<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
+	static std::set<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
 }
 
 class PluginDiscoveryService: public SCServer::DiscoveryService
@@ -247,13 +234,13 @@ void SetHideActorDelegate(void(*hideActor)(void*))
 }
 
 TELEPORT_EXPORT
-void SetHeadPoseSetterDelegate(void(*headPoseSetter)(const avs::HeadPose*))
+void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
 {
 	setHeadPose = headPoseSetter;
 }
 
 TELEPORT_EXPORT
-void SetNewInputProcessingDelegate(void(*newInputProcessing)(const avs::InputState*))
+void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
 {
 	processNewInput = newInputProcessing;
 }
@@ -272,7 +259,7 @@ void SetConnectionTimeout(int32_t timeout)
 
 TELEPORT_EXPORT
 void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
-				void(*headPoseSetter)(const avs::HeadPose*), void(*newInputProcessing)(const avs::InputState*), void(*disconnect)(void))
+				void(*headPoseSetter)(avs::uid uid,const avs::HeadPose*), void(*newInputProcessing)(avs::uid uid,const avs::InputState*), void(*disconnect)(void))
 {
 	serverID = avs::GenerateUid();
 
@@ -311,18 +298,18 @@ void Shutdown()
 	onDisconnect = nullptr;
 }
 
+ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs):
+		geometryStreamingService(gs)
+	,clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, processNewInput, onDisconnect, connectionTimeout)
+{
+}
+
 TELEPORT_EXPORT
 void StartSession(avs::uid clientID, int32_t listenPort)
 {
-	std::shared_ptr<PluginGeometryStreamingService> newStreamingService(std::make_shared<PluginGeometryStreamingService>());
-	ClientData newClientData
-	{
-		SCServer::CasterContext(),
-		newStreamingService,
-		SCServer::ClientMessaging(&casterSettings, discoveryService, newStreamingService, setHeadPose, processNewInput, onDisconnect, connectionTimeout)
-	};
+	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>());
 
-	if(newClientData.clientMessaging.startSession(listenPort))
+	if(newClientData.clientMessaging.startSession(clientID,listenPort))
 	{
 		clientServices.emplace(clientID, std::move(newClientData));
 
@@ -344,7 +331,7 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 
 		newClient.clientMessaging.initialise(&newClient.casterContext, delegates);
 
-		unlinkedClientIDs.push(clientID);
+		unlinkedClientIDs.insert(clientID);
 	}
 	else
 	{
@@ -413,13 +400,14 @@ void Tick(float deltaTime)
 {
 	for(auto& idClientPair : clientServices)
 	{
-		idClientPair.second.clientMessaging.handleEvents();
+		ClientData &clientData=idClientPair.second;
+		clientData.clientMessaging.handleEvents();
 
-		if(idClientPair.second.clientMessaging.hasPeer())
+		if(clientData.clientMessaging.hasPeer())
 		{
-			idClientPair.second.clientMessaging.tick(deltaTime);
+			clientData.clientMessaging.tick(deltaTime);
 
-			if(idClientPair.second.isStreaming == false)
+			if(clientData.isStreaming == false)
 			{
 				StartStreaming(idClientPair.first);
 			}
@@ -431,6 +419,35 @@ void Tick(float deltaTime)
 	}
 	
 	discoveryService->tick();
+}
+
+TELEPORT_EXPORT
+void Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
+{
+	auto &c=clientServices.find(clientID);
+	if(c==clientServices.end())
+		return;
+	ClientData &clientData=c->second;
+	clientData.setOrigin(*pos);
+}
+TELEPORT_EXPORT
+bool Client_IsConnected(avs::uid clientID)
+{
+	auto &c=clientServices.find(clientID);
+	if(c==clientServices.end())
+		return false;
+	ClientData &clientData=c->second;
+	return clientData.isConnected();
+}
+
+TELEPORT_EXPORT
+bool Client_HasOrigin(avs::uid clientID)
+{
+	auto &c=clientServices.find(clientID);
+	if(c==clientServices.end())
+		return false;
+	ClientData &clientData=c->second;
+	return(clientData.hasOrigin());
 }
 
 TELEPORT_EXPORT
@@ -447,8 +464,8 @@ avs::uid GetUnlinkedClientID()
 {
 	if(unlinkedClientIDs.size() != 0)
 	{
-		avs::uid clientID = unlinkedClientIDs.front();
-		unlinkedClientIDs.pop();
+		avs::uid clientID = *(unlinkedClientIDs.begin());
+		unlinkedClientIDs.erase(unlinkedClientIDs.begin());
 
 		return clientID;
 	}

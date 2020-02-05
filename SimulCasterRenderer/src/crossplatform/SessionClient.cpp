@@ -127,7 +127,8 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo, const avs::HeadPo
 		if(handshakeAcknowledged)
 		{
 			SendDisplayInfo(displayInfo);
-			if(poseValid) SendHeadPose(headPose);
+			if(poseValid)
+				SendHeadPose(headPose);
 			SendInput(controllerState);
 			SendResourceRequests();
 			SendReceivedResources();
@@ -173,6 +174,11 @@ std::string SessionClient::GetServerIP() const
 	{
 		return std::string{};
 	}
+}
+
+avs::vec3 SessionClient::GetInitialPos() const
+{
+	return initialPos;
 }
 
 void SessionClient::DispatchEvent(const ENetEvent& event)
@@ -230,6 +236,15 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 
 			lastServerID = setupCommand.server_id;
 			SendHandshake(handshake);
+		}
+		break;
+		case avs::CommandPayloadType::SetPosition:
+		{
+			size_t commandSize = sizeof(avs::SetPositionCommand);
+			avs::SetPositionCommand command;
+			memcpy(&command, packet->data, commandSize);
+			receivedInitialPos=true;
+			initialPos=command.position;
 		}
 		break;
 		case avs::CommandPayloadType::ActorBounds:

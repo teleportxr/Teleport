@@ -11,7 +11,7 @@
 using namespace SCServer;
 
 ClientMessaging::ClientMessaging(const CasterSettings* settings, std::shared_ptr<DiscoveryService> discoveryService, std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-								 std::function<void(const avs::HeadPose*)> setHeadPose, std::function<void(const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
+								 std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose, std::function<void(avs::uid,const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
 								 const int32_t& disconnectTimeout)
 	:settings(settings), discoveryService(discoveryService), geometryStreamingService(geometryStreamingService),
 	setHeadPose(setHeadPose), processNewInput(processNewInput), onDisconnect(onDisconnect),
@@ -26,8 +26,9 @@ void ClientMessaging::initialise(CasterContext* context, CaptureDelegates captur
 	captureComponentDelegates = captureDelegates;
 }
 
-bool ClientMessaging::startSession(int32_t listenPort)
+bool ClientMessaging::startSession(avs::uid u,int32_t listenPort)
 {
+	uid=u;
 	ENetAddress ListenAddress;
 	ListenAddress.host = ENET_HOST_ANY;
 	ListenAddress.port = listenPort;
@@ -348,6 +349,13 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	std::cout << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 }
 
+void ClientMessaging::setPosition(const avs::vec3 &pos)
+{
+	avs::SetPositionCommand setp;
+	setp.position=pos;
+	sendCommand(setp);
+}
+
 void ClientMessaging::receiveInput(const ENetPacket* packet)
 {
 	if(packet->dataLength != sizeof(avs::InputState))
@@ -359,7 +367,7 @@ void ClientMessaging::receiveInput(const ENetPacket* packet)
 	avs::InputState inputState;
 	memcpy(&inputState, packet->data, packet->dataLength);
 
-	processNewInput(&inputState);
+	processNewInput(uid,&inputState);
 }
 
 void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
@@ -389,7 +397,7 @@ void ClientMessaging::receiveHeadPose(const ENetPacket* packet)
 	avs::HeadPose headPose;
 	memcpy(&headPose, packet->data, packet->dataLength);
 
-	setHeadPose(&headPose);
+	setHeadPose(uid,&headPose);
 }
 
 void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)

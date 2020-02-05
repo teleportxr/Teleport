@@ -11,6 +11,8 @@ typedef struct _ENetHost ENetHost;
 typedef struct _ENetPeer ENetPeer;
 typedef struct _ENetPacket ENetPacket;
 typedef struct _ENetEvent ENetEvent;
+typedef void (__stdcall *SetHeadPoseFn) (avs::uid uid,const avs::HeadPose*) ;
+typedef void (__stdcall *ProcessNewInputFn) (avs::uid uid,const avs::InputState*) ;
 
 namespace SCServer
 {
@@ -20,12 +22,12 @@ namespace SCServer
 	{
 	public:
 		ClientMessaging(const struct CasterSettings* settings, std::shared_ptr<DiscoveryService> discoveryService, std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-						std::function<void(const avs::HeadPose*)> setHeadPose, std::function<void(const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
+						std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose, std::function<void(avs::uid,const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
 						const int32_t& disconnectTimeout);
 
 		void initialise(CasterContext* context, CaptureDelegates captureDelegates);
 
-		bool startSession(int32_t listenPort);
+		bool startSession(avs::uid u,int32_t listenPort);
 		void stopSession();
 
 		void tick(float deltaTime);
@@ -36,6 +38,8 @@ namespace SCServer
 
 		bool hasHost() const;
 		bool hasPeer() const;
+
+		void setPosition(const avs::vec3 &pos);
 
 		bool sendCommand(const avs::Command& avsCommand) const;
 		template<typename T> bool sendCommand(const avs::Command& avsCommand, std::vector<T>& appendedList) const
@@ -61,12 +65,13 @@ namespace SCServer
 		uint16_t getClientPort() const;
 		uint16_t getServerPort() const;
 	private:
+		avs::uid uid;
 		const CasterSettings* settings;
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
 
-		std::function<void(const avs::HeadPose*)> setHeadPose; //Delegate called when a head pose is received.
-		std::function<void(const avs::InputState*)> processNewInput; //Delegate called when new input is received.
+		std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose; //Delegate called when a head pose is received.
+		std::function<void(avs::uid,const avs::InputState*)> processNewInput; //Delegate called when new input is received.
 		std::function<void(void)> onDisconnect; //Delegate called when the peer disconnects.
 
 		const int32_t& disconnectTimeout;

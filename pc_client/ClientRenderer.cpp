@@ -791,10 +791,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 			{
 				vec3 pos = camera.GetPosition();
 				pos.z = decoder->getCameraTransform().position.z;
-				//camera.SetPosition(pos);
 			}
 		}
-		else
+		if(!receivedInitialPos)
 		{
 			camera.SetPositionAsXYZ(0.f, 0.f, 5.f);
 			vec3 look(0.f, 1.f, 0.f), up(0.f, 0.f, 1.f);
@@ -807,7 +806,14 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
-		sessionClient.Frame(displayInfo, headPose, decoder->hasValidTransform(),controllerState, decoder->idrRequired());
+		sessionClient.Frame(displayInfo, headPose, receivedInitialPos,controllerState, decoder->idrRequired());
+		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
+		{
+			oculusOrigin = sessionClient.GetInitialPos();
+			vec3 pos = (const float*)& oculusOrigin;
+			camera.SetPosition(pos);
+			receivedInitialPos = true;
+		}
 		avs::Result result = pipeline.process();
 
 		static short c = 0;
