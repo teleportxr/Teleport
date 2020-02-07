@@ -10,11 +10,17 @@
 
 using namespace SCServer;
 
-ClientMessaging::ClientMessaging(const CasterSettings* settings, std::shared_ptr<DiscoveryService> discoveryService, std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-								 std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose, std::function<void(avs::uid,const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
-								 const int32_t& disconnectTimeout)
+ClientMessaging::ClientMessaging(const CasterSettings* settings
+								,std::shared_ptr<DiscoveryService> discoveryService
+								,std::shared_ptr<GeometryStreamingService> geometryStreamingService
+								,std::function<void(avs::uid,const avs::HeadPose*)> inSetHeadPose
+								,std::function<void(avs::uid,int index,const avs::HeadPose*)> inSetControllerPose
+								,std::function<void(avs::uid,const avs::InputState*)> inProcessNewInput
+								,std::function<void(void)> onDisconnect
+								,const int32_t& disconnectTimeout)
 	:settings(settings), discoveryService(discoveryService), geometryStreamingService(geometryStreamingService),
-	setHeadPose(setHeadPose), processNewInput(processNewInput), onDisconnect(onDisconnect),
+	setHeadPose(inSetHeadPose), setControllerPose(inSetControllerPose)
+	,processNewInput(inProcessNewInput), onDisconnect(onDisconnect),
 	disconnectTimeout(disconnectTimeout),
 	host(nullptr), peer(nullptr),
 	casterContext(nullptr)
@@ -437,6 +443,20 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	avs::ClientMessagePayloadType clientMessagePayloadType = *((avs::ClientMessagePayloadType*)packet->data);
 	switch(clientMessagePayloadType)
 	{
+		case avs::ClientMessagePayloadType::ControllerPoses:
+		{
+			avs::ControllerPosesMessage message;
+			memcpy(&message, packet->data, packet->dataLength);
+	
+			for(int i=0;i<2;i++)
+			{
+				avs::HeadPose &pose=message.controllerPoses[i];
+				avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, pose.orientation);
+				avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, pose.position);
+				setControllerPose(uid,i,&pose);
+			}
+		}
+		break;
 		case avs::ClientMessagePayloadType::ActorStatus:
 		{
 			size_t messageSize = sizeof(avs::ActorStatusMessage);

@@ -519,15 +519,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		headPose.position = {cameraPosition.x, cameraPosition.y, cameraPosition.z};
 
-		// TODO: Use compact representation with only 3 float values for wire format.
-		//const ovrQuatf HeadPoseOVR = *((const ovrQuatf*)&headPose.orientation);
-		//avs::HeadPose headPose2;
-		//ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
-		//ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR,RootPose);
-		// Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
-		//headPose2.orientation = avs::vec4{RelPose.x, RelPose.y,RelPose.z, RelPose.w};
-		//headPose2.position = *((avs::vec3*)&headPose.position);
-
 		mSession.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, controllerState, mDecoder.idrRequired());
 		if (!receivedInitialPos&&mSession.receivedInitialPos)
 		{
@@ -606,11 +597,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 				ctr.m_packetMapOrphans);
 	}
 	else
-		{
-			mGuiSys->ShowInfoText(0.017f,"Disconnected");
-		};
-
-
+	{
+		mGuiSys->ShowInfoText(0.001f,"Disconnected");
+	};
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -699,6 +688,11 @@ void Application::UpdateHandObjects()
 			if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
 			{
 				remoteStates.push_back(remoteState);
+				if(deviceIndex<2)
+				{
+					controllerPoses[deviceIndex].position=*((const avs::vec3*)&remoteState.HeadPose.Pose.Position);
+					controllerPoses[deviceIndex].orientation=*((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
+				}
 			}
 		}
 		++deviceIndex;

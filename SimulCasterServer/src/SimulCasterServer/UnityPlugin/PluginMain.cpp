@@ -37,6 +37,7 @@ namespace
 	static std::function<void(void* actorPtr)> onHideActor;
 
 	static SetHeadPoseFn setHeadPose;
+	static SetControllerPoseFn setControllerPose;
 	static ProcessNewInputFn processNewInput;
 	static std::function<void(void)> onDisconnect;
 	static int32_t connectionTimeout = 5;
@@ -247,6 +248,13 @@ void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
 }
 
 TELEPORT_EXPORT
+void SetControllerPoseSetterDelegate(SetControllerPoseFn f)
+{
+	setControllerPose = f;
+}
+
+
+TELEPORT_EXPORT
 void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
 {
 	processNewInput = newInputProcessing;
@@ -266,13 +274,15 @@ void SetConnectionTimeout(int32_t timeout)
 
 TELEPORT_EXPORT
 void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
-				void(*headPoseSetter)(avs::uid uid,const avs::HeadPose*), void(*newInputProcessing)(avs::uid uid,const avs::InputState*), void(*disconnect)(void))
+				void(*headPoseSetter)(avs::uid uid,const avs::HeadPose*),
+				void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*),  void(*newInputProcessing)(avs::uid uid,const avs::InputState*), void(*disconnect)(void))
 {
 	serverID = avs::GenerateUid();
 
 	SetShowActorDelegate(showActor);
 	SetHideActorDelegate(hideActor);
 	SetHeadPoseSetterDelegate(headPoseSetter);
+	SetControllerPoseSetterDelegate(controllerPoseSetter);
 	SetNewInputProcessingDelegate(newInputProcessing);
 	SetDisconnectDelegate(disconnect);
 
@@ -301,13 +311,14 @@ void Shutdown()
 	onHideActor = nullptr;
 
 	setHeadPose = nullptr;
+	setControllerPose=nullptr;
 	processNewInput = nullptr;
 	onDisconnect = nullptr;
 }
 
 ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs):
 		geometryStreamingService(gs)
-	,clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, processNewInput, onDisconnect, connectionTimeout)
+	,clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, onDisconnect, connectionTimeout)
 {
 }
 

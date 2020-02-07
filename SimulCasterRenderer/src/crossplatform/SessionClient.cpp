@@ -130,7 +130,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo, const avs::HeadPo
 			if(poseValid)
 			{
 				SendHeadPose(headPose);
-				//SendControllerPoses(controllerPoses);
+				SendControllerPoses(headPose,controllerPoses);
 			}
 			SendInput(controllerState);
 			SendResourceRequests();
@@ -308,6 +308,18 @@ void SessionClient::SendHeadPose(const avs::HeadPose& pose)
 	ENetPacket* packet = enet_packet_create(&pose, sizeof(avs::HeadPose), 0);
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose), packet);
 }
+
+void SessionClient::SendControllerPoses(const avs::HeadPose& headPose,const avs::HeadPose * poses)
+{
+	if(!poses)
+		return;
+	avs::ControllerPosesMessage message;
+	message.headPose=headPose;
+	message.controllerPoses[0]=poses[0];
+	message.controllerPoses[1]=poses[1];
+	SendClientMessage(message);
+}
+
 
 void SessionClient::SendInput(const ControllerState& controllerState)
 {
