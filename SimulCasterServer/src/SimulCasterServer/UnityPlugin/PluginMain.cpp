@@ -155,9 +155,16 @@ public:
 			enet_socket_send(discoverySocket, &address, &buffer, 1);
 
 			StartSession(clientID, servicePort);
+			lastFoundClientID=clientID;
 		}
 	}
+	virtual uint64_t getNewClientID()
+	{
+		return lastFoundClientID;
+		lastFoundClientID=0;
+	}
 private:
+	uint32_t lastFoundClientID=0;
 #pragma pack(push, 1) 
 	struct ServiceDiscoveryResponse
 	{

@@ -817,7 +817,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		avs::Result result = pipeline.process();
 
 		static short c = 0;
-		if (!c--)
+		if (!(c--))
 		{
 			const avs::NetworkSourceCounters Counters = source.getCounterValues();
 			std::cout << "Network packets dropped: " << 100.0f*Counters.networkDropped << "%"

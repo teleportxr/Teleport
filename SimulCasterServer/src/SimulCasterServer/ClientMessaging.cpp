@@ -132,6 +132,10 @@ void ClientMessaging::handleEvents()
 
 				peer = event.peer;
 				///TODO: This work allow multi-connect with Unity, or otherwise; change it to allow multiple connections.
+
+				// TODO: This is pretty ropey: Discovery service really shouldn't be inside a specific client.
+				if(!uid)
+					this->uid=discoveryService->getNewClientID();
 				discoveryService->shutdown();
 
 				std::cout << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
@@ -296,7 +300,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	}
 	avs::Handshake handshake;
 	memcpy(&handshake, packet->data, packet->dataLength);
-
+	
 	if(handshake.isReadyToReceivePayloads != true)
 	{
 		std::cout << "Session: Handshake not ready to receive.\n";
@@ -396,7 +400,9 @@ void ClientMessaging::receiveHeadPose(const ENetPacket* packet)
 	
 	avs::HeadPose headPose;
 	memcpy(&headPose, packet->data, packet->dataLength);
-
+	
+	avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, headPose.orientation);
+	avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, headPose.position);
 	setHeadPose(uid,&headPose);
 }
 
