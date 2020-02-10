@@ -9,7 +9,7 @@ class PluginGeometryStreamingService;
 class ClientData
 {
 public:
-	ClientData(std::shared_ptr<PluginGeometryStreamingService> gs);
+	ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::function<void(void)> disconnect);
 	SCServer::CasterContext casterContext;
 
 	std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService;

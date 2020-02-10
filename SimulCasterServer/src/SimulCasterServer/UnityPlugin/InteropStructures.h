@@ -22,18 +22,18 @@ struct InteropNode
 
 struct InteropMesh
 {
-	size_t primitiveArrayAmount;
+	int64_t primitiveArrayAmount;
 	avs::PrimitiveArray* primitiveArrays;
 
-	size_t accessorAmount;
+	int64_t accessorAmount;
 	avs::uid* accessorIDs;
 	avs::Accessor* accessors;
 
-	size_t bufferViewAmount;
+	int64_t bufferViewAmount;
 	avs::uid* bufferViewIDs;
 	avs::BufferView* bufferViews;
 
-	size_t bufferAmount;
+	int64_t bufferAmount;
 	avs::uid* bufferIDs;
 	avs::GeometryBuffer* buffers;
 };
@@ -76,8 +76,23 @@ struct InteropTexture
 };
 
 //Converts an interop texture to a libavstream texture.
-avs::Texture ToAvsTexture(InteropTexture texture)
+//	texture : Texture to copy data from.
+//	copyBuffer : Whether to copy the texture buffer from the InteropTexture instead of copying the pointer. This should be true, unless you have copied the buffer yourself.
+//Returns avs::Texture with the same data as the InteropTexture, ready to be stored.
+avs::Texture ToAvsTexture(InteropTexture texture, bool copyBuffer)
 {
+	unsigned char* data;
+		
+	if(copyBuffer)
+	{
+		data = new unsigned char[texture.dataSize];
+		memcpy_s(data, texture.dataSize, texture.data, texture.dataSize);
+	}
+	else
+	{
+		data = texture.data;
+	}
+
 	return
 	{
 		{texture.name, texture.name + texture.nameLength},
@@ -90,7 +105,7 @@ avs::Texture ToAvsTexture(InteropTexture texture)
 		texture.format,
 		texture.compression,
 		texture.dataSize,
-		texture.data,
+		data,
 		texture.sampler_uid
 	};
 }
