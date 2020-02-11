@@ -30,14 +30,10 @@ namespace SCServer
 		struct VideoPipe
 		{
 			avs::Queue* sourceQueue;
-			avs::Forwarder forwarder;
-			avs::Packetizer packetizer;
 		};
 		struct GeometryPipe
 		{
 			avs::Queue* sourceQueue;
-			avs::Forwarder forwarder;
-			avs::Packetizer packetizer;
 		};
 
 		const CasterSettings* settings;

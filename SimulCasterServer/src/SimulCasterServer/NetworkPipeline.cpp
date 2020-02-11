@@ -31,17 +31,17 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 	networkSink.reset(new avs::NetworkSink);
 
 	videoPipes.resize(depthQueue ? 2 : 1);
-	for(std::unique_ptr<VideoPipe>& Pipe : videoPipes)
+	for(std::unique_ptr<VideoPipe>& pipe : videoPipes)
 	{
-		Pipe = std::make_unique<VideoPipe>();
+		pipe = std::make_unique<VideoPipe>();
 	}
 	videoPipes[0]->sourceQueue = colorQueue;
 	if(depthQueue) videoPipes[1]->sourceQueue = depthQueue;
 
 	geometryPipes.resize(1);
-	for(std::unique_ptr<GeometryPipe>& Pipe : geometryPipes)
+	for(std::unique_ptr<GeometryPipe>& pipe : geometryPipes)
 	{
-		Pipe = std::make_unique<GeometryPipe>();
+		pipe = std::make_unique<GeometryPipe>();
 	}
 	geometryPipes[0]->sourceQueue = geometryQueue;
 
@@ -51,36 +51,61 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 	wcstombs_s(&stringLength, remoteIP, inNetworkSettings.remoteIP, 20);
 
 	size_t NumInputs = videoPipes.size() + geometryPipes.size();
-	if(!networkSink->configure(NumInputs, nullptr, inNetworkSettings.localPort, remoteIP, inNetworkSettings.remotePort))
+
+	std::vector<avs::NetworkSinkStream> streams;
+
+	for (int32_t i = 0; i < videoPipes.size(); ++i)
 	{
-		std::cout << "Failed to configure network sink!\n";
+		avs::NetworkSinkStream stream;
+		stream.parserType = avs::StreamParserType::AVC_AnnexB;
+		stream.useParser = false;
+		stream.counter = 0;
+		stream.chunkSize = 64 * 1024;
+		stream.streamIndex = 50 + i;
+		stream.dataType = avs::NetworkDataType::HEVC; // this shouldn't be hardcoded when H264 support added
+		streams.emplace_back(std::move(stream));
+	}
+
+	for (int32_t i = 0; i < geometryPipes.size(); ++i)
+	{
+		avs::NetworkSinkStream stream;
+		stream.parserType = avs::StreamParserType::Geometry;
+		stream.useParser = true;
+		stream.counter = 0;
+		stream.chunkSize = 64 * 1024;
+		stream.streamIndex = 100 + i;
+		stream.dataType = avs::NetworkDataType::Geometry;
+		streams.emplace_back(std::move(stream));
+	}
+
+	if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP, inNetworkSettings.remotePort, SinkParams))
+	{
+		std::cout << "Failed to configure network sink! \n";
 		return;
 	}
 
-	// Each video stream has an input Queue, a forwarder, and a packetizer.
-	// The Geometry queue consists of an input Queue, a forwarder, and a Geometry packetizer.
-	for(int32_t i = 0; i < videoPipes.size(); ++i)
+	for (int32_t i = 0; i < videoPipes.size(); ++i)
 	{
-		auto& Pipe = videoPipes[i];
-		Pipe->forwarder.configure(1, 1, 64 * 1024);
-		Pipe->packetizer.configure(avs::StreamParserInterface::Create(avs::StreamParserType::AVC_AnnexB), 1, 50 + i);
-		if(!pipeline->link({Pipe->sourceQueue, &Pipe->forwarder, &Pipe->packetizer}) || !avs::Node::link(Pipe->packetizer, *networkSink))
+		auto &pipe = videoPipes[i];
+		if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
 		{
-			std::cout << "Failed to configure network video pipeline!\n";
+			std::cout << "Failed to configure network pipeline for video! \n";
 			return;
 		}
+		pipeline->add(pipe->sourceQueue);
 	}
-	for(int32_t i = 0; i < geometryPipes.size(); ++i)
+
+	for (int32_t i = 0; i < geometryPipes.size(); ++i)
 	{
-		auto& Pipe = geometryPipes[i];
-		Pipe->forwarder.configure(1, 1, 64 * 1024);
-		Pipe->packetizer.configure(avs::StreamParserInterface::Create(avs::StreamParserType::Geometry), 1, 100 + i);
-		if(!pipeline->link({Pipe->sourceQueue, &Pipe->forwarder, &Pipe->packetizer}) || !avs::Node::link(Pipe->packetizer, *networkSink))
+		auto &pipe = geometryPipes[i];
+		if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
 		{
-			std::cout << "Failed to configure network video pipeline!\n";
+			std::cout << "Failed to configure network pipeline for geometry! \n";
 			return;
 		}
+		pipeline->add(pipe->sourceQueue);
 	}
+
 	pipeline->add(networkSink.get());
 
 #if WITH_REMOTEPLAY_STATS
