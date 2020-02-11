@@ -66,7 +66,7 @@ avs::Result GeometryEncoder::encode(uint32_t timestamp, avs::GeometrySourceBacke
 				keepQueueing = attemptQueueData();
 				if(!keepQueueing) break;
 			}
-
+			
 			for(avs::MaterialResources material : meshResourceInfo.materials)
 			{
 				if(GetNewUIDs(material.texture_uids, req) != 0)
@@ -121,11 +121,16 @@ avs::Result GeometryEncoder::encode(uint32_t timestamp, avs::GeometrySourceBacke
 		}
 	}
 
+	attemptQueueData();
+
 	// GALU to end.
-	queuedBuffer.push_back(GALU_code[0]);
-	queuedBuffer.push_back(GALU_code[1]);
-	queuedBuffer.push_back(GALU_code[2]);
-	queuedBuffer.push_back(GALU_code[3]);
+	if (queuedBuffer.size() > sizeof GALU_code)
+	{
+		queuedBuffer.push_back(GALU_code[0]);
+		queuedBuffer.push_back(GALU_code[1]);
+		queuedBuffer.push_back(GALU_code[2]);
+		queuedBuffer.push_back(GALU_code[3]);
+	}
 
 	return avs::Result::OK;
 }
