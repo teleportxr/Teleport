@@ -121,8 +121,6 @@ avs::Result GeometryEncoder::encode(uint32_t timestamp, avs::GeometrySourceBacke
 		}
 	}
 
-	attemptQueueData();
-
 	// GALU to end.
 	if (queuedBuffer.size() > sizeof GALU_code)
 	{
