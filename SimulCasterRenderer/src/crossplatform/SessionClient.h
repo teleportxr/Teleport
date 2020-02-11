@@ -39,7 +39,7 @@ public:
 
     void SendClientMessage(const avs::ClientMessage &msg);
 
-    void Frame(const avs::DisplayInfo& displayInfo, const avs::HeadPose& headPose,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
+    void Frame(const avs::DisplayInfo& displayInfo, const avs::HeadPose& headPose, const avs::HeadPose* controllerPoses,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -53,6 +53,7 @@ private:
 
     void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
     void SendHeadPose(const avs::HeadPose& headPose);
+    void SendControllerPoses(const avs::HeadPose& headPose,const avs::HeadPose* poses);
     void SendInput(const ControllerState& controllerState);
     void SendResourceRequests();
     void SendReceivedResources();

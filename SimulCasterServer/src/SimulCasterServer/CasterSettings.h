@@ -49,6 +49,8 @@ namespace SCServer
 		uint8_t compressionLevel;
 
 		bool willDisableMainCamera;
+
+		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
 	};
 
 	struct CasterNetworkSettings

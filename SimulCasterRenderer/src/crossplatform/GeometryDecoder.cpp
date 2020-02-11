@@ -200,11 +200,11 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					continue;
 				case AttributeSemantic::NORMAL:
 					meshElementCreate.m_Normals = (const avs::vec3*)(data);
-					assert(accessor.count / 8 == vertexCount);
+					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::TANGENT:
 					meshElementCreate.m_Tangents = (const avs::vec4*)(data);
-					assert(accessor.count / 8 == vertexCount);
+					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
 					meshElementCreate.m_UV0s = (const avs::vec2*)(data);

@@ -10,11 +10,17 @@
 
 using namespace SCServer;
 
-ClientMessaging::ClientMessaging(const CasterSettings* settings, std::shared_ptr<DiscoveryService> discoveryService, std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-								 std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose, std::function<void(avs::uid,const avs::InputState*)> processNewInput, std::function<void(void)> onDisconnect,
+ClientMessaging::ClientMessaging(const CasterSettings* settings,
+								 std::shared_ptr<DiscoveryService> discoveryService,
+								 std::shared_ptr<GeometryStreamingService> geometryStreamingService,
+								 std::function<void(avs::uid,const avs::HeadPose*)> inSetHeadPose,
+								 std::function<void(avs::uid,int index,const avs::HeadPose*)> inSetControllerPose,
+								 std::function<void(avs::uid,const avs::InputState*)> inProcessNewInput,
+								 std::function<void(void)> onDisconnect,
 								 const int32_t& disconnectTimeout)
 	:settings(settings), discoveryService(discoveryService), geometryStreamingService(geometryStreamingService),
-	setHeadPose(setHeadPose), processNewInput(processNewInput), onDisconnect(onDisconnect),
+	setHeadPose(inSetHeadPose), setControllerPose(inSetControllerPose)
+	,processNewInput(inProcessNewInput), onDisconnect(onDisconnect),
 	disconnectTimeout(disconnectTimeout),
 	host(nullptr), peer(nullptr),
 	casterContext(nullptr)
@@ -26,9 +32,10 @@ void ClientMessaging::initialise(CasterContext* context, CaptureDelegates captur
 	captureComponentDelegates = captureDelegates;
 }
 
-bool ClientMessaging::startSession(avs::uid u,int32_t listenPort)
+bool ClientMessaging::startSession(avs::uid clientID, int32_t listenPort)
 {
-	uid=u;
+	this->clientID = clientID;
+
 	ENetAddress ListenAddress;
 	ListenAddress.host = ENET_HOST_ANY;
 	ListenAddress.port = listenPort;
@@ -132,6 +139,9 @@ void ClientMessaging::handleEvents()
 
 				peer = event.peer;
 				///TODO: This work allow multi-connect with Unity, or otherwise; change it to allow multiple connections.
+
+				// TODO: This is pretty ropey: Discovery service really shouldn't be inside a specific client.
+				if(!clientID) this->clientID = discoveryService->getNewClientID();
 				discoveryService->shutdown();
 
 				std::cout << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
@@ -296,7 +306,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	}
 	avs::Handshake handshake;
 	memcpy(&handshake, packet->data, packet->dataLength);
-
+	
 	if(handshake.isReadyToReceivePayloads != true)
 	{
 		std::cout << "Session: Handshake not ready to receive.\n";
@@ -367,7 +377,7 @@ void ClientMessaging::receiveInput(const ENetPacket* packet)
 	avs::InputState inputState;
 	memcpy(&inputState, packet->data, packet->dataLength);
 
-	processNewInput(uid,&inputState);
+	processNewInput(clientID, &inputState);
 }
 
 void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
@@ -396,8 +406,10 @@ void ClientMessaging::receiveHeadPose(const ENetPacket* packet)
 	
 	avs::HeadPose headPose;
 	memcpy(&headPose, packet->data, packet->dataLength);
-
-	setHeadPose(uid,&headPose);
+	
+	avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, headPose.orientation);
+	avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, headPose.position);
+	setHeadPose(clientID, &headPose);
 }
 
 void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
@@ -431,6 +443,20 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	avs::ClientMessagePayloadType clientMessagePayloadType = *((avs::ClientMessagePayloadType*)packet->data);
 	switch(clientMessagePayloadType)
 	{
+		case avs::ClientMessagePayloadType::ControllerPoses:
+		{
+			avs::ControllerPosesMessage message;
+			memcpy(&message, packet->data, packet->dataLength);
+	
+			for(int i=0;i<2;i++)
+			{
+				avs::HeadPose &pose=message.controllerPoses[i];
+				avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, pose.orientation);
+				avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, pose.position);
+				setControllerPose(clientID, i, &pose);
+			}
+		}
+		break;
 		case avs::ClientMessagePayloadType::ActorStatus:
 		{
 			size_t messageSize = sizeof(avs::ActorStatusMessage);

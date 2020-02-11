@@ -460,8 +460,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
             }
 
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
-//			float last_x=controllerState.mTrackpadX;
-//			float last_y=controllerState.mTrackpadY;
 			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
 			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
 			controllerState.mJoystickAxisX=ovrState.Joystick.x;
@@ -506,7 +504,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			receivedInitialPos = true;
 		}
 	}
-	else
+	if(!receivedInitialPos)
 	{
 		scr_UE4_captureTransform = avs::Transform();
 		oculusOrigin = scr_UE4_captureTransform.m_Translation;
@@ -518,20 +516,15 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	if(mSession.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
-		avs::HeadPose headPose;
 		headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		headPose.position = {cameraPosition.x, cameraPosition.y, cameraPosition.z};
 
-		// TODO: Use compact representation with only 3 float values for wire format.
-		const ovrQuatf HeadPoseOVR = *((const ovrQuatf*)&headPose.orientation);
-		avs::HeadPose headPose2;
-		ovrQuatf RootPose = { 0.0f, 0.0f, 0.0f, 1.0f };
-		ovrQuatf RelPose = RelativeQuaternion(HeadPoseOVR,RootPose);
-		// Convert from Oculus coordinate system (x back, y up, z left) to Simulcaster (x right, y forward, z up).
-		headPose2.orientation = avs::vec4{RelPose.x, RelPose.y,RelPose.z, RelPose.w};
-		headPose2.position = *((avs::vec3*)&headPose.position);
-
-		mSession.Frame(displayInfo, headPose, mDecoder.hasValidTransform(),controllerState, mDecoder.idrRequired());
+		mSession.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, controllerState, mDecoder.idrRequired());
+		if (!receivedInitialPos&&mSession.receivedInitialPos)
+		{
+			oculusOrigin = mSession.GetInitialPos();
+			receivedInitialPos = true;
+		}
 	}
 	else
 	{
@@ -604,11 +597,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 				ctr.m_packetMapOrphans);
 	}
 	else
-		{
-			mGuiSys->ShowInfoText(0.017f,"Disconnected");
-		};
-
-
+	{
+		mGuiSys->ShowInfoText(0.001f,"Disconnected");
+	};
 #endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
@@ -666,70 +657,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 	mVideoUB->Submit();
 
-	//Move the hands before they are drawn.
-    {
-        std::vector<ovrTracking> remoteStates;
-
-        uint32_t deviceIndex = 0;
-        ovrInputCapabilityHeader capsHeader;
-        //Poll controller state from the Oculus API.
-        while( vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader ) >= 0 )
-        {
-            if ( capsHeader.Type == ovrControllerType_TrackedRemote )
-            {
-                ovrTracking remoteState;
-                if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
-                {
-                    remoteStates.push_back(remoteState);
-                }
-            }
-
-            ++deviceIndex;
-        }
-
-        size_t handIndex = 0;
-        //Update hands to current position, and orientation.
-        for(avs::uid handID : resourceManagers.mActorManager.handUIDs)
-        {
-            std::shared_ptr<scr::Actor> hand = resourceManagers.mActorManager.GetActor(handID);
-
-            //Break if the client doesn't have the hand actor yet.
-            if(!hand)
-            {
-                break;
-            }
-
-            //Hands are only visible, if there is a hand for them to position relative to.
-            if(handIndex >= remoteStates.size())
-            {
-                hand->isVisible = false;
-                continue;
-            }
-            hand->isVisible = true;
-
-            hand->UpdateModelMatrix
-            (
-               scr::vec3
-               {
-                   remoteStates[handIndex].HeadPose.Pose.Position.x + cameraPosition.x,
-                   remoteStates[handIndex].HeadPose.Pose.Position.y + cameraPosition.y,
-                   remoteStates[handIndex].HeadPose.Pose.Position.z + cameraPosition.z
-               },
-               scr::quat
-               {
-                   remoteStates[handIndex].HeadPose.Pose.Orientation.x,
-                   remoteStates[handIndex].HeadPose.Pose.Orientation.y,
-                   remoteStates[handIndex].HeadPose.Pose.Orientation.z,
-                   remoteStates[handIndex].HeadPose.Pose.Orientation.w
-               }
-               * HAND_ROTATION_DIFFERENCE,
-               hand->GetTransform().m_Scale
-            );
-
-            ++handIndex;
-        }
-    }
-
+//Move the hands before they are drawn.
+	UpdateHandObjects();
 	//Append SCR Actors to surfaces.
 	GL_CheckErrors("Frame: Pre-SCR");
 	uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
@@ -742,6 +671,73 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
 
 	return res;
+}
+
+void Application::UpdateHandObjects()
+{
+	std::vector<ovrTracking> remoteStates;
+
+	uint32_t deviceIndex = 0;
+	ovrInputCapabilityHeader capsHeader;
+	//Poll controller state from the Oculus API.
+	while( vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader ) >= 0 )
+	{
+		if ( capsHeader.Type == ovrControllerType_TrackedRemote )
+		{
+			ovrTracking remoteState;
+			if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
+			{
+				remoteStates.push_back(remoteState);
+				if(deviceIndex<2)
+				{
+					controllerPoses[deviceIndex].position=*((const avs::vec3*)&remoteState.HeadPose.Pose.Position);
+					controllerPoses[deviceIndex].orientation=*((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
+				}
+			}
+		}
+		++deviceIndex;
+	}
+	size_t handIndex = 0;
+	//Update hands to current position, and orientation.
+	for(avs::uid handID : resourceManagers.mActorManager.handUIDs)
+	{
+		std::shared_ptr<scr::Actor> hand = resourceManagers.mActorManager.GetActor(handID);
+
+		//Break if the client doesn't have the hand actor yet.
+		if(!hand)
+		{
+			break;
+		}
+
+		//Hands are only visible, if there is a hand for them to position relative to.
+		if(handIndex >= remoteStates.size())
+		{
+			hand->isVisible = false;
+			continue;
+		}
+		hand->isVisible = true;
+
+		hand->UpdateModelMatrix
+				(
+						scr::vec3
+								{
+										remoteStates[handIndex].HeadPose.Pose.Position.x + cameraPosition.x,
+										remoteStates[handIndex].HeadPose.Pose.Position.y + cameraPosition.y,
+										remoteStates[handIndex].HeadPose.Pose.Position.z + cameraPosition.z
+								},
+						scr::quat
+								{
+										remoteStates[handIndex].HeadPose.Pose.Orientation.x,
+										remoteStates[handIndex].HeadPose.Pose.Orientation.y,
+										remoteStates[handIndex].HeadPose.Pose.Orientation.z,
+										remoteStates[handIndex].HeadPose.Pose.Orientation.w
+								}
+						* HAND_ROTATION_DIFFERENCE,
+						hand->GetTransform().m_Scale
+				);
+
+		++handIndex;
+	}
 }
 
 bool Application::InitializeController()
@@ -775,134 +771,142 @@ bool Application::InitializeController()
 
 void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
-	if(mPipelineConfigured) {
-		// TODO: Fix!
-		return;
-	}
-	receivedInitialPos=false;
-	OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height,setupCommand.colour_cubemap_size);
-
-	avs::NetworkSourceParams sourceParams = {};
-	sourceParams.socketBufferSize = 3 * 1024 * 1024; // 3 Mb socket buffer size
-	//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
-	sourceParams.maxJitterBufferLength = 0;
-
-
-	if(!mNetworkSource.configure(NumStreams + (GeoStream?1:0), setupCommand.port+1, mSession.GetServerIP().c_str(), setupCommand.port, sourceParams)) {
-		OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
-		return;
-	}
-	mNetworkSource.setDebugStream(setupCommand.debug_stream);
-	mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
-	mNetworkSource.setDoChecksums(setupCommand.do_checksums);
-	avs::DecoderParams decoderParams = {};
-	decoderParams.codec = avs::VideoCodec::HEVC;
-	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	decoderParams.prependStartCodes = false;
-	decoderParams.deferDisplay = false;
-	size_t stream_width=setupCommand.video_width;
-	size_t stream_height=setupCommand.video_height;
-	if(!mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50))
+	if(!mPipelineConfigured)
 	{
-		OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
-		mNetworkSource.deconfigure();
-		return;
+		receivedInitialPos = false;
+		OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port,
+				 setupCommand.video_width, setupCommand.video_height,
+				 setupCommand.colour_cubemap_size);
+
+		avs::NetworkSourceParams sourceParams = {};
+		sourceParams.socketBufferSize      = 3 * 1024 * 1024; // 3 Mb socket buffer size
+		//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
+		sourceParams.maxJitterBufferLength = 0;
+
+
+		if (!mNetworkSource.configure(
+				NumStreams + (GeoStream ? 1 : 0), setupCommand.port + 1,
+				mSession.GetServerIP().c_str(), setupCommand.port, sourceParams))
+		{
+			OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
+			return;
+		}
+		mNetworkSource.setDebugStream(setupCommand.debug_stream);
+		mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
+		mNetworkSource.setDoChecksums(setupCommand.do_checksums);
+		avs::DecoderParams decoderParams = {};
+		decoderParams.codec             = avs::VideoCodec::HEVC;
+		decoderParams.decodeFrequency   = avs::DecodeFrequency::NALUnit;
+		decoderParams.prependStartCodes = false;
+		decoderParams.deferDisplay      = false;
+		size_t stream_width  = setupCommand.video_width;
+		size_t stream_height = setupCommand.video_height;
+		if (!mDecoder.configure(
+				avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50))
+		{
+			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
+			mNetworkSource.deconfigure();
+			return;
+		}
+		{
+			scr::Texture::TextureCreateInfo textureCreateInfo = {};
+			textureCreateInfo.externalResource = true;
+			textureCreateInfo.slot   = scr::Texture::Slot::NORMAL;
+			textureCreateInfo.format = scr::Texture::Format::RGBA8;
+			textureCreateInfo.type   = scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
+			textureCreateInfo.height = setupCommand.video_height;
+			textureCreateInfo.width  = setupCommand.video_width;
+
+			mVideoTexture->Create(textureCreateInfo);
+			((scc::GL_Texture *) (mVideoTexture.get()))->SetExternalGlTexture(
+					mVideoSurfaceTexture->GetTextureId());
+
+		}
+		renderConstants.colourOffsetScale.x = 0;
+		renderConstants.colourOffsetScale.y = 0;
+		renderConstants.colourOffsetScale.z = 1.0f;
+		renderConstants.colourOffsetScale.w =
+				float(setupCommand.video_height) / float(stream_height);
+
+		renderConstants.depthOffsetScale.x = 0;
+		renderConstants.depthOffsetScale.y =
+				float(setupCommand.video_height) / float(stream_height);
+		renderConstants.depthOffsetScale.z = float(setupCommand.depth_width) / float(stream_width);
+		renderConstants.depthOffsetScale.w =
+				float(setupCommand.depth_height) / float(stream_height);
+
+		mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
+
+		mPipeline.link({&mNetworkSource, &mDecoder, &mSurface});
+
+		if (GeoStream)
+		{
+			avsGeometryDecoder.configure(100, &geometryDecoder);
+			avsGeometryTarget.configure(&resourceCreator);
+			mPipeline.link({&mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget});
+		}
+		//GL_CheckErrors("Pre-Build Cubemap");
+		//Build Video Cubemap
+		{
+			scr::Texture::TextureCreateInfo textureCreateInfo =
+													{
+															setupCommand.colour_cubemap_size,
+															setupCommand.colour_cubemap_size,
+															1,
+															4,
+															1,
+															1,
+															scr::Texture::Slot::UNKNOWN,
+															scr::Texture::Type::TEXTURE_CUBE_MAP,
+															scr::Texture::Format::RGBA8,
+															scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+															{},
+															{},
+															scr::Texture::CompressionFormat::UNCOMPRESSED
+													};
+			mCubemapTexture->Create(textureCreateInfo);
+			mCubemapTexture->UseSampler(mSamplerCubeMipMap);
+		}
+		//GL_CheckErrors("Built Video Cubemap");
+		//Build Lighting Cubemap
+		{
+			scr::Texture::TextureCreateInfo textureCreateInfo //TODO: Check this against the incoming texture from the video stream
+													{
+															128,
+															128,
+															1,
+															4,
+															1,
+															3,
+															scr::Texture::Slot::UNKNOWN,
+															scr::Texture::Type::TEXTURE_CUBE_MAP,
+															scr::Texture::Format::RGBA8,
+															scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+															{},
+															{},
+															scr::Texture::CompressionFormat::UNCOMPRESSED
+													};
+			textureCreateInfo.mipCount = 1;
+			textureCreateInfo.width  = diffuseSize;
+			textureCreateInfo.height = diffuseSize;
+			mDiffuseTexture->Create(textureCreateInfo);
+			textureCreateInfo.width  = lightSize;
+			textureCreateInfo.height = lightSize;
+			mCubemapLightingTexture->Create(textureCreateInfo);
+			textureCreateInfo.mipCount = 3;
+			textureCreateInfo.width  = specularSize;
+			textureCreateInfo.height = specularSize;
+			mSpecularTexture->Create(textureCreateInfo);
+			mRoughSpecularTexture->Create(textureCreateInfo);
+			mDiffuseTexture->UseSampler(mSamplerCubeMipMap);
+			mSpecularTexture->UseSampler(mSamplerCubeMipMap);
+			mRoughSpecularTexture->UseSampler(mSamplerCubeMipMap);
+			mCubemapLightingTexture->UseSampler(mSamplerCubeMipMap);
+		}
+		//GL_CheckErrors("Built Lighting Cubemap");
+
+		mPipelineConfigured = true;
 	}
-	{
-		scr::Texture::TextureCreateInfo textureCreateInfo={};
-		textureCreateInfo.externalResource = true;
-		textureCreateInfo.slot=scr::Texture::Slot::NORMAL;
-		textureCreateInfo.format=scr::Texture::Format::RGBA8;
-		textureCreateInfo.type=scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
-		textureCreateInfo.height=setupCommand.video_height;
-		textureCreateInfo.width=setupCommand.video_width;
-
-		mVideoTexture->Create(textureCreateInfo);
-		((scc::GL_Texture*)(mVideoTexture.get()))->SetExternalGlTexture(mVideoSurfaceTexture->GetTextureId());
-
-	}
-	renderConstants.colourOffsetScale.x =0;
-	renderConstants.colourOffsetScale.y = 0;
-	renderConstants.colourOffsetScale.z = 1.0f;
-	renderConstants.colourOffsetScale.w = float(setupCommand.video_height) / float(stream_height);
-
-	renderConstants.depthOffsetScale.x = 0;
-	renderConstants.depthOffsetScale.y = float(setupCommand.video_height) / float(stream_height);
-	renderConstants.depthOffsetScale.z = float(setupCommand.depth_width) / float(stream_width);
-	renderConstants.depthOffsetScale.w = float(setupCommand.depth_height) / float(stream_height);
-
-	mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
-
-	mPipeline.link({&mNetworkSource, &mDecoder, &mSurface});
-
-   if(GeoStream)
-   {
-		avsGeometryDecoder.configure(100, &geometryDecoder);
-		avsGeometryTarget.configure(&resourceCreator);
-		mPipeline.link({ &mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget });
-   }
-    //GL_CheckErrors("Pre-Build Cubemap");
-   //Build Video Cubemap
-   {
-	   scr::Texture::TextureCreateInfo textureCreateInfo =
-				{
-						setupCommand.colour_cubemap_size,
-						setupCommand.colour_cubemap_size,
-						1,
-						4,
-						1,
-						1,
-						scr::Texture::Slot::UNKNOWN,
-						scr::Texture::Type::TEXTURE_CUBE_MAP,
-						scr::Texture::Format::RGBA8,
-						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-                        {},
-                        {},
-						scr::Texture::CompressionFormat::UNCOMPRESSED
-				};
-	   mCubemapTexture->Create(textureCreateInfo);
-	   mCubemapTexture->UseSampler(mSamplerCubeMipMap);
-   }
-    //GL_CheckErrors("Built Video Cubemap");
-   //Build Lighting Cubemap
-	{
-		scr::Texture::TextureCreateInfo textureCreateInfo //TODO: Check this against the incoming texture from the video stream
-				{
-						128,
-						128,
-						1,
-						4,
-						1,
-						3,
-						scr::Texture::Slot::UNKNOWN,
-						scr::Texture::Type::TEXTURE_CUBE_MAP,
-						scr::Texture::Format::RGBA8,
-						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-						{},
-						{},
-						scr::Texture::CompressionFormat::UNCOMPRESSED
-				};
-		textureCreateInfo.mipCount=1;
-		textureCreateInfo.width=diffuseSize;
-		textureCreateInfo.height=diffuseSize;
-		mDiffuseTexture->Create(textureCreateInfo);
-		textureCreateInfo.width=lightSize;
-		textureCreateInfo.height=lightSize;
-		mCubemapLightingTexture->Create(textureCreateInfo);
-		textureCreateInfo.mipCount=3;
-		textureCreateInfo.width=specularSize;
-		textureCreateInfo.height=specularSize;
-		mSpecularTexture->Create(textureCreateInfo);
-		mRoughSpecularTexture->Create(textureCreateInfo);
-		mDiffuseTexture->UseSampler(mSamplerCubeMipMap);
-		mSpecularTexture->UseSampler(mSamplerCubeMipMap);
-		mRoughSpecularTexture->UseSampler(mSamplerCubeMipMap);
-		mCubemapLightingTexture->UseSampler(mSamplerCubeMipMap);
-	}
-    //GL_CheckErrors("Built Lighting Cubemap");
-
-	mPipelineConfigured = true;
-
     if(shouldClearEverything)
     {
         resourceManagers.Clear();

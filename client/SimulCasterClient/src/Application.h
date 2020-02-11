@@ -47,6 +47,7 @@ public:
 
 	virtual OVR::ovrFrameResult Frame(const OVR::ovrFrameInput &vrFrame) override;
 
+
 	class OVR::ovrLocale &GetLocale()
 	{
 		return *mLocale;
@@ -69,6 +70,9 @@ public:
 	/* End DecodeEventInterface */
 
 private:
+	avs::HeadPose headPose;
+	avs::HeadPose controllerPoses[2];
+	void UpdateHandObjects();
 	struct CubemapUB
 	{
 		scr::ivec2 sourceOffset;

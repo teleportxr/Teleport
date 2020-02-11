@@ -806,7 +806,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
-		sessionClient.Frame(displayInfo, headPose, receivedInitialPos,controllerState, decoder->idrRequired());
+		sessionClient.Frame(displayInfo, headPose, {}, receivedInitialPos, controllerState, decoder->idrRequired());
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
 			oculusOrigin = sessionClient.GetInitialPos();
@@ -817,7 +817,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		avs::Result result = pipeline.process();
 
 		static short c = 0;
-		if (!c--)
+		if (!(c--))
 		{
 			const avs::NetworkSourceCounters Counters = source.getCounterValues();
 			std::cout << "Network packets dropped: " << 100.0f*Counters.networkDropped << "%"

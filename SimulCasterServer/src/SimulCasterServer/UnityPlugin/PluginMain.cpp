@@ -16,8 +16,9 @@
 #include "InteropStructures.h"
 
 using namespace SCServer;
-TELEPORT_EXPORT
-void StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT void StopStreaming(avs::uid clientID);
+TELEPORT_EXPORT void StopSession(avs::uid clientID);
 
 
 #include "SimulCasterServer/ClientData.h"
@@ -26,6 +27,8 @@ namespace
 	static const uint16_t DISCOVERY_PORT = 10607;
 	static const uint16_t SERVICE_PORT = 10500;
 
+	static avs::Context avsContext;
+
 	static std::shared_ptr<PluginDiscoveryService> discoveryService = std::make_unique<PluginDiscoveryService>();
 	static GeometryStore geometryStore;
 
@@ -33,16 +36,17 @@ namespace
 
 	static SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
-	static std::function<void(void* actorPtr)> onShowActor;
-	static std::function<void(void* actorPtr)> onHideActor;
+	static std::function<void(void** actorPtr)> onShowActor;
+	static std::function<void(void** actorPtr)> onHideActor;
 
 	static SetHeadPoseFn setHeadPose;
+	static SetControllerPoseFn setControllerPose;
 	static ProcessNewInputFn processNewInput;
-	static std::function<void(void)> onDisconnect;
 	static int32_t connectionTimeout = 5;
 	static avs::uid serverID = 0;
 
 	static std::set<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
+	static std::vector<avs::uid> lostClients; //Clients who have been lost, and are awaiting deletion.
 }
 
 class PluginDiscoveryService: public SCServer::DiscoveryService
@@ -155,9 +159,16 @@ public:
 			enet_socket_send(discoverySocket, &address, &buffer, 1);
 
 			StartSession(clientID, servicePort);
+			lastFoundClientID=clientID;
 		}
 	}
+	virtual uint64_t getNewClientID()
+	{
+		return lastFoundClientID;
+		lastFoundClientID=0;
+	}
 private:
+	uint32_t lastFoundClientID=0;
 #pragma pack(push, 1) 
 	struct ServiceDiscoveryResponse
 	{
@@ -205,12 +216,12 @@ public:
 private:
 	virtual void showActor_Internal(void* actorPtr)
 	{
-		if(onShowActor) onShowActor(actorPtr);
+		if(onShowActor) onShowActor(&actorPtr);
 	}
 
 	virtual void hideActor_Internal(void* actorPtr)
 	{
-		if(onHideActor) onHideActor(actorPtr);
+		if(onHideActor) onHideActor(&actorPtr);
 	}
 };
 
@@ -240,15 +251,21 @@ void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
 }
 
 TELEPORT_EXPORT
+void SetControllerPoseSetterDelegate(SetControllerPoseFn f)
+{
+	setControllerPose = f;
+}
+
+TELEPORT_EXPORT
 void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
 {
 	processNewInput = newInputProcessing;
 }
 
 TELEPORT_EXPORT
-void SetDisconnectDelegate(void(*disconnect)(void))
+void SetMessageHandlerDelegate(avs::MessageHandlerFunc messageHandler)
 {
-	onDisconnect = disconnect;
+	avsContext.setMessageHandler(messageHandler, nullptr);
 }
 
 TELEPORT_EXPORT
@@ -259,15 +276,17 @@ void SetConnectionTimeout(int32_t timeout)
 
 TELEPORT_EXPORT
 void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
-				void(*headPoseSetter)(avs::uid uid,const avs::HeadPose*), void(*newInputProcessing)(avs::uid uid,const avs::InputState*), void(*disconnect)(void))
+				void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*), void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*), void(*newInputProcessing)(avs::uid clientID, const avs::InputState*),
+				avs::MessageHandlerFunc messageHandler)
 {
 	serverID = avs::GenerateUid();
 
 	SetShowActorDelegate(showActor);
 	SetHideActorDelegate(hideActor);
 	SetHeadPoseSetterDelegate(headPoseSetter);
+	SetControllerPoseSetterDelegate(controllerPoseSetter);
 	SetNewInputProcessingDelegate(newInputProcessing);
-	SetDisconnectDelegate(disconnect);
+	SetMessageHandlerDelegate(messageHandler);
 
 	if(enet_initialize() != 0)
 	{
@@ -294,22 +313,21 @@ void Shutdown()
 	onHideActor = nullptr;
 
 	setHeadPose = nullptr;
+	setControllerPose=nullptr;
 	processNewInput = nullptr;
-	onDisconnect = nullptr;
 }
 
-ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs):
-		geometryStreamingService(gs)
-	,clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, processNewInput, onDisconnect, connectionTimeout)
-{
-}
+ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::function<void(void)> disconnect)
+	:geometryStreamingService(gs),
+	clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
+{}
 
 TELEPORT_EXPORT
 void StartSession(avs::uid clientID, int32_t listenPort)
 {
-	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>());
+	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::bind(&StopStreaming, clientID));
 
-	if(newClientData.clientMessaging.startSession(clientID,listenPort))
+	if(newClientData.clientMessaging.startSession(clientID, listenPort))
 	{
 		clientServices.emplace(clientID, std::move(newClientData));
 
@@ -342,6 +360,8 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 TELEPORT_EXPORT
 void StopSession(avs::uid clientID)
 {
+	if(clientServices.at(clientID).isStreaming) StopStreaming(clientID);
+
 	clientServices.at(clientID).clientMessaging.stopSession();
 	clientServices.erase(clientID);
 }
@@ -393,11 +413,24 @@ void StopStreaming(avs::uid clientID)
 {
 	clientServices.at(clientID).geometryStreamingService->stopStreaming();
 	clientServices.at(clientID).isStreaming = false;
+
+	//Delay deletion of clients.
+	lostClients.push_back(clientID);
 }
 
 TELEPORT_EXPORT
 void Tick(float deltaTime)
 {
+	//Delete client data for clients who have been lost.
+	if(lostClients.size() != 0)
+	{
+		for(avs::uid clientID : lostClients)
+		{
+			StopSession(clientID);
+		}
+		lostClients.clear();
+	}
+
 	for(auto& idClientPair : clientServices)
 	{
 		ClientData &clientData=idClientPair.second;
@@ -405,6 +438,11 @@ void Tick(float deltaTime)
 
 		if(clientData.clientMessaging.hasPeer())
 		{
+			if(idClientPair.second.casterContext.NetworkPipeline)
+			{
+				idClientPair.second.casterContext.NetworkPipeline->process();
+			}
+
 			clientData.clientMessaging.tick(deltaTime);
 
 			if(clientData.isStreaming == false)
@@ -412,12 +450,8 @@ void Tick(float deltaTime)
 				StartStreaming(idClientPair.first);
 			}
 		}
-		else if(idClientPair.second.isStreaming)
-		{
-			StopSession(idClientPair.first);
-		}
 	}
-	
+
 	discoveryService->tick();
 }
 
@@ -464,7 +498,7 @@ avs::uid GetUnlinkedClientID()
 {
 	if(unlinkedClientIDs.size() != 0)
 	{
-		avs::uid clientID = *(unlinkedClientIDs.begin());
+		avs::uid clientID = *unlinkedClientIDs.begin();
 		unlinkedClientIDs.erase(unlinkedClientIDs.begin());
 
 		return clientID;
@@ -633,26 +667,39 @@ void StoreNode(avs::uid id, InteropNode node)
 }
 
 TELEPORT_EXPORT
-void StoreMesh(avs::uid id, InteropMesh mesh)
+void StoreMesh(avs::uid id, InteropMesh* mesh)
 {
 	avs::Mesh newMesh;
+
 	//Create vector in-place with pointer.
-	newMesh.primitiveArrays = {mesh.primitiveArrays, mesh.primitiveArrays + mesh.primitiveArrayAmount};
+	newMesh.primitiveArrays = {mesh->primitiveArrays, mesh->primitiveArrays + mesh->primitiveArrayAmount};
+	//Memcpy the attributes into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
+	for(int i = 0; i < mesh->primitiveArrayAmount; i++)
+	{
+		size_t dataSize = sizeof(avs::Attribute) * mesh->primitiveArrays[i].attributeCount;
+
+		newMesh.primitiveArrays[i].attributes = new avs::Attribute[dataSize];
+		memcpy_s(newMesh.primitiveArrays[i].attributes, dataSize, mesh->primitiveArrays[i].attributes, dataSize);
+	}
 
 	//Zip all of the maps back together.
-	for(int i = 0; i < mesh.accessorAmount; i++)
+	for(int i = 0; i < mesh->accessorAmount; i++)
 	{
-		newMesh.accessors[mesh.accessorIDs[i]] = mesh.accessors[i];
+		newMesh.accessors[mesh->accessorIDs[i]] = mesh->accessors[i];
 	}
 
-	for(int i = 0; i < mesh.bufferViewAmount; i++)
+	for(int i = 0; i < mesh->bufferViewAmount; i++)
 	{
-		newMesh.bufferViews[mesh.bufferViewIDs[i]] = mesh.bufferViews[i];
+		newMesh.bufferViews[mesh->bufferViewIDs[i]] = mesh->bufferViews[i];
 	}
 
-	for(int i = 0; i < mesh.accessorAmount; i++)
+	for(int i = 0; i < mesh->bufferAmount; i++)
 	{
-		newMesh.buffers[mesh.bufferIDs[i]] = mesh.buffers[i];
+		newMesh.buffers[mesh->bufferIDs[i]] = mesh->buffers[i];
+
+		//Memcpy the data into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
+		newMesh.buffers[mesh->bufferIDs[i]].data = new uint8_t[mesh->buffers[i].byteLength];
+		memcpy_s(const_cast<uint8_t*>(newMesh.buffers[mesh->bufferIDs[i]].data), mesh->buffers[i].byteLength, mesh->buffers[i].data, mesh->buffers[i].byteLength);
 	}
 
 	geometryStore.storeMesh(id, std::move(newMesh));
@@ -702,7 +749,7 @@ void StoreTexture(avs::uid id, InteropTexture texture, std::time_t lastModified,
 TELEPORT_EXPORT
 void StoreShadowMap(avs::uid id, InteropTexture shadowMap)
 {
-	geometryStore.storeShadowMap(id, ToAvsTexture(shadowMap));
+	geometryStore.storeShadowMap(id, ToAvsTexture(shadowMap, true));
 }
 
 avs::DataNode* getNode(avs::uid nodeID)
