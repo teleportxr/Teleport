@@ -1,6 +1,7 @@
 #include <functional>
 #include <iostream>
 #include <queue>
+#include <sstream>
 #include <vector>
 
 #include "enet/enet.h"
@@ -741,9 +742,7 @@ void StoreMaterial(avs::uid id, InteropMaterial material)
 TELEPORT_EXPORT
 void StoreTexture(avs::uid id, InteropTexture texture, std::time_t lastModified, char* basisFileLocation)
 {
-	///If I'm passing the pointer to the texture memory, then I need to perform an operation to retrieve the actual data.
-
-	//geometryStore.storeTexture(id, ToAvsTexture(texture), lastModified, basisFileLocation);
+	geometryStore.storeTexture(id, ToAvsTexture(texture, true), lastModified, basisFileLocation);
 }
 
 TELEPORT_EXPORT
@@ -764,9 +763,16 @@ uint64_t GetAmountOfTexturesWaitingForCompression()
 }
 
 TELEPORT_EXPORT
-const avs::Texture* GetNextCompressedTexture()
+BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures)
 {
-	return geometryStore.getNextCompressedTexture();
+	const avs::Texture* texture = geometryStore.getNextCompressedTexture();
+
+	std::wstringstream messageStream;
+	//Write compression message to wide string stream.
+	messageStream << "Compressing texture " << textureIndex << "/" << totalTextures << " (" << texture->name.data() << " [" << texture->width << " x " << texture->height << "])";
+
+	//Convert to binary string.
+	return SysAllocString(messageStream.str().data());
 }
 
 TELEPORT_EXPORT

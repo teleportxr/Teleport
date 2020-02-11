@@ -236,9 +236,9 @@ bool ClientMessaging::sendSetupCommand(avs::SetupCommand&& setupCommand)
 	{
 		geometryStreamingService->confirmResource(resourceID);
 	}
-	auto SC = std::move(setupCommand);
-	SC.resourceCount = resourcesClientNeeds.size();
-	return sendCommand<avs::uid>(SC, resourcesClientNeeds);
+	
+	setupCommand.resourceCount = resourcesClientNeeds.size();
+	return sendCommand<avs::uid>(setupCommand, resourcesClientNeeds);
 }
 
 std::string ClientMessaging::getClientIP() const
