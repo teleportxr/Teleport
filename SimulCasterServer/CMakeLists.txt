@@ -8,6 +8,7 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
+	src/SimulCasterServer/CasterTypes.h
 	src/SimulCasterServer/CaptureDelegates.h
 	src/SimulCasterServer/CasterContext.h
 	src/SimulCasterServer/CasterSettings.h
@@ -24,7 +25,8 @@ set(src
 	src/SimulCasterServer/NetworkPipeline.h
 	src/SimulCasterServer/ClientData.cpp
 	src/SimulCasterServer/ClientData.h
-	
+	src/SimulCasterServer/VideoEncodePipeline.cpp
+	src/SimulCasterServer/VideoEncodePipeline.h	
 )
 
 #Whether to build dynamic runtime libraries.
@@ -64,3 +66,11 @@ target_include_directories(SimulCasterServer PUBLIC ../thirdparty/basis_universa
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/enet/include)
 
 target_link_libraries( SimulCasterServer libavstream enet basisu efp Winmm.lib)
+
+if(WIN32)
+	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
+else()
+	set(def_platform PLATFORM_LINUX)
+endif()
+
+target_compile_definitions(SimulCasterServer PRIVATE ${def_platform})
