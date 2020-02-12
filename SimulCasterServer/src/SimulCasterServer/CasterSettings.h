@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CasterTypes.h"
+
 namespace SCServer
 {
 	struct CasterSettings
@@ -19,6 +21,7 @@ namespace SCServer
 		int32_t geometryBufferCutoffSize; // Size we stop encoding nodes at.
 		float confirmationWaitTime; //Seconds to wait before resending a resource.
 
+		bool enableVideoStreaming;
 		bool willOverrideTextureTarget;
 		void* sceneCaptureTextureTarget;
 		int32_t videoEncodeFrequency;
@@ -28,7 +31,7 @@ namespace SCServer
 		int32_t cullQuadIndex; // This culls a quad at the index. For debugging only
 		int32_t targetFPS;
 		int32_t idrInterval;
-		//EncoderRateControlMode rateControlMode;
+		VideoEncoderRateControlMode rateControlMode;
 		int32_t averageBitrate;
 		int32_t maxBitrate;
 		bool enableAutoBitRate;
