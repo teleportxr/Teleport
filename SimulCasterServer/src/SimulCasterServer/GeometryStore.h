@@ -66,6 +66,8 @@ namespace SCServer
 		void storeTexture(avs::uid id, avs::Texture&& texture, std::time_t lastModified, std::string basisFileLocation);
 		void storeShadowMap(avs::uid id, avs::Texture&& shadowMap);
 
+		void removeNode(avs::uid id);
+
 		//Returns amount of textures waiting to be compressed.
 		size_t getAmountOfTexturesWaitingForCompression() const;
 		//Returns the texture that will be compressed next.

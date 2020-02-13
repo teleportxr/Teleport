@@ -750,6 +750,13 @@ void StoreShadowMap(avs::uid id, InteropTexture shadowMap)
 	geometryStore.storeShadowMap(id, ToAvsTexture(shadowMap, true));
 }
 
+TELEPORT_EXPORT
+void RemoveNode(avs::uid nodeID)
+{
+	geometryStore.removeNode(nodeID);
+}
+
+TELEPORT_EXPORT
 avs::DataNode* getNode(avs::uid nodeID)
 {
 	return geometryStore.getNode(nodeID);
