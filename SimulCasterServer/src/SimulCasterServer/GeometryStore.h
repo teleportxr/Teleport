@@ -18,6 +18,8 @@ namespace SCServer
 
 		bool willDelayTextureCompression = true; //Causes textures to wait for compression in StoreTexture, rather than calling compress them during the function call, when true.
 
+		void clear(bool freeMeshBuffers);
+
 		void setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality);
 
 		virtual std::vector<avs::uid> getNodeIDs() const override;

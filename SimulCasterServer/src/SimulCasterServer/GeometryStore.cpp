@@ -66,6 +66,49 @@ GeometryStore::~GeometryStore()
 	delete basisCompressorParams.m_pJob_pool;
 }
 
+void GeometryStore::clear(bool freeMeshBuffers)
+{
+	//Free memory for primitive attributes and geometry buffers.
+	for(auto& idMeshPair : meshes)
+	{
+		for(avs::PrimitiveArray& primitive : idMeshPair.second.primitiveArrays)
+		{
+			delete[] primitive.attributes;
+		}
+
+		//Unreal just uses the pointer, but Unity copies them on the native side.
+		if(freeMeshBuffers)
+		{
+			for(auto& idBufferPair : idMeshPair.second.buffers)
+			{
+				delete[] idBufferPair.second.data;
+			}
+		}
+	}
+	
+	//Free memory for texture pixel data.
+	for(auto& idTexturePair : textures)
+	{
+		delete[] idTexturePair.second.data;
+	}
+
+	//Free memory for shadow map pixel data.
+	for(auto& idShadowPair : shadowMaps)
+	{
+		delete[] idShadowPair.second.data;
+	}
+
+	nodes.clear();
+	meshes.clear();
+	materials.clear();
+	textures.clear();
+	shadowMaps.clear();
+
+	texturesToCompress.clear();
+	lightNodes.clear();
+	hands.clear();
+}
+
 void GeometryStore::setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
 {
 	basisCompressorParams.m_quality_level = compressionStrength;

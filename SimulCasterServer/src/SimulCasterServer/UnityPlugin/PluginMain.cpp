@@ -627,6 +627,12 @@ uint16_t GetServerPort(avs::uid clientID)
 
 ///GeometryStore START
 TELEPORT_EXPORT
+void ClearGeometryStore()
+{
+	geometryStore.clear(true);
+}
+
+TELEPORT_EXPORT
 void SetDelayTextureCompression(bool willDelay)
 {
 	geometryStore.willDelayTextureCompression = willDelay;
