@@ -9,6 +9,7 @@
 
 #include "SimulCasterServer/CasterSettings.h"
 #include "SimulCasterServer/CaptureDelegates.h"
+#include "SimulCasterServer/ClientData.h"
 #include "SimulCasterServer/DiscoveryService.h"
 #include "SimulCasterServer/GeometryStore.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
@@ -21,8 +22,6 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void StopSession(avs::uid clientID);
 
-
-#include "SimulCasterServer/ClientData.h"
 namespace
 {
 	static const uint16_t DISCOVERY_PORT = 10607;
