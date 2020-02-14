@@ -231,7 +231,7 @@ namespace SCServer
 
 			put(uid);
 			avs::Transform transform = node->transform;
-			avs::ConvertTransform(avs::AxesStandard::UnrealStyle, req->getAxesStandard(), transform);
+			avs::ConvertTransform(settings->axesStandard, req->getAxesStandard(), transform);
 
 			put(transform);
 			put(node->data_uid);

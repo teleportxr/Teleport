@@ -346,7 +346,7 @@ void GeometryStore::storeShadowMap(avs::uid id, avs::Texture&& newShadowMap)
 	shadowMaps[id] = newShadowMap;
 }
 
-void SCServer::GeometryStore::removeNode(avs::uid id)
+void GeometryStore::removeNode(avs::uid id)
 {
 	nodes.erase(id);
 }
