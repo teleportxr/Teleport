@@ -22,8 +22,7 @@ namespace SCServer
 		float confirmationWaitTime; //Seconds to wait before resending a resource.
 
 		bool enableVideoStreaming;
-		bool willOverrideTextureTarget;
-		void* sceneCaptureTextureTarget;
+		float captureCubeSize;
 		int32_t videoEncodeFrequency;
 		bool enableDeferOutput;
 		bool enableCubemapCulling;
