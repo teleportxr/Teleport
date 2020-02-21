@@ -387,20 +387,21 @@ void StartStreaming(avs::uid clientID)
 	};
 
 	avs::SetupCommand setupCommand;
+	setupCommand.port = clientServices.at(clientID).clientMessaging.getServerPort() + 1;
 	setupCommand.video_width = encoderSettings.frameWidth;
 	setupCommand.video_height = encoderSettings.frameHeight;
 	setupCommand.depth_height = encoderSettings.depthHeight;
 	setupCommand.depth_width = encoderSettings.depthWidth;
-	setupCommand.colour_cubemap_size = encoderSettings.frameWidth / 3;
-	setupCommand.compose_cube = encoderSettings.enableDecomposeCube;
-	setupCommand.port = clientServices.at(clientID).clientMessaging.getServerPort() + 1;
-	setupCommand.debug_stream = casterSettings.debugStream;
-	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
-	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
-	setupCommand.server_id = serverID;
 	setupCommand.use_10_bit_decoding = casterSettings.use10BitEncoding;
 	setupCommand.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
+	setupCommand.colour_cubemap_size = encoderSettings.frameWidth / 3;
+	setupCommand.compose_cube = encoderSettings.enableDecomposeCube;
+	setupCommand.debug_stream = casterSettings.debugStream;
+	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
+	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
+	setupCommand.server_id = serverID;
+	setupCommand.is_bgr = false;
 
 	///TODO: Initialise actors in range.
 
@@ -674,7 +675,7 @@ void StoreNode(avs::uid id, InteropNode node)
 }
 
 TELEPORT_EXPORT
-void StoreMesh(avs::uid id, InteropMesh* mesh)
+void StoreMesh(avs::uid id, avs::AxesStandard extractToStandard, InteropMesh* mesh)
 {
 	avs::Mesh newMesh;
 
@@ -709,7 +710,7 @@ void StoreMesh(avs::uid id, InteropMesh* mesh)
 		memcpy_s(const_cast<uint8_t*>(newMesh.buffers[mesh->bufferIDs[i]].data), mesh->buffers[i].byteLength, mesh->buffers[i].data, mesh->buffers[i].byteLength);
 	}
 
-	geometryStore.storeMesh(id, std::move(newMesh));
+	geometryStore.storeMesh(id, extractToStandard, std::move(newMesh));
 }
 
 TELEPORT_EXPORT

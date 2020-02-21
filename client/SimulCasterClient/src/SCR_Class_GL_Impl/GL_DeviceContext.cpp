@@ -58,14 +58,14 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             SCR_COUT("Invalid Input Command");
         }
     }
-    BindShaderResources(descriptorSets, effect);
+    BindShaderResources(descriptorSets, effect, pInputCommand->effectPassName);
     glDrawElements(m_Topology, m_IndexCount, m_Type, nullptr);
 }
 
 void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
 {
     const InputCommand_Compute& ic_c = *(dynamic_cast<InputCommand_Compute*>(pInputCommand));
-    BindShaderResources(ic_c.m_ShaderResources, ic_c.m_pComputeEffect.get());
+    BindShaderResources(ic_c.m_ShaderResources, ic_c.m_pComputeEffect.get(), pInputCommand->effectPassName);
     const uvec3& size = ic_c.m_WorkGroupSize;
     OVR::GL_CheckErrors("DispatchCompute: 1");
     glDispatchCompute(size.x, size.y, size.z);
@@ -84,7 +84,7 @@ void GL_DeviceContext::EndFrame()
 
 }
 
-void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& shaderResources, Effect* pEffect)
+void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& shaderResources, Effect* pEffect, const char* effectPassName)
 {
     //TODO: Move to OpenGL ES 3.2 for explicit in-shader UniformBlockBinding with the 'binding = X' layout qualifier!
 
@@ -92,7 +92,7 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
         return; //SCR_CERR_BREAK("Invalid effect. Can not bind descriptor sets!", -1);
 
     //Set Uniforms for textures and UBs!
-    GLuint& program = dynamic_cast<GL_Effect*>(pEffect)->GetGlPlatform().Program;
+    GLuint& program = dynamic_cast<GL_Effect*>(pEffect)->GetGlPlatform(effectPassName).Program;
     glUseProgram(program);
 	OVR::GL_CheckErrors("BindShaderResources: 0");
     for(auto& sr : shaderResources)

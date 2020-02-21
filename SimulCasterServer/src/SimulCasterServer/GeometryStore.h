@@ -28,8 +28,8 @@ namespace SCServer
 		virtual const std::map<avs::uid, avs::DataNode>& getNodes() const override;
 
 		virtual std::vector<avs::uid> getMeshIDs() const override;
-		virtual avs::Mesh* getMesh(avs::uid meshID) override;
-		virtual const avs::Mesh* getMesh(avs::uid meshID) const override;
+		virtual avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) override;
+		virtual const avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) const override;
 
 		virtual std::vector<avs::uid> getTextureIDs() const override;
 		virtual avs::Texture* getTexture(avs::uid textureID) override;
@@ -63,7 +63,7 @@ namespace SCServer
 		bool hasShadowMap(avs::uid id) const;
 
 		void storeNode(avs::uid id, avs::DataNode&& node);
-		void storeMesh(avs::uid id, avs::Mesh&& mesh);
+		void storeMesh(avs::uid id, avs::AxesStandard standard, avs::Mesh&& mesh);
 		void storeMaterial(avs::uid id, avs::Material&& material);
 		void storeTexture(avs::uid id, avs::Texture&& texture, std::time_t lastModified, std::string basisFileLocation);
 		void storeShadowMap(avs::uid id, avs::Texture&& shadowMap);
@@ -89,7 +89,7 @@ namespace SCServer
 		basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
 
 		std::map<avs::uid, avs::DataNode> nodes;
-		std::map<avs::uid, avs::Mesh> meshes;
+		std::map<avs::uid, std::map<avs::AxesStandard, avs::Mesh>> meshes;
 		std::map<avs::uid, avs::Material> materials;
 		std::map<avs::uid, avs::Texture> textures;
 		std::map<avs::uid, avs::Texture> shadowMaps;

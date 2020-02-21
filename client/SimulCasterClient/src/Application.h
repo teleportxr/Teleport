@@ -176,6 +176,7 @@ private:
 	scc::GL_Effect                mEffect;
 	std::shared_ptr<scr::Sampler> mSampler;
 	std::shared_ptr<scr::Sampler> mSamplerCubeMipMap;
+	bool is_bgr = false; //Whether to display the textures as BGR textures.
 
 
 	bool receivedInitialPos=false;

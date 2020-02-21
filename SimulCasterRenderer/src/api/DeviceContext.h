@@ -22,6 +22,7 @@ namespace scr
 		FrameBuffer*				pFBs; 
 		uint32_t					frameBufferCount;
 		Camera*						pCamera;
+		const char*					effectPassName;
 
         virtual ~InputCommand() = default;
 	};
@@ -42,9 +43,10 @@ namespace scr
 			pFBs = pInputCommandCreateInfo->pFBs;
 			frameBufferCount = pInputCommandCreateInfo->frameBufferCount;
 			pCamera = pInputCommandCreateInfo->pCamera;
-			pIndexBuffer=ib;
+			effectPassName = pInputCommandCreateInfo->effectPassName;
 
 			pVertexBuffer=vb;
+			pIndexBuffer=ib;
 			pMaterial = m;
 		};
 	};
@@ -67,6 +69,7 @@ namespace scr
 			pFBs = pInputCommandCreateInfo->pFBs;
 			frameBufferCount = pInputCommandCreateInfo->frameBufferCount;
 			pCamera = pInputCommandCreateInfo->pCamera;
+			effectPassName = pInputCommandCreateInfo->effectPassName;
 
 			m_WorkGroupSize = workGroupSize;
 			m_pComputeEffect = computeEffect;

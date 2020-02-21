@@ -90,9 +90,10 @@ void main()
     v_Weights	        = a_Weights;
     v_CameraPosition    = cam.u_Position;
     // sm.ViewMatrix[VIEW_ID]._
-    mat4 cob = mat4(vec4(0.0, 1.0, 0.0, 0.0),
-                    vec4(0.0, 0.0, 1.0, 0.0),
-                    vec4(-1.0, 0.0, 0.0, 0.0),
-                    vec4(0.0, 0.0, 0.0, 1.0));
-    v_ModelSpacePosition = (transpose(cob) * vec4(a_Position, 1.0)).xyz;
+    //mat4 cob = mat4(vec4(0.0, 1.0, 0.0, 0.0),
+    //                vec4(0.0, 0.0, 1.0, 0.0),
+    //                vec4(-1.0, 0.0, 0.0, 0.0),
+    //                vec4(0.0, 0.0, 0.0, 1.0));
+    //v_ModelSpacePosition = (transpose(cob) * vec4(a_Position, 1.0)).xyz;
+    v_ModelSpacePosition = a_Position;
 }

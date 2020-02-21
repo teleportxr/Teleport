@@ -69,19 +69,22 @@ GeometryStore::~GeometryStore()
 void GeometryStore::clear(bool freeMeshBuffers)
 {
 	//Free memory for primitive attributes and geometry buffers.
-	for(auto& idMeshPair : meshes)
+	for(auto& standardPair : meshes)
 	{
-		for(avs::PrimitiveArray& primitive : idMeshPair.second.primitiveArrays)
+		for(auto& meshPair : standardPair.second)
 		{
-			delete[] primitive.attributes;
-		}
-
-		//Unreal just uses the pointer, but Unity copies them on the native side.
-		if(freeMeshBuffers)
-		{
-			for(auto& idBufferPair : idMeshPair.second.buffers)
+			for(avs::PrimitiveArray& primitive : meshPair.second.primitiveArrays)
 			{
-				delete[] idBufferPair.second.data;
+				delete[] primitive.attributes;
+			}
+
+			//Unreal just uses the pointer, but Unity copies them on the native side.
+			if(freeMeshBuffers)
+			{
+				for(auto& bufferPair : meshPair.second.buffers)
+				{
+					delete[] bufferPair.second.data;
+				}
 			}
 		}
 	}
@@ -140,14 +143,14 @@ std::vector<avs::uid> GeometryStore::getMeshIDs() const
 	return getVectorOfIDs(meshes);
 }
 
-avs::Mesh* GeometryStore::getMesh(avs::uid meshID)
+avs::Mesh* GeometryStore::getMesh(avs::uid meshID, avs::AxesStandard standard)
 {
-	return getResource(meshes, meshID);
+	return &getResource(meshes, meshID)->at(standard);
 }
 
-const avs::Mesh* GeometryStore::getMesh(avs::uid meshID) const
+const avs::Mesh* GeometryStore::getMesh(avs::uid meshID, avs::AxesStandard standard) const
 {
-	return getResource(meshes, meshID);
+	return &getResource(meshes, meshID)->at(standard);
 }
 
 std::vector<avs::uid> GeometryStore::getTextureIDs() const
@@ -242,9 +245,9 @@ void GeometryStore::storeNode(avs::uid id, avs::DataNode&& newNode)
 	if(newNode.data_type == avs::NodeDataType::ShadowMap) lightNodes.emplace_back(avs::LightNodeResources{id, newNode.data_uid});
 }
 
-void GeometryStore::storeMesh(avs::uid id, avs::Mesh&& newMesh)
+void GeometryStore::storeMesh(avs::uid id, avs::AxesStandard standard, avs::Mesh&& newMesh)
 {
-	meshes[id] = newMesh;
+	meshes[id][standard] = newMesh;
 }
 
 void GeometryStore::storeMaterial(avs::uid id, avs::Material&& newMaterial)

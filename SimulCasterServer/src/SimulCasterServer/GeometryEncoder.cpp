@@ -159,7 +159,7 @@ namespace SCServer
 			avs::uid uid = missingUIDs[h];
 			put(uid);
 
-			avs::Mesh* mesh = src->getMesh(uid);
+			avs::Mesh* mesh = src->getMesh(uid, req->getAxesStandard());
 
 			put(mesh->primitiveArrays.size());
 

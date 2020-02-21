@@ -260,6 +260,29 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 }
 
 
+void ClientRenderer::ChangePass(ShaderMode newShaderMode)
+{
+	passName = std::string(is_bgr ? "bgr" : "rgb");
+
+	switch(newShaderMode)
+	{
+		case ShaderMode::PBR:
+			break;
+		case ShaderMode::ALBEDO:
+			passName.append("_albedo_only");
+			break;
+		case ShaderMode::NORMAL_UNSWIZZLED:
+			passName.append("_normal_unswizzled");
+			break;
+		case ShaderMode::NORMAL_UNREAL:
+			passName.append("_normal_unreal");
+			break;
+		case ShaderMode::NORMAL_UNITY:
+			passName.append("_normal_unity");
+			break;
+	}
+}
+
 void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContext, simul::crossplatform::Texture *srcTexture, simul::crossplatform::Texture* targetTexture, int mips,int2 sourceOffset)
 {
 	cubemapConstants.sourceOffset = sourceOffset ;
@@ -541,7 +564,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 
 			pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 			pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-			pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
+			pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), passName.c_str());
 			renderPlatform->SetLayout(deviceContext, layout);
 			renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 			renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
@@ -647,6 +670,10 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.use10BitDecoding = setupCommand.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = setupCommand.use_yuv_444_decoding;
+	
+	is_bgr = setupCommand.is_bgr;
+	ChangePass(ShaderMode::PBR);
+
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type = avs::DeviceType::Direct3D11;
@@ -886,6 +913,21 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'R':
 			RecompileShaders();
+			break;
+		case VK_NUMPAD0: //Display full PBR rendering.
+			if(!bKeyDown) ChangePass(ShaderMode::PBR);
+			break;
+		case VK_NUMPAD1: //Display only albedo/diffuse.
+			if(!bKeyDown) ChangePass(ShaderMode::ALBEDO);
+			break;
+		case VK_NUMPAD4: //Display normals for native PC client frame-of-reference.
+			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNSWIZZLED);
+			break;
+		case VK_NUMPAD5: //Display normals swizzled for matching Unreal output.
+			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNREAL);
+			break;
+		case VK_NUMPAD6: //Display normals swizzled for matching Unity output.
+			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNITY);
 			break;
 		default: 
 			int  k=tolower(wParam);

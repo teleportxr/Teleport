@@ -29,7 +29,7 @@ class GL_DeviceContext final : public scr::DeviceContext
         void EndFrame() override;
 
     private:
-        void BindShaderResources(const std::vector<scr::ShaderResource>& shaderResources, scr::Effect* pEffect);
+        void BindShaderResources(const std::vector<scr::ShaderResource>& shaderResources, scr::Effect* pEffect, const char* effectPassName);
 
     private:
     	GLenum m_Topology;

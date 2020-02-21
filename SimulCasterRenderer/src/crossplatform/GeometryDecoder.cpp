@@ -195,7 +195,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					size_t tnSize = 0;
 					tnSize = avs::GetComponentSize(accessor.componentType) * avs::GetDataTypeSize(accessor.type);
 					meshElementCreate.m_TangentNormalSize = tnSize;
-					meshElementCreate.m_TangentNormals= (const uint8_t*)buffer.data;
+					meshElementCreate.m_TangentNormals= (const uint8_t*)data;
 				}
 					continue;
 				case AttributeSemantic::NORMAL:
