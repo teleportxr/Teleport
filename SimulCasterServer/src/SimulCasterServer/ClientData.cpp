@@ -1,6 +1,5 @@
 #include "SimulCasterServer/ClientData.h"
 
-
 void ClientData::setOrigin(avs::vec3 pos)
 {
 	if(clientMessaging.hasPeer())

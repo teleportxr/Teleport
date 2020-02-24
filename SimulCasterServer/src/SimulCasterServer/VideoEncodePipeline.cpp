@@ -13,7 +13,7 @@
 
 namespace SCServer
 {
-	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& vidEncodeParams, avs::Node* output)
+	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* output)
 	{
 		auto createSurfaceBackend = [](GraphicsDeviceType deviceType, void* resource)->avs::SurfaceBackendInterface*
 		{
@@ -37,16 +37,16 @@ namespace SCServer
 			return avsSurfaceBackend;
 		};
 
-		if (!vidEncodeParams.deviceHandle)
+		if (!videoEncodeParams.deviceHandle)
 		{
 			std::cout << "Graphics device provided is null \n";
 			return Result::InvalidGraphicsDevice;
 		}
 
 		avs::SurfaceBackendInterface* avsSurfaceBackend;
-		if (vidEncodeParams.inputSurfaceResource)
+		if (videoEncodeParams.inputSurfaceResource)
 		{
-			avsSurfaceBackend = createSurfaceBackend(vidEncodeParams.deviceType, vidEncodeParams.inputSurfaceResource);
+			avsSurfaceBackend = createSurfaceBackend(videoEncodeParams.deviceType, videoEncodeParams.inputSurfaceResource);
 		}
 		else
 		{
@@ -88,7 +88,7 @@ namespace SCServer
 			return Result::InputSurfaceNodeConfigurationError;
 		}
 
-		if (!encoder->configure(avs::DeviceHandle{ (avs::DeviceType)vidEncodeParams.deviceType, vidEncodeParams.deviceHandle }, vidEncodeParams.encodeWidth, vidEncodeParams.encodeHeight, encoderParams))
+		if (!encoder->configure(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams))
 		{
 			std::cout << "Failed to configure encoder node \n";
 			return Result::EncoderNodeConfigurationError;

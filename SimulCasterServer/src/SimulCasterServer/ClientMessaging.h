@@ -6,6 +6,7 @@
 #include "CaptureDelegates.h"
 #include "CasterSettings.h"
 #include "GeometryStreamingService.h"
+#include "VideoEncodePipeline.h"
 
 typedef struct _ENetHost ENetHost;
 typedef struct _ENetPeer ENetPeer;
@@ -26,6 +27,7 @@ namespace SCServer
 		ClientMessaging(const struct CasterSettings* settings,
 						std::shared_ptr<DiscoveryService> discoveryService,
 						std::shared_ptr<GeometryStreamingService> geometryStreamingService,
+						std::shared_ptr<VideoEncodePipeline> videoEncodePipeline,
 						std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose,
 						std::function<void(avs::uid,int index,const avs::HeadPose*)> setControllerPose,
 						std::function<void(avs::uid,const avs::InputState*)> processNewInput,
@@ -76,6 +78,7 @@ namespace SCServer
 		const CasterSettings* settings;
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
+		std::shared_ptr<VideoEncodePipeline> videoEncodePipeline;
 
 		std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose;			//Delegate called when a head pose is received.
 		std::function<void(avs::uid,int index,const avs::HeadPose*)> setControllerPose;			//Delegate called when a head pose is received.
