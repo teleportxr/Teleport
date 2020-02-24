@@ -13,7 +13,7 @@
 
 namespace SCServer
 {
-	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& vidEncodeParams)
+	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& vidEncodeParams, avs::Node* output)
 	{
 		auto createSurfaceBackend = [](GraphicsDeviceType deviceType, void* resource)->avs::SurfaceBackendInterface*
 		{
@@ -94,7 +94,7 @@ namespace SCServer
 			return Result::EncoderNodeConfigurationError;
 		}
 
-		if (!pipeline->link({ inputSurface.get(), encoder.get(), vidEncodeParams.output }))
+		if (!pipeline->link({ inputSurface.get(), encoder.get(), output }))
 		{
 			std::cout << "Error configuring the video encoding pipeline \n";
 			return Result::PipelineConfigurationError;
