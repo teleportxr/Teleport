@@ -402,6 +402,7 @@ void StartStreaming(avs::uid clientID)
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
 	setupCommand.server_id = serverID;
 	setupCommand.is_bgr = false;
+	setupCommand.is_clockwise_winding = true;
 
 	///TODO: Initialise actors in range.
 

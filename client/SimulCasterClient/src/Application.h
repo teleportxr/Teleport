@@ -177,7 +177,7 @@ private:
 	std::shared_ptr<scr::Sampler> mSampler;
 	std::shared_ptr<scr::Sampler> mSamplerCubeMipMap;
 	bool is_bgr = false; //Whether to display the textures as BGR textures.
-
+	bool is_clockwise_winding = false; //Whether the geometry winding order is clockwise.
 
 	bool receivedInitialPos=false;
 	struct OVRActor

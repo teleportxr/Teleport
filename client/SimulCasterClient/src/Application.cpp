@@ -788,6 +788,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 	if(!mPipelineConfigured)
 	{
 		is_bgr = setupCommand.is_bgr;
+		is_clockwise_winding = setupCommand.is_clockwise_winding;
 
 	    receivedInitialPos = false;
 		OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port,
@@ -1231,8 +1232,8 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
 	rs.depthClampEnable = false;
 	rs.rasterizerDiscardEnable = false;
 	rs.polygonMode = scr::Effect::PolygonMode::FILL;
-	rs.cullMode = scr::Effect::CullMode::FRONT_BIT;
-	rs.frontFace = scr::Effect::FrontFace::COUNTER_CLOCKWISE;
+	rs.cullMode = scr::Effect::CullMode::FRONT_BIT; //As of 2020-02-24, this only affects whether culling is enabled.
+	rs.frontFace = scr::Effect::FrontFace::COUNTER_CLOCKWISE; //Unity does clockwise winding, and Unreal does counter-clockwise, but this is set before we connect to a server.
 
 	scr::Effect::MultisamplingState ms = {};
 	ms.samplerShadingEnable = false;
@@ -1377,9 +1378,8 @@ void Application::CreateNativeActor(avs::uid actorID, std::shared_ptr<scr::Actor
         ovr_surface_def->graphicsCommand.GpuState.depthFunc = scc::GL_Effect::ToGLCompareOp(
                 gl_effectPass.depthStencilingState.depthCompareOp);
 
-        ovr_surface_def->graphicsCommand.GpuState.frontFace = gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
-        ovr_surface_def->graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(
-                gl_effectPass.rasterizationState.polygonMode);
+        ovr_surface_def->graphicsCommand.GpuState.frontFace = is_clockwise_winding ? GL_CW : GL_CCW;//gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
+        ovr_surface_def->graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
         ovr_surface_def->graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
         ovr_surface_def->graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;
         ovr_surface_def->graphicsCommand.GpuState.depthMaskEnable = true;
