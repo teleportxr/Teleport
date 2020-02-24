@@ -18,10 +18,9 @@ namespace SCServer
 	{
 		int32_t encodeWidth = 0;
 		int32_t encodeHeight = 0;
-		avs::Node* output = nullptr;
+		GraphicsDeviceType deviceType;
 		void* deviceHandle = nullptr;
 		void* inputSurfaceResource = nullptr;
-		GraphicsDeviceType deviceType;
 	};
 
 	class VideoEncodePipeline
@@ -30,7 +29,7 @@ namespace SCServer
 		VideoEncodePipeline() = default;
 		~VideoEncodePipeline() = default;
 
-		Result initialize(const CasterSettings& settings, const VideoEncodeParams& vidEncodeParams);
+		Result initialize(const CasterSettings& settings, const VideoEncodeParams& vidEncodeParams, avs::Node* output);
 		Result process(avs::Transform& cameraTransform, bool forceIDR = false);
 		Result release();
 
