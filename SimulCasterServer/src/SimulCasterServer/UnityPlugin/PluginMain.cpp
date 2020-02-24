@@ -12,6 +12,7 @@
 #include "SimulCasterServer/DiscoveryService.h"
 #include "SimulCasterServer/GeometryStore.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
+#include "SimulCasterServer/VideoEncodePipeline.h"
 
 #include "Export.h"
 #include "InteropStructures.h"
@@ -226,6 +227,29 @@ private:
 	}
 };
 
+class PluginVideoEncodePipeline : public SCServer::VideoEncodePipeline
+{
+public:
+	PluginVideoEncodePipeline() 
+		:SCServer::VideoEncodePipeline() {}
+
+	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
+	{
+		return SCServer::VideoEncodePipeline::initialize(casterSettings, videoEncodeParams, colorQueue);
+	}
+
+	Result encode(avs::Transform& cameraTransform, bool forceIDR = false)
+	{
+		return SCServer::VideoEncodePipeline::process(cameraTransform, forceIDR);
+	}
+
+	Result deconfigure()
+	{
+		return SCServer::VideoEncodePipeline::release();
+	}
+
+};
+
 ///PLUGIN-SPECIFIC START
 TELEPORT_EXPORT
 void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
@@ -318,16 +342,17 @@ void Shutdown()
 	processNewInput = nullptr;
 }
 
-ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::function<void(void)> disconnect)
-	:geometryStreamingService(gs),
-	clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
+ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::function<void(void)> disconnect)
+	: geometryStreamingService(gs)
+	, videoEncodePipeline(vep)
+	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, vep, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
 {}
 
 TELEPORT_EXPORT
 void StartSession(avs::uid clientID, int32_t listenPort)
 {
-	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::bind(&StopStreaming, clientID));
-
+	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::bind(&StopStreaming, clientID));
+	
 	if(newClientData.clientMessaging.startSession(clientID, listenPort))
 	{
 		clientServices.emplace(clientID, std::move(newClientData));
@@ -342,7 +367,10 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 		///TODO: Initialise real delegates for capture component.
 		SCServer::CaptureDelegates delegates;
 		delegates.startStreaming = [](SCServer::CasterContext* context){};
-		delegates.requestKeyframe = [](){};
+		delegates.requestKeyframe = [&newClient]()
+		{
+			newClient.videoKeyframeRequired = true;
+		};
 		delegates.getClientCameraInfo = []()->SCServer::CameraInfo&
 		{
 			return SCServer::CameraInfo();
@@ -414,6 +442,7 @@ TELEPORT_EXPORT
 void StopStreaming(avs::uid clientID)
 {
 	clientServices.at(clientID).geometryStreamingService->stopStreaming();
+	clientServices.at(clientID).videoEncodePipeline->deconfigure();
 	clientServices.at(clientID).isStreaming = false;
 
 	//Delay deletion of clients.
@@ -569,6 +598,28 @@ bool HasResource(avs::uid clientID, avs::uid resourceID)
 	return clientServices.at(clientID).geometryStreamingService->hasResource(resourceID);
 }
 ///GeometryStreamingService END
+
+
+///VideoEncodePipeline START
+TELEPORT_EXPORT
+void InitializeVideoEncoder(avs::uid clientID, const SCServer::VideoEncodeParams videoEncodeParams)
+{
+	auto& clientData = clientServices.at(clientID);
+	clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
+}
+
+TELEPORT_EXPORT
+void EncodeVideoFrame(avs::uid clientID, avs::Transform cameraTransform)
+{
+	auto& clientData = clientServices.at(clientID);
+	Result result = clientData.videoEncodePipeline->encode(cameraTransform, clientData.videoKeyframeRequired);
+	if (result)
+	{
+		clientData.videoKeyframeRequired = false;
+	}
+}
+///VideoEncodePipeline END
+
 
 ///ClientMessaging START
 TELEPORT_EXPORT

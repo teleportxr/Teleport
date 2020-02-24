@@ -29,7 +29,7 @@ namespace SCServer
 		VideoEncodePipeline() = default;
 		~VideoEncodePipeline() = default;
 
-		Result initialize(const CasterSettings& settings, const VideoEncodeParams& vidEncodeParams, avs::Node* output);
+		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* output);
 		Result process(avs::Transform& cameraTransform, bool forceIDR = false);
 		Result release();
 
