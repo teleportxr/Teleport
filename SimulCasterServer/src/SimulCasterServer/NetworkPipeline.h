@@ -17,7 +17,7 @@ namespace SCServer
 	{
 	public:
 		NetworkPipeline(const CasterSettings* settings);
-		virtual ~NetworkPipeline() = default;
+		virtual ~NetworkPipeline();
 
 		void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue);
 

@@ -9,6 +9,7 @@
 
 #include "SimulCasterServer/CasterSettings.h"
 #include "SimulCasterServer/CaptureDelegates.h"
+#include "SimulCasterServer/ClientData.h"
 #include "SimulCasterServer/DiscoveryService.h"
 #include "SimulCasterServer/GeometryStore.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
@@ -22,8 +23,11 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void StopSession(avs::uid clientID);
 
+typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::HeadPose*);
+typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::HeadPose*);
+typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*);
+typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 
-#include "SimulCasterServer/ClientData.h"
 namespace
 {
 	static const uint16_t DISCOVERY_PORT = 10607;
@@ -44,6 +48,8 @@ namespace
 	static SetHeadPoseFn setHeadPose;
 	static SetControllerPoseFn setControllerPose;
 	static ProcessNewInputFn processNewInput;
+	static DisconnectFn onDisconnect;
+
 	static int32_t connectionTimeout = 5;
 	static avs::uid serverID = 0;
 
@@ -195,6 +201,8 @@ public:
 		this->geometryStore = &::geometryStore;
 	}
 
+	virtual ~PluginGeometryStreamingService() = default;
+
 	void addActor(void* newActor, avs::uid actorID)
 	{
 		SCServer::GeometryStreamingService::addActor(newActor, actorID);
@@ -250,6 +258,14 @@ public:
 
 };
 
+///PLUGIN-INTERNAL START
+void Disconnect(avs::uid clientID)
+{
+	onDisconnect(clientID);
+	StopStreaming(clientID);
+}
+///PLUGIN-INTERNAL END
+
 ///PLUGIN-SPECIFIC START
 TELEPORT_EXPORT
 void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
@@ -288,6 +304,12 @@ void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
 }
 
 TELEPORT_EXPORT
+void SetDisconnectDelegate(DisconnectFn disconnect)
+{
+	onDisconnect = disconnect;
+}
+
+TELEPORT_EXPORT
 void SetMessageHandlerDelegate(avs::MessageHandlerFunc messageHandler)
 {
 	avsContext.setMessageHandler(messageHandler, nullptr);
@@ -302,7 +324,7 @@ void SetConnectionTimeout(int32_t timeout)
 TELEPORT_EXPORT
 void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
 				void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*), void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*), void(*newInputProcessing)(avs::uid clientID, const avs::InputState*),
-				avs::MessageHandlerFunc messageHandler)
+				DisconnectFn disconnect, avs::MessageHandlerFunc messageHandler)
 {
 	serverID = avs::GenerateUid();
 
@@ -311,6 +333,7 @@ void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
 	SetHeadPoseSetterDelegate(headPoseSetter);
 	SetControllerPoseSetterDelegate(controllerPoseSetter);
 	SetNewInputProcessingDelegate(newInputProcessing);
+	SetDisconnectDelegate(disconnect);
 	SetMessageHandlerDelegate(messageHandler);
 
 	if(enet_initialize() != 0)
@@ -351,7 +374,7 @@ ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::
 TELEPORT_EXPORT
 void StartSession(avs::uid clientID, int32_t listenPort)
 {
-	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::bind(&StopStreaming, clientID));
+	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::bind(&Disconnect, clientID));
 	
 	if(newClientData.clientMessaging.startSession(clientID, listenPort))
 	{
@@ -389,10 +412,18 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 TELEPORT_EXPORT
 void StopSession(avs::uid clientID)
 {
-	if(clientServices.at(clientID).isStreaming) StopStreaming(clientID);
+	//Early-out if a client with this ID doesn't exist.
+	auto& clientIt = clientServices.find(clientID);
+	if(clientIt == clientServices.end()) return;
+		
+	ClientData& lostClient = clientIt->second;
+	//Shut-down connections to the client.
+	if(lostClient.isStreaming) StopStreaming(clientID);
+	lostClient.clientMessaging.stopSession();
 
-	clientServices.at(clientID).clientMessaging.stopSession();
+	//Remove references to lost client.
 	clientServices.erase(clientID);
+	lostClients.pop_back();
 }
 
 TELEPORT_EXPORT
@@ -442,9 +473,11 @@ void StartStreaming(avs::uid clientID)
 TELEPORT_EXPORT
 void StopStreaming(avs::uid clientID)
 {
-	clientServices.at(clientID).geometryStreamingService->stopStreaming();
-	clientServices.at(clientID).videoEncodePipeline->deconfigure();
-	clientServices.at(clientID).isStreaming = false;
+	ClientData& lostClient = clientServices.at(clientID);
+
+	lostClient.clientMessaging.sendCommand(avs::ShutdownCommand());
+	lostClient.videoEncodePipeline->deconfigure();
+	lostClient.isStreaming = false;
 
 	//Delay deletion of clients.
 	lostClients.push_back(clientID);

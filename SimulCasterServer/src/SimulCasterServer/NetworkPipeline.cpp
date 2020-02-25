@@ -17,6 +17,11 @@ namespace SCServer
 		:settings(settings)
 	{}
 
+	NetworkPipeline::~NetworkPipeline()
+	{
+		release();
+	}
+
 	void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue)
 	{
 		assert(colorQueue);

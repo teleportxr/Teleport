@@ -68,6 +68,8 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 
 void SessionClient::Disconnect(uint timeout)
 {
+	mCommandInterface->OnVideoStreamClosed();
+
 	if(mClientHost && mServerPeer)
 	{
 		if(timeout == 0)

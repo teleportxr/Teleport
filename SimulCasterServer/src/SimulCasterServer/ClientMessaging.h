@@ -13,10 +13,6 @@ typedef struct _ENetPeer ENetPeer;
 typedef struct _ENetPacket ENetPacket;
 typedef struct _ENetEvent ENetEvent;
 
-typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::HeadPose*);
-typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::HeadPose*);
-typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*);
-
 namespace SCServer
 {
 	class DiscoveryService;

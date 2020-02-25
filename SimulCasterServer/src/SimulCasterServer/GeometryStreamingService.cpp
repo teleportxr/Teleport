@@ -21,6 +21,7 @@ GeometryStreamingService::GeometryStreamingService(const CasterSettings* setting
 
 GeometryStreamingService::~GeometryStreamingService()
 {
+	stopStreaming();
 	if(avsPipeline) avsPipeline->deconfigure();
 }
 
@@ -79,14 +80,6 @@ void GeometryStreamingService::stopStreaming()
 	if(avsGeometryEncoder) avsGeometryEncoder->deconfigure();
 	avsPipeline.reset();
 	casterContext = nullptr;
-
-	for(auto idActorPair : hiddenActors)
-	{
-		if(idActorPair.second)
-		{
-			showActor_Internal(idActorPair.second);
-		}
-	}
 
 	reset();
 }
