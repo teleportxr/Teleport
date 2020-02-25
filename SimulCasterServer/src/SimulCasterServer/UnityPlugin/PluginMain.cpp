@@ -345,7 +345,7 @@ void Shutdown()
 ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::function<void(void)> disconnect)
 	: geometryStreamingService(gs)
 	, videoEncodePipeline(vep)
-	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, vep, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
+	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
 {}
 
 TELEPORT_EXPORT

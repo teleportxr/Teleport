@@ -13,7 +13,6 @@ using namespace SCServer;
 ClientMessaging::ClientMessaging(const CasterSettings* settings,
 								 std::shared_ptr<DiscoveryService> discoveryService,
 								 std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-								 std::shared_ptr<VideoEncodePipeline> videoEncodePipeline,
 								 std::function<void(avs::uid,const avs::HeadPose*)> inSetHeadPose,
 								 std::function<void(avs::uid,int index,const avs::HeadPose*)> inSetControllerPose,
 								 std::function<void(avs::uid,const avs::InputState*)> inProcessNewInput,
@@ -22,7 +21,6 @@ ClientMessaging::ClientMessaging(const CasterSettings* settings,
 	: settings(settings) 
 	, discoveryService(discoveryService) 
 	, geometryStreamingService(geometryStreamingService)
-	, videoEncodePipeline(videoEncodePipeline)
 	, setHeadPose(inSetHeadPose)
 	, setControllerPose(inSetControllerPose)
 	, processNewInput(inProcessNewInput)

@@ -1,7 +1,6 @@
 #include "libavstream/common.hpp"
 #include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
-#include "SimulCasterServer/VideoEncodePipeline.h"
 
 class PluginDiscoveryService;
 class PluginGeometryStreamingService;
