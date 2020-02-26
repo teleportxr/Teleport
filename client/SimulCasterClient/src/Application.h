@@ -176,7 +176,7 @@ private:
 	scc::GL_Effect                mEffect;
 	std::shared_ptr<scr::Sampler> mSampler;
 	std::shared_ptr<scr::Sampler> mSamplerCubeMipMap;
-	bool is_bgr = false; //Whether to display the textures as BGR textures.
+	char* effectPassName = const_cast<char*>("OpaquePBR"); //Which effect pass the geometry should be rendered with.
 	bool is_clockwise_winding = false; //Whether the geometry winding order is clockwise.
 
 	bool receivedInitialPos=false;

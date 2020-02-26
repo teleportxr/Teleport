@@ -212,22 +212,21 @@ vec3 PBR(vec3 normal,vec3 viewDir,vec3 diffuseColour,float roughness
 	return colour;
 }
 
-vec4 Solid(vertexOutput IN, bool isBGR)
+vec4 Solid(vertexOutput IN)
 {
 	vec3 tangentx		= normalize(IN.tangent);
 	vec3 tangenty		= normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
 
 	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R);
-	normalLookup		= 2.0 * ((isBGR ? normalLookup.bgr : normalLookup.rgb) - vec3(0.5, 0.5, 0.5));
+	normalLookup		= 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
 	vec3 normal			= normalize(mul(normalLookup, TangentMatrix));
 
 	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R);
-	diffuseColour = (isBGR ? diffuseColour.bgr : diffuseColour.rgb) * diffuseOutputScalar.rgb;
+	diffuseColour = diffuseColour.rgb * diffuseOutputScalar.rgb;
 
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R);
-	if(isBGR) combinedLookup = combinedLookup.bgra;
 
 	float roughness		=GetRoughness(combinedLookup);
 	float metallic		=GetMetallic(combinedLookup);
@@ -238,42 +237,32 @@ vec4 Solid(vertexOutput IN, bool isBGR)
 	return u;
 }
 
-vec4 Solid_AlbedoOnly(vertexOutput IN, bool isBGR)
+vec4 Solid_AlbedoOnly(vertexOutput IN)
 {
 	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R);
-	diffuseColour = (isBGR ? diffuseColour.bgr : diffuseColour.rgb) * diffuseOutputScalar.rgb;
+	diffuseColour = diffuseColour.rgb * diffuseOutputScalar.rgb;
 
 	return vec4(diffuseColour.rgb, 1.0);
 }
 
 shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN, false);
-}
-
-shader vec4 PS_SolidBGR(vertexOutput IN) : SV_TARGET
-{
-	return Solid(IN, true);
+	return Solid(IN);
 }
 
 shader vec4 PS_Solid_AlbedoOnly(vertexOutput IN) : SV_TARGET
 {
-	return Solid_AlbedoOnly(IN, false);
+	return Solid_AlbedoOnly(IN);
 }
 
-shader vec4 PS_SolidBGR_AlbedoOnly(vertexOutput IN) : SV_TARGET
-{
-	return Solid_AlbedoOnly(IN, true);
-}
-
-vec4 DebugNormal(vertexOutput IN, int swizzle_mode, bool isBGR)
+vec4 DebugNormal(vertexOutput IN, int swizzle_mode)
 {
 	vec3 tangentx = normalize(IN.tangent);
 	vec3 tangenty = normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix = mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
 
 	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R);
-	normalLookup		= 2.0 * ((isBGR ? normalLookup.bgr : normalLookup.rgb) - vec3(0.5, 0.5, 0.5));
+	normalLookup		= 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
 	vec3 normal = normalize(mul(normalLookup, TangentMatrix));
 	normal = (normal + vec3(1.0f, 1.0f, 1.0f)) / 2.0f;
 
@@ -285,34 +274,19 @@ vec4 DebugNormal(vertexOutput IN, int swizzle_mode, bool isBGR)
 	}
 }
 
-vec4 PS_DebugNormal_Unswizzled_RGB(vertexOutput IN) : SV_TARGET
+vec4 PS_DebugNormal_Unswizzled(vertexOutput IN) : SV_TARGET
 {
-	return DebugNormal(IN, 0, false);
+	return DebugNormal(IN, 0);
 }
 
-vec4 PS_DebugNormal_Unswizzled_BGR(vertexOutput IN) : SV_TARGET
+vec4 PS_DebugNormal_Unreal(vertexOutput IN) : SV_TARGET
 {
-	return DebugNormal(IN, 0, true);
+	return DebugNormal(IN, 1);
 }
 
-vec4 PS_DebugNormal_Unreal_RGB(vertexOutput IN) : SV_TARGET
+vec4 PS_DebugNormal_Unity(vertexOutput IN) : SV_TARGET
 {
-	return DebugNormal(IN, 1, false);
-}
-
-vec4 PS_DebugNormal_Unreal_BGR(vertexOutput IN) : SV_TARGET
-{
-	return DebugNormal(IN, 1, true);
-}
-
-vec4 PS_DebugNormal_Unity_RGB(vertexOutput IN) : SV_TARGET
-{
-	return DebugNormal(IN, 2, false);
-}
-
-vec4 PS_DebugNormal_Unity_BGR(vertexOutput IN) : SV_TARGET
-{
-	return DebugNormal(IN, 2, true);
+	return DebugNormal(IN, 2);
 }
 
 /// A function that applies atmospherics and cloud visibility to a pixel of a transparent object.
@@ -384,21 +358,16 @@ shader vec4 PS_Transparent(vertexOutput IN) : SV_TARGET
 
 VertexShader vs_solid = CompileShader(vs_4_0, VS_Solid());
 PixelShader ps_solid = CompileShader(ps_4_0, PS_Solid());
-PixelShader ps_solid_bgr = CompileShader(ps_4_0, PS_SolidBGR());
 
-PixelShader ps_solid_albedo_only = CompileShader(ps_4_0, PS_Solid_AlbedoOnly());
-PixelShader ps_solid_bgr_albedo_only = CompileShader(ps_4_0, PS_SolidBGR_AlbedoOnly());
-
-PixelShader ps_debug_normal_unswizzled_rgb = CompileShader(ps_4_0, PS_DebugNormal_Unswizzled_RGB());
-PixelShader ps_debug_normal_unswizzled_bgr = CompileShader(ps_4_0, PS_DebugNormal_Unswizzled_BGR());
-PixelShader ps_debug_normal_unreal_rgb = CompileShader(ps_4_0, PS_DebugNormal_Unreal_RGB());
-PixelShader ps_debug_normal_unreal_bgr = CompileShader(ps_4_0, PS_DebugNormal_Unreal_BGR());
-PixelShader ps_debug_normal_unity_rgb = CompileShader(ps_4_0, PS_DebugNormal_Unity_RGB());
-PixelShader ps_debug_normal_unity_bgr = CompileShader(ps_4_0, PS_DebugNormal_Unity_BGR());
+//Debug renders.
+PixelShader ps_solid_albedo_only = CompileShader(ps_4_0, PS_Solid_AlbedoOnly()); //Albedo only view
+PixelShader ps_debug_normal_unswizzled = CompileShader(ps_4_0, PS_DebugNormal_Unswizzled()); //Unswizzled Normal view
+PixelShader ps_debug_normal_unreal = CompileShader(ps_4_0, PS_DebugNormal_Unreal()); //Unreal-basis normal view
+PixelShader ps_debug_normal_unity = CompileShader(ps_4_0, PS_DebugNormal_Unity()); //Unity-basis normal view
 
 technique solid
 {
-    pass rgb 
+    pass pbr 
     {
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -407,17 +376,8 @@ technique solid
         SetGeometryShader(NULL);
 		SetPixelShader(ps_solid);
     }
-    pass bgr 
-    {
-		SetRasterizerState(RenderFrontfaceCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-        SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_bgr);
-    }
 
-	pass rgb_albedo_only
+	pass albedo_only
     {
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -426,69 +386,32 @@ technique solid
         SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_albedo_only);
     }
-    pass bgr_albedo_only
-    {
-		SetRasterizerState(RenderFrontfaceCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-        SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_bgr_albedo_only);
-    }
-
-	pass rgb_normal_unswizzled
+	pass normal_unswizzled
 	{
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
         SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unswizzled_rgb);
+		SetPixelShader(ps_debug_normal_unswizzled);
     }
-	pass bgr_normal_unswizzled
+	pass normal_unreal
 	{
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
         SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unswizzled_bgr);
+		SetPixelShader(ps_debug_normal_unreal);
     }
-	pass rgb_normal_unreal
+	pass normal_unity
 	{
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
         SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unreal_rgb);
-    }
-	pass bgr_normal_unreal
-	{
-		SetRasterizerState(RenderFrontfaceCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-        SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unreal_bgr);
-    }
-	pass rgb_normal_unity
-	{
-		SetRasterizerState(RenderFrontfaceCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-        SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unity_rgb);
-    }
-	pass bgr_normal_unity
-	{
-		SetRasterizerState(RenderFrontfaceCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-        SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unity_bgr);
+		SetPixelShader(ps_debug_normal_unity);
     }
 }
 

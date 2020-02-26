@@ -262,23 +262,22 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 
 void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 {
-	passName = std::string(is_bgr ? "bgr" : "rgb");
-
 	switch(newShaderMode)
 	{
 		case ShaderMode::PBR:
+			passName = "pbr";
 			break;
 		case ShaderMode::ALBEDO:
-			passName.append("_albedo_only");
+			passName = "albedo_only";
 			break;
 		case ShaderMode::NORMAL_UNSWIZZLED:
-			passName.append("_normal_unswizzled");
+			passName = "normal_unswizzled";
 			break;
 		case ShaderMode::NORMAL_UNREAL:
-			passName.append("_normal_unreal");
+			passName = "normal_unreal";
 			break;
 		case ShaderMode::NORMAL_UNITY:
-			passName.append("_normal_unity");
+			passName = "normal_unity";
 			break;
 	}
 }
@@ -670,9 +669,6 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.use10BitDecoding = setupCommand.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = setupCommand.use_yuv_444_decoding;
-	
-	is_bgr = setupCommand.is_bgr;
-	ChangePass(ShaderMode::PBR);
 
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();

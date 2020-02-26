@@ -231,7 +231,7 @@ vec4 Gamma(vec4 a)
     return pow(a,vec4(.45,.45,.45,1.0));
 }
 
-vec4 Opaque(bool isBGR)
+void Opaque()
 {
     //Debug light
 	Light d_Light;
@@ -243,8 +243,7 @@ vec4 Opaque(bool isBGR)
 	vec3 Lo;				//Exitance Radiance from the surface in the direction of the camera.
     vec3 Le = vec3(0.0);	//Emissive Radiance from the surface in the direction of the camera, if any.
 
-    vec4 combinedLookup = texture(u_Combined, v_UV_diffuse*u_CombinedTexCoordsScalar_R)*u_CombinedOutputScalar;
-    if(isBGR) combinedLookup = combinedLookup.bgra;
+    vec4 combinedLookup = texture(u_Combined, v_UV_diffuse * u_CombinedTexCoordsScalar_R) * u_CombinedOutputScalar;
 
     //Primary non-light dependent
     float roughness = GetRoughness(combinedLookup);
@@ -252,17 +251,15 @@ vec4 Opaque(bool isBGR)
     float roughnessL = max(0.01, roughnessE);
 
     vec3 normalLookup = texture(u_Normal, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
-    vec3 tangentSpaceNormalMap = 2.0 * ((isBGR ? normalLookup.bgr : normalLookup.rgb) - vec3(0.5, 0.5, 0.5));//*u_NormalOutputScalar.bgr;
+    vec3 tangentSpaceNormalMap = 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
     vec3 normal = normalize(v_TBN * tangentSpaceNormalMap);
-
 
     vec3 viewDir = normalize(v_Position-v_CameraPosition);
 	vec3 diffuse_light = vec3(0, 0, 0);
 	vec3 specular_light = vec3(0, 0, 0);
     float metallic = GetMetallic(combinedLookup);
 
-    vec3 diffuseColour = texture(u_Diffuse, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;
-    diffuseColour = (isBGR ? diffuseColour.bgr : diffuseColour.rgb) * u_DiffuseOutputScalar.rgb;
+    vec3 diffuseColour = texture(u_Diffuse, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb * u_DiffuseOutputScalar.rgb;
 
     //Loop over lights to calculate Lo (accumulation of L in the direction Wo)
     for(int i = 0; i < 1/*MaxLights*/; i++)
@@ -299,19 +296,5 @@ vec4 Opaque(bool isBGR)
 	vec3 output_radiance = PBR(normal, viewDir, diffuseColour, roughness, metallic, ao);
    // output_radiance*=0.0001;
    // output_radiance+=combinedLookup.rgb;
-    return Gamma(vec4(output_radiance,1.0));
-
-    vec3 correct_normal = (normal.zxy + vec3(1.0, 1.0, 1.0)) / 2.0;
-    correct_normal.x = 1.0 - correct_normal.x;
-    return Gamma(vec4(correct_normal,1.0));
-}
-
-void Opaque_RGB()
-{
-    gl_FragColor = Opaque(false);
-}
-
-void Opaque_BGR()
-{
-    gl_FragColor = Opaque(true);
+    gl_FragColor = Gamma(vec4(output_radiance,1.0));
 }

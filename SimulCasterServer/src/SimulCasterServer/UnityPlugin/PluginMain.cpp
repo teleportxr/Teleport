@@ -834,7 +834,7 @@ void StoreMaterial(avs::uid id, InteropMaterial material)
 TELEPORT_EXPORT
 void StoreTexture(avs::uid id, InteropTexture texture, std::time_t lastModified, char* basisFileLocation)
 {
-	geometryStore.storeTexture(id, ToAvsTexture(texture, true), lastModified, basisFileLocation);
+	geometryStore.storeTexture(id, ToAvsTexture(texture, true), lastModified, basisFileLocation, false);
 }
 
 TELEPORT_EXPORT

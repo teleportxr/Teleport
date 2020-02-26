@@ -327,33 +327,19 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
 		//Set scr::EffectPass
-		scr::ShaderSystem::PipelineCreateInfo pipelineRGB;
+		scr::ShaderSystem::PipelineCreateInfo pipelinePBR;
 		{
-			pipelineRGB.m_Count                          = 2;
-			pipelineRGB.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-			pipelineRGB.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-			pipelineRGB.m_ShaderCreateInfo[0].entryPoint = "main";
-			pipelineRGB.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
-			pipelineRGB.m_ShaderCreateInfo[0].sourceCode = LoadTextFile("shaders/OpaquePBR.vert");
-			pipelineRGB.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-			pipelineRGB.m_ShaderCreateInfo[1].entryPoint = "Opaque_RGB";
-			pipelineRGB.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
-			pipelineRGB.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/OpaquePBR.frag");
+			pipelinePBR.m_Count                          = 2;
+			pipelinePBR.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
+			pipelinePBR.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+			pipelinePBR.m_ShaderCreateInfo[0].entryPoint = "main";
+			pipelinePBR.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
+			pipelinePBR.m_ShaderCreateInfo[0].sourceCode = LoadTextFile("shaders/OpaquePBR.vert");
+			pipelinePBR.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+			pipelinePBR.m_ShaderCreateInfo[1].entryPoint = "Opaque";
+			pipelinePBR.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
+			pipelinePBR.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/OpaquePBR.frag");
 		}
-
-        scr::ShaderSystem::PipelineCreateInfo pipelineBGR;
-        {
-            pipelineBGR.m_Count                          = 2;
-            pipelineBGR.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-            pipelineBGR.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-            pipelineBGR.m_ShaderCreateInfo[0].entryPoint = "main";
-            pipelineBGR.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
-            pipelineBGR.m_ShaderCreateInfo[0].sourceCode = LoadTextFile("shaders/OpaquePBR.vert");
-            pipelineBGR.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-            pipelineBGR.m_ShaderCreateInfo[1].entryPoint = "Opaque_BGR";
-            pipelineBGR.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
-            pipelineBGR.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/OpaquePBR.frag");
-        }
 
 		scr::VertexBufferLayout layout;
 		layout.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC3, scr::VertexBufferLayout::Type::FLOAT);
@@ -389,8 +375,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {});
 		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {});
 
-		BuildEffectPass("OpaquePBR_RGB", &layout, &pipelineRGB, {pbrShaderResource});
-        BuildEffectPass("OpaquePBR_BGR", &layout, &pipelineBGR, {pbrShaderResource});
+		BuildEffectPass("OpaquePBR", &layout, &pipelinePBR, {pbrShaderResource});
 
 		//Set Lighting Cubemap Shader Resource
         scr::ShaderResourceLayout lightingCubemapLayout;
@@ -420,11 +405,7 @@ void Application::LeavingVrMode()
 
 bool Application::OnKeyEvent(const int keyCode, const int repeatCount, const KeyEventType eventType)
 {
-	if(mGuiSys->OnKeyEvent(keyCode, repeatCount, eventType))
-	{
-		return true;
-	}
-	return false;
+    return mGuiSys->OnKeyEvent(keyCode, repeatCount, eventType);
 }
 
 extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
@@ -785,12 +766,11 @@ bool Application::InitializeController()
 
 void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
+	is_clockwise_winding = setupCommand.is_clockwise_winding;
+
 	if(!mPipelineConfigured)
 	{
-		is_bgr = setupCommand.is_bgr;
-		is_clockwise_winding = setupCommand.is_clockwise_winding;
-
-	    receivedInitialPos = false;
+		receivedInitialPos = false;
 		OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port,
 				 setupCommand.video_width, setupCommand.video_height,
 				 setupCommand.colour_cubemap_size);
@@ -1301,7 +1281,6 @@ std::string Application::LoadTextFile(const char *filename)
 void Application::CreateNativeActor(avs::uid actorID, std::shared_ptr<scr::Actor> actorInfo)
 {
     std::shared_ptr<OVRActor> pOvrActor = std::make_shared<OVRActor>();
-    const char* effectPassName = is_bgr ? "OpaquePBR_BGR" : "OpaquePBR_RGB";
 
     for(size_t i = 0; i < actorInfo->GetMaterials().size(); i++)
     {

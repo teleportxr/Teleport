@@ -65,7 +65,7 @@ namespace SCServer
 		void storeNode(avs::uid id, avs::DataNode&& node);
 		void storeMesh(avs::uid id, avs::AxesStandard standard, avs::Mesh&& mesh);
 		void storeMaterial(avs::uid id, avs::Material&& material);
-		void storeTexture(avs::uid id, avs::Texture&& texture, std::time_t lastModified, std::string basisFileLocation);
+		void storeTexture(avs::uid id, avs::Texture&& texture, std::time_t lastModified, std::string basisFileLocation, bool swapRedBlueChannels);
 		void storeShadowMap(avs::uid id, avs::Texture&& shadowMap);
 
 		void removeNode(avs::uid id);
@@ -99,5 +99,10 @@ namespace SCServer
 		std::vector<avs::LightNodeResources> lightNodes; //List of all light nodes; prevents having to search for them every geometry tick.
 
 		std::vector<std::pair<void*, avs::uid>> hands; //List of pointer-IDs pairs of the nodes that represent the hands that are in use.
+
+		//Swaps the red and blue channels of the passed texture; expects four bytes per pixel (one byte per channel), RGBA.
+		//	originalData : Pixel data in BGRA/RGBA format and four bytes per pixel.
+		//	dataSize : Byte size of the passed data.
+		void swapTextureRedBlue(unsigned char* textureData, uint32_t dataSize);
 	};
 }

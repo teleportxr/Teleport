@@ -117,9 +117,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool show_osd = true;
 	bool render_from_video_centre = false;
 	bool show_textures = false;
-	bool is_bgr = false;
 
-	std::string passName = "rgb"; //Pass used for rendering.
+	std::string passName = "pbr"; //Pass used for rendering geometry.
 public:
 	ClientRenderer();
 	~ClientRenderer();
