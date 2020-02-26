@@ -650,7 +650,6 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 {
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
-	receivedInitialPos = false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 1212992;
@@ -761,6 +760,8 @@ void ClientRenderer::OnVideoStreamClosed()
 	pipeline.deconfigure();
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
+
+	receivedInitialPos = false;
 }
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)

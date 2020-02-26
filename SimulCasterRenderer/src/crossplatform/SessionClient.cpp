@@ -113,6 +113,7 @@ void SessionClient::Disconnect(uint timeout)
 	}
 
 	handshakeAcknowledged = false;
+	receivedInitialPos = false;
 }
 
 void SessionClient::SendClientMessage(const avs::ClientMessage& msg)

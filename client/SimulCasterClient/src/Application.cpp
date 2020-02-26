@@ -769,8 +769,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 	is_clockwise_winding = setupCommand.is_clockwise_winding;
 
 	if(!mPipelineConfigured)
-	{
-		receivedInitialPos = false;
+    {
 		OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port,
 				 setupCommand.video_width, setupCommand.video_height,
 				 setupCommand.colour_cubemap_size);
@@ -934,6 +933,8 @@ void Application::OnVideoStreamClosed()
 	mPipeline.deconfigure();
 	mPipeline.reset();
 	mPipelineConfigured = false;
+
+    receivedInitialPos = false;
 }
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)
