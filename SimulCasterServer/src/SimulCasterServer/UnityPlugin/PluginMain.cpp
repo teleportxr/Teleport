@@ -17,6 +17,7 @@
 
 #include "Export.h"
 #include "InteropStructures.h"
+#include "PluginGraphics.h"
 
 using namespace SCServer;
 TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
@@ -636,8 +637,14 @@ bool HasResource(avs::uid clientID, avs::uid resourceID)
 
 ///VideoEncodePipeline START
 TELEPORT_EXPORT
-void InitializeVideoEncoder(avs::uid clientID, const SCServer::VideoEncodeParams videoEncodeParams)
+void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams videoEncodeParams)
 {
+	videoEncodeParams.deviceHandle = GraphicsManager::mGraphicsDevice;
+	if (videoEncodeParams.deviceHandle)
+	{
+		std::cout << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+		return;
+	}
 	auto& clientData = clientServices.at(clientID);
 	clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
 }
