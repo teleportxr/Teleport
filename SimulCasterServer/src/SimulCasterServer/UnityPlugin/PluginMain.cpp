@@ -1,6 +1,7 @@
 #include <functional>
 #include <iostream>
 #include <queue>
+#include <sstream>
 #include <vector>
 
 #include "enet/enet.h"
@@ -8,23 +9,31 @@
 
 #include "SimulCasterServer/CasterSettings.h"
 #include "SimulCasterServer/CaptureDelegates.h"
+#include "SimulCasterServer/ClientData.h"
 #include "SimulCasterServer/DiscoveryService.h"
 #include "SimulCasterServer/GeometryStore.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
+#include "SimulCasterServer/VideoEncodePipeline.h"
 
 #include "Export.h"
 #include "InteropStructures.h"
 
 using namespace SCServer;
-TELEPORT_EXPORT
-void StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT void StopStreaming(avs::uid clientID);
+TELEPORT_EXPORT void StopSession(avs::uid clientID);
 
+typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::HeadPose*);
+typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::HeadPose*);
+typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*);
+typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 
-#include "SimulCasterServer/ClientData.h"
 namespace
 {
 	static const uint16_t DISCOVERY_PORT = 10607;
 	static const uint16_t SERVICE_PORT = 10500;
+
+	static avs::Context avsContext;
 
 	static std::shared_ptr<PluginDiscoveryService> discoveryService = std::make_unique<PluginDiscoveryService>();
 	static GeometryStore geometryStore;
@@ -33,17 +42,19 @@ namespace
 
 	static SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
-	static std::function<void(void* actorPtr)> onShowActor;
-	static std::function<void(void* actorPtr)> onHideActor;
+	static std::function<void(void** actorPtr)> onShowActor;
+	static std::function<void(void** actorPtr)> onHideActor;
 
 	static SetHeadPoseFn setHeadPose;
 	static SetControllerPoseFn setControllerPose;
 	static ProcessNewInputFn processNewInput;
-	static std::function<void(void)> onDisconnect;
+	static DisconnectFn onDisconnect;
+
 	static int32_t connectionTimeout = 5;
 	static avs::uid serverID = 0;
 
 	static std::set<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
+	static std::vector<avs::uid> lostClients; //Clients who have been lost, and are awaiting deletion.
 }
 
 class PluginDiscoveryService: public SCServer::DiscoveryService
@@ -190,6 +201,8 @@ public:
 		this->geometryStore = &::geometryStore;
 	}
 
+	virtual ~PluginGeometryStreamingService() = default;
+
 	void addActor(void* newActor, avs::uid actorID)
 	{
 		SCServer::GeometryStreamingService::addActor(newActor, actorID);
@@ -213,14 +226,45 @@ public:
 private:
 	virtual void showActor_Internal(void* actorPtr)
 	{
-		if(onShowActor) onShowActor(actorPtr);
+		if(onShowActor) onShowActor(&actorPtr);
 	}
 
 	virtual void hideActor_Internal(void* actorPtr)
 	{
-		if(onHideActor) onHideActor(actorPtr);
+		if(onHideActor) onHideActor(&actorPtr);
 	}
 };
+
+class PluginVideoEncodePipeline : public SCServer::VideoEncodePipeline
+{
+public:
+	PluginVideoEncodePipeline() 
+		:SCServer::VideoEncodePipeline() {}
+
+	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
+	{
+		return SCServer::VideoEncodePipeline::initialize(casterSettings, videoEncodeParams, colorQueue);
+	}
+
+	Result encode(avs::Transform& cameraTransform, bool forceIDR = false)
+	{
+		return SCServer::VideoEncodePipeline::process(cameraTransform, forceIDR);
+	}
+
+	Result deconfigure()
+	{
+		return SCServer::VideoEncodePipeline::release();
+	}
+
+};
+
+///PLUGIN-INTERNAL START
+void Disconnect(avs::uid clientID)
+{
+	onDisconnect(clientID);
+	StopStreaming(clientID);
+}
+///PLUGIN-INTERNAL END
 
 ///PLUGIN-SPECIFIC START
 TELEPORT_EXPORT
@@ -253,7 +297,6 @@ void SetControllerPoseSetterDelegate(SetControllerPoseFn f)
 	setControllerPose = f;
 }
 
-
 TELEPORT_EXPORT
 void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
 {
@@ -261,9 +304,15 @@ void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
 }
 
 TELEPORT_EXPORT
-void SetDisconnectDelegate(void(*disconnect)(void))
+void SetDisconnectDelegate(DisconnectFn disconnect)
 {
 	onDisconnect = disconnect;
+}
+
+TELEPORT_EXPORT
+void SetMessageHandlerDelegate(avs::MessageHandlerFunc messageHandler)
+{
+	avsContext.setMessageHandler(messageHandler, nullptr);
 }
 
 TELEPORT_EXPORT
@@ -274,8 +323,8 @@ void SetConnectionTimeout(int32_t timeout)
 
 TELEPORT_EXPORT
 void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
-				void(*headPoseSetter)(avs::uid uid,const avs::HeadPose*),
-				void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*),  void(*newInputProcessing)(avs::uid uid,const avs::InputState*), void(*disconnect)(void))
+				void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*), void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*), void(*newInputProcessing)(avs::uid clientID, const avs::InputState*),
+				DisconnectFn disconnect, avs::MessageHandlerFunc messageHandler)
 {
 	serverID = avs::GenerateUid();
 
@@ -285,6 +334,7 @@ void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
 	SetControllerPoseSetterDelegate(controllerPoseSetter);
 	SetNewInputProcessingDelegate(newInputProcessing);
 	SetDisconnectDelegate(disconnect);
+	SetMessageHandlerDelegate(messageHandler);
 
 	if(enet_initialize() != 0)
 	{
@@ -313,21 +363,20 @@ void Shutdown()
 	setHeadPose = nullptr;
 	setControllerPose=nullptr;
 	processNewInput = nullptr;
-	onDisconnect = nullptr;
 }
 
-ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs):
-		geometryStreamingService(gs)
-	,clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, onDisconnect, connectionTimeout)
-{
-}
+ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::function<void(void)> disconnect)
+	: geometryStreamingService(gs)
+	, videoEncodePipeline(vep)
+	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
+{}
 
 TELEPORT_EXPORT
 void StartSession(avs::uid clientID, int32_t listenPort)
 {
-	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>());
-
-	if(newClientData.clientMessaging.startSession(clientID,listenPort))
+	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::bind(&Disconnect, clientID));
+	
+	if(newClientData.clientMessaging.startSession(clientID, listenPort))
 	{
 		clientServices.emplace(clientID, std::move(newClientData));
 
@@ -341,7 +390,10 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 		///TODO: Initialise real delegates for capture component.
 		SCServer::CaptureDelegates delegates;
 		delegates.startStreaming = [](SCServer::CasterContext* context){};
-		delegates.requestKeyframe = [](){};
+		delegates.requestKeyframe = [&newClient]()
+		{
+			newClient.videoKeyframeRequired = true;
+		};
 		delegates.getClientCameraInfo = []()->SCServer::CameraInfo&
 		{
 			return SCServer::CameraInfo();
@@ -360,8 +412,18 @@ void StartSession(avs::uid clientID, int32_t listenPort)
 TELEPORT_EXPORT
 void StopSession(avs::uid clientID)
 {
-	clientServices.at(clientID).clientMessaging.stopSession();
+	//Early-out if a client with this ID doesn't exist.
+	auto& clientIt = clientServices.find(clientID);
+	if(clientIt == clientServices.end()) return;
+		
+	ClientData& lostClient = clientIt->second;
+	//Shut-down connections to the client.
+	if(lostClient.isStreaming) StopStreaming(clientID);
+	lostClient.clientMessaging.stopSession();
+
+	//Remove references to lost client.
 	clientServices.erase(clientID);
+	lostClients.pop_back();
 }
 
 TELEPORT_EXPORT
@@ -384,20 +446,21 @@ void StartStreaming(avs::uid clientID)
 	};
 
 	avs::SetupCommand setupCommand;
+	setupCommand.port = clientServices.at(clientID).clientMessaging.getServerPort() + 1;
 	setupCommand.video_width = encoderSettings.frameWidth;
 	setupCommand.video_height = encoderSettings.frameHeight;
 	setupCommand.depth_height = encoderSettings.depthHeight;
 	setupCommand.depth_width = encoderSettings.depthWidth;
-	setupCommand.colour_cubemap_size = encoderSettings.frameWidth / 3;
-	setupCommand.compose_cube = encoderSettings.enableDecomposeCube;
-	setupCommand.port = clientServices.at(clientID).clientMessaging.getServerPort() + 1;
-	setupCommand.debug_stream = casterSettings.debugStream;
-	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
-	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
-	setupCommand.server_id = serverID;
 	setupCommand.use_10_bit_decoding = casterSettings.use10BitEncoding;
 	setupCommand.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
+	setupCommand.colour_cubemap_size = encoderSettings.frameWidth / 3;
+	setupCommand.compose_cube = encoderSettings.enableDecomposeCube;
+	setupCommand.debug_stream = casterSettings.debugStream;
+	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
+	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
+	setupCommand.server_id = serverID;
+	setupCommand.is_clockwise_winding = true;
 
 	///TODO: Initialise actors in range.
 
@@ -409,13 +472,29 @@ void StartStreaming(avs::uid clientID)
 TELEPORT_EXPORT
 void StopStreaming(avs::uid clientID)
 {
-	clientServices.at(clientID).geometryStreamingService->stopStreaming();
-	clientServices.at(clientID).isStreaming = false;
+	ClientData& lostClient = clientServices.at(clientID);
+
+	lostClient.clientMessaging.sendCommand(avs::ShutdownCommand());
+	lostClient.videoEncodePipeline->deconfigure();
+	lostClient.isStreaming = false;
+
+	//Delay deletion of clients.
+	lostClients.push_back(clientID);
 }
 
 TELEPORT_EXPORT
 void Tick(float deltaTime)
 {
+	//Delete client data for clients who have been lost.
+	if(lostClients.size() != 0)
+	{
+		for(avs::uid clientID : lostClients)
+		{
+			StopSession(clientID);
+		}
+		lostClients.clear();
+	}
+
 	for(auto& idClientPair : clientServices)
 	{
 		ClientData &clientData=idClientPair.second;
@@ -423,6 +502,11 @@ void Tick(float deltaTime)
 
 		if(clientData.clientMessaging.hasPeer())
 		{
+			if(idClientPair.second.casterContext.NetworkPipeline)
+			{
+				idClientPair.second.casterContext.NetworkPipeline->process();
+			}
+
 			clientData.clientMessaging.tick(deltaTime);
 
 			if(clientData.isStreaming == false)
@@ -430,12 +514,8 @@ void Tick(float deltaTime)
 				StartStreaming(idClientPair.first);
 			}
 		}
-		else if(idClientPair.second.isStreaming)
-		{
-			StopSession(idClientPair.first);
-		}
 	}
-	
+
 	discoveryService->tick();
 }
 
@@ -482,7 +562,7 @@ avs::uid GetUnlinkedClientID()
 {
 	if(unlinkedClientIDs.size() != 0)
 	{
-		avs::uid clientID = *(unlinkedClientIDs.begin());
+		avs::uid clientID = *unlinkedClientIDs.begin();
 		unlinkedClientIDs.erase(unlinkedClientIDs.begin());
 
 		return clientID;
@@ -552,6 +632,28 @@ bool HasResource(avs::uid clientID, avs::uid resourceID)
 }
 ///GeometryStreamingService END
 
+
+///VideoEncodePipeline START
+TELEPORT_EXPORT
+void InitializeVideoEncoder(avs::uid clientID, const SCServer::VideoEncodeParams videoEncodeParams)
+{
+	auto& clientData = clientServices.at(clientID);
+	clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
+}
+
+TELEPORT_EXPORT
+void EncodeVideoFrame(avs::uid clientID, avs::Transform cameraTransform)
+{
+	auto& clientData = clientServices.at(clientID);
+	Result result = clientData.videoEncodePipeline->encode(cameraTransform, clientData.videoKeyframeRequired);
+	if (result)
+	{
+		clientData.videoKeyframeRequired = false;
+	}
+}
+///VideoEncodePipeline END
+
+
 ///ClientMessaging START
 TELEPORT_EXPORT
 void ActorEnteredBounds(avs::uid clientID, avs::uid actorID)
@@ -610,6 +712,12 @@ uint16_t GetServerPort(avs::uid clientID)
 
 ///GeometryStore START
 TELEPORT_EXPORT
+void ClearGeometryStore()
+{
+	geometryStore.clear(true);
+}
+
+TELEPORT_EXPORT
 void SetDelayTextureCompression(bool willDelay)
 {
 	geometryStore.willDelayTextureCompression = willDelay;
@@ -651,29 +759,42 @@ void StoreNode(avs::uid id, InteropNode node)
 }
 
 TELEPORT_EXPORT
-void StoreMesh(avs::uid id, InteropMesh mesh)
+void StoreMesh(avs::uid id, avs::AxesStandard extractToStandard, InteropMesh* mesh)
 {
 	avs::Mesh newMesh;
+
 	//Create vector in-place with pointer.
-	newMesh.primitiveArrays = {mesh.primitiveArrays, mesh.primitiveArrays + mesh.primitiveArrayAmount};
+	newMesh.primitiveArrays = {mesh->primitiveArrays, mesh->primitiveArrays + mesh->primitiveArrayAmount};
+	//Memcpy the attributes into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
+	for(int i = 0; i < mesh->primitiveArrayAmount; i++)
+	{
+		size_t dataSize = sizeof(avs::Attribute) * mesh->primitiveArrays[i].attributeCount;
+
+		newMesh.primitiveArrays[i].attributes = new avs::Attribute[dataSize];
+		memcpy_s(newMesh.primitiveArrays[i].attributes, dataSize, mesh->primitiveArrays[i].attributes, dataSize);
+	}
 
 	//Zip all of the maps back together.
-	for(int i = 0; i < mesh.accessorAmount; i++)
+	for(int i = 0; i < mesh->accessorAmount; i++)
 	{
-		newMesh.accessors[mesh.accessorIDs[i]] = mesh.accessors[i];
+		newMesh.accessors[mesh->accessorIDs[i]] = mesh->accessors[i];
 	}
 
-	for(int i = 0; i < mesh.bufferViewAmount; i++)
+	for(int i = 0; i < mesh->bufferViewAmount; i++)
 	{
-		newMesh.bufferViews[mesh.bufferViewIDs[i]] = mesh.bufferViews[i];
+		newMesh.bufferViews[mesh->bufferViewIDs[i]] = mesh->bufferViews[i];
 	}
 
-	for(int i = 0; i < mesh.accessorAmount; i++)
+	for(int i = 0; i < mesh->bufferAmount; i++)
 	{
-		newMesh.buffers[mesh.bufferIDs[i]] = mesh.buffers[i];
+		newMesh.buffers[mesh->bufferIDs[i]] = mesh->buffers[i];
+
+		//Memcpy the data into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
+		newMesh.buffers[mesh->bufferIDs[i]].data = new uint8_t[mesh->buffers[i].byteLength];
+		memcpy_s(const_cast<uint8_t*>(newMesh.buffers[mesh->bufferIDs[i]].data), mesh->buffers[i].byteLength, mesh->buffers[i].data, mesh->buffers[i].byteLength);
 	}
 
-	geometryStore.storeMesh(id, std::move(newMesh));
+	geometryStore.storeMesh(id, extractToStandard, std::move(newMesh));
 }
 
 TELEPORT_EXPORT
@@ -712,17 +833,22 @@ void StoreMaterial(avs::uid id, InteropMaterial material)
 TELEPORT_EXPORT
 void StoreTexture(avs::uid id, InteropTexture texture, std::time_t lastModified, char* basisFileLocation)
 {
-	///If I'm passing the pointer to the texture memory, then I need to perform an operation to retrieve the actual data.
-
-	//geometryStore.storeTexture(id, ToAvsTexture(texture), lastModified, basisFileLocation);
+	geometryStore.storeTexture(id, ToAvsTexture(texture, true), lastModified, basisFileLocation, false);
 }
 
 TELEPORT_EXPORT
 void StoreShadowMap(avs::uid id, InteropTexture shadowMap)
 {
-	geometryStore.storeShadowMap(id, ToAvsTexture(shadowMap));
+	geometryStore.storeShadowMap(id, ToAvsTexture(shadowMap, true));
 }
 
+TELEPORT_EXPORT
+void RemoveNode(avs::uid nodeID)
+{
+	geometryStore.removeNode(nodeID);
+}
+
+TELEPORT_EXPORT
 avs::DataNode* getNode(avs::uid nodeID)
 {
 	return geometryStore.getNode(nodeID);
@@ -735,9 +861,16 @@ uint64_t GetAmountOfTexturesWaitingForCompression()
 }
 
 TELEPORT_EXPORT
-const avs::Texture* GetNextCompressedTexture()
+BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures)
 {
-	return geometryStore.getNextCompressedTexture();
+	const avs::Texture* texture = geometryStore.getNextCompressedTexture();
+
+	std::wstringstream messageStream;
+	//Write compression message to wide string stream.
+	messageStream << "Compressing texture " << textureIndex << "/" << totalTextures << " (" << texture->name.data() << " [" << texture->width << " x " << texture->height << "])";
+
+	//Convert to binary string.
+	return SysAllocString(messageStream.str().data());
 }
 
 TELEPORT_EXPORT

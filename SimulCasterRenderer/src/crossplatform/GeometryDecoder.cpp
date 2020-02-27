@@ -195,16 +195,16 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					size_t tnSize = 0;
 					tnSize = avs::GetComponentSize(accessor.componentType) * avs::GetDataTypeSize(accessor.type);
 					meshElementCreate.m_TangentNormalSize = tnSize;
-					meshElementCreate.m_TangentNormals= (const uint8_t*)buffer.data;
+					meshElementCreate.m_TangentNormals= (const uint8_t*)data;
 				}
 					continue;
 				case AttributeSemantic::NORMAL:
 					meshElementCreate.m_Normals = (const avs::vec3*)(data);
-					assert(accessor.count / 8 == vertexCount);
+					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::TANGENT:
 					meshElementCreate.m_Tangents = (const avs::vec4*)(data);
-					assert(accessor.count / 8 == vertexCount);
+					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
 					meshElementCreate.m_UV0s = (const avs::vec2*)(data);
@@ -346,6 +346,8 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 		texture.arrayCount = Next4B;
 		texture.mipCount = Next4B;
 		texture.format = static_cast<avs::TextureFormat>(Next4B);
+		if(texture.format==avs::TextureFormat::INVALID)
+			texture.format=avs::TextureFormat::G8;
 		texture.compression = static_cast<avs::TextureCompression>(Next4B);
 
 		texture.dataSize = Next4B;

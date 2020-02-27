@@ -68,6 +68,8 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 
 void SessionClient::Disconnect(uint timeout)
 {
+	mCommandInterface->OnVideoStreamClosed();
+
 	if(mClientHost && mServerPeer)
 	{
 		if(timeout == 0)
@@ -111,6 +113,7 @@ void SessionClient::Disconnect(uint timeout)
 	}
 
 	handshakeAcknowledged = false;
+	receivedInitialPos = false;
 }
 
 void SessionClient::SendClientMessage(const avs::ClientMessage& msg)

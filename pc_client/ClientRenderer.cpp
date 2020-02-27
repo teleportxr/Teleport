@@ -260,6 +260,31 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 }
 
 
+void ClientRenderer::ChangePass(ShaderMode newShaderMode)
+{
+	switch(newShaderMode)
+	{
+		case ShaderMode::PBR:
+			passName = "pbr";
+			break;
+		case ShaderMode::ALBEDO:
+			passName = "albedo_only";
+			break;
+		case ShaderMode::NORMAL_UNSWIZZLED:
+			passName = "normal_unswizzled";
+			break;
+		case ShaderMode::NORMAL_UNREAL:
+			passName = "normal_unreal";
+			break;
+		case ShaderMode::NORMAL_UNITY:
+			passName = "normal_unity";
+			break;
+		case ShaderMode::NORMAL_VERTEXNORMALS:
+			passName = "normal_vertexnormals";
+			break;
+	}
+}
+
 void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContext, simul::crossplatform::Texture *srcTexture, simul::crossplatform::Texture* targetTexture, int mips,int2 sourceOffset)
 {
 	cubemapConstants.sourceOffset = sourceOffset ;
@@ -396,7 +421,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		{
 			int W = hdrFramebuffer->GetWidth();
 			int H = hdrFramebuffer->GetHeight();
-			renderPlatform->DrawTexture(deviceContext, 0,0, W,H , ti->texture);
+			renderPlatform->DrawTexture(deviceContext, 0,0, W, H, ti->texture);
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -541,7 +566,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 
 			pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 			pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-			pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByIndex(0), 0);
+			pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), passName.c_str());
 			renderPlatform->SetLayout(deviceContext, layout);
 			renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 			renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
@@ -628,7 +653,6 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 {
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
-	receivedInitialPos = false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 1212992;
@@ -647,6 +671,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	decoderParams.codec = avs::VideoCodec::HEVC;
 	decoderParams.use10BitDecoding = setupCommand.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = setupCommand.use_yuv_444_decoding;
+
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type = avs::DeviceType::Direct3D11;
@@ -738,6 +763,8 @@ void ClientRenderer::OnVideoStreamClosed()
 	pipeline.deconfigure();
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
+
+	receivedInitialPos = false;
 }
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
@@ -886,6 +913,24 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'R':
 			RecompileShaders();
+			break;
+		case VK_NUMPAD0: //Display full PBR rendering.
+			if(!bKeyDown) ChangePass(ShaderMode::PBR);
+			break;
+		case VK_NUMPAD1: //Display only albedo/diffuse.
+			if(!bKeyDown) ChangePass(ShaderMode::ALBEDO);
+			break;
+		case VK_NUMPAD4: //Display normals for native PC client frame-of-reference.
+			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNSWIZZLED);
+			break;
+		case VK_NUMPAD5: //Display normals swizzled for matching Unreal output.
+			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNREAL);
+			break;
+		case VK_NUMPAD6: //Display normals swizzled for matching Unity output.
+			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNITY);
+			break;
+		case VK_NUMPAD2: //Display normals swizzled for matching Unity output.
+			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_VERTEXNORMALS);
 			break;
 		default: 
 			int  k=tolower(wParam);

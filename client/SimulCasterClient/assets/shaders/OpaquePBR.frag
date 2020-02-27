@@ -105,7 +105,7 @@ vec3 EnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 
 float GetRoughness(vec4 combinedLookup)
 {
-    return combinedLookup.b;
+    return combinedLookup.r;
 }
 
 float GetMetallic(vec4 combinedLookup)
@@ -115,7 +115,7 @@ float GetMetallic(vec4 combinedLookup)
 
 float GetAO(vec4 combinedLookup)
 {
-    return combinedLookup.r;
+    return combinedLookup.b;
 }
 
 float GetSpecular(vec4 combinedLookup)
@@ -231,7 +231,7 @@ vec4 Gamma(vec4 a)
     return pow(a,vec4(.45,.45,.45,1.0));
 }
 
-void main()
+void Opaque()
 {
     //Debug light
 	Light d_Light;
@@ -239,26 +239,28 @@ void main()
 	d_Light.u_Position = vec3(1.3, 1.8, -7.6);
 	d_Light.u_Power = 100.0;
 	d_Light.u_Direction = vec3(0.0, -0.391, -0.921);
-	
+
 	vec3 Lo;				//Exitance Radiance from the surface in the direction of the camera.
     vec3 Le = vec3(0.0);	//Emissive Radiance from the surface in the direction of the camera, if any.
 
-    vec4 combinedLookup = texture(u_Combined, v_UV_diffuse*u_CombinedTexCoordsScalar_R)*u_CombinedOutputScalar;
+    vec4 combinedLookup = texture(u_Combined, v_UV_diffuse * u_CombinedTexCoordsScalar_R) * u_CombinedOutputScalar;
+
     //Primary non-light dependent
     float roughness = GetRoughness(combinedLookup);
     float roughnessE =roughness*roughness;
     float roughnessL = max(0.01, roughnessE);
 
-    vec3 normalLookup=texture(u_Normal, v_UV_normal * u_NormalTexCoordsScalar_R).bgr;
-    vec3 tangetSpaceNormalMap = 2.0*(normalLookup-vec3(0.5,0.5,0.5));//*u_NormalOutputScalar.bgr;
-    vec3 normal = normalize( v_TBN*tangetSpaceNormalMap );
-
+    vec3 normalLookup = texture(u_Normal, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
+    vec3 tangentSpaceNormalMap = 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
+    vec3 normal = normalize(v_TBN * tangentSpaceNormalMap);
 
     vec3 viewDir = normalize(v_Position-v_CameraPosition);
 	vec3 diffuse_light = vec3(0, 0, 0);
 	vec3 specular_light = vec3(0, 0, 0);
     float metallic = GetMetallic(combinedLookup);
-    vec3 diffuseColour= texture(u_Diffuse, v_UV_diffuse*u_DiffuseTexCoordsScalar_R).bgr*u_DiffuseOutputScalar.rgb;
+
+    vec3 diffuseColour = texture(u_Diffuse, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb * u_DiffuseOutputScalar.rgb;
+
     //Loop over lights to calculate Lo (accumulation of L in the direction Wo)
     for(int i = 0; i < 1/*MaxLights*/; i++)
     {

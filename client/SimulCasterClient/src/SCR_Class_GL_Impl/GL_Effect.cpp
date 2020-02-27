@@ -9,6 +9,14 @@ using namespace OVR;
 
 #define OPENGLES_310 310
 
+GL_Effect::~GL_Effect()
+{
+    for(auto& programPair : m_EffectPrograms)
+    {
+        GlProgram::Free(programPair.second);
+    }
+}
+
 void GL_Effect::Create(EffectCreateInfo* pEffectCreateInfo)
 {
     m_CI = *pEffectCreateInfo;
@@ -20,115 +28,20 @@ void GL_Effect::CreatePass(EffectPassCreateInfo* pEffectCreateInfo)
 
 void GL_Effect::LinkShaders(const char* effectPassName, const std::vector<ShaderResource>& shaderResources)
 {
-    Shader* vertex = nullptr;
-    Shader* fragment = nullptr;
-
     ShaderSystem::Pipeline& pipeline = m_EffectPasses.at(effectPassName).pipeline;
-    if(pipeline.m_Type == ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS)
+    switch(pipeline.m_Type)
     {
-        for(size_t i = 0; i < pipeline.m_ShaderCount; i++)
-        {
-            if(pipeline.m_Shaders[i]->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_VERTEX)
-                vertex = pipeline.m_Shaders[i].get();
-            else if(pipeline.m_Shaders[i]->GetShaderCreateInfo().stage == Shader::Stage ::SHADER_STAGE_FRAGMENT)
-                fragment = pipeline.m_Shaders[i].get();
-            else
-                continue;
-        }
+    case ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS:
+        BuildGraphicsPipeline(effectPassName, pipeline, shaderResources);
+        break;
+    case ShaderSystem::PipelineType::PIPELINE_TYPE_COMPUTE:
+        BuildComputePipeline(effectPassName, pipeline, shaderResources);
+        break;
+    default:
+        SCR_LOG("Attempted to create a pipeline with an unset pipeline type!");
+        assert(false);
+        break;
     }
-    else
-    {
-    	std::string src="#version 310 es\n";
-		//Compile compute shader
-		const auto &sc=pipeline.m_Shaders[0]->GetShaderCreateInfo();
-		if(sc.entryPoint.length())
-		{
-			src+="#define ";
-			src+=sc.entryPoint;
-			src+=" main\n";
-		}
-		src+=sc.sourceCode;
-
-		GLuint id = glCreateShader(GL_COMPUTE_SHADER);
-		const char* source = src.c_str();
-		glShaderSource(id, 1, &source, nullptr);
-		glCompileShader(id);
-		GLint isCompiled = 0;
-		glGetShaderiv(id, GL_COMPILE_STATUS, &isCompiled);
-		if (isCompiled == GL_FALSE)
-		{
-			GLint maxLength = 0;
-			glGetShaderiv(id, GL_INFO_LOG_LENGTH, &maxLength);
-			// The maxLength includes the NULL character
-			std::vector<GLchar> errorLog(maxLength);
-			glGetShaderInfoLog(id, maxLength, &maxLength, &errorLog[0]);
-			OVR_FAIL("%s",(const char*)errorLog.data());
-			OVR_DEBUG_BREAK;
-			glDeleteShader(id);
-			return;
-		}
-
-		//Build compute program
-		GLuint program = glCreateProgram();
-		glAttachShader(program, id);
-		glLinkProgram(program);
-		GLint isLinked = 0;
-		glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
-		if (isLinked == GL_FALSE)
-		{
-			GLint maxLength = 0;
-			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
-			// The maxLength includes the NULL character
-			std::vector<GLchar> errorLog(maxLength);
-			glGetProgramInfoLog(program, maxLength, &maxLength, &errorLog[0]);
-			OVR_FAIL("%s",(const char*)errorLog.data());
-			OVR_DEBUG_BREAK;
-			glDeleteProgram(program);
-			return;
-		}
-		glValidateProgram(program);
-		glDeleteShader(id);
-		m_Program.Program = program;
-        return;
-    }
-
-    assert(vertex != nullptr && fragment != nullptr);
-
-    std::vector<ovrProgramParm> uniformParms;
-    for(const auto& shaderResource : shaderResources )
-    {
-        for(const auto& resource : shaderResource.GetWriteShaderResources())
-        {
-            const char* name = resource.shaderResourceName;
-            ovrProgramParmType type = ToOVRProgramParmType(resource.shaderResourceType);
-            assert(type != ovrProgramParmType::MAX);
-            uniformParms.push_back({name, type});
-        }
-    }
-    const char* vertSrc = nullptr;
-    const char* fragSrc = nullptr;
-    const size_t maxStringLiteralSize = 4096;
-    bool vertHeapAlloc = vertex->GetShaderCreateInfo().sourceCode.size() > maxStringLiteralSize;
-    bool fragHeapAlloc = fragment->GetShaderCreateInfo().sourceCode.size() > maxStringLiteralSize;
-
-    if(vertHeapAlloc)
-        vertSrc = new char[vertex->GetShaderCreateInfo().sourceCode.size()];
-    if(fragHeapAlloc)
-        fragSrc = new char[fragment->GetShaderCreateInfo().sourceCode.size()];
-
-    vertSrc = vertex->GetShaderCreateInfo().sourceCode.c_str();
-    fragSrc = fragment->GetShaderCreateInfo().sourceCode.c_str();
-
-    static std::string vertDir="";
-	static std::string fragDir="";//#extension GL_EXT_shader_texture_lod : require\n";
-
-    m_Program = GlProgram::Build( vertDir.c_str(), vertSrc, fragDir.c_str(), fragSrc, uniformParms.data(), (int)uniformParms.size(), OPENGLES_310);
-
-    if(vertHeapAlloc)
-        delete[] vertSrc;
-    if(fragHeapAlloc)
-        delete[] fragSrc;
-
 }
 
 void GL_Effect::Bind(const char* effectPassName) const
@@ -338,4 +251,103 @@ ovrProgramParmType GL_Effect::ToOVRProgramParmType(ShaderResourceLayout::ShaderR
 		default:
 			exit(1);
     }
-};
+}
+
+void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources)
+{
+    Shader* vertex = nullptr;
+    Shader* fragment = nullptr;
+
+    for(size_t i = 0; i < pipeline.m_ShaderCount; i++)
+    {
+        if(pipeline.m_Shaders[i]->GetShaderCreateInfo().stage == Shader::Stage::SHADER_STAGE_VERTEX)
+        {
+            vertex = pipeline.m_Shaders[i].get();
+        }
+        else if(pipeline.m_Shaders[i]->GetShaderCreateInfo().stage == Shader::Stage::SHADER_STAGE_FRAGMENT)
+        {
+            fragment = pipeline.m_Shaders[i].get();
+        }
+    }
+
+    assert(vertex != nullptr && fragment != nullptr);
+
+    std::vector<ovrProgramParm> uniformParms;
+    for(const auto& shaderResource : shaderResources)
+    {
+        for(const auto& resource : shaderResource.GetWriteShaderResources())
+        {
+            const char* name = resource.shaderResourceName;
+            ovrProgramParmType type = ToOVRProgramParmType(resource.shaderResourceType);
+            assert(type != ovrProgramParmType::MAX);
+            uniformParms.push_back({name, type});
+        }
+    }
+
+    std::string vertSourceCode = "#define " + vertex->GetShaderCreateInfo().entryPoint + " main\r\n" + vertex->GetShaderCreateInfo().sourceCode;
+    std::string fragSourceCode = "#define " + fragment->GetShaderCreateInfo().entryPoint + " main\r\n" + fragment->GetShaderCreateInfo().sourceCode;
+
+    static std::string vertDir = "";
+    static std::string fragDir = "";//#extension GL_EXT_shader_texture_lod : require\n";
+
+    m_EffectPrograms.emplace
+    (
+            effectPassName,
+            GlProgram::Build(vertDir.c_str(), vertSourceCode.c_str(), fragDir.c_str(), fragSourceCode.c_str(), uniformParms.data(), (int)uniformParms.size(), OPENGLES_310)
+     );
+}
+
+void GL_Effect::BuildComputePipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources)
+{
+    std::string src = "#version 310 es\n";
+    //Compile compute shader
+    const auto& sc = pipeline.m_Shaders[0]->GetShaderCreateInfo();
+    if(sc.entryPoint.length())
+    {
+        src += "#define ";
+        src += sc.entryPoint;
+        src += " main\n";
+    }
+    src += sc.sourceCode;
+
+    GLuint id = glCreateShader(GL_COMPUTE_SHADER);
+    const char* source = src.c_str();
+    glShaderSource(id, 1, &source, nullptr);
+    glCompileShader(id);
+    GLint isCompiled = 0;
+    glGetShaderiv(id, GL_COMPILE_STATUS, &isCompiled);
+    if(isCompiled == GL_FALSE)
+    {
+        GLint maxLength = 0;
+        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &maxLength);
+        // The maxLength includes the NULL character
+        std::vector<GLchar> errorLog(maxLength);
+        glGetShaderInfoLog(id, maxLength, &maxLength, &errorLog[0]);
+        OVR_FAIL("%s", (const char*)errorLog.data());
+        OVR_DEBUG_BREAK;
+        glDeleteShader(id);
+        return;
+    }
+
+    //Build compute program
+    GLuint program = glCreateProgram();
+    glAttachShader(program, id);
+    glLinkProgram(program);
+    GLint isLinked = 0;
+    glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
+    if(isLinked == GL_FALSE)
+    {
+        GLint maxLength = 0;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
+        // The maxLength includes the NULL character
+        std::vector<GLchar> errorLog(maxLength);
+        glGetProgramInfoLog(program, maxLength, &maxLength, &errorLog[0]);
+        OVR_FAIL("%s", (const char*)errorLog.data());
+        OVR_DEBUG_BREAK;
+        glDeleteProgram(program);
+        return;
+    }
+    glValidateProgram(program);
+    glDeleteShader(id);
+    m_EffectPrograms[effectPassName].Program = program;
+}

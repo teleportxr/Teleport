@@ -52,7 +52,7 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 	m_DummyDiffuse->Create(tci);
 
 	uint32_t* normal = new uint32_t[1];
-	*normal = normalBGRA;
+	*normal = normalRGBA;
 	tci.mips[0] = (uint8_t*)normal;
 	m_DummyNormal->Create(tci);
 
@@ -462,20 +462,20 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 		{},
 		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_textureFormat) : scr::Texture::CompressionFormat::UNCOMPRESSED
      };
+
+	//Copy the data out of the buffer, so it can be transcoded or used as-is (uncompressed).
+	unsigned char* data = new unsigned char[texture.dataSize];
+	memcpy(data, texture.data, texture.dataSize);
 	
 	if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
-		//Data we need to store, so it can be transcoded by the basis thread.
-		unsigned char* basisData = new unsigned char[texture.dataSize];
-		memcpy(basisData, texture.data, texture.dataSize);
-
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(UntranscodedTexture{texture_uid, texture.dataSize, basisData, std::move(texInfo), texture.name});
+		texturesToTranscode.emplace_back(UntranscodedTexture{texture_uid, texture.dataSize, data, std::move(texInfo), texture.name});
 	}
 	else
 	{
 		texInfo.mipSizes.push_back(texture.dataSize);
-		texInfo.mips.push_back(texture.data);
+		texInfo.mips.push_back(data);
 
 		CompleteTexture(texture_uid, texInfo);
 	}

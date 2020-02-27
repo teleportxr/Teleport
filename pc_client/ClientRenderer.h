@@ -60,6 +60,13 @@ struct RendererStats
 
 class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, public SessionCommandInterface
 {
+	enum class ShaderMode
+	{
+		PBR, ALBEDO, NORMAL_UNSWIZZLED, NORMAL_UNREAL, NORMAL_UNITY, NORMAL_VERTEXNORMALS
+	};
+
+	void ChangePass(ShaderMode newShaderMode);
+
 	int frame_number;
 	/// It is better to use a reversed depth buffer format, i.e. the near plane is z=1 and the far plane is z=0. This
 	/// distributes numerical precision to where it is better used.
@@ -110,6 +117,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool show_osd = true;
 	bool render_from_video_centre = false;
 	bool show_textures = false;
+
+	std::string passName = "pbr"; //Pass used for rendering geometry.
 public:
 	ClientRenderer();
 	~ClientRenderer();

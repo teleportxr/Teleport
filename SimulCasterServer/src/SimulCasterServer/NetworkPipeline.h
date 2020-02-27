@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "libavstream/libavstream.hpp"
-#include "libavstream/platforms/platform_windows.hpp"
+#include <libavstream/platforms/platform_windows.hpp>
+#include <libavstream/libavstream.hpp>
 
 #define WITH_REMOTEPLAY_STATS 1
 
@@ -17,7 +17,7 @@ namespace SCServer
 	{
 	public:
 		NetworkPipeline(const CasterSettings* settings);
-		virtual ~NetworkPipeline() = default;
+		virtual ~NetworkPipeline();
 
 		void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue);
 
@@ -30,14 +30,10 @@ namespace SCServer
 		struct VideoPipe
 		{
 			avs::Queue* sourceQueue;
-			avs::Forwarder forwarder;
-			avs::Packetizer packetizer;
 		};
 		struct GeometryPipe
 		{
 			avs::Queue* sourceQueue;
-			avs::Forwarder forwarder;
-			avs::Packetizer packetizer;
 		};
 
 		const CasterSettings* settings;

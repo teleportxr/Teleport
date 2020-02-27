@@ -49,13 +49,14 @@ Clone the repository with submodules:
     * Remove RelWithDebInfo and MinSizeRelease configurations.
 3. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch.
 4. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config. The projects needed are:
-    * libavstream
     * basisu
-    * enet
-    * srt_virtual
-    * srt_static
+	* efp
+	* enet
 	* haicrypt_virtual
-    * SimulCasterServer 
+	* libavstream
+    * SimulCasterServer
+    * srt_static
+    * srt_virtual
 
 5. Ensure cuda_kernels project in libavstream solution is at least toolset Visual Studio 2019.
 6. Build the projects, this creates static libraries for UnrealDemo to link.
