@@ -38,9 +38,9 @@ namespace SCServer
 		}
 	private:
 		const struct CasterSettings* settings;
-
+		size_t prevBufferSize;
 		void putPayload(avs::GeometryPayloadType t);
-		static unsigned char GALU_code[];
+		void putPayloadSize();
 
 		//Following functions push the data from the source onto the buffer, depending on what the requester needs.
 		//	src : Source we are taking the data from.

@@ -33,10 +33,8 @@ size_t GetNewUIDs(std::vector<avs::uid> & outUIDs, avs::GeometryRequesterBackend
 namespace SCServer
 {
 	GeometryEncoder::GeometryEncoder(const CasterSettings* settings)
-		:settings(settings)
+		:settings(settings), prevBufferSize(0)
 	{}
-
-	unsigned char GeometryEncoder::GALU_code[] = { 0x01,0x00,0x80,0xFF };
 
 	avs::Result GeometryEncoder::encode(uint32_t timestamp, avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req)
 	{
@@ -121,16 +119,6 @@ namespace SCServer
 				}
 			}
 		}
-
-		// GALU to end.
-		if (queuedBuffer.size() > sizeof GALU_code)
-		{
-			queuedBuffer.push_back(GALU_code[0]);
-			queuedBuffer.push_back(GALU_code[1]);
-			queuedBuffer.push_back(GALU_code[2]);
-			queuedBuffer.push_back(GALU_code[3]);
-		}
-
 		return avs::Result::OK;
 	}
 
@@ -214,6 +202,9 @@ namespace SCServer
 				put(buffer.data, buffer.byteLength);
 			}
 
+			// Actual size is now known so update payload size
+			putPayloadSize();
+
 			req->encodedResource(uid);
 		}
 		return avs::Result::OK;
@@ -250,17 +241,37 @@ namespace SCServer
 			req->encodedResource(uid);
 		}
 
+		// Actual size is now known so update payload size
+		putPayloadSize();
+
 		return avs::Result::OK;
 	}
 
 	void GeometryEncoder::putPayload(avs::GeometryPayloadType t)
 	{
-		buffer.push_back(GALU_code[0]);
-		buffer.push_back(GALU_code[1]);
-		buffer.push_back(GALU_code[2]);
-		buffer.push_back(GALU_code[3]);
-		//Place payload type onto the buffer.
+		prevBufferSize = buffer.size();
+
+		// Add placeholder for the payload size 
+		put(size_t(sizeof(avs::GeometryPayloadType)));
+
+		// Place payload type onto the buffer.
 		put(t);
+	}
+
+	void GeometryEncoder::putPayloadSize()
+	{
+		if (!buffer.size())
+		{
+			prevBufferSize = 0;
+			return;
+		}
+
+		size_t payloadSize = buffer.size() - prevBufferSize - sizeof(size_t);
+
+		// prevBufferSize will be the index where the payload size placeholder was added
+		replace(prevBufferSize, payloadSize);
+
+		prevBufferSize = 0;
 	}
 
 	avs::Result GeometryEncoder::encodeTextures(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs)
@@ -361,6 +372,9 @@ namespace SCServer
 				//Push amount of textures we are sending.
 				put(materialTexture_uids.size());
 
+				// Actual size is now known so update payload size
+				putPayloadSize();
+
 				if (materialTexture_uids.size() != 0)
 				{
 					//Push textures.
@@ -428,6 +442,9 @@ namespace SCServer
 
 				//Push sampler identifier.
 				put(texture->sampler_uid);
+
+				// Actual size is now known so update payload size
+				putPayloadSize();
 
 				//Flag we have encoded the texture.
 				req->encodedResource(uid);
