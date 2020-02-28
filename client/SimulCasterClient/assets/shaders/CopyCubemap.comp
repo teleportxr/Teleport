@@ -31,7 +31,11 @@ void colour_only()
     ivec2 loadPos   = ivec2(invocationId.xy)+cub.sourceOffset+ivec2(cub.faceSize,cub.faceSize)*faceOffset;
     vec4 lookup     = texelFetch(videoFrameTexture, loadPos, 0);
     ivec3 storePos  = ivec3(invocationId.xyz);
-   // lookup.r+=1.0;//float((invocationId.z/uint(2))%uint(2));
+    // lookup.r+=1.0;//float((invocationId.z/uint(2))%uint(2));
+    // Aidan: RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder.
+    lookup.r *= lookup.r;
+    lookup.g *= lookup.g;
+    lookup.b *= lookup.b;
     imageStore(destTex, storePos.xyz, lookup);
 }
 

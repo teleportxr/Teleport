@@ -26,7 +26,21 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-  project.archivesBaseName = "simulcasterclient"
+  signingConfigs {
+      debug {
+          storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
+          storePassword 'android'
+          keyAlias = 'android'
+          keyPassword 'android'
+      }
+      release {
+          storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
+          storePassword 'android'
+          keyAlias = 'android'
+          keyPassword 'android'
+      }
+  }
+    project.archivesBaseName = "simulcasterclient"
   defaultConfig {
     applicationId "co.Simul.simulcasterclient"
 
@@ -38,6 +52,18 @@ android {
         ndkBuild {
                 abiFilters 'armeabi-v7a','arm64-v8a'
         }
+    }
+  }
+
+  buildTypes {
+    debug {
+        debuggable true
+        //minifyEnabled false
+        //useProguard false
+    }
+    release {
+        //minifyEnabled true
+        //useProguard true
     }
   }
 
