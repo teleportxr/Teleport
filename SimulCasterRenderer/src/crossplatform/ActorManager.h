@@ -1,13 +1,16 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
+#include <algorithm>
+#include <functional>
 #include <map>
 #include <memory>
-#include <functional>
+#include <unordered_map>
 
-#include <libavstream/geometry/mesh_interface.hpp>
-#include "ResourceManager.h"
+#include "libavstream/geometry/mesh_interface.hpp"
+
 #include "Actor.h"
+#include "ResourceManager.h"
 
 namespace scr
 {
@@ -16,101 +19,175 @@ namespace scr
 	public:
 		struct LiveActor
 		{
-			std::shared_ptr<Actor> actor = nullptr;
+            avs::uid actorID = 0; //ID of the actor.
+			Actor actor;
+
 			uint32_t timeSinceLastVisible = 0; //Miliseconds the actor has been invisible.
 		};
 
 		uint32_t actorLifetime = 2000; //Milliseconds the manager waits before removing invisible actors.
-		std::vector<avs::uid> handUIDs; //UIDs of the actors that are used as hands.
 
-		std::function<void(avs::uid actorID, std::shared_ptr<Actor> actorInfo)> nativeActorCreator; //Function that creates a native actor.
-		std::function<void(avs::uid actorID)> nativeActorDestroyer; //Function that destroys a native actor.
-		std::function<void(void)> nativeActorClearer; //Function that clears the list of native actors.
+		virtual ~ActorManager() = default;
 
-		void CreateActor(avs::uid actor_uid, const Actor::ActorCreateInfo& pActorCreateInfo)
+		virtual void CreateActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
 		{
-			actorMap[actor_uid] = {std::make_shared<Actor>(pActorCreateInfo), 0};
-			if(nativeActorCreator) nativeActorCreator(actor_uid, actorMap[actor_uid].actor);
+			actorList.emplace(actorList.begin() + visibleActorAmount, std::make_unique<LiveActor>(LiveActor{actorID, actorCreateInfo}));
+			actorLookup[actorID] = visibleActorAmount;
+			++visibleActorAmount;
 		}
 
-		void RemoveActor(avs::uid actor_uid)
+        virtual void CreateHand(avs::uid handID, const Actor::ActorCreateInfo& handCreateInfo)
+        {
+            handList.emplace_back(std::make_unique<LiveActor>(LiveActor{handID, handCreateInfo}));
+			actorLookup[handID] = handList.size() - 1;
+
+			if(!rightHand) SetHands(0, handID);
+			else if(!leftHand) SetHands(handID);
+        }
+
+		void RemoveActor(avs::uid actorID)
 		{
-			RemoveActor_Internal(actor_uid);
+			if(!HasActor(actorID)) return;
+
+			if(isActorVisible(actorID)) --visibleActorAmount;
+			actorList.erase(actorList.begin() + actorLookup.at(actorID));
 		}
 
-		bool HasActor(avs::uid actor_uid) const
+		bool HasActor(avs::uid actorID) const
 		{
-			return actorMap.find(actor_uid) != actorMap.end();
+			return actorLookup.find(actorID) != actorLookup.end();
 		}
 
-		std::shared_ptr<Actor> GetActor(avs::uid actor_uid) const
+		Actor* GetActor(avs::uid actorID)
 		{
-			if(HasActor(actor_uid))
-			{
-				return actorMap.at(actor_uid).actor;
-			}
-
-			return nullptr;
+			return HasActor(actorID) ? &actorList[actorLookup.at(actorID)]->actor : nullptr;
 		}
+
+		bool SetHands(avs::uid leftHandID = 0, avs::uid rightHandID = 0)
+        {
+            if(leftHandID != 0)
+            {
+				if(!HasActor(leftHandID)) return false;
+				leftHand = handList[actorLookup.at(leftHandID)].get();
+            }
+
+            if(rightHandID != 0)
+            {
+				if(!HasActor(rightHandID)) return false;
+				rightHand = handList[actorLookup.at(rightHandID)].get();
+            }
+
+            return true;
+        }
+
+		void GetHands(LiveActor*& outLeftHand, LiveActor*& outRightHand)
+        {
+		    outLeftHand = leftHand;
+            outRightHand = rightHand;
+        }
 
 		//Causes the actor to become visible.
-		bool ShowActor(avs::uid actor_uid)
+		bool ShowActor(avs::uid actorID)
 		{
-			if(HasActor(actor_uid))
+			if(HasActor(actorID))
 			{
-				actorMap[actor_uid].actor->isVisible = true;
-				return true;
+				size_t actorIndex = actorLookup.at(actorID);
+
+				if(!isActorVisible(actorIndex))
+				{
+					size_t swapIndex = visibleActorAmount;
+
+					auto actorIt = actorList.begin() + actorIndex;
+					auto swapIt = actorList.begin() + swapIndex;
+
+					(*actorIt)->timeSinceLastVisible = 0;
+
+					actorLookup.at((*actorIt)->actorID) = swapIndex;
+					actorLookup.at((*swapIt)->actorID) = actorIndex;
+					std::iter_swap(actorIt, swapIt);
+					
+					++visibleActorAmount;
+
+					return true;
+				}
 			}
 
 			return false;
 		}
 
 		//Causes the actor to become invisible.
-		bool HideActor(avs::uid actor_uid)
+		bool HideActor(avs::uid actorID)
 		{
-			if(HasActor(actor_uid))
+			if(HasActor(actorID))
 			{
-				actorMap[actor_uid].actor->isVisible = false;
-				return true;
+				size_t actorIndex = actorLookup.at(actorID);
+
+				if(isActorVisible(actorIndex))
+				{
+					size_t swapIndex = visibleActorAmount - 1;
+
+					auto actorIt = actorList.begin() + actorIndex;
+					auto swapIt = actorList.begin() + swapIndex;
+
+					actorLookup.at((*actorIt)->actorID) = swapIndex;
+					actorLookup.at((*swapIt)->actorID) = actorIndex;
+					std::iter_swap(actorIt, swapIt);
+
+					--visibleActorAmount;
+
+					return true;
+				}
 			}
 
 			return false;
 		}
 
+        bool UpdateActorTransform(avs::uid actorID, const scr::vec3& translation, const scr::quat& rotation, const scr::vec3& scale)
+        {
+			if(!HasActor(actorID)) return false;
+			
+			actorList[actorLookup.at(actorID)]->actor.UpdateModelMatrix(translation, rotation, scale);
+			return true;
+        }
+
+		bool UpdateHandTransform(avs::uid handID, const scr::vec3& translation, const scr::quat& rotation, const scr::vec3& scale)
+		{
+			if(!HasActor(handID)) return false;
+
+			handList[actorLookup.at(handID)]->actor.UpdateModelMatrix(translation, rotation, scale);
+			return true;
+		}
+
 		//Tick the actor manager along, and remove any actors that have been invisible for too long.
 		void Update(uint32_t deltaTimestamp)
 		{
-			for(auto it = actorMap.begin(); it != actorMap.end();)
+			//Increment timeSinceLastVisible for all invisible actors.
+			auto actorIt = actorList.begin() + visibleActorAmount;
+			for(; actorIt != actorList.end(); actorIt++)
 			{
-				if(it->second.actor->isVisible)
-				{
-					//If the actor is visible, then reset their timer and continue.
-					it->second.timeSinceLastVisible = 0;
-					it++;
-				}
-				else
-				{
-					it->second.timeSinceLastVisible += deltaTimestamp;
+				(*actorIt)->timeSinceLastVisible += deltaTimestamp;
 
-					if(it->second.timeSinceLastVisible >= actorLifetime)
-					{
-						//Erase an actor if they have been invisible for too long.
-						it = RemoveActor_Internal(it);
-					}
-					else
-					{
-						it++;
-					}
-				}
+				if((*actorIt)->timeSinceLastVisible >= actorLifetime) break;
+			}
+
+			//Delete actors that have been invisible for too long.
+			for(; actorIt != actorList.end();)
+			{
+				actorLookup.erase((*actorIt)->actorID);
+				actorIt = actorList.erase(actorIt);
 			}
 		}
 
 		//Clear actor manager of all actors.
 		void Clear()
 		{
-			actorMap.clear();
-			handUIDs.clear();
-			if(nativeActorClearer) nativeActorClearer();
+			actorList.clear();
+			handList.clear();
+            visibleActorAmount = 0;
+
+			actorLookup.clear();
+			leftHand = nullptr;
+			rightHand = nullptr;
 		}
 
 		//Clear, and free memory of, all resources; bar from resources on the list.
@@ -118,60 +195,51 @@ namespace scr
 		//	outExistingActors : List of actors in the exclude list that were actually in the actor manager.
 		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
 		{
-			for(auto it = actorMap.begin(); it != actorMap.end();)
+			for(auto it = actorList.begin(); it != actorList.end();)
 			{
-				bool isExcluded = false; //We don't remove the resource if it is excluded.
-				unsigned int i = 0;
-				while(i < excludeList.size() && !isExcluded)
-				{
-					//The resource is excluded if its uid appears in the exclude list.
-					if(excludeList[i] == it->first)
-					{
-						outExistingActors.push_back(excludeList[i]);
-						isExcluded = true;
-					}
-
-					++i;
-				}
-
 				//Increment the iterator if it is excluded.
-				if(isExcluded)
+				if(std::find(excludeList.begin(), excludeList.end(), (*it)->actorID) != excludeList.end())
 				{
+					excludeList.erase(std::remove(excludeList.begin(), excludeList.end(), (*it)->actorID), excludeList.end());
+					outExistingActors.push_back((*it)->actorID);
+
 					++it;
-					excludeList.erase(std::remove(excludeList.begin(), excludeList.end(), excludeList[i - 1]), excludeList.end());
 				}
 				//Remove the resource if it is not.
 				else
 				{
-					it = RemoveActor_Internal(it);
+					actorLookup.erase((*it)->actorID);
+					it = actorList.erase(it);
+					--visibleActorAmount;
 				}
 			}
 		}
 
-		const std::map<avs::uid, LiveActor>& GetActorList()
+		const std::vector<std::unique_ptr<LiveActor>>& GetActorList() const
 		{
-			return actorMap;
+			return actorList;
 		}
+
+		size_t getVisibleActorAmount() const
+		{
+			return visibleActorAmount;
+		}
+
+	protected:
+		typedef std::vector<std::unique_ptr<LiveActor>> actorList_t;
+
+		actorList_t actorList; //Actors/geometry that are drawn to the screen.
+        size_t visibleActorAmount = 0; //Amount of actors in the actorList currently being rendered.
+
+		actorList_t handList; //List of hand actors; handled differently as we don't want them cleaned-up.
+        std::unordered_map<avs::uid, size_t> actorLookup; //<ActorID, Index of actor in actorList/handList>
+
+        LiveActor* leftHand = nullptr;
+        LiveActor* rightHand = nullptr;
 	private:
-		std::map<avs::uid, LiveActor> actorMap; //<ID of the actor, struct of the information on the living actor>.
-
-		//Removes actor with passed ID; use the version with the iterator parameter where possible.
-		//	actorID : ID of the actor to be removed.
-		void RemoveActor_Internal(avs::uid actorID)
+	    bool isActorVisible(size_t actorIndex) const
 		{
-			RemoveActor_Internal(actorMap.find(actorID));
-		}
-
-		//Removes actor at iterator, and returns iterator to next item in the list.
-		//	currentItem : Iterator pointing to the item in the list that is to be removed.
-		std::map<avs::uid, LiveActor>::iterator RemoveActor_Internal(std::map<avs::uid, LiveActor>::iterator currentItem)
-		{
-			avs::uid actorID = currentItem->first;
-
-			std::map<avs::uid, LiveActor>::iterator nextItem = actorMap.erase(currentItem);
-			if(nativeActorDestroyer) nativeActorDestroyer(actorID);
-
-			return nextItem;
+			return actorIndex < visibleActorAmount;
 		}
 	};
 }

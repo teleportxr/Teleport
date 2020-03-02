@@ -5,20 +5,20 @@
 #include <VrApi_Types.h>
 #include <VrApi_Input.h>
 
-#include <libavstream/libavstream.hpp>
-
 #include "App.h"
+#include "GuiSys.h"
 #include "SceneView.h"
 #include "SoundEffectContext.h"
-#include "GuiSys.h"
 
-#include "crossplatform/SessionClient.h"
-#include "VideoDecoderProxy.h"
-
-#include "ResourceCreator.h"
-#include "GeometryDecoder.h"
+#include <libavstream/libavstream.hpp>
 #include <libavstream/geometrydecoder.hpp>
-#include "SCR_Class_GL_Impl/GL_RenderPlatform.h"
+
+#include "crossplatform/GeometryDecoder.h"
+#include "crossplatform/ResourceCreator.h"
+#include "crossplatform/SessionClient.h"
+
+#include "GlobalGraphicsResources.h"
+#include "VideoDecoderProxy.h"
 
 namespace OVR {
 	class ovrLocale;
@@ -103,7 +103,6 @@ private:
 	static constexpr size_t NumStreams = 1;
 	static constexpr bool   GeoStream  = true;
 
-	scc::GL_RenderPlatform renderPlatform;
 	GeometryDecoder        geometryDecoder;
 	ResourceCreator        resourceCreator;
 	avs::GeometryDecoder   avsGeometryDecoder;
@@ -137,16 +136,14 @@ private:
 	std::shared_ptr<scr::UniformBuffer> mVideoUB;
 	std::shared_ptr<scr::ShaderStorageBuffer> mCameraPositionBuffer;
 	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
-	scr::ShaderResource                 mLightCubemapShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
 	std::shared_ptr<scr::Effect>        mExtractCameraPositionEffect;
 
+	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	std::string                         CopyCubemapSrc;
 	std::string                         ExtractPositionSrc;
-
-	scr::vec4 mCameraPositions[8];
 
 	ovrMobile                           *mOvrMobile;
 	SessionClient                       mSession;
@@ -166,39 +163,12 @@ private:
 
 	//Clientside Renderering Objects
 	scc::GL_DeviceContext mDeviceContext;
-	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
 
-	scr::vec3                    cameraPosition;	// in real space.
-	scr::vec3					oculusOrigin;		// in metres. The headPose will be relative to this.
-
-	std::shared_ptr<scr::Camera> scrCamera;
-
-	scc::GL_Effect                mEffect;
-	std::shared_ptr<scr::Sampler> mSampler;
-	std::shared_ptr<scr::Sampler> mSamplerCubeMipMap;
-	char* effectPassName = const_cast<char*>("OpaquePBR"); //Which effect pass the geometry should be rendered with.
-	bool is_clockwise_winding = false; //Whether the geometry winding order is clockwise.
+	scr::vec4 mCameraPositions[8];
+	scr::vec3 cameraPosition;	// in real space.
+	scr::vec3 oculusOrigin;		// in metres. The headPose will be relative to this.
 
 	bool receivedInitialPos=false;
-	struct OVRActor
-	{
-		std::vector<std::shared_ptr<OVR::ovrSurfaceDef>> ovrSurfaceDefs;
-
-		~OVRActor()
-		{
-			ovrSurfaceDefs.clear();
-		}
-	};
-	std::map<avs::uid, std::shared_ptr<OVRActor>> mOVRActors;
-
-	//Creates a native actor with the passed id, and actor information.
-	//  actorID : ID of the native actor to be created; same as SCR actor.
-	//  actorInfo : Information to use to create the native actor.
-	void CreateNativeActor(avs::uid actorID, std::shared_ptr<scr::Actor> actorInfo);
-	//Destroys the native actor with the passed ID.
-	void DestroyNativeActor(avs::uid actorID);
-	//Destroys all native actors.
-	void ClearNativeActors();
 
 	void CopyToCubemaps();
 	void RenderLocalActors(OVR::ovrFrameResult& res);

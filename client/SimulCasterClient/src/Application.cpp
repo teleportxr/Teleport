@@ -1,20 +1,22 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "Application.h"
 
-#include "AndroidDiscoveryService.h"
-#include "Config.h"
-#include "VideoSurface.h"
+#include <sstream>
 
+#include "GLESDebug.h"
 #include "GuiSys.h"
-#include "OVR_Locale.h"
-#include "OVR_LogUtils.h"
 #include "OVR_FileSys.h"
 #include "OVR_GlUtils.h"
+#include "OVR_Locale.h"
+#include "OVR_LogUtils.h"
 #include "OVR_Math.h"
-#include "GLESDebug.h"
 
-#include <enet/enet.h>
-#include <sstream>
+#include "enet/enet.h"
+
+#include "AndroidDiscoveryService.h"
+#include "Config.h"
+#include "OVRActorManager.h"
+#include "VideoSurface.h"
 
 #if defined( OVR_OS_WIN32 )
 #include "../res_pc/resource.h"
@@ -79,8 +81,8 @@ Application::Application()
 	, mOvrMobile(nullptr)
 	, mSession(this, std::make_unique<AndroidDiscoveryService>(), resourceCreator)
 	, mControllerID(0)
-	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
-	, mEffect(dynamic_cast<scr::RenderPlatform*>(&renderPlatform))
+	, resourceManagers(new OVRActorManager)
+	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform))
 {
 	pthread_setname_np(pthread_self(), "SimulCaster_Application");
 	memset(&renderConstants,0,sizeof(RenderConstants));
@@ -92,19 +94,14 @@ Application::Application()
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
-	resourceCreator.Initialise(dynamic_cast<scr::RenderPlatform*>(&renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	resourceCreator.Initialise(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
-	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
-
-	//Set-up actor manager to create, destroy, and clear OVR actors at the same time as the SCR actors.
-	resourceManagers.mActorManager.nativeActorCreator = std::bind(&Application::CreateNativeActor, this, std::placeholders::_1, std::placeholders::_2);
-	resourceManagers.mActorManager.nativeActorDestroyer = std::bind(&Application::DestroyNativeActor, this, std::placeholders::_1);
-	resourceManagers.mActorManager.nativeActorClearer = std::bind(&Application::ClearNativeActors, this);
+	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
 
 	//Default Effects
 	scr::Effect::EffectCreateInfo ci;
 	ci.effectName = "StandardEffects";
-	mEffect.Create(&ci);
+	GlobalGraphicsResources.pbrEffect.Create(&ci);
 
 	//Default Sampler
 	scr::Sampler::SamplerCreateInfo sci  = {};
@@ -114,12 +111,12 @@ Application::Application()
 	sci.minFilter = scr::Sampler::Filter::LINEAR;
 	sci.magFilter = scr::Sampler::Filter::LINEAR;
 
-	mSampler = renderPlatform.InstantiateSampler();
-	mSampler->Create(&sci);
+	GlobalGraphicsResources.sampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
+	GlobalGraphicsResources.sampler->Create(&sci);
 
 	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
-	mSamplerCubeMipMap = renderPlatform.InstantiateSampler();
-	mSamplerCubeMipMap->Create(&sci);
+	GlobalGraphicsResources.cubeMipMapSampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
+	GlobalGraphicsResources.cubeMipMapSampler->Create(&sci);
 }
 
 Application::~Application()
@@ -162,9 +159,9 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		const ovrJava *java = app->GetJava();
 
 		OVR_LOG("%s | %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
-		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragTextureSlots);
-		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &maxFragUniformBlocks);
-		OVR_LOG("Fragment Texture Slots: %d, Fragment Uniform Blocks: %d", maxFragTextureSlots, maxFragUniformBlocks);
+		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GlobalGraphicsResources.maxFragTextureSlots);
+		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &GlobalGraphicsResources.maxFragUniformBlocks);
+		OVR_LOG("Fragment Texture Slots: %d, Fragment Uniform Blocks: %d", GlobalGraphicsResources.maxFragTextureSlots, GlobalGraphicsResources.maxFragUniformBlocks);
 
         //Setup Debug
         scc::SetupGLESDebug();
@@ -184,7 +181,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		//VideoSurfaceProgram
 		{
 			{
-				mVideoUB = renderPlatform.InstantiateUniformBuffer();
+				mVideoUB = GlobalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
 				scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(VideoUB), &videoUB};
 				mVideoUB->Create(&uniformBufferCreateInfo);
 			}
@@ -211,15 +208,15 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		mDecoder.setBackend(new VideoDecoderProxy(java->Env, this, avs::VideoCodec::HEVC));
 
 		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
-		mVideoTexture        = renderPlatform.InstantiateTexture();
-		mCubemapUB = renderPlatform.InstantiateUniformBuffer();
-		mCubemapTexture 	    = renderPlatform.InstantiateTexture();
-        mDiffuseTexture = renderPlatform.InstantiateTexture();
-		mSpecularTexture = renderPlatform.InstantiateTexture();
-		mRoughSpecularTexture = renderPlatform.InstantiateTexture();
+		mVideoTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
+		mCubemapUB = GlobalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
+		mCubemapTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
+        mDiffuseTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
+		mSpecularTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
+		mRoughSpecularTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
 
-		mCubemapLightingTexture = renderPlatform.InstantiateTexture();
-		mCameraPositionBuffer	=renderPlatform.InstantiateShaderStorageBuffer();
+		mCubemapLightingTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
+		mCameraPositionBuffer= GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
 		{
 			scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
 					3,
@@ -231,9 +228,9 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		}
 		{
 			CopyCubemapSrc     = LoadTextFile("shaders/CopyCubemap.comp");
-			mCopyCubemapEffect = renderPlatform.InstantiateEffect();
-			mCopyCubemapWithDepthEffect = renderPlatform.InstantiateEffect();
-			mExtractCameraPositionEffect=renderPlatform.InstantiateEffect();
+			mCopyCubemapEffect = GlobalGraphicsResources.renderPlatform.InstantiateEffect();
+			mCopyCubemapWithDepthEffect = GlobalGraphicsResources.renderPlatform.InstantiateEffect();
+			mExtractCameraPositionEffect=GlobalGraphicsResources.renderPlatform.InstantiateEffect();
 
 			scr::Effect::EffectCreateInfo effectCreateInfo = {};
 			effectCreateInfo.effectName = "CopyCubemap";
@@ -252,7 +249,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_only";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/CopyCubemap.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = CopyCubemapSrc;
-			scr::ShaderSystem::Pipeline cp(&renderPlatform, &pipelineCreateInfo);
+			scr::ShaderSystem::Pipeline cp(&GlobalGraphicsResources.renderPlatform, &pipelineCreateInfo);
 
 			scr::Effect::EffectPassCreateInfo effectPassCreateInfo;
 			effectPassCreateInfo.effectPassName = "CopyCubemap";
@@ -260,7 +257,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
 
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_depth";
-			scr::ShaderSystem::Pipeline cp2(&renderPlatform, &pipelineCreateInfo);
+			scr::ShaderSystem::Pipeline cp2(&GlobalGraphicsResources.renderPlatform, &pipelineCreateInfo);
 
 			effectPassCreateInfo.effectPassName = "ColourAndDepth";
 			effectPassCreateInfo.pipeline = cp2;
@@ -272,7 +269,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 				pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractPositionSrc;
 				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_camera_position";
 				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_camera_position";
-				scr::ShaderSystem::Pipeline cp3(&renderPlatform, &pipelineCreateInfo);
+				scr::ShaderSystem::Pipeline cp3(&GlobalGraphicsResources.renderPlatform, &pipelineCreateInfo);
 				effectPassCreateInfo.effectPassName = "ExtractPosition";
 				effectPassCreateInfo.pipeline = cp3;
 				mExtractCameraPositionEffect->CreatePass(&effectPassCreateInfo);
@@ -290,15 +287,15 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			layout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, scr::Shader::Stage::SHADER_STAGE_COMPUTE);
 
             scr::ShaderResource sr({layout, layout, layout});
-            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {mSamplerCubeMipMap, mCubemapTexture,0,uint32_t(-1)});
-            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
+            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {GlobalGraphicsResources.cubeMipMapSampler, mCubemapTexture,0,uint32_t(-1)});
+            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
             sr.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
             sr.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {});
-            sr.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
+            sr.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
             sr.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
-			sr.AddImage(2, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {mSampler, mVideoTexture});
+			sr.AddImage(2, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
 			sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 			sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 3, "CameraPosition", {mCameraPositionBuffer.get()});
 
@@ -319,12 +316,12 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 		//Set up scr::Camera
 		scr::Camera::CameraCreateInfo c_ci = {
-				(scr::RenderPlatform*)(&renderPlatform),
+				(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform),
 				scr::Camera::ProjectionType::PERSPECTIVE,
 				scr::quat(0.0f, 0.0f, 0.0f, 1.0f),
 				cameraPosition
 		};
-		scrCamera = std::make_shared<scr::Camera>(&c_ci);
+		GlobalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
 		//Set scr::EffectPass
 		scr::ShaderSystem::PipelineCreateInfo pipelinePBR;
@@ -379,16 +376,16 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 		//Set Lighting Cubemap Shader Resource
         scr::ShaderResourceLayout lightingCubemapLayout;
-        lightingCubemapLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-        lightingCubemapLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		lightingCubemapLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		lightingCubemapLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType ::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+        lightingCubemapLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+        lightingCubemapLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+		lightingCubemapLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+		lightingCubemapLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-        mLightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
-		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {mDiffuseTexture->GetSampler(), mDiffuseTexture});
-		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {mSpecularTexture->GetSampler(), mSpecularTexture});
-		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture});
-		mLightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_LightsCubemap", {mCubemapLightingTexture->GetSampler(), mCubemapLightingTexture});
+        GlobalGraphicsResources.lightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
+		GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {mDiffuseTexture->GetSampler(), mDiffuseTexture});
+		GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {mSpecularTexture->GetSampler(), mSpecularTexture});
+		GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture});
+		GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_LightsCubemap", {mCubemapLightingTexture->GetSampler(), mCubemapLightingTexture});
 
 		int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
 		mRefreshRates.resize(num_refresh_rates);
@@ -485,7 +482,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	scr::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
 
 	//Get the Capture Position
-	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&renderPlatform)};
+	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform)};
 	scr::Transform scr_UE4_captureTransform(tci);
 	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
@@ -552,7 +549,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 	scr::vec3 camera_from_videoCentre=cameraPosition-scr_UE4_captureTransform.m_Translation;
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
-	scrCamera->UpdatePosition(scr_OVR_headPos);
+	GlobalGraphicsResources.scrCamera->UpdatePosition(scr_OVR_headPos);
 
 	static float frameRate=1.0f;
 	if(vrFrame.DeltaSeconds>0.0f)
@@ -572,20 +569,19 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		if(mShowInfo)
 			mGuiSys->ShowInfoText(
-				0.017f, "Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
-						"Incomplete Decoder Packets: %d\n"
-						"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
-						"Actors: SCR %d | OVR %d \n"
-						"Camera Position: %1.3f, %1.3f, %1.3f\n"
-						//"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
-						//"Pos: %3.3f %3.3f %3.3f\n"
-						"Orphans: %d\n",mDecoder.getTotalFramesProcessed(),
-						ctr.networkPacketsDropped,
-				ctr.decoderPacketsDropped,
+				0.017f,
+				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
+				"Incomplete Decoder Packets: %d\n"
+				"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
+				"Actors: %d \n"
+				"Camera Position: %1.3f, %1.3f, %1.3f\n"
+				//"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
+				//"Pos: %3.3f %3.3f %3.3f\n"
+				"Orphans: %d\n",
+				mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
 				ctr.incompleteDPsReceived,
 				frameRate, ctr.bandwidthKPS,
-				(uint64_t) resourceManagers.mActorManager.GetActorList().size(),
-				(uint64_t) mOVRActors.size(),
+				static_cast<uint64_t>(resourceManagers.mActorManager->GetActorList().size()),
 				cameraPosition.x, cameraPosition.y, cameraPosition.z,
 				//headPose.w, headPose.x, headPose.y, headPose.z,
 				//headPos.x, headPos.y, headPos.z,
@@ -652,7 +648,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 	mVideoUB->Submit();
 
-//Move the hands before they are drawn.
+	//Move the hands before they are drawn.
 	UpdateHandObjects();
 	//Append SCR Actors to surfaces.
 	GL_CheckErrors("Frame: Pre-SCR");
@@ -677,62 +673,86 @@ void Application::UpdateHandObjects()
 	//Poll controller state from the Oculus API.
 	while( vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader ) >= 0 )
 	{
-		if ( capsHeader.Type == ovrControllerType_TrackedRemote )
+		if(capsHeader.Type == ovrControllerType_TrackedRemote)
 		{
 			ovrTracking remoteState;
 			if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
 			{
 				remoteStates.push_back(remoteState);
-				if(deviceIndex<2)
+				if(deviceIndex < 2)
 				{
-					controllerPoses[deviceIndex].position=*((const avs::vec3*)&remoteState.HeadPose.Pose.Position);
-					controllerPoses[deviceIndex].orientation=*((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
+					controllerPoses[deviceIndex].position = *((const avs::vec3*)&remoteState.HeadPose.Pose.Position);
+					controllerPoses[deviceIndex].orientation = *((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
+				}
+				else
+				{
+					break;
 				}
 			}
 		}
 		++deviceIndex;
 	}
-	size_t handIndex = 0;
-	//Update hands to current position, and orientation.
-	for(avs::uid handID : resourceManagers.mActorManager.handUIDs)
-	{
-		std::shared_ptr<scr::Actor> hand = resourceManagers.mActorManager.GetActor(handID);
 
-		//Break if the client doesn't have the hand actor yet.
-		if(!hand)
-		{
-			break;
-		}
+	OVRActorManager::LiveOVRActor* leftHand = nullptr;
+	OVRActorManager::LiveOVRActor* rightHand = nullptr;
+    dynamic_cast<OVRActorManager*>(resourceManagers.mActorManager.get())->GetHands(leftHand, rightHand);
 
-		//Hands are only visible, if there is a hand for them to position relative to.
-		if(handIndex >= remoteStates.size())
-		{
-			hand->isVisible = false;
-			continue;
-		}
-		hand->isVisible = true;
+    switch(remoteStates.size())
+    {
+    case 0:
+        return;
+    case 1: //Set non-dominant hand away. TODO: Query OVR for which hand is dominant/in-use.
+        leftHand = nullptr;
+        break;
+    default:
+        break;
+    }
 
-		hand->UpdateModelMatrix
-				(
-						scr::vec3
-								{
-										remoteStates[handIndex].HeadPose.Pose.Position.x + cameraPosition.x,
-										remoteStates[handIndex].HeadPose.Pose.Position.y + cameraPosition.y,
-										remoteStates[handIndex].HeadPose.Pose.Position.z + cameraPosition.z
-								},
-						scr::quat
-								{
-										remoteStates[handIndex].HeadPose.Pose.Orientation.x,
-										remoteStates[handIndex].HeadPose.Pose.Orientation.y,
-										remoteStates[handIndex].HeadPose.Pose.Orientation.z,
-										remoteStates[handIndex].HeadPose.Pose.Orientation.w
-								}
-						* HAND_ROTATION_DIFFERENCE,
-						hand->GetTransform().m_Scale
-				);
+	OVR::Matrix4f transform;
+    scr::mat4 transformToOculusOrigin = scr::mat4::Translation(-oculusOrigin);
+    if(rightHand)
+    {
+        rightHand->actor.UpdateModelMatrix
+                (
+                        scr::vec3
+                                {
+                                        remoteStates[0].HeadPose.Pose.Position.x + cameraPosition.x,
+                                        remoteStates[0].HeadPose.Pose.Position.y + cameraPosition.y,
+                                        remoteStates[0].HeadPose.Pose.Position.z + cameraPosition.z
+                                },
+                        scr::quat
+                                {
+                                        remoteStates[0].HeadPose.Pose.Orientation.x,
+                                        remoteStates[0].HeadPose.Pose.Orientation.y,
+                                        remoteStates[0].HeadPose.Pose.Orientation.z,
+                                        remoteStates[0].HeadPose.Pose.Orientation.w
+                                }
+                        * HAND_ROTATION_DIFFERENCE,
+                        rightHand->actor.GetTransform().m_Scale
+                );
+    }
 
-		++handIndex;
-	}
+    if(leftHand)
+    {
+        leftHand->actor.UpdateModelMatrix
+                (
+                        scr::vec3
+                                {
+                                        remoteStates[1].HeadPose.Pose.Position.x + cameraPosition.x,
+                                        remoteStates[1].HeadPose.Pose.Position.y + cameraPosition.y,
+                                        remoteStates[1].HeadPose.Pose.Position.z + cameraPosition.z
+                                },
+                        scr::quat
+                                {
+                                        remoteStates[1].HeadPose.Pose.Orientation.x,
+                                        remoteStates[1].HeadPose.Pose.Orientation.y,
+                                        remoteStates[1].HeadPose.Pose.Orientation.z,
+                                        remoteStates[1].HeadPose.Pose.Orientation.w
+                                }
+                        * HAND_ROTATION_DIFFERENCE,
+                        leftHand->actor.GetTransform().m_Scale
+                );
+    }
 }
 
 bool Application::InitializeController()
@@ -766,7 +786,7 @@ bool Application::InitializeController()
 
 void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
-	is_clockwise_winding = setupCommand.is_clockwise_winding;
+	GlobalGraphicsResources.is_clockwise_winding = setupCommand.is_clockwise_winding;
 
 	if(!mPipelineConfigured)
     {
@@ -861,7 +881,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 															scr::Texture::CompressionFormat::UNCOMPRESSED
 													};
 			mCubemapTexture->Create(textureCreateInfo);
-			mCubemapTexture->UseSampler(mSamplerCubeMipMap);
+			mCubemapTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
 		}
 		//GL_CheckErrors("Built Video Cubemap");
 		//Build Lighting Cubemap
@@ -894,31 +914,25 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 			textureCreateInfo.height = specularSize;
 			mSpecularTexture->Create(textureCreateInfo);
 			mRoughSpecularTexture->Create(textureCreateInfo);
-			mDiffuseTexture->UseSampler(mSamplerCubeMipMap);
-			mSpecularTexture->UseSampler(mSamplerCubeMipMap);
-			mRoughSpecularTexture->UseSampler(mSamplerCubeMipMap);
-			mCubemapLightingTexture->UseSampler(mSamplerCubeMipMap);
+			mDiffuseTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+			mSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+			mRoughSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+			mCubemapLightingTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
 		}
 		//GL_CheckErrors("Built Lighting Cubemap");
 
 		mPipelineConfigured = true;
 	}
-    if(shouldClearEverything)
-    {
-        resourceManagers.Clear();
-        mOVRActors.clear();
-    }
-    else
-    {
-        resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
-    }
+
+    if(shouldClearEverything) resourceManagers.Clear();
+    else resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
 
     handshake.startDisplayInfo.width = 1440;
     handshake.startDisplayInfo.height = 1600;
     handshake.framerate = 60;
     handshake.FOV = 110;
     handshake.isVR = true;
-	handshake.udpBufferSize=mNetworkSource.getSystemBufferSize();
+	handshake.udpBufferSize = static_cast<uint32_t>(mNetworkSource.getSystemBufferSize());
 	handshake.maxBandwidthKpS = 10*handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
 	handshake.isReadyToReceivePayloads=true;
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
@@ -939,12 +953,12 @@ void Application::OnVideoStreamClosed()
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)
 {
-    return resourceManagers.mActorManager.ShowActor(actor_uid);
+    return resourceManagers.mActorManager->ShowActor(actor_uid);
 }
 
 bool Application::OnActorLeftBounds(avs::uid actor_uid)
 {
-	return resourceManagers.mActorManager.HideActor(actor_uid);
+	return resourceManagers.mActorManager->HideActor(actor_uid);
 }
 
 void Application::OnFrameAvailable()
@@ -1106,7 +1120,7 @@ void Application::CopyToCubemaps()
 			for (uint32_t m = 0; m < 6; m++)
 			{
 				inputCommand.m_WorkGroupSize={(mip_size+1)/8,(mip_size+1)/8,6};
-				mCubemapComputeShaderResources[0][1].SetImageInfo(0, {mSamplerCubeMipMap, mSpecularTexture, m});
+				mCubemapComputeShaderResources[0][1].SetImageInfo(0, {GlobalGraphicsResources.cubeMipMapSampler, mSpecularTexture, m});
 				cubemapUB.sourceOffset.y       = (int32_t) (2 * tc.width) + mip_y;
 				cubemapUB.faceSize = mip_size;
 				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
@@ -1149,50 +1163,58 @@ void Application::CopyToCubemaps()
 
 void Application::RenderLocalActors(ovrFrameResult& res)
 {
-	for(auto& a : resourceManagers.mActorManager.GetActorList())
-	{
-		auto &actor=a.second.actor;
-		if(!actor->isVisible)
-		{
-            continue;
-        }
+	// Because we're using OVR's rendering, we must position the actor's relative to the oculus origin.
+	OVR::Matrix4f transform;
+	scr::mat4 transformToOculusOrigin = scr::mat4::Translation(-oculusOrigin);
 
-		std::shared_ptr<OVRActor> pOvrActor = mOVRActors[a.first];
-		assert(pOvrActor);
-		for(size_t i=0;i<actor->GetMaterials().size();i++)
-        {
-		    if(i>=pOvrActor->ovrSurfaceDefs.size())
+	auto RenderLocalActor = [&](OVRActorManager::LiveOVRActor* ovrActor)
+	{
+		const scr::Actor& actor = ovrActor->actor;
+
+		//----OVR Actor Set Transforms----//
+		scr::mat4 scr_Transform = transformToOculusOrigin * actor.GetTransform().GetTransformMatrix();
+		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
+
+		for(size_t matIndex = 0; matIndex < actor.GetMaterials().size(); matIndex++)
+		{
+			if(matIndex >= ovrActor->ovrSurfaceDefs.size())
 			{
 				//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
 				break;
 			}
-			//----OVR Actor Set Transforms----//
 
-			// Because we're using OVR's rendering, we must position the actor's relative to the oculus origin.
-			//Change of Basis matrix
-			//scr::mat4 cob = scr::mat4({0, 1, 0, 0}, {0, 0, 1, 0}, {1, 0, 0, 0}, {0, 0, 0, 1});
-			scr::mat4 transformToOculusOrigin = scr::mat4::Translation(-oculusOrigin);
-			scr::mat4 scr_Transform = transformToOculusOrigin *actor->GetTransform().GetTransformMatrix();// * cob;
-
-			OVR::Matrix4f transform;
-			memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
-			res.Surfaces.emplace_back(transform, pOvrActor->ovrSurfaceDefs[i].get());
+			res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
 		}
+	};
+
+	//Render local actors.
+	const std::vector<std::unique_ptr<scr::ActorManager::LiveActor>>& actorList = resourceManagers.mActorManager->GetActorList();
+	for(size_t actorIndex = 0; actorIndex < resourceManagers.mActorManager->getVisibleActorAmount(); actorIndex++)
+	{
+		OVRActorManager::LiveOVRActor* ovrActor = static_cast<OVRActorManager::LiveOVRActor*>(actorList[actorIndex].get());
+		RenderLocalActor(ovrActor);
 	}
+
+	//Retrieve hands.
+	OVRActorManager::LiveOVRActor *leftHand = nullptr, *rightHand = nullptr;
+	dynamic_cast<OVRActorManager*>(resourceManagers.mActorManager.get())->GetHands(leftHand, rightHand);
+
+	//Render hands, if they exist.
+	if(leftHand) RenderLocalActor(leftHand);
+	if(rightHand) RenderLocalActor(rightHand);
 }
 
 const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
 		, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)
 {
-	if (mEffect.HasEffectPass(effectPassName))
-		return mEffect.GetEffectPassCreateInfo(effectPassName);
+	if (GlobalGraphicsResources.pbrEffect.HasEffectPass(effectPassName)) return GlobalGraphicsResources.pbrEffect.GetEffectPassCreateInfo(effectPassName);
 
 	scr::ShaderSystem::PassVariables pv;
 	pv.mask          = false;
 	pv.reverseDepth  = false;
 	pv.msaa          = false;
 
-	scr::ShaderSystem::Pipeline gp (&renderPlatform,pipelineCreateInfo);
+	scr::ShaderSystem::Pipeline gp (&GlobalGraphicsResources.renderPlatform,pipelineCreateInfo);
 
 	//scr::VertexBufferLayout
 	vbl->CalculateStride();
@@ -1257,12 +1279,10 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
 	ci.depthStencilingState = dss;
 	ci.colourBlendingState = cbs;
 
-    mEffect.CreatePass(&ci);
+	GlobalGraphicsResources.pbrEffect.CreatePass(&ci);
+	GlobalGraphicsResources.pbrEffect.LinkShaders(effectPassName, shaderResources);
 
-
-    mEffect.LinkShaders(effectPassName, shaderResources);
-
-	return mEffect.GetEffectPassCreateInfo(effectPassName);
+	return GlobalGraphicsResources.pbrEffect.GetEffectPassCreateInfo(effectPassName);
 }
 
 std::string Application::LoadTextFile(const char *filename)
@@ -1277,152 +1297,4 @@ std::string Application::LoadTextFile(const char *filename)
         return std::string((const char *)outBuffer.data());
     }
     return "";
-}
-
-void Application::CreateNativeActor(avs::uid actorID, std::shared_ptr<scr::Actor> actorInfo)
-{
-    std::shared_ptr<OVRActor> pOvrActor = std::make_shared<OVRActor>();
-
-    for(size_t i = 0; i < actorInfo->GetMaterials().size(); i++)
-    {
-        //From Actor
-        const scr::Mesh::MeshCreateInfo& meshCI = actorInfo->GetMesh()->GetMeshCreateInfo();
-        scr::Material::MaterialCreateInfo& materialCI = actorInfo->GetMaterials()[i]->GetMaterialCreateInfo();
-        if(i >= meshCI.vb.size() || i >= meshCI.ib.size())
-        {
-            OVR_LOG("Skipping empty element in mesh.");
-            break; //This break; isn't working correctly
-        }
-        //Mesh.
-        // The first instance of vb/ib should be adequate to get the information needed.
-        const auto gl_vb = dynamic_cast<scc::GL_VertexBuffer*>(meshCI.vb[i].get());
-        const auto gl_ib = dynamic_cast<scc::GL_IndexBuffer*>(meshCI.ib[i].get());
-        gl_vb->CreateVAO(gl_ib->GetIndexID());
-
-        //Material
-        std::vector<scr::ShaderResource> pbrShaderResources;
-        pbrShaderResources.push_back(scrCamera->GetShaderResource());
-        pbrShaderResources.push_back(actorInfo->GetMaterials()[i]->GetShaderResource());
-        pbrShaderResources.push_back(mLightCubemapShaderResources);
-
-        materialCI.effect = dynamic_cast<scr::Effect*>(&mEffect);
-        const auto gl_effect = &mEffect;
-        const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo(effectPassName);
-        if(materialCI.diffuse.texture)
-        {
-            materialCI.diffuse.texture->UseSampler(mSampler);
-        }
-        if(materialCI.normal.texture)
-        {
-            materialCI.normal.texture->UseSampler(mSampler);
-        }
-        if(materialCI.combined.texture)
-        {
-            materialCI.combined.texture->UseSampler(mSampler);
-        }
-
-        //----Set OVR Actor----//
-        //Construct Mesh
-        GlGeometry geo;
-        geo.vertexBuffer = gl_vb->GetVertexID();
-        geo.indexBuffer = gl_ib->GetIndexID();
-        geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-        geo.primitiveType = scc::GL_Effect::ToGLTopology(gl_effectPass.topology);
-        geo.vertexCount = (int)gl_vb->GetVertexCount();
-        geo.indexCount = (int)gl_ib->GetIndexBufferCreateInfo().indexCount;
-        GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
-
-        //Initialise OVR Actor
-        std::shared_ptr<ovrSurfaceDef> ovr_surface_def(new ovrSurfaceDef);
-        std::string _actorName = std::string("ActorUID: ") + std::to_string(actorID);
-        ovr_surface_def->surfaceName = _actorName;
-        ovr_surface_def->numInstances = 1;
-        ovr_surface_def->geo = geo;
-
-        //Set Shader Program
-        ovr_surface_def->graphicsCommand.Program = gl_effect->GetGlPlatform(effectPassName);
-
-        //Set Rendering Set
-        ovr_surface_def->graphicsCommand.GpuState.blendMode = scc::GL_Effect::ToGLBlendOp(
-                gl_effectPass.colourBlendingState.colorBlendOp);
-        ovr_surface_def->graphicsCommand.GpuState.blendSrc = scc::GL_Effect::ToGLBlendFactor(
-                gl_effectPass.colourBlendingState.srcColorBlendFactor);
-        ovr_surface_def->graphicsCommand.GpuState.blendDst = scc::GL_Effect::ToGLBlendFactor(
-                gl_effectPass.colourBlendingState.dstColorBlendFactor);
-        ovr_surface_def->graphicsCommand.GpuState.blendModeAlpha = scc::GL_Effect::ToGLBlendOp(
-                gl_effectPass.colourBlendingState.alphaBlendOp);
-        ovr_surface_def->graphicsCommand.GpuState.blendSrcAlpha = scc::GL_Effect::ToGLBlendFactor(
-                gl_effectPass.colourBlendingState.srcAlphaBlendFactor);
-        ovr_surface_def->graphicsCommand.GpuState.blendDstAlpha = scc::GL_Effect::ToGLBlendFactor(
-                gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
-        ovr_surface_def->graphicsCommand.GpuState.depthFunc = scc::GL_Effect::ToGLCompareOp(
-                gl_effectPass.depthStencilingState.depthCompareOp);
-
-        ovr_surface_def->graphicsCommand.GpuState.frontFace = is_clockwise_winding ? GL_CW : GL_CCW;//gl_effectPass.rasterizationState.frontFace == scr::Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
-        ovr_surface_def->graphicsCommand.GpuState.polygonMode = scc::GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
-        ovr_surface_def->graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? OVR::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVR::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
-        ovr_surface_def->graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;
-        ovr_surface_def->graphicsCommand.GpuState.depthMaskEnable = true;
-        ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[0] = true;
-        ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[1] = true;
-        ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[2] = true;
-        ovr_surface_def->graphicsCommand.GpuState.colorMaskEnable[3] = true;
-        ovr_surface_def->graphicsCommand.GpuState.polygonOffsetEnable = false;
-        ovr_surface_def->graphicsCommand.GpuState.cullEnable = gl_effectPass.rasterizationState.cullMode == scr::Effect::CullMode::NONE ? false : true;
-        ovr_surface_def->graphicsCommand.GpuState.lineWidth = 1.0F;
-        ovr_surface_def->graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
-        ovr_surface_def->graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
-
-        //Update Uniforms and Textures
-        size_t resourceCount = 0;
-        GLint textureCount = 0, uniformCount = 0;
-        size_t j = 0;
-        for(auto& sr : pbrShaderResources)
-        {
-            std::vector<scr::ShaderResource::WriteShaderResource>& shaderResourceSet = sr.GetWriteShaderResources();
-            for(auto& resource : shaderResourceSet)
-            {
-                scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
-                if(type == scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
-                {
-                    if(resource.imageInfo.texture.get())
-                    {
-                        auto gl_texture = dynamic_cast<scc::GL_Texture*>(resource.imageInfo.texture.get());
-                        ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_texture->GetGlTexture());
-                        textureCount++;
-                    }
-                }
-                else if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
-                {
-                    if(resource.bufferInfo.buffer)
-                    {
-                        scc::GL_UniformBuffer* gl_uniformBuffer = static_cast<scc::GL_UniformBuffer*>(resource.bufferInfo.buffer);
-                        ovr_surface_def->graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
-                        uniformCount++;
-                    }
-                }
-                else
-                {
-                    //NULL
-                }
-                j++;
-                resourceCount++;
-                assert(resourceCount <= OVR::ovrUniform::MAX_UNIFORMS);
-                assert(textureCount <= maxFragTextureSlots);
-                assert(uniformCount <= maxFragUniformBlocks);
-            }
-        }
-        pOvrActor->ovrSurfaceDefs.push_back(ovr_surface_def);
-    }
-    mOVRActors[actorID] = pOvrActor;
-}
-
-void Application::DestroyNativeActor(avs::uid actorID)
-{
-    mOVRActors.erase(actorID);
-}
-
-void Application::ClearNativeActors()
-{
-    mOVRActors.clear();
 }

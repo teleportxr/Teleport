@@ -625,37 +625,36 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 
 void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 {
-	if (m_pActorManager->HasActor(node_uid)) //Check the actor has already been added, if so update transform.
+	switch(node.data_type)
 	{
-		m_pActorManager->GetActor(node_uid)->GetTransform().UpdateModelMatrix(node.transform.position, node.transform.rotation, node.transform.scale);
-	}
-	else
-	{
-	    switch (node.data_type)
-	    {
-	    ///GGMP: This is intended to continue into Mesh; I'd rather not copy+paste the CreateActor function call.
 		case NodeDataType::Hand:
-			m_pActorManager->handUIDs.push_back(node_uid);
-	    case NodeDataType::Mesh:
-	    	CreateActor(node_uid, node.data_uid,node.materials, node.transform);
-	    	break;
-	    case NodeDataType::Camera:
-	    	break;
-	    case NodeDataType::Scene:
-	    	break;
-	    case NodeDataType::ShadowMap:
+			if(!m_pActorManager->HasActor(node_uid))
+			{
+				CreateActor(node_uid, node.data_uid, node.materials, node.transform, true);
+			}
+			break;
+		case NodeDataType::Mesh:
+			if(!m_pActorManager->UpdateActorTransform(node_uid, node.transform.position, node.transform.rotation, node.transform.scale))
+			{
+				CreateActor(node_uid, node.data_uid, node.materials, node.transform, false);
+			}
+			break;
+		case NodeDataType::Camera:
+			break;
+		case NodeDataType::Scene:
+			break;
+		case NodeDataType::ShadowMap:
 			CreateLight(node_uid, node);
-	        break;
-	    default:
-	        SCR_LOG("Unknown NodeDataType: %c", (int)node.data_type)
-	        break;
-	    }
+			break;
+		default:
+			SCR_LOG("Unknown NodeDataType: %c", static_cast<int>(node.data_type));
+			break;
 	}
 
 	m_ReceivedResources.push_back(node_uid);
 }
 
-void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid> &material_uids, const avs::Transform &transform)
+void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid> &material_uids, const avs::Transform &transform, bool isHand)
 {
 	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>();
 	//A list of unique resources that the actor is missing, and needs to be completed.
@@ -690,7 +689,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const st
 	//Complete actor now, if we aren't missing any resources.
 	if(missingResources.size() == 0)
 	{
-		CompleteActor(node_uid, newActor->actorInfo);
+		CompleteActor(node_uid, newActor->actorInfo, isHand);
 	}
 	else
 	{
@@ -702,6 +701,8 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const st
 		{
 			m_WaitingForResources[uid].push_back(newActor);
 		}
+
+		newActor->isHand = isHand;
 	}
 }
 
@@ -733,7 +734,7 @@ void ResourceCreator::CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreat
 		//If only this mesh is pointing to the actor, then it is complete.
 		if(it->use_count() == 1)
 		{
-			CompleteActor(actorInfo.lock()->id, actorInfo.lock()->actorInfo);
+			CompleteActor(actorInfo.lock()->id, actorInfo.lock()->actorInfo, actorInfo.lock()->isHand);
 		}
 	}
 
@@ -784,7 +785,7 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 		//If only this material is pointing to the actor, then it is complete.
 		if(it->use_count() == 1)
 		{
-			CompleteActor(actorInfo.lock()->id, actorInfo.lock()->actorInfo);
+			CompleteActor(actorInfo.lock()->id, actorInfo.lock()->actorInfo, actorInfo.lock()->isHand);
 		}
 	}
 
@@ -792,10 +793,11 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 	m_WaitingForResources.erase(material_uid);
 }
 
-void ResourceCreator::CompleteActor(avs::uid actor_uid, const scr::Actor::ActorCreateInfo& actorInfo)
+void ResourceCreator::CompleteActor(avs::uid actor_uid, const scr::Actor::ActorCreateInfo& actorInfo, bool isHand)
 {
-	///We're using the node_uid as the actor_uid as we are currently generating an actor per node/transform anyway; this way the server can tell the client to remove an actor.
-	m_pActorManager->CreateActor(actor_uid, actorInfo);
+	///We're using the node ID as the actor ID as we are currently generating an actor per node/transform anyway; this way the server can tell the client to remove an actor.
+	if(isHand) m_pActorManager->CreateHand(actor_uid, actorInfo);
+	else m_pActorManager->CreateActor(actor_uid, actorInfo);
 	m_CompletedActors.push_back(actor_uid);
 }
 
