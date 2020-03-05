@@ -13,6 +13,12 @@
 
 namespace SCServer
 {
+
+	VideoEncodePipeline::~VideoEncodePipeline()
+	{
+		release();
+	}
+
 	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* output)
 	{
 		auto createSurfaceBackend = [](GraphicsDeviceType deviceType, void* resource)->avs::SurfaceBackendInterface*

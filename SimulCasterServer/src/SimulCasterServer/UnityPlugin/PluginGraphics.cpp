@@ -9,12 +9,71 @@
 
 //#include "IUnityGraphicsVulkan.h"
 
+#include <iostream>
+
 namespace SCServer
 {  
     IUnityInterfaces* GraphicsManager::mUnityInterfaces = nullptr;
     IUnityGraphics* GraphicsManager::mGraphics = nullptr;
     UnityGfxRenderer GraphicsManager::mRendererType = kUnityGfxRendererNull;
     void* GraphicsManager::mGraphicsDevice = nullptr;
+
+    void* GraphicsManager::CreateTextureCopy(void* sourceTexture)
+    {
+        if (kUnityGfxRendererD3D11 != mRendererType)
+        {
+            std::cout << "Texture conversion only supported for D3D11 currently" << std::endl;
+            return nullptr;
+        }
+        
+        ID3D11Device* device = (ID3D11Device*)mGraphicsDevice;
+        ID3D11Texture2D* source = (ID3D11Texture2D*)sourceTexture;
+
+        D3D11_TEXTURE2D_DESC desc;
+        source->GetDesc(&desc);
+
+        // Aidan: This is a bit hacky but these are the only possibilities so it'll be grand 
+        if (desc.Format == DXGI_FORMAT_R16G16B16A16_TYPELESS)
+        {
+            desc.Format = DXGI_FORMAT_R16G16B16A16_UNORM;
+        }
+        else if (desc.Format == DXGI_FORMAT_R8G8B8A8_TYPELESS)
+        {
+            desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        }
+
+        ID3D11Texture2D* copy;
+        //D3D11_SUBRESOURCE_DATA data;
+        device->CreateTexture2D(&desc, NULL, &copy);
+       
+        return copy;
+    }
+
+    void GraphicsManager::CopyResource(void* target, void* source)
+    {
+        if (kUnityGfxRendererD3D11 != mRendererType)
+        {
+            std::cout << "Texture conversion only supported for D3D11 currently" << std::endl;
+            return;
+        }
+
+        ID3D11Device* device = (ID3D11Device*)mGraphicsDevice;
+     
+        ID3D11DeviceContext* context;
+        device->GetImmediateContext(&context);
+
+        context->CopyResource((ID3D11Resource*)target, (ID3D11Resource*)source);
+
+        context->Release();
+    }
+
+    void GraphicsManager::ReleaseResource(void* resource)
+    {
+        if (resource)
+        {
+            ((ID3D11Resource*)resource)->Release();
+        }
+    }
 }
 
 using SGM = SCServer::GraphicsManager;
@@ -93,6 +152,7 @@ static void AssignGraphicsDevice()
             break;
     };
 }
+
 
 
 

@@ -8,6 +8,10 @@ namespace SCServer
 	class GraphicsManager
 	{
 	public:
+		static void* CreateTextureCopy(void* sourceTexture);
+		static void CopyResource(void* target, void* source);
+		static void ReleaseResource(void* resource);
+
 		static IUnityInterfaces* mUnityInterfaces;
 		static IUnityGraphics* mGraphics;
 		static UnityGfxRenderer mRendererType;
