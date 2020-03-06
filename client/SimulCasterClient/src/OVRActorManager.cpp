@@ -113,7 +113,7 @@ std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(avs::uid actorID, 
         ovr_surface_def.graphicsCommand.GpuState.blendDstAlpha = GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
         ovr_surface_def.graphicsCommand.GpuState.depthFunc = GL_Effect::ToGLCompareOp(gl_effectPass.depthStencilingState.depthCompareOp);
 
-        ovr_surface_def.graphicsCommand.GpuState.frontFace = GlobalGraphicsResources.is_clockwise_winding ? GL_CW : GL_CCW;//gl_effectPass.rasterizationState.frontFace == Effect::FrontFace::COUNTER_CLOCKWISE ? GL_CCW : GL_CW;
+        ovr_surface_def.graphicsCommand.GpuState.frontFace = GL_CCW;
         ovr_surface_def.graphicsCommand.GpuState.polygonMode = GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
         ovr_surface_def.graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? ovrGpuState::ovrBlendEnable::BLEND_ENABLE : ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
         ovr_surface_def.graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;

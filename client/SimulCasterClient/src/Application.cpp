@@ -338,6 +338,20 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			pipelinePBR.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/OpaquePBR.frag");
 		}
 
+		scr::ShaderSystem::PipelineCreateInfo pipelineAlbedo;
+		{
+			pipelineAlbedo.m_Count                          = 2;
+			pipelineAlbedo.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
+			pipelineAlbedo.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+			pipelineAlbedo.m_ShaderCreateInfo[0].entryPoint = "main";
+			pipelineAlbedo.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
+			pipelineAlbedo.m_ShaderCreateInfo[0].sourceCode = LoadTextFile("shaders/OpaquePBR.vert");
+			pipelineAlbedo.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+			pipelineAlbedo.m_ShaderCreateInfo[1].entryPoint = "OpaqueAlbedo";
+			pipelineAlbedo.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
+			pipelineAlbedo.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/OpaquePBR.frag");
+		}
+
 		scr::VertexBufferLayout layout;
 		layout.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC3, scr::VertexBufferLayout::Type::FLOAT);
 		layout.AddAttribute(1, scr::VertexBufferLayout::ComponentCount::VEC3, scr::VertexBufferLayout::Type::FLOAT);
@@ -373,6 +387,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {});
 
 		BuildEffectPass("OpaquePBR", &layout, &pipelinePBR, {pbrShaderResource});
+		BuildEffectPass("OpaqueAlbedo", &layout, &pipelineAlbedo, {pbrShaderResource});
 
 		//Set Lighting Cubemap Shader Resource
         scr::ShaderResourceLayout lightingCubemapLayout;
@@ -786,8 +801,6 @@ bool Application::InitializeController()
 
 void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
-	GlobalGraphicsResources.is_clockwise_winding = setupCommand.is_clockwise_winding;
-
 	if(!mPipelineConfigured)
     {
 		OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port,

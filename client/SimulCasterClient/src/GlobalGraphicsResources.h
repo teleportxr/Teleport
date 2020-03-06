@@ -17,7 +17,6 @@ public:
     std::shared_ptr<scr::Camera> scrCamera;
 
     char* effectPassName = const_cast<char*>("OpaquePBR"); //Which effect pass the geometry should be rendered with.
-    bool is_clockwise_winding = false; //Whether the geometry winding order is clockwise.
 
     static GlobalGraphicsResources& GetInstance()
     {

@@ -7,6 +7,7 @@
 
 using namespace pc_client;
 using namespace scr;
+
 const char * GetAttributeSemantic(avs::AttributeSemantic sem)
 {
 	switch (sem)
@@ -21,10 +22,10 @@ const char * GetAttributeSemantic(avs::AttributeSemantic sem)
 		return "TANGENT";
 		break;
 	case avs::AttributeSemantic::TEXCOORD_0:
-		return "TEXCOORD_0";
+		return "TEXCOORD";
 		break;
 	case avs::AttributeSemantic::TEXCOORD_1:
-		return "TEXCOORD_1";
+		return "TEXCOORD";
 		break;
 	case avs::AttributeSemantic::COLOR_0:
 		return "COLOR_0";
@@ -156,33 +157,34 @@ void PC_VertexBuffer::Unbind() const
 {
 }
 
-void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCreateInfo)
+void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCreateInfo)
 {
 	m_CI = *pVertexBufferCreateInfo;
-	
-	size_t num_vertices = m_CI.size / m_CI.layout->m_Stride;
-	const auto *const rp = static_cast<const PC_RenderPlatform* const> (renderPlatform);
-	auto *srp = rp->GetSimulRenderPlatform();
+
+	const auto* const rp = static_cast<const PC_RenderPlatform* const> (renderPlatform);
+	auto* srp = rp->GetSimulRenderPlatform();
 	m_SimulBuffer = srp->CreateBuffer();
+
 	size_t numAttr = m_CI.layout->m_Attributes.size();
-	simul::crossplatform::LayoutDesc *desc = new simul::crossplatform::LayoutDesc[numAttr];
+	simul::crossplatform::LayoutDesc* desc = new simul::crossplatform::LayoutDesc[numAttr];
 
 	int byteOffset = 0;
-	for (size_t i = 0; i < numAttr; i++)
+	for(size_t i = 0; i < numAttr; i++)
 	{
-		auto &attr = m_CI.layout->m_Attributes[i];
-		avs::AttributeSemantic s = (avs::AttributeSemantic) attr.location;
-		desc[i].semanticName = GetAttributeSemantic(s);
-		desc[i].semanticIndex = GetAttributeSemanticIndex((avs::AttributeSemantic)i);
+		auto& attr = m_CI.layout->m_Attributes[i];
+		avs::AttributeSemantic semantic = static_cast<avs::AttributeSemantic>(attr.location);
+		desc[i].semanticName = GetAttributeSemantic(semantic);
+		desc[i].semanticIndex = GetAttributeSemanticIndex(semantic);
 		desc[i].format = GetAttributeFormat(attr);
-		desc[i].inputSlot = (int)i;
+		desc[i].inputSlot = 0;
+		desc[i].alignedByteOffset = byteOffset;
+
 		size_t this_size = GetByteSize(attr);
-		desc[i].alignedByteOffset = byteOffset; 
-		if (m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED)
+		if(m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED)
 		{
-			byteOffset += GetByteSize(attr);
+			byteOffset += this_size;
 		}
-		else if (m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::GROUPED)
+		else if(m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::GROUPED)
 		{
 			byteOffset += this_size * m_CI.vertexCount;
 		}
@@ -190,21 +192,9 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo * pVertexBufferCr
 		desc[i].perInstance = false;
 		desc[i].instanceDataStepRate = 0;
 	}
+
 	delete m_layout;
-	{
-		simul::crossplatform::LayoutDesc desc[] =
-				{
-					{ "POSITION", 0, simul::crossplatform::RGB_32_FLOAT, 0, 0, false, 0 },
-					{ "NORMAL", 0, simul::crossplatform::RGB_32_FLOAT, 0, 12, false, 0 },
-					{ "TANGENT", 0, simul::crossplatform::RGBA_32_FLOAT, 0, 24, false, 0 },
-					{ "TEXCOORD", 0, simul::crossplatform::RG_32_FLOAT, 0, 40, false, 0 },
-					{ "TEXCOORD", 1, simul::crossplatform::RG_32_FLOAT, 0, 48, false, 0 },
-				};
-		m_layout = srp->CreateLayout(
-					sizeof(desc) / sizeof(simul::crossplatform::LayoutDesc)
-					, desc,true);
-	}
-	//m_layout = srp->CreateLayout( (int)m_CI.layout->m_Attributes.size(), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);// , m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
-	//m_layout->SetDesc(desc, (int)m_CI.layout->m_Attributes.size(), m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
-	m_SimulBuffer->EnsureVertexBuffer(srp, (int)num_vertices, m_layout, m_CI.data);
+	m_layout = srp->CreateLayout(m_CI.layout->m_Attributes.size(), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
+	m_SimulBuffer->EnsureVertexBuffer(srp, m_CI.vertexCount, m_layout, m_CI.data);
+	delete[] desc;
 }
