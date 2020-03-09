@@ -13,6 +13,8 @@ LOCAL_SRC_FILES			:= \
     ../src/AndroidDiscoveryService.cpp \
     ../src/Application.cpp \
     ../src/GLESDebug.cpp \
+    ../src/GlobalGraphicsResources.cpp \
+    ../src/OVRActorManager.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \
     ../src/SCR_Class_GL_Impl/GL_DeviceContext.cpp \

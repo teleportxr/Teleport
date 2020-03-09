@@ -31,8 +31,9 @@ namespace scr
 {
     struct ResourceManagers
     {
-        ResourceManagers()
-            :mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
+        ResourceManagers(scr::ActorManager* actorManager)
+            :mActorManager(actorManager),
+            mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
             mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
             mUniformBufferManager(&scr::UniformBuffer::Destroy),
             mVertexBufferManager(&scr::VertexBuffer::Destroy),
@@ -48,7 +49,7 @@ namespace scr
 		//Clear any resources that have not been used longer than their expiry time.
         void Update(uint32_t timeElapsed)
         {
-			mActorManager.Update(timeElapsed);
+			mActorManager->Update(timeElapsed);
             mIndexBufferManager.Update(timeElapsed);
             mShaderManager.Update(timeElapsed);
             mMaterialManager.Update(timeElapsed);
@@ -62,7 +63,7 @@ namespace scr
 		//Clear all resources.
 		void Clear()
 		{
-			mActorManager.Clear();
+			mActorManager->Clear();
 
 			mIndexBufferManager.Clear();
 			mShaderManager.Clear();
@@ -85,7 +86,7 @@ namespace scr
 			mLightManager.ClearCareful(excludeList);
 
 			//Last as it will likely be the largest.
-			mActorManager.ClearCareful(excludeList, outExistingActors);
+			mActorManager->ClearCareful(excludeList, outExistingActors);
 
 			///As the UIDs of these aren't(?) stored on the server; the server can't confirm their existence.
 			///If the mesh is cleared, then these will be cleared.
@@ -95,7 +96,7 @@ namespace scr
 			//mVertexBufferManager.ClearCareful(excludeList);
 		}
 
-        scr::ActorManager  					mActorManager;
+        std::unique_ptr<scr::ActorManager>	mActorManager;
         ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
         ResourceManager<scr::Shader>        mShaderManager;
         ResourceManager<scr::Material>		mMaterialManager;
@@ -178,6 +179,7 @@ private:
 	{
 		scr::Actor::ActorCreateInfo actorInfo;
 		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; // <ID of the material, list of indexes the material should be placed into actor material list.
+		bool isHand;
 	};
 
 	struct UntranscodedTexture
@@ -189,14 +191,14 @@ private:
 
 		std::string name; //For debugging which texture failed.
 	};
-
-	void CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, const avs::Transform &transform) override;
+	
+	void CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, const avs::Transform &transform, bool isHand);
 	void CreateLight(avs::uid node_uid, avs::DataNode& node);
 
 	void CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo);
 	void CompleteTexture(avs::uid texture_uid, const scr::Texture::TextureCreateInfo& textureInfo);
 	void CompleteMaterial(avs::uid material_uid, const scr::Material::MaterialCreateInfo& materialInfo);
-	void CompleteActor(avs::uid node_uid, const scr::Actor::ActorCreateInfo& actorInfo);
+	void CompleteActor(avs::uid node_uid, const scr::Actor::ActorCreateInfo& actorInfo, bool isHand);
 
 	scr::API m_API;
 	const scr::RenderPlatform* m_pRenderPlatform = nullptr;

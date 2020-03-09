@@ -79,8 +79,6 @@ namespace scr
 			Transform transform;
 		};
 
-		bool isVisible = true;
-
 	private:
 		ActorCreateInfo m_CI;
 
@@ -89,8 +87,9 @@ namespace scr
 
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
-		inline std::shared_ptr<Mesh> GetMesh() { return m_CI.mesh; }
+		inline std::shared_ptr<Mesh> GetMesh() const { return m_CI.mesh; }
 		inline const std::vector<std::shared_ptr<Material>> GetMaterials() const { return m_CI.materials; }
+		inline const Transform& GetTransform() const { return m_CI.transform; }
 		inline Transform& GetTransform() { return m_CI.transform; }
 	};
 }

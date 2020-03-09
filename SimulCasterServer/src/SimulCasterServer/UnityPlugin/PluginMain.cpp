@@ -242,21 +242,45 @@ public:
 	PluginVideoEncodePipeline() 
 		:SCServer::VideoEncodePipeline() {}
 
-	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
+	~PluginVideoEncodePipeline()
 	{
+		//GraphicsManager::ReleaseResource(encoderSurfaceResource);
+	}
+
+	Result configure(VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
+	{
+		if (!GraphicsManager::mGraphicsDevice)
+		{
+			std::cout << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			return Result::InvalidGraphicsDevice;
+		}
+
+		if (!inputSurfaceResource)
+		{
+			std::cout << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			return Result::InvalidGraphicsResource;
+		}
+
+		inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
+		// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
+		encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
+
+		videoEncodeParams.deviceHandle = GraphicsManager::mGraphicsDevice;
+		videoEncodeParams.inputSurfaceResource = encoderSurfaceResource;
+
 		return SCServer::VideoEncodePipeline::initialize(casterSettings, videoEncodeParams, colorQueue);
 	}
 
 	Result encode(avs::Transform& cameraTransform, bool forceIDR = false)
 	{
+		// Copy data from Unity texture to its CUDA compatible copy
+		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
 		return SCServer::VideoEncodePipeline::process(cameraTransform, forceIDR);
 	}
 
-	Result deconfigure()
-	{
-		return SCServer::VideoEncodePipeline::release();
-	}
-
+private:
+	void* inputSurfaceResource;
+	void* encoderSurfaceResource;
 };
 
 ///PLUGIN-INTERNAL START
@@ -461,7 +485,6 @@ void StartStreaming(avs::uid clientID)
 	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
 	setupCommand.server_id = serverID;
-	setupCommand.is_clockwise_winding = true;
 
 	///TODO: Initialise actors in range.
 
@@ -476,7 +499,6 @@ void StopStreaming(avs::uid clientID)
 	ClientData& lostClient = clientServices.at(clientID);
 
 	lostClient.clientMessaging.sendCommand(avs::ShutdownCommand());
-	lostClient.videoEncodePipeline->deconfigure();
 	lostClient.isStreaming = false;
 
 	//Delay deletion of clients.
@@ -636,27 +658,66 @@ bool HasResource(avs::uid clientID, avs::uid resourceID)
 
 ///VideoEncodePipeline START
 TELEPORT_EXPORT
-void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams videoEncodeParams)
+void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
 {
-	videoEncodeParams.deviceHandle = GraphicsManager::mGraphicsDevice;
-	if (videoEncodeParams.deviceHandle)
-	{
-		std::cout << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
-		return;
-	}
 	auto& clientData = clientServices.at(clientID);
-	clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
+	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
+	if(!result)
+	{
+		std::cout << "Error occurred when trying to encode video" << std::endl;
+	}
 }
 
 TELEPORT_EXPORT
-void EncodeVideoFrame(avs::uid clientID, avs::Transform cameraTransform)
+void EncodeVideoFrame(avs::uid clientID, avs::Transform& cameraTransform)
 {
 	auto& clientData = clientServices.at(clientID);
+	avs::ConvertTransform(avs::AxesStandard::UnityStyle, clientData.casterContext.axesStandard, cameraTransform);
 	Result result = clientData.videoEncodePipeline->encode(cameraTransform, clientData.videoKeyframeRequired);
 	if (result)
 	{
 		clientData.videoKeyframeRequired = false;
 	}
+	else
+	{
+		std::cout << "Error occurred when trying to encode video" << std::endl;
+	}
+}
+
+struct EncodeVideoParamsWrapper
+{
+	avs::uid clientID;
+	SCServer::VideoEncodeParams videoEncodeParams;
+};
+
+struct TransformWrapper
+{
+	avs::uid clientID;
+	avs::Transform transform;
+};
+
+static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
+{
+	if (eventID == 0)
+	{
+		auto wrapper = (EncodeVideoParamsWrapper*)data;
+		InitializeVideoEncoder(wrapper->clientID, wrapper->videoEncodeParams);
+	}
+	else if (eventID == 1)
+	{
+		auto wrapper = (TransformWrapper*)data;
+		EncodeVideoFrame(wrapper->clientID, wrapper->transform);
+	}
+	else
+	{
+		std::cout << "Unknown event id" << std::endl;
+	}
+}
+
+TELEPORT_EXPORT
+UnityRenderingEventAndData GetRenderEventWithDataCallback()
+{
+	return OnRenderEventWithData;
 }
 ///VideoEncodePipeline END
 

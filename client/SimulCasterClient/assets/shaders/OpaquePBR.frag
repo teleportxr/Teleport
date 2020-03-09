@@ -298,3 +298,9 @@ void Opaque()
    // output_radiance+=combinedLookup.rgb;
     gl_FragColor = Gamma(vec4(output_radiance,1.0));
 }
+
+void OpaqueAlbedo()
+{
+    vec3 diffuseColour = texture(u_Diffuse, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb * u_DiffuseOutputScalar.rgb;
+    gl_FragColor = Gamma(vec4(diffuseColour, 1.0));
+}

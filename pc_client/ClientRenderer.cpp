@@ -96,13 +96,14 @@ ClientRenderer::ClientRenderer():
 	videoAsCubemapTexture(nullptr),
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
+	resourceManagers(new scr::ActorManager),
 	resourceCreator(basist::transcoder_texture_format::cTFBC1),
 	sessionClient(this, std::make_unique<PCDiscoveryService>(), resourceCreator),
 	RenderMode(0)
 {
 	avsTextures.resize(NumStreams);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
-	resourceCreator.AssociateActorManager(&resourceManagers.mActorManager);
+	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
 
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
@@ -486,7 +487,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", campos.x, campos.y, campos.z),white);
 
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager.GetActorList().size(),resourceManagers.mMeshManager.GetCache(cacheLock).size()), white);
+		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager->GetActorList().size(),resourceManagers.mMeshManager.GetCache(cacheLock).size()), white);
 
 		//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 		//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
@@ -504,41 +505,36 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
-	for (const auto& actorData : resourceManagers.mActorManager.GetActorList())
+
+	const std::vector<std::unique_ptr<scr::ActorManager::LiveActor>>& actorList = resourceManagers.mActorManager->GetActorList();
+	for(size_t i = 0; i < resourceManagers.mActorManager->getVisibleActorAmount(); i++)
 	{
-		//Don't draw the actor, if they are invisible.
-		if(!actorData.second.actor->isVisible)
-		{
-			continue;
-		}
+		const scr::Actor& actor = actorList[i]->actor;
+		const scr::Transform& transform = actor.GetTransform();
 
-		const scr::Transform &transform = actorData.second.actor->GetTransform();
+		const std::shared_ptr<scr::Mesh> mesh = actor.GetMesh();
+		if(!mesh) continue;
+		const std::vector<std::shared_ptr<scr::Material>> materials = actor.GetMaterials();
+		if(materials.size() == 0) continue;
 
-		const std::shared_ptr<scr::Mesh> mesh = actorData.second.actor->GetMesh();
-		if (!mesh)
-			continue;
-		const std::vector<std::shared_ptr<scr::Material>> materials = actorData.second.actor->GetMaterials();
-		if (!materials.size())
-			continue;
 		size_t element = 0;
-		const auto &CI=mesh->GetMeshCreateInfo();
-		for (const std::shared_ptr<scr::Material>& m : materials)
+		const auto& CI = mesh->GetMeshCreateInfo();
+		for(const std::shared_ptr<scr::Material>& m : materials)
 		{
-			if (element >= CI.ib.size())
-				break;
+			if(element >= CI.ib.size()) break;
 			const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(CI.vb[element].get());
 			const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(CI.ib[element].get());
 
-			const simul::crossplatform::Buffer* const v[] = { vb->GetSimulVertexBuffer() };
+			const simul::crossplatform::Buffer* const v[] = {vb->GetSimulVertexBuffer()};
 			simul::crossplatform::Layout* layout = nullptr;
-			if (!layout)
+			if(!layout)
 			{
-				layout =(const_cast<pc_client::PC_VertexBuffer*>( vb))->GetLayout();
+				layout = (const_cast<pc_client::PC_VertexBuffer*>(vb))->GetLayout();
 			}
 			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 			mat4 model;
-			model=((const float*)& (transform.GetTransformMatrix()));
-			mat4::mul(cameraConstants.worldViewProj, *((mat4*)& deviceContext.viewStruct.viewProj), model);
+			model = ((const float*)&(transform.GetTransformMatrix()));
+			mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
 			cameraConstants.world = model;
 			cameraConstants.view = deviceContext.viewStruct.view;
 			cameraConstants.proj = deviceContext.viewStruct.proj;
@@ -557,10 +553,10 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : nullptr);
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : nullptr);
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() :nullptr);
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() : nullptr);
 				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
 				pbrEffect->SetTexture(deviceContext, "roughSpecularCubemap", roughSpecularCubemapTexture);
-				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture); 
+				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
 				pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 			}
 
@@ -579,6 +575,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		}
 	}
 }
+
 void ClientRenderer::InvalidateDeviceObjects()
 {
 	for (auto i : avsTextures)
@@ -769,12 +766,12 @@ void ClientRenderer::OnVideoStreamClosed()
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
 {
-	return resourceManagers.mActorManager.ShowActor(actor_uid);
+	return resourceManagers.mActorManager->ShowActor(actor_uid);
 }
 
 bool ClientRenderer::OnActorLeftBounds(avs::uid actor_uid)
 {
-	return resourceManagers.mActorManager.HideActor(actor_uid);
+	return resourceManagers.mActorManager->HideActor(actor_uid);
 }
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
@@ -828,7 +825,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 		auto q = camera.GetOrientation().GetQuaternion();
 		auto q_rel=q/q0;
-		avs::DisplayInfo displayInfo = {hdrFramebuffer->GetWidth(), hdrFramebuffer->GetHeight()};
+		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 		avs::HeadPose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();

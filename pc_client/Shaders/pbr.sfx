@@ -77,11 +77,11 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 	OUT.texCoords0	=vec2(0,0);
 	OUT.texCoords1	=vec2(0,0);
 #ifdef SFX_OPENGL
-    OUT.normal.xyz	=mul(mat3(world),vec3(0,0,1.0));
-	OUT.tangent.xyz = mul(mat3(world), vec3(0, 0, 1.0));
+    OUT.normal.xyz	=mul(vec3(0,0,1.0), mat3(world));
+	OUT.tangent.xyz = mul(vec3(0, 0, 1.0), mat3(world));
 #else
-    OUT.normal.xyz	=mul(world,vec4(vec3(0,0,1.0),0.0)).xyz;
-	OUT.tangent.xyz =mul(world,vec4(vec3(0, 0, 1.0), 0.0)).xyz;
+    OUT.normal.xyz	=mul(vec4(vec3(0,0,1.0),0.0), world).xyz;
+	OUT.tangent.xyz =mul(vec4(vec3(0, 0, 1.0), 0.0), world).xyz;
 #endif
 	OUT.hPosition	=OUT.clip_pos;
     return OUT;
@@ -102,11 +102,11 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	OUT.texCoords0	=IN.texCoords0;
 	OUT.texCoords1	=IN.texCoords1;
 #ifdef SFX_OPENGL
-	OUT.normal.xyz = mul(mat3(world), IN.normal);
-	OUT.tangent.xyz = mul(mat3(world), IN.tangent);
+	OUT.normal.xyz = mul(IN.normal, mat3(world));
+	OUT.tangent.xyz = mul(IN.tangent, mat3(world));
 #else
-	OUT.normal = mul( vec4(IN.normal.xyz, 0.0),world).xyz;
-	OUT.tangent = vec4(mul(IN.tangent.xyz,world).xyz,0.0);
+	OUT.normal = mul(vec4(IN.normal.xyz, 0.0), world).xyz;
+	OUT.tangent = vec4(mul(IN.tangent.xyz, world).xyz,0.0);
 	//OUT.normal = IN.normal;
 	//OUT.tangent = IN.tangent;
 #endif
