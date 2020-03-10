@@ -43,7 +43,6 @@ namespace SCServer
         }
 
         ID3D11Texture2D* copy;
-        //D3D11_SUBRESOURCE_DATA data;
         device->CreateTexture2D(&desc, NULL, &copy);
        
         return copy;
@@ -71,8 +70,13 @@ namespace SCServer
     {
         if (resource)
         {
-            ((ID3D11Resource*)resource)->Release();
+            ((IUnknown*)resource)->Release();
         }
+    }
+
+    void GraphicsManager::AddResourceRef(void* resource)
+    {    
+        ((IUnknown*)resource)->AddRef();
     }
 }
 

@@ -11,6 +11,7 @@ namespace SCServer
 		static void* CreateTextureCopy(void* sourceTexture);
 		static void CopyResource(void* target, void* source);
 		static void ReleaseResource(void* resource);
+		static void AddResourceRef(void* texture);
 
 		static IUnityInterfaces* mUnityInterfaces;
 		static IUnityGraphics* mGraphics;
