@@ -240,7 +240,10 @@ class PluginVideoEncodePipeline : public SCServer::VideoEncodePipeline
 {
 public:
 	PluginVideoEncodePipeline() 
-		:SCServer::VideoEncodePipeline() {}
+		:
+		inputSurfaceResource(nullptr),
+		encoderSurfaceResource(nullptr),
+		SCServer::VideoEncodePipeline() {}
 
 	~PluginVideoEncodePipeline()
 	{
@@ -255,7 +258,7 @@ public:
 			return Result::InvalidGraphicsDevice;
 		}
 
-		if (!inputSurfaceResource)
+		if (!videoEncodeParams.inputSurfaceResource)
 		{
 			std::cout << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
 			return Result::InvalidGraphicsResource;
