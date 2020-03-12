@@ -205,7 +205,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 				OVR_FAIL("Failed to build video surface shader program");
 			}
 		}
-		mDecoder.setBackend(new VideoDecoderProxy(java->Env, this, avs::VideoCodec::HEVC));
+		mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));
 
 		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
 		mVideoTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
@@ -824,10 +824,11 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
 		mNetworkSource.setDoChecksums(setupCommand.do_checksums);
 		avs::DecoderParams decoderParams = {};
-		decoderParams.codec             = avs::VideoCodec::HEVC;
+		decoderParams.codec             = setupCommand.videoCodec;
 		decoderParams.decodeFrequency   = avs::DecodeFrequency::NALUnit;
 		decoderParams.prependStartCodes = false;
 		decoderParams.deferDisplay      = false;
+
 		size_t stream_width  = setupCommand.video_width;
 		size_t stream_height = setupCommand.video_height;
 		if (!mDecoder.configure(

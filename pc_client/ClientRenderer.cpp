@@ -662,7 +662,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
 	decoderParams.deferDisplay = false;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	decoderParams.codec = avs::VideoCodec::HEVC;
+	decoderParams.codec = setupCommand.videoCodec;
 	decoderParams.use10BitDecoding = setupCommand.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = setupCommand.use_yuv_444_decoding;
 

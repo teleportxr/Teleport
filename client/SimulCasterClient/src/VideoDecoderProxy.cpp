@@ -16,16 +16,14 @@ void Java_co_Simul_remoteplayclient_VideoDecoder_nativeFrameAvailable(JNIEnv* en
 
 VideoDecoderProxy::JNI VideoDecoderProxy::jni;
 
-VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInterface, avs::VideoCodec codecType)
+VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInterface)
     : mFrameWidth(0), mFrameHeight(0)
     , mInitialized(false)
     , mSurfaceTexture(nullptr)
     , mEventInterface(eventInterface)
     , mEnv(env)
 {
-    assert(mEnv);
-    jobject videoDecoder = mEnv->NewObject(jni.videoDecoderClass, jni.ctorMethod, this, static_cast<int>(codecType));
-    mVideoDecoder = mEnv->NewGlobalRef(videoDecoder);
+
 }
 
 VideoDecoderProxy::~VideoDecoderProxy()
@@ -43,7 +41,13 @@ avs::Result VideoDecoderProxy::initialize(const avs::DeviceHandle& device, int f
 
     mFrameWidth  = frameWidth;
     mFrameHeight = frameHeight;
+
+    assert(mEnv);
+    jobject videoDecoder = mEnv->NewObject(jni.videoDecoderClass, jni.ctorMethod, this, static_cast<int>(params.codec));
+    mVideoDecoder = mEnv->NewGlobalRef(videoDecoder);
+
     mInitialized = true;
+
     return avs::Result::OK;
 }
 
@@ -90,7 +94,7 @@ avs::Result VideoDecoderProxy::unregisterSurface(const avs::SurfaceBackendInterf
     return avs::Result::OK;
 }
 
-avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payloadType)
+avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payloadType, bool lastPayload)
 {
     if(!mInitialized) {
         return avs::Result::DecoderBackend_NotInitialized;
@@ -100,7 +104,7 @@ avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInByt
     }
 
     jobject jbuffer = mEnv->NewDirectByteBuffer(const_cast<void*>(buffer), bufferSizeInBytes);
-    jboolean isReadyToDisplay = mEnv->CallBooleanMethod(mVideoDecoder, jni.decodeMethod, jbuffer, payloadType);
+    jboolean isReadyToDisplay = mEnv->CallBooleanMethod(mVideoDecoder, jni.decodeMethod, jbuffer, payloadType, lastPayload);
     mEnv->DeleteLocalRef(jbuffer);
     return isReadyToDisplay ? avs::Result::DecoderBackend_ReadyToDisplay : avs::Result::OK;
 }
@@ -135,7 +139,7 @@ void VideoDecoderProxy::InitializeJNI(JNIEnv* env)
     jni.ctorMethod = env->GetMethodID(jni.videoDecoderClass, "<init>", "(JI)V");
     jni.initializeMethod = env->GetMethodID(jni.videoDecoderClass, "initialize", "(IILandroid/graphics/SurfaceTexture;)V");
     jni.shutdownMethod = env->GetMethodID(jni.videoDecoderClass, "shutdown", "()V");
-    jni.decodeMethod = env->GetMethodID(jni.videoDecoderClass, "decode", "(Ljava/nio/ByteBuffer;I)Z");
+    jni.decodeMethod = env->GetMethodID(jni.videoDecoderClass, "decode", "(Ljava/nio/ByteBuffer;IZ)Z");
     jni.displayMethod = env->GetMethodID(jni.videoDecoderClass, "display", "()Z");
 }
 

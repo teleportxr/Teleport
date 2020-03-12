@@ -15,7 +15,7 @@ enum class VideoCodec {
 }
 
 enum class PayloadType {
-    FirstVCL,       /*!< = 0V. ideo Coding Layer unit (first in each access unit). */
+    FirstVCL,       /*!< Video Coding Layer unit (first VCL in an access unit). */
     VCL,            /*!< Video Coding Layer unit (any subsequent in each access unit). */
     VPS,            /*!< Video Parameter Set (HEVC only) */
     SPS,            /*!< Sequence Parameter Set */
@@ -63,7 +63,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         mDisplayRequests = 0
     }
 
-    fun decode(buffer: ByteBuffer, payloadTypeIndex: Int): Boolean
+    fun decode(buffer: ByteBuffer, payloadTypeIndex: Int, lastPayload: Boolean): Boolean
     {
         if(!mDecoderConfigured)
         {
@@ -72,7 +72,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         }
 
         val payloadType = getPayloadTypeFromIndex(payloadTypeIndex)
-        val payloadFlags = when(payloadType)
+        var payloadFlags = when(payloadType)
         {
             PayloadType.VPS -> MediaCodec.BUFFER_FLAG_CODEC_CONFIG
             PayloadType.PPS -> MediaCodec.BUFFER_FLAG_CODEC_CONFIG
@@ -85,10 +85,18 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
             else -> byteArrayOf(0, 0, 1)
         }
 
-        if(payloadType == PayloadType.FirstVCL)
+        if(lastPayload)
         {
             // Request to output previous access unit.
             ++mDisplayRequests
+        }
+        else
+        {
+            // Signifies partial frame data. For all VCLs in a frame besides the last one. Needed for H264.
+           // if (payloadFlags == 0)
+            //{
+              //  payloadFlags = 8;
+            //}
         }
 
         val inputBuffer = startCodes.plus(ByteArray(buffer.remaining()))
@@ -124,7 +132,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         }
         else
         {
-            //Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
+            Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
         }
     }
 

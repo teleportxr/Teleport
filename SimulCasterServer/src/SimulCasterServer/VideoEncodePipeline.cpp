@@ -62,7 +62,7 @@ namespace SCServer
 		
 
 		avs::EncoderParams encoderParams = {};
-		encoderParams.codec = avs::VideoCodec::HEVC;
+		encoderParams.codec = settings.videoCodec;
 		encoderParams.preset = avs::VideoPreset::HighQuality;
 		encoderParams.targetFrameRate = settings.targetFPS;
 		encoderParams.idrInterval = settings.idrInterval;

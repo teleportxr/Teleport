@@ -488,6 +488,7 @@ void StartStreaming(avs::uid clientID)
 	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
 	setupCommand.server_id = serverID;
+	setupCommand.videoCodec = casterSettings.videoCodec;
 
 	///TODO: Initialise actors in range.
 
