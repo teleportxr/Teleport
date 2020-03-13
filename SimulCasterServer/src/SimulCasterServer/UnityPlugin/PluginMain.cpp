@@ -294,6 +294,14 @@ void Disconnect(avs::uid clientID)
 }
 ///PLUGIN-INTERNAL END
 
+///MEMORY-MANAGEMENT START
+TELEPORT_EXPORT
+void DeleteUnmanagedArray(void** unmanagedArray)
+{
+	delete[] *unmanagedArray;
+}
+///MEMORY-MANAGEMENT END
+
 ///PLUGIN-SPECIFIC START
 TELEPORT_EXPORT
 void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
@@ -784,6 +792,25 @@ uint16_t GetServerPort(avs::uid clientID)
 
 ///GeometryStore START
 TELEPORT_EXPORT
+void SaveGeometryStore()
+{
+	geometryStore.saveToDisk();
+}
+
+TELEPORT_EXPORT
+void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)
+{
+	geometryStore.loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);
+}
+
+//Inform GeometryStore of resources that still exist, and of their new IDs.
+TELEPORT_EXPORT
+void ReaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
+{
+	geometryStore.reaffirmResources(meshAmount, reaffirmedMeshes, textureAmount, reaffirmedTextures, materialAmount, reaffirmedMaterials);
+}
+
+TELEPORT_EXPORT
 void ClearGeometryStore()
 {
 	geometryStore.clear(true);
@@ -816,102 +843,31 @@ void SetHands(std::pair<void*, avs::uid> firstHand, std::pair<void*, avs::uid> s
 TELEPORT_EXPORT
 void StoreNode(avs::uid id, InteropNode node)
 {
-	//Covert to avs::DataNode in-place.
-	geometryStore.storeNode
-	(
-		id,
-		{
-			node.transform,
-			node.dataID,
-			node.dataType,
-			{node.materialIDs, node.materialIDs + node.materialAmount},
-			{node.childIDs, node.childIDs + node.childAmount}
-		}
-	);
+	geometryStore.storeNode(id, avs::DataNode(node));
 }
 
 TELEPORT_EXPORT
-void StoreMesh(avs::uid id, avs::AxesStandard extractToStandard, InteropMesh* mesh)
+void StoreMesh(avs::uid id, BSTR guid, std::time_t lastModified, InteropMesh* mesh, avs::AxesStandard extractToStandard)
 {
-	avs::Mesh newMesh;
-
-	//Create vector in-place with pointer.
-	newMesh.primitiveArrays = {mesh->primitiveArrays, mesh->primitiveArrays + mesh->primitiveArrayAmount};
-	//Memcpy the attributes into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
-	for(int i = 0; i < mesh->primitiveArrayAmount; i++)
-	{
-		size_t dataSize = sizeof(avs::Attribute) * mesh->primitiveArrays[i].attributeCount;
-
-		newMesh.primitiveArrays[i].attributes = new avs::Attribute[dataSize];
-		memcpy_s(newMesh.primitiveArrays[i].attributes, dataSize, mesh->primitiveArrays[i].attributes, dataSize);
-	}
-
-	//Zip all of the maps back together.
-	for(int i = 0; i < mesh->accessorAmount; i++)
-	{
-		newMesh.accessors[mesh->accessorIDs[i]] = mesh->accessors[i];
-	}
-
-	for(int i = 0; i < mesh->bufferViewAmount; i++)
-	{
-		newMesh.bufferViews[mesh->bufferViewIDs[i]] = mesh->bufferViews[i];
-	}
-
-	for(int i = 0; i < mesh->bufferAmount; i++)
-	{
-		newMesh.buffers[mesh->bufferIDs[i]] = mesh->buffers[i];
-
-		//Memcpy the data into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
-		newMesh.buffers[mesh->bufferIDs[i]].data = new uint8_t[mesh->buffers[i].byteLength];
-		memcpy_s(const_cast<uint8_t*>(newMesh.buffers[mesh->bufferIDs[i]].data), mesh->buffers[i].byteLength, mesh->buffers[i].data, mesh->buffers[i].byteLength);
-	}
-
-	geometryStore.storeMesh(id, extractToStandard, std::move(newMesh));
+	geometryStore.storeMesh(id, guid, lastModified, avs::Mesh(*mesh), extractToStandard);
 }
 
 TELEPORT_EXPORT
-void StoreMaterial(avs::uid id, InteropMaterial material)
+void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModified, InteropMaterial material)
 {
-	std::unordered_map<avs::MaterialExtensionIdentifier, std::shared_ptr<avs::MaterialExtension>> extensions;
-
-	//Stitch extension map together.
-	for(int i = 0; i < material.extensionAmount; i++)
-	{
-		avs::MaterialExtensionIdentifier extensionID = material.extensionIDs[i];
-
-		switch(extensionID)
-		{
-			case avs::MaterialExtensionIdentifier::SIMPLE_GRASS_WIND:
-				extensions.emplace(extensionID, std::make_shared<avs::SimpleGrassWindExtension>(*static_cast<avs::SimpleGrassWindExtension*>(material.extensions[i])));
-				break;
-		}
-	}
-
-	geometryStore.storeMaterial
-	(
-		id,
-		{
-			{material.name, material.name + material.nameLength},
-			material.pbrMetallicRoughness,
-			material.normalTexture,
-			material.occlusionTexture,
-			material.emissiveTexture,
-			material.emissiveFactor,
-			extensions
-		}
-	);
+	geometryStore.storeMaterial(id, guid, lastModified, avs::Material(material));
 }
 
 TELEPORT_EXPORT
-void StoreTexture(avs::uid id, InteropTexture texture, std::time_t lastModified, char* basisFileLocation)
+void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation)
 {
-	geometryStore.storeTexture(id, ToAvsTexture(texture, true), lastModified, basisFileLocation, false);
+	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation);
 }
 
 TELEPORT_EXPORT
-void StoreShadowMap(avs::uid id, InteropTexture shadowMap)
+void StoreShadowMap(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture shadowMap)
 {
-	geometryStore.storeShadowMap(id, ToAvsTexture(shadowMap, true));
+	geometryStore.storeShadowMap(id, guid, lastModified, avs::Texture(shadowMap));
 }
 
 TELEPORT_EXPORT
@@ -932,6 +888,7 @@ uint64_t GetAmountOfTexturesWaitingForCompression()
 	return static_cast<int64_t>(geometryStore.getAmountOfTexturesWaitingForCompression());
 }
 
+///TODO: Free memory of allocated string, or use passed in string to return message.
 TELEPORT_EXPORT
 BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures)
 {
