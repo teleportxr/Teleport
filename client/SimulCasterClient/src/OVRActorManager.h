@@ -24,6 +24,10 @@ public:
     virtual void CreateActor(avs::uid actorID, const scr::Actor::ActorCreateInfo& pActorCreateInfo) override;
     virtual void CreateHand(avs::uid handID, const scr::Actor::ActorCreateInfo& handCreateInfo) override;
 
+	//Changes PBR effect used on actors/surfaces to the effect pass with the passed name.
+	//Also changes GlobalGraphicsResource::effectPassName.
+    void ChangeEffectPass(const char* effectPassName);
+
     void GetHands(LiveOVRActor*& leftHand, LiveOVRActor*& rightHand);
 private:
     GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();

@@ -463,7 +463,18 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			//Flip show debug information, if the grip trigger was released.
 			if((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_GripTrigger) != 0 && (controllerState.mButtons & ovrButton::ovrButton_GripTrigger) == 0)
 			{
-					mShowInfo=!mShowInfo;
+					mShowInfo =! mShowInfo;
+            }
+
+			//Flip rendering mode when the trigger is held, and the X or A button is released.
+            if((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_Trigger) != 0 &&
+					(((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_X) != 0 && (controllerState.mButtons & ovrButton::ovrButton_X) == 0) ||
+					((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_A) != 0 && (controllerState.mButtons & ovrButton::ovrButton_A) == 0)))
+            {
+                OVRActorManager* actorManager = dynamic_cast<OVRActorManager*>(resourceManagers.mActorManager.get());
+
+                if(strcmp(GlobalGraphicsResources.effectPassName, "OpaquePBR") == 0) actorManager->ChangeEffectPass("OpaqueAlbedo");
+                else if(strcmp(GlobalGraphicsResources.effectPassName, "OpaqueAlbedo") == 0) actorManager->ChangeEffectPass("OpaquePBR");
             }
 
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
@@ -582,9 +593,10 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	auto ctr=mNetworkSource.getCounterValues();
 	if(mSession.IsConnected())
 	{
-		if(mShowInfo)
+	    if(mShowInfo)
 			mGuiSys->ShowInfoText(
 				0.017f,
+                "%s\n"
 				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 				"Incomplete Decoder Packets: %d\n"
 				"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
@@ -593,6 +605,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 				//"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
 				//"Pos: %3.3f %3.3f %3.3f\n"
 				"Orphans: %d\n",
+				GlobalGraphicsResources.effectPassName,
 				mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
 				ctr.incompleteDPsReceived,
 				frameRate, ctr.bandwidthKPS,
@@ -723,9 +736,7 @@ void Application::UpdateHandObjects()
         break;
     }
 
-	OVR::Matrix4f transform;
-    scr::mat4 transformToOculusOrigin = scr::mat4::Translation(-oculusOrigin);
-    if(rightHand)
+	if(rightHand)
     {
         rightHand->actor.UpdateModelMatrix
                 (
@@ -1197,7 +1208,7 @@ void Application::RenderLocalActors(ovrFrameResult& res)
 				break;
 			}
 
-			res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
+            res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
 		}
 	};
 
