@@ -18,6 +18,18 @@ struct InteropNode
 
 	size_t childAmount;
 	avs::uid* childIDs;
+
+	operator avs::DataNode() const
+	{
+		return
+		{
+			transform,
+			dataID,
+			dataType,
+			{materialIDs, materialIDs + materialAmount},
+			{childIDs, childIDs + childAmount}
+		};
+	}
 };
 
 struct InteropMesh
@@ -36,12 +48,49 @@ struct InteropMesh
 	int64_t bufferAmount;
 	avs::uid* bufferIDs;
 	avs::GeometryBuffer* buffers;
+
+	operator avs::Mesh() const
+	{
+		avs::Mesh newMesh;
+
+		//Create vector in-place with pointer.
+		newMesh.primitiveArrays = {primitiveArrays, primitiveArrays + primitiveArrayAmount};
+		//Memcpy the attributes into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
+		for(int i = 0; i < primitiveArrayAmount; i++)
+		{
+			size_t dataSize = sizeof(avs::Attribute) * primitiveArrays[i].attributeCount;
+
+			newMesh.primitiveArrays[i].attributes = new avs::Attribute[dataSize];
+			memcpy_s(newMesh.primitiveArrays[i].attributes, dataSize, primitiveArrays[i].attributes, dataSize);
+		}
+
+		//Zip all of the maps back together.
+		for(int i = 0; i < accessorAmount; i++)
+		{
+			newMesh.accessors[accessorIDs[i]] = accessors[i];
+		}
+
+		for(int i = 0; i < bufferViewAmount; i++)
+		{
+			newMesh.bufferViews[bufferViewIDs[i]] = bufferViews[i];
+		}
+
+		for(int i = 0; i < bufferAmount; i++)
+		{
+			newMesh.buffers[bufferIDs[i]] = buffers[i];
+
+			//Memcpy the data into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
+			newMesh.buffers[bufferIDs[i]].data = new uint8_t[buffers[i].byteLength];
+			memcpy_s(const_cast<uint8_t*>(newMesh.buffers[bufferIDs[i]].data), buffers[i].byteLength, buffers[i].data, buffers[i].byteLength);
+		}
+
+		return newMesh;
+	}
 };
 
 struct InteropMaterial
 {
-	size_t nameLength;
-	char* name;
+	BSTR name;
 
 	avs::PBRMetallicRoughness pbrMetallicRoughness;
 	avs::TextureAccessor normalTexture;
@@ -52,12 +101,40 @@ struct InteropMaterial
 	size_t extensionAmount;
 	avs::MaterialExtensionIdentifier* extensionIDs;
 	avs::MaterialExtension** extensions;
+
+	operator avs::Material() const
+	{
+		std::unordered_map<avs::MaterialExtensionIdentifier, std::shared_ptr<avs::MaterialExtension>> convertedExtensions;
+
+		//Stitch extension map together.
+		for(int i = 0; i < extensionAmount; i++)
+		{
+			avs::MaterialExtensionIdentifier extensionID = extensionIDs[i];
+
+			switch(extensionID)
+			{
+				case avs::MaterialExtensionIdentifier::SIMPLE_GRASS_WIND:
+					convertedExtensions.emplace(extensionID, std::make_shared<avs::SimpleGrassWindExtension>(*static_cast<avs::SimpleGrassWindExtension*>(extensions[i])));
+					break;
+			}
+		}
+
+		return
+		{
+			convertToByteString(name),
+			pbrMetallicRoughness,
+			normalTexture,
+			occlusionTexture,
+			emissiveTexture,
+			emissiveFactor,
+			convertedExtensions
+		};
+	}
 };
 
 struct InteropTexture
 {
-	size_t nameLength;
-	char* name;
+	BSTR name;
 
 	uint32_t width;
 	uint32_t height;
@@ -73,39 +150,23 @@ struct InteropTexture
 	unsigned char* data;
 
 	avs::uid sampler_uid = 0;
+
+	operator avs::Texture() const
+	{
+		return
+		{
+			convertToByteString(name),
+			width,
+			height,
+			depth,
+			bytesPerPixel,
+			arrayCount,
+			mipCount,
+			format,
+			compression,
+			dataSize,
+			data,
+			sampler_uid
+		};
+	}
 };
-
-//Converts an interop texture to a libavstream texture.
-//	texture : Texture to copy data from.
-//	copyBuffer : Whether to copy the texture buffer from the InteropTexture instead of copying the pointer. This should be true, unless you have copied the buffer yourself.
-//Returns avs::Texture with the same data as the InteropTexture, ready to be stored.
-avs::Texture ToAvsTexture(InteropTexture texture, bool copyBuffer)
-{
-	unsigned char* data;
-		
-	if(copyBuffer)
-	{
-		data = new unsigned char[texture.dataSize];
-		memcpy_s(data, texture.dataSize, texture.data, texture.dataSize);
-	}
-	else
-	{
-		data = texture.data;
-	}
-
-	return
-	{
-		{texture.name, texture.name + texture.nameLength},
-		texture.width,
-		texture.height,
-		texture.depth,
-		texture.bytesPerPixel,
-		texture.arrayCount,
-		texture.mipCount,
-		texture.format,
-		texture.compression,
-		texture.dataSize,
-		data,
-		texture.sampler_uid
-	};
-}

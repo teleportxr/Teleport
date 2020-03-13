@@ -17,6 +17,7 @@ set(src
 	src/SimulCasterServer/ClientMessaging.cpp
 	src/SimulCasterServer/ClientMessaging.h
 	src/SimulCasterServer/DiscoveryService.h
+	src/SimulCasterServer/ExtractedTypes.h
 	src/SimulCasterServer/GeometryEncoder.cpp
 	src/SimulCasterServer/GeometryEncoder.h
 	src/SimulCasterServer/GeometryStore.cpp
