@@ -14,7 +14,7 @@ public:
 class VideoDecoderProxy final : public avs::DecoderBackendInterface
 {
 public:
-    VideoDecoderProxy(JNIEnv* env, DecodeEventInterface* eventInterface, avs::VideoCodec codecType);
+    VideoDecoderProxy(JNIEnv* env, DecodeEventInterface* eventInterface);
     virtual ~VideoDecoderProxy();
 
     /* Begin avs::DecoderBackendInterface */
@@ -22,7 +22,7 @@ public:
     avs::Result shutdown() override;
     avs::Result registerSurface(const avs::SurfaceBackendInterface* surface) override;
     avs::Result unregisterSurface(const avs::SurfaceBackendInterface* surface) override;
-    avs::Result decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payaloadType) override;
+    avs::Result decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payaloadType, bool lastPayload) override;
     avs::Result display() override;
     /* End avs::DecoderBackendInterface */
 

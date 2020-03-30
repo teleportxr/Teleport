@@ -1,12 +1,13 @@
 #pragma once
 
-#include <vector>
-#include <unordered_map>
 #include <ctime>
-
-#include "libavstream/geometry/mesh_interface.hpp"
+#include <unordered_map>
+#include <vector>
 
 #include "basisu_comp.h"
+#include "libavstream/geometry/mesh_interface.hpp"
+
+#include "ExtractedTypes.h"
 
 namespace SCServer
 {
@@ -17,6 +18,13 @@ namespace SCServer
 		~GeometryStore();
 
 		bool willDelayTextureCompression = true; //Causes textures to wait for compression in StoreTexture, rather than calling compress them during the function call, when true.
+
+		void saveToDisk() const;
+		//Load from disk.
+		//Parameters are used to return the meta data of the resources that were loaded back-in, so they can be confirmed.
+		void loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials);
+		//Inform GeometryStore of the resources that still exist, and of their new IDs.
+		void reaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials);
 
 		void clear(bool freeMeshBuffers);
 
@@ -62,11 +70,11 @@ namespace SCServer
 		//Returns whether there is a shadow map stored with the passed id.
 		bool hasShadowMap(avs::uid id) const;
 
-		void storeNode(avs::uid id, avs::DataNode&& node);
-		void storeMesh(avs::uid id, avs::AxesStandard standard, avs::Mesh&& mesh);
-		void storeMaterial(avs::uid id, avs::Material&& material);
-		void storeTexture(avs::uid id, avs::Texture&& texture, std::time_t lastModified, std::string basisFileLocation, bool swapRedBlueChannels);
-		void storeShadowMap(avs::uid id, avs::Texture&& shadowMap);
+		void storeNode(avs::uid id, avs::DataNode& newNode);
+		void storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard);
+		void storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Material& newMaterial);
+		void storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation);
+		void storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& shadowMap);
 
 		void removeNode(avs::uid id);
 
@@ -86,13 +94,19 @@ namespace SCServer
 			size_t dataSize;
 		};
 
+		//Names of the files that store each resource type.
+		const std::string TEXTURE_FILE_NAME = "teleportVR_textures.dat";
+		const std::string MATERIAL_FILE_NAME = "teleportVR_materials.dat";
+		const std::string MESH_PC_FILE_NAME = "teleportVR_meshes_PC.dat";
+		const std::string MESH_ANDROID_FILE_NAME = "teleportVR_meshes_android.dat";
+
 		basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
 
 		std::map<avs::uid, avs::DataNode> nodes;
-		std::map<avs::uid, std::map<avs::AxesStandard, avs::Mesh>> meshes;
-		std::map<avs::uid, avs::Material> materials;
-		std::map<avs::uid, avs::Texture> textures;
-		std::map<avs::uid, avs::Texture> shadowMaps;
+		std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> meshes;
+		std::map<avs::uid, ExtractedMaterial> materials;
+		std::map<avs::uid, ExtractedTexture> textures;
+		std::map<avs::uid, ExtractedTexture> shadowMaps;
 
 		std::map<avs::uid, PrecompressedTexture> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
 
@@ -100,9 +114,10 @@ namespace SCServer
 
 		std::vector<std::pair<void*, avs::uid>> hands; //List of pointer-IDs pairs of the nodes that represent the hands that are in use.
 
-		//Swaps the red and blue channels of the passed texture; expects four bytes per pixel (one byte per channel), RGBA.
-		//	originalData : Pixel data in BGRA/RGBA format and four bytes per pixel.
-		//	dataSize : Byte size of the passed data.
-		void swapTextureRedBlue(unsigned char* textureData, uint32_t dataSize);
+		template<typename ExtractedResource>
+		void saveResources(const std::string file_name, const std::map<avs::uid, ExtractedResource>& resourceMap) const;
+
+		template<typename ExtractedResource>
+		void loadResources(const std::string file_name, std::map<avs::uid, ExtractedResource>& resourceMap);
 	};
 }

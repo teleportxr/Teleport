@@ -171,3 +171,24 @@ std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(avs::uid actorID, 
     }
     return ovrSurfaceDefs;
 }
+
+void OVRActorManager::ChangeEffectPass(const char* effectPassName)
+{
+    //Early-out if this we aren't actually changing the effect pass.
+    if(strcmp(GlobalGraphicsResources.effectPassName, effectPassName) == 0)
+    {
+        return;
+    }
+
+    GlobalGraphicsResources.effectPassName = const_cast<char*>(effectPassName);
+    OVR::GlProgram& effectPass = GlobalGraphicsResources.pbrEffect.GetGlPlatform(effectPassName);
+
+    //Change effect used by all actors/surfaces.
+    for(auto& actor : actorList)
+    {
+        for(auto& surface : static_cast<LiveOVRActor*>(actor.get())->ovrSurfaceDefs)
+        {
+            surface.graphicsCommand.Program = effectPass;
+        }
+    }
+}

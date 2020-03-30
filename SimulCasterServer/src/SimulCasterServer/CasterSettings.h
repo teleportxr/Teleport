@@ -30,6 +30,7 @@ namespace SCServer
 		int32_t cullQuadIndex; // This culls a quad at the index. For debugging only
 		int32_t targetFPS;
 		int32_t idrInterval;
+		avs::VideoCodec videoCodec;
 		VideoEncoderRateControlMode rateControlMode;
 		int32_t averageBitrate;
 		int32_t maxBitrate;
