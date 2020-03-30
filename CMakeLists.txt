@@ -11,7 +11,7 @@ else()
 	endif()
 endif()
 
-set(REMOTEPLAY_SIMUL "C:/Simul/4.2/Simul" CACHE PATH "Simul folder" )
+set(REMOTEPLAY_PLATFORM_DIR "${CMAKE_SOURCE_DIR}/firstparty/Platform" )
 option(REMOTEPLAY_SERVER "Build for server? If true, client will not be built." OFF)
 option(REMOTEPLAY_UNITY "Build for Unity?" OFF)
 set(REMOTEPLAY_UNITY_PLUGINS_DIR "${CMAKE_BINARY_DIR}/../Assets/external-sdk/Teleport/Plugins/x86_64" CACHE PATH "")

@@ -1,8 +1,8 @@
 #define NOMINMAX				// Prevent Windows from defining min and max as macros
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 
-#include "Simul/Base/EnvironmentVariables.h"
-#include "Simul/Base/StringFunctions.h"
+#include "Platform/Core/EnvironmentVariables.h"
+#include "Platform/Core/StringFunctions.h"
 #include "Simul/Platform/CrossPlatform/BaseFramebuffer.h"
 #include "Simul/Platform/CrossPlatform/Material.h"
 #include "Simul/Platform/CrossPlatform/HDRRenderer.h"

@@ -4,7 +4,7 @@
 
 #include "stdafx.h"
 #include "resource.h"
-#include "Simul/Base/EnvironmentVariables.h"
+#include "Platform/Core/EnvironmentVariables.h"
 #include "Simul/Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Simul/Platform/CrossPlatform/RenderPlatform.h"
 #include "Simul/Platform/CrossPlatform/DisplaySurfaceManager.h"
