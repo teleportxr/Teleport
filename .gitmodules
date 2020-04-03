@@ -9,7 +9,7 @@
 	url = git@github.com:simul/srt.git
 [submodule "thirdparty/efp"]
 	path = thirdparty/efp
-	url = https://github.com/simul/efp
+	url = git@github.com:simul/efp
 [submodule "firstparty/Platform"]
 	path = firstparty/Platform
 	url = git@github.com:simul/Platform.git
