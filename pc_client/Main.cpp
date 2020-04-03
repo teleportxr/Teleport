@@ -5,16 +5,16 @@
 #include "stdafx.h"
 #include "resource.h"
 #include "Platform/Core/EnvironmentVariables.h"
-#include "Simul/Platform/CrossPlatform/GraphicsDeviceInterface.h"
-#include "Simul/Platform/CrossPlatform/RenderPlatform.h"
-#include "Simul/Platform/CrossPlatform/DisplaySurfaceManager.h"
-#include "Simul/Platform/CrossPlatform/DisplaySurface.h"
-#include "Simul/Platform/DirectX11/RenderPlatform.h"
-#include "Simul/Base/Timer.h"
-#include "Simul/Platform/DirectX11/Direct3D11Manager.h"
+#include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
+#include "Platform/CrossPlatform/RenderPlatform.h"
+#include "Platform/CrossPlatform/DisplaySurfaceManager.h"
+#include "Platform/CrossPlatform/DisplaySurface.h"
+#include "Platform/DirectX11/RenderPlatform.h"
+#include "Platform/Core/Timer.h"
+#include "Platform/DirectX11/Direct3D11Manager.h"
 #include "ClientRenderer.h"
 #ifdef _MSC_VER
-#include "Simul/Platform/Windows/VisualStudioDebugOutput.h"
+#include "Platform/Windows/VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #endif
 
@@ -129,36 +129,32 @@ void InitRenderer(HWND hWnd)
 	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" to direct3D11Manager to use d3d debugging:
 	gdi->Initialize(true, false,false);
-	std::string simul_env = STRINGIFY(SIMUL);
+	std::string src_dir = STRINGIFY(CMAKE_SOURCE_DIR);
+	std::string build_dir = STRINGIFY(CMAKE_BINARY_DIR);
 	// Create an instance of our simple clientRenderer class defined above:
 	{
 		// Whether run from the project directory or from the executable location, we want to be
 		// able to find the shaders and textures:
 		
 		renderPlatform->PushTexturePath("");
-		renderPlatform->PushTexturePath("../../../../Media/Textures");
-		renderPlatform->PushTexturePath("../../Media/Textures");
-		renderPlatform->PushTexturePath((simul_env+"/Media/Textures").c_str());
+		renderPlatform->PushTexturePath("Textures");
+		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
+		renderPlatform->PushTexturePath("../../pc_client/Textures");
 		// Or from the Simul directory -e.g. by automatic builds:
 
-		renderPlatform->PushTexturePath("Media/Textures");
-	
-		renderPlatform->PushShaderPath("Shaders");					// working directory C:\Simul\RemotePlay\pc_client
+		renderPlatform->PushTexturePath("pc_client/Textures");
 		renderPlatform->PushShaderPath("pc_client/Shaders");		// working directory C:\Simul\RemotePlay
-		renderPlatform->PushShaderPath("Platform/CrossPlatform/SFX/");
-		renderPlatform->PushShaderPath("../../../../Platform/CrossPlatform/SFX");
-		renderPlatform->PushShaderPath("../../Platform/CrossPlatform/SFX");
-		renderPlatform->PushShaderPath((simul_env+"/Platform/CrossPlatform/SFX").c_str());
-		renderPlatform->PushShaderPath((simul_env+"/Platform/CrossPlatform/SL").c_str());
-		renderPlatform->PushShaderBinaryPath("shaderbin");
+
+		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/Shaders/SFX").c_str());
+		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/Shaders/SL").c_str());
+		renderPlatform->PushShaderPath("../../../../firstparty/Platform/Shaders/SFX");
+		renderPlatform->PushShaderPath("../../../../firstparty/Platform/Shaders/SL");
+		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SFX");
+		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SL");
 		if (strcmp(renderPlatform->GetName(), "DirectX 11") == 0)
 		{
-			renderPlatform->PushShaderPath("../../../../Platform/DirectX11/HLSL");
-			renderPlatform->PushShaderPath("../../Platform/DirectX11/HLSL");
-			renderPlatform->PushShaderPath("Platform/DirectX11/HLSL/");
-			renderPlatform->PushShaderPath((simul_env+"/Platform/DirectX11/HLSL").c_str());
-			if(simul_env.length())
-				renderPlatform->PushShaderBinaryPath((simul_env+"/Media/shaderbin").c_str());
+			renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/DirectX11/HLSL").c_str());
+			renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX11/shaderbin").c_str());
 		}
 		if (strcmp(renderPlatform->GetName(), "DirectX 12") == 0)
 		{
@@ -166,8 +162,7 @@ void InitRenderer(HWND hWnd)
 			renderPlatform->PushShaderPath("../../Platform/DirectX12/HLSL");
 			renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
 			// Must do this before RestoreDeviceObjects so the rootsig can be found
-			if(simul_env.length())
-				renderPlatform->PushShaderBinaryPath("../../Platform/DirectX12/shaderbin");
+			renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
 		}
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
@@ -241,7 +236,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				clientRenderer.Update();
 
 				double fTime=0.0;
-				static simul::base::Timer t;
+				static simul::core::Timer t;
 				
 				float time_step=t.UpdateTime()/1000.0f;
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);

@@ -1,8 +1,8 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "PC_IndexBuffer.h"
 #include "PC_RenderPlatform.h"
-#include "Simul/Platform/CrossPlatform/Buffer.h"
-#include "Simul/Platform/CrossPlatform/RenderPlatform.h"
+#include "Platform/CrossPlatform/Buffer.h"
+#include "Platform/CrossPlatform/RenderPlatform.h"
 
 using namespace pc_client;
 using namespace scr;

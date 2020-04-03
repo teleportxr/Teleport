@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Simul/Platform/CrossPlatform/GraphicsDeviceInterface.h"
-#include "Simul/Platform/CrossPlatform/RenderPlatform.h"
-#include "Simul/Platform/CrossPlatform/HdrRenderer.h"
-#include "Simul/Platform/CrossPlatform/MeshRenderer.h"
-#include "Simul/Platform/CrossPlatform/SL/CppSl.hs"
-#include "Simul/Platform/CrossPlatform/SL/camera_constants.sl"
+#include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
+#include "Platform/CrossPlatform/RenderPlatform.h"
+#include "Platform/CrossPlatform/HdrRenderer.h"
+#include "Platform/CrossPlatform/MeshRenderer.h"
+#include "Platform/Shaders/SL/CppSl.sl"
+#include "Platform/Shaders/SL/camera_constants.sl"
 #include "Shaders/cubemap_constants.sl"
 #include "Shaders/pbr_constants.sl"
 

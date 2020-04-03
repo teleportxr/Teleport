@@ -2,7 +2,7 @@
 #include "shader_platform.sl"
 #include "common.sl"
 #include "render_states.sl"
-#include "states.sl"
+#include "sampler_states.sl"
 #include "camera_constants.sl"
 #include "cubemap_constants.sl"
 

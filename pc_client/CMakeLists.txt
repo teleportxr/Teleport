@@ -39,8 +39,8 @@ set(scr_pc_impl
 )
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DSIMUL=${REMOTEPLAY_SIMUL}")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DSIMUL=${REMOTEPLAY_SIMUL}")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DPLATFORM_DIR=${REMOTEPLAY_PLATFORM_DIR}")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DPLATFORM_DIR=${REMOTEPLAY_PLATFORM_DIR}")
 else()
 	message(FATAL_ERROR "Unsupported platform!")
 endif()
@@ -49,14 +49,13 @@ source_group("Shaders" src FILES ${shaders} )
 add_static_executable( pc_client WIN32 ${srcs} ${scr_pc_impl} ${shaders} )
 
 target_include_directories(pc_client PRIVATE 
-	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src ../thirdparty/basis_universal)
-target_link_directories(pc_client PRIVATE "${REMOTEPLAY_SIMUL}/build/x64/v141/Static ${CONFIG_NAME}" "${REMOTEPLAY_SIMUL}/build/lib/${CONFIG_NAME}"
-	"${REMOTEPLAY_SIMUL}/lib/x64/v141/Static ${CONFIG_NAME}" "${REMOTEPLAY_SIMUL}/lib/x64/v140/Static ${CONFIG_NAME}" )
+	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
+target_link_directories(pc_client PRIVATE "${REMOTEPLAY_PLATFORM_DIR}/build/lib/${CONFIG_NAME}" )
 
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 set_target_properties( pc_client PROPERTIES FOLDER Client)
-target_include_directories(pc_client PRIVATE ${REMOTEPLAY_SIMUL}/..) 
+target_include_directories(pc_client PRIVATE ${REMOTEPLAY_PLATFORM_DIR}/..) 
 target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include )
 target_compile_features(pc_client PRIVATE cxx_std_17)
 
@@ -66,4 +65,4 @@ endif()
 
 target_link_libraries(pc_client libavstream enet SimulCasterRenderer basisu winmm)
 
-target_link_libraries(pc_client debug effects11_MTd optimized effects11_MT debug directxtex_MTd optimized directxtex_MT)
+target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT SimulDirectX11_MT effects11_MT directxtex_MT )

@@ -3,17 +3,18 @@
 
 #include "Platform/Core/EnvironmentVariables.h"
 #include "Platform/Core/StringFunctions.h"
-#include "Simul/Platform/CrossPlatform/BaseFramebuffer.h"
-#include "Simul/Platform/CrossPlatform/Material.h"
-#include "Simul/Platform/CrossPlatform/HDRRenderer.h"
-#include "Simul/Platform/CrossPlatform/View.h"
-#include "Simul/Platform/CrossPlatform/Mesh.h"
-#include "Simul/Platform/CrossPlatform/GpuProfiler.h"
-#include "Simul/Platform/CrossPlatform/Macros.h"
-#include "Simul/Platform/CrossPlatform/Camera.h"
-#include "Simul/Platform/CrossPlatform/DeviceContext.h"
-#include "Simul/Platform/CrossPlatform/CommandLineParams.h"
-#include "Simul/Platform/CrossPlatform/SphericalHarmonics.h"
+#include "Platform/Core/Timer.h"
+#include "Platform/CrossPlatform/BaseFramebuffer.h"
+#include "Platform/CrossPlatform/Material.h"
+#include "Platform/CrossPlatform/HDRRenderer.h"
+#include "Platform/CrossPlatform/View.h"
+#include "Platform/CrossPlatform/Mesh.h"
+#include "Platform/CrossPlatform/GpuProfiler.h"
+#include "Platform/CrossPlatform/Macros.h"
+#include "Platform/CrossPlatform/Camera.h"
+#include "Platform/CrossPlatform/DeviceContext.h"
+#include "Platform/CrossPlatform/CommandLineParams.h"
+#include "Platform/CrossPlatform/SphericalHarmonics.h"
 
 #include "Config.h"
 #include "PCDiscoveryService.h"
@@ -316,7 +317,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		w,
 		h
 	);
-	static simul::base::Timer timer;
+	static simul::core::Timer timer;
 	static float last_t = 0.0f;
 	timer.UpdateTime();
 	if (last_t != 0.0f && timer.TimeSum != last_t)
@@ -794,7 +795,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	// Handle networked session.
 	if (sessionClient.IsConnected())
 	{
-		vec3 forward=-camera.GetOrientation().Tz();
+		vec3 forward=-camera.Orientation.Tz();
 		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
@@ -823,7 +824,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 			vec3 look(0.f, 1.f, 0.f), up(0.f, 0.f, 1.f);
 			camera.LookInDirection(look, up);
 		}
-		auto q = camera.GetOrientation().GetQuaternion();
+		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel=q/q0;
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 		avs::HeadPose headPose;
