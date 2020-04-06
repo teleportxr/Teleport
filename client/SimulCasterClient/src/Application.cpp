@@ -709,7 +709,9 @@ void Application::UpdateHandObjects()
 				remoteStates.push_back(remoteState);
 				if(deviceIndex < 2)
 				{
-					controllerPoses[deviceIndex].position = *((const avs::vec3*)&remoteState.HeadPose.Pose.Position);
+					scr::vec3 pos=oculusOrigin+*((const scr::vec3*)&remoteState.HeadPose.Pose.Position);
+
+					controllerPoses[deviceIndex].position = *((const avs::vec3*)(&pos));
 					controllerPoses[deviceIndex].orientation = *((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
 				}
 				else

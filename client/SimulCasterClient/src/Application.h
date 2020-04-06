@@ -151,7 +151,7 @@ private:
 	std::vector<float> mRefreshRates;
 
 	ovrDeviceID mControllerID;
-	//int		 mControllerIndex;
+
 	ovrVector2f mTrackpadDim;
     ControllerState mLastPrimaryControllerState; //State of the primary controller on the last frame.
 

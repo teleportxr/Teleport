@@ -73,13 +73,13 @@ elseif(ANDROID)
 endif()
 
 set( src_public ${src_root} ${src_api} ${src_crossplatform} )
-
+message ( "src_public ${src_public}" )
 #source_group("src" src FILES ${src_root} )
 #source_group("src\\api" src FILES ${src_api} )
 #source_group("src\\crossplatform" src FILES ${src_crossplatform} )
 
 #For MT runtime
-add_static_library( SimulCasterRenderer STATIC ${src_public} )  
+add_static_library( SimulCasterRenderer SOURCES ${src_public} )  
 set_target_properties( SimulCasterRenderer PROPERTIES FOLDER Client)
 
 #For MD runtime
