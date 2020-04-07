@@ -216,7 +216,7 @@ private:
 	std::thread basisThread; //Thread where we transcode basis files to mip data.
 	
 	const uint32_t diffuseBGRA = 0xFFFFFFFF;
-	const uint32_t normalBGRA = 0xFF7F7FFF;
+	//const uint32_t normalBGRA = 0xFF7F7FFF;
 	const uint32_t normalRGBA = 0xFFFF7F7F;
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
 	

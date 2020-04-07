@@ -6,13 +6,18 @@
 #include "ResourceCreator.h"
 #include "Log.h"
 
-SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService, ResourceCreator& resourceCreator)
-	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService)), mResourceCreator(resourceCreator)
+SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService)
+	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService))
 {}
 
 SessionClient::~SessionClient()
 {
 	Disconnect(0);
+}
+
+void SessionClient::SetResourceCreator(ResourceCreator *r)
+{
+	mResourceCreator=r;
 }
 
 bool SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
@@ -376,7 +381,7 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 
 void SessionClient::SendResourceRequests()
 {
-	std::vector<avs::uid> resourceRequests = mResourceCreator.TakeResourceRequests();
+	std::vector<avs::uid> resourceRequests = mResourceCreator->TakeResourceRequests();
 
 	//Append session client's resource requests.
 	resourceRequests.insert(resourceRequests.end(), mResourceRequests.begin(), mResourceRequests.end());
@@ -396,7 +401,7 @@ void SessionClient::SendResourceRequests()
 
 void SessionClient::SendReceivedResources()
 {
-	std::vector<avs::uid> receivedResources = mResourceCreator.TakeReceivedResources();
+	std::vector<avs::uid> receivedResources = mResourceCreator->TakeReceivedResources();
 
 	if(receivedResources.size() != 0)
 	{
@@ -417,7 +422,7 @@ void SessionClient::SendActorUpdates()
 {
 	//Insert completed actors.
 	{
-		std::vector<avs::uid> completedActors = mResourceCreator.TakeCompletedActors();
+		std::vector<avs::uid> completedActors = mResourceCreator->TakeCompletedActors();
 		mReceivedActors.insert(mReceivedActors.end(), completedActors.begin(), completedActors.end());
 	}
 

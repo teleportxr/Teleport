@@ -19,6 +19,8 @@
 
 #include "GlobalGraphicsResources.h"
 #include "VideoDecoderProxy.h"
+#include "LobbyRenderer.h"
+#include "ClientRenderer.h"
 
 namespace OVR {
 	class ovrLocale;
@@ -104,7 +106,6 @@ private:
 	static constexpr bool   GeoStream  = true;
 
 	GeometryDecoder        geometryDecoder;
-	ResourceCreator        resourceCreator;
 	avs::GeometryDecoder   avsGeometryDecoder;
 	avs::GeometryTarget    avsGeometryTarget;
 
@@ -159,20 +160,20 @@ private:
 
 	int mNumPendingFrames                  = 0;
 
-	scr::ResourceManagers resourceManagers;
-
 	//Clientside Renderering Objects
 	scc::GL_DeviceContext mDeviceContext;
 
 	scr::vec4 mCameraPositions[8];
 	scr::vec3 cameraPosition;	// in real space.
-	scr::vec3 oculusOrigin;		// in metres. The headPose will be relative to this.
 
 	bool receivedInitialPos=false;
 
 	void CopyToCubemaps();
-	void RenderLocalActors(OVR::ovrFrameResult& res);
     const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources);
 	std::string LoadTextFile(const char *filename);
 	bool mShowInfo=true;
+	ClientRenderer clientRenderer;
+	scr::ResourceManagers resourceManagers;
+	ResourceCreator        resourceCreator;
+	LobbyRenderer lobbyRenderer;
 };

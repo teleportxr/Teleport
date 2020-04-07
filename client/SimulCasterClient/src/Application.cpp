@@ -69,7 +69,6 @@ static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
 Application::Application()
 	: mDecoder(avs::DecoderBackend::Custom)
 	, mPipelineConfigured(false)
-	, resourceCreator(basist::transcoder_texture_format::cTFETC2)
 	, mSoundEffectContext(nullptr)
 	, mSoundEffectPlayer(nullptr)
 	, mGuiSys(OvrGuiSys::Create())
@@ -79,11 +78,15 @@ Application::Application()
 	, mCubemapLightingTexture(nullptr)
 	, mCameraPositionBuffer(nullptr)
 	, mOvrMobile(nullptr)
-	, mSession(this, std::make_unique<AndroidDiscoveryService>(), resourceCreator)
+	, mSession(this, std::make_unique<AndroidDiscoveryService>())
 	, mControllerID(0)
-	, resourceManagers(new OVRActorManager)
 	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform))
+	, resourceManagers(new OVRActorManager)
+	,resourceCreator(basist::transcoder_texture_format::cTFETC2)
+	,clientRenderer(&resourceCreator,&resourceManagers,this)
 {
+	mSession.SetResourceCreator(&resourceCreator);
+
 	pthread_setname_np(pthread_self(), "SimulCaster_Application");
 	memset(&renderConstants,0,sizeof(RenderConstants));
 	renderConstants.colourOffsetScale={0.0f,0.0f,1.0f,0.6667f};
@@ -518,17 +521,17 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		if (!receivedInitialPos)
 		{
 			// Oculus Origin means where the headset's zero is in real space.
-			oculusOrigin = scr_UE4_captureTransform.m_Translation;
+			clientRenderer.oculusOrigin = scr_UE4_captureTransform.m_Translation;
 			receivedInitialPos = true;
 		}
 	}
 	if(!receivedInitialPos)
 	{
 		scr_UE4_captureTransform = avs::Transform();
-		oculusOrigin = scr_UE4_captureTransform.m_Translation;
+		clientRenderer.oculusOrigin = scr_UE4_captureTransform.m_Translation;
 	}
 
-	cameraPosition = oculusOrigin+scr_OVR_headPos;
+	cameraPosition = clientRenderer.oculusOrigin+scr_OVR_headPos;
 
 	// Handle networked session.
 	if(mSession.IsConnected())
@@ -540,7 +543,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		mSession.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, controllerState, mDecoder.idrRequired());
 		if (!receivedInitialPos&&mSession.receivedInitialPos)
 		{
-			oculusOrigin = mSession.GetInitialPos();
+			clientRenderer.oculusOrigin = mSession.GetInitialPos();
 			receivedInitialPos = true;
 		}
 	}
@@ -683,7 +686,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
 	resourceManagers.Update(time_elapsed);
 	resourceCreator.Update(time_elapsed);
-	RenderLocalActors(res);
+	clientRenderer.RenderLocalActors(res);
 	GL_CheckErrors("Frame: Post-SCR");
 
 	// Append GuiSys surfaces. This should always be the last item to append the render list.
@@ -709,7 +712,7 @@ void Application::UpdateHandObjects()
 				remoteStates.push_back(remoteState);
 				if(deviceIndex < 2)
 				{
-					scr::vec3 pos=oculusOrigin+*((const scr::vec3*)&remoteState.HeadPose.Pose.Position);
+					scr::vec3 pos=clientRenderer.oculusOrigin+*((const scr::vec3*)&remoteState.HeadPose.Pose.Position);
 
 					controllerPoses[deviceIndex].position = *((const avs::vec3*)(&pos));
 					controllerPoses[deviceIndex].orientation = *((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
@@ -1188,48 +1191,6 @@ void Application::CopyToCubemaps()
 	}
 }
 
-void Application::RenderLocalActors(ovrFrameResult& res)
-{
-	// Because we're using OVR's rendering, we must position the actor's relative to the oculus origin.
-	OVR::Matrix4f transform;
-	scr::mat4 transformToOculusOrigin = scr::mat4::Translation(-oculusOrigin);
-
-	auto RenderLocalActor = [&](OVRActorManager::LiveOVRActor* ovrActor)
-	{
-		const scr::Actor& actor = ovrActor->actor;
-
-		//----OVR Actor Set Transforms----//
-		scr::mat4 scr_Transform = transformToOculusOrigin * actor.GetTransform().GetTransformMatrix();
-		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
-
-		for(size_t matIndex = 0; matIndex < actor.GetMaterials().size(); matIndex++)
-		{
-			if(matIndex >= ovrActor->ovrSurfaceDefs.size())
-			{
-				//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
-				break;
-			}
-
-            res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
-		}
-	};
-
-	//Render local actors.
-	const std::vector<std::unique_ptr<scr::ActorManager::LiveActor>>& actorList = resourceManagers.mActorManager->GetActorList();
-	for(size_t actorIndex = 0; actorIndex < resourceManagers.mActorManager->getVisibleActorAmount(); actorIndex++)
-	{
-		OVRActorManager::LiveOVRActor* ovrActor = static_cast<OVRActorManager::LiveOVRActor*>(actorList[actorIndex].get());
-		RenderLocalActor(ovrActor);
-	}
-
-	//Retrieve hands.
-	OVRActorManager::LiveOVRActor *leftHand = nullptr, *rightHand = nullptr;
-	dynamic_cast<OVRActorManager*>(resourceManagers.mActorManager.get())->GetHands(leftHand, rightHand);
-
-	//Render hands, if they exist.
-	if(leftHand) RenderLocalActor(leftHand);
-	if(rightHand) RenderLocalActor(rightHand);
-}
 
 const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
 		, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)

@@ -29,9 +29,10 @@ public:
 class SessionClient
 {
 public:
-    SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService, ResourceCreator& resourceCreator);
+    SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService);
     ~SessionClient();
 
+    void SetResourceCreator(ResourceCreator *);
     bool Discover(uint16_t discoveryPort, ENetAddress& remote);
     bool Connect(const char* remoteIP, uint16_t remotePort, uint timeout);
     bool Connect(const ENetAddress& remote, uint timeout);
@@ -66,7 +67,7 @@ private:
 
     SessionCommandInterface* const mCommandInterface;
     std::unique_ptr<DiscoveryService> discoveryService;
-    ResourceCreator& mResourceCreator;
+    ResourceCreator* mResourceCreator=nullptr;
 
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;

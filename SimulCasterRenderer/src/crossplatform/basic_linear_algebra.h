@@ -1,6 +1,7 @@
 ﻿// (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 #include <cmath>
+#include <libavstream/common.hpp>
 
 //TODO: Placeholder! Find maths library!
 namespace scr

@@ -17,6 +17,8 @@ LOCAL_SRC_FILES			:= \
     ../src/OVRActorManager.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \
+	../src/ClientRenderer.cpp\
+	../src/LobbyRenderer.cpp\
     ../src/SCR_Class_GL_Impl/GL_DeviceContext.cpp \
     ../src/SCR_Class_GL_Impl/GL_Effect.cpp \
     ../src/SCR_Class_GL_Impl/GL_FrameBuffer.cpp \
