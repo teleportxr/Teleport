@@ -241,9 +241,9 @@ class PluginVideoEncodePipeline : public SCServer::VideoEncodePipeline
 public:
 	PluginVideoEncodePipeline() 
 		:
+		SCServer::VideoEncodePipeline(),
 		inputSurfaceResource(nullptr),
-		encoderSurfaceResource(nullptr),
-		SCServer::VideoEncodePipeline() {}
+		encoderSurfaceResource(nullptr) {}
 
 	~PluginVideoEncodePipeline()
 	{
