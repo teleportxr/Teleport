@@ -7,7 +7,7 @@ else()
 	if(REMOTEPLAY_SERVER)
 		project(RemotePlay_Server)
 	else()
-		project(RemotePlay)
+		project(RemotePlay_Client)
 	endif()
 endif()
 
