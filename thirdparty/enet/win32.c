@@ -138,6 +138,12 @@ enet_address_get_host (const ENetAddress * address, char * name, size_t nameLeng
     return 0;
 }
 
+void show_winsock_error()
+{
+    int which_error=WSAGetLastError();
+    printf("Winsock reported error %d",which_error);
+}
+
 int
 enet_socket_bind (ENetSocket socket, const ENetAddress * address)
 {
@@ -157,10 +163,15 @@ enet_socket_bind (ENetSocket socket, const ENetAddress * address)
        sin.sin_port = 0;
        sin.sin_addr.s_addr = INADDR_ANY;
     }
-
-    return bind (socket,
+    int bind_result=bind (socket,
                  (struct sockaddr *) & sin,
-                 sizeof (struct sockaddr_in)) == SOCKET_ERROR ? -1 : 0;
+                 sizeof (struct sockaddr_in));
+    if(bind_result== SOCKET_ERROR)
+    {
+        show_winsock_error();
+        return -1;
+    }
+    return  bind_result== SOCKET_ERROR ? -1 : 0;
 }
 
 int

@@ -12,6 +12,7 @@ else()
 endif()
 
 set(REMOTEPLAY_PLATFORM_DIR "${CMAKE_SOURCE_DIR}/firstparty/Platform" )
+set(SIMUL_PLATFORM_FOLDER_PREFIX "Platform" )
 set(SIMUL_PLATFORM_DIR ${REMOTEPLAY_PLATFORM_DIR})
 option(REMOTEPLAY_SERVER "Build for server? If true, client will not be built." OFF)
 option(REMOTEPLAY_UNITY "Build for Unity?" OFF)

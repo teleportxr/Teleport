@@ -18,6 +18,10 @@
 #include "Export.h"
 #include "InteropStructures.h"
 #include "PluginGraphics.h"
+#ifdef _MSC_VER
+#include "../VisualStudioDebugOutput.h"
+VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
+#endif
 
 using namespace SCServer;
 TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
@@ -31,8 +35,6 @@ typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 
 namespace
 {
-	static const uint16_t DISCOVERY_PORT = 10607;
-	static const uint16_t SERVICE_PORT = 10500;
 
 	static avs::Context avsContext;
 
@@ -77,8 +79,10 @@ public:
 			return false;
 		}
 
-		if(servicePort == 0) servicePort = this->servicePort;
-		else this->servicePort = servicePort;
+		if(servicePort == 0)
+			servicePort = this->servicePort;
+		else
+			this->servicePort = servicePort;
 
 		if(servicePort == 0)
 		{
@@ -357,20 +361,33 @@ void SetConnectionTimeout(int32_t timeout)
 	connectionTimeout = timeout;
 }
 
+
+struct InitializeState
+{
+	void(*showActor)(void*);
+	void(*hideActor)(void*);
+	void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*);
+	void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*);
+	void(*newInputProcessing)(avs::uid clientID, const avs::InputState*);
+	DisconnectFn disconnect;
+	avs::MessageHandlerFunc messageHandler;
+	uint32_t DISCOVERY_PORT = 10607;
+	uint32_t SERVICE_PORT = 10500;
+
+};
+
 TELEPORT_EXPORT
-void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
-				void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*), void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*), void(*newInputProcessing)(avs::uid clientID, const avs::InputState*),
-				DisconnectFn disconnect, avs::MessageHandlerFunc messageHandler)
+void Initialise(const InitializeState *initializeState)
 {
 	serverID = avs::GenerateUid();
 
-	SetShowActorDelegate(showActor);
-	SetHideActorDelegate(hideActor);
-	SetHeadPoseSetterDelegate(headPoseSetter);
-	SetControllerPoseSetterDelegate(controllerPoseSetter);
-	SetNewInputProcessingDelegate(newInputProcessing);
-	SetDisconnectDelegate(disconnect);
-	SetMessageHandlerDelegate(messageHandler);
+	SetShowActorDelegate(initializeState->showActor);
+	SetHideActorDelegate(initializeState->hideActor);
+	SetHeadPoseSetterDelegate(initializeState->headPoseSetter);
+	SetControllerPoseSetterDelegate(initializeState->controllerPoseSetter);
+	SetNewInputProcessingDelegate(initializeState->newInputProcessing);
+	SetDisconnectDelegate(initializeState->disconnect);
+	SetMessageHandlerDelegate(initializeState->messageHandler);
 
 	if(enet_initialize() != 0)
 	{
@@ -379,7 +396,7 @@ void Initialise(void(*showActor)(void*), void(*hideActor)(void*),
 	}
 	atexit(enet_deinitialize);
 
-	discoveryService->initialise(DISCOVERY_PORT, SERVICE_PORT);
+	discoveryService->initialise(initializeState->DISCOVERY_PORT,initializeState->SERVICE_PORT);
 }
 
 TELEPORT_EXPORT

@@ -99,9 +99,10 @@ ClientRenderer::ClientRenderer():
 	framenumber(0),
 	resourceManagers(new scr::ActorManager),
 	resourceCreator(basist::transcoder_texture_format::cTFBC1),
-	sessionClient(this, std::make_unique<PCDiscoveryService>(), resourceCreator),
+	sessionClient(this, std::make_unique<PCDiscoveryService>()),
 	RenderMode(0)
 {
+	sessionClient.SetResourceCreator(&resourceCreator);
 	avsTextures.resize(NumStreams);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
 	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
@@ -522,7 +523,8 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		const auto& CI = mesh->GetMeshCreateInfo();
 		for(const std::shared_ptr<scr::Material>& m : materials)
 		{
-			if(element >= CI.ib.size()) break;
+			if(element >= CI.ib.size())
+				break;
 			const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(CI.vb[element].get());
 			const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(CI.ib[element].get());
 

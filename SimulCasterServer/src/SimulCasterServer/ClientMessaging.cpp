@@ -7,6 +7,7 @@
 #include "libavstream/common.hpp" //InputState
 
 #include "DiscoveryService.h"
+#include "ErrorHandling.h"
 
 using namespace SCServer;
 
@@ -49,7 +50,8 @@ bool ClientMessaging::startSession(avs::uid clientID, int32_t listenPort)
 	host = enet_host_create(&ListenAddress, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 	if(!host)
 	{
-		std::cout << "Session: Failed to create ENET server host!\n";
+		std::cerr << "Session: Failed to create ENET server host!\n";
+		DEBUG_BREAK_ONCE
 	}
 
 	return host;
