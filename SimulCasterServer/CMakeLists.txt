@@ -71,7 +71,7 @@ target_include_directories(SimulCasterServer PUBLIC ../thirdparty/basis_universa
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/enet/include)
 
 #Include CUDA library location.
-target_link_directories(SimulCasterServer PUBLIC "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/lib/x64")
+target_link_directories(SimulCasterServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
 target_link_libraries(SimulCasterServer libavstream enet basisu efp winmm cudart d3d12)
 
