@@ -8,7 +8,7 @@ Clone the repository with submodules:
 
 ## Prerequisites
 
-1. Visual Studio 2017 (with Visual C++ tools for CMake)
+1. Visual Studio 2019 (with Visual C++ tools for CMake)
 2. Android Studio
 3. Unreal Engine 4.22 incorporating the patch to move SceneCaptureSource from USceneCaptureComponent2D to USceneCaptureComponent
 4. NVIDIA CUDA Toolkit 10.
