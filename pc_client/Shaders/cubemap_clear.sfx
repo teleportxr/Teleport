@@ -46,7 +46,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	for (int i = 0; i < 5; i++)
 	{
 		float depth = lookup.a;
-		dist_m =0.0;// max(0.2, 20.0 * depth);
+		dist_m =2000.0;// max(0.2, 20.0 * depth);
 		vec3 pos_m = dist_m * view_orig;
 		pos_m += vec3(offsetFromVideo2.yx, offsetFromVideo2.z) ;//*step(-0.99, -depth);
 

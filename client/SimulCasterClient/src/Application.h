@@ -72,9 +72,6 @@ public:
 	/* End DecodeEventInterface */
 
 private:
-	avs::HeadPose headPose;
-	avs::HeadPose controllerPoses[2];
-	void UpdateHandObjects();
 	struct CubemapUB
 	{
 		scr::ivec2 sourceOffset;
@@ -146,7 +143,6 @@ private:
 	std::string                         CopyCubemapSrc;
 	std::string                         ExtractPositionSrc;
 
-	ovrMobile                           *mOvrMobile;
 	SessionClient                       mSession;
 
 	std::vector<float> mRefreshRates;
@@ -156,15 +152,12 @@ private:
 	ovrVector2f mTrackpadDim;
     ControllerState mLastPrimaryControllerState; //State of the primary controller on the last frame.
 
-	const scr::quat HAND_ROTATION_DIFFERENCE {0.0000000456194194, 0.923879385, -0.382683367, 0.000000110135019}; //Adjustment to the controller's rotation to get the desired rotation.
-
 	int mNumPendingFrames                  = 0;
 
 	//Clientside Renderering Objects
 	scc::GL_DeviceContext mDeviceContext;
 
 	scr::vec4 mCameraPositions[8];
-	scr::vec3 cameraPosition;	// in real space.
 
 	bool receivedInitialPos=false;
 

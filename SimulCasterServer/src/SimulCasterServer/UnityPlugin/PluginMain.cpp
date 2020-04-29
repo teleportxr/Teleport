@@ -45,8 +45,8 @@ namespace
 
 	static SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
-	static std::function<void(void** actorPtr)> onShowActor;
-	static std::function<void(void** actorPtr)> onHideActor;
+	static std::function<void(avs::uid clientID,void** actorPtr)> onShowActor;
+	static std::function<void(avs::uid clientID,void** actorPtr)> onHideActor;
 
 	static SetHeadPoseFn setHeadPose;
 	static SetControllerPoseFn setControllerPose;
@@ -229,14 +229,16 @@ public:
 	}
 
 private:
-	virtual void showActor_Internal(void* actorPtr)
+	virtual void showActor_Internal(avs::uid clientID, void* actorPtr)
 	{
-		if(onShowActor) onShowActor(&actorPtr);
+		if(onShowActor)
+			onShowActor(clientID,&actorPtr);
 	}
 
-	virtual void hideActor_Internal(void* actorPtr)
+	virtual void hideActor_Internal(avs::uid clientID, void* actorPtr)
 	{
-		if(onHideActor) onHideActor(&actorPtr);
+		if(onHideActor)
+			onHideActor(clientID,&actorPtr);
 	}
 };
 
@@ -314,13 +316,13 @@ void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
 }
 
 TELEPORT_EXPORT
-void SetShowActorDelegate(void(*showActor)(void*))
+void SetShowActorDelegate(void(*showActor)(avs::uid,void*))
 {
 	onShowActor = showActor;
 }
 
 TELEPORT_EXPORT
-void SetHideActorDelegate(void(*hideActor)(void*))
+void SetHideActorDelegate(void(*hideActor)(avs::uid,void*))
 {
 	onHideActor = hideActor;
 }
@@ -364,8 +366,8 @@ void SetConnectionTimeout(int32_t timeout)
 
 struct InitializeState
 {
-	void(*showActor)(void*);
-	void(*hideActor)(void*);
+	void(*showActor)(avs::uid clientID,void*);
+	void(*hideActor)(avs::uid clientID,void*);
 	void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*);
 	void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*);
 	void(*newInputProcessing)(avs::uid clientID, const avs::InputState*);
@@ -662,20 +664,22 @@ bool IsStreamingActor(avs::uid clientID, void* actor)
 TELEPORT_EXPORT
 void ShowActor(avs::uid clientID, avs::uid actorID)
 {
-	clientServices.at(clientID).geometryStreamingService->showActor(actorID);
+	clientServices.at(clientID).geometryStreamingService->showActor(clientID,actorID);
 }
 
 TELEPORT_EXPORT
 void HideActor(avs::uid clientID, avs::uid actorID)
 {
-	clientServices.at(clientID).geometryStreamingService->hideActor(actorID);
+	clientServices.at(clientID).geometryStreamingService->hideActor(clientID,actorID);
 }
 
 TELEPORT_EXPORT
 void SetActorVisible(avs::uid clientID, avs::uid actorID, bool isVisible)
 {
-	if(isVisible) ShowActor(clientID, actorID);
-	else HideActor(clientID, actorID);
+	if(isVisible)
+		ShowActor(clientID, actorID);
+	else
+		HideActor(clientID, actorID);
 }
 
 bool HasResource(avs::uid clientID, avs::uid resourceID)

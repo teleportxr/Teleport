@@ -84,12 +84,12 @@ void GeometryStreamingService::stopStreaming()
 	reset();
 }
 
-void GeometryStreamingService::hideActor(avs::uid actorID)
+void GeometryStreamingService::hideActor(avs::uid clientID,avs::uid actorID)
 {
 	auto actorPair = streamedActors.find(actorID);
 	if(actorPair != streamedActors.end())
 	{
-		hideActor_Internal(actorPair->second);
+		hideActor_Internal(clientID,actorPair->second);
 		hiddenActors[actorID] = actorPair->second;
 	}
 	else
@@ -98,12 +98,12 @@ void GeometryStreamingService::hideActor(avs::uid actorID)
 	}
 }
 
-void GeometryStreamingService::showActor(avs::uid actorID)
+void GeometryStreamingService::showActor(avs::uid clientID,avs::uid actorID)
 {
 	auto actorPair = hiddenActors.find(actorID);
 	if(actorPair != hiddenActors.end())
 	{
-		showActor_Internal(actorPair->second);
+		showActor_Internal(clientID,actorPair->second);
 		hiddenActors.erase(actorPair);
 	}
 	else
@@ -112,10 +112,12 @@ void GeometryStreamingService::showActor(avs::uid actorID)
 	}
 }
 
-void GeometryStreamingService::setActorVisible(avs::uid actorID, bool isVisible)
+void GeometryStreamingService::setActorVisible(avs::uid clientID,avs::uid actorID, bool isVisible)
 {
-	if(isVisible) showActor(actorID);
-	else hideActor(actorID);
+	if(isVisible)
+		showActor(clientID,actorID);
+	else
+		hideActor(clientID,actorID);
 }
 
 void GeometryStreamingService::addHandsToStream()

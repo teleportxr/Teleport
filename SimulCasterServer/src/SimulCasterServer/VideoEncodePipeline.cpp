@@ -1,5 +1,5 @@
 #include "VideoEncodePipeline.h"
-
+#include "ErrorHandling.h"
 #include <iostream>
 #include <algorithm>
 #include <set>
@@ -130,7 +130,7 @@ namespace SCServer
 
 		if (!procResult)
 		{
-			std::cout << "Encode pipeline processing encountered an error \n";
+			TELEPORT_CERR << "Encode pipeline processing encountered an error \n";
 			return Result::PipelineProcessingError;
 		}
 

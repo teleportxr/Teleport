@@ -148,7 +148,8 @@ void ClientMessaging::handleEvents()
 				///TODO: This work allow multi-connect with Unity, or otherwise; change it to allow multiple connections.
 
 				// TODO: This is pretty ropey: Discovery service really shouldn't be inside a specific client.
-				if(!clientID) this->clientID = discoveryService->getNewClientID();
+				if(!clientID)
+					this->clientID = discoveryService->getNewClientID();
 				discoveryService->shutdown();
 
 				std::cout << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
@@ -480,12 +481,12 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 
 			for(avs::uid actorID : drawn)
 			{
-				geometryStreamingService->hideActor(actorID);
+				geometryStreamingService->hideActor(clientID,actorID);
 			}
 
 			for(avs::uid actorID : toRelease)
 			{
-				geometryStreamingService->showActor(actorID);
+				geometryStreamingService->showActor(clientID,actorID);
 			}
 
 			break;

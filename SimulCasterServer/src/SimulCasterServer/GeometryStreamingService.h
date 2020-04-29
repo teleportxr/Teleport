@@ -36,9 +36,9 @@ namespace SCServer
 		//Stop streaming to client.
 		virtual void stopStreaming();
 
-		void hideActor(avs::uid actorID);
-		void showActor(avs::uid actorID);
-		void setActorVisible(avs::uid actorID, bool isVisible);
+		void hideActor(avs::uid clientID,avs::uid actorID);
+		void showActor(avs::uid clientID,avs::uid actorID);
+		void setActorVisible(avs::uid clientID,avs::uid actorID, bool isVisible);
 
 		//Adds the hand actors to the list of streamed actors.
 		void addHandsToStream();
@@ -56,8 +56,8 @@ namespace SCServer
 
 		bool isStreamingActor(void* actor);
 
-		virtual void showActor_Internal(void* actorPtr) = 0;
-		virtual void hideActor_Internal(void* actorPtr) = 0;
+		virtual void showActor_Internal(avs::uid clientID,void* actorPtr) = 0;
+		virtual void hideActor_Internal(avs::uid clientID,void* actorPtr) = 0;
 
 		std::unordered_map<avs::uid, void*> getHiddenActors()
 		{

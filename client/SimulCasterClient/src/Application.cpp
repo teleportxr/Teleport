@@ -56,7 +56,7 @@ ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
 	r.z= p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x;
 	return r;
 }
-
+#if 0
 static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
 {
 	ovrQuatf iq=q;
@@ -65,7 +65,7 @@ static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
 	iq.z*=-1.f;
 	return QuaternionMultiply(p,iq);
 }
-
+#endif
 Application::Application()
 	: mDecoder(avs::DecoderBackend::Custom)
 	, mPipelineConfigured(false)
@@ -77,13 +77,12 @@ Application::Application()
 	, mCubemapTexture(nullptr)
 	, mCubemapLightingTexture(nullptr)
 	, mCameraPositionBuffer(nullptr)
-	, mOvrMobile(nullptr)
 	, mSession(this, std::make_unique<AndroidDiscoveryService>())
 	, mControllerID(0)
 	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform))
+	,clientRenderer(&resourceCreator,&resourceManagers,this)
 	, resourceManagers(new OVRActorManager)
 	,resourceCreator(basist::transcoder_texture_format::cTFETC2)
-	,clientRenderer(&resourceCreator,&resourceManagers,this)
 {
 	mSession.SetResourceCreator(&resourceCreator);
 
@@ -126,7 +125,6 @@ Application::~Application()
 {
 	mPipeline.deconfigure();
 
-	mOvrMobile=nullptr;
 	mRefreshRates.clear();
 	delete mVideoSurfaceTexture;
 	mVideoSurfaceDef.geo.Free();
@@ -168,8 +166,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
         //Setup Debug
         scc::SetupGLESDebug();
-
-		mOvrMobile = app->GetOvrMobile();
+		clientRenderer.EnteredVR(app->GetOvrMobile());
 
 		mSoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
 		mSoundEffectContext->Initialize(&app->GetFileSys());
@@ -322,7 +319,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 				(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform),
 				scr::Camera::ProjectionType::PERSPECTIVE,
 				scr::quat(0.0f, 0.0f, 0.0f, 1.0f),
-				cameraPosition
+				clientRenderer.cameraPosition
 		};
 		GlobalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
@@ -410,7 +407,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 		vrapi_GetSystemPropertyFloatArray(java,VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,mRefreshRates.data(),num_refresh_rates);
 
 		if(num_refresh_rates>0)
-			vrapi_SetDisplayRefreshRate(mOvrMobile,mRefreshRates[num_refresh_rates-1]);
+			vrapi_SetDisplayRefreshRate(app->GetOvrMobile(),mRefreshRates[num_refresh_rates-1]);
 	}
 }
 
@@ -459,7 +456,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		ovrInputStateTrackedRemote ovrState;
 		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
-		if(vrapi_GetCurrentInputState(mOvrMobile, mControllerID, &ovrState.Header) >= 0)
+		if(vrapi_GetCurrentInputState(app->GetOvrMobile(), mControllerID, &ovrState.Header) >= 0)
 		{
 			controllerState.mButtons = ovrState.Buttons;
 
@@ -531,16 +528,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		clientRenderer.oculusOrigin = scr_UE4_captureTransform.m_Translation;
 	}
 
-	cameraPosition = clientRenderer.oculusOrigin+scr_OVR_headPos;
+	clientRenderer.cameraPosition = clientRenderer.oculusOrigin+scr_OVR_headPos;
 
 	// Handle networked session.
 	if(mSession.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
-		headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
-		headPose.position = {cameraPosition.x, cameraPosition.y, cameraPosition.z};
+		clientRenderer.headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
+		clientRenderer.headPose.position = {clientRenderer.cameraPosition.x, clientRenderer.cameraPosition.y, clientRenderer.cameraPosition.z};
 
-		mSession.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, controllerState, mDecoder.idrRequired());
+		mSession.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllerState, mDecoder.idrRequired());
 		if (!receivedInitialPos&&mSession.receivedInitialPos)
 		{
 			clientRenderer.oculusOrigin = mSession.GetInitialPos();
@@ -576,7 +573,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
-	scr::vec3 camera_from_videoCentre=cameraPosition-scr_UE4_captureTransform.m_Translation;
+	scr::vec3 camera_from_videoCentre=clientRenderer.cameraPosition-scr_UE4_captureTransform.m_Translation;
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
 	GlobalGraphicsResources.scrCamera->UpdatePosition(scr_OVR_headPos);
 
@@ -613,7 +610,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 				ctr.incompleteDPsReceived,
 				frameRate, ctr.bandwidthKPS,
 				static_cast<uint64_t>(resourceManagers.mActorManager->GetActorList().size()),
-				cameraPosition.x, cameraPosition.y, cameraPosition.z,
+				clientRenderer.cameraPosition.x, clientRenderer.cameraPosition.y, clientRenderer.cameraPosition.z,
 				//headPose.w, headPose.x, headPose.y, headPose.z,
 				//headPos.x, headPos.y, headPos.z,
 				ctr.m_packetMapOrphans);
@@ -671,7 +668,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		scr::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
 		videoUB.eyeOffsets[0]=left_eye;		// left eye
 		videoUB.eyeOffsets[1]=eye;	// right eye.
-		videoUB.cameraPosition=cameraPosition;
+		videoUB.cameraPosition=clientRenderer.cameraPosition;
 
 		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
 		mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
@@ -680,7 +677,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mVideoUB->Submit();
 
 	//Move the hands before they are drawn.
-	UpdateHandObjects();
+	clientRenderer.UpdateHandObjects();
 	//Append SCR Actors to surfaces.
 	GL_CheckErrors("Frame: Pre-SCR");
 	uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
@@ -695,102 +692,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	return res;
 }
 
-void Application::UpdateHandObjects()
-{
-	std::vector<ovrTracking> remoteStates;
-
-	uint32_t deviceIndex = 0;
-	ovrInputCapabilityHeader capsHeader;
-	//Poll controller state from the Oculus API.
-	while( vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader ) >= 0 )
-	{
-		if(capsHeader.Type == ovrControllerType_TrackedRemote)
-		{
-			ovrTracking remoteState;
-			if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
-			{
-				remoteStates.push_back(remoteState);
-				if(deviceIndex < 2)
-				{
-					scr::vec3 pos=clientRenderer.oculusOrigin+*((const scr::vec3*)&remoteState.HeadPose.Pose.Position);
-
-					controllerPoses[deviceIndex].position = *((const avs::vec3*)(&pos));
-					controllerPoses[deviceIndex].orientation = *((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
-				}
-				else
-				{
-					break;
-				}
-			}
-		}
-		++deviceIndex;
-	}
-
-	OVRActorManager::LiveOVRActor* leftHand = nullptr;
-	OVRActorManager::LiveOVRActor* rightHand = nullptr;
-    dynamic_cast<OVRActorManager*>(resourceManagers.mActorManager.get())->GetHands(leftHand, rightHand);
-
-    switch(remoteStates.size())
-    {
-    case 0:
-        return;
-    case 1: //Set non-dominant hand away. TODO: Query OVR for which hand is dominant/in-use.
-        leftHand = nullptr;
-        break;
-    default:
-        break;
-    }
-
-	if(rightHand)
-    {
-        rightHand->actor.UpdateModelMatrix
-                (
-                        scr::vec3
-                                {
-                                        remoteStates[0].HeadPose.Pose.Position.x + cameraPosition.x,
-                                        remoteStates[0].HeadPose.Pose.Position.y + cameraPosition.y,
-                                        remoteStates[0].HeadPose.Pose.Position.z + cameraPosition.z
-                                },
-                        scr::quat
-                                {
-                                        remoteStates[0].HeadPose.Pose.Orientation.x,
-                                        remoteStates[0].HeadPose.Pose.Orientation.y,
-                                        remoteStates[0].HeadPose.Pose.Orientation.z,
-                                        remoteStates[0].HeadPose.Pose.Orientation.w
-                                }
-                        * HAND_ROTATION_DIFFERENCE,
-                        rightHand->actor.GetTransform().m_Scale
-                );
-    }
-
-    if(leftHand)
-    {
-        leftHand->actor.UpdateModelMatrix
-                (
-                        scr::vec3
-                                {
-                                        remoteStates[1].HeadPose.Pose.Position.x + cameraPosition.x,
-                                        remoteStates[1].HeadPose.Pose.Position.y + cameraPosition.y,
-                                        remoteStates[1].HeadPose.Pose.Position.z + cameraPosition.z
-                                },
-                        scr::quat
-                                {
-                                        remoteStates[1].HeadPose.Pose.Orientation.x,
-                                        remoteStates[1].HeadPose.Pose.Orientation.y,
-                                        remoteStates[1].HeadPose.Pose.Orientation.z,
-                                        remoteStates[1].HeadPose.Pose.Orientation.w
-                                }
-                        * HAND_ROTATION_DIFFERENCE,
-                        leftHand->actor.GetTransform().m_Scale
-                );
-    }
-}
-
 bool Application::InitializeController()
 {
 	ovrInputCapabilityHeader inputCapsHeader;
 	for(uint32_t i = 0;
-		vrapi_EnumerateInputDevices(mOvrMobile, i, &inputCapsHeader) == 0; ++i) {
+		vrapi_EnumerateInputDevices(clientRenderer.mOvrMobile, i, &inputCapsHeader) == 0; ++i) {
 		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote)
 		{
 			if ((int) inputCapsHeader.DeviceID != -1)
@@ -800,7 +706,7 @@ bool Application::InitializeController()
 
 				ovrInputTrackedRemoteCapabilities trackedInputCaps;
 				trackedInputCaps.Header = inputCapsHeader;
-				vrapi_GetInputDeviceCapabilities(mOvrMobile, &trackedInputCaps.Header);
+				vrapi_GetInputDeviceCapabilities(clientRenderer.mOvrMobile, &trackedInputCaps.Header);
 				OVR_LOG("Controller Capabilities: %ud", trackedInputCaps.ControllerCapabilities);
 				OVR_LOG("Button Capabilities: %ud", trackedInputCaps.ButtonCapabilities);
 				OVR_LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
@@ -1075,7 +981,6 @@ void Application::CopyToCubemaps()
 		inputCommand.m_pComputeEffect=mCopyCubemapEffect;
         inputCommand.effectPassName = "CopyCubemap";
 		int32_t mip_y=0;
-#if 1
 		{
 			static uint32_t face= 0;
 			mip_y = 0;
@@ -1100,7 +1005,6 @@ void Application::CopyToCubemaps()
 			face++;
 			face=face%6;
 		}
-
 		{
 			mip_y = 0;
 			int32_t          mip_size = specularSize;
@@ -1142,39 +1046,6 @@ void Application::CopyToCubemaps()
 				mip_size/=2;
 			}
 		}
-#else
-		cubemapUB.sourceOffset.x+= 3*128;
-		{
-			mip_y = 0;
-			uint32_t      mip_size = 128;
-			for (uint32_t m = 0; m < 6; m++)
-			{
-				inputCommand.m_WorkGroupSize={(mip_size+1)/8,(mip_size+1)/8,6};
-				mCubemapComputeShaderResources[0][1].SetImageInfo(0, {GlobalGraphicsResources.cubeMipMapSampler, mSpecularTexture, m});
-				cubemapUB.sourceOffset.y       = (int32_t) (2 * tc.width) + mip_y;
-				cubemapUB.faceSize = mip_size;
-				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
-				mDeviceContext.DispatchCompute(&inputCommand);
-				mip_y += 2 * mip_size;
-				mip_size /= 2;
-			}
-		}
-		cubemapUB.sourceOffset.x+= 3*128;
-		{
-			mip_y = 0;
-			uint32_t      mip_size = 128;
-			for (uint32_t m = 0; m < 6; m++)
-			{
-				inputCommand.m_WorkGroupSize={(mip_size+1)/8,(mip_size+1)/8,6};
-				mCubemapComputeShaderResources[0][1].SetImageInfo(0, {mSampler, mCubemapLightingTexture, m});
-				cubemapUB.sourceOffset.y       = (int32_t) (2 * tc.width) + mip_y;
-				cubemapUB.faceSize = mip_size;
-				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
-				mDeviceContext.DispatchCompute(&inputCommand);
-				mip_y += 2 * mip_size;
-				mip_size /= 2;
-			}
-#endif
 		GL_CheckErrors("Frame: CopyToCubemaps - Lighting");
 		{
             inputCommandCreateInfo.effectPassName = "ExtractPosition";

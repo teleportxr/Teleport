@@ -4,17 +4,125 @@
 
 #include "ClientRenderer.h"
 #include "OVRActorManager.h"
+#include "OVR_GlUtils.h"
+#include "OVR_Math.h"
+
+#include <VrApi_Types.h>
+#include <VrApi_Input.h>
 
 using namespace OVR;
 ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i):oculusOrigin(0,0,0)
 		, resourceManagers(rm)
 		,resourceCreator(r)
+		, mOvrMobile(nullptr)
 {
 }
 
 
 ClientRenderer::~ClientRenderer()
 {
+	ExitedVR();
+}
+
+void ClientRenderer::EnteredVR(struct ovrMobile *o)
+{
+	mOvrMobile = o;
+}
+
+void ClientRenderer::ExitedVR()
+{
+	mOvrMobile=nullptr;
+}
+
+void ClientRenderer::UpdateHandObjects()
+{
+	std::vector<ovrTracking> remoteStates;
+
+	uint32_t deviceIndex = 0;
+	ovrInputCapabilityHeader capsHeader;
+	//Poll controller state from the Oculus API.
+	while( vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader ) >= 0 )
+	{
+		if(capsHeader.Type == ovrControllerType_TrackedRemote)
+		{
+			ovrTracking remoteState;
+			if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
+			{
+				remoteStates.push_back(remoteState);
+				if(deviceIndex < 2)
+				{
+					scr::vec3 pos=oculusOrigin+*((const scr::vec3*)&remoteState.HeadPose.Pose.Position);
+
+					controllerPoses[deviceIndex].position = *((const avs::vec3*)(&pos));
+					controllerPoses[deviceIndex].orientation = *((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+		++deviceIndex;
+	}
+
+	OVRActorManager::LiveOVRActor* leftHand = nullptr;
+	OVRActorManager::LiveOVRActor* rightHand = nullptr;
+	dynamic_cast<OVRActorManager*>(resourceManagers->mActorManager.get())->GetHands(leftHand, rightHand);
+
+	switch(remoteStates.size())
+	{
+		case 0:
+			return;
+		case 1: //Set non-dominant hand away. TODO: Query OVR for which hand is dominant/in-use.
+			leftHand = nullptr;
+			break;
+		default:
+			break;
+	}
+
+	if(rightHand)
+	{
+		rightHand->actor.UpdateModelMatrix
+				(
+						scr::vec3
+								{
+										remoteStates[0].HeadPose.Pose.Position.x + cameraPosition.x,
+										remoteStates[0].HeadPose.Pose.Position.y + cameraPosition.y,
+										remoteStates[0].HeadPose.Pose.Position.z + cameraPosition.z
+								},
+						scr::quat
+								{
+										remoteStates[0].HeadPose.Pose.Orientation.x,
+										remoteStates[0].HeadPose.Pose.Orientation.y,
+										remoteStates[0].HeadPose.Pose.Orientation.z,
+										remoteStates[0].HeadPose.Pose.Orientation.w
+								}
+						* HAND_ROTATION_DIFFERENCE,
+						rightHand->actor.GetTransform().m_Scale
+				);
+	}
+
+	if(leftHand)
+	{
+		leftHand->actor.UpdateModelMatrix
+				(
+						scr::vec3
+								{
+										remoteStates[1].HeadPose.Pose.Position.x + cameraPosition.x,
+										remoteStates[1].HeadPose.Pose.Position.y + cameraPosition.y,
+										remoteStates[1].HeadPose.Pose.Position.z + cameraPosition.z
+								},
+						scr::quat
+								{
+										remoteStates[1].HeadPose.Pose.Orientation.x,
+										remoteStates[1].HeadPose.Pose.Orientation.y,
+										remoteStates[1].HeadPose.Pose.Orientation.z,
+										remoteStates[1].HeadPose.Pose.Orientation.w
+								}
+						* HAND_ROTATION_DIFFERENCE,
+						leftHand->actor.GetTransform().m_Scale
+				);
+	}
 }
 
 void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
@@ -56,6 +164,8 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 	dynamic_cast<OVRActorManager*>(resourceManagers->mActorManager.get())->GetHands(leftHand, rightHand);
 
 	//Render hands, if they exist.
-	if(leftHand) RenderLocalActor(leftHand);
-	if(rightHand) RenderLocalActor(rightHand);
+	if(leftHand)
+		RenderLocalActor(leftHand);
+	if(rightHand)
+		RenderLocalActor(rightHand);
 }
