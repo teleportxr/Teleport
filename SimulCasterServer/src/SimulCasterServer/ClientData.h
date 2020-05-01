@@ -22,6 +22,8 @@ public:
 	void setOrigin(avs::vec3 pos);
 	bool isConnected() const;
 	bool hasOrigin() const;
+	avs::vec3 getOrigin() const;
 protected:
 	mutable bool _hasOrigin=false;
+	avs::vec3 originClientHas;
 };

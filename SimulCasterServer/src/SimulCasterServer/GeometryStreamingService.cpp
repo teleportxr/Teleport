@@ -4,6 +4,7 @@
 
 #include "CasterSettings.h"
 #include "GeometryStore.h"
+#include "ErrorHandling.h"
 
 using namespace SCServer;
 
@@ -209,7 +210,11 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vect
 	for(avs::uid material_uid : thisNode->materials)
 	{
 		avs::Material* thisMaterial = geometryStore->getMaterial(material_uid);
-
+		if(!thisMaterial)
+		{
+			TELEPORT_CERR<<"Material not found in store: "<<(unsigned long long)material_uid<<std::endl;
+			continue;
+		}
 		avs::MaterialResources material;
 		material.material_uid = material_uid;
 

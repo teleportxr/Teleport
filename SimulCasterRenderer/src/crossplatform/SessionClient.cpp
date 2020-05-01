@@ -254,7 +254,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			size_t commandSize = sizeof(avs::SetPositionCommand);
 			avs::SetPositionCommand command;
 			memcpy(&command, packet->data, commandSize);
-			receivedInitialPos=true;
+			receivedInitialPos ++;
 			initialPos=command.position;
 		}
 		break;

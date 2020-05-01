@@ -45,7 +45,7 @@ public:
     bool IsConnected() const;
     std::string GetServerIP() const;
     
-	bool receivedInitialPos = false;
+	unsigned long long receivedInitialPos = 0;
 
     avs::vec3 GetInitialPos() const;
 private:

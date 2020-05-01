@@ -515,9 +515,11 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 		const scr::Transform& transform = actor.GetTransform();
 
 		const std::shared_ptr<scr::Mesh> mesh = actor.GetMesh();
-		if(!mesh) continue;
+		if(!mesh)
+			continue;
 		const std::vector<std::shared_ptr<scr::Material>> materials = actor.GetMaterials();
-		if(materials.size() == 0) continue;
+		if(materials.size() == 0)
+			continue;
 
 		size_t element = 0;
 		const auto& CI = mesh->GetMeshCreateInfo();
@@ -834,12 +836,12 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
 		sessionClient.Frame(displayInfo, headPose, nullptr, receivedInitialPos,controllerState, decoder->idrRequired());
-		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
+		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			oculusOrigin = sessionClient.GetInitialPos();
 			vec3 pos = (const float*)& oculusOrigin;
 			camera.SetPosition(pos);
-			receivedInitialPos = true;
+			receivedInitialPos = sessionClient.receivedInitialPos;
 		}
 		avs::Result result = pipeline.process();
 

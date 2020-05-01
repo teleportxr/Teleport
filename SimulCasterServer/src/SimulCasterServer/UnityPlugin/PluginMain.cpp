@@ -424,7 +424,10 @@ ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::
 	: geometryStreamingService(gs)
 	, videoEncodePipeline(vep)
 	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
-{}
+	
+{
+	originClientHas.x= originClientHas.y= originClientHas.z=0.f;
+}
 
 TELEPORT_EXPORT
 void StartSession(avs::uid clientID, int32_t listenPort)
@@ -593,13 +596,16 @@ bool Client_IsConnected(avs::uid clientID)
 }
 
 TELEPORT_EXPORT
-bool Client_HasOrigin(avs::uid clientID)
+bool Client_HasOrigin(avs::uid clientID, avs::vec3* pos)
 {
 	auto &c=clientServices.find(clientID);
 	if(c==clientServices.end())
 		return false;
 	ClientData &clientData=c->second;
-	return(clientData.hasOrigin());
+	bool result=(clientData.hasOrigin());
+	if(result&&pos)
+		*pos=clientData.getOrigin();
+	return result;
 }
 
 TELEPORT_EXPORT

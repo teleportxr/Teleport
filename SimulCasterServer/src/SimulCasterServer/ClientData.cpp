@@ -6,7 +6,9 @@ void ClientData::setOrigin(avs::vec3 pos)
 	{
 		clientMessaging.setPosition(pos);
 		// ASSUME the message was received...
+		// TODO: Only set this when client confirms.
 		_hasOrigin=true;
+		originClientHas=pos;
 	}
 }
 
@@ -23,4 +25,9 @@ bool ClientData::hasOrigin() const
 	}
 	_hasOrigin=false;
 	return false;
+}
+
+avs::vec3 ClientData::getOrigin() const
+{
+	return originClientHas;
 }

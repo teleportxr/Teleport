@@ -100,8 +100,12 @@ namespace SCServer
 	{
 		saveResources(TEXTURE_FILE_NAME, textures);
 		saveResources(MATERIAL_FILE_NAME, materials);
-		saveResources(MESH_PC_FILE_NAME, meshes.at(avs::AxesStandard::EngineeringStyle));
-		saveResources(MESH_ANDROID_FILE_NAME, meshes.at(avs::AxesStandard::GlStyle));
+		auto &a= meshes.find(avs::AxesStandard::EngineeringStyle);
+		if(a!=meshes.end())
+			saveResources(MESH_PC_FILE_NAME, a->second);
+		auto& g = meshes.find(avs::AxesStandard::GlStyle);
+		if (g != meshes.end())
+			saveResources(MESH_ANDROID_FILE_NAME, g->second);
 	}
 
 	void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials)
