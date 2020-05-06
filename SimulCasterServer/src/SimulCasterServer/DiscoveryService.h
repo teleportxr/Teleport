@@ -11,5 +11,6 @@ namespace SCServer
 		virtual void shutdown() = 0;
 		virtual void tick() = 0;
 		virtual uint64_t getNewClientID() =0;
+		virtual void discoveryCompleteForClient(uint64_t ClientID)=0;
 	};
 }

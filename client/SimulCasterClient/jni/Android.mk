@@ -12,6 +12,7 @@ LOCAL_SHARED_LIBRARIES	:= vrapi
 LOCAL_SRC_FILES			:= \
     ../src/AndroidDiscoveryService.cpp \
     ../src/Application.cpp \
+    ../src/Controllers.cpp \
     ../src/GLESDebug.cpp \
     ../src/GlobalGraphicsResources.cpp \
     ../src/OVRActorManager.cpp \

@@ -77,6 +77,12 @@ Clone the repository with submodules:
 8. Go to File->Project Structure->Modules->SimulCasterClient->Signing Configs and in debug config, put in the details of the key you created. 
 9. Click the build icon to compile and then you should be able to run.
 
+## Firewall setup
+1. Go to Windows Security->Firewall & Network->Advanced Settings.
+2. Choose Inbound Rules->New Rule->Port->UDP.
+3. Enter the Discovery Port and create the rule.
+Repeat 2-3 for the Service Port.
+
 ## Running
 
 1. Connect your Android device to the same WiFi network your development PC is on.
@@ -148,3 +154,6 @@ This is only necessary if we change NDK or modify srt in some way. Set up Ubuntu
     zip -r armeabi-v7a.zip armeabi-v7a
     zip -r x86.zip x86
     zip -r x86_64.zip x86_64
+
+## Troubleshooting
+1. If you can receive packets from the headset, but can't transmit to it, it may have an IP address conflict. Check no other device has the same IP.

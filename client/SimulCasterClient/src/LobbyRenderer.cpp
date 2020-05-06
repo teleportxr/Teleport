@@ -3,3 +3,8 @@
 //
 
 #include "LobbyRenderer.h"
+
+void LobbyRenderer::Render(OVR::OvrGuiSys *mGuiSys)
+{
+	mGuiSys->ShowInfoText(0.001f,"Not connected");
+}

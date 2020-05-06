@@ -149,20 +149,23 @@ void ClientMessaging::handleEvents()
 
 				// TODO: This is pretty ropey: Discovery service really shouldn't be inside a specific client.
 				if(!clientID)
+				{
 					this->clientID = discoveryService->getNewClientID();
-				discoveryService->shutdown();
+					TELEPORT_CERR << "Client ID should already be set." << std::endl;
+				}
+				discoveryService->discoveryCompleteForClient(this->clientID);
 
-				std::cout << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
+				TELEPORT_COUT << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
 				break;
 			case ENET_EVENT_TYPE_DISCONNECT:
 				assert(peer == event.peer);
 
-				std::cout << "Client disconnected " << getClientIP() << ":" << getClientPort() << std::endl;
+				TELEPORT_COUT << "Client disconnected " << getClientIP() << ":" << getClientPort() << std::endl;
 				onDisconnect();
 				peer = nullptr;
 				
 				// TRY to restart the discovery service...
-				discoveryService->initialise();
+				//discoveryService->initialise();
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
 				dispatchEvent(event);

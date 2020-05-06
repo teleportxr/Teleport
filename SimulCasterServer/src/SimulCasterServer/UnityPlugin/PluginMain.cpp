@@ -18,6 +18,8 @@
 #include "Export.h"
 #include "InteropStructures.h"
 #include "PluginGraphics.h"
+#include "SimulCasterServer/ErrorHandling.h"
+
 #ifdef _MSC_VER
 #include "../VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
@@ -63,6 +65,8 @@ namespace
 class PluginDiscoveryService: public SCServer::DiscoveryService
 {
 public:
+	//List of clientIDs we want to attempt to connect to.
+	std::map<uint32_t, ENetAddress> newClients;
 	virtual ~PluginDiscoveryService()
 	{
 		shutdown();
@@ -70,8 +74,10 @@ public:
 
 	virtual bool initialise(uint16_t discoveryPort = 0, uint16_t servicePort = 0) override
 	{
-		if(discoveryPort == 0) discoveryPort = this->discoveryPort;
-		else this->discoveryPort = discoveryPort;
+		if(discoveryPort == 0)
+			discoveryPort = this->discoveryPort;
+		else
+			this->discoveryPort = discoveryPort;
 
 		if(discoveryPort == 0)
 		{
@@ -104,7 +110,7 @@ public:
 		address = {ENET_HOST_ANY, discoveryPort};
 		if(enet_socket_bind(discoverySocket, &address) != 0)
 		{
-			printf_s("Failed to bind discovery socket on port: %d\n", address.port);
+			TELEPORT_CERR<<"Failed to bind discovery socket on port: "<< address.port<<std::endl;
 			enet_socket_destroy(discoverySocket);
 			discoverySocket = 0;
 			return false;
@@ -117,6 +123,7 @@ public:
 	{
 		enet_socket_destroy(discoverySocket);
 		discoverySocket = 0;
+		newClients.clear();
 	}
 
 	virtual void tick() override
@@ -126,53 +133,67 @@ public:
 			printf_s("Attempted to call tick on client discovery service without initalising!");
 			return;
 		}
-
-		//List of clientIDs we want to attempt to connect to.
-		std::set<uint32_t> newClients;
+		
 
 		uint32_t clientID = 0; //Newly received ID.
 		ENetBuffer buffer = {sizeof(clientID), &clientID}; //Buffer to retrieve client ID with.
-
+		ENetAddress addr;
 		//Retrieve all packets received since last call, and add any new clients.
-		while(enet_socket_receive(discoverySocket, &address, &buffer, 1) != 0)
+		while(size_t packetsize=enet_socket_receive(discoverySocket, &addr, &buffer, 1)> 0)
 		{
-			//Skip clients we have already added.
-			if(clientServices.find(clientID) != clientServices.end()) continue;
-
-			std::wstring desiredIP(casterSettings.clientIP);
-
-			//Ignore connections from clients with the wrong IP, if a desired IP has been set.
-			if(desiredIP.length() != 0)
 			{
-				//Retrieve IP of client that sent message, and covert to string.
-				char clientIPRaw[20];
-				enet_address_get_host_ip(&address, clientIPRaw, 20);
+				//Skip clients we have already added.
+				if(clientServices.find(clientID) != clientServices.end())
+					continue;
+				if (newClients.find(clientID) != newClients.end())
+					continue;
+				std::wstring desiredIP(casterSettings.clientIP);
 
-				//Trying to use the pointer to the string's data results in an incorrect size, and incorrect iterators.
-				std::string clientIP = clientIPRaw;
-
-				//Create new wide-string with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
-				if(desiredIP.compare(0, clientIP.size(), {clientIP.begin(), clientIP.end()}) == 0)
+				//Ignore connections from clients with the wrong IP, if a desired IP has been set.
+				if(desiredIP.length() != 0)
 				{
-					newClients.insert(clientID);
+					//Retrieve IP of client that sent message, and covert to string.
+					char clientIPRaw[20];
+					enet_address_get_host_ip(&addr, clientIPRaw, 20);
+
+					//Trying to use the pointer to the string's data results in an incorrect size, and incorrect iterators.
+					std::string clientIP = clientIPRaw;
+
+					//Create new wide-string with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
+					if(desiredIP.compare(0, clientIP.size(), {clientIP.begin(), clientIP.end()}) == 0)
+					{
+						newClients[clientID]= addr;
+					}
 				}
-			}
-			else
-			{
-				newClients.insert(clientID);
+				else
+				{
+					newClients[clientID] = addr;
+				}
 			}
 		}
 
 		//Send response, containing port to connect on, to all clients we want to host.
-		for(uint32_t id : newClients)
+		for(auto &c: newClients)
 		{
+			auto clientID=c.first;
+			auto addr=c.second;
 			ServiceDiscoveryResponse response = {clientID, servicePort};
 
 			buffer = {sizeof(ServiceDiscoveryResponse), &response};
-			enet_socket_send(discoverySocket, &address, &buffer, 1);
-
+			enet_socket_send(discoverySocket, &addr, &buffer, 1);
 			StartSession(clientID, servicePort);
-			lastFoundClientID=clientID;
+		}
+	}
+	virtual void discoveryCompleteForClient(uint64_t ClientID) override
+	{
+		auto i=newClients.find(ClientID);
+		if(i==newClients.end())
+		{
+			TELEPORT_CERR<<"Client had already completed discovery\n";
+		}
+		else
+		{
+			newClients.erase(i);
 		}
 	}
 	virtual uint64_t getNewClientID()
@@ -378,8 +399,7 @@ struct InitializeState
 
 };
 
-TELEPORT_EXPORT
-void Initialise(const InitializeState *initializeState)
+TELEPORT_EXPORT bool Initialise(const InitializeState *initializeState)
 {
 	serverID = avs::GenerateUid();
 
@@ -393,12 +413,12 @@ void Initialise(const InitializeState *initializeState)
 
 	if(enet_initialize() != 0)
 	{
-		printf_s("An error occurred while attempting to initalise ENet!\n");
-		return;
+		TELEPORT_CERR<<"An error occurred while attempting to initalise ENet!\n";
+		return false;
 	}
 	atexit(enet_deinitialize);
 
-	discoveryService->initialise(initializeState->DISCOVERY_PORT,initializeState->SERVICE_PORT);
+	return discoveryService->initialise(initializeState->DISCOVERY_PORT,initializeState->SERVICE_PORT);
 }
 
 TELEPORT_EXPORT
@@ -429,42 +449,48 @@ ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::
 	originClientHas.x= originClientHas.y= originClientHas.z=0.f;
 }
 
-TELEPORT_EXPORT
-void StartSession(avs::uid clientID, int32_t listenPort)
+TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 {
-	ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::bind(&Disconnect, clientID));
-	
-	if(newClientData.clientMessaging.startSession(clientID, listenPort))
+	// Already started this session.
+	if(clientServices.find(clientID) == clientServices.end())
 	{
-		clientServices.emplace(clientID, std::move(newClientData));
-
-		ClientData& newClient = clientServices.at(clientID);
-		newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
-		newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
-
-		newClient.casterContext.ColorQueue->configure(16);
-		newClient.casterContext.GeometryQueue->configure(16);
-
-		///TODO: Initialise real delegates for capture component.
-		SCServer::CaptureDelegates delegates;
-		delegates.startStreaming = [](SCServer::CasterContext* context){};
-		delegates.requestKeyframe = [&newClient]()
+		ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::bind(&Disconnect, clientID));
+	
+		if(newClientData.clientMessaging.startSession(clientID, listenPort))
 		{
-			newClient.videoKeyframeRequired = true;
-		};
-		delegates.getClientCameraInfo = []()->SCServer::CameraInfo&
+			clientServices.emplace(clientID, std::move(newClientData));
+		}
+		else
 		{
-			return SCServer::CameraInfo();
-		};
-
-		newClient.clientMessaging.initialise(&newClient.casterContext, delegates);
-
-		unlinkedClientIDs.insert(clientID);
+			std::cerr << "Failed to start session for client: " << clientID << std::endl;
+		}
 	}
 	else
+		return;	// already got this client.
+	ClientData& newClient = clientServices.at(clientID);
+	newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
+	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
+
+	newClient.casterContext.ColorQueue->configure(16);
+	newClient.casterContext.GeometryQueue->configure(16);
+
+	///TODO: Initialise real delegates for capture component.
+	SCServer::CaptureDelegates delegates;
+	delegates.startStreaming = [](SCServer::CasterContext* context){};
+	delegates.requestKeyframe = [&newClient]()
 	{
-		std::cout << "Failed to start session for client: " << clientID << std::endl;
-	}
+		newClient.videoKeyframeRequired = true;
+	};
+	delegates.getClientCameraInfo = []()->SCServer::CameraInfo&
+	{
+		static SCServer::CameraInfo c;
+		return c;
+	};
+
+	newClient.clientMessaging.initialise(&newClient.casterContext, delegates);
+
+	unlinkedClientIDs.insert(clientID);
+	
 }
 
 TELEPORT_EXPORT
@@ -472,16 +498,23 @@ void StopSession(avs::uid clientID)
 {
 	//Early-out if a client with this ID doesn't exist.
 	auto& clientIt = clientServices.find(clientID);
-	if(clientIt == clientServices.end()) return;
+	if(clientIt == clientServices.end())
+		return;
 		
 	ClientData& lostClient = clientIt->second;
 	//Shut-down connections to the client.
-	if(lostClient.isStreaming) StopStreaming(clientID);
+	if(lostClient.isStreaming)
+		StopStreaming(clientID);
 	lostClient.clientMessaging.stopSession();
 
 	//Remove references to lost client.
 	clientServices.erase(clientID);
-	lostClients.pop_back();
+	// TODO: How does this work? 
+	for(int i=0;i<lostClients.size();i++)
+	{
+		if(lostClients[i] ==clientID)
+			lostClients.erase(lostClients.begin()+i);
+	}
 }
 
 TELEPORT_EXPORT
@@ -539,8 +572,7 @@ void StopStreaming(avs::uid clientID)
 	lostClients.push_back(clientID);
 }
 
-TELEPORT_EXPORT
-void Tick(float deltaTime)
+TELEPORT_EXPORT void Tick(float deltaTime)
 {
 	//Delete client data for clients who have been lost.
 	if(lostClients.size() != 0)

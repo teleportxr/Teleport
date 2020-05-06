@@ -6,9 +6,12 @@
 #define CLIENT_LOBBYRENDERER_H
 
 
+#include <GuiSys.h>
+
 class LobbyRenderer
 {
-
+public:
+	void Render(OVR::OvrGuiSys *mGuiSys);
 };
 
 

@@ -15,6 +15,7 @@
 
 #include "AndroidDiscoveryService.h"
 #include "Config.h"
+#include "Log.h"
 #include "OVRActorManager.h"
 #include "VideoSurface.h"
 
@@ -26,26 +27,17 @@ using namespace OVR;
 
 
 #if defined( OVR_OS_ANDROID )
-extern "C" {
-
-jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* jni, jclass clazz, jobject activity,
-		jstring fromPackageName, jstring commandString, jstring uriString )
+extern "C"
 {
-	VideoDecoderProxy::InitializeJNI(jni);
-	return (new Application())->SetActivity(jni, clazz, activity, fromPackageName, commandString, uriString);
-}
-
+	jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv* jni, jclass clazz, jobject activity,
+			jstring fromPackageName, jstring commandString, jstring uriString )
+	{
+		VideoDecoderProxy::InitializeJNI(jni);
+		return (new Application())->SetActivity(jni, clazz, activity, fromPackageName, commandString, uriString);
+	}
 } // extern "C"
 
 #endif
-
-const int specularSize = 128;
-const int diffuseSize = 64;
-const int lightSize = 64;
-scr::ivec2 specularOffset={0,0};
-scr::ivec2 diffuseOffset={3* specularSize/2, specularSize*2};
-scr::ivec2 roughOffset={3* specularSize,0};
-scr::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
 
 ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
 {
@@ -56,34 +48,20 @@ ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q)
 	r.z= p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x;
 	return r;
 }
-#if 0
-static inline ovrQuatf RelativeQuaternion(const ovrQuatf &p,const ovrQuatf &q)
-{
-	ovrQuatf iq=q;
-	iq.x*=-1.f;
-	iq.y*=-1.f;
-	iq.z*=-1.f;
-	return QuaternionMultiply(p,iq);
-}
-#endif
+
 Application::Application()
-	: mDecoder(avs::DecoderBackend::Custom)
-	, mPipelineConfigured(false)
+	: mPipelineConfigured(false)
 	, mSoundEffectContext(nullptr)
 	, mSoundEffectPlayer(nullptr)
 	, mGuiSys(OvrGuiSys::Create())
 	, mLocale(nullptr)
-	, mVideoSurfaceTexture(nullptr)
-	, mCubemapTexture(nullptr)
-	, mCubemapLightingTexture(nullptr)
-	, mCameraPositionBuffer(nullptr)
 	, mSession(this, std::make_unique<AndroidDiscoveryService>())
-	, mControllerID(0)
 	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform))
-	,clientRenderer(&resourceCreator,&resourceManagers,this)
+	,clientRenderer(&resourceCreator,&resourceManagers,this,this)
 	, resourceManagers(new OVRActorManager)
 	,resourceCreator(basist::transcoder_texture_format::cTFETC2)
 {
+	RedirectStdCoutCerr();
 	mSession.SetResourceCreator(&resourceCreator);
 
 	pthread_setname_np(pthread_self(), "SimulCaster_Application");
@@ -126,10 +104,7 @@ Application::~Application()
 	mPipeline.deconfigure();
 
 	mRefreshRates.clear();
-	delete mVideoSurfaceTexture;
-	mVideoSurfaceDef.geo.Free();
-	GlProgram::Free(mVideoSurfaceProgram);
-
+	clientRenderer.ExitedVR();
 	delete mSoundEffectPlayer;
 	delete mSoundEffectContext;
 
@@ -154,261 +129,57 @@ void Application::Configure(ovrSettings& settings )
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
 {
+	if(intentType != INTENT_LAUNCH)
+		return;
 
-	if(intentType == INTENT_LAUNCH)
-	{
-		const ovrJava *java = app->GetJava();
+	OVR_LOG("%s | %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
+	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GlobalGraphicsResources.maxFragTextureSlots);
+	glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &GlobalGraphicsResources.maxFragUniformBlocks);
+	OVR_LOG("Fragment Texture Slots: %d, Fragment Uniform Blocks: %d", GlobalGraphicsResources.maxFragTextureSlots, GlobalGraphicsResources.maxFragUniformBlocks);
 
-		OVR_LOG("%s | %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
-		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GlobalGraphicsResources.maxFragTextureSlots);
-		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &GlobalGraphicsResources.maxFragUniformBlocks);
-		OVR_LOG("Fragment Texture Slots: %d, Fragment Uniform Blocks: %d", GlobalGraphicsResources.maxFragTextureSlots, GlobalGraphicsResources.maxFragUniformBlocks);
+    //Setup Debug
+    scc::SetupGLESDebug();
 
-        //Setup Debug
-        scc::SetupGLESDebug();
-		clientRenderer.EnteredVR(app->GetOvrMobile());
+	const ovrJava *java=app->GetJava();
+	mSoundEffectContext=new ovrSoundEffectContext(*java->Env, java->ActivityObject);
+	mSoundEffectContext->Initialize(&app->GetFileSys());
+	mSoundEffectPlayer=new OvrGuiSys::ovrDummySoundEffectPlayer();
 
-		mSoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
-		mSoundEffectContext->Initialize(&app->GetFileSys());
-		mSoundEffectPlayer = new OvrGuiSys::ovrDummySoundEffectPlayer();
+	mLocale=ovrLocale::Create(*java->Env, java->ActivityObject, "default");
+	std::string fontName;
+	GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
 
-		mLocale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
+	clientRenderer.EnteredVR(app->GetOvrMobile(),java);
+	mGuiSys->Init(app, *mSoundEffectPlayer, fontName.c_str(), &app->GetDebugLines());
 
-		std::string fontName;
-		GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
-		mGuiSys->Init(this->app, *mSoundEffectPlayer, fontName.c_str(), &app->GetDebugLines());
-
-		//VideoSurfaceProgram
-		{
-			{
-				mVideoUB = GlobalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-				scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(VideoUB), &videoUB};
-				mVideoUB->Create(&uniformBufferCreateInfo);
-			}
-			static ovrProgramParm uniformParms[] =    // both TextureMvpProgram and CubeMapPanoProgram use the same parm mapping
-										  {
-												  {"colourOffsetScale"	, ovrProgramParmType::FLOAT_VECTOR4},
-												  {"depthOffsetScale"	, ovrProgramParmType::FLOAT_VECTOR4},
-												  {"cubemapTexture"		, ovrProgramParmType::TEXTURE_SAMPLED},
-												  {"videoFrameTexture"	, ovrProgramParmType::TEXTURE_SAMPLED},
-												  {"videoUB"			, ovrProgramParmType::BUFFER_UNIFORM},
-										  };
-			std::string videoSurfaceVert = LoadTextFile("shaders/VideoSurface.vert");
-			std::string videoSurfaceFrag = LoadTextFile("shaders/VideoSurface.frag");
-			mVideoSurfaceProgram = GlProgram::Build(
-					nullptr, videoSurfaceVert.c_str(),
-					"#extension GL_OES_EGL_image_external_essl3 : require\n", videoSurfaceFrag.c_str(),
-					uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm),
-					310);
-			if (!mVideoSurfaceProgram.IsValid())
-			{
-				OVR_FAIL("Failed to build video surface shader program");
-			}
-		}
-		mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));
-
-		mVideoSurfaceTexture = new OVR::SurfaceTexture(java->Env);
-		mVideoTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-		mCubemapUB = GlobalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-		mCubemapTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-        mDiffuseTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-		mSpecularTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-		mRoughSpecularTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-
-		mCubemapLightingTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-		mCameraPositionBuffer= GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
-		{
-			scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
-					3,
-					scr::ShaderStorageBuffer::Access::NONE,
-					8*4*sizeof(float),
-					(void*)&mCameraPositions
-			};
-			mCameraPositionBuffer->Create(&shaderStorageBufferCreateInfo);
-		}
-		{
-			CopyCubemapSrc     = LoadTextFile("shaders/CopyCubemap.comp");
-			mCopyCubemapEffect = GlobalGraphicsResources.renderPlatform.InstantiateEffect();
-			mCopyCubemapWithDepthEffect = GlobalGraphicsResources.renderPlatform.InstantiateEffect();
-			mExtractCameraPositionEffect=GlobalGraphicsResources.renderPlatform.InstantiateEffect();
-
-			scr::Effect::EffectCreateInfo effectCreateInfo = {};
-			effectCreateInfo.effectName = "CopyCubemap";
-			mCopyCubemapEffect->Create(&effectCreateInfo);
-
-			effectCreateInfo.effectName = "CopyCubemapWithDepth";
-			mCopyCubemapWithDepthEffect->Create(&effectCreateInfo);
-
-			effectCreateInfo.effectName = "ExtractCameraPosition";
-			mExtractCameraPositionEffect->Create(&effectCreateInfo);
-
-			scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.m_Count = 1;
-			pipelineCreateInfo.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_COMPUTE;
-			pipelineCreateInfo.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_COMPUTE;
-			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_only";
-			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/CopyCubemap.comp";
-			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = CopyCubemapSrc;
-			scr::ShaderSystem::Pipeline cp(&GlobalGraphicsResources.renderPlatform, &pipelineCreateInfo);
-
-			scr::Effect::EffectPassCreateInfo effectPassCreateInfo;
-			effectPassCreateInfo.effectPassName = "CopyCubemap";
-			effectPassCreateInfo.pipeline = cp;
-			mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
-
-			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_depth";
-			scr::ShaderSystem::Pipeline cp2(&GlobalGraphicsResources.renderPlatform, &pipelineCreateInfo);
-
-			effectPassCreateInfo.effectPassName = "ColourAndDepth";
-			effectPassCreateInfo.pipeline = cp2;
-			mCopyCubemapWithDepthEffect->CreatePass(&effectPassCreateInfo);
-
-			{
-				ExtractPositionSrc     = LoadTextFile("shaders/ExtractPosition.comp");
-				pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/ExtractPosition.comp";
-				pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractPositionSrc;
-				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_camera_position";
-				pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_camera_position";
-				scr::ShaderSystem::Pipeline cp3(&GlobalGraphicsResources.renderPlatform, &pipelineCreateInfo);
-				effectPassCreateInfo.effectPassName = "ExtractPosition";
-				effectPassCreateInfo.pipeline = cp3;
-				mExtractCameraPositionEffect->CreatePass(&effectPassCreateInfo);
+	clientRenderer.mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));
 
 
-				scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(CubemapUB), &cubemapUB};
-				mCubemapUB->Create(&uniformBufferCreateInfo);
-			}
-			GL_CheckErrors("mCubemapUB:Create");
+	//Set Lighting Cubemap Shader Resource
+    scr::ShaderResourceLayout lightingCubemapLayout;
+    lightingCubemapLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+    lightingCubemapLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	lightingCubemapLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	lightingCubemapLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-            scr::ShaderResourceLayout layout;
-            layout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
-            layout.AddBinding(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
-            layout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
-			layout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, scr::Shader::Stage::SHADER_STAGE_COMPUTE);
+    GlobalGraphicsResources.lightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {clientRenderer.mDiffuseTexture->GetSampler(), clientRenderer.mDiffuseTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {clientRenderer.mSpecularTexture->GetSampler(), clientRenderer.mSpecularTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler(), clientRenderer.mRoughSpecularTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler(), clientRenderer.mCubemapLightingTexture});
 
-            scr::ShaderResource sr({layout, layout, layout});
-            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {GlobalGraphicsResources.cubeMipMapSampler, mCubemapTexture,0,uint32_t(-1)});
-            sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
-            sr.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+	int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
+	mRefreshRates.resize(num_refresh_rates);
+	vrapi_GetSystemPropertyFloatArray(java,VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,mRefreshRates.data(),num_refresh_rates);
 
-            sr.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {});
-            sr.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
-            sr.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+	if(num_refresh_rates>0)
+		vrapi_SetDisplayRefreshRate(app->GetOvrMobile(),mRefreshRates[num_refresh_rates-1]);
 
-			sr.AddImage(2, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
-			sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
-			sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 3, "CameraPosition", {mCameraPositionBuffer.get()});
+	// Bind the delegates.
 
-
-			mCubemapComputeShaderResources.push_back(sr);
-
-			mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
-			mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{});
-			mExtractCameraPositionEffect->LinkShaders("ExtractPosition",{});
-		}
-
-		mVideoSurfaceDef.surfaceName = "VideoSurface";
-		mVideoSurfaceDef.geo = BuildGlobe(1.f,1.f,500.f);
-								//BuildTesselatedQuad( 1, 1,true );
-		mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
-		mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
-		mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
-
-		//Set up scr::Camera
-		scr::Camera::CameraCreateInfo c_ci = {
-				(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform),
-				scr::Camera::ProjectionType::PERSPECTIVE,
-				scr::quat(0.0f, 0.0f, 0.0f, 1.0f),
-				clientRenderer.cameraPosition
-		};
-		GlobalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
-
-		//Set scr::EffectPass
-		scr::ShaderSystem::PipelineCreateInfo pipelinePBR;
-		{
-			pipelinePBR.m_Count                          = 2;
-			pipelinePBR.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-			pipelinePBR.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-			pipelinePBR.m_ShaderCreateInfo[0].entryPoint = "main";
-			pipelinePBR.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
-			pipelinePBR.m_ShaderCreateInfo[0].sourceCode = LoadTextFile("shaders/OpaquePBR.vert");
-			pipelinePBR.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-			pipelinePBR.m_ShaderCreateInfo[1].entryPoint = "Opaque";
-			pipelinePBR.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
-			pipelinePBR.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/OpaquePBR.frag");
-		}
-
-		scr::ShaderSystem::PipelineCreateInfo pipelineAlbedo;
-		{
-			pipelineAlbedo.m_Count                          = 2;
-			pipelineAlbedo.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-			pipelineAlbedo.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-			pipelineAlbedo.m_ShaderCreateInfo[0].entryPoint = "main";
-			pipelineAlbedo.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
-			pipelineAlbedo.m_ShaderCreateInfo[0].sourceCode = LoadTextFile("shaders/OpaquePBR.vert");
-			pipelineAlbedo.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-			pipelineAlbedo.m_ShaderCreateInfo[1].entryPoint = "OpaqueAlbedo";
-			pipelineAlbedo.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
-			pipelineAlbedo.m_ShaderCreateInfo[1].sourceCode = LoadTextFile("shaders/OpaquePBR.frag");
-		}
-
-		scr::VertexBufferLayout layout;
-		layout.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC3, scr::VertexBufferLayout::Type::FLOAT);
-		layout.AddAttribute(1, scr::VertexBufferLayout::ComponentCount::VEC3, scr::VertexBufferLayout::Type::FLOAT);
-		layout.AddAttribute(2, scr::VertexBufferLayout::ComponentCount::VEC4, scr::VertexBufferLayout::Type::FLOAT);
-		layout.AddAttribute(3, scr::VertexBufferLayout::ComponentCount::VEC2, scr::VertexBufferLayout::Type::FLOAT);
-		layout.AddAttribute(4, scr::VertexBufferLayout::ComponentCount::VEC2, scr::VertexBufferLayout::Type::FLOAT);
-		layout.AddAttribute(5, scr::VertexBufferLayout::ComponentCount::VEC4, scr::VertexBufferLayout::Type::FLOAT);
-		layout.AddAttribute(6, scr::VertexBufferLayout::ComponentCount::VEC4, scr::VertexBufferLayout::Type::FLOAT);
-		layout.AddAttribute(7, scr::VertexBufferLayout::ComponentCount::VEC4, scr::VertexBufferLayout::Type::FLOAT);
-		layout.CalculateStride();
-
-		scr::ShaderResourceLayout vertLayout;
-		vertLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
-		vertLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
-		scr::ShaderResourceLayout fragLayout;
-		fragLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		fragLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		fragLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		fragLayout.AddBinding(12, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		fragLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		fragLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		fragLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		fragLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-
-		scr::ShaderResource pbrShaderResource({vertLayout, fragLayout});
-		pbrShaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", {});
-		pbrShaderResource.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", {});
-		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse", {});
-		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal", {});
-		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", {});
-		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {});
-		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {});
-		pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {});
-
-		BuildEffectPass("OpaquePBR", &layout, &pipelinePBR, {pbrShaderResource});
-		BuildEffectPass("OpaqueAlbedo", &layout, &pipelineAlbedo, {pbrShaderResource});
-
-		//Set Lighting Cubemap Shader Resource
-        scr::ShaderResourceLayout lightingCubemapLayout;
-        lightingCubemapLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-        lightingCubemapLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		lightingCubemapLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-		lightingCubemapLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-
-        GlobalGraphicsResources.lightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
-		GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {mDiffuseTexture->GetSampler(), mDiffuseTexture});
-		GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {mSpecularTexture->GetSampler(), mSpecularTexture});
-		GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture});
-		GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_LightsCubemap", {mCubemapLightingTexture->GetSampler(), mCubemapLightingTexture});
-
-		int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
-		mRefreshRates.resize(num_refresh_rates);
-		vrapi_GetSystemPropertyFloatArray(java,VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,mRefreshRates.data(),num_refresh_rates);
-
-		if(num_refresh_rates>0)
-			vrapi_SetDisplayRefreshRate(app->GetOvrMobile(),mRefreshRates[num_refresh_rates-1]);
-	}
+	controllers.SetToggleTexturesDelegate(std::bind(&ClientRenderer::ToggleTextures,&clientRenderer));
+	controllers.SetToggleShowInfoDelegate(std::bind(&ClientRenderer::ToggleShowInfo,&clientRenderer));
+	controllers.SetSetStickOffsetDelegate(std::bind(&ClientRenderer::SetStickOffset,&clientRenderer,std::placeholders::_1,std::placeholders::_2));
 }
 
 void Application::LeavingVrMode()
@@ -446,59 +217,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 
 	// Try to find remote controller
-	if((int)mControllerID == 0) {
-		InitializeController();
-	}
-
-	// Query controller input state.
-	ControllerState controllerState = {};
-	if((int)mControllerID != 0)
+	if((int)controllers.mControllerID == 0)
 	{
-		ovrInputStateTrackedRemote ovrState;
-		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
-		if(vrapi_GetCurrentInputState(app->GetOvrMobile(), mControllerID, &ovrState.Header) >= 0)
-		{
-			controllerState.mButtons = ovrState.Buttons;
-
-			//Flip show debug information, if the grip trigger was released.
-			if((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_GripTrigger) != 0 && (controllerState.mButtons & ovrButton::ovrButton_GripTrigger) == 0)
-			{
-					mShowInfo =! mShowInfo;
-            }
-
-			//Flip rendering mode when the trigger is held, and the X or A button is released.
-            if((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_Trigger) != 0 &&
-					(((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_X) != 0 && (controllerState.mButtons & ovrButton::ovrButton_X) == 0) ||
-					((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_A) != 0 && (controllerState.mButtons & ovrButton::ovrButton_A) == 0)))
-            {
-                OVRActorManager* actorManager = dynamic_cast<OVRActorManager*>(resourceManagers.mActorManager.get());
-
-                if(strcmp(GlobalGraphicsResources.effectPassName, "OpaquePBR") == 0) actorManager->ChangeEffectPass("OpaqueAlbedo");
-                else if(strcmp(GlobalGraphicsResources.effectPassName, "OpaqueAlbedo") == 0) actorManager->ChangeEffectPass("OpaquePBR");
-            }
-
-			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
-			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
-			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
-			controllerState.mJoystickAxisX=ovrState.Joystick.x;
-			controllerState.mJoystickAxisY=ovrState.Joystick.y * -1;
-			if(controllerState.mTrackpadStatus)
-			{
-				float          dx = controllerState.mTrackpadX - 0.5f;
-				float          dy = controllerState.mTrackpadY - 0.5f;
-				ModelCollision collisionModel;
-				ModelCollision groundCollisionModel;
-
-				//					 collisionModel, groundCollisionModel );
-				ovrFrameInput *f = const_cast<ovrFrameInput *>(&vrFrame);
-				f->Input.sticks[0][0] += dx;
-				f->Input.sticks[0][1] += dy;
-				//f->Input.sticks[1][0] += dx;
-				//f->Input.sticks[1][1] += dy;
-			}
-//ovr_re
-		}
+		controllers.InitializeController(app->GetOvrMobile());
 	}
+	controllers.Update(app->GetOvrMobile());
 	ovrVector3f footPos=mScene.GetFootPos();
 
 	//Get HMD Position/Orientation
@@ -510,10 +233,10 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Get the Capture Position
 	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform)};
 	scr::Transform scr_UE4_captureTransform(tci);
-	avs::Transform avs_UE4_captureTransform = mDecoder.getCameraTransform();
+	avs::Transform avs_UE4_captureTransform = clientRenderer.mDecoder.getCameraTransform();
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
 
-	if(mDecoder.hasValidTransform())
+	if(clientRenderer.mDecoder.hasValidTransform())
 	{
 		if (!receivedInitialPos)
 		{
@@ -537,7 +260,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		clientRenderer.headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		clientRenderer.headPose.position = {clientRenderer.cameraPosition.x, clientRenderer.cameraPosition.y, clientRenderer.cameraPosition.z};
 
-		mSession.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllerState, mDecoder.idrRequired());
+		mSession.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastPrimaryControllerState, clientRenderer.mDecoder.idrRequired());
 		if (!receivedInitialPos&&mSession.receivedInitialPos)
 		{
 			clientRenderer.oculusOrigin = mSession.GetInitialPos();
@@ -552,12 +275,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
 	}
-	mLastPrimaryControllerState = controllerState;
 
 	// Update video texture if we have any pending decoded frames.
 	while(mNumPendingFrames > 0)
 	{
-		mVideoSurfaceTexture->Update();
+		clientRenderer.mVideoSurfaceTexture->Update();
 		--mNumPendingFrames;
 	}
 
@@ -577,49 +299,23 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
 	GlobalGraphicsResources.scrCamera->UpdatePosition(scr_OVR_headPos);
 
-	static float frameRate=1.0f;
-	if(vrFrame.DeltaSeconds>0.0f)
-	{
-		frameRate*=0.99f;
-		frameRate+=0.01f/vrFrame.DeltaSeconds;
-	}
 
 	Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 	ovrQuatf X0={1.0f,0.f,0.f,0.0f};
 	ovrQuatf headPoseC={-headPose.x,-headPose.y,-headPose.z,headPose.w};
 	ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPose,X0),headPoseC);
-#if 1
+
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto ctr=mNetworkSource.getCounterValues();
 	if(mSession.IsConnected())
 	{
-	    if(mShowInfo)
-			mGuiSys->ShowInfoText(
-				0.017f,
-                "%s\n"
-				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
-				"Incomplete Decoder Packets: %d\n"
-				"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
-				"Actors: %d \n"
-				"Camera Position: %1.3f, %1.3f, %1.3f\n"
-				//"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
-				//"Pos: %3.3f %3.3f %3.3f\n"
-				"Orphans: %d\n",
-				GlobalGraphicsResources.effectPassName,
-				mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
-				ctr.incompleteDPsReceived,
-				frameRate, ctr.bandwidthKPS,
-				static_cast<uint64_t>(resourceManagers.mActorManager->GetActorList().size()),
-				clientRenderer.cameraPosition.x, clientRenderer.cameraPosition.y, clientRenderer.cameraPosition.z,
-				//headPose.w, headPose.x, headPose.y, headPose.z,
-				//headPos.x, headPos.y, headPos.z,
-				ctr.m_packetMapOrphans);
+		clientRenderer.Render(vrFrame,mGuiSys);
 	}
 	else
 	{
-		mGuiSys->ShowInfoText(0.001f,"Disconnected");
+		res.ClearColorBuffer=true;
+		res.ClearDepthBuffer=true;
+		lobbyRenderer.Render(mGuiSys);
 	};
-#endif
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
 	res.SwapInterval = app->GetSwapInterval();
@@ -640,7 +336,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 
 	GL_CheckErrors("Frame: Pre-Cubemap");
-	CopyToCubemaps();
+	clientRenderer.CopyToCubemaps(mDeviceContext);
 	// Append video surface
 	{
 		ovrMatrix4f eye0=res.FrameMatrices.EyeView[ 0 ];
@@ -649,32 +345,32 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		eye0.M[2][3]=0.0f;
 		ovrMatrix4f viewProj0=res.FrameMatrices.EyeProjection[ 0 ]*eye0;
 		ovrMatrix4f viewProjT0=ovrMatrix4f_Transpose( &viewProj0 );
-		videoUB.invViewProj[0]=ovrMatrix4f_Inverse( &viewProjT0 );
+		clientRenderer.videoUB.invViewProj[0]=ovrMatrix4f_Inverse( &viewProjT0 );
 		ovrMatrix4f eye1=res.FrameMatrices.EyeView[ 1 ];
 		eye1.M[0][3]=0.0f;
 		eye1.M[1][3]=0.0f;
 		eye1.M[2][3]=0.0f;
 		ovrMatrix4f viewProj1=res.FrameMatrices.EyeProjection[ 1 ]*eye1;
 		ovrMatrix4f viewProjT1=ovrMatrix4f_Transpose( &viewProj1 );
-		videoUB.invViewProj[1]=ovrMatrix4f_Inverse( &viewProjT1 );
+		clientRenderer.videoUB.invViewProj[1]=ovrMatrix4f_Inverse( &viewProjT1 );
 	}
-	mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_UniformBuffer *)  mVideoUB.get())->GetGlBuffer());
-	if(mCubemapTexture->IsValid())
+	clientRenderer.mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_UniformBuffer *)  clientRenderer.mVideoUB.get())->GetGlBuffer());
+	if(clientRenderer.mCubemapTexture->IsValid())
 	{
 		float w=vrFrame.IPD/2.0f;//.04f; //half separation.
 		scr::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
 		scr::vec3 &v=camera_from_videoCentre;
 		scr::vec4 right_eye ={v.x+eye.x,v.y+eye.y,v.z+eye.z,0.0f};
 		scr::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
-		videoUB.eyeOffsets[0]=left_eye;		// left eye
-		videoUB.eyeOffsets[1]=eye;	// right eye.
-		videoUB.cameraPosition=clientRenderer.cameraPosition;
+		clientRenderer.videoUB.eyeOffsets[0]=left_eye;		// left eye
+		clientRenderer.videoUB.eyeOffsets[1]=eye;	// right eye.
+		clientRenderer.videoUB.cameraPosition=clientRenderer.cameraPosition;
 
-		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
-		mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
-		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
+		clientRenderer.mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) clientRenderer.mCubemapTexture.get())->GetGlTexture());
+		clientRenderer.mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  clientRenderer.mVideoTexture.get())->GetGlTexture());
+		res.Surfaces.push_back(ovrDrawSurface(&clientRenderer.mVideoSurfaceDef));
 	}
-	mVideoUB->Submit();
+	clientRenderer.mVideoUB->Submit();
 
 	//Move the hands before they are drawn.
 	clientRenderer.UpdateHandObjects();
@@ -692,35 +388,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	return res;
 }
 
-bool Application::InitializeController()
-{
-	ovrInputCapabilityHeader inputCapsHeader;
-	for(uint32_t i = 0;
-		vrapi_EnumerateInputDevices(clientRenderer.mOvrMobile, i, &inputCapsHeader) == 0; ++i) {
-		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote)
-		{
-			if ((int) inputCapsHeader.DeviceID != -1)
-			{
-				mControllerID = inputCapsHeader.DeviceID;
-				OVR_LOG("Found controller (ID: %d)", mControllerID);
-
-				ovrInputTrackedRemoteCapabilities trackedInputCaps;
-				trackedInputCaps.Header = inputCapsHeader;
-				vrapi_GetInputDeviceCapabilities(clientRenderer.mOvrMobile, &trackedInputCaps.Header);
-				OVR_LOG("Controller Capabilities: %ud", trackedInputCaps.ControllerCapabilities);
-				OVR_LOG("Button Capabilities: %ud", trackedInputCaps.ButtonCapabilities);
-				OVR_LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
-				OVR_LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
-				mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
-				mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
 void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
 {
 	if(!mPipelineConfigured)
@@ -735,16 +402,16 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		sourceParams.maxJitterBufferLength = 0;
 
 
-		if (!mNetworkSource.configure(
+		if (!clientRenderer.mNetworkSource.configure(
 				NumStreams + (GeoStream ? 1 : 0), setupCommand.port + 1,
 				mSession.GetServerIP().c_str(), setupCommand.port, sourceParams))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
 			return;
 		}
-		mNetworkSource.setDebugStream(setupCommand.debug_stream);
-		mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
-		mNetworkSource.setDoChecksums(setupCommand.do_checksums);
+	    clientRenderer.mNetworkSource.setDebugStream(setupCommand.debug_stream);
+	    clientRenderer.mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
+	    clientRenderer.mNetworkSource.setDoChecksums(setupCommand.do_checksums);
 		avs::DecoderParams decoderParams = {};
 		decoderParams.codec             = setupCommand.videoCodec;
 		decoderParams.decodeFrequency   = avs::DecodeFrequency::NALUnit;
@@ -753,11 +420,10 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 
 		size_t stream_width  = setupCommand.video_width;
 		size_t stream_height = setupCommand.video_height;
-		if (!mDecoder.configure(
-				avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50))
+		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
-			mNetworkSource.deconfigure();
+			clientRenderer.mNetworkSource.deconfigure();
 			return;
 		}
 		{
@@ -769,9 +435,9 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 			textureCreateInfo.height = setupCommand.video_height;
 			textureCreateInfo.width  = setupCommand.video_width;
 
-			mVideoTexture->Create(textureCreateInfo);
-			((scc::GL_Texture *) (mVideoTexture.get()))->SetExternalGlTexture(
-					mVideoSurfaceTexture->GetTextureId());
+			clientRenderer.mVideoTexture->Create(textureCreateInfo);
+			((scc::GL_Texture *) (clientRenderer.mVideoTexture.get()))->SetExternalGlTexture(
+					clientRenderer.mVideoSurfaceTexture->GetTextureId());
 
 		}
 		renderConstants.colourOffsetScale.x = 0;
@@ -787,15 +453,15 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		renderConstants.depthOffsetScale.w =
 				float(setupCommand.depth_height) / float(stream_height);
 
-		mSurface.configure(new VideoSurface(mVideoSurfaceTexture));
+		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
 
-		mPipeline.link({&mNetworkSource, &mDecoder, &mSurface});
+		mPipeline.link({&clientRenderer.mNetworkSource, &clientRenderer.mDecoder, &mSurface});
 
 		if (GeoStream)
 		{
 			avsGeometryDecoder.configure(100, &geometryDecoder);
 			avsGeometryTarget.configure(&resourceCreator);
-			mPipeline.link({&mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget});
+			mPipeline.link({&clientRenderer.mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget});
 		}
 		//GL_CheckErrors("Pre-Build Cubemap");
 		//Build Video Cubemap
@@ -816,8 +482,8 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 															{},
 															scr::Texture::CompressionFormat::UNCOMPRESSED
 													};
-			mCubemapTexture->Create(textureCreateInfo);
-			mCubemapTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+			clientRenderer.mCubemapTexture->Create(textureCreateInfo);
+			clientRenderer.mCubemapTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
 		}
 		//GL_CheckErrors("Built Video Cubemap");
 		//Build Lighting Cubemap
@@ -839,21 +505,21 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 															scr::Texture::CompressionFormat::UNCOMPRESSED
 													};
 			textureCreateInfo.mipCount = 1;
-			textureCreateInfo.width  = diffuseSize;
-			textureCreateInfo.height = diffuseSize;
-			mDiffuseTexture->Create(textureCreateInfo);
-			textureCreateInfo.width  = lightSize;
-			textureCreateInfo.height = lightSize;
-			mCubemapLightingTexture->Create(textureCreateInfo);
+			textureCreateInfo.width  = clientRenderer.diffuseSize;
+			textureCreateInfo.height = clientRenderer.diffuseSize;
+			clientRenderer.mDiffuseTexture->Create(textureCreateInfo);
+			textureCreateInfo.width  = clientRenderer.lightSize;
+			textureCreateInfo.height = clientRenderer.lightSize;
+			clientRenderer.mCubemapLightingTexture->Create(textureCreateInfo);
 			textureCreateInfo.mipCount = 3;
-			textureCreateInfo.width  = specularSize;
-			textureCreateInfo.height = specularSize;
-			mSpecularTexture->Create(textureCreateInfo);
-			mRoughSpecularTexture->Create(textureCreateInfo);
-			mDiffuseTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
-			mSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
-			mRoughSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
-			mCubemapLightingTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+			textureCreateInfo.width  = clientRenderer.specularSize;
+			textureCreateInfo.height = clientRenderer.specularSize;
+			clientRenderer.mSpecularTexture->Create(textureCreateInfo);
+			clientRenderer.mRoughSpecularTexture->Create(textureCreateInfo);
+			clientRenderer.mDiffuseTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+			clientRenderer.mSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+			clientRenderer.mRoughSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+			clientRenderer.mCubemapLightingTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
 		}
 		//GL_CheckErrors("Built Lighting Cubemap");
 
@@ -868,7 +534,7 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
     handshake.framerate = 60;
     handshake.FOV = 110;
     handshake.isVR = true;
-	handshake.udpBufferSize = static_cast<uint32_t>(mNetworkSource.getSystemBufferSize());
+	handshake.udpBufferSize = static_cast<uint32_t>(clientRenderer.mNetworkSource.getSystemBufferSize());
 	handshake.maxBandwidthKpS = 10*handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
 	handshake.isReadyToReceivePayloads=true;
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
@@ -947,121 +613,6 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, 
 	}
 }
 #include <algorithm>
-void Application::CopyToCubemaps()
-{
-	// Here the compute shader to copy from the video texture into the cubemap/s.
-	auto &tc=mCubemapTexture->GetTextureCreateInfo();
-	if(mCubemapTexture->IsValid())
-	{
-		const uint32_t ThreadCount=8;
-		GLint max_u,max_v,max_w;
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,0,&max_u);
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,1,&max_v);
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,2,&max_w);
-		scr::uvec3 size  = {tc.width/ThreadCount, tc.width/ThreadCount, 6};
-
-		size.x=std::min(size.x,(uint32_t)max_u);
-		size.y=std::min(size.y,(uint32_t)max_v);
-		size.z=std::min(size.z,(uint32_t)max_w);
-
-		scr::InputCommandCreateInfo inputCommandCreateInfo;
-		inputCommandCreateInfo.effectPassName = "ColourAndDepth";
-
-		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapWithDepthEffect, {mCubemapComputeShaderResources[0][0]});
-		cubemapUB.faceSize			=tc.width;
-		cubemapUB.sourceOffset		={0,0};
-		cubemapUB.mip             	=0;
-		cubemapUB.face             	=0;
-
-		mDeviceContext.DispatchCompute(&inputCommand);
-		GL_CheckErrors("Frame: CopyToCubemaps - Main");
-		cubemapUB.faceSize = 0;
-		scr::ivec2 offset0={(int32_t) ((3 *  tc.width) / 2),(int32_t) (2 * tc.width)};
-		//Lighting Cubemaps
-		inputCommand.m_pComputeEffect=mCopyCubemapEffect;
-        inputCommand.effectPassName = "CopyCubemap";
-		int32_t mip_y=0;
-		{
-			static uint32_t face= 0;
-			mip_y = 0;
-			int32_t mip_size=diffuseSize;
-			uint32_t M=mDiffuseTexture->GetTextureCreateInfo().mipCount;
-			scr::ivec2 offset={offset0.x+diffuseOffset.x,offset0.y+diffuseOffset.y};
-			for (uint32_t m        = 0; m < M; m++)
-			{
-					inputCommand.m_WorkGroupSize = {(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount ,6};
-					mCubemapComputeShaderResources[0].SetImageInfo(1, 0, {mDiffuseTexture->GetSampler(), mDiffuseTexture, m});
-					cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
-					cubemapUB.faceSize 				= uint32_t(mip_size);
-					cubemapUB.mip                  = m;
-					cubemapUB.face				   = 0;
-					inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
-					mDeviceContext.DispatchCompute(&inputCommand);
-					//OVR_LOG("Dispatch offset=%d %d wgSize=%d %d %d mipSize=%d",cubemapUB.sourceOffset.x,cubemapUB.sourceOffset.y,inputCommand.m_WorkGroupSize.x,inputCommand.m_WorkGroupSize.y,inputCommand.m_WorkGroupSize.z,cubemapUB.faceSize);
-
-				mip_y += 2 * mip_size;
-				mip_size /= 2;
-			}
-			face++;
-			face=face%6;
-		}
-		{
-			mip_y = 0;
-			int32_t          mip_size = specularSize;
-			uint32_t         M        = mSpecularTexture->GetTextureCreateInfo().mipCount;
-			scr::ivec2       offset   = {
-					offset0.x + specularOffset.x, offset0.y + specularOffset.y};
-			for (uint32_t m        = 0; m < M; m++)
-			{
-				inputCommand.m_WorkGroupSize = {
-						(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount, 6};
-				mCubemapComputeShaderResources[0].SetImageInfo(
-						1, 0, {mSpecularTexture->GetSampler(), mSpecularTexture, m});
-				cubemapUB.sourceOffset         = {offset.x, offset.y + mip_y};
-				cubemapUB.faceSize             = uint32_t(mip_size);
-				cubemapUB.mip                  = m;
-				cubemapUB.face                 = 0;
-				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
-				mDeviceContext.DispatchCompute(&inputCommand);
-				mip_y += 2 * mip_size;
-				mip_size /= 2;
-			}
-		}
-		{
-			mip_y = 0;
-			int32_t          mip_size = specularSize;
-			uint32_t         M        = mSpecularTexture->GetTextureCreateInfo().mipCount;
-			scr::ivec2       offset   = {	offset0.x + roughOffset.x, offset0.y + roughOffset.y};
-			for(uint32_t m=0;m<M;m++)
-			{
-				inputCommand.m_WorkGroupSize={(mip_size+1)/ThreadCount,(mip_size+1)/ThreadCount,6};
-				mCubemapComputeShaderResources[0].SetImageInfo(1 ,0, {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture, m});
-				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
-				cubemapUB.faceSize 				= uint32_t(mip_size);
-				cubemapUB.mip             		= m;
-				cubemapUB.face					= 0;
-				inputCommand.m_ShaderResources	= {mCubemapComputeShaderResources[0][1]};
-				mDeviceContext.DispatchCompute(&inputCommand);
-				mip_y							+=2*mip_size;
-				mip_size/=2;
-			}
-		}
-		GL_CheckErrors("Frame: CopyToCubemaps - Lighting");
-		{
-            inputCommandCreateInfo.effectPassName = "ExtractPosition";
-
-			scr::uvec3 size  = {1,1,1};
-			cubemapUB.sourceOffset		={0,0};
-			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractCameraPositionEffect, {mCubemapComputeShaderResources[0][2]});
-			cubemapUB.faceSize			=tc.width;
-			cubemapUB.sourceOffset		={(int32_t)mVideoTexture->GetTextureCreateInfo().width - (32 * 4), (int32_t)mVideoTexture->GetTextureCreateInfo().height - (3 * 8)};
-
-			mDeviceContext.DispatchCompute(&inputCommand);
-		}
-
-	}
-}
-
 
 const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
 		, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)

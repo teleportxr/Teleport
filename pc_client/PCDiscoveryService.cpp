@@ -67,8 +67,14 @@ bool PCDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remote)
 	ServiceDiscoveryResponse response = {};
 	ENetAddress  responseAddress = {0xffffffff, 0};
 	ENetBuffer responseBuffer = {sizeof(response),&response};
-	// Send our client id to the server on the discovery port.
-	enet_socket_send(serviceDiscoverySocket, &broadcastAddress, &buffer, 1);
+	// Send our client id to the server on the discovery port. Once every 1000 frames.
+	static int frame=1000;
+	frame--;
+	if(!frame)
+	{
+		enet_socket_send(serviceDiscoverySocket, &broadcastAddress, &buffer, 1);
+		frame=1000;
+	}
 	{
 		static size_t bytesRecv;
 		do

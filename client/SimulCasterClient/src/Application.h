@@ -21,15 +21,18 @@
 #include "VideoDecoderProxy.h"
 #include "LobbyRenderer.h"
 #include "ClientRenderer.h"
+#include "Controllers.h"
 
-namespace OVR {
+namespace OVR
+{
 	class ovrLocale;
 }
 
-namespace scr {
+namespace scr
+{
 	class Texture;
 }
-class Application : public OVR::VrAppInterface, public SessionCommandInterface, public DecodeEventInterface
+class Application : public OVR::VrAppInterface, public SessionCommandInterface, public DecodeEventInterface, public ClientAppInterface
 {
 public:
 	Application();
@@ -55,8 +58,6 @@ public:
 		return *mLocale;
 	}
 
-	bool InitializeController();
-
 	/* Begin SessionCommandInterface */
 	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors) override;
 
@@ -72,31 +73,14 @@ public:
 	/* End DecodeEventInterface */
 
 private:
-	struct CubemapUB
-	{
-		scr::ivec2 sourceOffset;
-		uint32_t   faceSize;
-		uint32_t    mip = 0;
-		uint32_t    face = 0;
-	};
-	CubemapUB cubemapUB;
-	struct VideoUB
-	{
-		scr::vec4 eyeOffsets[2];
-		ovrMatrix4f invViewProj[2];
-		scr::vec3 cameraPosition;
-		int pad_;
-	};
-	VideoUB videoUB;
+	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
 
 	avs::Context  mContext;
 	avs::Pipeline mPipeline;
 
-	avs::Decoder       mDecoder;
 	avs::Surface       mSurface;
-	avs::NetworkSource mNetworkSource;
 	bool               mPipelineConfigured;
 
 	static constexpr size_t NumStreams = 1;
@@ -121,52 +105,23 @@ private:
 
 	OVR::OvrSceneView mScene;
 
-	OVR::ovrSurfaceDef mVideoSurfaceDef;
-	OVR::GlProgram     mVideoSurfaceProgram;
-	OVR::SurfaceTexture *mVideoSurfaceTexture;
-	std::shared_ptr<scr::Texture>       mVideoTexture;
-	std::shared_ptr<scr::Texture>       mCubemapTexture;
-	std::shared_ptr<scr::Texture>       mDiffuseTexture;
-	std::shared_ptr<scr::Texture>       mSpecularTexture;
-	std::shared_ptr<scr::Texture>       mRoughSpecularTexture;
-	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
-	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
-	std::shared_ptr<scr::UniformBuffer> mVideoUB;
-	std::shared_ptr<scr::ShaderStorageBuffer> mCameraPositionBuffer;
-	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
-	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
-	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
-	std::shared_ptr<scr::Effect>        mExtractCameraPositionEffect;
-
-	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
-
-	std::string                         CopyCubemapSrc;
-	std::string                         ExtractPositionSrc;
-
 	SessionClient                       mSession;
 
 	std::vector<float> mRefreshRates;
-
-	ovrDeviceID mControllerID;
-
-	ovrVector2f mTrackpadDim;
-    ControllerState mLastPrimaryControllerState; //State of the primary controller on the last frame.
 
 	int mNumPendingFrames                  = 0;
 
 	//Clientside Renderering Objects
 	scc::GL_DeviceContext mDeviceContext;
 
-	scr::vec4 mCameraPositions[8];
-
 	bool receivedInitialPos=false;
 
-	void CopyToCubemaps();
-    const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources);
-	std::string LoadTextFile(const char *filename);
-	bool mShowInfo=true;
+    const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources) override;
+
+	std::string LoadTextFile(const char *filename) override;
 	ClientRenderer clientRenderer;
 	scr::ResourceManagers resourceManagers;
 	ResourceCreator        resourceCreator;
 	LobbyRenderer lobbyRenderer;
+	Controllers controllers;
 };
