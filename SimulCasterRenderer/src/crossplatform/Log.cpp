@@ -1,6 +1,7 @@
 #include "Log.h"
 #include <iostream>
 #include <stdarg.h>
+#if defined(PLATFORM_ANDROID)
 #include <android/log.h>
 
 class AndroidStreambuf : public std::streambuf
@@ -51,6 +52,8 @@ void RedirectStdCoutCerr()
 	std::cout.rdbuf(&androidCout);
 	std::cerr.rdbuf(&androidCerr);
 }
+#endif
+
 void ClientLog(const char* fileTag, int lineno, const char* msg_type, const char* format_str, ...)
 {
 	int size = (int)strlen(format_str) + 100;
