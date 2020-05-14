@@ -196,6 +196,11 @@ bool ClientMessaging::hasPeer() const
 	return peer;
 }
 
+bool ClientMessaging::hasReceivedHandshake() const
+{
+	return casterContext->axesStandard!= avs::AxesStandard::NotInitialized;
+}
+
 bool ClientMessaging::sendCommand(const avs::Command& avsCommand) const
 {
 	assert(peer);
@@ -370,11 +375,18 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	std::cout << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 }
 
-void ClientMessaging::setPosition(const avs::vec3 &pos)
+bool ClientMessaging::setPosition(const avs::vec3 &pos)
 {
 	avs::SetPositionCommand setp;
-	setp.position=pos;
-	sendCommand(setp);
+	avs::vec3 p=pos;
+	if(casterContext->axesStandard!= avs::AxesStandard::NotInitialized)
+	{
+		avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, p);
+		setp.position=p;
+		sendCommand(setp);
+	}
+	else
+		return false;
 }
 
 void ClientMessaging::receiveInput(const ENetPacket* packet)

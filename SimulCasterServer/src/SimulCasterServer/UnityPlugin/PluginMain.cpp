@@ -612,13 +612,13 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 }
 
 TELEPORT_EXPORT
-void Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
+bool Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
 {
 	auto &c=clientServices.find(clientID);
 	if(c==clientServices.end())
-		return;
+		return false;
 	ClientData &clientData=c->second;
-	clientData.setOrigin(*pos);
+	return clientData.setOrigin(*pos);
 }
 TELEPORT_EXPORT
 bool Client_IsConnected(avs::uid clientID)

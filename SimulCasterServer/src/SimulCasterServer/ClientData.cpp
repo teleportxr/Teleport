@@ -1,15 +1,19 @@
 #include "SimulCasterServer/ClientData.h"
 
-void ClientData::setOrigin(avs::vec3 pos)
+bool ClientData::setOrigin(avs::vec3 pos)
 {
-	if(clientMessaging.hasPeer())
+	if(clientMessaging.hasPeer()&& clientMessaging.hasReceivedHandshake())
 	{
-		clientMessaging.setPosition(pos);
+		if(clientMessaging.setPosition(pos))
+		{
 		// ASSUME the message was received...
 		// TODO: Only set this when client confirms.
-		_hasOrigin=true;
-		originClientHas=pos;
+			_hasOrigin=true;
+			originClientHas=pos;
+			return true;
+		}
 	}
+	return false;
 }
 
 bool ClientData::isConnected() const
