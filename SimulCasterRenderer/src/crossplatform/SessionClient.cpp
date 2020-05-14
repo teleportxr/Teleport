@@ -178,6 +178,13 @@ bool SessionClient::IsConnected() const
 	return mServerPeer != nullptr;
 }
 
+int SessionClient::GetPort() const
+{
+	if(!mServerPeer)
+		return 0;
+	return mServerPeer->address.port;
+}
+
 std::string SessionClient::GetServerIP() const
 {
 	if(IsConnected())

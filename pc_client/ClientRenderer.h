@@ -139,6 +139,8 @@ public:
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
 	void PrintHelpText(simul::crossplatform::DeviceContext& deviceContext);
+	
+	void DrawOSD(simul::crossplatform::DeviceContext& deviceContext);
 	void RenderLocalActors(simul::crossplatform::DeviceContext &);
 	int AddView();
 	void ResizeView(int view_id, int W, int H);

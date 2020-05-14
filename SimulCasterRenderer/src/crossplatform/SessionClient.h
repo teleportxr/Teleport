@@ -44,6 +44,7 @@ public:
 
     bool IsConnected() const;
     std::string GetServerIP() const;
+    int GetPort() const;
     
 	unsigned long long receivedInitialPos = 0;
 

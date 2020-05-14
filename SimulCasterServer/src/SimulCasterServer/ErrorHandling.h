@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <stdexcept> // for runtime_error
 
-#define DEBUG_BREAK_ONCE {bool done=false;if(!done){ done=true;DebugBreak();}}
+#define DEBUG_BREAK_ONCE {static bool done=false;if(!done){ done=true;DebugBreak();}}
 #ifndef TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_INTERNAL_CHECKS 0
 #endif

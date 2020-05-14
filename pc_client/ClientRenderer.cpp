@@ -474,12 +474,22 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	cpuProfiler.EndFrame();
 	if(show_osd)
 	{
+		DrawOSD(deviceContext);
+	}
+	frame_number++;
+}
+
+
+
+void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
+{
+	vec4 white(1.f, 1.f, 1.f, 1.f);
 		const avs::NetworkSourceCounters counters = source.getCounterValues();
 		//ImGui::Text("Frame #: %d", renderStats.frameCounter);
 		//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
 		deviceContext.framePrintX = 0;
-		renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s"
-			, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str()):"Not connected",white);
+		renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
+			, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):simul::base::QuickFormat("Not connected. Discovering on port %d",REMOTEPLAY_DISCOVERY_PORT),white);
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
 		if(show_osd== NETWORK_OSD)
 		{
@@ -518,11 +528,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
 		//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
 		PrintHelpText(deviceContext);
-	}
-	frame_number++;
 }
-
-
 
 void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
 {
@@ -809,7 +815,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 {
 	mouseCameraInput.forward_back_input	=(float)keydown['w']-(float)keydown['s'];
 	mouseCameraInput.right_left_input	=(float)keydown['d']-(float)keydown['a'];
-	mouseCameraInput.up_down_input		=(float)keydown['t']-(float)keydown['g'];
+	mouseCameraInput.up_down_input		=(float)keydown['q']-(float)keydown['z'];
 	static float spd = 2.0f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step

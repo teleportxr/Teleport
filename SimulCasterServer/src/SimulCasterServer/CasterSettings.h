@@ -14,7 +14,6 @@ namespace SCServer
 		int32_t detectionSphereBufferDistance;
 		int32_t expectedLag;
 		int64_t throttleKpS;
-		void* handActor;
 
 		bool enableGeometryStreaming;
 		uint8_t geometryTicksPerSecond;

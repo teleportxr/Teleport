@@ -1,9 +1,8 @@
 #include "Log.h"
 #include <iostream>
 #include <stdarg.h>
-#if defined(PLATFORM_ANDROID)
+#ifdef __ANDROID__
 #include <android/log.h>
-
 class AndroidStreambuf : public std::streambuf
 {
 public:
