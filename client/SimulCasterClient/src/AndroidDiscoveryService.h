@@ -8,5 +8,5 @@ public:
     AndroidDiscoveryService();
     virtual ~AndroidDiscoveryService();
 
-    virtual bool Discover(uint16_t discoveryPort, ENetAddress& remote) override;
+    virtual uint32_t Discover(uint16_t discoveryPort, ENetAddress& remote) override;
 };

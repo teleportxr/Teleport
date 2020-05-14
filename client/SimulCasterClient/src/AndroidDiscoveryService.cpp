@@ -30,7 +30,7 @@ AndroidDiscoveryService::~AndroidDiscoveryService()
     }
 }
 
-bool AndroidDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remote)
+uint32_t AndroidDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remote)
 {
     bool serverDiscovered = false;
 
@@ -43,7 +43,7 @@ bool AndroidDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remo
         if(serviceDiscoverySocket <= 0)
         {
             FAIL("Failed to create service discovery UDP socket");
-            return false;
+            return 0;
         }
 
         int flagEnable = 1;
@@ -58,7 +58,7 @@ bool AndroidDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remo
             serviceDiscoverySocket = 0;
 
             FAIL("Failed to bind to service discovery UDP socket");
-            return false;
+            return 0;
         }
     }
     // Don't send too many broadcasts.
@@ -107,6 +107,7 @@ bool AndroidDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remo
 
         enet_socket_destroy(serviceDiscoverySocket);
         serviceDiscoverySocket = 0;
+        return clientID;
     }
-    return serverDiscovered;
+    return 0;
 }

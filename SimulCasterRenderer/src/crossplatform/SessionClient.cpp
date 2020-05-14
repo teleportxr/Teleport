@@ -20,9 +20,12 @@ void SessionClient::SetResourceCreator(ResourceCreator *r)
 	mResourceCreator=r;
 }
 
-bool SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
+uint32_t SessionClient::Discover(uint16_t discoveryPort, ENetAddress& remote)
 {
-	return discoveryService->Discover(discoveryPort, remote);
+	uint32_t cl_id=discoveryService->Discover(discoveryPort, remote);
+	if(cl_id!=0)
+		clientID=cl_id;
+	return cl_id;
 }
 
 bool SessionClient::Connect(const char* remoteIP, uint16_t remotePort, uint timeout)
@@ -119,6 +122,8 @@ void SessionClient::Disconnect(uint timeout)
 
 	handshakeAcknowledged = false;
 	receivedInitialPos = false;
+	// TODO: retain client id for reconnection.
+	clientID=0;
 }
 
 void SessionClient::SendClientMessage(const avs::ClientMessage& msg)

@@ -415,6 +415,17 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				cubemapClearEffect->Unapply(deviceContext);
 			}
 		}
+		cameraPositionBuffer.CopyToReadBuffer(deviceContext);
+		const vec4 *videoPosBuffer=cameraPositionBuffer.OpenReadBuffer(deviceContext);
+		if(videoPosBuffer)
+		{
+			if(videoPosBuffer[0].w==110.0f)
+			{
+				videoPos = (const float*)videoPosBuffer;
+				videoPosDecoded=true;
+			}
+		}
+		cameraPositionBuffer.CloseReadBuffer(deviceContext);
 		RenderLocalActors(deviceContext);
 
 		// We must deactivate the depth buffer here, in order to use it as a texture:
@@ -466,37 +477,51 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		const avs::NetworkSourceCounters counters = source.getCounterValues();
 		//ImGui::Text("Frame #: %d", renderStats.frameCounter);
 		//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
-		int y = 0;
-		int dy = 18;
-		renderPlatform->Print(deviceContext, w / 2, y += dy, sessionClient.IsConnected()? simul::base::QuickFormat("Connected to: %s"
-			,sessionClient.GetServerIP().c_str()):"Not connected",white);
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Framerate: %4.4f", framerate));
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Bandwidth: %4.4f", counters.bandwidthKPS));
-		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Jitter Buffer Length: %d ", counters.jitterBufferLength ));
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Jitter Buffer Push: %d ", counters.jitterBufferPush));
-		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Jitter Buffer Pop: %d ", counters.jitterBufferPop )); 
-		renderPlatform->Print(deviceContext,w/2,y+=dy, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
-		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network Packet orphans: %d", counters.m_packetMapOrphans));
-		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Max age: %d", counters.m_maxAge));
-		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
-		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
-		renderPlatform->Print(deviceContext,w/2,y+=dy,simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
-		renderPlatform->Print(deviceContext, w/2,y+=dy,simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDPsReceived));
-		avs::Transform transform = decoder[0].getCameraTransform();
-		vec3 campos=camera.GetPosition();
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Camera: %4.4f %4.4f %4.4f", campos.x, campos.y, campos.z),white);
-
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		renderPlatform->Print(deviceContext, w / 2, y += dy, simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager->GetActorList().size(),resourceManagers.mMeshManager.GetCache(cacheLock).size()), white);
+		deviceContext.framePrintX = 0;
+		renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s"
+			, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str()):"Not connected",white);
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
+		if(show_osd== NETWORK_OSD)
+		{
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Bandwidth: %4.4f", counters.bandwidthKPS));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Length: %d ", counters.jitterBufferLength ));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Push: %d ", counters.jitterBufferPush));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Pop: %d ", counters.jitterBufferPop )); 
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network Packet orphans: %d", counters.m_packetMapOrphans));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Max age: %d", counters.m_maxAge));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDPsReceived));
+		}
+		else if(show_osd== CAMERA_OSD)
+		{
+			avs::Transform transform = decoder[0].getCameraTransform();
+			vec3 viewpos=camera.GetPosition();
+			renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", oculusOrigin.x, oculusOrigin.y, oculusOrigin.z)):"Origin:", white);
+			renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("  View: %4.4f %4.4f %4.4f", viewpos.x, viewpos.y, viewpos.z),white);
+			if(videoPosDecoded)
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
+			else
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: -"), white);
+		}
+		else if(show_osd==GEOMETRY_OSD)
+		{
+			std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+			renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager->GetActorList().size(),resourceManagers.mMeshManager.GetCache(cacheLock).size()), white);
+		}
 
 		//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 		//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
 		//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
+		PrintHelpText(deviceContext);
 	}
 	frame_number++;
 }
+
 
 
 void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
@@ -655,6 +680,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 {
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
+	videoPosDecoded=false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 1212992;
@@ -804,24 +830,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
 		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f, 0.0f, 0.0f));
-		if (decoder->hasValidTransform())
-		{
-			avs::vec3 vpos = decoder->getCameraTransform().position;
-			videoPos = *((vec3*)(&vpos));
-			// Oculus Origin means where the headset's zero is in real space.
-			if (!receivedInitialPos)
-			{
-				oculusOrigin = vpos;
-				vec3 pos = (const float*)& oculusOrigin;
-				camera.SetPosition(pos);
-				receivedInitialPos = true;
-			}
-			else
-			{
-				vec3 pos = camera.GetPosition();
-				pos.z = decoder->getCameraTransform().position.z;
-			}
-		}
+
 		if(!receivedInitialPos)
 		{
 			camera.SetPositionAsXYZ(0.f, 0.f, 5.f);
@@ -881,64 +890,86 @@ void ClientRenderer::OnMouse(bool bLeftButtonDown
 	mouseCameraInput.MouseY=yPos;
 }
 
+void ClientRenderer::PrintHelpText(simul::crossplatform::DeviceContext& deviceContext)
+{
+	deviceContext.framePrintY = 0;
+	deviceContext.framePrintX = hdrFramebuffer->GetWidth() / 2;
+	renderPlatform->LinePrint(deviceContext, "V: Show video");
+	renderPlatform->LinePrint(deviceContext, "O: Toggle OSD");
+	renderPlatform->LinePrint(deviceContext, "C: Toggle render from centre");
+	renderPlatform->LinePrint(deviceContext, "T: Toggle Textures");
+	renderPlatform->LinePrint(deviceContext, "K: Disconnect");
+	renderPlatform->LinePrint(deviceContext, "M: Change rendermode");
+	renderPlatform->LinePrint(deviceContext, "R: Recompile shaders");
+	renderPlatform->LinePrint(deviceContext, "NUM 0: PBR");
+	renderPlatform->LinePrint(deviceContext, "NUM 1: Albedo");
+	renderPlatform->LinePrint(deviceContext, "NUM 4: Unswizzled Normals");
+	renderPlatform->LinePrint(deviceContext, "NUM 5: Unreal Normals");
+	renderPlatform->LinePrint(deviceContext, "NUM 6: Unity Normals");
+	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
+}
 void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 {
 	switch (wParam) 
 	{
-		case 'V':
-			if(!bKeyDown)
-				show_video = !show_video;
-			break;
-		case 'O':
-			if (!bKeyDown)
-				show_osd = !show_osd;
-			break;
-		case 'C':
-			if (!bKeyDown)
-				render_from_video_centre = !render_from_video_centre;
-			break; 
-		case 'T':
-			if (!bKeyDown)
-				show_textures = !show_textures;
-			break;
-		case 'K':
-			sessionClient.Disconnect(0);
-			break;
 		case VK_LEFT: 
 		case VK_RIGHT: 
 		case VK_UP: 
 		case VK_DOWN:
+			return;
+		default:
+			int  k = tolower(wParam);
+			if (k > 255)
+				return;
+			keydown[k] = bKeyDown ? 1 : 0;
+		break; 
+	}
+	if (!bKeyDown)
+	{
+		switch (wParam)
+		{
+		case 'V':
+			show_video = !show_video;
+			break;
+		case 'O':
+			show_osd =(show_osd+1)%NUM_OSDS;
+			break;
+		case 'C':
+			render_from_video_centre = !render_from_video_centre;
+			break;
+		case 'T':
+			show_textures = !show_textures;
+			break;
+		case 'K':
+			sessionClient.Disconnect(0);
 			break;
 		case 'M':
 			RenderMode++;
-			RenderMode= RenderMode%2;
+			RenderMode = RenderMode % 2;
 			break;
 		case 'R':
 			RecompileShaders();
 			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
-			if(!bKeyDown) ChangePass(ShaderMode::PBR);
+			ChangePass(ShaderMode::PBR);
 			break;
 		case VK_NUMPAD1: //Display only albedo/diffuse.
-			if(!bKeyDown) ChangePass(ShaderMode::ALBEDO);
+			ChangePass(ShaderMode::ALBEDO);
 			break;
 		case VK_NUMPAD4: //Display normals for native PC client frame-of-reference.
-			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNSWIZZLED);
+			ChangePass(ShaderMode::NORMAL_UNSWIZZLED);
 			break;
 		case VK_NUMPAD5: //Display normals swizzled for matching Unreal output.
-			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNREAL);
+			ChangePass(ShaderMode::NORMAL_UNREAL);
 			break;
 		case VK_NUMPAD6: //Display normals swizzled for matching Unity output.
-			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_UNITY);
+			ChangePass(ShaderMode::NORMAL_UNITY);
 			break;
 		case VK_NUMPAD2: //Display normals swizzled for matching Unity output.
-			if(!bKeyDown) ChangePass(ShaderMode::NORMAL_VERTEXNORMALS);
+			ChangePass(ShaderMode::NORMAL_VERTEXNORMALS);
 			break;
-		default: 
-			int  k=tolower(wParam);
-			if(k>255)
-				return;
-			keydown[k]=bKeyDown?1:0;
-		break; 
+		default:
+			break;
+		}
 	}
 }

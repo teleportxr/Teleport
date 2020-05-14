@@ -33,7 +33,7 @@ public:
     ~SessionClient();
 
     void SetResourceCreator(ResourceCreator *);
-    bool Discover(uint16_t discoveryPort, ENetAddress& remote);
+	uint32_t Discover(uint16_t discoveryPort, ENetAddress& remote);
     bool Connect(const char* remoteIP, uint16_t remotePort, uint timeout);
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
@@ -48,6 +48,12 @@ public:
 	unsigned long long receivedInitialPos = 0;
 
     avs::vec3 GetInitialPos() const;
+
+    uint32_t GetClientID() const
+	{
+    	return clientID;
+	}
+
 private:
     void DispatchEvent(const ENetEvent& event);
     void ParseCommandPacket(ENetPacket* packet);
@@ -81,4 +87,6 @@ private:
     std::vector<avs::uid> mLostActors; //Actor that have left bounds, are about to be hidden, and need to be confirmed to the server.
 
     avs::vec3 initialPos;
+
+	uint32_t clientID=0;
 };

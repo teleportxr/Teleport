@@ -122,7 +122,10 @@ shader void CS_ExtractCameraPosition(uint3 g : SV_GroupID, uint3 t : SV_GroupThr
 		{
 			all_bits|=accumulate_position[i];
 		}
-		RWCameraPosition[0] = asfloat(all_bits);//asfloat(accumulate_position[4]);// float4(SceneColor.rgba);
+		 vec4 campos= asfloat(all_bits);//asfloat(accumulate_position[4]);// float4(SceneColor.rgba);
+		 // Set w to magic number for sanity check.
+		 campos.w=110.0;
+		 RWCameraPosition[0]=campos;
 	}
 }
 

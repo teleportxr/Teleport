@@ -114,7 +114,15 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	scr::ResourceManagers resourceManagers;
 	void Recompose(simul::crossplatform::DeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 	bool show_video = false;
-	bool show_osd = true;
+	enum
+	{
+		NO_OSD,
+		CAMERA_OSD,
+		NETWORK_OSD,
+		GEOMETRY_OSD,
+		NUM_OSDS
+	};
+	int show_osd = CAMERA_OSD;
 	bool render_from_video_centre = false;
 	bool show_textures = false;
 
@@ -130,6 +138,7 @@ public:
 	virtual bool OnActorLeftBounds(avs::uid actor_uid) override;
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
+	void PrintHelpText(simul::crossplatform::DeviceContext& deviceContext);
 	void RenderLocalActors(simul::crossplatform::DeviceContext &);
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
@@ -185,4 +194,5 @@ public:
 	unsigned long long receivedInitialPos = 0;
 	avs::vec3 oculusOrigin;
 	vec3 videoPos;
+	bool videoPosDecoded=false;
 };

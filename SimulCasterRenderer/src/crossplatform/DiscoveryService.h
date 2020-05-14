@@ -9,8 +9,8 @@ class DiscoveryService
 {
 public:
 	virtual ~DiscoveryService(){};
-
-	virtual bool Discover(uint16_t discoveryPort, ENetAddress& remote) = 0;
+	/// Returns Client ID.
+	virtual uint32_t Discover(uint16_t discoveryPort, ENetAddress& remote) = 0;
 protected:
 	uint32_t clientID = 0;
 	int serviceDiscoverySocket = 0;

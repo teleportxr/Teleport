@@ -467,7 +467,10 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 	}
 	else
 		return;	// already got this client.
-	ClientData& newClient = clientServices.at(clientID);
+	auto &c= clientServices.find(clientID);
+	if(c==clientServices.end())
+		return;
+	ClientData& newClient = c->second;
 	newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
 
