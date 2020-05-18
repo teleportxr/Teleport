@@ -10,7 +10,6 @@ namespace SCServer
 		virtual bool initialise(uint16_t inDiscoveryPort = 0, uint16_t inServicePort = 0) = 0;
 		virtual void shutdown() = 0;
 		virtual void tick() = 0;
-		virtual uint64_t getNewClientID() =0;
 		virtual void discoveryCompleteForClient(uint64_t ClientID)=0;
 	};
 }

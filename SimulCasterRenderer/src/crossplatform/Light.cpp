@@ -40,36 +40,39 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	s_LightData[m_LightID].power = 100; //i.e 100W
 	UpdateLightSpaceTransform();
 
-	m_ShadowMapSampler = m_CI.renderPlatform->InstantiateSampler();
-	Sampler::SamplerCreateInfo sci;
-	sci.minFilter = Sampler::Filter::LINEAR;
-	sci.magFilter = Sampler::Filter::LINEAR;
-	sci.wrapU = Sampler::Wrap::CLAMP_TO_EDGE;
-	sci.wrapV = Sampler::Wrap::CLAMP_TO_EDGE;
-	sci.wrapW = Sampler::Wrap::CLAMP_TO_EDGE;
-	sci.minLod = 0;
-	sci.maxLod = 0;
-	sci.anisotropyEnable = false;
-	sci.maxAnisotropy = 1.0f;
-	m_ShadowMapSampler->Create(&sci);
+	if (m_CI.shadowMapTexture)
+	{
+		m_ShadowMapSampler = m_CI.renderPlatform->InstantiateSampler();
+		Sampler::SamplerCreateInfo sci;
+		sci.minFilter = Sampler::Filter::LINEAR;
+		sci.magFilter = Sampler::Filter::LINEAR;
+		sci.wrapU = Sampler::Wrap::CLAMP_TO_EDGE;
+		sci.wrapV = Sampler::Wrap::CLAMP_TO_EDGE;
+		sci.wrapW = Sampler::Wrap::CLAMP_TO_EDGE;
+		sci.minLod = 0;
+		sci.maxLod = 0;
+		sci.anisotropyEnable = false;
+		sci.maxAnisotropy = 1.0f;
+		m_ShadowMapSampler->Create(&sci);
 	
-	m_CI.shadowMapTexture->UseSampler(m_ShadowMapSampler);
+		m_CI.shadowMapTexture->UseSampler(m_ShadowMapSampler);
 
-	m_ShaderResourceLayout.AddBinding(2, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(19, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(20, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(21, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(22, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(23, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(24, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(25, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-	m_ShaderResourceLayout.AddBinding(26, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(2, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(19, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(20, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(21, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(22, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(23, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(24, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(25, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(26, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { s_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
+		m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
+		m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { s_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
 	
-	std::string shaderResourceName = std::string("u_ShadowMap") + std::to_string(m_LightID);
-	m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});
+		std::string shaderResourceName = std::string("u_ShadowMap") + std::to_string(m_LightID);
+		m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});
+	}
 }
 
 void Light::UpdatePosition(const vec3& position) 

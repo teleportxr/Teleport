@@ -36,7 +36,10 @@ T* getResource(std::map<avs::uid, T>& resourceMap, avs::uid id)
 	//Assuming an incorrect resource should not happen, or at least not frequently.
 	try
 	{
-		return &resourceMap.at(id);
+		auto r=resourceMap.find(id);
+		if (r != resourceMap.end())
+			return &r->second;
+		return nullptr;
 	}
 	catch(std::out_of_range oor)
 	{
@@ -51,7 +54,9 @@ const T* getResource(const std::map<avs::uid, T>& resourceMap, avs::uid id)
 	//Assuming an incorrect resource should not happen, or at least not frequently.
 	try
 	{
-		return &resourceMap.at(id);
+		auto r = resourceMap.find(id);
+		if (r!=resourceMap.end())
+			return &r->second;
 	}
 	catch(std::out_of_range oor)
 	{
@@ -393,7 +398,8 @@ namespace SCServer
 	{
 		nodes[id] = newNode;
 
-		if(newNode.data_type == avs::NodeDataType::ShadowMap) lightNodes.emplace_back(avs::LightNodeResources{id, newNode.data_uid});
+		if(newNode.data_type == avs::NodeDataType::ShadowMap|| newNode.data_type == avs::NodeDataType::Light)
+			lightNodes.emplace_back(avs::LightNodeResources{id, newNode.data_uid});
 	}
 
 	void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard)

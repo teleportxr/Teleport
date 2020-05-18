@@ -197,4 +197,5 @@ public:
 	avs::vec3 oculusOrigin;
 	vec3 videoPos;
 	bool videoPosDecoded=false;
+	bool canConnect=false;
 };

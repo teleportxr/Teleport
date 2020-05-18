@@ -479,55 +479,58 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	frame_number++;
 }
 
-
-
 void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 {
 	vec4 white(1.f, 1.f, 1.f, 1.f);
-		const avs::NetworkSourceCounters counters = source.getCounterValues();
-		//ImGui::Text("Frame #: %d", renderStats.frameCounter);
-		//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
-		deviceContext.framePrintX = 0;
-		renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
-			, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):simul::base::QuickFormat("Not connected. Discovering on port %d",REMOTEPLAY_DISCOVERY_PORT),white);
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
-		if(show_osd== NETWORK_OSD)
-		{
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Bandwidth: %4.4f", counters.bandwidthKPS));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Length: %d ", counters.jitterBufferLength ));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Push: %d ", counters.jitterBufferPush));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Pop: %d ", counters.jitterBufferPop )); 
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network Packet orphans: %d", counters.m_packetMapOrphans));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Max age: %d", counters.m_maxAge));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDPsReceived));
-		}
-		else if(show_osd== CAMERA_OSD)
-		{
-			avs::Transform transform = decoder[0].getCameraTransform();
-			vec3 viewpos=camera.GetPosition();
-			renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", oculusOrigin.x, oculusOrigin.y, oculusOrigin.z)):"Origin:", white);
-			renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("  View: %4.4f %4.4f %4.4f", viewpos.x, viewpos.y, viewpos.z),white);
-			if(videoPosDecoded)
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
-			else
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: -"), white);
-		}
-		else if(show_osd==GEOMETRY_OSD)
-		{
-			std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-			renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("Actors: %d, Meshes: %d",resourceManagers.mActorManager->GetActorList().size(),resourceManagers.mMeshManager.GetCache(cacheLock).size()), white);
-		}
+	const avs::NetworkSourceCounters counters = source.getCounterValues();
+	//ImGui::Text("Frame #: %d", renderStats.frameCounter);
+	//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
+	deviceContext.framePrintX = 8;
+	deviceContext.framePrintY = 8;
+	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
+		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
+		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d",REMOTEPLAY_DISCOVERY_PORT):"Offline"),white);
+	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
+	if(show_osd== NETWORK_OSD)
+	{
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Bandwidth: %4.4f", counters.bandwidthKPS));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Length: %d ", counters.jitterBufferLength ));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Push: %d ", counters.jitterBufferPush));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Pop: %d ", counters.jitterBufferPop )); 
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network Packet orphans: %d", counters.m_packetMapOrphans));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Max age: %d", counters.m_maxAge));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDPsReceived));
+	}
+	else if(show_osd== CAMERA_OSD)
+	{
+		avs::Transform transform = decoder[0].getCameraTransform();
+		vec3 viewpos=camera.GetPosition();
+		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", oculusOrigin.x, oculusOrigin.y, oculusOrigin.z)):"Origin:", white);
+		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("  View: %4.4f %4.4f %4.4f", viewpos.x, viewpos.y, viewpos.z),white);
+		if(videoPosDecoded)
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
+		else
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: -"), white);
+	}
+	else if(show_osd==GEOMETRY_OSD)
+	{
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Actors: %d\nMeshes: %d\nLights: %d"
+		,resourceManagers.mActorManager->GetActorList().size()
+		,resourceManagers.mMeshManager.GetCache(cacheLock).size()
+		,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
+	}
 
-		//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
-		//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
-		//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
-		PrintHelpText(deviceContext);
+	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
+	//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
+	//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
+	PrintHelpText(deviceContext);
 }
 
 void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
@@ -544,70 +547,69 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	{
 		const scr::Actor& actor = actorList[i]->actor;
 		const scr::Transform& transform = actor.GetTransform();
-
 		const std::shared_ptr<scr::Mesh> mesh = actor.GetMesh();
-		if(!mesh)
-			continue;
-		const std::vector<std::shared_ptr<scr::Material>> materials = actor.GetMaterials();
-		if(materials.size() == 0)
-			continue;
-
-		size_t element = 0;
-		const auto& CI = mesh->GetMeshCreateInfo();
-		for(const std::shared_ptr<scr::Material>& m : materials)
+		if(mesh)
 		{
-			if(element >= CI.ib.size())
-				break;
-			const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(CI.vb[element].get());
-			const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(CI.ib[element].get());
+			const std::vector<std::shared_ptr<scr::Material>> materials = actor.GetMaterials();
+			if(materials.size() == 0)
+				continue;
 
-			const simul::crossplatform::Buffer* const v[] = {vb->GetSimulVertexBuffer()};
-			simul::crossplatform::Layout* layout = nullptr;
-			if(!layout)
+			size_t element = 0;
+			const auto& CI = mesh->GetMeshCreateInfo();
+			for(const std::shared_ptr<scr::Material>& m : materials)
 			{
-				layout = (const_cast<pc_client::PC_VertexBuffer*>(vb))->GetLayout();
+				if(element >= CI.ib.size())
+					break;
+				const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(CI.vb[element].get());
+				const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(CI.ib[element].get());
+
+				const simul::crossplatform::Buffer* const v[] = {vb->GetSimulVertexBuffer()};
+				simul::crossplatform::Layout* layout = nullptr;
+				if(!layout)
+				{
+					layout = (const_cast<pc_client::PC_VertexBuffer*>(vb))->GetLayout();
+				}
+				cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+				mat4 model;
+				model = ((const float*)&(transform.GetTransformMatrix()));
+				mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
+				cameraConstants.world = model;
+				cameraConstants.view = deviceContext.viewStruct.view;
+				cameraConstants.proj = deviceContext.viewStruct.proj;
+				cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
+				cameraConstants.viewPosition = camera.GetPosition();
+				cameraPositionBuffer.Apply(deviceContext, cubemapClearEffect, pbrEffect->GetShaderResource("videoCameraPositionBuffer"));
+
+				scr::Material& mat = *m;
+				{
+					auto& mcr = mat.GetMaterialCreateInfo();
+					const scr::Material::MaterialData& md = mat.GetMaterialData();
+					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
+					auto* d = ((pc_client::PC_Texture*) & (*mcr.diffuse.texture));
+					auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
+					auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
+
+					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
+					pbrEffect->SetTexture(deviceContext, "roughSpecularCubemap", roughSpecularCubemapTexture);
+					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+					pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
+				}
+
+				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
+				pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+				pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), passName.c_str());
+				renderPlatform->SetLayout(deviceContext, layout);
+				renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
+				renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
+				renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
+				renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
+				layout->Unapply(deviceContext);
+				pbrEffect->Unapply(deviceContext);
+				element++;
 			}
-			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-			mat4 model;
-			model = ((const float*)&(transform.GetTransformMatrix()));
-			mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
-			cameraConstants.world = model;
-			cameraConstants.view = deviceContext.viewStruct.view;
-			cameraConstants.proj = deviceContext.viewStruct.proj;
-			cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
-			cameraConstants.viewPosition = camera.GetPosition();
-			cameraPositionBuffer.Apply(deviceContext, cubemapClearEffect, pbrEffect->GetShaderResource("videoCameraPositionBuffer"));
-
-			scr::Material& mat = *m;
-			{
-				auto& mcr = mat.GetMaterialCreateInfo();
-				const scr::Material::MaterialData& md = mat.GetMaterialData();
-				memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
-				auto* d = ((pc_client::PC_Texture*) & (*mcr.diffuse.texture));
-				auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
-				auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
-
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : nullptr);
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : nullptr);
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), c ? c->GetSimulTexture() : nullptr);
-				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
-				pbrEffect->SetTexture(deviceContext, "roughSpecularCubemap", roughSpecularCubemapTexture);
-				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
-				pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
-			}
-
-			pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
-			pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-			pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), passName.c_str());
-			renderPlatform->SetLayout(deviceContext, layout);
-			renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
-			renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
-			renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
-			renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
-			layout->Unapply(deviceContext);
-			pbrEffect->Unapply(deviceContext);
-
-			element++;
 		}
 	}
 }
@@ -872,7 +874,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	else
 	{
 		ENetAddress remoteEndpoint;
-		if (sessionClient.Discover(REMOTEPLAY_DISCOVERY_PORT, remoteEndpoint))
+		if (canConnect&&sessionClient.Discover(REMOTEPLAY_DISCOVERY_PORT, remoteEndpoint))
 		{
 			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
@@ -898,13 +900,13 @@ void ClientRenderer::OnMouse(bool bLeftButtonDown
 
 void ClientRenderer::PrintHelpText(simul::crossplatform::DeviceContext& deviceContext)
 {
-	deviceContext.framePrintY = 0;
+	deviceContext.framePrintY = 8;
 	deviceContext.framePrintX = hdrFramebuffer->GetWidth() / 2;
-	renderPlatform->LinePrint(deviceContext, "V: Show video");
+	renderPlatform->LinePrint(deviceContext, "K: Connect/Disconnect");
 	renderPlatform->LinePrint(deviceContext, "O: Toggle OSD");
+	renderPlatform->LinePrint(deviceContext, "V: Show video");
 	renderPlatform->LinePrint(deviceContext, "C: Toggle render from centre");
 	renderPlatform->LinePrint(deviceContext, "T: Toggle Textures");
-	renderPlatform->LinePrint(deviceContext, "K: Disconnect");
 	renderPlatform->LinePrint(deviceContext, "M: Change rendermode");
 	renderPlatform->LinePrint(deviceContext, "R: Recompile shaders");
 	renderPlatform->LinePrint(deviceContext, "NUM 0: PBR");
@@ -914,6 +916,7 @@ void ClientRenderer::PrintHelpText(simul::crossplatform::DeviceContext& deviceCo
 	renderPlatform->LinePrint(deviceContext, "NUM 6: Unity Normals");
 	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
 }
+
 void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 {
 	switch (wParam) 
@@ -948,6 +951,7 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'K':
 			sessionClient.Disconnect(0);
+			canConnect=!canConnect;
 			break;
 		case 'M':
 			RenderMode++;

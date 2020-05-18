@@ -1,3 +1,4 @@
+#pragma once
 #include "libavstream/common.hpp"
 #include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
@@ -26,4 +27,5 @@ public:
 protected:
 	mutable bool _hasOrigin=false;
 	avs::vec3 originClientHas;
+	ENetAddress address;
 };

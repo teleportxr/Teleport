@@ -7,6 +7,8 @@
 
 #include "CasterSettings.h"
 
+#include "ErrorHandling.h"
+
 
 //Clear a passed vector of UIDs that are believed to have already been sent to the client.
 //	outUIDs : Vector of all UIDs of resources that could potentially need to be sent across.
@@ -141,13 +143,17 @@ namespace SCServer
 		{
 			size_t oldBufferSize = buffer.size();
 
+			avs::uid uid = missingUIDs[h];
+			avs::Mesh* mesh = src->getMesh(uid, req->getAxesStandard());
+			if(!mesh)
+			{
+				TELEPORT_CERR<<"Mesh not found with uid "<<uid<<std::endl;
+				continue;
+			}
+
 			putPayload(avs::GeometryPayloadType::Mesh);
 			put((size_t)1);
-
-			avs::uid uid = missingUIDs[h];
 			put(uid);
-
-			avs::Mesh* mesh = src->getMesh(uid, req->getAxesStandard());
 
 			put(mesh->primitiveArrays.size());
 

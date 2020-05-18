@@ -644,6 +644,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 		case NodeDataType::Scene:
 			break;
 		case NodeDataType::ShadowMap:
+		case NodeDataType::Light:
 			CreateLight(node_uid, node);
 			break;
 		default:

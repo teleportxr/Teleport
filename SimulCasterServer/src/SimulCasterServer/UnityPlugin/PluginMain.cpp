@@ -10,7 +10,7 @@
 #include "SimulCasterServer/CasterSettings.h"
 #include "SimulCasterServer/CaptureDelegates.h"
 #include "SimulCasterServer/ClientData.h"
-#include "SimulCasterServer/DiscoveryService.h"
+#include "SimulCasterServer/DefaultDiscoveryService.h"
 #include "SimulCasterServer/GeometryStore.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
 #include "SimulCasterServer/VideoEncodePipeline.h"
@@ -35,188 +35,29 @@ typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs
 typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 
-namespace
-{
+static avs::Context avsContext;
 
-	static avs::Context avsContext;
+static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_unique<DefaultDiscoveryService>();
+static GeometryStore geometryStore;
 
-	static std::shared_ptr<PluginDiscoveryService> discoveryService = std::make_unique<PluginDiscoveryService>();
-	static GeometryStore geometryStore;
+std::map<avs::uid, ClientData> clientServices;
 
-	static std::map<avs::uid, ClientData> clientServices;
+SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
-	static SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
+static std::function<void(avs::uid clientID,void** actorPtr)> onShowActor;
+static std::function<void(avs::uid clientID,void** actorPtr)> onHideActor;
 
-	static std::function<void(avs::uid clientID,void** actorPtr)> onShowActor;
-	static std::function<void(avs::uid clientID,void** actorPtr)> onHideActor;
+static SetHeadPoseFn setHeadPose;
+static SetControllerPoseFn setControllerPose;
+static ProcessNewInputFn processNewInput;
+static DisconnectFn onDisconnect;
 
-	static SetHeadPoseFn setHeadPose;
-	static SetControllerPoseFn setControllerPose;
-	static ProcessNewInputFn processNewInput;
-	static DisconnectFn onDisconnect;
+static int32_t connectionTimeout = 5;
+static avs::uid serverID = 0;
 
-	static int32_t connectionTimeout = 5;
-	static avs::uid serverID = 0;
+static std::set<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
+static std::vector<avs::uid> lostClients; //Clients who have been lost, and are awaiting deletion.
 
-	static std::set<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
-	static std::vector<avs::uid> lostClients; //Clients who have been lost, and are awaiting deletion.
-}
-
-class PluginDiscoveryService: public SCServer::DiscoveryService
-{
-public:
-	//List of clientIDs we want to attempt to connect to.
-	std::map<uint32_t, ENetAddress> newClients;
-	virtual ~PluginDiscoveryService()
-	{
-		shutdown();
-	}
-
-	virtual bool initialise(uint16_t discoveryPort = 0, uint16_t servicePort = 0) override
-	{
-		if(discoveryPort == 0)
-			discoveryPort = this->discoveryPort;
-		else
-			this->discoveryPort = discoveryPort;
-
-		if(discoveryPort == 0)
-		{
-			printf_s("Discovery port is not set.\n");
-			return false;
-		}
-
-		if(servicePort == 0)
-			servicePort = this->servicePort;
-		else
-			this->servicePort = servicePort;
-
-		if(servicePort == 0)
-		{
-			printf_s("Service port is not set.\n");
-			return false;
-		}
-		
-		discoverySocket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);
-		if(discoverySocket <= 0)
-		{
-			printf_s("Failed to create discovery socket.\n");
-			return false;
-		}
-
-		enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_NONBLOCK, 1);
-		enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_BROADCAST, 1);
-		enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_REUSEADDR, 1);
-
-		address = {ENET_HOST_ANY, discoveryPort};
-		if(enet_socket_bind(discoverySocket, &address) != 0)
-		{
-			TELEPORT_CERR<<"Failed to bind discovery socket on port: "<< address.port<<std::endl;
-			enet_socket_destroy(discoverySocket);
-			discoverySocket = 0;
-			return false;
-		}
-
-		return true;
-	}
-
-	virtual void shutdown() override
-	{
-		enet_socket_destroy(discoverySocket);
-		discoverySocket = 0;
-		newClients.clear();
-	}
-
-	virtual void tick() override
-	{
-		if(!discoverySocket || discoveryPort == 0 || servicePort == 0)
-		{
-			printf_s("Attempted to call tick on client discovery service without initalising!");
-			return;
-		}
-		
-
-		uint32_t clientID = 0; //Newly received ID.
-		ENetBuffer buffer = {sizeof(clientID), &clientID}; //Buffer to retrieve client ID with.
-		ENetAddress addr;
-		//Retrieve all packets received since last call, and add any new clients.
-		while(size_t packetsize=enet_socket_receive(discoverySocket, &addr, &buffer, 1)> 0)
-		{
-			{
-				//Skip clients we have already added.
-				if(clientServices.find(clientID) != clientServices.end())
-					continue;
-				if (newClients.find(clientID) != newClients.end())
-					continue;
-				std::wstring desiredIP(casterSettings.clientIP);
-
-				//Ignore connections from clients with the wrong IP, if a desired IP has been set.
-				if(desiredIP.length() != 0)
-				{
-					//Retrieve IP of client that sent message, and covert to string.
-					char clientIPRaw[20];
-					enet_address_get_host_ip(&addr, clientIPRaw, 20);
-
-					//Trying to use the pointer to the string's data results in an incorrect size, and incorrect iterators.
-					std::string clientIP = clientIPRaw;
-
-					//Create new wide-string with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
-					if(desiredIP.compare(0, clientIP.size(), {clientIP.begin(), clientIP.end()}) == 0)
-					{
-						newClients[clientID]= addr;
-					}
-				}
-				else
-				{
-					newClients[clientID] = addr;
-				}
-			}
-		}
-
-		//Send response, containing port to connect on, to all clients we want to host.
-		for(auto &c: newClients)
-		{
-			auto clientID=c.first;
-			auto addr=c.second;
-			ServiceDiscoveryResponse response = {clientID, servicePort};
-
-			buffer = {sizeof(ServiceDiscoveryResponse), &response};
-			enet_socket_send(discoverySocket, &addr, &buffer, 1);
-			StartSession(clientID, servicePort);
-		}
-	}
-	virtual void discoveryCompleteForClient(uint64_t ClientID) override
-	{
-		auto i=newClients.find(ClientID);
-		if(i==newClients.end())
-		{
-			TELEPORT_CERR<<"Client had already completed discovery\n";
-		}
-		else
-		{
-			newClients.erase(i);
-		}
-	}
-	virtual uint64_t getNewClientID()
-	{
-		return lastFoundClientID;
-		lastFoundClientID=0;
-	}
-private:
-	uint32_t lastFoundClientID=0;
-#pragma pack(push, 1) 
-	struct ServiceDiscoveryResponse
-	{
-		uint32_t clientID;
-		uint16_t remotePort;
-	};
-#pragma pack(pop)
-
-	ENetSocket discoverySocket;
-	ENetAddress address;
-
-	uint16_t discoveryPort = 0;
-	uint16_t servicePort = 0;
-};
 
 class PluginGeometryStreamingService : public SCServer::GeometryStreamingService
 {
@@ -322,64 +163,54 @@ void Disconnect(avs::uid clientID)
 ///PLUGIN-INTERNAL END
 
 ///MEMORY-MANAGEMENT START
-TELEPORT_EXPORT
-void DeleteUnmanagedArray(void** unmanagedArray)
+TELEPORT_EXPORT void DeleteUnmanagedArray(void** unmanagedArray)
 {
 	delete[] *unmanagedArray;
 }
 ///MEMORY-MANAGEMENT END
 
 ///PLUGIN-SPECIFIC START
-TELEPORT_EXPORT
-void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
+TELEPORT_EXPORT void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
 {
 	casterSettings = newSettings;
 }
 
-TELEPORT_EXPORT
-void SetShowActorDelegate(void(*showActor)(avs::uid,void*))
+TELEPORT_EXPORT void SetShowActorDelegate(void(*showActor)(avs::uid,void*))
 {
 	onShowActor = showActor;
 }
 
-TELEPORT_EXPORT
-void SetHideActorDelegate(void(*hideActor)(avs::uid,void*))
+TELEPORT_EXPORT void SetHideActorDelegate(void(*hideActor)(avs::uid,void*))
 {
 	onHideActor = hideActor;
 }
 
-TELEPORT_EXPORT
-void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
+TELEPORT_EXPORT void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
 {
 	setHeadPose = headPoseSetter;
 }
 
-TELEPORT_EXPORT
-void SetControllerPoseSetterDelegate(SetControllerPoseFn f)
+TELEPORT_EXPORT void SetControllerPoseSetterDelegate(SetControllerPoseFn f)
 {
 	setControllerPose = f;
 }
 
-TELEPORT_EXPORT
-void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
+TELEPORT_EXPORT void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
 {
 	processNewInput = newInputProcessing;
 }
 
-TELEPORT_EXPORT
-void SetDisconnectDelegate(DisconnectFn disconnect)
+TELEPORT_EXPORT void SetDisconnectDelegate(DisconnectFn disconnect)
 {
 	onDisconnect = disconnect;
 }
 
-TELEPORT_EXPORT
-void SetMessageHandlerDelegate(avs::MessageHandlerFunc messageHandler)
+TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc messageHandler)
 {
 	avsContext.setMessageHandler(messageHandler, nullptr);
 }
 
-TELEPORT_EXPORT
-void SetConnectionTimeout(int32_t timeout)
+TELEPORT_EXPORT void SetConnectionTimeout(int32_t timeout)
 {
 	connectionTimeout = timeout;
 }
@@ -421,8 +252,7 @@ TELEPORT_EXPORT bool Initialise(const InitializeState *initializeState)
 	return discoveryService->initialise(initializeState->DISCOVERY_PORT,initializeState->SERVICE_PORT);
 }
 
-TELEPORT_EXPORT
-void Shutdown()
+TELEPORT_EXPORT void Shutdown()
 {
 	discoveryService->shutdown();
 
@@ -474,8 +304,8 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 	newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
 
-	newClient.casterContext.ColorQueue->configure(16);
-	newClient.casterContext.GeometryQueue->configure(16);
+	newClient.casterContext.ColorQueue->configure(16,"colorQueue");
+	newClient.casterContext.GeometryQueue->configure(16, "GeometryQueue");
 
 	///TODO: Initialise real delegates for capture component.
 	SCServer::CaptureDelegates delegates;
@@ -496,8 +326,7 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 	
 }
 
-TELEPORT_EXPORT
-void StopSession(avs::uid clientID)
+TELEPORT_EXPORT void StopSession(avs::uid clientID)
 {
 	//Early-out if a client with this ID doesn't exist.
 	auto& clientIt = clientServices.find(clientID);
@@ -520,10 +349,10 @@ void StopSession(avs::uid clientID)
 	}
 }
 
-TELEPORT_EXPORT
-void StartStreaming(avs::uid clientID)
+TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 {
-	ClientData& client = clientServices.at(clientID);
+	auto c = clientServices.find(clientID);
+	ClientData& client = c->second;
 	client.geometryStreamingService->startStreaming(&client.casterContext);
 
 	///TODO: Need to retrieve encoder settings from unity.
@@ -540,7 +369,7 @@ void StartStreaming(avs::uid clientID)
 	};
 
 	avs::SetupCommand setupCommand;
-	setupCommand.port = clientServices.at(clientID).clientMessaging.getServerPort() + 1;
+	setupCommand.port = c->second.clientMessaging.getServerPort() + 1;
 	setupCommand.video_width = encoderSettings.frameWidth;
 	setupCommand.video_height = encoderSettings.frameHeight;
 	setupCommand.depth_height = encoderSettings.depthHeight;
@@ -563,10 +392,10 @@ void StartStreaming(avs::uid clientID)
 	client.isStreaming = true;
 }
 
-TELEPORT_EXPORT
-void StopStreaming(avs::uid clientID)
+TELEPORT_EXPORT void StopStreaming(avs::uid clientID)
 {
-	ClientData& lostClient = clientServices.at(clientID);
+	auto c = clientServices.find(clientID);
+	ClientData& lostClient = c->second;
 
 	lostClient.clientMessaging.sendCommand(avs::ShutdownCommand());
 	lostClient.isStreaming = false;
@@ -611,8 +440,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	discoveryService->tick();
 }
 
-TELEPORT_EXPORT
-bool Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
+TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
 {
 	auto &c=clientServices.find(clientID);
 	if(c==clientServices.end())
@@ -620,8 +448,7 @@ bool Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
 	ClientData &clientData=c->second;
 	return clientData.setOrigin(*pos);
 }
-TELEPORT_EXPORT
-bool Client_IsConnected(avs::uid clientID)
+TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
 {
 	auto &c=clientServices.find(clientID);
 	if(c==clientServices.end())
@@ -630,8 +457,7 @@ bool Client_IsConnected(avs::uid clientID)
 	return clientData.isConnected();
 }
 
-TELEPORT_EXPORT
-bool Client_HasOrigin(avs::uid clientID, avs::vec3* pos)
+TELEPORT_EXPORT bool Client_HasOrigin(avs::uid clientID, avs::vec3* pos)
 {
 	auto &c=clientServices.find(clientID);
 	if(c==clientServices.end())
@@ -643,8 +469,7 @@ bool Client_HasOrigin(avs::uid clientID, avs::vec3* pos)
 	return result;
 }
 
-TELEPORT_EXPORT
-void Reset()
+TELEPORT_EXPORT void Reset()
 {
 	for(auto& clientIDInfoPair : clientServices)
 	{
@@ -652,8 +477,7 @@ void Reset()
 	}
 }
 
-TELEPORT_EXPORT
-avs::uid GetUnlinkedClientID()
+TELEPORT_EXPORT avs::uid GetUnlinkedClientID()
 {
 	if(unlinkedClientIDs.size() != 0)
 	{
@@ -670,52 +494,62 @@ avs::uid GetUnlinkedClientID()
 ///PLUGIN-SPECIFC END
 
 ///libavstream START
-TELEPORT_EXPORT
-avs::uid GenerateID()
+TELEPORT_EXPORT avs::uid GenerateID()
 {
 	return avs::GenerateUid();
 }
 ///libavstream END
 
 ///GeometryStreamingService START
-TELEPORT_EXPORT
-void AddActor(avs::uid clientID, void* newActor, avs::uid actorID)
+TELEPORT_EXPORT void AddActor(avs::uid clientID, void* newActor, avs::uid actorID)
 {
-	clientServices.at(clientID).geometryStreamingService->addActor(newActor, actorID);
+	auto c= clientServices.find(clientID);
+	if(c==clientServices.end())
+		return;
+	c->second.geometryStreamingService->addActor(newActor, actorID);
 }
 
-TELEPORT_EXPORT
-avs::uid RemoveActor(avs::uid clientID, void* oldActor)
+TELEPORT_EXPORT avs::uid RemoveActor(avs::uid clientID, void* oldActor)
 {
-	return clientServices.at(clientID).geometryStreamingService->removeActor(oldActor);
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+		return 0;
+	return c->second.geometryStreamingService->removeActor(oldActor);
 }
 
-TELEPORT_EXPORT
-avs::uid GetActorID(avs::uid clientID, void* actor)
+TELEPORT_EXPORT avs::uid GetActorID(avs::uid clientID, void* actor)
 {
-	return clientServices.at(clientID).geometryStreamingService->getActorID(actor);
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+		return 0;
+	return c->second.geometryStreamingService->getActorID(actor);
 }
 
-TELEPORT_EXPORT
-bool IsStreamingActor(avs::uid clientID, void* actor)
+TELEPORT_EXPORT bool IsStreamingActor(avs::uid clientID, void* actor)
 {
-	return clientServices.at(clientID).geometryStreamingService->isStreamingActor(actor);
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+		return false;
+	return c->second.geometryStreamingService->isStreamingActor(actor);
 }
 
-TELEPORT_EXPORT
-void ShowActor(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT void ShowActor(avs::uid clientID, avs::uid actorID)
 {
-	clientServices.at(clientID).geometryStreamingService->showActor(clientID,actorID);
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+		return;
+	c->second.geometryStreamingService->showActor(clientID,actorID);
 }
 
-TELEPORT_EXPORT
-void HideActor(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT void HideActor(avs::uid clientID, avs::uid actorID)
 {
-	clientServices.at(clientID).geometryStreamingService->hideActor(clientID,actorID);
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+		return;
+	c->second.geometryStreamingService->hideActor(clientID,actorID);
 }
 
-TELEPORT_EXPORT
-void SetActorVisible(avs::uid clientID, avs::uid actorID, bool isVisible)
+TELEPORT_EXPORT void SetActorVisible(avs::uid clientID, avs::uid actorID, bool isVisible)
 {
 	if(isVisible)
 		ShowActor(clientID, actorID);
@@ -725,16 +559,17 @@ void SetActorVisible(avs::uid clientID, avs::uid actorID, bool isVisible)
 
 bool HasResource(avs::uid clientID, avs::uid resourceID)
 {
-	return clientServices.at(clientID).geometryStreamingService->hasResource(resourceID);
+	auto c = clientServices.find(clientID);
+	return c->second.geometryStreamingService->hasResource(resourceID);
 }
 ///GeometryStreamingService END
 
 
 ///VideoEncodePipeline START
-TELEPORT_EXPORT
-void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
+TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
 {
-	auto& clientData = clientServices.at(clientID);
+	auto c = clientServices.find(clientID);
+	auto& clientData = c->second;
 	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
 	if(!result)
 	{
@@ -742,10 +577,15 @@ void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& vide
 	}
 }
 
-TELEPORT_EXPORT
-void EncodeVideoFrame(avs::uid clientID, avs::Transform& cameraTransform)
+TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, avs::Transform& cameraTransform)
 {
-	auto& clientData = clientServices.at(clientID);
+	auto c = clientServices.find(clientID);
+	auto& clientData = c->second;
+	if(!clientData.clientMessaging.hasPeer())
+	{
+		TELEPORT_CERR<< "EncodeVideoFrame called but peer is not connected." << std::endl;
+		return;
+	}
 	avs::ConvertTransform(avs::AxesStandard::UnityStyle, clientData.casterContext.axesStandard, cameraTransform);
 	Result result = clientData.videoEncodePipeline->encode(cameraTransform, clientData.videoKeyframeRequired);
 	if (result)
@@ -788,171 +628,152 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 	}
 }
 
-TELEPORT_EXPORT
-UnityRenderingEventAndData GetRenderEventWithDataCallback()
+TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 {
 	return OnRenderEventWithData;
 }
 ///VideoEncodePipeline END
 
-
 ///ClientMessaging START
-TELEPORT_EXPORT
-void ActorEnteredBounds(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT void ActorEnteredBounds(avs::uid clientID, avs::uid actorID)
 {
-	clientServices.at(clientID).clientMessaging.actorEnteredBounds(actorID);
+	auto c = clientServices.find(clientID);
+	c->second.clientMessaging.actorEnteredBounds(actorID);
 }
 
-TELEPORT_EXPORT
-void ActorLeftBounds(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT void ActorLeftBounds(avs::uid clientID, avs::uid actorID)
 {
-	clientServices.at(clientID).clientMessaging.actorLeftBounds(actorID);
+	auto c = clientServices.find(clientID);
+	c->second.clientMessaging.actorLeftBounds(actorID);
 }
 
-TELEPORT_EXPORT
-bool HasHost(avs::uid clientID)
+TELEPORT_EXPORT bool HasHost(avs::uid clientID)
 {
-	return clientServices.at(clientID).clientMessaging.hasHost();
+	auto c = clientServices.find(clientID);
+	return c->second.clientMessaging.hasHost();
 }
 
-TELEPORT_EXPORT
-bool HasPeer(avs::uid clientID)
+TELEPORT_EXPORT bool HasPeer(avs::uid clientID)
 {
-	return clientServices.at(clientID).clientMessaging.hasPeer();
+	auto c = clientServices.find(clientID);
+	return c->second.clientMessaging.hasPeer();
 }
 
-TELEPORT_EXPORT
-bool SendCommand(avs::uid clientID, const avs::Command& avsCommand)
+TELEPORT_EXPORT bool SendCommand(avs::uid clientID, const avs::Command& avsCommand)
 {
-	return clientServices.at(clientID).clientMessaging.sendCommand(avsCommand);
+	auto c = clientServices.find(clientID);
+	return c->second.clientMessaging.sendCommand(avsCommand);
 }
 
-TELEPORT_EXPORT
-bool SendCommandWithList(avs::uid clientID, const avs::Command& avsCommand, std::vector<avs::uid>& appendedList)
+TELEPORT_EXPORT bool SendCommandWithList(avs::uid clientID, const avs::Command& avsCommand, std::vector<avs::uid>& appendedList)
 {
-	return clientServices.at(clientID).clientMessaging.sendCommand(avsCommand, appendedList);
+	auto c = clientServices.find(clientID);
+	return c->second.clientMessaging.sendCommand(avsCommand, appendedList);
 }
 
-TELEPORT_EXPORT
-char* GetClientIP(avs::uid clientID)
+TELEPORT_EXPORT char* GetClientIP(avs::uid clientID)
 {
-	return clientServices.at(clientID).clientMessaging.getClientIP().data();
+	auto c = clientServices.find(clientID);
+	return c->second.clientMessaging.getClientIP().data();
 }
 
-TELEPORT_EXPORT
-uint16_t GetClientPort(avs::uid clientID)
+TELEPORT_EXPORT uint16_t GetClientPort(avs::uid clientID)
 {
-	return clientServices.at(clientID).clientMessaging.getClientPort();
+	auto c = clientServices.find(clientID);
+	return c->second.clientMessaging.getClientPort();
 }
 
-TELEPORT_EXPORT
-uint16_t GetServerPort(avs::uid clientID)
+TELEPORT_EXPORT uint16_t GetServerPort(avs::uid clientID)
 {
-	return clientServices.at(clientID).clientMessaging.getServerPort();
+	auto c = clientServices.find(clientID);
+	return c->second.clientMessaging.getServerPort();
 }
 ///ClientMessaging END
 
 ///GeometryStore START
-TELEPORT_EXPORT
-void SaveGeometryStore()
+TELEPORT_EXPORT void SaveGeometryStore()
 {
 	geometryStore.saveToDisk();
 }
 
-TELEPORT_EXPORT
-void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)
+TELEPORT_EXPORT void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)
 {
 	geometryStore.loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);
 }
 
 //Inform GeometryStore of resources that still exist, and of their new IDs.
-TELEPORT_EXPORT
-void ReaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
+TELEPORT_EXPORT void ReaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
 {
 	geometryStore.reaffirmResources(meshAmount, reaffirmedMeshes, textureAmount, reaffirmedTextures, materialAmount, reaffirmedMaterials);
 }
 
-TELEPORT_EXPORT
-void ClearGeometryStore()
+TELEPORT_EXPORT void ClearGeometryStore()
 {
 	geometryStore.clear(true);
 }
 
-TELEPORT_EXPORT
-void SetDelayTextureCompression(bool willDelay)
+TELEPORT_EXPORT void SetDelayTextureCompression(bool willDelay)
 {
 	geometryStore.willDelayTextureCompression = willDelay;
 }
 
-TELEPORT_EXPORT
-void SetCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
+TELEPORT_EXPORT void SetCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
 {
 	geometryStore.setCompressionLevels(compressionStrength, compressionQuality);
 }
 
-TELEPORT_EXPORT
-const std::vector<std::pair<void*, avs::uid>>& GetHands()
+TELEPORT_EXPORT const std::vector<std::pair<void*, avs::uid>>& GetHands()
 {
 	return geometryStore.getHands();
 }
 
-TELEPORT_EXPORT
-void SetHands(std::pair<void*, avs::uid> firstHand, std::pair<void*, avs::uid> secondHand)
+TELEPORT_EXPORT void SetHands(std::pair<void*, avs::uid> firstHand, std::pair<void*, avs::uid> secondHand)
 {
 	geometryStore.setHands(firstHand, secondHand);
 }
 
-TELEPORT_EXPORT
-void StoreNode(avs::uid id, InteropNode node)
+TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 {
 	geometryStore.storeNode(id, avs::DataNode(node));
 }
 
-TELEPORT_EXPORT
-void StoreMesh(avs::uid id, BSTR guid, std::time_t lastModified, InteropMesh* mesh, avs::AxesStandard extractToStandard)
+TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, std::time_t lastModified, InteropMesh* mesh, avs::AxesStandard extractToStandard)
 {
 	geometryStore.storeMesh(id, guid, lastModified, avs::Mesh(*mesh), extractToStandard);
 }
 
-TELEPORT_EXPORT
-void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModified, InteropMaterial material)
+TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModified, InteropMaterial material)
 {
 	geometryStore.storeMaterial(id, guid, lastModified, avs::Material(material));
 }
 
-TELEPORT_EXPORT
-void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation)
+TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation)
 {
 	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation);
 }
 
-TELEPORT_EXPORT
-void StoreShadowMap(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture shadowMap)
+TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture shadowMap)
 {
 	geometryStore.storeShadowMap(id, guid, lastModified, avs::Texture(shadowMap));
 }
 
-TELEPORT_EXPORT
-void RemoveNode(avs::uid nodeID)
+TELEPORT_EXPORT void RemoveNode(avs::uid nodeID)
 {
 	geometryStore.removeNode(nodeID);
 }
 
-TELEPORT_EXPORT
-avs::DataNode* getNode(avs::uid nodeID)
+TELEPORT_EXPORT avs::DataNode* getNode(avs::uid nodeID)
 {
 	return geometryStore.getNode(nodeID);
 }
 
-TELEPORT_EXPORT
-uint64_t GetAmountOfTexturesWaitingForCompression()
+TELEPORT_EXPORT uint64_t GetAmountOfTexturesWaitingForCompression()
 {
 	return static_cast<int64_t>(geometryStore.getAmountOfTexturesWaitingForCompression());
 }
 
 ///TODO: Free memory of allocated string, or use passed in string to return message.
-TELEPORT_EXPORT
-BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures)
+TELEPORT_EXPORT BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures)
 {
 	const avs::Texture* texture = geometryStore.getNextCompressedTexture();
 
@@ -964,8 +785,7 @@ BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTex
 	return SysAllocString(messageStream.str().data());
 }
 
-TELEPORT_EXPORT
-void CompressNextTexture()
+TELEPORT_EXPORT void CompressNextTexture()
 {
 	geometryStore.compressNextTexture();
 }

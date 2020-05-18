@@ -145,27 +145,14 @@ void ClientMessaging::handleEvents()
 				enet_address_get_host_ip(&event.peer->address, address, sizeof(address));
 
 				peer = event.peer;
-				///TODO: This work allow multi-connect with Unity, or otherwise; change it to allow multiple connections.
-
-				// TODO: This is pretty ropey: Discovery service really shouldn't be inside a specific client.
-				if(!clientID)
-				{
-					this->clientID = discoveryService->getNewClientID();
-					TELEPORT_CERR << "Client ID should already be set." << std::endl;
-				}
-				discoveryService->discoveryCompleteForClient(this->clientID);
-
+				discoveryService->discoveryCompleteForClient(clientID);
 				TELEPORT_COUT << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
 				break;
 			case ENET_EVENT_TYPE_DISCONNECT:
 				assert(peer == event.peer);
-
 				TELEPORT_COUT << "Client disconnected " << getClientIP() << ":" << getClientPort() << std::endl;
 				onDisconnect();
 				peer = nullptr;
-				
-				// TRY to restart the discovery service...
-				//discoveryService->initialise();
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
 				dispatchEvent(event);

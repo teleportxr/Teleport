@@ -87,7 +87,6 @@ uint32_t PCDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remot
 	{
 		// This will change responseAddress from 0xffffffff into the address of the server
 		bytesRecv = enet_socket_receive(serviceDiscoverySocket, &responseAddress, &responseBuffer, 1);
-
 		if(bytesRecv == sizeof(response) && clientID == response.clientID)
 		{
 			remote.host = responseAddress.host;

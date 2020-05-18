@@ -16,6 +16,7 @@ set(src
 	src/SimulCasterServer/ClientData.h
 	src/SimulCasterServer/ClientMessaging.cpp
 	src/SimulCasterServer/ClientMessaging.h
+	src/SimulCasterServer/DiscoveryService.cpp
 	src/SimulCasterServer/DiscoveryService.h 
 	src/SimulCasterServer/ErrorHandling.h
 	src/SimulCasterServer/ExtractedTypes.h
@@ -27,6 +28,8 @@ set(src
 	src/SimulCasterServer/GeometryStreamingService.h
 	src/SimulCasterServer/NetworkPipeline.cpp
 	src/SimulCasterServer/NetworkPipeline.h
+	src/SimulCasterServer/DefaultDiscoveryService.cpp
+	src/SimulCasterServer/DefaultDiscoveryService.h
 	src/SimulCasterServer/VideoEncodePipeline.cpp
 	src/SimulCasterServer/VideoEncodePipeline.h	
 )

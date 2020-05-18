@@ -46,7 +46,7 @@ void GeometryStreamingService::requestResource(avs::uid resource_uid)
 void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 {
 	unconfirmedResourceTimes.erase(resource_uid);
-	//Confirm again; incase something just elapsed the timer, but has yet to be sent.
+	//Confirm again; in case something just elapsed the timer, but has yet to be sent.
 	sentResources[resource_uid] = true;
 }
 

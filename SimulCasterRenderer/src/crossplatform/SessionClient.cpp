@@ -12,7 +12,7 @@ SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::uni
 
 SessionClient::~SessionClient()
 {
-	Disconnect(0);
+	//Disconnect(0); causes crash. trying to access deleted objects.
 }
 
 void SessionClient::SetResourceCreator(ResourceCreator *r)
