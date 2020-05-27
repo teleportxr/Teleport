@@ -1,5 +1,8 @@
 #pragma once
+
+#include "enet/enet.h"
 #include "libavstream/common.hpp"
+
 #include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
 

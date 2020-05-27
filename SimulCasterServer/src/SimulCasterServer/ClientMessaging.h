@@ -64,8 +64,6 @@ namespace SCServer
 			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 		}
 
-		bool sendSetupCommand(avs::SetupCommand&& setupCommand);
-
 		std::string getClientIP() const;
 		uint16_t getClientPort() const;
 		uint16_t getServerPort() const;
@@ -87,6 +85,8 @@ namespace SCServer
 
 		ENetHost* host;
 		ENetPeer* peer;
+
+		bool receivedHandshake = false; //Whether we've received the handshake from the client.
 
 		std::vector<avs::uid> actorsEnteredBounds; //Stores actors client needs to know have entered streaming bounds.
 		std::vector<avs::uid> actorsLeftBounds; //Stores actors client needs to know have left streaming bounds.

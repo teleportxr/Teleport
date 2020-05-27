@@ -225,12 +225,10 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 	switch(commandPayloadType)
 	{
 		case avs::CommandPayloadType::Shutdown:
-		{
 			mCommandInterface->OnVideoStreamClosed();
-		}
-		break;
+			break;
 		case avs::CommandPayloadType::AcknowledgeHandshake:
-			handshakeAcknowledged = true;
+			ReceiveHandshakeAcknowledgement(packet);
 			break;
 		case avs::CommandPayloadType::Setup:
 		{
@@ -240,25 +238,22 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			avs::SetupCommand setupCommand;
 			memcpy(&setupCommand, packet->data, commandSize);
 
-			//Copy resources the client will need from the packet.
-			size_t resourceListSize = sizeof(avs::uid) * setupCommand.resourceCount;
-			std::vector<avs::uid> resourcesClientNeeds(setupCommand.resourceCount);
-			if(resourceListSize)
+			avs::Handshake handshake;
+			mCommandInterface->OnVideoStreamChanged(setupCommand, handshake);
+			
+			std::vector<avs::uid> resourceIDs;
+			if(setupCommand.server_id == lastServerID)
 			{
-				memcpy(resourcesClientNeeds.data(), packet->data + commandSize, resourceListSize);
+				resourceIDs = mCommandInterface->GetGeometryResources();
+				handshake.resourceCount = resourceIDs.size();
+			}
+			else
+			{
+				mCommandInterface->ClearGeometryResources();
 			}
 
-			avs::Handshake handshake;
-			std::vector<avs::uid> outActors;
-			mCommandInterface->OnVideoStreamChanged(setupCommand, handshake, setupCommand.server_id != lastServerID, resourcesClientNeeds, outActors);
-			//Add the unfound resources to the resource request list.
-			mResourceRequests.insert(mResourceRequests.end(), resourcesClientNeeds.begin(), resourcesClientNeeds.end());
-
-			//Confirm the actors the client already has.
-			mReceivedActors.insert(mReceivedActors.end(), outActors.begin(), outActors.end());
-
+			SendHandshake(handshake, resourceIDs);
 			lastServerID = setupCommand.server_id;
-			SendHandshake(handshake);
 		}
 		break;
 		case avs::CommandPayloadType::SetPosition:
@@ -464,8 +459,33 @@ void SessionClient::SendKeyframeRequest()
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_KeyframeRequest), packet);
 }
 
-void SessionClient::SendHandshake(const avs::Handshake& handshake)
+void SessionClient::SendHandshake(const avs::Handshake& handshake, const std::vector<avs::uid>& clientResourceIDs)
 {
-	ENetPacket* packet = enet_packet_create(&handshake, sizeof(avs::Handshake), 0);
+	size_t handshakeSize = sizeof(avs::Handshake);
+	size_t resourceListSize = sizeof(avs::uid) * clientResourceIDs.size();
+
+	//Create handshake.
+	ENetPacket* packet = enet_packet_create(&handshake, handshakeSize, ENET_PACKET_FLAG_RELIABLE);
+	//Append list of resource IDs the client has.
+	enet_packet_resize(packet, handshakeSize + resourceListSize);
+	memcpy(packet->data + handshakeSize, clientResourceIDs.data(), resourceListSize);
+
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Handshake), packet);
+}
+
+void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::AcknowledgeHandshakeCommand);
+
+	//Extract command from packet.
+	avs::AcknowledgeHandshakeCommand command;
+	memcpy(&command, packet->data, sizeof(avs::AcknowledgeHandshakeCommand));
+
+	//Extract list of visible actors.
+	std::vector<avs::uid> visibleActors(command.visibleActorAmount);
+	memcpy(visibleActors.data(), packet->data + commandSize, sizeof(avs::uid) * command.visibleActorAmount);
+
+	mCommandInterface->SetVisibleActors(visibleActors);
+
+	handshakeAcknowledged = true;
 }

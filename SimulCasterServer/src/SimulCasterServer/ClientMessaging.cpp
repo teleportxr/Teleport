@@ -92,10 +92,16 @@ void ClientMessaging::stopSession()
 		enet_host_destroy(host);
 		host = nullptr;
 	}
+
+	receivedHandshake = false;
+	geometryStreamingService->reset();
 }
 
 void ClientMessaging::tick(float deltaTime)
 {
+	//Don't stream geometry to the client before we've received the handshake.
+	if(!receivedHandshake) return;
+
 	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;
 
@@ -199,51 +205,6 @@ bool ClientMessaging::sendCommand(const avs::Command& avsCommand) const
 	return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 }
 
-bool ClientMessaging::sendSetupCommand(avs::SetupCommand&& setupCommand)
-{
-	std::vector<avs::uid> resourcesClientNeeds;
-
-	//Get resources the client will need to check it has.
-	std::vector<avs::MeshNodeResources> outMeshResources;
-	std::vector<avs::LightNodeResources> outLightResources;
-	geometryStreamingService->getResourcesToStream(outMeshResources, outLightResources);
-
-	for(const avs::MeshNodeResources& meshResource : outMeshResources)
-	{
-		resourcesClientNeeds.push_back(meshResource.node_uid);
-		resourcesClientNeeds.push_back(meshResource.mesh_uid);
-
-		for(const avs::MaterialResources& material : meshResource.materials)
-		{
-			resourcesClientNeeds.push_back(material.material_uid);
-
-			for(avs::uid texture_uid : material.texture_uids)
-			{
-				resourcesClientNeeds.push_back(texture_uid);
-			}
-		}
-	}
-	for(const avs::LightNodeResources& lightResource : outLightResources)
-	{
-		resourcesClientNeeds.push_back(lightResource.node_uid);
-		resourcesClientNeeds.push_back(lightResource.shadowmap_uid);
-	}
-
-	//Remove duplicates, and UIDs of 0.
-	std::sort(resourcesClientNeeds.begin(), resourcesClientNeeds.end());
-	resourcesClientNeeds.erase(std::unique(resourcesClientNeeds.begin(), resourcesClientNeeds.end()), resourcesClientNeeds.end());
-	resourcesClientNeeds.erase(std::remove(resourcesClientNeeds.begin(), resourcesClientNeeds.end(), 0), resourcesClientNeeds.end());
-
-	//If the client needs a resource it will tell us; we don't want to stream the data if the client already has it.
-	for(avs::uid resourceID : resourcesClientNeeds)
-	{
-		geometryStreamingService->confirmResource(resourceID);
-	}
-	
-	setupCommand.resourceCount = resourcesClientNeeds.size();
-	return sendCommand<avs::uid>(setupCommand, resourcesClientNeeds);
-}
-
 std::string ClientMessaging::getClientIP() const
 {
 	assert(peer);
@@ -302,19 +263,10 @@ void ClientMessaging::dispatchEvent(const ENetEvent& event)
 
 void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 {
-	if(packet->dataLength != sizeof(avs::Handshake))
-	{
-		std::cout << "Session: Received malformed handshake packet of length: " << packet->dataLength << std::endl;
-		return;
-	}
+	size_t handShakeSize = sizeof(avs::Handshake);
+
 	avs::Handshake handshake;
-	memcpy(&handshake, packet->data, packet->dataLength);
-	
-	if(handshake.isReadyToReceivePayloads != true)
-	{
-		std::cout << "Session: Handshake not ready to receive.\n";
-		return;
-	}
+	memcpy(&handshake, packet->data, handShakeSize);
 
 	if(handshake.usingHands)
 	{
@@ -353,11 +305,34 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	cameraInfo.fov = handshake.FOV;
 	cameraInfo.isVR = handshake.isVR;
 
+	//Extract list of resources the client has.
+	std::vector<avs::uid> clientResources(handshake.resourceCount);
+	memcpy(clientResources.data(), packet->data + handShakeSize, sizeof(avs::uid) * handshake.resourceCount);
+
+	//Confirm resources the client has told us they have.
+	for(int i = 0; i < handshake.resourceCount; i++)
+	{
+		geometryStreamingService->confirmResource(clientResources[i]);
+	}
+
 	captureComponentDelegates.startStreaming(casterContext);
 	geometryStreamingService->startStreaming(casterContext);
+	receivedHandshake = true;
 
-	avs::AcknowledgeHandshakeCommand ack;
-	sendCommand(ack);
+	//Client has nothing, thus can't show actors.
+	if(handshake.resourceCount == 0)
+	{
+		avs::AcknowledgeHandshakeCommand ack;
+		sendCommand(ack);
+	}
+	//Client may have required resources, as they are reconnecting; tell them to show streamed actors.
+	else
+	{
+		std::vector<avs::uid> streamedActorIDs = geometryStreamingService->getStreamedActorIDs();
+
+		avs::AcknowledgeHandshakeCommand ack(streamedActorIDs.size());
+		sendCommand<avs::uid>(ack, streamedActorIDs);
+	}
 
 	std::cout << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 }

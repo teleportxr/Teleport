@@ -388,7 +388,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	return res;
 }
 
-void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
+void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, avs::Handshake& handshake)
 {
 	if(!mPipelineConfigured)
     {
@@ -526,9 +526,6 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
 		mPipelineConfigured = true;
 	}
 
-    if(shouldClearEverything) resourceManagers.Clear();
-    else resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
-
     handshake.startDisplayInfo.width = 1440;
     handshake.startDisplayInfo.height = 1600;
     handshake.framerate = 60;
@@ -536,7 +533,6 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs
     handshake.isVR = true;
 	handshake.udpBufferSize = static_cast<uint32_t>(clientRenderer.mNetworkSource.getSystemBufferSize());
 	handshake.maxBandwidthKpS = 10*handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
-	handshake.isReadyToReceivePayloads=true;
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.usingHands = true;
@@ -561,6 +557,21 @@ bool Application::OnActorEnteredBounds(avs::uid actor_uid)
 bool Application::OnActorLeftBounds(avs::uid actor_uid)
 {
 	return resourceManagers.mActorManager->HideActor(actor_uid);
+}
+
+std::vector<uid> Application::GetGeometryResources()
+{
+    return resourceManagers.GetAllResourceIDs();
+}
+
+void Application::ClearGeometryResources()
+{
+    resourceManagers.Clear();
+}
+
+void Application::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
+{
+    resourceManagers.mActorManager->SetVisibleActors(visibleActors);
 }
 
 void Application::OnFrameAvailable()

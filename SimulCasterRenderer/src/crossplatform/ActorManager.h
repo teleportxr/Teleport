@@ -142,6 +142,19 @@ namespace scr
 			return false;
 		}
 
+		//Make all actors in the passed list visible, while hiding the actors that are absent.
+		void SetVisibleActors(const std::vector<avs::uid> visibleActors)
+		{
+			//Hide all actors.
+			visibleActorAmount = 0;
+
+			//Show actors that should be visible.
+			for(avs::uid id : visibleActors)
+			{
+				ShowActor(id);
+			}
+		}
+
         bool UpdateActorTransform(avs::uid actorID, const scr::vec3& translation, const scr::quat& rotation, const scr::vec3& scale)
         {
 			if(!HasActor(actorID)) return false;

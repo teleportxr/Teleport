@@ -684,7 +684,7 @@ void ClientRenderer::Update()
 	previousTimestamp = timestamp;
 }
 
-void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors)
+void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
 																	,setupCommand.depth_width,setupCommand.depth_height	);
@@ -771,18 +771,8 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 		pipeline.link({ &source, &avsGeometryDecoder, &avsGeometryTarget });
 	}
 
-	if(shouldClearEverything)
-	{
-		resourceManagers.Clear();
-	}
-	else
-	{
-		resourceManagers.ClearCareful(resourcesClientNeeds, outExistingActors);
-	}
-
 	handshake.startDisplayInfo.width = hdrFramebuffer->GetWidth();
 	handshake.startDisplayInfo.height = hdrFramebuffer->GetHeight();
-	handshake.isReadyToReceivePayloads = true;
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.FOV = 90.0f;
@@ -811,6 +801,21 @@ bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
 bool ClientRenderer::OnActorLeftBounds(avs::uid actor_uid)
 {
 	return resourceManagers.mActorManager->HideActor(actor_uid);
+}
+
+std::vector<uid> ClientRenderer::GetGeometryResources()
+{
+	return resourceManagers.GetAllResourceIDs();
+}
+
+void ClientRenderer::ClearGeometryResources()
+{
+	resourceManagers.Clear();
+}
+
+void ClientRenderer::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
+{
+	resourceManagers.mActorManager->SetVisibleActors(visibleActors);
 }
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)

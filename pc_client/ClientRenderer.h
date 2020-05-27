@@ -131,11 +131,17 @@ public:
 	ClientRenderer();
 	~ClientRenderer();
 	// Implement SessionCommandInterface
-	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors) override;
+	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 	void OnVideoStreamClosed() override;
 
-	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
-	virtual bool OnActorLeftBounds(avs::uid actor_uid) override;
+	bool OnActorEnteredBounds(avs::uid actor_uid) override;
+	bool OnActorLeftBounds(avs::uid actor_uid) override;
+
+	std::vector<avs::uid> GetGeometryResources() override;
+	void ClearGeometryResources() override;
+
+	void SetVisibleActors(const std::vector<avs::uid>& visibleActors) override;
+
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
 	void PrintHelpText(simul::crossplatform::DeviceContext& deviceContext);

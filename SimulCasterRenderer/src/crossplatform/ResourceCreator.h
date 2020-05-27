@@ -60,6 +60,30 @@ namespace scr
 			//mLightManager.Update(timeElapsed);
         }
 
+
+		std::vector<uid> GetAllResourceIDs()
+		{
+			std::vector<uid> resourceIDs;
+			
+			mMaterialManager.GetAllIDs(resourceIDs);
+			mTextureManager.GetAllIDs(resourceIDs);
+			mMeshManager.GetAllIDs(resourceIDs);
+			mLightManager.GetAllIDs(resourceIDs);
+
+			return resourceIDs;
+
+			/*
+				//We will resend the actors/objects to update the transform data, as changes in client position (and thus the new invisible actors) aren't stored for the reconnect.
+				mActorManager;
+
+				//These IDs aren't stored on the server currently, and thus are ignored.
+				mIndexBufferManager.GetAllIDs();
+				mShaderManager.GetAllIDs();
+				mUniformBufferManager.GetAllIDs();
+				mVertexBufferManager.GetAllIDs();
+			*/
+		}
+
 		//Clear all resources.
 		void Clear()
 		{

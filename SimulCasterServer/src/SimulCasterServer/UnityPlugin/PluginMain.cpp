@@ -387,7 +387,7 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 
 	///TODO: Initialise actors in range.
 
-	client.clientMessaging.sendSetupCommand(std::move(setupCommand));
+	client.clientMessaging.sendCommand(std::move(setupCommand));
 
 	client.isStreaming = true;
 }

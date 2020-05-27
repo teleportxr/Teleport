@@ -46,6 +46,18 @@ namespace SCServer
 		virtual void tick(float deltaTime);
 
 		virtual void reset();
+
+		std::vector<avs::uid> getStreamedActorIDs()
+		{
+			std::vector<avs::uid> actorIDs;
+
+			for(auto actorPair : streamedActors)
+			{
+				actorIDs.push_back(actorPair.first);
+			}
+
+			return actorIDs;
+		}
 	protected:
 		GeometryStore* geometryStore;
 
@@ -59,7 +71,7 @@ namespace SCServer
 		virtual void showActor_Internal(avs::uid clientID,void* actorPtr) = 0;
 		virtual void hideActor_Internal(avs::uid clientID,void* actorPtr) = 0;
 
-		std::unordered_map<avs::uid, void*> getHiddenActors()
+		std::unordered_map<avs::uid, void*>& getHiddenActors()
 		{
 			return hiddenActors;
 		}

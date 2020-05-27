@@ -59,13 +59,16 @@ public:
 	}
 
 	/* Begin SessionCommandInterface */
-	virtual void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake, bool shouldClearEverything, std::vector<avs::uid>& resourcesClientNeeds, std::vector<avs::uid>& outExistingActors) override;
-
+	virtual void OnVideoStreamChanged(const avs::SetupCommand& setupCommand, avs::Handshake& handshake) override;
 	virtual void OnVideoStreamClosed() override;
 
 	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
-
 	virtual bool OnActorLeftBounds(avs::uid actor_uid) override;
+
+    virtual std::vector<avs::uid> GetGeometryResources() override;
+    virtual void ClearGeometryResources() override;
+
+    virtual void SetVisibleActors(const std::vector<avs::uid>& visibleActors) override;
 	/* End SessionCommandInterface */
 
 	/* Begin DecodeEventInterface */

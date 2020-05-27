@@ -49,6 +49,9 @@ public:
 	//Resets time since last use of the resource.
 	std::shared_ptr<T> Get(uid id);
 
+	//Pushes the IDs of all of the resources stored in the resource manager into the passed vector.
+	void GetAllIDs(std::vector<uid>& resourceIDs);
+
 	//Clear, and free memory of, all resources.
 	void Clear();
 	//Clear, and free memory of, all resources; bar from resources on the list.
@@ -129,6 +132,17 @@ std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 	data.timeSinceLastUse = 0;
 
 	return data.resource;
+}
+
+template<class T>
+void ResourceManager<T>::GetAllIDs(std::vector<uid>& resourceIDs)
+{
+	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
+
+	for(auto idDataPair : cachedItems)
+	{
+		resourceIDs.push_back(idDataPair.first);
+	}
 }
 
 template<class T>
