@@ -111,7 +111,8 @@ public:
 		:
 		SCServer::VideoEncodePipeline(),
 		inputSurfaceResource(nullptr),
-		encoderSurfaceResource(nullptr) {}
+		encoderSurfaceResource(nullptr),
+		configured(false) {}
 
 	~PluginVideoEncodePipeline()
 	{
@@ -120,6 +121,12 @@ public:
 
 	Result configure(VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
 	{
+		if (configured)
+		{
+			std::cout << "Video encode pipeline already configured." << std::endl;
+			return Result::EncoderAlreadyConfigured;
+		}
+
 		if (!GraphicsManager::mGraphicsDevice)
 		{
 			std::cout << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
@@ -139,11 +146,52 @@ public:
 		videoEncodeParams.deviceHandle = GraphicsManager::mGraphicsDevice;
 		videoEncodeParams.inputSurfaceResource = encoderSurfaceResource;
 
-		return SCServer::VideoEncodePipeline::initialize(casterSettings, videoEncodeParams, colorQueue);
+		Result result = SCServer::VideoEncodePipeline::initialize(casterSettings, videoEncodeParams, colorQueue);
+		if (result)
+		{
+			configured = true;
+		}
+		return result;
+	}
+
+	Result reconfigure(VideoEncodeParams& videoEncodeParams)
+	{
+		if (!configured)
+		{
+			std::cout << "Video encoder cannot be reconfigured if pipeline has not been configured." << std::endl;
+			return Result::EncoderNotConfigured;
+		}
+
+		if (!GraphicsManager::mGraphicsDevice)
+		{
+			std::cout << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			return Result::InvalidGraphicsDevice;
+		}
+
+		if (videoEncodeParams.inputSurfaceResource)
+		{
+			std::cout << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			return Result::InvalidGraphicsResource;
+		}
+
+		inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
+		// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
+		encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
+
+		videoEncodeParams.deviceHandle = GraphicsManager::mGraphicsDevice;
+		videoEncodeParams.inputSurfaceResource = encoderSurfaceResource;
+
+		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, videoEncodeParams);
 	}
 
 	Result encode(avs::Transform& cameraTransform, bool forceIDR = false)
 	{
+		if (!configured)
+		{
+			std::cout << "Video encoder can not encode because it has not been configured." << std::endl;
+			return Result::EncoderNotConfigured;
+		}
+
 		// Copy data from Unity texture to its CUDA compatible copy
 		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
 		return SCServer::VideoEncodePipeline::process(cameraTransform, forceIDR);
@@ -152,6 +200,7 @@ public:
 private:
 	void* inputSurfaceResource;
 	void* encoderSurfaceResource;
+	bool configured;
 };
 
 ///PLUGIN-INTERNAL START
@@ -498,6 +547,14 @@ TELEPORT_EXPORT avs::uid GenerateID()
 {
 	return avs::GenerateUid();
 }
+
+TELEPORT_EXPORT float GetBandwidthInKbps(avs::uid clientID)
+{
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+		return 0;
+	return c->second.casterContext.NetworkPipeline->getBandWidthKPS();
+}
 ///libavstream END
 
 ///GeometryStreamingService START
@@ -573,7 +630,18 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEn
 	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
 	if(!result)
 	{
-		std::cout << "Error occurred when trying to encode video" << std::endl;
+		std::cout << "Error occurred when trying to configure the video encode pipeline" << std::endl;
+	}
+}
+
+TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
+{
+	auto c = clientServices.find(clientID);
+	auto& clientData = c->second;
+	Result result = clientData.videoEncodePipeline->reconfigure(videoEncodeParams);
+	if (!result)
+	{
+		std::cout << "Error occurred when trying to reconfigure the video encode pipeline" << std::endl;
 	}
 }
 
@@ -618,6 +686,11 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 		InitializeVideoEncoder(wrapper->clientID, wrapper->videoEncodeParams);
 	}
 	else if (eventID == 1)
+	{
+		auto wrapper = (EncodeVideoParamsWrapper*)data;
+		ReconfigureVideoEncoder(wrapper->clientID, wrapper->videoEncodeParams);
+	}
+	else if (eventID == 2)
 	{
 		auto wrapper = (TransformWrapper*)data;
 		EncodeVideoFrame(wrapper->clientID, wrapper->transform);

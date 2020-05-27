@@ -37,10 +37,14 @@ namespace SCServer
 			InvalidGraphicsDevice,
 			InvalidGraphicsResource,
 			InputSurfaceNodeConfigurationError,
+			InputSurfaceUnregistrationError,
 			EncoderNodeConfigurationError,
+			EncoderNodeReconfigurationError,
+			EncoderAlreadyConfigured,
+			EncoderNotConfigured,
 			PipelineConfigurationError,
 			PipelineNotInitialized,
-			PipelineProcessingError,
+			PipelineProcessingError
 		};
 
 		Result(Code code) : m_code(code)
