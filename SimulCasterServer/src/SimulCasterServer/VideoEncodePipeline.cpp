@@ -13,6 +13,7 @@
 
 namespace SCServer
 {
+	static void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams encoderParams);
 
 	VideoEncodePipeline::~VideoEncodePipeline()
 	{
@@ -61,7 +62,84 @@ namespace SCServer
 		}
 		
 
+		pipeline.reset(new avs::Pipeline);
+		inputSurface.reset(new avs::Surface);
+		encoder.reset(new avs::Encoder);
+
+		if (!inputSurface->configure(avsSurfaceBackend))
+		{
+			std::cout << "Failed to configure input surface node \n";
+			return Result::InputSurfaceNodeConfigurationError;
+		}
+
 		avs::EncoderParams encoderParams = {};
+		CrateEncodeParams(settings, videoEncodeParams, encoderParams);
+
+		if (!encoder->configure(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams))
+		{
+			std::cout << "Failed to configure encoder node \n";
+			return Result::EncoderNodeConfigurationError;
+		}
+
+		if (!pipeline->link({ inputSurface.get(), encoder.get(), output }))
+		{
+			std::cout << "Error configuring the video encoding pipeline \n";
+			return Result::PipelineConfigurationError;
+		}
+
+		avs::Transform Transform = avs::Transform();
+		for (uint8_t i = 0; i < settings.expectedLag; ++i)
+		{
+			encoder->setCameraTransform(Transform);
+		}
+
+		return Result::OK;
+	}
+
+	Result VideoEncodePipeline::reconfigure(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams)
+	{
+		if (!pipeline)
+		{
+			std::cout << "Error video encode pipeline not initialized \n";
+			return Result::PipelineNotInitialized;
+		}
+
+		auto changeSurfaceBackendResource = [](avs::SurfaceBackendInterface* avsSurfaceBackend, GraphicsDeviceType deviceType, void* resource)->void
+		{
+#if PLATFORM_WINDOWS
+			if (deviceType == GraphicsDeviceType::Direct3D11)
+			{
+				(dynamic_cast<avs::SurfaceDX11*>(avsSurfaceBackend))->setResource(reinterpret_cast<ID3D11Texture2D*>(resource));
+			}
+			if (deviceType == GraphicsDeviceType::Direct3D12)
+			{
+				(dynamic_cast<avs::SurfaceDX12*>(avsSurfaceBackend))->setResource(reinterpret_cast<ID3D12Resource*>(resource));
+			}
+#endif
+			if (deviceType == GraphicsDeviceType::OpenGL)
+			{
+				// TODO: Implement
+			}
+		};
+
+		if (videoEncodeParams.inputSurfaceResource)
+		{
+			if (!encoder->unregisterSurface())
+			{
+				std::cout << "Error occured trying to unregister the surface \n";
+				return Result::InputSurfaceUnregistrationError;
+			}
+			changeSurfaceBackendResource(inputSurface->getBackendSurface(), videoEncodeParams.deviceType, videoEncodeParams.inputSurfaceResource);
+		}
+
+		avs::EncoderParams encoderParams = {};
+		CrateEncodeParams(settings, videoEncodeParams, encoderParams);
+
+		encoder->reconfigure(videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams);
+	}
+
+	void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams encoderParams)
+	{
 		encoderParams.codec = settings.videoCodec;
 		encoderParams.preset = avs::VideoPreset::HighQuality;
 		encoderParams.targetFrameRate = settings.targetFPS;
@@ -83,36 +161,6 @@ namespace SCServer
 		{
 			encoderParams.inputFormat = avs::SurfaceFormat::ARGB;
 		}
-
-		pipeline.reset(new avs::Pipeline);
-		inputSurface.reset(new avs::Surface);
-		encoder.reset(new avs::Encoder);
-
-		if (!inputSurface->configure(avsSurfaceBackend))
-		{
-			std::cout << "Failed to configure input surface node \n";
-			return Result::InputSurfaceNodeConfigurationError;
-		}
-
-		if (!encoder->configure(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams))
-		{
-			std::cout << "Failed to configure encoder node \n";
-			return Result::EncoderNodeConfigurationError;
-		}
-
-		if (!pipeline->link({ inputSurface.get(), encoder.get(), output }))
-		{
-			std::cout << "Error configuring the video encoding pipeline \n";
-			return Result::PipelineConfigurationError;
-		}
-
-		avs::Transform Transform = avs::Transform();
-		for (uint8_t i = 0; i < settings.expectedLag; ++i)
-		{
-			encoder->setCameraTransform(Transform);
-		}
-
-		return Result::OK;
 	}
 
 	Result VideoEncodePipeline::process(avs::Transform& cameraTransform, bool forceIDR)
