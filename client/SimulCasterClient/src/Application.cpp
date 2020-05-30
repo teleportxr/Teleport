@@ -549,6 +549,19 @@ void Application::OnVideoStreamClosed()
     receivedInitialPos = false;
 }
 
+void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand)
+{
+	if(!mPipelineConfigured)
+	{
+		return;
+	}
+
+    const avs::VideoConfig& videoConfig = reconfigureVideoCommand.video_config;
+
+    WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
+    , videoConfig.depth_width, videoConfig.depth_height);
+}
+
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)
 {
     return resourceManagers.mActorManager->ShowActor(actor_uid);

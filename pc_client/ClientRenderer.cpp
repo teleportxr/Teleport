@@ -686,8 +686,10 @@ void ClientRenderer::Update()
 
 void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
-	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, setupCommand.video_width, setupCommand.video_height
-																	,setupCommand.depth_width,setupCommand.depth_height	);
+	const avs::VideoConfig& videoConfig = setupCommand.video_config;
+
+	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, videoConfig.video_width, videoConfig.video_height
+																	, videoConfig.depth_width, videoConfig.depth_height	);
 	videoPosDecoded=false;
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
@@ -702,11 +704,12 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
 	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+	
 	decoderParams.deferDisplay = false;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	decoderParams.codec = setupCommand.videoCodec;
-	decoderParams.use10BitDecoding = setupCommand.use_10_bit_decoding;
-	decoderParams.useYUV444ChromaFormat = setupCommand.use_yuv_444_decoding;
+	decoderParams.codec = videoConfig.videoCodec;
+	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
+	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
 
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();
@@ -730,10 +733,10 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 			source -<
 					 \->decoder	-> surface
 	*/
-	size_t stream_width = setupCommand.video_width;
-	size_t stream_height = setupCommand.video_height;
+	size_t stream_width = videoConfig.video_width;
+	size_t stream_height = videoConfig.video_height;
 
-	videoAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.colour_cubemap_size, setupCommand.colour_cubemap_size, 1, 1,
+	videoAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
 		crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, specularSize, specularSize, 1, 3,	crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	roughSpecularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, specularSize, specularSize, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
@@ -745,7 +748,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	colourOffsetScale.x=0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
-	colourOffsetScale.w = float(setupCommand.video_height) / float(stream_height);
+	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
 	for (size_t i = 0; i < NumStreams; ++i)
 	{
@@ -791,6 +794,57 @@ void ClientRenderer::OnVideoStreamClosed()
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
 
 	receivedInitialPos = false;
+}
+
+void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand)
+{
+	const avs::VideoConfig& videoConfig = reconfigureVideoCommand.video_config;
+
+	WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
+		, videoConfig.depth_width, videoConfig.depth_height);
+
+	decoderParams.deferDisplay = false;
+	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
+	decoderParams.codec = videoConfig.videoCodec;
+	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
+	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
+
+	avs::DeviceHandle dev;
+	dev.handle = renderPlatform->AsD3D11Device();
+	dev.type = avs::DeviceType::Direct3D11;
+
+	size_t stream_width = videoConfig.video_width;
+	size_t stream_height = videoConfig.video_height;
+
+	videoAsCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
+		crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
+
+	colourOffsetScale.x = 0;
+	colourOffsetScale.y = 0;
+	colourOffsetScale.z = 1.0f;
+	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
+
+	for (size_t i = 0; i < NumStreams; ++i)
+	{
+		AVSTextureImpl* ti = (AVSTextureImpl*)(avsTextures[i].get());
+		// Only create new texture and register new surface if resolution has changed
+		if (ti && ti->texture->GetWidth() != stream_width || ti->texture->GetLength() != stream_height)
+		{
+			SAFE_DELETE(ti->texture);
+
+			if (!decoder[i].unregisterSurface())
+			{
+				throw std::runtime_error("Failed to unregister decoder surface");
+			}
+
+			CreateTexture(avsTextures[i], int(stream_width), int(stream_height), SurfaceFormats[i]);
+		}
+
+		if (!decoder[i].reconfigure((int)stream_width, (int)stream_height, decoderParams))
+		{
+			throw std::runtime_error("Failed to reconfigure decoder");
+		}
+	}
 }
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)

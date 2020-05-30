@@ -419,20 +419,21 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 
 	avs::SetupCommand setupCommand;
 	setupCommand.port = c->second.clientMessaging.getServerPort() + 1;
-	setupCommand.video_width = encoderSettings.frameWidth;
-	setupCommand.video_height = encoderSettings.frameHeight;
-	setupCommand.depth_height = encoderSettings.depthHeight;
-	setupCommand.depth_width = encoderSettings.depthWidth;
-	setupCommand.use_10_bit_decoding = casterSettings.use10BitEncoding;
-	setupCommand.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
-	setupCommand.colour_cubemap_size = encoderSettings.frameWidth / 3;
-	setupCommand.compose_cube = encoderSettings.enableDecomposeCube;
 	setupCommand.debug_stream = casterSettings.debugStream;
 	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
 	setupCommand.server_id = serverID;
-	setupCommand.videoCodec = casterSettings.videoCodec;
+	avs::VideoConfig& videoConfig = setupCommand.video_config;
+	videoConfig.video_width = encoderSettings.frameWidth;
+	videoConfig.video_height = encoderSettings.frameHeight;
+	videoConfig.depth_height = encoderSettings.depthHeight;
+	videoConfig.depth_width = encoderSettings.depthWidth;
+	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
+	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
+	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;
+	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
+	videoConfig.videoCodec = casterSettings.videoCodec;
 
 	///TODO: Initialise actors in range.
 
@@ -642,7 +643,34 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	if (!result)
 	{
 		std::cout << "Error occurred when trying to reconfigure the video encode pipeline" << std::endl;
+		return;
 	}
+
+	///TODO: Need to retrieve encoder settings from unity.
+	SCServer::CasterEncoderSettings encoderSettings
+	{
+		1536,
+		1536,
+		1920,
+		960,
+		false,
+		true,
+		true,
+		10000
+	};
+	avs::ReconfigureVideoCommand cmd;
+	avs::VideoConfig& videoConfig = cmd.video_config;
+	videoConfig.video_width = encoderSettings.frameWidth;
+	videoConfig.video_height = encoderSettings.frameHeight;
+	videoConfig.depth_height = encoderSettings.depthHeight;
+	videoConfig.depth_width = encoderSettings.depthWidth;
+	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
+	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
+	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;
+	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
+	videoConfig.videoCodec = casterSettings.videoCodec;
+
+	c->second.clientMessaging.sendCommand(cmd);
 }
 
 TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, avs::Transform& cameraTransform)

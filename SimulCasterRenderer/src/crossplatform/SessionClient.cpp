@@ -256,6 +256,16 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			lastServerID = setupCommand.server_id;
 		}
 		break;
+		case avs::CommandPayloadType::ReconfigureVideo:
+		{
+			size_t commandSize = sizeof(avs::ReconfigureVideoCommand);
+
+			//Copy command out of packet.
+			avs::ReconfigureVideoCommand reconfigureCommand;
+			memcpy(&reconfigureCommand, packet->data, commandSize);
+
+			mCommandInterface->OnReconfigureVideo(reconfigureCommand);
+		}
 		case avs::CommandPayloadType::SetPosition:
 		{
 			size_t commandSize = sizeof(avs::SetPositionCommand);

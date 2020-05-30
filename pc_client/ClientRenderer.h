@@ -134,6 +134,8 @@ public:
 	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 	void OnVideoStreamClosed() override;
 
+	void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
+
 	bool OnActorEnteredBounds(avs::uid actor_uid) override;
 	bool OnActorLeftBounds(avs::uid actor_uid) override;
 

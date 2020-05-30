@@ -22,6 +22,8 @@ public:
     virtual void OnVideoStreamChanged(const avs::SetupCommand& setupCommand, avs::Handshake& handshake) = 0;
     virtual void OnVideoStreamClosed() = 0;
 
+    virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) = 0;
+
     virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
     virtual bool OnActorLeftBounds(avs::uid actor_uid) = 0;
     
