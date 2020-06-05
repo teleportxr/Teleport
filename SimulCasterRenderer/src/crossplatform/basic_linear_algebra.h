@@ -195,6 +195,10 @@ namespace scr
 		quat(avs::vec4 vec)
 			:i(vec.x), j(vec.y), k(vec.z),s(vec.w) {}
 
+		quat(scr::vec4 vec)
+			:i(vec.x), j(vec.y), k(vec.z), s(vec.w)
+		{}
+
 		quat Conjugate()
 		{
 			return quat(-this->i, -this->j, -this->k,this->s);
@@ -241,6 +245,16 @@ namespace scr
 				(+(s * other.z) + (i * other.y) - (j * other.x)),	//K
 				(-(i * other.x) - (j * other.y) - (k * other.z))	//S
 			);
+		}
+
+		void operator*=(const quat& other)
+		{
+			*this = *this * other;
+		}
+
+		void operator*=(const vec3& other)
+		{
+			*this = *this * other;
 		}
 
 		const quat &operator=(const vec4 &vec)

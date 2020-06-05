@@ -676,7 +676,7 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 void ClientRenderer::Update()
 {
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-	uint32_t timeElapsed = (timestamp - previousTimestamp)/1000;//ns to ms
+	float timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
 
 	resourceManagers.Update(timeElapsed);
 	resourceCreator.Update(timeElapsed);
@@ -870,6 +870,11 @@ void ClientRenderer::ClearGeometryResources()
 void ClientRenderer::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
 {
 	resourceManagers.mActorManager->SetVisibleActors(visibleActors);
+}
+
+void ClientRenderer::UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList)
+{
+	resourceManagers.mActorManager->UpdateActorMovement(updateList);
 }
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)

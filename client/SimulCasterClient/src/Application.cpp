@@ -587,6 +587,11 @@ void Application::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
     resourceManagers.mActorManager->SetVisibleActors(visibleActors);
 }
 
+void Application::UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList)
+{
+	resourceManagers.mActorManager->UpdateActorMovement(updateList);
+}
+
 void Application::OnFrameAvailable()
 {
 	++mNumPendingFrames;

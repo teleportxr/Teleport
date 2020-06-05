@@ -71,6 +71,7 @@ public:
     virtual void ClearGeometryResources() override;
 
     virtual void SetVisibleActors(const std::vector<avs::uid>& visibleActors) override;
+    virtual void UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList) override;
 	/* End SessionCommandInterface */
 
 	/* Begin DecodeEventInterface */

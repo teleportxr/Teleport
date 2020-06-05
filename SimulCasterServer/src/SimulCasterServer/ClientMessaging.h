@@ -39,6 +39,7 @@ namespace SCServer
 
 		void actorEnteredBounds(avs::uid actorID);
 		void actorLeftBounds(avs::uid actorID);
+		void updateActorMovement(std::vector<avs::MovementUpdate>& updateList);
 
 		bool hasHost() const;
 		bool hasPeer() const;

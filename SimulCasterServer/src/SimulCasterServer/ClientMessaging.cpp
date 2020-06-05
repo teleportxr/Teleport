@@ -179,6 +179,12 @@ void ClientMessaging::actorLeftBounds(avs::uid actorID)
 	actorsEnteredBounds.erase(std::remove(actorsEnteredBounds.begin(), actorsEnteredBounds.end(), actorID), actorsEnteredBounds.end());
 }
 
+void ClientMessaging::updateActorMovement(std::vector<avs::MovementUpdate>& updateList)
+{
+	avs::UpdateActorMovementCommand command(updateList.size());
+	sendCommand<avs::MovementUpdate>(command, updateList);
+}
+
 bool ClientMessaging::hasHost() const
 {
 	return host;

@@ -316,7 +316,10 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			}
 		}
 
-		break;
+			break;
+		case avs::CommandPayloadType::UpdateActorMovement:
+			ReceiveActorMovementUpdate(packet);
+			break;
 		default:
 			break;
 	};
@@ -489,7 +492,7 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 
 	//Extract command from packet.
 	avs::AcknowledgeHandshakeCommand command;
-	memcpy(&command, packet->data, sizeof(avs::AcknowledgeHandshakeCommand));
+	memcpy(&command, packet->data, commandSize);
 
 	//Extract list of visible actors.
 	std::vector<avs::uid> visibleActors(command.visibleActorAmount);
@@ -498,4 +501,18 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 	mCommandInterface->SetVisibleActors(visibleActors);
 
 	handshakeAcknowledged = true;
+}
+
+void SessionClient::ReceiveActorMovementUpdate(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::UpdateActorMovementCommand);
+
+	//Extract command from packet.
+	avs::UpdateActorMovementCommand command;
+	memcpy(&command, packet->data, commandSize);
+
+	std::vector<avs::MovementUpdate> updateList(command.updatesAmount);
+	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::MovementUpdate) * command.updatesAmount);
+
+	mCommandInterface->UpdateActorMovement(updateList);
 }

@@ -738,14 +738,36 @@ TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 ///ClientMessaging START
 TELEPORT_EXPORT void ActorEnteredBounds(avs::uid clientID, avs::uid actorID)
 {
-	auto c = clientServices.find(clientID);
-	c->second.clientMessaging.actorEnteredBounds(actorID);
+	auto client = clientServices.find(clientID);
+	if(client == clientServices.end()) return;
+
+	client->second.clientMessaging.actorEnteredBounds(actorID);
 }
 
 TELEPORT_EXPORT void ActorLeftBounds(avs::uid clientID, avs::uid actorID)
 {
-	auto c = clientServices.find(clientID);
-	c->second.clientMessaging.actorLeftBounds(actorID);
+	auto client = clientServices.find(clientID);
+	if(client == clientServices.end()) return;
+
+	client->second.clientMessaging.actorLeftBounds(actorID);
+}
+
+TELEPORT_EXPORT void UpdateActorMovement(avs::uid clientID, avs::MovementUpdate* updates, int updateAmount)
+{
+	auto client = clientServices.find(clientID);
+
+	std::vector<avs::MovementUpdate> updateList(updateAmount);
+	for(int i = 0; i < updateAmount; i++)
+	{
+		updateList[i] = updates[i];
+
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, client->second.casterContext.axesStandard, updateList[i].position);
+		avs::ConvertRotation(avs::AxesStandard::UnityStyle, client->second.casterContext.axesStandard, updateList[i].rotation);
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, client->second.casterContext.axesStandard, updateList[i].velocity);
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, client->second.casterContext.axesStandard, updateList[i].angularVelocityAxis);
+	}
+
+	client->second.clientMessaging.updateActorMovement(updateList);
 }
 
 TELEPORT_EXPORT bool HasHost(avs::uid clientID)

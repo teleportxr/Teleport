@@ -60,7 +60,7 @@ public:
 
 	//Process the ResourceManager for this tick; allowing it to free any resources that have not been used for a while.
 	//	deltaTimestamp : Milliseconds that have passed since the last update.
-	void Update(uint32_t deltaTimestamp);
+	void Update(float deltaTimestamp);
 private:
 
 	//Increases readability by obfuscating the full iterator definition.
@@ -191,7 +191,7 @@ void ResourceManager<T>::ClearCareful(std::vector<uid>& excludeList)
 }
 
 template<class T>
-void ResourceManager<T>::Update(uint32_t deltaTimestamp)
+void ResourceManager<T>::Update(float deltaTimestamp)
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.

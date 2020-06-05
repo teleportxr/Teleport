@@ -31,6 +31,7 @@ public:
     virtual void ClearGeometryResources() = 0;
 
     virtual void SetVisibleActors(const std::vector<avs::uid>& visibleActors) = 0;
+    virtual void UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList) = 0;
 };
 
 class SessionClient
@@ -78,6 +79,7 @@ private:
     void SendHandshake(const avs::Handshake &handshake, const std::vector<avs::uid>& clientResourceIDs);
 
     void ReceiveHandshakeAcknowledgement(const ENetPacket* packet);
+    void ReceiveActorMovementUpdate(const ENetPacket* packet);
 
     avs::uid lastServerID = 0; //UID of the server we last connected to.
 

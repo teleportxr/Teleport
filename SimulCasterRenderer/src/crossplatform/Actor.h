@@ -82,10 +82,15 @@ namespace scr
 	private:
 		ActorCreateInfo m_CI;
 
+		avs::MovementUpdate lastReceivedMovement;
 	public:
 		Actor(const ActorCreateInfo &pActorCreateInfo);
 
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
+
+		void UpdateLastMovement(const avs::MovementUpdate& update);
+		//Updates the transform by extrapolating data from the last confirmed timestamp.
+		void TickExtrapolatedTransform(float deltaTime);
 
 		inline std::shared_ptr<Mesh> GetMesh() const { return m_CI.mesh; }
 		inline const std::vector<std::shared_ptr<Material>> GetMaterials() const { return m_CI.materials; }

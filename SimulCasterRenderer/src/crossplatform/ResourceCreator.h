@@ -47,7 +47,8 @@ namespace scr
         }
 
 		//Clear any resources that have not been used longer than their expiry time.
-        void Update(uint32_t timeElapsed)
+		//	timeElapsed : Delta time in milliseconds.
+		void Update(float timeElapsed)
         {
 			mActorManager->Update(timeElapsed);
             mIndexBufferManager.Update(timeElapsed);

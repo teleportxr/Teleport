@@ -57,3 +57,25 @@ void Actor::UpdateModelMatrix(const vec3& translation, const quat& rotation, con
 {
 	m_CI.transform.UpdateModelMatrix(translation, rotation, scale);
 }
+
+void scr::Actor::UpdateLastMovement(const avs::MovementUpdate& update)
+{
+	lastReceivedMovement = update;
+
+	UpdateModelMatrix(update.position, update.rotation, m_CI.transform.m_Scale);
+}
+
+
+void Actor::TickExtrapolatedTransform(float deltaTime)
+{
+	deltaTime /= 1000;
+	m_CI.transform.m_Translation += static_cast<scr::vec3>(lastReceivedMovement.velocity) * deltaTime;
+
+	if(lastReceivedMovement.angularVelocityAngle != 0)
+	{
+		scr::quat deltaRotation(lastReceivedMovement.angularVelocityAngle * deltaTime, lastReceivedMovement.angularVelocityAxis);
+		m_CI.transform.m_Rotation *= deltaRotation;
+	}
+
+	UpdateModelMatrix(m_CI.transform.m_Translation, m_CI.transform.m_Rotation, m_CI.transform.m_Scale);
+}

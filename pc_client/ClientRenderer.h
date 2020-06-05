@@ -143,6 +143,7 @@ public:
 	void ClearGeometryResources() override;
 
 	void SetVisibleActors(const std::vector<avs::uid>& visibleActors) override;
+	void UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList) override;
 
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();

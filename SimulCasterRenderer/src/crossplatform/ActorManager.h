@@ -171,23 +171,45 @@ namespace scr
 			return true;
 		}
 
-		//Tick the actor manager along, and remove any actors that have been invisible for too long.
-		void Update(uint32_t deltaTimestamp)
+		void UpdateActorMovement(std::vector<avs::MovementUpdate> updateList)
 		{
-			//Increment timeSinceLastVisible for all invisible actors.
-			auto actorIt = actorList.begin() + visibleActorAmount;
-			for(; actorIt != actorList.end(); actorIt++)
+			for(avs::MovementUpdate update : updateList)
 			{
-				(*actorIt)->timeSinceLastVisible += deltaTimestamp;
+				if(!HasActor(update.nodeID)) continue;
 
-				if((*actorIt)->timeSinceLastVisible >= actorLifetime) break;
+				scr::Actor& actor = actorList[actorLookup.at(update.nodeID)]->actor;
+				actor.UpdateLastMovement(update);
+			}
+		}
+
+		//Tick the actor manager along, and remove any actors that have been invisible for too long.
+		//	deltaTime : Milliseconds since last update.
+		void Update(float deltaTime)
+		{
+			{
+				//Increment timeSinceLastVisible for all invisible actors.
+				auto actorIt = actorList.begin() + visibleActorAmount;
+				for(; actorIt != actorList.end(); actorIt++)
+				{
+					(*actorIt)->timeSinceLastVisible += deltaTime;
+
+					if((*actorIt)->timeSinceLastVisible >= actorLifetime) break;
+				}
+
+				//Delete actors that have been invisible for too long.
+				for(; actorIt != actorList.end();)
+				{
+					actorLookup.erase((*actorIt)->actorID);
+					actorIt = actorList.erase(actorIt);
+				}
 			}
 
-			//Delete actors that have been invisible for too long.
-			for(; actorIt != actorList.end();)
 			{
-				actorLookup.erase((*actorIt)->actorID);
-				actorIt = actorList.erase(actorIt);
+				for(auto actorIt = actorList.begin(); actorIt != actorList.begin() + visibleActorAmount; actorIt++)
+				{
+					
+					(*actorIt)->actor.TickExtrapolatedTransform(deltaTime);
+				}
 			}
 		}
 
