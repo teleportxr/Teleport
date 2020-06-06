@@ -38,7 +38,12 @@ namespace SCServer
 		bool useAsyncEncoding;
 		bool use10BitEncoding;
 		bool useYUV444Decoding;
-		
+		bool usePerspectiveRendering;
+		int32_t sceneCaptureWidth;
+		int32_t sceneCaptureHeight;
+		bool useDynamicQuality;
+		int32_t bandwidthCalculationInterval;
+
 		int32_t debugStream;
 		bool enableDebugNetworkPackets;
 		bool enableDebugControlPackets;

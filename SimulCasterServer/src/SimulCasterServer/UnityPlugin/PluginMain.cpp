@@ -164,23 +164,26 @@ public:
 
 		if (!GraphicsManager::mGraphicsDevice)
 		{
-			std::cout << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			std::cout << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
 			return Result::InvalidGraphicsDevice;
 		}
 
 		if (videoEncodeParams.inputSurfaceResource)
 		{
-			std::cout << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			std::cout << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
 			return Result::InvalidGraphicsResource;
 		}
 
-		inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
-		// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
-		encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
-
+		if (videoEncodeParams.inputSurfaceResource)
+		{
+			inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
+			// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
+			encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
+			videoEncodeParams.inputSurfaceResource = encoderSurfaceResource;
+		}
+		
 		videoEncodeParams.deviceHandle = GraphicsManager::mGraphicsDevice;
-		videoEncodeParams.inputSurfaceResource = encoderSurfaceResource;
-
+		
 		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, videoEncodeParams);
 	}
 
@@ -405,17 +408,24 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	client.geometryStreamingService->startStreaming(&client.casterContext);
 
 	///TODO: Need to retrieve encoder settings from unity.
-	SCServer::CasterEncoderSettings encoderSettings
+	SCServer::CasterEncoderSettings encoderSettings;
+	if (casterSettings.usePerspectiveRendering)
 	{
-		1536,
-		1536,
-		1920,
-		960,
-		false,
-		true,
-		true,
-		10000
-	};
+		encoderSettings.frameWidth = casterSettings.sceneCaptureWidth;
+		encoderSettings.frameHeight = casterSettings.sceneCaptureHeight;
+		
+	}
+	else
+	{
+		encoderSettings.frameWidth = casterSettings.captureCubeSize * 3;
+		encoderSettings.frameHeight = casterSettings.captureCubeSize * 3;
+	}
+	encoderSettings.depthWidth = 0; // not used
+	encoderSettings.depthHeight = 0; // not used
+	encoderSettings.wllWriteDepthTexture = false;
+	encoderSettings.enableStackDepth = true;
+	encoderSettings.enableDecomposeCube = true;
+	encoderSettings.maxDepth = 10000;
 
 	avs::SetupCommand setupCommand;
 	setupCommand.port = c->second.clientMessaging.getServerPort() + 1;
@@ -649,10 +659,10 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	///TODO: Need to retrieve encoder settings from unity.
 	SCServer::CasterEncoderSettings encoderSettings
 	{
-		1536,
-		1536,
-		1920,
-		960,
+		videoEncodeParams.encodeWidth,
+		videoEncodeParams.encodeHeight,
+		0, // not used
+		0, // not used
 		false,
 		true,
 		true,
