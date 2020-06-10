@@ -217,7 +217,7 @@ private:
 		std::string name; //For debugging which texture failed.
 	};
 	
-	void CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid>& material_uids, const avs::Transform &transform, bool isHand);
+	void CreateActor(avs::uid node_uid, avs::DataNode& node, bool isHand);
 	void CreateLight(avs::uid node_uid, avs::DataNode& node);
 
 	void CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo);

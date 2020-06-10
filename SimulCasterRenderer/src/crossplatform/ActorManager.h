@@ -20,10 +20,12 @@ namespace scr
 		struct LiveActor
 		{
             avs::uid actorID = 0; //ID of the actor.
-			Actor actor;
+			std::shared_ptr<Actor> actor;
 
 			uint32_t timeSinceLastVisible = 0; //Miliseconds the actor has been invisible.
 		};
+
+		typedef std::vector<std::shared_ptr<LiveActor>> actorList_t;
 
 		uint32_t actorLifetime = 2000; //Milliseconds the manager waits before removing invisible actors.
 
@@ -31,14 +33,24 @@ namespace scr
 
 		virtual void CreateActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
 		{
-			actorList.emplace(actorList.begin() + visibleActorAmount, std::make_unique<LiveActor>(LiveActor{actorID, actorCreateInfo}));
+			actorList.emplace(actorList.begin() + visibleActorAmount, std::make_unique<LiveActor>(LiveActor{actorID, std::make_shared<Actor>(actorCreateInfo)}));
 			actorLookup[actorID] = visibleActorAmount;
 			++visibleActorAmount;
+
+			//Link new actor to parent.
+			LinkToParentActor(actorID);
+
+			//Link actor's children to this actor.
+			for(avs::uid childID : actorCreateInfo.childIDs)
+			{
+				parentActors[childID] = actorID;
+				LinkToParentActor(childID);
+			}
 		}
 
         virtual void CreateHand(avs::uid handID, const Actor::ActorCreateInfo& handCreateInfo)
         {
-            handList.emplace_back(std::make_unique<LiveActor>(LiveActor{handID, handCreateInfo}));
+            handList.emplace_back(std::make_unique<LiveActor>(LiveActor{handID, std::make_shared<Actor>(handCreateInfo)}));
 			actorLookup[handID] = handList.size() - 1;
 
 			if(!rightHand) SetHands(0, handID);
@@ -49,7 +61,7 @@ namespace scr
 		{
 			if(!HasActor(actorID)) return;
 
-			if(isActorVisible(actorID)) --visibleActorAmount;
+			if(IsActorVisible(actorID)) --visibleActorAmount;
 			actorList.erase(actorList.begin() + actorLookup.at(actorID));
 		}
 
@@ -58,9 +70,9 @@ namespace scr
 			return actorLookup.find(actorID) != actorLookup.end();
 		}
 
-		Actor* GetActor(avs::uid actorID)
+		std::shared_ptr<Actor> GetActor(avs::uid actorID)
 		{
-			return HasActor(actorID) ? &actorList[actorLookup.at(actorID)]->actor : nullptr;
+			return HasActor(actorID) ? actorList[actorLookup.at(actorID)]->actor : nullptr;
 		}
 
 		bool SetHands(avs::uid leftHandID = 0, avs::uid rightHandID = 0)
@@ -93,7 +105,7 @@ namespace scr
 			{
 				size_t actorIndex = actorLookup.at(actorID);
 
-				if(!isActorVisible(actorIndex))
+				if(!IsActorVisible(actorIndex))
 				{
 					size_t swapIndex = visibleActorAmount;
 
@@ -122,7 +134,7 @@ namespace scr
 			{
 				size_t actorIndex = actorLookup.at(actorID);
 
-				if(isActorVisible(actorIndex))
+				if(IsActorVisible(actorIndex))
 				{
 					size_t swapIndex = visibleActorAmount - 1;
 
@@ -159,7 +171,7 @@ namespace scr
         {
 			if(!HasActor(actorID)) return false;
 			
-			actorList[actorLookup.at(actorID)]->actor.UpdateModelMatrix(translation, rotation, scale);
+			actorList[actorLookup.at(actorID)]->actor->UpdateModelMatrix(translation, rotation, scale);
 			return true;
         }
 
@@ -167,7 +179,7 @@ namespace scr
 		{
 			if(!HasActor(handID)) return false;
 
-			handList[actorLookup.at(handID)]->actor.UpdateModelMatrix(translation, rotation, scale);
+			handList[actorLookup.at(handID)]->actor->UpdateModelMatrix(translation, rotation, scale);
 			return true;
 		}
 
@@ -175,10 +187,10 @@ namespace scr
 		{
 			for(avs::MovementUpdate update : updateList)
 			{
-				if(!HasActor(update.nodeID)) continue;
+				std::shared_ptr<scr::Actor> actor = GetActor(update.nodeID);
+				if(actor == nullptr) continue;
 
-				scr::Actor& actor = actorList[actorLookup.at(update.nodeID)]->actor;
-				actor.UpdateLastMovement(update);
+				actor->SetLastMovement(update);
 			}
 		}
 
@@ -208,7 +220,7 @@ namespace scr
 				for(auto actorIt = actorList.begin(); actorIt != actorList.begin() + visibleActorAmount; actorIt++)
 				{
 					
-					(*actorIt)->actor.TickExtrapolatedTransform(deltaTime);
+					(*actorIt)->actor->TickExtrapolatedTransform(deltaTime);
 				}
 			}
 		}
@@ -250,7 +262,7 @@ namespace scr
 			}
 		}
 
-		const std::vector<std::unique_ptr<LiveActor>>& GetActorList() const
+		const actorList_t& GetActorList() const
 		{
 			return actorList;
 		}
@@ -261,8 +273,6 @@ namespace scr
 		}
 
 	protected:
-		typedef std::vector<std::unique_ptr<LiveActor>> actorList_t;
-
 		actorList_t actorList; //Actors/geometry that are drawn to the screen.
         size_t visibleActorAmount = 0; //Amount of actors in the actorList currently being rendered.
 
@@ -272,9 +282,25 @@ namespace scr
         LiveActor* leftHand = nullptr;
         LiveActor* rightHand = nullptr;
 	private:
-	    bool isActorVisible(size_t actorIndex) const
+		std::map<avs::uid, avs::uid> parentActors;
+
+		//Uses the index of the actor in the actorList to determine if it is visible.
+	    bool IsActorVisible(size_t actorIndex) const
 		{
 			return actorIndex < visibleActorAmount;
+		}
+
+		//Links the actor with the passed ID to it's parent. If the actor doesn't exist, then it doesn't do anything.
+		void LinkToParentActor(avs::uid actorID)
+		{
+			auto parentIt = parentActors.find(actorID);
+			if(parentIt == parentActors.end()) return;
+
+			std::shared_ptr<Actor> parent = GetActor(parentIt->second);
+			std::shared_ptr<Actor> child = GetActor(actorID);
+
+			child->SetParent(parent);
+			parent->AddChild(child);
 		}
 	};
 }

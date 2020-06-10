@@ -542,15 +542,15 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
 
-	const std::vector<std::unique_ptr<scr::ActorManager::LiveActor>>& actorList = resourceManagers.mActorManager->GetActorList();
+	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetActorList();
 	for(size_t i = 0; i < resourceManagers.mActorManager->getVisibleActorAmount(); i++)
 	{
-		const scr::Actor& actor = actorList[i]->actor;
-		const scr::Transform& transform = actor.GetTransform();
-		const std::shared_ptr<scr::Mesh> mesh = actor.GetMesh();
+		const std::shared_ptr<scr::Actor>& actor = actorList[i]->actor;
+		const scr::Transform& transform = actor->GetGlobalTransform();
+		const std::shared_ptr<scr::Mesh> mesh = actor->GetMesh();
 		if(mesh)
 		{
-			const std::vector<std::shared_ptr<scr::Material>> materials = actor.GetMaterials();
+			const std::vector<std::shared_ptr<scr::Material>> materials = actor->GetMaterials();
 			if(materials.size() == 0)
 				continue;
 

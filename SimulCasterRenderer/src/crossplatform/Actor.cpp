@@ -2,7 +2,8 @@
 
 #include "Actor.h"
 
-using namespace scr;
+namespace scr
+{
 
 //Transform
 bool Transform::s_UninitialisedUB = true;
@@ -13,13 +14,13 @@ Transform::Transform()
 {}
 
 Transform::Transform(const TransformCreateInfo& pTransformCreateInfo)
-	:Transform(pTransformCreateInfo, vec3(), quat(), vec3())
+	: Transform(pTransformCreateInfo, vec3(), quat(), vec3())
 {}
 
 Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 translation, quat rotation, vec3 scale)
-	:m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
+	: m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
 {
-	if (false)//s_UninitialisedUB)
+	if(false)//s_UninitialisedUB)
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 1;
@@ -50,32 +51,73 @@ void Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation,
 //Actor
 Actor::Actor(const ActorCreateInfo& pActorCreateInfo)
 	:m_CI(pActorCreateInfo)
-{
-}
+{}
 
 void Actor::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
 {
-	m_CI.transform.UpdateModelMatrix(translation, rotation, scale);
+	m_CI.localTransform.UpdateModelMatrix(translation, rotation, scale);
+	RequestTransformUpdate();
 }
 
-void scr::Actor::UpdateLastMovement(const avs::MovementUpdate& update)
+void Actor::RequestTransformUpdate()
+{
+	isTransformDirty = true;
+
+	//The actor's children need to update their transforms, as their parent's transform has been updated.
+	for(auto childIt = children.begin(); childIt != children.end();)
+	{
+		std::shared_ptr<Actor> child = childIt->lock();
+
+		//Erase weak pointer from list, if the child actor has been removed.
+		if(child)
+		{
+			child->RequestTransformUpdate();
+			++childIt;
+		}
+		else
+		{
+			childIt = children.erase(childIt);
+		}
+	}
+}
+
+void Actor::SetLastMovement(const avs::MovementUpdate& update)
 {
 	lastReceivedMovement = update;
 
-	UpdateModelMatrix(update.position, update.rotation, m_CI.transform.m_Scale);
+	UpdateModelMatrix(update.position, update.rotation, m_CI.localTransform.m_Scale);
 }
-
 
 void Actor::TickExtrapolatedTransform(float deltaTime)
 {
 	deltaTime /= 1000;
-	m_CI.transform.m_Translation += static_cast<scr::vec3>(lastReceivedMovement.velocity) * deltaTime;
+	m_CI.localTransform.m_Translation += static_cast<vec3>(lastReceivedMovement.velocity) * deltaTime;
 
 	if(lastReceivedMovement.angularVelocityAngle != 0)
 	{
-		scr::quat deltaRotation(lastReceivedMovement.angularVelocityAngle * deltaTime, lastReceivedMovement.angularVelocityAxis);
-		m_CI.transform.m_Rotation *= deltaRotation;
+		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * deltaTime, lastReceivedMovement.angularVelocityAxis);
+		m_CI.localTransform.m_Rotation *= deltaRotation;
 	}
 
-	UpdateModelMatrix(m_CI.transform.m_Translation, m_CI.transform.m_Rotation, m_CI.transform.m_Scale);
+	UpdateModelMatrix(m_CI.localTransform.m_Translation, m_CI.localTransform.m_Rotation, m_CI.localTransform.m_Scale);
+}
+
+void Actor::SetParent(std::weak_ptr<Actor> parent)
+{
+	this->parent = parent;
+}
+
+void Actor::AddChild(std::weak_ptr<Actor> child)
+{
+	children.push_back(child);
+}
+
+void Actor::UpdateGlobalTransform() const
+{
+	std::shared_ptr<Actor> parentPtr = parent.lock();
+	globalTransform = parentPtr ? parentPtr->GetGlobalTransform() * m_CI.localTransform : m_CI.localTransform;
+
+	isTransformDirty = false;
+}
+
 }

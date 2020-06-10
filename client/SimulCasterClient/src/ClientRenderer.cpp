@@ -427,7 +427,7 @@ void ClientRenderer::UpdateHandObjects()
 
 	if(rightHand)
 	{
-		rightHand->actor.UpdateModelMatrix
+		rightHand->actor->UpdateModelMatrix
 				(
 						scr::vec3
 								{
@@ -443,13 +443,13 @@ void ClientRenderer::UpdateHandObjects()
 										remoteStates[0].HeadPose.Pose.Orientation.w
 								}
 						* HAND_ROTATION_DIFFERENCE,
-						rightHand->actor.GetTransform().m_Scale
+						rightHand->actor->GetGlobalTransform().m_Scale
 				);
 	}
 
 	if(leftHand)
 	{
-		leftHand->actor.UpdateModelMatrix
+		leftHand->actor->UpdateModelMatrix
 				(
 						scr::vec3
 								{
@@ -465,7 +465,7 @@ void ClientRenderer::UpdateHandObjects()
 										remoteStates[1].HeadPose.Pose.Orientation.w
 								}
 						* HAND_ROTATION_DIFFERENCE,
-						leftHand->actor.GetTransform().m_Scale
+						leftHand->actor->GetGlobalTransform().m_Scale
 				);
 	}
 }
@@ -478,13 +478,13 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 
 	auto RenderLocalActor = [&](OVRActorManager::LiveOVRActor* ovrActor)
 	{
-		const scr::Actor& actor = ovrActor->actor;
+		const std::shared_ptr<scr::Actor> actor = ovrActor->actor;
 
 		//----OVR Actor Set Transforms----//
-		scr::mat4 scr_Transform = transformToOculusOrigin * actor.GetTransform().GetTransformMatrix();
+		scr::mat4 scr_Transform = transformToOculusOrigin * actor->GetGlobalTransform().GetTransformMatrix();
 		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
 
-		for(size_t matIndex = 0; matIndex < actor.GetMaterials().size(); matIndex++)
+		for(size_t matIndex = 0; matIndex < actor->GetMaterials().size(); matIndex++)
 		{
 			if(matIndex >= ovrActor->ovrSurfaceDefs.size())
 			{
@@ -497,7 +497,7 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 	};
 
 	//Render local actors.
-	const std::vector<std::unique_ptr<scr::ActorManager::LiveActor>>& actorList = resourceManagers->mActorManager->GetActorList();
+	const scr::ActorManager::actorList_t& actorList = resourceManagers->mActorManager->GetActorList();
 	for(size_t actorIndex = 0; actorIndex < resourceManagers->mActorManager->getVisibleActorAmount(); actorIndex++)
 	{
 		OVRActorManager::LiveOVRActor* ovrActor = static_cast<OVRActorManager::LiveOVRActor*>(actorList[actorIndex].get());

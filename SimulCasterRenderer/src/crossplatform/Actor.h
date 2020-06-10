@@ -61,6 +61,11 @@ namespace scr
 		Transform(const TransformCreateInfo& pTransformCreateInfo);
 		Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 translation, quat rotation, vec3 scale);
 
+		Transform operator*(const Transform& other)
+		{
+			return Transform(m_CI, m_Translation + other.m_Translation, m_Rotation * other.m_Rotation, m_Scale + m_Scale);
+		}
+
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 
 		inline const mat4& GetTransformMatrix() const { return  m_TransformData.m_ModelMatrix; }
@@ -76,25 +81,55 @@ namespace scr
 			bool animatedMesh;	//Will the mesh deform?
 			std::shared_ptr<Mesh> mesh;
 			std::vector<std::shared_ptr<Material>> materials;
-			Transform transform;
+			Transform localTransform;
+
+			std::vector<avs::uid> childIDs;
 		};
 
 	private:
 		ActorCreateInfo m_CI;
+
+		//Cached global transform, and dirty flag; updated when necessary on a request.
+		mutable bool isTransformDirty = true;
+		mutable Transform globalTransform;
+
+		std::weak_ptr<Actor> parent;
+		std::vector<std::weak_ptr<Actor>> children;
 
 		avs::MovementUpdate lastReceivedMovement;
 	public:
 		Actor(const ActorCreateInfo &pActorCreateInfo);
 
 		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
+		//Requests global transform of actor, and actor's children, be recalculated.
+		void RequestTransformUpdate();
 
-		void UpdateLastMovement(const avs::MovementUpdate& update);
+		void SetLastMovement(const avs::MovementUpdate& update);
 		//Updates the transform by extrapolating data from the last confirmed timestamp.
 		void TickExtrapolatedTransform(float deltaTime);
 
+		void SetParent(std::weak_ptr<Actor> parent);
+		void AddChild(std::weak_ptr<Actor> child);
+
 		inline std::shared_ptr<Mesh> GetMesh() const { return m_CI.mesh; }
 		inline const std::vector<std::shared_ptr<Material>> GetMaterials() const { return m_CI.materials; }
-		inline const Transform& GetTransform() const { return m_CI.transform; }
-		inline Transform& GetTransform() { return m_CI.transform; }
+
+		inline const Transform& GetLocalTransform() const { return m_CI.localTransform; } const
+		inline Transform& GetLocalTransform() { return m_CI.localTransform; }
+
+		inline const Transform& GetGlobalTransform() const
+		{ 
+			if(isTransformDirty) UpdateGlobalTransform();
+			return globalTransform; 
+		}
+
+		inline Transform& GetGlobalTransform()
+		{
+			if(isTransformDirty) UpdateGlobalTransform();
+			return globalTransform;
+		}
+
+	private:
+		void UpdateGlobalTransform() const;
 	};
 }

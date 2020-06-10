@@ -17,14 +17,14 @@ using namespace scr;
 
 void OVRActorManager::CreateActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
 {
-    actorList.emplace(actorList.begin() + visibleActorAmount, std::make_unique<LiveOVRActor>(LiveOVRActor(LiveActor{actorID, actorCreateInfo}, CreateNativeActor(actorID, actorCreateInfo))));
+    actorList.emplace(actorList.begin() + visibleActorAmount, std::make_unique<LiveOVRActor>(LiveOVRActor(LiveActor{actorID, std::make_shared<Actor>(actorCreateInfo)}, CreateNativeActor(actorID, actorCreateInfo))));
     actorLookup[actorID] = visibleActorAmount;
     ++visibleActorAmount;
 }
 
 void OVRActorManager::CreateHand(avs::uid handID, const scr::Actor::ActorCreateInfo& handCreateInfo)
 {
-    handList.emplace_back(std::make_unique<LiveOVRActor>(LiveOVRActor(LiveActor{handID, handCreateInfo}, CreateNativeActor(handID, handCreateInfo))));
+    handList.emplace_back(std::make_unique<LiveOVRActor>(LiveOVRActor(LiveActor{handID, std::make_shared<Actor>(handCreateInfo)}, CreateNativeActor(handID, handCreateInfo))));
     actorLookup[handID] = handList.size() - 1;
 
     if(!rightHand) SetHands(0, handID);

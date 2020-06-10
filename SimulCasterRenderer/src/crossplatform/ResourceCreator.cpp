@@ -630,13 +630,13 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 		case NodeDataType::Hand:
 			if(!m_pActorManager->HasActor(node_uid))
 			{
-				CreateActor(node_uid, node.data_uid, node.materials, node.transform, true);
+				CreateActor(node_uid, node, true);
 			}
 			break;
 		case NodeDataType::Mesh:
 			if(!m_pActorManager->UpdateActorTransform(node_uid, node.transform.position, node.transform.rotation, node.transform.scale))
 			{
-				CreateActor(node_uid, node.data_uid, node.materials, node.transform, false);
+				CreateActor(node_uid, node, false);
 			}
 			break;
 		case NodeDataType::Camera:
@@ -655,7 +655,7 @@ void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
 	m_ReceivedResources.push_back(node_uid);
 }
 
-void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const std::vector<avs::uid> &material_uids, const avs::Transform &transform, bool isHand)
+void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool isHand)
 {
 	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>();
 	//A list of unique resources that the actor is missing, and needs to be completed.
@@ -663,18 +663,18 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const st
 
 	newActor->actorInfo.staticMesh = true;
 	newActor->actorInfo.animatedMesh = false;
-	newActor->actorInfo.transform = transform;
+	newActor->actorInfo.localTransform = node.transform;
 
-	newActor->actorInfo.mesh = m_MeshManager->Get(mesh_uid);
+	newActor->actorInfo.mesh = m_MeshManager->Get(node.data_uid);
 	if(!newActor->actorInfo.mesh)
 	{
-		missingResources.insert(mesh_uid);
+		missingResources.insert(node.data_uid);
 	}
 
-	newActor->actorInfo.materials.resize(material_uids.size());
-	for(size_t i = 0; i < material_uids.size(); i++)
+	newActor->actorInfo.materials.resize(node.materials.size());
+	for(size_t i = 0; i < node.materials.size(); i++)
 	{
-		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(material_uids[i]);
+		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(node.materials[i]);
 
 		if(material)
 		{
@@ -682,10 +682,12 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::uid mesh_uid, const st
 		}
 		else
 		{
-			missingResources.insert(material_uids[i]);
-			newActor->materialSlots[material_uids[i]].push_back(i);
+			missingResources.insert(node.materials[i]);
+			newActor->materialSlots[node.materials[i]].push_back(i);
 		}
 	}
+
+	newActor->actorInfo.childIDs = node.childrenUids;
 
 	//Complete actor now, if we aren't missing any resources.
 	if(missingResources.size() == 0)
