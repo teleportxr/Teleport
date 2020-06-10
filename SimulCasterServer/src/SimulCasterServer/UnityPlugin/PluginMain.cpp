@@ -119,7 +119,7 @@ public:
 		//GraphicsManager::ReleaseResource(encoderSurfaceResource);
 	}
 
-	Result configure(VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
+	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
 	{
 		if (configured)
 		{
@@ -143,10 +143,11 @@ public:
 		// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
 		encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
 
-		videoEncodeParams.deviceHandle = GraphicsManager::mGraphicsDevice;
-		videoEncodeParams.inputSurfaceResource = encoderSurfaceResource;
+		VideoEncodeParams params = videoEncodeParams;
+		params.deviceHandle = GraphicsManager::mGraphicsDevice;
+		params.inputSurfaceResource = encoderSurfaceResource;
 
-		Result result = SCServer::VideoEncodePipeline::initialize(casterSettings, videoEncodeParams, colorQueue);
+		Result result = SCServer::VideoEncodePipeline::initialize(casterSettings, params, colorQueue);
 		if (result)
 		{
 			configured = true;
@@ -154,7 +155,7 @@ public:
 		return result;
 	}
 
-	Result reconfigure(VideoEncodeParams& videoEncodeParams)
+	Result reconfigure(const VideoEncodeParams& videoEncodeParams)
 	{
 		if (!configured)
 		{
@@ -174,17 +175,24 @@ public:
 			return Result::InvalidGraphicsResource;
 		}
 
+		VideoEncodeParams params = videoEncodeParams;
+		params.deviceHandle = GraphicsManager::mGraphicsDevice;
+
 		if (videoEncodeParams.inputSurfaceResource)
 		{
 			inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
 			// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
 			encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
-			videoEncodeParams.inputSurfaceResource = encoderSurfaceResource;
+			params.inputSurfaceResource = encoderSurfaceResource;
+		}
+		else
+		{
+			params.inputSurfaceResource = encoderSurfaceResource;
 		}
 		
-		videoEncodeParams.deviceHandle = GraphicsManager::mGraphicsDevice;
+	
 		
-		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, videoEncodeParams);
+		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, params);
 	}
 
 	Result encode(avs::Transform& cameraTransform, bool forceIDR = false)

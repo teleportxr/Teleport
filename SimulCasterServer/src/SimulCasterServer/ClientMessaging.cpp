@@ -52,9 +52,10 @@ bool ClientMessaging::startSession(avs::uid clientID, int32_t listenPort)
 	{
 		std::cerr << "Session: Failed to create ENET server host!\n";
 		DEBUG_BREAK_ONCE
+		return false;
 	}
 
-	return host;
+	return true;
 }
 
 void ClientMessaging::stopSession()

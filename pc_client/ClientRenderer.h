@@ -122,7 +122,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 		GEOMETRY_OSD,
 		NUM_OSDS
 	};
-	int show_osd = CAMERA_OSD;
+	int show_osd = NETWORK_OSD;
 	bool render_from_video_centre = false;
 	bool show_textures = false;
 

@@ -13,7 +13,7 @@
 
 namespace SCServer
 {
-	static void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams encoderParams);
+	static void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams);
 
 	VideoEncodePipeline::~VideoEncodePipeline()
 	{
@@ -138,7 +138,7 @@ namespace SCServer
 		encoder->reconfigure(videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams);
 	}
 
-	void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams encoderParams)
+	void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams)
 	{
 		encoderParams.codec = settings.videoCodec;
 		encoderParams.preset = avs::VideoPreset::HighQuality;
