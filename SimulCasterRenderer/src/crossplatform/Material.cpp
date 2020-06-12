@@ -25,7 +25,7 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 	m_MaterialData.combinedTexCoordsScalar_B	= m_CI.combined.texCoordsScalar[2];
 	m_MaterialData.combinedTexCoordsScalar_A	= m_CI.combined.texCoordsScalar[3];
 
-	m_MaterialData.u_SpecularColour 			= vec3(1, 1 ,1);
+	m_MaterialData.u_SpecularColour 			= avs::vec3(1, 1 ,1);
 
 	m_MaterialData.u_DiffuseTexCoordIndex		= m_CI.diffuse.texCoordIndex;
 	m_MaterialData.u_NormalTexCoordIndex		= m_CI.normal.texCoordIndex;

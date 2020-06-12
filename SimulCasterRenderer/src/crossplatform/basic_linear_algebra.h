@@ -10,199 +10,38 @@ namespace scr
 	const float TAU = 2.0f * PI;
 	const float HALF_PI = 0.5f * PI;
 
-	struct vec2
-	{
-		float x, y;
-
-		vec2()
-			:x(0), y(0) {};
-		vec2(float x, float y)
-			:x(x), y(y) {};
-		vec2(const avs::vec2 &vec)
-			:x(vec.x), y(vec.y) {};
-
-		inline float Length() 
-		{ 
-			return sqrtf((powf(x, 2) + powf(y, 2))); 
-		}
-		inline vec2 Normalise()
-		{
-			return (*this * (1.0f / Length()));
-		}
-		inline float Dot(const vec2& other)
-		{
-			return (this->x * other.x) + (this->y * other.y);
-		}
-
-		vec2 operator+ (const vec2& other) const
-		{
-			return vec2(x + other.x, y + other.y);
-		}
-
-		vec2 operator- (const vec2& other) const
-		{
-			return vec2(x - other.x, y - other.y);
-		}
-
-		//Scales the vec2 by the scaler a. The scaler go on the rhs of the object.
-		vec2 operator*(float a) const
-		{
-			return vec2(a * x, a * y);
-		}
-	};
-	struct vec3
-	{
-		float x, y, z;
-
-		vec3()
-			:x(0), y(0), z(0) {};
-		vec3(float x, float y, float z)
-			:x(x), y(y), z(z) {};
-		vec3(const avs::vec3 &vec)
-			:x(vec.x), y(vec.y), z(vec.z) {}
-
-		inline float Length()
-		{
-			return sqrtf((powf(x, 2) + powf(y, 2) + powf(z, 2)));
-		}
-		inline vec3 Normalise()
-		{
-			return (*this * (1.0f / Length()));
-		}
-		inline float Dot(const vec3& other)
-		{
-			return (this->x * other.x) + (this->y * other.y) + (this->z * other.z);
-		}
-		inline vec3 Cross(const vec3& other)
-		{
-			return vec3(this->y * other.z - this->z * other.y, this->z * other.x - this->x * other.z, this->x * other.y - this->y * other.x);
-		}
-
-		vec3 operator+ (const vec3& other) const
-		{
-			return vec3(x + other.x, y + other.y, z + other.z);
-		}
-		const vec3 &operator+= (const vec3& other)
-		{
-			x +=other.x;
-			y +=other.y;
-			z +=other.z;
-			return *this;
-		}
-		const vec3 &operator*= (float a)
-		{
-			x *=a;
-			y *=a;
-			z *=a;
-			return *this;
-		}
-
-		vec3 operator- () const
-		{
-			return vec3(-x , -y , -z );
-		}
-
-
-		vec3 operator- (const vec3& other) const
-		{
-			return vec3(x - other.x, y - other.y, z - other.z);
-		}
-
-		//Scales the vec3 by the scaler a. The scaler go on the rhs of the object.
-		vec3 operator*(float a) const
-		{
-			return vec3(a * x, a * y, a * z);
-		}
-
-		const vec3& operator=(const avs::vec3& vec)
-		{
-			x = vec.x;
-			y = vec.y;
-			z = vec.z;
-			return *this;
-		};
-	};
-	struct vec4
-	{
-		float x, y, z, w;
-
-		vec4()
-			:x(0), y(0), z(0), w(0) {};
-		vec4(float x, float y, float z, float w)
-			:x(x), y(y), z(z), w(w) {};
-		vec4(const avs::vec4 &vec)
-			:x(vec.x), y(vec.y), z(vec.z), w(vec.w) {}
-
-		inline float Length()
-		{
-			return sqrtf((powf(x, 2) + powf(y, 2) + powf(z, 2) + powf(w, 2)));
-		}
-		inline vec4 Normalise()
-		{
-			return (*this * (1.0f / Length()));
-		}
-		inline float Dot(const vec4& other)
-		{
-			return (this->x * other.x) + (this->y * other.y) + (this->z * other.z) + (this->w * other.w);
-		}
-
-		vec4 operator+ (const vec4& other) const
-		{
-			return vec4(x + other.x, y + other.y, z + other.z, w + other.w);
-		}
-
-		vec4 operator- (const vec4& other) const
-		{
-			return vec4(x - other.x, y - other.y, z - other.z, w - other.w);
-		}
-
-		//Scales the vec3 by the scaler a. The scaler go on the rhs of the object.
-		vec4 operator*(float a) const
-		{
-			return vec4(a * x, a * y, a * z, a * w);
-		}
-
-		const vec4 &operator=(const avs::vec4 &vec)
-		{
-			x = vec.x;
-			y = vec.y;
-			z = vec.z;
-			w = vec.w;
-			return *this;
-		}
-	};
 	struct quat
 	{
 		float i, j, k, s;
 
 		quat()
-			:i(0), j(0), k(0), s(0) {}
+			:i(0), j(0), k(0), s(0)
+		{}
 
-		quat(float i, float j, float k,float s)
-			:  i(i), j(j), k(k), s(s)
-		{
-		}
+		quat(float i, float j, float k, float s)
+			:i(i), j(j), k(k), s(s)
+		{}
 		
-		quat(float angle, const vec3& axis)
+		quat(float angle, const avs::vec3& axis)
 		{
-			vec3 scaledAxis = axis * sinf(angle / 2.0f);
+			avs::vec3 scaledAxis = axis * sinf(angle / 2.0f);
 			s = cosf(angle / 2.0f);
 			i = scaledAxis.x;
 			j = scaledAxis.y;
 			k = scaledAxis.z;
+
 			Normalise();
 		}
-		quat(avs::vec4 vec)
-			:i(vec.x), j(vec.y), k(vec.z),s(vec.w) {}
 
-		quat(scr::vec4 vec)
+		quat(avs::vec4 vec)
 			:i(vec.x), j(vec.y), k(vec.z), s(vec.w)
 		{}
 
 		quat Conjugate()
 		{
-			return quat(-this->i, -this->j, -this->k,this->s);
+			return quat(-this->i, -this->j, -this->k, this->s);
 		}
+
 		quat Normalise()
 		{
 			float length = sqrtf(s * s + i * i + j * j + k * k);
@@ -210,24 +49,39 @@ namespace scr
 			i /= length;
 			j /= length;
 			k /= length;
+
 			return *this;
 		}
-		void ToAxisAngle(vec3& outAxis, float& outAngle)
+
+		void ToAxisAngle(avs::vec3& outAxis, float& outAngle)
 		{
-			vec3 result = vec3(i, j, k);
+			avs::vec3 result = avs::vec3(i, j, k);
+
 			float theta = 2 * acosf(s);
-			if (theta > 0)
+			if(theta > 0)
 			{
-				result * (1.0f / sinf(theta / 2.0f));
+				result* (1.0f / sinf(theta / 2.0f));
 			}
+
 			outAxis = result;
 			outAngle = theta;
 		}
-		vec3 GetIJK()
+
+		avs::vec3 GetIJK()
 		{
-			vec3 result = { i, j, k };
-			return result.Normalise();
+			return avs::vec3(i, j, k).Normalised();
 		}
+
+		avs::vec3 RotateVector(const avs::vec3 rhs) const
+		{
+			avs::vec3 quatVec(i, j, k);
+
+			return
+				quatVec * 2.0f * quatVec.Dot(rhs) +
+				rhs * (s * s - quatVec.Dot(quatVec)) +
+				quatVec.Cross(rhs) * 2.0f * s;
+		}
+
 		quat operator*(const quat& other) const
 		{
 			return quat(
@@ -237,7 +91,8 @@ namespace scr
 				((s * other.s) - (i * other.i) - (j * other.j) - (k * other.k))		//S
 			);
 		}
-		quat operator*(const vec3& other) const
+
+		quat operator*(const avs::vec3& other) const
 		{
 			return quat(
 				(+(s * other.x) + (j * other.z) - (k * other.y)),	//I
@@ -252,12 +107,12 @@ namespace scr
 			*this = *this * other;
 		}
 
-		void operator*=(const vec3& other)
+		void operator*=(const avs::vec3& other)
 		{
 			*this = *this * other;
 		}
 
-		const quat &operator=(const vec4 &vec)
+		const quat &operator=(const avs::vec4 &vec)
 		{
 			s = vec.w;
 			i = vec.x;
@@ -266,26 +121,45 @@ namespace scr
 			return *this;
 		}
 	};
+
 	struct mat4
 	{
 		float a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p;
 
 		mat4()
-			:a(0), b(0), c(0), d(0), e(0), f(0), g(0), h(0),
-			i(0), j(0), k(0), l(0), m(0), n(0), o(0), p(0) {}
+			:mat4
+			(0.0f, 0.0f, 0.0f, 0.0f,
+			 0.0f, 0.0f, 0.0f, 0.0f,
+			 0.0f, 0.0f, 0.0f, 0.0f,
+			 0.0f, 0.0f, 0.0f, 0.0f
+			)
+		{}
 
 		mat4(float a, float b, float c, float d, float e, float f, float g, float h,
-			float i, float j, float k, float l, float m, float n, float o, float p)
-			: a(a), b(b), c(c), d(d), e(e), f(f), g(g), h(h),
-			i(i), j(j), k(k), l(l), m(m), n(n), o(o), p(p) {}
+			 float i, float j, float k, float l, float m, float n, float o, float p)
+			:a(a), b(b), c(c), d(d),
+			e(e), f(f), g(g), h(h),
+			i(i), j(j), k(k), l(l),
+			m(m), n(n), o(o), p(p)
+		{}
 
 		mat4(float diagonal)
-			: a(diagonal), b(0), c(0), d(0), e(0), f(diagonal), g(0), h(0),
-			i(0), j(0), k(diagonal), l(0), m(0), n(0), o(0), p(diagonal) {}
+			:mat4
+			(diagonal, 0.0f, 0.0f, 0.0f,
+			 0.0f, diagonal, 0.0f, 0.0f,
+			 0.0f, 0.0f, diagonal, 0.0f,
+			 0.0f, 0.0f, 0.0f, diagonal
+			)
+		{}
 
-		mat4(const vec4& a, const vec4& b, const vec4& c, const vec4& d)
-			: a(a.x), b(a.y), c(a.z), d(a.w), e(b.x), f(b.y), g(b.z), h(b.w),
-			i(c.x), j(c.y), k(c.z), l(c.w), m(d.x), n(d.y), o(d.z), p(d.w) {}
+		mat4(const avs::vec4& a, const avs::vec4& b, const avs::vec4& c, const avs::vec4& d)
+			:mat4
+			(a.x, a.y, a.z, a.w,
+			 b.x, b.y, b.z, b.w,
+			 c.x, c.y, c.z, c.w,
+			 d.x, d.y, d.z, d.w
+			)
+		{}
 
 		mat4 Transpose()
 		{
@@ -294,66 +168,93 @@ namespace scr
 			k = k;
 			p = p;*/
 
-			float temp_b = b;
-			float temp_c = c;
-			float temp_d = d;
-			float temp_g = g;
-			float temp_h = h;
-			float temp_l = l;
-
-			b = e;
-			c = i;
-			d = m;
-			g = j;
-			h = n;
-			l = o;
-
-			e = temp_b;
-			i = temp_c;
-			m = temp_d;
-			j = temp_g;
-			n = temp_h;
-			o = temp_l;
+			std::swap(b, e);
+			std::swap(c, i);
+			std::swap(d, m);
+			std::swap(g, j);
+			std::swap(h, n);
+			std::swap(l, o);
 
 			return *this;
 		}
-		mat4 Identity()
+
+		avs::vec4 operator*(const avs::vec4& input) const
 		{
-			return mat4(1);
+			avs::vec4 transform_i(a, e, i, m);
+			avs::vec4 transform_j(b, f, j, n);
+			avs::vec4 transform_k(c, g, k, o);
+			avs::vec4 transform_l(d, h, l, p);
+			avs::vec4 output(transform_i * input.x + transform_j * input.y + transform_k * input.z + transform_l * input.w);
+			return output;
+		}
+		
+		mat4 operator* (const mat4& input) const
+		{
+			avs::vec4 input_i(input.a, input.e, input.i, input.m);
+			avs::vec4 input_j(input.b, input.f, input.j, input.n);
+			avs::vec4 input_k(input.c, input.g, input.k, input.o);
+			avs::vec4 input_l(input.d, input.h, input.l, input.p);
+
+			avs::vec4 output_i = *this * input_i;
+			avs::vec4 output_j = *this * input_j;
+			avs::vec4 output_k = *this * input_k;
+			avs::vec4  output_l = *this * input_l;
+
+			mat4 output(output_i, output_j, output_k, output_l);
+			output.Transpose();
+			return output;
 		}
 
-		static mat4 Perspective(float horizontalFOV, float aspectRatio, float zNear, float zFar) 
+		static mat4 Identity()
 		{
-			return mat4((1 / (aspectRatio * static_cast<float>(tanf(horizontalFOV / 2)))), (0), (0), (0),
+			return mat4(1.0f);
+		}
+
+		static mat4 Perspective(float horizontalFOV, float aspectRatio, float zNear, float zFar)
+		{
+			return mat4
+			(
+				(1 / (aspectRatio * static_cast<float>(tanf(horizontalFOV / 2)))), (0), (0), (0),
 				(0), (1 / static_cast<float>(tanf(horizontalFOV / 2))), (0), (0),
 				(0), (0), -((zFar + zNear) / (zFar - zNear)), -((2 * zFar * zNear) / (zFar - zNear)),
-				(0), (0), (-1), (0));
-		};
-		static mat4 Orthographic(float left, float right, float bottom, float top, float _near, float _far) 
+				(0), (0), (-1), (0)
+			);
+		}
+
+		static mat4 Orthographic(float left, float right, float bottom, float top, float _near, float _far)
 		{
-			return mat4((2 / (right - left)), (0), (0), (-(right + left) / (right - left)),
+			return mat4
+			(
+				(2 / (right - left)), (0), (0), (-(right + left) / (right - left)),
 				(0), (2 / (top - bottom)), (0), (-(top + bottom) / (top - bottom)),
 				(0), (0), (-2 / (_far - _near)), (-(_far + _near) / (_far - _near)),
-				(0), (0), (0), (1));
-		};
-		
-		static mat4 Translation(const vec3& translation)
+				(0), (0), (0), (1)
+			);
+		}
+
+		static mat4 Translation(const avs::vec3& translation)
 		{
-			mat4 result(1);
-			result.d = translation.x;
-			result.h = translation.y;
-			result.l = translation.z;
-			return result;
-		};
-		static mat4 Rotation(const quat& orientation) 
+			return mat4
+			(
+				1.0f, 0.0f, 0.0f, translation.x,
+				0.0f, 1.0f, 0.0f, translation.y,
+				0.0f, 0.0f, 1.0f, translation.z,
+				0.0f, 0.0f, 0.0f, 1.0f
+			);
+		}
+
+		static mat4 Rotation(const quat& orientation)
 		{
-			return mat4(
-				(powf(orientation.s, 2) + powf(orientation.i, 2) - powf(orientation.j, 2) - powf(orientation.k, 2)), 2 * (orientation.i * orientation.j - orientation.k * orientation.s), 2 * (orientation.i*orientation.k + orientation.j * orientation.s), 0,
-				2 * (orientation.i * orientation.j + orientation.k * orientation.s), (powf(orientation.s, 2) - powf(orientation.i, 2) + powf(orientation.j, 2) - powf(orientation.k, 2)), 2 * (orientation.j*orientation.k - orientation.i * orientation.s), 0,
+			return mat4
+			(
+				(powf(orientation.s, 2) + powf(orientation.i, 2) - powf(orientation.j, 2) - powf(orientation.k, 2)), 2 * (orientation.i * orientation.j - orientation.k * orientation.s), 2 * (orientation.i * orientation.k + orientation.j * orientation.s), 0,
+				2 * (orientation.i * orientation.j + orientation.k * orientation.s), (powf(orientation.s, 2) - powf(orientation.i, 2) + powf(orientation.j, 2) - powf(orientation.k, 2)), 2 * (orientation.j * orientation.k - orientation.i * orientation.s), 0,
 				2 * (orientation.i * orientation.k - orientation.j * orientation.s), 2 * (orientation.j * orientation.k + orientation.i * orientation.s), (powf(orientation.s, 2) - powf(orientation.i, 2) - powf(orientation.j, 2) + powf(orientation.k, 2)), 0,
-				0, 0, 0, 1);
-		};
-		static mat4 Rotation(float angle, const vec3& axis)
+				0, 0, 0, 1
+			);
+		}
+
+		static mat4 Rotation(float angle, const avs::vec3& axis)
 		{
 			mat4 result(1);
 			float c_angle = static_cast<float>(cos(angle));
@@ -385,64 +286,30 @@ namespace scr
 			result.p = 1;
 
 			return result;
-		};
-		static mat4 Scale(const vec3& scale) 
-		{
-			mat4 result(1);
-			result.a = scale.x;
-			result.f = scale.y;
-			result.k = scale.z;
-			return result;
-		};
-		
-		inline vec4 Mat4Vec4Multi(const vec4& input, const mat4& transform) const
-		{
-			const float& x = input.x;
-			const float& y = input.y;
-			const float& z = input.z;
-			const float& w = input.w;
-			vec4 transform_i(transform.a, transform.e, transform.i, transform.m);
-			vec4 transform_j(transform.b, transform.f, transform.j, transform.n);
-			vec4 transform_k(transform.c, transform.g, transform.k, transform.o);
-			vec4 transform_l(transform.d, transform.h, transform.l, transform.p);
-			vec4 output(transform_i * x + transform_j * y + transform_k * z + transform_l * w);
-			return output;
-		}
-		inline vec4 operator* (const vec4& input) const
-		{
-			return Mat4Vec4Multi(input, *this);
 		}
 
-		inline mat4 Mat4Mat4Multi(const mat4& transform, const mat4& input) const
+		static mat4 Scale(const avs::vec3& scale)
 		{
-			vec4 input_i(input.a, input.e, input.i, input.m);
-			vec4 input_j(input.b, input.f, input.j, input.n);
-			vec4 input_k(input.c, input.g, input.k, input.o);
-			vec4 input_l(input.d, input.h, input.l, input.p);
-			vec4 output_i = transform * input_i;
-			vec4 output_j = transform * input_j;
-			vec4 output_k = transform * input_k;
-			vec4  output_l = transform * input_l;
-			mat4 output(output_i, output_j, output_k, output_l);
-			output.Transpose();
-			return output;
+			return mat4
+			(
+				scale.x, 0.0f, 0.0f, 0.0f,
+				0.0f, scale.y, 0.0f, 0.0f,
+				0.0f, 0.0f, scale.z, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f
+			);
 		}
-		inline mat4 operator* (const mat4& input) const
-		{
-			return Mat4Mat4Multi(*this, input);
-		}
-
-
 	};
 
 	struct uvec2
 	{
 		uint32_t x, y;
 	};
+
 	struct uvec3
 	{
 		uint32_t x, y, z;
-	};	
+	};
+
 	struct uvec4
 	{
 		uint32_t x, y, z, w;
@@ -452,10 +319,12 @@ namespace scr
 	{
 		int32_t x, y;
 	};
+
 	struct ivec3
 	{
 		int32_t x, y, z;
 	};
+
 	struct ivec4
 	{
 		int32_t x, y, z, w;

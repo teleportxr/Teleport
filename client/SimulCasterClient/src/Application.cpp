@@ -225,10 +225,10 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	ovrVector3f footPos=mScene.GetFootPos();
 
 	//Get HMD Position/Orientation
-	scr::vec3 headPos =*((const scr::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
-	headPos+=*((scr::vec3*)&footPos);
+	avs::vec3 headPos =*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
+	headPos+=*((avs::vec3*)&footPos);
 	//headPos*=10.0f;
-	scr::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
+	avs::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
 
 	//Get the Capture Position
 	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform)};
@@ -295,7 +295,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
-	scr::vec3 camera_from_videoCentre=clientRenderer.cameraPosition-scr_UE4_captureTransform.m_Translation;
+	avs::vec3 camera_from_videoCentre=clientRenderer.cameraPosition-scr_UE4_captureTransform.m_Translation;
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
 	GlobalGraphicsResources.scrCamera->UpdatePosition(scr_OVR_headPos);
 
@@ -358,10 +358,10 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	if(clientRenderer.mCubemapTexture->IsValid())
 	{
 		float w=vrFrame.IPD/2.0f;//.04f; //half separation.
-		scr::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
-		scr::vec3 &v=camera_from_videoCentre;
-		scr::vec4 right_eye ={v.x+eye.x,v.y+eye.y,v.z+eye.z,0.0f};
-		scr::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
+		avs::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
+		avs::vec3 &v=camera_from_videoCentre;
+		avs::vec4 right_eye ={v.x+eye.x,v.y+eye.y,v.z+eye.z,0.0f};
+		avs::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
 		clientRenderer.videoUB.eyeOffsets[0]=left_eye;		// left eye
 		clientRenderer.videoUB.eyeOffsets[1]=eye;	// right eye.
 		clientRenderer.videoUB.cameraPosition=clientRenderer.cameraPosition;

@@ -24,7 +24,7 @@ namespace scr
 		{
 			const RenderPlatform* renderPlatform;
 			Type type;
-			vec3 position;
+			avs::vec3 position;
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
 		};
@@ -34,10 +34,10 @@ namespace scr
 
 		struct LightData //Layout conformant to GLSL std140
 		{
-			vec4 colour;
-			vec3 position;
+			avs::vec4 colour;
+			avs::vec3 position;
 			float power;		 //Strength or Power of the light in Watts equilavent to Radiant Flux in Radiometry.
-			vec3 direction;
+			avs::vec3 direction;
 			float _pad;
 			mat4 lightSpaceTransform;
 		};
@@ -58,7 +58,7 @@ namespace scr
 		Light(LightCreateInfo* pLightCreateInfo);
 		~Light() = default;
 
-		void UpdatePosition(const vec3& position);
+		void UpdatePosition(const avs::vec3& position);
 		void UpdateOrientation(const quat& orientation);
 
 		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }

@@ -15,8 +15,8 @@ namespace scr
 		struct MaterialParameter
 		{
 			std::shared_ptr<Texture> texture;	//Texture Reference.
-			vec2 texCoordsScalar[4];			//Scales the texture co-ordinates for tiling; one per channel.
-			vec4 textureOutputScalar;			//Scales the output of the texture per channel.
+			avs::vec2 texCoordsScalar[4];			//Scales the texture co-ordinates for tiling; one per channel.
+			avs::vec4 textureOutputScalar;			//Scales the output of the texture per channel.
 			float texCoordIndex;				//Selects which texture co-ordinates to use in sampling.
 		};
 		struct MaterialCreateInfo
@@ -29,25 +29,25 @@ namespace scr
 		};
 		struct MaterialData //Layout conformant to GLSL std140
 		{
-			vec4 diffuseOutputScalar;
-			vec2 diffuseTexCoordsScalar_R;
-			vec2 diffuseTexCoordsScalar_G;
-			vec2 diffuseTexCoordsScalar_B;
-			vec2 diffuseTexCoordsScalar_A;
-
-			vec4 normalOutputScalar;
-			vec2 normalTexCoordsScalar_R;
-			vec2 normalTexCoordsScalar_G;
-			vec2 normalTexCoordsScalar_B;
-			vec2 normalTexCoordsScalar_A;
-
-			vec4 combinedOutputScalar;
-			vec2 combinedTexCoordsScalar_R;
-			vec2 combinedTexCoordsScalar_G;
-			vec2 combinedTexCoordsScalar_B;
-			vec2 combinedTexCoordsScalar_A;
-
-			vec3 u_SpecularColour;
+			avs::vec4 diffuseOutputScalar;
+			avs::vec2 diffuseTexCoordsScalar_R;
+			avs::vec2 diffuseTexCoordsScalar_G;
+			avs::vec2 diffuseTexCoordsScalar_B;
+			avs::vec2 diffuseTexCoordsScalar_A;
+			
+			avs::vec4 normalOutputScalar;
+			avs::vec2 normalTexCoordsScalar_R;
+			avs::vec2 normalTexCoordsScalar_G;
+			avs::vec2 normalTexCoordsScalar_B;
+			avs::vec2 normalTexCoordsScalar_A;
+			
+			avs::vec4 combinedOutputScalar;
+			avs::vec2 combinedTexCoordsScalar_R;
+			avs::vec2 combinedTexCoordsScalar_G;
+			avs::vec2 combinedTexCoordsScalar_B;
+			avs::vec2 combinedTexCoordsScalar_A;
+			
+			avs::vec3 u_SpecularColour;
 			float _pad;
 
 			float u_DiffuseTexCoordIndex;

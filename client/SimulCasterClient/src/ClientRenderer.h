@@ -40,7 +40,7 @@ public:
 	avs::Decoder       mDecoder;
 	avs::NetworkSource mNetworkSource;
 
-	scr::vec3 oculusOrigin;		// in metres. The headPose will be relative to this.
+	avs::vec3 oculusOrigin;		// in metres. The headPose will be relative to this.
 
 	scr::ResourceManagers	*resourceManagers	=nullptr;
 	ResourceCreator			*resourceCreator	=nullptr;
@@ -48,17 +48,18 @@ public:
 	ovrMobile				*mOvrMobile			=nullptr;
 	avs::HeadPose headPose;
 	avs::HeadPose controllerPoses[2];
-	scr::vec3 cameraPosition;	// in real space.
+	avs::vec3 cameraPosition;	// in real space.
 	const scr::quat HAND_ROTATION_DIFFERENCE {0.0000000456194194, 0.923879385, -0.382683367, 0.000000110135019}; //Adjustment to the controller's rotation to get the desired rotation.
 
 	struct VideoUB
 	{
-		scr::vec4 eyeOffsets[2];
+		avs::vec4 eyeOffsets[2];
 		ovrMatrix4f invViewProj[2];
-		scr::vec3 cameraPosition;
+		avs::vec3 cameraPosition;
 		int pad_;
 	};
 	VideoUB videoUB;
+
 	struct CubemapUB
 	{
 		scr::ivec2 sourceOffset;
@@ -87,7 +88,7 @@ public:
 
 	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
-	scr::vec4 mCameraPositions[8];
+	avs::vec4 mCameraPositions[8];
 
 	std::string                         CopyCubemapSrc;
 	std::string                         ExtractPositionSrc;

@@ -386,7 +386,7 @@ void ClientRenderer::UpdateHandObjects()
 	uint32_t deviceIndex = 0;
 	ovrInputCapabilityHeader capsHeader;
 	//Poll controller state from the Oculus API.
-	while( vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader ) >= 0 )
+	while(vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader) >= 0)
 	{
 		if(capsHeader.Type == ovrControllerType_TrackedRemote)
 		{
@@ -396,10 +396,10 @@ void ClientRenderer::UpdateHandObjects()
 				remoteStates.push_back(remoteState);
 				if(deviceIndex < 2)
 				{
-					scr::vec3 pos=oculusOrigin+*((const scr::vec3*)&remoteState.HeadPose.Pose.Position);
+					avs::vec3 pos = oculusOrigin + *((const avs::vec3 *)&remoteState.HeadPose.Pose.Position);
 
-					controllerPoses[deviceIndex].position = *((const avs::vec3*)(&pos));
-					controllerPoses[deviceIndex].orientation = *((const avs::vec4*)(&remoteState.HeadPose.Pose.Orientation));
+					controllerPoses[deviceIndex].position = *((const avs::vec3 *)(&pos));
+					controllerPoses[deviceIndex].orientation = *((const avs::vec4 *)(&remoteState.HeadPose.Pose.Orientation));
 				}
 				else
 				{
@@ -410,8 +410,8 @@ void ClientRenderer::UpdateHandObjects()
 		++deviceIndex;
 	}
 
-	OVRActorManager::LiveOVRActor* leftHand = nullptr;
-	OVRActorManager::LiveOVRActor* rightHand = nullptr;
+	OVRActorManager::LiveOVRActor *leftHand = nullptr;
+	OVRActorManager::LiveOVRActor *rightHand = nullptr;
 	dynamic_cast<OVRActorManager*>(resourceManagers->mActorManager.get())->GetHands(leftHand, rightHand);
 
 	switch(remoteStates.size())
@@ -429,7 +429,7 @@ void ClientRenderer::UpdateHandObjects()
 	{
 		rightHand->actor->UpdateModelMatrix
 				(
-						scr::vec3
+						avs::vec3
 								{
 										remoteStates[0].HeadPose.Pose.Position.x + cameraPosition.x,
 										remoteStates[0].HeadPose.Pose.Position.y + cameraPosition.y,
@@ -451,7 +451,7 @@ void ClientRenderer::UpdateHandObjects()
 	{
 		leftHand->actor->UpdateModelMatrix
 				(
-						scr::vec3
+						avs::vec3
 								{
 										remoteStates[1].HeadPose.Pose.Position.x + cameraPosition.x,
 										remoteStates[1].HeadPose.Pose.Position.y + cameraPosition.y,

@@ -167,7 +167,7 @@ namespace scr
 			}
 		}
 
-        bool UpdateActorTransform(avs::uid actorID, const scr::vec3& translation, const scr::quat& rotation, const scr::vec3& scale)
+        bool UpdateActorTransform(avs::uid actorID, const avs::vec3& translation, const scr::quat& rotation, const avs::vec3& scale)
         {
 			if(!HasActor(actorID)) return false;
 			
@@ -175,7 +175,7 @@ namespace scr
 			return true;
         }
 
-		bool UpdateHandTransform(avs::uid handID, const scr::vec3& translation, const scr::quat& rotation, const scr::vec3& scale)
+		bool UpdateHandTransform(avs::uid handID, const avs::vec3& translation, const scr::quat& rotation, const avs::vec3& scale)
 		{
 			if(!HasActor(handID)) return false;
 
@@ -298,6 +298,8 @@ namespace scr
 
 			std::shared_ptr<Actor> parent = GetActor(parentIt->second);
 			std::shared_ptr<Actor> child = GetActor(actorID);
+
+			if(child == nullptr) return;
 
 			child->SetParent(parent);
 			parent->AddChild(child);

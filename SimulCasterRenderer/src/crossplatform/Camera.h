@@ -22,7 +22,7 @@ namespace scr
 			RenderPlatform* renderPlatform;
 			ProjectionType type;
 			quat orientation;
-			vec3 position;
+			avs::vec3 position;
 		};
 
 	private:
@@ -31,7 +31,7 @@ namespace scr
 			mat4 m_ProjectionMatrix;
 			mat4 m_ViewMatrix;
 			quat m_Orientation;
-			vec3 m_Position;
+			avs::vec3 m_Position;
 			float _pad;
 		} m_CameraData;
 
@@ -46,7 +46,7 @@ namespace scr
 	public:
 		Camera(CameraCreateInfo* pCameraCreateInfo);
 
-		void UpdatePosition(const vec3& position);
+		void UpdatePosition(const avs::vec3& position);
 		void UpdateOrientation(const quat& orientation);
 		void UpdateView();
 		
@@ -57,6 +57,6 @@ namespace scr
 
 		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 
-		inline const vec3& GetPosition() const { return m_CameraData.m_Position; }
+		inline const avs::vec3& GetPosition() const { return m_CameraData.m_Position; }
 	};
 };

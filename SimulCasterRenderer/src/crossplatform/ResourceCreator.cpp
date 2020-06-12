@@ -508,7 +508,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 			newMaterial->textureSlots.emplace(material.pbrMetallicRoughness.baseColorTexture.index, newMaterial->materialInfo.diffuse.texture);
 		}
 
-		scr::vec2 tiling = { material.pbrMetallicRoughness.baseColorTexture.tiling.x, material.pbrMetallicRoughness.baseColorTexture.tiling.y };
+		avs::vec2 tiling = { material.pbrMetallicRoughness.baseColorTexture.tiling.x, material.pbrMetallicRoughness.baseColorTexture.tiling.y };
 
 		newMaterial->materialInfo.diffuse.texCoordsScalar[0] = tiling;
 		newMaterial->materialInfo.diffuse.texCoordsScalar[1] = tiling;
@@ -522,11 +522,11 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 	else
 	{
 		newMaterial->materialInfo.diffuse.texture = m_DummyDiffuse; 
-		newMaterial->materialInfo.diffuse.texCoordsScalar[0] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.texCoordsScalar[1] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.texCoordsScalar[2] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.texCoordsScalar[3] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.textureOutputScalar = scr::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.texCoordsScalar[0] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.texCoordsScalar[1] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.texCoordsScalar[2] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.texCoordsScalar[3] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.diffuse.textureOutputScalar = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		newMaterial->materialInfo.diffuse.texCoordIndex = 0.0f;
 	}
 
@@ -544,24 +544,24 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 			newMaterial->textureSlots.emplace(material.normalTexture.index, newMaterial->materialInfo.normal.texture);
 		}
 
-			scr::vec2 tiling = {material.normalTexture.tiling.x, material.normalTexture.tiling.y};
+			avs::vec2 tiling = {material.normalTexture.tiling.x, material.normalTexture.tiling.y};
 
 		newMaterial->materialInfo.normal.texCoordsScalar[0] = tiling;
 		newMaterial->materialInfo.normal.texCoordsScalar[1] = tiling;
 		newMaterial->materialInfo.normal.texCoordsScalar[2] = tiling;
 		newMaterial->materialInfo.normal.texCoordsScalar[3] = tiling;
 
-		newMaterial->materialInfo.normal.textureOutputScalar = scr::vec4{1, 1, 1, 1};
+		newMaterial->materialInfo.normal.textureOutputScalar = avs::vec4{1, 1, 1, 1};
 		newMaterial->materialInfo.normal.texCoordIndex = (float)material.normalTexture.texCoord;
 	}
 	else
 	{
 		newMaterial->materialInfo.normal.texture = m_DummyNormal;
-		newMaterial->materialInfo.normal.texCoordsScalar[0] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.normal.texCoordsScalar[1] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.normal.texCoordsScalar[2] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.normal.texCoordsScalar[3] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.normal.textureOutputScalar = scr::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		newMaterial->materialInfo.normal.texCoordsScalar[0] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.normal.texCoordsScalar[1] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.normal.texCoordsScalar[2] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.normal.texCoordsScalar[3] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.normal.textureOutputScalar = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		newMaterial->materialInfo.normal.texCoordIndex = 0.0f;
 	}
 
@@ -579,25 +579,25 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 			newMaterial->textureSlots.emplace(material.pbrMetallicRoughness.metallicRoughnessTexture.index, newMaterial->materialInfo.combined.texture);
 		}
 
-		scr::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
+		avs::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
 
 		newMaterial->materialInfo.combined.texCoordsScalar[0] = tiling;
 		newMaterial->materialInfo.combined.texCoordsScalar[1] = tiling;
 		newMaterial->materialInfo.combined.texCoordsScalar[2] = tiling;
 		newMaterial->materialInfo.combined.texCoordsScalar[3] = tiling;
 
-		newMaterial->materialInfo.combined.textureOutputScalar = scr::vec4{1, 1, 1, 1};
+		newMaterial->materialInfo.combined.textureOutputScalar = avs::vec4{1, 1, 1, 1};
 
 		newMaterial->materialInfo.combined.texCoordIndex = (float)material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
 	}
 	else
 	{
 		newMaterial->materialInfo.combined.texture = m_DummyCombined;
-		newMaterial->materialInfo.combined.texCoordsScalar[0] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.combined.texCoordsScalar[1] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.combined.texCoordsScalar[2] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.combined.texCoordsScalar[3] = scr::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.combined.textureOutputScalar = scr::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		newMaterial->materialInfo.combined.texCoordsScalar[0] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.combined.texCoordsScalar[1] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.combined.texCoordsScalar[2] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.combined.texCoordsScalar[3] = avs::vec2(1.0f, 1.0f);
+		newMaterial->materialInfo.combined.textureOutputScalar = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		newMaterial->materialInfo.combined.texCoordIndex = 0.0f;
 	}
 
@@ -714,7 +714,7 @@ void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
 	scr::Light::LightCreateInfo lci;
 	lci.renderPlatform = m_pRenderPlatform;
 	lci.type = scr::Light::Type::DIRECTIONAL;
-	lci.position = scr::vec3(node.transform.position);
+	lci.position = avs::vec3(node.transform.position);
 	lci.orientation = scr::quat(node.transform.rotation);
 	lci.shadowMapTexture = m_TextureManager->Get(node.data_uid);
 

@@ -17,9 +17,9 @@ namespace scr
 			RenderPlatform* renderPlatform;
 		};
 
-		vec3 m_Translation;
+		avs::vec3 m_Translation;
 		quat m_Rotation;
-		vec3 m_Scale;
+		avs::vec3 m_Scale;
 
 	private:
 		struct TransformData
@@ -34,39 +34,33 @@ namespace scr
 
 		ShaderResourceLayout m_ShaderResourceLayout;
 		ShaderResource m_ShaderResource;
-	
-	public:
-		Transform& operator= (const avs::Transform& transform)
-		{
-			m_Translation.x = transform.position.x;
-			m_Translation.y = transform.position.y;
-			m_Translation.z = transform.position.z;
-
-			m_Rotation.s = transform.rotation.w;
-			m_Rotation.i = transform.rotation.x;
-			m_Rotation.j = transform.rotation.y;
-			m_Rotation.k = transform.rotation.z;
-
-			m_Scale.x = transform.scale.x;
-			m_Scale.y = transform.scale.y;
-			m_Scale.z = transform.scale.z;
-
-			m_TransformData.m_ModelMatrix = mat4::Translation(m_Translation) * mat4::Rotation(m_Rotation) * mat4::Scale(m_Scale);
-			
-			return *this;
-		}
 
 	public:
 		Transform();
 		Transform(const TransformCreateInfo& pTransformCreateInfo);
-		Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 translation, quat rotation, vec3 scale);
+		Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 translation, quat rotation, avs::vec3 scale);
 
-		Transform operator*(const Transform& other)
+		Transform& operator= (const avs::Transform& transform)
 		{
-			return Transform(m_CI, m_Translation + other.m_Translation, m_Rotation * other.m_Rotation, m_Scale + m_Scale);
+			m_Translation = transform.position;
+			m_Rotation = transform.rotation;
+			m_Scale = transform.scale;
+
+			m_TransformData.m_ModelMatrix = mat4::Translation(m_Translation) * mat4::Rotation(m_Rotation) * mat4::Scale(m_Scale);
+
+			return *this;
 		}
 
-		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
+		Transform operator*(const Transform& other) const
+		{
+			avs::vec3 globalScale(m_Scale.x * other.m_Scale.x, m_Scale.y * other.m_Scale.y, m_Scale.z * other.m_Scale.z);
+			quat globalRotation = other.m_Rotation * m_Rotation;
+			avs::vec3 globalPosition = other.m_Translation + other.m_Rotation.RotateVector(m_Translation);
+
+			return Transform(m_CI, globalPosition, globalRotation, globalScale);
+		}
+
+		void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 
 		inline const mat4& GetTransformMatrix() const { return  m_TransformData.m_ModelMatrix; }
 		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
@@ -100,7 +94,7 @@ namespace scr
 	public:
 		Actor(const ActorCreateInfo &pActorCreateInfo);
 
-		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
+		void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 		//Requests global transform of actor, and actor's children, be recalculated.
 		void RequestTransformUpdate();
 

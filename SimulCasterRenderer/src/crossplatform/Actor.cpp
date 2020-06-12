@@ -10,14 +10,14 @@ bool Transform::s_UninitialisedUB = true;
 std::shared_ptr<UniformBuffer> Transform::s_UB = nullptr;
 
 Transform::Transform()
-	:Transform(TransformCreateInfo{nullptr}, vec3(), quat(), vec3())
+	:Transform(TransformCreateInfo{nullptr}, avs::vec3(), quat(), avs::vec3())
 {}
 
 Transform::Transform(const TransformCreateInfo& pTransformCreateInfo)
-	: Transform(pTransformCreateInfo, vec3(), quat(), vec3())
+	: Transform(pTransformCreateInfo, avs::vec3(), quat(), avs::vec3())
 {}
 
-Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 translation, quat rotation, vec3 scale)
+Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 translation, quat rotation, avs::vec3 scale)
 	: m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
 {
 	if(false)//s_UninitialisedUB)
@@ -40,7 +40,7 @@ Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, vec3 trans
 	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 }
 
-void Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
+void Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
 	m_Translation = translation;
 	m_Rotation = rotation;
@@ -53,7 +53,7 @@ Actor::Actor(const ActorCreateInfo& pActorCreateInfo)
 	:m_CI(pActorCreateInfo)
 {}
 
-void Actor::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
+void Actor::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
 	m_CI.localTransform.UpdateModelMatrix(translation, rotation, scale);
 	RequestTransformUpdate();
@@ -91,7 +91,7 @@ void Actor::SetLastMovement(const avs::MovementUpdate& update)
 void Actor::TickExtrapolatedTransform(float deltaTime)
 {
 	deltaTime /= 1000;
-	m_CI.localTransform.m_Translation += static_cast<vec3>(lastReceivedMovement.velocity) * deltaTime;
+	m_CI.localTransform.m_Translation += static_cast<avs::vec3>(lastReceivedMovement.velocity) * deltaTime;
 
 	if(lastReceivedMovement.angularVelocityAngle != 0)
 	{
@@ -115,7 +115,7 @@ void Actor::AddChild(std::weak_ptr<Actor> child)
 void Actor::UpdateGlobalTransform() const
 {
 	std::shared_ptr<Actor> parentPtr = parent.lock();
-	globalTransform = parentPtr ? parentPtr->GetGlobalTransform() * m_CI.localTransform : m_CI.localTransform;
+	globalTransform = parentPtr ? m_CI.localTransform * parentPtr->GetGlobalTransform() : m_CI.localTransform;
 
 	isTransformDirty = false;
 }

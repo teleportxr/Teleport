@@ -30,7 +30,8 @@ Clone the repository with submodules:
 8. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
 9. Uncheck 'ENABLE_ENCRYPTION' option from srt.
 10. Check 'STATIC' and 'BUILD_AS_LIBRARY' options from Basis Universal.
-11. Generate, open and build the Visual Studio project.
+11. Uncheck PLATFORM_D3D11_SFX.
+12. Generate, open and build the Visual Studio project.
 
 ## Building UE4 plugin
 

@@ -36,7 +36,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	m_LightID = s_LightData.size() - 1;
 
 	//Default values
-	s_LightData[m_LightID].colour = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	s_LightData[m_LightID].colour = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	s_LightData[m_LightID].power = 100; //i.e 100W
 	UpdateLightSpaceTransform();
 
@@ -75,7 +75,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	}
 }
 
-void Light::UpdatePosition(const vec3& position) 
+void Light::UpdatePosition(const avs::vec3& position) 
 {
 	m_CI.position = position;
 	UpdateLightSpaceTransform();
@@ -89,7 +89,7 @@ void Light::UpdateLightSpaceTransform()
 {
 	if (IsValid())
 	{
-		vec3 defaultDirection = { 0.0f, 0.0f, -1.0f };
+		avs::vec3 defaultDirection = { 0.0f, 0.0f, -1.0f };
 
 		s_LightData[m_LightID].position = m_CI.position;
 		s_LightData[m_LightID].direction = ((m_CI.orientation * defaultDirection) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
