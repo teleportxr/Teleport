@@ -64,6 +64,7 @@ namespace SCServer
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::AVC_AnnexB;
 			stream.useParser = false;
+			stream.isDataLimitPerFrame = false;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
 			stream.streamIndex = 50 + i;
@@ -73,9 +74,11 @@ namespace SCServer
 
 		for (int32_t i = 0; i < geometryPipes.size(); ++i)
 		{
+			static const uint8_t expectedFPS = 60;
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::Geometry;
 			stream.useParser = true;
+			stream.isDataLimitPerFrame = true;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
 			stream.streamIndex = 100 + i;
