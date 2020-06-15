@@ -19,9 +19,10 @@ public:
 
     /* Begin avs::DecoderBackendInterface */
     avs::Result initialize(const avs::DeviceHandle& device, int frameWidth, int frameHeight, const avs::DecoderParams& params) override;
+    avs::Result reconfigure(int frameWidth, int frameHeight, const avs::DecoderParams& params) override;
     avs::Result shutdown() override;
     avs::Result registerSurface(const avs::SurfaceBackendInterface* surface) override;
-    avs::Result unregisterSurface(const avs::SurfaceBackendInterface* surface) override;
+    avs::Result unregisterSurface() override;
     avs::Result decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payaloadType, bool lastPayload) override;
     avs::Result display() override;
     /* End avs::DecoderBackendInterface */

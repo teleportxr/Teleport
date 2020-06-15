@@ -51,6 +51,19 @@ avs::Result VideoDecoderProxy::initialize(const avs::DeviceHandle& device, int f
     return avs::Result::OK;
 }
 
+avs::Result VideoDecoderProxy::reconfigure(int frameWidth, int frameHeight, const avs::DecoderParams& params)
+{
+    if(!mInitialized) {
+        return avs::Result::DecoderBackend_NotInitialized;
+    }
+
+    mInitialized = false;
+
+    avs::DeviceHandle dummyHandle;
+
+    initialize(dummyHandle, frameWidth, frameHeight, params);
+}
+
 avs::Result VideoDecoderProxy::shutdown()
 {
     if(!mInitialized) {
@@ -84,7 +97,7 @@ avs::Result VideoDecoderProxy::registerSurface(const avs::SurfaceBackendInterfac
     return avs::Result::OK;
 }
 
-avs::Result VideoDecoderProxy::unregisterSurface(const avs::SurfaceBackendInterface* surface)
+avs::Result VideoDecoderProxy::unregisterSurface()
 {
     if(!mSurfaceTexture) {
         return avs::Result::DecoderBackend_SurfaceNotRegistered;

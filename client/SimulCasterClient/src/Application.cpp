@@ -390,11 +390,12 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, avs::Handshake& handshake)
 {
+    const avs::VideoConfig& videoConfig = setupCommand.video_config;
 	if(!mPipelineConfigured)
     {
 		OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port,
-				 setupCommand.video_width, setupCommand.video_height,
-				 setupCommand.colour_cubemap_size);
+                 videoConfig.video_width, videoConfig.video_height,
+                 videoConfig.colour_cubemap_size);
 
 		avs::NetworkSourceParams sourceParams = {};
 		sourceParams.socketBufferSize      = 3 * 1024 * 1024; // 3 Mb socket buffer size
@@ -413,13 +414,13 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, av
 	    clientRenderer.mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
 	    clientRenderer.mNetworkSource.setDoChecksums(setupCommand.do_checksums);
 		avs::DecoderParams decoderParams = {};
-		decoderParams.codec             = setupCommand.videoCodec;
+		decoderParams.codec             = videoConfig.videoCodec;
 		decoderParams.decodeFrequency   = avs::DecodeFrequency::NALUnit;
 		decoderParams.prependStartCodes = false;
 		decoderParams.deferDisplay      = false;
 
-		size_t stream_width  = setupCommand.video_width;
-		size_t stream_height = setupCommand.video_height;
+		size_t stream_width  = videoConfig.video_width;
+		size_t stream_height = videoConfig.video_height;
 		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
@@ -432,8 +433,8 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, av
 			textureCreateInfo.slot   = scr::Texture::Slot::NORMAL;
 			textureCreateInfo.format = scr::Texture::Format::RGBA8;
 			textureCreateInfo.type   = scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
-			textureCreateInfo.height = setupCommand.video_height;
-			textureCreateInfo.width  = setupCommand.video_width;
+			textureCreateInfo.height = videoConfig.video_height;
+			textureCreateInfo.width  = videoConfig.video_width;
 
 			clientRenderer.mVideoTexture->Create(textureCreateInfo);
 			((scc::GL_Texture *) (clientRenderer.mVideoTexture.get()))->SetExternalGlTexture(
@@ -444,14 +445,14 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, av
 		renderConstants.colourOffsetScale.y = 0;
 		renderConstants.colourOffsetScale.z = 1.0f;
 		renderConstants.colourOffsetScale.w =
-				float(setupCommand.video_height) / float(stream_height);
+				float(videoConfig.video_height) / float(stream_height);
 
 		renderConstants.depthOffsetScale.x = 0;
 		renderConstants.depthOffsetScale.y =
-				float(setupCommand.video_height) / float(stream_height);
-		renderConstants.depthOffsetScale.z = float(setupCommand.depth_width) / float(stream_width);
+				float(videoConfig.video_height) / float(stream_height);
+		renderConstants.depthOffsetScale.z = float(videoConfig.depth_width) / float(stream_width);
 		renderConstants.depthOffsetScale.w =
-				float(setupCommand.depth_height) / float(stream_height);
+				float(videoConfig.depth_height) / float(stream_height);
 
 		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
 
@@ -468,8 +469,8 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, av
 		{
 			scr::Texture::TextureCreateInfo textureCreateInfo =
 													{
-															setupCommand.colour_cubemap_size,
-															setupCommand.colour_cubemap_size,
+                                                            videoConfig.colour_cubemap_size,
+                                                            videoConfig.colour_cubemap_size,
 															1,
 															4,
 															1,
