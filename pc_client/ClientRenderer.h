@@ -92,7 +92,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::Texture *specularCubemapTexture;
 	simul::crossplatform::Texture* roughSpecularCubemapTexture;
 	simul::crossplatform::Texture* lightingCubemapTexture;
-	simul::crossplatform::Texture* videoAsCubemapTexture;
+	simul::crossplatform::Texture* videoTexture;
+
 	/// A camera instance to generate view and proj matrices and handle mouse control.
 	/// In practice you will have your own solution for this.
 	simul::crossplatform::Camera			camera;
