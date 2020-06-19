@@ -15,6 +15,7 @@ using namespace OVR;
 ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c)
 		:mDecoder(avs::DecoderBackend::Custom)
 		 , oculusOrigin(0,0,0)
+		 , transformToOculusOrigin(scr::mat4::Translation(-oculusOrigin))
 		, resourceManagers(rm)
 		, resourceCreator(r)
 		, clientAppInterface(c)
@@ -410,9 +411,8 @@ void ClientRenderer::UpdateHandObjects()
 		++deviceIndex;
 	}
 
-	OVRActorManager::LiveOVRActor *leftHand = nullptr;
-	OVRActorManager::LiveOVRActor *rightHand = nullptr;
-	dynamic_cast<OVRActorManager*>(resourceManagers->mActorManager.get())->GetHands(leftHand, rightHand);
+	std::shared_ptr<scr::Actor> leftHand, rightHand;
+	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
 
 	switch(remoteStates.size())
 	{
@@ -427,7 +427,7 @@ void ClientRenderer::UpdateHandObjects()
 
 	if(rightHand)
 	{
-		rightHand->actor->UpdateModelMatrix
+		rightHand->UpdateModelMatrix
 				(
 						avs::vec3
 								{
@@ -443,13 +443,13 @@ void ClientRenderer::UpdateHandObjects()
 										remoteStates[0].HeadPose.Pose.Orientation.w
 								}
 						* HAND_ROTATION_DIFFERENCE,
-						rightHand->actor->GetGlobalTransform().m_Scale
+						rightHand->GetGlobalTransform().m_Scale
 				);
 	}
 
 	if(leftHand)
 	{
-		leftHand->actor->UpdateModelMatrix
+		leftHand->UpdateModelMatrix
 				(
 						avs::vec3
 								{
@@ -465,54 +465,59 @@ void ClientRenderer::UpdateHandObjects()
 										remoteStates[1].HeadPose.Pose.Orientation.w
 								}
 						* HAND_ROTATION_DIFFERENCE,
-						leftHand->actor->GetGlobalTransform().m_Scale
+						leftHand->GetGlobalTransform().m_Scale
 				);
 	}
 }
 
 void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 {
-	// Because we're using OVR's rendering, we must position the actor's relative to the oculus origin.
-	OVR::Matrix4f transform;
-	scr::mat4 transformToOculusOrigin = scr::mat4::Translation(-oculusOrigin);
-
-	auto RenderLocalActor = [&](OVRActorManager::LiveOVRActor* ovrActor)
-	{
-		const std::shared_ptr<scr::Actor> actor = ovrActor->actor;
-
-		//----OVR Actor Set Transforms----//
-		scr::mat4 scr_Transform = transformToOculusOrigin * actor->GetGlobalTransform().GetTransformMatrix();
-		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
-
-		for(size_t matIndex = 0; matIndex < actor->GetMaterials().size(); matIndex++)
-		{
-			if(matIndex >= ovrActor->ovrSurfaceDefs.size())
-			{
-				//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
-				break;
-			}
-
-			res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
-		}
-	};
-
 	//Render local actors.
-	const scr::ActorManager::actorList_t& actorList = resourceManagers->mActorManager->GetActorList();
-	for(size_t actorIndex = 0; actorIndex < resourceManagers->mActorManager->getVisibleActorAmount(); actorIndex++)
+	const scr::ActorManager::actorList_t &rootActors = resourceManagers->mActorManager->GetRootActors();
+	for(std::shared_ptr<scr::Actor> actor : rootActors)
 	{
-		OVRActorManager::LiveOVRActor* ovrActor = static_cast<OVRActorManager::LiveOVRActor*>(actorList[actorIndex].get());
-		RenderLocalActor(ovrActor);
+		RenderActor(res, actor);
 	}
 
 	//Retrieve hands.
-	OVRActorManager::LiveOVRActor *leftHand = nullptr, *rightHand = nullptr;
-	dynamic_cast<OVRActorManager*>(resourceManagers->mActorManager.get())->GetHands(leftHand, rightHand);
+	std::shared_ptr<scr::Actor> leftHand, rightHand;
+	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
 
 	//Render hands, if they exist.
-	if(leftHand)
-		RenderLocalActor(leftHand);
-	if(rightHand)
-		RenderLocalActor(rightHand);
+	if(leftHand) RenderActor(res, leftHand);
+	if(rightHand) RenderActor(res, rightHand);
+}
+
+
+void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Actor> actor)
+{
+	std::shared_ptr<OVRActorManager::OVRActor> ovrActor = std::static_pointer_cast<OVRActorManager::OVRActor>(actor);
+
+	//----OVR Actor Set Transforms----//
+	scr::mat4 scr_Transform = transformToOculusOrigin * actor->GetGlobalTransform().GetTransformMatrix();
+
+	OVR::Matrix4f transform;
+	memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
+
+	for(size_t matIndex = 0; matIndex < actor->GetMaterials().size(); matIndex++)
+	{
+		if(matIndex >= ovrActor->ovrSurfaceDefs.size())
+		{
+			//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
+			break;
+		}
+
+		res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
+	}
+
+	for(std::weak_ptr<scr::Actor> childPtr : actor->GetChildren())
+	{
+		std::shared_ptr<scr::Actor> child = childPtr.lock();
+		if(child)
+		{
+			RenderActor(res, child);
+		}
+	}
 }
 
 void ClientRenderer::ToggleTextures()
@@ -563,7 +568,7 @@ void ClientRenderer::Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mG
 				mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
 				ctr.incompleteDPsReceived,
 				frameRate, ctr.bandwidthKPS,
-				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorList().size()),
+				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
 				cameraPosition.x, cameraPosition.y, cameraPosition.z,
 				//headPose.w, headPose.x, headPose.y, headPose.z,
 				//headPos.x, headPos.y, headPos.z,

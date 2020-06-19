@@ -533,7 +533,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Actors: %d\nMeshes: %d\nLights: %d"
-		,resourceManagers.mActorManager->GetActorList().size()
+		,resourceManagers.mActorManager->GetActorAmount()
 		,resourceManagers.mMeshManager.GetCache(cacheLock).size()
 		,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 	}
@@ -553,52 +553,57 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
 
-	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetActorList();
+	cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+	cameraConstants.view = deviceContext.viewStruct.view;
+	cameraConstants.proj = deviceContext.viewStruct.proj;
+	cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
+	cameraConstants.viewPosition = camera.GetPosition();
+	cameraPositionBuffer.Apply(deviceContext, cubemapClearEffect, pbrEffect->GetShaderResource("videoCameraPositionBuffer"));
+
+	/*const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetActorList();
 	for(size_t i = 0; i < resourceManagers.mActorManager->getVisibleActorAmount(); i++)
 	{
-		const std::shared_ptr<scr::Actor>& actor = actorList[i]->actor;
+		RenderActor(deviceContext, actorList[i]->actor);
+	}*/
+
+	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
+	for(std::shared_ptr<scr::Actor> actor : resourceManagers.mActorManager->GetRootActors())
+	{
+		RenderActor(deviceContext, actor);
+	}
+}
+
+void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceContext, std::shared_ptr<scr::Actor> actor)
+{
+	//Only render visible actors, but still render children that are close enough.
+	if(actor->IsVisible())
+	{
 		const scr::Transform& transform = actor->GetGlobalTransform();
 		const std::shared_ptr<scr::Mesh> mesh = actor->GetMesh();
 		if(mesh)
 		{
-			const std::vector<std::shared_ptr<scr::Material>> materials = actor->GetMaterials();
-			if(materials.size() == 0)
-				continue;
-
-			size_t element = 0;
-			const auto& CI = mesh->GetMeshCreateInfo();
-			for(const std::shared_ptr<scr::Material>& m : materials)
+			const auto& meshInfo = mesh->GetMeshCreateInfo();
+			for(size_t element = 0; element < actor->GetMaterials().size() && element < meshInfo.ib.size(); element++)
 			{
-				if(element >= CI.ib.size())
-					break;
-				const auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(CI.vb[element].get());
-				const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(CI.ib[element].get());
+				auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(meshInfo.vb[element].get());
+				const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(meshInfo.ib[element].get());
 
 				const simul::crossplatform::Buffer* const v[] = {vb->GetSimulVertexBuffer()};
-				simul::crossplatform::Layout* layout = nullptr;
-				if(!layout)
-				{
-					layout = (const_cast<pc_client::PC_VertexBuffer*>(vb))->GetLayout();
-				}
-				cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+				simul::crossplatform::Layout* layout = vb->GetLayout();
+
 				mat4 model;
 				model = ((const float*)&(transform.GetTransformMatrix()));
 				mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
 				cameraConstants.world = model;
-				cameraConstants.view = deviceContext.viewStruct.view;
-				cameraConstants.proj = deviceContext.viewStruct.proj;
-				cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
-				cameraConstants.viewPosition = camera.GetPosition();
-				cameraPositionBuffer.Apply(deviceContext, cubemapClearEffect, pbrEffect->GetShaderResource("videoCameraPositionBuffer"));
 
-				scr::Material& mat = *m;
+				scr::Material& mat = *actor->GetMaterials()[element];
 				{
-					auto& mcr = mat.GetMaterialCreateInfo();
+					auto& matInfo = mat.GetMaterialCreateInfo();
 					const scr::Material::MaterialData& md = mat.GetMaterialData();
 					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
-					auto* d = ((pc_client::PC_Texture*) & (*mcr.diffuse.texture));
-					auto* n = ((pc_client::PC_Texture*) & (*mcr.normal.texture));
-					auto* c = ((pc_client::PC_Texture*) & (*mcr.combined.texture));
+					auto* d = ((pc_client::PC_Texture*) & (*matInfo.diffuse.texture));
+					auto* n = ((pc_client::PC_Texture*) & (*matInfo.normal.texture));
+					auto* c = ((pc_client::PC_Texture*) & (*matInfo.combined.texture));
 
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), d ? d->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), n ? n->GetSimulTexture() : nullptr);
@@ -619,8 +624,16 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 				renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
 				layout->Unapply(deviceContext);
 				pbrEffect->Unapply(deviceContext);
-				element++;
 			}
+		}
+	}
+
+	for(std::weak_ptr<scr::Actor> childPtr : actor->GetChildren())
+	{
+		std::shared_ptr<scr::Actor> child = childPtr.lock();
+		if(child)
+		{
+			RenderActor(deviceContext, child);
 		}
 	}
 }

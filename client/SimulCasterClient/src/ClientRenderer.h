@@ -35,12 +35,15 @@ public:
 	void Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mGuiSys);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
 	void UpdateHandObjects();
+
 	void RenderLocalActors(OVR::ovrFrameResult& res);
+	void RenderActor(OVR::ovrFrameResult& res, std::shared_ptr<scr::Actor> actor);
 
 	avs::Decoder       mDecoder;
 	avs::NetworkSource mNetworkSource;
 
 	avs::vec3 oculusOrigin;		// in metres. The headPose will be relative to this.
+	scr::mat4 transformToOculusOrigin; // Because we're using OVR's rendering, we must position the actor's relative to the oculus origin.
 
 	scr::ResourceManagers	*resourceManagers	=nullptr;
 	ResourceCreator			*resourceCreator	=nullptr;

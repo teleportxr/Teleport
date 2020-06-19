@@ -10,10 +10,10 @@
 class OVRActorManager : public scr::ActorManager
 {
 public:
-    struct LiveOVRActor : public LiveActor
+	struct OVRActor : public scr::Actor
     {
-        LiveOVRActor(LiveActor&& baseActor, std::vector<OVR::ovrSurfaceDef> ovrSurfaceDefs)
-        :LiveActor(baseActor), ovrSurfaceDefs(ovrSurfaceDefs)
+        OVRActor(avs::uid id, const ActorCreateInfo& pActorCreateInfo, std::vector<OVR::ovrSurfaceDef> ovrSurfaceDefs)
+        :Actor(id, pActorCreateInfo), ovrSurfaceDefs(ovrSurfaceDefs)
         {}
 
         std::vector<OVR::ovrSurfaceDef> ovrSurfaceDefs;
@@ -27,8 +27,6 @@ public:
 	//Changes PBR effect used on actors/surfaces to the effect pass with the passed name.
 	//Also changes GlobalGraphicsResource::effectPassName.
     void ChangeEffectPass(const char* effectPassName);
-
-    void GetHands(LiveOVRActor*& leftHand, LiveOVRActor*& rightHand);
 private:
     GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 

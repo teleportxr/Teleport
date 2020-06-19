@@ -26,6 +26,9 @@ set( src_api
 set( src_crossplatform
 	src/crossplatform/Actor.cpp
 	src/crossplatform/Actor.h
+	src/crossplatform/ActorComponents.cpp
+	src/crossplatform/ActorComponents.h
+	src/crossplatform/ActorManager.cpp
 	src/crossplatform/ActorManager.h
 	src/crossplatform/API.cpp
 	src/crossplatform/API.h
@@ -51,7 +54,10 @@ set( src_crossplatform
 	src/crossplatform/SessionClient.h
 	src/crossplatform/ShaderResource.cpp
 	src/crossplatform/ShaderResource.h
+	src/crossplatform/ShaderSystem.cpp
 	src/crossplatform/ShaderSystem.h
+	src/crossplatform/Transform.cpp
+	src/crossplatform/Transform.h
 	)
 
 #Include its root directory

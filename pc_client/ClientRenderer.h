@@ -151,7 +151,9 @@ public:
 	void PrintHelpText(simul::crossplatform::DeviceContext& deviceContext);
 	
 	void DrawOSD(simul::crossplatform::DeviceContext& deviceContext);
-	void RenderLocalActors(simul::crossplatform::DeviceContext &);
+	void RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext);
+	void RenderActor(simul::crossplatform::DeviceContext& deviceContext, std::shared_ptr<scr::Actor> actor);
+
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
 	void RenderOpaqueTest(simul::crossplatform::DeviceContext &deviceContext);

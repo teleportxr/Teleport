@@ -17,28 +17,12 @@ using namespace scr;
 
 void OVRActorManager::CreateActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
 {
-    actorList.emplace(actorList.begin() + visibleActorAmount, std::make_unique<LiveOVRActor>(LiveOVRActor(LiveActor{actorID, std::make_shared<Actor>(actorCreateInfo)}, CreateNativeActor(actorID, actorCreateInfo))));
-    actorLookup[actorID] = visibleActorAmount;
-    ++visibleActorAmount;
+	AddActor(std::make_shared<OVRActor>(actorID, actorCreateInfo, CreateNativeActor(actorID, actorCreateInfo)));
 }
 
 void OVRActorManager::CreateHand(avs::uid handID, const scr::Actor::ActorCreateInfo& handCreateInfo)
 {
-    handList.emplace_back(std::make_unique<LiveOVRActor>(LiveOVRActor(LiveActor{handID, std::make_shared<Actor>(handCreateInfo)}, CreateNativeActor(handID, handCreateInfo))));
-    actorLookup[handID] = handList.size() - 1;
-
-    if(!rightHand) SetHands(0, handID);
-    else if(!leftHand) SetHands(handID);
-}
-
-void OVRActorManager::GetHands(OVRActorManager::LiveOVRActor*& outLeftHand, OVRActorManager::LiveOVRActor*& outRightHand)
-{
-    LiveActor* tempLeftHand = nullptr;
-    LiveActor* tempRightHand = nullptr;
-    ActorManager::GetHands(tempLeftHand, tempRightHand);
-
-    outLeftHand = static_cast<LiveOVRActor*>(tempLeftHand);
-    outRightHand = static_cast<LiveOVRActor*>(tempRightHand);
+	AddHand(std::make_shared<OVRActor>(handID, handCreateInfo, CreateNativeActor(handID, handCreateInfo)));
 }
 
 std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
@@ -184,9 +168,9 @@ void OVRActorManager::ChangeEffectPass(const char* effectPassName)
     OVR::GlProgram& effectPass = GlobalGraphicsResources.pbrEffect.GetGlPlatform(effectPassName);
 
     //Change effect used by all actors/surfaces.
-    for(auto& actor : actorList)
+    for(auto& actorPair : actorLookup)
     {
-        for(auto& surface : static_cast<LiveOVRActor*>(actor.get())->ovrSurfaceDefs)
+        for(auto& surface : std::static_pointer_cast<OVRActor>(actorPair.second)->ovrSurfaceDefs)
         {
             surface.graphicsCommand.Program = effectPass;
         }

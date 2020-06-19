@@ -5,52 +5,9 @@
 namespace scr
 {
 
-//Transform
-bool Transform::s_UninitialisedUB = true;
-std::shared_ptr<UniformBuffer> Transform::s_UB = nullptr;
-
-Transform::Transform()
-	:Transform(TransformCreateInfo{nullptr}, avs::vec3(), quat(), avs::vec3())
-{}
-
-Transform::Transform(const TransformCreateInfo& pTransformCreateInfo)
-	: Transform(pTransformCreateInfo, avs::vec3(), quat(), avs::vec3())
-{}
-
-Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 translation, quat rotation, avs::vec3 scale)
-	: m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
-{
-	if(false)//s_UninitialisedUB)
-	{
-		UniformBuffer::UniformBufferCreateInfo ub_ci;
-		ub_ci.bindingLocation = 1;
-		ub_ci.size = sizeof(TransformData);
-		ub_ci.data = &m_TransformData;
-
-		s_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
-		s_UB->Create(&ub_ci);
-		s_UninitialisedUB = false;
-	}
-
-	m_ShaderResourceLayout.AddBinding(1, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
-
-	m_ShaderResource = ShaderResource({m_ShaderResourceLayout});
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_ActorUBO", {s_UB.get(), 0, sizeof(TransformData)});
-
-	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
-}
-
-void Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
-{
-	m_Translation = translation;
-	m_Rotation = rotation;
-	m_Scale = scale;
-	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
-}
-
 //Actor
-Actor::Actor(const ActorCreateInfo& pActorCreateInfo)
-	:m_CI(pActorCreateInfo)
+Actor::Actor(avs::uid id, const ActorCreateInfo& pActorCreateInfo)
+	:id(id), m_CI(pActorCreateInfo)
 {}
 
 void Actor::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
@@ -102,6 +59,17 @@ void Actor::TickExtrapolatedTransform(float deltaTime)
 	UpdateModelMatrix(m_CI.localTransform.m_Translation, m_CI.localTransform.m_Rotation, m_CI.localTransform.m_Scale);
 }
 
+void Actor::Update(float deltaTime)
+{
+	TickExtrapolatedTransform(deltaTime);
+	visibility.update(deltaTime);
+
+	for(std::weak_ptr<Actor> child : children)
+	{
+		child.lock()->Update(deltaTime);
+	}
+}
+
 void Actor::SetParent(std::weak_ptr<Actor> parent)
 {
 	this->parent = parent;
@@ -110,6 +78,24 @@ void Actor::SetParent(std::weak_ptr<Actor> parent)
 void Actor::AddChild(std::weak_ptr<Actor> child)
 {
 	children.push_back(child);
+}
+
+void Actor::RemoveChild(std::weak_ptr<Actor> actorPtr)
+{
+	std::shared_ptr<Actor> actor = actorPtr.lock();
+	for(auto it = children.begin(); it != children.end(); it++)
+	{
+		if(it->lock() == actor)
+		{
+			children.erase(it);
+			return;
+		}
+	}
+}
+
+void Actor::SetVisible(bool visible)
+{
+	visibility.setVisibility(visible);
 }
 
 void Actor::UpdateGlobalTransform() const

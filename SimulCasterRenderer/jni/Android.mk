@@ -25,19 +25,21 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/LibOVRKernel/Src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/1stParty/OpenGL_Loader/Include
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
-LOCAL_SRC_FILES  := 	../src/crossplatform/Actor.cpp			\
-    					../src/crossplatform/API.cpp			\
-						../src/crossplatform/Camera.cpp			\
-						../src/crossplatform/GeometryDecoder.cpp\
-						../src/crossplatform/Light.cpp			\
-						../src/crossplatform/Log.cpp\
-						../src/crossplatform/Material.cpp		\
-						../src/crossplatform/Mesh.cpp			\
-						../src/crossplatform/ResourceCreator.cpp\
-						../src/crossplatform/SessionClient.cpp\
-						../src/crossplatform/ShaderSystem.cpp\
-						../src/crossplatform/ShaderResource.cpp\
-
+LOCAL_SRC_FILES  := 	../src/crossplatform/Actor.cpp				\
+						../src/crossplatform/ActorComponents.cpp	\
+						../src/crossplatform/ActorManager.cpp		\
+						../src/crossplatform/API.cpp				\
+						../src/crossplatform/Camera.cpp				\
+						../src/crossplatform/GeometryDecoder.cpp	\
+						../src/crossplatform/Light.cpp				\
+						../src/crossplatform/Log.cpp				\
+						../src/crossplatform/Material.cpp			\
+						../src/crossplatform/Mesh.cpp				\
+						../src/crossplatform/ResourceCreator.cpp	\
+						../src/crossplatform/SessionClient.cpp		\
+						../src/crossplatform/ShaderSystem.cpp		\
+						../src/crossplatform/ShaderResource.cpp		\
+						../src/crossplatform/Transform.cpp			\
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable
