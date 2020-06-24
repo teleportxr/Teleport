@@ -214,6 +214,19 @@ private:
 	bool configured;
 };
 
+struct InitialiseState
+{
+	void(*showActor)(avs::uid clientID, void*);
+	void(*hideActor)(avs::uid clientID, void*);
+	void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*);
+	void(*controllerPoseSetter)(avs::uid uid, int index, const avs::HeadPose*);
+	void(*newInputProcessing)(avs::uid clientID, const avs::InputState*);
+	DisconnectFn disconnect;
+	avs::MessageHandlerFunc messageHandler;
+	uint32_t DISCOVERY_PORT = 10607;
+	uint32_t SERVICE_PORT = 10500;
+};
+
 ///PLUGIN-INTERNAL START
 void Disconnect(avs::uid clientID)
 {
@@ -275,32 +288,17 @@ TELEPORT_EXPORT void SetConnectionTimeout(int32_t timeout)
 	connectionTimeout = timeout;
 }
 
-
-struct InitializeState
-{
-	void(*showActor)(avs::uid clientID,void*);
-	void(*hideActor)(avs::uid clientID,void*);
-	void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*);
-	void(*controllerPoseSetter)(avs::uid uid,int index,const avs::HeadPose*);
-	void(*newInputProcessing)(avs::uid clientID, const avs::InputState*);
-	DisconnectFn disconnect;
-	avs::MessageHandlerFunc messageHandler;
-	uint32_t DISCOVERY_PORT = 10607;
-	uint32_t SERVICE_PORT = 10500;
-
-};
-
-TELEPORT_EXPORT bool Initialise(const InitializeState *initializeState)
+TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 {
 	serverID = avs::GenerateUid();
 
-	SetShowActorDelegate(initializeState->showActor);
-	SetHideActorDelegate(initializeState->hideActor);
-	SetHeadPoseSetterDelegate(initializeState->headPoseSetter);
-	SetControllerPoseSetterDelegate(initializeState->controllerPoseSetter);
-	SetNewInputProcessingDelegate(initializeState->newInputProcessing);
-	SetDisconnectDelegate(initializeState->disconnect);
-	SetMessageHandlerDelegate(initializeState->messageHandler);
+	SetShowActorDelegate(initialiseState->showActor);
+	SetHideActorDelegate(initialiseState->hideActor);
+	SetHeadPoseSetterDelegate(initialiseState->headPoseSetter);
+	SetControllerPoseSetterDelegate(initialiseState->controllerPoseSetter);
+	SetNewInputProcessingDelegate(initialiseState->newInputProcessing);
+	SetDisconnectDelegate(initialiseState->disconnect);
+	SetMessageHandlerDelegate(initialiseState->messageHandler);
 
 	if(enet_initialize() != 0)
 	{
@@ -309,7 +307,7 @@ TELEPORT_EXPORT bool Initialise(const InitializeState *initializeState)
 	}
 	atexit(enet_deinitialize);
 
-	return discoveryService->initialise(initializeState->DISCOVERY_PORT,initializeState->SERVICE_PORT);
+	return discoveryService->initialise(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT);
 }
 
 TELEPORT_EXPORT void Shutdown()
@@ -631,6 +629,22 @@ TELEPORT_EXPORT void SetActorVisible(avs::uid clientID, avs::uid actorID, bool i
 		ShowActor(clientID, actorID);
 	else
 		HideActor(clientID, actorID);
+}
+
+TELEPORT_EXPORT bool IsClientRenderingActorID(avs::uid clientID, avs::uid actorID)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end()) return false;
+
+	return clientPair->second.geometryStreamingService->isClientRenderingActor(actorID);
+}
+
+TELEPORT_EXPORT bool IsClientRenderingActorPtr(avs::uid clientID, void* actorPtr)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end()) return false;
+
+	return clientPair->second.geometryStreamingService->isClientRenderingActor(actorPtr);
 }
 
 bool HasResource(avs::uid clientID, avs::uid resourceID)

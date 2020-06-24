@@ -39,6 +39,8 @@ namespace SCServer
 		void hideActor(avs::uid clientID,avs::uid actorID);
 		void showActor(avs::uid clientID,avs::uid actorID);
 		void setActorVisible(avs::uid clientID,avs::uid actorID, bool isVisible);
+		bool isClientRenderingActor(avs::uid actorID);
+		bool isClientRenderingActor(void* actorPtr);
 
 		//Adds the hand actors to the list of streamed actors.
 		void addHandsToStream();

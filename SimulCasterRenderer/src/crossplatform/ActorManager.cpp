@@ -264,7 +264,7 @@ void ActorManager::LinkToParentActor(avs::uid childID)
 	std::shared_ptr<Actor> parent = GetActor(parentIt->second);
 	std::shared_ptr<Actor> child = GetActor(childID);
 
-	if(child == nullptr) return;
+	if(parent == nullptr || child == nullptr) return;
 
 	child->SetParent(parent);
 	parent->AddChild(child);

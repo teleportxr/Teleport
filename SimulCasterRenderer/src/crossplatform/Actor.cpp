@@ -12,8 +12,15 @@ Actor::Actor(avs::uid id, const ActorCreateInfo& pActorCreateInfo)
 
 void Actor::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
-	m_CI.localTransform.UpdateModelMatrix(translation, rotation, scale);
-	RequestTransformUpdate();
+	if(lastReceivedMovement.isGlobal)
+	{
+		globalTransform.UpdateModelMatrix(translation, rotation, scale);
+	}
+	else
+	{
+		m_CI.localTransform.UpdateModelMatrix(translation, rotation, scale);
+		RequestTransformUpdate();
+	}
 }
 
 void Actor::RequestTransformUpdate()
@@ -48,15 +55,17 @@ void Actor::SetLastMovement(const avs::MovementUpdate& update)
 void Actor::TickExtrapolatedTransform(float deltaTime)
 {
 	deltaTime /= 1000;
-	m_CI.localTransform.m_Translation += static_cast<avs::vec3>(lastReceivedMovement.velocity) * deltaTime;
+	scr::Transform& transform = (lastReceivedMovement.isGlobal ? globalTransform : m_CI.localTransform);
+
+	transform.m_Translation += static_cast<avs::vec3>(lastReceivedMovement.velocity) * deltaTime;
 
 	if(lastReceivedMovement.angularVelocityAngle != 0)
 	{
 		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * deltaTime, lastReceivedMovement.angularVelocityAxis);
-		m_CI.localTransform.m_Rotation *= deltaRotation;
+		transform.m_Rotation *= deltaRotation;
 	}
 
-	UpdateModelMatrix(m_CI.localTransform.m_Translation, m_CI.localTransform.m_Rotation, m_CI.localTransform.m_Scale);
+	UpdateModelMatrix(transform.m_Translation, transform.m_Rotation, transform.m_Scale);
 }
 
 void Actor::Update(float deltaTime)

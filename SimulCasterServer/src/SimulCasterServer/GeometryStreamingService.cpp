@@ -121,6 +121,16 @@ void GeometryStreamingService::setActorVisible(avs::uid clientID,avs::uid actorI
 		hideActor(clientID,actorID);
 }
 
+bool SCServer::GeometryStreamingService::isClientRenderingActor(avs::uid actorID)
+{
+	return hiddenActors.find(actorID) != hiddenActors.end();
+}
+
+bool SCServer::GeometryStreamingService::isClientRenderingActor(void* actorPtr)
+{
+	return isClientRenderingActor(getActorID(actorPtr));
+}
+
 void GeometryStreamingService::addHandsToStream()
 {
 	const std::vector<std::pair<void*, avs::uid>>& hands = geometryStore->getHands();
