@@ -422,7 +422,8 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, av
 
 		size_t stream_width  = videoConfig.video_width;
 		size_t stream_height = videoConfig.video_height;
-		auto f = std::bind(&OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
+		// test
+		auto f = std::bind(&Application::OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
 		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50, f))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
@@ -743,5 +744,4 @@ std::string Application::LoadTextFile(const char *filename)
             outBuffer.push_back('\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
         return std::string((const char *)outBuffer.data());
     }
-    return "";
-}
+    

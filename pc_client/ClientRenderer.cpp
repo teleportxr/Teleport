@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <random>
 #include <functional>
+#include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/surfaces/surface_dx11.hpp>
 
 #include "libavstream/platforms/platform_windows.hpp"
@@ -783,7 +784,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	for (size_t i = 0; i < NumStreams; ++i)
 	{
 		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
-		auto f = std::bind(&OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
+		auto f = std::bind(&ClientRenderer::OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
 		// Video streams are 50+...
 		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, (int)(50+i), f))
 		{
@@ -888,7 +889,9 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 
 void ClientRenderer::OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
 {
-
+	avs::SceneCaptureCubeTagData tagData;
+	memcpy(&tagData, data, dataSize);
+	// Store tagData
 }
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
