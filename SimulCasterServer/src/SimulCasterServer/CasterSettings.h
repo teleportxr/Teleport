@@ -22,7 +22,7 @@ namespace SCServer
 
 		bool enableVideoStreaming;
 		float captureCubeSize;
-		int32_t videoEncodeFrequency;
+		int32_t pipelin;
 		bool enableDeferOutput;
 		bool enableCubemapCulling;
 		int32_t blocksPerCubeFaceAcross; // The number of blocks per cube face will be this value squared

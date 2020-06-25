@@ -31,7 +31,7 @@ namespace SCServer
 
 		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* output);
 		Result reconfigure(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams);
-		Result process(avs::Transform& cameraTransform, bool forceIDR = false);
+		Result process(const uint8_t* extraData, size_t extraDataSize, bool forceIDR = false);
 		Result release();
 
 	private:

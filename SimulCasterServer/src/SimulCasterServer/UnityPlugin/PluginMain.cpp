@@ -195,7 +195,7 @@ public:
 		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, params);
 	}
 
-	Result encode(avs::Transform& cameraTransform, bool forceIDR = false)
+	Result encode(const uint8_t* extraData, size_t extraDataSize, bool forceIDR = false)
 	{
 		if (!configured)
 		{
@@ -205,7 +205,7 @@ public:
 
 		// Copy data from Unity texture to its CUDA compatible copy
 		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
-		return SCServer::VideoEncodePipeline::process(cameraTransform, forceIDR);
+		return SCServer::VideoEncodePipeline::process(extraData, extraDataSize, forceIDR);
 	}
 
 private:
@@ -705,7 +705,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	c->second.clientMessaging.sendCommand(cmd);
 }
 
-TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, avs::Transform& cameraTransform)
+TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* extraData, size_t extraDataSize)
 {
 	auto c = clientServices.find(clientID);
 	auto& clientData = c->second;
@@ -714,8 +714,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, avs::Transform& cameraT
 		TELEPORT_CERR<< "EncodeVideoFrame called but peer is not connected." << std::endl;
 		return;
 	}
-	avs::ConvertTransform(avs::AxesStandard::UnityStyle, clientData.casterContext.axesStandard, cameraTransform);
-	Result result = clientData.videoEncodePipeline->encode(cameraTransform, clientData.videoKeyframeRequired);
+	Result result = clientData.videoEncodePipeline->encode(extraData, extraDataSize, clientData.videoKeyframeRequired);
 	if (result)
 	{
 		clientData.videoKeyframeRequired = false;
@@ -726,16 +725,22 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, avs::Transform& cameraT
 	}
 }
 
+TELEPORT_EXPORT void ConvertTransform(avs::uid clientID, avs::Transform& transform)
+{
+	auto c = clientServices.find(clientID);
+	auto& clientData = c->second;
+	if (!clientData.clientMessaging.hasPeer())
+	{
+		TELEPORT_CERR << "ConvertTransform called but peer is not connected." << std::endl;
+		return;
+	}
+	avs::ConvertTransform(avs::AxesStandard::UnityStyle, clientData.casterContext.axesStandard, transform);
+}
+
 struct EncodeVideoParamsWrapper
 {
 	avs::uid clientID;
 	SCServer::VideoEncodeParams videoEncodeParams;
-};
-
-struct TransformWrapper
-{
-	avs::uid clientID;
-	avs::Transform transform;
 };
 
 static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
@@ -752,8 +757,25 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 	}
 	else if (eventID == 2)
 	{
-		auto wrapper = (TransformWrapper*)data;
-		EncodeVideoFrame(wrapper->clientID, wrapper->transform);
+		const uint8_t* buffer = (uint8_t*)data;
+
+		avs::uid clientID;
+		memcpy(&clientID, buffer, sizeof(avs::uid));
+
+		size_t dataSize;
+		memcpy(&dataSize, buffer + sizeof(avs::uid), sizeof(size_t));
+		
+		const uint8_t* extraData;
+		if (dataSize > 0)
+		{
+			extraData = buffer + sizeof(avs::uid) + sizeof(size_t);
+		}
+		else
+		{
+			extraData = nullptr;
+		}
+		
+		EncodeVideoFrame(clientID, extraData, dataSize);
 	}
 	else
 	{
