@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <random>
+#include <functional>
 #include <libavstream/surfaces/surface_dx11.hpp>
 
 #include "libavstream/platforms/platform_windows.hpp"
@@ -30,6 +31,7 @@
 #include "crossplatform/SessionClient.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
+
 
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
@@ -520,7 +522,6 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 	}
 	else if(show_osd== CAMERA_OSD)
 	{
-		avs::Transform transform = decoder[0].getCameraTransform();
 		vec3 viewpos=camera.GetPosition();
 		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", oculusOrigin.x, oculusOrigin.y, oculusOrigin.z)):"Origin:", white);
 		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("  View: %4.4f %4.4f %4.4f", viewpos.x, viewpos.y, viewpos.z),white);
@@ -546,10 +547,6 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 
 void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
 {
-	//avs::Transform transform=decoder[0].getCameraTransform();
-	//vec3 pos = (const float*)&transform.position;
-	//camera.SetPosition(pos);
-
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
 
@@ -786,8 +783,9 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	for (size_t i = 0; i < NumStreams; ++i)
 	{
 		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
+		auto f = std::bind(&OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
 		// Video streams are 50+...
-		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, (int)(50+i)))
+		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, (int)(50+i), f))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}
@@ -886,6 +884,11 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 			throw std::runtime_error("Failed to reconfigure decoder");
 		}
 	}
+}
+
+void ClientRenderer::OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
+{
+
 }
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)

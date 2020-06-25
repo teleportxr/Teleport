@@ -210,4 +210,7 @@ public:
 	vec3 videoPos;
 	bool videoPosDecoded=false;
 	bool canConnect=false;
+
+private:
+	void OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize);
 };

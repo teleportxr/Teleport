@@ -87,12 +87,6 @@ namespace SCServer
 			return Result::PipelineConfigurationError;
 		}
 
-		avs::Transform Transform = avs::Transform();
-		for (uint8_t i = 0; i < settings.expectedLag; ++i)
-		{
-			encoder->setCameraTransform(Transform);
-		}
-
 		return Result::OK;
 	}
 
@@ -163,7 +157,7 @@ namespace SCServer
 		}
 	}
 
-	Result VideoEncodePipeline::process(avs::Transform& cameraTransform, bool forceIDR)
+	Result VideoEncodePipeline::process(const uint8_t* extraData, size_t extraDataSize, bool forceIDR)
 	{
 		if (!pipeline)
 		{
@@ -171,15 +165,22 @@ namespace SCServer
 			return Result::PipelineNotInitialized;
 		}
 
-		encoder->setCameraTransform(cameraTransform);
 		encoder->setForceIDR(forceIDR);
 
-		avs::Result procResult = pipeline->process();
+		avs::Result result = pipeline->process();
 
-		if (!procResult)
+		if (!result)
 		{
 			TELEPORT_CERR << "Encode pipeline processing encountered an error \n";
 			return Result::PipelineProcessingError;
+		}
+
+		result = encoder->writeOutput(extraData, extraDataSize);
+
+		if (!result)
+		{
+			TELEPORT_CERR << "Encode pipeline encountered an error trying to write output \n";
+			return Result::PipelineWriteOutputError;
 		}
 
 		return Result::OK;

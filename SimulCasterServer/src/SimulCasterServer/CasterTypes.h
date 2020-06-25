@@ -44,7 +44,8 @@ namespace SCServer
 			EncoderNotConfigured,
 			PipelineConfigurationError,
 			PipelineNotInitialized,
-			PipelineProcessingError
+			PipelineProcessingError,
+			PipelineWriteOutputError
 		};
 
 		Result(Code code) : m_code(code)

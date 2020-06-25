@@ -79,6 +79,8 @@ public:
 	/* End DecodeEventInterface */
 
 private:
+    void OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize);
+
 	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);

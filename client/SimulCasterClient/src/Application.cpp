@@ -233,10 +233,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Get the Capture Position
 	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform)};
 	scr::Transform scr_UE4_captureTransform(tci);
-	avs::Transform avs_UE4_captureTransform = clientRenderer.mDecoder.getCameraTransform();
+	// TODO: change this when tag data is working
+	avs::Transform avs_UE4_captureTransform;
 	scr_UE4_captureTransform = avs_UE4_captureTransform;
 
-	if(clientRenderer.mDecoder.hasValidTransform())
+	if(true)
 	{
 		if (!receivedInitialPos)
 		{
@@ -421,7 +422,8 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, av
 
 		size_t stream_width  = videoConfig.video_width;
 		size_t stream_height = videoConfig.video_height;
-		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50))
+		auto f = std::bind(&OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
+		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50, f))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
 			clientRenderer.mNetworkSource.deconfigure();
@@ -561,6 +563,11 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
 
     WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
     , videoConfig.depth_width, videoConfig.depth_height);
+}
+
+void OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
+{
+
 }
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)
