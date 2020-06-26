@@ -815,6 +815,8 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	handshake.framerate = 60;
 	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
+
+	lastSetupCommand = setupCommand;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 
@@ -885,12 +887,14 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 			throw std::runtime_error("Failed to reconfigure decoder");
 		}
 	}
+	lastSetupCommand.video_config = reconfigureVideoCommand.video_config;
 }
 
 void ClientRenderer::OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
 {
 	avs::SceneCaptureCubeTagData tagData;
 	memcpy(&tagData, data, dataSize);
+	avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
 	// Store tagData
 }
 

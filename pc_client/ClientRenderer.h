@@ -203,6 +203,7 @@ public:
 	avs::NetworkSourceParams sourceParams = {};
 	avs::DecoderParams decoderParams = {};
 	avs::Pipeline pipeline;
+	avs::SetupCommand lastSetupCommand;
 	int RenderMode;
 	std::shared_ptr<scr::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;

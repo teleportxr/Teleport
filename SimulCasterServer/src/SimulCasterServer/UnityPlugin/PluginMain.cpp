@@ -440,6 +440,7 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
 	setupCommand.server_id = serverID;
+	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	avs::VideoConfig& videoConfig = setupCommand.video_config;
 	videoConfig.video_width = encoderSettings.frameWidth;
 	videoConfig.video_height = encoderSettings.frameHeight;
@@ -725,18 +726,6 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* extraDat
 	}
 }
 
-TELEPORT_EXPORT void ConvertTransform(avs::uid clientID, avs::Transform& transform)
-{
-	auto c = clientServices.find(clientID);
-	auto& clientData = c->second;
-	if (!clientData.clientMessaging.hasPeer())
-	{
-		TELEPORT_CERR << "ConvertTransform called but peer is not connected." << std::endl;
-		return;
-	}
-	avs::ConvertTransform(avs::AxesStandard::UnityStyle, clientData.casterContext.axesStandard, transform);
-}
-
 struct EncodeVideoParamsWrapper
 {
 	avs::uid clientID;
@@ -775,7 +764,7 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 			extraData = nullptr;
 		}
 		
-		EncodeVideoFrame(clientID, extraData, dataSize);
+		EncodeVideoFrame(clientID, extraData, dataSize); 
 	}
 	else
 	{
