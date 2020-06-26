@@ -62,12 +62,19 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
     vec2 u_CombinedTexCoordsScalar_B;
     vec2 u_CombinedTexCoordsScalar_A;
 
+    vec4 u_EmissiveOutputScalar;
+    vec2 u_EmissiveTexCoordsScalar_R;
+    vec2 u_EmissiveTexCoordsScalar_G;
+    vec2 u_EmissiveTexCoordsScalar_B;
+    vec2 u_EmissiveTexCoordsScalar_A;
+
     vec3 u_SpecularColour;
     float _pad;
 
     float u_DiffuseTexCoordIndex;
     float u_NormalTexCoordIndex;
     float u_CombinedTexCoordIndex;
+    float u_EmissiveTexCoordIndex;
     float _pad2;
 };
 

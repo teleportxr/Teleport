@@ -59,21 +59,30 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
     vec2 u_CombinedTexCoordsScalar_B;
     vec2 u_CombinedTexCoordsScalar_A;
 
+    vec4 u_EmissiveOutputScalar;
+    vec2 u_EmissiveTexCoordsScalar_R;
+    vec2 u_EmissiveTexCoordsScalar_G;
+    vec2 u_EmissiveTexCoordsScalar_B;
+    vec2 u_EmissiveTexCoordsScalar_A;
+
     vec3 u_SpecularColour;
     float _pad;
 
     float u_DiffuseTexCoordIndex;
     float u_NormalTexCoordIndex;
     float u_CombinedTexCoordIndex;
+    float u_EmissiveTexCoordIndex;
     float _pad2;
 };
 layout(binding = 10) uniform sampler2D u_Diffuse;
 layout(binding = 11) uniform sampler2D u_Normal;
 layout(binding = 12) uniform sampler2D u_Combined;
-layout(binding = 13) uniform samplerCube u_DiffuseCubemap;
-layout(binding = 14) uniform samplerCube u_SpecularCubemap;
-layout(binding = 15) uniform samplerCube u_RoughSpecularCubemap;
-layout(binding = 16) uniform samplerCube u_LightsCubemap;
+layout(binding = 13) uniform sampler2D u_Emissive;
+
+layout(binding = 14) uniform samplerCube u_DiffuseCubemap;
+layout(binding = 15) uniform samplerCube u_SpecularCubemap;
+layout(binding = 16) uniform samplerCube u_RoughSpecularCubemap;
+layout(binding = 17) uniform samplerCube u_LightsCubemap;
 
 layout(binding = 19) uniform sampler2D u_ShadowMap0;
 layout(binding = 20) uniform sampler2D u_ShadowMap1;
@@ -296,7 +305,11 @@ void Opaque()
 	vec3 output_radiance = PBR(normal, viewDir, diffuseColour, roughness, metallic, ao);
    // output_radiance*=0.0001;
    // output_radiance+=combinedLookup.rgb;
-    gl_FragColor = Gamma(vec4(output_radiance,1.0));
+
+   vec3 emissive = texture(u_Emissive, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;
+   emissive *= u_EmissiveOutputScalar.rgb;
+
+    gl_FragColor = Gamma(vec4(output_radiance + emissive, 1.0));
 }
 
 void OpaqueAlbedo()

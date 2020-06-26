@@ -157,16 +157,16 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 
 	//Set Lighting Cubemap Shader Resource
     scr::ShaderResourceLayout lightingCubemapLayout;
-    lightingCubemapLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
     lightingCubemapLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	lightingCubemapLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+    lightingCubemapLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	lightingCubemapLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	lightingCubemapLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
     GlobalGraphicsResources.lightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_DiffuseCubemap", {clientRenderer.mDiffuseTexture->GetSampler(), clientRenderer.mDiffuseTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_SpecularCubemap", {clientRenderer.mSpecularTexture->GetSampler(), clientRenderer.mSpecularTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler(), clientRenderer.mRoughSpecularTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler(), clientRenderer.mCubemapLightingTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_DiffuseCubemap", {clientRenderer.mDiffuseTexture->GetSampler(), clientRenderer.mDiffuseTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_SpecularCubemap", {clientRenderer.mSpecularTexture->GetSampler(), clientRenderer.mSpecularTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler(), clientRenderer.mRoughSpecularTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17, "u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler(), clientRenderer.mCubemapLightingTexture});
 
 	int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
 	mRefreshRates.resize(num_refresh_rates);
@@ -566,7 +566,7 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
     , videoConfig.depth_width, videoConfig.depth_height);
 }
 
-void OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
+void Application::OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
 {
 
 }
@@ -735,13 +735,13 @@ const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char
 
 std::string Application::LoadTextFile(const char *filename)
 {
-    std::vector<uint8_t> outBuffer;
-    std::string str="apk:///assets/";
-    str+=filename;
-    if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
-    {
-        if(outBuffer.back() != '\0')
-            outBuffer.push_back('\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
-        return std::string((const char *)outBuffer.data());
-    }
-    
+	std::vector<uint8_t> outBuffer;
+	std::string str = "apk:///assets/";
+	str += filename;
+	if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
+	{
+		if(outBuffer.back() != '\0')
+			outBuffer.push_back('\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
+		return std::string((const char *)outBuffer.data());
+	}
+}
