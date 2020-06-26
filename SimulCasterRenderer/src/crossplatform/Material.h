@@ -19,14 +19,17 @@ namespace scr
 			avs::vec4 textureOutputScalar;			//Scales the output of the texture per channel.
 			float texCoordIndex;				//Selects which texture co-ordinates to use in sampling.
 		};
+
 		struct MaterialCreateInfo
 		{
 			const RenderPlatform* renderPlatform;
 			MaterialParameter diffuse;	//RGBA Colour Texture
 			MaterialParameter normal;	//R: Tangent, G: Bi-normals and B: Normals
 			MaterialParameter combined;	//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
+			MaterialParameter emissive;
 			Effect* effect;				//Effect associated with this material: opaque, transparent, emissive, etc.
 		};
+
 		struct MaterialData //Layout conformant to GLSL std140
 		{
 			avs::vec4 diffuseOutputScalar;
@@ -46,6 +49,12 @@ namespace scr
 			avs::vec2 combinedTexCoordsScalar_G;
 			avs::vec2 combinedTexCoordsScalar_B;
 			avs::vec2 combinedTexCoordsScalar_A;
+
+			avs::vec4 emissiveOutputScalar;
+			avs::vec2 emissiveTexCoordsScalar_R;
+			avs::vec2 emissiveTexCoordsScalar_G;
+			avs::vec2 emissiveTexCoordsScalar_B;
+			avs::vec2 emissiveTexCoordsScalar_A;
 			
 			avs::vec3 u_SpecularColour;
 			float _pad;
@@ -53,6 +62,7 @@ namespace scr
 			float u_DiffuseTexCoordIndex;
 			float u_NormalTexCoordIndex;
 			float u_CombinedTexCoordIndex;
+			float u_EmissiveTexCoordIndex;
 			float _pad2;
 		};
 

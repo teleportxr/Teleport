@@ -30,6 +30,12 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	vec2 combinedTexCoordsScalar_B;
 	vec2 combinedTexCoordsScalar_A;
 
+	vec4 emissiveOutputScalar;
+	vec2 emissiveTexCoordsScalar_R;
+	vec2 emissiveTexCoordsScalar_G;
+	vec2 emissiveTexCoordsScalar_B;
+	vec2 emissiveTexCoordsScalar_A;
+
 	vec3 u_SpecularColour;
 	float _pad;
 
@@ -39,6 +45,7 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	float u_DiffuseTexCoordIndex;
 	float u_NormalTexCoordIndex;
 	float u_CombinedTexCoordIndex;
+	float u_EmissiveTexCoordIndex;
 	float _pad2;
 SIMUL_CONSTANT_BUFFER_END
 

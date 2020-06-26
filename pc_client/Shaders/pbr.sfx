@@ -9,6 +9,7 @@
 uniform Texture2D diffuseTexture;
 uniform Texture2D normalTexture;
 uniform Texture2D combinedTexture;
+uniform Texture2D emissiveTexture;
 uniform TextureCube diffuseCubemap;
 uniform TextureCube specularCubemap;
 uniform TextureCube roughSpecularCubemap;
@@ -231,9 +232,14 @@ vec4 Solid(vertexOutput IN)
 	float roughness		=GetRoughness(combinedLookup);
 	float metallic		=GetMetallic(combinedLookup);
 	float ao			=GetAO(combinedLookup);
+
 	vec3 c				=PBR(normal, view, diffuseColour, roughness, metallic,ao);
 	//c.gb += 0.03;
-	vec4 u				=vec4(c.rgb,1.0);
+
+	vec3 emissive = emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R);
+	emissive *= emissiveOutputScalar;
+
+	vec4 u				=vec4(c.rgb + emissive.rgb, 1.0);
 	return u;
 }
 

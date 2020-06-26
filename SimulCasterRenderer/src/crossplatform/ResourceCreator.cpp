@@ -32,6 +32,7 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 	m_DummyDiffuse = m_pRenderPlatform->InstantiateTexture();
 	m_DummyNormal = m_pRenderPlatform->InstantiateTexture();
 	m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
+	m_DummyEmissive = m_pRenderPlatform->InstantiateTexture();
 
 	scr::Texture::TextureCreateInfo tci =
 	{
@@ -48,18 +49,23 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 
 	uint32_t* diffuse = new uint32_t[1];
 	*diffuse = diffuseBGRA;
-	tci.mips[0] = (uint8_t*)diffuse;
+	tci.mips[0] = reinterpret_cast<uint8_t*>(diffuse);
 	m_DummyDiffuse->Create(tci);
 
 	uint32_t* normal = new uint32_t[1];
 	*normal = normalRGBA;
-	tci.mips[0] = (uint8_t*)normal;
+	tci.mips[0] = reinterpret_cast<uint8_t*>(normal);
 	m_DummyNormal->Create(tci);
 
 	uint32_t* combine = new uint32_t[1];
 	*combine = combinedBGRA;
-	tci.mips[0] = (uint8_t*)combine;
+	tci.mips[0] = reinterpret_cast<uint8_t*>(combine);
 	m_DummyCombined->Create(tci);
+
+	uint32_t* emissive = new uint32_t[1];
+	*emissive = emissiveBGRA;
+	tci.mips[0] = reinterpret_cast<uint8_t*>(emissive);
+	m_DummyEmissive->Create(tci);
 }
 
 std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
@@ -90,7 +96,7 @@ std::vector<avs::uid> ResourceCreator::TakeCompletedActors()
 	return completedActors;
 }
 
-void ResourceCreator::Update(uint32_t deltaTime)
+void ResourceCreator::Update(float deltaTime)
 {
 	std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
 	
@@ -444,7 +450,7 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 	}
 }
 
-void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& texture)
+void ResourceCreator::CreateTexture(avs::uid texture_uid, const avs::Texture& texture)
 {
 	scr::Texture::TextureCreateInfo texInfo =
 	{
@@ -483,123 +489,45 @@ void ResourceCreator::passTexture(avs::uid texture_uid, const avs::Texture& text
 	m_ReceivedResources.push_back(texture_uid);
 }
 
-void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & material)
+void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material & material)
 {
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
 	//A list of unique resources that the material is missing, and needs to be completed.
 	std::set<avs::uid> missingResources;
 
 	newMaterial->materialInfo.renderPlatform = m_pRenderPlatform;
-	newMaterial->materialInfo.diffuse.texture = nullptr;
-	newMaterial->materialInfo.normal.texture = nullptr;
-	newMaterial->materialInfo.combined.texture = nullptr;
 
-	if (material.pbrMetallicRoughness.baseColorTexture.index != 0)
-	{
-		const std::shared_ptr<scr::Texture> diffuseTexture = m_TextureManager->Get(material.pbrMetallicRoughness.baseColorTexture.index);
+	//Colour/Albedo/Diffuse
+	AddTextureToMaterial(material.pbrMetallicRoughness.baseColorTexture,
+						 material.pbrMetallicRoughness.baseColorFactor,
+						 m_DummyDiffuse,
+						 newMaterial->materialInfo.diffuse,
+						 newMaterial->textureSlots,
+						 missingResources);
 
-		if (diffuseTexture)
-		{
-			newMaterial->materialInfo.diffuse.texture = diffuseTexture;
-		}
-		else
-		{
-			missingResources.insert(material.pbrMetallicRoughness.baseColorTexture.index);
-			newMaterial->textureSlots.emplace(material.pbrMetallicRoughness.baseColorTexture.index, newMaterial->materialInfo.diffuse.texture);
-		}
+	//Normal
+	AddTextureToMaterial(material.normalTexture,
+						 avs::vec4{1, 1, 1, 1},
+						 m_DummyNormal,
+						 newMaterial->materialInfo.normal,
+						 newMaterial->textureSlots,
+						 missingResources);
 
-		avs::vec2 tiling = { material.pbrMetallicRoughness.baseColorTexture.tiling.x, material.pbrMetallicRoughness.baseColorTexture.tiling.y };
+	//Combined
+	AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
+						 avs::vec4{1, 1, 1, 1},
+						 m_DummyCombined,
+						 newMaterial->materialInfo.combined,
+						 newMaterial->textureSlots,
+						 missingResources);
 
-		newMaterial->materialInfo.diffuse.texCoordsScalar[0] = tiling;
-		newMaterial->materialInfo.diffuse.texCoordsScalar[1] = tiling;
-		newMaterial->materialInfo.diffuse.texCoordsScalar[2] = tiling;
-		newMaterial->materialInfo.diffuse.texCoordsScalar[3] = tiling;
-
-		newMaterial->materialInfo.diffuse.textureOutputScalar = material.pbrMetallicRoughness.baseColorFactor;
-
-		newMaterial->materialInfo.diffuse.texCoordIndex = (float)material.pbrMetallicRoughness.baseColorTexture.texCoord;
-	}
-	else
-	{
-		newMaterial->materialInfo.diffuse.texture = m_DummyDiffuse; 
-		newMaterial->materialInfo.diffuse.texCoordsScalar[0] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.texCoordsScalar[1] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.texCoordsScalar[2] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.texCoordsScalar[3] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.textureOutputScalar = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		newMaterial->materialInfo.diffuse.texCoordIndex = 0.0f;
-	}
-
-	if(material.normalTexture.index != 0)
-	{
-		const std::shared_ptr<scr::Texture> normalTexture = m_TextureManager->Get(material.normalTexture.index);
-
-		if(normalTexture)
-		{
-			newMaterial->materialInfo.normal.texture = normalTexture;
-		}
-		else
-		{
-			missingResources.insert(material.normalTexture.index);
-			newMaterial->textureSlots.emplace(material.normalTexture.index, newMaterial->materialInfo.normal.texture);
-		}
-
-			avs::vec2 tiling = {material.normalTexture.tiling.x, material.normalTexture.tiling.y};
-
-		newMaterial->materialInfo.normal.texCoordsScalar[0] = tiling;
-		newMaterial->materialInfo.normal.texCoordsScalar[1] = tiling;
-		newMaterial->materialInfo.normal.texCoordsScalar[2] = tiling;
-		newMaterial->materialInfo.normal.texCoordsScalar[3] = tiling;
-
-		newMaterial->materialInfo.normal.textureOutputScalar = avs::vec4{1, 1, 1, 1};
-		newMaterial->materialInfo.normal.texCoordIndex = (float)material.normalTexture.texCoord;
-	}
-	else
-	{
-		newMaterial->materialInfo.normal.texture = m_DummyNormal;
-		newMaterial->materialInfo.normal.texCoordsScalar[0] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.normal.texCoordsScalar[1] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.normal.texCoordsScalar[2] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.normal.texCoordsScalar[3] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.normal.textureOutputScalar = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		newMaterial->materialInfo.normal.texCoordIndex = 0.0f;
-	}
-
-	if(material.pbrMetallicRoughness.metallicRoughnessTexture.index != 0)
-	{
-		const std::shared_ptr<scr::Texture> metallicRoughnessTexture = m_TextureManager->Get(material.pbrMetallicRoughness.metallicRoughnessTexture.index);
-
-		if(metallicRoughnessTexture)
-		{
-			newMaterial->materialInfo.combined.texture = metallicRoughnessTexture;
-		}
-		else
-		{
-			missingResources.insert(material.pbrMetallicRoughness.metallicRoughnessTexture.index);
-			newMaterial->textureSlots.emplace(material.pbrMetallicRoughness.metallicRoughnessTexture.index, newMaterial->materialInfo.combined.texture);
-		}
-
-		avs::vec2 tiling = {material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x, material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y};
-
-		newMaterial->materialInfo.combined.texCoordsScalar[0] = tiling;
-		newMaterial->materialInfo.combined.texCoordsScalar[1] = tiling;
-		newMaterial->materialInfo.combined.texCoordsScalar[2] = tiling;
-		newMaterial->materialInfo.combined.texCoordsScalar[3] = tiling;
-
-		newMaterial->materialInfo.combined.textureOutputScalar = avs::vec4{1, 1, 1, 1};
-
-		newMaterial->materialInfo.combined.texCoordIndex = (float)material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
-	}
-	else
-	{
-		newMaterial->materialInfo.combined.texture = m_DummyCombined;
-		newMaterial->materialInfo.combined.texCoordsScalar[0] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.combined.texCoordsScalar[1] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.combined.texCoordsScalar[2] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.combined.texCoordsScalar[3] = avs::vec2(1.0f, 1.0f);
-		newMaterial->materialInfo.combined.textureOutputScalar = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		newMaterial->materialInfo.combined.texCoordIndex = 0.0f;
-	}
+	//Emissive
+	AddTextureToMaterial(material.emissiveTexture,
+						 avs::vec4(material.emissiveFactor.x, material.emissiveFactor.y, material.emissiveFactor.z, 1.0f),
+						 m_DummyEmissive,
+						 newMaterial->materialInfo.emissive,
+						 newMaterial->textureSlots,
+						 missingResources);
 
 	///This needs an actual value.
 	newMaterial->materialInfo.effect = nullptr;
@@ -623,7 +551,7 @@ void ResourceCreator::passMaterial(avs::uid material_uid, const avs::Material & 
 	m_ReceivedResources.push_back(material_uid);
 }
 
-void ResourceCreator::passNode(avs::uid node_uid, avs::DataNode& node)
+void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 {
 	switch(node.data_type)
 	{
@@ -802,6 +730,45 @@ void ResourceCreator::CompleteActor(avs::uid actor_uid, const scr::Actor::ActorC
 	if(isHand) m_pActorManager->CreateHand(actor_uid, actorInfo);
 	else m_pActorManager->CreateActor(actor_uid, actorInfo);
 	m_CompletedActors.push_back(actor_uid);
+}
+
+void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<scr::Texture>& dummyTexture, scr::Material::MaterialParameter& materialParameter, std::unordered_map<avs::uid, std::shared_ptr<scr::Texture>&>& textureSlots, std::set<avs::uid>& missingResources) const
+{
+	if(accessor.index != 0)
+	{
+		const std::shared_ptr<scr::Texture> texture = m_TextureManager->Get(accessor.index);
+
+		if(texture)
+		{
+			materialParameter.texture = texture;
+		}
+		else
+		{
+			missingResources.insert(accessor.index);
+			textureSlots.emplace(accessor.index, materialParameter.texture);
+		}
+
+		avs::vec2 tiling = {accessor.tiling.x, accessor.tiling.y};
+
+		materialParameter.texCoordsScalar[0] = tiling;
+		materialParameter.texCoordsScalar[1] = tiling;
+		materialParameter.texCoordsScalar[2] = tiling;
+		materialParameter.texCoordsScalar[3] = tiling;
+
+		materialParameter.textureOutputScalar = colourFactor;
+
+		materialParameter.texCoordIndex = static_cast<float>(accessor.texCoord);
+	}
+	else
+	{
+		materialParameter.texture = dummyTexture;
+		materialParameter.texCoordsScalar[0] = avs::vec2(1.0f, 1.0f);
+		materialParameter.texCoordsScalar[1] = avs::vec2(1.0f, 1.0f);
+		materialParameter.texCoordsScalar[2] = avs::vec2(1.0f, 1.0f);
+		materialParameter.texCoordsScalar[3] = avs::vec2(1.0f, 1.0f);
+		materialParameter.textureOutputScalar = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		materialParameter.texCoordIndex = 0.0f;
+	}
 }
 
 void ResourceCreator::BasisThread_TranscodeTextures()

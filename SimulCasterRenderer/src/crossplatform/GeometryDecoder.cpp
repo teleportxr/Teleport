@@ -316,7 +316,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 			material.extensions[id] = std::move(newExtension);
 		}
 
-		target->passMaterial(mat_uid, material);
+		target->CreateMaterial(mat_uid, material);
 	}
 	
 	return avs::Result::OK;
@@ -355,7 +355,7 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 
 		texture.sampler_uid = Next8B;
 
-		target->passTexture(texture_uid, texture);
+		target->CreateTexture(texture_uid, texture);
 	}
 
 	return Result::OK;
@@ -391,7 +391,7 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		{
 			node.childrenUids.push_back(Next8B);
 		}
-		target->passNode(uid, node);
+		target->CreateNode(uid, node);
 	}
 	return avs::Result::OK;
 }

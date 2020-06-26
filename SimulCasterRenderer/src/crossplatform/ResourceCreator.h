@@ -1,19 +1,20 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
-#include <libavstream/mesh.hpp>
-#include <libavstream/geometry/mesh_interface.hpp>
 
-#include "API.h"
-#include "ResourceManager.h"
-#include "ActorManager.h"
-#include "Light.h"
-#include "api/RenderPlatform.h"
+#include <thread>
+#include <mutex>
+#include <set>
 
 #include "transcoder/basisu_transcoder.h"
 
-//Multithreading
-#include <thread>
-#include <mutex>
+#include <libavstream/geometry/mesh_interface.hpp>
+#include <libavstream/mesh.hpp>
+
+#include "ActorManager.h"
+#include "API.h"
+#include "api/RenderPlatform.h"
+#include "Light.h"
+#include "ResourceManager.h"
 
 namespace scr
 {
@@ -150,7 +151,7 @@ public:
 
 	//Updates any processes that need to happen on a regular basis; should be called at least once per second.
 	//	deltaTime : Milliseconds that has passed since the last call to Update();
-	void Update(uint32_t deltaTime);
+	void Update(float deltaTime);
 
 	inline void AssociateActorManager(scr::ActorManager* actorManager)
 	{
@@ -180,14 +181,14 @@ public:
 	// Inherited via GeometryTargetBackendInterface
 	avs::Result Assemble(const avs::MeshCreate& meshCreate) override;
 
-	void passTexture(avs::uid texture_uid, const avs::Texture& texture) override;
-	void passMaterial(avs::uid material_uid, const avs::Material& material) override;
-
-	void passNode(avs::uid node_uid, avs::DataNode& node) override;
+	void CreateTexture(avs::uid texture_uid, const avs::Texture& texture) override;
+	void CreateMaterial(avs::uid material_uid, const avs::Material& material) override;
+	void CreateNode(avs::uid node_uid, avs::DataNode& node) override;
 
 	std::shared_ptr<scr::Texture> m_DummyDiffuse;
 	std::shared_ptr<scr::Texture> m_DummyNormal;
 	std::shared_ptr<scr::Texture> m_DummyCombined;
+	std::shared_ptr<scr::Texture> m_DummyEmissive;
 private:
 	struct IncompleteResource
 	{
@@ -225,6 +226,20 @@ private:
 	void CompleteMaterial(avs::uid material_uid, const scr::Material::MaterialCreateInfo& materialInfo);
 	void CompleteActor(avs::uid node_uid, const scr::Actor::ActorCreateInfo& actorInfo, bool isHand);
 
+	//Add texture to material being created.
+	//	accessor : Data on texture that was received from server.
+	//	colourFactor : Vector factor to multiply texture with to adjust strength.
+	//	dummyTexture : Texture to use if there is no texture ID assigned.
+	//	materialParameter : Material's data for this texture.
+	//	textureSlots : Mapping list of texture IDs to the texture slot(e.g. diffuse texture).
+	//	missingResources : Set containing IDs of textures that the client doesn't have.
+	void AddTextureToMaterial(const avs::TextureAccessor& accessor,
+							  const avs::vec4& colourFactor,
+							  const std::shared_ptr<scr::Texture>& dummyTexture,
+							  scr::Material::MaterialParameter& materialParameter,
+							  std::unordered_map<avs::uid, std::shared_ptr<scr::Texture>&>& textureSlots,
+							  std::set<avs::uid>& missingResources) const;
+
 	scr::API m_API;
 	const scr::RenderPlatform* m_pRenderPlatform = nullptr;
 	scr::VertexBufferLayout::PackingStyle m_PackingStyle;
@@ -244,6 +259,7 @@ private:
 	//const uint32_t normalBGRA = 0xFF7F7FFF;
 	const uint32_t normalRGBA = 0xFFFF7F7F;
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
+	const uint32_t emissiveBGRA = 0x00000000;
 	
 //s	uint32_t m_PostUseLifetime = 1000; //30,000ms = 30s
 	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;
