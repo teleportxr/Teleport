@@ -126,8 +126,8 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         if(inputBufferID >= 0)
         {
             val inputBuffer = mDecoder.getInputBuffer(inputBufferID)
-            inputBuffer.clear()
-            inputBuffer.put(buffer)
+            inputBuffer?.clear()
+            inputBuffer?.put(buffer)
             mDecoder.queueInputBuffer(inputBufferID, 0, buffer.size, 0, flags)
         }
         else
