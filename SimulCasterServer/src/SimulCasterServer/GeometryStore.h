@@ -78,6 +78,8 @@ namespace SCServer
 
 		void removeNode(avs::uid id);
 
+		void updateNode(avs::uid id, avs::Transform& newTransform);
+
 		//Returns amount of textures waiting to be compressed.
 		size_t getAmountOfTexturesWaitingForCompression() const;
 		//Returns the texture that will be compressed next.

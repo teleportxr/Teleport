@@ -483,6 +483,14 @@ namespace SCServer
 		nodes.erase(id);
 	}
 
+	void GeometryStore::updateNode(avs::uid id, avs::Transform& newTransform)
+	{
+		auto nodeIt = nodes.find(id);
+		if(nodeIt == nodes.end()) return;
+
+		nodeIt->second.transform = newTransform;
+	}
+
 	size_t GeometryStore::getAmountOfTexturesWaitingForCompression() const
 	{
 		return texturesToCompress.size();

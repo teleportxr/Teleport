@@ -576,12 +576,14 @@ TELEPORT_EXPORT float GetBandwidthInKbps(avs::uid clientID)
 ///libavstream END
 
 ///GeometryStreamingService START
-TELEPORT_EXPORT void AddActor(avs::uid clientID, void* newActor, avs::uid actorID)
+TELEPORT_EXPORT void AddActor(avs::uid clientID, void* newActor, avs::uid actorID, avs::Transform currentTransform)
 {
 	auto c= clientServices.find(clientID);
 	if(c==clientServices.end())
 		return;
 	c->second.geometryStreamingService->addActor(newActor, actorID);
+	//Update node transform as it may have changed since the actor was last streamed.
+	geometryStore.updateNode(actorID, currentTransform);
 }
 
 TELEPORT_EXPORT avs::uid RemoveActor(avs::uid clientID, void* oldActor)
