@@ -78,6 +78,7 @@ namespace scr
 		void AddHand(std::shared_ptr<Actor> newHand);
 	private:
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an actor, so they can be linked when received. <ChildID, ParentID>
+		std::map<avs::uid, avs::MovementUpdate> earlyMovements; //Movements that have arrived before the actor was received.
 
 		//Uses the index of the actor in the actorList to determine if it is visible.
 		bool IsActorVisible(avs::uid actorID) const;

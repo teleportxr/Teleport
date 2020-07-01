@@ -159,13 +159,19 @@ bool ActorManager::UpdateActorTransform(avs::uid actorID, const avs::vec3& trans
 
 void ActorManager::UpdateActorMovement(std::vector<avs::MovementUpdate> updateList)
 {
+	earlyMovements.clear();
+
 	for(avs::MovementUpdate update : updateList)
 	{
 		auto actorIt = actorLookup.find(update.nodeID);
 		if(actorIt != actorLookup.end())
 		{
 			actorIt->second->SetLastMovement(update);
-		}		
+		}
+		else
+		{
+			earlyMovements[update.nodeID] = update;
+		}
 	}
 }
 
@@ -230,6 +236,10 @@ void ActorManager::AddActor(std::shared_ptr<Actor> newActor)
 {
 	rootActors.push_back(newActor);
 	actorLookup[newActor->id] = newActor;
+
+	//Update movement based on movement data that was received before the actor was complete.
+	auto movementIt = earlyMovements.find(newActor->id);
+	if(movementIt != earlyMovements.end()) newActor->SetLastMovement(movementIt->second);
 
 	//Link new actor to parent.
 	LinkToParentActor(newActor->id);
