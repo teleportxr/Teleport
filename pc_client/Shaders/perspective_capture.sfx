@@ -4,6 +4,7 @@
 #include "render_states.sl"
 #include "sampler_states.sl"
 #include "camera_constants.sl"
+#include "cubemap_constants.sl"
 
 uniform Texture2D<float4> videoTexture;
 uniform RWTexture2DArray<uchar4> RWTextureTargetArray;
@@ -17,6 +18,7 @@ shader void CS_RecomposeTextureFromVideo(uint3 g : SV_GroupID, uint3 t : SV_Grou
 	SceneColor.r *= SceneColor.r;
 	SceneColor.g *= SceneColor.g;
 	SceneColor.b *= SceneColor.b;
+
 	RWTextureTargetArray[pos] = SceneColor;
 }
 

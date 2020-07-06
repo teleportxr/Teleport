@@ -22,7 +22,7 @@
 #include <algorithm>
 #include <random>
 #include <functional>
-#include <libavstream/geometry/mesh_interface.hpp>
+
 #include <libavstream/surfaces/surface_dx11.hpp>
 
 #include "libavstream/platforms/platform_windows.hpp"
@@ -171,8 +171,9 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	pbrConstants.LinkToEffect(pbrEffect,"pbrConstants");
 	cubemapConstants.RestoreDeviceObjects(renderPlatform);
 	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
-	cameraConstants.RestoreDeviceObjects(renderPlatform);
-	cameraPositionBuffer.RestoreDeviceObjects(renderPlatform,8,true);
+	cameraConstants.RestoreDeviceObjects(renderPlatform); 
+	tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
+
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
 	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
@@ -340,7 +341,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	cpuProfiler.StartFrame();
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
-
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
 	hdrFramebuffer->Activate(deviceContext);
@@ -353,6 +353,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	if (render_from_video_centre)
 	{
 		Sleep(200);
+		vec3 videoPos = videoPosDecoded ? cubemapConstants.videoCamPosition : vec3(0, 0, 0);
 		camera.SetPosition(videoPos);
 	}
 
@@ -370,9 +371,46 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
-		if (videoTexture->IsCubemap())
+		if (ti)
 		{
-			if (ti)
+			// This will apply to both rendering methods
+			{
+				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+				tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("RWTagDataID"));
+				cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 1);
+				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+				cubemapClearEffect->Apply(deviceContext, "extract_tag_data_id", 0);
+				renderPlatform->DispatchCompute(deviceContext, 1, 1, 1);
+				cubemapClearEffect->Unapply(deviceContext);
+				cubemapClearEffect->UnbindTextures(deviceContext);
+
+				tagDataIDBuffer.CopyToReadBuffer(deviceContext);
+				const uint4* videoIDBuffer = tagDataIDBuffer.OpenReadBuffer(deviceContext);
+				if (videoIDBuffer)
+				{	
+					int tagDataID = videoIDBuffer[0].x;	
+
+					if (videoTexture->IsCubemap())
+					{
+						const auto& ct = videoTagDataCubeArray[tagDataID].cameraTransform;
+						cubemapConstants.videoCamPosition = vec3(ct.position.x, ct.position.y, ct.position.z);
+						cubemapConstants.videoCamRotation = vec4(ct.rotation.x, ct.rotation.y, ct.rotation.z, ct.rotation.w);
+					}
+					else
+					{
+						const auto& ct = videoTagData2DArray[tagDataID].cameraTransform;
+						cubemapConstants.videoCamPosition = vec3(ct.position.x, ct.position.y, ct.position.z);
+						cubemapConstants.videoCamRotation = vec4(ct.rotation.x, ct.rotation.y, ct.rotation.z, ct.rotation.w);
+					}
+					pbrConstants.videoCamPosition = cubemapConstants.videoCamPosition;
+					pbrConstants.videoCamRotation = cubemapConstants.videoCamRotation;
+
+					videoPosDecoded = true;
+				}
+				tagDataIDBuffer.CloseReadBuffer(deviceContext);
+			}
+
+			if (videoTexture->IsCubemap())
 			{
 				int W = videoTexture->width;
 				{
@@ -394,62 +432,39 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture, specularCubemapTexture->mips, sourceOffset + roughOffset);
 				Recompose(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, sourceOffset + lightOffset);
 				{
-					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-					cameraPositionBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("RWCameraPosition"));
-					cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - (3 * 8));
+					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
+					cubemapConstants.offsetFromVideo = vec3(camera.GetPosition()) - cubemapConstants.videoCamPosition;
+					cubemapConstants.cameraPosition = vec3(camera.GetPosition());
+					cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-					cubemapClearEffect->Apply(deviceContext, "extract_camera_position", 0);
-					renderPlatform->DispatchCompute(deviceContext, 1, 1, 1);
-					cubemapClearEffect->Unapply(deviceContext);
-					cubemapClearEffect->UnbindTextures(deviceContext);
-				}
-			}
-			{
-				cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-				cubemapConstants.offsetFromVideo = vec3(camera.GetPosition()) - videoPos;
-				cubemapConstants.cameraPosition = vec3(camera.GetPosition());
-				cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-				cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-				cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", videoTexture);
-				if (ti)
-				{
-					cameraPositionBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("CameraPosition"));
+					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+					cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", videoTexture);
+					
 					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 					cubemapClearEffect->Apply(deviceContext, "use_cubemap", 0);
 					renderPlatform->DrawQuad(deviceContext);
 					cubemapClearEffect->Unapply(deviceContext);
+				
 				}
+				RenderLocalActors(deviceContext);
 			}
-			cameraPositionBuffer.CopyToReadBuffer(deviceContext);
-			const vec4* videoPosBuffer = cameraPositionBuffer.OpenReadBuffer(deviceContext);
-			if (videoPosBuffer)
+			else
 			{
-				if (videoPosBuffer[0].w == 110.0f)
+				if (!show_video)
 				{
-					videoPos = (const float*)videoPosBuffer;
-					videoPosDecoded = true;
+					int W = hdrFramebuffer->GetWidth();
+					int H = hdrFramebuffer->GetHeight();
+					renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, videoTexture);
 				}
 			}
-			cameraPositionBuffer.CloseReadBuffer(deviceContext);
-			RenderLocalActors(deviceContext);
-		}
-		else
-		{
-			if (ti && !show_video)
+			// We must deactivate the depth buffer here, in order to use it as a texture:
+			hdrFramebuffer->DeactivateDepth(deviceContext);
+			if (show_video)
 			{
 				int W = hdrFramebuffer->GetWidth();
 				int H = hdrFramebuffer->GetHeight();
-				renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, videoTexture);
+				renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 			}
-		}
-		// We must deactivate the depth buffer here, in order to use it as a texture:
-		hdrFramebuffer->DeactivateDepth(deviceContext);
-		if (ti && show_video)
-		{
-			int W = hdrFramebuffer->GetWidth();
-			int H = hdrFramebuffer->GetHeight();
-			renderPlatform->DrawTexture(deviceContext, 0,0, W, H, ti->texture);
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -526,10 +541,15 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 		vec3 viewpos=camera.GetPosition();
 		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", oculusOrigin.x, oculusOrigin.y, oculusOrigin.z)):"Origin:", white);
 		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("  View: %4.4f %4.4f %4.4f", viewpos.x, viewpos.y, viewpos.z),white);
-		if(videoPosDecoded)
+		if (videoPosDecoded)
+		{
+			const auto& videoPos = cubemapConstants.videoCamPosition;
 			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
+		}	
 		else
+		{
 			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: -"), white);
+		}
 	}
 	else if(show_osd==GEOMETRY_OSD)
 	{
@@ -556,7 +576,6 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	cameraConstants.proj = deviceContext.viewStruct.proj;
 	cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
 	cameraConstants.viewPosition = camera.GetPosition();
-	cameraPositionBuffer.Apply(deviceContext, cubemapClearEffect, pbrEffect->GetShaderResource("videoCameraPositionBuffer"));
 
 	/*const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetActorList();
 	for(size_t i = 0; i < resourceManagers.mActorManager->getVisibleActorAmount(); i++)
@@ -713,6 +732,12 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 	videoPosDecoded=false;
+
+	videoTagData2DArray.clear();
+	videoTagData2DArray.resize(maxTagDataSize);
+	videoTagDataCubeArray.clear();
+	videoTagDataCubeArray.resize(maxTagDataSize);
+
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 1212992;
@@ -892,10 +917,20 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 
 void ClientRenderer::OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
 {
-	avs::SceneCaptureCubeTagData tagData;
-	memcpy(&tagData, data, dataSize);
-	avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
-	// Store tagData
+	if (lastSetupCommand.video_config.use_cubemap)
+	{
+		avs::SceneCaptureCubeTagData tagData;
+		memcpy(&tagData, data, dataSize);
+		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
+		videoTagDataCubeArray[tagData.id] = std::move(tagData);
+	}
+	else
+	{
+		avs::SceneCapture2DTagData tagData;
+		memcpy(&tagData, data, dataSize);
+		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
+		videoTagData2DArray[tagData.id] = std::move(tagData);
+	}
 }
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)

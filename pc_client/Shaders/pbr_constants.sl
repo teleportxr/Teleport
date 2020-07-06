@@ -33,8 +33,9 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	vec3 u_SpecularColour;
 	float _pad;
 
-	uniform vec3 videoCameraPosition;
+	uniform vec3 videoCamPosition;
 	float _pad1;
+	uniform vec4 videoCamRotation;
 
 	float u_DiffuseTexCoordIndex;
 	float u_NormalTexCoordIndex;
