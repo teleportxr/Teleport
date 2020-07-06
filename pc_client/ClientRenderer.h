@@ -12,6 +12,7 @@
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
 #include <libavstream/geometrydecoder.hpp>
+#include <libavstream/geometry/mesh_interface.hpp>
 
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
 #include "crossplatform/SessionClient.h"
@@ -58,6 +59,8 @@ struct RendererStats
 	double lastFPS;
 };
 
+
+
 class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, public SessionCommandInterface
 {
 	enum class ShaderMode
@@ -87,12 +90,17 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
-	simul::crossplatform::StructuredBuffer<vec4>		cameraPositionBuffer;
+	simul::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularCubemapTexture;
 	simul::crossplatform::Texture* roughSpecularCubemapTexture;
 	simul::crossplatform::Texture* lightingCubemapTexture;
 	simul::crossplatform::Texture* videoTexture;
+
+	static constexpr int maxTagDataSize = 32;
+
+	std::vector<avs::SceneCapture2DTagData> videoTagData2DArray;
+	std::vector<avs::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	/// A camera instance to generate view and proj matrices and handle mouse control.
 	/// In practice you will have your own solution for this.
@@ -208,7 +216,6 @@ public:
 	std::shared_ptr<scr::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;
 	avs::vec3 oculusOrigin;
-	vec3 videoPos;
 	bool videoPosDecoded=false;
 	bool canConnect=false;
 

@@ -4,12 +4,17 @@
 
 SIMUL_CONSTANT_BUFFER(CubemapConstants, 4)
 uniform vec3 offsetFromVideo;
-uniform int _pad;
+uniform int _pad1;
 uniform vec3 cameraPosition;
 uniform int _pad2;
+uniform vec4 cameraRotation;
 uniform vec4 depthOffsetScale;
 uniform int2 sourceOffset;
 uniform int targetSize;
+uniform int _pad3;
+uniform vec3 videoCamPosition;
+uniform vec4 videoCamRotation;
+
 SIMUL_CONSTANT_BUFFER_END
 
 
