@@ -377,7 +377,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			{
 				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 				tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("RWTagDataID"));
-				cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 1);
+				cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 				cubemapClearEffect->Apply(deviceContext, "extract_tag_data_id", 0);
 				renderPlatform->DispatchCompute(deviceContext, 1, 1, 1);
@@ -386,7 +386,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 
 				tagDataIDBuffer.CopyToReadBuffer(deviceContext);
 				const uint4* videoIDBuffer = tagDataIDBuffer.OpenReadBuffer(deviceContext);
-				if (videoIDBuffer)
+				if (videoIDBuffer && videoIDBuffer[0].w == 110)
 				{	
 					int tagDataID = videoIDBuffer[0].x;	
 

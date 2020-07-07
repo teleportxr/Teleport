@@ -41,6 +41,7 @@ namespace SCServer
 		bool usePerspectiveRendering;
 		int32_t sceneCaptureWidth;
 		int32_t sceneCaptureHeight;
+		float perspectiveFOV;
 		bool useDynamicQuality;
 		int32_t bandwidthCalculationInterval;
 

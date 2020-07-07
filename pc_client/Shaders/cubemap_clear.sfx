@@ -9,7 +9,7 @@
 uniform TextureCube cubemapTexture;
 uniform Texture2D<float4> plainTexture;
 uniform RWTexture2DArray<uchar4> RWTextureTargetArray;
-uniform RWStructuredBuffer<vec4> RWTagDataID;
+uniform RWStructuredBuffer<uint4> RWTagDataID;
  
 vec2 OffsetScale(vec2 uv, vec4 offsc)
 {
@@ -92,7 +92,7 @@ shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	RWTextureTargetArray[pos] = SceneColor;
 }
 
-groupshared uint4 accumulate_position[32];
+groupshared uint accumulate_position[32];
 // From the encoded binary at bottom-right
 [numthreads(32, 1, 1)]
 shader void CS_ExtractTagDataID(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
@@ -103,53 +103,19 @@ shader void CS_ExtractTagDataID(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID
 	// The offset is to the X component. The thread index gives us the bit mask.
 	float4 lookupX	= plainTexture.Load(int3(pos_x.xy, 0));
 	// Convert the green component to a 0 or 1 uint. shift to get the binary.
-	int bitX		=(int)(lookupX.g+0.5)<<uint(ThreadID.x);
-	accumulate_position[ThreadID.x] = uint4(bitX,0,0,0);
+	int bitX		= (int)(lookupX.g+0.5) << uint(ThreadID.x);
+	accumulate_position[ThreadID.x] = uint(bitX);
 	GroupMemoryBarrierWithGroupSync();
 	// Now join all the bits together.
 	if(ThreadID.x==0)
 	{
-		uint4 all_bits=uint4(0,0,0,0);
+		uint all_bits = 0;
 		for(int i=0;i<32;i++)
 		{
-			all_bits|=accumulate_position[i];
+			all_bits |= accumulate_position[i];
 		}
-		RWTagDataID[0]=all_bits;
-	}
-}
-
-// From the encoded binary at bottom-right
-[numthreads(32, 1, 1)]
-shader void CS_ExtractCamPos(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
-{
-	uint2 ThreadID	= uint2(g.xy * 32 + t.xy);
-	uint2 pos		= sourceOffset+4*ThreadID.xy;
-	uint2 pos_x		= pos +uint2(2,2);
-	uint2 pos_y		= pos +uint2(2,10);
-	uint2 pos_z		= pos +uint2(2,18);
-	// The offset is to the X component. The thread index gives us the bit mask.
-	float4 lookupX	= plainTexture.Load(int3(pos_x.xy, 0));
-	float4 lookupY	= plainTexture.Load(int3(pos_y.xy, 0));
-	float4 lookupZ	= plainTexture.Load(int3(pos_z.xy, 0));
-	// Convert the green component to a 0 or 1 uint. shift to get the binary.
-	int bitX		=(int)(lookupX.g+0.5)<<uint(ThreadID.x);
-	int bitY		=(int)(lookupY.g+0.5)<<uint(ThreadID.x);
-	int bitZ		=(int)(lookupZ.g+0.5)<<uint(ThreadID.x);
-	int4 bits		=uint4(bitX,bitY,bitZ,0);
-	accumulate_position[ThreadID.x] = bits;
-	GroupMemoryBarrierWithGroupSync();
-	// Now join all the bits together.
-	if(ThreadID.x==0)
-	{
-		uint4 all_bits=uint4(0,0,0,0);
-		for(int i=0;i<32;i++)
-		{
-			all_bits|=accumulate_position[i];
-		}
-		 vec4 campos= asfloat(all_bits);//asfloat(accumulate_position[4]);// float4(SceneColor.rgba);
-		 // Set w to magic number for sanity check.
-		 campos.w=110.0;
-		 RWCameraPosition[0]=campos;
+		// use w for sanity check
+		RWTagDataID[0]= uint4(all_bits, 0, 0, 110);
 	}
 }
 
@@ -231,11 +197,11 @@ technique recompose
 		SetComputeShader(CompileShader(cs_5_0, CS_Recompose()));
 	}
 }
-technique extract_camera_position
+technique extract_tag_data_id
 {
 	pass p0
 	{
-		SetComputeShader(CompileShader(cs_5_0, CS_ExtractCameraPosition()));
+		SetComputeShader(CompileShader(cs_5_0, CS_ExtractTagDataID()));
 	}
 }
 technique recompose_with_depth_alpha
