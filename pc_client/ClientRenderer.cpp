@@ -386,13 +386,13 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 
 				tagDataIDBuffer.CopyToReadBuffer(deviceContext);
 				const uint4* videoIDBuffer = tagDataIDBuffer.OpenReadBuffer(deviceContext);
-				if (videoIDBuffer && videoIDBuffer[0].w == 110)
+				if (videoIDBuffer && videoIDBuffer[0].w == 110) // sanity check
 				{	
 					int tagDataID = videoIDBuffer[0].x;	
 
 					if (videoTexture->IsCubemap())
 					{
-						const auto& ct = videoTagDataCubeArray[tagDataID].cameraTransform;
+						const auto& ct = videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
 						cubemapConstants.videoCamPosition = vec3(ct.position.x, ct.position.y, ct.position.z);
 						cubemapConstants.videoCamRotation = vec4(ct.rotation.x, ct.rotation.y, ct.rotation.z, ct.rotation.w);
 					}
@@ -923,14 +923,25 @@ void ClientRenderer::OnReceiveExtraVideoData(const uint8_t* data, size_t dataSiz
 {
 	if (lastSetupCommand.video_config.use_cubemap)
 	{
-		avs::SceneCaptureCubeTagData tagData;
-		memcpy(&tagData, data, dataSize);
-		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
-		videoTagDataCubeArray[tagData.id] = std::move(tagData);
+		scr::SceneCaptureCubeTagData tagData;
+		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.coreData.cameraTransform);
+
+		tagData.lights.resize(tagData.coreData.lightCount);
+
+		// Aidan : View and proj matrices are currently unchanged from Unity
+		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
+		for (auto& light : tagData.lights)
+		{
+			memcpy(&light, &data[index], sizeof(scr::LightData));
+			avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
+			index += sizeof(scr::LightData);
+		}
+		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
 	}
 	else
 	{
-		avs::SceneCapture2DTagData tagData;
+		scr::SceneCapture2DTagData tagData;
 		memcpy(&tagData, data, dataSize);
 		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
 		videoTagData2DArray[tagData.id] = std::move(tagData);

@@ -53,4 +53,93 @@ namespace scr
 		COPY_BIT	= 0x00000020,
 		DRAW_BIT	= 0x00000040
 	};
+
+	struct SceneCapture2DTagData
+	{
+#ifndef __ANDROID__
+#pragma pack(push, 1)
+#endif
+		uint32_t id;
+		avs::Transform cameraTransform;
+#ifndef __ANDROID__
+#pragma pack(pop)
+#endif
+	}
+#ifdef __ANDROID__
+	__attribute__((packed))
+#endif
+		;
+
+	// Taken from Unity
+	enum class LightType
+	{
+		//
+		// Summary:
+		//     The light is a spot light.
+		Spot = 0,
+		//
+		// Summary:
+		//     The light is a directional light.
+		Directional = 1,
+		//
+		// Summary:
+		//     The light is a point light.
+		Point = 2,
+		Area = 3,
+		//
+		// Summary:
+		//     The light is a rectangle shaped area light. It affects only baked lightmaps and
+		//     lightprobes.
+		Rectangle = 3,
+		//
+		// Summary:
+		//     The light is a disc shaped area light. It affects only baked lightmaps and lightprobes.
+		Disc = 4
+	};
+
+	struct SceneCaptureCubeCoreTagData
+	{
+#ifndef __ANDROID__
+#pragma pack(push, 1)
+#endif
+		uint32_t id;
+		avs::Transform cameraTransform;
+		uint32_t lightCount;
+#ifndef __ANDROID__
+#pragma pack(pop)
+#endif
+	}
+#ifdef __ANDROID__
+	__attribute__((packed))
+#endif
+		;
+
+	struct LightData
+	{
+#ifndef __ANDROID__
+#pragma pack(push, 1)
+#endif
+		avs::Transform worldTransform;
+		avs::vec4 color;
+		float range;
+		float spotAngle;
+		LightType lightType;
+		float shadowViewMatrix[4][4];
+		float shadowProjectionMatrix[4][4];
+#ifndef __ANDROID__
+#pragma pack(pop)
+#endif
+	}
+#ifdef __ANDROID__
+	__attribute__((packed))
+#endif
+		;
+
+
+	struct SceneCaptureCubeTagData
+	{
+		SceneCaptureCubeCoreTagData coreData;
+		std::vector<LightData> lights;
+	}
+	;
 }

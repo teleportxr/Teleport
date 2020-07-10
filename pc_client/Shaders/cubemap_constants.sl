@@ -11,7 +11,7 @@ uniform vec4 cameraRotation;
 uniform vec4 depthOffsetScale;
 uniform int2 sourceOffset;
 uniform int targetSize;
-uniform int _pad3;
+uniform float perspectiveFOV;
 uniform vec3 videoCamPosition;
 uniform vec4 videoCamRotation;
 

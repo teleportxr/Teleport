@@ -4,6 +4,7 @@
 #include "render_states.sl"
 #include "sampler_states.sl"
 #include "camera_constants.sl"
+#include "quaternion.sl"
 #include "cubemap_constants.sl"
 
 uniform TextureCube cubemapTexture;
@@ -152,6 +153,23 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 	RWTextureTargetArray[pos] = SceneColor;// float4(SceneColor.rgba);
 }
 
+[numthreads(16, 16, 1)]
+shader void CS_RecomposePerspective(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
+{
+	int3 pos = int3(g.xy * 16 + t.xy, 0);
+	uint InputW, InputH;
+	plainTexture.GetDimensions(InputW, InputH);
+
+
+	float4 SceneColor = plainTexture.Load(pos);
+	// RGB values are squared here because the server used their square root to improve colour quantization in the video encoder. 
+	SceneColor.r *= SceneColor.r;
+	SceneColor.g *= SceneColor.g;
+	SceneColor.b *= SceneColor.b;
+
+	RWTextureTargetArray[pos] = SceneColor;
+}
+
 VertexShader vs = CompileShader(vs_4_0, VS_SimpleFullscreen());
 
 technique normal_view
@@ -205,9 +223,16 @@ technique extract_tag_data_id
 	}
 }
 technique recompose_with_depth_alpha
+{
+	pass p0
 	{
-		pass p0
-		{
-			SetComputeShader(CompileShader(cs_5_0, CS_RecomposeWithDepthAlpha()));
-		}
+		SetComputeShader(CompileShader(cs_5_0, CS_RecomposeWithDepthAlpha()));
 	}
+}
+technique recompose_perspective
+{
+	pass p0
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_RecomposePerspective()));
+	}
+}

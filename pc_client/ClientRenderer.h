@@ -99,8 +99,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 
 	static constexpr int maxTagDataSize = 32;
 
-	std::vector<avs::SceneCapture2DTagData> videoTagData2DArray;
-	std::vector<avs::SceneCaptureCubeTagData> videoTagDataCubeArray;
+	std::vector<scr::SceneCapture2DTagData> videoTagData2DArray;
+	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	/// A camera instance to generate view and proj matrices and handle mouse control.
 	/// In practice you will have your own solution for this.

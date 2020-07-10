@@ -190,12 +190,10 @@ public:
 			params.inputSurfaceResource = encoderSurfaceResource;
 		}
 		
-	
-		
 		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, params);
 	}
 
-	Result encode(const uint8_t* extraData, size_t extraDataSize, bool forceIDR = false)
+	Result encode(bool forceIDR = false)
 	{
 		if (!configured)
 		{
@@ -205,13 +203,24 @@ public:
 
 		// Copy data from Unity texture to its CUDA compatible copy
 		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
-		return SCServer::VideoEncodePipeline::process(extraData, extraDataSize, forceIDR);
+		Result result = SCServer::VideoEncodePipeline::process(extraData.data(), extraData.size(), forceIDR);
+		extraData.clear();
+		return result;
+	}
+
+	Result addExtraData(const uint8_t* data, size_t dataSize)
+	{
+		size_t index = extraData.size();
+		extraData.resize(extraData.size() + dataSize);
+		memcpy(&extraData[index], data, dataSize);
+		return Result::OK;
 	}
 
 private:
 	void* inputSurfaceResource;
 	void* encoderSurfaceResource;
 	bool configured;
+	std::vector<std::uint8_t> extraData;
 };
 
 struct InitialiseState
@@ -710,7 +719,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	c->second.clientMessaging.sendCommand(cmd);
 }
 
-TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* extraData, size_t extraDataSize)
+TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
 	auto& clientData = c->second;
@@ -719,7 +728,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* extraDat
 		TELEPORT_CERR<< "EncodeVideoFrame called but peer is not connected." << std::endl;
 		return;
 	}
-	Result result = clientData.videoEncodePipeline->encode(extraData, extraDataSize, clientData.videoKeyframeRequired);
+	Result result = clientData.videoEncodePipeline->encode(clientData.videoKeyframeRequired);
 	if (result)
 	{
 		clientData.videoKeyframeRequired = false;
@@ -727,6 +736,20 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* extraDat
 	else
 	{
 		std::cout << "Error occurred when trying to encode video" << std::endl;
+	}
+}
+
+TELEPORT_EXPORT void AddVideoTagData(avs::uid clientID, const uint8_t* data, size_t dataSize)
+{
+	auto c = clientServices.find(clientID);
+	if (c != clientServices.end())
+	{
+		auto& clientData = c->second;
+
+		if (!clientData.videoEncodePipeline->addExtraData(data, dataSize))
+		{
+			std::cout << "Error occurred when trying to add video tag data" << std::endl;
+		}
 	}
 }
 
@@ -750,25 +773,10 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 	}
 	else if (eventID == 2)
 	{
-		const uint8_t* buffer = (uint8_t*)data;
-
 		avs::uid clientID;
-		memcpy(&clientID, buffer, sizeof(avs::uid));
-
-		size_t dataSize;
-		memcpy(&dataSize, buffer + sizeof(avs::uid), sizeof(size_t));
+		memcpy(&clientID, data, sizeof(avs::uid));
 		
-		const uint8_t* extraData;
-		if (dataSize > 0)
-		{
-			extraData = buffer + sizeof(avs::uid) + sizeof(size_t);
-		}
-		else
-		{
-			extraData = nullptr;
-		}
-		
-		EncodeVideoFrame(clientID, extraData, dataSize); 
+		EncodeVideoFrame(clientID); 
 	}
 	else
 	{
