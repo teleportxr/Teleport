@@ -61,7 +61,7 @@ struct vertexOutput
     vec2 texCoords0		: TEXCOORD0;
     vec2 texCoords1		: TEXCOORD1;
     vec3 normal			: TEXCOORD2;
-	vec3 tangent		 : TEXCOORD3;
+	vec3 tangent		: TEXCOORD3;
     vec3 wpos			: TEXCOORD4;
     vec3 view			: TEXCOORD5;
     vec4 clip_pos		: TEXCOORD6;

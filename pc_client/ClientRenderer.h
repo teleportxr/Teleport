@@ -8,6 +8,7 @@
 #include "Platform/Shaders/SL/camera_constants.sl"
 #include "Shaders/cubemap_constants.sl"
 #include "Shaders/pbr_constants.sl"
+#include "Shaders/video_types.sl"
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
@@ -91,6 +92,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 	simul::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
+	simul::crossplatform::StructuredBuffer<VideoTagData2D> tagData2DBuffer;
+	simul::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularCubemapTexture;
 	simul::crossplatform::Texture* roughSpecularCubemapTexture;
@@ -218,7 +221,9 @@ public:
 	avs::vec3 oculusOrigin;
 	bool videoPosDecoded=false;
 	bool canConnect=false;
+	vec3 videoPos;
 
 private:
 	void OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize);
+	void UpdateTagDataBuffers(simul::crossplatform::DeviceContext& deviceContext);
 };

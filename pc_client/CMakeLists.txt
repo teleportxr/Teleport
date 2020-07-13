@@ -20,7 +20,7 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_Effect.h
 	SCR_Class_PC_Impl/PC_FrameBuffer.cpp
 	SCR_Class_PC_Impl/PC_FrameBuffer.h
-	SCR_Class_PC_Impl/PC_IndexBuffer.cpp 
+	SCR_Class_PC_Impl/PC_IndexBuffer.cpp
 	SCR_Class_PC_Impl/PC_IndexBuffer.h
 	SCR_Class_PC_Impl/PC_RenderPlatform.h
 	SCR_Class_PC_Impl/PC_RenderPlatform.cpp
