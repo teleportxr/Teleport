@@ -8,8 +8,8 @@ struct DirectionalLight
 	vec3 direction;
 	float pad;
 	vec4 color;
-	mat4d shadowViewMatrix;
-	mat4d shadowProjectionMatrix;
+	mat4 shadowViewMatrix;
+	mat4 shadowProjectionMatrix;
 };
 
 struct PointLight
@@ -19,8 +19,8 @@ struct PointLight
 	vec3 attenuation;
 	float pad;
 	vec4 color;
-	mat4d shadowViewMatrix;
-	mat4d shadowProjectionMatrix;
+	mat4 shadowViewMatrix;
+	mat4 shadowProjectionMatrix;
 };
 
 struct SpotLight
@@ -32,8 +32,8 @@ struct SpotLight
 	vec3 attenuation;
 	float pad;
 	vec4 color;
-	mat4d shadowViewMatrix;
-	mat4d shadowProjectionMatrix;
+	mat4 shadowViewMatrix;
+	mat4 shadowProjectionMatrix;
 };
 
 struct VideoTagData2D

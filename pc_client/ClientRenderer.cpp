@@ -173,8 +173,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
 	cameraConstants.RestoreDeviceObjects(renderPlatform); 
 	tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
-	tagData2DBuffer.RestoreDeviceObjects(renderPlatform, 32, true, false);
-	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, 32, true, false);
+	tagData2DBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
+	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
 
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
