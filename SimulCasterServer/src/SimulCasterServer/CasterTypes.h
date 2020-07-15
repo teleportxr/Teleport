@@ -45,7 +45,8 @@ namespace SCServer
 			PipelineConfigurationError,
 			PipelineNotInitialized,
 			PipelineProcessingError,
-			PipelineWriteOutputError
+			PipelineWriteOutputError,
+			InvalidTagDataIdError
 		};
 
 		Result(Code code) : m_code(code)

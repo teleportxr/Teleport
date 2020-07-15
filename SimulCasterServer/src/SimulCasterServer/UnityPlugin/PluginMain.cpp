@@ -112,7 +112,10 @@ public:
 		SCServer::VideoEncodePipeline(),
 		inputSurfaceResource(nullptr),
 		encoderSurfaceResource(nullptr),
-		configured(false) {}
+		configured(false)
+	{
+		tagDataArray.resize(32);
+	}
 
 	~PluginVideoEncodePipeline()
 	{
@@ -193,7 +196,7 @@ public:
 		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, params);
 	}
 
-	Result encode(bool forceIDR = false)
+	Result encode(uint32_t tagDataID, bool forceIDR = false)
 	{
 		if (!configured)
 		{
@@ -201,18 +204,43 @@ public:
 			return Result::EncoderNotConfigured;
 		}
 
+		if (tagDataID > tagDataArray.size() - 1)
+		{
+			return Result::InvalidTagDataIdError;
+		}
+
 		// Copy data from Unity texture to its CUDA compatible copy
 		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
-		Result result = SCServer::VideoEncodePipeline::process(extraData.data(), extraData.size(), forceIDR);
-		extraData.clear();
+		const auto& tagData = tagDataArray[tagDataID];
+		Result result = SCServer::VideoEncodePipeline::process(tagData.data(), tagData.size(), forceIDR);
+		tagDataArray[tagDataID].clear();
 		return result;
 	}
 
-	Result addExtraData(const uint8_t* data, size_t dataSize)
+	Result addTagData(uint32_t tagDataID, const uint8_t* data, size_t dataSize)
 	{
-		size_t index = extraData.size();
-		extraData.resize(extraData.size() + dataSize);
-		memcpy(&extraData[index], data, dataSize);
+		if (tagDataID > tagDataArray.size() - 1)
+		{
+			return Result::InvalidTagDataIdError;
+		}
+
+		auto& tagData = tagDataArray[tagDataID];
+		size_t currentSize = tagData.size();
+		tagData.resize(currentSize + dataSize);
+		memcpy(&tagData[currentSize], data, dataSize);
+
+		return Result::OK;
+	}
+
+	Result clearTagData(uint32_t tagDataID)
+	{
+		if (tagDataID > tagDataArray.size() - 1)
+		{
+			return Result::InvalidTagDataIdError;
+		}
+
+		tagDataArray[tagDataID].clear();
+
 		return Result::OK;
 	}
 
@@ -220,7 +248,7 @@ private:
 	void* inputSurfaceResource;
 	void* encoderSurfaceResource;
 	bool configured;
-	std::vector<std::uint8_t> extraData;
+	std::vector<std::vector<std::uint8_t>> tagDataArray;
 };
 
 struct InitialiseState
@@ -419,6 +447,10 @@ TELEPORT_EXPORT void StopSession(avs::uid clientID)
 TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+	{
+		return;
+	}
 	ClientData& client = c->second;
 	client.geometryStreamingService->startStreaming(&client.casterContext);
 
@@ -461,7 +493,8 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;
-
+	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;
+	
 	///TODO: Initialise actors in range.
 
 	client.clientMessaging.sendCommand(std::move(setupCommand));
@@ -472,6 +505,8 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 TELEPORT_EXPORT void StopStreaming(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end()) return;
+
 	ClientData& lostClient = c->second;
 
 	lostClient.clientMessaging.sendCommand(avs::ShutdownCommand());
@@ -663,6 +698,10 @@ TELEPORT_EXPORT bool IsClientRenderingActorPtr(avs::uid clientID, void* actorPtr
 bool HasResource(avs::uid clientID, avs::uid resourceID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+	{
+		return false;
+	}
 	return c->second.geometryStreamingService->hasResource(resourceID);
 }
 ///GeometryStreamingService END
@@ -672,6 +711,11 @@ bool HasResource(avs::uid clientID, avs::uid resourceID)
 TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+	{
+		return;
+	}
+
 	auto& clientData = c->second;
 	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
 	if(!result)
@@ -683,6 +727,11 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEn
 TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+	{
+		return;
+	}
+
 	auto& clientData = c->second;
 	Result result = clientData.videoEncodePipeline->reconfigure(videoEncodeParams);
 	if (!result)
@@ -715,41 +764,65 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;
+	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;
 
 	c->second.clientMessaging.sendCommand(cmd);
 }
 
-TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID)
+TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, uint32_t tagDataID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+	{
+		return;
+	}
+
 	auto& clientData = c->second;
 	if(!clientData.clientMessaging.hasPeer())
 	{
 		TELEPORT_CERR<< "EncodeVideoFrame called but peer is not connected." << std::endl;
 		return;
 	}
-	Result result = clientData.videoEncodePipeline->encode(clientData.videoKeyframeRequired);
+	Result result = clientData.videoEncodePipeline->encode(tagDataID, clientData.videoKeyframeRequired);
 	if (result)
 	{
 		clientData.videoKeyframeRequired = false;
 	}
 	else
 	{
-		std::cout << "Error occurred when trying to encode video" << std::endl;
+		TELEPORT_CERR << "Error occurred when trying to encode video" << std::endl;
 	}
 }
 
-TELEPORT_EXPORT void AddVideoTagData(avs::uid clientID, const uint8_t* data, size_t dataSize)
+TELEPORT_EXPORT void AddVideoTagData(avs::uid clientID, uint32_t tagDataID, const uint8_t* data, size_t dataSize)
 {
 	auto c = clientServices.find(clientID);
-	if (c != clientServices.end())
+	if (c == clientServices.end())
 	{
-		auto& clientData = c->second;
+		return;
+	}
 
-		if (!clientData.videoEncodePipeline->addExtraData(data, dataSize))
-		{
-			std::cout << "Error occurred when trying to add video tag data" << std::endl;
-		}
+	auto& clientData = c->second;
+
+	if (!clientData.videoEncodePipeline->addTagData(tagDataID, data, dataSize))
+	{
+		std::cout << "Error occurred when trying to add video tag data" << std::endl;
+	}
+}
+
+TELEPORT_EXPORT void ClearVideoTagData(avs::uid clientID, uint32_t tagDataID)
+{
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+	{
+		return;
+	}
+
+	auto& clientData = c->second;
+
+	if (!clientData.videoEncodePipeline->clearTagData(tagDataID))
+	{
+		std::cout << "Error occurred when trying to clear video tag data" << std::endl;
 	}
 }
 
@@ -773,10 +846,15 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 	}
 	else if (eventID == 2)
 	{
+		const auto buffer = (uint8_t*)data;
+
 		avs::uid clientID;
-		memcpy(&clientID, data, sizeof(avs::uid));
-		
-		EncodeVideoFrame(clientID); 
+		memcpy(&clientID, buffer, sizeof(avs::uid));
+
+		uint32_t tagDataID;
+		memcpy(&tagDataID, buffer + sizeof(avs::uid), sizeof(uint32_t));
+
+		EncodeVideoFrame(clientID, tagDataID);
 	}
 	else
 	{
@@ -810,7 +888,7 @@ TELEPORT_EXPORT void ActorLeftBounds(avs::uid clientID, avs::uid actorID)
 TELEPORT_EXPORT void UpdateActorMovement(avs::uid clientID, avs::MovementUpdate* updates, int updateAmount)
 {
 	auto client = clientServices.find(clientID);
-
+	if (client == clientServices.end()) return;
 	std::vector<avs::MovementUpdate> updateList(updateAmount);
 	for(int i = 0; i < updateAmount; i++)
 	{
@@ -828,42 +906,49 @@ TELEPORT_EXPORT void UpdateActorMovement(avs::uid clientID, avs::MovementUpdate*
 TELEPORT_EXPORT bool HasHost(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end()) return false;
 	return c->second.clientMessaging.hasHost();
 }
 
 TELEPORT_EXPORT bool HasPeer(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end()) return false;
 	return c->second.clientMessaging.hasPeer();
 }
 
 TELEPORT_EXPORT bool SendCommand(avs::uid clientID, const avs::Command& avsCommand)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end()) return false;
 	return c->second.clientMessaging.sendCommand(avsCommand);
 }
 
 TELEPORT_EXPORT bool SendCommandWithList(avs::uid clientID, const avs::Command& avsCommand, std::vector<avs::uid>& appendedList)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end()) return false;
 	return c->second.clientMessaging.sendCommand(avsCommand, appendedList);
 }
 
 TELEPORT_EXPORT char* GetClientIP(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end()) return "";
 	return c->second.clientMessaging.getClientIP().data();
 }
 
 TELEPORT_EXPORT uint16_t GetClientPort(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end()) return 0;
 	return c->second.clientMessaging.getClientPort();
 }
 
 TELEPORT_EXPORT uint16_t GetServerPort(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
+	if (c == clientServices.end()) return 0;
 	return c->second.clientMessaging.getServerPort();
 }
 ///ClientMessaging END
