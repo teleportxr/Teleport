@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.8)
+add_library(asio INTERFACE)
+
+target_compile_definitions(asio INTERFACE ASIO_STANDALONE _SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING)
+target_include_directories(asio INTERFACE include)

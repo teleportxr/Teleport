@@ -5,6 +5,7 @@
 
 #include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
+#include "enet/enet.h"
 
 class PluginDiscoveryService;
 class PluginGeometryStreamingService;

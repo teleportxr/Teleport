@@ -22,6 +22,8 @@ uniform Texture2D shadowTexture;
 uniform Texture3D inscatterVolumeTexture;
 //////////////////////////
 
+//uniform StructuredBuffer<vec4> videoCameraPositionBuffer;
+
 float GetRoughness(vec4 combinedLookup)
 {
 	return combinedLookup.r;
@@ -255,6 +257,11 @@ shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
 	return Solid(IN);
 }
 
+shader vec4 PS_Depth(vertexOutput IN) : SV_TARGET
+{
+	return Solid(IN);
+}
+
 shader vec4 PS_Solid_AlbedoOnly(vertexOutput IN) : SV_TARGET
 {
 	return Solid_AlbedoOnly(IN);
@@ -369,6 +376,7 @@ shader vec4 PS_Transparent(vertexOutput IN) : SV_TARGET
 
 VertexShader vs_solid = CompileShader(vs_4_0, VS_Solid());
 PixelShader ps_solid = CompileShader(ps_4_0, PS_Solid());
+PixelShader ps_depth = CompileShader(ps_4_0, PS_Depth());
 
 //Debug renders.
 PixelShader ps_solid_albedo_only = CompileShader(ps_4_0, PS_Solid_AlbedoOnly()); //Albedo only view
@@ -379,6 +387,15 @@ PixelShader ps_debug_normal_vertexnormals = CompileShader(ps_4_0, PS_DebugNormal
 
 technique solid
 {
+    pass depth 
+    {
+		SetRasterizerState(RenderFrontfaceCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid);
+        SetGeometryShader(NULL);
+		SetPixelShader(ps_depth);
+    }
     pass pbr 
     {
 		SetRasterizerState(RenderFrontfaceCull);
@@ -388,7 +405,6 @@ technique solid
         SetGeometryShader(NULL);
 		SetPixelShader(ps_solid);
     }
-
 	pass albedo_only
     {
 		SetRasterizerState(RenderFrontfaceCull);

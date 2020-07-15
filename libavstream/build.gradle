@@ -1,0 +1,50 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 29
+    defaultConfig {
+        //<uses-sdk android:minSdkVersion="17"/>
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            ndk {
+                abiFilters 'armeabi-v7a','arm64-v8a'
+            }
+            ndkBuild {
+                abiFilters 'armeabi-v7a','arm64-v8a'
+                targets "avstream"
+            }
+        }
+    }
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+        }
+    }
+    buildTypes {
+        debug {
+            debuggable true
+            jniDebuggable true
+
+            externalNativeBuild {
+                ndkBuild {
+                    arguments "NDK_DEBUG=1","OVR_DEBUG=1","USE_ASAN=1","DEBUG=1","_DEBUG=1"
+                }
+            }
+        }
+
+        release {
+            debuggable false
+            jniDebuggable false
+
+            externalNativeBuild {
+                ndkBuild {
+                    arguments "NDK_DEBUG=0","OVR_DEBUG=0","USE_ASAN=0","NDEBUG=1"
+                }
+            }
+        }
+    }
+    buildToolsVersion = '29.0.3'
+}

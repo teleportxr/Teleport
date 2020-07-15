@@ -446,12 +446,27 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 					cubemapClearEffect->Apply(deviceContext, "use_cubemap", 0);
 					renderPlatform->DrawQuad(deviceContext);
 					cubemapClearEffect->Unapply(deviceContext);
-				
+					cubemapClearEffect->UnbindTextures(deviceContext);
 				}
 				RenderLocalActors(deviceContext);
 			}
 			else
 			{
+				{
+					int W = videoTexture->width;
+					int H = videoTexture->length;
+					cubemapConstants.sourceOffset = int2(0, 0);
+					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+					cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoTexture);
+
+					cubemapClearEffect->Apply(deviceContext, "recompose_perspective", 0);
+					renderPlatform->DispatchCompute(deviceContext, W / 16, H / 16, 1);
+					cubemapClearEffect->Unapply(deviceContext);
+					cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+					cubemapClearEffect->UnbindTextures(deviceContext);
+				}
 				if (!show_video)
 				{
 					int W = hdrFramebuffer->GetWidth();
@@ -833,7 +848,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, stream_width, stream_height, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, 1920, 1080, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 	

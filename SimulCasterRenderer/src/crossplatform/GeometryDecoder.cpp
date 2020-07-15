@@ -49,35 +49,35 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 
 	switch (type)
 	{
-	case GeometryPayloadType::Mesh:
-	{
-		return decodeMesh(target);
-	}
-	case GeometryPayloadType::Material:
-	{
-		return decodeMaterial(target);
-	}
-	case GeometryPayloadType::MaterialInstance:
-	{
-		return decodeMaterialInstance(target);
-	}
-	case GeometryPayloadType::Texture:
-	{
-		return decodeTexture(target);
-	}
-	case GeometryPayloadType::Animation:
-	{
-		return decodeAnimation(target);
-	}
-	case GeometryPayloadType::Node:
-	{
-		return decodeNode(target);
-	}
+		case GeometryPayloadType::Mesh:
+		{
+			return decodeMesh(target);
+		}
+		case GeometryPayloadType::Material:
+		{
+			return decodeMaterial(target);
+		}
+		case GeometryPayloadType::MaterialInstance:
+		{
+			return decodeMaterialInstance(target);
+		}
+		case GeometryPayloadType::Texture:
+		{
+			return decodeTexture(target);
+		}
+		case GeometryPayloadType::Animation:
+		{
+			return decodeAnimation(target);
+		}
+		case GeometryPayloadType::Node:
+		{
+			return decodeNode(target);
+		}
 
-	default:
-	{ 
-		return avs::Result::GeometryDecoder_InvalidPayload;
-	}
+		default:
+		{ 
+			return avs::Result::GeometryDecoder_InvalidPayload;
+		}
 	};
 }
 

@@ -1,6 +1,3 @@
-[submodule "libavstream"]
-	path = libavstream
-	url = git@github.com:simul/libavstream.git
 [submodule "thirdparty/basis_universal"]
 	path = thirdparty/basis_universal
 	url = git@github.com:simul/basis_universal.git
@@ -10,3 +7,6 @@
 [submodule "firstparty/Platform"]
 	path = firstparty/Platform
 	url = git@github.com:simul/Platform.git
+[submodule "libavstream/thirdparty/efp"]
+	path = libavstream/thirdparty/efp
+	url = git@github.com:simul/efp.git
