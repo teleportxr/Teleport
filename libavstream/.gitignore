@@ -1,0 +1,9 @@
+# MSVC specific
+.vs/**
+
+# Build & install directories
+build/**
+install/**
+
+# Generated documentation
+doc/html/

@@ -1,0 +1,12 @@
+prefix=/home/roderick/SRT/arm64-v8a
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: srt
+Description: SRT library set
+Version: 1.4.1
+Libs: -L${libdir} -lsrt   
+Libs.private:  -lc++ -lm -ldl -lc -ldl
+Cflags: -I${includedir} -I${includedir}/srt
+Requires.private: openssl libcrypto

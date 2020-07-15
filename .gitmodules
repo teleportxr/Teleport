@@ -7,3 +7,6 @@
 [submodule "firstparty/Platform"]
 	path = firstparty/Platform
 	url = git@github.com:simul/Platform.git
+[submodule "libavstream/thirdparty/efp"]
+	path = libavstream/thirdparty/efp
+	url = git@github.com:simul/efp.git

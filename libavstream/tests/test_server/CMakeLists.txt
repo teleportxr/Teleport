@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.8)
+add_executable(test_server test_server.cpp)
+target_compile_features(test_server PRIVATE cxx_std_17)
+set_target_properties( test_server PROPERTIES FOLDER AVStream/Test)
+target_link_libraries(test_server testapi renderer libavstream cxxopts)
