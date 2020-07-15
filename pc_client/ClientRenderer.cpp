@@ -445,7 +445,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 					cubemapClearEffect->Apply(deviceContext, "use_cubemap", 0);
 					renderPlatform->DrawQuad(deviceContext);
 					cubemapClearEffect->Unapply(deviceContext);
-				
+					cubemapClearEffect->UnbindTextures(deviceContext);
 				}
 				RenderLocalActors(deviceContext);
 			}
