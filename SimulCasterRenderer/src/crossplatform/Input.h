@@ -1,14 +1,15 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2020 Simul Software Ltd
 
 #pragma once
 
 #include <stdint.h>
 
-struct ControllerState {
-    uint32_t mButtons;
-    bool  mTrackpadStatus;
-    float mTrackpadX;
-    float mTrackpadY;
+struct ControllerState
+{
+	uint32_t mButtons;
+	bool  mTrackpadStatus;
+	float mTrackpadX;
+	float mTrackpadY;
 	float mJoystickAxisX;
 	float mJoystickAxisY;
 };

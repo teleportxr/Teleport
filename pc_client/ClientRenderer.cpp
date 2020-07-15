@@ -193,6 +193,7 @@ void ClientRenderer::RecompileShaders()
 	delete cubemapClearEffect;
 	pbrEffect = renderPlatform->CreateEffect("pbr");
 	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
+	_RWTagDataIDBuffer = cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
 }
 
 
@@ -377,8 +378,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		{
 			// This will apply to both rendering methods
 			{
-				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-				tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer"));
+				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture); 
+				tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, _RWTagDataIDBuffer );
 				cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 				cubemapClearEffect->Apply(deviceContext, "extract_tag_data_id", 0);
@@ -1010,6 +1011,20 @@ void ClientRenderer::UpdateActorMovement(const std::vector<avs::MovementUpdate>&
 	resourceManagers.mActorManager->UpdateActorMovement(updateList);
 }
 
+void ClientRenderer::FillInControllerPose(avs::HeadPose& pose, float offset)
+{
+	float x= mouseCameraInput.MouseX / hdrFramebuffer->GetWidth();
+	float y=mouseCameraInput.MouseY / hdrFramebuffer->GetHeight();
+	vec3 controller_dir=camera.ScreenPositionToDirection(x,y, hdrFramebuffer->GetWidth()/ hdrFramebuffer->GetHeight());
+	vec3 view_dir=camera.ScreenPositionToDirection(0,0,1.0f);
+	float angle=atan2f(view_dir.x,view_dir.y);
+	vec3 pos_offset(sin(angle),cos(angle),0.0f);
+	// Get horizontal azimuth of view.
+	pose.position=camera.GetPosition();
+	pose.position+=*((avs::vec3*)&pos_offset);
+	//pose.orientation=
+}
+
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
 {
 	mouseCameraInput.forward_back_input	=(float)keydown['w']-(float)keydown['s'];
@@ -1049,7 +1064,10 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
-		sessionClient.Frame(displayInfo, headPose, nullptr, receivedInitialPos,controllerState, decoder->idrRequired());
+		avs::HeadPose controllerPoses[2];
+		FillInControllerPose(controllerPoses[0],-1.0f);
+		FillInControllerPose(controllerPoses[1], 1.0f);
+		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos,controllerState, decoder->idrRequired());
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			oculusOrigin = sessionClient.GetInitialPos();

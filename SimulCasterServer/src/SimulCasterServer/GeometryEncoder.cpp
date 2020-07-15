@@ -225,7 +225,12 @@ namespace SCServer
 		for (const avs::uid &uid : missingUIDs)
 		{
 			avs::DataNode* node = src->getNode(uid);
-
+			if(!node)
+			{
+				TELEPORT_CERR << "No such node with uid " << uid << std::endl;
+				node = src->getNode(uid);
+				continue;
+			}
 			put(uid);
 			avs::Transform transform = node->transform;
 			avs::ConvertTransform(settings->axesStandard, req->getAxesStandard(), transform);

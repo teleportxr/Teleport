@@ -182,11 +182,11 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCre
 		size_t this_size = GetByteSize(attr);
 		if(m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED)
 		{
-			byteOffset += this_size;
+			byteOffset += (int)this_size;
 		}
 		else if(m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::GROUPED)
 		{
-			byteOffset += this_size * m_CI.vertexCount;
+			byteOffset += (int)this_size * m_CI.vertexCount;
 		}
 
 		desc[i].perInstance = false;
@@ -195,6 +195,6 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCre
 
 	delete m_layout;
 	m_layout = srp->CreateLayout(m_CI.layout->m_Attributes.size(), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
-	m_SimulBuffer->EnsureVertexBuffer(srp, m_CI.vertexCount, m_layout, m_CI.data);
+	m_SimulBuffer->EnsureVertexBuffer(srp, (int)m_CI.vertexCount, m_layout, m_CI.data);
 	delete[] desc;
 }

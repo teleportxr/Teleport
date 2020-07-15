@@ -26,15 +26,17 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
+     ndkVersion "21.3.6528147"
+
     signingConfigs {
         release {
-            storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
+            storeFile file('android.debug.keystore.jks')
             storePassword 'android'
             keyAlias = 'android'
             keyPassword 'android'
         }
         debug {
-            storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
+            storeFile file('android.debug.keystore.jks')
             storePassword 'android'
             keyAlias = 'android'
             keyPassword 'android'

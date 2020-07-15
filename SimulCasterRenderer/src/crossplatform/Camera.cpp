@@ -42,6 +42,7 @@ void Camera::UpdateOrientation(const quat& orientation)
 {
 	m_CameraData.m_Orientation = orientation;
 }
+
 void Camera::UpdateView()
 {
 	//Inverse for a translation matrix is a -position input. Inverse for a rotation matrix is its transpose.

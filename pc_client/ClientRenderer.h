@@ -88,6 +88,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::MeshRenderer *meshRenderer;
 	simul::crossplatform::Effect *pbrEffect;
 	simul::crossplatform::Effect *cubemapClearEffect;
+	simul::crossplatform::ShaderResource _RWTagDataIDBuffer;
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
@@ -185,7 +186,7 @@ public:
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
 
 	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);
-
+	void FillInControllerPose(avs::HeadPose &pose,float offset);
 	//Update the state of objects on the ClientRenderer.
 	void Update();
 

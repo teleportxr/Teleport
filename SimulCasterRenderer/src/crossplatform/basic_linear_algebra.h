@@ -214,10 +214,10 @@ namespace scr
 		{
 			return mat4
 			(
-				(1 / (aspectRatio * static_cast<float>(tanf(horizontalFOV / 2)))), (0), (0), (0),
-				(0), (1 / static_cast<float>(tanf(horizontalFOV / 2))), (0), (0),
-				(0), (0), -((zFar + zNear) / (zFar - zNear)), -((2 * zFar * zNear) / (zFar - zNear)),
-				(0), (0), (-1), (0)
+				(1.0f / (aspectRatio * static_cast<float>(tanf(horizontalFOV / 2.0f)))), (0), (0), (0),
+				(0), (1.0f / static_cast<float>(tanf(horizontalFOV / 2.0f))), (0), (0),
+				(0), (0), -((zFar + zNear) / (zFar - zNear)), -((2.0f * zFar * zNear) / (zFar - zNear)),
+				(0), (0), (-1.0f), (0)
 			);
 		}
 
@@ -225,10 +225,10 @@ namespace scr
 		{
 			return mat4
 			(
-				(2 / (right - left)), (0), (0), (-(right + left) / (right - left)),
-				(0), (2 / (top - bottom)), (0), (-(top + bottom) / (top - bottom)),
-				(0), (0), (-2 / (_far - _near)), (-(_far + _near) / (_far - _near)),
-				(0), (0), (0), (1)
+				(2.0f / (right - left)), (0), (0), (-(right + left) / (right - left)),
+				(0), (2.0f / (top - bottom)), (0), (-(top + bottom) / (top - bottom)),
+				(0), (0), (-2.0f / (_far - _near)), (-(_far + _near) / (_far - _near)),
+				(0), (0), (0), (1.0f)
 			);
 		}
 

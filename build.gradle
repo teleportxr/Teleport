@@ -1,23 +1,28 @@
 task assemble {}
-buildscript { 
+buildscript
+{
     ext.kotlin_version = '1.3.72'
 
-  repositories {
-    google()
-    jcenter()
-  }
-
-  dependencies {
-    classpath 'com.android.tools.build:gradle:4.0.0'
-  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version" }
-
-    
+    repositories
+    {
+        google()
+        jcenter()
     }
 
+    dependencies
+    {
+        classpath 'com.android.tools.build:gradle:3.6.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
 allprojects {
     repositories {
         google()
       jcenter()
+        maven { url 'https://maven.google.com' }
+        ivy {
+            url "https://repo.example.com/ivy"
+        }
     }
 }
 

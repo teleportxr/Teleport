@@ -744,4 +744,5 @@ std::string Application::LoadTextFile(const char *filename)
 			outBuffer.push_back('\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
 		return std::string((const char *)outBuffer.data());
 	}
+	return "";
 }
