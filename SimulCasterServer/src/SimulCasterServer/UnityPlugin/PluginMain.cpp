@@ -30,8 +30,8 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void StopSession(avs::uid clientID);
 
-typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::HeadPose*);
-typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::HeadPose*);
+typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
+typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
 typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 
@@ -255,8 +255,8 @@ struct InitialiseState
 {
 	void(*showActor)(avs::uid clientID, void*);
 	void(*hideActor)(avs::uid clientID, void*);
-	void(*headPoseSetter)(avs::uid clientID, const avs::HeadPose*);
-	void(*controllerPoseSetter)(avs::uid uid, int index, const avs::HeadPose*);
+	void(*headPoseSetter)(avs::uid clientID, const avs::Pose*);
+	void(*controllerPoseSetter)(avs::uid uid, int index, const avs::Pose*);
 	void(*newInputProcessing)(avs::uid clientID, const avs::InputState*);
 	DisconnectFn disconnect;
 	avs::MessageHandlerFunc messageHandler;
@@ -791,6 +791,8 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, uint32_t tagDataID)
 	else
 	{
 		TELEPORT_CERR << "Error occurred when trying to encode video" << std::endl;
+		// repeat the attempt for debugging purposes.
+		result = clientData.videoEncodePipeline->encode(tagDataID, clientData.videoKeyframeRequired);
 	}
 }
 
@@ -807,6 +809,7 @@ TELEPORT_EXPORT void AddVideoTagData(avs::uid clientID, uint32_t tagDataID, cons
 	if (!clientData.videoEncodePipeline->addTagData(tagDataID, data, dataSize))
 	{
 		std::cout << "Error occurred when trying to add video tag data" << std::endl;
+		clientData.videoEncodePipeline->addTagData(tagDataID, data, dataSize);
 	}
 }
 

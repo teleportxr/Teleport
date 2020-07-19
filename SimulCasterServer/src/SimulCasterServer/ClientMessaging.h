@@ -23,8 +23,8 @@ namespace SCServer
 		ClientMessaging(const struct CasterSettings* settings,
 						std::shared_ptr<DiscoveryService> discoveryService,
 						std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-						std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose,
-						std::function<void(avs::uid,int index,const avs::HeadPose*)> setControllerPose,
+						std::function<void(avs::uid,const avs::Pose*)> setHeadPose,
+						std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose,
 						std::function<void(avs::uid,const avs::InputState*)> processNewInput,
 						std::function<void(void)> onDisconnect,
 						const int32_t& disconnectTimeout);
@@ -74,8 +74,8 @@ namespace SCServer
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
 
-		std::function<void(avs::uid,const avs::HeadPose*)> setHeadPose;			//Delegate called when a head pose is received.
-		std::function<void(avs::uid,int index,const avs::HeadPose*)> setControllerPose;			//Delegate called when a head pose is received.
+		std::function<void(avs::uid,const avs::Pose*)> setHeadPose;			//Delegate called when a head pose is received.
+		std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose;			//Delegate called when a head pose is received.
 		std::function<void(avs::uid,const avs::InputState*)> processNewInput;	//Delegate called when new input is received.
 		std::function<void(void)> onDisconnect; //Delegate called when the peer disconnects.
 

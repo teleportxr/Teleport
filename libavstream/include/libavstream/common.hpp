@@ -519,7 +519,7 @@ namespace avs
 		float joystickAxisY;
 	};
 
-	struct HeadPose
+	struct Pose
 	{
 		avs::vec4 orientation;
 		avs::vec3 position;
@@ -598,8 +598,8 @@ namespace avs
 	//Message info struct containing how many resources were received; sent alongside a list of UIDs.
 	struct ControllerPosesMessage: public ClientMessage
 	{
-		HeadPose headPose;
-		HeadPose controllerPoses[2];
+		Pose headPose;
+		Pose controllerPoses[2];
 
 		ControllerPosesMessage()
 		:ClientMessage(ClientMessagePayloadType::ControllerPoses)

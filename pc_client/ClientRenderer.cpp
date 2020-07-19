@@ -1061,11 +1061,18 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel=q/q0;
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
-		avs::HeadPose headPose;
+		avs::Pose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
-		sessionClient.Frame(displayInfo, headPose, nullptr, receivedInitialPos,controllerState, decoder->idrRequired());
+		
+		avs::Pose controllerPoses[2];
+		controllerPoses[0].orientation=*((avs::vec4*) & q_rel);
+		controllerPoses[1].orientation=*((avs::vec4*) & q_rel);
+		controllerPoses[0].position= *((avs::vec3*) & pos);
+		controllerPoses[1].position= *((avs::vec3*) & pos);
+
+		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos,controllerState, decoder->idrRequired());
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			oculusOrigin = sessionClient.GetInitialPos();
