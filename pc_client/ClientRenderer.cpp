@@ -389,7 +389,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 
 				tagDataIDBuffer.CopyToReadBuffer(deviceContext);
 				const uint4* videoIDBuffer = tagDataIDBuffer.OpenReadBuffer(deviceContext);
-				if (videoIDBuffer && videoIDBuffer[0].w == 110) // sanity check
+				if (videoIDBuffer && videoIDBuffer[0].x < 32 && videoIDBuffer[0].w == 110) // sanity check
 				{	
 					int tagDataID = videoIDBuffer[0].x;	
 
@@ -455,6 +455,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				{
 					int W = videoTexture->width;
 					int H = videoTexture->length;
+					tagData2DBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagData2DBuffer"));
 					cubemapConstants.sourceOffset = int2(0, 0);
 					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
