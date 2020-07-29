@@ -261,7 +261,7 @@ Result Encoder::Private::writeOutput(IOInterface* outputNode, const uint8_t* ext
 
 		uint8_t index = 0;
 		memcpy(&extraData[index], &dataSize, sizeFieldInBytes);
-		index += sizeFieldInBytes;
+		index += (uint8_t)sizeFieldInBytes;
 		
 		if (m_params.codec == VideoCodec::H264)
 		{

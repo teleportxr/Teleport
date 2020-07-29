@@ -133,6 +133,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 		CAMERA_OSD,
 		NETWORK_OSD,
 		GEOMETRY_OSD,
+		CONTROLLER_OSD,
 		NUM_OSDS
 	};
 	int show_osd = NETWORK_OSD;
@@ -140,6 +141,17 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool show_textures = false;
 
 	std::string passName = "pbr"; //Pass used for rendering geometry.
+
+	struct ControllerSim
+	{
+		vec3 controller_dir;
+		vec3 view_dir;
+		float angle;
+		vec3 pos_offset[2];
+		avs::vec3 position[2];
+		avs::vec4 orientation[2];
+	};
+	ControllerSim controllerSim;
 public:
 	ClientRenderer();
 	~ClientRenderer();
@@ -186,7 +198,7 @@ public:
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
 
 	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);
-	void FillInControllerPose(avs::HeadPose &pose,float offset);
+	void FillInControllerPose(int index, avs::Pose &pose,float offset);
 	//Update the state of objects on the ClientRenderer.
 	void Update();
 

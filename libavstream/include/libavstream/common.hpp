@@ -116,6 +116,13 @@ namespace avs
 			return vec3(-x, -y, -z);
 		}
 
+		void operator=(const float* v)
+		{
+			x = v[0];
+			y = v[1];
+			z = v[2];
+		}
+
 		vec3 operator+(const vec3& rhs) const
 		{
 			return vec3(x + rhs.x, y + rhs.y, z + rhs.z);
@@ -201,9 +208,25 @@ namespace avs
 			:x(x), y(y), z(z), w(w)
 		{}
 
+		vec4(const float* v)
+		{
+			this->x = v[0];
+			this->y = v[1];
+			this->z = v[2];
+			this->w = v[3];
+		}
+
 		vec4 operator-() const
 		{
 			return vec4(-x, -y, -z, -w);
+		}
+
+		void operator=(const float* v)
+		{
+			x = v[0];
+			y = v[1];
+			z = v[2];
+			w = v[3];
 		}
 
 		vec4 operator+(const vec4& rhs) const
@@ -519,7 +542,7 @@ namespace avs
 		float joystickAxisY;
 	};
 
-	struct HeadPose
+	struct Pose
 	{
 		avs::vec4 orientation;
 		avs::vec3 position;
@@ -598,8 +621,8 @@ namespace avs
 	//Message info struct containing how many resources were received; sent alongside a list of UIDs.
 	struct ControllerPosesMessage: public ClientMessage
 	{
-		HeadPose headPose;
-		HeadPose controllerPoses[2];
+		Pose headPose;
+		Pose controllerPoses[2];
 
 		ControllerPosesMessage()
 		:ClientMessage(ClientMessagePayloadType::ControllerPoses)

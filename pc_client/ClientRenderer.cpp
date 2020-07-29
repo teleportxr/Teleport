@@ -608,6 +608,23 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 		,resourceManagers.mMeshManager.GetCache(cacheLock).size()
 		,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 	}
+	else if(show_osd== CONTROLLER_OSD)
+	{
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     Mouse: %d %d",mouseCameraInput.MouseX,mouseCameraInput.MouseY));
+
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("      angle: %3.3f", controllerSim.angle));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" pos_offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
+
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
+
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
+
+	}
 
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 	//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
@@ -1026,19 +1043,33 @@ void ClientRenderer::UpdateActorMovement(const std::vector<avs::MovementUpdate>&
 {
 	resourceManagers.mActorManager->UpdateActorMovement(updateList);
 }
-
-void ClientRenderer::FillInControllerPose(avs::HeadPose& pose, float offset)
+#include "Platform/CrossPlatform/Quaterniond.h"
+void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offset)
 {
-	float x= mouseCameraInput.MouseX / hdrFramebuffer->GetWidth();
-	float y=mouseCameraInput.MouseY / hdrFramebuffer->GetHeight();
-	vec3 controller_dir=camera.ScreenPositionToDirection(x,y, hdrFramebuffer->GetWidth()/ hdrFramebuffer->GetHeight());
-	vec3 view_dir=camera.ScreenPositionToDirection(0,0,1.0f);
-	float angle=atan2f(view_dir.x,view_dir.y);
-	vec3 pos_offset(sin(angle),cos(angle),0.0f);
+	float x= mouseCameraInput.MouseX / (float)hdrFramebuffer->GetWidth();
+	float y= mouseCameraInput.MouseY / (float)hdrFramebuffer->GetHeight();
+	controllerSim.controller_dir=camera.ScreenPositionToDirection(x,y, hdrFramebuffer->GetWidth()/ hdrFramebuffer->GetHeight());
+	controllerSim.view_dir=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
+	// we seek the angle positive on the Z-axis representing the view direction azimuth:
+	controllerSim.angle=atan2f(-controllerSim.view_dir.x, controllerSim.view_dir.y);
+	float sine= sin(controllerSim.angle), cosine=cos(controllerSim.angle);
+	static float hand_dist=0.5f;
+	controllerSim.pos_offset[index]=vec3(hand_dist*(-sine+offset*cosine),hand_dist*(cosine+offset*sine),0.0f);
 	// Get horizontal azimuth of view.
 	pose.position=camera.GetPosition();
-	pose.position+=*((avs::vec3*)&pos_offset);
-	//pose.orientation=
+	pose.position+=*((avs::vec3*)&controllerSim.pos_offset[index]);
+
+	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
+	// The up direction is x, and the left direction is z.
+	simul::crossplatform::Quaternion<float> q(0,0,0,1.0f);
+	float azimuth= atan2f(-controllerSim.controller_dir.x, controllerSim.controller_dir.y);
+	float elevation=asin(controllerSim.controller_dir.z);
+	q.Rotate(azimuth,vec3(0,0,1.0f));
+	q.Rotate(elevation, vec3(1.0f, 0, 0));
+
+	controllerSim.position[index] =pose.position;
+	controllerSim.orientation[index] =((const float*)&q);
+	pose.orientation= ((const float*)&q);
 }
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
@@ -1076,13 +1107,15 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel=q/q0;
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
-		avs::HeadPose headPose;
+		avs::Pose headPose;
 		headPose.orientation = *((avs::vec4*) & q_rel);
 		vec3 pos = camera.GetPosition();
 		headPose.position = *((avs::vec3*) & pos);
-		avs::HeadPose controllerPoses[2];
-		FillInControllerPose(controllerPoses[0],-1.0f);
-		FillInControllerPose(controllerPoses[1], 1.0f);
+		
+		avs::Pose controllerPoses[2];
+		FillInControllerPose(0,controllerPoses[0],1.0f);
+		FillInControllerPose(1,controllerPoses[1], -1.0f);
+
 		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos,controllerState, decoder->idrRequired());
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{

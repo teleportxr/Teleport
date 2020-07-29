@@ -14,8 +14,8 @@ using namespace SCServer;
 ClientMessaging::ClientMessaging(const CasterSettings* settings,
 								 std::shared_ptr<DiscoveryService> discoveryService,
 								 std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-								 std::function<void(avs::uid,const avs::HeadPose*)> inSetHeadPose,
-								 std::function<void(avs::uid,int index,const avs::HeadPose*)> inSetControllerPose,
+								 std::function<void(avs::uid,const avs::Pose*)> inSetHeadPose,
+								 std::function<void(avs::uid,int index,const avs::Pose*)> inSetControllerPose,
 								 std::function<void(avs::uid,const avs::InputState*)> inProcessNewInput,
 								 std::function<void(void)> onDisconnect,
 								 const int32_t& disconnectTimeout)
@@ -390,13 +390,13 @@ void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
 
 void ClientMessaging::receiveHeadPose(const ENetPacket* packet)
 {
-	if(packet->dataLength != sizeof(avs::HeadPose))
+	if(packet->dataLength != sizeof(avs::Pose))
 	{
 		std::cout << "Session: Received malformed head pose packet of length: " << packet->dataLength << std::endl;
 		return;
 	}
 	
-	avs::HeadPose headPose;
+	avs::Pose headPose;
 	memcpy(&headPose, packet->data, packet->dataLength);
 	
 	avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, headPose.orientation);
@@ -442,7 +442,7 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	
 			for(int i=0;i<2;i++)
 			{
-				avs::HeadPose &pose=message.controllerPoses[i];
+				avs::Pose &pose=message.controllerPoses[i];
 				avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, pose.orientation);
 				avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, pose.position);
 				setControllerPose(clientID, i, &pose);
