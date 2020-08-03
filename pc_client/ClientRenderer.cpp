@@ -567,7 +567,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 	deviceContext.framePrintY = 8;
 	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
 		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
-		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d",REMOTEPLAY_DISCOVERY_PORT):"Offline"),white);
+		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d",REMOTEPLAY_CLIENT_DISCOVERY_PORT):"Offline"),white);
 	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
 	if(show_osd== NETWORK_OSD)
 	{
@@ -1094,7 +1094,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	else
 	{
 		ENetAddress remoteEndpoint;
-		if (canConnect&&sessionClient.Discover(REMOTEPLAY_DISCOVERY_PORT, remoteEndpoint))
+		if (canConnect&&sessionClient.Discover(REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
 		{
 			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}

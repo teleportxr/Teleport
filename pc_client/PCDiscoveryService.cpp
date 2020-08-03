@@ -59,15 +59,20 @@ int PCDiscoveryService::CreateDiscoverySocket(uint16_t discoveryPort)
 	return sock;
 }
 
-uint32_t PCDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remote)
+uint32_t PCDiscoveryService::Discover(uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
 {
 	bool serverDiscovered = false;
 
-	ENetAddress broadcastAddress = {ENET_HOST_BROADCAST, discoveryPort};
+	if (serverIP.empty())
+	{
+		serverIP = "255.255.255.255";
+	}
+
+	ENetAddress serverAddress = { inet_addr(serverIP.c_str()), serverDiscoveryPort }; 
 
 	if(!serviceDiscoverySocket)
 	{
-		serviceDiscoverySocket=CreateDiscoverySocket(discoveryPort);
+		serviceDiscoverySocket=CreateDiscoverySocket(clientDiscoveryPort);
 	}
 	ENetBuffer buffer = {sizeof(clientID) ,(void*)&clientID};
 	ServiceDiscoveryResponse response = {};
@@ -78,7 +83,7 @@ uint32_t PCDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remot
 	frame--;
 	if(!frame)
 	{
-		enet_socket_send(serviceDiscoverySocket, &broadcastAddress, &buffer, 1);
+		enet_socket_send(serviceDiscoverySocket, &serverAddress, &buffer, 1);
 		frame=1000;
 	}
 
@@ -95,7 +100,6 @@ uint32_t PCDiscoveryService::Discover(uint16_t discoveryPort, ENetAddress& remot
 		}
 	}
 	while(bytesRecv > 0 && !serverDiscovered);
-
 
 	if(serverDiscovered)
 	{
