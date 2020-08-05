@@ -460,7 +460,6 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	{
 		encoderSettings.frameWidth = casterSettings.sceneCaptureWidth;
 		encoderSettings.frameHeight = casterSettings.sceneCaptureHeight;
-		
 	}
 	else
 	{

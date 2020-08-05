@@ -13,7 +13,7 @@ namespace
 
 namespace SCServer
 {
-	NetworkPipeline::NetworkPipeline(const SCServer::CasterSettings* settings)
+	NetworkPipeline::NetworkPipeline(const CasterSettings* settings)
 		:settings(settings)
 	{}
 
@@ -22,7 +22,7 @@ namespace SCServer
 		release();
 	}
 
-	void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue)
+	void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue)
 	{
 		assert(colorQueue);
 
@@ -50,12 +50,19 @@ namespace SCServer
 		}
 		geometryPipes[0]->sourceQueue = geometryQueue;
 
+		audioPipes.resize(1);
+		for (std::unique_ptr<AudioPipe>& pipe : audioPipes)
+		{
+			pipe = std::make_unique<AudioPipe>();
+		}
+		audioPipes[0]->sourceQueue = geometryQueue;
+
 		char remoteIP[20];
 		size_t stringLength = wcslen(inNetworkSettings.remoteIP);
 		//Convert wide character string to multibyte string.
 		wcstombs_s(&stringLength, remoteIP, inNetworkSettings.remoteIP, 20);
 
-		size_t NumInputs = videoPipes.size() + geometryPipes.size();
+		size_t NumInputs = videoPipes.size() + geometryPipes.size() + audioPipes.size();
 
 		std::vector<avs::NetworkSinkStream> streams;
 
@@ -74,7 +81,6 @@ namespace SCServer
 
 		for (int32_t i = 0; i < geometryPipes.size(); ++i)
 		{
-			static const uint8_t expectedFPS = 60;
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::Geometry;
 			stream.useParser = true;
@@ -83,6 +89,19 @@ namespace SCServer
 			stream.chunkSize = 64 * 1024;
 			stream.streamIndex = 100 + i;
 			stream.dataType = avs::NetworkDataType::Geometry;
+			streams.emplace_back(std::move(stream));
+		}
+
+		for (int32_t i = 0; i < audioPipes.size(); ++i)
+		{
+			avs::NetworkSinkStream stream;
+			stream.parserType = avs::StreamParserType::Audio;
+			stream.useParser = false;
+			stream.isDataLimitPerFrame = true;
+			stream.counter = 0;
+			stream.chunkSize = 64 * 1024;
+			stream.streamIndex = 150 + i;
+			stream.dataType = avs::NetworkDataType::Audio;
 			streams.emplace_back(std::move(stream));
 		}
 
@@ -109,6 +128,17 @@ namespace SCServer
 			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
 			{
 				std::cout << "Failed to configure network pipeline for geometry! \n";
+				return;
+			}
+			pipeline->add(pipe->sourceQueue);
+		}
+
+		for (int32_t i = 0; i < audioPipes.size(); ++i)
+		{
+			auto& pipe = audioPipes[i];
+			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
+			{
+				std::cout << "Failed to configure network pipeline for audio! \n";
 				return;
 			}
 			pipeline->add(pipe->sourceQueue);

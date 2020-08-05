@@ -15,6 +15,7 @@ namespace SCServer
 		std::unique_ptr<avs::Queue> ColorQueue;
 		std::unique_ptr<avs::Queue> DepthQueue;
 		std::unique_ptr<avs::Queue> GeometryQueue;
+		std::unique_ptr<avs::Queue> AudioQueue;
 		bool isCapturingDepth = false;
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
 	};
