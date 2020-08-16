@@ -41,7 +41,7 @@ public:
     ~SessionClient();
 
     void SetResourceCreator(ResourceCreator *);
-	uint32_t Discover(uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote);
+	uint32_t Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote);
     bool Connect(const char* remoteIP, uint16_t remotePort, uint timeout);
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);

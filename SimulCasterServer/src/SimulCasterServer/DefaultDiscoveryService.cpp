@@ -41,6 +41,7 @@ bool DefaultDiscoveryService::initialise(uint16_t discovPort, uint16_t servPort)
 	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_REUSEADDR, 1);
 
 	address = { ENET_HOST_ANY, discoveryPort };
+	//enet_address_set_host(&(address), "192.168.3.42");
 	if (enet_socket_bind(discoverySocket, &address) != 0)
 	{
 		TELEPORT_CERR << "Failed to bind discovery socket on port: " << address.port << std::endl;

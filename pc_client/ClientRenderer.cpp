@@ -563,7 +563,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 	const avs::NetworkSourceCounters counters = source.getCounterValues();
 	//ImGui::Text("Frame #: %d", renderStats.frameCounter);
 	//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
-	deviceContext.framePrintX = 8;
+	//deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
 	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
 		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
@@ -1093,8 +1093,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	}
 	else
 	{
-		ENetAddress remoteEndpoint;
-		if (canConnect&&sessionClient.Discover(REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
+		ENetAddress remoteEndpoint; //192.168.3.42 45.132.108.84
+		if (canConnect && sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
 		{
 			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
@@ -1121,7 +1121,7 @@ void ClientRenderer::OnMouse(bool bLeftButtonDown
 void ClientRenderer::PrintHelpText(simul::crossplatform::DeviceContext& deviceContext)
 {
 	deviceContext.framePrintY = 8;
-	deviceContext.framePrintX = hdrFramebuffer->GetWidth() / 2;
+	//deviceContext.framePrintX = hdrFramebuffer->GetWidth() / 2;
 	renderPlatform->LinePrint(deviceContext, "K: Connect/Disconnect");
 	renderPlatform->LinePrint(deviceContext, "O: Toggle OSD");
 	renderPlatform->LinePrint(deviceContext, "V: Show video");

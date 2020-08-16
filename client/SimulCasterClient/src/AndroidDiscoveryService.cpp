@@ -30,7 +30,7 @@ AndroidDiscoveryService::~AndroidDiscoveryService()
     }
 }
 
-uint32_t AndroidDiscoveryService::Discover(uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
+uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
 {
     bool serverDiscovered = false;
 
@@ -40,7 +40,7 @@ uint32_t AndroidDiscoveryService::Discover(uint16_t clientDiscoveryPort, std::st
     }
 
     struct sockaddr_in serverAddress = { AF_INET, htons(serverDiscoveryPort) };
-    broadcastAddress.sin_addr.s_addr = inet_addr(serverIP.c_str());
+    serverAddress.sin_addr.s_addr = inet_addr(serverIP.c_str());
 
     if(!serviceDiscoverySocket)
     {
@@ -72,7 +72,7 @@ uint32_t AndroidDiscoveryService::Discover(uint16_t clientDiscoveryPort, std::st
     if(!counter)
     {
         sendto(serviceDiscoverySocket, &clientID, sizeof(clientID), 0,
-               (struct sockaddr *) &broadcastAddress, sizeof(broadcastAddress));
+               (struct sockaddr *) & serverAddress, sizeof(serverAddress));
         counter = 60;
     }
 

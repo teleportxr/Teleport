@@ -20,9 +20,9 @@ void SessionClient::SetResourceCreator(ResourceCreator *r)
 	mResourceCreator=r;
 }
 
-uint32_t SessionClient::Discover(uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
+uint32_t SessionClient::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
 {
-	uint32_t cl_id=discoveryService->Discover(clientDiscoveryPort, serverIP, serverDiscoveryPort, remote);
+	uint32_t cl_id=discoveryService->Discover(clientIP, clientDiscoveryPort, serverIP, serverDiscoveryPort, remote);
 	if(cl_id!=0)
 		clientID=cl_id;
 	return cl_id;

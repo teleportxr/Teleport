@@ -30,7 +30,7 @@ PCDiscoveryService::~PCDiscoveryService()
 	}
 }
 
-int PCDiscoveryService::CreateDiscoverySocket(uint16_t discoveryPort)
+int PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t discoveryPort)
 {
 	int sock = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);// PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock <= 0)
@@ -45,10 +45,16 @@ int PCDiscoveryService::CreateDiscoverySocket(uint16_t discoveryPort)
 	// We don't want to block, just check for packets.
 	enet_socket_set_option(sock, ENET_SOCKOPT_NONBLOCK, 1);
 
+	if (ip.empty())
+	{
+		ip = "127.0.0.1";
+	}
+
 	// Here we BIND the socket to the local address that we want to be identified with.
 	// e.g. our OWN local IP.
 	ENetAddress bindAddress = { ENET_HOST_ANY, discoveryPort };
-	enet_address_set_host(&(bindAddress), "127.0.0.1");
+
+	enet_address_set_host(&(bindAddress), ip.c_str());
 	if (enet_socket_bind(sock, &bindAddress) != 0)
 	{
 		FAIL("Failed to bind to service discovery UDP socket");
@@ -59,7 +65,7 @@ int PCDiscoveryService::CreateDiscoverySocket(uint16_t discoveryPort)
 	return sock;
 }
 
-uint32_t PCDiscoveryService::Discover(uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
+uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
 {
 	bool serverDiscovered = false;
 
@@ -68,11 +74,12 @@ uint32_t PCDiscoveryService::Discover(uint16_t clientDiscoveryPort, std::string 
 		serverIP = "255.255.255.255";
 	}
 
-	ENetAddress serverAddress = { inet_addr(serverIP.c_str()), serverDiscoveryPort }; 
+	ENetAddress serverAddress = { ENET_HOST_ANY, serverDiscoveryPort };
+	enet_address_set_host(&(serverAddress), serverIP.c_str());
 
 	if(!serviceDiscoverySocket)
 	{
-		serviceDiscoverySocket=CreateDiscoverySocket(clientDiscoveryPort);
+		serviceDiscoverySocket = CreateDiscoverySocket(clientIP, clientDiscoveryPort);
 	}
 	ENetBuffer buffer = {sizeof(clientID) ,(void*)&clientID};
 	ServiceDiscoveryResponse response = {};
@@ -83,7 +90,7 @@ uint32_t PCDiscoveryService::Discover(uint16_t clientDiscoveryPort, std::string 
 	frame--;
 	if(!frame)
 	{
-		enet_socket_send(serviceDiscoverySocket, &serverAddress, &buffer, 1);
+		int res = enet_socket_send(serviceDiscoverySocket, &serverAddress, &buffer, 1);
 		frame=1000;
 	}
 
