@@ -463,7 +463,8 @@ namespace avs
 	{
 		H264 = 0,
 		HEVC,
-		Geometry
+		Geometry,
+		Audio
 	};
 
 	enum class GeometryPayloadType : uint8_t

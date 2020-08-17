@@ -13,6 +13,7 @@ namespace avs
 	{
 		AVC_AnnexB, /*<! AVC Annex B bitstream parser */
 		Geometry,
+		Audio,
 		Custom,     /*<! Custom bitstream parser */
 		Default = AVC_AnnexB, /*<! Default bitstream parser */
 	};

@@ -303,7 +303,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		};
 
 		casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));
-		casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->DepthQueue.get(), casterContext->GeometryQueue.get());
+		casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->DepthQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
 	}
 
 	CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
