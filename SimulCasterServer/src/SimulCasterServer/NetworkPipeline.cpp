@@ -62,7 +62,11 @@ namespace SCServer
 		//Convert wide character string to multibyte string.
 		wcstombs_s(&stringLength, remoteIP, inNetworkSettings.remoteIP, 20);
 
-		size_t NumInputs = videoPipes.size() + geometryPipes.size() + audioPipes.size();
+		size_t NumInputs = videoPipes.size() + geometryPipes.size()
+#if REMOTEPLAY_SUPPORT_AUDIO
+			+ audioPipes.size()
+#endif
+			;
 
 		std::vector<avs::NetworkSinkStream> streams;
 
@@ -91,7 +95,7 @@ namespace SCServer
 			stream.dataType = avs::NetworkDataType::Geometry;
 			streams.emplace_back(std::move(stream));
 		}
-
+#if REMOTEPLAY_SUPPORT_AUDIO
 		for (int32_t i = 0; i < audioPipes.size(); ++i)
 		{
 			avs::NetworkSinkStream stream;
@@ -104,7 +108,7 @@ namespace SCServer
 			stream.dataType = avs::NetworkDataType::Audio;
 			streams.emplace_back(std::move(stream));
 		}
-
+#endif
 		if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP, inNetworkSettings.remotePort, SinkParams))
 		{
 			std::cout << "Failed to configure network sink! \n";
@@ -132,7 +136,7 @@ namespace SCServer
 			}
 			pipeline->add(pipe->sourceQueue);
 		}
-
+#if REMOTEPLAY_SUPPORT_AUDIO
 		for (int32_t i = 0; i < audioPipes.size(); ++i)
 		{
 			auto& pipe = audioPipes[i];
@@ -143,7 +147,7 @@ namespace SCServer
 			}
 			pipeline->add(pipe->sourceQueue);
 		}
-
+#endif
 		pipeline->add(networkSink.get());
 
 #if WITH_REMOTEPLAY_STATS

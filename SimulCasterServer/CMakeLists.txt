@@ -64,6 +64,7 @@ if(REMOTEPLAY_UNITY)
 else()
 	add_library(SimulCasterServer STATIC ${src})
 endif()
+SetDefaults( SimulCasterServer )
 
 #Include its root directory
 target_include_directories(SimulCasterServer PUBLIC src)

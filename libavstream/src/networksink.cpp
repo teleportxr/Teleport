@@ -392,7 +392,7 @@ Result NetworkSink::process(uint32_t timestamp)
 			{
 				if (result != Result::IO_Empty)
 				{
-					AVSLOG(Error) << "NetworkSink: Failed to read from input node: " << i;
+					AVSLOG(Error) << "NetworkSink: Failed to read from input node: " << i << "\n";
 					continue;
 				}
 			}
