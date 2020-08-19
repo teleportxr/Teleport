@@ -433,6 +433,14 @@ namespace avs
 		HEVC /*!< HEVC (H265) */
 	};
 
+	/*! Audio codec. */
+	enum class AudioCodec
+	{
+		Any = 0,
+		Invalid = 0,
+		PCM
+	};
+
 	/*! Video encoding preset. */
 	enum class VideoPreset
 	{
@@ -475,6 +483,11 @@ namespace avs
 		Texture,
 		Animation,
 		Node
+	};
+
+	enum class AudioPayloadType : uint8_t
+	{
+		Capture = 0
 	};
 
 	enum class NodeDataType : uint8_t

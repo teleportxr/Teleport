@@ -155,7 +155,7 @@ public:
 };
 
 /*!
- * Geometry interface.
+ * Geometry target interface.
  *
  * Nodes implementing this interface can act as data sinks for the purpose of building geometry.
  */
@@ -166,6 +166,19 @@ public:
 
 	/*! Get surface backend associated with this node. */
 	virtual GeometryTargetBackendInterface* getGeometryTargetBackendInterface() const = 0;
+};
+
+/*!
+ * Audio target interface.
+ *
+ * Nodes implementing this interface can act as data sinks for the purpose of decoding and playing audio.
+ */
+class AVSTREAM_API AudioTargetInterface
+{
+public:
+	virtual ~AudioTargetInterface() = default;
+
+	virtual Result process(const void* buffer, size_t bufferSizeInBytes, AudioPayloadType payloadType) = 0;
 };
 
 ///*!

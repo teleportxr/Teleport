@@ -204,7 +204,7 @@ public:
 			return Result::EncoderNotConfigured;
 		}
 
-		if (tagDataID > tagDataArray.size() - 1)
+		if (tagDataID >= tagDataArray.size())
 		{
 			return Result::InvalidTagDataIdError;
 		}
@@ -219,7 +219,7 @@ public:
 
 	Result addTagData(uint32_t tagDataID, const uint8_t* data, size_t dataSize)
 	{
-		if (tagDataID > tagDataArray.size() - 1)
+		if (tagDataID >= tagDataArray.size())
 		{
 			return Result::InvalidTagDataIdError;
 		}
@@ -234,7 +234,7 @@ public:
 
 	Result clearTagData(uint32_t tagDataID)
 	{
-		if (tagDataID > tagDataArray.size() - 1)
+		if (tagDataID >= tagDataArray.size())
 		{
 			return Result::InvalidTagDataIdError;
 		}
@@ -398,9 +398,11 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 	ClientData& newClient = c->second;
 	newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
+	newClient.casterContext.AudioQueue = std::make_unique<avs::Queue>();
 
-	newClient.casterContext.ColorQueue->configure(16,"colorQueue");
+	newClient.casterContext.ColorQueue->configure(16,"ColorQueue");
 	newClient.casterContext.GeometryQueue->configure(16, "GeometryQueue");
+	newClient.casterContext.AudioQueue->configure(16, "AudioQueue");
 
 	///TODO: Initialise real delegates for capture component.
 	SCServer::CaptureDelegates delegates;

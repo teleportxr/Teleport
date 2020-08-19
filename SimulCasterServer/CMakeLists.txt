@@ -32,6 +32,10 @@ set(src
 	src/SimulCasterServer/DefaultDiscoveryService.h
 	src/SimulCasterServer/VideoEncodePipeline.cpp
 	src/SimulCasterServer/VideoEncodePipeline.h	
+	src/SimulCasterServer/AudioEncoder.cpp
+	src/SimulCasterServer/AudioEncoder.h
+	src/SimulCasterServer/AudioEncodePipeline.cpp
+	src/SimulCasterServer/AudioEncodePipeline.h	
 )
 
 #Whether to build dynamic runtime libraries.

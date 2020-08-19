@@ -23,6 +23,7 @@ set(src_private_root
 	src/geometrydecoder.cpp
 	src/encoder.cpp
 	src/geometryencoder.cpp
+	src/audioencoder.cpp
 	src/surface.cpp
 	src/mesh.cpp
 	src/buffer.cpp
@@ -59,6 +60,7 @@ set(hdr_private_root
 	src/geometrydecoder_p.hpp
 	src/encoder_p.hpp
 	src/geometryencoder_p.hpp
+	src/audioencoder_p.h
 	src/surface_p.hpp
 	src/mesh_p.hpp
 	src/buffer_p.hpp
@@ -72,7 +74,7 @@ set(hdr_private_root
 
 set(hdr_private_api 
 	src/api/cuda.hpp
-        src/api/cuda_dx12.hpp)
+    src/api/cuda_dx12.hpp)
 set(hdr_private_stream
 	src/stream/parser_avc.hpp
 	src/stream/parser_geo.hpp)
@@ -125,8 +127,10 @@ set(src_public_root
 	include/libavstream/interfaces.hpp
 	include/libavstream/decoder.hpp
 	include/libavstream/geometrydecoder.hpp
+	include/libavstream/audiodecoder.h
 	include/libavstream/encoder.hpp
 	include/libavstream/geometryencoder.hpp
+	include/libavstream/audioencoder.h
 	include/libavstream/surface.hpp
 	include/libavstream/buffer.hpp
 	include/libavstream/queue.hpp
@@ -159,8 +163,12 @@ set(hdr_public_geometry
 	include/libavstream/geometry/material_interface.hpp
 	include/libavstream/geometry/material_extensions.h
 	)
+
+set(hdr_public_audio
+	include/libavstream/audio/audio_interface.h
+	)
 	
-set(hdr_public ${src_public_root} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} )
+set(hdr_public ${src_public_root} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} ${hdr_public_audio})
 source_group("Public Headers" src FILES ${src_public_root} )
 source_group("Public Headers\\stream" src FILES ${src_public_stream} )
 source_group("Public Headers\\decoders" src FILES ${src_public_decoders} )
@@ -168,6 +176,7 @@ source_group("Public Headers\\encoders" src FILES ${src_public_encoders} )
 source_group("Public Headers\\surfaces" src FILES ${src_public_surfaces} )
 source_group("Public Headers\\platforms" src FILES ${src_public_platforms} )
 source_group("Public Headers\\geometry" src FILES ${hdr_public_geometry} )
+source_group("Public Headers\\audio" src FILES ${hdr_public_audio} )
 
 set(src_private ${src_private_root} ${src_private_api} ${src_private_stream} ${src_private_util})
 
