@@ -320,6 +320,7 @@ Result Encoder::Private::writeOutput(IOInterface* outputNode, const uint8_t* ext
 		{
 			return result;
 		}
+
 		if (numBytesWrittenToOutput < mappedBufferSize)
 		{
 			AVSLOG(Warning) << "Encoder: Incomplete frame image written to output node";
