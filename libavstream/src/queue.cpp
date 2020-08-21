@@ -63,7 +63,6 @@ namespace avs
 
 	Result Queue::write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
-
 		std::lock_guard<std::mutex> lock(data->m_mutex);
 		if (data->m_buffers.size() == data->m_maxBuffers)
 		{

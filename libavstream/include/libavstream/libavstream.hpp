@@ -17,6 +17,7 @@
 #include "decoder.hpp"
 #include "encoder.hpp"
 #include "geometryencoder.hpp"
+#include "audioencoder.h"
 #include "nullsink.hpp"
 #include "networksink.hpp"
 #include "networksource.hpp"

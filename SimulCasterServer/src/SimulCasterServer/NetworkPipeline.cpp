@@ -15,7 +15,8 @@ namespace SCServer
 {
 	NetworkPipeline::NetworkPipeline(const CasterSettings* settings)
 		:settings(settings)
-	{}
+	{
+	}
 
 	NetworkPipeline::~NetworkPipeline()
 	{
@@ -55,7 +56,7 @@ namespace SCServer
 		{
 			pipe = std::make_unique<AudioPipe>();
 		}
-		audioPipes[0]->sourceQueue = geometryQueue;
+		audioPipes[0]->sourceQueue = audioQueue;
 
 		char remoteIP[20];
 		size_t stringLength = wcslen(inNetworkSettings.remoteIP);
