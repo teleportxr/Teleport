@@ -182,6 +182,11 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 }
+void ClientRenderer::SetServer(const char *ip,int port)
+{
+	server_ip=ip;
+	server_discovery_port=port;
+}
 
 // This allows live-recompile of shaders. 
 void ClientRenderer::RecompileShaders()
@@ -795,7 +800,7 @@ void ClientRenderer::Update()
 	previousTimestamp = timestamp;
 }
 
-void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
+void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
 	const avs::VideoConfig& videoConfig = setupCommand.video_config;
 
@@ -813,7 +818,7 @@ void ClientRenderer::OnVideoStreamChanged(const avs::SetupCommand &setupCommand,
 	sourceParams.socketBufferSize = 1212992;
 	sourceParams.requiredLatencyMs=setupCommand.requiredLatencyMs;
 	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port+1, "127.0.0.1", setupCommand.port, sourceParams))
+	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port+1, server_ip, setupCommand.port, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
@@ -1088,6 +1093,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	controllerState.mTrackpadY=0.5f;
 	controllerState.mJoystickAxisX =(mouseCameraInput.right_left_input);
 	controllerState.mJoystickAxisY =(mouseCameraInput.forward_back_input);
+	controllerState.mButtons= mouseCameraInput.MouseButtons;
 	controllerState.mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())
@@ -1138,7 +1144,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	else
 	{
 		ENetAddress remoteEndpoint; //192.168.3.42 45.132.108.84
-		if (canConnect && sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
+		if (canConnect && sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
 			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}

@@ -152,11 +152,13 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 		avs::vec4 orientation[2];
 	};
 	ControllerSim controllerSim;
+	std::string server_ip;
+	int server_discovery_port=0;
 public:
 	ClientRenderer();
 	~ClientRenderer();
 	// Implement SessionCommandInterface
-	void OnVideoStreamChanged(const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+	void OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 	void OnVideoStreamClosed() override;
 
 	void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
@@ -185,6 +187,7 @@ public:
 	void RenderTransparentTest(simul::crossplatform::DeviceContext &deviceContext);
 	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame) override;
 	void Init(simul::crossplatform::RenderPlatform *r);
+	void SetServer(const char* ip,int port);
 	void InvalidateDeviceObjects();
 	void RemoveView(int);
 	bool OnDeviceRemoved();

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(pc_client)
 file(GLOB shaders "Shaders/*.sfx" "Shaders/*.sl")
+file(GLOB inifiles "*.ini")
 set(srcs
 	ClientRenderer.cpp
 	Main.cpp
@@ -12,6 +13,7 @@ set(srcs
 	PCDiscoveryService.h
 	stdafx.h
 	targetver.h
+	
 )
 set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_DeviceContext.cpp
@@ -46,7 +48,7 @@ else()
 endif()
 
 source_group("Shaders" src FILES ${shaders} )
-add_static_executable( pc_client WIN32 ${srcs} ${scr_pc_impl} ${shaders} )
+add_static_executable( pc_client WIN32 ${srcs} ${scr_pc_impl} ${shaders} ${inifiles} )
 
 target_include_directories(pc_client PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)

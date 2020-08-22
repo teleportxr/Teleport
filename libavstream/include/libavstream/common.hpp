@@ -548,8 +548,7 @@ namespace avs
 
 	struct InputState
 	{
-		uint32_t buttonsPressed;
-		uint32_t buttonsReleased;
+		uint32_t buttonsDown;		// arbitrary bitfield.
 		float trackpadAxisX;
 		float trackpadAxisY;
 		float joystickAxisX;

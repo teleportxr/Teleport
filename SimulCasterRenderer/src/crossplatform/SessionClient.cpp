@@ -24,7 +24,9 @@ uint32_t SessionClient::Discover(std::string clientIP, uint16_t clientDiscoveryP
 {
 	uint32_t cl_id=discoveryService->Discover(clientIP, clientDiscoveryPort, serverIP, serverDiscoveryPort, remote);
 	if(cl_id!=0)
+	{
 		clientID=cl_id;
+	}
 	return cl_id;
 }
 
@@ -239,7 +241,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			memcpy(&setupCommand, packet->data, commandSize);
 
 			avs::Handshake handshake;
-			mCommandInterface->OnVideoStreamChanged(setupCommand, handshake);
+			char server_ip[100];
+			enet_address_get_host_ip(&mServerEndpoint, server_ip, 99);
+			mCommandInterface->OnVideoStreamChanged(server_ip, setupCommand, handshake);
 			
 			std::vector<avs::uid> resourceIDs;
 			if(setupCommand.server_id == lastServerID)

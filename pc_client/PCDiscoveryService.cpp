@@ -3,6 +3,7 @@
 #include <random>
 
 #include "crossplatform/Log.h"
+#include "ErrorHandling.h"
 
 #pragma pack(push, 1) 
 struct ServiceDiscoveryResponse
@@ -42,19 +43,21 @@ int PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t discovery
 	int flagEnable = 1;
 	enet_socket_set_option(sock, ENET_SOCKOPT_REUSEADDR, 1);
 	enet_socket_set_option(sock, ENET_SOCKOPT_BROADCAST, 1);
+	//enet_socket_set_option(sock, ENET_SOCKOPT_RCVBUF, 0);
+	//enet_socket_set_option(sock, ENET_SOCKOPT_SNDBUF, 0);
 	// We don't want to block, just check for packets.
 	enet_socket_set_option(sock, ENET_SOCKOPT_NONBLOCK, 1);
 
-	if (ip.empty())
-	{
-		ip = "127.0.0.1";
-	}
 
 	// Here we BIND the socket to the local address that we want to be identified with.
 	// e.g. our OWN local IP.
 	ENetAddress bindAddress = { ENET_HOST_ANY, discoveryPort };
 
-	enet_address_set_host(&(bindAddress), ip.c_str());
+	if (!ip.empty())
+	{
+	//	ip = "127.0.0.1";
+		enet_address_set_host(&(bindAddress), ip.c_str());
+	}
 	if (enet_socket_bind(sock, &bindAddress) != 0)
 	{
 		FAIL("Failed to bind to service discovery UDP socket");
@@ -90,8 +93,14 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 	frame--;
 	if(!frame)
 	{
+		frame = 1000;
 		int res = enet_socket_send(serviceDiscoverySocket, &serverAddress, &buffer, 1);
-		frame=1000;
+		if(res==-1)
+		{
+			int err=WSAGetLastError();
+			TELEPORT_CERR<<"PCDicoveryService enet_socket_send failed with error "<<err<<std::endl;
+			return 0;
+		}
 	}
 
 	static size_t bytesRecv;

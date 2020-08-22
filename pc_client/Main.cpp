@@ -11,8 +11,11 @@
 #include "Platform/CrossPlatform/DisplaySurface.h"
 #include "Platform/DirectX11/RenderPlatform.h"
 #include "Platform/Core/Timer.h"
+#include "Platform/Core/SimpleIni.h"
 #include "Platform/DirectX11/Direct3D11Manager.h"
 #include "ClientRenderer.h"
+#include "ErrorHandling.h"
+#include "Config.h"
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
@@ -25,6 +28,7 @@ simul::dx11::RenderPlatform renderPlatformDx11;
 simul::dx11::Direct3D11Manager direct3D11Manager;
 simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 ClientRenderer clientRenderer;
+std::string server_ip= REMOTEPLAY_SERVER_IP;
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -46,11 +50,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
+	CSimpleIniA ini;
+	SI_Error rc = ini.LoadFile("pc_client/client.ini");
+	if (rc== SI_OK)
+	{
+		server_ip = ini.GetValue("", "SERVER_IP", REMOTEPLAY_SERVER_IP);
+	}
+	else
+	{
+		TELEPORT_CERR<<"Create client.ini in pc_client directory to specify settings."<<std::endl;
+	}
+	errno=0;
     // Initialize global strings
     MyRegisterClass(hInstance);
     // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
+    if (!InitInstance(hInstance, nCmdShow))
     {
         return FALSE;
     }
@@ -101,7 +115,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    {
       return FALSE;
    }
-   SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+   SetWindowPos(hWnd
+   , HWND_TOP// or HWND_TOPMOST
+   , 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);	
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
    InitRenderer(hWnd);
@@ -162,6 +178,7 @@ void InitRenderer(HWND hWnd)
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	clientRenderer.Init(renderPlatform);
+	clientRenderer.SetServer(server_ip.c_str(), REMOTEPLAY_SERVER_DISCOVERY_PORT);
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(hWnd,&clientRenderer,-1);
 }
