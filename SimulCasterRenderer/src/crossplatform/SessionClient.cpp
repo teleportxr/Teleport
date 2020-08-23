@@ -356,7 +356,7 @@ void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pos
 void SessionClient::SendInput(const ControllerState& controllerState)
 {
 	avs::InputState inputState = {};
-
+	inputState.buttonsDown= controllerState.mButtons;
 	const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
 	/*auto updateButtonState = [&inputState, &controllerState, buttonsDiffMask](uint32_t button)
 	{
