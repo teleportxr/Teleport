@@ -20,7 +20,7 @@ if(REMOTEPLAY_UNITY)
 else()
 	option(REMOTEPLAY_SERVER "Build for server? If true, client will not be built." OFF)
 endif()
-option(REMOTEPLAY_SUPPORT_AUDIO "Enable audio streaming support?" OFF)
+
 if(REMOTEPLAY_UNITY)
 	set(REMOTEPLAY_UNITY_PLUGINS_DIR "${CMAKE_BINARY_DIR}/../Assets/external-sdk/Teleport/Plugins/x86_64" CACHE PATH "")
 	set(REMOTEPLAY_UNITY_PROJECT_DIR "${CMAKE_BINARY_DIR}/.." CACHE PATH "")
