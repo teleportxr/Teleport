@@ -73,7 +73,7 @@ namespace SCServer
 			stream.isDataLimitPerFrame = false;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
-			stream.streamIndex = 50 + i;
+			stream.id = 50 + i;
 			stream.dataType = avs::NetworkDataType::HEVC; // this shouldn't be hardcoded when H264 support added
 			streams.emplace_back(std::move(stream));
 		}
@@ -86,7 +86,7 @@ namespace SCServer
 			stream.isDataLimitPerFrame = true;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
-			stream.streamIndex = 100 + i;
+			stream.id = 100 + i;
 			stream.dataType = avs::NetworkDataType::Geometry;
 			streams.emplace_back(std::move(stream));
 		}
@@ -99,7 +99,7 @@ namespace SCServer
 			stream.isDataLimitPerFrame = true;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
-			stream.streamIndex = 150 + i;
+			stream.id = 150 + i;
 			stream.dataType = avs::NetworkDataType::Audio;
 			streams.emplace_back(std::move(stream));
 		}

@@ -66,6 +66,7 @@ namespace avs
 		uint8_t estimatedDecodingFrequency; //Estimated times per second the client will decode the packets sent to them.
 		std::unique_ptr<ElasticFrameProtocolSender> m_EFPSender;
 		std::vector<NetworkSinkStream> m_streams;
+		std::unordered_map<int, uint32_t> m_streamIndices;
 		std::queue<std::vector<uint8_t>> m_dataQueue;
 		size_t m_maxPacketCountPerFrame;
 		size_t m_packetsSent;

@@ -39,8 +39,8 @@ namespace avs
 		uint64_t counter = 0;
 		/*! Max size of the buffer */
 		size_t chunkSize = 0;
-		/*! Stream index */
-		uint32_t streamIndex = 0;
+		/*! id */
+		uint32_t id = 0;
 		/*! Stream parser type */
 		StreamParserType parserType;
 		/*! Data type */

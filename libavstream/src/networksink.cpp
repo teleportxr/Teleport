@@ -119,6 +119,8 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	{
 		auto& stream = m_data->m_streams[i];
 		stream.buffer.resize(stream.chunkSize);
+		m_data->m_streamIndices.emplace(stream.id, i);
+
 		if (stream.useParser)
 		{
 			auto parser = std::unique_ptr<StreamParserInterface>(avs::StreamParserInterface::Create(stream.parserType));
@@ -455,14 +457,17 @@ void NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, ui
 		stream.counter, // pts
 		stream.counter, // dts
 		code,
-		stream.streamIndex,
+		stream.id,
 		NO_FLAGS);
 }
 
 void NetworkSink::Private::sendOrCacheData(const std::vector<uint8_t>& subPacket)
 {
+	uint8_t id = subPacket[1];
+	auto index = m_streamIndices[id];
+
 	// streamID is second byte for all EFP packet types
-	const auto& stream = m_streams[subPacket[1]];
+	const auto& stream = m_streams[index];
 
 	if (stream.isDataLimitPerFrame && m_packetsSent >= m_maxPacketCountPerFrame)
 	{
