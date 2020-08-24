@@ -46,7 +46,7 @@ namespace SCServer
 
 		if (!videoEncodeParams.deviceHandle)
 		{
-			std::cout << "Graphics device provided is null \n";
+			TELEPORT_CERR << "Graphics device provided is null \n";
 			return Result::InvalidGraphicsDevice;
 		}
 
@@ -57,7 +57,7 @@ namespace SCServer
 		}
 		else
 		{
-			std::cout << "Failed to create encoder color input surface texture. Graphics resource provided is null. \n";
+			TELEPORT_CERR << "Failed to create encoder color input surface texture. Graphics resource provided is null. \n";
 			return Result::InvalidGraphicsResource;
 		}
 		
@@ -68,7 +68,7 @@ namespace SCServer
 
 		if (!inputSurface->configure(avsSurfaceBackend))
 		{
-			std::cout << "Failed to configure input surface node \n";
+			TELEPORT_CERR << "Failed to configure input surface node \n";
 			return Result::InputSurfaceNodeConfigurationError;
 		}
 
@@ -77,13 +77,13 @@ namespace SCServer
 
 		if (!encoder->configure(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams))
 		{
-			std::cout << "Failed to configure encoder node \n";
+			TELEPORT_CERR << "Failed to configure encoder node \n";
 			return Result::EncoderNodeConfigurationError;
 		}
 
 		if (!pipeline->link({ inputSurface.get(), encoder.get(), output }))
 		{
-			std::cout << "Error configuring the video encoding pipeline \n";
+			TELEPORT_CERR << "Error configuring the video encoding pipeline \n";
 			return Result::PipelineConfigurationError;
 		}
 
@@ -94,7 +94,7 @@ namespace SCServer
 	{
 		if (!pipeline)
 		{
-			std::cout << "Error video encode pipeline not initialized \n";
+			TELEPORT_CERR << "Error video encode pipeline not initialized \n";
 			return Result::PipelineNotInitialized;
 		}
 
@@ -161,7 +161,7 @@ namespace SCServer
 	{
 		if (!pipeline)
 		{
-			std::cout << "Error video encode pipeline not initialized \n";
+			TELEPORT_CERR << "Error video encode pipeline not initialized \n";
 			return Result::PipelineNotInitialized;
 		}
 

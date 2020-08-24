@@ -430,6 +430,7 @@ void NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, ui
 	switch (stream.dataType)
 	{
 	case NetworkDataType::Geometry:
+	case NetworkDataType::Audio:
 		dataContent = ElasticFrameContent::privatedata;
 		break;
 	case NetworkDataType::H264:
