@@ -10,15 +10,17 @@
 class PluginDiscoveryService;
 class PluginGeometryStreamingService;
 class PluginVideoEncodePipeline;
+class PluginAudioEncodePipeline;
 
 class ClientData
 {
 public:
-	ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::function<void(void)> disconnect);
+	ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::shared_ptr<PluginAudioEncodePipeline> aep, std::function<void(void)> disconnect);
 	SCServer::CasterContext casterContext;
 
 	std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService;
 	std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline;
+	std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline;
 	SCServer::ClientMessaging clientMessaging;
 
 	bool isStreaming = false;

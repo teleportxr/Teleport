@@ -8,8 +8,6 @@
 #include <libavstream/libavstream.hpp>
 #include <libavstream/common.hpp>
 #include <libavstream/audio/audio_interface.h>
-#include "AudioEncoder.h"
-
 
 namespace SCServer
 {

@@ -13,6 +13,7 @@
 #include "SimulCasterServer/DefaultDiscoveryService.h"
 #include "SimulCasterServer/GeometryStore.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
+#include "SimulCasterServer/AudioEncodePipeline.h"
 #include "SimulCasterServer/VideoEncodePipeline.h"
 
 #include "Export.h"
@@ -251,6 +252,53 @@ private:
 	std::vector<std::vector<std::uint8_t>> tagDataArray;
 };
 
+class PluginAudioEncodePipeline : public SCServer::AudioEncodePipeline
+{
+public:
+	PluginAudioEncodePipeline()
+		:
+		SCServer::AudioEncodePipeline(),
+		configured(false)
+	{
+		
+	}
+
+	~PluginAudioEncodePipeline()
+	{
+		
+	}
+
+	Result configure(const AudioEncodeParams& audioEncodeParams, avs::Queue* audioQueue)
+	{
+		if (configured)
+		{
+			std::cout << "Audio encode pipeline already configured." << std::endl;
+			return Result::EncoderAlreadyConfigured;
+		}
+
+		Result result = SCServer::AudioEncodePipeline::initialize(casterSettings, audioEncodeParams, audioQueue);
+		if (result)
+		{
+			configured = true;
+		}
+		return result;
+	}
+
+	Result sendAudio(const uint8_t* data, size_t dataSize)
+	{
+		if (!configured)
+		{
+			std::cout << "Audio encoder can not encode because it has not been configured." << std::endl;
+			return Result::EncoderNotConfigured;
+		}
+
+		return SCServer::AudioEncodePipeline::process(data, dataSize);
+	}
+
+private:
+	bool configured;
+};
+
 struct InitialiseState
 {
 	void(*showActor)(avs::uid clientID, void*);
@@ -365,9 +413,10 @@ TELEPORT_EXPORT void Shutdown()
 	processNewInput = nullptr;
 }
 
-ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::function<void(void)> disconnect)
+ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::shared_ptr<PluginAudioEncodePipeline> aep, std::function<void(void)> disconnect)
 	: geometryStreamingService(gs)
 	, videoEncodePipeline(vep)
+	, audioEncodePipeline(aep)
 	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
 	
 {
@@ -379,7 +428,7 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 	// Already started this session.
 	if(clientServices.find(clientID) == clientServices.end())
 	{
-		ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::bind(&Disconnect, clientID));
+		ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::make_shared<PluginAudioEncodePipeline>(), std::bind(&Disconnect, clientID));
 	
 		if(newClientData.clientMessaging.startSession(clientID, listenPort))
 		{
@@ -561,6 +610,7 @@ TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
 	ClientData &clientData=c->second;
 	return clientData.setOrigin(*pos);
 }
+
 TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
 {
 	auto &c=clientServices.find(clientID);
@@ -721,7 +771,7 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEn
 	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
 	if(!result)
 	{
-		std::cout << "Error occurred when trying to configure the video encode pipeline" << std::endl;
+		TELEPORT_CERR << "Error occurred when trying to configure the video encode pipeline" << std::endl;
 	}
 }
 
@@ -737,7 +787,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	Result result = clientData.videoEncodePipeline->reconfigure(videoEncodeParams);
 	if (!result)
 	{
-		std::cout << "Error occurred when trying to reconfigure the video encode pipeline" << std::endl;
+		TELEPORT_CERR << "Error occurred when trying to reconfigure the video encode pipeline" << std::endl;
 		return;
 	}
 
@@ -862,7 +912,7 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 	}
 	else
 	{
-		std::cout << "Unknown event id" << std::endl;
+		TELEPORT_CERR << "Unknown event id" << std::endl;
 	}
 }
 
@@ -871,6 +921,52 @@ TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 	return OnRenderEventWithData;
 }
 ///VideoEncodePipeline END
+
+///AudioEncodePipeline START
+TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, SCServer::AudioEncodeParams& audioEncodeParams)
+{
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+	{
+		return;
+	}
+
+	auto& clientData = c->second;
+	Result result = clientData.audioEncodePipeline->configure(audioEncodeParams, clientData.casterContext.AudioQueue.get());
+	if (!result)
+	{
+		TELEPORT_CERR << "Error occurred when trying to configure the audio encode pipeline" << std::endl;
+	}
+}
+
+TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t dataSize)
+{
+	auto c = clientServices.find(clientID);
+	if (c == clientServices.end())
+	{
+		return;
+	}
+
+	auto& clientData = c->second;
+	if (!clientData.clientMessaging.hasPeer())
+	{
+		TELEPORT_CERR << "SendAudio called but peer is not connected." << std::endl;
+		return;
+	}
+
+	Result result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
+	if (result)
+	{
+		clientData.videoKeyframeRequired = false;
+	}
+	else
+	{
+		TELEPORT_CERR << "Error occurred when trying to send audio" << std::endl;
+		// repeat the attempt for debugging purposes.
+		result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
+	}
+}
+///AudioEncodePipeline END
 
 ///ClientMessaging START
 TELEPORT_EXPORT void ActorEnteredBounds(avs::uid clientID, avs::uid actorID)
