@@ -923,7 +923,7 @@ TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 ///VideoEncodePipeline END
 
 ///AudioEncodePipeline START
-TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, SCServer::AudioEncodeParams& audioEncodeParams)
+TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const SCServer::AudioEncodeParams& audioEncodeParams)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -958,7 +958,7 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 	if (result)
 	{
 		clientData.videoKeyframeRequired = false;
-	}
+	} 
 	else
 	{
 		TELEPORT_CERR << "Error occurred when trying to send audio" << std::endl;
