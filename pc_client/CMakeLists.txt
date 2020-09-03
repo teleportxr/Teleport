@@ -38,6 +38,8 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_UniformBuffer.h
 	SCR_Class_PC_Impl/PC_VertexBuffer.cpp
 	SCR_Class_PC_Impl/PC_VertexBuffer.h
+	SCR_Class_PC_Impl/PC_AudioPlayer.cpp
+	SCR_Class_PC_Impl/PC_AudioPlayer.h
 )
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
@@ -51,7 +53,7 @@ source_group("Shaders" src FILES ${shaders} )
 add_static_executable( pc_client WIN32 ${srcs} ${scr_pc_impl} ${shaders} ${inifiles} )
 
 target_include_directories(pc_client PRIVATE 
-	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterRenderer/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
+	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterAudio/src ../SimulCasterRenderer/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
 target_link_directories(pc_client PRIVATE "${REMOTEPLAY_PLATFORM_DIR}/build/lib/${CONFIG_NAME}" )
 
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
@@ -65,6 +67,6 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
-target_link_libraries(pc_client libavstream enet SimulCasterRenderer basisu winmm)
+target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer basisu winmm)
 
 target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT SimulDirectX11_MT effects11_MT directxtex_MT )

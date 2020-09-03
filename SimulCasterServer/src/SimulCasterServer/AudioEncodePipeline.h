@@ -3,6 +3,7 @@
 #include <memory>
 #include "CasterContext.h"
 #include "CasterSettings.h"
+#include "AudioEncoder.h"
 
 // Forward declare so classes that include don't have to know about them
 namespace avs
@@ -28,7 +29,7 @@ namespace SCServer
 		Result process(const uint8_t* data, size_t dataSize);
 
 	private:
-		std::unique_ptr<class AudioEncoder> encoderBackend;
+		std::unique_ptr<AudioEncoder> encoderBackend;
 		std::unique_ptr<avs::Pipeline> pipeline;
 		std::unique_ptr<avs::AudioEncoder> encoder;
 	};

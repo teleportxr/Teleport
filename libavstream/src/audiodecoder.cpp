@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2019 Simul Software Ltd
+// (c) Copyright 2018-2020 Simul Software Ltd
 #include <memory>
 #include <vector>
 
@@ -23,6 +23,7 @@ namespace avs
 			return type;
 		}
 	};
+
 	struct AudioDecoder::Private final : public Node::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(AudioDecoder, Node)
@@ -187,7 +188,6 @@ namespace avs
 		if (m)
 		{
 			assert(d().m_backend);
-			//d().m_backend->unregisterSurface(surface->getBackendSurface());
 		}
 	}
 
