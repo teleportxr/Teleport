@@ -25,12 +25,10 @@ namespace scr
 			const RenderPlatform* renderPlatform;
 			Type type;
 			avs::vec3 position;
+			avs::vec4 lightColour;
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
 		};
-	
-	private:
-		LightCreateInfo m_CI;
 
 		struct LightData //Layout conformant to GLSL std140
 		{
@@ -41,6 +39,9 @@ namespace scr
 			float _pad;
 			mat4 lightSpaceTransform;
 		};
+	
+	private:
+		LightCreateInfo m_CI;
 		static bool s_UninitialisedUB;
 		static std::shared_ptr<UniformBuffer> s_UB;
 
@@ -63,7 +64,11 @@ namespace scr
 
 		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
 		inline std::shared_ptr<Texture>& GetShadowMapTexture() { return m_CI.shadowMapTexture; }
-		inline const std::vector<LightData>& GetLightData() const { return s_LightData; }
+		const LightData& GetLightData() const;
+		static const std::vector<LightData> &GetAllLightData() 
+		{
+			return s_LightData;
+		}
 		inline bool IsValid() { return m_IsValid; }
 
 	private:

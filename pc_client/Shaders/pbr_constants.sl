@@ -46,4 +46,14 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	float _pad2;
 SIMUL_CONSTANT_BUFFER_END
 
+struct Light
+{
+	vec4 colour;
+	vec3 position;
+	float power;
+	vec3 direction;
+	float lpad1;
+	mat4 lightSpaceTransform;
+};						
+
 #endif

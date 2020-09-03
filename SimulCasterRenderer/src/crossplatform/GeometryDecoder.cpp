@@ -378,12 +378,24 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);
 		
-		uint64_t materialCount = Next8B;
-		node.materials.reserve(materialCount);
-		for (uint64_t j = 0; j < materialCount; ++j)
+		switch(node.data_type)
 		{
-			node.materials.push_back(Next8B);
+		case avs::NodeDataType::Mesh:
+		{
+			uint64_t materialCount = Next8B;
+			node.materials.reserve(materialCount);
+			for (uint64_t j = 0; j < materialCount; ++j)
+			{
+				node.materials.push_back(Next8B);
+			}
 		}
+			break;
+		case avs::NodeDataType::Light:
+			node.lightColour=NextVec4;
+			break;
+		default:
+			break;
+		};
 
 		uint64_t childCount = Next8B;
 		node.materials.reserve(childCount);

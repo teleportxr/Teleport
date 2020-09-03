@@ -238,10 +238,21 @@ namespace SCServer
 			put(transform);
 			put(node->data_uid);
 			put(node->data_type);
-			put(node->materials.size());
-			for (const auto& id : node->materials)
+			if(node->data_type==avs::NodeDataType::Mesh)
 			{
-				put(id);
+				put(node->materials.size());
+				for (const auto& id : node->materials)
+				{
+					put(id);
+				}
+			}
+			else
+			{
+				TELEPORT_ASSERT(node->materials.size()==0);
+			}
+			if(node->data_type==avs::NodeDataType::Light)
+			{
+				put(node->lightColour);
 			}
 			put(node->childrenUids.size());
 			for (const auto& id : node->childrenUids)

@@ -242,8 +242,9 @@ namespace avs
 	{
 		Transform transform;
 		uid data_uid;
-		NodeDataType data_type; 
-		std::vector<uid> materials;
+		NodeDataType data_type;
+		std::vector<uid> materials;		// if it's a mesh
+		vec4 lightColour;				// if it's a light
 		std::vector<uid> childrenUids;
 	};
 	inline size_t GetComponentSize(Accessor::ComponentType t)

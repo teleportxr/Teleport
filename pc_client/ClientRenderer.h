@@ -89,12 +89,14 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::Effect *pbrEffect;
 	simul::crossplatform::Effect *cubemapClearEffect;
 	simul::crossplatform::ShaderResource _RWTagDataIDBuffer;
+	simul::crossplatform::ShaderResource _lights;
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 	simul::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 	simul::crossplatform::StructuredBuffer<VideoTagData2D> tagData2DBuffer;
 	simul::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
+	simul::crossplatform::StructuredBuffer<Light> lightsBuffer;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularCubemapTexture;
 	simul::crossplatform::Texture* roughSpecularCubemapTexture;

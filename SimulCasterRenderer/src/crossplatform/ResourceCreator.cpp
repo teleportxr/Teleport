@@ -645,7 +645,7 @@ void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
 	lci.position = avs::vec3(node.transform.position);
 	lci.orientation = scr::quat(node.transform.rotation);
 	lci.shadowMapTexture = m_TextureManager->Get(node.data_uid);
-
+	lci.lightColour=node.lightColour;
 	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
 	m_LightManager->Add(node_uid, light);
 }
@@ -708,15 +708,20 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 	{
 		const std::weak_ptr<IncompleteActor>& actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
 
-		for(size_t materialIndex : actorInfo.lock()->materialSlots.at(material_uid))
+		auto &actorInfoLocked=actorInfo.lock();
+		auto m=actorInfoLocked->materialSlots.find(material_uid);
+		if(m!=actorInfoLocked->materialSlots.end())
 		{
-			actorInfo.lock()->actorInfo.materials[materialIndex] = material;
-		}		
+			for(size_t materialIndex : m->second)
+			{
+				actorInfoLocked->actorInfo.materials[materialIndex] = material;
+			}		
 
 		//If only this material is pointing to the actor, then it is complete.
-		if(it->use_count() == 1)
-		{
-			CompleteActor(actorInfo.lock()->id, actorInfo.lock()->actorInfo, actorInfo.lock()->isHand);
+			if(it->use_count() == 1)
+			{
+				CompleteActor(actorInfoLocked->id, actorInfo.lock()->actorInfo, actorInfo.lock()->isHand);
+			}
 		}
 	}
 

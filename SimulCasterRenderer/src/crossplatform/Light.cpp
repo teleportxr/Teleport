@@ -36,8 +36,8 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	m_LightID = s_LightData.size() - 1;
 
 	//Default values
-	s_LightData[m_LightID].colour = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	s_LightData[m_LightID].power = 100; //i.e 100W
+	s_LightData[m_LightID].colour = pLightCreateInfo->lightColour;
+	s_LightData[m_LightID].power = 1.0f; //i.e 100W
 	UpdateLightSpaceTransform();
 
 	if (m_CI.shadowMapTexture)
@@ -84,6 +84,10 @@ void Light::UpdateOrientation(const quat& orientation)
 { 
 	m_CI.orientation = orientation;
 	UpdateLightSpaceTransform();
+}
+const Light::LightData& Light::GetLightData() const 
+{
+	return s_LightData[m_LightID];
 }
 void Light::UpdateLightSpaceTransform()
 {

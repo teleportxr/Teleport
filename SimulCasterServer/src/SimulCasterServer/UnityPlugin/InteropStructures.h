@@ -12,6 +12,7 @@ struct InteropNode
 	avs::Transform transform;
 	avs::uid dataID;
 	avs::NodeDataType dataType;
+	avs::vec4 lightColour;
 
 	size_t materialAmount;
 	avs::uid* materialIDs;
@@ -27,6 +28,7 @@ struct InteropNode
 			dataID,
 			dataType,
 			{materialIDs, materialIDs + materialAmount},
+			lightColour,
 			{childIDs, childIDs + childAmount}
 		};
 	}

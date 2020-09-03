@@ -17,6 +17,9 @@
 #define TELEPORT_CERR\
 	std::cerr<<__FILE__<<"("<<std::dec<<__LINE__<<"): warning: "
 
+#define TELEPORT_ASSERT(c)\
+	if(!c){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}
+
 #if TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_INTERNAL_CERR\
 		std::cerr << __FILE__ << "(" << __LINE__ << "): warning: "

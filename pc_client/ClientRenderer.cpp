@@ -175,13 +175,14 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
 	tagData2DBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
 	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
-
+	lightsBuffer.RestoreDeviceObjects(renderPlatform,1,false,true);
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
 	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
 
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 }
+
 void ClientRenderer::SetServer(const char *ip,int port)
 {
 	server_ip=ip;
@@ -199,6 +200,7 @@ void ClientRenderer::RecompileShaders()
 	pbrEffect = renderPlatform->CreateEffect("pbr");
 	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
 	_RWTagDataIDBuffer = cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
+	_lights = pbrEffect->GetShaderResource("lights");
 }
 
 
@@ -663,6 +665,17 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 
 void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceContext, std::shared_ptr<scr::Actor> actor)
 {
+	{
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+		if(cachedLights.size()>lightsBuffer.count)
+		{
+			lightsBuffer.InvalidateDeviceObjects();
+			lightsBuffer.RestoreDeviceObjects(renderPlatform,cachedLights.size());
+		}
+	}
+	Light *l=(Light*)(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
+	lightsBuffer.SetData(deviceContext,l);
 	//Only render visible actors, but still render children that are close enough.
 	if(actor->IsVisible())
 	{
@@ -705,17 +718,18 @@ void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceCont
 					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				}
-
+				
+				lightsBuffer.Apply(deviceContext, pbrEffect, _lights );
 				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 				pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-				pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), passName.c_str());
 				renderPlatform->SetLayout(deviceContext, layout);
 				renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 				renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
 				renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
+				pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), passName.c_str());
 				renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
-				layout->Unapply(deviceContext);
 				pbrEffect->Unapply(deviceContext);
+				layout->Unapply(deviceContext);
 			}
 		}
 	}
@@ -1051,6 +1065,8 @@ void ClientRenderer::UpdateActorMovement(const std::vector<avs::MovementUpdate>&
 #include "Platform/CrossPlatform/Quaterniond.h"
 void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offset)
 {
+	if(!hdrFramebuffer->GetHeight())
+		return;
 	float x= mouseCameraInput.MouseX / (float)hdrFramebuffer->GetWidth();
 	float y= mouseCameraInput.MouseY / (float)hdrFramebuffer->GetHeight();
 	controllerSim.controller_dir=camera.ScreenPositionToDirection(x,y, hdrFramebuffer->GetWidth()/ hdrFramebuffer->GetHeight());

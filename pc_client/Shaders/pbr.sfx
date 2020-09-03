@@ -22,7 +22,7 @@ uniform Texture2D shadowTexture;
 uniform Texture3D inscatterVolumeTexture;
 //////////////////////////
 
-//uniform StructuredBuffer<vec4> videoCameraPositionBuffer;
+uniform StructuredBuffer<Light> lights;
 
 float GetRoughness(vec4 combinedLookup)
 {
@@ -108,7 +108,7 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	OUT.tangent.xyz = mul(IN.tangent, mat3(world));
 #else
 	OUT.normal = mul(vec4(IN.normal.xyz, 0.0), world).xyz;
-	OUT.tangent = vec4(mul(IN.tangent.xyz, world).xyz,0.0);
+	OUT.tangent = vec4(mul(IN.tangent.xyz, world).xyz,0.0).xyz;
 	//OUT.normal = IN.normal;
 	//OUT.tangent = IN.tangent;
 #endif
@@ -163,55 +163,66 @@ float MipFromRoughness(float roughness, float CubemapMaxMip)
 	return (log2(roughness * 1.2) + 3.0);
 }
 
-vec3 PBR(vec3 normal,vec3 viewDir,vec3 diffuseColour,float roughness
-,float metallic,float ao)
+struct SurfaceState
 {
+	vec3 F;
+	vec3 kS;
+	vec3 kD;
+	vec3 refl;
+};
+SurfaceState PreprocessSurface(vec3 normal,vec3 viewDir,vec3 diffuseColour,float metallic,float ao)
+{
+	SurfaceState surfaceState;
 	// Constant normal incidence Fresnel factor for all dielectrics.
 	vec3 Fdielectric		=vec3(0.04,0.04,0.04);
 	// Fresnel reflectance at normal incidence (for metals use albedo color).
 	vec3 F0					= lerp(Fdielectric, diffuseColour, metallic);
-
-	float roughnessE		= roughness * roughness;
-	float roughnessL		= max(.01, roughnessE);
-
-	float roughness_mip		= MipFromRoughness(roughness, 5.0);
-	vec3 refl				= reflect(viewDir, normal);
-
-	float n_v				= saturate(dot(normal, viewDir));
 	// Angle between surface normal and outgoing light direction.
 	float cosLo				= saturate( dot(normal,- viewDir));
+	surfaceState.F					=FresnelTerm(F0, cosLo);
+	surfaceState.kS					=surfaceState.F;
+	surfaceState.kD					= lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0,0.0,0.0), metallic);
+	surfaceState.refl				= reflect(viewDir, normal);
+	return surfaceState;
+}
 
+vec3 PBR(SurfaceState surfaceState,vec3 normal,vec3 viewDir,vec3 diffuseColour,float roughness
+,float metallic,float ao,Light light)
+{
+	float roughnessE		= roughness * roughness;
+	float roughnessL		= max(.01, roughnessE);
+	float roughness_mip		= MipFromRoughness(roughness, 5.0);
+	float n_v				= saturate(dot(normal, viewDir));
+	// Sample the environment maps:
 	vec3 diffuse_env		= roughSpecularCubemap.SampleLevel(cubeSamplerState, normal.xyz,0.0).rgb;
-	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,refl.xyz, roughness_mip).rgb;
-	vec3 rough_env			= roughSpecularCubemap.SampleLevel(cubeSamplerState, refl.xyz, saturate(roughness_mip-3.0)).rgb;
-
+	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,surfaceState.refl.xyz, roughness_mip).rgb;
+	vec3 rough_env			= roughSpecularCubemap.SampleLevel(cubeSamplerState, surfaceState.refl.xyz, saturate(roughness_mip-3.0)).rgb;
 	env						=lerp(env,rough_env,saturate(roughness_mip-2.0));
+
+
 	//env					=mix(env, diffuse_env, saturate((roughnessE - 0.25) / 0.75));
 
-	vec3 envSpecularColour = EnvBRDFApprox(diffuseColour, roughnessE, n_v);
+	vec3 envSpecularColour	=EnvBRDFApprox(diffuseColour, roughnessE, n_v);
 	vec3 specular			=envSpecularColour * env;
-	vec3 lightColour		= lightingCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
 
-	// Angle between surface normal and outgoing light direction.
-	vec3 F					=FresnelTerm(F0, cosLo);
-	vec3 kS					= F;
 	 //Metallic materials will have no diffuse output.
-
-	vec3 kD					= lerp(vec3(1.0, 1.0, 1.0) - kS, vec3(0.0,0.0,0.0), metallic);
-
+	
+	// Per-light:
+	float n_l				=saturate(dot(normal, light.direction));
 	//float lightD			=DistributionTerm(roughnessL, n_h);
 	//float lightV			=VisibilityTerm(roughnessL, n_v, n_l);
 	//specular				+=lightColour * F * (lightD * lightV * SIMUL_PI_F * n_l);
 
 	//float ao				= SceneAO(pos, normal, localToWorld);
-	specular				*= kS*saturate(pow(n_v + ao, roughnessE) - 1. + ao);
+	specular				*= surfaceState.kS*saturate(pow(n_v + ao, roughnessE) - 1. + ao);
 	
-	vec3 diffuse			= kD*diffuseColour * diffuse_env;
-	diffuse *= ao;
-	//diffuse					+=lightColour *diffuseColour * saturate(n_l);
+	vec3 diffuse			= surfaceState.kD*diffuseColour * diffuse_env;
+	diffuse					*= ao;
+	vec3 lightColour		=light.colour;//lightingCubemap.Sample(cubeSamplerState, normal.xyz).rgb;
+	diffuse					+=lightColour *diffuseColour * saturate(n_l);
 	vec3 colour				= diffuse+specular;
-	//colour.gb += .1;
-	return diffuseColour;
+
+	return colour;
 }
 
 vec4 Solid(vertexOutput IN)
@@ -220,11 +231,11 @@ vec4 Solid(vertexOutput IN)
 	vec3 tangenty		= normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
 
-	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R);
+	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).xyz;
 	normalLookup		= 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
 	vec3 normal			= normalize(mul(normalLookup, TangentMatrix));
 
-	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R);
+	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R).rgb;
 	diffuseColour = diffuseColour.rgb * diffuseOutputScalar.rgb;
 
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
@@ -234,10 +245,12 @@ vec4 Solid(vertexOutput IN)
 	float metallic		=GetMetallic(combinedLookup);
 	float ao			=GetAO(combinedLookup);
 
-	vec3 c				=PBR(normal, view, diffuseColour, roughness, metallic,ao);
+	SurfaceState surfaceState=PreprocessSurface(normal,view,metallic,ao);
+	Light light=lights[0];
+	vec3 c				=PBR(surfaceState,normal, view, diffuseColour, roughness, metallic, ao, light);
 	//c.gb += 0.03;
 
-	vec3 emissive = emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R);
+	vec3 emissive = emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
 	emissive *= emissiveOutputScalar;
 
 	vec4 u				=vec4(c.rgb + emissive.rgb, 1.0);
@@ -246,7 +259,7 @@ vec4 Solid(vertexOutput IN)
 
 vec4 Solid_AlbedoOnly(vertexOutput IN)
 {
-	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R);
+	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R).rgb;
 	diffuseColour = diffuseColour.rgb * diffuseOutputScalar.rgb;
 
 	return vec4(diffuseColour.rgb, 1.0);
