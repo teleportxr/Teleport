@@ -73,7 +73,7 @@ namespace SCServer
 			stream.isDataLimitPerFrame = false;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
-			stream.id = i;
+			stream.id = 20 + i;
 			stream.dataType = avs::NetworkDataType::HEVC; 
 			streams.emplace_back(std::move(stream));
 		}
@@ -86,7 +86,7 @@ namespace SCServer
 			stream.isDataLimitPerFrame = false;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
-			stream.id = 50 + i;
+			stream.id = 40 + i;
 			stream.dataType = avs::NetworkDataType::Audio;
 			streams.emplace_back(std::move(stream));
 		}
@@ -99,7 +99,7 @@ namespace SCServer
 			stream.isDataLimitPerFrame = true;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
-			stream.id = 100 + i;
+			stream.id = 60 + i;
 			stream.dataType = avs::NetworkDataType::Geometry;
 			streams.emplace_back(std::move(stream));
 		}

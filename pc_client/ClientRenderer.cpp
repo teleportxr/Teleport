@@ -884,12 +884,12 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
-	for (size_t i = 0; i < NumVidStreams; ++i)
+	for (int i = 0; i < NumVidStreams; ++i)
 	{
 		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
 		auto f = std::bind(&ClientRenderer::OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
 		// Video streams are 0+...
-		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, (int)(i), f))
+		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20 + i, f))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}
@@ -905,7 +905,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	// Audio
 	if (AudioStream)
 	{
-		avsAudioDecoder.configure(50);
+		avsAudioDecoder.configure(40);
 		auto player = new PC_AudioPlayer();
 		sca::AudioParams audioParams;
 		audioParams.codec = sca::AudioCodec::PCM;
@@ -921,7 +921,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	// We will add a GEOMETRY PIPE:
 	if(GeoStream)
 	{
-		avsGeometryDecoder.configure(100,&geometryDecoder);
+		avsGeometryDecoder.configure(60,&geometryDecoder);
 		avsGeometryTarget.configure(&resourceCreator);
 		pipeline.link({ &source, &avsGeometryDecoder, &avsGeometryTarget });
 	}
