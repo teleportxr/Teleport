@@ -388,6 +388,8 @@ namespace avs
 			GeometryDecoder_InvalidPayload,
 			GeometryDecoder_InvalidBufferSize,
 			GeometryDecoder_ClientRendererError,
+			AudioTarget_InvalidBackend,
+			AudioTargetBackend_AudioProcessingError,
 			Node_NotReady,
 			UnknownError,
 			Num_ResultCode,
@@ -686,6 +688,13 @@ namespace avs
 		int32_t		compose_cube = 0;
 		int32_t     use_cubemap = 1;
 		avs::VideoCodec videoCodec = avs::VideoCodec::Any;
+	};
+
+	struct AudioConfig
+	{
+		uint32_t sampleRate = 44100;
+		uint32_t bitsPerSample = 16;
+		uint32_t numChannels = 2;
 	};
 
 	struct SetupCommand : public Command

@@ -24,6 +24,7 @@ set(src_private_root
 	src/encoder.cpp
 	src/geometryencoder.cpp
 	src/audioencoder.cpp
+	src/audiodecoder.cpp
 	src/surface.cpp
 	src/mesh.cpp
 	src/buffer.cpp
@@ -61,6 +62,7 @@ set(hdr_private_root
 	src/encoder_p.hpp
 	src/geometryencoder_p.hpp
 	src/audioencoder_p.h
+	src/audiodecoder_p.h
 	src/surface_p.hpp
 	src/mesh_p.hpp
 	src/buffer_p.hpp
@@ -95,15 +97,16 @@ set(hdr_private_util
 	src/util/jitterbuffer.hpp
 	src/util/ringbuffer.hpp
 	src/util/misc.hpp
-	src/util/srtutil.h
-)
+	src/util/srtutil.h)
 set(src_private_util
-	src/util/srtutil.cpp
-	)
+	src/util/srtutil.cpp)
+set(src_private_audio
+	src/audio/audiotarget.cpp)
 
 source_group("Source Files\\api" src FILES ${src_private_api} )
 source_group("Source Files\\stream" src FILES ${src_private_stream} )
 source_group("Source Files\\util" src FILES ${src_private_util} )
+source_group("Source Files\\audio" src FILES ${src_private_audio} )
 
 set(hdr_private ${hdr_private_root} ${hdr_private_api} ${hdr_private_stream} ${hdr_private_parsers} ${hdr_private_network} ${hdr_private_decoders} ${hdr_private_encoders} ${hdr_private_util} )
 
@@ -162,11 +165,12 @@ set(hdr_public_geometry
 	include/libavstream/geometry/mesh_interface.hpp
 	include/libavstream/geometry/material_interface.hpp
 	include/libavstream/geometry/material_extensions.h
-	)
+)
 
 set(hdr_public_audio
 	include/libavstream/audio/audio_interface.h
-	)
+	include/libavstream/audio/audiotarget.h
+)
 	
 set(hdr_public ${src_public_root} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} ${hdr_public_audio})
 source_group("Public Headers" src FILES ${src_public_root} )
@@ -178,7 +182,7 @@ source_group("Public Headers\\platforms" src FILES ${src_public_platforms} )
 source_group("Public Headers\\geometry" src FILES ${hdr_public_geometry} )
 source_group("Public Headers\\audio" src FILES ${hdr_public_audio} )
 
-set(src_private ${src_private_root} ${src_private_api} ${src_private_stream} ${src_private_util})
+set(src_private ${src_private_root} ${src_private_api} ${src_private_stream} ${src_private_util} ${src_private_audio})
 
 # Windows platform
 if(WIN32)

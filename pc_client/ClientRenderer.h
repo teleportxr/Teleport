@@ -14,6 +14,8 @@
 #include <libavstream/surfaces/surface_interface.hpp>
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
+#include <libavstream/audiodecoder.h>
+#include <libavstream/audio/audiotarget.h>
 
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
 #include "crossplatform/SessionClient.h"
@@ -25,6 +27,8 @@
 #include "api/Texture.h"
 #include "api/UniformBuffer.h"
 #include "api/VertexBuffer.h"
+
+#include "crossplatform/AudioStreamTarget.h"
 
 namespace avs
 {
@@ -205,7 +209,8 @@ public:
 	//Update the state of objects on the ClientRenderer.
 	void Update();
 
-	static constexpr size_t NumStreams = 1;
+	static constexpr size_t NumVidStreams = 1;
+	static constexpr bool AudioStream = true;
 	static constexpr bool GeoStream  = true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
@@ -219,13 +224,17 @@ public:
 	avs::Context context;
 
 	avs::NetworkSource source;
-	avs::Decoder decoder[NumStreams];
-	avs::Surface surface[NumStreams];
+	avs::Decoder decoder[NumVidStreams];
+	avs::Surface surface[NumVidStreams];
 
 	GeometryDecoder geometryDecoder;
 	ResourceCreator resourceCreator;
 	avs::GeometryDecoder avsGeometryDecoder;
 	avs::GeometryTarget avsGeometryTarget;
+	
+	avs::AudioDecoder avsAudioDecoder;
+	avs::AudioTarget avsAudioTarget;
+	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 
 	avs::NetworkSourceParams sourceParams = {};
 	avs::DecoderParams decoderParams = {};

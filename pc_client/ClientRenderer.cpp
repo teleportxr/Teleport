@@ -33,6 +33,8 @@
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
+#include "SCR_Class_PC_Impl/PC_AudioPlayer.h"
+
 
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
@@ -106,7 +108,7 @@ ClientRenderer::ClientRenderer():
 	RenderMode(0)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
-	avsTextures.resize(NumStreams);
+	avsTextures.resize(NumVidStreams);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
 	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
 
@@ -817,8 +819,9 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 1212992;
 	sourceParams.requiredLatencyMs=setupCommand.requiredLatencyMs;
-	// Configure for num video streams + 1 geometry stream
-	if (!source.configure(NumStreams+(GeoStream?1:0), setupCommand.port+1, server_ip, setupCommand.port, sourceParams))
+	auto numStreams = NumVidStreams + (AudioStream ? 1 : 0) + (GeoStream ? 1 : 0);
+	// Configure for num video streams + 1 audio stream + 1 geometry stream
+	if (!source.configure(numStreams, setupCommand.port+1, server_ip, setupCommand.port, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
@@ -881,12 +884,12 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
-	for (size_t i = 0; i < NumStreams; ++i)
+	for (size_t i = 0; i < NumVidStreams; ++i)
 	{
 		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
 		auto f = std::bind(&ClientRenderer::OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
-		// Video streams are 50+...
-		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, (int)(50+i), f))
+		// Video streams are 0+...
+		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, (int)(i), f))
 		{
 			throw std::runtime_error("Failed to configure decoder node");
 		}
@@ -898,6 +901,23 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		pipeline.link({ &decoder[i], &surface[i] });
 		avs::Node::link(source, decoder[i]);
 	}
+
+	// Audio
+	if (AudioStream)
+	{
+		avsAudioDecoder.configure(50);
+		auto player = new PC_AudioPlayer();
+		sca::AudioParams audioParams;
+		audioParams.codec = sca::AudioCodec::PCM;
+		audioParams.numChannels = 2;
+		audioParams.sampleRate = 48000;
+		audioParams.bitsPerSample = 16;
+		player->initialize(audioParams);
+		audioStreamTarget.reset(new sca::AudioStreamTarget(player));
+		avsAudioTarget.configure(audioStreamTarget.get());
+		pipeline.link({ &source, &avsAudioDecoder, &avsAudioTarget });
+	}
+
 	// We will add a GEOMETRY PIPE:
 	if(GeoStream)
 	{
@@ -966,7 +986,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
-	for (size_t i = 0; i < NumStreams; ++i)
+	for (size_t i = 0; i < NumVidStreams; ++i)
 	{
 		AVSTextureImpl* ti = (AVSTextureImpl*)(avsTextures[i].get());
 		// Only create new texture and register new surface if resolution has changed

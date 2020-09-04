@@ -29,6 +29,13 @@ namespace avs
 		virtual Result shutdown() = 0;
 	};
 
+	class AVSTREAM_API AudioTargetBackendInterface : public UseInternalAllocator
+	{
+	public:
+		virtual ~AudioTargetBackendInterface() = default;
+		virtual Result process(const void* buffer, size_t bufferSizeInBytes, AudioPayloadType payloadType) = 0;
+	};
+
 	class AudioParserInterface
 	{
 	public:

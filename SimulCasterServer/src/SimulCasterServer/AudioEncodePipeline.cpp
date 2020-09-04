@@ -16,10 +16,10 @@ namespace SCServer
 		
 	}
 
-	Result AudioEncodePipeline::initialize(const CasterSettings& settings, const AudioEncodeParams& audioEncodeParams, avs::Node* output)
+	Result AudioEncodePipeline::initialize(const CasterSettings& settings, const AudioParams& audioParams, avs::Node* output)
 	{
 		avs::AudioEncoderParams encoderParams;
-		encoderParams.codec = audioEncodeParams.codec;
+		encoderParams.codec = audioParams.codec;
 
 		encoderBackend.reset(new AudioEncoder(&settings));
 		pipeline.reset(new avs::Pipeline);

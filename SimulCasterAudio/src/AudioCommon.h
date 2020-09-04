@@ -45,7 +45,11 @@ namespace sca
 			UnknownError,
 			AudioDeviceInitializationError,
 			AudioMasteringVoiceCreationError,
-			AudioPlayingError
+			AudioSourceVoiceCreationError,
+			AudioPlayingError,
+			AudioPlayerAlreadyInitialized,
+			AudioPlayerNotInitialized,
+			AudioPlayerBufferSubmissionError
 		};
 
 		Result(Code code) : m_code(code)
@@ -57,11 +61,22 @@ namespace sca
 		Code m_code;
 	};
 
-	/*!
-	 * Audio type.
-	 */
-	enum class AudioType : uint8_t
+	enum class AudioCodec
 	{
-		PCM = 0
+		Any = 0,
+		Invalid = 0,
+		PCM
 	};
+	struct AudioParams
+	{
+		AudioCodec codec = AudioCodec::PCM;
+		uint32_t sampleRate = 44100;
+		uint32_t bitsPerSample = 16;
+		uint32_t numChannels = 2;
+	};
+
+#ifndef SAFE_DELETE
+#define SAFE_DELETE(p) { if(p) { delete p; (p)=NULL; } }
+#endif
+
 }

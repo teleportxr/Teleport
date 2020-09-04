@@ -268,7 +268,7 @@ public:
 		
 	}
 
-	Result configure(const AudioEncodeParams& audioEncodeParams, avs::Queue* audioQueue)
+	Result configure(const AudioParams& audioParams, avs::Queue* audioQueue)
 	{
 		if (configured)
 		{
@@ -276,7 +276,7 @@ public:
 			return Result::EncoderAlreadyConfigured;
 		}
 
-		Result result = SCServer::AudioEncodePipeline::initialize(casterSettings, audioEncodeParams, audioQueue);
+		Result result = SCServer::AudioEncodePipeline::initialize(casterSettings, audioParams, audioQueue);
 		if (result)
 		{
 			configured = true;
@@ -532,6 +532,7 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
+
 	avs::VideoConfig& videoConfig = setupCommand.video_config;
 	videoConfig.video_width = encoderSettings.frameWidth;
 	videoConfig.video_height = encoderSettings.frameHeight;
@@ -923,7 +924,7 @@ TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 ///VideoEncodePipeline END
 
 ///AudioEncodePipeline START
-TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const SCServer::AudioEncodeParams& audioEncodeParams)
+TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const SCServer::AudioParams& audioParams)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -932,7 +933,7 @@ TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const SCServer::A
 	}
 
 	auto& clientData = c->second;
-	Result result = clientData.audioEncodePipeline->configure(audioEncodeParams, clientData.casterContext.AudioQueue.get());
+	Result result = clientData.audioEncodePipeline->configure(audioParams, clientData.casterContext.AudioQueue.get());
 	if (!result)
 	{
 		TELEPORT_CERR << "Error occurred when trying to configure the audio encode pipeline" << std::endl;
