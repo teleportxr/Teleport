@@ -39,7 +39,7 @@ PC_AudioPlayer::~PC_AudioPlayer()
 		masteringVoice->DestroyVoice();
 
 	if (device.Get())
-		device->StartEngine();
+		device->StopEngine();
 }
 
 sca::Result PC_AudioPlayer::initialize(const sca::AudioParams& audioParams)
@@ -81,8 +81,7 @@ sca::Result PC_AudioPlayer::initialize(const sca::AudioParams& audioParams)
 	waveFormat.cbSize = 0; // Ignored for PCM formats
 
 	// Create source voice
-	//hr = device->CreateSourceVoice(&sourceVoice, &waveFormat, 0U, 2.0f, voiceCallback.get());
-	hr = device->CreateSourceVoice(&sourceVoice, &waveFormat);
+	hr = device->CreateSourceVoice(&sourceVoice, &waveFormat, 0U, 2.0f, voiceCallback.get());
 	if (FAILED(hr))
 	{
 		SCA_COUT("Error occurred trying to create the source voice.");

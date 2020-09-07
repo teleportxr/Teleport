@@ -393,6 +393,9 @@ namespace avs
 			Node_NotReady,
 			UnknownError,
 			Num_ResultCode,
+			NetworkSink_SendingDataFailed,
+			NetworkSink_PackingDataFailed,
+			NetworkSink_InvalidStreamDataType
 		};
 
 		Result(Code code) : m_code(code)

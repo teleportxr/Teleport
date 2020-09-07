@@ -213,9 +213,7 @@ public:
 		// Copy data from Unity texture to its CUDA compatible copy
 		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
 		const auto& tagData = tagDataArray[tagDataID];
-		Result result = SCServer::VideoEncodePipeline::process(tagData.data(), tagData.size(), forceIDR);
-		tagDataArray[tagDataID].clear();
-		return result;
+		return SCServer::VideoEncodePipeline::process(tagData.data(), tagData.size(), forceIDR);
 	}
 
 	Result addTagData(uint32_t tagDataID, const uint8_t* data, size_t dataSize)
@@ -845,6 +843,14 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, uint32_t tagDataID)
 		TELEPORT_CERR << "Error occurred when trying to encode video" << std::endl;
 		// repeat the attempt for debugging purposes.
 		result = clientData.videoEncodePipeline->encode(tagDataID, clientData.videoKeyframeRequired);
+		if (result)
+		{
+			clientData.videoKeyframeRequired = false;
+		}
+	}
+	if (!clientData.videoEncodePipeline->clearTagData(tagDataID))
+	{
+		TELEPORT_CERR << "Error occurred when trying to clear video tag data after encoding" << std::endl;
 	}
 }
 
