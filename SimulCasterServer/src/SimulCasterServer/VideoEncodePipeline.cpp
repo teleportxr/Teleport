@@ -120,7 +120,7 @@ namespace SCServer
 		{
 			if (!encoder->unregisterSurface())
 			{
-				std::cout << "Error occured trying to unregister the surface \n";
+				TELEPORT_CERR << "Error occured trying to unregister the surface \n";
 				return Result::InputSurfaceUnregistrationError;
 			}
 			changeSurfaceBackendResource(inputSurface->getBackendSurface(), videoEncodeParams.deviceType, videoEncodeParams.inputSurfaceResource);

@@ -962,16 +962,12 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 	}
 
 	Result result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
-	if (result)
-	{
-		clientData.videoKeyframeRequired = false;
-	} 
-	else
+	if (!result)
 	{
 		TELEPORT_CERR << "Error occurred when trying to send audio" << std::endl;
 		// repeat the attempt for debugging purposes.
 		result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
-	}
+	} 
 }
 ///AudioEncodePipeline END
 

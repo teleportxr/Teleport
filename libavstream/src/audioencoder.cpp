@@ -33,7 +33,12 @@ Result AudioEncoder::configure(const AudioEncoderParams& params)
 	}
 
 	assert(d().m_backend);
-	return d().m_backend->initialize(params);
+	Result result = d().m_backend->initialize(params);
+	if (result)
+	{
+		d().m_configured = true;
+	}
+	return result;
 }
 
 Result AudioEncoder::deconfigure()

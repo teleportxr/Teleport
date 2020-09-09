@@ -21,19 +21,18 @@ namespace SCServer
 		avs::AudioEncoderParams encoderParams;
 		encoderParams.codec = audioParams.codec;
 
-		encoderBackend.reset(new AudioEncoder(&settings));
+		encoder.reset(new avs::AudioEncoder(new AudioEncoder(&settings)));
 		pipeline.reset(new avs::Pipeline);
-		encoder.reset(new avs::AudioEncoder(encoderBackend.get()));
 
 		if (!encoder->configure(encoderParams))
 		{
-			std::cout << "Failed to configure audio encoder node \n";
+			TELEPORT_CERR << "Failed to configure audio encoder node \n";
 			return Result::EncoderNodeConfigurationError;
 		}
 
 		if (!pipeline->link({ encoder.get(), output }))
 		{
-			std::cout << "Error configuring the audio encoding pipeline \n";
+			TELEPORT_CERR << "Error configuring the audio encoding pipeline \n";
 			return Result::PipelineConfigurationError;
 		}
 
@@ -44,7 +43,7 @@ namespace SCServer
 	{
 		if (!pipeline)
 		{
-			std::cout << "Error: audio encode pipeline not initialized \n";
+			TELEPORT_CERR << "Error: audio encode pipeline not initialized \n";
 			return Result::PipelineNotInitialized;
 		}
 

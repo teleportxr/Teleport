@@ -911,7 +911,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		audioParams.codec = sca::AudioCodec::PCM;
 		audioParams.numChannels = 2;
 		audioParams.sampleRate = 48000;
-		audioParams.bitsPerSample = 16;
+		audioParams.bitsPerSample = 24;
 		player->initialize(audioParams);
 		audioStreamTarget.reset(new sca::AudioStreamTarget(player));
 		avsAudioTarget.configure(audioStreamTarget.get());

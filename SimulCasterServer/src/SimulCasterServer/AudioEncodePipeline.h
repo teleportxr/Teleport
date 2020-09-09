@@ -31,8 +31,7 @@ namespace SCServer
 		Result process(const uint8_t* data, size_t dataSize);
 
 	private:
-		std::unique_ptr<AudioEncoder> encoderBackend;
-		std::unique_ptr<avs::Pipeline> pipeline;
 		std::unique_ptr<avs::AudioEncoder> encoder;
+		std::unique_ptr<avs::Pipeline> pipeline;
 	};
 }
