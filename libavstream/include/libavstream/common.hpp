@@ -388,9 +388,14 @@ namespace avs
 			GeometryDecoder_InvalidPayload,
 			GeometryDecoder_InvalidBufferSize,
 			GeometryDecoder_ClientRendererError,
+			AudioTarget_InvalidBackend,
+			AudioTargetBackend_AudioProcessingError,
 			Node_NotReady,
 			UnknownError,
 			Num_ResultCode,
+			NetworkSink_SendingDataFailed,
+			NetworkSink_PackingDataFailed,
+			NetworkSink_InvalidStreamDataType
 		};
 
 		Result(Code code) : m_code(code)
@@ -698,6 +703,13 @@ namespace avs
 		int32_t		light_x=0;
 		int32_t		light_y=0;
 		int32_t		light_cubemap_size=0;
+	};
+
+	struct AudioConfig
+	{
+		uint32_t sampleRate = 44100;
+		uint32_t bitsPerSample = 16;
+		uint32_t numChannels = 2;
 	};
 
 	struct SetupCommand : public Command

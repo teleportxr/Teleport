@@ -72,9 +72,9 @@ namespace avs
 		size_t m_packetsSent;
 		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
 
-		void packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
+		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		void sendOrCacheData(const std::vector<uint8_t>& subPacket);
-		void sendData(const std::vector<uint8_t> &subPacket);
+		void sendData(const std::vector<uint8_t>& subPacket);
 	};
 
 } // avs

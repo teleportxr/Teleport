@@ -68,6 +68,7 @@ namespace avs
 		 *  - Result::Mesh_InvalidBackend if backend is nullptr.
 		 */
 		Result configure(GeometryTargetBackendInterface *);
+
 		GeometryTargetBackendInterface* getGeometryTargetBackendInterface() const override;
 
 		/*!

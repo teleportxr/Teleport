@@ -525,6 +525,7 @@ namespace avs
 		virtual void CreateMaterial(uid material_uid, const Material & material) = 0;
 		virtual void CreateNode(uid node_uid, DataNode& node) = 0;
 	};
+
 	//! A Geometry decoder backend converts a 
 	class AVSTREAM_API GeometryDecoderBackendInterface : public UseInternalAllocator
 	{

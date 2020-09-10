@@ -16,6 +16,7 @@ class GeometryTargetBackendInterface;
 class GeometryEncoderBackendInterface;
 class GeometryDecoderBackendInterface;
 class GeometryRequesterBackendInterface;
+class AudioTargetBackendInterface;
 
 /*!
  * General (stream of bytes) I/O node interface.
@@ -178,7 +179,8 @@ class AVSTREAM_API AudioTargetInterface
 public:
 	virtual ~AudioTargetInterface() = default;
 
-	virtual Result process(const void* buffer, size_t bufferSizeInBytes, AudioPayloadType payloadType) = 0;
+	/*! Get audio backend associated with this node. */
+	virtual AudioTargetBackendInterface* getAudioTargetBackendInterface() const = 0;
 };
 
 ///*!

@@ -111,8 +111,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	auto onPacketParsed = [](Node* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)->Result
 	{
 		NetworkSink* ns = static_cast<NetworkSink*>(node);
-		ns->m_data->packData((const uint8_t*)buffer + dataOffset, dataSize, inputNodeIndex);
-		return Result::OK;
+		return ns->m_data->packData((const uint8_t*)buffer + dataOffset, dataSize, inputNodeIndex);
 	};
 
 	for (size_t i = 0; i < m_data->m_streams.size(); ++i)
@@ -361,6 +360,7 @@ Result NetworkSink::process(uint32_t timestamp)
 				stream.buffer.resize(bufferSize);
 				result = nodeIO->read(this, stream.buffer.data(), bufferSize, numBytesRead);
 			}
+	
 			numBytesRead = std::min(bufferSize, numBytesRead);
 
 			return result;
@@ -408,21 +408,25 @@ Result NetworkSink::process(uint32_t timestamp)
 		{
 			continue;
 		}
-
+		Result res = Result::OK;
 		if (stream.useParser && m_data->m_parsers.find(i) != m_data->m_parsers.end())
 		{
-			m_data->m_parsers[i]->parse((const char*)stream.buffer.data(), numBytesRead);
+			res = m_data->m_parsers[i]->parse((const char*)stream.buffer.data(), numBytesRead);
 		}
 		else
 		{
-			m_data->packData(stream.buffer.data(), numBytesRead, i);
+			res = m_data->packData(stream.buffer.data(), numBytesRead, i);
+		}
+		if (!res)
+		{
+			return res;
 		}
 	}
 
 	return Result::OK;
 }
 
-void NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
+Result NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
 {
 	uint32_t code = 0;
 	ElasticFrameContent dataContent;
@@ -444,21 +448,28 @@ void NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, ui
 		dataContent = ElasticFrameContent::h265;
 		break;
 	default:
-		AVSLOG(Error) << "NetworkSink: Invalid stream datatype. Cannot send data. \n";
-		return;
+		AVSLOG(Error) << "NetworkSink: Invalid stream data type. Cannot send data. \n";
+		return Result::NetworkSink_InvalidStreamDataType;
 	}
 
 	// total number of EFP superframes created since the start for this stream
 	stream.counter++;
 
-	m_EFPSender->packAndSendFromPtr(buffer,
+	auto efpResult = m_EFPSender->packAndSendFromPtr(buffer,
 		bufferSize,
-		dataContent,
+		dataContent, 
 		stream.counter, // pts
 		stream.counter, // dts
 		code,
 		stream.id,
 		NO_FLAGS);
+
+	if (efpResult != ElasticFrameMessages::noError)
+	{
+		AVSLOG(Error) << "NetworkSink: An error occured in EFP trying to pack data. \n";
+		return Result::NetworkSink_PackingDataFailed;
+	}
+	return Result::OK;
 }
 
 void NetworkSink::Private::sendOrCacheData(const std::vector<uint8_t>& subPacket)

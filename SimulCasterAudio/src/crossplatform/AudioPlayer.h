@@ -11,11 +11,13 @@ namespace sca
 	{
 	public:
 		virtual ~AudioPlayer();
-		virtual Result playStream(const float* data, size_t dataSize, AudioType audioType) = 0;
+		virtual Result playStream(const uint8_t* data, size_t dataSize) = 0;
+		virtual Result initialize(const AudioParams& audioParams);
 
 	protected:
 		AudioPlayer();
-		virtual Result initalize() = 0;
+		AudioParams audioParams;
+		bool initialized;
 	};
 }
 

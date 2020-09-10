@@ -37,11 +37,10 @@ bool DefaultDiscoveryService::initialise(uint16_t discovPort, uint16_t servPort)
 	}
 
 	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_NONBLOCK, 1);
-	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_BROADCAST, 0);
+	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_BROADCAST, 1);
 	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_REUSEADDR, 1);
 
 	address = { ENET_HOST_ANY, discoveryPort };
-	//enet_address_set_host(&(address), "192.168.0.36");//"77.98.250.152");// NOT NEEDED.
 	if (enet_socket_bind(discoverySocket, &address) != 0)
 	{
 		int err= WSAGetLastError();

@@ -27,8 +27,7 @@ namespace avs
 	struct AudioDecoder::Private final : public Node::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(AudioDecoder, Node)
-			// non-owned backend
-			AudioDecoderBackendInterface* m_backend;
+
 		std::unique_ptr<AudioParserInterface> m_parser;
 
 		NetworkFrame m_frame;
@@ -50,13 +49,13 @@ namespace avs
 	}
 
 	Result AudioDecoder::configure(uint8_t streamId)
+	{
 		if (d().m_configured)
 		{
 			Result deconf_result = deconfigure();
 			if (deconf_result != Result::OK)
 				return Result::Node_AlreadyConfigured;
 		}
-		d().m_backend = (backend);
 
 		assert(d().m_backend);
 
@@ -72,12 +71,8 @@ namespace avs
 			return Result::Node_NotConfigured;
 		}
 
-		Result result = Result::OK;
-		if (d().m_backend)
-		{
-			unlinkOutput();
-		}
-
+		Result result = unlinkOutput();
+		
 		d().m_configured = false;
 
 		d().m_frame = {};
@@ -92,8 +87,8 @@ namespace avs
 			return Result::Node_NotConfigured;
 		}
 
-		auto* gti = dynamic_cast<AudioTargetInterface*>(getOutput(0));
-		if (!gti)
+		auto* ati = dynamic_cast<AudioTargetInterface*>(getOutput(0));
+		if (!ati)
 		{
 			return Result::Node_InvalidOutput;
 		}
@@ -105,7 +100,6 @@ namespace avs
 		}
 
 		Result result = Result::OK;
-
 		do
 		{
 			result = input->readFrame(this, d().m_frame, d().m_streamId);
@@ -119,32 +113,29 @@ namespace avs
 				AVSLOG(Warning) << "AudioDecoder: Failed to read input";
 				return result;
 			}
-
 			// Check if data was lost or corrupted
 			if (d().m_frame.broken)
 			{
 				continue;
 			}
 
-			result = d().processPayload(d().m_frame.buffer.data(), d().m_frame.bufferSize, gti);
+			result = d().processPayload(d().m_frame.buffer.data(), d().m_frame.bufferSize, ati);
 		} while (result == Result::OK);
-
 
 		return result;
 	}
 
 	Result AudioDecoder::Private::processPayload(const uint8_t* buffer, size_t bufferSize, AudioTargetInterface* target)
 	{
-		assert(m_backend);
 		Result result = Result::UnknownError;
 
 		// At the moment there is only one payload
-		//size_t payloadTypeOffset = 0;
+		size_t payloadTypeOffset = 0;
 		//AudioPayloadType payloadType = m_parser->classify(buffer, bufferSize, payloadTypeOffset);
 
 		if (target && bufferSize)
 		{
-			result = target->process(buffer + payloadTypeOffset, bufferSize - payloadTypeOffset, AudioPayloadType::Capture);
+			result = target->getAudioTargetBackendInterface()->process(buffer + payloadTypeOffset, bufferSize - payloadTypeOffset, AudioPayloadType::Capture);
 		}
 		return result;
 	}
@@ -166,7 +157,6 @@ namespace avs
 			AVSLOG(Error) << "AudioDecoder: Node needs to be configured before it can accept output";
 			return Result::Node_NotConfigured;
 		}
-		assert(d().m_backend);
 
 		AudioTargetInterface* m = dynamic_cast<AudioTargetInterface*>(node);
 		if (!m)
@@ -174,21 +164,12 @@ namespace avs
 			AVSLOG(Error) << "AudioDecoder: Output node is not a Mesh";
 			return Result::Node_Incompatible;
 		}
-		return Result::OK;// d().m_backend->registerSurface(surface->getBackendSurface());
+		return Result::OK;
 	}
 
 	void AudioDecoder::onOutputUnlink(int slot, Node* node)
 	{
-		if (!d().m_configured)
-		{
-			return;
-		}
-
-		AudioTargetInterface* m = dynamic_cast<AudioTargetInterface*>(node);
-		if (m)
-		{
-			assert(d().m_backend);
-		}
+		
 	}
 
 	uint8_t AudioDecoder::getStreamId() const

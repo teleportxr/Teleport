@@ -45,6 +45,9 @@ namespace SCServer
 		bool useDynamicQuality;
 		int32_t bandwidthCalculationInterval;
 
+		// Audio
+		bool isStreamingAudio;
+
 		int32_t debugStream;
 		bool enableDebugNetworkPackets;
 		bool enableDebugControlPackets;
