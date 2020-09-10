@@ -219,6 +219,7 @@ public:
 
 	std::vector<AVSTextureHandle> avsTextures;
 	avs::Context context;
+	avs::VideoConfig videoConfig;
 
 	avs::NetworkSource source;
 	avs::Decoder decoder[NumStreams];

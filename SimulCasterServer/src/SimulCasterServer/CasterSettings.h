@@ -59,6 +59,11 @@ namespace SCServer
 		bool willDisableMainCamera;
 
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
+
+		int32_t specularCubemapSize;
+		int32_t roughCubemapSize;
+		int32_t diffuseCubemapSize;
+		int32_t lightCubemapSize;
 	};
 
 	struct CasterNetworkSettings
@@ -81,5 +86,9 @@ namespace SCServer
 		bool enableStackDepth;
 		bool enableDecomposeCube;
 		float maxDepth;
+		int32_t specularCubemapSize;
+		int32_t roughCubemapSize;
+		int32_t diffuseCubemapSize;
+		int32_t lightCubemapSize;
 	};
 }

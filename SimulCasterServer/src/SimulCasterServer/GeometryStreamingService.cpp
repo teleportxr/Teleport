@@ -62,7 +62,8 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::MeshNodeRes
 
 void GeometryStreamingService::startStreaming(SCServer::CasterContext* context)
 {
-	if(casterContext == context) return;
+	if(casterContext == context)
+		return;
 	casterContext = context;
 
 	avsPipeline.reset(new avs::Pipeline);
@@ -76,9 +77,12 @@ void GeometryStreamingService::startStreaming(SCServer::CasterContext* context)
 
 void GeometryStreamingService::stopStreaming()
 {
-	if(avsPipeline) avsPipeline->deconfigure();
-	if(avsGeometrySource) avsGeometrySource->deconfigure();
-	if(avsGeometryEncoder) avsGeometryEncoder->deconfigure();
+	if(avsPipeline)
+		avsPipeline->deconfigure();
+	if(avsGeometrySource)
+		avsGeometrySource->deconfigure();
+	if(avsGeometryEncoder)
+		avsGeometryEncoder->deconfigure();
 	avsPipeline.reset();
 	casterContext = nullptr;
 

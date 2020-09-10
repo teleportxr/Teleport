@@ -38,13 +38,7 @@ std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
 
 using namespace simul;
-const int specularSize = 128;
-const int diffuseSize = 64;
-const int lightSize = 64;
-int2 specularOffset(0,0);
-int2 diffuseOffset(3* specularSize/2, specularSize*2);
-int2 roughOffset(3* specularSize,0);
-int2 lightOffset(3 * specularSize+3 * specularSize / 2, specularSize * 2);
+
 void set_float4(float f[4], float a, float b, float c, float d)
 {
 	f[0] = a;
@@ -52,7 +46,6 @@ void set_float4(float f[4], float a, float b, float c, float d)
 	f[2] = c;
 	f[3] = d;
 }
-
 
 void apply_material()
 {
@@ -435,10 +428,10 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 					cubemapClearEffect->UnbindTextures(deviceContext);
 				}
 				int2 sourceOffset(3 * W / 2, 2 * W);
-				Recompose(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, sourceOffset + diffuseOffset);
-				Recompose(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, sourceOffset + specularOffset);
-				Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture, specularCubemapTexture->mips, sourceOffset + roughOffset);
-				Recompose(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, sourceOffset + lightOffset);
+				Recompose(deviceContext, ti->texture, diffuseCubemapTexture			, diffuseCubemapTexture->mips, sourceOffset + int2(videoConfig.diffuse_x,videoConfig.diffuse_y));
+				Recompose(deviceContext, ti->texture, specularCubemapTexture		, specularCubemapTexture->mips, sourceOffset + int2(videoConfig.specular_x,videoConfig.specular_y));
+				Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture	, specularCubemapTexture->mips, sourceOffset + int2(videoConfig.rough_x,videoConfig.rough_y));
+				Recompose(deviceContext, ti->texture, lightingCubemapTexture		, lightingCubemapTexture->mips, sourceOffset + int2(videoConfig.light_x,videoConfig.light_y));
 				{
 					tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
 					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
@@ -876,11 +869,11 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	{
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
-		specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, specularSize, specularSize, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-		roughSpecularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, specularSize, specularSize, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-		lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, lightSize, lightSize, 1, 1,
+		specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.specular_cubemap_size, videoConfig.specular_cubemap_size, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+		roughSpecularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.rough_cubemap_size, videoConfig.rough_cubemap_size, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+		lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.light_cubemap_size, videoConfig.light_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-		diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, diffuseSize, diffuseSize, 1, 1,
+		diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.diffuse_cubemap_size, videoConfig.diffuse_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	}
 	else
@@ -946,7 +939,7 @@ void ClientRenderer::OnVideoStreamClosed()
 
 void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand)
 {
-	const avs::VideoConfig& videoConfig = reconfigureVideoCommand.video_config;
+	videoConfig = reconfigureVideoCommand.video_config;
 
 	WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
 		, videoConfig.depth_width, videoConfig.depth_height);

@@ -686,6 +686,18 @@ namespace avs
 		int32_t		compose_cube = 0;
 		int32_t     use_cubemap = 1;
 		avs::VideoCodec videoCodec = avs::VideoCodec::Any;
+		int32_t		specular_x=0;
+		int32_t		specular_y=0;
+		int32_t		specular_cubemap_size=0;
+		int32_t		rough_x=0;
+		int32_t		rough_y=0;
+		int32_t		rough_cubemap_size=0;
+		int32_t		diffuse_x=0;
+		int32_t		diffuse_y=0;
+		int32_t		diffuse_cubemap_size=0;
+		int32_t		light_x=0;
+		int32_t		light_y=0;
+		int32_t		light_cubemap_size=0;
 	};
 
 	struct SetupCommand : public Command
