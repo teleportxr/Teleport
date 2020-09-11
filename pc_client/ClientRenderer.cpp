@@ -922,14 +922,14 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		audioParams.codec = sca::AudioCodec::PCM;
 		audioParams.numChannels = 2;
 		audioParams.sampleRate = 48000;
-		audioParams.bitsPerSample = 24;
+		audioParams.bitsPerSample = 32;
 		player->initialize(audioParams);
 		audioStreamTarget.reset(new sca::AudioStreamTarget(player));
 		avsAudioTarget.configure(audioStreamTarget.get());
 		pipeline.link({ &source, &avsAudioDecoder, &avsAudioTarget });
 	}
 
-	// We will add a GEOMETRY PIPE:
+	// We will add a GEOMETRY PIPE
 	if(GeoStream)
 	{
 		avsGeometryDecoder.configure(60,&geometryDecoder);

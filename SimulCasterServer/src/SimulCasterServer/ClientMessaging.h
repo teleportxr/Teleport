@@ -31,11 +31,11 @@ namespace SCServer
 
 		void initialise(CasterContext* context, CaptureDelegates captureDelegates);
 
-		bool startSession(avs::uid u,int32_t listenPort);
+		bool startSession(avs::uid u, int32_t listenPort);
 		void stopSession();
 
 		void tick(float deltaTime);
-		void handleEvents();
+		void handleEvents(float deltaTime);
 
 		void actorEnteredBounds(avs::uid actorID);
 		void actorLeftBounds(avs::uid actorID);

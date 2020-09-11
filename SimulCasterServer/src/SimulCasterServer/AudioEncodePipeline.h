@@ -18,6 +18,7 @@ namespace SCServer
 	{
 		avs::AudioCodec codec = avs::AudioCodec::PCM;
 		uint32_t sampleRate = 44100;
+		uint32_t bitsPerSample = 16;
 		uint32_t numChannels = 2;
 	};
 

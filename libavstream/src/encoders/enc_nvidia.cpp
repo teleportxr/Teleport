@@ -516,7 +516,8 @@ namespace avs
 			NV_ENC_PIC_PARAMS flushParams = {};
 			flushParams.version = NV_ENC_PIC_PARAMS_VER;
 			flushParams.encodePicFlags = NV_ENC_PIC_FLAG_EOS;
-			if (NVFAILED(g_api.nvEncEncodePicture(m_encoder, &flushParams)))
+			NVENCSTATUS status = g_api.nvEncEncodePicture(m_encoder, &flushParams);
+			if (NVFAILED(status))
 			{
 				AVSLOG(Warning) << "EncoderNV: Failed to flush hardware encoder\n";
 				result = Result::EncoderBackend_FlushError;

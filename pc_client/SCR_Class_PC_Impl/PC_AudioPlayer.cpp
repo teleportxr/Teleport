@@ -60,21 +60,22 @@ sca::Result PC_AudioPlayer::initialize(const sca::AudioParams& audioParams)
 		SCA_COUT("Error occurred trying to create the XAudio2 device.");
 		return sca::Result::AudioDeviceInitializationError;
 	}
-
-	device->StartEngine();
-
+	
 	// Create master voice
 	hr = device->CreateMasteringVoice(&masteringVoice);
 	if (FAILED(hr))
 	{
 		SCA_COUT("Error occurred trying to create the mastering voice.");
+		device->Release();
 		return sca::Result::AudioMasteringVoiceCreationError;
 	}
 	
+	device->StartEngine();
+
 	WAVEFORMATEX waveFormat;
 	waveFormat.nChannels = audioParams.numChannels;
-	waveFormat.nSamplesPerSec = 48000;
-	waveFormat.wFormatTag = WAVE_FORMAT_PCM;
+	waveFormat.nSamplesPerSec = audioParams.sampleRate;
+	waveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
 	waveFormat.wBitsPerSample = audioParams.bitsPerSample;
 	waveFormat.nBlockAlign = (waveFormat.wBitsPerSample * waveFormat.nChannels) / 8;
 	waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
@@ -85,6 +86,9 @@ sca::Result PC_AudioPlayer::initialize(const sca::AudioParams& audioParams)
 	if (FAILED(hr))
 	{
 		SCA_COUT("Error occurred trying to create the source voice.");
+		masteringVoice->DestroyVoice();
+		device->StopEngine();
+		device->Release();
 		return sca::Result::AudioSourceVoiceCreationError;
 	}
 

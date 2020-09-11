@@ -3,6 +3,7 @@
 #include <queue>
 #include <sstream>
 #include <vector>
+#include <unordered_map>
 
 #include "enet/enet.h"
 #include "libavstream/common.hpp"
@@ -58,6 +59,9 @@ static avs::uid serverID = 0;
 
 static std::set<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
 static std::vector<avs::uid> lostClients; //Clients who have been lost, and are awaiting deletion.
+
+static std::mutex audioMutex;
+static std::mutex videoMutex;
 
 
 class PluginGeometryStreamingService : public SCServer::GeometryStreamingService
@@ -311,6 +315,24 @@ struct InitialiseState
 };
 
 ///PLUGIN-INTERNAL START
+void RemoveClient(avs::uid clientID)
+{
+	std::lock_guard<std::mutex> videoLock(audioMutex);
+	std::lock_guard<std::mutex> audioLock(videoMutex);
+
+	// Early-out if a client with this ID doesn't exist.
+	auto& clientIt = clientServices.find(clientID);
+	if (clientIt == clientServices.end())
+		return;
+
+	ClientData& client = clientIt->second;
+
+	client.clientMessaging.stopSession();
+
+	// Remove references to lost client.
+	clientServices.erase(clientID);
+}
+
 void Disconnect(avs::uid clientID)
 {
 	onDisconnect(clientID);
@@ -395,19 +417,31 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 
 TELEPORT_EXPORT void Shutdown()
 {
+	std::lock_guard<std::mutex> videoLock(audioMutex);
+	std::lock_guard<std::mutex> audioLock(videoMutex);
+
 	discoveryService->shutdown();
 
 	for(auto& clientService : clientServices)
 	{
-		clientService.second.clientMessaging.stopSession();
+		ClientData& client = clientService.second;
+		// Stre
+		if (client.isStreaming)
+		{
+			// This will add to lost clients but will be cleared below
+			StopStreaming(clientService.first);
+		}
+		client.clientMessaging.stopSession();
 	}
+
+	lostClients.clear();
 	clientServices.clear();
 
 	onShowActor = nullptr;
 	onHideActor = nullptr;
 
 	setHeadPose = nullptr;
-	setControllerPose=nullptr;
+	setControllerPose = nullptr;
 	processNewInput = nullptr;
 }
 
@@ -472,24 +506,33 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 
 TELEPORT_EXPORT void StopSession(avs::uid clientID)
 {
-	//Early-out if a client with this ID doesn't exist.
+	// Early-out if a client with this ID doesn't exist.
 	auto& clientIt = clientServices.find(clientID);
 	if(clientIt == clientServices.end())
 		return;
 		
-	ClientData& lostClient = clientIt->second;
-	//Shut-down connections to the client.
-	if(lostClient.isStreaming)
-		StopStreaming(clientID);
-	lostClient.clientMessaging.stopSession();
-
-	//Remove references to lost client.
-	clientServices.erase(clientID);
-	// TODO: How does this work? 
-	for(int i=0;i<lostClients.size();i++)
+	ClientData& client = clientIt->second;
+	// Shut-down connections to the client.
+	if (client.isStreaming)
 	{
-		if(lostClients[i] ==clientID)
-			lostClients.erase(lostClients.begin()+i);
+		// Will add to lost clients and call shutdown command
+		StopStreaming(clientID);
+	}
+
+	RemoveClient(clientID);
+
+	auto iter = lostClients.begin();
+	while (iter != lostClients.end())
+	{
+		if (*iter == clientID)
+		{
+			// Continue checking rest of container just in case client ID was added more than once
+			iter = lostClients.erase(iter);
+		}
+		else
+		{
+			++iter;
+		}
 	}
 }
 
@@ -592,7 +635,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	{
 		for(avs::uid clientID : lostClients)
 		{
-			StopSession(clientID);
+			RemoveClient(clientID);
 		}
 		lostClients.clear();
 	}
@@ -600,7 +643,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	for(auto& idClientPair : clientServices)
 	{
 		ClientData &clientData=idClientPair.second;
-		clientData.clientMessaging.handleEvents();
+		clientData.clientMessaging.handleEvents(deltaTime);
 
 		if(clientData.clientMessaging.hasPeer())
 		{
@@ -780,6 +823,8 @@ bool HasResource(avs::uid clientID, avs::uid resourceID)
 ///VideoEncodePipeline START
 TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
 {
+	std::lock_guard<std::mutex> lock(videoMutex);
+
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 	{
@@ -796,6 +841,8 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEn
 
 TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
 {
+	std::lock_guard<std::mutex> lock(videoMutex);
+
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 	{
@@ -841,6 +888,8 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 
 TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, uint32_t tagDataID)
 {
+	std::lock_guard<std::mutex> lock(videoMutex);
+
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 	{
@@ -876,6 +925,8 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, uint32_t tagDataID)
 
 TELEPORT_EXPORT void AddVideoTagData(avs::uid clientID, uint32_t tagDataID, const uint8_t* data, size_t dataSize)
 {
+	std::lock_guard<std::mutex> lock(videoMutex);
+
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 	{
@@ -893,6 +944,8 @@ TELEPORT_EXPORT void AddVideoTagData(avs::uid clientID, uint32_t tagDataID, cons
 
 TELEPORT_EXPORT void ClearVideoTagData(avs::uid clientID, uint32_t tagDataID)
 {
+	std::lock_guard<std::mutex> lock(videoMutex);
+
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 	{
@@ -952,6 +1005,8 @@ TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 ///AudioEncodePipeline START
 TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const SCServer::AudioParams& audioParams)
 {
+	std::lock_guard<std::mutex> lock(audioMutex);
+
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 	{
@@ -968,6 +1023,8 @@ TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const SCServer::A
 
 TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t dataSize)
 {
+	std::lock_guard<std::mutex> lock(audioMutex);
+
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 	{
