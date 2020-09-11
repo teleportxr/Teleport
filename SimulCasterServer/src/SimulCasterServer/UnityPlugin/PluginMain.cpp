@@ -531,37 +531,38 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 
-	avs::VideoConfig& videoConfig = setupCommand.video_config;
-	videoConfig.video_width	= encoderSettings.frameWidth;
-	videoConfig.video_height	= encoderSettings.frameHeight;
-	videoConfig.depth_height	= encoderSettings.depthHeight;
-	videoConfig.depth_width		= encoderSettings.depthWidth;
-	videoConfig.perspectiveFOV	= casterSettings.perspectiveFOV;
-	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
-	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
-	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;
-	videoConfig.compose_cube	= encoderSettings.enableDecomposeCube;
-	videoConfig.videoCodec		= casterSettings.videoCodec;
-	videoConfig.use_cubemap		= !casterSettings.usePerspectiveRendering;
+	avs::VideoConfig& videoConfig		= setupCommand.video_config;
+	videoConfig.video_width				= encoderSettings.frameWidth;
+	videoConfig.video_height			= encoderSettings.frameHeight;
+	videoConfig.depth_height			= encoderSettings.depthHeight;
+	videoConfig.depth_width				= encoderSettings.depthWidth;
+	videoConfig.perspectiveFOV			= casterSettings.perspectiveFOV;
+	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
+	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
+	videoConfig.colour_cubemap_size		= encoderSettings.frameWidth / 3;
+	videoConfig.compose_cube			= encoderSettings.enableDecomposeCube;
+	videoConfig.videoCodec				= casterSettings.videoCodec;
+	videoConfig.use_cubemap				= !casterSettings.usePerspectiveRendering;
 	
 	videoConfig.specular_cubemap_size	=casterSettings.specularCubemapSize;
+	int depth_cubemap_size				=videoConfig.colour_cubemap_size/2;
 	// To the right of the depth cube, underneath the colour cube.
-	videoConfig.specular_x				=encoderSettings.depthWidth*3;
-	videoConfig.specular_y				=videoConfig.colour_cubemap_size*2;
+	videoConfig.specular_x			=depth_cubemap_size*3;
+	videoConfig.specular_y			=videoConfig.colour_cubemap_size*2;
 	
 	videoConfig.rough_cubemap_size	=casterSettings.roughCubemapSize;
 	// To the right of the specular cube, after 3 mips = 1 + 1/2 + 1/4
-	videoConfig.rough_x				=videoConfig.specular_x+(casterSettings.specularCubemapSize*7)/4;
+	videoConfig.rough_x				=videoConfig.specular_x+(casterSettings.specularCubemapSize*3*7)/4;
 	videoConfig.rough_y				=videoConfig.specular_y;
 	
 	videoConfig.diffuse_cubemap_size=casterSettings.diffuseCubemapSize;
 	// To the right of the depth map, under the specular map.
-	videoConfig.diffuse_x			=encoderSettings.depthWidth*3;
+	videoConfig.diffuse_x			=depth_cubemap_size*3;
 	videoConfig.diffuse_y			=videoConfig.specular_y+casterSettings.specularCubemapSize*2;
 	
 	videoConfig.light_cubemap_size	=casterSettings.lightCubemapSize;
 	// To the right of the diffuse map.
-	videoConfig.light_x				=videoConfig.diffuse_x+(casterSettings.diffuseCubemapSize*7)/4;
+	videoConfig.light_x				=videoConfig.diffuse_x+(casterSettings.diffuseCubemapSize*3*7)/4;
 	videoConfig.light_y				=videoConfig.diffuse_y;
 	///TODO: Initialise actors in range.
 

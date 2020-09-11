@@ -7,10 +7,14 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	float roughness;
 	vec4 depthToLinFadeDistParams;
 	vec4 fullResToLowResTransformXYWH;
-	vec3 lightIrradiance;
-	float metal;
+
 	vec3 lightDir;
+	int lightCount;
+
 	int reverseDepth;
+	float metal;
+	uint __ipad1;
+	uint __ipad2;
 
 	vec4 diffuseOutputScalar;
 	vec2 diffuseTexCoordsScalar_R;

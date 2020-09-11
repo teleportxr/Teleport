@@ -170,7 +170,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
 	tagData2DBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
 	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
-	lightsBuffer.RestoreDeviceObjects(renderPlatform,1,false,true);
+	lightsBuffer.RestoreDeviceObjects(renderPlatform,10,false,true);
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
 	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
@@ -430,10 +430,10 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 					cubemapClearEffect->UnbindTextures(deviceContext);
 				}
 				int2 sourceOffset(3 * W / 2, 2 * W);
-				Recompose(deviceContext, ti->texture, diffuseCubemapTexture			, diffuseCubemapTexture->mips, sourceOffset + int2(videoConfig.diffuse_x,videoConfig.diffuse_y));
-				Recompose(deviceContext, ti->texture, specularCubemapTexture		, specularCubemapTexture->mips, sourceOffset + int2(videoConfig.specular_x,videoConfig.specular_y));
-				Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture	, specularCubemapTexture->mips, sourceOffset + int2(videoConfig.rough_x,videoConfig.rough_y));
-				Recompose(deviceContext, ti->texture, lightingCubemapTexture		, lightingCubemapTexture->mips, sourceOffset + int2(videoConfig.light_x,videoConfig.light_y));
+				Recompose(deviceContext, ti->texture, diffuseCubemapTexture			, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x,videoConfig.diffuse_y));
+				Recompose(deviceContext, ti->texture, specularCubemapTexture		, specularCubemapTexture->mips, int2(videoConfig.specular_x,videoConfig.specular_y));
+				Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture	, specularCubemapTexture->mips, int2(videoConfig.rough_x,videoConfig.rough_y));
+				Recompose(deviceContext, ti->texture, lightingCubemapTexture		, lightingCubemapTexture->mips, int2(videoConfig.light_x,videoConfig.light_y));
 				{
 					tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
 					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
@@ -485,6 +485,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				int H = hdrFramebuffer->GetHeight();
 				renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 			}
+			renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f);
+			renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f);
+			renderPlatform->DrawCubemap(deviceContext,roughSpecularCubemapTexture,0.3f,0.5f,0.2f,1.f,1.f);
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -668,6 +671,7 @@ void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceCont
 			lightsBuffer.InvalidateDeviceObjects();
 			lightsBuffer.RestoreDeviceObjects(renderPlatform,cachedLights.size());
 		}
+		pbrConstants.lightCount=cachedLights.size();
 	}
 	Light *l=(Light*)(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
 	lightsBuffer.SetData(deviceContext,l);
@@ -811,7 +815,7 @@ void ClientRenderer::Update()
 
 void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
-	const avs::VideoConfig& videoConfig = setupCommand.video_config;
+	videoConfig = setupCommand.video_config;
 
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);

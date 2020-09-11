@@ -74,7 +74,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 			lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
 		}
 	}
-	return  lookup+0.1*vec4(lookup.aaa,0);
+	return  lookup;//+0.1*vec4(lookup.aaa,0);
 }
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
@@ -96,7 +96,7 @@ shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	int3 pos = int3(ThreadID);
 	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 	float4 SceneColor = plainTexture.Load(int3(pos.xy+sourceOffset+ OutputW*FaceOffsets[ThreadID.z],0));
-    SceneColor.r += 0.4;
+//    SceneColor.r += 0.4;
 	RWTextureTargetArray[pos] = SceneColor;
 }
 
