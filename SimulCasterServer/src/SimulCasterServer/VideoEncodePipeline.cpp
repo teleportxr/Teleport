@@ -189,9 +189,9 @@ namespace SCServer
 	Result VideoEncodePipeline::release()
 	{
 		pipeline.reset();
-		inputSurface.reset();
 		encoder.reset();
-
+		inputSurface.reset();
+		
 		return Result::OK;
 	}
 }
