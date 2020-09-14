@@ -253,6 +253,10 @@ namespace SCServer
 			if(node->data_type==avs::NodeDataType::Light)
 			{
 				put(node->lightColour);
+				avs::vec4 lightRotation = node->lightRotation;
+				avs::ConvertRotation(settings->axesStandard, req->getAxesStandard(), lightRotation);
+				put(lightRotation);
+				put(node->lightType);
 			}
 			put(node->childrenUids.size());
 			for (const auto& id : node->childrenUids)

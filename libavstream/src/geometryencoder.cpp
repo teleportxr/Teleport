@@ -72,7 +72,73 @@ namespace avs
 			}
 		}
 	}
+	
+	int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis)
+	{
+		int8_t a=(axis)%3;
+		int8_t sn=(axis>=3)?-1:1;
+		static int8_t ue_e[]={ 1, 0, 2 };
+		static int8_t gl_2[]={ 1, 2, 3 };
+		
+		static int8_t unt[]={ 0, 2, 1 };
+		static int8_t ue_gl[]={ 1, 2, 3 };
 
+		static int8_t uy_gl[]={ 0, 1, 5 };
+		static int8_t uy_en[]= { 0, 2, 1 };
+		if (fromStandard == toStandard)
+		{
+			return axis;
+		}
+		if (fromStandard == avs::AxesStandard::UnrealStyle)
+		{
+			if (toStandard == avs::AxesStandard::GlStyle)
+			{
+				return ue_gl[axis];
+			}
+			if (toStandard == avs::AxesStandard::EngineeringStyle)
+			{
+				return ue_e[axis];
+			}
+		}
+		else if (fromStandard == avs::AxesStandard::UnityStyle)
+		{
+			if (toStandard == avs::AxesStandard::GlStyle)
+			{
+				return uy_gl[axis];
+			}
+			if (toStandard == avs::AxesStandard::EngineeringStyle)
+			{
+				return uy_en[axis];
+			}
+		}
+		else if (fromStandard == avs::AxesStandard::EngineeringStyle)
+		{
+			if (toStandard == avs::AxesStandard::UnrealStyle)
+			{
+				static int8_t en_ue[]= { 1, 0,2};
+				return en_ue[axis];
+			}
+			else if (toStandard == avs::AxesStandard::UnityStyle)
+			{
+				static int8_t en_uy[] = { 0, 2, 1 };
+				return en_uy[axis];
+			}
+		}
+		else if (fromStandard == avs::AxesStandard::GlStyle)
+		{
+			if (toStandard == avs::AxesStandard::UnrealStyle)
+			{
+				static int8_t gl_ue[] = { 5, 0, 1 };
+				return gl_ue[axis];
+			}
+			else if (toStandard == avs::AxesStandard::UnityStyle)
+			{
+				static int8_t gl_uy[] = { 0, 1, 5 };
+				return gl_uy[axis];
+			}
+		}
+		return -1;
+	}
 	void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &position)
 	{
 		if (fromStandard == toStandard)

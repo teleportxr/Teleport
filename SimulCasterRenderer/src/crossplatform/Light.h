@@ -15,10 +15,10 @@ namespace scr
 	public:
 		enum class Type : uint32_t
 		{
-			POINT,
-			DIRECTIONAL,
-			SPOT,
-			AREA
+			POINT=0,
+			DIRECTIONAL=1,
+			SPOT=2,
+			AREA=3
 		};
 		struct LightCreateInfo
 		{
