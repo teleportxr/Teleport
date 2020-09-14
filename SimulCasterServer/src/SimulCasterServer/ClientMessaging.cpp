@@ -33,10 +33,17 @@ namespace SCServer
 		, clientID(0)
 	{}
 
+	bool ClientMessaging::isInitialised() const
+	{
+		return initialized;
+	}
+
+
 	void ClientMessaging::initialise(CasterContext* context, CaptureDelegates captureDelegates)
 	{
 		casterContext = context;
 		captureComponentDelegates = captureDelegates;
+		initialized=true;
 	}
 
 	bool ClientMessaging::startSession(avs::uid clientID, int32_t listenPort)

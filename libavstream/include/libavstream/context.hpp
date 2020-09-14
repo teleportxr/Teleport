@@ -35,6 +35,8 @@ namespace avs
 		/*! Get instance of the global context object. */
 		static Context* instance();
 
+		void log(LogSeverity severity, const char*) const;
+
 		/*!
 		 * Set custom message handler.
 		 * \note Default (library provided) message handler prints to standard output.

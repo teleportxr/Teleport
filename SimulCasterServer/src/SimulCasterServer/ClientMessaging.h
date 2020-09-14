@@ -28,7 +28,8 @@ namespace SCServer
 						std::function<void(avs::uid,const avs::InputState*)> processNewInput,
 						std::function<void(void)> onDisconnect,
 						const int32_t& disconnectTimeout);
-
+		
+		bool isInitialised() const;
 		void initialise(CasterContext* context, CaptureDelegates captureDelegates);
 
 		bool startSession(avs::uid u, int32_t listenPort);
@@ -70,6 +71,7 @@ namespace SCServer
 		uint16_t getServerPort() const;
 	private:
 		avs::uid clientID;
+		bool initialized=false;
 		const CasterSettings* settings;
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;

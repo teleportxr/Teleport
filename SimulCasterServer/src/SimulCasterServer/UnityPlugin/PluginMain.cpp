@@ -383,9 +383,16 @@ TELEPORT_EXPORT void SetDisconnectDelegate(DisconnectFn disconnect)
 	onDisconnect = disconnect;
 }
 
+static void passOnOutput(const char *msg)
+{
+	if(msg)
+		avsContext.log(avs::LogSeverity::Warning,msg);
+}
+
 TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc messageHandler)
 {
 	avsContext.setMessageHandler(messageHandler, nullptr);
+	debug_buffer.setCallback(&passOnOutput);
 }
 
 TELEPORT_EXPORT void SetConnectionTimeout(int32_t timeout)
@@ -480,6 +487,8 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 	if(c==clientServices.end())
 		return;
 	ClientData& newClient = c->second;
+	if(newClient.clientMessaging.isInitialised())
+		return;
 	newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.AudioQueue = std::make_unique<avs::Queue>();
@@ -835,7 +844,8 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEn
 	}
 
 	auto& clientData = c->second;
-	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, clientData.casterContext.ColorQueue.get());
+	avs::Queue *q=clientData.casterContext.ColorQueue.get();
+	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, q);
 	if(!result)
 	{
 		TELEPORT_CERR << "Error occurred when trying to configure the video encode pipeline" << std::endl;

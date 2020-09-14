@@ -60,3 +60,8 @@ void Context::Private::log(LogSeverity severity, const char* msg) const
 		m_messageHandler(severity, msg, m_userData);
 	}
 }
+
+void Context::log(LogSeverity severity, const char* msg) const
+{
+	d().log(severity,msg);
+}
