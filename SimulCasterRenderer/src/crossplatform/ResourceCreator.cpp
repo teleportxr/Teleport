@@ -507,7 +507,7 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material 
 
 	//Normal
 	AddTextureToMaterial(material.normalTexture,
-						 avs::vec4{1, 1, 1, 1},
+						 avs::vec4{material.normalTexture.scale, 1, 1, 1},
 						 m_DummyNormal,
 						 newMaterial->materialInfo.normal,
 						 newMaterial->textureSlots,
@@ -515,7 +515,7 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material 
 
 	//Combined
 	AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
-						 avs::vec4{1, 1, 1, 1},
+						 avs::vec4{material.pbrMetallicRoughness.roughnessFactor, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, 1},
 						 m_DummyCombined,
 						 newMaterial->materialInfo.combined,
 						 newMaterial->textureSlots,
@@ -759,9 +759,6 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 		materialParameter.texCoordsScalar[1] = tiling;
 		materialParameter.texCoordsScalar[2] = tiling;
 		materialParameter.texCoordsScalar[3] = tiling;
-
-		materialParameter.textureOutputScalar = colourFactor;
-
 		materialParameter.texCoordIndex = static_cast<float>(accessor.texCoord);
 	}
 	else
@@ -771,9 +768,10 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 		materialParameter.texCoordsScalar[1] = avs::vec2(1.0f, 1.0f);
 		materialParameter.texCoordsScalar[2] = avs::vec2(1.0f, 1.0f);
 		materialParameter.texCoordsScalar[3] = avs::vec2(1.0f, 1.0f);
-		materialParameter.textureOutputScalar = avs::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		materialParameter.texCoordIndex = 0.0f;
 	}
+
+	materialParameter.textureOutputScalar = colourFactor;
 }
 
 void ResourceCreator::BasisThread_TranscodeTextures()
