@@ -68,7 +68,7 @@ namespace avs
 	private:
 		Result onInputLink(int slot, Node* node) override;
 		Result onOutputLink(int slot, Node* node) override;
-		void   onOutputUnlink(int slot, Node* node) override;
+		void onOutputUnlink(int slot, Node* node) override;
 	};
 
 } // avs

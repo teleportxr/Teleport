@@ -43,19 +43,24 @@ namespace sca
 		{
 			OK = 0,
 			UnknownError,
+			AudioPlayerIsNull,
 			AudioDeviceInitializationError,
 			AudioMasteringVoiceCreationError,
 			AudioSourceVoiceCreationError,
 			AudioPlayingError,
 			AudioPlayerAlreadyInitialized,
 			AudioPlayerNotInitialized,
+			AudioPlayerAlreadyConfigured,
+			AudioPlayerNotConfigured,
 			AudioPlayerBufferSubmissionError
 		};
 
+		Result() : m_code(Code::OK) 
+		{}
 		Result(Code code) : m_code(code)
 		{}
 		//! if(Result) returns true only if m_code == OK i.e. is ZERO.
-		operator bool() const { return m_code == OK; }
+		operator bool() const { return m_code == Code::OK; }
 		operator Code() const { return m_code; }
 	private:
 		Code m_code;

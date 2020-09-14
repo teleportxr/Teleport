@@ -71,7 +71,21 @@ namespace avs
 			return Result::Node_NotConfigured;
 		}
 
-		Result result = unlinkOutput();
+		AudioTargetInterface * ati = dynamic_cast<AudioTargetInterface*>(getOutput(0));
+		if (!ati)
+		{
+			AVSLOG(Error) << "AudioDecoder: Output node is not an audio target interface";
+			return Result::Node_Incompatible;
+		}
+
+		Result result = ati->getAudioTargetBackendInterface()->deconfigure();
+
+		if (!result)
+		{
+			return result;
+		}
+
+		result = unlinkOutput();
 		
 		d().m_configured = false;
 
@@ -158,10 +172,10 @@ namespace avs
 			return Result::Node_NotConfigured;
 		}
 
-		AudioTargetInterface* m = dynamic_cast<AudioTargetInterface*>(node);
-		if (!m)
+		AudioTargetInterface* ati = dynamic_cast<AudioTargetInterface*>(node);
+		if (!ati)
 		{
-			AVSLOG(Error) << "AudioDecoder: Output node is not a Mesh";
+			AVSLOG(Error) << "AudioDecoder: Output node is not an audio target interface";
 			return Result::Node_Incompatible;
 		}
 		return Result::OK;

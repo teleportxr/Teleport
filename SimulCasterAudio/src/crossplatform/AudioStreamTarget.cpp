@@ -8,7 +8,22 @@ namespace sca
 
 	AudioStreamTarget::~AudioStreamTarget() 
 	{
-		SAFE_DELETE(player);
+		
+	}
+
+	avs::Result AudioStreamTarget::deconfigure()
+	{
+		if (!player)
+		{
+			return avs::Result::AudioTargetBackend_NullAudioPlayer;
+		}
+
+		if (!player->deconfigure())
+		{
+			return avs::Result::AudioTargetBackend_PlayerDeconfigurationError;
+		}
+
+		return avs::Result::OK;
 	}
 
 	avs::Result AudioStreamTarget::process(const void* buffer, size_t bufferSizeInBytes, avs::AudioPayloadType payloadType)
