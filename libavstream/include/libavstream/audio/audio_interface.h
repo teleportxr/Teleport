@@ -34,6 +34,7 @@ namespace avs
 	public:
 		virtual ~AudioTargetBackendInterface() = default;
 		virtual Result process(const void* buffer, size_t bufferSizeInBytes, AudioPayloadType payloadType) = 0;
+		virtual Result deconfigure() = 0;
 	};
 
 	class AudioParserInterface

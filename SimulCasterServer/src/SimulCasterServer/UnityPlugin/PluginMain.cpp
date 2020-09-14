@@ -131,19 +131,19 @@ public:
 	{
 		if (configured)
 		{
-			std::cout << "Video encode pipeline already configured." << std::endl;
+			TELEPORT_CERR << "Video encode pipeline already configured." << std::endl;
 			return Result::EncoderAlreadyConfigured;
 		}
 
 		if (!GraphicsManager::mGraphicsDevice)
 		{
-			std::cout << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
 			return Result::InvalidGraphicsDevice;
 		}
 
 		if (!videoEncodeParams.inputSurfaceResource)
 		{
-			std::cout << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
 			return Result::InvalidGraphicsResource;
 		}
 
@@ -167,19 +167,19 @@ public:
 	{
 		if (!configured)
 		{
-			std::cout << "Video encoder cannot be reconfigured if pipeline has not been configured." << std::endl;
+			TELEPORT_CERR << "Video encoder cannot be reconfigured if pipeline has not been configured." << std::endl;
 			return Result::EncoderNotConfigured;
 		}
 
 		if (!GraphicsManager::mGraphicsDevice)
 		{
-			std::cout << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
+			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
 			return Result::InvalidGraphicsDevice;
 		}
 
 		if (videoEncodeParams.inputSurfaceResource)
 		{
-			std::cout << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
+			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
 			return Result::InvalidGraphicsResource;
 		}
 
@@ -205,7 +205,7 @@ public:
 	{
 		if (!configured)
 		{
-			std::cout << "Video encoder can not encode because it has not been configured." << std::endl;
+			TELEPORT_CERR << "Video encoder can not encode because it has not been configured." << std::endl;
 			return Result::EncoderNotConfigured;
 		}
 
@@ -274,7 +274,7 @@ public:
 	{
 		if (configured)
 		{
-			std::cout << "Audio encode pipeline already configured." << std::endl;
+			TELEPORT_CERR << "Audio encode pipeline already configured." << std::endl;
 			return Result::EncoderAlreadyConfigured;
 		}
 
@@ -290,7 +290,7 @@ public:
 	{
 		if (!configured)
 		{
-			std::cout << "Audio encoder can not encode because it has not been configured." << std::endl;
+			TELEPORT_CERR << "Audio encoder can not encode because it has not been configured." << std::endl;
 			return Result::EncoderNotConfigured;
 		}
 

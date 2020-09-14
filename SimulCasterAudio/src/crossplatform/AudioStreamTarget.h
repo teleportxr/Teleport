@@ -20,6 +20,8 @@ namespace sca
 
 		avs::Result process(const void* buffer, size_t bufferSizeInBytes, avs::AudioPayloadType payloadType) override;
 
+		avs::Result deconfigure() override;
+
 		AudioPlayer* GetAudioPlayer() const
 		{
 			return player;

@@ -390,6 +390,8 @@ namespace avs
 			GeometryDecoder_ClientRendererError,
 			AudioTarget_InvalidBackend,
 			AudioTargetBackend_AudioProcessingError,
+			AudioTargetBackend_NullAudioPlayer,
+			AudioTargetBackend_PlayerDeconfigurationError,
 			Node_NotReady,
 			UnknownError,
 			Num_ResultCode,
