@@ -74,10 +74,16 @@ void DefaultDiscoveryService::tick()
 	//Retrieve all packets received since last call, and add any new clients.
 	while (size_t packetsize = enet_socket_receive(discoverySocket, &addr, &buffer, 1) > 0)
 	{
+		bool already_got=false;
 		//Skip clients we have already added.
 		if (clientServices.find(clientID) != clientServices.end())
-			continue;
-		if (newClients.find(clientID) != newClients.end())
+		{
+			// ok, we've received a connection request from a client that WE think we already have.
+			// Apparently the CLIENT thinks they've disconnected.
+			TELEPORT_CERR << "Warning: Client "<<clientID<<" reconnected, but we didn't know we'd lost them.\n";
+			already_got=true;
+		}
+		else if (newClients.find(clientID) != newClients.end())
 			continue;
 		std::wstring desiredIP(casterSettings.clientIP);
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
@@ -94,6 +100,11 @@ void DefaultDiscoveryService::tick()
 			if (desiredIP.compare(0, clientIP.size(), { clientIP.begin(), clientIP.end() }) == 0)
 			{
 				newClients[clientID] = addr;
+			}
+			else if(already_got)
+			{
+				//we should remove this client because its IP is wrong
+				TELEPORT_CERR << "But "<<clientID<<" has the wrong IP, should drop.\n";
 			}
 		}
 		else

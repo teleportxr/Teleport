@@ -223,7 +223,7 @@ Result NetworkSink::process(uint32_t timestamp)
 				{
 				case SRTS_LISTENING:
 				{
-					AVSLOG(Info) << "SRTS_LISTENING \n";
+					//AVSLOG(Info) << "SRTS_LISTENING \n"; too much spam.
 					socklen_t sa_len = sizeof(sockaddr_in);
 					SRTSOCKET rem = srt_accept(m_data->m_socket, (struct sockaddr*)(&m_data->remote_addr), (int*)&sa_len);
 					if (rem > 0)

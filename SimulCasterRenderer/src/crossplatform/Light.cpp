@@ -36,8 +36,9 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	m_LightID = s_LightData.size() - 1;
 
 	//Default values
-	s_LightData[m_LightID].colour = pLightCreateInfo->lightColour;
-	s_LightData[m_LightID].power = 1.0f; //i.e 100W
+	auto &light=s_LightData[m_LightID];
+	light.colour = pLightCreateInfo->lightColour;
+	light.power = 1.0f; //i.e 100W
 	UpdateLightSpaceTransform();
 
 	if (m_CI.shadowMapTexture)
@@ -80,11 +81,13 @@ void Light::UpdatePosition(const avs::vec3& position)
 	m_CI.position = position;
 	UpdateLightSpaceTransform();
 }
+
 void Light::UpdateOrientation(const quat& orientation)
 { 
 	m_CI.orientation = orientation;
 	UpdateLightSpaceTransform();
 }
+
 const Light::LightData& Light::GetLightData() const 
 {
 	return s_LightData[m_LightID];
@@ -93,11 +96,12 @@ void Light::UpdateLightSpaceTransform()
 {
 	if (IsValid())
 	{
-		avs::vec3 defaultDirection = { 0.0f, 0.0f, -1.0f };
-
-		s_LightData[m_LightID].position = m_CI.position;
-		s_LightData[m_LightID].direction = ((m_CI.orientation * defaultDirection) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
-		s_LightData[m_LightID].lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation);
+		auto &light=s_LightData[m_LightID];
+		// We consider lights to shine in the Z direction.
+		avs::vec3 defaultDirection(0,0,1.0f);
+		light.position = m_CI.position;
+		light.direction = ((m_CI.orientation * defaultDirection) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
+		light.lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation);
 	}
 	else
 		return;

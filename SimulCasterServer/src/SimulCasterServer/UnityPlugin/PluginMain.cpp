@@ -468,11 +468,14 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 		}
 		else
 		{
-			std::cerr << "Failed to start session for client: " << clientID << std::endl;
+			TELEPORT_CERR << "Failed to start session for client: " << clientID << std::endl;
 		}
 	}
 	else
-		return;	// already got this client.
+	{
+		TELEPORT_CERR << "Reconnecting to client: " << clientID << std::endl;
+		// already got this client. This can happen if the client thinks it's disconnected but we didn't know that.
+	}
 	auto &c= clientServices.find(clientID);
 	if(c==clientServices.end())
 		return;

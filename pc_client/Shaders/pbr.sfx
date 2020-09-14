@@ -232,8 +232,8 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,Light light)
 {
 	float roughnessL		= max(.01, surfaceProperties.roughness2);
-	float n_l				=saturate(dot(surfaceProperties.normal, light.direction));
-	vec3 halfway			=normalize(viewDir-light.direction);
+	float n_l				=saturate(dot(surfaceProperties.normal, -light.direction));
+	vec3 halfway			=normalize(viewDir+light.direction);
 	float n_h				=saturate(dot(surfaceProperties.normal, halfway));
 	float lightD			=DistributionTerm(roughnessL, n_h);
 	float lightV			=VisibilityTerm(roughnessL, surfaceState.n_v, n_l);

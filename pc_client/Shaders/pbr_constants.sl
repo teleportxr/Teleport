@@ -8,12 +8,9 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	vec4 depthToLinFadeDistParams;
 	vec4 fullResToLowResTransformXYWH;
 
-	vec3 lightDir;
 	int lightCount;
-
 	int reverseDepth;
-	float metal;
-	uint __ipad1;
+	float metalXXXX;
 	uint __ipad2;
 
 	vec4 diffuseOutputScalar;

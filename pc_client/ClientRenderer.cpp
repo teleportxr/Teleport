@@ -265,8 +265,6 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 	static float sc[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	model.ScaleRows(sc);
 	pbrConstants.reverseDepth = deviceContext.viewStruct.frustum.reverseDepth;
-	// Some arbitrary light values 
-	pbrConstants.lightDir = vec3(0, 0, 1);
 	mat4 m = mat4::identity();
 	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture);
 }

@@ -238,6 +238,8 @@ namespace avs
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);
 	extern void AVSTREAM_API ConvertRotation(AxesStandard fromStandard, AxesStandard toStandard, vec4 &rotation);
 	extern void AVSTREAM_API ConvertPosition(AxesStandard fromStandard, AxesStandard toStandard, vec3 &position);
+	extern int8_t AVSTREAM_API ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis);
+
 	struct DataNode
 	{
 		Transform transform;
@@ -245,6 +247,8 @@ namespace avs
 		NodeDataType data_type;
 		std::vector<uid> materials;		// if it's a mesh
 		vec4 lightColour;				// if it's a light
+		vec4 lightRotation;				// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
+		uint8_t lightType;
 		std::vector<uid> childrenUids;
 	};
 	inline size_t GetComponentSize(Accessor::ComponentType t)
