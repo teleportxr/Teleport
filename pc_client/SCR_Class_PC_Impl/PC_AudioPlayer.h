@@ -5,6 +5,7 @@
 #include <wrl.h>
 #include <queue>
 #include <mutex>
+#include <future>
 #include "xaudio2.h"
 
 struct AudioBuffer
@@ -79,11 +80,18 @@ public:
 
 	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
 
-	sca::Result initialize(const sca::AudioParams& audioParams) override;
+	sca::Result initializeAudioDevice() override;
+
+	sca::Result configure(const sca::AudioParams& audioParams) override;
+
+	sca::Result deconfigure() override;
 
 private:
+	sca::Result asyncInitializeAudioDevice();
+
+	std::future<sca::Result> initResult;
+
 	Microsoft::WRL::ComPtr<IXAudio2> device;						
-	//Microsoft::WRL::ComPtr<IXAudio2MasteringVoice> masterVoice;
 	IXAudio2MasteringVoice* masteringVoice;
 	IXAudio2SourceVoice* sourceVoice;
 

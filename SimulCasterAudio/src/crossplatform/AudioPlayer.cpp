@@ -5,22 +5,9 @@
 namespace sca
 {
 	AudioPlayer::AudioPlayer()
-		: initialized(false) {}
+		: initialized(false), configured(false) {}
 
 	AudioPlayer::~AudioPlayer() {}
-
-	Result AudioPlayer::initialize(const AudioParams& audioParams)
-	{
-		if (initialized)
-		{
-			return Result::AudioPlayerAlreadyInitialized;
-		}
-
-		this->audioParams = audioParams;
-		initialized = true;
-
-		return Result::OK;
-	}
 }
 
 

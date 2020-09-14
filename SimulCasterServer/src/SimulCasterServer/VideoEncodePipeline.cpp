@@ -61,7 +61,6 @@ namespace SCServer
 			return Result::InvalidGraphicsResource;
 		}
 		
-
 		pipeline.reset(new avs::Pipeline);
 		inputSurface.reset(new avs::Surface);
 		encoder.reset(new avs::Encoder);

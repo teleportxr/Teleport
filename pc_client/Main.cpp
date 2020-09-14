@@ -52,6 +52,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+	// Needed for asynchronous device creation in XAudio2
+	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED); 
+	if (FAILED(hr))
+	{
+		TELEPORT_CERR << "Coinitialize failed. Exiting." << std::endl;
+		return 0;
+	}
+
 	CSimpleIniA ini;
 	SI_Error rc = ini.LoadFile("pc_client/client.ini");
 	if (rc== SI_OK)
@@ -83,6 +92,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 	ShutdownRenderer();
+
+	// Needed for asynchronous device creation in XAudio2
+	CoUninitialize();
+
     return (int) msg.wParam;
 }
 

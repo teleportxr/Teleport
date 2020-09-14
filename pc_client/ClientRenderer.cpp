@@ -33,8 +33,6 @@
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
-#include "SCR_Class_PC_Impl/PC_AudioPlayer.h"
-
 
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
@@ -118,6 +116,9 @@ ClientRenderer::~ClientRenderer()
 
 void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 {
+	// Initialize the audio (asynchronously)
+	audioPlayer.initializeAudioDevice();
+
 	renderPlatform=r;
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
@@ -264,7 +265,6 @@ void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceC
 	static float sc[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	model.ScaleRows(sc);
 	pbrConstants.reverseDepth = deviceContext.viewStruct.frustum.reverseDepth;
-	// Some arbitrary light values 
 	mat4 m = mat4::identity();
 	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture);
 }
@@ -915,14 +915,14 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	if (AudioStream)
 	{
 		avsAudioDecoder.configure(40);
-		auto player = new PC_AudioPlayer();
 		sca::AudioParams audioParams;
 		audioParams.codec = sca::AudioCodec::PCM;
 		audioParams.numChannels = 2;
 		audioParams.sampleRate = 48000;
 		audioParams.bitsPerSample = 32;
-		player->initialize(audioParams);
-		audioStreamTarget.reset(new sca::AudioStreamTarget(player));
+		// This will be deconfigured automatically when the pipeline is deconfigured.
+		audioPlayer.configure(audioParams);
+		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
 		avsAudioTarget.configure(audioStreamTarget.get());
 		pipeline.link({ &source, &avsAudioDecoder, &avsAudioTarget });
 	}
