@@ -147,7 +147,12 @@ namespace SCServer
 			avs::Mesh* mesh = src->getMesh(uid, req->getAxesStandard());
 			if(!mesh)
 			{
-				TELEPORT_CERR<<"Mesh not found with uid "<<uid<<std::endl;
+				static bool done=false;
+				if(!done)
+				{
+					TELEPORT_CERR<<"Mesh not found with uid "<<uid<<std::endl;
+					done=true;
+				}
 				continue;
 			}
 
@@ -253,9 +258,9 @@ namespace SCServer
 			if(node->data_type==avs::NodeDataType::Light)
 			{
 				put(node->lightColour);
-				avs::vec4 lightRotation = node->lightRotation;
-				avs::ConvertRotation(settings->axesStandard, req->getAxesStandard(), lightRotation);
-				put(lightRotation);
+				avs::vec3 lightDirection = node->lightDirection;
+				avs::ConvertPosition(settings->axesStandard, req->getAxesStandard(), lightDirection);
+				put(lightDirection);
 				put(node->lightType);
 			}
 			put(node->childrenUids.size());

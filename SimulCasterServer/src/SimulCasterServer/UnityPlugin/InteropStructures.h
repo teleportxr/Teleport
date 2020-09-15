@@ -13,7 +13,7 @@ struct InteropNode
 	avs::uid dataID;
 	avs::NodeDataType dataType;
 	avs::vec4 lightColour;
-	avs::vec4 lightRotation;		// constant, determined why whatever axis the engine uses for light direction.
+	avs::vec3 lightDirection;		// constant, determined why whatever axis the engine uses for light direction.
 	uint8_t lightType;
 
 	size_t materialAmount;
@@ -31,7 +31,7 @@ struct InteropNode
 			dataType,
 			{materialIDs, materialIDs + materialAmount},
 			lightColour,
-			lightRotation,
+			lightDirection,
 			lightType,
 			{childIDs, childIDs + childAmount}
 		};

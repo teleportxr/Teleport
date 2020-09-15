@@ -34,6 +34,7 @@ private:
 #define NextB get<uint8_t>(m_Buffer.data(), &m_BufferOffset)
 #define NextFloat get<float>(m_Buffer.data(), &m_BufferOffset)
 #define NextVec4 get<avs::vec4>(m_Buffer.data(), &m_BufferOffset)
+#define NextVec3 get<avs::vec3>(m_Buffer.data(), &m_BufferOffset)
 #define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  
 
 private:

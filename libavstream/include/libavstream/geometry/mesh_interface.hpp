@@ -247,7 +247,7 @@ namespace avs
 		NodeDataType data_type;
 		std::vector<uid> materials;		// if it's a mesh
 		vec4 lightColour;				// if it's a light
-		vec4 lightRotation;				// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
+		vec3 lightDirection;				// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
 		uint8_t lightType;
 		std::vector<uid> childrenUids;
 	};

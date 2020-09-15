@@ -92,6 +92,7 @@ const Light::LightData& Light::GetLightData() const
 {
 	return s_LightData[m_LightID];
 }
+
 void Light::UpdateLightSpaceTransform()
 {
 	if (IsValid())
@@ -100,7 +101,7 @@ void Light::UpdateLightSpaceTransform()
 		// We consider lights to shine in the Z direction.
 		avs::vec3 defaultDirection(0,0,1.0f);
 		light.position = m_CI.position;
-		light.direction = ((m_CI.orientation * defaultDirection) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
+		light.direction = ((m_CI.orientation * m_CI.direction) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
 		light.lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation);
 	}
 	else

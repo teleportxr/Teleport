@@ -610,6 +610,16 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 		,resourceManagers.mActorManager->GetActorAmount()
 		,resourceManagers.mMeshManager.GetCache(cacheLock).size()
 		,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
+		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+		for(auto &i:cachedLights)
+		{
+			auto &l=i.second;
+			if(l.resource)
+			{
+				auto &L=l.resource->GetLightData();
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("dir: %3.3f %3.3f %3.3f",L.direction.x,L.direction.y,L.direction.z));
+			}
+		}
 	}
 	else if(show_osd== CONTROLLER_OSD)
 	{

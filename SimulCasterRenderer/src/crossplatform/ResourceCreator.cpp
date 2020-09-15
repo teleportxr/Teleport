@@ -641,9 +641,10 @@ void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
 {
 	scr::Light::LightCreateInfo lci;
 	lci.renderPlatform = m_pRenderPlatform;
-	lci.type = (scr::Light::Type)node.lightType;//::DIRECTIONAL;
+	lci.type = (scr::Light::Type)node.lightType;
 	lci.position = avs::vec3(node.transform.position);
-	lci.orientation = scr::quat(node.transform.rotation)*scr::quat(node.lightRotation);
+	lci.direction=node.lightDirection;
+	lci.orientation = scr::quat(node.transform.rotation);
 	lci.shadowMapTexture = m_TextureManager->Get(node.data_uid);
 	lci.lightColour=node.lightColour;
 	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);

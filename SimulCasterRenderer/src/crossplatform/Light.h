@@ -26,6 +26,7 @@ namespace scr
 			Type type;
 			avs::vec3 position;
 			avs::vec4 lightColour;
+			avs::vec3 direction;
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
 		};
