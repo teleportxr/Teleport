@@ -74,8 +74,11 @@ void DefaultDiscoveryService::tick()
 	//Retrieve all packets received since last call, and add any new clients.
 	while (size_t packetsize = enet_socket_receive(discoverySocket, &addr, &buffer, 1) > 0)
 	{
-		bool already_got=false;
 		//Skip clients we have already added.
+		if (newClients.find(clientID) != newClients.end())
+			continue;
+
+		bool already_got = false;
 		if (clientServices.find(clientID) != clientServices.end())
 		{
 			// ok, we've received a connection request from a client that WE think we already have.
@@ -83,8 +86,7 @@ void DefaultDiscoveryService::tick()
 			TELEPORT_CERR << "Warning: Client "<<clientID<<" reconnected, but we didn't know we'd lost them.\n";
 			already_got=true;
 		}
-		else if (newClients.find(clientID) != newClients.end())
-			continue;
+		
 		std::wstring desiredIP(casterSettings.clientIP);
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
 		if (desiredIP.length() != 0)
@@ -96,7 +98,7 @@ void DefaultDiscoveryService::tick()
 			//Trying to use the pointer to the string's data results in an incorrect size, and incorrect iterators.
 			std::string clientIP = clientIPRaw;
 
-			//Create new wide-string with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
+			//Create new wide-stringk with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
 			if (desiredIP.compare(0, clientIP.size(), { clientIP.begin(), clientIP.end() }) == 0)
 			{
 				newClients[clientID] = addr;
