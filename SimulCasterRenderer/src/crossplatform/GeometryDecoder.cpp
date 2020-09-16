@@ -224,7 +224,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					//target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
 					continue;
 				default:
-				    SCR_CERR("Unknown attribute semantic: " << (uint32_t)attrib.semantic);
+				    SCR_CERR<<"Unknown attribute semantic: " << (uint32_t)attrib.semantic<<std::endl;
 				    continue;
 				}
 			}

@@ -19,7 +19,7 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 	m_MaterialData.normalTexCoordsScalar_B		= m_CI.normal.texCoordsScalar[2];
 	m_MaterialData.normalTexCoordsScalar_A		= m_CI.normal.texCoordsScalar[3];
 
-	m_MaterialData.combinedOutputScalar			= m_CI.combined.textureOutputScalar;
+	m_MaterialData.combinedOutputScalarRoughMetalOcclusion			= m_CI.combined.textureOutputScalar;
 	m_MaterialData.combinedTexCoordsScalar_R	= m_CI.combined.texCoordsScalar[0];
 	m_MaterialData.combinedTexCoordsScalar_G	= m_CI.combined.texCoordsScalar[1];
 	m_MaterialData.combinedTexCoordsScalar_B	= m_CI.combined.texCoordsScalar[2];

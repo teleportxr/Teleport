@@ -143,7 +143,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	vs.exposure=1.f;
 	vs.farZ=3000.f;
 	vs.nearZ=0.01f;
-	vs.gamma=0.44f;
+	vs.gamma=1.0f;
 	vs.InfiniteFarPlane=true;
 	vs.projection=crossplatform::DEPTH_REVERSE;
 	

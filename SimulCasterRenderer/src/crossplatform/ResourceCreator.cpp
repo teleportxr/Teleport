@@ -120,7 +120,7 @@ avs::Result ResourceCreator::Assemble(const avs::MeshCreate& meshCreate)
 
 	if (!m_pRenderPlatform)
 	{
-		SCR_CERR("No valid render platform was found.");
+		SCR_CERR<<"No valid render platform was found."<<std::endl;
         return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 	scr::Mesh::MeshCreateInfo mesh_ci;
@@ -368,13 +368,13 @@ avs::Result ResourceCreator::Assemble(const avs::MeshCreate& meshCreate)
 		}
 		else
 		{
-			SCR_CERR("Unknown vertex buffer layout.");
+			SCR_CERR<<"Unknown vertex buffer layout."<<std::endl;
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
 		if (constructedVBSize == 0 || constructedVB == nullptr || meshElementCreate.m_IndexCount == 0 || meshElementCreate.m_Indices == nullptr)
 		{
-			SCR_CERR("Unable to construct vertex and index buffers.");
+			SCR_CERR<<"Unable to construct vertex and index buffers."<<std::endl;
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
@@ -585,6 +585,7 @@ void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 
 void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool isHand)
 {
+	SCR_COUT<<"CreateActor: "<< (unsigned long long) node_uid<<std::endl;
 	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>();
 	//A list of unique resources that the actor is missing, and needs to be completed.
 	std::set<avs::uid> missingResources;
@@ -733,8 +734,13 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 void ResourceCreator::CompleteActor(avs::uid actor_uid, const scr::Actor::ActorCreateInfo& actorInfo, bool isHand)
 {
 	///We're using the node ID as the actor ID as we are currently generating an actor per node/transform anyway; this way the server can tell the client to remove an actor.
-	if(isHand) m_pActorManager->CreateHand(actor_uid, actorInfo);
-	else m_pActorManager->CreateActor(actor_uid, actorInfo);
+	if(isHand)
+		m_pActorManager->CreateHand(actor_uid, actorInfo);
+	else
+	{
+		SCR_COUT<<"CompleteActor "<<(unsigned long long)actor_uid<<std::endl;
+		m_pActorManager->CreateActor(actor_uid, actorInfo);
+	}
 	m_CompletedActors.push_back(actor_uid);
 }
 
@@ -810,7 +816,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					}
 					else
 					{
-						SCR_COUT("Texture \"" + transcoding.name + "\" failed to transcode mipmap level " + std::to_string(mipIndex) + ".");
+						SCR_CERR<<"Texture \"" << transcoding.name << "\" failed to transcode mipmap level " <<mipIndex<< "."<<std::endl;
 						delete[] outData;
 					}
 				}
@@ -822,14 +828,14 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				}
 				else
 				{
-					SCR_COUT("Texture \"" + transcoding.name + "\" failed to transcode, but was a valid basis file.");
+					SCR_CERR<<"Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file."<<std::endl;
 				}
 
 				delete[] transcoding.data;
 			}
 			else
 			{
-				SCR_COUT("Texture \"" + transcoding.name + "\" failed to start transcoding.");
+				SCR_CERR<<"Texture \"" << transcoding.name << "\" failed to start transcoding."<<std::endl;
 			}
 
 			texturesToTranscode.erase(texturesToTranscode.begin());

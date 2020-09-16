@@ -31,12 +31,15 @@ inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 }
 
 #endif
-void log_print(const char* source, const char* format ...)
+void log_print(const char* source, const char* format, ...)
 {
 	va_list ap;
 	char fmt[1000];
 	sprintf(fmt, "%s %s", source, format);
-	va_start(ap, fmt);
-	vsnprintf(fmt,1000,fmt, ap);
+	char outp[1000];
+	va_start(ap, format);
+	vsnprintf(outp,1000,fmt, ap);
 	va_end(ap);
+    // Now actually output the darn thing.
+    std::cout<<outp<<std::endl;
 }

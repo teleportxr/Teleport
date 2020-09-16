@@ -66,22 +66,22 @@ namespace scr
 		void AddColourAttachment(Texture& colourTexture, uint32_t attachmentIndex, bool overrideTexture = false)
 		{
 			if (!CheckTextureCompatibility(colourTexture))
-				SCR_COUT("Incompatible texture.");
+				SCR_CERR<<"Incompatible texture.\n";
 			
 			if (m_ColourTextures.at(attachmentIndex) == nullptr || overrideTexture)
 				m_ColourTextures.at(attachmentIndex) = &colourTexture;
 			else
-				SCR_COUT("Can't add colour texture attachment.");
+				SCR_CERR<<"Can't add colour texture attachment.\n";
 		};
 		void AddDepthAttachment(Texture& depthTexture, bool overrideTexture = false)
 		{
 			if (!CheckTextureCompatibility(depthTexture))
-				SCR_COUT("Incompatible texture.");
+				SCR_CERR<<"Incompatible texture.\n";
 
 			if (m_DepthTexture == nullptr || overrideTexture)
 				m_DepthTexture = &depthTexture;
 			else
-				SCR_COUT("Can't add depth texture attachment");
+				SCR_CERR<<"Can't add depth texture attachment\n";
 		};
 
 	private:

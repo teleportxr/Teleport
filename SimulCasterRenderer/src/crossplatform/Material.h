@@ -44,7 +44,7 @@ namespace scr
 			avs::vec2 normalTexCoordsScalar_B;
 			avs::vec2 normalTexCoordsScalar_A;
 			
-			avs::vec4 combinedOutputScalar;
+			avs::vec4 combinedOutputScalarRoughMetalOcclusion;
 			avs::vec2 combinedTexCoordsScalar_R;
 			avs::vec2 combinedTexCoordsScalar_G;
 			avs::vec2 combinedTexCoordsScalar_B;

@@ -52,7 +52,7 @@ void Camera::UpdateProjection(float horizontalFOV, float aspectRatio, float zNea
 {
 	if (m_CI.type != Camera::ProjectionType::PERSPECTIVE)
 	{
-		SCR_COUT("Invalid ProjectionType.");
+		SCR_CERR<<"Invalid ProjectionType.\n";
 		return;
 	}
 	m_CameraData.m_ProjectionMatrix = mat4::Perspective(horizontalFOV, aspectRatio, zNear, zFar);
@@ -61,7 +61,7 @@ void Camera::UpdateProjection(float left, float right, float bottom, float top, 
 {
 	if (m_CI.type != Camera::ProjectionType::ORTHOGRAPHIC)
 	{
-		SCR_COUT("Invalid ProjectionType.");
+		SCR_CERR<<"Invalid ProjectionType.\n";
 		return;
 	}
 	m_CameraData.m_ProjectionMatrix = mat4::Orthographic(left, right, bottom, top, near, far);

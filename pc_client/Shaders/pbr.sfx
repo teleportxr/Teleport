@@ -262,7 +262,7 @@ vec4 Solid(vertexOutput IN)
 	diffuseColour = diffuseColour.rgb * diffuseOutputScalar.rgb;
 
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
-	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R);
+	vec4 combinedLookup = combinedOutputScalarRoughMetalOcclusion*combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R);
 	
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.roughness		=GetRoughness(combinedLookup);

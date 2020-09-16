@@ -25,7 +25,7 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	vec2 normalTexCoordsScalar_B;
 	vec2 normalTexCoordsScalar_A;
 
-	vec4 combinedOutputScalar;
+	vec4 combinedOutputScalarRoughMetalOcclusion;
 	vec2 combinedTexCoordsScalar_R;
 	vec2 combinedTexCoordsScalar_G;
 	vec2 combinedTexCoordsScalar_B;

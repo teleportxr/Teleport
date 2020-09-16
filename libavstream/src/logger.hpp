@@ -29,7 +29,6 @@ namespace avs
 				return *this;
 			std::ostringstream stream;
 			stream << arg;
-			std::cerr << arg;
 			Context::instance()->d().log(m_severity, stream.str().c_str());
 			return *this;
 		}
