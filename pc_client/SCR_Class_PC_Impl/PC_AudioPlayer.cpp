@@ -85,15 +85,17 @@ sca::Result PC_AudioPlayer::configure(const sca::AudioParams& audioParams)
 		return sca::Result::AudioPlayerAlreadyConfigured;
 	}
 
-	// This will block until asyncInitializeAudioDevice has finished
-	sca::Result result = initResult.get();
-	if (!result)
+	if (!initialized)
 	{
-		return result;
+		// This will block until asyncInitializeAudioDevice has finished
+		sca::Result result = initResult.get();
+		if (!result)
+		{
+			return result;
+		}
+		initialized = true;
 	}
-
-	initialized = true;
-
+	
 	WAVEFORMATEX waveFormat;
 	waveFormat.nChannels = audioParams.numChannels;
 	waveFormat.nSamplesPerSec = audioParams.sampleRate;
