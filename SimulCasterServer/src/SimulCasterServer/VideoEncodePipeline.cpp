@@ -62,8 +62,8 @@ namespace SCServer
 		}
 		
 		pipeline.reset(new avs::Pipeline);
-		inputSurface.reset(new avs::Surface);
 		encoder.reset(new avs::Encoder);
+		inputSurface.reset(new avs::Surface);
 
 		if (!inputSurface->configure(avsSurfaceBackend))
 		{

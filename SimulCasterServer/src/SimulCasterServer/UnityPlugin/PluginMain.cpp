@@ -124,7 +124,7 @@ public:
 
 	~PluginVideoEncodePipeline()
 	{
-		//GraphicsManager::ReleaseResource(encoderSurfaceResource);
+		deconfigure();
 	}
 
 	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
@@ -205,7 +205,7 @@ public:
 	{
 		if (!configured)
 		{
-			TELEPORT_CERR << "Video encoder can not encode because it has not been configured." << std::endl;
+			TELEPORT_CERR << "Video encoder cannot encode because it has not been configured." << std::endl;
 			return Result::EncoderNotConfigured;
 		}
 
@@ -218,6 +218,28 @@ public:
 		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
 		const auto& tagData = tagDataArray[tagDataID];
 		return SCServer::VideoEncodePipeline::process(tagData.data(), tagData.size(), forceIDR);
+	}
+
+	Result deconfigure() 
+	{
+		if (!configured)
+		{
+			TELEPORT_CERR << "Video encoder cannot be deconfigured because it has not been configured." << std::endl;
+			return Result::EncoderNotConfigured;
+		}
+
+		Result result = release();
+		if (!result)
+		{
+			return result;
+		}
+		
+		GraphicsManager::ReleaseResource(encoderSurfaceResource);
+		inputSurfaceResource = nullptr;
+
+		configured = false;
+		
+		return result;
 	}
 
 	Result addTagData(uint32_t tagDataID, const uint8_t* data, size_t dataSize)
@@ -246,7 +268,7 @@ public:
 
 		return Result::OK;
 	}
-
+	
 private:
 	void* inputSurfaceResource;
 	void* encoderSurfaceResource;
@@ -317,8 +339,8 @@ struct InitialiseState
 ///PLUGIN-INTERNAL START
 void RemoveClient(avs::uid clientID)
 {
-	std::lock_guard<std::mutex> videoLock(audioMutex);
-	std::lock_guard<std::mutex> audioLock(videoMutex);
+	std::lock_guard<std::mutex> videoLock(videoMutex);
+	std::lock_guard<std::mutex> audioLock(audioMutex);
 
 	// Early-out if a client with this ID doesn't exist.
 	auto& clientIt = clientServices.find(clientID);
@@ -424,8 +446,8 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 
 TELEPORT_EXPORT void Shutdown()
 {
-	std::lock_guard<std::mutex> videoLock(audioMutex);
-	std::lock_guard<std::mutex> audioLock(videoMutex);
+	std::lock_guard<std::mutex> videoLock(videoMutex);
+	std::lock_guard<std::mutex> audioLock(audioMutex);
 
 	discoveryService->shutdown();
 

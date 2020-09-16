@@ -158,6 +158,9 @@ Result NetworkSource::configure(size_t numOutputs, uint16_t localPort, const cha
 
 Result NetworkSource::deconfigure()
 {
+	// Will stop receiver thread on destruction
+	m_data->m_EFPReceiver.reset();
+
 	setNumOutputSlots(0);
 	m_data->runningThread = false;
 	if(m_data->thr.joinable())
@@ -167,8 +170,6 @@ Result NetworkSource::deconfigure()
 	m_data->m_counters = {};
 	m_data->m_remote = {};
 
-	m_data->m_EFPReceiver.reset();
-
 	// Socket must be killed BEFORE service, or asio throws a fit.
 	// At a guess, this is because socket was created from service, and expects it to still exist
 	// as socket is shut down.
@@ -177,7 +178,6 @@ Result NetworkSource::deconfigure()
 #else
 	m_data->m_socket.reset();
 	m_data->m_service.reset();
-
 	m_data->m_endpoint.reset();
 #endif
 

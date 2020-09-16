@@ -38,7 +38,6 @@ namespace SCServer
 		return initialized;
 	}
 
-
 	void ClientMessaging::initialise(CasterContext* context, CaptureDelegates captureDelegates)
 	{
 		casterContext = context;
@@ -168,7 +167,7 @@ namespace SCServer
 			case ENET_EVENT_TYPE_DISCONNECT:
 				assert(peer == event.peer);
 				timeSinceLastMessage = 0;
-				TELEPORT_COUT << "Client disconnected " << getClientIP() << ":" << getClientPort() << std::endl;
+				TELEPORT_COUT << "Client disconnected: " << getClientIP() << ":" << getClientPort() << std::endl;
 				onDisconnect();
 				peer = nullptr;
 				break;
@@ -181,7 +180,7 @@ namespace SCServer
 
 		// Aidan: Just trying this out for the moment for picking up when we don't receive ENET_EVENT_TYPE_DISCONNECT when we should. 
 		// This should be a lot more sophisticated and not hard coded.
-		if (host && peer && timeSinceLastMessage > 30)
+		if (host && peer && timeSinceLastMessage > 5)
 		{
 			TELEPORT_COUT << "No message received in " << timeSinceLastMessage << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
 			onDisconnect();
@@ -407,6 +406,8 @@ namespace SCServer
 		CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
 		cameraInfo.width = static_cast<float>(displayInfo.width);
 		cameraInfo.height = static_cast<float>(displayInfo.height);
+
+
 	}
 
 	void ClientMessaging::receiveHeadPose(const ENetPacket* packet)
@@ -468,8 +469,8 @@ namespace SCServer
 				avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, pose.position);
 				setControllerPose(clientID, i, &pose);
 			}
+			break;
 		}
-		break;
 		case avs::ClientMessagePayloadType::ActorStatus:
 		{
 			size_t messageSize = sizeof(avs::ActorStatusMessage);
