@@ -544,7 +544,7 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material 
 
 		for(avs::uid uid : missingResources)
 		{
-			m_WaitingForResources[uid].push_back(newMaterial);
+			if(std::find(m_WaitingForResources[uid].begin(), m_WaitingForResources[uid].end(), newMaterial) == m_WaitingForResources[uid].end()) m_WaitingForResources[uid].push_back(newMaterial);
 		}
 	}
 
@@ -630,7 +630,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool i
 
 		for(avs::uid uid : missingResources)
 		{
-			m_WaitingForResources[uid].push_back(newActor);
+			if(std::find(m_WaitingForResources[uid].begin(), m_WaitingForResources[uid].end(), newActor) == m_WaitingForResources[uid].end()) m_WaitingForResources[uid].push_back(newActor);
 		}
 
 		newActor->isHand = isHand;
