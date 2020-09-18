@@ -26,6 +26,7 @@ namespace scr
 			Type type;
 			avs::vec3 position;
 			avs::vec4 lightColour;
+			float lightRadius;
 			avs::vec3 direction;
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
@@ -33,12 +34,14 @@ namespace scr
 
 		struct LightData //Layout conformant to GLSL std140
 		{
+			mat4 lightSpaceTransform;
 			avs::vec4 colour;
 			avs::vec3 position;
 			float power;		 //Strength or Power of the light in Watts equilavent to Radiant Flux in Radiometry.
 			avs::vec3 direction;
-			float _pad;
-			mat4 lightSpaceTransform;
+			float is_point;
+			float radius;		// "point" light is a sphere.
+			avs::vec3 pad3;
 		};
 	
 	private:

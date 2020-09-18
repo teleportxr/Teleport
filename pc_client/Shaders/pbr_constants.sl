@@ -49,12 +49,14 @@ SIMUL_CONSTANT_BUFFER_END
 
 struct Light
 {
+	mat4 lightSpaceTransform;
 	vec4 colour;
 	vec3 position;
 	float power;
 	vec3 direction;
-	float lpad1;
-	mat4 lightSpaceTransform;
+	float is_point;
+	float radius;	
+	vec3 pad3;
 };						
 
 #endif

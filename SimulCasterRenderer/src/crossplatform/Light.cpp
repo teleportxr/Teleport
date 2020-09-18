@@ -38,7 +38,9 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	//Default values
 	auto &light=s_LightData[m_LightID];
 	light.colour = pLightCreateInfo->lightColour;
+	light.radius=pLightCreateInfo->lightRadius;
 	light.power = 1.0f; //i.e 100W
+	light.is_point=float(pLightCreateInfo->type!=Type::DIRECTIONAL);
 	UpdateLightSpaceTransform();
 
 	if (m_CI.shadowMapTexture)
@@ -58,7 +60,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	
 		m_CI.shadowMapTexture->UseSampler(m_ShadowMapSampler);
 
-		m_ShaderResourceLayout.AddBinding(2, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(2,  ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 		m_ShaderResourceLayout.AddBinding(19, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 		m_ShaderResourceLayout.AddBinding(20, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 		m_ShaderResourceLayout.AddBinding(21, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);

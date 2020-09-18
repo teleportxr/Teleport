@@ -119,12 +119,12 @@ public:
 		encoderSurfaceResource(nullptr),
 		configured(false)
 	{
-		tagDataArray.resize(32);
+		
 	}
 
 	~PluginVideoEncodePipeline()
 	{
-		//GraphicsManager::ReleaseResource(encoderSurfaceResource);
+		deconfigure();
 	}
 
 	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
@@ -201,57 +201,46 @@ public:
 		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, params);
 	}
 
-	Result encode(uint32_t tagDataID, bool forceIDR = false)
+	Result encode(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false)
 	{
 		if (!configured)
 		{
-			TELEPORT_CERR << "Video encoder can not encode because it has not been configured." << std::endl;
+			TELEPORT_CERR << "Video encoder cannot encode because it has not been configured." << std::endl;
 			return Result::EncoderNotConfigured;
-		}
-
-		if (tagDataID >= tagDataArray.size())
-		{
-			return Result::InvalidTagDataIdError;
 		}
 
 		// Copy data from Unity texture to its CUDA compatible copy
 		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
-		const auto& tagData = tagDataArray[tagDataID];
-		return SCServer::VideoEncodePipeline::process(tagData.data(), tagData.size(), forceIDR);
+
+		return SCServer::VideoEncodePipeline::process(tagData, tagDataSize, forceIDR);
 	}
 
-	Result addTagData(uint32_t tagDataID, const uint8_t* data, size_t dataSize)
+	Result deconfigure() 
 	{
-		if (tagDataID >= tagDataArray.size())
+		if (!configured)
 		{
-			return Result::InvalidTagDataIdError;
+			TELEPORT_CERR << "Video encoder cannot be deconfigured because it has not been configured." << std::endl;
+			return Result::EncoderNotConfigured;
 		}
 
-		auto& tagData = tagDataArray[tagDataID];
-		size_t currentSize = tagData.size();
-		tagData.resize(currentSize + dataSize);
-		memcpy(&tagData[currentSize], data, dataSize);
-
-		return Result::OK;
-	}
-
-	Result clearTagData(uint32_t tagDataID)
-	{
-		if (tagDataID >= tagDataArray.size())
+		Result result = release();
+		if (!result)
 		{
-			return Result::InvalidTagDataIdError;
+			return result;
 		}
+		
+		GraphicsManager::ReleaseResource(encoderSurfaceResource);
+		inputSurfaceResource = nullptr;
 
-		tagDataArray[tagDataID].clear();
-
-		return Result::OK;
+		configured = false;
+		
+		return result;
 	}
-
+	
 private:
 	void* inputSurfaceResource;
 	void* encoderSurfaceResource;
 	bool configured;
-	std::vector<std::vector<std::uint8_t>> tagDataArray;
 };
 
 class PluginAudioEncodePipeline : public SCServer::AudioEncodePipeline
@@ -317,8 +306,8 @@ struct InitialiseState
 ///PLUGIN-INTERNAL START
 void RemoveClient(avs::uid clientID)
 {
-	std::lock_guard<std::mutex> videoLock(audioMutex);
-	std::lock_guard<std::mutex> audioLock(videoMutex);
+	std::lock_guard<std::mutex> videoLock(videoMutex);
+	std::lock_guard<std::mutex> audioLock(audioMutex);
 
 	// Early-out if a client with this ID doesn't exist.
 	auto& clientIt = clientServices.find(clientID);
@@ -424,8 +413,8 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 
 TELEPORT_EXPORT void Shutdown()
 {
-	std::lock_guard<std::mutex> videoLock(audioMutex);
-	std::lock_guard<std::mutex> audioLock(videoMutex);
+	std::lock_guard<std::mutex> videoLock(videoMutex);
+	std::lock_guard<std::mutex> audioLock(audioMutex);
 
 	discoveryService->shutdown();
 
@@ -748,7 +737,7 @@ TELEPORT_EXPORT float GetBandwidthInKbps(avs::uid clientID)
 ///GeometryStreamingService START
 TELEPORT_EXPORT void AddActor(avs::uid clientID, void* newActor, avs::uid actorID, avs::Transform currentTransform)
 {
-	auto c= clientServices.find(clientID);
+k	auto c= clientServices.find(clientID);
 	if(c==clientServices.end())
 		return;
 	c->second.geometryStreamingService->addActor(newActor, actorID);
@@ -899,7 +888,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	c->second.clientMessaging.sendCommand(cmd);
 }
 
-TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, uint32_t tagDataID)
+TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData, size_t tagDataSize)
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
 
@@ -915,7 +904,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, uint32_t tagDataID)
 		TELEPORT_CERR<< "EncodeVideoFrame called but peer is not connected." << std::endl;
 		return;
 	}
-	Result result = clientData.videoEncodePipeline->encode(tagDataID, clientData.videoKeyframeRequired);
+	Result result = clientData.videoEncodePipeline->encode(tagData, tagDataSize, clientData.videoKeyframeRequired);
 	if (result)
 	{
 		clientData.videoKeyframeRequired = false;
@@ -924,52 +913,11 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, uint32_t tagDataID)
 	{
 		TELEPORT_CERR << "Error occurred when trying to encode video" << std::endl;
 		// repeat the attempt for debugging purposes.
-		result = clientData.videoEncodePipeline->encode(tagDataID, clientData.videoKeyframeRequired);
+		result = clientData.videoEncodePipeline->encode(tagData, tagDataSize, clientData.videoKeyframeRequired);
 		if (result)
 		{
 			clientData.videoKeyframeRequired = false;
 		}
-	}
-	if (!clientData.videoEncodePipeline->clearTagData(tagDataID))
-	{
-		TELEPORT_CERR << "Error occurred when trying to clear video tag data after encoding" << std::endl;
-	}
-}
-
-TELEPORT_EXPORT void AddVideoTagData(avs::uid clientID, uint32_t tagDataID, const uint8_t* data, size_t dataSize)
-{
-	std::lock_guard<std::mutex> lock(videoMutex);
-
-	auto c = clientServices.find(clientID);
-	if (c == clientServices.end())
-	{
-		return;
-	}
-
-	auto& clientData = c->second;
-
-	if (!clientData.videoEncodePipeline->addTagData(tagDataID, data, dataSize))
-	{
-		TELEPORT_CERR << "Error occurred when trying to add video tag data" << std::endl;
-		clientData.videoEncodePipeline->addTagData(tagDataID, data, dataSize);
-	}
-}
-
-TELEPORT_EXPORT void ClearVideoTagData(avs::uid clientID, uint32_t tagDataID)
-{
-	std::lock_guard<std::mutex> lock(videoMutex);
-
-	auto c = clientServices.find(clientID);
-	if (c == clientServices.end())
-	{
-		return;
-	}
-
-	auto& clientData = c->second;
-
-	if (!clientData.videoEncodePipeline->clearTagData(tagDataID))
-	{
-		TELEPORT_CERR << "Error occurred when trying to clear video tag data" << std::endl;
 	}
 }
 
@@ -998,10 +946,12 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 		avs::uid clientID;
 		memcpy(&clientID, buffer, sizeof(avs::uid));
 
-		uint32_t tagDataID;
-		memcpy(&tagDataID, buffer + sizeof(avs::uid), sizeof(uint32_t));
+		uint32_t tagDataSize;
+		memcpy(&tagDataSize, buffer + sizeof(avs::uid), sizeof(size_t));
 
-		EncodeVideoFrame(clientID, tagDataID);
+		const uint8_t* tagData = buffer + sizeof(avs::uid) + sizeof(size_t);
+
+		EncodeVideoFrame(clientID, tagData, tagDataSize);
 	}
 	else
 	{

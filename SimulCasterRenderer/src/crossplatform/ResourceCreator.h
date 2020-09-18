@@ -189,12 +189,22 @@ public:
 	std::shared_ptr<scr::Texture> m_DummyNormal;
 	std::shared_ptr<scr::Texture> m_DummyCombined;
 	std::shared_ptr<scr::Texture> m_DummyEmissive;
-private:
+	
 	struct IncompleteResource
 	{
 		avs::uid id;
 	};
-
+	
+	struct MissingResource
+	{
+		std::vector<std::shared_ptr<IncompleteResource>> incompleteResources;
+	};
+	
+	std::unordered_map<avs::uid, MissingResource> &GetMissingResources()
+	{
+		return m_WaitingForResources;
+	}
+private:
 	struct IncompleteMaterial: IncompleteResource
 	{
 		scr::Material::MaterialCreateInfo materialInfo;
@@ -276,7 +286,7 @@ private:
 	std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 	std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.
 	std::vector<avs::uid> m_CompletedActors; //List of IDs of actors that have been fully received, and have yet to be confirmed to the server.
-	std::unordered_map<avs::uid, std::vector<std::shared_ptr<IncompleteResource>>> m_WaitingForResources; //<ID of Missing Resource, List Of Things Waiting For Resource>
+	std::unordered_map<avs::uid, MissingResource> m_WaitingForResources; //<ID of Missing Resource, List Of Things Waiting For Resource>
 
 	void BasisThread_TranscodeTextures();
 };

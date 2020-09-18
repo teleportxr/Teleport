@@ -392,7 +392,7 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 			break;
 		case avs::NodeDataType::Light:
 			node.lightColour=NextVec4;
-			//node.lightLocaAxis=NextB;
+			node.lightRadius=NextFloat;
 			node.lightDirection= NextVec3;
 			node.lightType=NextB;
 			break;

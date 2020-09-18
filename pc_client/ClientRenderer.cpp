@@ -606,10 +606,14 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 	else if(show_osd==GEOMETRY_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Actors: %d\nMeshes: %d\nLights: %d"
-		,resourceManagers.mActorManager->GetActorAmount()
-		,resourceManagers.mMeshManager.GetCache(cacheLock).size()
-		,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Actors: %d",resourceManagers.mActorManager->GetActorAmount()), white);
+		auto &rootActors=resourceManagers.mActorManager->GetRootActors();
+		for(auto &a:rootActors)
+		{
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d ",a->id));
+		}
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d"	,resourceManagers.mMeshManager.GetCache(cacheLock).size()
+																									,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
 		for(auto &i:cachedLights)
 		{
@@ -617,7 +621,19 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 			if(l.resource)
 			{
 				auto &L=l.resource->GetLightData();
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("dir: %3.3f %3.3f %3.3f",L.direction.x,L.direction.y,L.direction.z));
+				if(L.is_point==0.0f)
+					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: dir %3.3f %3.3f %3.3f",i.first,L.direction.x,L.direction.y,L.direction.z));
+				else
+					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,L.position.x,L.position.y,L.position.z,L.radius));
+			}
+		}
+		auto &missing=resourceCreator.GetMissingResources();
+		if(missing.size())
+		{
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Missing Resources"));
+			for(auto m:missing)
+			{
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d",m.first));
 			}
 		}
 	}

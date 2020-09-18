@@ -544,7 +544,7 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material 
 
 		for(avs::uid uid : missingResources)
 		{
-			m_WaitingForResources[uid].push_back(newMaterial);
+			m_WaitingForResources[uid].incompleteResources.push_back(newMaterial);
 		}
 	}
 
@@ -562,6 +562,7 @@ void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 			}
 			break;
 		case NodeDataType::Mesh:
+			// TODO: WHY do we only update the transform if the type is a mesh..?
 			if(!m_pActorManager->UpdateActorTransform(node_uid, node.transform.position, node.transform.rotation, node.transform.scale))
 			{
 				CreateActor(node_uid, node, false);
@@ -628,10 +629,11 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool i
 		m_ResourceRequests.insert(std::end(m_ResourceRequests), std::begin(missingResources), std::end(missingResources));
 
 		newActor->id = node_uid;
-
+		// For each missing resource the _actor_ has, there's a vector of Incomplete resources.
+		// and we add the actor to that vector...
 		for(avs::uid uid : missingResources)
 		{
-			m_WaitingForResources[uid].push_back(newActor);
+			m_WaitingForResources[uid].incompleteResources.push_back(newActor);
 		}
 
 		newActor->isHand = isHand;
@@ -648,6 +650,7 @@ void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
 	lci.orientation = scr::quat(node.transform.rotation);
 	lci.shadowMapTexture = m_TextureManager->Get(node.data_uid);
 	lci.lightColour=node.lightColour;
+	lci.lightRadius=node.lightRadius;
 	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
 	m_LightManager->Add(node_uid, light);
 }
@@ -658,7 +661,7 @@ void ResourceCreator::CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreat
 	m_MeshManager->Add(mesh_uid, mesh);
 
 	//Add mesh to actors waiting for mesh.
-	for(auto it = m_WaitingForResources[mesh_uid].begin(); it != m_WaitingForResources[mesh_uid].end(); it++)
+	for(auto it = m_WaitingForResources[mesh_uid].incompleteResources.begin(); it != m_WaitingForResources[mesh_uid].incompleteResources.end(); it++)
 	{
 		std::weak_ptr<IncompleteActor> actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
 
@@ -683,7 +686,7 @@ void ResourceCreator::CompleteTexture(avs::uid texture_uid, const scr::Texture::
 	m_TextureManager->Add(texture_uid, scrTexture);
 
 	//Add texture to materials waiting for texture.
-	for(auto it = m_WaitingForResources[texture_uid].begin(); it != m_WaitingForResources[texture_uid].end(); it++)
+	for(auto it = m_WaitingForResources[texture_uid].incompleteResources.begin(); it != m_WaitingForResources[texture_uid].incompleteResources.end(); it++)
 	{
 		std::weak_ptr<IncompleteMaterial> materialInfo = std::static_pointer_cast<IncompleteMaterial>(*it);
 
@@ -706,7 +709,7 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 	m_MaterialManager->Add(material_uid, material);
 
 	//Add material to actors waiting for material.
-	for(auto it = m_WaitingForResources[material_uid].begin(); it != m_WaitingForResources[material_uid].end(); it++)
+	for(auto it = m_WaitingForResources[material_uid].incompleteResources.begin(); it != m_WaitingForResources[material_uid].incompleteResources.end(); it++)
 	{
 		const std::weak_ptr<IncompleteActor>& actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
 

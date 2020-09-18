@@ -17,7 +17,7 @@ namespace SCServer
 
 	VideoEncodePipeline::~VideoEncodePipeline()
 	{
-		release();
+	
 	}
 
 	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* output)
@@ -62,8 +62,8 @@ namespace SCServer
 		}
 		
 		pipeline.reset(new avs::Pipeline);
-		inputSurface.reset(new avs::Surface);
 		encoder.reset(new avs::Encoder);
+		inputSurface.reset(new avs::Surface);
 
 		if (!inputSurface->configure(avsSurfaceBackend))
 		{
@@ -187,9 +187,9 @@ namespace SCServer
 
 	Result VideoEncodePipeline::release()
 	{
-		pipeline.reset();
 		encoder.reset();
 		inputSurface.reset();
+		pipeline.reset();
 		
 		return Result::OK;
 	}

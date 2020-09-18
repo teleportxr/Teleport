@@ -14,6 +14,7 @@ struct InteropNode
 	avs::NodeDataType dataType;
 	avs::vec4 lightColour;
 	avs::vec3 lightDirection;		// constant, determined why whatever axis the engine uses for light direction.
+	float lightRadius;				// i.e. light is a sphere, where lightColour is the irradiance on its surface.
 	uint8_t lightType;
 
 	size_t materialAmount;
@@ -31,6 +32,7 @@ struct InteropNode
 			dataType,
 			{materialIDs, materialIDs + materialAmount},
 			lightColour,
+			lightRadius,
 			lightDirection,
 			lightType,
 			{childIDs, childIDs + childAmount}
