@@ -28,8 +28,10 @@ public:
 	};
 
 	const avs::uid id;
+	
+	Actor(avs::uid id);
 
-	Actor(avs::uid id, const ActorCreateInfo& pActorCreateInfo);
+	void Init(const ActorCreateInfo& pActorCreateInfo);
 
 	void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 	//Requests global transform of actor, and actor's children, be recalculated.

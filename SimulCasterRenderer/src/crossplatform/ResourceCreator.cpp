@@ -452,6 +452,7 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 
 void ResourceCreator::CreateTexture(avs::uid texture_uid, const avs::Texture& texture)
 {
+	SCR_COUT<<"CreateTexture "<< (unsigned long long) texture_uid<<std::endl;
 	scr::Texture::TextureCreateInfo texInfo =
 	{
 		texture.width,
@@ -491,6 +492,7 @@ void ResourceCreator::CreateTexture(avs::uid texture_uid, const avs::Texture& te
 
 void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material & material)
 {
+	SCR_COUT<<"CreateMaterial "<< (unsigned long long) material_uid;
 	std::shared_ptr<IncompleteMaterial> newMaterial = std::make_shared<IncompleteMaterial>();
 	//A list of unique resources that the material is missing, and needs to be completed.
 	std::set<avs::uid> missingResources;
@@ -531,9 +533,10 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material 
 
 	///This needs an actual value.
 	newMaterial->materialInfo.effect = nullptr;
-
+	
 	if(missingResources.size() == 0)
 	{
+		std::cout<<std::endl;
 		CompleteMaterial(material_uid, newMaterial->materialInfo);
 	}
 	else
@@ -541,11 +544,16 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material 
 		m_ResourceRequests.insert(std::end(m_ResourceRequests), std::begin(missingResources), std::end(missingResources));
 
 		newMaterial->id = material_uid;
-
+		
+		std::cout<<": missing";
 		for(avs::uid uid : missingResources)
 		{
-			m_WaitingForResources[uid].incompleteResources.push_back(newMaterial);
+			std::cout<<" "<<uid;
+			auto &incomplete=m_WaitingForResources[uid].incompleteResources;
+			if(std::find(incomplete.begin(), incomplete.end(), newMaterial) == incomplete.end())
+				incomplete.push_back(newMaterial);
 		}
+		std::cout<<std::endl;
 	}
 
 	m_ReceivedResources.push_back(material_uid);
@@ -586,7 +594,14 @@ void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 
 void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool isHand)
 {
-	SCR_COUT<<"CreateActor: "<< (unsigned long long) node_uid<<std::endl;
+	auto a=m_pActorManager->GetActor(node_uid);
+	if(a)
+	{
+		SCR_CERR<<"CreateActor "<< (unsigned long long) node_uid<<" already called for this uid."<<std::endl;
+		return;
+	}
+	a=m_pActorManager->CreateActor(node_uid);
+	// The problem here is we may have already called this with the same actor uid.
 	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>();
 	//A list of unique resources that the actor is missing, and needs to be completed.
 	std::set<avs::uid> missingResources;
@@ -622,6 +637,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool i
 	//Complete actor now, if we aren't missing any resources.
 	if(missingResources.size() == 0)
 	{
+		SCR_COUT<<"CreateActor "<< (unsigned long long) node_uid<<std::endl;
 		CompleteActor(node_uid, newActor->actorInfo, isHand);
 	}
 	else
@@ -629,12 +645,18 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool i
 		m_ResourceRequests.insert(std::end(m_ResourceRequests), std::begin(missingResources), std::end(missingResources));
 
 		newActor->id = node_uid;
+		SCR_COUT<<"CreateActor "<< (unsigned long long) node_uid<<": missing ";
+		
 		// For each missing resource the _actor_ has, there's a vector of Incomplete resources.
 		// and we add the actor to that vector...
 		for(avs::uid uid : missingResources)
 		{
-			m_WaitingForResources[uid].incompleteResources.push_back(newActor);
+			std::cout<<uid<<" ";
+			auto &incomplete=m_WaitingForResources[uid].incompleteResources;
+			if(std::find(incomplete.begin(), incomplete.end(), newActor) == incomplete.end())
+				incomplete.push_back(newActor);
 		}
+		std::cout<<std::endl;
 
 		newActor->isHand = isHand;
 	}
@@ -642,6 +664,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool i
 
 void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
 {
+	SCR_COUT<<"CreateLight "<< (unsigned long long) node_uid<<std::endl;
 	scr::Light::LightCreateInfo lci;
 	lci.renderPlatform = m_pRenderPlatform;
 	lci.type = (scr::Light::Type)node.lightType;
@@ -657,6 +680,7 @@ void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
 
 void ResourceCreator::CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo)
 {
+	SCR_COUT<<"CompleteMesh "<< (unsigned long long) mesh_uid<<std::endl;
 	std::shared_ptr<scr::Mesh> mesh = std::make_shared<scr::Mesh>(meshInfo);
 	m_MeshManager->Add(mesh_uid, mesh);
 
@@ -680,6 +704,7 @@ void ResourceCreator::CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreat
 
 void ResourceCreator::CompleteTexture(avs::uid texture_uid, const scr::Texture::TextureCreateInfo& textureInfo)
 {
+	SCR_COUT<<"CompleteTexture "<< (unsigned long long) texture_uid<<std::endl;
 	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(textureInfo);
 
@@ -688,14 +713,14 @@ void ResourceCreator::CompleteTexture(avs::uid texture_uid, const scr::Texture::
 	//Add texture to materials waiting for texture.
 	for(auto it = m_WaitingForResources[texture_uid].incompleteResources.begin(); it != m_WaitingForResources[texture_uid].incompleteResources.end(); it++)
 	{
-		std::weak_ptr<IncompleteMaterial> materialInfo = std::static_pointer_cast<IncompleteMaterial>(*it);
+		std::weak_ptr<IncompleteMaterial> incompleteMaterial = std::static_pointer_cast<IncompleteMaterial>(*it);
 
-		materialInfo.lock()->textureSlots.at(texture_uid) = scrTexture;
+		incompleteMaterial.lock()->textureSlots.at(texture_uid) = scrTexture;
 
 		//If only this texture is pointing to the material, then it is complete.
 		if(it->use_count() == 1)
 		{
-			CompleteMaterial(materialInfo.lock()->id, materialInfo.lock()->materialInfo);
+			CompleteMaterial(incompleteMaterial.lock()->id, incompleteMaterial.lock()->materialInfo);
 		}
 	}
 
@@ -707,10 +732,20 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 {
 	std::shared_ptr<scr::Material> material = std::make_shared<scr::Material>(materialInfo);
 	m_MaterialManager->Add(material_uid, material);
-
-	//Add material to actors waiting for material.
-	for(auto it = m_WaitingForResources[material_uid].incompleteResources.begin(); it != m_WaitingForResources[material_uid].incompleteResources.end(); it++)
+	
+	auto &incomplete=m_WaitingForResources[material_uid].incompleteResources;
+	SCR_COUT<<"CompleteMaterial "<< (unsigned long long) material_uid;
+	if(incomplete.size())
 	{
+		std::cout<<" for";
+		for(auto it = incomplete.begin(); it != incomplete.end(); it++)
+			std::cout<<" "<<(*it)->id;
+	}
+	std::cout<<std::endl;
+	//Add material to actors waiting for material.
+	for(auto it = incomplete.begin(); it != incomplete.end(); it++)
+	{
+		size_t ref_count=it->use_count();
 		const std::weak_ptr<IncompleteActor>& actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
 
 		auto &actorInfoLocked=actorInfo.lock();
@@ -723,13 +758,13 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 			}		
 
 		//If only this material is pointing to the actor, then it is complete.
-			if(it->use_count() == 1)
+			if(ref_count == 1)
 			{
-				CompleteActor(actorInfoLocked->id, actorInfo.lock()->actorInfo, actorInfo.lock()->isHand);
+				SCR_COUT<<"\tCompleting Actor "<< (unsigned long long) actorInfoLocked->id<<std::endl;
+				CompleteActor(actorInfoLocked->id, actorInfoLocked->actorInfo, actorInfoLocked->isHand);
 			}
 		}
 	}
-
 	//Resource has arrived, so we are no longer waiting for it.
 	m_WaitingForResources.erase(material_uid);
 }
@@ -738,11 +773,15 @@ void ResourceCreator::CompleteActor(avs::uid actor_uid, const scr::Actor::ActorC
 {
 	///We're using the node ID as the actor ID as we are currently generating an actor per node/transform anyway; this way the server can tell the client to remove an actor.
 	if(isHand)
-		m_pActorManager->CreateHand(actor_uid, actorInfo);
+	{
+		auto a=m_pActorManager->CreateHand(actor_uid);
+		a->Init(actorInfo);
+	}
 	else
 	{
 		SCR_COUT<<"CompleteActor "<<(unsigned long long)actor_uid<<std::endl;
-		m_pActorManager->CreateActor(actor_uid, actorInfo);
+		auto a=m_pActorManager->CreateActor(actor_uid);
+		a->Init(actorInfo);
 	}
 	m_CompletedActors.push_back(actor_uid);
 }

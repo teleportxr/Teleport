@@ -23,8 +23,8 @@ namespace scr
 
 		virtual ~ActorManager() = default;
 
-		virtual void CreateActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo);
-		virtual void CreateHand(avs::uid handID, const Actor::ActorCreateInfo& handCreateInfo);
+		virtual std::shared_ptr<Actor> CreateActor(avs::uid actorID);
+		virtual std::shared_ptr<Actor> CreateHand(avs::uid handID);
 
 		void RemoveActor(std::shared_ptr<Actor> actor);
 		void RemoveActor(avs::uid actorID);
@@ -65,9 +65,9 @@ namespace scr
 
 	protected:
 		actorList_t rootActors; //Actors that are parented to the world root.
-
-		actorList_t handList; //List of hand actors; handled differently as we don't want them cleaned-up.
-        std::unordered_map<avs::uid, std::shared_ptr<Actor>> actorLookup; //<ActorID, Actor>
+		/// List of hand actors; handled differently as we don't want them cleaned-up.
+		actorList_t handList; 
+        std::unordered_map<avs::uid, std::shared_ptr<Actor>> actorLookup;
 
 		avs::uid leftHandID = 0;
 		avs::uid rightHandID = 0;

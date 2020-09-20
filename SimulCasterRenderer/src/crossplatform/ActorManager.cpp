@@ -1,16 +1,29 @@
 #include "ActorManager.h"
 
-namespace scr
-{
+using namespace scr;
 
-void ActorManager::CreateActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
+std::shared_ptr<Actor> ActorManager::CreateActor(avs::uid actorID)
 {
-	AddActor(std::make_shared<Actor>(actorID, actorCreateInfo));
+	auto i=actorLookup.find(actorID);
+	if(i!=actorLookup.end())
+	{
+		return i->second;
+	}
+	auto a=std::make_shared<Actor>(actorID);
+	AddActor(a);
+	return a;
 }
 
-void ActorManager::CreateHand(avs::uid handID, const Actor::ActorCreateInfo& handCreateInfo)
+std::shared_ptr<Actor> ActorManager::CreateHand(avs::uid handID)
 {
-	AddHand(std::make_shared<Actor>(handID, handCreateInfo));
+	auto i=actorLookup.find(handID);
+	if(i!=actorLookup.end())
+	{
+		return i->second;
+	}
+	auto a=std::make_shared<Actor>(handID);
+	AddHand(a);
+	return a;
 }
 
 void ActorManager::RemoveActor(std::shared_ptr<Actor> actor)
@@ -282,4 +295,3 @@ void ActorManager::LinkToParentActor(avs::uid childID)
 	rootActors.erase(std::find(rootActors.begin(), rootActors.end(), actorLookup[childID]));
 }
 
-}

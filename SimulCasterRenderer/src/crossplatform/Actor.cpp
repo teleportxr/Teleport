@@ -6,9 +6,14 @@ namespace scr
 {
 
 //Actor
-Actor::Actor(avs::uid id, const ActorCreateInfo& pActorCreateInfo)
-	:id(id), m_CI(pActorCreateInfo)
-{}
+Actor::Actor(avs::uid i):id(i)
+{
+}
+
+void Actor::Init(const ActorCreateInfo& actorCreateInfo)
+{
+	m_CI=actorCreateInfo;
+}
 
 void Actor::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {

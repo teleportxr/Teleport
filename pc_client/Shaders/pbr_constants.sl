@@ -3,15 +3,11 @@
 #define PBR_CONSTANTS_SL
 
 SIMUL_CONSTANT_BUFFER(PbrConstants,13)
-	vec3 albedo;
-	float roughness;
-	vec4 depthToLinFadeDistParams;
-	vec4 fullResToLowResTransformXYWH;
-
 	int lightCount;
 	int reverseDepth;
-	float metalXXXX;
-	uint __ipad2;
+	vec2 _pad0;
+
+	vec4 depthToLinFadeDistParams;
 
 	vec4 diffuseOutputScalar;
 	vec2 diffuseTexCoordsScalar_R;

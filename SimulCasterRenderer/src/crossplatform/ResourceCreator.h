@@ -194,7 +194,7 @@ public:
 	{
 		avs::uid id;
 	};
-	
+
 	struct MissingResource
 	{
 		std::vector<std::shared_ptr<IncompleteResource>> incompleteResources;

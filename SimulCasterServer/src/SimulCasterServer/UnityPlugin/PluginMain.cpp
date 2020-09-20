@@ -737,7 +737,7 @@ TELEPORT_EXPORT float GetBandwidthInKbps(avs::uid clientID)
 ///GeometryStreamingService START
 TELEPORT_EXPORT void AddActor(avs::uid clientID, void* newActor, avs::uid actorID, avs::Transform currentTransform)
 {
-k	auto c= clientServices.find(clientID);
+	auto c= clientServices.find(clientID);
 	if(c==clientServices.end())
 		return;
 	c->second.geometryStreamingService->addActor(newActor, actorID);
