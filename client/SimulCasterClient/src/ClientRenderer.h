@@ -49,8 +49,8 @@ public:
 	ResourceCreator			*resourceCreator	=nullptr;
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	ovrMobile				*mOvrMobile			=nullptr;
-	avs::HeadPose headPose;
-	avs::HeadPose controllerPoses[2];
+	avs::Pose headPose;
+	avs::Pose controllerPoses[2];
 	avs::vec3 cameraPosition;	// in real space.
 	const scr::quat HAND_ROTATION_DIFFERENCE {0.0000000456194194, 0.923879385, -0.382683367, 0.000000110135019}; //Adjustment to the controller's rotation to get the desired rotation.
 

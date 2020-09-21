@@ -4,6 +4,8 @@
 #include "Platform/CrossPlatform/Macros.h"
 #include <chrono>
 #include <thread>
+#include "xaudio2.h"
+
 
 
 class VoiceCallback : public IXAudio2VoiceCallback
@@ -20,7 +22,8 @@ public:
 	void OnVoiceProcessingPassStart(UINT32 SamplesRequired) {    }
 	void OnBufferEnd(void* pBufferContext)
 	{ 
-		((ThreadSafeQueue<AudioBuffer>*)pBufferContext)->pop();
+		//((sca::ThreadSafeQueue<AudioBuffer>*)pBufferContext)->pop();
+		delete[] pBufferContext;
 	}
 	void OnBufferStart(void* pBufferContext) {    }
 	void OnLoopEnd(void* pBufferContext) {    }
@@ -157,19 +160,22 @@ sca::Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
-	auto& audioBuffer = audioBuffers.emplace(AudioBuffer());
-	audioBuffer.data.resize(dataSize);
-	memcpy(&audioBuffer.data[0], &data[0], dataSize);
-	ZeroMemory(&audioBuffer.buffer, sizeof(XAUDIO2_BUFFER));
-	audioBuffer.buffer.AudioBytes = (UINT32)dataSize;
-	audioBuffer.buffer.pAudioData = (BYTE* const)&audioBuffer.data[0];
-	audioBuffer.buffer.pContext = (void*)&audioBuffers;
-	audioBuffer.buffer.PlayBegin = 0;
-	audioBuffer.buffer.PlayLength = 0;
+	BYTE* audioData = new BYTE[dataSize];
+	memcpy(&audioData[0], &data[0], dataSize);
+
+	XAUDIO2_BUFFER xaBuffer;
+	ZeroMemory(&xaBuffer, sizeof(XAUDIO2_BUFFER));
+	xaBuffer.AudioBytes = (UINT32)dataSize;
+	//xaBuffer.pAudioData = (BYTE* const)&audioBuffer.data[0];
+	//xaBuffer.pContext = (void*)&audioBuffers;
+	xaBuffer.pAudioData = (BYTE* const)&audioData[0];
+	xaBuffer.pContext = (void*)audioData;
+	xaBuffer.PlayBegin = 0;
+	xaBuffer.PlayLength = 0;
 
 	// Submit the audio buffer to the source voice
 	// This will queue the buffer and shouldn't effect sound already being played
-	HRESULT hr = sourceVoice->SubmitSourceBuffer(&audioBuffer.buffer);
+	HRESULT hr = sourceVoice->SubmitSourceBuffer(&xaBuffer);
 	if (FAILED(hr))
 	{
 		SCA_COUT("Error occurred trying to submit audio buffer to source voice.");
