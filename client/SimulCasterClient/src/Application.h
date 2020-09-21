@@ -12,10 +12,14 @@
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/geometrydecoder.hpp>
+#include <libavstream/audiodecoder.h>
+#include <libavstream/audio/audiotarget.h>
 
 #include "crossplatform/GeometryDecoder.h"
 #include "crossplatform/ResourceCreator.h"
 #include "crossplatform/SessionClient.h"
+#include "crossplatform/AudioStreamTarget.h"
+#include "SCR_Class_AAudio_Impl/AA_AudioPlayer.h"
 
 #include "GlobalGraphicsResources.h"
 #include "VideoDecoderProxy.h"
@@ -59,7 +63,7 @@ public:
 	}
 
 	/* Begin SessionCommandInterface */
-	virtual void OnVideoStreamChanged(const avs::SetupCommand& setupCommand, avs::Handshake& handshake) override;
+	virtual void OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) override;
 	virtual void OnVideoStreamClosed() override;
 
 	virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
@@ -92,11 +96,17 @@ private:
 	bool               mPipelineConfigured;
 
 	static constexpr size_t NumStreams = 1;
+	static constexpr bool AudioStream = true;
 	static constexpr bool   GeoStream  = true;
 
 	GeometryDecoder        geometryDecoder;
 	avs::GeometryDecoder   avsGeometryDecoder;
 	avs::GeometryTarget    avsGeometryTarget;
+
+	avs::AudioDecoder avsAudioDecoder;
+	avs::AudioTarget avsAudioTarget;
+	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
+	AA_AudioPlayer audioPlayer;
 
 	struct RenderConstants
 	{

@@ -18,11 +18,10 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../libavstream/include
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
-LOCAL_SRC_FILES  := 	../src/crossplatform/AudioCommon.cpp		\
+LOCAL_SRC_FILES  := 	../src/AudioCommon.cpp				        \
 						../src/crossplatform/AudioLog.cpp	        \
 						../src/crossplatform/AudioPlayer.cpp		\
-						../src/crossplatform/AudioStreamTarget.cpp	\			
-						../src/AudioCommon.cpp				        \
+						../src/crossplatform/AudioStreamTarget.cpp			
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable

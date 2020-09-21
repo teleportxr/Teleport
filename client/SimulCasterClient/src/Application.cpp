@@ -74,6 +74,9 @@ Application::Application()
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
+	// Initialize the audio (asynchronously)
+	audioPlayer.initializeAudioDevice();
+
 	resourceCreator.Initialise(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
 	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
@@ -390,7 +393,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	return res;
 }
 
-void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, avs::Handshake& handshake)
+void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake)
 {
     const avs::VideoConfig& videoConfig = setupCommand.video_config;
 	if(!mPipelineConfigured)
@@ -461,6 +464,22 @@ void Application::OnVideoStreamChanged(const avs::SetupCommand& setupCommand, av
 		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
 
 		mPipeline.link({&clientRenderer.mNetworkSource, &clientRenderer.mDecoder, &mSurface});
+
+		// Audio
+		if (AudioStream)
+		{
+			avsAudioDecoder.configure(40);
+			sca::AudioParams audioParams;
+			audioParams.codec = sca::AudioCodec::PCM;
+			audioParams.numChannels = 2;
+			audioParams.sampleRate = 48000;
+			audioParams.bitsPerSample = 32;
+			// This will be deconfigured automatically when the pipeline is deconfigured.
+			audioPlayer.configure(audioParams);
+			audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
+			avsAudioTarget.configure(audioStreamTarget.get());
+            mPipeline.link({ &clientRenderer.mNetworkSource, &avsAudioDecoder, &avsAudioTarget });
+		}
 
 		if (GeoStream)
 		{

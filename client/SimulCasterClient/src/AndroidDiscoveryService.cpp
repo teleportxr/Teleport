@@ -4,6 +4,8 @@
 
 #include "crossplatform/Log.h"
 
+#include <arpa/inet.h>
+
 #pragma pack(push, 1)
 struct ServiceDiscoveryResponse
 {
