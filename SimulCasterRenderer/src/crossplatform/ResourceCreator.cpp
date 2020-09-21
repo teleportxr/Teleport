@@ -746,9 +746,9 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 	for(auto it = incomplete.begin(); it != incomplete.end(); it++)
 	{
 		size_t ref_count=it->use_count();
-		const std::weak_ptr<IncompleteActor>& actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
+		std::weak_ptr<IncompleteActor> actorInfo = std::static_pointer_cast<IncompleteActor>(*it);
 
-		auto &actorInfoLocked=actorInfo.lock();
+		std::shared_ptr<IncompleteActor> actorInfoLocked=actorInfo.lock();
 		auto m=actorInfoLocked->materialSlots.find(material_uid);
 		if(m!=actorInfoLocked->materialSlots.end())
 		{

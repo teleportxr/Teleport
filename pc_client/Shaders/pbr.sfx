@@ -234,7 +234,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	vec3 diff				=light.position-surfaceProperties.position;
 	float dist_to_light		=length(diff);
 	float d					=max(1.0,dist_to_light/light.radius);
-	vec3 irradiance			=25*light.colour.rgb*lerp(1.0,1.0/(d*d),light.is_point);
+	vec3 irradiance			=5*light.colour.rgb*lerp(1.0,1.0/(d*d),light.is_point);
 	vec3 dir_from_surface_to_light=lerp(-light.direction,normalize(diff),light.is_point);
 	float roughnessL		= max(.01, surfaceProperties.roughness2);
 	float n_l				=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
