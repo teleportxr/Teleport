@@ -2,7 +2,7 @@
 #pragma once
 
 #include "crossplatform/AudioPlayer.h"
-
+#include <aaudio/AAudio.h>
 /*! A class to play audio from streams and files for PC
 */
 class AA_AudioPlayer final : public sca::AudioPlayer
@@ -20,7 +20,7 @@ public:
 	sca::Result deconfigure() override;
 
 private:
-	class AAudioStream* audioStream;
+	AAudioStream* audioStream;
 };
 
 

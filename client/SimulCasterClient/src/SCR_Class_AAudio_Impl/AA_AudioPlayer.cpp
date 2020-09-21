@@ -3,7 +3,7 @@
 #include "AA_AudioPlayer.h"
 #include <chrono>
 #include <thread>
-#include <AAudio.h>
+#include <aaudio/AAudio.h>
 
 
 AA_AudioPlayer::AA_AudioPlayer()
@@ -29,7 +29,7 @@ sca::Result AA_AudioPlayer::initializeAudioDevice()
 	return sca::Result::OK;
 }
 
-sca::Result PC_AudioPlayer::configure(const sca::AudioParams& audioParams)
+sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 {
 	if (configured)
 	{
@@ -71,7 +71,7 @@ sca::Result PC_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	configured = true;
 }
 
-sca::Result PC_AudioPlayer::deconfigure()
+sca::Result AA_AudioPlayer::deconfigure()
 {
 	if (!configured)
 	{
@@ -79,7 +79,7 @@ sca::Result PC_AudioPlayer::deconfigure()
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
-	aaudio_result_t r = AAudioStreamBuilder_closeStream(audioStream);
+	aaudio_result_t r = AAudioStream_close(audioStream);
 
 	if (r != AAUDIO_OK)
 	{
@@ -87,13 +87,13 @@ sca::Result PC_AudioPlayer::deconfigure()
 		return sca::Result::AudioCloseStreamError;
 	}
 
-	r = AAudioStreamBuilder_releaseStream(audioStream);
+	//r = AAudioStream_release(audioStream);
 
-	if (r != AAUDIO_OK)
-	{
-		SCA_COUT("Error occurred trying to release audio stream.");
-		return sca::Result::AudioReleaseStreamError;
-	}
+	//if (r != AAUDIO_OK)
+	//{
+		//SCA_COUT("Error occurred trying to release audio stream.");
+		//return sca::Result::AudioReleaseStreamError;
+	//}
 
 	configured = false;
 
@@ -102,7 +102,7 @@ sca::Result PC_AudioPlayer::deconfigure()
 	return sca::Result::OK;
 }
 
-sca::Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
+sca::Result AA_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!initialized)
 	{
@@ -116,8 +116,8 @@ sca::Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
-	int32_t numFrames = dataSize / (audioParams.sampleSize * audioParams.numChannels);
-	AAudioStream_write(audioStream, (void*)data, numFrames);
+	int32_t numFrames = dataSize / (audioParams.bitsPerSample * audioParams.numChannels);
+	AAudioStream_write(audioStream, (void*)data, numFrames, 100000);
 
 	return sca::Result::OK;
 }

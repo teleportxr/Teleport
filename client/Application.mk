@@ -5,7 +5,7 @@
 
 # This needs to be defined to get the right header directories for egl / etc
 # NOTE: this is ignored from here now, and must be specified in build.gradle!
-APP_PLATFORM := android-21
+APP_PLATFORM := android-29
 
 APP_ABI := armeabi-v7a
 
