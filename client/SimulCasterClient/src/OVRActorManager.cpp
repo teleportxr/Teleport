@@ -15,18 +15,9 @@ using namespace OVR;
 using namespace scc;
 using namespace scr;
 
-void OVRActorManager::CreateActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
+std::vector<ovrSurfaceDef> CreateNativeActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
 {
-	AddActor(std::make_shared<OVRActor>(actorID, actorCreateInfo, CreateNativeActor(actorID, actorCreateInfo)));
-}
-
-void OVRActorManager::CreateHand(avs::uid handID, const scr::Actor::ActorCreateInfo& handCreateInfo)
-{
-	AddHand(std::make_shared<OVRActor>(handID, handCreateInfo, CreateNativeActor(handID, handCreateInfo)));
-}
-
-std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
-{
+    GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
     std::vector<ovrSurfaceDef> ovrSurfaceDefs;
 
     for(size_t i = 0; i < actorCreateInfo.materials.size(); i++)
@@ -155,6 +146,13 @@ std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(avs::uid actorID, 
     }
     return ovrSurfaceDefs;
 }
+void OVRActor::Init(const scr::Actor::ActorCreateInfo& actorCreateInfo)
+{
+
+    ovrSurfaceDefs=CreateNativeActor(id, actorCreateInfo);
+}
+
+
 
 void OVRActorManager::ChangeEffectPass(const char* effectPassName)
 {

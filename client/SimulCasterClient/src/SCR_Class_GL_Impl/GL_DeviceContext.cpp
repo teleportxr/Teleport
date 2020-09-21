@@ -55,7 +55,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
         }
         case INPUT_COMMAND_COMPUTE:
         {
-            SCR_COUT("Invalid Input Command");
+            SCR_CERR<<"Invalid Input Command";
         }
     }
     BindShaderResources(descriptorSets, effect, pInputCommand->effectPassName);

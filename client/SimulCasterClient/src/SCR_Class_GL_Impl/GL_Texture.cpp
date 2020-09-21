@@ -47,7 +47,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_1D: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_1D");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_1D\n";
                 return;
             }
             case Type::TEXTURE_2D: {
@@ -60,7 +60,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
             }
             case Type::TEXTURE_1D_ARRAY:
             {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_1D_ARRAY");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_1D_ARRAY\n";
                 return;
             }
             case Type::TEXTURE_2D_ARRAY: {
@@ -68,11 +68,11 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 break;
             }
             case Type::TEXTURE_2D_MULTISAMPLE: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE\n";
                 return;
             }
             case Type::TEXTURE_2D_MULTISAMPLE_ARRAY: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE_ARRAY");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE_ARRAY\n";
                 return;
             }
             case Type::TEXTURE_CUBE_MAP:
@@ -97,12 +97,12 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 				return;
             }
             case Type::TEXTURE_CUBE_MAP_ARRAY: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_CUBE_MAP_ARRAY");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_CUBE_MAP_ARRAY\n";
                 return;
             }
             case Type::TEXTURE_2D_EXTERNAL_OES:
             default:
-				SCR_CERR_BREAK("Unsupported texture type",1);
+            SCR_CERR_BREAK("Unsupported texture type",1);
             	return;
         }
     }
@@ -115,7 +115,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_1D: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_1D for compressed textures");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_1D for compressed textures\n";
                 return;
             }
             case Type::TEXTURE_2D: {
@@ -127,19 +127,19 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 break;
             }
             case Type::TEXTURE_1D_ARRAY: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_1D_ARRAY for compressed textures");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_1D_ARRAY for compressed textures\n";
                 return;
             }
             case Type::TEXTURE_2D_ARRAY: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_2D_ARRAY for compressed textures");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_2D_ARRAY for compressed textures\n";
                 return;
             }
             case Type::TEXTURE_2D_MULTISAMPLE: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE for compressed textures");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE for compressed textures\n";
                 return;
             }
             case Type::TEXTURE_2D_MULTISAMPLE_ARRAY: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE_ARRAY for compressed textures");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_2D_MULTISAMPLE_ARRAY for compressed textures";
                 return;
             }
             case Type::TEXTURE_CUBE_MAP: {
@@ -150,7 +150,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 }
             }
             case Type::TEXTURE_CUBE_MAP_ARRAY: {
-                SCR_COUT("OpenGLES 3.0 doesn't support GL_TEXTURE_CUBE_MAP_ARRAY for compressed textures");
+                SCR_CERR<<"OpenGLES 3.0 doesn't support GL_TEXTURE_CUBE_MAP_ARRAY for compressed textures";
                 return;
             }
 			default:
@@ -325,7 +325,7 @@ GLenum GL_Texture::ToBaseGLFormat(Format format) const
         case Format::FORMAT_UNKNOWN:
             return 0;
         default:
-            SCR_COUT("Unknown texture format");
+            SCR_CERR<<"Unknown texture format";
             return 0;
     }
 }
@@ -442,7 +442,7 @@ GLenum GL_Texture::ToGLFormat(Format format) const {
         case Format::FORMAT_UNKNOWN:
             return 0;
             default:
-                 SCR_CERR("Unknown format");
+                 SCR_CERR<<"Unknown format\n";
                  return 0;
 
     }

@@ -31,7 +31,7 @@ public:
 	
 	Actor(avs::uid id);
 
-	void Init(const ActorCreateInfo& pActorCreateInfo);
+	virtual void Init(const ActorCreateInfo& pActorCreateInfo);
 
 	void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 	//Requests global transform of actor, and actor's children, be recalculated.

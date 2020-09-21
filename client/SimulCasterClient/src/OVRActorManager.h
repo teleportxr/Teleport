@@ -7,22 +7,22 @@
 #include "ActorManager.h"
 #include "GlobalGraphicsResources.h"
 
+class OVRActor : public scr::Actor
+{
+public:
+	OVRActor(avs::uid id)
+			:Actor(id)
+	{}
+	void Init(const scr::Actor::ActorCreateInfo& actorCreateInfo);
+	std::vector<OVR::ovrSurfaceDef> ovrSurfaceDefs;
+};
+
 class OVRActorManager : public scr::ActorManager
 {
 public:
-	struct OVRActor : public scr::Actor
-    {
-        OVRActor(avs::uid id, const ActorCreateInfo& pActorCreateInfo, std::vector<OVR::ovrSurfaceDef> ovrSurfaceDefs)
-        :Actor(id, pActorCreateInfo), ovrSurfaceDefs(ovrSurfaceDefs)
-        {}
-
-        std::vector<OVR::ovrSurfaceDef> ovrSurfaceDefs;
-    };
 
     virtual ~OVRActorManager() = default;
 
-    virtual void CreateActor(avs::uid actorID, const scr::Actor::ActorCreateInfo& pActorCreateInfo) override;
-    virtual void CreateHand(avs::uid handID, const scr::Actor::ActorCreateInfo& handCreateInfo) override;
 
 	//Changes PBR effect used on actors/surfaces to the effect pass with the passed name.
 	//Also changes GlobalGraphicsResource::effectPassName.

@@ -493,7 +493,7 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 
 void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Actor> actor)
 {
-	std::shared_ptr<OVRActorManager::OVRActor> ovrActor = std::static_pointer_cast<OVRActorManager::OVRActor>(actor);
+	std::shared_ptr<OVRActor> ovrActor = std::static_pointer_cast<OVRActor>(actor);
 
 	//----OVR Actor Set Transforms----//
 	scr::mat4 scr_Transform = transformToOculusOrigin * actor->GetGlobalTransform().GetTransformMatrix();
