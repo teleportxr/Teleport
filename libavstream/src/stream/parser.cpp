@@ -12,6 +12,8 @@ StreamParserInterface *StreamParserInterface::Create(StreamParserType type)
 	{
 	case StreamParserType::AVC_AnnexB:
 		return new StreamParserAVC;
+	case StreamParserType::Audio:
+		break;
 	case StreamParserType::Geometry:
 		return new GeometryStreamParser;
 	case StreamParserType::Custom:
