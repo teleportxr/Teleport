@@ -57,8 +57,6 @@ namespace avs
 				return Result::Node_AlreadyConfigured;
 		}
 
-		assert(d().m_backend);
-
 		d().m_configured = true;
 		d().m_streamId = streamId;
 		return Result::OK;

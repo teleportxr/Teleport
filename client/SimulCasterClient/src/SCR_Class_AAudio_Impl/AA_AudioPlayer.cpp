@@ -3,8 +3,8 @@
 #include "AA_AudioPlayer.h"
 #include <chrono>
 #include <thread>
-#include <aaudio/AAudio.h>
 
+#define FAILED(r)      (((aaudio_result_t)(r)) != AAUDIO_OK)
 
 AA_AudioPlayer::AA_AudioPlayer()
 {
@@ -21,6 +21,7 @@ sca::Result AA_AudioPlayer::initializeAudioDevice()
 {
 	if (initialized)
 	{
+		SCA_CERR("Audio player has already been initialized");
 		return sca::Result::AudioPlayerAlreadyInitialized;
 	}
 
@@ -33,15 +34,15 @@ sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 {
 	if (configured)
 	{
-		SCA_COUT("Audio player has already been configured.");
+		SCA_CERR("Audio player has already been configured.");
 		return sca::Result::AudioPlayerAlreadyConfigured;
 	}
 
 	AAudioStreamBuilder* builder;
-	aaudio_result_t r = AAudio_createStreamBuilder(&builder);
-	if (r != AAUDIO_OK)
+
+	if (FAILED(AAudio_createStreamBuilder(&builder)))
 	{
-		SCA_COUT("Error occurred trying to create audio stream builder.");
+		SCA_CERR("Error occurred trying to create audio stream builder.");
 		return sca::Result::AudioStreamBuilderCreationError;
 	}
 	AAudioStreamBuilder_setPerformanceMode(builder, AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
@@ -51,49 +52,46 @@ sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	AAudioStreamBuilder_setChannelCount(builder, audioParams.numChannels);
 	AAudioStreamBuilder_setFormat(builder, AAUDIO_FORMAT_PCM_FLOAT);
 
-	r = AAudioStreamBuilder_openStream(builder, &audioStream);
+	auto result = sca::Result::OK;
+
+	if (FAILED(AAudioStreamBuilder_openStream(builder, &audioStream)))
+	{
+		SCA_CERR("Error occurred trying to open audio stream.");
+		result = sca::Result::AudioOpenStreamError;
+	}
 
 	// Builder no longer neeeded after stream is created because we don't need any more streams
-	aaudio_result_t dr = AAudioStreamBuilder_delete(builder);
-	if (dr != AAUDIO_OK)
+	if (FAILED(AAudioStreamBuilder_delete(builder)))
 	{
-		SCA_COUT("Error occurred trying to delete audio stream builder.");
-		return sca::Result::AudioStreamBuilderDeletionError;
+		SCA_CERR("Error occurred trying to delete audio stream builder.");
+		if (result)
+			result = sca::Result::AudioStreamBuilderDeletionError;
 	}
 
-	if (r != AAUDIO_OK)
+	if (!result)
 	{
-		SCA_COUT("Error occurred trying to open audio stream.");
-		return sca::Result::AudioOpenStreamError;
+		return result;
 	}
-	
+
 	this->audioParams = audioParams;
 	configured = true;
+
+	return result;
 }
 
 sca::Result AA_AudioPlayer::deconfigure()
 {
 	if (!configured)
 	{
-		SCA_COUT("Can't deconfigure audio player because it is not configured.");
+		SCA_CERR("Can't deconfigure audio player because it is not configured.");
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
-	aaudio_result_t r = AAudioStream_close(audioStream);
-
-	if (r != AAUDIO_OK)
+	if (FAILED(AAudioStream_close(audioStream)))
 	{
-		SCA_COUT("Error occurred trying to close audio stream.");
+		SCA_CERR("Error occurred trying to close audio stream.");
 		return sca::Result::AudioCloseStreamError;
 	}
-
-	//r = AAudioStream_release(audioStream);
-
-	//if (r != AAUDIO_OK)
-	//{
-		//SCA_COUT("Error occurred trying to release audio stream.");
-		//return sca::Result::AudioReleaseStreamError;
-	//}
 
 	configured = false;
 
@@ -106,18 +104,21 @@ sca::Result AA_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!initialized)
 	{
-		SCA_COUT("Can't play audio stream because the audio player has not been initialized.");
+		SCA_CERR("Can't play audio stream because the audio player has not been initialized.");
 		return sca::Result::AudioPlayerNotInitialized;
 	}
 
 	if (!configured)
 	{
-		SCA_COUT("Can't play audio stream because the audio player has not been configured.");
+		SCA_CERR("Can't play audio stream because the audio player has not been configured.");
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
-	int32_t numFrames = dataSize / (audioParams.bitsPerSample * audioParams.numChannels);
-	AAudioStream_write(audioStream, (void*)data, numFrames, 100000);
+	int32_t numFrames = (int32_t)dataSize / (audioParams.bitsPerSample * audioParams.numChannels);
+	if(FAILED(AAudioStream_write(audioStream, (const void*)data, numFrames, 100000)))
+	{
+		return sca::Result::AudioWriteError;
+	}
 
 	return sca::Result::OK;
 }

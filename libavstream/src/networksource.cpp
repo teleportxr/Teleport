@@ -49,18 +49,11 @@ Result NetworkSource::configure(size_t numOutputs, uint16_t localPort, const cha
 		}
 		m_data->pollid = srt_epoll_create();
 		int yes = 1;
-		int no = 0;
-		int hundred = 100;
-		int ten_thousand = 10000;
-		int million = 1000000;
-		//srt_setsockflag(m_data->m_socket, SRTO_RCVSYN, &no, sizeof no);
-		//srt_setsockflag(m_data->m_socket, SRTO_SNDSYN, &no, sizeof no);
+		int ten_thousand = 10000;	
 		srt_setsockflag(m_data->m_socket, SRTO_SNDTIMEO, &ten_thousand, sizeof ten_thousand);
 		srt_setsockflag(m_data->m_socket, SRTO_RCVTIMEO, &ten_thousand, sizeof ten_thousand);
 		int32_t latency=12;
 		CHECK_SRT_ERROR(srt_setsockopt(m_data->m_socket, 0, SRTO_RCVLATENCY, &latency, sizeof latency));
-		//sockaddr_in local_bind_addr = CreateAddrInet("127.0.0.1",localPort);
-		//CHECK_SRT_ERROR( srt_bind(m_data->m_socket, (sockaddr*)&local_bind_addr, sizeof local_bind_addr));
 		m_data->remote_addr = CreateAddrInet(remote,remotePort);
 		m_data->remote_addr.sin_family = AF_INET;
 		m_data->remote_addr.sin_port = htons(remotePort);

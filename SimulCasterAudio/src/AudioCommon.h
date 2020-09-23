@@ -59,7 +59,8 @@ namespace sca
 			AudioStreamBuilderDeletionError,
 			AudioOpenStreamError,
 			AudioCloseStreamError,
-			AudioReleaseStreamError
+			AudioReleaseStreamError,
+			AudioWriteError
 		};
 
 		Result() : m_code(Code::OK) 

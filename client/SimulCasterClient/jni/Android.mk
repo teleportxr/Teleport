@@ -5,7 +5,7 @@ include $(CLEAR_VARS)
 include ../cflags.mk
 
 LOCAL_MODULE			:= ovrapp
-LOCAL_LDLIBS			:= -llog -landroid -lGLESv3 -lEGL		# include default libraries
+LOCAL_LDLIBS			:= -llog -landroid -lGLESv3 -lEGL -laaudio  		# include default libraries
 LOCAL_STATIC_LIBRARIES	:=  vrsound vrmodel vrlocale vrgui vrappframework libovrkernel enet libavstream SimulCasterRenderer SimulCasterAudio
 LOCAL_SHARED_LIBRARIES	:= vrapi
 
