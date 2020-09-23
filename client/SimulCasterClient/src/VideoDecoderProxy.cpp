@@ -61,7 +61,7 @@ avs::Result VideoDecoderProxy::reconfigure(int frameWidth, int frameHeight, cons
 
     avs::DeviceHandle dummyHandle;
 
-    initialize(dummyHandle, frameWidth, frameHeight, params);
+    return initialize(dummyHandle, frameWidth, frameHeight, params);
 }
 
 avs::Result VideoDecoderProxy::shutdown()

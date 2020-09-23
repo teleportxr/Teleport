@@ -754,14 +754,14 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 		{
 			for(size_t materialIndex : m->second)
 			{
-				actorInfoLocked->actorInfo.materials[materialIndex] = material;
+				actorInfo.lock()->actorInfo.materials[materialIndex] = material;
 			}		
 
 		//If only this material is pointing to the actor, then it is complete.
 			if(ref_count == 1)
 			{
-				SCR_COUT<<"\tCompleting Actor "<< (unsigned long long) actorInfoLocked->id<<std::endl;
-				CompleteActor(actorInfoLocked->id, actorInfoLocked->actorInfo, actorInfoLocked->isHand);
+				SCR_COUT<<"\tCompleting Actor "<< (unsigned long long) actorInfo.lock()->id<<std::endl;
+				CompleteActor(actorInfo.lock()->id, actorInfo.lock()->actorInfo, actorInfo.lock()->isHand);
 			}
 		}
 	}

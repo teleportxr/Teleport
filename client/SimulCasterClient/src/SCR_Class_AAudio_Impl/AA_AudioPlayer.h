@@ -3,6 +3,8 @@
 
 #include "crossplatform/AudioPlayer.h"
 #include <aaudio/AAudio.h>
+#include <android/ndk-version.h>
+
 /*! A class to play audio from streams and files for PC
 */
 class AA_AudioPlayer final : public sca::AudioPlayer

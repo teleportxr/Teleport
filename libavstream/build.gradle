@@ -4,7 +4,8 @@ android {
     compileSdkVersion 29
     defaultConfig {
         //<uses-sdk android:minSdkVersion="17"/>
-        targetSdkVersion 28
+        targetSdkVersion 29
+        minSdkVersion 26
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
