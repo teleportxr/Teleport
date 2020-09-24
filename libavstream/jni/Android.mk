@@ -28,6 +28,7 @@ LOCAL_SRC_FILES  := 	../src/context.cpp \
                         ../src/pipeline.cpp \
                         ../src/node.cpp \
                         ../src/decoder.cpp \
+                        ../src/audiodecoder.cpp \
                         ../src/geometrydecoder.cpp \
                         ../src/mesh.cpp \
                         ../src/surface.cpp \
@@ -49,7 +50,8 @@ LOCAL_SRC_FILES  := 	../src/context.cpp \
                         ../src/platforms/platform_posix.cpp \
                         ../src/geometrydecoder.cpp \
                         ../src/mesh.cpp \
-                        ../src/util/srtutil.cpp
+                        ../src/util/srtutil.cpp \
+                        ../src/audio/audiotarget.cpp
 
 LOCAL_CFLAGS += -DASIO_STANDALONE -DSRT_NO_DEPRECATED
 LOCAL_CPPFLAGS += -Wc++17-extensions

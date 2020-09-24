@@ -27,7 +27,7 @@ apply plugin: 'kotlin-android-extensions'
 
 android {
     ndkVersion "21.3.6528147"
-    compileSdkVersion 29
+
     signingConfigs {
         release {
             storeFile file('android.debug.keystore.jks')
@@ -45,8 +45,6 @@ android {
     project.archivesBaseName = "simulcasterclient"
   defaultConfig {
     applicationId "co.Simul.simulcasterclient"
-    minSdkVersion 27
-    targetSdkVersion 29
 
     // override app plugin abiFilters to test experimental 64-bit support
     externalNativeBuild {
@@ -91,6 +89,5 @@ android {
         sourceCompatibility = 1.8
         targetCompatibility = 1.8
     }
-    compileSdkVersion = 29
     buildToolsVersion = '29.0.3'
 }

@@ -268,7 +268,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 	scr::ivec2 specularOffset={0,0};
 	scr::ivec2 diffuseOffset={3* specularSize/2, specularSize*2};
 	scr::ivec2 roughOffset={3* specularSize,0};
-	scr::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
+	//scr::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
 	// Here the compute shader to copy from the video texture into the cubemap/s.
 	auto &tc=mCubemapTexture->GetTextureCreateInfo();
 	if(mCubemapTexture->IsValid())
