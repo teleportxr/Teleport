@@ -33,10 +33,10 @@ android {
             storePassword 'android'
             keyAlias = 'android'
             keyPassword 'android'
-            storeFile file('android.debug.keystore.jks')
+            storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
         }
         debug {
-            storeFile file('C:\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
+            storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
             storePassword 'android'
             keyAlias = 'android'
             keyPassword 'android'
@@ -106,4 +106,5 @@ android {
         targetCompatibility = 1.8
     }
     buildToolsVersion = '29.0.3'
+    compileSdkVersion 25
 }

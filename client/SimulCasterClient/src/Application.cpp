@@ -23,6 +23,12 @@
 #include "../res_pc/resource.h"
 #endif
 
+#if defined( USE_AAUDIO )
+#include "SCR_Class_AAudio_Impl/AA_AudioPlayer.h"
+#else
+#include "SCR_Class_SL_Impl/SL_AudioPlayer.h"
+#endif
+
 using namespace OVR;
 
 
@@ -74,8 +80,12 @@ Application::Application()
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
-	// Initialize the audio (asynchronously)
-	audioPlayer.initializeAudioDevice();
+#if defined( USE_AAUDIO )
+	audioPlayer = new AA_AudioPlayer();
+#else
+	audioPlayer = new SL_AudioPlayer();
+#endif
+	audioPlayer->initializeAudioDevice();
 
 	resourceCreator.Initialise(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
@@ -115,6 +125,8 @@ Application::~Application()
 
 	mSession.Disconnect(REMOTEPLAY_TIMEOUT);
 	enet_deinitialize();
+
+	SAFE_DELETE(audioPlayer)
 }
 
 void Application::Configure(ovrSettings& settings )
@@ -475,8 +487,8 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 			audioParams.sampleRate = 48000;
 			audioParams.bitsPerSample = 32;
 			// This will be deconfigured automatically when the pipeline is deconfigured.
-			audioPlayer.configure(audioParams);
-			audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
+			audioPlayer->configure(audioParams);
+			audioStreamTarget.reset(new sca::AudioStreamTarget(audioPlayer));
 			avsAudioTarget.configure(audioStreamTarget.get());
             mPipeline.link({ &clientRenderer.mNetworkSource, &avsAudioDecoder, &avsAudioTarget });
 		}

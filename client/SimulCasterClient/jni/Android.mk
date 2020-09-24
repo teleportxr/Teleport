@@ -4,8 +4,10 @@ include $(CLEAR_VARS)
 
 include ../cflags.mk
 
+USE_AAUDIO := false
+
 LOCAL_MODULE			:= ovrapp
-LOCAL_LDLIBS			:= -llog -landroid -lGLESv3 -lEGL -laaudio  		# include default libraries
+LOCAL_LDLIBS			:= -llog -landroid -lGLESv3 -lEGL  		# include default libraries
 LOCAL_STATIC_LIBRARIES	:=  vrsound vrmodel vrlocale vrgui vrappframework libovrkernel enet libavstream SimulCasterRenderer SimulCasterAudio
 LOCAL_SHARED_LIBRARIES	:= vrapi
 
@@ -31,7 +33,15 @@ LOCAL_SRC_FILES			:= \
     ../src/SCR_Class_GL_Impl/GL_Texture.cpp \
     ../src/SCR_Class_GL_Impl/GL_UniformBuffer.cpp \
     ../src/SCR_Class_GL_Impl/GL_VertexBuffer.cpp \
-    ../src/SCR_Class_AAudio_Impl/AA_AudioPlayer.cpp
+
+ifeq ($(USE_AAUDIO),true)
+LOCAL_CFLAGS += -USING_AAUDIO
+LOCAL_LDLIBS += -laaudio
+LOCAL_SRC_FILES += ../src/SCR_Class_AAudio_Impl/AA_AudioPlayer.cpp
+else
+LOCAL_LDLIBS += -lOpenSLES
+LOCAL_SRC_FILES += ../src/SCR_Class_SL_Impl/SL_AudioPlayer.cpp
+endif
 
 LOCAL_C_INCLUDES += ../1stParty/OVR/Include
 LOCAL_C_INCLUDES += ../VrAppSupport/VrModel/Src

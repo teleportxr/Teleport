@@ -2,16 +2,16 @@
 #pragma once
 
 #include <crossplatform/AudioPlayer.h>
-#include <aaudio/AAudio.h>
+#include <SLES/OpenSLES_Android.h>
 #include <android/ndk-version.h>
 
 /*! A class to play audio from streams and files for PC
 */
-class AA_AudioPlayer final : public sca::AudioPlayer
+class SL_AudioPlayer final : public sca::AudioPlayer
 {
 public:
-	AA_AudioPlayer();
-	~AA_AudioPlayer();
+	SL_AudioPlayer();
+	~SL_AudioPlayer();
 
 	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
 
@@ -22,7 +22,7 @@ public:
 	sca::Result deconfigure() override;
 
 private:
-	AAudioStream* audioStream;
+	//AAudioStream* audioStream;
 };
 
 

@@ -12,11 +12,11 @@ class VrLibPlugin implements Plugin<Project> {
     }
 
     project.android {
-      compileSdkVersion 29
+      compileSdkVersion 25
 
       defaultConfig {
             minSdkVersion 25
-            targetSdkVersion 29
+            targetSdkVersion 25
 
             externalNativeBuild {
                   ndk {

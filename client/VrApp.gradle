@@ -110,11 +110,11 @@ class VrAppPlugin implements Plugin<Project> {
 
     project.android {
 
-	  compileSdkVersion 29
+	  compileSdkVersion 25
 
 	  defaultConfig {
 		  minSdkVersion 25
-		  targetSdkVersion 29
+		  targetSdkVersion 25
 
 		  externalNativeBuild {
 			  ndk {
@@ -122,7 +122,7 @@ class VrAppPlugin implements Plugin<Project> {
 			  }
 			  ndkBuild {
 				  def numProcs = Runtime.runtime.availableProcessors()
-				  arguments "V=0", "-j$numProcs", "-C$project.buildDir.parent", "APP_PLATFORM=android-29", "NDK_TOOLCHAIN_VERSION=clang", "APP_STL=c++_static"
+				  arguments "V=0", "-j$numProcs", "-C$project.buildDir.parent", "APP_PLATFORM=android-25", "NDK_TOOLCHAIN_VERSION=clang", "APP_STL=c++_static"
 				  abiFilters 'armeabi-v7a'
 			  }
 		  }

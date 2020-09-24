@@ -19,7 +19,7 @@
 #include "crossplatform/ResourceCreator.h"
 #include "crossplatform/SessionClient.h"
 #include "crossplatform/AudioStreamTarget.h"
-#include "SCR_Class_AAudio_Impl/AA_AudioPlayer.h"
+#include <crossplatform/AudioPlayer.h>
 
 #include "GlobalGraphicsResources.h"
 #include "VideoDecoderProxy.h"
@@ -106,7 +106,7 @@ private:
 	avs::AudioDecoder avsAudioDecoder;
 	avs::AudioTarget avsAudioTarget;
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
-	AA_AudioPlayer audioPlayer;
+	sca::AudioPlayer* audioPlayer;
 
 	struct RenderConstants
 	{
