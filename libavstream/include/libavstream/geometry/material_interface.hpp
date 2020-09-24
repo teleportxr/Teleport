@@ -220,6 +220,17 @@ namespace avs
 				>> textureAccessor.scale;
 		}
 	};
+	enum class RoughnessMode: uint16_t
+	{
+		CONSTANT=0,
+		MULTIPLY,
+		MULTIPLY_REVERSE
+	};
+
+       template<typename istream> istream& operator>>( istream  &is, RoughnessMode &obj ) { 
+	   is>>*((char*)&obj);
+         return is;            
+      }
 	struct PBRMetallicRoughness
 	{
 		TextureAccessor baseColorTexture;
@@ -228,7 +239,7 @@ namespace avs
 		TextureAccessor metallicRoughnessTexture;
 		float metallicFactor = 1.0f;
 		float roughnessFactor = 1.0f;
-
+		RoughnessMode roughnessMode=RoughnessMode::MULTIPLY;
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const PBRMetallicRoughness& metallicRoughness)
 		{
@@ -236,17 +247,22 @@ namespace avs
 				<< " " << metallicRoughness.baseColorFactor
 				<< " " << metallicRoughness.metallicRoughnessTexture
 				<< " " << metallicRoughness.metallicFactor
-				<< " " << metallicRoughness.roughnessFactor;
+				<< " " << metallicRoughness.roughnessFactor
+				<< " " << (unsigned short)metallicRoughness.roughnessMode;
+				// TODO: roughnessMode not implemented here.
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, PBRMetallicRoughness& metallicRoughness)
 		{
-			return in >> metallicRoughness.baseColorTexture
+			unsigned short &ch=*((unsigned short*)&metallicRoughness.roughnessMode);
+			return 
+				in>> metallicRoughness.baseColorTexture
 				>> metallicRoughness.baseColorFactor
 				>> metallicRoughness.metallicRoughnessTexture
 				>> metallicRoughness.metallicFactor
-				>> metallicRoughness.roughnessFactor;
+				>> metallicRoughness.roughnessFactor
+				>> ch;
 		}
 	};
 	struct Material

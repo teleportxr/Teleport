@@ -25,13 +25,11 @@ Clone the repository with submodules:
 3. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/build/x64
 4. Configure for x64 platform with default native compiler
 5. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
-6. Set Simul Directory.
-7. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
-8. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
-9. Uncheck 'ENABLE_ENCRYPTION' option from srt.
-10. Check 'STATIC' and 'BUILD_AS_LIBRARY' options from Basis Universal.
-11. Uncheck PLATFORM_D3D11_SFX.
-12. Generate, open and build the Visual Studio project.
+6. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
+7. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
+8. Uncheck 'ENABLE_ENCRYPTION' option from srt.
+9. Uncheck PLATFORM_D3D11_SFX.
+10. Generate, open and build the Visual Studio project.
 
 ## Building UE4 plugin
 

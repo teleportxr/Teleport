@@ -357,7 +357,8 @@ namespace SCServer
 				put(material->pbrMetallicRoughness.metallicRoughnessTexture.tiling.y);
 				put(material->pbrMetallicRoughness.metallicFactor);
 				put(material->pbrMetallicRoughness.roughnessFactor);
-
+				put(material->pbrMetallicRoughness.roughnessMode);
+				
 				//Push normal map, and scale.
 				put(material->normalTexture.index);
 				put(material->normalTexture.texCoord);

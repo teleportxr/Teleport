@@ -25,7 +25,7 @@ namespace basist
 {
     class etc1_global_selector_codebook;
     class basisu_transcoder;
-    enum transcoder_texture_format;
+    enum class transcoder_texture_format;
 }
 
 namespace scr

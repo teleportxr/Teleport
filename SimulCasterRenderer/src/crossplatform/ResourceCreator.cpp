@@ -442,7 +442,7 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 		case basist::transcoder_texture_format::cTFBC5: return scr::Texture::CompressionFormat::BC5;
 		case basist::transcoder_texture_format::cTFETC1: return scr::Texture::CompressionFormat::ETC1;
 		case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
-		case basist::transcoder_texture_format::cTFPVRTC1_4_OPAQUE_ONLY: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
+		case basist::transcoder_texture_format::cTFPVRTC1_4_RGBA: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
 		case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
 		case basist::transcoder_texture_format::cTFTotalTextureFormats: return scr::Texture::CompressionFormat::UNCOMPRESSED;
 		default:
@@ -516,8 +516,10 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material 
 						 missingResources);
 
 	//Combined
+	float rough=material.pbrMetallicRoughness.roughnessMode==RoughnessMode::MULTIPLY?material.pbrMetallicRoughness.roughnessFactor:0.0f;
+	float rough_or_smoothness=material.pbrMetallicRoughness.roughnessMode==RoughnessMode::MULTIPLY_REVERSE?1.0f:0.0f;
 	AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
-						 avs::vec4{material.pbrMetallicRoughness.roughnessFactor, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, 1},
+						 avs::vec4{rough, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, rough_or_smoothness},
 						 m_DummyCombined,
 						 newMaterial->materialInfo.combined,
 						 newMaterial->textureSlots,
@@ -848,7 +850,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					uint32_t basisWidth, basisHeight, basisBlocks;
 
 					basis_transcoder.get_image_level_desc(transcoding.data, transcoding.dataSize, 0, mipIndex, basisWidth, basisHeight, basisBlocks);
-					uint32_t outDataSize = basist::basis_get_bytes_per_block(basis_textureFormat) * basisBlocks;
+					uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_textureFormat) * basisBlocks;
 
 					unsigned char* outData = new unsigned char[outDataSize];
 					if(basis_transcoder.transcode_image_level(transcoding.data, transcoding.dataSize, 0, mipIndex, outData, basisBlocks, basis_textureFormat))

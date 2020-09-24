@@ -278,6 +278,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y = NextFloat;
 		material.pbrMetallicRoughness.metallicFactor = NextFloat;
 		material.pbrMetallicRoughness.roughnessFactor = NextFloat;
+		material.pbrMetallicRoughness.roughnessMode = (RoughnessMode) Next2B;
 
 		material.normalTexture.index = Next8B;
 		material.normalTexture.texCoord = Next8B;

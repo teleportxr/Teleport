@@ -34,7 +34,7 @@ set (CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "")
 set(ENABLE_ENCRYPTION OFF CACHE BOOL "Enable encryption in SRT")
 
 #Hide Basis Universal STATIC option, and set to opposite of USE_DYNAMIC_RUNTIME.
-if(USE_DYNAMIC_RUNTIME)
+if(LIBAV_USE_DYNAMIC_RUNTIME)
 	set(STATIC OFF CACHE INTERNAL "Static linking for Basis Universal" FORCE)
 else()
 	set(STATIC ON CACHE INTERNAL "Static linking for Basis Universal" FORCE)

@@ -94,7 +94,7 @@ ClientRenderer::ClientRenderer():
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
 	resourceManagers(new scr::ActorManager),
-	resourceCreator(basist::transcoder_texture_format::cTFBC1),
+	resourceCreator(basist::transcoder_texture_format::cTFBC3),
 	sessionClient(this, std::make_unique<PCDiscoveryService>()),
 	RenderMode(0)
 {
@@ -498,8 +498,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto& textures = resourceManagers.mTextureManager.GetCache(cacheLock);
-		static int tw = 32;
-		int x = 0, y = hdrFramebuffer->GetHeight()-64;
+		static int tw = 64;
+		int x = 0, y = hdrFramebuffer->GetHeight()-tw*2;
 		for (auto t : textures)
 		{
 			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
@@ -512,7 +512,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			}
 		}
 		y += tw;
-		renderPlatform->DrawTexture(deviceContext, x+=tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyDiffuse.get())))->GetSimulTexture());
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyDiffuse.get())))->GetSimulTexture());
 		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyNormal.get())))->GetSimulTexture());
 		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyCombined.get())))->GetSimulTexture());
 	}
@@ -622,9 +622,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 			{
 				auto &L=l.resource->GetLightData();
 				if(L.is_point==0.0f)
-					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: dir %3.3f %3.3f %3.3f",i.first,L.direction.x,L.direction.y,L.direction.z));
+					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,L.colour.x,L.colour.y,L.colour.z,L.direction.x,L.direction.y,L.direction.z));
 				else
-					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,L.position.x,L.position.y,L.position.z,L.radius));
+					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,L.colour.x,L.colour.y,L.colour.z,L.position.x,L.position.y,L.position.z,L.radius));
 			}
 		}
 		auto &missing=resourceCreator.GetMissingResources();

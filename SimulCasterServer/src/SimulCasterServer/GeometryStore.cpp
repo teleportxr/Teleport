@@ -499,8 +499,8 @@ namespace SCServer
 	const avs::Texture* GeometryStore::getNextCompressedTexture() const
 	{
 		//No textures to compress.
-		if(texturesToCompress.size() == 0) return nullptr;
-
+		if(texturesToCompress.size() == 0)
+			return nullptr;
 		auto compressionPair = texturesToCompress.begin();
 		auto foundTexture = textures.find(compressionPair->first);
 		assert(foundTexture != textures.end());
@@ -511,8 +511,8 @@ namespace SCServer
 	void GeometryStore::compressNextTexture()
 	{
 		//No textures to compress.
-		if(texturesToCompress.size() == 0) return;
-
+		if(texturesToCompress.size() == 0)
+			return;
 		auto compressionPair = texturesToCompress.begin();
 		auto& foundTexture = textures.find(compressionPair->first);
 		assert(foundTexture != textures.end());
@@ -531,7 +531,10 @@ namespace SCServer
 		basisCompressorParams.m_out_filename = compressionData.basisFilePath;
 
 		basisCompressorParams.m_mip_gen = true;
-		basisCompressorParams.m_mip_smallest_dimension = 4; //Appears to be the smallest texture size that SimulFX handles.
+		basisCompressorParams.m_mip_smallest_dimension = 4; // ???
+		
+		// use UASTC, which is better for normals.
+		basisCompressorParams.m_uastc=false;
 
 		basisu::basis_compressor basisCompressor;
 
