@@ -533,8 +533,9 @@ namespace SCServer
 		basisCompressorParams.m_mip_gen = true;
 		basisCompressorParams.m_mip_smallest_dimension = 4; // ???
 		
+		static bool use_uastc=false;
 		// use UASTC, which is better for normals.
-		basisCompressorParams.m_uastc=false;
+		basisCompressorParams.m_uastc=use_uastc;
 
 		basisu::basis_compressor basisCompressor;
 

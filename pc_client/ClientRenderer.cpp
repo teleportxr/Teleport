@@ -661,6 +661,24 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 	PrintHelpText(deviceContext);
 }
 
+void ClientRenderer::WriteHierarchy(int tab,std::shared_ptr<scr::Actor> actor)
+{
+	for(int i=0;i<tab;i++)
+		std::cout<<"\t";
+	std::cout<<actor->id<<std::endl;
+	for(auto a:actor->GetChildren())
+	{
+		WriteHierarchy(tab+1,a.lock());
+	}
+}
+
+void ClientRenderer::WriteHierarchies()
+{
+	for(std::shared_ptr<scr::Actor> actor : resourceManagers.mActorManager->GetRootActors())
+	{
+		WriteHierarchy(0,actor);
+	}
+}
 void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
 {
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
@@ -1247,6 +1265,7 @@ void ClientRenderer::PrintHelpText(simul::crossplatform::DeviceContext& deviceCo
 	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
 }
 
+
 void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 {
 	switch (wParam) 
@@ -1275,6 +1294,9 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'C':
 			render_from_video_centre = !render_from_video_centre;
+			break;
+		case 'H':
+			WriteHierarchies();
 			break;
 		case 'T':
 			show_textures = !show_textures;

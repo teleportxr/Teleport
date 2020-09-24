@@ -184,6 +184,8 @@ public:
 	void PrintHelpText(simul::crossplatform::DeviceContext& deviceContext);
 	
 	void DrawOSD(simul::crossplatform::DeviceContext& deviceContext);
+	void WriteHierarchy(int tab,std::shared_ptr<scr::Actor> actor);
+	void WriteHierarchies();
 	void RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext);
 	void RenderActor(simul::crossplatform::DeviceContext& deviceContext, std::shared_ptr<scr::Actor> actor);
 

@@ -42,15 +42,18 @@ namespace SCServer
 			pipe = std::make_unique<VideoPipe>();
 		}
 		videoPipes[0]->sourceQueue = colorQueue;
-		if (depthQueue) videoPipes[1]->sourceQueue = depthQueue;
+		if (depthQueue)
+			videoPipes[1]->sourceQueue = depthQueue;
 
-		audioPipes.resize(1);
-		for (std::unique_ptr<AudioPipe>& pipe : audioPipes)
+		if(audioQueue)
 		{
-			pipe = std::make_unique<AudioPipe>();
+			audioPipes.resize(1);
+			for (std::unique_ptr<AudioPipe>& pipe : audioPipes)
+			{
+				pipe = std::make_unique<AudioPipe>();
+			}
+			audioPipes[0]->sourceQueue = audioQueue;
 		}
-		audioPipes[0]->sourceQueue = audioQueue;
-
 		geometryPipes.resize(1);
 		for (std::unique_ptr<GeometryPipe>& pipe : geometryPipes)
 		{
