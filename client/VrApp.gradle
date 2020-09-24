@@ -113,7 +113,7 @@ class VrAppPlugin implements Plugin<Project> {
 	  compileSdkVersion 29
 
 	  defaultConfig {
-		  minSdkVersion 29
+		  minSdkVersion 25
 		  targetSdkVersion 29
 
 		  externalNativeBuild {

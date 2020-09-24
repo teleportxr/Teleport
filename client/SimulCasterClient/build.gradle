@@ -30,13 +30,13 @@ android {
 
     signingConfigs {
         release {
-            storeFile file('android.debug.keystore.jks')
             storePassword 'android'
             keyAlias = 'android'
             keyPassword 'android'
+            storeFile file('android.debug.keystore.jks')
         }
         debug {
-            storeFile file('android.debug.keystore.jks')
+            storeFile file('C:\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
             storePassword 'android'
             keyAlias = 'android'
             keyPassword 'android'
@@ -70,8 +70,24 @@ android {
           signingConfig signingConfigs.release
     }
   }
-
-  sourceSets {
+    packagingOptions {
+        exclude 'META-INF/kotlin-stdlib-common-coroutines.kotlin_module'
+        exclude 'kotlin/annotation/annotation.kotlin_builtins'
+        exclude 'kotlin/internal/internal.kotlin_builtins'
+        exclude 'META-INF/simulcasterclient_debug.kotlin_module'
+        exclude 'kotlin/collections/collections.kotlin_builtins'
+        exclude 'kotlin/reflect/reflect.kotlin_builtins'
+        exclude 'META-INF/kotlin-android-extensions-runtime.kotlin_module'
+        exclude 'META-INF/kotlin-stdlib-common.kotlin_module'
+        exclude 'META-INF/kotlin-stdlib.kotlin_module'
+        exclude 'META-INF/kotlin-stdlib-coroutines.kotlin_module'
+        exclude 'META-INF/kotlin-stdlib-jdk7.kotlin_module'
+        exclude 'kotlin/ranges/ranges.kotlin_builtins'
+        exclude 'kotlin/kotlin.kotlin_builtins'
+        exclude 'kotlin/coroutines/coroutines.kotlin_builtins'
+        exclude 'AndroidManifest.xml'
+    }
+    sourceSets {
     main {
       manifest.srcFile 'AndroidManifest.xml'
       java.srcDirs = ['java']
