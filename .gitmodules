@@ -10,3 +10,6 @@
 [submodule "libavstream/thirdparty/efp"]
 	path = libavstream/thirdparty/efp
 	url = git@github.com:simul/efp.git
+[submodule "plugins/UnrealDemo"]
+	path = plugins/UnrealDemo
+	url = git@github.com:simul/teleport-unreal.git
