@@ -42,6 +42,7 @@ public:
 private:
 	int	overflow(int c)
 	{
+		std::lock_guard<std::mutex> logLock(logMutex);
 		sync();
 
 		if (c != EOF)
@@ -70,6 +71,8 @@ private:
 		}
 		return 0;
 	}
+protected:
+	std::mutex logMutex;
 };
 
 class VisualStudioDebugOutput : public vsBufferedStringStreamBuf
@@ -78,7 +81,7 @@ public:
     VisualStudioDebugOutput(bool send_to_output_window=true,
 							const char *logfilename=NULL,size_t bufsize=(size_t)16
 							,DebugOutputCallback c=NULL)
-		:vsBufferedStringStreamBuf((int)bufsize)
+							:vsBufferedStringStreamBuf((int)bufsize)
 		,to_logfile(false)
 		,old_cout_buffer(NULL)
 		,old_cerr_buffer(NULL)
@@ -102,7 +105,6 @@ public:
 	}
 	void setLogFile(const char *logfilename)
 	{
-	
 		std::string fn=logfilename;
 		if(fn.find(":")>=fn.length())
 		{
@@ -131,6 +133,7 @@ public:
 	}
     virtual void writeString(const std::string &str)
     {
+		std::lock_guard<std::mutex> logLock(logMutex);
 		if(to_logfile)
 			logFile<<str.c_str();
 		if(callback)

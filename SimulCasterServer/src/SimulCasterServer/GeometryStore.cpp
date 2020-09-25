@@ -293,12 +293,16 @@ namespace SCServer
 
 	avs::Mesh* GeometryStore::getMesh(avs::uid meshID, avs::AxesStandard standard)
 	{
+		if(meshes.find(standard)==meshes.end())
+			return nullptr;
 		ExtractedMesh* meshData = getResource(meshes.at(standard), meshID);
 		return (meshData ? &meshData->mesh : nullptr);
 	}
 
 	const avs::Mesh* GeometryStore::getMesh(avs::uid meshID, avs::AxesStandard standard) const
 	{
+		if(meshes.find(standard)==meshes.end())
+			return nullptr;
 		const ExtractedMesh* meshData = getResource(meshes.at(standard), meshID);
 		return (meshData ? &meshData->mesh : nullptr);
 	}

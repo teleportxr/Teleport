@@ -24,7 +24,7 @@
 
 #ifdef _MSC_VER
 #include "../VisualStudioDebugOutput.h"
-VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
+VisualStudioDebugOutput debug_buffer(false, nullptr, 128);
 #endif
 
 using namespace SCServer;
@@ -378,9 +378,36 @@ static void passOnOutput(const char *msg)
 		avsContext.log(avs::LogSeverity::Warning,msg);
 }
 
-TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc messageHandler)
+avs::MessageHandlerFunc messageHandler=nullptr;
+struct LogMessage
 {
-	avsContext.setMessageHandler(messageHandler, nullptr);
+	avs::LogSeverity severity;
+	std::string msg;
+	void* userData;
+};
+std::vector<LogMessage> messages;
+ void AccumulateMessagesFromThreads(avs::LogSeverity severity, const char* msg, void* userData)
+ {
+	 LogMessage logMessage={severity,msg,userData};
+	 messages.push_back(std::move(logMessage));
+ }
+
+ void PipeOutMessages()
+ {
+	 if(messageHandler)
+	 {
+		 for(auto m:messages)
+		 {
+			 messageHandler(m.severity,m.msg.c_str(),m.userData);
+		 }
+	 }
+	 messages.clear();
+ }
+
+TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc msgh)
+{
+	messageHandler=msgh;
+	avsContext.setMessageHandler(AccumulateMessagesFromThreads, nullptr);
 	debug_buffer.setCallback(&passOnOutput);
 }
 
@@ -663,6 +690,11 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	}
 
 	discoveryService->tick();
+	PipeOutMessages();
+}
+TELEPORT_EXPORT void Tock()
+{
+	PipeOutMessages();
 }
 
 TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
@@ -897,7 +929,6 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 	{
 		return;
 	}
-
 	auto& clientData = c->second;
 	if(!clientData.clientMessaging.hasPeer())
 	{
@@ -950,7 +981,7 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 		memcpy(&tagDataSize, buffer + sizeof(avs::uid), sizeof(size_t));
 
 		const uint8_t* tagData = buffer + sizeof(avs::uid) + sizeof(size_t);
-
+		
 		EncodeVideoFrame(clientID, tagData, tagDataSize);
 	}
 	else

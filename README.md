@@ -64,6 +64,9 @@ Clone the repository with submodules:
 9. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
 10. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
+## Building Unity plugin
+1. In Cmake GUI, set REMOTEPLAY_UNITY to checked.
+
 ## Building Android client application
 
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
@@ -73,7 +76,7 @@ Clone the repository with submodules:
 5. New method: In Android Studio open RemotePlay/build.gradle.
 6. On the top right, click the Sync Project with Gradle Files button (has a shark icon) to load the config for your device.
 7. In Android Studio, go to Build->Generate Signed Bundle / APK and generate a key named android.debug.keystore in your RemotePlay/client/SimulCasterClient directory.
-8. Go to File->Project Structure->Modules->SimulCasterClient->Signing Configs and in debug config, put in the details of the key you created. 
+8. Go to File->Project Structure->Modules->client->SimulCasterClient->Signing Configs and in debug config, put in the details of the key you created. 
 9. Click the build icon to compile and then you should be able to run.
 
 ## Firewall setup
