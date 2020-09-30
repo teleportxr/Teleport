@@ -1,4 +1,5 @@
 #include "GeometryStore.h"
+#include "ErrorHandling.h"
 
 #include <filesystem>
 #include <fstream>
@@ -154,9 +155,9 @@ namespace SCServer
 			++i;
 		}
 	}
-
 	void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
 	{
+		TELEPORT_COUT<<"Reaffirming resources"<<std::endl;
 		//Copy data on the resources that were loaded.
 		std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> oldMeshes = meshes;
 		std::map<avs::uid, ExtractedMaterial> oldMaterials = materials;
@@ -164,6 +165,8 @@ namespace SCServer
 
 		//Delete the old data; we don't want to use the GeometryStore::clear(...) function as that will call delete on the pointers we want to copy.
 		meshes.clear();
+		TELEPORT_COUT<<"Had "<<materials.size()<<" materials."<<std::endl;
+		TELEPORT_COUT<<"MaterialAmount is "<<materialAmount<<"."<<std::endl;
 		materials.clear();
 		textures.clear();
 
@@ -203,6 +206,7 @@ namespace SCServer
 			avs::uid newID = reaffirmedMaterials[i].newID;
 
 			materials[newID] = oldMaterials[reaffirmedMaterials[i].oldID];
+			TELEPORT_COUT<<"New uid: Material "<<newID<<", old uid was material ."<<reaffirmedMaterials[i].oldID<<std::endl;
 
 			//Replace all texture accessor indexes with their new index.
 			replaceTextureID(materials[newID].material.pbrMetallicRoughness.baseColorTexture.index);

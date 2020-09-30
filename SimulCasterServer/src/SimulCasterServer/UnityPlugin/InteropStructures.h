@@ -109,7 +109,10 @@ struct InteropMaterial
 	size_t extensionAmount;
 	avs::MaterialExtensionIdentifier* extensionIDs;
 	avs::MaterialExtension** extensions;
-
+	const InteropMaterial &operator=(const avs::Material& avsMaterial)
+	{
+		return *this;
+	}
 	operator avs::Material() const
 	{
 		std::unordered_map<avs::MaterialExtensionIdentifier, std::shared_ptr<avs::MaterialExtension>> convertedExtensions;
@@ -129,7 +132,7 @@ struct InteropMaterial
 
 		return
 		{
-			convertToByteString(name),
+			avs::convertToByteString(name),
 			pbrMetallicRoughness,
 			normalTexture,
 			occlusionTexture,
@@ -163,7 +166,7 @@ struct InteropTexture
 	{
 		return
 		{
-			convertToByteString(name),
+			avs::convertToByteString(name),
 			width,
 			height,
 			depth,

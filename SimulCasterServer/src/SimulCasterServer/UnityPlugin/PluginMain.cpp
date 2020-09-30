@@ -1184,6 +1184,15 @@ TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModif
 	geometryStore.storeMaterial(id, guid, lastModified, avs::Material(material));
 }
 
+TELEPORT_EXPORT bool IsMaterialStored(avs::uid id)
+{
+	const avs::Material *avsmat=geometryStore.getMaterial(id);
+	if(avsmat)
+		return true;
+	return false;
+}
+
+
 TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation)
 {
 	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation);

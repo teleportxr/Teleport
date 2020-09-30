@@ -215,7 +215,8 @@ bool GeometryStreamingService::isStreamingActor(void* actor)
 void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const
 {
 	avs::DataNode* thisNode = geometryStore->getNode(node_uid);
-	if(!thisNode || thisNode->data_uid == 0) return;
+	if(!thisNode || thisNode->data_uid == 0)
+		return;
 
 	avs::MeshNodeResources meshNode;
 	meshNode.node_uid = node_uid;

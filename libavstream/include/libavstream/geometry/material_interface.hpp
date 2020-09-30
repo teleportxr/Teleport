@@ -10,26 +10,40 @@
 
 #include "material_extensions.h"
 
-//Convert from wide char to byte char.
-//We should really use wide strings for the names of textures and materials, as we will want to support UTF-8.
-static std::string convertToByteString(std::wstring wideString)
-{
-	std::string byteString;
-	byteString.resize(wideString.size());
-
-	size_t stringSize = wideString.size() + 1;
-#if WIN32
-    size_t charsConverted;
-	wcstombs_s(&charsConverted, const_cast<char*>(byteString.data()), stringSize, wideString.data(), stringSize);
-#else
-	wcstombs(const_cast<char*>(byteString.data()), wideString.data(), stringSize);
-#endif
-
-	return byteString;
-}
-
 namespace avs
 {
+	//Convert from wide char to byte char.
+	//We should really NOT use wide strings for the names of textures and materials, as we will want to support UTF-8.
+	// Roderick: wstring is not UTF-8, but UTF-16, favoured only by Microsoft.
+	// The correct unicode to use in most circumstances is UTF-8, which is represented adequately
+	// by an std::string.
+	static std::string convertToByteString(std::wstring wideString)
+	{
+		std::string byteString;
+		byteString.resize(wideString.size());
+
+		size_t stringSize = wideString.size() + 1;
+	#if WIN32
+		size_t charsConverted;
+		wcstombs_s(&charsConverted, const_cast<char*>(byteString.data()), stringSize, wideString.data(), stringSize);
+	#else
+		wcstombs(const_cast<char*>(byteString.data()), wideString.data(), stringSize);
+	#endif
+
+		return byteString;
+	}
+	static std::wstring Utf8ToWString(const char *src_utf8)
+	{
+		int src_length=(int)strlen(src_utf8);
+		int length=src_length;
+		wchar_t *output_buffer = new wchar_t [length+1];
+		mbstowcs(output_buffer, src_utf8, (size_t)length );
+		output_buffer[length]=0;
+		std::wstring wstr=std::wstring(output_buffer);
+		delete [] output_buffer;
+		return wstr;
+	}
+
 	enum class SamplerFilter : uint32_t
 	{
 		NEAREST,					//GL_NEAREST (0x2600)
