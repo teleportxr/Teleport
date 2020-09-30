@@ -516,7 +516,7 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material 
 						 missingResources);
 
 	//Combined
-	float rough=material.pbrMetallicRoughness.roughnessMode==RoughnessMode::MULTIPLY?material.pbrMetallicRoughness.roughnessFactor:0.0f;
+	float rough=material.pbrMetallicRoughness.roughnessFactor;
 	float rough_or_smoothness=material.pbrMetallicRoughness.roughnessMode==RoughnessMode::MULTIPLY_REVERSE?1.0f:0.0f;
 	AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
 						 avs::vec4{rough, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, rough_or_smoothness},

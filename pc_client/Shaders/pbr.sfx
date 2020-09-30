@@ -234,7 +234,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	vec3 diff						=light.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
 	float d							=max(1.0,dist_to_light/light.radius);
-	vec3 irradiance					=vec3(.5,.32,0)*lerp(1.0,5.0/(d*d),light.is_point);
+	vec3 irradiance					=light.colour*lerp(1.0,5.0/(d*d),light.is_point);
 	vec3 dir_from_surface_to_light	=lerp(-light.direction,normalize(diff),light.is_point);
 	float roughnessL				= max(.01, surfaceProperties.roughness2);
 	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
@@ -269,8 +269,9 @@ vec4 Solid(vertexOutput IN)
 
 	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R);
+	// from combinedLookup we will either use roughness*roughnessTexture, or (1-roughness)*smoothnessTexture. This depends on combinedOutputScalarRoughMetalOcclusion.a.
 	combinedLookup		=combinedLookup.araa;
-	combinedLookup.a	=1.0-combinedLookup.a;
+	//combinedLookup.a	=1.0-combinedLookup.a;
 	// occlusion to 1.0 for now.
 	combinedLookup.b	=1.0;
 	// So combinedLookup is now rough-metal-occl-smooth

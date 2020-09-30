@@ -487,12 +487,12 @@ namespace SCServer
 
 			for (avs::uid actorID : drawn)
 			{
-				geometryStreamingService->hideActor(clientID, actorID);
+				geometryStreamingService->hideNode(clientID, actorID);
 			}
 
 			for (avs::uid actorID : toRelease)
 			{
-				geometryStreamingService->showActor(clientID, actorID);
+				geometryStreamingService->showNode(clientID, actorID);
 			}
 
 			break;

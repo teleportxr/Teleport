@@ -262,13 +262,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				 */
 				clientRenderer.Update();
 
-				double fTime=0.0;
+				static double fTime=0.0;
 				static simul::core::Timer t;
 				
 				float time_step=t.UpdateTime()/1000.0f;
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer.ResizeView(0, w->viewport.w, w->viewport.h);
 				clientRenderer.OnFrameMove(fTime,time_step);
+				fTime+=time_step;
 				errno=0;
 				dsmi->Render(hWnd);
 				errno=0;

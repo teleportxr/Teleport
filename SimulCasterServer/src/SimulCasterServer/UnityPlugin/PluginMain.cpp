@@ -806,7 +806,7 @@ TELEPORT_EXPORT void ShowActor(avs::uid clientID, avs::uid actorID)
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 		return;
-	c->second.geometryStreamingService->showActor(clientID,actorID);
+	c->second.geometryStreamingService->showNode(clientID,actorID);
 }
 
 TELEPORT_EXPORT void HideActor(avs::uid clientID, avs::uid actorID)
@@ -814,7 +814,7 @@ TELEPORT_EXPORT void HideActor(avs::uid clientID, avs::uid actorID)
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 		return;
-	c->second.geometryStreamingService->hideActor(clientID,actorID);
+	c->second.geometryStreamingService->hideNode(clientID,actorID);
 }
 
 TELEPORT_EXPORT void SetActorVisible(avs::uid clientID, avs::uid actorID, bool isVisible)
@@ -830,7 +830,7 @@ TELEPORT_EXPORT bool IsClientRenderingActorID(avs::uid clientID, avs::uid actorI
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end()) return false;
 
-	return clientPair->second.geometryStreamingService->isClientRenderingActor(actorID);
+	return clientPair->second.geometryStreamingService->isClientRenderingNode(actorID);
 }
 
 TELEPORT_EXPORT bool IsClientRenderingActorPtr(avs::uid clientID, void* actorPtr)
@@ -838,7 +838,7 @@ TELEPORT_EXPORT bool IsClientRenderingActorPtr(avs::uid clientID, void* actorPtr
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end()) return false;
 
-	return clientPair->second.geometryStreamingService->isClientRenderingActor(actorPtr);
+	return clientPair->second.geometryStreamingService->isClientRenderingNode(actorPtr);
 }
 
 bool HasResource(avs::uid clientID, avs::uid resourceID)

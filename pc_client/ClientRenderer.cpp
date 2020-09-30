@@ -1200,7 +1200,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(0,controllerPoses[0],1.0f);
 		FillInControllerPose(1,controllerPoses[1], -1.0f);
 
-		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos,controllerState, decoder->idrRequired());
+		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos,controllerState, decoder->idrRequired(),fTime);
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			oculusOrigin = sessionClient.GetInitialPos();

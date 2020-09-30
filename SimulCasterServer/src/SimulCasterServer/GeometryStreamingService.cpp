@@ -52,7 +52,7 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 
 void GeometryStreamingService::getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const
 {
-	for(auto actorPair : streamedActorIDs)
+	for(auto actorPair : streamedNodeIDs)
 	{
 		GetMeshNodeResources(actorPair.second, outMeshResources);
 	}
@@ -89,50 +89,50 @@ void GeometryStreamingService::stopStreaming()
 	reset();
 }
 
-void GeometryStreamingService::hideActor(avs::uid clientID,avs::uid actorID)
+void GeometryStreamingService::hideNode(avs::uid clientID,avs::uid nodeID)
 {
-	auto actorPair = streamedActors.find(actorID);
-	if(actorPair != streamedActors.end())
+	auto actorPair = streamedNodes.find(nodeID);
+	if(actorPair != streamedNodes.end())
 	{
 		hideActor_Internal(clientID,actorPair->second);
-		hiddenActors[actorID] = actorPair->second;
+		hiddenNodes[nodeID] = actorPair->second;
 	}
 	else
 	{
-		std::cout << "Tried to hide non-streamed actor with ID of " << actorID <<"!\n";
+		std::cout << "Tried to hide non-streamed actor with ID of " << nodeID <<"!\n";
 	}
 }
 
-void GeometryStreamingService::showActor(avs::uid clientID,avs::uid actorID)
+void GeometryStreamingService::showNode(avs::uid clientID,avs::uid nodeID)
 {
-	auto actorPair = hiddenActors.find(actorID);
-	if(actorPair != hiddenActors.end())
+	auto actorPair = hiddenNodes.find(nodeID);
+	if(actorPair != hiddenNodes.end())
 	{
 		showActor_Internal(clientID,actorPair->second);
-		hiddenActors.erase(actorPair);
+		hiddenNodes.erase(actorPair);
 	}
 	else
 	{
-		std::cout << "Tried to show non-hidden actor with ID of " << actorID << "!\n";
+		std::cout << "Tried to show non-hidden actor with ID of " << nodeID << "!\n";
 	}
 }
 
-void GeometryStreamingService::setActorVisible(avs::uid clientID,avs::uid actorID, bool isVisible)
+void GeometryStreamingService::setNodeVisible(avs::uid clientID,avs::uid nodeID, bool isVisible)
 {
 	if(isVisible)
-		showActor(clientID,actorID);
+		showNode(clientID,nodeID);
 	else
-		hideActor(clientID,actorID);
+		hideNode(clientID,nodeID);
 }
 
-bool SCServer::GeometryStreamingService::isClientRenderingActor(avs::uid actorID)
+bool SCServer::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 {
-	return hiddenActors.find(actorID) != hiddenActors.end();
+	return hiddenNodes.find(nodeID) != hiddenNodes.end();
 }
 
-bool SCServer::GeometryStreamingService::isClientRenderingActor(void* actorPtr)
+bool SCServer::GeometryStreamingService::isClientRenderingNode(void* actorPtr)
 {
-	return isClientRenderingActor(getActorID(actorPtr));
+	return isClientRenderingNode(getActorID(actorPtr));
 }
 
 void GeometryStreamingService::addHandsToStream()
@@ -141,7 +141,7 @@ void GeometryStreamingService::addHandsToStream()
 
 	for(std::pair<void*, avs::uid> pointerIDHand : hands)
 	{
-		streamedActorIDs.emplace(pointerIDHand);
+		streamedNodeIDs.emplace(pointerIDHand);
 	}
 }
 
@@ -177,39 +177,39 @@ void GeometryStreamingService::reset()
 {
 	sentResources.clear();
 	unconfirmedResourceTimes.clear();
-	streamedActorIDs.clear();
-	streamedActors.clear();
-	hiddenActors.clear();
+	streamedNodeIDs.clear();
+	streamedNodes.clear();
+	hiddenNodes.clear();
 }
 
-void GeometryStreamingService::addActor(void* newActor, avs::uid actorID)
+void GeometryStreamingService::addActor(void* newActor, avs::uid nodeID)
 {
-	if(actorID != 0)
+	if(nodeID != 0)
 	{
-		streamedActorIDs[newActor] = actorID;
-		streamedActors[actorID] = newActor;
+		streamedNodeIDs[newActor] = nodeID;
+		streamedNodes[nodeID] = newActor;
 	}
 }
 
 avs::uid GeometryStreamingService::removeActor(void* oldActor)
 {
-	avs::uid actorID = streamedActorIDs[oldActor];
-	streamedActorIDs.erase(oldActor);
-	streamedActors.erase(actorID);
+	avs::uid nodeID = streamedNodeIDs[oldActor];
+	streamedNodeIDs.erase(oldActor);
+	streamedNodes.erase(nodeID);
 
-	return actorID;
+	return nodeID;
 }
 
 avs::uid GeometryStreamingService::getActorID(void* actor)
 {
-	auto idPair = streamedActorIDs.find(actor);
+	auto idPair = streamedNodeIDs.find(actor);
 
-	return idPair != streamedActorIDs.end() ? idPair->second : 0;
+	return idPair != streamedNodeIDs.end() ? idPair->second : 0;
 }
 
 bool GeometryStreamingService::isStreamingActor(void* actor)
 {
-	return streamedActorIDs.find(actor) != streamedActorIDs.end();
+	return streamedNodeIDs.find(actor) != streamedNodeIDs.end();
 }
 
 void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const

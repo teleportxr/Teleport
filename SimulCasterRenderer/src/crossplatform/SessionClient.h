@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 
 #include <enet/enet.h>
@@ -48,7 +49,13 @@ public:
 
     void SendClientMessage(const avs::ClientMessage &msg);
 
-    void Frame(const avs::DisplayInfo& displayInfo, const avs::Pose& headPose, const avs::Pose* controllerPoses,bool poseValid, const ControllerState& controllerState, bool requestKeyframe);
+    void Frame(const avs::DisplayInfo& displayInfo
+        , const avs::Pose& headPose
+        , const avs::Pose* controllerPoses
+        , bool poseValid
+        , const ControllerState& controllerState
+        , bool requestKeyframe
+	    , double time);
 
     bool IsConnected() const;
     std::string GetServerIP() const;
@@ -95,10 +102,13 @@ private:
 
     bool handshakeAcknowledged = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
+    std::map<avs::uid,double> mSentResourceRequests;
     std::vector<avs::uid> mReceivedActors; //Actors that have entered bounds, are about to be drawn, and need to be confirmed to the server.
     std::vector<avs::uid> mLostActors; //Actor that have left bounds, are about to be hidden, and need to be confirmed to the server.
 
     avs::vec3 initialPos;
 
 	uint32_t clientID=0;
+
+    double time=0.0;
 };

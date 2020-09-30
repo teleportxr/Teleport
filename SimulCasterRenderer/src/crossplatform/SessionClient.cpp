@@ -135,8 +135,15 @@ void SessionClient::SendClientMessage(const avs::ClientMessage& msg)
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 }
 
-void SessionClient::Frame(const avs::DisplayInfo &displayInfo, const avs::Pose &headPose, const avs::Pose* controllerPoses,bool poseValid,const ControllerState& controllerState, bool requestKeyframe)
+void SessionClient::Frame(const avs::DisplayInfo &displayInfo
+	,const avs::Pose &headPose
+	,const avs::Pose* controllerPoses
+	,bool poseValid
+	,const ControllerState& controllerState
+	,bool requestKeyframe
+	,double t)
 {
+	time=t;
 	if(mClientHost && mServerPeer)
 	{
 		if(handshakeAcknowledged)
@@ -407,19 +414,33 @@ void SessionClient::SendResourceRequests()
 {
 	std::vector<avs::uid> resourceRequests = mResourceCreator->TakeResourceRequests();
 
-	//Append session client's resource requests.
-	resourceRequests.insert(resourceRequests.end(), mResourceRequests.begin(), mResourceRequests.end());
-	mResourceRequests.clear();
+	//Append to session client's resource requests.
+	mResourceRequests.insert(mResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
+	resourceRequests.clear();
 
-	if(resourceRequests.size() != 0)
+	if(mResourceRequests.size() != 0)
 	{
-		size_t resourceAmount = resourceRequests.size();
+		size_t resourceAmount = mResourceRequests.size();
 		ENetPacket* packet = enet_packet_create(&resourceAmount, sizeof(size_t), ENET_PACKET_FLAG_RELIABLE);
 
 		enet_packet_resize(packet, sizeof(size_t) + sizeof(avs::uid) * resourceAmount);
-		memcpy(packet->data + sizeof(size_t), resourceRequests.data(), sizeof(avs::uid) * resourceAmount);
+		memcpy(packet->data + sizeof(size_t), mResourceRequests.data(), sizeof(avs::uid) * resourceAmount);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
+		for(auto i:mResourceRequests)
+		{
+			mSentResourceRequests[i]=time;
+		}
+		mResourceRequests.clear();
+	}
+	// Have we been waiting too long for any resources?
+	for(auto r:mSentResourceRequests)
+	{
+		if(time-r.second>10.0)
+		{
+			SCR_COUT<<"Re-requesting resource "<<r.first<<std::endl;
+			mResourceRequests.push_back(r.first);
+		}
 	}
 }
 
@@ -439,6 +460,13 @@ void SessionClient::SendReceivedResources()
 		memcpy(packet->data + messageSize, receivedResources.data(), receivedResourcesSize);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
+
+		for(auto r:receivedResources)
+		{
+			auto q=mSentResourceRequests.find(r);
+			if(q!=mSentResourceRequests.end())
+				mSentResourceRequests.erase(r);
+		}
 	}
 }
 
