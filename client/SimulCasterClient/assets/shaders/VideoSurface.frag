@@ -22,9 +22,21 @@ layout(std140, binding = 2) uniform videoUB
 } vid;
 
 
-layout(std430,binding=3) buffer RWCameraPosition_ssbo
+layout(std430,binding=3) buffer RWTagDataID_ssbo
 {
-    vec4 RWCameraPosition[8];
+    uvec4 RWTagDataID;
+};
+
+struct VideoTagDataCube
+{
+    vec3 cameraPosition;
+    float pad;
+    vec4 cameraRotation;
+};
+
+layout(std430,binding=4) buffer TagDataCube_ssbo
+{
+    VideoTagDataCube tagDataCubeBuffer[32];
 };
 
 
@@ -50,7 +62,9 @@ void main()
     clip_pos.y+=2.0*vTexCoords.y;
    //vec3 view=normalize((clip_pos*vInvViewProj).xyz);
 
-    vec3 offsetFromVideo2=vid.cameraPosition+vEyeOffset-RWCameraPosition[0].xyz;
+    VideoTagDataCube td = tagDataCubeBuffer[RWTagDataID.x];
+
+    vec3 offsetFromVideo2=vid.cameraPosition+vEyeOffset-td.cameraPosition;
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
     vec3 view = vSampleVec;
     vec3 colourSampleVec=vSampleVec;

@@ -11,6 +11,12 @@ void GL_ShaderStorageBuffer::Create(ShaderStorageBufferCreateInfo* pShaderStorag
     m_SSBO = GlBuffer();
     m_SSBO.Create(GLBUFFER_TYPE_STORAGE, m_CI.size, m_CI.data);
 }
+
+void GL_ShaderStorageBuffer::Update(size_t size, const void* data, uint32_t offset)
+{
+    m_SSBO.Update(size, data, offset);
+}
+
 void GL_ShaderStorageBuffer::Destroy()
 {
     m_SSBO.Destroy();

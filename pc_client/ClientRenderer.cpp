@@ -935,7 +935,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	}
 	
 
-	colourOffsetScale.x=0;
+	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
@@ -943,7 +943,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	for (int i = 0; i < NumVidStreams; ++i)
 	{
 		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
-		auto f = std::bind(&ClientRenderer::OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
+		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
 		// Video streams are 0+...
 		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20 + i, f))
 		{
@@ -1066,7 +1066,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	lastSetupCommand.video_config = reconfigureVideoCommand.video_config;
 }
 
-void ClientRenderer::OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
+void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 {
 	if (lastSetupCommand.video_config.use_cubemap)
 	{

@@ -10,19 +10,19 @@ namespace sca
 	class AudioPlayer 
 	{
 	public:
-		virtual ~AudioPlayer();
+		AudioPlayer();
+		virtual ~AudioPlayer() = default;
 		virtual Result initializeAudioDevice() = 0;
 		virtual Result configure(const AudioParams& audioParams) = 0;
 		virtual Result deconfigure() = 0;
 		virtual Result playStream(const uint8_t* data, size_t dataSize) = 0;
-		bool isInitialized() { return initialized; }
-		bool isConfigured() { return configured; }
+		bool isInitialized() { return mInitialized; }
+		bool isConfigured() { return mConfigured; }
 
 	protected:
-		AudioPlayer();
-		AudioParams audioParams;
-		bool initialized;
-		bool configured;
+		AudioParams mAudioParams;
+		bool mInitialized;
+		bool mConfigured;
 	};
 }
 

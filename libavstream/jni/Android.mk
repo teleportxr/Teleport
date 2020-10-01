@@ -30,6 +30,7 @@ LOCAL_SRC_FILES  := 	../src/context.cpp \
                         ../src/decoder.cpp \
                         ../src/audiodecoder.cpp \
                         ../src/geometrydecoder.cpp \
+                        ../src/geometryencoder.cpp \
                         ../src/mesh.cpp \
                         ../src/surface.cpp \
                         ../src/buffer.cpp \

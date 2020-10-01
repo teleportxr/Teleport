@@ -2,8 +2,8 @@
 #pragma once
 
 #include <crossplatform/AudioPlayer.h>
+#include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
-#include <android/ndk-version.h>
 
 /*! A class to play audio from streams and files for PC
 */
@@ -22,7 +22,12 @@ public:
 	sca::Result deconfigure() override;
 
 private:
-	//AAudioStream* audioStream;
+	SLObjectItf mEngineObject = nullptr;
+	SLEngineItf mEngineInterface  = nullptr;
+    SLObjectItf mOutputMixObject = nullptr;
+    SLObjectItf mPlayerInterface = nullptr;
+	SLObjectItf mPlayInterface = nullptr;
+	SLAndroidSimpleBufferQueueItf mSimpleBufferQueueInterface = nullptr;
 };
 
 

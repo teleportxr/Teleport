@@ -140,6 +140,5 @@ namespace scr
 	{
 		SceneCaptureCubeCoreTagData coreData;
 		std::vector<LightData> lights;
-	}
-	;
+	};
 }
