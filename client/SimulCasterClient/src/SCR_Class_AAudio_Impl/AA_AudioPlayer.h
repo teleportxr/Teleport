@@ -22,7 +22,7 @@ public:
 	sca::Result deconfigure() override;
 
 private:
-	AAudioStream* audioStream;
+	AAudioStream* mAudioStream;
 };
 
 

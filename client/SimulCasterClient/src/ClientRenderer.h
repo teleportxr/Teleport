@@ -20,6 +20,55 @@ public:
 
 };
 
+// Placeholders for lights
+struct DirectionalLight
+{
+	avs::vec3 direction;
+	float pad;
+    avs::vec4 color;
+	ovrMatrix4f shadowViewMatrix;
+	ovrMatrix4f shadowProjectionMatrix;
+};
+
+struct PointLight
+{
+    avs::vec3 position;
+	float range;
+    avs::vec3 attenuation;
+	float pad;
+    avs::vec4 color;
+	ovrMatrix4f shadowViewMatrix;
+	ovrMatrix4f shadowProjectionMatrix;
+};
+
+struct SpotLight
+{
+    avs::vec3 position;
+	float  range;
+    avs::vec3 direction;
+	float cone;
+    avs::vec3 attenuation;
+	float pad;
+    avs::vec4 color;
+	ovrMatrix4f shadowViewMatrix;
+	ovrMatrix4f shadowProjectionMatrix;
+};
+
+struct VideoTagData2D
+{
+    avs::vec3 cameraPosition;
+	float pad;
+    avs::vec4 cameraRotation;
+};
+
+struct VideoTagDataCube
+{
+    avs::vec3 cameraPosition;
+	float pad;
+    avs::vec4 cameraRotation;
+	// Some light information
+};
+
 class ClientRenderer
 {
 public:
@@ -83,20 +132,27 @@ public:
 	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
 	std::shared_ptr<scr::UniformBuffer> mVideoUB;
-	std::shared_ptr<scr::ShaderStorageBuffer> mCameraPositionBuffer;
+	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataIDBuffer;
+	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataBuffer;
 	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
-	std::shared_ptr<scr::Effect>        mExtractCameraPositionEffect;
+	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;
+
+	std::vector<scr::SceneCapture2DTagData> mVideoTagData2DArray;
+	std::vector<scr::SceneCaptureCubeTagData> mVideoTagDataCubeArray;
 
 	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
-	avs::vec4 mCameraPositions[8];
+	static constexpr int MAX_TAG_DATA_COUNT = 32;
+
+	scr::uvec4 mTagDataID;
 
 	std::string                         CopyCubemapSrc;
-	std::string                         ExtractPositionSrc;
+	std::string                         ExtractTagDataIDSrc;
 	int specularSize = 128;
 	int diffuseSize = 64;
 	int lightSize = 64;
 	bool mShowInfo=true;
+	bool mIsCubemapVideo = true;
 };

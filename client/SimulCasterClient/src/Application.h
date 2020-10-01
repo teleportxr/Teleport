@@ -83,7 +83,7 @@ public:
 	/* End DecodeEventInterface */
 
 private:
-    void OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize);
+    void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 
 	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
@@ -95,8 +95,8 @@ private:
 	avs::Surface       mSurface;
 	bool               mPipelineConfigured;
 
-	static constexpr size_t NumStreams = 1;
-	static constexpr bool AudioStream = true;
+	static constexpr size_t NumVideoStreams = 1;
+	static constexpr bool AudioStream = false;
 	static constexpr bool   GeoStream  = true;
 
 	GeometryDecoder        geometryDecoder;
@@ -139,7 +139,8 @@ private:
 	std::string LoadTextFile(const char *filename) override;
 	ClientRenderer clientRenderer;
 	scr::ResourceManagers resourceManagers;
-	ResourceCreator        resourceCreator;
+	ResourceCreator resourceCreator;
 	LobbyRenderer lobbyRenderer;
 	Controllers controllers;
+	avs::SetupCommand mLastSetupCommand;
 };

@@ -18,6 +18,7 @@
 #include "Log.h"
 #include "OVRActorManager.h"
 #include "VideoSurface.h"
+#include <libavstream/common.hpp>
 
 #if defined( OVR_OS_WIN32 )
 #include "../res_pc/resource.h"
@@ -76,16 +77,20 @@ Application::Application()
 	renderConstants.depthOffsetScale={0.0f,0.6667f,0.5f,0.3333f};
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
 
-	if(enet_initialize() != 0) {
+	if(enet_initialize() != 0)
+	{
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
+	if (AudioStream)
+	{
 #if defined( USE_AAUDIO )
-	audioPlayer = new AA_AudioPlayer();
+		audioPlayer = new AA_AudioPlayer();
 #else
-	audioPlayer = new SL_AudioPlayer();
+		audioPlayer = new SL_AudioPlayer();
 #endif
-	audioPlayer->initializeAudioDevice();
+		audioPlayer->initializeAudioDevice();
+	}
 
 	resourceCreator.Initialise(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
@@ -287,7 +292,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		ENetAddress remoteEndpoint;
 		// Set server ip to empty string to use broadcast ip
-		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
+		if(mSession.Discover("192.168.3.128", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
 		{
 			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
@@ -421,7 +426,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 
 		if (!clientRenderer.mNetworkSource.configure(
-				NumStreams + (GeoStream ? 1 : 0), setupCommand.port + 1,
+				NumVideoStreams + (AudioStream ? 1 : 0) + (GeoStream ? 1 : 0), setupCommand.port + 1,
 				mSession.GetServerIP().c_str(), setupCommand.port, sourceParams))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
@@ -430,6 +435,12 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 	    clientRenderer.mNetworkSource.setDebugStream(setupCommand.debug_stream);
 	    clientRenderer.mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
 	    clientRenderer.mNetworkSource.setDoChecksums(setupCommand.do_checksums);
+
+		clientRenderer.mVideoTagData2DArray.clear();
+		clientRenderer.mVideoTagData2DArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
+		clientRenderer.mVideoTagDataCubeArray.clear();
+		clientRenderer.mVideoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
+
 		avs::DecoderParams decoderParams = {};
 		decoderParams.codec             = videoConfig.videoCodec;
 		decoderParams.decodeFrequency   = avs::DecodeFrequency::NALUnit;
@@ -439,8 +450,8 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 		size_t stream_width  = videoConfig.video_width;
 		size_t stream_height = videoConfig.video_height;
 		// test
-		auto f = std::bind(&Application::OnReceiveExtraVideoData, this, std::placeholders::_1, std::placeholders::_2);
-		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 50, f))
+		auto f = std::bind(&Application::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
+		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 20, f))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
 			clientRenderer.mNetworkSource.deconfigure();
@@ -495,7 +506,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 		if (GeoStream)
 		{
-			avsGeometryDecoder.configure(100, &geometryDecoder);
+			avsGeometryDecoder.configure(60, &geometryDecoder);
 			avsGeometryTarget.configure(&resourceCreator);
 			mPipeline.link({&clientRenderer.mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget});
 		}
@@ -572,6 +583,10 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.usingHands = true;
+
+	clientRenderer.mIsCubemapVideo = setupCommand.video_config.use_cubemap;
+
+	mLastSetupCommand = setupCommand;
 }
 
 void Application::OnVideoStreamClosed()
@@ -598,9 +613,51 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
     , videoConfig.depth_width, videoConfig.depth_height);
 }
 
-void Application::OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize)
+void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 {
+	if (mLastSetupCommand.video_config.use_cubemap)
+	{
+		scr::SceneCaptureCubeTagData tagData;
+		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.coreData.cameraTransform);
 
+		tagData.lights.resize(tagData.coreData.lightCount);
+
+		// Aidan : View and proj matrices are currently unchanged from Unity
+		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
+		for (auto& light : tagData.lights)
+		{
+			memcpy(&light, &data[index], sizeof(scr::LightData));
+			avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
+			index += sizeof(scr::LightData);
+		}
+
+		VideoTagDataCube shaderData;
+        shaderData.cameraPosition = tagData.coreData.cameraTransform.position;
+        shaderData.pad = 0;
+        shaderData.cameraRotation = tagData.coreData.cameraTransform.rotation;
+
+		const uint32_t offset = clientRenderer.MAX_TAG_DATA_COUNT * sizeof(VideoTagDataCube) * tagData.coreData.id;
+		clientRenderer.mTagDataBuffer->Update(sizeof(VideoTagDataCube), (void*)&shaderData, offset);
+
+		clientRenderer.mVideoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
+	}
+	else
+	{
+		scr::SceneCapture2DTagData tagData;
+		memcpy(&tagData, data, dataSize);
+		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
+
+		VideoTagData2D shaderData;
+		shaderData.cameraPosition = tagData.cameraTransform.position;
+		shaderData.pad = 0;
+		shaderData.cameraRotation = tagData.cameraTransform.rotation;
+
+		const uint32_t offset = clientRenderer.MAX_TAG_DATA_COUNT * sizeof(VideoTagData2D) * tagData.id;
+		clientRenderer.mTagDataBuffer->Update(sizeof(VideoTagData2D), (void*)&shaderData, offset);
+
+		clientRenderer.mVideoTagData2DArray[tagData.id] = std::move(tagData);
+	}
 }
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)

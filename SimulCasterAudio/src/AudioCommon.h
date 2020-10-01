@@ -55,12 +55,13 @@ namespace sca
 			AudioPlayerAlreadyConfigured,
 			AudioPlayerNotConfigured,
 			AudioPlayerBufferSubmissionError,
-			AudioStreamBuilderCreationError,
-			AudioStreamBuilderDeletionError,
-			AudioOpenStreamError,
+            AudioStreamCreationError,
+            AudioStreamConfigurationError,
 			AudioCloseStreamError,
-			AudioReleaseStreamError,
-			AudioWriteError
+			AudioResourceDeletionError,
+			AudioWriteError,
+			AudioOutputMixerInitializationError,
+            AudioBufferInitializationError
 		};
 
 		Result() : m_code(Code::OK) 

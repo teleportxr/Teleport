@@ -23,7 +23,8 @@ ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,Sess
         , mVideoSurfaceTexture(nullptr)
         , mCubemapTexture(nullptr)
         , mCubemapLightingTexture(nullptr)
-        , mCameraPositionBuffer(nullptr)
+        , mTagDataIDBuffer(nullptr)
+		, mTagDataBuffer(nullptr)
 {
 }
 
@@ -46,7 +47,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		}
 		static ovrProgramParm uniformParms[]  =    // both TextureMvpProgram and CubeMapPanoProgram use the same parm mapping
 				                      {
-						                      {  "colourOffsetScale", ovrProgramParmType::FLOAT_VECTOR4}
+						                        {"colourOffsetScale", ovrProgramParmType::FLOAT_VECTOR4}
 						                      , {"depthOffsetScale" , ovrProgramParmType::FLOAT_VECTOR4}
 						                      , {"cubemapTexture"   , ovrProgramParmType::TEXTURE_SAMPLED}
 						                      , {"videoFrameTexture", ovrProgramParmType::TEXTURE_SAMPLED}
@@ -74,25 +75,56 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		mSpecularTexture     =GlobalGraphicsResources.renderPlatform.InstantiateTexture();
 		mRoughSpecularTexture=GlobalGraphicsResources.renderPlatform.InstantiateTexture();
 
-		mCubemapLightingTexture=GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-		mCameraPositionBuffer=GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
+		mCubemapLightingTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
+		mTagDataIDBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
+		mTagDataBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
+		mTagDataBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
 	}
+	// Tag Data ID
 	{
 		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
 				3,
 				scr::ShaderStorageBuffer::Access::NONE,
-				8*4*sizeof(float),
-				(void*)&mCameraPositions
+					sizeof(scr::uvec4),
+				(void*)&mTagDataID
 		};
-		mCameraPositionBuffer->Create(&shaderStorageBufferCreateInfo);
+		mTagDataIDBuffer->Create(&shaderStorageBufferCreateInfo);
 	}
 
+	if (mIsCubemapVideo)
+	{
+		// Tag Data Cube Buffer
+		{
+			VideoTagDataCube shaderTagDataCubeArray[MAX_TAG_DATA_COUNT];
+			scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
+					4,
+					scr::ShaderStorageBuffer::Access::NONE,
+					sizeof(VideoTagDataCube) * MAX_TAG_DATA_COUNT,
+					(void*)&shaderTagDataCubeArray
+			};
+			mTagDataBuffer->Create(&shaderStorageBufferCreateInfo);
+		}
+	}
+	else
+	{
+		// Tag Data 2D Buffer
+		{
+			VideoTagData2D shaderTagData2DArray[MAX_TAG_DATA_COUNT];
+			scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
+					4,
+					scr::ShaderStorageBuffer::Access::NONE,
+					sizeof(VideoTagData2D) * MAX_TAG_DATA_COUNT,
+					(void*)&shaderTagData2DArray
+			};
+			mTagDataBuffer->Create(&shaderStorageBufferCreateInfo);
+		}
+	}
 
 	{
 		CopyCubemapSrc     = clientAppInterface->LoadTextFile("shaders/CopyCubemap.comp");
 		mCopyCubemapEffect = GlobalGraphicsResources.renderPlatform.InstantiateEffect();
 		mCopyCubemapWithDepthEffect = GlobalGraphicsResources.renderPlatform.InstantiateEffect();
-		mExtractCameraPositionEffect=GlobalGraphicsResources.renderPlatform.InstantiateEffect();
+		mExtractTagDataIDEffect=GlobalGraphicsResources.renderPlatform.InstantiateEffect();
 
 		scr::Effect::EffectCreateInfo effectCreateInfo = {};
 		effectCreateInfo.effectName = "CopyCubemap";
@@ -101,8 +133,8 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		effectCreateInfo.effectName = "CopyCubemapWithDepth";
 		mCopyCubemapWithDepthEffect->Create(&effectCreateInfo);
 
-		effectCreateInfo.effectName = "ExtractCameraPosition";
-		mExtractCameraPositionEffect->Create(&effectCreateInfo);
+		effectCreateInfo.effectName = "ExtractTagDataID";
+		mExtractTagDataIDEffect->Create(&effectCreateInfo);
 
 		scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo = {};
 		pipelineCreateInfo.m_Count = 1;
@@ -126,16 +158,14 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		mCopyCubemapWithDepthEffect->CreatePass(&effectPassCreateInfo);
 
 		{
-			ExtractPositionSrc     = clientAppInterface->LoadTextFile("shaders/ExtractPosition.comp");
-			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/ExtractPosition.comp";
-			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractPositionSrc;
-			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_camera_position";
-			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_camera_position";
+			ExtractTagDataIDSrc = clientAppInterface->LoadTextFile("shaders/ExtractTagDataID.comp");
+			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/ExtractTagDataID.comp";
+			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractTagDataIDSrc;
+			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_tag_data_id";
 			scr::ShaderSystem::Pipeline cp3(&GlobalGraphicsResources.renderPlatform, &pipelineCreateInfo);
-			effectPassCreateInfo.effectPassName = "ExtractPosition";
+			effectPassCreateInfo.effectPassName = "ExtractTagDataID";
 			effectPassCreateInfo.pipeline = cp3;
-			mExtractCameraPositionEffect->CreatePass(&effectPassCreateInfo);
-
+			mExtractTagDataIDEffect->CreatePass(&effectPassCreateInfo);
 
 			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(CubemapUB), &cubemapUB};
 			mCubemapUB->Create(&uniformBufferCreateInfo);
@@ -159,14 +189,13 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 		sr.AddImage(2, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
 		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
-		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 3, "CameraPosition", {mCameraPositionBuffer.get()});
-
+		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 3, "TagDataID", {mTagDataIDBuffer.get()});
 
 		mCubemapComputeShaderResources.push_back(sr);
 
 		mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
 		mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{});
-		mExtractCameraPositionEffect->LinkShaders("ExtractPosition",{});
+		mExtractTagDataIDEffect->LinkShaders("ExtractTagDataID",{});
 	}
 
 	mVideoSurfaceDef.surfaceName = "VideoSurface";
@@ -368,11 +397,11 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		}
 		GL_CheckErrors("Frame: CopyToCubemaps - Lighting");
 		{
-			inputCommandCreateInfo.effectPassName = "ExtractPosition";
+			inputCommandCreateInfo.effectPassName = "ExtractTagDataID";
 
 			scr::uvec3 size  = {1,1,1};
 			cubemapUB.sourceOffset		={0,0};
-			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractCameraPositionEffect, {mCubemapComputeShaderResources[0][2]});
+			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractTagDataIDEffect, {mCubemapComputeShaderResources[0][2]});
 			cubemapUB.faceSize			=tc.width;
 			cubemapUB.sourceOffset		={(int32_t)mVideoTexture->GetTextureCreateInfo().width - (32 * 4), (int32_t)mVideoTexture->GetTextureCreateInfo().height - (3 * 8)};
 

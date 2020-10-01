@@ -256,6 +256,6 @@ public:
 	vec3 videoPos;
 
 private:
-	void OnReceiveExtraVideoData(const uint8_t* data, size_t dataSize);
+	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::DeviceContext& deviceContext);
 };

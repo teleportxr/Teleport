@@ -28,13 +28,13 @@ public:
 private:
 	sca::Result asyncInitializeAudioDevice();
 
-	std::future<sca::Result> initResult;
+	std::future<sca::Result> mInitResult;
 
-	Microsoft::WRL::ComPtr<IXAudio2> device;						
-	IXAudio2MasteringVoice* masteringVoice;
-	IXAudio2SourceVoice* sourceVoice;
+	Microsoft::WRL::ComPtr<IXAudio2> mDevice;						
+	IXAudio2MasteringVoice* mMasteringVoice;
+	IXAudio2SourceVoice* mSourceVoice;
 
-	std::unique_ptr<class VoiceCallback> voiceCallback;
+	std::unique_ptr<class VoiceCallback> mVoiceCallback;
 };
 
 
