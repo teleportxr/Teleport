@@ -52,9 +52,10 @@ void GlBuffer::Update( const size_t updateDataSize, const void * data, uint32_t 
 {
 	OVR_ASSERT( buffer != 0 );
 
-	if ( offset + updateDataSize > size )
+	size_t subSize = offset + updateDataSize;
+	if ( subSize > size )
 	{
-		OVR_FAIL( "GlBuffer::Update: size overflow %zu specified, %zu allocated\n", updateDataSize, size );
+		OVR_FAIL( "GlBuffer::Update: size overflow %zu specified, %zu allocated\n", subSize, size );
 	}
 
 	glBindBuffer( target, buffer );
