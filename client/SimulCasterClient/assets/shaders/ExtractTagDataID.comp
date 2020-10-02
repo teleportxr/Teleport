@@ -33,12 +33,12 @@ void extract_tag_data_id()
     // Now join all the bits together.
     if(ThreadID.x==uint(0))
     {
-        uint all_bits = 0;
+        uint all_bits = uint(0);
         for(int i=0;i<32;i++)
         {
             all_bits |= accumulate_position[i];
         }
        // Use w for sanity check.
-       RWTagDataID = uvec4(all_bits, 0, 0, 110);
+       RWTagDataID = uvec4(all_bits, uint(0), uint(0), uint(110));
     }
 }

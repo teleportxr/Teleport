@@ -400,10 +400,9 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			inputCommandCreateInfo.effectPassName = "ExtractTagDataID";
 
 			scr::uvec3 size  = {1,1,1};
-			cubemapUB.sourceOffset		={0,0};
 			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractTagDataIDEffect, {mCubemapComputeShaderResources[0][2]});
 			cubemapUB.faceSize			=tc.width;
-			cubemapUB.sourceOffset		={(int32_t)mVideoTexture->GetTextureCreateInfo().width - (32 * 4), (int32_t)mVideoTexture->GetTextureCreateInfo().height - (3 * 8)};
+			cubemapUB.sourceOffset		={(int32_t)mVideoTexture->GetTextureCreateInfo().width - (32 * 4), (int32_t)mVideoTexture->GetTextureCreateInfo().height - 4};
 
 			mDeviceContext.DispatchCompute(&inputCommand);
 		}

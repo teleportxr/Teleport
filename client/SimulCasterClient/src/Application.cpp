@@ -294,7 +294,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		ENetAddress remoteEndpoint;
 		// Set server ip to empty string to use broadcast ip
-		if(mSession.Discover("192.168.3.128", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
+		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
 		{
 			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
@@ -639,7 +639,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
         shaderData.pad = 0;
         shaderData.cameraRotation = tagData.coreData.cameraTransform.rotation;
 
-		const uint32_t offset = clientRenderer.MAX_TAG_DATA_COUNT * sizeof(VideoTagDataCube) * tagData.coreData.id;
+		uint32_t offset = sizeof(VideoTagDataCube) * tagData.coreData.id;
 		clientRenderer.mTagDataBuffer->Update(sizeof(VideoTagDataCube), (void*)&shaderData, offset);
 
 		clientRenderer.mVideoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
@@ -655,7 +655,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		shaderData.pad = 0;
 		shaderData.cameraRotation = tagData.cameraTransform.rotation;
 
-		const uint32_t offset = clientRenderer.MAX_TAG_DATA_COUNT * sizeof(VideoTagData2D) * tagData.id;
+		uint32_t offset = sizeof(VideoTagData2D) * tagData.id;
 		clientRenderer.mTagDataBuffer->Update(sizeof(VideoTagData2D), (void*)&shaderData, offset);
 
 		clientRenderer.mVideoTagData2DArray[tagData.id] = std::move(tagData);
