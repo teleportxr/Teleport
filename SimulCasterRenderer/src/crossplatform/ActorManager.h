@@ -23,8 +23,9 @@ namespace scr
 
 		virtual ~ActorManager() = default;
 
-		virtual std::shared_ptr<Actor> CreateActor(avs::uid actorID);
-		virtual std::shared_ptr<Actor> CreateHand(avs::uid handID);
+		virtual std::shared_ptr<Actor> CreateActor(avs::uid id) const;
+
+		virtual void AddActor(std::shared_ptr<Actor> actor, bool isHand);
 
 		void RemoveActor(std::shared_ptr<Actor> actor);
 		void RemoveActor(avs::uid actorID);
@@ -72,10 +73,10 @@ namespace scr
 		avs::uid leftHandID = 0;
 		avs::uid rightHandID = 0;
 
-		//Add actor to manager after being created.
-		void AddActor(std::shared_ptr<Actor> newActor);
-		//Add hand to manager after being created.
-		void AddHand(std::shared_ptr<Actor> newHand);
+		//Link actor to systems after being added.
+		void LinkActor(std::shared_ptr<Actor> newActor);
+		//Link hand to systems after being added.
+		void LinkHand(std::shared_ptr<Actor> newHand);
 	private:
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an actor, so they can be linked when received. <ChildID, ParentID>
 		std::map<avs::uid, avs::MovementUpdate> earlyMovements; //Movements that have arrived before the actor was received.

@@ -36,6 +36,7 @@ public:
 	Transform();
 	Transform(const TransformCreateInfo& pTransformCreateInfo);
 	Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 translation, quat rotation, avs::vec3 scale);
+	Transform(const avs::Transform& transform);
 
 	Transform& operator= (const avs::Transform& transform)
 	{

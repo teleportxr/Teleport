@@ -215,7 +215,7 @@ extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 
 ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
-    GL_CheckErrors("Frame: Start");
+	GL_CheckErrors("Frame: Start");
 	// process input events first because this mirrors the behavior when OnKeyEvent was
 	// a virtual function on VrAppInterface and was called by VrAppFramework.
 	for(int i = 0; i < vrFrame.Input.NumKeyEvents; i++)
@@ -281,7 +281,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		clientRenderer.headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		clientRenderer.headPose.position = {clientRenderer.cameraPosition.x, clientRenderer.cameraPosition.y, clientRenderer.cameraPosition.z};
 
-		mSession.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastPrimaryControllerState, clientRenderer.mDecoder.idrRequired());
+		mSession.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastPrimaryControllerState, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (!receivedInitialPos&&mSession.receivedInitialPos)
 		{
 			clientRenderer.oculusOrigin = mSession.GetInitialPos();

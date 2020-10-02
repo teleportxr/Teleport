@@ -370,7 +370,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& ta
 avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& target)
 {
 	uint64_t nodeCount = Next8B;
-	for (uint64_t i = 0; i < nodeCount; ++i)
+	for(uint64_t i = 0; i < nodeCount; ++i)
 	{
 		avs::uid uid = Next8B;
 
@@ -378,32 +378,32 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.transform = NextChunk(avs::Transform);
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);
-		
+
 		switch(node.data_type)
 		{
 		case avs::NodeDataType::Mesh:
 		{
 			uint64_t materialCount = Next8B;
 			node.materials.reserve(materialCount);
-			for (uint64_t j = 0; j < materialCount; ++j)
+			for(uint64_t j = 0; j < materialCount; ++j)
 			{
 				node.materials.push_back(Next8B);
 			}
 		}
-			break;
+		break;
 		case avs::NodeDataType::Light:
-			node.lightColour=NextVec4;
-			node.lightRadius=NextFloat;
-			node.lightDirection= NextVec3;
-			node.lightType=NextB;
+			node.lightColour = NextVec4;
+			node.lightRadius = NextFloat;
+			node.lightDirection = NextVec3;
+			node.lightType = NextB;
 			break;
 		default:
 			break;
 		};
 
 		uint64_t childCount = Next8B;
-		node.materials.reserve(childCount);
-		for (uint64_t j = 0; j < childCount; ++j)
+		node.childrenUids.reserve(childCount);
+		for(uint64_t j = 0; j < childCount; ++j)
 		{
 			node.childrenUids.push_back(Next8B);
 		}

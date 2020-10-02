@@ -4,16 +4,9 @@
 
 namespace scr
 {
-
-//Actor
-Actor::Actor(avs::uid i):id(i)
-{
-}
-
-void Actor::Init(const ActorCreateInfo& actorCreateInfo)
-{
-	m_CI=actorCreateInfo;
-}
+Actor::Actor(avs::uid id)
+	:id(id)
+{}
 
 void Actor::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
@@ -23,7 +16,7 @@ void Actor::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation
 	}
 	else
 	{
-		m_CI.localTransform.UpdateModelMatrix(translation, rotation, scale);
+		localTransform.UpdateModelMatrix(translation, rotation, scale);
 		RequestTransformUpdate();
 	}
 }
@@ -54,13 +47,13 @@ void Actor::SetLastMovement(const avs::MovementUpdate& update)
 {
 	lastReceivedMovement = update;
 
-	UpdateModelMatrix(update.position, update.rotation, m_CI.localTransform.m_Scale);
+	UpdateModelMatrix(update.position, update.rotation, localTransform.m_Scale);
 }
 
 void Actor::TickExtrapolatedTransform(float deltaTime)
 {
 	deltaTime /= 1000;
-	scr::Transform& transform = (lastReceivedMovement.isGlobal ? globalTransform : m_CI.localTransform);
+	scr::Transform& transform = (lastReceivedMovement.isGlobal ? globalTransform : localTransform);
 
 	transform.m_Translation += static_cast<avs::vec3>(lastReceivedMovement.velocity) * deltaTime;
 
@@ -115,9 +108,14 @@ void Actor::SetVisible(bool visible)
 void Actor::UpdateGlobalTransform() const
 {
 	std::shared_ptr<Actor> parentPtr = parent.lock();
-	globalTransform = parentPtr ? m_CI.localTransform * parentPtr->GetGlobalTransform() : m_CI.localTransform;
+	globalTransform = parentPtr ? localTransform * parentPtr->GetGlobalTransform() : localTransform;
 
 	isTransformDirty = false;
+
+	for(std::weak_ptr<Actor> child : children)
+	{
+		child.lock()->UpdateGlobalTransform();
+	}
 }
 
 }

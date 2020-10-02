@@ -690,12 +690,6 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
 	cameraConstants.viewPosition = camera.GetPosition();
 
-	/*const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetActorList();
-	for(size_t i = 0; i < resourceManagers.mActorManager->getVisibleActorAmount(); i++)
-	{
-		RenderActor(deviceContext, actorList[i]->actor);
-	}*/
-
 	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
 	for(std::shared_ptr<scr::Actor> actor : resourceManagers.mActorManager->GetRootActors())
 	{
@@ -717,6 +711,7 @@ void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceCont
 	}
 	Light *l=(Light*)(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
 	lightsBuffer.SetData(deviceContext,l);
+
 	//Only render visible actors, but still render children that are close enough.
 	if(actor->IsVisible())
 	{
@@ -728,8 +723,8 @@ void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceCont
 			static int mat_select=-1;
 			for(size_t element = 0; element < actor->GetMaterials().size() && element < meshInfo.ib.size(); element++)
 			{
-				if(mat_select>=0&&mat_select!=element)
-					continue;
+				if(mat_select >= 0 && mat_select != element) continue;
+
 				auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(meshInfo.vb[element].get());
 				const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(meshInfo.ib[element].get());
 
@@ -741,10 +736,16 @@ void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceCont
 				mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
 				cameraConstants.world = model;
 
-				scr::Material& mat = *actor->GetMaterials()[element];
+				std::shared_ptr<scr::Material> material = actor->GetMaterials()[element];
+				if(!material)
 				{
-					auto& matInfo = mat.GetMaterialCreateInfo();
-					const scr::Material::MaterialData& md = mat.GetMaterialData();
+					//Actor incomplete.
+					continue;
+				}
+				else
+				{
+					const scr::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
+					const scr::Material::MaterialData& md = material->GetMaterialData();
 					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
 
 					std::shared_ptr<pc_client::PC_Texture> diffuse = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.diffuse.texture);

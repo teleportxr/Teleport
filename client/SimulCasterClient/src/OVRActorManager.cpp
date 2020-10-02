@@ -15,16 +15,28 @@ using namespace OVR;
 using namespace scc;
 using namespace scr;
 
-std::vector<ovrSurfaceDef> CreateNativeActor(avs::uid actorID, const Actor::ActorCreateInfo& actorCreateInfo)
+std::shared_ptr<scr::Actor> OVRActorManager::CreateActor(avs::uid id) const
 {
-    GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
+    return std::make_shared<OVRActor>(id);
+}
+
+void OVRActorManager::AddActor(std::shared_ptr<Actor> actor, bool isHand)
+{
+	std::shared_ptr<OVRActor> ovrActor = std::static_pointer_cast<OVRActor>(actor);
+	ovrActor->ovrSurfaceDefs = CreateNativeActor(ovrActor);
+
+	ActorManager::AddActor(actor, isHand);
+}
+
+std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(std::shared_ptr<Actor> actor)
+{
     std::vector<ovrSurfaceDef> ovrSurfaceDefs;
 
-    for(size_t i = 0; i < actorCreateInfo.materials.size(); i++)
+    for(size_t i = 0; i < actor->GetMaterials().size(); i++)
     {
         //From Actor
-        const Mesh::MeshCreateInfo& meshCI = actorCreateInfo.mesh->GetMeshCreateInfo();
-        Material::MaterialCreateInfo& materialCI = actorCreateInfo.materials[i]->GetMaterialCreateInfo();
+        const Mesh::MeshCreateInfo& meshCI = actor->GetMesh()->GetMeshCreateInfo();
+        Material::MaterialCreateInfo& materialCI = actor->GetMaterials()[i]->GetMaterialCreateInfo();
         if(i >= meshCI.vb.size() || i >= meshCI.ib.size())
         {
             OVR_LOG("Skipping empty element in mesh.");
@@ -39,7 +51,7 @@ std::vector<ovrSurfaceDef> CreateNativeActor(avs::uid actorID, const Actor::Acto
         //Material
         std::vector<ShaderResource> pbrShaderResources;
         pbrShaderResources.push_back(GlobalGraphicsResources.scrCamera->GetShaderResource());
-        pbrShaderResources.push_back(actorCreateInfo.materials[i]->GetShaderResource());
+        pbrShaderResources.push_back(actor->GetMaterials()[i]->GetShaderResource());
         pbrShaderResources.push_back(GlobalGraphicsResources.lightCubemapShaderResources);
 
         materialCI.effect = dynamic_cast<Effect*>(&GlobalGraphicsResources.pbrEffect);
@@ -71,7 +83,7 @@ std::vector<ovrSurfaceDef> CreateNativeActor(avs::uid actorID, const Actor::Acto
 
         //Initialise OVR Actor
         ovrSurfaceDef ovr_surface_def;
-        std::string _actorName = std::string("ActorUID: ") + std::to_string(actorID);
+        std::string _actorName = std::string("ActorUID: ") + std::to_string(actor->id);
         ovr_surface_def.surfaceName = _actorName;
         ovr_surface_def.numInstances = 1;
         ovr_surface_def.geo = geo;
@@ -146,13 +158,6 @@ std::vector<ovrSurfaceDef> CreateNativeActor(avs::uid actorID, const Actor::Acto
     }
     return ovrSurfaceDefs;
 }
-void OVRActor::Init(const scr::Actor::ActorCreateInfo& actorCreateInfo)
-{
-
-    ovrSurfaceDefs=CreateNativeActor(id, actorCreateInfo);
-}
-
-
 
 void OVRActorManager::ChangeEffectPass(const char* effectPassName)
 {

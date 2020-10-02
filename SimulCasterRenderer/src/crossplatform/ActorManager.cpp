@@ -1,29 +1,18 @@
 #include "ActorManager.h"
 
-using namespace scr;
-
-std::shared_ptr<Actor> ActorManager::CreateActor(avs::uid actorID)
+namespace scr
 {
-	auto i=actorLookup.find(actorID);
-	if(i!=actorLookup.end())
-	{
-		return i->second;
-	}
-	auto a=std::make_shared<Actor>(actorID);
-	AddActor(a);
-	return a;
+std::shared_ptr<Actor> ActorManager::CreateActor(avs::uid id) const
+{
+	return std::make_shared<Actor>(id);
 }
 
-std::shared_ptr<Actor> ActorManager::CreateHand(avs::uid handID)
+void ActorManager::AddActor(std::shared_ptr<Actor> actor, bool isHand)
 {
-	auto i=actorLookup.find(handID);
-	if(i!=actorLookup.end())
-	{
-		return i->second;
-	}
-	auto a=std::make_shared<Actor>(handID);
-	AddHand(a);
-	return a;
+	//Remove any actor already using the ID.
+	RemoveActor(actor->id);
+
+	isHand ? LinkHand(actor) : LinkActor(actor);
 }
 
 void ActorManager::RemoveActor(std::shared_ptr<Actor> actor)
@@ -139,7 +128,7 @@ bool ActorManager::HideActor(avs::uid actorID)
 		actorIt->second->SetVisible(false);
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -150,7 +139,7 @@ void ActorManager::SetVisibleActors(const std::vector<avs::uid> visibleActors)
 	{
 		it.second->SetVisible(false);
 	}
-	
+
 	//Show visible actors.
 	for(avs::uid id : visibleActors)
 	{
@@ -158,7 +147,7 @@ void ActorManager::SetVisibleActors(const std::vector<avs::uid> visibleActors)
 	}
 }
 
-bool ActorManager::UpdateActorTransform(avs::uid actorID, const avs::vec3& translation, const scr::quat& rotation, const avs::vec3& scale)
+bool ActorManager::UpdateActorTransform(avs::uid actorID, const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
 	auto actorIt = actorLookup.find(actorID);
 	if(actorIt != actorLookup.end())
@@ -166,7 +155,7 @@ bool ActorManager::UpdateActorTransform(avs::uid actorID, const avs::vec3& trans
 		actorIt->second->UpdateModelMatrix(translation, rotation, scale);
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -245,7 +234,7 @@ const ActorManager::actorList_t& ActorManager::GetRootActors() const
 	return rootActors;
 }
 
-void ActorManager::AddActor(std::shared_ptr<Actor> newActor)
+void ActorManager::LinkActor(std::shared_ptr<Actor> newActor)
 {
 	rootActors.push_back(newActor);
 	actorLookup[newActor->id] = newActor;
@@ -265,7 +254,7 @@ void ActorManager::AddActor(std::shared_ptr<Actor> newActor)
 	}
 }
 
-void ActorManager::AddHand(std::shared_ptr<Actor> newHand)
+void ActorManager::LinkHand(std::shared_ptr<Actor> newHand)
 {
 	handList.push_back(newHand);
 	actorLookup[newHand->id] = newHand;
@@ -294,4 +283,4 @@ void ActorManager::LinkToParentActor(avs::uid childID)
 
 	rootActors.erase(std::find(rootActors.begin(), rootActors.end(), actorLookup[childID]));
 }
-
+}

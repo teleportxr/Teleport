@@ -39,6 +39,12 @@ Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 
 	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 }
 
+Transform::Transform(const avs::Transform& transform)
+	:m_Translation(transform.position), m_Rotation(transform.rotation), m_Scale(transform.scale)
+{
+	m_TransformData.m_ModelMatrix = mat4::Translation(m_Translation) * mat4::Rotation(m_Rotation) * mat4::Scale(m_Scale);
+}
+
 void Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
 	m_Translation = translation;

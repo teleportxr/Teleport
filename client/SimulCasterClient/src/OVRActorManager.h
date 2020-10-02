@@ -11,9 +11,9 @@ class OVRActor : public scr::Actor
 {
 public:
 	OVRActor(avs::uid id)
-			:Actor(id)
+		:Actor(id)
 	{}
-	void Init(const scr::Actor::ActorCreateInfo& actorCreateInfo);
+
 	std::vector<OVR::ovrSurfaceDef> ovrSurfaceDefs;
 };
 
@@ -23,6 +23,9 @@ public:
 
     virtual ~OVRActorManager() = default;
 
+    virtual std::shared_ptr<scr::Actor> CreateActor(avs::uid id) const override;
+
+	virtual void AddActor(std::shared_ptr<scr::Actor> actor, bool isHand) override;
 
 	//Changes PBR effect used on actors/surfaces to the effect pass with the passed name.
 	//Also changes GlobalGraphicsResource::effectPassName.
@@ -31,7 +34,6 @@ private:
     GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
     //Creates a native actor with the passed id, and actor information.
-    //  actorID : ID of the native actor to be created; same as SCR actor.
     //  actorInfo : Information to use to create the native actor.
-    std::vector<OVR::ovrSurfaceDef> CreateNativeActor(avs::uid actorID, const scr::Actor::ActorCreateInfo& actorCreateInfo);
+    std::vector<OVR::ovrSurfaceDef> CreateNativeActor(std::shared_ptr<scr::Actor> actor);
 };

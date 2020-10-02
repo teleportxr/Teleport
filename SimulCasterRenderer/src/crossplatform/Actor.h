@@ -16,22 +16,9 @@ namespace scr
 class Actor
 {
 public:
-	struct ActorCreateInfo
-	{
-		bool staticMesh;	//Will the mesh move throughout the scene?
-		bool animatedMesh;	//Will the mesh deform?
-		std::shared_ptr<Mesh> mesh;
-		std::vector<std::shared_ptr<Material>> materials;
-		Transform localTransform;
-
-		std::vector<avs::uid> childIDs;
-	};
-
 	const avs::uid id;
-	
-	Actor(avs::uid id);
 
-	virtual void Init(const ActorCreateInfo& pActorCreateInfo);
+	Actor(avs::uid id);
 
 	void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 	//Requests global transform of actor, and actor's children, be recalculated.
@@ -53,13 +40,25 @@ public:
 
 	std::weak_ptr<Actor> GetParent() const { return parent; }
 	const std::vector<std::weak_ptr<Actor>>& GetChildren() const { return children; }
-	const std::vector<avs::uid>& GetChildrenIDs() const { return m_CI.childIDs; }
 
-	std::shared_ptr<Mesh> GetMesh() const { return m_CI.mesh; }
-	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return m_CI.materials; }
+	void SetChildrenIDs(std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
+	const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
 
-	const Transform& GetLocalTransform() const { return m_CI.localTransform; } const
-	Transform& GetLocalTransform() { return m_CI.localTransform; }
+	void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
+	std::shared_ptr<Mesh> GetMesh() const { return mesh; }
+
+	void SetMaterial(size_t index, std::shared_ptr<Material> material)
+	{
+		if(index < materials.size()) materials[index] = material;
+		else SCR_COUT << "ERROR: Attempted to add material at index <" << index << "> past the end of the material list of Actor<" << id << "> of size: " << materials.size() << std::endl;
+	}
+	void SetMaterialListSize(size_t size) { materials.resize(size); }
+	void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials) { this->materials = materials; }
+	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return materials; }
+
+	void SetLocalTransform(const Transform& transform) { localTransform = transform; }
+	const Transform& GetLocalTransform() const { return localTransform; }
+	Transform& GetLocalTransform() { return localTransform; }
 
 	const Transform& GetGlobalTransform() const
 	{
@@ -74,7 +73,11 @@ public:
 	}
 
 private:
-	ActorCreateInfo m_CI;
+	std::shared_ptr<Mesh> mesh;
+	std::vector<std::shared_ptr<Material>> materials;
+	Transform localTransform;
+
+	std::vector<avs::uid> childIDs;
 
 	//Cached global transform, and dirty flag; updated when necessary on a request.
 	mutable bool isTransformDirty = true;
