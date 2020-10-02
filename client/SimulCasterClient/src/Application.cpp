@@ -281,7 +281,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		clientRenderer.headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		clientRenderer.headPose.position = {clientRenderer.cameraPosition.x, clientRenderer.cameraPosition.y, clientRenderer.cameraPosition.z};
 
-		mSession.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastPrimaryControllerState, clientRenderer.mDecoder.idrRequired());
+		static double fTime=0.0;
+		mSession.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastPrimaryControllerState, clientRenderer.mDecoder.idrRequired(), fTime);
+		fTime += vrFrame.DeltaSeconds;
 		if (!receivedInitialPos&&mSession.receivedInitialPos)
 		{
 			clientRenderer.oculusOrigin = mSession.GetInitialPos();
