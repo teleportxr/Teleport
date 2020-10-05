@@ -191,14 +191,14 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 
 	if (FAILED((*mPlayerInterface)->GetInterface(mPlayerInterface, SL_IID_PLAY, &mPlayInterface)))
 	{
-		SCA_CERR("SL_AudioPlayer: Error occurred trying to aquire the play interface.");
+		SCA_CERR("SL_AudioPlayer: Error occurred trying to acquire the play interface.");
 		return sca::Result::AudioStreamConfigurationError;
 	}
 
 	// Buffer setup
     if (FAILED((*mPlayerInterface)->GetInterface(mPlayerInterface, SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &mSimpleBufferQueueInterface)))
     {
-        SCA_CERR("SL_AudioPlayer: Error occurred trying to aquire the simple buffer queue interface.");
+        SCA_CERR("SL_AudioPlayer: Error occurred trying to acquire the simple buffer queue interface.");
         return sca::Result::AudioBufferInitializationError;
     }
 
@@ -259,11 +259,12 @@ sca::Result SL_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 
 	int32_t numFrames = (int32_t)dataSize / (mAudioParams.bitsPerSample * mAudioParams.numChannels);
 
+
 	// TODO: Write audio data using SLES
-	//if(FAILED(AAudioStream_write(audioStream, (const void*)data, numFrames, 100000)))
-	//{
-		//return sca::Result::AudioWriteError;
-	//}
+	if(FAILED((*mSimpleBufferQueueInterface)->Enqueue(mSimpleBufferQueueInterface, data, dataSize)))
+	{
+		return sca::Result::AudioWriteError;
+	}
 
 	return sca::Result::OK;
 }
