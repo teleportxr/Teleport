@@ -96,7 +96,7 @@ private:
 	bool               mPipelineConfigured;
 
 	static constexpr size_t NumVideoStreams = 1;
-	static constexpr bool AudioStream = false;
+	static constexpr bool AudioStream = true;
 	static constexpr bool   GeoStream  = true;
 
 	GeometryDecoder        geometryDecoder;

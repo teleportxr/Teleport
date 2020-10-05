@@ -2,8 +2,8 @@
 
 #include "SL_AudioPlayer.h"
 #include <android/ndk-version.h>
-#include <chrono>
-#include <thread>
+#include <iostream>
+#include <vector>
 
 #define FAILED(r)      (((SLresult)(r)) != SL_RESULT_SUCCESS)
 
@@ -169,7 +169,7 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	SLresult pmResult = SL_RESULT_SUCCESS;
 
 	// 12 for low latency
-    int32_t performanceMode = 12;
+    SLuint32 performanceMode = SL_ANDROID_PERFORMANCE_LATENCY;
 
 	pmResult = (*configItf)->SetConfiguration(configItf, SL_ANDROID_KEY_PERFORMANCE_MODE, &performanceMode, sizeof(performanceMode));
 	if (SL_RESULT_SUCCESS != pmResult) {
@@ -214,35 +214,6 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	return result;
 }
 
-sca::Result SL_AudioPlayer::deconfigure()
-{
-	if (!mConfigured)
-	{
-		SCA_CERR("SL_AudioPlayer: Can't deconfigure audio player because it is not configured.");
-		return sca::Result::AudioPlayerNotConfigured;
-	}
-
-	mSimpleBufferQueueInterface = nullptr;
-
-	if (mPlayInterface != nullptr)
-	{
-		(*mPlayInterface)->Destroy(mPlayInterface);
-		mPlayInterface = nullptr;
-	}
-
-	if (mPlayerInterface != nullptr)
-	{
-		(*mPlayerInterface)->Destroy(mPlayerInterface);
-		mPlayerInterface = nullptr;
-	}
-
-	mConfigured = false;
-
-	mAudioParams = {};
-
-	return sca::Result::OK;
-}
-
 sca::Result SL_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!mInitialized)
@@ -257,16 +228,52 @@ sca::Result SL_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
-	int32_t numFrames = (int32_t)dataSize / (mAudioParams.bitsPerSample * mAudioParams.numChannels);
+	//int32_t numFrames = (int32_t)dataSize / (mAudioParams.bitsPerSample * mAudioParams.numChannels);
 
+    mAudioBufferQueue.emplace(std::vector<uint8_t>(data, data + dataSize));
 
-	// TODO: Write audio data using SLES
-	if(FAILED((*mSimpleBufferQueueInterface)->Enqueue(mSimpleBufferQueueInterface, data, dataSize)))
+	if(FAILED((*mSimpleBufferQueueInterface)->Enqueue(mSimpleBufferQueueInterface, mAudioBufferQueue.back().data(), dataSize)))
 	{
+        SCA_CERR("SL_AudioPlayer: Error occured trying to enqueue the audio buffer.");
 		return sca::Result::AudioWriteError;
 	}
 
+    if(FAILED((*mPlayInterface)->SetPlayState(mPlayInterface, SL_PLAYSTATE_PLAYING)))
+    {
+        SCA_CERR("SL_AudioPlayer: Error occured trying to set state to 'Playing'.");
+        return sca::Result::AudioSetStateError;
+    }
+
 	return sca::Result::OK;
+}
+
+void SL_AudioPlayer::onWriteEnd()
+{
+    mAudioBufferQueue.pop();
+}
+
+sca::Result SL_AudioPlayer::deconfigure()
+{
+    if (!mConfigured)
+    {
+        SCA_CERR("SL_AudioPlayer: Can't deconfigure audio player because it is not configured.");
+        return sca::Result::AudioPlayerNotConfigured;
+    }
+
+    mSimpleBufferQueueInterface = nullptr;
+    mPlayInterface = nullptr;
+
+    if (mPlayerInterface != nullptr)
+    {
+        (*mPlayerInterface)->Destroy(mPlayerInterface);
+        mPlayerInterface = nullptr;
+    }
+
+    mConfigured = false;
+
+    mAudioParams = {};
+
+    return sca::Result::OK;
 }
 
 SLuint32 channelCountToChannelMask(int channelCount)  {
@@ -311,7 +318,7 @@ SLuint32 getDefaultByteOrder() {
 
 // This callback handler is called every time a buffer has been processed by OpenSL ES.
 void bufferQueueCallback(SLAndroidSimpleBufferQueueItf bq, void *context) {
-    //(reinterpret_cast<AudioStreamOpenSLES *>(context))->processBufferCallback(bq);
+    (reinterpret_cast<SL_AudioPlayer*>(context))->onWriteEnd();
 }
 
 

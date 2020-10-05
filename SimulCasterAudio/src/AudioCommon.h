@@ -59,9 +59,10 @@ namespace sca
             AudioStreamConfigurationError,
 			AudioCloseStreamError,
 			AudioResourceDeletionError,
-			AudioWriteError,
 			AudioOutputMixerInitializationError,
-            AudioBufferInitializationError
+            AudioBufferInitializationError,
+			AudioWriteError,
+			AudioSetStateError
 		};
 
 		Result() : m_code(Code::OK) 

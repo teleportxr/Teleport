@@ -13,11 +13,13 @@ public:
 	SL_AudioPlayer();
 	~SL_AudioPlayer();
 
-	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
-
 	sca::Result initializeAudioDevice() override;
 
 	sca::Result configure(const sca::AudioParams& audioParams) override;
+
+	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
+
+	void onWriteEnd();
 
 	sca::Result deconfigure() override;
 
@@ -26,8 +28,10 @@ private:
 	SLEngineItf mEngineInterface  = nullptr;
     SLObjectItf mOutputMixObject = nullptr;
     SLObjectItf mPlayerInterface = nullptr;
-	SLObjectItf mPlayInterface = nullptr;
+	SLPlayItf mPlayInterface = nullptr;
 	SLAndroidSimpleBufferQueueItf mSimpleBufferQueueInterface = nullptr;
+
+	sca::ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
 };
 
 
