@@ -619,7 +619,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 	{
 		scr::SceneCaptureCubeTagData tagData;
 		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
-		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.coreData.cameraTransform);
+		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.coreData.cameraTransform);
 
 		tagData.lights.resize(tagData.coreData.lightCount);
 
@@ -628,7 +628,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		for (auto& light : tagData.lights)
 		{
 			memcpy(&light, &data[index], sizeof(scr::LightData));
-			avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
+			avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, light.worldTransform);
 			index += sizeof(scr::LightData);
 		}
 
@@ -646,7 +646,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 	{
 		scr::SceneCapture2DTagData tagData;
 		memcpy(&tagData, data, dataSize);
-		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
+		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.cameraTransform);
 
 		VideoTagData2D shaderData;
 		shaderData.cameraPosition = tagData.cameraTransform.position;
