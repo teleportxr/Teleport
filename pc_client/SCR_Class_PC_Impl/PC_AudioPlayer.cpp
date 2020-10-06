@@ -145,9 +145,6 @@ sca::Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 
 	mAudioBufferQueue.emplace(std::vector<uint8_t>(data, data + dataSize));
 
-	BYTE* audioData = new BYTE[dataSize];
-	memcpy(&audioData[0], &data[0], dataSize);
-
 	XAUDIO2_BUFFER xaBuffer;
 	ZeroMemory(&xaBuffer, sizeof(XAUDIO2_BUFFER));
 	xaBuffer.AudioBytes = (UINT32)dataSize;
