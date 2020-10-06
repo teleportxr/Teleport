@@ -21,8 +21,7 @@ public:
 	void OnVoiceProcessingPassStart(UINT32 SamplesRequired) {    }
 	void OnBufferEnd(void* pBufferContext)
 	{ 
-		//((sca::ThreadSafeQueue<AudioBuffer>*)pBufferContext)->pop();
-		delete[] pBufferContext;
+		reinterpret_cast<PC_AudioPlayer*>(pBufferContext)->onAudioProcessed();
 	}
 	void OnBufferStart(void* pBufferContext) {    }
 	void OnLoopEnd(void* pBufferContext) {    }
@@ -130,6 +129,50 @@ sca::Result PC_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	return sca::Result::OK;
 }
 
+sca::Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
+{
+	if (!mInitialized)
+	{
+		SCA_COUT("PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized.");
+		return sca::Result::AudioPlayerNotInitialized;
+	}
+
+	if (!mConfigured)
+	{
+		SCA_COUT("Can't play audio stream because the audio player has not been configured.");
+		return sca::Result::AudioPlayerNotConfigured;
+	}
+
+	mAudioBufferQueue.emplace(std::vector<uint8_t>(data, data + dataSize));
+
+	BYTE* audioData = new BYTE[dataSize];
+	memcpy(&audioData[0], &data[0], dataSize);
+
+	XAUDIO2_BUFFER xaBuffer;
+	ZeroMemory(&xaBuffer, sizeof(XAUDIO2_BUFFER));
+	xaBuffer.AudioBytes = (UINT32)dataSize;
+	xaBuffer.pAudioData = (BYTE* const)mAudioBufferQueue.back().data();
+	xaBuffer.pContext = (void*)this;
+	xaBuffer.PlayBegin = 0;
+	xaBuffer.PlayLength = 0;
+
+	// Submit the audio buffer to the source voice
+	// This will queue the buffer and shouldn't effect sound already being played
+	HRESULT hr = mSourceVoice->SubmitSourceBuffer(&xaBuffer);
+	if (FAILED(hr))
+	{
+		SCA_COUT("PC_AudioPlayer: Error occurred trying to submit audio buffer to source voice.");
+		return sca::Result::AudioPlayerBufferSubmissionError;
+	}
+
+	return sca::Result::OK;
+}
+
+void PC_AudioPlayer::onAudioProcessed()
+{
+	mAudioBufferQueue.pop();
+}
+
 sca::Result PC_AudioPlayer::deconfigure()
 {
 	if (!mConfigured)
@@ -147,45 +190,6 @@ sca::Result PC_AudioPlayer::deconfigure()
 
 	if (mSourceVoice)
 		mSourceVoice->DestroyVoice();
-
-	return sca::Result::OK;
-}
-
-sca::Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
-{
-	if (!mInitialized)
-	{
-		SCA_COUT("PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized.");
-		return sca::Result::AudioPlayerNotInitialized;
-	}
-
-	if (!mConfigured)
-	{
-		SCA_COUT("Can't play audio stream because the audio player has not been configured.");
-		return sca::Result::AudioPlayerNotConfigured;
-	}
-
-	BYTE* audioData = new BYTE[dataSize];
-	memcpy(&audioData[0], &data[0], dataSize);
-
-	XAUDIO2_BUFFER xaBuffer;
-	ZeroMemory(&xaBuffer, sizeof(XAUDIO2_BUFFER));
-	xaBuffer.AudioBytes = (UINT32)dataSize;
-	//xaBuffer.pAudioData = (BYTE* const)&audioBuffer.data[0];
-	//xaBuffer.pContext = (void*)&audioBuffers;
-	xaBuffer.pAudioData = (BYTE* const)&audioData[0];
-	xaBuffer.pContext = (void*)audioData;
-	xaBuffer.PlayBegin = 0;
-	xaBuffer.PlayLength = 0;
-
-	// Submit the audio buffer to the source voice
-	// This will queue the buffer and shouldn't effect sound already being played
-	HRESULT hr = mSourceVoice->SubmitSourceBuffer(&xaBuffer);
-	if (FAILED(hr))
-	{
-		SCA_COUT("PC_AudioPlayer: Error occurred trying to submit audio buffer to source voice.");
-		return sca::Result::AudioPlayerBufferSubmissionError;
-	}
 
 	return sca::Result::OK;
 }

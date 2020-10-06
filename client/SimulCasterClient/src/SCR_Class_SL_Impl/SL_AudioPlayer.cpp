@@ -2,7 +2,6 @@
 
 #include "SL_AudioPlayer.h"
 #include <android/ndk-version.h>
-#include <iostream>
 #include <vector>
 
 #define FAILED(r)      (((SLresult)(r)) != SL_RESULT_SUCCESS)
@@ -247,7 +246,7 @@ sca::Result SL_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 	return sca::Result::OK;
 }
 
-void SL_AudioPlayer::onWriteEnd()
+void SL_AudioPlayer::onAudioProcessed()
 {
     mAudioBufferQueue.pop();
 }
@@ -318,7 +317,7 @@ SLuint32 getDefaultByteOrder() {
 
 // This callback handler is called every time a buffer has been processed by OpenSL ES.
 void bufferQueueCallback(SLAndroidSimpleBufferQueueItf bq, void *context) {
-    (reinterpret_cast<SL_AudioPlayer*>(context))->onWriteEnd();
+    (reinterpret_cast<SL_AudioPlayer*>(context))->onAudioProcessed();
 }
 
 

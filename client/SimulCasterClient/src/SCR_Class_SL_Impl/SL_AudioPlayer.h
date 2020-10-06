@@ -19,7 +19,7 @@ public:
 
 	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
 
-	void onWriteEnd();
+	void onAudioProcessed() override;
 
 	sca::Result deconfigure() override;
 

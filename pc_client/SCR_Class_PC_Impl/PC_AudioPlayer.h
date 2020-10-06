@@ -17,11 +17,13 @@ public:
 	PC_AudioPlayer();
 	~PC_AudioPlayer();
 
-	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
-
 	sca::Result initializeAudioDevice() override;
 
 	sca::Result configure(const sca::AudioParams& audioParams) override;
+
+	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
+
+	void onAudioProcessed() override;
 
 	sca::Result deconfigure() override;
 
@@ -35,6 +37,8 @@ private:
 	IXAudio2SourceVoice* mSourceVoice;
 
 	std::unique_ptr<class VoiceCallback> mVoiceCallback;
+
+	sca::ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
 };
 
 
