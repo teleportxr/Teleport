@@ -19,6 +19,8 @@ public:
 
 	sca::Result configure(const sca::AudioParams& audioParams) override;
 
+	void onAudioProcessed() override {}
+
 	sca::Result deconfigure() override;
 
 private:

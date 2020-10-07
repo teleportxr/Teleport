@@ -1173,6 +1173,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	controllerState.mJoystickAxisX =(mouseCameraInput.right_left_input);
 	controllerState.mJoystickAxisY =(mouseCameraInput.forward_back_input);
 	controllerState.mButtons= mouseCameraInput.MouseButtons;
+	// Reset
+	mouseCameraInput.MouseButtons = 0;
 	controllerState.mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())
@@ -1240,7 +1242,7 @@ void ClientRenderer::OnMouse(bool bLeftButtonDown
 			,int yPos )
 {
 	mouseCameraInput.MouseButtons
-		=(bLeftButtonDown?crossplatform::MouseCameraInput::LEFT_BUTTON:0)
+		|=(bLeftButtonDown?crossplatform::MouseCameraInput::LEFT_BUTTON:0)
 		|(bRightButtonDown?crossplatform::MouseCameraInput::RIGHT_BUTTON:0)
 		|(bMiddleButtonDown?crossplatform::MouseCameraInput::MIDDLE_BUTTON:0);
 	mouseCameraInput.MouseX=xPos;

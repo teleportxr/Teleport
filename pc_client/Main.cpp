@@ -65,8 +65,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	SI_Error rc = ini.LoadFile("pc_client/client.ini");
 	if (rc== SI_OK)
 	{
-		server_ip = ini.GetValue("", "SERVER_IP", REMOTEPLAY_SERVER_IP);
-		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",REMOTEPLAY_SERVER_DISCOVERY_PORT);
+		server_ip = ini.GetValue("SERVER", "IP", REMOTEPLAY_SERVER_IP);
+		server_discovery_port = ini.GetLongValue("SERVER", "DISCOVERY_PORT",REMOTEPLAY_SERVER_DISCOVERY_PORT);
 	}
 	else
 	{
@@ -207,6 +207,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+	case WM_LBUTTONUP:
+	{
+		int xPos = GET_X_LPARAM(lParam);
+		int yPos = GET_Y_LPARAM(lParam);
+		clientRenderer.OnMouse(true
+			, (wParam & MK_RBUTTON) != 0
+			, (wParam & MK_MBUTTON) != 0
+			, 0, xPos, yPos);
+	}
+	break;
 	case WM_MOUSEWHEEL:
 		{
 			int xPos = GET_X_LPARAM(lParam); 
