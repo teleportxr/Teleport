@@ -63,6 +63,18 @@ static std::vector<avs::uid> lostClients; //Clients who have been lost, and are 
 static std::mutex audioMutex;
 static std::mutex videoMutex;
 
+// Messages related stuff
+avs::MessageHandlerFunc messageHandler = nullptr;
+struct LogMessage
+{
+	avs::LogSeverity severity;
+	std::string msg;
+	void* userData;
+};
+
+static std::vector<LogMessage> messages;
+static std::mutex messagesMutex;
+
 
 class PluginGeometryStreamingService : public SCServer::GeometryStreamingService
 {
@@ -378,31 +390,25 @@ static void passOnOutput(const char *msg)
 		avsContext.log(avs::LogSeverity::Warning,msg);
 }
 
-avs::MessageHandlerFunc messageHandler=nullptr;
-struct LogMessage
+void AccumulateMessagesFromThreads(avs::LogSeverity severity, const char* msg, void* userData)
 {
-	avs::LogSeverity severity;
-	std::string msg;
-	void* userData;
-};
-std::vector<LogMessage> messages;
- void AccumulateMessagesFromThreads(avs::LogSeverity severity, const char* msg, void* userData)
- {
+	 std::lock_guard<std::mutex> lock(messagesMutex);
 	 LogMessage logMessage={severity,msg,userData};
 	 messages.push_back(std::move(logMessage));
- }
+}
 
- void PipeOutMessages()
- {
-	 if(messageHandler)
-	 {
-		 for(auto m:messages)
-		 {
-			 messageHandler(m.severity,m.msg.c_str(),m.userData);
-		 }
-	 }
-	 messages.clear();
- }
+void PipeOutMessages()
+{
+	std::lock_guard<std::mutex> lock(messagesMutex);
+	if(messageHandler)
+	{
+		for(auto m:messages)
+		{
+			messageHandler(m.severity,m.msg.c_str(),m.userData);
+		}
+	}
+	messages.clear();
+}
 
 TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc msgh)
 {
