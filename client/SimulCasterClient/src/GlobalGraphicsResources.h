@@ -6,10 +6,12 @@
 struct GlobalGraphicsResources
 {
 public:
-    GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
+	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
+
+	scc::GL_Effect *GetPbrEffect();
 
     scc::GL_RenderPlatform renderPlatform;
-    scc::GL_Effect pbrEffect = dynamic_cast<scr::RenderPlatform*>(&renderPlatform);
+    scc::GL_Effect pbrEffect;
     std::shared_ptr<scr::Sampler> sampler;
     std::shared_ptr<scr::Sampler> cubeMipMapSampler;
     scr::ShaderResource lightCubemapShaderResources;
@@ -23,7 +25,7 @@ public:
         return instance;
     }
 private:
-    GlobalGraphicsResources()
+    GlobalGraphicsResources():pbrEffect(&renderPlatform)
     {}
 
     static GlobalGraphicsResources instance;

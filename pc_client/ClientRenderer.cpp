@@ -661,7 +661,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
 	PrintHelpText(deviceContext);
 }
 
-void ClientRenderer::WriteHierarchy(int tab,std::shared_ptr<scr::Actor> actor)
+void ClientRenderer::WriteHierarchy(int tab,std::shared_ptr<scr::Node> actor)
 {
 	for(int i=0;i<tab;i++)
 		std::cout<<"\t";
@@ -674,7 +674,7 @@ void ClientRenderer::WriteHierarchy(int tab,std::shared_ptr<scr::Actor> actor)
 
 void ClientRenderer::WriteHierarchies()
 {
-	for(std::shared_ptr<scr::Actor> actor : resourceManagers.mActorManager->GetRootActors())
+	for(std::shared_ptr<scr::Node> actor : resourceManagers.mActorManager->GetRootActors())
 	{
 		WriteHierarchy(0,actor);
 	}
@@ -691,13 +691,13 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	cameraConstants.viewPosition = camera.GetPosition();
 
 	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
-	for(std::shared_ptr<scr::Actor> actor : resourceManagers.mActorManager->GetRootActors())
+	for(std::shared_ptr<scr::Node> actor : resourceManagers.mActorManager->GetRootActors())
 	{
 		RenderActor(deviceContext, actor);
 	}
 }
 
-void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceContext, std::shared_ptr<scr::Actor> actor)
+void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceContext, std::shared_ptr<scr::Node> actor)
 {
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
@@ -779,9 +779,9 @@ void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceCont
 		}
 	}
 
-	for(std::weak_ptr<scr::Actor> childPtr : actor->GetChildren())
+	for(std::weak_ptr<scr::Node> childPtr : actor->GetChildren())
 	{
-		std::shared_ptr<scr::Actor> child = childPtr.lock();
+		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if(child)
 		{
 			RenderActor(deviceContext, child);

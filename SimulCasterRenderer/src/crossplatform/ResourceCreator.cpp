@@ -751,7 +751,7 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 	std::cout << std::endl;
 }
 
-void ResourceCreator::CompleteActor(avs::uid actor_uid, std::shared_ptr<scr::Actor> actor, bool isHand)
+void ResourceCreator::CompleteActor(avs::uid actor_uid, std::shared_ptr<scr::Node> actor, bool isHand)
 {
 	SCR_COUT << "CompleteActor(ID: " << actor_uid << ", isHand: " << isHand << ")\n";
 

@@ -63,7 +63,7 @@ Application::Application()
 	, mGuiSys(OvrGuiSys::Create())
 	, mLocale(nullptr)
 	, mSession(this, std::make_unique<AndroidDiscoveryService>())
-	, mDeviceContext(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform))
+	, mDeviceContext(&GlobalGraphicsResources.renderPlatform)
 	,clientRenderer(&resourceCreator,&resourceManagers,this,this)
 	, resourceManagers(new OVRActorManager)
 	,resourceCreator(basist::transcoder_texture_format::cTFETC2)
@@ -92,7 +92,7 @@ Application::Application()
 		audioPlayer->initializeAudioDevice();
 	}
 
-	resourceCreator.Initialise(dynamic_cast<scr::RenderPlatform*>(&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	resourceCreator.Initialise((&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
 	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
 
@@ -292,7 +292,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		ENetAddress remoteEndpoint;
 		// Set server ip to empty string to use broadcast ip
-		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
+		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "192.168.3.40", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
 		{
 			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}

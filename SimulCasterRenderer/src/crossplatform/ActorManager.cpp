@@ -1,13 +1,13 @@
 #include "ActorManager.h"
 
-namespace scr
+using namespace scr;
+
+std::shared_ptr<Node> ActorManager::CreateActor(avs::uid id) const
 {
-std::shared_ptr<Actor> ActorManager::CreateActor(avs::uid id) const
-{
-	return std::make_shared<Actor>(id);
+	return std::make_shared<Node>(id);
 }
 
-void ActorManager::AddActor(std::shared_ptr<Actor> actor, bool isHand)
+void ActorManager::AddActor(std::shared_ptr<Node> actor, bool isHand)
 {
 	//Remove any actor already using the ID.
 	RemoveActor(actor->id);
@@ -15,10 +15,10 @@ void ActorManager::AddActor(std::shared_ptr<Actor> actor, bool isHand)
 	isHand ? LinkHand(actor) : LinkActor(actor);
 }
 
-void ActorManager::RemoveActor(std::shared_ptr<Actor> actor)
+void ActorManager::RemoveActor(std::shared_ptr<Node> actor)
 {
 	//Remove actor from parent's child list.
-	std::shared_ptr<Actor> parent = actor->GetParent().lock();
+	std::shared_ptr<Node> parent = actor->GetParent().lock();
 	if(parent)
 	{
 		parent->RemoveChild(actor);
@@ -30,16 +30,16 @@ void ActorManager::RemoveActor(std::shared_ptr<Actor> actor)
 	}
 
 	//Attach children to world root.
-	std::vector<std::weak_ptr<Actor>> children = actor->GetChildren();
-	for(std::weak_ptr<Actor> childPtr : children)
+	std::vector<std::weak_ptr<Node>> children = actor->GetChildren();
+	for(std::weak_ptr<Node> childPtr : children)
 	{
-		std::shared_ptr<Actor> child = childPtr.lock();
+		std::shared_ptr<Node> child = childPtr.lock();
 		if(child)
 		{
 			rootActors.push_back(child);
 
 			//Remove parent
-			child->SetParent(std::weak_ptr<Actor>());
+			child->SetParent(std::weak_ptr<Node>());
 			parentLookup.erase(child->id);
 		}
 	}
@@ -62,7 +62,7 @@ bool ActorManager::HasActor(avs::uid actorID) const
 	return actorLookup.find(actorID) != actorLookup.end();
 }
 
-std::shared_ptr<Actor> ActorManager::GetActor(avs::uid actorID)
+std::shared_ptr<Node> ActorManager::GetActor(avs::uid actorID)
 {
 	return HasActor(actorID) ? actorLookup.at(actorID) : nullptr;
 }
@@ -85,7 +85,7 @@ void ActorManager::SetHands(avs::uid leftHandID, avs::uid rightHandID)
 	}
 }
 
-void ActorManager::GetHands(std::shared_ptr<Actor>& outLeftHand, std::shared_ptr<Actor>& outRightHand)
+void ActorManager::GetHands(std::shared_ptr<Node>& outLeftHand, std::shared_ptr<Node>& outRightHand)
 {
 	auto leftHandIt = actorLookup.find(leftHandID);
 	if(leftHandIt != actorLookup.end())
@@ -234,7 +234,7 @@ const ActorManager::actorList_t& ActorManager::GetRootActors() const
 	return rootActors;
 }
 
-void ActorManager::LinkActor(std::shared_ptr<Actor> newActor)
+void ActorManager::LinkActor(std::shared_ptr<Node> newActor)
 {
 	rootActors.push_back(newActor);
 	actorLookup[newActor->id] = newActor;
@@ -254,7 +254,7 @@ void ActorManager::LinkActor(std::shared_ptr<Actor> newActor)
 	}
 }
 
-void ActorManager::LinkHand(std::shared_ptr<Actor> newHand)
+void ActorManager::LinkHand(std::shared_ptr<Node> newHand)
 {
 	handList.push_back(newHand);
 	actorLookup[newHand->id] = newHand;
@@ -273,8 +273,8 @@ void ActorManager::LinkToParentActor(avs::uid childID)
 	auto parentIt = parentLookup.find(childID);
 	if(parentIt == parentLookup.end()) return;
 
-	std::shared_ptr<Actor> parent = GetActor(parentIt->second);
-	std::shared_ptr<Actor> child = GetActor(childID);
+	std::shared_ptr<Node> parent = GetActor(parentIt->second);
+	std::shared_ptr<Node> child = GetActor(childID);
 
 	if(parent == nullptr || child == nullptr) return;
 
@@ -282,5 +282,4 @@ void ActorManager::LinkToParentActor(avs::uid childID)
 	parent->AddChild(child);
 
 	rootActors.erase(std::find(rootActors.begin(), rootActors.end(), actorLookup[childID]));
-}
 }

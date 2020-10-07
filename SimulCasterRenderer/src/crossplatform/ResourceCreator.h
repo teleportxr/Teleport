@@ -213,7 +213,7 @@ private:
 
 	struct IncompleteActor : IncompleteResource
 	{
-		std::shared_ptr<scr::Actor> actor;
+		std::shared_ptr<scr::Node> actor;
 		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; // <ID of the material, list of indexes the material should be placed into actor material list.
 		bool isHand;
 	};
@@ -234,7 +234,7 @@ private:
 	void CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo);
 	void CompleteTexture(avs::uid texture_uid, const scr::Texture::TextureCreateInfo& textureInfo);
 	void CompleteMaterial(avs::uid material_uid, const scr::Material::MaterialCreateInfo& materialInfo);
-	void CompleteActor(avs::uid node_uid, std::shared_ptr<scr::Actor> actor, bool isHand);
+	void CompleteActor(avs::uid node_uid, std::shared_ptr<scr::Node> actor, bool isHand);
 
 	//Add texture to material being created.
 	//	accessor : Data on texture that was received from server.

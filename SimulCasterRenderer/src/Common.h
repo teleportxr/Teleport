@@ -126,6 +126,9 @@ namespace scr
 		LightType lightType;
 		float shadowViewMatrix[4][4];
 		float shadowProjectionMatrix[4][4];
+		int texturePosition[2];
+		int textureSize;
+		uint32_t uid;
 #ifndef __ANDROID__
 #pragma pack(pop)
 #endif

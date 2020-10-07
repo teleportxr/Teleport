@@ -5,7 +5,7 @@
 #include "api/FrameBuffer.h"
 #include "api/ShaderStorageBuffer.h"
 #include "crossplatform/Camera.h"
-#include "crossplatform/Actor.h"
+#include "crossplatform/Node.h"
 
 namespace scr
 {

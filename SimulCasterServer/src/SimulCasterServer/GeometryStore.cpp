@@ -404,6 +404,7 @@ namespace SCServer
 
 	void GeometryStore::storeNode(avs::uid id, avs::DataNode& newNode)
 	{
+		TELEPORT_COUT<<"storeNode "<<id<<", type "<<(int)newNode.data_type<<std::endl;
 		nodes[id] = newNode;
 
 		if(newNode.data_type == avs::NodeDataType::ShadowMap|| newNode.data_type == avs::NodeDataType::Light)

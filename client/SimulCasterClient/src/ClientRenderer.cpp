@@ -441,7 +441,7 @@ void ClientRenderer::UpdateHandObjects()
 		++deviceIndex;
 	}
 
-	std::shared_ptr<scr::Actor> leftHand, rightHand;
+	std::shared_ptr<scr::Node> leftHand, rightHand;
 	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
 
 	switch(remoteStates.size())
@@ -504,13 +504,13 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 {
 	//Render local actors.
 	const scr::ActorManager::actorList_t &rootActors = resourceManagers->mActorManager->GetRootActors();
-	for(std::shared_ptr<scr::Actor> actor : rootActors)
+	for(std::shared_ptr<scr::Node> actor : rootActors)
 	{
 		RenderActor(res, actor);
 	}
 
 	//Retrieve hands.
-	std::shared_ptr<scr::Actor> leftHand, rightHand;
+	std::shared_ptr<scr::Node> leftHand, rightHand;
 	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
 
 	//Render hands, if they exist.
@@ -519,11 +519,11 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 }
 
 
-void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Actor> actor)
+void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node> actor)
 {
 	std::shared_ptr<OVRActor> ovrActor = std::static_pointer_cast<OVRActor>(actor);
 
-	//----OVR Actor Set Transforms----//
+	//----OVR Node Set Transforms----//
 	scr::mat4 scr_Transform = transformToOculusOrigin * actor->GetGlobalTransform().GetTransformMatrix();
 
 	OVR::Matrix4f transform;
@@ -540,9 +540,9 @@ void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Actor
 		res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
 	}
 
-	for(std::weak_ptr<scr::Actor> childPtr : actor->GetChildren())
+	for(std::weak_ptr<scr::Node> childPtr : actor->GetChildren())
 	{
-		std::shared_ptr<scr::Actor> child = childPtr.lock();
+		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if(child)
 		{
 			RenderActor(res, child);

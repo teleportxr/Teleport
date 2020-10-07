@@ -15,12 +15,12 @@ using namespace OVR;
 using namespace scc;
 using namespace scr;
 
-std::shared_ptr<scr::Actor> OVRActorManager::CreateActor(avs::uid id) const
+std::shared_ptr<scr::Node> OVRActorManager::CreateActor(avs::uid id) const
 {
     return std::make_shared<OVRActor>(id);
 }
 
-void OVRActorManager::AddActor(std::shared_ptr<Actor> actor, bool isHand)
+void OVRActorManager::AddActor(std::shared_ptr<Node> actor, bool isHand)
 {
 	std::shared_ptr<OVRActor> ovrActor = std::static_pointer_cast<OVRActor>(actor);
 	ovrActor->ovrSurfaceDefs = CreateNativeActor(ovrActor);
@@ -28,20 +28,27 @@ void OVRActorManager::AddActor(std::shared_ptr<Actor> actor, bool isHand)
 	ActorManager::AddActor(actor, isHand);
 }
 
-std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(std::shared_ptr<Actor> actor)
+std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(std::shared_ptr<Node> actor)
 {
     std::vector<ovrSurfaceDef> ovrSurfaceDefs;
-
-    for(size_t i = 0; i < actor->GetMaterials().size(); i++)
+	const std::vector<std::shared_ptr<Material>>& materials=actor->GetMaterials();
+	for(size_t i = 0; i < materials.size(); i++)
     {
-        //From Actor
+        //From Node
+        const auto &material=materials[i];
+        if(material== nullptr)
+        {
+            OVR_WARN("Null material.");
+            continue;
+        }
         const Mesh::MeshCreateInfo& meshCI = actor->GetMesh()->GetMeshCreateInfo();
-        Material::MaterialCreateInfo& materialCI = actor->GetMaterials()[i]->GetMaterialCreateInfo();
+        Material::MaterialCreateInfo& materialCI = material->GetMaterialCreateInfo();
         if(i >= meshCI.vb.size() || i >= meshCI.ib.size())
         {
             OVR_LOG("Skipping empty element in mesh.");
             break; //This break; isn't working correctly
         }
+		materialCI.effect = GlobalGraphicsResources.GetPbrEffect();
         //Mesh.
         // The first instance of vb/ib should be adequate to get the information needed.
         const auto gl_vb = dynamic_cast<GL_VertexBuffer*>(meshCI.vb[i].get());
@@ -49,12 +56,10 @@ std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(std::shared_ptr<Ac
         gl_vb->CreateVAO(gl_ib->GetIndexID());
 
         //Material
-        std::vector<ShaderResource> pbrShaderResources;
-        pbrShaderResources.push_back(GlobalGraphicsResources.scrCamera->GetShaderResource());
-        pbrShaderResources.push_back(actor->GetMaterials()[i]->GetShaderResource());
-        pbrShaderResources.push_back(GlobalGraphicsResources.lightCubemapShaderResources);
-
-        materialCI.effect = dynamic_cast<Effect*>(&GlobalGraphicsResources.pbrEffect);
+        std::vector<const ShaderResource*> pbrShaderResources;
+        pbrShaderResources.push_back(&(GlobalGraphicsResources.scrCamera->GetShaderResource()));
+        pbrShaderResources.push_back(&(material->GetShaderResource()));
+        pbrShaderResources.push_back(&(GlobalGraphicsResources.lightCubemapShaderResources));
         const auto gl_effect = &GlobalGraphicsResources.pbrEffect;
         const auto gl_effectPass = gl_effect->GetEffectPassCreateInfo(GlobalGraphicsResources.effectPassName);
         if(materialCI.diffuse.texture)
@@ -70,18 +75,18 @@ std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(std::shared_ptr<Ac
             materialCI.combined.texture->UseSampler(GlobalGraphicsResources.sampler);
         }
 
-        //----Set OVR Actor----//
+        //----Set OVR Node----//
         //Construct Mesh
         GlGeometry geo;
-        geo.vertexBuffer = gl_vb->GetVertexID();
-        geo.indexBuffer = gl_ib->GetIndexID();
-        geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-        geo.primitiveType = GL_Effect::ToGLTopology(gl_effectPass.topology);
-        geo.vertexCount = (int)gl_vb->GetVertexCount();
-        geo.indexCount = (int)gl_ib->GetIndexBufferCreateInfo().indexCount;
+        geo.vertexBuffer		= gl_vb->GetVertexID();
+        geo.indexBuffer			= gl_ib->GetIndexID();
+        geo.vertexArrayObject	= gl_vb->GetVertexArrayID();
+        geo.primitiveType		= GL_Effect::ToGLTopology(gl_effectPass.topology);
+        geo.vertexCount			= (int)gl_vb->GetVertexCount();
+        geo.indexCount			= (int)gl_ib->GetIndexBufferCreateInfo().indexCount;
         GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
 
-        //Initialise OVR Actor
+        //Initialise OVR Node
         ovrSurfaceDef ovr_surface_def;
         std::string _actorName = std::string("ActorUID: ") + std::to_string(actor->id);
         ovr_surface_def.surfaceName = _actorName;
@@ -121,7 +126,7 @@ std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(std::shared_ptr<Ac
         size_t j = 0;
         for(auto& sr : pbrShaderResources)
         {
-            std::vector<ShaderResource::WriteShaderResource>& shaderResourceSet = sr.GetWriteShaderResources();
+            const std::vector<ShaderResource::WriteShaderResource>& shaderResourceSet = sr->GetWriteShaderResources();
             for(auto& resource : shaderResourceSet)
             {
                 ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;

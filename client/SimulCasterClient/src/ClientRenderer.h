@@ -86,7 +86,7 @@ public:
 	void UpdateHandObjects();
 
 	void RenderLocalActors(OVR::ovrFrameResult& res);
-	void RenderActor(OVR::ovrFrameResult& res, std::shared_ptr<scr::Actor> actor);
+	void RenderActor(OVR::ovrFrameResult& res, std::shared_ptr<scr::Node> actor);
 
 	avs::Decoder       mDecoder;
 	avs::NetworkSource mNetworkSource;
