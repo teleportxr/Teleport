@@ -211,10 +211,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		int xPos = GET_X_LPARAM(lParam);
 		int yPos = GET_Y_LPARAM(lParam);
-		clientRenderer.OnMouse(true
+		clientRenderer.OnMouseClick(true
 			, (wParam & MK_RBUTTON) != 0
 			, (wParam & MK_MBUTTON) != 0
-			, 0, xPos, yPos);
+			, 0);
 	}
 	break;
 	case WM_MOUSEWHEEL:
@@ -222,20 +222,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			int xPos = GET_X_LPARAM(lParam); 
 			int yPos = GET_Y_LPARAM(lParam); 
 			short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-			clientRenderer.OnMouse((wParam&MK_LBUTTON)!=0
+			clientRenderer.OnMouseClick((wParam&MK_LBUTTON)!=0
 				,(wParam&MK_RBUTTON)!=0
 				,(wParam&MK_MBUTTON)!=0
-				,0,xPos,yPos);
+				,0);
 		}
 		break;
 	case WM_MOUSEMOVE:
 		{
 			int xPos = GET_X_LPARAM(lParam); 
 			int yPos = GET_Y_LPARAM(lParam); 
-			clientRenderer.OnMouse((wParam&MK_LBUTTON)!=0
-				,(wParam&MK_RBUTTON)!=0
-				,(wParam&MK_MBUTTON)!=0
-				,0,xPos,yPos);
+			clientRenderer.OnMouseMove(xPos, yPos);
 		}
 		break;
 	case WM_KEYDOWN:

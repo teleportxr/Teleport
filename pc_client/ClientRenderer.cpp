@@ -1234,17 +1234,16 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	//sessionClient.Frame(camera.GetOrientation().GetQuaternion(), controllerState);
 }
 
-void ClientRenderer::OnMouse(bool bLeftButtonDown
-			,bool bRightButtonDown
-			,bool bMiddleButtonDown
-			,int nMouseWheelDelta
-			,int xPos
-			,int yPos )
+void ClientRenderer::OnMouseClick(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
 {
 	mouseCameraInput.MouseButtons
-		|=(bLeftButtonDown?crossplatform::MouseCameraInput::LEFT_BUTTON:0)
-		|(bRightButtonDown?crossplatform::MouseCameraInput::RIGHT_BUTTON:0)
-		|(bMiddleButtonDown?crossplatform::MouseCameraInput::MIDDLE_BUTTON:0);
+		|= (bLeftButtonDown ? crossplatform::MouseCameraInput::LEFT_BUTTON : 0)
+		| (bRightButtonDown ? crossplatform::MouseCameraInput::RIGHT_BUTTON : 0)
+		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
+}
+
+void ClientRenderer::OnMouseMove(int xPos, int yPos )
+{
 	mouseCameraInput.MouseX=xPos;
 	mouseCameraInput.MouseY=yPos;
 }
