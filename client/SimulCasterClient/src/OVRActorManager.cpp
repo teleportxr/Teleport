@@ -36,7 +36,7 @@ std::vector<ovrSurfaceDef> OVRActorManager::CreateNativeActor(std::shared_ptr<No
     {
         //From Node
         const auto &material=materials[i];
-        if(material== nullptr)
+        if(material==nullptr)
         {
             OVR_WARN("Null material.");
             continue;

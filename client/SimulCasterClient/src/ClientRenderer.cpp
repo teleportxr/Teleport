@@ -562,7 +562,7 @@ void ClientRenderer::ToggleTextures()
 
 
 void ClientRenderer::ToggleShowInfo()
-	{
+{
 	mShowInfo=!mShowInfo;
 }
 

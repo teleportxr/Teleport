@@ -292,7 +292,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		ENetAddress remoteEndpoint;
 		// Set server ip to empty string to use broadcast ip
-		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "192.168.3.40", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
+		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
 		{
 			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
