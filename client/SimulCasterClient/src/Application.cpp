@@ -20,6 +20,8 @@
 #include "VideoSurface.h"
 #include <libavstream/common.hpp>
 
+#include "SimpleIni.h"
+
 #if defined( OVR_OS_WIN32 )
 #include "../res_pc/resource.h"
 #endif
@@ -69,6 +71,7 @@ Application::Application()
 	,resourceCreator(basist::transcoder_texture_format::cTFETC2)
 {
 	RedirectStdCoutCerr();
+
 	mSession.SetResourceCreator(&resourceCreator);
 
 	pthread_setname_np(pthread_self(), "SimulCaster_Application");
@@ -115,6 +118,8 @@ Application::Application()
 	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
 	GlobalGraphicsResources.cubeMipMapSampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
 	GlobalGraphicsResources.cubeMipMapSampler->Create(&sci);
+
+
 }
 
 Application::~Application()
@@ -151,6 +156,20 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 {
 	if(intentType != INTENT_LAUNCH)
 		return;
+
+	std::string client_ini=LoadTextFile("client.ini");
+	CSimpleIniA ini;
+
+	SI_Error rc = ini.LoadData(client_ini.data(), client_ini.length());
+	if (rc== SI_OK)
+	{
+		server_ip = ini.GetValue("", "SERVER_IP", "");
+		server_discovery_port = ini.GetLongValue("","SERVER_DISCOVERY_PORT",REMOTEPLAY_SERVER_DISCOVERY_PORT);
+	}
+	else
+	{
+		std::cerr<<"Create client.ini in assets directory to specify settings."<<std::endl;
+	}
 
 	OVR_LOG("%s | %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GlobalGraphicsResources.maxFragTextureSlots);
@@ -292,7 +311,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		ENetAddress remoteEndpoint;
 		// Set server ip to empty string to use broadcast ip
-		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, "", REMOTEPLAY_SERVER_DISCOVERY_PORT, remoteEndpoint))
+		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
 			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
@@ -827,7 +846,11 @@ std::string Application::LoadTextFile(const char *filename)
 	std::vector<uint8_t> outBuffer;
 	std::string str = "apk:///assets/";
 	str += filename;
-	if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
+	if(!app)
+	{
+
+	}
+	else if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
 	{
 		if(outBuffer.back() != '\0')
 			outBuffer.push_back('\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!

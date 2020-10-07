@@ -65,8 +65,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	SI_Error rc = ini.LoadFile("pc_client/client.ini");
 	if (rc== SI_OK)
 	{
-		server_ip = ini.GetValue("SERVER", "IP", REMOTEPLAY_SERVER_IP);
-		server_discovery_port = ini.GetLongValue("SERVER", "DISCOVERY_PORT",REMOTEPLAY_SERVER_DISCOVERY_PORT);
+		server_ip = ini.GetValue("", "SERVER_IP", REMOTEPLAY_SERVER_IP);
+		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",REMOTEPLAY_SERVER_DISCOVERY_PORT);
 	}
 	else
 	{

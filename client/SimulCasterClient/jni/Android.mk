@@ -6,7 +6,7 @@ include ../cflags.mk
 
 LOCAL_MODULE			:= ovrapp
 LOCAL_LDLIBS			:= -llog -landroid -lGLESv3 -lEGL  		# include default libraries
-LOCAL_STATIC_LIBRARIES	:=  vrsound vrmodel vrlocale vrgui vrappframework libovrkernel enet libavstream SimulCasterRenderer SimulCasterAudio
+LOCAL_STATIC_LIBRARIES	:= vrsound vrmodel vrlocale vrgui vrappframework libovrkernel enet libavstream SimulCasterRenderer SimulCasterAudio
 LOCAL_SHARED_LIBRARIES	:= vrapi
 
 LOCAL_SRC_FILES			:= \
@@ -31,6 +31,7 @@ LOCAL_SRC_FILES			:= \
     ../src/SCR_Class_GL_Impl/GL_Texture.cpp \
     ../src/SCR_Class_GL_Impl/GL_UniformBuffer.cpp \
     ../src/SCR_Class_GL_Impl/GL_VertexBuffer.cpp \
+    ../src/ConvertUTF.c \
 
 ifeq ($(APP_PLATFORM),$(filter $(APP_PLATFORM), android-26 android-27 android-28 android-29 android-30))
 LOCAL_CFLAGS += -USING_AAUDIO

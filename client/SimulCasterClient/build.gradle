@@ -26,23 +26,26 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    ndkVersion "21.3.6528147"
+    ndkVersion "20.1.5948944"
 
     signingConfigs {
         release {
             storePassword 'android'
             keyAlias = 'android'
             keyPassword 'android'
-            storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
+            storeFile file('android.debug.keystore.jks')
         }
         debug {
-            storeFile file('D:\\Simul\\RemotePlay\\client\\SimulCasterClient\\android.debug.keystore.jks')
+            storeFile file('android.debug.keystore.jks')
             storePassword 'android'
             keyAlias = 'android'
             keyPassword 'android'
         }
     }
-    project.archivesBaseName = "simulcasterclient"
+      lintOptions {
+          abortOnError false
+      }
+  project.archivesBaseName = "simulcasterclient"
   defaultConfig {
     applicationId "co.Simul.simulcasterclient"
 
@@ -87,7 +90,7 @@ android {
         exclude 'kotlin/coroutines/coroutines.kotlin_builtins'
         exclude 'AndroidManifest.xml'
     }
-    sourceSets {
+  sourceSets {
     main {
       manifest.srcFile 'AndroidManifest.xml'
       java.srcDirs = ['java']
@@ -106,5 +109,5 @@ android {
         targetCompatibility = 1.8
     }
     buildToolsVersion = '29.0.3'
-    compileSdkVersion 25
+    compileSdkVersion 29
 }

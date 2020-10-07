@@ -4,6 +4,9 @@ android {
 	compileSdkVersion 29
 	buildToolsVersion '29.0.3'
 
+      lintOptions {
+          abortOnError false
+      }
 	defaultConfig {
 		minSdkVersion 24
 		targetSdkVersion 24
@@ -63,7 +66,6 @@ android {
 			// within.
 		}
 	}
-    ndkVersion '21.3.6528147'
 }
 
 task( "cleanWorkAround" ) {

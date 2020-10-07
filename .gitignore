@@ -1,3 +1,4 @@
 # IDE Project Files
 .vs/
 *.user
+/pc_client/client.ini

@@ -3,6 +3,9 @@ apply plugin: 'com.android.library'
 android {
 	compileSdkVersion 29
 	buildToolsVersion '29.0.3'
+      lintOptions {
+          abortOnError false
+      }
 
 	defaultConfig {
 		minSdkVersion 21
@@ -58,7 +61,6 @@ android {
 			java.srcDirs = ['../../java']
 		}
 	}
-    ndkVersion '21.3.6528147'
 }
 
 task( "cleanWorkAround" ) {
