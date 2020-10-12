@@ -163,35 +163,20 @@ public:
 	//	deltaTime : Milliseconds that has passed since the last call to Update();
 	void Update(float deltaTime);
 
-	inline void AssociateActorManager(scr::ActorManager* actorManager)
+	inline void AssociateResourceManagers(scr::ResourceManagers& resourceManagers)
 	{
-		m_pActorManager = actorManager;
-	}
-
-	inline void AssociateResourceManagers(
-		ResourceManager<scr::IndexBuffer>* indexBufferManager,
-		ResourceManager<scr::Shader>* shaderManager,
-		ResourceManager<scr::Material>* materialManager,
-		ResourceManager<scr::Texture>* textureManager,
-		ResourceManager<scr::UniformBuffer>* uniformBufferManager,
-		ResourceManager<scr::VertexBuffer>* vertexBufferManager,
-		ResourceManager<scr::Mesh>* meshManager,
-		ResourceManager<scr::Skin>* skinManager,
-		ResourceManager<scr::Light>* lightManager,
-		ResourceManager<scr::Bone>* boneManager,
-		ResourceManager<scr::Animation>* animationManager)
-	{
-		m_IndexBufferManager = indexBufferManager;
-		m_ShaderManager = shaderManager;
-		m_MaterialManager = materialManager;
-		m_TextureManager = textureManager;
-		m_UniformBufferManager = uniformBufferManager;
-		m_VertexBufferManager = vertexBufferManager;
-		m_MeshManager = meshManager;
-		m_SkinManager = skinManager;
-		m_LightManager = lightManager;
-		m_BoneManager = boneManager;
-		m_AnimationManager = animationManager;
+		m_IndexBufferManager = &resourceManagers.mIndexBufferManager;
+		m_ShaderManager = &resourceManagers.mShaderManager;
+		m_MaterialManager = &resourceManagers.mMaterialManager;
+		m_TextureManager = &resourceManagers.mTextureManager;
+		m_UniformBufferManager = &resourceManagers.mUniformBufferManager;
+		m_VertexBufferManager = &resourceManagers.mVertexBufferManager;
+		m_MeshManager = &resourceManagers.mMeshManager;
+		m_SkinManager = &resourceManagers.mSkinManager;
+		m_LightManager = &resourceManagers.mLightManager;
+		m_BoneManager = &resourceManagers.mBoneManager;
+		m_AnimationManager = &resourceManagers.mAnimationManager;
+		m_pActorManager = resourceManagers.mActorManager.get();
 	}
 
 	// Inherited via GeometryTargetBackendInterface
@@ -325,7 +310,6 @@ private:
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
 	const uint32_t emissiveBGRA = 0x00000000;
 	
-//s	uint32_t m_PostUseLifetime = 1000; //30,000ms = 30s
 	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;
 	ResourceManager<scr::Material> *m_MaterialManager;
 	ResourceManager<scr::Shader> *m_ShaderManager;

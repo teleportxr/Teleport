@@ -96,8 +96,7 @@ Application::Application()
 	}
 
 	resourceCreator.Initialise((&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
-	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
-	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
+	resourceCreator.AssociateResourceManagers(resourceManagers);
 
 	//Default Effects
 	scr::Effect::EffectCreateInfo ci;

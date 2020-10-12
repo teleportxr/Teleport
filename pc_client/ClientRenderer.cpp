@@ -100,8 +100,7 @@ ClientRenderer::ClientRenderer():
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
 	avsTextures.resize(NumVidStreams);
-	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mSkinManager, &resourceManagers.mLightManager, &resourceManagers.mBoneManager, &resourceManagers.mAnimationManager);
-	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
+	resourceCreator.AssociateResourceManagers(resourceManagers);
 
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();

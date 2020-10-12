@@ -59,7 +59,7 @@ void BoneKeyframe::setRotationToTime(float time, scr::quat& boneRotation, const 
 
 size_t BoneKeyframe::getNextKeyframeIndex(float time, const std::vector<avs::Vector3Keyframe>& keyframes)
 {
-	for(int i = 1; i < keyframes.size(); i++)
+	for(size_t i = 1; i < keyframes.size(); i++)
 	{
 		if(keyframes[i].time >= time) return i;
 	}
@@ -69,7 +69,7 @@ size_t BoneKeyframe::getNextKeyframeIndex(float time, const std::vector<avs::Vec
 
 size_t BoneKeyframe::getNextKeyframeIndex(float time, const std::vector<avs::Vector4Keyframe>& keyframes)
 {
-	for(int i = 1; i < keyframes.size(); i++)
+	for(size_t i = 1; i < keyframes.size(); i++)
 	{
 		if(keyframes[i].time >= time) return i;
 	}

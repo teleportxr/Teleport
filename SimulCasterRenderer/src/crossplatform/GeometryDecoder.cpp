@@ -353,7 +353,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& ta
 	uid animationID = Next8B;
 
 	animation.boneKeyframes.resize(Next8B);
-	for(int i = 0; i < animation.boneKeyframes.size(); i++)
+	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		avs::TransformKeyframe& transformKeyframe = animation.boneKeyframes[i];
 		transformKeyframe.nodeID = Next8B;
@@ -382,7 +382,7 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.parentID = Next8B;
 
 		node.animations.resize(Next8B);
-		for(int j = 0; j < node.animations.size(); j++)
+		for(size_t j = 0; j < node.animations.size(); j++)
 		{
 			node.animations[j] = Next8B;
 		}
@@ -428,13 +428,13 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 	avs::Skin skin;
 
 	skin.inverseBindMatrices.resize(Next8B);
-	for(int i = 0; i < skin.inverseBindMatrices.size(); i++)
+	for(size_t i = 0; i < skin.inverseBindMatrices.size(); i++)
 	{
 		skin.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
 	}
 
 	skin.jointIDs.resize(Next8B);
-	for(int i = 0; i < skin.jointIDs.size(); i++)
+	for(size_t i = 0; i < skin.jointIDs.size(); i++)
 	{
 		skin.jointIDs[i] = Next8B;
 	}
@@ -448,7 +448,7 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 avs::Result GeometryDecoder::decodeFloatKeyframes(std::vector<avs::FloatKeyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
-	for(int i = 0; i < keyframes.size(); i++)
+	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
 		keyframes[i].value = NextFloat;
@@ -460,7 +460,7 @@ avs::Result GeometryDecoder::decodeFloatKeyframes(std::vector<avs::FloatKeyframe
 avs::Result GeometryDecoder::decodeVector3Keyframes(std::vector<avs::Vector3Keyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
-	for(int i = 0; i < keyframes.size(); i++)
+	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
 		keyframes[i].value = NextChunk(avs::vec3);
@@ -472,7 +472,7 @@ avs::Result GeometryDecoder::decodeVector3Keyframes(std::vector<avs::Vector3Keyf
 avs::Result GeometryDecoder::decodeVector4Keyframes(std::vector<avs::Vector4Keyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
-	for(int i = 0; i < keyframes.size(); i++)
+	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
 		keyframes[i].value = NextChunk(avs::vec4);

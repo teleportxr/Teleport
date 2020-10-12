@@ -611,12 +611,12 @@ void ResourceCreator::CreateSkin(avs::uid skinID, avs::Skin& skin)
 	scr::Transform::TransformCreateInfo transformCreateInfo;
 	transformCreateInfo.renderPlatform = m_pRenderPlatform;
 
-	for(int i = 0; i < skin.inverseBindMatrices.size(); i++)
+	for(size_t i = 0; i < skin.inverseBindMatrices.size(); i++)
 	{
 		incompleteSkin->skin->inverseBindMatrices[i] = scr::Transform(transformCreateInfo, static_cast<scr::mat4>(skin.inverseBindMatrices[i]));
 	}
 
-	for(int i = 0; i < skin.jointIDs.size(); i++)
+	for(size_t i = 0; i < skin.jointIDs.size(); i++)
 	{
 		avs::uid jointID = skin.jointIDs[i];
 		std::shared_ptr<scr::Bone> bone = m_BoneManager->Get(jointID);
@@ -651,7 +651,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 	std::shared_ptr<IncompleteAnimation> incompleteAnimation = std::make_shared<IncompleteAnimation>(id, avs::GeometryPayloadType::Animation);
 	std::vector<avs::uid> missingResources;
 
-	for(int i = 0; i < animation.boneKeyframes.size(); i++)
+	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		const avs::TransformKeyframe& avsKeyframes = animation.boneKeyframes[i];
 
@@ -936,7 +936,7 @@ void ResourceCreator::CompleteBone(avs::uid boneID, std::shared_ptr<scr::Bone> b
 	{
 		if((*it)->type == avs::GeometryPayloadType::Skin)
 		{
-			std::shared_ptr<IncompleteSkin> incompleteSkin = std::reinterpret_pointer_cast<IncompleteSkin>(*it);
+			std::shared_ptr<IncompleteSkin> incompleteSkin = std::static_pointer_cast<IncompleteSkin>(*it);
 			incompleteSkin->skin->bones[incompleteSkin->missingBones[boneID]] = bone;
 
 			//If only this bone, and the loop, are pointing at the skin, then it is complete.
@@ -945,7 +945,7 @@ void ResourceCreator::CompleteBone(avs::uid boneID, std::shared_ptr<scr::Bone> b
 		}
 		else if((*it)->type == avs::GeometryPayloadType::Animation)
 		{
-			std::shared_ptr<IncompleteAnimation> incompleteAnimation = std::reinterpret_pointer_cast<IncompleteAnimation>(*it);
+			std::shared_ptr<IncompleteAnimation> incompleteAnimation = std::static_pointer_cast<IncompleteAnimation>(*it);
 			incompleteAnimation->boneKeyframes[incompleteAnimation->missingBones[boneID]].bonePtr = bone;
 
 			//If only this bone, and the loop, are pointing at the animation, then it is complete.
