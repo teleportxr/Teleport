@@ -31,10 +31,10 @@ const char * GetAttributeSemantic(avs::AttributeSemantic sem)
 		return "COLOR_0";
 		break;
 	case avs::AttributeSemantic::JOINTS_0:
-		return "JOINTS_0";
+		return "TEXCOORD";
 		break;
 	case avs::AttributeSemantic::WEIGHTS_0:
-		return "WEIGHTS_0";
+		return "TEXCOORD";
 		break;
 	case avs::AttributeSemantic::COUNT:
 		return "COUNT";
@@ -68,10 +68,10 @@ int GetAttributeSemanticIndex(avs::AttributeSemantic sem)
 		return 0;
 		break;
 	case avs::AttributeSemantic::JOINTS_0:
-		return 0;
+		return 2;
 		break;
 	case avs::AttributeSemantic::WEIGHTS_0:
-		return 0;
+		return 3;
 		break;
 	default:
 		return 0;
@@ -115,6 +115,20 @@ simul::crossplatform::PixelFormat GetAttributeFormat(const scr::VertexBufferLayo
 			default:
 				break;
 			};
+		}
+		case scr::VertexBufferLayout::Type::INT:
+		{
+			switch(attr.componentCount)
+			{
+			case scr::VertexBufferLayout::ComponentCount::SCALAR:
+				return simul::crossplatform::PixelFormat::R_32_INT;
+			case scr::VertexBufferLayout::ComponentCount::VEC2:
+				return simul::crossplatform::PixelFormat::RG_8_SNORM;
+			case scr::VertexBufferLayout::ComponentCount::VEC3:
+				return simul::crossplatform::PixelFormat::RGB_10_A2_INT;
+			case scr::VertexBufferLayout::ComponentCount::VEC4:
+				return simul::crossplatform::PixelFormat::RGBA_32_INT;
+			}
 		}
 		default:
 			break;
@@ -178,6 +192,11 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCre
 		desc[i].format = GetAttributeFormat(attr);
 		desc[i].inputSlot = 0;
 		desc[i].alignedByteOffset = byteOffset;
+
+		if(desc[i].format == simul::crossplatform::UNKNOWN)
+		{
+			SCR_COUT << "ERROR: Unknown format for attribute: " << desc[i].semanticName << std::endl;
+		}
 
 		size_t this_size = GetByteSize(attr);
 		if(m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED)

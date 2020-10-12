@@ -2,6 +2,13 @@
 
 #include "libavstream/geometry/mesh_interface.hpp"
 
+namespace avs
+{
+struct FloatKeyframe;
+struct Vector3Keyframe;
+struct Vector4Keyframe;
+}
+
 namespace SCServer
 {
 	class GeometryEncoder: public avs::GeometryEncoderBackendInterface
@@ -46,14 +53,20 @@ namespace SCServer
 		//	src : Source we are taking the data from.
 		//	req : Object that defines what needs to transfered across.
 		//Returns a code to determine how the encoding went.
+		avs::Result encodeAnimation(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid animationID);
+		avs::Result encodeMaterials(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
 		avs::Result encodeMeshes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
 		avs::Result encodeNodes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
-		avs::Result encodeTextures(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
-		avs::Result encodeMaterials(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
 		avs::Result encodeShadowMaps(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
-
+		avs::Result encodeSkin(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid skinID);
+		avs::Result encodeTextures(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
+		
 		//The actual implementation of encode textures that can be used by encodeMaterials to package textures with it.
 		avs::Result encodeTexturesBackend(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs, bool isShadowMap = false);
+
+		avs::Result encodeFloatKeyframes(const std::vector<avs::FloatKeyframe>& keyframes);
+		avs::Result encodeVector3Keyframes(const std::vector<avs::Vector3Keyframe>& keyframes);
+		avs::Result encodeVector4Keyframes(const std::vector<avs::Vector4Keyframe>& keyframes);
 
 		//Moves the data from buffer into queuedBuffer; keeping in mind the recommended buffer cutoff size.
 		//Data will usually not be queued if it would cause it to exceed the recommended size, but the data may have been queued anyway.

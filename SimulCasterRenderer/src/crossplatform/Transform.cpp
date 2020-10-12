@@ -39,8 +39,22 @@ Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 
 	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 }
 
+Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, scr::mat4 matrix)
+{
+	m_TransformData.m_ModelMatrix = matrix;
+
+	m_Translation = matrix.GetTranslation();
+	m_Rotation = matrix.GetRotation();
+	m_Scale = matrix.GetScale();
+}
+
 Transform::Transform(const avs::Transform& transform)
 	:m_Translation(transform.position), m_Rotation(transform.rotation), m_Scale(transform.scale)
+{
+	m_TransformData.m_ModelMatrix = mat4::Translation(m_Translation) * mat4::Rotation(m_Rotation) * mat4::Scale(m_Scale);
+}
+
+void Transform::UpdateModelMatrix()
 {
 	m_TransformData.m_ModelMatrix = mat4::Translation(m_Translation) * mat4::Rotation(m_Rotation) * mat4::Scale(m_Scale);
 }
@@ -50,7 +64,6 @@ void Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rota
 	m_Translation = translation;
 	m_Rotation = rotation;
 	m_Scale = scale;
-	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
+	UpdateModelMatrix();
 }
-
 }

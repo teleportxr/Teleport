@@ -100,7 +100,7 @@ ClientRenderer::ClientRenderer():
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
 	avsTextures.resize(NumVidStreams);
-	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mLightManager);
+	resourceCreator.AssociateResourceManagers(&resourceManagers.mIndexBufferManager, &resourceManagers.mShaderManager, &resourceManagers.mMaterialManager, &resourceManagers.mTextureManager, &resourceManagers.mUniformBufferManager, &resourceManagers.mVertexBufferManager, &resourceManagers.mMeshManager, &resourceManagers.mSkinManager, &resourceManagers.mLightManager, &resourceManagers.mBoneManager, &resourceManagers.mAnimationManager);
 	resourceCreator.AssociateActorManager(resourceManagers.mActorManager.get());
 
 	//Initalise time stamping for state update.
@@ -172,6 +172,9 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	tagData2DBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
 	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
 	lightsBuffer.RestoreDeviceObjects(renderPlatform,10,false,true);
+	boneMatrices.RestoreDeviceObjects(renderPlatform);
+	boneMatrices.LinkToEffect(pbrEffect, "boneMatrices");
+
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
 	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
@@ -765,13 +768,25 @@ void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceCont
 				}
 				
 				lightsBuffer.Apply(deviceContext, pbrEffect, _lights );
+				std::string usedPassName = passName;
+
+				std::shared_ptr<scr::Skin> skin = actor->GetSkin();
+				if(skin)
+				{
+					std::vector<scr::mat4> scr_matrices = skin->GetBoneMatrices();
+					memcpy(&boneMatrices.boneMatrices, scr_matrices.data(), sizeof(scr::mat4) * 64);
+
+					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
+					usedPassName = "anim_" + usedPassName;
+				}
+
 				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 				pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 				renderPlatform->SetLayout(deviceContext, layout);
 				renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 				renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
 				renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
-				pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), passName.c_str());
+				pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), usedPassName.c_str());
 				renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
 				pbrEffect->Unapply(deviceContext);
 				layout->Unapply(deviceContext);

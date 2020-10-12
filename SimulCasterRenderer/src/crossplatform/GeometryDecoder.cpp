@@ -1,7 +1,10 @@
 #include "GeometryDecoder.h"
+
 #include <iostream>
+
 #include <Common.h>
 
+#include "libavstream/geometry/animation_interface.h"
 
 using namespace avs;
 
@@ -47,37 +50,16 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	m_Buffer.resize(m_BufferSize);
 	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
 
-	switch (type)
+	switch(type)
 	{
-		case GeometryPayloadType::Mesh:
-		{
-			return decodeMesh(target);
-		}
-		case GeometryPayloadType::Material:
-		{
-			return decodeMaterial(target);
-		}
-		case GeometryPayloadType::MaterialInstance:
-		{
-			return decodeMaterialInstance(target);
-		}
-		case GeometryPayloadType::Texture:
-		{
-			return decodeTexture(target);
-		}
-		case GeometryPayloadType::Animation:
-		{
-			return decodeAnimation(target);
-		}
-		case GeometryPayloadType::Node:
-		{
-			return decodeNode(target);
-		}
-
-		default:
-		{ 
-			return avs::Result::GeometryDecoder_InvalidPayload;
-		}
+	case GeometryPayloadType::Mesh: return decodeMesh(target);
+	case GeometryPayloadType::Material: return decodeMaterial(target);
+	case GeometryPayloadType::MaterialInstance: return decodeMaterialInstance(target);
+	case GeometryPayloadType::Texture: return decodeTexture(target);
+	case GeometryPayloadType::Animation: return decodeAnimation(target);
+	case GeometryPayloadType::Node: return decodeNode(target);
+	case GeometryPayloadType::Skin: return decodeSkin(target);
+	default: return avs::Result::GeometryDecoder_InvalidPayload;
 	};
 }
 
@@ -183,45 +165,49 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 				const Accessor& accessor		= dg.accessors[attrib.accessor];
 				const BufferView& bufferView	= dg.bufferViews[accessor.bufferView];
 				const GeometryBuffer& buffer	= dg.buffers[bufferView.buffer];
-				const uint8_t* data				= buffer.data+bufferView.byteOffset;
+				const uint8_t* data				= buffer.data + bufferView.byteOffset;
+
 				switch (attrib.semantic)
 				{
 				case AttributeSemantic::POSITION:
 					meshElementCreate.m_VertexCount = vertexCount = accessor.count;
-					meshElementCreate.m_Vertices = (const avs::vec3*)(data);
+					meshElementCreate.m_Vertices = reinterpret_cast<const avs::vec3*>(data);
 					continue;
 				case AttributeSemantic::TANGENTNORMALXZ:
 				{
 					size_t tnSize = 0;
 					tnSize = avs::GetComponentSize(accessor.componentType) * avs::GetDataTypeSize(accessor.type);
 					meshElementCreate.m_TangentNormalSize = tnSize;
-					meshElementCreate.m_TangentNormals= (const uint8_t*)data;
+					meshElementCreate.m_TangentNormals = reinterpret_cast<const uint8_t*>(data);
 				}
 					continue;
 				case AttributeSemantic::NORMAL:
-					meshElementCreate.m_Normals = (const avs::vec3*)(data);
+					meshElementCreate.m_Normals = reinterpret_cast<const avs::vec3*>(data);
 					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::TANGENT:
-					meshElementCreate.m_Tangents = (const avs::vec4*)(data);
+					meshElementCreate.m_Tangents = reinterpret_cast<const avs::vec4*>(data);
 					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::TEXCOORD_0:
-					meshElementCreate.m_UV0s = (const avs::vec2*)(data);
+					meshElementCreate.m_UV0s = reinterpret_cast<const avs::vec2*>(data);
 					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::TEXCOORD_1:
-					meshElementCreate.m_UV1s = (const avs::vec2*)(data);
+					meshElementCreate.m_UV1s = reinterpret_cast<const avs::vec2*>(data);
 					assert(accessor.count == vertexCount);
-					continue;;
+					continue;
 				case AttributeSemantic::COLOR_0:
-					//target->ensureColors(mesh_uid, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
+					meshElementCreate.m_Colors = reinterpret_cast<const avs::vec4*>(data);
+					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::JOINTS_0:
-					//target->ensureJoints(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
+					meshElementCreate.m_Joints = reinterpret_cast<const avs::vec4*>(data);
+					assert(accessor.count == vertexCount);
 					continue;
 				case AttributeSemantic::WEIGHTS_0:
-					//target->ensureWeights(it->first, 0, (int)accessor.count, (const avs::vec4*)buffer.data);
+					meshElementCreate.m_Weights = reinterpret_cast<const avs::vec4*>(data);
+					assert(accessor.count == vertexCount);
 					continue;
 				default:
 				    SCR_CERR<<"Unknown attribute semantic: " << (uint32_t)attrib.semantic<<std::endl;
@@ -328,7 +314,7 @@ avs::Result GeometryDecoder::decodeMaterialInstance(GeometryTargetBackendInterfa
 	return avs::Result::GeometryDecoder_Incomplete;
 }
 
-Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
+Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target)
 {
 	size_t textureAmount = Next8B;
 	for(size_t i = 0; i < textureAmount; i++)
@@ -347,8 +333,7 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 		texture.arrayCount = Next4B;
 		texture.mipCount = Next4B;
 		texture.format = static_cast<avs::TextureFormat>(Next4B);
-		if(texture.format==avs::TextureFormat::INVALID)
-			texture.format=avs::TextureFormat::G8;
+		if(texture.format == avs::TextureFormat::INVALID) texture.format = avs::TextureFormat::G8;
 		texture.compression = static_cast<avs::TextureCompression>(Next4B);
 
 		texture.dataSize = Next4B;
@@ -364,7 +349,22 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface *& target)
 
 avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& target)
 {
-	return avs::Result::GeometryDecoder_Incomplete;
+	Animation animation;
+	uid animationID = Next8B;
+
+	animation.boneKeyframes.resize(Next8B);
+	for(int i = 0; i < animation.boneKeyframes.size(); i++)
+	{
+		avs::TransformKeyframe& transformKeyframe = animation.boneKeyframes[i];
+		transformKeyframe.nodeID = Next8B;
+
+		decodeVector3Keyframes(transformKeyframe.positionKeyframes);
+		decodeVector4Keyframes(transformKeyframe.rotationKeyframes);
+	}
+
+	target->CreateAnimation(animationID, animation);
+
+	return avs::Result::OK;
 }
 
 avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& target)
@@ -378,6 +378,14 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.transform = NextChunk(avs::Transform);
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);
+		node.skinID = Next8B;
+		node.parentID = Next8B;
+
+		node.animations.resize(Next8B);
+		for(int j = 0; j < node.animations.size(); j++)
+		{
+			node.animations[j] = Next8B;
+		}
 
 		switch(node.data_type)
 		{
@@ -402,12 +410,73 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		};
 
 		uint64_t childCount = Next8B;
-		node.childrenUids.reserve(childCount);
+		node.childrenIDs.reserve(childCount);
 		for(uint64_t j = 0; j < childCount; ++j)
 		{
-			node.childrenUids.push_back(Next8B);
+			node.childrenIDs.push_back(Next8B);
 		}
+
 		target->CreateNode(uid, node);
 	}
+	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& target)
+{
+	avs::uid skinID = Next8B;
+
+	avs::Skin skin;
+
+	skin.inverseBindMatrices.resize(Next8B);
+	for(int i = 0; i < skin.inverseBindMatrices.size(); i++)
+	{
+		skin.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
+	}
+
+	skin.jointIDs.resize(Next8B);
+	for(int i = 0; i < skin.jointIDs.size(); i++)
+	{
+		skin.jointIDs[i] = Next8B;
+	}
+
+	skin.rootTransform = NextChunk(avs::Transform);
+
+	target->CreateSkin(skinID, skin);
+	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::decodeFloatKeyframes(std::vector<avs::FloatKeyframe>& keyframes)
+{
+	keyframes.resize(Next8B);
+	for(int i = 0; i < keyframes.size(); i++)
+	{
+		keyframes[i].time = NextFloat;
+		keyframes[i].value = NextFloat;
+	}
+
+	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::decodeVector3Keyframes(std::vector<avs::Vector3Keyframe>& keyframes)
+{
+	keyframes.resize(Next8B);
+	for(int i = 0; i < keyframes.size(); i++)
+	{
+		keyframes[i].time = NextFloat;
+		keyframes[i].value = NextChunk(avs::vec3);
+	}
+
+	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::decodeVector4Keyframes(std::vector<avs::Vector4Keyframe>& keyframes)
+{
+	keyframes.resize(Next8B);
+	for(int i = 0; i < keyframes.size(); i++)
+	{
+		keyframes[i].time = NextFloat;
+		keyframes[i].value = NextChunk(avs::vec4);
+	}
+
 	return avs::Result::OK;
 }

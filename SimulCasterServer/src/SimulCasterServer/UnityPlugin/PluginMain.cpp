@@ -589,8 +589,8 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	}
 	else
 	{
-		encoderSettings.frameWidth = casterSettings.captureCubeSize * 3;
-		encoderSettings.frameHeight = casterSettings.captureCubeSize * 3;
+		encoderSettings.frameWidth = static_cast<int32_t>(casterSettings.captureCubeSize * 3);
+		encoderSettings.frameHeight = static_cast<int32_t>(casterSettings.captureCubeSize * 3);
 	}
 	encoderSettings.depthWidth = 0; // not used
 	encoderSettings.depthHeight = 0; // not used
@@ -1178,6 +1178,21 @@ TELEPORT_EXPORT void SetHands(std::pair<void*, avs::uid> firstHand, std::pair<vo
 TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 {
 	geometryStore.storeNode(id, avs::DataNode(node));
+}
+
+TELEPORT_EXPORT void StoreSkin(avs::uid id, InteropSkin skin)
+{
+	geometryStore.storeSkin(id, avs::Skin(skin), avs::AxesStandard::UnityStyle);
+}
+
+TELEPORT_EXPORT void StorePropertyAnimation(avs::uid animationID, InteropPropertyAnimation* animation)
+{
+	geometryStore.storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
+}
+
+TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransformAnimation* animation)
+{
+	geometryStore.storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, std::time_t lastModified, InteropMesh* mesh, avs::AxesStandard extractToStandard)

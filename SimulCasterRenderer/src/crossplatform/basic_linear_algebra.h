@@ -10,6 +10,8 @@ namespace scr
 	const float TAU = 2.0f * PI;
 	const float HALF_PI = 0.5f * PI;
 
+	struct quat;
+	inline quat operator*(float lhs, const quat& rhs);
 	struct quat
 	{
 		float i, j, k, s;
@@ -37,12 +39,12 @@ namespace scr
 			:i(vec.x), j(vec.y), k(vec.z), s(vec.w)
 		{}
 
-		quat Conjugate()
+		quat Conjugate() const
 		{
 			return quat(-this->i, -this->j, -this->k, this->s);
 		}
 
-		quat Normalise()
+		quat& Normalise()
 		{
 			float length = sqrtf(s * s + i * i + j * j + k * k);
 			s /= length;
@@ -53,7 +55,13 @@ namespace scr
 			return *this;
 		}
 
-		void ToAxisAngle(avs::vec3& outAxis, float& outAngle)
+		quat GetNormalised() const
+		{
+			float length = sqrtf(s * s + i * i + j * j + k * k);
+			return quat(i / length, j / length, k / length, s / length);
+		}
+
+		void ToAxisAngle(avs::vec3& outAxis, float& outAngle) const
 		{
 			avs::vec3 result = avs::vec3(i, j, k);
 
@@ -67,7 +75,7 @@ namespace scr
 			outAngle = theta;
 		}
 
-		avs::vec3 GetIJK()
+		avs::vec3 GetIJK() const
 		{
 			return avs::vec3(i, j, k).Normalised();
 		}
@@ -80,6 +88,46 @@ namespace scr
 				quatVec * 2.0f * quatVec.Dot(rhs) +
 				rhs * (s * s - quatVec.Dot(quatVec)) +
 				quatVec.Cross(rhs) * 2.0f * s;
+		}
+
+		static quat Slerp(const scr::quat& source, const scr::quat& target, float time)
+		{
+			avs::vec4 unitSource = source.GetNormalised();
+			avs::vec4 unitTarget = target.GetNormalised();
+
+			float dot = unitSource.Dot(unitTarget);
+			if(dot < 0.0f)
+			{
+				unitSource = -unitSource;
+				dot = -dot;
+			}
+
+			static const double DOT_THRESHOLD = 0.9995f;
+			if(static_cast<double>(dot) > DOT_THRESHOLD)
+			{
+				quat result = (unitSource * time) + (unitTarget - unitSource);
+				return result.Normalise();
+			}
+
+			float theta_0 = acos(dot);
+			float theta = theta_0 * time;
+			float sin_theta_0 = sin(theta_0);
+			float sin_theta = sin(theta);
+
+			float s0 = cos(theta) - dot * sin_theta / sin_theta_0;
+			float s1 = sin_theta / sin_theta_0;
+
+			return (s0 * unitSource) + (s1 * unitTarget);
+		}
+
+		quat Slerp(const scr::quat& rhs, float time) const
+		{
+			return Slerp(*this, rhs, time);
+		}
+
+		quat operator-() const
+		{
+			return quat(-i, -j, -k, -s);
 		}
 
 		quat operator*(const quat& other) const
@@ -102,6 +150,11 @@ namespace scr
 			);
 		}
 
+		quat operator*(float rhs) const
+		{
+			return quat(i * rhs, j * rhs, k * rhs, s * rhs);
+		}
+
 		void operator*=(const quat& other)
 		{
 			*this = *this * other;
@@ -120,7 +173,17 @@ namespace scr
 			k = vec.z;
 			return *this;
 		}
+
+		operator avs::vec4() const
+		{
+			return avs::vec4(i, j, k, s);
+		}
 	};
+
+	inline quat operator*(float lhs, const quat& rhs)
+	{
+		return quat(rhs.i * lhs, rhs.j * lhs, rhs.k * lhs, rhs.s * lhs);
+	}
 
 	struct mat4
 	{
@@ -159,6 +222,13 @@ namespace scr
 			 c.x, c.y, c.z, c.w,
 			 d.x, d.y, d.z, d.w
 			)
+		{}
+
+		mat4(avs::Mat4x4 matrix)
+			:mat4(matrix.m00, matrix.m01, matrix.m02, matrix.m03,
+				  matrix.m10, matrix.m11, matrix.m12, matrix.m13,
+				  matrix.m20, matrix.m21, matrix.m22, matrix.m23,
+				  matrix.m30, matrix.m31, matrix.m32, matrix.m33)
 		{}
 
 		mat4 Transpose()
@@ -204,6 +274,26 @@ namespace scr
 			output.Transpose();
 			return output;
 		}
+
+		avs::vec3 GetTranslation() const
+		{
+			return avs::vec3(d, h, l);
+		}
+
+		scr::quat GetRotation() const
+		{
+			//TODO: An actual implementation.
+			return scr::quat();
+		}
+
+		avs::vec3 GetScale() const
+		{
+			avs::vec3 x(a, e, i);
+			avs::vec3 y(b, f, j);
+			avs::vec3 z(c, g, k);
+
+			return avs::vec3(x.Length(), y.Length(), z.Length());
+		} 
 
 		static mat4 Identity()
 		{

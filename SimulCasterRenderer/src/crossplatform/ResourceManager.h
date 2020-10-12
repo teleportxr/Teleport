@@ -21,8 +21,8 @@ public:
 	struct ResourceData
 	{
 		std::shared_ptr<T> resource;
-		uint32_t postUseLifetime; //Milliseconds the resource should be kept alive after the last object has stopped using it.
-		uint32_t timeSinceLastUse; //Milliseconds since the data was last used by the session.
+		float postUseLifetime; //Milliseconds the resource should be kept alive after the last object has stopped using it.
+		float timeSinceLastUse; //Milliseconds since the data was last used by the session.
 	};
 
 	//Create a resource manager with the class specific function to free it from memory before destroying the resource.
@@ -33,7 +33,7 @@ public:
 	//	id : Unique identifier of the resource.
 	//	newResource : The resource.
 	//	postUseLifetime : Milliseconds the resource should be kept alive after the last object has stopped using it.
-	void Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime = 1000);
+	void Add(uid id, std::shared_ptr<T> & newItem, float postUseLifetime = 1000);
 
 	//Returns whether the manager contains the resource.
 	bool Has(uid id) const;
@@ -92,7 +92,7 @@ ResourceManager<T>::~ResourceManager()
 }
 
 template<class T>
-void ResourceManager<T>::Add(uid id, std::shared_ptr<T> & newItem, uint32_t postUseLifetime)
+void ResourceManager<T>::Add(uid id, std::shared_ptr<T> & newItem, float postUseLifetime)
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	cachedItems.emplace(id, ResourceData{newItem, postUseLifetime, 0});

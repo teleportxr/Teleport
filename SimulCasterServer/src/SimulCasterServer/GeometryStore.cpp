@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #endif
 
+#include "libavstream/geometry/animation_interface.h"
+
 //We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
 #if _MSC_VER < 1920
 namespace filesystem = std::experimental::filesystem;
@@ -34,35 +36,16 @@ std::vector<avs::uid> getVectorOfIDs(const std::map<avs::uid, T>& resourceMap)
 template<class T>
 T* getResource(std::map<avs::uid, T>& resourceMap, avs::uid id)
 {
-	//Assuming an incorrect resource should not happen, or at least not frequently.
-	try
-	{
-		auto r=resourceMap.find(id);
-		if (r != resourceMap.end())
-			return &r->second;
-		return nullptr;
-	}
-	catch(std::out_of_range oor)
-	{
-		return nullptr;
-	}
+	auto resource = resourceMap.find(id);
+	return (resource != resourceMap.end()) ? &resource->second : nullptr;
 }
 
 //Const version.
 template<class T>
 const T* getResource(const std::map<avs::uid, T>& resourceMap, avs::uid id)
 {
-	//Assuming an incorrect resource should not happen, or at least not frequently.
-	try
-	{
-		auto r = resourceMap.find(id);
-		if (r!=resourceMap.end())
-			return &r->second;
-	}
-	catch(std::out_of_range oor)
-	{
-		return nullptr;
-	}
+	auto resource = resourceMap.find(id);
+	return (resource != resourceMap.end()) ? &resource->second : nullptr;
 }
 
 std::time_t GetFileWriteTime(const std::filesystem::path& filename)
@@ -95,6 +78,15 @@ namespace SCServer
 
 		basisCompressorParams.m_quality_level = 1;
 		basisCompressorParams.m_compression_level = 1;
+
+		//Create look-up maps.
+		meshes[avs::AxesStandard::EngineeringStyle];
+		meshes[avs::AxesStandard::GlStyle];
+		animations[avs::AxesStandard::EngineeringStyle];
+		animations[avs::AxesStandard::GlStyle];
+		skins[avs::AxesStandard::EngineeringStyle];
+		skins[avs::AxesStandard::GlStyle];
+
 	}
 
 	GeometryStore::~GeometryStore()
@@ -106,19 +98,12 @@ namespace SCServer
 	{
 		saveResources(TEXTURE_FILE_NAME, textures);
 		saveResources(MATERIAL_FILE_NAME, materials);
-		auto &a= meshes.find(avs::AxesStandard::EngineeringStyle);
-		if(a!=meshes.end())
-			saveResources(MESH_PC_FILE_NAME, a->second);
-		auto& g = meshes.find(avs::AxesStandard::GlStyle);
-		if (g != meshes.end())
-			saveResources(MESH_ANDROID_FILE_NAME, g->second);
+		saveResources(MESH_PC_FILE_NAME, meshes.at(avs::AxesStandard::EngineeringStyle));
+		saveResources(MESH_ANDROID_FILE_NAME, meshes.at(avs::AxesStandard::GlStyle));
 	}
 
 	void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials)
 	{
-		meshes[avs::AxesStandard::EngineeringStyle];
-		meshes[avs::AxesStandard::GlStyle];
-
 		loadResources(MESH_PC_FILE_NAME, meshes.at(avs::AxesStandard::EngineeringStyle));
 		loadResources(MESH_ANDROID_FILE_NAME, meshes.at(avs::AxesStandard::GlStyle));
 		loadResources(TEXTURE_FILE_NAME, textures);
@@ -289,6 +274,26 @@ namespace SCServer
 		return nodes;
 	}
 
+	avs::Skin* GeometryStore::getSkin(avs::uid skinID, avs::AxesStandard standard)
+	{
+		return getResource(skins.at(standard), skinID);
+	}
+
+	const avs::Skin* GeometryStore::getSkin(avs::uid skinID, avs::AxesStandard standard) const
+	{
+		return getResource(skins.at(standard), skinID);
+	}
+
+	avs::Animation* GeometryStore::getAnimation(avs::uid id, avs::AxesStandard standard)
+	{
+		return getResource(animations.at(standard), id);
+	}
+
+	const avs::Animation* GeometryStore::getAnimation(avs::uid id, avs::AxesStandard standard) const
+	{
+		return getResource(animations.at(standard), id);
+	}
+
 	std::vector<avs::uid> GeometryStore::getMeshIDs() const
 	{
 		//Every mesh map should be identical, so we just use the engineering style.
@@ -297,16 +302,12 @@ namespace SCServer
 
 	avs::Mesh* GeometryStore::getMesh(avs::uid meshID, avs::AxesStandard standard)
 	{
-		if(meshes.find(standard)==meshes.end())
-			return nullptr;
 		ExtractedMesh* meshData = getResource(meshes.at(standard), meshID);
 		return (meshData ? &meshData->mesh : nullptr);
 	}
 
 	const avs::Mesh* GeometryStore::getMesh(avs::uid meshID, avs::AxesStandard standard) const
 	{
-		if(meshes.find(standard)==meshes.end())
-			return nullptr;
 		const ExtractedMesh* meshData = getResource(meshes.at(standard), meshID);
 		return (meshData ? &meshData->mesh : nullptr);
 	}
@@ -409,6 +410,18 @@ namespace SCServer
 
 		if(newNode.data_type == avs::NodeDataType::ShadowMap|| newNode.data_type == avs::NodeDataType::Light)
 			lightNodes.emplace_back(avs::LightNodeResources{id, newNode.data_uid});
+	}
+
+	void GeometryStore::storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard)
+	{
+		skins[avs::AxesStandard::EngineeringStyle][id] = avs::Skin::convertToStandard(newSkin, sourceStandard, avs::AxesStandard::EngineeringStyle);
+		skins[avs::AxesStandard::GlStyle][id] = avs::Skin::convertToStandard(newSkin, sourceStandard, avs::AxesStandard::GlStyle);
+	}
+
+	void GeometryStore::storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard)
+	{
+		animations[avs::AxesStandard::EngineeringStyle][id] = avs::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
+		animations[avs::AxesStandard::GlStyle][id] = avs::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
 	}
 
 	void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard)

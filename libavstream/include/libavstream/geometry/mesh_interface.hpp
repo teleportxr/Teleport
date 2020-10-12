@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+
 #include <libavstream/common.hpp>
 #include <libavstream/memory.hpp>
 
@@ -12,6 +13,8 @@
 
 namespace avs
 {
+struct Animation;
+
 	template<typename T> struct Vec2
 	{
 		T x, y;
@@ -182,10 +185,10 @@ namespace avs
 	{
 		enum class DataType : uint32_t
 		{
-			SCALAR = 0
-			, VEC2
-			, VEC3
-			, VEC4
+			SCALAR = 0,
+			VEC2,
+			VEC3,
+			VEC4
 		};
 		enum class ComponentType : uint32_t
 		{
@@ -238,20 +241,31 @@ namespace avs
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);
 	extern void AVSTREAM_API ConvertRotation(AxesStandard fromStandard, AxesStandard toStandard, vec4 &rotation);
 	extern void AVSTREAM_API ConvertPosition(AxesStandard fromStandard, AxesStandard toStandard, vec3 &position);
-	extern int8_t AVSTREAM_API ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis);
+	extern int8_t AVSTREAM_API ConvertAxis(AxesStandard fromStandard, AxesStandard toStandard, int8_t axis);
 
 	struct DataNode
 	{
 		Transform transform;
-		uid data_uid;
+
+		uid parentID;
+		std::vector<uid> childrenIDs;
+
 		NodeDataType data_type;
-		std::vector<uid> materials;		// if it's a mesh
-		vec4 lightColour;				// if it's a light
+		uid data_uid;
+
+		//MESH
+		std::vector<uid> materials;
+		//SKINNED MESH
+		uid skinID;
+		std::vector<uid> animations;
+
+		//LIGHT
+		vec4 lightColour;
 		float lightRadius;
-		vec3 lightDirection;				// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
+		vec3 lightDirection; // Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
 		uint8_t lightType;
-		std::vector<uid> childrenUids;
 	};
+
 	inline size_t GetComponentSize(Accessor::ComponentType t)
 	{
 		switch (t)
@@ -280,6 +294,7 @@ namespace avs
 			return 8;
 		return 4;
 	}
+
 	inline size_t GetDataTypeSize(Accessor::DataType t)
 	{
 		switch (t)
@@ -295,6 +310,29 @@ namespace avs
 			return 4;
 		};
 	}
+
+	struct Skin
+	{
+		std::vector<Mat4x4> inverseBindMatrices;
+		std::vector<uid> jointIDs;
+		Transform rootTransform;
+
+		static Skin convertToStandard(const Skin& skin, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
+		{
+			avs::Skin convertedSkin;
+			convertedSkin.jointIDs = skin.jointIDs;
+
+			for(const Mat4x4& matrix : skin.inverseBindMatrices)
+			{
+				convertedSkin.inverseBindMatrices.push_back(Mat4x4::convertToStandard(matrix, sourceStandard, targetStandard));
+			}
+
+			convertedSkin.rootTransform = skin.rootTransform;
+			avs::ConvertTransform(sourceStandard, targetStandard, convertedSkin.rootTransform);
+
+			return convertedSkin;
+		}
+	};
 
 	struct Mesh
 	{
@@ -391,6 +429,9 @@ namespace avs
 	{
 		uid node_uid;
 		uid mesh_uid;
+		uid skinID;
+		std::vector<uid> jointIDs;
+		std::vector<uid> animationIDs;
 		std::vector<MaterialResources> materials;
 	};
 
@@ -425,6 +466,12 @@ namespace avs
 		//Returns the mesh if successfully found, otherwise nullptr.
 		virtual Mesh* getMesh(uid meshID, avs::AxesStandard standard) = 0;
 		virtual const Mesh* getMesh(uid meshID, avs::AxesStandard standard) const = 0;
+
+		virtual avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) = 0;
+		virtual const avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) const = 0;
+
+		virtual avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) = 0;
+		virtual const avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const = 0;
 
 		//Get IDs of all textures stored in this geometry source.
 		virtual std::vector<uid> getTextureIDs() const = 0;
@@ -524,11 +571,13 @@ namespace avs
 	{
 	public:
 		virtual ~GeometryTargetBackendInterface() = default;
-		virtual Result Assemble(const MeshCreate& meshCreate) = 0;
+		virtual Result Assemble(MeshCreate& meshCreate) = 0;
 
 		virtual void CreateTexture(uid texture_uid, const Texture & texture) = 0;
 		virtual void CreateMaterial(uid material_uid, const Material & material) = 0;
 		virtual void CreateNode(uid node_uid, DataNode& node) = 0;
+		virtual void CreateSkin(avs::uid skinID, avs::Skin& skin) = 0;
+		virtual void CreateAnimation(avs::uid id, avs::Animation& animation) = 0;
 	};
 
 	//! A Geometry decoder backend converts a 

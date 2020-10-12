@@ -4,6 +4,7 @@
 #include <set>
 
 #include "libavstream/common.hpp"
+#include "libavstream/geometry/animation_interface.h"
 
 #include "CasterSettings.h"
 
@@ -38,7 +39,7 @@ namespace SCServer
 		:settings(settings), prevBufferSize(0)
 	{}
 
-	avs::Result GeometryEncoder::encode(uint32_t timestamp, avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req)
+	avs::Result GeometryEncoder::encode(uint32_t timestamp, avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req)
 	{
 		queuedBuffer.clear();
 
@@ -51,81 +52,107 @@ namespace SCServer
 
 		//Queue what may have been left since last time, and keep queueing if there is still some space.
 		bool keepQueueing = attemptQueueData();
-		if (keepQueueing)
+		if(keepQueueing)
 		{
 			std::vector<avs::MeshNodeResources> meshNodeResources;
 			std::vector<avs::LightNodeResources> lightNodeResources;
 
 			req->getResourcesToStream(meshNodeResources, lightNodeResources);
 			//Encode mesh nodes first, as they should be sent before lighting data.
-			for (avs::MeshNodeResources meshResourceInfo : meshNodeResources)
+			for(avs::MeshNodeResources meshResourceInfo : meshNodeResources)
 			{
-				if (!req->hasResource(meshResourceInfo.mesh_uid))
+				if(!req->hasResource(meshResourceInfo.mesh_uid))
 				{
-					encodeMeshes(src, req, { meshResourceInfo.mesh_uid });
+					encodeMeshes(src, req, {meshResourceInfo.mesh_uid});
 
 					keepQueueing = attemptQueueData();
-					if (!keepQueueing)
-						break;
+					if(!keepQueueing) break;
 				}
 
-				for (avs::MaterialResources material : meshResourceInfo.materials)
+				if(meshResourceInfo.skinID != 0)
 				{
-					if (GetNewUIDs(material.texture_uids, req) != 0)
+					for(avs::uid boneID : meshResourceInfo.jointIDs)
 					{
-						for (avs::uid textureID : material.texture_uids)
+						if(!req->hasResource(boneID))
 						{
-							encodeTextures(src, req, { textureID });
+							encodeNodes(src, req, {boneID});
 
 							keepQueueing = attemptQueueData();
-							if (!keepQueueing)
-								break;
+							if(!keepQueueing) break;
 						}
-
-						if (!keepQueueing)
-							break;
 					}
 
-					if (!req->hasResource(material.material_uid))
+					if(!req->hasResource(meshResourceInfo.skinID))
 					{
-						encodeMaterials(src, req, { material.material_uid });
+						encodeSkin(src, req, meshResourceInfo.skinID);
 
 						keepQueueing = attemptQueueData();
-						if (!keepQueueing)
-							break;
+						if(!keepQueueing) break;
 					}
 				}
-				if (!keepQueueing)
-					break;
 
-				if (!req->hasResource(meshResourceInfo.node_uid))
+				for(avs::uid animationID : meshResourceInfo.animationIDs)
 				{
-					encodeNodes(src, req, { meshResourceInfo.node_uid });
+					if(!req->hasResource(animationID))
+					{
+						encodeAnimation(src, req, animationID);
+
+						keepQueueing = attemptQueueData();
+						if(!keepQueueing) break;
+					}
+				}
+				if(!keepQueueing) break;
+
+				for(avs::MaterialResources material : meshResourceInfo.materials)
+				{
+					if(GetNewUIDs(material.texture_uids, req) != 0)
+					{
+						for(avs::uid textureID : material.texture_uids)
+						{
+							encodeTextures(src, req, {textureID});
+
+							keepQueueing = attemptQueueData();
+							if(!keepQueueing) break;
+						}
+
+						if(!keepQueueing) break;
+					}
+
+					if(!req->hasResource(material.material_uid))
+					{
+						encodeMaterials(src, req, {material.material_uid});
+
+						keepQueueing = attemptQueueData();
+						if(!keepQueueing) break;
+					}
+				}
+				if(!keepQueueing) break;
+
+				if(!req->hasResource(meshResourceInfo.node_uid))
+				{
+					encodeNodes(src, req, {meshResourceInfo.node_uid});
 
 					keepQueueing = attemptQueueData();
-					if (!keepQueueing)
-						break;
+					if(!keepQueueing) break;
 				}
 			}
 
-			for (avs::LightNodeResources lightResourceInfo : lightNodeResources)
+			for(avs::LightNodeResources lightResourceInfo : lightNodeResources)
 			{
-				if (!req->hasResource(lightResourceInfo.shadowmap_uid))
+				if(!req->hasResource(lightResourceInfo.shadowmap_uid))
 				{
-					encodeTextures(src, req, { lightResourceInfo.shadowmap_uid });
+					encodeTextures(src, req, {lightResourceInfo.shadowmap_uid});
 
 					keepQueueing = attemptQueueData();
-					if (!keepQueueing)
-						break;
+					if(!keepQueueing) break;
 				}
 
-				if (!req->hasResource(lightResourceInfo.node_uid))
+				if(!req->hasResource(lightResourceInfo.node_uid))
 				{
-					encodeNodes(src, req, { lightResourceInfo.node_uid });
+					encodeNodes(src, req, {lightResourceInfo.node_uid});
 
 					keepQueueing = attemptQueueData();
-					if (!keepQueueing)
-						break;
+					if(!keepQueueing) break;
 				}
 			}
 		}
@@ -145,9 +172,9 @@ namespace SCServer
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 	{
-		for (size_t h = 0; h < missingUIDs.size(); h++)
+		for(size_t h = 0; h < missingUIDs.size(); h++)
 		{
 			size_t oldBufferSize = buffer.size();
 
@@ -155,11 +182,11 @@ namespace SCServer
 			avs::Mesh* mesh = src->getMesh(uid, req->getAxesStandard());
 			if(!mesh)
 			{
-				static bool done=false;
-				if(!done)
+				static bool hasReported = false;
+				if(!hasReported)
 				{
-					TELEPORT_CERR<<"Mesh not found with uid "<<uid<<std::endl;
-					done=true;
+					TELEPORT_CERR << "Mesh not found with uid " << uid << std::endl;
+					hasReported = true;
 				}
 				continue;
 			}
@@ -171,14 +198,14 @@ namespace SCServer
 			put(mesh->primitiveArrays.size());
 
 			std::set<avs::uid> accessors;
-			for (avs::PrimitiveArray primitiveArray : mesh->primitiveArrays)
+			for(const avs::PrimitiveArray& primitiveArray : mesh->primitiveArrays)
 			{
 				put(primitiveArray.attributeCount);
 				put(primitiveArray.indices_accessor);
 				put(primitiveArray.material);
 				put(primitiveArray.primitiveMode);
 				accessors.insert(primitiveArray.indices_accessor);
-				for (size_t k = 0; k < primitiveArray.attributeCount; k++)
+				for(size_t k = 0; k < primitiveArray.attributeCount; k++)
 				{
 					put(primitiveArray.attributes[k]);
 					accessors.insert(primitiveArray.attributes[k].accessor);
@@ -187,7 +214,7 @@ namespace SCServer
 
 			put(accessors.size());
 			std::set<avs::uid> bufferViews;
-			for (avs::uid accessorID : accessors)
+			for(avs::uid accessorID : accessors)
 			{
 				avs::Accessor accessor = mesh->accessors[accessorID];
 				put(accessorID);
@@ -201,7 +228,7 @@ namespace SCServer
 
 			put(bufferViews.size());
 			std::set<avs::uid> buffers;
-			for (avs::uid bufferViewID : bufferViews)
+			for(avs::uid bufferViewID : bufferViews)
 			{
 				avs::BufferView bufferView = mesh->bufferViews[bufferViewID];
 				put(bufferViewID);
@@ -213,7 +240,7 @@ namespace SCServer
 			}
 
 			put(buffers.size());
-			for (avs::uid bufferID : buffers)
+			for(avs::uid bufferID : buffers)
 			{
 				avs::GeometryBuffer buffer = mesh->buffers[bufferID];
 				put(bufferID);
@@ -251,18 +278,28 @@ namespace SCServer
 			put(transform);
 			put(node->data_uid);
 			put(node->data_type);
-			if(node->data_type==avs::NodeDataType::Mesh)
+			put(node->skinID);
+			put(node->parentID);
+
+			put(node->animations.size());
+			for(avs::uid id : node->animations)
+			{
+				put(id);
+			}
+
+			if(node->data_type == avs::NodeDataType::Mesh)
 			{
 				put(node->materials.size());
-				for (const auto& id : node->materials)
+				for(avs::uid id : node->materials)
 				{
 					put(id);
 				}
 			}
 			else
 			{
-				TELEPORT_ASSERT(node->materials.size()==0);
+				TELEPORT_ASSERT(node->materials.size() == 0);
 			}
+
 			if(node->data_type==avs::NodeDataType::Light)
 			{
 				put(node->lightColour);
@@ -272,8 +309,8 @@ namespace SCServer
 				put(lightDirection);
 				put(node->lightType);
 			}
-			put(node->childrenUids.size());
-			for (const auto& id : node->childrenUids)
+			put(node->childrenIDs.size());
+			for(avs::uid id : node->childrenIDs)
 			{
 				put(id);
 			}
@@ -283,6 +320,90 @@ namespace SCServer
 
 		// Actual size is now known so update payload size
 		putPayloadSize();
+
+		return avs::Result::OK;
+	}
+
+	avs::Result GeometryEncoder::encodeSkin(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid skinID)
+	{
+		putPayload(avs::GeometryPayloadType::Skin);
+
+		const avs::Skin* skin = src->getSkin(skinID, req->getAxesStandard());
+		if(skin)
+		{
+			put(skinID);
+
+			put(skin->inverseBindMatrices.size());
+			for(int i = 0; i < skin->inverseBindMatrices.size(); i++)
+			{
+				put(skin->inverseBindMatrices[i]);
+			}
+
+			put(skin->jointIDs.size());
+			for(int i = 0; i < skin->jointIDs.size(); i++)
+			{
+				put(skin->jointIDs[i]);
+			}
+
+			put(skin->rootTransform);
+
+			putPayloadSize();
+			req->encodedResource(skinID);
+		}
+
+		return avs::Result::OK;
+	}
+
+	//avs::Result GeometryEncoder::encodeAnimation(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
+	//{
+	//	const avs::Animation* animation = src->getAnimation(animationID, req->getAxesStandard());
+	//	if(animation)
+	//	{
+	//		putPayload(avs::GeometryPayloadType::Animation);
+	//		put(animationID);
+	//		
+	//		put(animation->transformKeyframes.size());
+	//		for(const avs::TransformKeyframe& transformKeyframe : animation->transformKeyframes)
+	//		{
+	//			put(transformKeyframe.nodeID);
+
+	//			encodeFloatKeyframes(transformKeyframe.positionXKeyframes);
+	//			encodeFloatKeyframes(transformKeyframe.positionYKeyframes);
+	//			encodeFloatKeyframes(transformKeyframe.positionZKeyframes);
+
+	//			encodeFloatKeyframes(transformKeyframe.rotationXKeyframes);
+	//			encodeFloatKeyframes(transformKeyframe.rotationYKeyframes);
+	//			encodeFloatKeyframes(transformKeyframe.rotationZKeyframes);
+	//			encodeFloatKeyframes(transformKeyframe.rotationWKeyframes);
+	//		}
+
+	//		putPayloadSize();
+	//		req->encodedResource(animationID);
+	//	}
+
+	//	return avs::Result::OK;
+	//}
+
+	avs::Result GeometryEncoder::encodeAnimation(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
+	{
+		const avs::Animation* animation = src->getAnimation(animationID, req->getAxesStandard());
+		if(animation)
+		{
+			putPayload(avs::GeometryPayloadType::Animation);
+			put(animationID);
+
+			put(animation->boneKeyframes.size());
+			for(const avs::TransformKeyframe& transformKeyframe : animation->boneKeyframes)
+			{
+				put(transformKeyframe.nodeID);
+
+				encodeVector3Keyframes(transformKeyframe.positionKeyframes);
+				encodeVector4Keyframes(transformKeyframe.rotationKeyframes);
+			}
+
+			putPayloadSize();
+			req->encodedResource(animationID);
+		}
 
 		return avs::Result::OK;
 	}
@@ -490,6 +611,42 @@ namespace SCServer
 				//Flag we have encoded the texture.
 				req->encodedResource(uid);
 			}
+		}
+
+		return avs::Result::OK;
+	}
+
+	avs::Result GeometryEncoder::encodeFloatKeyframes(const std::vector<avs::FloatKeyframe>& keyframes)
+	{
+		put(keyframes.size());
+		for(const avs::FloatKeyframe& keyframe : keyframes)
+		{
+			put(keyframe.time);
+			put(keyframe.value);
+		}
+
+		return avs::Result::OK;
+	}
+
+	avs::Result GeometryEncoder::encodeVector3Keyframes(const std::vector<avs::Vector3Keyframe>& keyframes)
+	{
+		put(keyframes.size());
+		for(const avs::Vector3Keyframe& keyframe : keyframes)
+		{
+			put(keyframe.time);
+			put(keyframe.value);
+		}
+
+		return avs::Result::OK;
+	}
+
+	avs::Result GeometryEncoder::encodeVector4Keyframes(const std::vector<avs::Vector4Keyframe>& keyframes)
+	{
+		put(keyframes.size());
+		for(const avs::Vector4Keyframe& keyframe : keyframes)
+		{
+			put(keyframe.time);
+			put(keyframe.value);
 		}
 
 		return avs::Result::OK;

@@ -24,15 +24,17 @@ set( src_api
 	src/api/VertexBufferLayout.h
 	)
 set( src_crossplatform
-	src/crossplatform/Node.cpp
-	src/crossplatform/Node.h
 	src/crossplatform/ActorComponents.cpp
 	src/crossplatform/ActorComponents.h
 	src/crossplatform/ActorManager.cpp
 	src/crossplatform/ActorManager.h
+	src/crossplatform/Animation.cpp
+	src/crossplatform/Animation.h
 	src/crossplatform/API.cpp
 	src/crossplatform/API.h
 	src/crossplatform/basic_linear_algebra.h
+	src/crossplatform/Bone.cpp
+	src/crossplatform/Bone.h
 	src/crossplatform/Camera.cpp
 	src/crossplatform/Camera.h
 	src/crossplatform/DiscoveryService.h
@@ -47,6 +49,8 @@ set( src_crossplatform
 	src/crossplatform/Material.h
 	src/crossplatform/Mesh.cpp
 	src/crossplatform/Mesh.h
+	src/crossplatform/Node.cpp
+	src/crossplatform/Node.h
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h
@@ -56,6 +60,8 @@ set( src_crossplatform
 	src/crossplatform/ShaderResource.h
 	src/crossplatform/ShaderSystem.cpp
 	src/crossplatform/ShaderSystem.h
+	src/crossplatform/Skin.cpp
+	src/crossplatform/Skin.h
 	src/crossplatform/Transform.cpp
 	src/crossplatform/Transform.h
 	)

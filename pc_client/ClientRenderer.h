@@ -98,6 +98,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
+	simul::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
 	simul::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 	simul::crossplatform::StructuredBuffer<VideoTagData2D> tagData2DBuffer;
 	simul::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;

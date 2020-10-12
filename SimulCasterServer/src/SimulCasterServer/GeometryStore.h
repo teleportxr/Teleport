@@ -35,6 +35,12 @@ namespace SCServer
 		virtual const avs::DataNode* getNode(avs::uid nodeID) const override;
 		virtual const std::map<avs::uid, avs::DataNode>& getNodes() const override;
 
+		virtual avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) override;
+		virtual const avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) const override;
+
+		virtual avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) override;
+		virtual const avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const override;
+
 		virtual std::vector<avs::uid> getMeshIDs() const override;
 		virtual avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) override;
 		virtual const avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) const override;
@@ -71,6 +77,8 @@ namespace SCServer
 		bool hasShadowMap(avs::uid id) const;
 
 		void storeNode(avs::uid id, avs::DataNode& newNode);
+		void storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard);
+		void storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard);
 		void storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard);
 		void storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Material& newMaterial);
 		void storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation);
@@ -105,6 +113,8 @@ namespace SCServer
 		basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
 
 		std::map<avs::uid, avs::DataNode> nodes;
+		std::map<avs::AxesStandard, std::map<avs::uid, avs::Skin>> skins;
+		std::map<avs::AxesStandard, std::map<avs::uid, avs::Animation>> animations;
 		std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> meshes;
 		std::map<avs::uid, ExtractedMaterial> materials;
 		std::map<avs::uid, ExtractedTexture> textures;

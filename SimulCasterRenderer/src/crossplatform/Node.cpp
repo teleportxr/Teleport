@@ -2,8 +2,8 @@
 
 #include "Node.h"
 
-using namespace scr;
-
+namespace scr
+{
 Node::Node(avs::uid id)
 	:id(id)
 {}
@@ -53,7 +53,7 @@ void Node::SetLastMovement(const avs::MovementUpdate& update)
 void Node::TickExtrapolatedTransform(float deltaTime)
 {
 	deltaTime /= 1000;
-	scr::Transform& transform = (lastReceivedMovement.isGlobal ? globalTransform : localTransform);
+	Transform& transform = (lastReceivedMovement.isGlobal ? globalTransform : localTransform);
 
 	transform.m_Translation += static_cast<avs::vec3>(lastReceivedMovement.velocity) * deltaTime;
 
@@ -70,6 +70,7 @@ void Node::Update(float deltaTime)
 {
 	TickExtrapolatedTransform(deltaTime);
 	visibility.update(deltaTime);
+	animationComponent.update(deltaTime);
 
 	for(std::weak_ptr<Node> child : children)
 	{
@@ -117,4 +118,4 @@ void Node::UpdateGlobalTransform() const
 		child.lock()->UpdateGlobalTransform();
 	}
 }
-
+}

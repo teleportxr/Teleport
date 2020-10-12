@@ -221,6 +221,16 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vect
 	avs::MeshNodeResources meshNode;
 	meshNode.node_uid = node_uid;
 	meshNode.mesh_uid = thisNode->data_uid;
+	meshNode.skinID = thisNode->skinID;
+
+	//Get joint/bone IDs, if the skinID is not zero.
+	if(meshNode.skinID != 0)
+	{
+		avs::Skin* skin = geometryStore->getSkin(thisNode->skinID, getAxesStandard());
+		meshNode.jointIDs = skin->jointIDs;
+	}
+	
+	meshNode.animationIDs = thisNode->animations;
 
 	for(avs::uid material_uid : thisNode->materials)
 	{
@@ -247,7 +257,7 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vect
 		meshNode.materials.push_back(material);
 	}
 
-	for(avs::uid childNode_uid : thisNode->childrenUids)
+	for(avs::uid childNode_uid : thisNode->childrenIDs)
 	{
 		GetMeshNodeResources(childNode_uid, outMeshResources);
 	}

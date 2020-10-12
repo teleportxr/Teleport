@@ -5,6 +5,13 @@
 
 #include <map>
 
+namespace avs
+{
+struct FloatKeyframe;
+struct Vector3Keyframe;
+struct Vector4Keyframe;
+}
+
 /*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.
 */
 class GeometryDecoder final : public avs::GeometryDecoderBackendInterface
@@ -22,6 +29,11 @@ private:
 	avs::Result decodeTexture(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeAnimation(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeNode(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeSkin(avs::GeometryTargetBackendInterface*& target);
+
+	avs::Result decodeFloatKeyframes(std::vector<avs::FloatKeyframe>& keyframes);
+	avs::Result decodeVector3Keyframes(std::vector<avs::Vector3Keyframe>& keyframes);
+	avs::Result decodeVector4Keyframes(std::vector<avs::Vector4Keyframe>& keyframes);
 
 	//Use for the #define Next8B and #define Next4B macros
 	std::vector<uint8_t> m_Buffer;

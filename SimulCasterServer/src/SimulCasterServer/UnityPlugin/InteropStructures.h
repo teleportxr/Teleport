@@ -5,17 +5,24 @@
 #pragma once
 
 #include "libavstream/common.hpp"
+#include "libavstream/geometry/animation_interface.h"
 #include "libavstream/geometry/mesh_interface.hpp"
 
 struct InteropNode
 {
 	avs::Transform transform;
-	avs::uid dataID;
 	avs::NodeDataType dataType;
+	avs::uid parentID;
+	avs::uid dataID;
+	avs::uid skinID;
+
 	avs::vec4 lightColour;
 	avs::vec3 lightDirection;		// constant, determined why whatever axis the engine uses for light direction.
 	float lightRadius;				// i.e. light is a sphere, where lightColour is the irradiance on its surface.
 	uint8_t lightType;
+
+	size_t animationAmount;
+	avs::uid* animationIDs;
 
 	size_t materialAmount;
 	avs::uid* materialIDs;
@@ -28,14 +35,42 @@ struct InteropNode
 		return
 		{
 			transform,
-			dataID,
+
+			parentID,
+			{childIDs, childIDs + childAmount},
+
 			dataType,
+			dataID,
+
 			{materialIDs, materialIDs + materialAmount},
+			skinID,
+			{animationIDs, animationIDs + animationAmount},
+
 			lightColour,
 			lightRadius,
 			lightDirection,
 			lightType,
-			{childIDs, childIDs + childAmount}
+		};
+	}
+};
+
+struct InteropSkin
+{
+	size_t bindMatrixAmount;
+	avs::Mat4x4* inverseBindMatrices;
+	
+	size_t jointAmount;
+	avs::uid* jointIDs;
+
+	avs::Transform rootTransform;
+
+	operator avs::Skin() const
+	{
+		return
+		{
+			{inverseBindMatrices, inverseBindMatrices + bindMatrixAmount},
+			{jointIDs, jointIDs + jointAmount},
+			rootTransform
 		};
 	}
 };
@@ -178,6 +213,110 @@ struct InteropTexture
 			dataSize,
 			data,
 			sampler_uid
+		};
+	}
+};
+
+struct InteropPropertyKeyframe
+{
+	avs::uid nodeID;
+
+	int positionXAmount;
+	int positionYAmount;
+	int positionZAmount;
+	avs::FloatKeyframe* positionXKeyframes;
+	avs::FloatKeyframe* positionZKeyframes;
+	avs::FloatKeyframe* positionYKeyframes;
+
+	int rotationXAmount;
+	int rotationYAmount;
+	int rotationZAmount;
+	int rotationWAmount;
+	avs::FloatKeyframe* rotationXKeyframes;
+	avs::FloatKeyframe* rotationYKeyframes;
+	avs::FloatKeyframe* rotationZKeyframes;
+	avs::FloatKeyframe* rotationWKeyframes;
+
+	//operator avs::PropertyKeyframe() const
+	//{
+	//	return
+	//	{
+	//		nodeID,
+
+	//		{positionXKeyframes, positionXKeyframes + positionXAmount},
+	//		{positionYKeyframes, positionYKeyframes + positionYAmount},
+	//		{positionZKeyframes, positionZKeyframes + positionZAmount},
+
+
+	//		{rotationXKeyframes, rotationXKeyframes + rotationXAmount},
+	//		{rotationYKeyframes, rotationYKeyframes + rotationYAmount},
+	//		{rotationZKeyframes, rotationZKeyframes + rotationZAmount},
+	//		{rotationWKeyframes, rotationWKeyframes + rotationWAmount}
+	//	};
+	//}
+
+	operator avs::TransformKeyframe() const
+	{
+		return
+		{
+			nodeID
+		};
+	}
+};
+
+struct InteropPropertyAnimation
+{
+	int64_t boneAmount;
+	InteropPropertyKeyframe* boneKeyframes;
+
+	//operator avs::PropertyAnimation() const
+	//{
+	//	return
+	//	{
+	//		{boneKeyframes, boneKeyframes + boneAmount}
+	//	};
+	//}
+
+	operator avs::Animation() const
+	{
+		return
+		{
+			{boneKeyframes, boneKeyframes + boneAmount}
+		};
+	}
+};
+
+struct InteropTransformKeyframe
+{
+	avs::uid nodeID;
+
+	int positionAmount;
+	avs::Vector3Keyframe* positionKeyframes;
+
+	int rotationAmount;
+	avs::Vector4Keyframe* rotationKeyframes;
+
+	operator avs::TransformKeyframe() const
+	{
+		return
+		{
+			nodeID,
+			{positionKeyframes, positionKeyframes + positionAmount},
+			{rotationKeyframes, rotationKeyframes + rotationAmount}
+		};
+	}
+};
+
+struct InteropTransformAnimation
+{
+	int64_t boneAmount;
+	InteropTransformKeyframe* boneKeyframes;
+
+	operator avs::Animation() const
+	{
+		return
+		{
+			{boneKeyframes, boneKeyframes + boneAmount}
 		};
 	}
 };

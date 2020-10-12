@@ -11,7 +11,7 @@ class Transform
 public:
 	struct TransformCreateInfo
 	{
-		RenderPlatform* renderPlatform;
+		const RenderPlatform* renderPlatform;
 	};
 
 	avs::vec3 m_Translation;
@@ -36,6 +36,7 @@ public:
 	Transform();
 	Transform(const TransformCreateInfo& pTransformCreateInfo);
 	Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 translation, quat rotation, avs::vec3 scale);
+	Transform(const TransformCreateInfo& pTransformCreateInfo, scr::mat4 matrix);
 	Transform(const avs::Transform& transform);
 
 	Transform& operator= (const avs::Transform& transform)
@@ -58,6 +59,7 @@ public:
 		return Transform(m_CI, globalPosition, globalRotation, globalScale);
 	}
 
+	void UpdateModelMatrix();
 	void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 
 	inline const mat4& GetTransformMatrix() const { return  m_TransformData.m_ModelMatrix; }

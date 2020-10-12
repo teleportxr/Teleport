@@ -15,17 +15,12 @@
 #include "api/RenderPlatform.h"
 #include "Light.h"
 #include "ResourceManager.h"
+#include "Skin.h"
 
 namespace scr
 {
-	class Material;
-}
-
-namespace basist
-{
-    class etc1_global_selector_codebook;
-    class basisu_transcoder;
-    enum class transcoder_texture_format;
+class Animation;
+class Material;
 }
 
 namespace scr
@@ -59,7 +54,10 @@ namespace scr
             mUniformBufferManager.Update(timeElapsed);
             mVertexBufferManager.Update(timeElapsed);
 			mMeshManager.Update(timeElapsed);
+			mSkinManager.Update(timeElapsed);
 			//mLightManager.Update(timeElapsed);
+			mBoneManager.Update(timeElapsed);
+			mAnimationManager.Update(timeElapsed);
         }
 
 
@@ -70,7 +68,10 @@ namespace scr
 			mMaterialManager.GetAllIDs(resourceIDs);
 			mTextureManager.GetAllIDs(resourceIDs);
 			mMeshManager.GetAllIDs(resourceIDs);
+			mSkinManager.GetAllIDs(resourceIDs);
 			mLightManager.GetAllIDs(resourceIDs);
+			mBoneManager.GetAllIDs(resourceIDs);
+			mAnimationManager.GetAllIDs(resourceIDs);
 
 			return resourceIDs;
 
@@ -97,8 +98,11 @@ namespace scr
 			mTextureManager.Clear();
 			mUniformBufferManager.Clear();
 			mVertexBufferManager.Clear();
-			mMeshManager.Clear(); 
+			mMeshManager.Clear();
+			mSkinManager.Clear();
 			mLightManager.Clear();
+			mBoneManager.Clear();
+			mAnimationManager.Clear();
 		}
 
 		//Clear all resources that aren't in the exclude list.
@@ -109,7 +113,10 @@ namespace scr
 			mMaterialManager.ClearCareful(excludeList);
 			mTextureManager.ClearCareful(excludeList);
 			mMeshManager.ClearCareful(excludeList);
+			mSkinManager.ClearCareful(excludeList);
 			mLightManager.ClearCareful(excludeList);
+			mBoneManager.ClearCareful(excludeList);
+			mAnimationManager.ClearCareful(excludeList);
 
 			//Last as it will likely be the largest.
 			mActorManager->ClearCareful(excludeList, outExistingActors);
@@ -130,7 +137,10 @@ namespace scr
         ResourceManager<scr::UniformBuffer> mUniformBufferManager;
         ResourceManager<scr::VertexBuffer>  mVertexBufferManager;
 		ResourceManager<scr::Mesh>			mMeshManager;
+		ResourceManager<scr::Skin>			mSkinManager;
 		ResourceManager<scr::Light>			mLightManager;
+		ResourceManager<scr::Bone>			mBoneManager;
+		ResourceManager<scr::Animation>		mAnimationManager;
     };
 }
 
@@ -159,14 +169,17 @@ public:
 	}
 
 	inline void AssociateResourceManagers(
-		ResourceManager<scr::IndexBuffer> *indexBufferManager,
-		ResourceManager<scr::Shader> *shaderManager,
-		ResourceManager<scr::Material> *materialManager,
-		ResourceManager<scr::Texture> *textureManager,
-		ResourceManager<scr::UniformBuffer> *uniformBufferManager,
-		ResourceManager<scr::VertexBuffer> *vertexBufferManager,
-		ResourceManager<scr::Mesh> *meshManager,
-		ResourceManager<scr::Light> *lightManager)
+		ResourceManager<scr::IndexBuffer>* indexBufferManager,
+		ResourceManager<scr::Shader>* shaderManager,
+		ResourceManager<scr::Material>* materialManager,
+		ResourceManager<scr::Texture>* textureManager,
+		ResourceManager<scr::UniformBuffer>* uniformBufferManager,
+		ResourceManager<scr::VertexBuffer>* vertexBufferManager,
+		ResourceManager<scr::Mesh>* meshManager,
+		ResourceManager<scr::Skin>* skinManager,
+		ResourceManager<scr::Light>* lightManager,
+		ResourceManager<scr::Bone>* boneManager,
+		ResourceManager<scr::Animation>* animationManager)
 	{
 		m_IndexBufferManager = indexBufferManager;
 		m_ShaderManager = shaderManager;
@@ -175,15 +188,20 @@ public:
 		m_UniformBufferManager = uniformBufferManager;
 		m_VertexBufferManager = vertexBufferManager;
 		m_MeshManager = meshManager;
+		m_SkinManager = skinManager;
 		m_LightManager = lightManager;
+		m_BoneManager = boneManager;
+		m_AnimationManager = animationManager;
 	}
 
 	// Inherited via GeometryTargetBackendInterface
-	avs::Result Assemble(const avs::MeshCreate& meshCreate) override;
+	avs::Result Assemble(avs::MeshCreate& meshCreate) override;
 
 	void CreateTexture(avs::uid texture_uid, const avs::Texture& texture) override;
 	void CreateMaterial(avs::uid material_uid, const avs::Material& material) override;
 	void CreateNode(avs::uid node_uid, avs::DataNode& node) override;
+	void CreateSkin(avs::uid skinID, avs::Skin& skin) override;
+	void CreateAnimation(avs::uid id, avs::Animation& animation) override;
 
 	std::shared_ptr<scr::Texture> m_DummyDiffuse;
 	std::shared_ptr<scr::Texture> m_DummyNormal;
@@ -192,30 +210,62 @@ public:
 	
 	struct IncompleteResource
 	{
+		IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
+			:id(id), type(type)
+		{}
+
 		avs::uid id;
+		avs::GeometryPayloadType type;
 	};
 
-	struct MissingResource
-	{
-		std::vector<std::shared_ptr<IncompleteResource>> incompleteResources;
-	};
-	
-	std::unordered_map<avs::uid, MissingResource> &GetMissingResources()
+	std::unordered_map<avs::uid, std::vector<std::shared_ptr<IncompleteResource>>> &GetMissingResources()
 	{
 		return m_WaitingForResources;
 	}
 private:
 	struct IncompleteMaterial: IncompleteResource
 	{
+		IncompleteMaterial(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
 		scr::Material::MaterialCreateInfo materialInfo;
-		std::unordered_map<avs::uid, std::shared_ptr<scr::Texture>&> textureSlots; // <ID of the texture, slot the texture should be placed into.
+		std::unordered_map<avs::uid, std::shared_ptr<scr::Texture>&> textureSlots; //<ID of the texture, slot the texture should be placed into>.
 	};
 
 	struct IncompleteActor : IncompleteResource
 	{
+		IncompleteActor(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
 		std::shared_ptr<scr::Node> actor;
-		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; // <ID of the material, list of indexes the material should be placed into actor material list.
-		bool isHand;
+		bool isHand = false;
+
+		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into actor material list>.
+		std::unordered_map<avs::uid, size_t> missingAnimations; //<ID of missing animation, index in animation vector>
+	};
+
+	struct IncompleteSkin : IncompleteResource
+	{
+		IncompleteSkin(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
+		std::shared_ptr<scr::Skin> skin;
+
+		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
+	};
+
+	struct IncompleteAnimation : IncompleteResource
+	{
+		IncompleteAnimation(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
+		std::vector<scr::BoneKeyframe> boneKeyframes;
+
+		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
 	};
 
 	struct UntranscodedTexture
@@ -230,11 +280,15 @@ private:
 	
 	void CreateActor(avs::uid node_uid, avs::DataNode& node, bool isHand);
 	void CreateLight(avs::uid node_uid, avs::DataNode& node);
+	void CreateBone(avs::uid boneID, avs::DataNode& node);
 
 	void CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo);
+	void CompleteSkin(avs::uid skinID, std::shared_ptr<IncompleteSkin> completeSkin);
 	void CompleteTexture(avs::uid texture_uid, const scr::Texture::TextureCreateInfo& textureInfo);
 	void CompleteMaterial(avs::uid material_uid, const scr::Material::MaterialCreateInfo& materialInfo);
 	void CompleteActor(avs::uid node_uid, std::shared_ptr<scr::Node> actor, bool isHand);
+	void CompleteBone(avs::uid boneID, std::shared_ptr<scr::Bone> bone);
+	void CompleteAnimation(avs::uid animationID, std::shared_ptr<IncompleteAnimation> completeAnimation);
 
 	//Add texture to material being created.
 	//	accessor : Data on texture that was received from server.
@@ -279,14 +333,17 @@ private:
 	ResourceManager<scr::UniformBuffer> *m_UniformBufferManager;
 	ResourceManager<scr::VertexBuffer> *m_VertexBufferManager;
 	ResourceManager<scr::Mesh> *m_MeshManager;
+	ResourceManager<scr::Skin>* m_SkinManager;
 	ResourceManager<scr::Light> *m_LightManager;
+	ResourceManager<scr::Bone>* m_BoneManager;
+	ResourceManager<scr::Animation>* m_AnimationManager;
 
 	scr::ActorManager* m_pActorManager;
 
 	std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 	std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.
 	std::vector<avs::uid> m_CompletedActors; //List of IDs of actors that have been fully received, and have yet to be confirmed to the server.
-	std::unordered_map<avs::uid, MissingResource> m_WaitingForResources; //<ID of Missing Resource, List Of Things Waiting For Resource>
+	std::unordered_map<avs::uid, std::vector<std::shared_ptr<IncompleteResource>>> m_WaitingForResources; //<ID of Missing Resource, List Of Things Waiting For Resource>
 
 	void BasisThread_TranscodeTextures();
 };

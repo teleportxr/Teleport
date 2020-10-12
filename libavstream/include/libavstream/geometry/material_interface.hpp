@@ -32,6 +32,21 @@ namespace avs
 
 		return byteString;
 	}
+	
+	static std::wstring Utf8ToWString(const char* src_utf8)
+	{
+		size_t src_length = strlen(src_utf8);
+		size_t length = src_length;
+
+		size_t numOfCharsConverted;
+		wchar_t* output_buffer = new wchar_t[length + 1];
+		mbstowcs_s(&numOfCharsConverted, output_buffer, length + 1, src_utf8, length);
+		output_buffer[length] = 0;
+
+		std::wstring wstr = std::wstring(output_buffer);
+		delete[] output_buffer;
+		return wstr;
+	}
 
 	enum class SamplerFilter : uint32_t
 	{
