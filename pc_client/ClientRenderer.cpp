@@ -1242,7 +1242,7 @@ void ClientRenderer::OnMouseClick(bool bLeftButtonDown, bool bRightButtonDown, b
 		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 }
 
-void ClientRenderer::OnMouseMove(int xPos, int yPos )
+void ClientRenderer::OnMouseMove(int xPos, int yPos)
 {
 	mouseCameraInput.MouseX=xPos;
 	mouseCameraInput.MouseY=yPos;
