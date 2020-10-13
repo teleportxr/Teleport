@@ -517,7 +517,7 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 
 	newClient.casterContext.ColorQueue->configure(16,"ColorQueue");
 	newClient.casterContext.GeometryQueue->configure(16, "GeometryQueue");
-	newClient.casterContext.AudioQueue->configure(16, "AudioQueue");
+	newClient.casterContext.AudioQueue->configure(120, "AudioQueue");
 
 	///TODO: Initialise real delegates for capture component.
 	SCServer::CaptureDelegates delegates;

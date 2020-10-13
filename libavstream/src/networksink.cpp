@@ -203,7 +203,7 @@ Result NetworkSink::process(uint32_t timestamp)
 		}*/
 	int srtrfdslen = 2;
 	int srtwfdslen = 2;
-	SRTSOCKET srtrwfds[4] = { SRT_INVALID_SOCK, SRT_INVALID_SOCK , SRT_INVALID_SOCK, SRT_INVALID_SOCK };
+	SRTSOCKET srtrwfds[4] = { SRT_INVALID_SOCK, SRT_INVALID_SOCK, SRT_INVALID_SOCK, SRT_INVALID_SOCK };
 	int sysrfdslen = 2;
 	SYSSOCKET sysrfds[2];
 	if (srt_epoll_wait(m_data->pollid,

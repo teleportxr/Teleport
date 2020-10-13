@@ -180,7 +180,7 @@ namespace SCServer
 
 		// Aidan: Just trying this out for the moment for picking up when we don't receive ENET_EVENT_TYPE_DISCONNECT when we should. 
 		// This should be a lot more sophisticated and not hard coded.
-		if (host && peer && timeSinceLastMessage > 5)
+		if (host && peer && timeSinceLastMessage > 10)
 		{
 			TELEPORT_COUT << "No message received in " << timeSinceLastMessage << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
 			onDisconnect();
