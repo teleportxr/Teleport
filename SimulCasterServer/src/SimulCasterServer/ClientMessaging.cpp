@@ -55,11 +55,11 @@ namespace SCServer
 
 		// ServerHost will live for the lifetime of the session.
 		host = enet_host_create(&ListenAddress, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
-		if (!host)
+		if(!host)
 		{
 			std::cerr << "Session: Failed to create ENET server host!\n";
-			DEBUG_BREAK_ONCE
-				return false;
+			DEBUG_BREAK_ONCE;
+			return false;
 		}
 
 		return true;

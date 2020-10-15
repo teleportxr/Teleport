@@ -24,7 +24,23 @@ namespace scc
 
 		void LinkShaders(const char* effectPassName, const std::vector<scr::ShaderResource>& shaderResources) override;
 
-		inline OVR::GlProgram& GetGlPlatform(const char* effectPassName) {return m_EffectPrograms[effectPassName];}
+		inline OVR::GlProgram* GetGlPlatform(const char* effectPassName)
+		{
+			auto platformPair = m_EffectPrograms.find(effectPassName);
+
+			//Return null pointer, if no effect exists with that name.
+			if(platformPair == m_EffectPrograms.end()) return nullptr;
+			else return &platformPair->second;
+		}
+
+		inline const OVR::GlProgram* GetGlPlatform(const char* effectPassName) const
+		{
+			auto platformPair = m_EffectPrograms.find(effectPassName);
+
+			//Return null pointer, if no effect exists with that name.
+			if(platformPair == m_EffectPrograms.end()) return nullptr;
+			else return &platformPair->second;
+		}
 
 		static GLenum ToGLTopology(TopologyType topology);
         static GLenum ToGLCullMode(CullMode cullMode);

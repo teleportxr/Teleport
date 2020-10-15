@@ -23,6 +23,8 @@ public:
 
 	Node(avs::uid id);
 
+	virtual ~Node() = default;
+
 	void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 	//Requests global transform of actor, and actor's children, be recalculated.
 	void RequestTransformUpdate();
@@ -48,20 +50,20 @@ public:
 	const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
 
 
-	void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
+	virtual void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
 	std::shared_ptr<Mesh> GetMesh() const { return mesh; }
 
 	void SetSkin(std::shared_ptr<Skin> skin) { this->skin = skin; }
 	const std::shared_ptr<Skin> GetSkin() const { return skin; }
 	std::shared_ptr<Skin> GetSkin() { return skin; }
 
-	void SetMaterial(size_t index, std::shared_ptr<Material> material)
+	virtual void SetMaterial(size_t index, std::shared_ptr<Material> material)
 	{
 		if(index < materials.size()) materials[index] = material;
 		else SCR_COUT << "ERROR: Attempted to add material at index <" << index << "> past the end of the material list of Node<" << id << "> of size: " << materials.size() << std::endl;
 	}
-	void SetMaterialListSize(size_t size) { materials.resize(size); }
-	void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials) { this->materials = materials; }
+	virtual void SetMaterialListSize(size_t size) { materials.resize(size); }
+	virtual void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials) { this->materials = materials; }
 	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return materials; }
 
 	void SetLocalTransform(const Transform& transform) { localTransform = transform; }
@@ -79,7 +81,6 @@ public:
 		if(isTransformDirty) UpdateGlobalTransform();
 		return globalTransform;
 	}
-
 private:
 	std::shared_ptr<Mesh> mesh;
 	std::shared_ptr<Skin> skin;

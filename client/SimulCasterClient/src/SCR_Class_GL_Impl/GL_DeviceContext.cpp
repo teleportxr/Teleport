@@ -92,7 +92,7 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
         return; //SCR_CERR_BREAK("Invalid effect. Can not bind descriptor sets!", -1);
 
     //Set Uniforms for textures and UBs!
-    GLuint& program = dynamic_cast<GL_Effect*>(pEffect)->GetGlPlatform(effectPassName).Program;
+    GLuint& program = dynamic_cast<GL_Effect*>(pEffect)->GetGlPlatform(effectPassName)->Program;
     glUseProgram(program);
 	OVR::GL_CheckErrors("BindShaderResources: 0");
     for(auto& sr : shaderResources)
