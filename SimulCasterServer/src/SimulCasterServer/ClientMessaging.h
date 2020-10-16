@@ -2,11 +2,16 @@
 
 #include <functional>
 #include <vector>
+#include <thread>
+#include <atomic>
+#include <mutex>
 
 #include "CaptureDelegates.h"
 #include "CasterSettings.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
+
+
 
 typedef struct _ENetHost ENetHost;
 typedef struct _ENetPeer ENetPeer;
@@ -29,6 +34,8 @@ namespace SCServer
 						std::function<void(void)> onDisconnect,
 						const int32_t& disconnectTimeout);
 		
+		virtual ~ClientMessaging();
+
 		bool isInitialised() const;
 		void initialise(CasterContext* context, CaptureDelegates captureDelegates);
 
@@ -69,6 +76,11 @@ namespace SCServer
 		std::string getClientIP() const;
 		uint16_t getClientPort() const;
 		uint16_t getServerPort() const;
+		float getBandWidthKPS() const;
+
+		static void startAsyncNetworkDataProcessing();
+		static void stopAsyncNetworkDataProcessing(bool killThread = true);
+
 	private:
 		avs::uid clientID;
 		bool initialized=false;
@@ -102,5 +114,15 @@ namespace SCServer
 		void receiveResourceRequest(const ENetPacket* packet);
 		void receiveKeyframeRequest(const ENetPacket* packet);
 		void receiveClientMessage(const ENetPacket* packet);
+
+		void addNetworkPipelineToAsyncProcessing();
+		void removeNetworkPipelineFromAsyncProcessing();
+		
+		static std::atomic_bool asyncNetworkDataProcessingActive;
+		static void processNetworkDataAsync();
+
+		static std::unordered_map<avs::uid, NetworkPipeline*> networkPipelines;
+		static std::thread networkThread;
+		static std::mutex networkMutex;
 	};
 }

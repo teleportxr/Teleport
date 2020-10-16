@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "ErrorHandling.h"
 #include "CasterSettings.h"
 
 namespace
@@ -109,7 +110,7 @@ namespace SCServer
 
 		if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP, inNetworkSettings.remotePort, SinkParams))
 		{
-			std::cout << "Failed to configure network sink! \n";
+			TELEPORT_CERR << "Failed to configure network sink!" << std::endl;
 			return;
 		}
 
@@ -118,7 +119,7 @@ namespace SCServer
 			auto &pipe = videoPipes[i];
 			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
 			{
-				std::cout << "Failed to configure network pipeline for video! \n";
+				TELEPORT_CERR << "Failed to configure network pipeline for video!" << std::endl;
 				return;
 			}
 			pipeline->add(pipe->sourceQueue);
@@ -129,7 +130,7 @@ namespace SCServer
 			auto& pipe = audioPipes[i];
 			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
 			{
-				std::cout << "Failed to configure network pipeline for audio! \n";
+				TELEPORT_CERR << "Failed to configure network pipeline for audio!" << std::endl;
 				return;
 			}
 			pipeline->add(pipe->sourceQueue);
@@ -140,7 +141,7 @@ namespace SCServer
 			auto &pipe = geometryPipes[i];
 			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
 			{
-				std::cout << "Failed to configure network pipeline for geometry! \n";
+				TELEPORT_CERR << "Failed to configure network pipeline for geometry!" << std::endl;
 				return;
 			}
 			pipeline->add(pipe->sourceQueue);
@@ -171,15 +172,15 @@ namespace SCServer
 		const avs::Result result = pipeline->process();
 		if (!result && result != avs::Result::IO_Empty)
 		{
-			std::cout << "Network pipeline processing encountered an error!\n";
+			TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
 		}
 
-#if WITH_REMOTEPLAY_STATS
+#if 0
 		avs::Timestamp timestamp = avs::PlatformWindows::getTimestamp();
 		if (avs::PlatformWindows::getTimeElapsed(lastTimestamp, timestamp) >= networkPipelineStatInterval)
 		{
 			const avs::NetworkSinkCounters counters = networkSink->getCounterValues();
-			std::cout << "DP: " << counters.decoderPacketsQueued << " | NP: " << counters.networkPacketsSent << " | BYTES: " << counters.bytesSent << std::endl;
+			TELEPORT_COUT << "DP: " << counters.decoderPacketsQueued << " | NP: " << counters.networkPacketsSent << " | BYTES: " << counters.bytesSent << std::endl;
 			lastTimestamp = timestamp;
 		}
 		networkSink->setDebugStream(settings->debugStream);

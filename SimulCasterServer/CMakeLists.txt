@@ -3,6 +3,7 @@ project(SimulCasterServer)
 
 # Build options
 option(USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" ON)
+option(USE_ASYNC_NETWORK_PROCESSING "Process network pipelines on a separate thread?" OFF)
 
 set(DEBUG_CONFIGURATIONS Debug)
 
@@ -91,3 +92,7 @@ else()
 endif()
 
 target_compile_definitions(SimulCasterServer PRIVATE ${def_platform})
+
+if(${USE_ASYNC_NETWORK_PROCESSING})
+	target_compile_definitions(SimulCasterServer PUBLIC ASYNC_NETWORK_PROCESSING)
+endif()
