@@ -11,6 +11,11 @@
 
 namespace SCServer
 {
+	std::atomic_bool ClientMessaging::asyncNetworkDataProcessingActive = false;
+	std::unordered_map<avs::uid, NetworkPipeline*> ClientMessaging::networkPipelines;
+	std::thread ClientMessaging::networkThread;
+	std::mutex ClientMessaging::networkMutex;
+
 	ClientMessaging::ClientMessaging(const CasterSettings* settings,
 		std::shared_ptr<DiscoveryService> discoveryService,
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService,
@@ -32,6 +37,11 @@ namespace SCServer
 		, casterContext(nullptr)
 		, clientID(0)
 	{}
+
+	ClientMessaging::~ClientMessaging()
+	{
+		removeNetworkPipelineFromAsyncProcessing();
+	}
 
 	bool ClientMessaging::isInitialised() const
 	{
@@ -67,6 +77,8 @@ namespace SCServer
 
 	void ClientMessaging::stopSession()
 	{
+		removeNetworkPipelineFromAsyncProcessing();
+
 		if (peer)
 		{
 			assert(host);
@@ -180,11 +192,11 @@ namespace SCServer
 
 		// Aidan: Just trying this out for the moment for picking up when we don't receive ENET_EVENT_TYPE_DISCONNECT when we should. 
 		// This should be a lot more sophisticated and not hard coded.
-		if (host && peer && timeSinceLastMessage > 10)
+		/*if (host && peer && timeSinceLastMessage > 10)
 		{
 			TELEPORT_COUT << "No message received in " << timeSinceLastMessage << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
 			onDisconnect();
-		}
+		}*/
 
 	}
 
@@ -256,6 +268,16 @@ namespace SCServer
 		return host->address.port;
 	}
 
+	float ClientMessaging::getBandWidthKPS() const
+	{
+		if (casterContext && casterContext->NetworkPipeline)
+		{
+			std::lock_guard<std::mutex> lock(networkMutex);
+			return casterContext->NetworkPipeline->getBandWidthKPS();
+		}
+		return 0;
+	}
+
 	void ClientMessaging::dispatchEvent(const ENetEvent& event)
 	{
 		switch (event.channelID)
@@ -324,6 +346,8 @@ namespace SCServer
 
 			casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));
 			casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->DepthQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
+
+			addNetworkPipelineToAsyncProcessing();
 		}
 
 		CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
@@ -361,7 +385,7 @@ namespace SCServer
 			sendCommand<avs::uid>(ack, streamedActorIDs);
 		}
 
-		std::cout << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
+		TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 	}
 
 	bool ClientMessaging::setPosition(const avs::vec3& pos)
@@ -382,7 +406,7 @@ namespace SCServer
 	{
 		if (packet->dataLength != sizeof(avs::InputState))
 		{
-			std::cout << "Session: Received malformed input state change packet of length: " << packet->dataLength << std::endl;
+			TELEPORT_COUT << "Session: Received malformed input state change packet of length: " << packet->dataLength << std::endl;
 			return;
 		}
 
@@ -396,7 +420,7 @@ namespace SCServer
 	{
 		if (packet->dataLength != sizeof(avs::DisplayInfo))
 		{
-			std::cout << "Session: Received malformed display info packet of length: " << packet->dataLength << std::endl;
+			TELEPORT_COUT << "Session: Received malformed display info packet of length: " << packet->dataLength << std::endl;
 			return;
 		}
 
@@ -414,7 +438,7 @@ namespace SCServer
 	{
 		if (packet->dataLength != sizeof(avs::Pose))
 		{
-			std::cout << "Session: Received malformed head pose packet of length: " << packet->dataLength << std::endl;
+			TELEPORT_COUT << "Session: Received malformed head pose packet of length: " << packet->dataLength << std::endl;
 			return;
 		}
 
@@ -448,7 +472,7 @@ namespace SCServer
 		}
 		else
 		{
-			std::cout << "Received keyframe request, but capture component isn't set.\n";
+			TELEPORT_COUT << "Received keyframe request, but capture component isn't set.\n";
 		}
 	}
 
@@ -517,5 +541,63 @@ namespace SCServer
 		default:
 			break;
 		};
+	}
+
+	void ClientMessaging::addNetworkPipelineToAsyncProcessing()
+	{
+		std::lock_guard<std::mutex> lock(networkMutex);
+		networkPipelines[clientID] = casterContext->NetworkPipeline.get();
+	}
+
+	void ClientMessaging::removeNetworkPipelineFromAsyncProcessing()
+	{
+		std::lock_guard<std::mutex> lock(networkMutex);
+		if (networkPipelines.find(clientID) != networkPipelines.end())
+		{
+			networkPipelines.erase(clientID);
+		}
+	}
+
+	void ClientMessaging::startAsyncNetworkDataProcessing()
+	{
+#ifdef ASYNC_NETWORK_PROCESSING
+		if (!asyncNetworkDataProcessingActive)
+		{
+			asyncNetworkDataProcessingActive = true;
+			if (!networkThread.joinable())
+			{
+				networkThread = std::thread(&ClientMessaging::processNetworkDataAsync);
+			}		
+		}
+#endif
+	}
+
+	void ClientMessaging::stopAsyncNetworkDataProcessing(bool killThread)
+	{
+#ifdef ASYNC_NETWORK_PROCESSING
+		if (asyncNetworkDataProcessingActive)
+		{
+			asyncNetworkDataProcessingActive = false;
+			if (killThread && networkThread.joinable())
+			{
+				networkThread.join();
+			}
+		}
+#endif
+	}
+
+	void ClientMessaging::processNetworkDataAsync()
+	{
+		while (asyncNetworkDataProcessingActive)
+		{
+			std::lock_guard<std::mutex> lock(networkMutex);
+			for (auto& keyVal : networkPipelines)
+			{
+				if (keyVal.second)
+				{
+					keyVal.second->process();
+				}
+			}
+		}
 	}
 }
