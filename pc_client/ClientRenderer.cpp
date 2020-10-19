@@ -222,7 +222,7 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 }
 
 /// Render an example transparent object.
-void ClientRenderer::RenderOpaqueTest(crossplatform::DeviceContext &deviceContext)
+void ClientRenderer::RenderOpaqueTest(crossplatform::GraphicsDeviceContext &deviceContext)
 {
 	if(!pbrEffect)
 		return;
@@ -256,7 +256,7 @@ void ClientRenderer::RenderOpaqueTest(crossplatform::DeviceContext &deviceContex
 
 base::DefaultProfiler cpuProfiler;
 /// Render an example transparent object.
-void ClientRenderer::RenderTransparentTest(crossplatform::DeviceContext &deviceContext)
+void ClientRenderer::RenderTransparentTest(crossplatform::GraphicsDeviceContext &deviceContext)
 {
 	if (!pbrEffect)
 		return;
@@ -297,7 +297,7 @@ void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 	}
 }
 
-void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContext, simul::crossplatform::Texture *srcTexture, simul::crossplatform::Texture* targetTexture, int mips,int2 sourceOffset)
+void ClientRenderer::Recompose(simul::crossplatform::GraphicsDeviceContext &deviceContext, simul::crossplatform::Texture *srcTexture, simul::crossplatform::Texture* targetTexture, int mips,int2 sourceOffset)
 {
 	cubemapConstants.sourceOffset = sourceOffset ;
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
@@ -319,7 +319,7 @@ void ClientRenderer::Recompose(simul::crossplatform::DeviceContext &deviceContex
 
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
 {
-	simul::crossplatform::DeviceContext	deviceContext;
+	simul::crossplatform::GraphicsDeviceContext	deviceContext;
 	deviceContext.setDefaultRenderTargets(renderTexture,
 		nullptr,
 		0,
@@ -531,7 +531,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	frame_number++;
 }
 
-void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::DeviceContext& deviceContext)
+void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if (lastSetupCommand.video_config.use_cubemap)
 	{
@@ -563,7 +563,7 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::DeviceContext& d
 	}
 }
 
-void ClientRenderer::DrawOSD(simul::crossplatform::DeviceContext& deviceContext)
+void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	const avs::NetworkSourceCounters counters = source.getCounterValues();
@@ -681,7 +681,7 @@ void ClientRenderer::WriteHierarchies()
 		WriteHierarchy(0,actor);
 	}
 }
-void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext)
+void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
@@ -699,7 +699,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::DeviceContext& devi
 	}
 }
 
-void ClientRenderer::RenderActor(simul::crossplatform::DeviceContext& deviceContext, std::shared_ptr<scr::Node> actor)
+void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, std::shared_ptr<scr::Node> actor)
 {
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
@@ -1262,7 +1262,7 @@ void ClientRenderer::OnMouseMove(int xPos, int yPos)
 	mouseCameraInput.MouseY=yPos;
 }
 
-void ClientRenderer::PrintHelpText(simul::crossplatform::DeviceContext& deviceContext)
+void ClientRenderer::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	deviceContext.framePrintY = 8;
 	deviceContext.framePrintX = hdrFramebuffer->GetWidth() / 2;

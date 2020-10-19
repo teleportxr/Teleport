@@ -133,7 +133,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
 	
 	scr::ResourceManagers resourceManagers;
-	void Recompose(simul::crossplatform::DeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
+	void Recompose(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 	bool show_video = false;
 	enum
 	{
@@ -182,19 +182,19 @@ public:
 
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
-	void PrintHelpText(simul::crossplatform::DeviceContext& deviceContext);
+	void PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	
-	void DrawOSD(simul::crossplatform::DeviceContext& deviceContext);
+	void DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> actor);
 	void WriteHierarchies();
-	void RenderLocalActors(simul::crossplatform::DeviceContext& deviceContext);
-	void RenderActor(simul::crossplatform::DeviceContext& deviceContext, std::shared_ptr<scr::Node> actor);
+	void RenderLocalActors(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+	void RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, std::shared_ptr<scr::Node> actor);
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
-	void RenderOpaqueTest(simul::crossplatform::DeviceContext &deviceContext);
+	void RenderOpaqueTest(simul::crossplatform::GraphicsDeviceContext &deviceContext);
 	/// Render an example transparent object.
-	void RenderTransparentTest(simul::crossplatform::DeviceContext &deviceContext);
+	void RenderTransparentTest(simul::crossplatform::GraphicsDeviceContext &deviceContext);
 	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame) override;
 	void Init(simul::crossplatform::RenderPlatform *r);
 	void SetServer(const char* ip,int port);
@@ -254,5 +254,5 @@ public:
 
 private:
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
-	void UpdateTagDataBuffers(simul::crossplatform::DeviceContext& deviceContext);
+	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 };
