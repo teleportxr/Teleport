@@ -469,6 +469,7 @@ Result NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, 
 		AVSLOG(Error) << "NetworkSink: An error occured in EFP trying to pack data. \n";
 		return Result::NetworkSink_PackingDataFailed;
 	}
+
 	return Result::OK;
 }
 

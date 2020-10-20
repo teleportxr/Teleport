@@ -25,7 +25,7 @@ namespace avs
 		bool m_outputPending = false;
 		bool m_forceIDR = false;
 
-		Result writeOutput(IOInterface* outputNode, const uint8_t* extraDataBuffer, size_t bufferSize);
+		Result writeOutput(IOInterface* outputNode, const uint8_t* tagDataBuffer, size_t tagDataBufferSize);
 	};
 
 } // avs

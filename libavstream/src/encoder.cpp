@@ -244,88 +244,73 @@ Result Encoder::unregisterSurface()
 	return result;
 }
 
-Result Encoder::Private::writeOutput(IOInterface* outputNode, const uint8_t* extraDataBuffer, size_t bufferSize)
+Result Encoder::Private::writeOutput(IOInterface* outputNode, const uint8_t* tagDataBuffer, size_t tagDataBufferSize)
 {
 	assert(outputNode);
 	assert(m_backend);
 
 	Result result = Result::OK;
 
-	// Write any extra data such as the camera transform
+	void* mappedBuffer;
+	size_t mappedBufferSize;
+
+	result = m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize);
+	if (!result)
 	{
-		size_t sizeFieldInBytes = sizeof(size_t);
-		// 1 byte for payload type identification
-		size_t dataSize = bufferSize + 1;
-
-		std::vector<uint8_t> extraData(dataSize + sizeFieldInBytes);
-
-		uint8_t index = 0;
-		memcpy(&extraData[index], &dataSize, sizeFieldInBytes);
-		index += (uint8_t)sizeFieldInBytes;
-		
-		if (m_params.codec == VideoCodec::H264)
-		{
-			// Aidan: I picked 30 (11110). See the classify function for the VideoPayloadType in nalu_parser_h264.hpp
-			extraData[index++] = 30;
-		}
-		else if (m_params.codec == VideoCodec::HEVC)
-		{
-			// Aidan: I picked 62 (1 less than 111111). See the classify function for the VideoPayloadType in nalu_parser_h265.hpp
-			// 62 << 1 is 124
-			extraData[index++] = 62 << 1;
-		}
-		else
-		{
-			extraData[index++] = 0;
-		}
-
-		if (bufferSize > 0)
-		{
-			memcpy(&extraData[index], extraDataBuffer, bufferSize);
-		}
-
-		size_t numBytesWrittenToOutput;
-		result = outputNode->write(q_ptr(), extraData.data(), extraData.size(), numBytesWrittenToOutput);
-
-		if (!result)
-		{
-			return result;
-		}
-		
-		if (numBytesWrittenToOutput < sizeof(Transform))
-		{
-			AVSLOG(Warning) << "Encoder: Incomplete frame camera transform written to output node";
-			return Result::Encoder_IncompleteFrame;
-		}
+		return result;
 	}
 
-	// Write the image
-	{
-		void*  mappedBuffer;
-		size_t mappedBufferSize;
+	// Write video and tag data to the output node
+	size_t sizeFieldInBytes = sizeof(size_t);
+	// 1 byte for payload type identification
+	size_t tagDataSize = tagDataBufferSize + 1;
 
-		result = m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize);
-		if (!result)
-		{
-			return result;
-		}
+	std::vector<uint8_t> videoData(tagDataSize + sizeFieldInBytes + mappedBufferSize);
 
-		size_t numBytesWrittenToOutput;
+	size_t index = 0;
+	memcpy(&videoData[index], &tagDataSize, sizeFieldInBytes);
+	index += sizeFieldInBytes;
 		
-		result = outputNode->amend(q_ptr(), mappedBuffer, mappedBufferSize, numBytesWrittenToOutput);
+	if (m_params.codec == VideoCodec::H264)
+	{
+		// Aidan: I picked 30 (11110). See the classify function for the VideoPayloadType in nalu_parser_h264.hpp
+		videoData[index++] = 30;
+	}
+	else if (m_params.codec == VideoCodec::HEVC)
+	{
+		// Aidan: I picked 62 (1 less than 111111). See the classify function for the VideoPayloadType in nalu_parser_h265.hpp
+		// 62 << 1 is 124
+		videoData[index++] = 62 << 1;
+	}
+	else
+	{
+		videoData[index++] = 0;
+	}
 
-		m_backend->unmapOutputBuffer();
+	// Copy tag data 
+	if (tagDataBufferSize > 0)
+	{
+		memcpy(&videoData[index], tagDataBuffer, tagDataBufferSize);
+	}
 
-		if (!result)
-		{
-			return result;
-		}
+	// Copy video encoder output data
+	if (mappedBufferSize > 0)
+	{
+		memcpy(&videoData[index + tagDataBufferSize], mappedBuffer, mappedBufferSize);
+	}
 
-		if (numBytesWrittenToOutput < mappedBufferSize)
-		{
-			AVSLOG(Warning) << "Encoder: Incomplete frame image written to output node";
-			return Result::Encoder_IncompleteFrame;
-		}
+	size_t numBytesWrittenToOutput;
+	result = outputNode->write(q_ptr(), videoData.data(), videoData.size(), numBytesWrittenToOutput);
+
+	if (!result)
+	{
+		return result;
+	}
+		
+	if (numBytesWrittenToOutput < videoData.size())
+	{
+		AVSLOG(Warning) << "Encoder: Incomplete video frame written to output node";
+		return Result::Encoder_IncompleteFrame;
 	}
 
 	return result;
