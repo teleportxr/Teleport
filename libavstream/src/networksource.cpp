@@ -114,7 +114,7 @@ Result NetworkSource::configure(size_t numOutputs, uint16_t localPort, const cha
 	m_data->m_params = params;
 	m_data->m_EFPReceiver.reset(new ElasticFrameProtocolReceiver());
 
-	m_data->m_EFPReceiver->receiveCallback = [this](ElasticFrameProtocolReceiver::pFramePtr &rPacket)->void
+	m_data->m_EFPReceiver->receiveCallback = [this](ElasticFrameProtocolReceiver::pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)->void
 	{
 		std::lock_guard<std::mutex> guard(m_data->m_mutex);
 
