@@ -50,12 +50,13 @@ else()
 endif()
 
 source_group("Shaders" src FILES ${shaders} )
-add_static_executable( pc_client WIN32 ${srcs} ${scr_pc_impl} ${shaders} ${inifiles} )
+add_static_executable( pc_client WIN32 SOURCES ${srcs} ${scr_pc_impl} ${shaders} ${inifiles} )
 
 target_include_directories(pc_client PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterAudio/src ../SimulCasterRenderer/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
 target_link_directories(pc_client PRIVATE "${REMOTEPLAY_PLATFORM_DIR}/build/lib/${CONFIG_NAME}" )
-
+set( JSON_FILE "${SIMUL_PLATFORM_DIR}/DirectX11/HLSL/HLSL11.json" )
+add_sfx_shader_project(pc_client ${JSON_FILE} INCLUDES "${SIMUL_PLATFORM_DIR}/DirectX11/HLSL" "${SIMUL_DIR}/Shaders/SL" "${SIMUL_PLATFORM_DIR}/Shaders/SL" SOURCES ${shaders} ${SHADER_INCLUDES} ${CORE_SHADER_INCLUDES} OPTIONS -w OUTPUT "${CMAKE_BINARY_DIR}/Platform/DirectX11/shaderbin" DEFINES PLATFORM_D3D11_SFX=1)
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 set_target_properties( pc_client PROPERTIES FOLDER Client)

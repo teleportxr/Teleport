@@ -19,10 +19,10 @@ public :
 
 	bool InitializeController(ovrMobile *pMobile);
 	void Update(ovrMobile *ovrmobile);
-	ovrDeviceID mControllerID;
+	ovrDeviceID mControllerIDs[2];
 
 	ovrVector2f mTrackpadDim;
-	ControllerState mLastPrimaryControllerState; //State of the primary controller on the last frame.
+	ControllerState mLastControllerStates[2]; //State of the primary controller on the last frame.
 private:
 	TriggerDelegate ToggleTextures;
 	TriggerDelegate ToggleShowInfo;

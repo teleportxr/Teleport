@@ -78,7 +78,8 @@ public:
 
 	Transform& GetGlobalTransform()
 	{
-		if(isTransformDirty) UpdateGlobalTransform();
+		if(isTransformDirty)
+			UpdateGlobalTransform();
 		return globalTransform;
 	}
 private:

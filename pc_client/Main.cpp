@@ -181,6 +181,7 @@ void InitRenderer(HWND hWnd)
 		{
 			renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/DirectX11/HLSL").c_str());
 			renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX11/shaderbin").c_str());
+			renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX11/shaderbin").c_str());
 		}
 		if (strcmp(renderPlatform->GetName(), "DirectX 12") == 0)
 		{
@@ -189,6 +190,7 @@ void InitRenderer(HWND hWnd)
 			renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
 			// Must do this before RestoreDeviceObjects so the rootsig can be found
 			renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
+			renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
 		}
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
@@ -232,7 +234,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			int xPos = GET_X_LPARAM(lParam); 
 			int yPos = GET_Y_LPARAM(lParam); 
-			clientRenderer.OnMouseMove(xPos, yPos);
+			clientRenderer.OnMouseMove((wParam&MK_LBUTTON)!=0
+				,(wParam&MK_RBUTTON)!=0
+				,(wParam&MK_MBUTTON)!=0
+				,0,xPos,yPos);
 		}
 		break;
 	case WM_KEYDOWN:

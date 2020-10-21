@@ -53,6 +53,7 @@ void RedirectStdCoutCerr()
 }
 #endif
 
+#include  <strstream>
 void ClientLog(const char* fileTag, int lineno, const char* msg_type, const char* format_str, ...)
 {
 	int size = (int)strlen(format_str) + 100;
@@ -75,5 +76,7 @@ void ClientLog(const char* fileTag, int lineno, const char* msg_type, const char
 		else
 			size *= 2;
 	}
-	std::cerr << "Teleport: "<<fileTag << "(" << lineno << "): " << msg_type << ": " << str.c_str() << std::endl;
+	std::strstream sstr;
+	sstr << "Teleport: "<<fileTag << "(" << lineno << "): " << msg_type << ": " << str.c_str();
+	std::cerr<<sstr.str();
 }

@@ -38,10 +38,9 @@ void OVRActor::SetMaterialListSize(size_t size)
 	ovrSurfaceDefs.resize(size);
 	if(old_size < size)
 	{
-
         GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	    std::shared_ptr<Material> placeholderMaterial = std::make_shared<Material>(Material::MaterialCreateInfo{&globalGraphicsResources.renderPlatform});
-
+        //placeholderMaterial->GetMaterialCreateInfo().diffuse=globalGraphicsResources.dif
 	    //We don't know have the information on the material yet, so we use placeholder OVR surfaces.
 		for(size_t i = old_size; i < size; i++)
 		{
@@ -109,9 +108,12 @@ OVR::ovrSurfaceDef OVRActor::CreateOVRSurface(size_t materialIndex, std::shared_
     const scc::GL_Effect& gl_effect = globalGraphicsResources.pbrEffect;
     const scr::Effect::EffectPassCreateInfo& gl_effectPass = gl_effect.GetEffectPassCreateInfo(globalGraphicsResources.effectPassName);
 
-    if(materialCI.diffuse.texture) materialCI.diffuse.texture->UseSampler(globalGraphicsResources.sampler);
-    if(materialCI.normal.texture) materialCI.normal.texture->UseSampler(globalGraphicsResources.sampler);
-    if(materialCI.combined.texture)materialCI.combined.texture->UseSampler(globalGraphicsResources.sampler);
+    if(materialCI.diffuse.texture)
+        materialCI.diffuse.texture->UseSampler(globalGraphicsResources.sampler);
+    if(materialCI.normal.texture)
+        materialCI.normal.texture->UseSampler(globalGraphicsResources.sampler);
+    if(materialCI.combined.texture)
+        materialCI.combined.texture->UseSampler(globalGraphicsResources.sampler);
 
     //----Set OVR Node----//
     //Construct Mesh
@@ -142,7 +144,7 @@ OVR::ovrSurfaceDef OVRActor::CreateOVRSurface(size_t materialIndex, std::shared_
     ovr_surface_def.graphicsCommand.GpuState.blendDstAlpha = GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
     ovr_surface_def.graphicsCommand.GpuState.depthFunc = GL_Effect::ToGLCompareOp(gl_effectPass.depthStencilingState.depthCompareOp);
 
-    ovr_surface_def.graphicsCommand.GpuState.frontFace = GL_CCW;
+    ovr_surface_def.graphicsCommand.GpuState.frontFace = GL_CW;
     ovr_surface_def.graphicsCommand.GpuState.polygonMode = GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
     ovr_surface_def.graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? ovrGpuState::ovrBlendEnable::BLEND_ENABLE : ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
     ovr_surface_def.graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;

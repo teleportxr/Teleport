@@ -123,7 +123,7 @@ private:
 
 	OVR::OvrSceneView mScene;
 
-	SessionClient                       mSession;
+	SessionClient                       sessionClient;
 
 	std::vector<float> mRefreshRates;
 
@@ -132,7 +132,7 @@ private:
 	//Clientside Renderering Objects
 	scc::GL_DeviceContext mDeviceContext;
 
-	bool receivedInitialPos=false;
+	unsigned long long receivedInitialPos=0;
 
     const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources) override;
 

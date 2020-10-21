@@ -24,6 +24,8 @@ set( src_api
 	src/api/VertexBufferLayout.h
 	)
 set( src_crossplatform
+	src/crossplatform/Node.cpp
+	src/crossplatform/Node.h
 	src/crossplatform/ActorComponents.cpp
 	src/crossplatform/ActorComponents.h
 	src/crossplatform/ActorManager.cpp

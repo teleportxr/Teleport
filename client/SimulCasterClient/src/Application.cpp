@@ -64,7 +64,7 @@ Application::Application()
 	, mSoundEffectPlayer(nullptr)
 	, mGuiSys(OvrGuiSys::Create())
 	, mLocale(nullptr)
-	, mSession(this, std::make_unique<AndroidDiscoveryService>())
+	, sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 	, mDeviceContext(&GlobalGraphicsResources.renderPlatform)
 	,clientRenderer(&resourceCreator,&resourceManagers,this,this)
 	, resourceManagers(new OVRActorManager)
@@ -72,7 +72,7 @@ Application::Application()
 {
 	RedirectStdCoutCerr();
 
-	mSession.SetResourceCreator(&resourceCreator);
+	sessionClient.SetResourceCreator(&resourceCreator);
 
 	pthread_setname_np(pthread_self(), "SimulCaster_Application");
 	memset(&renderConstants,0,sizeof(RenderConstants));
@@ -132,7 +132,7 @@ Application::~Application()
 
 	OvrGuiSys::Destroy(mGuiSys);
 
-	mSession.Disconnect(REMOTEPLAY_TIMEOUT);
+	sessionClient.Disconnect(REMOTEPLAY_TIMEOUT);
 	enet_deinitialize();
 
 	SAFE_DELETE(audioPlayer)
@@ -255,7 +255,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 
 	// Try to find remote controller
-	if((int)controllers.mControllerID == 0)
+	if((int)controllers.mControllerIDs[0] == 0)
 	{
 		controllers.InitializeController(app->GetOvrMobile());
 	}
@@ -265,44 +265,31 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Get HMD Position/Orientation
 	avs::vec3 headPos =*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
 	headPos+=*((avs::vec3*)&footPos);
-	//headPos*=10.0f;
+
 	avs::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
 
-	//Get the Capture Position
-	scr::Transform::TransformCreateInfo tci = {(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform)};
-	scr::Transform scr_UE4_captureTransform(tci);
-	// TODO: change this when tag data is working
-	avs::Transform avs_UE4_captureTransform;
-	scr_UE4_captureTransform = avs_UE4_captureTransform;
+	//Get the Origin Position
+	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
+	{
+		clientRenderer.oculusOrigin = sessionClient.GetInitialPos();
+		receivedInitialPos = sessionClient.receivedInitialPos;
+	}
+	// Oculus Origin means where the headset's zero is in real space.
 
-	if(true)
-	{
-		if (!receivedInitialPos)
-		{
-			// Oculus Origin means where the headset's zero is in real space.
-			clientRenderer.oculusOrigin = scr_UE4_captureTransform.m_Translation;
-			receivedInitialPos = true;
-		}
-	}
-	if(!receivedInitialPos)
-	{
-		scr_UE4_captureTransform = avs::Transform();
-		clientRenderer.oculusOrigin = scr_UE4_captureTransform.m_Translation;
-	}
 
 	clientRenderer.cameraPosition = clientRenderer.oculusOrigin+scr_OVR_headPos;
 
 	// Handle networked session.
-	if(mSession.IsConnected())
+	if(sessionClient.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
 		clientRenderer.headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
 		clientRenderer.headPose.position = {clientRenderer.cameraPosition.x, clientRenderer.cameraPosition.y, clientRenderer.cameraPosition.z};
 
-		mSession.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastPrimaryControllerState, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
-		if (!receivedInitialPos&&mSession.receivedInitialPos)
+		sessionClient.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
+		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
-			clientRenderer.oculusOrigin = mSession.GetInitialPos();
+			clientRenderer.oculusOrigin = sessionClient.GetInitialPos();
 			receivedInitialPos = true;
 		}
 	}
@@ -310,9 +297,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		ENetAddress remoteEndpoint;
 		// Set server ip to empty string to use broadcast ip
-		if(mSession.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
+		if(sessionClient.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
-			mSession.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
+			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
 	}
 
@@ -335,7 +322,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
-	avs::vec3 camera_from_videoCentre=clientRenderer.cameraPosition-scr_UE4_captureTransform.m_Translation;
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
 	GlobalGraphicsResources.scrCamera->UpdatePosition(scr_OVR_headPos);
 
@@ -346,7 +332,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPose,X0),headPoseC);
 
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	if(mSession.IsConnected())
+	if(sessionClient.IsConnected())
 	{
 		clientRenderer.Render(vrFrame,mGuiSys);
 	}
@@ -399,8 +385,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		float w=vrFrame.IPD/2.0f;//.04f; //half separation.
 		avs::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
-		avs::vec3 &v=camera_from_videoCentre;
-		avs::vec4 right_eye ={v.x+eye.x,v.y+eye.y,v.z+eye.z,0.0f};
 		avs::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
 		clientRenderer.videoUB.eyeOffsets[0]=left_eye;		// left eye
 		clientRenderer.videoUB.eyeOffsets[1]=eye;	// right eye.
@@ -445,7 +429,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 		if (!clientRenderer.mNetworkSource.configure(
 				NumVideoStreams + (AudioStream ? 1 : 0) + (GeoStream ? 1 : 0), setupCommand.port + 1,
-				mSession.GetServerIP().c_str(), setupCommand.port, sourceParams))
+				sessionClient.GetServerIP().c_str(), setupCommand.port, sourceParams))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
 			return;

@@ -53,7 +53,7 @@ public:
         , const avs::Pose& headPose
         , const avs::Pose* controllerPoses
         , bool poseValid
-        , const ControllerState& controllerState
+        , const ControllerState* controllerState
         , bool requestKeyframe
 	    , double time);
 

@@ -92,7 +92,7 @@ public:
 	avs::NetworkSource mNetworkSource;
 
 	avs::vec3 oculusOrigin;		// in metres. The headPose will be relative to this.
-	scr::mat4 transformToOculusOrigin; // Because we're using OVR's rendering, we must position the actor's relative to the oculus origin.
+	scr::mat4 transformToOculusOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.
 
 	scr::ResourceManagers	*resourceManagers	=nullptr;
 	ResourceCreator			*resourceCreator	=nullptr;
@@ -153,6 +153,16 @@ public:
 	int specularSize = 128;
 	int diffuseSize = 64;
 	int lightSize = 64;
-	bool mShowInfo=true;
+	enum
+	{
+		NO_OSD,
+		CAMERA_OSD,
+		NETWORK_OSD,
+		GEOMETRY_OSD,
+		CONTROLLER_OSD,
+		NUM_OSDS
+	};
+	int show_osd = GEOMETRY_OSD;
 	bool mIsCubemapVideo = true;
+	void DrawOSD(OVR::OvrGuiSys *mGuiSys);
 };
