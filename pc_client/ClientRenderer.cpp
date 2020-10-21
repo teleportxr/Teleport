@@ -1218,7 +1218,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(0,controllerPoses[0],1.0f);
 		FillInControllerPose(1,controllerPoses[1], -1.0f);
 
-		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos,controllerState, decoder->idrRequired(),fTime);
+		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, &controllerState, decoder->idrRequired(),fTime);
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			oculusOrigin = sessionClient.GetInitialPos();
@@ -1265,19 +1265,10 @@ void ClientRenderer::OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButto
 		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 }
 
-void ClientRenderer::OnMouseMove(bool bLeftButtonDown
-			,bool bRightButtonDown
-			,bool bMiddleButtonDown
-			,int nMouseWheelDelta
-			,int xPos
-			,int yPos )
+void ClientRenderer::OnMouseMove(int xPos, int yPos)
 {
 	mouseCameraInput.MouseX=xPos;
 	mouseCameraInput.MouseY=yPos;
-	mouseCameraInput.MouseButtons
-		|= (bLeftButtonDown ? crossplatform::MouseCameraInput::LEFT_BUTTON : 0)
-		| (bRightButtonDown ? crossplatform::MouseCameraInput::RIGHT_BUTTON : 0)
-		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 }
 
 void ClientRenderer::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext)
