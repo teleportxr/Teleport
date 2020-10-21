@@ -202,7 +202,8 @@ public:
 	void RemoveView(int);
 	bool OnDeviceRemoved();
 	void OnFrameMove(double fTime, float time_step);
-	void OnMouseClick(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
+	void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
+	void OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnMouseMove(int xPos, int yPos);
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
 
