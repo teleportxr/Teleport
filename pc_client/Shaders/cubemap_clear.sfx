@@ -111,7 +111,7 @@ shader void CS_ExtractTagDataID(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID
 	// The offset is to the X component. The thread index gives us the bit mask.
 	float4 lookupX	= plainTexture.Load(int3(pos_x.xy, 0));
 	// Convert the green component to a 0 or 1 uint. shift to get the binary.
-	int bitX		= (int)(lookupX.g+0.5) << uint(ThreadID.x);
+	int bitX		= int(lookupX.g+0.5) << int(ThreadID.x);
 	accumulate_position[ThreadID.x] = uint(bitX);
 	GroupMemoryBarrierWithGroupSync();
 	// Now join all the bits together.

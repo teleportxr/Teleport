@@ -7,10 +7,9 @@
 #include "Controllers.h"
 #include "Log.h"
 
-Controllers::Controllers():
-		mControllerID(0)
+Controllers::Controllers()
 {
-
+	mControllerIDs[0]=mControllerIDs[1]=0;
 }
 Controllers::~Controllers()
 {
@@ -44,15 +43,16 @@ void Controllers::ClearDelegates()
 bool Controllers::InitializeController(ovrMobile *ovrmobile)
 {
 	ovrInputCapabilityHeader inputCapsHeader;
+	int idx=0;
 	for(uint32_t i = 0;
 	    vrapi_EnumerateInputDevices(ovrmobile, i, &inputCapsHeader) == 0; ++i) {
 		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote)
 		{
 			if ((int) inputCapsHeader.DeviceID != -1)
 			{
-				mControllerID = inputCapsHeader.DeviceID;
-				LOG("Found controller (ID: %d)", mControllerID);
-
+				mControllerIDs[idx] = inputCapsHeader.DeviceID;
+				LOG("Found controller (ID: %d)", mControllerIDs[idx]);
+				idx++;
 				ovrInputTrackedRemoteCapabilities trackedInputCaps;
 				trackedInputCaps.Header = inputCapsHeader;
 				vrapi_GetInputDeviceCapabilities(ovrmobile, &trackedInputCaps.Header);
@@ -62,38 +62,39 @@ bool Controllers::InitializeController(ovrMobile *ovrmobile)
 				LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
 				mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
 				mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
-				return true;
 			}
 		}
 	}
 
-	return false;
+	return (idx>0);
 }
 
 void Controllers::Update(ovrMobile *ovrmobile)
 {
 	// Query controller input state.
 	ControllerState controllerState = {};
-	if((int)mControllerID != 0)
+	for(int i=0;i<2;i++)
+	if((int)mControllerIDs[i] != 0)
 	{
 		ovrInputStateTrackedRemote ovrState;
 		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
-		if(vrapi_GetCurrentInputState(ovrmobile, mControllerID, &ovrState.Header) >= 0)
+		if(vrapi_GetCurrentInputState(ovrmobile, mControllerIDs[i], &ovrState.Header) >= 0)
 		{
 			controllerState.mButtons = ovrState.Buttons;
 
-			//Flip show debug information, if the grip trigger was released.
-			if((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_GripTrigger) != 0 && (controllerState.mButtons & ovrButton::ovrButton_GripTrigger) == 0)
+			bool clicked=((mLastControllerStates[i].mButtons & ovrButton::ovrButton_X) != 0 && (controllerState.mButtons & ovrButton::ovrButton_X) == 0) ||
+						 ((mLastControllerStates[i].mButtons & ovrButton::ovrButton_A) != 0 && (controllerState.mButtons & ovrButton::ovrButton_A) == 0);
+			//Flip rendering mode when the trigger is held, and the X or A button is released.
+			if((mLastControllerStates[i].mButtons & ovrButton::ovrButton_Trigger) != 0 )
+			{
+				if(clicked)
+				{
+					ToggleTextures();
+				}
+			}
+			else if(clicked)
 			{
 				ToggleShowInfo();
-			}
-
-			//Flip rendering mode when the trigger is held, and the X or A button is released.
-			if((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_Trigger) != 0 &&
-			   (((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_X) != 0 && (controllerState.mButtons & ovrButton::ovrButton_X) == 0) ||
-			    ((mLastPrimaryControllerState.mButtons & ovrButton::ovrButton_A) != 0 && (controllerState.mButtons & ovrButton::ovrButton_A) == 0)))
-			{
-				ToggleTextures();
 			}
 
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
@@ -108,7 +109,7 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				float          dy = controllerState.mTrackpadY - 0.5f;
 				SetStickOffset(dx,dy);
 			}
+			mLastControllerStates[i] = controllerState;
 		}
 	}
-	mLastPrimaryControllerState = controllerState;
 }

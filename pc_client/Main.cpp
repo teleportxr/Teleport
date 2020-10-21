@@ -181,6 +181,7 @@ void InitRenderer(HWND hWnd)
 		{
 			renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/DirectX11/HLSL").c_str());
 			renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX11/shaderbin").c_str());
+			renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX11/shaderbin").c_str());
 		}
 		if (strcmp(renderPlatform->GetName(), "DirectX 12") == 0)
 		{
@@ -189,6 +190,7 @@ void InitRenderer(HWND hWnd)
 			renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
 			// Must do this before RestoreDeviceObjects so the rootsig can be found
 			renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
+			renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
 		}
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());

@@ -139,7 +139,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose &headPose
 	,const avs::Pose* controllerPoses
 	,bool poseValid
-	,const ControllerState& controllerState
+	,const ControllerState* controllerStates
 	,bool requestKeyframe
 	,double t)
 {
@@ -154,7 +154,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 				SendHeadPose(headPose);
 				SendControllerPoses(headPose,controllerPoses);
 			}
-			SendInput(controllerState);
+			SendInput(controllerStates[0]);
 			SendResourceRequests();
 			SendReceivedResources();
 			SendActorUpdates();
@@ -179,7 +179,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			}
 		}
 	}
-	mPrevControllerState = controllerState;
+	mPrevControllerState = controllerStates[0];
 }
 
 bool SessionClient::IsConnected() const

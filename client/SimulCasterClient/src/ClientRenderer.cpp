@@ -14,8 +14,8 @@
 using namespace OVR;
 ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c)
 		:mDecoder(avs::DecoderBackend::Custom)
-		 , oculusOrigin(0,0,0)
-		 , transformToOculusOrigin(scr::mat4::Translation(-oculusOrigin))
+		, oculusOrigin(0,0,0)
+		, transformToOculusOrigin(scr::mat4::Translation(-oculusOrigin))
 		, resourceManagers(rm)
 		, resourceCreator(r)
 		, clientAppInterface(c)
@@ -514,8 +514,10 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
 
 	//Render hands, if they exist.
-	if(leftHand) RenderActor(res, leftHand);
-	if(rightHand) RenderActor(res, rightHand);
+	if(leftHand)
+		RenderActor(res, leftHand);
+	if(rightHand)
+		RenderActor(res, rightHand);
 }
 
 
@@ -524,7 +526,9 @@ void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node>
 	std::shared_ptr<OVRActor> ovrActor = std::static_pointer_cast<OVRActor>(actor);
 
 	//----OVR Node Set Transforms----//
-	scr::mat4 scr_Transform = transformToOculusOrigin * actor->GetGlobalTransform().GetTransformMatrix();
+	scr::mat4 globalMatrix=actor->GetGlobalTransform().GetTransformMatrix();
+	transformToOculusOrigin=scr::mat4::Translation(-oculusOrigin);
+	scr::mat4 scr_Transform = transformToOculusOrigin * globalMatrix;
 
 	OVR::Matrix4f transform;
 	memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
@@ -563,7 +567,9 @@ void ClientRenderer::ToggleTextures()
 
 void ClientRenderer::ToggleShowInfo()
 {
-	mShowInfo=!mShowInfo;
+	show_osd++;
+	if(show_osd>=NUM_OSDS)
+		show_osd=NO_OSD;
 }
 
 void  ClientRenderer::SetStickOffset(float x,float y)
@@ -573,29 +579,34 @@ void  ClientRenderer::SetStickOffset(float x,float y)
 	//f->Input.sticks[0][1] += dy;
 }
 
+static float frameRate=1.0f;
 void ClientRenderer::Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mGuiSys)
 {
-	static float frameRate=1.0f;
 	if(vrFrame.DeltaSeconds>0.0f)
 	{
 		frameRate*=0.99f;
 		frameRate+=0.01f/vrFrame.DeltaSeconds;
 	}
+	if(show_osd!=NO_OSD)
+	{
+		DrawOSD(mGuiSys);
+	}
+}
+
+void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
+{
 	auto ctr=mNetworkSource.getCounterValues();
-	if(mShowInfo)
+	if(show_osd== NETWORK_OSD)
+	{
 		mGuiSys->ShowInfoText(
 				0.017f,
-				"%s\n"
 				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 				"Incomplete Decoder Packets: %d\n"
 				"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
 				"Actors: %d \n"
-				"Camera Position: %1.3f, %1.3f, %1.3f\n"
-				//"Orient: %1.3f, {%1.3f, %1.3f, %1.3f}\n"
-				//"Pos: %3.3f %3.3f %3.3f\n"
 				"Orphans: %d\n",
-				GlobalGraphicsResources.effectPassName,
-				mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
+				mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped,
+				ctr.decoderPacketsDropped,
 				ctr.incompleteDPsReceived,
 				frameRate, ctr.bandwidthKPS,
 				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
@@ -603,4 +614,40 @@ void ClientRenderer::Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mG
 				//headPose.w, headPose.x, headPose.y, headPose.z,
 				//headPos.x, headPos.y, headPos.z,
 				ctr.m_packetMapOrphans);
+	}
+	else if(show_osd== CAMERA_OSD)
+	{
+		mGuiSys->ShowInfoText(
+				0.017f,
+				"  Camera Position: %1.3f, %1.3f, %1.3f\n"
+				      "Received  Origin: %1.3f, %1.3f, %1.3f\n"
+				,cameraPosition.x, cameraPosition.y, cameraPosition.z
+				,oculusOrigin.x,oculusOrigin.y,oculusOrigin.z
+				);
+	}
+	else if(show_osd== GEOMETRY_OSD)
+	{
+		mGuiSys->ShowInfoText(
+				0.017f,
+			"%s\n"
+				"Actors: %d \n"
+				"Orphans: %d",
+				GlobalGraphicsResources.effectPassName,
+				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
+				ctr.m_packetMapOrphans);
+			auto &missing=resourceCreator->GetMissingResources();
+			if(missing.size())
+			{
+				mGuiSys->ShowInfoText(
+						0.017f,
+						"Missing Resources\n");
+				for(auto m:missing)
+				{
+					mGuiSys->ShowInfoText(
+							0.017f,
+							"%d\n",m.first);
+				}
+			}
+
+	}
 }

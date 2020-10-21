@@ -401,22 +401,22 @@ vec4 DebugNormal(vertexOutput IN, int swizzle_mode)
 	}
 }
 
-vec4 PS_DebugNormal_Unswizzled(vertexOutput IN) : SV_TARGET
+shader vec4 PS_DebugNormal_Unswizzled(vertexOutput IN) : SV_TARGET
 {
 	return DebugNormal(IN, 0);
 }
 
-vec4 PS_DebugNormal_Unreal(vertexOutput IN) : SV_TARGET
+shader vec4 PS_DebugNormal_Unreal(vertexOutput IN) : SV_TARGET
 {
 	return DebugNormal(IN, 1);
 }
 
-vec4 PS_DebugNormal_Unity(vertexOutput IN) : SV_TARGET
+shader vec4 PS_DebugNormal_Unity(vertexOutput IN) : SV_TARGET
 {
 	return DebugNormal(IN, 2);
 }
 
-vec4 PS_DebugNormal_VertexNormals(vertexOutput IN) : SV_TARGET
+shader vec4 PS_DebugNormal_VertexNormals(vertexOutput IN) : SV_TARGET
 {
 	return DebugNormal(IN, 3);
 }

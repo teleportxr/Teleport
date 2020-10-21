@@ -406,8 +406,8 @@ void PipeOutMessages()
 		{
 			messageHandler(m.severity,m.msg.c_str(),m.userData);
 		}
+		messages.clear();
 	}
-	messages.clear();
 }
 
 TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc msgh)

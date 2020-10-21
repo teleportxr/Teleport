@@ -641,8 +641,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	}
 	else if(show_osd== CONTROLLER_OSD)
 	{
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     Mouse: %d %d",mouseCameraInput.MouseX,mouseCameraInput.MouseY));
-
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
+		
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("      angle: %3.3f", controllerSim.angle));
@@ -1184,9 +1185,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,14000.f);
 	controllerState.mTrackpadX=0.5f;
 	controllerState.mTrackpadY=0.5f;
-	controllerState.mJoystickAxisX =(mouseCameraInput.right_left_input);
-	controllerState.mJoystickAxisY =(mouseCameraInput.forward_back_input);
-	controllerState.mButtons= mouseCameraInput.MouseButtons;
+	controllerState.mJoystickAxisX	=mouseCameraInput.right_left_input;
+	controllerState.mJoystickAxisY	=mouseCameraInput.forward_back_input;
+	controllerState.mButtons		=mouseCameraInput.MouseButtons;
 	// Reset
 	mouseCameraInput.MouseButtons = 0;
 	controllerState.mTrackpadStatus=true;
@@ -1197,7 +1198,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
-		simul::math::Quaternion q0(3.1415926536f / 2.f, simul::math::Vector3(1.f, 0.0f, 0.0f));
+		simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
 
 		if(!receivedInitialPos)
 		{
@@ -1264,10 +1265,19 @@ void ClientRenderer::OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButto
 		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 }
 
-void ClientRenderer::OnMouseMove(int xPos, int yPos)
+void ClientRenderer::OnMouseMove(bool bLeftButtonDown
+			,bool bRightButtonDown
+			,bool bMiddleButtonDown
+			,int nMouseWheelDelta
+			,int xPos
+			,int yPos )
 {
 	mouseCameraInput.MouseX=xPos;
 	mouseCameraInput.MouseY=yPos;
+	mouseCameraInput.MouseButtons
+		|= (bLeftButtonDown ? crossplatform::MouseCameraInput::LEFT_BUTTON : 0)
+		| (bRightButtonDown ? crossplatform::MouseCameraInput::RIGHT_BUTTON : 0)
+		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 }
 
 void ClientRenderer::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext)
