@@ -95,30 +95,6 @@ Application::Application()
 		audioPlayer->initializeAudioDevice();
 	}
 
-	resourceCreator.Initialise((&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
-	resourceCreator.AssociateResourceManagers(resourceManagers);
-
-	//Default Effects
-	scr::Effect::EffectCreateInfo ci;
-	ci.effectName = "StandardEffects";
-	GlobalGraphicsResources.pbrEffect.Create(&ci);
-
-	//Default Sampler
-	scr::Sampler::SamplerCreateInfo sci  = {};
-	sci.wrapU = scr::Sampler::Wrap::REPEAT;
-	sci.wrapV = scr::Sampler::Wrap::REPEAT;
-	sci.wrapW = scr::Sampler::Wrap::REPEAT;
-	sci.minFilter = scr::Sampler::Filter::LINEAR;
-	sci.magFilter = scr::Sampler::Filter::LINEAR;
-
-	GlobalGraphicsResources.sampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
-	GlobalGraphicsResources.sampler->Create(&sci);
-
-	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
-	GlobalGraphicsResources.cubeMipMapSampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
-	GlobalGraphicsResources.cubeMipMapSampler->Create(&sci);
-
-
 }
 
 Application::~Application()
@@ -169,6 +145,30 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	{
 		std::cerr<<"Create client.ini in assets directory to specify settings."<<std::endl;
 	}
+
+
+	resourceCreator.Initialise((&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	resourceCreator.AssociateResourceManagers(resourceManagers);
+
+	//Default Effects
+	scr::Effect::EffectCreateInfo ci;
+	ci.effectName = "StandardEffects";
+	GlobalGraphicsResources.pbrEffect.Create(&ci);
+
+	//Default Sampler
+	scr::Sampler::SamplerCreateInfo sci  = {};
+	sci.wrapU = scr::Sampler::Wrap::REPEAT;
+	sci.wrapV = scr::Sampler::Wrap::REPEAT;
+	sci.wrapW = scr::Sampler::Wrap::REPEAT;
+	sci.minFilter = scr::Sampler::Filter::LINEAR;
+	sci.magFilter = scr::Sampler::Filter::LINEAR;
+
+	GlobalGraphicsResources.sampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
+	GlobalGraphicsResources.sampler->Create(&sci);
+
+	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
+	GlobalGraphicsResources.cubeMipMapSampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
+	GlobalGraphicsResources.cubeMipMapSampler->Create(&sci);
 
 	OVR_LOG("%s | %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GlobalGraphicsResources.maxFragTextureSlots);
@@ -290,7 +290,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
 			clientRenderer.oculusOrigin = sessionClient.GetInitialPos();
-			receivedInitialPos = true;
+			receivedInitialPos = sessionClient.receivedInitialPos;
 		}
 	}
 	else
@@ -299,7 +299,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		// Set server ip to empty string to use broadcast ip
 		if(sessionClient.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
-			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
+			if(!sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT))
+			{
+				OVR_ERROR("Discovered but failed to connect");
+			}
+
 		}
 	}
 
@@ -554,16 +558,18 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 															scr::Texture::CompressionFormat::UNCOMPRESSED
 													};
 			textureCreateInfo.mipCount = 1;
-			textureCreateInfo.width  = clientRenderer.diffuseSize;
-			textureCreateInfo.height = clientRenderer.diffuseSize;
+			textureCreateInfo.width  = clientRenderer.videoConfig.diffuse_cubemap_size;
+			textureCreateInfo.height = clientRenderer.videoConfig.diffuse_cubemap_size;
 			clientRenderer.mDiffuseTexture->Create(textureCreateInfo);
-			textureCreateInfo.width  = clientRenderer.lightSize;
-			textureCreateInfo.height = clientRenderer.lightSize;
+			textureCreateInfo.width  = clientRenderer.videoConfig.light_cubemap_size;
+			textureCreateInfo.height = clientRenderer.videoConfig.light_cubemap_size;
 			clientRenderer.mCubemapLightingTexture->Create(textureCreateInfo);
 			textureCreateInfo.mipCount = 3;
-			textureCreateInfo.width  = clientRenderer.specularSize;
-			textureCreateInfo.height = clientRenderer.specularSize;
+			textureCreateInfo.width  = clientRenderer.videoConfig.specular_cubemap_size;
+			textureCreateInfo.height = clientRenderer.videoConfig.specular_cubemap_size;
 			clientRenderer.mSpecularTexture->Create(textureCreateInfo);
+			textureCreateInfo.width  = clientRenderer.videoConfig.rough_cubemap_size;
+			textureCreateInfo.height = clientRenderer.videoConfig.rough_cubemap_size;
 			clientRenderer.mRoughSpecularTexture->Create(textureCreateInfo);
 			clientRenderer.mDiffuseTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
 			clientRenderer.mSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
@@ -609,10 +615,10 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
 		return;
 	}
 
-    const avs::VideoConfig& videoConfig = reconfigureVideoCommand.video_config;
+    clientRenderer.videoConfig = reconfigureVideoCommand.video_config;
 
-    WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
-    , videoConfig.depth_width, videoConfig.depth_height);
+    WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", clientRenderer.videoConfig.video_width, clientRenderer.videoConfig.video_height
+    , clientRenderer.videoConfig.depth_width, clientRenderer.videoConfig.depth_height);
 }
 
 void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)

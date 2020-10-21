@@ -4,11 +4,11 @@
 #include "api/Texture.h"
 #include "ShaderResource.h"
 #include "api/Effect.h"
-#include "api/RenderPlatform.h"
 #include "basic_linear_algebra.h"
 
 namespace scr
 {
+	class RenderPlatform;
 	class Material
 	{
 	public:

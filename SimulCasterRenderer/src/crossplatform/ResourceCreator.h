@@ -192,7 +192,7 @@ public:
 	std::shared_ptr<scr::Texture> m_DummyNormal;
 	std::shared_ptr<scr::Texture> m_DummyCombined;
 	std::shared_ptr<scr::Texture> m_DummyEmissive;
-	
+
 	struct IncompleteResource
 	{
 		IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
@@ -290,7 +290,7 @@ private:
 							  std::set<avs::uid>& missingResources) const;
 
 	scr::API m_API;
-	const scr::RenderPlatform* m_pRenderPlatform = nullptr;
+	scr::RenderPlatform* m_pRenderPlatform = nullptr;
 	scr::VertexBufferLayout::PackingStyle m_PackingStyle;
 
 	basist::etc1_global_selector_codebook basis_codeBook;

@@ -11,11 +11,13 @@
 #include "ShaderStorageBuffer.h"
 #include "Texture.h"
 #include "UniformBuffer.h"
+#include "Material.h"
 #include "VertexBuffer.h"
 #include "crossplatform/API.h"
 
 namespace scr
 {
+	class Material;
 	class RenderPlatform
 	{
 	public:
@@ -32,5 +34,6 @@ namespace scr
 		virtual std::shared_ptr<Texture>				InstantiateTexture() const = 0;
 		virtual std::shared_ptr<UniformBuffer>			InstantiateUniformBuffer() const = 0;
 		virtual std::shared_ptr<VertexBuffer>			InstantiateVertexBuffer() const = 0;
+		std::shared_ptr<scr::Material> placeholderMaterial ;
 	};
 }

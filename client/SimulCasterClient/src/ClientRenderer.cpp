@@ -294,9 +294,9 @@ void ClientRenderer::ExitedVR()
 
 void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 {
-	scr::ivec2 specularOffset={0,0};
-	scr::ivec2 diffuseOffset={3* specularSize/2, specularSize*2};
-	scr::ivec2 roughOffset={3* specularSize,0};
+	scr::ivec2 specularOffset={videoConfig.specular_x, videoConfig.specular_y};
+	scr::ivec2 diffuseOffset={videoConfig.diffuse_x, videoConfig.diffuse_y};
+	scr::ivec2 roughOffset={videoConfig.rough_x, videoConfig.rough_y};
 	//scr::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
 	// Here the compute shader to copy from the video texture into the cubemap/s.
 	auto &tc=mCubemapTexture->GetTextureCreateInfo();
@@ -325,7 +325,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		mDeviceContext.DispatchCompute(&inputCommand);
 		GL_CheckErrors("Frame: CopyToCubemaps - Main");
 		cubemapUB.faceSize = 0;
-		scr::ivec2 offset0={(int32_t) ((3 *  tc.width) / 2),(int32_t) (2 * tc.width)};
+		scr::ivec2 offset0={0,0};//(int32_t) ((3 *  tc.width) / 2),(int32_t) (2 * tc.width)};
 		//Lighting Cubemaps
 		inputCommand.m_pComputeEffect=mCopyCubemapEffect;
 		inputCommand.effectPassName = "CopyCubemap";
@@ -333,7 +333,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		{
 			static uint32_t face= 0;
 			mip_y = 0;
-			int32_t mip_size=diffuseSize;
+			int32_t mip_size=videoConfig.diffuse_cubemap_size;
 			uint32_t M=mDiffuseTexture->GetTextureCreateInfo().mipCount;
 			scr::ivec2 offset={offset0.x+diffuseOffset.x,offset0.y+diffuseOffset.y};
 			for (uint32_t m        = 0; m < M; m++)
@@ -356,7 +356,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		}
 		{
 			mip_y = 0;
-			int32_t          mip_size = specularSize;
+			int32_t          mip_size = videoConfig.specular_cubemap_size;
 			uint32_t         M        = mSpecularTexture->GetTextureCreateInfo().mipCount;
 			scr::ivec2       offset   = {
 					offset0.x + specularOffset.x, offset0.y + specularOffset.y};
@@ -378,7 +378,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		}
 		{
 			mip_y = 0;
-			int32_t          mip_size = specularSize;
+			int32_t          mip_size = videoConfig.rough_cubemap_size;
 			uint32_t         M        = mSpecularTexture->GetTextureCreateInfo().mipCount;
 			scr::ivec2       offset   = {	offset0.x + roughOffset.x, offset0.y + roughOffset.y};
 			for(uint32_t m=0;m<M;m++)

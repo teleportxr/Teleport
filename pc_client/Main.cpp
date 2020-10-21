@@ -232,11 +232,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			int xPos = GET_X_LPARAM(lParam); 
 			int yPos = GET_Y_LPARAM(lParam); 
-			clientRenderer.OnMouseMove(xPos, yPos);
-			clientRenderer.OnMouseButtonClicked((wParam & MK_LBUTTON) != 0
-				, (wParam & MK_RBUTTON) != 0
-				, (wParam & MK_MBUTTON) != 0
-				, 0);
+			short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+			clientRenderer.OnMouseMove(xPos, yPos
+				,(wParam&MK_LBUTTON)!=0
+				,(wParam&MK_RBUTTON)!=0
+				,(wParam&MK_MBUTTON)!=0
+				,zDelta);
 		}
 		break;
 	case WM_KEYDOWN:

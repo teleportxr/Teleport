@@ -725,6 +725,16 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool i
 			newActor->missingAnimations[animationID] = i;
 		}
 	}
+	if(m_pRenderPlatform->placeholderMaterial== nullptr)
+	{
+		scr::Material::MaterialCreateInfo materialCreateInfo;
+		materialCreateInfo.renderPlatform = m_pRenderPlatform;
+		materialCreateInfo.diffuse.texture=m_DummyDiffuse;
+		materialCreateInfo.combined.texture=m_DummyCombined;
+		materialCreateInfo.normal.texture=m_DummyNormal;
+		materialCreateInfo.emissive.texture=m_DummyEmissive;
+		m_pRenderPlatform->placeholderMaterial = std::make_shared<scr::Material>(materialCreateInfo);
+	}
 
 	newActor->actor->SetMaterialListSize(node.materials.size());
 	for(size_t i = 0; i < node.materials.size(); i++)
@@ -737,6 +747,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool i
 		}
 		else
 		{
+			newActor->actor->SetMaterial(i, m_pRenderPlatform->placeholderMaterial);
 			SCR_COUT << "MeshNode(" << node_uid << "). Missing material: " << node.materials[i] << std::endl;
 			missingResources.insert(node.materials[i]);
 			newActor->materialSlots[node.materials[i]].push_back(i);
@@ -878,8 +889,10 @@ void ResourceCreator::CompleteTexture(avs::uid texture_uid, const scr::Texture::
 		incompleteMaterial->textureSlots.at(texture_uid) = scrTexture;
 
 		//If only this texture and this function are pointing to the material, then it is complete.
-		if(it->use_count() == 2) CompleteMaterial(incompleteMaterial->id, incompleteMaterial->materialInfo);
-		else SCR_COUT << "Waiting Material(" << incompleteMaterial->id << "). Got texture: " << texture_uid << std::endl;
+		if(it->use_count() == 2)
+			CompleteMaterial(incompleteMaterial->id, incompleteMaterial->materialInfo);
+		else
+			SCR_COUT << "Waiting Material(" << incompleteMaterial->id << "). Got texture: " << texture_uid << std::endl;
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
@@ -907,8 +920,10 @@ void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Materia
 			}
 
 			//If only this material and function are pointing to the MeshNode, then it is complete.
-			if(incompleteActor.use_count() == 2) CompleteActor(incompleteActor->id, incompleteActor->actor, incompleteActor->isHand);
-			else SCR_COUT << "Waiting MeshNode(" << incompleteActor->id << "). Got material: " << material_uid << std::endl;
+			if(incompleteActor.use_count() == 2)
+				CompleteActor(incompleteActor->id, incompleteActor->actor, incompleteActor->isHand);
+			else
+				SCR_COUT << "Waiting MeshNode(" << incompleteActor->id << "). Got material: " << material_uid << std::endl;
 		}
 	}
 

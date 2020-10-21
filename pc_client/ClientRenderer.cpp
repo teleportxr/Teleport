@@ -712,7 +712,7 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 		}
 		pbrConstants.lightCount=cachedLights.size();
 	}
-	Light *l=(Light*)(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
+	PbrLight *l=(PbrLight*)(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
 	lightsBuffer.SetData(deviceContext,l);
 
 	//Only render visible actors, but still render children that are close enough.
@@ -1183,14 +1183,14 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
-	controllerState.mTrackpadX=0.5f;
-	controllerState.mTrackpadY=0.5f;
-	controllerState.mJoystickAxisX	=mouseCameraInput.right_left_input;
-	controllerState.mJoystickAxisY	=mouseCameraInput.forward_back_input;
-	controllerState.mButtons		=mouseCameraInput.MouseButtons;
+	controllerStates[0].mTrackpadX=0.5f;
+	controllerStates[0].mTrackpadY=0.5f;
+	controllerStates[0].mJoystickAxisX	=mouseCameraInput.right_left_input;
+	controllerStates[0].mJoystickAxisY	=mouseCameraInput.forward_back_input;
+	controllerStates[0].mButtons		=mouseCameraInput.MouseButtons;
 	// Reset
 	mouseCameraInput.MouseButtons = 0;
-	controllerState.mTrackpadStatus=true;
+	controllerStates[0].mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())
 	{
@@ -1218,7 +1218,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(0,controllerPoses[0],1.0f);
 		FillInControllerPose(1,controllerPoses[1], -1.0f);
 
-		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos,controllerState, decoder->idrRequired(),fTime);
+		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, controllerStates, decoder->idrRequired(),fTime);
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			oculusOrigin = sessionClient.GetInitialPos();
@@ -1252,9 +1252,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta)
 {
 	mouseCameraInput.MouseButtons
-		|= (bLeftButtonReleased ? crossplatform::MouseCameraInput::LEFT_BUTTON_RELEASED : 0)
-		| (bRightButtonReleased ? crossplatform::MouseCameraInput::RIGHT_BUTTON_RELEASED : 0)
-		| (bMiddleButtonReleased ? crossplatform::MouseCameraInput::MIDDLE_BUTTON_RELEASED : 0);
+		|= (bLeftButtonReleased ? crossplatform::MouseCameraInput::LEFT_BUTTON : 0)
+		| (bRightButtonReleased ? crossplatform::MouseCameraInput::RIGHT_BUTTON : 0)
+		| (bMiddleButtonReleased ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 }
 
 void ClientRenderer::OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
@@ -1265,12 +1265,12 @@ void ClientRenderer::OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButto
 		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 }
 
-void ClientRenderer::OnMouseMove(bool bLeftButtonDown
+void ClientRenderer::OnMouseMove(int xPos
+			,int yPos,bool bLeftButtonDown
 			,bool bRightButtonDown
 			,bool bMiddleButtonDown
 			,int nMouseWheelDelta
-			,int xPos
-			,int yPos )
+			 )
 {
 	mouseCameraInput.MouseX=xPos;
 	mouseCameraInput.MouseY=yPos;

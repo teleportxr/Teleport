@@ -46,7 +46,7 @@ SIMUL_CONSTANT_BUFFER_END
 SIMUL_CONSTANT_BUFFER(BoneMatrices, 12)
 	mat4 boneMatrices[64];
 SIMUL_CONSTANT_BUFFER_END
-struct Light
+struct PbrLight
 {
 	mat4 lightSpaceTransform;
 	vec4 colour;

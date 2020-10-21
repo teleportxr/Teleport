@@ -102,7 +102,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 	simul::crossplatform::StructuredBuffer<VideoTagData2D> tagData2DBuffer;
 	simul::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
-	simul::crossplatform::StructuredBuffer<Light> lightsBuffer;
+	simul::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularCubemapTexture;
 	simul::crossplatform::Texture* roughSpecularCubemapTexture;
@@ -126,7 +126,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool keydown[256];
 	int framenumber;
 	SessionClient sessionClient;
-	ControllerState controllerState;
+	ControllerState controllerStates[2];
 	float framerate = 0.0f;
 
 	avs::Timestamp platformStartTimestamp; //Timestamp of when the system started.
@@ -204,7 +204,7 @@ public:
 	void OnFrameMove(double fTime, float time_step);
 	void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
 	void OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
-	void OnMouseMove(int xPos, int yPos);
+	void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
 
 	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);

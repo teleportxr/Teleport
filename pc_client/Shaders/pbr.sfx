@@ -22,7 +22,7 @@ uniform Texture2D shadowTexture;
 uniform Texture3D inscatterVolumeTexture;
 //////////////////////////
 
-uniform StructuredBuffer<Light> lights;
+uniform StructuredBuffer<PbrLight> lights;
 
 float GetRoughness(vec4 combinedLookup)
 {
@@ -278,7 +278,7 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	return colour;
 }
 
-vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,Light light)
+vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,PbrLight light)
 {
 	vec3 diff						=light.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
@@ -345,7 +345,7 @@ vec4 Solid(vertexOutput IN)
 	{
 		if(i>=lightCount)
 			break;
-		Light light			=lights[i];
+		PbrLight light			=lights[i];
 		c					+=PBRAddLight(surfaceState,view,surfaceProperties,light);
 	}
 	//c.gb += 0.03;

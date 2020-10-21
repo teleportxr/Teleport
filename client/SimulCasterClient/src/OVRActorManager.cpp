@@ -39,12 +39,11 @@ void OVRActor::SetMaterialListSize(size_t size)
 	if(old_size < size)
 	{
         GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
-	    std::shared_ptr<Material> placeholderMaterial = std::make_shared<Material>(Material::MaterialCreateInfo{&globalGraphicsResources.renderPlatform});
-        //placeholderMaterial->GetMaterialCreateInfo().diffuse=globalGraphicsResources.dif
+
 	    //We don't know have the information on the material yet, so we use placeholder OVR surfaces.
 		for(size_t i = old_size; i < size; i++)
 		{
-			ovrSurfaceDefs[i] = CreateOVRSurface(i, placeholderMaterial);
+			ovrSurfaceDefs[i] = CreateOVRSurface(i, globalGraphicsResources.renderPlatform.placeholderMaterial);
 		}
 	}
 }

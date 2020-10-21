@@ -101,6 +101,7 @@ public:
 	avs::Pose headPose;
 	avs::Pose controllerPoses[2];
 	avs::vec3 cameraPosition;	// in real space.
+	avs::VideoConfig videoConfig;
 	const scr::quat HAND_ROTATION_DIFFERENCE {0.0000000456194194, 0.923879385, -0.382683367, 0.000000110135019}; //Adjustment to the controller's rotation to get the desired rotation.
 
 	struct VideoUB
@@ -150,9 +151,6 @@ public:
 
 	std::string                         CopyCubemapSrc;
 	std::string                         ExtractTagDataIDSrc;
-	int specularSize = 128;
-	int diffuseSize = 64;
-	int lightSize = 64;
 	enum
 	{
 		NO_OSD,
