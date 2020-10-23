@@ -1188,6 +1188,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	controllerStates[0].mJoystickAxisX	=mouseCameraInput.right_left_input;
 	controllerStates[0].mJoystickAxisY	=mouseCameraInput.forward_back_input;
 	controllerStates[0].mButtons		=mouseCameraInput.MouseButtons;
+
 	// Reset
 	mouseCameraInput.MouseButtons = 0;
 	controllerStates[0].mTrackpadStatus=true;
