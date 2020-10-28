@@ -16,7 +16,7 @@ class ClientAppInterface
 {
 public:
 	virtual std::string LoadTextFile(const char *filename)=0;
-	virtual const scr::Effect::EffectPassCreateInfo& BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources)=0;
+	virtual const scr::Effect::EffectPassCreateInfo* BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources)=0;
 
 };
 
@@ -143,6 +143,8 @@ public:
 	std::vector<scr::SceneCapture2DTagData> mVideoTagData2DArray;
 	std::vector<scr::SceneCaptureCubeTagData> mVideoTagDataCubeArray;
 
+	std::vector<std::string> passNames;
+	int passSelector=0;
 	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	static constexpr int MAX_TAG_DATA_COUNT = 32;

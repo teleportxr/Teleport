@@ -168,7 +168,8 @@ namespace scr
 		virtual void CreatePass(EffectPassCreateInfo* pEffectPassCreateInfo) = 0;
 
 		inline const EffectCreateInfo& GetEffectCreateInfo() const { return m_CI;}
-		inline const EffectPassCreateInfo& GetEffectPassCreateInfo(const char* effectPassName) const { return m_EffectPasses.at(effectPassName);}
+		/// May return nullptr if pass is not present.
+		const EffectPassCreateInfo *GetEffectPassCreateInfo(const char* effectPassName) const;
 		inline bool HasEffectPass(const char* effectPassName)
 		{
 			if(m_EffectPasses.empty())

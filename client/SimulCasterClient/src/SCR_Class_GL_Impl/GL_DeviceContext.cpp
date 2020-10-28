@@ -46,7 +46,11 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             descriptorSets.push_back(ic_mmt->pMaterial->GetShaderResource());
             effect = ic_mmt->pMaterial->GetMaterialCreateInfo().effect;
             dynamic_cast<const GL_Effect*>(effect)->Bind(effectPassName);
-            m_Topology = static_cast<const GL_Effect*>(effect)->ToGLTopology(effect->GetEffectPassCreateInfo(effectPassName).topology);
+            auto *pass=effect->GetEffectPassCreateInfo(effectPassName);
+            if(pass)
+            {
+                m_Topology = static_cast<const GL_Effect *>(effect)->ToGLTopology(pass->topology);
+            }
 
             //Transform
             descriptorSets.push_back(ic_mmt->pTransform.GetDescriptorSet());

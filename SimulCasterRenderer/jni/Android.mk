@@ -31,6 +31,7 @@ LOCAL_SRC_FILES  := 	../src/crossplatform/ActorComponents.cpp	\
 						../src/crossplatform/API.cpp				\
 						../src/crossplatform/Bone.cpp				\
 						../src/crossplatform/Camera.cpp				\
+						../src/api/Effect.cpp						\
 						../src/crossplatform/GeometryDecoder.cpp	\
 						../src/crossplatform/Light.cpp				\
 						../src/crossplatform/Log.cpp				\

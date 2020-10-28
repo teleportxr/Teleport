@@ -198,7 +198,7 @@ vec3 fresnel_schlick(vec3 R0, vec3 h, vec3 wi)
 }
 vec3 FresnelTerm(vec3 specularColour, float v_h)
 {
-	vec3 fresnel = specularColour + (vec3(1.0,1.0,1.0)- specularColour) * pow((1.0 - v_h), 5.);
+	vec3 fresnel = specularColour + (vec3(1.0,1.0,1.0)- specularColour) * pow((1.0 - v_h), 5.0);
 	return fresnel;
 }
 

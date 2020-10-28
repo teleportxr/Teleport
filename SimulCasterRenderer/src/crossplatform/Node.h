@@ -82,7 +82,7 @@ public:
 			UpdateGlobalTransform();
 		return globalTransform;
 	}
-private:
+protected:
 	std::shared_ptr<Mesh> mesh;
 	std::shared_ptr<Skin> skin;
 	std::vector<std::shared_ptr<Material>> materials;

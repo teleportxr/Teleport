@@ -68,10 +68,14 @@ OVR::ovrSurfaceDef OVRActor::CreateOVRSurface(size_t materialIndex, std::shared_
         OVR_WARN("Failed to create OVR surface!\nNull material passed to CreateOVRSurface(...).");
         return ovr_surface_def;
     }
-
+    if(mesh==nullptr)
+    {
+        OVR_WARN("Mesh is null in CreateOVRSurface(...).");
+        return ovr_surface_def;
+    }
     GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
-    const Mesh::MeshCreateInfo &meshCI = GetMesh()->GetMeshCreateInfo();
+    const Mesh::MeshCreateInfo &meshCI = mesh->GetMeshCreateInfo();
     Material::MaterialCreateInfo &materialCI = material->GetMaterialCreateInfo();
     if(materialIndex >= meshCI.vb.size() || materialIndex >= meshCI.ib.size())
     {
@@ -105,7 +109,7 @@ OVR::ovrSurfaceDef OVRActor::CreateOVRSurface(size_t materialIndex, std::shared_
     pbrShaderResources.push_back(&(material->GetShaderResource()));
     pbrShaderResources.push_back(&(globalGraphicsResources.lightCubemapShaderResources));
     const scc::GL_Effect& gl_effect = globalGraphicsResources.pbrEffect;
-    const scr::Effect::EffectPassCreateInfo& gl_effectPass = gl_effect.GetEffectPassCreateInfo(globalGraphicsResources.effectPassName);
+    const scr::Effect::EffectPassCreateInfo* gl_effectPass = gl_effect.GetEffectPassCreateInfo(globalGraphicsResources.effectPassName);
 
     if(materialCI.diffuse.texture)
         materialCI.diffuse.texture->UseSampler(globalGraphicsResources.sampler);
@@ -120,7 +124,8 @@ OVR::ovrSurfaceDef OVRActor::CreateOVRSurface(size_t materialIndex, std::shared_
     geo.vertexBuffer = gl_vb->GetVertexID();
     geo.indexBuffer = gl_ib->GetIndexID();
     geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-    geo.primitiveType = GL_Effect::ToGLTopology(gl_effectPass.topology);
+    if(gl_effectPass)
+        geo.primitiveType = GL_Effect::ToGLTopology(gl_effectPass->topology);
     geo.vertexCount = (int)gl_vb->GetVertexCount();
     geo.indexCount = (int)gl_ib->GetIndexBufferCreateInfo().indexCount;
     GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
@@ -135,29 +140,42 @@ OVR::ovrSurfaceDef OVRActor::CreateOVRSurface(size_t materialIndex, std::shared_
     ovr_surface_def.graphicsCommand.Program = *gl_effect.GetGlPlatform(globalGraphicsResources.effectPassName);
 
     //Set Rendering Set
-    ovr_surface_def.graphicsCommand.GpuState.blendMode = GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.colorBlendOp);
-    ovr_surface_def.graphicsCommand.GpuState.blendSrc = GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcColorBlendFactor);
-    ovr_surface_def.graphicsCommand.GpuState.blendDst = GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstColorBlendFactor);
-    ovr_surface_def.graphicsCommand.GpuState.blendModeAlpha = GL_Effect::ToGLBlendOp(gl_effectPass.colourBlendingState.alphaBlendOp);
-    ovr_surface_def.graphicsCommand.GpuState.blendSrcAlpha = GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.srcAlphaBlendFactor);
-    ovr_surface_def.graphicsCommand.GpuState.blendDstAlpha = GL_Effect::ToGLBlendFactor(gl_effectPass.colourBlendingState.dstAlphaBlendFactor);
-    ovr_surface_def.graphicsCommand.GpuState.depthFunc = GL_Effect::ToGLCompareOp(gl_effectPass.depthStencilingState.depthCompareOp);
+    if(gl_effectPass)
+    {
+        ovr_surface_def.graphicsCommand.GpuState.blendMode      = GL_Effect::ToGLBlendOp(
+                gl_effectPass->colourBlendingState.colorBlendOp);
+        ovr_surface_def.graphicsCommand.GpuState.blendSrc       = GL_Effect::ToGLBlendFactor(
+                gl_effectPass->colourBlendingState.srcColorBlendFactor);
+        ovr_surface_def.graphicsCommand.GpuState.blendDst       = GL_Effect::ToGLBlendFactor(
+                gl_effectPass->colourBlendingState.dstColorBlendFactor);
+        ovr_surface_def.graphicsCommand.GpuState.blendModeAlpha = GL_Effect::ToGLBlendOp(
+                gl_effectPass->colourBlendingState.alphaBlendOp);
+        ovr_surface_def.graphicsCommand.GpuState.blendSrcAlpha  = GL_Effect::ToGLBlendFactor(
+                gl_effectPass->colourBlendingState.srcAlphaBlendFactor);
+        ovr_surface_def.graphicsCommand.GpuState.blendDstAlpha  = GL_Effect::ToGLBlendFactor(
+                gl_effectPass->colourBlendingState.dstAlphaBlendFactor);
+        ovr_surface_def.graphicsCommand.GpuState.depthFunc      = GL_Effect::ToGLCompareOp(
+                gl_effectPass->depthStencilingState.depthCompareOp);
 
-    ovr_surface_def.graphicsCommand.GpuState.frontFace = GL_CW;
-    ovr_surface_def.graphicsCommand.GpuState.polygonMode = GL_Effect::ToGLPolygonMode(gl_effectPass.rasterizationState.polygonMode);
-    ovr_surface_def.graphicsCommand.GpuState.blendEnable = gl_effectPass.colourBlendingState.blendEnable ? ovrGpuState::ovrBlendEnable::BLEND_ENABLE : ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
-    ovr_surface_def.graphicsCommand.GpuState.depthEnable = gl_effectPass.depthStencilingState.depthTestEnable;
-    ovr_surface_def.graphicsCommand.GpuState.depthMaskEnable = true;
-    ovr_surface_def.graphicsCommand.GpuState.colorMaskEnable[0] = true;
-    ovr_surface_def.graphicsCommand.GpuState.colorMaskEnable[1] = true;
-    ovr_surface_def.graphicsCommand.GpuState.colorMaskEnable[2] = true;
-    ovr_surface_def.graphicsCommand.GpuState.colorMaskEnable[3] = true;
-    ovr_surface_def.graphicsCommand.GpuState.polygonOffsetEnable = false;
-    ovr_surface_def.graphicsCommand.GpuState.cullEnable = gl_effectPass.rasterizationState.cullMode != Effect::CullMode::NONE;
-    ovr_surface_def.graphicsCommand.GpuState.lineWidth = 1.0F;
-    ovr_surface_def.graphicsCommand.GpuState.depthRange[0] = gl_effectPass.depthStencilingState.minDepthBounds;
-    ovr_surface_def.graphicsCommand.GpuState.depthRange[1] = gl_effectPass.depthStencilingState.maxDepthBounds;
-
+        ovr_surface_def.graphicsCommand.GpuState.frontFace       = GL_CCW;
+        ovr_surface_def.graphicsCommand.GpuState.polygonMode     = GL_Effect::ToGLPolygonMode(
+                gl_effectPass->rasterizationState.polygonMode);
+        ovr_surface_def.graphicsCommand.GpuState.blendEnable     = gl_effectPass->colourBlendingState.blendEnable
+                                                                   ? ovrGpuState::ovrBlendEnable::BLEND_ENABLE
+                                                                   : ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
+        ovr_surface_def.graphicsCommand.GpuState.depthEnable     = gl_effectPass->depthStencilingState.depthTestEnable;
+        ovr_surface_def.graphicsCommand.GpuState.depthMaskEnable = true;
+        ovr_surface_def.graphicsCommand.GpuState.colorMaskEnable[0] = true;
+        ovr_surface_def.graphicsCommand.GpuState.colorMaskEnable[1] = true;
+        ovr_surface_def.graphicsCommand.GpuState.colorMaskEnable[2] = true;
+        ovr_surface_def.graphicsCommand.GpuState.colorMaskEnable[3] = true;
+        ovr_surface_def.graphicsCommand.GpuState.polygonOffsetEnable = false;
+        ovr_surface_def.graphicsCommand.GpuState.cullEnable          =
+                gl_effectPass->rasterizationState.cullMode != Effect::CullMode::NONE;
+        ovr_surface_def.graphicsCommand.GpuState.lineWidth           = 1.0F;
+        ovr_surface_def.graphicsCommand.GpuState.depthRange[0] = gl_effectPass->depthStencilingState.minDepthBounds;
+        ovr_surface_def.graphicsCommand.GpuState.depthRange[1] = gl_effectPass->depthStencilingState.maxDepthBounds;
+    }
     //Update Uniforms and Textures
     size_t resourceCount = 0;
     GLint textureCount = 0, uniformCount = 0;

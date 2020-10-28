@@ -15,7 +15,7 @@ namespace avs
 	{
 		ConvertPosition(fromStandard, toStandard, transform.position);
 		ConvertRotation(fromStandard, toStandard, transform.rotation);
-		ConvertPosition(fromStandard, toStandard, transform.scale);
+		ConvertScale(fromStandard, toStandard, transform.scale);
 	}
 	void ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec4 &rotation)
 	{
@@ -76,7 +76,7 @@ namespace avs
 	int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis)
 	{
 		int8_t a=(axis)%3;
-		int8_t sn=(axis>=3)?-1:1;
+		//int8_t sn=(axis>=3)?-1:1;
 		static int8_t ue_e[]={ 1, 0, 2 };
 		static int8_t gl_2[]={ 1, 2, 3 };
 		
@@ -138,6 +138,57 @@ namespace avs
 			}
 		}
 		return -1;
+	}
+	void ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &scale)
+	{
+		if (fromStandard == toStandard)
+		{
+			return;
+		}
+		if (fromStandard == avs::AxesStandard::UnrealStyle)
+		{
+			if (toStandard == avs::AxesStandard::GlStyle)
+			{
+				scale = { +scale.y, +scale.z, scale.x };
+			}
+			if (toStandard == avs::AxesStandard::EngineeringStyle)
+			{
+				scale = { scale.y, scale.x,scale.z };
+			}
+		}
+		else if (fromStandard == avs::AxesStandard::UnityStyle)
+		{
+			if (toStandard == avs::AxesStandard::GlStyle)
+			{
+				scale = { scale.x, scale.y, scale.z };
+			}
+			if (toStandard == avs::AxesStandard::EngineeringStyle)
+			{
+				scale = { scale.x, scale.z, scale.y };
+			}
+		}
+		else if (fromStandard == avs::AxesStandard::EngineeringStyle)
+		{
+			if (toStandard == avs::AxesStandard::UnrealStyle)
+			{
+				scale = { scale.y, scale.x,scale.z };
+			}
+			else if (toStandard == avs::AxesStandard::UnityStyle)
+			{
+				scale = { scale.x, scale.z, scale.y };
+			}
+		}
+		else if (fromStandard == avs::AxesStandard::GlStyle)
+		{
+			if (toStandard == avs::AxesStandard::UnrealStyle)
+			{
+				scale = { scale.z, +scale.x, +scale.y };
+			}
+			else if (toStandard == avs::AxesStandard::UnityStyle)
+			{
+				scale = { scale.x, scale.y, scale.z };
+			}
+		}
 	}
 	void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &position)
 	{

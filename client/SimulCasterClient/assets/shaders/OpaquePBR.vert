@@ -20,7 +20,7 @@ layout(std140, binding = 0) uniform u_CameraData
     vec4 u_Orientation; //Quaternion
     vec3 u_Position;
     float _pad;
-}cam;
+} cam;
 
 /*layout(std140, binding = 1) uniform TransformUB
 {
@@ -56,7 +56,7 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
     vec2 u_NormalTexCoordsScalar_B;
     vec2 u_NormalTexCoordsScalar_A;
 
-    vec4 u_CombinedOutputScalar;
+    vec4 u_CombinedOutputScalarRoughMetalOcclusion;
     vec2 u_CombinedTexCoordsScalar_R;
     vec2 u_CombinedTexCoordsScalar_G;
     vec2 u_CombinedTexCoordsScalar_B;
@@ -81,7 +81,7 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
 void main()
 {
     //gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
-    gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
+    gl_Position         = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
 
     v_Position 	        = (ModelMatrix * vec4(a_Position, 1.0)).xyz;
     v_Normal	        = normalize((ModelMatrix * vec4(a_Normal, 0.0)).xyz);

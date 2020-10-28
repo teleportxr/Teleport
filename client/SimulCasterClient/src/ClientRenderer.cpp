@@ -214,34 +214,6 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 	};
 	GlobalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
-	//Set scr::EffectPass
-	scr::ShaderSystem::PipelineCreateInfo pipelinePBR;
-	{
-		pipelinePBR.m_Count                          = 2;
-		pipelinePBR.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-		pipelinePBR.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-		pipelinePBR.m_ShaderCreateInfo[0].entryPoint = "main";
-		pipelinePBR.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
-		pipelinePBR.m_ShaderCreateInfo[0].sourceCode = clientAppInterface->LoadTextFile("shaders/OpaquePBR.vert");
-		pipelinePBR.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-		pipelinePBR.m_ShaderCreateInfo[1].entryPoint = "Opaque";
-		pipelinePBR.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
-		pipelinePBR.m_ShaderCreateInfo[1].sourceCode = clientAppInterface->LoadTextFile("shaders/OpaquePBR.frag");
-	}
-
-	scr::ShaderSystem::PipelineCreateInfo pipelineAlbedo;
-	{
-		pipelineAlbedo.m_Count                          = 2;
-		pipelineAlbedo.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-		pipelineAlbedo.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-		pipelineAlbedo.m_ShaderCreateInfo[0].entryPoint = "main";
-		pipelineAlbedo.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
-		pipelineAlbedo.m_ShaderCreateInfo[0].sourceCode = clientAppInterface->LoadTextFile("shaders/OpaquePBR.vert");
-		pipelineAlbedo.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-		pipelineAlbedo.m_ShaderCreateInfo[1].entryPoint = "OpaqueAlbedo";
-		pipelineAlbedo.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
-		pipelineAlbedo.m_ShaderCreateInfo[1].sourceCode = clientAppInterface->LoadTextFile("shaders/OpaquePBR.frag");
-	}
 
 
 	scr::VertexBufferLayout layout;
@@ -272,16 +244,37 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 	scr::ShaderResource pbrShaderResource({vertLayout, fragLayout});
 	pbrShaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", {});
 	pbrShaderResource.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", {});
-	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse", {});
-	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal", {});
-	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", {});
-	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_Emissive", {});
+	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_DiffuseTexture", {});
+	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_NormalTexture", {});
+	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_CombinedTexture", {});
+	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_EmissiveTexture", {});
 	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_DiffuseCubemap", {});
 	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_SpecularCubemap", {});
 	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {});
 
-	clientAppInterface->BuildEffectPass("OpaquePBR", &layout, &pipelinePBR, {pbrShaderResource});
-	clientAppInterface->BuildEffectPass("OpaqueAlbedo", &layout, &pipelineAlbedo, {pbrShaderResource});
+	passNames.clear();
+	passNames.push_back("OpaquePBR");
+	passNames.push_back("OpaqueAlbedo");
+	passNames.push_back("OpaqueNormal");
+	//Set scr::EffectPass
+	scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
+	{
+		pipelineCreateInfo.m_Count                          = 2;
+		pipelineCreateInfo.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
+		pipelineCreateInfo.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+		pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "main";
+		pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
+		pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = clientAppInterface->LoadTextFile("shaders/OpaquePBR.vert");
+		pipelineCreateInfo.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaquePBR";
+		pipelineCreateInfo.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
+		pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = clientAppInterface->LoadTextFile("shaders/OpaquePBR.frag");
+	}
+	clientAppInterface->BuildEffectPass("OpaquePBR", &layout, &pipelineCreateInfo, {pbrShaderResource});
+	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueAlbedo";
+	clientAppInterface->BuildEffectPass("OpaqueAlbedo", &layout, &pipelineCreateInfo, {pbrShaderResource});
+	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueNormal";
+	clientAppInterface->BuildEffectPass("OpaqueNormal", &layout, &pipelineCreateInfo, {pbrShaderResource});
 }
 
 void ClientRenderer::ExitedVR()
@@ -330,6 +323,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		inputCommand.m_pComputeEffect=mCopyCubemapEffect;
 		inputCommand.effectPassName = "CopyCubemap";
 		int32_t mip_y=0;
+		if(mDiffuseTexture->IsValid())
 		{
 			static uint32_t face= 0;
 			mip_y = 0;
@@ -354,6 +348,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			face++;
 			face=face%6;
 		}
+		if(mSpecularTexture->IsValid())
 		{
 			mip_y = 0;
 			int32_t          mip_size = videoConfig.specular_cubemap_size;
@@ -376,6 +371,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 				mip_size /= 2;
 			}
 		}
+		if(mRoughSpecularTexture->IsValid())
 		{
 			mip_y = 0;
 			int32_t          mip_size = videoConfig.rough_cubemap_size;
@@ -396,9 +392,9 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			}
 		}
 		GL_CheckErrors("Frame: CopyToCubemaps - Lighting");
+		if(mVideoTexture->IsValid())
 		{
 			inputCommandCreateInfo.effectPassName = "ExtractTagDataID";
-
 			scr::uvec3 size  = {1,1,1};
 			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractTagDataIDEffect, {mCubemapComputeShaderResources[0][2]});
 			cubemapUB.faceSize			=tc.width;
@@ -557,11 +553,9 @@ void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node>
 void ClientRenderer::ToggleTextures()
 {
 	OVRActorManager* actorManager = dynamic_cast<OVRActorManager*>(resourceManagers->mActorManager.get());
-
-	if(strcmp(GlobalGraphicsResources.effectPassName, "OpaquePBR") == 0)
-		actorManager->ChangeEffectPass("OpaqueAlbedo");
-	else if(strcmp(GlobalGraphicsResources.effectPassName, "OpaqueAlbedo") == 0)
-		actorManager->ChangeEffectPass("OpaquePBR");
+	passSelector++;
+	passSelector=passSelector%(passNames.size());
+	actorManager->ChangeEffectPass(passNames[passSelector].c_str());
 }
 
 

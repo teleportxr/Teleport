@@ -297,11 +297,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	{
 		ENetAddress remoteEndpoint;
 		// Set server ip to empty string to use broadcast ip
-		if(sessionClient.Discover("127.0.0.1", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
+		if(sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
 			if(!sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT))
 			{
-				OVR_ERROR("Discovered but failed to connect");
+				//OVR_WARN("Discovered but failed to connect");
 			}
 
 		}
@@ -749,10 +749,11 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, 
 }
 #include <algorithm>
 
-const scr::Effect::EffectPassCreateInfo& Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
+const scr::Effect::EffectPassCreateInfo* Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
 		, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)
 {
-	if (GlobalGraphicsResources.pbrEffect.HasEffectPass(effectPassName)) return GlobalGraphicsResources.pbrEffect.GetEffectPassCreateInfo(effectPassName);
+	if (GlobalGraphicsResources.pbrEffect.HasEffectPass(effectPassName))
+		return GlobalGraphicsResources.pbrEffect.GetEffectPassCreateInfo(effectPassName);
 
 	scr::ShaderSystem::PassVariables pv;
 	pv.mask          = false;

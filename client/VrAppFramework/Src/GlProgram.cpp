@@ -369,7 +369,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 		Free( p );
 		if ( abortOnError )
 		{
-			OVR_FAIL( "Failed to compile fragment shader" );
+			OVR_WARN( "Failed to compile fragment shader" );
 		}
 		return GlProgram();
 	}
@@ -508,7 +508,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 #ifdef OVR_BUILD_DEBUG
 		if ( p.Uniforms[i].Location < 0 || p.Uniforms[i].Binding < 0 )
 		{
-			OVR_WARN( "GlProgram::Build. Invalid shader parm: %s", parms[i].Name );
+			OVR_WARN( "GlProgram::Build. Invalid shader parameter: %s", parms[i].Name );
 		}
 #endif
 
