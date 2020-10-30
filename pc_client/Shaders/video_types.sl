@@ -36,11 +36,20 @@ struct SpotLight
 	mat4 shadowProjectionMatrix;
 };
 
+struct LightTag
+{
+	mat4 worldToShadowMatrix;
+	vec2 shadowTexCoordOffset;
+	vec2 shadowTexCoordScale;
+};
+
 struct VideoTagData2D
 {
 	vec3 cameraPosition;
 	float pad;
 	vec4 cameraRotation;
+	// Some light information 
+	LightTag lightTags[4];
 };
 
 struct VideoTagDataCube
@@ -49,6 +58,7 @@ struct VideoTagDataCube
 	float pad;
 	vec4 cameraRotation;
 	// Some light information 
+	LightTag lightTags[4];
 };
 
 #endif

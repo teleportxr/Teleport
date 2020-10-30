@@ -124,7 +124,8 @@ namespace scr
 		float range;
 		float spotAngle;
 		LightType lightType;
-		float shadowViewMatrix[4][4];
+		avs::vec3 position;
+		avs::vec4 orientation;
 		float shadowProjectionMatrix[4][4];
 		int texturePosition[2];
 		int textureSize;

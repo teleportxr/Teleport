@@ -3,6 +3,7 @@
 #include "../SL/common.sl"
 #include "../SL/render_states.sl"
 #include "../SL/camera_constants.sl"
+#include "video_types.sl"
 #include "../SL/depth.sl"
 #include "pbr_constants.sl"
 
@@ -14,6 +15,7 @@ uniform TextureCube diffuseCubemap;
 uniform TextureCube specularCubemap;
 uniform TextureCube roughSpecularCubemap;
 uniform TextureCube lightingCubemap;
+uniform Texture2D videoTexture;
 
 //////////////////////////
 uniform TextureCube nearFarTextureCube;
@@ -23,6 +25,31 @@ uniform Texture3D inscatterVolumeTexture;
 //////////////////////////
 
 uniform StructuredBuffer<PbrLight> lights;
+uniform StructuredBuffer<uint4> TagDataIDBuffer;
+uniform StructuredBuffer<VideoTagData2D> TagData2DBuffer;
+uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
+
+SamplerComparisonState shadowComparisonState
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Clamp;
+	AddressV = Clamp;
+	AddressW = Clamp;
+	Comparison= GREATER;
+};
+
+ vec4 GetShadowCoord( vec3 wpos, PbrLight light,LightTag lightTag )
+{
+    return vec4( mul (lightTag.worldToShadowMatrix, vec4(wpos,1.0)).xyz, 0);
+}
+
+float GetShadow(Texture2D videoTexture,PbrLight light,LightTag lightTag,vec3 wpos)
+{
+	vec4 spos=GetShadowCoord( wpos, light, lightTag );
+	vec4 coord=vec4(lightTag.shadowTexCoordOffset.xy+spos.xy*lightTag.shadowTexCoordScale.xy,spos.zw);
+	float depth_lookup=videoTexture.SampleLevel(clampSamplerState,coord.xy,0).x;//,coord.z);
+	return depth_lookup;
+}
 
 float GetRoughness(vec4 combinedLookup)
 {
@@ -278,12 +305,12 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	return colour;
 }
 
-vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,PbrLight light)
+vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,PbrLight light,LightTag lightTag)
 {
 	vec3 diff						=light.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
 	float d							=max(1.0,dist_to_light/light.radius);
-	vec3 irradiance					=light.colour*lerp(1.0,5.0/(d*d),light.is_point);
+	vec3 irradiance					=light.colour.rgb*lerp(1.0,5.0/(d*d),light.is_point);
 	vec3 dir_from_surface_to_light	=lerp(-light.direction,normalize(diff),light.is_point);
 	float roughnessL				= max(.01, surfaceProperties.roughness2);
 	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
@@ -298,9 +325,19 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 
 	//float ao				= SceneAO(pos, normal, localToWorld);
 	specular						*= surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
-	vec3 colour						= diffuse+specular;
+	vec3 colour						=diffuse+specular;
 
-	return colour;
+	float shadow					=GetShadow(videoTexture,light,lightTag,surfaceProperties.position);
+	diffuse *=shadow;
+     vec4 spos= mul ( vec4(surfaceProperties.position,1.0),lightTag.worldToShadowMatrix);
+    // vec4 spos=saturate( mul (light.lightSpaceTransform, vec4(surfaceProperties.position,1.0)));
+	//spos.xy=lightTag.shadowTexCoordScale.xy;
+	//	spos.z=0;
+
+	vec4 coord=(vec4(lightTag.shadowTexCoordOffset.xy+spos.xy*lightTag.shadowTexCoordScale.xy,spos.zw));
+	vec4 shadowLookup=videoTexture.SampleLevel(clampSamplerState,coord.xy,0);//,coord.z);
+	float in_range=step(0.0,spos.x)*step(spos.x,1.0)*step(0.0,spos.y)*step(spos.y,1.0);
+	return in_range*(saturate(spos.xyz)+shadowLookup.xxx+.2*frac(spos.xyz*10.0));//vec3(shadow,0,0);
 }
 
 vec4 Solid(vertexOutput IN)
@@ -341,12 +378,15 @@ vec4 Solid(vertexOutput IN)
 
 	SurfaceState surfaceState	=PreprocessSurface(view,surfaceProperties);
 	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
+	int id = int(TagDataIDBuffer[0].x);
+	VideoTagDataCube tagData = TagDataCubeBuffer[id];
 	for(int i=0;i<10;i++)
 	{
 		if(i>=lightCount)
 			break;
-		PbrLight light			=lights[i];
-		c					+=PBRAddLight(surfaceState,view,surfaceProperties,light);
+		PbrLight light		=lights[i];
+		LightTag lightTag	=tagData.lightTags[i];
+		c					=PBRAddLight(surfaceState,view,surfaceProperties,light,lightTag);
 	}
 	//c.gb += 0.03;
 
@@ -490,7 +530,7 @@ shader vec4 PS_Transparent(vertexOutput IN) : SV_TARGET
 VertexShader vs_solid = CompileShader(vs_4_0, VS_Solid());
 VertexShader vs_anim = CompileShader(vs_4_0, VS_Animation());
 PixelShader ps_solid = CompileShader(ps_4_0, PS_Solid());
-PixelShader ps_depth = CompileShader(ps_4_0, PS_Depth());
+PixelShader ps_depth = CompileShader(ps_5_1, PS_Depth());
 
 //Debug renders.
 PixelShader ps_solid_albedo_only = CompileShader(ps_4_0, PS_Solid_AlbedoOnly()); //Albedo only view

@@ -544,6 +544,24 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 
 			data[i].cameraPosition = { pos.x, pos.y, pos.z };
 			data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
+			for(int j=0;j<td.lights.size();j++)
+			{
+				LightTag &t=data[i].lightTags[j];
+				const scr::LightData &l=td.lights[j];
+				// Convert from +-1 to [0,1]
+				t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
+				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
+				t.shadowTexCoordScale.x=float(l.textureSize)/float(lastSetupCommand.video_config.video_width);
+				t.shadowTexCoordScale.y=float(l.textureSize)/float(lastSetupCommand.video_config.video_height);
+				// Because tag data is NOT properly transformed in advance yet:
+				avs::vec3 position		=l.position;
+				avs::vec4 orientation	=l.orientation;
+				avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
+				avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
+				scr::mat4 worldToShadowMatrix=scr::mat4::Translation(position)*scr::mat4::Rotation(orientation) ;
+			//	worldToShadowMatrix		=scr::mat4((const float*)&l.shadowProjectionMatrix)*worldToShadowMatrix;
+				t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
+			}
 		}	
 		tagDataCubeBuffer.SetData(deviceContext, data);
 	}
@@ -617,6 +635,8 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d"	,resourceManagers.mMeshManager.GetCache(cacheLock).size()
 																									,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+
+		int j=0;
 		for(auto &i:cachedLights)
 		{
 			auto &l=i.second;
@@ -628,7 +648,15 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 				else
 					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,L.colour.x,L.colour.y,L.colour.z,L.position.x,L.position.y,L.position.z,L.radius));
 			}
+			if(j<videoTagDataCubeArray[0].lights.size())
+			{
+				auto &l=videoTagDataCubeArray[0].lights[j];
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z));
+			}
+			j++;
 		}
+		
+		
 		auto &missing=resourceCreator.GetMissingResources();
 		if(missing.size())
 		{
@@ -702,6 +730,9 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 
 void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, std::shared_ptr<scr::Node> actor)
 {
+	AVSTextureHandle th = avsTextures[0];
+	AVSTexture& tx = *th;
+	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
@@ -764,10 +795,13 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "roughSpecularCubemap", roughSpecularCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
-					pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
+					pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
+				//	pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				}
 				
 				lightsBuffer.Apply(deviceContext, pbrEffect, _lights );
+				tagDataCubeBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataCubeBuffer"));
+				tagDataIDBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataIDBuffer"));
 				std::string usedPassName = passName;
 
 				std::shared_ptr<scr::Skin> skin = actor->GetSkin();
@@ -950,7 +984,6 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 	
-
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
@@ -1098,6 +1131,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		{
 			memcpy(&light, &data[index], sizeof(scr::LightData));
 			avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
+
 			index += sizeof(scr::LightData);
 		}
 		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
@@ -1252,10 +1286,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta)
 {
-	mouseCameraInput.MouseButtons
-		|= (bLeftButtonReleased ? crossplatform::MouseCameraInput::LEFT_BUTTON_RELEASED : 0)
-		| (bRightButtonReleased ? crossplatform::MouseCameraInput::RIGHT_BUTTON_RELEASED : 0)
-		| (bMiddleButtonReleased ? crossplatform::MouseCameraInput::MIDDLE_BUTTON_RELEASED : 0);
 }
 
 void ClientRenderer::OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)

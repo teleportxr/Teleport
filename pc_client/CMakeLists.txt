@@ -60,7 +60,8 @@ add_sfx_shader_project(pc_client ${JSON_FILE} INCLUDES "${SIMUL_PLATFORM_DIR}/Di
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 set_target_properties( pc_client PROPERTIES FOLDER Client)
-target_include_directories(pc_client PRIVATE ${REMOTEPLAY_PLATFORM_DIR}/..) 
+set_target_properties(pc_client PROPERTIES
+		VS_DEBUGGER_ENVIRONMENT       "PATH=C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x86;$(PATH)"	 )		
 target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include )
 target_compile_features(pc_client PRIVATE cxx_std_17)
 

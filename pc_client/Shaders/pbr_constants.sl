@@ -46,6 +46,7 @@ SIMUL_CONSTANT_BUFFER_END
 SIMUL_CONSTANT_BUFFER(BoneMatrices, 12)
 	mat4 boneMatrices[64];
 SIMUL_CONSTANT_BUFFER_END
+
 struct PbrLight
 {
 	mat4 lightSpaceTransform;
@@ -55,7 +56,9 @@ struct PbrLight
 	vec3 direction;
 	float is_point;
 	float radius;	
-	vec3 pad3;
+	vec2 pad3;
+	vec2 shadowTexCoordOffset;
+	vec2 shadowTexCoordScale;
 };						
 
 #endif

@@ -811,6 +811,10 @@ namespace avs
 		int32_t		light_x=0;
 		int32_t		light_y=0;
 		int32_t		light_cubemap_size=0;
+		
+		int32_t		shadowmap_x=0;
+		int32_t		shadowmap_y=0;
+		int32_t		shadowmap_size=0;
 	};
 
 	struct AudioConfig

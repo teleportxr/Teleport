@@ -30,6 +30,8 @@ namespace scr
 			avs::vec3 direction;
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
+			avs::vec2 shadowTexCoordOffset;
+			avs::vec2 shadowTexCoordScale;
 		};
 
 		struct LightData //Layout conformant to GLSL std140
@@ -42,6 +44,8 @@ namespace scr
 			float is_point;
 			float radius;		// "point" light is a sphere.
 			avs::vec3 pad3;
+			avs::vec2 shadowTexCoordOffset;
+			avs::vec2 shadowTexCoordScale;
 		};
 	
 	private:

@@ -648,7 +648,10 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	videoConfig.light_x				=videoConfig.diffuse_x+(casterSettings.diffuseCubemapSize*3*7)/4;
 	videoConfig.light_y				=videoConfig.diffuse_y;
 	///TODO: Initialise actors in range.
-
+	
+	videoConfig.shadowmap_x		=videoConfig.diffuse_x;
+	videoConfig.shadowmap_y		=videoConfig.diffuse_y+2*videoConfig.diffuse_cubemap_size;
+	videoConfig.shadowmap_size	=64;
 	client.clientMessaging.sendCommand(std::move(setupCommand));
 
 	client.isStreaming = true;

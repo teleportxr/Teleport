@@ -41,6 +41,8 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	light.radius=pLightCreateInfo->lightRadius;
 	light.power = 1.0f; //i.e 100W
 	light.is_point=float(pLightCreateInfo->type!=Type::DIRECTIONAL);
+	light.shadowTexCoordOffset= pLightCreateInfo->shadowTexCoordOffset;
+	light.shadowTexCoordScale= pLightCreateInfo->shadowTexCoordScale;
 	UpdateLightSpaceTransform();
 
 	if (m_CI.shadowMapTexture)
@@ -104,8 +106,7 @@ void Light::UpdateLightSpaceTransform()
 		avs::vec3 defaultDirection(0,0,1.0f);
 		light.position = m_CI.position;
 		light.direction = ((m_CI.orientation * m_CI.direction) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
-		light.lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation);
+		avs::vec3 scale(m_CI.lightRadius,m_CI.lightRadius,m_CI.lightRadius);
+		light.lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation)*mat4::Scale(scale);
 	}
-	else
-		return;
 }

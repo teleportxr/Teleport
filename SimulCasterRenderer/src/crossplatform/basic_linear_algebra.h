@@ -206,6 +206,13 @@ namespace scr
 			m(m), n(n), o(o), p(p)
 		{}
 
+		mat4(const float *m)
+			:mat4(m[0], m[1], m[2], m[3],
+				  m[4], m[5], m[6], m[7],
+				  m[8], m[9], m[10], m[11],
+				  m[12], m[13], m[14], m[15])
+		{}
+
 		mat4(float diagonal)
 			:mat4
 			(diagonal, 0.0f, 0.0f, 0.0f,

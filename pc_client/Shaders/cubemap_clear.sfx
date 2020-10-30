@@ -1,19 +1,19 @@
 //  Copyright (c) 2015-2017 Simul Software Ltd. All rights reserved.
 #include "shader_platform.sl"
 #include "common.sl"
+#include "video_types.sl"
 #include "render_states.sl"
 #include "sampler_states.sl"
 #include "camera_constants.sl"
 #include "quaternion.sl"
 #include "cubemap_constants.sl"
-#include "video_types.sl"
 
 uniform TextureCube cubemapTexture;
 uniform Texture2D<float4> plainTexture;
-uniform RWTexture2DArray<uchar4> RWTextureTargetArray;
-uniform RWStructuredBuffer<uint4> RWTagDataIDBuffer;
-uniform StructuredBuffer<VideoTagData2D> TagData2DBuffer;
-uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
+uniform RWTexture2DArray<uchar4> RWTextureTargetArray: register(u1);
+uniform RWStructuredBuffer<uint4> RWTagDataIDBuffer: register(u2);
+uniform StructuredBuffer<VideoTagData2D> TagData2DBuffer: register(u3);
+uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer: register(t3);
 
  
 vec2 OffsetScale(vec2 uv, vec4 offsc)
