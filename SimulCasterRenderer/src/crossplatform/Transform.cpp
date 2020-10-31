@@ -36,7 +36,11 @@ Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 
 	m_ShaderResource = ShaderResource({m_ShaderResourceLayout});
 	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_ActorUBO", {s_UB.get(), 0, sizeof(TransformData)});
 
-	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
+	mat4 trans=mat4::Translation(translation);
+	mat4 ident=mat4::Identity();
+	mat4 transmul=trans*ident;
+
+	m_TransformData.m_ModelMatrix = trans * mat4::Rotation(rotation) * mat4::Scale(scale);
 }
 
 Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, scr::mat4 matrix)

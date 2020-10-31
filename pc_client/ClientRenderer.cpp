@@ -422,7 +422,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 					cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoTexture);
-
+				tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataIDBuffer"));
+				
 					cubemapClearEffect->Apply(deviceContext, "recompose_with_depth_alpha", 0);
 					renderPlatform->DispatchCompute(deviceContext, W / 16, W / 16, 6);
 					cubemapClearEffect->Unapply(deviceContext);
@@ -519,7 +520,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyCombined.get())))->GetSimulTexture());
 	}
 	hdrFramebuffer->Deactivate(deviceContext);
-	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.44f);
+	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,1.0f);
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
@@ -558,8 +559,15 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 				avs::vec4 orientation	=l.orientation;
 				avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
 				avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
-				scr::mat4 worldToShadowMatrix=scr::mat4::Translation(position)*scr::mat4::Rotation(orientation) ;
-			//	worldToShadowMatrix		=scr::mat4((const float*)&l.shadowProjectionMatrix)*worldToShadowMatrix;
+				//orientation.x*=-1.0f;
+				//orientation.y*=-1.0f;
+				//orientation.z*=-1.0f;
+				scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
+					//scr::mat4::Rotation(orientation)*scr::mat4::Translation(-position);
+				
+				//scr::mat4 proj=scr::mat4((const float*)&l.shadowProjectionMatrix);
+				//worldToShadowMatrix		=proj*worldToShadowMatrix;
+				//worldToShadowMatrix		=worldToShadowMatrix.Transpose();
 				t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
 			}
 		}	
@@ -652,6 +660,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			{
 				auto &l=videoTagDataCubeArray[0].lights[j];
 				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z));
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]));
 			}
 			j++;
 		}
@@ -822,6 +831,7 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 				renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
 				pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), usedPassName.c_str());
 				renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
+				pbrEffect->UnbindTextures(deviceContext);
 				pbrEffect->Unapply(deviceContext);
 				layout->Unapply(deviceContext);
 			}

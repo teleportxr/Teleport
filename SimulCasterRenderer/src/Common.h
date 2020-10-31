@@ -127,6 +127,7 @@ namespace scr
 		avs::vec3 position;
 		avs::vec4 orientation;
 		float shadowProjectionMatrix[4][4];
+		float worldToShadowMatrix[4][4];
 		int texturePosition[2];
 		int textureSize;
 		uint32_t uid;
