@@ -65,13 +65,13 @@ const float g_MinVariance=0.000001;
 float ChebyshevUpperBound(vec2 Moments, float t)
 {
 	// One-tailed inequality valid if t > Moments.x   
-	float p = (t <= Moments.x);   // Compute variance.    
+	float p =step(t,Moments.x+0.00);// (t <= Moments.x);   // Compute variance.    
 	float Variance = Moments.y - (Moments.x*Moments.x);
 	Variance = max(Variance, g_MinVariance);
 	// Compute probabilistic upper bound.    
 	float d = t - Moments.x;   
 	float p_max = Variance / (Variance + d*d);
-	return p;// max(p, p_max);
+	return  max(p, p_max);
 }
 
 float ShadowContribution(vec2 LightTexCoord, float DistanceToLight)
@@ -88,11 +88,14 @@ vec4 GetVarianceShadow(Texture2D videoTexture,PbrLight light,LightTag lightTag,v
 	vec4 spos=GetShadowCoord( wpos, light, lightTag );
 	vec4 coord=vec4(lightTag.shadowTexCoordOffset.xy+spos.xy*lightTag.shadowTexCoordScale.xy,spos.zw);
 	//coord.z=1.0-coord.z;
-	float fragDepth=1.0-spos.z;
 	// Gamma-correct is necessary for now...
 	vec4 depth_lookup=(videoTexture.SampleLevel(clampSamplerState,coord.xy,0));//.x+0.03;
-	float depth=depth_lookup.x;//-0.01;
-	vec2 moments=vec2(depth,depth_lookup.y);
+	//float depth=depth_lookup.x;//-0.01;
+	float depth=depth_lookup.x;//0.75+(depth_lookup.x-0.75)/4.0;
+	float D2=depth_lookup.y;
+	vec2 moments=vec2(depth,D2);
+	float fragDepth=1.0-spos.z;
+	fragDepth=0.8+8.0*(fragDepth-0.8);
 	float shadowed = ChebyshevUpperBound(moments,fragDepth); 
 
 	// r is depth, g is depth squared.
@@ -100,7 +103,7 @@ vec4 GetVarianceShadow(Texture2D videoTexture,PbrLight light,LightTag lightTag,v
 	float shadowed2=step(fragDepth,depth);
 	//if(wpos.y>0)
 	// 	return fragDepth;
-	return shadowed;//vec4(shadowed,shadowed,shadowed,0);
+	return vec4(shadowed,0,0,0);//vec4(shadowed,shadowed,shadowed,0);
 }
 
 float GetRoughness(vec4 combinedLookup)
@@ -381,7 +384,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 
 	vec4 shadow					=GetVarianceShadow(videoTexture,light,lightTag,surfaceProperties.position);
 	//diffuse *=shadow;
-    return shadow;//*(diffuse+specular);
+    return shadow.x*(diffuse+specular);
 }
 
 vec4 Solid(vertexOutput IN)
@@ -430,7 +433,7 @@ vec4 Solid(vertexOutput IN)
 			break;
 		PbrLight light		=lights[i];
 		LightTag lightTag	=tagData.lightTags[i];
-		c					=PBRAddLight(surfaceState,view,surfaceProperties,light,lightTag);
+		c					+=PBRAddLight(surfaceState,view,surfaceProperties,light,lightTag);
 	}
 	//c.gb += 0.03;
 
