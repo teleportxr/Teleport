@@ -30,7 +30,8 @@ namespace avs
 
 		std::unique_ptr<AudioParserInterface> m_parser;
 
-		NetworkFrame m_frame;
+		std::vector<uint8_t> m_frameBuffer;
+		NetworkFrameInfo m_frame;
 		bool m_configured = false;
 		int m_streamId = 0;
 		Result processPayload(const uint8_t* buffer, size_t bufferSize, AudioTargetInterface* target);
@@ -59,6 +60,8 @@ namespace avs
 
 		d().m_configured = true;
 		d().m_streamId = streamId;
+		d().m_frameBuffer.resize(2048);
+
 		return Result::OK;
 	}
 
@@ -105,33 +108,47 @@ namespace avs
 			return Result::Node_InvalidOutput;
 		}
 
-		FrameInterface* input = dynamic_cast<FrameInterface*>(getInput(0));
+		IOInterface* input = dynamic_cast<IOInterface*>(getInput(0));
 		if (!input)
 		{
 			return Result::Node_InvalidInput;
 		}
 
 		Result result = Result::OK;
+
 		do
 		{
-			result = input->readFrame(this, d().m_frame, d().m_streamId);
+			size_t bufferSize = d().m_frameBuffer.size();
+			size_t bytesRead;
+			result = input->read(this, d().m_frameBuffer.data(), bufferSize, bytesRead);
 
 			if (result == Result::IO_Empty)
 			{
 				break;
 			}
-			else if (result != Result::OK)
+
+			if (result == Result::IO_Retry)
 			{
-				AVSLOG(Warning) << "AudioDecoder: Failed to read input";
+				d().m_frameBuffer.resize(bufferSize);
+				result = input->read(this, d().m_frameBuffer.data(), bufferSize, bytesRead);
+			}
+
+			if (result != Result::OK || bytesRead < sizeof(NetworkFrameInfo))
+			{
+				AVSLOG(Warning) << "AudioDecoder: Failed to read input.";
 				return result;
 			}
+
+			// Copy frame info 
+			memcpy(&d().m_frame, d().m_frameBuffer.data(), sizeof(NetworkFrameInfo));
+
 			// Check if data was lost or corrupted
 			if (d().m_frame.broken)
 			{
 				continue;
 			}
 
-			result = d().processPayload(d().m_frame.buffer.data(), d().m_frame.bufferSize, ati);
+			result = d().processPayload(d().m_frameBuffer.data() + sizeof(NetworkFrameInfo), d().m_frame.dataSize, ati);
 		} while (result == Result::OK);
 
 		return result;
@@ -154,9 +171,9 @@ namespace avs
 
 	Result AudioDecoder::onInputLink(int slot, Node* node)
 	{
-		if (!dynamic_cast<FrameInterface*>(node))
+		if (!dynamic_cast<IOInterface*>(node))
 		{
-			AVSLOG(Error) << "AudioDecoder: Input node must implement packet operations";
+			AVSLOG(Error) << "AudioDecoder: Input node must provide data";
 			return Result::Node_Incompatible;
 		}
 		return Result::OK;

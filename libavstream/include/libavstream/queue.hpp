@@ -5,6 +5,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
+#include <vector>
 
 namespace avs
 {
@@ -66,14 +67,14 @@ namespace avs
 		Result write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 
 		/*!
-		 * Amend buffer at the back of the queue.
-		 * \sa IOInterface::amend()
+		 * Emplace buffer at the back of the queue.
+		 * \sa IOInterface::emplace()
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::IO_Full if attempted to write to full queue.
 		 *  - Result::IO_OutOfMemory if failed to allocate memory for the queue buffer.
 		 */
-		Result amend(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
+		Result emplace(Node*, std::vector<char>&& buffer, size_t& bytesWritten);
 
 
 	

@@ -213,7 +213,7 @@ public:
 	void Update();
 
 	static constexpr size_t NumVidStreams = 1;
-	static constexpr bool AudioStream = true;
+	static constexpr bool AudioStream = false;
 	static constexpr bool GeoStream  = true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
@@ -228,14 +228,17 @@ public:
 	avs::VideoConfig videoConfig;
 
 	avs::NetworkSource source;
+	avs::Queue videoQueues[NumVidStreams];
 	avs::Decoder decoder[NumVidStreams];
 	avs::Surface surface[NumVidStreams];
 
 	GeometryDecoder geometryDecoder;
 	ResourceCreator resourceCreator;
+	avs::Queue geometryQueue;
 	avs::GeometryDecoder avsGeometryDecoder;
 	avs::GeometryTarget avsGeometryTarget;
 	
+	avs::Queue audioQueue;
 	avs::AudioDecoder avsAudioDecoder;
 	avs::AudioTarget avsAudioTarget;
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
@@ -244,6 +247,7 @@ public:
 	avs::NetworkSourceParams sourceParams = {};
 	avs::DecoderParams decoderParams = {};
 	avs::Pipeline pipeline;
+	
 	avs::SetupCommand lastSetupCommand;
 	int RenderMode;
 	std::shared_ptr<scr::Material> mFlatColourMaterial;

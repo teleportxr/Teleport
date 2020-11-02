@@ -143,6 +143,7 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 	m_params = params;
 	m_configured = true;
 	m_streamId = streamId;
+	m_frameBuffer.resize(100000);
 
 	return Result::OK;
 }
@@ -206,7 +207,7 @@ Result Decoder::process(uint32_t timestamp)
 		return Result::Node_InvalidOutput;
 	}
 
-	FrameInterface* input = dynamic_cast<FrameInterface*>(getInput(0));
+	IOInterface* input = dynamic_cast<IOInterface*>(getInput(0));
 	if (!input)
 	{
 		return Result::Node_InvalidInput;
@@ -224,20 +225,32 @@ Result Decoder::process(uint32_t timestamp)
 		m_extraDataSize = 0;
 		m_firstVCLOffset = 0;
 
-		result = input->readFrame(this, m_frame, m_streamId);
+		size_t bufferSize = m_frameBuffer.size();
+		size_t bytesRead;
+		result = input->read(this, m_frameBuffer.data(), bufferSize, bytesRead);
 
 		if (result == Result::IO_Empty)
 		{
 			break;
 		}
-		else if (result != Result::OK)
+
+		if (result == Result::IO_Retry)
 		{
-			AVSLOG(Warning) << "Decoder: Failed to read input";
+			m_frameBuffer.resize(bufferSize);
+			result = input->read(this, m_frameBuffer.data(), bufferSize, bytesRead);
+		}
+
+		if (result != Result::OK || bytesRead < sizeof(NetworkFrameInfo))
+		{
+			AVSLOG(Warning) << "Decoder: Failed to read input.";
 			return result;
 		}
 
+		// Copy frame info 
+		memcpy(&m_frame, m_frameBuffer.data(), sizeof(NetworkFrameInfo));
+
 		// Check if data was lost or corrupted
-		if (m_frame.broken || m_frame.bufferSize == 0)
+		if (m_frame.broken || m_frame.dataSize == 0)
 		{
 			m_state = {};
 			m_idrRequired = true;
@@ -255,7 +268,7 @@ Result Decoder::process(uint32_t timestamp)
 
 		// Parse will call the onPacketParsed callback and this will call processPayload
 		// processPayload will call the decoder
-		result = m_vid_parser->parse((const char*)m_frame.buffer.data(), m_frame.bufferSize);
+		result = m_vid_parser->parse((const char*)(m_frameBuffer.data() + sizeof(NetworkFrameInfo)), m_frame.dataSize);
 		// Any decoding for this frame now complete //
 
 		m_currentFrameNumber = m_frame.pts;
@@ -395,11 +408,11 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 	{
 #if defined(PLATFORM_WINDOWS)
 		const void* frameData = buffer + m_extraDataSize;
-		size_t frameSize = m_frame.bufferSize - m_extraDataSize;
+		size_t frameSize = m_frame.dataSize - m_extraDataSize;
 		// NVidia decoder takes the whole frame
 		result = m_backend->decode(frameData, frameSize, payloadType, isLastPayload);
 #elif defined(PLATFORM_ANDROID)
-		size_t size = m_frame.bufferSize - m_firstVCLOffset;
+		size_t size = m_frame.info.dataSize - m_firstVCLOffset;
 		result = m_backend->decode(buffer + m_firstVCLOffset, size, payloadType, isLastPayload);
 #endif
 		if (result == avs::Result::DecoderBackend_ReadyToDisplay)
@@ -423,9 +436,9 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 
 Result Decoder::onInputLink(int slot, Node* node)
 {
-	if (!dynamic_cast<FrameInterface*>(node))
+	if (!dynamic_cast<IOInterface*>(node))
 	{
-		AVSLOG(Error) << "Decoder: Input node must implement packet operations";
+		AVSLOG(Error) << "Decoder: Input node must provide data";
 		return Result::Node_Incompatible;
 	}
 	return Result::OK;

@@ -87,7 +87,8 @@ namespace avs
 		std::unique_ptr<udp::socket> m_socket;
 		std::unique_ptr<udp::endpoint> m_endpoint;
 #endif
-
+		std::vector<NetworkSourceStream> m_streams;
+		std::unordered_map<uint32_t, int> m_streamNodeMap;
 		NetworkSourceParams m_params;
 		NetworkSourceCounters m_counters;
 
@@ -95,14 +96,8 @@ namespace avs
 
 		uint32_t m_pipelineTimestamp = 0;
 
-		// Queues of raw payload buffers for each stream
-		// (each queue contains decoder packets for a single frame in decoding order)
-		// key is stream id.
-		using StreamBuffers = std::map<int,std::queue<NetworkFrame>>;
 		// Second level jitter queue with first level buffer queues for every stream.
 		//std::unique_ptr<JitterBuffer<StreamBuffers>> m_jitterBuffer;
-
-		StreamBuffers m_streamBuffers;
 
 		struct
 		{
@@ -115,8 +110,9 @@ namespace avs
 		int64_t lastBytesReceived;
 
 		std::thread thr;
-		std::mutex m_mutex;
-		mutable bool runningThread;
+		std::mutex m_networkMutex;
+		std::mutex m_dataMutex;
+		std::atomic_bool runningThread;
 
 		int32_t debugStream;
 		bool mDebugNetworkPackets=false;

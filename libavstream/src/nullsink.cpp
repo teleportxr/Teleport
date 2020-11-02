@@ -34,12 +34,6 @@ Result NullSink::write(Node* writer, const void* buffer, size_t bufferSize, size
 	// Do nothing.
 	return Result::OK;
 }
-
-Result NullSink::amend(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten)
-{
-	// Do nothing.
-	return Result::OK;
-}
 	
 Result NullSink::readPacket(Node* reader, void* buffer, size_t& bufferSize, int )
 {

@@ -76,20 +76,6 @@ public:
 	Result write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 
 	/*!
-	 * Not implemented.
-	 * @param writer
-	 * @param buffer
-	 * @param bufferSize
-	 * @param bytesWritten
-	 * @return
-	 */
-	Result amend(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override
-	{
-		assert(0);
-		return Result::UnknownError;
-	}
-
-	/*!
 	 * File node does not support packet read operations.
 	 * \return Always returns Result::Node_NotSupported.
 	 */
