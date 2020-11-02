@@ -213,7 +213,7 @@ public:
 	void Update();
 
 	static constexpr size_t NumVidStreams = 1;
-	static constexpr bool AudioStream = false;
+	static constexpr bool AudioStream = true;
 	static constexpr bool GeoStream  = true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
