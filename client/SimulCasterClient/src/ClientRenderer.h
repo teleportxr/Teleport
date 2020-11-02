@@ -90,6 +90,9 @@ public:
 
 	avs::Decoder       mDecoder;
 	avs::NetworkSource mNetworkSource;
+	avs::Queue videoQueue;
+	avs::Queue audioQueue;
+	avs::Queue geometryQueue;
 
 	avs::vec3 oculusOrigin;		// in metres. The headPose will be relative to this.
 	scr::mat4 transformToOculusOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.

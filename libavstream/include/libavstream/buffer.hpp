@@ -55,11 +55,6 @@ public:
 	 */
 	Result write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 
-	Result amend(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override
-	{
-		return Result::File_WriteFailed;
-	}
-
 	/*! Get currently configured buffer capacity. */
 	size_t getCapacity() const;
 

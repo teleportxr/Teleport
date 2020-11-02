@@ -178,7 +178,8 @@ namespace avs
 		DecoderState m_state = {};
 
 		uint64_t m_currentFrameNumber = 0;
-		NetworkFrame m_frame;
+		std::vector<uint8_t> m_frameBuffer;
+		NetworkFrameInfo m_frame;
 		size_t m_extraDataSize = 0;
 		size_t m_firstVCLOffset = 0;
 		int m_interimFramesProcessed = 0;

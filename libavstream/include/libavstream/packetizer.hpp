@@ -75,12 +75,6 @@ public:
 	 *  - Result::IO_OutOfMemory if failed to allocate memory for internal buffer.
 	 */
 	Result write(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
-
-	/*!
-	 * Packetizer node does not support amend operations.
-	 * \return Always returns Result::Node_NotSupported.
-	 */
-	Result amend(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 	
 	/*!
 	 * Get node display name (for reporting & profiling).

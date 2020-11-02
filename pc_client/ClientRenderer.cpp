@@ -154,7 +154,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	meshRenderer->RestoreDeviceObjects(renderPlatform);
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
-	videoTexture = renderPlatform->CreateTexture();
+	videoTexture = renderPlatform->CreateTexture();  
 	specularCubemapTexture = renderPlatform->CreateTexture();
 	roughSpecularCubemapTexture = renderPlatform->CreateTexture();
 	diffuseCubemapTexture = renderPlatform->CreateTexture();
@@ -615,7 +615,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDPsReceived));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
 	}
 	else if(show_osd== CAMERA_OSD)
 	{
@@ -935,13 +935,24 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 1212992;
 	sourceParams.requiredLatencyMs=setupCommand.requiredLatencyMs;
-	auto numStreams = NumVidStreams + (AudioStream ? 1 : 0) + (GeoStream ? 1 : 0);
+
+	std::vector<avs::NetworkSourceStream> streams = { {20} };
+	if (AudioStream)
+	{
+		streams.push_back({ 40 });
+	}
+	if (GeoStream)
+	{
+		streams.push_back({ 60 });
+	}
+
 	// Configure for num video streams + 1 audio stream + 1 geometry stream
-	if (!source.configure(numStreams, setupCommand.port+1, server_ip, setupCommand.port, sourceParams))
+	if (!source.configure(std::move(streams), setupCommand.port + 1, server_ip, setupCommand.port, sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;
 	}
+
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
 	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
@@ -1013,8 +1024,11 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 			throw std::runtime_error("Failed to configure output surface node");
 		}
 
+		videoQueues[i].configure(16, "VideoQueue " + i);
+
+		avs::Node::link(source, videoQueues[i]);
+		avs::Node::link(videoQueues[i], decoder[i]);
 		pipeline.link({ &decoder[i], &surface[i] });
-		avs::Node::link(source, decoder[i]);
 	}
 
 	// Audio
@@ -1030,7 +1044,12 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		audioPlayer.configure(audioParams);
 		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
 		avsAudioTarget.configure(audioStreamTarget.get());
-		pipeline.link({ &source, &avsAudioDecoder, &avsAudioTarget });
+
+		audioQueue.configure(120, "AudioQueue");
+
+		avs::Node::link(source, audioQueue);
+		avs::Node::link(audioQueue, avsAudioDecoder);
+		pipeline.link({ &avsAudioDecoder, &avsAudioTarget });
 	}
 
 	// We will add a GEOMETRY PIPE
@@ -1038,7 +1057,12 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	{
 		avsGeometryDecoder.configure(60,&geometryDecoder);
 		avsGeometryTarget.configure(&resourceCreator);
-		pipeline.link({ &source, &avsGeometryDecoder, &avsGeometryTarget });
+
+		geometryQueue.configure(16, "GeometryQueue");
+
+		avs::Node::link(source, geometryQueue);
+		avs::Node::link(geometryQueue, avsGeometryDecoder);
+		pipeline.link({ &avsGeometryDecoder, &avsGeometryTarget });
 	}
 
 	handshake.startDisplayInfo.width = hdrFramebuffer->GetWidth();
@@ -1059,6 +1083,13 @@ void ClientRenderer::OnVideoStreamClosed()
 {
 	WARN("VIDEO STREAM CLOSED");
 	pipeline.deconfigure();
+	for (int i = 0; i < NumVidStreams; ++i)
+	{
+		videoQueues[i].deconfigure();
+	}
+	audioQueue.deconfigure();
+	geometryQueue.deconfigure();
+
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
 

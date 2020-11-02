@@ -30,7 +30,8 @@ namespace avs
 		GeometryDecoderBackendInterface *m_backend;
 		std::unique_ptr<GeometryParserInterface> m_parser;
 
-		NetworkFrame m_frame;
+		std::vector<uint8_t> m_frameBuffer;
+		NetworkFrameInfo m_frame;
 		bool m_configured = false;
 		int m_streamId = 0;
 		Result processPayload(const uint8_t* buffer, size_t bufferSize, GeometryTargetInterface *target);
@@ -65,6 +66,8 @@ Result GeometryDecoder::configure(uint8_t streamId, GeometryDecoderBackendInterf
 
 	d().m_configured = true;
 	d().m_streamId = streamId;
+	d().m_frameBuffer.resize(2000);
+
 	return Result::OK;
 }
 
@@ -88,32 +91,6 @@ Result GeometryDecoder::deconfigure()
 	return result;
 }
 
-//Result GeometryDecoder::decode(const NetworkFrame& frame)
-//{
-//	std::lock_guard<std::mutex> guard(d().m_mutex);
-//
-//	if (!d().m_configured)
-//	{
-//		return Result::Node_NotConfigured;
-//	}
-//
-//	auto *gti = dynamic_cast<GeometryTargetInterface*>(getOutput(0));
-//	if (!gti)
-//	{
-//		return Result::Node_InvalidOutput;
-//	}
-//
-//	// Check if data was lost or corrupted
-//	if (data.broken)
-//	{
-//		return Result::GeometryDecoder_InvalidPayload;
-//	}
-//
-//	d().processPayload(data.buffer, data.bufferSize, gti);
-//
-//	return Result::OK;
-//}
-
 Result GeometryDecoder::process(uint32_t timestamp)
 {
 	if (!d().m_configured)
@@ -126,7 +103,7 @@ Result GeometryDecoder::process(uint32_t timestamp)
 		return Result::Node_InvalidOutput;
 	}
 
-	FrameInterface* input = dynamic_cast<FrameInterface*>(getInput(0));
+	IOInterface* input = dynamic_cast<IOInterface*>(getInput(0));
 	if (!input)
 	{
 		return Result::Node_InvalidInput;
@@ -136,17 +113,29 @@ Result GeometryDecoder::process(uint32_t timestamp)
 
 	do
 	{
-		result = input->readFrame(this, d().m_frame, d().m_streamId);
+		size_t bufferSize = d().m_frameBuffer.size();
+		size_t bytesRead;
+		result = input->read(this, d().m_frameBuffer.data(), bufferSize, bytesRead);
 
 		if (result == Result::IO_Empty)
 		{
 			break;
 		}
-		else if (result != Result::OK)
+
+		if (result == Result::IO_Retry)
 		{
-			AVSLOG(Warning) << "GeometryDecoder: Failed to read input";
+			d().m_frameBuffer.resize(bufferSize);
+			result = input->read(this, d().m_frameBuffer.data(), bufferSize, bytesRead);
+		}
+
+		if (result != Result::OK || bytesRead < sizeof(NetworkFrameInfo))
+		{
+			AVSLOG(Warning) << "GeometryDecoder: Failed to read input.";
 			return result;
 		}
+
+		// Copy frame info 
+		memcpy(&d().m_frame, d().m_frameBuffer.data(), sizeof(NetworkFrameInfo));
 
 		// Check if data was lost or corrupted
 		if (d().m_frame.broken)
@@ -154,7 +143,7 @@ Result GeometryDecoder::process(uint32_t timestamp)
 			continue;
 		}
 
-		result = d().processPayload(d().m_frame.buffer.data(), d().m_frame.bufferSize, gti);
+		result = d().processPayload(d().m_frameBuffer.data() + sizeof(NetworkFrameInfo), d().m_frame.dataSize, gti);
 	} while (result == Result::OK);
 
 
@@ -190,9 +179,9 @@ Result GeometryDecoder::Private::processPayload(const uint8_t* buffer, size_t bu
 
 Result GeometryDecoder::onInputLink(int slot, Node* node)
 {
-	if (!dynamic_cast<FrameInterface*>(node))
+	if (!dynamic_cast<IOInterface*>(node))
 	{
-		AVSLOG(Error) << "GeometryDecoder: Input node must implement packet operations";
+		AVSLOG(Error) << "GeometryDecoder: Input node must provide data";
 		return Result::Node_Incompatible;
 	}
 	return Result::OK;

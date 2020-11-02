@@ -47,7 +47,6 @@ public:
 	 */
 	Result write(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 
-	Result amend(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 	/*!
 	 * Null sink node does not support read operations.
 	 * \return Always returns Result::Node_NotSupported.

@@ -104,12 +104,6 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result Packetizer::amend(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten)
-	{
-		AVSLOG(Warning) << "Attempted to amend buffer in Packetizer node";
-		return Result::Node_NotSupported;
-	}
-
 	Result Packetizer::Private::onPacketParsed(Node* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)
 	{
 		assert(node);

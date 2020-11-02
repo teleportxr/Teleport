@@ -4,6 +4,7 @@
 #include <iostream>
 #include <networksource_p.hpp>
 #include <ElasticFrameProtocol.h>
+#include <libavstream\queue.hpp>
 
 #ifdef __ANDROID__
 #include <pthread.h>
@@ -11,6 +12,7 @@
 #if LIBAV_USE_SRT
 #include <util/srtutil.h>
 #endif
+
 #ifndef LIBAV_USE_SRT
 #define LIBAV_USE_SRT 1
 #endif
@@ -26,8 +28,10 @@ NetworkSource::NetworkSource()
 	m_data = static_cast<NetworkSource::Private*>(m_d);
 }
 
-Result NetworkSource::configure(size_t numOutputs, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSourceParams& params)
+Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSourceParams& params)
 {
+	size_t numOutputs = streams.size();
+
 	if (numOutputs == 0 || localPort == 0 || remotePort == 0)
 	{
 		return Result::Node_InvalidConfiguration;
@@ -109,15 +113,19 @@ Result NetworkSource::configure(size_t numOutputs, uint16_t localPort, const cha
 
 	setNumOutputSlots(numOutputs);
 
-	m_data->m_streamBuffers.clear();
+	m_data->m_streams = std::move(streams);
+
+	for (int i = 0; i < numOutputs; ++i)
+	{
+		const auto& stream = m_data->m_streams[i];
+		m_data->m_streamNodeMap[stream.id] = i;
+	}
 
 	m_data->m_params = params;
-	m_data->m_EFPReceiver.reset(new ElasticFrameProtocolReceiver());
+	m_data->m_EFPReceiver.reset(new ElasticFrameProtocolReceiver(100, 0, nullptr, ElasticFrameProtocolReceiver::EFPReceiverMode::RUN_TO_COMPLETION));
 
 	m_data->m_EFPReceiver->receiveCallback = [this](ElasticFrameProtocolReceiver::pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)->void
 	{
-		std::lock_guard<std::mutex> guard(m_data->m_mutex);
-
 		if (rPacket->mBroken)
 		{
 			AVSLOG(Warning) << "Received NAL-units of size " << unsigned(rPacket->mFrameSize) <<
@@ -125,25 +133,48 @@ Result NetworkSource::configure(size_t numOutputs, uint16_t localPort, const cha
 				" pts " << unsigned(rPacket->mPts) <<
 				" is broken? " << rPacket->mBroken <<
 				" from EFP connection " << unsigned(rPacket->mSource) << "\n";
-			m_data->m_counters.incompleteDPsReceived++;
+			std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
+			m_data->m_counters.incompleteDecoderPacketsReceived++;
 		}
 		else
 		{
+			std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
 			m_data->m_counters.decoderPacketsReceived++;
 		}
 
-		NetworkFrame frame;
-		frame.pts = rPacket->mPts;
-		frame.dts = rPacket->mDts;
-		frame.broken = rPacket->mBroken;
-		frame.bufferSize = rPacket->mFrameSize;
-		frame.buffer.insert(frame.buffer.end(), rPacket->pFrameData, rPacket->pFrameData + rPacket->mFrameSize);
-		
-		if (m_data->m_streamBuffers.find(rPacket->mStreamID) == m_data->m_streamBuffers.end())
+		std::vector<char> buffer(sizeof(NetworkFrameInfo) + rPacket->mFrameSize);
+
+		NetworkFrameInfo frameInfo;
+		frameInfo.pts = rPacket->mPts;
+		frameInfo.dts = rPacket->mDts;
+		frameInfo.dataSize = rPacket->mFrameSize;
+		frameInfo.broken = rPacket->mBroken;
+
+		memcpy(buffer.data(), &frameInfo, sizeof(NetworkFrameInfo));
+		memcpy(&buffer[sizeof(NetworkFrameInfo)], rPacket->pFrameData, rPacket->mFrameSize);
+
+		int nodeIndex = m_data->m_streamNodeMap[rPacket->mStreamID];
+
+		auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
+		if (!outputNode)
 		{
-			m_data->m_streamBuffers[rPacket->mStreamID] = std::queue<NetworkFrame>();
+			AVSLOG(Warning) << "NetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
+			return;
 		}
-		m_data->m_streamBuffers[rPacket->mStreamID].emplace(std::move(frame));
+
+		size_t numBytesWrittenToOutput;
+		auto result = outputNode->emplace(m_data->q_ptr(), std::move(buffer), numBytesWrittenToOutput);
+
+		if (!result)
+		{
+			AVSLOG(Warning) << "NetworkSource EFP Callback: Failed to write to output node.";
+			return;
+		}
+
+		if (numBytesWrittenToOutput < buffer.size())
+		{
+			AVSLOG(Warning) << "NetworkSource EFP Callback: Incomplete frame written to output node.";
+		}
 	};
 
 	return Result::OK;
@@ -151,17 +182,29 @@ Result NetworkSource::configure(size_t numOutputs, uint16_t localPort, const cha
 
 Result NetworkSource::deconfigure()
 {
-	// Will stop receiver thread on destruction
+	if (getNumOutputSlots() <= 0)
+	{
+		return Result::Node_NotConfigured;
+	}
+
+	m_data->runningThread = false;
+		
+	if (m_data->thr.joinable())
+	{
+		std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
+		m_data->thr.join();
+	}	
+
+	// Will stop any extra EFP thread 
 	m_data->m_EFPReceiver.reset();
 
 	setNumOutputSlots(0);
-	m_data->runningThread = false;
-	if(m_data->thr.joinable())
-	    m_data->thr.join();
 	m_data->m_recvBuffer.reset();
 
 	m_data->m_counters = {};
 	m_data->m_remote = {};
+	m_data->m_streamNodeMap.clear();
+	m_data->m_streams.clear();
 
 	// Socket must be killed BEFORE service, or asio throws a fit.
 	// At a guess, this is because socket was created from service, and expects it to still exist
@@ -179,13 +222,15 @@ Result NetworkSource::deconfigure()
 
 void NetworkSource::closeSocket()
 {
+	std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
+
 	m_data->runningThread = false;
 #if LIBAV_USE_SRT
 	m_data->bConnected=false;
 	if(m_data->m_socket)
 		srt_close(m_data->m_socket);
-	//if(m_data->pollid)
-	//	srt_epoll_release(m_data->pollid);
+	if(m_data->pollid)
+		srt_epoll_release(m_data->pollid);
 	srt_cleanup();
 	m_data->pollid=0;
 	m_data->m_socket=0;
@@ -197,6 +242,7 @@ void NetworkSource::pollData()
 	asyncRecvPackets();
 	while (m_data->runningThread)
 	{
+		std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
 #if LIBAV_USE_SRT
 		asyncRecvPackets();
 #else
@@ -268,20 +314,25 @@ Result NetworkSource::process(uint32_t timestamp)
 		}
 	}
 #endif
-	uint64_t bytes_this_frame = m_data->m_counters.bytesReceived - m_data->lastBytesReceived;
-	m_data->bandwidthBytes += bytes_this_frame;
-
-	int64_t time_step_ns = timestamp - m_data->lastBandwidthTimestamp;
-	if (time_step_ns > 1000000 && m_data->bandwidthBytes>0)
 	{
-		float bandwidth_bytes_per_ms = float(m_data->bandwidthBytes) / float(time_step_ns);
-		m_data->m_counters.bandwidthKPS *= 0.9f;
-		m_data->m_counters.bandwidthKPS += 0.1f* 1000.0f*bandwidth_bytes_per_ms / 1024.0f;
-		m_data->lastBandwidthTimestamp = timestamp;
+		// Counters will be written to on packet processing thread
+		std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
 
-		m_data->bandwidthBytes = 0;
+		uint64_t bytes_this_frame = m_data->m_counters.bytesReceived - m_data->lastBytesReceived;
+		m_data->bandwidthBytes += bytes_this_frame;
+
+		int64_t time_step_ns = timestamp - m_data->lastBandwidthTimestamp;
+		if (time_step_ns > 1000000 && m_data->bandwidthBytes > 0)
+		{
+			float bandwidth_bytes_per_ms = float(m_data->bandwidthBytes) / float(time_step_ns);
+			m_data->m_counters.bandwidthKPS *= 0.9f;
+			m_data->m_counters.bandwidthKPS += 0.1f * 1000.0f * bandwidth_bytes_per_ms / 1024.0f;
+			m_data->lastBandwidthTimestamp = timestamp;
+
+			m_data->bandwidthBytes = 0;
+		}
+		m_data->lastBytesReceived = m_data->m_counters.bytesReceived;
 	}
-	m_data->lastBytesReceived = m_data->m_counters.bytesReceived;
 
 	m_data->m_pipelineTimestamp = timestamp;
 	
@@ -350,7 +401,6 @@ Result NetworkSource::process(uint32_t timestamp)
 #endif
 		}
 #endif
-		accumulatePackets();
 	}
 	catch (const std::exception& e)
 	{
@@ -360,40 +410,7 @@ Result NetworkSource::process(uint32_t timestamp)
 	return Result::OK;
 }
 
-Result NetworkSource::readFrame(Node* reader, NetworkFrame& frame, int index)
-{
-	std::lock_guard<std::mutex> guard(m_data->m_mutex);
-
-	if (m_data->m_streamBuffers.empty())
-	{
-		return Result::IO_Empty;
-	}
-
-	auto iter = m_data->m_streamBuffers.find(index);
-	if (iter == m_data->m_streamBuffers.end() || iter->second.empty())
-	{
-		return Result::IO_Empty;
-	}
-
-	NetworkFrame& qFrame = iter->second.front();
-	frame.dts = qFrame.dts;
-	frame.pts = qFrame.pts;
-	frame.bufferSize = qFrame.bufferSize;
-	frame.broken = qFrame.broken;
-
-	if (frame.buffer.size() < qFrame.bufferSize)
-	{
-		frame.buffer.resize(qFrame.bufferSize);
-	}
-
-	memcpy(frame.buffer.data(), qFrame.buffer.data(), qFrame.bufferSize);
-
-	iter->second.pop();
-
-	return Result::OK;
-}
-
-const NetworkSourceCounters& NetworkSource::getCounterValues() const
+NetworkSourceCounters NetworkSource::getCounterValues() const
 {
 	return m_data->m_counters;
 }
@@ -488,25 +505,26 @@ __attribute__((optnone))
 #endif
 void NetworkSource::asyncRecvPackets()
 {
+	static uint8_t packetData[PacketFormat::MaxPacketSize];
 #if LIBAV_USE_SRT
-	RawPacket *rawPacket= m_data->m_recvBuffer.reserve_next();
-	int st = srt_recvmsg(m_data->m_socket, (char*)rawPacket->data, PacketFormat::MaxPacketSize);
+	int st = srt_recvmsg(m_data->m_socket, (char*)packetData, PacketFormat::MaxPacketSize);
     if (st <= 0)
     {
 		std::this_thread::sleep_for(std::chrono::nanoseconds(5)); // 0.000000005s (cross platform solution) same as Sleep(100)
 		std::this_thread::yield();
         return;
     }
-	rawPacket->size = PacketFormat::MaxPacketSize;
-	if (!m_data->m_recvBuffer.full())
+
 	{
-		m_data->m_recvBuffer.commit_next();
-		std::this_thread::yield();
+		std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
+		m_data->m_counters.bytesReceived += PacketFormat::MaxPacketSize;
+		m_data->m_counters.networkPacketsReceived++;
 	}
-	else
+
+	auto val = m_data->m_EFPReceiver->receiveFragmentFromPtr(packetData, PacketFormat::MaxPacketSize, 0);
+	if (EFPFAILED(val))
 	{
-		AVSLOG(Warning) << "Ring buffer exhausted " << "\n";
-		return;
+		AVSLOG(Warning) << "EFP Error: Invalid data fragment received" << "\n";
 	}
 #else
 	assert(m_data->m_socket);

@@ -52,19 +52,6 @@ public:
 	 *  - Node specific error result.
 	 */
 	virtual Result write(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) = 0;
-
-	/*!
-	 * Amend bytes.
-	 * \param writer Node which performs the amend operation.
-	 * \param buffer Pointer to soruce buffer.
-	 * \param bufferSize Size of source buffer in bytes.
-	 * \param bytesWritten Number of bytes actually written should the amend operation succeed.
-	 * \return
-	 *  - Result::OK on success.
-	 *  - Result::IO_InvalidArgument if either buffer is nullptr or bufferSize is zero.
-	 *  - Node specific error result.
-	 */
-	virtual Result amend(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) = 0;
 };
 
 /*!
@@ -102,29 +89,6 @@ public:
 	 *  - Node specific error result.
 	 */
 	virtual Result writePacket(Node* writer, const void* buffer, size_t bufferSize, const int index) = 0;
-};
-
-/*!
- * Frame Output interface.
- *
- * Nodes implementing this interface can act as data sources for the purpose of super frame reads 
- */
-class AVSTREAM_API FrameInterface
-{
-public:
-	virtual ~FrameInterface() = default;
-
-	/*!
-	 * Read frame.
-	 * \param reader Node which performs the read operation.
-	 * \param network frame reference that will point to the data
-	 * \param index which can be used as a data accessor 
-	 * \return
-	 *  - Result::OK on success.
-	 *  - Result::IO_Retry if no buffer available
-	 *  - Node specific error result.
-	 */
-	virtual Result readFrame(Node* reader, NetworkFrame& frame, int index) = 0;
 };
 
 /*!

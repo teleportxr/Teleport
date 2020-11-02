@@ -81,22 +81,18 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result Queue::amend(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
+	Result Queue::emplace(Node*, std::vector<char>&& buffer, size_t& bytesWritten)
 	{
 		std::lock_guard<std::mutex> lock(data->m_mutex);
+		size_t bufferSize = buffer.size();
+		if (data->m_buffers.size() == data->m_maxBuffers)
+		{
+			AVSLOG(Warning) << data->name.c_str() << " Queue::emplace: out of buffers.\n";
+			return Result::IO_Full;
+		}
 		try
 		{
-
-			// Adds the data in the new buffer to the last buffer in the queue
-			if (data->m_buffers.empty())
-			{
-				return Result::IO_Empty;
-			}
-
-			std::vector<char>& lastBuffer = data->m_buffers.back();
-			size_t currentSize = lastBuffer.size();
-			lastBuffer.resize(currentSize + bufferSize);
-			memcpy(lastBuffer.data() + currentSize, static_cast<const char*>(buffer), bufferSize);
+			data->m_buffers.emplace(std::move(buffer));
 		}
 		catch (const std::bad_alloc&)
 		{
@@ -105,6 +101,7 @@ namespace avs
 		bytesWritten = bufferSize;
 		return Result::OK;
 	}
+
 
 	void Queue::Private::flushInternal()
 	{

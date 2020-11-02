@@ -11,6 +11,14 @@ namespace avs
 {
 	struct NetworkPacket;
 	class NetworkPacketMap;
+
+	/*! Network source stream data. */
+	struct NetworkSourceStream
+	{
+		/*! id */
+		uint32_t id = 0;
+	};
+
 	/*! Network source parameters. */
 	struct NetworkSourceParams
 	{
@@ -55,7 +63,7 @@ namespace avs
 		/*! Number of decoder packets dropped due to GC timeout. */
 		uint64_t decoderPacketsDropped = 0;
 		/*! Number of incomplete decoder packets received. */
-		uint64_t incompleteDPsReceived = 0;
+		uint64_t incompleteDecoderPacketsReceived = 0;
 		/*! Current length of jitter buffer in ms. */
 		uint32_t jitterBufferLength = 0;
 		/*! Number of jitter buffer push calls this frame. */
@@ -76,7 +84,7 @@ namespace avs
 	 *
 	 * Receives video stream from a remote UDP endpoint.
 	 */
-	class AVSTREAM_API NetworkSource final : public Node, public FrameInterface
+	class AVSTREAM_API NetworkSource final : public Node
 	{
 		AVSTREAM_PUBLICINTERFACE(NetworkSource)
 	public:
@@ -94,7 +102,7 @@ namespace avs
 		 *  - Result::Node_InvalidConfiguration if numOutputs, localPort, or remotePort is zero, or if remote is either nullptr or empty string.
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
-		Result configure(size_t numOutputs, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSourceParams& params = {});
+		Result configure(std::vector<NetworkSourceStream>&& streams, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSourceParams& params = {});
 
 		/*!
 		 * Deconfigure network source and release all associated resources.
@@ -112,9 +120,6 @@ namespace avs
 		 */
 		Result process(uint32_t timestamp) override;
 
-
-		Result readFrame(Node* reader, NetworkFrame& frame, int index) override;
-
 		/*!
 		 * Get node display name (for reporting & profiling).
 		 */
@@ -123,7 +128,7 @@ namespace avs
 		/*!
 		 * Get current counter values.
 		 */
-		const NetworkSourceCounters& getCounterValues() const;
+		NetworkSourceCounters getCounterValues() const;
 
 		void setDebugStream(uint32_t);
 		void setDoChecksums(bool);
