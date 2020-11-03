@@ -48,7 +48,7 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
     //params.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 
     avs::NetworkSource networkSource;
-    if(!networkSource.configure(1, port+1, address.c_str(), port, params))
+    if(!networkSource.configure({},port+1, address.c_str(), port, params))
     {
         OVR_WARN("VideoStreamClient: Failed to configure network source");
         return;

@@ -412,7 +412,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		// NVidia decoder takes the whole frame
 		result = m_backend->decode(frameData, frameSize, payloadType, isLastPayload);
 #elif defined(PLATFORM_ANDROID)
-		size_t size = m_frame.info.dataSize - m_firstVCLOffset;
+		size_t size = m_frame.dataSize - m_firstVCLOffset;
 		result = m_backend->decode(buffer + m_firstVCLOffset, size, payloadType, isLastPayload);
 #endif
 		if (result == avs::Result::DecoderBackend_ReadyToDisplay)

@@ -430,9 +430,18 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 		//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 		sourceParams.maxJitterBufferLength = 0;
 
+		std::vector<avs::NetworkSourceStream> streams = { {20} };
+		if (AudioStream)
+		{
+			streams.push_back({ 40 });
+		}
+		if (GeoStream)
+		{
+			streams.push_back({ 60 });
+		}
 
 		if (!clientRenderer.mNetworkSource.configure(
-				NumVideoStreams + (AudioStream ? 1 : 0) + (GeoStream ? 1 : 0), setupCommand.port + 1,
+				std::move(streams), setupCommand.port + 1,
 				sessionClient.GetServerIP().c_str(), setupCommand.port, sourceParams))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
@@ -492,7 +501,12 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
 
-		mPipeline.link({&clientRenderer.mNetworkSource, &clientRenderer.mDecoder, &mSurface});
+		clientRenderer.mVideoQueue.configure(16, "VideoQueue");
+
+		avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mVideoQueue);
+		avs::Node::link(clientRenderer.mVideoQueue, clientRenderer.mDecoder);
+		mPipeline.link({ &clientRenderer.mDecoder, &mSurface });
+
 
 		// Audio
 		if (AudioStream)
@@ -507,14 +521,23 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 			audioPlayer->configure(audioParams);
 			audioStreamTarget.reset(new sca::AudioStreamTarget(audioPlayer));
 			avsAudioTarget.configure(audioStreamTarget.get());
-            mPipeline.link({ &clientRenderer.mNetworkSource, &avsAudioDecoder, &avsAudioTarget });
+			clientRenderer.mAudioQueue.configure(120, "AudioQueue");
+
+			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mAudioQueue);
+			avs::Node::link(clientRenderer.mAudioQueue, avsAudioDecoder);
+			mPipeline.link({ &avsAudioDecoder, &avsAudioTarget });
 		}
 
 		if (GeoStream)
 		{
 			avsGeometryDecoder.configure(60, &geometryDecoder);
 			avsGeometryTarget.configure(&resourceCreator);
+			clientRenderer.mGeometryQueue.configure(16, "GeometryQueue");
 			mPipeline.link({&clientRenderer.mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget});
+
+			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mGeometryQueue);
+			avs::Node::link(clientRenderer.mGeometryQueue, avsGeometryDecoder);
+			mPipeline.link({ &avsGeometryDecoder, &avsGeometryTarget });
 		}
 		//GL_CheckErrors("Pre-Build Cubemap");
 		//Build Video Cubemap

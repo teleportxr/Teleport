@@ -601,7 +601,7 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				"Orphans: %d\n",
 				mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped,
 				ctr.decoderPacketsDropped,
-				ctr.incompleteDPsReceived,
+				ctr.incompleteDecoderPacketsReceived,
 				frameRate, ctr.bandwidthKPS,
 				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
 				cameraPosition.x, cameraPosition.y, cameraPosition.z,
