@@ -15,6 +15,7 @@
 #include "Platform/CrossPlatform/DeviceContext.h"
 #include "Platform/CrossPlatform/CommandLineParams.h"
 #include "Platform/CrossPlatform/SphericalHarmonics.h"
+#include "Platform/CrossPlatform/Quaterniond.h"
 
 #include "Config.h"
 #include "PCDiscoveryService.h"
@@ -559,9 +560,9 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 				avs::vec4 orientation	=l.orientation;
 				avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
 				avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
-				//orientation.x*=-1.0f;
-				//orientation.y*=-1.0f;
-				//orientation.z*=-1.0f;
+				t.position=*((vec3*)&position);
+				crossplatform::Quaternionf q((const float*)&orientation);
+				t.direction=q*vec3(0,0,1.0f);
 				scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
 					//scr::mat4::Rotation(orientation)*scr::mat4::Translation(-position);
 				
