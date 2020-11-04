@@ -520,7 +520,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyCombined.get())))->GetSimulTexture());
 	}
 	hdrFramebuffer->Deactivate(deviceContext);
-	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,1.0f);
+	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.45f);
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
@@ -1408,7 +1408,8 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			show_textures = !show_textures;
 			break;
 		case 'K':
-			sessionClient.Disconnect(0);
+			if(sessionClient.IsConnected())
+				sessionClient.Disconnect(0);
 			canConnect=!canConnect;
 			break;
 		case 'M':

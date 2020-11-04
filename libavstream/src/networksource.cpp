@@ -340,10 +340,7 @@ Result NetworkSource::process(uint32_t timestamp)
 	if(!m_data->bConnected)
 	{
 		int res=srt_connect(m_data->m_socket, (sockaddr*)&m_data->remote_addr, sizeof m_data->remote_addr);
-		if(!res)
-		{
-		}
-		else
+		if(res)
 		{
 			CHECK_SRT_ERROR(res);
 		}

@@ -22,7 +22,7 @@ namespace SCServer
 		void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
 
 		virtual void release();
-		virtual void process();
+		virtual bool process();
 
 		virtual avs::Pipeline* getAvsPipeline() const;
 		virtual float getBandWidthKPS() const;

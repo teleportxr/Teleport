@@ -571,6 +571,7 @@ namespace SCServer
 		}
 #endif
 	}
+		 bool ClientMessaging::asyncNetworkDataProcessingFailed=false;
 
 	void ClientMessaging::stopAsyncNetworkDataProcessing(bool killThread)
 	{
@@ -583,11 +584,16 @@ namespace SCServer
 				networkThread.join();
 			}
 		}
+		else if(networkThread.joinable())
+		{
+			networkThread.join();
+		}
 #endif
 	}
 
 	void ClientMessaging::processNetworkDataAsync()
 	{
+		asyncNetworkDataProcessingFailed=false;
 		while (asyncNetworkDataProcessingActive)
 		{
 			std::lock_guard<std::mutex> lock(networkMutex);
@@ -595,7 +601,10 @@ namespace SCServer
 			{
 				if (keyVal.second)
 				{
-					keyVal.second->process();
+					if(!keyVal.second->process())
+					{
+						asyncNetworkDataProcessingFailed=true;
+					}
 				}
 			}
 		}

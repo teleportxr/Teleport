@@ -82,6 +82,7 @@ namespace SCServer
 		static void stopAsyncNetworkDataProcessing(bool killThread = true);
 
 	private:
+		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
 		bool initialized=false;
 		const CasterSettings* settings;

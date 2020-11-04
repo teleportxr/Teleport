@@ -164,7 +164,7 @@ namespace SCServer
 		audioPipes.clear();
 	}
 
-	void NetworkPipeline::process()
+	bool NetworkPipeline::process()
 	{
 		assert(pipeline);
 		assert(networkSink);
@@ -173,6 +173,7 @@ namespace SCServer
 		if (!result && result != avs::Result::IO_Empty)
 		{
 			TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
+			return false;
 		}
 
 #if 0
@@ -188,6 +189,7 @@ namespace SCServer
 		networkSink->setDoChecksums(settings->enableChecksums);
 		networkSink->setEstimatedDecodingFrequency(settings->estimatedDecodingFrequency);
 #endif // WITH_REMOTEPLAY_STATS
+		return true;
 	}
 
 	avs::Pipeline* NetworkPipeline::getAvsPipeline() const

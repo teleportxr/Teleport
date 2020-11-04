@@ -260,17 +260,22 @@ namespace SCServer
 	{
 		//Place payload type onto the buffer.
 		putPayload(avs::GeometryPayloadType::Node);
+		for (int i=0;i<missingUIDs.size();i++)
+		{
+			avs::uid uid =missingUIDs[i];
+			avs::DataNode* node = src->getNode(uid);
+			if(!node)
+			{
+				TELEPORT_CERR << "No such node with uid " << uid << std::endl;
+				missingUIDs.erase(missingUIDs.begin()+i);
+				i--;
+			}
+		}
 
 		put(missingUIDs.size());
 		for (const avs::uid &uid : missingUIDs)
 		{
 			avs::DataNode* node = src->getNode(uid);
-			if(!node)
-			{
-				TELEPORT_CERR << "No such node with uid " << uid << std::endl;
-				node = src->getNode(uid);
-				continue;
-			}
 			put(uid);
 			avs::Transform transform = node->transform;
 			avs::ConvertTransform(settings->axesStandard, req->getAxesStandard(), transform);

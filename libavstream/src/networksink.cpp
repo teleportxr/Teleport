@@ -231,6 +231,8 @@ Result NetworkSink::process(uint32_t timestamp)
 						m_data->m_remote_socket = rem;
 						m_data->bConnected = true;
 					}
+					else
+						return Result::Network_SendFailed;
 				}
 				break;
 				case SRTS_CONNECTED:
