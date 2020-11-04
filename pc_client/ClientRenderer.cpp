@@ -593,6 +593,8 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	vec4 white(1.f, 1.f, 1.f, 1.f);
+	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
+	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = source.getCounterValues();
 	//ImGui::Text("Frame #: %d", renderStats.frameCounter);
 	//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
@@ -644,24 +646,26 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d"	,resourceManagers.mMeshManager.GetCache(cacheLock).size()
 																									,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
-
 		int j=0;
 		for(auto &i:cachedLights)
 		{
 			auto &l=i.second;
 			if(l.resource)
 			{
-				auto &L=l.resource->GetLightData();
-				if(L.is_point==0.0f)
-					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,L.colour.x,L.colour.y,L.colour.z,L.direction.x,L.direction.y,L.direction.z));
-				else
-					renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,L.colour.x,L.colour.y,L.colour.z,L.position.x,L.position.y,L.position.z,L.radius));
+				auto *L=l.resource->GetLightData();
+				if(L)
+				{
+					if(L->is_point==0.0f)
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),text_colour,background);
+					else
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,L->colour.x,L->colour.y,L->colour.z,L->position.x,L->position.y,L->position.z,L->radius),text_colour,background);
+				}
 			}
 			if(j<videoTagDataCubeArray[0].lights.size())
 			{
 				auto &l=videoTagDataCubeArray[0].lights[j];
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z));
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]));
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
 			}
 			j++;
 		}
@@ -753,7 +757,8 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 		}
 		pbrConstants.lightCount=cachedLights.size();
 	}
-	PbrLight *l=(PbrLight*)(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
+	scr::Light::LightData *sLights=(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
+	PbrLight *l=(PbrLight*)sLights;
 	lightsBuffer.SetData(deviceContext,l);
 
 	//Only render visible actors, but still render children that are close enough.

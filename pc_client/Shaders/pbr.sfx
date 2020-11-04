@@ -362,10 +362,10 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 
 vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,PbrLight light,LightTag lightTag)
 {
-	vec3 diff						=light.position-surfaceProperties.position;
+	vec3 diff						=lightTag.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
 	float d							=max(1.0,dist_to_light/light.radius);
-	vec3 irradiance					=light.colour.rgb*lerp(1.0,5.0/(d*d),light.is_point);
+	vec3 irradiance					=light.colour.rgb*lerp(1.0,1.0/(d*d),light.is_point);
 	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),light.is_point);
 	float roughnessL				= max(.01, surfaceProperties.roughness2);
 	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
@@ -382,7 +382,9 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	specular						*= surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour						=diffuse+specular;
 
-	vec4 shadow					=GetVarianceShadow(videoTexture,light,lightTag,surfaceProperties.position);
+	vec4 shadow					=vec4(1.0,1.0,1.0,1.0);
+	if(!light.is_point)
+		shadow=GetVarianceShadow(videoTexture,light,lightTag,surfaceProperties.position);
 	//diffuse *=shadow;
     return shadow.x*(diffuse+specular);
 }
@@ -425,8 +427,8 @@ vec4 Solid(vertexOutput IN)
 
 	SurfaceState surfaceState	=PreprocessSurface(view,surfaceProperties);
 	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
-	int id = int(TagDataIDBuffer[0].x);
-	VideoTagDataCube tagData = TagDataCubeBuffer[id];
+	int id						=int(TagDataIDBuffer[0].x);
+	VideoTagDataCube tagData	=TagDataCubeBuffer[id];
 	for(int i=0;i<10;i++)
 	{
 		if(i>=lightCount)

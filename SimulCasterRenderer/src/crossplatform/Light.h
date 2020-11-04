@@ -30,8 +30,6 @@ namespace scr
 			avs::vec3 direction;
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
-			avs::vec2 shadowTexCoordOffset;
-			avs::vec2 shadowTexCoordScale;
 		};
 
 		struct LightData //Layout conformant to GLSL std140
@@ -44,8 +42,6 @@ namespace scr
 			float is_point;
 			float radius;		// "point" light is a sphere.
 			avs::vec3 pad3;
-			avs::vec2 shadowTexCoordOffset;
-			avs::vec2 shadowTexCoordScale;
 		};
 	
 	private:
@@ -72,7 +68,7 @@ namespace scr
 
 		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
 		inline std::shared_ptr<Texture>& GetShadowMapTexture() { return m_CI.shadowMapTexture; }
-		const LightData& GetLightData() const;
+		const LightData* GetLightData() const;
 		static const std::vector<LightData> &GetAllLightData() 
 		{
 			return s_LightData;

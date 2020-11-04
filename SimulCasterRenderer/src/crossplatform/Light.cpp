@@ -41,8 +41,6 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	light.radius=pLightCreateInfo->lightRadius;
 	light.power = 1.0f; //i.e 100W
 	light.is_point=float(pLightCreateInfo->type!=Type::DIRECTIONAL);
-	light.shadowTexCoordOffset= pLightCreateInfo->shadowTexCoordOffset;
-	light.shadowTexCoordScale= pLightCreateInfo->shadowTexCoordScale;
 	UpdateLightSpaceTransform();
 
 	if (m_CI.shadowMapTexture)
@@ -92,9 +90,11 @@ void Light::UpdateOrientation(const quat& orientation)
 	UpdateLightSpaceTransform();
 }
 
-const Light::LightData& Light::GetLightData() const 
+const Light::LightData* Light::GetLightData() const 
 {
-	return s_LightData[m_LightID];
+	if(m_LightID>=0&&m_LightID<s_LightData.size())
+		return &(s_LightData[m_LightID]);
+	return nullptr;
 }
 
 void Light::UpdateLightSpaceTransform()

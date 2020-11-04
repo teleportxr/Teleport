@@ -56,9 +56,7 @@ struct PbrLight
 	vec3 direction;
 	float is_point;
 	float radius;	
-	vec2 pad3;
-	vec2 shadowTexCoordOffset;
-	vec2 shadowTexCoordScale;
+	vec3 pad3;
 };						
 
 #endif
