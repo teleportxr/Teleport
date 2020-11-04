@@ -451,6 +451,8 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 	    clientRenderer.mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
 	    clientRenderer.mNetworkSource.setDoChecksums(setupCommand.do_checksums);
 
+	    mPipeline.add(&clientRenderer.mNetworkSource);
+
 		clientRenderer.mVideoTagData2DArray.clear();
 		clientRenderer.mVideoTagData2DArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
 		clientRenderer.mVideoTagDataCubeArray.clear();
@@ -501,7 +503,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
 
-		clientRenderer.mVideoQueue.configure(16, "VideoQueue");
+		clientRenderer.mVideoQueue.configure(16, "VideoQueue                        ");
 
 		avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mVideoQueue);
 		avs::Node::link(clientRenderer.mVideoQueue, clientRenderer.mDecoder);
