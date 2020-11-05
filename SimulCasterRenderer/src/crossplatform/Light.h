@@ -13,12 +13,15 @@ namespace scr
 	class Light
 	{
 	public:
+		// Matches Unity...
 		enum class Type : uint32_t
 		{
-			POINT=0,
+			SPOT=0,
 			DIRECTIONAL=1,
-			SPOT=2,
-			AREA=3
+			POINT=2,
+			AREA=3,
+			RECTANGLE=3,
+			DISC=4
 		};
 		struct LightCreateInfo
 		{
@@ -30,6 +33,7 @@ namespace scr
 			avs::vec3 direction;
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
+			avs::uid uid;
 		};
 
 		struct LightData //Layout conformant to GLSL std140
@@ -40,8 +44,10 @@ namespace scr
 			float power;		 //Strength or Power of the light in Watts equilavent to Radiant Flux in Radiometry.
 			avs::vec3 direction;
 			float is_point;
+			float is_spot;
 			float radius;		// "point" light is a sphere.
-			avs::vec3 pad3;
+			unsigned uid32;		// lowest 32 bits of the uid.
+			float pad1;
 		};
 	
 	private:
@@ -65,7 +71,11 @@ namespace scr
 
 		void UpdatePosition(const avs::vec3& position);
 		void UpdateOrientation(const quat& orientation);
-
+		
+		const LightCreateInfo &GetLightCreateInfo()
+		{
+			return m_CI;
+		}
 		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
 		inline std::shared_ptr<Texture>& GetShadowMapTexture() { return m_CI.shadowMapTexture; }
 		const LightData* GetLightData() const;

@@ -44,7 +44,7 @@ struct LightTag
 	vec3 position;
 	int	pospad;
 	vec3 direction;
-	int dirpad;
+	uint uid32;
 };
 
 struct VideoTagData2D

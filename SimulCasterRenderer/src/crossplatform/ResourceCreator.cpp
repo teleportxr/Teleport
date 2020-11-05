@@ -794,6 +794,7 @@ void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
 	lci.shadowMapTexture = m_TextureManager->Get(node.data_uid);
 	lci.lightColour=node.lightColour;
 	lci.lightRadius=node.lightRadius;
+	lci.uid=node_uid;
 	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
 	m_LightManager->Add(node_uid, light);
 }

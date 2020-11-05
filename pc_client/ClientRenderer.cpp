@@ -549,7 +549,8 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 			for(int j=0;j<td.lights.size();j++)
 			{
 				LightTag &t=data[i].lightTags[j];
-				const scr::LightData &l=td.lights[j];
+				const scr::LightTagData &l=td.lights[j];
+				t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
 				// Convert from +-1 to [0,1]
 				t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
 				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
@@ -652,20 +653,37 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			auto &l=i.second;
 			if(l.resource)
 			{
+				auto &lcr=l.resource->GetLightCreateInfo();
 				auto *L=l.resource->GetLightData();
 				if(L)
 				{
+					const char *lightTypeName="";
+					switch(lcr.type)
+					{
+					case scr::Light::Type::POINT:
+						lightTypeName="Point";
+						break;
+					case scr::Light::Type::DIRECTIONAL:
+						lightTypeName="  Dir";
+						break;
+					case scr::Light::Type::SPOT:
+						lightTypeName=" Spot";
+						break;
+					case scr::Light::Type::AREA:
+						lightTypeName=" Area";
+						break;
+					};
 					if(L->is_point==0.0f)
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),text_colour,background);
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),text_colour,background);
 					else
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,L->colour.x,L->colour.y,L->colour.z,L->position.x,L->position.y,L->position.z,L->radius),text_colour,background);
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->position.x,L->position.y,L->position.z,L->radius),text_colour,background);
 				}
 			}
 			if(j<videoTagDataCubeArray[0].lights.size())
 			{
 				auto &l=videoTagDataCubeArray[0].lights[j];
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
 			}
 			j++;
 		}
@@ -1172,14 +1190,34 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 		tagData.lights.resize(tagData.coreData.lightCount);
 
-		// Aidan : View and proj matrices are currently unchanged from Unity
+		// We will check the received light tags agains the current list of lights - rough and temporary.
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+		auto &cachedLight=cachedLights.begin();
+		////
+
 		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
 		for (auto& light : tagData.lights)
 		{
-			memcpy(&light, &data[index], sizeof(scr::LightData));
-			avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
-
-			index += sizeof(scr::LightData);
+			memcpy(&light, &data[index], sizeof(scr::LightTagData));
+			// checks:
+			if(cachedLight==cachedLights.end())
+			{
+				// mismatch in the number.
+				std::cerr<<"light count mismatch"<<std::endl;
+			}
+			else if(cachedLight->second.resource->GetLightCreateInfo().uid!=light.uid)
+			{
+				// uid mismatch.
+				std::cerr<<"uid mismatch"<<std::endl;
+			}
+			else
+			{
+				avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
+				index += sizeof(scr::LightTagData);
+				cachedLight++;
+			}
+			////
 		}
 		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
 	}

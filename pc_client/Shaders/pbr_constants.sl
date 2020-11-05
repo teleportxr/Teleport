@@ -55,8 +55,10 @@ struct PbrLight
 	float power;
 	vec3 direction;
 	float is_point;
-	float radius;	
-	vec3 pad3;
+	float is_spot;
+	float radius;
+	uint uid32;		// lowest 32 bits of the uid.
+	float pad1;
 };						
 
 #endif

@@ -41,6 +41,9 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	light.radius=pLightCreateInfo->lightRadius;
 	light.power = 1.0f; //i.e 100W
 	light.is_point=float(pLightCreateInfo->type!=Type::DIRECTIONAL);
+	light.is_spot=float(pLightCreateInfo->type==Type::SPOT);
+	// Low 32 bits of the uid for matching.
+	light.uid32=(unsigned)(m_CI.uid&(uint64_t)0xFFFFFFFF);
 	UpdateLightSpaceTransform();
 
 	if (m_CI.shadowMapTexture)

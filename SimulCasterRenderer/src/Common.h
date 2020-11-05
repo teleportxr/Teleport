@@ -71,7 +71,7 @@ namespace scr
 		;
 
 	// Taken from Unity
-	enum class LightType
+	enum class LightType : char
 	{
 		//
 		// Summary:
@@ -114,7 +114,7 @@ namespace scr
 #endif
 		;
 
-	struct LightData
+	struct LightTagData
 	{
 #ifndef __ANDROID__
 #pragma pack(push, 1)
@@ -130,7 +130,7 @@ namespace scr
 		float worldToShadowMatrix[4][4];
 		int texturePosition[2];
 		int textureSize;
-		uint32_t uid;
+		uint64_t uid;
 #ifndef __ANDROID__
 #pragma pack(pop)
 #endif
@@ -144,6 +144,6 @@ namespace scr
 	struct SceneCaptureCubeTagData
 	{
 		SceneCaptureCubeCoreTagData coreData;
-		std::vector<LightData> lights;
+		std::vector<LightTagData> lights;
 	};
 }
