@@ -1371,14 +1371,12 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta)
 {
-}
-
-void ClientRenderer::OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
-{
-	mouseCameraInput.MouseButtons
-		|= (bLeftButtonDown ? crossplatform::MouseCameraInput::LEFT_BUTTON : 0)
-		| (bRightButtonDown ? crossplatform::MouseCameraInput::RIGHT_BUTTON : 0)
-		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
+	static avs::uid eventId=0;
+	avs::InputEvent evt;
+	evt.eventId=eventId++;		 //< A monotonically increasing event identifier.
+	evt.inputUid=bLeftButtonReleased?1:0;		 //< e.g. the uniqe identifier for this button or control.
+	evt.intValue=0;
+	controllerStates[0].inputEvents.push_back(evt);
 }
 
 void ClientRenderer::OnMouseMove(int xPos

@@ -658,6 +658,19 @@ namespace avs
 		bool isVR = true;
 		uint64_t resourceCount = 0; //Amount of resources the client has, and are appended to the handshake.
 	};
+	
+	enum InputEventType : unsigned char
+	{
+		None=0,
+		Click
+	};
+	
+	struct InputEvent
+	{
+		uint32_t eventId;		 //< A monotonically increasing event identifier.
+		uid inputUid;		 //< e.g. the uniqe identifier for this button or control.
+		uint32_t intValue;
+	};
 
 	struct InputState
 	{
@@ -666,6 +679,7 @@ namespace avs
 		float trackpadAxisY;
 		float joystickAxisX;
 		float joystickAxisY;
+		uint32_t numEvents;
 	};
 
 	struct Pose

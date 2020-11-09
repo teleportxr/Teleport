@@ -365,16 +365,6 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 	avs::InputState inputState = {};
 	inputState.buttonsDown= controllerState.mButtons;
 	const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
-	/*auto updateButtonState = [&inputState, &controllerState, buttonsDiffMask](uint32_t button)
-	{
-		if(buttonsDiffMask & button)
-		{
-			if(controllerState.mButtons & button)
-				inputState.buttonsPressed |= button;
-			else
-				inputState.buttonsReleased |= button;
-		}
-	};*/
 	inputState.joystickAxisX = controllerState.mJoystickAxisX;
 	inputState.joystickAxisY = controllerState.mJoystickAxisY;
 	// We need to update trackpad axis on the server whenever:
@@ -405,7 +395,10 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 				packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
 			}
 		}
-		ENetPacket* packet = enet_packet_create(&inputState, sizeof(inputState), packetFlags);
+		inputBuffer.resize(sizeof(avs::InputEvent)+inputState.numEvents*sizeof(avs::InputEvent));
+		memcpy(inputBuffer.data(),&inputState,sizeof(avs::InputState));
+		memcpy(inputBuffer.data()+sizeof(avs::InputState),controllerState.inputEvents.data(),inputState.numEvents*sizeof(avs::InputEvent));
+		ENetPacket* packet = enet_packet_create(inputBuffer.data(), inputBuffer.size(), packetFlags);
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
 	}
 }

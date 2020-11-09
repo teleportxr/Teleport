@@ -111,4 +111,5 @@ private:
 	uint32_t clientID=0;
 
     double time=0.0;
+    std::vector<uint8_t> inputBuffer;
 };

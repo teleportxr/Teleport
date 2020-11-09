@@ -12,4 +12,5 @@ struct ControllerState
 	float mTrackpadY;
 	float mJoystickAxisX;
 	float mJoystickAxisY;
+	std::vector<avs::InputEvent> inputEvents;
 };
