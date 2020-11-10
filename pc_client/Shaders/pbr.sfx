@@ -76,14 +76,6 @@ float ChebyshevUpperBound(vec2 Moments, float t)
 	return  max(p, p_max);
 }
 
-float ShadowContribution(vec2 LightTexCoord, float DistanceToLight)
-{
-   // Read the moments from the variance shadow map.    
-	float2 Moments = videoTexture.SampleLevel(ShadowSampler, LightTexCoord).xy;   
-// Compute the Chebyshev upper bound.    
-	return ChebyshevUpperBound(Moments, DistanceToLight);
-} 
-
 vec4 GetVarianceShadow(Texture2D videoTexture,LightTag lightTag,vec4 spos)
 {
 	vec4 coord=vec4(lightTag.shadowTexCoordOffset.xy+spos.xy*lightTag.shadowTexCoordScale.xy,spos.zw);
@@ -95,7 +87,7 @@ vec4 GetVarianceShadow(Texture2D videoTexture,LightTag lightTag,vec4 spos)
 	vec2 moments=vec2(depth,D2);
 	float fragDepth=1.0-spos.z;
 	fragDepth=0.8+8.0*(fragDepth-0.8);
-	float shadowed = ChebyshevUpperBound(moments,fragDepth); 
+	float shadowed = ChebyshevUpperBound(moments,fragDepth);
 	float shadowed2=step(fragDepth,depth);
 	return vec4(shadowed,0,0,0);
 }
