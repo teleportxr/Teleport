@@ -395,11 +395,16 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 				packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
 			}
 		}
+		inputState.numEvents=controllerState.inputEvents.size();
 		inputBuffer.resize(sizeof(avs::InputEvent)+inputState.numEvents*sizeof(avs::InputEvent));
 		memcpy(inputBuffer.data(),&inputState,sizeof(avs::InputState));
 		memcpy(inputBuffer.data()+sizeof(avs::InputState),controllerState.inputEvents.data(),inputState.numEvents*sizeof(avs::InputEvent));
-		ENetPacket* packet = enet_packet_create(inputBuffer.data(), inputBuffer.size(), packetFlags);
+		size_t dataLength=inputBuffer.size();
+		if(dataLength!=24)
+		{
+		ENetPacket* packet = enet_packet_create(inputBuffer.data(), dataLength, packetFlags);
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
+		}
 	}
 }
 

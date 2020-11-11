@@ -404,9 +404,9 @@ namespace SCServer
 
 	void ClientMessaging::receiveInput(const ENetPacket* packet)
 	{
-		if (packet->dataLength != sizeof(avs::InputState))
+		if (packet->dataLength < sizeof(avs::InputState))
 		{
-			TELEPORT_COUT << "Session: Received malformed input state change packet of length: " << packet->dataLength << std::endl;
+			TELEPORT_CERR << "Session: Received malformed input state change packet of length: " << packet->dataLength << std::endl;
 			return;
 		}
 

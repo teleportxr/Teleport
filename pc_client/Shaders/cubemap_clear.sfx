@@ -75,7 +75,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 		}
 	}
 //	lookup.r=float(id)/32.0;
-	return  lookup+0.1*vec4(lookup.aaa,0);
+	return  lookup;//+0.1*vec4(lookup.aaa,0);
 }
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET

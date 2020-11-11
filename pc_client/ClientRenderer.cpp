@@ -777,7 +777,8 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 	}
 	scr::Light::LightData *sLights=(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
 	PbrLight *l=(PbrLight*)sLights;
-	lightsBuffer.SetData(deviceContext,l);
+	if(l)
+		lightsBuffer.SetData(deviceContext,l);
 
 	//Only render visible actors, but still render children that are close enough.
 	if(actor->IsVisible())
@@ -1339,6 +1340,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(1,controllerPoses[1], -1.0f);
 
 		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, controllerStates, decoder->idrRequired(),fTime);
+
+		for(int i=0;i<2;i++)
+			controllerStates[i].inputEvents.clear();
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			oculusOrigin = sessionClient.GetInitialPos();
