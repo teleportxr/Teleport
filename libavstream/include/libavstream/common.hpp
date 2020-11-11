@@ -665,10 +665,12 @@ namespace avs
 		Click
 	};
 	
+	#pragma pack(push)
+	#pragma pack(1)
 	struct InputEvent
 	{
 		uint32_t eventId;		 //< A monotonically increasing event identifier.
-		uid inputUid;		 //< e.g. the uniqe identifier for this button or control.
+		uid inputUid;			//< e.g. the uniqe identifier for this button or control.
 		uint32_t intValue;
 	};
 
@@ -681,6 +683,7 @@ namespace avs
 		float joystickAxisY;
 		uint32_t numEvents;
 	};
+	#pragma pack(pop)
 
 	struct Pose
 	{

@@ -21,7 +21,7 @@ namespace SCServer
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 		std::function<void(avs::uid, const avs::Pose*)> inSetHeadPose,
 		std::function<void(avs::uid, int index, const avs::Pose*)> inSetControllerPose,
-		std::function<void(avs::uid, const avs::InputState*)> inProcessNewInput,
+		std::function<void(avs::uid, const avs::InputState *,const avs::InputEvent* )> inProcessNewInput,
 		std::function<void(void)> onDisconnect,
 		const int32_t& disconnectTimeout)
 		: settings(settings)
@@ -409,11 +409,41 @@ namespace SCServer
 			TELEPORT_CERR << "Session: Received malformed input state change packet of length: " << packet->dataLength << std::endl;
 			return;
 		}
-
 		avs::InputState inputState;
-		memcpy(&inputState, packet->data, packet->dataLength);
+		memcpy(&inputState, packet->data, sizeof(avs::InputState));
+		if(packet->dataLength!=sizeof(avs::InputState)+inputState.numEvents*sizeof(avs::InputEvent))
+		{
+			TELEPORT_CERR << "Session: Received malformed input state change packet of length: " << packet->dataLength <<" but with "<<inputState.numEvents<<" events."<< std::endl;
+			return;
+		}
+	
+		std::vector<avs::InputEvent> inputEvents;
+		inputEvents.resize(inputState.numEvents);
+		memcpy(const_cast<avs::InputEvent*>(inputEvents.data()), packet->data+ sizeof(avs::InputState),packet->dataLength-sizeof(avs::InputState));
+		
+        // Creation of a new SAFEARRAY
+     /*   SAFEARRAYBOUND bounds;
+        bounds.lLbound = 0;
+        bounds.cElements = inputState.numEvents;
 
-		processNewInput(clientID, &inputState);
+        SAFEARRAY *data = SafeArrayCreate(VT_RECORD, inputState.numEvents, &bounds);
+        int *pVals;
+
+        HRESULT hr = SafeArrayAccessData(data, (void**)&pVals); // direct access to SA memory
+
+        if (SUCCEEDED(hr))
+        {
+            for (ULONG i = 0; i < bounds.cElements; i++)
+            {
+                pVals[i] = i + 100;
+            }
+        }
+        else
+        {
+            // Error
+        }*/
+		const avs::InputEvent *v=inputEvents.data();
+		processNewInput(clientID, &inputState, (const avs::InputEvent *)&v);
 	}
 
 	void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)

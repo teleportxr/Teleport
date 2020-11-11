@@ -396,7 +396,7 @@ void SessionClient::SendInput(const ControllerState& controllerState)
 			}
 		}
 		inputState.numEvents=controllerState.inputEvents.size();
-		inputBuffer.resize(sizeof(avs::InputEvent)+inputState.numEvents*sizeof(avs::InputEvent));
+		inputBuffer.resize(sizeof(avs::InputState)+inputState.numEvents*sizeof(avs::InputEvent));
 		memcpy(inputBuffer.data(),&inputState,sizeof(avs::InputState));
 		memcpy(inputBuffer.data()+sizeof(avs::InputState),controllerState.inputEvents.data(),inputState.numEvents*sizeof(avs::InputEvent));
 		size_t dataLength=inputBuffer.size();

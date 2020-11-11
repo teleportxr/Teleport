@@ -22,6 +22,8 @@
 #include "PluginGraphics.h"
 #include "SimulCasterServer/ErrorHandling.h"
 
+//#include <OAIdl.h>	// for SAFE_ARRAY
+
 #ifdef _MSC_VER
 #include "../VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(false, nullptr, 128);
@@ -34,7 +36,6 @@ TELEPORT_EXPORT void StopSession(avs::uid clientID);
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
-typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 
 static avs::Context avsContext;
@@ -308,7 +309,7 @@ struct InitialiseState
 	void(*hideActor)(avs::uid clientID, void*);
 	void(*headPoseSetter)(avs::uid clientID, const avs::Pose*);
 	void(*controllerPoseSetter)(avs::uid uid, int index, const avs::Pose*);
-	void(*newInputProcessing)(avs::uid clientID, const avs::InputState*);
+	ProcessNewInputFn newInputProcessing;
 	DisconnectFn disconnect;
 	avs::MessageHandlerFunc messageHandler;
 	uint32_t DISCOVERY_PORT = 10607;
