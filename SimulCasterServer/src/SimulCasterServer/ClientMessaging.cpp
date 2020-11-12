@@ -21,7 +21,7 @@ namespace SCServer
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 		std::function<void(avs::uid, const avs::Pose*)> inSetHeadPose,
 		std::function<void(avs::uid, int index, const avs::Pose*)> inSetControllerPose,
-		std::function<void(avs::uid, const avs::InputState *,const avs::InputEvent* )> inProcessNewInput,
+		std::function<void(avs::uid, const avs::InputState *,const avs::InputEvent** )> inProcessNewInput,
 		std::function<void(void)> onDisconnect,
 		const int32_t& disconnectTimeout)
 		: settings(settings)
@@ -418,32 +418,12 @@ namespace SCServer
 		}
 	
 		std::vector<avs::InputEvent> inputEvents;
+		//inputState.numEvents++;
 		inputEvents.resize(inputState.numEvents);
 		memcpy(const_cast<avs::InputEvent*>(inputEvents.data()), packet->data+ sizeof(avs::InputState),packet->dataLength-sizeof(avs::InputState));
-		
-        // Creation of a new SAFEARRAY
-     /*   SAFEARRAYBOUND bounds;
-        bounds.lLbound = 0;
-        bounds.cElements = inputState.numEvents;
-
-        SAFEARRAY *data = SafeArrayCreate(VT_RECORD, inputState.numEvents, &bounds);
-        int *pVals;
-
-        HRESULT hr = SafeArrayAccessData(data, (void**)&pVals); // direct access to SA memory
-
-        if (SUCCEEDED(hr))
-        {
-            for (ULONG i = 0; i < bounds.cElements; i++)
-            {
-                pVals[i] = i + 100;
-            }
-        }
-        else
-        {
-            // Error
-        }*/
+		//inputEvents[inputEvents.size()-1]=inputEvents[0];
 		const avs::InputEvent *v=inputEvents.data();
-		processNewInput(clientID, &inputState, (const avs::InputEvent *)&v);
+		processNewInput(clientID, &inputState, (const avs::InputEvent **)&v);
 	}
 
 	void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
