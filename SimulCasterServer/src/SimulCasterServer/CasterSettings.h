@@ -77,6 +77,7 @@ namespace SCServer
 		int32_t clientBandwidthLimit;
 		int32_t clientBufferSize;
 		int32_t requiredLatencyMs;
+		int32_t connectionTimeout;
 	};
 
 	struct CasterEncoderSettings

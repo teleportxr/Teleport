@@ -56,6 +56,9 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint
 		int ten_thousand = 10000;	
 		srt_setsockflag(m_data->m_socket, SRTO_SNDTIMEO, &ten_thousand, sizeof ten_thousand);
 		srt_setsockflag(m_data->m_socket, SRTO_RCVTIMEO, &ten_thousand, sizeof ten_thousand);
+
+		srt_setsockflag(m_data->m_socket, SRTO_PEERIDLETIMEO, &params.connectionTimeout, sizeof params.connectionTimeout);
+
 		int32_t latency=12;
 		CHECK_SRT_ERROR(srt_setsockopt(m_data->m_socket, 0, SRTO_RCVLATENCY, &latency, sizeof latency));
 		m_data->remote_addr = CreateAddrInet(remote,remotePort);
