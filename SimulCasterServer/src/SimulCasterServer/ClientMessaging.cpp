@@ -88,7 +88,7 @@ namespace SCServer
 
 			ENetEvent event;
 			bool bIsPeerConnected = true;
-			while (bIsPeerConnected && enet_host_service(host, &event, disconnectTimeout) > 0)
+			while (bIsPeerConnected && enet_host_service(host, &event, 5) > 0)
 			{
 				switch (event.type)
 				{
@@ -173,6 +173,7 @@ namespace SCServer
 				char address[20];
 				enet_address_get_host_ip(&event.peer->address, address, sizeof(address));
 				peer = event.peer;
+				enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 5);
 				discoveryService->discoveryCompleteForClient(clientID);
 				TELEPORT_COUT << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
 				break;
@@ -341,7 +342,8 @@ namespace SCServer
 				networkSettings.localPort + 1,
 				static_cast<int32_t>(handshake.maxBandwidthKpS),
 				static_cast<int32_t>(handshake.udpBufferSize),
-				settings->requiredLatencyMs
+				settings->requiredLatencyMs,
+				disconnectTimeout
 			};
 
 			casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));

@@ -49,6 +49,8 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 		srt_setsockflag(m_data->m_socket, SRTO_SNDTIMEO, &thousand, sizeof thousand);
 		srt_setsockflag(m_data->m_socket, SRTO_RCVTIMEO, &thousand, sizeof thousand);
 
+		srt_setsockflag(m_data->m_socket, SRTO_PEERIDLETIMEO, &params.connectionTimeout, sizeof params.connectionTimeout);
+
 		//SRT_TRANSTYPE tt = SRTT_LIVE;
 		//CHECK_SRT_ERROR(srt_setsockopt(m_data->m_socket, 0, SRTO_TRANSTYPE, &tt, sizeof tt));
 		//int32_t latency=params.requiredLatencyMs;
@@ -231,8 +233,6 @@ Result NetworkSink::process(uint32_t timestamp)
 						m_data->m_remote_socket = rem;
 						m_data->bConnected = true;
 					}
-					else
-						return Result::Network_SendFailed;
 				}
 				break;
 				case SRTS_CONNECTED:

@@ -18,6 +18,7 @@ namespace avs
 		int socketBufferSize = 1024 * 1024;
 		uint64_t throttleToRateKpS;
 		uint32_t requiredLatencyMs;
+		int connectionTimeout = 5000;
 	};
 
 	/*! Network sink counters. */

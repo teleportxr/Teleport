@@ -1,4 +1,5 @@
 #include "util/srtutil.h"
+#include "logger.hpp"
 
 #if LIBAV_USE_SRT
 using namespace avs;
@@ -34,6 +35,6 @@ void avs::CHECK_SRT_ERROR(int err)
 	if(!err)
 		return;
 	const char* errstr=srt_getlasterror_str();
-	std::cerr<<"Srt: error: "<<(errstr?errstr:"unknown")<<std::endl;
+    AVSLOG(Error) << "Srt: error: " << (errstr ? errstr : "unknown") << "\n";
 }
 #endif

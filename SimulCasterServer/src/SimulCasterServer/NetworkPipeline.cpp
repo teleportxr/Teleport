@@ -33,6 +33,7 @@ namespace SCServer
 		SinkParams.throttleToRateKpS = std::min(settings->throttleKpS, static_cast<int64_t>(inNetworkSettings.clientBandwidthLimit));// Assuming 60Hz on the other size. k per sec
 		SinkParams.socketBufferSize = inNetworkSettings.clientBufferSize;
 		SinkParams.requiredLatencyMs = inNetworkSettings.requiredLatencyMs;
+		SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;
 
 		pipeline.reset(new avs::Pipeline);
 		networkSink.reset(new avs::NetworkSink);

@@ -46,7 +46,9 @@ namespace avs
 		 */
 		int socketBufferSize = 4*1024 * 1024;
 
-		int32_t requiredLatencyMs=0;
+		int32_t requiredLatencyMs = 0;
+
+		int connectionTimeout = 5000;
 	};
 
 	/*! Network source counters. */
