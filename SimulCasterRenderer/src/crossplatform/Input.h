@@ -3,6 +3,8 @@
 #pragma once
 
 #include <stdint.h>
+#include <vector>
+#include <libavstream/common.hpp>
 
 struct ControllerState
 {

@@ -425,10 +425,13 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
                  videoConfig.video_width, videoConfig.video_height,
                  videoConfig.colour_cubemap_size);
 
+		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
+
 		avs::NetworkSourceParams sourceParams = {};
 		sourceParams.socketBufferSize      = 3 * 1024 * 1024; // 3 Mb socket buffer size
 		//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 		sourceParams.maxJitterBufferLength = 0;
+		sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
 
 		std::vector<avs::NetworkSourceStream> streams = { {20} };
 		if (AudioStream)
@@ -660,9 +663,9 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
 		for (auto& light : tagData.lights)
 		{
-			memcpy(&light, &data[index], sizeof(scr::LightData));
+			memcpy(&light, &data[index], sizeof(scr::Light::LightData));
 			avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, light.worldTransform);
-			index += sizeof(scr::LightData);
+			index += sizeof(scr::Light::LightData);
 		}
 
 		VideoTagDataCube shaderData;
