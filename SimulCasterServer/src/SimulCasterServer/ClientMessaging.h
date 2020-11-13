@@ -33,7 +33,7 @@ namespace SCServer
 						std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose,
 						std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput,
 						std::function<void(void)> onDisconnect,
-						const int32_t& disconnectTimeout);
+						const uint32_t& disconnectTimeout);
 		
 		virtual ~ClientMessaging();
 
@@ -95,7 +95,7 @@ namespace SCServer
 		std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput;	//Delegate called when new input is received.
 		std::function<void(void)> onDisconnect; //Delegate called when the peer disconnects.
 
-		const int32_t& disconnectTimeout;
+		const uint32_t& disconnectTimeout;
 
 		CasterContext* casterContext;
 		CaptureDelegates captureComponentDelegates;

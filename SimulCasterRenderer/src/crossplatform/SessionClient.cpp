@@ -128,6 +128,14 @@ void SessionClient::Disconnect(uint timeout)
 	clientID=0;
 }
 
+void SessionClient::SetPeerTimeout(uint timeout)
+{
+	if (IsConnected())
+	{
+		enet_peer_timeout(mServerPeer, 0, timeout, timeout * 6);
+	}
+}
+
 void SessionClient::SendClientMessage(const avs::ClientMessage& msg)
 {
 	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);

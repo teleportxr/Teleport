@@ -23,7 +23,7 @@ namespace SCServer
 		std::function<void(avs::uid, int index, const avs::Pose*)> inSetControllerPose,
 		std::function<void(avs::uid, const avs::InputState *,const avs::InputEvent** )> inProcessNewInput,
 		std::function<void(void)> onDisconnect,
-		const int32_t& disconnectTimeout)
+		const uint32_t& disconnectTimeout)
 		: settings(settings)
 		, discoveryService(discoveryService)
 		, geometryStreamingService(geometryStreamingService)
@@ -173,7 +173,7 @@ namespace SCServer
 				char address[20];
 				enet_address_get_host_ip(&event.peer->address, address, sizeof(address));
 				peer = event.peer;
-				enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 5);
+				enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 6);
 				discoveryService->discoveryCompleteForClient(clientID);
 				TELEPORT_COUT << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
 				break;

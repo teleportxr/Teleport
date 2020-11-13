@@ -956,10 +956,13 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	videoTagDataCubeArray.clear();
 	videoTagDataCubeArray.resize(maxTagDataSize);
 
+	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
+
 	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
 	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
 	sourceParams.socketBufferSize = 1212992;
 	sourceParams.requiredLatencyMs=setupCommand.requiredLatencyMs;
+	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
 
 	std::vector<avs::NetworkSourceStream> streams = { {20} };
 	if (AudioStream)

@@ -55,7 +55,7 @@ static SetControllerPoseFn setControllerPose;
 static ProcessNewInputFn processNewInput;
 static DisconnectFn onDisconnect;
 
-static int32_t connectionTimeout = 60000;
+static uint32_t connectionTimeout = 60000;
 static avs::uid serverID = 0;
 
 static std::set<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
@@ -612,6 +612,7 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
+	setupCommand.idle_connection_timeout = connectionTimeout;
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 

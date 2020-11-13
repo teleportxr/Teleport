@@ -46,6 +46,7 @@ public:
     bool Connect(const char* remoteIP, uint16_t remotePort, uint timeout);
     bool Connect(const ENetAddress& remote, uint timeout);
     void Disconnect(uint timeout);
+    void SetPeerTimeout(uint timeout);
 
     void SendClientMessage(const avs::ClientMessage &msg);
 

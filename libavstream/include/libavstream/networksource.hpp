@@ -48,7 +48,7 @@ namespace avs
 
 		int32_t requiredLatencyMs = 0;
 
-		int connectionTimeout = 5000;
+		uint32_t connectionTimeout = 5000;
 	};
 
 	/*! Network source counters. */
