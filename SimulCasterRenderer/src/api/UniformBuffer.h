@@ -38,6 +38,7 @@ namespace scr
 
 		//Submits the stored UBO data to the GPU.
 		virtual void Submit() const = 0;
+		virtual void Update() const = 0;
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(UniformBuffer*, int)> ResourceInUseCallback = &UniformBuffer::ResourceInUse;

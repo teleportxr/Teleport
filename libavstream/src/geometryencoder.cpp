@@ -17,6 +17,7 @@ namespace avs
 		ConvertRotation(fromStandard, toStandard, transform.rotation);
 		ConvertScale(fromStandard, toStandard, transform.scale);
 	}
+
 	void ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec4 &rotation)
 	{
 		if (fromStandard == toStandard)
@@ -139,6 +140,7 @@ namespace avs
 		}
 		return -1;
 	}
+
 	void ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &scale)
 	{
 		if (fromStandard == toStandard)
@@ -190,6 +192,7 @@ namespace avs
 			}
 		}
 	}
+
 	void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &position)
 	{
 		if (fromStandard == toStandard)
@@ -254,7 +257,6 @@ namespace avs
 		// Geom encoder doesn't own its backend.
 		GeometryEncoderBackendInterface *m_backend;
 	};
-
 } // avs
 
 using namespace avs;

@@ -604,7 +604,7 @@ void ResourceCreator::CreateSkin(avs::uid skinID, avs::Skin& skin)
 	m_ReceivedResources.push_back(skinID);
 
 	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(skinID, avs::GeometryPayloadType::Skin);
-	incompleteSkin->skin = std::make_shared<scr::Skin>();
+	incompleteSkin->skin = m_pRenderPlatform->InstantiateSkin();
 	incompleteSkin->skin->inverseBindMatrices.resize(skin.inverseBindMatrices.size());
 	incompleteSkin->skin->bones.resize(skin.jointIDs.size());
 
@@ -631,7 +631,7 @@ void ResourceCreator::CreateSkin(avs::uid skinID, avs::Skin& skin)
 		}
 	}
 
-	incompleteSkin->skin->rootTransform = skin.rootTransform;
+	incompleteSkin->skin->skinTransform = skin.skinTransform;
 
 	if(incompleteSkin->missingBones.size() == 0)
 	{

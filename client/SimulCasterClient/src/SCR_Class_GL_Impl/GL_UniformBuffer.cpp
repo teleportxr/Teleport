@@ -22,15 +22,6 @@ void GL_UniformBuffer::Destroy()
     m_UBO.Destroy();
 }
 
-void GL_UniformBuffer::Bind() const
-{
-    glBindBuffer(GL_UNIFORM_BUFFER, m_UBO.GetBuffer());
-}
-void GL_UniformBuffer::Unbind() const
-{
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-}
-
 void GL_UniformBuffer::Submit() const
 {
     Bind();
@@ -38,4 +29,18 @@ void GL_UniformBuffer::Submit() const
    // OVR_WARN("glBufferSubData: %llx %d %d %d",(unsigned long long int)m_CI.data,((int32_t*)m_CI.data)[0],((int32_t*)m_CI.data)[1],((uint32_t*)m_CI.data)[2]);
     Unbind();
     glBindBufferBase(GL_UNIFORM_BUFFER, m_CI.bindingLocation,m_UBO.GetBuffer());
+}
+
+void GL_UniformBuffer::Update() const
+{
+    m_UBO.Update(m_CI.size, m_CI.data);
+}
+
+void GL_UniformBuffer::Bind() const
+{
+    glBindBuffer(GL_UNIFORM_BUFFER, m_UBO.GetBuffer());
+}
+void GL_UniformBuffer::Unbind() const
+{
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }

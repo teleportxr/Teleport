@@ -214,8 +214,6 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 	};
 	GlobalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
-
-
 	scr::VertexBufferLayout layout;
 	layout.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC3, scr::VertexBufferLayout::Type::FLOAT);
 	layout.AddAttribute(1, scr::VertexBufferLayout::ComponentCount::VEC3, scr::VertexBufferLayout::Type::FLOAT);
@@ -229,6 +227,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 	scr::ShaderResourceLayout vertLayout;
 	vertLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	vertLayout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	vertLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	scr::ShaderResourceLayout fragLayout;
 	fragLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
@@ -243,6 +242,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 	scr::ShaderResource pbrShaderResource({vertLayout, fragLayout});
 	pbrShaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", {});
+	pbrShaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 4, "u_BoneData", {});
 	pbrShaderResource.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", {});
 	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_DiffuseTexture", {});
 	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_NormalTexture", {});
@@ -256,25 +256,40 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 	passNames.push_back("OpaquePBR");
 	passNames.push_back("OpaqueAlbedo");
 	passNames.push_back("OpaqueNormal");
-	//Set scr::EffectPass
+
 	scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
 	{
 		pipelineCreateInfo.m_Count                          = 2;
 		pipelineCreateInfo.m_PipelineType                   = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
 		pipelineCreateInfo.m_ShaderCreateInfo[0].stage      = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-		pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "main";
 		pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/OpaquePBR.vert";
 		pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = clientAppInterface->LoadTextFile("shaders/OpaquePBR.vert");
 		pipelineCreateInfo.m_ShaderCreateInfo[1].stage      = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaquePBR";
 		pipelineCreateInfo.m_ShaderCreateInfo[1].filepath   = "shaders/OpaquePBR.frag";
 		pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = clientAppInterface->LoadTextFile("shaders/OpaquePBR.frag");
 	}
-	clientAppInterface->BuildEffectPass("OpaquePBR", &layout, &pipelineCreateInfo, {pbrShaderResource});
+
+	//Static passes.
+	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Static";
+	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaquePBR";
+	clientAppInterface->BuildEffectPass("Static_OpaquePBR", &layout, &pipelineCreateInfo, {pbrShaderResource});
+
 	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueAlbedo";
-	clientAppInterface->BuildEffectPass("OpaqueAlbedo", &layout, &pipelineCreateInfo, {pbrShaderResource});
+	clientAppInterface->BuildEffectPass("Static_OpaqueAlbedo", &layout, &pipelineCreateInfo, {pbrShaderResource});
+
 	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueNormal";
-	clientAppInterface->BuildEffectPass("OpaqueNormal", &layout, &pipelineCreateInfo, {pbrShaderResource});
+	clientAppInterface->BuildEffectPass("Static_OpaqueNormal", &layout, &pipelineCreateInfo, {pbrShaderResource});
+
+	//Skinned passes.
+	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Animated";
+	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaquePBR";
+	clientAppInterface->BuildEffectPass("Animated_OpaquePBR", &layout, &pipelineCreateInfo, {pbrShaderResource});
+
+	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueAlbedo";
+	clientAppInterface->BuildEffectPass("Animated_OpaqueAlbedo", &layout, &pipelineCreateInfo, {pbrShaderResource});
+
+	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueNormal";
+	clientAppInterface->BuildEffectPass("Animated_OpaqueNormal", &layout, &pipelineCreateInfo, {pbrShaderResource});
 }
 
 void ClientRenderer::ExitedVR()
@@ -510,10 +525,8 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
 
 	//Render hands, if they exist.
-	if(leftHand)
-		RenderActor(res, leftHand);
-	if(rightHand)
-		RenderActor(res, rightHand);
+	if(leftHand) RenderActor(res, leftHand);
+	if(rightHand) RenderActor(res, rightHand);
 }
 
 
@@ -525,6 +538,9 @@ void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node>
 	scr::mat4 globalMatrix=actor->GetGlobalTransform().GetTransformMatrix();
 	transformToOculusOrigin=scr::mat4::Translation(-oculusOrigin);
 	scr::mat4 scr_Transform = transformToOculusOrigin * globalMatrix;
+
+	std::shared_ptr<scr::Skin> skin = ovrActor->GetSkin();
+	if(skin) skin->UpdateBoneMatrices(globalMatrix);
 
 	OVR::Matrix4f transform;
 	memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));

@@ -25,7 +25,7 @@ namespace pc_client
 {
     class PC_RenderPlatform final : public scr::RenderPlatform
     {
-		simul::crossplatform::RenderPlatform *renderPlatform;
+		simul::crossplatform::RenderPlatform* renderPlatform = nullptr;
     public:
         PC_RenderPlatform():scr::RenderPlatform() {}
         ~PC_RenderPlatform() {}
@@ -36,6 +36,7 @@ namespace pc_client
 		std::shared_ptr<scr::Sampler>				InstantiateSampler() const override;
 		std::shared_ptr<scr::Shader>				InstantiateShader() const override;
 		std::shared_ptr<scr::ShaderStorageBuffer>	InstantiateShaderStorageBuffer() const override;
+		std::shared_ptr<scr::Skin>					InstantiateSkin() const override;
 		std::shared_ptr<scr::Texture>				InstantiateTexture() const override;
 		std::shared_ptr<scr::UniformBuffer>			InstantiateUniformBuffer() const override;
 		std::shared_ptr<scr::VertexBuffer>			InstantiateVertexBuffer() const override;

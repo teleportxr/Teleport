@@ -375,24 +375,24 @@ namespace avs
 			);
 		}
 
-		static Mat4x4 convertToStandard(const Mat4x4& matrix, avs::AxesStandard fromStandard, avs::AxesStandard toStandard)
+		static Mat4x4 convertToStandard(const Mat4x4& matrix, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 		{
 			
 			Mat4x4 convertedMatrix = matrix;
 
-			switch(fromStandard)
+			switch(sourceStandard)
 			{
 			case avs::AxesStandard::UnityStyle:
-				switch(toStandard)
+				switch(targetStandard)
 				{
 				case avs::AxesStandard::EngineeringStyle:
 					///POSITION:
-					//convertedMatrix.m03 = matrix.m03
+					//convertedMatrix.m03 = matrix.m03;
 					convertedMatrix.m13 = matrix.m23;
 					convertedMatrix.m23 = matrix.m13;
 
 					//ROTATION (Implicitly handles scale.):
-					//convertedMatrix.m00 = matrix.m00
+					//convertedMatrix.m00 = matrix.m00;
 					convertedMatrix.m01 = matrix.m02;
 					convertedMatrix.m02 = matrix.m01;
 
@@ -406,18 +406,68 @@ namespace avs
 
 					break;
 				case::avs::AxesStandard::GlStyle:
-					//AVSLOG(Warning) << "Unimplemented toStandard in Mat4x4::convertToStandard: GlStyle!\n";
+					convertedMatrix.m20 = -matrix.m20;
+					convertedMatrix.m21 = -matrix.m21;
+					convertedMatrix.m22 = -matrix.m22;
+					convertedMatrix.m23 = -matrix.m23;
+
 					break;
 				default:
-					//AVSLOG(Warning) << "Unrecognised toStandard in Mat4x4::convertToStandard!\n";
+					//AVSLOG(Error) << "Unrecognised targetStandard in Mat4x4::convertToStandard!\n";
 					break;
 				}
 				break;
 			case avs::AxesStandard::UnrealStyle:
-				//AVSLOG(Warning) << "Unimplemented fromStandard in Mat4x4::convertToStandard: UnrealStyle!\n";
+				switch(targetStandard)
+				{
+				case avs::AxesStandard::EngineeringStyle:
+					///POSITION:
+					convertedMatrix.m03 = matrix.m13;
+					convertedMatrix.m13 = matrix.m03;
+					//convertedMatrix.m23 = matrix.m23;
+
+					//ROTATION (Implicitly handles scale.):
+					convertedMatrix.m00 = matrix.m11;
+					convertedMatrix.m01 = matrix.m10;
+					convertedMatrix.m02 = matrix.m12;
+
+					convertedMatrix.m10 = matrix.m01;
+					convertedMatrix.m11 = matrix.m00;
+					convertedMatrix.m12 = matrix.m02;
+
+					convertedMatrix.m20 = matrix.m21;
+					convertedMatrix.m21 = matrix.m20;
+					//convertedMatrix.m22 = matrix.m22;
+
+					break;
+				case::avs::AxesStandard::GlStyle:
+					//+position.y, +position.z, -position.x
+					///POSITION:
+					convertedMatrix.m03 = matrix.m13;
+					convertedMatrix.m13 = matrix.m23;
+					convertedMatrix.m23 = -matrix.m03;
+
+					//ROTATION (Implicitly handles scale.):
+					convertedMatrix.m00 = matrix.m11;
+					convertedMatrix.m01 = matrix.m12;
+					convertedMatrix.m02 = matrix.m10;
+
+					convertedMatrix.m10 = matrix.m21;
+					convertedMatrix.m11 = matrix.m22;
+					convertedMatrix.m12 = matrix.m20;
+
+					convertedMatrix.m20 = -matrix.m01;
+					convertedMatrix.m21 = -matrix.m02;
+					convertedMatrix.m22 = -matrix.m00;
+
+					break;
+				default:
+					//AVSLOG(Error) << "Unrecognised targetStandard in Mat4x4::convertToStandard!\n";
+					break;
+				}
 				break;
 			default:
-				//AVSLOG(Warning) << "Unrecognised fromStandard in Mat4x4::convertToStandard!\n";
+				//AVSLOG(Error) << "Unrecognised sourceStandard in Mat4x4::convertToStandard!\n";
 				break;
 			}
 

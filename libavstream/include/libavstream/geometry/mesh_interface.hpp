@@ -316,7 +316,7 @@ struct Animation;
 	{
 		std::vector<Mat4x4> inverseBindMatrices;
 		std::vector<uid> jointIDs;
-		Transform rootTransform;
+		Transform skinTransform;
 
 		static Skin convertToStandard(const Skin& skin, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 		{
@@ -328,8 +328,8 @@ struct Animation;
 				convertedSkin.inverseBindMatrices.push_back(Mat4x4::convertToStandard(matrix, sourceStandard, targetStandard));
 			}
 
-			convertedSkin.rootTransform = skin.rootTransform;
-			avs::ConvertTransform(sourceStandard, targetStandard, convertedSkin.rootTransform);
+			convertedSkin.skinTransform = skin.skinTransform;
+			avs::ConvertTransform(sourceStandard, targetStandard, convertedSkin.skinTransform);
 
 			return convertedSkin;
 		}

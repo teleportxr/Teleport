@@ -26,20 +26,28 @@ namespace scc
 
 		inline OVR::GlProgram* GetGlPlatform(const char* effectPassName)
 		{
-			auto platformPair = m_EffectPrograms.find(effectPassName);
+			for(auto& programPair : m_EffectPrograms)
+			{
+				if(strcmp(programPair.first.c_str(), effectPassName) == 0)
+				{
+					return &programPair.second;
+				}
+			}
 
-			//Return null pointer, if no effect exists with that name.
-			if(platformPair == m_EffectPrograms.end()) return nullptr;
-			else return &platformPair->second;
+			return nullptr;
 		}
 
 		inline const OVR::GlProgram* GetGlPlatform(const char* effectPassName) const
 		{
-			auto platformPair = m_EffectPrograms.find(effectPassName);
+			for(const auto& programPair : m_EffectPrograms)
+			{
+				if(strcmp(programPair.first.c_str(), effectPassName) == 0)
+				{
+					return &programPair.second;
+				}
+			}
 
-			//Return null pointer, if no effect exists with that name.
-			if(platformPair == m_EffectPrograms.end()) return nullptr;
-			else return &platformPair->second;
+			return nullptr;
 		}
 
 		static GLenum ToGLTopology(TopologyType topology);

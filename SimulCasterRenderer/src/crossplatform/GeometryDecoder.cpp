@@ -439,7 +439,7 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 		skin.jointIDs[i] = Next8B;
 	}
 
-	skin.rootTransform = NextChunk(avs::Transform);
+	skin.skinTransform = NextChunk(avs::Transform);
 
 	target->CreateSkin(skinID, skin);
 	return avs::Result::OK;

@@ -1,10 +1,13 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "PC_RenderPlatform.h"
 
-using namespace pc_client;
+#include "crossplatform/Skin.h"
+
 using namespace scr;
 
-void PC_RenderPlatform::SetSimulRenderPlatform(simul::crossplatform::RenderPlatform *r)
+namespace pc_client
+{
+void PC_RenderPlatform::SetSimulRenderPlatform(simul::crossplatform::RenderPlatform* r)
 {
 	renderPlatform = r;
 }
@@ -31,8 +34,14 @@ std::shared_ptr<scr::Shader> PC_RenderPlatform::InstantiateShader() const
 }
 std::shared_ptr<scr::ShaderStorageBuffer> PC_RenderPlatform::InstantiateShaderStorageBuffer() const
 {
-	return std::shared_ptr<PC_ShaderStorageBuffer>();
+	return std::make_shared<PC_ShaderStorageBuffer>(this);
 }
+
+std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin() const
+{
+	return std::make_shared<scr::Skin>();
+}
+
 std::shared_ptr<scr::Texture> PC_RenderPlatform::InstantiateTexture() const
 {
 	return std::make_shared<PC_Texture>(this);
@@ -44,4 +53,5 @@ std::shared_ptr<scr::UniformBuffer> PC_RenderPlatform::InstantiateUniformBuffer(
 std::shared_ptr<scr::VertexBuffer> PC_RenderPlatform::InstantiateVertexBuffer() const
 {
 	return std::make_shared<PC_VertexBuffer>(this);
+}
 }

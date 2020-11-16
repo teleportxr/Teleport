@@ -2,8 +2,8 @@
 
 GlobalGraphicsResources GlobalGraphicsResources::instance;
 
-
-scc::GL_Effect *GlobalGraphicsResources::GetPbrEffect()
+GlobalGraphicsResources::GlobalGraphicsResources()
+	:defaultPBREffect(&renderPlatform), defaultSkin(&renderPlatform)
 {
-	return &pbrEffect;
+
 }

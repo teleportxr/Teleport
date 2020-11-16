@@ -16,7 +16,7 @@ void BoneKeyframe::seekTime(float time)
 	setPositionToTime(time, transform.m_Translation, positionKeyframes);
 	setRotationToTime(time, transform.m_Rotation, rotationKeyframes);
 
-	transform.UpdateModelMatrix(transform.m_Translation, transform.m_Rotation, transform.m_Scale);
+	transform.UpdateModelMatrix();
 	bone->SetLocalTransform(transform);
 }
 

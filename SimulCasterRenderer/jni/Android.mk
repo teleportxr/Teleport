@@ -25,13 +25,13 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/LibOVRKernel/Src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/1stParty/OpenGL_Loader/Include
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
-LOCAL_SRC_FILES  := 	../src/crossplatform/ActorComponents.cpp	\
+LOCAL_SRC_FILES  := 	../src/api/Effect.cpp						\
+						../src/crossplatform/ActorComponents.cpp	\
 						../src/crossplatform/ActorManager.cpp		\
 						../src/crossplatform/Animation.cpp			\
 						../src/crossplatform/API.cpp				\
 						../src/crossplatform/Bone.cpp				\
 						../src/crossplatform/Camera.cpp				\
-						../src/api/Effect.cpp						\
 						../src/crossplatform/GeometryDecoder.cpp	\
 						../src/crossplatform/Light.cpp				\
 						../src/crossplatform/Log.cpp				\

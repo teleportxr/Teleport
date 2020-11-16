@@ -168,16 +168,23 @@ namespace scr
 		virtual void CreatePass(EffectPassCreateInfo* pEffectPassCreateInfo) = 0;
 
 		inline const EffectCreateInfo& GetEffectCreateInfo() const { return m_CI;}
-		/// May return nullptr if pass is not present.
-		const EffectPassCreateInfo *GetEffectPassCreateInfo(const char* effectPassName) const;
-		inline bool HasEffectPass(const char* effectPassName)
+		const EffectPassCreateInfo* GetEffectPassCreateInfo(const char* effectPassName) const
 		{
-			if(m_EffectPasses.empty())
-			    return false;
-		    else if(m_EffectPasses.find(effectPassName) != m_EffectPasses.end())
-				return true;
-			else
-				return false;
+			for(const auto& passPair : m_EffectPasses)
+			{
+				if(strcmp(passPair.first, effectPassName) == 0)
+				{
+					return &passPair.second;
+				}
+			}
+
+			return nullptr;
+		}
+
+		bool HasEffectPass(const char* effectPassName)
+		{
+			//Null pointer returns false, otherwise true.
+			return GetEffectPassCreateInfo(effectPassName);
 		}
 
 		virtual void LinkShaders(const char* effectPassName, const std::vector<ShaderResource>& shaderResources) = 0;

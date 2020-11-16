@@ -6,12 +6,22 @@
 //TODO: Placeholder! Find maths library!
 namespace scr
 {
+	//CONSTANTS
+
 	const float PI = 3.1415926535f;
 	const float TAU = 2.0f * PI;
 	const float HALF_PI = 0.5f * PI;
 
+	//FORWARD DECLARATIONS
+
 	struct quat;
 	inline quat operator*(float lhs, const quat& rhs);
+
+	struct mat4;
+	inline mat4 operator*(float lhs, const mat4& rhs);
+
+	//DEFINITIONS
+
 	struct quat
 	{
 		float i, j, k, s;
@@ -185,17 +195,81 @@ namespace scr
 		return quat(rhs.i * lhs, rhs.j * lhs, rhs.k * lhs, rhs.s * lhs);
 	}
 
+	struct mat2
+	{
+		float a, b;
+		float c, d;
+
+		mat2()
+			:mat2(1.0f)
+		{}
+
+		mat2(float diagonal)
+			:mat2
+			(
+				1.0f, 0.0f,
+				0.0f, 1.0f
+			)
+		{}
+
+		mat2(float a, float b, float c, float d)
+			:a(a), b(b), c(c), d(d)
+		{}
+
+		static float Determinant(float a, float b, float c, float d)
+		{
+			return a * d - b * c;
+		}
+
+		float GetDeterminant() const
+		{
+			return Determinant(a, b, c, d);
+		}
+	};
+
+	struct mat3
+	{
+		float a, b, c;
+		float d, e, f;
+		float g, h, i;
+
+		mat3()
+			:mat3(1.0f)
+		{}
+
+		mat3(float diagonal)
+			:mat3
+			(
+				1.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 1.0f
+			)
+		{}
+
+		mat3(float a, float b, float c, float d, float e, float f, float g, float h, float i)
+			:a(a), b(b), c(c), d(d), e(e), f(f), g(g), h(h), i(i)
+		{}
+
+		static float Determinant(float a, float b, float c, float d, float e, float f, float g, float h, float i)
+		{
+			return a * mat2::Determinant(e, f, h, i) - b * mat2::Determinant(d, f, g, i) + c * mat2::Determinant(d, e, g, h);
+		}
+
+		float GetDeterminant() const
+		{
+			return Determinant(a, b, c, d, e, f, g, h, i);
+		}
+	};
+
 	struct mat4
 	{
-		float a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p;
+		float a, b, c, d;
+		float e, f, g, h;
+		float i, j, k, l;
+		float m, n, o, p;
 
 		mat4()
-			:mat4
-			(0.0f, 0.0f, 0.0f, 0.0f,
-			 0.0f, 0.0f, 0.0f, 0.0f,
-			 0.0f, 0.0f, 0.0f, 0.0f,
-			 0.0f, 0.0f, 0.0f, 0.0f
-			)
+			:mat4(1.0f)
 		{}
 
 		mat4(float a, float b, float c, float d, float e, float f, float g, float h,
@@ -238,7 +312,28 @@ namespace scr
 				  matrix.m30, matrix.m31, matrix.m32, matrix.m33)
 		{}
 
-		mat4 Transpose()
+		static mat4 Transpose(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j, float k, float l, float m, float n, float o, float p)
+		{
+			return mat4
+			(
+				a, e, i, m,
+				b, f, j, n,
+				c, g, k, o,
+				d, h, l, p
+			);
+		}
+
+		static mat4 Transpose(mat4 source)
+		{
+			return Transpose(source.a, source.b, source.c, source.d, source.e, source.f, source.g, source.h, source.i, source.j, source.k, source.l, source.m, source.n, source.o, source.p);
+		}
+
+		mat4 GetTranspose() const
+		{
+			return Transpose(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p);
+		}
+
+		mat4& Transposed()
 		{
 			/*a = a;
 			f = f;
@@ -253,6 +348,33 @@ namespace scr
 			std::swap(l, o);
 
 			return *this;
+		}
+
+
+		static float Determinant(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j, float k, float l, float m, float n, float o, float p)
+		{
+			return a * mat3::Determinant(f, g, h, j, k, l, n, o, p) - b * mat3::Determinant(e, g, h, i, k, l, m, o, p) + c * mat3::Determinant(e, f, h, i, j, l, m, n, p) - d * mat3::Determinant(e, f, g, i, j, k, m, n, o);
+		}
+
+		float GetDeterminant() const
+		{
+			return Determinant(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p);
+		}
+
+		mat4 GetInverted() const
+		{
+			const mat4 cofactors
+			(
+				+mat3::Determinant(f, g, h, j, k, l, n, o, p), -mat3::Determinant(e, g, h, i, k, l, m, o, p), +mat3::Determinant(e, f, h, i, j, l, m, n, p), -mat3::Determinant(e, f, g, i, j, k, m, n, o),
+				-mat3::Determinant(b, c, d, j, k, l, n, o, p), +mat3::Determinant(a, c, d, i, k, l, m, o, p), -mat3::Determinant(a, b, d, i, j, l, m, n, p), +mat3::Determinant(a, b, c, i, j, k, m, n, o),
+				+mat3::Determinant(b, c, d, f, g, h, n, o, p), -mat3::Determinant(a, c, d, e, g, h, m, o, p), +mat3::Determinant(a, b, d, e, f, h, m, n, p), -mat3::Determinant(a, b, c, e, f, g, m, n, o),
+				-mat3::Determinant(b, c, d, f, g, h, j, k, l), +mat3::Determinant(a, c, d, e, g, h, i, k, l), -mat3::Determinant(a, b, d, e, f, h, i, j, l), +mat3::Determinant(a, b, c, e, f, g, i, j, k)
+			);
+
+			mat4 adjugate = cofactors.GetTranspose();
+			float determinate = a * cofactors.a + b * cofactors.b + c * cofactors.c + d * cofactors.d;
+
+			return (1 / determinate) * adjugate;
 		}
 
 		avs::vec4 operator*(const avs::vec4& input) const
@@ -278,8 +400,19 @@ namespace scr
 			avs::vec4  output_l = *this * input_l;
 
 			mat4 output(output_i, output_j, output_k, output_l);
-			output.Transpose();
+			output.Transposed();
 			return output;
+		}
+
+		mat4 operator*(float rhs) const
+		{
+			return mat4
+			(
+				a * rhs, b * rhs, c * rhs, d * rhs,
+				e * rhs, f * rhs, g * rhs, h * rhs,
+				i * rhs, j * rhs, k * rhs, l * rhs,
+				m * rhs, n * rhs, o * rhs, p * rhs
+			);
 		}
 
 		avs::vec3 GetTranslation() const
@@ -395,7 +528,23 @@ namespace scr
 				0.0f, 0.0f, 0.0f, 1.0f
 			);
 		}
+
+		operator avs::Mat4x4()
+		{
+			return avs::Mat4x4
+			(
+				a, b, c, d,
+				e, f, g, h,
+				i, j, k, l,
+				m, n, o, p
+			);
+		}
 	};
+
+	inline mat4 operator*(float lhs, const mat4& rhs)
+	{
+		return rhs * lhs;
+	}
 
 	struct uvec2
 	{

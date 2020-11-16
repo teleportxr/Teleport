@@ -3,21 +3,23 @@
 
 #include "Common.h"
 
-#include "FrameBuffer.h"
-#include "IndexBuffer.h"
-#include "Effect.h"
-#include "Sampler.h"
-#include "Shader.h"
-#include "ShaderStorageBuffer.h"
-#include "Texture.h"
-#include "UniformBuffer.h"
-#include "Material.h"
-#include "VertexBuffer.h"
 #include "crossplatform/API.h"
 
 namespace scr
 {
+	class FrameBuffer;
+	class IndexBuffer;
+	class Effect;
+	class Sampler;
+	class Shader;
+	class ShaderStorageBuffer;
+	class Skin;
+	class Texture;
+	class UniformBuffer;
+	class VertexBuffer;
+
 	class Material;
+
 	class RenderPlatform
 	{
 	public:
@@ -31,9 +33,11 @@ namespace scr
 		virtual std::shared_ptr<Sampler>				InstantiateSampler() const = 0;
 		virtual std::shared_ptr<Shader>					InstantiateShader() const = 0;
 		virtual std::shared_ptr<ShaderStorageBuffer>	InstantiateShaderStorageBuffer() const = 0;
+		virtual std::shared_ptr<Skin>					InstantiateSkin() const = 0;
 		virtual std::shared_ptr<Texture>				InstantiateTexture() const = 0;
 		virtual std::shared_ptr<UniformBuffer>			InstantiateUniformBuffer() const = 0;
 		virtual std::shared_ptr<VertexBuffer>			InstantiateVertexBuffer() const = 0;
-		std::shared_ptr<scr::Material> placeholderMaterial ;
+
+		std::shared_ptr<scr::Material> placeholderMaterial;
 	};
 }

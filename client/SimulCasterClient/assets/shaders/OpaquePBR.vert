@@ -75,10 +75,14 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
     float u_NormalTexCoordIndex;
     float u_CombinedTexCoordIndex;
     float u_EmissiveTexCoordIndex;
-    float _pad2;
 };
 
-void main()
+layout(std140, binding = 4) uniform u_BoneData
+{
+    mat4 u_Bones[64];
+};
+
+void Static()
 {
     //gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
     gl_Position         = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
@@ -103,4 +107,30 @@ void main()
     //                vec4(0.0, 0.0, 0.0, 1.0));
     //v_ModelSpacePosition = (transpose(cob) * vec4(a_Position, 1.0)).xyz;
     v_ModelSpacePosition = a_Position;
+}
+
+void Animated()
+{
+    mat4 boneTransform  = u_Bones[int(a_Joint[0])] * a_Weights[0]
+                        + u_Bones[int(a_Joint[1])] * a_Weights[1]
+                        + u_Bones[int(a_Joint[2])] * a_Weights[2]
+                        + u_Bones[int(a_Joint[3])] * a_Weights[3];
+
+    gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * (vec4(a_Position, 1.0) * boneTransform);
+
+    v_Position 	        = (ModelMatrix * (vec4(a_Position, 1.0) * boneTransform)).xyz;
+    v_Normal	        = normalize((ModelMatrix * (vec4(a_Normal, 0.0) * boneTransform)).xyz);
+    v_Tangent	        = normalize((ModelMatrix * (vec4(a_Tangent.xyz, 0.0) * boneTransform)).xyz);
+
+    v_Binormal	        = normalize(cross(v_Normal, v_Tangent));
+    v_TBN		        = mat3(v_Tangent, v_Binormal, v_Normal);
+    vec2 UV0		    = a_UV0.xy;
+    vec2 UV1		    = a_UV1.xy;
+    v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
+    v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
+    v_Color		        = a_Color;
+    v_Joint		        = a_Joint;
+    v_Weights	        = a_Weights;
+    v_CameraPosition    = cam.u_Position;
+    v_ModelSpacePosition = a_Position.xyz;
 }

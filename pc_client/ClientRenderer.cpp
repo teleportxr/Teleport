@@ -765,6 +765,7 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 	AVSTextureHandle th = avsTextures[0];
 	AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
@@ -841,8 +842,8 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 				std::shared_ptr<scr::Skin> skin = actor->GetSkin();
 				if(skin)
 				{
-					std::vector<scr::mat4> scr_matrices = skin->GetBoneMatrices();
-					memcpy(&boneMatrices.boneMatrices, scr_matrices.data(), sizeof(scr::mat4) * 64);
+					scr::mat4* scr_matrices = skin->GetBoneMatrices(transform.GetTransformMatrix());
+					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(scr::mat4) * 64);
 
 					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
 					usedPassName = "anim_" + usedPassName;

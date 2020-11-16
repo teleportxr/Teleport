@@ -1,7 +1,8 @@
 #pragma once
 
+#include "api/RenderPlatform.h"
 #include "basic_linear_algebra.h"
-#include "../../SimulCasterRenderer/src/api/RenderPlatform.h"
+#include "ShaderResource.h"
 
 namespace scr
 {

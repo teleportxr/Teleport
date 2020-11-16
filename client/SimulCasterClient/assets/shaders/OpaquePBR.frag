@@ -76,7 +76,6 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
     float u_NormalTexCoordIndex;
     float u_CombinedTexCoordIndex;
     float u_EmissiveTexCoordIndex;
-    float _pad2;
 };
 layout(binding = 10) uniform sampler2D u_DiffuseTexture;
 layout(binding = 11) uniform sampler2D u_NormalTexture;
@@ -411,16 +410,19 @@ void OpaquePBR()
 
 void OpaqueAlbedo()
 {
-    vec3 diffuseColour = texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb ;//* u_DiffuseOutputScalar.rgb;
+    vec3 diffuseColour = texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;
     gl_FragColor = Gamma(vec4(diffuseColour, 1.0));
 }
 
 void OpaqueNormal()
 {
     vec3 normalLookup = texture(u_NormalTexture, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
-    vec3 tangentSpaceNormalMap = 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
+    vec3 tangentSpaceNormalMap = 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
     vec3 normal = normalize(v_TBN * tangentSpaceNormalMap);
-    normal=max(normal,vec3(0,0,0));
+
+    normal.z = -normal.z; //Flip Z for Unity to GL/OVR. Will need a different method for Unreal.
+    normal = (normal + vec3(1.0f, 1.0f, 1.0f)) / 2.0f; //Move negative normals into visible range.
+
     gl_FragColor = Gamma(vec4(normal, 1.0));
 }
 

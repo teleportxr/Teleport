@@ -49,11 +49,10 @@ public:
 	void SetChildrenIDs(std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
 	const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
 
-
 	virtual void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
 	std::shared_ptr<Mesh> GetMesh() const { return mesh; }
 
-	void SetSkin(std::shared_ptr<Skin> skin) { this->skin = skin; }
+	virtual void SetSkin(std::shared_ptr<Skin> skin) { this->skin = skin; }
 	const std::shared_ptr<Skin> GetSkin() const { return skin; }
 	std::shared_ptr<Skin> GetSkin() { return skin; }
 

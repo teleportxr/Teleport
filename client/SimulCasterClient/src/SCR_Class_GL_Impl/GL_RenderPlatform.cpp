@@ -1,6 +1,18 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_RenderPlatform.h"
 
+#include "GL_DeviceContext.h"
+#include "GL_Effect.h"
+#include "GL_FrameBuffer.h"
+#include "GL_IndexBuffer.h"
+#include "GL_Sampler.h"
+#include "GL_Shader.h"
+#include "GL_ShaderStorageBuffer.h"
+#include "GL_Skin.h"
+#include "GL_Texture.h"
+#include "GL_UniformBuffer.h"
+#include "GL_VertexBuffer.h"
+
 using namespace scc;
 using namespace scr;
 
@@ -28,6 +40,12 @@ std::shared_ptr<ShaderStorageBuffer> GL_RenderPlatform::InstantiateShaderStorage
 {
     return std::make_shared<GL_ShaderStorageBuffer>(this);
 }
+
+std::shared_ptr<scr::Skin> GL_RenderPlatform::InstantiateSkin() const
+{
+    return std::make_shared<GL_Skin>(this);
+}
+
 std::shared_ptr<Texture> GL_RenderPlatform::InstantiateTexture() const
 {
     return std::make_shared<GL_Texture>(this);

@@ -153,7 +153,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	//Default Effects
 	scr::Effect::EffectCreateInfo ci;
 	ci.effectName = "StandardEffects";
-	GlobalGraphicsResources.pbrEffect.Create(&ci);
+	GlobalGraphicsResources.defaultPBREffect.Create(&ci);
 
 	//Default Sampler
 	scr::Sampler::SamplerCreateInfo sci  = {};
@@ -775,13 +775,11 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, 
 			break;
 	}
 }
-#include <algorithm>
 
 const scr::Effect::EffectPassCreateInfo* Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
 		, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)
 {
-	if (GlobalGraphicsResources.pbrEffect.HasEffectPass(effectPassName))
-		return GlobalGraphicsResources.pbrEffect.GetEffectPassCreateInfo(effectPassName);
+	if(GlobalGraphicsResources.defaultPBREffect.HasEffectPass(effectPassName)) return GlobalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
 
 	scr::ShaderSystem::PassVariables pv;
 	pv.mask          = false;
@@ -853,10 +851,10 @@ const scr::Effect::EffectPassCreateInfo* Application::BuildEffectPass(const char
 	ci.depthStencilingState = dss;
 	ci.colourBlendingState = cbs;
 
-	GlobalGraphicsResources.pbrEffect.CreatePass(&ci);
-	GlobalGraphicsResources.pbrEffect.LinkShaders(effectPassName, shaderResources);
+	GlobalGraphicsResources.defaultPBREffect.CreatePass(&ci);
+	GlobalGraphicsResources.defaultPBREffect.LinkShaders(effectPassName, shaderResources);
 
-	return GlobalGraphicsResources.pbrEffect.GetEffectPassCreateInfo(effectPassName);
+	return GlobalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
 }
 
 std::string Application::LoadTextFile(const char *filename)

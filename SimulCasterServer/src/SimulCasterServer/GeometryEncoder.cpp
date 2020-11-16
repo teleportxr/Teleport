@@ -350,7 +350,7 @@ namespace SCServer
 				put(skin->jointIDs[i]);
 			}
 
-			put(skin->rootTransform);
+			put(skin->skinTransform);
 
 			putPayloadSize();
 			req->encodedResource(skinID);

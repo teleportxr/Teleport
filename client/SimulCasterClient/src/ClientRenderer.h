@@ -12,6 +12,8 @@
 #include <libavstream/libavstream.hpp>
 #include <OVR_Input.h>
 
+#include "SCR_Class_GL_Impl/GL_DeviceContext.h"
+
 class ClientAppInterface
 {
 public:

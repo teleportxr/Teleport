@@ -23,12 +23,14 @@ class GL_UniformBuffer final : public scr::UniformBuffer
 		void Create(UniformBufferCreateInfo* pUniformBufferCreateInfo) override;
 		void Destroy() override;
 
+		void Submit() const override;
+		void Update() const override;
+
+		bool ResourceInUse(int timeout) override {return true;}
+
 		void Bind() const override;
 		void Unbind() const override;
 
-		void Submit() const override;
-        bool ResourceInUse(int timeout) override {return true;}
-
-        inline OVR::GlBuffer& GetGlBuffer() { return m_UBO; }
+		inline OVR::GlBuffer& GetGlBuffer() { return m_UBO; }
 	};
 }
