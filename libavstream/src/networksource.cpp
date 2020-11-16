@@ -9,13 +9,10 @@
 #ifdef __ANDROID__
 #include <pthread.h>
 #endif
-#if LIBAV_USE_SRT
-#include <util/srtutil.h>
-#endif
 
-#ifndef LIBAV_USE_SRT
-#define LIBAV_USE_SRT 1
-#endif
+#include <util/srtutil.h>
+
+
 using namespace avs;
 //static uint32_t gaps=0;
 
@@ -43,7 +40,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint
 	try
 	{
 		m_data->bOneTimeWarnings=true;
-#if LIBAV_USE_SRT
+
 		srt_startup();
 		m_data->m_socket=srt_create_socket();
 		if (m_data->m_socket == SRT_ERROR)
@@ -75,33 +72,6 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint
 	//CHECK_SRT_ERROR( srt_rendezvous(m_data->m_socket, (sockaddr*)&local_bind_addr, sizeof local_bind_addr,                                   (sockaddr*)&remote_addr, sizeof remote_addr));
 		
 		m_data->m_systemBufferSize = 1000000;
-#else
-		// deconfigure does this:
-		{
-			m_data->m_endpoint.reset();
-		}
-		// problem here:  socket must be reset before m_service, or crash happens.
-		m_data->m_socket.reset();
-		m_data->m_service.reset(new asio::io_service);
-		udp::socket *udps = new udp::socket{ *m_data->m_service, udp::v4() };
-		// problem here:  socket must be reset before m_service, or crash happens.
-		m_data->m_socket.reset(udps);
-
-		const asio::socket_base::reuse_address reuseAddr(true);
-		m_data->m_socket->set_option(reuseAddr);
-		const asio::socket_base::receive_buffer_size recvBufferSize(params.socketBufferSize);
-		m_data->m_socket->set_option(recvBufferSize);
-		asio::socket_base::receive_buffer_size real_option;
-		m_data->m_socket->get_option(real_option);
-		int real_size = real_option.value();
-		if(real_size!=params.socketBufferSize)
-		{
-			AVSLOG(Warning)<<"Asio socket buffer size is not requested "<<params.socketBufferSize<<" but only "<<real_size<<"\n";
-		}
-		m_data->m_systemBufferSize = real_size;
-
-		m_data->m_socket->bind(udp::endpoint{ udp::v4(), localPort });
-#endif
 		m_data->m_remote.address = remote;
 		m_data->m_remote.port = std::to_string(remotePort);
 		m_data->lastBandwidthTimestamp = 0;
@@ -202,7 +172,6 @@ Result NetworkSource::deconfigure()
 	m_data->m_EFPReceiver.reset();
 
 	setNumOutputSlots(0);
-	m_data->m_recvBuffer.reset();
 
 	m_data->m_counters = {};
 	m_data->m_remote = {};
@@ -212,13 +181,7 @@ Result NetworkSource::deconfigure()
 	// Socket must be killed BEFORE service, or asio throws a fit.
 	// At a guess, this is because socket was created from service, and expects it to still exist
 	// as socket is shut down.
-#if LIBAV_USE_SRT
 	closeSocket();
-#else
-	m_data->m_socket.reset();
-	m_data->m_service.reset();
-	m_data->m_endpoint.reset();
-#endif
 
 	return Result::OK;
 }
@@ -228,7 +191,6 @@ void NetworkSource::closeSocket()
 	std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
 
 	m_data->runningThread = false;
-#if LIBAV_USE_SRT
 	m_data->bConnected=false;
 	if(m_data->m_socket)
 		srt_close(m_data->m_socket);
@@ -237,7 +199,6 @@ void NetworkSource::closeSocket()
 	srt_cleanup();
 	m_data->pollid=0;
 	m_data->m_socket=0;
-#endif
 }
 
 void NetworkSource::pollData()
@@ -246,18 +207,7 @@ void NetworkSource::pollData()
 	while (m_data->runningThread)
 	{
 		std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
-#if LIBAV_USE_SRT
 		asyncRecvPackets();
-#else
-		// Poll() accumulates NetworkPackets in recvBuffer.
-		while (m_data->m_service->poll() > 0)
-		{
-			//std::this_thread::sleep_for(std::chrono::nanoseconds(10));
-			std::this_thread::yield();
-		}
-		//std::this_thread::sleep_for(std::chrono::nanoseconds(10));
-		std::this_thread::yield();
-#endif
 	}
 }
 
@@ -269,7 +219,6 @@ Result NetworkSource::process(uint32_t timestamp)
 	}
     int srtrfdslen = 2;
     int srtwfdslen = 2;
-#if LIBAV_USE_SRT
     SRTSOCKET srtrwfds[4] = { SRT_INVALID_SOCK, SRT_INVALID_SOCK , SRT_INVALID_SOCK  };
     int sysrfdslen = 2;
     SYSSOCKET sysrfds[2];
@@ -316,7 +265,7 @@ Result NetworkSource::process(uint32_t timestamp)
 			};
 		}
 	}
-#endif
+
 	{
 		// Counters will be written to on packet processing thread
 		std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
@@ -339,7 +288,6 @@ Result NetworkSource::process(uint32_t timestamp)
 
 	m_data->m_pipelineTimestamp = timestamp;
 	
-#if LIBAV_USE_SRT
 	if(!m_data->bConnected)
 	{
 		int res=srt_connect(m_data->m_socket, (sockaddr*)&m_data->remote_addr, sizeof m_data->remote_addr);
@@ -362,51 +310,7 @@ Result NetworkSource::process(uint32_t timestamp)
 		pthread_setschedparam(m_data->thr .native_handle(), SCHED_RR, &sch_params);
 #endif
 	}
-#else
-	assert(m_data->m_service);
-	if (!m_data->m_endpoint)
-	{
-		try
-		{
-			udp::resolver resolver(*m_data->m_service);
-			auto results = resolver.resolve({ udp::v4(), m_data->m_remote.address, m_data->m_remote.port });
-			if (results.empty())
-			{
-				throw std::runtime_error("Remote host not found");
-			}
-			m_data->m_endpoint.reset(new udp::endpoint{ *results });
-			//asyncRecvPackets();
-		}
-		catch (const std::exception& e)
-		{
-			AVSLOG(Error) << "NetworkSource: Failed to resolve remote endpoint: " << e.what();
-			return Result::Network_ResolveFailed;
-		}
-	}
-	
-#endif
-	try
-	{
-#if !(LIBAV_USE_SRT)
-		if (!m_data->thr.joinable())
-		{
-			m_data->runningThread = true;
-			m_data->thr = std::thread(&NetworkSource::pollData, this);
-#ifdef __ANDROID__
-			pthread_setname_np(m_data->thr .native_handle(), "buffer_thread");
-			sched_param sch_params;
-			// Roderick: Upping the priority to 99 really seems to help avoid dropped packets.
-			sch_params.sched_priority = 99;
-			pthread_setschedparam(m_data->thr .native_handle(), SCHED_RR, &sch_params);
-#endif
-		}
-#endif
-	}
-	catch (const std::exception& e)
-	{
-		AVSLOG(Error) << "NetworkSource: Network poll failed: " << e.what();
-		return Result::Network_RecvFailed;
-	}
+
 	return Result::OK;
 }
 
@@ -442,71 +346,13 @@ void NetworkSource::sendAck(NetworkPacket &packet)
 	ackPacket.serialize(buffer);
 }
 
-void NetworkSource::accumulatePackets()
-{
-	while (!m_data->m_recvBuffer.empty())
-	{
-		RawPacket rawPacket = m_data->m_recvBuffer.get();
-		size_t bytesRecv = (size_t)rawPacket.size;
-		if (bytesRecv == 0)
-		{
-			AVSLOG(Warning) << "No bytes in packet  " << "\n";
-			continue;
-		}
-		if (m_data->mDebugNetworkPackets)
-		{
-			NetworkPacket packet;
-			ByteBuffer buffer(bytesRecv);
-			memcpy(buffer.data(), rawPacket.data, bytesRecv);
-			if (packet.unserialize(buffer, 0, bytesRecv))
-			{
-				sendAck(packet);
-				if (packet.streamIndex == m_data->debugStream)
-				{
-					unsigned long long checksum = 0;
-					if (m_data->bDoChecksums)
-						for (size_t i = 0; i < (bytesRecv); i++)
-						{
-							checksum += (unsigned long long)rawPacket.data[i];
-						}
-					if (packet.flags.fragmentFirst&&packet.flags.fragmentLast)
-					{
-						AVSLOG(Warning) << m_data->debugStream << " - Packet Whole Fragment " << packet.sequence << " " << bytesRecv << " with checksum " << checksum << " at time=" << m_data->m_pipelineTimestamp << "\n";
-					}
-					else if (packet.flags.fragmentFirst)
-					{
-						AVSLOG(Warning) << m_data->debugStream << " - Packet fragmentFirst " << packet.sequence << " " << bytesRecv << " with checksum " << checksum << " at time=" << m_data->m_pipelineTimestamp << "\n";
-					}
-					else if (packet.flags.fragmentLast)
-					{
-						AVSLOG(Warning) << m_data->debugStream << " - Packet fragmentLast " << packet.sequence << " " << bytesRecv << " with checksum " << checksum << " at time=" << m_data->m_pipelineTimestamp << "\n";
-					}
-					else
-					{
-						AVSLOG(Warning) << m_data->debugStream << " - Packet " << packet.sequence << " " << bytesRecv << " with checksum " << checksum << " at time=" << m_data->m_pipelineTimestamp << "\n";
-					}
-				}
-			}
-		}
-		m_data->m_counters.bytesReceived += bytesRecv;
-		m_data->m_counters.networkPacketsReceived++;
-
-		auto val = m_data->m_EFPReceiver->receiveFragmentFromPtr(rawPacket.data, bytesRecv, 0);
-		if (EFPFAILED(val))
-		{
-			AVSLOG(Warning) << "EFP Error: Invalid data fragment received" << "\n";
-		}
-		rawPacket.size = 0;
-	}
-}
-
 #ifndef _MSC_VER
 __attribute__((optnone))
 #endif
 void NetworkSource::asyncRecvPackets()
 {
 	static uint8_t packetData[PacketFormat::MaxPacketSize];
-#if LIBAV_USE_SRT
+
 	int st = srt_recvmsg(m_data->m_socket, (char*)packetData, PacketFormat::MaxPacketSize);
     if (st <= 0)
     {
@@ -526,38 +372,5 @@ void NetworkSource::asyncRecvPackets()
 	{
 		AVSLOG(Warning) << "EFP Error: Invalid data fragment received" << "\n";
 	}
-#else
-	assert(m_data->m_socket);
-	assert(m_data->m_endpoint);
-	RawPacket *rawPacket= m_data->m_recvBuffer.reserve_next();
-	m_data->m_socket->async_receive_from(asio::buffer(rawPacket->data,PacketFormat::MaxPacketSize), *(m_data->m_endpoint.get()),
-		[this, rawPacket](asio::error_code ec, size_t bytesRecv)
-			{
-				if (!ec && bytesRecv > 0)
-				{
-					rawPacket->size= bytesRecv;
-//					rawPacket->sent_ack=false;
-					if (!m_data->m_recvBuffer.full())
-					{
-						m_data->m_recvBuffer.commit_next();
-						std::this_thread::yield();
-						asyncRecvPackets();
-					}
-					else
-					{
-						AVSLOG(Warning) << "Ring buffer exhausted " << "\n";
-						return;
-					}
-				}
-				else if (ec)
-				{
-					AVSLOG(Warning) << " asio: " << ec.value()<<"\n" ;
-				}
-				else
-				{
-					AVSLOG(Warning) << " no m_data in async_receive_from\n" ;
-				}
-			});
-#endif
 }
 

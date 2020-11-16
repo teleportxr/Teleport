@@ -3,9 +3,9 @@
 
 #include <networksink_p.hpp>
 #include <network/packetformat.hpp>
-#if LIBAV_USE_SRT
+
 #include <util/srtutil.h>
-#endif
+
 #include <iostream>
 #include <cmath>
 
@@ -33,7 +33,6 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 
 	try
 	{
-#if LIBAV_USE_SRT
 		srt_startup();
 		srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::debug;
 		srt_setloglevel(loglevel);
@@ -76,21 +75,6 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 		CHECK_SRT_ERROR(srt_bind(m_data->m_socket, (struct sockaddr*)&local_bind_addr, sizeof(sockaddr_in)));
 
 		srt_listen(m_data->m_socket, 2);
-
-#else
-		m_data->m_service.reset(new asio::io_service);
-
-		m_data->m_socket.reset(new udp::socket{ *m_data->m_service, udp::v4() });
-
-		const asio::socket_base::reuse_address reuseAddr(true);
-		m_data->m_socket->set_option(reuseAddr);
-		const asio::socket_base::send_buffer_size sendBufferSize(params.socketBufferSize);
-		m_data->m_socket->set_option(sendBufferSize);
-
-		m_data->m_socket->bind(udp::endpoint{ udp::v4(), localPort });
-		m_data->m_remote.address = remote;
-		m_data->m_remote.port = std::to_string(remotePort);
-#endif
 
 		m_data->lastBandwidthTimestamp = 0;
 		m_data->bandwidthBytes = 0;
@@ -164,7 +148,6 @@ Result NetworkSink::deconfigure()
 
 	m_data->m_counters = {};
 
-#if LIBAV_USE_SRT
 	srt_close(m_data->m_remote_socket);
 	srt_close(m_data->m_socket);
 	srt_epoll_release(m_data->pollid);
@@ -173,14 +156,7 @@ Result NetworkSink::deconfigure()
 	m_data->m_socket = 0;
 	m_data->m_remote_socket = 0;
 	srt_cleanup();
-#else
-	m_data->m_socket->shutdown(asio::socket_base::shutdown_both);
-	m_data->m_socket->close();
 
-	m_data->m_socket.reset();
-	m_data->m_endpoint.reset();
-	m_data->m_service.reset();
-#endif
 	m_data->debugStream = 0;
 	m_data->doChecksums = false;
 	return Result::OK;
@@ -192,17 +168,7 @@ Result NetworkSink::process(uint32_t timestamp)
 	{
 		return Result::Node_NotConfigured;
 	}
-#if LIBAV_USE_SRT
-	/*	if(!m_data->m_remote_socket||m_data->m_remote_socket<0)
-		{
-		   socklen_t sa_len = sizeof(sockaddr_in);
-	//SRT_API SRTSOCKET srt_accept       (SRTSOCKET u, struct sockaddr* addr, int* addrlen);
-			int res=srt_accept(m_data->m_socket, (struct sockaddr*)(&m_data->remote_addr),(int*) &sa_len);
-			if(res>0)
-			{
-			AVSLOG(Info) << "srt_accept"<<" \n";
-			}
-		}*/
+
 	int srtrfdslen = 2;
 	int srtwfdslen = 2;
 	SRTSOCKET srtrwfds[4] = { SRT_INVALID_SOCK, SRT_INVALID_SOCK, SRT_INVALID_SOCK, SRT_INVALID_SOCK };
@@ -314,29 +280,6 @@ Result NetworkSink::process(uint32_t timestamp)
 		m_data->bandwidthKPerS = (float)perf.mbpsBandwidth * 1000.0f;
 		m_data->bandwidthBytes = (m_data->bandwidthKPerS * 1000.0f) / 8.0f;
 	}
-	
-#else
-	assert(m_data->m_service);
-
-	if (!m_data->m_endpoint)
-	{
-		try
-		{
-			udp::resolver resolver(*m_data->m_service);
-			auto results = resolver.resolve({ udp::v4(), m_data->m_remote.address, m_data->m_remote.port });
-			if (results.empty())
-			{
-				throw std::runtime_error("Remote host not found");
-			}
-			m_data->m_endpoint.reset(new udp::endpoint{ *results });
-		}
-		catch (const std::exception& e)
-		{
-			AVSLOG(Error) << "NetworkSink: Failed to resolve remote endpoint: " << e.what();
-			return Result::Network_ResolveFailed;
-		}
-	}
-#endif
 
 	const size_t numInputs = getNumInputSlots();
 	if (numInputs == 0 || !m_data->m_EFPSender)
@@ -499,13 +442,9 @@ void NetworkSink::Private::sendData(const std::vector<uint8_t> &subPacket)
 
 	try
 	{
-#if LIBAV_USE_SRT
 		SRT_MSGCTRL mctrl;
 		srt_msgctrl_init(&mctrl);
 		srt_sendmsg2(m_remote_socket, buffer, bufferSize, &mctrl);
-#else
-		m_socket->send_to(asio::buffer(subPacket), *m_endpoint);
-#endif
 		m_packetsSent++;
 	}
 	catch (const std::exception& e)

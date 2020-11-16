@@ -145,7 +145,6 @@ namespace avs
 		//size_t m_size;
 
 		void sendAck(avs::NetworkPacket &packet);
-		void accumulatePackets();
 		void asyncRecvPackets();
 		void closeSocket();
 		void pollData();
