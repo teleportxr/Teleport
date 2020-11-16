@@ -155,6 +155,10 @@ namespace SCServer
 		materials.clear();
 		textures.clear();
 
+		//Ensure these exist even if there were no meshes to load.
+		meshes[avs::AxesStandard::EngineeringStyle];
+		meshes[avs::AxesStandard::GlStyle];
+
 		//Replace old IDs with their new IDs; fixing any links that need to be changed.
 
 		//ASSUMPTION: Mesh resources aren't shared, and as such it doesn't matter that their IDs aren't re-assigned.
@@ -238,6 +242,8 @@ namespace SCServer
 		}
 
 		nodes.clear();
+		skins.clear();
+		animations.clear();
 		meshes.clear();
 		materials.clear();
 		textures.clear();
@@ -246,6 +252,14 @@ namespace SCServer
 		texturesToCompress.clear();
 		lightNodes.clear();
 		if(hands.size() == 0) hands.clear(); //hands.clear() appears to be nulling the head of the unlinkedClientIDs, which is causing an exception when used.
+
+		//Recreate look-up maps.
+		meshes[avs::AxesStandard::EngineeringStyle];
+		meshes[avs::AxesStandard::GlStyle];
+		animations[avs::AxesStandard::EngineeringStyle];
+		animations[avs::AxesStandard::GlStyle];
+		skins[avs::AxesStandard::EngineeringStyle];
+		skins[avs::AxesStandard::GlStyle];
 	}
 
 	void GeometryStore::setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
