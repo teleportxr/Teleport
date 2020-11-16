@@ -1087,7 +1087,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		avsGeometryDecoder.configure(60,&geometryDecoder);
 		avsGeometryTarget.configure(&resourceCreator);
 
-		geometryQueue.configure(16, "GeometryQueue");
+		geometryQueue.configure(200, "GeometryQueue");
 
 		avs::Node::link(source, geometryQueue);
 		avs::Node::link(geometryQueue, avsGeometryDecoder);
