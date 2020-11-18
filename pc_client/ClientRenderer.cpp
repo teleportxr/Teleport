@@ -645,10 +645,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Actors: %d",resourceManagers.mActorManager->GetActorAmount()), white);
 		auto &rootActors=resourceManagers.mActorManager->GetRootActors();
-		for(auto &a:rootActors)
+		for(const std::shared_ptr<scr::Node>& actor : rootActors)
 		{
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d ",a->id));
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d(%s)", actor->id, actor->name.c_str()));
 		}
+
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d"	,resourceManagers.mMeshManager.GetCache(cacheLock).size()
 																									,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
@@ -693,14 +694,14 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			j++;
 		}
 		
-		
 		auto &missing=resourceCreator.GetMissingResources();
 		if(missing.size())
 		{
 			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Missing Resources"));
-			for(auto m:missing)
+			for(const auto& missingPair : missing)
 			{
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d",m.first));
+				const ResourceCreator::MissingResource& missingResource = missingPair.second;
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%s_%d", missingResource.resourceType, missingResource.id));
 			}
 		}
 	}
@@ -729,14 +730,17 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	PrintHelpText(deviceContext);
 }
 
-void ClientRenderer::WriteHierarchy(int tab,std::shared_ptr<scr::Node> actor)
+void ClientRenderer::WriteHierarchy(int tab, std::shared_ptr<scr::Node> actor)
 {
-	for(int i=0;i<tab;i++)
-		std::cout<<"\t";
-	std::cout<<actor->id<<std::endl;
-	for(auto a:actor->GetChildren())
+	for(int i = 0; i < tab; i++)
 	{
-		WriteHierarchy(tab+1,a.lock());
+		std::cout << "\t";
+	}
+	std::cout << actor->id << "(" << actor->name << ")" << std::endl;
+
+	for(auto a : actor->GetChildren())
+	{
+		WriteHierarchy(tab + 1, a.lock());
 	}
 }
 
@@ -1092,7 +1096,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		avsGeometryDecoder.configure(60,&geometryDecoder);
 		avsGeometryTarget.configure(&resourceCreator);
 
-		geometryQueue.configure(16, "GeometryQueue");
+		geometryQueue.configure(200, "GeometryQueue");
 
 		avs::Node::link(source, geometryQueue);
 		avs::Node::link(geometryQueue, avsGeometryDecoder);

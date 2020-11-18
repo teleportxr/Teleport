@@ -15,6 +15,7 @@ namespace scr
 	class ShaderStorageBuffer;
 	class Skin;
 	class Texture;
+	class Transform;
 	class UniformBuffer;
 	class VertexBuffer;
 
@@ -33,7 +34,8 @@ namespace scr
 		virtual std::shared_ptr<Sampler>				InstantiateSampler() const = 0;
 		virtual std::shared_ptr<Shader>					InstantiateShader() const = 0;
 		virtual std::shared_ptr<ShaderStorageBuffer>	InstantiateShaderStorageBuffer() const = 0;
-		virtual std::shared_ptr<Skin>					InstantiateSkin() const = 0;
+		virtual std::shared_ptr<Skin>					InstantiateSkin(const std::string& name) const = 0;
+		virtual std::shared_ptr<Skin>					InstantiateSkin(const std::string& name, const std::vector<Transform>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const = 0;
 		virtual std::shared_ptr<Texture>				InstantiateTexture() const = 0;
 		virtual std::shared_ptr<UniformBuffer>			InstantiateUniformBuffer() const = 0;
 		virtual std::shared_ptr<VertexBuffer>			InstantiateVertexBuffer() const = 0;

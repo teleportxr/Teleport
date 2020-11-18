@@ -37,9 +37,14 @@ std::shared_ptr<scr::ShaderStorageBuffer> PC_RenderPlatform::InstantiateShaderSt
 	return std::make_shared<PC_ShaderStorageBuffer>(this);
 }
 
-std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin() const
+std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin(const std::string& name) const
 {
-	return std::make_shared<scr::Skin>();
+	return std::make_shared<scr::Skin>(name);
+}
+
+std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin(const std::string& name, const std::vector<Transform>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const
+{
+	return std::make_shared<scr::Skin>(name, inverseBindMatrices, boneAmount, skinTransform);
 }
 
 std::shared_ptr<scr::Texture> PC_RenderPlatform::InstantiateTexture() const

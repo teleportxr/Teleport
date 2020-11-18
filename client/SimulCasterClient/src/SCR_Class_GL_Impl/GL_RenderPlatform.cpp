@@ -41,9 +41,14 @@ std::shared_ptr<ShaderStorageBuffer> GL_RenderPlatform::InstantiateShaderStorage
     return std::make_shared<GL_ShaderStorageBuffer>(this);
 }
 
-std::shared_ptr<scr::Skin> GL_RenderPlatform::InstantiateSkin() const
+std::shared_ptr<scr::Skin> GL_RenderPlatform::InstantiateSkin(const std::string& name) const
 {
-    return std::make_shared<GL_Skin>(this);
+    return std::make_shared<GL_Skin>(this, name);
+}
+
+std::shared_ptr<scr::Skin> GL_RenderPlatform::InstantiateSkin(const std::string& name, const std::vector<Transform>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const
+{
+	return std::make_shared<GL_Skin>(this, name, inverseBindMatrices, boneAmount, skinTransform);
 }
 
 std::shared_ptr<Texture> GL_RenderPlatform::InstantiateTexture() const

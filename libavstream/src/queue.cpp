@@ -66,8 +66,8 @@ namespace avs
 		std::lock_guard<std::mutex> lock(data->m_mutex);
 		if (data->m_buffers.size() == data->m_maxBuffers)
 		{
-			AVSLOG(Warning) << data->name.c_str()<<" Queue::write: out of buffers.\n";
-			return Result::IO_Full;
+			AVSLOG(Warning) << data->name.c_str()<<" Queue::write: Max buffers reached. Doubling max .\n";
+			data->m_maxBuffers *= 2;
 		}
 		try
 		{
@@ -87,8 +87,8 @@ namespace avs
 		size_t bufferSize = buffer.size();
 		if (data->m_buffers.size() == data->m_maxBuffers)
 		{
-			AVSLOG(Warning) << data->name.c_str() << " Queue::emplace: out of buffers.\n";
-			return Result::IO_Full;
+			AVSLOG(Warning) << data->name.c_str() << " Queue::emplace: Max buffers reached. Doubling max.\n";
+			data->m_maxBuffers *= 2;
 		}
 		try
 		{

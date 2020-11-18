@@ -246,6 +246,8 @@ struct Animation;
 
 	struct DataNode
 	{
+		std::string name;
+
 		Transform transform;
 
 		uid parentID;
@@ -314,6 +316,7 @@ struct Animation;
 
 	struct Skin
 	{
+		std::string name;
 		std::vector<Mat4x4> inverseBindMatrices;
 		std::vector<uid> jointIDs;
 		Transform skinTransform;
@@ -321,6 +324,7 @@ struct Animation;
 		static Skin convertToStandard(const Skin& skin, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 		{
 			avs::Skin convertedSkin;
+			convertedSkin.name = skin.name;
 			convertedSkin.jointIDs = skin.jointIDs;
 
 			for(const Mat4x4& matrix : skin.inverseBindMatrices)
@@ -337,6 +341,8 @@ struct Animation;
 
 	struct Mesh
 	{
+		std::string name;
+
 		std::vector<PrimitiveArray> primitiveArrays;
 		std::unordered_map<uid, Accessor> accessors;
 		std::map<uid, BufferView> bufferViews;
@@ -345,6 +351,9 @@ struct Animation;
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Mesh& mesh)
 		{
+			//Name needs its own line, so spaces can be included.
+			out << std::wstring{mesh.name.begin(), mesh.name.end()} << std::endl;
+
 			out << mesh.primitiveArrays.size();
 			for(size_t i = 0; i < mesh.primitiveArrays.size(); i++)
 			{
@@ -375,6 +384,15 @@ struct Animation;
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, Mesh& mesh)
 		{
+			//Step past new line that may be next in buffer.
+			if(in.peek() == '\n') in.get();
+
+				//Read name with spaces included.
+				std::wstring wideName;
+				std::getline(in, wideName);
+
+				mesh.name = convertToByteString(wideName);
+
 			size_t primitiveArrayAmount;
 			in >> primitiveArrayAmount;
 			mesh.primitiveArrays.resize(primitiveArrayAmount);
@@ -559,6 +577,8 @@ struct Animation;
 	};
 	struct MeshCreate
 	{
+		std::string name;
+
 		uid mesh_uid = 0;
 		size_t m_NumElements = 0;
 		MeshElementCreate m_MeshElementCreate[8];

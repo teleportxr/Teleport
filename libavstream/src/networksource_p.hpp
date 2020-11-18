@@ -92,8 +92,6 @@ namespace avs
 		NetworkSourceParams m_params;
 		NetworkSourceCounters m_counters;
 
-		RingBuffer<RawPacket,12000> m_recvBuffer;
-
 		uint32_t m_pipelineTimestamp = 0;
 
 		// Second level jitter queue with first level buffer queues for every stream.

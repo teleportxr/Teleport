@@ -9,10 +9,11 @@ namespace scr
 class Bone
 {
 public:
-	Bone(avs::uid id);
+	Bone(avs::uid id, const std::string& name);
 	~Bone();
 
 	const avs::uid id;
+	const std::string name;
 
 	void SetParent(std::shared_ptr<Bone> parent);
 	const std::shared_ptr<Bone> GetParent() const;

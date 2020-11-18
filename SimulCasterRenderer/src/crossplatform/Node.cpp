@@ -4,8 +4,8 @@
 
 namespace scr
 {
-Node::Node(avs::uid id)
-	:id(id)
+Node::Node(avs::uid id, const std::string& name)
+	:id(id), name(name)
 {}
 
 void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)

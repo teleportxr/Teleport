@@ -195,6 +195,12 @@ namespace SCServer
 			put((size_t)1);
 			put(uid);
 
+			//Push name length.
+			size_t nameLength = mesh->name.length();
+			put(nameLength);
+			//Push name.
+			put((uint8_t*)mesh->name.data(), nameLength);
+
 			put(mesh->primitiveArrays.size());
 
 			std::set<avs::uid> accessors;
@@ -277,6 +283,13 @@ namespace SCServer
 		{
 			avs::DataNode* node = src->getNode(uid);
 			put(uid);
+
+			//Push name length.
+			size_t nameLength = node->name.length();
+			put(nameLength);
+			//Push name.
+			put((uint8_t*)node->name.data(), nameLength);
+
 			avs::Transform transform = node->transform;
 			avs::ConvertTransform(settings->axesStandard, req->getAxesStandard(), transform);
 
@@ -338,6 +351,12 @@ namespace SCServer
 		{
 			put(skinID);
 
+			//Push name length.
+			size_t nameLength = skin->name.length();
+			put(nameLength);
+			//Push name.
+			put((uint8_t*)skin->name.data(), nameLength);
+
 			put(skin->inverseBindMatrices.size());
 			for(int i = 0; i < skin->inverseBindMatrices.size(); i++)
 			{
@@ -396,6 +415,12 @@ namespace SCServer
 		{
 			putPayload(avs::GeometryPayloadType::Animation);
 			put(animationID);
+
+			//Push name length.
+			size_t nameLength = animation->name.length();
+			put(nameLength);
+			//Push name.
+			put((uint8_t*)animation->name.data(), nameLength);
 
 			put(animation->boneKeyframes.size());
 			for(const avs::TransformKeyframe& transformKeyframe : animation->boneKeyframes)

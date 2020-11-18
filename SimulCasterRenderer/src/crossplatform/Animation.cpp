@@ -38,7 +38,7 @@ void BoneKeyframe::setPositionToTime(float time, avs::vec3& bonePosition, const 
 	bonePosition = (1 - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
 }
 
-void BoneKeyframe::setRotationToTime(float time, scr::quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes)
+void BoneKeyframe::setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes)
 {
 	if(keyframes.size() == 0) return;
 	if(keyframes.size() == 1)
@@ -82,14 +82,20 @@ float BoneKeyframe::getTimeBlend(float currentTime, float previousTime, float ne
 	return (currentTime - previousTime) / (nextTime - previousTime);
 }
 
-Animation::Animation()
+Animation::Animation(const std::string& name)
+	:name(name)
 {}
 
-Animation::Animation(std::vector<BoneKeyframe> boneKeyframes)
-	:boneKeyframes(boneKeyframes)
+Animation::Animation(const std::string& name, std::vector<BoneKeyframe> boneKeyframes)
+	:name(name), boneKeyframes(boneKeyframes)
 {
-	//Retrieve end time from latest time in any bone animations.
-	//ASSUMPTION: This works for Unity, but does it work for Unreal?
+	updateAnimationLength();
+}
+
+//Retrieve end time from latest time in any bone animations.
+//ASSUMPTION: This works for Unity, but does it work for Unreal?
+void Animation::updateAnimationLength()
+{
 	if(boneKeyframes.empty()) return;
 
 	BoneKeyframe& boneAnimation = boneKeyframes[0];

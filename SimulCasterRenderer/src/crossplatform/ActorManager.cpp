@@ -2,9 +2,9 @@
 
 using namespace scr;
 
-std::shared_ptr<Node> ActorManager::CreateActor(avs::uid id) const
+std::shared_ptr<Node> ActorManager::CreateActor(avs::uid id, const std::string& name) const
 {
-	return std::make_shared<Node>(id);
+	return std::make_shared<Node>(id, name);
 }
 
 void ActorManager::AddActor(std::shared_ptr<Node> actor, bool isHand)

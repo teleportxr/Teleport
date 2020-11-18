@@ -257,9 +257,9 @@ void OVRActor::RefreshOVRSurfaces()
 	}
 }
 
-std::shared_ptr<scr::Node> OVRActorManager::CreateActor(avs::uid id) const
+std::shared_ptr<scr::Node> OVRActorManager::CreateActor(avs::uid id, const std::string& name) const
 {
-    return std::make_shared<OVRActor>(id);
+    return std::make_shared<OVRActor>(id, name);
 }
 
 void OVRActorManager::AddActor(std::shared_ptr<Node> actor, bool isHand)

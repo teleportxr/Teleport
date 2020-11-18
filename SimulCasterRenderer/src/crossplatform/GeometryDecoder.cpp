@@ -69,10 +69,17 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	dg.clear();
 	avs::uid uid;
 
+	std::string name;
+
 	size_t meshCount = Next8B;
 	for (size_t i = 0; i < meshCount; i++)
 	{
 		uid = Next8B; 
+
+		size_t nameLength = Next8B;
+		name.resize(nameLength);
+		copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+
 		size_t primitiveArraysSize = Next8B;
 		dg.primitiveArrays[uid].reserve(primitiveArraysSize);
 
@@ -227,9 +234,13 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			meshElementCreate.m_ElementIndex = index;
 			index++;
 		}
+		meshCreate.name = name;
+
 		avs::Result result = target->Assemble(meshCreate);
-		if (result != avs::Result::OK)
+		if(result != avs::Result::OK)
+		{
 			return result;
+		}
 	}
 	return avs::Result::OK;
 }
@@ -352,6 +363,10 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& ta
 	Animation animation;
 	uid animationID = Next8B;
 
+	size_t nameLength = Next8B;
+	animation.name.resize(nameLength);
+	copy<char>(animation.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+
 	animation.boneKeyframes.resize(Next8B);
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
@@ -375,6 +390,11 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		avs::uid uid = Next8B;
 
 		avs::DataNode node;
+
+		size_t nameLength = Next8B;
+		node.name.resize(nameLength);
+		copy<char>(node.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+
 		node.transform = NextChunk(avs::Transform);
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);
@@ -426,6 +446,10 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 	avs::uid skinID = Next8B;
 
 	avs::Skin skin;
+
+	size_t nameLength = Next8B;
+	skin.name.resize(nameLength);
+	copy<char>(skin.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 
 	skin.inverseBindMatrices.resize(Next8B);
 	for(size_t i = 0; i < skin.inverseBindMatrices.size(); i++)
