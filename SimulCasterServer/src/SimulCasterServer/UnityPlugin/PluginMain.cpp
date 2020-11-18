@@ -716,13 +716,13 @@ TELEPORT_EXPORT void Tock()
 	PipeOutMessages();
 }
 
-TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos)
+TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID, const avs::vec3 *pos, bool set_rel,const avs::vec3 *orig_to_head)
 {
 	auto &c=clientServices.find(clientID);
 	if(c==clientServices.end())
 		return false;
 	ClientData &clientData=c->second;
-	return clientData.setOrigin(*pos);
+	return clientData.setOrigin(*pos,set_rel,*orig_to_head);
 }
 
 TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)

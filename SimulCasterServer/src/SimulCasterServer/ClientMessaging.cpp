@@ -390,14 +390,18 @@ namespace SCServer
 		TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 	}
 
-	bool ClientMessaging::setPosition(const avs::vec3& pos)
+	bool ClientMessaging::setPosition(const avs::vec3& pos,bool set_rel,const avs::vec3 &rel_to_head)
 	{
 		avs::SetPositionCommand setp;
-		avs::vec3 p = pos;
 		if (casterContext->axesStandard != avs::AxesStandard::NotInitialized)
 		{
+			avs::vec3 p = pos;
 			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, p);
-			setp.position = p;
+			setp.origin_pos = p;
+			setp.set_relative_pos = (uint8_t)set_rel;
+			avs::vec3 o=rel_to_head;
+			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, o);
+			setp.relative_pos=o;
 			sendCommand(setp);
 		}
 		else

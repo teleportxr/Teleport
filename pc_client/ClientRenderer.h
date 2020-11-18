@@ -252,7 +252,9 @@ public:
 	int RenderMode;
 	std::shared_ptr<scr::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;
-	avs::vec3 oculusOrigin;
+	unsigned long long receivedRelativePos = 0;
+	vec3 localOriginPos;
+	vec3 relativeHeadPos;
 	bool videoPosDecoded=false;
 	bool canConnect=false;
 	vec3 videoPos;

@@ -362,10 +362,13 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		vec3 pos = videoPosDecoded ? videoPos : vec3(0, 0, 0);
 		camera.SetPosition(pos);
 	}
-
+	relativeHeadPos=camera.GetPosition();
 	// The following block renders to the hdrFramebuffer's rendertarget:
+	vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	{
+		camera.SetPosition(finalViewPos);
 		deviceContext.viewStruct.view = camera.MakeViewMatrix();
+		camera.SetPosition(relativeHeadPos);
 		float aspect = (float)viewport.w / (float)viewport.h;
 		if (reverseDepth)
 			deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
@@ -423,7 +426,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 					cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoTexture);
-				tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataIDBuffer"));
+					tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataIDBuffer"));
 				
 					cubemapClearEffect->Apply(deviceContext, "recompose_with_depth_alpha", 0);
 					renderPlatform->DispatchCompute(deviceContext, W / 16, W / 16, 6);
@@ -439,8 +442,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				{
 					tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
 					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-					cubemapConstants.offsetFromVideo = vec3(camera.GetPosition()) - videoPos;
-					cubemapConstants.cameraPosition = vec3(camera.GetPosition());
+					cubemapConstants.offsetFromVideo = finalViewPos - videoPos;
+					cubemapConstants.cameraPosition = finalViewPos;
 					cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -623,9 +626,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	}
 	else if(show_osd== CAMERA_OSD)
 	{
-		vec3 viewpos=camera.GetPosition();
-		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", oculusOrigin.x, oculusOrigin.y, oculusOrigin.z)):"Origin:", white);
-		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("  View: %4.4f %4.4f %4.4f", viewpos.x, viewpos.y, viewpos.z),white);
+		vec3 offset=camera.GetPosition();
+		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", localOriginPos.x, localOriginPos.y, localOriginPos.z)):"Origin:", white);
+		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("Offset: %4.4f %4.4f %4.4f", offset.x, offset.y, offset.z),white);
+		vec3 viewpos=localOriginPos+offset;
+		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", viewpos.x, viewpos.y, viewpos.z),white);
 		if (videoPosDecoded)
 		{
 			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
@@ -744,7 +749,7 @@ void ClientRenderer::WriteHierarchies()
 }
 void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
-	deviceContext.viewStruct.view = camera.MakeViewMatrix();
+//	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
 
 	cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
@@ -1335,9 +1340,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		auto q_rel=q/q0;
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 		avs::Pose headPose;
-		headPose.orientation = *((avs::vec4*) & q_rel);
+		headPose.orientation = *((avs::vec4*)&q_rel);
 		vec3 pos = camera.GetPosition();
-		headPose.position = *((avs::vec3*) & pos);
+		headPose.position = *((avs::vec3*)&pos);
 		
 		avs::Pose controllerPoses[2];
 		FillInControllerPose(0,controllerPoses[0],1.0f);
@@ -1349,10 +1354,14 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 			controllerStates[i].inputEvents.clear();
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
-			oculusOrigin = sessionClient.GetInitialPos();
-			vec3 pos = (const float*)& oculusOrigin;
-			camera.SetPosition(pos);
+			localOriginPos = *((vec3*)&sessionClient.GetOriginPos());
 			receivedInitialPos = sessionClient.receivedInitialPos;
+			if(receivedRelativePos!=sessionClient.receivedRelativePos)
+			{
+				receivedRelativePos=sessionClient.receivedRelativePos;
+				vec3 pos =*((vec3*)&sessionClient.GetOriginToHeadOffset());
+				camera.SetPosition((const float*)(&pos));
+			}
 		}
 		avs::Result result = pipeline.process();
 

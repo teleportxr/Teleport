@@ -850,7 +850,9 @@ namespace avs
 	struct SetPositionCommand : public Command
 	{
 		SetPositionCommand() : Command(CommandPayloadType::SetPosition) {}
-		vec3 position;
+		vec3 origin_pos;
+		uint8_t set_relative_pos;
+		vec3 relative_pos;
 	};
 	
 	struct VideoConfig

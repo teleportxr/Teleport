@@ -54,7 +54,7 @@ namespace SCServer
 		bool hasPeer() const;
 		bool hasReceivedHandshake() const;
 
-		bool setPosition(const avs::vec3 &pos);
+		bool setPosition(const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head);
 
 		bool sendCommand(const avs::Command& avsCommand) const;
 		template<typename T> bool sendCommand(const avs::Command& avsCommand, std::vector<T>& appendedList) const

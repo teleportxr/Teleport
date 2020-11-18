@@ -1,10 +1,10 @@
 #include "SimulCasterServer/ClientData.h"
 
-bool ClientData::setOrigin(avs::vec3 pos)
+bool ClientData::setOrigin(avs::vec3 pos,bool set_rel,avs::vec3 rel_to_head)
 {
 	if(clientMessaging.hasPeer()&& clientMessaging.hasReceivedHandshake())
 	{
-		if(clientMessaging.setPosition(pos))
+		if(clientMessaging.setPosition(pos,set_rel,rel_to_head))
 		{
 		// ASSUME the message was received...
 		// TODO: Only set this when client confirms.

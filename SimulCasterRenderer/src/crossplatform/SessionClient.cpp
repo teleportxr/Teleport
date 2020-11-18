@@ -216,9 +216,14 @@ std::string SessionClient::GetServerIP() const
 	}
 }
 
-avs::vec3 SessionClient::GetInitialPos() const
+avs::vec3 SessionClient::GetOriginPos() const
 {
-	return initialPos;
+	return originPos;
+}
+
+avs::vec3 SessionClient::GetOriginToHeadOffset() const
+{
+	return originToHeadPos;
 }
 
 void SessionClient::DispatchEvent(const ENetEvent& event)
@@ -291,7 +296,10 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			avs::SetPositionCommand command;
 			memcpy(&command, packet->data, commandSize);
 			receivedInitialPos ++;
-			initialPos=command.position;
+			originPos=command.origin_pos;
+			if(command.set_relative_pos)
+				receivedRelativePos++;
+			originToHeadPos=command.relative_pos;
 		}
 		break;
 		case avs::CommandPayloadType::ActorBounds:

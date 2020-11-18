@@ -63,8 +63,10 @@ public:
     int GetPort() const;
     
 	unsigned long long receivedInitialPos = 0;
+    unsigned long long receivedRelativePos=0;
 
-    avs::vec3 GetInitialPos() const;
+    avs::vec3 GetOriginPos() const;
+    avs::vec3 GetOriginToHeadOffset() const;
 
     uint32_t GetClientID() const
 	{
@@ -107,7 +109,8 @@ private:
     std::vector<avs::uid> mReceivedActors; //Actors that have entered bounds, are about to be drawn, and need to be confirmed to the server.
     std::vector<avs::uid> mLostActors; //Actor that have left bounds, are about to be hidden, and need to be confirmed to the server.
 
-    avs::vec3 initialPos;
+    avs::vec3 originPos;
+    avs::vec3 originToHeadPos;
 
 	uint32_t clientID=0;
 
