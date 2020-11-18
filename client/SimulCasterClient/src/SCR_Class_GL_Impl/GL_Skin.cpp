@@ -2,7 +2,26 @@
 
 namespace scc
 {
-GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform)
+GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name)
+	:scr::Skin(name)
+{
+	CreateUniformBuffer(renderPlatform);
+}
+
+GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name, const std::vector<scr::Transform>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform)
+	:scr::Skin(name, inverseBindMatrices, boneAmount, skinTransform)
+{
+	CreateUniformBuffer(renderPlatform);
+}
+
+void GL_Skin::UpdateBoneMatrices(const scr::mat4 &rootTransform)
+{
+	scr::Skin::UpdateBoneMatrices(rootTransform);
+
+	uniformBuffer->Update();
+}
+
+void GL_Skin::CreateUniformBuffer(const scc::GL_RenderPlatform *renderPlatform)
 {
 	size_t boneMatricesSize = sizeof(scr::mat4) * MAX_BONES;
 	uint32_t bindingIndex = 4;
@@ -20,12 +39,5 @@ GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform)
 
 	shaderResource = scr::ShaderResource({shaderResourceLayout});
 	shaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, bindingIndex, "u_BoneData", {uniformBuffer.get(), 0, boneMatricesSize});
-}
-
-void GL_Skin::UpdateBoneMatrices(const scr::mat4 &rootTransform)
-{
-	scr::Skin::UpdateBoneMatrices(rootTransform);
-
-	uniformBuffer->Update();
 }
 }

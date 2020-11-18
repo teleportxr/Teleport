@@ -1,15 +1,17 @@
 //
 // Created by roder on 06/04/2020.
 //
-
 #include "ClientRenderer.h"
-#include "OVRActorManager.h"
+
+#include <algorithm>
+#include <sstream>
+
 #include "OVR_GlUtils.h"
 #include "OVR_Math.h"
-
 #include <VrApi_Types.h>
 #include <VrApi_Input.h>
-#include <algorithm>
+
+#include "OVRActorManager.h"
 
 using namespace OVR;
 ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c)
@@ -577,9 +579,7 @@ void ClientRenderer::ToggleTextures()
 
 void ClientRenderer::ToggleShowInfo()
 {
-	show_osd++;
-	if(show_osd>=NUM_OSDS)
-		show_osd=NO_OSD;
+	show_osd = (show_osd + 1) % NUM_OSDS;
 }
 
 void  ClientRenderer::SetStickOffset(float x,float y)
@@ -609,7 +609,7 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 	if(show_osd== NETWORK_OSD)
 	{
 		mGuiSys->ShowInfoText(
-				0.017f,
+				INFO_TEXT_DURATION,
 				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 				"Incomplete Decoder Packets: %d\n"
 				"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
@@ -620,7 +620,7 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				ctr.incompleteDecoderPacketsReceived,
 				frameRate, ctr.bandwidthKPS,
 				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
-				cameraPosition.x, cameraPosition.y, cameraPosition.z,
+				//cameraPosition.x, cameraPosition.y, cameraPosition.z,
 				//headPose.w, headPose.x, headPose.y, headPose.z,
 				//headPos.x, headPos.y, headPos.z,
 				ctr.m_packetMapOrphans);
@@ -628,36 +628,51 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 	else if(show_osd== CAMERA_OSD)
 	{
 		mGuiSys->ShowInfoText(
-				0.017f,
+				INFO_TEXT_DURATION,
 				"  Camera Position: %1.3f, %1.3f, %1.3f\n"
 				      "Received  Origin: %1.3f, %1.3f, %1.3f\n"
 				,cameraPosition.x, cameraPosition.y, cameraPosition.z
 				,oculusOrigin.x,oculusOrigin.y,oculusOrigin.z
 				);
 	}
-	else if(show_osd== GEOMETRY_OSD)
+	else if(show_osd == GEOMETRY_OSD)
 	{
-		mGuiSys->ShowInfoText(
-				0.017f,
-			"%s\n"
-				"Actors: %d \n"
-				"Orphans: %d",
-				GlobalGraphicsResources.effectPassName,
-				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
-				ctr.m_packetMapOrphans);
-			auto &missing=resourceCreator->GetMissingResources();
-			if(missing.size())
+		mGuiSys->ShowInfoText
+		(
+			INFO_TEXT_DURATION,
+		"%s\n"
+			"Actors: %d \n"
+			"Orphans: %d",
+			GlobalGraphicsResources.effectPassName,
+			static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
+			ctr.m_packetMapOrphans
+		);
+
+		const auto& missingResources = resourceCreator->GetMissingResources();
+		if(missingResources.size() > 0)
+		{
+			std::ostringstream missingResourcesStream;
+			missingResourcesStream << "Missing Resources\n";
+
+			size_t resourcesOnLine = 0;
+			for(const auto& missingPair : missingResources)
 			{
-				mGuiSys->ShowInfoText(
-						0.017f,
-						"Missing Resources\n");
-				for(auto m:missing)
+				const ResourceCreator::MissingResource& missingResource = missingPair.second;
+				missingResourcesStream << missingResource.resourceType << "_" << missingResource.id;
+
+				resourcesOnLine++;
+				if(resourcesOnLine >= MAX_RESOURCES_PER_LINE)
 				{
-					mGuiSys->ShowInfoText(
-							0.017f,
-							"%d\n",m.first);
+					missingResourcesStream << std::endl;
+					resourcesOnLine = 0;
+				}
+				else
+				{
+					missingResourcesStream << " | ";
 				}
 			}
 
+			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, missingResourcesStream.str().c_str());
+		}
 	}
 }

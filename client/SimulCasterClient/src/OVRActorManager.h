@@ -10,8 +10,8 @@
 class OVRActor : public scr::Node
 {
 public:
-	OVRActor(avs::uid id)
-		:Node(id)
+	OVRActor(avs::uid id, const std::string& name)
+		:Node(id, name)
 	{}
 
 	virtual ~OVRActor() = default;
@@ -40,7 +40,7 @@ public:
 
     virtual ~OVRActorManager() = default;
 
-    virtual std::shared_ptr<scr::Node> CreateActor(avs::uid id) const override;
+    virtual std::shared_ptr<scr::Node> CreateActor(avs::uid id, const std::string& name) const override;
 
 	virtual void AddActor(std::shared_ptr<scr::Node> actor, bool isHand) override;
 

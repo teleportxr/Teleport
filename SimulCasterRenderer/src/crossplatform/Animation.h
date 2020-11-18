@@ -7,7 +7,6 @@
 
 namespace scr
 {
-class Actor;
 class Bone;
 struct quat;
 
@@ -24,7 +23,7 @@ public:
 	void seekTime(float time);
 private:
 	void setPositionToTime(float time, avs::vec3& bonePosition, const std::vector<avs::Vector3Keyframe>& keyframes);
-	void setRotationToTime(float time, scr::quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes);
+	void setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes);
 
 	size_t getNextKeyframeIndex(float time, const std::vector<avs::Vector3Keyframe>& keyframes);
 	size_t getNextKeyframeIndex(float time, const std::vector<avs::Vector4Keyframe>& keyframes);
@@ -34,11 +33,15 @@ private:
 class Animation
 {
 public:
+	const std::string name;
 	std::vector<BoneKeyframe> boneKeyframes;
 
-	Animation();
-	Animation(std::vector<BoneKeyframe> boneKeyframes);
+	Animation(const std::string& name);
+	Animation(const std::string& name, std::vector<BoneKeyframe> boneKeyframes);
 	
+	//Updates how long the animations runs for.
+	void updateAnimationLength();
+
 	//Returns whether the animation has finished.
 	bool finished();
 

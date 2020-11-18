@@ -11,6 +11,8 @@ namespace scr
 	public:
 		struct MeshCreateInfo
 		{
+			std::string name;
+
 			std::vector<std::shared_ptr<VertexBuffer>> vb;
 			std::vector<std::shared_ptr<IndexBuffer>> ib;
 		};

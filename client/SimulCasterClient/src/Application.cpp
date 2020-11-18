@@ -549,6 +549,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 		{
 			scr::Texture::TextureCreateInfo textureCreateInfo =
 													{
+															"Cubemap Texture",
                                                             videoConfig.colour_cubemap_size,
                                                             videoConfig.colour_cubemap_size,
 															1,
@@ -571,6 +572,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 		{
 			scr::Texture::TextureCreateInfo textureCreateInfo //TODO: Check this against the incoming texture from the video stream
 													{
+															"Cubemap Sub-Textures",
 															128,
 															128,
 															1,

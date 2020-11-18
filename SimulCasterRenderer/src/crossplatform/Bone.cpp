@@ -2,8 +2,8 @@
 
 namespace scr
 {
-Bone::Bone(avs::uid id)
-	:id(id)
+Bone::Bone(avs::uid id, const std::string& name)
+	:id(id), name(name)
 {}
 
 Bone::~Bone()

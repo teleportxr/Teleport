@@ -134,11 +134,13 @@ struct TransformKeyframe
 
 struct Animation
 {
+	std::string name;
 	std::vector<TransformKeyframe> boneKeyframes;
 
 	static Animation convertToStandard(const Animation& animation, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 	{
 		Animation convertedAnimation;
+		convertedAnimation.name = animation.name;
 
 		for(const TransformKeyframe& keyframe : animation.boneKeyframes)
 		{

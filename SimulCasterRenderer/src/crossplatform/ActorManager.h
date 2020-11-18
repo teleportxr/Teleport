@@ -23,7 +23,7 @@ namespace scr
 
 		virtual ~ActorManager() = default;
 
-		virtual std::shared_ptr<Node> CreateActor(avs::uid id) const;
+		virtual std::shared_ptr<Node> CreateActor(avs::uid id, const std::string& name) const;
 
 		virtual void AddActor(std::shared_ptr<Node> actor, bool isHand);
 

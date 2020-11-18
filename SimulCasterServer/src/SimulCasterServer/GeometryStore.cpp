@@ -161,7 +161,7 @@ namespace SCServer
 
 		//Replace old IDs with their new IDs; fixing any links that need to be changed.
 
-		//ASSUMPTION: Mesh resources aren't shared, and as such it doesn't matter that their IDs aren't re-assigned.
+		//ASSUMPTION: Mesh sub-resources(e.g. index buffers) aren't shared, and as such it doesn't matter that their IDs aren't re-assigned.
 		for(auto meshMapPair : oldMeshes)
 		{
 			avs::AxesStandard mapStandard = meshMapPair.first;

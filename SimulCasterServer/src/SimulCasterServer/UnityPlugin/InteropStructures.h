@@ -10,6 +10,8 @@
 
 struct InteropNode
 {
+	BSTR name;
+
 	avs::Transform transform;
 	avs::NodeDataType dataType;
 	avs::uid parentID;
@@ -34,6 +36,8 @@ struct InteropNode
 	{
 		return
 		{
+			avs::convertToByteString(name),
+
 			transform,
 
 			parentID,
@@ -56,6 +60,8 @@ struct InteropNode
 
 struct InteropSkin
 {
+	BSTR name;
+
 	size_t bindMatrixAmount;
 	avs::Mat4x4* inverseBindMatrices;
 	
@@ -68,6 +74,7 @@ struct InteropSkin
 	{
 		return
 		{
+			avs::convertToByteString(name),
 			{inverseBindMatrices, inverseBindMatrices + bindMatrixAmount},
 			{jointIDs, jointIDs + jointAmount},
 			rootTransform
@@ -77,6 +84,8 @@ struct InteropSkin
 
 struct InteropMesh
 {
+	BSTR name;
+
 	int64_t primitiveArrayAmount;
 	avs::PrimitiveArray* primitiveArrays;
 
@@ -95,6 +104,7 @@ struct InteropMesh
 	operator avs::Mesh() const
 	{
 		avs::Mesh newMesh;
+		newMesh.name = avs::convertToByteString(name);
 
 		//Create vector in-place with pointer.
 		newMesh.primitiveArrays = {primitiveArrays, primitiveArrays + primitiveArrayAmount};
@@ -281,6 +291,7 @@ struct InteropPropertyAnimation
 	{
 		return
 		{
+			"PropertyAnimation",
 			{boneKeyframes, boneKeyframes + boneAmount}
 		};
 	}
@@ -309,6 +320,8 @@ struct InteropTransformKeyframe
 
 struct InteropTransformAnimation
 {
+	BSTR name;
+
 	int64_t boneAmount;
 	InteropTransformKeyframe* boneKeyframes;
 
@@ -316,6 +329,7 @@ struct InteropTransformAnimation
 	{
 		return
 		{
+			avs::convertToByteString(name),
 			{boneKeyframes, boneKeyframes + boneAmount}
 		};
 	}

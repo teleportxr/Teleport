@@ -148,6 +148,28 @@ namespace scr
 class ResourceCreator final : public avs::GeometryTargetBackendInterface
 {
 public:
+	struct IncompleteResource
+	{
+		IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
+			:id(id), type(type)
+		{}
+
+		const avs::uid id;
+		const avs::GeometryPayloadType type;
+	};
+
+	struct MissingResource
+	{
+		const avs::uid id; //ID of the missing resource.
+		const char* resourceType; //String indicating missing resource's type.
+
+		std::vector<std::shared_ptr<IncompleteResource>> waitingResources; //Resources that can't be completed without this missing resource.
+
+		MissingResource(avs::uid id, const char* resourceType)
+			:id(id), resourceType(resourceType)
+		{}
+	};
+
 	ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat);
 	~ResourceCreator();
 	
@@ -193,19 +215,9 @@ public:
 	std::shared_ptr<scr::Texture> m_DummyCombined;
 	std::shared_ptr<scr::Texture> m_DummyEmissive;
 
-	struct IncompleteResource
+	std::unordered_map<avs::uid, MissingResource>& GetMissingResources()
 	{
-		IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
-			:id(id), type(type)
-		{}
-
-		avs::uid id;
-		avs::GeometryPayloadType type;
-	};
-
-	std::unordered_map<avs::uid, std::vector<std::shared_ptr<IncompleteResource>>> &GetMissingResources()
-	{
-		return m_WaitingForResources;
+		return m_MissingResources;
 	}
 private:
 	struct IncompleteMaterial: IncompleteResource
@@ -220,12 +232,13 @@ private:
 
 	struct IncompleteActor : IncompleteResource
 	{
-		IncompleteActor(avs::uid id, avs::GeometryPayloadType type)
-			:IncompleteResource(id, type)
+		IncompleteActor(avs::uid id, avs::GeometryPayloadType type, bool isHand)
+			:IncompleteResource(id, type), isHand(isHand)
 		{}
 
+		const bool isHand = false;
+
 		std::shared_ptr<scr::Node> actor;
-		bool isHand = false;
 
 		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into actor material list>.
 		std::unordered_map<avs::uid, size_t> missingAnimations; //<ID of missing animation, index in animation vector>
@@ -248,7 +261,7 @@ private:
 			:IncompleteResource(id, type)
 		{}
 
-		std::vector<scr::BoneKeyframe> boneKeyframes;
+		std::shared_ptr<scr::Animation> animation;
 
 		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
 	};
@@ -279,15 +292,17 @@ private:
 	//	accessor : Data on texture that was received from server.
 	//	colourFactor : Vector factor to multiply texture with to adjust strength.
 	//	dummyTexture : Texture to use if there is no texture ID assigned.
-	//	materialParameter : Material's data for this texture.
-	//	textureSlots : Mapping list of texture IDs to the texture slot(e.g. diffuse texture).
-	//	missingResources : Set containing IDs of textures that the client doesn't have.
+	//	incompleteMaterial : IncompleteMaterial we are attempting to add the texture to.
+	//	materialParameter : Parameter we are modifying.
 	void AddTextureToMaterial(const avs::TextureAccessor& accessor,
 							  const avs::vec4& colourFactor,
 							  const std::shared_ptr<scr::Texture>& dummyTexture,
-							  scr::Material::MaterialParameter& materialParameter,
-							  std::unordered_map<avs::uid, std::shared_ptr<scr::Texture>&>& textureSlots,
-							  std::set<avs::uid>& missingResources) const;
+							  std::shared_ptr<IncompleteMaterial> incompleteMaterial,
+							  scr::Material::MaterialParameter& materialParameter);
+
+	MissingResource& GetMissingResource(avs::uid id, const char* resourceType);
+
+	void BasisThread_TranscodeTextures();
 
 	scr::API m_API;
 	scr::RenderPlatform* m_pRenderPlatform = nullptr;
@@ -310,25 +325,23 @@ private:
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
 	const uint32_t emissiveBGRA = 0x00000000;
 	
-	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager;
-	ResourceManager<scr::Material> *m_MaterialManager;
-	ResourceManager<scr::Shader> *m_ShaderManager;
-	ResourceManager<scr::Texture> *m_TextureManager;
-	ResourceManager<scr::UniformBuffer> *m_UniformBufferManager;
-	ResourceManager<scr::VertexBuffer> *m_VertexBufferManager;
-	ResourceManager<scr::Mesh> *m_MeshManager;
-	ResourceManager<scr::Skin>* m_SkinManager;
-	ResourceManager<scr::Light> *m_LightManager;
-	ResourceManager<scr::Bone>* m_BoneManager;
-	ResourceManager<scr::Animation>* m_AnimationManager;
+	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager = nullptr;
+	ResourceManager<scr::Material> *m_MaterialManager = nullptr;
+	ResourceManager<scr::Shader> *m_ShaderManager = nullptr;
+	ResourceManager<scr::Texture> *m_TextureManager = nullptr;
+	ResourceManager<scr::UniformBuffer> *m_UniformBufferManager = nullptr;
+	ResourceManager<scr::VertexBuffer> *m_VertexBufferManager = nullptr;
+	ResourceManager<scr::Mesh> *m_MeshManager = nullptr;
+	ResourceManager<scr::Skin>* m_SkinManager = nullptr;
+	ResourceManager<scr::Light> *m_LightManager = nullptr;
+	ResourceManager<scr::Bone>* m_BoneManager = nullptr;
+	ResourceManager<scr::Animation>* m_AnimationManager = nullptr;
 
-	scr::ActorManager* m_pActorManager;
+	scr::ActorManager* m_pActorManager = nullptr;
 
 	std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 	std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.
 	std::vector<avs::uid> m_CompletedActors; //List of IDs of actors that have been fully received, and have yet to be confirmed to the server.
-	std::unordered_map<avs::uid, std::vector<std::shared_ptr<IncompleteResource>>> m_WaitingForResources; //<ID of Missing Resource, List Of Things Waiting For Resource>
-
-	void BasisThread_TranscodeTextures();
+	std::unordered_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 };
 

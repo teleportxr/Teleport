@@ -9,7 +9,8 @@ namespace scc
 class GL_Skin : public scr::Skin
 {
 public:
-	GL_Skin(const scc::GL_RenderPlatform *renderPlatform);
+	GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name);
+	GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name, const std::vector<scr::Transform>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform);
 
 	virtual ~GL_Skin() = default;
 
@@ -22,5 +23,7 @@ private:
 	scr::ShaderResource shaderResource;
 	scr::ShaderResourceLayout shaderResourceLayout;
 	std::shared_ptr<scr::UniformBuffer> uniformBuffer;
+
+	void CreateUniformBuffer(const scc::GL_RenderPlatform *renderPlatform);
 };
 }

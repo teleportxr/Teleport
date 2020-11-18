@@ -17,11 +17,12 @@ class Node
 {
 public:
 	const avs::uid id;
+	const std::string name;
 
 	VisibilityComponent visibility;
 	AnimationComponent animationComponent;
 
-	Node(avs::uid id);
+	Node(avs::uid id, const std::string& name);
 
 	virtual ~Node() = default;
 

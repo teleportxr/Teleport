@@ -170,4 +170,7 @@ public:
 	int show_osd = GEOMETRY_OSD;
 	bool mIsCubemapVideo = true;
 	void DrawOSD(OVR::OvrGuiSys *mGuiSys);
+private:
+	static constexpr float INFO_TEXT_DURATION = 0.017f;
+	static constexpr size_t MAX_RESOURCES_PER_LINE = 3;
 };
