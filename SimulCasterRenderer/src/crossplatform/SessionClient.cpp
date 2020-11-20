@@ -5,6 +5,7 @@
 
 #include "ResourceCreator.h"
 #include "Log.h"
+#include <limits>
 
 SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService)
 	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService))
@@ -295,10 +296,10 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			size_t commandSize = sizeof(avs::SetPositionCommand);
 			avs::SetPositionCommand command;
 			memcpy(&command, packet->data, commandSize);
-			receivedInitialPos ++;
+			receivedInitialPos = (receivedInitialPos + 1) % ULLONG_MAX;
 			originPos=command.origin_pos;
 			if(command.set_relative_pos)
-				receivedRelativePos++;
+				receivedRelativePos = (receivedRelativePos + 1) % ULLONG_MAX;
 			originToHeadPos=command.relative_pos;
 		}
 		break;
