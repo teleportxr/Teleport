@@ -133,7 +133,6 @@ public:
 	}
     virtual void writeString(const std::string &str)
     {
-		std::lock_guard<std::mutex> logLock(logMutex);
 		if(to_logfile)
 			logFile<<str.c_str();
 		if(callback)
