@@ -191,13 +191,12 @@ namespace SCServer
 			}
 		}
 
-		// Aidan: Just trying this out for the moment for picking up when we don't receive ENET_EVENT_TYPE_DISCONNECT when we should. 
-		// This should be a lot more sophisticated and not hard coded.
-		/*if (host && peer && timeSinceLastMessage > 10)
+		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
+		if (host && peer && timeSinceLastMessage > disconnectTimeout / 1000)
 		{
 			TELEPORT_COUT << "No message received in " << timeSinceLastMessage << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
 			onDisconnect();
-		}*/
+		}
 
 	}
 
@@ -402,10 +401,9 @@ namespace SCServer
 			avs::vec3 o=rel_to_head;
 			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, o);
 			setp.relative_pos=o;
-			sendCommand(setp);
+			return sendCommand(setp);
 		}
-		else
-			return false;
+		return false;
 	}
 
 	void ClientMessaging::receiveInput(const ENetPacket* packet)

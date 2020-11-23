@@ -63,7 +63,7 @@ public:
     int GetPort() const;
     
 	unsigned long long receivedInitialPos = 0;
-    unsigned long long receivedRelativePos=0;
+    unsigned long long receivedRelativePos = 0;
 
     avs::vec3 GetOriginPos() const;
     avs::vec3 GetOriginToHeadOffset() const;
