@@ -15,6 +15,9 @@
 	std::cout<<__FILE__<<"("<<std::dec<<__LINE__<<"): info: "
 
 #define TELEPORT_CERR\
+	std::cerr<<__FILE__<<"("<<std::dec<<__LINE__<<"): error: "
+
+#define TELEPORT_WARN\
 	std::cerr<<__FILE__<<"("<<std::dec<<__LINE__<<"): warning: "
 
 #define TELEPORT_ASSERT(c)\
