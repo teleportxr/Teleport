@@ -231,17 +231,17 @@ vec3 EnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 	return specularColour * AB.x + AB.y;
 }
 
-float VisibilityTerm(float roughness, float n_v, float n_l)
+float VisibilityTerm(float roughness2, float n_v, float n_l)
 {
-	float m2 = roughness * roughness;
+	float m2 = roughness2;//roughness * roughness;
 	float visV = n_l * sqrt(n_v * (n_v - n_v * m2) + m2);
 	float visL = n_v * sqrt(n_l * (n_l - n_l * m2) + m2);
 	return saturate( 0.5 / max(visV + visL, 0.00001));
 }
 
-float DistributionTerm(float roughness, float n_h)
+float DistributionTerm(float roughness2, float n_h)
 {
-	float m2 = roughness * roughness;
+	float m2 = roughness2;//roughness * roughness;
 	float d = (n_h * m2 - n_h) * n_h + 1.0;
 	return m2 / (d * d * SIMUL_PI_F);
 }
@@ -302,12 +302,13 @@ SurfaceState PreprocessSurface(vec3 viewDir,SurfaceProperties surfaceProperties)
 	// Fresnel reflectance at normal incidence (for metals use albedo color).
 	vec3 F0						= lerp(Fdielectric, surfaceProperties.albedo, surfaceProperties.metallic);
 	// Angle between surface normal and outgoing light direction.
-	float cosLo					= saturate( dot(surfaceProperties.normal,-viewDir) );
+	float n_v					=-dot(surfaceProperties.normal,viewDir);
+	float cosLo					= saturate(n_v );
 	surfaceState.F				= FresnelTerm(F0, cosLo);
 	surfaceState.kS				= surfaceState.F;
 	surfaceState.kD				= lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0,0.0,0.0), surfaceProperties.metallic);
 	surfaceState.refl			= reflect(viewDir,surfaceProperties.normal);
-	surfaceState.n_v			= saturate(dot(surfaceProperties.normal, viewDir));
+	surfaceState.n_v			= saturate(n_v);
 	return surfaceState;
 }
 
@@ -341,7 +342,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	float d							=max(1.0,dist_to_light/light.radius);
 	vec3 irradiance					=light.colour.rgb*lerp(1.0,1.0/(d*d),light.is_point);
 	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),light.is_point);
-	float roughnessL				= max(.01, surfaceProperties.roughness2);
+	float roughnessL				=min(1.0,max(.01, surfaceProperties.roughness2));
 	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
 	vec3 halfway					=normalize(viewDir+dir_from_surface_to_light);
 	vec3 refl						=normalize(reflect(viewDir,surfaceProperties.normal));
@@ -350,14 +351,14 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	float lightV					=VisibilityTerm(roughnessL, surfaceState.n_v, n_l);
 	// Per-light:
 	vec3 diffuse					=surfaceState.kD*irradiance * surfaceProperties.albedo * saturate(n_l);
-	vec3 specular					=irradiance * surfaceState.F * (lightD * lightV * SIMUL_PI_F );
+	vec3 specular					=surfaceState.kS*irradiance * surfaceState.F * ( lightD*lightV*SIMUL_PI_F *n_l);
 
 	//float ao				= SceneAO(pos, normal, localToWorld);
-	specular						*= surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
+///	specular						*=surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour						=diffuse+specular;
 
-	vec4 shadow					=vec4(1.0,1.0,1.0,1.0);
-	vec4 spos					=GetShadowCoord( surfaceProperties.position,  lightTag );
+	vec4 shadow						=vec4(1.0,1.0,1.0,1.0);
+	vec4 spos						=GetShadowCoord( surfaceProperties.position, lightTag );
 //	if(!(light.is_point*light.is_spot))
 //		shadow=GetVarianceShadow(videoTexture,lightTag,spos);
 //	if(light.is_spot)
