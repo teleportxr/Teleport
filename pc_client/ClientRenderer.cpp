@@ -760,7 +760,9 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 	cameraConstants.view = deviceContext.viewStruct.view;
 	cameraConstants.proj = deviceContext.viewStruct.proj;
 	cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
-	cameraConstants.viewPosition = camera.GetPosition();
+	// The following block renders to the hdrFramebuffer's rendertarget:
+	vec3 finalViewPos=localOriginPos+relativeHeadPos;
+	cameraConstants.viewPosition = finalViewPos;
 
 	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
 	for(std::shared_ptr<scr::Node> actor : resourceManagers.mActorManager->GetRootActors())

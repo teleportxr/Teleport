@@ -358,10 +358,10 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 
 	vec4 shadow					=vec4(1.0,1.0,1.0,1.0);
 	vec4 spos					=GetShadowCoord( surfaceProperties.position,  lightTag );
-	if(!(light.is_point*light.is_spot))
-		shadow=GetVarianceShadow(videoTexture,lightTag,spos);
-	if(light.is_spot)
-		shadow=GetSpotLighting(lightTag,spos);
+//	if(!(light.is_point*light.is_spot))
+//		shadow=GetVarianceShadow(videoTexture,lightTag,spos);
+//	if(light.is_spot)
+//		shadow=GetSpotLighting(lightTag,spos);
 	//diffuse *=shadow;
     return shadow.r*(diffuse+specular);
 }
