@@ -148,8 +148,8 @@ void GeometryStreamingService::addHandsToStream()
 void GeometryStreamingService::tick(float deltaTime)
 {
 	// Might not be initialized... YET
-	if(!avsPipeline || !settings->enableGeometryStreaming) return;
-
+	if(!avsPipeline || !settings->enableGeometryStreaming)
+		return;
 	// We can now be confident that all streamable geometries have been initialized, so we will do internal setup.
 	// Each frame we manage a view of which streamable geometries should or shouldn't be rendered on our client.
 

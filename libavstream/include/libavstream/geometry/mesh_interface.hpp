@@ -385,13 +385,14 @@ struct Animation;
 		friend InStream& operator>> (InStream& in, Mesh& mesh)
 		{
 			//Step past new line that may be next in buffer.
-			if(in.peek() == '\n') in.get();
+			if(in.peek() == '\n')
+				in.get();
 
-				//Read name with spaces included.
-				std::wstring wideName;
-				std::getline(in, wideName);
+			//Read name with spaces included.
+			std::wstring wideName;
+			std::getline(in, wideName);
 
-				mesh.name = convertToByteString(wideName);
+			mesh.name = convertToByteString(wideName);
 
 			size_t primitiveArrayAmount;
 			in >> primitiveArrayAmount;

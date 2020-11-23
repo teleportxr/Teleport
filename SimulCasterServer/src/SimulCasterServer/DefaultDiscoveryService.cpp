@@ -5,7 +5,7 @@
 #include "SimulCasterServer/CasterSettings.h"
 extern std::map<avs::uid, ClientData> clientServices;
 extern SCServer::CasterSettings casterSettings;
-TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort);
 
 using namespace SCServer;
 
@@ -124,7 +124,7 @@ void DefaultDiscoveryService::tick()
 
 		buffer = { sizeof(ServiceDiscoveryResponse), &response };
 		enet_socket_send(discoverySocket, &addr, &buffer, 1);
-		StartSession(clientID, servicePort);
+		Client_StartSession(clientID, servicePort);
 	}
 }
 

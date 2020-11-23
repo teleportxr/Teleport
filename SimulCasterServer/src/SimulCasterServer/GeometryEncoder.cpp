@@ -182,11 +182,11 @@ namespace SCServer
 			avs::Mesh* mesh = src->getMesh(uid, req->getAxesStandard());
 			if(!mesh)
 			{
-				static bool hasReported = false;
-				if(!hasReported)
+				static std::set<avs::uid> hasReported ;
+				if(hasReported.find(uid)==hasReported.end())
 				{
 					TELEPORT_CERR << "Mesh not found with uid " << uid << std::endl;
-					hasReported = true;
+					hasReported.insert(uid);
 				}
 				continue;
 			}

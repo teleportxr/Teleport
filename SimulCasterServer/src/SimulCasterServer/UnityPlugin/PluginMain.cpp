@@ -30,9 +30,9 @@ VisualStudioDebugOutput debug_buffer(false, nullptr, 128);
 #endif
 
 using namespace SCServer;
-TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort);
-TELEPORT_EXPORT void StopStreaming(avs::uid clientID);
-TELEPORT_EXPORT void StopSession(avs::uid clientID);
+TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
+TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
@@ -338,7 +338,7 @@ void RemoveClient(avs::uid clientID)
 void Disconnect(avs::uid clientID)
 {
 	onDisconnect(clientID);
-	StopStreaming(clientID);
+	Client_StopStreaming(clientID);
 }
 ///PLUGIN-INTERNAL END
 
@@ -465,7 +465,7 @@ TELEPORT_EXPORT void Shutdown()
 		if (client.isStreaming)
 		{
 			// This will add to lost clients but will be cleared below
-			StopStreaming(clientService.first);
+			Client_StopStreaming(clientService.first);
 		}
 		client.clientMessaging.stopSession();
 	}
@@ -491,7 +491,7 @@ ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::
 	originClientHas.x= originClientHas.y= originClientHas.z=0.f;
 }
 
-TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
+TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 {
 	// Already started this session.
 	if(clientServices.find(clientID) == clientServices.end())
@@ -545,7 +545,7 @@ TELEPORT_EXPORT void StartSession(avs::uid clientID, int32_t listenPort)
 	
 }
 
-TELEPORT_EXPORT void StopSession(avs::uid clientID)
+TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
 {
 	// Early-out if a client with this ID doesn't exist.
 	auto& clientIt = clientServices.find(clientID);
@@ -557,7 +557,7 @@ TELEPORT_EXPORT void StopSession(avs::uid clientID)
 	if (client.isStreaming)
 	{
 		// Will add to lost clients and call shutdown command
-		StopStreaming(clientID);
+		Client_StopStreaming(clientID);
 	}
 
 	RemoveClient(clientID);
@@ -577,7 +577,7 @@ TELEPORT_EXPORT void StopSession(avs::uid clientID)
 	}
 }
 
-TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
+TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -659,7 +659,7 @@ TELEPORT_EXPORT void StartStreaming(avs::uid clientID)
 	client.isStreaming = true;
 }
 
-TELEPORT_EXPORT void StopStreaming(avs::uid clientID)
+TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end()) return;
@@ -703,7 +703,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 
 			if(clientData.isStreaming == false)
 			{
-				StartStreaming(idClientPair.first);
+				Client_StartStreaming(idClientPair.first);
 			}
 		}
 	}
@@ -786,7 +786,7 @@ TELEPORT_EXPORT float GetBandwidthInKbps(avs::uid clientID)
 ///libavstream END
 
 ///GeometryStreamingService START
-TELEPORT_EXPORT void AddActor(avs::uid clientID, void* newActor, avs::uid actorID, avs::Transform currentTransform)
+TELEPORT_EXPORT void Client_AddActor(avs::uid clientID, void* newActor, avs::uid actorID, avs::Transform currentTransform)
 {
 	auto c= clientServices.find(clientID);
 	if(c==clientServices.end())
@@ -796,7 +796,7 @@ TELEPORT_EXPORT void AddActor(avs::uid clientID, void* newActor, avs::uid actorI
 	geometryStore.updateNode(actorID, currentTransform);
 }
 
-TELEPORT_EXPORT avs::uid RemoveActor(avs::uid clientID, void* oldActor)
+TELEPORT_EXPORT avs::uid Client_RemoveActor(avs::uid clientID, void* oldActor)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -804,7 +804,7 @@ TELEPORT_EXPORT avs::uid RemoveActor(avs::uid clientID, void* oldActor)
 	return c->second.geometryStreamingService->removeActor(oldActor);
 }
 
-TELEPORT_EXPORT avs::uid GetActorID(avs::uid clientID, void* actor)
+TELEPORT_EXPORT avs::uid Client_GetActorID(avs::uid clientID, void* actor)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -812,7 +812,7 @@ TELEPORT_EXPORT avs::uid GetActorID(avs::uid clientID, void* actor)
 	return c->second.geometryStreamingService->getActorID(actor);
 }
 
-TELEPORT_EXPORT bool IsStreamingActor(avs::uid clientID, void* actor)
+TELEPORT_EXPORT bool Client_IsStreamingActor(avs::uid clientID, void* actor)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -820,7 +820,7 @@ TELEPORT_EXPORT bool IsStreamingActor(avs::uid clientID, void* actor)
 	return c->second.geometryStreamingService->isStreamingActor(actor);
 }
 
-TELEPORT_EXPORT void ShowActor(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT void Client_ShowActor(avs::uid clientID, avs::uid actorID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -828,7 +828,7 @@ TELEPORT_EXPORT void ShowActor(avs::uid clientID, avs::uid actorID)
 	c->second.geometryStreamingService->showNode(clientID,actorID);
 }
 
-TELEPORT_EXPORT void HideActor(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT void Client_HideActor(avs::uid clientID, avs::uid actorID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -836,15 +836,15 @@ TELEPORT_EXPORT void HideActor(avs::uid clientID, avs::uid actorID)
 	c->second.geometryStreamingService->hideNode(clientID,actorID);
 }
 
-TELEPORT_EXPORT void SetActorVisible(avs::uid clientID, avs::uid actorID, bool isVisible)
+TELEPORT_EXPORT void Client_SetActorVisible(avs::uid clientID, avs::uid actorID, bool isVisible)
 {
 	if(isVisible)
-		ShowActor(clientID, actorID);
+		Client_ShowActor(clientID, actorID);
 	else
-		HideActor(clientID, actorID);
+		Client_HideActor(clientID, actorID);
 }
 
-TELEPORT_EXPORT bool IsClientRenderingActorID(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT bool Client_IsClientRenderingActorID(avs::uid clientID, avs::uid actorID)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end()) return false;
@@ -852,7 +852,7 @@ TELEPORT_EXPORT bool IsClientRenderingActorID(avs::uid clientID, avs::uid actorI
 	return clientPair->second.geometryStreamingService->isClientRenderingNode(actorID);
 }
 
-TELEPORT_EXPORT bool IsClientRenderingActorPtr(avs::uid clientID, void* actorPtr)
+TELEPORT_EXPORT bool Client_IsClientRenderingActorPtr(avs::uid clientID, void* actorPtr)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end()) return false;
@@ -860,7 +860,7 @@ TELEPORT_EXPORT bool IsClientRenderingActorPtr(avs::uid clientID, void* actorPtr
 	return clientPair->second.geometryStreamingService->isClientRenderingNode(actorPtr);
 }
 
-bool HasResource(avs::uid clientID, avs::uid resourceID)
+bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
@@ -1062,7 +1062,7 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 ///AudioEncodePipeline END
 
 ///ClientMessaging START
-TELEPORT_EXPORT void ActorEnteredBounds(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT void Client_ActorEnteredBounds(avs::uid clientID, avs::uid actorID)
 {
 	auto client = clientServices.find(clientID);
 	if(client == clientServices.end()) return;
@@ -1070,7 +1070,7 @@ TELEPORT_EXPORT void ActorEnteredBounds(avs::uid clientID, avs::uid actorID)
 	client->second.clientMessaging.actorEnteredBounds(actorID);
 }
 
-TELEPORT_EXPORT void ActorLeftBounds(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT void Client_ActorLeftBounds(avs::uid clientID, avs::uid actorID)
 {
 	auto client = clientServices.find(clientID);
 	if(client == clientServices.end()) return;
@@ -1078,7 +1078,7 @@ TELEPORT_EXPORT void ActorLeftBounds(avs::uid clientID, avs::uid actorID)
 	client->second.clientMessaging.actorLeftBounds(actorID);
 }
 
-TELEPORT_EXPORT void UpdateActorMovement(avs::uid clientID, avs::MovementUpdate* updates, int updateAmount)
+TELEPORT_EXPORT void Client_UpdateActorMovement(avs::uid clientID, avs::MovementUpdate* updates, int updateAmount)
 {
 	auto client = clientServices.find(clientID);
 	if (client == clientServices.end()) return;
@@ -1096,49 +1096,49 @@ TELEPORT_EXPORT void UpdateActorMovement(avs::uid clientID, avs::MovementUpdate*
 	client->second.clientMessaging.updateActorMovement(updateList);
 }
 
-TELEPORT_EXPORT bool HasHost(avs::uid clientID)
+TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end()) return false;
 	return c->second.clientMessaging.hasHost();
 }
 
-TELEPORT_EXPORT bool HasPeer(avs::uid clientID)
+TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end()) return false;
 	return c->second.clientMessaging.hasPeer();
 }
 
-TELEPORT_EXPORT bool SendCommand(avs::uid clientID, const avs::Command& avsCommand)
+TELEPORT_EXPORT bool Client_SendCommand(avs::uid clientID, const avs::Command& avsCommand)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end()) return false;
 	return c->second.clientMessaging.sendCommand(avsCommand);
 }
 
-TELEPORT_EXPORT bool SendCommandWithList(avs::uid clientID, const avs::Command& avsCommand, std::vector<avs::uid>& appendedList)
+TELEPORT_EXPORT bool Client_SendCommandWithList(avs::uid clientID, const avs::Command& avsCommand, std::vector<avs::uid>& appendedList)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end()) return false;
 	return c->second.clientMessaging.sendCommand(avsCommand, appendedList);
 }
 
-TELEPORT_EXPORT char* GetClientIP(avs::uid clientID)
+TELEPORT_EXPORT char* Client_GetClientIP(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end()) return "";
 	return c->second.clientMessaging.getClientIP().data();
 }
 
-TELEPORT_EXPORT uint16_t GetClientPort(avs::uid clientID)
+TELEPORT_EXPORT uint16_t Client_GetClientPort(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end()) return 0;
 	return c->second.clientMessaging.getClientPort();
 }
 
-TELEPORT_EXPORT uint16_t GetServerPort(avs::uid clientID)
+TELEPORT_EXPORT uint16_t Client_GetServerPort(avs::uid clientID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end()) return 0;
