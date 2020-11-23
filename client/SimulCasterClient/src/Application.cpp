@@ -271,7 +271,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Get the Origin Position
 	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 	{
-		clientRenderer.oculusOrigin = sessionClient.GetInitialPos();
+		clientRenderer.oculusOrigin = sessionClient.GetOriginPos();
 		receivedInitialPos = sessionClient.receivedInitialPos;
 	}
 	// Oculus Origin means where the headset's zero is in real space.
@@ -289,7 +289,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		sessionClient.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
-			clientRenderer.oculusOrigin = sessionClient.GetInitialPos();
+			clientRenderer.oculusOrigin = sessionClient.GetOriginPos();
 			receivedInitialPos = sessionClient.receivedInitialPos;
 		}
 	}
