@@ -223,7 +223,7 @@ technique recompose
 		SetComputeShader(CompileShader(cs_5_0, CS_Recompose()));
 	}
 }
-technique extract_tag_data_id
+technique extract_tag_data_id 
 {
 	pass p0
 	{

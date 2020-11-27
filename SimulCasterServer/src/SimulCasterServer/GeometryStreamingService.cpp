@@ -139,7 +139,7 @@ void GeometryStreamingService::addHandsToStream()
 {
 	const std::vector<std::pair<void*, avs::uid>>& hands = geometryStore->getHands();
 
-	for(std::pair<void*, avs::uid> pointerIDHand : hands)
+	for(const std::pair<void*, avs::uid>& pointerIDHand : hands)
 	{
 		streamedNodeIDs.emplace(pointerIDHand);
 	}

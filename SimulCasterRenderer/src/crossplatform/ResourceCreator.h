@@ -276,7 +276,7 @@ private:
 		std::string name; //For debugging which texture failed.
 	};
 	
-	void CreateActor(avs::uid node_uid, avs::DataNode& node, bool isHand);
+	void CreateActor(avs::uid node_uid, avs::DataNode& node);
 	void CreateLight(avs::uid node_uid, avs::DataNode& node);
 	void CreateBone(avs::uid boneID, avs::DataNode& node);
 
