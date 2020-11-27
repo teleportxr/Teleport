@@ -555,18 +555,11 @@ void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 
 	switch(node.data_type)
 	{
-		case NodeDataType::Hand:
-			if(!m_pActorManager->HasActor(node_uid))
-			{
-				CreateActor(node_uid, node, true);
-			}
-
-			break;
 		case NodeDataType::Mesh:
 			// TODO: WHY do we only update the transform if the type is a mesh..?
 			if(!m_pActorManager->UpdateActorTransform(node_uid, node.transform.position, node.transform.rotation, node.transform.scale))
 			{
-				CreateActor(node_uid, node, false);
+				CreateActor(node_uid, node;
 			}
 
 			break;
@@ -666,7 +659,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 }
 
 //TODO: Rename Actor to MeshNode.
-void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool isHand)
+void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node)
 {
 	if(m_pActorManager->HasActor(node_uid))
 	{
@@ -674,6 +667,8 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node, bool i
 		return;
 	}
 	SCR_COUT << "CreateActor(" << node_uid << ", " << node.name << ")\n";
+
+	bool isHand = node.data_subtype == NodeDataSubtype::LeftHand || node.data_subtype == NodeDataSubtype::RightHand;
 
 	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>(node_uid, avs::GeometryPayloadType::Node, isHand);
 	//Whether the actor is missing any resource before, and must wait for them before it can be completed.

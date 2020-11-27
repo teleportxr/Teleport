@@ -14,6 +14,7 @@ struct InteropNode
 
 	avs::Transform transform;
 	avs::NodeDataType dataType;
+	avs::NodeDataSubtype dataSubtype;
 	avs::uid parentID;
 	avs::uid dataID;
 	avs::uid skinID;
@@ -44,6 +45,7 @@ struct InteropNode
 			{childIDs, childIDs + childAmount},
 
 			dataType,
+			dataSubtype,
 			dataID,
 
 			{materialIDs, materialIDs + materialAmount},

@@ -677,9 +677,15 @@ namespace avs
 		Camera,
 		Scene,
 		ShadowMap,
-		Hand,
 		Light,
 		Bone
+	};
+
+	enum class NodeDataSubtype : uint8_t
+	{
+		None = 0,
+		LeftHand,
+		RightHand
 	};
 
 	enum class ActorStatus : uint8_t
