@@ -40,7 +40,6 @@ namespace SCServer
 		void showNode(avs::uid clientID,avs::uid actorID);
 		void setNodeVisible(avs::uid clientID,avs::uid actorID, bool isVisible);
 		bool isClientRenderingNode(avs::uid actorID);
-		bool isClientRenderingNode(void* actorPtr);
 
 		//Adds the hand actors to the list of streamed actors.
 		void addHandsToStream();
@@ -53,30 +52,23 @@ namespace SCServer
 		{
 			std::vector<avs::uid> actorIDs;
 
-			for(auto actorPair : streamedNodes)
+			for(auto n : streamedNodeUids)
 			{
-				actorIDs.push_back(actorPair.first);
+				actorIDs.push_back(n);
 			}
 
 			return actorIDs;
 		}
+
+		void addActor(avs::uid actorID);
+		avs::uid removeActorByID(avs::uid actorID);
+		bool isStreamingActorID(avs::uid actorID);
 	protected:
 		GeometryStore* geometryStore;
 
-		void addActor(void* newActor, avs::uid actorID);
-		avs::uid removeActor(void* oldActor);
+		virtual void showActor_Internal(avs::uid clientID,avs::uid nodeID) = 0;
+		virtual void hideActor_Internal(avs::uid clientID,avs::uid nodeID) = 0;
 
-		avs::uid getActorID(void* actor);
-
-		bool isStreamingActor(void* actor);
-
-		virtual void showActor_Internal(avs::uid clientID,void* actorPtr) = 0;
-		virtual void hideActor_Internal(avs::uid clientID,void* actorPtr) = 0;
-
-		std::unordered_map<avs::uid, void*>& getHiddenNodes()
-		{
-			return hiddenNodes;
-		}
 	private:
 		const struct CasterSettings* settings;		
 
@@ -90,10 +82,8 @@ namespace SCServer
 		std::unique_ptr<avs::Pipeline> avsPipeline;
 		std::unique_ptr<avs::GeometrySource> avsGeometrySource;
 		std::unique_ptr<avs::GeometryEncoder> avsGeometryEncoder;
-
-		std::map<void*, avs::uid> streamedNodeIDs; //Nodes that the client needs to draw, and should be sent to them; <Pointer to Actor, Node ID of root mesh>.
-		std::unordered_map<avs::uid, void*> streamedNodes; //Nodes that should be streamed to the client; <ActorID, Pointer to Actor>.
-		std::unordered_map<avs::uid, void*> hiddenNodes; //Nodes that are currently hidden on the server; <ActorID, Pointer to Actor>.
+		std::set<avs::uid> streamedNodeUids;				//Nodes that the client needs to draw, and should be sent to them; <Pointer to Actor, Node ID of root mesh>.
+		std::set<avs::uid> hiddenNodes;	//Nodes that are currently hidden on the server; <ActorID, Pointer to Actor>.
 
 		//Recursively obtains the resources from the mesh node, and its child nodes.
 		void GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const;

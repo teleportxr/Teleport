@@ -141,6 +141,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 		CAMERA_OSD,
 		NETWORK_OSD,
 		GEOMETRY_OSD,
+		TAG_OSD,
 		CONTROLLER_OSD,
 		NUM_OSDS
 	};

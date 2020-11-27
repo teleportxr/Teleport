@@ -471,6 +471,8 @@ struct Animation;
 
 		//! A Node has a transform, and MAY contain an instance of a mesh.
 		virtual std::vector<uid> getNodeIDs() const = 0;
+		//! If it exists, get the name of the node, otherwise an empty string.
+		virtual const char* getNodeName(avs::uid nodeID) const =0;
 		//Get node with passed ID.
 		//	nodeID : Indentifier of the node.
 		//Returns the node if successfully found, otherwise nullptr.

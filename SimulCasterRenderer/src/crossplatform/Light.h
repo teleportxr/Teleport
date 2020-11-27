@@ -13,7 +13,7 @@ namespace scr
 	class Light
 	{
 	public:
-		// Matches Unity...
+		// Matches Unity... also scr::LightType
 		enum class Type : uint32_t
 		{
 			SPOT=0,

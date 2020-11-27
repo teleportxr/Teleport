@@ -47,8 +47,8 @@ std::map<avs::uid, ClientData> clientServices;
 
 SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
-static std::function<void(avs::uid clientID,void** actorPtr)> onShowActor;
-static std::function<void(avs::uid clientID,void** actorPtr)> onHideActor;
+static std::function<bool(avs::uid clientID,avs::uid nodeID)> onShowActor;
+static std::function<bool(avs::uid clientID,avs::uid nodeID)> onHideActor;
 
 static SetHeadPoseFn setHeadPose;
 static SetControllerPoseFn setControllerPose;
@@ -87,38 +87,28 @@ public:
 	}
 
 	virtual ~PluginGeometryStreamingService() = default;
-
-	void addActor(void* newActor, avs::uid actorID)
-	{
-		SCServer::GeometryStreamingService::addActor(newActor, actorID);
-	}
-
-	avs::uid removeActor(void* oldActor)
-	{
-		return SCServer::GeometryStreamingService::removeActor(oldActor);
-	}
-
-	avs::uid getActorID(void* actor)
-	{
-		return SCServer::GeometryStreamingService::getActorID(actor);
-	}
-
-	bool isStreamingActor(void* actor)
-	{
-		return SCServer::GeometryStreamingService::isStreamingActor(actor);
-	}
-
+	
 private:
-	virtual void showActor_Internal(avs::uid clientID, void* actorPtr)
+	virtual void showActor_Internal(avs::uid clientID, avs::uid nodeID)
 	{
 		if(onShowActor)
-			onShowActor(clientID,&actorPtr);
+		{
+			if(!onShowActor(clientID,nodeID))
+			{
+				TELEPORT_CERR<<"onShowActor failed for node "<<nodeID<<"("<<geometryStore->getNodeName(nodeID)<<")"<<std::endl;
+			}
+		}
 	}
 
-	virtual void hideActor_Internal(avs::uid clientID, void* actorPtr)
+	virtual void hideActor_Internal(avs::uid clientID, avs::uid nodeID)
 	{
 		if(onHideActor)
-			onHideActor(clientID,&actorPtr);
+		{
+			if(!onHideActor(clientID,nodeID))
+			{
+				TELEPORT_CERR<<"onHideActor failed for node "<<nodeID<<"("<<geometryStore->getNodeName(nodeID)<<")"<<std::endl;
+			}
+		}
 	}
 };
 
@@ -305,8 +295,8 @@ private:
 
 struct InitialiseState
 {
-	void(*showActor)(avs::uid clientID, void*);
-	void(*hideActor)(avs::uid clientID, void*);
+	bool(*showActor)(avs::uid clientID, avs::uid nodeID);
+	bool(*hideActor)(avs::uid clientID, avs::uid nodeID);
 	void(*headPoseSetter)(avs::uid clientID, const avs::Pose*);
 	void(*controllerPoseSetter)(avs::uid uid, int index, const avs::Pose*);
 	ProcessNewInputFn newInputProcessing;
@@ -355,12 +345,12 @@ TELEPORT_EXPORT void UpdateCasterSettings(const SCServer::CasterSettings newSett
 	casterSettings = newSettings;
 }
 
-TELEPORT_EXPORT void SetShowActorDelegate(void(*showActor)(avs::uid,void*))
+TELEPORT_EXPORT void SetShowActorDelegate(bool(*showActor)(avs::uid,avs::uid))
 {
 	onShowActor = showActor;
 }
 
-TELEPORT_EXPORT void SetHideActorDelegate(void(*hideActor)(avs::uid,void*))
+TELEPORT_EXPORT void SetHideActorDelegate(bool(*hideActor)(avs::uid,avs::uid))
 {
 	onHideActor = hideActor;
 }
@@ -391,11 +381,27 @@ static void passOnOutput(const char *msg)
 		avsContext.log(avs::LogSeverity::Warning,msg);
 }
 
+static void passOnError(const char *msg)
+{
+	if(msg)
+		avsContext.log(avs::LogSeverity::Error,msg);
+}
+
 void AccumulateMessagesFromThreads(avs::LogSeverity severity, const char* msg, void* userData)
 {
-	 std::lock_guard<std::mutex> lock(messagesMutex);
-	 LogMessage logMessage={severity,msg,userData};
-	 messages.push_back(std::move(logMessage));
+	std::lock_guard<std::mutex> lock(messagesMutex);
+	if(messages.size()==99)
+	{
+		LogMessage logMessage={avs::LogSeverity::Error,"Too many messages since last call to PipeOutMessages()",nullptr};
+		messages.push_back(std::move(logMessage));
+		return;
+	}
+	else if(messages.size()>99)
+	{
+		return;
+	}
+	LogMessage logMessage={severity,msg,userData};
+	messages.push_back(std::move(logMessage));
 }
 
 void PipeOutMessages()
@@ -415,7 +421,8 @@ TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc msgh)
 {
 	messageHandler=msgh;
 	avsContext.setMessageHandler(AccumulateMessagesFromThreads, nullptr);
-	debug_buffer.setCallback(&passOnOutput);
+	debug_buffer.setOutputCallback(&passOnOutput);
+	debug_buffer.setErrorCallback(&passOnError);
 }
 
 TELEPORT_EXPORT void SetConnectionTimeout(int32_t timeout)
@@ -791,33 +798,25 @@ TELEPORT_EXPORT void Client_AddActor(avs::uid clientID, void* newActor, avs::uid
 	auto c= clientServices.find(clientID);
 	if(c==clientServices.end())
 		return;
-	c->second.geometryStreamingService->addActor(newActor, actorID);
+	c->second.geometryStreamingService->addActor( actorID);
 	//Update node transform as it may have changed since the actor was last streamed.
 	geometryStore.updateNode(actorID, currentTransform);
 }
 
-TELEPORT_EXPORT avs::uid Client_RemoveActor(avs::uid clientID, void* oldActor)
+TELEPORT_EXPORT avs::uid Client_RemoveActorByID(avs::uid clientID, avs::uid actorID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 		return 0;
-	return c->second.geometryStreamingService->removeActor(oldActor);
+	return c->second.geometryStreamingService->removeActorByID(actorID);
 }
 
-TELEPORT_EXPORT avs::uid Client_GetActorID(avs::uid clientID, void* actor)
-{
-	auto c = clientServices.find(clientID);
-	if (c == clientServices.end())
-		return 0;
-	return c->second.geometryStreamingService->getActorID(actor);
-}
-
-TELEPORT_EXPORT bool Client_IsStreamingActor(avs::uid clientID, void* actor)
+TELEPORT_EXPORT bool Client_IsStreamingActorID(avs::uid clientID, avs::uid actorID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 		return false;
-	return c->second.geometryStreamingService->isStreamingActor(actor);
+	return c->second.geometryStreamingService->isStreamingActorID(actorID);
 }
 
 TELEPORT_EXPORT void Client_ShowActor(avs::uid clientID, avs::uid actorID)
@@ -850,14 +849,6 @@ TELEPORT_EXPORT bool Client_IsClientRenderingActorID(avs::uid clientID, avs::uid
 	if(clientPair == clientServices.end()) return false;
 
 	return clientPair->second.geometryStreamingService->isClientRenderingNode(actorID);
-}
-
-TELEPORT_EXPORT bool Client_IsClientRenderingActorPtr(avs::uid clientID, void* actorPtr)
-{
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end()) return false;
-
-	return clientPair->second.geometryStreamingService->isClientRenderingNode(actorPtr);
 }
 
 bool Client_HasResource(avs::uid clientID, avs::uid resourceID)

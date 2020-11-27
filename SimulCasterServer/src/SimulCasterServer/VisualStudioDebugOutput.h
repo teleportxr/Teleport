@@ -19,11 +19,15 @@
 #define __stdcall
 #endif
 typedef void (__stdcall *DebugOutputCallback)(const char *);
+class VisualStudioDebugOutput;
+// A simple delegate, it will usually be a function partially bound with std::bind.
+typedef std::function<void(const std::string &str)> WriteStringDelegate;
 
 class vsBufferedStringStreamBuf : public std::streambuf
 {
+	WriteStringDelegate writeStringDelegate;
 public:
-	vsBufferedStringStreamBuf(int bufferSize) 
+	vsBufferedStringStreamBuf(int bufferSize,WriteStringDelegate d) :writeStringDelegate(d)
 	{
 		if (bufferSize)
 		{
@@ -38,25 +42,22 @@ public:
 		//sync();
 		delete[] pbase();
 	}
-	virtual void writeString(const std::string &str) = 0;
 private:
 	int	overflow(int c)
 	{
 		std::lock_guard<std::mutex> logLock(logMutex);
 		sync();
-
 		if (c != EOF)
 		{
 			if (pbase() == epptr())
 			{
 				std::string temp;
 				temp += char(c);
-				writeString(temp);
+				writeStringDelegate(temp);
 			}
 			else
 				sputc((char)c);
 		}
-
 		return 0;
 	}
 
@@ -66,7 +67,7 @@ private:
 		{
 			int len = int(pptr() - pbase());
 			std::string temp(pbase(), len);
-			writeString(temp);
+			writeStringDelegate(temp);
 			setp(pbase(), epptr());
 		}
 		return 0;
@@ -75,23 +76,32 @@ protected:
 	std::mutex logMutex;
 };
 
-class VisualStudioDebugOutput : public vsBufferedStringStreamBuf
+class VisualStudioDebugOutput 
 {
+	vsBufferedStringStreamBuf out;
+	vsBufferedStringStreamBuf err;
 public:
     VisualStudioDebugOutput(bool send_to_output_window=true,
 							const char *logfilename=NULL,size_t bufsize=(size_t)16
-							,DebugOutputCallback c=NULL)
-							:vsBufferedStringStreamBuf((int)bufsize)
+							,DebugOutputCallback c=NULL
+							,DebugOutputCallback e=NULL)
+							:out((int)bufsize,std::bind(&VisualStudioDebugOutput::writeOutputString,this,std::placeholders::_1))
+							,err((int)bufsize,std::bind(&VisualStudioDebugOutput::writeErrorString,this,std::placeholders::_1))
 		,to_logfile(false)
 		,old_cout_buffer(NULL)
 		,old_cerr_buffer(NULL)
-		,callback(c)
+		,outputCallback(c)
+		,errorCallback(e)
 	{
+		if(c&&!e)
+			errorCallback=c;
+		if(e&&!c)
+			outputCallback=e;
 		to_output_window=send_to_output_window;
 		if(logfilename)
 			setLogFile(logfilename);
-		old_cout_buffer=std::cout.rdbuf(this);
-		old_cerr_buffer=std::cerr.rdbuf(this);
+		old_cout_buffer=std::cout.rdbuf(&out);
+		old_cerr_buffer=std::cerr.rdbuf(&err);
 	}
 	virtual ~VisualStudioDebugOutput()
 	{
@@ -127,17 +137,33 @@ public:
 			errno=0;
 		}
 	}
-	void setCallback(DebugOutputCallback c)
+	void setOutputCallback(DebugOutputCallback c)
 	{
-		callback=c;
+		outputCallback=c;
 	}
-    virtual void writeString(const std::string &str)
+	void setErrorCallback(DebugOutputCallback c)
+	{
+		errorCallback=c;
+	}
+    void writeErrorString(const std::string &str)
+    {
+		writeString(str,true);
+    }
+    void writeOutputString(const std::string &str)
+    {
+		writeString(str,false);
+    }
+    void writeString(const std::string &str,bool error)
     {
 		if(to_logfile)
 			logFile<<str.c_str();
-		if(callback)
+		if(error&&errorCallback)
 		{
-			callback(str.c_str());
+			errorCallback(str.c_str());
+		}
+		else if(!error&&outputCallback)
+		{
+			outputCallback(str.c_str());
 		}
 		if(to_output_window)
 		{
@@ -157,5 +183,6 @@ protected:
 	bool to_logfile;
 	std::streambuf *old_cout_buffer;
 	std::streambuf *old_cerr_buffer;
-	DebugOutputCallback callback;
+	DebugOutputCallback outputCallback;
+	DebugOutputCallback errorCallback;
 };

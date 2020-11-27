@@ -29,6 +29,8 @@ namespace SCServer
 		void clear(bool freeMeshBuffers);
 
 		void setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality);
+		
+		const char* getNodeName(avs::uid nodeID) const override;
 
 		virtual std::vector<avs::uid> getNodeIDs() const override;
 		virtual avs::DataNode* getNode(avs::uid nodeID) override;

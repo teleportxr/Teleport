@@ -535,6 +535,26 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	}
 	frame_number++;
 }
+static const char *ToString(scr::Light::Type type)
+{
+	const char *lightTypeName="";
+	switch(type)
+	{
+	case scr::Light::Type::POINT:
+		lightTypeName="Point";
+		break;
+	case scr::Light::Type::DIRECTIONAL:
+		lightTypeName="  Dir";
+		break;
+	case scr::Light::Type::SPOT:
+		lightTypeName=" Spot";
+		break;
+	case scr::Light::Type::AREA:
+		lightTypeName=" Area";
+		break;
+	};
+	return lightTypeName;
+}
 
 void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
@@ -663,22 +683,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 				auto *L=l.resource->GetLightData();
 				if(L)
 				{
-					const char *lightTypeName="";
-					switch(lcr.type)
-					{
-					case scr::Light::Type::POINT:
-						lightTypeName="Point";
-						break;
-					case scr::Light::Type::DIRECTIONAL:
-						lightTypeName="  Dir";
-						break;
-					case scr::Light::Type::SPOT:
-						lightTypeName=" Spot";
-						break;
-					case scr::Light::Type::AREA:
-						lightTypeName=" Area";
-						break;
-					};
+					const char *lightTypeName=ToString(lcr.type);
 					if(L->is_point==0.0f)
 						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),text_colour,background);
 					else
@@ -702,6 +707,20 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			{
 				const ResourceCreator::MissingResource& missingResource = missingPair.second;
 				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%s_%d", missingResource.resourceType, missingResource.id));
+			}
+		}
+	}
+	else if(show_osd==TAG_OSD)
+	{
+		renderPlatform->LinePrint(deviceContext,"Tags\n");
+		for(int i=0;i<videoTagDataCubeArray.size();i++)
+		{
+			auto &tag=videoTagDataCubeArray[i];
+			renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%d lights",tag.coreData.lightCount));
+			for(int j=0;j<tag.lights.size();j++)
+			{
+				auto &l=tag.lights[j];
+				renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type %s, %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType),l.color.x,l.color.y,l.color.z));
 			}
 		}
 	}
