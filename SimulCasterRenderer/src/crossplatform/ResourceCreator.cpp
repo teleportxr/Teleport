@@ -559,9 +559,8 @@ void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 			// TODO: WHY do we only update the transform if the type is a mesh..?
 			if(!m_pActorManager->UpdateActorTransform(node_uid, node.transform.position, node.transform.rotation, node.transform.scale))
 			{
-				CreateActor(node_uid, node;
+				CreateActor(node_uid, node);
 			}
-
 			break;
 		case NodeDataType::Camera:
 			break;
@@ -755,7 +754,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node)
 	newActor->actor->SetChildrenIDs(node.childrenIDs);
 
 	//Create MeshNode even if it is missing resources, but create a hand if it is a hand.
-	m_pActorManager->AddActor(newActor->actor, isHand);
+	m_pActorManager->AddActor(newActor->actor, node);
 
 	//Complete actor now, if we aren't missing any resources.
 	if(!isMissingResources)
