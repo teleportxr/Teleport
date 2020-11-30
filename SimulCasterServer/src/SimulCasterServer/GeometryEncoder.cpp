@@ -296,6 +296,8 @@ namespace SCServer
 			put(transform);
 			put(node->data_uid);
 			put(node->data_type);
+			put(node->data_subtype);
+
 			put(node->skinID);
 			put(node->parentID);
 
