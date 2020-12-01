@@ -266,18 +266,24 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	avs::vec3 headPos =*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
 	headPos+=*((avs::vec3*)&footPos);
 
-	avs::vec3 scr_OVR_headPos = {headPos.x, headPos.y, headPos.z};
+	clientRenderer.relativeHeadPos= {headPos.x, headPos.y, headPos.z};
 
 	//Get the Origin Position
 	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 	{
-		clientRenderer.oculusOrigin = sessionClient.GetOriginPos();
+		clientRenderer.localOriginPos = sessionClient.GetOriginPos();
 		receivedInitialPos = sessionClient.receivedInitialPos;
+		if(receivedRelativePos!=sessionClient.receivedRelativePos)
+		{
+			receivedRelativePos=sessionClient.receivedRelativePos;
+			avs::vec3 pos =sessionClient.GetOriginToHeadOffset();
+			//camera.SetPosition((const float*)(&pos));
+		}
 	}
 	// Oculus Origin means where the headset's zero is in real space.
 
 
-	clientRenderer.cameraPosition = clientRenderer.oculusOrigin+scr_OVR_headPos;
+	clientRenderer.cameraPosition = clientRenderer.localOriginPos+clientRenderer.relativeHeadPos;
 
 	// Handle networked session.
 	if(sessionClient.IsConnected())
@@ -289,7 +295,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		sessionClient.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
-			clientRenderer.oculusOrigin = sessionClient.GetOriginPos();
+			clientRenderer.localOriginPos = sessionClient.GetOriginPos();
 			receivedInitialPos = sessionClient.receivedInitialPos;
 		}
 	}
@@ -327,7 +333,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
-	GlobalGraphicsResources.scrCamera->UpdatePosition(scr_OVR_headPos);
+	GlobalGraphicsResources.scrCamera->UpdatePosition(clientRenderer.cameraPosition);
 
 
 	Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;

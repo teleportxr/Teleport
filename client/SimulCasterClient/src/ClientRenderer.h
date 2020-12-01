@@ -96,7 +96,8 @@ public:
 	avs::Queue mAudioQueue;
 	avs::Queue mGeometryQueue;
 
-	avs::vec3 oculusOrigin;		// in metres. The headPose will be relative to this.
+	avs::vec3 localOriginPos;		// in metres. The headPose will be relative to this.
+	avs::vec3 relativeHeadPos;
 	scr::mat4 transformToOculusOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.
 
 	scr::ResourceManagers	*resourceManagers	=nullptr;

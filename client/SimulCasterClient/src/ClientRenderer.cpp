@@ -16,8 +16,9 @@
 using namespace OVR;
 ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c)
 		:mDecoder(avs::DecoderBackend::Custom)
-		, oculusOrigin(0,0,0)
-		, transformToOculusOrigin(scr::mat4::Translation(-oculusOrigin))
+		, localOriginPos(0,0,0)
+		,relativeHeadPos(0,0,0)
+		, transformToOculusOrigin(scr::mat4::Translation(-localOriginPos))
 		, resourceManagers(rm)
 		, resourceCreator(r)
 		, clientAppInterface(c)
@@ -440,7 +441,7 @@ void ClientRenderer::UpdateHandObjects()
 				remoteStates.push_back(remoteState);
 				if(deviceIndex < 2)
 				{
-					avs::vec3 pos = oculusOrigin + *((const avs::vec3 *)&remoteState.HeadPose.Pose.Position);
+					avs::vec3 pos = localOriginPos + *((const avs::vec3 *)&remoteState.HeadPose.Pose.Position);
 
 					controllerPoses[deviceIndex].position = *((const avs::vec3 *)(&pos));
 					controllerPoses[deviceIndex].orientation = *((const avs::vec4 *)(&remoteState.HeadPose.Pose.Orientation));
@@ -538,7 +539,7 @@ void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node>
 
 	//----OVR Node Set Transforms----//
 	scr::mat4 globalMatrix=actor->GetGlobalTransform().GetTransformMatrix();
-	transformToOculusOrigin=scr::mat4::Translation(-oculusOrigin);
+	transformToOculusOrigin=scr::mat4::Translation(-localOriginPos);
 	scr::mat4 scr_Transform = transformToOculusOrigin * globalMatrix;
 
 	std::shared_ptr<scr::Skin> skin = ovrActor->GetSkin();
@@ -620,9 +621,6 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				ctr.incompleteDecoderPacketsReceived,
 				frameRate, ctr.bandwidthKPS,
 				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
-				//cameraPosition.x, cameraPosition.y, cameraPosition.z,
-				//headPose.w, headPose.x, headPose.y, headPose.z,
-				//headPos.x, headPos.y, headPos.z,
 				ctr.m_packetMapOrphans);
 	}
 	else if(show_osd== CAMERA_OSD)
@@ -632,7 +630,7 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				"  Camera Position: %1.3f, %1.3f, %1.3f\n"
 				      "Received  Origin: %1.3f, %1.3f, %1.3f\n"
 				,cameraPosition.x, cameraPosition.y, cameraPosition.z
-				,oculusOrigin.x,oculusOrigin.y,oculusOrigin.z
+				,localOriginPos.x,localOriginPos.y,localOriginPos.z
 				);
 	}
 	else if(show_osd == GEOMETRY_OSD)

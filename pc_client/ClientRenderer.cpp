@@ -571,11 +571,13 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 
 			data[i].cameraPosition = { pos.x, pos.y, pos.z };
 			data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
+			data[i].lightCount=td.lights.size();
 			for(int j=0;j<td.lights.size();j++)
 			{
 				LightTag &t=data[i].lightTags[j];
 				const scr::LightTagData &l=td.lights[j];
 				t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
+				t.colour=*((vec4*)&l.color);
 				// Convert from +-1 to [0,1]
 				t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
 				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
@@ -590,7 +592,7 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 				crossplatform::Quaternionf q((const float*)&orientation);
 				t.direction=q*vec3(0,0,1.0f);
 				scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
-
+				
 				t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
 
 				auto &nodeLight=cachedLights.find(l.uid);
@@ -696,17 +698,19 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 				if(L)
 				{
 					const char *lightTypeName=ToString(lcr.type);
+					vec4 light_colour=(const float*)&L->colour;
+					light_colour.w=1.0f;
 					if(L->is_point==0.0f)
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),text_colour,background);
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),light_colour,background);
 					else
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->position.x,L->position.y,L->position.z,L->radius),text_colour,background);
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->position.x,L->position.y,L->position.z,L->radius),light_colour,background);
 				}
 			}
 			if(j<videoTagDataCubeArray[0].lights.size())
 			{
 				auto &l=videoTagDataCubeArray[0].lights[j];
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
+				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
 			}
 			j++;
 		}
@@ -1250,24 +1254,8 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		for (auto& light : tagData.lights)
 		{
 			memcpy(&light, &data[index], sizeof(scr::LightTagData));
-			// checks:
-		/*	if(cachedLight==cachedLights.end())
-			{
-				// mismatch in the number.
-				std::cerr<<"light count mismatch"<<std::endl;
-			}
-			else if(cachedLight->second.resource->GetLightCreateInfo().uid!=light.uid)
-			{
-				// uid mismatch.
-				std::cerr<<"uid mismatch"<<std::endl;
-			}
-			else*/
-			{
-				avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
-				index += sizeof(scr::LightTagData);
-			//	cachedLight++;
-			}
-			////
+			avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
+			index += sizeof(scr::LightTagData);
 		}
 		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
 	}

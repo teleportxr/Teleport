@@ -133,6 +133,7 @@ private:
 	scc::GL_DeviceContext mDeviceContext;
 
 	unsigned long long receivedInitialPos=0;
+	unsigned long long receivedRelativePos=0;
 
     const scr::Effect::EffectPassCreateInfo *BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources) override;
 

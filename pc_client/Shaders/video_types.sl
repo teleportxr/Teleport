@@ -55,19 +55,19 @@ struct LightTag
 struct VideoTagData2D
 {
 	vec3 cameraPosition;
-	float pad;
+	int lightCount;
 	vec4 cameraRotation;
 	// Some light information 
-	LightTag lightTags[4];
+	LightTag lightTags[10];
 };
 
 struct VideoTagDataCube
 {
 	vec3 cameraPosition;
-	float pad;
+	int lightCount;
 	vec4 cameraRotation;
 	// Some light information 
-	LightTag lightTags[4];
+	LightTag lightTags[10];
 };
 
 #endif
