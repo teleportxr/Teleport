@@ -25,7 +25,7 @@ namespace scr
 
 		virtual std::shared_ptr<Node> CreateActor(avs::uid id, const std::string& name) const;
 
-		virtual void AddActor(std::shared_ptr<Node> actor, bool isHand);
+		virtual void AddActor(std::shared_ptr<Node> actor, const avs::DataNode& node);
 
 		void RemoveActor(std::shared_ptr<Node> actor);
 		void RemoveActor(avs::uid actorID);

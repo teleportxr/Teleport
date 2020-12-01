@@ -254,6 +254,7 @@ struct Animation;
 		std::vector<uid> childrenIDs;
 
 		NodeDataType data_type;
+		NodeDataSubtype data_subtype;
 		uid data_uid;
 
 		//MESH
