@@ -24,7 +24,6 @@ uniform Texture2D shadowTexture;
 uniform Texture3D inscatterVolumeTexture;
 //////////////////////////
 
-uniform StructuredBuffer<PbrLight> lights;
 uniform StructuredBuffer<uint4> TagDataIDBuffer;
 uniform StructuredBuffer<VideoTagData2D> TagData2DBuffer;
 uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
@@ -335,13 +334,13 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	return colour/3.0;
 }
 
-vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,PbrLight light,LightTag lightTag)
+vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,LightTag lightTag)
 {
 	vec3 diff						=lightTag.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
-	float d							=max(1.0,dist_to_light/light.radius);
-	vec3 irradiance					=light.colour.rgb*lerp(1.0,1.0/(d*d),light.is_point);
-	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),light.is_point);
+	float d							=max(1.0,dist_to_light/lightTag.radius);
+	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,1.0/(d*d),lightTag.is_point);
+	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
 	float roughnessL				=min(1.0,max(.01, surfaceProperties.roughness2));
 	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
 	vec3 halfway					=normalize(viewDir+dir_from_surface_to_light);
@@ -411,9 +410,8 @@ vec4 Solid(vertexOutput IN)
 	{
 		if(i>=lightCount)
 			break;
-		PbrLight light		=lights[i];
 		LightTag lightTag	=tagData.lightTags[i];
-		c					+=PBRAddLight(surfaceState,view,surfaceProperties,light,lightTag);
+		c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
 	}
 	//c.gb += 0.03;
 

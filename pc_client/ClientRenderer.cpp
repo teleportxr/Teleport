@@ -557,7 +557,9 @@ static const char *ToString(scr::Light::Type type)
 }
 
 void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext)
-{
+{				
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
 	if (lastSetupCommand.video_config.use_cubemap)
 	{
 		VideoTagDataCube data[maxTagDataSize];
@@ -588,12 +590,22 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 				crossplatform::Quaternionf q((const float*)&orientation);
 				t.direction=q*vec3(0,0,1.0f);
 				scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
-					//scr::mat4::Rotation(orientation)*scr::mat4::Translation(-position);
-				
-				//scr::mat4 proj=scr::mat4((const float*)&l.shadowProjectionMatrix);
-				//worldToShadowMatrix		=proj*worldToShadowMatrix;
-				//worldToShadowMatrix		=worldToShadowMatrix.Transpose();
+
 				t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
+
+				auto &nodeLight=cachedLights.find(l.uid);
+				if(nodeLight!=cachedLights.end())
+				{
+					auto *lightData=nodeLight->second.resource->GetLightData();
+					if(lightData)
+					{
+						t.colour=(const float*)(&lightData->colour);
+						t.is_spot=lightData->is_spot;
+						t.is_point=lightData->is_point;
+						t.radius=lightData->radius;
+						t.shadow_strength=0.0f;
+					}
+				}
 			}
 		}	
 		tagDataCubeBuffer.SetData(deviceContext, data);
@@ -1227,8 +1239,11 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 		// We will check the received light tags agains the current list of lights - rough and temporary.
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		/*
+		Roderick: we will here ignore the cached lights (CPU-streamed node lights) as they are unordered so may be found in a different order
+			to the tag lights. ALL light data will go into the tags, using uid lookup to get any needed data from the unordered cache.
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
-		auto &cachedLight=cachedLights.begin();
+		auto &cachedLight=cachedLights.begin();*/
 		////
 
 		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
@@ -1236,7 +1251,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		{
 			memcpy(&light, &data[index], sizeof(scr::LightTagData));
 			// checks:
-			if(cachedLight==cachedLights.end())
+		/*	if(cachedLight==cachedLights.end())
 			{
 				// mismatch in the number.
 				std::cerr<<"light count mismatch"<<std::endl;
@@ -1246,11 +1261,11 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 				// uid mismatch.
 				std::cerr<<"uid mismatch"<<std::endl;
 			}
-			else
+			else*/
 			{
 				avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
 				index += sizeof(scr::LightTagData);
-				cachedLight++;
+			//	cachedLight++;
 			}
 			////
 		}

@@ -41,10 +41,15 @@ struct LightTag
 	mat4 worldToShadowMatrix;
 	vec2 shadowTexCoordOffset;
 	vec2 shadowTexCoordScale;
+	vec4 colour;
 	vec3 position;
 	int	pospad;
 	vec3 direction;
 	uint uid32;
+	float is_spot;
+	float is_point;
+	float shadow_strength;
+	float radius;
 };
 
 struct VideoTagData2D
