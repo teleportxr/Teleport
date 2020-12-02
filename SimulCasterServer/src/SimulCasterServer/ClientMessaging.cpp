@@ -612,18 +612,20 @@ namespace SCServer
 	void ClientMessaging::processNetworkDataAsync()
 	{
 		asyncNetworkDataProcessingFailed=false;
+		// Elapsed time since the main thread last ticked (seconds).
 		avs::Timestamp timestamp;
-		double elapsedTime;
+		double elapsedTime; 
 		while (asyncNetworkDataProcessingActive)
 		{
-			// Only continue processing if the main thread hasn't hung
+			// Only continue processing if the main thread hasn't hung.
 			timestamp = avs::PlatformWindows::getTimestamp();
 			{
 				std::lock_guard<std::mutex> lock(dataMutex);
-				elapsedTime = avs::PlatformWindows::getTimeElapsed(lastTickTimestamp, timestamp);
+				elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(lastTickTimestamp, timestamp);
 			}
 		
-			if (elapsedTime < 1)
+			// Proceed only if the main thread hasn't hung.
+			if (elapsedTime < 0.20)
 			{
 				std::lock_guard<std::mutex> lock(networkMutex);
 				for (auto& keyVal : networkPipelines)
