@@ -449,7 +449,6 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 	}
 	atexit(enet_deinitialize);
 
-	// Starts separate thread if async turned on.
 	ClientMessaging::startAsyncNetworkDataProcessing();
 
 	return discoveryService->initialise(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT);
@@ -462,7 +461,6 @@ TELEPORT_EXPORT void Shutdown()
 
 	discoveryService->shutdown();
 
-	// Stops separate thread if async turned on.
 	ClientMessaging::stopAsyncNetworkDataProcessing(true);
 
 	for(auto& clientService : clientServices)
@@ -703,13 +701,6 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 
 		if(clientData.clientMessaging.hasPeer())
 		{
-#ifndef ASYNC_NETWORK_PROCESSING
-			if(idClientPair.second.casterContext.NetworkPipeline)
-			{
-				idClientPair.second.casterContext.NetworkPipeline->process();
-			}
-#endif
-
 			clientData.clientMessaging.tick(deltaTime);
 
 			if(clientData.isStreaming == false)

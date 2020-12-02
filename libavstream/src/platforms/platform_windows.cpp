@@ -60,7 +60,18 @@ double PlatformWindows::getTimeElapsed(const Timestamp& tBegin, const Timestamp&
 	// Convert to nanoseconds:
 	return (elapsedCounter.QuadPart * 1000000.0) / (long double)frequency.QuadPart;
 }
-	
+
+double PlatformWindows::getTimeElapsedInSeconds(const Timestamp& tBegin, const Timestamp& tEnd)
+{
+	if (!frequency.QuadPart)
+		QueryPerformanceFrequency(&frequency);
+
+	LARGE_INTEGER elapsedCounter;
+	elapsedCounter.QuadPart = tEnd.QuadPart - tBegin.QuadPart;
+
+	return (elapsedCounter.QuadPart) / (double)frequency.QuadPart;
+}
+
 SystemTime PlatformWindows::getSystemTime()
 {
 	SYSTEMTIME systime;

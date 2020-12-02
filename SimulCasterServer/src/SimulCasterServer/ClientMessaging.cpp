@@ -15,6 +15,8 @@ namespace SCServer
 	std::unordered_map<avs::uid, NetworkPipeline*> ClientMessaging::networkPipelines;
 	std::thread ClientMessaging::networkThread;
 	std::mutex ClientMessaging::networkMutex;
+	std::mutex ClientMessaging::dataMutex;
+	avs::Timestamp ClientMessaging::lastTickTimestamp;
 
 	ClientMessaging::ClientMessaging(const CasterSettings* settings,
 		std::shared_ptr<DiscoveryService> discoveryService,
@@ -129,6 +131,12 @@ namespace SCServer
 
 		static float timeSinceLastGeometryStream = 0;
 		timeSinceLastGeometryStream += deltaTime;
+
+		{
+			std::lock_guard<std::mutex> guard(dataMutex);
+			lastTickTimestamp = avs::PlatformWindows::getTimestamp();
+		}
+	
 
 		const float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f / settings->geometryTicksPerSecond;
 
@@ -582,7 +590,6 @@ namespace SCServer
 
 	void ClientMessaging::startAsyncNetworkDataProcessing()
 	{
-#ifdef ASYNC_NETWORK_PROCESSING
 		if (!asyncNetworkDataProcessingActive)
 		{
 			asyncNetworkDataProcessingActive = true;
@@ -591,13 +598,11 @@ namespace SCServer
 				networkThread = std::thread(&ClientMessaging::processNetworkDataAsync);
 			}		
 		}
-#endif
 	}
 		 bool ClientMessaging::asyncNetworkDataProcessingFailed=false;
 
 	void ClientMessaging::stopAsyncNetworkDataProcessing(bool killThread)
 	{
-#ifdef ASYNC_NETWORK_PROCESSING
 		if (asyncNetworkDataProcessingActive)
 		{
 			asyncNetworkDataProcessingActive = false;
@@ -610,22 +615,35 @@ namespace SCServer
 		{
 			networkThread.join();
 		}
-#endif
 	}
 
 	void ClientMessaging::processNetworkDataAsync()
 	{
 		asyncNetworkDataProcessingFailed=false;
+		// Elapsed time since the main thread last ticked (seconds).
+		avs::Timestamp timestamp;
+		double elapsedTime; 
 		while (asyncNetworkDataProcessingActive)
 		{
-			std::lock_guard<std::mutex> lock(networkMutex);
-			for (auto& keyVal : networkPipelines)
+			// Only continue processing if the main thread hasn't hung.
+			timestamp = avs::PlatformWindows::getTimestamp();
 			{
-				if (keyVal.second)
+				std::lock_guard<std::mutex> lock(dataMutex);
+				elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(lastTickTimestamp, timestamp);
+			}
+		
+			// Proceed only if the main thread hasn't hung.
+			if (elapsedTime < 0.20)
+			{
+				std::lock_guard<std::mutex> lock(networkMutex);
+				for (auto& keyVal : networkPipelines)
 				{
-					if(!keyVal.second->process())
+					if (keyVal.second)
 					{
-						asyncNetworkDataProcessingFailed=true;
+						if (!keyVal.second->process())
+						{
+							asyncNetworkDataProcessingFailed = true;
+						}
 					}
 				}
 			}

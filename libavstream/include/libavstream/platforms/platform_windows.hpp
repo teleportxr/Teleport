@@ -30,6 +30,7 @@ public:
 
 	static Timestamp getTimestamp();
 	static double getTimeElapsed(const Timestamp& tBegin, const Timestamp& tEnd);
+	static double getTimeElapsedInSeconds(const Timestamp& tBegin, const Timestamp& tEnd);
 
 	static SystemTime getSystemTime();
 };
