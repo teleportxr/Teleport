@@ -48,6 +48,11 @@ namespace SCServer
 		return initialized;
 	}
 
+	void ClientMessaging::unInitialise() 
+	{
+		 initialized=false;
+	}
+
 	void ClientMessaging::initialise(CasterContext* context, CaptureDelegates captureDelegates)
 	{
 		casterContext = context;
@@ -249,7 +254,10 @@ namespace SCServer
 		assert(peer);
 
 		char address[20];
-		enet_address_get_host_ip(&peer->address, address, sizeof(address));
+		if(peer)
+			enet_address_get_host_ip(&peer->address, address, sizeof(address));
+		else
+			sprintf(address,"");
 
 		return std::string(address);
 	}

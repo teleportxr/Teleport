@@ -262,9 +262,9 @@ std::shared_ptr<scr::Node> OVRActorManager::CreateActor(avs::uid id, const std::
     return std::make_shared<OVRActor>(id, name);
 }
 
-void OVRActorManager::AddActor(std::shared_ptr<Node> actor, bool isHand)
+void OVRActorManager::AddActor(std::shared_ptr<Node> actor, const avs::DataNode& node)
 {
-	ActorManager::AddActor(actor, isHand);
+	ActorManager::AddActor(actor, node);
 }
 
 void OVRActorManager::ChangeEffectPass(const char* effectPassName)

@@ -56,19 +56,38 @@ struct SpotLight
 	ovrMatrix4f shadowProjectionMatrix;
 };
 
+// ALL light data is passed in as tags.
+struct LightTag
+{
+	ovrMatrix4f worldToShadowMatrix;
+	avs::vec2 shadowTexCoordOffset;
+	avs::vec2 shadowTexCoordScale;
+	avs::vec4 colour;
+	avs::vec3 position;
+	int	pospad;
+	avs::vec3 direction;
+	uint uid32;
+	float is_spot;
+	float is_point;
+	float shadow_strength;
+	float radius;
+};
+
 struct VideoTagData2D
 {
     avs::vec3 cameraPosition;
-	float pad;
+	int lightCount;
     avs::vec4 cameraRotation;
+	LightTag lightTags[10];
 };
 
 struct VideoTagDataCube
 {
     avs::vec3 cameraPosition;
-	float pad;
+	int lightCount;
     avs::vec4 cameraRotation;
 	// Some light information
+	LightTag lightTags[10];
 };
 
 class ClientRenderer

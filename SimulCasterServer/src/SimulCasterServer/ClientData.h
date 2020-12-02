@@ -35,3 +35,9 @@ protected:
 	avs::vec3 originClientHas;
 	ENetAddress address;
 };
+
+
+struct ClientStatus
+{
+	unsigned ipAddress;
+};

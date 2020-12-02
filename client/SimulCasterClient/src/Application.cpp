@@ -75,9 +75,6 @@ Application::Application()
 	sessionClient.SetResourceCreator(&resourceCreator);
 
 	pthread_setname_np(pthread_self(), "SimulCaster_Application");
-	memset(&renderConstants,0,sizeof(RenderConstants));
-	renderConstants.colourOffsetScale={0.0f,0.0f,1.0f,0.6667f};
-	renderConstants.depthOffsetScale={0.0f,0.6667f,0.5f,0.3333f};
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
 
 	if(enet_initialize() != 0)
@@ -206,6 +203,13 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler(), clientRenderer.mRoughSpecularTexture});
 	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17, "u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler(), clientRenderer.mCubemapLightingTexture});
 
+	// Set tag data shader resources.
+	scr::ShaderResourceLayout tagDataLayout;
+	tagDataLayout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	tagDataLayout.AddBinding(5, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+
+	GlobalGraphicsResources.tagDataResources.SetLayouts({tagDataLayout});
+
 	int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
 	mRefreshRates.resize(num_refresh_rates);
 	vrapi_GetSystemPropertyFloatArray(java,VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,mRefreshRates.data(),num_refresh_rates);
@@ -301,15 +305,13 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 	else
 	{
-		ENetAddress remoteEndpoint;
-		// Set server ip to empty string to use broadcast ip
-		if(sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
+		if (!sessionClient.HasDiscovered())
 		{
-			if(!sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT))
-			{
-				//OVR_WARN("Discovered but failed to connect");
-			}
-
+			sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+		}
+		if (sessionClient.HasDiscovered())
+		{
+			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
 		}
 	}
 
@@ -497,18 +499,6 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 					clientRenderer.mVideoSurfaceTexture->GetTextureId());
 
 		}
-		renderConstants.colourOffsetScale.x = 0;
-		renderConstants.colourOffsetScale.y = 0;
-		renderConstants.colourOffsetScale.z = 1.0f;
-		renderConstants.colourOffsetScale.w =
-				float(videoConfig.video_height) / float(stream_height);
-
-		renderConstants.depthOffsetScale.x = 0;
-		renderConstants.depthOffsetScale.y =
-				float(videoConfig.video_height) / float(stream_height);
-		renderConstants.depthOffsetScale.z = float(videoConfig.depth_width) / float(stream_width);
-		renderConstants.depthOffsetScale.w =
-				float(videoConfig.depth_height) / float(stream_height);
 
 		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
 
@@ -678,8 +668,8 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 		VideoTagDataCube shaderData;
         shaderData.cameraPosition = tagData.coreData.cameraTransform.position;
-        shaderData.pad = 0;
         shaderData.cameraRotation = tagData.coreData.cameraTransform.rotation;
+		shaderData.lightCount = tagData.lights.size();
 
 		uint32_t offset = sizeof(VideoTagDataCube) * tagData.coreData.id;
 		clientRenderer.mTagDataBuffer->Update(sizeof(VideoTagDataCube), (void*)&shaderData, offset);
@@ -694,7 +684,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 		VideoTagData2D shaderData;
 		shaderData.cameraPosition = tagData.cameraTransform.position;
-		shaderData.pad = 0;
+		shaderData.lightCount = 0;//tagData.lights.size();
 		shaderData.cameraRotation = tagData.cameraTransform.rotation;
 
 		uint32_t offset = sizeof(VideoTagData2D) * tagData.id;

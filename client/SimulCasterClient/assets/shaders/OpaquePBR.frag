@@ -77,6 +77,43 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
     float u_CombinedTexCoordIndex;
     float u_EmissiveTexCoordIndex;
 };
+
+layout(std430,binding=4) buffer RWTagDataID_ssbo
+{
+    uvec4 RWTagDataID;
+};
+
+// ALL light data is passed in as tags.
+struct LightTag
+{
+    mat4 worldToShadowMatrix;
+    vec2 shadowTexCoordOffset;
+    vec2 shadowTexCoordScale;
+    vec4 colour;
+    vec3 position;
+    int	pospad;
+    vec3 direction;
+    uint uid32;
+    float is_spot;
+    float is_point;
+    float shadow_strength;
+    float radius;
+};
+
+struct VideoTagDataCube
+{
+    vec3 cameraPosition;
+    int lightCount;
+    vec4 cameraRotation;
+// Some light information
+    LightTag lightTags[10];
+};
+
+layout(std430,binding=5) buffer TagDataCube_ssbo
+{
+    VideoTagDataCube tagDataCubeBuffer[32];
+};
+
 layout(binding = 10) uniform sampler2D u_DiffuseTexture;
 layout(binding = 11) uniform sampler2D u_NormalTexture;
 layout(binding = 12) uniform sampler2D u_CombinedTexture;

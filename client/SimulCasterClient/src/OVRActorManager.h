@@ -42,7 +42,7 @@ public:
 
     virtual std::shared_ptr<scr::Node> CreateActor(avs::uid id, const std::string& name) const override;
 
-	virtual void AddActor(std::shared_ptr<scr::Node> actor, bool isHand) override;
+	virtual void AddActor(std::shared_ptr<scr::Node> actor, const avs::DataNode& node) override;
 
 	//Changes PBR effect used on actors/surfaces to the effect pass with the passed name.
 	//Also changes GlobalGraphicsResource::effectPassName.

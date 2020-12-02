@@ -97,30 +97,27 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 	if (mIsCubemapVideo)
 	{
 		// Tag Data Cube Buffer
-		{
-			VideoTagDataCube shaderTagDataCubeArray[MAX_TAG_DATA_COUNT];
-			scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
-					4,
-					scr::ShaderStorageBuffer::Access::NONE,
-					sizeof(VideoTagDataCube) * MAX_TAG_DATA_COUNT,
-					(void*)&shaderTagDataCubeArray
-			};
-			mTagDataBuffer->Create(&shaderStorageBufferCreateInfo);
-		}
+		VideoTagDataCube shaderTagDataCubeArray[MAX_TAG_DATA_COUNT];
+		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
+				4,
+				scr::ShaderStorageBuffer::Access::NONE,
+				sizeof(VideoTagDataCube) * MAX_TAG_DATA_COUNT,
+				(void*)&shaderTagDataCubeArray
+		};
+		mTagDataBuffer->Create(&shaderStorageBufferCreateInfo);
 	}
 	else
 	{
 		// Tag Data 2D Buffer
-		{
-			VideoTagData2D shaderTagData2DArray[MAX_TAG_DATA_COUNT];
-			scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
-					4,
-					scr::ShaderStorageBuffer::Access::NONE,
-					sizeof(VideoTagData2D) * MAX_TAG_DATA_COUNT,
-					(void*)&shaderTagData2DArray
-			};
-			mTagDataBuffer->Create(&shaderStorageBufferCreateInfo);
-		}
+		VideoTagData2D shaderTagData2DArray[MAX_TAG_DATA_COUNT];
+		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
+				4,
+				scr::ShaderStorageBuffer::Access::NONE,
+				sizeof(VideoTagData2D) * MAX_TAG_DATA_COUNT,
+				(void*)&shaderTagData2DArray
+		};
+		mTagDataBuffer->Create(&shaderStorageBufferCreateInfo);
+
 	}
 
 	{
@@ -528,8 +525,10 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
 
 	//Render hands, if they exist.
-	if(leftHand) RenderActor(res, leftHand);
-	if(rightHand) RenderActor(res, rightHand);
+	if(leftHand)
+		RenderActor(res, leftHand);
+	if(rightHand)
+		RenderActor(res, rightHand);
 }
 
 
@@ -543,7 +542,8 @@ void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node>
 	scr::mat4 scr_Transform = transformToOculusOrigin * globalMatrix;
 
 	std::shared_ptr<scr::Skin> skin = ovrActor->GetSkin();
-	if(skin) skin->UpdateBoneMatrices(globalMatrix);
+	if(skin)
+		skin->UpdateBoneMatrices(globalMatrix);
 
 	OVR::Matrix4f transform;
 	memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));

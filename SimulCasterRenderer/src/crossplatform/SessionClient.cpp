@@ -27,6 +27,7 @@ uint32_t SessionClient::Discover(std::string clientIP, uint16_t clientDiscoveryP
 	if(cl_id!=0)
 	{
 		clientID=cl_id;
+		discovered=true;
 	}
 	return cl_id;
 }
@@ -127,6 +128,7 @@ void SessionClient::Disconnect(uint timeout)
 	receivedInitialPos = false;
 	// TODO: retain client id for reconnection.
 	clientID=0;
+	discovered=false;
 }
 
 void SessionClient::SetPeerTimeout(uint timeout)
@@ -194,6 +196,11 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 bool SessionClient::IsConnected() const
 {
 	return mServerPeer != nullptr;
+}
+
+bool SessionClient::HasDiscovered() const
+{
+	return discovered;
 }
 
 int SessionClient::GetPort() const

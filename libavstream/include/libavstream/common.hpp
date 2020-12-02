@@ -781,6 +781,7 @@ namespace avs
 		ReceivedResources,
 		ControllerPoses
 	};
+
 	struct ClientMessage
 	{
 		ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}

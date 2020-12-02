@@ -59,6 +59,7 @@ public:
 	    , double time);
 
     bool IsConnected() const;
+    bool HasDiscovered();
     std::string GetServerIP() const;
     int GetPort() const;
     
@@ -116,4 +117,5 @@ private:
 
     double time=0.0;
     std::vector<uint8_t> inputBuffer;
+    bool discovered=false;
 };

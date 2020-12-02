@@ -27,11 +27,30 @@ layout(std430,binding=3) buffer RWTagDataID_ssbo
     uvec4 RWTagDataID;
 };
 
+// ALL light data is passed in as tags.
+struct LightTag
+{
+    mat4 worldToShadowMatrix;
+    vec2 shadowTexCoordOffset;
+    vec2 shadowTexCoordScale;
+    vec4 colour;
+    vec3 position;
+    int	pospad;
+    vec3 direction;
+    uint uid32;
+    float is_spot;
+    float is_point;
+    float shadow_strength;
+    float radius;
+};
+
 struct VideoTagDataCube
 {
     vec3 cameraPosition;
-    float pad;
+    int lightCount;
     vec4 cameraRotation;
+// Some light information
+    LightTag lightTags[10];
 };
 
 layout(std430,binding=4) buffer TagDataCube_ssbo
@@ -91,7 +110,8 @@ void main()
             lookup=textureLod(cubemapTexture, colourSampleVec, 0.0);
         }
     }
-//finalLookup.rgb+=fract(vEyeOffset);
+lookup.rgb=fract(td.cameraPosition);
+    lookup.r=1.0;
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));//+ max(vec4(0,0,0,0),vec4(normalize(offsetFromVideo2.xyz),0));
     //8.0*abs(vSampleVec.z)
 }

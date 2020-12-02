@@ -108,12 +108,6 @@ private:
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 	sca::AudioPlayer* audioPlayer;
 
-	struct RenderConstants
-	{
-		avs::vec4 colourOffsetScale;
-		avs::vec4 depthOffsetScale;
-	};
-	RenderConstants        renderConstants;
 
 	OVR::ovrSoundEffectContext        *mSoundEffectContext;
 	OVR::OvrGuiSys::SoundEffectPlayer *mSoundEffectPlayer;
@@ -147,4 +141,5 @@ private:
 
 	std::string server_ip;
 	int server_discovery_port=10600;
+	ENetAddress remoteEndpoint;
 };

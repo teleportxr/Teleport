@@ -516,8 +516,11 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	}
 	else
 	{
-		TELEPORT_CERR << "Reconnecting to client: " << clientID << std::endl;
+		TELEPORT_CERR << "Already got client: " << clientID << std::endl;
 		// already got this client. This can happen if the client thinks it's disconnected but we didn't know that.
+//		auto &c= clientServices.find(clientID);
+//		if(c!=clientServices.end())
+//			c->second.clientMessaging.unInitialise();
 	}
 	auto &c= clientServices.find(clientID);
 	if(c==clientServices.end())
@@ -525,6 +528,7 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	ClientData& newClient = c->second;
 	if(newClient.clientMessaging.isInitialised())
 		return;
+//	c->second.videoEncodePipeline->deconfigure();
 	newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.AudioQueue = std::make_unique<avs::Queue>();
@@ -718,6 +722,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	discoveryService->tick();
 	PipeOutMessages();
 }
+
 TELEPORT_EXPORT void Tock()
 {
 	PipeOutMessages();
@@ -875,8 +880,8 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEn
 	}
 
 	auto& clientData = c->second;
-	avs::Queue *q=clientData.casterContext.ColorQueue.get();
-	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, q);
+	avs::Queue *q	=clientData.casterContext.ColorQueue.get();
+	Result result	=clientData.videoEncodePipeline->configure(videoEncodeParams, q);
 	if(!result)
 	{
 		TELEPORT_CERR << "Error occurred when trying to configure the video encode pipeline" << std::endl;
@@ -1115,11 +1120,21 @@ TELEPORT_EXPORT bool Client_SendCommandWithList(avs::uid clientID, const avs::Co
 	return c->second.clientMessaging.sendCommand(avsCommand, appendedList);
 }
 
-TELEPORT_EXPORT char* Client_GetClientIP(avs::uid clientID)
+TELEPORT_EXPORT const DWORD WINAPI Client_GetClientIP(avs::uid clientID,__in DWORD bufferLength,__out char* lpBuffer)
 {
 	auto c = clientServices.find(clientID);
-	if (c == clientServices.end()) return "";
-	return c->second.clientMessaging.getClientIP().data();
+	static std::string str;
+	if (c != clientServices.end())
+		str=c->second.clientMessaging.getClientIP();
+	else
+		str="";
+	size_t final_len=std::min((size_t)bufferLength,str.length());
+	if(final_len>0)
+	{
+		memcpy((void*)lpBuffer,str.c_str(),final_len);
+		lpBuffer[final_len]=0;
+	}
+	return final_len;
 }
 
 TELEPORT_EXPORT uint16_t Client_GetClientPort(avs::uid clientID)
