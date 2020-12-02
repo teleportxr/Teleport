@@ -3,7 +3,6 @@ project(SimulCasterServer)
 
 # Build options
 option(USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" ON)
-option(USE_ASYNC_NETWORK_PROCESSING "Process network pipelines on a separate thread?" ON)
 
 set(DEBUG_CONFIGURATIONS Debug)
 

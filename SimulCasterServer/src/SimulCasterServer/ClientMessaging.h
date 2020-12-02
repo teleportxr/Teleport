@@ -126,5 +126,7 @@ namespace SCServer
 		static std::unordered_map<avs::uid, NetworkPipeline*> networkPipelines;
 		static std::thread networkThread;
 		static std::mutex networkMutex;
+		static std::mutex dataMutex;
+		static avs::Timestamp lastTickTimestamp;
 	};
 }
