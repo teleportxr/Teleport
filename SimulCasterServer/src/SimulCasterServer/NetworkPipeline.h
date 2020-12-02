@@ -47,6 +47,7 @@ namespace SCServer
 		std::vector<std::unique_ptr<GeometryPipe>> geometryPipes;
 		std::vector<std::unique_ptr<AudioPipe>> audioPipes;
 		std::unique_ptr<avs::NetworkSink> networkSink;
+		avs::Result prevProcResult;
 
 #if WITH_REMOTEPLAY_STATS
 		avs::Timestamp lastTimestamp;

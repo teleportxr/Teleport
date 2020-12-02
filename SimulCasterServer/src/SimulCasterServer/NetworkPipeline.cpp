@@ -15,7 +15,7 @@ namespace
 namespace SCServer
 {
 	NetworkPipeline::NetworkPipeline(const CasterSettings* settings)
-		:settings(settings)
+		: settings(settings), prevProcResult(avs::Result::OK)
 	{
 	}
 
@@ -153,6 +153,8 @@ namespace SCServer
 #if WITH_REMOTEPLAY_STATS
 		lastTimestamp = avs::PlatformWindows::getTimestamp();
 #endif // WITH_REMOTEPLAY_STATS
+
+		prevProcResult = avs::Result::OK;
 	}
 
 	void NetworkPipeline::release()
@@ -171,11 +173,13 @@ namespace SCServer
 		assert(networkSink);
 
 		const avs::Result result = pipeline->process();
-		if (!result && result != avs::Result::IO_Empty)
+		// Prevent spamming of errors from NetworkSink. This happens when there is a connection issue.
+		if (!result && result != avs::Result::IO_Empty && result != prevProcResult)
 		{
 			TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
 			return false;
 		}
+		prevProcResult = result;
 
 #if 0
 		avs::Timestamp timestamp = avs::PlatformWindows::getTimestamp();
