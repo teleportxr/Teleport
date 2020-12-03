@@ -48,14 +48,13 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 			                                                                     , &videoUB};
 			mVideoUB->Create(&uniformBufferCreateInfo);
 		}
-		static ovrProgramParm uniformParms[]  =    // both TextureMvpProgram and CubeMapPanoProgram use the same parm mapping
+		static ovrProgramParm uniformParms[]  =
 				                      {
-						                        {"colourOffsetScale", ovrProgramParmType::FLOAT_VECTOR4}
-						                      , {"depthOffsetScale" , ovrProgramParmType::FLOAT_VECTOR4}
-						                      , {"cubemapTexture"   , ovrProgramParmType::TEXTURE_SAMPLED}
-						                      , {"videoFrameTexture", ovrProgramParmType::TEXTURE_SAMPLED}
+						                       {"cubemapTexture"   , ovrProgramParmType::TEXTURE_SAMPLED}
 						                      , {"videoUB"          , ovrProgramParmType::BUFFER_UNIFORM}
-						                      ,};
+                                              , {"RWTagDataID_ssbo" , ovrProgramParmType::BUFFER_STORAGE}
+                                              , {"TagDataCube_ssbo"  , ovrProgramParmType::BUFFER_STORAGE}
+						              ,};
 		std::string           videoSurfaceVert=clientAppInterface->LoadTextFile(
 				"shaders/VideoSurface.vert");
 		std::string           videoSurfaceFrag=clientAppInterface->LoadTextFile(
@@ -80,7 +79,6 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 		mCubemapLightingTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
 		mTagDataIDBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
-		mTagDataBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
 		mTagDataBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
 	}
 	// Tag Data ID
@@ -419,6 +417,48 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		}
 
 	}
+}
+extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
+void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrFrameResult &res)
+{
+    {
+        ovrMatrix4f eye0=res.FrameMatrices.EyeView[ 0 ];
+        eye0.M[0][3]=0.0f;
+        eye0.M[1][3]=0.0f;
+        eye0.M[2][3]=0.0f;
+        ovrMatrix4f viewProj0=res.FrameMatrices.EyeProjection[ 0 ]*eye0;
+        ovrMatrix4f viewProjT0=ovrMatrix4f_Transpose( &viewProj0 );
+        videoUB.invViewProj[0]=ovrMatrix4f_Inverse( &viewProjT0 );
+        ovrMatrix4f eye1=res.FrameMatrices.EyeView[ 1 ];
+        eye1.M[0][3]=0.0f;
+        eye1.M[1][3]=0.0f;
+        eye1.M[2][3]=0.0f;
+        ovrMatrix4f viewProj1=res.FrameMatrices.EyeProjection[ 1 ]*eye1;
+        ovrMatrix4f viewProjT1=ovrMatrix4f_Transpose( &viewProj1 );
+        videoUB.invViewProj[1]=ovrMatrix4f_Inverse( &viewProjT1 );
+    }
+    // Set data to send to the shader:
+    if(mCubemapTexture->IsValid())
+    {
+        ovrQuatf X0={1.0f,0.f,0.f,0.0f};
+        ovrQuatf headPoseQ={headPose.orientation.x,headPose.orientation.y,headPose.orientation.z,headPose.orientation.w};
+        ovrQuatf headPoseC={-headPose.orientation.x,-headPose.orientation.y,-headPose.orientation.z,headPose.orientation.w};
+        ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPoseQ,X0),headPoseC);
+        float w=eyeSeparation/2.0f;//.04f; //half separation.
+        avs::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
+        avs::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
+        videoUB.eyeOffsets[0]=left_eye;		// left eye
+        videoUB.eyeOffsets[1]=eye;	// right eye.
+        videoUB.cameraPosition=cameraPosition;
+
+        mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
+        //mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
+		mVideoSurfaceDef.graphicsCommand.UniformData[3].Data =  &(((scc::GL_UniformBuffer *)  		mVideoUB.get())->GetGlBuffer());
+		mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
+		mVideoSurfaceDef.graphicsCommand.UniformData[5].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataBuffer.get())->GetGlBuffer());
+        res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
+    }
+    mVideoUB->Submit();
 }
 
 void ClientRenderer::UpdateHandObjects()

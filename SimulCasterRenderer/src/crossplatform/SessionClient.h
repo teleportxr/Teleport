@@ -59,7 +59,7 @@ public:
 	    , double time);
 
     bool IsConnected() const;
-    bool HasDiscovered();
+    bool HasDiscovered() const;
     std::string GetServerIP() const;
     int GetPort() const;
     

@@ -8,7 +8,7 @@ layout(location = 5) out vec3 vEyeOffset;
 layout(location = 6) out vec3 vDirection;
 layout(location = 7) out vec2 vTexCoords;
 
-layout(std140, binding = 2) uniform videoUB
+layout(std140, binding = 1) uniform videoUB
 {
     vec4 eyeOffsets[2];
     mat4 invViewProj[2];

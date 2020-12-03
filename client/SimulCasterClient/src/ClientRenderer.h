@@ -78,7 +78,7 @@ struct VideoTagData2D
     avs::vec3 cameraPosition;
 	int lightCount;
     avs::vec4 cameraRotation;
-	LightTag lightTags[10];
+	LightTag lightTags[4];
 };
 
 struct VideoTagDataCube
@@ -87,7 +87,7 @@ struct VideoTagDataCube
 	int lightCount;
     avs::vec4 cameraRotation;
 	// Some light information
-	LightTag lightTags[10];
+	LightTag lightTags[4];
 };
 
 class ClientRenderer
@@ -104,6 +104,7 @@ public:
 	void ExitedVR();
 	void Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mGuiSys);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
+    void RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrFrameResult &res);
 	void UpdateHandObjects();
 
 	void RenderLocalActors(OVR::ovrFrameResult& res);
@@ -123,6 +124,7 @@ public:
 	ResourceCreator			*resourceCreator	=nullptr;
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	ovrMobile				*mOvrMobile			=nullptr;
+	float eyeSeparation=0.06f;
 	avs::Pose headPose;
 	avs::Pose controllerPoses[2];
 	avs::vec3 cameraPosition;	// in real space.

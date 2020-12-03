@@ -237,6 +237,7 @@ extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 
 ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
+    clientRenderer.eyeSeparation=vrFrame.IPD;
 	GL_CheckErrors("Frame: Start");
 	// process input events first because this mirrors the behavior when OnKeyEvent was
 	// a virtual function on VrAppInterface and was called by VrAppFramework.
@@ -285,7 +286,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		}
 	}
 	// Oculus Origin means where the headset's zero is in real space.
-
 
 	clientRenderer.cameraPosition = clientRenderer.localOriginPos+clientRenderer.relativeHeadPos;
 
@@ -339,9 +339,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 
 	Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
-	ovrQuatf X0={1.0f,0.f,0.f,0.0f};
-	ovrQuatf headPoseC={-headPose.x,-headPose.y,-headPose.z,headPose.w};
-	ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPose,X0),headPoseC);
 
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	if(sessionClient.IsConnected())
@@ -376,37 +373,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	GL_CheckErrors("Frame: Pre-Cubemap");
 	clientRenderer.CopyToCubemaps(mDeviceContext);
 	// Append video surface
-	{
-		ovrMatrix4f eye0=res.FrameMatrices.EyeView[ 0 ];
-		eye0.M[0][3]=0.0f;
-		eye0.M[1][3]=0.0f;
-		eye0.M[2][3]=0.0f;
-		ovrMatrix4f viewProj0=res.FrameMatrices.EyeProjection[ 0 ]*eye0;
-		ovrMatrix4f viewProjT0=ovrMatrix4f_Transpose( &viewProj0 );
-		clientRenderer.videoUB.invViewProj[0]=ovrMatrix4f_Inverse( &viewProjT0 );
-		ovrMatrix4f eye1=res.FrameMatrices.EyeView[ 1 ];
-		eye1.M[0][3]=0.0f;
-		eye1.M[1][3]=0.0f;
-		eye1.M[2][3]=0.0f;
-		ovrMatrix4f viewProj1=res.FrameMatrices.EyeProjection[ 1 ]*eye1;
-		ovrMatrix4f viewProjT1=ovrMatrix4f_Transpose( &viewProj1 );
-		clientRenderer.videoUB.invViewProj[1]=ovrMatrix4f_Inverse( &viewProjT1 );
-	}
-	clientRenderer.mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_UniformBuffer *)  clientRenderer.mVideoUB.get())->GetGlBuffer());
-	if(clientRenderer.mCubemapTexture->IsValid())
-	{
-		float w=vrFrame.IPD/2.0f;//.04f; //half separation.
-		avs::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
-		avs::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
-		clientRenderer.videoUB.eyeOffsets[0]=left_eye;		// left eye
-		clientRenderer.videoUB.eyeOffsets[1]=eye;	// right eye.
-		clientRenderer.videoUB.cameraPosition=clientRenderer.cameraPosition;
-
-		clientRenderer.mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) clientRenderer.mCubemapTexture.get())->GetGlTexture());
-		clientRenderer.mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  clientRenderer.mVideoTexture.get())->GetGlTexture());
-		res.Surfaces.push_back(ovrDrawSurface(&clientRenderer.mVideoSurfaceDef));
-	}
-	clientRenderer.mVideoUB->Submit();
+    clientRenderer.RenderVideo(mDeviceContext,res);
 
 	//Move the hands before they are drawn.
 	clientRenderer.UpdateHandObjects();
@@ -646,7 +613,7 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
     WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", clientRenderer.videoConfig.video_width, clientRenderer.videoConfig.video_height
     , clientRenderer.videoConfig.depth_width, clientRenderer.videoConfig.depth_height);
 }
-
+#include<algorithm>
 void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 {
 	if (mLastSetupCommand.video_config.use_cubemap)
@@ -655,7 +622,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
 		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.coreData.cameraTransform);
 
-		tagData.lights.resize(tagData.coreData.lightCount);
+		tagData.lights.resize(std::min(tagData.coreData.lightCount,(uint32_t)4));
 
 		// Aidan : View and proj matrices are currently unchanged from Unity
 		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);

@@ -106,7 +106,7 @@ struct VideoTagDataCube
     int lightCount;
     vec4 cameraRotation;
 // Some light information
-    LightTag lightTags[10];
+    LightTag lightTags[4];
 };
 
 layout(std430,binding=5) buffer TagDataCube_ssbo

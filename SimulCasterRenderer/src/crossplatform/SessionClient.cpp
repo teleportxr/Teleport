@@ -169,7 +169,8 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			SendResourceRequests();
 			SendReceivedResources();
 			SendActorUpdates();
-			if(requestKeyframe) SendKeyframeRequest();
+			if(requestKeyframe)
+				SendKeyframeRequest();
 		}
 
 		ENetEvent event;
