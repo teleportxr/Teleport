@@ -113,6 +113,7 @@ struct GlProgram
 		, Uniforms()
 		, numTextureBindings( 0 )
 		, numUniformBufferBindings( 0 )
+		,numStorageBufferBindings(0)
 		, uMvp( -1 )
 		, uModel( -1 )
 		, uColor( -1 )
@@ -176,6 +177,7 @@ struct GlProgram
 	ovrUniform					Uniforms[ovrUniform::MAX_UNIFORMS];
 	int							numTextureBindings;
 	int							numUniformBufferBindings;
+	int							numStorageBufferBindings;
 
 	// ----DEPRECATED_GLPROGRAM
 	// deprecated interface - to be removed

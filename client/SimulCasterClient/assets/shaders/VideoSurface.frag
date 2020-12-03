@@ -44,15 +44,16 @@ layout(std140, binding = 1) uniform videoUB
     vec3 cameraPosition;
     int _pad2;
 } vid;
-layout(std430,binding=2) buffer RWTagDataID_ssbo
+
+layout(std430) buffer RWTagDataID_ssbo
 {
     uvec4 RWTagDataID;
 };
-layout(std430,binding=3) buffer TagDataCube_ssbo
+
+layout(std430) buffer TagDataCube_ssbo
 {
     VideoTagDataCube tagDataCubeBuffer[32];
 };
-
 
 vec2 WorldspaceDirToUV(vec3 wsDir)
 {
@@ -61,14 +62,17 @@ vec2 WorldspaceDirToUV(vec3 wsDir)
     vec2  uv    = fract(vec2(phi, theta));
     return uv;
 }
+
 vec2 OffsetScale(vec2 uv, vec4 offsc)
 {
     return uv * offsc.zw + offsc.xy;
 }
+
 vec4 mul(mat4 a,vec4 b)
 {
     return a*b;
 }
+
 void main()
 {
     vec4 clip_pos=vec4(-1.0,-1.0,1.0,1.0);
@@ -76,6 +80,6 @@ void main()
     clip_pos.y+=2.0*vTexCoords.y;
     //VideoTagDataCube td = tagDataCubeBuffer[RWTagDataID.x];
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
-    lookup.r=float(RWTagDataID.x)/31.0;
+    lookup.g=min(1.0,float(RWTagDataID.w)/31.0);
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
 }

@@ -341,16 +341,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	if(sessionClient.IsConnected())
-	{
-		clientRenderer.Render(vrFrame,mGuiSys);
-	}
-	else
-	{
-		res.ClearColorBuffer=true;
-		res.ClearDepthBuffer=true;
-		lobbyRenderer.Render(mGuiSys);
-	};
 	res.FrameIndex   = vrFrame.FrameNumber;
 	res.DisplayTime  = vrFrame.PredictedDisplayTimeInSeconds;
 	res.SwapInterval = app->GetSwapInterval();
@@ -374,7 +364,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	clientRenderer.CopyToCubemaps(mDeviceContext);
 	// Append video surface
     clientRenderer.RenderVideo(mDeviceContext,res);
-
+	if(sessionClient.IsConnected())
+	{
+		clientRenderer.Render(vrFrame,mGuiSys);
+	}
+	else
+	{
+		res.ClearColorBuffer=true;
+		res.ClearDepthBuffer=true;
+		lobbyRenderer.Render(mGuiSys);
+	};
 	//Move the hands before they are drawn.
 	clientRenderer.UpdateHandObjects();
 	//Append SCR Actors to surfaces.

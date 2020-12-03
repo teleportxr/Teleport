@@ -52,8 +52,8 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 				                      {
 						                       {"cubemapTexture"   , ovrProgramParmType::TEXTURE_SAMPLED}
 						                      , {"videoUB"          , ovrProgramParmType::BUFFER_UNIFORM}
-                                              , {"RWTagDataID_ssbo" , ovrProgramParmType::BUFFER_STORAGE}
-                                              , {"TagDataCube_ssbo"  , ovrProgramParmType::BUFFER_STORAGE}
+                                              , {"RWTagDataID" , ovrProgramParmType::BUFFER_STORAGE}
+                                              , {"TagDataCube"  , ovrProgramParmType::BUFFER_STORAGE}
 						              ,};
 		std::string           videoSurfaceVert=clientAppInterface->LoadTextFile(
 				"shaders/VideoSurface.vert");
@@ -451,11 +451,11 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrF
         videoUB.eyeOffsets[1]=eye;	// right eye.
         videoUB.cameraPosition=cameraPosition;
 
-        mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
+        mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
         //mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
-		mVideoSurfaceDef.graphicsCommand.UniformData[3].Data =  &(((scc::GL_UniformBuffer *)  		mVideoUB.get())->GetGlBuffer());
-		mVideoSurfaceDef.graphicsCommand.UniformData[4].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
-		mVideoSurfaceDef.graphicsCommand.UniformData[5].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataBuffer.get())->GetGlBuffer());
+		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data =  &(((scc::GL_UniformBuffer *)  		mVideoUB.get())->GetGlBuffer());
+		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
+		mVideoSurfaceDef.graphicsCommand.UniformData[3].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataBuffer.get())->GetGlBuffer());
         res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
     }
     mVideoUB->Submit();

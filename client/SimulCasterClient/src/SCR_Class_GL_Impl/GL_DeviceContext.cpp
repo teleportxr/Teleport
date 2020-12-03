@@ -139,6 +139,9 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
             }
             else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
             {
+                GL_ShaderStorageBuffer *gl_shaderStorageBuffer = static_cast<GL_ShaderStorageBuffer *>(wsr.bufferInfo.buffer);
+                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, wsr.dstBinding, gl_shaderStorageBuffer->GetGlBuffer().GetBuffer() );
+                OVR::GL_CheckErrors("BindShaderResources: 3");
                 //NULL
             }
             else
