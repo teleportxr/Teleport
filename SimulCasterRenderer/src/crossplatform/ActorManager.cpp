@@ -11,8 +11,9 @@ namespace scr
 	{
 		//Remove any actor already using the ID.
 		RemoveActor(actor->id);
-		bool isHand = node.data_subtype == avs::NodeDataSubtype::LeftHand || node.data_subtype == avs::NodeDataSubtype::RightHand;
-		isHand ? LinkHand(actor) : LinkActor(actor);
+		bool isLeftHand = node.data_subtype == avs::NodeDataSubtype::LeftHand;
+		bool isHand = isLeftHand || node.data_subtype == avs::NodeDataSubtype::RightHand;
+		isHand ? LinkHand(actor, isLeftHand) : LinkActor(actor);
 	}
 
 	void ActorManager::RemoveActor(std::shared_ptr<Node> actor)
@@ -254,13 +255,25 @@ namespace scr
 		}
 	}
 
-	void ActorManager::LinkHand(std::shared_ptr<Node> newHand)
+	void ActorManager::LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand)
 	{
 		handList.push_back(newHand);
 		actorLookup[newHand->id] = newHand;
 
-		if (!rightHandID) rightHandID = newHand->id;
-		else if (!leftHandID) leftHandID = newHand->id;
+		//Link new actor to parent.
+		LinkToParentActor(newHand->id);
+
+		//Link actor's children to this actor.
+		for (avs::uid childID : newHand->GetChildrenIDs())
+		{
+			parentLookup[childID] = newHand->id;
+			LinkToParentActor(childID);
+		}
+
+		if (isLeftHand)
+			leftHandID = newHand->id;
+		else 
+			rightHandID = newHand->id;
 	}
 
 	bool ActorManager::IsActorVisible(avs::uid actorID) const

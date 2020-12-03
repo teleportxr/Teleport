@@ -76,7 +76,7 @@ namespace scr
 		//Link actor to systems after being added.
 		void LinkActor(std::shared_ptr<Node> newActor);
 		//Link hand to systems after being added.
-		void LinkHand(std::shared_ptr<Node> newHand);
+		void LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand = true);
 	private:
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an actor, so they can be linked when received. <ChildID, ParentID>
 		std::map<avs::uid, avs::MovementUpdate> earlyMovements; //Movements that have arrived before the actor was received.
