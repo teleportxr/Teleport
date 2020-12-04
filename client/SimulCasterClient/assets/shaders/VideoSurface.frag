@@ -51,7 +51,7 @@ layout(std430, binding = 0) buffer RWTagDataID_ssbo
 
 layout(std430, binding = 1) buffer TagDataCube_ssbo
 {
-    VideoTagDataCube tagDataCubeBuffer[32];
+    VideoTagDataCube tagDataCube;
 };
 
 vec2 WorldspaceDirToUV(vec3 wsDir)
@@ -77,9 +77,8 @@ void main()
     vec4 clip_pos=vec4(-1.0,-1.0,1.0,1.0);
     clip_pos.x+=2.0*vTexCoords.x;
     clip_pos.y+=2.0*vTexCoords.y;
-    VideoTagDataCube td = tagDataCubeBuffer[RWTagDataID.x%uint(32)];
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
-lookup.rgb=fract(10.0*td.cameraPosition.xyz);
+lookup.rgb=fract(10.0*tagDataCube.cameraPosition.xyz);
 //lookup.b=float(RWTagDataID.x)/31.0;
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
 }

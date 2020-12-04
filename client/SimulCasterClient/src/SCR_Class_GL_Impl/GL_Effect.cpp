@@ -299,14 +299,14 @@ void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSys
 
 void GL_Effect::BuildComputePipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources)
 {
-    std::string src = "#version 310 es\n";
+    std::string src = "#version 310 es\r\n";
     //Compile compute shader
     const auto& sc = pipeline.m_Shaders[0]->GetShaderCreateInfo();
     if(sc.entryPoint.length())
     {
         src += "#define ";
         src += sc.entryPoint;
-        src += " main\n";
+        src += " main\r\n";
     }
     src += sc.sourceCode;
 

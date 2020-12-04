@@ -161,11 +161,13 @@ public:
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
 	std::shared_ptr<scr::UniformBuffer> mVideoUB;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataIDBuffer;
+	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataBuffer;
 	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
 	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;
+	std::shared_ptr<scr::Effect>        mExtractOneTagEffect;
 
 	std::vector<scr::SceneCapture2DTagData> mVideoTagData2DArray;
 	std::vector<scr::SceneCaptureCubeTagData> mVideoTagDataCubeArray;

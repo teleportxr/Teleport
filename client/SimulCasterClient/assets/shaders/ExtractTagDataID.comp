@@ -1,6 +1,7 @@
 #extension GL_OES_EGL_image_external_essl3 : require
 precision highp float;
 
+
 layout(rgba8, binding = 0) uniform writeonly lowp imageCube destTex;
 layout(binding = 1) uniform highp samplerExternalOES videoFrameTexture;
 layout(std140, binding = 2) uniform cubemapUB

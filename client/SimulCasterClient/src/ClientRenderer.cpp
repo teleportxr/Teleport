@@ -42,6 +42,7 @@ ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,Sess
         , mCubemapTexture(nullptr)
         , mCubemapLightingTexture(nullptr)
         , mTagDataIDBuffer(nullptr)
+		,mTagDataArrayBuffer(nullptr)
 		, mTagDataBuffer(nullptr)
 {
 }
@@ -94,6 +95,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 		mCubemapLightingTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
 		mTagDataIDBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
+		mTagDataArrayBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
 		mTagDataBuffer = GlobalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
 	}
 	// Tag Data ID
@@ -112,25 +114,40 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		// Tag Data Cube Buffer
 		VideoTagDataCube shaderTagDataCubeArray[MAX_TAG_DATA_COUNT];
 		shaderTagDataCubeArray[0].cameraPosition.x=1.0f;
-		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
+		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo tagBufferCreateInfo = {
 				1,
+				scr::ShaderStorageBuffer::Access::READ_WRITE_BIT,
+				sizeof(VideoTagDataCube),
+				(void*) nullptr
+		};
+		mTagDataBuffer->Create(&tagBufferCreateInfo);
+
+		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
+				2,
 				scr::ShaderStorageBuffer::Access::READ_WRITE_BIT,
 				sizeof(VideoTagDataCube) * MAX_TAG_DATA_COUNT,
 				(void*)&shaderTagDataCubeArray
 		};
-		mTagDataBuffer->Create(&shaderStorageBufferCreateInfo);
+		mTagDataArrayBuffer->Create(&arrayBufferCreateInfo);
 	}
 	else
 	{
 		// Tag Data 2D Buffer
-		VideoTagData2D shaderTagData2DArray[MAX_TAG_DATA_COUNT];
-		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
+		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo tagBufferCreateInfo = {
 				1,
+				scr::ShaderStorageBuffer::Access::READ_WRITE_BIT,
+				sizeof(VideoTagData2D),
+				(void*)nullptr
+		};
+		mTagDataBuffer->Create(&tagBufferCreateInfo);
+		VideoTagData2D shaderTagData2DArray[MAX_TAG_DATA_COUNT];
+		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
+				2,
 				scr::ShaderStorageBuffer::Access::NONE,
 				sizeof(VideoTagData2D) * MAX_TAG_DATA_COUNT,
 				(void*)&shaderTagData2DArray
 		};
-		mTagDataBuffer->Create(&shaderStorageBufferCreateInfo);
+		mTagDataArrayBuffer->Create(&arrayBufferCreateInfo);
 
 	}
 
@@ -139,7 +156,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		mCopyCubemapEffect = GlobalGraphicsResources.renderPlatform.InstantiateEffect();
 		mCopyCubemapWithDepthEffect = GlobalGraphicsResources.renderPlatform.InstantiateEffect();
 		mExtractTagDataIDEffect=GlobalGraphicsResources.renderPlatform.InstantiateEffect();
-
+		mExtractOneTagEffect=GlobalGraphicsResources.renderPlatform.InstantiateEffect();
 		scr::Effect::EffectCreateInfo effectCreateInfo = {};
 		effectCreateInfo.effectName = "CopyCubemap";
 		mCopyCubemapEffect->Create(&effectCreateInfo);
@@ -149,6 +166,9 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 		effectCreateInfo.effectName = "ExtractTagDataID";
 		mExtractTagDataIDEffect->Create(&effectCreateInfo);
+
+		effectCreateInfo.effectName = "ExtractOneTag";
+		mExtractOneTagEffect->Create(&effectCreateInfo);
 
 		scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo = {};
 		pipelineCreateInfo.m_Count = 1;
@@ -181,6 +201,16 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 			effectPassCreateInfo.pipeline = cp3;
 			mExtractTagDataIDEffect->CreatePass(&effectPassCreateInfo);
 
+			std::string ExtractTagDataSrc = clientAppInterface->LoadTextFile("shaders/ExtractOneTag.comp");
+			// pass to extract from the array into a single tag buffer:
+			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath   = "shaders/ExtractOneTag.comp";
+			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractTagDataSrc;
+			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_tag_data";
+			scr::ShaderSystem::Pipeline cp4(&GlobalGraphicsResources.renderPlatform, &pipelineCreateInfo);
+			effectPassCreateInfo.effectPassName = "ExtractOneTag";
+			effectPassCreateInfo.pipeline = cp4;
+			mExtractOneTagEffect->CreatePass(&effectPassCreateInfo);
+
 			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2, sizeof(CubemapUB), &cubemapUB};
 			mCubemapUB->Create(&uniformBufferCreateInfo);
 		}
@@ -203,13 +233,16 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 		sr.AddImage(2, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
 		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
-		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 3, "TagDataID", {mTagDataIDBuffer.get()});
+		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 0, "TagDataID", {mTagDataIDBuffer.get()});
+		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 1, "TagDataCube_ssbo", {mTagDataBuffer.get()});
+		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 2, "TagDataCubeArray_ssbo", {mTagDataArrayBuffer.get()});
 
 		mCubemapComputeShaderResources.push_back(sr);
 
 		mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
 		mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{});
 		mExtractTagDataIDEffect->LinkShaders("ExtractTagDataID",{});
+		mExtractOneTagEffect->LinkShaders("ExtractOneTag",{});
 	}
 
 	mVideoSurfaceDef.surfaceName = "VideoSurface";
@@ -427,7 +460,10 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractTagDataIDEffect, {mCubemapComputeShaderResources[0][2]});
 			cubemapUB.faceSize			=tc.width;
 			cubemapUB.sourceOffset		={(int32_t)mVideoTexture->GetTextureCreateInfo().width - (32 * 4), (int32_t)mVideoTexture->GetTextureCreateInfo().height - 4};
+			mDeviceContext.DispatchCompute(&inputCommand);
 
+			inputCommandCreateInfo.effectPassName = "ExtractOneTag";
+			scr::InputCommand_Compute extractTagCommand(&inputCommandCreateInfo, size, mExtractOneTagEffect, {mCubemapComputeShaderResources[0][2]});
 			mDeviceContext.DispatchCompute(&inputCommand);
 		}
 	}
@@ -442,7 +478,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 	if (lastSetupCommand.video_config.use_cubemap)
 	{
 		static VideoTagDataCube data[MAX_TAG_DATA_COUNT];
-		for (int i = 0; i < mVideoTagDataCubeArray.size(); ++i)
+		for (size_t i = 0; i < mVideoTagDataCubeArray.size(); ++i)
 		{
 			const auto& td = mVideoTagDataCubeArray[i];
 			const auto& pos = td.coreData.cameraTransform.position;
@@ -451,7 +487,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 			data[i].cameraPosition = { pos.x, pos.y, pos.z };
 			data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
 			data[i].lightCount=td.lights.size();
-			for(int j=0;j<td.lights.size();j++)
+			for(size_t j=0;j<td.lights.size();j++)
 			{
 				LightTag &t=data[i].lightTags[j];
 				const scr::LightTagData &l=td.lights[j];
@@ -490,12 +526,12 @@ void ClientRenderer::UpdateTagDataBuffers()
 				}
 			}
 		}
-		mTagDataBuffer->Update(32*sizeof(VideoTagDataCube),data,0);
+		mTagDataArrayBuffer->Update(32*sizeof(VideoTagDataCube),data,0);
 	}
 	else
 	{
 		VideoTagData2D data[MAX_TAG_DATA_COUNT];
-		for (int i = 0; i < mVideoTagData2DArray.size(); ++i)
+		for (size_t i = 0; i < mVideoTagData2DArray.size(); ++i)
 		{
 			const auto& td = mVideoTagData2DArray[i];
 			const auto& pos = td.cameraTransform.position;
