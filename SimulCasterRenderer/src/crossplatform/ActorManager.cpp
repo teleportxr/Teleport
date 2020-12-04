@@ -201,7 +201,6 @@ namespace scr
 	void ActorManager::Clear()
 	{
 		rootActors.clear();
-		handList.clear();
 		actorLookup.clear();
 
 		leftHandID = 0;
@@ -257,18 +256,7 @@ namespace scr
 
 	void ActorManager::LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand)
 	{
-		handList.push_back(newHand);
-		actorLookup[newHand->id] = newHand;
-
-		//Link new actor to parent.
-		LinkToParentActor(newHand->id);
-
-		//Link actor's children to this actor.
-		for (avs::uid childID : newHand->GetChildrenIDs())
-		{
-			parentLookup[childID] = newHand->id;
-			LinkToParentActor(childID);
-		}
+		LinkActor(newHand);
 
 		if (isLeftHand)
 			leftHandID = newHand->id;

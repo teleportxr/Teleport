@@ -800,13 +800,13 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 	cameraConstants.viewPosition = finalViewPos;
 
 	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
-	for(std::shared_ptr<scr::Node> actor : resourceManagers.mActorManager->GetRootActors())
+	for(const std::shared_ptr<scr::Node>& actor : actorList)
 	{
 		RenderActor(deviceContext, actor);
 	}
 }
 
-void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, std::shared_ptr<scr::Node> actor)
+void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& actor)
 {
 	AVSTextureHandle th = avsTextures[0];
 	AVSTexture& tx = *th;

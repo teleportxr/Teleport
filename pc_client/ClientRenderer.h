@@ -189,7 +189,7 @@ public:
 	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> actor);
 	void WriteHierarchies();
 	void RenderLocalActors(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-	void RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, std::shared_ptr<scr::Node> actor);
+	void RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& actor);
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);

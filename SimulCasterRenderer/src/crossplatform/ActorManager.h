@@ -67,7 +67,6 @@ namespace scr
 	protected:
 		actorList_t rootActors; //Actors that are parented to the world root.
 		/// List of hand actors; handled differently as we don't want them cleaned-up.
-		actorList_t handList; 
         std::unordered_map<avs::uid, std::shared_ptr<Node>> actorLookup;
 
 		avs::uid leftHandID = 0;
