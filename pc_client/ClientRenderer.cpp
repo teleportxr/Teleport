@@ -804,6 +804,16 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 	{
 		RenderActor(deviceContext, actor);
 	}
+
+	if (renderHands)
+	{
+		std::shared_ptr<scr::Node> leftHand;
+		std::shared_ptr<scr::Node> rightHand;
+		resourceManagers.mActorManager->GetHands(leftHand, rightHand);
+		RenderActor(deviceContext, leftHand);
+		RenderActor(deviceContext, rightHand);
+	}
+	
 }
 
 void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& actor)
@@ -1505,6 +1515,9 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'R':
 			RecompileShaders();
+			break;
+		case 'L':
+			renderHands = !renderHands;
 			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
 			ChangePass(ShaderMode::PBR);

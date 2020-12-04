@@ -234,9 +234,12 @@ namespace scr
 		return rootActors;
 	}
 
-	void ActorManager::LinkActor(std::shared_ptr<Node> newActor)
+	void ActorManager::LinkActor(std::shared_ptr<Node> newActor, bool isHand)
 	{
-		rootActors.push_back(newActor);
+		if (!isHand)
+		{
+			rootActors.push_back(newActor);
+		}
 		actorLookup[newActor->id] = newActor;
 
 		//Update movement based on movement data that was received before the actor was complete.
@@ -256,7 +259,7 @@ namespace scr
 
 	void ActorManager::LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand)
 	{
-		LinkActor(newHand);
+		LinkActor(newHand, true);
 
 		if (isLeftHand)
 			leftHandID = newHand->id;

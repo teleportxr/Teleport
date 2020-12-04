@@ -73,7 +73,7 @@ namespace scr
 		avs::uid rightHandID = 0;
 
 		//Link actor to systems after being added.
-		void LinkActor(std::shared_ptr<Node> newActor);
+		void LinkActor(std::shared_ptr<Node> newActor, bool isHand = false);
 		//Link hand to systems after being added.
 		void LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand = true);
 	private:

@@ -135,6 +135,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	scr::ResourceManagers resourceManagers;
 	void Recompose(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 	bool show_video = false;
+	bool renderHands = false;
+
 	enum
 	{
 		NO_OSD,
