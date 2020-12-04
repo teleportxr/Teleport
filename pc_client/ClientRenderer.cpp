@@ -800,13 +800,23 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 	cameraConstants.viewPosition = finalViewPos;
 
 	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
-	for(std::shared_ptr<scr::Node> actor : resourceManagers.mActorManager->GetRootActors())
+	for(const std::shared_ptr<scr::Node>& actor : actorList)
 	{
 		RenderActor(deviceContext, actor);
 	}
+
+	if (renderHands)
+	{
+		std::shared_ptr<scr::Node> leftHand;
+		std::shared_ptr<scr::Node> rightHand;
+		resourceManagers.mActorManager->GetHands(leftHand, rightHand);
+		RenderActor(deviceContext, leftHand);
+		RenderActor(deviceContext, rightHand);
+	}
+	
 }
 
-void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, std::shared_ptr<scr::Node> actor)
+void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& actor)
 {
 	AVSTextureHandle th = avsTextures[0];
 	AVSTexture& tx = *th;
@@ -1505,6 +1515,9 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'R':
 			RecompileShaders();
+			break;
+		case 'L':
+			renderHands = !renderHands;
 			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
 			ChangePass(ShaderMode::PBR);

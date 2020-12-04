@@ -135,6 +135,8 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	scr::ResourceManagers resourceManagers;
 	void Recompose(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 	bool show_video = false;
+	bool renderHands = false;
+
 	enum
 	{
 		NO_OSD,
@@ -189,7 +191,7 @@ public:
 	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> actor);
 	void WriteHierarchies();
 	void RenderLocalActors(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-	void RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, std::shared_ptr<scr::Node> actor);
+	void RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& actor);
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);

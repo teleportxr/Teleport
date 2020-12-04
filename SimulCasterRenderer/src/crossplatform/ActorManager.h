@@ -67,14 +67,13 @@ namespace scr
 	protected:
 		actorList_t rootActors; //Actors that are parented to the world root.
 		/// List of hand actors; handled differently as we don't want them cleaned-up.
-		actorList_t handList; 
         std::unordered_map<avs::uid, std::shared_ptr<Node>> actorLookup;
 
 		avs::uid leftHandID = 0;
 		avs::uid rightHandID = 0;
 
 		//Link actor to systems after being added.
-		void LinkActor(std::shared_ptr<Node> newActor);
+		void LinkActor(std::shared_ptr<Node> newActor, bool isHand = false);
 		//Link hand to systems after being added.
 		void LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand = true);
 	private:
