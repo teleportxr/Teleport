@@ -32,7 +32,6 @@ struct VideoTagDataCube
     vec3 cameraPosition;
     int lightCount;
     vec4 cameraRotation;
-// Some light information
     LightTag lightTags[4];
 };
 
@@ -45,12 +44,12 @@ layout(std140, binding = 1) uniform videoUB
     int _pad2;
 } vid;
 
-layout(std430) buffer RWTagDataID_ssbo
+layout(std430, binding = 0) buffer RWTagDataID_ssbo
 {
     uvec4 RWTagDataID;
 };
 
-layout(std430) buffer TagDataCube_ssbo
+layout(std430, binding = 1) buffer TagDataCube_ssbo
 {
     VideoTagDataCube tagDataCubeBuffer[32];
 };
@@ -78,8 +77,9 @@ void main()
     vec4 clip_pos=vec4(-1.0,-1.0,1.0,1.0);
     clip_pos.x+=2.0*vTexCoords.x;
     clip_pos.y+=2.0*vTexCoords.y;
-    //VideoTagDataCube td = tagDataCubeBuffer[RWTagDataID.x];
+    VideoTagDataCube td = tagDataCubeBuffer[RWTagDataID.x%uint(32)];
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
-    lookup.g=min(1.0,float(RWTagDataID.w)/31.0);
+lookup.rgb=fract(10.0*td.cameraPosition.xyz);
+//lookup.b=float(RWTagDataID.x)/31.0;
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
 }

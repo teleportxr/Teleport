@@ -57,7 +57,7 @@ struct SpotLight
 };
 
 // ALL light data is passed in as tags.
-struct LightTag
+struct __attribute__ ((packed)) LightTag
 {
 	ovrMatrix4f worldToShadowMatrix;
 	avs::vec2 shadowTexCoordOffset;
@@ -73,7 +73,7 @@ struct LightTag
 	float radius;
 };
 
-struct VideoTagData2D
+struct __attribute__ ((packed)) VideoTagData2D
 {
     avs::vec3 cameraPosition;
 	int lightCount;
@@ -81,7 +81,7 @@ struct VideoTagData2D
 	LightTag lightTags[4];
 };
 
-struct VideoTagDataCube
+struct __attribute__ ((packed)) VideoTagDataCube
 {
     avs::vec3 cameraPosition;
 	int lightCount;
@@ -192,7 +192,9 @@ public:
 	int show_osd = GEOMETRY_OSD;
 	bool mIsCubemapVideo = true;
 	void DrawOSD(OVR::OvrGuiSys *mGuiSys);
+	avs::SetupCommand lastSetupCommand;
 private:
+	void UpdateTagDataBuffers();
 	static constexpr float INFO_TEXT_DURATION = 0.017f;
 	static constexpr size_t MAX_RESOURCES_PER_LINE = 3;
 };

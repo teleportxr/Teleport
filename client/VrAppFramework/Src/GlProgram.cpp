@@ -497,7 +497,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 		else if ( parms[i].Type == ovrProgramParmType::BUFFER_STORAGE )
 		{
 			// NO location for storage buffers??
-			p.Uniforms[i].Location = 0;//glGetUniformBlockIndex( p.Program, parms[i].Name );
+			p.Uniforms[i].Location = p.numStorageBufferBindings;//glGetUniformBlockIndex( p.Program, parms[i].Name );
 			p.Uniforms[i].Binding = p.numStorageBufferBindings++;
 			//glUniformBlockBinding( p.Program, p.Uniforms[i].Location, p.Uniforms[i].Binding );
 		}

@@ -137,7 +137,6 @@ private:
 	ResourceCreator resourceCreator;
 	LobbyRenderer lobbyRenderer;
 	Controllers controllers;
-	avs::SetupCommand mLastSetupCommand;
 
 	std::string server_ip;
 	int server_discovery_port=10600;

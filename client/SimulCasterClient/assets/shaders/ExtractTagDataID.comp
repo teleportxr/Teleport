@@ -11,7 +11,7 @@ layout(std140, binding = 2) uniform cubemapUB
     uint face;
 } cub;
 
-layout(std430,binding=3) buffer RWTagDataID_ssbo
+layout(std430,binding=0) buffer RWTagDataID_ssbo
 {
     uvec4 RWTagDataID;
 };

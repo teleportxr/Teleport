@@ -586,7 +586,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 	clientRenderer.mIsCubemapVideo = setupCommand.video_config.use_cubemap;
 
-	mLastSetupCommand = setupCommand;
+	clientRenderer.lastSetupCommand = setupCommand;
 }
 
 void Application::OnVideoStreamClosed()
@@ -615,11 +615,11 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
 #include<algorithm>
 void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 {
-	if (mLastSetupCommand.video_config.use_cubemap)
+	if (clientRenderer.lastSetupCommand.video_config.use_cubemap)
 	{
 		scr::SceneCaptureCubeTagData tagData;
 		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
-		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.coreData.cameraTransform);
+		avs::ConvertTransform(clientRenderer.lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.coreData.cameraTransform);
 
 		tagData.lights.resize(std::min(tagData.coreData.lightCount,(uint32_t)4));
 
@@ -628,7 +628,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		for (auto& light : tagData.lights)
 		{
 			memcpy(&light, &data[index], sizeof(scr::Light::LightData));
-			avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, light.worldTransform);
+			avs::ConvertTransform(clientRenderer.lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, light.worldTransform);
 			index += sizeof(scr::Light::LightData);
 		}
 
@@ -646,7 +646,7 @@ void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 	{
 		scr::SceneCapture2DTagData tagData;
 		memcpy(&tagData, data, dataSize);
-		avs::ConvertTransform(mLastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.cameraTransform);
+		avs::ConvertTransform(clientRenderer.lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.cameraTransform);
 
 		VideoTagData2D shaderData;
 		shaderData.cameraPosition = tagData.cameraTransform.position;

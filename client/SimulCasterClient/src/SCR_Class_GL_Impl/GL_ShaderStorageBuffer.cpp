@@ -42,7 +42,7 @@ void GL_ShaderStorageBuffer::Access()
         memcpy(gpuData, m_CI.data, m_CI.size);
 
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);*/
-    Unbind();
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, m_CI.bindingLocation, m_SSBO.GetBuffer());
+    Unbind();
 }
 

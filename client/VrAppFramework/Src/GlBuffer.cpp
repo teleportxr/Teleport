@@ -28,12 +28,14 @@ bool GlBuffer::Create( const GlBufferType_t type, const size_t dataSize, const v
 {
 	OVR_ASSERT( buffer == 0 );
 
-	target = ( ( type == GLBUFFER_TYPE_UNIFORM ) ? GL_UNIFORM_BUFFER : ( type == GLBUFFER_TYPE_STORAGE ) ? GL_SHADER_STORAGE_BUFFER :0 );
+	target = ( ( type == GLBUFFER_TYPE_UNIFORM ) ? GL_UNIFORM_BUFFER : (( type == GLBUFFER_TYPE_STORAGE ) ? GL_SHADER_STORAGE_BUFFER :0) );
+	GLenum usage=( ( type == GLBUFFER_TYPE_UNIFORM ) ? GL_STATIC_DRAW :(( type == GLBUFFER_TYPE_STORAGE ) ? GL_DYNAMIC_DRAW :0) );
+
 	size = dataSize;
 
 	glGenBuffers( 1, &buffer );
 	glBindBuffer( target, buffer );
-	glBufferData( target, dataSize, data, GL_STATIC_DRAW );
+	glBufferData( target, dataSize, data, usage);
 	glBindBuffer( target, 0 );
 
 	return true;

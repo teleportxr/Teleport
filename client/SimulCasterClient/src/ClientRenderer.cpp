@@ -14,6 +14,21 @@
 #include "OVRActorManager.h"
 
 using namespace OVR;
+extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
+avs::vec3 QuaternionTimesVector(const ovrQuatf &q,const avs::vec3 &vec)
+{
+	const float &x0 = vec.x;
+	const float &y0 = vec.y;
+	const float &z0 = vec.z;
+	float s1 = q.x * x0 + q.y * y0 + q.z * z0;
+	float x1 = q.w * x0 + q.y * z0 - q.z * y0;
+	float y1 = q.w * y0 + q.z * x0 - q.x * z0;
+	float z1 = q.w * z0 + q.x * y0 - q.y * x0;
+	avs::vec3 ret={ s1 * q.x + q.w * x1 + q.y * z1 - q.z * y1,
+					s1 * q.y + q.w * y1 + q.z * x1 - q.x * z1,
+					s1 * q.z + q.w * z1 + q.x * y1 - q.y * x1};
+	return ret;
+}
 ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c)
 		:mDecoder(avs::DecoderBackend::Custom)
 		, localOriginPos(0,0,0)
@@ -84,7 +99,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 	// Tag Data ID
 	{
 		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
-				3,
+				0,
 				scr::ShaderStorageBuffer::Access::NONE,
 					sizeof(scr::uvec4),
 				(void*)&mTagDataID
@@ -96,9 +111,10 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 	{
 		// Tag Data Cube Buffer
 		VideoTagDataCube shaderTagDataCubeArray[MAX_TAG_DATA_COUNT];
+		shaderTagDataCubeArray[0].cameraPosition.x=1.0f;
 		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
-				4,
-				scr::ShaderStorageBuffer::Access::NONE,
+				1,
+				scr::ShaderStorageBuffer::Access::READ_WRITE_BIT,
 				sizeof(VideoTagDataCube) * MAX_TAG_DATA_COUNT,
 				(void*)&shaderTagDataCubeArray
 		};
@@ -109,7 +125,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		// Tag Data 2D Buffer
 		VideoTagData2D shaderTagData2DArray[MAX_TAG_DATA_COUNT];
 		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
-				4,
+				1,
 				scr::ShaderStorageBuffer::Access::NONE,
 				sizeof(VideoTagData2D) * MAX_TAG_DATA_COUNT,
 				(void*)&shaderTagData2DArray
@@ -202,7 +218,6 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 	mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
 	mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
 	mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
-
 	//Set up scr::Camera
 	scr::Camera::CameraCreateInfo c_ci = {
 			(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform),
@@ -415,10 +430,83 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 
 			mDeviceContext.DispatchCompute(&inputCommand);
 		}
+	}
+	UpdateTagDataBuffers();
+}
 
+void ClientRenderer::UpdateTagDataBuffers()
+{
+	// TODO: too slow.
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	auto &cachedLights=resourceManagers->mLightManager.GetCache(cacheLock);
+	if (lastSetupCommand.video_config.use_cubemap)
+	{
+		static VideoTagDataCube data[MAX_TAG_DATA_COUNT];
+		for (int i = 0; i < mVideoTagDataCubeArray.size(); ++i)
+		{
+			const auto& td = mVideoTagDataCubeArray[i];
+			const auto& pos = td.coreData.cameraTransform.position;
+			const auto& rot = td.coreData.cameraTransform.rotation;
+
+			data[i].cameraPosition = { pos.x, pos.y, pos.z };
+			data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
+			data[i].lightCount=td.lights.size();
+			for(int j=0;j<td.lights.size();j++)
+			{
+				LightTag &t=data[i].lightTags[j];
+				const scr::LightTagData &l=td.lights[j];
+				t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
+				t.colour=*((avs::vec4*)&l.color);
+				// Convert from +-1 to [0,1]
+				t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
+				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
+				t.shadowTexCoordScale.x=float(l.textureSize)/float(lastSetupCommand.video_config.video_width);
+				t.shadowTexCoordScale.y=float(l.textureSize)/float(lastSetupCommand.video_config.video_height);
+				// Because tag data is NOT properly transformed in advance yet:
+				avs::vec3 position		=l.position;
+				avs::vec4 orientation	=l.orientation;
+				avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
+				avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
+				t.position=*((avs::vec3*)&position);
+				ovrQuatf q={orientation.x,orientation.y,orientation.z,orientation.w};
+				avs::vec3 z={0,0,1.0f};
+				t.direction=QuaternionTimesVector(q,z);
+				scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
+
+				t.worldToShadowMatrix	=*((ovrMatrix4f*)&worldToShadowMatrix);
+
+				const auto &nodeLight=cachedLights.find(l.uid);
+				if(nodeLight!=cachedLights.end())
+				{
+					auto *lightData=nodeLight->second.resource->GetLightData();
+					if(lightData)
+					{
+						t.colour=(const float*)(&lightData->colour);
+						t.is_spot=lightData->is_spot;
+						t.is_point=lightData->is_point;
+						t.radius=lightData->radius;
+						t.shadow_strength=0.0f;
+					}
+				}
+			}
+		}
+		mTagDataBuffer->Update(32*sizeof(VideoTagDataCube),data,0);
+	}
+	else
+	{
+		VideoTagData2D data[MAX_TAG_DATA_COUNT];
+		for (int i = 0; i < mVideoTagData2DArray.size(); ++i)
+		{
+			const auto& td = mVideoTagData2DArray[i];
+			const auto& pos = td.cameraTransform.position;
+			const auto& rot = td.cameraTransform.rotation;
+
+			data[i].cameraPosition = { pos.x, pos.y, pos.z };
+			data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
+		}
+		//tagData2DBuffer.SetData(deviceContext, data);
 	}
 }
-extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrFrameResult &res)
 {
     {
