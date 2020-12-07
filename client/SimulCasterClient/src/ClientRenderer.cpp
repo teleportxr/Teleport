@@ -2,16 +2,36 @@
 // Created by roder on 06/04/2020.
 //
 #include "ClientRenderer.h"
-
 #include <algorithm>
 #include <sstream>
-
+#include <iomanip>
 #include "OVR_GlUtils.h"
 #include "OVR_Math.h"
 #include <VrApi_Types.h>
 #include <VrApi_Input.h>
 
 #include "OVRActorManager.h"
+
+static const char *ToString(scr::Light::Type type)
+{
+	const char *lightTypeName="";
+	switch(type)
+	{
+		case scr::Light::Type::POINT:
+			lightTypeName="Point";
+			break;
+		case scr::Light::Type::DIRECTIONAL:
+			lightTypeName="  Dir";
+			break;
+		case scr::Light::Type::SPOT:
+			lightTypeName=" Spot";
+			break;
+		case scr::Light::Type::AREA:
+			lightTypeName=" Area";
+			break;
+	};
+	return lightTypeName;
+}
 
 using namespace OVR;
 extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
@@ -42,7 +62,7 @@ ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,Sess
         , mCubemapTexture(nullptr)
         , mCubemapLightingTexture(nullptr)
         , mTagDataIDBuffer(nullptr)
-		,mTagDataArrayBuffer(nullptr)
+		, mTagDataArrayBuffer(nullptr)
 		, mTagDataBuffer(nullptr)
 {
 }
@@ -68,7 +88,6 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 				                      {
 						                       {"cubemapTexture"   , ovrProgramParmType::TEXTURE_SAMPLED}
 						                      , {"videoUB"          , ovrProgramParmType::BUFFER_UNIFORM}
-                                              , {"RWTagDataID" , ovrProgramParmType::BUFFER_STORAGE}
                                               , {"TagDataCube"  , ovrProgramParmType::BUFFER_STORAGE}
 						              ,};
 		std::string           videoSurfaceVert=clientAppInterface->LoadTextFile(
@@ -89,8 +108,8 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		mVideoTexture        =GlobalGraphicsResources.renderPlatform.InstantiateTexture();
 		mCubemapUB           =GlobalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
 		mCubemapTexture      =GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-		mDiffuseTexture      =GlobalGraphicsResources.renderPlatform.InstantiateTexture();
-		mSpecularTexture     =GlobalGraphicsResources.renderPlatform.InstantiateTexture();
+		diffuseCubemapTexture      =GlobalGraphicsResources.renderPlatform.InstantiateTexture();
+		specularCubemapTexture     =GlobalGraphicsResources.renderPlatform.InstantiateTexture();
 		mRoughSpecularTexture=GlobalGraphicsResources.renderPlatform.InstantiateTexture();
 
 		mCubemapLightingTexture = GlobalGraphicsResources.renderPlatform.InstantiateTexture();
@@ -273,10 +292,10 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 	scr::ShaderResourceLayout vertLayout;
 	vertLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	vertLayout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	vertLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	vertLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	scr::ShaderResourceLayout fragLayout;
-	fragLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	fragLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	fragLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	fragLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	fragLayout.AddBinding(12, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
@@ -288,8 +307,8 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 
 	scr::ShaderResource pbrShaderResource({vertLayout, fragLayout});
 	pbrShaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", {});
-	pbrShaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 4, "u_BoneData", {});
-	pbrShaderResource.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_MaterialData", {});
+	pbrShaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "u_BoneData", {});
+	pbrShaderResource.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_MaterialData", {});
 	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_DiffuseTexture", {});
 	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_NormalTexture", {});
 	pbrShaderResource.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_CombinedTexture", {});
@@ -346,6 +365,118 @@ void ClientRenderer::ExitedVR()
 	GlProgram::Free(mVideoSurfaceProgram);
 }
 
+void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
+{
+	videoConfig=vc;
+	//Build Video Cubemap
+	{
+		scr::Texture::TextureCreateInfo textureCreateInfo =
+				{
+						"Cubemap Texture",
+						videoConfig.colour_cubemap_size,
+						videoConfig.colour_cubemap_size,
+						1,
+						4,
+						1,
+						1,
+						scr::Texture::Slot::UNKNOWN,
+						scr::Texture::Type::TEXTURE_CUBE_MAP,
+						scr::Texture::Format::RGBA8,
+						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+						{},
+						{},
+						scr::Texture::CompressionFormat::UNCOMPRESSED
+				};
+		mCubemapTexture->Create(textureCreateInfo);
+		mCubemapTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+	}
+	//GL_CheckErrors("Built Video Cubemap");
+	//Build Lighting Cubemap
+	{
+		scr::Texture::TextureCreateInfo textureCreateInfo //TODO: Check this against the incoming texture from the video stream
+				{
+						"Cubemap Sub-Textures",
+						128,
+						128,
+						1,
+						4,
+						1,
+						3,
+						scr::Texture::Slot::UNKNOWN,
+						scr::Texture::Type::TEXTURE_CUBE_MAP,
+						scr::Texture::Format::RGBA8,
+						scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+						{},
+						{},
+						scr::Texture::CompressionFormat::UNCOMPRESSED
+				};
+		textureCreateInfo.mipCount = 1;
+		textureCreateInfo.width  = videoConfig.diffuse_cubemap_size;
+		textureCreateInfo.height = videoConfig.diffuse_cubemap_size;
+		diffuseCubemapTexture->Create(textureCreateInfo);
+		textureCreateInfo.width  = videoConfig.light_cubemap_size;
+		textureCreateInfo.height = videoConfig.light_cubemap_size;
+		mCubemapLightingTexture->Create(textureCreateInfo);
+		textureCreateInfo.mipCount = 3;
+		textureCreateInfo.width  = videoConfig.specular_cubemap_size;
+		textureCreateInfo.height = videoConfig.specular_cubemap_size;
+		specularCubemapTexture->Create(textureCreateInfo);
+		textureCreateInfo.width  = videoConfig.rough_cubemap_size;
+		textureCreateInfo.height = videoConfig.rough_cubemap_size;
+		mRoughSpecularTexture->Create(textureCreateInfo);
+		diffuseCubemapTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+		specularCubemapTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+		mRoughSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+		mCubemapLightingTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
+	}
+	//GL_CheckErrors("Built Lighting Cubemap");
+}
+void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
+{
+	if (lastSetupCommand.video_config.use_cubemap)
+	{
+		scr::SceneCaptureCubeTagData tagData;
+		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.coreData.cameraTransform);
+
+		tagData.lights.resize(std::min(tagData.coreData.lightCount,(uint32_t)4));
+
+		// Aidan : View and proj matrices are currently unchanged from Unity
+		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
+		for (auto& light : tagData.lights)
+		{
+			memcpy(&light, &data[index], sizeof(scr::LightTagData));
+			avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, light.worldTransform);
+			index += sizeof(scr::LightTagData);
+		}
+
+		VideoTagDataCube shaderData;
+		shaderData.cameraPosition = tagData.coreData.cameraTransform.position;
+		shaderData.cameraRotation = tagData.coreData.cameraTransform.rotation;
+		shaderData.lightCount = tagData.lights.size();
+
+		uint32_t offset = sizeof(VideoTagDataCube) * tagData.coreData.id;
+		mTagDataArrayBuffer->Update(sizeof(VideoTagDataCube), (void*)&shaderData, offset);
+
+		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
+	}
+	else
+	{
+		scr::SceneCapture2DTagData tagData;
+		memcpy(&tagData, data, dataSize);
+		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.cameraTransform);
+
+		VideoTagData2D shaderData;
+		shaderData.cameraPosition = tagData.cameraTransform.position;
+		shaderData.lightCount = 0;//tagData.lights.size();
+		shaderData.cameraRotation = tagData.cameraTransform.rotation;
+
+		uint32_t offset = sizeof(VideoTagData2D) * tagData.id;
+		mTagDataBuffer->Update(sizeof(VideoTagData2D), (void*)&shaderData, offset);
+
+		mVideoTagData2DArray[tagData.id] = std::move(tagData);
+	}
+}
 void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 {
 	scr::ivec2 specularOffset={videoConfig.specular_x, videoConfig.specular_y};
@@ -384,17 +515,17 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		inputCommand.m_pComputeEffect=mCopyCubemapEffect;
 		inputCommand.effectPassName = "CopyCubemap";
 		int32_t mip_y=0;
-		if(mDiffuseTexture->IsValid())
+		if(diffuseCubemapTexture->IsValid())
 		{
 			static uint32_t face= 0;
 			mip_y = 0;
 			int32_t mip_size=videoConfig.diffuse_cubemap_size;
-			uint32_t M=mDiffuseTexture->GetTextureCreateInfo().mipCount;
+			uint32_t M=diffuseCubemapTexture->GetTextureCreateInfo().mipCount;
 			scr::ivec2 offset={offset0.x+diffuseOffset.x,offset0.y+diffuseOffset.y};
 			for (uint32_t m        = 0; m < M; m++)
 			{
 				inputCommand.m_WorkGroupSize = {(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount ,6};
-				mCubemapComputeShaderResources[0].SetImageInfo(1, 0, {mDiffuseTexture->GetSampler(), mDiffuseTexture, m});
+				mCubemapComputeShaderResources[0].SetImageInfo(1, 0, {diffuseCubemapTexture->GetSampler(), diffuseCubemapTexture, m});
 				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
 				cubemapUB.faceSize 				= uint32_t(mip_size);
 				cubemapUB.mip                  = m;
@@ -409,11 +540,11 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			face++;
 			face=face%6;
 		}
-		if(mSpecularTexture->IsValid())
+		if(specularCubemapTexture->IsValid())
 		{
 			mip_y = 0;
 			int32_t          mip_size = videoConfig.specular_cubemap_size;
-			uint32_t         M        = mSpecularTexture->GetTextureCreateInfo().mipCount;
+			uint32_t         M        = specularCubemapTexture->GetTextureCreateInfo().mipCount;
 			scr::ivec2       offset   = {
 					offset0.x + specularOffset.x, offset0.y + specularOffset.y};
 			for (uint32_t m        = 0; m < M; m++)
@@ -421,7 +552,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 				inputCommand.m_WorkGroupSize = {
 						(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount, 6};
 				mCubemapComputeShaderResources[0].SetImageInfo(
-						1, 0, {mSpecularTexture->GetSampler(), mSpecularTexture, m});
+						1, 0, {specularCubemapTexture->GetSampler(), specularCubemapTexture, m});
 				cubemapUB.sourceOffset         = {offset.x, offset.y + mip_y};
 				cubemapUB.faceSize             = uint32_t(mip_size);
 				cubemapUB.mip                  = m;
@@ -436,7 +567,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		{
 			mip_y = 0;
 			int32_t          mip_size = videoConfig.rough_cubemap_size;
-			uint32_t         M        = mSpecularTexture->GetTextureCreateInfo().mipCount;
+			uint32_t         M        = specularCubemapTexture->GetTextureCreateInfo().mipCount;
 			scr::ivec2       offset   = {	offset0.x + roughOffset.x, offset0.y + roughOffset.y};
 			for(uint32_t m=0;m<M;m++)
 			{
@@ -464,7 +595,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 
 			inputCommandCreateInfo.effectPassName = "ExtractOneTag";
 			scr::InputCommand_Compute extractTagCommand(&inputCommandCreateInfo, size, mExtractOneTagEffect, {mCubemapComputeShaderResources[0][2]});
-			mDeviceContext.DispatchCompute(&inputCommand);
+			mDeviceContext.DispatchCompute(&extractTagCommand);
 		}
 	}
 	UpdateTagDataBuffers();
@@ -477,56 +608,66 @@ void ClientRenderer::UpdateTagDataBuffers()
 	auto &cachedLights=resourceManagers->mLightManager.GetCache(cacheLock);
 	if (lastSetupCommand.video_config.use_cubemap)
 	{
-		static VideoTagDataCube data[MAX_TAG_DATA_COUNT];
-		for (size_t i = 0; i < mVideoTagDataCubeArray.size(); ++i)
+		VideoTagDataCube *data=static_cast<VideoTagDataCube*>(mTagDataArrayBuffer->Map());
+		if(data)
 		{
-			const auto& td = mVideoTagDataCubeArray[i];
-			const auto& pos = td.coreData.cameraTransform.position;
-			const auto& rot = td.coreData.cameraTransform.rotation;
-
-			data[i].cameraPosition = { pos.x, pos.y, pos.z };
-			data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
-			data[i].lightCount=td.lights.size();
-			for(size_t j=0;j<td.lights.size();j++)
+			//VideoTagDataCube &data=*pdata;
+			for (size_t i = 0; i < videoTagDataCubeArray.size(); ++i)
 			{
-				LightTag &t=data[i].lightTags[j];
-				const scr::LightTagData &l=td.lights[j];
-				t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
-				t.colour=*((avs::vec4*)&l.color);
-				// Convert from +-1 to [0,1]
-				t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
-				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
-				t.shadowTexCoordScale.x=float(l.textureSize)/float(lastSetupCommand.video_config.video_width);
-				t.shadowTexCoordScale.y=float(l.textureSize)/float(lastSetupCommand.video_config.video_height);
-				// Because tag data is NOT properly transformed in advance yet:
-				avs::vec3 position		=l.position;
-				avs::vec4 orientation	=l.orientation;
-				avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
-				avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
-				t.position=*((avs::vec3*)&position);
-				ovrQuatf q={orientation.x,orientation.y,orientation.z,orientation.w};
-				avs::vec3 z={0,0,1.0f};
-				t.direction=QuaternionTimesVector(q,z);
-				scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
+				const auto& td = videoTagDataCubeArray[i];
+				const auto& pos = td.coreData.cameraTransform.position;
+				const auto& rot = td.coreData.cameraTransform.rotation;
 
-				t.worldToShadowMatrix	=*((ovrMatrix4f*)&worldToShadowMatrix);
-
-				const auto &nodeLight=cachedLights.find(l.uid);
-				if(nodeLight!=cachedLights.end())
+				data[i].cameraPosition = { pos.x, pos.y, pos.z };
+				data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
+				data[i].lightCount=td.lights.size();
+				for(size_t j=0;j<td.lights.size();j++)
 				{
-					auto *lightData=nodeLight->second.resource->GetLightData();
-					if(lightData)
+					LightTag &t=data[i].lightTags[j];
+					const scr::LightTagData &l=td.lights[j];
+					t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
+					t.colour=*((avs::vec4*)&l.color);
+					// Convert from +-1 to [0,1]
+					t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
+					t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
+					t.shadowTexCoordScale.x=float(l.textureSize)/float(lastSetupCommand.video_config.video_width);
+					t.shadowTexCoordScale.y=float(l.textureSize)/float(lastSetupCommand.video_config.video_height);
+					// Because tag data is NOT properly transformed in advance yet:
+					avs::vec3 position		=l.position;
+					avs::vec4 orientation	=l.orientation;
+					avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
+					avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
+					t.position=*((avs::vec3*)&position);
+					ovrQuatf q={orientation.x,orientation.y,orientation.z,orientation.w};
+					avs::vec3 z={0,0,1.0f};
+					t.direction=QuaternionTimesVector(q,z);
+					scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
+
+					t.worldToShadowMatrix	=*((ovrMatrix4f*)&worldToShadowMatrix);
+
+					const auto &nodeLight=cachedLights.find(l.uid);
+					if(nodeLight!=cachedLights.end())
 					{
-						t.colour=(const float*)(&lightData->colour);
-						t.is_spot=lightData->is_spot;
-						t.is_point=lightData->is_point;
-						t.radius=lightData->radius;
-						t.shadow_strength=0.0f;
+						auto *lightData=nodeLight->second.resource->GetLightData();
+						if(lightData)
+						{
+							t.colour=(const float*)(&lightData->colour);
+							t.is_spot=lightData->is_spot;
+							t.is_point=lightData->is_point;
+							t.radius=lightData->radius;
+							t.shadow_strength=0.0f;
+						}
+						else
+						{
+							OVR_WARN("No matching cached light.");
+						}
+
 					}
 				}
 			}
+			mTagDataArrayBuffer->Unmap();
 		}
-		mTagDataArrayBuffer->Update(32*sizeof(VideoTagDataCube),data,0);
+		//mTagDataArrayBuffer->Update(32*sizeof(VideoTagDataCube),data,0);
 	}
 	else
 	{
@@ -578,8 +719,9 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrF
         mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
         //mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
 		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data =  &(((scc::GL_UniformBuffer *)  		mVideoUB.get())->GetGlBuffer());
-		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
-		mVideoSurfaceDef.graphicsCommand.UniformData[3].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataBuffer.get())->GetGlBuffer());
+		//mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
+		OVR::GlBuffer& buf=((scc::GL_ShaderStorageBuffer *)  mTagDataBuffer.get())->GetGlBuffer();
+		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &buf;
         res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
     }
     mVideoUB->Submit();
@@ -777,15 +919,11 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				INFO_TEXT_DURATION,
 				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 				"Incomplete Decoder Packets: %d\n"
-				"Framerate: %4.4f Bandwidth(kbps): %4.4f\n"
-				"Actors: %d \n"
-				"Orphans: %d\n",
-				mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped,
+				"Framerate: %4.4f Bandwidth(kbps): %4.4f"
+				,mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped,
 				ctr.decoderPacketsDropped,
 				ctr.incompleteDecoderPacketsReceived,
-				frameRate, ctr.bandwidthKPS,
-				static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
-				ctr.m_packetMapOrphans);
+				frameRate, ctr.bandwidthKPS);
 	}
 	else if(show_osd== CAMERA_OSD)
 	{
@@ -836,5 +974,30 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 
 			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, missingResourcesStream.str().c_str());
 		}
+	}
+	else if(show_osd==TAG_OSD)
+	{
+		std::ostringstream sstr;
+		std::setprecision(5);
+		sstr<<"Tags\n"<<std::setw(4) ;
+		for(size_t i=0;i<std::min((size_t)3,videoTagDataCubeArray.size());i++)
+		{
+			auto &tag=videoTagDataCubeArray[i];
+			sstr<<tag.coreData.lightCount<<" lights\n";
+			for(size_t j=0;j<tag.lights.size();j++)
+			{
+				auto &l=tag.lights[j];
+				sstr<<"\t"<<l.uid<<": Type "<<ToString((scr::Light::Type)l.lightType)<<", clr "<<l.color.x<<","<<l.color.y<<","<<l.color.z;
+				if(l.lightType==scr::LightType::Directional)
+				{
+					ovrQuatf q={l.orientation.x,l.orientation.y,l.orientation.z,l.orientation.w};
+					avs::vec3 z={0,0,1.0f};
+					avs::vec3 direction=QuaternionTimesVector(q,z);
+					sstr << ", d " << direction.x << "," << direction.y << "," << direction.z;
+				}
+				sstr<<"\n";
+			}
+		}
+		mGuiSys->ShowInfoText(INFO_TEXT_DURATION,sstr.str().c_str());
 	}
 }

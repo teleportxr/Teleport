@@ -39,6 +39,8 @@ namespace scr
 
 		virtual void Create(ShaderStorageBufferCreateInfo* pShaderStorageBufferCreateInfo) = 0;
 		virtual void Update(size_t size, const void* data, uint32_t offset = 0) = 0;
+		virtual void* Map() = 0;
+		virtual void Unmap() = 0;
 		virtual void Destroy() = 0;
 
 		inline ShaderStorageBufferCreateInfo& GetShaderStorageBufferCreateInfo() { return m_CI; }

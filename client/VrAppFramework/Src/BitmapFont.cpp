@@ -1015,7 +1015,7 @@ bool FontInfoType::LoadFromBuffer( void const * buffer, size_t const bufferSize 
 	VerticalPad = jsonGlyphs.GetChildFloatByName( "VerticalPad" ) * nhScale;
 	FontHeight = jsonGlyphs.GetChildFloatByName( "FontHeight" ) * nhScale;
 	CenterOffset = jsonGlyphs.GetChildFloatByName( "CenterOffset" );
-	TweakScale = jsonGlyphs.GetChildFloatByName( "TweakScale", 1.0f );
+	TweakScale = 0.5f;//jsonGlyphs.GetChildFloatByName( "TweakScale", 0.5f );
 	EdgeWidth = jsonGlyphs.GetChildFloatByName( "EdgeWidth", 32.0f );
 
 #if defined( OVR_BUILD_DEBUG )

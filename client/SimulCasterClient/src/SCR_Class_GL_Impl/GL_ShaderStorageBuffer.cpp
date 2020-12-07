@@ -17,6 +17,16 @@ void GL_ShaderStorageBuffer::Update(size_t size, const void* data, uint32_t offs
     m_SSBO.Update(size, data, offset);
 }
 
+void *GL_ShaderStorageBuffer::Map()
+{
+    return m_SSBO.MapBuffer();
+}
+
+void GL_ShaderStorageBuffer::Unmap()
+{
+    m_SSBO.UnmapBuffer();
+}
+
 void GL_ShaderStorageBuffer::Destroy()
 {
     m_SSBO.Destroy();

@@ -42,7 +42,7 @@ layout(location = 12) out vec3 v_CameraPosition;
 layout(location = 13) out vec3 v_ModelSpacePosition;
 
 //Material
-layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL std140
+layout(std140, binding = 2) uniform u_MaterialData //Layout conformant to GLSL std140
 {
     vec4 u_DiffuseOutputScalar;
     vec2 u_DiffuseTexCoordsScalar_R;
@@ -77,7 +77,7 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
     float u_EmissiveTexCoordIndex;
 };
 
-layout(std140, binding = 4) uniform u_BoneData
+layout(std140, binding = 3) uniform u_BoneData
 {
     mat4 u_Bones[64];
 };
@@ -92,8 +92,8 @@ void Static()
     v_Tangent	        = normalize((ModelMatrix * vec4(a_Tangent.xyz,0.0)).xyz);
     v_Binormal	        = normalize(cross(v_Normal, v_Tangent));
     v_TBN		        = mat3(v_Tangent, v_Binormal, v_Normal);
-    vec2 UV0		        = vec2(a_UV0.x,a_UV0.y);
-    vec2 UV1		        = vec2(a_UV1.x,a_UV1.y);
+    vec2 UV0		    = vec2(a_UV0.x,a_UV0.y);
+    vec2 UV1		    = vec2(a_UV1.x,a_UV1.y);
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
     v_Color		        = a_Color;

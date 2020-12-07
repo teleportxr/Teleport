@@ -103,6 +103,8 @@ public:
 	void EnteredVR(struct ovrMobile *ovrMobile,const ovrJava *java);
 	void ExitedVR();
 	void Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mGuiSys);
+	void OnVideoStreamChanged(const avs::VideoConfig &vc);
+	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
     void RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrFrameResult &res);
 	void UpdateHandObjects();
@@ -154,8 +156,8 @@ public:
 	OVR::SurfaceTexture *mVideoSurfaceTexture=nullptr;
 	std::shared_ptr<scr::Texture>       mVideoTexture;
 	std::shared_ptr<scr::Texture>       mCubemapTexture;
-	std::shared_ptr<scr::Texture>       mDiffuseTexture;
-	std::shared_ptr<scr::Texture>       mSpecularTexture;
+	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;
+	std::shared_ptr<scr::Texture>       specularCubemapTexture;
 	std::shared_ptr<scr::Texture>       mRoughSpecularTexture;
 	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
@@ -170,7 +172,7 @@ public:
 	std::shared_ptr<scr::Effect>        mExtractOneTagEffect;
 
 	std::vector<scr::SceneCapture2DTagData> mVideoTagData2DArray;
-	std::vector<scr::SceneCaptureCubeTagData> mVideoTagDataCubeArray;
+	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	std::vector<std::string> passNames;
 	int passSelector=0;
@@ -188,6 +190,7 @@ public:
 		CAMERA_OSD,
 		NETWORK_OSD,
 		GEOMETRY_OSD,
+		TAG_OSD,
 		CONTROLLER_OSD,
 		NUM_OSDS
 	};

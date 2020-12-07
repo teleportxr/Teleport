@@ -198,8 +198,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	lightingCubemapLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
     GlobalGraphicsResources.lightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_DiffuseCubemap", {clientRenderer.mDiffuseTexture->GetSampler(), clientRenderer.mDiffuseTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_SpecularCubemap", {clientRenderer.mSpecularTexture->GetSampler(), clientRenderer.mSpecularTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler(), clientRenderer.diffuseCubemapTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler(), clientRenderer.specularCubemapTexture});
 	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler(), clientRenderer.mRoughSpecularTexture});
 	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17, "u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler(), clientRenderer.mCubemapLightingTexture});
 
@@ -432,8 +432,8 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 		clientRenderer.mVideoTagData2DArray.clear();
 		clientRenderer.mVideoTagData2DArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
-		clientRenderer.mVideoTagDataCubeArray.clear();
-		clientRenderer.mVideoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
+		clientRenderer.videoTagDataCubeArray.clear();
+		clientRenderer.videoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
 
 		avs::DecoderParams decoderParams = {};
 		decoderParams.codec             = videoConfig.videoCodec;
@@ -444,7 +444,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 		size_t stream_width  = videoConfig.video_width;
 		size_t stream_height = videoConfig.video_height;
 		// test
-		auto f = std::bind(&Application::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
+		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, &clientRenderer, std::placeholders::_1, std::placeholders::_2);
 		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height, decoderParams, 20, f))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
@@ -507,68 +507,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 			mPipeline.link({ &avsGeometryDecoder, &avsGeometryTarget });
 		}
 		//GL_CheckErrors("Pre-Build Cubemap");
-		//Build Video Cubemap
-		{
-			scr::Texture::TextureCreateInfo textureCreateInfo =
-													{
-															"Cubemap Texture",
-                                                            videoConfig.colour_cubemap_size,
-                                                            videoConfig.colour_cubemap_size,
-															1,
-															4,
-															1,
-															1,
-															scr::Texture::Slot::UNKNOWN,
-															scr::Texture::Type::TEXTURE_CUBE_MAP,
-															scr::Texture::Format::RGBA8,
-															scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-															{},
-															{},
-															scr::Texture::CompressionFormat::UNCOMPRESSED
-													};
-			clientRenderer.mCubemapTexture->Create(textureCreateInfo);
-			clientRenderer.mCubemapTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
-		}
-		//GL_CheckErrors("Built Video Cubemap");
-		//Build Lighting Cubemap
-		{
-			scr::Texture::TextureCreateInfo textureCreateInfo //TODO: Check this against the incoming texture from the video stream
-													{
-															"Cubemap Sub-Textures",
-															128,
-															128,
-															1,
-															4,
-															1,
-															3,
-															scr::Texture::Slot::UNKNOWN,
-															scr::Texture::Type::TEXTURE_CUBE_MAP,
-															scr::Texture::Format::RGBA8,
-															scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-															{},
-															{},
-															scr::Texture::CompressionFormat::UNCOMPRESSED
-													};
-			textureCreateInfo.mipCount = 1;
-			textureCreateInfo.width  = clientRenderer.videoConfig.diffuse_cubemap_size;
-			textureCreateInfo.height = clientRenderer.videoConfig.diffuse_cubemap_size;
-			clientRenderer.mDiffuseTexture->Create(textureCreateInfo);
-			textureCreateInfo.width  = clientRenderer.videoConfig.light_cubemap_size;
-			textureCreateInfo.height = clientRenderer.videoConfig.light_cubemap_size;
-			clientRenderer.mCubemapLightingTexture->Create(textureCreateInfo);
-			textureCreateInfo.mipCount = 3;
-			textureCreateInfo.width  = clientRenderer.videoConfig.specular_cubemap_size;
-			textureCreateInfo.height = clientRenderer.videoConfig.specular_cubemap_size;
-			clientRenderer.mSpecularTexture->Create(textureCreateInfo);
-			textureCreateInfo.width  = clientRenderer.videoConfig.rough_cubemap_size;
-			textureCreateInfo.height = clientRenderer.videoConfig.rough_cubemap_size;
-			clientRenderer.mRoughSpecularTexture->Create(textureCreateInfo);
-			clientRenderer.mDiffuseTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
-			clientRenderer.mSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
-			clientRenderer.mRoughSpecularTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
-			clientRenderer.mCubemapLightingTexture->UseSampler(GlobalGraphicsResources.cubeMipMapSampler);
-		}
-		//GL_CheckErrors("Built Lighting Cubemap");
+		clientRenderer.OnVideoStreamChanged(videoConfig);
 
 		mPipelineConfigured = true;
 	}
@@ -607,57 +546,9 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
 		return;
 	}
 
-    clientRenderer.videoConfig = reconfigureVideoCommand.video_config;
-
+	clientRenderer.OnVideoStreamChanged(reconfigureVideoCommand.video_config);
     WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", clientRenderer.videoConfig.video_width, clientRenderer.videoConfig.video_height
     , clientRenderer.videoConfig.depth_width, clientRenderer.videoConfig.depth_height);
-}
-#include<algorithm>
-void Application::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
-{
-	if (clientRenderer.lastSetupCommand.video_config.use_cubemap)
-	{
-		scr::SceneCaptureCubeTagData tagData;
-		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
-		avs::ConvertTransform(clientRenderer.lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.coreData.cameraTransform);
-
-		tagData.lights.resize(std::min(tagData.coreData.lightCount,(uint32_t)4));
-
-		// Aidan : View and proj matrices are currently unchanged from Unity
-		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
-		for (auto& light : tagData.lights)
-		{
-			memcpy(&light, &data[index], sizeof(scr::Light::LightData));
-			avs::ConvertTransform(clientRenderer.lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, light.worldTransform);
-			index += sizeof(scr::Light::LightData);
-		}
-
-		VideoTagDataCube shaderData;
-        shaderData.cameraPosition = tagData.coreData.cameraTransform.position;
-        shaderData.cameraRotation = tagData.coreData.cameraTransform.rotation;
-		shaderData.lightCount = tagData.lights.size();
-
-		uint32_t offset = sizeof(VideoTagDataCube) * tagData.coreData.id;
-		clientRenderer.mTagDataBuffer->Update(sizeof(VideoTagDataCube), (void*)&shaderData, offset);
-
-		clientRenderer.mVideoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
-	}
-	else
-	{
-		scr::SceneCapture2DTagData tagData;
-		memcpy(&tagData, data, dataSize);
-		avs::ConvertTransform(clientRenderer.lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle, tagData.cameraTransform);
-
-		VideoTagData2D shaderData;
-		shaderData.cameraPosition = tagData.cameraTransform.position;
-		shaderData.lightCount = 0;//tagData.lights.size();
-		shaderData.cameraRotation = tagData.cameraTransform.rotation;
-
-		uint32_t offset = sizeof(VideoTagData2D) * tagData.id;
-		clientRenderer.mTagDataBuffer->Update(sizeof(VideoTagData2D), (void*)&shaderData, offset);
-
-		clientRenderer.mVideoTagData2DArray[tagData.id] = std::move(tagData);
-	}
 }
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)
@@ -743,7 +634,8 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char* msg, 
 const scr::Effect::EffectPassCreateInfo* Application::BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl
 		, const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo,  const std::vector<scr::ShaderResource>& shaderResources)
 {
-	if(GlobalGraphicsResources.defaultPBREffect.HasEffectPass(effectPassName)) return GlobalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
+	if(GlobalGraphicsResources.defaultPBREffect.HasEffectPass(effectPassName))
+		return GlobalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
 
 	scr::ShaderSystem::PassVariables pv;
 	pv.mask          = false;

@@ -18,6 +18,8 @@ namespace scc
 
         void Create(ShaderStorageBufferCreateInfo* pShaderStorageBufferCreateInfo) override;
         void Update(size_t size, const void* data, uint32_t offset = 0) override;
+        void* Map() override;
+        void Unmap() override;
         void Destroy() override;
 
         void Bind() const override;

@@ -83,7 +83,6 @@ public:
 	/* End DecodeEventInterface */
 
 private:
-    void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 
 	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 

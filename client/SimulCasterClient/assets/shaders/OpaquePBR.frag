@@ -18,32 +18,13 @@ layout(location = 11) in vec4 v_Weights;
 layout(location = 12) in vec3 v_CameraPosition;
 layout(location = 13) in vec3 v_ModelSpacePosition;
 
-const int lightCount=1;
 
 #define lerp mix
 #define SIMUL_PI_F (3.1415926536)
 //From Application SR
-//Lights
-const int MaxLights = 8;
-struct PbrLight //Layout conformant to GLSL std140
-{
-	mat4 lightSpaceTransform;
-    vec4 colour;
-    vec3 position;
-    float power;		 //Strength or Power of the light in Watts equivalent to Radiant Flux in Radiometry.
-    vec3 direction;
-	float is_point;
-	float radius;
-	vec3 pad3;
-};
-
-layout(std140, binding = 2) uniform u_LightData
-{
-    PbrLight[MaxLights] u_Lights;
-};
 
 //Material
-layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL std140
+layout(std140, binding = 2) uniform u_MaterialData //Layout conformant to GLSL std140
 {
     vec4 u_DiffuseOutputScalar;
     vec2 u_DiffuseTexCoordsScalar_R;
@@ -78,11 +59,6 @@ layout(std140, binding = 3) uniform u_MaterialData //Layout conformant to GLSL s
     float u_EmissiveTexCoordIndex;
 };
 
-layout(std430,binding=4) buffer RWTagDataID_ssbo
-{
-    uvec4 RWTagDataID;
-};
-
 // ALL light data is passed in as tags.
 struct LightTag
 {
@@ -105,13 +81,12 @@ struct VideoTagDataCube
     vec3 cameraPosition;
     int lightCount;
     vec4 cameraRotation;
-// Some light information
     LightTag lightTags[4];
 };
 
-layout(std430,binding=5) buffer TagDataCube_ssbo
+layout(std430, binding = 0) buffer TagDataCube_ssbo
 {
-    VideoTagDataCube tagDataCubeBuffer[32];
+    VideoTagDataCube tagDataCube;
 };
 
 layout(binding = 10) uniform sampler2D u_DiffuseTexture;
@@ -144,6 +119,10 @@ float saturate(float _val)
 vec3 saturate(vec3 _val)
 {
     return min(vec3(1.0,1.0,1.0), max(vec3(0.0,0.0,0.0), _val));
+}
+vec3 ConvertCubemapTexcoords(vec3 p)
+{
+    return vec3(-p.z,p.x,p.y);
 }
 
 vec3 EnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
@@ -293,9 +272,10 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 {
     float roughness_mip     = MipFromRoughness(surfaceProperties.roughness, 5.0);
     // Sample the environment maps:
-    vec3 diffuse_env        =textureLod(u_DiffuseCubemap, surfaceProperties.normal.xyz,0.0).rgb;
-    vec3 env                =textureLod(u_SpecularCubemap,surfaceState.refl.xyz, roughness_mip).rgb;
-    vec3 rough_env          =textureLod(u_RoughSpecularCubemap, surfaceState.refl.xyz, saturate(roughness_mip-3.0)).rgb;
+    vec3 diffuse_env        =textureLod(u_DiffuseCubemap, ConvertCubemapTexcoords(surfaceProperties.normal.xyz),0.0).rgb;
+    vec3 refl               =ConvertCubemapTexcoords(surfaceState.refl.xyz);
+    vec3 env                =textureLod(u_SpecularCubemap, refl, roughness_mip).rgb;
+    vec3 rough_env          =textureLod(u_RoughSpecularCubemap, refl, saturate(roughness_mip-3.0)).rgb;
     env                     =lerp(env,rough_env,saturate(roughness_mip-2.0));
 
     //env                   =mix(env, diffuse_env, saturate((roughnessE - 0.25) / 0.75));
@@ -364,13 +344,13 @@ vec4 Gamma(vec4 a)
     return pow(a,vec4(.45,.45,.45,1.0));
 }
 
-vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,PbrLight light)
+vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,LightTag lightTag)
 {
-	vec3 diff						=light.position-surfaceProperties.position;
+	vec3 diff						=lightTag.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
-	float d							=max(1.0,dist_to_light/light.radius);
-	vec3 irradiance					=light.colour.rgb*lerp(1.0,5.0/(d*d),light.is_point);
-	vec3 dir_from_surface_to_light	=lerp(-light.direction,normalize(diff),light.is_point);
+	float d							=max(1.0,dist_to_light/lightTag.radius);
+	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,5.0/(d*d),lightTag.is_point);
+	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
 	float roughnessL				= max(.01, surfaceProperties.roughness2);
 	float n_l						= saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
 	vec3 halfway					=normalize(viewDir+dir_from_surface_to_light);
@@ -386,7 +366,8 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	specular						*= surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour						= diffuse+specular;
 
-	return colour;
+    return colour;
+	//return -lightTag.direction;
 }
 
 
@@ -428,13 +409,12 @@ void OpaquePBR()
 
 	SurfaceState surfaceState	=PreprocessSurface(view,surfaceProperties);
 	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
-	
-	for(int i=0;i<3;i++)
+
+	for(int i=0;i<1;i++)
 	{
-		if(i>=lightCount)
+		if(i>=tagDataCube.lightCount)
 			break;
-		PbrLight light			=u_Lights[i];
-		c					+=PBRAddLight(surfaceState,view,surfaceProperties,light);
+		c					=PBRAddLight(surfaceState,view,surfaceProperties,tagDataCube.lightTags[i]);
 	}
 
 	vec3 emissive		= texture(u_EmissiveTexture, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;

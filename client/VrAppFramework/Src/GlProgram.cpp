@@ -369,7 +369,7 @@ GlProgram GlProgram::Build( const char * vertexDirectives, const char * vertexSr
 		Free( p );
 		if ( abortOnError )
 		{
-			OVR_WARN( "Failed to compile fragment shader" );
+			OVR_FAIL( "Failed to compile fragment shader" );
 		}
 		return GlProgram();
 	}

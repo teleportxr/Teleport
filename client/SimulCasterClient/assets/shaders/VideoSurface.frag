@@ -44,12 +44,7 @@ layout(std140, binding = 1) uniform videoUB
     int _pad2;
 } vid;
 
-layout(std430, binding = 0) buffer RWTagDataID_ssbo
-{
-    uvec4 RWTagDataID;
-};
-
-layout(std430, binding = 1) buffer TagDataCube_ssbo
+layout(std430, binding = 0) buffer TagDataCube_ssbo
 {
     VideoTagDataCube tagDataCube;
 };
@@ -78,7 +73,33 @@ void main()
     clip_pos.x+=2.0*vTexCoords.x;
     clip_pos.y+=2.0*vTexCoords.y;
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
-lookup.rgb=fract(10.0*tagDataCube.cameraPosition.xyz);
-//lookup.b=float(RWTagDataID.x)/31.0;
+    vec3 offsetFromVideo2=vid.cameraPosition+vEyeOffset-tagDataCube.cameraPosition;
+    vec3 view = vSampleVec;
+    vec3 colourSampleVec=vSampleVec;
+    for (int i = 0; i < 5; i++)
+    {
+        float depth = lookup.a;
+        float dist_m=max(0.2,20.0*depth);
+        vec3 pos_m=dist_m*vDirection;
+        pos_m+=offsetFromVideo2* step(-0.8, -depth);
+
+        // But this does not intersect at depth. We want the vector from the original centre, of
+
+        // original radius to hit point
+        float R = dist_m;
+        float F = length(offsetFromVideo2);
+        {
+            float D = -dot(normalize(offsetFromVideo2), vDirection);
+            float b = F * D;
+            float c = F * F - R * R;
+            float U = -b + sqrt(b * b - c);
+            pos_m += (U - R) * vDirection*step(-F,0.0);
+
+            colourSampleVec  = normalize(vec3(-pos_m.z, pos_m.x, pos_m.y));
+            lookup=textureLod(cubemapTexture, colourSampleVec, 0.0);
+        }
+    }
+//lookup.rgb+=fract(10.0*tagDataCube.cameraPosition.xyz);
+	//lookup.b=float(RWTagDataID.x)/31.0;
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
 }

@@ -34,6 +34,26 @@
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
+static const char* ToString(scr::Light::Type type)
+{
+	const char* lightTypeName = "";
+	switch (type)
+	{
+	case scr::Light::Type::POINT:
+		lightTypeName = "Point";
+		break;
+	case scr::Light::Type::DIRECTIONAL:
+		lightTypeName = "  Dir";
+		break;
+	case scr::Light::Type::SPOT:
+		lightTypeName = " Spot";
+		break;
+	case scr::Light::Type::AREA:
+		lightTypeName = " Area";
+		break;
+	};
+	return lightTypeName;
+}
 
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
@@ -535,26 +555,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	}
 	frame_number++;
 }
-static const char *ToString(scr::Light::Type type)
-{
-	const char *lightTypeName="";
-	switch(type)
-	{
-	case scr::Light::Type::POINT:
-		lightTypeName="Point";
-		break;
-	case scr::Light::Type::DIRECTIONAL:
-		lightTypeName="  Dir";
-		break;
-	case scr::Light::Type::SPOT:
-		lightTypeName=" Spot";
-		break;
-	case scr::Light::Type::AREA:
-		lightTypeName=" Area";
-		break;
-	};
-	return lightTypeName;
-}
 
 void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {				
@@ -634,8 +634,6 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = source.getCounterValues();
-	//ImGui::Text("Frame #: %d", renderStats.frameCounter);
-	//ImGui::PlotLines("FPS", statFPS.data(), statFPS.count(), 0, nullptr, 0.0f, 60.0f);
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
 	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
