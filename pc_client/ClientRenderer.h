@@ -110,6 +110,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::Texture* videoTexture;
 
 	static constexpr int maxTagDataSize = 32;
+	VideoTagDataCube videoTagDataCube[maxTagDataSize];
 
 	std::vector<scr::SceneCapture2DTagData> videoTagData2DArray;
 	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;

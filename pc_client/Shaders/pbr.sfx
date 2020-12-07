@@ -363,7 +363,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	if(lightTag.is_spot)
 		shadow*=GetSpotLighting(lightTag,spos);
 	//diffuse *=shadow;
-    return shadow.r*(diffuse+specular);
+    return  shadow.r*(diffuse+specular);
 }
 
 vec4 Solid(vertexOutput IN)
@@ -406,12 +406,12 @@ vec4 Solid(vertexOutput IN)
 	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
 	int id						=int(TagDataIDBuffer[0].x);
 	VideoTagDataCube tagData	=TagDataCubeBuffer[id];
-	for(int i=1;i<2;i++)
+	for(int i=0;i<10;i++)
 	{
 		if(i>=tagData.lightCount)
 			break;
 		LightTag lightTag	=tagData.lightTags[i];
-		c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
+		c					=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
 	}
 	//c.gb += 0.03;
 

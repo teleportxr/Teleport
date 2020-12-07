@@ -700,7 +700,9 @@ namespace avs
 		WantToRelease,
 		Released
 	};
-
+	
+	#pragma pack(push)
+	#pragma pack(1)
 	struct DisplayInfo
 	{
 		uint32_t width;
@@ -726,8 +728,6 @@ namespace avs
 		Click
 	};
 	
-	#pragma pack(push)
-	#pragma pack(1)
 	struct InputEvent
 	{
 		uint32_t eventId;		 //< A monotonically increasing event identifier.

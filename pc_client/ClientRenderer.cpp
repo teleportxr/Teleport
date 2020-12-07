@@ -31,6 +31,7 @@
 #include "crossplatform/Material.h"
 #include "crossplatform/Log.h"
 #include "crossplatform/SessionClient.h"
+#include "crossplatform/Light.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
@@ -562,19 +563,18 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 	auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
 	if (lastSetupCommand.video_config.use_cubemap)
 	{
-		VideoTagDataCube data[maxTagDataSize];
 		for (int i = 0; i < videoTagDataCubeArray.size(); ++i)
 		{
 			const auto& td = videoTagDataCubeArray[i];
 			const auto& pos = td.coreData.cameraTransform.position;
 			const auto& rot = td.coreData.cameraTransform.rotation;
 
-			data[i].cameraPosition = { pos.x, pos.y, pos.z };
-			data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
-			data[i].lightCount=td.lights.size();
+			videoTagDataCube[i].cameraPosition = { pos.x, pos.y, pos.z };
+			videoTagDataCube[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
+			videoTagDataCube[i].lightCount=td.lights.size();
 			for(int j=0;j<td.lights.size();j++)
 			{
-				LightTag &t=data[i].lightTags[j];
+				LightTag &t=videoTagDataCube[i].lightTags[j];
 				const scr::LightTagData &l=td.lights[j];
 				t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
 				t.colour=*((vec4*)&l.color);
@@ -583,11 +583,11 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
 				t.shadowTexCoordScale.x=float(l.textureSize)/float(lastSetupCommand.video_config.video_width);
 				t.shadowTexCoordScale.y=float(l.textureSize)/float(lastSetupCommand.video_config.video_height);
-				// Because tag data is NOT properly transformed in advance yet:
+				// Because tag data is NOW properly transformed in advance :
 				avs::vec3 position		=l.position;
 				avs::vec4 orientation	=l.orientation;
-				avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
-				avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
+				//avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
+				//avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
 				t.position=*((vec3*)&position);
 				crossplatform::Quaternionf q((const float*)&orientation);
 				t.direction=q*vec3(0,0,1.0f);
@@ -610,7 +610,7 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 				}
 			}
 		}	
-		tagDataCubeBuffer.SetData(deviceContext, data);
+		tagDataCubeBuffer.SetData(deviceContext, videoTagDataCube);
 	}
 	else
 	{
@@ -731,10 +731,32 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		{
 			auto &tag=videoTagDataCubeArray[i];
 			renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%d lights",tag.coreData.lightCount));
+
+			auto *gpu_tag_buffer=videoTagDataCube;
+			if(gpu_tag_buffer)
 			for(int j=0;j<tag.lights.size();j++)
 			{
 				auto &l=tag.lights[j];
-				renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type %s, %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType),l.color.x,l.color.y,l.color.z));
+				auto &t=gpu_tag_buffer[j];
+				const auto& td = videoTagDataCubeArray[i];
+				for(int j=0;j<td.lights.size()&&j<10;j++)
+				{
+					const LightTag &lightTag=t.lightTags[j];
+					vec4 clr={l.color.x,l.color.y,l.color.z,1.0f};
+					if(l.lightType==scr::LightType::Directional)
+						renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType)
+							,lightTag.direction.x
+							,lightTag.direction.y
+							,lightTag.direction.z
+							,l.color.x,l.color.y,l.color.z),clr);
+					else
+						renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType)
+							,lightTag.position.x
+							,lightTag.position.y
+							,lightTag.position.z
+							,l.color.x,l.color.y,l.color.z),clr);
+				}
+
 			}
 		}
 	}

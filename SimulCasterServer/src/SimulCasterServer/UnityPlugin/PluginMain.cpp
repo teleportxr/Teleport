@@ -34,10 +34,31 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
 
+TELEPORT_EXPORT void ConvertTransform(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::Transform &transform)
+{
+	avs::ConvertTransform(fromStandard,toStandard,transform);
+}
+TELEPORT_EXPORT void ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::vec4 &rotation)
+{
+	avs::ConvertRotation(fromStandard,toStandard,rotation);
+}
+TELEPORT_EXPORT void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::vec3 &position)
+{
+	avs::ConvertPosition(fromStandard,toStandard,position);
+}
+TELEPORT_EXPORT void ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::vec3 &scale)
+{
+	avs::ConvertScale(fromStandard,toStandard,scale);
+}
+TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis)
+{
+	return avs::ConvertAxis(fromStandard,toStandard,axis);
+}
+
+
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
-
 static avs::Context avsContext;
 
 static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_unique<DefaultDiscoveryService>();
@@ -54,7 +75,7 @@ static SetHeadPoseFn setHeadPose;
 static SetControllerPoseFn setControllerPose;
 static ProcessNewInputFn processNewInput;
 static DisconnectFn onDisconnect;
-
+static ReportHandshakeFn reportHandshake;
 static uint32_t connectionTimeout = 60000;
 static avs::uid serverID = 0;
 
@@ -304,6 +325,7 @@ struct InitialiseState
 	avs::MessageHandlerFunc messageHandler;
 	uint32_t DISCOVERY_PORT = 10607;
 	uint32_t SERVICE_PORT = 10500;
+	void(*reportHandshake)(avs::uid clientID, const avs::Handshake *h);
 };
 
 ///PLUGIN-INTERNAL START
@@ -442,6 +464,8 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 	SetDisconnectDelegate(initialiseState->disconnect);
 	SetMessageHandlerDelegate(initialiseState->messageHandler);
 
+	reportHandshake=initialiseState->reportHandshake;
+
 	if(enet_initialize() != 0)
 	{
 		TELEPORT_CERR<<"An error occurred while attempting to initalise ENet!\n";
@@ -490,7 +514,7 @@ ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::
 	: geometryStreamingService(gs)
 	, videoEncodePipeline(vep)
 	, audioEncodePipeline(aep)
-	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout)
+	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout,reportHandshake)
 	
 {
 	originClientHas.x= originClientHas.y= originClientHas.z=0.f;

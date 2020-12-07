@@ -14,6 +14,8 @@
 
 typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*, const avs::InputEvent**);
 
+typedef void(__stdcall* ReportHandshakeFn) (avs::uid clientID,const avs::Handshake *h);
+
 typedef struct _ENetHost ENetHost;
 typedef struct _ENetPeer ENetPeer;
 typedef struct _ENetPacket ENetPacket;
@@ -33,7 +35,8 @@ namespace SCServer
 						std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose,
 						std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput,
 						std::function<void(void)> onDisconnect,
-						const uint32_t& disconnectTimeout);
+						const uint32_t& disconnectTimeout
+						,ReportHandshakeFn reportHandshakeFn);
 		
 		virtual ~ClientMessaging();
 
@@ -84,6 +87,7 @@ namespace SCServer
 		static void stopAsyncNetworkDataProcessing(bool killThread = true);
 
 	private:
+		ReportHandshakeFn reportHandshake;
 		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
 		bool initialized=false;

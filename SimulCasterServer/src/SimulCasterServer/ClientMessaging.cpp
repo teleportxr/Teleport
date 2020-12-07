@@ -25,7 +25,8 @@ namespace SCServer
 		std::function<void(avs::uid, int index, const avs::Pose*)> inSetControllerPose,
 		std::function<void(avs::uid, const avs::InputState *,const avs::InputEvent** )> inProcessNewInput,
 		std::function<void(void)> onDisconnect,
-		const uint32_t& disconnectTimeout)
+		const uint32_t& disconnectTimeout
+		,ReportHandshakeFn reportHandshakeFn)
 		: settings(settings)
 		, discoveryService(discoveryService)
 		, geometryStreamingService(geometryStreamingService)
@@ -33,6 +34,7 @@ namespace SCServer
 		, setControllerPose(inSetControllerPose)
 		, processNewInput(inProcessNewInput)
 		, onDisconnect(onDisconnect)
+		, reportHandshake(reportHandshakeFn)
 		, disconnectTimeout(disconnectTimeout)
 		, host(nullptr)
 		, peer(nullptr)
@@ -401,7 +403,7 @@ namespace SCServer
 			avs::AcknowledgeHandshakeCommand ack(streamedActorIDs.size());
 			sendCommand<avs::uid>(ack, streamedActorIDs);
 		}
-
+		reportHandshake(this->clientID,&handshake);
 		TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 	}
 

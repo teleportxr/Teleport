@@ -14,6 +14,8 @@ class PC_ShaderStorageBuffer final : public scr::ShaderStorageBuffer
 
 		void Create(ShaderStorageBufferCreateInfo * pUniformBuffer) override {}
 		void Update(size_t size, const void* data, uint32_t offset = 0) override {}
+		void* Map() override;
+		void Unmap() override;
 		void Destroy() override {}
 
 		bool ResourceInUse(int timeout) override { return true; }
