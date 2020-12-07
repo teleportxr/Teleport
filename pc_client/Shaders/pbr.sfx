@@ -339,7 +339,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	vec3 diff						=lightTag.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
 	float d							=max(1.0,dist_to_light/lightTag.radius);
-	vec3 irradiance					=lightTag.colour.rgb*lerp(5.0,1.0/(d*d),lightTag.is_point);
+	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,1.0/(d*d),lightTag.is_point);
 	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
 	float roughnessL				=min(1.0,max(.01, surfaceProperties.roughness2));
 	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
@@ -363,7 +363,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	if(lightTag.is_spot)
 		shadow*=GetSpotLighting(lightTag,spos);
 	//diffuse *=shadow;
-    return  shadow.r*(diffuse+specular);
+    return shadow.r*(diffuse+specular);
 }
 
 vec4 Solid(vertexOutput IN)
@@ -411,7 +411,7 @@ vec4 Solid(vertexOutput IN)
 		if(i>=tagData.lightCount)
 			break;
 		LightTag lightTag	=tagData.lightTags[i];
-		c					=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
+		c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
 	}
 	//c.gb += 0.03;
 

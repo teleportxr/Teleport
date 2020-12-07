@@ -738,24 +738,20 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			{
 				auto &l=tag.lights[j];
 				auto &t=gpu_tag_buffer[j];
-				const auto& td = videoTagDataCubeArray[i];
-				for(int j=0;j<td.lights.size()&&j<10;j++)
-				{
-					const LightTag &lightTag=t.lightTags[j];
-					vec4 clr={l.color.x,l.color.y,l.color.z,1.0f};
-					if(l.lightType==scr::LightType::Directional)
-						renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType)
-							,lightTag.direction.x
-							,lightTag.direction.y
-							,lightTag.direction.z
-							,l.color.x,l.color.y,l.color.z),clr);
-					else
-						renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType)
-							,lightTag.position.x
-							,lightTag.position.y
-							,lightTag.position.z
-							,l.color.x,l.color.y,l.color.z),clr);
-				}
+				const LightTag &lightTag=t.lightTags[j];
+				vec4 clr={l.color.x,l.color.y,l.color.z,1.0f};
+				if(l.lightType==scr::LightType::Directional)
+					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType)
+						,lightTag.direction.x
+						,lightTag.direction.y
+						,lightTag.direction.z
+						,l.color.x,l.color.y,l.color.z),clr);
+				else
+					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType)
+						,lightTag.position.x
+						,lightTag.position.y
+						,lightTag.position.z
+						,l.color.x,l.color.y,l.color.z),clr);
 
 			}
 		}
