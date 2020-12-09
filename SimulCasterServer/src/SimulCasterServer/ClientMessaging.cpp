@@ -398,10 +398,10 @@ namespace SCServer
 		//Client may have required resources, as they are reconnecting; tell them to show streamed actors.
 		else
 		{
-			std::vector<avs::uid> streamedActorIDs = geometryStreamingService->getStreamedActorIDs();
+			std::vector<avs::uid> streamedNodeIDs = geometryStreamingService->getStreameNodeIDs();
 
-			avs::AcknowledgeHandshakeCommand ack(streamedActorIDs.size());
-			sendCommand<avs::uid>(ack, streamedActorIDs);
+			avs::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
+			sendCommand<avs::uid>(ack, streamedNodeIDs);
 		}
 		reportHandshake(this->clientID,&handshake);
 		TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;

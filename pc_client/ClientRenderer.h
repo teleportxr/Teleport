@@ -264,6 +264,7 @@ public:
 	vec3 videoPos;
 
 private:
+	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::Node &node,int indent);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 };

@@ -36,10 +36,10 @@ namespace SCServer
 		//Stop streaming to client.
 		virtual void stopStreaming();
 
-		void hideNode(avs::uid clientID,avs::uid actorID);
-		void showNode(avs::uid clientID,avs::uid actorID);
-		void setNodeVisible(avs::uid clientID,avs::uid actorID, bool isVisible);
-		bool isClientRenderingNode(avs::uid actorID);
+		void hideNode(avs::uid clientID,avs::uid nodeID);
+		void showNode(avs::uid clientID,avs::uid nodeID);
+		void setNodeVisible(avs::uid clientID,avs::uid nodeID, bool isVisible);
+		bool isClientRenderingNode(avs::uid nodeID);
 
 		//Adds the hand actors to the list of streamed actors.
 		void addHandsToStream();
@@ -48,21 +48,11 @@ namespace SCServer
 
 		virtual void reset();
 
-		std::vector<avs::uid> getStreamedActorIDs()
-		{
-			std::vector<avs::uid> actorIDs;
+		std::vector<avs::uid> getStreameNodeIDs();
 
-			for(auto n : streamedNodeUids)
-			{
-				actorIDs.push_back(n);
-			}
-
-			return actorIDs;
-		}
-
-		void addActor(avs::uid actorID);
-		avs::uid removeActorByID(avs::uid actorID);
-		bool isStreamingActorID(avs::uid actorID);
+		void addNode(avs::uid nodeID);
+		avs::uid removeNodeByID(avs::uid nodeID);
+		bool isStreamingNodeID(avs::uid nodeID);
 	protected:
 		GeometryStore* geometryStore;
 
@@ -82,8 +72,8 @@ namespace SCServer
 		std::unique_ptr<avs::Pipeline> avsPipeline;
 		std::unique_ptr<avs::GeometrySource> avsGeometrySource;
 		std::unique_ptr<avs::GeometryEncoder> avsGeometryEncoder;
-		std::set<avs::uid> streamedNodeUids;				//Nodes that the client needs to draw, and should be sent to them; <Pointer to Actor, Node ID of root mesh>.
-		std::set<avs::uid> hiddenNodes;	//Nodes that are currently hidden on the server; <ActorID, Pointer to Actor>.
+		std::set<avs::uid> streamedNodeUids;				//Nodes that the client needs to draw, and should be sent to them;
+		std::set<avs::uid> hiddenNodes;	//Nodes that are currently hidden on the server;
 
 		//Recursively obtains the resources from the mesh node, and its child nodes.
 		void GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const;

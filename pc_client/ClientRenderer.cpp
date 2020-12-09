@@ -628,6 +628,27 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 	}
 }
 
+void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::Node &node,int indent)
+{
+	static char indent_txt[20];
+	indent_txt[indent]=0;
+	if(indent>0)
+		indent_txt[indent-1]=' ';
+	std::string details;
+	if(node.GetMesh())
+	{
+		const auto &mesh=*node.GetMesh();
+		details="mesh:";
+		details+=mesh.GetMeshCreateInfo().name;
+	}
+	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d(%s) %s",indent_txt, node.id, node.name.c_str(),details.c_str()));
+	const auto &children =node.GetChildren();
+	for(const auto c :children)
+	{
+		ListNode(deviceContext,c.lock().operator*(),indent+1);
+	}
+}
+
 void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -679,7 +700,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		auto &rootActors=resourceManagers.mActorManager->GetRootActors();
 		for(const std::shared_ptr<scr::Node>& actor : rootActors)
 		{
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%d(%s)", actor->id, actor->name.c_str()));
+			ListNode(deviceContext,*actor,1);
 		}
 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d"	,resourceManagers.mMeshManager.GetCache(cacheLock).size()
@@ -902,7 +923,7 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "roughSpecularCubemap", roughSpecularCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
-					pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
+				//	pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
 				//	pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				}
 				

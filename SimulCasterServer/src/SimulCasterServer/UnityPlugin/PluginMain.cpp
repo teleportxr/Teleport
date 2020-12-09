@@ -813,30 +813,30 @@ TELEPORT_EXPORT float GetBandwidthInKbps(avs::uid clientID)
 ///libavstream END
 
 ///GeometryStreamingService START
-TELEPORT_EXPORT void Client_AddActor(avs::uid clientID, void* newActor, avs::uid actorID, avs::Transform currentTransform)
+TELEPORT_EXPORT void Client_AddNode(avs::uid clientID,  avs::uid actorID, avs::Transform currentTransform)
 {
 	auto c= clientServices.find(clientID);
 	if(c==clientServices.end())
 		return;
-	c->second.geometryStreamingService->addActor( actorID);
+	c->second.geometryStreamingService->addNode( actorID);
 	//Update node transform as it may have changed since the actor was last streamed.
 	geometryStore.updateNode(actorID, currentTransform);
 }
 
-TELEPORT_EXPORT avs::uid Client_RemoveActorByID(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT avs::uid Client_RemoveNodeByID(avs::uid clientID, avs::uid actorID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 		return 0;
-	return c->second.geometryStreamingService->removeActorByID(actorID);
+	return c->second.geometryStreamingService->removeNodeByID(actorID);
 }
 
-TELEPORT_EXPORT bool Client_IsStreamingActorID(avs::uid clientID, avs::uid actorID)
+TELEPORT_EXPORT bool Client_IsStreamingNodeID(avs::uid clientID, avs::uid actorID)
 {
 	auto c = clientServices.find(clientID);
 	if (c == clientServices.end())
 		return false;
-	return c->second.geometryStreamingService->isStreamingActorID(actorID);
+	return c->second.geometryStreamingService->isStreamingNodeID(actorID);
 }
 
 TELEPORT_EXPORT void Client_ShowActor(avs::uid clientID, avs::uid actorID)

@@ -176,7 +176,19 @@ void GeometryStreamingService::reset()
 	hiddenNodes.clear();
 }
 
-void GeometryStreamingService::addActor( avs::uid nodeID)
+std::vector<avs::uid> GeometryStreamingService::getStreameNodeIDs()
+{
+	std::vector<avs::uid> IDs;
+
+	for(auto n : streamedNodeUids)
+	{
+		IDs.push_back(n);
+	}
+
+	return IDs;
+}
+
+void GeometryStreamingService::addNode( avs::uid nodeID)
 {
 	if(nodeID != 0)
 	{
@@ -184,14 +196,14 @@ void GeometryStreamingService::addActor( avs::uid nodeID)
 	}
 }
 
-avs::uid GeometryStreamingService::removeActorByID(avs::uid nodeID)
+avs::uid GeometryStreamingService::removeNodeByID(avs::uid nodeID)
 {
 	streamedNodeUids.erase(nodeID);
 
 	return nodeID;
 }
 
-bool GeometryStreamingService::isStreamingActorID(avs::uid actorID)
+bool GeometryStreamingService::isStreamingNodeID(avs::uid actorID)
 {
 	return streamedNodeUids.find(actorID) != streamedNodeUids.end();
 }
