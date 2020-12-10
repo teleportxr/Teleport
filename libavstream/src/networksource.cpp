@@ -69,14 +69,10 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint
 		m_data->bConnected=false;
         int events = SRT_EPOLL_IN | SRT_EPOLL_ERR|SRT_EPOLL_OUT;
 		CHECK_SRT_ERROR(srt_epoll_add_usock(m_data->pollid,m_data->m_socket, &events));
-	//CHECK_SRT_ERROR( srt_rendezvous(m_data->m_socket, (sockaddr*)&local_bind_addr, sizeof local_bind_addr,                                   (sockaddr*)&remote_addr, sizeof remote_addr));
 		
-		m_data->m_systemBufferSize = 1000000;
 		m_data->m_remote.address = remote;
 		m_data->m_remote.port = std::to_string(remotePort);
-		m_data->lastBandwidthTimestamp = 0;
 		m_data->bandwidthBytes=0;
-		m_data->lastBytesReceived = 0;
 	}
 	catch (const std::exception& e)
 	{
@@ -270,20 +266,16 @@ Result NetworkSource::process(uint32_t timestamp)
 		// Counters will be written to on packet processing thread
 		std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
 
-		uint64_t bytes_this_frame = m_data->m_counters.bytesReceived - m_data->lastBytesReceived;
-		m_data->bandwidthBytes += bytes_this_frame;
-
-		int64_t time_step_ns = timestamp - m_data->lastBandwidthTimestamp;
-		if (time_step_ns > 1000000 && m_data->bandwidthBytes > 0)
+		SRT_TRACEBSTATS perf;
+		// returns 0 if there's no error during execution and -1 if there is
+		if (srt_bstats(m_data->m_socket, &perf, true) == 0)
 		{
-			float bandwidth_bytes_per_ms = float(m_data->bandwidthBytes) / float(time_step_ns);
-			m_data->m_counters.bandwidthKPS *= 0.9f;
-			m_data->m_counters.bandwidthKPS += 0.1f * 1000.0f * bandwidth_bytes_per_ms / 1024.0f;
-			m_data->lastBandwidthTimestamp = timestamp;
-
-			m_data->bandwidthBytes = 0;
+			// KiloBytes
+			m_data->m_counters.bandwidthKPS = (float)perf.mbpsRecvRate * 1000.0f * 0.125f;
+			m_data->bandwidthBytes = m_data->m_counters.bandwidthKPS * 1000.0f;
+			double latency = perf.msRTT * 4;
+			//srt_setsockflag(m_data->m_socket, SRTO_RCVLATENCY, &latency, sizeof latency);
 		}
-		m_data->lastBytesReceived = m_data->m_counters.bytesReceived;
 	}
 
 	m_data->m_pipelineTimestamp = timestamp;
@@ -334,11 +326,6 @@ void NetworkSource::setDebugNetworkPackets(bool s)
 	m_data->mDebugNetworkPackets = s;
 }
 
-size_t NetworkSource::getSystemBufferSize() const
-{
-	return m_data->m_systemBufferSize;
-}
-
 void NetworkSource::sendAck(NetworkPacket &packet)
 {
 	NetworkPacket ackPacket;
@@ -372,5 +359,10 @@ void NetworkSource::asyncRecvPackets()
 	{
 		AVSLOG(Warning) << "EFP Error: Invalid data fragment received" << "\n";
 	}
+}
+
+size_t NetworkSource::getSystemBufferSize() const
+{
+	return 100000;
 }
 
