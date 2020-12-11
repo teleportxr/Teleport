@@ -103,9 +103,7 @@ namespace avs
 			std::string port;
 		} m_remote;
 
-		int64_t lastBandwidthTimestamp;
-		int64_t bandwidthBytes;
-		int64_t lastBytesReceived;
+		float bandwidthBytes;
 
 		std::thread thr;
 		std::mutex m_networkMutex;
