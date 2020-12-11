@@ -826,8 +826,16 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 		std::shared_ptr<scr::Node> leftHand;
 		std::shared_ptr<scr::Node> rightHand;
 		resourceManagers.mActorManager->GetHands(leftHand, rightHand);
-		RenderActor(deviceContext, leftHand);
-		RenderActor(deviceContext, rightHand);
+
+		if(leftHand)
+		{
+			RenderActor(deviceContext, leftHand);
+		}
+
+		if(rightHand)
+		{
+			RenderActor(deviceContext, rightHand);
+		}
 	}
 	
 }
@@ -1312,6 +1320,7 @@ std::vector<uid> ClientRenderer::GetGeometryResources()
 void ClientRenderer::ClearGeometryResources()
 {
 	resourceManagers.Clear();
+	resourceCreator.Clear();
 }
 
 void ClientRenderer::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
