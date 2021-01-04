@@ -9,7 +9,7 @@
 // Forward declaration of utility functions and callback
 SLuint32 getDefaultByteOrder();
 SLuint32 channelCountToChannelMask(int channelCount);
-static void bufferQueueCallback(SLAndroidSimpleBufferQueueItf bq, void *context);
+static void outputBufferQueueCallback(SLAndroidSimpleBufferQueueItf bq, void *context);
 
 // Google will add below variables to <SLES/OpenSLES_Android.h> (eventually)
 static constexpr int SL_ANDROID_SPEAKER_STEREO = (SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT);
@@ -201,11 +201,15 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
         return sca::Result::AudioBufferInitializationError;
     }
 
-    if (FAILED((*mSimpleBufferQueueInterface)->RegisterCallback(mSimpleBufferQueueInterface, bufferQueueCallback, this)))
+    if (FAILED((*mSimpleBufferQueueInterface)->RegisterCallback(mSimpleBufferQueueInterface, outputBufferQueueCallback, this)))
     {
         SCA_CERR("SL_AudioPlayer: Failed to register buffer queue callback.");
         return sca::Result::AudioBufferInitializationError;
     }
+
+
+    // Below is for recorder
+
 
 	mAudioParams = audioParams;
 	mConfigured = true;
@@ -316,7 +320,7 @@ SLuint32 getDefaultByteOrder() {
 }
 
 // This callback handler is called every time a buffer has been processed by OpenSL ES.
-void bufferQueueCallback(SLAndroidSimpleBufferQueueItf bq, void *context) {
+void outputBufferQueueCallback(SLAndroidSimpleBufferQueueItf bq, void *context) {
     (reinterpret_cast<SL_AudioPlayer*>(context))->onAudioProcessed();
 }
 
