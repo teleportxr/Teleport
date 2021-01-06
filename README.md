@@ -65,7 +65,18 @@ Clone the repository with submodules:
 10. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
 ## Building Unity plugin
-1. In Cmake GUI, set REMOTEPLAY_UNITY to checked.
+
+1. Using CMakeGUI:
+	* Check REMOTEPLAY_UNITY.
+	* Check REMOTEPLAY_SERVER.
+	* Check LIBAV_USE_DYNAMIC_RUNTIME.
+	* Click 'Configure' solution button.
+	* Set REMOTEPLAY_UNITY_EDITOR_DIR to "Editor" sub-directory where Unity is installed; e.g. "C:/Program Files/Unity/2019.4.15f1/Editor".
+	* Click 'Generate' solution button.
+2. Open Project, and set to "Release" build mode.
+3. Set SimulCasterServer as startup project.
+	* Right-click SimulCasterServer project in 'Solution Explorer' pane.
+	* Click "Set as Startup Project".
 
 ## Building Android client application
 
