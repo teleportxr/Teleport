@@ -97,6 +97,22 @@ std::vector<avs::uid> ResourceCreator::TakeCompletedActors()
 	return completedActors;
 }
 
+void ResourceCreator::Clear()
+{
+	mutex_texturesToCreate.lock();
+	texturesToCreate;
+	mutex_texturesToCreate.unlock();
+
+	mutex_texturesToTranscode.lock();
+	texturesToTranscode;
+	mutex_texturesToTranscode.unlock();
+
+	m_ResourceRequests.clear();
+	m_ReceivedResources.clear();
+	m_CompletedActors.clear();
+	m_MissingResources.clear();
+}
+
 void ResourceCreator::Update(float deltaTime)
 {
 	std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);

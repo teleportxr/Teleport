@@ -688,7 +688,8 @@ namespace avs
 
 	enum class NodeDataSubtype : uint8_t
 	{
-		None = 0,
+		None,
+		Body,
 		LeftHand,
 		RightHand
 	};

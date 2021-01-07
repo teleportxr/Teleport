@@ -56,8 +56,9 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint
 
 		srt_setsockflag(m_data->m_socket, SRTO_PEERIDLETIMEO, &params.connectionTimeout, sizeof params.connectionTimeout);
 
-		int32_t latency=12;
+		int32_t latency=60;
 		CHECK_SRT_ERROR(srt_setsockopt(m_data->m_socket, 0, SRTO_RCVLATENCY, &latency, sizeof latency));
+
 		m_data->remote_addr = CreateAddrInet(remote,remotePort);
 		m_data->remote_addr.sin_family = AF_INET;
 		m_data->remote_addr.sin_port = htons(remotePort);
@@ -273,8 +274,6 @@ Result NetworkSource::process(uint32_t timestamp)
 			// KiloBytes
 			m_data->m_counters.bandwidthKPS = (float)perf.mbpsRecvRate * 1000.0f * 0.125f;
 			m_data->bandwidthBytes = m_data->m_counters.bandwidthKPS * 1000.0f;
-			double latency = perf.msRTT * 4;
-			//srt_setsockflag(m_data->m_socket, SRTO_RCVLATENCY, &latency, sizeof latency);
 		}
 	}
 

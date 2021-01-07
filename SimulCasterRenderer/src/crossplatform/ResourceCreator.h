@@ -174,12 +174,15 @@ public:
 	~ResourceCreator();
 	
 	void Initialise(scr::RenderPlatform *r, scr::VertexBufferLayout::PackingStyle packingStyle);
+
 	//Returns the resources the ResourceCreator needs, and clears the list.
 	std::vector<avs::uid> TakeResourceRequests();
 	//Returns a list of resource IDs corresponding to the resources the client has received, and clears the list.
 	std::vector<avs::uid> TakeReceivedResources();
 	//Returns the actors that have been finished since the call, and clears the list.
 	std::vector<avs::uid> TakeCompletedActors();
+
+	void Clear();
 
 	//Updates any processes that need to happen on a regular basis; should be called at least once per second.
 	//	deltaTime : Milliseconds that has passed since the last call to Update();
