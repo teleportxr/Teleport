@@ -251,7 +251,6 @@ void GeometryStore::clear(bool freeMeshBuffers)
 
 	texturesToCompress.clear();
 	lightNodes.clear();
-	if(hands.size() == 0) hands.clear(); //hands.clear() appears to be nulling the head of the unlinkedClientIDs, which is causing an exception when used.
 
 	//Recreate look-up maps.
 	meshes[avs::AxesStandard::EngineeringStyle];
@@ -389,16 +388,6 @@ const avs::Texture* GeometryStore::getShadowMap(avs::uid shadowID) const
 const std::vector<avs::LightNodeResources>& GeometryStore::getLightNodes() const
 {
 	return lightNodes;
-}
-
-const std::vector<std::pair<void*, avs::uid>>& GeometryStore::getHands() const
-{
-	return hands;
-}
-
-void GeometryStore::setHands(std::pair<void*, avs::uid> firstHand, std::pair<void*, avs::uid> secondHand)
-{
-	hands = {firstHand, secondHand};
 }
 
 bool GeometryStore::hasNode(avs::uid id) const

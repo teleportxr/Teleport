@@ -130,16 +130,6 @@ bool SCServer::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 	return hiddenNodes.find(nodeID) != hiddenNodes.end();
 }
 
-void GeometryStreamingService::addHandsToStream()
-{
-	const std::vector<std::pair<void*, avs::uid>>& hands = geometryStore->getHands();
-
-	for(const std::pair<void*, avs::uid>& pointerIDHand : hands)
-	{
-		streamedNodeUids.insert(pointerIDHand.second);
-	}
-}
-
 void GeometryStreamingService::tick(float deltaTime)
 {
 	// Might not be initialized... YET

@@ -62,11 +62,6 @@ namespace SCServer
 		//Returns a list of all light nodes that need to be streamed to the client.
 		const std::vector<avs::LightNodeResources>& getLightNodes() const;
 
-		//Returns a list of pointer-ID pairs belonging to the nodes that represent the player's hands.
-		const std::vector<std::pair<void*, avs::uid>>& getHands() const;
-		//Set pointer-ID pairs for each hand.
-		void setHands(std::pair<void*, avs::uid> firstHand, std::pair<void*, avs::uid> secondHand);
-
 		//Returns whether there is a node stored with the passed id.
 		bool hasNode(avs::uid id) const;
 		//Returns whether there is a mesh stored with the passed id.
@@ -125,8 +120,6 @@ namespace SCServer
 		std::map<avs::uid, PrecompressedTexture> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
 
 		std::vector<avs::LightNodeResources> lightNodes; //List of all light nodes; prevents having to search for them every geometry tick.
-
-		std::vector<std::pair<void*, avs::uid>> hands; //List of pointer-IDs pairs of the nodes that represent the hands that are in use.
 
 		template<typename ExtractedResource>
 		void saveResources(const std::string file_name, const std::map<avs::uid, ExtractedResource>& resourceMap) const;

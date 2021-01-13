@@ -41,9 +41,6 @@ namespace SCServer
 		void setNodeVisible(avs::uid clientID,avs::uid actorID, bool isVisible);
 		bool isClientRenderingNode(avs::uid actorID);
 
-		//Adds the hand actors to the list of streamed actors.
-		void addHandsToStream();
-
 		virtual void tick(float deltaTime);
 
 		virtual void reset();
