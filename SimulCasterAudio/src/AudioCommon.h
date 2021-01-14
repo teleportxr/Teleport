@@ -18,10 +18,9 @@
 
 //Debug
 #define SCA_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
-#define SCA_CERR(msg)				 std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl;
-
 #define SCA_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
-#define SCA_COUT(msg)				 std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl;
+#define SCA_CERR std::cerr << __FILE__ << "(" << __LINE__ << "): " 
+#define SCA_COUT std::cout << __FILE__ << "(" << __LINE__ << "): " 
 
 extern void log_print(const char* source,const char *format, ...);
 
@@ -62,7 +61,9 @@ namespace sca
 			AudioOutputMixerInitializationError,
             AudioBufferInitializationError,
 			AudioWriteError,
-			AudioSetStateError
+			AudioSetStateError,
+			AudioRecorderCreationError,
+			AudioRecorderInitializationError
 		};
 
 		Result() : m_code(Code::OK) 

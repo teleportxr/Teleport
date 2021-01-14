@@ -19,19 +19,33 @@ public:
 
 	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
 
-	void onAudioProcessed() override;
+	sca::Result startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback) override;
+
+	sca::Result stopRecording() override;
 
 	sca::Result deconfigure() override;
+
+	void onAudioProcessed() override;
+
+	void onAudioRecorded(SLAndroidSimpleBufferQueueItf bq);
 
 private:
 	SLObjectItf mEngineObject = nullptr;
 	SLEngineItf mEngineInterface  = nullptr;
-    SLObjectItf mOutputMixObject = nullptr;
-    SLObjectItf mPlayerInterface = nullptr;
-	SLPlayItf mPlayInterface = nullptr;
-	SLAndroidSimpleBufferQueueItf mSimpleBufferQueueInterface = nullptr;
 
-	sca::ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
+	// Playing
+    SLObjectItf mOutputMixObject = nullptr;
+    SLObjectItf mPlayerObject = nullptr;
+	SLPlayItf mPlayInterface = nullptr;
+	SLAndroidSimpleBufferQueueItf mOutputBufferQueueInterface = nullptr;
+	sca::ThreadSafeQueue<std::vector<uint8_t>> mOutputBufferQueue;
+
+	// Recording
+	SLObjectItf mRecorderObject = nullptr;
+	SLRecordItf mRecordInterface = nullptr;
+	std::unique_ptr<class RecordBuffer> mRecordBuffer;
+	std::function<void(const uint8_t * data, size_t dataSize)> mRecordingCallback;
+
 };
 
 

@@ -493,6 +493,36 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mAudioQueue);
 			avs::Node::link(clientRenderer.mAudioQueue, avsAudioDecoder);
 			mPipeline.link({ &avsAudioDecoder, &avsAudioTarget });
+
+			// Audio Input
+			if (setupCommand.audio_input_enabled)
+            {
+                sca::NetworkSettings networkSettings =
+                {
+						setupCommand.port + 1,
+                        server_ip,
+						setupCommand.port,
+                        static_cast<int32_t>(handshake.maxBandwidthKpS),
+                        static_cast<int32_t>(handshake.udpBufferSize),
+                        setupCommand.requiredLatencyMs,
+						(int32_t)setupCommand.idle_connection_timeout
+                };
+
+                mNetworkPipeline.reset(new sca::NetworkPipeline());
+				mAudioInputQueue.configure(120, "AudioInputQueue");
+				mNetworkPipeline->initialise(networkSettings, &mAudioInputQueue);
+
+				// Callback called on separate thread when recording buffer is full
+				auto f = [this](const uint8_t * data, size_t dataSize)->void
+				{
+					size_t bytesWritten;
+					if(mAudioInputQueue.write(nullptr, data, dataSize, bytesWritten))
+					{
+						mNetworkPipeline->process();
+					}
+				};
+				audioPlayer->startRecording(f);
+            }
 		}
 
 		if (GeoStream)

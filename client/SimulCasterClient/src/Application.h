@@ -20,6 +20,7 @@
 #include "crossplatform/SessionClient.h"
 #include "crossplatform/AudioStreamTarget.h"
 #include <crossplatform/AudioPlayer.h>
+#include <crossplatform/NetworkPipeline.h>
 
 #include "GlobalGraphicsResources.h"
 #include "VideoDecoderProxy.h"
@@ -106,7 +107,8 @@ private:
 	avs::AudioTarget avsAudioTarget;
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 	sca::AudioPlayer* audioPlayer;
-
+	std::unique_ptr<sca::NetworkPipeline> mNetworkPipeline;
+	avs::Queue mAudioInputQueue;
 
 	OVR::ovrSoundEffectContext        *mSoundEffectContext;
 	OVR::OvrGuiSys::SoundEffectPlayer *mSoundEffectPlayer;

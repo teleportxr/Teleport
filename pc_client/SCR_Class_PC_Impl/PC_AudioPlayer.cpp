@@ -13,10 +13,10 @@ public:
 	VoiceCallback() {}
 	~VoiceCallback() {  }
 
-	//Called when the voice has just finished playing a contiguous audio stream.
+	// Called when the voice has just finished playing a contiguous audio stream.
 	void OnStreamEnd() {  }
 
-	//Unused methods are stubs
+	// Unused methods are stubs
 	void OnVoiceProcessingPassEnd() { }
 	void OnVoiceProcessingPassStart(UINT32 SamplesRequired) {    }
 	void OnBufferEnd(void* pBufferContext)
@@ -67,7 +67,7 @@ sca::Result PC_AudioPlayer::asyncInitializeAudioDevice()
 	hr = XAudio2Create(mDevice.GetAddressOf());
 	if (FAILED(hr))
 	{
-		SCA_COUT("PC_AudioPlayer: Error occurred trying to create the XAudio2 device.");
+		SCA_COUT << "PC_AudioPlayer: Error occurred trying to create the XAudio2 device." << std::endl;
 		return sca::Result::AudioDeviceInitializationError;
 	}
 
@@ -75,7 +75,7 @@ sca::Result PC_AudioPlayer::asyncInitializeAudioDevice()
 	hr = mDevice->CreateMasteringVoice(&mMasteringVoice);
 	if (FAILED(hr))
 	{
-		SCA_COUT("PC_AudioPlayer: Error occurred trying to create the mastering voice.");
+		SCA_COUT << "PC_AudioPlayer: Error occurred trying to create the mastering voice." << std::endl;
 		return sca::Result::AudioMasteringVoiceCreationError;
 	}
 
@@ -86,7 +86,7 @@ sca::Result PC_AudioPlayer::configure(const sca::AudioParams& audioParams)
 {
 	if (mConfigured)
 	{
-		SCA_COUT("PC_AudioPlayer: Audio player has already been configured.");
+		SCA_COUT << "PC_AudioPlayer: Audio player has already been configured." << std::endl;
 		return sca::Result::AudioPlayerAlreadyConfigured;
 	}
 
@@ -115,7 +115,7 @@ sca::Result PC_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	if (FAILED(hr))
 	{
 		mMasteringVoice->DestroyVoice();
-		SCA_COUT("PC_AudioPlayer: Error occurred trying to create the source voice.");
+		SCA_COUT << "PC_AudioPlayer: Error occurred trying to create the source voice." << std::endl;
 		return sca::Result::AudioSourceVoiceCreationError;
 	}
 
@@ -133,13 +133,13 @@ sca::Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!mInitialized)
 	{
-		SCA_COUT("PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized.");
+		SCA_COUT << "PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
 		return sca::Result::AudioPlayerNotInitialized;
 	}
 
 	if (!mConfigured)
 	{
-		SCA_COUT("Can't play audio stream because the audio player has not been configured.");
+		SCA_COUT << "PC_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
@@ -158,23 +158,55 @@ sca::Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 	HRESULT hr = mSourceVoice->SubmitSourceBuffer(&xaBuffer);
 	if (FAILED(hr))
 	{
-		SCA_COUT("PC_AudioPlayer: Error occurred trying to submit audio buffer to source voice.");
+		SCA_COUT << "PC_AudioPlayer: Error occurred trying to submit audio buffer to source voice." << std::endl;
 		return sca::Result::AudioPlayerBufferSubmissionError;
 	}
 
 	return sca::Result::OK;
 }
 
-void PC_AudioPlayer::onAudioProcessed()
+sca::Result PC_AudioPlayer::startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback)
 {
-	mAudioBufferQueue.pop();
+	if (!mInitialized)
+	{
+		SCA_COUT << "PC_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
+		return sca::Result::AudioPlayerNotInitialized;
+	}
+
+	if (!mConfigured)
+	{
+		SCA_COUT << "PC_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+		return sca::Result::AudioPlayerNotConfigured;
+	}
+
+	if (mRecording)
+	{
+		SCA_COUT << "PC_AudioPlayer: Already recording." << std::endl;
+		return sca::Result::OK;
+	}
+
+	mRecording = true;
+	return sca::Result::OK;
+}
+
+sca::Result PC_AudioPlayer::stopRecording()
+{
+	if (!mRecording)
+	{
+		SCA_COUT << "PC_AudioPlayer: Not recording." << std::endl;
+		return sca::Result::OK;
+	}
+
+	mRecording = false;
+
+	return sca::Result::OK;
 }
 
 sca::Result PC_AudioPlayer::deconfigure()
 {
 	if (!mConfigured)
 	{
-		SCA_COUT("PC_AudioPlayer: Can't deconfigure audio player because it is not configured.");
+		SCA_COUT << "PC_AudioPlayer: Can't deconfigure audio player because it is not configured." << std::endl;
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
@@ -189,6 +221,11 @@ sca::Result PC_AudioPlayer::deconfigure()
 		mSourceVoice->DestroyVoice();
 
 	return sca::Result::OK;
+}
+
+void PC_AudioPlayer::onAudioProcessed()
+{
+	mAudioBufferQueue.pop();
 }
 
 

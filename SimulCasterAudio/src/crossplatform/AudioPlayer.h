@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AudioCommon.h"
+#include <functional>
 
 namespace sca
 {
@@ -15,15 +16,19 @@ namespace sca
 		virtual Result initializeAudioDevice() = 0;
 		virtual Result configure(const AudioParams& audioParams) = 0;
 		virtual Result playStream(const uint8_t* data, size_t dataSize) = 0;
-		virtual void onAudioProcessed() = 0;
+		virtual Result startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback) = 0;
+		virtual Result stopRecording() = 0;
 		virtual Result deconfigure() = 0;
-		bool isInitialized() { return mInitialized; }
-		bool isConfigured() { return mConfigured; }
+		virtual void onAudioProcessed() = 0;
+		bool isInitialized() const { return mInitialized; }
+		bool isConfigured() const { return mConfigured; }
+		bool isRecording() const { return mRecording; }
 
 	protected:
 		AudioParams mAudioParams;
 		bool mInitialized;
 		bool mConfigured;
+		bool mRecording;
 	};
 }
 

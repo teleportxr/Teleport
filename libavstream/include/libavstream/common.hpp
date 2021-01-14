@@ -914,9 +914,10 @@ namespace avs
 		uint32_t 	do_checksums=0;
 		uint32_t 	debug_network_packets=0;
 		int32_t		requiredLatencyMs=0;
-		uint32_t     idle_connection_timeout = 5000;
+		uint32_t    idle_connection_timeout = 5000;
 		avs::uid	server_id = 0;
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
+		bool audio_input_enabled = false;
 		VideoConfig video_config;
 	};
 
