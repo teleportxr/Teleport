@@ -1199,16 +1199,6 @@ TELEPORT_EXPORT void SetCompressionLevels(uint8_t compressionStrength, uint8_t c
 	geometryStore.setCompressionLevels(compressionStrength, compressionQuality);
 }
 
-TELEPORT_EXPORT const std::vector<std::pair<void*, avs::uid>>& GetHands()
-{
-	return geometryStore.getHands();
-}
-
-TELEPORT_EXPORT void SetHands(std::pair<void*, avs::uid> firstHand, std::pair<void*, avs::uid> secondHand)
-{
-	geometryStore.setHands(firstHand, secondHand);
-}
-
 TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 {
 	geometryStore.storeNode(id, avs::DataNode(node));

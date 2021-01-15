@@ -23,7 +23,7 @@ sca::Result AA_AudioPlayer::initializeAudioDevice()
 {
 	if (mInitialized)
 	{
-		SCA_CERR("AA_AudioPlayer: Audio player has already been initialized");
+		SCA_CERR << "AA_AudioPlayer: Audio player has already been initialized" << std::endl;
 		return sca::Result::AudioPlayerAlreadyInitialized;
 	}
 
@@ -36,7 +36,7 @@ sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 {
 	if (mConfigured)
 	{
-		SCA_CERR("AA_AudioPlayer: Audio player has already been configured.");
+		SCA_CERR << "AA_AudioPlayer: Audio player has already been configured." << std::endl;
 		return sca::Result::AudioPlayerAlreadyConfigured;
 	}
 
@@ -44,7 +44,7 @@ sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 
 	if (FAILED(AAudio_createStreamBuilder(&builder)))
 	{
-		SCA_CERR("AA_AudioPlayer: Error occurred trying to create audio stream builder.");
+		SCA_CERR << "AA_AudioPlayer: Error occurred trying to create audio stream builder." << std::endl;
 		return sca::Result::AudioDeviceInitializationError;
 	}
 	AAudioStreamBuilder_setPerformanceMode(builder, AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
@@ -58,14 +58,14 @@ sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 
 	if (FAILED(AAudioStreamBuilder_openStream(builder, &mAudioStream)))
 	{
-		SCA_CERR("AA_AudioPlayer: Error occurred trying to open audio stream.");
+		SCA_CERR << "AA_AudioPlayer: Error occurred trying to open audio stream." << std::endl;
 		result = sca::Result::AudioStreamCreationError;
 	}
 
 	// Builder no longer needed after stream is created because we don't need any more streams
 	if (FAILED(AAudioStreamBuilder_delete(builder)))
 	{
-		SCA_CERR("AA_AudioPlayer: Error occurred trying to delete audio stream builder.");
+		SCA_CERR << "AA_AudioPlayer: Error occurred trying to delete audio stream builder." << std::endl;
 		if (result)
 			result = sca::Result::AudioResourceDeletionError;
 	}
@@ -81,38 +81,17 @@ sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	return result;
 }
 
-sca::Result AA_AudioPlayer::deconfigure()
-{
-	if (!mConfigured)
-	{
-		SCA_CERR("AA_AudioPlayer: Can't deconfigure audio player because it is not configured.");
-		return sca::Result::AudioPlayerNotConfigured;
-	}
-
-	if (FAILED(AAudioStream_close(mAudioStream)))
-	{
-		SCA_CERR("AA_AudioPlayer: Error occurred trying to close audio stream.");
-		return sca::Result::AudioCloseStreamError;
-	}
-
-	mConfigured = false;
-
-	mAudioParams = {};
-
-	return sca::Result::OK;
-}
-
 sca::Result AA_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!mInitialized)
 	{
-		SCA_CERR("AA_AudioPlayer: Can't play audio stream because the audio player has not been initialized.");
+		SCA_CERR << "AA_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
 		return sca::Result::AudioPlayerNotInitialized;
 	}
 
 	if (!mConfigured)
 	{
-		SCA_CERR("AA_AudioPlayer: Can't play audio stream because the audio player has not been configured.");
+		SCA_CERR << "AA_AudioPlayer: Can't play audio stream because the audio player has not been configured."  << std::endl;
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
@@ -123,6 +102,70 @@ sca::Result AA_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 	}
 
 	return sca::Result::OK;
+}
+
+sca::Result AA_AudioPlayer::startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback)
+{
+	if (!mInitialized)
+	{
+		SCA_CERR << "AA_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
+		return sca::Result::AudioPlayerNotInitialized;
+	}
+
+	if (!mConfigured)
+	{
+		SCA_CERR << "AA_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+		return sca::Result::AudioPlayerNotConfigured;
+	}
+
+	if (mRecording)
+	{
+		SCA_CERR << "AA_AudioPlayers: Already recording." << std::endl;
+		return sca::Result::OK;
+	}
+
+	mRecording = true;
+
+	return sca::Result::OK;
+}
+
+sca::Result AA_AudioPlayer::stopRecording()
+{
+	if (!mRecording)
+	{
+		SCA_CERR << "AA_AudioPlayer: Not recording." << std::endl;
+		return sca::Result::OK;
+	}
+
+	mRecording = false;
+
+	return sca::Result::OK;
+}
+
+sca::Result AA_AudioPlayer::deconfigure()
+{
+	if (!mConfigured)
+	{
+		SCA_CERR << "AA_AudioPlayer: Can't deconfigure audio player because it is not configured." << std::endl;
+		return sca::Result::AudioPlayerNotConfigured;
+	}
+
+	if (FAILED(AAudioStream_close(mAudioStream)))
+	{
+		SCA_CERR << "AA_AudioPlayer: Error occurred trying to close audio stream." << std::endl;
+		return sca::Result::AudioCloseStreamError;
+	}
+
+	mConfigured = false;
+
+	mAudioParams = {};
+
+	return sca::Result::OK;
+}
+
+void AA_AudioPlayer::onAudioProcessed()
+{
+
 }
 
 

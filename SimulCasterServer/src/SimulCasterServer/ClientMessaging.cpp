@@ -335,11 +335,6 @@ namespace SCServer
 		avs::Handshake handshake;
 		memcpy(&handshake, packet->data, handShakeSize);
 
-		if (handshake.usingHands)
-		{
-			geometryStreamingService->addHandsToStream();
-		}
-
 		casterContext->axesStandard = handshake.axesStandard;
 
 		int32_t streamingPort = getServerPort() + 1;

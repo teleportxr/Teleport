@@ -19,9 +19,13 @@ public:
 
 	sca::Result configure(const sca::AudioParams& audioParams) override;
 
-	void onAudioProcessed() override {}
+	sca::Result startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback) override;
+
+	sca::Result stopRecording() override;
 
 	sca::Result deconfigure() override;
+
+	void onAudioProcessed() override;
 
 private:
 	AAudioStream* mAudioStream;

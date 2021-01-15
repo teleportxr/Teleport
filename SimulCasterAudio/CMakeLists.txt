@@ -15,6 +15,8 @@ set( src_crossplatform
 	src/crossplatform/AudioPlayer.h
 	src/crossplatform/AudioLog.cpp
 	src/crossplatform/AudioLog.h
+	src/crossplatform/NetworkPipeline.cpp
+	src/crossplatform/NetworkPipeline.h
 	)
 
 #Include its root directory
