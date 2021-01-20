@@ -21,6 +21,7 @@ namespace SCServer
 		float confirmationWaitTime; //Seconds to wait before resending a resource.
 
 		bool enableVideoStreaming;
+		bool enableWebcamStreaming;
 		float captureCubeSize;
 		int32_t pipelin;
 		bool enableDeferOutput;
@@ -47,6 +48,7 @@ namespace SCServer
 
 		// Audio
 		bool isStreamingAudio;
+		bool isReceivingAudio;
 
 		int32_t debugStream;
 		bool enableDebugNetworkPackets;

@@ -170,6 +170,11 @@ namespace SCServer
 
 			timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 		}
+
+		if (settings->isReceivingAudio && casterContext->sourceNetworkPipeline.get())
+		{
+			casterContext->sourceNetworkPipeline->process();
+		}
 	}
 
 	void ClientMessaging::handleEvents(float deltaTime)
@@ -362,6 +367,18 @@ namespace SCServer
 			casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->DepthQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
 
 			addNetworkPipelineToAsyncProcessing();
+		}
+
+		if (settings->isReceivingAudio && !casterContext->sourceNetworkPipeline)
+		{
+			avs::NetworkSourceParams sourceParams;
+			sourceParams.connectionTimeout = disconnectTimeout;
+			sourceParams.localPort = streamingPort;
+			sourceParams.remoteIP = getClientIP().c_str();
+			sourceParams.remotePort = streamingPort + 1;
+
+			casterContext->sourceNetworkPipeline.reset(new SourceNetworkPipeline(settings));
+			casterContext->sourceNetworkPipeline->initialize(sourceParams, casterContext->sourceAudioQueue.get(), casterContext->audioDecoder.get(), casterContext->audioTarget.get());
 		}
 
 		CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();

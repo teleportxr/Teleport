@@ -29,7 +29,7 @@
 #include "api/VertexBuffer.h"
 
 #include "crossplatform/AudioStreamTarget.h"
-#include "SCR_Class_PC_Impl/PC_AudioPlayer.h"
+#include "pc/PC_AudioPlayer.h"
 
 namespace avs
 {
@@ -246,9 +246,8 @@ public:
 	avs::AudioDecoder avsAudioDecoder;
 	avs::AudioTarget avsAudioTarget;
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
-	PC_AudioPlayer audioPlayer;
+	sca::PC_AudioPlayer audioPlayer;
 
-	avs::NetworkSourceParams sourceParams = {};
 	avs::DecoderParams decoderParams = {};
 	avs::Pipeline pipeline;
 	

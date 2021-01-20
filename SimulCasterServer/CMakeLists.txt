@@ -28,6 +28,8 @@ set(src
 	src/SimulCasterServer/GeometryStreamingService.h
 	src/SimulCasterServer/NetworkPipeline.cpp
 	src/SimulCasterServer/NetworkPipeline.h
+	src/SimulCasterServer/SourceNetworkPipeline.cpp
+	src/SimulCasterServer/SourceNetworkPipeline.h
 	src/SimulCasterServer/DefaultDiscoveryService.cpp
 	src/SimulCasterServer/DefaultDiscoveryService.h
 	src/SimulCasterServer/VideoEncodePipeline.cpp
@@ -74,6 +76,8 @@ SetDefaults( SimulCasterServer )
 target_include_directories(SimulCasterServer PUBLIC src)
 #Include libavstream
 target_include_directories(SimulCasterServer PUBLIC ../libavstream/include)
+#Include libavstream
+target_include_directories(SimulCasterServer PUBLIC ../SimulCasterAudio/src)
 #Include Basis Universal
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/basis_universal)
 #Include enet
@@ -82,7 +86,7 @@ target_include_directories(SimulCasterServer PUBLIC ../thirdparty/enet/include)
 #Include CUDA library location.
 target_link_directories(SimulCasterServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
-target_link_libraries(SimulCasterServer libavstream enet basisu efp winmm cudart d3d12)
+target_link_libraries(SimulCasterServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12)
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)

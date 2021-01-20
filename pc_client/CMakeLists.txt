@@ -38,8 +38,6 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_UniformBuffer.h
 	SCR_Class_PC_Impl/PC_VertexBuffer.cpp
 	SCR_Class_PC_Impl/PC_VertexBuffer.h
-	SCR_Class_PC_Impl/PC_AudioPlayer.cpp
-	SCR_Class_PC_Impl/PC_AudioPlayer.h
 )
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)

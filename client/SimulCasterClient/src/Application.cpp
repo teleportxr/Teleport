@@ -401,12 +401,6 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
-		avs::NetworkSourceParams sourceParams = {};
-		sourceParams.socketBufferSize      = 3 * 1024 * 1024; // 3 Mb socket buffer size
-		//sourceParams.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
-		sourceParams.maxJitterBufferLength = 0;
-		sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-
 		std::vector<avs::NetworkSourceStream> streams = { {20} };
 		if (AudioStream)
 		{
@@ -417,11 +411,15 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 			streams.push_back({ 60 });
 		}
 
-		if (!clientRenderer.mNetworkSource.configure(
-				std::move(streams), setupCommand.port + 1,
-				sessionClient.GetServerIP().c_str(), setupCommand.port, sourceParams))
+        avs::NetworkSourceParams sourceParams;
+        sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
+        sourceParams.localPort = setupCommand.port + 1;
+        sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
+        sourceParams.remotePort = setupCommand.port;
+
+		if (!clientRenderer.mNetworkSource.configure(std::move(streams), sourceParams))
 		{
-			OVR_WARN("OnVideoStreamChanged: Failed to configure network source node");
+			OVR_WARN("OnVideoStreamChanged: Failed to configure network source node.");
 			return;
 		}
 	    clientRenderer.mNetworkSource.setDebugStream(setupCommand.debug_stream);
