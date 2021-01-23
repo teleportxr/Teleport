@@ -272,7 +272,7 @@ void ClientRenderer::RenderOpaqueTest(crossplatform::GraphicsDeviceContext &devi
 		model.ScaleRows(sc);
 		pbrConstants.reverseDepth		=deviceContext.viewStruct.frustum.reverseDepth;
 		mat4 m = mat4::identity();
-		meshRenderer->Render(deviceContext, transparentMesh,*(mat4*)&model,diffuseCubemapTexture, specularCubemapTexture);
+		meshRenderer->Render(deviceContext, transparentMesh,*(mat4*)&model,diffuseCubemapTexture, specularCubemapTexture, nullptr);
 	}
 }
 
@@ -290,7 +290,7 @@ void ClientRenderer::RenderTransparentTest(crossplatform::GraphicsDeviceContext 
 	model.ScaleRows(sc);
 	pbrConstants.reverseDepth = deviceContext.viewStruct.frustum.reverseDepth;
 	mat4 m = mat4::identity();
-	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture);
+	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture, nullptr);
 }
 
 
