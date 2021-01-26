@@ -21,3 +21,5 @@
 #include "nullsink.hpp"
 #include "networksink.hpp"
 #include "networksource.hpp"
+#include "audiodecoder.h"
+#include "audio/audiotarget.h"

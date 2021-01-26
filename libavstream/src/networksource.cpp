@@ -25,15 +25,15 @@ NetworkSource::NetworkSource()
 	m_data = static_cast<NetworkSource::Private*>(m_d);
 }
 
-Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSourceParams& params)
+Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params)
 {
 	size_t numOutputs = streams.size();
 
-	if (numOutputs == 0 || localPort == 0 || remotePort == 0)
+	if (numOutputs == 0 || params.localPort == 0 || params.remotePort == 0)
 	{
 		return Result::Node_InvalidConfiguration;
 	}
-	if (!remote || !remote[0])
+	if (!params.remoteIP || !params.remoteIP[0])
 	{
 		return Result::Node_InvalidConfiguration;
 	}
@@ -59,10 +59,10 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint
 		int32_t latency=60;
 		CHECK_SRT_ERROR(srt_setsockopt(m_data->m_socket, 0, SRTO_RCVLATENCY, &latency, sizeof latency));
 
-		m_data->remote_addr = CreateAddrInet(remote,remotePort);
+		m_data->remote_addr = CreateAddrInet(params.remoteIP, params.remotePort);
 		m_data->remote_addr.sin_family = AF_INET;
-		m_data->remote_addr.sin_port = htons(remotePort);
-		if (inet_pton(AF_INET,remote, &m_data->remote_addr.sin_addr) != 1)
+		m_data->remote_addr.sin_port = htons(params.remotePort);
+		if (inet_pton(AF_INET, params.remoteIP, &m_data->remote_addr.sin_addr) != 1)
 		{
 			return Result::Node_NotReady;
 		}
@@ -71,8 +71,8 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, uint
         int events = SRT_EPOLL_IN | SRT_EPOLL_ERR|SRT_EPOLL_OUT;
 		CHECK_SRT_ERROR(srt_epoll_add_usock(m_data->pollid,m_data->m_socket, &events));
 		
-		m_data->m_remote.address = remote;
-		m_data->m_remote.port = std::to_string(remotePort);
+		m_data->m_remote.address = params.remoteIP;
+		m_data->m_remote.port = std::to_string(params.remotePort);
 		m_data->bandwidthBytes=0;
 	}
 	catch (const std::exception& e)

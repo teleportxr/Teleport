@@ -56,7 +56,7 @@ namespace sca
 			stream.isDataLimitPerFrame = false;
 			stream.counter = 0;
 			stream.chunkSize = 2048;
-			stream.id = 40 + i;
+			stream.id = 100 + i;
 			stream.dataType = avs::NetworkDataType::Audio;
 			streams.emplace_back(std::move(stream));
 		}

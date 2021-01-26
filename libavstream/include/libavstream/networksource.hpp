@@ -22,32 +22,9 @@ namespace avs
 	/*! Network source parameters. */
 	struct NetworkSourceParams
 	{
-		/*!
-		 * Fragment garbage collector time-to-live.
-		 * Time in ns after which fragments of incomplete decoder packets are considered stale and are removed from incoming fragment map.
-		 *
-		 * \note Settings this to twice the ideal frame time seems to produce the best results.
-		 */
-		uint32_t gcTTL = (1000*1000) / 60 * 20;
-
-		/*!
-		 * Nominal jitter buffer length in ms.
-		 */
-		uint32_t nominalJitterBufferLength = 0;
-
-		/*!
-		 * Max jitter buffer length in ms.
-		 */
-		uint32_t maxJitterBufferLength = 0;
-
-		/*!
-		 * Operating system socket recv buffer size.
-		 
-		 */
-		int socketBufferSize = 4*1024 * 1024;
-
-		int32_t requiredLatencyMs = 0;
-
+		int32_t localPort;
+		const char* remoteIP;
+		int32_t remotePort;
 		uint32_t connectionTimeout = 5000;
 	};
 
@@ -104,7 +81,7 @@ namespace avs
 		 *  - Result::Node_InvalidConfiguration if numOutputs, localPort, or remotePort is zero, or if remote is either nullptr or empty string.
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
-		Result configure(std::vector<NetworkSourceStream>&& streams, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSourceParams& params = {});
+		Result configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params);
 
 		/*!
 		 * Deconfigure network source and release all associated resources.

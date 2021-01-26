@@ -21,6 +21,7 @@
 #include "InteropStructures.h"
 #include "PluginGraphics.h"
 #include "SimulCasterServer/ErrorHandling.h"
+#include "crossplatform/CustomAudioStreamTarget.h"
 
 //#include <OAIdl.h>	// for SAFE_ARRAY
 
@@ -59,6 +60,8 @@ TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStan
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
+typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
+
 static avs::Context avsContext;
 
 static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_unique<DefaultDiscoveryService>();
@@ -75,6 +78,7 @@ static SetHeadPoseFn setHeadPose;
 static SetControllerPoseFn setControllerPose;
 static ProcessNewInputFn processNewInput;
 static DisconnectFn onDisconnect;
+static ProcessAudioInputFn processAudioInput;
 static ReportHandshakeFn reportHandshake;
 static uint32_t connectionTimeout = 60000;
 static avs::uid serverID = 0;
@@ -326,6 +330,7 @@ struct InitialiseState
 	uint32_t DISCOVERY_PORT = 10607;
 	uint32_t SERVICE_PORT = 10500;
 	void(*reportHandshake)(avs::uid clientID, const avs::Handshake *h);
+	ProcessAudioInputFn processAudioInput;
 };
 
 ///PLUGIN-INTERNAL START
@@ -352,6 +357,12 @@ void Disconnect(avs::uid clientID)
 	onDisconnect(clientID);
 	Client_StopStreaming(clientID);
 }
+
+void ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize)
+{
+	processAudioInput(clientID, data, dataSize);
+}
+
 ///PLUGIN-INTERNAL END
 
 ///MEMORY-MANAGEMENT START
@@ -395,6 +406,11 @@ TELEPORT_EXPORT void SetNewInputProcessingDelegate(ProcessNewInputFn newInputPro
 TELEPORT_EXPORT void SetDisconnectDelegate(DisconnectFn disconnect)
 {
 	onDisconnect = disconnect;
+}
+
+TELEPORT_EXPORT void SetProcessAudioInputDelegate(ProcessAudioInputFn f)
+{
+	processAudioInput = f;
 }
 
 static void passOnOutput(const char *msg)
@@ -463,6 +479,7 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 	SetNewInputProcessingDelegate(initialiseState->newInputProcessing);
 	SetDisconnectDelegate(initialiseState->disconnect);
 	SetMessageHandlerDelegate(initialiseState->messageHandler);
+	SetProcessAudioInputDelegate(initialiseState->processAudioInput);
 
 	reportHandshake=initialiseState->reportHandshake;
 
@@ -550,7 +567,8 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	ClientData& newClient = c->second;
 	if(newClient.clientMessaging.isInitialised())
 		return;
-//	c->second.videoEncodePipeline->deconfigure();
+
+	// Sending
 	newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.AudioQueue = std::make_unique<avs::Queue>();
@@ -558,6 +576,19 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	newClient.casterContext.ColorQueue->configure(16,"ColorQueue");
 	newClient.casterContext.GeometryQueue->configure(16, "GeometryQueue");
 	newClient.casterContext.AudioQueue->configure(120, "AudioQueue");
+
+	// Receiving
+	if (casterSettings.isReceivingAudio)
+	{
+		newClient.casterContext.sourceAudioQueue = std::make_unique<avs::Queue>();
+		newClient.casterContext.audioDecoder = std::make_unique<avs::AudioDecoder>();
+		newClient.casterContext.audioTarget = std::make_unique<avs::AudioTarget>();
+		newClient.casterContext.audioStreamTarget = std::make_unique<sca::CustomAudioStreamTarget>(std::bind(&ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2));
+
+		newClient.casterContext.sourceAudioQueue->configure(120, "SourceAudioQueue");
+		newClient.casterContext.audioDecoder->configure(100);
+		newClient.casterContext.audioTarget->configure(newClient.casterContext.audioStreamTarget.get());
+	}
 
 	///TODO: Initialise real delegates for capture component.
 	SCServer::CaptureDelegates delegates;
@@ -648,6 +679,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	setupCommand.idle_connection_timeout = connectionTimeout;
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
+	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
 
 	avs::VideoConfig& videoConfig		= setupCommand.video_config;
 	videoConfig.video_width				= encoderSettings.frameWidth;
@@ -661,7 +693,8 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.compose_cube			= encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec				= casterSettings.videoCodec;
 	videoConfig.use_cubemap				= !casterSettings.usePerspectiveRendering;
-	
+	videoConfig.stream_webcam			= casterSettings.enableWebcamStreaming;
+
 	videoConfig.specular_cubemap_size	=casterSettings.specularCubemapSize;
 	int depth_cubemap_size				=videoConfig.colour_cubemap_size/2;
 	// To the right of the depth cube, underneath the colour cube.

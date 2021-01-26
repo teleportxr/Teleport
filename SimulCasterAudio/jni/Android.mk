@@ -23,6 +23,7 @@ LOCAL_SRC_FILES  := 	../src/AudioCommon.cpp				        \
 						../src/crossplatform/AudioLog.cpp	        \
 						../src/crossplatform/AudioPlayer.cpp		\
 						../src/crossplatform/AudioStreamTarget.cpp  \
+						../src/crossplatform/CustomAudioStreamTarget.cpp  \
 						../src/crossplatform/NetworkPipeline.cpp
 
 

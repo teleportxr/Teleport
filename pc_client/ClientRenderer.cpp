@@ -272,7 +272,7 @@ void ClientRenderer::RenderOpaqueTest(crossplatform::GraphicsDeviceContext &devi
 		model.ScaleRows(sc);
 		pbrConstants.reverseDepth		=deviceContext.viewStruct.frustum.reverseDepth;
 		mat4 m = mat4::identity();
-		meshRenderer->Render(deviceContext, transparentMesh,*(mat4*)&model,diffuseCubemapTexture, specularCubemapTexture);
+		meshRenderer->Render(deviceContext, transparentMesh,*(mat4*)&model,diffuseCubemapTexture, specularCubemapTexture, nullptr);
 	}
 }
 
@@ -290,7 +290,7 @@ void ClientRenderer::RenderTransparentTest(crossplatform::GraphicsDeviceContext 
 	model.ScaleRows(sc);
 	pbrConstants.reverseDepth = deviceContext.viewStruct.frustum.reverseDepth;
 	mat4 m = mat4::identity();
-	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture);
+	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture, nullptr);
 }
 
 
@@ -1060,12 +1060,6 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
-	sourceParams.nominalJitterBufferLength = NominalJitterBufferLength;
-	sourceParams.maxJitterBufferLength = MaxJitterBufferLength;
-	sourceParams.socketBufferSize = 1212992;
-	sourceParams.requiredLatencyMs=setupCommand.requiredLatencyMs;
-	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-
 	std::vector<avs::NetworkSourceStream> streams = { {20} };
 	if (AudioStream)
 	{
@@ -1076,8 +1070,14 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		streams.push_back({ 60 });
 	}
 
+	avs::NetworkSourceParams sourceParams;
+	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
+	sourceParams.localPort = setupCommand.port + 1;
+	sourceParams.remoteIP = server_ip;
+	sourceParams.remotePort = setupCommand.port;
+
 	// Configure for num video streams + 1 audio stream + 1 geometry stream
-	if (!source.configure(std::move(streams), setupCommand.port + 1, server_ip, setupCommand.port, sourceParams))
+	if (!source.configure(std::move(streams), sourceParams))
 	{
 		LOG("Failed to configure network source node");
 		return;

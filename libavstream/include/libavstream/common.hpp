@@ -498,6 +498,7 @@ namespace avs
 			Node_InvalidInput,
 			Node_InvalidOutput,
 			Node_LinkFailed,
+			Node_Null,
 			Decoder_NoSuitableBackendFound,
 			Encoder_NoSuitableBackendFound,
 			Encoder_IncompleteFrame,
@@ -880,6 +881,7 @@ namespace avs
 		uint32_t	colour_cubemap_size = 0;
 		int32_t		compose_cube = 0;
 		int32_t     use_cubemap = 1;
+		int32_t     stream_webcam = 0;
 		avs::VideoCodec videoCodec = avs::VideoCodec::Any;
 		int32_t		specular_x=0;
 		int32_t		specular_y=0;
@@ -917,7 +919,7 @@ namespace avs
 		uint32_t    idle_connection_timeout = 5000;
 		avs::uid	server_id = 0;
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
-		bool audio_input_enabled = false;
+		int32_t audio_input_enabled = 0;
 		VideoConfig video_config;
 	};
 
