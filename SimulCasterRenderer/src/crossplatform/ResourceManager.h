@@ -98,28 +98,24 @@ void ResourceManager<T>::Add(uid id, std::shared_ptr<T> & newItem, float postUse
 	cachedItems.emplace(id, ResourceData{newItem, postUseLifetime, 0});
 }
 
-template<class T>
-bool ResourceManager<T>::Has(uid id) const
+template<class T> bool ResourceManager<T>::Has(uid id) const
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	return cachedItems.find(id) != cachedItems.end();
 }
 
-template<class T>
-inline std::unordered_map<uid, typename ResourceManager<T>::ResourceData>& ResourceManager<T>::GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock)
+template<class T> inline std::unordered_map<uid, typename ResourceManager<T>::ResourceData>& ResourceManager<T>::GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock)
 {
 	cacheLock = std::make_unique<std::lock_guard<std::mutex>>(mutex_cachedItems);
 	return cachedItems;
 }
 
-template<class T>
-void ResourceManager<T>::SetLifetimeFactor(float lifetimeFactor)
+template<class T> void ResourceManager<T>::SetLifetimeFactor(float lifetimeFactor)
 {
 	this->lifetimeFactor = lifetimeFactor;
 }
 
-template<class T>
-std::shared_ptr<T> ResourceManager<T>::Get(uid id)
+template<class T> std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 
@@ -134,8 +130,7 @@ std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 	return data.resource;
 }
 
-template<class T>
-void ResourceManager<T>::GetAllIDs(std::vector<uid>& resourceIDs)
+template<class T> void ResourceManager<T>::GetAllIDs(std::vector<uid>& resourceIDs)
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 

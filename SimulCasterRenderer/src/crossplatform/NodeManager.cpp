@@ -1,13 +1,13 @@
-#include "ActorManager.h"
+#include "NodeManager.h"
 
 namespace scr
 {
-	std::shared_ptr<Node> ActorManager::CreateActor(avs::uid id, const std::string& name) const
+	std::shared_ptr<Node> NodeManager::CreateActor(avs::uid id, const std::string& name) const
 	{
 		return std::make_shared<Node>(id, name);
 	}
 
-	void ActorManager::AddActor(std::shared_ptr<Node> actor, const avs::DataNode& node)
+	void NodeManager::AddActor(std::shared_ptr<Node> actor, const avs::DataNode& node)
 	{
 		//Remove any actor already using the ID.
 		RemoveActor(actor->id);
@@ -16,7 +16,7 @@ namespace scr
 		isHand ? LinkHand(actor, isLeftHand) : LinkActor(actor);
 	}
 
-	void ActorManager::RemoveActor(std::shared_ptr<Node> actor)
+	void NodeManager::RemoveActor(std::shared_ptr<Node> actor)
 	{
 		//Remove actor from parent's child list.
 		std::shared_ptr<Node> parent = actor->GetParent().lock();
@@ -49,7 +49,7 @@ namespace scr
 		actorLookup.erase(actor->id);
 	}
 
-	void ActorManager::RemoveActor(avs::uid actorID)
+	void NodeManager::RemoveActor(avs::uid actorID)
 	{
 		auto actorIt = actorLookup.find(actorID);
 		if (actorIt != actorLookup.end())
@@ -58,22 +58,22 @@ namespace scr
 		}
 	}
 
-	bool ActorManager::HasActor(avs::uid actorID) const
+	bool NodeManager::HasActor(avs::uid actorID) const
 	{
 		return actorLookup.find(actorID) != actorLookup.end();
 	}
 
-	std::shared_ptr<Node> ActorManager::GetActor(avs::uid actorID)
+	std::shared_ptr<Node> NodeManager::GetActor(avs::uid actorID)
 	{
 		return HasActor(actorID) ? actorLookup.at(actorID) : nullptr;
 	}
 
-	size_t ActorManager::GetActorAmount()
+	size_t NodeManager::GetActorAmount()
 	{
 		return actorLookup.size();
 	}
 
-	void ActorManager::SetHands(avs::uid leftHandID, avs::uid rightHandID)
+	void NodeManager::SetHands(avs::uid leftHandID, avs::uid rightHandID)
 	{
 		if (leftHandID != 0)
 		{
@@ -86,7 +86,7 @@ namespace scr
 		}
 	}
 
-	void ActorManager::GetHands(std::shared_ptr<Node>& outLeftHand, std::shared_ptr<Node>& outRightHand)
+	void NodeManager::GetHands(std::shared_ptr<Node>& outLeftHand, std::shared_ptr<Node>& outRightHand)
 	{
 		auto leftHandIt = actorLookup.find(leftHandID);
 		if (leftHandIt != actorLookup.end())
@@ -109,7 +109,7 @@ namespace scr
 		}
 	}
 
-	bool ActorManager::ShowActor(avs::uid actorID)
+	bool NodeManager::ShowActor(avs::uid actorID)
 	{
 		auto actorIt = actorLookup.find(actorID);
 		if (actorIt != actorLookup.end())
@@ -121,7 +121,7 @@ namespace scr
 		return false;
 	}
 
-	bool ActorManager::HideActor(avs::uid actorID)
+	bool NodeManager::HideActor(avs::uid actorID)
 	{
 		auto actorIt = actorLookup.find(actorID);
 		if (actorIt != actorLookup.end())
@@ -133,7 +133,7 @@ namespace scr
 		return false;
 	}
 
-	void ActorManager::SetVisibleActors(const std::vector<avs::uid> visibleActors)
+	void NodeManager::SetVisibleActors(const std::vector<avs::uid> visibleActors)
 	{
 		//Hide all actors.
 		for (auto it : actorLookup)
@@ -148,7 +148,7 @@ namespace scr
 		}
 	}
 
-	bool ActorManager::UpdateActorTransform(avs::uid actorID, const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
+	bool NodeManager::UpdateActorTransform(avs::uid actorID, const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 	{
 		auto actorIt = actorLookup.find(actorID);
 		if (actorIt != actorLookup.end())
@@ -160,7 +160,7 @@ namespace scr
 		return false;
 	}
 
-	void ActorManager::UpdateActorMovement(std::vector<avs::MovementUpdate> updateList)
+	void NodeManager::UpdateActorMovement(std::vector<avs::MovementUpdate> updateList)
 	{
 		earlyMovements.clear();
 
@@ -178,7 +178,7 @@ namespace scr
 		}
 	}
 
-	void ActorManager::Update(float deltaTime)
+	void NodeManager::Update(float deltaTime)
 	{
 		actorList_t expiredActors;
 		for (auto actor : rootActors)
@@ -198,7 +198,7 @@ namespace scr
 		}
 	}
 
-	void ActorManager::Clear()
+	void NodeManager::Clear()
 	{
 		rootActors.clear();
 		actorLookup.clear();
@@ -209,7 +209,7 @@ namespace scr
 		parentLookup.clear();
 	}
 
-	void ActorManager::ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
+	void NodeManager::ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
 	{
 		for (auto it = actorLookup.begin(); it != actorLookup.end();)
 		{
@@ -229,12 +229,12 @@ namespace scr
 		}
 	}
 
-	const ActorManager::actorList_t& ActorManager::GetRootActors() const
+	const NodeManager::actorList_t& NodeManager::GetRootActors() const
 	{
 		return rootActors;
 	}
 
-	void ActorManager::LinkActor(std::shared_ptr<Node> newActor, bool isHand)
+	void NodeManager::LinkActor(std::shared_ptr<Node> newActor, bool isHand)
 	{
 		if (!isHand)
 		{
@@ -257,7 +257,7 @@ namespace scr
 		}
 	}
 
-	void ActorManager::LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand)
+	void NodeManager::LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand)
 	{
 		LinkActor(newHand, true);
 
@@ -267,12 +267,12 @@ namespace scr
 			rightHandID = newHand->id;
 	}
 
-	bool ActorManager::IsActorVisible(avs::uid actorID) const
+	bool NodeManager::IsActorVisible(avs::uid actorID) const
 	{
 		return HasActor(actorID) && actorLookup.at(actorID)->IsVisible();
 	}
 
-	void ActorManager::LinkToParentActor(avs::uid childID)
+	void NodeManager::LinkToParentActor(avs::uid childID)
 	{
 		auto parentIt = parentLookup.find(childID);
 		if (parentIt == parentLookup.end()) return;

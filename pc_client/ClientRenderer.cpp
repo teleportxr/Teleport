@@ -243,56 +243,7 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 	}
 }
 
-/// Render an example transparent object.
-void ClientRenderer::RenderOpaqueTest(crossplatform::GraphicsDeviceContext &deviceContext)
-{
-	if(!pbrEffect)
-		return;
-	generator.seed(12);
-	static float spd=20.0f;
-	static float angle=0.0f;
-	angle+=0.01f;
-	// Vertical position
-	simul::math::Matrix4x4 model;
-	for(int i=0;i<1000;i++)
-	{
-		float x=100.0f*(rando(generator));
-		float y=100.0f*(rando(generator));
-		float z=10.0f*rando(generator);
-		float vx=rando(generator)*spd;
-		float vy=rando(generator)*spd;
-		float vz=rando(generator)*spd*.1f;
-		float sn=sin(angle+rando(generator)*3.1415926536f);
-		x+=vx*sn;
-		y+=vy*sn;
-		z+=vz*sn;
-		model=math::Matrix4x4::Translation(x,y,z);
-		// scale.
-		static float sc[]={1.0f,1.0f,1.0f,1.0f};
-		model.ScaleRows(sc);
-		pbrConstants.reverseDepth		=deviceContext.viewStruct.frustum.reverseDepth;
-		mat4 m = mat4::identity();
-		meshRenderer->Render(deviceContext, transparentMesh,*(mat4*)&model,diffuseCubemapTexture, specularCubemapTexture, nullptr);
-	}
-}
-
 base::DefaultProfiler cpuProfiler;
-/// Render an example transparent object.
-void ClientRenderer::RenderTransparentTest(crossplatform::GraphicsDeviceContext &deviceContext)
-{
-	if (!pbrEffect)
-		return;
-	// Vertical position
-	static float z = 500.0f;
-	simul::math::Matrix4x4 model = math::Matrix4x4::Translation(0, 0, z);
-	// scale.
-	static float sc[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	model.ScaleRows(sc);
-	pbrConstants.reverseDepth = deviceContext.viewStruct.frustum.reverseDepth;
-	mat4 m = mat4::identity();
-	meshRenderer->Render(deviceContext, transparentMesh, m, diffuseCubemapTexture, specularCubemapTexture, nullptr);
-}
-
 
 void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 {
@@ -638,8 +589,7 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 	if(node.GetMesh())
 	{
 		const auto &mesh=*node.GetMesh();
-		details="mesh:";
-		details+=mesh.GetMeshCreateInfo().name;
+		details=simul::base::QuickFormat("mesh: %s (0x%08x)",mesh.GetMeshCreateInfo().name.c_str(),&mesh);
 	}
 	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d(%s) %s",indent_txt, node.id, node.name.c_str(),details.c_str()));
 	const auto &children =node.GetChildren();
@@ -648,6 +598,7 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 		ListNode(deviceContext,c.lock().operator*(),indent+1);
 	}
 }
+
 
 void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {

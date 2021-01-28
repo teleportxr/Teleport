@@ -428,6 +428,11 @@ static void passOnError(const char *msg)
 void AccumulateMessagesFromThreads(avs::LogSeverity severity, const char* msg, void* userData)
 {
 	std::lock_guard<std::mutex> lock(messagesMutex);
+	if(severity==avs::LogSeverity::Error|| severity==avs::LogSeverity::Critical)
+	{
+		LogMessage tst={severity,msg,userData};
+		// can break here.
+	}
 	if(messages.size()==99)
 	{
 		LogMessage logMessage={avs::LogSeverity::Error,"Too many messages since last call to PipeOutMessages()",nullptr};

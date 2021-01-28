@@ -196,9 +196,6 @@ public:
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
-	void RenderOpaqueTest(simul::crossplatform::GraphicsDeviceContext &deviceContext);
-	/// Render an example transparent object.
-	void RenderTransparentTest(simul::crossplatform::GraphicsDeviceContext &deviceContext);
 	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame) override;
 	void Init(simul::crossplatform::RenderPlatform *r);
 	void SetServer(const char* ip,int port);

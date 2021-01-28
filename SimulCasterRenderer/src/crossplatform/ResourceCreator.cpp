@@ -701,6 +701,10 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node)
 		m_ResourceRequests.push_back(node.data_uid);
 		GetMissingResource(node.data_uid, "Mesh").waitingResources.push_back(newActor);
 	}
+	else
+	{
+		SCR_COUT << "\thas mesh "<<node.data_uid<<"(" << newActor->actor->GetMesh()->GetMeshCreateInfo().name.c_str() << ")\n";
+	}
 
 	if(node.skinID != 0)
 	{

@@ -14,14 +14,14 @@
 
 namespace scr
 {
-	class ActorManager
+	class NodeManager
 	{
 	public:
 		typedef std::vector<std::shared_ptr<Node>> actorList_t;
 
 		uint32_t actorLifetime = 2000; //Milliseconds the manager waits before removing invisible actors.
 
-		virtual ~ActorManager() = default;
+		virtual ~NodeManager() = default;
 
 		virtual std::shared_ptr<Node> CreateActor(avs::uid id, const std::string& name) const;
 

@@ -66,7 +66,8 @@ namespace SCServer
 					encodeMeshes(src, req, {meshResourceInfo.mesh_uid});
 
 					keepQueueing = attemptQueueData();
-					if(!keepQueueing) break;
+					if(!keepQueueing)
+						break;
 				}
 
 				if(meshResourceInfo.skinID != 0)
@@ -78,7 +79,8 @@ namespace SCServer
 							encodeNodes(src, req, {boneID});
 
 							keepQueueing = attemptQueueData();
-							if(!keepQueueing) break;
+							if(!keepQueueing)
+								break;
 						}
 					}
 
@@ -87,7 +89,8 @@ namespace SCServer
 						encodeSkin(src, req, meshResourceInfo.skinID);
 
 						keepQueueing = attemptQueueData();
-						if(!keepQueueing) break;
+						if(!keepQueueing)
+							break;
 					}
 				}
 
@@ -98,10 +101,12 @@ namespace SCServer
 						encodeAnimation(src, req, animationID);
 
 						keepQueueing = attemptQueueData();
-						if(!keepQueueing) break;
+						if(!keepQueueing)
+							break;
 					}
 				}
-				if(!keepQueueing) break;
+				if(!keepQueueing)
+					break;
 
 				for(avs::MaterialResources material : meshResourceInfo.materials)
 				{
@@ -112,10 +117,12 @@ namespace SCServer
 							encodeTextures(src, req, {textureID});
 
 							keepQueueing = attemptQueueData();
-							if(!keepQueueing) break;
+							if(!keepQueueing)
+								break;
 						}
 
-						if(!keepQueueing) break;
+						if(!keepQueueing)
+							break;
 					}
 
 					if(!req->hasResource(material.material_uid))
@@ -123,17 +130,20 @@ namespace SCServer
 						encodeMaterials(src, req, {material.material_uid});
 
 						keepQueueing = attemptQueueData();
-						if(!keepQueueing) break;
+						if(!keepQueueing)
+							break;
 					}
 				}
-				if(!keepQueueing) break;
+				if(!keepQueueing)
+					break;
 
 				if(!req->hasResource(meshResourceInfo.node_uid))
 				{
 					encodeNodes(src, req, {meshResourceInfo.node_uid});
 
 					keepQueueing = attemptQueueData();
-					if(!keepQueueing) break;
+					if(!keepQueueing)
+						break;
 				}
 			}
 
@@ -144,7 +154,8 @@ namespace SCServer
 					encodeTextures(src, req, {lightResourceInfo.shadowmap_uid});
 
 					keepQueueing = attemptQueueData();
-					if(!keepQueueing) break;
+					if(!keepQueueing)
+						break;
 				}
 
 				if(!req->hasResource(lightResourceInfo.node_uid))
@@ -152,7 +163,8 @@ namespace SCServer
 					encodeNodes(src, req, {lightResourceInfo.node_uid});
 
 					keepQueueing = attemptQueueData();
-					if(!keepQueueing) break;
+					if(!keepQueueing)
+						break;
 				}
 			}
 		}

@@ -28,8 +28,8 @@ set( src_crossplatform
 	src/crossplatform/Node.h
 	src/crossplatform/ActorComponents.cpp
 	src/crossplatform/ActorComponents.h
-	src/crossplatform/ActorManager.cpp
-	src/crossplatform/ActorManager.h
+	src/crossplatform/NodeManager.cpp
+	src/crossplatform/NodeManager.h
 	src/crossplatform/Animation.cpp
 	src/crossplatform/Animation.h
 	src/crossplatform/API.cpp

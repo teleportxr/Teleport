@@ -33,16 +33,14 @@ std::vector<avs::uid> getVectorOfIDs(const std::map<avs::uid, T>& resourceMap)
 	return ids;
 }
 
-template<class T>
-T* getResource(std::map<avs::uid, T>& resourceMap, avs::uid id)
+template<class T> T* getResource(std::map<avs::uid, T>& resourceMap, avs::uid id)
 {
 	auto resource = resourceMap.find(id);
 	return (resource != resourceMap.end()) ? &resource->second : nullptr;
 }
 
 //Const version.
-template<class T>
-const T* getResource(const std::map<avs::uid, T>& resourceMap, avs::uid id)
+template<class T> const T* getResource(const std::map<avs::uid, T>& resourceMap, avs::uid id)
 {
 	auto resource = resourceMap.find(id);
 	return (resource != resourceMap.end()) ? &resource->second : nullptr;
@@ -415,9 +413,38 @@ bool GeometryStore::hasShadowMap(avs::uid id) const
 	return shadowMaps.find(id) != shadowMaps.end();
 }
 
+const char *stringOf(avs::NodeDataType t)
+{
+	switch(t)
+	{
+		case avs::NodeDataType::Mesh:
+			return "Mesh";
+		break;
+		case avs::NodeDataType::Camera:
+		case avs::NodeDataType::Scene:
+			return "Scene";
+		break;
+		case avs::NodeDataType::ShadowMap:
+		case avs::NodeDataType::Light:
+			return "Light";
+		break;
+		case avs::NodeDataType::Bone:
+			return "Bone";
+		break;
+		default:
+		break;
+	};
+
+	return "";
+}
+template<typename T,typename tr> std::basic_ostream<T,tr> & operator << (std::basic_ostream<T,tr> &out, const avs::NodeDataType &c) 
+{ 
+    out << (int)c; 
+    return out; 
+} 
 void GeometryStore::storeNode(avs::uid id, avs::DataNode& newNode)
 {
-	TELEPORT_COUT<<"storeNode "<<id<<", type "<<(int)newNode.data_type<<std::endl;
+	TELEPORT_COUT<<"storeNode "<<newNode.name.c_str()<<" uid "<<id<<", type "<<stringOf(newNode.data_type)<<", data uid "<<(int)newNode.data_uid<<std::endl;
 	nodes[id] = newNode;
 
 	if(newNode.data_type == avs::NodeDataType::ShadowMap|| newNode.data_type == avs::NodeDataType::Light)
