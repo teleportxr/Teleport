@@ -44,11 +44,14 @@ void VideoStreamClient::StopReceiving()
 void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
 {
     avs::NetworkSourceParams params = {};
-    params.socketBufferSize = 64 * 1024 * 1024; // 16MiB socket buffer size
+    params.remoteIP = address.c_str(); // 16MiB socket buffer size
+    params.connectionTimeout = 90000;
+    params.localPort = port + 1;
+    params.remotePort = port;
     //params.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 
     avs::NetworkSource networkSource;
-    if(!networkSource.configure({},port+1, address.c_str(), port, params))
+    if(!networkSource.configure({},params))
     {
         OVR_WARN("VideoStreamClient: Failed to configure network source");
         return;
