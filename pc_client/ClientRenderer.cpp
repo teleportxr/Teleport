@@ -115,7 +115,7 @@ ClientRenderer::ClientRenderer():
 	videoTexture(nullptr),
 	diffuseCubemapTexture(nullptr),
 	framenumber(0),
-	resourceManagers(new scr::ActorManager),
+	resourceManagers(new scr::NodeManager),
 	resourceCreator(basist::transcoder_texture_format::cTFBC3),
 	sessionClient(this, std::make_unique<PCDiscoveryService>()),
 	RenderMode(0)
@@ -787,7 +787,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 	vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	cameraConstants.viewPosition = finalViewPos;
 
-	const scr::ActorManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
+	const scr::NodeManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
 	for(const std::shared_ptr<scr::Node>& actor : actorList)
 	{
 		RenderActor(deviceContext, actor);

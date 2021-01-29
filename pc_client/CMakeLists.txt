@@ -13,8 +13,8 @@ set(srcs
 	PCDiscoveryService.h
 	stdafx.h
 	targetver.h
-	
 )
+
 set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_DeviceContext.cpp
 	SCR_Class_PC_Impl/PC_DeviceContext.h
@@ -39,6 +39,7 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_VertexBuffer.cpp
 	SCR_Class_PC_Impl/PC_VertexBuffer.h
 )
+
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DPLATFORM_DIR=${REMOTEPLAY_PLATFORM_DIR}")

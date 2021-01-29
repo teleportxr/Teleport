@@ -10,7 +10,7 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/mesh.hpp>
 
-#include "ActorManager.h"
+#include "NodeManager.h"
 #include "API.h"
 #include "api/RenderPlatform.h"
 #include "Light.h"
@@ -27,7 +27,7 @@ namespace scr
 {
     struct ResourceManagers
     {
-        ResourceManagers(scr::ActorManager* actorManager)
+        ResourceManagers(scr::NodeManager* actorManager)
             :mActorManager(actorManager),
             mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
             mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
@@ -129,7 +129,7 @@ namespace scr
 			//mVertexBufferManager.ClearCareful(excludeList);
 		}
 
-        std::unique_ptr<scr::ActorManager>	mActorManager;
+        std::unique_ptr<scr::NodeManager>	mActorManager;
         ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
         ResourceManager<scr::Shader>        mShaderManager;
         ResourceManager<scr::Material>		mMaterialManager;
@@ -340,7 +340,7 @@ private:
 	ResourceManager<scr::Bone>* m_BoneManager = nullptr;
 	ResourceManager<scr::Animation>* m_AnimationManager = nullptr;
 
-	scr::ActorManager* m_pActorManager = nullptr;
+	scr::NodeManager* m_pActorManager = nullptr;
 
 	std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 	std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.
