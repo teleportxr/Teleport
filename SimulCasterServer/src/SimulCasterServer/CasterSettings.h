@@ -69,6 +69,8 @@ namespace SCServer
 		int32_t roughCubemapSize;
 		int32_t diffuseCubemapSize;
 		int32_t lightCubemapSize;
+
+		bool lockPlayerHeight;
 	};
 
 	struct CasterNetworkSettings

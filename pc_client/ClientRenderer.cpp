@@ -1341,12 +1341,21 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.right_left_input	=(float)keydown['d']-(float)keydown['a'];
 	mouseCameraInput.up_down_input		=(float)keydown['q']-(float)keydown['z'];
 	static float spd = 2.0f;
+	float prevCamHeight = camera.GetPosition()[2];
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
 							,spd
 							,mouseCameraState
 							,mouseCameraInput
-							,14000.f);
+							,14000.f
+							,lastSetupCommand.lock_player_height);
+	// Lock height
+	/*if ()
+	{
+		vec3 currentPos = camera.GetPosition();
+		currentPos[2] = prevCamHeight;
+	}*/
+
 	controllerStates[0].mTrackpadX=0.5f;
 	controllerStates[0].mTrackpadY=0.5f;
 	controllerStates[0].mJoystickAxisX	=mouseCameraInput.right_left_input;
