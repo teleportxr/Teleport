@@ -166,6 +166,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	ControllerSim controllerSim;
 	std::string server_ip;
 	int server_discovery_port=0;
+	float roomRadius=1.5f;
 public:
 	ClientRenderer();
 	~ClientRenderer();

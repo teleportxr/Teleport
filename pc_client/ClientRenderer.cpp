@@ -730,21 +730,25 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	}
 	else if(show_osd== CONTROLLER_OSD)
 	{
+		renderPlatform->LinePrint(deviceContext, "CONTROLLERS\n");
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     W %d A %d S %d D %d",keydown['w'],keydown['a'],keydown['s'],keydown['d']));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
 		
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("      angle: %3.3f", controllerSim.angle));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" pos_offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
-
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("      angle: %3.3f", controllerSim.angle));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\n   joystick: %3.3f %3.3f", controllerStates[0].mJoystickAxisX, controllerStates[0].mJoystickAxisY));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f", controllerStates[1].mJoystickAxisX, controllerStates[1].mJoystickAxisY));
 	}
 
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
@@ -1337,9 +1341,26 @@ void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offse
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
 {
-	mouseCameraInput.forward_back_input	=(float)keydown['w']-(float)keydown['s'];
-	mouseCameraInput.right_left_input	=(float)keydown['d']-(float)keydown['a'];
-	mouseCameraInput.up_down_input		=(float)keydown['q']-(float)keydown['z'];
+	vec2 clientspace_input;
+	static vec2 stored_clientspace_input(0,0);
+	clientspace_input.y=((float)keydown['w']-(float)keydown['s'])*(float)(keydown[VK_SHIFT]);
+	clientspace_input.x=((float)keydown['d']-(float)keydown['a'])*(float)(keydown[VK_SHIFT]);
+	static int clientspace_timeout=0;
+	if(clientspace_input.y!=0||clientspace_input.x!=0)
+	{
+		stored_clientspace_input=clientspace_input;
+		clientspace_timeout=20;
+	}
+	else if(clientspace_timeout)
+	{
+		clientspace_timeout--;
+		if(!clientspace_timeout)
+			stored_clientspace_input=vec2(0,0);
+	}
+	mouseCameraInput.forward_back_input	=((float)keydown['w']-(float)keydown['s'])*(float)(!keydown[VK_SHIFT]);
+	mouseCameraInput.right_left_input	=((float)keydown['d']-(float)keydown['a'])*(float)(!keydown[VK_SHIFT]);
+	mouseCameraInput.up_down_input		=((float)keydown['q']-(float)keydown['z'])*(float)(!keydown[VK_SHIFT]);
+	
 	static float spd = 2.0f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
@@ -1347,10 +1368,34 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,mouseCameraState
 							,mouseCameraInput
 							,14000.f);
+	// consider this to be the position relative to the local origin. Don't let it get too far from centre.
+	vec3 cam_pos=camera.GetPosition();
+	float r=sqrt(cam_pos.x*cam_pos.x+cam_pos.y*cam_pos.y);
+	if(cam_pos.z>2.0f)
+		cam_pos.z=2.0f;
+	if(cam_pos.z<1.0f)
+		cam_pos.z=1.0f;
+	if(r>0.9f*roomRadius)
+	{
+		float s=(r/roomRadius-0.9f)/0.01f;
+		float reduce=0.9f*roomRadius/r;
+		cam_pos.x*=reduce;
+		cam_pos.y*=reduce;
+		camera.SetPosition(cam_pos);
+		float x=s*cam_pos.x/roomRadius;
+		float y=s*cam_pos.y/roomRadius;
+	//	interpret going beyond the boundary as requesting motion of the local origin.
+	}
+	for(int i=0;i<2;i++)
+	{
+		controllerStates[i].mJoystickAxisX=stored_clientspace_input.x;
+		controllerStates[i].mJoystickAxisY=stored_clientspace_input.y;
+	}
+
 	controllerStates[0].mTrackpadX=0.5f;
 	controllerStates[0].mTrackpadY=0.5f;
-	controllerStates[0].mJoystickAxisX	=mouseCameraInput.right_left_input;
-	controllerStates[0].mJoystickAxisY	=mouseCameraInput.forward_back_input;
+	//controllerStates[0].mJoystickAxisX	=mouseCameraInput.right_left_input;
+	//controllerStates[0].mJoystickAxisY	=mouseCameraInput.forward_back_input;
 	controllerStates[0].mButtons		=mouseCameraInput.MouseButtons;
 
 	// Reset
