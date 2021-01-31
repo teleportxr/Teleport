@@ -920,6 +920,7 @@ namespace avs
 		avs::uid	server_id = 0;
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
 		int32_t audio_input_enabled = 0;
+		int32_t lock_player_height = 1;
 		VideoConfig video_config;
 	};
 

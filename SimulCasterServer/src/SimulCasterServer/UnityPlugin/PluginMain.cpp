@@ -685,6 +685,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
+	setupCommand.lock_player_height = casterSettings.lockPlayerHeight;
 
 	avs::VideoConfig& videoConfig		= setupCommand.video_config;
 	videoConfig.video_width				= encoderSettings.frameWidth;

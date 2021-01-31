@@ -1362,12 +1362,21 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.up_down_input		=((float)keydown['q']-(float)keydown['z'])*(float)(!keydown[VK_SHIFT]);
 	
 	static float spd = 2.0f;
+	float prevCamHeight = camera.GetPosition()[2];
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
 							,spd
 							,mouseCameraState
 							,mouseCameraInput
-							,14000.f);
+							,14000.f
+							,lastSetupCommand.lock_player_height);
+	// Lock height
+	/*if ()
+	{
+		vec3 currentPos = camera.GetPosition();
+		currentPos[2] = prevCamHeight;
+	}*/
+
 	// consider this to be the position relative to the local origin. Don't let it get too far from centre.
 	vec3 cam_pos=camera.GetPosition();
 	float r=sqrt(cam_pos.x*cam_pos.x+cam_pos.y*cam_pos.y);
