@@ -27,7 +27,7 @@ LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
 LOCAL_SRC_FILES  := 	../src/api/Effect.cpp						\
 						../src/crossplatform/ActorComponents.cpp	\
-						../src/crossplatform/ActorManager.cpp		\
+						../src/crossplatform/NodeManager.cpp		\
 						../src/crossplatform/Animation.cpp			\
 						../src/crossplatform/API.cpp				\
 						../src/crossplatform/Bone.cpp				\

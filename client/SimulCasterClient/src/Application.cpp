@@ -16,7 +16,7 @@
 #include "AndroidDiscoveryService.h"
 #include "Config.h"
 #include "Log.h"
-#include "OVRActorManager.h"
+#include "OVRNodeManager.h"
 #include "VideoSurface.h"
 #include <libavstream/common.hpp>
 
@@ -66,9 +66,10 @@ Application::Application()
 	, mLocale(nullptr)
 	, sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 	, mDeviceContext(&GlobalGraphicsResources.renderPlatform)
-	,clientRenderer(&resourceCreator,&resourceManagers,this,this)
-	, resourceManagers(new OVRActorManager)
-	,resourceCreator(basist::transcoder_texture_format::cTFETC2)
+		,resourceManagers(new OVRNodeManager)
+		,resourceCreator(basist::transcoder_texture_format::cTFETC2)
+	,clientRenderer(&resourceCreator,&resourceManagers,this,this,&clientDeviceState)
+	,lobbyRenderer(&clientDeviceState)
 {
 	RedirectStdCoutCerr();
 
@@ -114,12 +115,12 @@ Application::~Application()
 void Application::Configure(ovrSettings& settings )
 {
 	settings.CpuLevel = 0;
-	settings.GpuLevel = 2;
+	settings.GpuLevel = 0;
 
 	settings.EyeBufferParms.colorFormat = COLOR_8888;
 	settings.EyeBufferParms.depthFormat = DEPTH_16;
 	settings.EyeBufferParms.multisamples = 1;
-	settings.TrackingSpace=VRAPI_TRACKING_SPACE_LOCAL;
+	settings.TrackingSpace=VRAPI_TRACKING_SPACE_LOCAL_FLOOR;
 	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 	settings.RenderMode = RENDERMODE_STEREO;
 }
@@ -265,29 +266,29 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		controllers.InitializeController(app->GetOvrMobile());
 	}
 	controllers.Update(app->GetOvrMobile());
-	ovrVector3f footPos=mScene.GetFootPos();
-
+	clientDeviceState.localFootPos=*((const avs::vec3*)&mScene.GetFootPos());
+	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
 	//Get HMD Position/Orientation
 	avs::vec3 headPos =*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
-	headPos+=*((avs::vec3*)&footPos);
+	//headPos+=clientDeviceState.localFootPos;
 
-	clientRenderer.relativeHeadPos= {headPos.x, headPos.y, headPos.z};
+	clientDeviceState.relativeHeadPos= {headPos.x, headPos.y, headPos.z};
 
 	//Get the Origin Position
 	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 	{
-		clientRenderer.localOriginPos = sessionClient.GetOriginPos();
+		clientDeviceState.localOriginPos = sessionClient.GetOriginPos();
 		receivedInitialPos = sessionClient.receivedInitialPos;
 		if(receivedRelativePos!=sessionClient.receivedRelativePos)
 		{
 			receivedRelativePos=sessionClient.receivedRelativePos;
-			avs::vec3 pos =sessionClient.GetOriginToHeadOffset();
+			//avs::vec3 pos =sessionClient.GetOriginToHeadOffset();
 			//camera.SetPosition((const float*)(&pos));
 		}
 	}
 	// Oculus Origin means where the headset's zero is in real space.
 
-	clientRenderer.cameraPosition = clientRenderer.localOriginPos+clientRenderer.relativeHeadPos;
+	clientRenderer.cameraPosition = clientDeviceState.localOriginPos+clientDeviceState.relativeHeadPos;
 
 	// Handle networked session.
 	if(sessionClient.IsConnected())
@@ -299,7 +300,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		sessionClient.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
-			clientRenderer.localOriginPos = sessionClient.GetOriginPos();
+			clientDeviceState.localOriginPos = sessionClient.GetOriginPos();
 			receivedInitialPos = sessionClient.receivedInitialPos;
 		}
 	}
@@ -337,8 +338,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
 	GlobalGraphicsResources.scrCamera->UpdatePosition(clientRenderer.cameraPosition);
 
-
-	Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
+	//Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	res.FrameIndex   = vrFrame.FrameNumber;
@@ -581,12 +581,12 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
 
 bool Application::OnActorEnteredBounds(avs::uid actor_uid)
 {
-    return resourceManagers.mActorManager->ShowActor(actor_uid);
+    return resourceManagers.mNodeManager->ShowActor(actor_uid);
 }
 
 bool Application::OnActorLeftBounds(avs::uid actor_uid)
 {
-	return resourceManagers.mActorManager->HideActor(actor_uid);
+	return resourceManagers.mNodeManager->HideActor(actor_uid);
 }
 
 std::vector<uid> Application::GetGeometryResources()
@@ -601,12 +601,12 @@ void Application::ClearGeometryResources()
 
 void Application::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
 {
-    resourceManagers.mActorManager->SetVisibleActors(visibleActors);
+    resourceManagers.mNodeManager->SetVisibleActors(visibleActors);
 }
 
 void Application::UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList)
 {
-	resourceManagers.mActorManager->UpdateActorMovement(updateList);
+	resourceManagers.mNodeManager->UpdateActorMovement(updateList);
 }
 
 void Application::OnFrameAvailable()

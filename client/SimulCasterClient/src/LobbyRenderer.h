@@ -1,18 +1,12 @@
-//
-// Created by roder on 06/04/2020.
-//
-
-#ifndef CLIENT_LOBBYRENDERER_H
-#define CLIENT_LOBBYRENDERER_H
-
-
+#pragma once
 #include <GuiSys.h>
-
+class ClientDeviceState;
 class LobbyRenderer
 {
 public:
+	LobbyRenderer(ClientDeviceState *s);
 	void Render(OVR::OvrGuiSys *mGuiSys);
+
+protected:
+	ClientDeviceState *clientDeviceState=nullptr;
 };
-
-
-#endif //CLIENT_LOBBYRENDERER_H

@@ -26,6 +26,7 @@
 #include "VideoDecoderProxy.h"
 #include "LobbyRenderer.h"
 #include "ClientRenderer.h"
+#include "ClientDeviceState.h"
 #include "Controllers.h"
 
 namespace OVR
@@ -83,7 +84,7 @@ public:
 	virtual void OnFrameAvailable() override;
 	/* End DecodeEventInterface */
 
-private:
+protected:
 
 	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
@@ -142,4 +143,5 @@ private:
 	std::string server_ip;
 	int server_discovery_port=10600;
 	ENetAddress remoteEndpoint;
+	ClientDeviceState clientDeviceState;
 };

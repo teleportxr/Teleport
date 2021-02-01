@@ -12,10 +12,11 @@ LOCAL_SHARED_LIBRARIES	:= vrapi
 LOCAL_SRC_FILES			:= \
     ../src/AndroidDiscoveryService.cpp \
     ../src/Application.cpp \
+	../src/ClientDeviceState.cpp\
     ../src/Controllers.cpp \
     ../src/GLESDebug.cpp \
     ../src/GlobalGraphicsResources.cpp \
-    ../src/OVRActorManager.cpp \
+    ../src/OVRNodeManager.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \
 	../src/ClientRenderer.cpp\

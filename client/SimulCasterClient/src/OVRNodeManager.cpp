@@ -1,4 +1,4 @@
-#include "OVRActorManager.h"
+#include "OVRNodeManager.h"
 
 #include "GlGeometry.h"
 #include "OVR_LogUtils.h"
@@ -257,17 +257,17 @@ void OVRActor::RefreshOVRSurfaces()
 	}
 }
 
-std::shared_ptr<scr::Node> OVRActorManager::CreateActor(avs::uid id, const std::string& name) const
+std::shared_ptr<scr::Node> OVRNodeManager::CreateActor(avs::uid id, const std::string& name) const
 {
     return std::make_shared<OVRActor>(id, name);
 }
 
-void OVRActorManager::AddActor(std::shared_ptr<Node> actor, const avs::DataNode& node)
+void OVRNodeManager::AddActor(std::shared_ptr<Node> actor, const avs::DataNode& node)
 {
-	ActorManager::AddActor(actor, node);
+	NodeManager::AddActor(actor, node);
 }
 
-void OVRActorManager::ChangeEffectPass(const char* effectPassName)
+void OVRNodeManager::ChangeEffectPass(const char* effectPassName)
 {
     GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 

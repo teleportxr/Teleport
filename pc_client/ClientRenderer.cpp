@@ -647,8 +647,8 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	else if(show_osd==GEOMETRY_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Actors: %d",resourceManagers.mActorManager->GetActorAmount()), white);
-		auto &rootActors=resourceManagers.mActorManager->GetRootActors();
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Actors: %d",resourceManagers.mNodeManager->GetActorAmount()), white);
+		auto &rootActors=resourceManagers.mNodeManager->GetRootActors();
 		for(const std::shared_ptr<scr::Node>& actor : rootActors)
 		{
 			ListNode(deviceContext,*actor,1);
@@ -773,7 +773,7 @@ void ClientRenderer::WriteHierarchy(int tab, std::shared_ptr<scr::Node> actor)
 
 void ClientRenderer::WriteHierarchies()
 {
-	for(std::shared_ptr<scr::Node> actor : resourceManagers.mActorManager->GetRootActors())
+	for(std::shared_ptr<scr::Node> actor : resourceManagers.mNodeManager->GetRootActors())
 	{
 		WriteHierarchy(0,actor);
 	}
@@ -791,7 +791,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 	vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	cameraConstants.viewPosition = finalViewPos;
 
-	const scr::NodeManager::actorList_t& actorList = resourceManagers.mActorManager->GetRootActors();
+	const scr::NodeManager::actorList_t& actorList = resourceManagers.mNodeManager->GetRootActors();
 	for(const std::shared_ptr<scr::Node>& actor : actorList)
 	{
 		RenderActor(deviceContext, actor);
@@ -801,7 +801,7 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 	{
 		std::shared_ptr<scr::Node> leftHand;
 		std::shared_ptr<scr::Node> rightHand;
-		resourceManagers.mActorManager->GetHands(leftHand, rightHand);
+		resourceManagers.mNodeManager->GetHands(leftHand, rightHand);
 
 		if(leftHand)
 		{
@@ -1280,12 +1280,12 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
 {
-	return resourceManagers.mActorManager->ShowActor(actor_uid);
+	return resourceManagers.mNodeManager->ShowActor(actor_uid);
 }
 
 bool ClientRenderer::OnActorLeftBounds(avs::uid actor_uid)
 {
-	return resourceManagers.mActorManager->HideActor(actor_uid);
+	return resourceManagers.mNodeManager->HideActor(actor_uid);
 }
 
 std::vector<uid> ClientRenderer::GetGeometryResources()
@@ -1301,12 +1301,12 @@ void ClientRenderer::ClearGeometryResources()
 
 void ClientRenderer::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
 {
-	resourceManagers.mActorManager->SetVisibleActors(visibleActors);
+	resourceManagers.mNodeManager->SetVisibleActors(visibleActors);
 }
 
 void ClientRenderer::UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList)
 {
-	resourceManagers.mActorManager->UpdateActorMovement(updateList);
+	resourceManagers.mNodeManager->UpdateActorMovement(updateList);
 }
 #include "Platform/CrossPlatform/Quaterniond.h"
 void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offset)

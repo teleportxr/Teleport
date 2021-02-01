@@ -27,8 +27,8 @@ namespace scr
 {
     struct ResourceManagers
     {
-        ResourceManagers(scr::NodeManager* actorManager)
-            :mActorManager(actorManager),
+        ResourceManagers(scr::NodeManager* NodeManager)
+            :mNodeManager(NodeManager),
             mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
             mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
             mUniformBufferManager(&scr::UniformBuffer::Destroy),
@@ -46,7 +46,7 @@ namespace scr
 		//	timeElapsed : Delta time in milliseconds.
 		void Update(float timeElapsed)
         {
-			mActorManager->Update(timeElapsed);
+			mNodeManager->Update(timeElapsed);
             mIndexBufferManager.Update(timeElapsed);
             mShaderManager.Update(timeElapsed);
             mMaterialManager.Update(timeElapsed);
@@ -77,7 +77,7 @@ namespace scr
 
 			/*
 				//We will resend the actors/objects to update the transform data, as changes in client position (and thus the new invisible actors) aren't stored for the reconnect.
-				mActorManager;
+				mNodeManager;
 
 				//These IDs aren't stored on the server currently, and thus are ignored.
 				mIndexBufferManager.GetAllIDs();
@@ -90,7 +90,7 @@ namespace scr
 		//Clear all resources.
 		void Clear()
 		{
-			mActorManager->Clear();
+			mNodeManager->Clear();
 
 			mIndexBufferManager.Clear();
 			mShaderManager.Clear();
@@ -119,7 +119,7 @@ namespace scr
 			mAnimationManager.ClearCareful(excludeList);
 
 			//Last as it will likely be the largest.
-			mActorManager->ClearCareful(excludeList, outExistingActors);
+			mNodeManager->ClearCareful(excludeList, outExistingActors);
 
 			///As the UIDs of these aren't(?) stored on the server; the server can't confirm their existence.
 			///If the mesh is cleared, then these will be cleared.
@@ -129,7 +129,7 @@ namespace scr
 			//mVertexBufferManager.ClearCareful(excludeList);
 		}
 
-        std::unique_ptr<scr::NodeManager>	mActorManager;
+        std::unique_ptr<scr::NodeManager>	mNodeManager;
         ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
         ResourceManager<scr::Shader>        mShaderManager;
         ResourceManager<scr::Material>		mMaterialManager;
@@ -201,7 +201,7 @@ public:
 		m_LightManager = &resourceManagers.mLightManager;
 		m_BoneManager = &resourceManagers.mBoneManager;
 		m_AnimationManager = &resourceManagers.mAnimationManager;
-		m_pActorManager = resourceManagers.mActorManager.get();
+		m_pNodeManager = resourceManagers.mNodeManager.get();
 	}
 
 	// Inherited via GeometryTargetBackendInterface
@@ -340,7 +340,7 @@ private:
 	ResourceManager<scr::Bone>* m_BoneManager = nullptr;
 	ResourceManager<scr::Animation>* m_AnimationManager = nullptr;
 
-	scr::NodeManager* m_pActorManager = nullptr;
+	scr::NodeManager* m_pNodeManager = nullptr;
 
 	std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 	std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.

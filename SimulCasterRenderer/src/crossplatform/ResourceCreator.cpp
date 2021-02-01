@@ -573,7 +573,7 @@ void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 	{
 		case NodeDataType::Mesh:
 			// TODO: WHY do we only update the transform if the type is a mesh..?
-			if(!m_pActorManager->UpdateActorTransform(node_uid, node.transform.position, node.transform.rotation, node.transform.scale))
+			if(!m_pNodeManager->UpdateActorTransform(node_uid, node.transform.position, node.transform.rotation, node.transform.scale))
 			{
 				CreateActor(node_uid, node);
 			}
@@ -676,7 +676,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 //TODO: Rename Actor to MeshNode.
 void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node)
 {
-	if(m_pActorManager->HasActor(node_uid))
+	if(m_pNodeManager->HasActor(node_uid))
 	{
 		SCR_CERR << "CreateActor(" << node_uid << ", " << node.name << "). Already created!\n";
 		return;
@@ -689,7 +689,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node)
 	//Whether the actor is missing any resource before, and must wait for them before it can be completed.
 	bool isMissingResources = false;
 
-	newActor->actor = m_pActorManager->CreateActor(node_uid, node.name);
+	newActor->actor = m_pNodeManager->CreateActor(node_uid, node.name);
 	newActor->actor->SetLocalTransform(static_cast<scr::Transform>(node.transform));
 
 	newActor->actor->SetMesh(m_MeshManager->Get(node.data_uid));
@@ -774,7 +774,7 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node)
 	newActor->actor->SetChildrenIDs(node.childrenIDs);
 
 	//Create MeshNode even if it is missing resources, but create a hand if it is a hand.
-	m_pActorManager->AddActor(newActor->actor, node);
+	m_pNodeManager->AddActor(newActor->actor, node);
 
 	//Complete actor now, if we aren't missing any resources.
 	if(!isMissingResources)

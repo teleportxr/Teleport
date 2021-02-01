@@ -90,10 +90,12 @@ struct __attribute__ ((packed)) VideoTagDataCube
 	LightTag lightTags[4];
 };
 
+class ClientDeviceState;
+
 class ClientRenderer
 {
 public:
-	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c);
+	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c,ClientDeviceState *s);
 	~ClientRenderer();
 
 	void ToggleTextures();
@@ -118,10 +120,6 @@ public:
 	avs::Queue mAudioQueue;
 	avs::Queue mGeometryQueue;
 
-	avs::vec3 localOriginPos;		// in metres. The headPose will be relative to this.
-	avs::vec3 relativeHeadPos;
-	scr::mat4 transformToOculusOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.
-
 	scr::ResourceManagers	*resourceManagers	=nullptr;
 	ResourceCreator			*resourceCreator	=nullptr;
 	ClientAppInterface		*clientAppInterface	=nullptr;
@@ -129,7 +127,7 @@ public:
 	float eyeSeparation=0.06f;
 	avs::Pose headPose;
 	avs::Pose controllerPoses[2];
-	avs::vec3 cameraPosition;	// in real space.
+	avs::vec3 cameraPosition;	// in game absolute space.
 	avs::VideoConfig videoConfig;
 	const scr::quat HAND_ROTATION_DIFFERENCE {0.0000000456194194, 0.923879385, -0.382683367, 0.000000110135019}; //Adjustment to the controller's rotation to get the desired rotation.
 
@@ -194,11 +192,12 @@ public:
 		CONTROLLER_OSD,
 		NUM_OSDS
 	};
-	int show_osd = GEOMETRY_OSD;
+	int show_osd = CAMERA_OSD;
 	bool mIsCubemapVideo = true;
 	void DrawOSD(OVR::OvrGuiSys *mGuiSys);
 	avs::SetupCommand lastSetupCommand;
-private:
+protected:
+	ClientDeviceState *clientDeviceState=nullptr;
 	void UpdateTagDataBuffers();
 	static constexpr float INFO_TEXT_DURATION = 0.017f;
 	static constexpr size_t MAX_RESOURCES_PER_LINE = 3;

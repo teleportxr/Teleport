@@ -4,7 +4,7 @@
 
 #include "libavstream/common.hpp"
 
-#include "ActorManager.h"
+#include "NodeManager.h"
 #include "GlobalGraphicsResources.h"
 
 class OVRActor : public scr::Node
@@ -34,11 +34,11 @@ private:
 	void RefreshOVRSurfaces();
 };
 
-class OVRActorManager : public scr::ActorManager
+class OVRNodeManager : public scr::NodeManager
 {
 public:
 
-    virtual ~OVRActorManager() = default;
+    virtual ~OVRNodeManager() = default;
 
     virtual std::shared_ptr<scr::Node> CreateActor(avs::uid id, const std::string& name) const override;
 

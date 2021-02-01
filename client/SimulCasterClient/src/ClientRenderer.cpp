@@ -10,7 +10,8 @@
 #include <VrApi_Types.h>
 #include <VrApi_Input.h>
 
-#include "OVRActorManager.h"
+#include "OVRNodeManager.h"
+#include "ClientDeviceState.h"
 
 static const char *ToString(scr::Light::Type type)
 {
@@ -49,11 +50,9 @@ avs::vec3 QuaternionTimesVector(const ovrQuatf &q,const avs::vec3 &vec)
 					s1 * q.z + q.w * z1 + q.x * y1 - q.y * x1};
 	return ret;
 }
-ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c)
+ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c
+,ClientDeviceState *s)
 		:mDecoder(avs::DecoderBackend::Custom)
-		, localOriginPos(0,0,0)
-		,relativeHeadPos(0,0,0)
-		, transformToOculusOrigin(scr::mat4::Translation(-localOriginPos))
 		, resourceManagers(rm)
 		, resourceCreator(r)
 		, clientAppInterface(c)
@@ -64,6 +63,7 @@ ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,Sess
         , mTagDataIDBuffer(nullptr)
 		, mTagDataArrayBuffer(nullptr)
 		, mTagDataBuffer(nullptr)
+		, clientDeviceState(s)
 {
 }
 
@@ -744,7 +744,7 @@ void ClientRenderer::UpdateHandObjects()
 				remoteStates.push_back(remoteState);
 				if(deviceIndex < 2)
 				{
-					avs::vec3 pos = localOriginPos + *((const avs::vec3 *)&remoteState.HeadPose.Pose.Position);
+					avs::vec3 pos = clientDeviceState->localOriginPos + *((const avs::vec3 *)&remoteState.HeadPose.Pose.Position);
 
 					controllerPoses[deviceIndex].position = *((const avs::vec3 *)(&pos));
 					controllerPoses[deviceIndex].orientation = *((const avs::vec4 *)(&remoteState.HeadPose.Pose.Orientation));
@@ -759,7 +759,7 @@ void ClientRenderer::UpdateHandObjects()
 	}
 
 	std::shared_ptr<scr::Node> leftHand, rightHand;
-	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
+	resourceManagers->mNodeManager->GetHands(leftHand, rightHand);
 
 	switch(remoteStates.size())
 	{
@@ -820,7 +820,7 @@ void ClientRenderer::UpdateHandObjects()
 void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 {
 	//Render local actors.
-	const scr::ActorManager::actorList_t &rootActors = resourceManagers->mActorManager->GetRootActors();
+	const scr::NodeManager::actorList_t &rootActors = resourceManagers->mNodeManager->GetRootActors();
 	for(std::shared_ptr<scr::Node> actor : rootActors)
 	{
 		RenderActor(res, actor);
@@ -828,7 +828,7 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 
 	//Retrieve hands.
 	std::shared_ptr<scr::Node> leftHand, rightHand;
-	resourceManagers->mActorManager->GetHands(leftHand, rightHand);
+	resourceManagers->mNodeManager->GetHands(leftHand, rightHand);
 
 	//Render hands, if they exist.
 	if(leftHand)
@@ -844,8 +844,8 @@ void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node>
 
 	//----OVR Node Set Transforms----//
 	scr::mat4 globalMatrix=actor->GetGlobalTransform().GetTransformMatrix();
-	transformToOculusOrigin=scr::mat4::Translation(-localOriginPos);
-	scr::mat4 scr_Transform = transformToOculusOrigin * globalMatrix;
+	clientDeviceState->transformToLocalOrigin=scr::mat4::Translation(-clientDeviceState->localOriginPos);
+	scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
 
 	std::shared_ptr<scr::Skin> skin = ovrActor->GetSkin();
 	if(skin)
@@ -877,10 +877,10 @@ void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node>
 
 void ClientRenderer::ToggleTextures()
 {
-	OVRActorManager* actorManager = dynamic_cast<OVRActorManager*>(resourceManagers->mActorManager.get());
+	OVRNodeManager* NodeManager = dynamic_cast<OVRNodeManager*>(resourceManagers->mNodeManager.get());
 	passSelector++;
 	passSelector=passSelector%(passNames.size());
-	actorManager->ChangeEffectPass(passNames[passSelector].c_str());
+	NodeManager->ChangeEffectPass(passNames[passSelector].c_str());
 }
 
 
@@ -929,10 +929,12 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 	{
 		mGuiSys->ShowInfoText(
 				INFO_TEXT_DURATION,
-				"  Camera Position: %1.3f, %1.3f, %1.3f\n"
-				      "Received  Origin: %1.3f, %1.3f, %1.3f\n"
+				      "Clientspace  Origin: %1.3f, %1.3f, %1.3f\n"
+					       "  + Camera Relative: %1.3f, %1.3f, %1.3f\n"
+					       "  = Camera Position: %1.3f, %1.3f, %1.3f\n"
+				,clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y,clientDeviceState->localOriginPos.z
+				,clientDeviceState->relativeHeadPos.x,clientDeviceState->relativeHeadPos.y,clientDeviceState->relativeHeadPos.z
 				,cameraPosition.x, cameraPosition.y, cameraPosition.z
-				,localOriginPos.x,localOriginPos.y,localOriginPos.z
 				);
 	}
 	else if(show_osd == GEOMETRY_OSD)
@@ -944,7 +946,7 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 			"Actors: %d \n"
 			"Orphans: %d",
 			GlobalGraphicsResources.effectPassName,
-			static_cast<uint64_t>(resourceManagers->mActorManager->GetActorAmount()),
+			static_cast<uint64_t>(resourceManagers->mNodeManager->GetActorAmount()),
 			ctr.m_packetMapOrphans
 		);
 
