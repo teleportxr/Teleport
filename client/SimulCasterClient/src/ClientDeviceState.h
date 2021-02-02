@@ -12,6 +12,7 @@ public:
 	avs::vec3 relativeHeadPos;
 	scr::mat4 transformToLocalOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.
 	float eyeHeight=0.5f;
+	float eyeYaw=0.0f;
 
 };
 

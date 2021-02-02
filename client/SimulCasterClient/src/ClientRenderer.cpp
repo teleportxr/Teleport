@@ -912,58 +912,61 @@ void ClientRenderer::Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mG
 
 void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 {
-	auto ctr=mNetworkSource.getCounterValues();
-	if(show_osd== NETWORK_OSD)
+	auto ctr = mNetworkSource.getCounterValues();
+	if (show_osd == NETWORK_OSD)
 	{
 		mGuiSys->ShowInfoText(
 				INFO_TEXT_DURATION,
 				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 				"Incomplete Decoder Packets: %d\n"
-				"Framerate: %4.4f Bandwidth(kbps): %4.4f"
-				,mDecoder.getTotalFramesProcessed(), ctr.networkPacketsDropped,
+				"Framerate: %4.4f Bandwidth(kbps): %4.4f", mDecoder.getTotalFramesProcessed(),
+				ctr.networkPacketsDropped,
 				ctr.decoderPacketsDropped,
 				ctr.incompleteDecoderPacketsReceived,
 				frameRate, ctr.bandwidthKPS);
 	}
-	else if(show_osd== CAMERA_OSD)
+	else if (show_osd == CAMERA_OSD)
 	{
 		mGuiSys->ShowInfoText(
 				INFO_TEXT_DURATION,
-				      "Clientspace  Origin: %1.3f, %1.3f, %1.3f\n"
-					       "  + Camera Relative: %1.3f, %1.3f, %1.3f\n"
-					       "  = Camera Position: %1.3f, %1.3f, %1.3f\n"
-				,clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y,clientDeviceState->localOriginPos.z
-				,clientDeviceState->relativeHeadPos.x,clientDeviceState->relativeHeadPos.y,clientDeviceState->relativeHeadPos.z
-				,cameraPosition.x, cameraPosition.y, cameraPosition.z
-				);
+				"Clientspace  Origin: %1.3f, %1.3f, %1.3f\n"
+				"  + Camera Relative: %1.3f, %1.3f, %1.3f\n"
+				"  = Camera Position: %1.3f, %1.3f, %1.3f\n\n"
+				"Eye yaw: %1.3f\n", clientDeviceState->localOriginPos.x,
+				clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z,
+				clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,
+				clientDeviceState->relativeHeadPos.z, cameraPosition.x, cameraPosition.y,
+				cameraPosition.z, clientDeviceState->eyeYaw
+							 );
 	}
-	else if(show_osd == GEOMETRY_OSD)
+	else if (show_osd == GEOMETRY_OSD)
 	{
 		mGuiSys->ShowInfoText
-		(
-			INFO_TEXT_DURATION,
-		"%s\n"
-			"Actors: %d \n"
-			"Orphans: %d",
-			GlobalGraphicsResources.effectPassName,
-			static_cast<uint64_t>(resourceManagers->mNodeManager->GetActorAmount()),
-			ctr.m_packetMapOrphans
-		);
+				(
+						INFO_TEXT_DURATION,
+						"%s\n"
+						"Actors: %d \n"
+						"Orphans: %d",
+						GlobalGraphicsResources.effectPassName,
+						static_cast<uint64_t>(resourceManagers->mNodeManager->GetActorAmount()),
+						ctr.m_packetMapOrphans
+				);
 
-		const auto& missingResources = resourceCreator->GetMissingResources();
-		if(missingResources.size() > 0)
+		const auto &missingResources = resourceCreator->GetMissingResources();
+		if (missingResources.size() > 0)
 		{
 			std::ostringstream missingResourcesStream;
 			missingResourcesStream << "Missing Resources\n";
 
 			size_t resourcesOnLine = 0;
-			for(const auto& missingPair : missingResources)
+			for (
+				const auto &missingPair : missingResources)
 			{
-				const ResourceCreator::MissingResource& missingResource = missingPair.second;
+				const ResourceCreator::MissingResource &missingResource = missingPair.second;
 				missingResourcesStream << missingResource.resourceType << "_" << missingResource.id;
 
 				resourcesOnLine++;
-				if(resourcesOnLine >= MAX_RESOURCES_PER_LINE)
+				if (resourcesOnLine >= MAX_RESOURCES_PER_LINE)
 				{
 					missingResourcesStream << std::endl;
 					resourcesOnLine = 0;
@@ -977,29 +980,33 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, missingResourcesStream.str().c_str());
 		}
 	}
-	else if(show_osd==TAG_OSD)
+	else if (show_osd == TAG_OSD)
 	{
 		std::ostringstream sstr;
 		std::setprecision(5);
-		sstr<<"Tags\n"<<std::setw(4) ;
-		for(size_t i=0;i<std::min((size_t)3,videoTagDataCubeArray.size());i++)
+		sstr << "Tags\n" << std::setw(4);
+		for (
+				size_t i = 0; i < std::min((size_t) 3, videoTagDataCubeArray.size()); i++)
 		{
-			auto &tag=videoTagDataCubeArray[i];
-			sstr<<tag.coreData.lightCount<<" lights\n";
-			for(size_t j=0;j<tag.lights.size();j++)
+			auto &tag = videoTagDataCubeArray[i];
+			sstr << tag.coreData.lightCount << " lights\n";
+			for (
+					size_t j = 0; j < tag.lights.size(); j++)
 			{
-				auto &l=tag.lights[j];
-				sstr<<"\t"<<l.uid<<": Type "<<ToString((scr::Light::Type)l.lightType)<<", clr "<<l.color.x<<","<<l.color.y<<","<<l.color.z;
-				if(l.lightType==scr::LightType::Directional)
+				auto &l = tag.lights[j];
+				sstr << "\t" << l.uid << ": Type " << ToString((scr::Light::Type) l.lightType)
+					 << ", clr " << l.color.x << "," << l.color.y << "," << l.color.z;
+				if (l.lightType == scr::LightType::Directional)
 				{
-					ovrQuatf q={l.orientation.x,l.orientation.y,l.orientation.z,l.orientation.w};
-					avs::vec3 z={0,0,1.0f};
-					avs::vec3 direction=QuaternionTimesVector(q,z);
+					ovrQuatf  q         = {
+							l.orientation.x, l.orientation.y, l.orientation.z, l.orientation.w};
+					avs::vec3 z         = {0, 0, 1.0f};
+					avs::vec3 direction = QuaternionTimesVector(q, z);
 					sstr << ", d " << direction.x << "," << direction.y << "," << direction.z;
 				}
-				sstr<<"\n";
+				sstr << "\n";
 			}
 		}
-		mGuiSys->ShowInfoText(INFO_TEXT_DURATION,sstr.str().c_str());
+		mGuiSys->ShowInfoText(INFO_TEXT_DURATION, sstr.str().c_str());
 	}
 }

@@ -156,9 +156,12 @@ OVR::ovrSurfaceDef OVRActor::CreateOVRSurface(size_t materialIndex, std::shared_
     const scr::Effect::EffectPassCreateInfo* effectPassCreateInfo = gl_effect.GetEffectPassCreateInfo(completePassName.c_str());
 
     //Material
-    if(materialCI.diffuse.texture) materialCI.diffuse.texture->UseSampler(globalGraphicsResources.sampler);
-    if(materialCI.normal.texture) materialCI.normal.texture->UseSampler(globalGraphicsResources.sampler);
-    if(materialCI.combined.texture)materialCI.combined.texture->UseSampler(globalGraphicsResources.sampler);
+    if(materialCI.diffuse.texture)
+    	materialCI.diffuse.texture->UseSampler(globalGraphicsResources.sampler);
+    if(materialCI.normal.texture)
+    	materialCI.normal.texture->UseSampler(globalGraphicsResources.sampler);
+    if(materialCI.combined.texture)
+    	materialCI.combined.texture->UseSampler(globalGraphicsResources.sampler);
 
     //----Set OVR Node----//
     //Construct Mesh

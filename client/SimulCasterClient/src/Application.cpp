@@ -67,9 +67,9 @@ Application::Application()
 	, sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 	, mDeviceContext(&GlobalGraphicsResources.renderPlatform)
 		,resourceManagers(new OVRNodeManager)
+		,clientRenderer(&resourceCreator,&resourceManagers,this,this,&clientDeviceState)
+		,lobbyRenderer(&clientDeviceState)
 		,resourceCreator(basist::transcoder_texture_format::cTFETC2)
-	,clientRenderer(&resourceCreator,&resourceManagers,this,this,&clientDeviceState)
-	,lobbyRenderer(&clientDeviceState)
 {
 	RedirectStdCoutCerr();
 
@@ -238,6 +238,7 @@ extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 
 ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
+	mScene.Frame(vrFrame);
     clientRenderer.eyeSeparation=vrFrame.IPD;
 	GL_CheckErrors("Frame: Start");
 	// process input events first because this mirrors the behavior when OnKeyEvent was
@@ -270,6 +271,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
 	//Get HMD Position/Orientation
 	avs::vec3 headPos =*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
+	clientDeviceState.eyeYaw=mScene.GetYawOffset();
 	//headPos+=clientDeviceState.localFootPos;
 
 	clientDeviceState.relativeHeadPos= {headPos.x, headPos.y, headPos.z};
@@ -329,7 +331,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Build frame
 	ovrFrameResult res;
 
-	mScene.Frame(vrFrame);
 	mScene.GetFrameMatrices(vrFrame.FovX, vrFrame.FovY, res.FrameMatrices);
 	mScene.GenerateFrameSurfaceList(res.FrameMatrices, res.Surfaces);
 
@@ -337,8 +338,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
 	GlobalGraphicsResources.scrCamera->UpdatePosition(clientRenderer.cameraPosition);
-
-	//Quat<float> headPose = vrFrame.Tracking.HeadPose.Pose.Orientation;
 
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	res.FrameIndex   = vrFrame.FrameNumber;
