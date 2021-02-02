@@ -475,6 +475,8 @@ TELEPORT_EXPORT void SetConnectionTimeout(int32_t timeout)
 
 TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 {
+	unlinkedClientIDs.clear();
+
 	serverID = avs::GenerateUid();
 
 	SetShowActorDelegate(initialiseState->showActor);
@@ -522,6 +524,7 @@ TELEPORT_EXPORT void Shutdown()
 	}
 
 	lostClients.clear();
+	unlinkedClientIDs.clear();
 	clientServices.clear();
 
 	onShowActor = nullptr;
