@@ -575,7 +575,7 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	}
 	else
 	{
-		TELEPORT_CERR << "Already got client: " << clientID << std::endl;
+		TELEPORT_WARN << "Already got client: " << clientID << std::endl;
 		// already got this client. This can happen if the client thinks it's disconnected but we didn't know that.
 //		auto &c= clientServices.find(clientID);
 //		if(c!=clientServices.end())
@@ -1016,7 +1016,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 	auto& clientData = c->second;
 	if(!clientData.clientMessaging.hasPeer())
 	{
-		TELEPORT_CERR<< "EncodeVideoFrame called but peer is not connected." << std::endl;
+		//TELEPORT_ERROR << "EncodeVideoFrame called but peer is not connected." << std::endl;
 		return;
 	}
 	Result result = clientData.videoEncodePipeline->encode(tagData, tagDataSize, clientData.videoKeyframeRequired);
@@ -1112,7 +1112,7 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 	auto& clientData = c->second;
 	if (!clientData.clientMessaging.hasPeer())
 	{
-		TELEPORT_CERR << "SendAudio called but peer is not connected." << std::endl;
+		//TELEPORT_CERR << "SendAudio called but peer is not connected." << std::endl;
 		return;
 	}
 
