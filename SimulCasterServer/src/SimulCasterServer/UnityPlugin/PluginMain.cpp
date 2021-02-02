@@ -98,7 +98,7 @@ struct LogMessage
 	void* userData;
 };
 
-static std::vector<LogMessage> messages;
+static std::vector<LogMessage> messages(100);
 static std::mutex messagesMutex;
 
 
@@ -462,10 +462,22 @@ void PipeOutMessages()
 
 TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc msgh)
 {
-	messageHandler=msgh;
-	avsContext.setMessageHandler(AccumulateMessagesFromThreads, nullptr);
-	debug_buffer.setOutputCallback(&passOnOutput);
-	debug_buffer.setErrorCallback(&passOnError);
+	if(msgh)
+	{
+		debug_buffer.setToOutputWindow(false);
+		messageHandler=msgh;
+		avsContext.setMessageHandler(AccumulateMessagesFromThreads, nullptr); 
+		debug_buffer.setOutputCallback(&passOnOutput);
+		debug_buffer.setErrorCallback(&passOnError);
+	}
+	else
+	{
+		debug_buffer.setToOutputWindow(true);
+		messageHandler=nullptr;
+		avsContext.setMessageHandler(nullptr, nullptr); 
+		debug_buffer.setOutputCallback(nullptr);
+		debug_buffer.setErrorCallback(nullptr);
+	}
 }
 
 TELEPORT_EXPORT void SetConnectionTimeout(int32_t timeout)
@@ -1107,7 +1119,7 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 	Result result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
 	if (!result)
 	{
-		TELEPORT_CERR << "Error occurred when trying to send audio" << std::endl;
+		TELEPORT_CERR << "Error "<<result<<" occurred when trying to send audio" << std::endl;
 		// repeat the attempt for debugging purposes.
 		result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
 	} 
@@ -1323,3 +1335,13 @@ TELEPORT_EXPORT void CompressNextTexture()
 	geometryStore.compressNextTexture();
 }
 ///GeometryStore END
+
+TELEPORT_EXPORT size_t SizeOf(const char *str)
+{
+	if(strcmp(str,"CasterSettings")==0)
+	{
+		return sizeof(CasterSettings);
+	}
+	TELEPORT_CERR<<"Unknown type for SizeOf: "<<str<<std::endl;
+	return 0;
+}

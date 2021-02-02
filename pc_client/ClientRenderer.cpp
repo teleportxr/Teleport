@@ -1,4 +1,3 @@
-#define NOMINMAX				// Prevent Windows from defining min and max as macros
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 
 #include "Platform/Core/EnvironmentVariables.h"
@@ -1321,10 +1320,12 @@ void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offse
 	controllerSim.angle=atan2f(-controllerSim.view_dir.x, controllerSim.view_dir.y);
 	float sine= sin(controllerSim.angle), cosine=cos(controllerSim.angle);
 	static float hand_dist=0.5f;
-	controllerSim.pos_offset[index]=vec3(hand_dist*(-sine+offset*cosine),hand_dist*(cosine+offset*sine),0.0f);
+	controllerSim.pos_offset[index]=vec3(hand_dist*(-sine+offset*cosine),hand_dist*(cosine+offset*sine),-0.5f);
 	// Get horizontal azimuth of view.
-	pose.position=camera.GetPosition();
-	pose.position+=*((avs::vec3*)&controllerSim.pos_offset[index]);
+	vec3 camera_local_pos=camera.GetPosition();
+	vec3 worldspace_pos=localOriginPos+camera_local_pos;
+	worldspace_pos+=controllerSim.pos_offset[index];
+	pose.position=*((avs::vec3*)&worldspace_pos);
 
 	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
 	// The up direction is x, and the left direction is z.
@@ -1367,8 +1368,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,spd
 							,mouseCameraState
 							,mouseCameraInput
-							,14000.f
-							,lastSetupCommand.lock_player_height);
+							,14000.f);
+
 
 	// consider this to be the position relative to the local origin. Don't let it get too far from centre.
 	vec3 cam_pos=camera.GetPosition();
@@ -1423,9 +1424,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 		avs::Pose headPose;
 		headPose.orientation = *((avs::vec4*)&q_rel);
-		vec3 pos = camera.GetPosition();
-		headPose.position = *((avs::vec3*)&pos);
-		
+		vec3 offset = camera.GetPosition();
+		vec3 worldspace_camera_pos=localOriginPos+offset;
+		headPose.position = *((avs::vec3*)&worldspace_camera_pos);
 		avs::Pose controllerPoses[2];
 		FillInControllerPose(0,controllerPoses[0],1.0f);
 		FillInControllerPose(1,controllerPoses[1], -1.0f);

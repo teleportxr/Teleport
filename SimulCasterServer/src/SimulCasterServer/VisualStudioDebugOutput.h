@@ -153,6 +153,10 @@ public:
     {
 		writeString(str,false);
     }
+    void setToOutputWindow(bool o)
+	{
+		to_output_window=o;
+	}
     void writeString(const std::string &str,bool error)
     {
 		if(to_logfile)

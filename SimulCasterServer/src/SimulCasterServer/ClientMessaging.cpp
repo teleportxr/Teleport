@@ -73,7 +73,14 @@ namespace SCServer
 		ListenAddress.port = listenPort;
 
 		// ServerHost will live for the lifetime of the session.
-		host = enet_host_create(&ListenAddress, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+		if(host)
+		{
+			TELEPORT_COUT<<"startSession - already have host ptr.\n";
+		}
+		else
+		{
+			host = enet_host_create(&ListenAddress, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+		}
 		if(!host)
 		{
 			std::cerr << "Session: Failed to create ENET server host!\n";
