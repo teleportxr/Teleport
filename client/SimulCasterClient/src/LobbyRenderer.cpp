@@ -15,5 +15,5 @@ void LobbyRenderer::Render(OVR::OvrGuiSys *mGuiSys)
 			,clientDeviceState->relativeHeadPos.x,clientDeviceState->relativeHeadPos.y,clientDeviceState->relativeHeadPos.z
 			,clientDeviceState->localFootPos.x,clientDeviceState->localFootPos.y,clientDeviceState->localFootPos.z
 			,clientDeviceState->eyeHeight
-			,clientDeviceState->eyeYaw);
+			,clientDeviceState->stickYaw);
 }

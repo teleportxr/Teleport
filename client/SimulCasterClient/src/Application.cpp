@@ -66,9 +66,9 @@ Application::Application()
 	, mLocale(nullptr)
 	, sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 	, mDeviceContext(&GlobalGraphicsResources.renderPlatform)
-		,resourceManagers(new OVRNodeManager)
 		,clientRenderer(&resourceCreator,&resourceManagers,this,this,&clientDeviceState)
 		,lobbyRenderer(&clientDeviceState)
+		,resourceManagers(new OVRNodeManager)
 		,resourceCreator(basist::transcoder_texture_format::cTFETC2)
 {
 	RedirectStdCoutCerr();
@@ -129,6 +129,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 {
 	if(intentType != INTENT_LAUNCH)
 		return;
+	RedirectStdCoutCerr();
 
 	std::string client_ini=LoadTextFile("client.ini");
 	CSimpleIniA ini;
@@ -269,12 +270,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	controllers.Update(app->GetOvrMobile());
 	clientDeviceState.localFootPos=*((const avs::vec3*)&mScene.GetFootPos());
 	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
-	//Get HMD Position/Orientation
-	avs::vec3 headPos =*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
-	clientDeviceState.eyeYaw=mScene.GetYawOffset();
-	//headPos+=clientDeviceState.localFootPos;
 
-	clientDeviceState.relativeHeadPos= {headPos.x, headPos.y, headPos.z};
 
 	//Get the Origin Position
 	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
@@ -290,16 +286,18 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	}
 	// Oculus Origin means where the headset's zero is in real space.
 
-	clientRenderer.cameraPosition = clientDeviceState.localOriginPos+clientDeviceState.relativeHeadPos;
+	//Get HMD Position/Orientation
+	clientDeviceState.stickYaw=mScene.GetStickYaw();
+	//headPos+=clientDeviceState.localFootPos;
+	clientDeviceState.relativeHeadPos=*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
+	clientDeviceState.cameraPosition = clientDeviceState.localOriginPos+clientDeviceState.relativeHeadPos;
 
+	clientDeviceState.SetHeadPose(vrFrame.Tracking.HeadPose.Pose.Position,vrFrame.Tracking.HeadPose.Pose.Orientation);
 	// Handle networked session.
 	if(sessionClient.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
-		clientRenderer.headPose.orientation=*((avs::vec4*)(&vrFrame.Tracking.HeadPose.Pose.Orientation));
-		clientRenderer.headPose.position = {clientRenderer.cameraPosition.x, clientRenderer.cameraPosition.y, clientRenderer.cameraPosition.z};
-
-		sessionClient.Frame(displayInfo, clientRenderer.headPose, clientRenderer.controllerPoses, receivedInitialPos, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
+		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
 			clientDeviceState.localOriginPos = sessionClient.GetOriginPos();
@@ -314,7 +312,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		}
 		if (sessionClient.HasDiscovered())
 		{
-			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
+			// if connect fails, restart discovery.
+			if(!sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT))
+				sessionClient.Disconnect(0);
 		}
 	}
 
@@ -337,7 +337,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
-	GlobalGraphicsResources.scrCamera->UpdatePosition(clientRenderer.cameraPosition);
+	GlobalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.cameraPosition);
 
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	res.FrameIndex   = vrFrame.FrameNumber;

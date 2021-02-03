@@ -110,7 +110,7 @@ uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t client
     {
         char remoteIP[20];
         enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
-        WARN("Discovered session server: %s:%d", remoteIP, remote.port);
+        LOG("Discovered session server: %s:%d", remoteIP, remote.port);
 
         enet_socket_destroy(serviceDiscoverySocket);
         serviceDiscoverySocket = 0;

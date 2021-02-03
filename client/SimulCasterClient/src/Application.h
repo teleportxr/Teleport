@@ -135,9 +135,9 @@ protected:
 
 	std::string LoadTextFile(const char *filename) override;
 	ClientRenderer clientRenderer;
+	LobbyRenderer lobbyRenderer;
 	scr::ResourceManagers resourceManagers;
 	ResourceCreator resourceCreator;
-	LobbyRenderer lobbyRenderer;
 	Controllers controllers;
 
 	std::string server_ip;

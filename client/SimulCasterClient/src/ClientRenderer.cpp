@@ -30,6 +30,11 @@ static const char *ToString(scr::Light::Type type)
 		case scr::Light::Type::AREA:
 			lightTypeName=" Area";
 			break;
+		case scr::Light::Type::DISC:
+			lightTypeName=" Disc";
+			break;
+		default:
+			break;
 	};
 	return lightTypeName;
 }
@@ -275,7 +280,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 			(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform),
 			scr::Camera::ProjectionType::PERSPECTIVE,
 			scr::quat(0.0f, 0.0f, 0.0f, 1.0f),
-			cameraPosition
+			clientDeviceState->cameraPosition
 	};
 	GlobalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
@@ -706,19 +711,19 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrF
     if(mCubemapTexture->IsValid())
     {
         ovrQuatf X0={1.0f,0.f,0.f,0.0f};
-        ovrQuatf headPoseQ={headPose.orientation.x,headPose.orientation.y,headPose.orientation.z,headPose.orientation.w};
-        ovrQuatf headPoseC={-headPose.orientation.x,-headPose.orientation.y,-headPose.orientation.z,headPose.orientation.w};
+        ovrQuatf headPoseQ={clientDeviceState->headPose.orientation.x,clientDeviceState->headPose.orientation.y,clientDeviceState->headPose.orientation.z,clientDeviceState->headPose.orientation.w};
+        ovrQuatf headPoseC={-clientDeviceState->headPose.orientation.x,-clientDeviceState->headPose.orientation.y,-clientDeviceState->headPose.orientation.z,clientDeviceState->headPose.orientation.w};
         ovrQuatf xDir= QuaternionMultiply(QuaternionMultiply(headPoseQ,X0),headPoseC);
         float w=eyeSeparation/2.0f;//.04f; //half separation.
         avs::vec4 eye={w*xDir.x,w*xDir.y,w*xDir.z,0.0f};
         avs::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
         videoUB.eyeOffsets[0]=left_eye;		// left eye
         videoUB.eyeOffsets[1]=eye;	// right eye.
-        videoUB.cameraPosition=cameraPosition;
+        videoUB.cameraPosition=clientDeviceState->cameraPosition;
 
-        mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
+        mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *)mCubemapTexture.get())->GetGlTexture());
         //mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
-		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data =  &(((scc::GL_UniformBuffer *)  		mVideoUB.get())->GetGlBuffer());
+		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data =  &(((scc::GL_UniformBuffer *)mVideoUB.get())->GetGlBuffer());
 		//mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
 		OVR::GlBuffer& buf=((scc::GL_ShaderStorageBuffer *)  mTagDataBuffer.get())->GetGlBuffer();
 		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &buf;
@@ -744,10 +749,7 @@ void ClientRenderer::UpdateHandObjects()
 				remoteStates.push_back(remoteState);
 				if(deviceIndex < 2)
 				{
-					avs::vec3 pos = clientDeviceState->localOriginPos + *((const avs::vec3 *)&remoteState.HeadPose.Pose.Position);
-
-					controllerPoses[deviceIndex].position = *((const avs::vec3 *)(&pos));
-					controllerPoses[deviceIndex].orientation = *((const avs::vec4 *)(&remoteState.HeadPose.Pose.Orientation));
+					clientDeviceState->SetControllerPose(deviceIndex,remoteState.HeadPose.Pose.Position,remoteState.HeadPose.Pose.Orientation);
 				}
 				else
 				{
@@ -778,9 +780,9 @@ void ClientRenderer::UpdateHandObjects()
 				(
 						avs::vec3
 								{
-										remoteStates[0].HeadPose.Pose.Position.x + cameraPosition.x,
-										remoteStates[0].HeadPose.Pose.Position.y + cameraPosition.y,
-										remoteStates[0].HeadPose.Pose.Position.z + cameraPosition.z
+										remoteStates[0].HeadPose.Pose.Position.x + clientDeviceState->cameraPosition.x,
+										remoteStates[0].HeadPose.Pose.Position.y + clientDeviceState->cameraPosition.y,
+										remoteStates[0].HeadPose.Pose.Position.z + clientDeviceState->cameraPosition.z
 								},
 						scr::quat
 								{
@@ -800,9 +802,9 @@ void ClientRenderer::UpdateHandObjects()
 				(
 						avs::vec3
 								{
-										remoteStates[1].HeadPose.Pose.Position.x + cameraPosition.x,
-										remoteStates[1].HeadPose.Pose.Position.y + cameraPosition.y,
-										remoteStates[1].HeadPose.Pose.Position.z + cameraPosition.z
+										remoteStates[1].HeadPose.Pose.Position.x + clientDeviceState->cameraPosition.x,
+										remoteStates[1].HeadPose.Pose.Position.y + clientDeviceState->cameraPosition.y,
+										remoteStates[1].HeadPose.Pose.Position.z + clientDeviceState->cameraPosition.z
 								},
 						scr::quat
 								{
@@ -935,8 +937,8 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				"Eye yaw: %1.3f\n", clientDeviceState->localOriginPos.x,
 				clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z,
 				clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,
-				clientDeviceState->relativeHeadPos.z, cameraPosition.x, cameraPosition.y,
-				cameraPosition.z, clientDeviceState->eyeYaw
+				clientDeviceState->relativeHeadPos.z, clientDeviceState->cameraPosition.x, clientDeviceState->cameraPosition.y,
+				clientDeviceState->cameraPosition.z, clientDeviceState->stickYaw
 							 );
 	}
 	else if (show_osd == GEOMETRY_OSD)
