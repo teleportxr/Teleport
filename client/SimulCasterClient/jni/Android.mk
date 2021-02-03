@@ -16,6 +16,7 @@ LOCAL_SRC_FILES			:= \
     ../src/Controllers.cpp \
     ../src/GLESDebug.cpp \
     ../src/GlobalGraphicsResources.cpp \
+    ../src/OVRNode.cpp \
     ../src/OVRNodeManager.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \

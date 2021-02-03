@@ -24,8 +24,8 @@ void ClientDeviceState::TransformPose(avs::Pose &p)
 void ClientDeviceState::SetHeadPose(ovrVector3f pos,ovrQuatf q)
 {
 	headPose.orientation=*((const avs::vec4 *)(&q));
-	TransformPose(headPose);
 	headPose.position=*((const avs::vec3 *)(&pos));
+	TransformPose(headPose);
 }
 
 void ClientDeviceState::SetControllerPose(int index,ovrVector3f pos,ovrQuatf q)

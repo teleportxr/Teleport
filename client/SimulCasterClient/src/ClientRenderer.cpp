@@ -842,7 +842,7 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 
 void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node> actor)
 {
-	std::shared_ptr<OVRActor> ovrActor = std::static_pointer_cast<OVRActor>(actor);
+	std::shared_ptr<OVRNode> ovrActor = std::static_pointer_cast<OVRNode>(actor);
 
 	//----OVR Node Set Transforms----//
 	scr::mat4 globalMatrix=actor->GetGlobalTransform().GetTransformMatrix();
