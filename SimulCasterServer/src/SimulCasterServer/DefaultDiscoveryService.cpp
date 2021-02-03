@@ -83,7 +83,7 @@ void DefaultDiscoveryService::tick()
 		{
 			// ok, we've received a connection request from a client that WE think we already have.
 			// Apparently the CLIENT thinks they've disconnected.
-			TELEPORT_WARN << "Warning: Client "<<clientID<<" reconnected, but we didn't know we'd lost them.\n";
+			TELEPORT_COUT << "Warning: Client "<<clientID<<" reconnected, but we didn't know we'd lost them.\n";
 			already_got=true;
 		}
 		

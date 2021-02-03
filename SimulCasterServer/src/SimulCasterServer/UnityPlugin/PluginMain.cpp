@@ -575,7 +575,7 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	}
 	else
 	{
-		TELEPORT_WARN << "Already got client: " << clientID << std::endl;
+		TELEPORT_COUT << "Already got client: " << clientID << std::endl;
 		// already got this client. This can happen if the client thinks it's disconnected but we didn't know that.
 //		auto &c= clientServices.find(clientID);
 //		if(c!=clientServices.end())
