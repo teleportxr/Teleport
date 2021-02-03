@@ -55,8 +55,8 @@ namespace SCServer
 		bool enableDebugControlPackets;
 		bool enableChecksums;
 		bool willCacheReset;
-		uint8_t estimatedDecodingFrequency; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
 		bool pipeDllOutputToUnity;
+		uint8_t estimatedDecodingFrequency; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
 
 		bool useCompressedTextures;
 		uint8_t qualityLevel;
