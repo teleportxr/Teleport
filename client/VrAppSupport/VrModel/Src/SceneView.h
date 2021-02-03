@@ -94,6 +94,7 @@ public:
 
 	float					GetYawOffset() const { return SceneYaw; }
 	void					SetYawOffset( const float yaw ) { EyeYaw += (yaw-SceneYaw); SceneYaw = yaw; }
+	float					GetStickYaw() const { return StickYaw; }
 
 	float					GetZnear() const { return Znear; }
 	void					SetZnear( float z ) { Znear = z; }

@@ -36,7 +36,7 @@ private:
 			char writebuf[bufsize+1];
 			memcpy(writebuf, this->pbase(), this->pptr()-this->pbase());
 			writebuf[this->pptr()-this->pbase()]='\0';
-			rc=__android_log_write(ANDROID_LOG_INFO, "std", writebuf)>0;
+			rc=__android_log_write(logPriority, "co.Simul.simulcasterclient", writebuf)>0;
 			this->setp(buffer, buffer+bufsize-1);
 		}
 		return rc;
@@ -46,16 +46,24 @@ private:
 };
 AndroidStreambuf androidCout;
 AndroidStreambuf androidCerr(ANDROID_LOG_WARN);
-void RedirectStdCoutCerr()
-{
-	std::cout.rdbuf(&androidCout);
-	std::cerr.rdbuf(&androidCerr);
+void RedirectStdCoutCerr() {
+	auto *oldout = std::cout.rdbuf(&androidCout);
+	auto *olderr = std::cerr.rdbuf(&androidCerr);
+	if (oldout != &androidCout)
+	{
+		__android_log_write(ANDROID_LOG_DEBUG, "co.Simul.simulcasterclient", "redirected cout");
+	}
+	if (olderr != &androidCerr)
+	{
+		__android_log_write(ANDROID_LOG_DEBUG, "co.Simul.simulcasterclient", "redirected cerr");
+	}
 }
 #endif
 
 #include  <strstream>
-void ClientLog(const char* fileTag, int lineno, const char* msg_type, const char* format_str, ...)
+void ClientLog(const char* fileTag, int lineno, ClientLogPriority prio, const char* format_str, ...)
 {
+	RedirectStdCoutCerr();
 	int size = (int)strlen(format_str) + 100;
 	static std::string str;
 	va_list ap;
@@ -77,6 +85,14 @@ void ClientLog(const char* fileTag, int lineno, const char* msg_type, const char
 			size *= 2;
 	}
 	std::strstream sstr;
-	sstr << "Teleport: "<<fileTag << "(" << lineno << "): " << msg_type << ": " << str.c_str();
-	std::cerr<<sstr.str();
+	const char *typestr="info";
+	if(prio==ClientLogPriority::WARNING)
+		typestr="warning";
+	if(prio==ClientLogPriority::ERROR)
+		typestr="error";
+	sstr << "Teleport: "<<fileTag << "(" << lineno << "): " << typestr << ": " << str.c_str();
+	if(prio>=ClientLogPriority::WARNING)
+		std::cerr<<sstr.str();
+	else
+		std::cout<<sstr.str();
 }
