@@ -444,7 +444,7 @@ template<typename T,typename tr> std::basic_ostream<T,tr> & operator << (std::ba
 } 
 void GeometryStore::storeNode(avs::uid id, avs::DataNode& newNode)
 {
-	TELEPORT_COUT<<"storeNode "<<newNode.name.c_str()<<" uid "<<id<<", type "<<stringOf(newNode.data_type)<<", data uid "<<(int)newNode.data_uid<<std::endl;
+//	TELEPORT_COUT<<"storeNode "<<newNode.name.c_str()<<" uid "<<id<<", type "<<stringOf(newNode.data_type)<<", data uid "<<(int)newNode.data_uid<<std::endl;
 	nodes[id] = newNode;
 
 	if(newNode.data_type == avs::NodeDataType::ShadowMap|| newNode.data_type == avs::NodeDataType::Light)

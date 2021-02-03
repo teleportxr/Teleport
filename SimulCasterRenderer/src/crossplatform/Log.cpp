@@ -63,7 +63,9 @@ void RedirectStdCoutCerr() {
 #include  <strstream>
 void ClientLog(const char* fileTag, int lineno, ClientLogPriority prio, const char* format_str, ...)
 {
+#ifdef __ANDROID__
 	RedirectStdCoutCerr();
+#endif
 	int size = (int)strlen(format_str) + 100;
 	static std::string str;
 	va_list ap;
@@ -88,7 +90,7 @@ void ClientLog(const char* fileTag, int lineno, ClientLogPriority prio, const ch
 	const char *typestr="info";
 	if(prio==ClientLogPriority::WARNING)
 		typestr="warning";
-	if(prio==ClientLogPriority::ERROR)
+	if(prio==ClientLogPriority::LOG_ERROR)
 		typestr="error";
 	sstr << "Teleport: "<<fileTag << "(" << lineno << "): " << typestr << ": " << str.c_str();
 	if(prio>=ClientLogPriority::WARNING)

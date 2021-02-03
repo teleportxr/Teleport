@@ -44,7 +44,13 @@ namespace SCServer
 
 	ClientMessaging::~ClientMessaging()
 	{
-		removeNetworkPipelineFromAsyncProcessing();
+	// Don't do anything in the destructor - this would break std::move.
+	/*	if (host)
+		{
+			enet_host_destroy(host);
+			host = nullptr;
+		}
+		removeNetworkPipelineFromAsyncProcessing();*/
 	}
 
 	bool ClientMessaging::isInitialised() const
