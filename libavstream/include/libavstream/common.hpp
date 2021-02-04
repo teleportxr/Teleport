@@ -739,6 +739,7 @@ namespace avs
 
 	struct InputState
 	{
+		uint32_t controllerId;
 		uint32_t buttonsDown;		// arbitrary bitfield.
 		float trackpadAxisX;
 		float trackpadAxisY;

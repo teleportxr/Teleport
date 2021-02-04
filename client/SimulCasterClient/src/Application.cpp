@@ -239,6 +239,8 @@ extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 
 ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
+	// we don't want local slide movements.
+	mScene.SetMoveSpeed(0.0f);
 	mScene.Frame(vrFrame);
     clientRenderer.eyeSeparation=vrFrame.IPD;
 	GL_CheckErrors("Frame: Start");
@@ -270,7 +272,6 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	controllers.Update(app->GetOvrMobile());
 	clientDeviceState.localFootPos=*((const avs::vec3*)&mScene.GetFootPos());
 	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
-
 
 	//Get the Origin Position
 	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)

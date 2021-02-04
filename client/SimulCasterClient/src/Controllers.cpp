@@ -101,7 +101,7 @@ void Controllers::Update(ovrMobile *ovrmobile)
 			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
 			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
 			controllerState.mJoystickAxisX=ovrState.Joystick.x;
-			controllerState.mJoystickAxisY=ovrState.Joystick.y * -1;
+			controllerState.mJoystickAxisY=ovrState.Joystick.y * -1.f;
 
 			if(controllerState.mTrackpadStatus)
 			{

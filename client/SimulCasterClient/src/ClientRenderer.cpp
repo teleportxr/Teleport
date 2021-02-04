@@ -908,12 +908,11 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				"Clientspace  Origin: %1.3f, %1.3f, %1.3f\n"
 				"  + Camera Relative: %1.3f, %1.3f, %1.3f\n"
 				"  = Camera Position: %1.3f, %1.3f, %1.3f\n\n"
-				"Eye yaw: %1.3f\n", clientDeviceState->localOriginPos.x,
-				clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z,
-				clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,
-				clientDeviceState->relativeHeadPos.z, clientDeviceState->cameraPosition.x, clientDeviceState->cameraPosition.y,
-				clientDeviceState->cameraPosition.z, clientDeviceState->stickYaw
-							 );
+				"Eye yaw: %1.3f\n"
+				, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
+				, clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z
+				, clientDeviceState->cameraPosition.x, clientDeviceState->cameraPosition.y,	clientDeviceState->cameraPosition.z
+				, clientDeviceState->stickYaw );
 	}
 	else if (show_osd == GEOMETRY_OSD)
 	{
@@ -961,13 +960,20 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 		std::ostringstream sstr;
 		std::setprecision(5);
 		sstr << "Tags\n" << std::setw(4);
-		for (
-				size_t i = 0; i < std::min((size_t) 3, videoTagDataCubeArray.size()); i++)
+		static int ii=0;
+		static char iii=0;
+		iii++;
+		if(!iii)
 		{
-			auto &tag = videoTagDataCubeArray[i];
+			ii++;
+			if (ii > 2)
+				ii = 0;
+		}
+		for (size_t i = 0; i < std::min((size_t) 8, videoTagDataCubeArray.size()); i++)
+		{
+			auto &tag = videoTagDataCubeArray[i+8*ii];
 			sstr << tag.coreData.lightCount << " lights\n";
-			for (
-					size_t j = 0; j < tag.lights.size(); j++)
+			for (size_t j = 0; j < tag.lights.size(); j++)
 			{
 				auto &l = tag.lights[j];
 				sstr << "\t" << l.uid << ": Type " << ToString((scr::Light::Type) l.lightType)

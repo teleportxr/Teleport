@@ -165,7 +165,8 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 				SendHeadPose(headPose);
 				SendControllerPoses(headPose,controllerPoses);
 			}
-			SendInput(controllerStates[0]);
+			SendInput(0,controllerStates[0]);
+			SendInput(1,controllerStates[1]);
 			SendResourceRequests();
 			SendReceivedResources();
 			SendNodeUpdates();
@@ -385,11 +386,12 @@ void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pos
 }
 
 
-void SessionClient::SendInput(const ControllerState& controllerState)
+void SessionClient::SendInput(int id,const ControllerState& controllerState)
 {
 	avs::InputState inputState = {};
 	inputState.buttonsDown= controllerState.mButtons;
 	const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
+	inputState.controllerId=id;
 	inputState.joystickAxisX = controllerState.mJoystickAxisX;
 	inputState.joystickAxisY = controllerState.mJoystickAxisY;
 	// We need to update trackpad axis on the server whenever:

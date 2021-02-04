@@ -927,7 +927,7 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	{
 		StickYaw -= 2.0f * MATH_FLOAT_PI;
 	}
-	YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
+	//YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
 
 	// Only if there is no head tracking, allow right stick up/down to adjust pitch,
 	// which can be useful for debugging without having to dock the device.

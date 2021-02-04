@@ -81,7 +81,7 @@ private:
     void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
     void SendHeadPose(const avs::Pose& headPose);
     void SendControllerPoses(const avs::Pose& headPose,const avs::Pose* poses);
-    void SendInput(const ControllerState& controllerState);
+    void SendInput(int id,const ControllerState& controllerState);
     void SendResourceRequests();
     void SendReceivedResources();
     void SendNodeUpdates();
