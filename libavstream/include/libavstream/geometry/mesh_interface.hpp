@@ -541,7 +541,7 @@ struct Animation;
 		virtual void getResourcesToStream(std::vector<MeshNodeResources>& outMeshResources, std::vector<LightNodeResources>& outLightResources) const = 0;
 
 		//Returns the axes standard used by the client.
-		virtual AxesStandard getAxesStandard() const = 0;
+		virtual AxesStandard getClientAxesStandard() const = 0;
 	};
 	//! A Geometry decoder backend converts a 
 	class AVSTREAM_API GeometryEncoderBackendInterface : public UseInternalAllocator
@@ -598,10 +598,10 @@ struct Animation;
 		virtual ~GeometryTargetBackendInterface() = default;
 		virtual Result Assemble(MeshCreate& meshCreate) = 0;
 
-		virtual void CreateTexture(uid texture_uid, const Texture & texture) = 0;
-		virtual void CreateMaterial(uid material_uid, const Material & material) = 0;
-		virtual void CreateNode(uid node_uid, DataNode& node) = 0;
-		virtual void CreateSkin(avs::uid skinID, avs::Skin& skin) = 0;
+		virtual void CreateTexture(uid id, const Texture& texture) = 0;
+		virtual void CreateMaterial(uid id, const Material& material) = 0;
+		virtual void CreateNode(uid id, DataNode& node) = 0;
+		virtual void CreateSkin(avs::uid id, avs::Skin& skin) = 0;
 		virtual void CreateAnimation(avs::uid id, avs::Animation& animation) = 0;
 	};
 

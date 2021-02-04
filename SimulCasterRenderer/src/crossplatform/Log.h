@@ -3,12 +3,13 @@
 #if defined(PLATFORM_ANDROID)
 extern void RedirectStdCoutCerr();
 #endif
+
 enum class ClientLogPriority
 {
-	UNKNOWN = 0,
+	UNKNOWN,
 	DEFAULT,
 	VERBOSE,
-	DEBUG,
+	LOG_DEBUG,
 	INFO,
 	WARNING,
 	LOG_ERROR,

@@ -6,8 +6,6 @@
 #include "GeometryStore.h"
 #include "ErrorHandling.h"
 
-using namespace SCServer;
-
 //Remove duplicates, and 0s, from passed vector of UIDs.
 void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 {
@@ -16,8 +14,10 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
+namespace SCServer
+{
 GeometryStreamingService::GeometryStreamingService(const CasterSettings* settings)
-	:settings(settings), geometryEncoder(settings)
+	:geometryStore(nullptr), settings(settings), casterContext(nullptr), geometryEncoder(settings)
 {}
 
 GeometryStreamingService::~GeometryStreamingService()
@@ -52,9 +52,9 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 
 void GeometryStreamingService::getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const
 {
-	for(auto n : streamedNodeUids)
+	for(avs::uid nodeID : streamedNodeIDs)
 	{
-		GetMeshNodeResources(n, outMeshResources);
+		GetMeshNodeResources(nodeID, outMeshResources);
 	}
 
 	outLightResources = geometryStore->getLightNodes();
@@ -63,7 +63,9 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::MeshNodeRes
 void GeometryStreamingService::startStreaming(SCServer::CasterContext* context)
 {
 	if(casterContext == context)
+	{
 		return;
+	}
 	casterContext = context;
 
 	avsPipeline.reset(new avs::Pipeline);
@@ -78,51 +80,61 @@ void GeometryStreamingService::startStreaming(SCServer::CasterContext* context)
 void GeometryStreamingService::stopStreaming()
 {
 	if(avsPipeline)
+	{
 		avsPipeline->deconfigure();
+	}
 	if(avsGeometrySource)
+	{
 		avsGeometrySource->deconfigure();
+	}
 	if(avsGeometryEncoder)
+	{
 		avsGeometryEncoder->deconfigure();
+	}
 	avsPipeline.reset();
 	casterContext = nullptr;
 
 	reset();
 }
 
-void GeometryStreamingService::hideNode(avs::uid clientID,avs::uid nodeID)
+void GeometryStreamingService::hideNode(avs::uid clientID, avs::uid nodeID)
 {
-	auto actorPair = streamedNodeUids.find(nodeID);
-	if(actorPair != streamedNodeUids.end())
+	auto nodePair = streamedNodeIDs.find(nodeID);
+	if(nodePair != streamedNodeIDs.end())
 	{
-		hideActor_Internal(clientID,nodeID);
+		hideNode_Internal(clientID, nodeID);
 		hiddenNodes.insert(nodeID);
 	}
 	else
 	{
-		std::cout << "Tried to hide non-streamed actor with ID of " << nodeID <<"!\n";
+		TELEPORT_COUT << "Tried to hide non-streamed node with ID of " << nodeID << "!\n";
 	}
 }
 
-void GeometryStreamingService::showNode(avs::uid clientID,avs::uid nodeID)
+void GeometryStreamingService::showNode(avs::uid clientID, avs::uid nodeID)
 {
-	auto actorPair = hiddenNodes.find(nodeID);
-	if(actorPair != hiddenNodes.end())
+	auto nodePair = hiddenNodes.find(nodeID);
+	if(nodePair != hiddenNodes.end())
 	{
-		showActor_Internal(clientID,nodeID);
+		showNode_Internal(clientID, nodeID);
 		hiddenNodes.erase(nodeID);
 	}
 	else
 	{
-		std::cout << "Tried to show non-hidden actor with ID of " << nodeID << "!\n";
+		TELEPORT_COUT << "Tried to show non-hidden node with ID of " << nodeID << "!\n";
 	}
 }
 
-void GeometryStreamingService::setNodeVisible(avs::uid clientID,avs::uid nodeID, bool isVisible)
+void GeometryStreamingService::setNodeVisible(avs::uid clientID, avs::uid nodeID, bool isVisible)
 {
 	if(isVisible)
-		showNode(clientID,nodeID);
+	{
+		showNode(clientID, nodeID);
+	}
 	else
-		hideNode(clientID,nodeID);
+	{
+		hideNode(clientID, nodeID);
+	}
 }
 
 bool SCServer::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
@@ -145,7 +157,7 @@ void GeometryStreamingService::tick(float deltaTime)
 
 		if(it->second > settings->confirmationWaitTime)
 		{
-			std::cout << "Resource with ID " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
+			TELEPORT_COUT << "Resource with ID " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
 
 			sentResources[it->first] = false;
 			it = unconfirmedResourceTimes.erase(it);
@@ -162,47 +174,35 @@ void GeometryStreamingService::reset()
 {
 	sentResources.clear();
 	unconfirmedResourceTimes.clear();
-	streamedNodeUids.clear();
+	streamedNodeIDs.clear();
 	hiddenNodes.clear();
-}
-
-std::vector<avs::uid> GeometryStreamingService::getStreameNodeIDs()
-{
-	std::vector<avs::uid> IDs;
-
-	for(auto n : streamedNodeUids)
-	{
-		IDs.push_back(n);
-	}
-
-	return IDs;
 }
 
 void GeometryStreamingService::addNode( avs::uid nodeID)
 {
 	if(nodeID != 0)
 	{
-		streamedNodeUids.insert(nodeID);
+		streamedNodeIDs.insert(nodeID);
 	}
 }
 
-avs::uid GeometryStreamingService::removeNodeByID(avs::uid nodeID)
+void GeometryStreamingService::removeNode(avs::uid nodeID)
 {
-	streamedNodeUids.erase(nodeID);
-
-	return nodeID;
+	streamedNodeIDs.erase(nodeID);
 }
 
-bool GeometryStreamingService::isStreamingNodeID(avs::uid actorID)
+bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
 {
-	return streamedNodeUids.find(actorID) != streamedNodeUids.end();
+	return streamedNodeIDs.find(nodeID) != streamedNodeIDs.end();
 }
 
 void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const
 {
 	avs::DataNode* thisNode = geometryStore->getNode(node_uid);
-	if(!thisNode || thisNode->data_uid == 0)
+	if(!thisNode)
+	{
 		return;
+	}
 
 	avs::MeshNodeResources meshNode;
 	meshNode.node_uid = node_uid;
@@ -212,10 +212,10 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vect
 	//Get joint/bone IDs, if the skinID is not zero.
 	if(meshNode.skinID != 0)
 	{
-		avs::Skin* skin = geometryStore->getSkin(thisNode->skinID, getAxesStandard());
+		avs::Skin* skin = geometryStore->getSkin(thisNode->skinID, getClientAxesStandard());
 		meshNode.jointIDs = skin->jointIDs;
 	}
-	
+
 	meshNode.animationIDs = thisNode->animations;
 
 	for(avs::uid material_uid : thisNode->materials)
@@ -223,7 +223,7 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vect
 		avs::Material* thisMaterial = geometryStore->getMaterial(material_uid);
 		if(!thisMaterial)
 		{
-			TELEPORT_CERR<<"Material not found in store: "<<(unsigned long long)material_uid<<std::endl;
+			TELEPORT_CERR << "Material not found in store: " << material_uid << std::endl;
 			continue;
 		}
 		avs::MaterialResources material;
@@ -243,10 +243,6 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vect
 		meshNode.materials.push_back(material);
 	}
 
-	for(avs::uid childNode_uid : thisNode->childrenIDs)
-	{
-		GetMeshNodeResources(childNode_uid, outMeshResources);
-	}
-
 	outMeshResources.push_back(meshNode);
+}
 }

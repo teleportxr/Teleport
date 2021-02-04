@@ -66,10 +66,10 @@ Application::Application()
 	, mLocale(nullptr)
 	, sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 	, mDeviceContext(&GlobalGraphicsResources.renderPlatform)
-		,clientRenderer(&resourceCreator,&resourceManagers,this,this,&clientDeviceState)
-		,lobbyRenderer(&clientDeviceState)
-		,resourceManagers(new OVRNodeManager)
-		,resourceCreator(basist::transcoder_texture_format::cTFETC2)
+	, clientRenderer(&resourceCreator, &resourceManagers,this,this,&clientDeviceState)
+	, lobbyRenderer(&clientDeviceState)
+	, resourceManagers(new OVRNodeManager)
+	, resourceCreator(basist::transcoder_texture_format::cTFETC2)
 {
 	RedirectStdCoutCerr();
 
@@ -363,6 +363,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	clientRenderer.CopyToCubemaps(mDeviceContext);
 	// Append video surface
     clientRenderer.RenderVideo(mDeviceContext,res);
+
 	if(sessionClient.IsConnected())
 	{
 		clientRenderer.Render(vrFrame,mGuiSys);
@@ -373,14 +374,16 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		res.ClearDepthBuffer=true;
 		lobbyRenderer.Render(mGuiSys);
 	};
-	//Move the hands before they are drawn.
-	clientRenderer.UpdateHandObjects();
-	//Append SCR Actors to surfaces.
+
+	//Append SCR Nodes to surfaces.
 	GL_CheckErrors("Frame: Pre-SCR");
 	uint32_t time_elapsed=(uint32_t)(vrFrame.DeltaSeconds*1000.0f);
 	resourceManagers.Update(time_elapsed);
 	resourceCreator.Update(time_elapsed);
-	clientRenderer.RenderLocalActors(res);
+
+	//Move the hands before they are drawn.
+	clientRenderer.UpdateHandObjects();
+	clientRenderer.RenderLocalNodes(res);
 	GL_CheckErrors("Frame: Post-SCR");
 
 	// Append GuiSys surfaces. This should always be the last item to append the render list.
@@ -578,14 +581,14 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfi
     , clientRenderer.videoConfig.depth_width, clientRenderer.videoConfig.depth_height);
 }
 
-bool Application::OnActorEnteredBounds(avs::uid actor_uid)
+bool Application::OnNodeEnteredBounds(avs::uid id)
 {
-    return resourceManagers.mNodeManager->ShowActor(actor_uid);
+    return resourceManagers.mNodeManager->ShowNode(id);
 }
 
-bool Application::OnActorLeftBounds(avs::uid actor_uid)
+bool Application::OnNodeLeftBounds(avs::uid id)
 {
-	return resourceManagers.mNodeManager->HideActor(actor_uid);
+	return resourceManagers.mNodeManager->HideNode(id);
 }
 
 std::vector<uid> Application::GetGeometryResources()
@@ -598,14 +601,14 @@ void Application::ClearGeometryResources()
     resourceManagers.Clear();
 }
 
-void Application::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
+void Application::SetVisibleNodes(const std::vector<avs::uid>& visibleNodes)
 {
-    resourceManagers.mNodeManager->SetVisibleActors(visibleActors);
+    resourceManagers.mNodeManager->SetVisibleNodes(visibleNodes);
 }
 
-void Application::UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList)
+void Application::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
 {
-	resourceManagers.mNodeManager->UpdateActorMovement(updateList);
+	resourceManagers.mNodeManager->UpdateNodeMovement(updateList);
 }
 
 void Application::OnFrameAvailable()

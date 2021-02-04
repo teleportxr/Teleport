@@ -160,25 +160,25 @@ namespace SCServer
 		{
 			geometryStreamingService->tick(TIME_BETWEEN_GEOMETRY_TICKS);
 
-			//Tell the client to change the visibility of actors that have changed whether they are within streamable bounds.
-			if (!actorsEnteredBounds.empty() || !actorsLeftBounds.empty())
+			//Tell the client to change the visibility of nodes that have changed whether they are within streamable bounds.
+			if (!nodesEnteredBounds.empty() || !nodesLeftBounds.empty())
 			{
-				size_t commandSize = sizeof(avs::ActorBoundsCommand);
-				size_t enteredBoundsSize = sizeof(avs::uid) * actorsEnteredBounds.size();
-				size_t leftBoundsSize = sizeof(avs::uid) * actorsLeftBounds.size();
+				size_t commandSize = sizeof(avs::NodeBoundsCommand);
+				size_t enteredBoundsSize = sizeof(avs::uid) * nodesEnteredBounds.size();
+				size_t leftBoundsSize = sizeof(avs::uid) * nodesLeftBounds.size();
 
-				avs::ActorBoundsCommand boundsCommand(actorsEnteredBounds.size(), actorsLeftBounds.size());
+				avs::NodeBoundsCommand boundsCommand(nodesEnteredBounds.size(), nodesLeftBounds.size());
 				ENetPacket* packet = enet_packet_create(&boundsCommand, commandSize, ENET_PACKET_FLAG_RELIABLE);
 
-				//Resize packet, and insert actor lists.
+				//Resize packet, and insert node lists.
 				enet_packet_resize(packet, commandSize + enteredBoundsSize + leftBoundsSize);
-				memcpy(packet->data + commandSize, actorsEnteredBounds.data(), enteredBoundsSize);
-				memcpy(packet->data + commandSize + enteredBoundsSize, actorsLeftBounds.data(), leftBoundsSize);
+				memcpy(packet->data + commandSize, nodesEnteredBounds.data(), enteredBoundsSize);
+				memcpy(packet->data + commandSize + enteredBoundsSize, nodesLeftBounds.data(), leftBoundsSize);
 
 				enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
 
-				actorsEnteredBounds.clear();
-				actorsLeftBounds.clear();
+				nodesEnteredBounds.clear();
+				nodesLeftBounds.clear();
 			}
 
 			timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
@@ -233,21 +233,21 @@ namespace SCServer
 
 	}
 
-	void ClientMessaging::actorEnteredBounds(avs::uid actorID)
+	void ClientMessaging::nodeEnteredBounds(avs::uid nodeID)
 	{
-		actorsEnteredBounds.push_back(actorID);
-		actorsLeftBounds.erase(std::remove(actorsLeftBounds.begin(), actorsLeftBounds.end(), actorID), actorsLeftBounds.end());
+		nodesEnteredBounds.push_back(nodeID);
+		nodesLeftBounds.erase(std::remove(nodesLeftBounds.begin(), nodesLeftBounds.end(), nodeID), nodesLeftBounds.end());
 	}
 
-	void ClientMessaging::actorLeftBounds(avs::uid actorID)
+	void ClientMessaging::nodeLeftBounds(avs::uid nodeID)
 	{
-		actorsLeftBounds.push_back(actorID);
-		actorsEnteredBounds.erase(std::remove(actorsEnteredBounds.begin(), actorsEnteredBounds.end(), actorID), actorsEnteredBounds.end());
+		nodesLeftBounds.push_back(nodeID);
+		nodesEnteredBounds.erase(std::remove(nodesEnteredBounds.begin(), nodesEnteredBounds.end(), nodeID), nodesEnteredBounds.end());
 	}
 
-	void ClientMessaging::updateActorMovement(std::vector<avs::MovementUpdate>& updateList)
+	void ClientMessaging::updateNodeMovement(std::vector<avs::MovementUpdate>& updateList)
 	{
-		avs::UpdateActorMovementCommand command(updateList.size());
+		avs::UpdateNodeMovementCommand command(updateList.size());
 		sendCommand<avs::MovementUpdate>(command, updateList);
 	}
 
@@ -414,19 +414,19 @@ namespace SCServer
 		geometryStreamingService->startStreaming(casterContext);
 		receivedHandshake = true;
 
-		//Client has nothing, thus can't show actors.
+		//Client has nothing, thus can't show nodes.
 		if (handshake.resourceCount == 0)
 		{
 			avs::AcknowledgeHandshakeCommand ack;
 			sendCommand(ack);
 		}
-		//Client may have required resources, as they are reconnecting; tell them to show streamed actors.
+		//Client may have required resources, as they are reconnecting; tell them to show streamed nodes.
 		else
 		{
-			std::vector<avs::uid> streamedNodeIDs = geometryStreamingService->getStreameNodeIDs();
+			const std::set<avs::uid>& streamedNodeIDs = geometryStreamingService->getStreamedNodeIDs();
 
 			avs::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
-			sendCommand<avs::uid>(ack, streamedNodeIDs);
+			sendCommand<avs::uid>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 		}
 		reportHandshake(this->clientID,&handshake);
 		TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
@@ -552,28 +552,28 @@ namespace SCServer
 			}
 			break;
 		}
-		case avs::ClientMessagePayloadType::ActorStatus:
+		case avs::ClientMessagePayloadType::NodeStatus:
 		{
-			size_t messageSize = sizeof(avs::ActorStatusMessage);
-			avs::ActorStatusMessage message;
+			size_t messageSize = sizeof(avs::NodeStatusMessage);
+			avs::NodeStatusMessage message;
 			memcpy(&message, packet->data, messageSize);
 
-			size_t drawnSize = sizeof(avs::uid) * message.actorsDrawnAmount;
-			std::vector<avs::uid> drawn(message.actorsDrawnAmount);
+			size_t drawnSize = sizeof(avs::uid) * message.nodesDrawnAmount;
+			std::vector<avs::uid> drawn(message.nodesDrawnAmount);
 			memcpy(drawn.data(), packet->data + messageSize, drawnSize);
 
-			size_t toReleaseSize = sizeof(avs::uid) * message.actorsWantToReleaseAmount;
-			std::vector<avs::uid> toRelease(message.actorsWantToReleaseAmount);
+			size_t toReleaseSize = sizeof(avs::uid) * message.nodesWantToReleaseAmount;
+			std::vector<avs::uid> toRelease(message.nodesWantToReleaseAmount);
 			memcpy(toRelease.data(), packet->data + messageSize + drawnSize, toReleaseSize);
 
-			for (avs::uid actorID : drawn)
+			for (avs::uid nodeID : drawn)
 			{
-				geometryStreamingService->hideNode(clientID, actorID);
+				geometryStreamingService->hideNode(clientID, nodeID);
 			}
 
-			for (avs::uid actorID : toRelease)
+			for (avs::uid nodeID : toRelease)
 			{
-				geometryStreamingService->showNode(clientID, actorID);
+				geometryStreamingService->showNode(clientID, nodeID);
 			}
 
 			break;

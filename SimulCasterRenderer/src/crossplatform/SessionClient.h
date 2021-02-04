@@ -25,14 +25,14 @@ public:
 
     virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) = 0;
 
-    virtual bool OnActorEnteredBounds(avs::uid actor_uid) = 0;
-    virtual bool OnActorLeftBounds(avs::uid actor_uid) = 0;
+    virtual bool OnNodeEnteredBounds(avs::uid node_uid) = 0;
+    virtual bool OnNodeLeftBounds(avs::uid node_uid) = 0;
     
     virtual std::vector<avs::uid> GetGeometryResources() = 0;
     virtual void ClearGeometryResources() = 0;
 
-    virtual void SetVisibleActors(const std::vector<avs::uid>& visibleActors) = 0;
-    virtual void UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList) = 0;
+    virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) = 0;
+    virtual void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) = 0;
 };
 
 class SessionClient
@@ -84,13 +84,13 @@ private:
     void SendInput(const ControllerState& controllerState);
     void SendResourceRequests();
     void SendReceivedResources();
-    void SendActorUpdates();
+    void SendNodeUpdates();
     void SendKeyframeRequest();
     //Tell server we are ready to receive geometry payloads.
     void SendHandshake(const avs::Handshake &handshake, const std::vector<avs::uid>& clientResourceIDs);
 
     void ReceiveHandshakeAcknowledgement(const ENetPacket* packet);
-    void ReceiveActorMovementUpdate(const ENetPacket* packet);
+    void ReceiveNodeMovementUpdate(const ENetPacket* packet);
 
     avs::uid lastServerID = 0; //UID of the server we last connected to.
 
@@ -105,10 +105,10 @@ private:
     ControllerState mPrevControllerState = {};
 
     bool handshakeAcknowledged = false;
-    std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for actors.
+    std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for nodes.
     std::map<avs::uid,double> mSentResourceRequests;
-    std::vector<avs::uid> mReceivedActors; //Actors that have entered bounds, are about to be drawn, and need to be confirmed to the server.
-    std::vector<avs::uid> mLostActors; //Actor that have left bounds, are about to be hidden, and need to be confirmed to the server.
+    std::vector<avs::uid> mReceivedNodes; //Nodes that have entered bounds, are about to be drawn, and need to be confirmed to the server.
+    std::vector<avs::uid> mLostNodes; //Node that have left bounds, are about to be hidden, and need to be confirmed to the server.
 
     avs::vec3 originPos;
     avs::vec3 originToHeadPos;

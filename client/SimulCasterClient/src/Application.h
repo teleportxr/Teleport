@@ -70,14 +70,14 @@ public:
 
 	virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
 
-	virtual bool OnActorEnteredBounds(avs::uid actor_uid) override;
-	virtual bool OnActorLeftBounds(avs::uid actor_uid) override;
+	virtual bool OnNodeEnteredBounds(avs::uid id) override;
+	virtual bool OnNodeLeftBounds(avs::uid id) override;
 
     virtual std::vector<avs::uid> GetGeometryResources() override;
     virtual void ClearGeometryResources() override;
 
-    virtual void SetVisibleActors(const std::vector<avs::uid>& visibleActors) override;
-    virtual void UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList) override;
+    virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
+    virtual void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) override;
 	/* End SessionCommandInterface */
 
 	/* Begin DecodeEventInterface */
@@ -134,6 +134,7 @@ protected:
     const scr::Effect::EffectPassCreateInfo *BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources) override;
 
 	std::string LoadTextFile(const char *filename) override;
+
 	ClientRenderer clientRenderer;
 	LobbyRenderer lobbyRenderer;
 	scr::ResourceManagers resourceManagers;

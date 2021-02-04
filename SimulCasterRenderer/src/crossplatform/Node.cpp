@@ -25,12 +25,12 @@ void Node::RequestTransformUpdate()
 {
 	isTransformDirty = true;
 
-	//The actor's children need to update their transforms, as their parent's transform has been updated.
+	//The node's children need to update their transforms, as their parent's transform has been updated.
 	for(auto childIt = children.begin(); childIt != children.end();)
 	{
 		std::shared_ptr<Node> child = childIt->lock();
 
-		//Erase weak pointer from list, if the child actor has been removed.
+		//Erase weak pointer from list, if the child node has been removed.
 		if(child)
 		{
 			child->RequestTransformUpdate();
@@ -78,27 +78,57 @@ void Node::Update(float deltaTime)
 	}
 }
 
-void Node::SetParent(std::weak_ptr<Node> parent)
+void Node::SetParent(std::shared_ptr<Node> node)
 {
-	this->parent = parent;
+	
+	std::shared_ptr<Node> oldParent = parent.lock();
+		
+	parent = node;
+
+	//Remove self from parent list of existing parent, if we have a parent.
+	//Prevent stack overflow by doing this after setting the new parent.
+	if(oldParent)
+	{
+		oldParent->RemoveChild(id);
+	}
 }
 
-void Node::AddChild(std::weak_ptr<Node> child)
+void Node::AddChild(std::shared_ptr<Node> child)
 {
 	children.push_back(child);
 }
 
-void Node::RemoveChild(std::weak_ptr<Node> actorPtr)
+void Node::RemoveChild(std::shared_ptr<Node> node)
 {
-	std::shared_ptr<Node> actor = actorPtr.lock();
 	for(auto it = children.begin(); it != children.end(); it++)
 	{
-		if(it->lock() == actor)
+		std::shared_ptr<Node> child = it->lock();
+		if(child == node)
 		{
 			children.erase(it);
+			child->SetParent(nullptr);
 			return;
 		}
 	}
+}
+
+void Node::RemoveChild(avs::uid childID)
+{
+	for(auto it = children.begin(); it != children.end(); it++)
+	{
+		std::shared_ptr<Node> child = it->lock();
+		if(child && child->id == childID)
+		{
+			children.erase(it);
+			child->SetParent(nullptr);
+			return;
+		}
+	}
+}
+
+void Node::ClearChildren()
+{
+	children.clear();
 }
 
 void Node::SetVisible(bool visible)

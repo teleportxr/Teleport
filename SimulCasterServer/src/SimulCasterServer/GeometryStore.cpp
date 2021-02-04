@@ -193,7 +193,7 @@ void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* re
 		avs::uid newID = reaffirmedMaterials[i].newID;
 
 		materials[newID] = oldMaterials[reaffirmedMaterials[i].oldID];
-		TELEPORT_COUT<<"New uid: Material "<<newID<<", old uid was material ."<<reaffirmedMaterials[i].oldID<<std::endl;
+		TELEPORT_COUT << "New ID: Material " << newID << ", was material " << reaffirmedMaterials[i].oldID << ".\n";
 
 		//Replace all texture accessor indexes with their new index.
 		replaceTextureID(materials[newID].material.pbrMetallicRoughness.baseColorTexture.index);
@@ -527,7 +527,7 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 
 		if(newTexture.dataSize > 1048576)
 		{
-			std::cout << "Texture \"" << newTexture.name << "\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: " << newTexture.dataSize << "B(" << newTexture.dataSize / 1048576.0f << "MB).\n";
+			TELEPORT_WARN << "Texture \"" << newTexture.name << "\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: " << newTexture.dataSize << "B(" << newTexture.dataSize / 1048576.0f << "MB).\n";
 		}
 	}
 
@@ -616,12 +616,12 @@ void GeometryStore::compressNextTexture()
 		}
 		else
 		{
-			std::cout << "Failed to compress texture: " << newTexture.name << ".\n";
+			TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"!\n";
 		}
 	}
 	else
 	{
-		std::cout << "Failed to initialise basis compressor for texture: " << newTexture.name << ".\n";
+		TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"! Basis Universal compressor failed to initialise.\n";
 	}
 
 	texturesToCompress.erase(texturesToCompress.begin());

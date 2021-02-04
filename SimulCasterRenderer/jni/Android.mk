@@ -26,8 +26,6 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/1stParty/OpenGL_Loader/Include
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
 LOCAL_SRC_FILES  := 	../src/api/Effect.cpp						\
-						../src/crossplatform/ActorComponents.cpp	\
-						../src/crossplatform/NodeManager.cpp		\
 						../src/crossplatform/Animation.cpp			\
 						../src/crossplatform/API.cpp				\
 						../src/crossplatform/Bone.cpp				\
@@ -38,6 +36,8 @@ LOCAL_SRC_FILES  := 	../src/api/Effect.cpp						\
 						../src/crossplatform/Material.cpp			\
 						../src/crossplatform/Mesh.cpp				\
 						../src/crossplatform/Node.cpp				\
+						../src/crossplatform/NodeComponents.cpp     \
+						../src/crossplatform/NodeManager.cpp		\
 						../src/crossplatform/ResourceCreator.cpp	\
 						../src/crossplatform/SessionClient.cpp		\
 						../src/crossplatform/ShaderSystem.cpp		\

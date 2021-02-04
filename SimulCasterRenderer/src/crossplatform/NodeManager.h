@@ -17,73 +17,78 @@ namespace scr
 	class NodeManager
 	{
 	public:
-		typedef std::vector<std::shared_ptr<Node>> actorList_t;
+		typedef std::vector<std::shared_ptr<Node>> nodeList_t;
 
-		uint32_t actorLifetime = 2000; //Milliseconds the manager waits before removing invisible actors.
+		uint32_t nodeLifetime = 2000; //Milliseconds the manager waits before removing invisible nodes.
 
 		virtual ~NodeManager() = default;
 
-		virtual std::shared_ptr<Node> CreateActor(avs::uid id, const std::string& name) const;
+		virtual std::shared_ptr<Node> CreateNode(avs::uid id, const std::string& name) const;
 
-		virtual void AddActor(std::shared_ptr<Node> actor, const avs::DataNode& node);
+		void AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeData);
 
-		void RemoveActor(std::shared_ptr<Node> actor);
-		void RemoveActor(avs::uid actorID);
+		void RemoveNode(std::shared_ptr<Node> node);
+		void RemoveNode(avs::uid nodeID);
 
-		bool HasActor(avs::uid actorID) const;
+		bool HasNode(avs::uid nodeID) const;
 
-		std::shared_ptr<Node> GetActor(avs::uid actorID);
-		size_t GetActorAmount();
+		std::shared_ptr<Node> GetNode(avs::uid nodeID);
+		size_t GetNodeAmount();
 
-		void SetHands(avs::uid leftHandID = 0, avs::uid rightHandID = 0);
-		void GetHands(std::shared_ptr<Node>& outLeftHand, std::shared_ptr<Node>& outRightHand);
+		//Get list of nodes parented to the world root.
+		const nodeList_t& GetRootNodes() const;
 
-		//Get list of actors parented to the world root.
-		const actorList_t& GetRootActors() const;
+		void SetBody(std::shared_ptr<Node> node);
+		bool SetBody(avs::uid nodeID);
+		std::shared_ptr<Node> GetBody();
 
-		//Causes the actor to become visible.
-		bool ShowActor(avs::uid actorID);
-		//Causes the actor to become invisible.
-		bool HideActor(avs::uid actorID);
+		void SetLeftHand(std::shared_ptr<Node> node);
+		bool SetLeftHand(avs::uid nodeID);
+		std::shared_ptr<Node> GetLeftHand();
 
-		//Make all actors in the passed list visible, while hiding the actors that are absent.
-		void SetVisibleActors(const std::vector<avs::uid> visibleActors);
+		void SetRightHand(std::shared_ptr<Node> node);
+		bool SetRightHand(avs::uid nodeID);
+		std::shared_ptr<Node> GetRightHand();
 
-		bool UpdateActorTransform(avs::uid actorID, const avs::vec3& translation, const scr::quat& rotation, const avs::vec3& scale);
+		//Causes the node to become visible.
+		bool ShowNode(avs::uid nodeID);
+		//Causes the node to become invisible.
+		bool HideNode(avs::uid nodeID);
 
-		void UpdateActorMovement(std::vector<avs::MovementUpdate> updateList);
+		//Make all nodes in the passed list visible, while hiding the nodes that are absent.
+		void SetVisibleNodes(const std::vector<avs::uid> visibleNodes);
 
-		//Tick the actor manager along, and remove any actors that have been invisible for too long.
+		bool UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translation, const scr::quat& rotation, const avs::vec3& scale);
+
+		void UpdateNodeMovement(std::vector<avs::MovementUpdate> updateList);
+
+		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.
 		void Update(float deltaTime);
 
-		//Clear actor manager of all actors.
+		//Clear node manager of all nodes.
 		void Clear();
 		//Clear, and free memory of, all resources; bar from resources on the list.
 		//	excludeList : Elements to not clear from the manager; removes UID if it finds the element.
-		//	outExistingActors : List of actors in the exclude list that were actually in the actor manager.
-		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors);
+		//	outExistingNodes : List of nodes in the exclude list that were actually in the node manager.
+		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes);
 
 	protected:
-		actorList_t rootActors; //Actors that are parented to the world root.
-		/// List of hand actors; handled differently as we don't want them cleaned-up.
-        std::unordered_map<avs::uid, std::shared_ptr<Node>> actorLookup;
+		nodeList_t rootNodes; //Nodes that are parented to the world root.
+		/// List of hand nodes; handled differently as we don't want them cleaned-up.
+        std::unordered_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 
-		avs::uid leftHandID = 0;
-		avs::uid rightHandID = 0;
-
-		//Link actor to systems after being added.
-		void LinkActor(std::shared_ptr<Node> newActor, bool isHand = false);
-		//Link hand to systems after being added.
-		void LinkHand(std::shared_ptr<Node> newHand, bool isLeftHand = true);
+		std::shared_ptr<Node> body;
+		std::shared_ptr<Node> leftHand;
+		std::shared_ptr<Node> rightHand;
 	private:
-		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an actor, so they can be linked when received. <ChildID, ParentID>
-		std::map<avs::uid, avs::MovementUpdate> earlyMovements; //Movements that have arrived before the actor was received.
+		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an node, so they can be linked when received. <ChildID, ParentID>
+		std::map<avs::uid, avs::MovementUpdate> earlyMovements; //Movements that have arrived before the node was received.
 
-		//Uses the index of the actor in the actorList to determine if it is visible.
-		bool IsActorVisible(avs::uid actorID) const;
+		//Uses the index of the node in the nodeList to determine if it is visible.
+		bool IsNodeVisible(avs::uid nodeID) const;
 
-		//Links the actor with the passed ID to it's parent. If the actor doesn't exist, then it doesn't do anything.
-		void LinkToParentActor(avs::uid actorID);
+		//Links the node with the passed ID to it's parent. If the node doesn't exist, then it doesn't do anything.
+		void LinkToParentNode(avs::uid nodeID);
 	};
 }

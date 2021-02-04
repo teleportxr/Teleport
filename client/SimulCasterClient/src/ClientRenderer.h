@@ -111,8 +111,8 @@ public:
     void RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrFrameResult &res);
 	void UpdateHandObjects();
 
-	void RenderLocalActors(OVR::ovrFrameResult& res);
-	void RenderActor(OVR::ovrFrameResult& res, std::shared_ptr<scr::Node> actor);
+	void RenderLocalNodes(OVR::ovrFrameResult& res);
+	void RenderNode(OVR::ovrFrameResult& res, std::shared_ptr<scr::Node> node);
 
 	avs::Decoder       mDecoder;
 	avs::NetworkSource mNetworkSource;

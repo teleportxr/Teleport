@@ -2,16 +2,13 @@
 
 #include "SurfaceRender.h"
 
-#include "libavstream/common.hpp"
-
-#include "NodeManager.h"
-#include "GlobalGraphicsResources.h"
+#include "Node.h"
 
 class OVRNode : public scr::Node
 {
 public:
 	OVRNode(avs::uid id, const std::string& name)
-			:Node(id, name)
+		:Node(id, name)
 	{}
 
 	virtual ~OVRNode() = default;
