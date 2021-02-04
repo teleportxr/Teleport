@@ -836,7 +836,8 @@ void ClientRenderer::RenderNode(ovrFrameResult& res, std::shared_ptr<scr::Node> 
 			//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
 			break;
 		}
-
+		if(ovrNode->ovrSurfaceDefs[matIndex].geo.indexCount==0)
+			continue;
 		res.Surfaces.emplace_back(transform, &ovrNode->ovrSurfaceDefs[matIndex]);
 	}
 

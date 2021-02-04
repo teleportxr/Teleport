@@ -110,7 +110,11 @@ OVR::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_p
 		return ovr_surface_def;
 	}
 	std::shared_ptr<scr::Mesh> mesh = GetMesh();
-	if(!mesh) return ovr_surface_def; //Can't create surface without mesh.
+	if(!mesh)
+	{
+		OVR_WARN("Mesh is null in CreateOVRSurface(...).");
+		return ovr_surface_def;
+	}
 
 	const scr::Mesh::MeshCreateInfo &meshCI = mesh->GetMeshCreateInfo();
 	scr::Material::MaterialCreateInfo &materialCI = material->GetMaterialCreateInfo();

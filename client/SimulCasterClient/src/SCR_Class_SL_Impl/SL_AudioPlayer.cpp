@@ -324,7 +324,7 @@ sca::Result SL_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 
 	if (!mConfigured)
 	{
-		SCA_CERR << "SL_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
+		//spamming: SCA_CERR << "SL_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
@@ -357,7 +357,8 @@ sca::Result SL_AudioPlayer::startRecording(std::function<void(const uint8_t * da
 
 	if (!mConfigured)
 	{
-		SCA_CERR << "SL_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+		// spamming
+		// SCA_CERR << "SL_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
