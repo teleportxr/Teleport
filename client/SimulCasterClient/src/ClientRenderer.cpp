@@ -817,30 +817,29 @@ void ClientRenderer::RenderNode(ovrFrameResult& res, std::shared_ptr<scr::Node> 
 {
 	std::shared_ptr<OVRNode> ovrNode = std::static_pointer_cast<OVRNode>(node);
 
-	//----OVR Node Set Transforms----//
+	//Get final transform.
 	scr::mat4 globalMatrix=node->GetGlobalTransform().GetTransformMatrix();
 	clientDeviceState->transformToLocalOrigin=scr::mat4::Translation(-clientDeviceState->localOriginPos);
 	scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
 
-	std::shared_ptr<scr::Skin> skin = ovrNode->GetSkin();
-	if(skin)
-		skin->UpdateBoneMatrices(globalMatrix);
-
+	//Convert transform to OVR type.
 	OVR::Matrix4f transform;
 	memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
 
-	for(size_t matIndex = 0; matIndex < node->GetMaterials().size(); matIndex++)
+	//Update skin uniform buffer to animate skinned meshes.
+	std::shared_ptr<scr::Skin> skin = ovrNode->GetSkin();
+	if(skin)
 	{
-		if(matIndex >= ovrNode->ovrSurfaceDefs.size())
-		{
-			//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
-			break;
-		}
-		if(ovrNode->ovrSurfaceDefs[matIndex].geo.indexCount==0)
-			continue;
-		res.Surfaces.emplace_back(transform, &ovrNode->ovrSurfaceDefs[matIndex]);
+		skin->UpdateBoneMatrices(globalMatrix);
 	}
 
+	//Push surfaces onto render queue.
+	for(ovrSurfaceDef& surfaceDef : ovrNode->ovrSurfaceDefs)
+	{
+		res.Surfaces.emplace_back(transform, &surfaceDef);
+	}
+
+	//Render children.
 	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
 	{
 		std::shared_ptr<scr::Node> child = childPtr.lock();
