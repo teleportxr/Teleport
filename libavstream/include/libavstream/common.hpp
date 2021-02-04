@@ -695,7 +695,7 @@ namespace avs
 		RightHand
 	};
 
-	enum class ActorStatus : uint8_t
+	enum class NodeStatus : uint8_t
 	{
 		Unknown = 0,
 		Drawn,
@@ -719,7 +719,7 @@ namespace avs
 		uint32_t maxBandwidthKpS=0;			// In kilobytes per second
 		AxesStandard axesStandard = AxesStandard::NotInitialized;
 		uint8_t framerate = 0;				// In hertz
-		bool usingHands = false; //Whether to send the hand actors to the client.
+		bool usingHands = false; //Whether to send the hand nodes to the client.
 		bool isVR = true;
 		uint64_t resourceCount = 0; //Amount of resources the client has, and are appended to the handshake.
 	};
@@ -784,7 +784,7 @@ namespace avs
 	enum class ClientMessagePayloadType : uint8_t
 	{
 		Invalid = 0,
-		ActorStatus,
+		NodeStatus,
 		ReceivedResources,
 		ControllerPoses
 	};
@@ -795,20 +795,20 @@ namespace avs
 		ClientMessagePayloadType clientMessagePayloadType;
 	};
 	
-	//Message info struct containing how many actors have changed to what state; sent alongside two list of actor UIDs.
-	struct ActorStatusMessage: public ClientMessage
+	//Message info struct containing how many nodes have changed to what state; sent alongside two list of node UIDs.
+	struct NodeStatusMessage : public ClientMessage
 	{
-		size_t actorsDrawnAmount;
-		size_t actorsWantToReleaseAmount;
+		size_t nodesDrawnAmount;
+		size_t nodesWantToReleaseAmount;
 
-		ActorStatusMessage()
-			:ActorStatusMessage(0, 0)
+		NodeStatusMessage()
+			:NodeStatusMessage(0, 0)
 		{}
 
-		ActorStatusMessage(size_t actorsDrawnAmount, size_t actorsWantToReleaseAmount)
-			:ClientMessage(ClientMessagePayloadType::ActorStatus),
-			actorsDrawnAmount(actorsDrawnAmount),
-			actorsWantToReleaseAmount(actorsWantToReleaseAmount)
+		NodeStatusMessage(size_t nodesDrawnAmount, size_t nodesWantToReleaseAmount)
+			:ClientMessage(ClientMessagePayloadType::NodeStatus),
+			nodesDrawnAmount(nodesDrawnAmount),
+			nodesWantToReleaseAmount(nodesWantToReleaseAmount)
 		{}
 	};
 
@@ -841,10 +841,10 @@ namespace avs
 		Invalid,
 		Shutdown,
 		Setup,
-		ActorBounds,
+		NodeBounds,
 		AcknowledgeHandshake,
 		SetPosition,
-		UpdateActorMovement,
+		UpdateNodeMovement,
 		ReconfigureVideo
 	};
 	struct Command
@@ -856,9 +856,9 @@ namespace avs
 	struct AcknowledgeHandshakeCommand : public Command
 	{
 		AcknowledgeHandshakeCommand() : Command(CommandPayloadType::AcknowledgeHandshake) {}
-		AcknowledgeHandshakeCommand(size_t visibleActorAmount) : Command(CommandPayloadType::AcknowledgeHandshake), visibleActorAmount(visibleActorAmount){}
+		AcknowledgeHandshakeCommand(size_t visibleNodeAmount) : Command(CommandPayloadType::AcknowledgeHandshake), visibleNodeAmount(visibleNodeAmount){}
 
-		size_t visibleActorAmount = 0; //Amount of visible actor IDs appended to the command payload.
+		size_t visibleNodeAmount = 0; //Amount of visible node IDs appended to the command payload.
 	};
 
 	struct SetPositionCommand : public Command
@@ -935,30 +935,30 @@ namespace avs
 		ShutdownCommand() : Command(CommandPayloadType::Shutdown) {}
 	};
 
-	struct ActorBoundsCommand: public Command
+	struct NodeBoundsCommand: public Command
 	{
-		size_t actorsShowAmount;
-		size_t actorsHideAmount;
+		size_t nodesShowAmount;
+		size_t nodesHideAmount;
 
-		ActorBoundsCommand()
-			:ActorBoundsCommand(0, 0)
+		NodeBoundsCommand()
+			:NodeBoundsCommand(0, 0)
 		{}
 
-		ActorBoundsCommand(size_t actorsShowAmount, size_t actorsHideAmount)
-			:Command(CommandPayloadType::ActorBounds), actorsShowAmount(actorsShowAmount), actorsHideAmount(actorsHideAmount)
+		NodeBoundsCommand(size_t nodesShowAmount, size_t nodesHideAmount)
+			:Command(CommandPayloadType::NodeBounds), nodesShowAmount(nodesShowAmount), nodesHideAmount(nodesHideAmount)
 		{}
 	};
 
-	struct UpdateActorMovementCommand : public Command
+	struct UpdateNodeMovementCommand : public Command
 	{
 		size_t updatesAmount;
 
-		UpdateActorMovementCommand()
-			:UpdateActorMovementCommand(0)
+		UpdateNodeMovementCommand()
+			:UpdateNodeMovementCommand(0)
 		{}
 
-		UpdateActorMovementCommand(size_t updatesAmount)
-			:Command(CommandPayloadType::UpdateActorMovement), updatesAmount(updatesAmount)
+		UpdateNodeMovementCommand(size_t updatesAmount)
+			:Command(CommandPayloadType::UpdateNodeMovement), updatesAmount(updatesAmount)
 		{}
 	};
 
@@ -970,14 +970,14 @@ namespace avs
 			return sizeof(SetupCommand);
 		case CommandPayloadType::Shutdown:
 			return sizeof(ShutdownCommand);
-		case CommandPayloadType::ActorBounds:
-			return sizeof(ActorBoundsCommand);
+		case CommandPayloadType::NodeBounds:
+			return sizeof(NodeBoundsCommand);
 		case CommandPayloadType::AcknowledgeHandshake:
 			return sizeof(AcknowledgeHandshakeCommand);
 		case CommandPayloadType::SetPosition:
 			return sizeof(SetPositionCommand);
-		case CommandPayloadType::UpdateActorMovement:
-			return sizeof(UpdateActorMovementCommand);
+		case CommandPayloadType::UpdateNodeMovement:
+			return sizeof(UpdateNodeMovementCommand);
 		default:
 			return 0;
 		};
@@ -987,8 +987,8 @@ namespace avs
 	{
 		switch (t)
 		{
-		case ClientMessagePayloadType::ActorStatus:
-			return sizeof(ActorStatusMessage);
+		case ClientMessagePayloadType::NodeStatus:
+			return sizeof(NodeStatusMessage);
 		case ClientMessagePayloadType::ReceivedResources:
 			return sizeof(ReceivedResourcesMessage);
 			case ClientMessagePayloadType::ControllerPoses:

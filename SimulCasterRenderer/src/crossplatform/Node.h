@@ -3,7 +3,7 @@
 
 #include <libavstream/geometry/mesh_interface.hpp>
 
-#include "ActorComponents.h"
+#include "NodeComponents.h"
 #include "api/UniformBuffer.h"
 #include "basic_linear_algebra.h"
 #include "Material.h"
@@ -27,7 +27,7 @@ public:
 	virtual ~Node() = default;
 
 	void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
-	//Requests global transform of actor, and actor's children, be recalculated.
+	//Requests global transform of node, and node's children, be recalculated.
 	void RequestTransformUpdate();
 
 	void SetLastMovement(const avs::MovementUpdate& update);
@@ -36,19 +36,21 @@ public:
 
 	void Update(float deltaTime);
 
-	void SetParent(std::weak_ptr<Node> parent);
-	void AddChild(std::weak_ptr<Node> child);
-	void RemoveChild(std::weak_ptr<Node> child);
+	void SetParent(std::shared_ptr<Node> parent);
+	std::weak_ptr<Node> GetParent() const { return parent; }
+
+	void AddChild(std::shared_ptr<Node> child);
+	void RemoveChild(std::shared_ptr<Node> child);
+	void RemoveChild(avs::uid childID);
+	void ClearChildren();
+
+	const std::vector<std::weak_ptr<Node>>& GetChildren() const { return children; }
+	void SetChildrenIDs(std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
+	const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
 
 	bool IsVisible() const { return visibility.getVisibility(); }
 	void SetVisible(bool visible);
 	float GetTimeSinceLastVisible() const { return visibility.getTimeSinceLastVisible(); }
-
-	std::weak_ptr<Node> GetParent() const { return parent; }
-	const std::vector<std::weak_ptr<Node>>& GetChildren() const { return children; }
-
-	void SetChildrenIDs(std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
-	const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
 
 	virtual void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
 	std::shared_ptr<Mesh> GetMesh() const { return mesh; }

@@ -136,7 +136,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	scr::ResourceManagers resourceManagers;
 	void Recompose(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 	bool show_video = false;
-	bool renderHands = false;
+	bool renderPlayer = false; //Whether to render the player.
 
 	enum
 	{
@@ -176,24 +176,24 @@ public:
 
 	void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
 
-	bool OnActorEnteredBounds(avs::uid actor_uid) override;
-	bool OnActorLeftBounds(avs::uid actor_uid) override;
+	bool OnNodeEnteredBounds(avs::uid nodeID) override;
+	bool OnNodeLeftBounds(avs::uid nodeID) override;
 
 	std::vector<avs::uid> GetGeometryResources() override;
 	void ClearGeometryResources() override;
 
-	void SetVisibleActors(const std::vector<avs::uid>& visibleActors) override;
-	void UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList) override;
+	void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
+	void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) override;
 
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
 	void PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	
 	void DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> actor);
+	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> node);
 	void WriteHierarchies();
-	void RenderLocalActors(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-	void RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& actor);
+	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node);
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);

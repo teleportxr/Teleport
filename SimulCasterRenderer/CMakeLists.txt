@@ -24,12 +24,6 @@ set( src_api
 	src/api/VertexBufferLayout.h
 	)
 set( src_crossplatform
-	src/crossplatform/Node.cpp
-	src/crossplatform/Node.h
-	src/crossplatform/ActorComponents.cpp
-	src/crossplatform/ActorComponents.h
-	src/crossplatform/NodeManager.cpp
-	src/crossplatform/NodeManager.h
 	src/crossplatform/Animation.cpp
 	src/crossplatform/Animation.h
 	src/crossplatform/API.cpp
@@ -53,6 +47,10 @@ set( src_crossplatform
 	src/crossplatform/Mesh.h
 	src/crossplatform/Node.cpp
 	src/crossplatform/Node.h
+	src/crossplatform/NodeComponents.cpp
+	src/crossplatform/NodeComponents.h
+	src/crossplatform/NodeManager.cpp
+	src/crossplatform/NodeManager.h
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h

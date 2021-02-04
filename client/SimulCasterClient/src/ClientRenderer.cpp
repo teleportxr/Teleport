@@ -10,8 +10,12 @@
 #include <VrApi_Types.h>
 #include <VrApi_Input.h>
 
-#include "OVRNodeManager.h"
 #include "ClientDeviceState.h"
+#include "OVRNode.h"
+#include "OVRNodeManager.h"
+
+using namespace OVR;
+extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 
 static const char *ToString(scr::Light::Type type)
 {
@@ -31,16 +35,15 @@ static const char *ToString(scr::Light::Type type)
 			lightTypeName=" Area";
 			break;
 		case scr::Light::Type::DISC:
-			lightTypeName=" Disc";
+			lightTypeName = " Disc";
 			break;
 		default:
+			lightTypeName = "UNKNOWN";
 			break;
 	};
 	return lightTypeName;
 }
 
-using namespace OVR;
-extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 avs::vec3 QuaternionTimesVector(const ovrQuatf &q,const avs::vec3 &vec)
 {
 	const float &x0 = vec.x;
@@ -55,6 +58,7 @@ avs::vec3 QuaternionTimesVector(const ovrQuatf &q,const avs::vec3 &vec)
 					s1 * q.z + q.w * z1 + q.x * y1 - q.y * x1};
 	return ret;
 }
+
 ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c
 ,ClientDeviceState *s)
 		:mDecoder(avs::DecoderBackend::Custom)
@@ -71,7 +75,6 @@ ClientRenderer::ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,Sess
 		, clientDeviceState(s)
 {
 }
-
 
 ClientRenderer::~ClientRenderer()
 {
@@ -734,8 +737,6 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrF
 
 void ClientRenderer::UpdateHandObjects()
 {
-	std::vector<ovrTracking> remoteStates;
-
 	uint32_t deviceIndex = 0;
 	ovrInputCapabilityHeader capsHeader;
 	//Poll controller state from the Oculus API.
@@ -746,10 +747,9 @@ void ClientRenderer::UpdateHandObjects()
 			ovrTracking remoteState;
 			if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
 			{
-				remoteStates.push_back(remoteState);
 				if(deviceIndex < 2)
 				{
-					clientDeviceState->SetControllerPose(deviceIndex,remoteState.HeadPose.Pose.Position,remoteState.HeadPose.Pose.Orientation);
+					clientDeviceState->SetControllerPose(deviceIndex, remoteState.HeadPose.Pose.Position, remoteState.HeadPose.Pose.Orientation);
 				}
 				else
 				{
@@ -760,129 +760,102 @@ void ClientRenderer::UpdateHandObjects()
 		++deviceIndex;
 	}
 
-	std::shared_ptr<scr::Node> leftHand, rightHand;
-	resourceManagers->mNodeManager->GetHands(leftHand, rightHand);
-
-	switch(remoteStates.size())
+	/*
+	std::shared_ptr<scr::Node> body = resourceManagers->mNodeManager->GetBody();
+	if(body)
 	{
-		case 0:
-			return;
-		case 1: //Set non-dominant hand away. TODO: Query OVR for which hand is dominant/in-use.
-			leftHand = nullptr;
-			break;
-		default:
-			break;
+		body->UpdateModelMatrix(headPose.position, headPose.orientation, body->GetGlobalTransform().m_Scale);
 	}
 
+	std::shared_ptr<scr::Node> rightHand = resourceManagers->mNodeManager->GetRightHand();
 	if(rightHand)
 	{
-		rightHand->UpdateModelMatrix
-				(
-						avs::vec3
-								{
-										remoteStates[0].HeadPose.Pose.Position.x + clientDeviceState->cameraPosition.x,
-										remoteStates[0].HeadPose.Pose.Position.y + clientDeviceState->cameraPosition.y,
-										remoteStates[0].HeadPose.Pose.Position.z + clientDeviceState->cameraPosition.z
-								},
-						scr::quat
-								{
-										remoteStates[0].HeadPose.Pose.Orientation.x,
-										remoteStates[0].HeadPose.Pose.Orientation.y,
-										remoteStates[0].HeadPose.Pose.Orientation.z,
-										remoteStates[0].HeadPose.Pose.Orientation.w
-								}
-						* HAND_ROTATION_DIFFERENCE,
-						rightHand->GetGlobalTransform().m_Scale
-				);
+		avs::vec3 newPosition = controllerPoses[0].position;
+		scr::quat newRotation = scr::quat(controllerPoses[0].orientation) * HAND_ROTATION_DIFFERENCE;
+		rightHand->UpdateModelMatrix(newPosition, newRotation, rightHand->GetGlobalTransform().m_Scale);
 	}
 
+	std::shared_ptr<scr::Node> leftHand = resourceManagers->mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
-		leftHand->UpdateModelMatrix
-				(
-						avs::vec3
-								{
-										remoteStates[1].HeadPose.Pose.Position.x + clientDeviceState->cameraPosition.x,
-										remoteStates[1].HeadPose.Pose.Position.y + clientDeviceState->cameraPosition.y,
-										remoteStates[1].HeadPose.Pose.Position.z + clientDeviceState->cameraPosition.z
-								},
-						scr::quat
-								{
-										remoteStates[1].HeadPose.Pose.Orientation.x,
-										remoteStates[1].HeadPose.Pose.Orientation.y,
-										remoteStates[1].HeadPose.Pose.Orientation.z,
-										remoteStates[1].HeadPose.Pose.Orientation.w
-								}
-						* HAND_ROTATION_DIFFERENCE,
-						leftHand->GetGlobalTransform().m_Scale
-				);
+		avs::vec3 newPosition = controllerPoses[1].position;
+		scr::quat newRotation = scr::quat(controllerPoses[1].orientation) * HAND_ROTATION_DIFFERENCE;
+		leftHand->UpdateModelMatrix(newPosition, newRotation, leftHand->GetGlobalTransform().m_Scale);
+	}
+	 */
+}
+
+void ClientRenderer::RenderLocalNodes(ovrFrameResult& res)
+{
+	//Render local nodes.
+	const scr::NodeManager::nodeList_t &rootNodes = resourceManagers->mNodeManager->GetRootNodes();
+	for(std::shared_ptr<scr::Node> node : rootNodes)
+	{
+		RenderNode(res, node);
+	}
+
+	//Render player, if parts exist.
+	std::shared_ptr<scr::Node> body = resourceManagers->mNodeManager->GetBody();
+	if(body)
+	{
+		RenderNode(res, body);
+	}
+	std::shared_ptr<scr::Node> leftHand = resourceManagers->mNodeManager->GetLeftHand();
+	if(leftHand)
+	{
+		RenderNode(res, leftHand);
+	}
+	std::shared_ptr<scr::Node> rightHand = resourceManagers->mNodeManager->GetRightHand();
+	if(rightHand)
+	{
+		RenderNode(res, rightHand);
 	}
 }
 
-void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
+
+void ClientRenderer::RenderNode(ovrFrameResult& res, std::shared_ptr<scr::Node> node)
 {
-	//Render local actors.
-	const scr::NodeManager::actorList_t &rootActors = resourceManagers->mNodeManager->GetRootActors();
-	for(std::shared_ptr<scr::Node> actor : rootActors)
-	{
-		RenderActor(res, actor);
-	}
-
-	//Retrieve hands.
-	std::shared_ptr<scr::Node> leftHand, rightHand;
-	resourceManagers->mNodeManager->GetHands(leftHand, rightHand);
-
-	//Render hands, if they exist.
-	if(leftHand)
-		RenderActor(res, leftHand);
-	if(rightHand)
-		RenderActor(res, rightHand);
-}
-
-
-void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node> actor)
-{
-	std::shared_ptr<OVRNode> ovrActor = std::static_pointer_cast<OVRNode>(actor);
+	std::shared_ptr<OVRNode> ovrNode = std::static_pointer_cast<OVRNode>(node);
 
 	//----OVR Node Set Transforms----//
-	scr::mat4 globalMatrix=actor->GetGlobalTransform().GetTransformMatrix();
+	scr::mat4 globalMatrix=node->GetGlobalTransform().GetTransformMatrix();
 	clientDeviceState->transformToLocalOrigin=scr::mat4::Translation(-clientDeviceState->localOriginPos);
 	scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
 
-	std::shared_ptr<scr::Skin> skin = ovrActor->GetSkin();
+	std::shared_ptr<scr::Skin> skin = ovrNode->GetSkin();
 	if(skin)
 		skin->UpdateBoneMatrices(globalMatrix);
 
 	OVR::Matrix4f transform;
 	memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
 
-	for(size_t matIndex = 0; matIndex < actor->GetMaterials().size(); matIndex++)
+	for(size_t matIndex = 0; matIndex < node->GetMaterials().size(); matIndex++)
 	{
-		if(matIndex >= ovrActor->ovrSurfaceDefs.size())
+		if(matIndex >= ovrNode->ovrSurfaceDefs.size())
 		{
 			//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
 			break;
 		}
 
-		res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
+		res.Surfaces.emplace_back(transform, &ovrNode->ovrSurfaceDefs[matIndex]);
 	}
 
-	for(std::weak_ptr<scr::Node> childPtr : actor->GetChildren())
+	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
 	{
 		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if(child)
 		{
-			RenderActor(res, child);
+			RenderNode(res, child);
 		}
 	}
 }
 
 void ClientRenderer::ToggleTextures()
 {
-	OVRNodeManager* NodeManager = dynamic_cast<OVRNodeManager*>(resourceManagers->mNodeManager.get());
+	OVRNodeManager* nodeManager = dynamic_cast<OVRNodeManager*>(resourceManagers->mNodeManager.get());
 	passSelector++;
 	passSelector=passSelector%(passNames.size());
-	NodeManager->ChangeEffectPass(passNames[passSelector].c_str());
+	nodeManager->ChangeEffectPass(passNames[passSelector].c_str());
 }
 
 
@@ -944,15 +917,15 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 	else if (show_osd == GEOMETRY_OSD)
 	{
 		mGuiSys->ShowInfoText
-				(
-						INFO_TEXT_DURATION,
-						"%s\n"
-						"Actors: %d \n"
-						"Orphans: %d",
-						GlobalGraphicsResources.effectPassName,
-						static_cast<uint64_t>(resourceManagers->mNodeManager->GetActorAmount()),
-						ctr.m_packetMapOrphans
-				);
+		(
+			INFO_TEXT_DURATION,
+			"%s\n"
+			"Nodes: %d \n"
+			"Orphans: %d",
+			GlobalGraphicsResources.effectPassName,
+			static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()),
+			ctr.m_packetMapOrphans
+		);
 
 		const auto &missingResources = resourceCreator->GetMissingResources();
 		if (missingResources.size() > 0)

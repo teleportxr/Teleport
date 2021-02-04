@@ -50,9 +50,9 @@ namespace SCServer
 		void tick(float deltaTime);
 		void handleEvents(float deltaTime);
 
-		void actorEnteredBounds(avs::uid actorID);
-		void actorLeftBounds(avs::uid actorID);
-		void updateActorMovement(std::vector<avs::MovementUpdate>& updateList);
+		void nodeEnteredBounds(avs::uid nodeID);
+		void nodeLeftBounds(avs::uid nodeID);
+		void updateNodeMovement(std::vector<avs::MovementUpdate>& updateList);
 
 		bool hasHost() const;
 		bool hasPeer() const;
@@ -110,8 +110,8 @@ namespace SCServer
 
 		bool receivedHandshake = false; //Whether we've received the handshake from the client.
 
-		std::vector<avs::uid> actorsEnteredBounds; //Stores actors client needs to know have entered streaming bounds.
-		std::vector<avs::uid> actorsLeftBounds; //Stores actors client needs to know have left streaming bounds.
+		std::vector<avs::uid> nodesEnteredBounds; //Stores nodes client needs to know have entered streaming bounds.
+		std::vector<avs::uid> nodesLeftBounds; //Stores nodes client needs to know have left streaming bounds.
 
 		void dispatchEvent(const ENetEvent& event);
 		void receiveHandshake(const ENetPacket* packet);

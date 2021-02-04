@@ -27,8 +27,8 @@ namespace scr
 {
     struct ResourceManagers
     {
-        ResourceManagers(scr::NodeManager* NodeManager)
-            :mNodeManager(NodeManager),
+        ResourceManagers(scr::NodeManager* nodeManager)
+            :mNodeManager(nodeManager),
             mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
             mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
             mUniformBufferManager(&scr::UniformBuffer::Destroy),
@@ -76,7 +76,7 @@ namespace scr
 			return resourceIDs;
 
 			/*
-				//We will resend the actors/objects to update the transform data, as changes in client position (and thus the new invisible actors) aren't stored for the reconnect.
+				//We will resend the nodes/objects to update the transform data, as changes in client position (and thus the new invisible nodes) aren't stored for the reconnect.
 				mNodeManager;
 
 				//These IDs aren't stored on the server currently, and thus are ignored.
@@ -107,8 +107,8 @@ namespace scr
 
 		//Clear all resources that aren't in the exclude list.
 		//	excludeList : List of resources that should be spared from clearing of resource managers.
-		//	outExistingActors : List of actors in the excludeList that existed on the client.
-		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingActors)
+		//	outExistingNodes : List of nodes in the excludeList that existed on the client.
+		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)
 		{
 			mMaterialManager.ClearCareful(excludeList);
 			mTextureManager.ClearCareful(excludeList);
@@ -119,7 +119,7 @@ namespace scr
 			mAnimationManager.ClearCareful(excludeList);
 
 			//Last as it will likely be the largest.
-			mNodeManager->ClearCareful(excludeList, outExistingActors);
+			mNodeManager->ClearCareful(excludeList, outExistingNodes);
 
 			///As the UIDs of these aren't(?) stored on the server; the server can't confirm their existence.
 			///If the mesh is cleared, then these will be cleared.
@@ -179,8 +179,8 @@ public:
 	std::vector<avs::uid> TakeResourceRequests();
 	//Returns a list of resource IDs corresponding to the resources the client has received, and clears the list.
 	std::vector<avs::uid> TakeReceivedResources();
-	//Returns the actors that have been finished since the call, and clears the list.
-	std::vector<avs::uid> TakeCompletedActors();
+	//Returns the nodes that have been finished since the call, and clears the list.
+	std::vector<avs::uid> TakeCompletedNodes();
 
 	void Clear();
 
@@ -207,10 +207,10 @@ public:
 	// Inherited via GeometryTargetBackendInterface
 	avs::Result Assemble(avs::MeshCreate& meshCreate) override;
 
-	void CreateTexture(avs::uid texture_uid, const avs::Texture& texture) override;
-	void CreateMaterial(avs::uid material_uid, const avs::Material& material) override;
-	void CreateNode(avs::uid node_uid, avs::DataNode& node) override;
-	void CreateSkin(avs::uid skinID, avs::Skin& skin) override;
+	void CreateTexture(avs::uid id, const avs::Texture& texture) override;
+	void CreateMaterial(avs::uid id, const avs::Material& material) override;
+	void CreateNode(avs::uid id, avs::DataNode& node) override;
+	void CreateSkin(avs::uid id, avs::Skin& skin) override;
 	void CreateAnimation(avs::uid id, avs::Animation& animation) override;
 
 	std::shared_ptr<scr::Texture> m_DummyDiffuse;
@@ -233,17 +233,15 @@ private:
 		std::unordered_map<avs::uid, std::shared_ptr<scr::Texture>&> textureSlots; //<ID of the texture, slot the texture should be placed into>.
 	};
 
-	struct IncompleteActor : IncompleteResource
+	struct IncompleteNode : IncompleteResource
 	{
-		IncompleteActor(avs::uid id, avs::GeometryPayloadType type, bool isHand)
-			:IncompleteResource(id, type), isHand(isHand)
+		IncompleteNode(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
 		{}
 
-		const bool isHand = false;
+		std::shared_ptr<scr::Node> node;
 
-		std::shared_ptr<scr::Node> actor;
-
-		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into actor material list>.
+		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into node material list>.
 		std::unordered_map<avs::uid, size_t> missingAnimations; //<ID of missing animation, index in animation vector>
 	};
 
@@ -279,17 +277,17 @@ private:
 		std::string name; //For debugging which texture failed.
 	};
 	
-	void CreateActor(avs::uid node_uid, avs::DataNode& node);
-	void CreateLight(avs::uid node_uid, avs::DataNode& node);
-	void CreateBone(avs::uid boneID, avs::DataNode& node);
+	void CreateMeshNode(avs::uid id, avs::DataNode& node);
+	void CreateLight(avs::uid id, avs::DataNode& node);
+	void CreateBone(avs::uid id, avs::DataNode& node);
 
-	void CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo);
-	void CompleteSkin(avs::uid skinID, std::shared_ptr<IncompleteSkin> completeSkin);
-	void CompleteTexture(avs::uid texture_uid, const scr::Texture::TextureCreateInfo& textureInfo);
-	void CompleteMaterial(avs::uid material_uid, const scr::Material::MaterialCreateInfo& materialInfo);
-	void CompleteActor(avs::uid node_uid, std::shared_ptr<scr::Node> actor, bool isHand);
-	void CompleteBone(avs::uid boneID, std::shared_ptr<scr::Bone> bone);
-	void CompleteAnimation(avs::uid animationID, std::shared_ptr<IncompleteAnimation> completeAnimation);
+	void CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo& meshInfo);
+	void CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin);
+	void CompleteTexture(avs::uid id, const scr::Texture::TextureCreateInfo& textureInfo);
+	void CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo);
+	void CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> node);
+	void CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone);
+	void CompleteAnimation(avs::uid id, std::shared_ptr<IncompleteAnimation> completeAnimation);
 
 	//Add texture to material being created.
 	//	accessor : Data on texture that was received from server.
@@ -344,7 +342,7 @@ private:
 
 	std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 	std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.
-	std::vector<avs::uid> m_CompletedActors; //List of IDs of actors that have been fully received, and have yet to be confirmed to the server.
+	std::vector<avs::uid> m_CompletedNodes; //List of IDs of nodes that have been fully received, and have yet to be confirmed to the server.
 	std::unordered_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 };
 

@@ -168,7 +168,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			SendInput(controllerStates[0]);
 			SendResourceRequests();
 			SendReceivedResources();
-			SendActorUpdates();
+			SendNodeUpdates();
 			if(requestKeyframe)
 				SendKeyframeRequest();
 		}
@@ -311,50 +311,50 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			originToHeadPos=command.relative_pos;
 		}
 		break;
-		case avs::CommandPayloadType::ActorBounds:
+		case avs::CommandPayloadType::NodeBounds:
 		{
-			size_t commandSize = sizeof(avs::ActorBoundsCommand);
+			size_t commandSize = sizeof(avs::NodeBoundsCommand);
 
-			avs::ActorBoundsCommand command;
+			avs::NodeBoundsCommand command;
 			memcpy(&command, packet->data, commandSize);
 
-			size_t enteredSize = sizeof(avs::uid) * command.actorsShowAmount;
-			size_t leftSize = sizeof(avs::uid) * command.actorsHideAmount;
+			size_t enteredSize = sizeof(avs::uid) * command.nodesShowAmount;
+			size_t leftSize = sizeof(avs::uid) * command.nodesHideAmount;
 
-			std::vector<avs::uid> enteredActors(command.actorsShowAmount);
-			std::vector<avs::uid> leftActors(command.actorsHideAmount);
+			std::vector<avs::uid> enteredNodes(command.nodesShowAmount);
+			std::vector<avs::uid> leftNodes(command.nodesHideAmount);
 
-			memcpy(enteredActors.data(), packet->data + commandSize, enteredSize);
-			memcpy(leftActors.data(), packet->data + commandSize + enteredSize, leftSize);
+			memcpy(enteredNodes.data(), packet->data + commandSize, enteredSize);
+			memcpy(leftNodes.data(), packet->data + commandSize + enteredSize, leftSize);
 
-			std::vector<avs::uid> missingActors;
-			//Tell the renderer to show the actors that have entered the streamable bounds; create resend requests for actors it does not have the data on, and confirm actors it does have the data for.
-			for(avs::uid actor_uid : enteredActors)
+			std::vector<avs::uid> missingNodes;
+			//Tell the renderer to show the nodes that have entered the streamable bounds; create resend requests for nodes it does not have the data on, and confirm nodes it does have the data for.
+			for(avs::uid node_uid : enteredNodes)
 			{
-				if(!mCommandInterface->OnActorEnteredBounds(actor_uid))
+				if(!mCommandInterface->OnNodeEnteredBounds(node_uid))
 				{
-					missingActors.push_back(actor_uid);
+					missingNodes.push_back(node_uid);
 				}
 				else
 				{
-					mReceivedActors.push_back(actor_uid);
+					mReceivedNodes.push_back(node_uid);
 				}
 			}
-			mResourceRequests.insert(mResourceRequests.end(), missingActors.begin(), missingActors.end());
+			mResourceRequests.insert(mResourceRequests.end(), missingNodes.begin(), missingNodes.end());
 
-			//Tell renderer to hide actors that have left bounds.
-			for(avs::uid actor_uid : leftActors)
+			//Tell renderer to hide nodes that have left bounds.
+			for(avs::uid node_uid : leftNodes)
 			{
-				if(mCommandInterface->OnActorLeftBounds(actor_uid))
+				if(mCommandInterface->OnNodeLeftBounds(node_uid))
 				{
-					mLostActors.push_back(actor_uid);
+					mLostNodes.push_back(node_uid);
 				}
 			}
 		}
 
 			break;
-		case avs::CommandPayloadType::UpdateActorMovement:
-			ReceiveActorMovementUpdate(packet);
+		case avs::CommandPayloadType::UpdateNodeMovement:
+			ReceiveNodeMovementUpdate(packet);
 			break;
 		default:
 			break;
@@ -499,31 +499,31 @@ void SessionClient::SendReceivedResources()
 	}
 }
 
-void SessionClient::SendActorUpdates()
+void SessionClient::SendNodeUpdates()
 {
-	//Insert completed actors.
+	//Insert completed nodes.
 	{
-		std::vector<avs::uid> completedActors = mResourceCreator->TakeCompletedActors();
-		mReceivedActors.insert(mReceivedActors.end(), completedActors.begin(), completedActors.end());
+		std::vector<avs::uid> completedNodes = mResourceCreator->TakeCompletedNodes();
+		mReceivedNodes.insert(mReceivedNodes.end(), completedNodes.begin(), completedNodes.end());
 	}
 
-	if(mReceivedActors.size() != 0 || mLostActors.size() != 0)
+	if(mReceivedNodes.size() != 0 || mLostNodes.size() != 0)
 	{
-		avs::ActorStatusMessage message(mReceivedActors.size(), mLostActors.size());
+		avs::NodeStatusMessage message(mReceivedNodes.size(), mLostNodes.size());
 
-		size_t messageSize = sizeof(avs::ActorStatusMessage);
-		size_t receivedSize = sizeof(avs::uid) * mReceivedActors.size();
-		size_t lostSize = sizeof(avs::uid) * mLostActors.size();
+		size_t messageSize = sizeof(avs::NodeStatusMessage);
+		size_t receivedSize = sizeof(avs::uid) * mReceivedNodes.size();
+		size_t lostSize = sizeof(avs::uid) * mLostNodes.size();
 
 		ENetPacket* packet = enet_packet_create(&message, messageSize, ENET_PACKET_FLAG_RELIABLE);
 		enet_packet_resize(packet, messageSize + receivedSize + lostSize);
-		memcpy(packet->data + messageSize, mReceivedActors.data(), receivedSize);
-		memcpy(packet->data + messageSize + receivedSize, mLostActors.data(), lostSize);
+		memcpy(packet->data + messageSize, mReceivedNodes.data(), receivedSize);
+		memcpy(packet->data + messageSize + receivedSize, mLostNodes.data(), lostSize);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 
-		mReceivedActors.clear();
-		mLostActors.clear();
+		mReceivedNodes.clear();
+		mLostNodes.clear();
 	}
 }
 
@@ -555,25 +555,25 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 	avs::AcknowledgeHandshakeCommand command;
 	memcpy(&command, packet->data, commandSize);
 
-	//Extract list of visible actors.
-	std::vector<avs::uid> visibleActors(command.visibleActorAmount);
-	memcpy(visibleActors.data(), packet->data + commandSize, sizeof(avs::uid) * command.visibleActorAmount);
+	//Extract list of visible nodes.
+	std::vector<avs::uid> visibleNodes(command.visibleNodeAmount);
+	memcpy(visibleNodes.data(), packet->data + commandSize, sizeof(avs::uid) * command.visibleNodeAmount);
 
-	mCommandInterface->SetVisibleActors(visibleActors);
+	mCommandInterface->SetVisibleNodes(visibleNodes);
 
 	handshakeAcknowledged = true;
 }
 
-void SessionClient::ReceiveActorMovementUpdate(const ENetPacket* packet)
+void SessionClient::ReceiveNodeMovementUpdate(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::UpdateActorMovementCommand);
+	size_t commandSize = sizeof(avs::UpdateNodeMovementCommand);
 
 	//Extract command from packet.
-	avs::UpdateActorMovementCommand command;
+	avs::UpdateNodeMovementCommand command;
 	memcpy(&command, packet->data, commandSize);
 
 	std::vector<avs::MovementUpdate> updateList(command.updatesAmount);
 	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::MovementUpdate) * command.updatesAmount);
 
-	mCommandInterface->UpdateActorMovement(updateList);
+	mCommandInterface->UpdateNodeMovement(updateList);
 }

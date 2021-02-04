@@ -426,7 +426,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 					cubemapClearEffect->Unapply(deviceContext);
 					cubemapClearEffect->UnbindTextures(deviceContext);
 				}
-				RenderLocalActors(deviceContext);
+				RenderLocalNodes(deviceContext);
 			}
 			else
 			{
@@ -646,15 +646,17 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	else if(show_osd==GEOMETRY_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Actors: %d",resourceManagers.mNodeManager->GetActorAmount()), white);
-		auto &rootActors=resourceManagers.mNodeManager->GetRootActors();
-		for(const std::shared_ptr<scr::Node>& actor : rootActors)
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
+
+		auto &rootNodes=resourceManagers.mNodeManager->GetRootNodes();
+		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{
-			ListNode(deviceContext,*actor,1);
+			ListNode(deviceContext, *node, 1);
 		}
 
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d"	,resourceManagers.mMeshManager.GetCache(cacheLock).size()
-																									,resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
+																									resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
+
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
 		int j=0;
 		for(auto &i:cachedLights)
@@ -756,28 +758,47 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	PrintHelpText(deviceContext);
 }
 
-void ClientRenderer::WriteHierarchy(int tab, std::shared_ptr<scr::Node> actor)
+void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<scr::Node> node)
 {
-	for(int i = 0; i < tab; i++)
+	for(int i = 0; i < tabDepth; i++)
 	{
 		std::cout << "\t";
 	}
-	std::cout << actor->id << "(" << actor->name << ")" << std::endl;
+	std::cout << node->id << "(" << node->name << ")" << std::endl;
 
-	for(auto a : actor->GetChildren())
+	for(auto child : node->GetChildren())
 	{
-		WriteHierarchy(tab + 1, a.lock());
+		WriteHierarchy(tabDepth + 1, child.lock());
 	}
 }
 
 void ClientRenderer::WriteHierarchies()
 {
-	for(std::shared_ptr<scr::Node> actor : resourceManagers.mNodeManager->GetRootActors())
+	for(std::shared_ptr<scr::Node> node : resourceManagers.mNodeManager->GetRootNodes())
 	{
-		WriteHierarchy(0,actor);
+		WriteHierarchy(0, node);
+	}
+
+	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
+	if(body)
+	{
+		WriteHierarchy(0, body);
+	}
+
+	std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
+	if(leftHand)
+	{
+		WriteHierarchy(0, leftHand);
+	}
+
+	std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
+	if(rightHand)
+	{
+		WriteHierarchy(0, rightHand);
 	}
 }
-void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+
+void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 //	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
@@ -790,32 +811,35 @@ void ClientRenderer::RenderLocalActors(simul::crossplatform::GraphicsDeviceConte
 	vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	cameraConstants.viewPosition = finalViewPos;
 
-	const scr::NodeManager::actorList_t& actorList = resourceManagers.mNodeManager->GetRootActors();
-	for(const std::shared_ptr<scr::Node>& actor : actorList)
+	const scr::NodeManager::nodeList_t& nodeList = resourceManagers.mNodeManager->GetRootNodes();
+	for(const std::shared_ptr<scr::Node>& node : nodeList)
 	{
-		RenderActor(deviceContext, actor);
+		RenderNode(deviceContext, node);
 	}
 
-	if (renderHands)
+	if(renderPlayer)
 	{
-		std::shared_ptr<scr::Node> leftHand;
-		std::shared_ptr<scr::Node> rightHand;
-		resourceManagers.mNodeManager->GetHands(leftHand, rightHand);
+		std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
+		if(body)
+		{
+			RenderNode(deviceContext, body);
+		}
 
+		std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
 		if(leftHand)
 		{
-			RenderActor(deviceContext, leftHand);
+			RenderNode(deviceContext, leftHand);
 		}
 
+		std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
 		if(rightHand)
 		{
-			RenderActor(deviceContext, rightHand);
+			RenderNode(deviceContext, rightHand);
 		}
 	}
-	
 }
 
-void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& actor)
+void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node)
 {
 	AVSTextureHandle th = avsTextures[0];
 	AVSTexture& tx = *th;
@@ -836,16 +860,16 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 	if(l)
 		lightsBuffer.SetData(deviceContext,l);
 
-	//Only render visible actors, but still render children that are close enough.
-	if(actor->IsVisible())
+	//Only render visible nodes, but still render children that are close enough.
+	if(node->IsVisible())
 	{
-		const scr::Transform& transform = actor->GetGlobalTransform();
-		const std::shared_ptr<scr::Mesh> mesh = actor->GetMesh();
+		const scr::Transform& transform = node->GetGlobalTransform();
+		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
 		if(mesh)
 		{
 			const auto& meshInfo = mesh->GetMeshCreateInfo();
 			static int mat_select=-1;
-			for(size_t element = 0; element < actor->GetMaterials().size() && element < meshInfo.ib.size(); element++)
+			for(size_t element = 0; element < node->GetMaterials().size() && element < meshInfo.ib.size(); element++)
 			{
 				if(mat_select >= 0 && mat_select != element) continue;
 
@@ -860,10 +884,10 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 				mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
 				cameraConstants.world = model;
 
-				std::shared_ptr<scr::Material> material = actor->GetMaterials()[element];
+				std::shared_ptr<scr::Material> material = node->GetMaterials()[element];
 				if(!material)
 				{
-					//Actor incomplete.
+					//Node incomplete.
 					continue;
 				}
 				else
@@ -885,8 +909,9 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "roughSpecularCubemap", roughSpecularCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
-				//	pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
-				//	pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
+					//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
+					//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
+					//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				}
 				
 				lightsBuffer.Apply(deviceContext, pbrEffect, _lights );
@@ -894,7 +919,7 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 				tagDataIDBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataIDBuffer"));
 				std::string usedPassName = passName;
 
-				std::shared_ptr<scr::Skin> skin = actor->GetSkin();
+				std::shared_ptr<scr::Skin> skin = node->GetSkin();
 				if(skin)
 				{
 					scr::mat4* scr_matrices = skin->GetBoneMatrices(transform.GetTransformMatrix());
@@ -919,12 +944,12 @@ void ClientRenderer::RenderActor(simul::crossplatform::GraphicsDeviceContext& de
 		}
 	}
 
-	for(std::weak_ptr<scr::Node> childPtr : actor->GetChildren())
+	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
 	{
 		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if(child)
 		{
-			RenderActor(deviceContext, child);
+			RenderNode(deviceContext, child);
 		}
 	}
 }
@@ -1165,7 +1190,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 void ClientRenderer::OnVideoStreamClosed()
 {
-	WARN("VIDEO STREAM CLOSED");
+	WARN("VIDEO STREAM CLOSED\n");
 	pipeline.deconfigure();
 	for (int i = 0; i < NumVidStreams; ++i)
 	{
@@ -1277,14 +1302,14 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 	}
 }
 
-bool ClientRenderer::OnActorEnteredBounds(avs::uid actor_uid)
+bool ClientRenderer::OnNodeEnteredBounds(avs::uid id)
 {
-	return resourceManagers.mNodeManager->ShowActor(actor_uid);
+	return resourceManagers.mNodeManager->ShowNode(id);
 }
 
-bool ClientRenderer::OnActorLeftBounds(avs::uid actor_uid)
+bool ClientRenderer::OnNodeLeftBounds(avs::uid id)
 {
-	return resourceManagers.mNodeManager->HideActor(actor_uid);
+	return resourceManagers.mNodeManager->HideNode(id);
 }
 
 std::vector<uid> ClientRenderer::GetGeometryResources()
@@ -1298,14 +1323,14 @@ void ClientRenderer::ClearGeometryResources()
 	resourceCreator.Clear();
 }
 
-void ClientRenderer::SetVisibleActors(const std::vector<avs::uid>& visibleActors)
+void ClientRenderer::SetVisibleNodes(const std::vector<avs::uid>& visibleNodes)
 {
-	resourceManagers.mNodeManager->SetVisibleActors(visibleActors);
+	resourceManagers.mNodeManager->SetVisibleNodes(visibleNodes);
 }
 
-void ClientRenderer::UpdateActorMovement(const std::vector<avs::MovementUpdate>& updateList)
+void ClientRenderer::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
 {
-	resourceManagers.mNodeManager->UpdateActorMovement(updateList);
+	resourceManagers.mNodeManager->UpdateNodeMovement(updateList);
 }
 #include "Platform/CrossPlatform/Quaterniond.h"
 void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offset)
@@ -1562,7 +1587,7 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			RecompileShaders();
 			break;
 		case 'L':
-			renderHands = !renderHands;
+			renderPlayer = !renderPlayer;
 			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
 			ChangePass(ShaderMode::PBR);

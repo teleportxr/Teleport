@@ -89,27 +89,27 @@ std::vector<avs::uid> ResourceCreator::TakeReceivedResources()
 	return receivedResources;
 }
 
-std::vector<avs::uid> ResourceCreator::TakeCompletedActors()
+std::vector<avs::uid> ResourceCreator::TakeCompletedNodes()
 {
-	std::vector<avs::uid> completedActors = std::move(m_CompletedActors);
-	m_CompletedActors.clear();
+	std::vector<avs::uid> completedNodes = std::move(m_CompletedNodes);
+	m_CompletedNodes.clear();
 
-	return completedActors;
+	return completedNodes;
 }
 
 void ResourceCreator::Clear()
 {
 	mutex_texturesToCreate.lock();
-	texturesToCreate;
+	texturesToCreate.clear();
 	mutex_texturesToCreate.unlock();
 
 	mutex_texturesToTranscode.lock();
-	texturesToTranscode;
+	texturesToTranscode.clear();
 	mutex_texturesToTranscode.unlock();
 
 	m_ResourceRequests.clear();
 	m_ReceivedResources.clear();
-	m_CompletedActors.clear();
+	m_CompletedNodes.clear();
 	m_MissingResources.clear();
 }
 
@@ -476,10 +476,10 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 	}
 }
 
-void ResourceCreator::CreateTexture(avs::uid texture_uid, const avs::Texture& texture)
+void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 {
-	SCR_COUT << "CreateTexture(" << texture_uid << ", " << texture.name << ")\n";
-	m_ReceivedResources.push_back(texture_uid);
+	SCR_COUT << "CreateTexture(" << id << ", " << texture.name << ")\n";
+	m_ReceivedResources.push_back(id);
 
 	scr::Texture::TextureCreateInfo texInfo =
 	{
@@ -506,23 +506,23 @@ void ResourceCreator::CreateTexture(avs::uid texture_uid, const avs::Texture& te
 	if(texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(UntranscodedTexture{texture_uid, texture.dataSize, data, std::move(texInfo), texture.name});
+		texturesToTranscode.emplace_back(UntranscodedTexture{id, texture.dataSize, data, std::move(texInfo), texture.name});
 	}
 	else
 	{
 		texInfo.mipSizes.push_back(texture.dataSize);
 		texInfo.mips.push_back(data);
 
-		CompleteTexture(texture_uid, texInfo);
+		CompleteTexture(id, texInfo);
 	}
 }
 
-void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material& material)
+void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 {
-	SCR_COUT << "CreateMaterial(" << material_uid << ", " << material.name << ")\n";
-	m_ReceivedResources.push_back(material_uid);
+	SCR_COUT << "CreateMaterial(" << id << ", " << material.name << ")\n";
+	m_ReceivedResources.push_back(id);
 
-	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(material_uid, avs::GeometryPayloadType::Material);
+	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, avs::GeometryPayloadType::Material);
 	//A list of unique resources that the material is missing, and needs to be completed.
 	std::set<avs::uid> missingResources;
 
@@ -561,22 +561,18 @@ void ResourceCreator::CreateMaterial(avs::uid material_uid, const avs::Material&
 
 	if(incompleteMaterial->textureSlots.size() == 0)
 	{
-		CompleteMaterial(material_uid, incompleteMaterial->materialInfo);
+		CompleteMaterial(id, incompleteMaterial->materialInfo);
 	}
 }
 
-void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
+void ResourceCreator::CreateNode(avs::uid id, avs::DataNode& node)
 {
-	m_ReceivedResources.push_back(node_uid);
+	m_ReceivedResources.push_back(id);
 
 	switch(node.data_type)
 	{
 		case NodeDataType::Mesh:
-			// TODO: WHY do we only update the transform if the type is a mesh..?
-			if(!m_pNodeManager->UpdateActorTransform(node_uid, node.transform.position, node.transform.rotation, node.transform.scale))
-			{
-				CreateActor(node_uid, node);
-			}
+			CreateMeshNode(id, node);
 			break;
 		case NodeDataType::Camera:
 			break;
@@ -584,10 +580,10 @@ void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 			break;
 		case NodeDataType::ShadowMap:
 		case NodeDataType::Light:
-			CreateLight(node_uid, node);
+			CreateLight(id, node);
 			break;
 		case NodeDataType::Bone:
-			CreateBone(node_uid, node);
+			CreateBone(id, node);
 			break;
 		default:
 			SCR_LOG("Unknown NodeDataType: %c", static_cast<int>(node.data_type));
@@ -595,12 +591,12 @@ void ResourceCreator::CreateNode(avs::uid node_uid, avs::DataNode& node)
 	}
 }
 
-void ResourceCreator::CreateSkin(avs::uid skinID, avs::Skin& skin)
+void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 {
-	SCR_COUT << "CreateSkin(" << skinID << ", " << skin.name << ")\n";
-	m_ReceivedResources.push_back(skinID);
+	SCR_COUT << "CreateSkin(" << id << ", " << skin.name << ")\n";
+	m_ReceivedResources.push_back(id);
 
-	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(skinID, avs::GeometryPayloadType::Skin);
+	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(id, avs::GeometryPayloadType::Skin);
 
 	scr::Transform::TransformCreateInfo transformCreateInfo;
 	transformCreateInfo.renderPlatform = m_pRenderPlatform;
@@ -625,7 +621,7 @@ void ResourceCreator::CreateSkin(avs::uid skinID, avs::Skin& skin)
 		if(bone) incompleteSkin->skin->SetBone(i, bone);
 		else
 		{
-			SCR_COUT << "Skin_" << skinID << "(" << incompleteSkin->skin->name << ") missing Bone_" << jointID << std::endl;
+			SCR_COUT << "Skin_" << id << "(" << incompleteSkin->skin->name << ") missing Bone_" << jointID << std::endl;
 			incompleteSkin->missingBones[jointID] = i;
 			m_ResourceRequests.push_back(jointID);
 			GetMissingResource(jointID, "Bone").waitingResources.push_back(incompleteSkin);
@@ -634,7 +630,7 @@ void ResourceCreator::CreateSkin(avs::uid skinID, avs::Skin& skin)
 
 	if(incompleteSkin->missingBones.size() == 0)
 	{
-		CompleteSkin(skinID, incompleteSkin);
+		CompleteSkin(id, incompleteSkin);
 	}
 }
 
@@ -673,49 +669,45 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 	}
 }
 
-//TODO: Rename Actor to MeshNode.
-void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node)
+void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 {
-	if(m_pNodeManager->HasActor(node_uid))
+	if(m_pNodeManager->HasNode(id))
 	{
-		SCR_CERR << "CreateActor(" << node_uid << ", " << node.name << "). Already created!\n";
+		SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created!\n";
 		return;
 	}
-	SCR_COUT << "CreateActor(" << node_uid << ", " << node.name << ")\n";
+	SCR_COUT << "CreateMeshNode(" << id << ", " << node.name << ")\n";
 
-	bool isHand = node.data_subtype == NodeDataSubtype::LeftHand || node.data_subtype == NodeDataSubtype::RightHand;
-
-	std::shared_ptr<IncompleteActor> newActor = std::make_shared<IncompleteActor>(node_uid, avs::GeometryPayloadType::Node, isHand);
-	//Whether the actor is missing any resource before, and must wait for them before it can be completed.
+	std::shared_ptr<IncompleteNode> newNode = std::make_shared<IncompleteNode>(id, avs::GeometryPayloadType::Node);
+	//Whether the node is missing any resource before, and must wait for them before it can be completed.
 	bool isMissingResources = false;
 
-	newActor->actor = m_pNodeManager->CreateActor(node_uid, node.name);
-	newActor->actor->SetLocalTransform(static_cast<scr::Transform>(node.transform));
+	newNode->node = m_pNodeManager->CreateNode(id, node.name);
+	newNode->node->SetLocalTransform(static_cast<scr::Transform>(node.transform));
 
-	newActor->actor->SetMesh(m_MeshManager->Get(node.data_uid));
-	if(!newActor->actor->GetMesh())
+	if(node.data_uid != 0)
 	{
-		SCR_COUT << "MeshNode_" << node_uid << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
+		newNode->node->SetMesh(m_MeshManager->Get(node.data_uid));
+		if(!newNode->node->GetMesh())
+		{
+			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
 
-		isMissingResources = true;
-		m_ResourceRequests.push_back(node.data_uid);
-		GetMissingResource(node.data_uid, "Mesh").waitingResources.push_back(newActor);
-	}
-	else
-	{
-		SCR_COUT << "\thas mesh "<<node.data_uid<<"(" << newActor->actor->GetMesh()->GetMeshCreateInfo().name.c_str() << ")\n";
+			isMissingResources = true;
+			m_ResourceRequests.push_back(node.data_uid);
+			GetMissingResource(node.data_uid, "Mesh").waitingResources.push_back(newNode);
+		}
 	}
 
 	if(node.skinID != 0)
 	{
-		newActor->actor->SetSkin(m_SkinManager->Get(node.skinID));
-		if(!newActor->actor->GetSkin())
+		newNode->node->SetSkin(m_SkinManager->Get(node.skinID));
+		if(!newNode->node->GetSkin())
 		{
-			SCR_COUT << "MeshNode_" << node_uid << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
+			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
 
 			isMissingResources = true;
 			m_ResourceRequests.push_back(node.skinID);
-			GetMissingResource(node.skinID, "Skin").waitingResources.push_back(newActor);
+			GetMissingResource(node.skinID, "Skin").waitingResources.push_back(newNode);
 		}
 	}
 
@@ -726,88 +718,88 @@ void ResourceCreator::CreateActor(avs::uid node_uid, avs::DataNode& node)
 
 		if(animation)
 		{
-			newActor->actor->animationComponent.AddAnimation(animationID, animation);
+			newNode->node->animationComponent.AddAnimation(animationID, animation);
 		}
 		else
 		{
-			SCR_COUT << "MeshNode_" << node_uid << "(" << node.name << ") missing Animation_" << animationID << std::endl;
+			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Animation_" << animationID << std::endl;
 
 			isMissingResources = true;
 			m_ResourceRequests.push_back(animationID);
-			GetMissingResource(animationID, "Animation").waitingResources.push_back(newActor);
+			GetMissingResource(animationID, "Animation").waitingResources.push_back(newNode);
 		}
 	}
 
-	if(m_pRenderPlatform->placeholderMaterial== nullptr)
+	if(m_pRenderPlatform->placeholderMaterial == nullptr)
 	{
 		scr::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.renderPlatform = m_pRenderPlatform;
-		materialCreateInfo.diffuse.texture=m_DummyDiffuse;
-		materialCreateInfo.combined.texture=m_DummyCombined;
-		materialCreateInfo.normal.texture=m_DummyNormal;
-		materialCreateInfo.emissive.texture=m_DummyEmissive;
+		materialCreateInfo.diffuse.texture = m_DummyDiffuse;
+		materialCreateInfo.combined.texture = m_DummyCombined;
+		materialCreateInfo.normal.texture = m_DummyNormal;
+		materialCreateInfo.emissive.texture = m_DummyEmissive;
 		m_pRenderPlatform->placeholderMaterial = std::make_shared<scr::Material>(materialCreateInfo);
 	}
 
-	newActor->actor->SetMaterialListSize(node.materials.size());
+	newNode->node->SetMaterialListSize(node.materials.size());
 	for(size_t i = 0; i < node.materials.size(); i++)
 	{
 		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(node.materials[i]);
 
 		if(material)
 		{
-			newActor->actor->SetMaterial(i, material);
+			newNode->node->SetMaterial(i, material);
 		}
 		else
 		{
-			newActor->actor->SetMaterial(i, m_pRenderPlatform->placeholderMaterial);
+			newNode->node->SetMaterial(i, m_pRenderPlatform->placeholderMaterial);
 
-			SCR_COUT << "MeshNode_" << node_uid << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
+			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
 
 			isMissingResources = true;
 			m_ResourceRequests.push_back(node.materials[i]);
-			GetMissingResource(node.materials[i], "Material").waitingResources.push_back(newActor);
-			newActor->materialSlots[node.materials[i]].push_back(i);
+			GetMissingResource(node.materials[i], "Material").waitingResources.push_back(newNode);
+			newNode->materialSlots[node.materials[i]].push_back(i);
 		}
 	}
 
-	newActor->actor->SetChildrenIDs(node.childrenIDs);
+	newNode->node->SetChildrenIDs(node.childrenIDs);
 
 	//Create MeshNode even if it is missing resources, but create a hand if it is a hand.
-	m_pNodeManager->AddActor(newActor->actor, node);
+	m_pNodeManager->AddNode(newNode->node, node);
 
-	//Complete actor now, if we aren't missing any resources.
+	//Complete node now, if we aren't missing any resources.
 	if(!isMissingResources)
 	{
-		CompleteActor(node_uid, newActor->actor, isHand);
+		CompleteMeshNode(id, newNode->node);
 	}
 }
 
-void ResourceCreator::CreateLight(avs::uid node_uid, avs::DataNode& node)
+void ResourceCreator::CreateLight(avs::uid id, avs::DataNode& node)
 {
-	SCR_COUT << "CreateLight(" << node_uid << ", " << node.name << ")\n";
-	m_ReceivedResources.push_back(node_uid);
+	SCR_COUT << "CreateLight(" << id << ", " << node.name << ")\n";
+	m_ReceivedResources.push_back(id);
 
 	scr::Light::LightCreateInfo lci;
 	lci.renderPlatform = m_pRenderPlatform;
 	lci.type = (scr::Light::Type)node.lightType;
 	lci.position = avs::vec3(node.transform.position);
-	lci.direction=node.lightDirection;
+	lci.direction = node.lightDirection;
 	lci.orientation = scr::quat(node.transform.rotation);
 	lci.shadowMapTexture = m_TextureManager->Get(node.data_uid);
-	lci.lightColour=node.lightColour;
-	lci.lightRadius=node.lightRadius;
-	lci.uid=node_uid;
+	lci.lightColour = node.lightColour;
+	lci.lightRadius = node.lightRadius;
+	lci.uid = id;
 	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
-	m_LightManager->Add(node_uid, light);
+	m_LightManager->Add(id, light);
 }
 
-void ResourceCreator::CreateBone(avs::uid boneID, avs::DataNode& node)
+void ResourceCreator::CreateBone(avs::uid id, avs::DataNode& node)
 {
-	SCR_COUT << "CreateBone(" << boneID << ", " << node.name << ")\n";
-	m_ReceivedResources.push_back(boneID);
+	SCR_COUT << "CreateBone(" << id << ", " << node.name << ")\n";
+	m_ReceivedResources.push_back(id);
 
-	std::shared_ptr<scr::Bone> bone = std::make_shared<scr::Bone>(boneID, node.name);
+	std::shared_ptr<scr::Bone> bone = std::make_shared<scr::Bone>(id, node.name);
 	bone->SetLocalTransform(node.transform);
 
 	//Link to parent and child bones.
@@ -829,71 +821,71 @@ void ResourceCreator::CreateBone(avs::uid boneID, avs::DataNode& node)
 		}
 	}
 
-	CompleteBone(boneID, bone);
+	CompleteBone(id, bone);
 }
 
-void ResourceCreator::CompleteMesh(avs::uid mesh_uid, const scr::Mesh::MeshCreateInfo& meshInfo)
+void ResourceCreator::CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo& meshInfo)
 {
-	SCR_COUT << "CompleteMesh(" << mesh_uid << ", " << meshInfo.name << ")\n";
+	SCR_COUT << "CompleteMesh(" << id << ", " << meshInfo.name << ")\n";
 
 	std::shared_ptr<scr::Mesh> mesh = std::make_shared<scr::Mesh>(meshInfo);
-	m_MeshManager->Add(mesh_uid, mesh);
+	m_MeshManager->Add(id, mesh);
 
-	//Add mesh to actors waiting for mesh.
-	MissingResource& missingMesh = GetMissingResource(mesh_uid, "Mesh");
+	//Add mesh to nodes waiting for mesh.
+	MissingResource& missingMesh = GetMissingResource(id, "Mesh");
 	for(auto it = missingMesh.waitingResources.begin(); it != missingMesh.waitingResources.end(); it++)
 	{
-		std::shared_ptr<IncompleteActor> incompleteActor = std::static_pointer_cast<IncompleteActor>(*it);
+		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 
-		incompleteActor->actor->SetMesh(mesh);
+		incompleteNode->node->SetMesh(mesh);
 
-		//If only this mesh and this function are pointing to the actor, then it is complete.
-		if(it->use_count() == 2) CompleteActor(incompleteActor->id, incompleteActor->actor, incompleteActor->isHand);
-		else SCR_COUT << "Waiting MeshNode_" << incompleteActor->id << "(" << incompleteActor->actor->name << ") got Mesh_" << mesh_uid << "(" << meshInfo.name << ")\n";
+		//If only this mesh and this function are pointing to the node, then it is complete.
+		if(it->use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+		else SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Mesh_" << id << "(" << meshInfo.name << ")\n";
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(mesh_uid);
+	m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteSkin(avs::uid skinID, std::shared_ptr<IncompleteSkin> completeSkin)
+void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin)
 {
-	SCR_COUT << "CompleteSkin(" << skinID << ", " << completeSkin->skin->name << ")\n";
+	SCR_COUT << "CompleteSkin(" << id << ", " << completeSkin->skin->name << ")\n";
 
-	m_SkinManager->Add(skinID, completeSkin->skin);
+	m_SkinManager->Add(id, completeSkin->skin);
 
-	//Add skin to actors waiting for skin.
-	MissingResource& missingSkin = GetMissingResource(skinID, "Skin");
+	//Add skin to nodes waiting for skin.
+	MissingResource& missingSkin = GetMissingResource(id, "Skin");
 	for(auto it = missingSkin.waitingResources.begin(); it != missingSkin.waitingResources.end(); it++)
 	{
-		std::shared_ptr<IncompleteActor> incompleteActor = std::static_pointer_cast<IncompleteActor>(*it);
-		incompleteActor->actor->SetSkin(completeSkin->skin);
+		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
+		incompleteNode->node->SetSkin(completeSkin->skin);
 
-		//If only this resource and this skin are pointing to the actor, then it is complete.
-		if(it->use_count() == 2) CompleteActor(incompleteActor->id, incompleteActor->actor, incompleteActor->isHand);
-		else SCR_COUT << "Waiting MeshNode_" << incompleteActor->id << "(" << incompleteActor->actor->name << ") got Skin_" << skinID << "(" << completeSkin->skin->name << ")\n";
+		//If only this resource and this skin are pointing to the node, then it is complete.
+		if(it->use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+		else SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Skin_" << id << "(" << completeSkin->skin->name << ")\n";
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(skinID);
+	m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteTexture(avs::uid texture_uid, const scr::Texture::TextureCreateInfo& textureInfo)
+void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCreateInfo& textureInfo)
 {
-	SCR_COUT << "CompleteTexture(" << texture_uid << ", " << textureInfo.name << ")\n";
+	SCR_COUT << "CompleteTexture(" << id << ", " << textureInfo.name << ")\n";
 
 	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(textureInfo);
 
-	m_TextureManager->Add(texture_uid, scrTexture);
+	m_TextureManager->Add(id, scrTexture);
 
 	//Add texture to materials waiting for texture.
-	MissingResource& missingTexture = GetMissingResource(texture_uid, "Texture");
+	MissingResource& missingTexture = GetMissingResource(id, "Texture");
 	for(auto it = missingTexture.waitingResources.begin(); it != missingTexture.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::static_pointer_cast<IncompleteMaterial>(*it);
 
-		incompleteMaterial->textureSlots.at(texture_uid) = scrTexture;
+		incompleteMaterial->textureSlots.at(id) = scrTexture;
 
 		//If only this texture and this function are pointing to the material, then it is complete.
 		if(it->use_count() == 2)
@@ -902,112 +894,112 @@ void ResourceCreator::CompleteTexture(avs::uid texture_uid, const scr::Texture::
 		}
 		else
 		{
-			SCR_COUT << "Waiting Material_" << incompleteMaterial->id << "(" << incompleteMaterial->materialInfo.name << ") got Texture_" << texture_uid << "(" << textureInfo.name << ")\n";
+			SCR_COUT << "Waiting Material_" << incompleteMaterial->id << "(" << incompleteMaterial->materialInfo.name << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
 		}
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(texture_uid);
+	m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteMaterial(avs::uid material_uid, const scr::Material::MaterialCreateInfo& materialInfo)
+void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo)
 {
-	SCR_COUT << "CompleteMaterial(" << material_uid << ", " << materialInfo.name << ")\n";
+	SCR_COUT << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
 
 	std::shared_ptr<scr::Material> material = std::make_shared<scr::Material>(materialInfo);
-	m_MaterialManager->Add(material_uid, material);
+	m_MaterialManager->Add(id, material);
 
-	//Add material to actors waiting for material.
-	MissingResource& missingMaterial = GetMissingResource(material_uid, "Material");
+	//Add material to nodes waiting for material.
+	MissingResource& missingMaterial = GetMissingResource(id, "Material");
 	for(auto it = missingMaterial.waitingResources.begin(); it != missingMaterial.waitingResources.end(); it++)
 	{
-		std::shared_ptr<IncompleteActor> incompleteActor = std::static_pointer_cast<IncompleteActor>(*it);
+		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 
-		auto indexesPair = incompleteActor->materialSlots.find(material_uid);
+		auto indexesPair = incompleteNode->materialSlots.find(id);
 		for(size_t materialIndex : indexesPair->second)
 		{
-			incompleteActor->actor->SetMaterial(materialIndex, material);
+			incompleteNode->node->SetMaterial(materialIndex, material);
 		}
 
 		//If only this material and function are pointing to the MeshNode, then it is complete.
-		if(incompleteActor.use_count() == 2)
+		if(incompleteNode.use_count() == 2)
 		{
-			CompleteActor(incompleteActor->id, incompleteActor->actor, incompleteActor->isHand);
+			CompleteMeshNode(incompleteNode->id, incompleteNode->node);
 		}
 		else
 		{
-			SCR_COUT << "Waiting MeshNode_" << incompleteActor->id << "(" << incompleteActor->actor->name << ") got Material_" << material_uid << "(" << materialInfo.name << ")\n";
+			SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Material_" << id << "(" << materialInfo.name << ")\n";
 		}
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(material_uid);
+	m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteActor(avs::uid actor_uid, std::shared_ptr<scr::Node> actor, bool isHand)
+void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> node)
 {
-	SCR_COUT << "CompleteActor(ID: " << actor_uid << ", actor: " << actor->name << ", isHand: " << isHand << ")\n";
+	SCR_COUT << "CompleteMeshNode(ID: " << id << ", node: " << node->name << ")\n";
 
-	///We're using the node ID as the actor ID as we are currently generating an actor per node/transform anyway; this way the server can tell the client to remove an actor.
-	m_CompletedActors.push_back(actor_uid);
+	///We're using the node ID as the node ID as we are currently generating an node per node/transform anyway; this way the server can tell the client to remove an node.
+	m_CompletedNodes.push_back(id);
 }
 
-void ResourceCreator::CompleteBone(avs::uid boneID, std::shared_ptr<scr::Bone> bone)
+void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
 {
-	SCR_COUT << "CompleteBone(" << boneID << ", " << bone->name << ")\n";
+	SCR_COUT << "CompleteBone(" << id << ", " << bone->name << ")\n";
 
-	m_BoneManager->Add(boneID, bone);
+	m_BoneManager->Add(id, bone);
 
 	//Add bone to skin waiting for bone.
-	MissingResource& missingBone = GetMissingResource(boneID, "Bone");
+	MissingResource& missingBone = GetMissingResource(id, "Bone");
 	for(auto it = missingBone.waitingResources.begin(); it != missingBone.waitingResources.end(); it++)
 	{
 		if((*it)->type == avs::GeometryPayloadType::Skin)
 		{
 			std::shared_ptr<IncompleteSkin> incompleteSkin = std::static_pointer_cast<IncompleteSkin>(*it);
-			incompleteSkin->skin->SetBone(incompleteSkin->missingBones[boneID], bone);
+			incompleteSkin->skin->SetBone(incompleteSkin->missingBones[id], bone);
 
 			//If only this bone, and the loop, are pointing at the skin, then it is complete.
 			if(it->use_count() == 2) CompleteSkin(incompleteSkin->id, incompleteSkin);
-			else SCR_COUT << "Waiting Skin_" << incompleteSkin->id << "(" << incompleteSkin->skin->name << ") got Bone_" << boneID << "(" << bone->name << ")\n";
+			else SCR_COUT << "Waiting Skin_" << incompleteSkin->id << "(" << incompleteSkin->skin->name << ") got Bone_" << id << "(" << bone->name << ")\n";
 		}
 		else if((*it)->type == avs::GeometryPayloadType::Animation)
 		{
 			std::shared_ptr<IncompleteAnimation> incompleteAnimation = std::static_pointer_cast<IncompleteAnimation>(*it);
-			incompleteAnimation->animation->boneKeyframes[incompleteAnimation->missingBones[boneID]].bonePtr = bone;
+			incompleteAnimation->animation->boneKeyframes[incompleteAnimation->missingBones[id]].bonePtr = bone;
 
 			//If only this bone, and the loop, are pointing at the animation, then it is complete.
 			if(it->use_count() == 2) CompleteAnimation(incompleteAnimation->id, incompleteAnimation);
-			else SCR_COUT << "Waiting Animation_" << incompleteAnimation->id << "(" << incompleteAnimation->animation->name << ") got Bone_" << boneID << "(" << bone->name << ")\n";
+			else SCR_COUT << "Waiting Animation_" << incompleteAnimation->id << "(" << incompleteAnimation->animation->name << ") got Bone_" << id << "(" << bone->name << ")\n";
 		}
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(boneID);
+	m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteAnimation(avs::uid animationID, std::shared_ptr<IncompleteAnimation> completeAnimation)
+void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<IncompleteAnimation> completeAnimation)
 {
-	SCR_COUT << "CompleteAnimation(" << animationID << ", " << completeAnimation->animation->name << ")\n";
+	SCR_COUT << "CompleteAnimation(" << id << ", " << completeAnimation->animation->name << ")\n";
 
 	//Update animation length now that all data for the animation has been received.
 	completeAnimation->animation->updateAnimationLength();
-	m_AnimationManager->Add(animationID, completeAnimation->animation);
+	m_AnimationManager->Add(id, completeAnimation->animation);
 
-	//Add animation to waiting actors.
-	MissingResource& missingAnimation = GetMissingResource(animationID, "Animation");
+	//Add animation to waiting nodes.
+	MissingResource& missingAnimation = GetMissingResource(id, "Animation");
 	for(auto it = missingAnimation.waitingResources.begin(); it != missingAnimation.waitingResources.end(); it++)
 	{
-		std::shared_ptr<IncompleteActor> incompleteActor = std::static_pointer_cast<IncompleteActor>(*it);
-		incompleteActor->actor->animationComponent.AddAnimation(animationID, completeAnimation->animation);
+		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
+		incompleteNode->node->animationComponent.AddAnimation(id, completeAnimation->animation);
 
 		//If only this bone, and the loop, are pointing at the skin, then it is complete.
-		if(incompleteActor.use_count() == 2) CompleteActor(incompleteActor->id, incompleteActor->actor, incompleteActor->isHand);
-		else SCR_COUT << "Waiting MeshNode_" << incompleteActor->id << "(" << incompleteActor->actor->name << ") got Animation_" << animationID << "(" << completeAnimation->animation->name << ")\n";
+		if(incompleteNode.use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+		else SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Animation_" << id << "(" << completeAnimation->animation->name << ")\n";
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(animationID);
+	m_MissingResources.erase(id);
 }
 
 void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<scr::Texture>& dummyTexture, std::shared_ptr<IncompleteMaterial> incompleteMaterial, scr::Material::MaterialParameter& materialParameter)

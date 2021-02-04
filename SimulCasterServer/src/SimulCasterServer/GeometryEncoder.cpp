@@ -191,7 +191,7 @@ namespace SCServer
 			size_t oldBufferSize = buffer.size();
 
 			avs::uid uid = missingUIDs[h];
-			avs::Mesh* mesh = src->getMesh(uid, req->getAxesStandard());
+			avs::Mesh* mesh = src->getMesh(uid, req->getClientAxesStandard());
 			if(!mesh)
 			{
 				static std::set<avs::uid> hasReported ;
@@ -303,7 +303,7 @@ namespace SCServer
 			put((uint8_t*)node->name.data(), nameLength);
 
 			avs::Transform transform = node->transform;
-			avs::ConvertTransform(settings->axesStandard, req->getAxesStandard(), transform);
+			avs::ConvertTransform(settings->axesStandard, req->getClientAxesStandard(), transform);
 
 			put(transform);
 			put(node->data_uid);
@@ -337,7 +337,7 @@ namespace SCServer
 				put(node->lightColour);
 				put(node->lightRadius);
 				avs::vec3 lightDirection = node->lightDirection;
-				avs::ConvertPosition(settings->axesStandard, req->getAxesStandard(), lightDirection);
+				avs::ConvertPosition(settings->axesStandard, req->getClientAxesStandard(), lightDirection);
 				put(lightDirection);
 				put(node->lightType);
 			}
@@ -360,7 +360,7 @@ namespace SCServer
 	{
 		putPayload(avs::GeometryPayloadType::Skin);
 
-		const avs::Skin* skin = src->getSkin(skinID, req->getAxesStandard());
+		const avs::Skin* skin = src->getSkin(skinID, req->getClientAxesStandard());
 		if(skin)
 		{
 			put(skinID);
@@ -394,7 +394,7 @@ namespace SCServer
 
 	//avs::Result GeometryEncoder::encodeAnimation(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
 	//{
-	//	const avs::Animation* animation = src->getAnimation(animationID, req->getAxesStandard());
+	//	const avs::Animation* animation = src->getAnimation(animationID, req->getClientAxesStandard());
 	//	if(animation)
 	//	{
 	//		putPayload(avs::GeometryPayloadType::Animation);
@@ -424,7 +424,7 @@ namespace SCServer
 
 	avs::Result GeometryEncoder::encodeAnimation(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
 	{
-		const avs::Animation* animation = src->getAnimation(animationID, req->getAxesStandard());
+		const avs::Animation* animation = src->getAnimation(animationID, req->getClientAxesStandard());
 		if(animation)
 		{
 			putPayload(avs::GeometryPayloadType::Animation);
