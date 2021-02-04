@@ -61,12 +61,30 @@ public:
 
 	virtual void SetMaterial(size_t index, std::shared_ptr<Material> material)
 	{
-		if(index < materials.size()) materials[index] = material;
-		else SCR_COUT << "ERROR: Attempted to add material at index <" << index << "> past the end of the material list of Node<" << id << "> of size: " << materials.size() << std::endl;
+		if(index >= materials.size() || index < 0)
+		{
+			SCR_CERR << "Failed to set material at index " << index << "! Index not valid for material list of size " << materials.size() << " in node \"" << name.c_str() << "\"(Node_" << id << ")!\n";
+		}
+		else
+		{
+			materials[index] = material;
+		}
 	}
+	std::shared_ptr<Material> GetMaterial(size_t index)
+	{
+		if(index >= materials.size() || index < 0)
+		{
+			SCR_CERR << "Failed to get material at index " << index << "! Index not valid for material list of size " << materials.size() << " in node \"" << name.c_str() << "\"(Node_" << id << ")!\n";
+			return nullptr;
+		}
+
+		return materials[index];
+	}
+
 	virtual void SetMaterialListSize(size_t size) { materials.resize(size); }
 	virtual void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials) { this->materials = materials; }
 	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return materials; }
+	size_t GetMaterialAmount() const { return materials.size(); }
 
 	void SetLocalTransform(const Transform& transform) { localTransform = transform; }
 	const Transform& GetLocalTransform() const { return localTransform; }
@@ -74,17 +92,25 @@ public:
 
 	const Transform& GetGlobalTransform() const
 	{
-		if(isTransformDirty) UpdateGlobalTransform();
+		if(isTransformDirty)
+		{
+			UpdateGlobalTransform();
+		}
+
 		return globalTransform;
 	}
 
 	Transform& GetGlobalTransform()
 	{
 		if(isTransformDirty)
+		{
 			UpdateGlobalTransform();
+		}
+
 		return globalTransform;
 	}
-protected:
+
+private:
 	std::shared_ptr<Mesh> mesh;
 	std::shared_ptr<Skin> skin;
 	std::vector<std::shared_ptr<Material>> materials;

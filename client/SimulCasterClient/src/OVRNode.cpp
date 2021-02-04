@@ -33,12 +33,26 @@ void OVRNode::SetSkin(std::shared_ptr<scr::Skin> skin)
 void OVRNode::SetMaterial(size_t index, std::shared_ptr<scr::Material> material)
 {
 	Node::SetMaterial(index, material);
+
+	//Surface may not exist as we don't have a mesh, or the index is in an invalid range.
+	if(index >= ovrSurfaceDefs.size() || index < 0)
+	{
+		return;
+	}
+
 	ovrSurfaceDefs[index] = CreateOVRSurface(index, material);
 }
 
 void OVRNode::SetMaterialListSize(size_t size)
 {
 	Node::SetMaterialListSize(size);
+
+	//We can't create surfaces without a mesh, so we shouldn't extend the surface list.
+	std::shared_ptr<scr::Mesh> mesh = GetMesh();
+	if(!mesh)
+	{
+		return;
+	}
 
 	size_t old_size = ovrSurfaceDefs.size();
 	ovrSurfaceDefs.resize(size);
@@ -101,32 +115,26 @@ OVR::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_p
 
 	if(material == nullptr)
 	{
-		OVR_WARN("Failed to create OVR surface!\nNull material passed to CreateOVRSurface(...).");
+		OVR_WARN("Failed to create OVR surface! Null material passed to CreateOVRSurface(...)!");
 		return ovr_surface_def;
 	}
-	if(mesh==nullptr)
-	{
-		OVR_WARN("Mesh is null in CreateOVRSurface(...).");
-		return ovr_surface_def;
-	}
+
 	std::shared_ptr<scr::Mesh> mesh = GetMesh();
 	if(!mesh)
 	{
-		OVR_WARN("Mesh is null in CreateOVRSurface(...).");
+		OVR_WARN("Failed to create OVR surface! OVRNode has no mesh!");
 		return ovr_surface_def;
 	}
 
 	const scr::Mesh::MeshCreateInfo &meshCI = mesh->GetMeshCreateInfo();
-	scr::Material::MaterialCreateInfo &materialCI = material->GetMaterialCreateInfo();
 	if(materialIndex >= meshCI.vb.size() || materialIndex >= meshCI.ib.size())
 	{
 		OVR_LOG("Failed to create OVR surface!\nMaterial index %zu greater than amount of mesh buffers: %zu Vertex | %zu Index", materialIndex, meshCI.vb.size(), meshCI.ib.size());
 		return ovr_surface_def;
 	}
-	materialCI.effect = &globalGraphicsResources.defaultPBREffect;
 
-	//Mesh.
-	// The first instance of vb/ib should be adequate to get the information needed.
+	///MESH
+
 	std::shared_ptr<scc::GL_VertexBuffer> gl_vb = std::dynamic_pointer_cast<scc::GL_VertexBuffer>(meshCI.vb[materialIndex]);
 	std::shared_ptr<scc::GL_IndexBuffer> gl_ib = std::dynamic_pointer_cast<scc::GL_IndexBuffer>(meshCI.ib[materialIndex]);
 
@@ -146,28 +154,29 @@ OVR::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_p
 
 	std::shared_ptr<scc::GL_Skin> skin = std::dynamic_pointer_cast<scc::GL_Skin>(GetSkin());
 
-	//Fill shader resources vector.
-	std::vector<const scr::ShaderResource*> pbrShaderResources;
-	pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
-	pbrShaderResources.push_back(&(skin ? skin->GetShaderResource() : globalGraphicsResources.defaultSkin.GetShaderResource()));
-	pbrShaderResources.push_back(&material->GetShaderResource());
-	pbrShaderResources.push_back(&globalGraphicsResources.lightCubemapShaderResources);
+	//Update material with Android-specific state.
+	scr::Material::MaterialCreateInfo &materialCI = material->GetMaterialCreateInfo();
+	materialCI.effect = &globalGraphicsResources.defaultPBREffect;
 
+	if(materialCI.diffuse.texture)
+	{
+		materialCI.diffuse.texture->UseSampler(globalGraphicsResources.sampler);
+	}
+	if(materialCI.normal.texture)
+	{
+		materialCI.normal.texture->UseSampler(globalGraphicsResources.sampler);
+	}
+	if(materialCI.combined.texture)
+	{
+		materialCI.combined.texture->UseSampler(globalGraphicsResources.sampler);
+	}
+
+	//Get effect pass create info.
 	std::string completePassName = GetCompleteEffectPassName(globalGraphicsResources.effectPassName);
-
 	const scc::GL_Effect& gl_effect = globalGraphicsResources.defaultPBREffect;
 	const scr::Effect::EffectPassCreateInfo* effectPassCreateInfo = gl_effect.GetEffectPassCreateInfo(completePassName.c_str());
 
-	//Material
-	if(materialCI.diffuse.texture)
-		materialCI.diffuse.texture->UseSampler(globalGraphicsResources.sampler);
-	if(materialCI.normal.texture)
-		materialCI.normal.texture->UseSampler(globalGraphicsResources.sampler);
-	if(materialCI.combined.texture)
-		materialCI.combined.texture->UseSampler(globalGraphicsResources.sampler);
-
-	//----Set OVR Node----//
-	//Construct Mesh
+	//Construct OVR::GLGeometry from mesh data.
 	OVR::GlGeometry geo;
 	geo.vertexBuffer = gl_vb->GetVertexID();
 	geo.indexBuffer = gl_ib->GetIndexID();
@@ -177,8 +186,8 @@ OVR::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_p
 	geo.indexCount = (int)gl_ib->GetIndexBufferCreateInfo().indexCount;
 	OVR::GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
 
-	//Initialise OVR Node
-	std::string _nodeName = std::string("NodeUID: ") + std::to_string(id);
+	//Initialise surface definition.
+	std::string _nodeName = std::string("NodeID: ") + std::to_string(id);
 	ovr_surface_def.surfaceName = _nodeName;
 	ovr_surface_def.numInstances = 1;
 	ovr_surface_def.geo = geo;
@@ -210,7 +219,14 @@ OVR::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_p
 		ovr_surface_def.graphicsCommand.GpuState.depthRange[1]			= effectPassCreateInfo->depthStencilingState.maxDepthBounds;
 	}
 
-	//Update Uniforms and Textures
+	//Fill shader resources vector.
+	std::vector<const scr::ShaderResource*> pbrShaderResources;
+	pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
+	pbrShaderResources.push_back(&(skin ? skin->GetShaderResource() : globalGraphicsResources.defaultSkin.GetShaderResource()));
+	pbrShaderResources.push_back(&material->GetShaderResource());
+	pbrShaderResources.push_back(&globalGraphicsResources.lightCubemapShaderResources);
+
+	//Set image samplers and uniform buffers.
 	size_t resourceCount = 0;
 	GLint textureCount = 0, uniformCount = 0;
 	size_t j = 0;
@@ -256,6 +272,15 @@ OVR::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_p
 void OVRNode::RefreshOVRSurfaces()
 {
 	ovrSurfaceDefs.clear();
+
+	//We can't create surfaces without a mesh, so we should leave the list empty.
+	std::shared_ptr<scr::Mesh> mesh = GetMesh();
+	if(!mesh)
+	{
+		return;
+	}
+
+	std::vector<std::shared_ptr<scr::Material>> materials = GetMaterials();
 	ovrSurfaceDefs.resize(materials.size());
 	for(size_t i = 0; i < materials.size(); i++)
 	{
