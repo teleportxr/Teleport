@@ -823,9 +823,9 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 {
 	//Render local actors.
 	const scr::NodeManager::actorList_t &rootActors = resourceManagers->mNodeManager->GetRootActors();
-	for(std::shared_ptr<scr::Node> actor : rootActors)
+	for(std::shared_ptr<scr::Node> node : rootActors)
 	{
-		RenderActor(res, actor);
+		RenderActor(res, node);
 	}
 
 	//Retrieve hands.
@@ -840,34 +840,34 @@ void ClientRenderer::RenderLocalActors(ovrFrameResult& res)
 }
 
 
-void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node> actor)
+void ClientRenderer::RenderActor(ovrFrameResult& res, std::shared_ptr<scr::Node> node)
 {
-	std::shared_ptr<OVRNode> ovrActor = std::static_pointer_cast<OVRNode>(actor);
+	std::shared_ptr<OVRNode> ovrNode = std::static_pointer_cast<OVRNode>(node);
 
 	//----OVR Node Set Transforms----//
-	scr::mat4 globalMatrix=actor->GetGlobalTransform().GetTransformMatrix();
+	scr::mat4 globalMatrix=node->GetGlobalTransform().GetTransformMatrix();
 	clientDeviceState->transformToLocalOrigin=scr::mat4::Translation(-clientDeviceState->localOriginPos);
 	scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
 
-	std::shared_ptr<scr::Skin> skin = ovrActor->GetSkin();
+	std::shared_ptr<scr::Skin> skin = ovrNode->GetSkin();
 	if(skin)
 		skin->UpdateBoneMatrices(globalMatrix);
 
 	OVR::Matrix4f transform;
 	memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
 
-	for(size_t matIndex = 0; matIndex < actor->GetMaterials().size(); matIndex++)
+	for(size_t matIndex = 0; matIndex < node->GetMaterials().size(); matIndex++)
 	{
-		if(matIndex >= ovrActor->ovrSurfaceDefs.size())
+		if(matIndex >= ovrNode->ovrSurfaceDefs.size())
 		{
 			//OVR_LOG("Skipping empty element in ovrSurfaceDefs.");
 			break;
 		}
-
-		res.Surfaces.emplace_back(transform, &ovrActor->ovrSurfaceDefs[matIndex]);
+		if(ovrNode->ovrSurfaceDefs[matIndex].geo.indexCount>0)
+			res.Surfaces.emplace_back(transform, &ovrNode->ovrSurfaceDefs[matIndex]);
 	}
 
-	for(std::weak_ptr<scr::Node> childPtr : actor->GetChildren())
+	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
 	{
 		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if(child)

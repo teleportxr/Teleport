@@ -1,4 +1,5 @@
 #include "OVRNodeManager.h"
+#include "OVRNode.h"
 
 #include "GlGeometry.h"
 #include "OVR_LogUtils.h"

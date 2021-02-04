@@ -1,7 +1,3 @@
-//
-// Created by Roderick on 03/02/2021.
-//
-
 #include "OVRNode.h"
 #include "OVRNodeManager.h"
 
