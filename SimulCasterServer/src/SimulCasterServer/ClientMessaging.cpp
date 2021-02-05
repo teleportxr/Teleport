@@ -22,6 +22,7 @@ namespace SCServer
 		std::shared_ptr<DiscoveryService> discoveryService,
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 		std::function<void(avs::uid, const avs::Pose*)> inSetHeadPose,
+		std::function<void(avs::uid, const avs::Pose*)> inSetOriginFromClient,
 		std::function<void(avs::uid, int index, const avs::Pose*)> inSetControllerPose,
 		std::function<void(avs::uid, const avs::InputState *,const avs::InputEvent** )> inProcessNewInput,
 		std::function<void(void)> onDisconnect,
@@ -31,6 +32,7 @@ namespace SCServer
 		, discoveryService(discoveryService)
 		, geometryStreamingService(geometryStreamingService)
 		, setHeadPose(inSetHeadPose)
+		, setOriginFromClient(inSetOriginFromClient)
 		, setControllerPose(inSetControllerPose)
 		, processNewInput(inProcessNewInput)
 		, onDisconnect(onDisconnect)
@@ -331,6 +333,9 @@ namespace SCServer
 			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose):
 				receiveHeadPose(event.packet);
 				break;
+			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Origin):
+				receiveOriginFromClient(event.packet);
+				break;
 			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest):
 				receiveResourceRequest(event.packet);
 				break;
@@ -507,6 +512,21 @@ namespace SCServer
 		setHeadPose(clientID, &headPose);
 	}
 
+	void ClientMessaging::receiveOriginFromClient(const ENetPacket* packet)
+	{
+		if (packet->dataLength != sizeof(avs::Pose))
+		{
+			TELEPORT_COUT << "Session: Received malformed origin packet of length: " << packet->dataLength << std::endl;
+			return;
+		}
+
+		avs::Pose pose;
+		memcpy(&pose, packet->data, packet->dataLength);
+		avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, pose.orientation);
+		avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, pose.position);
+		setOriginFromClient(clientID, &pose);
+	}
+	
 	void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 	{
 		size_t resourceAmount;

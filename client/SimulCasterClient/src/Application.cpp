@@ -240,7 +240,7 @@ extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
 	// we don't want local slide movements.
-	mScene.SetMoveSpeed(0.0f);
+	//mScene.SetMoveSpeed(0.0f);
 	mScene.Frame(vrFrame);
     clientRenderer.eyeSeparation=vrFrame.IPD;
 	GL_CheckErrors("Frame: Start");
@@ -276,7 +276,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Get the Origin Position
 	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 	{
-		clientDeviceState.localOriginPos = sessionClient.GetOriginPos();
+		clientDeviceState.localFootPos = sessionClient.GetOriginPos();
+		mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.localFootPos));
 		receivedInitialPos = sessionClient.receivedInitialPos;
 		if(receivedRelativePos!=sessionClient.receivedRelativePos)
 		{
@@ -291,7 +292,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	clientDeviceState.stickYaw=mScene.GetStickYaw();
 	//headPos+=clientDeviceState.localFootPos;
 	clientDeviceState.relativeHeadPos=*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
-	clientDeviceState.cameraPosition = clientDeviceState.localOriginPos+clientDeviceState.relativeHeadPos;
+	clientDeviceState.cameraPosition = clientDeviceState.localFootPos+clientDeviceState.relativeHeadPos;
 
 	clientDeviceState.SetHeadPose(vrFrame.Tracking.HeadPose.Pose.Position,vrFrame.Tracking.HeadPose.Pose.Orientation);
 	// Handle networked session.
@@ -301,7 +302,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
-			clientDeviceState.localOriginPos = sessionClient.GetOriginPos();
+			clientDeviceState.localFootPos = sessionClient.GetOriginPos();
+			mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.localFootPos));
 			receivedInitialPos = sessionClient.receivedInitialPos;
 		}
 	}

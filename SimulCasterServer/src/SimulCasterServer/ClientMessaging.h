@@ -32,6 +32,7 @@ namespace SCServer
 						std::shared_ptr<DiscoveryService> discoveryService,
 						std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 						std::function<void(avs::uid,const avs::Pose*)> setHeadPose,
+						std::function<void(avs::uid,const avs::Pose*)> setOriginFromClient,
 						std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose,
 						std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput,
 						std::function<void(void)> onDisconnect,
@@ -96,6 +97,7 @@ namespace SCServer
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
 
 		std::function<void(avs::uid,const avs::Pose*)> setHeadPose;			//Delegate called when a head pose is received.
+		std::function<void(avs::uid,const avs::Pose*)> setOriginFromClient;			//Delegate called when an origin is received.
 		std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose;			//Delegate called when a head pose is received.
 		std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput;	//Delegate called when new input is received.
 		std::function<void(void)> onDisconnect; //Delegate called when the peer disconnects.
@@ -118,6 +120,7 @@ namespace SCServer
 		void receiveInput(const ENetPacket* packet);
 		void receiveDisplayInfo(const ENetPacket* packet);
 		void receiveHeadPose(const ENetPacket* packet);
+		void receiveOriginFromClient(const ENetPacket* packet);
 		void receiveResourceRequest(const ENetPacket* packet);
 		void receiveKeyframeRequest(const ENetPacket* packet);
 		void receiveClientMessage(const ENetPacket* packet);

@@ -927,7 +927,7 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	{
 		StickYaw -= 2.0f * MATH_FLOAT_PI;
 	}
-	//YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
+	YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
 
 	// Only if there is no head tracking, allow right stick up/down to adjust pitch,
 	// which can be useful for debugging without having to dock the device.
@@ -946,7 +946,7 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	const Quatf quat = vrFrame.Tracking.HeadPose.Pose.Orientation;
 
 	quat.GetEulerAngles<Axis_Y, Axis_X, Axis_Z>( &EyeYaw, &EyePitch, &EyeRoll );
-
+#ifndef ENABLE_OVR_STICK_MOTION
 	// Yaw is modified by both joystick and application-set scene yaw.
 	// Pitch is only modified by joystick when no head tracking sensor is active.
 	if ( YawMod > 0.0f )
@@ -958,7 +958,6 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 		EyeYaw += StickYaw  + SceneYaw;
 	}
 	EyePitch += StickPitch;
-
 	//
 	// Player movement
 	//
@@ -991,6 +990,7 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 						collisionModel, groundCollisionModel );
 		}
 	}
+#endif
 
 	//
 	// Center eye transform

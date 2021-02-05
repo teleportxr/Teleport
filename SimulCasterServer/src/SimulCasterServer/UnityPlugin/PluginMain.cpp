@@ -58,6 +58,7 @@ TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStan
 
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
+typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
@@ -75,6 +76,7 @@ static std::function<bool(avs::uid clientID,avs::uid nodeID)> onShowNode;
 static std::function<bool(avs::uid clientID,avs::uid nodeID)> onHideNode;
 
 static SetHeadPoseFn setHeadPose;
+static SetOriginFromClientFn setOriginFromClient;
 static SetControllerPoseFn setControllerPose;
 static ProcessNewInputFn processNewInput;
 static DisconnectFn onDisconnect;
@@ -323,6 +325,7 @@ struct InitialiseState
 	bool(*showNode)(avs::uid clientID, avs::uid nodeID);
 	bool(*hideNode)(avs::uid clientID, avs::uid nodeID);
 	void(*headPoseSetter)(avs::uid clientID, const avs::Pose*);
+	void(*setOriginFromClientFn)(avs::uid clientID, const avs::Pose*);
 	void(*controllerPoseSetter)(avs::uid uid, int index, const avs::Pose*);
 	ProcessNewInputFn newInputProcessing;
 	DisconnectFn disconnect;
@@ -391,11 +394,6 @@ TELEPORT_EXPORT void SetHideNodeDelegate(bool(*hideNode)(avs::uid,avs::uid))
 TELEPORT_EXPORT void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
 {
 	setHeadPose = headPoseSetter;
-}
-
-TELEPORT_EXPORT void SetControllerPoseSetterDelegate(SetControllerPoseFn f)
-{
-	setControllerPose = f;
 }
 
 TELEPORT_EXPORT void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
@@ -494,7 +492,9 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 	SetShowNodeDelegate(initialiseState->showNode);
 	SetHideNodeDelegate(initialiseState->hideNode);
 	SetHeadPoseSetterDelegate(initialiseState->headPoseSetter);
-	SetControllerPoseSetterDelegate(initialiseState->controllerPoseSetter);
+
+	setOriginFromClient = initialiseState->setOriginFromClientFn;
+	setControllerPose = initialiseState->controllerPoseSetter;
 	SetNewInputProcessingDelegate(initialiseState->newInputProcessing);
 	SetDisconnectDelegate(initialiseState->disconnect);
 	SetMessageHandlerDelegate(initialiseState->messageHandler);
@@ -542,6 +542,7 @@ TELEPORT_EXPORT void Shutdown()
 	onHideNode = nullptr;
 
 	setHeadPose = nullptr;
+	setOriginFromClient=nullptr;
 	setControllerPose = nullptr;
 	processNewInput = nullptr;
 }
@@ -550,7 +551,7 @@ ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::
 	: geometryStreamingService(gs)
 	, videoEncodePipeline(vep)
 	, audioEncodePipeline(aep)
-	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setControllerPose, processNewInput, disconnect, connectionTimeout,reportHandshake)
+	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, disconnect, connectionTimeout,reportHandshake)
 	
 {
 	originClientHas.x= originClientHas.y= originClientHas.z=0.f;

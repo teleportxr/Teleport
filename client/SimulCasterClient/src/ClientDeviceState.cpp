@@ -2,10 +2,19 @@
 #include "basic_linear_algebra.h"
 
 ClientDeviceState::ClientDeviceState():
-localOriginPos(0,0,0)
-,relativeHeadPos(0,0,0)
-, transformToLocalOrigin(scr::mat4::Translation(-localOriginPos))
+//localOriginPos(0,0,0),
+relativeHeadPos(0,0,0)
+//, transformToLocalOrigin(scr::mat4::Translation(-localOriginPos))
 {
+}
+
+void ClientDeviceState::UpdateLocalOrigin()
+{
+	// Footspace is related to local space as follows:
+	// The orientation of footspace is identical to the orientation of localspace.
+	// Footspace is offset from local space by LocalFootPos, which is measured in game space.
+
+	// Therefore: Any time
 }
 
 void ClientDeviceState::TransformPose(avs::Pose &p)
@@ -18,7 +27,7 @@ void ClientDeviceState::TransformPose(avs::Pose &p)
 	avs::vec3 relp=p.position-relativeHeadPos;
 	scr::quat localP=*((scr::quat*)(&(relp)));
 	scr::quat globalP=(stickRotateQ*localP)*(stickRotateQ.Conjugate());
-	p.position=localOriginPos+relativeHeadPos+avs::vec3(globalP.i,globalP.j,globalP.k);
+	p.position=localFootPos+relativeHeadPos+avs::vec3(globalP.i,globalP.j,globalP.k);
 }
 
 void ClientDeviceState::SetHeadPose(ovrVector3f pos,ovrQuatf q)

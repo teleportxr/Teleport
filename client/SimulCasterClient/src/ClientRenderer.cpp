@@ -819,7 +819,7 @@ void ClientRenderer::RenderNode(ovrFrameResult& res, std::shared_ptr<scr::Node> 
 
 	//Get final transform.
 	scr::mat4 globalMatrix=node->GetGlobalTransform().GetTransformMatrix();
-	clientDeviceState->transformToLocalOrigin=scr::mat4::Translation(-clientDeviceState->localOriginPos);
+	clientDeviceState->transformToLocalOrigin=scr::mat4::Translation(-clientDeviceState->localFootPos);
 	scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
 
 	//Convert transform to OVR type.
@@ -904,11 +904,13 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 	{
 		mGuiSys->ShowInfoText(
 				INFO_TEXT_DURATION,
-				"Clientspace  Origin: %1.3f, %1.3f, %1.3f\n"
-				"  + Camera Relative: %1.3f, %1.3f, %1.3f\n"
-				"  = Camera Position: %1.3f, %1.3f, %1.3f\n\n"
+					//	"             Origin: %1.3f, %1.3f, %1.3f\n"
+						"         + Foot pos: %1.3f, %1.3f, %1.3f\n"
+						"  + Camera Relative: %1.3f, %1.3f, %1.3f\n"
+						"  = Camera Position: %1.3f, %1.3f, %1.3f\n\n"
 				"Eye yaw: %1.3f\n"
-				, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
+				//, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
+				, clientDeviceState->localFootPos.x,clientDeviceState->localFootPos.y,clientDeviceState->localFootPos.z
 				, clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z
 				, clientDeviceState->cameraPosition.x, clientDeviceState->cameraPosition.y,	clientDeviceState->cameraPosition.z
 				, clientDeviceState->stickYaw );

@@ -779,6 +779,7 @@ namespace avs
 		RPCH_ResourceRequest = 4,
 		RPCH_KeyframeRequest = 5,
 		RPCH_ClientMessage = 6,
+		RPCH_Origin = 7,
 		RPCH_NumChannels
 	};
 
