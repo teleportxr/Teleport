@@ -877,6 +877,7 @@ namespace avs
 	{
 		SetPositionCommand() : Command(CommandPayloadType::SetPosition) {}
 		vec3 origin_pos;
+		uint64_t valid_counter;
 		uint8_t set_relative_pos;
 		vec3 relative_pos;
 	};
