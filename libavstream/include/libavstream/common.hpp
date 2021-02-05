@@ -788,7 +788,8 @@ namespace avs
 		Invalid = 0,
 		NodeStatus,
 		ReceivedResources,
-		ControllerPoses
+		ControllerPoses,
+		OriginPose
 	};
 
 	struct ClientMessage
@@ -835,6 +836,15 @@ namespace avs
 
 		ControllerPosesMessage()
 		:ClientMessage(ClientMessagePayloadType::ControllerPoses)
+		{}
+	};
+	struct OriginPoseMessage: public ClientMessage
+	{
+		uint64_t counter;
+		Pose originPose;
+
+		OriginPoseMessage()
+				:ClientMessage(ClientMessagePayloadType::OriginPose)
 		{}
 	};
 

@@ -819,7 +819,7 @@ void ClientRenderer::RenderNode(ovrFrameResult& res, std::shared_ptr<scr::Node> 
 
 	//Get final transform.
 	scr::mat4 globalMatrix=node->GetGlobalTransform().GetTransformMatrix();
-	clientDeviceState->transformToLocalOrigin=scr::mat4::Translation(-clientDeviceState->localFootPos);
+	clientDeviceState->transformToLocalOrigin=scr::mat4::Identity();//Translation(-clientDeviceState->localFootPos);
 	scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
 
 	//Convert transform to OVR type.

@@ -53,7 +53,8 @@ public:
     void Frame(const avs::DisplayInfo& displayInfo
         , const avs::Pose& headPose
         , const avs::Pose* controllerPoses
-        , bool poseValid
+        , uint64_t originValidCounter
+        , const avs::Pose &originPose
         , const ControllerState* controllerState
         , bool requestKeyframe
 	    , double time);

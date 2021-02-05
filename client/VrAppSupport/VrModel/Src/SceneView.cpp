@@ -913,6 +913,10 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	//
 	// Player view angles
 	//
+	Vector3f headPos_gameSpace0;
+	headPos_gameSpace0.x= vrFrame.Tracking.HeadPose.Pose.Position.x*cos(StickYaw)+vrFrame.Tracking.HeadPose.Pose.Position.z*sin(StickYaw);
+	headPos_gameSpace0.y= vrFrame.Tracking.HeadPose.Pose.Position.y;
+	headPos_gameSpace0.z=-vrFrame.Tracking.HeadPose.Pose.Position.x*sin(StickYaw)+vrFrame.Tracking.HeadPose.Pose.Position.z*cos(StickYaw);
 
 	// Turn based on the look stick
 	// Because this can be predicted ahead by async TimeWarp, we apply
@@ -928,6 +932,19 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 		StickYaw -= 2.0f * MATH_FLOAT_PI;
 	}
 	YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
+
+	// with any change in StickYaw, we are rotating footSpace in gameSpace,
+	// with the result that footPos+footSpace(vrFrame.Tracking.HeadPose.Pose.Position) must remain constant.
+
+	// i.e. footPos0+footSpace0(vrFrame.Tracking.HeadPose.Pose.Position)=footPos1+footSpace1(vrFrame.Tracking.HeadPose.Position)
+	// so footPos1=footPos0+footSpace0(headpos)-footSpace1(headPos);
+
+	Vector3f headPos_gameSpace1;
+	headPos_gameSpace1.x= vrFrame.Tracking.HeadPose.Pose.Position.x*cos(StickYaw)+vrFrame.Tracking.HeadPose.Pose.Position.z*sin(StickYaw);
+	headPos_gameSpace1.y= vrFrame.Tracking.HeadPose.Pose.Position.y;
+	headPos_gameSpace1.z=-vrFrame.Tracking.HeadPose.Pose.Position.x*sin(StickYaw)+vrFrame.Tracking.HeadPose.Pose.Position.z*cos(StickYaw);
+	FootPos+=headPos_gameSpace0-headPos_gameSpace1;
+
 
 	// Only if there is no head tracking, allow right stick up/down to adjust pitch,
 	// which can be useful for debugging without having to dock the device.

@@ -276,8 +276,8 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Get the Origin Position
 	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 	{
-		clientDeviceState.localFootPos = sessionClient.GetOriginPos();
-		mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.localFootPos));
+		//clientDeviceState.localFootPos = sessionClient.GetOriginPos();
+		//mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.localFootPos));
 		receivedInitialPos = sessionClient.receivedInitialPos;
 		if(receivedRelativePos!=sessionClient.receivedRelativePos)
 		{
@@ -299,7 +299,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	if(sessionClient.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
-		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
+		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, clientDeviceState.localFootPos,controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
 			clientDeviceState.localFootPos = sessionClient.GetOriginPos();

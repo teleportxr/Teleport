@@ -149,7 +149,8 @@ void SessionClient::SendClientMessage(const avs::ClientMessage& msg)
 void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose &headPose
 	,const avs::Pose* controllerPoses
-	,bool poseValid
+	,uint64_t poseValidCounter
+	,const avs::Pose &originPose
 	,const ControllerState* controllerStates
 	,bool requestKeyframe
 	,double t)
@@ -160,10 +161,11 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		if(handshakeAcknowledged)
 		{
 			SendDisplayInfo(displayInfo);
-			if(poseValid)
+			if(poseValidCounter)
 			{
 				SendHeadPose(headPose);
 				SendControllerPoses(headPose,controllerPoses);
+				sendOriginPose(poseValidCounter,originPose);
 			}
 			SendInput(0,controllerStates[0]);
 			SendInput(1,controllerStates[1]);
@@ -385,6 +387,13 @@ void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pos
 	SendClientMessage(message);
 }
 
+void SessionClient::sendOriginPose(uint64_t validCounter,const avs::Pose& originPose)
+{
+	avs::OriginPoseMessage message;
+	message.counter=validCounter;
+	message.originPose=originPose;
+	SendClientMessage(message);
+}
 
 void SessionClient::SendInput(int id,const ControllerState& controllerState)
 {
