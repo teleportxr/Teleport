@@ -115,7 +115,8 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 	loadedMeshes = new LoadedResource[meshAmount];
 	for(auto& meshDataPair : meshes.at(avs::AxesStandard::EngineeringStyle))
 	{
-		loadedMeshes[i] = LoadedResource(meshDataPair.first, meshDataPair.second.guid, meshDataPair.second.lastModified);
+		BSTR meshName = _com_util::ConvertStringToBSTR(meshDataPair.second.mesh.name.c_str());
+		loadedMeshes[i] = LoadedResource(meshDataPair.first, meshDataPair.second.guid, meshName, meshDataPair.second.lastModified);
 
 		++i;
 	}
@@ -124,7 +125,8 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 	loadedTextures = new LoadedResource[textureAmount];
 	for(auto& textureDataPair : textures)
 	{
-		loadedTextures[i] = LoadedResource(textureDataPair.first, textureDataPair.second.guid, textureDataPair.second.lastModified);
+		BSTR textureName = _com_util::ConvertStringToBSTR(textureDataPair.second.texture.name.c_str());
+		loadedTextures[i] = LoadedResource(textureDataPair.first, textureDataPair.second.guid, textureName, textureDataPair.second.lastModified);
 
 		++i;
 	}
@@ -133,7 +135,8 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 	loadedMaterials = new LoadedResource[materialAmount];
 	for(auto& materialDataPair : materials)
 	{
-		loadedMaterials[i] = LoadedResource(materialDataPair.first, materialDataPair.second.guid, materialDataPair.second.lastModified);
+		BSTR materialName = _com_util::ConvertStringToBSTR(materialDataPair.second.material.name.c_str());
+		loadedMaterials[i] = LoadedResource(materialDataPair.first, materialDataPair.second.guid, materialName, materialDataPair.second.lastModified);
 
 		++i;
 	}
@@ -639,11 +642,7 @@ void GeometryStore::saveResources(const std::string file_name, const std::map<av
 	std::wofstream resourceFile(file_name, std::wofstream::out | std::wofstream::binary);
 	for(const auto& resourceData : resourceMap)
 	{
-		//Don't save to disk if the last modified time is zero, as this means it is a default asset and can't be identified.
-		if(resourceData.second.lastModified != 0)
-		{
-			resourceFile << resourceData.first << std::endl << resourceData.second << std::endl;
-		}
+		resourceFile << resourceData.first << std::endl << resourceData.second << std::endl;
 	}
 	resourceFile.close();
 
