@@ -1004,9 +1004,12 @@ namespace avs
 			return sizeof(NodeStatusMessage);
 		case ClientMessagePayloadType::ReceivedResources:
 			return sizeof(ReceivedResourcesMessage);
-			case ClientMessagePayloadType::ControllerPoses:
+		case ClientMessagePayloadType::ControllerPoses:
 				return sizeof(ControllerPosesMessage);
+			case ClientMessagePayloadType::OriginPose:
+				return sizeof(OriginPoseMessage);
 		default:
+			std::cerr << "Unrecognised ClientMessagePayloadType in GetClientMessageSize\n";
 			return 0;
 		};
 	}

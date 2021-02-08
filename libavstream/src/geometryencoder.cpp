@@ -81,7 +81,7 @@ namespace avs
 		static int8_t ue_e[]={ 1, 0, 2 };
 		static int8_t gl_2[]={ 1, 2, 3 };
 		
-		static int8_t unt[]={ 0, 2, 1 };
+		//static int8_t unt[]={ 0, 2, 1 };
 		static int8_t ue_gl[]={ 1, 2, 3 };
 
 		static int8_t uy_gl[]={ 0, 1, 5 };

@@ -142,7 +142,7 @@ void SessionClient::SetPeerTimeout(uint timeout)
 void SessionClient::SendClientMessage(const avs::ClientMessage& msg)
 {
 	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);
-	ENetPacket* packet = enet_packet_create(&msg, sz, ENET_PACKET_FLAG_RELIABLE);
+	ENetPacket* packet = enet_packet_create(&msg, sz, ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 }
 
@@ -307,11 +307,14 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			size_t commandSize = sizeof(avs::SetPositionCommand);
 			avs::SetPositionCommand command;
 			memcpy(&command, packet->data, commandSize);
-			receivedInitialPos = (receivedInitialPos + 1) % ULLONG_MAX;
-			originPos=command.origin_pos;
-			if(command.set_relative_pos)
-				receivedRelativePos = (receivedRelativePos + 1) % ULLONG_MAX;
-			originToHeadPos=command.relative_pos;
+			if(command.valid_counter>receivedInitialPos)
+			{
+				receivedInitialPos = command.valid_counter;
+				originPos = command.origin_pos;
+				if (command.set_relative_pos)
+					receivedRelativePos = command.valid_counter;
+				originToHeadPos = command.relative_pos;
+			}
 		}
 		break;
 		case avs::CommandPayloadType::NodeBounds:

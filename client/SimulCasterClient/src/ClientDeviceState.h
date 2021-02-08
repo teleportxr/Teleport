@@ -16,13 +16,14 @@ public:
 	float stickYaw=0.0f;
 
 	avs::Pose headPose;
+	avs::Pose originPose;
 	avs::Pose controllerPoses[2];
 	avs::vec3 cameraPosition;	// in game absolute space.
 
 	void TransformPose(avs::Pose &p);
+	void UpdateOriginPose();
 	void SetHeadPose(ovrVector3f pos,ovrQuatf q);
 	void SetControllerPose(int index,ovrVector3f pos,ovrQuatf q);
-	void UpdateLocalOrigin();
 };
 
 

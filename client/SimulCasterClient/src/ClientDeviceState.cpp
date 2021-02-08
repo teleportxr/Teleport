@@ -8,13 +8,13 @@ relativeHeadPos(0,0,0)
 {
 }
 
-void ClientDeviceState::UpdateLocalOrigin()
+void ClientDeviceState::UpdateOriginPose()
 {
 	// Footspace is related to local space as follows:
 	// The orientation of footspace is identical to the orientation of localspace.
 	// Footspace is offset from local space by LocalFootPos, which is measured in game space.
-
-	// Therefore: Any time
+	originPose.position=localFootPos;
+	originPose.orientation=scr::quat(stickYaw,avs::vec3(0,1.0f,0));
 }
 
 void ClientDeviceState::TransformPose(avs::Pose &p)

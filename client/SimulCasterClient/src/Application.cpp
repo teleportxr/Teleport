@@ -295,11 +295,12 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	clientDeviceState.cameraPosition = clientDeviceState.localFootPos+clientDeviceState.relativeHeadPos;
 
 	clientDeviceState.SetHeadPose(vrFrame.Tracking.HeadPose.Pose.Position,vrFrame.Tracking.HeadPose.Pose.Orientation);
+	clientDeviceState.UpdateOriginPose();
 	// Handle networked session.
 	if(sessionClient.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
-		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, clientDeviceState.localFootPos,controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
+		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
 		{
 			clientDeviceState.localFootPos = sessionClient.GetOriginPos();
