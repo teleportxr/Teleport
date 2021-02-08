@@ -118,6 +118,12 @@ sca::Result AA_AudioPlayer::startRecording(std::function<void(const uint8_t * da
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
+	if (!mRecordingAllowed)
+	{
+		SCA_CERR << "AA_AudioPlayer: The user has not granted permission to record audio." << std::endl;
+		return sca::Result::AudioRecordingNotPermitted;
+	}
+
 	if (mRecording)
 	{
 		SCA_CERR << "AA_AudioPlayers: Already recording." << std::endl;
@@ -155,6 +161,8 @@ sca::Result AA_AudioPlayer::deconfigure()
 		SCA_CERR << "AA_AudioPlayer: Error occurred trying to close audio stream." << std::endl;
 		return sca::Result::AudioCloseStreamError;
 	}
+
+	mRecordingAllowed = false;
 
 	mConfigured = false;
 
