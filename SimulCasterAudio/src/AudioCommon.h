@@ -63,7 +63,8 @@ namespace sca
 			AudioWriteError,
 			AudioSetStateError,
 			AudioRecorderCreationError,
-			AudioRecorderInitializationError
+			AudioRecorderInitializationError,
+			AudioRecordingNotPermitted
 		};
 
 		Result() : m_code(Code::OK) 
