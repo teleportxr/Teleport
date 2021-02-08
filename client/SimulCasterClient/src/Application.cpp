@@ -240,7 +240,7 @@ extern ovrQuatf QuaternionMultiply(const ovrQuatf &p,const ovrQuatf &q);
 ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
 	// we don't want local slide movements.
-	//mScene.SetMoveSpeed(0.0f);
+	mScene.SetMoveSpeed(1.0f);
 	mScene.Frame(vrFrame);
     clientRenderer.eyeSeparation=vrFrame.IPD;
 	GL_CheckErrors("Frame: Start");
@@ -291,10 +291,9 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	//Get HMD Position/Orientation
 	clientDeviceState.stickYaw=mScene.GetStickYaw();
 	//headPos+=clientDeviceState.localFootPos;
-	clientDeviceState.relativeHeadPos=*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
+	//clientDeviceState.relativeHeadPos=*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
+	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.Tracking.HeadPose.Pose.Position)),*((const scr::quat *)(&vrFrame.Tracking.HeadPose.Pose.Orientation)));
 	clientDeviceState.cameraPosition = clientDeviceState.localFootPos+clientDeviceState.relativeHeadPos;
-
-	clientDeviceState.SetHeadPose(vrFrame.Tracking.HeadPose.Pose.Position,vrFrame.Tracking.HeadPose.Pose.Orientation);
 	clientDeviceState.UpdateOriginPose();
 	// Handle networked session.
 	if(sessionClient.IsConnected())

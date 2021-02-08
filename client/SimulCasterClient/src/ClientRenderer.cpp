@@ -749,7 +749,7 @@ void ClientRenderer::UpdateHandObjects()
 			{
 				if(deviceIndex < 2)
 				{
-					clientDeviceState->SetControllerPose(deviceIndex, remoteState.HeadPose.Pose.Position, remoteState.HeadPose.Pose.Orientation);
+					clientDeviceState->SetControllerPose(deviceIndex,*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),*((const scr::quat *)(&remoteState.HeadPose.Pose.Orientation)));
 				}
 				else
 				{

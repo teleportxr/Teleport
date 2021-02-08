@@ -67,6 +67,6 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
-target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer basisu winmm)
+target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm)
 
 target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT SimulDirectX11_MT directxtex_MT )

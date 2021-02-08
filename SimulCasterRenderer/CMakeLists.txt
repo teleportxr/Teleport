@@ -74,6 +74,7 @@ include_directories(../libavstream/include)
 include_directories(../thirdparty/basis_universal)
 #Include enet
 include_directories(../thirdparty/enet/include)
+include_directories(../TeleportClient)
 
 if(WIN32)
 # Removed circular dependency

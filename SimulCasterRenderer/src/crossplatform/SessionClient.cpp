@@ -387,6 +387,11 @@ void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pos
 	message.headPose=headPose;
 	message.controllerPoses[0]=poses[0];
 	message.controllerPoses[1]=poses[1];
+	if(isnan(headPose.position.x))
+	{
+		WARN("Trying to send NaN");
+		return;
+	}
 	SendClientMessage(message);
 }
 

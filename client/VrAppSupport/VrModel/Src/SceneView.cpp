@@ -981,11 +981,11 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 
 	// Allow up / down movement if there is no floor collision model or in 'free move' mode.
 	const bool upDown = ( WorldModel.Definition == NULL || FreeMove ) && ( ( vrFrame.Input.buttonState & BUTTON_RIGHT_TRIGGER ) != 0 );
-	const Vector3f gamepadMove(
+	Vector3f gamepadMove(
 		vrFrame.Input.sticks[0][0],
 			upDown ? -vrFrame.Input.sticks[0][1] : 0.0f,
-			upDown ? 0.0f : vrFrame.Input.sticks[0][1] );
-
+			upDown ? 0.0f : (vrFrame.Input.sticks[0][1]) );
+	gamepadMove.z*=-1.0f;
 	// Perform player movement if there is input.
 	if ( gamepadMove.LengthSq() > 0.0f )
 	{

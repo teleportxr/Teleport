@@ -6,13 +6,12 @@ include ../cflags.mk
 
 LOCAL_MODULE			:= ovrapp
 LOCAL_LDLIBS			:= -llog -landroid -lGLESv3 -lEGL  		# include default libraries
-LOCAL_STATIC_LIBRARIES	:= vrsound vrmodel vrlocale vrgui vrappframework libovrkernel enet libavstream SimulCasterRenderer SimulCasterAudio
+LOCAL_STATIC_LIBRARIES	:= vrsound vrmodel vrlocale vrgui vrappframework libovrkernel enet libavstream SimulCasterRenderer TeleportClient SimulCasterAudio
 LOCAL_SHARED_LIBRARIES	:= vrapi
 
 LOCAL_SRC_FILES			:= \
     ../src/AndroidDiscoveryService.cpp \
     ../src/Application.cpp \
-	../src/ClientDeviceState.cpp\
     ../src/Controllers.cpp \
     ../src/GLESDebug.cpp \
     ../src/GlobalGraphicsResources.cpp \
@@ -20,8 +19,8 @@ LOCAL_SRC_FILES			:= \
     ../src/OVRNodeManager.cpp \
     ../src/VideoStreamClient.cpp \
     ../src/VideoDecoderProxy.cpp \
-	../src/ClientRenderer.cpp\
-	../src/LobbyRenderer.cpp\
+	../src/ClientRenderer.cpp \
+	../src/LobbyRenderer.cpp \
     ../src/SCR_Class_GL_Impl/GL_DeviceContext.cpp \
     ../src/SCR_Class_GL_Impl/GL_Effect.cpp \
     ../src/SCR_Class_GL_Impl/GL_FrameBuffer.cpp \
@@ -54,6 +53,7 @@ LOCAL_C_INCLUDES += ../libavstream/include
 LOCAL_C_INCLUDES += ../thirdparty/basis_universal
 LOCAL_C_INCLUDES += ../SimulCasterRenderer/src
 LOCAL_C_INCLUDES += ../SimulCasterAudio/src
+LOCAL_C_INCLUDES += ../TeleportClient
 LOCAL_C_INCLUDES += 3rdParty/enet/Include
 
 LOCAL_CFLAGS += -D__ANDROID__
@@ -72,5 +72,6 @@ $(call import-module,../libavstream/jni)
 $(call import-module,../libavstream/thirdparty/srt/build_android/jni)
 
 $(call import-module,../SimulCasterRenderer/jni)
+$(call import-module,../TeleportClient/jni)
 $(call import-module,../SimulCasterAudio/jni)
 $(call import-module,3rdParty/enet/jni)

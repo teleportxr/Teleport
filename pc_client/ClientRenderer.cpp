@@ -1456,7 +1456,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(0,controllerPoses[0],1.0f);
 		FillInControllerPose(1,controllerPoses[1], -1.0f);
 
-		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, controllerStates, decoder->idrRequired(),fTime);
+		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, originPose, controllerStates, decoder->idrRequired(),fTime);
 
 		for(int i=0;i<2;i++)
 			controllerStates[i].inputEvents.clear();
