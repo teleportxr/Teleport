@@ -179,6 +179,12 @@ namespace sca
 			return sca::Result::AudioPlayerNotConfigured;
 		}
 
+		if (!mRecordingAllowed)
+		{
+			SCA_CERR << "PC_AudioPlayer: The user has not granted permission to record audio." << std::endl;
+			return sca::Result::AudioRecordingNotPermitted;
+		}
+
 		if (mRecording)
 		{
 			SCA_COUT << "PC_AudioPlayer: Already recording." << std::endl;
@@ -209,6 +215,8 @@ namespace sca
 			SCA_COUT << "PC_AudioPlayer: Can't deconfigure audio player because it is not configured." << std::endl;
 			return sca::Result::AudioPlayerNotConfigured;
 		}
+
+		mRecordingAllowed = false;
 
 		mConfigured = false;
 

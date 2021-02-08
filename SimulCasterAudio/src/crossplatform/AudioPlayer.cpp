@@ -5,7 +5,7 @@
 namespace sca
 {
 	AudioPlayer::AudioPlayer()
-		: mInitialized(false), mConfigured(false), mRecording(false) {}
+		: mInitialized(false), mConfigured(false), mRecording(false), mRecordingAllowed(false) {}
 }
 
 

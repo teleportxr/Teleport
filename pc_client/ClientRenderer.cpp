@@ -1028,7 +1028,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 {
 	videoConfig = setupCommand.video_config;
 
-	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d", setupCommand.port, videoConfig.video_width, videoConfig.video_height
+	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d\n", setupCommand.port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 	videoPosDecoded=false;
 
@@ -1126,11 +1126,11 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		// Video streams are 0+...
 		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20 + i, f))
 		{
-			throw std::runtime_error("Failed to configure decoder node");
+			SCR_CERR << "Failed to configure decoder node!\n";
 		}
 		if (!surface[i].configure(avsTextures[i]->createSurface()))
 		{
-			throw std::runtime_error("Failed to configure output surface node");
+			SCR_CERR << "Failed to configure output surface node!\n";
 		}
 
 		videoQueues[i].configure(16, "VideoQueue " + i);

@@ -19,6 +19,7 @@ dependencies {
   implementation project(':client:VrAppSupport:VrSound:Projects:Android')
   implementation project(':libavstream')
 
+    implementation 'androidx.appcompat:appcompat:1.0.0'
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${kotlin_version}"
 }
 

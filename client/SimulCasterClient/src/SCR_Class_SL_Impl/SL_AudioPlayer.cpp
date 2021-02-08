@@ -6,7 +6,6 @@
 
 #define FAILED(r)      (((SLresult)(r)) != SL_RESULT_SUCCESS)
 
-
 class RecordBuffer
 {
 public:
@@ -53,7 +52,8 @@ private:
 
 // Forward declaration of utility functions and callback
 SLuint32 getDefaultByteOrder();
-SLuint32 channelCountToChannelMask(int channelCount);
+SLuint32 outputChannelCountToChannelMask(int channelCount);
+SLuint32 inputChannelCountToChannelMask(int channelCount);
 static void outputBufferQueueCallback(SLAndroidSimpleBufferQueueItf bq, void* context);
 static void inputBufferQueueCallback(SLAndroidSimpleBufferQueueItf bq, void* context);
 
@@ -180,14 +180,14 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
     * API 21 (Lollipop) introduced support for floating-point data representation and an extended
     * data format type: SLAndroidDataFormat_PCM_EX. Would need change for older APIs but we likely won't need to target older ones
     */
-    // Define the audio data format.
+    // Define the output audio data format.
 	SLAndroidDataFormat_PCM_EX format_pcm_ex = {
 			SL_ANDROID_DATAFORMAT_PCM_EX,       // formatType
             static_cast<SLuint32>(audioParams.numChannels),           // numChannels
             static_cast<SLuint32>(audioParams.sampleRate * 1000),    // milliSamplesPerSec
             bitsPerSample,                      // bitsPerSample
             bitsPerSample,                      // containerSize;
-            channelCountToChannelMask(audioParams.numChannels), // channelMask
+            outputChannelCountToChannelMask(audioParams.numChannels), // channelMask
             getDefaultByteOrder(),
 			SL_ANDROID_PCM_REPRESENTATION_FLOAT
     };
@@ -195,117 +195,141 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Player
 	/////////////////////////////////////////////////////////////////////////////////////////////////
-
-    SLDataSource outputAudioSrc = {&loc_bufq, &format_pcm_ex};
-
-	SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, mOutputMixObject};
-	SLDataSink outputAudioSink = {&loc_outmix, NULL};
-
-	const SLInterfaceID ids[] = {SL_IID_BUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION};
-	const SLboolean reqs[] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
-
-	// Stream setup
-    if (FAILED((*mEngineInterface)->CreateAudioPlayer(mEngineInterface, &mPlayerObject, &outputAudioSrc,
-    		&outputAudioSink, sizeof(ids) / sizeof(ids[0]), ids, reqs)))
 	{
-		SCA_CERR << "SL_AudioPlayer: Error occurred trying to create audio stream." << std::endl;
-		return sca::Result::AudioStreamCreationError;
+		SLDataSource outputAudioSrc = {&loc_bufq, &format_pcm_ex};
+
+		SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, mOutputMixObject};
+		SLDataSink outputAudioSink = {&loc_outmix, NULL};
+
+		const SLInterfaceID ids[] = {SL_IID_BUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION};
+		const SLboolean reqs[] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+
+		// Stream setup
+		if (FAILED((*mEngineInterface)->CreateAudioPlayer(mEngineInterface, &mPlayerObject,
+														  &outputAudioSrc,
+														  &outputAudioSink,
+														  sizeof(ids) / sizeof(ids[0]), ids,
+														  reqs))) {
+			SCA_CERR << "SL_AudioPlayer: Error occurred trying to create audio stream."
+					 << std::endl;
+			return sca::Result::AudioStreamCreationError;
+		}
+
+		SLAndroidConfigurationItf configItf = nullptr;
+
+		// Configure the stream.
+		if (FAILED((*mPlayerObject)->GetInterface(mPlayerObject, SL_IID_ANDROIDCONFIGURATION,
+												  (void *) &configItf))) {
+			SCA_CERR << "SL_AudioPlayer: Error occurred trying to get android configuration for audio stream." << std::endl;
+			return sca::Result::AudioStreamConfigurationError;
+		}
+
+		SLresult pmResult = SL_RESULT_SUCCESS;
+
+		// 12 for low latency
+		SLuint32 performanceMode = SL_ANDROID_PERFORMANCE_LATENCY;
+
+		pmResult = (*configItf)->SetConfiguration(configItf, SL_ANDROID_KEY_PERFORMANCE_MODE,
+												  &performanceMode, sizeof(performanceMode));
+		if (SL_RESULT_SUCCESS != pmResult) {
+			SCA_CERR << "SL_AudioPlayer: Setting low latency performance mode failed. Default will be used." << std::endl;
+		}
+
+		SLuint32 presetValue = SL_ANDROID_STREAM_MEDIA;
+		if (FAILED((*configItf)->SetConfiguration(configItf, SL_ANDROID_KEY_STREAM_TYPE, &presetValue, sizeof(presetValue))))
+		{
+			SCA_CERR << "SL_AudioPlayer: Error occurred trying to set the stream type." << std::endl;
+			return sca::Result::AudioStreamConfigurationError;
+		}
+
+		if (FAILED((*mPlayerObject)->Realize(mPlayerObject, SL_BOOLEAN_FALSE))) {
+			SCA_CERR << "SL_AudioPlayer: Error occurred trying to realize the audio stream interface." << std::endl;
+			return sca::Result::AudioStreamConfigurationError;
+		}
+
+		if (FAILED((*mPlayerObject)->GetInterface(mPlayerObject, SL_IID_PLAY, &mPlayInterface))) {
+			SCA_CERR << "SL_AudioPlayer: Error occurred trying to acquire the play interface." << std::endl;
+			return sca::Result::AudioStreamConfigurationError;
+		}
+
+		// Buffer setup
+		if (FAILED((*mPlayerObject)->GetInterface(mPlayerObject, SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+												  &mOutputBufferQueueInterface))) {
+			SCA_CERR << "SL_AudioPlayer: Error occurred trying to acquire the output buffer queue interface." << std::endl;
+			return sca::Result::AudioBufferInitializationError;
+		}
+
+		if (FAILED((*mOutputBufferQueueInterface)->RegisterCallback(mOutputBufferQueueInterface,
+																	outputBufferQueueCallback,
+																	this))) {
+			SCA_CERR << "SL_AudioPlayer: Failed to register output buffer queue callback." << std::endl;
+			return sca::Result::AudioBufferInitializationError;
+		}
 	}
-
-	SLAndroidConfigurationItf configItf = nullptr;
-
-    // Configure the stream.
-    if (FAILED((*mPlayerObject)->GetInterface(mPlayerObject, SL_IID_ANDROIDCONFIGURATION, (void *)&configItf)))
-	{
-		SCA_CERR << "SL_AudioPlayer: Error occurred trying to get android configuration for audio stream." << std::endl;
-		return sca::Result::AudioStreamConfigurationError;
-	}
-
-	SLresult pmResult = SL_RESULT_SUCCESS;
-
-	// 12 for low latency
-    SLuint32 performanceMode = SL_ANDROID_PERFORMANCE_LATENCY;
-
-	pmResult = (*configItf)->SetConfiguration(configItf, SL_ANDROID_KEY_PERFORMANCE_MODE, &performanceMode, sizeof(performanceMode));
-	if (SL_RESULT_SUCCESS != pmResult) {
-		SCA_CERR << "SL_AudioPlayer: Setting low latency performance mode failed. Default will be used." << std::endl;
-	}
-
-	SLuint32 presetValue = SL_ANDROID_STREAM_MEDIA;
-	if (FAILED((*configItf)->SetConfiguration(configItf, SL_ANDROID_KEY_STREAM_TYPE, &presetValue, sizeof(presetValue))))
-	{
-		SCA_CERR << "SL_AudioPlayer: Error occurred trying to set the stream type." << std::endl;
-		return sca::Result::AudioStreamConfigurationError;
-	}
-
-	if (FAILED((*mPlayerObject)->Realize(mPlayerObject, SL_BOOLEAN_FALSE)))
-	{
-		SCA_CERR << "SL_AudioPlayer: Error occurred trying to realize the audio stream interface." << std::endl;
-		return sca::Result::AudioStreamConfigurationError;
-	}
-
-	if (FAILED((*mPlayerObject)->GetInterface(mPlayerObject, SL_IID_PLAY, &mPlayInterface)))
-	{
-		SCA_CERR << "SL_AudioPlayer: Error occurred trying to acquire the play interface." << std::endl;
-		return sca::Result::AudioStreamConfigurationError;
-	}
-
-	// Buffer setup
-    if (FAILED((*mPlayerObject)->GetInterface(mPlayerObject, SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &mOutputBufferQueueInterface)))
-    {
-        SCA_CERR << "SL_AudioPlayer: Error occurred trying to acquire the output buffer queue interface." << std::endl;
-        return sca::Result::AudioBufferInitializationError;
-    }
-
-    if (FAILED((*mOutputBufferQueueInterface)->RegisterCallback(mOutputBufferQueueInterface, outputBufferQueueCallback, this)))
-    {
-        SCA_CERR << "SL_AudioPlayer: Failed to register output buffer queue callback." << std::endl;
-        return sca::Result::AudioBufferInitializationError;
-    }
-
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Recorder
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 
-	// Setting up the IO device (microphone)
-	SLDataLocator_IODevice ioDevice = {
-			SL_DATALOCATOR_IODEVICE,         // Types of
-			SL_IODEVICE_AUDIOINPUT,          // device type selected audio input type
-			SL_DEFAULTDEVICEID_AUDIOINPUT,   // deviceID
-			NULL                             // device instance
-	};
-	SLDataSource inputAudioSrc = {
-			&ioDevice,                       // SLDataLocator_IODevice configuration input
-			NULL                   // Input format, the collection does not need
-	};
-
-	SLDataSink inputAudioSink = {
-			&loc_bufq,                   // SLDataFormat_PCM_EX configuration output
-			&format_pcm_ex               // Output data format
-	};
-
-	// Create a recorded object
-	const SLInterfaceID id[1] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE};
-	const SLboolean req[1] = {SL_BOOLEAN_TRUE};
-	if (FAILED((*mEngineInterface)->CreateAudioRecorder(mEngineInterface, &mRecorderObject, &inputAudioSrc,
-														&inputAudioSink, 1, id, req)))
 	{
-		SCA_CERR << "SL_AudioPlayer: Error occurred trying to create audio recorder object." << std::endl;
-		return sca::Result::AudioRecorderCreationError;
-	}
+		// Setting up the IO device (microphone)
+		SLDataLocator_IODevice ioDevice = {
+				SL_DATALOCATOR_IODEVICE,         // Types of
+				SL_IODEVICE_AUDIOINPUT,          // device type selected audio input type
+				SL_DEFAULTDEVICEID_AUDIOINPUT,   // deviceID
+				NULL                             // device instance
+		};
+		SLDataSource inputAudioSrc = {
+				&ioDevice,                       // SLDataLocator_IODevice configuration input
+				NULL                   // Input format, the collection does not need
+		};
 
-	// Instantiate this recording object
-	if (FAILED((*mRecorderObject)->Realize(mRecorderObject, SL_BOOLEAN_FALSE)))
-	{
-		SCA_CERR << "SL_AudioPlayer: Error occurred trying to instantiate audio recorder object." << std::endl;
-		return sca::Result::AudioRecorderInitializationError;
-	}
+		// Define the output audio data format.
+		SLAndroidDataFormat_PCM_EX input_format_pcm_ex = {
+				SL_ANDROID_DATAFORMAT_PCM_EX,       // formatType
+				static_cast<SLuint32>(audioParams.numChannels),           // numChannels
+				static_cast<SLuint32>(audioParams.sampleRate * 1000),    // milliSamplesPerSec
+				bitsPerSample,                      // bitsPerSample
+				bitsPerSample,                      // containerSize;
+				outputChannelCountToChannelMask(audioParams.numChannels), // channelMask
+				getDefaultByteOrder(),
+				SL_ANDROID_PCM_REPRESENTATION_FLOAT
+		};
 
-	// Get the recording interface
-	if (FAILED((*mRecorderObject)->GetInterface(mRecorderObject, SL_IID_RECORD, &mRecordInterface)))
-	{
-		SCA_CERR << "SL_AudioPlayer: Error occurred trying to get the recorder interface." << std::endl;
-		return sca::Result::AudioRecorderInitializationError;
+		SLDataSink inputAudioSink = {
+				&loc_bufq,                   // SLDataFormat_PCM_EX configuration output
+				&input_format_pcm_ex         // Output data format
+		};
+
+		// Create a recorded object
+		const SLInterfaceID ids[2] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION};
+		const SLboolean reqs[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+		if (FAILED((*mEngineInterface)->CreateAudioRecorder(mEngineInterface, &mRecorderObject,
+															&inputAudioSrc,
+															&inputAudioSink,  sizeof(ids) / sizeof(ids[0]),
+															ids, reqs))) {
+			SCA_CERR << "SL_AudioPlayer: Error occurred trying to create audio recorder object." << std::endl;
+			return sca::Result::AudioRecorderCreationError;
+		}
+
+		SLresult result = (*mRecorderObject)->Realize(mRecorderObject, SL_BOOLEAN_FALSE);
+		// Instantiate this recording object
+		if (FAILED(result)) {
+			if (result != SL_RESULT_CONTENT_UNSUPPORTED)
+			{
+				SCA_CERR << "SL_AudioPlayer: Error occurred trying to instantiate audio recorder object." << std::endl;
+				return sca::Result::AudioRecorderInitializationError;
+			}
+			mRecordingAllowed = false;
+		} else
+		{
+			mRecordingAllowed = true;
+			// Get the recording interface
+			if (FAILED((*mRecorderObject)->GetInterface(mRecorderObject, SL_IID_RECORD,
+														&mRecordInterface))) {
+				SCA_CERR << "SL_AudioPlayer: Error occurred trying to get the recorder interface." << std::endl;
+				return sca::Result::AudioRecorderInitializationError;
+			}
+		}
 	}
 
 	mAudioParams = audioParams;
@@ -360,6 +384,12 @@ sca::Result SL_AudioPlayer::startRecording(std::function<void(const uint8_t * da
 		// spamming
 		// SCA_CERR << "SL_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
 		return sca::Result::AudioPlayerNotConfigured;
+	}
+
+	if (!mRecordingAllowed)
+	{
+		SCA_CERR << "SL_AudioPlayer: The user has not granted permission to record audio." << std::endl;
+		return sca::Result::AudioRecordingNotPermitted;
 	}
 
 	if (mRecording)
@@ -459,6 +489,8 @@ sca::Result SL_AudioPlayer::deconfigure()
 		mRecordInterface = nullptr;
 	}
 
+	mRecordingAllowed = false;
+
     mConfigured = false;
 
     mAudioParams = {};
@@ -496,7 +528,7 @@ void SL_AudioPlayer::onAudioRecorded(SLAndroidSimpleBufferQueueItf bq)
 	}
 }
 
-SLuint32 channelCountToChannelMask(int channelCount)  {
+SLuint32 outputChannelCountToChannelMask(int channelCount)  {
 	SLuint32 channelMask = 0;
 
 	switch (channelCount) {
@@ -525,6 +557,27 @@ SLuint32 channelCountToChannelMask(int channelCount)  {
 			break;
 	}
 	return channelMask;
+}
+
+SLuint32 inputChannelCountToChannelMask(int channelCount)  {
+    SLuint32 channelMask = 0;
+
+    // Yes, it seems strange to use SPEAKER constants to describe inputs.
+    // But that is how OpenSL ES does it internally.
+    switch (channelCount) {
+        case 1:
+            channelMask = SL_SPEAKER_FRONT_LEFT;
+            break;
+
+        case 2:
+            channelMask = SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;
+            break;
+
+        default:
+            channelMask = SL_ANDROID_UNKNOWN_CHANNELMASK;
+            break;
+    }
+    return channelMask;
 }
 
 static bool isLittleEndian() {

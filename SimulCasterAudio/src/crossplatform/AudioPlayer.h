@@ -29,6 +29,7 @@ namespace sca
 		bool mInitialized;
 		bool mConfigured;
 		bool mRecording;
+		bool mRecordingAllowed;
 	};
 }
 

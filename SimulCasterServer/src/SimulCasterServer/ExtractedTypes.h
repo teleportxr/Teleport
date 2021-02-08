@@ -30,7 +30,7 @@ namespace SCServer
 		{
 			std::wstring guidAsString;
 			in >> guidAsString;
-			meshData.guid = SysAllocStringLen(guidAsString.data(), static_cast<unsigned int>(guidAsString.size()));
+			meshData.guid = _bstr_t(guidAsString.data());
 
 			return in >> meshData.lastModified >> meshData.mesh;
 		}
@@ -53,7 +53,7 @@ namespace SCServer
 		{
 			std::wstring guidAsString;
 			in >> guidAsString;
-			materialData.guid = SysAllocStringLen(guidAsString.data(), static_cast<unsigned int>(guidAsString.size()));
+			materialData.guid = _bstr_t(guidAsString.data());
 
 			return in >> materialData.lastModified >> materialData.material;
 		}
@@ -76,7 +76,7 @@ namespace SCServer
 		{
 			std::wstring guidAsString;
 			in >> guidAsString;
-			textureData.guid = SysAllocStringLen(guidAsString.data(), static_cast<unsigned int>(guidAsString.size()));
+			textureData.guid = _bstr_t(guidAsString.data());
 
 			return in >> textureData.lastModified >> textureData.texture;
 		}
@@ -87,11 +87,12 @@ namespace SCServer
 	{
 		avs::uid oldID; //The id the resource was using previously; kept so the links between resources can be re-linked.
 		BSTR guid; //Uniquely identifying string that the engine uses to identify assets.
+		BSTR name; //Name of the asset to tell it apart from assets with the GUID; i.e. they come from the same source file.
 		std::time_t lastModified;
 
 		LoadedResource() = default;
-		LoadedResource(avs::uid oldID, _bstr_t guid, std::time_t lastModified)
-			:oldID(oldID), guid(guid), lastModified(lastModified)
+		LoadedResource(avs::uid oldID, _bstr_t guid, BSTR name, std::time_t lastModified)
+			:oldID(oldID), guid(guid), name(name), lastModified(lastModified)
 		{}
 	};
 

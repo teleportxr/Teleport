@@ -1078,7 +1078,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 	ClientData& clientData = clientPair->second;
 	if(!clientData.clientMessaging.hasPeer())
 	{
-		TELEPORT_CERR << "Failed to encode video frame for Client_" << clientID << "! Client has no peer!\n";
+		TELEPORT_COUT << "Failed to encode video frame for Client_" << clientID << "! Client has no peer!\n";
 		return;
 	}
 
@@ -1178,7 +1178,6 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 	ClientData& clientData = clientPair->second;
 	if (!clientData.clientMessaging.hasPeer())
 	{
-		TELEPORT_CERR << "Failed to send audio to Client_" << clientID << "! SendAudio called but peer is not connected.\n";
 		return;
 	}
 
