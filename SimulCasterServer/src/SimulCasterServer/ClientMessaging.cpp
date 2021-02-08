@@ -9,8 +9,8 @@
 #include "DiscoveryService.h"
 #include "ErrorHandling.h"
 
-namespace SCServer
-{
+using namespace SCServer;
+
 	std::atomic_bool ClientMessaging::asyncNetworkDataProcessingActive = false;
 	std::unordered_map<avs::uid, NetworkPipeline*> ClientMessaging::networkPipelines;
 	std::thread ClientMessaging::networkThread;
@@ -22,7 +22,7 @@ namespace SCServer
 		std::shared_ptr<DiscoveryService> discoveryService,
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 		std::function<void(avs::uid, const avs::Pose*)> inSetHeadPose,
-		std::function<void(avs::uid, const avs::Pose*)> inSetOriginFromClient,
+		std::function<void(avs::uid, uint64_t,const avs::Pose*)> inSetOriginFromClient,
 		std::function<void(avs::uid, int index, const avs::Pose*)> inSetControllerPose,
 		std::function<void(avs::uid, const avs::InputState *,const avs::InputEvent** )> inProcessNewInput,
 		std::function<void(void)> onDisconnect,
@@ -333,9 +333,6 @@ namespace SCServer
 			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose):
 				receiveHeadPose(event.packet);
 				break;
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Origin):
-				receiveOriginFromClient(event.packet);
-				break;
 			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest):
 				receiveResourceRequest(event.packet);
 				break;
@@ -437,7 +434,7 @@ namespace SCServer
 		TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 	}
 
-	bool ClientMessaging::setPosition(const avs::vec3& pos,bool set_rel,const avs::vec3 &rel_to_head)
+	bool ClientMessaging::setPosition(uint64_t valid_counter,const avs::vec3& pos,bool set_rel,const avs::vec3 &rel_to_head)
 	{
 		avs::SetPositionCommand setp;
 		if (casterContext->axesStandard != avs::AxesStandard::NotInitialized)
@@ -449,6 +446,7 @@ namespace SCServer
 			avs::vec3 o=rel_to_head;
 			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, o);
 			setp.relative_pos=o;
+			setp.valid_counter=valid_counter;
 			return sendCommand(setp);
 		}
 		return false;
@@ -511,21 +509,6 @@ namespace SCServer
 		avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, headPose.position);
 		setHeadPose(clientID, &headPose);
 	}
-
-	void ClientMessaging::receiveOriginFromClient(const ENetPacket* packet)
-	{
-		if (packet->dataLength != sizeof(avs::Pose))
-		{
-			TELEPORT_COUT << "Session: Received malformed origin packet of length: " << packet->dataLength << std::endl;
-			return;
-		}
-
-		avs::Pose pose;
-		memcpy(&pose, packet->data, packet->dataLength);
-		avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, pose.orientation);
-		avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, pose.position);
-		setOriginFromClient(clientID, &pose);
-	}
 	
 	void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 	{
@@ -558,6 +541,15 @@ namespace SCServer
 		avs::ClientMessagePayloadType clientMessagePayloadType = *((avs::ClientMessagePayloadType*)packet->data);
 		switch (clientMessagePayloadType)
 		{
+		case avs::ClientMessagePayloadType::OriginPose:
+		{
+			avs::OriginPoseMessage message;
+			memcpy(&message, packet->data, packet->dataLength);
+			avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, message.originPose.orientation);
+			avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, message.originPose.position);
+			setOriginFromClient(clientID, message.counter,&message.originPose);
+		}
+		break;
 		case avs::ClientMessagePayloadType::ControllerPoses:
 		{
 			avs::ControllerPosesMessage message;
@@ -696,4 +688,4 @@ namespace SCServer
 			}
 		}
 	}
-}
+

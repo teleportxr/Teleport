@@ -26,7 +26,7 @@ public:
 	bool isStreaming = false;
 	bool videoKeyframeRequired = false;
 
-	bool setOrigin(avs::vec3 pos,bool set_rel,avs::vec3 rel_to_head);
+	bool setOrigin(uint64_t ctr,avs::vec3 pos,bool set_rel,avs::vec3 rel_to_head);
 	bool isConnected() const;
 	bool hasOrigin() const;
 	avs::vec3 getOrigin() const;

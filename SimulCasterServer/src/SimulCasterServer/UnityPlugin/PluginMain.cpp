@@ -58,7 +58,7 @@ TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStan
 
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
-typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, const avs::Pose*);
+typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, uint64_t,const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
@@ -325,7 +325,7 @@ struct InitialiseState
 	bool(*showNode)(avs::uid clientID, avs::uid nodeID);
 	bool(*hideNode)(avs::uid clientID, avs::uid nodeID);
 	void(*headPoseSetter)(avs::uid clientID, const avs::Pose*);
-	void(*setOriginFromClientFn)(avs::uid clientID, const avs::Pose*);
+	void(*setOriginFromClientFn)(avs::uid clientID, uint64_t,const avs::Pose*);
 	void(*controllerPoseSetter)(avs::uid uid, int index, const avs::Pose*);
 	ProcessNewInputFn newInputProcessing;
 	DisconnectFn disconnect;
@@ -806,7 +806,7 @@ TELEPORT_EXPORT void Tock()
 	PipeOutMessages();
 }
 
-TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID, const avs::vec3* pos, bool set_rel, const avs::vec3* orig_to_head)
+TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter, const avs::vec3* pos, bool set_rel, const avs::vec3* orig_to_head)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -816,7 +816,7 @@ TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID, const avs::vec3* pos, b
 	}
 
 	ClientData& clientData = clientPair->second;
-	return clientData.setOrigin(*pos, set_rel, *orig_to_head);
+	return clientData.setOrigin(validCounter,*pos, set_rel, *orig_to_head);
 }
 
 TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
