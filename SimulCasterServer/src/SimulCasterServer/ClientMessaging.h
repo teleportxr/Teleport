@@ -32,7 +32,7 @@ namespace SCServer
 						std::shared_ptr<DiscoveryService> discoveryService,
 						std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 						std::function<void(avs::uid,const avs::Pose*)> setHeadPose,
-						std::function<void(avs::uid,const avs::Pose*)> setOriginFromClient,
+						std::function<void(avs::uid,uint64_t,const avs::Pose*)> setOriginFromClient,
 						std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose,
 						std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput,
 						std::function<void(void)> onDisconnect,
@@ -59,7 +59,7 @@ namespace SCServer
 		bool hasPeer() const;
 		bool hasReceivedHandshake() const;
 
-		bool setPosition(const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head);
+		bool setPosition(uint64_t valid_counter,const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head);
 
 		bool sendCommand(const avs::Command& avsCommand) const;
 		template<typename T> bool sendCommand(const avs::Command& avsCommand, std::vector<T>& appendedList) const
@@ -96,9 +96,9 @@ namespace SCServer
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
 
-		std::function<void(avs::uid,const avs::Pose*)> setHeadPose;			//Delegate called when a head pose is received.
-		std::function<void(avs::uid,const avs::Pose*)> setOriginFromClient;			//Delegate called when an origin is received.
-		std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose;			//Delegate called when a head pose is received.
+		std::function<void(avs::uid,const avs::Pose*)> setHeadPose;										//Delegate called when a head pose is received.
+		std::function<void(avs::uid,uint64_t,const avs::Pose*)> setOriginFromClient;					//Delegate called when an origin is received.
+		std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose;						//Delegate called when a head pose is received.
 		std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput;	//Delegate called when new input is received.
 		std::function<void(void)> onDisconnect; //Delegate called when the peer disconnects.
 
@@ -110,17 +110,16 @@ namespace SCServer
 		ENetHost* host;
 		ENetPeer* peer;
 
-		bool receivedHandshake = false; //Whether we've received the handshake from the client.
+		bool receivedHandshake = false;				//Whether we've received the handshake from the client.
 
-		std::vector<avs::uid> nodesEnteredBounds; //Stores nodes client needs to know have entered streaming bounds.
-		std::vector<avs::uid> nodesLeftBounds; //Stores nodes client needs to know have left streaming bounds.
+		std::vector<avs::uid> nodesEnteredBounds;	//Stores nodes client needs to know have entered streaming bounds.
+		std::vector<avs::uid> nodesLeftBounds;		//Stores nodes client needs to know have left streaming bounds.
 
 		void dispatchEvent(const ENetEvent& event);
 		void receiveHandshake(const ENetPacket* packet);
 		void receiveInput(const ENetPacket* packet);
 		void receiveDisplayInfo(const ENetPacket* packet);
 		void receiveHeadPose(const ENetPacket* packet);
-		void receiveOriginFromClient(const ENetPacket* packet);
 		void receiveResourceRequest(const ENetPacket* packet);
 		void receiveKeyframeRequest(const ENetPacket* packet);
 		void receiveClientMessage(const ENetPacket* packet);
