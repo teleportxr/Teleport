@@ -290,10 +290,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	//Get HMD Position/Orientation
 	clientDeviceState.stickYaw=mScene.GetStickYaw();
-	//headPos+=clientDeviceState.localFootPos;
-	//clientDeviceState.relativeHeadPos=*((const avs::vec3*)&vrFrame.Tracking.HeadPose.Pose.Position);
 	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.Tracking.HeadPose.Pose.Position)),*((const scr::quat *)(&vrFrame.Tracking.HeadPose.Pose.Orientation)));
-	clientDeviceState.cameraPosition = clientDeviceState.localFootPos+clientDeviceState.relativeHeadPos;
 	clientDeviceState.UpdateOriginPose();
 	// Handle networked session.
 	if(sessionClient.IsConnected())
@@ -340,7 +337,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	// Update GUI systems after the app frame, but before rendering anything.
 	mGuiSys->Frame(vrFrame, res.FrameMatrices.CenterView);
 	// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
-	GlobalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.cameraPosition);
+	GlobalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.position);
 
     std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	res.FrameIndex   = vrFrame.FrameNumber;

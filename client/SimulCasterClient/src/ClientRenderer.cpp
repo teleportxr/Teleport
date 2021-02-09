@@ -283,7 +283,7 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 			(scr::RenderPlatform*)(&GlobalGraphicsResources.renderPlatform),
 			scr::Camera::ProjectionType::PERSPECTIVE,
 			scr::quat(0.0f, 0.0f, 0.0f, 1.0f),
-			clientDeviceState->cameraPosition
+			clientDeviceState->headPose.position
 	};
 	GlobalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
@@ -722,7 +722,8 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrF
         avs::vec4 left_eye ={-eye.x,-eye.y,-eye.z,0.0f};
         videoUB.eyeOffsets[0]=left_eye;		// left eye
         videoUB.eyeOffsets[1]=eye;	// right eye.
-        videoUB.cameraPosition=clientDeviceState->cameraPosition;
+        videoUB.cameraPosition=
+				clientDeviceState->headPose.position;
 
         mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *)mCubemapTexture.get())->GetGlTexture());
         //mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
@@ -904,15 +905,14 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 	{
 		mGuiSys->ShowInfoText(
 				INFO_TEXT_DURATION,
-					//	"             Origin: %1.3f, %1.3f, %1.3f\n"
-						"         + Foot pos: %1.3f, %1.3f, %1.3f\n"
-						"  + Camera Relative: %1.3f, %1.3f, %1.3f\n"
-						"  = Camera Position: %1.3f, %1.3f, %1.3f\n\n"
+						"         Foot pos: %1.3f, %1.3f, %1.3f\n"
+						"+ Camera Relative: %1.3f, %1.3f, %1.3f\n"
+						"= Camera Position: %1.3f, %1.3f, %1.3f\n\n"
 				"Eye yaw: %1.3f\n"
 				//, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
 				, clientDeviceState->localFootPos.x,clientDeviceState->localFootPos.y,clientDeviceState->localFootPos.z
 				, clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z
-				, clientDeviceState->cameraPosition.x, clientDeviceState->cameraPosition.y,	clientDeviceState->cameraPosition.z
+				, clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,	clientDeviceState->headPose.position.z
 				, clientDeviceState->stickYaw );
 	}
 	else if (show_osd == GEOMETRY_OSD)

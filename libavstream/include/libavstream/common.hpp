@@ -138,6 +138,11 @@ namespace avs
 			return vec3(-x, -y, -z);
 		}
 
+		const float *operator()() const
+		{
+			return &x;
+		}
+
 		void operator=(const float* v)
 		{
 			x = v[0];

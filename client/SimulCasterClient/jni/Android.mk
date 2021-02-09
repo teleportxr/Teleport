@@ -55,6 +55,7 @@ LOCAL_C_INCLUDES += ../SimulCasterRenderer/src
 LOCAL_C_INCLUDES += ../SimulCasterAudio/src
 LOCAL_C_INCLUDES += ../TeleportClient
 LOCAL_C_INCLUDES += 3rdParty/enet/Include
+LOCAL_C_INCLUDES += ../firstparty
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable -Wno-abstract-final-class

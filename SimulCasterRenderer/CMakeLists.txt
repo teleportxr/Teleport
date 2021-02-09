@@ -28,7 +28,6 @@ set( src_crossplatform
 	src/crossplatform/Animation.h
 	src/crossplatform/API.cpp
 	src/crossplatform/API.h
-	src/crossplatform/basic_linear_algebra.h
 	src/crossplatform/Bone.cpp
 	src/crossplatform/Bone.h
 	src/crossplatform/Camera.cpp

@@ -100,7 +100,8 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 		std::cout << msg ;
 }
 
-ClientRenderer::ClientRenderer():
+ClientRenderer::ClientRenderer(ClientDeviceState *c):
+	clientDeviceState(c),
 	renderPlatform(nullptr),
 	hdrFramebuffer(nullptr),
 	hDRRenderer(nullptr),
@@ -333,13 +334,19 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		vec3 pos = videoPosDecoded ? videoPos : vec3(0, 0, 0);
 		camera.SetPosition(pos);
 	}
-	relativeHeadPos=camera.GetPosition();
+	//relativeHeadPos=camera.GetPosition();
 	// The following block renders to the hdrFramebuffer's rendertarget:
-	vec3 finalViewPos=localOriginPos+relativeHeadPos;
+	//vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	{
-		camera.SetPosition(finalViewPos);
+		auto p=camera.GetPosition();
+		auto q=camera.Orientation.GetQuaternion();
+		// global pos/orientation:
+		camera.SetPosition((const float*)&clientDeviceState->headPose.position);
+		camera.SetOrientationAsQuaternion((const float*)&clientDeviceState->headPose.orientation);
 		deviceContext.viewStruct.view = camera.MakeViewMatrix();
-		camera.SetPosition(relativeHeadPos);
+		// back to local.
+		camera.SetPosition(p);
+		camera.SetOrientationAsQuaternion(q);
 		float aspect = (float)viewport.w / (float)viewport.h;
 		if (reverseDepth)
 			deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
@@ -413,8 +420,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				{
 					tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
 					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-					cubemapConstants.offsetFromVideo = finalViewPos - videoPos;
-					cubemapConstants.cameraPosition = finalViewPos;
+					cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.position)- videoPos;
+					cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.position);
 					cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -630,10 +637,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	else if(show_osd== CAMERA_OSD)
 	{
 		vec3 offset=camera.GetPosition();
-		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", localOriginPos.x, localOriginPos.y, localOriginPos.z)):"Origin:", white);
-		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("Offset: %4.4f %4.4f %4.4f", offset.x, offset.y, offset.z),white);
-		vec3 viewpos=localOriginPos+offset;
-		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", viewpos.x, viewpos.y, viewpos.z),white);
+		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->localFootPos.x, clientDeviceState->localFootPos.y, clientDeviceState->localFootPos.z)):"Origin:", white);
+		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("Offset: %4.4f %4.4f %4.4f", clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z),white);
+		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y, clientDeviceState->headPose.position.z),white);
 		if (videoPosDecoded)
 		{
 			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
@@ -808,8 +814,7 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 	cameraConstants.proj = deviceContext.viewStruct.proj;
 	cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
 	// The following block renders to the hdrFramebuffer's rendertarget:
-	vec3 finalViewPos=localOriginPos+relativeHeadPos;
-	cameraConstants.viewPosition = finalViewPos;
+	cameraConstants.viewPosition = ((const float*)&clientDeviceState->headPose.position);
 
 	const scr::NodeManager::nodeList_t& nodeList = resourceManagers.mNodeManager->GetRootNodes();
 	for(const std::shared_ptr<scr::Node>& node : nodeList)
@@ -1333,7 +1338,7 @@ void ClientRenderer::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& 
 	resourceManagers.mNodeManager->UpdateNodeMovement(updateList);
 }
 #include "Platform/CrossPlatform/Quaterniond.h"
-void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offset)
+void ClientRenderer::FillInControllerPose(int index, float offset)
 {
 	if(!hdrFramebuffer->GetHeight())
 		return;
@@ -1348,9 +1353,8 @@ void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offse
 	controllerSim.pos_offset[index]=vec3(hand_dist*(-sine+offset*cosine),hand_dist*(cosine+offset*sine),-0.5f);
 	// Get horizontal azimuth of view.
 	vec3 camera_local_pos=camera.GetPosition();
-	vec3 worldspace_pos=localOriginPos+camera_local_pos;
-	worldspace_pos+=controllerSim.pos_offset[index];
-	pose.position=*((avs::vec3*)&worldspace_pos);
+	vec3 footspace_pos=camera_local_pos;
+	footspace_pos+=controllerSim.pos_offset[index];
 
 	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
 	// The up direction is x, and the left direction is z.
@@ -1360,9 +1364,10 @@ void ClientRenderer::FillInControllerPose(int index,avs::Pose& pose, float offse
 	q.Rotate(azimuth,vec3(0,0,1.0f));
 	q.Rotate(elevation, vec3(1.0f, 0, 0));
 
-	controllerSim.position[index] =pose.position;
+	// convert from footspace to worldspace
+	clientDeviceState->SetControllerPose( index,*((avs::vec3*)&footspace_pos),*((const scr::quat*)&q));
+	controllerSim.position[index] =footspace_pos;
 	controllerSim.orientation[index] =((const float*)&q);
-	pose.orientation= ((const float*)&q);
 }
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
@@ -1429,40 +1434,41 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	// Reset
 	mouseCameraInput.MouseButtons = 0;
 	controllerStates[0].mTrackpadStatus=true;
+
+	simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
+	auto q = camera.Orientation.GetQuaternion();
+	auto q_rel=q/q0;
+	clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos),*((scr::quat*)&q_rel));
+	clientDeviceState->UpdateOriginPose();
 	// Handle networked session.
 	if (sessionClient.IsConnected())
 	{
 		vec3 forward=-camera.Orientation.Tz();
+		vec3 right=camera.Orientation.Tx();
+		*((vec3*)&clientDeviceState->localFootPos)+=mouseCameraInput.forward_back_input*time_step*forward;
+		*((vec3*)&clientDeviceState->localFootPos)+=mouseCameraInput.right_left_input*time_step*right;
 		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
-		simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
 
 		if(!receivedInitialPos)
 		{
-			camera.SetPositionAsXYZ(0.f, 0.f, 5.f);
+			camera.SetPositionAsXYZ(0.f, 0.f, 1.5f);
 			vec3 look(0.f, 1.f, 0.f), up(0.f, 0.f, 1.f);
 			camera.LookInDirection(look, up);
 		}
-		auto q = camera.Orientation.GetQuaternion();
-		auto q_rel=q/q0;
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
-		avs::Pose headPose;
-		headPose.orientation = *((avs::vec4*)&q_rel);
-		vec3 offset = camera.GetPosition();
-		vec3 worldspace_camera_pos=localOriginPos+offset;
-		headPose.position = *((avs::vec3*)&worldspace_camera_pos);
-		avs::Pose controllerPoses[2];
-		FillInControllerPose(0,controllerPoses[0],1.0f);
-		FillInControllerPose(1,controllerPoses[1], -1.0f);
+	
+		FillInControllerPose(0,1.0f);
+		FillInControllerPose(1, -1.0f);
 
-		sessionClient.Frame(displayInfo, headPose, controllerPoses, receivedInitialPos, originPose, controllerStates, decoder->idrRequired(),fTime);
+		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder->idrRequired(),fTime);
 
 		for(int i=0;i<2;i++)
 			controllerStates[i].inputEvents.clear();
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
-			localOriginPos = *((vec3*)&sessionClient.GetOriginPos());
+			clientDeviceState->localFootPos = sessionClient.GetOriginPos();
 			receivedInitialPos = sessionClient.receivedInitialPos;
 			if(receivedRelativePos!=sessionClient.receivedRelativePos)
 			{

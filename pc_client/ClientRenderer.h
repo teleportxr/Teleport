@@ -30,6 +30,7 @@
 
 #include "crossplatform/AudioStreamTarget.h"
 #include "pc/PC_AudioPlayer.h"
+#include "TeleportClient/ClientDeviceState.h"
 
 namespace avs
 {
@@ -167,8 +168,9 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	std::string server_ip;
 	int server_discovery_port=0;
 	float roomRadius=1.5f;
+	ClientDeviceState *clientDeviceState;
 public:
-	ClientRenderer();
+	ClientRenderer(ClientDeviceState *clientDeviceState);
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	void OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
@@ -210,7 +212,7 @@ public:
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
 
 	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);
-	void FillInControllerPose(int index, avs::Pose &pose,float offset);
+	void FillInControllerPose(int index, float offset);
 	//Update the state of objects on the ClientRenderer.
 	void Update();
 
@@ -254,8 +256,6 @@ public:
 	std::shared_ptr<scr::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;
 	unsigned long long receivedRelativePos = 0;
-	vec3 localOriginPos;
-	vec3 relativeHeadPos;
 	bool videoPosDecoded=false;
 	bool canConnect=false;
 	vec3 videoPos;
