@@ -109,7 +109,6 @@ public:
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
     void RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrFrameResult &res);
-	void UpdateHandObjects();
 
 	void RenderLocalNodes(OVR::ovrFrameResult& res);
 	void RenderNode(OVR::ovrFrameResult& res, std::shared_ptr<scr::Node> node);
@@ -126,8 +125,6 @@ public:
 	ovrMobile				*mOvrMobile			=nullptr;
 	float eyeSeparation=0.06f;
 	avs::VideoConfig videoConfig;
-	const scr::quat HAND_ROTATION_DIFFERENCE {0.0000000456194194, 0.923879385, -0.382683367, 0.000000110135019}; //Adjustment to the controller's rotation to get the desired rotation.
-
 	struct VideoUB
 	{
 		avs::vec4 eyeOffsets[2];

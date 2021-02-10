@@ -12,6 +12,7 @@ public:
 	scr::mat4 transformToLocalOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.
 	float eyeHeight=0.5f;
 	float stickYaw=0.0f;
+	avs::Pose controllerRelativePoses[2];	// in local space.
 
 	avs::Pose headPose;				// in game absolute space.
 	avs::Pose originPose;			// in game absolute space.

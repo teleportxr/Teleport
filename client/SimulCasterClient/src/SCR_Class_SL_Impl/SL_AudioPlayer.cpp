@@ -358,7 +358,7 @@ sca::Result SL_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 
 	if(FAILED((*mOutputBufferQueueInterface)->Enqueue(mOutputBufferQueueInterface, mOutputBufferQueue.back().data(), dataSize)))
 	{
-        SCA_CERR << "SL_AudioPlayer: Error occured trying to enqueue the audio buffer." << std::endl;
+        ///spamming SCA_CERR << "SL_AudioPlayer: Error occured trying to enqueue the audio buffer." << std::endl;
 		return sca::Result::AudioWriteError;
 	}
 
