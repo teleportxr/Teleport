@@ -72,8 +72,12 @@ namespace sca
 		Result(Code code) : m_code(code)
 		{}
 		//! if(Result) returns true only if m_code == OK i.e. is ZERO.
-		operator bool() const { return m_code == Code::OK; }
+		operator bool() const { return m_code == OK; }
 		operator Code() const { return m_code; }
+		bool operator ==(const Code & c) const { return m_code == c; }
+		bool operator !=(const Code & c) const { return m_code != c; }
+		bool operator ==(const Result& r) const { return m_code == r.m_code; }
+		bool operator !=(const Result& r) const { return m_code != r.m_code; }
 	private:
 		Code m_code;
 	};
