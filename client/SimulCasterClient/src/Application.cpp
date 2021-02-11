@@ -257,11 +257,11 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 			continue;   // consumed the event
 		}
 		// If nothing consumed the key and it's a short-press of the back key, then exit the application to OculusHome.
-		if(keyCode == OVR_KEY_BACK && eventType == KEY_EVENT_SHORT_PRESS)
+	/*	if(keyCode == OVR_KEY_BACK && eventType == KEY_EVENT_SHORT_PRESS)
 		{
 			app->ShowConfirmQuitSystemUI();
 			continue;
-		}
+		}*/
 	}
 
 	// Try to find remote controller
@@ -382,7 +382,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	resourceCreator.Update(time_elapsed);
 
 	//Move the hands before they are drawn.
-	clientRenderer.UpdateHandObjects();
+	UpdateHandObjects();
 	clientRenderer.RenderLocalNodes(res);
 	GL_CheckErrors("Frame: Post-SCR");
 
@@ -390,6 +390,56 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
 
 	return res;
+}
+
+
+void Application::UpdateHandObjects()
+{
+	uint32_t deviceIndex = 0;
+	ovrInputCapabilityHeader capsHeader;
+	//Poll controller state from the Oculus API.
+	while(vrapi_EnumerateInputDevices(app->GetOvrMobile(), deviceIndex, &capsHeader) >= 0)
+	{
+		if(capsHeader.Type == ovrControllerType_TrackedRemote)
+		{
+			ovrTracking remoteState;
+			if(vrapi_GetInputTrackingState(app->GetOvrMobile(), capsHeader.DeviceID, 0, &remoteState) >= 0)
+			{
+				if(deviceIndex < 2)
+				{
+					clientDeviceState.SetControllerPose(deviceIndex,*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),*((const scr::quat *)(&remoteState.HeadPose.Pose.Orientation)));
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+		++deviceIndex;
+	}
+
+
+	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
+	if(body)
+	{
+		body->UpdateModelMatrix(clientDeviceState.headPose.position, clientDeviceState.headPose.orientation, body->GetGlobalTransform().m_Scale);
+	}
+
+	std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
+	if(rightHand)
+	{
+		avs::vec3 newPosition = clientDeviceState.controllerPoses[0].position;
+		scr::quat newRotation = scr::quat(clientDeviceState.controllerPoses[0].orientation) * HAND_ROTATION_DIFFERENCE;
+		rightHand->UpdateModelMatrix(newPosition, newRotation, rightHand->GetGlobalTransform().m_Scale);
+	}
+
+	std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
+	if(leftHand)
+	{
+		avs::vec3 newPosition = clientDeviceState.controllerPoses[1].position;
+		scr::quat newRotation = scr::quat(clientDeviceState.controllerPoses[1].orientation) * HAND_ROTATION_DIFFERENCE;
+		leftHand->UpdateModelMatrix(newPosition, newRotation, leftHand->GetGlobalTransform().m_Scale);
+	}
 }
 
 void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake)

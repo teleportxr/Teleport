@@ -73,7 +73,7 @@ void main()
     clip_pos.x+=2.0*vTexCoords.x;
     clip_pos.y+=2.0*vTexCoords.y;
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
-    vec3 offsetFromVideo2=vid.cameraPosition+vEyeOffset-tagDataCube.cameraPosition;
+    vec3 offsetFromVideo2=vid.cameraPosition-tagDataCube.cameraPosition+vEyeOffset;
     vec3 view = vSampleVec;
     vec3 colourSampleVec=vSampleVec;
     for (int i = 0; i < 5; i++)
@@ -99,7 +99,7 @@ void main()
             lookup=textureLod(cubemapTexture, colourSampleVec, 0.0);
         }
     }
-//lookup.rgb+=fract(10.0*tagDataCube.cameraPosition.xyz);
+//lookup.rgb+=abs(offsetFromVideo2);
 	//lookup.b=float(RWTagDataID.x)/31.0;
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
 }

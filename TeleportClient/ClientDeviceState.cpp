@@ -44,6 +44,7 @@ void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,scr::quat q)
 {
 	controllerPoses[index].position = pos;
 	controllerPoses[index].orientation = *((const avs::vec4 *)(&q));
+	controllerRelativePoses[index]=controllerPoses[index];
 	TransformPose(controllerPoses[index]);
 	controllerPoses[index].position+=localFootPos;
 }

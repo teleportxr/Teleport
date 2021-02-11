@@ -342,23 +342,31 @@ sca::Result SL_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!mInitialized)
 	{
-		SCA_CERR << "SL_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
-		return sca::Result::AudioPlayerNotInitialized;
+        sca::Result r = sca::Result::AudioPlayerNotInitialized;
+        if (r != mLastResult)
+        {
+            SCA_CERR << "SL_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
+            mLastResult = r;
+        }
+		return r;
 	}
 
 	if (!mConfigured)
 	{
-		//spamming: SCA_CERR << "SL_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
-		return sca::Result::AudioPlayerNotConfigured;
+        sca::Result r = sca::Result::AudioPlayerNotConfigured;
+        if (r != mLastResult)
+        {
+            SCA_CERR << "SL_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
+            mLastResult = r;
+        }
+        return r;
 	}
-
-	//int32_t numFrames = (int32_t)dataSize / (mAudioParams.bitsPerSample * mAudioParams.numChannels);
 
 	mOutputBufferQueue.emplace(std::vector<uint8_t>(data, data + dataSize));
 
 	if(FAILED((*mOutputBufferQueueInterface)->Enqueue(mOutputBufferQueueInterface, mOutputBufferQueue.back().data(), dataSize)))
 	{
-        SCA_CERR << "SL_AudioPlayer: Error occured trying to enqueue the audio buffer." << std::endl;
+        ///spamming SCA_CERR << "SL_AudioPlayer: Error occured trying to enqueue the audio buffer." << std::endl;
 		return sca::Result::AudioWriteError;
 	}
 
@@ -375,21 +383,35 @@ sca::Result SL_AudioPlayer::startRecording(std::function<void(const uint8_t * da
 {
 	if (!mInitialized)
 	{
-		SCA_CERR << "SL_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
-		return sca::Result::AudioPlayerNotInitialized;
+        sca::Result r = sca::Result::AudioPlayerNotInitialized;
+        if (r != mLastResult)
+        {
+            SCA_CERR << "SL_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
+            mLastResult = r;
+        }
+        return r;
 	}
 
 	if (!mConfigured)
 	{
-		// spamming
-		// SCA_CERR << "SL_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
-		return sca::Result::AudioPlayerNotConfigured;
+        sca::Result r = sca::Result::AudioPlayerNotConfigured;
+        if (r != mLastResult)
+        {
+            SCA_CERR << "SL_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+            mLastResult = r;
+        }
+        return r;
 	}
 
 	if (!mRecordingAllowed)
 	{
-		SCA_CERR << "SL_AudioPlayer: The user has not granted permission to record audio." << std::endl;
-		return sca::Result::AudioRecordingNotPermitted;
+        sca::Result r = sca::Result::AudioRecordingNotPermitted;
+        if (r != mLastResult)
+        {
+            SCA_CERR << "SL_AudioPlayer: The user has not granted permission to record audio." << std::endl;
+            mLastResult = r;
+        }
+        return r;
 	}
 
 	if (mRecording)
@@ -435,7 +457,7 @@ sca::Result SL_AudioPlayer::startRecording(std::function<void(const uint8_t * da
 	// Start recording
 	if(FAILED((*mRecordInterface)->SetRecordState(mRecordInterface, SL_RECORDSTATE_RECORDING)))
 	{
-		SCA_CERR << "SL_AudioPlayer: Error occured trying to set recording state." << std::endl;
+		SCA_CERR << "SL_AudioPlayer: Error occurred trying to set recording state." << std::endl;
 		mRecording = false;
 		return sca::Result::AudioSetStateError;
 	}

@@ -736,56 +736,6 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVR::ovrF
     mVideoUB->Submit();
 }
 
-void ClientRenderer::UpdateHandObjects()
-{
-	uint32_t deviceIndex = 0;
-	ovrInputCapabilityHeader capsHeader;
-	//Poll controller state from the Oculus API.
-	while(vrapi_EnumerateInputDevices(mOvrMobile, deviceIndex, &capsHeader) >= 0)
-	{
-		if(capsHeader.Type == ovrControllerType_TrackedRemote)
-		{
-			ovrTracking remoteState;
-			if(vrapi_GetInputTrackingState(mOvrMobile, capsHeader.DeviceID, 0, &remoteState) >= 0)
-			{
-				if(deviceIndex < 2)
-				{
-					clientDeviceState->SetControllerPose(deviceIndex,*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),*((const scr::quat *)(&remoteState.HeadPose.Pose.Orientation)));
-				}
-				else
-				{
-					break;
-				}
-			}
-		}
-		++deviceIndex;
-	}
-
-	/*
-	std::shared_ptr<scr::Node> body = resourceManagers->mNodeManager->GetBody();
-	if(body)
-	{
-		body->UpdateModelMatrix(headPose.position, headPose.orientation, body->GetGlobalTransform().m_Scale);
-	}
-
-	std::shared_ptr<scr::Node> rightHand = resourceManagers->mNodeManager->GetRightHand();
-	if(rightHand)
-	{
-		avs::vec3 newPosition = controllerPoses[0].position;
-		scr::quat newRotation = scr::quat(controllerPoses[0].orientation) * HAND_ROTATION_DIFFERENCE;
-		rightHand->UpdateModelMatrix(newPosition, newRotation, rightHand->GetGlobalTransform().m_Scale);
-	}
-
-	std::shared_ptr<scr::Node> leftHand = resourceManagers->mNodeManager->GetLeftHand();
-	if(leftHand)
-	{
-		avs::vec3 newPosition = controllerPoses[1].position;
-		scr::quat newRotation = scr::quat(controllerPoses[1].orientation) * HAND_ROTATION_DIFFERENCE;
-		leftHand->UpdateModelMatrix(newPosition, newRotation, leftHand->GetGlobalTransform().m_Scale);
-	}
-	 */
-}
-
 void ClientRenderer::RenderLocalNodes(ovrFrameResult& res)
 {
 	//Render local nodes.
@@ -903,17 +853,41 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 	}
 	else if (show_osd == CAMERA_OSD)
 	{
+		avs::vec3 vidPos(0,0,0);
+		if(videoTagDataCubeArray.size())
+			vidPos=videoTagDataCubeArray[0].coreData.cameraTransform.position;
 		mGuiSys->ShowInfoText(
 				INFO_TEXT_DURATION,
-						"         Foot pos: %1.3f, %1.3f, %1.3f\n"
-						"+ Camera Relative: %1.3f, %1.3f, %1.3f\n"
-						"= Camera Position: %1.3f, %1.3f, %1.3f\n\n"
-				"Eye yaw: %1.3f\n"
+				"        Foot pos: %1.3f, %1.3f, %1.3f\n\n"
+				" Camera Relative: %1.3f, %1.3f, %1.3f\n"
+				" Camera Position: %1.3f, %1.3f, %1.3f\n"
+				"             yaw: %1.3f\n"
+				"  Video Position: %1.3f, %1.3f, %1.3f\n\n"
+				"Controller 0 rel: %1.3f, %1.3f, %1.3f\n"
+				"             pos: %1.3f, %1.3f, %1.3f\n"
+				"Controller 1 rel: %1.3f, %1.3f, %1.3f\n"
+				"             pos: %1.3f, %1.3f, %1.3f\n"
 				//, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
-				, clientDeviceState->localFootPos.x,clientDeviceState->localFootPos.y,clientDeviceState->localFootPos.z
-				, clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z
-				, clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,	clientDeviceState->headPose.position.z
-				, clientDeviceState->stickYaw );
+				,clientDeviceState->localFootPos.x, clientDeviceState->localFootPos.y,	clientDeviceState->localFootPos.z,
+				clientDeviceState->relativeHeadPos.x,clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z,
+				clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,clientDeviceState->headPose.position.z,
+				clientDeviceState->stickYaw,
+				vidPos.x,
+				vidPos.y,
+				vidPos.z,
+				clientDeviceState->controllerRelativePoses[0].position.x,
+				clientDeviceState->controllerRelativePoses[0].position.y,
+				clientDeviceState->controllerRelativePoses[0].position.z,
+				clientDeviceState->controllerPoses[0].position.x,
+				clientDeviceState->controllerPoses[0].position.y,
+				clientDeviceState->controllerPoses[0].position.z,
+				clientDeviceState->controllerRelativePoses[1].position.x,
+				clientDeviceState->controllerRelativePoses[1].position.y,
+				clientDeviceState->controllerRelativePoses[1].position.z,
+				clientDeviceState->controllerPoses[1].position.x,
+				clientDeviceState->controllerPoses[1].position.y,
+				clientDeviceState->controllerPoses[1].position.z
+				);
 	}
 	else if (show_osd == GEOMETRY_OSD)
 	{

@@ -30,6 +30,7 @@ namespace sca
 		bool mConfigured;
 		bool mRecording;
 		bool mRecordingAllowed;
+		Result mLastResult;
 	};
 }
 
