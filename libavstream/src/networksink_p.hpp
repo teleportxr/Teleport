@@ -49,10 +49,17 @@ namespace avs
 		std::map<uint8_t, std::queue<std::queue<NetworkPacket>>>::iterator m_currentStream; //The stream we are currently sending a decoder packet on.
 #endif
 
-		struct {
+		struct 
+		{
 			std::string address;
 			std::string port;
 		} m_remote;
+
+		struct DataEntry
+		{
+			uint32_t timestamp;
+			uint32_t data;
+		};
 
 		uint64_t lastBandwidthTimestamp;
 		uint64_t lastTimestamp;
@@ -67,14 +74,21 @@ namespace avs
 		std::unique_ptr<ElasticFrameProtocolSender> m_EFPSender;
 		std::vector<NetworkSinkStream> m_streams;
 		std::unordered_map<int, uint32_t> m_streamIndices;
+		NetworkSinkParams m_params;
 		std::queue<std::vector<uint8_t>> m_dataQueue;
 		size_t m_maxPacketCountPerFrame;
-		size_t m_packetsSent;
+		/** Packets sent this frame */
+		uint32_t m_packetsSent;
 		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
+		std::mutex m_countersMutex;
+		/** Records data sent over particular interval */
+		std::vector<DataEntry> m_dataStats;
+		uint32_t m_elapsedStatsTime;
 
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		void sendOrCacheData(const std::vector<uint8_t>& subPacket);
 		void sendData(const std::vector<uint8_t>& subPacket);
+		void updateCounters(uint32_t timestamp);
 	};
 
 } // avs
