@@ -338,15 +338,14 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	//vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	{
-		auto p=camera.GetPosition();
-		auto q=camera.Orientation.GetQuaternion();
+		simul::geometry::SimulOrientation	globalOrientation;
 		// global pos/orientation:
-		camera.SetPosition((const float*)&clientDeviceState->headPose.position);
-		camera.SetOrientationAsQuaternion((const float*)&clientDeviceState->headPose.orientation);
-		deviceContext.viewStruct.view = camera.MakeViewMatrix();
-		// back to local.
-		camera.SetPosition(p);
-		camera.SetOrientationAsQuaternion(q);
+		globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.position);
+		simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(-1.f, 0.0f, 0.0f));
+		simul::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.orientation;
+		auto q_rel=q1/q0;
+		globalOrientation.SetOrientation(q_rel);
+		deviceContext.viewStruct.view =globalOrientation.GetInverseMatrix().RowPointer(0);
 		float aspect = (float)viewport.w / (float)viewport.h;
 		if (reverseDepth)
 			deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
@@ -1392,7 +1391,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.right_left_input	=((float)keydown['d']-(float)keydown['a'])*(float)(!keydown[VK_SHIFT]);
 	mouseCameraInput.up_down_input		=((float)keydown['q']-(float)keydown['z'])*(float)(!keydown[VK_SHIFT]);
 	
-	static float spd = 2.0f;
+	static float spd = 0.1f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step
 							,spd
@@ -1408,7 +1407,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		cam_pos.z=2.0f;
 	if(cam_pos.z<1.0f)
 		cam_pos.z=1.0f;
-	if(r>0.9f*roomRadius)
+	/*if(r>0.9f*roomRadius)
 	{
 		float s=(r/roomRadius-0.9f)/0.01f;
 		float reduce=0.9f*roomRadius/r;
@@ -1418,11 +1417,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		float x=s*cam_pos.x/roomRadius;
 		float y=s*cam_pos.y/roomRadius;
 	//	interpret going beyond the boundary as requesting motion of the local origin.
-	}
+	}*/
 	for(int i=0;i<2;i++)
 	{
-		controllerStates[i].mJoystickAxisX=stored_clientspace_input.x;
-		controllerStates[i].mJoystickAxisY=stored_clientspace_input.y;
+	//	controllerStates[i].mJoystickAxisX=stored_clientspace_input.x;
+	//	controllerStates[i].mJoystickAxisY=stored_clientspace_input.y;
 	}
 
 	controllerStates[0].mTrackpadX=0.5f;
@@ -1445,8 +1444,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	{
 		vec3 forward=-camera.Orientation.Tz();
 		vec3 right=camera.Orientation.Tx();
-		*((vec3*)&clientDeviceState->localFootPos)+=mouseCameraInput.forward_back_input*time_step*forward;
-		*((vec3*)&clientDeviceState->localFootPos)+=mouseCameraInput.right_left_input*time_step*right;
+		*((vec3*)&clientDeviceState->localFootPos)+=clientspace_input.y*time_step*forward;
+		*((vec3*)&clientDeviceState->localFootPos)+=clientspace_input.x*time_step*right;
 		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
@@ -1476,6 +1475,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 				vec3 pos =*((vec3*)&sessionClient.GetOriginToHeadOffset());
 				camera.SetPosition((const float*)(&pos));
 			}
+		}
+		// Are we being sent an update to our current position, e.g. floor height?
+		else if(receivedInitialPos==sessionClient.receivedInitialPos)
+		{
+			clientDeviceState->localFootPos.z = sessionClient.GetOriginPos().z;
 		}
 		avs::Result result = pipeline.process();
 
