@@ -72,6 +72,7 @@ namespace SCServer
 		int32_t lightCubemapSize;
 
 		bool lockPlayerHeight;
+		avs::ControlModel controlModel=avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY;
 	};
 
 	struct CasterNetworkSettings

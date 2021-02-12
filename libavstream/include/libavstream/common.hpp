@@ -926,6 +926,12 @@ namespace avs
 		uint32_t numChannels = 2;
 	};
 
+	enum class ControlModel: uint32_t
+	{
+		NONE=0,
+		CLIENT_ORIGIN_SERVER_GRAVITY=1,
+		SERVER_ORIGIN_CLIENT_LOCAL=2
+	};
 	struct SetupCommand : public Command
 	{
 		SetupCommand() : Command(CommandPayloadType::Setup) {}
@@ -939,6 +945,7 @@ namespace avs
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
 		int32_t audio_input_enabled = 0;
 		int32_t lock_player_height = 1;
+		ControlModel control_model;
 		VideoConfig video_config;
 	};
 
