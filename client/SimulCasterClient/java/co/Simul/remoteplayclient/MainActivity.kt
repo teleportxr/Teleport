@@ -26,7 +26,7 @@ class MainActivity : VrActivity() {
 
         appPtr = nativeSetAppInterface(this, fromPackageNameString, commandString, uriString)
 
-        requestRecordPermission()
+        //requestRecordPermission()
     }
 
     companion object {
