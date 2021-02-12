@@ -195,7 +195,7 @@ Result Decoder::deconfigure()
 	return result;
 }
 
-Result Decoder::process(uint32_t timestamp)
+Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
 	if (!m_configured)
 	{

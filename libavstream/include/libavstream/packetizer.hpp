@@ -59,7 +59,7 @@ public:
 	 *  - Result::Node_NotConfigured if packetizer has not been configured.
 	 *  - Any error result returned by StreamParserInterface::parse().
 	 */
-	Result process(uint32_t timestamp) override;
+	Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
 	/*!
 	 * Packetizer node does not support read operations.

@@ -134,11 +134,12 @@ namespace avs
 		/*!
 		 * Perform any node specific work as part of a pipeline.
 		 * \param timestamp Pipeline timestamp.
+		 * \param deltaTime Pipeline timestamp.
 		 * \return
 		 *  - Result::OK on success (or no-op).
 		 *  - Node specific error result on failure.
 		 */
-		virtual Result process(uint32_t timestamp)
+		virtual Result process(uint64_t timestamp, uint64_t deltaTime)
 		{
 			return Result::OK;
 		}

@@ -174,11 +174,16 @@ namespace SCServer
 
 		const avs::Result result = pipeline->process();
 		// Prevent spamming of errors from NetworkSink. This happens when there is a connection issue.
-		if (!result && result != avs::Result::IO_Empty && result != prevProcResult)
+		if (!result && result != avs::Result::IO_Empty)
 		{
-			TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
+			if (result != prevProcResult)
+			{
+				TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
+				prevProcResult = result;
+			}
 			return false;
 		}
+
 		prevProcResult = result;
 
 #if 0
@@ -205,5 +210,19 @@ namespace SCServer
 	float NetworkPipeline::getBandWidthKPS() const
 	{
 		return networkSink ? networkSink->getBandwidthKPerS() : 0.0f;
+	}
+
+	avs::Result NetworkPipeline::getCounterValues(avs::NetworkSinkCounters& counters) const
+	{
+		if (networkSink.get())
+		{
+			counters = networkSink->getCounterValues();
+		}
+		else
+		{
+			TELEPORT_CERR << "Can't return counters because network sink is null." << std::endl;
+			return avs::Result::Node_Null;
+		}
+		return avs::Result::OK;
 	}
 }

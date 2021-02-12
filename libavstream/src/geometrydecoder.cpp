@@ -91,7 +91,7 @@ Result GeometryDecoder::deconfigure()
 	return result;
 }
 
-Result GeometryDecoder::process(uint32_t timestamp)
+Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
 	if (!d().m_configured)
 	{

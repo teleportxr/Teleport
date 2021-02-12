@@ -26,6 +26,9 @@ namespace SCServer
 
 		virtual avs::Pipeline* getAvsPipeline() const;
 		virtual float getBandWidthKPS() const;
+
+		avs::Result getCounterValues(avs::NetworkSinkCounters& counters) const;
+
 	private:
 		struct VideoPipe
 		{

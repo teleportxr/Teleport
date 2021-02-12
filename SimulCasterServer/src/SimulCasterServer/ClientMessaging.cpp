@@ -186,7 +186,7 @@ using namespace SCServer;
 			timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 		}
 
-		if (settings->isReceivingAudio && casterContext->sourceNetworkPipeline.get())
+		if (settings->isReceivingAudio && casterContext->sourceNetworkPipeline)
 		{
 			casterContext->sourceNetworkPipeline->process();
 		}

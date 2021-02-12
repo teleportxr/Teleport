@@ -98,14 +98,17 @@ Result Pipeline::process()
 
 Result Pipeline::Private::process()
 {
-	const uint32_t timestamp = (uint32_t)Platform::getTimeElapsed(m_startPlatformTimestamp, Platform::getTimestamp());
+	// Returns in nanoseconds. Convert to milliseconds
+	const uint64_t timestamp = (uint64_t)(0.001 * Platform::getTimeElapsed(m_startPlatformTimestamp, Platform::getTimestamp()));
 	if (!m_started)
 	{
 		//m_startTimestamp = Platform::getTimestamp(); 
 		m_startTimestamp = timestamp;
 		m_started = true;
 	}
-	m_lastTimestamp = (uint64_t)timestamp;
+	const uint64_t deltaTime = timestamp - m_lastTimestamp;
+
+	m_lastTimestamp = timestamp;
 	const bool isProfiling = m_statFile.is_open();
 	std::vector<double> timings;
 	if (isProfiling)
@@ -122,7 +125,7 @@ Result Pipeline::Private::process()
 		{
 			profileStartTimestamp = Platform::getTimestamp();
 		}
-		result = node->process(timestamp);
+		result = node->process(timestamp, deltaTime);
 		if (isProfiling)
 		{
 			const Timestamp profileEndTimestamp = Platform::getTimestamp();

@@ -25,6 +25,8 @@ class MainActivity : VrActivity() {
         val uriString = getUriStringFromIntent(intent)
 
         appPtr = nativeSetAppInterface(this, fromPackageNameString, commandString, uriString)
+
+        requestRecordPermission()
     }
 
     companion object {
@@ -38,13 +40,11 @@ class MainActivity : VrActivity() {
     override fun onStart() {
         super.onStart()
 
-        //requestRecordPermission()
 //        Toast.makeText(applicationContext,
 //                "This is a test!!!!!", Toast.LENGTH_SHORT).show()
-        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
 
         //val switchActivityIntent = Intent(this, MainActivity::class.java)
-       // startActivity(switchActivityIntent)
+        //startActivity(switchActivityIntent)
     }
 
     private fun requestRecordPermission() {
@@ -53,11 +53,13 @@ class MainActivity : VrActivity() {
             return;
         }
 
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED){
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                //&& ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)){
             // the dialog will be opened so we have to keep that in memory
             alreadyRequestedRecordingPermission = true
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
-            ActivityCompat.requestPermissions(this, arrayOf<String>(Manifest.permission.RECORD_AUDIO), 0)
+            //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED)
+            ActivityCompat.requestPermissions(this, arrayOf<String>(Manifest.permission.RECORD_AUDIO), 1024)
+            //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
         }
     }
 }
