@@ -97,7 +97,7 @@ namespace avs
 		 *  - Result::Network_ResolveFailed if failed to resolve the name of remote UDP endpoint.
 		 *  - Result::Network_RecvFailed on general network receive failure.
 		 */
-		Result process(uint32_t timestamp) override;
+		Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
 		/*!
 		 * Get node display name (for reporting & profiling).

@@ -58,7 +58,7 @@ namespace avs
 		 *  - Any error result returned by PacketInterface::readPacket().
 		 *  - Any error result returned by DecoderBackendInterface::decode().
 		 */
-		Result process(uint32_t timestamp) override;
+		Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
 		/*!
 		 * Get node display name (for reporting & profiling).

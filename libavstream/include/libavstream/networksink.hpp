@@ -20,7 +20,7 @@ namespace avs
 		uint32_t requiredLatencyMs;
 		uint32_t connectionTimeout = 5000;
 		uint32_t bandwidthInterval = 5000;
-		bool calculateStats = false;
+		bool calculateStats = true;
 	};
 
 	/*! Network sink counters. */
@@ -35,13 +35,13 @@ namespace avs
 		/*! Minimum packets sent per second over all intervals */
 		uint32_t minPacketsSentPerSec = 0;
 		/*! Maximum packets sent per second over all intervals */
-		uint32_t maxPacketsSentPerSec = UINT32_MAX;
+		uint32_t maxPacketsSentPerSec = 0;
 		/*! Average bandwidth required per second in the last interval  */
 		uint32_t avgRequiredBandwidth = 0;
 		/*! Minimum bandwidth required per second over all intervals */
 		uint32_t minRequiredBandwidth = 0;
 		/*! Maximum bandwidth required per second over all intervals */
-		uint32_t maxRequiredBandwidth = UINT32_MAX;
+		uint32_t maxRequiredBandwidth = 0;
 	};
 
 	/*! Network sink stream data. */
@@ -109,7 +109,7 @@ namespace avs
 		 *  - Result::Network_ResolveFailed if failed to resolve the name of remote UDP endpoint.
 		 *  - Result::Network_SendFailed on general network send failure.
 		 */
-		Result process(uint32_t timestamp) override;
+		Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
 		/*!
 		 * Get node display name (for reporting & profiling).

@@ -88,7 +88,7 @@ namespace avs
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		void sendOrCacheData(const std::vector<uint8_t>& subPacket);
 		void sendData(const std::vector<uint8_t>& subPacket);
-		void updateCounters(uint32_t timestamp);
+		void updateCounters(uint32_t deltaTime);
 	};
 
 } // avs

@@ -59,7 +59,7 @@ Result AudioEncoder::deconfigure()
 	return result;
 }
 
-Result AudioEncoder::process(uint32_t timestamp)
+Result AudioEncoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
 	if (!d().m_configured)
 	{

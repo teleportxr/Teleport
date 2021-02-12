@@ -60,7 +60,7 @@ public:
 	 *  - Any error result returned by IOInterface::read() and IOInterface::write().
 	 *  - Any error result returned by PacketInterface::readPacket() and PacketInterface::writePacket().
 	 */
-	Result process(uint32_t) override;
+	Result process(uint64_t timestamp, uint64_t deltaTime) override;
 	
 	/*!
 	 * Get node display name (for reporting & profiling).

@@ -50,7 +50,7 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result Packetizer::process(uint32_t timestamp)
+	Result Packetizer::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		if ( getNumOutputSlots() == 0)
 		{

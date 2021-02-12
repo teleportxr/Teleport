@@ -129,7 +129,7 @@ Result Encoder::deconfigure()
 	return result;
 }
 
-Result Encoder::process(uint32_t timestamp)
+Result Encoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
 	if (!d().m_configured)
 	{

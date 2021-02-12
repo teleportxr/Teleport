@@ -1329,6 +1329,34 @@ TELEPORT_EXPORT uint16_t Client_GetServerPort(avs::uid clientID)
 	}
 	return clientPair->second.clientMessaging.getServerPort();
 }
+
+TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::NetworkSinkCounters& counters)
+{
+	auto clientPair = clientServices.find(clientID);
+	if (clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to retrieve network stats of Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
+		return false;
+	}
+	
+	ClientData& clientData = clientPair->second;
+	if (!clientData.clientMessaging.hasPeer())
+	{
+		TELEPORT_COUT << "Failed to retrieve network stats of Client_" << clientID << "! Client has no peer!\n";
+		return false;
+	}
+
+	if (!clientData.casterContext.NetworkPipeline)
+	{
+		TELEPORT_COUT << "Failed to retrieve network stats of Client_" << clientID << "! NetworkPipeline is null!\n";
+		return false;
+	}
+	
+	// Thread safe
+	clientData.casterContext.NetworkPipeline->getCounterValues(counters);
+
+	return true;
+}
 ///ClientMessaging END
 
 ///GeometryStore START

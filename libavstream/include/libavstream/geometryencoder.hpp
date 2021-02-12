@@ -46,7 +46,7 @@ namespace avs
 		 *  - Result::Node_InvalidOutput if no compatible output node is linked to output slot 0.
 		 *  - Result::Encoder_IncompleteFrame if encoded bitstream was only partially written to output node.
 		 */
-		Result process(uint32_t timestamp) override;
+		Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
 		/*!
 		 * Get node display name (for reporting & profiling).

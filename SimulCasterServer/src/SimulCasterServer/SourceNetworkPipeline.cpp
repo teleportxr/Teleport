@@ -94,9 +94,13 @@ namespace SCServer
 
 		const avs::Result result = pipeline->process();
 		// Prevent spamming of errors from NetworkSource. This can happen when there is a connection issue.
-		if (!result && result != avs::Result::IO_Empty && result != prevProcResult)
+		if (!result && result != avs::Result::IO_Empty)
 		{
-			TELEPORT_CERR << "Source network pipeline processing encountered an error!" << std::endl;
+			if (result != prevProcResult)
+			{
+				TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
+				prevProcResult = result;
+			}
 			return false;
 		}
 		prevProcResult = result;

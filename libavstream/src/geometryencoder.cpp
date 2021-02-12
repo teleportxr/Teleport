@@ -300,7 +300,7 @@ Result GeometryEncoder::deconfigure()
 	return result;
 }
 
-Result GeometryEncoder::process(uint32_t timestamp)
+Result GeometryEncoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
 	avs::Node *input0 = getInput(0);
 	if (!input0)

@@ -170,7 +170,7 @@ Result NetworkSink::deconfigure()
 	return Result::OK;
 }
 
-Result NetworkSink::process(uint32_t timestamp)
+Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 {
 	if (getNumInputSlots() == 0 || !m_data->m_socket)
 	{
@@ -377,12 +377,12 @@ Result NetworkSink::process(uint32_t timestamp)
 	}
 
 	// Convert timestamp from nanoseconds to milliseconds
-	m_data->updateCounters(timestamp / 1000);
+	m_data->updateCounters(deltaTime);
 
 	return Result::OK;
 }
 
-void NetworkSink::Private::updateCounters(uint32_t timestamp)
+void NetworkSink::Private::updateCounters(uint32_t deltaTime)
 {
 	if (!m_params.calculateStats || m_params.bandwidthInterval == 0)
 	{
@@ -398,7 +398,7 @@ void NetworkSink::Private::updateCounters(uint32_t timestamp)
 	{
 		iter--;
 
-		iter->timestamp += timestamp;
+		iter->timestamp += deltaTime;
 
 		// If this entry's timestamp is too old, it can be removed with all older entries
 		if (iter->timestamp > m_params.bandwidthInterval)
@@ -414,8 +414,11 @@ void NetworkSink::Private::updateCounters(uint32_t timestamp)
 	// Account for time elapsed in the application not having reached the interval time 
 	timeElapsed = std::min(timeElapsed, m_params.bandwidthInterval);
 
-	avgPacketsSentPerSec /= timeElapsed;
-
+	if (timeElapsed)
+	{
+		avgPacketsSentPerSec /= timeElapsed;
+	}
+	
 	{
 		std::lock_guard<std::mutex> lock(m_countersMutex);
 		if (m_packetsSent > 0)
@@ -426,7 +429,7 @@ void NetworkSink::Private::updateCounters(uint32_t timestamp)
 
 		m_counters.avgPacketsSentPerSec = avgPacketsSentPerSec;
 
-		if (avgPacketsSentPerSec < m_counters.minPacketsSentPerSec)
+		if (avgPacketsSentPerSec > 0 && (m_counters.minPacketsSentPerSec == 0 || avgPacketsSentPerSec < m_counters.minPacketsSentPerSec))
 		{
 			m_counters.minPacketsSentPerSec = avgPacketsSentPerSec;
 		}
@@ -442,7 +445,10 @@ void NetworkSink::Private::updateCounters(uint32_t timestamp)
 		m_counters.maxRequiredBandwidth = (m_counters.maxPacketsSentPerSec * 8) / 1000000;
 	}
 
-	m_dataStats.push_back({ 0, m_packetsSent });
+	if (m_packetsSent > 0)
+	{
+		m_dataStats.push_back({ 0, m_packetsSent });
+	}
 }
 
 Result NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)

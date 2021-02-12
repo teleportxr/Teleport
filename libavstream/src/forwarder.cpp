@@ -47,7 +47,7 @@ namespace avs {
 		return Result::OK;
 	}
 
-	Result Forwarder::process(uint32_t)
+	Result Forwarder::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		const size_t numInputs = getNumInputSlots();
 		const size_t numOutputs = getNumOutputSlots();
