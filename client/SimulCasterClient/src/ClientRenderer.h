@@ -157,7 +157,10 @@ public:
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataIDBuffer;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataBuffer;
-	std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
+	//std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
+	scr::ShaderResource				    mColourAndDepthShaderResources;
+	scr::ShaderResource				    mCopyCubemapShaderResources;
+	scr::ShaderResource				    mExtractTagShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
 	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;

@@ -112,10 +112,5 @@ namespace scr
 		const std::vector<WriteShaderResource>& GetWriteShaderResources() const {return m_WriteShaderResources;}
 		std::vector<WriteShaderResource>& GetWriteShaderResources() {return m_WriteShaderResources;}
 		ShaderResource GetShaderResourcesBySet(uint32_t shaderResourceSetIndex);
-
-		ShaderResource operator[](uint32_t shaderResourceSetIndex)
-		{
-			return GetShaderResourcesBySet(shaderResourceSetIndex);
-		}
 	};
 }

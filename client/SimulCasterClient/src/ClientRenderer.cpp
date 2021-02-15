@@ -249,22 +249,23 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		layout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage ::SHADER_STAGE_COMPUTE);
 		layout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, scr::Shader::Stage::SHADER_STAGE_COMPUTE);
 
-		scr::ShaderResource sr({layout, layout, layout});
-		sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {GlobalGraphicsResources.cubeMipMapSampler, mCubemapTexture,0,uint32_t(-1)});
-		sr.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
-		sr.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+		mColourAndDepthShaderResources.SetLayouts({layout});
+		mColourAndDepthShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {GlobalGraphicsResources.cubeMipMapSampler, mCubemapTexture,0,uint32_t(-1)});
+		mColourAndDepthShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
+		mColourAndDepthShaderResources.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
-		sr.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {});
-		sr.AddImage(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
-		sr.AddBuffer(1, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+		mCopyCubemapShaderResources.SetLayouts({layout});
+		mCopyCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {});
+		mCopyCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
+		mCopyCubemapShaderResources.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
-		sr.AddImage(2, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
-		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
-		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 0, "TagDataID", {mTagDataIDBuffer.get()});
-		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 1, "TagDataCube_ssbo", {mTagDataBuffer.get()});
-		sr.AddBuffer(2, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 2, "TagDataCubeArray_ssbo", {mTagDataArrayBuffer.get()});
+		mExtractTagShaderResources.SetLayouts({layout});
+		mExtractTagShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1, "videoFrameTexture", {GlobalGraphicsResources.sampler, mVideoTexture});
+		mExtractTagShaderResources.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB", {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+		mExtractTagShaderResources.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 0, "TagDataID", {mTagDataIDBuffer.get()});
+		mExtractTagShaderResources.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 1, "TagDataCube_ssbo", {mTagDataBuffer.get()});
+		mExtractTagShaderResources.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 2, "TagDataCubeArray_ssbo", {mTagDataArrayBuffer.get()});
 
-		mCubemapComputeShaderResources.push_back(sr);
 
 		mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
 		mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{});
@@ -509,7 +510,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		scr::InputCommandCreateInfo inputCommandCreateInfo;
 		inputCommandCreateInfo.effectPassName = "ColourAndDepth";
 
-		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapWithDepthEffect, {mCubemapComputeShaderResources[0][0]});
+		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mCopyCubemapWithDepthEffect, {mColourAndDepthShaderResources.GetShaderResourcesBySet(0)});
 		cubemapUB.faceSize			=tc.width;
 		cubemapUB.sourceOffset		={0,0};
 		cubemapUB.mip             	=0;
@@ -533,12 +534,12 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			for (uint32_t m        = 0; m < M; m++)
 			{
 				inputCommand.m_WorkGroupSize = {(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount ,6};
-				mCubemapComputeShaderResources[0].SetImageInfo(1, 0, {diffuseCubemapTexture->GetSampler(), diffuseCubemapTexture, m});
+				mCopyCubemapShaderResources.SetImageInfo(0, 0, {diffuseCubemapTexture->GetSampler(), diffuseCubemapTexture, m});
 				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
 				cubemapUB.faceSize 				= uint32_t(mip_size);
 				cubemapUB.mip                  = m;
 				cubemapUB.face				   = 0;
-				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0].GetShaderResourcesBySet((1))};
+				inputCommand.m_ShaderResources = {mCopyCubemapShaderResources.GetShaderResourcesBySet(0)};
 				mDeviceContext.DispatchCompute(&inputCommand);
 				//OVR_LOG("Dispatch offset=%d %d wgSize=%d %d %d mipSize=%d",cubemapUB.sourceOffset.x,cubemapUB.sourceOffset.y,inputCommand.m_WorkGroupSize.x,inputCommand.m_WorkGroupSize.y,inputCommand.m_WorkGroupSize.z,cubemapUB.faceSize);
 
@@ -559,13 +560,13 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			{
 				inputCommand.m_WorkGroupSize = {
 						(mip_size + 1) / ThreadCount, (mip_size + 1) / ThreadCount, 6};
-				mCubemapComputeShaderResources[0].SetImageInfo(
-						1, 0, {specularCubemapTexture->GetSampler(), specularCubemapTexture, m});
+				mCopyCubemapShaderResources.SetImageInfo(
+						0, 0, {specularCubemapTexture->GetSampler(), specularCubemapTexture, m});
 				cubemapUB.sourceOffset         = {offset.x, offset.y + mip_y};
 				cubemapUB.faceSize             = uint32_t(mip_size);
 				cubemapUB.mip                  = m;
 				cubemapUB.face                 = 0;
-				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
+				inputCommand.m_ShaderResources = {mCopyCubemapShaderResources.GetShaderResourcesBySet(0)};
 				mDeviceContext.DispatchCompute(&inputCommand);
 				mip_y += 2 * mip_size;
 				mip_size /= 2;
@@ -580,12 +581,12 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			for(uint32_t m=0;m<M;m++)
 			{
 				inputCommand.m_WorkGroupSize={(mip_size+1)/ThreadCount,(mip_size+1)/ThreadCount,6};
-				mCubemapComputeShaderResources[0].SetImageInfo(1 ,0, {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture, m});
+				mCopyCubemapShaderResources.SetImageInfo(0 ,0, {mRoughSpecularTexture->GetSampler(), mRoughSpecularTexture, m});
 				cubemapUB.sourceOffset			={offset.x,offset.y+mip_y};
 				cubemapUB.faceSize 				= uint32_t(mip_size);
 				cubemapUB.mip             		= m;
 				cubemapUB.face					= 0;
-				inputCommand.m_ShaderResources	= {mCubemapComputeShaderResources[0][1]};
+				inputCommand.m_ShaderResources	= {mCopyCubemapShaderResources.GetShaderResourcesBySet(0)};
 				mDeviceContext.DispatchCompute(&inputCommand);
 				mip_y							+=2*mip_size;
 				mip_size/=2;
@@ -596,13 +597,13 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		{
 			inputCommandCreateInfo.effectPassName = "ExtractTagDataID";
 			scr::uvec3 size  = {1,1,1};
-			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractTagDataIDEffect, {mCubemapComputeShaderResources[0][2]});
+			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size, mExtractTagDataIDEffect, {mExtractTagShaderResources.GetShaderResourcesBySet(0)});
 			cubemapUB.faceSize			=tc.width;
 			cubemapUB.sourceOffset		={(int32_t)mVideoTexture->GetTextureCreateInfo().width - (32 * 4), (int32_t)mVideoTexture->GetTextureCreateInfo().height - 4};
 			mDeviceContext.DispatchCompute(&inputCommand);
 
 			inputCommandCreateInfo.effectPassName = "ExtractOneTag";
-			scr::InputCommand_Compute extractTagCommand(&inputCommandCreateInfo, size, mExtractOneTagEffect, {mCubemapComputeShaderResources[0][2]});
+			scr::InputCommand_Compute extractTagCommand(&inputCommandCreateInfo, size, mExtractOneTagEffect, {mExtractTagShaderResources.GetShaderResourcesBySet(0)});
 			mDeviceContext.DispatchCompute(&extractTagCommand);
 		}
 	}
