@@ -12,7 +12,7 @@ LOCAL_CFLAGS	+= -Wno-strict-aliasing		# TODO: need to rewrite some code
 LOCAL_CFLAGS	+= -Wno-unused-parameter
 LOCAL_CFLAGS	+= -Wno-missing-field-initializers	# warns on this: SwipeAction	ret = {}
 LOCAL_CFLAGS	+= -Wno-multichar	# used in internal Android headers:  DISPLAY_EVENT_VSYNC = 'vsyn',
-LOCAL_CPPFLAGS  += -Wno-invalid-offsetof
+LOCAL_CPPFLAGS  += -Wno-invalid-offsetof -Wno-address-of-packed-member
 LOCAL_CPPFLAGS  += -std=c++17
 LOCAL_CPPFLAGS  += -frtti
 LOCAL_CPPFLAGS += -fsigned-char

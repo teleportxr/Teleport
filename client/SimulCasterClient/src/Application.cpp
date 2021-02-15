@@ -241,7 +241,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 {
 	// we don't want local slide movements.
 	mScene.SetMoveSpeed(1.0f);
-	mScene.Frame(vrFrame);
+	mScene.Frame(vrFrame,-1,false);
     clientRenderer.eyeSeparation=vrFrame.IPD;
 	GL_CheckErrors("Frame: Start");
 	// process input events first because this mirrors the behavior when OnKeyEvent was
@@ -273,35 +273,24 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 	clientDeviceState.localFootPos=*((const avs::vec3*)&mScene.GetFootPos());
 	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
 
-	//Get the Origin Position
-	if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
-	{
-		//clientDeviceState.localFootPos = sessionClient.GetOriginPos();
-		//mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.localFootPos));
-		receivedInitialPos = sessionClient.receivedInitialPos;
-		if(receivedRelativePos!=sessionClient.receivedRelativePos)
-		{
-			receivedRelativePos=sessionClient.receivedRelativePos;
-			//avs::vec3 pos =sessionClient.GetOriginToHeadOffset();
-			//camera.SetPosition((const float*)(&pos));
-		}
-	}
 	// Oculus Origin means where the headset's zero is in real space.
 
-	//Get HMD Position/Orientation
-	clientDeviceState.stickYaw=mScene.GetStickYaw();
-	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.Tracking.HeadPose.Pose.Position)),*((const scr::quat *)(&vrFrame.Tracking.HeadPose.Pose.Orientation)));
-	clientDeviceState.UpdateOriginPose();
 	// Handle networked session.
 	if(sessionClient.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
 		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
-		if (!receivedInitialPos&&sessionClient.receivedInitialPos)
+		if (sessionClient.receivedInitialPos>0&&receivedInitialPos!=sessionClient.receivedInitialPos)
 		{
 			clientDeviceState.localFootPos = sessionClient.GetOriginPos();
 			mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.localFootPos));
 			receivedInitialPos = sessionClient.receivedInitialPos;
+			if(receivedRelativePos!=sessionClient.receivedRelativePos)
+			{
+				receivedRelativePos=sessionClient.receivedRelativePos;
+				//avs::vec3 pos =sessionClient.GetOriginToHeadOffset();
+				//camera.SetPosition((const float*)(&pos));
+			}
 		}
 	}
 	else
@@ -318,6 +307,10 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		}
 	}
 
+	//Get HMD Position/Orientation
+	clientDeviceState.stickYaw=mScene.GetStickYaw();
+	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.Tracking.HeadPose.Pose.Position)),*((const scr::quat *)(&vrFrame.Tracking.HeadPose.Pose.Orientation)));
+	clientDeviceState.UpdateOriginPose();
 	// Update video texture if we have any pending decoded frames.
 	while(mNumPendingFrames > 0)
 	{

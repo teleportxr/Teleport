@@ -76,7 +76,7 @@ public:
 	// Models that have DontRenderForClientUid == suppressModelsWithClientId will be skipped
 	// to prevent the client's own head model from drawing in their view.
 	void					Frame(	const ovrFrameInput & vrFrame,
-									const long long suppressModelsWithClientId = -1 );
+									const long long suppressModelsWithClientId = -1, bool allowLocalOriginControl=true );
 
 	// Populate frameMatrices with the view and projection matrices for the scene.
 	void					GetFrameMatrices( const float fovDegreesX, const float fovDegreesY, ovrFrameMatrices & frameMatrices ) const;

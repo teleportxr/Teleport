@@ -165,7 +165,8 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			{
 				SendHeadPose(headPose);
 				SendControllerPoses(headPose,controllerPoses);
-				sendOriginPose(poseValidCounter,originPose);
+				if(setupCommand.control_model==avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY)
+					sendOriginPose(poseValidCounter,originPose);
 			}
 			SendInput(0,controllerStates[0]);
 			SendInput(1,controllerStates[1]);
@@ -269,7 +270,6 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			size_t commandSize = sizeof(avs::SetupCommand);
 
 			//Copy command out of packet.
-			avs::SetupCommand setupCommand;
 			memcpy(&setupCommand, packet->data, commandSize);
 
 			avs::Handshake handshake;

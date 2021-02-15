@@ -421,7 +421,7 @@ void OpaquePBR()
 	emissive			*= u_EmissiveOutputScalar.rgb;
 
 	vec4 u				=vec4(c.rgb + emissive.rgb, 1.0);
-
+    //u.r+=float(abs(tagDataCube.lightCount-1));
     gl_FragColor = Gamma(u);
 }
 

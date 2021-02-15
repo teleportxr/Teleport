@@ -16,7 +16,6 @@ Controllers::~Controllers()
 
 }
 
-
 void Controllers::SetToggleTexturesDelegate(TriggerDelegate d)
 {
 	ToggleTextures=d;
@@ -31,7 +30,6 @@ void Controllers::SetSetStickOffsetDelegate(Float2Delegate d)
 {
 	SetStickOffset=d;
 }
-
 
 void Controllers::ClearDelegates()
 {
@@ -69,6 +67,7 @@ bool Controllers::InitializeController(ovrMobile *ovrmobile)
 	return (idx>0);
 }
 
+static avs::uid eventId=0;
 void Controllers::Update(ovrMobile *ovrmobile)
 {
 	// Query controller input state.
@@ -76,32 +75,18 @@ void Controllers::Update(ovrMobile *ovrmobile)
 	for(int i=0;i<2;i++)
 	if((int)mControllerIDs[i] != 0)
 	{
+		ControllerState &lastControllerState=mLastControllerStates[i];
 		ovrInputStateTrackedRemote ovrState;
 		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
 		if(vrapi_GetCurrentInputState(ovrmobile, mControllerIDs[i], &ovrState.Header) >= 0)
 		{
 			controllerState.mButtons = ovrState.Buttons;
 
-			bool clicked=((mLastControllerStates[i].mButtons & ovrButton::ovrButton_X) != 0 && (controllerState.mButtons & ovrButton::ovrButton_X) == 0) ||
-						 ((mLastControllerStates[i].mButtons & ovrButton::ovrButton_A) != 0 && (controllerState.mButtons & ovrButton::ovrButton_A) == 0);
-			//Flip rendering mode when the trigger is held, and the X or A button is released.
-			if((mLastControllerStates[i].mButtons & ovrButton::ovrButton_Trigger) != 0 )
-			{
-				if(clicked)
-				{
-					ToggleTextures();
-				}
-			}
-			else if(clicked)
-			{
-				ToggleShowInfo();
-			}
-
 			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
 			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
 			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
 			controllerState.mJoystickAxisX=ovrState.Joystick.x;
-			controllerState.mJoystickAxisY=ovrState.Joystick.y * -1.f;
+			controllerState.mJoystickAxisY=ovrState.Joystick.y;
 
 			if(controllerState.mTrackpadStatus)
 			{
@@ -109,7 +94,26 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				float          dy = controllerState.mTrackpadY - 0.5f;
 				SetStickOffset(dx,dy);
 			}
+			uint32_t clicked=(~((uint32_t)controllerState.mButtons))&((uint32_t)lastControllerState.mButtons);
 			mLastControllerStates[i] = controllerState;
+
+			//Flip rendering mode when the trigger is held, and the X or A button is released.
+			if((clicked & ovrButton::ovrButton_Trigger) != 0 )
+			{
+				avs::InputEvent evt;
+				evt.eventId=eventId++;		 //< A monotonically increasing event identifier.
+				evt.inputUid=1;//i*32+ovrButton::ovrButton_Trigger;		 //< e.g. the uniqe identifier for this button or control.
+				evt.intValue=0;
+				mLastControllerStates[i].inputEvents.push_back(evt);
+			}
+			else if((clicked & ovrButton::ovrButton_A) != 0 )
+			{
+				ToggleShowInfo();
+			}
+			else if(clicked)
+			{
+				ToggleShowInfo();
+			}
 		}
 	}
 }

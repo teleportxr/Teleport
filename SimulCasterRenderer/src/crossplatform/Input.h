@@ -8,11 +8,11 @@
 
 struct ControllerState
 {
-	uint32_t mButtons;
-	bool  mTrackpadStatus;
-	float mTrackpadX;
-	float mTrackpadY;
-	float mJoystickAxisX;
-	float mJoystickAxisY;
+	uint32_t mButtons=0;
+	bool  mTrackpadStatus=false;
+	float mTrackpadX=0.0f;
+	float mTrackpadY=0.0f;
+	float mJoystickAxisX=0.0f;
+	float mJoystickAxisY=0.0f;
 	std::vector<avs::InputEvent> inputEvents;
 };

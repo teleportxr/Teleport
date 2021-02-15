@@ -741,7 +741,7 @@ void OvrSceneView::RemoveModelIndex( int index )
 void OvrSceneView::GetFrameMatrices( const float fovDegreesX, const float fovDegreesY, ovrFrameMatrices & frameMatrices ) const
 {
 	frameMatrices.CenterView = GetCenterEyeViewMatrix();
-	for ( int i = 0; i < 2; i++ )
+	for ( int i=0; i<2; i++ )
 	{
 		frameMatrices.EyeView[i] = GetEyeViewMatrix( i );
 		frameMatrices.EyeProjection[i] = GetEyeProjectionMatrix( i, fovDegreesX, fovDegreesY );
@@ -898,7 +898,7 @@ void OvrSceneView::UpdateCenterEye()
 }
 
 void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
-							const long long suppressModelsWithClientId_ )
+							const long long suppressModelsWithClientId_, bool allowLocalOriginControl )
 {
 	SuppressModelsWithClientId = suppressModelsWithClientId_;
 	CurrentTracking = vrFrame.Tracking;
@@ -913,51 +913,51 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	//
 	// Player view angles
 	//
-	Vector3f headPos_gameSpace0;
-	headPos_gameSpace0.x= vrFrame.Tracking.HeadPose.Pose.Position.x*cos(StickYaw)+vrFrame.Tracking.HeadPose.Pose.Position.z*sin(StickYaw);
-	headPos_gameSpace0.y= vrFrame.Tracking.HeadPose.Pose.Position.y;
-	headPos_gameSpace0.z=-vrFrame.Tracking.HeadPose.Pose.Position.x*sin(StickYaw)+vrFrame.Tracking.HeadPose.Pose.Position.z*cos(StickYaw);
-
-	// Turn based on the look stick
-	// Because this can be predicted ahead by async TimeWarp, we apply
-	// the yaw from the previous frame's controls, trading a frame of
-	// latency on stick controls to avoid a bounce-back.
-	StickYaw -= YawVelocity * dt;
-	if ( StickYaw < 0.0f )
+	if(allowLocalOriginControl)
 	{
-		StickYaw += 2.0f * MATH_FLOAT_PI;
+		Vector3f headPos_gameSpace0;
+		headPos_gameSpace0.x = vrFrame.Tracking.HeadPose.Pose.Position.x * cos(StickYaw) +
+							   vrFrame.Tracking.HeadPose.Pose.Position.z * sin(StickYaw);
+		headPos_gameSpace0.y = vrFrame.Tracking.HeadPose.Pose.Position.y;
+		headPos_gameSpace0.z = -vrFrame.Tracking.HeadPose.Pose.Position.x * sin(StickYaw) +
+							   vrFrame.Tracking.HeadPose.Pose.Position.z * cos(StickYaw);
+
+		// Turn based on the look stick
+		// Because this can be predicted ahead by async TimeWarp, we apply
+		// the yaw from the previous frame's controls, trading a frame of
+		// latency on stick controls to avoid a bounce-back.
+		StickYaw -= YawVelocity * dt;
+		if (StickYaw < 0.0f) {
+			StickYaw += 2.0f * MATH_FLOAT_PI;
+		} else if (StickYaw > 2.0f * MATH_FLOAT_PI) {
+			StickYaw -= 2.0f * MATH_FLOAT_PI;
+		}
+		YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
+
+		// with any change in StickYaw, we are rotating footSpace in gameSpace,
+		// with the result that footPos+footSpace(vrFrame.Tracking.HeadPose.Pose.Position) must remain constant.
+
+		// i.e. footPos0+footSpace0(vrFrame.Tracking.HeadPose.Pose.Position)=footPos1+footSpace1(vrFrame.Tracking.HeadPose.Position)
+		// so footPos1=footPos0+footSpace0(headpos)-footSpace1(headPos);
+
+		Vector3f headPos_gameSpace1;
+		headPos_gameSpace1.x = vrFrame.Tracking.HeadPose.Pose.Position.x * cos(StickYaw) +
+							   vrFrame.Tracking.HeadPose.Pose.Position.z * sin(StickYaw);
+		headPos_gameSpace1.y = vrFrame.Tracking.HeadPose.Pose.Position.y;
+		headPos_gameSpace1.z = -vrFrame.Tracking.HeadPose.Pose.Position.x * sin(StickYaw) +
+							   vrFrame.Tracking.HeadPose.Pose.Position.z * cos(StickYaw);
+		FootPos += headPos_gameSpace0 - headPos_gameSpace1;
+
+
+		// Only if there is no head tracking, allow right stick up/down to adjust pitch,
+		// which can be useful for debugging without having to dock the device.
+		if ((vrFrame.Tracking.Status & VRAPI_TRACKING_STATUS_ORIENTATION_TRACKED) == 0 ||
+			(vrFrame.Tracking.Status & VRAPI_TRACKING_STATUS_HMD_CONNECTED) == 0) {
+			StickPitch -= angleSpeed * vrFrame.Input.sticks[1][1] * dt;
+		} else {
+			StickPitch = 0.0f;
+		}
 	}
-	else if ( StickYaw > 2.0f * MATH_FLOAT_PI )
-	{
-		StickYaw -= 2.0f * MATH_FLOAT_PI;
-	}
-	YawVelocity = angleSpeed * vrFrame.Input.sticks[1][0];
-
-	// with any change in StickYaw, we are rotating footSpace in gameSpace,
-	// with the result that footPos+footSpace(vrFrame.Tracking.HeadPose.Pose.Position) must remain constant.
-
-	// i.e. footPos0+footSpace0(vrFrame.Tracking.HeadPose.Pose.Position)=footPos1+footSpace1(vrFrame.Tracking.HeadPose.Position)
-	// so footPos1=footPos0+footSpace0(headpos)-footSpace1(headPos);
-
-	Vector3f headPos_gameSpace1;
-	headPos_gameSpace1.x= vrFrame.Tracking.HeadPose.Pose.Position.x*cos(StickYaw)+vrFrame.Tracking.HeadPose.Pose.Position.z*sin(StickYaw);
-	headPos_gameSpace1.y= vrFrame.Tracking.HeadPose.Pose.Position.y;
-	headPos_gameSpace1.z=-vrFrame.Tracking.HeadPose.Pose.Position.x*sin(StickYaw)+vrFrame.Tracking.HeadPose.Pose.Position.z*cos(StickYaw);
-	FootPos+=headPos_gameSpace0-headPos_gameSpace1;
-
-
-	// Only if there is no head tracking, allow right stick up/down to adjust pitch,
-	// which can be useful for debugging without having to dock the device.
-	if ( ( vrFrame.Tracking.Status & VRAPI_TRACKING_STATUS_ORIENTATION_TRACKED ) == 0 ||
-		 ( vrFrame.Tracking.Status & VRAPI_TRACKING_STATUS_HMD_CONNECTED ) == 0 )
-	{
-		StickPitch -= angleSpeed * vrFrame.Input.sticks[1][1] * dt;
-	}
-	else
-	{
-		StickPitch = 0.0f;
-	}
-
 	// We extract Yaw, Pitch, Roll instead of directly using the orientation
 	// to allow "additional" yaw manipulation with mouse/controller and scene offsets.
 	const Quatf quat = vrFrame.Tracking.HeadPose.Pose.Orientation;
@@ -979,32 +979,33 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 	// Player movement
 	//
 
-	// Allow up / down movement if there is no floor collision model or in 'free move' mode.
-	const bool upDown = ( WorldModel.Definition == NULL || FreeMove ) && ( ( vrFrame.Input.buttonState & BUTTON_RIGHT_TRIGGER ) != 0 );
-	Vector3f gamepadMove(
-		vrFrame.Input.sticks[0][0],
-			upDown ? -vrFrame.Input.sticks[0][1] : 0.0f,
-			upDown ? 0.0f : (vrFrame.Input.sticks[0][1]) );
-	gamepadMove.z*=-1.0f;
-	// Perform player movement if there is input.
-	if ( gamepadMove.LengthSq() > 0.0f )
+	if(allowLocalOriginControl)
 	{
-		const Matrix4f yawRotate = Matrix4f::RotationY( EyeYaw );
-		const Vector3f orientationVector = yawRotate.Transform( gamepadMove );
+		// Allow up / down movement if there is no floor collision model or in 'free move' mode.
+		const bool upDown = (WorldModel.Definition == NULL || FreeMove) &&
+							((vrFrame.Input.buttonState & BUTTON_RIGHT_TRIGGER) != 0);
+		Vector3f gamepadMove(
+				vrFrame.Input.sticks[0][0],
+				upDown ? -vrFrame.Input.sticks[0][1] : 0.0f,
+				upDown ? 0.0f : (vrFrame.Input.sticks[0][1]));
+		gamepadMove.z *= -1.0f;
+		// Perform player movement if there is input.
+		if (gamepadMove.LengthSq() > 0.0f) {
+			const Matrix4f yawRotate = Matrix4f::RotationY(EyeYaw);
+			const Vector3f orientationVector = yawRotate.Transform(gamepadMove);
 
-		// Don't let move get too crazy fast
-		const float moveDistance = std::min<float>( MoveSpeed * (float)dt, 1.0f );
-		if ( WorldModel.Definition != NULL && !FreeMove )
-		{
-			FootPos = SlideMove( FootPos, GetEyeHeight(), orientationVector, moveDistance,
-						WorldModel.Definition->Collisions, WorldModel.Definition->GroundCollisions );
-		}
-		else
-		{	// no scene loaded, walk without any collisions
-			ModelCollision collisionModel;
-			ModelCollision groundCollisionModel;
-			FootPos = SlideMove( FootPos, GetEyeHeight(), orientationVector, moveDistance,
-						collisionModel, groundCollisionModel );
+			// Don't let move get too crazy fast
+			const float moveDistance = std::min<float>(MoveSpeed * (float) dt, 1.0f);
+			if (WorldModel.Definition != NULL && !FreeMove) {
+				FootPos = SlideMove(FootPos, GetEyeHeight(), orientationVector, moveDistance,
+									WorldModel.Definition->Collisions,
+									WorldModel.Definition->GroundCollisions);
+			} else {    // no scene loaded, walk without any collisions
+				ModelCollision collisionModel;
+				ModelCollision groundCollisionModel;
+				FootPos = SlideMove(FootPos, GetEyeHeight(), orientationVector, moveDistance,
+									collisionModel, groundCollisionModel);
+			}
 		}
 	}
 #endif

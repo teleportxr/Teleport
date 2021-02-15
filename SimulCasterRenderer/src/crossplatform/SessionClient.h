@@ -120,4 +120,5 @@ private:
     double time=0.0;
     std::vector<uint8_t> inputBuffer;
     bool discovered=false;
+	avs::SetupCommand setupCommand;
 };

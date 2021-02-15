@@ -667,7 +667,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 						}
 						else
 						{
-							OVR_WARN("No matching cached light.");
+							OVR_WARN("No matching cached light uid %llu.",l.uid);
 						}
 
 					}
@@ -763,7 +763,6 @@ void ClientRenderer::RenderLocalNodes(ovrFrameResult& res)
 	}
 }
 
-
 void ClientRenderer::RenderNode(ovrFrameResult& res, std::shared_ptr<scr::Node> node)
 {
 	std::shared_ptr<OVRNode> ovrNode = std::static_pointer_cast<OVRNode>(node);
@@ -836,11 +835,9 @@ void ClientRenderer::Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mG
 	}
 }
 
-void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
-{
+void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys) {
 	auto ctr = mNetworkSource.getCounterValues();
-	if (show_osd == NETWORK_OSD)
-	{
+	if (show_osd == NETWORK_OSD) {
 		mGuiSys->ShowInfoText(
 				INFO_TEXT_DURATION,
 				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
@@ -850,12 +847,10 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				ctr.decoderPacketsDropped,
 				ctr.incompleteDecoderPacketsReceived,
 				frameRate, ctr.bandwidthKPS);
-	}
-	else if (show_osd == CAMERA_OSD)
-	{
-		avs::vec3 vidPos(0,0,0);
-		if(videoTagDataCubeArray.size())
-			vidPos=videoTagDataCubeArray[0].coreData.cameraTransform.position;
+	} else if (show_osd == CAMERA_OSD) {
+		avs::vec3 vidPos(0, 0, 0);
+		if (videoTagDataCubeArray.size())
+			vidPos = videoTagDataCubeArray[0].coreData.cameraTransform.position;
 		mGuiSys->ShowInfoText(
 				INFO_TEXT_DURATION,
 				"        Foot pos: %1.3f, %1.3f, %1.3f\n\n"
@@ -868,13 +863,14 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				"Controller 1 rel: %1.3f, %1.3f, %1.3f\n"
 				"             pos: %1.3f, %1.3f, %1.3f\n"
 				//, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
-				,clientDeviceState->localFootPos.x, clientDeviceState->localFootPos.y,	clientDeviceState->localFootPos.z,
-				clientDeviceState->relativeHeadPos.x,clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z,
-				clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,clientDeviceState->headPose.position.z,
+				, clientDeviceState->localFootPos.x, clientDeviceState->localFootPos.y,
+				clientDeviceState->localFootPos.z,
+				clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,
+				clientDeviceState->relativeHeadPos.z,
+				clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,
+				clientDeviceState->headPose.position.z,
 				clientDeviceState->stickYaw,
-				vidPos.x,
-				vidPos.y,
-				vidPos.z,
+				vidPos.x, vidPos.y, vidPos.z,
 				clientDeviceState->controllerRelativePoses[0].position.x,
 				clientDeviceState->controllerRelativePoses[0].position.y,
 				clientDeviceState->controllerRelativePoses[0].position.z,
@@ -887,77 +883,64 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
 				clientDeviceState->controllerPoses[1].position.x,
 				clientDeviceState->controllerPoses[1].position.y,
 				clientDeviceState->controllerPoses[1].position.z
-				);
-	}
-	else if (show_osd == GEOMETRY_OSD)
-	{
-		mGuiSys->ShowInfoText
-		(
-			INFO_TEXT_DURATION,
-			"%s\n"
-			"Nodes: %d \n"
-			"Orphans: %d",
-			GlobalGraphicsResources.effectPassName,
-			static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()),
-			ctr.m_packetMapOrphans
 		);
+	} else if (show_osd == GEOMETRY_OSD) {
+		mGuiSys->ShowInfoText
+				(
+						INFO_TEXT_DURATION,
+						"%s\n"
+						"Nodes: %d \n"
+						"Orphans: %d",
+						GlobalGraphicsResources.effectPassName,
+						static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()),
+						ctr.m_packetMapOrphans
+				);
 
 		const auto &missingResources = resourceCreator->GetMissingResources();
-		if (missingResources.size() > 0)
-		{
+		if (missingResources.size() > 0) {
 			std::ostringstream missingResourcesStream;
 			missingResourcesStream << "Missing Resources\n";
 
 			size_t resourcesOnLine = 0;
 			for (
-				const auto &missingPair : missingResources)
-			{
+				const auto &missingPair : missingResources) {
 				const ResourceCreator::MissingResource &missingResource = missingPair.second;
 				missingResourcesStream << missingResource.resourceType << "_" << missingResource.id;
 
 				resourcesOnLine++;
-				if (resourcesOnLine >= MAX_RESOURCES_PER_LINE)
-				{
+				if (resourcesOnLine >= MAX_RESOURCES_PER_LINE) {
 					missingResourcesStream << std::endl;
 					resourcesOnLine = 0;
-				}
-				else
-				{
+				} else {
 					missingResourcesStream << " | ";
 				}
 			}
 
 			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, missingResourcesStream.str().c_str());
 		}
-	}
-	else if (show_osd == TAG_OSD)
-	{
+	} else if (show_osd == TAG_OSD) {
 		std::ostringstream sstr;
 		std::setprecision(5);
 		sstr << "Tags\n" << std::setw(4);
-		static int ii=0;
-		static char iii=0;
+		static int ii = 0;
+		static char iii = 0;
 		iii++;
-		if(!iii)
-		{
+		if (!iii) {
 			ii++;
 			if (ii > 2)
 				ii = 0;
 		}
-		for (size_t i = 0; i < std::min((size_t) 8, videoTagDataCubeArray.size()); i++)
-		{
-			auto &tag = videoTagDataCubeArray[i+8*ii];
+		for (size_t i = 0; i < std::min((size_t) 8, videoTagDataCubeArray.size()); i++) {
+			auto &tag = videoTagDataCubeArray[i + 8 * ii];
 			sstr << tag.coreData.lightCount << " lights\n";
-			for (size_t j = 0; j < tag.lights.size(); j++)
-			{
+			for (size_t j = 0; j < tag.lights.size(); j++) {
 				auto &l = tag.lights[j];
 				sstr << "\t" << l.uid << ": Type " << ToString((scr::Light::Type) l.lightType)
 					 << ", clr " << l.color.x << "," << l.color.y << "," << l.color.z;
-				if (l.lightType == scr::LightType::Directional)
-				{
-					ovrQuatf  q         = {
+				if (l.lightType == scr::LightType::Directional) {
+					ovrQuatf q = {
 							l.orientation.x, l.orientation.y, l.orientation.z, l.orientation.w};
-					avs::vec3 z         = {0, 0, 1.0f};
+					avs::vec3 z = {0, 0, 1.0f};
 					avs::vec3 direction = QuaternionTimesVector(q, z);
 					sstr << ", d " << direction.x << "," << direction.y << "," << direction.z;
 				}
