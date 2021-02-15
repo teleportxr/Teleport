@@ -13,7 +13,7 @@ void LobbyRenderer::Render(OVR::OvrGuiSys *mGuiSys)
 								 "eye height: %1.3f\n"
 								 "eye yaw: %1.3f\n"
 			,clientDeviceState->relativeHeadPos.x,clientDeviceState->relativeHeadPos.y,clientDeviceState->relativeHeadPos.z
-			,clientDeviceState->localFootPos.x,clientDeviceState->localFootPos.y,clientDeviceState->localFootPos.z
+			,clientDeviceState->originPose.position.x,clientDeviceState->originPose.position.y,clientDeviceState->originPose.position.z
 			,clientDeviceState->eyeHeight
 			,clientDeviceState->stickYaw);
 }

@@ -229,9 +229,9 @@ std::string SessionClient::GetServerIP() const
 	}
 }
 
-avs::vec3 SessionClient::GetOriginPos() const
+avs::Pose SessionClient::GetOriginPose() const
 {
-	return originPos;
+	return originPose;
 }
 
 avs::vec3 SessionClient::GetOriginToHeadOffset() const
@@ -310,7 +310,8 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			if(command.valid_counter>receivedInitialPos)
 			{
 				receivedInitialPos = command.valid_counter;
-				originPos = command.origin_pos;
+				originPose.position = command.origin_pos;
+				originPose.orientation=command.orientation;
 				if (command.set_relative_pos)
 					receivedRelativePos = command.valid_counter;
 				originToHeadPos = command.relative_pos;

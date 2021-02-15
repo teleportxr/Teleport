@@ -832,7 +832,7 @@ TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
 	{
-		TELEPORT_CERR << "Failed to check Client_" << clientID << " is connected! No client exists with ID " << clientID << "!\n";
+		//TELEPORT_CERR << "Failed to check Client_" << clientID << " is connected! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
 

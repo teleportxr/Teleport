@@ -270,7 +270,7 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		controllers.InitializeController(app->GetOvrMobile());
 	}
 	controllers.Update(app->GetOvrMobile());
-	clientDeviceState.localFootPos=*((const avs::vec3*)&mScene.GetFootPos());
+	clientDeviceState.originPose.position=*((const avs::vec3*)&mScene.GetFootPos());
 	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
 
 	// Oculus Origin means where the headset's zero is in real space.
@@ -282,8 +282,10 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
 		if (sessionClient.receivedInitialPos>0&&receivedInitialPos!=sessionClient.receivedInitialPos)
 		{
-			clientDeviceState.localFootPos = sessionClient.GetOriginPos();
-			mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.localFootPos));
+			clientDeviceState.originPose = sessionClient.GetOriginPose();
+			mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.originPose.position));
+			float yaw_angle=2.0f*atan2(clientDeviceState.originPose.orientation.y,clientDeviceState.originPose.orientation.w);
+			mScene.SetStickYaw(yaw_angle);
 			receivedInitialPos = sessionClient.receivedInitialPos;
 			if(receivedRelativePos!=sessionClient.receivedRelativePos)
 			{

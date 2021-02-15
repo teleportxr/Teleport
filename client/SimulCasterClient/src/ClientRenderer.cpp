@@ -518,7 +518,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		mDeviceContext.DispatchCompute(&inputCommand);
 		GL_CheckErrors("Frame: CopyToCubemaps - Main");
 		cubemapUB.faceSize = 0;
-		scr::ivec2 offset0={0,0};//(int32_t) ((3 *  tc.width) / 2),(int32_t) (2 * tc.width)};
+		scr::ivec2 offset0={0,0};
 		//Lighting Cubemaps
 		inputCommand.m_pComputeEffect=mCopyCubemapEffect;
 		inputCommand.effectPassName = "CopyCubemap";
@@ -538,7 +538,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 				cubemapUB.faceSize 				= uint32_t(mip_size);
 				cubemapUB.mip                  = m;
 				cubemapUB.face				   = 0;
-				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0][1]};
+				inputCommand.m_ShaderResources = &(mCubemapComputeShaderResources[0].GetShaderResourcesBySet((1)));
 				mDeviceContext.DispatchCompute(&inputCommand);
 				//OVR_LOG("Dispatch offset=%d %d wgSize=%d %d %d mipSize=%d",cubemapUB.sourceOffset.x,cubemapUB.sourceOffset.y,inputCommand.m_WorkGroupSize.x,inputCommand.m_WorkGroupSize.y,inputCommand.m_WorkGroupSize.z,cubemapUB.faceSize);
 
@@ -863,8 +863,8 @@ void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys) {
 				"Controller 1 rel: %1.3f, %1.3f, %1.3f\n"
 				"             pos: %1.3f, %1.3f, %1.3f\n"
 				//, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
-				, clientDeviceState->localFootPos.x, clientDeviceState->localFootPos.y,
-				clientDeviceState->localFootPos.z,
+				, clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y,
+				clientDeviceState->originPose.position.z,
 				clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,
 				clientDeviceState->relativeHeadPos.z,
 				clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,

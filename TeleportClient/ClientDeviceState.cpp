@@ -13,8 +13,8 @@ void ClientDeviceState::UpdateOriginPose()
 	// Footspace is related to local space as follows:
 	// The orientation of footspace is identical to the orientation of localspace.
 	// Footspace is offset from local space by LocalFootPos, which is measured in game space.
-	originPose.position=localFootPos;
-	originPose.orientation=scr::quat(stickYaw,avs::vec3(0,1.0f,0));
+	//originPose.position=localFootPos;
+	//originPose.orientation=scr::quat(stickYaw,avs::vec3(0,1.0f,0));
 }
 
 void ClientDeviceState::TransformPose(avs::Pose &p)
@@ -37,7 +37,7 @@ void ClientDeviceState::SetHeadPose(avs::vec3 pos,scr::quat q)
 	headPose.position=pos;
 	TransformPose(headPose);
 	relativeHeadPos=headPose.position;
-	headPose.position+=localFootPos;
+	headPose.position+=originPose.position;
 }
 
 void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,scr::quat q)
@@ -46,5 +46,5 @@ void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,scr::quat q)
 	controllerPoses[index].orientation = *((const avs::vec4 *)(&q));
 	controllerRelativePoses[index]=controllerPoses[index];
 	TransformPose(controllerPoses[index]);
-	controllerPoses[index].position+=localFootPos;
+	controllerPoses[index].position+=originPose.position;
 }
