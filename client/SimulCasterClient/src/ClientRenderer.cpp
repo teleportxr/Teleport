@@ -538,7 +538,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 				cubemapUB.faceSize 				= uint32_t(mip_size);
 				cubemapUB.mip                  = m;
 				cubemapUB.face				   = 0;
-				inputCommand.m_ShaderResources = &(mCubemapComputeShaderResources[0].GetShaderResourcesBySet((1)));
+				inputCommand.m_ShaderResources = {mCubemapComputeShaderResources[0].GetShaderResourcesBySet((1))};
 				mDeviceContext.DispatchCompute(&inputCommand);
 				//OVR_LOG("Dispatch offset=%d %d wgSize=%d %d %d mipSize=%d",cubemapUB.sourceOffset.x,cubemapUB.sourceOffset.y,inputCommand.m_WorkGroupSize.x,inputCommand.m_WorkGroupSize.y,inputCommand.m_WorkGroupSize.z,cubemapUB.faceSize);
 
