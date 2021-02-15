@@ -88,7 +88,7 @@ public:
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.
 	 *  - Any error result returned by EncoderBackendInterface::encodeFrame().
 	 */
-	Result process(uint32_t timestamp) override;
+	Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
 	/*!
 	 * Write data to the output stream

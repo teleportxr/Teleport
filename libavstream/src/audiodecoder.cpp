@@ -95,7 +95,7 @@ namespace avs
 		return result;
 	}
 
-	Result AudioDecoder::process(uint32_t timestamp)
+	Result AudioDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		if (!d().m_configured)
 		{
