@@ -560,7 +560,8 @@ ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::
 TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 {
 	//Check if we already have a session for a client with the passed ID.
-	if(clientServices.find(clientID) == clientServices.end())
+	auto c=clientServices.find(clientID);
+	if(c == clientServices.end())
 	{
 		ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::make_shared<PluginAudioEncodePipeline>(), std::bind(&Disconnect, clientID));
 		if(newClientData.clientMessaging.startSession(clientID, listenPort))
@@ -575,7 +576,14 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	}
 	else
 	{
-		TELEPORT_CERR << "Called StartSession on Client_" << clientID << ", but we have already started the session!\n";
+	/*	TELEPORT_CERR << "Called StartSession on Client_" << clientID << ", but we have already started the session. Restarting!\n";
+		if(!c->second.clientMessaging.restartSession(clientID, listenPort))
+		{
+			TELEPORT_CERR << "Failed to restartSession for Client_" << clientID << "!\n";
+			return;
+		}*/
+		unlinkedClientIDs.insert(clientID);
+		return;
 	}
 
 	auto clientPair = clientServices.find(clientID);
@@ -807,7 +815,7 @@ TELEPORT_EXPORT void Tock()
 	PipeOutMessages();
 }
 
-TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter, const avs::vec3* pos, bool set_rel, const avs::vec3* orig_to_head)
+TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter, const avs::vec3* pos, bool set_rel, const avs::vec3* orig_to_head, const avs::vec4* orient)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -815,9 +823,8 @@ TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter, c
 		TELEPORT_CERR << "Failed to set client origin of Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-
 	ClientData& clientData = clientPair->second;
-	return clientData.setOrigin(validCounter,*pos, set_rel, *orig_to_head);
+	return clientData.setOrigin(validCounter,*pos, set_rel, *orig_to_head,*orient);
 }
 
 TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)

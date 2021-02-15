@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-		package="co.Simul.remoteplayclient"
+	xmlns:tools="http://schemas.android.com/tools"
+	package="co.Simul.remoteplayclient"
 		android:versionCode="1" 
 		android:versionName="1.0"
-        android:installLocation="auto" >
+        android:installLocation="auto"
+       	android:debuggable="true"
+	tools:ignore="HardcodedDebugMode">
 
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 	<uses-permission android:name="android.permission.INTERNET" />

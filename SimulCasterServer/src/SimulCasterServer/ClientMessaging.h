@@ -47,6 +47,7 @@ namespace SCServer
 
 		bool startSession(avs::uid u, int32_t listenPort);
 		void stopSession();
+		bool restartSession(avs::uid clientID, int32_t listenPort);
 
 		void tick(float deltaTime);
 		void handleEvents(float deltaTime);
@@ -59,7 +60,7 @@ namespace SCServer
 		bool hasPeer() const;
 		bool hasReceivedHandshake() const;
 
-		bool setPosition(uint64_t valid_counter,const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head);
+		bool setPosition(uint64_t valid_counter,const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head,const avs::vec4 &orientation);
 
 		bool sendCommand(const avs::Command& avsCommand) const;
 		template<typename T> bool sendCommand(const avs::Command& avsCommand, std::vector<T>& appendedList) const

@@ -72,6 +72,16 @@ using namespace SCServer;
 		initialized=true;
 	}
 
+	bool ClientMessaging::restartSession(avs::uid clientID, int32_t listenPort)
+	{
+		if (host)
+		{
+			enet_host_destroy(host);
+			host = nullptr;
+		}
+		return startSession(clientID, listenPort);
+	}
+
 	bool ClientMessaging::startSession(avs::uid clientID, int32_t listenPort)
 	{
 		this->clientID = clientID;
@@ -434,7 +444,7 @@ using namespace SCServer;
 		TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 	}
 
-	bool ClientMessaging::setPosition(uint64_t valid_counter,const avs::vec3& pos,bool set_rel,const avs::vec3 &rel_to_head)
+	bool ClientMessaging::setPosition(uint64_t valid_counter,const avs::vec3& pos,bool set_rel,const avs::vec3 &rel_to_head,const avs::vec4 &orientation)
 	{
 		avs::SetPositionCommand setp;
 		if (casterContext->axesStandard != avs::AxesStandard::NotInitialized)
@@ -443,6 +453,8 @@ using namespace SCServer;
 			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, p);
 			setp.origin_pos = p;
 			setp.set_relative_pos = (uint8_t)set_rel;
+			setp.orientation=orientation;
+			avs::ConvertRotation(settings->axesStandard, casterContext->axesStandard, setp.orientation);
 			avs::vec3 o=rel_to_head;
 			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, o);
 			setp.relative_pos=o;
