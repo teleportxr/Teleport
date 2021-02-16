@@ -20,13 +20,13 @@ class MainActivity : VrActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        //requestRecordPermission()
+
         val commandString = getCommandStringFromIntent(intent)
         val fromPackageNameString = getPackageStringFromIntent(intent)
         val uriString = getUriStringFromIntent(intent)
 
         appPtr = nativeSetAppInterface(this, fromPackageNameString, commandString, uriString)
-
-        //requestRecordPermission()
     }
 
     companion object {
@@ -35,16 +35,6 @@ class MainActivity : VrActivity() {
             Log.d(TAG, "LoadLibrary")
             System.loadLibrary("ovrapp")
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-
-//        Toast.makeText(applicationContext,
-//                "This is a test!!!!!", Toast.LENGTH_SHORT).show()
-
-        //val switchActivityIntent = Intent(this, MainActivity::class.java)
-        //startActivity(switchActivityIntent)
     }
 
     private fun requestRecordPermission() {
@@ -57,9 +47,7 @@ class MainActivity : VrActivity() {
                 //&& ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)){
             // the dialog will be opened so we have to keep that in memory
             alreadyRequestedRecordingPermission = true
-            //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED)
             ActivityCompat.requestPermissions(this, arrayOf<String>(Manifest.permission.RECORD_AUDIO), 1024)
-            //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
         }
     }
 }

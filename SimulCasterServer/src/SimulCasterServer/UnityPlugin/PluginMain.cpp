@@ -604,9 +604,9 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.AudioQueue = std::make_unique<avs::Queue>();
 
-	newClient.casterContext.ColorQueue->configure(16,"ColorQueue");
-	newClient.casterContext.GeometryQueue->configure(16, "GeometryQueue");
-	newClient.casterContext.AudioQueue->configure(120, "AudioQueue");
+	newClient.casterContext.ColorQueue->configure(40000, 16,"ColorQueue");
+	newClient.casterContext.GeometryQueue->configure(200000, 16, "GeometryQueue");
+	newClient.casterContext.AudioQueue->configure(8192, 120, "AudioQueue");
 
 	// Receiving
 	if (casterSettings.isReceivingAudio)
@@ -616,7 +616,7 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 		newClient.casterContext.audioTarget = std::make_unique<avs::AudioTarget>();
 		newClient.casterContext.audioStreamTarget = std::make_unique<sca::CustomAudioStreamTarget>(std::bind(&ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2));
 
-		newClient.casterContext.sourceAudioQueue->configure(120, "SourceAudioQueue");
+		newClient.casterContext.sourceAudioQueue->configure(8192, 120, "SourceAudioQueue");
 		newClient.casterContext.audioDecoder->configure(100);
 		newClient.casterContext.audioTarget->configure(newClient.casterContext.audioStreamTarget.get());
 	}
