@@ -127,7 +127,7 @@ namespace avs
 		// Ensure any used sections of current memory go to the beginning
 		if (m_numElements > 0)
 		{
-			const size_t frontToEnd = std::min(oldBufferCount - (size_t)m_front, m_numElements);
+			const size_t frontToEnd = std::min<size_t>(oldBufferCount - m_front, m_numElements);
 			const size_t firstCopySize = frontToEnd * m_maxBufferSize;
 
 			memcpy(m_mem, &oldMem[m_front * m_maxBufferSize], firstCopySize);
@@ -160,7 +160,7 @@ namespace avs
 
 		if (m_numElements > 0)
 		{
-			const int64_t frontToEnd = std::min(m_maxBuffers - (size_t)m_front, m_numElements);
+			const int64_t frontToEnd = std::min<size_t>(m_maxBuffers - m_front, m_numElements);
 			const int64_t startToFront = m_numElements - frontToEnd;
 
 			// Start to front if applicable
