@@ -2,6 +2,9 @@
 // (c) Copyright 2018-2019 Simul Software Ltd
 
 #include <queue_p.hpp>
+#include <algorithm>
+
+#define SAFE_DELETE_ARRAY(p)		{ if(p) { delete[] p; (p)=nullptr; } }
 
 namespace avs
 {
@@ -12,16 +15,32 @@ namespace avs
 		data = (Queue::Private*)this->m_d;
 	}
 
-	Result Queue::configure(size_t maxBuffers,const char *n)
+	Queue::~Queue()
 	{
-		if (maxBuffers == 0)
+		data->flushInternal();
+	}
+
+	Result Queue::configure(size_t maxBufferSize, size_t maxBuffers, const char *n)
+	{
+		if (maxBufferSize == 0 || maxBuffers == 0)
 		{
 			return Result::Node_InvalidConfiguration;
 		}
 		data->name=n;
 		std::lock_guard<std::mutex> lock(data->m_mutex);
 		data->flushInternal();
+		data->m_originalMaxBufferSize = maxBufferSize;
+		data->m_originalMaxBuffers = maxBuffers;
+		data->m_maxBufferSize = maxBufferSize;
 		data->m_maxBuffers = maxBuffers;
+		data->m_numElements = 0;
+		data->m_front = -1;
+		data->m_mem = new char[data->m_maxBuffers * data->m_maxBufferSize];
+		data->m_dataSizes = new size_t[data->m_maxBuffers];
+		for (int i = 0; i < data->m_maxBuffers; ++i)
+		{
+			data->m_dataSizes[i] = 0;
+		}
 		return Result::OK;
 	}
 
@@ -29,7 +48,12 @@ namespace avs
 	{
 		std::lock_guard<std::mutex> lock(data->m_mutex);
 		data->flushInternal();
+		data->m_originalMaxBufferSize = 0;
+		data->m_originalMaxBuffers = 0;
+		data->m_maxBufferSize = 0;
 		data->m_maxBuffers = 0;
+		data->m_numElements = 0;
+		data->m_front = -1;
 		return Result::OK;
 	}
 
@@ -43,72 +67,148 @@ namespace avs
 	{
 		bytesRead = 0;
 		std::lock_guard<std::mutex> lock(data->m_mutex);
-		if (data->m_buffers.empty())
+		if (data->m_numElements == 0)
 		{
 			return Result::IO_Empty;
 		}
 
-		const auto& front = data->m_buffers.front();
-		if (!buffer || bufferSize < front.size())
+		size_t frontSize;
+		const void* front = data->front(frontSize);
+		if (!buffer || bufferSize < frontSize)
 		{
-			bufferSize = front.size();
+			bufferSize = frontSize;
 			return Result::IO_Retry;
 		}
 
-		std::memcpy(buffer, front.data(), front.size());
-		bytesRead = front.size();
-		data->m_buffers.pop();
+		std::memcpy(buffer, front, frontSize);
+		bytesRead = frontSize;
+		data->pop();
+
 		return Result::OK;
 	}
 
 	Result Queue::write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
 		std::lock_guard<std::mutex> lock(data->m_mutex);
-		if (data->m_buffers.size() == data->m_maxBuffers)
+		if (data->m_numElements == data->m_maxBuffers)
 		{
-			AVSLOG(Warning) << data->name.c_str()<<" Queue::write: Max buffers reached. Doubling max .\n";
-			data->m_maxBuffers *= 2;
+			AVSLOG(Warning) << data->name.c_str()<<" Queue::write: Max buffers reached. Increasing max .\n";
+			data->increaseBufferCount();
 		}
-		try
+		if (bufferSize > data->m_maxBufferSize)
 		{
-			data->m_buffers.emplace(static_cast<const char*>(buffer), static_cast<const char*>(buffer) + bufferSize);
+			AVSLOG(Warning) << data->name.c_str() << " Queue::write: Buffer size greater than max. Increasing max .\n";
+			data->increaseBufferSize(bufferSize);
 		}
-		catch (const std::bad_alloc&)
-		{
-			return Result::IO_OutOfMemory;
-		}
+		
+		data->push(buffer, bufferSize);
+
 		bytesWritten = bufferSize;
+
 		return Result::OK;
 	}
-
-	Result Queue::emplace(Node*, std::vector<char>&& buffer, size_t& bytesWritten)
-	{
-		std::lock_guard<std::mutex> lock(data->m_mutex);
-		size_t bufferSize = buffer.size();
-		if (data->m_buffers.size() == data->m_maxBuffers)
-		{
-			AVSLOG(Warning) << data->name.c_str() << " Queue::emplace: Max buffers reached. Doubling max.\n";
-			data->m_maxBuffers *= 2;
-		}
-		try
-		{
-			data->m_buffers.emplace(std::move(buffer));
-		}
-		catch (const std::bad_alloc&)
-		{
-			return Result::IO_OutOfMemory;
-		}
-		bytesWritten = bufferSize;
-		return Result::OK;
-	}
-
 
 	void Queue::Private::flushInternal()
 	{
-		while (!m_buffers.empty())
+		SAFE_DELETE_ARRAY(m_mem)
+		SAFE_DELETE_ARRAY(m_dataSizes)
+	}
+
+	void Queue::Private::increaseBufferCount()
+	{
+		const size_t oldBufferCount = m_maxBuffers;
+		m_maxBuffers += m_originalMaxBuffers * 0.5f;
+		char* oldMem = m_mem;
+		m_mem = new char[m_maxBuffers * m_maxBufferSize];
+
+		size_t* oldSizes = m_dataSizes;
+		m_dataSizes = new size_t[m_maxBuffers];
+
+		// Ensure any used sections of current memory go to the beginning
+		if (m_numElements > 0)
 		{
-			m_buffers.pop();
+			const size_t frontToEnd = std::min(oldBufferCount - m_front, m_numElements);
+			const size_t firstCopySize = frontToEnd * m_maxBufferSize;
+
+			memcpy(m_mem, &oldMem[m_front * m_maxBufferSize], firstCopySize);
+			memcpy(m_dataSizes, &oldSizes[m_front], sizeof(size_t) * frontToEnd);
+
+			// Account for potential wrap around items stored before front in memory
+			const int64_t startToFront = m_numElements - frontToEnd;
+			if (startToFront > 0)
+			{
+				memcpy(&m_mem[firstCopySize], &oldMem[(m_front - startToFront) * m_maxBufferSize], startToFront * m_maxBufferSize);
+				memcpy(&m_dataSizes[frontToEnd], &oldSizes[m_front - startToFront], startToFront * sizeof(size_t));
+			}
+			m_front = 0;
 		}
+		else
+		{
+			m_front = -1;
+		}
+
+		delete[] oldMem;
+		delete[] oldSizes;
+	}
+
+	void Queue::Private::increaseBufferSize(size_t requestedSize)
+	{
+		const size_t oldBufferSize = m_maxBufferSize;
+		m_maxBufferSize = requestedSize * 1.5;
+		char* oldMem = m_mem;
+		m_mem = new char[m_maxBuffers * m_maxBufferSize];
+
+		if (m_numElements > 0)
+		{
+			const int64_t frontToEnd = std::min(m_maxBuffers - m_front, m_numElements);
+			const int64_t startToFront = m_numElements - frontToEnd;
+
+			// Start to front if applicable
+			for (int64_t i = m_front - startToFront; i < m_front; ++i)
+			{
+				memcpy(&m_mem[i * m_maxBufferSize], &oldMem[i * oldBufferSize], oldBufferSize);
+			}
+		
+			// Front to end
+			for (int64_t i = m_front; i < m_front + frontToEnd; ++i)
+			{
+				memcpy(&m_mem[i * m_maxBufferSize], &oldMem[i * oldBufferSize], oldBufferSize);
+			}
+		}
+
+		delete[] oldMem;
+	}
+
+	const void* Queue::Private::front(size_t& bufferSize) const
+	{
+		bufferSize = m_dataSizes[m_front];
+		return &m_mem[m_front * m_maxBufferSize];
+	}
+
+	void Queue::Private::push(const void* buffer, size_t bufferSize)
+	{
+		if (m_numElements == 0)
+		{
+			m_front = 0;
+		}
+		const int64_t index = (m_front + m_numElements) % m_maxBuffers;
+		memcpy(&m_mem[index * m_maxBuffers], buffer, bufferSize);
+		m_dataSizes[index] = bufferSize;
+		m_numElements++;
+	}
+
+	void Queue::Private::pop()
+	{
+		m_dataSizes[m_front] = 0;
+		m_numElements--;
+		if (m_numElements == 0)
+		{
+			m_front = -1;
+		}
+		else
+		{
+			m_front = (m_front + 1) % m_maxBuffers;
+		}	
 	}
 
 } // avs

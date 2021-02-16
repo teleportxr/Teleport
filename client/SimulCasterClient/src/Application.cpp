@@ -518,7 +518,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 
 		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
 
-		clientRenderer.mVideoQueue.configure(16, "VideoQueue                        ");
+		clientRenderer.mVideoQueue.configure(200000, 16, "VideoQueue");
 
 		avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mVideoQueue);
 		avs::Node::link(clientRenderer.mVideoQueue, clientRenderer.mDecoder);
@@ -538,7 +538,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 			audioPlayer->configure(audioParams);
 			audioStreamTarget.reset(new sca::AudioStreamTarget(audioPlayer));
 			avsAudioTarget.configure(audioStreamTarget.get());
-			clientRenderer.mAudioQueue.configure(120, "AudioQueue");
+			clientRenderer.mAudioQueue.configure(4096, 120, "AudioQueue");
 
 			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mAudioQueue);
 			avs::Node::link(clientRenderer.mAudioQueue, avsAudioDecoder);
@@ -559,7 +559,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
                 };
 
                 mNetworkPipeline.reset(new sca::NetworkPipeline());
-				mAudioInputQueue.configure(120, "AudioInputQueue");
+				mAudioInputQueue.configure(4096, 120, "AudioInputQueue");
 				mNetworkPipeline->initialise(networkSettings, &mAudioInputQueue);
 
 				// Callback called on separate thread when recording buffer is full
@@ -579,7 +579,7 @@ void Application::OnVideoStreamChanged(const char* server_ip, const avs::SetupCo
 		{
 			avsGeometryDecoder.configure(60, &geometryDecoder);
 			avsGeometryTarget.configure(&resourceCreator);
-			clientRenderer.mGeometryQueue.configure(16, "GeometryQueue");
+			clientRenderer.mGeometryQueue.configure(10000, 200, "GeometryQueue");
 			mPipeline.link({&clientRenderer.mNetworkSource, &avsGeometryDecoder, &avsGeometryTarget});
 
 			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mGeometryQueue);

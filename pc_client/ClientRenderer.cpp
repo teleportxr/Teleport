@@ -1137,7 +1137,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 			SCR_CERR << "Failed to configure output surface node!\n";
 		}
 
-		videoQueues[i].configure(16, "VideoQueue " + i);
+		videoQueues[i].configure(200000, 16, "VideoQueue " + i);
 
 		avs::Node::link(source, videoQueues[i]);
 		avs::Node::link(videoQueues[i], decoder[i]);
@@ -1158,7 +1158,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
 		avsAudioTarget.configure(audioStreamTarget.get());
 
-		audioQueue.configure(120, "AudioQueue");
+		audioQueue.configure(4096, 120, "AudioQueue");
 
 		avs::Node::link(source, audioQueue);
 		avs::Node::link(audioQueue, avsAudioDecoder);
@@ -1171,7 +1171,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		avsGeometryDecoder.configure(60,&geometryDecoder);
 		avsGeometryTarget.configure(&resourceCreator);
 
-		geometryQueue.configure(200, "GeometryQueue");
+		geometryQueue.configure(10000, 200, "GeometryQueue");
 
 		avs::Node::link(source, geometryQueue);
 		avs::Node::link(geometryQueue, avsGeometryDecoder);
