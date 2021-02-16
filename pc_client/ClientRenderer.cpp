@@ -636,7 +636,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	else if(show_osd== CAMERA_OSD)
 	{
 		vec3 offset=camera.GetPosition();
-		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->localFootPos.x, clientDeviceState->localFootPos.y, clientDeviceState->localFootPos.z)):"Origin:", white);
+		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
 		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("Offset: %4.4f %4.4f %4.4f", clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z),white);
 		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y, clientDeviceState->headPose.position.z),white);
 		if (videoPosDecoded)
@@ -1407,22 +1407,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		cam_pos.z=2.0f;
 	if(cam_pos.z<1.0f)
 		cam_pos.z=1.0f;
-	/*if(r>0.9f*roomRadius)
-	{
-		float s=(r/roomRadius-0.9f)/0.01f;
-		float reduce=0.9f*roomRadius/r;
-		cam_pos.x*=reduce;
-		cam_pos.y*=reduce;
-		camera.SetPosition(cam_pos);
-		float x=s*cam_pos.x/roomRadius;
-		float y=s*cam_pos.y/roomRadius;
-	//	interpret going beyond the boundary as requesting motion of the local origin.
-	}*/
-	for(int i=0;i<2;i++)
-	{
-	//	controllerStates[i].mJoystickAxisX=stored_clientspace_input.x;
-	//	controllerStates[i].mJoystickAxisY=stored_clientspace_input.y;
-	}
+	controllerStates[1].mJoystickAxisX=stored_clientspace_input.x;
+	controllerStates[1].mJoystickAxisY=stored_clientspace_input.y;
+	//controllerStates[0].mJoystickAxisX=stored_clientspace_input.x;
 
 	controllerStates[0].mTrackpadX=0.5f;
 	controllerStates[0].mTrackpadY=0.5f;
@@ -1444,8 +1431,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	{
 		vec3 forward=-camera.Orientation.Tz();
 		vec3 right=camera.Orientation.Tx();
-		*((vec3*)&clientDeviceState->localFootPos)+=clientspace_input.y*time_step*forward;
-		*((vec3*)&clientDeviceState->localFootPos)+=clientspace_input.x*time_step*right;
+		*((vec3*)&clientDeviceState->originPose.position)+=clientspace_input.y*time_step*forward;
+		*((vec3*)&clientDeviceState->originPose.position)+=clientspace_input.x*time_step*right;
 		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
@@ -1467,7 +1454,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 			controllerStates[i].inputEvents.clear();
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
-			clientDeviceState->localFootPos = sessionClient.GetOriginPos();
+			clientDeviceState->originPose = sessionClient.GetOriginPose();
 			receivedInitialPos = sessionClient.receivedInitialPos;
 			if(receivedRelativePos!=sessionClient.receivedRelativePos)
 			{
@@ -1479,7 +1466,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		// Are we being sent an update to our current position, e.g. floor height?
 		else if(receivedInitialPos==sessionClient.receivedInitialPos)
 		{
-			clientDeviceState->localFootPos.z = sessionClient.GetOriginPos().z;
+			clientDeviceState->originPose.position.z = sessionClient.GetOriginPose().position.z;
 		}
 		avs::Result result = pipeline.process();
 

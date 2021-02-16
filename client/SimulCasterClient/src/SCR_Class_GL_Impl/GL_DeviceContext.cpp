@@ -114,26 +114,7 @@ void GL_DeviceContext::BindShaderResources(const std::vector<const ShaderResourc
 	        }
 	        if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
 	        {
-	//			GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
 	            GLuint blockIndex = glGetUniformBlockIndex(program, wsr.shaderResourceName);
-		/*		{
-					GLsizei length;
-					GLint   size;
-					GLenum  type;
-					GLchar  name[100];
-					for(GLuint l=0;l<3;l++)
-					{
-						glGetActiveUniform(
-							program,
-							l,
-							100,
-							&length,
-							&size,
-							&type,
-							name);
-					OVR_WARN("%d %d %s", l, type, name);
-					}
-				}*/
 	            glUniformBlockBinding(program, blockIndex, wsr.dstBinding);
 	            OVR::GL_CheckErrors("BindShaderResources: 3");
 	        }
