@@ -24,23 +24,15 @@ namespace avs
 	public:
 		Queue();
 
-		~Queue();
-
-		// Prevent copying and moving because this class handles raw memory
-		Queue(const Queue&) = delete;
-
-		Queue(const Queue&&) = delete;
-
 		/*!
 		 * Configure queue.
-		 * \param maxBufferSize Maximum size of a buffer in the queue.
-		 * \param maxBuffers Maximum number of buffers in the queue.
+		 * \param maxBuffers Maximum number of buffers in queue (capacity).
 		 * \warning Reconfiguring an already configured Queue performs an implicit flush.
 		 * \return 
 		 *  - Result::OK on success.
 		 *  - Result::Node_InvalidConfiguration if maxBuffers is zero.
 		 */
-		Result configure(size_t maxBufferSize, size_t maxBuffers, const char *name);
+		Result configure(size_t maxBuffers,const char *name);
 
 		/*!
 		 * Flush & deconfigure queue.
@@ -73,6 +65,17 @@ namespace avs
 		 *  - Result::IO_OutOfMemory if failed to allocate memory for the new queue buffer.
 		 */
 		Result write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
+
+		/*!
+		 * Emplace buffer at the back of the queue.
+		 * \sa IOInterface::emplace()
+		 * \return
+		 *  - Result::OK on success.
+		 *  - Result::IO_Full if attempted to write to full queue.
+		 *  - Result::IO_OutOfMemory if failed to allocate memory for the queue buffer.
+		 */
+		Result emplace(Node*, std::vector<char>&& buffer, size_t& bytesWritten);
+
 
 	
 		/*!

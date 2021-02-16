@@ -91,12 +91,11 @@ void GL_DeviceContext::EndFrame()
 void GL_DeviceContext::BindShaderResources(const std::vector<const ShaderResource*>& shaderResources, Effect* pEffect, const char* effectPassName)
 {
     //TODO: Move to OpenGL ES 3.2 for explicit in-shader UniformBlockBinding with the 'binding = X' layout qualifier!
-
     if(!pEffect)
         return; //SCR_CERR_BREAK("Invalid effect. Can not bind descriptor sets!", -1);
-
     //Set Uniforms for textures and UBs!
-    GLuint& program = dynamic_cast<GL_Effect*>(pEffect)->GetGlPlatform(effectPassName)->Program;
+	GL_Effect *glEffect =dynamic_cast<GL_Effect*>(pEffect);
+    GLuint& program = glEffect->GetGlPlatform(effectPassName)->Program;
     glUseProgram(program);
 	OVR::GL_CheckErrors("BindShaderResources: 0");
     for(auto& sr : shaderResources)
@@ -108,7 +107,7 @@ void GL_DeviceContext::BindShaderResources(const std::vector<const ShaderResourc
 	        {
 	            GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
 				OVR::GL_CheckErrors("BindShaderResources: 1");
-	
+
 	            glUniform1i(location, wsr.dstBinding);
 	            OVR::GL_CheckErrors("BindShaderResources: 2");
 	        }

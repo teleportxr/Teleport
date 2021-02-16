@@ -133,7 +133,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		}
 
 		size_t numBytesWrittenToOutput;
-		auto result = outputNode->write(m_data->q_ptr(), buffer.data(), buffer.size(), numBytesWrittenToOutput);
+		auto result = outputNode->emplace(m_data->q_ptr(), std::move(buffer), numBytesWrittenToOutput);
 
 		if (!result)
 		{

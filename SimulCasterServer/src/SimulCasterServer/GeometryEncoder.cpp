@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <set>
-#include <sstream>
 
 #include "libavstream/common.hpp"
 #include "libavstream/geometry/animation_interface.h"
@@ -185,7 +184,7 @@ namespace SCServer
 		return avs::Result::OK;
 	}
 
-	std::string MemSize(size_t sz)
+/*	std::string MemSize(size_t sz)
 	{
 		std::stringstream str;
 		if(sz<1024)
@@ -201,7 +200,7 @@ namespace SCServer
 			str<<(sz/1024/1024)<<" Mb";
 		}
 		return str.str();
-	}
+	}*/
 
 	avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 	{
@@ -285,7 +284,7 @@ namespace SCServer
 				put(buffer.data, buffer.byteLength);
 			}
 
-			TELEPORT_COUT<<"Encoded mesh "<<mesh->name.c_str()<<" with size "<<MemSize(buffer.size()-oldBufferSize)<<"\n";
+			//TELEPORT_COUT<<"Encoded mesh "<<mesh->name.c_str()<<" with size "<<MemSize(buffer.size()-oldBufferSize)<<"\n";
 			// Actual size is now known so update payload size
 			putPayloadSize();
 

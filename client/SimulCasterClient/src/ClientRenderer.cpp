@@ -267,10 +267,10 @@ void ClientRenderer::EnteredVR(struct ovrMobile *o,const ovrJava *java)
 		mExtractTagShaderResources.AddBuffer( scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 2, "TagDataCubeArray_ssbo", {mTagDataArrayBuffer.get()});
 
 
-		mCopyCubemapEffect->LinkShaders("CopyCubemap", {});
-		mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{});
-		mExtractTagDataIDEffect->LinkShaders("ExtractTagDataID",{});
-		mExtractOneTagEffect->LinkShaders("ExtractOneTag",{});
+		mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{mColourAndDepthShaderResources});
+		mCopyCubemapEffect->LinkShaders("CopyCubemap", {mCopyCubemapShaderResources});
+		mExtractTagDataIDEffect->LinkShaders("ExtractTagDataID",{mExtractTagShaderResources});
+		mExtractOneTagEffect->LinkShaders("ExtractOneTag",{mExtractTagShaderResources});
 	}
 
 	mVideoSurfaceDef.surfaceName = "VideoSurface";
