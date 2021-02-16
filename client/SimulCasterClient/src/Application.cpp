@@ -199,18 +199,12 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	lightingCubemapLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	lightingCubemapLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-    GlobalGraphicsResources.lightCubemapShaderResources.SetLayouts({lightingCubemapLayout});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler(), clientRenderer.diffuseCubemapTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler(), clientRenderer.specularCubemapTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler(), clientRenderer.mRoughSpecularTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(0, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17, "u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler(), clientRenderer.mCubemapLightingTexture});
+    GlobalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler(), clientRenderer.diffuseCubemapTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler(), clientRenderer.specularCubemapTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler(), clientRenderer.mRoughSpecularTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17, "u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler(), clientRenderer.mCubemapLightingTexture});
 
-	// Set tag data shader resources.
-	scr::ShaderResourceLayout tagDataLayout;
-	tagDataLayout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	tagDataLayout.AddBinding(5, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-
-	GlobalGraphicsResources.tagDataResources.SetLayouts({tagDataLayout});
 
 	int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
 	mRefreshRates.resize(num_refresh_rates);

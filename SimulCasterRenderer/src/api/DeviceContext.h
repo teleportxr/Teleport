@@ -58,12 +58,12 @@ namespace scr
 	{
 		uvec3												m_WorkGroupSize;
 		std::shared_ptr<Effect>								m_pComputeEffect;
-		std::vector<ShaderResource>							m_ShaderResources;
+		const ShaderResource							*m_ShaderResources;
 
 		InputCommand_Compute(InputCommandCreateInfo* pInputCommandCreateInfo,
 			const uvec3& workGroupSize,
 			const std::shared_ptr<Effect>& computeEffect,
-			const std::vector<ShaderResource>& shaderResources)
+			const ShaderResource& shaderResources)
 		{
 			type = INPUT_COMMAND_COMPUTE;
 			pFBs = pInputCommandCreateInfo->pFBs;
@@ -73,7 +73,7 @@ namespace scr
 
 			m_WorkGroupSize = workGroupSize;
 			m_pComputeEffect = computeEffect;
-			m_ShaderResources = shaderResources;
+			m_ShaderResources = &shaderResources;
 		};
 	};
 

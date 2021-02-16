@@ -135,6 +135,14 @@ namespace scr
 		{
 			return Slerp(*this, rhs, time);
 		}
+		bool operator==(const quat& q)
+		{
+			return s==q.s&&i==q.i&&j==q.j&&k==q.k;
+		}
+		bool operator!=(const quat& q)
+		{
+			return s!=q.s||i!=q.i||j!=q.j||k!=q.k;
+		}
 
 		quat operator-() const
 		{

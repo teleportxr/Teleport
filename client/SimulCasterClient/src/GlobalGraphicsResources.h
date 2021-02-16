@@ -16,7 +16,6 @@ public:
     std::shared_ptr<scr::Sampler> sampler;
     std::shared_ptr<scr::Sampler> cubeMipMapSampler;
 	scr::ShaderResource lightCubemapShaderResources;
-	scr::ShaderResource tagDataResources;
 
 	scc::GL_Effect defaultPBREffect;
 	scc::GL_Skin defaultSkin;

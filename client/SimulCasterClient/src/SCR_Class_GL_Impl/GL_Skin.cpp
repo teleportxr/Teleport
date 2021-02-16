@@ -38,6 +38,6 @@ void GL_Skin::CreateUniformBuffer(const scc::GL_RenderPlatform *renderPlatform)
 	shaderResourceLayout.AddBinding(bindingIndex, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
 
 	shaderResource = scr::ShaderResource({shaderResourceLayout});
-	shaderResource.AddBuffer(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, bindingIndex, "u_BoneData", {uniformBuffer.get(), 0, boneMatricesSize});
+	shaderResource.AddBuffer( scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, bindingIndex, "u_BoneData", {uniformBuffer.get(), 0, boneMatricesSize});
 }
 }

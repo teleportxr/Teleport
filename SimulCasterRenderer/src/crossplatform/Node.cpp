@@ -16,8 +16,8 @@ void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation,
 	}
 	else
 	{
-		localTransform.UpdateModelMatrix(translation, rotation, scale);
-		RequestTransformUpdate();
+		if(localTransform.UpdateModelMatrix(translation, rotation, scale))
+			RequestTransformUpdate();
 	}
 }
 

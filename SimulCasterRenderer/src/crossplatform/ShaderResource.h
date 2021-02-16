@@ -86,7 +86,6 @@ namespace scr
 		struct WriteShaderResource
 		{
 			const char* shaderResourceName;
-			uint32_t dstSet;
 			uint32_t dstBinding;
 			uint32_t dstArrayElement;
 			uint32_t shaderResourceCount;
@@ -96,21 +95,20 @@ namespace scr
 		};
 	private:
 
-		std::map<uint32_t, ShaderResourceLayout> m_ShaderResourceLayouts;
+		ShaderResourceLayout m_ShaderResourceLayout;
 		std::vector<WriteShaderResource> m_WriteShaderResources;
 
 	public:
 		ShaderResource() {};
-		ShaderResource(const std::vector<ShaderResourceLayout>& shaderResourceLayouts);
+		ShaderResource(const ShaderResourceLayout& shaderResourceLayout);
 		~ShaderResource();
 
-		void SetLayouts(const std::vector<ShaderResourceLayout>& shaderResourceLayouts);
-		void AddBuffer(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceBufferInfo& bufferInfo, uint32_t dstArrayElement = 0);
-		void AddImage(uint32_t shaderResourceSetIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement = 0);
-		void SetImageInfo(uint32_t shaderResourceSetIndex, size_t index, const ShaderResourceImageInfo& imageInfo);
+		void SetLayout(const ShaderResourceLayout& shaderResourceLayout);
+		void AddBuffer( ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceBufferInfo& bufferInfo, uint32_t dstArrayElement = 0);
+		void AddImage( ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement = 0);
+		void SetImageInfo( size_t index, const ShaderResourceImageInfo& imageInfo);
 
 		const std::vector<WriteShaderResource>& GetWriteShaderResources() const {return m_WriteShaderResources;}
 		std::vector<WriteShaderResource>& GetWriteShaderResources() {return m_WriteShaderResources;}
-		ShaderResource GetShaderResourcesBySet(uint32_t shaderResourceSetIndex);
 	};
 }

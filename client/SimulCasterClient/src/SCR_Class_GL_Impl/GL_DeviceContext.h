@@ -14,7 +14,7 @@
 
 namespace scc
 {
-class GL_DeviceContext final : public scr::DeviceContext
+	class GL_DeviceContext final : public scr::DeviceContext
     {
 	public:
     GL_DeviceContext(const scr::RenderPlatform*const r)
@@ -29,7 +29,7 @@ class GL_DeviceContext final : public scr::DeviceContext
         void EndFrame() override;
 
     private:
-        void BindShaderResources(const std::vector<scr::ShaderResource>& shaderResources, scr::Effect* pEffect, const char* effectPassName);
+        void BindShaderResources(const std::vector<const scr::ShaderResource*>& shaderResources, scr::Effect* pEffect, const char* effectPassName);
 
     private:
     	GLenum m_Topology;

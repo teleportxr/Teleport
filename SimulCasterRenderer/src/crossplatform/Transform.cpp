@@ -1,8 +1,8 @@
 #include "Transform.h"
 
 
-namespace scr
-{
+using namespace scr;
+
 
 //Transform
 bool Transform::s_UninitialisedUB = true;
@@ -34,7 +34,7 @@ Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 
 	m_ShaderResourceLayout.AddBinding(1, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
 	m_ShaderResource = ShaderResource({m_ShaderResourceLayout});
-	m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_NodeUBO", {s_UB.get(), 0, sizeof(TransformData)});
+	m_ShaderResource.AddBuffer( ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_NodeUBO", {s_UB.get(), 0, sizeof(TransformData)});
 
 	m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 }
@@ -59,11 +59,14 @@ void Transform::UpdateModelMatrix()
 	m_TransformData.m_ModelMatrix = mat4::Translation(m_Translation) * mat4::Rotation(m_Rotation) * mat4::Scale(m_Scale);
 }
 
-void Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
+bool Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
-	m_Translation = translation;
-	m_Rotation = rotation;
-	m_Scale = scale;
-	UpdateModelMatrix();
-}
+	if(m_Translation!=translation||m_Rotation!=rotation||m_Scale!=scale) {
+		m_Translation = translation;
+		m_Rotation = rotation;
+		m_Scale = scale;
+		UpdateModelMatrix();
+		return true;
+	}
+	return false;
 }

@@ -12,12 +12,12 @@ void GL_DeviceContext::Create(DeviceContextCreateInfo* pDeviceContextCreateInfo)
 void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 {
     //Set up for DescriptorSet binding
-    std::vector<ShaderResource> descriptorSets;
+    std::vector<const ShaderResource*> descriptorSets;
     Effect* effect = nullptr;
 
     //Default Init
     dynamic_cast<GL_FrameBuffer *>(pInputCommand->pFBs)[0].BeginFrame();
-    descriptorSets.push_back(pInputCommand->pCamera->GetShaderResource());
+    descriptorSets.push_back(&(pInputCommand->pCamera->GetShaderResource()));
 
     //Switch for types
     switch (pInputCommand->type)
@@ -43,7 +43,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 
             //Material
             const char* effectPassName = "";
-            descriptorSets.push_back(ic_mmt->pMaterial->GetShaderResource());
+            descriptorSets.push_back(&(ic_mmt->pMaterial->GetShaderResource()));
             effect = ic_mmt->pMaterial->GetMaterialCreateInfo().effect;
             dynamic_cast<const GL_Effect*>(effect)->Bind(effectPassName);
             auto *pass=effect->GetEffectPassCreateInfo(effectPassName);
@@ -53,7 +53,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             }
 
             //Transform
-            descriptorSets.push_back(ic_mmt->pTransform.GetDescriptorSet());
+            descriptorSets.push_back(&(ic_mmt->pTransform.GetDescriptorSet()));
 
             break;
         }
@@ -69,7 +69,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
 {
     const InputCommand_Compute& ic_c = *(dynamic_cast<InputCommand_Compute*>(pInputCommand));
-    BindShaderResources(ic_c.m_ShaderResources, ic_c.m_pComputeEffect.get(), pInputCommand->effectPassName);
+    BindShaderResources({ic_c.m_ShaderResources}, ic_c.m_pComputeEffect.get(), pInputCommand->effectPassName);
     const uvec3& size = ic_c.m_WorkGroupSize;
     OVR::GL_CheckErrors("DispatchCompute: 1");
     glDispatchCompute(size.x, size.y, size.z);
@@ -88,7 +88,7 @@ void GL_DeviceContext::EndFrame()
 
 }
 
-void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& shaderResources, Effect* pEffect, const char* effectPassName)
+void GL_DeviceContext::BindShaderResources(const std::vector<const ShaderResource*>& shaderResources, Effect* pEffect, const char* effectPassName)
 {
     //TODO: Move to OpenGL ES 3.2 for explicit in-shader UniformBlockBinding with the 'binding = X' layout qualifier!
 
@@ -101,21 +101,21 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
 	OVR::GL_CheckErrors("BindShaderResources: 0");
     for(auto& sr : shaderResources)
     {
-        for(auto& wsr : sr.GetWriteShaderResources())
-        {
-            ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
-            if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
-            {
-                GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
+        for(auto& wsr : sr->GetWriteShaderResources())
+	    {
+	        ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
+	        if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
+	        {
+	            GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
 				OVR::GL_CheckErrors("BindShaderResources: 1");
-
-                glUniform1i(location, wsr.dstBinding);
-                OVR::GL_CheckErrors("BindShaderResources: 2");
-            }
-            if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
-            {
-//				GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
-                GLuint blockIndex = glGetUniformBlockIndex(program, wsr.shaderResourceName);
+	
+	            glUniform1i(location, wsr.dstBinding);
+	            OVR::GL_CheckErrors("BindShaderResources: 2");
+	        }
+	        if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
+	        {
+	//			GLint location = glGetUniformLocation(program, wsr.shaderResourceName);
+	            GLuint blockIndex = glGetUniformBlockIndex(program, wsr.shaderResourceName);
 		/*		{
 					GLsizei length;
 					GLint   size;
@@ -134,50 +134,50 @@ void GL_DeviceContext::BindShaderResources(const std::vector<ShaderResource>& sh
 					OVR_WARN("%d %d %s", l, type, name);
 					}
 				}*/
-                glUniformBlockBinding(program, blockIndex, wsr.dstBinding);
-                OVR::GL_CheckErrors("BindShaderResources: 3");
-            }
-            else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
-            {
-                GL_ShaderStorageBuffer *gl_shaderStorageBuffer = static_cast<GL_ShaderStorageBuffer *>(wsr.bufferInfo.buffer);
-                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, wsr.dstBinding, gl_shaderStorageBuffer->GetGlBuffer().GetBuffer() );
-                OVR::GL_CheckErrors("BindShaderResources: 3");
-                //NULL
-            }
-            else
-            {
-                continue;
-            }
-        }
+	            glUniformBlockBinding(program, blockIndex, wsr.dstBinding);
+	            OVR::GL_CheckErrors("BindShaderResources: 3");
+	        }
+	        else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
+	        {
+	            GL_ShaderStorageBuffer *gl_shaderStorageBuffer = static_cast<GL_ShaderStorageBuffer *>(wsr.bufferInfo.buffer);
+	            glBindBufferBase( GL_SHADER_STORAGE_BUFFER, wsr.dstBinding, gl_shaderStorageBuffer->GetGlBuffer().GetBuffer() );
+	            OVR::GL_CheckErrors("BindShaderResources: 3");
+	            //NULL
+	        }
+	        else
+	        {
+	            continue;
+	        }
+	    }
     }
 
     //Bind Resources
     for(auto& sr : shaderResources)
     {
-        for(auto& wsr : sr.GetWriteShaderResources())
-        {
-            ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
-            if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE)
-            {
-                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->BindForWrite(wsr.dstBinding,wsr.imageInfo.mip,wsr.imageInfo.layer);
-            }
-            else if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
-            {
-                dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->Bind(wsr.imageInfo.mip,wsr.imageInfo.layer);
-            }
-            else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
-            {
-                ((const GL_UniformBuffer*)(wsr.bufferInfo.buffer))->Submit();
+        for(auto& wsr : sr->GetWriteShaderResources())
+	    {
+	        ShaderResourceLayout::ShaderResourceType type = wsr.shaderResourceType;
+	        if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE)
+	        {
+	            dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->BindForWrite(wsr.dstBinding,wsr.imageInfo.mip,wsr.imageInfo.layer);
+	        }
+	        else if(type == ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
+	        {
+	            dynamic_cast<const GL_Texture*>(wsr.imageInfo.texture.get())->Bind(wsr.imageInfo.mip,wsr.imageInfo.layer);
+	        }
+	        else if(type == ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
+	        {
+	            ((const GL_UniformBuffer*)(wsr.bufferInfo.buffer))->Submit();
 				OVR::GL_CheckErrors("BindShaderResources: 4");
-            }
-            else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
-            {
-                ((GL_ShaderStorageBuffer*)(wsr.bufferInfo.buffer))->Access();
+	        }
+	        else if(type == ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
+	        {
+	            ((GL_ShaderStorageBuffer*)(wsr.bufferInfo.buffer))->Access();
 				OVR::GL_CheckErrors("BindShaderResources: 5");
-            }
-            else
-            {
-                continue;
+	        }
+	        else
+	        {
+	            continue;
             }
         }
     }

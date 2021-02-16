@@ -4,34 +4,28 @@
 
 using namespace scr;
 
-ShaderResource::ShaderResource(const std::vector<ShaderResourceLayout>& shaderResourceLayouts)
+ShaderResource::ShaderResource(const ShaderResourceLayout& shaderResourceLayout)
 {
-	SetLayouts(shaderResourceLayouts);
+	SetLayout(shaderResourceLayout);
 }
 
-void ShaderResource::SetLayouts(const std::vector<ShaderResourceLayout>& shaderResourceLayouts)
+void ShaderResource::SetLayout(const ShaderResourceLayout& shaderResourceLayout)
 {
-	uint32_t shaderResourceKey = 0;
-	for (auto& shaderResourceLayout : shaderResourceLayouts)
-	{
-		m_ShaderResourceLayouts[shaderResourceKey] = shaderResourceLayout;
-		shaderResourceKey++;
-	}
+	m_ShaderResourceLayout = shaderResourceLayout;
 }
 
 ShaderResource::~ShaderResource()
 {
-	m_ShaderResourceLayouts.clear();
 }
 
-void ShaderResource::AddBuffer(uint32_t shaderResourceLayoutIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceBufferInfo& bufferInfo, uint32_t dstArrayElement)
+void ShaderResource::AddBuffer( ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceBufferInfo& bufferInfo, uint32_t dstArrayElement)
 {
 	WriteShaderResource wsr;
 	wsr.shaderResourceName = shaderResourceName;
-	wsr.dstSet = shaderResourceLayoutIndex;
+	//wsr.dstSet = shaderResourceLayoutIndex;
 	wsr.dstBinding = bindingIndex;
 	wsr.dstArrayElement = 0;
-	wsr.shaderResourceCount = m_ShaderResourceLayouts[shaderResourceLayoutIndex].FindShaderResourceLayout(bindingIndex).count;
+	wsr.shaderResourceCount = m_ShaderResourceLayout.FindShaderResourceLayout(bindingIndex).count;
 	wsr.shaderResourceType = shaderResourceType;
 	wsr.imageInfo = { nullptr, nullptr };
 	wsr.bufferInfo = bufferInfo;
@@ -39,14 +33,14 @@ void ShaderResource::AddBuffer(uint32_t shaderResourceLayoutIndex, ShaderResourc
 	m_WriteShaderResources.push_back(wsr);
 }
 
-void ShaderResource::AddImage(uint32_t shaderResourceLayoutIndex, ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement)
+void ShaderResource::AddImage( ShaderResourceLayout::ShaderResourceType shaderResourceType, uint32_t bindingIndex, const char* shaderResourceName, const ShaderResourceImageInfo& imageInfo, uint32_t dstArrayElement)
 {
 	WriteShaderResource wsr;
 	wsr.shaderResourceName = shaderResourceName;
-	wsr.dstSet = shaderResourceLayoutIndex;
+	//wsr.dstSet = shaderResourceLayoutIndex;
 	wsr.dstBinding = bindingIndex;
 	wsr.dstArrayElement = 0;
-	wsr.shaderResourceCount = m_ShaderResourceLayouts[shaderResourceLayoutIndex].FindShaderResourceLayout(bindingIndex).count;
+	wsr.shaderResourceCount = m_ShaderResourceLayout.FindShaderResourceLayout(bindingIndex).count;
 	wsr.shaderResourceType = shaderResourceType;
 	wsr.imageInfo = imageInfo;
 	wsr.bufferInfo = { nullptr, 0, 0 };
@@ -54,40 +48,16 @@ void ShaderResource::AddImage(uint32_t shaderResourceLayoutIndex, ShaderResource
 	m_WriteShaderResources.push_back(wsr);
 }
 
-void ShaderResource::SetImageInfo(uint32_t shaderResourceLayoutIndex, size_t index, const ShaderResourceImageInfo& imageInfo)
+void ShaderResource::SetImageInfo( size_t index, const ShaderResourceImageInfo& imageInfo)
 {
-	std::vector<WriteShaderResource>& this_wsrs= this->GetWriteShaderResources();
 	size_t idx=0;
-	for (auto& this_wsr : this_wsrs)
+	for (auto& this_wsr : m_WriteShaderResources)
 	{
-		if (this_wsr.dstSet == shaderResourceLayoutIndex)
+		if(idx==index)
 		{
-			if(idx==index)
-			{
-				this_wsr.imageInfo=imageInfo;
-				return;
-			}
-			idx++;
-
+			this_wsr.imageInfo=imageInfo;
+			return;
 		}
+		idx++;
 	}
-}
-
-ShaderResource ShaderResource::GetShaderResourcesBySet(uint32_t shaderResourceSetIndex)
-{
-	ShaderResourceLayout& shaderResourceLayout = m_ShaderResourceLayouts.find(shaderResourceSetIndex)->second;
-	const std::vector<WriteShaderResource>& this_wsrs= this->GetWriteShaderResources();
-
-	ShaderResource result({shaderResourceLayout});
-	result.GetWriteShaderResources().clear();
-	for (auto& this_wsr : this_wsrs)
-	{
-		if (this_wsr.dstSet == shaderResourceSetIndex)
-		{
-			result.GetWriteShaderResources().push_back(this_wsr);
-		}
-		else
-			continue;
-	}
-	return result;
 }

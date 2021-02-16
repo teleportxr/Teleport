@@ -74,10 +74,10 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 		m_ShaderResourceLayout.AddBinding(26, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 		m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-		m_ShaderResource.AddBuffer(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { s_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
+		m_ShaderResource.AddBuffer( ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { s_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
 	
 		std::string shaderResourceName = std::string("u_ShadowMap") + std::to_string(m_LightID);
-		m_ShaderResource.AddImage(0, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});
+		m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});
 	}
 }
 

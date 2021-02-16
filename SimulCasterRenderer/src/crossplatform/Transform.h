@@ -61,7 +61,7 @@ public:
 	}
 
 	void UpdateModelMatrix();
-	void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
+	bool UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 
 	inline const mat4& GetTransformMatrix() const { return  m_TransformData.m_ModelMatrix; }
 	inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }

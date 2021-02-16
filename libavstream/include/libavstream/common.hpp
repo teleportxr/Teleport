@@ -132,6 +132,14 @@ namespace avs
 		vec3(float x, float y, float z)
 			:x(x), y(y), z(z)
 		{}
+		bool operator==(const vec3& v)
+		{
+			return x==v.x&&y==v.y&&z==v.z;
+		}
+		bool operator!=(const vec3& v)
+		{
+			return x!=v.x||y!=v.y||z!=v.z;
+		}
 
 		vec3 operator-() const
 		{
