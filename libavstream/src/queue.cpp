@@ -192,7 +192,7 @@ namespace avs
 			m_front = 0;
 		}
 		const int64_t index = (m_front + m_numElements) % m_maxBuffers;
-		memcpy(&m_mem[index * m_maxBuffers], buffer, bufferSize);
+		memcpy(&m_mem[index * m_maxBufferSize], buffer, bufferSize);
 		m_dataSizes[index] = bufferSize;
 		m_numElements++;
 	}
