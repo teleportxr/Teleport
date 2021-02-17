@@ -1,5 +1,5 @@
 //#version 310 es
-precision highp float;
+precision lowp float;
 
 //To Output Framebuffer - Use gl_FragColor
 //layout(location = 0) out vec4 colour;
@@ -170,7 +170,7 @@ float GetSpecular(vec4 combinedLookup)
     return combinedLookup.a;
 }
 
-//BRDF Reflection Model to add from UE4:
+//BRDF Reflection Model
 //Diffuse: Burley, OrenNayar, Gotandas
 //Specular: Dist.: Blinn, Bechmann, GGXaniso
 //Specular: Vis.: Implicit, Neumann, Kelemen, Schlick, Smith, SmithJointAprrox.
@@ -292,53 +292,6 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
     return colour;
 }
 
-vec3 PBR(vec3 normal, vec3 viewDir, vec3 diffuseColour, float roughness,float metallic ,float ao) //Return a RGB value;
-{
-    float n_v				= saturate(dot(normal, viewDir));
-    float cosLo				= saturate( dot(normal,- viewDir));
-    // Constant normal incidence Fresnel factor for all dielectrics.
-    vec3 Fdielectric		=vec3(0.04,0.04,0.04);
-    // Fresnel reflectance at normal incidence (for metals use albedo color).
-    vec3 F0					= lerp(Fdielectric, diffuseColour, metallic);
-    vec3 F					= fresnel_schlick(F0, cosLo);
-    vec3 kS					= F;
-    vec3 kD					= lerp(vec3(1.0, 1.0, 1.0) - kS, vec3(0.0,0.0,0.0), metallic);
-
-    float roughnessE =roughness*roughness;
-    float roughnessL		= max(.01, roughnessE);
-
-    float roughness_mip     =MipFromRoughness(roughness,5.0);
-
-    vec3 normal_lookup      =vec3(-normal.z,normal.x,normal.y);
-    vec3 refl = reflect(viewDir, normal);
-    vec3 refl_lookup      =vec3(-refl.z,refl.x,refl.y);
-
-    vec3 env_specular       =textureLod(u_SpecularCubemap, refl_lookup,roughness_mip).rgb;
-    vec3 env_rough_specular =textureLod(u_RoughSpecularCubemap, refl_lookup,max(0.0,roughness_mip-3.0)).rgb;
-    vec3 env_diffuse        =textureLod(u_RoughSpecularCubemap,normal_lookup,0.0).rgb;
-    env_specular            =mix(env_specular,env_rough_specular,saturate(roughness_mip-2.0));
-    //Environment Light Calculation
-    //vec3 environment = mix(env_specular, env_diffuse, saturate((roughnessE - 0.25) / 0.75));
-
-    //Diffuse
-    vec3 diffuse			= kD*diffuseColour * env_diffuse*ao;
-
-    //Specular
-
-    vec3 envSpecularColour = EnvBRDFApprox(diffuseColour, roughnessE, n_v);
-
-    vec3 specular	         =envSpecularColour * env_specular;
-    specular				*=kS*saturate(pow(n_v + ao, roughnessE) - 1.0 + ao);
-
-   // Specular += specular_light * saturate(dot(-viewDir, normal));
-
-    //Ambient Occlusion
-   // Specular *= saturate(pow(dot(normal, -viewDir) + ao, roughnessE) - 1.0 + ao);
-
-	// factor diffuse by kD ???
-    return diffuse+specular; //kS is already included in the Specular calculations.
-}
-
 vec4 Gamma(vec4 a)
 {
     return pow(a,vec4(.45,.45,.45,1.0));
@@ -370,61 +323,99 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	//return -lightTag.direction;
 }
 
-
-void OpaquePBR()
+void PBR(bool diffuseTex,bool normalTex,bool combinedTex,bool emissiveTex)
 {
-	vec3 Lo;				//Exitance Radiance from the surface in the direction of the camera.
-    vec3 Le = vec3(0.0);	//Emissive Radiance from the surface in the direction of the camera, if any.
+    SurfaceProperties surfaceProperties;
 
-
-    vec3 normalLookup = texture(u_NormalTexture, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
-    vec3 tangentSpaceNormalMap = 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
-    vec3 normal = normalize(v_TBN * tangentSpaceNormalMap);
+    surfaceProperties.position		=v_Position;
 
     vec3 view = normalize(v_Position-v_CameraPosition);
-	vec3 diffuseColour	=texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;
-	diffuseColour		= diffuseColour.rgb * u_DiffuseOutputScalar.rgb;
+    vec3 normal;
+#if 0
+    if (normalTex)
+    {
+        vec3 normalLookup = texture(u_NormalTexture, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
+        vec3 tangentSpaceNormalMap = 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
+        surfaceProperties.normal		=normalize(v_TBN * tangentSpaceNormalMap);
+    }
+    else
+#endif
+    {
+        normal=v_Normal;
+        surfaceProperties.normal		=v_Normal;
+    }
+ #if 0
+    if(diffuseTex)
+    {
+        vec3 diffuseColour   =texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;
+        diffuseColour        =diffuseColour.rgb * u_DiffuseOutputScalar.rgb;
+        surfaceProperties.albedo		=diffuseColour;
+    }
+    else
+#endif
+    {
+        surfaceProperties.albedo		=u_DiffuseOutputScalar.rgb;
+    }
 
-	vec4 combinedLookup = texture(u_CombinedTexture, v_UV_diffuse * u_CombinedTexCoordsScalar_R);
-	// from combinedLookup we will either use roughness*roughnessTexture, or (1-roughness)*smoothnessTexture. This depends on combinedOutputScalarRoughMetalOcclusion.a.
-	combinedLookup		=combinedLookup.araa;
-	//combinedLookup.a	=1.0-combinedLookup.a;
-	// occlusion to 1.0 for now.
-	combinedLookup.b	=1.0;
-	// So combinedLookup is now rough-metal-occl-smooth
-	vec4 roughMetalOcclusion;
-	roughMetalOcclusion.rgb			=u_CombinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.rgb;
-	// smoothness:
-	roughMetalOcclusion.a			=(1.0-u_CombinedOutputScalarRoughMetalOcclusion.r)*combinedLookup.a;
-	SurfaceProperties surfaceProperties;
-	surfaceProperties.position		=v_Position;
-	// Either roughness or 1.0-smoothness depending on alpha of scalar.
-	surfaceProperties.roughness		=lerp(roughMetalOcclusion.r,1.0-roughMetalOcclusion.a,u_CombinedOutputScalarRoughMetalOcclusion.a);
-	surfaceProperties.metallic		=GetMetallic(roughMetalOcclusion);
-	surfaceProperties.ao			=GetAO(roughMetalOcclusion);
-
-	surfaceProperties.normal		=normal;
-	surfaceProperties.albedo		=diffuseColour;
-	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
+ #if 0
+   // vec4 u				=vec4(diffuseColour.rgb, 1.0);
+    //u.r+=float(abs(tagDataCube.lightCount-1));
+    //gl_FragColor = Gamma(u);
+    if(combinedTex)
+    {
+        vec4 combinedLookup = texture(u_CombinedTexture, v_UV_diffuse * u_CombinedTexCoordsScalar_R);
+        // from combinedLookup we will either use roughness*roughnessTexture, or (1-roughness)*smoothnessTexture. This depends on combinedOutputScalarRoughMetalOcclusion.a.
+        combinedLookup        =combinedLookup.araa;
+        //combinedLookup.a	=1.0-combinedLookup.a;
+        // occlusion to 1.0 for now.
+        combinedLookup.b    =1.0;
+        // So combinedLookup is now rough-metal-occl-smooth
+        vec4 roughMetalOcclusion;
+        roughMetalOcclusion.rgb            =u_CombinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.rgb;
+        // smoothness:
+        roughMetalOcclusion.a            =(1.0-u_CombinedOutputScalarRoughMetalOcclusion.r)*combinedLookup.a;
+        // Either roughness or 1.0-smoothness depending on alpha of scalar.
+        surfaceProperties.roughness        =lerp(roughMetalOcclusion.r, 1.0-roughMetalOcclusion.a, u_CombinedOutputScalarRoughMetalOcclusion.a);
+        surfaceProperties.metallic        =GetMetallic(roughMetalOcclusion);
+        surfaceProperties.ao            =GetAO(roughMetalOcclusion);
+    }
+    else
+ #endif
+    {
+        surfaceProperties.roughness     =u_CombinedOutputScalarRoughMetalOcclusion.r;
+        surfaceProperties.metallic      =u_CombinedOutputScalarRoughMetalOcclusion.g;
+        surfaceProperties.ao            =u_CombinedOutputScalarRoughMetalOcclusion.b;
+    }
+    surfaceProperties.roughness2    =surfaceProperties.roughness*surfaceProperties.roughness;
 
 	SurfaceState surfaceState	=PreprocessSurface(view,surfaceProperties);
 	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
-
-	for(int i=0;i<1;i++)
+#if 0
+	for(int i=0;i<4;i++)
 	{
 		if(i>=tagDataCube.lightCount)
 			break;
-		c					=PBRAddLight(surfaceState,view,surfaceProperties,tagDataCube.lightTags[i]);
+		c					+=PBRAddLight(surfaceState,view,surfaceProperties,tagDataCube.lightTags[i]);
 	}
+#endif
+    vec4 u				=vec4(c.rgb, 1.0);
+#if 0
+    if(emissiveTex)
+    {
+        vec3 emissive        = texture(u_EmissiveTexture, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;
+        emissive            *= u_EmissiveOutputScalar.rgb;
 
-	vec3 emissive		= texture(u_EmissiveTexture, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;
-	emissive			*= u_EmissiveOutputScalar.rgb;
-
-	vec4 u				=vec4(c.rgb + emissive.rgb, 1.0);
+        u.rgb                +=emissive.rgb;
+    }
+#endif
     //u.r+=float(abs(tagDataCube.lightCount-1));
     gl_FragColor = Gamma(u);
 }
 
+void OpaquePBR()
+{
+    PBR(false,false,false,false);
+}
 void OpaqueAlbedo()
 {
     vec3 diffuseColour = texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;
