@@ -616,7 +616,7 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 		newClient.casterContext.audioTarget = std::make_unique<avs::AudioTarget>();
 		newClient.casterContext.audioStreamTarget = std::make_unique<sca::CustomAudioStreamTarget>(std::bind(&ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2));
 
-		newClient.casterContext.sourceAudioQueue->configure( 120, "SourceAudioQueue");
+		newClient.casterContext.sourceAudioQueue->configure( 8192, 120, "SourceAudioQueue");
 		newClient.casterContext.audioDecoder->configure(100);
 		newClient.casterContext.audioTarget->configure(newClient.casterContext.audioStreamTarget.get());
 	}

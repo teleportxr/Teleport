@@ -89,6 +89,9 @@ Result Encoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 		d().m_params = params;
 		d().m_configured = true;
 	}
+
+	d().m_videoData.resize(200000);
+
 	return result;
 }
 
@@ -125,6 +128,8 @@ Result Encoder::deconfigure()
 	}
 	d().m_configured = false;
 	d().m_outputPending = false;
+
+	d().m_videoData.clear();
 
 	return result;
 }
@@ -265,49 +270,53 @@ Result Encoder::Private::writeOutput(IOInterface* outputNode, const uint8_t* tag
 	// 1 byte for payload type identification
 	size_t tagDataSize = tagDataBufferSize + 1;
 
-	std::vector<uint8_t> videoData(tagDataSize + sizeFieldInBytes + mappedBufferSize);
+	size_t videoDataSize = tagDataSize + sizeFieldInBytes + mappedBufferSize;
+	if (videoDataSize > m_videoData.size())
+	{
+		m_videoData.resize(videoDataSize);
+	}
 
 	size_t index = 0;
-	memcpy(&videoData[index], &tagDataSize, sizeFieldInBytes);
+	memcpy(&m_videoData[index], &tagDataSize, sizeFieldInBytes);
 	index += sizeFieldInBytes;
 		
 	if (m_params.codec == VideoCodec::H264)
 	{
 		// Aidan: I picked 30 (11110). See the classify function for the VideoPayloadType in nalu_parser_h264.hpp
-		videoData[index++] = 30;
+		m_videoData[index++] = 30;
 	}
 	else if (m_params.codec == VideoCodec::HEVC)
 	{
 		// Aidan: I picked 62 (1 less than 111111). See the classify function for the VideoPayloadType in nalu_parser_h265.hpp
 		// 62 << 1 is 124
-		videoData[index++] = 62 << 1;
+		m_videoData[index++] = 62 << 1;
 	}
 	else
 	{
-		videoData[index++] = 0;
+		m_videoData[index++] = 0;
 	}
 
 	// Copy tag data 
 	if (tagDataBufferSize > 0)
 	{
-		memcpy(&videoData[index], tagDataBuffer, tagDataBufferSize);
+		memcpy(&m_videoData[index], tagDataBuffer, tagDataBufferSize);
 	}
 
 	// Copy video encoder output data
 	if (mappedBufferSize > 0)
 	{
-		memcpy(&videoData[index + tagDataBufferSize], mappedBuffer, mappedBufferSize);
+		memcpy(&m_videoData[index + tagDataBufferSize], mappedBuffer, mappedBufferSize);
 	}
 
 	size_t numBytesWrittenToOutput;
-	result = outputNode->write(q_ptr(), videoData.data(), videoData.size(), numBytesWrittenToOutput);
+	result = outputNode->write(q_ptr(), m_videoData.data(), videoDataSize, numBytesWrittenToOutput);
 
 	if (!result)
 	{
 		return result;
 	}
 		
-	if (numBytesWrittenToOutput < videoData.size())
+	if (numBytesWrittenToOutput < videoDataSize)
 	{
 		AVSLOG(Warning) << "Encoder: Incomplete video frame written to output node";
 		return Result::Encoder_IncompleteFrame;

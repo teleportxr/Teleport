@@ -20,6 +20,7 @@ namespace avs
 		std::unique_ptr<EncoderBackendInterface> m_backend;
 		EncoderBackend m_selectedBackendType;
 		EncoderParams m_params = {};
+		std::vector<uint8_t> m_videoData;
 		bool m_configured = false;
 		bool m_surfaceRegistered = false;
 		bool m_outputPending = false;

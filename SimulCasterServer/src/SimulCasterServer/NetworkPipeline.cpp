@@ -214,7 +214,7 @@ namespace SCServer
 
 	avs::Result NetworkPipeline::getCounterValues(avs::NetworkSinkCounters& counters) const
 	{
-		if (networkSink.get())
+		if (networkSink)
 		{
 			counters = networkSink->getCounterValues();
 		}
