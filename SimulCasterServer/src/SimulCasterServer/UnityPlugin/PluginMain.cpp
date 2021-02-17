@@ -604,7 +604,7 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
 	newClient.casterContext.AudioQueue = std::make_unique<avs::Queue>();
 
-	newClient.casterContext.ColorQueue->configure(40000, 16,"ColorQueue");
+	newClient.casterContext.ColorQueue->configure(200000, 16,"ColorQueue");
 	newClient.casterContext.GeometryQueue->configure(200000, 16, "GeometryQueue");
 	newClient.casterContext.AudioQueue->configure(8192, 120, "AudioQueue");
 
