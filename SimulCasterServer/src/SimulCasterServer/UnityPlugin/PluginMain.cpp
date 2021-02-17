@@ -582,7 +582,7 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 			TELEPORT_CERR << "Failed to restartSession for Client_" << clientID << "!\n";
 			return;
 		}*/
-		unlinkedClientIDs.insert(clientID);
+		//unlinkedClientIDs.insert(clientID);
 		return;
 	}
 
