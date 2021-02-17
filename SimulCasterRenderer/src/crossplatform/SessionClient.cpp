@@ -302,6 +302,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 
 			mCommandInterface->OnReconfigureVideo(reconfigureCommand);
 		}
+		break;
 		case avs::CommandPayloadType::SetPosition:
 		{
 			size_t commandSize = sizeof(avs::SetPositionCommand);
@@ -358,8 +359,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 				}
 			}
 		}
-
-			break;
+		break;
 		case avs::CommandPayloadType::UpdateNodeMovement:
 			ReceiveNodeMovementUpdate(packet);
 			break;
