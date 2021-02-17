@@ -1030,6 +1030,8 @@ void ClientRenderer::Update()
 
 void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
+	ClearGeometryResources();
+
 	videoConfig = setupCommand.video_config;
 
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d\n", setupCommand.port, videoConfig.video_width, videoConfig.video_height

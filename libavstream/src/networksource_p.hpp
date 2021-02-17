@@ -119,6 +119,8 @@ namespace avs
 		bool bOneTimeWarnings=false;
 
 		std::unique_ptr<ElasticFrameProtocolReceiver> m_EFPReceiver;
+
+		std::vector<char> m_tempBuffer;
 	};
 
 } // avs

@@ -91,6 +91,8 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		m_data->m_streamNodeMap[stream.id] = i;
 	}
 
+	m_data->m_tempBuffer.resize(200000);
+
 	m_data->m_params = params;
 	m_data->m_EFPReceiver.reset(new ElasticFrameProtocolReceiver(100, 0, nullptr, ElasticFrameProtocolReceiver::EFPReceiverMode::RUN_TO_COMPLETION));
 
@@ -112,16 +114,20 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 			m_data->m_counters.decoderPacketsReceived++;
 		}
 
-		std::vector<char> buffer(sizeof(NetworkFrameInfo) + rPacket->mFrameSize);
-
+		size_t bufferSize = sizeof(NetworkFrameInfo) + rPacket->mFrameSize;
+		if (bufferSize > m_data->m_tempBuffer.size())
+		{
+			m_data->m_tempBuffer.resize(bufferSize);
+		}
+		
 		NetworkFrameInfo frameInfo;
 		frameInfo.pts = rPacket->mPts;
 		frameInfo.dts = rPacket->mDts;
 		frameInfo.dataSize = rPacket->mFrameSize;
 		frameInfo.broken = rPacket->mBroken;
 
-		memcpy(buffer.data(), &frameInfo, sizeof(NetworkFrameInfo));
-		memcpy(&buffer[sizeof(NetworkFrameInfo)], rPacket->pFrameData, rPacket->mFrameSize);
+		memcpy(m_data->m_tempBuffer.data(), &frameInfo, sizeof(NetworkFrameInfo));
+		memcpy(&m_data->m_tempBuffer[sizeof(NetworkFrameInfo)], rPacket->pFrameData, rPacket->mFrameSize);
 
 		int nodeIndex = m_data->m_streamNodeMap[rPacket->mStreamID];
 
@@ -133,7 +139,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		}
 
 		size_t numBytesWrittenToOutput;
-		auto result = outputNode->write(m_data->q_ptr(), buffer.data(), buffer.size(), numBytesWrittenToOutput);
+		auto result = outputNode->write(m_data->q_ptr(), m_data->m_tempBuffer.data(), bufferSize, numBytesWrittenToOutput);
 
 		if (!result)
 		{
@@ -141,7 +147,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 			return;
 		}
 
-		if (numBytesWrittenToOutput < buffer.size())
+		if (numBytesWrittenToOutput < bufferSize)
 		{
 			AVSLOG(Warning) << "NetworkSource EFP Callback: Incomplete frame written to output node.";
 		}
@@ -174,6 +180,8 @@ Result NetworkSource::deconfigure()
 	m_data->m_remote = {};
 	m_data->m_streamNodeMap.clear();
 	m_data->m_streams.clear();
+
+	m_data->m_tempBuffer.clear();
 
 	// Socket must be killed BEFORE service, or asio throws a fit.
 	// At a guess, this is because socket was created from service, and expects it to still exist
