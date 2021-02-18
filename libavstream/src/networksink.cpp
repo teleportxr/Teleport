@@ -123,6 +123,8 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 
 	m_data->m_params = params;
 
+	m_data->m_minPacketsSentPerSec = UINT32_MAX;
+
 	return Result::OK;
 }
 
@@ -151,6 +153,7 @@ Result NetworkSink::deconfigure()
 	m_data->m_remote = {};
 
 	m_data->m_counters = {};
+	m_data->m_minPacketsSentPerSec = UINT32_MAX;
 
 	srt_close(m_data->m_remote_socket);
 	srt_close(m_data->m_socket);
@@ -376,13 +379,12 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 	}
 
-	// Convert timestamp from nanoseconds to milliseconds
-	m_data->updateCounters(deltaTime);
+	m_data->updateCounters(timestamp, deltaTime);
 
 	return Result::OK;
 }
 
-void NetworkSink::Private::updateCounters(uint32_t deltaTime)
+void NetworkSink::Private::updateCounters(uint64_t timestamp, uint32_t deltaTime)
 {
 	if (!m_params.calculateStats || m_params.bandwidthInterval == 0)
 	{
@@ -416,7 +418,7 @@ void NetworkSink::Private::updateCounters(uint32_t deltaTime)
 
 	if (timeElapsed)
 	{
-		avgPacketsSentPerSec /= timeElapsed;
+		avgPacketsSentPerSec /= (timeElapsed * 0.001f);
 	}
 	
 	{
@@ -427,22 +429,27 @@ void NetworkSink::Private::updateCounters(uint32_t deltaTime)
 			m_counters.bytesSent = m_counters.networkPacketsSent * PacketFormat::MaxPacketSize;
 		}
 
-		m_counters.avgPacketsSentPerSec = avgPacketsSentPerSec;
-
-		if (avgPacketsSentPerSec > 0 && (m_counters.minPacketsSentPerSec == 0 || avgPacketsSentPerSec < m_counters.minPacketsSentPerSec))
+		if (timestamp > m_params.bandwidthInterval)
 		{
-			m_counters.minPacketsSentPerSec = avgPacketsSentPerSec;
+			m_counters.avgPacketsSentPerSec = avgPacketsSentPerSec;
+
+			if (avgPacketsSentPerSec > 0 && avgPacketsSentPerSec < m_minPacketsSentPerSec)
+			{
+				m_minPacketsSentPerSec = avgPacketsSentPerSec;
+				m_counters.minPacketsSentPerSec = avgPacketsSentPerSec;
+			}
+
+			if (avgPacketsSentPerSec > m_counters.maxPacketsSentPerSec)
+			{
+				m_counters.maxPacketsSentPerSec = avgPacketsSentPerSec;
+			}
+
+			// Bandwidth in mb/s
+			m_counters.avgRequiredBandwidth = m_counters.avgPacketsSentPerSec * PacketFormat::MaxPacketSize * 0.000008f;
+			m_counters.minRequiredBandwidth = m_counters.minPacketsSentPerSec * PacketFormat::MaxPacketSize * 0.000008f;
+			m_counters.maxRequiredBandwidth = m_counters.maxPacketsSentPerSec * PacketFormat::MaxPacketSize * 0.000008f;
 		}
 
-		if (avgPacketsSentPerSec > m_counters.maxPacketsSentPerSec)
-		{
-			m_counters.maxPacketsSentPerSec = avgPacketsSentPerSec;
-		}
-
-		// Bandwidth in mb/s
-		m_counters.avgRequiredBandwidth = (m_counters.avgPacketsSentPerSec * 8) / 1000000;
-		m_counters.minRequiredBandwidth = (m_counters.minPacketsSentPerSec * 8) / 1000000;
-		m_counters.maxRequiredBandwidth = (m_counters.maxPacketsSentPerSec * 8) / 1000000;
 	}
 
 	if (m_packetsSent > 0)

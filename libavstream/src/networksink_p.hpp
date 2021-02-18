@@ -40,6 +40,7 @@ namespace avs
 		std::unique_ptr<udp::endpoint> m_endpoint;
 #endif
 		NetworkSinkCounters m_counters;
+		uint32_t m_minPacketsSentPerSec;
 
 #if !defined(LIBAV_USE_EFP)
 		ByteBuffer m_buffer;
@@ -88,7 +89,7 @@ namespace avs
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		void sendOrCacheData(const std::vector<uint8_t>& subPacket);
 		void sendData(const std::vector<uint8_t>& subPacket);
-		void updateCounters(uint32_t deltaTime);
+		void updateCounters(uint64_t timestamp, uint32_t deltaTime);
 	};
 
 } // avs
