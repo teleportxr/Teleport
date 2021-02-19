@@ -975,6 +975,7 @@ void OvrSceneView::Frame( const ovrFrameInput & vrFrame,
 		EyeYaw += StickYaw  + SceneYaw;
 	}
 	EyePitch += StickPitch;
+
 	//
 	// Player movement
 	//

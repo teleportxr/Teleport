@@ -1,16 +1,14 @@
 LOCAL_PATH := $(call my-dir)
-
 ifeq ($(OVR_DEBUG),1)
   BUILDTYPE := Debug
 else
  BUILDTYPE := Release
 endif
 
-
 #--------------------------------------------------------
 # libvrapi.so
 #
-# VrApi Loader
+# VrApi
 #--------------------------------------------------------
 include $(CLEAR_VARS)
 
@@ -26,4 +24,3 @@ LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/../../../Include
 ifneq (,$(wildcard $(LOCAL_PATH)/$(LOCAL_SRC_FILES)))
   include $(PREBUILT_SHARED_LIBRARY)
 endif
-

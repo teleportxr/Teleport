@@ -1,4 +1,7 @@
-
+include ':client:VrCubeWorld_Framework:Projects:Android:build.gradle'
+include ':client:VrSamples:VrCubeWorld_Framework:Projects:Android'
+include ':client:VrSamples:SampleCommon:Projects:Android'
+include ':client:VrSamples:SampleFramework:Projects:Android'
 rootProject.projectDir = new File(settingsDir, '.')
 rootProject.name = "client"
 include ':avstream', ':simulcasterclient'
