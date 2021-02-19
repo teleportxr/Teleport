@@ -102,8 +102,8 @@ Result Pipeline::Private::process()
 	const uint64_t timestamp = (uint64_t)(0.001 * Platform::getTimeElapsed(m_startPlatformTimestamp, Platform::getTimestamp()));
 	if (!m_started)
 	{
-		//m_startTimestamp = Platform::getTimestamp(); 
 		m_startTimestamp = timestamp;
+		m_lastTimestamp = timestamp;
 		m_started = true;
 	}
 	const uint64_t deltaTime = timestamp - m_lastTimestamp;
