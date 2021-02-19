@@ -123,6 +123,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 
 	m_data->m_params = params;
 
+	m_data->m_statsTimeElapsed = 0;
 	m_data->m_minPacketsSentPerSec = UINT32_MAX;
 
 	return Result::OK;
@@ -153,7 +154,9 @@ Result NetworkSink::deconfigure()
 	m_data->m_remote = {};
 
 	m_data->m_counters = {};
+	m_data->m_statsTimeElapsed = 0;
 	m_data->m_minPacketsSentPerSec = UINT32_MAX;
+	
 
 	srt_close(m_data->m_remote_socket);
 	srt_close(m_data->m_socket);
@@ -391,36 +394,7 @@ void NetworkSink::Private::updateCounters(uint64_t timestamp, uint32_t deltaTime
 		return;
 	}
 
-	uint32_t timeElapsed = 0;
-	uint32_t avgPacketsSentPerSec = 0;
-
-	// Calculate average packets sent and update timestamps of the recorded stats and remove ones that are too old
-	auto iter = m_dataStats.end();
-	while (iter != m_dataStats.begin())
-	{
-		iter--;
-
-		iter->timestamp += deltaTime;
-
-		// If this entry's timestamp is too old, it can be removed with all older entries
-		if (iter->timestamp > m_params.bandwidthInterval)
-		{
-			m_dataStats.erase(m_dataStats.begin(), iter + 1);
-			break;
-		}
-		
-		timeElapsed = std::max(timeElapsed, iter->timestamp);
-		avgPacketsSentPerSec += iter->data;
-	}
-
-	// Account for time elapsed in the application not having reached the interval time 
-	timeElapsed = std::min(timeElapsed, m_params.bandwidthInterval);
-
-	if (timeElapsed)
-	{
-		avgPacketsSentPerSec /= (timeElapsed * 0.001f);
-	}
-	
+	// Update data sent counters
 	{
 		std::lock_guard<std::mutex> lock(m_countersMutex);
 		if (m_packetsSent > 0)
@@ -428,9 +402,54 @@ void NetworkSink::Private::updateCounters(uint64_t timestamp, uint32_t deltaTime
 			m_counters.networkPacketsSent += m_packetsSent;
 			m_counters.bytesSent = m_counters.networkPacketsSent * PacketFormat::MaxPacketSize;
 		}
+	}
 
-		if (timestamp > m_params.bandwidthInterval)
+	// Reset elapsed time and return to deal with large lags in updates
+	if (deltaTime > 200)
+	{
+		m_statsTimeElapsed = 0;
+		return;
+	}
+
+	m_statsTimeElapsed += deltaTime;
+
+	if (m_statsTimeElapsed > m_params.bandwidthInterval)
+	{
+		uint32_t intervalTimeElapsed = 0;
+		uint32_t avgPacketsSentPerSec = 0;
+
+		// Calculate average packets sent and update timestamps of the recorded stats and remove ones that are too old
+		auto iter = m_dataStats.end();
+		while (iter != m_dataStats.begin())
 		{
+			iter--;
+
+			iter->timestamp += deltaTime;
+
+			// If this entry's timestamp is too old, it can be removed with all older entries
+			if (iter->timestamp > m_params.bandwidthInterval)
+			{
+				m_dataStats.erase(m_dataStats.begin(), iter + 1);
+				break;
+			}
+
+			intervalTimeElapsed = std::max(intervalTimeElapsed, iter->timestamp);
+			avgPacketsSentPerSec += iter->data;
+		}
+
+		// Account for time elapsed in the application not having reached the interval time 
+		intervalTimeElapsed = std::min(intervalTimeElapsed, m_params.bandwidthInterval);
+
+		if (!intervalTimeElapsed)
+		{
+			return;
+		}
+
+		avgPacketsSentPerSec /= (intervalTimeElapsed * 0.001f);
+
+		// Update performance related counters
+		{
+			std::lock_guard<std::mutex> lock(m_countersMutex);
 			m_counters.avgPacketsSentPerSec = avgPacketsSentPerSec;
 
 			if (avgPacketsSentPerSec > 0 && avgPacketsSentPerSec < m_minPacketsSentPerSec)

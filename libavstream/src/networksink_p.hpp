@@ -40,6 +40,7 @@ namespace avs
 		std::unique_ptr<udp::endpoint> m_endpoint;
 #endif
 		NetworkSinkCounters m_counters;
+		uint64_t m_statsTimeElapsed;
 		uint32_t m_minPacketsSentPerSec;
 
 #if !defined(LIBAV_USE_EFP)
