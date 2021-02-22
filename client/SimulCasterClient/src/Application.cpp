@@ -121,6 +121,8 @@ void Application::Configure(ovrSettings& settings )
 	settings.EyeBufferParms.depthFormat = DEPTH_16;
 	settings.EyeBufferParms.multisamples = 1;
 	settings.TrackingSpace=VRAPI_TRACKING_SPACE_LOCAL_FLOOR;
+	int res=vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE);
+	useMultiview= (res == VRAPI_TRUE);
 	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 	settings.RenderMode = useMultiview?RENDERMODE_MULTIVIEW:RENDERMODE_STEREO;
 }
@@ -248,7 +250,6 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	controllers.SetSetStickOffsetDelegate(
 			std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1,
 					  std::placeholders::_2));
-	useMultiview= (vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE) == VRAPI_TRUE);
 
 }
 
@@ -836,15 +837,16 @@ std::string Application::LoadTextFile(const char *filename)
 	std::vector<uint8_t> outBuffer;
 	std::string str = "apk:///assets/";
 	str += filename;
-	if(!app)
+	if (!app)
 	{
 
 	}
-	else if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
+	else if (app->GetFileSys().ReadFile(str.c_str(), outBuffer))
 	{
-		if(outBuffer.back() != '\0')
-			outBuffer.push_back('\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
-		return std::string((const char *)outBuffer.data());
+		if (outBuffer.back() != '\0')
+			outBuffer.push_back(
+					'\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
+		return std::string((const char *) outBuffer.data());
 	}
 	return "";
 }

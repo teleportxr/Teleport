@@ -46,6 +46,8 @@ LOCAL_SRC_FILES := \
   ../../../Src/Locale/OVR_Locale.cpp \
   ../../../Src/Locale/tinyxml2.cpp \
   ../../../Src/Misc/Log.c \
+  ../../../Src/Misc/TalkToJava.cpp \
+  ../../../Src/Misc/MessageQueue.cpp \
   ../../../Src/Model/ModelCollision.cpp \
   ../../../Src/Model/ModelFile_glTF.cpp \
   ../../../Src/Model/ModelFile_OvrScene.cpp \

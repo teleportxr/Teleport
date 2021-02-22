@@ -300,7 +300,7 @@ void HandRenderer::Update(const ovrHandPose& handPose) {
     }
 
     /// Update the shader uniform parameters
-    SkinUniformBuffer.Update(SkinMatrices.size() * sizeof(Matrix4f), SkinMatrices.data());
+    SkinUniformBuffer.Update(SkinMatrices.size() * sizeof(Matrix4f), SkinMatrices.data(),0);
 
     /// Update the pose
     OVR::Posef rootPose = handPose.RootPose;

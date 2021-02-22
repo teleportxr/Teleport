@@ -70,6 +70,7 @@ enum class ovrProgramParmType : char {
     FLOAT_MATRIX4, // Matrix4f (always inverted for GL)
     TEXTURE_SAMPLED, // GlTexture
     BUFFER_UNIFORM, // read-only uniform buffer (GLSL: uniform)
+    BUFFER_STORAGE, // read-write storage buffer (GLSL: buffer)
     MAX
 };
 
@@ -108,7 +109,8 @@ struct GlProgram {
           FragmentShader(0),
           Uniforms(),
           numTextureBindings(0),
-          numUniformBufferBindings(0) {}
+          numUniformBufferBindings(0)
+		,numStorageBufferBindings(0) {}
 
     static const int GLSL_PROGRAM_VERSION = 300; // Minimum requirement for multiview support.
 
@@ -158,6 +160,7 @@ struct GlProgram {
     ovrUniform Uniforms[ovrUniform::MAX_UNIFORMS];
     int numTextureBindings;
     int numUniformBufferBindings;
+	int numStorageBufferBindings;
 #if OVR_USE_UNIFORM_NAMES
     std::string UniformNames[ovrUniform::MAX_UNIFORMS];
 #endif /// OVR_USE_UNIFORM_NAMES

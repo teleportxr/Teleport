@@ -229,7 +229,7 @@ void HandMaskRenderer::Update(
     HandMaskSurface.modelMatrix = Matrix4f();
     HandMaskSurfaceDef.numInstances = cells.size();
     HandMaskUniformBuffer.Update(
-        HandMaskMatrices.size() * sizeof(Matrix4f), HandMaskMatrices.data());
+        HandMaskMatrices.size() * sizeof(Matrix4f), HandMaskMatrices.data(),0);
 }
 
 void HandMaskRenderer::Render(std::vector<ovrDrawSurface>& surfaceList) {

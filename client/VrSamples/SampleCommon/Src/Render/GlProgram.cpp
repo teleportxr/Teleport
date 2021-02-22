@@ -274,6 +274,7 @@ GlProgram GlProgram::Build(
 
     p.numTextureBindings = 0;
     p.numUniformBufferBindings = 0;
+	p.numStorageBufferBindings=0;
 
     // Globally-defined system level uniforms.
     {
@@ -320,7 +321,16 @@ GlProgram GlProgram::Build(
             p.Uniforms[i].Location = glGetUniformBlockIndex(p.Program, parms[i].Name);
             p.Uniforms[i].Binding = p.numUniformBufferBindings++;
             glUniformBlockBinding(p.Program, p.Uniforms[i].Location, p.Uniforms[i].Binding);
-        } else {
+        } 
+		else if ( parms[i].Type == ovrProgramParmType::BUFFER_STORAGE )
+		{
+			// NO location for storage buffers??
+			p.Uniforms[i].Location = p.numStorageBufferBindings;//glGetUniformBlockIndex( p.Program, parms[i].Name );
+			p.Uniforms[i].Binding = p.numStorageBufferBindings++;
+			//glUniformBlockBinding( p.Program, p.Uniforms[i].Location, p.Uniforms[i].Binding );
+		}
+		else
+		{
             p.Uniforms[i].Location =
                 static_cast<int16_t>(glGetUniformLocation(p.Program, parms[i].Name));
             p.Uniforms[i].Binding = p.Uniforms[i].Location;

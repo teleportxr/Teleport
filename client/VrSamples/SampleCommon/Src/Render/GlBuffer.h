@@ -16,6 +16,7 @@ namespace OVRFW {
 
 enum GlBufferType_t {
     GLBUFFER_TYPE_UNIFORM,
+	GLBUFFER_TYPE_STORAGE,
 };
 
 class GlBuffer {
@@ -25,7 +26,7 @@ class GlBuffer {
     bool Create(const GlBufferType_t type, const size_t dataSize, const void* data);
     void Destroy();
 
-    void Update(const size_t updateDataSize, const void* data) const;
+    void Update(const size_t updateDataSize, const void* data,uint32_t offset=0) const;
 
     void* MapBuffer() const;
     void UnmapBuffer() const;

@@ -12,6 +12,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "GlBuffer.h"
 #include "Misc/Log.h"
 #include "CompilerUtils.h"
+#include <GLES3/gl32.h>
 
 namespace OVRFW {
 
@@ -20,12 +21,14 @@ GlBuffer::GlBuffer() : target(0), buffer(0), size(0) {}
 bool GlBuffer::Create(const GlBufferType_t type, const size_t dataSize, const void* data) {
     assert(buffer == 0);
 
-    target = ((type == GLBUFFER_TYPE_UNIFORM) ? GL_UNIFORM_BUFFER : 0);
+	target = ( ( type == GLBUFFER_TYPE_UNIFORM ) ? GL_UNIFORM_BUFFER : (( type == GLBUFFER_TYPE_STORAGE ) ? GL_SHADER_STORAGE_BUFFER :0) );
+	GLenum usage=( ( type == GLBUFFER_TYPE_UNIFORM ) ? GL_STATIC_DRAW :(( type == GLBUFFER_TYPE_STORAGE ) ? GL_DYNAMIC_DRAW :0) );
+
     size = dataSize;
 
     glGenBuffers(1, &buffer);
     glBindBuffer(target, buffer);
-    glBufferData(target, dataSize, data, GL_STATIC_DRAW);
+	glBufferData( target, dataSize, data, usage);
     glBindBuffer(target, 0);
 
     return true;
@@ -38,16 +41,19 @@ void GlBuffer::Destroy() {
     }
 }
 
-void GlBuffer::Update(const size_t updateDataSize, const void* data) const {
+void GlBuffer::Update(const size_t updateDataSize, const void* data, uint32_t offset ) const
+{
     assert(buffer != 0);
 
-    if (updateDataSize > size) {
-        ALOGE_FAIL(
+	size_t subSize = offset + updateDataSize;
+	if ( subSize > size )
+    {
+	    ALOGE_FAIL(
             "GlBuffer::Update: size overflow %zu specified, %zu allocated\n", updateDataSize, size);
     }
 
     glBindBuffer(target, buffer);
-    glBufferSubData(target, 0, updateDataSize, data);
+	glBufferSubData( target, offset, updateDataSize, data );
     glBindBuffer(target, 0);
 }
 
