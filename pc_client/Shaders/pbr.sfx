@@ -323,7 +323,7 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	//env					=mix(env, diffuse_env, saturate((roughnessE - 0.25) / 0.75));
 
 	vec3 envSpecularColour	=EnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
-	vec3 specular			=surfaceState.kS*envSpecularColour * env;
+	vec3 specular			=surfaceState.kS* env;
 
 	 //Metallic materials will have no diffuse output.
 	
@@ -331,7 +331,7 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	diffuse					*= surfaceProperties.ao;
 	vec3 colour				= diffuse+specular;
 
-	return colour/3.0;
+	return colour;
 }
 
 vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,LightTag lightTag)
@@ -368,6 +368,9 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 
 vec4 Solid(vertexOutput IN)
 {
+	vec3 diff			=IN.wpos.xyz - viewPosition;
+	if(length(diff)>5.0)
+		discard;
 	vec3 tangentx		= normalize(IN.tangent);
 	vec3 tangenty		= normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
@@ -379,7 +382,7 @@ vec4 Solid(vertexOutput IN)
 	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R).rgb;
 	diffuseColour		= diffuseColour.rgb * diffuseOutputScalar.rgb;
 
-	vec3 view			= normalize(IN.wpos.xyz - viewPosition);
+	vec3 view			= normalize(diff);
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R);
 	// from combinedLookup we will either use roughness*roughnessTexture, or (1-roughness)*smoothnessTexture. This depends on combinedOutputScalarRoughMetalOcclusion.a.
 	combinedLookup		=combinedLookup.araa;
@@ -420,6 +423,7 @@ vec4 Solid(vertexOutput IN)
 //	c=1.0-roughMetalOcclusion.a;
 	vec4 u				=vec4(c.rgb + emissive.rgb, 1.0);
 	//u.r=float(id)/32.0;
+//	u.rgb+=vec3(0.03,0,0.05);
 	return u;
 }
 

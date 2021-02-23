@@ -19,7 +19,7 @@ namespace scr
 	public:
 		typedef std::vector<std::shared_ptr<Node>> nodeList_t;
 
-		uint32_t nodeLifetime = 2000; //Milliseconds the manager waits before removing invisible nodes.
+		uint32_t nodeLifetime = 30000; //Milliseconds the manager waits before removing invisible nodes.
 
 		virtual ~NodeManager() = default;
 
