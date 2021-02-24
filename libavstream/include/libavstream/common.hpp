@@ -764,8 +764,8 @@ namespace avs
 
 	struct Pose
 	{
-		avs::vec4 orientation;
-		avs::vec3 position;
+		avs::vec4 orientation = {0, 0, 0, 1};
+		avs::vec3 position = {0, 0, 0};
 	};
 
 	//Contains information to update the transform of a node.

@@ -448,10 +448,14 @@ template<typename T,typename tr> std::basic_ostream<T,tr> & operator << (std::ba
 void GeometryStore::storeNode(avs::uid id, avs::DataNode& newNode)
 {
 //	TELEPORT_COUT<<"storeNode "<<newNode.name.c_str()<<" uid "<<id<<", type "<<stringOf(newNode.data_type)<<", data uid "<<(int)newNode.data_uid<<std::endl;
+	//Remove node before re-adding with new data.
+	removeNode(id);
 	nodes[id] = newNode;
 
-	if(newNode.data_type == avs::NodeDataType::ShadowMap|| newNode.data_type == avs::NodeDataType::Light)
+	if(newNode.data_type == avs::NodeDataType::ShadowMap || newNode.data_type == avs::NodeDataType::Light)
+	{
 		lightNodes.emplace_back(avs::LightNodeResources{id, newNode.data_uid});
+	}
 }
 
 void GeometryStore::storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard)
@@ -545,6 +549,16 @@ void GeometryStore::storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastMo
 void GeometryStore::removeNode(avs::uid id)
 {
 	nodes.erase(id);
+
+	//Remove from cached light node list; no guarantee if it a light, but presumably faster than checking.
+	for(auto it = lightNodes.begin(); it != lightNodes.end(); it++)
+	{
+		if(it->node_uid == id)
+		{
+			lightNodes.erase(it);
+			return;
+		}
+	}
 }
 
 void GeometryStore::updateNode(avs::uid id, avs::Transform& newTransform)

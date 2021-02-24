@@ -199,7 +199,7 @@ bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
 void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const
 {
 	avs::DataNode* thisNode = geometryStore->getNode(node_uid);
-	if(!thisNode)
+	if(!thisNode || thisNode->data_type != avs::NodeDataType::Mesh)
 	{
 		return;
 	}
