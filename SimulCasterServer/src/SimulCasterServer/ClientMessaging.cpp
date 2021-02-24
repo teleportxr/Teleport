@@ -9,8 +9,8 @@
 #include "DiscoveryService.h"
 #include "ErrorHandling.h"
 
-using namespace SCServer;
-
+namespace SCServer
+{
 	std::atomic_bool ClientMessaging::asyncNetworkDataProcessingActive = false;
 	std::unordered_map<avs::uid, NetworkPipeline*> ClientMessaging::networkPipelines;
 	std::thread ClientMessaging::networkThread;
@@ -22,12 +22,12 @@ using namespace SCServer;
 		std::shared_ptr<DiscoveryService> discoveryService,
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 		std::function<void(avs::uid, const avs::Pose*)> inSetHeadPose,
-		std::function<void(avs::uid, uint64_t,const avs::Pose*)> inSetOriginFromClient,
+		std::function<void(avs::uid, uint64_t, const avs::Pose*)> inSetOriginFromClient,
 		std::function<void(avs::uid, int index, const avs::Pose*)> inSetControllerPose,
-		std::function<void(avs::uid, const avs::InputState *,const avs::InputEvent** )> inProcessNewInput,
+		std::function<void(avs::uid, const avs::InputState*, const avs::InputEvent**)> inProcessNewInput,
 		std::function<void(void)> onDisconnect,
 		const uint32_t& disconnectTimeout
-		,ReportHandshakeFn reportHandshakeFn)
+		, ReportHandshakeFn reportHandshakeFn)
 		: settings(settings)
 		, discoveryService(discoveryService)
 		, geometryStreamingService(geometryStreamingService)
@@ -46,13 +46,13 @@ using namespace SCServer;
 
 	ClientMessaging::~ClientMessaging()
 	{
-	// Don't do anything in the destructor - this would break std::move.
-	/*	if (host)
-		{
-			enet_host_destroy(host);
-			host = nullptr;
-		}
-		removeNetworkPipelineFromAsyncProcessing();*/
+		// Don't do anything in the destructor - this would break std::move.
+		/*	if (host)
+			{
+				enet_host_destroy(host);
+				host = nullptr;
+			}
+			removeNetworkPipelineFromAsyncProcessing();*/
 	}
 
 	bool ClientMessaging::isInitialised() const
@@ -60,16 +60,16 @@ using namespace SCServer;
 		return initialized;
 	}
 
-	void ClientMessaging::unInitialise() 
+	void ClientMessaging::unInitialise()
 	{
-		 initialized=false;
+		initialized = false;
 	}
 
 	void ClientMessaging::initialise(CasterContext* context, CaptureDelegates captureDelegates)
 	{
 		casterContext = context;
 		captureComponentDelegates = captureDelegates;
-		initialized=true;
+		initialized = true;
 	}
 
 	bool ClientMessaging::restartSession(avs::uid clientID, int32_t listenPort)
@@ -91,15 +91,15 @@ using namespace SCServer;
 		ListenAddress.port = listenPort;
 
 		// ServerHost will live for the lifetime of the session.
-		if(host)
+		if (host)
 		{
-			TELEPORT_COUT<<"startSession - already have host ptr.\n";
+			TELEPORT_COUT << "startSession - already have host ptr.\n";
 		}
 		else
 		{
 			host = enet_host_create(&ListenAddress, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 		}
-		if(!host)
+		if (!host)
 		{
 			std::cerr << "Session: Failed to create ENET server host!\n";
 			DEBUG_BREAK_ONCE;
@@ -163,7 +163,7 @@ using namespace SCServer;
 			std::lock_guard<std::mutex> guard(dataMutex);
 			lastTickTimestamp = avs::PlatformWindows::getTimestamp();
 		}
-	
+
 
 		const float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f / settings->geometryTicksPerSecond;
 
@@ -294,10 +294,10 @@ using namespace SCServer;
 		assert(peer);
 
 		char address[20];
-		if(peer)
+		if (peer)
 			enet_address_get_host_ip(&peer->address, address, sizeof(address));
 		else
-			sprintf(address,"");
+			sprintf(address, "");
 
 		return std::string(address);
 	}
@@ -330,30 +330,30 @@ using namespace SCServer;
 	{
 		switch (event.channelID)
 		{
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Handshake):
+			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Handshake) :
 				//Delay the actual start of streaming until we receive a confirmation from the client that they are ready.
 				receiveHandshake(event.packet);
 				break;
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control):
-				receiveInput(event.packet);
-				break;
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo):
-				receiveDisplayInfo(event.packet);
-				break;
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose):
-				receiveHeadPose(event.packet);
-				break;
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest):
-				receiveResourceRequest(event.packet);
-				break;
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_KeyframeRequest):
-				receiveKeyframeRequest(event.packet);
-				break;
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage):
-				receiveClientMessage(event.packet);
-				break;
-			default:
-				break;
+				case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control) :
+					receiveInput(event.packet);
+					break;
+					case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo) :
+						receiveDisplayInfo(event.packet);
+						break;
+						case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose) :
+							receiveHeadPose(event.packet);
+							break;
+							case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest) :
+								receiveResourceRequest(event.packet);
+								break;
+								case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_KeyframeRequest) :
+									receiveKeyframeRequest(event.packet);
+									break;
+									case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage) :
+										receiveClientMessage(event.packet);
+										break;
+									default:
+										break;
 		}
 		enet_packet_destroy(event.packet);
 	}
@@ -440,11 +440,11 @@ using namespace SCServer;
 			avs::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
 			sendCommand<avs::uid>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 		}
-		reportHandshake(this->clientID,&handshake);
+		reportHandshake(this->clientID, &handshake);
 		TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << std::endl;
 	}
 
-	bool ClientMessaging::setPosition(uint64_t valid_counter,const avs::vec3& pos,bool set_rel,const avs::vec3 &rel_to_head,const avs::vec4 &orientation)
+	bool ClientMessaging::setPosition(uint64_t valid_counter, const avs::vec3& pos, bool set_rel, const avs::vec3& rel_to_head, const avs::vec4& orientation)
 	{
 		avs::SetPositionCommand setp;
 		if (casterContext->axesStandard != avs::AxesStandard::NotInitialized)
@@ -453,12 +453,12 @@ using namespace SCServer;
 			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, p);
 			setp.origin_pos = p;
 			setp.set_relative_pos = (uint8_t)set_rel;
-			setp.orientation=orientation;
+			setp.orientation = orientation;
 			avs::ConvertRotation(settings->axesStandard, casterContext->axesStandard, setp.orientation);
-			avs::vec3 o=rel_to_head;
+			avs::vec3 o = rel_to_head;
 			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, o);
-			setp.relative_pos=o;
-			setp.valid_counter=valid_counter;
+			setp.relative_pos = o;
+			setp.valid_counter = valid_counter;
 			return sendCommand(setp);
 		}
 		return false;
@@ -473,19 +473,19 @@ using namespace SCServer;
 		}
 		avs::InputState inputState;
 		memcpy(&inputState, packet->data, sizeof(avs::InputState));
-		if(packet->dataLength!=sizeof(avs::InputState)+inputState.numEvents*sizeof(avs::InputEvent))
+		if (packet->dataLength != sizeof(avs::InputState) + inputState.numEvents * sizeof(avs::InputEvent))
 		{
-			TELEPORT_CERR << "Session: Received malformed input state change packet of length: " << packet->dataLength <<" but with "<<inputState.numEvents<<" events."<< std::endl;
+			TELEPORT_CERR << "Session: Received malformed input state change packet of length: " << packet->dataLength << " but with " << inputState.numEvents << " events." << std::endl;
 			return;
 		}
-	
+
 		std::vector<avs::InputEvent> inputEvents;
 		//inputState.numEvents++;
 		inputEvents.resize(inputState.numEvents);
-		memcpy(const_cast<avs::InputEvent*>(inputEvents.data()), packet->data+ sizeof(avs::InputState),packet->dataLength-sizeof(avs::InputState));
+		memcpy(const_cast<avs::InputEvent*>(inputEvents.data()), packet->data + sizeof(avs::InputState), packet->dataLength - sizeof(avs::InputState));
 		//inputEvents[inputEvents.size()-1]=inputEvents[0];
-		const avs::InputEvent *v=inputEvents.data();
-		processNewInput(clientID, &inputState, (const avs::InputEvent **)&v);
+		const avs::InputEvent* v = inputEvents.data();
+		processNewInput(clientID, &inputState, (const avs::InputEvent**) & v);
 	}
 
 	void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
@@ -521,7 +521,7 @@ using namespace SCServer;
 		avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, headPose.position);
 		setHeadPose(clientID, &headPose);
 	}
-	
+
 	void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 	{
 		size_t resourceAmount;
@@ -559,7 +559,7 @@ using namespace SCServer;
 			memcpy(&message, packet->data, packet->dataLength);
 			avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, message.originPose.orientation);
 			avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, message.originPose.position);
-			setOriginFromClient(clientID, message.counter,&message.originPose);
+			setOriginFromClient(clientID, message.counter, &message.originPose);
 		}
 		break;
 		case avs::ClientMessagePayloadType::ControllerPoses:
@@ -646,11 +646,15 @@ using namespace SCServer;
 			asyncNetworkDataProcessingActive = true;
 			if (!networkThread.joinable())
 			{
+				{
+					std::lock_guard<std::mutex> guard(dataMutex);
+					lastTickTimestamp = avs::PlatformWindows::getTimestamp();
+				}
 				networkThread = std::thread(&ClientMessaging::processNetworkDataAsync);
-			}		
+			}
 		}
 	}
-		 bool ClientMessaging::asyncNetworkDataProcessingFailed=false;
+	bool ClientMessaging::asyncNetworkDataProcessingFailed = false;
 
 	void ClientMessaging::stopAsyncNetworkDataProcessing(bool killThread)
 	{
@@ -662,7 +666,7 @@ using namespace SCServer;
 				networkThread.join();
 			}
 		}
-		else if(networkThread.joinable())
+		else if (networkThread.joinable())
 		{
 			networkThread.join();
 		}
@@ -670,10 +674,10 @@ using namespace SCServer;
 
 	void ClientMessaging::processNetworkDataAsync()
 	{
-		asyncNetworkDataProcessingFailed=false;
+		asyncNetworkDataProcessingFailed = false;
 		// Elapsed time since the main thread last ticked (seconds).
 		avs::Timestamp timestamp;
-		double elapsedTime; 
+		double elapsedTime;
 		while (asyncNetworkDataProcessingActive)
 		{
 			// Only continue processing if the main thread hasn't hung.
@@ -682,7 +686,7 @@ using namespace SCServer;
 				std::lock_guard<std::mutex> lock(dataMutex);
 				elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(lastTickTimestamp, timestamp);
 			}
-		
+
 			// Proceed only if the main thread hasn't hung.
 			if (elapsedTime < 0.20)
 			{
@@ -700,4 +704,12 @@ using namespace SCServer;
 			}
 		}
 	}
+
+	avs::Timestamp ClientMessaging::getLastTickTimestamp()
+	{
+		std::lock_guard<std::mutex> guard(dataMutex);
+		return lastTickTimestamp;
+	}
+
+}
 

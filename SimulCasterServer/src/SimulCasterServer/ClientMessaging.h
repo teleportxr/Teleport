@@ -88,6 +88,8 @@ namespace SCServer
 		static void startAsyncNetworkDataProcessing();
 		static void stopAsyncNetworkDataProcessing(bool killThread = true);
 
+		static avs::Timestamp getLastTickTimestamp();
+
 	private:
 		ReportHandshakeFn reportHandshake;
 		static bool asyncNetworkDataProcessingFailed;

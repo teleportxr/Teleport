@@ -1189,13 +1189,17 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 		return;
 	}
 
+	// Only continue processing if the main thread hasn't hung.
+	double elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(ClientMessaging::getLastTickTimestamp(), avs::PlatformWindows::getTimestamp());
+	if (elapsedTime > 0.15f)
+	{
+		return;
+	}
+
 	Result result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
 	if (!result)
 	{
 		TELEPORT_CERR << "Failed to send audio to Client_" << clientID << "! Error occurred when trying to send audio" << std::endl;
-
-		// repeat the attempt for debugging purposes.
-		result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
 	} 
 }
 ///AudioEncodePipeline END
