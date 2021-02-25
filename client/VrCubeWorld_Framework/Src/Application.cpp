@@ -21,15 +21,16 @@
 
 using namespace OVRFW;
 
-#if defined( OVR_OS_ANDROIDX )
+
 extern "C"
 {
-	void Java_com_oculus_sdk_vrcubeworldfw_MainActivity_nativeInitFromJava(JNIEnv *jni)
+	JNIEXPORT jlong Java_com_oculus_sdk_vrcubeworldfw_MainActivity_nativeInitFromJava(JNIEnv *jni)
 	{
 		VideoDecoderProxy::InitializeJNI(jni);
+		return 0;
 	}
 } // extern "C"
-#endif
+
 
 static const char VERTEX_SHADER[] = R"glsl(
 in vec3 Position;

@@ -31,7 +31,7 @@ class MainActivity : Activity()
 {
     private var alreadyRequestedRecordingPermission = false
 
-    external fun nativeInitFromJava()
+    external fun nativeInitFromJava():Long
 
     override fun onCreate(savedInstanceState: Bundle?)
     {
