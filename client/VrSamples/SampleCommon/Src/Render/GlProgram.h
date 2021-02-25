@@ -81,7 +81,7 @@ struct ovrProgramParm {
 
 struct ovrUniform {
     // can be made as high as 16
-    static const int MAX_UNIFORMS = 16;
+	static const int MAX_UNIFORMS = 16 + 12; //Texture Slots + Uniform Blocks in Fragment Shader AJR
 
     ovrUniform() : Location(-1), Binding(-1), Type(ovrProgramParmType::MAX) {}
 
@@ -156,6 +156,11 @@ struct GlProgram {
                               //   mat4 ViewMatrix[NUM_VIEWS];
                               //   mat4 ProjectionMatrix[NUM_VIEWS];
                               // } sm;
+
+	// ----IMAGE_EXTERNAL_WORKAROUND
+	ovrUniform					ViewMatrix;
+	ovrUniform					ProjectionMatrix;
+	// ----IMAGE_EXTERNAL_WORKAROUND
 
     ovrUniform Uniforms[ovrUniform::MAX_UNIFORMS];
     int numTextureBindings;

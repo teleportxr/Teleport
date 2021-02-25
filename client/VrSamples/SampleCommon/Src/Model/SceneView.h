@@ -77,7 +77,7 @@ class OvrSceneView {
     // Allow movement inside the scene based on the joypad.
     // Models that have DontRenderForClientUid == suppressModelsWithClientId will be skipped
     // to prevent the client's own head model from drawing in their view.
-    void Frame(const ovrApplFrameIn& vrFrame, const long long suppressModelsWithClientId = -1);
+    void Frame(const ovrApplFrameIn& vrFrame, const long long suppressModelsWithClientId = -1, bool allowLocalOriginControl=true );
 
     // Populate frameMatrices with the view and projection matrices for the scene.
     void GetFrameMatrices(
@@ -113,6 +113,8 @@ class OvrSceneView {
         EyeYaw += (yaw - SceneYaw);
         SceneYaw = yaw;
     }
+	float					GetStickYaw() const { return StickYaw; }
+	void					SetStickYaw(float y){ StickYaw=y; }
 
     float GetZnear() const {
         return Znear;

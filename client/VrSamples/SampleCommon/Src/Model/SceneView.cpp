@@ -1065,7 +1065,7 @@ inline void ApplyDeadZone(Vector2f& v, float deadZoneRadius) {
 
 void OvrSceneView::Frame(
     const ovrApplFrameIn& vrFrame,
-    const long long suppressModelsWithClientId_) {
+    const long long suppressModelsWithClientId_, bool allowLocalOriginControl ) {
     SuppressModelsWithClientId = suppressModelsWithClientId_;
     CurrentTracking = vrFrame;
     InterPupillaryDistance = vrFrame.IPD;
@@ -1106,6 +1106,9 @@ void OvrSceneView::Frame(
     // Player view angles
     //
 
+	if(allowLocalOriginControl)
+	{
+
     // Turn based on the look stick
     // Because this can be predicted ahead by async TimeWarp, we apply
     // the yaw from the previous frame's controls, trading a frame of
@@ -1128,6 +1131,7 @@ void OvrSceneView::Frame(
             StickPitch = 0.0f;
         }
     */
+	}
 
     // We extract Yaw, Pitch, Roll instead of directly using the orientation
     // to allow "additional" yaw manipulation with mouse/controller and scene offsets.
@@ -1151,6 +1155,8 @@ void OvrSceneView::Frame(
     float allSticksY = LeftStick.y + RightStick.y;
     allSticksY = std::max(-1.0f, std::min(1.0f, allSticksY));
 
+	if(allowLocalOriginControl)
+	{
     // Allow up / down movement if there is no floor collision model or in 'free move' mode.
     const bool upDown = (WorldModel.Definition == NULL || FreeMove);
     Vector3f gamepadMove(
@@ -1183,6 +1189,7 @@ void OvrSceneView::Frame(
                 groundCollisionModel);
         }
     }
+	}
 
     //
     // Center eye transform

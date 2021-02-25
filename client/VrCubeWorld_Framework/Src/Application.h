@@ -89,6 +89,9 @@ namespace OVRFW
 		virtual void OnFrameAvailable() override;
 		/* End DecodeEventInterface */
 	private:
+		OVRFW::ovrApplFrameOut Frame(const OVRFW::ovrApplFrameIn& vrFrame);
+		void Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out);
+		void UpdateHandObjects();
 		bool ProcessIniFile();
 		void EnteredVrMode();
 		ovrRenderState RenderState;
@@ -138,7 +141,6 @@ namespace OVRFW
 		std::unique_ptr<sca::NetworkPipeline> mNetworkPipeline;
 		avs::Queue mAudioInputQueue;
 
-		OVRFW::ovrSoundEffectContext        *mSoundEffectContext;
 		OVRFW::OvrGuiSys::SoundEffectPlayer *mSoundEffectPlayer;
 
 		OVRFW::OvrGuiSys *mGuiSys;

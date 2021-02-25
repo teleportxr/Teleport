@@ -456,8 +456,6 @@ void Application::UpdateHandObjects()
 		}
 		++deviceIndex;
 	}
-
-
 	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
 	if(body)
 	{

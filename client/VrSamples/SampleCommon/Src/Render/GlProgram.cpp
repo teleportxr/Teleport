@@ -293,8 +293,17 @@ GlProgram GlProgram::Build(
         p.ModelMatrix.Type = ovrProgramParmType::FLOAT_MATRIX4;
         p.ModelMatrix.Location = glGetUniformLocation(p.Program, "ModelMatrix");
         p.ModelMatrix.Binding = p.ModelMatrix.Location;
-    }
 
+		// ----IMAGE_EXTERNAL_WORKAROUND
+		p.ViewMatrix.Type	 = ovrProgramParmType::FLOAT_MATRIX4;
+		p.ViewMatrix.Location = glGetUniformLocation( p.Program, "ViewMatrix" );
+		p.ViewMatrix.Binding  = p.ViewMatrix.Location;
+
+		p.ProjectionMatrix.Type	 = ovrProgramParmType::FLOAT_MATRIX4;
+		p.ProjectionMatrix.Location = glGetUniformLocation( p.Program, "ProjectionMatrix" );
+		p.ProjectionMatrix.Binding  = p.ProjectionMatrix.Location;
+		// ----IMAGE_EXTERNAL_WORKAROUND
+	}
     glUseProgram(p.Program);
 
     for (int i = 0; i < numParms; ++i) {
@@ -349,7 +358,7 @@ GlProgram GlProgram::Build(
 #endif /// OVR_USE_UNIFORM_NAMES
         }
 
-        OVR_ASSERT(p.Uniforms[i].Location >= 0 && p.Uniforms[i].Binding >= 0);
+       // OVR_ASSERT(p.Uniforms[i].Location >= 0 && p.Uniforms[i].Binding >= 0);
     }
 
     glUseProgram(0);

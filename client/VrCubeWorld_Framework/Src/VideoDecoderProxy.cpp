@@ -146,7 +146,8 @@ void VideoDecoderProxy::InitializeJNI(JNIEnv* env)
 {
     assert(env);
 
-    jclass videoDecoderClass = env->FindClass("co/Simul/remoteplayclient/VideoDecoder");
+    jclass videoDecoderClass = env->FindClass("com/oculus/vrcubeworld/VideoDecoder");
+	assert(videoDecoderClass);
     jni.videoDecoderClass = (jclass)env->NewGlobalRef((jobject)videoDecoderClass);
 
     jni.ctorMethod = env->GetMethodID(jni.videoDecoderClass, "<init>", "(JI)V");

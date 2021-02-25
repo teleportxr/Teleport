@@ -649,7 +649,8 @@ void ovrAppl::DefaultRenderFrame_Loading(const ovrApplFrameIn& in, ovrRendererOu
     FrameFlags |= VRAPI_FRAME_FLAG_FLUSH;
 }
 
-void ovrAppl::DefaultRenderFrame_Running(const ovrApplFrameIn& in, ovrRendererOutput& out) {
+void ovrAppl::DefaultRenderFrame_Running(const ovrApplFrameIn& in, ovrRendererOutput& out)
+{
     NumLayers = 0;
     FrameFlags = 0u;
     // set up layers
@@ -669,7 +670,8 @@ void ovrAppl::DefaultRenderFrame_Running(const ovrApplFrameIn& in, ovrRendererOu
     layerCount++;
 
     // render images for each eye
-    for (int eye = 0; eye < NumFramebuffers; ++eye) {
+    for (int eye = 0; eye < NumFramebuffers; ++eye)
+    {
         ovrFramebuffer* framebuffer = Framebuffer[eye].get();
         ovrFramebuffer_SetCurrent(framebuffer);
 

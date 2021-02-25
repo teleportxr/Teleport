@@ -18,6 +18,26 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "OVR_Asserts.h"
 #include "Log.h"
 
+// String functions
+
+static size_t OVR_strlen(const char* str) {
+	return strlen(str);
+}
+
+static char*  OVR_strcpy(char* dest, size_t destsize, const char* src) {
+#if defined(OVR_MSVC_SAFESTRING)
+	strcpy_s(dest, destsize, src);
+    return dest;
+#elif defined(OVR_OS_ANDROID)
+	strlcpy(dest, src, destsize);
+    return dest;
+#else
+	// FIXME: This should be a safer implementation
+	//OVR_UNUSED(destsize);
+	return strcpy(dest, src);
+#endif
+}
+
 namespace OVRFW
 {
 
@@ -43,7 +63,7 @@ ovrMessageQueue::ovrMessageQueue( int maxMessages_ ) :
 ovrMessageQueue::~ovrMessageQueue()
 {
 #if defined( OVR_BUILD_DEBUG )
-	LOG( "%p:~ovrMessageQueue: destroying ... ", this );
+	ALOG( "%p:~ovrMessageQueue: destroying ... ", this );
 #endif
 
 	// Free any messages remaining on the queue.
@@ -53,7 +73,7 @@ ovrMessageQueue::~ovrMessageQueue()
 		if ( !msg ) {
 			break;
 		}
-		LOG( "%p:~ovrMessageQueue: still on queue: %s", this, msg );
+		ALOG( "%p:~ovrMessageQueue: still on queue: %s", this, msg );
 		free( (void *)msg );
 	}
 
@@ -61,24 +81,24 @@ ovrMessageQueue::~ovrMessageQueue()
 	delete[] messages;
 
 #if defined( OVR_BUILD_DEBUG )
-	LOG( "%p:~ovrMessageQueue: destroying ... DONE", this );
+	ALOG( "%p:~ovrMessageQueue: destroying ... DONE", this );
 #endif
 }
 
 void ovrMessageQueue::Shutdown()
 {
-	LOG( "%p:ovrMessageQueue shutdown", this );
+	ALOG( "%p:ovrMessageQueue shutdown", this );
 	shutdown = true;
 
 	if ( debug )
 	{
-		LOG( "%p:Shutdown() : notifying on processed", this );
+		ALOG( "%p:Shutdown() : notifying on processed", this );
 	}
 	processed.notify_all();
 
 	if ( debug )
 	{
-		LOG( "%p:Shutdown() : notifying on posted", this );
+		ALOG( "%p:Shutdown() : notifying on posted", this );
 	}
 	posted.notify_all();
 }
@@ -87,6 +107,37 @@ void ovrMessageQueue::Shutdown()
 #if defined( OVR_OS_WIN32 ) && defined( PostMessage )
 #undef PostMessage
 #endif
+
+// OVR_strdup
+// Safe for Windows without turning off deprecation warnings. MSVC suggests _strdup
+// but that function only exists in MSVC.
+// Always 0-terminates.
+// Returns an empty string if NULL is passed -- for normal strdup that is undefined behavior.
+	static char*  OVR_strdup(const char* str) {
+		if (str == NULL) {
+			// for POSIX strdup, str == NULL is undefined.
+			// assert, and just allocate a small buffer and make it empty-string
+			OVR_ASSERT(str != NULL);
+			char* result = static_cast<char*>(malloc(8));
+			if (result == NULL) {
+				return NULL;
+			}
+			result[0] = '\0';
+			return result;
+		}
+
+		const size_t size = OVR_strlen(str) + 1;
+
+		char* result = static_cast<char*>(malloc(size));
+		if (result == NULL) {
+			return NULL;
+		}
+
+		// copy the input string -- OVR_strcpy always 0-terminates
+		OVR_strcpy(result, size, str);
+
+		return result;
+	}
 
 // Thread safe, callable by any thread.
 // The msg text is copied off before return, the caller can free
@@ -97,12 +148,12 @@ bool ovrMessageQueue::PostMessage( const char * msg, bool sync, bool abortIfFull
 {
 	if ( shutdown )
 	{
-		LOG( "%p:PostMessage( %s ) to shutdown queue", this, msg );
+		ALOG( "%p:PostMessage( %s ) to shutdown queue", this, msg );
 		return false;
 	}
 	if ( debug )
 	{
-		LOG( "%p:PostMessage( %s )", this, msg );
+		ALOG( "%p:PostMessage( %s )", this, msg );
 	}
 
 	// mutex lock scope
@@ -112,12 +163,12 @@ bool ovrMessageQueue::PostMessage( const char * msg, bool sync, bool abortIfFull
 		{
 			if ( abortIfFull )
 			{
-				LOG( "ovrMessageQueue overflow" );
+				ALOG( "ovrMessageQueue overflow" );
 				for ( int i = head; i < tail; i++ )
 				{
-					LOG( "%s", messages[i % maxMessages].string );
+					ALOG( "%s", messages[i % maxMessages].string );
 				}
-				OVR_FAIL( "Message buffer overflowed" );
+				ALOGW( "Message buffer overflowed" );
 			}
 			return false;
 		}
@@ -128,14 +179,14 @@ bool ovrMessageQueue::PostMessage( const char * msg, bool sync, bool abortIfFull
 
 		if ( debug )
 		{
-			LOG( "%p:PostMessage( '%s' ) : notifying on posted", this, msg );
+			ALOG( "%p:PostMessage( '%s' ) : notifying on posted", this, msg );
 		}
 
 		posted.notify_all();
 
 		if ( debug )
 		{
-			LOG( "%p:PostMessage( '%s' ) : sleep waiting on processed", this, msg );
+			ALOG( "%p:PostMessage( '%s' ) : sleep waiting on processed", this, msg );
 		}
 
 		// wait scope
@@ -147,7 +198,7 @@ bool ovrMessageQueue::PostMessage( const char * msg, bool sync, bool abortIfFull
 
 	if ( debug )
 	{
-		LOG( "%p:PostMessage( '%s' ) : awoke after waiting on processed", this, msg );
+		ALOG( "%p:PostMessage( '%s' ) : awoke after waiting on processed", this, msg );
 	}
 
 	return true;
@@ -232,7 +283,7 @@ const char * ovrMessageQueue::GetNextMessage()
 
 			if ( debug )
 			{
-				LOG( "%p:GetNextMessage() : %s", this, msg );
+				ALOG( "%p:GetNextMessage() : %s", this, msg );
 			}
 			return msg;
 		}
@@ -253,14 +304,14 @@ void ovrMessageQueue::SleepUntilMessage()
 		{
 			if ( debug )
 			{
-				LOG( "%p:SleepUntilMessage() : tail > head", this );
+				ALOG( "%p:SleepUntilMessage() : tail > head", this );
 			}
 			return;
 		}
 
 		if ( debug )
 		{
-			LOG( "%p:SleepUntilMessage() : sleep waiting on posted", this );
+			ALOG( "%p:SleepUntilMessage() : sleep waiting on posted", this );
 		}
 
 		// Wait
@@ -270,7 +321,7 @@ void ovrMessageQueue::SleepUntilMessage()
 
 	if ( debug )
 	{
-		LOG( "%p:SleepUntilMessage() : awoke after waiting on posted", this );
+		ALOG( "%p:SleepUntilMessage() : awoke after waiting on posted", this );
 	}
 
 }
@@ -282,7 +333,7 @@ void ovrMessageQueue::NotifyMessageProcessed()
 	{
 		if ( debug )
 		{
-			LOG( "%p:NotifyMessageProcessed() : notifying on processed", this );
+			ALOG( "%p:NotifyMessageProcessed() : notifying on processed", this );
 		}
 		processed.notify_all();
 	}
@@ -292,16 +343,16 @@ void ovrMessageQueue::ClearMessages()
 {
 	if ( debug )
 	{
-		LOG( "%p:ClearMessages()", this );
+		ALOG( "%p:ClearMessages()", this );
 	}
 	for ( const char * msg = GetNextMessage(); msg != NULL; msg = GetNextMessage() )
 	{
-		LOG( "%p:ClearMessages: discarding %s", this, msg );
+		ALOG( "%p:ClearMessages: discarding %s", this, msg );
 		free( (void *)msg );
 	}
 	if ( debug )
 	{
-		LOG( "%p:ClearMessages() COMPLETE", this );
+		ALOG( "%p:ClearMessages() COMPLETE", this );
 	}
 }
 

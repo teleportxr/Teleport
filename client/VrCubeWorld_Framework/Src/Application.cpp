@@ -24,15 +24,9 @@ using namespace OVRFW;
 #if defined( OVR_OS_ANDROIDX )
 extern "C"
 {
-	jlong Java_co_Simul_remoteplayclient_MainActivity_nativeSetAppInterface(JNIEnv *jni, jclass clazz
-																			, jobject activity
-																			, jstring fromPackageName
-																			, jstring commandString
-																			, jstring uriString)
+	void Java_com_oculus_sdk_vrcubeworldfw_MainActivity_nativeInitFromJava(JNIEnv *jni)
 	{
 		VideoDecoderProxy::InitializeJNI(jni);
-		return (new Application())->SetActivity(jni, clazz, activity, fromPackageName, commandString,
-												uriString);
 	}
 } // extern "C"
 #endif
@@ -99,9 +93,10 @@ static const unsigned short cubeIndices[36] = {
 
 Application::Application()
 		: ovrAppl(0, 0, CPU_LEVEL, GPU_LEVEL, true /* useMultiView */), mSoundEffectPlayer(nullptr)
-		  , mGuiSys(nullptr), Locale(nullptr), Random(2)
+		  , Locale(nullptr)
+		  ,mGuiSys(nullptr)
+		  , Random(2)
 		  , mPipelineConfigured(false)
-		  , mSoundEffectContext(nullptr)
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 		  , mDeviceContext(&GlobalGraphicsResources.renderPlatform)
 		  , clientRenderer(&resourceCreator, &resourceManagers, this, this, &clientDeviceState)
@@ -139,7 +134,6 @@ Application::~Application()
 	mRefreshRates.clear();
 	clientRenderer.ExitedVR();
 	delete mSoundEffectPlayer;
-	delete mSoundEffectContext;
 	sessionClient.Disconnect(REMOTEPLAY_TIMEOUT);
 	enet_deinitialize();
 	SAFE_DELETE(audioPlayer)
@@ -184,7 +178,6 @@ bool Application::ProcessIniFile()
 bool Application::AppInit(const OVRFW::ovrAppContext *context)
 {
 	RedirectStdCoutCerr();
-	ProcessIniFile();
 	const ovrJava &jj = *(reinterpret_cast<const ovrJava *>(context->ContextForVrApi()));
 	const xrJava ctx = JavaContextConvert(jj);
 	FileSys = OVRFW::ovrFileSys::Create(ctx);
@@ -218,6 +211,8 @@ bool Application::AppInit(const OVRFW::ovrAppContext *context)
 	std::string fontName;
 	Locale->GetLocalizedString("@string/font_name", "efigs.fnt", fontName);
 	mGuiSys->Init(FileSys, *mSoundEffectPlayer, fontName.c_str(), nullptr);
+
+	ProcessIniFile();
 
 	// Create the program.
 	Program = GlProgram::Build(VERTEX_SHADER, FRAGMENT_SHADER, nullptr, 0);
@@ -347,6 +342,7 @@ bool Application::AppInit(const OVRFW::ovrAppContext *context)
 
 	startTime = GetTimeInSeconds();
 
+	EnteredVrMode();
 	return true;
 }
 
@@ -389,15 +385,13 @@ void Application::EnteredVrMode()
 	/// Get JNI
 	const ovrJava *java = (reinterpret_cast<const ovrJava*>(GetContext()->ContextForVrApi()));
 	TempJniEnv env(java->Vm);
-	mSoundEffectContext = new OVRFW::ovrSoundEffectContext(*java->Env, java->ActivityObject);
-	ovrFileSys &fs=mGuiSys->GetFileSys();
-	mSoundEffectContext->Initialize(&fs);
 	mSoundEffectPlayer = new OvrGuiSys::ovrDummySoundEffectPlayer();
 
 	//mLocale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
 	//std::string fontName;
 	//GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
 
+	VideoDecoderProxy::InitializeJNI(java->Env);
 	clientRenderer.EnteredVR(java);
 
 	clientRenderer.mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));
@@ -543,9 +537,78 @@ OVRFW::ovrApplFrameOut Application::AppFrame(const OVRFW::ovrApplFrameIn &vrFram
 	GL(glBindBuffer(GL_ARRAY_BUFFER, 0));
 
 	CenterEyeViewMatrix = OVR::Matrix4f(vrFrame.HeadPose);
+	Frame(vrFrame);
 
 	// Update GUI systems last, but before rendering anything.
 	mGuiSys->Frame(vrFrame, CenterEyeViewMatrix);
+	return OVRFW::ovrApplFrameOut();
+}
+
+OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
+{
+	// we don't want local slide movements.
+	mScene.SetMoveSpeed(1.0f);
+	mScene.Frame(vrFrame,-1,false);
+	clientRenderer.eyeSeparation=vrFrame.IPD;
+	GLCheckErrorsWithTitle("Frame: Start");
+	// Try to find remote controller
+	if((int)controllers.mControllerIDs[0] == 0)
+	{
+		controllers.InitializeController(GetSessionObject());
+	}
+	controllers.Update(GetSessionObject());
+	clientDeviceState.originPose.position=*((const avs::vec3*)&mScene.GetFootPos());
+	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
+
+	// Oculus Origin means where the headset's zero is in real space.
+
+	// Handle networked session.
+	if(sessionClient.IsConnected())
+	{
+		avs::DisplayInfo displayInfo = {1440, 1600};
+		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds);
+		if (sessionClient.receivedInitialPos>0&&receivedInitialPos!=sessionClient.receivedInitialPos)
+		{
+			clientDeviceState.originPose = sessionClient.GetOriginPose();
+			mScene.SetFootPos(*((const OVR::Vector3f*)&clientDeviceState.originPose.position));
+			float yaw_angle=2.0f*atan2(clientDeviceState.originPose.orientation.y,clientDeviceState.originPose.orientation.w);
+			mScene.SetStickYaw(yaw_angle);
+			receivedInitialPos = sessionClient.receivedInitialPos;
+			if(receivedRelativePos!=sessionClient.receivedRelativePos)
+			{
+				receivedRelativePos=sessionClient.receivedRelativePos;
+				//avs::vec3 pos =sessionClient.GetOriginToHeadOffset();
+				//camera.SetPosition((const float*)(&pos));
+			}
+		}
+	}
+	else
+	{
+		if (!sessionClient.HasDiscovered())
+		{
+			sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+		}
+		if (sessionClient.HasDiscovered())
+		{
+			// if connect fails, restart discovery.
+			if(!sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT))
+				sessionClient.Disconnect(0);
+		}
+	}
+
+	//Get HMD Position/Orientation
+	clientDeviceState.stickYaw=mScene.GetStickYaw();
+	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.HeadPose.Translation)),*((const scr::quat *)(&vrFrame.HeadPose.Rotation)));
+	clientDeviceState.UpdateOriginPose();
+	// Update video texture if we have any pending decoded frames.
+	while(mNumPendingFrames > 0)
+	{
+		clientRenderer.mVideoSurfaceTexture->Update();
+		--mNumPendingFrames;
+	}
+
+	// Process stream pipeline
+	mPipeline.process();
 
 	return OVRFW::ovrApplFrameOut();
 }
@@ -582,6 +645,7 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 				///	worldLayer.Header.Flags |=
 				/// VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
 			}
+			Render(in, out);
 			DefaultRenderFrame_Running(in, out);
 		}
 			break;
@@ -590,6 +654,131 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 			DefaultRenderFrame_Ending(in, out);
 		}
 			break;
+	}
+}
+
+void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out)
+{
+//Build frame
+	mScene.GetFrameMatrices(SuggestedEyeFovDegreesX, SuggestedEyeFovDegreesY, out.FrameMatrices);
+	mScene.GenerateFrameSurfaceList(out.FrameMatrices, out.Surfaces);
+
+// The camera should be where our head is. But when rendering, the camera is in OVR space, so:
+	GlobalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.position);
+
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	//out.FrameIndex = vrFrame.FrameNumber;
+	//out.DisplayTime = vrFrame.PredictedDisplayTimeInSeconds;
+	//out.SwapInterval = app->GetSwapInterval();
+
+	//out.FrameFlags = 0;
+	//out.LayerCount = 0;
+
+/*	ovrLayerProjection2 &worldLayer = out.Layers[out.LayerCount++].Projection;
+
+	worldLayer = vrapi_DefaultLayerProjection2();
+	worldLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+	worldLayer.HeadPose = vrFrame.Tracking.HeadPose;
+	for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
+	{
+		worldLayer.Textures[eye].ColorSwapChain = vrFrame.ColorTextureSwapChain[eye];
+		worldLayer.Textures[eye].SwapChainIndex = vrFrame.TextureSwapChainIndex;
+		worldLayer.Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
+	}*/
+
+	GLCheckErrorsWithTitle("Frame: Pre-Cubemap");
+	clientRenderer.CopyToCubemaps(mDeviceContext);
+// Append video surface
+	clientRenderer.RenderVideo(mDeviceContext, out);
+
+	if (sessionClient.IsConnected())
+	{
+		clientRenderer.Render(in, mGuiSys);
+	}
+	else
+	{
+		//out.ClearColorBuffer = true;
+		//out.ClearDepthBuffer = true;
+		lobbyRenderer.Render(mGuiSys);
+	};
+
+//Append SCR Nodes to surfaces.
+	GLCheckErrorsWithTitle("Frame: Pre-SCR");
+	uint32_t time_elapsed = (uint32_t) (in.DeltaSeconds * 1000.0f);
+	resourceManagers.Update(time_elapsed);
+	resourceCreator.Update(time_elapsed);
+
+//Move the hands before they are drawn.
+	UpdateHandObjects();
+	clientRenderer.RenderLocalNodes(out);
+	GLCheckErrorsWithTitle("Frame: Post-SCR");
+
+// Append GuiSys surfaces. This should always be the last item to append the render list.
+	mGuiSys->AppendSurfaceList(out.FrameMatrices.CenterView, &out.Surfaces);
+/*	if(useMultiview)
+	{
+		// Initialize the FrameParms.
+		FrameParms = vrapi_DefaultFrameParms( app->GetJava(), VRAPI_FRAME_INIT_DEFAULT, vrapi_GetTimeInSeconds(), NULL );
+		for ( int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++ )
+		{
+			out.Layers[0].Textures[eye].ColorTextureSwapChain = vrFrame.ColorTextureSwapChain[eye];
+			//FrameParms.Layers[0].Textures[eye].DepthTextureSwapChain = vrFrame.DepthTextureSwapChain[eye];
+			out.Layers[0].Textures[eye].TextureSwapChainIndex = vrFrame.TextureSwapChainIndex;
+
+			out.Layers[0].Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
+			out.Layers[0].Textures[eye].HeadPose = vrFrame.Tracking.HeadPose;
+		}
+
+		//FrameParms.ExternalVelocity = mScene.GetExternalVelocity();
+		out.Layers[0].Flags = VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+
+	}*/
+}
+
+void Application::UpdateHandObjects()
+{
+	uint32_t deviceIndex = 0;
+	ovrInputCapabilityHeader capsHeader;
+	//Poll controller state from the Oculus API.
+	while(vrapi_EnumerateInputDevices(GetSessionObject(), deviceIndex, &capsHeader) >= 0)
+	{
+		if(capsHeader.Type == ovrControllerType_TrackedRemote)
+		{
+			ovrTracking remoteState;
+			if(vrapi_GetInputTrackingState(GetSessionObject(), capsHeader.DeviceID, 0, &remoteState) >= 0)
+			{
+				if(deviceIndex < 2)
+				{
+					clientDeviceState.SetControllerPose(deviceIndex,*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),*((const scr::quat *)(&remoteState.HeadPose.Pose.Orientation)));
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+		++deviceIndex;
+	}
+	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
+	if(body)
+	{
+		body->UpdateModelMatrix(clientDeviceState.headPose.position, clientDeviceState.headPose.orientation, body->GetGlobalTransform().m_Scale);
+	}
+
+	std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
+	if(rightHand)
+	{
+		avs::vec3 newPosition = clientDeviceState.controllerPoses[0].position;
+		scr::quat newRotation = scr::quat(clientDeviceState.controllerPoses[0].orientation) * HAND_ROTATION_DIFFERENCE;
+		rightHand->UpdateModelMatrix(newPosition, newRotation, rightHand->GetGlobalTransform().m_Scale);
+	}
+
+	std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
+	if(leftHand)
+	{
+		avs::vec3 newPosition = clientDeviceState.controllerPoses[1].position;
+		scr::quat newRotation = scr::quat(clientDeviceState.controllerPoses[1].orientation) * HAND_ROTATION_DIFFERENCE;
+		leftHand->UpdateModelMatrix(newPosition, newRotation, leftHand->GetGlobalTransform().m_Scale);
 	}
 }
 
