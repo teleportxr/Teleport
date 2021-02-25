@@ -1,8 +1,0 @@
-// (C) Copyright 2018 Simul.co
-
-#pragma once
-
-#define REMOTEPLAY_TIMEOUT        1000
-#define REMOTEPLAY_CLIENT_DISCOVERY_PORT 10599
-#define REMOTEPLAY_SERVER_DISCOVERY_PORT 10600
-

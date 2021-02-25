@@ -1,4 +1,4 @@
-import org.gradle.internal.os.OperatingSystem;
+import org.gradle.internal.os.OperatingSystem
 import com.android.ddmlib.AndroidDebugBridge
 import com.android.ddmlib.IDevice
 import com.android.ddmlib.CollectingOutputReceiver
@@ -36,14 +36,14 @@ class VrAppPlugin implements Plugin<Project> {
 
   boolean checkOsig( IDevice device, String deviceSerial, FileTree sigDir ) {
 	  if ( !isPackageInstalled( device, "com.samsung.android.hmt.vrsvc" ) ) {
-  		return true;
+  		return true
 	  }
 
     def oculusSig = "oculussig_${deviceSerial}"
     if ( sigDir.matching { include "**/${oculusSig}"}.isEmpty() ) {
-      return false;
+      return false
     }
-    return true;
+    return true
   }
 
   void clearAdbLog( IDevice device ) {

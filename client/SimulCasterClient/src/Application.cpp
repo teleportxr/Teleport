@@ -121,23 +121,21 @@ void Application::Configure(ovrSettings& settings )
 	settings.EyeBufferParms.depthFormat = DEPTH_16;
 	settings.EyeBufferParms.multisamples = 1;
 	settings.TrackingSpace=VRAPI_TRACKING_SPACE_LOCAL_FLOOR;
-	int res=vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE);
-	useMultiview= (res == VRAPI_TRUE);
 	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
-	settings.RenderMode = useMultiview?RENDERMODE_MULTIVIEW:RENDERMODE_STEREO;
+	settings.RenderMode = RENDERMODE_STEREO;
 }
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
 {
-	if (intentType != INTENT_LAUNCH)
+	if(intentType != INTENT_LAUNCH)
 		return;
 	RedirectStdCoutCerr();
 
-	std::string client_ini = LoadTextFile("client.ini");
+	std::string client_ini=LoadTextFile("client.ini");
 	CSimpleIniA ini;
 
 	SI_Error rc = ini.LoadData(client_ini.data(), client_ini.length());
-	if (rc == SI_OK)
+	if (rc== SI_OK)
 	{
 		server_ip = ini.GetValue("", "SERVER_IP", "");
 		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",
@@ -145,7 +143,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	}
 	else
 	{
-		std::cerr << "Create client.ini in assets directory to specify settings." << std::endl;
+		std::cerr<<"Create client.ini in assets directory to specify settings."<<std::endl;
 	}
 
 
@@ -159,7 +157,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	GlobalGraphicsResources.defaultPBREffect.Create(&ci);
 
 	//Default Sampler
-	scr::Sampler::SamplerCreateInfo sci = {};
+	scr::Sampler::SamplerCreateInfo sci  = {};
 	sci.wrapU = scr::Sampler::Wrap::REPEAT;
 	sci.wrapV = scr::Sampler::Wrap::REPEAT;
 	sci.wrapW = scr::Sampler::Wrap::REPEAT;
@@ -180,26 +178,26 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 			GlobalGraphicsResources.maxFragTextureSlots,
 			GlobalGraphicsResources.maxFragUniformBlocks);
 
-	//Setup Debug
-	scc::SetupGLESDebug();
+    //Setup Debug
+    scc::SetupGLESDebug();
 
-	const ovrJava *java = app->GetJava();
-	mSoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
+	const ovrJava *java=app->GetJava();
+	mSoundEffectContext=new ovrSoundEffectContext(*java->Env, java->ActivityObject);
 	mSoundEffectContext->Initialize(&app->GetFileSys());
-	mSoundEffectPlayer = new OvrGuiSys::ovrDummySoundEffectPlayer();
+	mSoundEffectPlayer=new OvrGuiSys::ovrDummySoundEffectPlayer();
 
-	mLocale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
+	mLocale=ovrLocale::Create(*java->Env, java->ActivityObject, "default");
 	std::string fontName;
 	GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
 
-	clientRenderer.EnteredVR(app->GetOvrMobile(), java);
+	clientRenderer.EnteredVR(app->GetOvrMobile(),java);
 	mGuiSys->Init(app, *mSoundEffectPlayer, fontName.c_str(), &app->GetDebugLines());
 
 	clientRenderer.mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));
 
 
 	//Set Lighting Cubemap Shader Resource
-	scr::ShaderResourceLayout lightingCubemapLayout;
+    scr::ShaderResourceLayout lightingCubemapLayout;
 	lightingCubemapLayout.AddBinding(14,
 									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
@@ -213,7 +211,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-	GlobalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
+    GlobalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
 	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14,
 			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
@@ -238,8 +236,8 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	vrapi_GetSystemPropertyFloatArray(java, VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,
 									  mRefreshRates.data(), num_refresh_rates);
 
-	if (num_refresh_rates > 0)
-		vrapi_SetDisplayRefreshRate(app->GetOvrMobile(), mRefreshRates[num_refresh_rates - 1]);
+	if(num_refresh_rates>0)
+		vrapi_SetDisplayRefreshRate(app->GetOvrMobile(),mRefreshRates[num_refresh_rates-1]);
 
 	// Bind the delegates.
 
@@ -835,16 +833,16 @@ std::string Application::LoadTextFile(const char *filename)
 	std::vector<uint8_t> outBuffer;
 	std::string str = "apk:///assets/";
 	str += filename;
-	if (!app)
+	if(!app)
 	{
 
 	}
-	else if (app->GetFileSys().ReadFile(str.c_str(), outBuffer))
+	else if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
 	{
-		if (outBuffer.back() != '\0')
+		if(outBuffer.back() != '\0')
 			outBuffer.push_back(
 					'\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
-		return std::string((const char *) outBuffer.data());
+		return std::string((const char *)outBuffer.data());
 	}
 	return "";
 }

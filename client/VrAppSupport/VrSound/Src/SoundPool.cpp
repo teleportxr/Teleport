@@ -16,7 +16,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "Windows/AudioPlayer.h"
 #endif
 
-namespace OVRFW {
+namespace OVR {
 
 ovrSoundPool::ovrSoundPool( JNIEnv & jni_, jobject activity_ ) :
 	jni( jni_ )

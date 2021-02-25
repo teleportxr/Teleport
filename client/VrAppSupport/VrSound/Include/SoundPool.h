@@ -14,9 +14,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "OVR_Types.h"
 
-namespace OVRFW
-{
-	class ovrFileSys;
+namespace OVR {
 
 // Pooled sound player for playing sounds from the APK. Must be
 // created/destroyed from the same thread.
@@ -26,7 +24,7 @@ public:
 			ovrSoundPool( JNIEnv & jni_, jobject activity_ );
 			~ovrSoundPool();
 
-	void	Initialize( class OVRFW::ovrFileSys * fileSys );
+	void	Initialize( class ovrFileSys * fileSys );
 
 	// Not thread safe on Android.
 	void	Play( JNIEnv & env, const char * soundName );

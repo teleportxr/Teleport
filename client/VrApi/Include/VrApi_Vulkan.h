@@ -40,23 +40,19 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDeviceMemory)
 
 /// Returns a list of strings delimited by a single space identifying Vulkan extensions that must
 /// be enabled for the instance in order for the VR runtime to support Vulkan-based applications.
-OVR_VRAPI_EXPORT ovrResult
-vrapi_GetInstanceExtensionsVulkan(char* extensionNames, uint32_t* extensionNamesSize);
+OVR_VRAPI_EXPORT ovrResult vrapi_GetInstanceExtensionsVulkan( char * extensionNames, uint32_t * extensionNamesSize );
 
 /// Returns a list of strings delimited by a single space identifying Vulkan extensions that must
 /// be enabled for the device in order for the VR runtime to support Vulkan-based applications.
-OVR_VRAPI_EXPORT ovrResult
-vrapi_GetDeviceExtensionsVulkan(char* extensionNames, uint32_t* extensionNamesSize);
+OVR_VRAPI_EXPORT ovrResult vrapi_GetDeviceExtensionsVulkan( char * extensionNames, uint32_t * extensionNamesSize );
 
 /// Initialization parameters unique to Vulkan.
-typedef struct ovrSystemCreateInfoVulkan_ {
+typedef struct ovrSystemCreateInfoVulkan_
+{
 	VkInstance			Instance;
 	VkPhysicalDevice	PhysicalDevice;
 	VkDevice			Device;
 } ovrSystemCreateInfoVulkan;
-
-OVR_VRAPI_ASSERT_TYPE_SIZE_32_BIT( ovrSystemCreateInfoVulkan, 12 );
-OVR_VRAPI_ASSERT_TYPE_SIZE_64_BIT( ovrSystemCreateInfoVulkan, 24 );
 
 /// Initializes the API for Vulkan support.
 /// This is lightweight and does not create any threads.
@@ -69,17 +65,11 @@ OVR_VRAPI_EXPORT ovrResult vrapi_CreateSystemVulkan( ovrSystemCreateInfoVulkan *
 OVR_VRAPI_EXPORT void vrapi_DestroySystemVulkan();
 
 /// Get the VkImage at the given index within the chain.
-OVR_VRAPI_EXPORT VkImage
-vrapi_GetTextureSwapChainBufferVulkan(ovrTextureSwapChain* chain, int index);
+OVR_VRAPI_EXPORT VkImage vrapi_GetTextureSwapChainBufferVulkan( ovrTextureSwapChain * chain, int index );
 
 /// Get the foveation VkImage and corresponding size at the given index within the chain.
 /// In case of failure, this returns a null image handle and zero width and height.
-OVR_VRAPI_EXPORT ovrResult vrapi_GetTextureSwapChainBufferFoveationVulkan(
-    ovrTextureSwapChain* chain,
-    int index,
-    VkImage* image,
-    uint32_t* imageWidth,
-    uint32_t* imageHeight);
+OVR_VRAPI_EXPORT ovrResult vrapi_GetTextureSwapChainBufferFoveationVulkan( ovrTextureSwapChain * chain, int index, VkImage * image, uint32_t * imageWidth, uint32_t * imageHeight );
 
 #if defined( __cplusplus )
 }	// extern "C"

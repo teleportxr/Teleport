@@ -39,13 +39,9 @@ sounds.
 #include <unordered_map>
 #include "OVR_JSON.h"
 
-namespace OVR
-{
-	class JSON;
+namespace OVR {
 
-}
-namespace OVRFW {
-
+class JSON;
 
 class ovrSoundAssetMapping
 {
@@ -57,7 +53,7 @@ public:
 	bool	GetSound( const char * soundName, std::string & outSound ) const;
 	
 private:
-	void	LoadSoundAssetsFromJsonObject( const std::string & url, std::shared_ptr<OVR::JSON> dataFile );
+	void	LoadSoundAssetsFromJsonObject( const std::string & url, std::shared_ptr<JSON> dataFile );
 	void	LoadSoundAssetsFromPackage( const std::string & url, const char * jsonFile );
 
 	std::unordered_map< std::string, std::string >  SoundMap;	// Maps hashed sound name to sound asset URL

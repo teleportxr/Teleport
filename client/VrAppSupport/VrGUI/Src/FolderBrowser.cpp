@@ -808,13 +808,14 @@ OvrFolderBrowser::OvrFolderBrowser(
 			panel = "res/raw/panel.tga";
 		}
 
-		ovr_ReadFileFromApplicationPackage( panel, bufferLength, buffer );
-
+		if(ovr_ReadFileFromApplicationPackage( panel, bufferLength, buffer ))
+		{
 			int panelW = 0;
 			int panelH = 0;
-		ThumbPanelBG = stbi_load_from_memory( ( stbi_uc const * )buffer, bufferLength, &panelW, &panelH, NULL, 4 );
-
+			ThumbPanelBG = stbi_load_from_memory((stbi_uc const *) buffer, bufferLength, &panelW,
+												 &panelH, NULL, 4);
 			OVR_ASSERT( ThumbPanelBG != 0 && panelW == ThumbWidth && panelH == ThumbHeight );
+		}
 	}
 
 	// load up the default panel textures once

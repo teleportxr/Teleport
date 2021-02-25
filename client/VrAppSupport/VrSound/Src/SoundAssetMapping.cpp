@@ -14,11 +14,11 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "OVR_JSON.h"
 #include "OVR_LogUtils.h"
 
-//#include "PathUtils.h"
+#include "PathUtils.h"
 #include "PackageFiles.h"
 #include "OVR_FileSys.h"
 
-namespace OVRFW {
+namespace OVR {
 
 static const char * DEV_SOUNDS_RELATIVE = "Oculus/sound_assets.json";
 static const char * VRLIB_SOUNDS = "res/raw/sound_assets.json";
@@ -35,7 +35,7 @@ void ovrSoundAssetMapping::LoadSoundAssets( ovrFileSys * fileSys )
 	std::string foundPath;
 	if ( GetFullPath( searchPaths, DEV_SOUNDS_RELATIVE, foundPath ) )
 	{
-		std::shared_ptr<OVR::JSON> dataFile = OVR::JSON::Load( foundPath.c_str() );
+		std::shared_ptr<JSON> dataFile = JSON::Load( foundPath.c_str() );
 		if ( dataFile == NULL )
 		{
 			OVR_FAIL( "ovrSoundAssetMapping::LoadSoundAssets failed to load JSON meta file: %s", foundPath.c_str() );
@@ -110,7 +110,7 @@ void ovrSoundAssetMapping::LoadSoundAssetsFromPackage( const std::string & url, 
 		OVR_FAIL( "ovrSoundAssetMapping::LoadSoundAssetsFromPackage failed to read %s", jsonFile );
 	}
 
-	auto dataFile = OVR::JSON::Parse( reinterpret_cast< char * >( buffer ) );
+	auto dataFile = JSON::Parse( reinterpret_cast< char * >( buffer ) );
 	if ( !dataFile )
 	{
 		OVR_FAIL( "ovrSoundAssetMapping::LoadSoundAssetsFromPackage failed json parse on %s", jsonFile );
@@ -120,7 +120,7 @@ void ovrSoundAssetMapping::LoadSoundAssetsFromPackage( const std::string & url, 
 	LoadSoundAssetsFromJsonObject( url, dataFile );
 }
 
-void ovrSoundAssetMapping::LoadSoundAssetsFromJsonObject( const std::string & url, std::shared_ptr<OVR::JSON> dataFile )
+void ovrSoundAssetMapping::LoadSoundAssetsFromJsonObject( const std::string & url, std::shared_ptr<JSON> dataFile )
 {
 	OVR_ASSERT( dataFile );
 

@@ -1,6 +1,6 @@
 
 //#version 310 es
-precision lowp float;
+precision highp float;
 
 //From Application VIA
 layout(location = 0) in vec3 a_Position;
