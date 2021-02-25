@@ -540,7 +540,7 @@ OVRFW::ovrApplFrameOut Application::AppFrame(const OVRFW::ovrApplFrameIn &vrFram
 	Frame(vrFrame);
 
 	// Update GUI systems last, but before rendering anything.
-	mGuiSys->Frame(vrFrame, CenterEyeViewMatrix);
+	mGuiSys->Frame(vrFrame, ovrMatrix4f_CreateIdentity());
 	return OVRFW::ovrApplFrameOut();
 }
 
@@ -624,27 +624,26 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 			break;
 		case RENDER_STATE_RUNNING:
 		{
+			/// Frame matrices
+			out.FrameMatrices.CenterView = CenterEyeViewMatrix;
+			for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
 			{
-				/// Frame matrices
-				out.FrameMatrices.CenterView = CenterEyeViewMatrix;
-				for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
-				{
-					out.FrameMatrices.EyeView[eye] = in.Eye[eye].ViewMatrix;
-					// Calculate projection matrix using custom near plane value.
-					out.FrameMatrices.EyeProjection[eye] = ovrMatrix4f_CreateProjectionFov(
-							SuggestedEyeFovDegreesX, SuggestedEyeFovDegreesY, 0.0f, 0.0f, 0.1f,
-							0.0f);
-				}
-
-				/// Surface
-				out.Surfaces.push_back(ovrDrawSurface(&SurfaceDef));
-
-				// Append mGuiSys surfaces.
-				mGuiSys->AppendSurfaceList(out.FrameMatrices.CenterView, &out.Surfaces);
-
-				///	worldLayer.Header.Flags |=
-				/// VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+				out.FrameMatrices.EyeView[eye] = in.Eye[eye].ViewMatrix;
+				// Calculate projection matrix using custom near plane value.
+				out.FrameMatrices.EyeProjection[eye] = ovrMatrix4f_CreateProjectionFov(
+						SuggestedEyeFovDegreesX, SuggestedEyeFovDegreesY, 0.0f, 0.0f, 0.1f,
+						0.0f);
 			}
+
+			/// Surface
+			//out.Surfaces.push_back(ovrDrawSurface(&SurfaceDef));
+
+			// Append mGuiSys surfaces.
+			//mGuiSys->AppendSurfaceList(out.FrameMatrices.CenterView, &out.Surfaces);
+
+			///	worldLayer.Header.Flags |=
+			/// VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+
 			Render(in, out);
 			DefaultRenderFrame_Running(in, out);
 		}
