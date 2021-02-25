@@ -57,13 +57,6 @@ static std::string GetDir( ovrStorageType storageType, ovrFolderType folderType,
 	OVR_ASSERT( folderType < EFT_COUNT );
 
 #if defined( OVR_OS_ANDROID )
-
-	if ( storageType == EST_SECONDARY_EXTERNAL_STORAGE && folderType == EFT_ROOT )
-	{
-		// On Android-M, external sdcard path is dynamic and is queried through VRSVC.
-		return vrapi_GetSystemPropertyString( java, VRAPI_SYS_PROP_EXT_SDCARD_PATH );
-	}
-	else
 	{
 		const char * methodName = FolderStorageMethodName[storageType][folderType];
 		const char * methodSignature = FolderStorageSignature;

@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import os, socket, sys
-
+os.environ['ANDROID_NDK_HOME']='C:\\Users\\Roderick\\AppData\\Local\\Android\\Sdk\\ndk\\21.3.6528147'
+os.environ['Path']='C:\\Program Files\\Java\\jre1.8.0_281\\bin;'+os.environ['Path']
 workingDir = os.getcwd()
 
 def init():

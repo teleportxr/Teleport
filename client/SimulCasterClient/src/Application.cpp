@@ -121,32 +121,36 @@ void Application::Configure(ovrSettings& settings )
 	settings.EyeBufferParms.depthFormat = DEPTH_16;
 	settings.EyeBufferParms.multisamples = 1;
 	settings.TrackingSpace=VRAPI_TRACKING_SPACE_LOCAL_FLOOR;
+	int res=vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE);
+	useMultiview= (res == VRAPI_TRUE);
 	//settings.TrackingTransform = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
-	settings.RenderMode = RENDERMODE_STEREO;
+	settings.RenderMode = useMultiview?RENDERMODE_MULTIVIEW:RENDERMODE_STEREO;
 }
 
 void Application::EnteredVrMode(const ovrIntentType intentType, const char* intentFromPackage, const char* intentJSON, const char* intentURI )
 {
-	if(intentType != INTENT_LAUNCH)
+	if (intentType != INTENT_LAUNCH)
 		return;
 	RedirectStdCoutCerr();
 
-	std::string client_ini=LoadTextFile("client.ini");
+	std::string client_ini = LoadTextFile("client.ini");
 	CSimpleIniA ini;
 
 	SI_Error rc = ini.LoadData(client_ini.data(), client_ini.length());
-	if (rc== SI_OK)
+	if (rc == SI_OK)
 	{
 		server_ip = ini.GetValue("", "SERVER_IP", "");
-		server_discovery_port = ini.GetLongValue("","SERVER_DISCOVERY_PORT",REMOTEPLAY_SERVER_DISCOVERY_PORT);
+		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",
+												 REMOTEPLAY_SERVER_DISCOVERY_PORT);
 	}
 	else
 	{
-		std::cerr<<"Create client.ini in assets directory to specify settings."<<std::endl;
+		std::cerr << "Create client.ini in assets directory to specify settings." << std::endl;
 	}
 
 
-	resourceCreator.Initialise((&GlobalGraphicsResources.renderPlatform), scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	resourceCreator.Initialise((&GlobalGraphicsResources.renderPlatform),
+							   scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	resourceCreator.AssociateResourceManagers(resourceManagers);
 
 	//Default Effects
@@ -155,7 +159,7 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	GlobalGraphicsResources.defaultPBREffect.Create(&ci);
 
 	//Default Sampler
-	scr::Sampler::SamplerCreateInfo sci  = {};
+	scr::Sampler::SamplerCreateInfo sci = {};
 	sci.wrapU = scr::Sampler::Wrap::REPEAT;
 	sci.wrapV = scr::Sampler::Wrap::REPEAT;
 	sci.wrapW = scr::Sampler::Wrap::REPEAT;
@@ -172,52 +176,81 @@ void Application::EnteredVrMode(const ovrIntentType intentType, const char* inte
 	OVR_LOG("%s | %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GlobalGraphicsResources.maxFragTextureSlots);
 	glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &GlobalGraphicsResources.maxFragUniformBlocks);
-	OVR_LOG("Fragment Texture Slots: %d, Fragment Uniform Blocks: %d", GlobalGraphicsResources.maxFragTextureSlots, GlobalGraphicsResources.maxFragUniformBlocks);
+	OVR_LOG("Fragment Texture Slots: %d, Fragment Uniform Blocks: %d",
+			GlobalGraphicsResources.maxFragTextureSlots,
+			GlobalGraphicsResources.maxFragUniformBlocks);
 
-    //Setup Debug
-    scc::SetupGLESDebug();
+	//Setup Debug
+	scc::SetupGLESDebug();
 
-	const ovrJava *java=app->GetJava();
-	mSoundEffectContext=new ovrSoundEffectContext(*java->Env, java->ActivityObject);
+	const ovrJava *java = app->GetJava();
+	mSoundEffectContext = new ovrSoundEffectContext(*java->Env, java->ActivityObject);
 	mSoundEffectContext->Initialize(&app->GetFileSys());
-	mSoundEffectPlayer=new OvrGuiSys::ovrDummySoundEffectPlayer();
+	mSoundEffectPlayer = new OvrGuiSys::ovrDummySoundEffectPlayer();
 
-	mLocale=ovrLocale::Create(*java->Env, java->ActivityObject, "default");
+	mLocale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
 	std::string fontName;
 	GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
 
-	clientRenderer.EnteredVR(app->GetOvrMobile(),java);
+	clientRenderer.EnteredVR(app->GetOvrMobile(), java);
 	mGuiSys->Init(app, *mSoundEffectPlayer, fontName.c_str(), &app->GetDebugLines());
 
 	clientRenderer.mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));
 
 
 	//Set Lighting Cubemap Shader Resource
-    scr::ShaderResourceLayout lightingCubemapLayout;
-    lightingCubemapLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-    lightingCubemapLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	lightingCubemapLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	lightingCubemapLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	scr::ShaderResourceLayout lightingCubemapLayout;
+	lightingCubemapLayout.AddBinding(14,
+									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	lightingCubemapLayout.AddBinding(15,
+									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	lightingCubemapLayout.AddBinding(16,
+									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	lightingCubemapLayout.AddBinding(17,
+									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-    GlobalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14, "u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler(), clientRenderer.diffuseCubemapTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15, "u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler(), clientRenderer.specularCubemapTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16, "u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler(), clientRenderer.mRoughSpecularTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17, "u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler(), clientRenderer.mCubemapLightingTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
+			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14,
+			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
+								 , clientRenderer.diffuseCubemapTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
+			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
+			"u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler()
+								  , clientRenderer.specularCubemapTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
+			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16,
+			"u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler()
+									   , clientRenderer.mRoughSpecularTexture});
+	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
+			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17,
+			"u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler()
+								, clientRenderer.mCubemapLightingTexture});
 
 
-	int num_refresh_rates=vrapi_GetSystemPropertyInt(java,VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
+	int num_refresh_rates = vrapi_GetSystemPropertyInt(java,
+													   VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
 	mRefreshRates.resize(num_refresh_rates);
-	vrapi_GetSystemPropertyFloatArray(java,VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,mRefreshRates.data(),num_refresh_rates);
+	vrapi_GetSystemPropertyFloatArray(java, VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,
+									  mRefreshRates.data(), num_refresh_rates);
 
-	if(num_refresh_rates>0)
-		vrapi_SetDisplayRefreshRate(app->GetOvrMobile(),mRefreshRates[num_refresh_rates-1]);
+	if (num_refresh_rates > 0)
+		vrapi_SetDisplayRefreshRate(app->GetOvrMobile(), mRefreshRates[num_refresh_rates - 1]);
 
 	// Bind the delegates.
 
-	controllers.SetToggleTexturesDelegate(std::bind(&ClientRenderer::ToggleTextures,&clientRenderer));
-	controllers.SetToggleShowInfoDelegate(std::bind(&ClientRenderer::ToggleShowInfo,&clientRenderer));
-	controllers.SetSetStickOffsetDelegate(std::bind(&ClientRenderer::SetStickOffset,&clientRenderer,std::placeholders::_1,std::placeholders::_2));
+	controllers.SetToggleTexturesDelegate(
+			std::bind(&ClientRenderer::ToggleTextures, &clientRenderer));
+	controllers.SetToggleShowInfoDelegate(
+			std::bind(&ClientRenderer::ToggleShowInfo, &clientRenderer));
+	controllers.SetSetStickOffsetDelegate(
+			std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1,
+					  std::placeholders::_2));
+
 }
 
 void Application::LeavingVrMode()
@@ -377,7 +410,24 @@ ovrFrameResult Application::Frame(const ovrFrameInput& vrFrame)
 
 	// Append GuiSys surfaces. This should always be the last item to append the render list.
 	mGuiSys->AppendSurfaceList(res.FrameMatrices.CenterView, &res.Surfaces);
+/*	if(useMultiview)
+	{
+		// Initialize the FrameParms.
+		FrameParms = vrapi_DefaultFrameParms( app->GetJava(), VRAPI_FRAME_INIT_DEFAULT, vrapi_GetTimeInSeconds(), NULL );
+		for ( int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++ )
+		{
+			res.Layers[0].Textures[eye].ColorTextureSwapChain = vrFrame.ColorTextureSwapChain[eye];
+			//FrameParms.Layers[0].Textures[eye].DepthTextureSwapChain = vrFrame.DepthTextureSwapChain[eye];
+			res.Layers[0].Textures[eye].TextureSwapChainIndex = vrFrame.TextureSwapChainIndex;
 
+			res.Layers[0].Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
+			res.Layers[0].Textures[eye].HeadPose = vrFrame.Tracking.HeadPose;
+		}
+
+		//FrameParms.ExternalVelocity = mScene.GetExternalVelocity();
+		res.Layers[0].Flags = VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+
+	}*/
 	return res;
 }
 
@@ -406,8 +456,6 @@ void Application::UpdateHandObjects()
 		}
 		++deviceIndex;
 	}
-
-
 	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
 	if(body)
 	{
@@ -787,15 +835,16 @@ std::string Application::LoadTextFile(const char *filename)
 	std::vector<uint8_t> outBuffer;
 	std::string str = "apk:///assets/";
 	str += filename;
-	if(!app)
+	if (!app)
 	{
 
 	}
-	else if(app->GetFileSys().ReadFile(str.c_str(), outBuffer))
+	else if (app->GetFileSys().ReadFile(str.c_str(), outBuffer))
 	{
-		if(outBuffer.back() != '\0')
-			outBuffer.push_back('\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
-		return std::string((const char *)outBuffer.data());
+		if (outBuffer.back() != '\0')
+			outBuffer.push_back(
+					'\0'); //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
+		return std::string((const char *) outBuffer.data());
 	}
 	return "";
 }

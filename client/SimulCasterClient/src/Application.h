@@ -147,4 +147,7 @@ protected:
 	int server_discovery_port=10600;
 	ENetAddress remoteEndpoint;
 	ClientDeviceState clientDeviceState;
+
+	bool useMultiview=false;
+	ovrFrameParms FrameParms;
 };

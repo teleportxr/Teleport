@@ -260,6 +260,8 @@ static GLuint CompileShader( GLenum shaderType, const char * directives, const c
 	{
 		OVR_WARN( "Compiling %s shader: ****** failed ******\n", shaderType == GL_VERTEX_SHADER ? "vertex" : "fragment" );
 		GLchar msg[1024];
+		glGetShaderInfoLog( shader, sizeof( msg ), 0, msg );
+		OVR_WARN( "%s\n", msg );
 		const char * sp = src;
 		int charCount = 0;
 		int line = 0;
