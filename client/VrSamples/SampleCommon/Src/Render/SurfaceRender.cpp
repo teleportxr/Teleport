@@ -19,6 +19,7 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 #include "GlTexture.h"
 #include "GlProgram.h"
 #include "GlBuffer.h"
+#include <GLES3/gl32.h>
 
 #include <algorithm>
 
@@ -382,6 +383,21 @@ ovrDrawCounters ovrSurfaceRender::RenderSurfaceList(
                                 }
                             }
                         } break;
+						case ovrProgramParmType::BUFFER_STORAGE:
+						{
+							const int parmBinding =  cmd.Program.Uniforms[i].Binding;
+							if ( parmBinding >= 0 && cmd.UniformData[i].Data != NULL )
+							{
+								const GlBuffer & buffer = *static_cast< GlBuffer * >( cmd.UniformData[i].Data );
+								if ( currentBuffers[parmBinding] != buffer.GetBuffer() )
+								{
+									counters.numBufferBinds++;
+									currentBuffers[parmBinding] = buffer.GetBuffer();
+									glBindBufferBase( GL_SHADER_STORAGE_BUFFER, parmBinding, buffer.GetBuffer() );
+								}
+							}
+						}
+						break;
                         case ovrProgramParmType::MAX:
                             uniformsDone = true;
                             break; // done

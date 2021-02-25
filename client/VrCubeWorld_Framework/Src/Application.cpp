@@ -392,7 +392,6 @@ void Application::EnteredVrMode()
 	//std::string fontName;
 	//GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
 
-	VideoDecoderProxy::InitializeJNI(java->Env);
 	clientRenderer.EnteredVR(java);
 
 	clientRenderer.mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));

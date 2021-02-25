@@ -5,7 +5,7 @@
 
 extern "C" {
 
-void Java_co_Simul_remoteplayclient_VideoDecoder_nativeFrameAvailable(JNIEnv* env, jclass clazz, jlong proxyPtr)
+JNIEXPORT void Java_com_oculus_sdk_vrcubeworldfw_VideoDecoder_nativeFrameAvailable(JNIEnv* env, jclass clazz, jlong proxyPtr)
 {
     VideoDecoderProxy* proxy = reinterpret_cast<VideoDecoderProxy*>(proxyPtr);
     assert(proxy);
@@ -146,7 +146,7 @@ void VideoDecoderProxy::InitializeJNI(JNIEnv* env)
 {
     assert(env);
 
-    jclass videoDecoderClass = env->FindClass("com/oculus/vrcubeworld/VideoDecoder");
+    jclass videoDecoderClass = env->FindClass("com/oculus/sdk/vrcubeworldfw/VideoDecoder");
 	assert(videoDecoderClass);
     jni.videoDecoderClass = (jclass)env->NewGlobalRef((jobject)videoDecoderClass);
 

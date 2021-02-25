@@ -1,7 +1,7 @@
 // Copyright (c) Facebook Technologies, LLC and its affiliates. All Rights reserved.
 package com.oculus.sdk.vrcubeworldfw
 
-import android.app.Activity
+import android.app.NativeActivity
 import android.os.Bundle
 
 /**
@@ -27,7 +27,7 @@ import android.os.Bundle
  * 2. Must remember what libraries have already been loaded to avoid infinitely looping when
  * libraries have circular dependencies.
  */
-class MainActivity : Activity()
+class MainActivity : NativeActivity()
 {
     private var alreadyRequestedRecordingPermission = false
 

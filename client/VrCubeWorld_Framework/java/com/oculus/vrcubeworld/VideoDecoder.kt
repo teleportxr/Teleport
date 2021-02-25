@@ -1,6 +1,6 @@
 // (C) Copyright 2018 Simul.co
 
-package com.oculus.vrcubeworld
+package com.oculus.sdk.vrcubeworldfw
 
 import android.graphics.SurfaceTexture
 import android.media.MediaCodec
