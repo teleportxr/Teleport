@@ -54,10 +54,26 @@ namespace SCServer
 		bool keepQueueing = attemptQueueData();
 		if(keepQueueing)
 		{
+			std::vector<avs::uid> nodeIDsToStream;
 			std::vector<avs::MeshNodeResources> meshNodeResources;
 			std::vector<avs::LightNodeResources> lightNodeResources;
 
-			req->getResourcesToStream(meshNodeResources, lightNodeResources);
+			req->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources);
+
+			for(avs::uid nodeID : nodeIDsToStream)
+			{
+				if(!req->hasResource(nodeID))
+				{
+					encodeNodes(src, req, {nodeID});
+
+					keepQueueing = attemptQueueData();
+					if(!keepQueueing)
+					{
+						break;
+					}
+				}
+			}
+
 			//Encode mesh nodes first, as they should be sent before lighting data.
 			for(avs::MeshNodeResources meshResourceInfo : meshNodeResources)
 			{
@@ -67,7 +83,9 @@ namespace SCServer
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
+					{
 						break;
+					}
 				}
 
 				if(meshResourceInfo.skinID != 0)
@@ -80,7 +98,9 @@ namespace SCServer
 
 							keepQueueing = attemptQueueData();
 							if(!keepQueueing)
+							{
 								break;
+							}
 						}
 					}
 
@@ -90,7 +110,9 @@ namespace SCServer
 
 						keepQueueing = attemptQueueData();
 						if(!keepQueueing)
+						{
 							break;
+						}
 					}
 				}
 
@@ -102,11 +124,15 @@ namespace SCServer
 
 						keepQueueing = attemptQueueData();
 						if(!keepQueueing)
+						{
 							break;
+						}
 					}
 				}
 				if(!keepQueueing)
+				{
 					break;
+				}
 
 				for(avs::MaterialResources material : meshResourceInfo.materials)
 				{
@@ -118,11 +144,15 @@ namespace SCServer
 
 							keepQueueing = attemptQueueData();
 							if(!keepQueueing)
+							{
 								break;
+							}
 						}
 
 						if(!keepQueueing)
+						{
 							break;
+						}
 					}
 
 					if(!req->hasResource(material.material_uid))
@@ -130,12 +160,17 @@ namespace SCServer
 						encodeMaterials(src, req, {material.material_uid});
 
 						keepQueueing = attemptQueueData();
+
 						if(!keepQueueing)
+						{
 							break;
+						}
 					}
 				}
 				if(!keepQueueing)
+				{
 					break;
+				}
 
 				if(!req->hasResource(meshResourceInfo.node_uid))
 				{
@@ -143,7 +178,9 @@ namespace SCServer
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
+					{
 						break;
+					}
 				}
 			}
 
@@ -155,7 +192,9 @@ namespace SCServer
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
+					{
 						break;
+					}
 				}
 
 				if(!req->hasResource(lightResourceInfo.node_uid))
@@ -164,10 +203,13 @@ namespace SCServer
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
+					{
 						break;
+					}
 				}
 			}
 		}
+
 		return avs::Result::OK;
 	}
 
@@ -184,40 +226,16 @@ namespace SCServer
 		return avs::Result::OK;
 	}
 
-/*	std::string MemSize(size_t sz)
-	{
-		std::stringstream str;
-		if(sz<1024)
-		{
-			str	<<sz<<" bytes";
-		}
-		else if(sz/1024<1024)
-		{
-			str<<(sz/1024)<<" kb";
-		}
-		else 
-		{
-			str<<(sz/1024/1024)<<" Mb";
-		}
-		return str.str();
-	}*/
-
 	avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 	{
-		for(size_t h = 0; h < missingUIDs.size(); h++)
+		for(avs::uid uid : missingUIDs)
 		{
 			size_t oldBufferSize = buffer.size();
 
-			avs::uid uid = missingUIDs[h];
 			avs::Mesh* mesh = src->getMesh(uid, req->getClientAxesStandard());
 			if(!mesh)
 			{
-				static std::set<avs::uid> hasReported ;
-				if(hasReported.find(uid)==hasReported.end())
-				{
-					TELEPORT_CERR << "Mesh not found with uid " << uid << std::endl;
-					hasReported.insert(uid);
-				}
+				TELEPORT_CERR << "Mesh encoding error! Mesh_" << uid << " does not exist!\n";
 				continue;
 			}
 
@@ -293,24 +311,24 @@ namespace SCServer
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface *req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 	{
 		//Place payload type onto the buffer.
 		putPayload(avs::GeometryPayloadType::Node);
-		for (int i=0;i<missingUIDs.size();i++)
+		for(int i = 0; i < missingUIDs.size(); i++)
 		{
-			avs::uid uid =missingUIDs[i];
+			avs::uid uid = missingUIDs[i];
 			avs::DataNode* node = src->getNode(uid);
 			if(!node)
 			{
-				TELEPORT_CERR << "No such node with uid " << uid << std::endl;
-				missingUIDs.erase(missingUIDs.begin()+i);
+				TELEPORT_CERR << "Node encoding error! Node_" << uid << " does not exist!\n";
+				missingUIDs.erase(missingUIDs.begin() + i);
 				i--;
 			}
 		}
 
 		put(missingUIDs.size());
-		for (const avs::uid &uid : missingUIDs)
+		for(const avs::uid& uid : missingUIDs)
 		{
 			avs::DataNode* node = src->getNode(uid);
 			put(uid);
@@ -351,7 +369,7 @@ namespace SCServer
 				TELEPORT_ASSERT(node->materials.size() == 0);
 			}
 
-			if(node->data_type==avs::NodeDataType::Light)
+			if(node->data_type == avs::NodeDataType::Light)
 			{
 				put(node->lightColour);
 				put(node->lightRadius);
@@ -410,36 +428,6 @@ namespace SCServer
 
 		return avs::Result::OK;
 	}
-
-	//avs::Result GeometryEncoder::encodeAnimation(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
-	//{
-	//	const avs::Animation* animation = src->getAnimation(animationID, req->getClientAxesStandard());
-	//	if(animation)
-	//	{
-	//		putPayload(avs::GeometryPayloadType::Animation);
-	//		put(animationID);
-	//		
-	//		put(animation->transformKeyframes.size());
-	//		for(const avs::TransformKeyframe& transformKeyframe : animation->transformKeyframes)
-	//		{
-	//			put(transformKeyframe.nodeID);
-
-	//			encodeFloatKeyframes(transformKeyframe.positionXKeyframes);
-	//			encodeFloatKeyframes(transformKeyframe.positionYKeyframes);
-	//			encodeFloatKeyframes(transformKeyframe.positionZKeyframes);
-
-	//			encodeFloatKeyframes(transformKeyframe.rotationXKeyframes);
-	//			encodeFloatKeyframes(transformKeyframe.rotationYKeyframes);
-	//			encodeFloatKeyframes(transformKeyframe.rotationZKeyframes);
-	//			encodeFloatKeyframes(transformKeyframe.rotationWKeyframes);
-	//		}
-
-	//		putPayloadSize();
-	//		req->encodedResource(animationID);
-	//	}
-
-	//	return avs::Result::OK;
-	//}
 
 	avs::Result GeometryEncoder::encodeAnimation(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
 	{

@@ -536,9 +536,10 @@ struct Animation;
 		virtual void confirmResource(uid resourceID) = 0;
 
 		//Get resources to stream on a per node basis.
+		//	outNodeIDs : IDs of nodes to stream with no dependencies on sub-resources.
 		//	outMeshResources : Resources to stream for mesh nodes.
 		//	outLightResources : Resources to stream for light nodes.
-		virtual void getResourcesToStream(std::vector<MeshNodeResources>& outMeshResources, std::vector<LightNodeResources>& outLightResources) const = 0;
+		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<MeshNodeResources>& outMeshResources, std::vector<LightNodeResources>& outLightResources) const = 0;
 
 		//Returns the axes standard used by the client.
 		virtual AxesStandard getClientAxesStandard() const = 0;
