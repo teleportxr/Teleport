@@ -9,7 +9,7 @@ layout(binding = 11) uniform sampler2D u_Normal;
 layout(binding = 12) uniform sampler2D u_Combined;
 
 //Layout conformant to GLSL std140
-layout(std140, binding = 3) uniform u_MaterialData
+layout(std140, binding = 2) uniform u_MaterialData
 {
     vec4 diffuseOutputScalar;
     vec2 diffuseTexCoordsScalar_R;

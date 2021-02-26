@@ -17,12 +17,12 @@ GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string
 void GL_Skin::UpdateBoneMatrices(const scr::mat4 &rootTransform)
 {
 	scr::Skin::UpdateBoneMatrices(rootTransform);
-
 	uniformBuffer->Update();
 }
 
 void GL_Skin::CreateUniformBuffer(const scc::GL_RenderPlatform *renderPlatform)
 {
+	//return;
 	size_t boneMatricesSize = sizeof(scr::mat4) * MAX_BONES;
 	uint32_t bindingIndex = 4;
 

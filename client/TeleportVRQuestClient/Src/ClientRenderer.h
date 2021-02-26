@@ -169,7 +169,6 @@ public:
 
 	std::vector<std::string> passNames;
 	int passSelector=0;
-	GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	static constexpr int MAX_TAG_DATA_COUNT = 32;
 

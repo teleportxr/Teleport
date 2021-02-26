@@ -1,5 +1,5 @@
 
-precision highp float;
+precision lowp float;
 
 const float PI    = 3.1415926536;
 const float TwoPI = 2.0 * PI;
@@ -7,7 +7,7 @@ const float TwoPI = 2.0 * PI;
 layout(location = 0) in vec3 vSampleVec;
 layout(location = 1) in mat4 vInvViewProj;
 layout(location = 5) in vec3 vEyeOffset;
-layout(location = 6) in vec3 vDirection;
+//layout(location = 6) in vec3 vDirection;
 layout(location = 7) in vec2 vTexCoords;
 
 // ALL light data is passed in as tags.
@@ -67,20 +67,28 @@ vec4 mul(mat4 a,vec4 b)
     return a*b;
 }
 
+vec3 SampleVec(vec3 position)
+{
+    return normalize(vec3(-position.z,position.x,position.y));
+}
+
 void main()
 {
     vec4 clip_pos=vec4(-1.0,-1.0,1.0,1.0);
     clip_pos.x+=2.0*vTexCoords.x;
     clip_pos.y+=2.0*vTexCoords.y;
-    vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
+
+    vec3 view=normalize((vInvViewProj*clip_pos).xyz);
+
+    vec3 colourSampleVec= SampleVec(view);
+    vec4 lookup = textureLod(cubemapTexture, colourSampleVec,0.0);
     vec3 offsetFromVideo2=vid.cameraPosition-tagDataCube.cameraPosition+vEyeOffset;
-    vec3 view = vSampleVec;
-    vec3 colourSampleVec=vSampleVec;
+   // vec3 view = vSampleVec;
     for (int i = 0; i < 5; i++)
     {
         float depth = lookup.a;
-        float dist_m=max(0.2,20.0*depth);
-        vec3 pos_m=dist_m*vDirection;
+        float dist_m=max(5.0,20.0*depth);
+        vec3 pos_m=dist_m*view;
         pos_m+=offsetFromVideo2* step(-0.8, -depth);
 
         // But this does not intersect at depth. We want the vector from the original centre, of
@@ -89,16 +97,18 @@ void main()
         float R = dist_m;
         float F = length(offsetFromVideo2);
         {
-            float D = -dot(normalize(offsetFromVideo2), vDirection);
+            float D = -dot(normalize(offsetFromVideo2), view);
             float b = F * D;
             float c = F * F - R * R;
             float U = -b + sqrt(b * b - c);
-            pos_m += (U - R) * vDirection*step(-F,0.0);
+            pos_m += (U - R) * view*step(-F,0.0);
 
-            colourSampleVec  = normalize(vec3(-pos_m.z, pos_m.x, pos_m.y));
+            colourSampleVec  = SampleVec(pos_m);
             lookup=textureLod(cubemapTexture, colourSampleVec, 0.0);
         }
     }
+    /* lookup.rgb=fract(view);*/
+    //lookup.b=0.0;
 //lookup.rgb+=abs(offsetFromVideo2);
 	//lookup.b=float(RWTagDataID.x)/31.0;
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));

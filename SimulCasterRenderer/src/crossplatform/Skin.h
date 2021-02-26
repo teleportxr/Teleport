@@ -10,7 +10,7 @@ namespace scr
 class Skin
 {
 public:
-	static constexpr size_t MAX_BONES = 64;
+	static constexpr size_t MAX_BONES = 8;
 
 	const std::string name;
 

@@ -417,7 +417,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 
 void OpaquePBR()
 {
-	PBR(true, true, true, true, true);
+	PBR(false, false, false, false, false);
 }
 void OpaqueAlbedo()
 {

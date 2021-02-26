@@ -900,8 +900,9 @@ void OvrSceneView::GetFrameMatrices(
     frameMatrices.CenterView = GetCenterEyeViewMatrix();
     frameMatrices.EyeView[0] = GetEyeViewMatrix(0);
     frameMatrices.EyeView[1] = GetEyeViewMatrix(1);
-    frameMatrices.EyeProjection[0] = GetEyeProjectionMatrix(0, fovDegreesX, fovDegreesY);
-    frameMatrices.EyeProjection[1] = GetEyeProjectionMatrix(1, fovDegreesX, fovDegreesY);
+    // we have custom far plane.
+    //frameMatrices.EyeProjection[0] = GetEyeProjectionMatrix(0, fovDegreesX, fovDegreesY);
+   // frameMatrices.EyeProjection[1] = GetEyeProjectionMatrix(1, fovDegreesX, fovDegreesY);
 }
 
 void OvrSceneView::GenerateFrameSurfaceList(

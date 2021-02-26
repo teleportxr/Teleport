@@ -100,13 +100,6 @@ namespace OVRFW
 		ovrSurfaceRender SurfaceRender;
 		ovrSurfaceDef SurfaceDef;
 		unsigned int Random;
-		GlProgram Program;
-		GlGeometry Cube;
-		GLint VertexTransformAttribute;
-		GLuint InstanceTransformBuffer;
-		ovrVector3f Rotations[NUM_ROTATIONS];
-		ovrVector3f CubePositions[NUM_INSTANCES];
-		int CubeRotations[NUM_INSTANCES];
 		ovrMatrix4f CenterEyeViewMatrix;
 		double startTime;
 
@@ -119,7 +112,6 @@ namespace OVRFW
 		std::string LoadTextFile(const char *filename) override;
 
 
-		GlobalGraphicsResources& GlobalGraphicsResources = GlobalGraphicsResources::GetInstance();
 		avs::Context  mContext;
 		avs::Pipeline mPipeline;
 
@@ -154,7 +146,7 @@ namespace OVRFW
 		int mNumPendingFrames                  = 0;
 
 		//Clientside Renderering Objects
-		scc::GL_DeviceContext mDeviceContext;
+		std::unique_ptr<scc::GL_DeviceContext> mDeviceContext;
 
 		unsigned long long receivedInitialPos=0;
 		unsigned long long receivedRelativePos=0;
@@ -170,7 +162,7 @@ namespace OVRFW
 		ENetAddress remoteEndpoint;
 		ClientDeviceState clientDeviceState;
 
-		bool useMultiview=false;
+		//bool useMultiview=false;
 		//ovrFrameParms FrameParms;
 	};
 

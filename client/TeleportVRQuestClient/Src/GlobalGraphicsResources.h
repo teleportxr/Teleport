@@ -10,6 +10,7 @@
 struct GlobalGraphicsResources
 {
 public:
+	GlobalGraphicsResources();
 	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
 
     scc::GL_RenderPlatform renderPlatform;
@@ -24,12 +25,8 @@ public:
 
     char* effectPassName = const_cast<char*>("OpaquePBR"); //Which effect pass the geometry should be rendered with.
 
-    static GlobalGraphicsResources& GetInstance()
-    {
-        return instance;
-    }
+    static GlobalGraphicsResources& GetInstance();
 private:
-	static GlobalGraphicsResources instance;
+	static GlobalGraphicsResources *instance;
 
-    GlobalGraphicsResources();
 };

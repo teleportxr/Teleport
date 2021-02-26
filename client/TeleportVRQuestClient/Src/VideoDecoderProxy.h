@@ -29,6 +29,10 @@ public:
 
     void NotifyFrameAvailable();
     static void InitializeJNI(JNIEnv* env);
+    static bool IsJNIInitialized()
+    {
+        return mJNIInitialized;
+    }
 
 private:
     void InitializeVideoDecoder(OVRFW::SurfaceTexture* surfaceTexture);
@@ -36,6 +40,7 @@ private:
 
     int mFrameWidth, mFrameHeight;
     bool mInitialized;
+    static bool mJNIInitialized;
 
     OVRFW::SurfaceTexture* mSurfaceTexture;
     DecodeEventInterface* mEventInterface;

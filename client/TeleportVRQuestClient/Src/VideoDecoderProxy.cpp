@@ -26,6 +26,7 @@ VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInt
 
 }
 
+ bool VideoDecoderProxy::mJNIInitialized=false;
 VideoDecoderProxy::~VideoDecoderProxy()
 {
     if(mVideoDecoder) {
@@ -155,6 +156,7 @@ void VideoDecoderProxy::InitializeJNI(JNIEnv* env)
     jni.shutdownMethod = env->GetMethodID(jni.videoDecoderClass, "shutdown", "()V");
     jni.decodeMethod = env->GetMethodID(jni.videoDecoderClass, "decode", "(Ljava/nio/ByteBuffer;IZ)Z");
     jni.displayMethod = env->GetMethodID(jni.videoDecoderClass, "display", "()Z");
+    mJNIInitialized=true;
 }
 
 void VideoDecoderProxy::InitializeVideoDecoder(OVRFW::SurfaceTexture* surfaceTexture)

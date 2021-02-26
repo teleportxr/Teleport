@@ -31,79 +31,17 @@ extern "C"
 	}
 } // extern "C"
 
-
-static const char VERTEX_SHADER[] = R"glsl(
-in vec3 Position;
-in vec4 VertexColor;
-in mat4 VertexTransform;
-out vec4 fragmentColor;
-void main()
-{
-	gl_Position = sm.ProjectionMatrix[VIEW_ID] * ( sm.ViewMatrix[VIEW_ID] * ( VertexTransform * vec4( Position * 0.1, 1.0 ) ) );
-	fragmentColor = VertexColor;
-}
-)glsl";
-
-static const char FRAGMENT_SHADER[] = R"glsl(
-in lowp vec4 fragmentColor;
-void main()
-{
-	gl_FragColor = fragmentColor;
-}
-)glsl";
-
-// setup Cube
-struct ovrCubeVertices
-{
-	Vector3f positions[8];
-	Vector4f colors[8];
-};
-
-static ovrCubeVertices cubeVertices = {
-		// positions
-		{
-				Vector3f(-1.0f, +1.0f, -1.0f)   , Vector3f(+1.0f, +1.0f, -1.0f)   , Vector3f(+1.0f,
-																							 +1.0f,
-																							 +1.0f), Vector3f(
-				-1.0f, +1.0f, +1.0f)   , // top
-				Vector3f(-1.0f, -1.0f, -1.0f)                            , Vector3f(-1.0f, -1.0f,
-																					+1.0f), Vector3f(
-				+1.0f, -1.0f, +1.0f)   , Vector3f(+1.0f, -1.0f, -1.0f) // bottom
-		}
-		,
-		// colors
-		{       Vector4f(1.0f, 0.0f, 1.0f, 1.0f), Vector4f(0.0f, 1.0f, 0.0f, 1.0f), Vector4f(0.0f,
-																							 0.0f,
-																							 1.0f,
-																							 1.0f) , Vector4f(
-				1.0f, 0.0f, 0.0f, 1.0f), Vector4f(0.0f, 0.0f, 1.0f, 1.0f), Vector4f(0.0f, 1.0f,
-																					0.0f,
-																					1.0f) , Vector4f(
-				1.0f, 0.0f, 1.0f, 1.0f), Vector4f(1.0f, 0.0f, 0.0f, 1.0f)}
-		,};
-
-static const unsigned short cubeIndices[36] = {
-		0, 2, 1, 2, 0, 3, // top
-		4, 6, 5, 6, 4, 7, // bottom
-		2, 6, 7, 7, 1, 2, // right
-		0, 4, 5, 5, 3, 0, // left
-		3, 5, 6, 6, 2, 3, // front
-		0, 1, 7, 7, 4, 0 // back
-};
-
-
 Application::Application()
 		: ovrAppl(0, 0, CPU_LEVEL, GPU_LEVEL, true /* useMultiView */), mSoundEffectPlayer(nullptr)
 		  , Locale(nullptr)
 		  , Random(2)
-		  , mGuiSys(nullptr)
 		  , mPipelineConfigured(false)
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
-		  , mDeviceContext(&GlobalGraphicsResources.renderPlatform)
 		  , clientRenderer(&resourceCreator, &resourceManagers, this, this, &clientDeviceState)
 		  , lobbyRenderer(&clientDeviceState)
 		  , resourceManagers(new OVRNodeManager)
 		  , resourceCreator(basist::transcoder_texture_format::cTFETC2)
+		  , mGuiSys(nullptr)
 {
 	CenterEyeViewMatrix = ovrMatrix4f_CreateIdentity();
 	RedirectStdCoutCerr();
@@ -140,10 +78,6 @@ Application::~Application()
 	SAFE_DELETE(audioPlayer)
 
 	mSoundEffectPlayer = nullptr;
-
-	GlProgram::Free(Program);
-	Cube.Free();
-	GL(glDeleteBuffers(1, &InstanceTransformBuffer));
 
 	OvrGuiSys::Destroy(mGuiSys);
 }
@@ -215,129 +149,6 @@ bool Application::AppInit(const OVRFW::ovrAppContext *context)
 
 	ProcessIniFile();
 
-	// Create the program.
-	Program = GlProgram::Build(VERTEX_SHADER, FRAGMENT_SHADER, nullptr, 0);
-	VertexTransformAttribute = glGetAttribLocation(Program.Program, "VertexTransform");
-
-	// Create the cube.
-	VertexAttribs attribs;
-	attribs.position.resize(8);
-	attribs.color.resize(8);
-	for (int i = 0; i < 8; i++)
-	{
-		attribs.position[i] = cubeVertices.positions[i];
-		attribs.color[i] = cubeVertices.colors[i];
-	}
-
-	std::vector<TriangleIndex> indices;
-	indices.resize(36);
-	for (int i = 0; i < 36; i++)
-	{
-		indices[i] = cubeIndices[i];
-	}
-
-	Cube.Create(attribs, indices);
-
-	// Setup the instance transform attributes.
-	GL(glBindVertexArray(Cube.vertexArrayObject));
-	GL(glGenBuffers(1, &InstanceTransformBuffer));
-	GL(glBindBuffer(GL_ARRAY_BUFFER, InstanceTransformBuffer));
-	GL(glBufferData(
-			GL_ARRAY_BUFFER, NUM_INSTANCES * 4 * 4 * sizeof(float), nullptr, GL_DYNAMIC_DRAW));
-	for (int i = 0; i < 4; i++)
-	{
-		GL(glEnableVertexAttribArray(VertexTransformAttribute + i));
-		GL(glVertexAttribPointer(
-				VertexTransformAttribute + i,
-				4,
-				GL_FLOAT,
-				false,
-				4 * 4 * sizeof(float),
-				(void *) (i * 4 * sizeof(float))));
-		GL(glVertexAttribDivisor(VertexTransformAttribute + i, 1));
-	}
-	GL(glBindVertexArray(0));
-
-	// Setup random rotations.
-	for (int i = 0; i < NUM_ROTATIONS; i++)
-	{
-		Rotations[i].x = RandomFloat();
-		Rotations[i].y = RandomFloat();
-		Rotations[i].z = RandomFloat();
-	}
-
-	// Setup random cube positions and rotations.
-	for (int i = 0; i < NUM_INSTANCES; i++)
-	{
-		volatile float rx, ry, rz;
-		for (;;)
-		{
-			rx = (RandomFloat() - 0.5f) * (50.0f + static_cast<float>(sqrt(NUM_INSTANCES)));
-			ry = (RandomFloat() - 0.5f) * (50.0f + static_cast<float>(sqrt(NUM_INSTANCES)));
-			rz = (RandomFloat() - 0.5f) * (50.0f + static_cast<float>(sqrt(NUM_INSTANCES)));
-
-			// If too close to 0,0,0
-			if (fabsf(rx) < 4.0f && fabsf(ry) < 4.0f && fabsf(rz) < 4.0f)
-			{
-				continue;
-			}
-
-			// Test for overlap with any of the existing cubes.
-			bool overlap = false;
-			for (int j = 0; j < i; j++)
-			{
-				if (fabsf(rx - CubePositions[j].x) < 4.0f &&
-					fabsf(ry - CubePositions[j].y) < 4.0f &&
-					fabsf(rz - CubePositions[j].z) < 4.0f)
-				{
-					overlap = true;
-					break;
-				}
-			}
-
-			if (!overlap)
-			{
-				break;
-			}
-		}
-
-		rx *= 0.1f;
-		ry *= 0.1f;
-		rz *= 0.1f;
-
-		// Insert into list sorted based on distance.
-		int insert = 0;
-		const float distSqr = rx * rx + ry * ry + rz * rz;
-		for (int j = i; j > 0; j--)
-		{
-			const ovrVector3f *otherPos = &CubePositions[j - 1];
-			const float otherDistSqr =
-					otherPos->x * otherPos->x + otherPos->y * otherPos->y
-					+ otherPos->z * otherPos->z;
-			if (distSqr > otherDistSqr)
-			{
-				insert = j;
-				break;
-			}
-			CubePositions[j] = CubePositions[j - 1];
-			CubeRotations[j] = CubeRotations[j - 1];
-		}
-
-		CubePositions[insert].x = rx;
-		CubePositions[insert].y = ry;
-		CubePositions[insert].z = rz;
-
-		CubeRotations[insert] = (int) (RandomFloat() * (NUM_ROTATIONS - 0.1f));
-	}
-
-	// Create SurfaceDef
-	SurfaceDef.surfaceName = "Application Framework";
-	SurfaceDef.graphicsCommand.Program = Program;
-	SurfaceDef.graphicsCommand.GpuState.blendEnable = ovrGpuState::BLEND_ENABLE;
-	SurfaceDef.graphicsCommand.GpuState.cullEnable = true;
-	SurfaceDef.graphicsCommand.GpuState.depthEnable = true;
-	SurfaceDef.geo = Cube;
-	SurfaceDef.numInstances = NUM_INSTANCES;
 
 	SurfaceRender.Init();
 
@@ -349,14 +160,16 @@ bool Application::AppInit(const OVRFW::ovrAppContext *context)
 
 void Application::EnteredVrMode()
 {
-	resourceCreator.Initialise((&GlobalGraphicsResources.renderPlatform),
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	mDeviceContext.reset(new scc::GL_DeviceContext(&globalGraphicsResources.renderPlatform));
+	resourceCreator.Initialise((&globalGraphicsResources.renderPlatform),
 							   scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	resourceCreator.AssociateResourceManagers(resourceManagers);
 
 	//Default Effects
 	scr::Effect::EffectCreateInfo ci;
 	ci.effectName = "StandardEffects";
-	GlobalGraphicsResources.defaultPBREffect.Create(&ci);
+	globalGraphicsResources.defaultPBREffect.Create(&ci);
 
 	//Default Sampler
 	scr::Sampler::SamplerCreateInfo sci = {};
@@ -366,19 +179,19 @@ void Application::EnteredVrMode()
 	sci.minFilter = scr::Sampler::Filter::LINEAR;
 	sci.magFilter = scr::Sampler::Filter::LINEAR;
 
-	GlobalGraphicsResources.sampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
-	GlobalGraphicsResources.sampler->Create(&sci);
+	globalGraphicsResources.sampler = globalGraphicsResources.renderPlatform.InstantiateSampler();
+	globalGraphicsResources.sampler->Create(&sci);
 
 	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
-	GlobalGraphicsResources.cubeMipMapSampler = GlobalGraphicsResources.renderPlatform.InstantiateSampler();
-	GlobalGraphicsResources.cubeMipMapSampler->Create(&sci);
+	globalGraphicsResources.cubeMipMapSampler = globalGraphicsResources.renderPlatform.InstantiateSampler();
+	globalGraphicsResources.cubeMipMapSampler->Create(&sci);
 
 	OVR_LOG("%s | %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
-	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GlobalGraphicsResources.maxFragTextureSlots);
-	glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &GlobalGraphicsResources.maxFragUniformBlocks);
+	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &globalGraphicsResources.maxFragTextureSlots);
+	glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &globalGraphicsResources.maxFragUniformBlocks);
 	OVR_LOG("Fragment Texture Slots: %d, Fragment Uniform Blocks: %d",
-			GlobalGraphicsResources.maxFragTextureSlots,
-			GlobalGraphicsResources.maxFragUniformBlocks);
+			globalGraphicsResources.maxFragTextureSlots,
+			globalGraphicsResources.maxFragUniformBlocks);
 
 	//Setup Debug
 	scc::SetupGLESDebug();
@@ -412,20 +225,20 @@ void Application::EnteredVrMode()
 									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-	GlobalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
+	globalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
+	globalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14,
 			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
 								 , clientRenderer.diffuseCubemapTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
+	globalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
 			"u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler()
 								  , clientRenderer.specularCubemapTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
+	globalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16,
 			"u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler()
 									   , clientRenderer.mRoughSpecularTexture});
-	GlobalGraphicsResources.lightCubemapShaderResources.AddImage(
+	globalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17,
 			"u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler()
 								, clientRenderer.mCubemapLightingTexture});
@@ -488,55 +301,6 @@ OVRFW::ovrApplFrameOut Application::AppFrame(const OVRFW::ovrApplFrameIn &vrFram
 		}
 	}
 
-	Vector3f currentRotation;
-	currentRotation.x = (float) (vrFrame.PredictedDisplayTime - startTime);
-	currentRotation.y = (float) (vrFrame.PredictedDisplayTime - startTime);
-	currentRotation.z = (float) (vrFrame.PredictedDisplayTime - startTime);
-
-	ovrMatrix4f rotationMatrices[NUM_ROTATIONS];
-	for (int i = 0; i < NUM_ROTATIONS; i++)
-	{
-		rotationMatrices[i] = ovrMatrix4f_CreateRotation(
-				Rotations[i].x * currentRotation.x,
-				Rotations[i].y * currentRotation.y,
-				Rotations[i].z * currentRotation.z);
-	}
-
-	// Update the instance transform attributes.
-	GL(glBindBuffer(GL_ARRAY_BUFFER, InstanceTransformBuffer));
-	GL(Matrix4f *cubeTransforms = (Matrix4f *) glMapBufferRange(
-			GL_ARRAY_BUFFER,
-			0,
-			NUM_INSTANCES * sizeof(Matrix4f),
-			   GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
-	for (int i = 0; i < NUM_INSTANCES; i++)
-	{
-		const int index = CubeRotations[i];
-
-		// Write in order in case the mapped buffer lives on write-combined memory.
-		cubeTransforms[i].M[0][0] = rotationMatrices[index].M[0][0];
-		cubeTransforms[i].M[0][1] = rotationMatrices[index].M[0][1];
-		cubeTransforms[i].M[0][2] = rotationMatrices[index].M[0][2];
-		cubeTransforms[i].M[0][3] = rotationMatrices[index].M[0][3];
-
-		cubeTransforms[i].M[1][0] = rotationMatrices[index].M[1][0];
-		cubeTransforms[i].M[1][1] = rotationMatrices[index].M[1][1];
-		cubeTransforms[i].M[1][2] = rotationMatrices[index].M[1][2];
-		cubeTransforms[i].M[1][3] = rotationMatrices[index].M[1][3];
-
-		cubeTransforms[i].M[2][0] = rotationMatrices[index].M[2][0];
-		cubeTransforms[i].M[2][1] = rotationMatrices[index].M[2][1];
-		cubeTransforms[i].M[2][2] = rotationMatrices[index].M[2][2];
-		cubeTransforms[i].M[2][3] = rotationMatrices[index].M[2][3];
-
-		cubeTransforms[i].M[3][0] = CubePositions[i].x;
-		cubeTransforms[i].M[3][1] = CubePositions[i].y;
-		cubeTransforms[i].M[3][2] = CubePositions[i].z;
-		cubeTransforms[i].M[3][3] = 1.0f;
-	}
-	GL(glUnmapBuffer(GL_ARRAY_BUFFER));
-	GL(glBindBuffer(GL_ARRAY_BUFFER, 0));
-
 	CenterEyeViewMatrix = OVR::Matrix4f(vrFrame.HeadPose);
 	Frame(vrFrame);
 
@@ -547,6 +311,8 @@ OVRFW::ovrApplFrameOut Application::AppFrame(const OVRFW::ovrApplFrameIn &vrFram
 
 OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 {
+	if(!VideoDecoderProxy::IsJNIInitialized())
+		return OVRFW::ovrApplFrameOut();
 	// we don't want local slide movements.
 	mScene.SetMoveSpeed(1.0f);
 	mScene.Frame(vrFrame,-1,false);
@@ -633,14 +399,9 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 				// Calculate projection matrix using custom near plane value.
 				out.FrameMatrices.EyeProjection[eye] = ovrMatrix4f_CreateProjectionFov(
 						SuggestedEyeFovDegreesX, SuggestedEyeFovDegreesY, 0.0f, 0.0f, 0.1f,
-						0.0f);
+						7.0f);
 			}
 
-			/// Surface
-			//out.Surfaces.push_back(ovrDrawSurface(&SurfaceDef));
-
-			// Append mGuiSys surfaces.
-			//mGuiSys->AppendSurfaceList(out.FrameMatrices.CenterView, &out.Surfaces);
 
 			///	worldLayer.Header.Flags |=
 			/// VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
@@ -659,12 +420,15 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 
 void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out)
 {
+	if(!VideoDecoderProxy::IsJNIInitialized())
+		return ;
 //Build frame
 	mScene.GetFrameMatrices(SuggestedEyeFovDegreesX, SuggestedEyeFovDegreesY, out.FrameMatrices);
 	mScene.GenerateFrameSurfaceList(out.FrameMatrices, out.Surfaces);
 
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 // The camera should be where our head is. But when rendering, the camera is in OVR space, so:
-	GlobalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.position);
+	globalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.position);
 
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	//out.FrameIndex = vrFrame.FrameNumber;
@@ -687,9 +451,9 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	}*/
 
 	GLCheckErrorsWithTitle("Frame: Pre-Cubemap");
-	clientRenderer.CopyToCubemaps(mDeviceContext);
+	clientRenderer.CopyToCubemaps(*mDeviceContext);
 // Append video surface
-	clientRenderer.RenderVideo(mDeviceContext, out);
+	clientRenderer.RenderVideo(*mDeviceContext, out);
 
 	if (sessionClient.IsConnected())
 	{
@@ -1071,9 +835,10 @@ Application::BuildEffectPass(const char *effectPassName, scr::VertexBufferLayout
 							 , const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo
 							 , const std::vector<scr::ShaderResource> &shaderResources)
 {
-	if (GlobalGraphicsResources.defaultPBREffect.HasEffectPass(effectPassName))
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	if (globalGraphicsResources.defaultPBREffect.HasEffectPass(effectPassName))
 	{
-		return GlobalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
+		return globalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
 	}
 
 	scr::ShaderSystem::PassVariables pv;
@@ -1081,7 +846,7 @@ Application::BuildEffectPass(const char *effectPassName, scr::VertexBufferLayout
 	pv.reverseDepth = false;
 	pv.msaa = false;
 
-	scr::ShaderSystem::Pipeline gp(&GlobalGraphicsResources.renderPlatform, pipelineCreateInfo);
+	scr::ShaderSystem::Pipeline gp(&globalGraphicsResources.renderPlatform, pipelineCreateInfo);
 
 	//scr::VertexBufferLayout
 	vbl->CalculateStride();
@@ -1146,10 +911,10 @@ Application::BuildEffectPass(const char *effectPassName, scr::VertexBufferLayout
 	ci.depthStencilingState = dss;
 	ci.colourBlendingState = cbs;
 
-	GlobalGraphicsResources.defaultPBREffect.CreatePass(&ci);
-	GlobalGraphicsResources.defaultPBREffect.LinkShaders(effectPassName, shaderResources);
+	globalGraphicsResources.defaultPBREffect.CreatePass(&ci);
+	globalGraphicsResources.defaultPBREffect.LinkShaders(effectPassName, shaderResources);
 
-	return GlobalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
+	return globalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
 }
 
 std::string Application::LoadTextFile(const char *filename)
