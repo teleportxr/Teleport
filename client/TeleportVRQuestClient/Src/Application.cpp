@@ -24,7 +24,7 @@ using namespace OVRFW;
 
 extern "C"
 {
-	JNIEXPORT jlong Java_com_oculus_sdk_vrcubeworldfw_MainActivity_nativeInitFromJava(JNIEnv *jni)
+	JNIEXPORT jlong Java_co_simul_teleportvrquestclient_MainActivity_nativeInitFromJava(JNIEnv *jni)
 	{
 		VideoDecoderProxy::InitializeJNI(jni);
 		return 0;
@@ -95,8 +95,8 @@ static const unsigned short cubeIndices[36] = {
 Application::Application()
 		: ovrAppl(0, 0, CPU_LEVEL, GPU_LEVEL, true /* useMultiView */), mSoundEffectPlayer(nullptr)
 		  , Locale(nullptr)
-		  ,mGuiSys(nullptr)
 		  , Random(2)
+		  , mGuiSys(nullptr)
 		  , mPipelineConfigured(false)
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 		  , mDeviceContext(&GlobalGraphicsResources.renderPlatform)
@@ -431,6 +431,7 @@ void Application::EnteredVrMode()
 								, clientRenderer.mCubemapLightingTexture});
 
 
+	//useMultiview=(vrapi_GetSystemPropertyInt( java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE ) == VRAPI_TRUE);
 	int num_refresh_rates = vrapi_GetSystemPropertyInt(java,
 													   VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
 	mRefreshRates.resize(num_refresh_rates);

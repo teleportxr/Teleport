@@ -1,13 +1,12 @@
 buildscript
-        {
+{
     ext.kotlin_version = '1.3.72'
-
     repositories
-            {
+    {
         mavenCentral()
     }
     dependencies
-            {
+    {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -15,28 +14,27 @@ apply plugin: 'com.android.application'
 apply from: "${rootProject.projectDir}/client/VrApp.gradle"
 
 dependencies
-        {
+{
     implementation 'androidx.appcompat:appcompat:1.0.0'
 }
 
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
-android {
+android
+{
     ndkVersion "20.1.5948944"
   // This is the name of the generated apk file, which will have
   // -debug.apk or -release.apk appended to it.
   // The filename doesn't effect the Android installation process.
   // Use only letters to remain compatible with the package name.
-  project.archivesBaseName = "vrcubeworldfw"
-
-  
+  project.archivesBaseName = "teleportvrquestclient"
 
   defaultConfig {
     // Gradle replaces the manifest package with this value, which must
     // be unique on a system.  If you don't change it, a new app
     // will replace an older one.
-    applicationId "com.oculus.sdk." + project.archivesBaseName
+    applicationId "co.simul." + project.archivesBaseName
     minSdkVersion 25
     targetSdkVersion 26
     buildToolsVersion = '29.0.3'

@@ -1,5 +1,5 @@
 // Copyright (c) Facebook Technologies, LLC and its affiliates. All Rights reserved.
-package com.oculus.sdk.vrcubeworldfw
+package co.simul.teleportvrquestclient
 
 import android.app.NativeActivity
 import android.os.Bundle
@@ -42,7 +42,7 @@ class MainActivity : NativeActivity()
     companion object {
         init {
             System.loadLibrary("vrapi")
-            System.loadLibrary("vrcubeworldfw")
+            System.loadLibrary("teleportvrquestclient")
         }
     }
     private fun requestRecordPermission()

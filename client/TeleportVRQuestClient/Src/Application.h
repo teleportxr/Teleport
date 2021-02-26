@@ -171,7 +171,7 @@ namespace OVRFW
 		ClientDeviceState clientDeviceState;
 
 		bool useMultiview=false;
-		ovrFrameParms FrameParms;
+		//ovrFrameParms FrameParms;
 	};
 
 }

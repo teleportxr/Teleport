@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 		xmlns:tools="http://schemas.android.com/tools"
-		package="com.oculus.sdk.vrcubeworldfw"
+		package="co.simul.teleportvrquestclient"
 		android:versionCode="1" 
 		android:versionName="1.0" 
         android:installLocation="auto"
-        tools:ignore="AppLinkUrlError">
+		android:debuggable="true"
+        tools:ignore="AppLinkUrlError,HardcodedDebugMode">
 
 	
 	<!-- Tell the system this app requires OpenGL ES 3.1. -->
@@ -21,7 +22,7 @@
 	<!-- Volume Control -->
 	<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
-	<application android:allowBackup="false" android:label="vrcubeworldfw">
+	<application android:allowBackup="false" android:label="teleportvrquestclient">
 		<meta-data android:name="com.samsung.android.vr.application.mode" android:value="vr_only"/>
     <meta-data android:name="com.oculus.supportedDevices" android:value="all" />    
     
@@ -30,14 +31,14 @@
         <!-- If targeting API level 24+, configChanges should additionally include 'density'. -->
         <!-- If targeting API level 24+, android:resizeableActivity="false" should be added. -->
 		<activity
-				android:name="com.oculus.sdk.vrcubeworldfw.MainActivity"
+				android:name="co.simul.teleportvrquestclient.MainActivity"
 				android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
 				android:launchMode="singleTask"
 				android:screenOrientation="landscape"
 				android:excludeFromRecents="false"
 				android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode">
 
-			<meta-data android:name="android.app.lib_name" android:value="vrcubeworldfw" />
+			<meta-data android:name="android.app.lib_name" android:value="teleportvrquestclient" />
       <!-- Indicate the activity is aware of VrApi focus states required for system overlays  -->
       <meta-data android:name="com.oculus.vr.focusaware" android:value="true"/>
 

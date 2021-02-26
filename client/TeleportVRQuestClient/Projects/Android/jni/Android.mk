@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 
 include $(LOCAL_PATH)/../../../../cflags.mk
 
-LOCAL_MODULE			:= vrcubeworldfw
+LOCAL_MODULE			:= teleportvrquestclient
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../../VrSamples/SampleCommon/Src \
     $(LOCAL_PATH)/../../../../VrSamples/SampleFramework/Src \

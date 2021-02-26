@@ -1,6 +1,6 @@
 // (C) Copyright 2018 Simul.co
 
-package com.oculus.sdk.vrcubeworldfw
+package co.simul.teleportvrquestclient
 
 import android.graphics.SurfaceTexture
 import android.media.MediaCodec
