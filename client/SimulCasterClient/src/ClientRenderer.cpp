@@ -668,7 +668,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 						}
 						else
 						{
-							OVR_WARN("No matching cached light uid %llu.",l.uid);
+							OVR_WARN("No matching cached light with ID %" PRIu64 ".", l.uid);
 						}
 
 					}
@@ -830,124 +830,196 @@ void ClientRenderer::Render(const OVR::ovrFrameInput& vrFrame,OVR::OvrGuiSys *mG
 		frameRate*=0.99f;
 		frameRate+=0.01f/vrFrame.DeltaSeconds;
 	}
-	if(show_osd!=NO_OSD)
-	{
-		DrawOSD(mGuiSys);
-	}
+
+	DrawOSD(mGuiSys);
 }
 
-void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys) {
+void ClientRenderer::DrawOSD(OVR::OvrGuiSys *mGuiSys)
+{
 	auto ctr = mNetworkSource.getCounterValues();
-	if (show_osd == NETWORK_OSD) {
-		mGuiSys->ShowInfoText(
-				INFO_TEXT_DURATION,
-				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
-				"Incomplete Decoder Packets: %d\n"
-				"Framerate: %4.4f Bandwidth(kbps): %4.4f", mDecoder.getTotalFramesProcessed(),
-				ctr.networkPacketsDropped,
-				ctr.decoderPacketsDropped,
-				ctr.incompleteDecoderPacketsReceived,
-				frameRate, ctr.bandwidthKPS);
-	} else if (show_osd == CAMERA_OSD) {
-		avs::vec3 vidPos(0, 0, 0);
-		if (videoTagDataCubeArray.size())
-			vidPos = videoTagDataCubeArray[0].coreData.cameraTransform.position;
-		mGuiSys->ShowInfoText(
-				INFO_TEXT_DURATION,
-				"        Foot pos: %1.3f, %1.3f, %1.3f\n\n"
-				" Camera Relative: %1.3f, %1.3f, %1.3f\n"
-				" Camera Position: %1.3f, %1.3f, %1.3f\n"
-				"             yaw: %1.3f\n"
-				"  Video Position: %1.3f, %1.3f, %1.3f\n\n"
-				"Controller 0 rel: %1.3f, %1.3f, %1.3f\n"
-				"             pos: %1.3f, %1.3f, %1.3f\n"
-				"Controller 1 rel: %1.3f, %1.3f, %1.3f\n"
-				"             pos: %1.3f, %1.3f, %1.3f\n"
-				//, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
-				, clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y,
-				clientDeviceState->originPose.position.z,
-				clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,
-				clientDeviceState->relativeHeadPos.z,
-				clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,
-				clientDeviceState->headPose.position.z,
-				clientDeviceState->stickYaw,
-				vidPos.x, vidPos.y, vidPos.z,
-				clientDeviceState->controllerRelativePoses[0].position.x,
-				clientDeviceState->controllerRelativePoses[0].position.y,
-				clientDeviceState->controllerRelativePoses[0].position.z,
-				clientDeviceState->controllerPoses[0].position.x,
-				clientDeviceState->controllerPoses[0].position.y,
-				clientDeviceState->controllerPoses[0].position.z,
-				clientDeviceState->controllerRelativePoses[1].position.x,
-				clientDeviceState->controllerRelativePoses[1].position.y,
-				clientDeviceState->controllerRelativePoses[1].position.z,
-				clientDeviceState->controllerPoses[1].position.x,
-				clientDeviceState->controllerPoses[1].position.y,
-				clientDeviceState->controllerPoses[1].position.z
-		);
-	} else if (show_osd == GEOMETRY_OSD) {
-		mGuiSys->ShowInfoText
-				(
+	switch(show_osd)
+	{
+		case NO_OSD:
+			break;
+		case CAMERA_OSD:
+		{
+			avs::vec3 vidPos(0, 0, 0);
+			if(videoTagDataCubeArray.size() != 0)
+			{
+				vidPos = videoTagDataCubeArray[0].coreData.cameraTransform.position;
+			}
+
+			mGuiSys->ShowInfoText(
+					INFO_TEXT_DURATION,
+					"        Foot pos: %1.3f, %1.3f, %1.3f\n\n"
+					" Camera Relative: %1.3f, %1.3f, %1.3f\n"
+					" Camera Position: %1.3f, %1.3f, %1.3f\n"
+					"             yaw: %1.3f\n"
+					"  Video Position: %1.3f, %1.3f, %1.3f\n\n"
+					"Controller 0 rel: %1.3f, %1.3f, %1.3f\n"
+					"             pos: %1.3f, %1.3f, %1.3f\n"
+					"Controller 1 rel: %1.3f, %1.3f, %1.3f\n"
+					"             pos: %1.3f, %1.3f, %1.3f\n"
+					//, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
+					, clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y,
+					clientDeviceState->originPose.position.z,
+					clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,
+					clientDeviceState->relativeHeadPos.z,
+					clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,
+					clientDeviceState->headPose.position.z,
+					clientDeviceState->stickYaw,
+					vidPos.x, vidPos.y, vidPos.z,
+					clientDeviceState->controllerRelativePoses[0].position.x,
+					clientDeviceState->controllerRelativePoses[0].position.y,
+					clientDeviceState->controllerRelativePoses[0].position.z,
+					clientDeviceState->controllerPoses[0].position.x,
+					clientDeviceState->controllerPoses[0].position.y,
+					clientDeviceState->controllerPoses[0].position.z,
+					clientDeviceState->controllerRelativePoses[1].position.x,
+					clientDeviceState->controllerRelativePoses[1].position.y,
+					clientDeviceState->controllerRelativePoses[1].position.z,
+					clientDeviceState->controllerPoses[1].position.x,
+					clientDeviceState->controllerPoses[1].position.y,
+					clientDeviceState->controllerPoses[1].position.z
+			);
+
+			break;
+		}
+		case NETWORK_OSD:
+		{
+			mGuiSys->ShowInfoText(
+					INFO_TEXT_DURATION,
+					"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
+					"Incomplete Decoder Packets: %d\n"
+					"Framerate: %4.4f Bandwidth(kbps): %4.4f",
+					mDecoder.getTotalFramesProcessed(),
+					ctr.networkPacketsDropped, ctr.decoderPacketsDropped,
+					ctr.incompleteDecoderPacketsReceived,
+					frameRate, ctr.bandwidthKPS);
+
+			break;
+		}
+		case GEOMETRY_OSD:
+		{
+			mGuiSys->ShowInfoText
+					(
+							INFO_TEXT_DURATION,
+							"%s\n"
+							"Nodes: %d \n"
+							"Orphans: %d",
+							GlobalGraphicsResources.effectPassName,
+							static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()),
+							ctr.m_packetMapOrphans
+					);
+
+			const auto &missingResources = resourceCreator->GetMissingResources();
+			if(missingResources.size() > 0)
+			{
+				std::ostringstream missingResourcesStream;
+				missingResourcesStream << "Missing Resources\n";
+
+				size_t resourcesOnLine = 0;
+				for(
+					const auto &missingPair : missingResources)
+				{
+					const ResourceCreator::MissingResource &missingResource = missingPair.second;
+					missingResourcesStream << missingResource.resourceType << "_" << missingResource.id;
+
+					resourcesOnLine++;
+					if(resourcesOnLine >= MAX_RESOURCES_PER_LINE)
+					{
+						missingResourcesStream << std::endl;
+						resourcesOnLine = 0;
+					}
+					else
+					{
+						missingResourcesStream << " | ";
+					}
+				}
+
+				mGuiSys->ShowInfoText(INFO_TEXT_DURATION, missingResourcesStream.str().c_str());
+			}
+
+			break;
+		}
+		case TAG_OSD:
+		{
+			std::ostringstream sstr;
+			std::setprecision(5);
+			sstr << "Tags\n" << std::setw(4);
+			static int ii = 0;
+			static char iii = 0;
+			iii++;
+			if(!iii)
+			{
+				ii++;
+				if(ii > 2)
+					ii = 0;
+			}
+			for(size_t i = 0; i < std::min((size_t)8, videoTagDataCubeArray.size()); i++)
+			{
+				auto &tag = videoTagDataCubeArray[i + 8 * ii];
+				sstr << tag.coreData.lightCount << " lights\n";
+				for(size_t j = 0; j < tag.lights.size(); j++)
+				{
+					auto &l = tag.lights[j];
+					sstr << "\t" << l.uid << ": Type " << ToString((scr::Light::Type)l.lightType)
+						 << ", clr " << l.color.x << "," << l.color.y << "," << l.color.z;
+					if(l.lightType == scr::LightType::Directional)
+					{
+						ovrQuatf q = {
+								l.orientation.x, l.orientation.y, l.orientation.z, l.orientation.w};
+						avs::vec3 z = {0, 0, 1.0f};
+						avs::vec3 direction = QuaternionTimesVector(q, z);
+						sstr << ", d " << direction.x << "," << direction.y << "," << direction.z;
+					}
+					sstr << "\n";
+				}
+			}
+			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, sstr.str().c_str());
+
+			break;
+		}
+		case CONTROLLER_OSD:
+		{
+			avs::vec3 leftHandPosition, rightHandPosition;
+			avs::vec4 leftHandOrientation, rightHandOrientation;
+
+			std::shared_ptr<scr::Node> leftHand = resourceManagers->mNodeManager->GetLeftHand();
+			if(leftHand)
+			{
+				leftHandPosition = leftHand->GetGlobalTransform().m_Translation;
+				leftHandOrientation = leftHand->GetGlobalTransform().m_Rotation;
+			}
+
+			std::shared_ptr<scr::Node> rightHand = resourceManagers->mNodeManager->GetRightHand();
+			if(rightHand)
+			{
+				rightHandPosition = rightHand->GetGlobalTransform().m_Translation;
+				rightHandOrientation = rightHand->GetGlobalTransform().m_Rotation;
+			}
+
+			mGuiSys->ShowInfoText
+					(
 						INFO_TEXT_DURATION,
-						"%s\n"
-						"Nodes: %d \n"
-						"Orphans: %d",
-						GlobalGraphicsResources.effectPassName,
-						static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()),
-						ctr.m_packetMapOrphans
-				);
+						"Controller 01: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
+						"Controller 02: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
+						"Left Hand Node: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
+						"Right Hand Node: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)",
+						clientDeviceState->controllerPoses[0].position.x, clientDeviceState->controllerPoses[0].position.y, clientDeviceState->controllerPoses[0].position.z,
+						clientDeviceState->controllerPoses[0].orientation.x, clientDeviceState->controllerPoses[0].orientation.y, clientDeviceState->controllerPoses[0].orientation.z, clientDeviceState->controllerPoses[0].orientation.w,
+						clientDeviceState->controllerPoses[1].position.x, clientDeviceState->controllerPoses[1].position.y, clientDeviceState->controllerPoses[1].position.z,
+						clientDeviceState->controllerPoses[1].orientation.x, clientDeviceState->controllerPoses[1].orientation.y, clientDeviceState->controllerPoses[1].orientation.z, clientDeviceState->controllerPoses[1].orientation.w,
+						leftHandPosition.x, leftHandPosition.y, leftHandPosition.z,
+						leftHandOrientation.x, leftHandOrientation.y, leftHandOrientation.z, leftHandOrientation.w,
+						rightHandPosition.x, rightHandPosition.y, rightHandPosition.z,
+						rightHandOrientation.x, rightHandOrientation.y, rightHandOrientation.z, rightHandOrientation.w
+					);
 
-		const auto &missingResources = resourceCreator->GetMissingResources();
-		if (missingResources.size() > 0) {
-			std::ostringstream missingResourcesStream;
-			missingResourcesStream << "Missing Resources\n";
-
-			size_t resourcesOnLine = 0;
-			for (
-				const auto &missingPair : missingResources) {
-				const ResourceCreator::MissingResource &missingResource = missingPair.second;
-				missingResourcesStream << missingResource.resourceType << "_" << missingResource.id;
-
-				resourcesOnLine++;
-				if (resourcesOnLine >= MAX_RESOURCES_PER_LINE) {
-					missingResourcesStream << std::endl;
-					resourcesOnLine = 0;
-				} else {
-					missingResourcesStream << " | ";
-				}
-			}
-
-			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, missingResourcesStream.str().c_str());
+			break;
 		}
-	} else if (show_osd == TAG_OSD) {
-		std::ostringstream sstr;
-		std::setprecision(5);
-		sstr << "Tags\n" << std::setw(4);
-		static int ii = 0;
-		static char iii = 0;
-		iii++;
-		if (!iii) {
-			ii++;
-			if (ii > 2)
-				ii = 0;
-		}
-		for (size_t i = 0; i < std::min((size_t) 8, videoTagDataCubeArray.size()); i++) {
-			auto &tag = videoTagDataCubeArray[i + 8 * ii];
-			sstr << tag.coreData.lightCount << " lights\n";
-			for (size_t j = 0; j < tag.lights.size(); j++) {
-				auto &l = tag.lights[j];
-				sstr << "\t" << l.uid << ": Type " << ToString((scr::Light::Type) l.lightType)
-					 << ", clr " << l.color.x << "," << l.color.y << "," << l.color.z;
-				if (l.lightType == scr::LightType::Directional) {
-					ovrQuatf q = {
-							l.orientation.x, l.orientation.y, l.orientation.z, l.orientation.w};
-					avs::vec3 z = {0, 0, 1.0f};
-					avs::vec3 direction = QuaternionTimesVector(q, z);
-					sstr << ", d " << direction.x << "," << direction.y << "," << direction.z;
-				}
-				sstr << "\n";
-			}
-		}
-		mGuiSys->ShowInfoText(INFO_TEXT_DURATION, sstr.str().c_str());
+		default:
+			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, "Unimplemented OSD mode.");
+			break;
 	}
 }

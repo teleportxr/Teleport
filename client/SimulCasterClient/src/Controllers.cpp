@@ -105,6 +105,8 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				evt.inputUid=1;//i*32+ovrButton::ovrButton_Trigger;		 //< e.g. the uniqe identifier for this button or control.
 				evt.intValue=0;
 				mLastControllerStates[i].inputEvents.push_back(evt);
+
+				ToggleTextures();
 			}
 			else if((clicked & ovrButton::ovrButton_A) != 0 )
 			{
