@@ -571,14 +571,15 @@ void ResourceCreator::CreateNode(avs::uid id, avs::DataNode& node)
 
 	switch(node.data_type)
 	{
+	case NodeDataType::Invalid:
+		SCR_CERR << "CreateNode failure! Received a node with a data type of Invalid(0)!\n";
+		break;
+	case NodeDataType::None:
+		CreateMeshNode(id, node);
+		break;
 		case NodeDataType::Mesh:
 			CreateMeshNode(id, node);
 			break;
-		case NodeDataType::Camera:
-			break;
-		case NodeDataType::Scene:
-			break;
-		case NodeDataType::ShadowMap:
 		case NodeDataType::Light:
 			CreateLight(id, node);
 			break;
