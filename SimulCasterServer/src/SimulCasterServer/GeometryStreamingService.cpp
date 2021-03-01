@@ -50,11 +50,23 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 	sentResources[resource_uid] = true;
 }
 
-void GeometryStreamingService::getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const
+void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const
 {
 	for(avs::uid nodeID : streamedNodeIDs)
 	{
-		GetMeshNodeResources(nodeID, outMeshResources);
+		avs::DataNode* node = geometryStore->getNode(nodeID);
+		if(!node)
+		{
+			continue;
+	}
+
+		switch(node->data_type)
+		{
+		case avs::NodeDataType::None:
+			outNodeIDs.push_back(nodeID);
+		case avs::NodeDataType::Mesh:
+			GetMeshNodeResources(nodeID, *node, outMeshResources);
+		}
 	}
 
 	outLightResources = geometryStore->getLightNodes();
@@ -196,36 +208,36 @@ bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
 	return streamedNodeIDs.find(nodeID) != streamedNodeIDs.end();
 }
 
-void GeometryStreamingService::GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const
+void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::DataNode& node, std::vector<avs::MeshNodeResources>& outMeshResources) const
 {
-	avs::DataNode* thisNode = geometryStore->getNode(node_uid);
-	if(!thisNode || thisNode->data_type != avs::NodeDataType::Mesh)
+	if(node.data_type != avs::NodeDataType::Mesh)
 	{
 		return;
 	}
 
 	avs::MeshNodeResources meshNode;
-	meshNode.node_uid = node_uid;
-	meshNode.mesh_uid = thisNode->data_uid;
-	meshNode.skinID = thisNode->skinID;
+	meshNode.node_uid = nodeID;
+	meshNode.mesh_uid = node.data_uid;
+	meshNode.skinID = node.skinID;
 
 	//Get joint/bone IDs, if the skinID is not zero.
 	if(meshNode.skinID != 0)
 	{
-		avs::Skin* skin = geometryStore->getSkin(thisNode->skinID, getClientAxesStandard());
+		avs::Skin* skin = geometryStore->getSkin(node.skinID, getClientAxesStandard());
 		meshNode.jointIDs = skin->jointIDs;
 	}
 
-	meshNode.animationIDs = thisNode->animations;
+	meshNode.animationIDs = node.animations;
 
-	for(avs::uid material_uid : thisNode->materials)
+	for(avs::uid material_uid : node.materials)
 	{
 		avs::Material* thisMaterial = geometryStore->getMaterial(material_uid);
 		if(!thisMaterial)
 		{
-			TELEPORT_CERR << "Material not found in store: " << material_uid << std::endl;
+			TELEPORT_CERR << "Error when locating materials for encoding! Material_" << material_uid << " was not found in the Geometry Store!\n";
 			continue;
 		}
+
 		avs::MaterialResources material;
 		material.material_uid = material_uid;
 

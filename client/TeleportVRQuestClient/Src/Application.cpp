@@ -305,7 +305,7 @@ OVRFW::ovrApplFrameOut Application::AppFrame(const OVRFW::ovrApplFrameIn &vrFram
 	Frame(vrFrame);
 
 	// Update GUI systems last, but before rendering anything.
-	mGuiSys->Frame(vrFrame, ovrMatrix4f_CreateIdentity());
+	mGuiSys->Frame(vrFrame, CenterEyeViewMatrix);//ovrMatrix4f_CreateIdentity());
 	return OVRFW::ovrApplFrameOut();
 }
 
@@ -431,24 +431,6 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	globalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.position);
 
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	//out.FrameIndex = vrFrame.FrameNumber;
-	//out.DisplayTime = vrFrame.PredictedDisplayTimeInSeconds;
-	//out.SwapInterval = app->GetSwapInterval();
-
-	//out.FrameFlags = 0;
-	//out.LayerCount = 0;
-
-/*	ovrLayerProjection2 &worldLayer = out.Layers[out.LayerCount++].Projection;
-
-	worldLayer = vrapi_DefaultLayerProjection2();
-	worldLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
-	worldLayer.HeadPose = vrFrame.Tracking.HeadPose;
-	for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
-	{
-		worldLayer.Textures[eye].ColorSwapChain = vrFrame.ColorTextureSwapChain[eye];
-		worldLayer.Textures[eye].SwapChainIndex = vrFrame.TextureSwapChainIndex;
-		worldLayer.Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
-	}*/
 
 	GLCheckErrorsWithTitle("Frame: Pre-Cubemap");
 	clientRenderer.CopyToCubemaps(*mDeviceContext);

@@ -53,11 +53,11 @@ public:
 
 	Transform operator*(const Transform& other) const
 	{
-		avs::vec3 globalScale(m_Scale.x * other.m_Scale.x, m_Scale.y * other.m_Scale.y, m_Scale.z * other.m_Scale.z);
-		quat globalRotation = other.m_Rotation * m_Rotation;
-		avs::vec3 globalPosition = other.m_Translation + other.m_Rotation.RotateVector(m_Translation);
+		avs::vec3 scale(m_Scale.x * other.m_Scale.x, m_Scale.y * other.m_Scale.y, m_Scale.z * other.m_Scale.z);
+		quat rotation = other.m_Rotation * m_Rotation;
+		avs::vec3 translation = other.m_Translation + other.m_Rotation.RotateVector(m_Translation * other.m_Scale);
 
-		return Transform(m_CI, globalPosition, globalRotation, globalScale);
+		return Transform(m_CI, translation, rotation, scale);
 	}
 
 	void UpdateModelMatrix();

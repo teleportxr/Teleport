@@ -879,7 +879,6 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 	{
 		res.Surfaces.emplace_back(transform, &surfaceDef);
 	}
-
 	//Render children.
 	for (std::weak_ptr<scr::Node> childPtr : node->GetChildren())
 	{
