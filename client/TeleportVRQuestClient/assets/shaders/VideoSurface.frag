@@ -40,6 +40,7 @@ layout(std140, binding = 1) uniform videoUB
 {
     vec4 eyeOffsets[2];
     mat4 invViewProj[2];
+    mat4 viewProj;
     vec3 cameraPosition;
     int _pad2;
 } vid;

@@ -676,7 +676,8 @@ namespace avs
 
 	enum class GeometryPayloadType : uint8_t
 	{
-		Mesh = 1,
+		Invalid=0, 
+		Mesh,
 		Material,
 		MaterialInstance,
 		Texture,
@@ -692,16 +693,16 @@ namespace avs
 
 	enum class NodeDataType : uint8_t
 	{
-		Mesh = 0,
-		Camera,
-		Scene,
-		ShadowMap,
+		Invalid=0,
+		None,
+		Mesh,
 		Light,
 		Bone
 	};
 
 	enum class NodeDataSubtype : uint8_t
 	{
+		Invalid=0,
 		None,
 		Body,
 		LeftHand,

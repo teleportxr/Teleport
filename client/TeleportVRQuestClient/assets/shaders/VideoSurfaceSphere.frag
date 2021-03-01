@@ -5,7 +5,6 @@ const float PI    = 3.1415926536;
 const float TwoPI = 2.0 * PI;
 
 layout(location = 0) in vec3 vSampleVec;
-layout(location = 1) in mat4 vInvViewProj;
 layout(location = 5) in vec3 vEyeOffset;
 layout(location = 6) in vec3 vDirection;
 layout(location = 7) in vec2 vTexCoords;
@@ -40,6 +39,7 @@ layout(std140, binding = 1) uniform videoUB
 {
     vec4 eyeOffsets[2];
     mat4 invViewProj[2];
+    mat4 viewProj;
     vec3 cameraPosition;
     int _pad2;
 } vid;
@@ -76,10 +76,11 @@ void main()
     vec3 offsetFromVideo2=vid.cameraPosition-tagDataCube.cameraPosition+vEyeOffset;
     vec3 view = vSampleVec;
     vec3 colourSampleVec=vSampleVec;
+    if(lookup.a<0.8)
     for (int i = 0; i < 5; i++)
     {
         float depth = lookup.a;
-        float dist_m=max(0.2,20.0*depth);
+        float dist_m=max(5.0,20.0*depth);
         vec3 pos_m=dist_m*vDirection;
         pos_m+=offsetFromVideo2* step(-0.8, -depth);
 

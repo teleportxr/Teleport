@@ -25,7 +25,7 @@ namespace SCServer
 		virtual void requestResource(avs::uid resourceID) override;
 		virtual void confirmResource(avs::uid resourceID) override;
 
-		virtual void getResourcesToStream(std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const override;
+		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const override;
 
 		virtual avs::AxesStandard getClientAxesStandard() const override
 		{
@@ -76,6 +76,6 @@ namespace SCServer
 		std::set<avs::uid> hiddenNodes; //Nodes that are currently hidden on the server.
 
 		//Recursively obtains the resources from the mesh node, and its child nodes.
-		void GetMeshNodeResources(avs::uid node_uid, std::vector<avs::MeshNodeResources>& outMeshResources) const;
+		void GetMeshNodeResources(avs::uid nodeID, const avs::DataNode& node, std::vector<avs::MeshNodeResources>& outMeshResources) const;
 	};
 }

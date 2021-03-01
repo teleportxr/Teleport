@@ -109,9 +109,9 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 						, {"TagDataCube"   , ovrProgramParmType::BUFFER_STORAGE}
 						,};
 		std::string videoSurfaceVert = clientAppInterface->LoadTextFile(
-				"shaders/VideoSurface.vert");
+				"shaders/VideoSurfaceSphere.vert");
 		std::string videoSurfaceFrag = clientAppInterface->LoadTextFile(
-				"shaders/VideoSurface.frag");
+				"shaders/VideoSurfaceSphere.frag");
 		mVideoSurfaceProgram = GlProgram::Build(
 				nullptr, videoSurfaceVert.c_str(),
 				"#extension GL_OES_EGL_image_external_essl3 : require\n", videoSurfaceFrag.c_str(),
@@ -308,8 +308,8 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	}
 
 	mVideoSurfaceDef.surfaceName = "VideoSurface";
-	mVideoSurfaceDef.geo = BuildTesselatedQuad(2,2,true);//BuildGlobe(1.f, 1.f, 500.f);
-	//BuildTesselatedQuad( 1, 1,true );
+	mVideoSurfaceDef.geo = BuildGlobe(1.f, 1.f, 6.f);
+	//BuildTesselatedQuad(2,2,true);//
 	mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
 	mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
 	mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
@@ -815,7 +815,7 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 		videoUB.eyeOffsets[1] = eye;    // right eye.
 		videoUB.cameraPosition =
 				clientDeviceState->headPose.position;
-
+		videoUB.viewProj=res.FrameMatrices.EyeProjection[0]*res.FrameMatrices.CenterView;
 		mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
 		//mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
 		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mVideoUB.get())->GetGlBuffer());

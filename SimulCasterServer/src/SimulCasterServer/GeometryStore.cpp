@@ -65,8 +65,21 @@ std::time_t GetFileWriteTime(const std::filesystem::path& filename)
 #endif
 }
 
-using namespace SCServer;
+const char* stringOf(avs::NodeDataType type)
+{
+	switch(type)
+	{
+	case avs::NodeDataType::Invalid:	return "Invalid";
+	case avs::NodeDataType::None:		return "None";
+	case avs::NodeDataType::Mesh:		return "Mesh";
+	case avs::NodeDataType::Light:		return "Light";
+	case avs::NodeDataType::Bone:		return "Bone";
+	default:							return "Unimplemented";
+	};
+}
 
+namespace SCServer
+{
 GeometryStore::GeometryStore()
 {
 	basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
@@ -143,7 +156,8 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 }
 void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
 {
-	TELEPORT_COUT<<"Reaffirming resources"<<std::endl;
+	TELEPORT_COUT << "Reaffirming resources.\node";
+
 	//Copy data on the resources that were loaded.
 	std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> oldMeshes = meshes;
 	std::map<avs::uid, ExtractedMaterial> oldMaterials = materials;
@@ -151,10 +165,10 @@ void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* re
 
 	//Delete the old data; we don't want to use the GeometryStore::clear(...) function as that will call delete on the pointers we want to copy.
 	meshes.clear();
-	TELEPORT_COUT<<"Had "<<materials.size()<<" materials."<<std::endl;
-	TELEPORT_COUT<<"MaterialAmount is "<<materialAmount<<"."<<std::endl;
 	materials.clear();
 	textures.clear();
+
+	TELEPORT_COUT << "Replacing " << oldMaterials.size() << " materials loaded from disk with " << materialAmount << " confirmed from managed code.\node";
 
 	//Ensure these exist even if there were no meshes to load.
 	meshes[avs::AxesStandard::EngineeringStyle];
@@ -268,6 +282,12 @@ void GeometryStore::setCompressionLevels(uint8_t compressionStrength, uint8_t co
 	basisCompressorParams.m_compression_level = compressionQuality;
 }
 
+const char* GeometryStore::getNodeName(avs::uid nodeID) const
+{
+	const avs::DataNode* node = getNode(nodeID);
+	return node ? node->name.c_str() : "NULL";
+}
+
 std::vector<avs::uid> GeometryStore::getNodeIDs() const
 {
 	return getVectorOfIDs(nodes);
@@ -277,16 +297,7 @@ avs::DataNode* GeometryStore::getNode(avs::uid nodeID)
 {
 	return getResource(nodes, nodeID);
 }
-const char *GeometryStore::getNodeName(avs::uid nodeID) const
-{
-	const char *name="";
-	const avs::DataNode* n=getNode(nodeID);
-	if(n)
-	{
-			name=n->name.c_str();
-	}
-	return name;
-}
+
 const avs::DataNode* GeometryStore::getNode(avs::uid nodeID) const
 {
 	return getResource(nodes, nodeID);
@@ -416,43 +427,13 @@ bool GeometryStore::hasShadowMap(avs::uid id) const
 	return shadowMaps.find(id) != shadowMaps.end();
 }
 
-const char *stringOf(avs::NodeDataType t)
-{
-	switch(t)
-	{
-		case avs::NodeDataType::Mesh:
-			return "Mesh";
-		break;
-		case avs::NodeDataType::Camera:
-		case avs::NodeDataType::Scene:
-			return "Scene";
-		break;
-		case avs::NodeDataType::ShadowMap:
-		case avs::NodeDataType::Light:
-			return "Light";
-		break;
-		case avs::NodeDataType::Bone:
-			return "Bone";
-		break;
-		default:
-		break;
-	};
-
-	return "";
-}
-template<typename T,typename tr> std::basic_ostream<T,tr> & operator << (std::basic_ostream<T,tr> &out, const avs::NodeDataType &c) 
-{ 
-    out << (int)c; 
-    return out; 
-} 
 void GeometryStore::storeNode(avs::uid id, avs::DataNode& newNode)
 {
-//	TELEPORT_COUT<<"storeNode "<<newNode.name.c_str()<<" uid "<<id<<", type "<<stringOf(newNode.data_type)<<", data uid "<<(int)newNode.data_uid<<std::endl;
 	//Remove node before re-adding with new data.
 	removeNode(id);
 	nodes[id] = newNode;
 
-	if(newNode.data_type == avs::NodeDataType::ShadowMap || newNode.data_type == avs::NodeDataType::Light)
+	if(newNode.data_type == avs::NodeDataType::Light)
 	{
 		lightNodes.emplace_back(avs::LightNodeResources{id, newNode.data_uid});
 	}
@@ -611,10 +592,6 @@ void GeometryStore::compressNextTexture()
 	basisCompressorParams.m_mip_gen = true;
 	basisCompressorParams.m_mip_smallest_dimension = 4; // ???
 	
-	static bool use_uastc=false;
-	// use UASTC, which is better for normals.
-	basisCompressorParams.m_uastc=use_uastc;
-
 	basisu::basis_compressor basisCompressor;
 
 	if(basisCompressor.init(basisCompressorParams))
@@ -680,4 +657,5 @@ void GeometryStore::loadResources(const std::string file_name, std::map<avs::uid
 			resourceFile >> newResource;
 		}
 	}
+}
 }
