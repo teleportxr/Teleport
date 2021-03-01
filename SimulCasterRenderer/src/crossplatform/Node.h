@@ -128,5 +128,8 @@ private:
 	avs::MovementUpdate lastReceivedMovement;
 
 	void UpdateGlobalTransform() const;
+
+	//Causes the global transforms off all children, and their children, to update whenever their global transform is requested.
+	void RequestChildrenUpdateTransforms();
 };
 }

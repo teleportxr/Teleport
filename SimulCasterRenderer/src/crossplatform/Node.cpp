@@ -10,14 +10,17 @@ Node::Node(avs::uid id, const std::string& name)
 
 void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
-	if(lastReceivedMovement.isGlobal)
+	//Only update the global transform if we are receiving global transforms for this node, but it has a parent.
+	if(lastReceivedMovement.isGlobal && GetParent().lock())
 	{
-		globalTransform.UpdateModelMatrix(translation, rotation, scale);
+		if(globalTransform.UpdateModelMatrix(translation, rotation, scale))
+		{
+			RequestChildrenUpdateTransforms();
+		}
 	}
-	else
+	else if(localTransform.UpdateModelMatrix(translation, rotation, scale))
 	{
-		if(localTransform.UpdateModelMatrix(translation, rotation, scale))
-			RequestTransformUpdate();
+		RequestTransformUpdate();
 	}
 }
 
@@ -26,21 +29,7 @@ void Node::RequestTransformUpdate()
 	isTransformDirty = true;
 
 	//The node's children need to update their transforms, as their parent's transform has been updated.
-	for(auto childIt = children.begin(); childIt != children.end();)
-	{
-		std::shared_ptr<Node> child = childIt->lock();
-
-		//Erase weak pointer from list, if the child node has been removed.
-		if(child)
-		{
-			child->RequestTransformUpdate();
-			++childIt;
-		}
-		else
-		{
-			childIt = children.erase(childIt);
-		}
-	}
+	RequestChildrenUpdateTransforms();
 }
 
 void Node::SetLastMovement(const avs::MovementUpdate& update)
@@ -146,6 +135,25 @@ void Node::UpdateGlobalTransform() const
 	for(std::weak_ptr<Node> child : children)
 	{
 		child.lock()->UpdateGlobalTransform();
+	}
+}
+
+void Node::RequestChildrenUpdateTransforms()
+{
+	for(auto childIt = children.begin(); childIt != children.end();)
+	{
+		std::shared_ptr<Node> child = childIt->lock();
+
+		//Erase weak pointer from list, if the child node has been removed.
+		if(child)
+		{
+			child->RequestTransformUpdate();
+			++childIt;
+		}
+		else
+		{
+			childIt = children.erase(childIt);
+		}
 	}
 }
 }

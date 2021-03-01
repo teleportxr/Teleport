@@ -61,11 +61,13 @@ void Transform::UpdateModelMatrix()
 
 bool Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
-	if(m_Translation!=translation||m_Rotation!=rotation||m_Scale!=scale) {
+	if(m_Translation != translation || m_Rotation != rotation || m_Scale != scale)
+	{
 		m_Translation = translation;
 		m_Rotation = rotation;
 		m_Scale = scale;
 		UpdateModelMatrix();
+
 		return true;
 	}
 	return false;

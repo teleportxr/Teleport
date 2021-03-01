@@ -198,6 +198,16 @@ namespace avs
 			*this = *this / rhs;
 		}
 
+		vec3 operator*(vec3 rhs) const
+		{
+			return vec3(x * rhs.x, y * rhs.y, z * rhs.z);
+		}
+
+		void operator*=(vec3 rhs)
+		{
+			*this = *this * rhs;
+		}
+
 		float Length() const
 		{
 			return sqrtf(x * x + y * y + z * z);
