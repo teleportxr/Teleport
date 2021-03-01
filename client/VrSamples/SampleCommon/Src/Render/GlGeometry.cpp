@@ -661,14 +661,17 @@ GlGeometry::Descriptor BuildDomeDescriptor(const float latRads, const float uSca
 
 // Build it with the equirect center down -Z
 GlGeometry::Descriptor BuildGlobeDescriptor(
-    const float uScale /*= 1.0f*/,
-    const float vScale /*= 1.0f*/,
-    const float radius /*= 100.0f*/) {
+        const float uScale /*= 1.0f*/,
+        const float vScale /*= 1.0f*/,
+        const float radius /*= 100.0f*/,
+        const int uniformVertical,
+        const int horizontal)
+{
     // Make four rows at the polar caps in the place of one
     // to diminish the degenerate triangle issue.
     const int poleVertical = 3;
-    const int uniformVertical = 64;
-    const int horizontal = 128;
+    //const int uniformVertical = 64;
+    //const int horizontal = 128;
     const int vertical = uniformVertical + poleVertical * 2;
 
     const int vertexCount = (horizontal + 1) * (vertical + 1);

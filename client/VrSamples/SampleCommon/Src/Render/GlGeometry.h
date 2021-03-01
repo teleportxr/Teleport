@@ -210,10 +210,12 @@ BuildDome(const float latRads, const float uScale = 1.0f, const float vScale = 1
 GlGeometry::Descriptor BuildGlobeDescriptor(
     const float uScale = 1.0f,
     const float vScale = 1.0f,
-    const float radius = 100.0f);
+    const float radius = 100.0f,
+    const int uniformVertical = 64,
+    const int horizontal = 128);
 inline GlGeometry
-BuildGlobe(const float uScale = 1.0f, const float vScale = 1.0f, const float radius = 100.0f) {
-    const GlGeometry::Descriptor d = BuildGlobeDescriptor(uScale, vScale, radius);
+BuildGlobe(const float uScale = 1.0f, const float vScale = 1.0f, const float radius = 100.0f, const int uniformVertical = 64, const int horizontal = 128) {
+    const GlGeometry::Descriptor d = BuildGlobeDescriptor(uScale, vScale, radius, uniformVertical, horizontal);
     return GlGeometry(d.attribs, d.indices);
 }
 

@@ -308,7 +308,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	}
 
 	mVideoSurfaceDef.surfaceName = "VideoSurface";
-	mVideoSurfaceDef.geo = BuildGlobe(1.f, 1.f, 6.f);
+	mVideoSurfaceDef.geo = BuildGlobe(1.f, 1.f, 6.f,32,64);
 	//BuildTesselatedQuad(2,2,true);//
 	mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
 	mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
