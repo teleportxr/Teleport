@@ -791,7 +791,7 @@ namespace avs
 		
 		vec3 velocity;
 		vec3 angularVelocityAxis;
-		float angularVelocityAngle;
+		float angularVelocityAngle;	// What is an angular velocity angle?
 	};
 
 	enum class RemotePlaySessionChannel : unsigned char //enet_uint8

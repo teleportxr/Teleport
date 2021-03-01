@@ -61,6 +61,11 @@ void Transform::UpdateModelMatrix()
 
 bool Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
+	if(scale.x==0.0f)
+	{
+		SCR_CERR<<"Scale is zero.\n";
+		return false;
+	}
 	if(m_Translation != translation || m_Rotation != rotation || m_Scale != scale)
 	{
 		m_Translation = translation;
