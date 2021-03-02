@@ -43,7 +43,6 @@ Application::Application()
 		  , resourceCreator(basist::transcoder_texture_format::cTFETC2)
 		  , mGuiSys(nullptr)
 {
-	CenterEyeViewMatrix = ovrMatrix4f_CreateIdentity();
 	RedirectStdCoutCerr();
 
 	sessionClient.SetResourceCreator(&resourceCreator);
@@ -301,12 +300,9 @@ OVRFW::ovrApplFrameOut Application::AppFrame(const OVRFW::ovrApplFrameIn &vrFram
 		}
 	}
 
-	CenterEyeViewMatrix = OVR::Matrix4f(vrFrame.HeadPose);
-	Frame(vrFrame);
-
-	// Update GUI systems last, but before rendering anything.
-	mGuiSys->Frame(vrFrame, CenterEyeViewMatrix);//ovrMatrix4f_CreateIdentity());
-	return OVRFW::ovrApplFrameOut();
+	//CenterEyeViewMatrix = OVR::Matrix4f(vrFrame.HeadPose);
+	OVRFW::ovrApplFrameOut out=Frame(vrFrame);
+	return out;
 }
 
 OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
@@ -392,7 +388,7 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 		case RENDER_STATE_RUNNING:
 		{
 			/// Frame matrices
-			out.FrameMatrices.CenterView = CenterEyeViewMatrix;
+			//out.FrameMatrices.CenterView = CenterEyeViewMatrix;
 			for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
 			{
 				out.FrameMatrices.EyeView[eye] = in.Eye[eye].ViewMatrix;
@@ -459,26 +455,6 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	clientRenderer.RenderLocalNodes(out);
 	GLCheckErrorsWithTitle("Frame: Post-SCR");
 
-// Append GuiSys surfaces. This should always be the last item to append the render list.
-	mGuiSys->AppendSurfaceList(out.FrameMatrices.CenterView, &out.Surfaces);
-/*	if(useMultiview)
-	{
-		// Initialize the FrameParms.
-		FrameParms = vrapi_DefaultFrameParms( app->GetJava(), VRAPI_FRAME_INIT_DEFAULT, vrapi_GetTimeInSeconds(), NULL );
-		for ( int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++ )
-		{
-			out.Layers[0].Textures[eye].ColorTextureSwapChain = vrFrame.ColorTextureSwapChain[eye];
-			//FrameParms.Layers[0].Textures[eye].DepthTextureSwapChain = vrFrame.DepthTextureSwapChain[eye];
-			out.Layers[0].Textures[eye].TextureSwapChainIndex = vrFrame.TextureSwapChainIndex;
-
-			out.Layers[0].Textures[eye].TexCoordsFromTanAngles = vrFrame.TexCoordsFromTanAngles;
-			out.Layers[0].Textures[eye].HeadPose = vrFrame.Tracking.HeadPose;
-		}
-
-		//FrameParms.ExternalVelocity = mScene.GetExternalVelocity();
-		out.Layers[0].Flags = VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
-
-	}*/
 }
 
 void Application::UpdateHandObjects()
@@ -529,8 +505,12 @@ void Application::UpdateHandObjects()
 }
 
 void Application::AppRenderEye(
-		const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out, int eye)
+		const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrRendererOutput &out, int eye)
 {
+	// Update GUI systems last, but before rendering anything.
+	mGuiSys->Frame(vrFrame, out.FrameMatrices.CenterView);
+// Append GuiSys surfaces. This should always be the last item to append the render list.
+	mGuiSys->AppendSurfaceList(out.FrameMatrices.CenterView, &out.Surfaces);
 	// Render the surfaces returned by Frame.
 	SurfaceRender.RenderSurfaceList(
 			out.Surfaces,

@@ -100,7 +100,7 @@ namespace OVRFW
 		ovrSurfaceRender SurfaceRender;
 		ovrSurfaceDef SurfaceDef;
 		unsigned int Random;
-		ovrMatrix4f CenterEyeViewMatrix;
+	//	ovrMatrix4f CenterEyeViewMatrix;
 		double startTime;
 
 		float RandomFloat();

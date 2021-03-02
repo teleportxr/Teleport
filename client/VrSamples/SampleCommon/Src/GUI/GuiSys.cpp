@@ -724,7 +724,7 @@ void OvrGuiSysLocal::Frame(
         return;
     }
 
-    Matrix4f lastViewMatrix(vrFrame.HeadPose);
+    Matrix4f lastViewMatrix(centerViewMatrix);//(vrFrame.HeadPose);
 
     const int currentRecenterCount = vrFrame.RecenterCount;
     if (currentRecenterCount != RecenterCount) {

@@ -11,8 +11,6 @@ include ':', \
 	'client:TeleportVRQuestClient:Projects:Android', \
 	'client:VrCubeWorld_Framework:Projects:Android', \
 	'client:VrAppFramework:Projects:Android', \
-	'client:VrAppSupport:VrLocale:Projects:Android', \
 	'client:VrAppSupport:VrSound:Projects:Android', \
 	'client:VrProjects:Native:RemotePlayClient:Projects:Android', \
-	'client:VrAppSupport:VrGUI:Projects:Android', \
 	'libavstream'

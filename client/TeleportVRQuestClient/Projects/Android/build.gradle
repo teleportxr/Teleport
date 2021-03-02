@@ -16,6 +16,10 @@ apply from: "${rootProject.projectDir}/client/VrApp.gradle"
 dependencies
 {
     implementation 'androidx.appcompat:appcompat:1.0.0'
+    implementation project(path: ':client:VrSamples:SampleCommon:Projects:Android')
+    implementation project(path: ':client:VrSamples:SampleFramework:Projects:Android')
+    implementation project(path: ':libavstream')
+    implementation project(path: ':client:VrAppSupport:VrSound:Projects:Android')
 }
 
 apply plugin: 'kotlin-android'
