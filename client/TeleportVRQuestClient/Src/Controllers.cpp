@@ -17,9 +17,9 @@ Controllers::~Controllers()
 
 }
 
-void Controllers::SetToggleTexturesDelegate(TriggerDelegate d)
+void Controllers::SetCycleShaderModeDelegate(TriggerDelegate d)
 {
-	ToggleTextures=d;
+	CycleShaderMode=d;
 }
 
 void Controllers::SetToggleShowInfoDelegate(TriggerDelegate d)
@@ -34,7 +34,7 @@ void Controllers::SetSetStickOffsetDelegate(Float2Delegate d)
 
 void Controllers::ClearDelegates()
 {
-	ToggleTextures=nullptr;
+	CycleShaderMode=nullptr;
 	ToggleShowInfo=nullptr;
 	SetStickOffset=nullptr;
 }
@@ -111,9 +111,9 @@ void Controllers::Update(ovrMobile *ovrmobile)
 			{
 				ToggleShowInfo();
 			}
-			else if(clicked)
+			else if((clicked& ovrButton::ovrButton_B) != 0 )
 			{
-				ToggleShowInfo();
+				CycleShaderMode();
 			}
 		}
 	}

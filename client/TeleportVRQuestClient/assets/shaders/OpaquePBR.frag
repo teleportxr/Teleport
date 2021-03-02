@@ -333,8 +333,8 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 #if 1
 	if (normalTex)
 	{
-		vec3 normalLookup = texture(u_NormalTexture, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
-		vec3 tangentSpaceNormalMap = 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
+		vec3 normalLookup				= texture(u_NormalTexture, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
+		vec3 tangentSpaceNormalMap		= 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
 		surfaceProperties.normal		=normalize(v_TBN * tangentSpaceNormalMap);
 	}
 	else
@@ -384,25 +384,25 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 #endif
 	{
 		surfaceProperties.roughness	=u_CombinedOutputScalarRoughMetalOcclusion.r;
-		surfaceProperties.metallic	=u_CombinedOutputScalarRoughMetalOcclusion.g*0.0;
+		surfaceProperties.metallic	=1.0;//u_CombinedOutputScalarRoughMetalOcclusion.g*0.0;
 		surfaceProperties.ao		=u_CombinedOutputScalarRoughMetalOcclusion.b;
 	}
 	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
-	surfaceProperties.roughness_mip		= MipFromRoughness(surfaceProperties.roughness, 5.0);
+	surfaceProperties.roughness_mip	= MipFromRoughness(surfaceProperties.roughness, 5.0);
 
 	SurfaceState surfaceState		=PreprocessSurface(view, surfaceProperties);
 	vec3 c							=PBRAmbient(surfaceState, view, surfaceProperties);
-	#if 1
+#if 1
 	if (doLights)
 	for (int i=0;i<4;i++)
 	{
 		if (i>=tagDataCube.lightCount)
-		break;
+			break;
 		c					+=PBRAddLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i]);
 	}
-		#endif
-	vec4 u				=vec4(c.rgb, 1.0);
-	#if 1
+#endif
+	vec4 u					=vec4(c.rgb, 1.0);
+#if 1
 	if (emissiveTex)
 	{
 		vec3 emissive		= texture(u_EmissiveTexture, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;
@@ -410,14 +410,14 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 
 		u.rgb				+=emissive.rgb;
 	}
-		#endif
-	//u.r+=float(abs(tagDataCube.lightCount-1));
+#endif
+	//u.rgb=surfaceState.refl;
 	gl_FragColor = Gamma(u);
 }
 
 void OpaquePBR()
 {
-	PBR(true, true, true, true, true);
+	PBR(true, false, false, false, false);
 }
 void OpaqueAlbedo()
 {

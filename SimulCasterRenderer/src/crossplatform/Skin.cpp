@@ -1,7 +1,7 @@
 #include "Skin.h"
 
-namespace scr
-{
+using namespace scr;
+
 Skin::Skin(const std::string& name)
 	:name(name)
 {}
@@ -17,4 +17,4 @@ void Skin::UpdateBoneMatrices(const mat4& rootTransform)
 		boneMatrices[i] = (rootTransform.GetInverted() * skinTransform.GetTransformMatrix() * bones[i]->GetGlobalTransform().GetTransformMatrix() * inverseBindMatrices[i].GetTransformMatrix());
 	}
 }
-}
+

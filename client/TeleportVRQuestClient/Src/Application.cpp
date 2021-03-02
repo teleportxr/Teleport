@@ -255,8 +255,8 @@ void Application::EnteredVrMode()
 
 	// Bind the delegates.
 
-	controllers.SetToggleTexturesDelegate(
-			std::bind(&ClientRenderer::ToggleTextures, &clientRenderer));
+	controllers.SetCycleShaderModeDelegate(
+			std::bind(&ClientRenderer::CycleShaderMode, &clientRenderer));
 	controllers.SetToggleShowInfoDelegate(
 			std::bind(&ClientRenderer::ToggleShowInfo, &clientRenderer));
 	controllers.SetSetStickOffsetDelegate(

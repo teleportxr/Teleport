@@ -12,7 +12,7 @@ public :
 	Controllers();
 	~Controllers();
 
-	void SetToggleTexturesDelegate(TriggerDelegate d);
+	void SetCycleShaderModeDelegate(TriggerDelegate d);
 	void SetToggleShowInfoDelegate(TriggerDelegate d);
 	void SetSetStickOffsetDelegate(Float2Delegate d);
 	void ClearDelegates();
@@ -24,7 +24,7 @@ public :
 	ovrVector2f mTrackpadDim;
 	ControllerState mLastControllerStates[2]; //State of the primary controller on the last frame.
 private:
-	TriggerDelegate ToggleTextures;
+	TriggerDelegate CycleShaderMode;
 	TriggerDelegate ToggleShowInfo;
 	Float2Delegate SetStickOffset;
 };

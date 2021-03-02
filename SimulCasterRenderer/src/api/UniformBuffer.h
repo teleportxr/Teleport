@@ -38,6 +38,7 @@ namespace scr
 
 		//Submits the stored UBO data to the GPU.
 		virtual void Submit() const = 0;
+		// and... so does this? What is the difference?
 		virtual void Update() const = 0;
 
 		virtual bool ResourceInUse(int timeout) = 0;

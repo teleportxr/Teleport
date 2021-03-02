@@ -55,7 +55,7 @@ namespace scr
 		void UpdateProjection(float horizontalFOV, float aspectRatio, float zNear, float zFar);
 		void UpdateProjection(float left, float right, float bottom, float top, float near, float far);
 
-		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
+		const ShaderResource& GetShaderResource() const;
 
 		inline const avs::vec3& GetPosition() const { return m_CameraData.m_Position; }
 	};

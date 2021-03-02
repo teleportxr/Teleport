@@ -873,10 +873,28 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 	{
 		skin->UpdateBoneMatrices(globalMatrix);
 	}
-
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	std::vector<const scr::ShaderResource*> pbrShaderResources;
+	pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
 	//Push surfaces onto render queue.
 	for (ovrSurfaceDef &surfaceDef : ovrNode->ovrSurfaceDefs)
 	{
+		// Must update the uniforms. e.g. camera pos.
+		for(const scr::ShaderResource *sr : pbrShaderResources)
+		{
+			const std::vector<scr::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
+			int j=0;
+			for(const scr::ShaderResource::WriteShaderResource& resource : shaderResourceSet)
+			{
+				scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
+				if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER&&resource.bufferInfo.buffer)
+				{
+					scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
+					surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
+				}
+				j++;
+			}
+		}
 		res.Surfaces.emplace_back(transform, &surfaceDef);
 	}
 	//Render children.
@@ -890,7 +908,7 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 	}
 }
 
-void ClientRenderer::ToggleTextures()
+void ClientRenderer::CycleShaderMode()
 {
 	OVRNodeManager *nodeManager = dynamic_cast<OVRNodeManager *>(resourceManagers->mNodeManager.get());
 	passSelector++;
@@ -928,12 +946,14 @@ void ClientRenderer::Render(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::OvrGuiS
 
 void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 {
+	static ovrVector3f offset={0,0,3.5f};
+	static ovrVector4f colour={1.0f,0.7f,0.5f,0.5f};
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	auto ctr = mNetworkSource.getCounterValues();
 	if (show_osd == NETWORK_OSD)
 	{
 		mGuiSys->ShowInfoText(
-				INFO_TEXT_DURATION,
+				INFO_TEXT_DURATION,offset,colour,
 				"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 				"Incomplete Decoder Packets: %d\n"
 				"Framerate: %4.4f Bandwidth(kbps): %4.4f", mDecoder.getTotalFramesProcessed(),
@@ -950,7 +970,7 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 			vidPos = videoTagDataCubeArray[0].coreData.cameraTransform.position;
 		}
 		mGuiSys->ShowInfoText(
-				INFO_TEXT_DURATION,
+				INFO_TEXT_DURATION,offset,colour,
 				"        Foot pos: %1.3f, %1.3f, %1.3f\n\n"
 				" Camera Relative: %1.3f, %1.3f, %1.3f\n"
 				" Camera Position: %1.3f, %1.3f, %1.3f\n"
@@ -996,7 +1016,7 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 
 		mGuiSys->ShowInfoText
 				(
-						INFO_TEXT_DURATION,
+						INFO_TEXT_DURATION,offset,colour,
 						"%s\n"
 						"Nodes: %d \n"
 						"Orphans: %d\n"
@@ -1030,7 +1050,7 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 					missingResourcesStream << " | ";
 				}
 			}
-			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, missingResourcesStream.str().c_str());
+			mGuiSys->ShowInfoText(INFO_TEXT_DURATION,offset,colour, missingResourcesStream.str().c_str());
 		}
 	}
 	else if (show_osd == TAG_OSD)
@@ -1068,6 +1088,6 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 				sstr << "\n";
 			}
 		}
-		mGuiSys->ShowInfoText(INFO_TEXT_DURATION, sstr.str().c_str());
+		mGuiSys->ShowInfoText(INFO_TEXT_DURATION,offset,colour, sstr.str().c_str());
 	}
 }

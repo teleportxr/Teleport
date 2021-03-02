@@ -97,7 +97,7 @@ public:
 	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c,ClientDeviceState *s);
 	~ClientRenderer();
 
-	void ToggleTextures();
+	void CycleShaderMode();
 	void ToggleShowInfo();
 	void  SetStickOffset(float,float);
 

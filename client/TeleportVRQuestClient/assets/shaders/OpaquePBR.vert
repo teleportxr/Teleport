@@ -84,10 +84,8 @@ layout(std140, binding = 3) uniform u_BoneData
 
 void Static()
 {
-    //gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
-    gl_Position         = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
-
     v_Position 	        = (ModelMatrix * vec4(a_Position, 1.0)).xyz;
+    gl_Position         = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * vec4(v_Position, 1.0);
     v_Normal	        = normalize((ModelMatrix * vec4(a_Normal, 0.0)).xyz);
     v_Tangent	        = normalize((ModelMatrix * vec4(a_Tangent.xyz,0.0)).xyz);
     v_Binormal	        = normalize(cross(v_Normal, v_Tangent));
