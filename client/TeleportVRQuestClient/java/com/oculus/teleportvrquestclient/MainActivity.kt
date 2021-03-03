@@ -38,9 +38,9 @@ class MainActivity : NativeActivity()
 
     override fun onCreate(savedInstanceState: Bundle?)
     {
-        nativeInitFromJava();
+        nativeInitFromJava()
         super.onCreate(savedInstanceState)
-        //requestRecordPermission();
+        //requestRecordPermission()
     }
 
     companion object {
