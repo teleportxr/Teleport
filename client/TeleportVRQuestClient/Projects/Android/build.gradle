@@ -27,6 +27,20 @@ apply plugin: 'kotlin-android-extensions'
 
 android
 {
+    signingConfigs {
+        debug {
+            storeFile file('D:\\Simul\\RemotePlay\\client\\TeleportVRQuestClient\\Projects\\Android\\android.debug.keystore')
+            storePassword 'android'
+            keyAlias 'android'
+            keyPassword 'android'
+        }
+        release {
+            storeFile file('D:\\Simul\\RemotePlay\\client\\TeleportVRQuestClient\\Projects\\Android\\android.debug.keystore')
+            storePassword 'android'
+            keyAlias 'android'
+            keyPassword 'android'
+        }
+    }
     ndkVersion "20.1.5948944"
   // This is the name of the generated apk file, which will have
   // -debug.apk or -release.apk appended to it.
