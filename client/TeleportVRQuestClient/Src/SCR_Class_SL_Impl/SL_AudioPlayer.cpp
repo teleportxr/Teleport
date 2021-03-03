@@ -169,45 +169,48 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 
     SLuint32 bitsPerSample = static_cast<SLuint32>(audioParams.bitsPerSample);
 
-    constexpr int bufferQueueLength = 2;
 
-    // Configure audio source
-    SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {
-            SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,    // locatorType
-            static_cast<SLuint32>(bufferQueueLength)};   // numBuffers
 
-	/**
-    * API 21 (Lollipop) introduced support for floating-point data representation and an extended
-    * data format type: SLAndroidDataFormat_PCM_EX. Would need change for older APIs but we likely won't need to target older ones
-    */
-    // Define the output audio data format.
-	SLAndroidDataFormat_PCM_EX format_pcm_ex = {
-			SL_ANDROID_DATAFORMAT_PCM_EX,       // formatType
-            static_cast<SLuint32>(audioParams.numChannels),           // numChannels
-            static_cast<SLuint32>(audioParams.sampleRate * 1000),    // milliSamplesPerSec
-            bitsPerSample,                      // bitsPerSample
-            bitsPerSample,                      // containerSize;
-            outputChannelCountToChannelMask(audioParams.numChannels), // channelMask
-            getDefaultByteOrder(),
-			SL_ANDROID_PCM_REPRESENTATION_FLOAT
-    };
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Player
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	{
-		SLDataSource outputAudioSrc = {&loc_bufq, &format_pcm_ex};
+        constexpr int bufferQueueLength = 5;
+
+        // Configure audio source
+        SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {
+                SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,    // locatorType
+                static_cast<SLuint32>(bufferQueueLength)};   // numBuffers
+
+    /**
+      * API 21 (Lollipop) introduced support for floating-point data representation and an extended
+      * data format type: SLAndroidDataFormat_PCM_EX. Would need change for older APIs but we likely won't need to target older ones
+      */
+        // Define the output audio data format.
+        SLAndroidDataFormat_PCM_EX format_pcm_ex = {
+                SL_ANDROID_DATAFORMAT_PCM_EX,       // formatType
+                static_cast<SLuint32>(audioParams.numChannels),           // numChannels
+                static_cast<SLuint32>(audioParams.sampleRate * 1000),    // milliSamplesPerSec
+                bitsPerSample,                      // bitsPerSample
+                bitsPerSample,                      // containerSize;
+                outputChannelCountToChannelMask(audioParams.numChannels), // channelMask
+                getDefaultByteOrder(),
+                SL_ANDROID_PCM_REPRESENTATION_FLOAT
+        };
+
+        SLDataSource audioSrc = {&loc_bufq, &format_pcm_ex};
 
 		SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, mOutputMixObject};
-		SLDataSink outputAudioSink = {&loc_outmix, NULL};
+		SLDataSink audioSink = {&loc_outmix, NULL};
 
 		const SLInterfaceID ids[] = {SL_IID_BUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION};
 		const SLboolean reqs[] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
 
 		// Stream setup
 		if (FAILED((*mEngineInterface)->CreateAudioPlayer(mEngineInterface, &mPlayerObject,
-														  &outputAudioSrc,
-														  &outputAudioSink,
+														  &audioSrc,
+														  &audioSink,
 														  sizeof(ids) / sizeof(ids[0]), ids,
 														  reqs))) {
 			SCA_CERR << "SL_AudioPlayer: Error occurred trying to create audio stream."
@@ -271,20 +274,27 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 	{
-		// Setting up the IO device (microphone)
+        constexpr int bufferQueueLength = 2;
+
+        // Configure audio source
+        SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {
+                SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,    // locatorType
+                static_cast<SLuint32>(bufferQueueLength)};   // numBuffers
+
+        // Setting up the IO device (microphone)
 		SLDataLocator_IODevice ioDevice = {
 				SL_DATALOCATOR_IODEVICE,         // Types of
 				SL_IODEVICE_AUDIOINPUT,          // device type selected audio input type
 				SL_DEFAULTDEVICEID_AUDIOINPUT,   // deviceID
 				NULL                             // device instance
 		};
-		SLDataSource inputAudioSrc = {
+		SLDataSource audioSrc = {
 				&ioDevice,                       // SLDataLocator_IODevice configuration input
 				NULL                   // Input format, the collection does not need
 		};
 
 		// Define the output audio data format.
-		SLAndroidDataFormat_PCM_EX input_format_pcm_ex = {
+		SLAndroidDataFormat_PCM_EX format_pcm_ex = {
 				SL_ANDROID_DATAFORMAT_PCM_EX,       // formatType
 				static_cast<SLuint32>(audioParams.numChannels),           // numChannels
 				static_cast<SLuint32>(audioParams.sampleRate * 1000),    // milliSamplesPerSec
@@ -295,17 +305,17 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 				SL_ANDROID_PCM_REPRESENTATION_FLOAT
 		};
 
-		SLDataSink inputAudioSink = {
+		SLDataSink audioSink = {
 				&loc_bufq,                   // SLDataFormat_PCM_EX configuration output
-				&input_format_pcm_ex         // Output data format
+				&format_pcm_ex         // Output data format
 		};
 
 		// Create a recorded object
 		const SLInterfaceID ids[2] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION};
 		const SLboolean reqs[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
 		if (FAILED((*mEngineInterface)->CreateAudioRecorder(mEngineInterface, &mRecorderObject,
-															&inputAudioSrc,
-															&inputAudioSink,  sizeof(ids) / sizeof(ids[0]),
+															&audioSrc,
+															&audioSink,  sizeof(ids) / sizeof(ids[0]),
 															ids, reqs))) {
 			SCA_CERR << "SL_AudioPlayer: Error occurred trying to create audio recorder object." << std::endl;
 			return sca::Result::AudioRecorderCreationError;
