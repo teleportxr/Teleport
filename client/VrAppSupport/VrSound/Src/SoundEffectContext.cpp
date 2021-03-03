@@ -11,10 +11,10 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "JniUtils.h"
 #include "SoundEffectContext.h"
-#include "VrCommon.h"
-#include "OVR_FileSys.h"
+//#include "VrCommon.h"
+//#include "GUI/FileSys.h"
 
-namespace OVR {
+using namespace OVRFW;
 
 const char * CMD_LOAD_SOUND_ASSET = "loadSoundAsset";
 
@@ -32,7 +32,7 @@ ovrSoundEffectContext::~ovrSoundEffectContext()
 {
 }
 
-void ovrSoundEffectContext::Initialize( ovrFileSys * fileSys )
+void ovrSoundEffectContext::Initialize( OVRFW::ovrFileSys * fileSys )
 {
 	SoundPool.Initialize( fileSys );
 	// TODO: kick this off in the background in the constructor?
@@ -137,6 +137,12 @@ void ovrSoundEffectContext::LoadSoundAssetInternal( JNIEnv & env, const char * n
 #endif
 }
 
+// Returns true if head equals check plus zero or more characters.
+static bool MatchesHead( const char * head, const char * check )
+{
+	const int l = static_cast<int>( OVR::OVR_strlen( head ) );
+	return 0 == OVR::OVR_strncmp( head, check, l );
+}
 void ovrSoundEffectContext::TtjCommand( JNIEnv & jni, const char * commandString )
 {
 #if defined( OVR_OS_ANDROID )
@@ -161,4 +167,3 @@ void ovrSoundEffectContext::TtjCommand( JNIEnv & jni, const char * commandString
 #endif
 }
 
-}

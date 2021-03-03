@@ -8,6 +8,16 @@ Node::Node(avs::uid id, const std::string& name)
 	:id(id), name(name)
 {}
 
+void Node::SetLocalTransform(const Transform& transform)
+{
+	if(transform.m_Scale.x==0.0f)
+	{
+		SCR_CERR<<"Scale is zero.\n";
+		return;
+	}
+
+	localTransform = transform;
+}
 void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
 	//Only update the global transform if we are receiving global transforms for this node, but it has a parent.
@@ -35,7 +45,6 @@ void Node::RequestTransformUpdate()
 void Node::SetLastMovement(const avs::MovementUpdate& update)
 {
 	lastReceivedMovement = update;
-
 	UpdateModelMatrix(update.position, update.rotation, localTransform.m_Scale);
 }
 
@@ -44,6 +53,9 @@ void Node::TickExtrapolatedTransform(float deltaTime)
 	deltaTime /= 1000;
 	Transform& transform = (lastReceivedMovement.isGlobal ? globalTransform : localTransform);
 
+	//      but lastReceivedMovement.isGlobal defaults to true. So this will always happen unless we get any local updates.
+	if(lastReceivedMovement.isGlobal)
+		GetGlobalTransform();	// force it to be valid at least...
 	transform.m_Translation += static_cast<avs::vec3>(lastReceivedMovement.velocity) * deltaTime;
 
 	if(lastReceivedMovement.angularVelocityAngle != 0)
@@ -149,7 +161,7 @@ void Node::RequestChildrenUpdateTransforms()
 		{
 			child->RequestTransformUpdate();
 			++childIt;
-		}
+}
 		else
 		{
 			childIt = children.erase(childIt);

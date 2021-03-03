@@ -686,7 +686,7 @@ namespace avs
 
 	enum class GeometryPayloadType : uint8_t
 	{
-		Invalid, 
+		Invalid=0, 
 		Mesh,
 		Material,
 		MaterialInstance,
@@ -703,7 +703,7 @@ namespace avs
 
 	enum class NodeDataType : uint8_t
 	{
-		Invalid,
+		Invalid=0,
 		None,
 		Mesh,
 		Light,
@@ -712,7 +712,7 @@ namespace avs
 
 	enum class NodeDataSubtype : uint8_t
 	{
-		Invalid,
+		Invalid=0,
 		None,
 		Body,
 		LeftHand,
@@ -791,7 +791,7 @@ namespace avs
 		
 		vec3 velocity;
 		vec3 angularVelocityAxis;
-		float angularVelocityAngle;
+		float angularVelocityAngle;	// What is an angular velocity angle?
 	};
 
 	enum class RemotePlaySessionChannel : unsigned char //enet_uint8

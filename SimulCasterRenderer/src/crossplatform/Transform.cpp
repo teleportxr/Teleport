@@ -9,11 +9,11 @@ bool Transform::s_UninitialisedUB = true;
 std::shared_ptr<UniformBuffer> Transform::s_UB = nullptr;
 
 Transform::Transform()
-	:Transform(TransformCreateInfo{nullptr}, avs::vec3(), quat(), avs::vec3())
+	:Transform(TransformCreateInfo{nullptr}, avs::vec3(), quat(0,0,0,1.0f), avs::vec3(1.0f,1.0f,1.0f))
 {}
 
 Transform::Transform(const TransformCreateInfo& pTransformCreateInfo)
-	: Transform(pTransformCreateInfo, avs::vec3(), quat(), avs::vec3())
+	: Transform(pTransformCreateInfo, avs::vec3(), quat(0,0,0,1.0f), avs::vec3(1.0f,1.0f,1.0f))
 {}
 
 Transform::Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 translation, quat rotation, avs::vec3 scale)
@@ -61,6 +61,11 @@ void Transform::UpdateModelMatrix()
 
 bool Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
+	if(scale.x==0.0f)
+	{
+		SCR_CERR<<"Scale is zero.\n";
+		return false;
+	}
 	if(m_Translation != translation || m_Rotation != rotation || m_Scale != scale)
 	{
 		m_Translation = translation;

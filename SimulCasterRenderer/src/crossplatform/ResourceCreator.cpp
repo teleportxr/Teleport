@@ -577,18 +577,18 @@ void ResourceCreator::CreateNode(avs::uid id, avs::DataNode& node)
 	case NodeDataType::None:
 		CreateMeshNode(id, node);
 		break;
-	case NodeDataType::Mesh:
-		CreateMeshNode(id, node);
-		break;
-	case NodeDataType::Light:
-		CreateLight(id, node);
-		break;
-	case NodeDataType::Bone:
-		CreateBone(id, node);
-		break;
-	default:
-		SCR_LOG("Unknown NodeDataType: %c", static_cast<int>(node.data_type));
-		break;
+		case NodeDataType::Mesh:
+			CreateMeshNode(id, node);
+			break;
+		case NodeDataType::Light:
+			CreateLight(id, node);
+			break;
+		case NodeDataType::Bone:
+			CreateBone(id, node);
+			break;
+		default:
+			SCR_LOG("Unknown NodeDataType: %c", static_cast<int>(node.data_type));
+			break;
 	}
 }
 

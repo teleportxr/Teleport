@@ -86,7 +86,7 @@ public:
 	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return materials; }
 	size_t GetMaterialAmount() const { return materials.size(); }
 
-	void SetLocalTransform(const Transform& transform) { localTransform = transform; }
+	void SetLocalTransform(const Transform& transform);
 	const Transform& GetLocalTransform() const { return localTransform; }
 	Transform& GetLocalTransform() { return localTransform; }
 

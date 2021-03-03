@@ -927,7 +927,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				if(skin)
 				{
 					scr::mat4* scr_matrices = skin->GetBoneMatrices(transform.GetTransformMatrix());
-					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(scr::mat4) * 64);
+					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(scr::mat4) * scr::Skin::MAX_BONES);
 
 					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
 					usedPassName = "anim_" + usedPassName;

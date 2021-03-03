@@ -85,7 +85,7 @@ namespace SCServer
 					if(!keepQueueing)
 					{
 						break;
-					}
+				}
 				}
 
 				if(meshResourceInfo.skinID != 0)
@@ -100,8 +100,8 @@ namespace SCServer
 							if(!keepQueueing)
 							{
 								break;
-							}
 						}
+					}
 					}
 
 					if(!req->hasResource(meshResourceInfo.skinID))
@@ -112,8 +112,8 @@ namespace SCServer
 						if(!keepQueueing)
 						{
 							break;
-						}
 					}
+				}
 				}
 
 				for(avs::uid animationID : meshResourceInfo.animationIDs)
@@ -126,8 +126,8 @@ namespace SCServer
 						if(!keepQueueing)
 						{
 							break;
-						}
 					}
+				}
 				}
 				if(!keepQueueing)
 				{
@@ -146,13 +146,13 @@ namespace SCServer
 							if(!keepQueueing)
 							{
 								break;
-							}
+						}
 						}
 
 						if(!keepQueueing)
 						{
 							break;
-						}
+					}
 					}
 
 					if(!req->hasResource(material.material_uid))
@@ -164,8 +164,8 @@ namespace SCServer
 						if(!keepQueueing)
 						{
 							break;
-						}
 					}
+				}
 				}
 				if(!keepQueueing)
 				{
@@ -180,8 +180,8 @@ namespace SCServer
 					if(!keepQueueing)
 					{
 						break;
-					}
 				}
+			}
 			}
 
 			for(avs::LightNodeResources lightResourceInfo : lightNodeResources)
@@ -194,7 +194,7 @@ namespace SCServer
 					if(!keepQueueing)
 					{
 						break;
-					}
+				}
 				}
 
 				if(!req->hasResource(lightResourceInfo.node_uid))
@@ -205,9 +205,9 @@ namespace SCServer
 					if(!keepQueueing)
 					{
 						break;
-					}
 				}
 			}
+		}
 		}
 
 		return avs::Result::OK;
@@ -311,24 +311,24 @@ namespace SCServer
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface *req, std::vector<avs::uid> missingUIDs)
 	{
 		//Place payload type onto the buffer.
 		putPayload(avs::GeometryPayloadType::Node);
-		for(int i = 0; i < missingUIDs.size(); i++)
+		for (int i=0;i<missingUIDs.size();i++)
 		{
-			avs::uid uid = missingUIDs[i];
+			avs::uid uid =missingUIDs[i];
 			avs::DataNode* node = src->getNode(uid);
 			if(!node)
 			{
 				TELEPORT_CERR << "Node encoding error! Node_" << uid << " does not exist!\n";
-				missingUIDs.erase(missingUIDs.begin() + i);
+				missingUIDs.erase(missingUIDs.begin()+i);
 				i--;
 			}
 		}
 
 		put(missingUIDs.size());
-		for(const avs::uid& uid : missingUIDs)
+		for (const avs::uid &uid : missingUIDs)
 		{
 			avs::DataNode* node = src->getNode(uid);
 			put(uid);
@@ -369,7 +369,7 @@ namespace SCServer
 				TELEPORT_ASSERT(node->materials.size() == 0);
 			}
 
-			if(node->data_type == avs::NodeDataType::Light)
+			if(node->data_type==avs::NodeDataType::Light)
 			{
 				put(node->lightColour);
 				put(node->lightRadius);

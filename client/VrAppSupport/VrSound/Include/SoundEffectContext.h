@@ -14,9 +14,9 @@ Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All
 
 #include "SoundAssetMapping.h"
 #include "SoundPool.h"
-#include "TalkToJava.h"
+#include "Misc/TalkToJava.h"
 
-namespace OVR {
+namespace OVRFW {
 
 // Context for playing sound effects from the APK. Must be
 // created/destroyed from the same thread.

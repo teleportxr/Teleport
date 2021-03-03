@@ -4,6 +4,7 @@
 
 using namespace scr;
 
+// A couple of globals... wtf?
 bool Camera::s_UninitialisedUB = true;
 std::shared_ptr<UniformBuffer> Camera::s_UB = nullptr;
 
@@ -12,7 +13,6 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 {
 	if (s_UninitialisedUB)
 	{
-
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.bindingLocation = 0;
 		ub_ci.size = sizeof(CameraData);
@@ -38,9 +38,17 @@ void Camera::UpdatePosition(const avs::vec3& position)
 {
 	m_CameraData.m_Position = position;
 }
+
 void Camera::UpdateOrientation(const quat& orientation)
 {
 	m_CameraData.m_Orientation = orientation;
+}
+
+const ShaderResource& Camera::GetShaderResource() const
+{
+	// I THINK this updates the values on the GPU...
+	s_UB->Update();
+	return m_ShaderResource;
 }
 
 void Camera::UpdateView()

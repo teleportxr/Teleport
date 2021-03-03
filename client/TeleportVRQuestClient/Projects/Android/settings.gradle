@@ -1,0 +1,11 @@
+
+rootProject.projectDir = new File(settingsDir, '../../../../..')
+rootProject.name = "TeleportVRQuestClient"
+
+include ':', \
+	'libavstream', \
+	'TeleportClient', \
+	'SimulCasterRenderer', \
+	'client:VrSamples:SampleCommon:Projects:Android', \
+	'client:VrSamples:SampleFramework:Projects:Android', \
+	'client:VrSamples:TeleportVRQuestClient:Projects:Android'

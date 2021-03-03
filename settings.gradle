@@ -1,5 +1,4 @@
 include ':client:TeleportVRQuestClient:Projects:Android:build.gradle'
-include ':client:VrSamples:VrCubeWorld_Framework:Projects:Android'
 include ':client:VrSamples:SampleCommon:Projects:Android'
 include ':client:VrSamples:SampleFramework:Projects:Android'
 rootProject.projectDir = new File(settingsDir, '.')
@@ -7,10 +6,7 @@ rootProject.name = "client"
 include ':avstream', ':simulcasterclient'
 include ':', \
 	'client:TeleportVRQuestClient:Projects:Android', \
-	'client:SimulCasterClient', \
 	'client:VrAppFramework:Projects:Android', \
-	'client:VrAppSupport:VrLocale:Projects:Android', \
 	'client:VrAppSupport:VrSound:Projects:Android', \
 	'client:VrProjects:Native:RemotePlayClient:Projects:Android', \
-	'client:VrAppSupport:VrGUI:Projects:Android', \
 	'libavstream'

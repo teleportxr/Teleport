@@ -26,7 +26,6 @@ class CommandOptions:
         self.loglevel = args.loglevel
         self.profile = args.profile
         self.use_gradle_daemon = args.use_gradle_daemon
-        self.disable_sig_check = args.disable_sig_check
         self.keystore_path = args.keystore_path
         self.keystore_pswd = args.keystore_pswd
         self.keyalias = args.keyalias
@@ -78,7 +77,7 @@ class CommandOptions:
         )
     parser.add_argument(
         '-log',
-        type=str, 
+        type=str,
         help="specify gradle log level [quiet,lifecycle,info,debug]",
         dest='loglevel',
         default='quiet'
@@ -94,12 +93,6 @@ class CommandOptions:
         help="don't use the gradle daemon when building",
         dest='use_gradle_daemon',
         action='store_false'
-        )
-    parser.add_argument(
-        '--disable-sig-check',
-        help="disables the check for oculussig file",
-        dest='disable_sig_check',
-        action='store_true'
         )
     parser.add_argument(
         '--keystore_path',
@@ -283,7 +276,6 @@ def run_gradle_task(opts, task, args = None):
     if opts.loglevel != "lifecycle": flags.append('-%s' % opts.loglevel)
     if opts.profile: flags.append('--profile')
     if opts.scan: flags.append('--scan')
-    if opts.disable_sig_check: flags.append('-Pdisable_sig_check')
     if opts.clear_logcat: flags.append('-Pclear_logcat')
     if opts.build_cache: flags.append('--build-cache')
     if opts.configure_on_demand: flags.append('--configure-on-demand')

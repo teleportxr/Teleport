@@ -1433,15 +1433,6 @@ TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModif
 	geometryStore.storeMaterial(id, guid, lastModified, avs::Material(material));
 }
 
-TELEPORT_EXPORT bool IsMaterialStored(avs::uid id)
-{
-	const avs::Material *avsmat=geometryStore.getMaterial(id);
-	if(avsmat)
-		return true;
-	return false;
-}
-
-
 TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation)
 {
 	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation);
@@ -1450,6 +1441,38 @@ TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModifi
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture shadowMap)
 {
 	geometryStore.storeShadowMap(id, guid, lastModified, avs::Texture(shadowMap));
+}
+
+TELEPORT_EXPORT bool IsNodeStored(avs::uid id)
+{
+	const avs::DataNode* node = geometryStore.getNode(id);
+	return node != nullptr;
+}
+
+TELEPORT_EXPORT bool IsSkinStored(avs::uid id)
+{
+	//NOTE: Assumes we always are storing animations in the engineering axes standard.
+	const avs::Skin* skin = geometryStore.getSkin(id, avs::AxesStandard::EngineeringStyle);
+	return skin != nullptr;
+}
+
+TELEPORT_EXPORT bool IsMeshStored(avs::uid id)
+{
+	//NOTE: Assumes we always are storing meshes in the engineering axes standard.
+	const avs::Mesh* mesh = geometryStore.getMesh(id, avs::AxesStandard::EngineeringStyle);
+	return mesh != nullptr;
+}
+
+TELEPORT_EXPORT bool IsMaterialStored(avs::uid id)
+{
+	const avs::Material* material = geometryStore.getMaterial(id);
+	return material != nullptr;
+}
+
+TELEPORT_EXPORT bool IsTextureStored(avs::uid id)
+{
+	const avs::Texture* texture = geometryStore.getTexture(id);
+	return texture != nullptr;
 }
 
 TELEPORT_EXPORT void RemoveNode(avs::uid nodeID)
