@@ -164,15 +164,13 @@ void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* re
 	std::map<avs::uid, ExtractedTexture> oldTextures = textures;
 
 	//Delete the old data; we don't want to use the GeometryStore::clear(...) function as that will call delete on the pointers we want to copy.
-	meshes.clear();
+	//Clear mesh lookup without messing with the structure.
+	meshes[avs::AxesStandard::EngineeringStyle].clear();
+	meshes[avs::AxesStandard::GlStyle].clear();
 	materials.clear();
 	textures.clear();
 
 	TELEPORT_COUT << "Replacing " << oldMaterials.size() << " materials loaded from disk with " << materialAmount << " confirmed from managed code.\node";
-
-	//Ensure these exist even if there were no meshes to load.
-	meshes[avs::AxesStandard::EngineeringStyle];
-	meshes[avs::AxesStandard::GlStyle];
 
 	//Replace old IDs with their new IDs; fixing any links that need to be changed.
 
@@ -256,24 +254,20 @@ void GeometryStore::clear(bool freeMeshBuffers)
 		delete[] idShadowPair.second.texture.data;
 	}
 
+	//Clear lookup tables; we want to clear the resources inside them, not their structure.
 	nodes.clear();
-	skins.clear();
-	animations.clear();
-	meshes.clear();
+	skins[avs::AxesStandard::EngineeringStyle].clear();
+	skins[avs::AxesStandard::GlStyle].clear();
+	animations[avs::AxesStandard::EngineeringStyle].clear();
+	animations[avs::AxesStandard::GlStyle].clear();
+	meshes[avs::AxesStandard::EngineeringStyle].clear();
+	meshes[avs::AxesStandard::GlStyle].clear();
 	materials.clear();
 	textures.clear();
 	shadowMaps.clear();
 
 	texturesToCompress.clear();
 	lightNodes.clear();
-
-	//Recreate look-up maps.
-	meshes[avs::AxesStandard::EngineeringStyle];
-	meshes[avs::AxesStandard::GlStyle];
-	animations[avs::AxesStandard::EngineeringStyle];
-	animations[avs::AxesStandard::GlStyle];
-	skins[avs::AxesStandard::EngineeringStyle];
-	skins[avs::AxesStandard::GlStyle];
 }
 
 void GeometryStore::setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
