@@ -311,8 +311,10 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	mVideoSurfaceDef.geo = BuildGlobe(1.f, 1.f, 6.f,32,64);
 	//BuildTesselatedQuad(2,2,true);//
 	mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
-	mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = false;
+	mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = true;
+	mVideoSurfaceDef.graphicsCommand.GpuState.depthMaskEnable = false;
 	mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
+	mVideoSurfaceDef.graphicsCommand.GpuState.blendEnable = OVRFW::ovrGpuState::BLEND_DISABLE;
 	//Set up scr::Camera
 	scr::Camera::CameraCreateInfo c_ci = {
 			(scr::RenderPlatform *) (&globalGraphicsResources.renderPlatform)

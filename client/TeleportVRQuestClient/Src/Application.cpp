@@ -430,19 +430,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
 	GLCheckErrorsWithTitle("Frame: Pre-Cubemap");
 	clientRenderer.CopyToCubemaps(*mDeviceContext);
-// Append video surface
-	clientRenderer.RenderVideo(*mDeviceContext, out);
 
-	if (sessionClient.IsConnected())
-	{
-		clientRenderer.Render(in, mGuiSys);
-	}
-	else
-	{
-		//out.ClearColorBuffer = true;
-		//out.ClearDepthBuffer = true;
-		lobbyRenderer.Render(mGuiSys);
-	};
 
 //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
@@ -453,6 +441,18 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 //Move the hands before they are drawn.
 	UpdateHandObjects();
 	clientRenderer.RenderLocalNodes(out);
+	if (sessionClient.IsConnected())
+	{
+		clientRenderer.Render(in, mGuiSys);
+// Append video surface
+		clientRenderer.RenderVideo(*mDeviceContext, out);
+	}
+	else
+	{
+		//out.ClearColorBuffer = true;
+		//out.ClearDepthBuffer = true;
+		lobbyRenderer.Render(mGuiSys);
+	};
 	GLCheckErrorsWithTitle("Frame: Post-SCR");
 
 }

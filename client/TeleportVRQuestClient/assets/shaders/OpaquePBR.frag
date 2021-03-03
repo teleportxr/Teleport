@@ -260,7 +260,7 @@ SurfaceState PreprocessSurface(vec3 viewDir, SurfaceProperties surfaceProperties
 	return surfaceState;
 }
 
-vec3 EnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
+vec3 KarisEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 {
 	const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
 	const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
@@ -270,16 +270,19 @@ vec3 EnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 	return specularColour * AB.x + AB.y;
 }
 
+vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
+{
+	float mult=1.0-max(roughness,n_v);
+	float m3=mult*mult*mult;
+	return specularColour +vec3(m3,m3,m3);
+}
+
 vec3 PBRAmbient(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties)
 {
-
-	//env					=mix(env, diffuse_env, saturate((roughnessE - 0.25) / 0.75));
-	//Metallic materials will have no diffuse output.
-
 	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo * surfaceProperties.diffuse_env;
 	diffuse					*= surfaceProperties.ao;
 
-	vec3 envSpecularColour	=EnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
+	vec3 envSpecularColour	=ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness, surfaceState.n_v);
 	vec3 env				=lerp(surfaceState.env, surfaceState.rough_env, saturate(surfaceProperties.roughness_mip-2.0));
 	vec3 specular			=surfaceState.kS*envSpecularColour * env;
 
@@ -312,6 +315,7 @@ vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 	vec3 diffuse					=surfaceState.kD*irradiance * surfaceProperties.albedo * saturate(n_l);
 	vec3 specular					=irradiance * surfaceState.kS * (lightD * lightV * SIMUL_PI_F);
 
+	//specular = D(n_h,roughness)*G(n_v,n_l,roughness)*F(l_h,specularColour)*n_l/(4.0*n_v*n_l);
 	//float ao						= SceneAO(pos, normal, localToWorld);
 	specular						*=saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour						= diffuse+specular;

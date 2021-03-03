@@ -88,7 +88,7 @@ void main()
     for (int i = 0; i < 5; i++)
     {
         float depth = lookup.a;
-        float dist_m=max(5.0,20.0*depth);
+        float dist_m=5.0*(5.0+20.0*depth);
         vec3 pos_m=dist_m*view;
         pos_m+=offsetFromVideo2* step(-0.8, -depth);
 

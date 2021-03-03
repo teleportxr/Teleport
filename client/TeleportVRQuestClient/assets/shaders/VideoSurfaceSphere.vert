@@ -42,6 +42,7 @@ layout(std430, binding = 0) buffer TagDataCube_ssbo
 {
     VideoTagDataCube tagDataCube;
 };
+
 void main()
 {
     // Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
@@ -49,7 +50,7 @@ void main()
     vec4 eye_pos    =vec4((sm.ViewMatrix[VIEW_ID] * ( vec4(position.xyz,0.0) )).xyz,1.0);
     vec4 out_pos    =sm.ProjectionMatrix[VIEW_ID] * eye_pos;
     //vec4 out_pos    =vid.viewProj*position;
-    gl_Position     =out_pos;//vec4(out_pos.xy/out_pos.z,0.0,1.0);
+    gl_Position     =out_pos;//vec4(out_pos.xy/out_pos.w,1.0,1.0);
     vec3 eyeOffset  =vid.eyeOffsets[VIEW_ID].xyz;
     vec3 v_offs     =vid.cameraPosition-tagDataCube.cameraPosition+eyeOffset;
     vOffsetFromVideo=vec3(-v_offs.z,v_offs.x,v_offs.y)*5.0;
