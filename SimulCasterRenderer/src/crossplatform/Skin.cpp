@@ -12,7 +12,9 @@ Skin::Skin(const std::string& name, const std::vector<Transform>& inverseBindMat
 
 void Skin::UpdateBoneMatrices(const mat4& rootTransform)
 {
-	for(size_t i = 0; i < bones.size(); i++)
+	//MAX_BONES may be less than the amount of bones we have.
+	size_t upperBound = std::min(bones.size(), MAX_BONES);
+	for(size_t i = 0; i < upperBound; i++)
 	{
 		boneMatrices[i] = (rootTransform.GetInverted() * skinTransform.GetTransformMatrix() * bones[i]->GetGlobalTransform().GetTransformMatrix() * inverseBindMatrices[i].GetTransformMatrix());
 	}

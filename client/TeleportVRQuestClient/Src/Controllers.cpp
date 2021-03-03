@@ -107,11 +107,11 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				evt.intValue=0;
 				mLastControllerStates[i].inputEvents.push_back(evt);
 			}
-			else if((clicked & ovrButton::ovrButton_A) != 0 )
+			else if((clicked & ovrButton::ovrButton_A) != 0 || (clicked & ovrButton::ovrButton_X) != 0)
 			{
 				ToggleShowInfo();
 			}
-			else if((clicked& ovrButton::ovrButton_B) != 0 )
+			else if((clicked& ovrButton::ovrButton_B) != 0 || (clicked & ovrButton::ovrButton_Y) != 0)
 			{
 				CycleShaderMode();
 			}
