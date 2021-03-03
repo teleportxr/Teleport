@@ -5,7 +5,6 @@ rootProject.projectDir = new File(settingsDir, '.')
 rootProject.name = "client"
 include ':avstream', ':simulcasterclient'
 include ':', \
-	'client:SimulCasterClient', \
 	'client:TeleportVRQuestClient:Projects:Android', \
 	'client:VrAppFramework:Projects:Android', \
 	'client:VrAppSupport:VrSound:Projects:Android', \

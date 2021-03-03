@@ -1,8 +1,11 @@
 // Copyright (c) Facebook Technologies, LLC and its affiliates. All Rights reserved.
 package co.simul.teleportvrquestclient
 
+import android.Manifest
 import android.app.NativeActivity
+import android.content.pm.PackageManager
 import android.os.Bundle
+import androidx.core.app.ActivityCompat
 
 /**
  * When using NativeActivity, we currently need to handle loading of dependent shared libraries
@@ -35,8 +38,9 @@ class MainActivity : NativeActivity()
 
     override fun onCreate(savedInstanceState: Bundle?)
     {
-       nativeInitFromJava();
+        nativeInitFromJava();
         super.onCreate(savedInstanceState)
+        //requestRecordPermission();
     }
 
     companion object {
@@ -52,13 +56,14 @@ class MainActivity : NativeActivity()
             // don't check again because the dialog is still open
             return;
         }
-/*
+
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
         {
             //&& ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)){
             // the dialog will be opened so we have to keep that in memory
             alreadyRequestedRecordingPermission = true
             ActivityCompat.requestPermissions(this, arrayOf<String>(Manifest.permission.RECORD_AUDIO), 1024)
-        }*/
+        }
+
     }
 }
