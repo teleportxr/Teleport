@@ -889,18 +889,6 @@ TELEPORT_EXPORT avs::uid GenerateID()
 {
 	return avs::GenerateUid();
 }
-
-TELEPORT_EXPORT float GetBandwidthInKbps(avs::uid clientID)
-{
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to get Client_" << clientID << "'s bandwidth! No client exists with ID " << clientID << "!\n";
-		return 0;
-	}
-
-	return clientPair->second.clientMessaging.getBandWidthKPS();
-}
 ///libavstream END
 
 ///GeometryStreamingService START
@@ -1365,7 +1353,7 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 	}
 	
 	// Thread safe
-	clientData.casterContext.NetworkPipeline->getCounterValues(counters);
+	clientData.casterContext.NetworkPipeline->getCounters(counters);
 
 	return true;
 }

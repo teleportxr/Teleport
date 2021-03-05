@@ -19,8 +19,7 @@ namespace avs
 		uint64_t throttleToRateKpS;
 		uint32_t requiredLatencyMs;
 		uint32_t connectionTimeout = 5000;
-		uint32_t bandwidthInterval = 5000;
-		bool calculateStats = true;
+		uint32_t bandwidthInterval = 10000;
 	};
 
 	/*! Network sink counters. */
@@ -30,18 +29,14 @@ namespace avs
 		uint64_t bytesSent = 0;
 		/*! Number of sent network packets. */
 		uint64_t networkPacketsSent = 0;
-		/*! Average packets sent per second over a user specified interval */
-		uint32_t avgPacketsSentPerSec = 0;
-		/*! Minimum packets sent per second over all intervals */
-		uint32_t minPacketsSentPerSec = 0;
-		/*! Maximum packets sent per second over all intervals */
-		uint32_t maxPacketsSentPerSec = 0;
-		/*! Average bandwidth required per second in the last interval  */
-		uint32_t avgRequiredBandwidth = 0;
-		/*! Minimum bandwidth required per second over all intervals */
-		uint32_t minRequiredBandwidth = 0;
-		/*! Maximum bandwidth required per second over all intervals */
-		uint32_t maxRequiredBandwidth = 0;
+		/*! Available bandwidth  */
+		double bandwidth = 0;
+		/*! Average bandwidth used */
+		double avgBandwidthUsed = 0;
+		/*! Minimum bandwidth used */
+		double minBandwidthUsed = 0;
+		/*! Maximum bandwidth used */
+		double maxBandwidthUsed = 0;
 	};
 
 	/*! Network sink stream data. */
@@ -119,9 +114,8 @@ namespace avs
 		/*!
 		 * Get current counter values.
 		 */
-		NetworkSinkCounters getCounterValues() const;
+		NetworkSinkCounters getCounters() const;
 
-		float getBandwidthKPerS() const;
 		/*!
 		* Debug a particular stream.
 		*/

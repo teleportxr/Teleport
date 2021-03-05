@@ -40,16 +40,7 @@ namespace avs
 		std::unique_ptr<udp::endpoint> m_endpoint;
 #endif
 		NetworkSinkCounters m_counters;
-		uint64_t m_statsTimeElapsed;
-		uint32_t m_minPacketsSentPerSec;
-
-#if !defined(LIBAV_USE_EFP)
-		ByteBuffer m_buffer;
-
-		std::map<uint8_t, uint16_t> m_streamSequences; //<ID of stream; sequence id of next packet sent on that stream>
-		std::map<uint8_t, std::queue<std::queue<NetworkPacket>>> m_streamQueues; //<ID of stream; queue of decoder packets (which are queues of network packets)>
-		std::map<uint8_t, std::queue<std::queue<NetworkPacket>>>::iterator m_currentStream; //The stream we are currently sending a decoder packet on.
-#endif
+		uint32_t m_minBandwidthUsed;
 
 		struct 
 		{
@@ -57,19 +48,10 @@ namespace avs
 			std::string port;
 		} m_remote;
 
-		struct DataEntry
-		{
-			uint32_t timestamp;
-			uint32_t data;
-		};
-
-		uint64_t lastBandwidthTimestamp;
 		uint64_t lastTimestamp;
-		uint64_t bandwidthBytes;
 		uint32_t debugStream;
 		bool doChecksums;
 		bool mDebugNetworkPackets=false;
-		float bandwidthKPerS;
 		uint64_t throttleRate; //Unused
 		uint64_t socketBufferSize; //Amount of bytes the client has in their socket's buffer to receive data.
 		uint8_t estimatedDecodingFrequency; //Estimated times per second the client will decode the packets sent to them.
@@ -78,14 +60,13 @@ namespace avs
 		std::unordered_map<int, uint32_t> m_streamIndices;
 		NetworkSinkParams m_params;
 		std::queue<std::vector<uint8_t>> m_dataQueue;
-		size_t m_maxPacketCountPerFrame;
+		size_t m_maxPacketsAllowedPerSecond;
+		size_t m_maxPacketsAllowed;
 		/** Packets sent this frame */
 		uint32_t m_packetsSent;
 		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
 		std::mutex m_countersMutex;
-		/** Records data sent over particular interval */
-		std::vector<DataEntry> m_dataStats;
-		uint32_t m_elapsedStatsTime;
+		uint32_t m_statsTimeElapsed;
 
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		void sendOrCacheData(const std::vector<uint8_t>& subPacket);

@@ -76,10 +76,6 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 
 		srt_listen(m_data->m_socket, 2);
 
-		m_data->lastBandwidthTimestamp = 0;
-		m_data->bandwidthBytes = 0;
-		m_data->bandwidthKPerS = 0.0f;
-
 		m_data->throttleRate = params.throttleToRateKpS;
 		m_data->socketBufferSize = params.socketBufferSize;
 	}
@@ -118,13 +114,14 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	// The callback will be called on the same thread calling 'packAndSendFromPtr'
 	m_data->m_EFPSender->sendCallback = std::bind(&Private::sendOrCacheData, m_data, std::placeholders::_1);
 
-	m_data->m_maxPacketCountPerFrame = 2500000 / 60 / PacketFormat::MaxPacketSize;
+	m_data->m_maxPacketsAllowedPerSecond = 2500000 / PacketFormat::MaxPacketSize;
+	m_data->m_maxPacketsAllowed = 0;
 	m_data->m_packetsSent = 0;
 
 	m_data->m_params = params;
 
 	m_data->m_statsTimeElapsed = 0;
-	m_data->m_minPacketsSentPerSec = UINT32_MAX;
+	m_data->m_minBandwidthUsed = UINT32_MAX;
 
 	return Result::OK;
 }
@@ -141,8 +138,6 @@ Result NetworkSink::deconfigure()
 		m_data->m_dataQueue.pop();
 	}
 
-	m_data->m_dataStats.clear();
-
 	m_data->m_EFPSender.reset();
 	m_data->m_parsers.clear();
 	m_data->m_streams.clear();
@@ -155,7 +150,7 @@ Result NetworkSink::deconfigure()
 
 	m_data->m_counters = {};
 	m_data->m_statsTimeElapsed = 0;
-	m_data->m_minPacketsSentPerSec = UINT32_MAX;
+	m_data->m_minBandwidthUsed = UINT32_MAX;
 	
 
 	srt_close(m_data->m_remote_socket);
@@ -287,14 +282,6 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 	if (!m_data->bConnected)
 		return Result::Node_NotReady;
 
-	SRT_TRACEBSTATS perf;
-	// returns 0 if there's no error during execution and -1 if there is
-	if (srt_bstats(m_data->m_remote_socket, &perf, true) == 0)
-	{
-		m_data->bandwidthKPerS = (float)perf.mbpsBandwidth * 1000.0f;
-		m_data->bandwidthBytes = (m_data->bandwidthKPerS * 1000.0f) / 8.0f;
-	}
-
 	const size_t numInputs = getNumInputSlots();
 	if (numInputs == 0 || !m_data->m_EFPSender)
 	{
@@ -333,13 +320,15 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 
 	m_data->m_packetsSent = 0;
 
+	m_data->m_maxPacketsAllowed = deltaTime * 0.001 * m_data->m_maxPacketsAllowedPerSecond;
+
 	for (int i = 0; i < (int)getNumInputSlots(); ++i)
 	{
 		const NetworkSinkStream& stream = m_data->m_streams[i];
 
 		if (stream.isDataLimitPerFrame)
 		{
-			while (!m_data->m_dataQueue.empty() && m_data->m_packetsSent < m_data->m_maxPacketCountPerFrame)
+			while (!m_data->m_dataQueue.empty() && m_data->m_packetsSent < m_data->m_maxPacketsAllowed)
 			{
 				m_data->sendData(m_data->m_dataQueue.front());
 				m_data->m_dataQueue.pop();
@@ -389,91 +378,47 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 
 void NetworkSink::Private::updateCounters(uint64_t timestamp, uint32_t deltaTime)
 {
-	if (!m_params.calculateStats || m_params.bandwidthInterval == 0)
+	if (m_params.bandwidthInterval == 0)
 	{
-		return;
-	}
-
-	// Update data sent counters
-	{
-		std::lock_guard<std::mutex> lock(m_countersMutex);
-		if (m_packetsSent > 0)
-		{
-			m_counters.networkPacketsSent += m_packetsSent;
-			m_counters.bytesSent = m_counters.networkPacketsSent * PacketFormat::MaxPacketSize;
-		}
-	}
-
-	// Reset elapsed time and return to deal with large lags in updates
-	if (deltaTime > 200)
-	{
-		m_statsTimeElapsed = 0;
 		return;
 	}
 
 	m_statsTimeElapsed += deltaTime;
 
-	if (m_statsTimeElapsed > m_params.bandwidthInterval)
-	{
-		uint32_t intervalTimeElapsed = 0;
-		uint32_t avgPacketsSentPerSec = 0;
+	m_statsTimeElapsed = 0;
 
-		// Calculate average packets sent and update timestamps of the recorded stats and remove ones that are too old
-		auto iter = m_dataStats.end();
-		while (iter != m_dataStats.begin())
-		{
-			iter--;
-
-			iter->timestamp += deltaTime;
-
-			// If this entry's timestamp is too old, it can be removed with all older entries
-			if (iter->timestamp > m_params.bandwidthInterval)
-			{
-				m_dataStats.erase(m_dataStats.begin(), iter + 1);
-				break;
-			}
-
-			intervalTimeElapsed = std::max(intervalTimeElapsed, iter->timestamp);
-			avgPacketsSentPerSec += iter->data;
-		}
-
-		// Account for time elapsed in the application not having reached the interval time 
-		intervalTimeElapsed = std::min(intervalTimeElapsed, m_params.bandwidthInterval);
-
-		if (!intervalTimeElapsed)
-		{
-			return;
-		}
-
-		avgPacketsSentPerSec /= (intervalTimeElapsed * 0.001f);
-
-		// Update performance related counters
-		{
-			std::lock_guard<std::mutex> lock(m_countersMutex);
-			m_counters.avgPacketsSentPerSec = avgPacketsSentPerSec;
-
-			if (avgPacketsSentPerSec > 0 && avgPacketsSentPerSec < m_minPacketsSentPerSec)
-			{
-				m_minPacketsSentPerSec = avgPacketsSentPerSec;
-				m_counters.minPacketsSentPerSec = avgPacketsSentPerSec;
-			}
-
-			if (avgPacketsSentPerSec > m_counters.maxPacketsSentPerSec)
-			{
-				m_counters.maxPacketsSentPerSec = avgPacketsSentPerSec;
-			}
-
-			// Bandwidth in mb/s
-			m_counters.avgRequiredBandwidth = m_counters.avgPacketsSentPerSec * PacketFormat::MaxPacketSize * 0.000008f;
-			m_counters.minRequiredBandwidth = m_counters.minPacketsSentPerSec * PacketFormat::MaxPacketSize * 0.000008f;
-			m_counters.maxRequiredBandwidth = m_counters.maxPacketsSentPerSec * PacketFormat::MaxPacketSize * 0.000008f;
-		}
-
-	}
+	// Update network stats
+	std::lock_guard<std::mutex> lock(m_countersMutex);
 
 	if (m_packetsSent > 0)
 	{
-		m_dataStats.push_back({ 0, m_packetsSent });
+		m_counters.networkPacketsSent += m_packetsSent;
+		m_counters.bytesSent = m_counters.networkPacketsSent * PacketFormat::MaxPacketSize;
+	}
+
+	SRT_TRACEBSTATS perf;
+	// returns 0 if there's no error during execution and -1 if there is
+	if (srt_bstats(m_remote_socket, &perf, true) != 0)
+	{
+		return;
+	}
+
+	m_counters.bandwidth = perf.mbpsBandwidth;
+
+	if (m_statsTimeElapsed > m_params.bandwidthInterval)
+	{
+		m_counters.avgBandwidthUsed = perf.mbpsSendRate;
+
+		if (m_counters.avgBandwidthUsed > 0 && m_counters.avgBandwidthUsed < m_minBandwidthUsed)
+		{
+			m_minBandwidthUsed = m_counters.avgBandwidthUsed;
+			m_counters.minBandwidthUsed = m_minBandwidthUsed;
+		}
+
+		if (m_counters.avgBandwidthUsed > m_counters.maxBandwidthUsed)
+		{
+			m_counters.maxBandwidthUsed = m_counters.avgBandwidthUsed;
+		}
 	}
 }
 
@@ -532,7 +477,7 @@ void NetworkSink::Private::sendOrCacheData(const std::vector<uint8_t>& subPacket
 	// streamID is second byte for all EFP packet types
 	const auto& stream = m_streams[index];
 
-	if (stream.isDataLimitPerFrame && m_packetsSent >= m_maxPacketCountPerFrame)
+	if (stream.isDataLimitPerFrame && m_packetsSent >= m_maxPacketsAllowed)
 	{
 		m_dataQueue.push(subPacket);
 		return;
@@ -559,16 +504,10 @@ void NetworkSink::Private::sendData(const std::vector<uint8_t> &subPacket)
 	}
 }
 
-NetworkSinkCounters NetworkSink::getCounterValues() const
+NetworkSinkCounters NetworkSink::getCounters() const
 {
 	std::lock_guard<std::mutex> lock(m_data->m_countersMutex);
 	return m_data->m_counters;
-}
-
-
-float NetworkSink::getBandwidthKPerS() const
-{
-	return m_data->bandwidthKPerS;
 }
 
 void NetworkSink::setDebugStream(uint32_t s)

@@ -117,8 +117,17 @@ namespace sca
 		return pipeline.get();
 	}
 
-	float NetworkPipeline::getBandWidthKPS() const
+	avs::Result NetworkPipeline::getCounters(avs::NetworkSinkCounters& counters) const
 	{
-		return networkSink ? networkSink->getBandwidthKPerS() : 0.0f;
+		if (networkSink)
+		{
+			counters = networkSink->getCounters();
+		}
+		else
+		{
+			SCA_CERR << "Can't return counters because network sink is null." << std::endl;
+			return avs::Result::Node_Null;
+		}
+		return avs::Result::OK;
 	}
 }

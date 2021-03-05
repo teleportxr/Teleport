@@ -207,16 +207,11 @@ namespace SCServer
 		return pipeline.get();
 	}
 
-	float NetworkPipeline::getBandWidthKPS() const
-	{
-		return networkSink ? networkSink->getBandwidthKPerS() : 0.0f;
-	}
-
-	avs::Result NetworkPipeline::getCounterValues(avs::NetworkSinkCounters& counters) const
+	avs::Result NetworkPipeline::getCounters(avs::NetworkSinkCounters& counters) const
 	{
 		if (networkSink)
 		{
-			counters = networkSink->getCounterValues();
+			counters = networkSink->getCounters();
 		}
 		else
 		{

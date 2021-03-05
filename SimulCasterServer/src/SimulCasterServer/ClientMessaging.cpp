@@ -316,16 +316,6 @@ namespace SCServer
 		return host->address.port;
 	}
 
-	float ClientMessaging::getBandWidthKPS() const
-	{
-		if (casterContext && casterContext->NetworkPipeline)
-		{
-			std::lock_guard<std::mutex> lock(networkMutex);
-			return casterContext->NetworkPipeline->getBandWidthKPS();
-		}
-		return 0;
-	}
-
 	void ClientMessaging::dispatchEvent(const ENetEvent& event)
 	{
 		switch (event.channelID)

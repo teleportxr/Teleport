@@ -83,7 +83,6 @@ namespace SCServer
 		std::string getClientIP() const;
 		uint16_t getClientPort() const;
 		uint16_t getServerPort() const;
-		float getBandWidthKPS() const;
 
 		static void startAsyncNetworkDataProcessing();
 		static void stopAsyncNetworkDataProcessing(bool killThread = true);

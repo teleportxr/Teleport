@@ -30,7 +30,9 @@ namespace sca
 		virtual bool process();
 
 		avs::Pipeline* getAvsPipeline() const;
-		float getBandWidthKPS() const;
+
+		avs::Result getCounters(avs::NetworkSinkCounters& counters) const;
+		
 	private:
 		struct AudioPipe
 		{
