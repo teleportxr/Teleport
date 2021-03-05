@@ -149,7 +149,6 @@ public:
 	std::shared_ptr<scr::Texture>       mCubemapTexture;
 	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;
 	std::shared_ptr<scr::Texture>       specularCubemapTexture;
-	std::shared_ptr<scr::Texture>       mRoughSpecularTexture;
 	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
 	std::shared_ptr<scr::UniformBuffer> mVideoUB;

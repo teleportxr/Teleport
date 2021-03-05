@@ -85,7 +85,7 @@ void main()
     vec4 lookup = textureLod(cubemapTexture, colourSampleVec,0.0);
     vec3 offsetFromVideo2=vid.cameraPosition-tagDataCube.cameraPosition+vEyeOffset;
    // vec3 view = vSampleVec;
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 3; i++)
     {
         float depth = lookup.a;
         float dist_m=5.0*(5.0+20.0*depth);

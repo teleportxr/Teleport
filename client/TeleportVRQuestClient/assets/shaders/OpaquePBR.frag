@@ -96,7 +96,6 @@ layout(binding = 13) uniform sampler2D u_EmissiveTexture;
 
 layout(binding = 14) uniform samplerCube u_DiffuseCubemap;
 layout(binding = 15) uniform samplerCube u_SpecularCubemap;
-layout(binding = 16) uniform samplerCube u_RoughSpecularCubemap;
 layout(binding = 17) uniform samplerCube u_LightsCubemap;
 
 layout(binding = 19) uniform sampler2D u_ShadowMap0;
@@ -203,7 +202,6 @@ float MipFromRoughness(float roughness, float CubemapMaxMip)
 	return (log2(roughness * 1.2) + 3.0);
 }
 
-
 struct SurfaceState
 {
 	vec3 kS;
@@ -212,7 +210,6 @@ struct SurfaceState
 	float n_v;
 	// pre-sampled environment maps:
 	vec3 env;
-	vec3 rough_env;
 };
 
 // The instantaneous properties at a specific point on a surface.
@@ -256,7 +253,6 @@ SurfaceState PreprocessSurface(vec3 viewDir, SurfaceProperties surfaceProperties
 	surfaceState.n_v		= saturate(dot(surfaceProperties.normal, viewDir));
 	vec3 refl				=ConvertCubemapTexcoords(surfaceState.refl.xyz);
 	surfaceState.env		=textureLod(u_SpecularCubemap, refl, surfaceProperties.roughness_mip).rgb;
-	surfaceState.rough_env	=textureLod(u_RoughSpecularCubemap, refl, saturate(surfaceProperties.roughness_mip-3.0)).rgb;
 	return surfaceState;
 }
 
@@ -283,10 +279,7 @@ vec3 PBRAmbient(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfa
 	diffuse					*= surfaceProperties.ao;
 
 	vec3 envSpecularColour	=ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness, surfaceState.n_v);
-	vec3 env				=lerp(surfaceState.env, surfaceState.rough_env, saturate(surfaceProperties.roughness_mip-2.0));
-	vec3 specular			=surfaceState.kS*envSpecularColour * env;
-
-
+	vec3 specular			=surfaceState.kS*envSpecularColour * surfaceState.env;
 	vec3 colour			 = diffuse+specular;
 
 	return colour;
@@ -380,7 +373,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 		// smoothness:
 		roughMetalOcclusion.a			=(1.0-u_CombinedOutputScalarRoughMetalOcclusion.r)*combinedLookup.a;
 		// Either roughness or 1.0-smoothness depending on alpha of scalar.
-		surfaceProperties.roughness		=lerp(roughMetalOcclusion.r, 1.0-roughMetalOcclusion.a, u_CombinedOutputScalarRoughMetalOcclusion.a);
+		surfaceProperties.roughness		=1.0-roughMetalOcclusion.a;//lerp(roughMetalOcclusion.r, 1.0-roughMetalOcclusion.a, u_CombinedOutputScalarRoughMetalOcclusion.a);
 		surfaceProperties.metallic		=roughMetalOcclusion.g;
 		surfaceProperties.ao			=GetAO(roughMetalOcclusion);
 	}
@@ -388,7 +381,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 #endif
 	{
 		surfaceProperties.roughness	=u_CombinedOutputScalarRoughMetalOcclusion.r;
-		surfaceProperties.metallic	=1.0;//u_CombinedOutputScalarRoughMetalOcclusion.g*0.0;
+		surfaceProperties.metallic	=u_CombinedOutputScalarRoughMetalOcclusion.g;
 		surfaceProperties.ao		=u_CombinedOutputScalarRoughMetalOcclusion.b;
 	}
 	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
@@ -421,7 +414,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 
 void OpaquePBR()
 {
-	PBR(true, false, false, false, false);
+	PBR(true, true, true, false, false);
 }
 void OpaqueAlbedo()
 {

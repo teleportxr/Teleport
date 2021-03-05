@@ -71,6 +71,12 @@ void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
     const InputCommand_Compute& ic_c = *(dynamic_cast<InputCommand_Compute*>(pInputCommand));
     BindShaderResources({ic_c.m_ShaderResources}, ic_c.m_pComputeEffect.get(), pInputCommand->effectPassName);
     const uvec3& size = ic_c.m_WorkGroupSize;
+#ifdef DEBUG
+	if(size.x*size.y*size.z==0)
+	{
+		SCR_CERR<<"Empty compute dispatch!\n";
+	}
+#endif
 	GLCheckErrorsWithTitle("DispatchCompute: 1");
     glDispatchCompute(size.x, size.y, size.z);
     GLCheckErrorsWithTitle("DispatchCompute: 2");

@@ -11,7 +11,7 @@ layout(std140, binding = 2) uniform cubemapUB
     uint face;
 } cub;
 
-layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout (local_size_x = 4, local_size_y = 4, local_size_z = 1) in;
 void colour_only()
 {
     ivec2 FaceOffsets[6] ;
@@ -40,7 +40,7 @@ void colour_only()
 }
 
 
-layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout (local_size_x = 4, local_size_y = 4, local_size_z = 1) in;
 void colour_and_depth()
 {
     vec4 DepthMask[4] ;

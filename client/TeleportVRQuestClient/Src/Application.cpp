@@ -234,10 +234,6 @@ void Application::EnteredVrMode()
 			"u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler()
 								  , clientRenderer.specularCubemapTexture});
 	globalGraphicsResources.lightCubemapShaderResources.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16,
-			"u_RoughSpecularCubemap", {clientRenderer.mRoughSpecularTexture->GetSampler()
-									   , clientRenderer.mRoughSpecularTexture});
-	globalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17,
 			"u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler()
 								, clientRenderer.mCubemapLightingTexture});
