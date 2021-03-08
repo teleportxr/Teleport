@@ -295,9 +295,9 @@ vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 	vec3 diff						=lightTag.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
 	float d							=max(1.0, dist_to_light/lightTag.radius);
-	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0, 5.0/(d*d), lightTag.is_point);
+	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,1.0/(d*d),lightTag.is_point);
 	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction, normalize(diff), lightTag.is_point);
-	float roughnessL				= max(.01, surfaceProperties.roughness2);
+	float roughnessL				=min(1.0,max(.01, surfaceProperties.roughness2));
 	float n_l						= saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
 	vec3 halfway					=normalize(viewDir+dir_from_surface_to_light);
 	vec3 refl						=normalize(reflect(viewDir, surfaceProperties.normal));
