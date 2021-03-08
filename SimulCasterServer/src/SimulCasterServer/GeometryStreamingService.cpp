@@ -23,7 +23,8 @@ GeometryStreamingService::GeometryStreamingService(const CasterSettings* setting
 GeometryStreamingService::~GeometryStreamingService()
 {
 	stopStreaming();
-	if(avsPipeline) avsPipeline->deconfigure();
+	if(avsPipeline)
+		avsPipeline->deconfigure();
 }
 
 bool GeometryStreamingService::hasResource(avs::uid resource_uid) const
@@ -64,12 +65,20 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 		{
 		case avs::NodeDataType::None:
 			outNodeIDs.push_back(nodeID);
+				break;
+			case avs::NodeDataType::Light:
+				{
+					//const auto &stored_light= geometryStore->getLightNodes().find(nodeID);
+					outLightResources.push_back(avs::LightNodeResources{nodeID,0});
+				}
+				break;
 		case avs::NodeDataType::Mesh:
 			GetMeshNodeResources(nodeID, *node, outMeshResources);
+				break;
+			default:
+				break;
 		}
 	}
-
-	outLightResources = geometryStore->getLightNodes();
 }
 
 void GeometryStreamingService::startStreaming(SCServer::CasterContext* context)
@@ -234,7 +243,7 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 		avs::Material* thisMaterial = geometryStore->getMaterial(material_uid);
 		if(!thisMaterial)
 		{
-			TELEPORT_CERR << "Error when locating materials for encoding! Material_" << material_uid << " was not found in the Geometry Store!\n";
+			TELEPORT_CERR << "Error when locating materials for encoding! Material " << material_uid << " was not found in the Geometry Store!\n";
 			continue;
 		}
 

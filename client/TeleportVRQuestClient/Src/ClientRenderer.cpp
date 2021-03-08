@@ -487,9 +487,6 @@ void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
 		textureCreateInfo.width = videoConfig.specular_cubemap_size;
 		textureCreateInfo.height = videoConfig.specular_cubemap_size;
 		specularCubemapTexture->Create(textureCreateInfo);
-		textureCreateInfo.width = videoConfig.rough_cubemap_size;
-		textureCreateInfo.height = videoConfig.rough_cubemap_size;
-		textureCreateInfo.mipCount = 3;
 		diffuseCubemapTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
 		specularCubemapTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
 		mCubemapLightingTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);

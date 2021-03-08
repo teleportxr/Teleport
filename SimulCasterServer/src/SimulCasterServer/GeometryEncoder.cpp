@@ -186,15 +186,18 @@ namespace SCServer
 
 			for(avs::LightNodeResources lightResourceInfo : lightNodeResources)
 			{
-				if(!req->hasResource(lightResourceInfo.shadowmap_uid))
+				if(lightResourceInfo.shadowmap_uid)
 				{
-					encodeTextures(src, req, {lightResourceInfo.shadowmap_uid});
-
-					keepQueueing = attemptQueueData();
-					if(!keepQueueing)
+					if(!req->hasResource(lightResourceInfo.shadowmap_uid))
 					{
-						break;
-				}
+						encodeTextures(src, req, {lightResourceInfo.shadowmap_uid});
+
+						keepQueueing = attemptQueueData();
+						if(!keepQueueing)
+						{
+							break;
+						}
+					}
 				}
 
 				if(!req->hasResource(lightResourceInfo.node_uid))

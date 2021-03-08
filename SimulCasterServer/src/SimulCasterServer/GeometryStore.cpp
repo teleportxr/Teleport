@@ -391,7 +391,7 @@ const avs::Texture* GeometryStore::getShadowMap(avs::uid shadowID) const
 	return (shadowMapData ? &shadowMapData->texture : nullptr);
 }
 
-const std::vector<avs::LightNodeResources>& GeometryStore::getLightNodes() const
+const std::map<avs::uid,avs::LightNodeResources>& GeometryStore::getLightNodes() const
 {
 	return lightNodes;
 }
@@ -429,7 +429,7 @@ void GeometryStore::storeNode(avs::uid id, avs::DataNode& newNode)
 
 	if(newNode.data_type == avs::NodeDataType::Light)
 	{
-		lightNodes.emplace_back(avs::LightNodeResources{id, newNode.data_uid});
+		lightNodes[id]=avs::LightNodeResources{id, newNode.data_uid};
 	}
 }
 
@@ -524,22 +524,14 @@ void GeometryStore::storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastMo
 void GeometryStore::removeNode(avs::uid id)
 {
 	nodes.erase(id);
-
-	//Remove from cached light node list; no guarantee if it a light, but presumably faster than checking.
-	for(auto it = lightNodes.begin(); it != lightNodes.end(); it++)
-	{
-		if(it->node_uid == id)
-		{
-			lightNodes.erase(it);
-			return;
+	lightNodes.erase(id);
 		}
-	}
-}
 
 void GeometryStore::updateNode(avs::uid id, avs::Transform& newTransform)
 {
 	auto nodeIt = nodes.find(id);
-	if(nodeIt == nodes.end()) return;
+	if(nodeIt == nodes.end())
+		return;
 
 	nodeIt->second.transform = newTransform;
 }

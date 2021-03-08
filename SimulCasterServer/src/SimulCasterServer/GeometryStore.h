@@ -60,7 +60,7 @@ namespace SCServer
 		virtual const avs::Texture* getShadowMap(avs::uid shadowID) const override;
 
 		//Returns a list of all light nodes that need to be streamed to the client.
-		const std::vector<avs::LightNodeResources>& getLightNodes() const;
+		const std::map<avs::uid,avs::LightNodeResources>& getLightNodes() const;
 
 		//Returns whether there is a node stored with the passed id.
 		bool hasNode(avs::uid id) const;
@@ -119,7 +119,7 @@ namespace SCServer
 
 		std::map<avs::uid, PrecompressedTexture> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
 
-		std::vector<avs::LightNodeResources> lightNodes; //List of all light nodes; prevents having to search for them every geometry tick.
+		std::map<avs::uid, avs::LightNodeResources> lightNodes; //List of ALL light nodes; prevents having to search for them every geometry tick.
 
 		template<typename ExtractedResource>
 		void saveResources(const std::string file_name, const std::map<avs::uid, ExtractedResource>& resourceMap) const;
