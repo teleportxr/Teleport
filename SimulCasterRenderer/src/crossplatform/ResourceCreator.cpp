@@ -544,10 +544,8 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 						 incompleteMaterial->materialInfo.normal);
 
 	//Combined
-	float rough = material.pbrMetallicRoughness.roughnessFactor;
-	float rough_or_smoothness = material.pbrMetallicRoughness.roughnessMode == RoughnessMode::MULTIPLY_REVERSE ? 1.0f : 0.0f;
 	AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
-						 avs::vec4{rough, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, rough_or_smoothness},
+						 avs::vec4{ material.pbrMetallicRoughness.roughnessMultiplier, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, material.pbrMetallicRoughness.roughnessOffset },
 						 m_DummyCombined,
 						 incompleteMaterial,
 						 incompleteMaterial->materialInfo.combined);
@@ -791,6 +789,7 @@ void ResourceCreator::CreateLight(avs::uid id, avs::DataNode& node)
 	lci.lightColour = node.lightColour;
 	lci.lightRadius = node.lightRadius;
 	lci.uid = id;
+	lci.name=node.name;
 	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
 	m_LightManager->Add(id, light);
 }

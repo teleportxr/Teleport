@@ -309,16 +309,23 @@ namespace scr
 	void NodeManager::LinkToParentNode(avs::uid childID)
 	{
 		auto parentIt = parentLookup.find(childID);
-		if (parentIt == parentLookup.end()) return;
+		if (parentIt == parentLookup.end())
+			return;
 
 		std::shared_ptr<Node> parent = GetNode(parentIt->second);
 		std::shared_ptr<Node> child = GetNode(childID);
 
-		if (parent == nullptr || child == nullptr) return;
+		if (parent == nullptr || child == nullptr)
+			return;
 
 		child->SetParent(parent);
 		parent->AddChild(child);
-
-		rootNodes.erase(std::find(rootNodes.begin(), rootNodes.end(), nodeLookup[childID]));
+		auto lk= nodeLookup.find(childID);
+		if(lk!=nodeLookup.end())
+		{
+			auto rn= std::find(rootNodes.begin(), rootNodes.end(), lk->second);
+			if(rn!=rootNodes.end())
+				rootNodes.erase(rn);
+		}
 	}
 }

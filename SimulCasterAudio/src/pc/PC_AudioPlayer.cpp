@@ -133,13 +133,13 @@ namespace sca
 	{
 		if (!mInitialized)
 		{
-			SCA_COUT << "PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
+			SCA_CERR << "PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
 			return sca::Result::AudioPlayerNotInitialized;
 		}
 
 		if (!mConfigured)
 		{
-			SCA_COUT << "PC_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
+			SCA_CERR << "PC_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
 			return sca::Result::AudioPlayerNotConfigured;
 		}
 
@@ -158,7 +158,7 @@ namespace sca
 		HRESULT hr = mSourceVoice->SubmitSourceBuffer(&xaBuffer);
 		if (FAILED(hr))
 		{
-			SCA_COUT << "PC_AudioPlayer: Error occurred trying to submit audio buffer to source voice." << std::endl;
+			SCA_CERR << "PC_AudioPlayer: Error occurred trying to submit audio buffer to source voice." << std::endl;
 			return sca::Result::AudioPlayerBufferSubmissionError;
 		}
 
@@ -169,13 +169,13 @@ namespace sca
 	{
 		if (!mInitialized)
 		{
-			SCA_COUT << "PC_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
+			SCA_CERR << "PC_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
 			return sca::Result::AudioPlayerNotInitialized;
 		}
 
 		if (!mConfigured)
 		{
-			SCA_COUT << "PC_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+			SCA_CERR << "PC_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
 			return sca::Result::AudioPlayerNotConfigured;
 		}
 

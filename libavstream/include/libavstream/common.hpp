@@ -924,9 +924,7 @@ namespace avs
 		int32_t		specular_x=0;
 		int32_t		specular_y=0;
 		int32_t		specular_cubemap_size=0;
-		int32_t		rough_x=0;
-		int32_t		rough_y=0;
-		int32_t		rough_cubemap_size=0;
+		int32_t		specular_mips=0;
 		int32_t		diffuse_x=0;
 		int32_t		diffuse_y=0;
 		int32_t		diffuse_cubemap_size=0;

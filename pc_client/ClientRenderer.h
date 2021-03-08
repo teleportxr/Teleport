@@ -106,7 +106,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
 	simul::crossplatform::Texture *diffuseCubemapTexture;
 	simul::crossplatform::Texture *specularCubemapTexture;
-	simul::crossplatform::Texture* roughSpecularCubemapTexture;
 	simul::crossplatform::Texture* lightingCubemapTexture;
 	simul::crossplatform::Texture* videoTexture;
 
@@ -261,7 +260,7 @@ public:
 	vec3 videoPos;
 
 private:
-	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::Node &node,int indent);
+	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::Node &node,int indent,int &countdown);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 };

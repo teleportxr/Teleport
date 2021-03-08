@@ -459,7 +459,7 @@ struct Animation;
 	struct LightNodeResources
 	{
 		uid node_uid;
-		uid shadowmap_uid;
+		uid shadowmap_uid=0;
 	};
 
 	//! Common mesh backend interface.

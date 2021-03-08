@@ -235,7 +235,7 @@ namespace SCServer
 			avs::Mesh* mesh = src->getMesh(uid, req->getClientAxesStandard());
 			if(!mesh)
 			{
-				TELEPORT_CERR << "Mesh encoding error! Mesh_" << uid << " does not exist!\n";
+				TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " does not exist!\n";
 				continue;
 			}
 
@@ -528,8 +528,8 @@ namespace SCServer
 				put(material->pbrMetallicRoughness.metallicRoughnessTexture.tiling.x);
 				put(material->pbrMetallicRoughness.metallicRoughnessTexture.tiling.y);
 				put(material->pbrMetallicRoughness.metallicFactor);
-				put(material->pbrMetallicRoughness.roughnessFactor);
-				put(material->pbrMetallicRoughness.roughnessMode);
+				put(material->pbrMetallicRoughness.roughnessMultiplier);
+				put(material->pbrMetallicRoughness.roughnessOffset);
 				
 				//Push normal map, and scale.
 				put(material->normalTexture.index);
@@ -614,8 +614,10 @@ namespace SCServer
 		{
 			avs::Texture* texture;
 
-			if (isShadowMap) texture = src->getShadowMap(uid);
-			else texture = src->getTexture(uid);
+			if (isShadowMap)
+				texture = src->getShadowMap(uid);
+			else
+				texture = src->getTexture(uid);
 
 			if (texture)
 			{
@@ -661,6 +663,11 @@ namespace SCServer
 
 				//Flag we have encoded the texture.
 				req->encodedResource(uid);
+			}
+			else
+			{
+				DEBUG_BREAK_ONCE("Missing texture");
+				TELEPORT_CERR<<"Trying to encode texture "<<uid<<" but it is not there.\n";
 			}
 		}
 

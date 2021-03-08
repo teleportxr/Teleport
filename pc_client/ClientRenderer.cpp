@@ -110,7 +110,6 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c):
 	pbrEffect(nullptr),
 	cubemapClearEffect(nullptr),
 	specularCubemapTexture(nullptr),
-	roughSpecularCubemapTexture(nullptr),
 	lightingCubemapTexture(nullptr),
 	videoTexture(nullptr),
 	diffuseCubemapTexture(nullptr),
@@ -178,7 +177,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	videoTexture = renderPlatform->CreateTexture();  
 	specularCubemapTexture = renderPlatform->CreateTexture();
-	roughSpecularCubemapTexture = renderPlatform->CreateTexture();
 	diffuseCubemapTexture = renderPlatform->CreateTexture();
 	lightingCubemapTexture = renderPlatform->CreateTexture();
 	errno=0;
@@ -283,7 +281,7 @@ void ClientRenderer::Recompose(simul::crossplatform::GraphicsDeviceContext &devi
 		cubemapClearEffect->Apply(deviceContext, "recompose", 0);
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
 		cubemapClearEffect->Unapply(deviceContext);
-		cubemapConstants.sourceOffset.y += 2 * cubemapConstants.targetSize;
+		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize;
 		cubemapConstants.targetSize /= 2;
 	}
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
@@ -414,7 +412,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				int2 sourceOffset(3 * W / 2, 2 * W);
 				Recompose(deviceContext, ti->texture, diffuseCubemapTexture			, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x,videoConfig.diffuse_y));
 				Recompose(deviceContext, ti->texture, specularCubemapTexture		, specularCubemapTexture->mips, int2(videoConfig.specular_x,videoConfig.specular_y));
-				Recompose(deviceContext, ti->texture, roughSpecularCubemapTexture	, specularCubemapTexture->mips, int2(videoConfig.rough_x,videoConfig.rough_y));
 				Recompose(deviceContext, ti->texture, lightingCubemapTexture		, lightingCubemapTexture->mips, int2(videoConfig.light_x,videoConfig.light_y));
 				{
 					tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
@@ -467,9 +464,14 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				int H = hdrFramebuffer->GetHeight();
 				renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 			}
-			renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f);
-			renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f);
-			renderPlatform->DrawCubemap(deviceContext,roughSpecularCubemapTexture,0.3f,0.5f,0.2f,1.f,1.f);
+			static int lod=0;
+			static char tt=0;
+			tt--;
+			if(!tt)
+				lod++;
+			lod=lod%8;
+			renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f,lod);
+			renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.0f,0.2f,1.f,1.f,lod);
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -552,12 +554,11 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 				t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
 
 				auto &nodeLight=cachedLights.find(l.uid);
-				if(nodeLight!=cachedLights.end())
+				if(nodeLight!=cachedLights.end()&& nodeLight->second.resource!=nullptr)
 				{
 					auto *lightData=nodeLight->second.resource->GetLightData();
 					if(lightData)
 					{
-						t.colour=(const float*)(&lightData->colour);
 						t.is_spot=lightData->is_spot;
 						t.is_point=lightData->is_point;
 						t.radius=lightData->radius;
@@ -584,8 +585,10 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 	}
 }
 
-void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::Node &node,int indent)
+void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::Node &node,int indent,int &countdown)
 {
+	if(!countdown)
+		return;
 	static char indent_txt[20];
 	indent_txt[indent]=0;
 	if(indent>0)
@@ -597,10 +600,11 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 		details=simul::base::QuickFormat("mesh: %s (0x%08x)",mesh.GetMeshCreateInfo().name.c_str(),&mesh);
 	}
 	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d(%s) %s",indent_txt, node.id, node.name.c_str(),details.c_str()));
+	countdown--;
 	const auto &children =node.GetChildren();
 	for(const auto c :children)
 	{
-		ListNode(deviceContext,c.lock().operator*(),indent+1);
+		ListNode(deviceContext,c.lock().operator*(),indent+1, countdown);
 	}
 }
 
@@ -654,9 +658,12 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
 
 		auto &rootNodes=resourceManagers.mNodeManager->GetRootNodes();
+		int countdown =10;
 		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{
-			ListNode(deviceContext, *node, 1);
+			ListNode(deviceContext, *node, 1,countdown);
+			if(!countdown)
+				break;
 		}
 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
@@ -677,9 +684,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					vec4 light_colour=(const float*)&L->colour;
 					light_colour.w=1.0f;
 					if(L->is_point==0.0f)
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),light_colour,background);
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),light_colour,background);
 					else
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first,lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->position.x,L->position.y,L->position.z,L->radius),light_colour,background);
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->position.x,L->position.y,L->position.z,L->radius),light_colour,background);
 				}
 			}
 			if(j<videoTagDataCubeArray[0].lights.size())
@@ -704,6 +711,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	}
 	else if(show_osd==TAG_OSD)
 	{
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		auto& cachedLights = resourceManagers.mLightManager.GetCache(cacheLock);
+		const char *name="";
 		renderPlatform->LinePrint(deviceContext,"Tags\n");
 		for(int i=0;i<videoTagDataCubeArray.size();i++)
 		{
@@ -718,14 +728,21 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 				auto &t=gpu_tag_buffer[j];
 				const LightTag &lightTag=t.lightTags[j];
 				vec4 clr={l.color.x,l.color.y,l.color.z,1.0f};
+				 
+				auto& c = cachedLights[l.uid];
+				if (c.resource)
+				{
+					auto& lcr =c.resource->GetLightCreateInfo();
+					name=lcr.name.c_str();
+				}
 				if(l.lightType==scr::LightType::Directional)
-					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType)
+					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: %s, Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
 						,lightTag.direction.x
 						,lightTag.direction.y
 						,lightTag.direction.z
 						,l.color.x,l.color.y,l.color.z),clr);
 				else
-					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,ToString((scr::Light::Type)l.lightType)
+					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: %s, Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
 						,lightTag.position.x
 						,lightTag.position.y
 						,lightTag.position.z
@@ -911,7 +928,6 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"), emissive ? emissive->GetSimulTexture() : nullptr);
 
 					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
-					pbrEffect->SetTexture(deviceContext, "roughSpecularCubemap", roughSpecularCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
 					//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 					//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
@@ -986,7 +1002,6 @@ void ClientRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(transparentMesh);
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularCubemapTexture);
-	SAFE_DELETE(roughSpecularCubemapTexture);
 	SAFE_DELETE(lightingCubemapTexture);
 	SAFE_DELETE(videoTexture);
 	SAFE_DELETE(meshRenderer);
@@ -1107,8 +1122,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	{
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
-		specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.specular_cubemap_size, videoConfig.specular_cubemap_size, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-		roughSpecularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.rough_cubemap_size, videoConfig.rough_cubemap_size, 1, 3, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+		specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.specular_cubemap_size, videoConfig.specular_cubemap_size, 1, videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 		lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.light_cubemap_size, videoConfig.light_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 		diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.diffuse_cubemap_size, videoConfig.diffuse_cubemap_size, 1, 1,
@@ -1294,7 +1308,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 		for (auto& light : tagData.lights)
 		{
 			memcpy(&light, &data[index], sizeof(scr::LightTagData));
-			avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
+			//avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
 			index += sizeof(scr::LightTagData);
 		}
 		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);

@@ -34,6 +34,7 @@ namespace scr
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
 			avs::uid uid;
+			std::string name;	// stored here because the actual NODE seems to be discarded - not good.
 		};
 
 		struct LightData //Layout conformant to GLSL std140

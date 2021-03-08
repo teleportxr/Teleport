@@ -737,10 +737,8 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.specular_x			=depth_cubemap_size*3;
 	videoConfig.specular_y			=videoConfig.colour_cubemap_size*2;
 	
-	videoConfig.rough_cubemap_size	=casterSettings.roughCubemapSize;
+	videoConfig.specular_mips		=casterSettings.specularMips;
 	// To the right of the specular cube, after 3 mips = 1 + 1/2 + 1/4
-	videoConfig.rough_x				=videoConfig.specular_x+(casterSettings.specularCubemapSize*3*7)/4;
-	videoConfig.rough_y				=videoConfig.specular_y;
 	
 	videoConfig.diffuse_cubemap_size=casterSettings.diffuseCubemapSize;
 	// To the right of the depth map, under the specular map.

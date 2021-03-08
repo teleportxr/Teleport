@@ -13,7 +13,6 @@ uniform Texture2D combinedTexture;
 uniform Texture2D emissiveTexture;
 uniform TextureCube diffuseCubemap;
 uniform TextureCube specularCubemap;
-uniform TextureCube roughSpecularCubemap;
 uniform TextureCube lightingCubemap;
 uniform Texture2D videoTexture;
 
@@ -93,24 +92,9 @@ vec4 GetVarianceShadow(Texture2D videoTexture,LightTag lightTag,vec4 spos)
 
 vec4 GetSpotLighting(LightTag lightTag,vec4 spos)
 {
-	float radius=length(spos.xy);
-	float s=saturate(spos.z)*saturate((0.5-radius)*10.0);
+	float radius=length(2.0*spos.xy-vec2(1.0,1.0));
+	float s=saturate(spos.z)*saturate((0.7-radius)*12.0);
 	return vec4(s,s,s,s);
-}
-
-float GetRoughness(vec4 combinedLookup)
-{
-	return combinedLookup.r;
-}
-
-float GetMetallic(vec4 combinedLookup)
-{
-	return combinedLookup.g;
-}
-
-float GetAO(vec4 combinedLookup)
-{
-	return combinedLookup.b;
 }
 
 float GetSpecular(vec4 combinedLookup)
@@ -264,7 +248,7 @@ float MipFromRoughness(float roughness, float CubemapMaxMip)
 	// Using more mips in the cubemap just allows sharper reflections to be supported
 	const float REFLECTION_CAPTURE_ROUGHEST_MIP = 6.0 - 1.0;
 	float LevelFrom1x1 = REFLECTION_CAPTURE_ROUGHEST_MIP - 1.2 * log2(roughness);
-	return (log2(roughness * 1.2) + 3.0);
+	return  log2(roughness * 1.2) + 3.0;
 }
 
 struct SurfaceState
@@ -311,18 +295,33 @@ SurfaceState PreprocessSurface(vec3 viewDir,SurfaceProperties surfaceProperties)
 	return surfaceState;
 }
 
+vec3 KarisEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
+{
+	const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+	const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+	vec4 r = roughness * c0 + c1;
+	float a004 = min(r.x * r.x, exp2(-9.28 * n_v)) * r.x + r.y;
+	vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
+	return specularColour * AB.x + AB.y;
+}
+
+vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
+{
+	float mult=1.0-max(roughness,n_v);
+	float m3=mult*mult*mult;
+	return specularColour +vec3(m3,m3,m3);
+}
+
 vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties)
 {
 	float roughness_mip		= MipFromRoughness(surfaceProperties.roughness, 5.0);
 	// Sample the environment maps:
 	vec3 diffuse_env		= diffuseCubemap.SampleLevel(cubeSamplerState, surfaceProperties.normal.xyz,0.0).rgb;
 	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,surfaceState.refl.xyz, roughness_mip).rgb;
-	vec3 rough_env			= roughSpecularCubemap.SampleLevel(cubeSamplerState, surfaceState.refl.xyz, saturate(roughness_mip-3.0)).rgb;
-	env						=lerp(env,rough_env,saturate(roughness_mip-2.0));
 
 	//env					=mix(env, diffuse_env, saturate((roughnessE - 0.25) / 0.75));
 
-	vec3 envSpecularColour	=EnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
+	vec3 envSpecularColour	= ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
 	vec3 specular			=surfaceState.kS* env;
 
 	 //Metallic materials will have no diffuse output.
@@ -349,7 +348,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	float lightD					=DistributionTerm(roughnessL, n_h);
 	float lightV					=VisibilityTerm(roughnessL, surfaceState.n_v, n_l);
 	// Per-light:
-	vec3 diffuse					=surfaceState.kD*irradiance * surfaceProperties.albedo * saturate(n_l);
+	vec3 diffuse					=surfaceState.kD*irradiance* surfaceProperties.albedo;// * saturate(n_l);
 	vec3 specular					=surfaceState.kS*irradiance * surfaceState.F * ( lightD*lightV*SIMUL_PI_F *n_l);
 
 	//float ao				= SceneAO(pos, normal, localToWorld);
@@ -362,8 +361,8 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 //		shadow=GetVarianceShadow(videoTexture,lightTag,spos);
 	if(lightTag.is_spot)
 		shadow*=GetSpotLighting(lightTag,spos);
-	//diffuse *=shadow;
-    return shadow.r*(diffuse+specular);
+	diffuse *=shadow;
+    return shadow;
 }
 
 vec4 Solid(vertexOutput IN)
@@ -384,22 +383,18 @@ vec4 Solid(vertexOutput IN)
 
 	vec3 view			= normalize(diff);
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R);
-	// from combinedLookup we will either use roughness*roughnessTexture, or (1-roughness)*smoothnessTexture. This depends on combinedOutputScalarRoughMetalOcclusion.a.
-	combinedLookup		=combinedLookup.araa;
-	//combinedLookup.a	=1.0-combinedLookup.a;
-	// occlusion to 1.0 for now.
+	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
+	// this allows us to have either roughness or smoothness textures.
 	combinedLookup.b	=1.0;
 	// So combinedLookup is now rough-metal-occl-smooth
-	vec4 roughMetalOcclusion;
-	roughMetalOcclusion.rgb			=combinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.rgb;
-	// smoothness:
-	roughMetalOcclusion.a			=(1.0-combinedOutputScalarRoughMetalOcclusion.r)*combinedLookup.a;
+	vec3 roughMetalOcclusion		=combinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.agb;
+	roughMetalOcclusion.r+=combinedOutputScalarRoughMetalOcclusion.a;
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.position		=IN.wpos;
-	// Either roughness or 1.0-smoothness depending on alpha of scalar.
-	surfaceProperties.roughness		=lerp(roughMetalOcclusion.r,1.0-roughMetalOcclusion.a,combinedOutputScalarRoughMetalOcclusion.a);
-	surfaceProperties.metallic		=GetMetallic(roughMetalOcclusion);
-	surfaceProperties.ao			=GetAO(roughMetalOcclusion);
+
+	surfaceProperties.roughness		=roughMetalOcclusion.r;
+	surfaceProperties.metallic		=roughMetalOcclusion.g;
+	surfaceProperties.ao			=roughMetalOcclusion.b;
 
 	surfaceProperties.normal		=normal;
 	surfaceProperties.albedo		=diffuseColour;
@@ -409,7 +404,7 @@ vec4 Solid(vertexOutput IN)
 	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
 	int id						=int(TagDataIDBuffer[0].x);
 	VideoTagDataCube tagData	=TagDataCubeBuffer[id];
-	for(int i=0;i<10;i++)
+	for(int i=0;i<6;i++)
 	{
 		if(i>=tagData.lightCount)
 			break;
@@ -423,7 +418,7 @@ vec4 Solid(vertexOutput IN)
 //	c=1.0-roughMetalOcclusion.a;
 	vec4 u				=vec4(c.rgb + emissive.rgb, 1.0);
 	//u.r=float(id)/32.0;
-//	u.rgb+=vec3(0.03,0,0.05);
+//u.rgb= surfaceProperties.roughness;
 	return u;
 }
 

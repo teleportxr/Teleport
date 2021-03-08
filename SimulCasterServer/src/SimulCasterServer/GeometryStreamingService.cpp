@@ -58,7 +58,7 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 		if(!node)
 		{
 			continue;
-	}
+		}
 
 		switch(node->data_type)
 		{
