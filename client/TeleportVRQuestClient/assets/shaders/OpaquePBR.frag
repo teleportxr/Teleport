@@ -331,7 +331,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	if (normalTex)
 	{
 		vec3 normalLookup				= texture(u_NormalTexture, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
-		vec3 tangentSpaceNormalMap		= 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
+		vec3 tangentSpaceNormalMap		= u_NormalOutputScalar.xyz*2.0*(normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
 		surfaceProperties.normal		=normalize(v_TBN * tangentSpaceNormalMap);
 	}
 	else
@@ -414,7 +414,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 
 void OpaquePBR()
 {
-	PBR(true, true, true, false, false);
+	PBR(true, true, true, false, true);
 }
 void OpaqueAlbedo()
 {

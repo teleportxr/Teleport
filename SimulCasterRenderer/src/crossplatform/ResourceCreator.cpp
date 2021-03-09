@@ -538,7 +538,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 
 	//Normal
 	AddTextureToMaterial(material.normalTexture,
-						 avs::vec4{material.normalTexture.scale, 1, 1, 1},
+						 avs::vec4{material.normalTexture.scale, material.normalTexture.scale, 1.0f, 1.0f},
 						 m_DummyNormal,
 						 incompleteMaterial,
 						 incompleteMaterial->materialInfo.normal);
