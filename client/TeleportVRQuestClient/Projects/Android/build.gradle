@@ -88,8 +88,8 @@ android
         }
 
         release {
-            debuggable false
-            jniDebuggable false
+            debuggable true
+            jniDebuggable true
 
             externalNativeBuild {
                 ndkBuild {
