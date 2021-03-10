@@ -16,7 +16,7 @@ namespace scr
 		size_t upperBound = std::min<size_t>(bones.size(), MAX_BONES);
 		for (size_t i = 0; i < upperBound; i++)
 		{
-			boneMatrices[i] = (rootTransform.GetInverted() * skinTransform.GetTransformMatrix() * bones[i]->GetGlobalTransform().GetTransformMatrix() * inverseBindMatrices[i].GetTransformMatrix());
+			boneMatrices[i] = (rootTransform.GetInverted() * rootTransform * skinTransform.GetTransformMatrix() * bones[i]->GetGlobalTransform().GetTransformMatrix() * inverseBindMatrices[i].GetTransformMatrix());
 		}
 	}
 }

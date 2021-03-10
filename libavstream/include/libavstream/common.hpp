@@ -965,6 +965,7 @@ namespace avs
 		int32_t lock_player_height = 1;
 		ControlModel control_model;
 		VideoConfig video_config;
+		avs::vec3 bodyOffsetFromHead;
 	};
 
 	struct ReconfigureVideoCommand : public Command

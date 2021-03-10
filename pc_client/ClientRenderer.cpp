@@ -585,26 +585,39 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 	}
 }
 
-void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::Node &node,int indent,int &countdown)
+void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining)
 {
-	if(!countdown)
+	//Return if we do not want to print any more lines.
+	if(linesRemaining <= 0)
+	{
 		return;
-	static char indent_txt[20];
-	indent_txt[indent]=0;
-	if(indent>0)
-		indent_txt[indent-1]=' ';
-	std::string details;
-	if(node.GetMesh())
-	{
-		const auto &mesh=*node.GetMesh();
-		details=simul::base::QuickFormat("mesh: %s (0x%08x)",mesh.GetMeshCreateInfo().name.c_str(),&mesh);
 	}
-	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d(%s) %s",indent_txt, node.id, node.name.c_str(),details.c_str()));
-	countdown--;
-	const auto &children =node.GetChildren();
-	for(const auto c :children)
+	--linesRemaining;
+
+	//Set indent string to indent amount.
+	static char indent_txt[20];
+	indent_txt[indent] = 0;
+	if(indent > 0)
 	{
-		ListNode(deviceContext,c.lock().operator*(),indent+1, countdown);
+		indent_txt[indent - 1] = ' ';
+	}
+
+	//Retrieve info string on mesh on node, if the node has a mesh.
+	std::string meshInfoString;
+	const std::shared_ptr<scr::Mesh>& mesh = node->GetMesh();
+	if(mesh)
+	{
+		meshInfoString = simul::base::QuickFormat("mesh: %s (0x%08x)", mesh->GetMeshCreateInfo().name.c_str(), &mesh);
+	}
+
+	//Print details on node to screen.
+	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d(%s) %s", indent_txt, node->id, node->name.c_str(), meshInfoString.c_str()));
+
+	//Print information on children to screen.
+	const std::vector<std::weak_ptr<scr::Node>>& children = node->GetChildren();
+	for(const auto c : children)
+	{
+		ListNode(deviceContext, c.lock(), indent + 1, linesRemaining);
 	}
 }
 
@@ -657,13 +670,33 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
 
-		auto &rootNodes=resourceManagers.mNodeManager->GetRootNodes();
-		int countdown =10;
+		int linesRemaining = 10;
+		auto& rootNodes = resourceManagers.mNodeManager->GetRootNodes();
 		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{
-			ListNode(deviceContext, *node, 1,countdown);
-			if(!countdown)
+			ListNode(deviceContext, node, 1, linesRemaining);
+			if(linesRemaining <= 0)
+			{
 				break;
+			}
+		}
+
+		const std::shared_ptr<scr::Node>& body = resourceManagers.mNodeManager->GetBody();
+		if(body)
+		{
+			ListNode(deviceContext, body, 1, linesRemaining);
+		}
+
+		const std::shared_ptr<scr::Node>& leftHand = resourceManagers.mNodeManager->GetLeftHand();
+		if(leftHand)
+		{
+			ListNode(deviceContext, leftHand, 1, linesRemaining);
+		}
+
+		const std::shared_ptr<scr::Node>& rightHand = resourceManagers.mNodeManager->GetRightHand();
+		if(rightHand)
+		{
+			ListNode(deviceContext, rightHand, 1, linesRemaining);
 		}
 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
@@ -796,6 +829,8 @@ void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<scr::Node> nod
 
 void ClientRenderer::WriteHierarchies()
 {
+	std::cout << "Node Tree\n----------------------------------\n";
+
 	for(std::shared_ptr<scr::Node> node : resourceManagers.mNodeManager->GetRootNodes())
 	{
 		WriteHierarchy(0, node);
@@ -818,6 +853,8 @@ void ClientRenderer::WriteHierarchies()
 	{
 		WriteHierarchy(0, rightHand);
 	}
+
+	std::cout << std::endl;
 }
 
 void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext)
@@ -843,19 +880,32 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
 		if(body)
 		{
-			RenderNode(deviceContext, body);
-		}
+			body->SetLocalPosition(clientDeviceState->headPose.position + bodyOffsetFromHead);
 
-		std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
-		if(leftHand)
-		{
-			RenderNode(deviceContext, leftHand);
+			//Calculate rotation angle on z-axis, and use to create new quaternion that only rotates the body on the z-axis.
+			float angle = std::atan2(clientDeviceState->headPose.orientation.z, clientDeviceState->headPose.orientation.w);
+			scr::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
+			body->SetLocalRotation(zRotation);
+
+			RenderNode(deviceContext, body);
 		}
 
 		std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
 		if(rightHand)
 		{
+			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
+			rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
+
 			RenderNode(deviceContext, rightHand);
+		}
+
+		std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
+		if(leftHand)
+		{
+			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[1].position);
+			leftHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[1].orientation);
+
+			RenderNode(deviceContext, leftHand);
 		}
 	}
 }
@@ -876,10 +926,12 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		}
 		pbrConstants.lightCount=cachedLights.size();
 	}
-	scr::Light::LightData *sLights=(const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
-	PbrLight *l=(PbrLight*)sLights;
+	scr::Light::LightData* sLights = (const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
+	PbrLight* l = (PbrLight*)sLights;
 	if(l)
-		lightsBuffer.SetData(deviceContext,l);
+	{
+		lightsBuffer.SetData(deviceContext, l);
+	}
 
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->IsVisible())
@@ -1086,6 +1138,9 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
 	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+
+	bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
+	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, bodyOffsetFromHead);
 	
 	decoderParams.deferDisplay = false;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;

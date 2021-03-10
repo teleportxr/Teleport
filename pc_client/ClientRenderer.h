@@ -136,7 +136,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	scr::ResourceManagers resourceManagers;
 	void Recompose(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 	bool show_video = false;
-	bool renderPlayer = false; //Whether to render the player.
+	bool renderPlayer = true; //Whether to render the player.
 
 	enum
 	{
@@ -259,8 +259,9 @@ public:
 	bool canConnect=false;
 	vec3 videoPos;
 
+	avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
 private:
-	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::Node &node,int indent,int &countdown);
+	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 };

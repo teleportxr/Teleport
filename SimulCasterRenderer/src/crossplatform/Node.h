@@ -110,6 +110,19 @@ public:
 		return globalTransform;
 	}
 
+	void SetLocalPosition(const avs::vec3& value);
+	const avs::vec3& GetLocalPosition() const { return GetLocalTransform().m_Translation; }
+	const avs::vec3& GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }
+	
+	void SetLocalRotation(const scr::quat& value);
+	const scr::quat& GetLocalRotation() const { return GetLocalTransform().m_Rotation; }
+	const scr::quat& GetGlobalRotation() const { return GetGlobalTransform().m_Rotation; }
+
+	void SetLocalScale(const avs::vec3& value);
+	const avs::vec3& GetLocalScale() const { return GetLocalTransform().m_Scale; }
+	const avs::vec3& GetGlobalScale() const { return GetGlobalTransform().m_Scale; }
+
+
 private:
 	std::shared_ptr<Mesh> mesh;
 	std::shared_ptr<Skin> skin;
@@ -131,5 +144,8 @@ private:
 
 	//Causes the global transforms off all children, and their children, to update whenever their global transform is requested.
 	void RequestChildrenUpdateTransforms();
+
+	//Whether we should use the global transform directly for update calculations.
+	bool ShouldUseGlobalTransform() const;
 };
 }

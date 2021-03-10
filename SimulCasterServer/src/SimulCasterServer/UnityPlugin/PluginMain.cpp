@@ -91,6 +91,8 @@ static std::vector<avs::uid> lostClients; //Clients who have been lost, and are 
 static std::mutex audioMutex;
 static std::mutex videoMutex;
 
+static avs::vec3 bodyOffsetFromHead;
+
 // Messages related stuff
 avs::MessageHandlerFunc messageHandler = nullptr;
 struct LogMessage
@@ -334,6 +336,7 @@ struct InitialiseState
 	uint32_t SERVICE_PORT = 10500;
 	void(*reportHandshake)(avs::uid clientID, const avs::Handshake *h);
 	ProcessAudioInputFn processAudioInput;
+	avs::vec3 bodyOffsetFromHead;
 };
 
 ///PLUGIN-INTERNAL START
@@ -502,6 +505,8 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 
 	reportHandshake=initialiseState->reportHandshake;
 
+	bodyOffsetFromHead = initialiseState->bodyOffsetFromHead;
+
 	if(enet_initialize() != 0)
 	{
 		TELEPORT_CERR<<"An error occurred while attempting to initalise ENet!\n";
@@ -547,23 +552,18 @@ TELEPORT_EXPORT void Shutdown()
 	processNewInput = nullptr;
 }
 
-ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::shared_ptr<PluginAudioEncodePipeline> aep, std::function<void(void)> disconnect)
-	: geometryStreamingService(gs)
-	, videoEncodePipeline(vep)
-	, audioEncodePipeline(aep)
-	, clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, disconnect, connectionTimeout,reportHandshake)
-	
-{
-	originClientHas.x= originClientHas.y= originClientHas.z=0.f;
-}
-
 TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 {
 	//Check if we already have a session for a client with the passed ID.
 	auto c=clientServices.find(clientID);
 	if(c == clientServices.end())
 	{
-		ClientData newClientData(std::make_shared<PluginGeometryStreamingService>(), std::make_shared<PluginVideoEncodePipeline>(), std::make_shared<PluginAudioEncodePipeline>(), std::bind(&Disconnect, clientID));
+		std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService = std::make_shared<PluginGeometryStreamingService>();
+		std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline = std::make_shared<PluginVideoEncodePipeline>();
+		std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline = std::make_shared<PluginAudioEncodePipeline>();
+		SCServer::ClientMessaging clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, std::bind(&Disconnect, clientID), connectionTimeout, reportHandshake);
+		ClientData newClientData(geometryStreamingService, videoEncodePipeline, audioEncodePipeline, clientMessaging);
+
 		if(newClientData.clientMessaging.startSession(clientID, listenPort))
 		{
 			clientServices.emplace(clientID, std::move(newClientData));
@@ -716,6 +716,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
 	setupCommand.lock_player_height = casterSettings.lockPlayerHeight;
 	setupCommand.control_model=casterSettings.controlModel;
+	setupCommand.bodyOffsetFromHead = bodyOffsetFromHead;
 
 	avs::VideoConfig& videoConfig		= setupCommand.video_config;
 	videoConfig.video_width				= encoderSettings.frameWidth;

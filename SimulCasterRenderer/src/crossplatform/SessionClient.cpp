@@ -440,7 +440,7 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 				packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
 			}
 		}
-		inputState.numEvents=controllerState.inputEvents.size();
+		inputState.numEvents = static_cast<uint32_t>(controllerState.inputEvents.size());
 	
 		inputBuffer.resize(sizeof(avs::InputState)+inputState.numEvents*sizeof(avs::InputEvent));
 		memcpy(inputBuffer.data(),&inputState,sizeof(avs::InputState));
