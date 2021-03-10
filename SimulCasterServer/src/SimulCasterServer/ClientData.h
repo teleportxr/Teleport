@@ -15,7 +15,7 @@ class PluginAudioEncodePipeline;
 class ClientData
 {
 public:
-	ClientData(std::shared_ptr<PluginGeometryStreamingService> gs, std::shared_ptr<PluginVideoEncodePipeline> vep, std::shared_ptr<PluginAudioEncodePipeline> aep, std::function<void(void)> disconnect);
+	ClientData(std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const SCServer::ClientMessaging& clientMessaging);
 	SCServer::CasterContext casterContext;
 
 	std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService;
@@ -33,7 +33,7 @@ public:
 protected:
 	mutable bool _hasOrigin=false;
 	avs::vec3 originClientHas;
-	ENetAddress address;
+	ENetAddress address = {};
 };
 
 

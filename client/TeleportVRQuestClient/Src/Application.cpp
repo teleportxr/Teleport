@@ -32,16 +32,17 @@ extern "C"
 } // extern "C"
 
 Application::Application()
-		: ovrAppl(0, 0, CPU_LEVEL, GPU_LEVEL, true /* useMultiView */), mSoundEffectPlayer(nullptr)
+		: ovrAppl(0, 0, CPU_LEVEL, GPU_LEVEL, true /* useMultiView */)
 		  , Locale(nullptr)
 		  , Random(2)
 		  , mPipelineConfigured(false)
+		  , mSoundEffectPlayer(nullptr)
+		  , mGuiSys(nullptr)
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 		  , clientRenderer(&resourceCreator, &resourceManagers, this, this, &clientDeviceState)
 		  , lobbyRenderer(&clientDeviceState)
 		  , resourceManagers(new OVRNodeManager)
 		  , resourceCreator(basist::transcoder_texture_format::cTFETC2)
-		  , mGuiSys(nullptr)
 {
 	RedirectStdCoutCerr();
 
@@ -480,23 +481,26 @@ void Application::UpdateHandObjects()
 	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
 	if(body)
 	{
-		body->UpdateModelMatrix(clientDeviceState.headPose.position, clientDeviceState.headPose.orientation, body->GetGlobalTransform().m_Scale);
+			body->SetLocalPosition(clientDeviceState.headPose.position + bodyOffsetFromHead);
+
+			//Calculate rotation angle on y-axis, and use to create new quaternion that only rotates the body on the y-axis.
+			float angle = std::atan2(clientDeviceState.headPose.orientation.y, clientDeviceState.headPose.orientation.w);
+			scr::quat yRotation(0.0f, std::sin(angle), 0.0f, std::cos(angle));
+			body->SetLocalRotation(yRotation);
 	}
 
 	std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
 	if(rightHand)
 	{
-		avs::vec3 newPosition = clientDeviceState.controllerPoses[0].position;
-		scr::quat newRotation = scr::quat(clientDeviceState.controllerPoses[0].orientation) * HAND_ROTATION_DIFFERENCE;
-		rightHand->UpdateModelMatrix(newPosition, newRotation, rightHand->GetGlobalTransform().m_Scale);
+			rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].position);
+			rightHand->SetLocalRotation(clientDeviceState.controllerRelativePoses[0].orientation);
 	}
 
 	std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
-		avs::vec3 newPosition = clientDeviceState.controllerPoses[1].position;
-		scr::quat newRotation = scr::quat(clientDeviceState.controllerPoses[1].orientation) * HAND_ROTATION_DIFFERENCE;
-		leftHand->UpdateModelMatrix(newPosition, newRotation, leftHand->GetGlobalTransform().m_Scale);
+			leftHand->SetLocalPosition(clientDeviceState.controllerPoses[1].position);
+			leftHand->SetLocalRotation(clientDeviceState.controllerRelativePoses[1].orientation);
 	}
 }
 
@@ -515,8 +519,7 @@ void Application::AppRenderEye(
 			eye);
 }
 
-void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCommand &setupCommand
-									   , avs::Handshake &handshake)
+void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
 {
 	const avs::VideoConfig &videoConfig = setupCommand.video_config;
 	if (!mPipelineConfigured)
@@ -542,6 +545,9 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 		sourceParams.localPort = setupCommand.port + 1;
 		sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
 		sourceParams.remotePort = setupCommand.port;
+
+		bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
+		avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::GlStyle, bodyOffsetFromHead);
 
 		if (!clientRenderer.mNetworkSource.configure(std::move(streams), sourceParams))
 		{

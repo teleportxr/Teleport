@@ -266,6 +266,10 @@ namespace scr
 		{
 			RemoveNode(node);
 		}
+
+		if(body) body->Update(deltaTime);
+		if(leftHand) leftHand->Update(deltaTime);
+		if(rightHand) rightHand->Update(deltaTime);
 	}
 
 	void NodeManager::Clear()

@@ -8,20 +8,9 @@ Node::Node(avs::uid id, const std::string& name)
 	:id(id), name(name)
 {}
 
-void Node::SetLocalTransform(const Transform& transform)
-{
-	if(transform.m_Scale.x==0.0f)
-	{
-		SCR_CERR<<"Scale is zero.\n";
-		return;
-	}
-
-	localTransform = transform;
-}
 void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
-	//Only update the global transform if we are receiving global transforms for this node, but it has a parent.
-	if(lastReceivedMovement.isGlobal && GetParent().lock())
+	if(ShouldUseGlobalTransform())
 	{
 		if(globalTransform.UpdateModelMatrix(translation, rotation, scale))
 		{
@@ -51,11 +40,8 @@ void Node::SetLastMovement(const avs::MovementUpdate& update)
 void Node::TickExtrapolatedTransform(float deltaTime)
 {
 	deltaTime /= 1000;
-	Transform& transform = (lastReceivedMovement.isGlobal ? globalTransform : localTransform);
+	Transform& transform = (ShouldUseGlobalTransform() ? GetGlobalTransform() : GetLocalTransform());
 
-	//      but lastReceivedMovement.isGlobal defaults to true. So this will always happen unless we get any local updates.
-	if(lastReceivedMovement.isGlobal)
-		GetGlobalTransform();	// force it to be valid at least...
 	transform.m_Translation += static_cast<avs::vec3>(lastReceivedMovement.velocity) * deltaTime;
 
 	if(lastReceivedMovement.angularVelocityAngle != 0)
@@ -137,6 +123,35 @@ void Node::SetVisible(bool visible)
 	visibility.setVisibility(visible);
 }
 
+void Node::SetLocalTransform(const Transform& transform)
+{
+	if(transform.m_Scale.x < 0.0001f)
+	{
+		SCR_CERR << "Failed to update local transform of Node_" << id << "(" << name.c_str() << ")! Scale.x is zero!\n";
+		return;
+	}
+
+	localTransform = transform;
+}
+
+void Node::SetLocalPosition(const avs::vec3& value)
+{
+	localTransform.m_Translation = value;
+	isTransformDirty = true;
+}
+
+void Node::SetLocalRotation(const scr::quat & value)
+{
+	localTransform.m_Rotation = value;
+	isTransformDirty = true;
+}
+
+void Node::SetLocalScale(const avs::vec3 & value)
+{
+	localTransform.m_Scale = value;
+	isTransformDirty = true;
+}
+
 void Node::UpdateGlobalTransform() const
 {
 	std::shared_ptr<Node> parentPtr = parent.lock();
@@ -167,5 +182,10 @@ void Node::RequestChildrenUpdateTransforms()
 			childIt = children.erase(childIt);
 		}
 	}
+}
+bool Node::ShouldUseGlobalTransform() const
+{
+	//Only use the global transform if we are receiving global transforms for this node and it has a parent.
+	return lastReceivedMovement.isGlobal && GetParent().lock();
 }
 }

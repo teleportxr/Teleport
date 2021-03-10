@@ -162,6 +162,8 @@ namespace OVRFW
 		ENetAddress remoteEndpoint;
 		ClientDeviceState clientDeviceState;
 
+		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
+
 		//bool useMultiview=false;
 		//ovrFrameParms FrameParms;
 	};

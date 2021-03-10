@@ -62,9 +62,6 @@ namespace SCServer
 	private:
 		const struct CasterSettings* settings;
 
-		std::unordered_map<avs::uid, bool> sentResources; //Tracks the resources sent to the user; <resource identifier, doesClientHave>.
-		std::unordered_map<avs::uid, float> unconfirmedResourceTimes; //Tracks time since an unconfirmed resource was sent; <resource identifier, time since sent>.
-
 		SCServer::CasterContext* casterContext = nullptr;
 		SCServer::GeometryEncoder geometryEncoder;
 
@@ -72,6 +69,9 @@ namespace SCServer
 		std::unique_ptr<avs::Pipeline> avsPipeline;
 		std::unique_ptr<avs::GeometrySource> avsGeometrySource;
 		std::unique_ptr<avs::GeometryEncoder> avsGeometryEncoder;
+
+		std::unordered_map<avs::uid, bool> sentResources; //Tracks the resources sent to the user; <resource identifier, doesClientHave>.
+		std::unordered_map<avs::uid, float> unconfirmedResourceTimes; //Tracks time since an unconfirmed resource was sent; <resource identifier, time since sent>.
 		std::set<avs::uid> streamedNodeIDs; //Nodes that the client needs to draw, and should be sent to them.
 		std::set<avs::uid> hiddenNodes; //Nodes that are currently hidden on the server.
 
