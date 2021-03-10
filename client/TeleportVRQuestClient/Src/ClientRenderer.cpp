@@ -399,6 +399,10 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	passNames.push_back("OpaqueAlbedo");
 	passNames.push_back("OpaqueNormal");
 
+	passNames.push_back("OpaquePBRDiffuse");
+	passNames.push_back("OpaquePBRDiffuseNormal");
+	passNames.push_back("OpaquePBRDiffuseNormalCombined");
+
 	scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
 	{
 		pipelineCreateInfo.m_Count = 2;
@@ -415,31 +419,24 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 	//Static passes.
 	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Static";
-	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaquePBR";
-	clientAppInterface->BuildEffectPass("Static_OpaquePBR", &layout, &pipelineCreateInfo,
-										{pbrShaderResource});
-
-	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueAlbedo";
-	clientAppInterface->BuildEffectPass("Static_OpaqueAlbedo", &layout, &pipelineCreateInfo,
-										{pbrShaderResource});
-
-	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueNormal";
-	clientAppInterface->BuildEffectPass("Static_OpaqueNormal", &layout, &pipelineCreateInfo,
-										{pbrShaderResource});
-
+	for(const std::string &p:passNames)
+	{
+		std::string stat_name="Static_";
+		stat_name+=p;
+		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = p.c_str();
+		clientAppInterface->BuildEffectPass(stat_name.c_str(), &layout, &pipelineCreateInfo,
+											{pbrShaderResource});
+	}
 	//Skinned passes.
 	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Animated";
-	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaquePBR";
-	clientAppInterface->BuildEffectPass("Animated_OpaquePBR", &layout, &pipelineCreateInfo,
-										{pbrShaderResource});
-
-	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueAlbedo";
-	clientAppInterface->BuildEffectPass("Animated_OpaqueAlbedo", &layout, &pipelineCreateInfo,
-										{pbrShaderResource});
-
-	pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = "OpaqueNormal";
-	clientAppInterface->BuildEffectPass("Animated_OpaqueNormal", &layout, &pipelineCreateInfo,
-										{pbrShaderResource});
+	for(const std::string &p:passNames)
+	{
+		std::string stat_name="Animated_";
+		stat_name+=p;
+		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = p.c_str();
+		clientAppInterface->BuildEffectPass(stat_name.c_str(), &layout, &pipelineCreateInfo,
+											{pbrShaderResource});
+	}
 }
 
 void ClientRenderer::ExitedVR()

@@ -85,7 +85,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 
 	m_data->m_streams = std::move(streams);
 
-	for (int i = 0; i < numOutputs; ++i)
+	for (size_t i = 0; i < numOutputs; ++i)
 	{
 		const auto& stream = m_data->m_streams[i];
 		m_data->m_streamNodeMap[stream.id] = i;

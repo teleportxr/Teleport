@@ -214,10 +214,6 @@ vec3 EnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 	return specularColour * AB.x + AB.y;
 }
 
-float GeometricTerm(float roughness2, float n_v, float n_l)
-{
-}
-
 float VisibilityTerm(float roughness2, float l_h)
 {
 	//return GeometricTerm(n_v,n_l,roughness2)/(4.0*n_v*n_l);

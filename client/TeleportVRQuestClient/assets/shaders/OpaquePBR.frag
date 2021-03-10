@@ -126,17 +126,17 @@ vec3 ConvertCubemapTexcoords(vec3 p)
 
 float VisibilityTerm(float roughness, float n_v, float n_l)
 {
-	float m2 = roughness * roughness;
-	float visV = n_l * sqrt(n_v * (n_v - n_v * m2) + m2);
-	float visL = n_v * sqrt(n_l * (n_l - n_l * m2) + m2);
+	float roughness2 = roughness * roughness;
+	float visV = n_l * sqrt(n_v * (n_v - n_v * roughness2) + roughness2);
+	float visL = n_v * sqrt(n_l * (n_l - n_l * roughness2) + roughness2);
 	return saturate(0.5 / max(visV + visL, 0.00001));
 }
 
 float DistributionTerm(float roughness, float n_h)
 {
-	float m2 = roughness * roughness;
-	float d = (n_h * m2 - n_h) * n_h + 1.0;
-	return m2 / (d * d * SIMUL_PI_F);
+	float roughness2 = roughness * roughness;
+	float d = (n_h * roughness2 - n_h) * n_h + 1.0;
+	return roughness2 / (d * d * SIMUL_PI_F);
 }
 
 float GetRoughness(vec4 combinedLookup)
@@ -172,6 +172,10 @@ vec3 Lambertian(vec3 diffuseColour)
 	return diffuseColour * 1.0 / PI;
 }
 
+float VisibilityTerm(float roughness2, float l_h)
+{
+	return 1.0/(l_h*l_h*(1.0-roughness2)+roughness2);
+}
 
 //SchlickGGX
 float GSub(vec3 n, vec3 w, float a, bool directLight)
@@ -276,11 +280,11 @@ vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 vec3 PBRAmbient(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties)
 {
 	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo * surfaceProperties.diffuse_env;
-	diffuse					*= surfaceProperties.ao;
+	diffuse					*=surfaceProperties.ao;
 
 	vec3 envSpecularColour	=ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness, surfaceState.n_v);
 	vec3 specular			=surfaceState.kS*envSpecularColour * surfaceState.env;
-	vec3 colour			 = diffuse+specular;
+	vec3 colour				=diffuse+specular;
 
 	return colour;
 }
@@ -292,32 +296,37 @@ vec4 Gamma(vec4 a)
 
 vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
 {
+	float r4						=surfaceProperties.roughness2*surfaceProperties.roughness2;
 	vec3 diff						=lightTag.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
 	float d							=max(1.0, dist_to_light/lightTag.radius);
-	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,1.0/(d*d),lightTag.is_point);
 	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction, normalize(diff), lightTag.is_point);
-	float roughnessL				=min(1.0,max(.01, surfaceProperties.roughness2));
-	float n_l						= saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
+	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
 	vec3 halfway					=normalize(viewDir+dir_from_surface_to_light);
-	vec3 refl						=normalize(reflect(viewDir, surfaceProperties.normal));
-	float n_h						=saturate(dot(refl, dir_from_surface_to_light));
-	float lightD					=DistributionTerm(roughnessL, n_h);
-	float lightV					=VisibilityTerm(roughnessL, surfaceState.n_v, n_l);
+	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,1.0/(d*d),lightTag.is_point);
+	float n_h						=saturate(dot(halfway, surfaceProperties.normal));
+	float l_h						=saturate(dot(halfway, dir_from_surface_to_light));
 	// Per-light:
-	vec3 diffuse					=surfaceState.kD*irradiance * surfaceProperties.albedo * saturate(n_l);
-	vec3 specular					=irradiance * surfaceState.kS * (lightD * lightV * SIMUL_PI_F);
+	vec3 diffuse					=surfaceState.kD*irradiance*surfaceProperties.albedo*saturate(n_l);
+	float u							=(n_h*n_h*(r4-1.0)+1.0)*l_h;
+	float specular_response			=r4/(4.0*3.14159*u*u*(roughness+0.5));
+	vec3 specular					=specular_response*(irradiance*surfaceState.kS);
 
-	//specular = D(n_h,roughness)*G(n_v,n_l,roughness)*F(l_h,specularColour)*n_l/(4.0*n_v*n_l);
+	vec4 shadow						=vec4(1.0,1.0,1.0,1.0);
+	//vec4 spos						=GetShadowCoord( surfaceProperties.position, lightTag );
+//	if(!(light.is_point*light.is_spot))
+//		shadow=GetVarianceShadow(videoTexture,lightTag,spos);
+	//if(lightTag.is_spot)
+	//	shadow*=GetSpotLighting(lightTag,spos);
 	//float ao						= SceneAO(pos, normal, localToWorld);
-	specular						*=saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
+	//						*=saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour						= diffuse+specular;
 
 	return colour;
 	//return -lightTag.direction;
 }
 
-void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool doLights)
+void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, int maxLights)
 {
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.position		=v_Position;
@@ -390,8 +399,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	SurfaceState surfaceState		=PreprocessSurface(view, surfaceProperties);
 	vec3 c							=PBRAmbient(surfaceState, view, surfaceProperties);
 #if 1
-	if (doLights)
-	for (int i=0;i<4;i++)
+	for (int i=0;i<maxLights;i++)
 	{
 		if (i>=tagDataCube.lightCount)
 			break;
@@ -412,10 +420,26 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	gl_FragColor = Gamma(u);
 }
 
+void OpaquePBRDiffuse()
+{
+	PBR(true, false, false, false, 0);
+}
+
+void OpaquePBRDiffuseNormal()
+{
+	PBR(true, true, false, false, 0);
+}
+
+void OpaquePBRDiffuseNormalCombined()
+{
+	PBR(true, true, true, false, 0);
+}
+
 void OpaquePBR()
 {
-	PBR(true, true, true, false, true);
+	PBR(true, true, true, false, 1);
 }
+
 void OpaqueAlbedo()
 {
 	vec3 diffuseColour = texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;

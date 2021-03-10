@@ -144,7 +144,7 @@ namespace scr
 		};
 		struct EffectPassCreateInfo
 		{
-			const char* effectPassName;
+			std::string effectPassName;
 			ShaderSystem::PassVariables passVariables;
 			ShaderSystem::Pipeline pipeline;
 			VertexBufferLayout vertexLayout;
@@ -158,7 +158,7 @@ namespace scr
 
 	protected:
 		EffectCreateInfo m_CI;
-		std::map<const char*, EffectPassCreateInfo> m_EffectPasses;
+		std::map<std::string, EffectPassCreateInfo> m_EffectPasses;
 
 	public:
 		Effect(const RenderPlatform*const r) : APIObject(r) {}
@@ -172,7 +172,7 @@ namespace scr
 		{
 			for(const auto& passPair : m_EffectPasses)
 			{
-				if(strcmp(passPair.first, effectPassName) == 0)
+				if(passPair.first== effectPassName)
 				{
 					return &passPair.second;
 				}

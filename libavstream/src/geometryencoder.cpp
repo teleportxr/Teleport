@@ -76,10 +76,10 @@ namespace avs
 	
 	int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis)
 	{
-		int8_t a=(axis)%3;
+		//int8_t a=(axis)%3;
 		//int8_t sn=(axis>=3)?-1:1;
 		static int8_t ue_e[]={ 1, 0, 2 };
-		static int8_t gl_2[]={ 1, 2, 3 };
+		//static int8_t gl_2[]={ 1, 2, 3 };
 		
 		//static int8_t unt[]={ 0, 2, 1 };
 		static int8_t ue_gl[]={ 1, 2, 3 };
@@ -359,8 +359,8 @@ Result GeometryEncoder::onInputLink(int slot, Node* node)
 		return Result::Node_Incompatible;
 	}
 
-	GeometrySourceBackendInterface* mi = meshInterface->getGeometrySourceBackendInterface();
 #if 0
+	GeometrySourceBackendInterface* mi = meshInterface->getGeometrySourceBackendInterface();
 	if (si && si->getFormat() != d().m_backend->getInputFormat())
 	{
 		AVSLOG(Error) << "GeometryEncoder: Input mesh format is not compatible with GeometryEncoder configuration\n";
