@@ -712,7 +712,6 @@ void ClientRenderer::UpdateTagDataBuffers()
 						auto *lightData = nodeLight->second.resource->GetLightData();
 						if (lightData)
 						{
-							t.colour = (const float *) (&lightData->colour);
 							t.is_spot = lightData->is_spot;
 							t.is_point = lightData->is_point;
 							t.radius = lightData->radius;
