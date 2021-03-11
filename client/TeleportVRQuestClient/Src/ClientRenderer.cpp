@@ -80,7 +80,6 @@ ClientRenderer::ClientRenderer(ResourceCreator *r, scr::ResourceManagers *rm
 		  , mCubemapLightingTexture(nullptr)
 		  , mTagDataIDBuffer(nullptr)
 		  , mTagDataArrayBuffer(nullptr)
-		  , mTagDataBuffer(nullptr)
 		  , clientDeviceState(s)
 {
 }
@@ -132,7 +131,6 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		mCubemapLightingTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
 		mTagDataIDBuffer = globalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
 		mTagDataArrayBuffer = globalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
-		mTagDataBuffer = globalGraphicsResources.renderPlatform.InstantiateShaderStorageBuffer();
 	}
 	// Tag Data ID
 	{
@@ -151,7 +149,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 				1, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
 				, (void *) nullptr
 		};
-		mTagDataBuffer->Create(&tagBufferCreateInfo);
+		globalGraphicsResources.mTagDataBuffer->Create(&tagBufferCreateInfo);
 
 		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
 				2, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
@@ -167,7 +165,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 				1, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagData2D)
 				, (void *) nullptr
 		};
-		mTagDataBuffer->Create(&tagBufferCreateInfo);
+		globalGraphicsResources.mTagDataBuffer->Create(&tagBufferCreateInfo);
 		VideoTagData2D shaderTagData2DArray[MAX_TAG_DATA_COUNT];
 		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
 				2, scr::ShaderStorageBuffer::Access::NONE, sizeof(VideoTagData2D)
@@ -293,7 +291,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 				{mTagDataIDBuffer.get()});
 		mExtractTagShaderResources.AddBuffer(
 				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 1,
-				"TagDataCube_ssbo", {mTagDataBuffer.get()});
+				"TagDataCube_ssbo", {globalGraphicsResources.mTagDataBuffer.get()});
 		mExtractTagShaderResources.AddBuffer(
 				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 2,
 				"TagDataCubeArray_ssbo", {mTagDataArrayBuffer.get()});
@@ -341,34 +339,34 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 						scr::VertexBufferLayout::Type::FLOAT);
 	layout.CalculateStride();
 
-	scr::ShaderResourceLayout vertLayout;
-	vertLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
+	scr::ShaderResourceLayout shaderResourceLayout;
+	shaderResourceLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
 						  scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	vertLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
+	shaderResourceLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
 						  scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	vertLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
+	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
 						  scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	//scr::ShaderResourceLayout fragLayout;
-	vertLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
+	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	vertLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+	shaderResourceLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	vertLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+	shaderResourceLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	vertLayout.AddBinding(12, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+	shaderResourceLayout.AddBinding(12, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	vertLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+	shaderResourceLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	vertLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+	shaderResourceLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	vertLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+	shaderResourceLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	vertLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+	shaderResourceLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	vertLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+	shaderResourceLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-	scr::ShaderResource pbrShaderResource(vertLayout);
+	scr::ShaderResource pbrShaderResource(shaderResourceLayout);
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0,
 								"u_CameraData", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3,
@@ -402,6 +400,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	passNames.push_back("OpaquePBRDiffuse");
 	passNames.push_back("OpaquePBRDiffuseNormal");
 	passNames.push_back("OpaquePBRDiffuseNormalCombined");
+	passNames.push_back("OpaquePBRLightsOnly");
 
 	scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
 	{
@@ -535,7 +534,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 		shaderData.cameraRotation = tagData.cameraTransform.rotation;
 
 		uint32_t offset = sizeof(VideoTagData2D) * tagData.id;
-		mTagDataBuffer->Update(sizeof(VideoTagData2D), (void *) &shaderData, offset);
+	//	mTagDataBuffer->Update(sizeof(VideoTagData2D), (void *) &shaderData, offset);
 
 		mVideoTagData2DArray[tagData.id] = std::move(tagData);
 	}
@@ -747,6 +746,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 
 void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::ovrRendererOutput &res)
 {
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	{
 		ovrMatrix4f eye0 = res.FrameMatrices.EyeView[0];
 		eye0.M[0][3] = 0.0f;
@@ -788,7 +788,7 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 		//mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
 		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mVideoUB.get())->GetGlBuffer());
 		//mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
-		OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *) mTagDataBuffer.get())->GetGlBuffer();
+		OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *) globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &buf;
 		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 	}
@@ -862,6 +862,8 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 				}
 				j++;
 			}
+			OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *) globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
+			surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
 		}
 		res.Surfaces.emplace_back(transform, &surfaceDef);
 	}

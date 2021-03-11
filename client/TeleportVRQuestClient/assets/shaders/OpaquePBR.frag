@@ -84,7 +84,7 @@ struct VideoTagDataCube
 	LightTag lightTags[4];
 };
 
-layout(std430, binding = 0) buffer TagDataCube_ssbo
+layout(std430, binding = 1) buffer TagDataCube_ssbo
 {
 	VideoTagDataCube tagDataCube;
 };
@@ -239,7 +239,7 @@ vec3 FresnelSchlick(vec3 specularColour, float v_h)
 	 return specularColour + (vec3(1.0, 1.0, 1.0)- specularColour) * pow((1.0 - v_h), 5.0);
 }
 
-SurfaceState PreprocessSurface(vec3 viewDir, SurfaceProperties surfaceProperties)
+SurfaceState PreprocessSurface(vec3 viewDir, SurfaceProperties surfaceProperties,bool lookupEnv)
 {
 	SurfaceState surfaceState;
 	float roughness_mip		= MipFromRoughness(surfaceProperties.roughness, 5.0);
@@ -253,7 +253,10 @@ SurfaceState PreprocessSurface(vec3 viewDir, SurfaceProperties surfaceProperties
 	surfaceState.n_v		= saturate(dot(surfaceProperties.normal, viewDir));
 	surfaceState.kS			= FresnelSchlick(F0, cosLo);
 	refl					= ConvertCubemapTexcoords(refl.xyz);
-	surfaceState.env		= textureLod(u_SpecularCubemap, refl, roughness_mip).rgb;
+	if(lookupEnv)
+		surfaceState.env		= textureLod(u_SpecularCubemap, refl, roughness_mip).rgb;
+	else
+		surfaceState.env=vec3(0,0,0);
 	surfaceState.kD			= lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0, 0.0, 0.0), surfaceProperties.metallic);
 	return surfaceState;
 }
@@ -300,7 +303,7 @@ vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 	float specular_response			=r4/(4.0*3.14159*u*u*(surfaceProperties.roughness+0.5));
 	vec3 specular					=specular_response*surfaceState.kS;
 
-	vec4 shadow						=vec4(1.0,1.0,1.0,1.0);
+	//vec4 shadow						=vec4(1.0,1.0,1.0,1.0);
 	//vec4 spos						=GetShadowCoord( surfaceProperties.position, lightTag );
 //	if(!(light.is_point*light.is_spot))
 //		shadow=GetVarianceShadow(videoTexture,lightTag,spos);
@@ -308,75 +311,83 @@ vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 	//	shadow*=GetSpotLighting(lightTag,spos);
 	//float ao						= SceneAO(pos, normal, localToWorld);
 	//						*=saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
-	vec3 colour						= irradiance;//*(diffuse);
-
+	vec3 colour						= irradiance*(diffuse+specular);
+//colour=vec3(surfaceProperties.metallic,0,0);
 	return colour;
 	//return -lightTag.direction;
 }
 
-void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, int maxLights)
+void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights)
 {
 	SurfaceProperties surfaceProperties;
-	surfaceProperties.position		=v_Position;
-	vec3 diff						= v_Position-v_CameraPosition;
-	float dist_to_frag				=length(diff);
+	surfaceProperties.position        =v_Position;
+	vec3 diff                        = v_Position-v_CameraPosition;
+	float dist_to_frag                =length(diff);
 	if (dist_to_frag>7.0)
-		 discard;
+	discard;
 	vec3 view = normalize(diff);
 	vec3 normal;
-#if 1
+	#if 1
 	if (normalTex)
 	{
-		vec3 normalLookup				= texture(u_NormalTexture, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
-		vec3 tangentSpaceNormalMap		= u_NormalOutputScalar.xyz*2.0*(normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
-		surfaceProperties.normal		=normalize(v_TBN * tangentSpaceNormalMap);
+		vec3 normalLookup                = texture(u_NormalTexture, v_UV_normal * u_NormalTexCoordsScalar_R).rgb;
+		vec3 tangentSpaceNormalMap        = u_NormalOutputScalar.xyz*2.0*(normalLookup.rgb - vec3(0.5, 0.5, 0.5));// * u_NormalOutputScalar.rgb;
+		surfaceProperties.normal        =normalize(v_TBN * tangentSpaceNormalMap);
 	}
 	else
-#endif
+	#endif
 	{
 		normal=v_Normal;
-		surfaceProperties.normal		=v_Normal;
+		surfaceProperties.normal        =v_Normal;
 	}
 	// Sample the environment maps:
-	surfaceProperties.diffuse_env		=textureLod(u_DiffuseCubemap, ConvertCubemapTexcoords(surfaceProperties.normal.xyz), 0.0).rgb;
-#if 1
+	if(ambient)
+		surfaceProperties.diffuse_env        =textureLod(u_DiffuseCubemap, ConvertCubemapTexcoords(surfaceProperties.normal.xyz), 0.0).rgb;
+	else
+		surfaceProperties.diffuse_env=vec3(0,0,0);
 	if (diffuseTex)
 	{
-		vec3 diffuseColour	=texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;
-		diffuseColour		=diffuseColour.rgb * u_DiffuseOutputScalar.rgb;
-		surfaceProperties.albedo		=diffuseColour;
+		vec3 diffuseColour    =texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;
+		diffuseColour        =diffuseColour.rgb * u_DiffuseOutputScalar.rgb;
+		surfaceProperties.albedo        =diffuseColour;
 	}
 	else
-#endif
 	{
-		surfaceProperties.albedo		=u_DiffuseOutputScalar.rgb;
+		surfaceProperties.albedo        =u_DiffuseOutputScalar.rgb;
 	}
 
 #if 1
-	// vec4 u				=vec4(diffuseColour.rgb, 1.0);
-	//u.r+=float(abs(tagDataCube.lightCount-1));
-	//gl_FragColor = Gamma(u);
 	if (combinedTex)
 	{
+		vec3 roughMetalOcclusion;
 		vec4 combinedLookup = texture(u_CombinedTexture, v_UV_diffuse * u_CombinedTexCoordsScalar_R);
 		// from combinedLookup we will either use roughness=A+B*combinedLookup.a;
-		vec3 roughMetalOcclusion		=u_CombinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.agb;
-		roughMetalOcclusion.r			+=u_CombinedOutputScalarRoughMetalOcclusion.a;
+		roughMetalOcclusion             =u_CombinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.agb;
+		roughMetalOcclusion.r           +=u_CombinedOutputScalarRoughMetalOcclusion.a;
 		surfaceProperties.roughness		=roughMetalOcclusion.r;
-		surfaceProperties.metallic		=roughMetalOcclusion.g;
-		surfaceProperties.ao			=roughMetalOcclusion.b;
+		surfaceProperties.metallic      =roughMetalOcclusion.g;
+		surfaceProperties.ao            =roughMetalOcclusion.b;
 	}
 	else
 #endif
 	{
-		surfaceProperties.roughness	=u_CombinedOutputScalarRoughMetalOcclusion.r;
-		surfaceProperties.metallic	=u_CombinedOutputScalarRoughMetalOcclusion.g;
-		surfaceProperties.ao		=u_CombinedOutputScalarRoughMetalOcclusion.b;
+		surfaceProperties.roughness    =u_CombinedOutputScalarRoughMetalOcclusion.r;
+		surfaceProperties.metallic    =u_CombinedOutputScalarRoughMetalOcclusion.g;
+		surfaceProperties.ao        =u_CombinedOutputScalarRoughMetalOcclusion.b;
 	}
-	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
+	surfaceProperties.roughness2    =surfaceProperties.roughness*surfaceProperties.roughness;
 
-	SurfaceState surfaceState		=PreprocessSurface(view, surfaceProperties);
-	vec3 c							=vec3(0,0,0);//PBRAmbient(surfaceState, view, surfaceProperties);
+	SurfaceState surfaceState        =PreprocessSurface(view, surfaceProperties,ambient);
+	vec3 c;
+	if (ambient)
+	{
+		c                            =PBRAmbient(surfaceState, view, surfaceProperties);
+	}
+	else
+	{
+		c=vec3(0,0,0);
+	}
+
 #if 1
 	for (int i=0;i<maxLights;i++)
 	{
@@ -401,22 +412,27 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, in
 
 void OpaquePBRDiffuse()
 {
-	PBR(true, false, false, false, 0);
+	PBR(true, false, false, false, true, 0);
 }
 
 void OpaquePBRDiffuseNormal()
 {
-	PBR(true, true, false, false, 0);
+	PBR(true, true, false, false, true, 0);
 }
 
 void OpaquePBRDiffuseNormalCombined()
 {
-	PBR(true, true, true, false, 0);
+	PBR(true, true, true, false, true, 0);
+}
+
+void OpaquePBRLightsOnly()
+{
+	PBR(true, true, true, false, false, 1);
 }
 
 void OpaquePBR()
 {
-	PBR(true, true, true, false, 1);
+	PBR(true, true, true, false, true, 1);
 }
 
 void OpaqueAlbedo()

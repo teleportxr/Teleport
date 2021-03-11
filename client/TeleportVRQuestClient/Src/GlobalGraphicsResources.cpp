@@ -12,5 +12,5 @@ GlobalGraphicsResources& GlobalGraphicsResources::GetInstance()
 GlobalGraphicsResources::GlobalGraphicsResources()
 	:defaultPBREffect(&renderPlatform), defaultSkin(&renderPlatform, "Default Skin")
 {
-
+	mTagDataBuffer = renderPlatform.InstantiateShaderStorageBuffer();
 }

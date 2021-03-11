@@ -239,7 +239,13 @@ void Application::EnteredVrMode()
 			"u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler()
 								, clientRenderer.mCubemapLightingTexture});
 
-
+	scr::ShaderResourceLayout tagBufferLayout;
+	tagBufferLayout.AddBinding(1,
+									 scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,
+									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	globalGraphicsResources.tagShaderResource.SetLayout(tagBufferLayout);
+	globalGraphicsResources.tagShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataCube_ssbo",{
+			globalGraphicsResources.mTagDataBuffer.get()});
 	//useMultiview=(vrapi_GetSystemPropertyInt( java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE ) == VRAPI_TRUE);
 	int num_refresh_rates = vrapi_GetSystemPropertyInt(java,
 													   VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);

@@ -22,11 +22,6 @@ layout(std140, binding = 0) uniform u_CameraData
     float _pad;
 } cam;
 
-/*layout(std140, binding = 1) uniform TransformUB
-{
-    mat4 u_ModelMatrix;
-}model;*/
-
 //To Fragment Varying
 layout(location = 0)  out vec3 v_Position;
 layout(location = 1)  out vec3 v_Normal;

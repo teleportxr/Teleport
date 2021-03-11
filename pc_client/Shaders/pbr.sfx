@@ -386,7 +386,7 @@ vec4 Solid(vertexOutput IN)
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R);
 	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
 	// this allows us to have either roughness or smoothness textures.
-	combinedLookup.b	=1.0;
+	//combinedLookup.b	=1.0;
 	// So combinedLookup is now rough-metal-occl-smooth
 	vec3 roughMetalOcclusion		=combinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.agb;
 	roughMetalOcclusion.r+=combinedOutputScalarRoughMetalOcclusion.a;

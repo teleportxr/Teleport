@@ -154,7 +154,6 @@ public:
 	std::shared_ptr<scr::UniformBuffer> mVideoUB;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataIDBuffer;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
-	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataBuffer;
 	//std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
 	scr::ShaderResource				    mColourAndDepthShaderResources;
 	scr::ShaderResource				    mCopyCubemapShaderResources;

@@ -87,6 +87,7 @@ else()
 	option(STATIC "" ON)
 	set(CMAKE_CXX_FLAGS_RELEASE "/MT /Od /Ob0 /Zi /DNDEBUG")
 	set(CMAKE_CXX_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1")
+		#someday we will add /fsanitize=address - when MS have fixed all the address bugs in their core libs.)
 endif()
 option(BUILD_AS_LIBRARY "" ON) 
 

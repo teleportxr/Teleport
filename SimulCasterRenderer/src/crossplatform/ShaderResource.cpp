@@ -61,3 +61,23 @@ void ShaderResource::SetImageInfo( size_t index, const ShaderResourceImageInfo& 
 		idx++;
 	}
 }
+
+ShaderResourceLayout::ShaderResourceLayoutBinding& ShaderResourceLayout::FindShaderResourceLayout(uint32_t bindingIndex)
+{
+	size_t index = (size_t)-1;
+	for (size_t i = 0; i < m_LayoutBindings.size(); i++)
+	{
+		if (m_LayoutBindings[i].binding == bindingIndex)
+		{
+			index = i;
+			break;
+		}
+	}
+	if (index == (size_t)-1)
+	{
+		SCR_LOG("Warning: Layout %d not found in the %d layout bindings.",bindingIndex,(int)m_LayoutBindings.size());
+		SCR_CERR_BREAK("Could not find DescriptorSetLayoutBinding at binding index: " << bindingIndex << ".", -1);
+		throw;
+	}
+	return m_LayoutBindings[index];
+}

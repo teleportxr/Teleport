@@ -13,6 +13,7 @@
 #include "SCR_Class_GL_Impl/GL_Texture.h"
 #include "SCR_Class_GL_Impl/GL_UniformBuffer.h"
 #include "SCR_Class_GL_Impl/GL_VertexBuffer.h"
+#include "SCR_Class_GL_Impl/GL_ShaderStorageBuffer.h"
 
 void OVRNode::SetMesh(std::shared_ptr<scr::Mesh> mesh)
 {
@@ -222,13 +223,14 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	//Fill shader resources vector.
 	std::vector<const scr::ShaderResource*> pbrShaderResources;
 	pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
-	pbrShaderResources.push_back(&(skin ? skin->GetShaderResource() : globalGraphicsResources.defaultSkin.GetShaderResource()));
+	pbrShaderResources.push_back(&globalGraphicsResources.tagShaderResource);
 	pbrShaderResources.push_back(&material->GetShaderResource());
 	pbrShaderResources.push_back(&globalGraphicsResources.lightCubemapShaderResources);
+	pbrShaderResources.push_back(&(skin ? skin->GetShaderResource() : globalGraphicsResources.defaultSkin.GetShaderResource()));
 
 	//Set image samplers and uniform buffers.
 	size_t resourceCount = 0;
-	GLint textureCount = 0, uniformCount = 0;
+	GLint textureCount = 0, uniformCount = 0, storageBufferCount;
 	size_t j = 0;
 	for(const scr::ShaderResource *sr : pbrShaderResources)
 	{
@@ -254,9 +256,15 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 					uniformCount++;
 				}
 			}
-			else
+			else if(type == scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
 			{
-				//NULL
+				if(resource.bufferInfo.buffer)
+				{
+					scc::GL_ShaderStorageBuffer *gl_storageBuffer = static_cast<scc::GL_ShaderStorageBuffer *>(resource.bufferInfo.buffer);
+
+					ovr_surface_def.graphicsCommand.UniformData[j].Data = &(gl_storageBuffer->GetGlBuffer());
+					storageBufferCount++;
+				}
 			}
 			j++;
 			resourceCount++;
