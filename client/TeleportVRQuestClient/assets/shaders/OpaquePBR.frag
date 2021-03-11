@@ -203,15 +203,14 @@ float D(vec3 n, vec3 h, float a2)
 
 float MipFromRoughness(float roughness, float CubemapMaxMip)
 {
-	return (log2(roughness * 1.2) + 3.0);
+	return max(0.0,log2(roughness * 1.2) + 3.0);
 }
 
 struct SurfaceState
 {
 	vec3 kS;
-	vec3 kD;
-	vec3 refl;
 	float n_v;
+	vec3 kD;
 	// pre-sampled environment maps:
 	vec3 env;
 };
@@ -220,19 +219,17 @@ struct SurfaceState
 struct SurfaceProperties
 {
 	vec3 albedo;// diffuse color
+	float roughness;
 	vec3 normal;
+	float roughness2;
 	vec3 emission;
 	vec3 position;
-	float roughness;
-	float roughness2;
-	float roughness_mip;
 	float metallic;
+
 	float ao;
 	float specular;// specular power in 0..1 range
-	float gloss;// specular intensity
 	float alpha;// alpha for transparencies
-	// pre-sampled environment maps:
-	vec3 diffuse_env;
+	vec3 diffuse_env;	// pre-sampled environment maps:
 };
 
 //SPECULAR
@@ -245,36 +242,27 @@ vec3 FresnelSchlick(vec3 specularColour, float v_h)
 SurfaceState PreprocessSurface(vec3 viewDir, SurfaceProperties surfaceProperties)
 {
 	SurfaceState surfaceState;
+	float roughness_mip		= MipFromRoughness(surfaceProperties.roughness, 5.0);
 	// Constant normal incidence Fresnel factor for all dielectrics.
 	vec3 Fdielectric		= vec3(0.04, 0.04, 0.04);
 	// Base reflectivity F0 at normal incidence (for metals use albedo color).
 	vec3 F0					= lerp(Fdielectric, surfaceProperties.albedo, surfaceProperties.metallic);
 	// Angle between surface normal and outgoing light direction.
 	float cosLo				= saturate(dot(surfaceProperties.normal, -viewDir));
-	surfaceState.kS			= FresnelSchlick(F0, cosLo);
-	surfaceState.kD			= lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0, 0.0, 0.0), surfaceProperties.metallic);
-	surfaceState.refl		= reflect(viewDir, surfaceProperties.normal);
+	vec3 refl				= reflect(viewDir, surfaceProperties.normal);
 	surfaceState.n_v		= saturate(dot(surfaceProperties.normal, viewDir));
-	vec3 refl				=ConvertCubemapTexcoords(surfaceState.refl.xyz);
-	surfaceState.env		=textureLod(u_SpecularCubemap, refl, surfaceProperties.roughness_mip).rgb;
+	surfaceState.kS			= FresnelSchlick(F0, cosLo);
+	refl					= ConvertCubemapTexcoords(refl.xyz);
+	surfaceState.env		= textureLod(u_SpecularCubemap, refl, roughness_mip).rgb;
+	surfaceState.kD			= lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0, 0.0, 0.0), surfaceProperties.metallic);
 	return surfaceState;
-}
-
-vec3 KarisEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
-{
-	const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
-	const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
-	vec4 r = roughness * c0 + c1;
-	float a004 = min(r.x * r.x, exp2(-9.28 * n_v)) * r.x + r.y;
-	vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
-	return specularColour * AB.x + AB.y;
 }
 
 vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 {
 	float mult=1.0-max(roughness,n_v);
 	float m3=mult*mult*mult;
-	return specularColour +vec3(m3,m3,m3);
+	return specularColour+vec3(m3,m3,m3);
 }
 
 vec3 PBRAmbient(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties)
@@ -296,21 +284,21 @@ vec4 Gamma(vec4 a)
 
 vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
 {
-	float r4						=surfaceProperties.roughness2*surfaceProperties.roughness2;
+	float r4						=clamp(surfaceProperties.roughness2*surfaceProperties.roughness2,0.0,1.0);
 	vec3 diff						=lightTag.position-surfaceProperties.position;
 	float dist_to_light				=length(diff);
 	float d							=max(1.0, dist_to_light/lightTag.radius);
 	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction, normalize(diff), lightTag.is_point);
 	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
-	vec3 halfway					=normalize(viewDir+dir_from_surface_to_light);
-	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,1.0/(d*d),lightTag.is_point);
+	vec3 halfway					=normalize(dir_from_surface_to_light-viewDir);
+	vec3 irradiance					=lightTag.colour.rgb;//*lerp(1.0,1.0/(d*d),lightTag.is_point);
 	float n_h						=saturate(dot(halfway, surfaceProperties.normal));
 	float l_h						=saturate(dot(halfway, dir_from_surface_to_light));
 	// Per-light:
-	vec3 diffuse					=surfaceState.kD*irradiance*surfaceProperties.albedo*saturate(n_l);
-	float u							=(n_h*n_h*(r4-1.0)+1.0)*l_h;
-	float specular_response			=r4/(4.0*3.14159*u*u*(roughness+0.5));
-	vec3 specular					=specular_response*(irradiance*surfaceState.kS);
+	vec3 diffuse					=surfaceState.kD*surfaceProperties.albedo*n_l;
+	float u							=max(0.001,(n_h*n_h*(r4-1.0)+1.0)*l_h);
+	float specular_response			=r4/(4.0*3.14159*u*u*(surfaceProperties.roughness+0.5));
+	vec3 specular					=specular_response*surfaceState.kS;
 
 	vec4 shadow						=vec4(1.0,1.0,1.0,1.0);
 	//vec4 spos						=GetShadowCoord( surfaceProperties.position, lightTag );
@@ -320,7 +308,7 @@ vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 	//	shadow*=GetSpotLighting(lightTag,spos);
 	//float ao						= SceneAO(pos, normal, localToWorld);
 	//						*=saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
-	vec3 colour						= diffuse+specular;
+	vec3 colour						= irradiance;//*(diffuse);
 
 	return colour;
 	//return -lightTag.direction;
@@ -371,20 +359,12 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, in
 	if (combinedTex)
 	{
 		vec4 combinedLookup = texture(u_CombinedTexture, v_UV_diffuse * u_CombinedTexCoordsScalar_R);
-		// from combinedLookup we will either use roughness*roughnessTexture, or (1-roughness)*smoothnessTexture. This depends on combinedOutputScalarRoughMetalOcclusion.a.
-		combinedLookup		=combinedLookup.araa;
-		//combinedLookup.a	=1.0-combinedLookup.a;
-		// occlusion to 1.0 for now.
-		combinedLookup.b	=1.0;
-		// So combinedLookup is now rough-metal-occl-smooth
-		vec4 roughMetalOcclusion;
-		roughMetalOcclusion.rgb			=u_CombinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.rgb;
-		// smoothness:
-		roughMetalOcclusion.a			=(1.0-u_CombinedOutputScalarRoughMetalOcclusion.r)*combinedLookup.a;
-		// Either roughness or 1.0-smoothness depending on alpha of scalar.
-		surfaceProperties.roughness		=1.0-roughMetalOcclusion.a;//lerp(roughMetalOcclusion.r, 1.0-roughMetalOcclusion.a, u_CombinedOutputScalarRoughMetalOcclusion.a);
+		// from combinedLookup we will either use roughness=A+B*combinedLookup.a;
+		vec3 roughMetalOcclusion		=u_CombinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.agb;
+		roughMetalOcclusion.r			+=u_CombinedOutputScalarRoughMetalOcclusion.a;
+		surfaceProperties.roughness		=roughMetalOcclusion.r;
 		surfaceProperties.metallic		=roughMetalOcclusion.g;
-		surfaceProperties.ao			=GetAO(roughMetalOcclusion);
+		surfaceProperties.ao			=roughMetalOcclusion.b;
 	}
 	else
 #endif
@@ -394,10 +374,9 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, in
 		surfaceProperties.ao		=u_CombinedOutputScalarRoughMetalOcclusion.b;
 	}
 	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
-	surfaceProperties.roughness_mip	= MipFromRoughness(surfaceProperties.roughness, 5.0);
 
 	SurfaceState surfaceState		=PreprocessSurface(view, surfaceProperties);
-	vec3 c							=PBRAmbient(surfaceState, view, surfaceProperties);
+	vec3 c							=vec3(0,0,0);//PBRAmbient(surfaceState, view, surfaceProperties);
 #if 1
 	for (int i=0;i<maxLights;i++)
 	{
