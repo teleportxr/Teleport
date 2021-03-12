@@ -27,6 +27,8 @@ extern "C"
 	JNIEXPORT jlong Java_co_simul_teleportvrquestclient_MainActivity_nativeInitFromJava(JNIEnv *jni)
 	{
 		VideoDecoderProxy::InitializeJNI(jni);
+		Android_MemoryUtil::InitializeJNI(jni);
+
 		return 0;
 	}
 } // extern "C"
@@ -204,6 +206,8 @@ void Application::EnteredVrMode()
 	//mLocale = ovrLocale::Create(*java->Env, java->ActivityObject, "default");
 	//std::string fontName;
 	//GetLocale().GetString("@string/font_name", "efigs.fnt", fontName);
+
+	memoryUtil.reset(new Android_MemoryUtil(java->Env));
 
 	clientRenderer.EnteredVR(java);
 

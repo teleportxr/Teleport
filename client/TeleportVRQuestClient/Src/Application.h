@@ -30,6 +30,8 @@
 #include "ClientDeviceState.h"
 #include "Controllers.h"
 
+#include "SCR_Class_Android_Impl/Android_MemoryUtil.h"
+
 using OVR::Axis_X;
 using OVR::Axis_Y;
 using OVR::Axis_Z;
@@ -153,6 +155,7 @@ namespace OVRFW
 
 		ClientRenderer clientRenderer;
 		LobbyRenderer lobbyRenderer;
+		std::unique_ptr<Android_MemoryUtil> memoryUtil;
 		scr::ResourceManagers resourceManagers;
 		ResourceCreator resourceCreator;
 		Controllers controllers;

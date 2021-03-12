@@ -63,6 +63,8 @@ set( src_crossplatform
 	src/crossplatform/Skin.h
 	src/crossplatform/Transform.cpp
 	src/crossplatform/Transform.h
+	src/crossplatform/MemoryUtil.cpp
+	src/crossplatform/MemoryUtil.h
 	)
 
 #Include its root directory

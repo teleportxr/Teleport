@@ -8,6 +8,7 @@
 #include <memory> //Smart pointers
 #include <mutex> //Thread safety.
 #include <algorithm> //std::remove
+#include "MemoryUtil.h"
 
 typedef unsigned long long uid; //Unique identifier for a resource.
 
@@ -78,11 +79,14 @@ private:
 	//	it : Iterator pointing to the item we want to delete.
 	//Returns an iterator to the next item in the unordered map.
 	mapIterator_t RemoveResource(mapIterator_t it);
+
+	// Bytes
+	static constexpr long MIN_REQUIRED_MEMORY = 1000000;
 };
 
 template<class T>
 ResourceManager<T>::ResourceManager(std::function<void(T&)> freeResourceFunction)
-	:freeResourceFunction(freeResourceFunction)
+	: freeResourceFunction(freeResourceFunction)
 {}
 
 template<class T>
@@ -188,6 +192,8 @@ void ResourceManager<T>::ClearCareful(std::vector<uid>& excludeList)
 template<class T>
 void ResourceManager<T>::Update(float deltaTimestamp)
 {
+	const bool sufficientMemory = scr::MemoryUtil::Get()->isSufficientMemory(MIN_REQUIRED_MEMORY);
+
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
@@ -197,8 +203,8 @@ void ResourceManager<T>::Update(float deltaTimestamp)
 		{
 			it->second.timeSinceLastUse += deltaTimestamp;
 
-			//Delete the resource, if it has been too long since the object was last used.
-			if(it->second.timeSinceLastUse >= it->second.postUseLifetime * lifetimeFactor)
+			//Delete the resource, if memory is low and it has been too long since the object was last used.
+			if(!sufficientMemory && it->second.timeSinceLastUse >= it->second.postUseLifetime * lifetimeFactor)
 			{
 				it = RemoveResource(it);
 			}

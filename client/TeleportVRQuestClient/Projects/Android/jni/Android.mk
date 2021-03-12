@@ -37,6 +37,7 @@ LOCAL_SRC_FILES			:= \
     ../../../src/SCR_Class_GL_Impl/GL_Texture.cpp \
     ../../../src/SCR_Class_GL_Impl/GL_UniformBuffer.cpp \
     ../../../src/SCR_Class_GL_Impl/GL_VertexBuffer.cpp \
+    ../../../src/SCR_Class_Android_Impl/Android_MemoryUtil.cpp \
     ../../../src/ConvertUTF.c \
 
 LOCAL_LDLIBS := -lEGL -lGLESv3 -landroid -llog -lz  		# include default libraries
