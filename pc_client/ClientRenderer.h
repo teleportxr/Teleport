@@ -31,6 +31,7 @@
 #include "crossplatform/AudioStreamTarget.h"
 #include "pc/PC_AudioPlayer.h"
 #include "TeleportClient/ClientDeviceState.h"
+#include "SCR_Class_PC_Impl/PC_MemoryUtil.h"
 
 namespace avs
 {
@@ -264,4 +265,6 @@ private:
 	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+
+	const PC_MemoryUtil memoryUtil;
 };

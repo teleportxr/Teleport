@@ -3,7 +3,9 @@
 
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <set>
+
 
 #include "transcoder/basisu_transcoder.h"
 
@@ -16,6 +18,7 @@
 #include "Light.h"
 #include "ResourceManager.h"
 #include "Skin.h"
+#include "MemoryUtil.h"
 
 namespace scr
 {
@@ -28,13 +31,11 @@ namespace scr
     struct ResourceManagers
     {
         ResourceManagers(scr::NodeManager* nodeManager)
-            :mNodeManager(nodeManager),
-            mIndexBufferManager(&scr::IndexBuffer::Destroy), mShaderManager(nullptr),
-            mMaterialManager(nullptr), mTextureManager(&scr::Texture::Destroy),
+            : mNodeManager(nodeManager),
+            mIndexBufferManager(&scr::IndexBuffer::Destroy),
+            mTextureManager(&scr::Texture::Destroy),
             mUniformBufferManager(&scr::UniformBuffer::Destroy),
-            mVertexBufferManager(&scr::VertexBuffer::Destroy),
-			mMeshManager(nullptr),
-			mLightManager(nullptr)
+            mVertexBufferManager(&scr::VertexBuffer::Destroy)
         {
         }
 
@@ -317,7 +318,7 @@ private:
 	
 	std::mutex mutex_texturesToTranscode;
 	std::mutex mutex_texturesToCreate;
-	bool shouldBeTranscoding = true; //Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
+	std::atomic_bool shouldBeTranscoding = true; //Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
 	std::thread basisThread; //Thread where we transcode basis files to mip data.
 	
 	const uint32_t diffuseBGRA = 0xFFFFFFFF;

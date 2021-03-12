@@ -47,6 +47,7 @@ LOCAL_SRC_FILES  := 	../src/api/Effect.cpp						\
 						../src/crossplatform/ShaderResource.cpp		\
 						../src/crossplatform/Skin.cpp				\
 						../src/crossplatform/Transform.cpp			\
+						../src/crossplatform/MemoryUtil.cpp			\
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable
