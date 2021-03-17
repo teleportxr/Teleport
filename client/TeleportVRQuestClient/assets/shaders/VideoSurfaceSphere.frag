@@ -1,10 +1,11 @@
 
-precision lowp float;
+precision highp float;
 
 const float PI    = 3.1415926536;
 const float TwoPI = 2.0 * PI;
 
 layout(location = 0) in vec3 vSampleVec;
+layout(location = 1) in float vDepth;
 layout(location = 7) in vec3 vOffsetFromVideo;
 
 // ALL light data is passed in as tags.
@@ -57,32 +58,27 @@ void main()
     vec4 lookup = textureLod(cubemapTexture, vSampleVec,0.0);
     vec3 view = vSampleVec;
     vec3 colourSampleVec=vSampleVec;
-    if(lookup.a<0.8)
+    for (int i = 0; i < 5; i++)
     {
-        //lookup=vec4(1.0,0.5,0.0,1.0);
-        for (int i = 0; i < 2; i++)
-        {
-            float depth = lookup.a;
-            float dist_m=5.0*(20.0*depth);
-            vec3 pos_m=dist_m*vSampleVec;
-            pos_m+=vOffsetFromVideo* step(-0.8, -depth);
+        float depth = lookup.a;
+        float dist_m=25.0*depth+5.0;
+        vec3 pos_m=dist_m*vSampleVec;
+        pos_m+=vOffsetFromVideo* step(-0.99, -depth);
+        // But this does not intersect at depth. We want the vector from the original centre, of
+        // original radius to hit point
+        float R = dist_m;
+        float F = length(vOffsetFromVideo);
+        float D = -dot(normalize(vOffsetFromVideo), vSampleVec);
+        float b = F * D;
+        float c = F * F - R * R;
+        float U = -b + sqrt(max(b*b - c,0.0));
+        pos_m   += (U - R) * vSampleVec*step(-F,0.0);
+        colourSampleVec  = normalize(pos_m);
+        lookup=textureLod(cubemapTexture, colourSampleVec, 0.0);
 
-            // But this does not intersect at depth. We want the vector from the original centre, of
-            // original radius to hit point
-            float R = dist_m;
-            float F = length(vOffsetFromVideo);
-            {
-                float D = -dot(normalize(vOffsetFromVideo), vSampleVec);
-                float b = F * D;
-                float c = F * F - R * R;
-                float U = -b + sqrt(max(b * b - c,0.0));
-                pos_m   += (U - R) * vSampleVec*step(-F,0.0);
-                colourSampleVec  = normalize(pos_m);
-                lookup=textureLod(cubemapTexture, colourSampleVec, 0.0);
-            }
-        }
+       //lookup.rgb+=vec3(depth,depth,depth);
     }
-//lookup.rgb+=abs(vOffsetFromVideo);
+    //lookup.rgb+=vec3(vDepth,vDepth,vDepth);
 	//lookup.b=float(RWTagDataID.x)/31.0;
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
 }

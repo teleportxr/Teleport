@@ -1,10 +1,12 @@
-precision lowp float;
+precision highp float;
 
 layout(location = 0) in vec4 position;
 
 layout(location = 0) out vec3 vSampleVec;
+layout(location = 1) out float vDepth;
 layout(location = 7) out vec3 vOffsetFromVideo;
 
+layout(binding = 0) uniform samplerCube cubemapTexture;
 layout(std140, binding = 1) uniform videoUB
 {
     vec4 eyeOffsets[2];
@@ -45,13 +47,15 @@ layout(std430, binding = 0) buffer TagDataCube_ssbo
 
 void main()
 {
+    vec3 dir        =normalize(position.xyz);
+    vSampleVec      =vec3(-dir.z,dir.x,dir.y);
+    vec4 lookup     =textureLod(cubemapTexture, vSampleVec,0.0);
+    vDepth          =lookup.a;//5.0*(20.0*lookup.a);
     // Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
-    vSampleVec      =normalize(vec3(-position.z,position.x,position.y));
     vec4 eye_pos    =vec4((sm.ViewMatrix[VIEW_ID] * ( vec4(position.xyz,0.0) )).xyz,1.0);
     vec4 out_pos    =sm.ProjectionMatrix[VIEW_ID] * eye_pos;
-    //vec4 out_pos    =vid.viewProj*position;
-    gl_Position     =out_pos;//vec4(out_pos.xy/out_pos.w,1.0,1.0);
     vec3 eyeOffset  =vid.eyeOffsets[VIEW_ID].xyz;
     vec3 v_offs     =vid.cameraPosition-tagDataCube.cameraPosition+eyeOffset;
-    vOffsetFromVideo=vec3(-v_offs.z,v_offs.x,v_offs.y)*5.0;
+    vOffsetFromVideo=vec3(-v_offs.z,v_offs.x,v_offs.y);
+    gl_Position     =out_pos;
 }

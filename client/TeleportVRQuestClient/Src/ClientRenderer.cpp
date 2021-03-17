@@ -321,86 +321,51 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	globalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
 	scr::VertexBufferLayout layout;
-	layout.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC3,
-						scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(1, scr::VertexBufferLayout::ComponentCount::VEC3,
-						scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(2, scr::VertexBufferLayout::ComponentCount::VEC4,
-						scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(3, scr::VertexBufferLayout::ComponentCount::VEC2,
-						scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(4, scr::VertexBufferLayout::ComponentCount::VEC2,
-						scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(5, scr::VertexBufferLayout::ComponentCount::VEC4,
-						scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(6, scr::VertexBufferLayout::ComponentCount::VEC4,
-						scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(7, scr::VertexBufferLayout::ComponentCount::VEC4,
-						scr::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC3,scr::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(1, scr::VertexBufferLayout::ComponentCount::VEC3,scr::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(2, scr::VertexBufferLayout::ComponentCount::VEC4,scr::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(3, scr::VertexBufferLayout::ComponentCount::VEC2,scr::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(4, scr::VertexBufferLayout::ComponentCount::VEC2,scr::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(5, scr::VertexBufferLayout::ComponentCount::VEC4,scr::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(6, scr::VertexBufferLayout::ComponentCount::VEC4,scr::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(7, scr::VertexBufferLayout::ComponentCount::VEC4,scr::VertexBufferLayout::Type::FLOAT);
 	layout.CalculateStride();
 
 	scr::ShaderResourceLayout shaderResourceLayout;
-	shaderResourceLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
-						  scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	shaderResourceLayout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
-						  scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
-						  scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	//scr::ShaderResourceLayout fragLayout;
-	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(12, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
+
+	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(12, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	scr::ShaderResource pbrShaderResource(shaderResourceLayout);
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0,
-								"u_CameraData", {});
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3,
-								"u_BoneData", {});
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2,
-								"u_MaterialData", {});
-	pbrShaderResource.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10,
-			"u_DiffuseTexture", {});
-	pbrShaderResource.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11,
-			"u_NormalTexture", {});
-	pbrShaderResource.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12,
-			"u_CombinedTexture", {});
-	pbrShaderResource.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13,
-			"u_EmissiveTexture", {});
-	pbrShaderResource.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14,
-			"u_DiffuseCubemap", {});
-	pbrShaderResource.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
-			"u_SpecularCubemap", {});
+	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,0,"u_CameraData", {});
+	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,4,"u_BoneData", {});
+	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,2,"u_MaterialData", {});
+	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,10,"u_DiffuseTexture", {});
+	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,11,"u_NormalTexture", {});
+	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,12,"u_CombinedTexture", {});
+	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,13,"u_EmissiveTexture", {});
+	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,14,"u_SpecularCubemap", {});
+	//pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_DiffuseCubemap", {});
 
 	passNames.clear();
 	passNames.push_back("OpaquePBR");
 	passNames.push_back("OpaqueAlbedo");
 	passNames.push_back("OpaqueNormal");
-
 	passNames.push_back("OpaquePBRDiffuse");
 	passNames.push_back("OpaquePBRDiffuseNormal");
 	passNames.push_back("OpaquePBRDiffuseNormalCombined");
 	passNames.push_back("OpaquePBRLightsOnly");
+	passNames.push_back("OpaquePBRDebug");
 
 	scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
 	{
@@ -427,7 +392,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 											{pbrShaderResource});
 	}
 	//Skinned passes.
-	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Animated";
+	//pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Animated";
 	for(const std::string &p:passNames)
 	{
 		std::string stat_name="Animated_";
@@ -472,6 +437,10 @@ void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
 						, scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
 						, scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
+		textureCreateInfo.mipCount = std::min(6,videoConfig.specular_mips);
+		textureCreateInfo.width = videoConfig.specular_cubemap_size;
+		textureCreateInfo.height = videoConfig.specular_cubemap_size;
+		specularCubemapTexture->Create(textureCreateInfo);
 		textureCreateInfo.mipCount = 1;
 		textureCreateInfo.width = videoConfig.diffuse_cubemap_size;
 		textureCreateInfo.height = videoConfig.diffuse_cubemap_size;
@@ -479,10 +448,6 @@ void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
 		textureCreateInfo.width = videoConfig.light_cubemap_size;
 		textureCreateInfo.height = videoConfig.light_cubemap_size;
 		mCubemapLightingTexture->Create(textureCreateInfo);
-		textureCreateInfo.mipCount = 6;
-		textureCreateInfo.width = videoConfig.specular_cubemap_size;
-		textureCreateInfo.height = videoConfig.specular_cubemap_size;
-		specularCubemapTexture->Create(textureCreateInfo);
 		diffuseCubemapTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
 		specularCubemapTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
 		mCubemapLightingTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
@@ -579,7 +544,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		inputCommand.m_pComputeEffect = mCopyCubemapEffect;
 		inputCommand.effectPassName = "CopyCubemap";
 		int32_t mip_x = 0;
-	//	ThreadCount = 4;
+
 		if (diffuseCubemapTexture->IsValid())
 		{
 			static uint32_t face = 0;
@@ -865,6 +830,7 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *) globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 			surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
 		}
+
 		res.Surfaces.emplace_back(transform, &surfaceDef);
 	}
 	//Render children.
@@ -975,12 +941,12 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 					INFO_TEXT_DURATION, offset, colour,
 					"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 					"Incomplete Decoder Packets: %d\n"
-					"Framerate: %4.4f Bandwidth(kbps): %4.4f", mDecoder.getTotalFramesProcessed(),
+					"Bandwidth(kbps): %4.4f"
+					, mDecoder.getTotalFramesProcessed(),
 					ctr.networkPacketsDropped,
 					ctr.decoderPacketsDropped,
 					ctr.incompleteDecoderPacketsReceived,
-					frameRate, ctr.bandwidthKPS);
-
+					ctr.bandwidthKPS);
 			break;
 		}
 		case GEOMETRY_OSD:
@@ -997,10 +963,12 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 					(
 							INFO_TEXT_DURATION, offset, colour,
 							"%s\n"
+	   						"Framerate: %4.4f\n"
 							"Nodes: %d \n"
 							"Orphans: %d\n"
 							"%s",
 							globalGraphicsResources.effectPassName,
+							frameRate,
 							static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()),
 							ctr.m_packetMapOrphans, str.str().c_str()
 					);

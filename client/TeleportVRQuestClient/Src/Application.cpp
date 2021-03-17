@@ -228,16 +228,16 @@ void Application::EnteredVrMode()
 	globalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
 	globalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14,
-			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
-								 , clientRenderer.diffuseCubemapTexture});
-	globalGraphicsResources.lightCubemapShaderResources.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
 			"u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler()
 								  , clientRenderer.specularCubemapTexture});
-	globalGraphicsResources.lightCubemapShaderResources.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 17,
+/*	globalGraphicsResources.lightCubemapShaderResources.AddImage(
+			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
 			"u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler()
 								, clientRenderer.mCubemapLightingTexture});
+	globalGraphicsResources.lightCubemapShaderResources.AddImage(
+			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16,
+			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
+								 , clientRenderer.diffuseCubemapTexture});*/
 
 	scr::ShaderResourceLayout tagBufferLayout;
 	tagBufferLayout.AddBinding(1,
@@ -452,8 +452,6 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	}
 	else
 	{
-		//out.ClearColorBuffer = true;
-		//out.ClearDepthBuffer = true;
 		lobbyRenderer.Render(mGuiSys);
 	};
 	GLCheckErrorsWithTitle("Frame: Post-SCR");
