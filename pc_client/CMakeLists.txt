@@ -38,6 +38,8 @@ set(scr_pc_impl
 	SCR_Class_PC_Impl/PC_UniformBuffer.h
 	SCR_Class_PC_Impl/PC_VertexBuffer.cpp
 	SCR_Class_PC_Impl/PC_VertexBuffer.h
+	SCR_Class_PC_Impl/PC_MemoryUtil.cpp
+	SCR_Class_PC_Impl/PC_MemoryUtil.h
 )
 
 if(WIN32)

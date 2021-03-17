@@ -41,6 +41,7 @@ class MainActivity : NativeActivity()
         nativeInitFromJava()
         super.onCreate(savedInstanceState)
         //requestRecordPermission()
+        MemoryUtil.setContext(applicationContext)
     }
 
     companion object {

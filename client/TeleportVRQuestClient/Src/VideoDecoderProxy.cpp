@@ -15,6 +15,7 @@ JNIEXPORT void Java_co_simul_teleportvrquestclient_VideoDecoder_nativeFrameAvail
 } // extern "C"
 
 VideoDecoderProxy::JNI VideoDecoderProxy::jni;
+bool VideoDecoderProxy::mJNIInitialized=false;
 
 VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInterface)
     : mFrameWidth(0), mFrameHeight(0)
@@ -26,7 +27,6 @@ VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInt
 
 }
 
- bool VideoDecoderProxy::mJNIInitialized=false;
 VideoDecoderProxy::~VideoDecoderProxy()
 {
     if(mVideoDecoder) {
