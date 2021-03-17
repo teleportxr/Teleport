@@ -79,7 +79,11 @@ void OVRNode::SetMaterialList(std::vector<std::shared_ptr<scr::Material>>& mater
 
 std::string OVRNode::GetCompleteEffectPassName(const char *effectPassName)
 {
+#ifdef TELEPORT_ANDROID_ANIMATION
 	return std::string(GetSkin() ? "Animated_" : "Static_") + effectPassName;
+#else
+	return std::string( "Static_") + effectPassName;
+#endif
 }
 
 OVRFW::GlProgram* OVRNode::GetEffectPass(const char* effectPassName)

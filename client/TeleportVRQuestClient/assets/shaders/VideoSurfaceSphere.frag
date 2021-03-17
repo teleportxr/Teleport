@@ -63,7 +63,7 @@ void main()
         for (int i = 0; i < 2; i++)
         {
             float depth = lookup.a;
-            float dist_m=5.0*(20.0*depth);
+            float dist_m=5.0*(5.0+25.0*depth);
             vec3 pos_m=dist_m*vSampleVec;
             pos_m+=vOffsetFromVideo* step(-0.8, -depth);
 

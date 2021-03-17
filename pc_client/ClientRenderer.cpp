@@ -530,7 +530,11 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 			videoTagDataCube[i].cameraPosition = { pos.x, pos.y, pos.z };
 			videoTagDataCube[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
 			videoTagDataCube[i].lightCount=td.lights.size();
-			for(int j=0;j<td.lights.size();j++)
+			if(td.lights.size()>10)
+			{
+				SCR_CERR_BREAK("Too many lights in tag.",10);
+			}
+			for(int j=0;j<td.lights.size()&&j<10;j++)
 			{
 				LightTag &t=videoTagDataCube[i].lightTags[j];
 				const scr::LightTagData &l=td.lights[j];
@@ -1258,7 +1262,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	handshake.framerate = 60;
 	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
-
+	handshake.maxLightsSupported=10;
 	lastSetupCommand = setupCommand;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
@@ -1365,6 +1369,11 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 			memcpy(&light, &data[index], sizeof(scr::LightTagData));
 			//avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
 			index += sizeof(scr::LightTagData);
+		}
+		if(tagData.coreData.id>= videoTagDataCubeArray.size())
+		{
+			SCR_CERR_BREAK("Bad tag id",1);
+			return;
 		}
 		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
 	}

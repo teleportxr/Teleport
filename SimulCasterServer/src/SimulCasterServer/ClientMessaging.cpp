@@ -154,7 +154,8 @@ namespace SCServer
 	void ClientMessaging::tick(float deltaTime)
 	{
 		//Don't stream geometry to the client before we've received the handshake.
-		if (!receivedHandshake) return;
+		if (!receivedHandshake)
+			return;
 
 		static float timeSinceLastGeometryStream = 0;
 		timeSinceLastGeometryStream += deltaTime;
