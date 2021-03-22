@@ -746,6 +746,7 @@ namespace avs
 		bool usingHands = false; //Whether to send the hand nodes to the client.
 		bool isVR = true;
 		uint64_t resourceCount = 0; //Amount of resources the client has, and are appended to the handshake.
+		uint32_t maxLightsSupported=0;
 	};
 	
 	enum InputEventType : unsigned char

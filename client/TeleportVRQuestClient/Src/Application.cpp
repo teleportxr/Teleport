@@ -692,6 +692,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.usingHands = true;
+	handshake.maxLightsSupported=4;
 
 	clientRenderer.mIsCubemapVideo = setupCommand.video_config.use_cubemap;
 
