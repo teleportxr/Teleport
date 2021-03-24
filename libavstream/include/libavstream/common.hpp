@@ -914,7 +914,7 @@ namespace avs
 		uint32_t	video_height = 0;
 		uint32_t	depth_width = 0;
 		uint32_t	depth_height = 0;
-		float perspectiveFOV = 110;
+		float perspective_fov = 110;
 		uint32_t    use_10_bit_decoding = 0;
 		uint32_t    use_yuv_444_decoding = 0;
 		uint32_t	colour_cubemap_size = 0;

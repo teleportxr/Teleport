@@ -11,7 +11,10 @@ uniform vec4 cameraRotation;
 uniform vec4 depthOffsetScale;
 uniform int2 sourceOffset;
 uniform int targetSize;
-uniform float perspectiveFOV;
+uniform float horizFOV;
+uniform float vertFOV;
+uniform float localHorizFOV;
+uniform float localVertFOV;
 
 SIMUL_CONSTANT_BUFFER_END
 

@@ -267,4 +267,6 @@ private:
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 
 	const PC_MemoryUtil memoryUtil;
+
+	static constexpr float HFOV = 90;
 };
