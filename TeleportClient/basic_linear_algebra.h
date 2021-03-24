@@ -9,10 +9,12 @@ namespace scr
 {
 	//CONSTANTS
 
-	const float PI = 3.1415926535f;
-	const float TAU = 2.0f * PI;
-	const float HALF_PI = 0.5f * PI;
-
+	constexpr float PI = 3.1415926535f;
+	constexpr float TAU = 2.0f * PI;
+	constexpr float HALF_PI = 0.5f * PI;
+	constexpr float DEG_TO_RAD = PI / 180.f;
+	constexpr float RAD_TO_DEG = 180.f / PI;
+	
 	//FORWARD DECLARATIONS
 
 	struct quat;
@@ -584,4 +586,11 @@ namespace scr
 	{
 		int32_t x, y, z, w;
 	};
+
+	/** Returns vertical FOV. FOV values in radians. */
+	inline float GetVerticalFOVFromHorizontal(float horizontal, float aspect)
+	{
+		// = 2 * arctan(tan(H / 2) * aspectratio)
+		return 2 * std::atanf(tanf(horizontal * 0.5f) * aspect);
+	}
 }

@@ -723,7 +723,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.video_height			= encoderSettings.frameHeight;
 	videoConfig.depth_height			= encoderSettings.depthHeight;
 	videoConfig.depth_width				= encoderSettings.depthWidth;
-	videoConfig.perspectiveFOV			= casterSettings.perspectiveFOV;
+	videoConfig.perspective_fov			= casterSettings.perspectiveFOV;
 	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
 	videoConfig.colour_cubemap_size		= encoderSettings.frameWidth / 3;
@@ -1048,7 +1048,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.video_height = encoderSettings.frameHeight;
 	videoConfig.depth_height = encoderSettings.depthHeight;
 	videoConfig.depth_width = encoderSettings.depthWidth;
-	videoConfig.perspectiveFOV = casterSettings.perspectiveFOV;
+	videoConfig.perspective_fov = casterSettings.perspectiveFOV;
 	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
 	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;

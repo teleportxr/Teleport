@@ -154,11 +154,16 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	camera.SetPositionAsXYZ(0.f,0.f,5.f);
 	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
 	camera.LookInDirection(look,up);
-	camera.SetHorizontalFieldOfViewDegrees(90.f);
+
+	camera.SetHorizontalFieldOfViewDegrees(HFOV);
 
 	// Automatic vertical fov - depends on window shape:
 	camera.SetVerticalFieldOfViewDegrees(0.f);
 	
+	const float aspect = hdrFramebuffer->GetWidth() / hdrFramebuffer->GetHeight();
+	cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
+	cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+
 	crossplatform::CameraViewStruct vs;
 	vs.exposure=1.f;
 	vs.farZ=3000.f;
@@ -239,6 +244,9 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 		hdrFramebuffer->SetWidthAndHeight(W,H);
 		hdrFramebuffer->SetAntialiasing(1);
 	}
+	const float aspect = W / H;
+	cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
+	cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 }
 
 base::DefaultProfiler cpuProfiler;
@@ -436,7 +444,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				{
 					int W = videoTexture->width;
 					int H = videoTexture->length;
-					tagData2DBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagData2DBuffer"));
 					cubemapConstants.sourceOffset = int2(0, 0);
 					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
 					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
@@ -451,9 +458,20 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				}
 				if (!show_video)
 				{
-					int W = hdrFramebuffer->GetWidth();
-					int H = hdrFramebuffer->GetHeight();
-					renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, videoTexture);
+					tagData2DBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagData2DBuffer"));
+					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
+					cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.position) - videoPos;
+					cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.position);
+					cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+					cubemapClearEffect->SetTexture(deviceContext, "perspectiveTexture", videoTexture);
+
+					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+					cubemapClearEffect->Apply(deviceContext, "use_perspective", 0);
+					renderPlatform->DrawQuad(deviceContext);
+					cubemapClearEffect->Unapply(deviceContext);
+					cubemapClearEffect->UnbindTextures(deviceContext);
 				}
 			}
 			// We must deactivate the depth buffer here, in order to use it as a texture:
@@ -1107,6 +1125,8 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d\n", setupCommand.port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
+
+
 	videoPosDecoded=false;
 
 	videoTagData2DArray.clear();
@@ -1182,17 +1202,19 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 		specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.specular_cubemap_size, videoConfig.specular_cubemap_size, 1, videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-		lightingCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.light_cubemap_size, videoConfig.light_cubemap_size, 1, 1,
-			crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 		diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.diffuse_cubemap_size, videoConfig.diffuse_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, 1920, 1080, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, stream_width, stream_height - 4, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
-	
+
+	const float aspect = setupCommand.video_config.video_width / setupCommand.video_config.video_height;
+	cubemapConstants.horizFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
+	cubemapConstants.vertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
@@ -1311,7 +1333,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, stream_width, stream_height, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.video_width, videoConfig.video_height - 4, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 
