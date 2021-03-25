@@ -54,22 +54,6 @@ namespace scr
 		DRAW_BIT	= 0x00000040
 	};
 
-	struct SceneCapture2DTagData
-	{
-#ifndef __ANDROID__
-#pragma pack(push, 1)
-#endif
-		uint32_t id;
-		avs::Transform cameraTransform;
-#ifndef __ANDROID__
-#pragma pack(pop)
-#endif
-	}
-#ifdef __ANDROID__
-	__attribute__((packed))
-#endif
-		;
-
 	// Taken from Unity
 	enum class LightType : char
 	{

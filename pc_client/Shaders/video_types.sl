@@ -52,13 +52,6 @@ struct LightTag
 	float radius;
 };
 
-struct VideoTagData2D
-{
-	vec3 cameraPosition;
-	int pad;
-	vec4 cameraRotation;
-};
-
 struct VideoTagDataCube
 {
 	vec3 cameraPosition;

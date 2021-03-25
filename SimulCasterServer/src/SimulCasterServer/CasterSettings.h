@@ -40,8 +40,8 @@ namespace SCServer
 		bool use10BitEncoding;
 		bool useYUV444Decoding;
 		bool usePerspectiveRendering;
-		int32_t sceneCaptureWidth;
-		int32_t sceneCaptureHeight;
+		int32_t perspectiveWidth;
+		int32_t perspectiveHeight;
 		float perspectiveFOV;
 		bool useDynamicQuality;
 		int32_t bandwidthCalculationInterval;

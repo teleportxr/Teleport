@@ -140,41 +140,23 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		mTagDataIDBuffer->Create(&shaderStorageBufferCreateInfo);
 	}
 
-	if (mIsCubemapVideo)
-	{
-		// Tag Data Cube Buffer
-		VideoTagDataCube shaderTagDataCubeArray[MAX_TAG_DATA_COUNT];
-		shaderTagDataCubeArray[0].cameraPosition.x = 1.0f;
-		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo tagBufferCreateInfo = {
-				1, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
-				, (void *) nullptr
-		};
-		globalGraphicsResources.mTagDataBuffer->Create(&tagBufferCreateInfo);
 
-		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
-				2, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
-																	 * MAX_TAG_DATA_COUNT
-				, (void *) &shaderTagDataCubeArray
-		};
-		mTagDataArrayBuffer->Create(&arrayBufferCreateInfo);
-	}
-	else
-	{
-		// Tag Data 2D Buffer
-		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo tagBufferCreateInfo = {
-				1, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagData2D)
-				, (void *) nullptr
-		};
-		globalGraphicsResources.mTagDataBuffer->Create(&tagBufferCreateInfo);
-		VideoTagData2D shaderTagData2DArray[MAX_TAG_DATA_COUNT];
-		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
-				2, scr::ShaderStorageBuffer::Access::NONE, sizeof(VideoTagData2D)
-														   * MAX_TAG_DATA_COUNT
-				, (void *) &shaderTagData2DArray
-		};
-		mTagDataArrayBuffer->Create(&arrayBufferCreateInfo);
+	// Tag Data Cube Buffer
+	VideoTagDataCube shaderTagDataCubeArray[MAX_TAG_DATA_COUNT];
+	shaderTagDataCubeArray[0].cameraPosition.x = 1.0f;
+	scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo tagBufferCreateInfo = {
+			1, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
+			, (void *) nullptr
+	};
+	globalGraphicsResources.mTagDataBuffer->Create(&tagBufferCreateInfo);
 
-	}
+	scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
+			2, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
+																 * MAX_TAG_DATA_COUNT
+			, (void *) &shaderTagDataCubeArray
+	};
+	mTagDataArrayBuffer->Create(&arrayBufferCreateInfo);
+
 
 	{
 		CopyCubemapSrc = clientAppInterface->LoadTextFile("shaders/CopyCubemap.comp");
@@ -457,52 +439,32 @@ void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
 
 void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 {
-	if (lastSetupCommand.video_config.use_cubemap)
+	scr::SceneCaptureCubeTagData tagData;
+	memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+	avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle,
+						  tagData.coreData.cameraTransform);
+
+	tagData.lights.resize(std::min(tagData.coreData.lightCount, (uint32_t) 4));
+
+	// Aidan : View and proj matrices are currently unchanged from Unity
+	size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
+	for (auto &light : tagData.lights)
 	{
-		scr::SceneCaptureCubeTagData tagData;
-		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+		memcpy(&light, &data[index], sizeof(scr::LightTagData));
 		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle,
-							  tagData.coreData.cameraTransform);
-
-		tagData.lights.resize(std::min(tagData.coreData.lightCount, (uint32_t) 4));
-
-		// Aidan : View and proj matrices are currently unchanged from Unity
-		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
-		for (auto &light : tagData.lights)
-		{
-			memcpy(&light, &data[index], sizeof(scr::LightTagData));
-			avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle,
-								  light.worldTransform);
-			index += sizeof(scr::LightTagData);
-		}
-
-		VideoTagDataCube shaderData;
-		shaderData.cameraPosition = tagData.coreData.cameraTransform.position;
-		shaderData.cameraRotation = tagData.coreData.cameraTransform.rotation;
-		shaderData.lightCount = tagData.lights.size();
-
-		uint32_t offset = sizeof(VideoTagDataCube) * tagData.coreData.id;
-		mTagDataArrayBuffer->Update(sizeof(VideoTagDataCube), (void *) &shaderData, offset);
-
-		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
+							  light.worldTransform);
+		index += sizeof(scr::LightTagData);
 	}
-	else
-	{
-		scr::SceneCapture2DTagData tagData;
-		memcpy(&tagData, data, dataSize);
-		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle,
-							  tagData.cameraTransform);
 
-		VideoTagData2D shaderData;
-		shaderData.cameraPosition = tagData.cameraTransform.position;
-		shaderData.lightCount = 0;//tagData.lights.size();
-		shaderData.cameraRotation = tagData.cameraTransform.rotation;
+	VideoTagDataCube shaderData;
+	shaderData.cameraPosition = tagData.coreData.cameraTransform.position;
+	shaderData.cameraRotation = tagData.coreData.cameraTransform.rotation;
+	shaderData.lightCount = tagData.lights.size();
 
-		uint32_t offset = sizeof(VideoTagData2D) * tagData.id;
-	//	mTagDataBuffer->Update(sizeof(VideoTagData2D), (void *) &shaderData, offset);
+	uint32_t offset = sizeof(VideoTagDataCube) * tagData.coreData.id;
+	mTagDataArrayBuffer->Update(sizeof(VideoTagDataCube), (void *) &shaderData, offset);
 
-		mVideoTagData2DArray[tagData.id] = std::move(tagData);
-	}
+	videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
 }
 
 void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
@@ -624,88 +586,70 @@ void ClientRenderer::UpdateTagDataBuffers()
 	// TODO: too slow.
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto &cachedLights = resourceManagers->mLightManager.GetCache(cacheLock);
-	if (lastSetupCommand.video_config.use_cubemap)
+	VideoTagDataCube *data = static_cast<VideoTagDataCube *>(mTagDataArrayBuffer->Map());
+	if (data)
 	{
-		VideoTagDataCube *data = static_cast<VideoTagDataCube *>(mTagDataArrayBuffer->Map());
-		if (data)
+		//VideoTagDataCube &data=*pdata;
+		for (size_t i = 0; i < videoTagDataCubeArray.size(); ++i)
 		{
-			//VideoTagDataCube &data=*pdata;
-			for (size_t i = 0; i < videoTagDataCubeArray.size(); ++i)
-			{
-				const auto &td = videoTagDataCubeArray[i];
-				const auto &pos = td.coreData.cameraTransform.position;
-				const auto &rot = td.coreData.cameraTransform.rotation;
-
-				data[i].cameraPosition = {pos.x, pos.y, pos.z};
-				data[i].cameraRotation = {rot.x, rot.y, rot.z, rot.w};
-				data[i].lightCount = td.lights.size();
-				for (size_t j = 0; j < td.lights.size(); j++)
-				{
-					LightTag &t = data[i].lightTags[j];
-					const scr::LightTagData &l = td.lights[j];
-					t.uid32 = (unsigned) (((uint64_t) 0xFFFFFFFF) & l.uid);
-					t.colour = *((avs::vec4 *) &l.color);
-					// Convert from +-1 to [0,1]
-					t.shadowTexCoordOffset.x = float(l.texturePosition[0])
-											   / float(lastSetupCommand.video_config.video_width);
-					t.shadowTexCoordOffset.y = float(l.texturePosition[1])
-											   / float(lastSetupCommand.video_config.video_height);
-					t.shadowTexCoordScale.x =
-							float(l.textureSize) / float(lastSetupCommand.video_config.video_width);
-					t.shadowTexCoordScale.y = float(l.textureSize)
-											  / float(lastSetupCommand.video_config.video_height);
-					// Because tag data is NOT properly transformed in advance yet:
-					avs::vec3 position = l.position;
-					avs::vec4 orientation = l.orientation;
-					avs::ConvertPosition(lastSetupCommand.axesStandard,
-										 avs::AxesStandard::EngineeringStyle, position);
-					avs::ConvertRotation(lastSetupCommand.axesStandard,
-										 avs::AxesStandard::EngineeringStyle, orientation);
-					t.position = *((avs::vec3 *) &position);
-					ovrQuatf q = {orientation.x, orientation.y, orientation.z, orientation.w};
-					avs::vec3 z = {0, 0, 1.0f};
-					t.direction = QuaternionTimesVector(q, z);
-					scr::mat4 worldToShadowMatrix = scr::mat4(
-							(const float *) &l.worldToShadowMatrix);
-
-					t.worldToShadowMatrix = *((ovrMatrix4f *) &worldToShadowMatrix);
-
-					const auto &nodeLight = cachedLights.find(l.uid);
-					if (nodeLight != cachedLights.end())
-					{
-						auto *lightData = nodeLight->second.resource->GetLightData();
-						if (lightData)
-						{
-							t.is_spot = lightData->is_spot;
-							t.is_point = lightData->is_point;
-							t.radius = lightData->radius;
-							t.shadow_strength = 0.0f;
-						}
-						else
-						{
-							OVR_WARN("No matching cached light with ID %" PRIu64 ".", l.uid);
-						}
-
-					}
-				}
-			}
-			mTagDataArrayBuffer->Unmap();
-		}
-		//mTagDataArrayBuffer->Update(32*sizeof(VideoTagDataCube),data,0);
-	}
-	else
-	{
-		VideoTagData2D data[MAX_TAG_DATA_COUNT];
-		for (size_t i = 0; i < mVideoTagData2DArray.size(); ++i)
-		{
-			const auto &td = mVideoTagData2DArray[i];
-			const auto &pos = td.cameraTransform.position;
-			const auto &rot = td.cameraTransform.rotation;
+			const auto &td = videoTagDataCubeArray[i];
+			const auto &pos = td.coreData.cameraTransform.position;
+			const auto &rot = td.coreData.cameraTransform.rotation;
 
 			data[i].cameraPosition = {pos.x, pos.y, pos.z};
 			data[i].cameraRotation = {rot.x, rot.y, rot.z, rot.w};
+			data[i].lightCount = td.lights.size();
+			for (size_t j = 0; j < td.lights.size(); j++)
+			{
+				LightTag &t = data[i].lightTags[j];
+				const scr::LightTagData &l = td.lights[j];
+				t.uid32 = (unsigned) (((uint64_t) 0xFFFFFFFF) & l.uid);
+				t.colour = *((avs::vec4 *) &l.color);
+				// Convert from +-1 to [0,1]
+				t.shadowTexCoordOffset.x = float(l.texturePosition[0])
+										   / float(lastSetupCommand.video_config.video_width);
+				t.shadowTexCoordOffset.y = float(l.texturePosition[1])
+										   / float(lastSetupCommand.video_config.video_height);
+				t.shadowTexCoordScale.x =
+						float(l.textureSize) / float(lastSetupCommand.video_config.video_width);
+				t.shadowTexCoordScale.y = float(l.textureSize)
+										  / float(lastSetupCommand.video_config.video_height);
+				// Because tag data is NOT properly transformed in advance yet:
+				avs::vec3 position = l.position;
+				avs::vec4 orientation = l.orientation;
+				avs::ConvertPosition(lastSetupCommand.axesStandard,
+									 avs::AxesStandard::EngineeringStyle, position);
+				avs::ConvertRotation(lastSetupCommand.axesStandard,
+									 avs::AxesStandard::EngineeringStyle, orientation);
+				t.position = *((avs::vec3 *) &position);
+				ovrQuatf q = {orientation.x, orientation.y, orientation.z, orientation.w};
+				avs::vec3 z = {0, 0, 1.0f};
+				t.direction = QuaternionTimesVector(q, z);
+				scr::mat4 worldToShadowMatrix = scr::mat4(
+						(const float *) &l.worldToShadowMatrix);
+
+				t.worldToShadowMatrix = *((ovrMatrix4f *) &worldToShadowMatrix);
+
+				const auto &nodeLight = cachedLights.find(l.uid);
+				if (nodeLight != cachedLights.end())
+				{
+					auto *lightData = nodeLight->second.resource->GetLightData();
+					if (lightData)
+					{
+						t.is_spot = lightData->is_spot;
+						t.is_point = lightData->is_point;
+						t.radius = lightData->radius;
+						t.shadow_strength = 0.0f;
+					}
+					else
+					{
+						OVR_WARN("No matching cached light with ID %" PRIu64 ".", l.uid);
+					}
+
+				}
+			}
 		}
-		//tagData2DBuffer.SetData(deviceContext, data);
+		mTagDataArrayBuffer->Unmap();
 	}
 }
 

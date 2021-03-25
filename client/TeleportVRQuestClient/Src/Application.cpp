@@ -568,8 +568,6 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 
 		mPipeline.add(&clientRenderer.mNetworkSource);
 
-		clientRenderer.mVideoTagData2DArray.clear();
-		clientRenderer.mVideoTagData2DArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
 		clientRenderer.videoTagDataCubeArray.clear();
 		clientRenderer.videoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
 

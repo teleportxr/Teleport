@@ -102,18 +102,16 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 	simul::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
 	simul::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
-	simul::crossplatform::StructuredBuffer<VideoTagData2D> tagData2DBuffer;
 	simul::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 	simul::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
-	simul::crossplatform::Texture *diffuseCubemapTexture;
-	simul::crossplatform::Texture *specularCubemapTexture;
+	simul::crossplatform::Texture* diffuseCubemapTexture;
+	simul::crossplatform::Texture* specularCubemapTexture;
 	simul::crossplatform::Texture* lightingCubemapTexture;
 	simul::crossplatform::Texture* videoTexture;
 
 	static constexpr int maxTagDataSize = 32;
 	VideoTagDataCube videoTagDataCube[maxTagDataSize];
 
-	std::vector<scr::SceneCapture2DTagData> videoTagData2DArray;
 	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	/// A camera instance to generate view and proj matrices and handle mouse control.

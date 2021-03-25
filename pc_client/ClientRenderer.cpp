@@ -193,7 +193,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
 	cameraConstants.RestoreDeviceObjects(renderPlatform); 
 	tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
-	tagData2DBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
 	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
 	lightsBuffer.RestoreDeviceObjects(renderPlatform,10,false,true);
 	boneMatrices.RestoreDeviceObjects(renderPlatform);
@@ -382,17 +381,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				{	
 					int tagDataID = videoIDBuffer[0].x;	
 
-					if (videoTexture->IsCubemap())
-					{
-						const auto& ct = videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
-						videoPos = vec3(ct.position.x, ct.position.y, ct.position.z);
-					}
-					else
-					{
-						const auto& ct = videoTagData2DArray[tagDataID].cameraTransform;
-						videoPos = vec3(ct.position.x, ct.position.y, ct.position.z);
-					}
-
+					const auto& ct = videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
+					videoPos = vec3(ct.position.x, ct.position.y, ct.position.z);
+					
 					videoPosDecoded = true;
 				}
 				tagDataIDBuffer.CloseReadBuffer(deviceContext);
@@ -458,7 +449,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				}
 				if (!show_video)
 				{
-					tagData2DBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagData2DBuffer"));
+					tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
 					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
 					cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.position) - videoPos;
 					cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.position);
@@ -547,8 +538,8 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 
 			videoTagDataCube[i].cameraPosition = { pos.x, pos.y, pos.z };
 			videoTagDataCube[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
-			videoTagDataCube[i].lightCount=td.lights.size();
-			if(td.lights.size()>10)
+			videoTagDataCube[i].lightCount = td.lights.size();
+			if(td.lights.size() > 10)
 			{
 				SCR_CERR_BREAK("Too many lights in tag.",10);
 			}
@@ -563,11 +554,9 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
 				t.shadowTexCoordScale.x=float(l.textureSize)/float(lastSetupCommand.video_config.video_width);
 				t.shadowTexCoordScale.y=float(l.textureSize)/float(lastSetupCommand.video_config.video_height);
-				// Because tag data is NOW properly transformed in advance :
+				// Tag data has been properly transformed in advance:
 				avs::vec3 position		=l.position;
 				avs::vec4 orientation	=l.orientation;
-				//avs::ConvertPosition(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, position);
-				//avs::ConvertRotation(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, orientation);
 				t.position=*((vec3*)&position);
 				crossplatform::Quaternionf q((const float*)&orientation);
 				t.direction=q*vec3(0,0,1.0f);
@@ -590,20 +579,6 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 			}
 		}	
 		tagDataCubeBuffer.SetData(deviceContext, videoTagDataCube);
-	}
-	else
-	{
-		VideoTagData2D data[maxTagDataSize];
-		for (int i = 0; i < videoTagData2DArray.size(); ++i)
-		{
-			const auto& td = videoTagData2DArray[i];
-			const auto& pos = td.cameraTransform.position;
-			const auto& rot = td.cameraTransform.rotation;
-
-			data[i].cameraPosition = { pos.x, pos.y, pos.z };
-			data[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
-		}
-		tagData2DBuffer.SetData(deviceContext, data);
 	}
 }
 
@@ -1129,8 +1104,6 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	videoPosDecoded=false;
 
-	videoTagData2DArray.clear();
-	videoTagData2DArray.resize(maxTagDataSize);
 	videoTagDataCubeArray.clear();
 	videoTagDataCubeArray.resize(maxTagDataSize);
 
@@ -1368,44 +1341,34 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 
 void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 {
-	if (lastSetupCommand.video_config.use_cubemap)
+	scr::SceneCaptureCubeTagData tagData;
+	memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+	avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.coreData.cameraTransform);
+
+	tagData.lights.resize(tagData.coreData.lightCount);
+
+	// We will check the received light tags agains the current list of lights - rough and temporary.
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	/*
+	Roderick: we will here ignore the cached lights (CPU-streamed node lights) as they are unordered so may be found in a different order
+		to the tag lights. ALL light data will go into the tags, using uid lookup to get any needed data from the unordered cache.
+	auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+	auto &cachedLight=cachedLights.begin();*/
+	////
+
+	size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
+	for (auto& light : tagData.lights)
 	{
-		scr::SceneCaptureCubeTagData tagData;
-		memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
-		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.coreData.cameraTransform);
-
-		tagData.lights.resize(tagData.coreData.lightCount);
-
-		// We will check the received light tags agains the current list of lights - rough and temporary.
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		/*
-		Roderick: we will here ignore the cached lights (CPU-streamed node lights) as they are unordered so may be found in a different order
-			to the tag lights. ALL light data will go into the tags, using uid lookup to get any needed data from the unordered cache.
-		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
-		auto &cachedLight=cachedLights.begin();*/
-		////
-
-		size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
-		for (auto& light : tagData.lights)
-		{
-			memcpy(&light, &data[index], sizeof(scr::LightTagData));
-			//avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
-			index += sizeof(scr::LightTagData);
-		}
-		if(tagData.coreData.id>= videoTagDataCubeArray.size())
-		{
-			SCR_CERR_BREAK("Bad tag id",1);
-			return;
-		}
-		videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
+		memcpy(&light, &data[index], sizeof(scr::LightTagData));
+		//avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
+		index += sizeof(scr::LightTagData);
 	}
-	else
+	if(tagData.coreData.id>= videoTagDataCubeArray.size())
 	{
-		scr::SceneCapture2DTagData tagData;
-		memcpy(&tagData, data, dataSize);
-		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.cameraTransform);
-		videoTagData2DArray[tagData.id] = std::move(tagData);
+		SCR_CERR_BREAK("Bad tag id",1);
+		return;
 	}
+	videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
 }
 
 bool ClientRenderer::OnNodeEnteredBounds(avs::uid id)

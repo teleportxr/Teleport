@@ -689,16 +689,18 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	SCServer::CasterEncoderSettings encoderSettings;
 	if (casterSettings.usePerspectiveRendering)
 	{
-		encoderSettings.frameWidth = casterSettings.sceneCaptureWidth;
-		encoderSettings.frameHeight = casterSettings.sceneCaptureHeight;
+		encoderSettings.frameWidth = casterSettings.perspectiveWidth;
+		encoderSettings.frameHeight = casterSettings.perspectiveHeight * 1.5f;
+		encoderSettings.depthWidth = casterSettings.perspectiveWidth * 0.5f;
+		encoderSettings.depthHeight = casterSettings.perspectiveHeight * 0.5f;
 	}
 	else
 	{
 		encoderSettings.frameWidth = static_cast<int32_t>(casterSettings.captureCubeSize * 3);
 		encoderSettings.frameHeight = static_cast<int32_t>(casterSettings.captureCubeSize * 3);
+		encoderSettings.depthWidth = casterSettings.captureCubeSize * 1.5f;
+		encoderSettings.depthHeight = casterSettings.captureCubeSize;
 	}
-	encoderSettings.depthWidth = 0; // not used
-	encoderSettings.depthHeight = 0; // not used
 	encoderSettings.wllWriteDepthTexture = false;
 	encoderSettings.enableStackDepth = true;
 	encoderSettings.enableDecomposeCube = true;
@@ -723,6 +725,8 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.video_height			= encoderSettings.frameHeight;
 	videoConfig.depth_height			= encoderSettings.depthHeight;
 	videoConfig.depth_width				= encoderSettings.depthWidth;
+	videoConfig.perspective_width       = casterSettings.perspectiveWidth;
+	videoConfig.perspective_height      = casterSettings.perspectiveHeight;
 	videoConfig.perspective_fov			= casterSettings.perspectiveFOV;
 	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
@@ -1048,6 +1052,8 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.video_height = encoderSettings.frameHeight;
 	videoConfig.depth_height = encoderSettings.depthHeight;
 	videoConfig.depth_width = encoderSettings.depthWidth;
+	videoConfig.perspective_width = casterSettings.perspectiveWidth;
+	videoConfig.perspective_height = casterSettings.perspectiveHeight;
 	videoConfig.perspective_fov = casterSettings.perspectiveFOV;
 	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;

@@ -154,7 +154,6 @@ public:
 	std::shared_ptr<scr::UniformBuffer> mVideoUB;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataIDBuffer;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
-	//std::vector<scr::ShaderResource>    mCubemapComputeShaderResources;
 	scr::ShaderResource				    mColourAndDepthShaderResources;
 	scr::ShaderResource				    mCopyCubemapShaderResources;
 	scr::ShaderResource				    mExtractTagShaderResources;
@@ -163,7 +162,6 @@ public:
 	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;
 	std::shared_ptr<scr::Effect>        mExtractOneTagEffect;
 
-	std::vector<scr::SceneCapture2DTagData> mVideoTagData2DArray;
 	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	std::vector<std::string> passNames;
