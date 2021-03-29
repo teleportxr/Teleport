@@ -3,6 +3,7 @@
 #define CUBEMAP_CONSTANTS_SL
 
 SIMUL_CONSTANT_BUFFER(CubemapConstants, 4)
+uniform mat4 serverProj;
 uniform vec3 offsetFromVideo;
 uniform int _pad1;
 uniform vec3 cameraPosition;
@@ -11,12 +12,16 @@ uniform vec4 cameraRotation;
 uniform vec4 depthOffsetScale;
 uniform int2 sourceOffset;
 uniform int targetSize;
-uniform float horizFOV;
-uniform float vertFOV;
-uniform float localHorizFOV;
-uniform float localVertFOV;
 
 SIMUL_CONSTANT_BUFFER_END
 
+#ifndef __cplusplus
+struct posTexVertexOutputPersp
+{
+	vec4 hPosition		: SV_POSITION;
+	vec2 texCoords		: TEXCOORD0;	
+	vec2 perspectiveUV	: TEXCOORD1;
+};
+#endif
 
 #endif

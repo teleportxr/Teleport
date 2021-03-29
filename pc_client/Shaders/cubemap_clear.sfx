@@ -78,22 +78,61 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	return  lookup;//+0.1*vec4(lookup.aaa,0);
 }
 
+posTexVertexOutputPersp VS_UsePerspective(idOnly IN)
+{
+	posTexVertexOutputPersp OUT;
+	vec2 poss[4];
+	poss[0]=vec2( 1.0,-1.0);
+	poss[1]=vec2( 1.0, 1.0);
+	poss[2]=vec2(-1.0,-1.0);
+	poss[3]=vec2(-1.0, 1.0);
+	vec2 pos		=poss[IN.vertex_id];
+	OUT.hPosition	=vec4(pos,0.0,1.0);
+	OUT.hPosition.z	=0.0;
+	OUT.texCoords	=0.5*(vec2(1.0,1.0)+vec2(pos.x,-pos.y));
+	
+	int id = int(TagDataIDBuffer[0].x);
+	VideoTagDataCube tagData = TagDataCubeBuffer[id];
+
+	// Perspective
+	vec3 vec = -ClipPosToView(pos);
+
+	// Transform to view space of server
+	vec = rotate_by_quaternion(tagData.cameraRotation, vec);
+	//vec3 offsetFromVideo = cameraPosition - tagData.cameraPosition;
+	vec -= normalize(tagData.cameraPosition);
+
+	// Change to clip space space of server
+	vec4 clip_pos = vec4(vec, 1.0);
+	clip_pos = mul(clip_pos, serverProj);
+
+	vec = clip_pos.xyz;
+
+	// Move to NDC space
+	if (clip_pos.w != 0)
+	{
+		vec /= clip_pos.w;
+	}
+
+	// Finally, convert to screen space
+	OUT.perspectiveUV = 0.5 * (vec2(1.0, 1.0) + vec2(vec.x,-vec.y));
+
+#ifdef SFX_OPENGL
+	OUT.texCoords.y =1.0 - OUT.texCoords.y;
+	OUT.perspectiveUV.y =1.0 - OUT.perspectiveUV.y;
+#endif
+
+	return OUT;
+}
+
 //Get the uv of the texture.
 //rotate with z = 1 by the client quaternion (normalize) 
 //Do reverse process of quaternion at angle was taken in
 //Gives uv for lookup in the video texture 
 //Take half FOV on both axes and get tangent of that and that is the range
-shader vec4 PS_UsePerspective(posTexVertexOutput IN) : SV_TARGET
+shader vec4 PS_UsePerspective(posTexVertexOutputPersp IN) : SV_TARGET
 {
-	int id = int(TagDataIDBuffer[0].x);
-	VideoTagDataCube tagData = TagDataCubeBuffer[id];
-	vec4 invQuat = quat_conj(tagData.cameraRotation);
-	vec3 uv = rotate_by_quaternion(invQuat, vec3(IN.texCoords.xy, 0));
-	uv = rotate_by_quaternion(cameraRotation, uv);
-	
-	//vec3 offsetFromVideo = cameraPosition - tagData.cameraPosition;
-	
-	vec4 lookup = perspectiveTexture.SampleLevel(wrapSamplerState, IN.texCoords, 0);
+	vec4 lookup = perspectiveTexture.SampleLevel(wrapSamplerState, IN.perspectiveUV, 0);
 	return lookup;
 }
 
@@ -173,9 +212,7 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 
 	float d = dot(lookupDepth, dMask);
 	// Aidan: RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder. 
-	SceneColor.r *= SceneColor.r;
-	SceneColor.g *= SceneColor.g;
-	SceneColor.b *= SceneColor.b;
+	SceneColor.rgb *= SceneColor.rgb;
 	SceneColor.a = d;
 	RWTextureTargetArray[pos] = SceneColor;// float4(SceneColor.rgba);
 }
@@ -238,7 +275,7 @@ technique use_perspective
 		SetDepthStencilState( DisableDepth, 0 );
 		SetBlendState(DontBlend,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
         SetGeometryShader(NULL);
-		SetVertexShader(vs);
+		SetVertexShader(CompileShader(vs_5_0, VS_UsePerspective()));
 		SetPixelShader(CompileShader(ps_5_0, PS_UsePerspective()));
     }
 }

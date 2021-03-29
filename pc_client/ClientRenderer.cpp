@@ -160,9 +160,9 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	// Automatic vertical fov - depends on window shape:
 	camera.SetVerticalFieldOfViewDegrees(0.f);
 	
-	const float aspect = hdrFramebuffer->GetWidth() / hdrFramebuffer->GetHeight();
-	cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
-	cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+	//const float aspect = hdrFramebuffer->GetWidth() / hdrFramebuffer->GetHeight();
+	//cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
+	//cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 
 	crossplatform::CameraViewStruct vs;
 	vs.exposure=1.f;
@@ -243,9 +243,9 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 		hdrFramebuffer->SetWidthAndHeight(W,H);
 		hdrFramebuffer->SetAntialiasing(1);
 	}
-	const float aspect = W / H;
-	cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
-	cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+	//const float aspect = W / H;
+	//cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
+	//cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 }
 
 base::DefaultProfiler cpuProfiler;
@@ -1180,13 +1180,15 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, stream_width, stream_height - 4, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 
-	const float aspect = setupCommand.video_config.video_width / setupCommand.video_config.video_height;
-	cubemapConstants.horizFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
-	cubemapConstants.vertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+	const float aspect = setupCommand.video_config.perspective_width / setupCommand.video_config.perspective_height;
+	const float horzFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
+	const float vertFOV = scr::GetVerticalFOVFromHorizontal(horzFOV, aspect);
+
+	cubemapConstants.serverProj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(horzFOV, vertFOV, videoConfig.nearClipPlane, 0);
 
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
@@ -1306,7 +1308,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.video_width, videoConfig.video_height - 4, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.video_width, videoConfig.video_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 

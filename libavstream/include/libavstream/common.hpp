@@ -917,6 +917,7 @@ namespace avs
 		uint32_t	perspective_width = 0;
 		uint32_t	perspective_height = 0;
 		float perspective_fov = 110;
+		float nearClipPlane = 0.5f;
 		uint32_t    use_10_bit_decoding = 0;
 		uint32_t    use_yuv_444_decoding = 0;
 		uint32_t	colour_cubemap_size = 0;
