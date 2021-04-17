@@ -133,7 +133,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
 	
 	scr::ResourceManagers resourceManagers;
-	void Recompose(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
+	
 	bool show_video = false;
 	bool renderPlayer = true; //Whether to render the player.
 
@@ -263,6 +263,9 @@ private:
 	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+	void RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique);
+	void RenderVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const simul::math::Matrix4x4& invCamMatrix);
+	void RecomposeCubemap(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 
 	const PC_MemoryUtil memoryUtil;
 

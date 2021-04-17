@@ -275,26 +275,6 @@ void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 	}
 }
 
-void ClientRenderer::Recompose(simul::crossplatform::GraphicsDeviceContext &deviceContext, simul::crossplatform::Texture *srcTexture, simul::crossplatform::Texture* targetTexture, int mips,int2 sourceOffset)
-{
-	cubemapConstants.sourceOffset = sourceOffset ;
-	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
-	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-	cubemapConstants.targetSize = targetTexture->width;
-	for (int m = 0; m < mips; m++)
-	{
-		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, m);
-		cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-		cubemapClearEffect->Apply(deviceContext, "recompose", 0);
-		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
-		cubemapClearEffect->Unapply(deviceContext);
-		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize;
-		cubemapConstants.targetSize /= 2;
-	}
-	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
-	cubemapClearEffect->UnbindTextures(deviceContext);
-}
-
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
 {
 	simul::crossplatform::GraphicsDeviceContext	deviceContext;
@@ -346,11 +326,14 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		simul::geometry::SimulOrientation	globalOrientation;
 		// global pos/orientation:
 		globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.position);
+		//globalOrientation.SetPosition({ 0,0,0 });
 		simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(-1.f, 0.0f, 0.0f));
 		simul::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.orientation;
+		//simul::math::Quaternion q_rel = (const float*)&vec4(0,0,0,1);
 		auto q_rel=q1/q0;
 		globalOrientation.SetOrientation(q_rel);
-		deviceContext.viewStruct.view =globalOrientation.GetInverseMatrix().RowPointer(0);
+		deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
+	
 		float aspect = (float)viewport.w / (float)viewport.h;
 		if (reverseDepth)
 			deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
@@ -393,78 +376,21 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 
 			if (videoTexture->IsCubemap())
 			{
-				int W = videoTexture->width;
-				{
-					cubemapConstants.sourceOffset = int2(0, 2 * W);
-					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-					cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoTexture);
-					tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataIDBuffer"));
-				
-					cubemapClearEffect->Apply(deviceContext, "recompose_with_depth_alpha", 0);
-					renderPlatform->DispatchCompute(deviceContext, W / 16, W / 16, 6);
-					cubemapClearEffect->Unapply(deviceContext);
-					cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
-					cubemapClearEffect->UnbindTextures(deviceContext);
-				}
-				int2 sourceOffset(3 * W / 2, 2 * W);
-				Recompose(deviceContext, ti->texture, diffuseCubemapTexture			, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x,videoConfig.diffuse_y));
-				Recompose(deviceContext, ti->texture, specularCubemapTexture		, specularCubemapTexture->mips, int2(videoConfig.specular_x,videoConfig.specular_y));
-				Recompose(deviceContext, ti->texture, lightingCubemapTexture		, lightingCubemapTexture->mips, int2(videoConfig.light_x,videoConfig.light_y));
-				{
-					tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
-					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-					cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.position)- videoPos;
-					cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.position);
-					cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-					cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", videoTexture);
-					
-					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-					cubemapClearEffect->Apply(deviceContext, "use_cubemap", 0);
-					renderPlatform->DrawQuad(deviceContext);
-					cubemapClearEffect->Unapply(deviceContext);
-					cubemapClearEffect->UnbindTextures(deviceContext);
-				}
-				RenderLocalNodes(deviceContext);
+				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, "recompose_with_depth_alpha");
+				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
+				RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x,videoConfig.diffuse_y));
+				RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x,videoConfig.specular_y));
+				RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x,videoConfig.light_y));
 			}
 			else
-			{
-				{
-					int W = videoTexture->width;
-					int H = videoTexture->length;
-					cubemapConstants.sourceOffset = int2(0, 0);
-					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-					cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", videoTexture);
-
-					cubemapClearEffect->Apply(deviceContext, "recompose_perspective", 0);
-					renderPlatform->DispatchCompute(deviceContext, W / 16, H / 16, 1);
-					cubemapClearEffect->Unapply(deviceContext);
-					cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
-					cubemapClearEffect->UnbindTextures(deviceContext);
-				}
-				if (!show_video)
-				{
-					tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
-					cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-					cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.position) - videoPos;
-					cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.position);
-					cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-					cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-					cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-					cubemapClearEffect->SetTexture(deviceContext, "perspectiveTexture", videoTexture);
-
-					cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
-					cubemapClearEffect->Apply(deviceContext, "use_perspective", 0);
-					renderPlatform->DrawQuad(deviceContext);
-					cubemapClearEffect->Unapply(deviceContext);
-					cubemapClearEffect->UnbindTextures(deviceContext);
-				}
+			{	
+				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, "recompose_perspective_with_depth_alpha");
+				simul::math::Matrix4x4 projInv;
+				deviceContext.viewStruct.proj.Inverse(projInv);
+				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
 			}
+			RenderLocalNodes(deviceContext);
+
 			// We must deactivate the depth buffer here, in order to use it as a texture:
 			hdrFramebuffer->DeactivateDepth(deviceContext);
 			if (show_video)
@@ -524,62 +450,114 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	frame_number++;
 }
 
+void ClientRenderer::RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique)
+{
+	int W = targetTexture->width;
+	int H = targetTexture->length;
+	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture);
+	tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataIDBuffer"));
+	int zGroups = videoTexture->IsCubemap() ? 6 : 1;
+	cubemapClearEffect->Apply(deviceContext, technique, 0);
+	renderPlatform->DispatchCompute(deviceContext, W / 16, H / 16, zGroups);
+	cubemapClearEffect->Unapply(deviceContext);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+	cubemapClearEffect->UnbindTextures(deviceContext);
+}
+
+void ClientRenderer::RenderVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const simul::math::Matrix4x4& invCamMatrix)
+{
+	tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
+	cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
+	cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.position) - videoPos;
+	cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.position);
+	cubemapConstants.cameraRotation = *((vec4*)&clientDeviceState->headPose.orientation);
+	cameraConstants.invWorldViewProj = invCamMatrix;
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+	cubemapClearEffect->SetTexture(deviceContext, shaderTexture, targetTexture);
+	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
+	cubemapClearEffect->Apply(deviceContext, technique, 0);
+	renderPlatform->DrawQuad(deviceContext);
+	cubemapClearEffect->Unapply(deviceContext);
+	cubemapClearEffect->UnbindTextures(deviceContext);
+}
+
+void ClientRenderer::RecomposeCubemap(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset)
+{
+	cubemapConstants.sourceOffset = sourceOffset;
+	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
+	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+	cubemapConstants.targetSize = targetTexture->width;
+	for (int m = 0; m < mips; m++)
+	{
+		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, m);
+		cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
+		cubemapClearEffect->Apply(deviceContext, "recompose", 0);
+		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
+		cubemapClearEffect->Unapply(deviceContext);
+		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize;
+		cubemapConstants.targetSize /= 2;
+	}
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+	cubemapClearEffect->UnbindTextures(deviceContext);
+}
+
 void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {				
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
-	if (lastSetupCommand.video_config.use_cubemap)
+	for (int i = 0; i < videoTagDataCubeArray.size(); ++i)
 	{
-		for (int i = 0; i < videoTagDataCubeArray.size(); ++i)
+		const auto& td = videoTagDataCubeArray[i];
+		const auto& pos = td.coreData.cameraTransform.position;
+		const auto& rot = td.coreData.cameraTransform.rotation;
+
+		videoTagDataCube[i].cameraPosition = { pos.x, pos.y, pos.z };
+		videoTagDataCube[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
+		videoTagDataCube[i].lightCount = td.lights.size();
+		if(td.lights.size() > 10)
 		{
-			const auto& td = videoTagDataCubeArray[i];
-			const auto& pos = td.coreData.cameraTransform.position;
-			const auto& rot = td.coreData.cameraTransform.rotation;
-
-			videoTagDataCube[i].cameraPosition = { pos.x, pos.y, pos.z };
-			videoTagDataCube[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
-			videoTagDataCube[i].lightCount = td.lights.size();
-			if(td.lights.size() > 10)
-			{
-				SCR_CERR_BREAK("Too many lights in tag.",10);
-			}
-			for(int j=0;j<td.lights.size()&&j<10;j++)
-			{
-				LightTag &t=videoTagDataCube[i].lightTags[j];
-				const scr::LightTagData &l=td.lights[j];
-				t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
-				t.colour=*((vec4*)&l.color);
-				// Convert from +-1 to [0,1]
-				t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
-				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
-				t.shadowTexCoordScale.x=float(l.textureSize)/float(lastSetupCommand.video_config.video_width);
-				t.shadowTexCoordScale.y=float(l.textureSize)/float(lastSetupCommand.video_config.video_height);
-				// Tag data has been properly transformed in advance:
-				avs::vec3 position		=l.position;
-				avs::vec4 orientation	=l.orientation;
-				t.position=*((vec3*)&position);
-				crossplatform::Quaternionf q((const float*)&orientation);
-				t.direction=q*vec3(0,0,1.0f);
-				scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
+			SCR_CERR_BREAK("Too many lights in tag.",10);
+		}
+		for(int j=0;j<td.lights.size()&&j<10;j++)
+		{
+			LightTag &t=videoTagDataCube[i].lightTags[j];
+			const scr::LightTagData &l=td.lights[j];
+			t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
+			t.colour=*((vec4*)&l.color);
+			// Convert from +-1 to [0,1]
+			t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
+			t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
+			t.shadowTexCoordScale.x=float(l.textureSize)/float(lastSetupCommand.video_config.video_width);
+			t.shadowTexCoordScale.y=float(l.textureSize)/float(lastSetupCommand.video_config.video_height);
+			// Tag data has been properly transformed in advance:
+			avs::vec3 position		=l.position;
+			avs::vec4 orientation	=l.orientation;
+			t.position=*((vec3*)&position);
+			crossplatform::Quaternionf q((const float*)&orientation);
+			t.direction=q*vec3(0,0,1.0f);
+			scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
 				
-				t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
+			t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
 
-				auto &nodeLight=cachedLights.find(l.uid);
-				if(nodeLight!=cachedLights.end()&& nodeLight->second.resource!=nullptr)
+			auto &nodeLight=cachedLights.find(l.uid);
+			if(nodeLight!=cachedLights.end()&& nodeLight->second.resource!=nullptr)
+			{
+				auto *lightData=nodeLight->second.resource->GetLightData();
+				if(lightData)
 				{
-					auto *lightData=nodeLight->second.resource->GetLightData();
-					if(lightData)
-					{
-						t.is_spot=lightData->is_spot;
-						t.is_point=lightData->is_point;
-						t.radius=lightData->radius;
-						t.shadow_strength=0.0f;
-					}
+					t.is_spot=lightData->is_spot;
+					t.is_point=lightData->is_point;
+					t.radius=lightData->radius;
+					t.shadow_strength=0.0f;
 				}
 			}
-		}	
-		tagDataCubeBuffer.SetData(deviceContext, videoTagDataCube);
-	}
+		}
+	}	
+	tagDataCubeBuffer.SetData(deviceContext, videoTagDataCube);
 }
 
 void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining)
@@ -1308,7 +1286,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.video_width, videoConfig.video_height, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 
