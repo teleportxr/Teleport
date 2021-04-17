@@ -747,6 +747,7 @@ namespace avs
 		bool isVR = true;
 		uint64_t resourceCount = 0; //Amount of resources the client has, and are appended to the handshake.
 		uint32_t maxLightsSupported=0;
+		uint32_t clientStreamingPort=0;	// the local port on the client to receive the stream.
 	};
 	
 	enum InputEventType : unsigned char
@@ -772,7 +773,6 @@ namespace avs
 		float joystickAxisY;
 		uint32_t numEvents;
 	};
-	#pragma pack(pop)
 
 	struct Pose
 	{
@@ -873,9 +873,9 @@ namespace avs
 		{}
 	};
 
-	enum class CommandPayloadType
+	enum class CommandPayloadType:uint32_t
 	{
-		Invalid,
+		Invalid=0,
 		Shutdown,
 		Setup,
 		NodeBounds,
@@ -948,7 +948,7 @@ namespace avs
 		uint32_t numChannels = 2;
 	};
 
-	enum class ControlModel: uint32_t
+	enum class ControlModel: uint8_t
 	{
 		NONE=0,
 		CLIENT_ORIGIN_SERVER_GRAVITY=1,
@@ -957,7 +957,7 @@ namespace avs
 	struct SetupCommand : public Command
 	{
 		SetupCommand() : Command(CommandPayloadType::Setup) {}
-		int32_t		port=0;
+		int32_t		server_streaming_port=0;
 		uint32_t	debug_stream = 0;
 		uint32_t 	do_checksums=0;
 		uint32_t 	debug_network_packets=0;
@@ -965,8 +965,8 @@ namespace avs
 		uint32_t    idle_connection_timeout = 5000;
 		avs::uid	server_id = 0;
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
-		int32_t audio_input_enabled = 0;
-		int32_t lock_player_height = 1;
+		uint8_t audio_input_enabled = 0;
+		uint8_t lock_player_height = 1;
 		ControlModel control_model;
 		VideoConfig video_config;
 		avs::vec3 bodyOffsetFromHead;
@@ -1070,4 +1070,5 @@ namespace avs
 		size_t dataSize = 0;
 		bool broken = false; // True if any fragment of the data has been lost
 	};
+#pragma pack(pop)
 } // avs
