@@ -618,7 +618,8 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 		avs::uid jointID = skin.jointIDs[i];
 		std::shared_ptr<scr::Bone> bone = m_BoneManager->Get(jointID);
 
-		if(bone) incompleteSkin->skin->SetBone(i, bone);
+		if(bone)
+			incompleteSkin->skin->SetBone(i, bone);
 		else
 		{
 			SCR_COUT << "Skin_" << id << "(" << incompleteSkin->skin->name << ") missing Bone_" << jointID << std::endl;

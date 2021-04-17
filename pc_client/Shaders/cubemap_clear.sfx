@@ -78,6 +78,12 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	return  lookup;//+0.1*vec4(lookup.aaa,0);
 }
 
+// Roderick: this unknown function caused a compilation error, so I am adding it. Is it correct?
+vec4 quat_inverse(vec4 q)
+{
+	return vec4(-q.xyz,q.w);
+}
+
 shader posTexVertexOutputPersp VS_UsePerspective(idOnly IN)
 {
 	posTexVertexOutputPersp OUT;
