@@ -10,10 +10,10 @@ namespace scr
 class Bone;
 struct quat;
 
-class BoneKeyframe
+class BoneKeyframeList
 {
 public:
-	BoneKeyframe();
+	BoneKeyframeList();
 
 	std::weak_ptr<Bone> bonePtr;
 
@@ -34,10 +34,10 @@ class Animation
 {
 public:
 	const std::string name;
-	std::vector<BoneKeyframe> boneKeyframes;
+	std::vector<BoneKeyframeList> boneKeyframeLists;
 
 	Animation(const std::string& name);
-	Animation(const std::string& name, std::vector<BoneKeyframe> boneKeyframes);
+	Animation(const std::string& name, std::vector<BoneKeyframeList> boneKeyframes);
 	
 	//Updates how long the animations runs for.
 	void updateAnimationLength();

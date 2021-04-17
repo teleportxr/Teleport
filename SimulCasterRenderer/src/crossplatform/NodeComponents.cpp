@@ -22,17 +22,19 @@ void AnimationComponent::AddAnimation(avs::uid id, std::shared_ptr<Animation> an
 void AnimationComponent::update(float deltaTime)
 {
 	//Early-out if there are no animations.
-	if(animations.empty()) return;
+	if(animations.empty())
+		return;
 
 	currentAnimation->second->update(deltaTime);
-
+	#ifndef FIX_BROKEN
 	if(currentAnimation->second->finished())
 	{
 		++currentAnimation;
-		if(currentAnimation == animations.end()) currentAnimation = animations.begin();
-
+		if(currentAnimation == animations.end())
+			currentAnimation = animations.begin();
 		currentAnimation->second->restart();
 	}
+	#endif
 }
 
 void VisibilityComponent::update(float deltaTime)

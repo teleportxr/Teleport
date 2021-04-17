@@ -79,7 +79,8 @@ void Bone::UpdateGlobalTransform() const
 
 const Transform& Bone::GetGlobalTransform() const
 {
-	if(isGlobalTransformDirty) UpdateGlobalTransform();
+	if(isGlobalTransformDirty)
+		UpdateGlobalTransform();
 	return globalTransform;
 }
 }

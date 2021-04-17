@@ -1,4 +1,6 @@
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 // Worldspace.cpp : Defines the entry point for the application.
 //
 

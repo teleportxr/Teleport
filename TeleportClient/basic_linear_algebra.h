@@ -434,7 +434,7 @@ namespace scr
 		scr::quat GetRotation() const
 		{
 			//TODO: An actual implementation.
-			return scr::quat();
+			return scr::quat(0,0,0,1.0f);
 		}
 
 		avs::vec3 GetScale() const

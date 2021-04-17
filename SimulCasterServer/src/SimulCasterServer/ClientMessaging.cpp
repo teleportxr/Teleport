@@ -324,27 +324,27 @@ namespace SCServer
 			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Handshake) :
 				//Delay the actual start of streaming until we receive a confirmation from the client that they are ready.
 				receiveHandshake(event.packet);
+			break;
+			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control) :
+				receiveInput(event.packet);
+			break;
+			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo) :
+				receiveDisplayInfo(event.packet);
+			break;
+			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose) :
+				receiveHeadPose(event.packet);
+			break;
+			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest) :
+				receiveResourceRequest(event.packet);
+			break;
+			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_KeyframeRequest) :
+				receiveKeyframeRequest(event.packet);
+			break;
+			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage) :
+				receiveClientMessage(event.packet);
+			break;
+			default:
 				break;
-				case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control) :
-					receiveInput(event.packet);
-					break;
-					case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo) :
-						receiveDisplayInfo(event.packet);
-						break;
-						case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose) :
-							receiveHeadPose(event.packet);
-							break;
-							case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest) :
-								receiveResourceRequest(event.packet);
-								break;
-								case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_KeyframeRequest) :
-									receiveKeyframeRequest(event.packet);
-									break;
-									case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage) :
-										receiveClientMessage(event.packet);
-										break;
-									default:
-										break;
 		}
 		enet_packet_destroy(event.packet);
 	}
@@ -372,7 +372,7 @@ namespace SCServer
 			{
 				streamingPort,
 				clientIP,
-				networkSettings.localPort + 1,
+				handshake.clientStreamingPort,
 				static_cast<int32_t>(handshake.maxBandwidthKpS),
 				static_cast<int32_t>(handshake.udpBufferSize),
 				settings->requiredLatencyMs,

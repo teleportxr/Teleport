@@ -42,7 +42,7 @@ std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin(const std::string&
 	return std::make_shared<scr::Skin>(name);
 }
 
-std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin(const std::string& name, const std::vector<Transform>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const
+std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin(const std::string& name, const std::vector<scr::mat4>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const
 {
 	return std::make_shared<scr::Skin>(name, inverseBindMatrices, boneAmount, skinTransform);
 }

@@ -103,6 +103,10 @@ bool Application::ProcessIniFile()
 		server_ip = ini.GetValue("", "SERVER_IP", "");
 		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",
 												 REMOTEPLAY_SERVER_DISCOVERY_PORT);
+		client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",
+												 REMOTEPLAY_CLIENT_SERVICE_PORT);
+		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",
+												 REMOTEPLAY_CLIENT_STREAMING_PORT);
 		return true;
 	}
 	else
@@ -532,7 +536,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 	const avs::VideoConfig &videoConfig = setupCommand.video_config;
 	if (!mPipelineConfigured)
 	{
-		OVR_WARN("VIDEO STREAM CHANGED: %d %d %d, cubemap %d", setupCommand.port,
+		OVR_WARN("VIDEO STREAM CHANGED: server port %d %d %d, cubemap %d", setupCommand.server_streaming_port,
 				 videoConfig.video_width, videoConfig.video_height,
 				 videoConfig.colour_cubemap_size);
 
@@ -550,9 +554,9 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 
 		avs::NetworkSourceParams sourceParams;
 		sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-		sourceParams.localPort = setupCommand.port + 1;
+		sourceParams.localPort = client_streaming_port;
 		sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
-		sourceParams.remotePort = setupCommand.port;
+		sourceParams.remotePort = setupCommand.server_streaming_port;
 
 		bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 		avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::GlStyle, bodyOffsetFromHead);
@@ -637,7 +641,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			{
 				sca::NetworkSettings networkSettings =
 						{
-								setupCommand.port + 1, server_ip, setupCommand.port
+								setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
 								, static_cast<int32_t>(handshake.maxBandwidthKpS)
 								, static_cast<int32_t>(handshake.udpBufferSize)
 								, setupCommand.requiredLatencyMs
@@ -691,7 +695,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 	handshake.MetresPerUnit = 1.0f;
 	handshake.usingHands = true;
 	handshake.maxLightsSupported=4;
-
+	handshake.clientStreamingPort=client_streaming_port;
 	clientRenderer.mIsCubemapVideo = setupCommand.video_config.use_cubemap;
 
 	clientRenderer.lastSetupCommand = setupCommand;

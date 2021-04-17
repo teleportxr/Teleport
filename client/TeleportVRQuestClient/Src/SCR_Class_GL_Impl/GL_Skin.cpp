@@ -8,7 +8,7 @@ GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string
 	CreateUniformBuffer(renderPlatform);
 }
 
-GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name, const std::vector<scr::Transform>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform)
+GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name, const std::vector<scr::mat4>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform)
 	:scr::Skin(name, inverseBindMatrices, boneAmount, skinTransform)
 {
 	CreateUniformBuffer(renderPlatform);

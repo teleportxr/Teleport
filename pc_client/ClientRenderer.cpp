@@ -1063,7 +1063,10 @@ void ClientRenderer::Update()
 {
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	float timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
-
+#ifndef FIX_BROKEN
+	static float static_time=0.01f;
+	timeElapsed=static_time;// hardcode 0.01 ms.
+#endif
 	resourceManagers.Update(timeElapsed);
 	resourceCreator.Update(timeElapsed);
 
@@ -1076,7 +1079,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	videoConfig = setupCommand.video_config;
 
-	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d\n", setupCommand.port, videoConfig.video_width, videoConfig.video_height
+	WARN("VIDEO STREAM CHANGED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 
 
@@ -1099,10 +1102,9 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	avs::NetworkSourceParams sourceParams;
 	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-	sourceParams.localPort = setupCommand.port + 1;
+	sourceParams.localPort = 101;
 	sourceParams.remoteIP = server_ip;
-	sourceParams.remotePort = setupCommand.port;
-
+	sourceParams.remotePort = setupCommand.server_streaming_port;
 	// Configure for num video streams + 1 audio stream + 1 geometry stream
 	if (!source.configure(std::move(streams), sourceParams))
 	{
@@ -1238,6 +1240,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
+	handshake.clientStreamingPort=sourceParams.localPort;
 	lastSetupCommand = setupCommand;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }

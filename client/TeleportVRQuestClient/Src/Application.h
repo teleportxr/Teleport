@@ -162,6 +162,8 @@ namespace OVRFW
 
 		std::string server_ip;
 		int server_discovery_port=10600;
+		int client_service_port=10501;
+		int client_streaming_port=10502;
 		ENetAddress remoteEndpoint;
 		ClientDeviceState clientDeviceState;
 

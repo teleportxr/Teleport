@@ -707,7 +707,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	encoderSettings.maxDepth = 10000;
 
 	avs::SetupCommand setupCommand;
-	setupCommand.port = clientData.clientMessaging.getServerPort() + 1;
+	setupCommand.server_streaming_port = clientData.clientMessaging.getServerPort() + 1;
 	setupCommand.debug_stream = casterSettings.debugStream;
 	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
