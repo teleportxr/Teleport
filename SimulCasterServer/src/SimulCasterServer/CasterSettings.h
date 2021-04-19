@@ -1,77 +1,79 @@
 #pragma once
 
+#include "libavstream/common_networking.h"
+
 #include "CasterTypes.h"
 
 namespace SCServer
 {
 	struct CasterSettings
 	{
-		int32_t requiredLatencyMs;
+		int32_t requiredLatencyMs = 0;
 
-		const wchar_t* sessionName;
-		const wchar_t* clientIP;
-		int32_t detectionSphereRadius;
-		int32_t detectionSphereBufferDistance;
-		int32_t expectedLag;
-		int64_t throttleKpS;
+		const wchar_t* sessionName = L"";
+		const wchar_t* clientIP = L"";
+		int32_t detectionSphereRadius = 0;
+		int32_t detectionSphereBufferDistance = 0;
+		int32_t expectedLag = 0;
+		int64_t throttleKpS = 0;
 
-		bool enableGeometryStreaming;
-		uint8_t geometryTicksPerSecond;
-		int32_t geometryBufferCutoffSize; // Size we stop encoding nodes at.
-		float confirmationWaitTime; //Seconds to wait before resending a resource.
+		bool enableGeometryStreaming = false;
+		uint8_t geometryTicksPerSecond = 0;
+		int32_t geometryBufferCutoffSize = 0; // Size we stop encoding nodes at.
+		float confirmationWaitTime = 0.0f; //Seconds to wait before resending a resource.
 
-		bool enableVideoStreaming;
-		bool enableWebcamStreaming;
-		float captureCubeSize;
-		int32_t pipelin;
-		bool enableDeferOutput;
-		bool enableCubemapCulling;
-		int32_t blocksPerCubeFaceAcross; // The number of blocks per cube face will be this value squared
-		int32_t cullQuadIndex; // This culls a quad at the index. For debugging only
-		int32_t targetFPS;
-		int32_t idrInterval;
-		avs::VideoCodec videoCodec;
-		VideoEncoderRateControlMode rateControlMode;
-		int32_t averageBitrate;
-		int32_t maxBitrate;
-		bool enableAutoBitRate;
-		int32_t vbvBufferSizeInFrames;
-		bool useAsyncEncoding;
-		bool use10BitEncoding;
-		bool useYUV444Decoding;
-		bool usePerspectiveRendering;
-		int32_t perspectiveWidth;
-		int32_t perspectiveHeight;
-		float perspectiveFOV;
-		bool useDynamicQuality;
-		int32_t bandwidthCalculationInterval;
+		bool enableVideoStreaming = false;
+		bool enableWebcamStreaming = false;
+		float captureCubeSize = 0.0f;
+		int32_t pipelin = 0;
+		bool enableDeferOutput = false;
+		bool enableCubemapCulling = false;
+		int32_t blocksPerCubeFaceAcross = 0; // The number of blocks per cube face will be this value squared
+		int32_t cullQuadIndex = 0; // This culls a quad at the index. For debugging only
+		int32_t targetFPS = 0;
+		int32_t idrInterval = 0;
+		avs::VideoCodec videoCodec = avs::VideoCodec::Invalid;
+		VideoEncoderRateControlMode rateControlMode = SCServer::VideoEncoderRateControlMode::RC_CONSTQP;
+		int32_t averageBitrate = 0;
+		int32_t maxBitrate = 0;
+		bool enableAutoBitRate = false;
+		int32_t vbvBufferSizeInFrames = 0;
+		bool useAsyncEncoding = false;
+		bool use10BitEncoding = false;
+		bool useYUV444Decoding = false;
+		bool usePerspectiveRendering = false;
+		int32_t perspectiveWidth = 0;
+		int32_t perspectiveHeight = 0;
+		float perspectiveFOV = 0.0f;
+		bool useDynamicQuality = false;
+		int32_t bandwidthCalculationInterval = 0;
 
 		// Audio
-		bool isStreamingAudio;
-		bool isReceivingAudio;
+		bool isStreamingAudio = false;
+		bool isReceivingAudio = false;
 
-		int32_t debugStream;
-		bool enableDebugNetworkPackets;
-		bool enableDebugControlPackets;
-		bool enableChecksums;
-		bool willCacheReset;
-		bool pipeDllOutputToUnity;
-		uint8_t estimatedDecodingFrequency; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
+		int32_t debugStream = 0;
+		bool enableDebugNetworkPackets = false;
+		bool enableDebugControlPackets = false;
+		bool enableChecksums = false;
+		bool willCacheReset = false;
+		bool pipeDllOutputToUnity = false;
+		uint8_t estimatedDecodingFrequency = 0; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
 
-		bool useCompressedTextures;
-		uint8_t qualityLevel;
-		uint8_t compressionLevel;
+		bool useCompressedTextures = false;
+		uint8_t qualityLevel = 0;
+		uint8_t compressionLevel = 0;
 
-		bool willDisableMainCamera;
+		bool willDisableMainCamera = false;
 
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
 
-		int32_t specularCubemapSize;
-		int32_t specularMips;
-		int32_t diffuseCubemapSize;
-		int32_t lightCubemapSize;
+		int32_t specularCubemapSize = 0;
+		int32_t specularMips = 0;
+		int32_t diffuseCubemapSize = 0;
+		int32_t lightCubemapSize = 0;
 
-		bool lockPlayerHeight;
+		bool lockPlayerHeight = false;
 		avs::ControlModel controlModel=avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY;
 	};
 

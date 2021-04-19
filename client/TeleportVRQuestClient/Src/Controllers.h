@@ -3,6 +3,11 @@
 
 #include <functional>
 
+#include <VrApi_Input.h>
+
+#include <crossplatform/Input.h>
+#include "libavstream/common_input.h"
+
 typedef std::function<void()> TriggerDelegate;
 typedef std::function<void(float,float)> Float2Delegate;
 
@@ -13,7 +18,7 @@ public :
 	~Controllers();
 
 	void SetCycleShaderModeDelegate(TriggerDelegate d);
-	void SetToggleShowInfoDelegate(TriggerDelegate d);
+	void SetCycleOSDDelegate(TriggerDelegate d);
 	void SetSetStickOffsetDelegate(Float2Delegate d);
 	void ClearDelegates();
 
@@ -24,9 +29,13 @@ public :
 	ovrVector2f mTrackpadDim;
 	ControllerState mLastControllerStates[2]; //State of the primary controller on the last frame.
 private:
+	void AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, ControllerState& controllerState, ovrButton buttonID, avs::InputList inputID);
+
 	TriggerDelegate CycleShaderMode;
-	TriggerDelegate ToggleShowInfo;
+	TriggerDelegate CycleOSD;
 	Float2Delegate SetStickOffset;
+
+	uint32_t nextEventID = 0;
 };
 
 

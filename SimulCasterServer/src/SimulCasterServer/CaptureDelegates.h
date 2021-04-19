@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "libavstream/common.hpp"
+#include "libavstream/common_maths.h"
 
 namespace SCServer
 {

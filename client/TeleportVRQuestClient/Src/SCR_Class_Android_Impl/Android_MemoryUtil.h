@@ -10,7 +10,8 @@ class Android_MemoryUtil : public scr::MemoryUtil
 {
 public:
 	Android_MemoryUtil(JNIEnv* env);
-	~Android_MemoryUtil();
+	virtual ~Android_MemoryUtil();
+
 	long getAvailableMemory() const override;
 	long getTotalMemory() const override;
 	void printMemoryStats() const override;

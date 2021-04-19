@@ -266,14 +266,9 @@ void Application::EnteredVrMode()
 
 	// Bind the delegates.
 
-	controllers.SetCycleShaderModeDelegate(
-			std::bind(&ClientRenderer::CycleShaderMode, &clientRenderer));
-	controllers.SetToggleShowInfoDelegate(
-			std::bind(&ClientRenderer::ToggleShowInfo, &clientRenderer));
-	controllers.SetSetStickOffsetDelegate(
-			std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1,
-					  std::placeholders::_2));
-
+	controllers.SetCycleShaderModeDelegate(std::bind(&ClientRenderer::CycleShaderMode, &clientRenderer));
+	controllers.SetCycleOSDDelegate(std::bind(&ClientRenderer::CycleOSD, &clientRenderer));
+	controllers.SetSetStickOffsetDelegate(std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1, std::placeholders::_2));
 }
 
 void Application::AppShutdown(const OVRFW::ovrAppContext *)

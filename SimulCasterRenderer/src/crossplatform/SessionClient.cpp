@@ -1,11 +1,14 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "SessionClient.h"
 
+#include <limits>
+
 #include "libavstream/common.hpp"
+#include "libavstream/common_networking.h"
+#include "libavstream/common_input.h"
 
 #include "ResourceCreator.h"
 #include "Log.h"
-#include <limits>
 
 SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService)
 	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService))
@@ -440,22 +443,27 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 				packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
 			}
 		}
-		inputState.numEvents = static_cast<uint32_t>(controllerState.inputEvents.size());
+
+		//Set event amount.
+		inputState.binaryEventAmount = static_cast<uint32_t>(controllerState.binaryEvents.size());
+		inputState.analogueEventAmount = static_cast<uint32_t>(controllerState.analogueEvents.size());
+		inputState.motionEventAmount = static_cast<uint32_t>(controllerState.motionEvents.size());
 	
-		inputBuffer.resize(sizeof(avs::InputState)+inputState.numEvents*sizeof(avs::InputEvent));
-		memcpy(inputBuffer.data(),&inputState,sizeof(avs::InputState));
-		memcpy(inputBuffer.data()+sizeof(avs::InputState),controllerState.inputEvents.data(),inputState.numEvents*sizeof(avs::InputEvent));
-		size_t dataLength=inputBuffer.size();
-		if(dataLength!=24)
-		{
-			ENetPacket* packet = enet_packet_create(inputBuffer.data(), dataLength, packetFlags);
-			enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
-		}
-		else
-		{
-			ENetPacket* packet = enet_packet_create(inputBuffer.data(), dataLength, packetFlags);
-			enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
-		}
+		//Calculate sizes for memory copy operations.
+		size_t inputStateSize = sizeof(avs::InputState);
+		size_t binaryEventSize = sizeof(avs::InputEventBinary) * inputState.binaryEventAmount;
+		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * inputState.analogueEventAmount;
+		size_t motionEventSize = sizeof(avs::InputEventMotion) * inputState.motionEventAmount;
+
+		//Size packet to final size, but initially only put the InputState struct inside.
+		ENetPacket* packet = enet_packet_create(&inputState, inputStateSize + binaryEventSize + analogueEventSize + motionEventSize, packetFlags);
+
+		//Copy events into packet.
+		memcpy(packet->data + inputStateSize, controllerState.binaryEvents.data(), binaryEventSize);
+		memcpy(packet->data + inputStateSize + binaryEventSize, controllerState.analogueEvents.data(), analogueEventSize);
+		memcpy(packet->data + inputStateSize + binaryEventSize + analogueEventSize, controllerState.motionEvents.data(), motionEventSize);
+
+		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
 	}
 }
 

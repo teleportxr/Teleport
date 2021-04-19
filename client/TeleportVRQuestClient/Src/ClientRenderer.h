@@ -98,7 +98,7 @@ public:
 	~ClientRenderer();
 
 	void CycleShaderMode();
-	void ToggleShowInfo();
+	void CycleOSD();
 	void  SetStickOffset(float,float);
 
 	void EnteredVR(const ovrJava *java);

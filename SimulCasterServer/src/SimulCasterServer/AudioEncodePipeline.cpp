@@ -27,16 +27,16 @@ namespace SCServer
 		if (!encoder->configure(encoderParams))
 		{
 			TELEPORT_CERR << "Failed to configure audio encoder node \n";
-			return Result::EncoderNodeConfigurationError;
+			return Result::Code::EncoderNodeConfigurationError;
 		}
 
 		if (!pipeline->link({ encoder.get(), output }))
 		{
 			TELEPORT_CERR << "Error configuring the audio encoding pipeline \n";
-			return Result::PipelineConfigurationError;
+			return Result::Code::PipelineConfigurationError;
 		}
 
-		return Result::OK;
+		return Result::Code::OK;
 	}
 
 	Result AudioEncodePipeline::process(const uint8_t* data, size_t dataSize)
@@ -44,7 +44,7 @@ namespace SCServer
 		if (!pipeline)
 		{
 			TELEPORT_CERR << "Error: audio encode pipeline not initialized \n";
-			return Result::PipelineNotInitialized;
+			return Result::Code::PipelineNotInitialized;
 		}
 
 		avs::Result result = pipeline->process();
@@ -52,7 +52,7 @@ namespace SCServer
 		if (!result)
 		{
 			TELEPORT_CERR << "Audio encode pipeline processing encountered an error \n";
-			return Result::PipelineProcessingError;
+			return Result::Code::PipelineProcessingError;
 		}
 
 		result = encoder->writeOutput(data, dataSize);
@@ -60,9 +60,9 @@ namespace SCServer
 		if (!result)
 		{
 			TELEPORT_CERR << "Audio encode pipeline encountered an error trying to write output \n";
-			return Result::PipelineWriteOutputError;
+			return Result::Code::PipelineWriteOutputError;
 		}
 
-		return Result::OK;
+		return Result::Code::OK;
 	}
 }

@@ -4,6 +4,7 @@
 #pragma once
 
 #include <array>
+#include <memory>
 #include <vector>
 
 #include <libavstream/stream/parser_interface.hpp>

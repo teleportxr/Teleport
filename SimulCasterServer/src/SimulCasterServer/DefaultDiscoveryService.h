@@ -1,7 +1,10 @@
 #pragma once
-#include "SimulCasterServer/DiscoveryService.h"
+
 #include <map>
+
 #include <enet/enet.h>
+
+#include "SimulCasterServer/DiscoveryService.h"
 #include "SimulCasterServer/UnityPlugin/Export.h"
 
 namespace SCServer
@@ -23,6 +26,7 @@ namespace SCServer
 	protected:
 		//List of clientIDs we want to attempt to connect to.
 		std::map<uint32_t, ENetAddress> newClients;
+
 #pragma pack(push, 1) 
 		struct ServiceDiscoveryResponse
 		{
@@ -31,8 +35,8 @@ namespace SCServer
 		};
 #pragma pack(pop)
 
-		ENetSocket discoverySocket;
-		ENetAddress address;
+		ENetSocket discoverySocket{};
+		ENetAddress address{};
 
 		uint16_t discoveryPort = 0;
 		uint16_t servicePort = 0;

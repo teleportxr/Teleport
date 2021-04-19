@@ -1498,8 +1498,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder->idrRequired(),fTime);
 
-		for(int i=0;i<2;i++)
-			controllerStates[i].inputEvents.clear();
+		for(int i = 0; i < 2; i++)
+		{
+			controllerStates[i].clear();
+		}
+
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			clientDeviceState->originPose = sessionClient.GetOriginPose();
@@ -1539,14 +1542,58 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	//sessionClient.Frame(camera.GetOrientation().GetQuaternion(), controllerState);
 }
 
+void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
+{
+	avs::InputList inputID;
+	if(bLeftButtonDown)
+	{
+		inputID = avs::InputList::TRIGGER01;
+	}
+	else if(bRightButtonDown)
+	{
+		inputID = avs::InputList::BUTTON_B;
+	}
+	else if(bMiddleButtonDown)
+	{
+		inputID = avs::InputList::BUTTON_A;
+	}
+	else
+	{
+		return;
+	}
+
+	avs::InputEventBinary buttonEvent;
+	buttonEvent.eventID = nextEventID++;
+	buttonEvent.inputID = inputID;
+	buttonEvent.activated = true;
+	controllerStates[0].binaryEvents.push_back(buttonEvent);
+}
+
 void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta)
 {
-	static avs::uid eventId=0;
-	avs::InputEvent evt;
-	evt.eventId=eventId++;		 //< A monotonically increasing event identifier.
-	evt.inputUid=bLeftButtonReleased?1:0;		 //< e.g. the uniqe identifier for this button or control.
-	evt.intValue=0;
-	controllerStates[0].inputEvents.push_back(evt);
+	avs::InputList inputID;
+	if(bLeftButtonReleased)
+	{
+		inputID = avs::InputList::TRIGGER01;
+	}
+	else if(bRightButtonReleased)
+	{
+		inputID = avs::InputList::BUTTON_B;
+	}
+	else if(bMiddleButtonReleased)
+	{
+		inputID = avs::InputList::BUTTON_A;
+	}
+	else
+	{
+		return;
+	}
+
+	avs::InputEventBinary buttonEvent;
+	buttonEvent.eventID = nextEventID++;
+	buttonEvent.inputID = inputID;
+	buttonEvent.activated = false;
+	controllerStates[0].binaryEvents.push_back(buttonEvent);
 }
 
 void ClientRenderer::OnMouseMove(int xPos

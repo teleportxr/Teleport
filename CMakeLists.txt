@@ -147,10 +147,14 @@ endif()
 
 add_subdirectory(SimulCasterAudio)
 add_subdirectory(libavstream)
+
 add_subdirectory(thirdparty/enet)
 set_target_properties( enet PROPERTIES FOLDER thirdparty/enet)
+
 add_subdirectory(thirdparty/basis_universal)
 set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
+#target_compile_options(basisu PRIVATE /wd4711)
+
 add_subdirectory(thirdparty/srt)
 set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
 set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)

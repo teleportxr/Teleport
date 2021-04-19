@@ -2,9 +2,8 @@
 // Created by Roderick on 05/05/2020.
 //
 
-#include <VrApi_Input.h>
-#include <crossplatform/Input.h>
 #include "Controllers.h"
+
 #include <crossplatform/Log.h>
 
 Controllers::Controllers()
@@ -17,26 +16,26 @@ Controllers::~Controllers()
 
 }
 
-void Controllers::SetCycleShaderModeDelegate(TriggerDelegate d)
+void Controllers::SetCycleShaderModeDelegate(TriggerDelegate delegate)
 {
-	CycleShaderMode=d;
+	CycleShaderMode = delegate;
 }
 
-void Controllers::SetToggleShowInfoDelegate(TriggerDelegate d)
+void Controllers::SetCycleOSDDelegate(TriggerDelegate delegate)
 {
-	ToggleShowInfo=d;
+	CycleOSD = delegate;
 }
 
-void Controllers::SetSetStickOffsetDelegate(Float2Delegate d)
+void Controllers::SetSetStickOffsetDelegate(Float2Delegate delegate)
 {
-	SetStickOffset=d;
+	SetStickOffset = delegate;
 }
 
 void Controllers::ClearDelegates()
 {
-	CycleShaderMode=nullptr;
-	ToggleShowInfo=nullptr;
-	SetStickOffset=nullptr;
+	CycleShaderMode = nullptr;
+	CycleOSD = nullptr;
+	SetStickOffset = nullptr;
 }
 
 bool Controllers::InitializeController(ovrMobile *ovrmobile)
@@ -68,53 +67,71 @@ bool Controllers::InitializeController(ovrMobile *ovrmobile)
 	return (idx>0);
 }
 
-static avs::uid eventId=0;
 void Controllers::Update(ovrMobile *ovrmobile)
 {
 	// Query controller input state.
 	ControllerState controllerState = {};
-	for(int i=0;i<2;i++)
-	if((int)mControllerIDs[i] != 0)
+	for(int i = 0; i < 2; i++)
 	{
-		ControllerState &lastControllerState=mLastControllerStates[i];
-		ovrInputStateTrackedRemote ovrState;
-		ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
-		if(vrapi_GetCurrentInputState(ovrmobile, mControllerIDs[i], &ovrState.Header) >= 0)
+		if((int)mControllerIDs[i] != 0)
 		{
-			controllerState.mButtons = ovrState.Buttons;
+			ControllerState &lastControllerState = mLastControllerStates[i];
+			ovrInputStateTrackedRemote ovrState;
+			ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
+			if(vrapi_GetCurrentInputState(ovrmobile, mControllerIDs[i], &ovrState.Header) >= 0)
+			{
+				controllerState.mButtons = ovrState.Buttons;
 
-			controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
-			controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
-			controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
-			controllerState.mJoystickAxisX=ovrState.Joystick.x;
-			controllerState.mJoystickAxisY=ovrState.Joystick.y;
+				controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
+				controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
+				controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
+				controllerState.mJoystickAxisX = ovrState.Joystick.x;
+				controllerState.mJoystickAxisY = ovrState.Joystick.y;
 
-			if(controllerState.mTrackpadStatus)
-			{
-				float          dx = controllerState.mTrackpadX - 0.5f;
-				float          dy = controllerState.mTrackpadY - 0.5f;
-				SetStickOffset(dx,dy);
-			}
-			uint32_t clicked=(~((uint32_t)controllerState.mButtons))&((uint32_t)lastControllerState.mButtons);
-			mLastControllerStates[i] = controllerState;
+				if(controllerState.mTrackpadStatus)
+				{
+					float dx = controllerState.mTrackpadX - 0.5f;
+					float dy = controllerState.mTrackpadY - 0.5f;
+					SetStickOffset(dx, dy);
+				}
 
-			//Flip rendering mode when the trigger is held, and the X or A button is released.
-			if((clicked & ovrButton::ovrButton_Trigger) != 0 )
-			{
-				avs::InputEvent evt;
-				evt.eventId=eventId++;		 //< A monotonically increasing event identifier.
-				evt.inputUid=1;//i*32+ovrButton::ovrButton_Trigger;		 //< e.g. the uniqe identifier for this button or control.
-				evt.intValue=0;
-				mLastControllerStates[i].inputEvents.push_back(evt);
-			}
-			else if((clicked & ovrButton::ovrButton_A) != 0 || (clicked & ovrButton::ovrButton_X) != 0)
-			{
-				ToggleShowInfo();
-			}
-			else if((clicked& ovrButton::ovrButton_B) != 0 || (clicked & ovrButton::ovrButton_Y) != 0)
-			{
-				CycleShaderMode();
+				uint32_t pressed = controllerState.mButtons & ~lastControllerState.mButtons;
+				uint32_t released = ~controllerState.mButtons & lastControllerState.mButtons;
+
+				//Detect when a button press or button release event occurs, and store the event in controllerState.
+				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_A, avs::InputList::BUTTON01);
+				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_X, avs::InputList::BUTTON01);
+				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_B, avs::InputList::BUTTON02);
+				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Y, avs::InputList::BUTTON02);
+				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Enter, avs::InputList::BUTTON_HOME);
+				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Trigger, avs::InputList::TRIGGER_BACK);
+				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_GripTrigger, avs::InputList::TRIGGER_GRIP);
+				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Joystick, avs::InputList::BUTTON_STICK);
+
+				if((released & ovrButton::ovrButton_A) != 0 || (released & ovrButton::ovrButton_X) != 0)
+				{
+					CycleOSD();
+				}
+
+				if((released & ovrButton::ovrButton_B) != 0 || (released & ovrButton::ovrButton_Y) != 0)
+				{
+					CycleShaderMode();
+				}
+
+				mLastControllerStates[i] = controllerState;
 			}
 		}
+	}
+}
+
+void Controllers::AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, ControllerState& controllerState, ovrButton buttonID, avs::InputList inputID)
+{
+	if((pressedButtons & buttonID) != 0)
+	{
+		controllerState.addBinaryEvent(nextEventID++, inputID, true);
+	}
+	else if((releasedButtons & buttonID) != 0)
+	{
+		controllerState.addBinaryEvent(nextEventID++, inputID, false);
 	}
 }

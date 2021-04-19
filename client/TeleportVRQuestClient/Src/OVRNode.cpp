@@ -235,7 +235,7 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 
 	//Set image samplers and uniform buffers.
 	size_t resourceCount = 0;
-	GLint textureCount = 0, uniformCount = 0, storageBufferCount;
+	GLint textureCount = 0, uniformCount = 0, storageBufferCount = 0;
 	size_t j = 0;
 	for(const scr::ShaderResource *sr : pbrShaderResources)
 	{

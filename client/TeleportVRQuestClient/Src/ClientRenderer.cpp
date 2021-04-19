@@ -797,7 +797,7 @@ void ClientRenderer::CycleShaderMode()
 }
 
 
-void ClientRenderer::ToggleShowInfo()
+void ClientRenderer::CycleOSD()
 {
 	show_osd = (show_osd + 1) % NUM_OSDS;
 }

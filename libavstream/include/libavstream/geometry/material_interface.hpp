@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "libavstream/common.hpp"
+#include "libavstream/common_maths.h"
 #include "libavstream/memory.hpp"
 
 #include "material_extensions.h"

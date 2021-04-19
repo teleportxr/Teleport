@@ -1,8 +1,10 @@
 ﻿// (C) Copyright 2018-2021 Simul Software Ltd
 #pragma once
 #include <cmath>
-#include <libavstream/common.hpp>
-#include <Platform/Shaders/SL/CppSl.sl>
+
+#include "libavstream/common_maths.h"
+
+#include "Platform/Shaders/SL/CppSl.sl"
 
 //TODO: Placeholder! Find maths library!
 namespace scr

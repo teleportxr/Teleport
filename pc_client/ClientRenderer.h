@@ -163,8 +163,11 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 		avs::vec4 orientation[2];
 	};
 	ControllerSim controllerSim;
+	uint32_t nextEventID = 0;
+
 	std::string server_ip;
 	int server_discovery_port=0;
+
 	float roomRadius=1.5f;
 	ClientDeviceState *clientDeviceState;
 public:
@@ -204,8 +207,8 @@ public:
 	void RemoveView(int);
 	bool OnDeviceRemoved();
 	void OnFrameMove(double fTime, float time_step);
+	void OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
-	void OnMouseButtonClicked(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnKeyboard(unsigned wParam, bool bKeyDown);
 

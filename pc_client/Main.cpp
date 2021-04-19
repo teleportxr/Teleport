@@ -213,14 +213,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+	case WM_LBUTTONDOWN:
+		clientRenderer.OnMouseButtonPressed(true, false, false, 0);
+		break;
 	case WM_LBUTTONUP:
-	{
-		clientRenderer.OnMouseButtonReleased(true
-			, false
-			, false
-			, 0);
-	}
-	break;
+		clientRenderer.OnMouseButtonReleased(true, false, false, 0);
+		break;
 	case WM_MOUSEWHEEL:
 		{
 			int xPos = GET_X_LPARAM(lParam); 
