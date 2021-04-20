@@ -769,7 +769,7 @@ TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
 	}
 
 	ClientData& lostClient = clientPair->second;
-	lostClient.clientMessaging.sendCommand(avs::ShutdownCommand());
+	lostClient.clientMessaging.stopSession();
 	lostClient.isStreaming = false;
 
 	//Delay deletion of clients.

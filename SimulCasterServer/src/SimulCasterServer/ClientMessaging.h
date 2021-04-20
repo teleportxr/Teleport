@@ -49,7 +49,7 @@ namespace SCServer
 		void initialise(CasterContext* context, CaptureDelegates captureDelegates);
 		void unInitialise();
 
-		bool startSession(avs::uid u, int32_t listenPort);
+		bool startSession(avs::uid clientID, int32_t listenPort);
 		void stopSession();
 		bool restartSession(avs::uid clientID, int32_t listenPort);
 
