@@ -584,9 +584,11 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 	{
 		meshInfoString = simul::base::QuickFormat("mesh: %s (0x%08x)", mesh->GetMeshCreateInfo().name.c_str(), &mesh);
 	}
-
+	avs::vec3 pos=node->GetGlobalPosition();
 	//Print details on node to screen.
-	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d(%s) %s", indent_txt, node->id, node->name.c_str(), meshInfoString.c_str()));
+	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d %s (%4.4f,%4.4f,%4.4f) %s", indent_txt, node->id, node->name.c_str()
+		,pos.x,pos.y,pos.z
+		, meshInfoString.c_str()));
 
 	//Print information on children to screen.
 	const std::vector<std::weak_ptr<scr::Node>>& children = node->GetChildren();
@@ -645,7 +647,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
 
-		int linesRemaining = 10;
+		int linesRemaining = 20;
 		auto& rootNodes = resourceManagers.mNodeManager->GetRootNodes();
 		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{

@@ -22,7 +22,7 @@ public :
 	void SetSetStickOffsetDelegate(Float2Delegate d);
 	void ClearDelegates();
 
-	bool InitializeController(ovrMobile *pMobile);
+	bool InitializeController(ovrMobile *pMobile,int idx);
 	void Update(ovrMobile *ovrmobile);
 	ovrDeviceID mControllerIDs[2];
 

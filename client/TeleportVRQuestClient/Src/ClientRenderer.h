@@ -12,6 +12,7 @@
 #include <VrApi_Input.h>
 
 #include "SCR_Class_GL_Impl/GL_DeviceContext.h"
+#include "Controllers.h"
 
 class ClientAppInterface
 {
@@ -94,7 +95,7 @@ class ClientDeviceState;
 class ClientRenderer
 {
 public:
-	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c,ClientDeviceState *s);
+	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c,ClientDeviceState *s,Controllers *cn);
 	~ClientRenderer();
 
 	void CycleShaderMode();
@@ -111,6 +112,8 @@ public:
 
 	void RenderLocalNodes(OVRFW::ovrRendererOutput& res);
 	void RenderNode(OVRFW::ovrRendererOutput& res, std::shared_ptr<scr::Node> node);
+
+	Controllers *controllers=nullptr;
 
 	avs::Decoder       mDecoder;
 	avs::NetworkSource mNetworkSource;

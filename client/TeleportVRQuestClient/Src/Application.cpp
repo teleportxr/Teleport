@@ -41,7 +41,7 @@ Application::Application()
 		  , mSoundEffectPlayer(nullptr)
 		  , mGuiSys(nullptr)
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
-		  , clientRenderer(&resourceCreator, &resourceManagers, this, this, &clientDeviceState)
+		  , clientRenderer(&resourceCreator, &resourceManagers, this, this, &clientDeviceState,&controllers)
 		  , lobbyRenderer(&clientDeviceState)
 		  , resourceManagers(new OVRNodeManager)
 		  , resourceCreator(basist::transcoder_texture_format::cTFETC2)
@@ -323,7 +323,11 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	// Try to find remote controller
 	if((int)controllers.mControllerIDs[0] == 0)
 	{
-		controllers.InitializeController(GetSessionObject());
+		controllers.InitializeController(GetSessionObject(),0);
+	}
+	if((int)controllers.mControllerIDs[1] == 0)
+	{
+		controllers.InitializeController(GetSessionObject(),1);
 	}
 	controllers.Update(GetSessionObject());
 	clientDeviceState.originPose.position=*((const avs::vec3*)&mScene.GetFootPos());

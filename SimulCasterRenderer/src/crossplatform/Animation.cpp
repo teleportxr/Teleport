@@ -36,7 +36,7 @@ namespace scr
 
 		//Linear interpolation between previous keyframe and next keyframe.
 		float timeBlend = getTimeBlend(time, previousKeyframe.time, nextKeyframe.time);
-		bonePosition = (1 - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
+		bonePosition = (1.0f - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
 	}
 
 	void BoneKeyframeList::setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes)
@@ -54,7 +54,7 @@ namespace scr
 
 		//Linear interpolation between previous keyframe and next keyframe.
 		float timeBlend = getTimeBlend(time, previousKeyframe.time, nextKeyframe.time);
-		boneRotation = (1 - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
+		boneRotation = (1.0f - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
 		//boneRotation = quat::Slerp(previousKeyframe.value, nextKeyframe.value, timeBlend);
 	}
 
@@ -62,7 +62,8 @@ namespace scr
 	{
 		for(size_t i = 1; i < keyframes.size(); i++)
 		{
-			if(keyframes[i].time >= time) return i;
+			if(keyframes[i].time >= time)
+				return i;
 		}
 
 		return keyframes.size() - 1;
@@ -72,7 +73,8 @@ namespace scr
 	{
 		for(size_t i = 1; i < keyframes.size(); i++)
 		{
-			if(keyframes[i].time >= time) return i;
+			if(keyframes[i].time >= time)
+				return i;
 		}
 
 		return keyframes.size() - 1;

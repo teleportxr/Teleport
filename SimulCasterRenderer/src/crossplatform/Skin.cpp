@@ -14,7 +14,7 @@ namespace scr
 	{
 		//MAX_BONES may be less than the amount of bones we have.
 		size_t upperBound = std::min<size_t>(bones.size(), MAX_BONES);
-		//mat4 rir=rootTransform.GetInverted() * rootTransform;
+
 		mat4 common=skinTransform.GetTransformMatrix();
 		for (size_t i = 0; i < upperBound; i++)
 		{

@@ -38,33 +38,47 @@ void Controllers::ClearDelegates()
 	SetStickOffset = nullptr;
 }
 
-bool Controllers::InitializeController(ovrMobile *ovrmobile)
+bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
 {
 	ovrInputCapabilityHeader inputCapsHeader;
-	int idx=0;
-	for(uint32_t i = 0;
-	    vrapi_EnumerateInputDevices(ovrmobile, i, &inputCapsHeader) == 0; ++i) {
-		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote)
+	for(uint32_t i = 0;i<2; ++i)
+	{
+		if(vrapi_EnumerateInputDevices(ovrmobile, i, &inputCapsHeader) >= 0)
+		if(idx==i&&inputCapsHeader.Type == ovrControllerType_TrackedRemote&&(int)inputCapsHeader.DeviceID != -1)
 		{
-			if ((int) inputCapsHeader.DeviceID != -1)
+			bool already_got;
+			for (int j = 0; j < 2; j++)
 			{
-				mControllerIDs[idx] = inputCapsHeader.DeviceID;
-				LOG("Found controller (ID: %d)", mControllerIDs[idx]);
-				idx++;
-				ovrInputTrackedRemoteCapabilities trackedInputCaps;
-				trackedInputCaps.Header = inputCapsHeader;
-				vrapi_GetInputDeviceCapabilities(ovrmobile, &trackedInputCaps.Header);
-				LOG("Controller Capabilities: %ud", trackedInputCaps.ControllerCapabilities);
-				LOG("Button Capabilities: %ud", trackedInputCaps.ButtonCapabilities);
-				LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
-				LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
-				mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
-				mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
+				if(mControllerIDs[j]==inputCapsHeader.DeviceID)
+					already_got=true;
 			}
+			if(already_got)
+				continue;
+			LOG("Found controller (ID: %d)", inputCapsHeader.DeviceID);
+			ovrInputTrackedRemoteCapabilities trackedInputCaps;
+			trackedInputCaps.Header = inputCapsHeader;
+			vrapi_GetInputDeviceCapabilities(ovrmobile, &trackedInputCaps.Header);
+			LOG("Controller Capabilities: %ud", trackedInputCaps.ControllerCapabilities);
+			if(idx==0)
+			{
+				if((trackedInputCaps.ControllerCapabilities&ovrControllerCapabilities::ovrControllerCaps_RightHand)!=ovrControllerCapabilities::ovrControllerCaps_RightHand)
+					continue;
+			}
+			if(idx==1)
+			{
+				if((trackedInputCaps.ControllerCapabilities&ovrControllerCapabilities::ovrControllerCaps_LeftHand)!=ovrControllerCapabilities::ovrControllerCaps_LeftHand)
+					continue;
+			}
+			LOG("Button Capabilities: %ud", trackedInputCaps.ButtonCapabilities);
+			LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
+			LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
+			mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
+			mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
+			mControllerIDs[idx] = inputCapsHeader.DeviceID;
 		}
 	}
 
-	return (idx>0);
+	return (mControllerIDs[idx] >0);
 }
 
 void Controllers::Update(ovrMobile *ovrmobile)

@@ -70,7 +70,7 @@ avs::vec3 QuaternionTimesVector(const ovrQuatf &q, const avs::vec3 &vec)
 
 ClientRenderer::ClientRenderer(ResourceCreator *r, scr::ResourceManagers *rm
 							   , SessionCommandInterface *i, ClientAppInterface *c
-							   , ClientDeviceState *s)
+							   , ClientDeviceState *s, Controllers *cn)
 		: mDecoder(avs::DecoderBackend::Custom)
 		  , resourceManagers(rm)
 		  , resourceCreator(r)
@@ -80,7 +80,8 @@ ClientRenderer::ClientRenderer(ResourceCreator *r, scr::ResourceManagers *rm
 		  , mCubemapLightingTexture(nullptr)
 		  , mTagDataIDBuffer(nullptr)
 		  , mTagDataArrayBuffer(nullptr)
-		  , clientDeviceState(s)
+		  , controllers(cn)
+		, clientDeviceState(s)
 {
 }
 
@@ -1006,14 +1007,14 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 			mGuiSys->ShowInfoText
 					(
 							INFO_TEXT_DURATION, offset, colour,
-							"Controller 01: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
-							"Controller 02: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
+							"Controller 0: %d (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
+							"Controller 1: %d (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
 							"Left Hand Node: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
 							"Right Hand Node: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)",
-							clientDeviceState->controllerPoses[0].position.x, clientDeviceState->controllerPoses[0].position.y, clientDeviceState->controllerPoses[0].position.z,
+							controllers->mControllerIDs[0],clientDeviceState->controllerPoses[0].position.x, clientDeviceState->controllerPoses[0].position.y, clientDeviceState->controllerPoses[0].position.z,
 							clientDeviceState->controllerPoses[0].orientation.x, clientDeviceState->controllerPoses[0].orientation.y, clientDeviceState->controllerPoses[0].orientation.z,
 							clientDeviceState->controllerPoses[0].orientation.w,
-							clientDeviceState->controllerPoses[1].position.x, clientDeviceState->controllerPoses[1].position.y, clientDeviceState->controllerPoses[1].position.z,
+							controllers->mControllerIDs[1],clientDeviceState->controllerPoses[1].position.x, clientDeviceState->controllerPoses[1].position.y, clientDeviceState->controllerPoses[1].position.z,
 							clientDeviceState->controllerPoses[1].orientation.x, clientDeviceState->controllerPoses[1].orientation.y, clientDeviceState->controllerPoses[1].orientation.z,
 							clientDeviceState->controllerPoses[1].orientation.w,
 							leftHandPosition.x, leftHandPosition.y, leftHandPosition.z,

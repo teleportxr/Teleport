@@ -12,6 +12,8 @@
 
 namespace avs
 {
+#pragma pack(push)
+#pragma pack(1)
 	typedef unsigned long long uid;
 	extern AVSTREAM_API uid GenerateUid();
 
@@ -302,4 +304,5 @@ namespace avs
 		size_t dataSize = 0;
 		bool broken = false; // True if any fragment of the data has been lost
 	};
+#pragma pack(pop)
 } // avs
