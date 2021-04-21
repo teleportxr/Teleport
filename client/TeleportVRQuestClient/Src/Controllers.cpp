@@ -41,34 +41,28 @@ void Controllers::ClearDelegates()
 bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
 {
 	ovrInputCapabilityHeader inputCapsHeader;
+	ovrControllerCapabilities caps;
+	if(idx==0)
+	{
+		caps=ovrControllerCapabilities::ovrControllerCaps_RightHand;
+	}
+	if(idx==1)
+	{
+		caps=ovrControllerCapabilities::ovrControllerCaps_LeftHand;
+	}
+
 	for(uint32_t i = 0;i<2; ++i)
 	{
 		if(vrapi_EnumerateInputDevices(ovrmobile, i, &inputCapsHeader) >= 0)
-		if(idx==i&&inputCapsHeader.Type == ovrControllerType_TrackedRemote&&(int)inputCapsHeader.DeviceID != -1)
+		if(inputCapsHeader.Type == ovrControllerType_TrackedRemote&&(int)inputCapsHeader.DeviceID != -1)
 		{
-			bool already_got;
-			for (int j = 0; j < 2; j++)
-			{
-				if(mControllerIDs[j]==inputCapsHeader.DeviceID)
-					already_got=true;
-			}
-			if(already_got)
-				continue;
-			LOG("Found controller (ID: %d)", inputCapsHeader.DeviceID);
 			ovrInputTrackedRemoteCapabilities trackedInputCaps;
 			trackedInputCaps.Header = inputCapsHeader;
 			vrapi_GetInputDeviceCapabilities(ovrmobile, &trackedInputCaps.Header);
+			if((trackedInputCaps.ControllerCapabilities&caps)!=caps)
+				continue;
+			LOG("Found controller (ID: %d)", inputCapsHeader.DeviceID);
 			LOG("Controller Capabilities: %ud", trackedInputCaps.ControllerCapabilities);
-			if(idx==0)
-			{
-				if((trackedInputCaps.ControllerCapabilities&ovrControllerCapabilities::ovrControllerCaps_RightHand)!=ovrControllerCapabilities::ovrControllerCaps_RightHand)
-					continue;
-			}
-			if(idx==1)
-			{
-				if((trackedInputCaps.ControllerCapabilities&ovrControllerCapabilities::ovrControllerCaps_LeftHand)!=ovrControllerCapabilities::ovrControllerCaps_LeftHand)
-					continue;
-			}
 			LOG("Button Capabilities: %ud", trackedInputCaps.ButtonCapabilities);
 			LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
 			LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
@@ -78,7 +72,7 @@ bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
 		}
 	}
 
-	return (mControllerIDs[idx] >0);
+	return (mControllerIDs[idx]>0);
 }
 
 void Controllers::Update(ovrMobile *ovrmobile)

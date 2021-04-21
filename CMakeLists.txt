@@ -145,6 +145,8 @@ else()
 	set(SA_BUILD_SHARED_LIB OFF CACHE BOOL "")
 endif()
 
+set(SA_BUILD_SHARED_LIB ${REMOTEPLAY_SERVER})
+
 add_subdirectory(SimulCasterAudio)
 add_subdirectory(libavstream)
 
@@ -156,6 +158,8 @@ set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
 #target_compile_options(basisu PRIVATE /wd4711)
 
 add_subdirectory(thirdparty/srt)
-set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
+if(NOT REMOTEPLAY_SERVER)
+	set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
+endif()
 set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
 #set_target_properties( haicrypt PROPERTIES FOLDER thirdparty/srt)
