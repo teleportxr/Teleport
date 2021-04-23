@@ -128,6 +128,7 @@ public:
 		avs::vec4 eyeOffsets[2];
 		ovrMatrix4f invViewProj[2];
 		ovrMatrix4f viewProj;
+		ovrMatrix4f serverProj;
 		avs::vec3 cameraPosition;
 		int pad_;
 	};
@@ -135,6 +136,7 @@ public:
 
 	struct CubemapUB
 	{
+		scr::uvec2 dimensions;
 		scr::ivec2 sourceOffset;
 		uint32_t   faceSize;
 		uint32_t    mip = 0;
@@ -143,10 +145,11 @@ public:
 	CubemapUB cubemapUB;
 
 	OVRFW::ovrSurfaceDef mVideoSurfaceDef;
-	OVRFW::GlProgram     mVideoSurfaceProgram;
+	OVRFW::GlProgram     mCubeVideoSurfaceProgram;
+	OVRFW::GlProgram     m2DVideoSurfaceProgram;
 	OVRFW::SurfaceTexture *mVideoSurfaceTexture=nullptr;
 	std::shared_ptr<scr::Texture>       mVideoTexture;
-	std::shared_ptr<scr::Texture>       mCubemapTexture;
+	std::shared_ptr<scr::Texture>       mRenderTexture;
 	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;
 	std::shared_ptr<scr::Texture>       specularCubemapTexture;
 	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
@@ -156,9 +159,11 @@ public:
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
 	scr::ShaderResource				    mColourAndDepthShaderResources;
 	scr::ShaderResource				    mCopyCubemapShaderResources;
+	scr::ShaderResource				    mCopyPerspectiveShaderResources;
 	scr::ShaderResource				    mExtractTagShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
+	std::shared_ptr<scr::Effect>        mCopyPerspectiveEffect;
 	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;
 	std::shared_ptr<scr::Effect>        mExtractOneTagEffect;
 

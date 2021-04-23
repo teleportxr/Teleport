@@ -76,7 +76,7 @@ ClientRenderer::ClientRenderer(ResourceCreator *r, scr::ResourceManagers *rm
 		  , resourceCreator(r)
 		  , clientAppInterface(c)
 		  , mVideoSurfaceTexture(nullptr)
-		  , mCubemapTexture(nullptr)
+		  , mRenderTexture(nullptr)
 		  , mCubemapLightingTexture(nullptr)
 		  , mTagDataIDBuffer(nullptr)
 		  , mTagDataArrayBuffer(nullptr)
@@ -103,28 +103,47 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		}
 		static ovrProgramParm uniformParms[] =
 				{
-						{  "cubemapTexture", ovrProgramParmType::TEXTURE_SAMPLED}
+						{  "renderTexture", ovrProgramParmType::TEXTURE_SAMPLED}
 						, {"videoUB"       , ovrProgramParmType::BUFFER_UNIFORM}
 						, {"TagDataCube"   , ovrProgramParmType::BUFFER_STORAGE}
 						,};
-		std::string videoSurfaceVert = clientAppInterface->LoadTextFile(
-				"shaders/VideoSurfaceSphere.vert");
-		std::string videoSurfaceFrag = clientAppInterface->LoadTextFile(
-				"shaders/VideoSurfaceSphere.frag");
-		mVideoSurfaceProgram = GlProgram::Build(
-				nullptr, videoSurfaceVert.c_str(),
-				"#extension GL_OES_EGL_image_external_essl3 : require\n", videoSurfaceFrag.c_str(),
-				uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm), 310);
-		if (!mVideoSurfaceProgram.IsValid())
+
+		// Cubemap
 		{
-			OVR_FAIL("Failed to build video surface shader program");
+			std::string videoSurfaceVert = clientAppInterface->LoadTextFile(
+					"shaders/VideoSurfaceSphere.vert");
+			std::string videoSurfaceFrag = clientAppInterface->LoadTextFile(
+					"shaders/VideoSurfaceSphere.frag");
+			mCubeVideoSurfaceProgram = GlProgram::Build(
+					nullptr, videoSurfaceVert.c_str(),
+					"#extension GL_OES_EGL_image_external_essl3 : require\n",
+					videoSurfaceFrag.c_str(),
+					uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm), 310);
+			if (!mCubeVideoSurfaceProgram.IsValid()) {
+				OVR_FAIL("Failed to build video surface shader program for cubemap rendering");
+			}
+		}
+		// Perspective
+		{
+			std::string videoSurfaceVert = clientAppInterface->LoadTextFile(
+					"shaders/VideoSurfaceSpherePersp.vert");
+			std::string videoSurfaceFrag = clientAppInterface->LoadTextFile(
+					"shaders/VideoSurfaceSpherePersp.frag");
+			m2DVideoSurfaceProgram = GlProgram::Build(
+					nullptr, videoSurfaceVert.c_str(),
+					"#extension GL_OES_EGL_image_external_essl3 : require\n",
+					videoSurfaceFrag.c_str(),
+					uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm), 310);
+			if (!m2DVideoSurfaceProgram.IsValid()) {
+				OVR_FAIL("Failed to build video surface shader program for perspective rendering");
+			}
 		}
 	}
 	{
 		mVideoSurfaceTexture = new OVRFW::SurfaceTexture(java->Env);
 		mVideoTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
 		mCubemapUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-		mCubemapTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
+		mRenderTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
 		diffuseCubemapTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
 		specularCubemapTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
 
@@ -162,6 +181,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		CopyCubemapSrc = clientAppInterface->LoadTextFile("shaders/CopyCubemap.comp");
 		mCopyCubemapEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		mCopyCubemapWithDepthEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
+        mCopyPerspectiveEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		mExtractTagDataIDEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		mExtractOneTagEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		scr::Effect::EffectCreateInfo effectCreateInfo = {};
@@ -170,6 +190,9 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 		effectCreateInfo.effectName = "CopyCubemapWithDepth";
 		mCopyCubemapWithDepthEffect->Create(&effectCreateInfo);
+
+        effectCreateInfo.effectName = "CopyPerspective";
+        mCopyPerspectiveEffect->Create(&effectCreateInfo);
 
 		effectCreateInfo.effectName = "ExtractTagDataID";
 		mExtractTagDataIDEffect->Create(&effectCreateInfo);
@@ -200,15 +223,29 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		effectPassCreateInfo.pipeline = cp2;
 		mCopyCubemapWithDepthEffect->CreatePass(&effectPassCreateInfo);
 
+        {
+            std::string copyPerspectiveSrc = clientAppInterface->LoadTextFile(
+                    "shaders/CopyPerspective.comp");
+            // pass to extract from the array into a single tag buffer:
+            pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/CopyPerspective.comp";
+            pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = copyPerspectiveSrc;
+            pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_depth";
+            scr::ShaderSystem::Pipeline cp3(&globalGraphicsResources.renderPlatform,
+                                            &pipelineCreateInfo);
+            effectPassCreateInfo.effectPassName = "PerspectiveColourAndDepth";
+            effectPassCreateInfo.pipeline = cp3;
+            mCopyPerspectiveEffect->CreatePass(&effectPassCreateInfo);
+        }
+
 		{
 			ExtractTagDataIDSrc = clientAppInterface->LoadTextFile("shaders/ExtractTagDataID.comp");
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/ExtractTagDataID.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractTagDataIDSrc;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_tag_data_id";
-			scr::ShaderSystem::Pipeline cp3(&globalGraphicsResources.renderPlatform,
+			scr::ShaderSystem::Pipeline cp4(&globalGraphicsResources.renderPlatform,
 											&pipelineCreateInfo);
 			effectPassCreateInfo.effectPassName = "ExtractTagDataID";
-			effectPassCreateInfo.pipeline = cp3;
+			effectPassCreateInfo.pipeline = cp4;
 			mExtractTagDataIDEffect->CreatePass(&effectPassCreateInfo);
 
 			std::string ExtractTagDataSrc = clientAppInterface->LoadTextFile(
@@ -217,10 +254,10 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/ExtractOneTag.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractTagDataSrc;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_tag_data";
-			scr::ShaderSystem::Pipeline cp4(&globalGraphicsResources.renderPlatform,
+			scr::ShaderSystem::Pipeline cp5(&globalGraphicsResources.renderPlatform,
 											&pipelineCreateInfo);
 			effectPassCreateInfo.effectPassName = "ExtractOneTag";
-			effectPassCreateInfo.pipeline = cp4;
+			effectPassCreateInfo.pipeline = cp5;
 			mExtractOneTagEffect->CreatePass(&effectPassCreateInfo);
 
 			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2
@@ -243,7 +280,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		mColourAndDepthShaderResources.SetLayout(layout);
 		mColourAndDepthShaderResources.AddImage(
 				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex",
-				{globalGraphicsResources.cubeMipMapSampler, mCubemapTexture, 0, uint32_t(-1)});
+				{globalGraphicsResources.cubeMipMapSampler, mRenderTexture, 0, uint32_t(-1)});
 		mColourAndDepthShaderResources.AddImage(
 				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
 				"videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
@@ -253,13 +290,25 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 		mCopyCubemapShaderResources.SetLayout(layout);
 		mCopyCubemapShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex", {});
+				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0,
+				"destTex", {});
 		mCopyCubemapShaderResources.AddImage(
 				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
 				"videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
 		mCopyCubemapShaderResources.AddBuffer(
 				scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB",
 				{mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+
+        mCopyPerspectiveShaderResources.SetLayout(layout);
+        mCopyPerspectiveShaderResources.AddImage(
+                scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0,
+                "destTex", {globalGraphicsResources.sampler, mRenderTexture});
+        mCopyPerspectiveShaderResources.AddImage(
+                scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
+                "videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
+        mCopyPerspectiveShaderResources.AddBuffer(
+                scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB",
+                {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
 		mExtractTagShaderResources.SetLayout(layout);
 		mExtractTagShaderResources.AddImage(
@@ -279,9 +328,9 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 				"TagDataCubeArray_ssbo", {mTagDataArrayBuffer.get()});
 
 
-		mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",
-												 {mColourAndDepthShaderResources});
+		mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{mColourAndDepthShaderResources});
 		mCopyCubemapEffect->LinkShaders("CopyCubemap", {mCopyCubemapShaderResources});
+        mCopyPerspectiveEffect->LinkShaders("PerspectiveColourAndDepth",{mCopyPerspectiveShaderResources});
 		mExtractTagDataIDEffect->LinkShaders("ExtractTagDataID", {mExtractTagShaderResources});
 		mExtractOneTagEffect->LinkShaders("ExtractOneTag", {mExtractTagShaderResources});
 	}
@@ -289,7 +338,6 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	mVideoSurfaceDef.surfaceName = "VideoSurface";
 	mVideoSurfaceDef.geo = BuildGlobe(1.f, 1.f, 6.f,32,64);
 	//BuildTesselatedQuad(2,2,true);//
-	mVideoSurfaceDef.graphicsCommand.Program = mVideoSurfaceProgram;
 	mVideoSurfaceDef.graphicsCommand.GpuState.depthEnable = true;
 	mVideoSurfaceDef.graphicsCommand.GpuState.depthMaskEnable = false;
 	mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
@@ -389,14 +437,15 @@ void ClientRenderer::ExitedVR()
 {
 	delete mVideoSurfaceTexture;
 	mVideoSurfaceDef.geo.Free();
-	GlProgram::Free(mVideoSurfaceProgram);
+	GlProgram::Free(mCubeVideoSurfaceProgram);
 }
 
 void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	videoConfig = vc;
-	//Build Video Cubemap
+	//Build Video Cubemap or perspective texture
+	if (vc.use_cubemap)
 	{
 		scr::Texture::TextureCreateInfo textureCreateInfo =
 				{
@@ -406,9 +455,32 @@ void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
 						, scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
 						, scr::Texture::CompressionFormat::UNCOMPRESSED
 				};
-		mCubemapTexture->Create(textureCreateInfo);
-		mCubemapTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
+		mRenderTexture->Create(textureCreateInfo);
+		mRenderTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
+
+		mVideoSurfaceDef.graphicsCommand.Program = mCubeVideoSurfaceProgram;
 	}
+	else
+	{
+		scr::Texture::TextureCreateInfo textureCreateInfo =
+				{
+						"Perspective Texture", videoConfig.perspective_width
+						, videoConfig.perspective_height, 1, 4, 1, 1, scr::Texture::Slot::UNKNOWN
+						, scr::Texture::Type::TEXTURE_2D, scr::Texture::Format::RGBA8
+						, scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
+						, scr::Texture::CompressionFormat::UNCOMPRESSED
+				};
+		mRenderTexture->Create(textureCreateInfo);
+		mRenderTexture->UseSampler(globalGraphicsResources.sampler);
+
+		mVideoSurfaceDef.graphicsCommand.Program = m2DVideoSurfaceProgram;
+	}
+
+	const float aspect = vc.perspective_width / vc.perspective_height;
+	const float horzFOV = vc.perspective_fov * scr::DEG_TO_RAD;
+	const float vertFOV = scr::GetVerticalFOVFromHorizontal(horzFOV, aspect);
+	videoUB.serverProj = ovrMatrix4f_CreateProjectionFov( horzFOV, vertFOV, 0.0f, 0.0f, vc.nearClipPlane, 0.0f );
+
 	//GLCheckErrorsWithTitle("Built Video Cubemap");
 	//Build Lighting Cubemap
 	{
@@ -473,8 +545,8 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 	scr::ivec2 diffuseOffset = {videoConfig.diffuse_x, videoConfig.diffuse_y};
 	//scr::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
 	// Here the compute shader to copy from the video texture into the cubemap/s.
-	auto &tc = mCubemapTexture->GetTextureCreateInfo();
-	if (mCubemapTexture->IsValid())
+	auto &tc = mRenderTexture->GetTextureCreateInfo();
+	if (mRenderTexture->IsValid())
 	{
 		const uint32_t ThreadCount = 4;
 		GLint max_u, max_v, max_w;
@@ -487,24 +559,48 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		size.y = std::min(size.y, (uint32_t) max_v);
 		size.z = std::min(size.z, (uint32_t) max_w);
 
-		scr::InputCommandCreateInfo inputCommandCreateInfo;
-		inputCommandCreateInfo.effectPassName = "ColourAndDepth";
-
-		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
-											   mCopyCubemapWithDepthEffect,
-											   {mColourAndDepthShaderResources});
 		cubemapUB.faceSize = tc.width;
 		cubemapUB.sourceOffset = {0, 0};
 		cubemapUB.mip = 0;
 		cubemapUB.face = 0;
 
-		mDeviceContext.DispatchCompute(&inputCommand);
+		if (mRenderTexture->GetTextureCreateInfo().type == scr::Texture::Type::TEXTURE_CUBE_MAP)
+		{
+			cubemapUB.dimensions = {cubemapUB.faceSize * 3, cubemapUB.faceSize * 2};
+
+			scr::InputCommandCreateInfo inputCommandCreateInfo;
+			inputCommandCreateInfo.effectPassName = "ColourAndDepth";
+
+			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+												   mCopyCubemapWithDepthEffect,
+												   {mColourAndDepthShaderResources});
+
+			mDeviceContext.DispatchCompute(&inputCommand);
+		}
+		else
+		{
+			const auto texInfo = mRenderTexture->GetTextureCreateInfo();
+			cubemapUB.dimensions = { texInfo.width, texInfo.height };
+
+			scr::InputCommandCreateInfo inputCommandCreateInfo;
+			inputCommandCreateInfo.effectPassName = "PerspectiveColourAndDepth";
+
+			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+												   mCopyPerspectiveEffect,
+												   {mCopyPerspectiveShaderResources});
+
+			mDeviceContext.DispatchCompute(&inputCommand);
+		}
+
 		GLCheckErrorsWithTitle("Frame: CopyToCubemaps - Main");
+
+		scr::InputCommandCreateInfo inputCommandCreateInfo;
+		inputCommandCreateInfo.effectPassName = "CopyCubemap";
+		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+											   mCopyCubemapEffect,
+											   {mCopyCubemapShaderResources});
 		cubemapUB.faceSize = 0;
 		scr::ivec2 offset0 = {0, 0};
-		//Lighting Cubemaps
-		inputCommand.m_pComputeEffect = mCopyCubemapEffect;
-		inputCommand.effectPassName = "CopyCubemap";
 		int32_t mip_x = 0;
 
 		if (diffuseCubemapTexture->IsValid())
@@ -673,7 +769,7 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 		videoUB.invViewProj[1] = ovrMatrix4f_Inverse(&viewProjT1);
 	}
 	// Set data to send to the shader:
-	if (mCubemapTexture->IsValid())
+	if (mRenderTexture->IsValid())
 	{
 		ovrQuatf X0 = {1.0f, 0.f, 0.f, 0.0f};
 		ovrQuatf headPoseQ = {clientDeviceState->headPose.orientation.x
@@ -693,7 +789,7 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 		videoUB.cameraPosition =
 				clientDeviceState->headPose.position;
 		videoUB.viewProj=res.FrameMatrices.EyeProjection[0]*res.FrameMatrices.CenterView;
-		mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mCubemapTexture.get())->GetGlTexture());
+		mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mRenderTexture.get())->GetGlTexture());
 		//mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
 		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mVideoUB.get())->GetGlBuffer());
 		//mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
