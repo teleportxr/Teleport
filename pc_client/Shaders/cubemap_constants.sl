@@ -16,11 +16,11 @@ uniform int targetSize;
 SIMUL_CONSTANT_BUFFER_END
 
 #ifndef __cplusplus
-struct posTexVertexOutputPersp
+struct posTexVertexOutputDebug
 {
 	vec4 hPosition		: SV_POSITION;
 	vec2 texCoords		: TEXCOORD0;	
-	vec2 perspectiveUV	: TEXCOORD1;
+	vec3 color : TEXCOORD1;
 };
 #endif
 

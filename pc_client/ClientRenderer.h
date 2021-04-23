@@ -119,6 +119,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::Camera			camera;
 	simul::crossplatform::MouseCameraState	mouseCameraState;
 	simul::crossplatform::MouseCameraInput	mouseCameraInput;
+
 	// determined by the stream setup command:
 	vec4 colourOffsetScale;
 	vec4 depthOffsetScale;

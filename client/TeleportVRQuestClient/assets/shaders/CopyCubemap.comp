@@ -5,6 +5,7 @@ layout(rgba8, binding = 0) uniform writeonly lowp imageCube destTex;
 layout(binding = 1) uniform highp samplerExternalOES videoFrameTexture;
 layout(std140, binding = 2) uniform cubemapUB
 {
+    uvec2 dimensions;
     ivec2 sourceOffset;
     uint faceSize;
     uint mip;
@@ -33,7 +34,7 @@ void colour_only()
     vec4 lookup     = texelFetch(videoFrameTexture, loadPos, 0);
     ivec3 storePos  = ivec3(invocationId.xyz);
     // lookup.r+=1.0;//float((invocationId.z/uint(2))%uint(2));
-    // Aidan: RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder.
+    // RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder.
     lookup.r *= lookup.r;
     lookup.g *= lookup.g;
     lookup.b *= lookup.b;
@@ -74,7 +75,7 @@ void colour_and_depth()
     vec4 dMask          =DepthMask[offsetToPos.x+2*offsetToPos.y];
     float d             =dot(lookupDepth,dMask);
     ivec3 storePos  = ivec3(invocationId.xyz);
-    // Aidan: RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder. 
+    // RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder.
     lookup.r *= lookup.r;
     lookup.g *= lookup.g;
     lookup.b *= lookup.b;

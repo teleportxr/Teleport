@@ -378,9 +378,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			{
 				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, "recompose_with_depth_alpha");
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
-				RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x,videoConfig.diffuse_y));
-				RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x,videoConfig.specular_y));
-				RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x,videoConfig.light_y));
 			}
 			else
 			{	
@@ -389,6 +386,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				deviceContext.viewStruct.proj.Inverse(projInv);
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
 			}
+			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x, videoConfig.diffuse_y));
+			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x, videoConfig.specular_y));
+			RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 			RenderLocalNodes(deviceContext);
 
 			// We must deactivate the depth buffer here, in order to use it as a texture:
