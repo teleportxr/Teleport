@@ -6,14 +6,18 @@
 #include <atomic>
 #include <mutex>
 
+#include "libavstream/common_input.h"
+
 #include "CaptureDelegates.h"
 #include "CasterSettings.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
 
-
-typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*, const avs::InputEvent**);
-
+typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
+typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, uint64_t, const avs::Pose*);
+typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
+typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*, const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
+typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 typedef void(__stdcall* ReportHandshakeFn) (avs::uid clientID,const avs::Handshake *h);
 
 typedef struct _ENetHost ENetHost;
@@ -31,13 +35,13 @@ namespace SCServer
 		ClientMessaging(const struct CasterSettings* settings,
 						std::shared_ptr<DiscoveryService> discoveryService,
 						std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-						std::function<void(avs::uid,const avs::Pose*)> setHeadPose,
-						std::function<void(avs::uid,uint64_t,const avs::Pose*)> setOriginFromClient,
-						std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose,
-						std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput,
-						std::function<void(void)> onDisconnect,
-						const uint32_t& disconnectTimeout
-						,ReportHandshakeFn reportHandshakeFn);
+						SetHeadPoseFn setHeadPose,
+						SetOriginFromClientFn setOriginFromClient,
+						SetControllerPoseFn setControllerPose,
+						ProcessNewInputFn processNewInput,
+						DisconnectFn onDisconnect,
+						const uint32_t& disconnectTimeout,
+						ReportHandshakeFn reportHandshakeFn);
 		
 		virtual ~ClientMessaging();
 
@@ -45,7 +49,7 @@ namespace SCServer
 		void initialise(CasterContext* context, CaptureDelegates captureDelegates);
 		void unInitialise();
 
-		bool startSession(avs::uid u, int32_t listenPort);
+		bool startSession(avs::uid clientID, int32_t listenPort);
 		void stopSession();
 		bool restartSession(avs::uid clientID, int32_t listenPort);
 
@@ -90,7 +94,6 @@ namespace SCServer
 		static avs::Timestamp getLastTickTimestamp();
 
 	private:
-		ReportHandshakeFn reportHandshake;
 		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
 		bool initialized=false;
@@ -98,11 +101,12 @@ namespace SCServer
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
 
-		std::function<void(avs::uid,const avs::Pose*)> setHeadPose;										//Delegate called when a head pose is received.
-		std::function<void(avs::uid,uint64_t,const avs::Pose*)> setOriginFromClient;					//Delegate called when an origin is received.
-		std::function<void(avs::uid,int index,const avs::Pose*)> setControllerPose;						//Delegate called when a head pose is received.
-		std::function<void(avs::uid,const avs::InputState*,const avs::InputEvent**)> processNewInput;	//Delegate called when new input is received.
-		std::function<void(void)> onDisconnect; //Delegate called when the peer disconnects.
+		SetHeadPoseFn setHeadPose; //Delegate called when a head pose is received.
+		SetOriginFromClientFn setOriginFromClient; //Delegate called when an origin is received.
+		SetControllerPoseFn setControllerPose; //Delegate called when a head pose is received.
+		ProcessNewInputFn processNewInput; //Delegate called when new input is received.
+		DisconnectFn onDisconnect; //Delegate called when the peer disconnects.
+		ReportHandshakeFn reportHandshake;
 
 		const uint32_t& disconnectTimeout;
 
@@ -116,6 +120,13 @@ namespace SCServer
 
 		std::vector<avs::uid> nodesEnteredBounds;	//Stores nodes client needs to know have entered streaming bounds.
 		std::vector<avs::uid> nodesLeftBounds;		//Stores nodes client needs to know have left streaming bounds.
+
+		avs::InputState newInputState[2]; //Newest input state received from the client.
+
+		//New input events we have received from the client this tick.
+		std::vector<avs::InputEventBinary> newBinaryEvents[2];
+		std::vector<avs::InputEventAnalogue> newAnalogueEvents[2];
+		std::vector<avs::InputEventMotion> newMotionEvents[2];
 
 		void dispatchEvent(const ENetEvent& event);
 		void receiveHandshake(const ENetPacket* packet);

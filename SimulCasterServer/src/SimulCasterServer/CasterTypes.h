@@ -31,7 +31,7 @@ namespace SCServer
 	struct Result
 	{
 		/*! Result code enumeration. */
-		enum Code
+		enum class Code
 		{
 			OK = 0,
 			UnknownError,
@@ -53,7 +53,7 @@ namespace SCServer
 		Result(Code code) : m_code(code)
 		{}
 		//! if(Result) returns true only if m_code == OK i.e. is ZERO.
-		operator bool() const { return m_code == OK; }
+		operator bool() const { return m_code == Code::OK; }
 		operator Code() const { return m_code; }
 	private:
 		Code m_code;

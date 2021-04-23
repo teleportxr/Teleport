@@ -26,7 +26,7 @@ else()
 endif()
 
 if(REMOTEPLAY_UNITY)
-	set(REMOTEPLAY_UNITY_PLUGINS_DIR "${CMAKE_BINARY_DIR}/../Assets/external-sdk/Teleport/Plugins/x86_64" CACHE PATH "")
+	set(REMOTEPLAY_UNITY_PLUGINS_DIR "${CMAKE_BINARY_DIR}/../Assets/Teleport/Plugins/x86_64" CACHE PATH "")
 	set(REMOTEPLAY_UNITY_PROJECT_DIR "${CMAKE_BINARY_DIR}/.." CACHE PATH "")
 	set(REMOTEPLAY_UNITY_EDITOR_DIR "C:/Program Files/Unity/Editor" CACHE PATH "")
 	set(REMOTEPLAY_UNITY_EDITOR_EXE "Unity.exe" CACHE STRING "")
@@ -145,13 +145,21 @@ else()
 	set(SA_BUILD_SHARED_LIB OFF CACHE BOOL "")
 endif()
 
+set(SA_BUILD_SHARED_LIB ${REMOTEPLAY_SERVER})
+
 add_subdirectory(SimulCasterAudio)
 add_subdirectory(libavstream)
+
 add_subdirectory(thirdparty/enet)
 set_target_properties( enet PROPERTIES FOLDER thirdparty/enet)
+
 add_subdirectory(thirdparty/basis_universal)
 set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
+#target_compile_options(basisu PRIVATE /wd4711)
+
 add_subdirectory(thirdparty/srt)
-set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
+if(NOT REMOTEPLAY_SERVER)
+	set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
+endif()
 set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
 #set_target_properties( haicrypt PROPERTIES FOLDER thirdparty/srt)

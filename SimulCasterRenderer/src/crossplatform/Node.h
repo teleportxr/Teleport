@@ -1,7 +1,8 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <libavstream/geometry/mesh_interface.hpp>
+#include "libavstream/common_networking.h"
+#include "libavstream/geometry/mesh_interface.hpp"
 
 #include "NodeComponents.h"
 #include "api/UniformBuffer.h"

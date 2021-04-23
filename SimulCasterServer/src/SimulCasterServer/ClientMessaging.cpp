@@ -4,7 +4,8 @@
 #include <iostream>
 
 #include "enet/enet.h"
-#include "libavstream/common.hpp" //InputState
+#include "libavstream/common_input.h"
+#include "libavstream/common_networking.h"
 
 #include "DiscoveryService.h"
 #include "ErrorHandling.h"
@@ -18,23 +19,23 @@ namespace SCServer
 	std::mutex ClientMessaging::dataMutex;
 	avs::Timestamp ClientMessaging::lastTickTimestamp;
 
-	ClientMessaging::ClientMessaging(const CasterSettings* settings,
-		std::shared_ptr<DiscoveryService> discoveryService,
-		std::shared_ptr<GeometryStreamingService> geometryStreamingService,
-		std::function<void(avs::uid, const avs::Pose*)> inSetHeadPose,
-		std::function<void(avs::uid, uint64_t, const avs::Pose*)> inSetOriginFromClient,
-		std::function<void(avs::uid, int index, const avs::Pose*)> inSetControllerPose,
-		std::function<void(avs::uid, const avs::InputState*, const avs::InputEvent**)> inProcessNewInput,
-		std::function<void(void)> onDisconnect,
-		const uint32_t& disconnectTimeout
-		, ReportHandshakeFn reportHandshakeFn)
+	ClientMessaging::ClientMessaging(const struct CasterSettings* settings,
+									 std::shared_ptr<DiscoveryService> discoveryService,
+									 std::shared_ptr<GeometryStreamingService> geometryStreamingService,
+									 SetHeadPoseFn setHeadPose,
+									 SetOriginFromClientFn setOriginFromClient,
+									 SetControllerPoseFn setControllerPose,
+									 ProcessNewInputFn processNewInput,
+									 DisconnectFn onDisconnect,
+									 const uint32_t& disconnectTimeout,
+									 ReportHandshakeFn reportHandshakeFn)
 		: settings(settings)
 		, discoveryService(discoveryService)
 		, geometryStreamingService(geometryStreamingService)
-		, setHeadPose(inSetHeadPose)
-		, setOriginFromClient(inSetOriginFromClient)
-		, setControllerPose(inSetControllerPose)
-		, processNewInput(inProcessNewInput)
+		, setHeadPose(setHeadPose)
+		, setOriginFromClient(setOriginFromClient)
+		, setControllerPose(setControllerPose)
+		, processNewInput(processNewInput)
 		, onDisconnect(onDisconnect)
 		, reportHandshake(reportHandshakeFn)
 		, disconnectTimeout(disconnectTimeout)
@@ -86,7 +87,7 @@ namespace SCServer
 	{
 		this->clientID = clientID;
 
-		ENetAddress ListenAddress;
+		ENetAddress ListenAddress = {};
 		ListenAddress.host = ENET_HOST_ANY;
 		ListenAddress.port = listenPort;
 
@@ -227,7 +228,7 @@ namespace SCServer
 				assert(peer == event.peer);
 				timeSinceLastMessage = 0;
 				TELEPORT_COUT << "Client disconnected: " << getClientIP() << ":" << getClientPort() << std::endl;
-				onDisconnect();
+				onDisconnect(clientID);
 				peer = nullptr;
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
@@ -237,13 +238,39 @@ namespace SCServer
 			}
 		}
 
+		//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
+		const avs::InputEventBinary* binaryEventsPtr = newBinaryEvents[0].data();
+		const avs::InputEventAnalogue* analogueEventsPtr = newAnalogueEvents[0].data();
+		const avs::InputEventMotion* motionEventsPtr = newMotionEvents[0].data();
+		processNewInput(clientID, &newInputState[0], &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+
+		//Input has been passed, so clear the events.
+		newInputState[0].binaryEventAmount = 0;
+		newInputState[0].analogueEventAmount = 0;
+		newInputState[0].motionEventAmount = 0;
+		newBinaryEvents[0].clear();
+		newAnalogueEvents[0].clear();
+		newMotionEvents[0].clear();
+
+		binaryEventsPtr = newBinaryEvents[1].data();
+		analogueEventsPtr = newAnalogueEvents[1].data();
+		motionEventsPtr = newMotionEvents[1].data();
+		processNewInput(clientID, &newInputState[1], &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+
+		//Input has been passed, so clear the events.
+		newInputState[1].binaryEventAmount = 0;
+		newInputState[1].analogueEventAmount = 0;
+		newInputState[1].motionEventAmount = 0;
+		newBinaryEvents[1].clear();
+		newAnalogueEvents[1].clear();
+		newMotionEvents[1].clear();
+
 		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
-		if (host && peer && timeSinceLastMessage > disconnectTimeout / 1000)
+		if (host && peer && timeSinceLastMessage > disconnectTimeout / 1000.0f)
 		{
 			TELEPORT_COUT << "No message received in " << timeSinceLastMessage << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
-			onDisconnect();
+			onDisconnect(clientID);
 		}
-
 	}
 
 	void ClientMessaging::nodeEnteredBounds(avs::uid nodeID)
@@ -319,32 +346,32 @@ namespace SCServer
 
 	void ClientMessaging::dispatchEvent(const ENetEvent& event)
 	{
-		switch (event.channelID)
+		switch(static_cast<avs::RemotePlaySessionChannel>(event.channelID))
 		{
-			case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Handshake) :
-				//Delay the actual start of streaming until we receive a confirmation from the client that they are ready.
-				receiveHandshake(event.packet);
-				break;
-				case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control) :
-					receiveInput(event.packet);
-					break;
-					case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo) :
-						receiveDisplayInfo(event.packet);
-						break;
-						case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose) :
-							receiveHeadPose(event.packet);
-							break;
-							case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest) :
-								receiveResourceRequest(event.packet);
-								break;
-								case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_KeyframeRequest) :
-									receiveKeyframeRequest(event.packet);
-									break;
-									case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage) :
-										receiveClientMessage(event.packet);
-										break;
-									default:
-										break;
+		case avs::RemotePlaySessionChannel::RPCH_Handshake:
+			//Delay the actual start of streaming until we receive a confirmation from the client that they are ready.
+			receiveHandshake(event.packet);
+			break;
+		case avs::RemotePlaySessionChannel::RPCH_Control:
+			receiveInput(event.packet);
+			break;
+		case avs::RemotePlaySessionChannel::RPCH_DisplayInfo:
+			receiveDisplayInfo(event.packet);
+			break;
+		case avs::RemotePlaySessionChannel::RPCH_HeadPose:
+			receiveHeadPose(event.packet);
+			break;
+		case avs::RemotePlaySessionChannel::RPCH_ResourceRequest:
+			receiveResourceRequest(event.packet);
+			break;
+		case avs::RemotePlaySessionChannel::RPCH_KeyframeRequest:
+			receiveKeyframeRequest(event.packet);
+			break;
+		case avs::RemotePlaySessionChannel::RPCH_ClientMessage:
+			receiveClientMessage(event.packet);
+			break;
+		default:
+			break;
 		}
 		enet_packet_destroy(event.packet);
 	}
@@ -372,7 +399,7 @@ namespace SCServer
 			{
 				streamingPort,
 				clientIP,
-				networkSettings.localPort + 1,
+				handshake.clientStreamingPort,
 				static_cast<int32_t>(handshake.maxBandwidthKpS),
 				static_cast<int32_t>(handshake.udpBufferSize),
 				settings->requiredLatencyMs,
@@ -387,10 +414,12 @@ namespace SCServer
 
 		if (settings->isReceivingAudio && !casterContext->sourceNetworkPipeline)
 		{
+			std::string clientIP = getClientIP();
+
 			avs::NetworkSourceParams sourceParams;
 			sourceParams.connectionTimeout = disconnectTimeout;
 			sourceParams.localPort = streamingPort;
-			sourceParams.remoteIP = getClientIP().c_str();
+			sourceParams.remoteIP = clientIP.c_str();
 			sourceParams.remotePort = streamingPort + 1;
 
 			casterContext->sourceNetworkPipeline.reset(new SourceNetworkPipeline(settings));
@@ -457,26 +486,50 @@ namespace SCServer
 
 	void ClientMessaging::receiveInput(const ENetPacket* packet)
 	{
-		if (packet->dataLength < sizeof(avs::InputState))
+		size_t inputStateSize = sizeof(avs::InputState);
+
+		if (packet->dataLength < inputStateSize)
 		{
-			TELEPORT_CERR << "Session: Received malformed input state change packet of length: " << packet->dataLength << std::endl;
-			return;
-		}
-		avs::InputState inputState;
-		memcpy(&inputState, packet->data, sizeof(avs::InputState));
-		if (packet->dataLength != sizeof(avs::InputState) + inputState.numEvents * sizeof(avs::InputEvent))
-		{
-			TELEPORT_CERR << "Session: Received malformed input state change packet of length: " << packet->dataLength << " but with " << inputState.numEvents << " events." << std::endl;
+			TELEPORT_CERR << "Error on receive input for Client_" << clientID << "! Received malformed InputState packet of length " << packet->dataLength << "; less than minimum size of " << inputStateSize << "!\n";
 			return;
 		}
 
-		std::vector<avs::InputEvent> inputEvents;
-		//inputState.numEvents++;
-		inputEvents.resize(inputState.numEvents);
-		memcpy(const_cast<avs::InputEvent*>(inputEvents.data()), packet->data + sizeof(avs::InputState), packet->dataLength - sizeof(avs::InputState));
-		//inputEvents[inputEvents.size()-1]=inputEvents[0];
-		const avs::InputEvent* v = inputEvents.data();
-		processNewInput(clientID, &inputState, (const avs::InputEvent**) & v);
+		avs::InputState inputState;
+		//Copy newest input state into member variable.
+		memcpy(&inputState, packet->data, inputStateSize);
+
+		size_t binaryEventSize = sizeof(avs::InputEventBinary) * inputState.binaryEventAmount;
+		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * inputState.analogueEventAmount;
+		size_t motionEventSize = sizeof(avs::InputEventMotion) * inputState.motionEventAmount;
+
+		if (packet->dataLength != inputStateSize + binaryEventSize + analogueEventSize + motionEventSize)
+		{
+			TELEPORT_CERR << "Error on receive input for Client_" << clientID << "! Received malformed InputState packet of length " << packet->dataLength << "; expected size of " << inputStateSize + binaryEventSize + analogueEventSize + motionEventSize << "!\n" <<
+				"InputState Size: " << inputStateSize << "\n" <<
+				"Binary Events Size:" << binaryEventSize << "(" << inputState.binaryEventAmount << ")\n" <<
+				"Analogue Events Size:" << analogueEventSize << "(" << inputState.analogueEventAmount << ")\n" <<
+				"Motion Events Size:" << motionEventSize << "(" << inputState.motionEventAmount << ")\n";
+
+			return;
+		}
+
+		uint32_t controllerID = inputState.controllerId;
+		inputState.binaryEventAmount += newInputState[controllerID].binaryEventAmount;
+		inputState.analogueEventAmount += newInputState[controllerID].analogueEventAmount;
+		inputState.motionEventAmount += newInputState[controllerID].motionEventAmount;
+		newInputState[controllerID] = inputState;
+
+		size_t oldBinarySize = sizeof(avs::InputEventBinary) * newBinaryEvents[controllerID].size();
+		newBinaryEvents[controllerID].resize(newBinaryEvents[controllerID].size() + inputState.binaryEventAmount);
+		memcpy(newBinaryEvents[controllerID].data() + oldBinarySize, packet->data + inputStateSize, binaryEventSize);
+		
+		size_t oldAnalogueSize = sizeof(avs::InputEventAnalogue) * newAnalogueEvents[controllerID].size();
+		newAnalogueEvents[controllerID].resize(newAnalogueEvents[controllerID].size() + inputState.analogueEventAmount);
+		memcpy(newAnalogueEvents[controllerID].data() + oldAnalogueSize, packet->data + inputStateSize + binaryEventSize, analogueEventSize);
+
+		size_t oldMotionSize = sizeof(avs::InputEventMotion) * newMotionEvents[controllerID].size();
+		newMotionEvents[controllerID].resize(newMotionEvents[controllerID].size() + inputState.analogueEventAmount);
+		memcpy(newMotionEvents[controllerID].data() + oldMotionSize, packet->data + inputStateSize + binaryEventSize + analogueEventSize, motionEventSize);
 	}
 
 	void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)

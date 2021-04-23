@@ -19,7 +19,7 @@ class GL_RenderPlatform final : public scr::RenderPlatform
 		std::shared_ptr<scr::Shader>				InstantiateShader() const override;
 		std::shared_ptr<scr::ShaderStorageBuffer> 	InstantiateShaderStorageBuffer() const override;
 		std::shared_ptr<scr::Skin>					InstantiateSkin(const std::string& name) const override;
-		std::shared_ptr<scr::Skin>					InstantiateSkin(const std::string& name, const std::vector<scr::Transform>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform) const override;
+		std::shared_ptr<scr::Skin>					InstantiateSkin(const std::string& name, const std::vector<scr::mat4>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform) const override;
 		std::shared_ptr<scr::Texture>				InstantiateTexture() const override;
 		std::shared_ptr<scr::UniformBuffer>			InstantiateUniformBuffer() const override;
 		std::shared_ptr<scr::VertexBuffer>			InstantiateVertexBuffer() const override;

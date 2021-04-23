@@ -120,23 +120,23 @@ namespace scr
 		{
 			std::string name;
 
-			uint32_t width;
-			uint32_t height;
-			uint32_t depth;
-			uint32_t bytesPerPixel;
-			uint32_t arrayCount;
-			uint32_t mipCount;
+			uint32_t width = 0;
+			uint32_t height = 0;
+			uint32_t depth = 0;
+			uint32_t bytesPerPixel = 0;
+			uint32_t arrayCount = 0;
+			uint32_t mipCount = 0;
 
-			Slot slot;
-			Type type;
-			Format format;
-			SampleCountBit sampleCount;
+			Slot slot = Slot::UNKNOWN;
+			Type type = Type::TEXTURE_UNKNOWN;
+			Format format = Format::FORMAT_UNKNOWN;
+			SampleCountBit sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
 			std::vector<size_t> mipSizes;
 			std::vector<const uint8_t*> mips;
 
-			CompressionFormat compression; //The format the texture is compressed in.
+			CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
 
-			bool externalResource;	// If true, the actual API resource will be created and managed externally on a per-platform basis.
+			bool externalResource = false;	// If true, the actual API resource will be created and managed externally on a per-platform basis.
 		};
 
 	protected:

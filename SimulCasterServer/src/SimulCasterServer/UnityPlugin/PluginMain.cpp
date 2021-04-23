@@ -56,11 +56,8 @@ TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStan
 	return avs::ConvertAxis(fromStandard,toStandard,axis);
 }
 
-
-typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
-typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, uint64_t,const avs::Pose*);
-typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
-typedef void(__stdcall* DisconnectFn) (avs::uid uid);
+typedef bool(__stdcall* ShowNodeFn)(avs::uid clientID, avs::uid nodeID);
+typedef bool(__stdcall* HideNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
 
 static avs::Context avsContext;
@@ -72,8 +69,8 @@ std::map<avs::uid, ClientData> clientServices;
 
 SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
-static std::function<bool(avs::uid clientID,avs::uid nodeID)> onShowNode;
-static std::function<bool(avs::uid clientID,avs::uid nodeID)> onHideNode;
+static ShowNodeFn onShowNode;
+static HideNodeFn onHideNode;
 
 static SetHeadPoseFn setHeadPose;
 static SetOriginFromClientFn setOriginFromClient;
@@ -97,9 +94,9 @@ static avs::vec3 bodyOffsetFromHead;
 avs::MessageHandlerFunc messageHandler = nullptr;
 struct LogMessage
 {
-	avs::LogSeverity severity;
+	avs::LogSeverity severity = avs::LogSeverity::Never;
 	std::string msg;
-	void* userData;
+	void* userData = nullptr;
 };
 
 static std::vector<LogMessage> messages(100);
@@ -164,19 +161,19 @@ public:
 		if (configured)
 		{
 			TELEPORT_CERR << "Video encode pipeline already configured." << std::endl;
-			return Result::EncoderAlreadyConfigured;
+			return Result::Code::EncoderAlreadyConfigured;
 		}
 
 		if (!GraphicsManager::mGraphicsDevice)
 		{
 			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
-			return Result::InvalidGraphicsDevice;
+			return Result::Code::InvalidGraphicsDevice;
 		}
 
 		if (!videoEncodeParams.inputSurfaceResource)
 		{
 			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
-			return Result::InvalidGraphicsResource;
+			return Result::Code::InvalidGraphicsResource;
 		}
 
 		inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
@@ -200,19 +197,19 @@ public:
 		if (!configured)
 		{
 			TELEPORT_CERR << "Video encoder cannot be reconfigured if pipeline has not been configured." << std::endl;
-			return Result::EncoderNotConfigured;
+			return Result::Code::EncoderNotConfigured;
 		}
 
 		if (!GraphicsManager::mGraphicsDevice)
 		{
 			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
-			return Result::InvalidGraphicsDevice;
+			return Result::Code::InvalidGraphicsDevice;
 		}
 
 		if (videoEncodeParams.inputSurfaceResource)
 		{
 			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
-			return Result::InvalidGraphicsResource;
+			return Result::Code::InvalidGraphicsResource;
 		}
 
 		VideoEncodeParams params = videoEncodeParams;
@@ -238,7 +235,7 @@ public:
 		if (!configured)
 		{
 			TELEPORT_CERR << "Video encoder cannot encode because it has not been configured." << std::endl;
-			return Result::EncoderNotConfigured;
+			return Result::Code::EncoderNotConfigured;
 		}
 
 		// Copy data from Unity texture to its CUDA compatible copy
@@ -252,7 +249,7 @@ public:
 		if (!configured)
 		{
 			TELEPORT_CERR << "Video encoder cannot be deconfigured because it has not been configured." << std::endl;
-			return Result::EncoderNotConfigured;
+			return Result::Code::EncoderNotConfigured;
 		}
 
 		Result result = release();
@@ -296,7 +293,7 @@ public:
 		if (configured)
 		{
 			TELEPORT_CERR << "Audio encode pipeline already configured." << std::endl;
-			return Result::EncoderAlreadyConfigured;
+			return Result::Code::EncoderAlreadyConfigured;
 		}
 
 		Result result = SCServer::AudioEncodePipeline::initialize(casterSettings, audioParams, audioQueue);
@@ -312,7 +309,7 @@ public:
 		if (!configured)
 		{
 			TELEPORT_CERR << "Audio encoder can not encode because it has not been configured." << std::endl;
-			return Result::EncoderNotConfigured;
+			return Result::Code::EncoderNotConfigured;
 		}
 
 		return SCServer::AudioEncodePipeline::process(data, dataSize);
@@ -324,17 +321,17 @@ private:
 
 struct InitialiseState
 {
-	bool(*showNode)(avs::uid clientID, avs::uid nodeID);
-	bool(*hideNode)(avs::uid clientID, avs::uid nodeID);
-	void(*headPoseSetter)(avs::uid clientID, const avs::Pose*);
-	void(*setOriginFromClientFn)(avs::uid clientID, uint64_t,const avs::Pose*);
-	void(*controllerPoseSetter)(avs::uid uid, int index, const avs::Pose*);
+	ShowNodeFn showNode;
+	HideNodeFn hideNode;
+	SetHeadPoseFn headPoseSetter;
+	SetOriginFromClientFn setOriginFromClientFn;
+	SetControllerPoseFn controllerPoseSetter;
 	ProcessNewInputFn newInputProcessing;
 	DisconnectFn disconnect;
 	avs::MessageHandlerFunc messageHandler;
 	uint32_t DISCOVERY_PORT = 10607;
 	uint32_t SERVICE_PORT = 10500;
-	void(*reportHandshake)(avs::uid clientID, const avs::Handshake *h);
+	ReportHandshakeFn reportHandshake;
 	ProcessAudioInputFn processAudioInput;
 	avs::vec3 bodyOffsetFromHead;
 };
@@ -384,12 +381,12 @@ TELEPORT_EXPORT void UpdateCasterSettings(const SCServer::CasterSettings newSett
 	casterSettings = newSettings;
 }
 
-TELEPORT_EXPORT void SetShowNodeDelegate(bool(*showNode)(avs::uid,avs::uid))
+TELEPORT_EXPORT void SetShowNodeDelegate(ShowNodeFn showNode)
 {
 	onShowNode = showNode;
 }
 
-TELEPORT_EXPORT void SetHideNodeDelegate(bool(*hideNode)(avs::uid,avs::uid))
+TELEPORT_EXPORT void SetHideNodeDelegate(HideNodeFn hideNode)
 {
 	onHideNode = hideNode;
 }
@@ -453,9 +450,9 @@ void PipeOutMessages()
 	std::lock_guard<std::mutex> lock(messagesMutex);
 	if(messageHandler)
 	{
-		for(auto m:messages)
+		for(LogMessage& message : messages)
 		{
-			messageHandler(m.severity,m.msg.c_str(),m.userData);
+			messageHandler(message.severity, message.msg.c_str(), message.userData);
 		}
 		messages.clear();
 	}
@@ -561,7 +558,7 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 		std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService = std::make_shared<PluginGeometryStreamingService>();
 		std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline = std::make_shared<PluginVideoEncodePipeline>();
 		std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline = std::make_shared<PluginAudioEncodePipeline>();
-		SCServer::ClientMessaging clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, std::bind(&Disconnect, clientID), connectionTimeout, reportHandshake);
+		SCServer::ClientMessaging clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake);
 		ClientData newClientData(geometryStreamingService, videoEncodePipeline, audioEncodePipeline, clientMessaging);
 
 		if(newClientData.clientMessaging.startSession(clientID, listenPort))
@@ -685,8 +682,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	ClientData& clientData = clientPair->second;
 	clientData.geometryStreamingService->startStreaming(&clientData.casterContext);
 
-	///TODO: Need to retrieve encoder settings from unity.
-	SCServer::CasterEncoderSettings encoderSettings;
+	SCServer::CasterEncoderSettings encoderSettings{};
 	if (casterSettings.usePerspectiveRendering)
 	{
 		encoderSettings.frameWidth = casterSettings.perspectiveWidth;
@@ -707,7 +703,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	encoderSettings.maxDepth = 10000;
 
 	avs::SetupCommand setupCommand;
-	setupCommand.port = clientData.clientMessaging.getServerPort() + 1;
+	setupCommand.server_streaming_port = clientData.clientMessaging.getServerPort() + 1;
 	setupCommand.debug_stream = casterSettings.debugStream;
 	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
@@ -773,7 +769,7 @@ TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
 	}
 
 	ClientData& lostClient = clientPair->second;
-	lostClient.clientMessaging.sendCommand(avs::ShutdownCommand());
+	lostClient.clientMessaging.stopSession();
 	lostClient.isStreaming = false;
 
 	//Delay deletion of clients.
@@ -807,7 +803,6 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 			}
 		}
 	}
-
 
 	discoveryService->tick();
 	PipeOutMessages();

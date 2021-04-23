@@ -43,7 +43,7 @@ void Bone::RemoveChild(avs::uid childID)
 {
 	for(auto it = children.begin(); it != children.end();)
 	{
-		if(it->expired()/* || it->lock()->id == childID*/)
+		if(it->expired() || it->lock()->id == childID)
 		{
 			it = children.erase(it);
 		}
@@ -79,7 +79,8 @@ void Bone::UpdateGlobalTransform() const
 
 const Transform& Bone::GetGlobalTransform() const
 {
-	if(isGlobalTransformDirty) UpdateGlobalTransform();
+	if(isGlobalTransformDirty)
+		UpdateGlobalTransform();
 	return globalTransform;
 }
 }

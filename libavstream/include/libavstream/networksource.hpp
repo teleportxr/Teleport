@@ -22,9 +22,9 @@ namespace avs
 	/*! Network source parameters. */
 	struct NetworkSourceParams
 	{
-		int32_t localPort;
-		const char* remoteIP;
-		int32_t remotePort;
+		int32_t localPort = 0;
+		const char* remoteIP = "";
+		int32_t remotePort = 0;
 		uint32_t connectionTimeout = 5000;
 	};
 

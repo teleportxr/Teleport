@@ -10,7 +10,7 @@ class GL_Skin : public scr::Skin
 {
 public:
 	GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name);
-	GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name, const std::vector<scr::Transform>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform);
+	GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name, const std::vector<scr::mat4>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform);
 
 	virtual ~GL_Skin() = default;
 

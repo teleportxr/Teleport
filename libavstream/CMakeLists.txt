@@ -121,31 +121,33 @@ source_group("Private Headers\\util" src FILES ${hdr_private_util} )
 
 # Public source
 set(src_public_root
-	include/libavstream/libavstream.hpp
-	include/libavstream/common.hpp
 	include/libavstream/abi.hpp
-	include/libavstream/context.hpp
-	include/libavstream/pipeline.hpp
-	include/libavstream/node.hpp
-	include/libavstream/interfaces.hpp
-	include/libavstream/decoder.hpp
-	include/libavstream/geometrydecoder.hpp
 	include/libavstream/audiodecoder.h
-	include/libavstream/encoder.hpp
-	include/libavstream/geometryencoder.hpp
 	include/libavstream/audioencoder.h
-	include/libavstream/surface.hpp
 	include/libavstream/buffer.hpp
-	include/libavstream/queue.hpp
+	include/libavstream/common.hpp
+	include/libavstream/common_input.h
+	include/libavstream/common_maths.h
+	include/libavstream/common_networking.h
+	include/libavstream/context.hpp
+	include/libavstream/decoder.hpp
+	include/libavstream/encoder.hpp
 	include/libavstream/file.hpp
-	include/libavstream/memory.hpp
 	include/libavstream/forwarder.hpp
-	include/libavstream/packetizer.hpp
-	include/libavstream/nullsink.hpp
+	include/libavstream/geometrydecoder.hpp
+	include/libavstream/geometryencoder.hpp
+	include/libavstream/interfaces.hpp
+	include/libavstream/libavstream.hpp
+	include/libavstream/memory.hpp
+	include/libavstream/mesh.hpp
 	include/libavstream/networksink.hpp
 	include/libavstream/networksource.hpp
-	include/libavstream/mesh.hpp
-	include/libavstream/platforms/platform_common.hpp
+	include/libavstream/node.hpp
+	include/libavstream/nullsink.hpp
+	include/libavstream/packetizer.hpp
+	include/libavstream/pipeline.hpp
+	include/libavstream/queue.hpp
+	include/libavstream/surface.hpp
 	)
 set(src_public_stream
 	include/libavstream/stream/parser_interface.hpp)
@@ -159,6 +161,7 @@ set(src_public_surfaces
 	include/libavstream/surfaces/surface_dx12.hpp
 )
 set(src_public_platforms
+	include/libavstream/platforms/platform_common.hpp
 	include/libavstream/platforms/platform_windows.hpp
 )
 set(hdr_public_geometry

@@ -1,7 +1,7 @@
 #include "NodeComponents.h"
 
-namespace scr
-{
+using namespace scr;
+
 
 AnimationComponent::AnimationComponent()
 {}
@@ -15,24 +15,26 @@ AnimationComponent::AnimationComponent(const std::map<avs::uid, std::shared_ptr<
 void AnimationComponent::AddAnimation(avs::uid id, std::shared_ptr<Animation> animation)
 {
 	animations[id] = animation;
-
-	if(currentAnimation == animations.end()) currentAnimation = animations.begin();
+	if(currentAnimation == animations.end())
+		currentAnimation = animations.begin();
 }
 
 void AnimationComponent::update(float deltaTime)
 {
 	//Early-out if there are no animations.
-	if(animations.empty()) return;
+	if(animations.empty())
+		return;
 
 	currentAnimation->second->update(deltaTime);
-
+#ifndef FIX_BROKEN
 	if(currentAnimation->second->finished())
 	{
 		++currentAnimation;
-		if(currentAnimation == animations.end()) currentAnimation = animations.begin();
-
+		if(currentAnimation == animations.end())
+			currentAnimation = animations.begin();
 		currentAnimation->second->restart();
 	}
+#endif
 }
 
 void VisibilityComponent::update(float deltaTime)
@@ -63,4 +65,3 @@ float VisibilityComponent::getTimeSinceLastVisible() const
 	return timeSinceLastVisible;
 }
 
-}

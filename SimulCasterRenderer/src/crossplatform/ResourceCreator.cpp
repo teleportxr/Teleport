@@ -601,11 +601,12 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 	transformCreateInfo.renderPlatform = m_pRenderPlatform;
 
 	//Convert avs::Mat4x4 to scr::Transform.
-	std::vector<scr::Transform> inverseBindMatrices;
+	std::vector<scr::mat4> inverseBindMatrices;
 	inverseBindMatrices.reserve(skin.inverseBindMatrices.size());
 	for(const Mat4x4& matrix : skin.inverseBindMatrices)
 	{
-		inverseBindMatrices.push_back(scr::Transform(transformCreateInfo, static_cast<scr::mat4>(matrix)));
+		inverseBindMatrices.push_back( static_cast<scr::mat4>(matrix));
+		//inverseBindMatrices.back().UpdateModelMatrix();
 	}
 
 	//Create skin.
@@ -617,7 +618,8 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 		avs::uid jointID = skin.jointIDs[i];
 		std::shared_ptr<scr::Bone> bone = m_BoneManager->Get(jointID);
 
-		if(bone) incompleteSkin->skin->SetBone(i, bone);
+		if(bone)
+			incompleteSkin->skin->SetBone(i, bone);
 		else
 		{
 			SCR_COUT << "Skin_" << id << "(" << incompleteSkin->skin->name << ") missing Bone_" << jointID << std::endl;
@@ -645,12 +647,13 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 	{
 		const avs::TransformKeyframe& avsKeyframes = animation.boneKeyframes[i];
 
-		scr::BoneKeyframe boneKeyframes;
-		boneKeyframes.positionKeyframes = avsKeyframes.positionKeyframes;
-		boneKeyframes.rotationKeyframes = avsKeyframes.rotationKeyframes;
+		scr::BoneKeyframeList boneKeyframeList;
+		boneKeyframeList.positionKeyframes = avsKeyframes.positionKeyframes;
+		boneKeyframeList.rotationKeyframes = avsKeyframes.rotationKeyframes;
 
 		std::shared_ptr<scr::Bone> bone = m_BoneManager->Get(avsKeyframes.nodeID);
-		if(bone) boneKeyframes.bonePtr = bone;
+		if(bone)
+			boneKeyframeList.bonePtr = bone;
 		else
 		{
 			SCR_COUT << "Animation_" << id << "(" << animation.name << ") missing Bone_" << avsKeyframes.nodeID << std::endl;
@@ -659,7 +662,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 			GetMissingResource(avsKeyframes.nodeID, "Bone").waitingResources.push_back(incompleteAnimation);
 		}
 
-		incompleteAnimation->animation->boneKeyframes.push_back(boneKeyframes);
+		incompleteAnimation->animation->boneKeyframeLists.push_back(boneKeyframeList);
 	}
 
 	if(incompleteAnimation->missingBones.size() == 0)
@@ -966,7 +969,7 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
 		else if((*it)->type == avs::GeometryPayloadType::Animation)
 		{
 			std::shared_ptr<IncompleteAnimation> incompleteAnimation = std::static_pointer_cast<IncompleteAnimation>(*it);
-			incompleteAnimation->animation->boneKeyframes[incompleteAnimation->missingBones[id]].bonePtr = bone;
+			incompleteAnimation->animation->boneKeyframeLists[incompleteAnimation->missingBones[id]].bonePtr = bone;
 
 			//If only this bone, and the loop, are pointing at the animation, then it is complete.
 			if(it->use_count() == 2) CompleteAnimation(incompleteAnimation->id, incompleteAnimation);

@@ -16,7 +16,7 @@ namespace scr
 
 	protected:
 		MemoryUtil();
-		~MemoryUtil();
+		virtual ~MemoryUtil();
 
 		static const MemoryUtil* mMemoryUtil;
 	};

@@ -584,9 +584,11 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 	{
 		meshInfoString = simul::base::QuickFormat("mesh: %s (0x%08x)", mesh->GetMeshCreateInfo().name.c_str(), &mesh);
 	}
-
+	avs::vec3 pos=node->GetGlobalPosition();
 	//Print details on node to screen.
-	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d(%s) %s", indent_txt, node->id, node->name.c_str(), meshInfoString.c_str()));
+	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d %s (%4.4f,%4.4f,%4.4f) %s", indent_txt, node->id, node->name.c_str()
+		,pos.x,pos.y,pos.z
+		, meshInfoString.c_str()));
 
 	//Print information on children to screen.
 	const std::vector<std::weak_ptr<scr::Node>>& children = node->GetChildren();
@@ -645,7 +647,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
 
-		int linesRemaining = 10;
+		int linesRemaining = 20;
 		auto& rootNodes = resourceManagers.mNodeManager->GetRootNodes();
 		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{
@@ -1063,7 +1065,10 @@ void ClientRenderer::Update()
 {
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	float timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
-
+#ifndef FIX_BROKEN
+	static float static_time=0.01f;
+	timeElapsed=static_time;// hardcode 0.01 ms.
+#endif
 	resourceManagers.Update(timeElapsed);
 	resourceCreator.Update(timeElapsed);
 
@@ -1076,7 +1081,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	videoConfig = setupCommand.video_config;
 
-	WARN("VIDEO STREAM CHANGED: port %d clr %d x %d dpth %d x %d\n", setupCommand.port, videoConfig.video_width, videoConfig.video_height
+	WARN("VIDEO STREAM CHANGED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 
 
@@ -1099,10 +1104,9 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	avs::NetworkSourceParams sourceParams;
 	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-	sourceParams.localPort = setupCommand.port + 1;
+	sourceParams.localPort = 101;
 	sourceParams.remoteIP = server_ip;
-	sourceParams.remotePort = setupCommand.port;
-
+	sourceParams.remotePort = setupCommand.server_streaming_port;
 	// Configure for num video streams + 1 audio stream + 1 geometry stream
 	if (!source.configure(std::move(streams), sourceParams))
 	{
@@ -1238,6 +1242,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
+	handshake.clientStreamingPort=sourceParams.localPort;
 	lastSetupCommand = setupCommand;
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
@@ -1495,8 +1500,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder->idrRequired(),fTime);
 
-		for(int i=0;i<2;i++)
-			controllerStates[i].inputEvents.clear();
+		for(int i = 0; i < 2; i++)
+		{
+			controllerStates[i].clear();
+		}
+
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			clientDeviceState->originPose = sessionClient.GetOriginPose();
@@ -1536,14 +1544,58 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	//sessionClient.Frame(camera.GetOrientation().GetQuaternion(), controllerState);
 }
 
+void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
+{
+	avs::InputList inputID;
+	if(bLeftButtonDown)
+	{
+		inputID = avs::InputList::TRIGGER01;
+	}
+	else if(bRightButtonDown)
+	{
+		inputID = avs::InputList::BUTTON_B;
+	}
+	else if(bMiddleButtonDown)
+	{
+		inputID = avs::InputList::BUTTON_A;
+	}
+	else
+	{
+		return;
+	}
+
+	avs::InputEventBinary buttonEvent;
+	buttonEvent.eventID = nextEventID++;
+	buttonEvent.inputID = inputID;
+	buttonEvent.activated = true;
+	controllerStates[0].binaryEvents.push_back(buttonEvent);
+}
+
 void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta)
 {
-	static avs::uid eventId=0;
-	avs::InputEvent evt;
-	evt.eventId=eventId++;		 //< A monotonically increasing event identifier.
-	evt.inputUid=bLeftButtonReleased?1:0;		 //< e.g. the uniqe identifier for this button or control.
-	evt.intValue=0;
-	controllerStates[0].inputEvents.push_back(evt);
+	avs::InputList inputID;
+	if(bLeftButtonReleased)
+	{
+		inputID = avs::InputList::TRIGGER01;
+	}
+	else if(bRightButtonReleased)
+	{
+		inputID = avs::InputList::BUTTON_B;
+	}
+	else if(bMiddleButtonReleased)
+	{
+		inputID = avs::InputList::BUTTON_A;
+	}
+	else
+	{
+		return;
+	}
+
+	avs::InputEventBinary buttonEvent;
+	buttonEvent.eventID = nextEventID++;
+	buttonEvent.inputID = inputID;
+	buttonEvent.activated = false;
+	controllerStates[0].binaryEvents.push_back(buttonEvent);
 }
 
 void ClientRenderer::OnMouseMove(int xPos

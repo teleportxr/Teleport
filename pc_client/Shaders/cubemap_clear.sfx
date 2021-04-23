@@ -93,7 +93,6 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	return  lookup;
 }
 
-shader posTexVertexOutput VS_UsePerspective(idOnly IN)
 {
 	posTexVertexOutput OUT;
 	vec2 poss[4];

@@ -9,6 +9,7 @@
 
 #include <enet/enet.h>
 #include "libavstream/common.hpp"
+#include "libavstream/common_networking.h"
 
 #include "Input.h"
 #include "DiscoveryService.h"
@@ -118,7 +119,6 @@ private:
 	uint32_t clientID=0;
 
     double time=0.0;
-    std::vector<uint8_t> inputBuffer;
     bool discovered=false;
 	avs::SetupCommand setupCommand;
 };
