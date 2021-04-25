@@ -16,7 +16,7 @@ bool DefaultDiscoveryService::initialise(uint16_t discovPort, uint16_t servPort)
 
 	if (discoveryPort == 0)
 	{
-		printf_s("Discovery port is not set.\n");
+		TELEPORT_CERR <<"Discovery port is not set.\n";
 		return false;
 	}
 
@@ -25,20 +25,32 @@ bool DefaultDiscoveryService::initialise(uint16_t discovPort, uint16_t servPort)
 
 	if (servicePort == 0)
 	{
-		printf_s("Service port is not set.\n");
+		TELEPORT_CERR <<"Service port is not set.\n";
 		return false;
 	}
 
 	discoverySocket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);
 	if (discoverySocket <= 0)
 	{
-		printf_s("Failed to create discovery socket.\n");
+		TELEPORT_CERR <<"Failed to create discovery socket.\n";
 		return false;
 	}
 
-	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_NONBLOCK, 1);
-	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_BROADCAST, 1);
-	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_REUSEADDR, 1);
+	if (enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_NONBLOCK, 1)<0)
+	{
+		TELEPORT_CERR <<"Failed to set nonblock.\n";
+		return false;
+	}
+	if (enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_BROADCAST, 1)<0)
+	{
+		TELEPORT_CERR <<"Failed to set broadcast.\n";
+		return false;
+	}
+	if (enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_REUSEADDR, 1)<0)
+	{
+		TELEPORT_CERR <<"Failed to set re-use address.\n";
+		return false;
+	}
 
 	address = { ENET_HOST_ANY, discoveryPort };
 	if (enet_socket_bind(discoverySocket, &address) != 0)

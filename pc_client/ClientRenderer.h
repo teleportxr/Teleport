@@ -263,6 +263,7 @@ public:
 
 	avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
 private:
+	avs::uid show_only=0;
 	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);

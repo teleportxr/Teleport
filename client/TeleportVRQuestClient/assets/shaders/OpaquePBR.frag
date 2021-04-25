@@ -429,7 +429,7 @@ void OpaquePBRDebug()
 
 void OpaquePBR()
 {
-	PBR(true, true, true, false, true, 1,false);
+	PBR(true, true, true, true, true, 1,false);
 }
 
 void OpaqueAlbedo()
