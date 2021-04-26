@@ -58,7 +58,7 @@ void main()
 {
     vec4 lookup = textureLod(renderTexture, vSampleVec,0.0);
     vec3 view = vSampleVec;
-    vec3 colourSampleVec=vSampleVec;
+    vec3 colourSampleVec = vSampleVec;
     for (int i = 0; i < 5; i++)
     {
 		float depth = lookup.a;
@@ -73,9 +73,9 @@ void main()
 		float b = F * D;
 		float c = F * F - R * R;
 		float U = -b + sqrt(max(b*b - c,0.0));
-		pos_m   += (U - R) * vSampleVec*step(-F,0.0);
-		colourSampleVec  = normalize(pos_m);
-		lookup=textureLod(renderTexture, colourSampleVec, 0.0);
+		pos_m += (U - R) * vSampleVec*step(-F,0.0);
+		colourSampleVec = normalize(pos_m);
+		lookup = textureLod(renderTexture, colourSampleVec, 0.0);
        //lookup.rgb+=vec3(depth,depth,depth);
     }
     //lookup.rgb+=vec3(vDepth,vDepth,vDepth);

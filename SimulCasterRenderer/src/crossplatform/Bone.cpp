@@ -9,18 +9,12 @@ Bone::Bone(avs::uid id, const std::string& name)
 Bone::~Bone()
 {
 	std::shared_ptr<scr::Bone> parentPtr = parent.lock();
-	if(parentPtr)
-	{
-		parentPtr->RemoveChild(id);
-	}
+	if(parentPtr) parentPtr->RemoveChild(id);
 
 	for(std::weak_ptr<scr::Bone> weak_child : children)
 	{
 		std::shared_ptr<scr::Bone> child = weak_child.lock();
-		if(child)
-		{
-			child->SetParent(nullptr);
-		}
+		if(child) child->SetParent(nullptr);
 	}
 }
 
@@ -86,10 +80,7 @@ void Bone::UpdateGlobalTransform() const
 const Transform& Bone::GetGlobalTransform() const
 {
 	if(isGlobalTransformDirty)
-	{
 		UpdateGlobalTransform();
-	}
-
 	return globalTransform;
 }
 }

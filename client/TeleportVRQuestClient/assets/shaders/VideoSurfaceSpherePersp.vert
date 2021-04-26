@@ -6,7 +6,7 @@ layout(location = 0) out vec3 vSampleVec;
 layout(location = 1) out float vDepth;
 layout(location = 7) out vec3 vOffsetFromVideo;
 
-layout(binding = 0) uniform samplerCube renderTexture;
+layout(binding = 0) uniform sampler2D renderTexture;
 layout(std140, binding = 1) uniform videoUB
 {
     vec4 eyeOffsets[2];
@@ -48,10 +48,10 @@ layout(std430, binding = 0) buffer TagDataCube_ssbo
 
 void main()
 {
-    vec3 dir        =normalize(position.xyz);
-    vSampleVec      =vec3(-dir.z,dir.x,dir.y);
-    vec4 lookup     =textureLod(renderTexture, vSampleVec,0.0);
-    vDepth          =lookup.a;//5.0*(20.0*lookup.a);
+    vec3 dir        = normalize(position.xyz);
+    vSampleVec    = vec3(-dir.z,dir.x,dir.y);
+    //vec4 lookup     = texelFetch(renderTexture, pos, 0);
+    //vDepth          = lookup.a; //5.0*(20.0*lookup.a);
     // Equirect map sampling vector is rotated -90deg on Y axis to match UE4 yaw.
     vec4 eye_pos    =vec4((sm.ViewMatrix[VIEW_ID] * ( vec4(position.xyz,0.0) )).xyz,1.0);
     vec4 out_pos    =sm.ProjectionMatrix[VIEW_ID] * eye_pos;

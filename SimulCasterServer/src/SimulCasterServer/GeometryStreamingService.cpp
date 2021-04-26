@@ -64,14 +64,19 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 		switch(node->data_type)
 		{
 		case avs::NodeDataType::None:
-		case avs::NodeDataType::Light:
 			outNodeIDs.push_back(nodeID);
-			break;
+				break;
+			case avs::NodeDataType::Light:
+				{
+					//const auto &stored_light= geometryStore->getLightNodes().find(nodeID);
+					outLightResources.push_back(avs::LightNodeResources{nodeID,0});
+				}
+				break;
 		case avs::NodeDataType::Mesh:
 			GetMeshNodeResources(nodeID, *node, outMeshResources);
-			break;
-		default:
-			break;
+				break;
+			default:
+				break;
 		}
 	}
 }

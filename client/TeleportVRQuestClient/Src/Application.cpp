@@ -444,7 +444,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
 //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
-	float time_elapsed = in.DeltaSeconds * 1000.0f;
+	uint32_t time_elapsed = (uint32_t) (in.DeltaSeconds * 1000.0f);
 	resourceManagers.Update(time_elapsed);
 	resourceCreator.Update(time_elapsed);
 

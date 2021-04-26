@@ -731,6 +731,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.videoCodec				= casterSettings.videoCodec;
 	videoConfig.use_cubemap				= !casterSettings.usePerspectiveRendering;
 	videoConfig.stream_webcam			= casterSettings.enableWebcamStreaming;
+	videoConfig.draw_distance           = casterSettings.detectionSphereRadius;
 
 	videoConfig.specular_cubemap_size	=casterSettings.specularCubemapSize;
 	int depth_cubemap_size				=videoConfig.colour_cubemap_size/2;
@@ -1056,6 +1057,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;
 	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;
+	videoConfig.draw_distance = casterSettings.detectionSphereRadius;
 
 	clientData.clientMessaging.sendCommand(cmd);
 }

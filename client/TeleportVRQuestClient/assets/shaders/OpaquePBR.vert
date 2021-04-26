@@ -19,7 +19,7 @@ layout(std140, binding = 0) uniform u_CameraData
     mat4 u_ViewMatrix;
     vec4 u_Orientation; //Quaternion
     vec3 u_Position;
-    float _pad;
+    float u_DrawDistance;
 } cam;
 
 //To Fragment Varying

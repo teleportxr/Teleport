@@ -23,6 +23,7 @@ namespace scr
 			ProjectionType type;
 			quat orientation;
 			avs::vec3 position;
+			float drawDistance;
 		};
 
 	private:
@@ -32,7 +33,7 @@ namespace scr
 			mat4 m_ViewMatrix;
 			quat m_Orientation;
 			avs::vec3 m_Position;
-			float _pad;
+			float m_DrawDistance;
 		} m_CameraData;
 
 		CameraCreateInfo m_CI;
@@ -48,6 +49,7 @@ namespace scr
 
 		void UpdatePosition(const avs::vec3& position);
 		void UpdateOrientation(const quat& orientation);
+		void UpdateDrawDistance(float distance);
 		void UpdateView();
 		
 		inline void UpdateView(const mat4& viewMatrix) { m_CameraData.m_ViewMatrix = viewMatrix; }

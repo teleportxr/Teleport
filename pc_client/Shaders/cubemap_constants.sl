@@ -20,7 +20,7 @@ struct posTexVertexOutputDebug
 {
 	vec4 hPosition		: SV_POSITION;
 	vec2 texCoords		: TEXCOORD0;	
-	vec3 color : TEXCOORD1;
+	vec3 color          : TEXCOORD1;
 };
 #endif
 
