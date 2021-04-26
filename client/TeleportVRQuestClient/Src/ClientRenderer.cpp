@@ -68,20 +68,21 @@ avs::vec3 QuaternionTimesVector(const ovrQuatf &q, const avs::vec3 &vec)
 	return ret;
 }
 
-ClientRenderer::ClientRenderer(ResourceCreator *r, scr::ResourceManagers *rm
-							   , SessionCommandInterface *i, ClientAppInterface *c
-							   , ClientDeviceState *s, Controllers *cn)
-		: mDecoder(avs::DecoderBackend::Custom)
-		  , resourceManagers(rm)
-		  , resourceCreator(r)
-		  , clientAppInterface(c)
-		  , mVideoSurfaceTexture(nullptr)
-		  , mRenderTexture(nullptr)
-		  , mCubemapLightingTexture(nullptr)
-		  , mTagDataIDBuffer(nullptr)
-		  , mTagDataArrayBuffer(nullptr)
-		  , controllers(cn)
-		, clientDeviceState(s)
+ClientRenderer::ClientRenderer
+(
+		ResourceCreator *r,
+		scr::ResourceManagers *rm,
+		SessionCommandInterface *i,
+		ClientAppInterface *c,
+		ClientDeviceState *s,
+		Controllers *cn
+)
+	:controllers(cn),
+	mDecoder(avs::DecoderBackend::Custom),
+	resourceManagers(rm),
+	resourceCreator(r),
+	clientAppInterface(c),
+	clientDeviceState(s)
 {
 }
 

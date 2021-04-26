@@ -150,7 +150,7 @@ public:
 	OVRFW::ovrSurfaceDef mVideoSurfaceDef;
 	OVRFW::GlProgram     mCubeVideoSurfaceProgram;
 	OVRFW::GlProgram     m2DVideoSurfaceProgram;
-	OVRFW::SurfaceTexture *mVideoSurfaceTexture=nullptr;
+	OVRFW::SurfaceTexture* mVideoSurfaceTexture = nullptr;
 	std::shared_ptr<scr::Texture>       mVideoTexture;
 	std::shared_ptr<scr::Texture>       mRenderTexture;
 	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;

@@ -125,7 +125,7 @@ void Node::SetVisible(bool visible)
 
 void Node::SetLocalTransform(const Transform& transform)
 {
-	if(transform.m_Scale.x < 0.0001f)
+	if(abs(transform.m_Scale.x) < 0.0001f)
 	{
 		SCR_CERR << "Failed to update local transform of Node_" << id << "(" << name.c_str() << ")! Scale.x is zero!\n";
 		return;

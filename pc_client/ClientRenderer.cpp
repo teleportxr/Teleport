@@ -1065,10 +1065,7 @@ void ClientRenderer::Update()
 {
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	float timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
-#ifndef FIX_BROKEN
-	static float static_time=0.01f;
-	timeElapsed=static_time;// hardcode 0.01 ms.
-#endif
+
 	resourceManagers.Update(timeElapsed);
 	resourceCreator.Update(timeElapsed);
 

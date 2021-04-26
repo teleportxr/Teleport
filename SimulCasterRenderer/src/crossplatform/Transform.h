@@ -10,11 +10,6 @@ namespace scr
 class Transform
 {
 public:
-	struct TransformCreateInfo
-	{
-		const RenderPlatform* renderPlatform;
-	};
-
 	avs::vec3 m_Translation;
 	quat m_Rotation;
 	avs::vec3 m_Scale;
@@ -25,19 +20,13 @@ private:
 		mat4 m_ModelMatrix;
 	} m_TransformData;
 
-	TransformCreateInfo m_CI;
-
-	static bool s_UninitialisedUB;
-	static std::shared_ptr<UniformBuffer> s_UB;
-
 	ShaderResourceLayout m_ShaderResourceLayout;
 	ShaderResource m_ShaderResource;
 
 public:
 	Transform();
-	Transform(const TransformCreateInfo& pTransformCreateInfo);
-	Transform(const TransformCreateInfo& pTransformCreateInfo, avs::vec3 translation, quat rotation, avs::vec3 scale);
-	Transform(const TransformCreateInfo& pTransformCreateInfo, scr::mat4 matrix);
+	Transform(avs::vec3 translation, quat rotation, avs::vec3 scale);
+	Transform(scr::mat4 matrix);
 	Transform(const avs::Transform& transform);
 
 	Transform& operator= (const avs::Transform& transform)
@@ -55,9 +44,9 @@ public:
 	{
 		avs::vec3 scale(m_Scale.x * other.m_Scale.x, m_Scale.y * other.m_Scale.y, m_Scale.z * other.m_Scale.z);
 		quat rotation = other.m_Rotation * m_Rotation;
-		avs::vec3 translation = other.m_Translation + other.m_Rotation.RotateVector(m_Translation * other.m_Scale);
+		avs::vec3 translation = other.m_Translation + other.m_Rotation.RotateVector(m_Translation * other.m_Scale.GetAbsolute());
 
-		return Transform(m_CI, translation, rotation, scale);
+		return Transform(translation, rotation, scale);
 	}
 
 	void UpdateModelMatrix();

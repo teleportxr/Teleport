@@ -1,8 +1,9 @@
 #include "NodeComponents.h"
 
-using namespace scr;
+#define CYCLE_ANIMATIONS 1
 
-
+namespace scr
+{
 AnimationComponent::AnimationComponent()
 {}
 
@@ -16,22 +17,30 @@ void AnimationComponent::AddAnimation(avs::uid id, std::shared_ptr<Animation> an
 {
 	animations[id] = animation;
 	if(currentAnimation == animations.end())
+	{
 		currentAnimation = animations.begin();
+	}
 }
 
 void AnimationComponent::update(float deltaTime)
 {
 	//Early-out if there are no animations.
 	if(animations.empty())
+	{
 		return;
+	}
 
 	currentAnimation->second->update(deltaTime);
-#ifndef FIX_BROKEN
+
+#if CYCLE_ANIMATIONS
 	if(currentAnimation->second->finished())
 	{
 		++currentAnimation;
 		if(currentAnimation == animations.end())
+		{
 			currentAnimation = animations.begin();
+		}
+
 		currentAnimation->second->restart();
 	}
 #endif
@@ -64,4 +73,4 @@ float VisibilityComponent::getTimeSinceLastVisible() const
 {
 	return timeSinceLastVisible;
 }
-
+}
