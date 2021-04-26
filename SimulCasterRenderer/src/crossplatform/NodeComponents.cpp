@@ -1,67 +1,76 @@
 #include "NodeComponents.h"
 
-using namespace scr;
+#define CYCLE_ANIMATIONS 1
 
-
-AnimationComponent::AnimationComponent()
-{}
-
-AnimationComponent::AnimationComponent(const std::map<avs::uid, std::shared_ptr<Animation>>& animations)
-	:animations(animations)
+namespace scr
 {
-	currentAnimation = this->animations.begin();
-}
+	AnimationComponent::AnimationComponent()
+	{}
 
-void AnimationComponent::AddAnimation(avs::uid id, std::shared_ptr<Animation> animation)
-{
-	animations[id] = animation;
-	if(currentAnimation == animations.end())
-		currentAnimation = animations.begin();
-}
-
-void AnimationComponent::update(float deltaTime)
-{
-	//Early-out if there are no animations.
-	if(animations.empty())
-		return;
-
-	currentAnimation->second->update(deltaTime);
-#ifndef FIX_BROKEN
-	if(currentAnimation->second->finished())
+	AnimationComponent::AnimationComponent(const std::map<avs::uid, std::shared_ptr<Animation>>& animations)
+		:animations(animations)
 	{
-		++currentAnimation;
-		if(currentAnimation == animations.end())
+		currentAnimation = this->animations.begin();
+	}
+
+	void AnimationComponent::AddAnimation(avs::uid id, std::shared_ptr<Animation> animation)
+	{
+		animations[id] = animation;
+		if (currentAnimation == animations.end())
+		{
 			currentAnimation = animations.begin();
-		currentAnimation->second->restart();
+		}
 	}
+
+	void AnimationComponent::update(float deltaTime)
+	{
+		//Early-out if there are no animations.
+		if (animations.empty())
+		{
+			return;
+		}
+
+		currentAnimation->second->update(deltaTime);
+
+#if CYCLE_ANIMATIONS
+		if (currentAnimation->second->finished())
+		{
+			++currentAnimation;
+			if (currentAnimation == animations.end())
+			{
+				currentAnimation = animations.begin();
+			}
+
+			currentAnimation->second->restart();
+		}
 #endif
-}
+	}
 
-void VisibilityComponent::update(float deltaTime)
-{
-	if(isVisible == false)
+	void VisibilityComponent::update(float deltaTime)
 	{
-		timeSinceLastVisible += deltaTime;
+		if (isVisible == false)
+		{
+			timeSinceLastVisible += deltaTime;
+		}
+	}
+
+	void VisibilityComponent::setVisibility(bool visible)
+	{
+		isVisible = visible;
+
+		if (isVisible)
+		{
+			timeSinceLastVisible = 0;
+		}
+	}
+
+	bool VisibilityComponent::getVisibility() const
+	{
+		return isVisible;
+	}
+
+	float VisibilityComponent::getTimeSinceLastVisible() const
+	{
+		return timeSinceLastVisible;
 	}
 }
-
-void VisibilityComponent::setVisibility(bool visible)
-{
-	isVisible = visible;
-
-	if(isVisible)
-	{
-		timeSinceLastVisible = 0;
-	}
-}
-
-bool VisibilityComponent::getVisibility() const
-{
-	return isVisible;
-}
-
-float VisibilityComponent::getTimeSinceLastVisible() const
-{
-	return timeSinceLastVisible;
-}
-

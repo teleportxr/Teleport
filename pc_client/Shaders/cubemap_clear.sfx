@@ -110,14 +110,17 @@ shader posTexVertexOutputDebug VS_UsePerspective(idOnly IN)
 	VideoTagDataCube tagData = TagDataCubeBuffer[id];
 	
 	// Transform to view space
-	vec3 vec = -ClipPosToView(vec4(pos.x, pos.y, 1, 1)).xzy;
+	vec3 vec = ClipPosToView(vec4(pos.x, pos.y, 1, 1));
 	OUT.color = vec;
+
+	vec4 q1 = vec4(tagData.cameraRotation.xzy, tagData.cameraRotation.w);
+	vec4 q2 = vec4(cameraRotation.xzy, cameraRotation.w);
 	// Transform to view space of server
-	vec = normalize(rotate_by_quaternion(quat_inverse(tagData.cameraRotation), vec));
-	vec = normalize(rotate_by_quaternion(cameraRotation, vec));
+	vec = normalize(rotate_by_quaternion(quat_inverse(q1), vec));
+	vec = normalize(rotate_by_quaternion(q2, vec));
 
 	// Finally, convert to uv
-	OUT.texCoords = ViewToServerScreenSpace(vec.xzy);
+	OUT.texCoords = ViewToServerScreenSpace(vec);
 
 #ifdef SFX_OPENGL
 	OUT.texCoords.y = 1.0 - OUT.texCoords.y;
