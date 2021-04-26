@@ -1065,7 +1065,10 @@ void ClientRenderer::Update()
 {
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	float timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
-
+#ifndef FIX_BROKEN
+	static float static_time=0.01f;
+	timeElapsed=static_time;// hardcode 0.01 ms.
+#endif
 	resourceManagers.Update(timeElapsed);
 	resourceCreator.Update(timeElapsed);
 
@@ -1081,7 +1084,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	WARN("VIDEO STREAM CHANGED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 
-
+	
 	videoPosDecoded=false;
 
 	videoTagDataCubeArray.clear();
@@ -1167,7 +1170,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	const float horzFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
 	const float vertFOV = scr::GetVerticalFOVFromHorizontal(horzFOV, aspect);
 
-	cubemapConstants.serverProj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(horzFOV, vertFOV, videoConfig.nearClipPlane, 0);
+	cubemapConstants.serverProj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(horzFOV, vertFOV, 0.01f, 0);
 
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
@@ -1241,6 +1244,9 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	handshake.maxLightsSupported=10;
 	handshake.clientStreamingPort=sourceParams.localPort;
 	lastSetupCommand = setupCommand;
+
+	pbrConstants.drawDistance = videoConfig.draw_distance;
+
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 

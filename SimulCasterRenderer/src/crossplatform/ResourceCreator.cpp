@@ -597,6 +597,9 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 
 	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(id, avs::GeometryPayloadType::Skin);
 
+	scr::Transform::TransformCreateInfo transformCreateInfo;
+	transformCreateInfo.renderPlatform = m_pRenderPlatform;
+
 	//Convert avs::Mat4x4 to scr::Transform.
 	std::vector<scr::mat4> inverseBindMatrices;
 	inverseBindMatrices.reserve(skin.inverseBindMatrices.size());

@@ -99,11 +99,6 @@ struct vec2
 		return x * other.x + y * other.y;
 	}
 
-	vec2 GetAbsolute() const
-	{
-		return vec2(abs(x), abs(y));
-	}
-
 	template<typename OutStream>
 	friend OutStream& operator<< (OutStream& out, const vec2& vec)
 	{
@@ -224,11 +219,6 @@ struct vec3
 		return vec3(y * rhs.z - z * rhs.y, z * rhs.x - x * rhs.z, x * rhs.y - y * rhs.x);
 	}
 
-	vec3 GetAbsolute() const
-	{
-		return vec3(abs(x), abs(y), abs(z));
-	}
-
 	template<typename OutStream>
 	friend OutStream& operator<< (OutStream& out, const vec3& vec)
 	{
@@ -328,11 +318,6 @@ struct vec4
 	float Dot(const vec4& rhs) const
 	{
 		return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w;
-	}
-
-	vec4 GetAbsolute() const
-	{
-		return vec4(abs(x), abs(y), abs(z), abs(w));
 	}
 
 	template<typename OutStream>

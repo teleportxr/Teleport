@@ -28,6 +28,8 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 
 	UpdateView();
 
+	UpdateDrawDistance(m_CI.drawDistance);
+
 	m_ShaderResourceLayout.AddBinding(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
@@ -42,6 +44,11 @@ void Camera::UpdatePosition(const avs::vec3& position)
 void Camera::UpdateOrientation(const quat& orientation)
 {
 	m_CameraData.m_Orientation = orientation;
+}
+
+void Camera::UpdateDrawDistance(float distance)
+{
+	m_CameraData.m_DrawDistance = distance;
 }
 
 const ShaderResource& Camera::GetShaderResource() const
