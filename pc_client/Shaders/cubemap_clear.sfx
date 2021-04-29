@@ -93,9 +93,9 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	return  lookup;
 }
 
-shader posTexVertexOutputDebug VS_UsePerspective(idOnly IN)
+shader posTexVertexOutput VS_UsePerspective(idOnly IN)
 {
-	posTexVertexOutputDebug OUT;
+	posTexVertexOutput OUT;
 	vec2 poss[4];
 	poss[0]=vec2( 1.0,-1.0);
 	poss[1]=vec2( 1.0, 1.0);
@@ -110,17 +110,17 @@ shader posTexVertexOutputDebug VS_UsePerspective(idOnly IN)
 	VideoTagDataCube tagData = TagDataCubeBuffer[id];
 	
 	// Transform to view space
-	vec3 vec = ClipPosToView(vec4(pos.x, pos.y, 1, 1));
-	OUT.color = vec;
+	// Swizzle y and z to go from left-handed (HLSL) to engineering
+	// because rotations are in engineering coordinate system.
+	vec3 vec = -ClipPosToView(vec4(pos.xy, 1, 1)).xzy;
 
-	vec4 q1 = vec4(tagData.cameraRotation.xzy, tagData.cameraRotation.w);
-	vec4 q2 = vec4(cameraRotation.xzy, cameraRotation.w);
 	// Transform to view space of server
-	vec = normalize(rotate_by_quaternion(quat_inverse(q1), vec));
-	vec = normalize(rotate_by_quaternion(q2, vec));
+	vec = normalize(rotate_by_quaternion(quat_inverse(cameraRotation), vec));
+	vec = normalize(rotate_by_quaternion(tagData.cameraRotation, vec));
 
 	// Finally, convert to uv
-	OUT.texCoords = ViewToServerScreenSpace(vec);
+	// Swizzle back
+	OUT.texCoords = ViewToServerScreenSpace(vec.xzy);
 
 #ifdef SFX_OPENGL
 	OUT.texCoords.y = 1.0 - OUT.texCoords.y;
@@ -170,7 +170,7 @@ shader vec4 PS_UsePerspective(posTexVertexOutput IN) : SV_TARGET
 	return lookup;
 }
 
-shader vec4 PS_UsePerspectiveOld(posTexVertexOutputDebug IN) : SV_TARGET
+shader vec4 PS_UsePerspectiveOld(posTexVertexOutput IN) : SV_TARGET
 {
 	vec4 lookup = perspectiveTexture.SampleLevel(wrapSamplerState, IN.texCoords, 0);
 	//lookup.xyz += IN.color;

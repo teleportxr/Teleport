@@ -22,7 +22,9 @@ namespace SCServer
 
 		void tick() override;
 
-		void discoveryCompleteForClient(uint64_t ClientID) override;
+		void sendResponseToClient(uint64_t clientID) override;
+
+		void discoveryCompleteForClient(uint64_t clientID) override;
 	protected:
 		//List of clientIDs we want to attempt to connect to.
 		std::map<uint32_t, ENetAddress> newClients;

@@ -228,7 +228,6 @@ public:
 		avs::SurfaceFormat::ARGB10,
 		avs::SurfaceFormat::ARGB,
 	};
-
 	std::vector<AVSTextureHandle> avsTextures;
 	avs::Context context;
 	avs::VideoConfig videoConfig;

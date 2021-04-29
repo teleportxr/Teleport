@@ -5,7 +5,7 @@
 #include "SimulCasterServer/CasterSettings.h"
 extern std::map<avs::uid, ClientData> clientServices;
 extern SCServer::CasterSettings casterSettings;
-TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
 
 using namespace SCServer;
 
@@ -107,7 +107,7 @@ void DefaultDiscoveryService::tick()
 			{
 				//we should remove this client because its IP is wrong
 				TELEPORT_CERR << "But "<<clientID<<" has the wrong IP, should drop.\n";
-			}
+			} 
 		}
 		else
 		{
@@ -115,22 +115,47 @@ void DefaultDiscoveryService::tick()
 		}
 	}
 
-	//Send response, containing port to connect on, to all clients we want to host.
-	for (auto& c : newClients)
+	for (auto c = newClients.cbegin(); c != newClients.cend();)
 	{
-		auto clientID = c.first;
-		auto addr = c.second;
-		ServiceDiscoveryResponse response = { clientID, servicePort };
+		auto clientID = c->first;
+		auto addr = c->second;
 
-		buffer = { sizeof(ServiceDiscoveryResponse), &response };
-		enet_socket_send(discoverySocket, &addr, &buffer, 1);
-		Client_StartSession(clientID, servicePort);
+		if (Client_StartSession(clientID, servicePort))
+		{
+			++c;
+		}
+		else
+		{
+			c = newClients.erase(c);
+		}
 	}
 }
 
-void DefaultDiscoveryService::discoveryCompleteForClient(uint64_t ClientID)
+void DefaultDiscoveryService::sendResponseToClient(uint64_t clientID)
 {
-	auto i = newClients.find(ClientID);
+	if (!discoverySocket || discoveryPort == 0 || servicePort == 0)
+	{
+		printf_s("Attempted to call sendResponseToClient on client discovery service without initalising!");
+		return;
+	}
+
+	auto c = newClients.find(clientID);
+	if (c == newClients.end())
+	{
+		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
+		return;
+	}
+
+	// Send response, containing port to connect on, to all clients we want to host.
+	auto addr = c->second;
+	ServiceDiscoveryResponse response = { clientID, servicePort };
+	ENetBuffer buffer = { sizeof(ServiceDiscoveryResponse), &response };
+	enet_socket_send(discoverySocket, &addr, &buffer, 1);
+}
+
+void DefaultDiscoveryService::discoveryCompleteForClient(uint64_t clientID)
+{
+	auto i = newClients.find(clientID);
 	if (i == newClients.end())
 	{
 		TELEPORT_CERR << "Client had already completed discovery\n";

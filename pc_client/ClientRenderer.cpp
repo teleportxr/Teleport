@@ -1440,7 +1440,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.forward_back_input	=((float)keydown['w']-(float)keydown['s'])*(float)(!keydown[VK_SHIFT]);
 	mouseCameraInput.right_left_input	=((float)keydown['d']-(float)keydown['a'])*(float)(!keydown[VK_SHIFT]);
 	mouseCameraInput.up_down_input		=((float)keydown['q']-(float)keydown['z'])*(float)(!keydown[VK_SHIFT]);
-	
+
 	static float spd = 0.5f;
 	crossplatform::UpdateMouseCamera(&camera
 							,time_step

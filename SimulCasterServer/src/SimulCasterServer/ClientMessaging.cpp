@@ -43,6 +43,8 @@ namespace SCServer
 		, peer(nullptr)
 		, casterContext(nullptr)
 		, clientID(0)
+		, startingSession(false)
+		, timeSinceLastClientComm(0)
 	{}
 
 	ClientMessaging::~ClientMessaging()
@@ -75,6 +77,8 @@ namespace SCServer
 
 	bool ClientMessaging::restartSession(avs::uid clientID, int32_t listenPort)
 	{
+		stopSession();
+		
 		if (host)
 		{
 			enet_host_destroy(host);
@@ -106,6 +110,8 @@ namespace SCServer
 			DEBUG_BREAK_ONCE;
 			return false;
 		}
+
+		startingSession = true;
 
 		return true;
 	}
@@ -206,8 +212,7 @@ namespace SCServer
 
 	void ClientMessaging::handleEvents(float deltaTime)
 	{
-		static float timeSinceLastMessage = 0;
-		timeSinceLastMessage += deltaTime;
+		timeSinceLastClientComm += deltaTime;
 
 		ENetEvent event;
 		while (enet_host_service(host, &event, 0) > 0)
@@ -216,23 +221,27 @@ namespace SCServer
 			{
 			case ENET_EVENT_TYPE_CONNECT:
 				assert(!peer);
-				timeSinceLastMessage = 0;
+				timeSinceLastClientComm = 0;
 				char address[20];
 				enet_address_get_host_ip(&event.peer->address, address, sizeof(address));
 				peer = event.peer;
 				enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 6);
 				discoveryService->discoveryCompleteForClient(clientID);
 				TELEPORT_COUT << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
+				startingSession = false;
 				break;
 			case ENET_EVENT_TYPE_DISCONNECT:
 				assert(peer == event.peer);
-				timeSinceLastMessage = 0;
-				TELEPORT_COUT << "Client disconnected: " << getClientIP() << ":" << getClientPort() << std::endl;
-				onDisconnect(clientID);
-				peer = nullptr;
+				timeSinceLastClientComm = 0;
+				if (!startingSession)
+				{
+					TELEPORT_COUT << "Client disconnected: " << getClientIP() << ":" << getClientPort() << std::endl;
+					Disconnect();
+					return;
+				}
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
-				timeSinceLastMessage = 0;
+				timeSinceLastClientComm = 0;
 				dispatchEvent(event);
 				break;
 			}
@@ -266,11 +275,17 @@ namespace SCServer
 		newMotionEvents[1].clear();
 
 		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
-		if (host && peer && timeSinceLastMessage > disconnectTimeout / 1000.0f)
+		if (host && peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
 		{
-			TELEPORT_COUT << "No message received in " << timeSinceLastMessage << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
-			onDisconnect(clientID);
+			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
+			Disconnect();
 		}
+	}
+
+	void ClientMessaging::Disconnect()
+	{
+		onDisconnect(clientID);
+		peer = nullptr;
 	}
 
 	void ClientMessaging::nodeEnteredBounds(avs::uid nodeID)
@@ -408,9 +423,9 @@ namespace SCServer
 
 			casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));
 			casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->DepthQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
-
-			addNetworkPipelineToAsyncProcessing();
 		}
+
+		addNetworkPipelineToAsyncProcessing();
 
 		if (settings->isReceivingAudio && !casterContext->sourceNetworkPipeline)
 		{

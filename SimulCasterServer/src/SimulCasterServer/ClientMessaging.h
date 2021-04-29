@@ -52,9 +52,10 @@ namespace SCServer
 		bool startSession(avs::uid clientID, int32_t listenPort);
 		void stopSession();
 		bool restartSession(avs::uid clientID, int32_t listenPort);
-
+		bool isStartingSession() { return startingSession;  }
 		void tick(float deltaTime);
 		void handleEvents(float deltaTime);
+		void Disconnect();
 
 		void nodeEnteredBounds(avs::uid nodeID);
 		void nodeLeftBounds(avs::uid nodeID);
@@ -97,6 +98,8 @@ namespace SCServer
 		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
 		bool initialized=false;
+		bool startingSession;
+		float timeSinceLastClientComm;
 		const CasterSettings* settings;
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
