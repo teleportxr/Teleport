@@ -224,9 +224,9 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	std::vector<const scr::ShaderResource*> pbrShaderResources;
 	pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
 	pbrShaderResources.push_back(&globalGraphicsResources.tagShaderResource);
+	pbrShaderResources.push_back(&(skin ? skin->GetShaderResource() : globalGraphicsResources.defaultSkin.GetShaderResource()));
 	pbrShaderResources.push_back(&material->GetShaderResource());
 	pbrShaderResources.push_back(&globalGraphicsResources.lightCubemapShaderResources);
-	pbrShaderResources.push_back(&(skin ? skin->GetShaderResource() : globalGraphicsResources.defaultSkin.GetShaderResource()));
 
 	//Set image samplers and uniform buffers.
 	size_t resourceCount = 0;

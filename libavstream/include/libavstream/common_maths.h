@@ -435,9 +435,10 @@ namespace avs
 
 					break;
 				case::avs::AxesStandard::GlStyle:
+					convertedMatrix.m02 = -matrix.m02;
+					convertedMatrix.m12 = -matrix.m12;
 					convertedMatrix.m20 = -matrix.m20;
 					convertedMatrix.m21 = -matrix.m21;
-					convertedMatrix.m22 = -matrix.m22;
 					convertedMatrix.m23 = -matrix.m23;
 
 					break;
@@ -479,15 +480,15 @@ namespace avs
 					//ROTATION (Implicitly handles scale.):
 					convertedMatrix.m00 = matrix.m11;
 					convertedMatrix.m01 = matrix.m12;
-					convertedMatrix.m02 = matrix.m10;
+					convertedMatrix.m02 = -matrix.m10;
 
 					convertedMatrix.m10 = matrix.m21;
 					convertedMatrix.m11 = matrix.m22;
-					convertedMatrix.m12 = matrix.m20;
+					convertedMatrix.m12 = -matrix.m20;
 
 					convertedMatrix.m20 = -matrix.m01;
 					convertedMatrix.m21 = -matrix.m02;
-					convertedMatrix.m22 = -matrix.m00;
+					convertedMatrix.m22 = matrix.m00;
 
 					break;
 				default:

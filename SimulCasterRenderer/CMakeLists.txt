@@ -3,6 +3,7 @@ project( SimulCasterRenderer )
 
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
+
 # Source
 set( src_root
 	src/Common.h
@@ -67,6 +68,11 @@ set( src_crossplatform
 	src/crossplatform/MemoryUtil.h
 	)
 
+set(src_testing
+	src/crossplatform/Tests.cpp
+	src/crossplatform/Tests.h
+	)
+
 #Include its root directory
 include_directories(src)
 #Include libavstream
@@ -86,7 +92,7 @@ elseif(ANDROID)
 	include_directories(../client/LibOVRKernel/Src)
 endif()
 
-set( src_public ${src_root} ${src_api} ${src_crossplatform} )
+set( src_public ${src_root} ${src_api} ${src_crossplatform} ${src_testing})
 message ( "src_public ${src_public}" )
 #source_group("src" src FILES ${src_root} )
 #source_group("src\\api" src FILES ${src_api} )

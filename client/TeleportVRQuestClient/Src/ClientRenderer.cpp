@@ -365,6 +365,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 	scr::ShaderResourceLayout shaderResourceLayout;
 	shaderResourceLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(1, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	shaderResourceLayout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
 
@@ -380,6 +381,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 	scr::ShaderResource pbrShaderResource(shaderResourceLayout);
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,0,"u_CameraData", {});
+	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataID", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,4,"u_BoneData", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,2,"u_MaterialData", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,10,"u_DiffuseTexture", {});
@@ -415,23 +417,20 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 	//Static passes.
 	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Static";
-	for(const std::string &p:passNames)
+	for(const std::string& passName : passNames)
 	{
-		std::string stat_name="Static_";
-		stat_name+=p;
-		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = p.c_str();
-		clientAppInterface->BuildEffectPass(stat_name.c_str(), &layout, &pipelineCreateInfo,
-											{pbrShaderResource});
+		std::string completeName = "Static_" + passName;
+		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = passName.c_str();
+		clientAppInterface->BuildEffectPass(completeName.c_str(), &layout, &pipelineCreateInfo, {pbrShaderResource});
 	}
+
 	//Skinned passes.
-	//pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Animated";
-	for(const std::string &p:passNames)
+	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Animated";
+	for(const std::string& passName : passNames)
 	{
-		std::string stat_name="Animated_";
-		stat_name+=p;
-		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = p.c_str();
-		clientAppInterface->BuildEffectPass(stat_name.c_str(), &layout, &pipelineCreateInfo,
-											{pbrShaderResource});
+		std::string effectName = "Animated_" + passName;
+		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = passName.c_str();
+		clientAppInterface->BuildEffectPass(effectName.c_str(), &layout, &pipelineCreateInfo, {pbrShaderResource});
 	}
 }
 
