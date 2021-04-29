@@ -428,6 +428,32 @@ namespace scr
 			);
 		}
 
+		bool operator==(const mat4& rhs) const
+		{
+			return
+				a == rhs.a &&
+				b == rhs.b &&
+				c == rhs.c &&
+				d == rhs.d &&
+				e == rhs.e &&
+				f == rhs.f &&
+				g == rhs.g &&
+				h == rhs.h &&
+				i == rhs.i &&
+				j == rhs.j &&
+				k == rhs.k &&
+				l == rhs.l &&
+				m == rhs.m &&
+				n == rhs.n &&
+				o == rhs.o &&
+				p == rhs.p;
+		}
+
+		bool operator!=(const mat4& rhs) const
+		{
+			return !(*this == rhs);
+		}
+
 		avs::vec3 GetTranslation() const
 		{
 			return avs::vec3(d, h, l);

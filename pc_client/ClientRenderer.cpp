@@ -31,6 +31,7 @@
 #include "crossplatform/Log.h"
 #include "crossplatform/SessionClient.h"
 #include "crossplatform/Light.h"
+#include "crossplatform/Tests.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
@@ -126,6 +127,8 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c):
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
 	previousTimestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
+
+	scr::Tests::RunAllTests();
 }
 
 ClientRenderer::~ClientRenderer()
