@@ -9,7 +9,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
 
 using namespace SCServer;
 
-bool DefaultDiscoveryService::initialise(uint16_t discovPort, uint16_t servPort)
+bool DefaultDiscoveryService::initialize(uint16_t discovPort, uint16_t servPort, std::string desIP)
 {
 	if (discovPort != 0)
 		discoveryPort = discovPort;
@@ -35,6 +35,8 @@ bool DefaultDiscoveryService::initialise(uint16_t discovPort, uint16_t servPort)
 		printf_s("Failed to create discovery socket.\n");
 		return false;
 	}
+
+	desiredIP = desIP;
 
 	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_NONBLOCK, 1);
 	enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_BROADCAST, 1);
@@ -87,7 +89,6 @@ void DefaultDiscoveryService::tick()
 			already_got=true;
 		}
 		
-		std::wstring desiredIP(casterSettings.clientIP);
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
 		if (desiredIP.length() != 0)
 		{

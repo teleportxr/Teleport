@@ -6,26 +6,25 @@
 
 namespace SCServer
 {
+#pragma pack(push)
+#pragma pack(1)
 	struct CasterSettings
 	{
 		int32_t requiredLatencyMs = 0;
-
-		const wchar_t* sessionName = L"";
-		const wchar_t* clientIP = L"";
 		int32_t detectionSphereRadius = 0;
 		int32_t detectionSphereBufferDistance = 0;
-		int32_t expectedLag = 0;
 		int64_t throttleKpS = 0;
 
 		bool enableGeometryStreaming = false;
-		uint8_t geometryTicksPerSecond = 0;
+		uint32_t geometryTicksPerSecond = 0;
 		int32_t geometryBufferCutoffSize = 0; // Size we stop encoding nodes at.
-		float confirmationWaitTime = 0.0f; //Seconds to wait before resending a resource.
+		float confirmationWaitTime = 0.0f; // Seconds to wait before resending a resource.
+		float clientDrawDistance = 0.0f; // Distance pixels are clipped for geometry on the client.
 
 		bool enableVideoStreaming = false;
 		bool enableWebcamStreaming = false;
 		float captureCubeSize = 0.0f;
-		int32_t pipelin = 0;
+		int32_t videoEncodeFrequency = 0;
 		bool enableDeferOutput = false;
 		bool enableCubemapCulling = false;
 		int32_t blocksPerCubeFaceAcross = 0; // The number of blocks per cube face will be this value squared
@@ -73,9 +72,9 @@ namespace SCServer
 		int32_t diffuseCubemapSize = 0;
 		int32_t lightCubemapSize = 0;
 
-		bool lockPlayerHeight = false;
 		avs::ControlModel controlModel=avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY;
 	};
+#pragma pack(pop)
 
 	struct CasterNetworkSettings
 	{

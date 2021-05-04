@@ -16,7 +16,7 @@ namespace SCServer
 		{
 			shutdown();
 		}
-		bool initialise(uint16_t discoveryPort = 0, uint16_t servicePort = 0) override;
+		bool initialize(uint16_t discoveryPort = 0, uint16_t servicePort = 0, std::string desiredIP = "") override;
 
 		void shutdown() override;
 
@@ -42,6 +42,7 @@ namespace SCServer
 
 		uint16_t discoveryPort = 0;
 		uint16_t servicePort = 0;
+		std::string desiredIP;
 	public:
 	};
 }

@@ -334,6 +334,7 @@ struct InitialiseState
 	ReportHandshakeFn reportHandshake;
 	ProcessAudioInputFn processAudioInput;
 	avs::vec3 bodyOffsetFromHead;
+	char* clientIP;
 };
 
 ///PLUGIN-INTERNAL START
@@ -504,10 +505,10 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 		return false;
 	}
 	atexit(enet_deinitialize);
-
+	
 	ClientMessaging::startAsyncNetworkDataProcessing();
 
-	return discoveryService->initialise(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT);
+	return discoveryService->initialize(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT, std::string(initialiseState->clientIP));
 }
 
 TELEPORT_EXPORT void Shutdown()
@@ -704,7 +705,6 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
-	setupCommand.lock_player_height = casterSettings.lockPlayerHeight;
 	setupCommand.control_model=casterSettings.controlModel;
 	setupCommand.bodyOffsetFromHead = bodyOffsetFromHead;
 
@@ -723,7 +723,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.videoCodec				= casterSettings.videoCodec;
 	videoConfig.use_cubemap				= !casterSettings.usePerspectiveRendering;
 	videoConfig.stream_webcam			= casterSettings.enableWebcamStreaming;
-	videoConfig.draw_distance           = casterSettings.detectionSphereRadius;
+	videoConfig.draw_distance           = casterSettings.clientDrawDistance;
 
 	videoConfig.specular_cubemap_size	=casterSettings.specularCubemapSize;
 	int depth_cubemap_size				=videoConfig.colour_cubemap_size/2;
@@ -1046,7 +1046,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;
 	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;
-	videoConfig.draw_distance = casterSettings.detectionSphereRadius;
+	videoConfig.draw_distance = casterSettings.clientDrawDistance;
 
 	clientData.clientMessaging.sendCommand(cmd);
 }

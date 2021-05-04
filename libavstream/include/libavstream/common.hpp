@@ -150,7 +150,7 @@ namespace avs
 	};
 
 	/*! Video codec. */
-	enum class VideoCodec
+	enum class VideoCodec : uint8_t
 	{
 		Any = 0,
 		Invalid = 0,
