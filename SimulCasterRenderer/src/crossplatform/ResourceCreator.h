@@ -257,17 +257,6 @@ private:
 		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
 	};
 
-	struct IncompleteAnimation : IncompleteResource
-	{
-		IncompleteAnimation(avs::uid id, avs::GeometryPayloadType type)
-			:IncompleteResource(id, type)
-		{}
-
-		std::shared_ptr<scr::Animation> animation;
-
-		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
-	};
-
 	struct UntranscodedTexture
 	{
 		avs::uid texture_uid;
@@ -288,7 +277,7 @@ private:
 	void CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo);
 	void CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> node);
 	void CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone);
-	void CompleteAnimation(avs::uid id, std::shared_ptr<IncompleteAnimation> completeAnimation);
+	void CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animation> animation);
 
 	//Add texture to material being created.
 	//	accessor : Data on texture that was received from server.
@@ -308,7 +297,7 @@ private:
 
 	scr::API m_API;
 	scr::RenderPlatform* m_pRenderPlatform = nullptr;
-	scr::VertexBufferLayout::PackingStyle m_PackingStyle;
+	scr::VertexBufferLayout::PackingStyle m_PackingStyle = scr::VertexBufferLayout::PackingStyle::GROUPED;
 
 	basist::etc1_global_selector_codebook basis_codeBook;
 	basist::transcoder_texture_format basis_textureFormat;

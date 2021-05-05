@@ -229,79 +229,9 @@ struct InteropTexture
 	}
 };
 
-struct InteropPropertyKeyframe
-{
-	avs::uid nodeID;
-
-	int positionXAmount;
-	int positionYAmount;
-	int positionZAmount;
-	avs::FloatKeyframe* positionXKeyframes;
-	avs::FloatKeyframe* positionZKeyframes;
-	avs::FloatKeyframe* positionYKeyframes;
-
-	int rotationXAmount;
-	int rotationYAmount;
-	int rotationZAmount;
-	int rotationWAmount;
-	avs::FloatKeyframe* rotationXKeyframes;
-	avs::FloatKeyframe* rotationYKeyframes;
-	avs::FloatKeyframe* rotationZKeyframes;
-	avs::FloatKeyframe* rotationWKeyframes;
-
-	//operator avs::PropertyKeyframe() const
-	//{
-	//	return
-	//	{
-	//		nodeID,
-
-	//		{positionXKeyframes, positionXKeyframes + positionXAmount},
-	//		{positionYKeyframes, positionYKeyframes + positionYAmount},
-	//		{positionZKeyframes, positionZKeyframes + positionZAmount},
-
-
-	//		{rotationXKeyframes, rotationXKeyframes + rotationXAmount},
-	//		{rotationYKeyframes, rotationYKeyframes + rotationYAmount},
-	//		{rotationZKeyframes, rotationZKeyframes + rotationZAmount},
-	//		{rotationWKeyframes, rotationWKeyframes + rotationWAmount}
-	//	};
-	//}
-
-	operator avs::TransformKeyframe() const
-	{
-		return
-		{
-			nodeID
-		};
-	}
-};
-
-struct InteropPropertyAnimation
-{
-	int64_t boneAmount;
-	InteropPropertyKeyframe* boneKeyframes;
-
-	//operator avs::PropertyAnimation() const
-	//{
-	//	return
-	//	{
-	//		{boneKeyframes, boneKeyframes + boneAmount}
-	//	};
-	//}
-
-	operator avs::Animation() const
-	{
-		return
-		{
-			"PropertyAnimation",
-			{boneKeyframes, boneKeyframes + boneAmount}
-		};
-	}
-};
-
 struct InteropTransformKeyframe
 {
-	avs::uid nodeID;
+	size_t boneIndex;
 
 	int positionAmount;
 	avs::Vector3Keyframe* positionKeyframes;
@@ -313,7 +243,7 @@ struct InteropTransformKeyframe
 	{
 		return
 		{
-			nodeID,
+			boneIndex,
 			{positionKeyframes, positionKeyframes + positionAmount},
 			{rotationKeyframes, rotationKeyframes + rotationAmount}
 		};

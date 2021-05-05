@@ -14,10 +14,11 @@ namespace scr
 
 		void AddAnimation(avs::uid id, std::shared_ptr<Animation> animation);
 
-		void update(float deltaTime);
+		void update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime);
 	private:
 		std::map<avs::uid, std::shared_ptr<Animation>> animations;
 		std::map<avs::uid, std::shared_ptr<Animation>>::iterator currentAnimation = animations.begin();
+		float currentAnimationTime = 0.0f; //How many milliseconds along the current animation is.
 	};
 
 	class VisibilityComponent

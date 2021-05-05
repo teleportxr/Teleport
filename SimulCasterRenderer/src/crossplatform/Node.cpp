@@ -57,7 +57,12 @@ namespace scr
 	{
 		TickExtrapolatedTransform(deltaTime);
 		visibility.update(deltaTime);
-		animationComponent.update(deltaTime);
+
+		//Attempt to animate, if we have a skin.
+		if(skin)
+		{
+			animationComponent.update(skin->GetBones(), deltaTime);
+		}
 
 		for (std::weak_ptr<Node> child : children)
 		{

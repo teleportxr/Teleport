@@ -1392,11 +1392,6 @@ TELEPORT_EXPORT void StoreSkin(avs::uid id, InteropSkin skin)
 	geometryStore.storeSkin(id, avs::Skin(skin), avs::AxesStandard::UnityStyle);
 }
 
-TELEPORT_EXPORT void StorePropertyAnimation(avs::uid animationID, InteropPropertyAnimation* animation)
-{
-	geometryStore.storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
-}
-
 TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransformAnimation* animation)
 {
 	geometryStore.storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);

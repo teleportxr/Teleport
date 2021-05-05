@@ -449,7 +449,7 @@ namespace SCServer
 			put(animation->boneKeyframes.size());
 			for(const avs::TransformKeyframe& transformKeyframe : animation->boneKeyframes)
 			{
-				put(transformKeyframe.nodeID);
+				put(transformKeyframe.boneIndex);
 
 				encodeVector3Keyframes(transformKeyframe.positionKeyframes);
 				encodeVector4Keyframes(transformKeyframe.rotationKeyframes);

@@ -379,7 +379,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& ta
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		avs::TransformKeyframe& transformKeyframe = animation.boneKeyframes[i];
-		transformKeyframe.nodeID = Next8B;
+		transformKeyframe.boneIndex = Next8B;
 
 		decodeVector3Keyframes(transformKeyframe.positionKeyframes);
 		decodeVector4Keyframes(transformKeyframe.rotationKeyframes);
