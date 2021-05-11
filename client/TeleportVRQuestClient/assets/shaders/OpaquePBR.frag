@@ -12,11 +12,14 @@ layout(location = 3)	in vec3 v_Binormal;
 layout(location = 4)	in mat3 v_TBN;
 layout(location = 7)	in vec2 v_UV_diffuse;
 layout(location = 8)	in vec2 v_UV_normal;
-layout(location = 9)	in vec4 v_Color;
+layout(location = 9)  in vec4 v_Color;
 layout(location = 10) in vec4 v_Joint;
 layout(location = 11) in vec4 v_Weights;
 layout(location = 12) in vec3 v_CameraPosition;
 layout(location = 13) in vec3 v_ModelSpacePosition;
+
+layout(location = 14) in float drawDistance;
+
 
 
 #define lerp mix
@@ -83,6 +86,16 @@ struct VideoTagDataCube
 	vec4 cameraRotation;
 	LightTag lightTags[4];
 };
+
+//From Application SR
+layout(std140, binding = 0) uniform u_CameraData
+{
+	mat4 u_ProjectionMatrix;
+	mat4 u_ViewMatrix;
+	vec4 u_Orientation; //Quaternion
+	vec3 u_Position;
+	float u_DrawDistance;
+} cam;
 
 layout(std430, binding = 1) buffer TagDataCube_ssbo
 {
@@ -321,7 +334,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	surfaceProperties.position        =v_Position;
 	vec3 diff                        = v_Position-v_CameraPosition;
 	float dist_to_frag                =length(diff);
-	if (dist_to_frag>5.0)
+	if (dist_to_frag > cam.u_DrawDistance)
 		discard;
 	vec3 view = normalize(diff);
 	if (normalTex)

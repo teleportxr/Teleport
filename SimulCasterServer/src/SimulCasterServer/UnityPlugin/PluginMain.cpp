@@ -31,7 +31,7 @@ VisualStudioDebugOutput debug_buffer(false, nullptr, 128);
 #endif
 
 using namespace SCServer;
-TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
 
@@ -334,6 +334,7 @@ struct InitialiseState
 	ReportHandshakeFn reportHandshake;
 	ProcessAudioInputFn processAudioInput;
 	avs::vec3 bodyOffsetFromHead;
+	char* clientIP;
 };
 
 ///PLUGIN-INTERNAL START
@@ -353,12 +354,6 @@ void RemoveClient(avs::uid clientID)
 
 	// Remove references to lost client.
 	clientServices.erase(clientID);
-}
-
-void Disconnect(avs::uid clientID)
-{
-	onDisconnect(clientID);
-	Client_StopStreaming(clientID);
 }
 
 void ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize)
@@ -510,10 +505,10 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 		return false;
 	}
 	atexit(enet_deinitialize);
-
+	
 	ClientMessaging::startAsyncNetworkDataProcessing();
 
-	return discoveryService->initialise(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT);
+	return discoveryService->initialize(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT, std::string(initialiseState->clientIP));
 }
 
 TELEPORT_EXPORT void Shutdown()
@@ -549,11 +544,14 @@ TELEPORT_EXPORT void Shutdown()
 	processNewInput = nullptr;
 }
 
-TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 {
+	std::lock_guard<std::mutex> videoLock(videoMutex);
+	std::lock_guard<std::mutex> audioLock(audioMutex);
+
 	//Check if we already have a session for a client with the passed ID.
-	auto c=clientServices.find(clientID);
-	if(c == clientServices.end())
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
 	{
 		std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService = std::make_shared<PluginGeometryStreamingService>();
 		std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline = std::make_shared<PluginVideoEncodePipeline>();
@@ -568,38 +566,30 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 		else
 		{
 			TELEPORT_CERR << "Failed to start session for Client_" << clientID << "!\n";
-			return;
+			return false;
 		}
+		clientPair = clientServices.find(clientID);
 	}
 	else
 	{
-	/*	TELEPORT_CERR << "Called StartSession on Client_" << clientID << ", but we have already started the session. Restarting!\n";
-		if(!c->second.clientMessaging.restartSession(clientID, listenPort))
+		if (!clientPair->second.clientMessaging.isStartingSession())
 		{
-			TELEPORT_CERR << "Failed to restartSession for Client_" << clientID << "!\n";
-			return;
-		}*/
-		//unlinkedClientIDs.insert(clientID);
-		return;
-	}
+			clientPair->second.clientMessaging.Disconnect();
+		}
 
-	auto clientPair = clientServices.find(clientID);
-	if(clientServices.find(clientID) == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to start session for Client_" << clientID << "! Failed to find client in client list despite being added/being found earlier!\n";
-		return;
+		return true;
 	}
 
 	ClientData& newClient = clientPair->second;
 	if(newClient.clientMessaging.isInitialised())
 	{
-		return;
+		newClient.clientMessaging.unInitialise();
 	}
 
 	// Sending
-	newClient.casterContext.ColorQueue = std::make_unique<avs::Queue>();
-	newClient.casterContext.GeometryQueue = std::make_unique<avs::Queue>();
-	newClient.casterContext.AudioQueue = std::make_unique<avs::Queue>();
+	newClient.casterContext.ColorQueue.reset(new avs::Queue);
+	newClient.casterContext.GeometryQueue.reset(new avs::Queue);
+	newClient.casterContext.AudioQueue.reset(new avs::Queue);
 
 	newClient.casterContext.ColorQueue->configure(200000, 16,"ColorQueue");
 	newClient.casterContext.GeometryQueue->configure(200000, 16, "GeometryQueue");
@@ -608,10 +598,10 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	// Receiving
 	if (casterSettings.isReceivingAudio)
 	{
-		newClient.casterContext.sourceAudioQueue = std::make_unique<avs::Queue>();
-		newClient.casterContext.audioDecoder = std::make_unique<avs::AudioDecoder>();
-		newClient.casterContext.audioTarget = std::make_unique<avs::AudioTarget>();
-		newClient.casterContext.audioStreamTarget = std::make_unique<sca::CustomAudioStreamTarget>(std::bind(&ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2));
+		newClient.casterContext.sourceAudioQueue.reset(new avs::Queue);
+		newClient.casterContext.audioDecoder.reset(new avs::AudioDecoder); 
+		newClient.casterContext.audioTarget.reset(new avs::AudioTarget); 
+		newClient.casterContext.audioStreamTarget.reset(new sca::CustomAudioStreamTarget(std::bind(&ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2)));
 
 		newClient.casterContext.sourceAudioQueue->configure( 8192, 120, "SourceAudioQueue");
 		newClient.casterContext.audioDecoder->configure(100);
@@ -634,7 +624,10 @@ TELEPORT_EXPORT void Client_StartSession(avs::uid clientID, int32_t listenPort)
 	newClient.clientMessaging.initialise(&newClient.casterContext, delegates);
 
 	unlinkedClientIDs.insert(clientID);
-	
+
+	discoveryService->sendResponseToClient(clientID);
+
+	return true;
 }
 
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
@@ -712,7 +705,6 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
-	setupCommand.lock_player_height = casterSettings.lockPlayerHeight;
 	setupCommand.control_model=casterSettings.controlModel;
 	setupCommand.bodyOffsetFromHead = bodyOffsetFromHead;
 
@@ -731,6 +723,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.videoCodec				= casterSettings.videoCodec;
 	videoConfig.use_cubemap				= !casterSettings.usePerspectiveRendering;
 	videoConfig.stream_webcam			= casterSettings.enableWebcamStreaming;
+	videoConfig.draw_distance           = casterSettings.clientDrawDistance;
 
 	videoConfig.specular_cubemap_size	=casterSettings.specularCubemapSize;
 	int depth_cubemap_size				=videoConfig.colour_cubemap_size/2;
@@ -779,14 +772,11 @@ TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
 TELEPORT_EXPORT void Tick(float deltaTime)
 {
 	//Delete client data for clients who have been lost.
-	if(lostClients.size() != 0)
+	for(avs::uid clientID : lostClients)
 	{
-		for(avs::uid clientID : lostClients)
-		{
-			RemoveClient(clientID);
-		}
-		lostClients.clear();
+		RemoveClient(clientID);
 	}
+	lostClients.clear();
 
 	for(auto& clientPair : clientServices)
 	{
@@ -1056,6 +1046,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;
 	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;
+	videoConfig.draw_distance = casterSettings.clientDrawDistance;
 
 	clientData.clientMessaging.sendCommand(cmd);
 }

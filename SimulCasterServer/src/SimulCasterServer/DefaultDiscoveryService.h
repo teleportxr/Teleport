@@ -16,13 +16,15 @@ namespace SCServer
 		{
 			shutdown();
 		}
-		bool initialise(uint16_t discoveryPort = 0, uint16_t servicePort = 0) override;
+		bool initialize(uint16_t discoveryPort = 0, uint16_t servicePort = 0, std::string desiredIP = "") override;
 
 		void shutdown() override;
 
 		void tick() override;
 
-		void discoveryCompleteForClient(uint64_t ClientID) override;
+		void sendResponseToClient(uint64_t clientID) override;
+
+		void discoveryCompleteForClient(uint64_t clientID) override;
 	protected:
 		//List of clientIDs we want to attempt to connect to.
 		std::map<uint32_t, ENetAddress> newClients;
@@ -40,6 +42,7 @@ namespace SCServer
 
 		uint16_t discoveryPort = 0;
 		uint16_t servicePort = 0;
+		std::string desiredIP;
 	public:
 	};
 }

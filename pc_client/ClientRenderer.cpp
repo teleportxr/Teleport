@@ -31,6 +31,7 @@
 #include "crossplatform/Log.h"
 #include "crossplatform/SessionClient.h"
 #include "crossplatform/Light.h"
+#include "crossplatform/Tests.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
@@ -126,6 +127,8 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c):
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
 	previousTimestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
+
+	scr::Tests::RunAllTests();
 }
 
 ClientRenderer::~ClientRenderer()
@@ -378,9 +381,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			{
 				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, "recompose_with_depth_alpha");
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
-				RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x,videoConfig.diffuse_y));
-				RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x,videoConfig.specular_y));
-				//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x,videoConfig.light_y));
 			}
 			else
 			{	
@@ -389,6 +389,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 				deviceContext.viewStruct.proj.Inverse(projInv);
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
 			}
+			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x, videoConfig.diffuse_y));
+			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x, videoConfig.specular_y));
+			//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 			RenderLocalNodes(deviceContext);
 
 			// We must deactivate the depth buffer here, in order to use it as a texture:
@@ -1075,10 +1078,7 @@ void ClientRenderer::Update()
 {
 	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	float timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
-#ifndef FIX_BROKEN
-	static float static_time=0.01f;
-	timeElapsed=static_time;// hardcode 0.01 ms.
-#endif
+
 	resourceManagers.Update(timeElapsed);
 	resourceCreator.Update(timeElapsed);
 
@@ -1180,7 +1180,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	const float horzFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
 	const float vertFOV = scr::GetVerticalFOVFromHorizontal(horzFOV, aspect);
 
-	cubemapConstants.serverProj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(horzFOV, vertFOV, videoConfig.nearClipPlane, 0);
+	cubemapConstants.serverProj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(horzFOV, vertFOV, 0.01f, 0);
 
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
@@ -1254,6 +1254,9 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	handshake.maxLightsSupported=10;
 	handshake.clientStreamingPort=sourceParams.localPort;
 	lastSetupCommand = setupCommand;
+
+	pbrConstants.drawDistance = videoConfig.draw_distance;
+
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 }
 

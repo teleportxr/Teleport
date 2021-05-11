@@ -76,14 +76,10 @@ void OVRNode::SetMaterialList(std::vector<std::shared_ptr<scr::Material>>& mater
 	//Recreate surfaces for new material list.
 	RefreshOVRSurfaces();
 }
-#define TELEPORT_ANDROID_ANIMATION 1
+
 std::string OVRNode::GetCompleteEffectPassName(const char *effectPassName)
 {
-#ifdef TELEPORT_ANDROID_ANIMATION
 	return std::string(GetSkin() ? "Animated_" : "Static_") + effectPassName;
-#else
-	return std::string( "Static_") + effectPassName;
-#endif
 }
 
 OVRFW::GlProgram* OVRNode::GetEffectPass(const char* effectPassName)
@@ -208,7 +204,7 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		ovr_surface_def.graphicsCommand.GpuState.blendDstAlpha			= scc::GL_Effect::ToGLBlendFactor(effectPassCreateInfo->colourBlendingState.dstAlphaBlendFactor);
 		ovr_surface_def.graphicsCommand.GpuState.depthFunc				= scc::GL_Effect::ToGLCompareOp(effectPassCreateInfo->depthStencilingState.depthCompareOp);
 
-		ovr_surface_def.graphicsCommand.GpuState.frontFace				= GL_CW;// skin?GL_CW: GL_CCW;
+		ovr_surface_def.graphicsCommand.GpuState.frontFace				= GL_CW;
 		ovr_surface_def.graphicsCommand.GpuState.polygonMode			= scc::GL_Effect::ToGLPolygonMode(effectPassCreateInfo->rasterizationState.polygonMode);
 		ovr_surface_def.graphicsCommand.GpuState.blendEnable			= effectPassCreateInfo->colourBlendingState.blendEnable ? OVRFW::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVRFW::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
 		ovr_surface_def.graphicsCommand.GpuState.depthEnable			= effectPassCreateInfo->depthStencilingState.depthTestEnable;
@@ -228,10 +224,9 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	std::vector<const scr::ShaderResource*> pbrShaderResources;
 	pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
 	pbrShaderResources.push_back(&globalGraphicsResources.tagShaderResource);
+	pbrShaderResources.push_back(&(skin ? skin->GetShaderResource() : globalGraphicsResources.defaultSkin.GetShaderResource()));
 	pbrShaderResources.push_back(&material->GetShaderResource());
 	pbrShaderResources.push_back(&globalGraphicsResources.lightCubemapShaderResources);
-	if(skin)
-		pbrShaderResources.push_back(&(skin->GetShaderResource()));// : globalGraphicsResources.defaultSkin.GetShaderResource()));
 
 	//Set image samplers and uniform buffers.
 	size_t resourceCount = 0;

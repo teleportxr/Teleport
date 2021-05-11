@@ -116,10 +116,10 @@ void ResourceCreator::Clear()
 void ResourceCreator::Update(float deltaTime)
 {
 	std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-	
+
 	//Complete any textures that have finished to transcode, and are waiting.
 	//This has to happen on the main thread, so we can use the main GL context.
-	for(auto texturePair = texturesToCreate.begin(); texturePair != texturesToCreate.end();)
+	for (auto texturePair = texturesToCreate.begin(); texturePair != texturesToCreate.end();)
 	{
 		CompleteTexture(texturePair->first, texturePair->second);
 		texturePair = texturesToCreate.erase(texturePair);
@@ -133,13 +133,13 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 
 	using namespace scr;
 
-	if(m_VertexBufferManager->Has(meshCreate.mesh_uid) ||	m_IndexBufferManager->Has(meshCreate.mesh_uid))
+	if (m_VertexBufferManager->Has(meshCreate.mesh_uid) || m_IndexBufferManager->Has(meshCreate.mesh_uid))
 		return avs::Result::OK;
 
 	if (!m_pRenderPlatform)
 	{
-		SCR_CERR<<"No valid render platform was found."<<std::endl;
-        return avs::Result::GeometryDecoder_ClientRendererError;
+		SCR_CERR << "No valid render platform was found." << std::endl;
+		return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 	scr::Mesh::MeshCreateInfo mesh_ci;
 	mesh_ci.name = meshCreate.name;
@@ -148,11 +148,11 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 
 	for (size_t i = 0; i < meshCreate.m_NumElements; i++)
 	{
-		MeshElementCreate &meshElementCreate = meshCreate.m_MeshElementCreate[i];
+		MeshElementCreate& meshElementCreate = meshCreate.m_MeshElementCreate[i];
 
 		//We have to pad the UV1s, if we are missing UV1s but have joints and weights; we use a vector so it will clean itself up.
 		std::vector<avs::vec2> paddedUV1s(meshElementCreate.m_VertexCount);
-		if(!meshElementCreate.m_UV1s && (meshElementCreate.m_Joints || meshElementCreate.m_Weights))
+		if (!meshElementCreate.m_UV1s && (meshElementCreate.m_Joints || meshElementCreate.m_Weights))
 		{
 			meshElementCreate.m_UV1s = paddedUV1s.data();
 		}
@@ -198,7 +198,7 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 
 		std::unique_ptr<float[]> constructedVB = std::make_unique<float[]>(constructedVBSize);
 		std::unique_ptr<uint8_t[]> _indices = std::make_unique<uint8_t[]>(indicesSize);
-		
+
 		memcpy(_indices.get(), meshElementCreate.m_Indices, indicesSize);
 
 		if (layout->m_PackingStyle == scr::VertexBufferLayout::PackingStyle::INTERLEAVED)
@@ -394,13 +394,13 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 		}
 		else
 		{
-			SCR_CERR<<"Unknown vertex buffer layout."<<std::endl;
+			SCR_CERR << "Unknown vertex buffer layout." << std::endl;
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
 		if (constructedVBSize == 0 || constructedVB == nullptr || meshElementCreate.m_IndexCount == 0 || meshElementCreate.m_Indices == nullptr)
 		{
-			SCR_CERR<<"Unable to construct vertex and index buffers."<<std::endl;
+			SCR_CERR << "Unable to construct vertex and index buffers." << std::endl;
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
@@ -427,52 +427,52 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 		mesh_ci.vb[i] = vb;
 		mesh_ci.ib[i] = ib;
 	}
-	if(!m_MeshManager->Has(meshCreate.mesh_uid))
+	if (!m_MeshManager->Has(meshCreate.mesh_uid))
 	{
 		CompleteMesh(meshCreate.mesh_uid, mesh_ci);
 	}
 
-    return avs::Result::OK;
+	return avs::Result::OK;
 }
 
 //Returns a scr::Texture::Format from a avs::TextureFormat.
 scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format)
 {
-	switch(format)
+	switch (format)
 	{
-		case avs::TextureFormat::INVALID: return scr::Texture::Format::FORMAT_UNKNOWN;
-		case avs::TextureFormat::G8: return scr::Texture::Format::R8;
-		case avs::TextureFormat::BGRA8: return scr::Texture::Format::BGRA8;
-		case avs::TextureFormat::BGRE8: return scr::Texture::Format::BGRA8;
-		case avs::TextureFormat::RGBA16: return scr::Texture::Format::RGBA16;
-		case avs::TextureFormat::RGBE8: return scr::Texture::Format::RGBA8;
-		case avs::TextureFormat::RGBA16F: return scr::Texture::Format::RGBA16F;
-		case avs::TextureFormat::RGBA8: return scr::Texture::Format::RGBA8;
-		case avs::TextureFormat::D16F: return scr::Texture::Format::DEPTH_COMPONENT16;
-		case avs::TextureFormat::D24F: return scr::Texture::Format::DEPTH_COMPONENT24;
-		case avs::TextureFormat::D32F: return scr::Texture::Format::DEPTH_COMPONENT32F;
-		case avs::TextureFormat::MAX: return scr::Texture::Format::FORMAT_UNKNOWN;
-		default:
-			exit(1);
+	case avs::TextureFormat::INVALID: return scr::Texture::Format::FORMAT_UNKNOWN;
+	case avs::TextureFormat::G8: return scr::Texture::Format::R8;
+	case avs::TextureFormat::BGRA8: return scr::Texture::Format::BGRA8;
+	case avs::TextureFormat::BGRE8: return scr::Texture::Format::BGRA8;
+	case avs::TextureFormat::RGBA16: return scr::Texture::Format::RGBA16;
+	case avs::TextureFormat::RGBE8: return scr::Texture::Format::RGBA8;
+	case avs::TextureFormat::RGBA16F: return scr::Texture::Format::RGBA16F;
+	case avs::TextureFormat::RGBA8: return scr::Texture::Format::RGBA8;
+	case avs::TextureFormat::D16F: return scr::Texture::Format::DEPTH_COMPONENT16;
+	case avs::TextureFormat::D24F: return scr::Texture::Format::DEPTH_COMPONENT24;
+	case avs::TextureFormat::D32F: return scr::Texture::Format::DEPTH_COMPONENT32F;
+	case avs::TextureFormat::MAX: return scr::Texture::Format::FORMAT_UNKNOWN;
+	default:
+		exit(1);
 	}
 }
 
 //Returns a SCR compression format from a basis universal transcoder format.
 scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_texture_format format)
 {
-	switch(format)
+	switch (format)
 	{
-		case basist::transcoder_texture_format::cTFBC1: return scr::Texture::CompressionFormat::BC1;
-		case basist::transcoder_texture_format::cTFBC3: return scr::Texture::CompressionFormat::BC3;
-		case basist::transcoder_texture_format::cTFBC4: return scr::Texture::CompressionFormat::BC4;
-		case basist::transcoder_texture_format::cTFBC5: return scr::Texture::CompressionFormat::BC5;
-		case basist::transcoder_texture_format::cTFETC1: return scr::Texture::CompressionFormat::ETC1;
-		case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
-		case basist::transcoder_texture_format::cTFPVRTC1_4_RGBA: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
-		case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
-		case basist::transcoder_texture_format::cTFTotalTextureFormats: return scr::Texture::CompressionFormat::UNCOMPRESSED;
-		default:
-			exit(1);
+	case basist::transcoder_texture_format::cTFBC1: return scr::Texture::CompressionFormat::BC1;
+	case basist::transcoder_texture_format::cTFBC3: return scr::Texture::CompressionFormat::BC3;
+	case basist::transcoder_texture_format::cTFBC4: return scr::Texture::CompressionFormat::BC4;
+	case basist::transcoder_texture_format::cTFBC5: return scr::Texture::CompressionFormat::BC5;
+	case basist::transcoder_texture_format::cTFETC1: return scr::Texture::CompressionFormat::ETC1;
+	case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
+	case basist::transcoder_texture_format::cTFPVRTC1_4_RGBA: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
+	case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+	case basist::transcoder_texture_format::cTFTotalTextureFormats: return scr::Texture::CompressionFormat::UNCOMPRESSED;
+	default:
+		exit(1);
 	}
 }
 
@@ -503,10 +503,10 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	unsigned char* data = new unsigned char[texture.dataSize];
 	memcpy(data, texture.data, texture.dataSize);
 
-	if(texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
+	if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(UntranscodedTexture{id, texture.dataSize, data, std::move(texInfo), texture.name});
+		texturesToTranscode.emplace_back(UntranscodedTexture{ id, texture.dataSize, data, std::move(texInfo), texture.name });
 	}
 	else
 	{
@@ -531,33 +531,33 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 
 	//Colour/Albedo/Diffuse
 	AddTextureToMaterial(material.pbrMetallicRoughness.baseColorTexture,
-						 material.pbrMetallicRoughness.baseColorFactor,
-						 m_DummyDiffuse,
-						 incompleteMaterial,
-						 incompleteMaterial->materialInfo.diffuse);
+		material.pbrMetallicRoughness.baseColorFactor,
+		m_DummyDiffuse,
+		incompleteMaterial,
+		incompleteMaterial->materialInfo.diffuse);
 
 	//Normal
 	AddTextureToMaterial(material.normalTexture,
-						 avs::vec4{material.normalTexture.scale, material.normalTexture.scale, 1.0f, 1.0f},
-						 m_DummyNormal,
-						 incompleteMaterial,
-						 incompleteMaterial->materialInfo.normal);
+		avs::vec4{ material.normalTexture.scale, material.normalTexture.scale, 1.0f, 1.0f },
+		m_DummyNormal,
+		incompleteMaterial,
+		incompleteMaterial->materialInfo.normal);
 
 	//Combined
 	AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
-						 avs::vec4{ material.pbrMetallicRoughness.roughnessMultiplier, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, material.pbrMetallicRoughness.roughnessOffset },
-						 m_DummyCombined,
-						 incompleteMaterial,
-						 incompleteMaterial->materialInfo.combined);
+		avs::vec4{ material.pbrMetallicRoughness.roughnessMultiplier, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, material.pbrMetallicRoughness.roughnessOffset },
+		m_DummyCombined,
+		incompleteMaterial,
+		incompleteMaterial->materialInfo.combined);
 
 	//Emissive
 	AddTextureToMaterial(material.emissiveTexture,
-						 avs::vec4(material.emissiveFactor.x, material.emissiveFactor.y, material.emissiveFactor.z, 1.0f),
-						 m_DummyEmissive,
-						 incompleteMaterial,
-						 incompleteMaterial->materialInfo.emissive);
+		avs::vec4(material.emissiveFactor.x, material.emissiveFactor.y, material.emissiveFactor.z, 1.0f),
+		m_DummyEmissive,
+		incompleteMaterial,
+		incompleteMaterial->materialInfo.emissive);
 
-	if(incompleteMaterial->textureSlots.size() == 0)
+	if (incompleteMaterial->textureSlots.size() == 0)
 	{
 		CompleteMaterial(id, incompleteMaterial->materialInfo);
 	}
@@ -567,7 +567,7 @@ void ResourceCreator::CreateNode(avs::uid id, avs::DataNode& node)
 {
 	m_ReceivedResources.push_back(id);
 
-	switch(node.data_type)
+	switch (node.data_type)
 	{
 	case NodeDataType::Invalid:
 		SCR_CERR << "CreateNode failure! Received a node with a data type of Invalid(0)!\n";
@@ -575,18 +575,18 @@ void ResourceCreator::CreateNode(avs::uid id, avs::DataNode& node)
 	case NodeDataType::None:
 		CreateMeshNode(id, node);
 		break;
-		case NodeDataType::Mesh:
-			CreateMeshNode(id, node);
-			break;
-		case NodeDataType::Light:
-			CreateLight(id, node);
-			break;
-		case NodeDataType::Bone:
-			CreateBone(id, node);
-			break;
-		default:
-			SCR_LOG("Unknown NodeDataType: %c", static_cast<int>(node.data_type));
-			break;
+	case NodeDataType::Mesh:
+		CreateMeshNode(id, node);
+		break;
+	case NodeDataType::Light:
+		CreateLight(id, node);
+		break;
+	case NodeDataType::Bone:
+		CreateBone(id, node);
+		break;
+	default:
+		SCR_LOG("Unknown NodeDataType: %c", static_cast<int>(node.data_type));
+		break;
 	}
 }
 
@@ -597,15 +597,12 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 
 	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(id, avs::GeometryPayloadType::Skin);
 
-	scr::Transform::TransformCreateInfo transformCreateInfo;
-	transformCreateInfo.renderPlatform = m_pRenderPlatform;
-
 	//Convert avs::Mat4x4 to scr::Transform.
 	std::vector<scr::mat4> inverseBindMatrices;
 	inverseBindMatrices.reserve(skin.inverseBindMatrices.size());
-	for(const Mat4x4& matrix : skin.inverseBindMatrices)
+	for (const Mat4x4& matrix : skin.inverseBindMatrices)
 	{
-		inverseBindMatrices.push_back( static_cast<scr::mat4>(matrix));
+		inverseBindMatrices.push_back(static_cast<scr::mat4>(matrix));
 		//inverseBindMatrices.back().UpdateModelMatrix();
 	}
 
@@ -613,12 +610,12 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 	incompleteSkin->skin = m_pRenderPlatform->InstantiateSkin(skin.name, inverseBindMatrices, skin.jointIDs.size(), skin.skinTransform);
 
 	//Add bones we have.
-	for(size_t i = 0; i < skin.jointIDs.size(); i++)
+	for (size_t i = 0; i < skin.jointIDs.size(); i++)
 	{
 		avs::uid jointID = skin.jointIDs[i];
 		std::shared_ptr<scr::Bone> bone = m_BoneManager->Get(jointID);
 
-		if(bone)
+		if (bone)
 			incompleteSkin->skin->SetBone(i, bone);
 		else
 		{
@@ -629,7 +626,7 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 		}
 	}
 
-	if(incompleteSkin->missingBones.size() == 0)
+	if (incompleteSkin->missingBones.size() == 0)
 	{
 		CompleteSkin(id, incompleteSkin);
 	}
@@ -643,7 +640,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 	std::shared_ptr<IncompleteAnimation> incompleteAnimation = std::make_shared<IncompleteAnimation>(id, avs::GeometryPayloadType::Animation);
 	incompleteAnimation->animation = std::make_shared<scr::Animation>(animation.name);
 
-	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
+	for (size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		const avs::TransformKeyframe& avsKeyframes = animation.boneKeyframes[i];
 
@@ -652,7 +649,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 		boneKeyframeList.rotationKeyframes = avsKeyframes.rotationKeyframes;
 
 		std::shared_ptr<scr::Bone> bone = m_BoneManager->Get(avsKeyframes.nodeID);
-		if(bone)
+		if (bone)
 			boneKeyframeList.bonePtr = bone;
 		else
 		{
@@ -665,7 +662,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 		incompleteAnimation->animation->boneKeyframeLists.push_back(boneKeyframeList);
 	}
 
-	if(incompleteAnimation->missingBones.size() == 0)
+	if (incompleteAnimation->missingBones.size() == 0)
 	{
 		CompleteAnimation(id, incompleteAnimation);
 	}
@@ -673,7 +670,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 
 void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 {
-	if(m_pNodeManager->HasNode(id))
+	if (m_pNodeManager->HasNode(id))
 	{
 		SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created!\n";
 		return;
@@ -687,10 +684,10 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	newNode->node = m_pNodeManager->CreateNode(id, node.name);
 	newNode->node->SetLocalTransform(static_cast<scr::Transform>(node.transform));
 
-	if(node.data_uid != 0)
+	if (node.data_uid != 0)
 	{
 		newNode->node->SetMesh(m_MeshManager->Get(node.data_uid));
-		if(!newNode->node->GetMesh())
+		if (!newNode->node->GetMesh())
 		{
 			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
 
@@ -700,10 +697,10 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 		}
 	}
 
-	if(node.skinID != 0)
+	if (node.skinID != 0)
 	{
 		newNode->node->SetSkin(m_SkinManager->Get(node.skinID));
-		if(!newNode->node->GetSkin())
+		if (!newNode->node->GetSkin())
 		{
 			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
 
@@ -713,12 +710,12 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 		}
 	}
 
-	for(size_t i = 0; i < node.animations.size(); i++)
+	for (size_t i = 0; i < node.animations.size(); i++)
 	{
 		avs::uid animationID = node.animations[i];
 		std::shared_ptr<scr::Animation> animation = m_AnimationManager->Get(animationID);
 
-		if(animation)
+		if (animation)
 		{
 			newNode->node->animationComponent.AddAnimation(animationID, animation);
 		}
@@ -732,7 +729,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 		}
 	}
 
-	if(m_pRenderPlatform->placeholderMaterial == nullptr)
+	if (m_pRenderPlatform->placeholderMaterial == nullptr)
 	{
 		scr::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.renderPlatform = m_pRenderPlatform;
@@ -744,11 +741,11 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	}
 
 	newNode->node->SetMaterialListSize(node.materials.size());
-	for(size_t i = 0; i < node.materials.size(); i++)
+	for (size_t i = 0; i < node.materials.size(); i++)
 	{
 		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(node.materials[i]);
 
-		if(material)
+		if (material)
 		{
 			newNode->node->SetMaterial(i, material);
 		}
@@ -771,7 +768,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	m_pNodeManager->AddNode(newNode->node, node);
 
 	//Complete node now, if we aren't missing any resources.
-	if(!isMissingResources)
+	if (!isMissingResources)
 	{
 		CompleteMeshNode(id, newNode->node);
 	}
@@ -792,7 +789,7 @@ void ResourceCreator::CreateLight(avs::uid id, avs::DataNode& node)
 	lci.lightColour = node.lightColour;
 	lci.lightRadius = node.lightRadius;
 	lci.uid = id;
-	lci.name=node.name;
+	lci.name = node.name;
 	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
 	m_LightManager->Add(id, light);
 }
@@ -808,16 +805,16 @@ void ResourceCreator::CreateBone(avs::uid id, avs::DataNode& node)
 	//Link to parent and child bones.
 	//We don't know what order the bones will arrive in, so we have to do it for both orders(parent -> child, child -> parent).
 	std::shared_ptr<scr::Bone> parent = m_BoneManager->Get(node.parentID);
-	if(parent)
+	if (parent)
 	{
 		bone->SetParent(parent);
 		parent->AddChild(bone);
 	}
 
-	for(avs::uid childID : node.childrenIDs)
+	for (avs::uid childID : node.childrenIDs)
 	{
 		std::shared_ptr<scr::Bone> child = m_BoneManager->Get(childID);
-		if(child)
+		if (child)
 		{
 			child->SetParent(bone);
 			bone->AddChild(child);
@@ -836,14 +833,14 @@ void ResourceCreator::CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo&
 
 	//Add mesh to nodes waiting for mesh.
 	MissingResource& missingMesh = GetMissingResource(id, "Mesh");
-	for(auto it = missingMesh.waitingResources.begin(); it != missingMesh.waitingResources.end(); it++)
+	for (auto it = missingMesh.waitingResources.begin(); it != missingMesh.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 
 		incompleteNode->node->SetMesh(mesh);
 
 		//If only this mesh and this function are pointing to the node, then it is complete.
-		if(it->use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+		if (it->use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
 		else SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Mesh_" << id << "(" << meshInfo.name << ")\n";
 	}
 
@@ -859,13 +856,13 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 
 	//Add skin to nodes waiting for skin.
 	MissingResource& missingSkin = GetMissingResource(id, "Skin");
-	for(auto it = missingSkin.waitingResources.begin(); it != missingSkin.waitingResources.end(); it++)
+	for (auto it = missingSkin.waitingResources.begin(); it != missingSkin.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 		incompleteNode->node->SetSkin(completeSkin->skin);
 
 		//If only this resource and this skin are pointing to the node, then it is complete.
-		if(it->use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+		if (it->use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
 		else SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Skin_" << id << "(" << completeSkin->skin->name << ")\n";
 	}
 
@@ -884,14 +881,14 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 
 	//Add texture to materials waiting for texture.
 	MissingResource& missingTexture = GetMissingResource(id, "Texture");
-	for(auto it = missingTexture.waitingResources.begin(); it != missingTexture.waitingResources.end(); it++)
+	for (auto it = missingTexture.waitingResources.begin(); it != missingTexture.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::static_pointer_cast<IncompleteMaterial>(*it);
 
 		incompleteMaterial->textureSlots.at(id) = scrTexture;
 
 		//If only this texture and this function are pointing to the material, then it is complete.
-		if(it->use_count() == 2)
+		if (it->use_count() == 2)
 		{
 			CompleteMaterial(incompleteMaterial->id, incompleteMaterial->materialInfo);
 		}
@@ -914,18 +911,18 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 
 	//Add material to nodes waiting for material.
 	MissingResource& missingMaterial = GetMissingResource(id, "Material");
-	for(auto it = missingMaterial.waitingResources.begin(); it != missingMaterial.waitingResources.end(); it++)
+	for (auto it = missingMaterial.waitingResources.begin(); it != missingMaterial.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 
 		auto indexesPair = incompleteNode->materialSlots.find(id);
-		for(size_t materialIndex : indexesPair->second)
+		for (size_t materialIndex : indexesPair->second)
 		{
 			incompleteNode->node->SetMaterial(materialIndex, material);
 		}
 
 		//If only this material and function are pointing to the MeshNode, then it is complete.
-		if(incompleteNode.use_count() == 2)
+		if (incompleteNode.use_count() == 2)
 		{
 			CompleteMeshNode(incompleteNode->id, incompleteNode->node);
 		}
@@ -955,24 +952,24 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
 
 	//Add bone to skin waiting for bone.
 	MissingResource& missingBone = GetMissingResource(id, "Bone");
-	for(auto it = missingBone.waitingResources.begin(); it != missingBone.waitingResources.end(); it++)
+	for (auto it = missingBone.waitingResources.begin(); it != missingBone.waitingResources.end(); it++)
 	{
-		if((*it)->type == avs::GeometryPayloadType::Skin)
+		if ((*it)->type == avs::GeometryPayloadType::Skin)
 		{
 			std::shared_ptr<IncompleteSkin> incompleteSkin = std::static_pointer_cast<IncompleteSkin>(*it);
 			incompleteSkin->skin->SetBone(incompleteSkin->missingBones[id], bone);
 
 			//If only this bone, and the loop, are pointing at the skin, then it is complete.
-			if(it->use_count() == 2) CompleteSkin(incompleteSkin->id, incompleteSkin);
+			if (it->use_count() == 2) CompleteSkin(incompleteSkin->id, incompleteSkin);
 			else SCR_COUT << "Waiting Skin_" << incompleteSkin->id << "(" << incompleteSkin->skin->name << ") got Bone_" << id << "(" << bone->name << ")\n";
 		}
-		else if((*it)->type == avs::GeometryPayloadType::Animation)
+		else if ((*it)->type == avs::GeometryPayloadType::Animation)
 		{
 			std::shared_ptr<IncompleteAnimation> incompleteAnimation = std::static_pointer_cast<IncompleteAnimation>(*it);
 			incompleteAnimation->animation->boneKeyframeLists[incompleteAnimation->missingBones[id]].bonePtr = bone;
 
 			//If only this bone, and the loop, are pointing at the animation, then it is complete.
-			if(it->use_count() == 2) CompleteAnimation(incompleteAnimation->id, incompleteAnimation);
+			if (it->use_count() == 2) CompleteAnimation(incompleteAnimation->id, incompleteAnimation);
 			else SCR_COUT << "Waiting Animation_" << incompleteAnimation->id << "(" << incompleteAnimation->animation->name << ") got Bone_" << id << "(" << bone->name << ")\n";
 		}
 	}
@@ -991,13 +988,13 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<IncompleteA
 
 	//Add animation to waiting nodes.
 	MissingResource& missingAnimation = GetMissingResource(id, "Animation");
-	for(auto it = missingAnimation.waitingResources.begin(); it != missingAnimation.waitingResources.end(); it++)
+	for (auto it = missingAnimation.waitingResources.begin(); it != missingAnimation.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 		incompleteNode->node->animationComponent.AddAnimation(id, completeAnimation->animation);
 
 		//If only this bone, and the loop, are pointing at the skin, then it is complete.
-		if(incompleteNode.use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+		if (incompleteNode.use_count() == 2) CompleteMeshNode(incompleteNode->id, incompleteNode->node);
 		else SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Animation_" << id << "(" << completeAnimation->animation->name << ")\n";
 	}
 
@@ -1007,11 +1004,11 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<IncompleteA
 
 void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<scr::Texture>& dummyTexture, std::shared_ptr<IncompleteMaterial> incompleteMaterial, scr::Material::MaterialParameter& materialParameter)
 {
-	if(accessor.index != 0)
+	if (accessor.index != 0)
 	{
 		const std::shared_ptr<scr::Texture> texture = m_TextureManager->Get(accessor.index);
 
-		if(texture)
+		if (texture)
 		{
 			materialParameter.texture = texture;
 		}
@@ -1024,7 +1021,7 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 			incompleteMaterial->textureSlots.emplace(accessor.index, materialParameter.texture);
 		}
 
-		avs::vec2 tiling = {accessor.tiling.x, accessor.tiling.y};
+		avs::vec2 tiling = { accessor.tiling.x, accessor.tiling.y };
 
 		materialParameter.texCoordsScalar[0] = tiling;
 		materialParameter.texCoordsScalar[1] = tiling;
@@ -1048,7 +1045,7 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 ResourceCreator::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, const char* resourceType)
 {
 	auto missingPair = m_MissingResources.find(id);
-	if(missingPair == m_MissingResources.end())
+	if (missingPair == m_MissingResources.end())
 	{
 		missingPair = m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 	}
@@ -1058,25 +1055,25 @@ ResourceCreator::MissingResource& ResourceCreator::GetMissingResource(avs::uid i
 
 void ResourceCreator::BasisThread_TranscodeTextures()
 {
-	while(shouldBeTranscoding)
+	while (shouldBeTranscoding)
 	{
 		std::this_thread::yield(); //Yield at the start, as we don't want to yield before we unlock (when lock goes out of scope).
 
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		if(texturesToTranscode.size() != 0)
+		if (texturesToTranscode.size() != 0)
 		{
 			UntranscodedTexture& transcoding = texturesToTranscode[0];
 
 			//We need a new transcoder for every .basis file.
 			basist::basisu_transcoder basis_transcoder(&basis_codeBook);
 
-			if(basis_transcoder.start_transcoding(transcoding.data, transcoding.dataSize))
+			if (basis_transcoder.start_transcoding(transcoding.data, transcoding.dataSize))
 			{
 				transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data, transcoding.dataSize, 0);
 				transcoding.scrTexture.mipSizes.reserve(transcoding.scrTexture.mipCount);
 				transcoding.scrTexture.mips.reserve(transcoding.scrTexture.mipCount);
 
-				for(uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+				for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
 				{
 					uint32_t basisWidth, basisHeight, basisBlocks;
 
@@ -1084,33 +1081,33 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_textureFormat) * basisBlocks;
 
 					unsigned char* outData = new unsigned char[outDataSize];
-					if(basis_transcoder.transcode_image_level(transcoding.data, transcoding.dataSize, 0, mipIndex, outData, basisBlocks, basis_textureFormat))
+					if (basis_transcoder.transcode_image_level(transcoding.data, transcoding.dataSize, 0, mipIndex, outData, basisBlocks, basis_textureFormat))
 					{
 						transcoding.scrTexture.mipSizes.push_back(outDataSize);
 						transcoding.scrTexture.mips.push_back(outData);
 					}
 					else
 					{
-						SCR_CERR<<"Texture \"" << transcoding.name << "\" failed to transcode mipmap level " <<mipIndex<< "."<<std::endl;
+						SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
 						delete[] outData;
 					}
 				}
 
-				if(transcoding.scrTexture.mips.size() != 0)
+				if (transcoding.scrTexture.mips.size() != 0)
 				{
 					std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-					texturesToCreate.emplace(std::pair{transcoding.texture_uid, std::move(transcoding.scrTexture)});
+					texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
 				}
 				else
 				{
-					SCR_CERR<<"Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file."<<std::endl;
+					SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
 				}
 
 				delete[] transcoding.data;
 			}
 			else
 			{
-				SCR_CERR<<"Texture \"" << transcoding.name << "\" failed to start transcoding."<<std::endl;
+				SCR_CERR << "Texture \"" << transcoding.name << "\" failed to start transcoding." << std::endl;
 			}
 
 			texturesToTranscode.erase(texturesToTranscode.begin());

@@ -169,9 +169,9 @@ ovrProgramParmType GL_Effect::ToOVRProgramParmType(ShaderResourceLayout::ShaderR
         case ShaderResourceLayout::ShaderResourceType::UNIFORM_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
         case ShaderResourceLayout::ShaderResourceType::STORAGE_TEXEL_BUFFER:     return ovrProgramParmType::MAX;
         case ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER:           return ovrProgramParmType::BUFFER_UNIFORM;
-        case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER:           return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER:           return ovrProgramParmType::BUFFER_STORAGE;
         case ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER_DYNAMIC:   return ovrProgramParmType::BUFFER_UNIFORM;
-        case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER_DYNAMIC:   return ovrProgramParmType::MAX;
+        case ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER_DYNAMIC:   return ovrProgramParmType::BUFFER_STORAGE;
         case ShaderResourceLayout::ShaderResourceType::INPUT_ATTACHMENT:         return ovrProgramParmType::MAX;
 		default:
 			exit(1);

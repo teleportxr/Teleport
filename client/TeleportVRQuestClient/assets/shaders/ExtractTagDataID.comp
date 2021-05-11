@@ -6,6 +6,7 @@ layout(rgba8, binding = 0) uniform writeonly lowp imageCube destTex;
 layout(binding = 1) uniform highp samplerExternalOES videoFrameTexture;
 layout(std140, binding = 2) uniform cubemapUB
 {
+    uvec2 dimensions;
     ivec2 sourceOffset;
     uint faceSize;
     uint mip;

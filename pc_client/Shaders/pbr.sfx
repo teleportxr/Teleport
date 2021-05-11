@@ -369,7 +369,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 vec4 Solid(vertexOutput IN)
 {
 	vec3 diff			=IN.wpos.xyz - viewPosition;
-	if(length(diff)>5.0)
+	if(length(diff) > drawDistance)
 		discard;
 	vec3 tangentx		= normalize(IN.tangent);
 	vec3 tangenty		= normalize(cross(IN.normal, tangentx));

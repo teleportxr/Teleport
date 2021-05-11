@@ -95,12 +95,11 @@ namespace avs
 		int32_t requiredLatencyMs = 0;
 		uint32_t idle_connection_timeout = 5000;
 		uid	server_id = 0;
-		AxesStandard axesStandard = AxesStandard::NotInitialized;
-		uint8_t audio_input_enabled = 0;
-		uint8_t lock_player_height = 1;
 		ControlModel control_model = ControlModel::NONE;
 		VideoConfig video_config;
 		vec3 bodyOffsetFromHead;
+		AxesStandard axesStandard = AxesStandard::NotInitialized;
+		uint8_t audio_input_enabled = 0;
 	};
 
 	struct ReconfigureVideoCommand : public Command

@@ -150,7 +150,7 @@ namespace avs
 	};
 
 	/*! Video codec. */
-	enum class VideoCodec
+	enum class VideoCodec : uint8_t
 	{
 		Any = 0,
 		Invalid = 0,
@@ -249,8 +249,8 @@ namespace avs
 		uint32_t	depth_height = 0;
 		uint32_t	perspective_width = 0;
 		uint32_t	perspective_height = 0;
-		float perspective_fov = 110;
-		float nearClipPlane = 0.5f;
+		float       perspective_fov = 110;
+		float       nearClipPlane = 0.5f;
 		uint32_t    use_10_bit_decoding = 0;
 		uint32_t    use_yuv_444_decoding = 0;
 		uint32_t	colour_cubemap_size = 0;
@@ -272,6 +272,7 @@ namespace avs
 		int32_t		shadowmap_x=0;
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
+		float       draw_distance = 5;
 	};
 
 	struct AudioConfig

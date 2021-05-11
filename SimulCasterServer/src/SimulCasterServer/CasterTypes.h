@@ -5,7 +5,7 @@
 
 namespace SCServer
 {
-	enum class VideoEncoderRateControlMode 
+	enum class VideoEncoderRateControlMode : uint8_t
 	{
 		RC_CONSTQP = 0, /**< Constant QP mode */
 		RC_VBR = 1, /**< Variable bitrate mode */

@@ -10,26 +10,32 @@ namespace scr
 	void BoneKeyframeList::seekTime(float time)
 	{
 		std::shared_ptr<Bone> bone = bonePtr.lock();
-		if(!bone)
+		if (!bone)
+		{
 			return;
+		}
+
 		Transform transform = bone->GetLocalTransform();
 		setPositionToTime(time, transform.m_Translation, positionKeyframes);
 		setRotationToTime(time, transform.m_Rotation, rotationKeyframes);
-//transform.m_Translation=positionKeyframes[0].value;
-//transform.m_Rotation=rotationKeyframes[0].value;
+
 		transform.UpdateModelMatrix();
 		bone->SetLocalTransform(transform);
 	}
 
 	void BoneKeyframeList::setPositionToTime(float time, avs::vec3& bonePosition, const std::vector<avs::Vector3Keyframe>& keyframes)
 	{
-		if(keyframes.size() == 0)
+		if (keyframes.size() == 0)
+		{
 			return;
-		if(keyframes.size() == 1)
+		}
+
+		if (keyframes.size() == 1)
 		{
 			bonePosition = keyframes[0].value;
 			return;
 		}
+
 		size_t nextKeyframeIndex = getNextKeyframeIndex(time, keyframes);
 		const avs::Vector3Keyframe& previousKeyframe = (nextKeyframeIndex == 0 ? keyframes[nextKeyframeIndex] : keyframes[nextKeyframeIndex - 1]);
 		const avs::Vector3Keyframe& nextKeyframe = keyframes[nextKeyframeIndex];
@@ -41,13 +47,17 @@ namespace scr
 
 	void BoneKeyframeList::setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes)
 	{
-		if(keyframes.size() == 0)
+		if (keyframes.size() == 0)
+		{
 			return;
-		if(keyframes.size() == 1)
+		}
+
+		if (keyframes.size() == 1)
 		{
 			boneRotation = keyframes[0].value;
 			return;
 		}
+
 		size_t nextKeyframeIndex = getNextKeyframeIndex(time, keyframes);
 		const avs::Vector4Keyframe& previousKeyframe = (nextKeyframeIndex == 0 ? keyframes[nextKeyframeIndex] : keyframes[nextKeyframeIndex - 1]);
 		const avs::Vector4Keyframe& nextKeyframe = keyframes[nextKeyframeIndex];
@@ -60,10 +70,12 @@ namespace scr
 
 	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector3Keyframe>& keyframes)
 	{
-		for(size_t i = 1; i < keyframes.size(); i++)
+		for (size_t i = 1; i < keyframes.size(); i++)
 		{
-			if(keyframes[i].time >= time)
+			if (keyframes[i].time >= time)
+			{
 				return i;
+			}
 		}
 
 		return keyframes.size() - 1;
@@ -71,10 +83,12 @@ namespace scr
 
 	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector4Keyframe>& keyframes)
 	{
-		for(size_t i = 1; i < keyframes.size(); i++)
+		for (size_t i = 1; i < keyframes.size(); i++)
 		{
-			if(keyframes[i].time >= time)
+			if (keyframes[i].time >= time)
+			{
 				return i;
+			}
 		}
 
 		return keyframes.size() - 1;
@@ -90,7 +104,7 @@ namespace scr
 	{}
 
 	Animation::Animation(const std::string& name, std::vector<BoneKeyframeList> bk)
-		:name(name), boneKeyframeLists(bk)
+		: name(name), boneKeyframeLists(bk)
 	{
 		updateAnimationLength();
 	}
@@ -99,17 +113,19 @@ namespace scr
 	//ASSUMPTION: This works for Unity, but does it work for Unreal?
 	void Animation::updateAnimationLength()
 	{
-		if(boneKeyframeLists.empty())
+		if (boneKeyframeLists.empty())
+		{
 			return;
+		}
 
 		BoneKeyframeList& boneAnimation = boneKeyframeLists[0];
-		if(!boneAnimation.positionKeyframes.empty())
+		if (!boneAnimation.positionKeyframes.empty())
 		{
 			endTime = std::max(endTime, boneAnimation.positionKeyframes[boneAnimation.positionKeyframes.size() - 1].time);
 			return;
 		}
 
-		if(!boneAnimation.rotationKeyframes.empty())
+		if (!boneAnimation.rotationKeyframes.empty())
 		{
 			endTime = std::max(endTime, boneAnimation.rotationKeyframes[boneAnimation.rotationKeyframes.size() - 1].time);
 			return;
@@ -125,7 +141,7 @@ namespace scr
 	{
 		currentTime = 0.0f;
 
-		for(BoneKeyframeList boneKeyframeList : boneKeyframeLists)
+		for (BoneKeyframeList boneKeyframeList : boneKeyframeLists)
 		{
 			boneKeyframeList.seekTime(currentTime);
 		}
@@ -135,7 +151,7 @@ namespace scr
 	{
 		currentTime = std::min(currentTime + deltaTime, endTime);
 
-		for(BoneKeyframeList boneKeyframeList : boneKeyframeLists)
+		for (BoneKeyframeList boneKeyframeList : boneKeyframeLists)
 		{
 			boneKeyframeList.seekTime(currentTime);
 		}
