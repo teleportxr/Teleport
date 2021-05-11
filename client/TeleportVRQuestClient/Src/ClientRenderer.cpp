@@ -105,7 +105,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		}
 		static ovrProgramParm uniformParms[] =
 				{
-						  {  "renderTexture", ovrProgramParmType::TEXTURE_SAMPLED}
+						  {"renderTexture", ovrProgramParmType::TEXTURE_SAMPLED}
 						, {"videoUB"       , ovrProgramParmType::BUFFER_UNIFORM}
 						, {"TagDataCube"   , ovrProgramParmType::BUFFER_STORAGE}
 						,};
@@ -478,9 +478,10 @@ void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
 	}
 
 	const float aspect = vc.perspective_width / vc.perspective_height;
-	const float horzFOV = vc.perspective_fov * scr::DEG_TO_RAD;
-	const float vertFOV = scr::GetVerticalFOVFromHorizontal(horzFOV, aspect);
-	videoUB.serverProj = ovrMatrix4f_CreateProjectionFov( horzFOV, vertFOV, 0.0f, 0.0f, vc.nearClipPlane, 0.0f );
+	const float vertFOV = scr::GetVerticalFOVFromHorizontalInDegrees(vc.perspective_fov, aspect);
+	// Takes FOV values in degrees
+	ovrMatrix4f serverProj = ovrMatrix4f_CreateProjectionFov( vc.perspective_fov, vertFOV, 0.0f, 0.0f, 0.1f, 0.0f );
+	videoUB.serverProj = ovrMatrix4f_Transpose(&serverProj);
 
 	//GLCheckErrorsWithTitle("Built Video Cubemap");
 	//Build Lighting Cubemap
@@ -557,7 +558,8 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &max_u);
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &max_v);
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &max_w);
-		scr::uvec3 size = {tc.width / ThreadCount, tc.width / ThreadCount, 6};
+
+		scr::uvec3 size = {tc.width / ThreadCount, tc.height / ThreadCount, 6};
 
 		size.x = std::min(size.x, (uint32_t) max_u);
 		size.y = std::min(size.y, (uint32_t) max_v);
@@ -568,7 +570,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		cubemapUB.mip = 0;
 		cubemapUB.face = 0;
 
-		if (mRenderTexture->GetTextureCreateInfo().type == scr::Texture::Type::TEXTURE_CUBE_MAP)
+		if (tc.type == scr::Texture::Type::TEXTURE_CUBE_MAP)
 		{
 			cubemapUB.dimensions = {cubemapUB.faceSize * 3, cubemapUB.faceSize * 2};
 
@@ -583,13 +585,14 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		}
 		else
 		{
+			scr::uvec3 perspSize = { size.x, size.y, 1};
 			const auto texInfo = mRenderTexture->GetTextureCreateInfo();
 			cubemapUB.dimensions = { texInfo.width, texInfo.height };
 
 			scr::InputCommandCreateInfo inputCommandCreateInfo;
 			inputCommandCreateInfo.effectPassName = "PerspectiveColourAndDepth";
 
-			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, perspSize,
 												   mCopyPerspectiveEffect,
 												   {mCopyPerspectiveShaderResources});
 

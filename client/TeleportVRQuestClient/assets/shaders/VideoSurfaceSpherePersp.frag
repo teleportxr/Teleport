@@ -33,7 +33,7 @@ struct VideoTagDataCube
     LightTag lightTags[4];
 };
 
-layout(binding = 0) uniform samplerCube renderTexture;
+layout(binding = 0) uniform sampler2D renderTexture;
 layout(std140, binding = 1) uniform videoUB
 {
     vec4 eyeOffsets[2];
@@ -54,31 +54,30 @@ vec4 mul(mat4 a,vec4 b)
     return a*b;
 }
 
+vec2 ViewToServerScreenSpace(vec3 pos)
+{
+	vec4 clip_pos = vec4(pos, 1.0);
+	clip_pos = vid.serverProj * clip_pos;
+
+	pos = clip_pos.xyz;
+
+	// Move to NDC space
+	if (clip_pos.w != 0.0)
+	{
+		pos /= clip_pos.w;
+	}
+
+	// Finally, convert to uv
+	// y is flipped because render texure is in HLSL form
+	return 0.5 * (vec2(1.0, 1.0) + vec2(pos.x, -pos.y));
+}
+
 void main()
 {
-    vec4 lookup = textureLod(renderTexture, vSampleVec,0.0);
+    //vec4 lookup = vec4(0.0, 0.0, 0.0, vDepth);
     vec3 view = vSampleVec;
-    vec3 colourSampleVec = vSampleVec;
-    for (int i = 0; i < 5; i++)
-    {
-		float depth = lookup.a;
-		float dist_m=25.0*depth+5.0;
-		vec3 pos_m=dist_m*vSampleVec;
-		pos_m+=vOffsetFromVideo* step(-0.99, -depth);
-		// But this does not intersect at depth. We want the vector from the original centre, of
-		// original radius to hit point
-		float R = dist_m;
-		float F = length(vOffsetFromVideo);
-		float D = -dot(normalize(vOffsetFromVideo), vSampleVec);
-		float b = F * D;
-		float c = F * F - R * R;
-		float U = -b + sqrt(max(b*b - c,0.0));
-		pos_m += (U - R) * vSampleVec*step(-F,0.0);
-		colourSampleVec = normalize(pos_m);
-		lookup = textureLod(renderTexture, colourSampleVec, 0.0);
-       //lookup.rgb+=vec3(depth,depth,depth);
-    }
-    //lookup.rgb+=vec3(vDepth,vDepth,vDepth);
-	//lookup.b=float(RWTagDataID.x)/31.0;
-    gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
+    vec2 uv = ViewToServerScreenSpace(view);
+    vec4 lookup = texture(renderTexture, uv);
+    //gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
+    gl_FragColor = lookup;
 }

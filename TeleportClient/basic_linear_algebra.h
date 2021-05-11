@@ -618,7 +618,11 @@ namespace scr
 	/** Returns vertical FOV. FOV values in radians. */
 	inline float GetVerticalFOVFromHorizontal(float horizontal, float aspect)
 	{
-		// = 2 * arctan(tan(H / 2) * aspectratio)
 		return 2 * std::atanf(tanf(horizontal * 0.5f) * aspect);
+	}
+
+	inline float GetVerticalFOVFromHorizontalInDegrees(float horizontal, float aspect)
+	{
+		return GetVerticalFOVFromHorizontal(horizontal * DEG_TO_RAD, aspect) * RAD_TO_DEG;
 	}
 }

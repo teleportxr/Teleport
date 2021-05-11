@@ -109,6 +109,7 @@ Result Pipeline::Private::process()
 	const uint64_t deltaTime = timestamp - m_lastTimestamp;
 
 	m_lastTimestamp = timestamp;
+	
 	const bool isProfiling = m_statFile.is_open();
 	std::vector<double> timings;
 	if (isProfiling)
