@@ -7,10 +7,9 @@ namespace scr
 	BoneKeyframeList::BoneKeyframeList()
 	{}
 
-	void BoneKeyframeList::seekTime(float time)
+	void BoneKeyframeList::seekTime(std::shared_ptr<Bone> bone, float time)
 	{
-		std::shared_ptr<Bone> bone = bonePtr.lock();
-		if (!bone)
+		if(!bone)
 		{
 			return;
 		}
@@ -25,12 +24,12 @@ namespace scr
 
 	void BoneKeyframeList::setPositionToTime(float time, avs::vec3& bonePosition, const std::vector<avs::Vector3Keyframe>& keyframes)
 	{
-		if (keyframes.size() == 0)
+		if(keyframes.size() == 0)
 		{
 			return;
 		}
 
-		if (keyframes.size() == 1)
+		if(keyframes.size() == 1)
 		{
 			bonePosition = keyframes[0].value;
 			return;
@@ -47,12 +46,12 @@ namespace scr
 
 	void BoneKeyframeList::setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes)
 	{
-		if (keyframes.size() == 0)
+		if(keyframes.size() == 0)
 		{
 			return;
 		}
 
-		if (keyframes.size() == 1)
+		if(keyframes.size() == 1)
 		{
 			boneRotation = keyframes[0].value;
 			return;
@@ -70,9 +69,9 @@ namespace scr
 
 	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector3Keyframe>& keyframes)
 	{
-		for (size_t i = 1; i < keyframes.size(); i++)
+		for(size_t i = 1; i < keyframes.size(); i++)
 		{
-			if (keyframes[i].time >= time)
+			if(keyframes[i].time >= time)
 			{
 				return i;
 			}
@@ -83,9 +82,9 @@ namespace scr
 
 	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector4Keyframe>& keyframes)
 	{
-		for (size_t i = 1; i < keyframes.size(); i++)
+		for(size_t i = 1; i < keyframes.size(); i++)
 		{
-			if (keyframes[i].time >= time)
+			if(keyframes[i].time >= time)
 			{
 				return i;
 			}
@@ -113,47 +112,35 @@ namespace scr
 	//ASSUMPTION: This works for Unity, but does it work for Unreal?
 	void Animation::updateAnimationLength()
 	{
-		if (boneKeyframeLists.empty())
+		if(boneKeyframeLists.empty())
 		{
 			return;
 		}
 
 		BoneKeyframeList& boneAnimation = boneKeyframeLists[0];
-		if (!boneAnimation.positionKeyframes.empty())
+		if(!boneAnimation.positionKeyframes.empty())
 		{
 			endTime = std::max(endTime, boneAnimation.positionKeyframes[boneAnimation.positionKeyframes.size() - 1].time);
 			return;
 		}
 
-		if (!boneAnimation.rotationKeyframes.empty())
+		if(!boneAnimation.rotationKeyframes.empty())
 		{
 			endTime = std::max(endTime, boneAnimation.rotationKeyframes[boneAnimation.rotationKeyframes.size() - 1].time);
 			return;
 		}
 	}
 
-	bool Animation::finished()
+	float Animation::getAnimationLength()
 	{
-		return currentTime >= endTime;
+		return endTime;
 	}
 
-	void Animation::restart()
+	void Animation::seekTime(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float time)
 	{
-		currentTime = 0.0f;
-
-		for (BoneKeyframeList boneKeyframeList : boneKeyframeLists)
+		for(BoneKeyframeList boneKeyframeList : boneKeyframeLists)
 		{
-			boneKeyframeList.seekTime(currentTime);
-		}
-	}
-
-	void Animation::update(float deltaTime)
-	{
-		currentTime = std::min(currentTime + deltaTime, endTime);
-
-		for (BoneKeyframeList boneKeyframeList : boneKeyframeLists)
-		{
-			boneKeyframeList.seekTime(currentTime);
+			boneKeyframeList.seekTime(boneList[boneKeyframeList.boneIndex], time);
 		}
 	}
 }

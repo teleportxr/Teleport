@@ -65,7 +65,6 @@ namespace scr
 			float u_NormalTexCoordIndex;
 			float u_CombinedTexCoordIndex;
 			float u_EmissiveTexCoordIndex;
-			float _pad2;
 		};
 
 	protected:

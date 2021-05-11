@@ -5,7 +5,8 @@
 SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	int lightCount;
 	int reverseDepth;
-	vec2 _pad0;
+	float drawDistance;
+	float _pad0;
 
 	vec4 depthToLinFadeDistParams;
 
@@ -34,13 +35,12 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	vec2 emissiveTexCoordsScalar_A;
 
 	vec3 u_SpecularColour;
-	float drawDistance;
+	float _pad;
 
 	float u_DiffuseTexCoordIndex;
 	float u_NormalTexCoordIndex;
 	float u_CombinedTexCoordIndex;
 	float u_EmissiveTexCoordIndex;
-	float _pad2;
 SIMUL_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(BoneMatrices, 12)

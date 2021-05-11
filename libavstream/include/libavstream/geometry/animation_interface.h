@@ -25,7 +25,7 @@ struct Vector4Keyframe
 
 struct TransformKeyframe
 {
-	avs::uid nodeID;
+	size_t boneIndex = -1; //Index of the bone used in the bones list.
 
 	std::vector<avs::Vector3Keyframe> positionKeyframes;
 	std::vector<avs::Vector4Keyframe> rotationKeyframes;

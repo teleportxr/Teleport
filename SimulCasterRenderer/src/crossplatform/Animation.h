@@ -15,12 +15,12 @@ class BoneKeyframeList
 public:
 	BoneKeyframeList();
 
-	std::weak_ptr<Bone> bonePtr;
+	size_t boneIndex = -1; //Index of the bone used in the bones list.
 
 	std::vector<avs::Vector3Keyframe> positionKeyframes;
 	std::vector<avs::Vector4Keyframe> rotationKeyframes;
 
-	void seekTime(float time);
+	void seekTime(std::shared_ptr<Bone> bone, float time);
 private:
 	void setPositionToTime(float time, avs::vec3& bonePosition, const std::vector<avs::Vector3Keyframe>& keyframes);
 	void setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes);
@@ -39,19 +39,17 @@ public:
 	Animation(const std::string& name);
 	Animation(const std::string& name, std::vector<BoneKeyframeList> boneKeyframes);
 	
-	//Updates how long the animations runs for.
+	//Updates how long the animations runs for by scanning boneKeyframeLists.
 	void updateAnimationLength();
 
-	//Returns whether the animation has finished.
-	bool finished();
+	//Returns how long the animation is in milliseconds.
+	float getAnimationLength();
 
-	//Resets internal timer to zero, and moves bones to start transforms.
-	void restart();
-
-	//Updates animation internal time, and sets bones to new transforms.
-	void update(float deltaTime);
+	//Sets bone transforms to positions and rotations specified by the animation at the passed time.
+	//	boneList : List of bones for the animation.
+	//	time : Time the animation will use when moving the bone transforms in milliseconds.
+	void seekTime(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float time);
 private:
-	float currentTime = 0.0f;
-	float endTime = 0.0f;
+	float endTime = 0.0f; //Milliseconds the animation lasts for.
 };
 }

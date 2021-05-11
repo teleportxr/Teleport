@@ -22,26 +22,29 @@ namespace scr
 		}
 	}
 
-	void AnimationComponent::update(float deltaTime)
+	void AnimationComponent::update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime)
 	{
 		//Early-out if there are no animations.
-		if (animations.empty())
+		if(animations.empty())
 		{
 			return;
 		}
 
-		currentAnimation->second->update(deltaTime);
+		currentAnimationTime = std::min(currentAnimationTime + deltaTime, currentAnimation->second->getAnimationLength());
+		currentAnimation->second->seekTime(boneList, currentAnimationTime);
 
 #if CYCLE_ANIMATIONS
-		if (currentAnimation->second->finished())
+		if(currentAnimationTime >= currentAnimation->second->getAnimationLength())
 		{
+			//Increment animations, and loop back to the start of the list if we reach the end.
 			++currentAnimation;
-			if (currentAnimation == animations.end())
+			if(currentAnimation == animations.end())
 			{
 				currentAnimation = animations.begin();
 			}
 
-			currentAnimation->second->restart();
+			currentAnimationTime = 0.0f;
+			currentAnimation->second->seekTime(boneList, currentAnimationTime);
 		}
 #endif
 	}
