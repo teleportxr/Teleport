@@ -61,6 +61,7 @@ namespace scr
 		bool UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translation, const scr::quat& rotation, const avs::vec3& scale);
 
 		void UpdateNodeMovement(std::vector<avs::MovementUpdate> updateList);
+		void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate);
 
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.

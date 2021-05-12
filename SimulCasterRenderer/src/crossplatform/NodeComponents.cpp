@@ -1,6 +1,6 @@
 #include "NodeComponents.h"
 
-#define CYCLE_ANIMATIONS 1
+#define CYCLE_ANIMATIONS 0
 
 namespace scr
 {
@@ -13,19 +13,35 @@ namespace scr
 		currentAnimation = this->animations.begin();
 	}
 
-	void AnimationComponent::AddAnimation(avs::uid id, std::shared_ptr<Animation> animation)
+	void AnimationComponent::addAnimation(avs::uid id, std::shared_ptr<Animation> animation)
 	{
 		animations[id] = animation;
-		if (currentAnimation == animations.end())
+
+		//We only need to set a starting animation if we are cycling the animations.
+#if CYCLE_ANIMATIONS
+		if(currentAnimation == animations.end())
 		{
 			currentAnimation = animations.begin();
 		}
+#endif
+	}
+
+	void AnimationComponent::setAnimation(avs::uid animationID, uint64_t start_timestamp)
+	{
+		auto animationItr = animations.find(animationID);
+		if(animationItr == animations.end())
+		{
+			return;
+		}
+
+		currentAnimation = animationItr;
+		currentAnimationTime = 0.0f;
 	}
 
 	void AnimationComponent::update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime)
 	{
-		//Early-out if there are no animations.
-		if(animations.empty())
+		//Early-out if we're not playing an animation; either from having no animations or the node isn't currently playing an animation.
+		if(currentAnimation == animations.end())
 		{
 			return;
 		}

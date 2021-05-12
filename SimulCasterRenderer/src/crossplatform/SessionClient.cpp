@@ -142,10 +142,10 @@ void SessionClient::SetPeerTimeout(uint timeout)
 	}
 }
 
-void SessionClient::SendClientMessage(const avs::ClientMessage& msg)
+void SessionClient::SendClientMessage(const avs::ClientMessage& message)
 {
-	size_t sz = avs::GetClientMessageSize(msg.clientMessagePayloadType);
-	ENetPacket* packet = enet_packet_create(&msg, sz, ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
+	size_t messageSize = message.getMessageSize();
+	ENetPacket* packet = enet_packet_create(&message, messageSize, ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 }
 
@@ -259,7 +259,7 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 
 void SessionClient::ParseCommandPacket(ENetPacket* packet)
 {
-	avs::CommandPayloadType commandPayloadType = *((avs::CommandPayloadType*)packet->data);
+	avs::CommandPayloadType commandPayloadType = *(reinterpret_cast<avs::CommandPayloadType*>(packet->data) + sizeof(void*));
 	switch(commandPayloadType)
 	{
 		case avs::CommandPayloadType::Shutdown:
@@ -273,7 +273,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			size_t commandSize = sizeof(avs::SetupCommand);
 
 			//Copy command out of packet.
-			memcpy(&setupCommand, packet->data, commandSize);
+			memcpy(static_cast<void*>(&setupCommand), packet->data, commandSize);
 
 			avs::Handshake handshake;
 			char server_ip[100];
@@ -301,7 +301,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 
 			//Copy command out of packet.
 			avs::ReconfigureVideoCommand reconfigureCommand;
-			memcpy(&reconfigureCommand, packet->data, commandSize);
+			memcpy(static_cast<void*>(&reconfigureCommand), packet->data, commandSize);
 
 			mCommandInterface->OnReconfigureVideo(reconfigureCommand);
 		}
@@ -310,7 +310,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		{
 			size_t commandSize = sizeof(avs::SetPositionCommand);
 			avs::SetPositionCommand command;
-			memcpy(&command, packet->data, commandSize);
+			memcpy(static_cast<void*>(&command), packet->data, commandSize);
 			if(command.valid_counter>receivedInitialPos)
 			{
 				receivedInitialPos = command.valid_counter;
@@ -327,7 +327,7 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			size_t commandSize = sizeof(avs::NodeBoundsCommand);
 
 			avs::NodeBoundsCommand command;
-			memcpy(&command, packet->data, commandSize);
+			memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 			size_t enteredSize = sizeof(avs::uid) * command.nodesShowAmount;
 			size_t leftSize = sizeof(avs::uid) * command.nodesHideAmount;
@@ -365,6 +365,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		break;
 		case avs::CommandPayloadType::UpdateNodeMovement:
 			ReceiveNodeMovementUpdate(packet);
+			break;
+		case avs::CommandPayloadType::UpdateNodeAnimation:
+			ReceiveNodeAnimationUpdate(packet);
 			break;
 		default:
 			break;
@@ -581,7 +584,7 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 
 	//Extract command from packet.
 	avs::AcknowledgeHandshakeCommand command;
-	memcpy(&command, packet->data, commandSize);
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	//Extract list of visible nodes.
 	std::vector<avs::uid> visibleNodes(command.visibleNodeAmount);
@@ -594,14 +597,23 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 
 void SessionClient::ReceiveNodeMovementUpdate(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::UpdateNodeMovementCommand);
-
 	//Extract command from packet.
 	avs::UpdateNodeMovementCommand command;
-	memcpy(&command, packet->data, commandSize);
+	size_t commandSize = command.getCommandSize();
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	std::vector<avs::MovementUpdate> updateList(command.updatesAmount);
 	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::MovementUpdate) * command.updatesAmount);
 
 	mCommandInterface->UpdateNodeMovement(updateList);
+}
+
+void SessionClient::ReceiveNodeAnimationUpdate(const ENetPacket* packet)
+{
+	//Extract command from packet.
+	avs::UpdateNodeAnimationCommand command;
+	size_t commandSize = command.getCommandSize();
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
+
+	mCommandInterface->UpdateNodeAnimation(command.animationUpdate);
 }

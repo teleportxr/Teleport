@@ -60,6 +60,7 @@ namespace SCServer
 		void nodeEnteredBounds(avs::uid nodeID);
 		void nodeLeftBounds(avs::uid nodeID);
 		void updateNodeMovement(std::vector<avs::MovementUpdate>& updateList);
+		void updateNodeAnimation(avs::NodeUpdateAnimation update);
 
 		bool hasHost() const;
 		bool hasPeer() const;
@@ -72,7 +73,7 @@ namespace SCServer
 		{
 			assert(peer);
 
-			size_t commandSize = avs::GetCommandSize(avsCommand.commandPayloadType);
+			size_t commandSize = avsCommand.getCommandSize();
 			size_t listSize = sizeof(T) * appendedList.size();
 
 			ENetPacket* packet = enet_packet_create(&avsCommand, commandSize, ENET_PACKET_FLAG_RELIABLE);

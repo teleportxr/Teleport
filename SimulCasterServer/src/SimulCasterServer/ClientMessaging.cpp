@@ -306,6 +306,12 @@ namespace SCServer
 		sendCommand<avs::MovementUpdate>(command, updateList);
 	}
 
+	void ClientMessaging::updateNodeAnimation(avs::NodeUpdateAnimation update)
+	{
+		avs::UpdateNodeAnimationCommand command(update);
+		sendCommand(command);
+	}
+
 	bool ClientMessaging::hasHost() const
 	{
 		return host;
@@ -321,12 +327,12 @@ namespace SCServer
 		return casterContext->axesStandard != avs::AxesStandard::NotInitialized;
 	}
 
-	bool ClientMessaging::sendCommand(const avs::Command& avsCommand) const
+	bool ClientMessaging::sendCommand(const avs::Command& command) const
 	{
 		assert(peer);
 
-		size_t commandSize = avs::GetCommandSize(avsCommand.commandPayloadType);
-		ENetPacket* packet = enet_packet_create(&avsCommand, commandSize, ENET_PACKET_FLAG_RELIABLE);
+		size_t commandSize = command.getCommandSize();
+		ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
 		assert(packet);
 
 		return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
@@ -337,10 +343,14 @@ namespace SCServer
 		assert(peer);
 
 		char address[20];
-		if (peer)
+		if(peer)
+		{
 			enet_address_get_host_ip(&peer->address, address, sizeof(address));
+		}
 		else
+		{
 			sprintf(address, "");
+		}
 
 		return std::string(address);
 	}
@@ -609,7 +619,7 @@ namespace SCServer
 
 	void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	{
-		avs::ClientMessagePayloadType clientMessagePayloadType = *((avs::ClientMessagePayloadType*)packet->data);
+		avs::ClientMessagePayloadType clientMessagePayloadType = *(reinterpret_cast<avs::ClientMessagePayloadType*>(packet->data) + sizeof(void*));
 		switch (clientMessagePayloadType)
 		{
 		case avs::ClientMessagePayloadType::OriginPose:

@@ -1389,6 +1389,12 @@ void ClientRenderer::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& 
 {
 	resourceManagers.mNodeManager->UpdateNodeMovement(updateList);
 }
+
+void ClientRenderer::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
+{
+	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
+}
+
 #include "Platform/CrossPlatform/Quaterniond.h"
 void ClientRenderer::FillInControllerPose(int index, float offset)
 {
