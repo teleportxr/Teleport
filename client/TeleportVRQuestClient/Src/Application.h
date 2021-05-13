@@ -83,6 +83,7 @@ namespace OVRFW
 		virtual void ClearGeometryResources() override;
 		virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
 		virtual void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) override;
+		virtual void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate) override;
 		/* End SessionCommandInterface */
 
 		/* Begin DecodeEventInterface */
