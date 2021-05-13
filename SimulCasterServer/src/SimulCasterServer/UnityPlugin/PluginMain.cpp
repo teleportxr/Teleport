@@ -679,16 +679,16 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	if (casterSettings.usePerspectiveRendering)
 	{
 		encoderSettings.frameWidth = casterSettings.perspectiveWidth;
-		encoderSettings.frameHeight = casterSettings.perspectiveHeight * 1.5f;
-		encoderSettings.depthWidth = casterSettings.perspectiveWidth * 0.5f;
-		encoderSettings.depthHeight = casterSettings.perspectiveHeight * 0.5f;
+		encoderSettings.frameHeight = static_cast<int32_t>(casterSettings.perspectiveHeight * 1.5f);
+		encoderSettings.depthWidth = static_cast<int32_t>(casterSettings.perspectiveWidth * 0.5f);
+		encoderSettings.depthHeight = static_cast<int32_t>(casterSettings.perspectiveHeight * 0.5f);
 	}
 	else
 	{
 		encoderSettings.frameWidth = static_cast<int32_t>(casterSettings.captureCubeSize * 3);
 		encoderSettings.frameHeight = static_cast<int32_t>(casterSettings.captureCubeSize * 3);
-		encoderSettings.depthWidth = casterSettings.captureCubeSize * 1.5f;
-		encoderSettings.depthHeight = casterSettings.captureCubeSize;
+		encoderSettings.depthWidth = static_cast<int32_t>(casterSettings.captureCubeSize * 1.5f);
+		encoderSettings.depthHeight = static_cast<int32_t>(casterSettings.captureCubeSize);
 	}
 	encoderSettings.wllWriteDepthTexture = false;
 	encoderSettings.enableStackDepth = true;
@@ -1308,7 +1308,7 @@ TELEPORT_EXPORT const DWORD WINAPI Client_GetClientIP(avs::uid clientID, __in DW
 		memcpy(reinterpret_cast<void*>(lpBuffer), str.c_str(), final_len);
 		lpBuffer[final_len] = 0;
 	}
-	return final_len;
+	return static_cast<DWORD>(final_len);
 }
 
 TELEPORT_EXPORT uint16_t Client_GetClientPort(avs::uid clientID)

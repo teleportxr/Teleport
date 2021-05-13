@@ -2,17 +2,11 @@
 
 #include <random>
 
+#include "libavstream/common_networking.h"
+
 #include "crossplatform/Log.h"
 
 #include <arpa/inet.h>
-
-#pragma pack(push, 1)
-struct ServiceDiscoveryResponse
-{
-    uint32_t clientID;
-    uint16_t remotePort;
-};
-#pragma pack(pop)
 
 AndroidDiscoveryService::AndroidDiscoveryService()
 {
@@ -79,7 +73,7 @@ uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t client
     }
 
     {
-        ServiceDiscoveryResponse response = {};
+        avs::ServiceDiscoveryResponse response = {};
         struct sockaddr_in responseAddr;
         socklen_t responseAddrSize = sizeof(responseAddr);
 

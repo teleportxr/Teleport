@@ -60,6 +60,12 @@ namespace avs
 		OriginPose
 	};
 
+	struct ServiceDiscoveryResponse
+	{
+		uint64_t clientID;
+		uint16_t remotePort;
+	};
+
 	struct Handshake
 	{
 		DisplayInfo startDisplayInfo = DisplayInfo();

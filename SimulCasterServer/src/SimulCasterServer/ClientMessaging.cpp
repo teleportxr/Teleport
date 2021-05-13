@@ -329,11 +329,20 @@ namespace SCServer
 
 	bool ClientMessaging::sendCommand(const avs::Command& command) const
 	{
-		assert(peer);
+		if(!peer)
+		{
+			TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
+			return false;
+		}
 
 		size_t commandSize = command.getCommandSize();
 		ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
-		assert(packet);
+		
+		if(!packet)
+		{
+			TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! Failed to create packet!\n";
+			return false;
+		}
 
 		return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 	}
@@ -424,11 +433,11 @@ namespace SCServer
 			{
 				streamingPort,
 				clientIP,
-				handshake.clientStreamingPort,
+				static_cast<int32_t>(handshake.clientStreamingPort),
 				static_cast<int32_t>(handshake.maxBandwidthKpS),
 				static_cast<int32_t>(handshake.udpBufferSize),
 				settings->requiredLatencyMs,
-				disconnectTimeout
+				static_cast<int32_t>(disconnectTimeout)
 			};
 
 			casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));

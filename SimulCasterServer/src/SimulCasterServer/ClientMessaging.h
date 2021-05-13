@@ -1,15 +1,16 @@
 #pragma once
 
-#include <functional>
-#include <vector>
-#include <thread>
 #include <atomic>
+#include <functional>
 #include <mutex>
+#include <thread>
+#include <vector>
 
 #include "libavstream/common_input.h"
 
 #include "CaptureDelegates.h"
 #include "CasterSettings.h"
+#include "ErrorHandling.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
 
@@ -69,15 +70,24 @@ namespace SCServer
 		bool setPosition(uint64_t valid_counter,const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head,const avs::vec4 &orientation);
 
 		bool sendCommand(const avs::Command& avsCommand) const;
-		template<typename T> bool sendCommand(const avs::Command& avsCommand, std::vector<T>& appendedList) const
+		template<typename T> bool sendCommand(const avs::Command& command, std::vector<T>& appendedList) const
 		{
-			assert(peer);
+			if(!peer)
+			{
+				TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
+				return false;
+			}
 
-			size_t commandSize = avsCommand.getCommandSize();
+			size_t commandSize = command.getCommandSize();
 			size_t listSize = sizeof(T) * appendedList.size();
 
-			ENetPacket* packet = enet_packet_create(&avsCommand, commandSize, ENET_PACKET_FLAG_RELIABLE);
-			assert(packet);
+			ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
+			
+			if(!packet)
+			{
+				TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! Failed to create packet!\n";
+				return false;
+			}
 
 			//Copy list into packet.
 			enet_packet_resize(packet, commandSize + listSize);
