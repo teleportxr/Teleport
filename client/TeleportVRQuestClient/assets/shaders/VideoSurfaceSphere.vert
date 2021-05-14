@@ -15,6 +15,7 @@ layout(std140, binding = 1) uniform videoUB
     mat4 serverProj;
     vec3 cameraPosition;
     int _pad2;
+    vec4 cameraRotation;
 } vid;
 
 // ALL light data is passed in as tags.
