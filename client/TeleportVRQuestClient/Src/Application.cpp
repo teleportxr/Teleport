@@ -754,6 +754,11 @@ void Application::UpdateNodeMovement(const std::vector<avs::MovementUpdate> &upd
 	resourceManagers.mNodeManager->UpdateNodeMovement(updateList);
 }
 
+void Application::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
+{
+	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
+}
+
 void Application::OnFrameAvailable()
 {
 	++mNumPendingFrames;

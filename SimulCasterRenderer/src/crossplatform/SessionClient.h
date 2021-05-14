@@ -34,6 +34,7 @@ public:
 
     virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) = 0;
     virtual void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) = 0;
+	virtual void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate) = 0;
 };
 
 class SessionClient
@@ -94,6 +95,7 @@ private:
 
     void ReceiveHandshakeAcknowledgement(const ENetPacket* packet);
     void ReceiveNodeMovementUpdate(const ENetPacket* packet);
+	void ReceiveNodeAnimationUpdate(const ENetPacket* packet);
 
     avs::uid lastServerID = 0; //UID of the server we last connected to.
 
@@ -103,9 +105,9 @@ private:
 
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;
-    ENetAddress mServerEndpoint;
+	ENetAddress mServerEndpoint{};
 
-    ControllerState mPrevControllerState = {};
+    ControllerState mPrevControllerState{};
 
     bool handshakeAcknowledged = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for nodes.

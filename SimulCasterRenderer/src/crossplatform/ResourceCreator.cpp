@@ -704,7 +704,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 
 		if (animation)
 		{
-			newNode->node->animationComponent.AddAnimation(animationID, animation);
+			newNode->node->animationComponent.addAnimation(animationID, animation);
 		}
 		else
 		{
@@ -971,7 +971,7 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animat
 	for(auto it = missingAnimation.waitingResources.begin(); it != missingAnimation.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
-		incompleteNode->node->animationComponent.AddAnimation(id, animation);
+		incompleteNode->node->animationComponent.addAnimation(id, animation);
 		SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Animation_" << id << "(" << animation->name << ")\n";
 
 		//If only this bone, and the loop, are pointing at the skin, then it is complete.

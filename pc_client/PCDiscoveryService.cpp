@@ -2,16 +2,10 @@
 
 #include <random>
 
+#include "libavstream/common_networking.h"
+
 #include "crossplatform/Log.h"
 #include "ErrorHandling.h"
-
-#pragma pack(push, 1) 
-struct ServiceDiscoveryResponse
-{
-	uint32_t clientID;
-	uint16_t remotePort;
-};
-#pragma pack(pop)
 
 PCDiscoveryService::PCDiscoveryService()
 {
@@ -85,7 +79,7 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 		serviceDiscoverySocket = CreateDiscoverySocket(clientIP, clientDiscoveryPort);
 	}
 	ENetBuffer buffer = {sizeof(clientID) ,(void*)&clientID};
-	ServiceDiscoveryResponse response = {};
+	avs::ServiceDiscoveryResponse response = {};
 	ENetAddress  responseAddress = {0xffffffff, 0};
 	ENetBuffer responseBuffer = {sizeof(response),&response};
 	// Send our client id to the server on the discovery port. Once every 1000 frames.

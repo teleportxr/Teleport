@@ -248,6 +248,17 @@ namespace scr
 		}
 	}
 
+	void NodeManager::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
+	{
+		std::shared_ptr<scr::Node> node = GetNode(animationUpdate.nodeID);
+		if(!node)
+		{
+			return;
+		}
+
+		node->animationComponent.setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
+	}
+
 	void NodeManager::Update(float deltaTime)
 	{
 		nodeList_t expiredNodes;

@@ -385,8 +385,6 @@ void NetworkSink::Private::updateCounters(uint64_t timestamp, uint32_t deltaTime
 
 	m_statsTimeElapsed += deltaTime;
 
-	m_statsTimeElapsed = 0;
-
 	// Update network stats
 	std::lock_guard<std::mutex> lock(m_countersMutex);
 
@@ -396,17 +394,18 @@ void NetworkSink::Private::updateCounters(uint64_t timestamp, uint32_t deltaTime
 		m_counters.bytesSent = m_counters.networkPacketsSent * PacketFormat::MaxPacketSize;
 	}
 
-	SRT_TRACEBSTATS perf;
-	// returns 0 if there's no error during execution and -1 if there is
-	if (srt_bstats(m_remote_socket, &perf, true) != 0)
-	{
-		return;
-	}
-
-	m_counters.bandwidth = perf.mbpsBandwidth;
-
 	if (m_statsTimeElapsed > m_params.bandwidthInterval)
 	{
+		m_statsTimeElapsed = 0;
+
+		SRT_TRACEBSTATS perf;
+		// returns 0 if there's no error during execution and -1 if there is
+		if (srt_bstats(m_remote_socket, &perf, true) != 0)
+		{
+			return;
+		}
+		m_counters.bandwidth = perf.mbpsBandwidth;
+
 		m_counters.avgBandwidthUsed = perf.mbpsSendRate;
 
 		if (m_counters.avgBandwidthUsed > 0 && m_counters.avgBandwidthUsed < m_minBandwidthUsed)

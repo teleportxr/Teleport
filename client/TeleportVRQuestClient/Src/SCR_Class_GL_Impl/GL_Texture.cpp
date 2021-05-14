@@ -55,8 +55,18 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_2D: {
-                glTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);
-                break;
+                if(m_CI.mips.size() != 0)
+                {
+                    glTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);
+                }
+                else
+                {
+                    GLCheckErrorsWithTitle("GL_Texture: Before create 2D texture");
+                    GLenum glInternalFormat=ToGLFormat(m_CI.format);
+                    glTexStorage2D(TypeToGLTarget(m_CI.type), m_CI.mipCount, glInternalFormat, m_CI.width, m_CI.height);
+                    GLCheckErrorsWithTitle("GL_Texture: After create 2D texture");
+                }
+                return;
             }
             case Type::TEXTURE_3D: {
                 glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);

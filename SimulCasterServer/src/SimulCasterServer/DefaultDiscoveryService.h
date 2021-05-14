@@ -27,15 +27,7 @@ namespace SCServer
 		void discoveryCompleteForClient(uint64_t clientID) override;
 	protected:
 		//List of clientIDs we want to attempt to connect to.
-		std::map<uint32_t, ENetAddress> newClients;
-
-#pragma pack(push, 1) 
-		struct ServiceDiscoveryResponse
-		{
-			uint32_t clientID;
-			uint16_t remotePort;
-		};
-#pragma pack(pop)
+		std::map<uint64_t, ENetAddress> newClients;
 
 		ENetSocket discoverySocket{};
 		ENetAddress address{};

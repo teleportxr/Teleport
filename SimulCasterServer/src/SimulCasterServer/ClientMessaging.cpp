@@ -306,6 +306,12 @@ namespace SCServer
 		sendCommand<avs::MovementUpdate>(command, updateList);
 	}
 
+	void ClientMessaging::updateNodeAnimation(avs::NodeUpdateAnimation update)
+	{
+		avs::UpdateNodeAnimationCommand command(update);
+		sendCommand(command);
+	}
+
 	bool ClientMessaging::hasHost() const
 	{
 		return host;
@@ -321,13 +327,22 @@ namespace SCServer
 		return casterContext->axesStandard != avs::AxesStandard::NotInitialized;
 	}
 
-	bool ClientMessaging::sendCommand(const avs::Command& avsCommand) const
+	bool ClientMessaging::sendCommand(const avs::Command& command) const
 	{
-		assert(peer);
+		if(!peer)
+		{
+			TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
+			return false;
+		}
 
-		size_t commandSize = avs::GetCommandSize(avsCommand.commandPayloadType);
-		ENetPacket* packet = enet_packet_create(&avsCommand, commandSize, ENET_PACKET_FLAG_RELIABLE);
-		assert(packet);
+		size_t commandSize = command.getCommandSize();
+		ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
+		
+		if(!packet)
+		{
+			TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! Failed to create packet!\n";
+			return false;
+		}
 
 		return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 	}
@@ -337,10 +352,14 @@ namespace SCServer
 		assert(peer);
 
 		char address[20];
-		if (peer)
+		if(peer)
+		{
 			enet_address_get_host_ip(&peer->address, address, sizeof(address));
+		}
 		else
+		{
 			sprintf(address, "");
+		}
 
 		return std::string(address);
 	}
@@ -414,11 +433,11 @@ namespace SCServer
 			{
 				streamingPort,
 				clientIP,
-				handshake.clientStreamingPort,
+				static_cast<int32_t>(handshake.clientStreamingPort),
 				static_cast<int32_t>(handshake.maxBandwidthKpS),
 				static_cast<int32_t>(handshake.udpBufferSize),
 				settings->requiredLatencyMs,
-				disconnectTimeout
+				static_cast<int32_t>(disconnectTimeout)
 			};
 
 			casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));
@@ -609,7 +628,7 @@ namespace SCServer
 
 	void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	{
-		avs::ClientMessagePayloadType clientMessagePayloadType = *((avs::ClientMessagePayloadType*)packet->data);
+		avs::ClientMessagePayloadType clientMessagePayloadType = *(reinterpret_cast<avs::ClientMessagePayloadType*>(packet->data) + sizeof(void*));
 		switch (clientMessagePayloadType)
 		{
 		case avs::ClientMessagePayloadType::OriginPose:

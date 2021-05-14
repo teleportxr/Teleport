@@ -12,7 +12,11 @@ namespace scr
 		AnimationComponent();
 		AnimationComponent(const std::map<avs::uid, std::shared_ptr<Animation>>& animations);
 
-		void AddAnimation(avs::uid id, std::shared_ptr<Animation> animation);
+		void addAnimation(avs::uid id, std::shared_ptr<Animation> animation);
+		//Set animation the component is playing.
+		//	animationID : ID of the animation to start playing.
+		//	unix_timestamp : UNIX timestamp of when the animation started playing on the server.
+		void setAnimation(avs::uid animationID, uint64_t start_timestamp);
 
 		void update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime);
 	private:

@@ -145,23 +145,23 @@ void DefaultDiscoveryService::tick()
 
 void DefaultDiscoveryService::sendResponseToClient(uint64_t clientID)
 {
-	if (!discoverySocket || discoveryPort == 0 || servicePort == 0)
+	if(!discoverySocket || discoveryPort == 0 || servicePort == 0)
 	{
 		printf_s("Attempted to call sendResponseToClient on client discovery service without initalising!");
 		return;
 	}
 
-	auto c = newClients.find(clientID);
-	if (c == newClients.end())
+	auto clientPair = newClients.find(clientID);
+	if(clientPair == newClients.end())
 	{
 		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
 		return;
 	}
 
 	// Send response, containing port to connect on, to all clients we want to host.
-	auto addr = c->second;
-	ServiceDiscoveryResponse response = { clientID, servicePort };
-	ENetBuffer buffer = { sizeof(ServiceDiscoveryResponse), &response };
+	ENetAddress addr = clientPair->second;
+	avs::ServiceDiscoveryResponse response = {clientID, servicePort};
+	ENetBuffer buffer = {sizeof(response), &response};
 	enet_socket_send(discoverySocket, &addr, &buffer, 1);
 }
 
