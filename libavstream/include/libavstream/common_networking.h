@@ -105,6 +105,7 @@ namespace avs
 		uid nodeID = 0;
 		vec3 position;
 		vec4 rotation;
+		vec3 scale;
 
 		vec3 velocity;
 		vec3 angularVelocityAxis;

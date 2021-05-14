@@ -70,7 +70,7 @@ struct LightTag
 	vec2 shadowTexCoordScale;
 	vec4 colour;
 	vec3 position;
-	int	pospad;
+	float range;
 	vec3 direction;
 	uint uid32;
 	float is_spot;
@@ -313,11 +313,12 @@ vec3 PBRLight(SurfaceState surfaceState, vec3 viewDir,vec3 dir_from_surface_to_l
 
 vec3 SpotLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
 {
-	vec3 diff                        =lightTag.position-surfaceProperties.position;
-	float dist_to_light                =length(diff);
-	float d                            =max(1.0, dist_to_light/lightTag.radius);
-	vec3 irradiance						=lightTag.colour.rgb/(d*d);
-	vec3 dir_from_surface_to_light    =normalize(diff);
+	vec3 diff						=lightTag.position-surfaceProperties.position;
+	float dist_to_light      		=length(diff);
+	float d                         =max(1.0, dist_to_light/lightTag.radius);
+	float atten						=step(dist_to_light,lightTag.range);
+	vec3 irradiance					=lightTag.colour.rgb*atten/(d*d);
+	vec3 dir_from_surface_to_light  =normalize(diff);
 
 	return PBRLight(surfaceState, viewDir,dir_from_surface_to_light,surfaceProperties, irradiance);
 }

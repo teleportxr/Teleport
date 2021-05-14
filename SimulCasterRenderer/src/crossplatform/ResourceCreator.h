@@ -214,10 +214,10 @@ public:
 	void CreateSkin(avs::uid id, avs::Skin& skin) override;
 	void CreateAnimation(avs::uid id, avs::Animation& animation) override;
 
-	std::shared_ptr<scr::Texture> m_DummyDiffuse;
+	std::shared_ptr<scr::Texture> m_DummyWhite;
 	std::shared_ptr<scr::Texture> m_DummyNormal;
 	std::shared_ptr<scr::Texture> m_DummyCombined;
-	std::shared_ptr<scr::Texture> m_DummyEmissive;
+	std::shared_ptr<scr::Texture> m_DummyBlack;
 
 	std::unordered_map<avs::uid, MissingResource>& GetMissingResources()
 	{
@@ -310,11 +310,11 @@ private:
 	std::atomic_bool shouldBeTranscoding = true; //Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
 	std::thread basisThread; //Thread where we transcode basis files to mip data.
 	
-	const uint32_t diffuseBGRA = 0xFFFFFFFF;
+	const uint32_t whiteBGRA = 0xFFFFFFFF;
 	//const uint32_t normalBGRA = 0xFF7F7FFF;
 	const uint32_t normalRGBA = 0xFFFF7F7F;
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
-	const uint32_t emissiveBGRA = 0x0;
+	const uint32_t blackBGRA = 0x0;
 	
 	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager = nullptr;
 	ResourceManager<scr::Material> *m_MaterialManager = nullptr;

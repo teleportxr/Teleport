@@ -64,7 +64,7 @@ struct __attribute__ ((packed)) LightTag
 	avs::vec2 shadowTexCoordScale;
 	avs::vec4 colour;
 	avs::vec3 position;
-	int	pospad;
+	float range;
 	avs::vec3 direction;
 	uint uid32;
 	float is_spot;

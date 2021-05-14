@@ -29,10 +29,10 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 	m_PackingStyle = packingStyle;
 
 	//Setup Dummy textures.
-	m_DummyDiffuse = m_pRenderPlatform->InstantiateTexture();
+	m_DummyWhite = m_pRenderPlatform->InstantiateTexture();
 	m_DummyNormal = m_pRenderPlatform->InstantiateTexture();
 	m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
-	m_DummyEmissive = m_pRenderPlatform->InstantiateTexture();
+	m_DummyBlack = m_pRenderPlatform->InstantiateTexture();
 
 	scr::Texture::TextureCreateInfo tci =
 	{
@@ -48,10 +48,10 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 		false
 	};
 
-	uint32_t* diffuse = new uint32_t[1];
-	*diffuse = diffuseBGRA;
-	tci.mips[0] = reinterpret_cast<uint8_t*>(diffuse);
-	m_DummyDiffuse->Create(tci);
+	uint32_t* white = new uint32_t[1];
+	*white = whiteBGRA;
+	tci.mips[0] = reinterpret_cast<uint8_t*>(white);
+	m_DummyWhite->Create(tci);
 
 	uint32_t* normal = new uint32_t[1];
 	*normal = normalRGBA;
@@ -63,10 +63,10 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 	tci.mips[0] = reinterpret_cast<uint8_t*>(combine);
 	m_DummyCombined->Create(tci);
 
-	uint32_t* emissive = new uint32_t[1];
-	*emissive = emissiveBGRA;
-	tci.mips[0] = reinterpret_cast<uint8_t*>(emissive);
-	m_DummyEmissive->Create(tci);
+	uint32_t* black = new uint32_t[1];
+	*black = blackBGRA;
+	tci.mips[0] = reinterpret_cast<uint8_t*>(black);
+	m_DummyBlack->Create(tci);
 }
 
 std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
@@ -532,7 +532,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 	//Colour/Albedo/Diffuse
 	AddTextureToMaterial(material.pbrMetallicRoughness.baseColorTexture,
 		material.pbrMetallicRoughness.baseColorFactor,
-		m_DummyDiffuse,
+		m_DummyWhite,
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.diffuse);
 
@@ -553,7 +553,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 	//Emissive
 	AddTextureToMaterial(material.emissiveTexture,
 		avs::vec4(material.emissiveFactor.x, material.emissiveFactor.y, material.emissiveFactor.z, 1.0f),
-		m_DummyEmissive,
+		m_DummyWhite,
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.emissive);
 
@@ -720,10 +720,10 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	{
 		scr::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.renderPlatform = m_pRenderPlatform;
-		materialCreateInfo.diffuse.texture = m_DummyDiffuse;
+		materialCreateInfo.diffuse.texture = m_DummyWhite;
 		materialCreateInfo.combined.texture = m_DummyCombined;
 		materialCreateInfo.normal.texture = m_DummyNormal;
-		materialCreateInfo.emissive.texture = m_DummyEmissive;
+		materialCreateInfo.emissive.texture = m_DummyBlack;
 		m_pRenderPlatform->placeholderMaterial = std::make_shared<scr::Material>(materialCreateInfo);
 	}
 

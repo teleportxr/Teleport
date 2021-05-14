@@ -34,7 +34,7 @@ namespace scr
 	void Node::SetLastMovement(const avs::MovementUpdate& update)
 	{
 		lastReceivedMovement = update;
-		UpdateModelMatrix(update.position, update.rotation, localTransform.m_Scale);
+		UpdateModelMatrix(update.position, update.rotation, update.scale);
 	}
 
 	void Node::TickExtrapolatedTransform(float deltaTime)

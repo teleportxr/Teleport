@@ -421,7 +421,7 @@ vec4 Solid(vertexOutput IN)
 	//u.r=float(id)/32.0;
 	vec3 highlight=vec3(0.01,0.02,0.05);
 //u.rgb+= highlight;
-//u.rgb=surfaceProperties.albedo.rgb;
+u.rgb=emissive.rgb;
 	return u;
 }
 
