@@ -98,7 +98,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	{
 		{
 			mVideoUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2
+			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {1
 					, sizeof(VideoUB)
 					, &videoUB};
 			mVideoUB->Create(&uniformBufferCreateInfo);
@@ -727,21 +727,14 @@ void ClientRenderer::UpdateTagDataBuffers()
 				t.worldToShadowMatrix = *((ovrMatrix4f *) &worldToShadowMatrix);
 
 				const auto &nodeLight = cachedLights.find(l.uid);
-				if (nodeLight != cachedLights.end())
+				if (nodeLight != cachedLights.end() && nodeLight->second.resource!=nullptr)
 				{
-					auto *lightData = nodeLight->second.resource->GetLightData();
-					if (lightData)
-					{
-						t.is_spot = lightData->is_spot;
-						t.is_point = lightData->is_point;
-						t.radius = lightData->radius;
-						t.shadow_strength = 0.0f;
-					}
-					else
-					{
-						OVR_WARN("No matching cached light with ID %" PRIu64 ".", l.uid);
-					}
-
+					const scr::Light::LightCreateInfo &lc=nodeLight->second.resource->GetLightCreateInfo();
+					t.is_point=float(lc.type!=scr::Light::Type::DIRECTIONAL);
+					t.is_spot=float(lc.type==scr::Light::Type::SPOT);
+					t.radius=lc.lightRadius;
+					t.range=lc.lightRange;
+					t.shadow_strength=0.0f;
 				}
 			}
 		}

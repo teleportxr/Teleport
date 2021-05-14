@@ -79,6 +79,6 @@ void main()
     vec3 view = vSampleVec;
     vec2 uv = ViewToServerScreenSpace(view);
     vec4 lookup = texture(renderTexture, uv);
-    gl_FragColor = pow(lookup,vec4(.44,.44,.44, 1.0));
-    //gl_FragColor = vec4(vid.cameraPosition.xyz, 1.0);
+    //gl_FragColor = pow(lookup,vec4(.44,.44,.44, 1.0));
+    gl_FragColor = vec4(normalize(vid.cameraPosition.xyz), 1.0);
 }

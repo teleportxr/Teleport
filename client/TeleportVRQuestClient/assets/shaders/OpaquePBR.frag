@@ -70,7 +70,7 @@ struct LightTag
 	vec2 shadowTexCoordScale;
 	vec4 colour;
 	vec3 position;
-	int	pospad;
+	float range;
 	vec3 direction;
 	uint uid32;
 	float is_spot;
