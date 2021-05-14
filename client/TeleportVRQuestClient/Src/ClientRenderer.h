@@ -134,6 +134,7 @@ public:
 		ovrMatrix4f serverProj;
 		avs::vec3 cameraPosition;
 		int pad_;
+		avs::vec4 cameraRotation;
 	};
 	VideoUB videoUB;
 

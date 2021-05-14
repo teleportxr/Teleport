@@ -1,4 +1,5 @@
 #include "NodeComponents.h"
+#include <algorithm>
 
 #define CYCLE_ANIMATIONS 0
 

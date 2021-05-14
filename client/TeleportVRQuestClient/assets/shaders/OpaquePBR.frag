@@ -27,7 +27,7 @@ layout(location = 14) in float drawDistance;
 //From Application SR
 
 //Material
-layout(std140, binding = 2) uniform u_MaterialData//Layout conformant to GLSL std140
+layout(std140, binding = 2) uniform u_MaterialData //Layout conformant to GLSL std140
 {
 	vec4 u_DiffuseOutputScalar;
 	vec2 u_DiffuseTexCoordsScalar_R;
