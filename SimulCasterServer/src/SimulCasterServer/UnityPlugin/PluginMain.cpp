@@ -1046,7 +1046,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;
 	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;
-	videoConfig.draw_distance			= casterSettings.detectionSphereRadius+casterSettings.clientDrawDistanceOffset;
+	videoConfig.draw_distance = casterSettings.detectionSphereRadius+casterSettings.clientDrawDistanceOffset;
 
 	clientData.clientMessaging.sendCommand(cmd);
 }

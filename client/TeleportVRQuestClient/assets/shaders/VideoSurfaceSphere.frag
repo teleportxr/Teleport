@@ -42,6 +42,7 @@ layout(std140, binding = 1) uniform videoUB
     mat4 serverProj;
     vec3 cameraPosition;
     int _pad2;
+    vec4 cameraRotation;
 } vid;
 
 layout(std430, binding = 0) buffer TagDataCube_ssbo

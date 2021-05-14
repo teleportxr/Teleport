@@ -15,6 +15,7 @@ layout(std140, binding = 1) uniform videoUB
     mat4 serverProj;
     vec3 cameraPosition;
     int _pad2;
+    vec4 cameraRotation;
 } vid;
 
 // ALL light data is passed in as tags.
@@ -57,7 +58,7 @@ vec4 quat_inverse(vec4 q)
 	if (len == 0.0f)
 	{
 		// Invalid argument
-		return vec4(0, 0, 0, 0);
+		return vec4(0.0, 0.0, 0.0, 0.0);
 	}
 	float invLen = 1.0f / len;
 	return vec4(-q.x * invLen, -q.y * invLen, -q.z * invLen, q.w * invLen);
@@ -83,12 +84,12 @@ vec4 quat_vec(vec4 q, vec3 v)
 	return qr;
 }
 
-vec3 rotate_by_quaternion(vec4 quat, vec3 position)
+vec3 rotate_by_quaternion(vec4 quat, vec3 pos)
 {
   vec4 qr_conj		= quat_conj(quat);
 
-  vec4 q_tmp		= quat_vec(quat,position);
-  vec4 qr			= quat_mult(q_tmp,qr_conj);
+  vec4 q_tmp		= quat_vec(quat, pos);
+  vec4 qr			= quat_mult(q_tmp, qr_conj);
 
   return qr.xyz;
 }
@@ -114,7 +115,7 @@ vec2 ViewToServerScreenSpace(vec3 pos)
 void main()
 {
     vSampleVec = normalize(position.xyz);
-    //vSampleVec = normalize(rotate_by_quaternion(tagDataCube.cameraRotation, vSampleVec));
+    //vSampleVec = normalize(rotate_by_quaternion(vid.cameraRotation, vSampleVec));
     vSampleVec = (sm.ViewMatrix[VIEW_ID] * (vec4(vSampleVec, 0.0))).xyz;
     vec2 uv = ViewToServerScreenSpace(vSampleVec);
     vec4 lookup = texture(renderTexture, uv);

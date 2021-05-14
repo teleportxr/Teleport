@@ -42,6 +42,7 @@ layout(std140, binding = 1) uniform videoUB
     mat4 serverProj;
     vec3 cameraPosition;
     int _pad2;
+    vec4 cameraRotation;
 } vid;
 
 layout(std430, binding = 0) buffer TagDataCube_ssbo
@@ -78,6 +79,6 @@ void main()
     vec3 view = vSampleVec;
     vec2 uv = ViewToServerScreenSpace(view);
     vec4 lookup = texture(renderTexture, uv);
-    //gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
-    gl_FragColor = lookup;
+    //gl_FragColor = pow(lookup,vec4(.44,.44,.44, 1.0));
+    gl_FragColor = vec4(normalize(vid.cameraPosition.xyz), 1.0);
 }

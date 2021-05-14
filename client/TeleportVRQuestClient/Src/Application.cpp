@@ -503,8 +503,8 @@ void Application::UpdateHandObjects()
 	std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
 	if(rightHand)
 	{
-			rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].position);
-			rightHand->SetLocalRotation(clientDeviceState.controllerRelativePoses[0].orientation);
+		rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].position);
+		rightHand->SetLocalRotation(clientDeviceState.controllerRelativePoses[0].orientation);
 	}
 
 	std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();

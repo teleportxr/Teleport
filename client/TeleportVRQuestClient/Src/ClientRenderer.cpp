@@ -98,7 +98,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	{
 		{
 			mVideoUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2
+			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {1
 					, sizeof(VideoUB)
 					, &videoUB};
 			mVideoUB->Create(&uniformBufferCreateInfo);
@@ -717,15 +717,8 @@ void ClientRenderer::UpdateTagDataBuffers()
 						float(l.textureSize) / float(lastSetupCommand.video_config.video_width);
 				t.shadowTexCoordScale.y = float(l.textureSize)
 										  / float(lastSetupCommand.video_config.video_height);
-				// Because tag data is NOT properly transformed in advance yet:
-				avs::vec3 position = l.position;
-				avs::vec4 orientation = l.orientation;
-				avs::ConvertPosition(lastSetupCommand.axesStandard,
-									 avs::AxesStandard::EngineeringStyle, position);
-				avs::ConvertRotation(lastSetupCommand.axesStandard,
-									 avs::AxesStandard::EngineeringStyle, orientation);
-				t.position = *((avs::vec3 *) &position);
-				ovrQuatf q = {orientation.x, orientation.y, orientation.z, orientation.w};
+				t.position = *((avs::vec3 *) &l.position);
+				ovrQuatf q = {l.orientation.x, l.orientation.y, l.orientation.z, l.orientation.w};
 				avs::vec3 z = {0, 0, 1.0f};
 				t.direction = QuaternionTimesVector(q, z);
 				scr::mat4 worldToShadowMatrix = scr::mat4(
@@ -734,7 +727,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 				t.worldToShadowMatrix = *((ovrMatrix4f *) &worldToShadowMatrix);
 
 				const auto &nodeLight = cachedLights.find(l.uid);
-				if (nodeLight != cachedLights.end())
+				if (nodeLight != cachedLights.end() && nodeLight->second.resource!=nullptr)
 				{
 					auto &lc = nodeLight->second.resource->GetLightCreateInfo();
 					t.is_point=float(lc.type!=scr::Light::Type::DIRECTIONAL);
@@ -786,13 +779,11 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 		avs::vec4 left_eye = {-eye.x, -eye.y, -eye.z, 0.0f};
 		videoUB.eyeOffsets[0] = left_eye;        // left eye
 		videoUB.eyeOffsets[1] = eye;    // right eye.
-		videoUB.cameraPosition =
-				clientDeviceState->headPose.position;
+		videoUB.cameraPosition = clientDeviceState->headPose.position;
+		videoUB.cameraRotation = clientDeviceState->headPose.orientation;
 		videoUB.viewProj=res.FrameMatrices.EyeProjection[0]*res.FrameMatrices.CenterView;
 		mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mRenderTexture.get())->GetGlTexture());
-		//mVideoSurfaceDef.graphicsCommand.UniformData[3].Data = &(((scc::GL_Texture *)  mVideoTexture.get())->GetGlTexture());
 		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mVideoUB.get())->GetGlBuffer());
-		//mVideoSurfaceDef.graphicsCommand.UniformData[2].Data =  &(((scc::GL_ShaderStorageBuffer *)  mTagDataIDBuffer.get())->GetGlBuffer());
 		OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *) globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &buf;
 		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
