@@ -35,9 +35,10 @@ namespace scr
 			std::shared_ptr<Texture> shadowMapTexture;
 			avs::uid uid;
 			std::string name;	// stored here because the actual NODE seems to be discarded - not good.
+			float lightRange;	// max range for effect.
 		};
 
-		struct LightData //Layout conformant to GLSL std140
+		struct LightData //Layout: conformant to GLSL std140. No point to this now.
 		{
 			mat4 lightSpaceTransform;
 			avs::vec4 colour;
@@ -48,7 +49,7 @@ namespace scr
 			float is_spot;
 			float radius;		// "point" light is a sphere.
 			unsigned uid32;		// lowest 32 bits of the uid.
-			float pad1;
+			float range;
 		};
 	
 	private:
@@ -79,11 +80,6 @@ namespace scr
 		}
 		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
 		inline std::shared_ptr<Texture>& GetShadowMapTexture() { return m_CI.shadowMapTexture; }
-		const LightData* GetLightData() const;
-		static const std::vector<LightData> &GetAllLightData() 
-		{
-			return s_LightData;
-		}
 		inline bool IsValid() { return m_IsValid; }
 
 	private:

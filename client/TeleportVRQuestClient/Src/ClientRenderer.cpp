@@ -1103,8 +1103,7 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 				rightHandOrientation = rightHand->GetGlobalTransform().m_Rotation;
 			}
 
-			mGuiSys->ShowInfoText
-					(
+			mGuiSys->ShowInfoText(
 							INFO_TEXT_DURATION, offset, colour,
 							"Controller 0: %d (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
 							"Controller 1: %d (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"

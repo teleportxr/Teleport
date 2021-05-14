@@ -39,6 +39,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	auto &light=s_LightData[m_LightID];
 	light.colour = pLightCreateInfo->lightColour;
 	light.radius=pLightCreateInfo->lightRadius;
+	light.range=pLightCreateInfo->lightRange;
 	light.power = 1.0f; //i.e 100W
 	light.is_point=float(pLightCreateInfo->type!=Type::DIRECTIONAL);
 	light.is_spot=float(pLightCreateInfo->type==Type::SPOT);
@@ -91,13 +92,6 @@ void Light::UpdateOrientation(const quat& orientation)
 { 
 	m_CI.orientation = orientation;
 	UpdateLightSpaceTransform();
-}
-
-const Light::LightData* Light::GetLightData() const 
-{
-	if(m_LightID>=0&&m_LightID<s_LightData.size())
-		return &(s_LightData[m_LightID]);
-	return nullptr;
 }
 
 void Light::UpdateLightSpaceTransform()

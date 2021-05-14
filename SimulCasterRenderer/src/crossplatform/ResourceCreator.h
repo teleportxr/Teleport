@@ -314,7 +314,7 @@ private:
 	//const uint32_t normalBGRA = 0xFF7F7FFF;
 	const uint32_t normalRGBA = 0xFFFF7F7F;
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
-	const uint32_t emissiveBGRA = 0xFFFFFFFF;
+	const uint32_t emissiveBGRA = 0x0;
 	
 	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager = nullptr;
 	ResourceManager<scr::Material> *m_MaterialManager = nullptr;

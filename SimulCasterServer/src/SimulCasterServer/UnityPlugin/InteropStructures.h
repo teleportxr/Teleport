@@ -22,6 +22,7 @@ struct InteropNode
 	avs::vec4 lightColour;
 	avs::vec3 lightDirection;		// constant, determined why whatever axis the engine uses for light direction.
 	float lightRadius;				// i.e. light is a sphere, where lightColour is the irradiance on its surface.
+	float lightRange;
 	uint8_t lightType;
 
 	size_t animationAmount;
@@ -56,6 +57,7 @@ struct InteropNode
 			lightRadius,
 			lightDirection,
 			lightType,
+			lightRange,
 		};
 	}
 };

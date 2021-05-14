@@ -376,6 +376,7 @@ namespace SCServer
 			{
 				put(node->lightColour);
 				put(node->lightRadius);
+				put(node->lightRange);
 				avs::vec3 lightDirection = node->lightDirection;
 				avs::ConvertPosition(settings->axesStandard, req->getClientAxesStandard(), lightDirection);
 				put(lightDirection);

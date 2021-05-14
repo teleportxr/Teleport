@@ -19,7 +19,7 @@ namespace SCServer
 		uint32_t geometryTicksPerSecond = 0;
 		int32_t geometryBufferCutoffSize = 0; // Size we stop encoding nodes at.
 		float confirmationWaitTime = 0.0f; // Seconds to wait before resending a resource.
-		float clientDrawDistance = 0.0f; // Distance pixels are clipped for geometry on the client.
+		float clientDrawDistanceOffset = 0.0f; // Distance pixels are clipped for geometry on the client.
 
 		bool enableVideoStreaming = false;
 		bool enableWebcamStreaming = false;

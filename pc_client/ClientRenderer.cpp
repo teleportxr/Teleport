@@ -549,14 +549,12 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 			auto &nodeLight=cachedLights.find(l.uid);
 			if(nodeLight!=cachedLights.end()&& nodeLight->second.resource!=nullptr)
 			{
-				auto *lightData=nodeLight->second.resource->GetLightData();
-				if(lightData)
-				{
-					t.is_spot=lightData->is_spot;
-					t.is_point=lightData->is_point;
-					t.radius=lightData->radius;
-					t.shadow_strength=0.0f;
-				}
+				const scr::Light::LightCreateInfo &lc=nodeLight->second.resource->GetLightCreateInfo();
+				t.is_point=float(lc.type!=scr::Light::Type::DIRECTIONAL);
+				t.is_spot=float(lc.type==scr::Light::Type::SPOT);
+				t.radius=lc.lightRadius;
+				t.range=lc.lightRange;
+				t.shadow_strength=0.0f;
 			}
 		}
 	}	
@@ -692,16 +690,17 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			if(l.resource)
 			{
 				auto &lcr=l.resource->GetLightCreateInfo();
-				auto *L=l.resource->GetLightData();
-				if(L)
 				{
 					const char *lightTypeName=ToString(lcr.type);
-					vec4 light_colour=(const float*)&L->colour;
+					vec4 light_colour=(const float*)&lcr.lightColour;
+					vec4 light_position=(const float*)&lcr.position;
+					vec4 light_direction=(const float*)&lcr.direction;
+					
 					light_colour.w=1.0f;
-					if(L->is_point==0.0f)
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->direction.x,L->direction.y,L->direction.z),light_colour,background);
+					if(lcr.type==scr::Light::Type::POINT)
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_direction.x,light_direction.y,light_direction.z),light_colour,background);
 					else
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,L->colour.x,L->colour.y,L->colour.z,L->position.x,L->position.y,L->position.z,L->radius),light_colour,background);
+						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_position.x,light_position.y,light_position.z,lcr.lightRadius),light_colour,background);
 				}
 			}
 			if(j<videoTagDataCubeArray[0].lights.size())
@@ -909,12 +908,6 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 			lightsBuffer.RestoreDeviceObjects(renderPlatform,cachedLights.size());
 		}
 		pbrConstants.lightCount=cachedLights.size();
-	}
-	scr::Light::LightData* sLights = (const_cast<scr::Light::LightData*>(scr::Light::GetAllLightData().data()));
-	PbrLight* l = (PbrLight*)sLights;
-	if(l)
-	{
-		lightsBuffer.SetData(deviceContext, l);
 	}
 
 	//Only render visible nodes, but still render children that are close enough.

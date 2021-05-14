@@ -268,6 +268,7 @@ struct Animation;
 		float lightRadius;
 		vec3 lightDirection; // Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
 		uint8_t lightType;
+		float lightRange;	// Maximum distance the light is effective at, in metres.
 	};
 
 	inline size_t GetComponentSize(Accessor::ComponentType t)
