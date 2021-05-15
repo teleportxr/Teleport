@@ -504,14 +504,13 @@ void Application::UpdateHandObjects()
 	if(rightHand)
 	{
 		rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].position);
-		rightHand->SetLocalRotation(clientDeviceState.controllerRelativePoses[0].orientation);
+		rightHand->SetLocalRotation(clientDeviceState.controllerPoses[0].orientation);
 	}
-
 	std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
-			leftHand->SetLocalPosition(clientDeviceState.controllerPoses[1].position);
-			leftHand->SetLocalRotation(clientDeviceState.controllerRelativePoses[1].orientation);
+		leftHand->SetLocalPosition(clientDeviceState.controllerPoses[1].position);
+		leftHand->SetLocalRotation(clientDeviceState.controllerPoses[1].orientation);
 	}
 }
 
@@ -923,3 +922,4 @@ void android_main(struct android_app *app)
 			std::unique_ptr<OVRFW::Application>(new OVRFW::Application());
 	appl->Run(app);
 }
+    

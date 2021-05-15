@@ -913,7 +913,7 @@ void ClientRenderer::Render(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::OvrGuiS
 
 void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 {
-	static ovrVector3f offset={0,0,3.5f};
+	static ovrVector3f offset={0,0,4.5f};
 	static ovrVector4f colour={1.0f,0.7f,0.5f,0.5f};
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	auto ctr = mNetworkSource.getCounterValues();
@@ -931,37 +931,42 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 			}
 			mGuiSys->ShowInfoText(
 					INFO_TEXT_DURATION, offset, colour,
-					"        Foot pos: %1.3f, %1.3f, %1.3f\n\n"
-					" Camera Relative: %1.3f, %1.3f, %1.3f\n"
-					" Camera Position: %1.3f, %1.3f, %1.3f\n"
-					"             yaw: %1.3f\n"
-					"  Video Position: %1.3f, %1.3f, %1.3f\n\n"
-					"Controller 0 rel: %1.3f, %1.3f, %1.3f\n"
-					"             pos: %1.3f, %1.3f, %1.3f\n"
-					"Controller 1 rel: %1.3f, %1.3f, %1.3f\n"
-					"             pos: %1.3f, %1.3f, %1.3f\n"
-					//, clientDeviceState->localOriginPos.x,clientDeviceState->localOriginPos.y, clientDeviceState->localOriginPos.z
-					, clientDeviceState->originPose.position.x,
-					clientDeviceState->originPose.position.y,
-					clientDeviceState->originPose.position.z,
-					clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,
-					clientDeviceState->relativeHeadPos.z,
-					clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,
-					clientDeviceState->headPose.position.z,
+					"        Foot pos: %1.2f, %1.2f, %1.2f    yaw: %1.2f\n"
+					" Camera Relative: %1.2f, %1.2f, %1.2f Abs: %1.2f, %1.2f, %1.2f\n"
+					"  Video Position: %1.2f, %1.2f, %1.2f\n"
+					"Controller 0 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+					"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+					"Controller 1 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+					"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+					, clientDeviceState->originPose.position.x,	clientDeviceState->originPose.position.y,clientDeviceState->originPose.position.z,
+					clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,clientDeviceState->relativeHeadPos.z,
+					clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,clientDeviceState->headPose.position.z,
 					clientDeviceState->stickYaw,
 					vidPos.x, vidPos.y, vidPos.z,
 					clientDeviceState->controllerRelativePoses[0].position.x,
 					clientDeviceState->controllerRelativePoses[0].position.y,
 					clientDeviceState->controllerRelativePoses[0].position.z,
+					clientDeviceState->controllerRelativePoses[0].orientation.x,
+					clientDeviceState->controllerRelativePoses[0].orientation.y,
+					clientDeviceState->controllerRelativePoses[0].orientation.z,
 					clientDeviceState->controllerPoses[0].position.x,
 					clientDeviceState->controllerPoses[0].position.y,
 					clientDeviceState->controllerPoses[0].position.z,
+					clientDeviceState->controllerPoses[0].orientation.x,
+					clientDeviceState->controllerPoses[0].orientation.y,
+					clientDeviceState->controllerPoses[0].orientation.z,
 					clientDeviceState->controllerRelativePoses[1].position.x,
 					clientDeviceState->controllerRelativePoses[1].position.y,
 					clientDeviceState->controllerRelativePoses[1].position.z,
+					clientDeviceState->controllerRelativePoses[1].orientation.x,
+					clientDeviceState->controllerRelativePoses[1].orientation.y,
+					clientDeviceState->controllerRelativePoses[1].orientation.z,
 					clientDeviceState->controllerPoses[1].position.x,
 					clientDeviceState->controllerPoses[1].position.y,
-					clientDeviceState->controllerPoses[1].position.z
+					clientDeviceState->controllerPoses[1].position.z,
+					clientDeviceState->controllerPoses[1].orientation.x,
+					clientDeviceState->controllerPoses[1].orientation.y,
+					clientDeviceState->controllerPoses[1].orientation.z
 			);
 
 			break;
@@ -1082,7 +1087,6 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 				leftHandPosition = leftHand->GetGlobalTransform().m_Translation;
 				leftHandOrientation = leftHand->GetGlobalTransform().m_Rotation;
 			}
-
 			std::shared_ptr<scr::Node> rightHand = resourceManagers->mNodeManager->GetRightHand();
 			if(rightHand)
 			{
@@ -1092,20 +1096,34 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 
 			mGuiSys->ShowInfoText(
 							INFO_TEXT_DURATION, offset, colour,
-							"Controller 0: %d (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
-							"Controller 1: %d (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
-							"Left Hand Node: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)\n"
-							"Right Hand Node: (%.2f, %.2f, %.2f) | (%.2f, %.2f, %.2f, %.2f)",
-							controllers->mControllerIDs[0],clientDeviceState->controllerPoses[0].position.x, clientDeviceState->controllerPoses[0].position.y, clientDeviceState->controllerPoses[0].position.z,
-							clientDeviceState->controllerPoses[0].orientation.x, clientDeviceState->controllerPoses[0].orientation.y, clientDeviceState->controllerPoses[0].orientation.z,
-							clientDeviceState->controllerPoses[0].orientation.w,
-							controllers->mControllerIDs[1],clientDeviceState->controllerPoses[1].position.x, clientDeviceState->controllerPoses[1].position.y, clientDeviceState->controllerPoses[1].position.z,
-							clientDeviceState->controllerPoses[1].orientation.x, clientDeviceState->controllerPoses[1].orientation.y, clientDeviceState->controllerPoses[1].orientation.z,
-							clientDeviceState->controllerPoses[1].orientation.w,
-							leftHandPosition.x, leftHandPosition.y, leftHandPosition.z,
-							leftHandOrientation.x, leftHandOrientation.y, leftHandOrientation.z, leftHandOrientation.w,
-							rightHandPosition.x, rightHandPosition.y, rightHandPosition.z,
-							rightHandOrientation.x, rightHandOrientation.y, rightHandOrientation.z, rightHandOrientation.w
+							"Controller 0 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+							"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+							"Controller 1 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+							"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+							,clientDeviceState->controllerRelativePoses[0].position.x,
+							clientDeviceState->controllerRelativePoses[0].position.y,
+							clientDeviceState->controllerRelativePoses[0].position.z,
+							clientDeviceState->controllerRelativePoses[0].orientation.x,
+							clientDeviceState->controllerRelativePoses[0].orientation.y,
+							clientDeviceState->controllerRelativePoses[0].orientation.z,
+							clientDeviceState->controllerPoses[0].position.x,
+							clientDeviceState->controllerPoses[0].position.y,
+							clientDeviceState->controllerPoses[0].position.z,
+							clientDeviceState->controllerPoses[0].orientation.x,
+							clientDeviceState->controllerPoses[0].orientation.y,
+							clientDeviceState->controllerPoses[0].orientation.z,
+							clientDeviceState->controllerRelativePoses[1].position.x,
+							clientDeviceState->controllerRelativePoses[1].position.y,
+							clientDeviceState->controllerRelativePoses[1].position.z,
+							clientDeviceState->controllerRelativePoses[1].orientation.x,
+							clientDeviceState->controllerRelativePoses[1].orientation.y,
+							clientDeviceState->controllerRelativePoses[1].orientation.z,
+							clientDeviceState->controllerPoses[1].position.x,
+							clientDeviceState->controllerPoses[1].position.y,
+							clientDeviceState->controllerPoses[1].position.z,
+							clientDeviceState->controllerPoses[1].orientation.x,
+							clientDeviceState->controllerPoses[1].orientation.y,
+							clientDeviceState->controllerPoses[1].orientation.z
 					);
 
 			break;
