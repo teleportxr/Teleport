@@ -26,6 +26,11 @@ void Controllers::SetCycleOSDDelegate(TriggerDelegate delegate)
 	CycleOSD = delegate;
 }
 
+void Controllers::SetDebugOutputDelegate(TriggerDelegate delegate)
+{
+	WriteDebugOutput = delegate;
+}
+
 void Controllers::SetSetStickOffsetDelegate(Float2Delegate delegate)
 {
 	SetStickOffset = delegate;
@@ -36,6 +41,7 @@ void Controllers::ClearDelegates()
 	CycleShaderMode = nullptr;
 	CycleOSD = nullptr;
 	SetStickOffset = nullptr;
+	WriteDebugOutput=nullptr;
 }
 
 bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
@@ -116,9 +122,13 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_GripTrigger, avs::InputList::TRIGGER_GRIP);
 				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Joystick, avs::InputList::BUTTON_STICK);
 
-				if((released & ovrButton::ovrButton_A) != 0 || (released & ovrButton::ovrButton_X) != 0)
+				if((released & ovrButton::ovrButton_A) != 0 != 0)
 				{
 					CycleOSD();
+				}
+				if( (released & ovrButton::ovrButton_X) != 0)
+				{
+					WriteDebugOutput();
 				}
 
 				if((released & ovrButton::ovrButton_B) != 0 || (released & ovrButton::ovrButton_Y) != 0)

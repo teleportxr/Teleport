@@ -35,10 +35,10 @@ uint32_t SessionClient::Discover(std::string clientIP, uint16_t clientDiscoveryP
 	return cl_id;
 }
 
-bool SessionClient::Connect(const char* remoteIP, uint16_t remotePort, uint timeout)
+bool SessionClient::Connect(const char* remote_ip, uint16_t remotePort, uint timeout)
 {
 	ENetAddress remote;
-	enet_address_set_host_ip(&remote, remoteIP);
+	enet_address_set_host_ip(&remote, remote_ip);
 	remote.port = remotePort;
 
 	return Connect(remote, timeout);
@@ -50,6 +50,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 	if(!mClientHost)
 	{
 		FAIL("Failed to create ENET client host");
+		remoteIP="";
 		return false;
 	}
 
@@ -59,6 +60,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 		WARN("Failed to initiate connection to the server");
 		enet_host_destroy(mClientHost);
 		mClientHost = nullptr;
+		remoteIP="";
 		return false;
 	}
 
@@ -67,9 +69,10 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 	{
 		mServerEndpoint = remote;
 
-		char remoteIP[20];
-		enet_address_get_host_ip(&mServerEndpoint, remoteIP, sizeof(remoteIP));
-		LOG("Connected to session server: %s:%d", remoteIP, remote.port);
+		char remote_ip[20];
+		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
+		LOG("Connected to session server: %s:%d", remote_ip, remote.port);
+		remoteIP=remote_ip;
 		return true;
 	}
 
@@ -78,11 +81,13 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 	enet_host_destroy(mClientHost);
 	mClientHost = nullptr;
 	mServerPeer = nullptr;
+	remoteIP="";
 	return false;
 }
 
 void SessionClient::Disconnect(uint timeout)
 {
+	remoteIP="";
 	mCommandInterface->OnVideoStreamClosed();
 
 	if(mClientHost && mServerPeer)
@@ -220,16 +225,7 @@ int SessionClient::GetPort() const
 
 std::string SessionClient::GetServerIP() const
 {
-	if(IsConnected())
-	{
-		char remoteIP[20];
-		enet_address_get_host_ip(&mServerEndpoint, remoteIP, sizeof(remoteIP));
-		return std::string(remoteIP);
-	}
-	else
-	{
-		return std::string{};
-	}
+	return remoteIP;
 }
 
 avs::Pose SessionClient::GetOriginPose() const

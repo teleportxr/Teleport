@@ -91,6 +91,7 @@ namespace OVRFW
 		/* End DecodeEventInterface */
 	private:
 		OVRFW::ovrApplFrameOut Frame(const OVRFW::ovrApplFrameIn& vrFrame);
+		void DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRendererOutput &out);
 		void Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out);
 		void UpdateHandObjects();
 		bool ProcessIniFile();
@@ -110,6 +111,7 @@ namespace OVRFW
 
 		static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
 		const scr::Effect::EffectPassCreateInfo *BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources) override;
+		void PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,...) override;
 		std::string LoadTextFile(const char *filename) override;
 
 
@@ -168,8 +170,9 @@ namespace OVRFW
 
 		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
 
-		//bool useMultiview=false;
-		//ovrFrameParms FrameParms;
+		OVR::Matrix4f lastCenterView;
+
+		float frameRate = 1.0f;
 	};
 
 }

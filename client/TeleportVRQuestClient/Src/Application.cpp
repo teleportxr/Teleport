@@ -41,8 +41,8 @@ Application::Application()
 		  , mSoundEffectPlayer(nullptr)
 		  , mGuiSys(nullptr)
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
-		  , clientRenderer(&resourceCreator, &resourceManagers, this, this, &clientDeviceState,&controllers)
-		  , lobbyRenderer(&clientDeviceState)
+		  , clientRenderer(&resourceCreator, &resourceManagers, this, &clientDeviceState,&controllers)
+		  , lobbyRenderer(&clientDeviceState, this)
 		  , resourceManagers(new OVRNodeManager)
 		  , resourceCreator(basist::transcoder_texture_format::cTFETC2)
 {
@@ -268,6 +268,7 @@ void Application::EnteredVrMode()
 
 	controllers.SetCycleShaderModeDelegate(std::bind(&ClientRenderer::CycleShaderMode, &clientRenderer));
 	controllers.SetCycleOSDDelegate(std::bind(&ClientRenderer::CycleOSD, &clientRenderer));
+	controllers.SetDebugOutputDelegate(std::bind(&ClientRenderer::WriteDebugOutput, &clientRenderer));
 	controllers.SetSetStickOffsetDelegate(std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1, std::placeholders::_2));
 }
 
@@ -398,7 +399,6 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 		case RENDER_STATE_RUNNING:
 		{
 			/// Frame matrices
-			//out.FrameMatrices.CenterView = CenterEyeViewMatrix;
 			for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
 			{
 				out.FrameMatrices.EyeView[eye] = in.Eye[eye].ViewMatrix;
@@ -407,10 +407,6 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 						SuggestedEyeFovDegreesX, SuggestedEyeFovDegreesY, 0.0f, 0.0f, 0.1f,
 						7.0f);
 			}
-
-
-			///	worldLayer.Header.Flags |=
-			/// VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
 
 			Render(in, out);
 			DefaultRenderFrame_Running(in, out);
@@ -424,12 +420,72 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 	}
 }
 
+void Application::PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,...)
+{
+	static char txt2[2000];
+	va_list args;
+	va_start(args, txt);
+	vsprintf(txt2,txt,args);
+	va_end(args);
+	OVRFW::BitmapFontSurface &fontSurface=mGuiSys->GetDefaultFontSurface();
+	auto GetViewMatrixPosition = [](Matrix4f const& m) {
+		return m.Inverted().GetTranslation();
+	};
+	auto GetViewMatrixForward= [](Matrix4f const& m) {
+		return Vector3f(-m.M[2][0], -m.M[2][1], -m.M[2][2]).Normalized();
+	};
+	Vector3f viewPos = GetViewMatrixPosition(lastCenterView);
+	Vector3f viewFwd = GetViewMatrixForward(lastCenterView);
+	Vector3f viewUp(0.0f, 1.0f, 0.0f);
+	Vector3f viewLeft = viewUp.Cross(viewFwd);
+	Vector3f newPos = viewPos + viewFwd * offset.z + viewUp * offset.y +
+					  viewLeft * offset.x;
+
+	fontParms_t fp;
+	fp.AlignHoriz = HORIZONTAL_CENTER;
+	fp.AlignVert = VERTICAL_CENTER;
+	fp.Billboard = true;
+	fp.TrackRoll = false;
+	fontSurface.DrawTextBillboarded3D(
+			mGuiSys->GetDefaultFont(),
+			fp,
+			newPos,
+			1.0f,
+			*((OVR::Vector4f*)&colour),
+			txt2);
+
+}
+
+void Application::DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRendererOutput &out)
+{
+	static avs::vec3 offset = {-2.0f, 2.0f, 6.0f};
+	static avs::vec4 colour = {1.0f, 1.0f, 0.5f, 0.5f};
+	static char txt[100];
+	if (sessionClient.IsConnected())
+	{
+		sprintf(txt,"Server: %s", sessionClient.GetServerIP().c_str());
+	}
+	else
+	{
+		sprintf(txt,"Unconnected");
+	}
+	PrintText(offset,colour,txt);
+	static avs::vec3 offset2 = {2.0f, 2.0f, 6.0f};
+	PrintText(offset2,colour,"%4.1f fps",frameRate);
+}
+
 void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out)
 {
 	if(!VideoDecoderProxy::IsJNIInitialized())
 		return ;
+	if (in.DeltaSeconds > 0.0f)
+	{
+		frameRate *= 0.99f;
+		frameRate += 0.01f / in.DeltaSeconds;
+	}
 //Build frame
 	mScene.GetFrameMatrices(SuggestedEyeFovDegreesX, SuggestedEyeFovDegreesY, out.FrameMatrices);
+	lastCenterView=out.FrameMatrices.CenterView;
 	mScene.GenerateFrameSurfaceList(out.FrameMatrices, out.Surfaces);
 
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
@@ -453,14 +509,15 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	clientRenderer.RenderLocalNodes(out);
 	if (sessionClient.IsConnected())
 	{
-		clientRenderer.Render(in, mGuiSys);
+		clientRenderer.DrawOSD();
 // Append video surface
 		clientRenderer.RenderVideo(*mDeviceContext, out);
 	}
 	else
 	{
-		lobbyRenderer.Render(mGuiSys);
+		lobbyRenderer.Render();
 	};
+	DrawConnectionStateOSD(mGuiSys, out);
 	GLCheckErrorsWithTitle("Frame: Post-SCR");
 
 }
@@ -514,8 +571,7 @@ void Application::UpdateHandObjects()
 	}
 }
 
-void Application::AppRenderEye(
-		const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrRendererOutput &out, int eye)
+void Application::AppRenderEye(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrRendererOutput &out, int eye)
 {
 	// Update GUI systems last, but before rendering anything.
 	mGuiSys->Frame(vrFrame, out.FrameMatrices.CenterView);
@@ -904,10 +960,9 @@ std::string Application::LoadTextFile(const char *filename)
 	{
 		if (outBuffer.back() != '\0')
 		{
-			outBuffer.push_back(
-					'\0');
-		} //Append Null terminator character. ReadFile() does return a null terminated string, apparently!
-		return std::string((const char *) outBuffer.data());
+			outBuffer.push_back('\0');
+		} //Append Null terminator character. ReadFile() does not return a null terminated string, apparently!
+		return std::string((const char *)outBuffer.data());
 	}
 	return "";
 }
@@ -922,4 +977,3 @@ void android_main(struct android_app *app)
 			std::unique_ptr<OVRFW::Application>(new OVRFW::Application());
 	appl->Run(app);
 }
-    

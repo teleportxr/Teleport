@@ -72,7 +72,6 @@ ClientRenderer::ClientRenderer
 (
     ResourceCreator *r,
     scr::ResourceManagers *rm,
-    SessionCommandInterface *i,
     ClientAppInterface *c,
     ClientDeviceState *s,
     Controllers *cn
@@ -883,6 +882,63 @@ void ClientRenderer::CycleShaderMode()
 	nodeManager->ChangeEffectPass(passNames[passSelector].c_str());
 }
 
+void ClientRenderer::ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining)
+{
+	//Return if we do not want to print any more lines.
+	if(linesRemaining <= 0)
+	{
+		return;
+	}
+	--linesRemaining;
+
+	//Set indent string to indent amount.
+	static char indent_txt[20];
+	indent_txt[indent] = 0;
+	if(indent > 0)
+	{
+		indent_txt[indent - 1] = ' ';
+	}
+
+	//Retrieve info string on mesh on node, if the node has a mesh.
+	std::string meshInfoString;
+	const std::shared_ptr<scr::Mesh>& mesh = node->GetMesh();
+	if(mesh)
+	{
+		meshInfoString = "mesh ";
+		meshInfoString+=mesh->GetMeshCreateInfo().name.c_str();
+	}
+	avs::vec3 pos=node->GetGlobalPosition();
+	//Print details on node to screen.
+	OVR_LOG("%s%llu %s (%4.4f,%4.4f,%4.4f) %s", indent_txt, node->id, node->name.c_str()
+			,pos.x,pos.y,pos.z
+			, meshInfoString.c_str());
+
+	//Print information on children to screen.
+	const std::vector<std::weak_ptr<scr::Node>>& children = node->GetChildren();
+	for(const auto c : children)
+	{
+		ListNode(c.lock(), indent + 1, linesRemaining);
+	}
+}
+
+void ClientRenderer::WriteDebugOutput()
+{
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	auto& rootNodes = resourceManagers->mNodeManager->GetRootNodes();
+	OVR_LOG("Root Nodes: %zu   Total Nodes: %zu",rootNodes.size(),resourceManagers->mNodeManager->GetNodeAmount());
+	size_t linesRemaining = 2000;
+	static uid show_only=0;
+	for(const std::shared_ptr<scr::Node>& node : rootNodes)
+	{
+		if(show_only!=0&&show_only!=node->id)
+			continue;
+		ListNode(node, 1, linesRemaining);
+		if(linesRemaining <= 0)
+		{
+			break;
+		}
+	}
+}
 
 void ClientRenderer::CycleOSD()
 {
@@ -896,25 +952,10 @@ void ClientRenderer::SetStickOffset(float x, float y)
 	//f->Input.sticks[0][1] += dy;
 }
 
-static float frameRate = 1.0f;
-
-void ClientRenderer::Render(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::OvrGuiSys *mGuiSys)
+void ClientRenderer::DrawOSD()
 {
-	if (vrFrame.DeltaSeconds > 0.0f)
-	{
-		frameRate *= 0.99f;
-		frameRate += 0.01f / vrFrame.DeltaSeconds;
-	}
-	if (show_osd != NO_OSD)
-	{
-		DrawOSD(mGuiSys);
-	}
-}
-
-void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
-{
-	static ovrVector3f offset={0,0,4.5f};
-	static ovrVector4f colour={1.0f,0.7f,0.5f,0.5f};
+	static avs::vec3 offset={0,0,4.5f};
+	static avs::vec4 colour={1.0f,0.7f,0.5f,0.5f};
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	auto ctr = mNetworkSource.getCounterValues();
 
@@ -929,8 +970,8 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 			{
 				vidPos = videoTagDataCubeArray[0].coreData.cameraTransform.position;
 			}
-			mGuiSys->ShowInfoText(
-					INFO_TEXT_DURATION, offset, colour,
+			clientAppInterface->PrintText(
+					offset, colour,
 					"        Foot pos: %1.2f, %1.2f, %1.2f    yaw: %1.2f\n"
 					" Camera Relative: %1.2f, %1.2f, %1.2f Abs: %1.2f, %1.2f, %1.2f\n"
 					"  Video Position: %1.2f, %1.2f, %1.2f\n"
@@ -973,8 +1014,8 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 		}
 		case NETWORK_OSD:
 		{
-			mGuiSys->ShowInfoText(
-					INFO_TEXT_DURATION, offset, colour,
+			clientAppInterface->PrintText(
+					offset, colour,
 					"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 					"Incomplete Decoder Packets: %d\n"
 					"Bandwidth(kbps): %4.4f"
@@ -995,16 +1036,13 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 			}
 			str << "\n";
 
-			mGuiSys->ShowInfoText
-					(
-							INFO_TEXT_DURATION, offset, colour,
+			clientAppInterface->PrintText(
+							offset, colour,
 							"%s\n"
-							"Framerate: %4.4f\n"
 							"Nodes: %d \n"
 							"Orphans: %d\n"
 							"%s",
 							globalGraphicsResources.effectPassName,
-							frameRate,
 							static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()),
 							ctr.m_packetMapOrphans, str.str().c_str()
 					);
@@ -1032,7 +1070,7 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 						missingResourcesStream << " | ";
 					}
 				}
-				mGuiSys->ShowInfoText(INFO_TEXT_DURATION, offset, colour, missingResourcesStream.str().c_str());
+				clientAppInterface->PrintText(offset, colour, missingResourcesStream.str().c_str());
 			}
 
 			break;
@@ -1072,7 +1110,7 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 					sstr << "\n";
 				}
 			}
-			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, offset, colour, sstr.str().c_str());
+			clientAppInterface->PrintText(offset, colour, sstr.str().c_str());
 
 			break;
 		}
@@ -1094,8 +1132,8 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 				rightHandOrientation = rightHand->GetGlobalTransform().m_Rotation;
 			}
 
-			mGuiSys->ShowInfoText(
-							INFO_TEXT_DURATION, offset, colour,
+			clientAppInterface->PrintText(
+							offset, colour,
 							"Controller 0 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
 							"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
 							"Controller 1 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
@@ -1129,7 +1167,6 @@ void ClientRenderer::DrawOSD(OVRFW::OvrGuiSys *mGuiSys)
 			break;
 		}
 		default:
-			mGuiSys->ShowInfoText(INFO_TEXT_DURATION, "Unimplemented OSD mode.");
 			break;
 	}
 }

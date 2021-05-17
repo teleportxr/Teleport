@@ -3,24 +3,17 @@
 #pragma once
 #include "basic_linear_algebra.h"
 #include "crossplatform/ResourceCreator.h"
-#include "crossplatform/SessionClient.h"
 #include "GlobalGraphicsResources.h"
 #include <Render/SurfaceTexture.h>
-#include <GUI/GuiSys.h>
 #include <libavstream/decoder.hpp>
 #include <libavstream/libavstream.hpp>
 #include <VrApi_Input.h>
+#include <FrameParams.h>
 
 #include "SCR_Class_GL_Impl/GL_DeviceContext.h"
 #include "Controllers.h"
+#include "ClientAppInterface.h"
 
-class ClientAppInterface
-{
-public:
-	virtual std::string LoadTextFile(const char *filename)=0;
-	virtual const scr::Effect::EffectPassCreateInfo* BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources)=0;
-
-};
 
 // Placeholders for lights
 struct DirectionalLight
@@ -95,16 +88,16 @@ class ClientDeviceState;
 class ClientRenderer
 {
 public:
-	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,SessionCommandInterface *i,ClientAppInterface *c,ClientDeviceState *s,Controllers *cn);
+	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,ClientAppInterface *c,ClientDeviceState *s,Controllers *cn);
 	~ClientRenderer();
 
 	void CycleShaderMode();
+	void WriteDebugOutput();
 	void CycleOSD();
 	void  SetStickOffset(float,float);
 
 	void EnteredVR(const ovrJava *java);
 	void ExitedVR();
-	void Render(const OVRFW::ovrApplFrameIn& vrFrame,OVRFW::OvrGuiSys *mGuiSys);
 	void OnVideoStreamChanged(const avs::VideoConfig &vc);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
@@ -194,9 +187,10 @@ public:
 	};
 	int show_osd = CAMERA_OSD;
 	bool mIsCubemapVideo = true;
-	void DrawOSD(OVRFW::OvrGuiSys *mGuiSys);
+	void DrawOSD();
 	avs::SetupCommand lastSetupCommand;
 protected:
+	void ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining);
 	ClientDeviceState *clientDeviceState=nullptr;
 	void UpdateTagDataBuffers();
 	static constexpr float INFO_TEXT_DURATION = 0.017f;

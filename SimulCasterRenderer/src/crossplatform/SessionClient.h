@@ -123,4 +123,5 @@ private:
     double time=0.0;
     bool discovered=false;
 	avs::SetupCommand setupCommand;
+	std::string remoteIP;
 };
