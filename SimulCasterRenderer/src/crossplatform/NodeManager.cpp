@@ -49,6 +49,20 @@ namespace scr
 			SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(nodeData.data_subtype) << "!\n";
 			break;
 		}
+
+		//Set last movement, if a movement update was received early.
+		auto movementPair = earlyMovements.find(node->id);
+		if(movementPair != earlyMovements.end())
+		{
+			node->SetLastMovement(movementPair->second);
+		}
+
+		//Set playing animation, if an animation update was received early.
+		auto animationPair = earlyAnimationUpdates.find(node->id);
+		if(animationPair != earlyAnimationUpdates.end())
+		{
+			node->animationComponent.setAnimation(animationPair->second.animationID, animationPair->second.timestamp);
+		}
 	}
 
 	void NodeManager::RemoveNode(std::shared_ptr<Node> node)
@@ -98,12 +112,12 @@ namespace scr
 		return nodeLookup.find(nodeID) != nodeLookup.end();
 	}
 
-	std::shared_ptr<Node> NodeManager::GetNode(avs::uid nodeID)
+	std::shared_ptr<Node> NodeManager::GetNode(avs::uid nodeID) const
 	{
 		return HasNode(nodeID) ? nodeLookup.at(nodeID) : nullptr;
 	}
 
-	size_t NodeManager::GetNodeAmount()
+	size_t NodeManager::GetNodeAmount() const
 	{
 		return nodeLookup.size();
 	}
@@ -130,7 +144,7 @@ namespace scr
 		return false;
 	}
 
-	std::shared_ptr<Node> NodeManager::GetBody()
+	std::shared_ptr<Node> NodeManager::GetBody() const
 	{
 		return body;
 	}
@@ -152,7 +166,7 @@ namespace scr
 		return false;
 	}
 
-	std::shared_ptr<Node> NodeManager::GetLeftHand()
+	std::shared_ptr<Node> NodeManager::GetLeftHand() const
 	{
 		return leftHand;
 	}
@@ -174,7 +188,7 @@ namespace scr
 		return false;
 	}
 
-	std::shared_ptr<Node> NodeManager::GetRightHand()
+	std::shared_ptr<Node> NodeManager::GetRightHand() const
 	{
 		return rightHand;
 	}
@@ -234,12 +248,12 @@ namespace scr
 	{
 		earlyMovements.clear();
 
-		for (avs::MovementUpdate update : updateList)
+		for(avs::MovementUpdate update : updateList)
 		{
-			auto nodeIt = nodeLookup.find(update.nodeID);
-			if (nodeIt != nodeLookup.end())
+			std::shared_ptr<scr::Node> node = GetNode(update.nodeID);
+			if(node)
 			{
-				nodeIt->second->SetLastMovement(update);
+				node->SetLastMovement(update);
 			}
 			else
 			{
@@ -251,12 +265,14 @@ namespace scr
 	void NodeManager::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
 	{
 		std::shared_ptr<scr::Node> node = GetNode(animationUpdate.nodeID);
-		if(!node)
+		if(node)
 		{
-			return;
+			node->animationComponent.setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
 		}
-
-		node->animationComponent.setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
+		else
+		{
+			earlyAnimationUpdates[animationUpdate.nodeID] = animationUpdate;
+		}
 	}
 
 	void NodeManager::Update(float deltaTime)
@@ -294,6 +310,7 @@ namespace scr
 
 		parentLookup.clear();
 		earlyMovements.clear();
+		earlyAnimationUpdates.clear();
 	}
 
 	void NodeManager::ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)
@@ -318,29 +335,33 @@ namespace scr
 
 	bool NodeManager::IsNodeVisible(avs::uid nodeID) const
 	{
-		return HasNode(nodeID) && nodeLookup.at(nodeID)->IsVisible();
+		std::shared_ptr<scr::Node> node = GetNode(nodeID);
+		return node != nullptr && node->IsVisible();
 	}
 
 	void NodeManager::LinkToParentNode(avs::uid childID)
 	{
+		//Do nothing if the child doesn't appear in the parent lookup; i.e. we have not received a parent for the node.
 		auto parentIt = parentLookup.find(childID);
-		if (parentIt == parentLookup.end())
+		if(parentIt == parentLookup.end())
+		{
 			return;
+		}
 
 		std::shared_ptr<Node> parent = GetNode(parentIt->second);
 		std::shared_ptr<Node> child = GetNode(childID);
 
-		if (parent == nullptr || child == nullptr)
+		//Do nothing if we couldn't find one of the nodes; likely due to the parent being removed before the child was received.
+		if(parent == nullptr || child == nullptr)
+		{
 			return;
+		}
 
+		//Connect up hierarchy.
 		child->SetParent(parent);
 		parent->AddChild(child);
-		auto lk= nodeLookup.find(childID);
-		if(lk!=nodeLookup.end())
-		{
-			auto rn= std::find(rootNodes.begin(), rootNodes.end(), lk->second);
-			if(rn!=rootNodes.end())
-				rootNodes.erase(rn);
-		}
+
+		//Erase child from the root nodes list, as they now have a parent.
+		rootNodes.erase(std::find(rootNodes.begin(), rootNodes.end(), child));
 	}
 }
