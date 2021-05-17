@@ -96,7 +96,7 @@ namespace scr
 #ifdef __ANDROID__
 	__attribute__((packed))
 #endif
-		;
+	;
 
 	struct LightTagData
 	{
@@ -122,8 +122,7 @@ namespace scr
 #ifdef __ANDROID__
 	__attribute__((packed))
 #endif
-		;
-
+	;
 
 	struct SceneCaptureCubeTagData
 	{

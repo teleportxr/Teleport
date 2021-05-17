@@ -406,7 +406,7 @@ vec4 Solid(vertexOutput IN)
 	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
 	int id						=int(TagDataIDBuffer[0].x);
 	VideoTagDataCube tagData	=TagDataCubeBuffer[id];
-	for(int i=1;i<2;i++)
+	for(int i=0;i<12;i++)
 	{
 		if(i>=tagData.lightCount)
 			break;
@@ -421,7 +421,7 @@ vec4 Solid(vertexOutput IN)
 	//u.r=float(id)/32.0;
 	vec3 highlight=vec3(0.01,0.02,0.05);
 //u.rgb+= highlight;
-u.rgb=emissive.rgb;
+//u.rg=frac(IN.texCoords0.xy );
 	return u;
 }
 

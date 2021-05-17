@@ -954,9 +954,14 @@ void ClientRenderer::SetStickOffset(float x, float y)
 
 void ClientRenderer::DrawOSD()
 {
-	static avs::vec3 offset={0,0,5.0f};
+	static avs::vec3 offset={0,0,4.5f};
 	static avs::vec4 colour={1.0f,0.7f,0.5f,0.5f};
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	if(passSelector!=0)
+	{
+		static avs::vec3 passoffset={0,2.0f,5.0f};
+		clientAppInterface->PrintText(passoffset,colour,"%s",globalGraphicsResources.effectPassName);
+	}
 	auto ctr = mNetworkSource.getCounterValues();
 
 	switch(show_osd)

@@ -106,9 +106,13 @@ namespace SCServer
 		}
 		if (!host)
 		{
-			std::cerr << "Session: Failed to create ENET server host!\n";
-			DEBUG_BREAK_ONCE;
-			return false;
+			host = enet_host_create(&ListenAddress, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+			if (!host)
+			{
+				std::cerr << "Session: Failed to create ENET server host!\n";
+				DEBUG_BREAK_ONCE;
+				return false;
+			}
 		}
 
 		startingSession = true;

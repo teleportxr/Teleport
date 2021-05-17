@@ -1224,6 +1224,7 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, avs::MovementU
 
 		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].position);
 		avs::ConvertRotation(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].rotation);
+		avs::ConvertScale(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].scale);
 		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].velocity);
 		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].angularVelocityAxis);
 	}

@@ -1,5 +1,6 @@
 //#version 310 es
-precision mediump float;
+// Precision: mediump or below can produce texture sampling problems for larger objects.
+precision highp float;
 
 //To Output Framebuffer - Use gl_FragColor
 //layout(location = 0) out vec4 colour;
@@ -329,14 +330,25 @@ vec3 DirectionalLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties
 	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, lightTag.colour.rgb);
 }
 
+vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
+{
+	vec3 diff						=lightTag.position-surfaceProperties.position;
+	float dist_to_light				=length(diff);
+	float d							=max(0.001,dist_to_light/lightTag.radius);
+	float atten						=step(dist_to_light,lightTag.range);
+	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,atten/(d*d),lightTag.is_point);
+	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
+	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, irradiance);
+}
+
 void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool debug)
 {
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.position        =v_Position;
 	vec3 diff                        = v_Position-v_CameraPosition;
 	float dist_to_frag                =length(diff);
-	if (dist_to_frag > cam.u_DrawDistance)
-		discard;
+	//if (dist_to_frag > cam.u_DrawDistance)
+	//	discard;
 	vec3 view = normalize(diff);
 	if (normalTex)
 	{
@@ -372,7 +384,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	}
 	if (diffuseTex)
 	{
-		vec3 diffuseColour			=texture(u_DiffuseTexture, v_UV_diffuse * u_DiffuseTexCoordsScalar_R).rgb;
+		vec3 diffuseColour			=texture(u_DiffuseTexture, v_UV_diffuse*200.0 ).rgb;//* u_DiffuseTexCoordsScalar_R
 		surfaceProperties.albedo	=diffuseColour.rgb * u_DiffuseOutputScalar.rgb;
 	}
 	else
@@ -396,7 +408,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	{
 		//if (i>=tagDataCube.lightCount)
 		//	break;
-		c					+=DirectionalLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i]);
+		c					+=PBRAddLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i]);
 		//c+=PBRLight(surfaceState, view, vec3(.7,.7,0.0),surfaceProperties, vec3(1.0,0.5,0.2));
 	}
 	vec4 u					=vec4(c.rgb, 1.0);
@@ -413,6 +425,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 		u.g=surfaceProperties.metallic;
 		u.b=surfaceProperties.ao;
 	}
+	//u.rgb=surfaceProperties.albedo;
 	gl_FragColor = Gamma(u);
 }
 
