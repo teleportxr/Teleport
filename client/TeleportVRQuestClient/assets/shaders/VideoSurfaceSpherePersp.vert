@@ -114,15 +114,14 @@ vec2 ViewToServerScreenSpace(vec3 pos)
 
 void main()
 {
+    vec3 eyeOffset = vid.eyeOffsets[VIEW_ID].xyz;
     vSampleVec = normalize(position.xyz);
-    //vSampleVec = normalize(rotate_by_quaternion(vid.cameraRotation, vSampleVec));
-    vSampleVec = (sm.ViewMatrix[VIEW_ID] * (vec4(vSampleVec, 0.0))).xyz;
+    vSampleVec = normalize(rotate_by_quaternion(quat_inverse(tagDataCube.cameraRotation), vSampleVec));
     vec2 uv = ViewToServerScreenSpace(vSampleVec);
     vec4 lookup = texture(renderTexture, uv);
     vDepth = lookup.a;
     vec4 eye_pos = vec4((sm.ViewMatrix[VIEW_ID] * (vec4(position.xyz, 0.0))).xyz, 1.0);
     vec4 out_pos = sm.ProjectionMatrix[VIEW_ID] * eye_pos;
-    vec3 eyeOffset = vid.eyeOffsets[VIEW_ID].xyz;
     vOffsetFromVideo = vid.cameraPosition - tagDataCube.cameraPosition + eyeOffset;
     vOffsetFromVideo = normalize(rotate_by_quaternion(tagDataCube.cameraRotation, vOffsetFromVideo));
     gl_Position = out_pos;
