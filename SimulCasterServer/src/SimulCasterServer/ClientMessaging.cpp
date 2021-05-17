@@ -553,17 +553,26 @@ namespace SCServer
 		inputState.motionEventAmount += newInputState[controllerID].motionEventAmount;
 		newInputState[controllerID] = inputState;
 
-		size_t oldBinarySize = sizeof(avs::InputEventBinary) * newBinaryEvents[controllerID].size();
-		newBinaryEvents[controllerID].resize(newBinaryEvents[controllerID].size() + inputState.binaryEventAmount);
-		memcpy(newBinaryEvents[controllerID].data() + oldBinarySize, packet->data + inputStateSize, binaryEventSize);
-		
-		size_t oldAnalogueSize = sizeof(avs::InputEventAnalogue) * newAnalogueEvents[controllerID].size();
-		newAnalogueEvents[controllerID].resize(newAnalogueEvents[controllerID].size() + inputState.analogueEventAmount);
-		memcpy(newAnalogueEvents[controllerID].data() + oldAnalogueSize, packet->data + inputStateSize + binaryEventSize, analogueEventSize);
+		if(newInputState[controllerID].binaryEventAmount != 0)
+		{
+			size_t oldBinarySize = sizeof(avs::InputEventBinary) * newBinaryEvents[controllerID].size();
+			newBinaryEvents[controllerID].resize(newBinaryEvents[controllerID].size() + inputState.binaryEventAmount);
+			memcpy(newBinaryEvents[controllerID].data() + oldBinarySize, packet->data + inputStateSize, binaryEventSize);
+		}
 
-		size_t oldMotionSize = sizeof(avs::InputEventMotion) * newMotionEvents[controllerID].size();
-		newMotionEvents[controllerID].resize(newMotionEvents[controllerID].size() + inputState.analogueEventAmount);
-		memcpy(newMotionEvents[controllerID].data() + oldMotionSize, packet->data + inputStateSize + binaryEventSize + analogueEventSize, motionEventSize);
+		if(newInputState[controllerID].analogueEventAmount != 0)
+		{
+			size_t oldAnalogueSize = sizeof(avs::InputEventAnalogue) * newAnalogueEvents[controllerID].size();
+			newAnalogueEvents[controllerID].resize(newAnalogueEvents[controllerID].size() + inputState.analogueEventAmount);
+			memcpy(newAnalogueEvents[controllerID].data() + oldAnalogueSize, packet->data + inputStateSize + binaryEventSize, analogueEventSize);
+		}
+
+		if(newInputState[controllerID].motionEventAmount != 0)
+		{
+			size_t oldMotionSize = sizeof(avs::InputEventMotion) * newMotionEvents[controllerID].size();
+			newMotionEvents[controllerID].resize(newMotionEvents[controllerID].size() + inputState.motionEventAmount);
+			memcpy(newMotionEvents[controllerID].data() + oldMotionSize, packet->data + inputStateSize + binaryEventSize + analogueEventSize, motionEventSize);
+		}
 	}
 
 	void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
