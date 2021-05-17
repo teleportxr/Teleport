@@ -428,19 +428,24 @@ void Application::PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,
 	vsprintf(txt2,txt,args);
 	va_end(args);
 	OVRFW::BitmapFontSurface &fontSurface=mGuiSys->GetDefaultFontSurface();
-	auto GetViewMatrixPosition = [](Matrix4f const& m) {
-		return m.Inverted().GetTranslation();
-	};
-	auto GetViewMatrixForward= [](Matrix4f const& m) {
-		return Vector3f(-m.M[2][0], -m.M[2][1], -m.M[2][2]).Normalized();
-	};
-	Vector3f viewPos = GetViewMatrixPosition(lastCenterView);
-	Vector3f viewFwd = GetViewMatrixForward(lastCenterView);
-	Vector3f viewUp(0.0f, 1.0f, 0.0f);
-	Vector3f viewLeft = viewUp.Cross(viewFwd);
-	Vector3f newPos = viewPos + viewFwd * offset.z + viewUp * offset.y +
-					  viewLeft * offset.x;
+	auto GetViewMatrixPosition = [](Matrix4f const& m)
+			{
+				return m.Inverted().GetTranslation();
+			};
+	auto GetViewMatrixForward= [](Matrix4f const& m)
+			{
+				return Vector3f(-m.M[2][0], -m.M[2][1], -m.M[2][2]);
+			};
 
+	auto GetViewMatrixUp= [](Matrix4f const& m)
+			{
+				return Vector3f(m.M[1][0], m.M[1][1], m.M[1][2]);
+			};
+	Vector3f viewPos	=GetViewMatrixPosition(lastCenterView);
+	Vector3f viewFwd	=GetViewMatrixForward(lastCenterView);
+	Vector3f viewUp		=GetViewMatrixUp(lastCenterView);
+	Vector3f viewRight = viewFwd.Cross(viewUp);
+	Vector3f newPos		= viewPos + viewFwd * offset.z + viewUp * offset.y +viewRight * offset.x;
 	fontParms_t fp;
 	fp.AlignHoriz = HORIZONTAL_CENTER;
 	fp.AlignVert = VERTICAL_CENTER;
@@ -458,7 +463,7 @@ void Application::PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,
 
 void Application::DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRendererOutput &out)
 {
-	static avs::vec3 offset = {-2.0f, 2.0f, 6.0f};
+	static avs::vec3 offset = {-2.0f, 2.0f, 5.5f};
 	static avs::vec4 colour = {1.0f, 1.0f, 0.5f, 0.5f};
 	static char txt[100];
 	if (sessionClient.IsConnected())
@@ -557,6 +562,7 @@ void Application::UpdateHandObjects()
 			body->SetLocalRotation(yRotation);
 	}
 
+	// Left and right hands have no parent and their position/orientation is relative to the current local space.
 	std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
 	if(rightHand)
 	{

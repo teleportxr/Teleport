@@ -111,15 +111,15 @@ public:
 		return globalTransform;
 	}
 
-	void SetLocalPosition(const avs::vec3& value);
+	void SetLocalPosition(const avs::vec3& pos);
 	const avs::vec3& GetLocalPosition() const { return GetLocalTransform().m_Translation; }
 	const avs::vec3& GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }
 	
-	void SetLocalRotation(const scr::quat& value);
+	void SetLocalRotation(const scr::quat& rot);
 	const scr::quat& GetLocalRotation() const { return GetLocalTransform().m_Rotation; }
 	const scr::quat& GetGlobalRotation() const { return GetGlobalTransform().m_Rotation; }
 
-	void SetLocalScale(const avs::vec3& value);
+	void SetLocalScale(const avs::vec3& scale);
 	const avs::vec3& GetLocalScale() const { return GetLocalTransform().m_Scale; }
 	const avs::vec3& GetGlobalScale() const { return GetGlobalTransform().m_Scale; }
 
