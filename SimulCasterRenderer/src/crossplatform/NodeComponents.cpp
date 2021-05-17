@@ -24,19 +24,26 @@ namespace scr
 		{
 			currentAnimation = animations.begin();
 		}
+#else
+		//Start playing the animation if we couldn't start it earlier, as we had yet to receive the animation.
+		if(id == latestAnimationID)
+		{
+			auto animationIterator = animations.find(id);
+			startAnimation(animationIterator, latestAnimationStartTimestamp);
+		}
 #endif
 	}
 
-	void AnimationComponent::setAnimation(avs::uid animationID, uint64_t start_timestamp)
+	void AnimationComponent::setAnimation(avs::uid animationID, uint64_t startTimestamp)
 	{
 		auto animationItr = animations.find(animationID);
-		if(animationItr == animations.end())
+		if(animationItr != animations.end())
 		{
-			return;
+			startAnimation(animationItr, startTimestamp);
 		}
 
-		currentAnimation = animationItr;
-		currentAnimationTime = 0.0f;
+		latestAnimationID = animationID;
+		latestAnimationStartTimestamp = startTimestamp;
 	}
 
 	void AnimationComponent::update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime)
@@ -64,6 +71,12 @@ namespace scr
 			currentAnimation->second->seekTime(boneList, currentAnimationTime);
 		}
 #endif
+	}
+
+	void AnimationComponent::startAnimation(std::map<avs::uid, std::shared_ptr<Animation>>::iterator animationIterator, uint64_t startTimestamp)
+	{
+		currentAnimation = animationIterator;
+		currentAnimationTime = 0.0f;
 	}
 
 	void VisibilityComponent::update(float deltaTime)

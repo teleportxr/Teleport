@@ -32,23 +32,23 @@ namespace scr
 
 		bool HasNode(avs::uid nodeID) const;
 
-		std::shared_ptr<Node> GetNode(avs::uid nodeID);
-		size_t GetNodeAmount();
+		std::shared_ptr<Node> GetNode(avs::uid nodeID) const;
+		size_t GetNodeAmount() const;
 
 		//Get list of nodes parented to the world root.
 		const nodeList_t& GetRootNodes() const;
 
 		void SetBody(std::shared_ptr<Node> node);
 		bool SetBody(avs::uid nodeID);
-		std::shared_ptr<Node> GetBody();
+		std::shared_ptr<Node> GetBody() const;
 
 		void SetLeftHand(std::shared_ptr<Node> node);
 		bool SetLeftHand(avs::uid nodeID);
-		std::shared_ptr<Node> GetLeftHand();
+		std::shared_ptr<Node> GetLeftHand() const;
 
 		void SetRightHand(std::shared_ptr<Node> node);
 		bool SetRightHand(avs::uid nodeID);
-		std::shared_ptr<Node> GetRightHand();
+		std::shared_ptr<Node> GetRightHand() const;
 
 		//Causes the node to become visible.
 		bool ShowNode(avs::uid nodeID);
@@ -85,6 +85,7 @@ namespace scr
 	private:
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an node, so they can be linked when received. <ChildID, ParentID>
 		std::map<avs::uid, avs::MovementUpdate> earlyMovements; //Movements that have arrived before the node was received.
+		std::map<avs::uid, avs::NodeUpdateAnimation> earlyAnimationUpdates; //Animation updates that were received before the node was received.
 
 		//Uses the index of the node in the nodeList to determine if it is visible.
 		bool IsNodeVisible(avs::uid nodeID) const;
