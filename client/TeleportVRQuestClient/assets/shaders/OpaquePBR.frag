@@ -384,7 +384,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	}
 	if (diffuseTex)
 	{
-		vec3 diffuseColour			=texture(u_DiffuseTexture, v_UV_diffuse*200.0 ).rgb;//* u_DiffuseTexCoordsScalar_R
+		vec3 diffuseColour			=texture(u_DiffuseTexture, v_UV_diffuse* u_DiffuseTexCoordsScalar_R).rgb;
 		surfaceProperties.albedo	=diffuseColour.rgb * u_DiffuseOutputScalar.rgb;
 	}
 	else
