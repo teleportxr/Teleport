@@ -532,24 +532,15 @@ void Application::UpdateHandObjects()
 	uint32_t deviceIndex = 0;
 	ovrInputCapabilityHeader capsHeader;
 	//Poll controller state from the Oculus API.
-	while(vrapi_EnumerateInputDevices(GetSessionObject(), deviceIndex, &capsHeader) >= 0)
+	for(int i=0;i<2;i++)
 	{
-		if(capsHeader.Type == ovrControllerType_TrackedRemote)
+		ovrTracking remoteState;
+		if(vrapi_GetInputTrackingState(GetSessionObject(), controllers.mControllerIDs[i], 0, &remoteState) >= 0)
 		{
-			ovrTracking remoteState;
-			if(vrapi_GetInputTrackingState(GetSessionObject(), capsHeader.DeviceID, 0, &remoteState) >= 0)
-			{
-				if(deviceIndex < 2)
-				{
-					clientDeviceState.SetControllerPose(deviceIndex,*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),*((const scr::quat *)(&remoteState.HeadPose.Pose.Orientation)));
-				}
-				else
-				{
-					break;
-				}
-			}
+			clientDeviceState.SetControllerPose(i,
+													*((const avs::vec3 *) (&remoteState.HeadPose.Pose.Position)),
+													*((const scr::quat *) (&remoteState.HeadPose.Pose.Orientation)));
 		}
-		++deviceIndex;
 	}
 	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
 	if(body)
