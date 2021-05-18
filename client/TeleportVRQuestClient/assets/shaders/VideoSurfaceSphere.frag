@@ -58,7 +58,6 @@ vec4 mul(mat4 a,vec4 b)
 void main()
 {
     vec4 lookup = textureLod(renderTexture, vSampleVec,0.0);
-    vec3 view = vSampleVec;
     vec3 colourSampleVec=vSampleVec;
     for (int i = 0; i < 5; i++)
     {
