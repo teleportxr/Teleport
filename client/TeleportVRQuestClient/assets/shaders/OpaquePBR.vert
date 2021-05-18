@@ -12,6 +12,30 @@ layout(location = 5) in vec4 a_Color;
 layout(location = 6) in vec4 a_Joint;
 layout(location = 7) in vec4 a_Weights;
 
+// ALL light data is passed in as tags.
+struct LightTag
+{
+    mat4 worldToShadowMatrix;
+    vec2 shadowTexCoordOffset;
+    vec2 shadowTexCoordScale;
+    vec4 colour;
+    vec3 position;
+    float range;
+    vec3 direction;
+    uint uid32;
+    float is_spot;
+    float is_point;
+    float shadow_strength;
+    float radius;
+};
+
+struct VideoTagDataCube
+{
+    vec3 cameraPosition;
+    int lightCount;
+    vec4 cameraRotation;
+    LightTag lightTags[4];
+};
 //From Application SR
 layout(std140, binding = 0) uniform u_CameraData
 {
@@ -21,6 +45,11 @@ layout(std140, binding = 0) uniform u_CameraData
     vec3 u_Position;
     float u_DrawDistance;
 } cam;
+
+layout(std430, binding = 1) buffer TagDataCube_ssbo
+{
+    VideoTagDataCube tagDataCube;
+};
 
 //To Fragment Varying
 layout(location = 0)  out vec3 v_Position;

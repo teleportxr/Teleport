@@ -346,8 +346,8 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	//Set up scr::Camera
 	scr::Camera::CameraCreateInfo c_ci = {
 			(scr::RenderPlatform *) (&globalGraphicsResources.renderPlatform)
-			, scr::Camera::ProjectionType::PERSPECTIVE, scr::quat(0.0f, 0.0f, 0.0f, 1.0f)
-			, clientDeviceState->headPose.position, 5
+			,scr::Camera::ProjectionType::PERSPECTIVE, scr::quat(0.0f, 0.0f, 0.0f, 1.0f)
+			,clientDeviceState->headPose.position, 5.0f
 	};
 	globalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 

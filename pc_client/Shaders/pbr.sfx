@@ -333,14 +333,8 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	return colour;
 }
 
-vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,LightTag lightTag)
+vec3 PBRLight(SurfaceState surfaceState, vec3 viewDir,vec3 dir_from_surface_to_light, SurfaceProperties surfaceProperties, vec3 irradiance)
 {
-	vec3 diff						=lightTag.position-surfaceProperties.position;
-	float dist_to_light				=length(diff);
-	float d							=max(0.001,dist_to_light/lightTag.radius);
-	float atten						=step(dist_to_light,lightTag.range);
-	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,atten/(d*d),lightTag.is_point);
-	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
 	float roughnessL				=min(100.0,max(.0001, surfaceProperties.roughness2));
 	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
 	vec3 halfway					=normalize(-viewDir+dir_from_surface_to_light);
@@ -352,19 +346,29 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	// Per-light:
 	vec3 diffuse					=surfaceState.kD*irradiance * surfaceProperties.albedo * saturate(n_l);
 	vec3 specular					= irradiance * ( lightD*lightV * surfaceState.kS *n_l);
-
-
-	vec4 shadow						=vec4(1.0,1.0,1.0,1.0);
-	vec4 spos						=GetShadowCoord( surfaceProperties.position, lightTag );
-//	if(!(light.is_point*light.is_spot))
-//		shadow=GetVarianceShadow(videoTexture,lightTag,spos);
-	if(lightTag.is_spot)
-		shadow*=GetSpotLighting(lightTag,spos);
 	//float ao						= SceneAO(pos, normal, localToWorld);
-///	specular						*=surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
+	///	specular						*=surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour = diffuse+specular;
 	//colour *= shadow;
-    return colour;//vec3(n_h,n_h,n_h);
+	return colour;//vec3(n_h,n_h,n_h);
+}
+
+vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,LightTag lightTag)
+{
+	vec3 diff						=lightTag.position-surfaceProperties.position;
+	float dist_to_light				=length(diff);
+	float d							=max(0.001,dist_to_light/lightTag.radius);
+	float atten						=step(dist_to_light,lightTag.range);
+	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,atten/(d*d),lightTag.is_point);
+	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
+	vec4 shadow						=vec4(1.0,1.0,1.0,1.0);
+	vec4 spos						=GetShadowCoord( surfaceProperties.position, lightTag );
+	//	if(!(light.is_point*light.is_spot))
+	//		shadow=GetVarianceShadow(videoTexture,lightTag,spos);
+	if(lightTag.is_spot)
+		shadow*=GetSpotLighting(lightTag,spos);
+	irradiance*=shadow;
+	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, irradiance);
 }
 
 vec4 Solid(vertexOutput IN)
