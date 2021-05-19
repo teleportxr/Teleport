@@ -64,13 +64,19 @@ layout(location = 9)  out vec4 v_Color;
 layout(location = 10) out vec4 v_Joint;
 layout(location = 11) out vec4 v_Weights;
 layout(location = 12) out vec3 v_CameraPosition;
-struct VertexLight
+struct SurfaceLightProperties
 {
     vec3 directionToLight;      // 1 location
     float distanceToLight;
+    vec3 halfway;
+    float n_h;
+    float l_h;
+    float n_l;
 };
 layout(location = 14) out vec3 v_VertexLight_directionToLight[4];   // Consumes 4 locations.
-layout(location = 20) out float v_VertexLight_distanceToLight[4];   // Consumes 4 locations.
+layout(location = 18) out float v_VertexLight_distanceToLight[4];   // Consumes 4 locations.
+layout(location = 22) out vec3 v_VertexLight_halfway[4];   // Consumes 4 locations.
+layout(location = 26) out vec3 v_VertexLight_nh_lh_nl[4];   // Consumes 4 locations.
 //Material
 layout(std140, binding = 2) uniform u_MaterialData //Layout conformant to GLSL std140
 {
@@ -118,18 +124,36 @@ struct VertexSurfaceProperties
     vec3 normal;
 };
 
-VertexLight GetVertexLight(vec3 viewDir, VertexSurfaceProperties surfaceProperties, LightTag lightTag)
+//Constants
+const float PI = 3.1415926535;
+
+//Helper Functions
+float saturate(float _val)
 {
-    VertexLight vertexLight;
+    return min(1.0, max(0.0, _val));
+}
+vec3 saturate(vec3 _val)
+{
+    return min(vec3(1.0, 1.0, 1.0), max(vec3(0.0, 0.0, 0.0), _val));
+}
+
+SurfaceLightProperties GetVertexLight(vec3 viewDir, VertexSurfaceProperties surfaceProperties, LightTag lightTag)
+{
+    SurfaceLightProperties vertexLight;
     vec3 diff                       =lightTag.position-surfaceProperties.position;
     vertexLight.distanceToLight      =length(diff);
     float d                         =max(0.001, vertexLight.distanceToLight/lightTag.radius);
     float atten                     =step(vertexLight.distanceToLight, lightTag.range);
     vec3 irradiance                 =lightTag.colour.rgb*lerp(1.0, atten/(d*d), lightTag.is_point);
     vertexLight.directionToLight    =lerp(-lightTag.direction, normalize(diff), lightTag.is_point);
+    vertexLight.n_l						=saturate(dot(surfaceProperties.normal, vertexLight.directionToLight));
+    vertexLight.halfway					=normalize(-viewDir+vertexLight.directionToLight);
+    vertexLight.n_h						=saturate(dot(vertexLight.halfway,surfaceProperties.normal));
+    vertexLight.l_h						=saturate(dot(vertexLight.halfway,vertexLight.directionToLight));
 
     return vertexLight;
 }
+
 void Static()
 {
     v_Position 	        = (ModelMatrix * vec4(a_Position, 1.0)).xyz;
@@ -147,14 +171,19 @@ void Static()
     v_Weights	        = a_Weights;
     v_CameraPosition    = cam.u_Position;
 
+    vec3 diff			=v_Position-v_CameraPosition;
+    vec3 viewDir        = normalize(diff);
+
     VertexSurfaceProperties vertexSurfaceProperties;
     vertexSurfaceProperties.position=v_Position;
-    vec3 viewDir=vec3(0,0,0);
-    VertexLight vertexLight0=GetVertexLight(viewDir,vertexSurfaceProperties,tagDataCube.lightTags[1]);
+    vertexSurfaceProperties.normal=v_Normal;
     for (int i=0;i<4;i++)
     {
+        SurfaceLightProperties vertexLight0=GetVertexLight(viewDir,vertexSurfaceProperties,tagDataCube.lightTags[i]);
         v_VertexLight_directionToLight[i]=vertexLight0.directionToLight;
         v_VertexLight_distanceToLight[i]=vertexLight0.distanceToLight;
+        v_VertexLight_halfway[i]            =vertexLight0.halfway;
+        v_VertexLight_nh_lh_nl[i]           =vec3(vertexLight0.n_h,vertexLight0.l_h,vertexLight0.n_l);
     }
 }
 
@@ -167,14 +196,14 @@ void Animated()
 
     gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * (vec4(a_Position, 1.0) * boneTransform);
 
-    v_Position 	        = (ModelMatrix * (vec4(a_Position, 1.0) * boneTransform)).xyz;
-    v_Normal	        = normalize((ModelMatrix * (vec4(a_Normal, 0.0) * boneTransform)).xyz);
-    v_Tangent	        = normalize((ModelMatrix * (vec4(a_Tangent.xyz, 0.0) * boneTransform)).xyz);
+    v_Position 	        =(ModelMatrix * (vec4(a_Position, 1.0) * boneTransform)).xyz;
+    v_Normal	        =normalize((ModelMatrix * (vec4(a_Normal, 0.0) * boneTransform)).xyz);
+    v_Tangent	        =normalize((ModelMatrix * (vec4(a_Tangent.xyz, 0.0) * boneTransform)).xyz);
 
-    v_Binormal	        = normalize(cross(v_Normal, v_Tangent));
-    v_TBN		        = mat3(v_Tangent, v_Binormal, v_Normal);
-    vec2 UV0		    = a_UV0.xy;
-    vec2 UV1		    = a_UV1.xy;
+    v_Binormal	        =normalize(cross(v_Normal, v_Tangent));
+    v_TBN		        =mat3(v_Tangent, v_Binormal, v_Normal);
+    vec2 UV0		    =a_UV0.xy;
+    vec2 UV1		    =a_UV1.xy;
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
     v_Color		        = a_Color;
@@ -182,14 +211,18 @@ void Animated()
     v_Weights	        = a_Weights;
     v_CameraPosition    = cam.u_Position;
 
+    vec3 diff			=v_Position-v_CameraPosition;
+    vec3 viewDir        = normalize(diff);
+
     VertexSurfaceProperties vertexSurfaceProperties;
     vertexSurfaceProperties.position=v_Position;
     vertexSurfaceProperties.normal=v_Normal;
-    vec3 viewDir=vec3(0,0,0);
-    VertexLight vertexLight0=GetVertexLight(viewDir,vertexSurfaceProperties,tagDataCube.lightTags[1]);
     for (int i=0;i<4;i++)
     {
-        v_VertexLight_directionToLight[i]=vertexLight0.directionToLight;
-        v_VertexLight_distanceToLight[i]=vertexLight0.distanceToLight;
+        SurfaceLightProperties vertexLight0=GetVertexLight(viewDir,vertexSurfaceProperties,tagDataCube.lightTags[i]);
+        v_VertexLight_directionToLight[i]   =vertexLight0.directionToLight;
+        v_VertexLight_distanceToLight[i]    =vertexLight0.distanceToLight;
+        v_VertexLight_halfway[i]            =vertexLight0.halfway;
+        v_VertexLight_nh_lh_nl[i]           =vec3(vertexLight0.n_h,vertexLight0.l_h,vertexLight0.n_l);
     }
 }

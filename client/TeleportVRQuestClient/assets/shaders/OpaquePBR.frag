@@ -17,13 +17,19 @@ layout(location = 9)  in vec4 v_Color;
 layout(location = 10) in vec4 v_Joint;
 layout(location = 11) in vec4 v_Weights;
 layout(location = 12) in vec3 v_CameraPosition;
-struct VertexLight
+struct SurfaceLightProperties
 {
 	vec3 directionToLight;      // 1 location
 	float distanceToLight;
+	vec3 halfway;
+	float n_h;
+	float l_h;
+	float n_l;
 };
 layout(location = 14) in vec3 v_VertexLight_directionToLight[4];   // Consumes 4 locations.
-layout(location = 20) in float v_VertexLight_distanceToLight[4];   // Consumes 4 locations.
+layout(location = 18) in float v_VertexLight_distanceToLight[4];   // Consumes 4 locations.
+layout(location = 22) in vec3 v_VertexLight_halfway[4];   // Consumes 4 locations.
+layout(location = 26) in vec3 v_VertexLight_nh_lh_nl[4];   // Consumes 4 locations.
 
 #define lerp mix
 #define SIMUL_PI_F (3.1415926536)
@@ -289,62 +295,71 @@ vec4 Gamma(vec4 a)
 	return pow(a, vec4(.45, .45, .45, 1.0));
 }
 
-vec3 PBRLight(SurfaceState surfaceState, vec3 viewDir,vec3 dir_from_surface_to_light, SurfaceProperties surfaceProperties, vec3 irradiance_n_l)
+vec3 PBRLight(SurfaceState surfaceState, vec3 viewDir,SurfaceLightProperties sl, SurfaceProperties surfaceProperties, vec3 irradiance_n_l)
 {
-	vec3 halfway					=normalize(-viewDir+dir_from_surface_to_light);
-	float n_h						=saturate(dot(halfway,surfaceProperties.normal));
-	float l_h						=saturate(dot(halfway,dir_from_surface_to_light));
-	float lightD					=DistributionTerm(surfaceProperties.roughness2, n_h);
-	float lightV					=VisibilityTerm(surfaceProperties.roughness2, l_h);
+	float lightD					=DistributionTerm(surfaceProperties.roughness2, sl.n_h);
+	float lightV					=VisibilityTerm(surfaceProperties.roughness2, sl.l_h);
 	// Per-light:
 	vec3 diffuse					=surfaceState.kD*irradiance_n_l * surfaceProperties.albedo ;
 	vec3 specular					= irradiance_n_l * ( lightD*lightV * surfaceState.kS );
 	//float ao						= SceneAO(pos, normal, localToWorld);
 	///	specular						*=surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour = diffuse+specular;
-	//colour *= shadow;
+
+	//colour.r=sl.n_h;
+	//colour.g=sl.l_h;
+	//colour.b=sl.n_l;
 	return colour;//vec3(n_h,n_h,n_h);
 }
 
 vec3 SpotLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
 {
+	SurfaceLightProperties sl;
 	vec3 diff						=lightTag.position-surfaceProperties.position;
-	float dist_to_light      		=length(diff);
-	float d                         =max(1.0, dist_to_light/lightTag.radius);
-	float atten						=step(dist_to_light,lightTag.range);
+	sl.distanceToLight      		=length(diff);
+	float d                         =max(1.0, sl.distanceToLight/lightTag.radius);
+	float atten						=step(sl.distanceToLight,lightTag.range);
 	vec3 irradiance					=lightTag.colour.rgb*atten/(d*d);
-	vec3 dir_from_surface_to_light  =normalize(diff);
-	return PBRLight(surfaceState, viewDir,dir_from_surface_to_light,surfaceProperties, irradiance);
+	sl.directionToLight		=normalize(diff);
+	sl.halfway				=normalize(-viewDir+sl.directionToLight);
+	sl.n_h						=saturate(dot(sl.halfway,surfaceProperties.normal));
+	sl.l_h						=saturate(dot(sl.halfway,sl.directionToLight));
+	return PBRLight(surfaceState, viewDir,sl,surfaceProperties, irradiance);
 }
 
 vec3 DirectionalLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
 {
-	vec3 dir_from_surface_to_light    =-lightTag.direction;
-	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, lightTag.colour.rgb);
+	SurfaceLightProperties sl;
+	sl.directionToLight    =-lightTag.direction;
+	sl.distanceToLight=1.0f;
+	sl.halfway				=normalize(-viewDir+sl.directionToLight);
+	sl.n_h						=saturate(dot(sl.halfway,surfaceProperties.normal));
+	sl.l_h						=saturate(dot(sl.halfway,sl.directionToLight));
+	return PBRLight(surfaceState, viewDir, sl,surfaceProperties, lightTag.colour.rgb);
 }
 
 vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
 {
-	vec3 diff						=lightTag.position-surfaceProperties.position;
-	float dist_to_light				=length(diff);
-	float d							=max(0.001,dist_to_light/lightTag.radius);
-	float atten						=step(dist_to_light,lightTag.range);
-	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,atten/(d*d),lightTag.is_point);
-	vec3 dir_from_surface_to_light	=lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
-	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
-	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, irradiance*n_l);
+	SurfaceLightProperties sl;
+	vec3 diff					=lightTag.position-surfaceProperties.position;
+	sl.distanceToLight			=length(diff);
+	float d						=max(0.001,sl.distanceToLight/lightTag.radius);
+	float atten					=step(sl.distanceToLight,lightTag.range);
+	vec3 irradiance				=lightTag.colour.rgb*lerp(1.0,atten/(d*d),lightTag.is_point);
+	sl.directionToLight			=lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
+	sl.n_l						=saturate(dot(surfaceProperties.normal, sl.directionToLight));
+	sl.halfway					=normalize(-viewDir+sl.directionToLight);
+	sl.n_h						=saturate(dot(sl.halfway,surfaceProperties.normal));
+	sl.l_h						=saturate(dot(sl.halfway,sl.directionToLight));
+	return PBRLight(surfaceState, viewDir, sl,surfaceProperties, irradiance*sl.n_l);
 }
 
-vec3 PBRAddVertexLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag, VertexLight vertexLight)
+vec3 PBRAddVertexLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag, SurfaceLightProperties vertexLight)
 {
-	vec3 diff						=lightTag.position-surfaceProperties.position;
-	float dist_to_light				=vertexLight.distanceToLight;//length(diff);
-	float d							=max(0.001,dist_to_light/lightTag.radius);
-	float atten						=step(dist_to_light,lightTag.range);
+	float d							=max(0.001,vertexLight.distanceToLight/lightTag.radius);
+	float atten						=step(vertexLight.distanceToLight,lightTag.range);
 	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,atten/(d*d),lightTag.is_point);
-	vec3 dir_from_surface_to_light	=vertexLight.directionToLight;//lerp(-lightTag.direction,normalize(diff),lightTag.is_point);
-	float n_l						=saturate(dot(surfaceProperties.normal, dir_from_surface_to_light));
-	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, irradiance*n_l);
+	return PBRLight(surfaceState, viewDir, vertexLight,surfaceProperties, irradiance*vertexLight.n_l);
 }
 
 SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool debug)
@@ -398,8 +413,8 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 
 void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool debug)
 {
-	vec3 diff                        = v_Position-v_CameraPosition;
-	float dist_to_frag                =length(diff);
+	vec3 diff					=v_Position-v_CameraPosition;
+	float dist_to_frag          =length(diff);
 	if (dist_to_frag > cam.u_DrawDistance)
 		discard;
 	vec3 view = normalize(diff);
@@ -416,14 +431,21 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 		c							=vec3(0,0,0);
 	}
 
-	for (int i=1;i<2;i++)
+	for (int i=0;i<2;i++)
 	{
 		//if (i>=tagDataCube.lightCount)
 		//	break;
-		VertexLight vertexLight;
+		SurfaceLightProperties vertexLight;
 		vertexLight.directionToLight	=v_VertexLight_directionToLight[i];
 		vertexLight.distanceToLight		=v_VertexLight_distanceToLight[i];
-		c					+=PBRAddVertexLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i],vertexLight);
+		vertexLight.halfway				=v_VertexLight_halfway[i];
+		vertexLight.n_h					=v_VertexLight_nh_lh_nl[i].x;
+		vertexLight.l_h					=v_VertexLight_nh_lh_nl[i].y;
+		vertexLight.n_l					=v_VertexLight_nh_lh_nl[i].z;
+		//if(view.x>0.0)
+			c		+=PBRAddVertexLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i],vertexLight);
+		//else
+		//	c		+=PBRAddLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i]);//,vertexLight);
 
 	}
 	vec4 u					=vec4(c.rgb, 1.0);

@@ -718,21 +718,23 @@ void ClientRenderer::UpdateTagDataBuffers()
 										  / float(lastSetupCommand.video_config.video_height);
 				t.position = *((avs::vec3 *) &l.position);
 				ovrQuatf q = {l.orientation.x, l.orientation.y, l.orientation.z, l.orientation.w};
-				avs::vec3 z = {0, 0, 1.0f};
+				// Note: we transform from a local y pointing light into the global direction.
+				// this is equivalent e.g. of +z in Unity, but what about Unreal etc? Need common way
+				// to express this.
+				static avs::vec3 z = {0, 1.0f, 0.0f};
 				t.direction = QuaternionTimesVector(q, z);
-				scr::mat4 worldToShadowMatrix = scr::mat4(
-						(const float *) &l.worldToShadowMatrix);
+				scr::mat4 worldToShadowMatrix = scr::mat4((const float *) &l.worldToShadowMatrix);
 
 				t.worldToShadowMatrix = *((ovrMatrix4f *) &worldToShadowMatrix);
 
 				const auto &nodeLight = cachedLights.find(l.uid);
 				if (nodeLight != cachedLights.end() && nodeLight->second.resource!=nullptr)
 				{
-					auto &lc = nodeLight->second.resource->GetLightCreateInfo();
-					t.is_point=float(lc.type!=scr::Light::Type::DIRECTIONAL);
-					t.is_spot=float(lc.type==scr::Light::Type::SPOT);
-					t.radius=lc.lightRadius;
-					t.range=lc.lightRange;
+					auto &lc		=nodeLight->second.resource->GetLightCreateInfo();
+					t.is_point		=float(lc.type!=scr::Light::Type::DIRECTIONAL);
+					t.is_spot		=float(lc.type==scr::Light::Type::SPOT);
+					t.radius		=lc.lightRadius;
+					t.range			=lc.lightRange;
 					t.shadow_strength=0.0f;
 				}
 			}

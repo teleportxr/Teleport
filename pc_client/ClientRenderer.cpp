@@ -751,13 +751,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					name=lcr.name.c_str();
 				}
 				if(l.lightType==scr::LightType::Directional)
-					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: %s, Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
-						,lightTag.direction.x
-						,lightTag.direction.y
-						,lightTag.direction.z
+					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
+						,lightTag.direction.x,lightTag.direction.y,lightTag.direction.z
 						,l.color.x,l.color.y,l.color.z),clr);
 				else
-					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: %s, Type: %s, %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
+					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
 						,lightTag.position.x
 						,lightTag.position.y
 						,lightTag.position.z
