@@ -1,15 +1,22 @@
 // (C) Copyright 2018-2021 Simul Software Ltd
 
 #include "Application.h"
+
 #include <sstream>
+
 #include "GLESDebug.h"
-#include "AndroidDiscoveryService.h"
-#include "OVRNodeManager.h"
-#include "VideoSurface.h"
+#include "SimpleIni.h"
+
 #include <libavstream/common.hpp>
+
+#include "crossplatform/ServerTimestamp.h"
+
 #include "Config.h"
 #include "Log.h"
-#include "SimpleIni.h"
+#include "VideoSurface.h"
+
+#include "AndroidDiscoveryService.h"
+#include "OVRNodeManager.h"
 
 #if defined( USE_AAUDIO )
 #include "SCR_Class_AAudio_Impl/AA_AudioPlayer.h"
@@ -506,6 +513,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
 	float time_elapsed = in.DeltaSeconds * 1000.0f;
+	scr::ServerTimestamp::tick(time_elapsed);
 	resourceManagers.Update(time_elapsed);
 	resourceCreator.Update(time_elapsed);
 
@@ -529,10 +537,8 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
 void Application::UpdateHandObjects()
 {
-	uint32_t deviceIndex = 0;
-	ovrInputCapabilityHeader capsHeader;
 	//Poll controller state from the Oculus API.
-	for(int i=0;i<2;i++)
+	for(int i=0; i<2; i++)
 	{
 		ovrTracking remoteState;
 		if(vrapi_GetInputTrackingState(GetSessionObject(), controllers.mControllerIDs[i], 0, &remoteState) >= 0)
@@ -541,6 +547,7 @@ void Application::UpdateHandObjects()
 													*((const scr::quat *) (&remoteState.HeadPose.Pose.Orientation)));
 		}
 	}
+
 	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
 	if(body)
 	{
@@ -590,6 +597,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 				 videoConfig.video_width, videoConfig.video_height,
 				 videoConfig.colour_cubemap_size);
 
+		scr::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 		std::vector<avs::NetworkSourceStream> streams = {{20}};

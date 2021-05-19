@@ -1,5 +1,8 @@
 #include "NodeComponents.h"
+
 #include <algorithm>
+
+#include "crossplatform/ServerTimestamp.h"
 
 #define CYCLE_ANIMATIONS 0
 
@@ -76,7 +79,7 @@ namespace scr
 	void AnimationComponent::startAnimation(std::map<avs::uid, std::shared_ptr<Animation>>::iterator animationIterator, uint64_t startTimestamp)
 	{
 		currentAnimation = animationIterator;
-		currentAnimationTime = 0.0f;
+		currentAnimationTime = static_cast<float>(ServerTimestamp::getCurrentTimestamp() - startTimestamp);
 	}
 
 	void VisibilityComponent::update(float deltaTime)

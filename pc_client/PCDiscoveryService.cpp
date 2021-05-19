@@ -27,20 +27,20 @@ PCDiscoveryService::~PCDiscoveryService()
 
 int PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t discoveryPort)
 {
-	int sock = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);// PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (sock <= 0)
+	ENetSocket socket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);// PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (socket <= 0)
 	{
 		FAIL("Failed to create service discovery UDP socket");
 		return 0;
 	}
 
 	int flagEnable = 1;
-	enet_socket_set_option(sock, ENET_SOCKOPT_REUSEADDR, 1);
-	enet_socket_set_option(sock, ENET_SOCKOPT_BROADCAST, 1);
+	enet_socket_set_option(socket, ENET_SOCKOPT_REUSEADDR, 1);
+	enet_socket_set_option(socket, ENET_SOCKOPT_BROADCAST, 1);
 	//enet_socket_set_option(sock, ENET_SOCKOPT_RCVBUF, 0);
 	//enet_socket_set_option(sock, ENET_SOCKOPT_SNDBUF, 0);
 	// We don't want to block, just check for packets.
-	enet_socket_set_option(sock, ENET_SOCKOPT_NONBLOCK, 1);
+	enet_socket_set_option(socket, ENET_SOCKOPT_NONBLOCK, 1);
 
 
 	// Here we BIND the socket to the local address that we want to be identified with.
@@ -52,14 +52,14 @@ int PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t discovery
 	//	ip = "127.0.0.1";
 		enet_address_set_host(&(bindAddress), ip.c_str());
 	}
-	if (enet_socket_bind(sock, &bindAddress) != 0)
+	if (enet_socket_bind(socket, &bindAddress) != 0)
 	{
 		FAIL("Failed to bind to service discovery UDP socket");
-		enet_socket_destroy(sock);
-		sock = 0;
+		enet_socket_destroy(socket);
+		socket = 0;
 		return 0;
 	}
-	return sock;
+	return socket;
 }
 
 uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)

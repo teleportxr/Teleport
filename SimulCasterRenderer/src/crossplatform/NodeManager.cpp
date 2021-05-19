@@ -220,13 +220,13 @@ namespace scr
 	void NodeManager::SetVisibleNodes(const std::vector<avs::uid> visibleNodes)
 	{
 		//Hide all nodes.
-		for (auto it : nodeLookup)
+		for(const auto& it : nodeLookup)
 		{
 			it.second->SetVisible(false);
 		}
 
 		//Show visible nodes.
-		for (avs::uid id : visibleNodes)
+		for(avs::uid id : visibleNodes)
 		{
 			ShowNode(id);
 		}
@@ -278,28 +278,34 @@ namespace scr
 	void NodeManager::Update(float deltaTime)
 	{
 		nodeList_t expiredNodes;
-		for (auto node : rootNodes)
+		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{
 			node->Update(deltaTime);
 
-			if (node->GetTimeSinceLastVisible() >= nodeLifetime)
+			if(node->GetTimeSinceLastVisible() >= nodeLifetime)
 			{
 				expiredNodes.push_back(node);
 			}
 		}
 
 		//Delete nodes that have been invisible for too long.
-		for (auto node : expiredNodes)
+		for(const std::shared_ptr<scr::Node>& node : expiredNodes)
 		{
 			RemoveNode(node);
 		}
 
 		if(body)
+		{
 			body->Update(deltaTime);
+		}
 		if(leftHand)
+		{
 			leftHand->Update(deltaTime);
+		}
 		if(rightHand)
+		{
 			rightHand->Update(deltaTime);
+		}
 	}
 
 	void NodeManager::Clear()

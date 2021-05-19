@@ -67,8 +67,6 @@ struct RendererStats
 	double lastFPS;
 };
 
-
-
 class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, public SessionCommandInterface
 {
 	enum class ShaderMode
@@ -78,7 +76,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 
 	void ChangePass(ShaderMode newShaderMode);
 
-	int frame_number;
 	/// It is better to use a reversed depth buffer format, i.e. the near plane is z=1 and the far plane is z=0. This
 	/// distributes numerical precision to where it is better used.
 	static const bool reverseDepth = true;
@@ -124,14 +121,13 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	vec4 colourOffsetScale;
 	vec4 depthOffsetScale;
 
-	bool keydown[256];
-	int framenumber;
+	bool keydown[256] = {};
 	SessionClient sessionClient;
 	ControllerState controllerStates[2];
 	float framerate = 0.0f;
 
 	avs::Timestamp platformStartTimestamp; //Timestamp of when the system started.
-	uint32_t previousTimestamp; //Milliseconds since system started from when the state was last updated.
+	double previousTimestamp; //Milliseconds since the state was last updated.
 	
 	scr::ResourceManagers resourceManagers;
 	
@@ -158,7 +154,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	{
 		vec3 controller_dir;
 		vec3 view_dir;
-		float angle;
+		float angle = 0.0f;
 		vec3 pos_offset[2];
 		avs::vec3 position[2];
 		avs::vec4 orientation[2];
