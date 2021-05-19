@@ -123,6 +123,6 @@ void main()
     vec4 eye_pos = vec4((sm.ViewMatrix[VIEW_ID] * (vec4(position.xyz, 0.0))).xyz, 1.0);
     vec4 out_pos = sm.ProjectionMatrix[VIEW_ID] * eye_pos;
     vOffsetFromVideo = vid.cameraPosition - tagDataCube.cameraPosition + eyeOffset;
-    vOffsetFromVideo = normalize(rotate_by_quaternion(tagDataCube.cameraRotation, vOffsetFromVideo));
+    vOffsetFromVideo = rotate_by_quaternion(quat_inverse(tagDataCube.cameraRotation), vOffsetFromVideo);
     gl_Position = out_pos;
 }

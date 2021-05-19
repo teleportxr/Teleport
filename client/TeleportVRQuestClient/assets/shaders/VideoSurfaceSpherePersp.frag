@@ -75,10 +75,26 @@ vec2 ViewToServerScreenSpace(vec3 pos)
 
 void main()
 {
-    //vec4 lookup = vec4(0.0, 0.0, 0.0, vDepth);
+    vec4 lookup = vec4(0.0, 0.0, 0.0, vDepth);
     vec3 view = vSampleVec;
-    vec2 uv = ViewToServerScreenSpace(view);
-    vec4 lookup = texture(renderTexture, uv);
-    gl_FragColor = pow(lookup,vec4(.44,.44,.44, 1.0));
-    //gl_FragColor = vec4(normalize(vid.cameraPosition.xyz), 1.0);
+    for (int i = 0; i < 5; i++)
+    {
+		float depth = lookup.a;
+		float dist_m = 25.0 * depth + 5.0;
+		vec3 pos_m = dist_m * vSampleVec;
+		pos_m += vOffsetFromVideo * step(-0.99, -depth);
+		// But this does not intersect at depth. We want the vector from the original centre, of
+		// original radius to hit point
+		float R = dist_m;
+		float F = length(vOffsetFromVideo);
+		float D = -dot(normalize(vOffsetFromVideo), vSampleVec);
+		float b = F * D;
+		float c = F * F - R * R;
+		float U = -b + sqrt(max(b * b - c, 0.0));
+		pos_m += (U - R) * vSampleVec * step(-F, 0.0);
+		view = normalize(pos_m);
+		vec2 uv = ViewToServerScreenSpace(view);
+		lookup = texture(renderTexture, uv);
+    }
+    gl_FragColor = pow(lookup, vec4(.44, .44, .44, 1.0));
 }
