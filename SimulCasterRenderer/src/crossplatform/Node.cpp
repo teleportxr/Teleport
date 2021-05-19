@@ -2,6 +2,8 @@
 
 #include "Node.h"
 
+#include "crossplatform/ServerTimestamp.h"
+
 namespace scr
 {
 	Node::Node(avs::uid id, const std::string& name)
@@ -33,24 +35,29 @@ namespace scr
 
 	void Node::SetLastMovement(const avs::MovementUpdate& update)
 	{
+		//TODO: Use movement updates to extrapolate a transform and then linearly interpolate towards the extrapolated position, rather than setting transform to the update. This will result in smoother movement.
 		lastReceivedMovement = update;
+
+		//Set transform, then tick based on difference in time since the update was sent and now.
 		UpdateModelMatrix(update.position, update.rotation, update.scale);
+		TickExtrapolatedTransform(static_cast<float>(ServerTimestamp::getCurrentTimestamp() - update.timestamp));
 	}
 
 	void Node::TickExtrapolatedTransform(float deltaTime)
 	{
 		deltaTime /= 1000;
-		Transform& transform = (ShouldUseGlobalTransform() ? GetGlobalTransform() : GetLocalTransform());
+		const Transform& transform = (ShouldUseGlobalTransform() ? GetGlobalTransform() : GetLocalTransform());
 
-		transform.m_Translation += static_cast<avs::vec3>(lastReceivedMovement.velocity)* deltaTime;
+		avs::vec3 newTranslation = transform.m_Translation + (lastReceivedMovement.velocity * deltaTime);
 
-		if (lastReceivedMovement.angularVelocityAngle != 0)
+		scr::quat newRotation = transform.m_Rotation;
+		if(lastReceivedMovement.angularVelocityAngle != 0)
 		{
 			quat deltaRotation(lastReceivedMovement.angularVelocityAngle * deltaTime, lastReceivedMovement.angularVelocityAxis);
-			transform.m_Rotation *= deltaRotation;
+			newRotation *= deltaRotation;
 		}
 
-		UpdateModelMatrix(transform.m_Translation, transform.m_Rotation, transform.m_Scale);
+		UpdateModelMatrix(newTranslation, newRotation, transform.m_Scale);
 	}
 
 	void Node::Update(float deltaTime)

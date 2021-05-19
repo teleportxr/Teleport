@@ -985,8 +985,8 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animat
 	m_MissingResources.erase(id);
 }
 
-void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<scr::Texture>& dummyTexture
-, std::shared_ptr<IncompleteMaterial> incompleteMaterial, scr::Material::MaterialParameter& materialParameter)
+void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<scr::Texture>& dummyTexture,
+										   std::shared_ptr<IncompleteMaterial> incompleteMaterial, scr::Material::MaterialParameter& materialParameter)
 {
 	if (accessor.index != 0)
 	{

@@ -27,10 +27,11 @@
 
 #include "libavstream/platforms/platform_windows.hpp"
 
-#include "crossplatform/Material.h"
-#include "crossplatform/Log.h"
-#include "crossplatform/SessionClient.h"
 #include "crossplatform/Light.h"
+#include "crossplatform/Log.h"
+#include "crossplatform/Material.h"
+#include "crossplatform/ServerTimestamp.h"
+#include "crossplatform/SessionClient.h"
 #include "crossplatform/Tests.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
@@ -102,22 +103,21 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 }
 
 ClientRenderer::ClientRenderer(ClientDeviceState *c):
-	clientDeviceState(c),
 	renderPlatform(nullptr),
 	hdrFramebuffer(nullptr),
 	hDRRenderer(nullptr),
-	meshRenderer(nullptr),
 	transparentMesh(nullptr),
+	meshRenderer(nullptr),
 	pbrEffect(nullptr),
 	cubemapClearEffect(nullptr),
+	diffuseCubemapTexture(nullptr),
 	specularCubemapTexture(nullptr),
 	lightingCubemapTexture(nullptr),
 	videoTexture(nullptr),
-	diffuseCubemapTexture(nullptr),
-	framenumber(0),
-	resourceManagers(new scr::NodeManager),
-	resourceCreator(basist::transcoder_texture_format::cTFBC3),
 	sessionClient(this, std::make_unique<PCDiscoveryService>()),
+	resourceManagers(new scr::NodeManager),
+	clientDeviceState(c),
+	resourceCreator(basist::transcoder_texture_format::cTFBC3),
 	RenderMode(0)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
@@ -126,7 +126,7 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c):
 
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
-	previousTimestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
+	previousTimestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 
 	scr::Tests::RunAllTests();
 }
@@ -408,8 +408,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			if(!tt)
 				lod++;
 			lod=lod%8;
-			renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f,lod);
-			renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f,lod);
+			renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
+			renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -451,7 +451,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	{
 		DrawOSD(deviceContext);
 	}
-	frame_number++;
 }
 
 void ClientRenderer::RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique)
@@ -521,7 +520,7 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 
 		videoTagDataCube[i].cameraPosition = { pos.x, pos.y, pos.z };
 		videoTagDataCube[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
-		videoTagDataCube[i].lightCount = td.lights.size();
+		videoTagDataCube[i].lightCount = static_cast<int>(td.lights.size());
 		if(td.lights.size() > 10)
 		{
 			SCR_CERR_BREAK("Too many lights in tag.",10);
@@ -904,9 +903,9 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		if(cachedLights.size()>lightsBuffer.count)
 		{
 			lightsBuffer.InvalidateDeviceObjects();
-			lightsBuffer.RestoreDeviceObjects(renderPlatform,cachedLights.size());
+			lightsBuffer.RestoreDeviceObjects(renderPlatform, static_cast<int>(cachedLights.size()));
 		}
-		pbrConstants.lightCount=cachedLights.size();
+		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
 
 	//Only render visible nodes, but still render children that are close enough.
@@ -1068,11 +1067,13 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 
 void ClientRenderer::Update()
 {
-	uint32_t timestamp = (uint32_t)avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-	float timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
+	double timestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
+	double timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
 
-	resourceManagers.Update(timeElapsed);
-	resourceCreator.Update(timeElapsed);
+	scr::ServerTimestamp::tick(timeElapsed);
+
+	resourceManagers.Update(static_cast<float>(timeElapsed));
+	resourceCreator.Update(static_cast<float>(timeElapsed));
 
 	previousTimestamp = timestamp;
 }
@@ -1086,12 +1087,12 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	WARN("VIDEO STREAM CHANGED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 
-
 	videoPosDecoded=false;
 
 	videoTagDataCubeArray.clear();
 	videoTagDataCubeArray.resize(maxTagDataSize);
 
+	scr::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 	std::vector<avs::NetworkSourceStream> streams = { {20} };
@@ -1168,7 +1169,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 
-	const float aspect = setupCommand.video_config.perspective_width / setupCommand.video_config.perspective_height;
+	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
 	const float horzFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
 	const float vertFOV = scr::GetVerticalFOVFromHorizontal(horzFOV, aspect);
 
@@ -1404,7 +1405,7 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 		return;
 	float x= mouseCameraInput.MouseX / (float)hdrFramebuffer->GetWidth();
 	float y= mouseCameraInput.MouseY / (float)hdrFramebuffer->GetHeight();
-	controllerSim.controller_dir=camera.ScreenPositionToDirection(x,y, hdrFramebuffer->GetWidth()/ hdrFramebuffer->GetHeight());
+	controllerSim.controller_dir = camera.ScreenPositionToDirection(x, y, hdrFramebuffer->GetWidth() / static_cast<float>(hdrFramebuffer->GetHeight()));
 	controllerSim.view_dir=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
 	// we seek the angle positive on the Z-axis representing the view direction azimuth:
 	controllerSim.angle=atan2f(-controllerSim.view_dir.x, controllerSim.view_dir.y);

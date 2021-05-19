@@ -15,7 +15,7 @@ namespace scr
 		void addAnimation(avs::uid id, std::shared_ptr<Animation> animation);
 		//Set animation the component is playing.
 		//	animationID : ID of the animation to start playing.
-		//	startTimestamp : UNIX timestamp of when the animation started playing on the server.
+		//	startTimestamp : Timestamp of when the animation started playing on the server.
 		void setAnimation(avs::uid animationID, uint64_t startTimestamp);
 
 		void update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime);
@@ -28,6 +28,9 @@ namespace scr
 		avs::uid latestAnimationID = 0;
 		uint64_t latestAnimationStartTimestamp = 0;
 
+		//Starts playing animation as if it had started at the passed time.
+		//	animationIterator : Iterator for animation to play from animations lookup.
+		//	startTimestamp : The timestamp of when the animation started on the server.
 		void startAnimation(std::map<avs::uid, std::shared_ptr<Animation>>::iterator animationIterator, uint64_t startTimestamp);
 	};
 

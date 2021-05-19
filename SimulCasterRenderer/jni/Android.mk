@@ -42,6 +42,7 @@ LOCAL_SRC_FILES  := 	../src/api/Effect.cpp						\
 						../src/crossplatform/NodeComponents.cpp     \
 						../src/crossplatform/NodeManager.cpp		\
 						../src/crossplatform/ResourceCreator.cpp	\
+						../src/crossplatform/ServerTimestamp.cpp	\
 						../src/crossplatform/SessionClient.cpp		\
 						../src/crossplatform/ShaderSystem.cpp		\
 						../src/crossplatform/ShaderResource.cpp		\

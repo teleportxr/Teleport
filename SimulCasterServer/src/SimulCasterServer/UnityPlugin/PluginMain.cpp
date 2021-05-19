@@ -59,6 +59,7 @@ TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStan
 typedef bool(__stdcall* ShowNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef bool(__stdcall* HideNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
+typedef int64_t(__stdcall* GetUnixTimestampFn)();
 
 static avs::Context avsContext;
 
@@ -78,6 +79,7 @@ static SetControllerPoseFn setControllerPose;
 static ProcessNewInputFn processNewInput;
 static DisconnectFn onDisconnect;
 static ProcessAudioInputFn processAudioInput;
+static GetUnixTimestampFn getUnixTimestamp;
 static ReportHandshakeFn reportHandshake;
 static uint32_t connectionTimeout = 60000;
 static avs::uid serverID = 0;
@@ -321,6 +323,10 @@ private:
 
 struct InitialiseState
 {
+	char* clientIP;
+	uint32_t DISCOVERY_PORT = 10607;
+	uint32_t SERVICE_PORT = 10500;
+
 	ShowNodeFn showNode;
 	HideNodeFn hideNode;
 	SetHeadPoseFn headPoseSetter;
@@ -329,12 +335,11 @@ struct InitialiseState
 	ProcessNewInputFn newInputProcessing;
 	DisconnectFn disconnect;
 	avs::MessageHandlerFunc messageHandler;
-	uint32_t DISCOVERY_PORT = 10607;
-	uint32_t SERVICE_PORT = 10500;
 	ReportHandshakeFn reportHandshake;
 	ProcessAudioInputFn processAudioInput;
+	GetUnixTimestampFn getUnixTimestamp;
+
 	avs::vec3 bodyOffsetFromHead;
-	char* clientIP;
 };
 
 ///PLUGIN-INTERNAL START
@@ -404,6 +409,11 @@ TELEPORT_EXPORT void SetDisconnectDelegate(DisconnectFn disconnect)
 TELEPORT_EXPORT void SetProcessAudioInputDelegate(ProcessAudioInputFn f)
 {
 	processAudioInput = f;
+}
+
+TELEPORT_EXPORT void SetGetUnixTimestampDelegate(GetUnixTimestampFn function)
+{
+	getUnixTimestamp = function;
 }
 
 static void passOnOutput(const char *msg)
@@ -494,6 +504,7 @@ TELEPORT_EXPORT bool Initialise(const InitialiseState *initialiseState)
 	SetDisconnectDelegate(initialiseState->disconnect);
 	SetMessageHandlerDelegate(initialiseState->messageHandler);
 	SetProcessAudioInputDelegate(initialiseState->processAudioInput);
+	SetGetUnixTimestampDelegate(initialiseState->getUnixTimestamp);
 
 	reportHandshake=initialiseState->reportHandshake;
 
@@ -707,6 +718,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
 	setupCommand.control_model=casterSettings.controlModel;
 	setupCommand.bodyOffsetFromHead = bodyOffsetFromHead;
+	setupCommand.startTimestamp = getUnixTimestamp();
 
 	avs::VideoConfig& videoConfig		= setupCommand.video_config;
 	videoConfig.video_width				= encoderSettings.frameWidth;

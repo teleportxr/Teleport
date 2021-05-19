@@ -54,6 +54,8 @@ set( src_crossplatform
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h
+	src/crossplatform/ServerTimestamp.cpp
+	src/crossplatform/ServerTimestamp.h
 	src/crossplatform/SessionClient.cpp
 	src/crossplatform/SessionClient.h
 	src/crossplatform/ShaderResource.cpp
