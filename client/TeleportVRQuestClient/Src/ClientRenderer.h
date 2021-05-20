@@ -185,7 +185,7 @@ public:
 		CONTROLLER_OSD,
 		NUM_OSDS
 	};
-	int show_osd = CAMERA_OSD;
+	int show_osd = NO_OSD;
 	bool mIsCubemapVideo = true;
 	void DrawOSD();
 	avs::SetupCommand lastSetupCommand;

@@ -48,7 +48,7 @@ namespace sca
 
 		std::vector<avs::NetworkSinkStream> streams;
 
-		for (int32_t i = 0; i < audioPipes.size(); ++i)
+		for (size_t i = 0; i < audioPipes.size(); ++i)
 		{
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::Audio;
@@ -67,7 +67,7 @@ namespace sca
 			return;
 		}
 
-		for (int32_t i = 0; i < audioPipes.size(); ++i)
+		for (size_t i = 0; i < audioPipes.size(); ++i)
 		{
 			auto& pipe = audioPipes[i];
 			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))

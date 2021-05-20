@@ -151,6 +151,8 @@ SurfaceLightProperties GetVertexLight(vec3 viewDir, VertexSurfaceProperties surf
     vertexLight.n_h						=saturate(dot(vertexLight.halfway,surfaceProperties.normal));
     vertexLight.l_h						=saturate(dot(vertexLight.halfway,vertexLight.directionToLight));
 
+    //vertexLight.distribution;
+    //vertexLight.visibility;
     return vertexLight;
 }
 

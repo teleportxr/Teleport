@@ -1,6 +1,6 @@
 //#version 310 es
 // Precision: mediump or below can produce texture sampling problems for larger objects.
-precision highp float;
+precision mediump float;
 
 //To Output Framebuffer - Use gl_FragColor
 //layout(location = 0) out vec4 colour;
@@ -25,6 +25,8 @@ struct SurfaceLightProperties
 	float n_h;
 	float l_h;
 	float n_l;
+	//float distribution;
+	//float visibility;
 };
 layout(location = 14) in vec3 v_VertexLight_directionToLight[4];   // Consumes 4 locations.
 layout(location = 18) in float v_VertexLight_distanceToLight[4];   // Consumes 4 locations.
@@ -301,7 +303,7 @@ vec3 PBRLight(SurfaceState surfaceState, vec3 viewDir,SurfaceLightProperties sl,
 	float lightV					=VisibilityTerm(surfaceProperties.roughness2, sl.l_h);
 	// Per-light:
 	vec3 diffuse					=surfaceState.kD*irradiance_n_l * surfaceProperties.albedo ;
-	vec3 specular					= irradiance_n_l * ( lightD*lightV * surfaceState.kS );
+	vec3 specular					=irradiance_n_l * ( lightD*lightV * surfaceState.kS );
 	//float ao						= SceneAO(pos, normal, localToWorld);
 	///	specular						*=surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour = diffuse+specular;
@@ -431,7 +433,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 		c							=vec3(0,0,0);
 	}
 
-	for (int i=0;i<2;i++)
+	for (int i=0;i<maxLights;i++)
 	{
 		//if (i>=tagDataCube.lightCount)
 		//	break;
@@ -442,10 +444,10 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 		vertexLight.n_h					=v_VertexLight_nh_lh_nl[i].x;
 		vertexLight.l_h					=v_VertexLight_nh_lh_nl[i].y;
 		vertexLight.n_l					=v_VertexLight_nh_lh_nl[i].z;
-		//if(view.x>0.0)
+		if(view.x>0.0)
 			c		+=PBRAddVertexLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i],vertexLight);
-		//else
-		//	c		+=PBRAddLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i]);//,vertexLight);
+		else
+			c		+=PBRAddLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i]);//,vertexLight);
 
 	}
 	vec4 u					=vec4(c.rgb, 1.0);
@@ -468,8 +470,14 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 
 void OpaquePBRDiffuse()
 {
-	PBR(true, false, false, false, true, 0,false);
+	PBR(true, false, false, false, false, 0,false);
 }
+
+void OpaquePBRAmbient()
+{
+	PBR(false, false, false, false, true, 0,false);
+}
+
 
 void OpaquePBRDiffuseNormal()
 {
@@ -478,7 +486,7 @@ void OpaquePBRDiffuseNormal()
 
 void OpaquePBRDiffuseNormalCombined()
 {
-	PBR(true, true, true, false, true, 0,false);
+	PBR(true, true, true, true, true, 0,false);
 }
 
 void OpaquePBRLightsOnly()

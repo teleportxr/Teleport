@@ -37,6 +37,7 @@ namespace scr
 
 		//Get list of nodes parented to the world root.
 		const nodeList_t& GetRootNodes() const;
+		const std::vector<std::shared_ptr<Node>> & GetSortedRootNodes();
 
 		void SetBody(std::shared_ptr<Node> node);
 		bool SetBody(avs::uid nodeID);
@@ -76,6 +77,7 @@ namespace scr
 
 	protected:
 		nodeList_t rootNodes; //Nodes that are parented to the world root.
+		std::vector<std::shared_ptr<scr::Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
 		/// List of hand nodes; handled differently as we don't want them cleaned-up.
         std::unordered_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 

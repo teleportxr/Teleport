@@ -395,6 +395,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	passNames.push_back("OpaqueAlbedo");
 	passNames.push_back("OpaqueNormal");
 	passNames.push_back("OpaquePBRDiffuse");
+	passNames.push_back("OpaquePBRAmbient");
 	passNames.push_back("OpaquePBRDiffuseNormal");
 	passNames.push_back("OpaquePBRDiffuseNormalCombined");
 	passNames.push_back("OpaquePBRLightsOnly");
@@ -794,11 +795,13 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 
 void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 {
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	//Render local nodes.
-	const scr::NodeManager::nodeList_t &rootNodes = resourceManagers->mNodeManager->GetRootNodes();
-	for (std::shared_ptr<scr::Node> node : rootNodes)
+	const scr::NodeManager::nodeList_t &distanceSortedRootNodes = resourceManagers->mNodeManager->GetSortedRootNodes();
+	for (std::shared_ptr<scr::Node> node : distanceSortedRootNodes)
 	{
 		RenderNode(res, node);
+		node->distance=length(globalGraphicsResources.scrCamera->GetPosition()-node->GetGlobalTransform().m_Translation);
 	}
 
 	//Render player, if parts exist.

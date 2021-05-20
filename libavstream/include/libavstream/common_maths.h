@@ -240,6 +240,11 @@ namespace avs
 		{
 			return in >> vec.x >> vec.y >> vec.z;
 		}
+
+		friend float length(const vec3& v)
+		{
+			return sqrt(v.Dot(v));
+		}
 	};
 
 	struct vec4
