@@ -1338,11 +1338,13 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 	tagData.lights.resize(tagData.coreData.lightCount);
 
+	scr::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
+
 	// We will check the received light tags agains the current list of lights - rough and temporary.
-	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	/*
 	Roderick: we will here ignore the cached lights (CPU-streamed node lights) as they are unordered so may be found in a different order
 		to the tag lights. ALL light data will go into the tags, using uid lookup to get any needed data from the unordered cache.
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
 	auto &cachedLight=cachedLights.begin();*/
 	////

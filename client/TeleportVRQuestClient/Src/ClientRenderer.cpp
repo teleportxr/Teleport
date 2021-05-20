@@ -2,14 +2,20 @@
 // Created by roder on 06/04/2020.
 //
 #include "ClientRenderer.h"
+
 #include <algorithm>
-#include <sstream>
 #include <iomanip>
+#include <sstream>
+
+#include <GLES3/gl32.h>
+
 #include "OVR_Math.h"
 #include <VrApi_Types.h>
 #include <VrApi_Input.h>
 #include <VrApi_Helpers.h>
-#include <GLES3/gl32.h>
+
+#include "crossplatform/ServerTimestamp.h"
+
 #include "ClientDeviceState.h"
 #include "OVRNode.h"
 #include "OVRNodeManager.h"
@@ -522,6 +528,8 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 						  tagData.coreData.cameraTransform);
 
 	tagData.lights.resize(std::min(tagData.coreData.lightCount, (uint32_t) 4));
+
+	scr::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
 
 	// Aidan : View and proj matrices are currently unchanged from Unity
 	size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
