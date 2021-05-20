@@ -86,6 +86,8 @@ namespace scr
 #ifndef __ANDROID__
 #pragma pack(push, 1)
 #endif
+		uint64_t timestamp;
+
 		uint32_t id;
 		avs::Transform cameraTransform;
 		uint32_t lightCount;
