@@ -59,7 +59,8 @@ public:
         , const avs::Pose &originPose
         , const ControllerState* controllerState
         , bool requestKeyframe
-	    , double time);
+	    , double time
+        , double deltaTime);
 
     bool IsConnected() const;
     bool HasDiscovered() const;
@@ -124,4 +125,5 @@ private:
     bool discovered=false;
 	avs::SetupCommand setupCommand;
 	std::string remoteIP;
+    float timeSinceLastServerComm;
 };
