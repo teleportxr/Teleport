@@ -810,7 +810,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	PipeOutMessages();
 }
 
-TELEPORT_EXPORT void Tock()
+TELEPORT_EXPORT void EditorTick()
 {
 	PipeOutMessages();
 }

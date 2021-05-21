@@ -335,7 +335,7 @@ namespace SCServer
 	{
 		if(!peer)
 		{
-			TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
+			TELEPORT_CERR << "Failed to send command with type: " << static_cast<int>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
 			return false;
 		}
 
@@ -344,7 +344,7 @@ namespace SCServer
 		
 		if(!packet)
 		{
-			TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! Failed to create packet!\n";
+			TELEPORT_CERR << "Failed to send command with type: " << static_cast<int>(command.commandPayloadType) << "! Failed to create packet!\n";
 			return false;
 		}
 

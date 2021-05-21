@@ -4,3 +4,6 @@
 /pc_client/client.ini
 Build
 .cxx/
+.gradle
+.idea
+gradle
