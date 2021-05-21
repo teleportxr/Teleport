@@ -162,7 +162,6 @@ bool Application::AppInit(const OVRFW::ovrAppContext *context)
 
 	ProcessIniFile();
 
-
 	SurfaceRender.Init();
 
 	startTime = GetTimeInSeconds();
