@@ -164,8 +164,8 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
             Framebuffer[eye].get(),
             UseMultiView,
             GL_RGBA8,
-            512,//vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH),
-            512,//vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
+            vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH),
+           vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
             NUM_MULTI_SAMPLES);
     }
 
