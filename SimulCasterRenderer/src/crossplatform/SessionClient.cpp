@@ -167,7 +167,8 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,double t
 	,double deltaTime)
 {
-	time=t;
+	time = t;
+
 	if(mClientHost && mServerPeer)
 	{
 		if(handshakeAcknowledged)
@@ -218,6 +219,17 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		}
 	}
 	mPrevControllerState = controllerStates[0];
+
+	//Append resource requests to the request list again, if it has been too long since we sent the request.
+	for(auto sentResource : mSentResourceRequests)
+	{
+		float timeSinceSent = time - sentResource.second;
+		if(timeSinceSent > RESOURCE_REQUEST_RESEND_TIME)
+		{
+			SCR_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
+			mResourceRequests.push_back(sentResource.first);
+		}
+	}
 }
 
 bool SessionClient::IsConnected() const
@@ -484,7 +496,7 @@ void SessionClient::SendResourceRequests()
 {
 	std::vector<avs::uid> resourceRequests = mResourceCreator->TakeResourceRequests();
 
-	//Append to session client's resource requests.
+	//Append ResourceCreator's resource requests to SessionClient's resource requests.
 	mResourceRequests.insert(mResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
 	resourceRequests.clear();
 
@@ -497,20 +509,13 @@ void SessionClient::SendResourceRequests()
 		memcpy(packet->data + sizeof(size_t), mResourceRequests.data(), sizeof(avs::uid) * resourceAmount);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
-		for(auto i:mResourceRequests)
+
+		//Store sent resource requests, so we can resend them if it has been too long since the request.
+		for(avs::uid id : mResourceRequests)
 		{
-			mSentResourceRequests[i]=time;
+			mSentResourceRequests[id] = time;
 		}
 		mResourceRequests.clear();
-	}
-	// Have we been waiting too long for any resources?
-	for(auto r:mSentResourceRequests)
-	{
-		if(time-r.second>10.0)
-		{
-			SCR_COUT<<"Re-requesting resource "<<r.first<<std::endl;
-			mResourceRequests.push_back(r.first);
-		}
 	}
 }
 
@@ -520,6 +525,16 @@ void SessionClient::SendReceivedResources()
 
 	if(receivedResources.size() != 0)
 	{
+		//Stop tracking resource requests we have now received.
+		for(avs::uid id : receivedResources)
+		{
+			auto sentRequestIt = mSentResourceRequests.find(id);
+			if(sentRequestIt != mSentResourceRequests.end())
+			{
+				mSentResourceRequests.erase(sentRequestIt);
+			}
+		}
+
 		avs::ReceivedResourcesMessage message(receivedResources.size());
 
 		size_t messageSize = sizeof(avs::ReceivedResourcesMessage);
@@ -530,13 +545,6 @@ void SessionClient::SendReceivedResources()
 		memcpy(packet->data + messageSize, receivedResources.data(), receivedResourcesSize);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
-
-		for(auto r:receivedResources)
-		{
-			auto q=mSentResourceRequests.find(r);
-			if(q!=mSentResourceRequests.end())
-				mSentResourceRequests.erase(r);
-		}
 	}
 }
 
