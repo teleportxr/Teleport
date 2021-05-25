@@ -7,6 +7,7 @@ set(DEBUG_CONFIGURATIONS Debug)
 set( src_files
 	ClientDeviceState.cpp
 	ClientDeviceState.h
+	DiscoveryService.h
 	basic_linear_algebra.h
 	)
 

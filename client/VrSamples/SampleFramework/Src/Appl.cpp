@@ -165,7 +165,7 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
             UseMultiView,
             GL_RGBA8,
             vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH),
-           vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
+            vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
             NUM_MULTI_SAMPLES);
     }
 
@@ -631,7 +631,7 @@ void ovrAppl::AppEyeGLStateSetup(
     GL(glEnable(GL_CULL_FACE));
     GL(glViewport(0, 0, fb->Width, fb->Height));
     GL(glScissor(0, 0, fb->Width, fb->Height));
-    GL(glClearColor(0.125f, 0.0f, 0.125f, 1.0f));
+    GL(glClearColor(0.125f, 0.0f, 0.25f, 1.0f));
     GL(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 }
 

@@ -166,9 +166,9 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	int server_discovery_port=0;
 
 	float roomRadius=1.5f;
-	ClientDeviceState *clientDeviceState;
+	teleport::client::ClientDeviceState *clientDeviceState;
 public:
-	ClientRenderer(ClientDeviceState *clientDeviceState);
+	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState);
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	void OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;

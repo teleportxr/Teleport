@@ -30,7 +30,7 @@ simul::crossplatform::RenderPlatform *renderPlatform = nullptr;
 simul::dx11::RenderPlatform renderPlatformDx11;
 simul::dx11::Direct3D11Manager direct3D11Manager;
 simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
-ClientDeviceState clientDeviceState;
+teleport::client::ClientDeviceState clientDeviceState;
 ClientRenderer clientRenderer(&clientDeviceState);
 std::string server_ip= REMOTEPLAY_SERVER_IP;
 int server_discovery_port = REMOTEPLAY_SERVER_DISCOVERY_PORT;

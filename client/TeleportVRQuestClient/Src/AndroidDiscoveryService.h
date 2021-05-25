@@ -1,8 +1,8 @@
 #pragma once
 
-#include "crossplatform/DiscoveryService.h"
+#include "TeleportClient/DiscoveryService.h"
 
-class AndroidDiscoveryService: public DiscoveryService
+class AndroidDiscoveryService: public teleport::client::DiscoveryService
 {
 public:
     AndroidDiscoveryService();

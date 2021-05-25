@@ -83,12 +83,17 @@ struct __attribute__ ((packed)) VideoTagDataCube
 	LightTag lightTags[4];
 };
 
-class ClientDeviceState;
-
+namespace teleport
+{
+	namespace client
+	{
+		class ClientDeviceState;
+	}
+}
 class ClientRenderer
 {
 public:
-	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,ClientAppInterface *c,ClientDeviceState *s,Controllers *cn);
+	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
 	~ClientRenderer();
 
 	void CycleShaderMode();
@@ -191,7 +196,7 @@ public:
 	avs::SetupCommand lastSetupCommand;
 protected:
 	void ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining);
-	ClientDeviceState *clientDeviceState=nullptr;
+	teleport::client::ClientDeviceState *clientDeviceState=nullptr;
 	void UpdateTagDataBuffers();
 	static constexpr float INFO_TEXT_DURATION = 0.017f;
 	static constexpr size_t MAX_RESOURCES_PER_LINE = 3;
