@@ -135,12 +135,25 @@ namespace SCServer
 		std::vector<avs::uid> nodesEnteredBounds;	//Stores nodes client needs to know have entered streaming bounds.
 		std::vector<avs::uid> nodesLeftBounds;		//Stores nodes client needs to know have left streaming bounds.
 
-		avs::InputState newInputState[2]; //Newest input state received from the client.
+		struct InputStateAndEvents
+		{
+			void clear()
+			{
+				inputState.binaryEventAmount = 0;
+				inputState.analogueEventAmount = 0;
+				inputState.motionEventAmount = 0;
+				newBinaryEvents.clear();
+				newAnalogueEvents.clear();
+				newMotionEvents.clear();
+			}
+			avs::InputState inputState;
+			//New input events we have received from the client this tick.
+			std::vector<avs::InputEventBinary> newBinaryEvents;
+			std::vector<avs::InputEventAnalogue> newAnalogueEvents;
+			std::vector<avs::InputEventMotion> newMotionEvents;
+		};
+		InputStateAndEvents newInputStateAndEvents[2]; //Newest input state received from the client.
 
-		//New input events we have received from the client this tick.
-		std::vector<avs::InputEventBinary> newBinaryEvents[2];
-		std::vector<avs::InputEventAnalogue> newAnalogueEvents[2];
-		std::vector<avs::InputEventMotion> newMotionEvents[2];
 
 		void dispatchEvent(const ENetEvent& event);
 		void receiveHandshake(const ENetPacket* packet);

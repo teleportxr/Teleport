@@ -281,13 +281,7 @@ void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
 {
 	simul::crossplatform::GraphicsDeviceContext	deviceContext;
-	deviceContext.setDefaultRenderTargets(renderTexture,
-		nullptr,
-		0,
-		0,
-		w,
-		h
-	);
+	deviceContext.setDefaultRenderTargets(renderTexture,nullptr,0,0,w,h);
 	static simul::core::Timer timer;
 	static float last_t = 0.0f;
 	timer.UpdateTime();
@@ -322,17 +316,16 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		vec3 pos = videoPosDecoded ? videoPos : vec3(0, 0, 0);
 		camera.SetPosition(pos);
 	}
-	//relativeHeadPos=camera.GetPosition();
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	//vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	{
 		simul::geometry::SimulOrientation	globalOrientation;
 		// global pos/orientation:
 		globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.position);
-		//globalOrientation.SetPosition({ 0,0,0 });
+	
 		simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(-1.f, 0.0f, 0.0f));
 		simul::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.orientation;
-		//simul::math::Quaternion q_rel = (const float*)&vec4(0,0,0,1);
+	
 		auto q_rel=q1/q0;
 		globalOrientation.SetOrientation(q_rel);
 		deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
@@ -1159,15 +1152,15 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	{
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
-		specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.specular_cubemap_size, videoConfig.specular_cubemap_size, 1, videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-		diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.diffuse_cubemap_size, videoConfig.diffuse_cubemap_size, 1, 1,
-			crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	}
 	else
 	{
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
+	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.specular_cubemap_size, videoConfig.specular_cubemap_size, 1, videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.diffuse_cubemap_size, videoConfig.diffuse_cubemap_size, 1, 1,
+		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
 	const float horzFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
@@ -1512,7 +1505,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(0,1.0f);
 		FillInControllerPose(1, -1.0f);
 
-		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder->idrRequired(),fTime, time_step);
+		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder->idrRequired(),fTime);
 
 		for(int i = 0; i < 2; i++)
 		{

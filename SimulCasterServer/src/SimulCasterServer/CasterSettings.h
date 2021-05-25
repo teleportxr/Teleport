@@ -17,9 +17,9 @@ namespace SCServer
 
 		bool enableGeometryStreaming = false;
 		uint32_t geometryTicksPerSecond = 0;
-		int32_t geometryBufferCutoffSize = 0; // Size we stop encoding nodes at.
-		float confirmationWaitTime = 0.0f; // Seconds to wait before resending a resource.
-		float clientDrawDistanceOffset = 0.0f; // Offset for distance pixels are clipped at for geometry on the client.
+		int32_t geometryBufferCutoffSize = 0;	// Size we stop encoding nodes at.
+		float confirmationWaitTime = 0.0f;		// Seconds to wait before resending a resource.
+		float clientDrawDistanceOffset = 0.0f;	// Offset for distance pixels are clipped at for geometry on the client.
 
 		bool enableVideoStreaming = false;
 		bool enableWebcamStreaming = false;
@@ -67,12 +67,27 @@ namespace SCServer
 
 		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
 
-		int32_t specularCubemapSize = 0;
-		int32_t specularMips = 0;
-		int32_t diffuseCubemapSize = 0;
-		int32_t lightCubemapSize = 0;
+		int32_t defaultSpecularCubemapSize = 0;
+		int32_t defaultSpecularMips = 0;
+		int32_t defaultDiffuseCubemapSize = 0;
+		int32_t defaultLightCubemapSize = 0;
+		int32_t defaultShadowmapSize=0;
 
 		avs::ControlModel controlModel=avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY;
+	};
+	struct ClientSettings
+	{
+		int32_t specularPos[2];
+		int32_t specularCubemapSize ;
+		int32_t specularMips;
+		int32_t diffusePos[2];
+		int32_t diffuseCubemapSize;
+		int32_t lightPos[2];
+		int32_t lightCubemapSize ;
+		int32_t shadowmapPos[2];
+		int32_t shadowmapSize;
+		int32_t webcamPos[2];
+		int32_t webcamSize[2];
 	};
 #pragma pack(pop)
 

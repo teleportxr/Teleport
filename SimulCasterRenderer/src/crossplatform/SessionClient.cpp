@@ -11,8 +11,7 @@
 #include "Log.h"
 
 SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService)
-	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService)),
-	  timeSinceLastServerComm(0)
+	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService))
 {}
 
 SessionClient::~SessionClient()
@@ -74,7 +73,6 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
 		LOG("Connected to session server: %s:%d", remote_ip, remote.port);
 		remoteIP=remote_ip;
-		timeSinceLastServerComm = 0;
 		return true;
 	}
 
@@ -136,8 +134,7 @@ void SessionClient::Disconnect(uint timeout)
 
 	handshakeAcknowledged = false;
 	receivedInitialPos = false;
-	// Client id is created once in discovery service constructor and is retained there
-	// Below value will be always set to same value when a connection is made
+	// TODO: retain client id for reconnection.
 	clientID=0;
 	discovered=false;
 }
@@ -164,8 +161,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose &originPose
 	,const ControllerState* controllerStates
 	,bool requestKeyframe
-	,double t
-	,double deltaTime)
+	,double t)
 {
 	time=t;
 	if(mClientHost && mServerPeer)
@@ -199,22 +195,12 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 				case ENET_EVENT_TYPE_CONNECT:
 					return;
 				case ENET_EVENT_TYPE_RECEIVE:
-					timeSinceLastServerComm = 0;
 					DispatchEvent(event);
 					break;
 				case ENET_EVENT_TYPE_DISCONNECT:
-					timeSinceLastServerComm = 0;
 					Disconnect(0);
 					return;
 			}
-		}
-
-		timeSinceLastServerComm += deltaTime;
-
-		// Handle cases where we set a breakpoint and enet doesn't receive disconnect message
-		if (timeSinceLastServerComm > (setupCommand.idle_connection_timeout * 0.001f) + 2)
-		{
-			Disconnect(0);
 		}
 	}
 	mPrevControllerState = controllerStates[0];
