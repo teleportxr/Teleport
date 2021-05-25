@@ -1048,48 +1048,42 @@ void ClientRenderer::DrawOSD()
 		{
 			std::ostringstream str;
 			const scr::NodeManager::nodeList_t &rootNodes = resourceManagers->mNodeManager->GetRootNodes();
+
+			str <<"Nodes: "<<static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount())<<
+				"Orphans: "<<ctr.m_packetMapOrphans<<"\n";
 			for(std::shared_ptr<scr::Node> node : rootNodes)
 			{
 				str << node->id << ", ";
 			}
 			str << "\n";
 
-			clientAppInterface->PrintText(
-							offset, colour,
-							"%s\n"
-							"Nodes: %d \n"
-							"Orphans: %d\n"
-							"%s",
-							globalGraphicsResources.effectPassName,
-							static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()),
-							ctr.m_packetMapOrphans, str.str().c_str()
-					);
-
 			const auto &missingResources = resourceCreator->GetMissingResources();
 			if(missingResources.size() > 0)
 			{
-				std::ostringstream missingResourcesStream;
-				missingResourcesStream << "Missing Resources\n";
+				str << "Missing Resources\n";
 
 				size_t resourcesOnLine = 0;
 				for(const auto &missingPair : missingResources)
 				{
 					const ResourceCreator::MissingResource &missingResource = missingPair.second;
-					missingResourcesStream << missingResource.resourceType << "_" << missingResource.id;
+					str << missingResource.resourceType << "_" << missingResource.id;
 
 					resourcesOnLine++;
 					if(resourcesOnLine >= MAX_RESOURCES_PER_LINE)
 					{
-						missingResourcesStream << std::endl;
+						str << std::endl;
 						resourcesOnLine = 0;
 					}
 					else
 					{
-						missingResourcesStream << " | ";
+						str << " | ";
 					}
 				}
-				clientAppInterface->PrintText(offset, colour, missingResourcesStream.str().c_str());
 			}
+
+			clientAppInterface->PrintText(
+					offset, colour, str.str().c_str()
+			);
 
 			break;
 		}
