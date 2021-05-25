@@ -675,6 +675,18 @@ TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
 	}
 }
 
+TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID, ClientSettings clientSettings)
+{
+	auto clientPair = clientServices.find(clientID);
+	if (clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to set clientSettings to Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
+		return;
+	}
+	ClientData& clientData = clientPair->second;
+	clientData.clientSettings=clientSettings;
+}
+
 TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 {
 	auto clientPair = clientServices.find(clientID);
@@ -684,6 +696,9 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 		return;
 	}
 	ClientData& clientData = clientPair->second;
+	//not ready?
+	if(clientData.clientSettings.diffusePos[0]==0)
+		return;
 	clientData.geometryStreamingService->startStreaming(&clientData.casterContext);
 
 	SCServer::CasterEncoderSettings encoderSettings{};
@@ -707,12 +722,12 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	encoderSettings.maxDepth = 10000;
 
 	avs::SetupCommand setupCommand;
-	setupCommand.server_streaming_port = clientData.clientMessaging.getServerPort() + 1;
-	setupCommand.debug_stream = casterSettings.debugStream;
-	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
-	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
-	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
-	setupCommand.idle_connection_timeout = connectionTimeout;
+	setupCommand.server_streaming_port		= clientData.clientMessaging.getServerPort() + 1;
+	setupCommand.debug_stream				= casterSettings.debugStream;
+	setupCommand.do_checksums				= casterSettings.enableChecksums ? 1 : 0;
+	setupCommand.debug_network_packets		= casterSettings.enableDebugNetworkPackets;
+	setupCommand.requiredLatencyMs			= casterSettings.requiredLatencyMs;
+	setupCommand.idle_connection_timeout	= connectionTimeout;
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
@@ -737,28 +752,28 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.stream_webcam			= casterSettings.enableWebcamStreaming;
 	videoConfig.draw_distance			= casterSettings.detectionSphereRadius+casterSettings.clientDrawDistanceOffset;
 
-	videoConfig.specular_cubemap_size	=casterSettings.specularCubemapSize;
+	videoConfig.specular_cubemap_size	=clientData.clientSettings.specularCubemapSize;
 	int depth_cubemap_size				=videoConfig.colour_cubemap_size/2;
 	// To the right of the depth cube, underneath the colour cube.
-	videoConfig.specular_x			=depth_cubemap_size*3;
-	videoConfig.specular_y			=videoConfig.colour_cubemap_size*2;
+	videoConfig.specular_x			=clientData.clientSettings.specularPos[0];//depth_cubemap_size*3;
+	videoConfig.specular_y			=clientData.clientSettings.specularPos[1];//videoConfig.colour_cubemap_size*2;
 	
-	videoConfig.specular_mips		=casterSettings.specularMips;
+	videoConfig.specular_mips		=clientData.clientSettings.specularMips;
 	// To the right of the specular cube, after 3 mips = 1 + 1/2 + 1/4
 	
-	videoConfig.diffuse_cubemap_size=casterSettings.diffuseCubemapSize;
+	videoConfig.diffuse_cubemap_size=clientData.clientSettings.diffuseCubemapSize;
 	// To the right of the depth map, under the specular map.
-	videoConfig.diffuse_x			=depth_cubemap_size*3;
-	videoConfig.diffuse_y			=videoConfig.specular_y+casterSettings.specularCubemapSize*2;
+	videoConfig.diffuse_x			=clientData.clientSettings.diffusePos[0];//depth_cubemap_size*3;
+	videoConfig.diffuse_y			=clientData.clientSettings.diffusePos[1];//videoConfig.specular_y+casterSettings.specularCubemapSize*2;
 	
-	videoConfig.light_cubemap_size	=casterSettings.lightCubemapSize;
+	videoConfig.light_cubemap_size	=clientData.clientSettings.lightCubemapSize;
 	// To the right of the diffuse map.
-	videoConfig.light_x				=videoConfig.diffuse_x+(casterSettings.diffuseCubemapSize*3*7)/4;
-	videoConfig.light_y				=videoConfig.diffuse_y;
+	videoConfig.light_x				=clientData.clientSettings.lightPos[0];//videoConfig.diffuse_x+(casterSettings.diffuseCubemapSize*3*7)/4;
+	videoConfig.light_y				=clientData.clientSettings.lightPos[1];//videoConfig.diffuse_y;
 	
-	videoConfig.shadowmap_x		=videoConfig.diffuse_x;
-	videoConfig.shadowmap_y		=videoConfig.diffuse_y+2*videoConfig.diffuse_cubemap_size;
-	videoConfig.shadowmap_size	=64;
+	videoConfig.shadowmap_x		=clientData.clientSettings.shadowmapPos[0];//videoConfig.diffuse_x;
+	videoConfig.shadowmap_y		=clientData.clientSettings.shadowmapPos[1];//videoConfig.diffuse_y+2*videoConfig.diffuse_cubemap_size;
+	videoConfig.shadowmap_size	=clientData.clientSettings.shadowmapSize;//64;
 	clientData.clientMessaging.sendCommand(std::move(setupCommand));
 
 	clientData.isStreaming = true;

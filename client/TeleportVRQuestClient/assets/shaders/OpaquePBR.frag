@@ -470,14 +470,13 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 
 void OpaquePBRDiffuse()
 {
-	PBR(true, false, false, false, false, 0,false);
+	PBR(true, false, false, false, true, 0,false);
 }
 
 void OpaquePBRAmbient()
 {
 	PBR(false, false, false, false, true, 0,false);
 }
-
 
 void OpaquePBRDiffuseNormal()
 {

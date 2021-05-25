@@ -11,8 +11,7 @@
 #include "Log.h"
 
 SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService)
-	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService)),
-	  timeSinceLastServerComm(0)
+	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService))
 {}
 
 SessionClient::~SessionClient()
@@ -74,7 +73,6 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
 		LOG("Connected to session server: %s:%d", remote_ip, remote.port);
 		remoteIP=remote_ip;
-		timeSinceLastServerComm = 0;
 		return true;
 	}
 
@@ -136,8 +134,7 @@ void SessionClient::Disconnect(uint timeout)
 
 	handshakeAcknowledged = false;
 	receivedInitialPos = false;
-	// Client id is created once in discovery service constructor and is retained there
-	// Below value will be always set to same value when a connection is made
+	// TODO: retain client id for reconnection.
 	clientID=0;
 	discovered=false;
 }
@@ -164,10 +161,10 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose &originPose
 	,const ControllerState* controllerStates
 	,bool requestKeyframe
-	,double t
-	,double deltaTime)
+	,double t)
 {
-	time=t;
+	time = t;
+
 	if(mClientHost && mServerPeer)
 	{
 		if(handshakeAcknowledged)
@@ -199,25 +196,26 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 				case ENET_EVENT_TYPE_CONNECT:
 					return;
 				case ENET_EVENT_TYPE_RECEIVE:
-					timeSinceLastServerComm = 0;
 					DispatchEvent(event);
 					break;
 				case ENET_EVENT_TYPE_DISCONNECT:
-					timeSinceLastServerComm = 0;
 					Disconnect(0);
 					return;
 			}
 		}
-
-		timeSinceLastServerComm += deltaTime;
-
-		// Handle cases where we set a breakpoint and enet doesn't receive disconnect message
-		if (timeSinceLastServerComm > (setupCommand.idle_connection_timeout * 0.001f) + 2)
-		{
-			Disconnect(0);
-		}
 	}
 	mPrevControllerState = controllerStates[0];
+
+	//Append resource requests to the request list again, if it has been too long since we sent the request.
+	for(auto sentResource : mSentResourceRequests)
+	{
+		float timeSinceSent = time - sentResource.second;
+		if(timeSinceSent > RESOURCE_REQUEST_RESEND_TIME)
+		{
+			SCR_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
+			mResourceRequests.push_back(sentResource.first);
+		}
+	}
 }
 
 bool SessionClient::IsConnected() const
@@ -484,7 +482,7 @@ void SessionClient::SendResourceRequests()
 {
 	std::vector<avs::uid> resourceRequests = mResourceCreator->TakeResourceRequests();
 
-	//Append to session client's resource requests.
+	//Append ResourceCreator's resource requests to SessionClient's resource requests.
 	mResourceRequests.insert(mResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
 	resourceRequests.clear();
 
@@ -497,20 +495,13 @@ void SessionClient::SendResourceRequests()
 		memcpy(packet->data + sizeof(size_t), mResourceRequests.data(), sizeof(avs::uid) * resourceAmount);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
-		for(auto i:mResourceRequests)
+
+		//Store sent resource requests, so we can resend them if it has been too long since the request.
+		for(avs::uid id : mResourceRequests)
 		{
-			mSentResourceRequests[i]=time;
+			mSentResourceRequests[id] = time;
 		}
 		mResourceRequests.clear();
-	}
-	// Have we been waiting too long for any resources?
-	for(auto r:mSentResourceRequests)
-	{
-		if(time-r.second>10.0)
-		{
-			SCR_COUT<<"Re-requesting resource "<<r.first<<std::endl;
-			mResourceRequests.push_back(r.first);
-		}
 	}
 }
 
@@ -520,6 +511,16 @@ void SessionClient::SendReceivedResources()
 
 	if(receivedResources.size() != 0)
 	{
+		//Stop tracking resource requests we have now received.
+		for(avs::uid id : receivedResources)
+		{
+			auto sentRequestIt = mSentResourceRequests.find(id);
+			if(sentRequestIt != mSentResourceRequests.end())
+			{
+				mSentResourceRequests.erase(sentRequestIt);
+			}
+		}
+
 		avs::ReceivedResourcesMessage message(receivedResources.size());
 
 		size_t messageSize = sizeof(avs::ReceivedResourcesMessage);
@@ -530,13 +531,6 @@ void SessionClient::SendReceivedResources()
 		memcpy(packet->data + messageSize, receivedResources.data(), receivedResourcesSize);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
-
-		for(auto r:receivedResources)
-		{
-			auto q=mSentResourceRequests.find(r);
-			if(q!=mSentResourceRequests.end())
-				mSentResourceRequests.erase(r);
-		}
 	}
 }
 

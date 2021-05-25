@@ -252,31 +252,21 @@ namespace SCServer
 		}
 
 		//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
-		const avs::InputEventBinary* binaryEventsPtr = newBinaryEvents[0].data();
-		const avs::InputEventAnalogue* analogueEventsPtr = newAnalogueEvents[0].data();
-		const avs::InputEventMotion* motionEventsPtr = newMotionEvents[0].data();
-		processNewInput(clientID, &newInputState[0], &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+		const avs::InputEventBinary* binaryEventsPtr = newInputStateAndEvents[0].newBinaryEvents.data();
+		const avs::InputEventAnalogue* analogueEventsPtr = newInputStateAndEvents[0].newAnalogueEvents.data();
+		const avs::InputEventMotion* motionEventsPtr = newInputStateAndEvents[0].newMotionEvents.data();
+		processNewInput(clientID, &newInputStateAndEvents[0].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
 
 		//Input has been passed, so clear the events.
-		newInputState[0].binaryEventAmount = 0;
-		newInputState[0].analogueEventAmount = 0;
-		newInputState[0].motionEventAmount = 0;
-		newBinaryEvents[0].clear();
-		newAnalogueEvents[0].clear();
-		newMotionEvents[0].clear();
+		newInputStateAndEvents[0].clear();
 
-		binaryEventsPtr = newBinaryEvents[1].data();
-		analogueEventsPtr = newAnalogueEvents[1].data();
-		motionEventsPtr = newMotionEvents[1].data();
-		processNewInput(clientID, &newInputState[1], &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+		binaryEventsPtr = newInputStateAndEvents[1].newBinaryEvents.data();
+		analogueEventsPtr = newInputStateAndEvents[1].newAnalogueEvents.data();
+		motionEventsPtr = newInputStateAndEvents[1].newMotionEvents.data();
+		processNewInput(clientID, &newInputStateAndEvents[1].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
 
 		//Input has been passed, so clear the events.
-		newInputState[1].binaryEventAmount = 0;
-		newInputState[1].analogueEventAmount = 0;
-		newInputState[1].motionEventAmount = 0;
-		newBinaryEvents[1].clear();
-		newAnalogueEvents[1].clear();
-		newMotionEvents[1].clear();
+		newInputStateAndEvents[1].clear();
 
 		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
 		if (host && peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
@@ -552,30 +542,31 @@ namespace SCServer
 		}
 
 		uint32_t controllerID = inputState.controllerId;
-		inputState.binaryEventAmount += newInputState[controllerID].binaryEventAmount;
-		inputState.analogueEventAmount += newInputState[controllerID].analogueEventAmount;
-		inputState.motionEventAmount += newInputState[controllerID].motionEventAmount;
-		newInputState[controllerID] = inputState;
+		auto &newInputState=newInputStateAndEvents[controllerID];
+		inputState.binaryEventAmount += newInputState.inputState.binaryEventAmount;
+		inputState.analogueEventAmount += newInputState.inputState.analogueEventAmount;
+		inputState.motionEventAmount += newInputState.inputState.motionEventAmount;
+		newInputState.inputState = inputState;
 
-		if(newInputState[controllerID].binaryEventAmount != 0)
+		if(newInputState.inputState.binaryEventAmount != 0) 
 		{
-			size_t oldBinarySize = sizeof(avs::InputEventBinary) * newBinaryEvents[controllerID].size();
-			newBinaryEvents[controllerID].resize(newBinaryEvents[controllerID].size() + inputState.binaryEventAmount);
-			memcpy(newBinaryEvents[controllerID].data() + oldBinarySize, packet->data + inputStateSize, binaryEventSize);
+			size_t oldBinarySize = sizeof(avs::InputEventBinary) * newInputState.newBinaryEvents.size();
+			newInputState.newBinaryEvents.resize(newInputState.newBinaryEvents.size() + inputState.binaryEventAmount);
+			memcpy(newInputState.newBinaryEvents.data() + oldBinarySize, packet->data + inputStateSize, binaryEventSize);
 		}
 
-		if(newInputState[controllerID].analogueEventAmount != 0)
+		if(newInputState.inputState.analogueEventAmount != 0)
 		{
-			size_t oldAnalogueSize = sizeof(avs::InputEventAnalogue) * newAnalogueEvents[controllerID].size();
-			newAnalogueEvents[controllerID].resize(newAnalogueEvents[controllerID].size() + inputState.analogueEventAmount);
-			memcpy(newAnalogueEvents[controllerID].data() + oldAnalogueSize, packet->data + inputStateSize + binaryEventSize, analogueEventSize);
+			size_t oldAnalogueSize = sizeof(avs::InputEventAnalogue) * newInputState.newAnalogueEvents.size();
+			newInputState.newAnalogueEvents.resize(newInputState.newAnalogueEvents.size() + inputState.analogueEventAmount);
+			memcpy(newInputState.newAnalogueEvents.data() + oldAnalogueSize, packet->data + inputStateSize + binaryEventSize, analogueEventSize);
 		}
 
-		if(newInputState[controllerID].motionEventAmount != 0)
+		if(newInputState.inputState.motionEventAmount != 0)
 		{
-			size_t oldMotionSize = sizeof(avs::InputEventMotion) * newMotionEvents[controllerID].size();
-			newMotionEvents[controllerID].resize(newMotionEvents[controllerID].size() + inputState.motionEventAmount);
-			memcpy(newMotionEvents[controllerID].data() + oldMotionSize, packet->data + inputStateSize + binaryEventSize + analogueEventSize, motionEventSize);
+			size_t oldMotionSize = sizeof(avs::InputEventMotion) * newInputState.newMotionEvents.size();
+			newInputState.newMotionEvents.resize(newInputState.newMotionEvents.size() + inputState.motionEventAmount);
+			memcpy(newInputState.newMotionEvents.data() + oldMotionSize, packet->data + inputStateSize + binaryEventSize + analogueEventSize, motionEventSize);
 		}
 	}
 
