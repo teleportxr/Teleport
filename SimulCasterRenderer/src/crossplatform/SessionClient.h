@@ -97,6 +97,8 @@ private:
     void ReceiveNodeMovementUpdate(const ENetPacket* packet);
 	void ReceiveNodeAnimationUpdate(const ENetPacket* packet);
 
+	static constexpr float RESOURCE_REQUEST_RESEND_TIME = 10.0f; //Seconds we wait before resending a resource request.
+
     avs::uid lastServerID = 0; //UID of the server we last connected to.
 
     SessionCommandInterface* const mCommandInterface;
@@ -111,7 +113,7 @@ private:
 
     bool handshakeAcknowledged = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for nodes.
-    std::map<avs::uid,double> mSentResourceRequests;
+	std::map<avs::uid, double> mSentResourceRequests; //<ID of requested resource, time we sent the request> Resource requests we have received, but have yet to receive confirmation of their receival.
     std::vector<avs::uid> mReceivedNodes; //Nodes that have entered bounds, are about to be drawn, and need to be confirmed to the server.
     std::vector<avs::uid> mLostNodes; //Node that have left bounds, are about to be hidden, and need to be confirmed to the server.
 
