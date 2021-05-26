@@ -192,7 +192,7 @@ void ResourceManager<T>::ClearCareful(std::vector<uid>& excludeList)
 template<class T>
 void ResourceManager<T>::Update(float deltaTimestamp)
 {
-	const bool sufficientMemory = scr::MemoryUtil::Get()->isSufficientMemory(MIN_REQUIRED_MEMORY);
+	const bool sufficientMemory = true;//scr::MemoryUtil::Get()->isSufficientMemory(MIN_REQUIRED_MEMORY);
 
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.
