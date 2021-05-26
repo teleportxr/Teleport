@@ -23,8 +23,8 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/VrApi/Include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/VrAppFramework/Include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/LibOVRKernel/Src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/1stParty/OpenGL_Loader/Include
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../TeleportClient
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../firstparty
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../..
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 

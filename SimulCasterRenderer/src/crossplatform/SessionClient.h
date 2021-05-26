@@ -11,9 +11,9 @@
 #include "libavstream/common.hpp"
 #include "libavstream/common_networking.h"
 
-#include "Input.h"
-#include "DiscoveryService.h"
-#include "basic_linear_algebra.h"
+#include "TeleportClient/Input.h"
+#include "TeleportClient/DiscoveryService.h"
+#include "TeleportClient/basic_linear_algebra.h"
 
 typedef unsigned int uint;
 class ResourceCreator;

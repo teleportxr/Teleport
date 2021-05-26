@@ -271,10 +271,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				 * But using them is causing the window to not be refreshed, and right now fixing it isn't top priority.
 				 */
 				clientRenderer.Update();
-
 				static double fTime=0.0;
 				static simul::core::Timer t;
-				
 				float time_step=t.UpdateTime()/1000.0f;
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer.ResizeView(0, w->viewport.w, w->viewport.h);

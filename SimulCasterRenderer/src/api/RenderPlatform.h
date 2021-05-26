@@ -4,7 +4,7 @@
 #include "Common.h"
 
 #include "crossplatform/API.h"
-#include "basic_linear_algebra.h"
+#include "TeleportClient/basic_linear_algebra.h"
 
 namespace scr
 {

@@ -35,7 +35,6 @@ set( src_crossplatform
 	src/crossplatform/Camera.h
 	src/crossplatform/GeometryDecoder.cpp
 	src/crossplatform/GeometryDecoder.h
-	src/crossplatform/Input.h
 	src/crossplatform/Light.cpp
 	src/crossplatform/Light.h
 	src/crossplatform/Log.cpp

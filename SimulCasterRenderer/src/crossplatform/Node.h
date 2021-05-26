@@ -6,7 +6,7 @@
 
 #include "NodeComponents.h"
 #include "api/UniformBuffer.h"
-#include "basic_linear_algebra.h"
+#include "TeleportClient/basic_linear_algebra.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Skin.h"

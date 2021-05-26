@@ -12,7 +12,7 @@ class LobbyRenderer
 {
 public:
 	LobbyRenderer(teleport::client::ClientDeviceState *s,ClientAppInterface *c);
-	void Render();
+	void Render(const char *server_ip= nullptr,int server_port=0);
 
 protected:
 	teleport::client::ClientDeviceState *clientDeviceState=nullptr;

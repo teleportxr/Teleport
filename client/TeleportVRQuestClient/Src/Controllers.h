@@ -5,7 +5,7 @@
 
 #include <VrApi_Input.h>
 
-#include <crossplatform/Input.h>
+#include <TeleportClient/Input.h>
 #include "libavstream/common_input.h"
 
 typedef std::function<void()> TriggerDelegate;

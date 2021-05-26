@@ -528,7 +528,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	}
 	else
 	{
-		lobbyRenderer.Render();
+		lobbyRenderer.Render(server_ip.c_str(),server_discovery_port);
 	};
 	DrawConnectionStateOSD(mGuiSys, out);
 	GLCheckErrorsWithTitle("Frame: Post-SCR");

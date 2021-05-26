@@ -4,7 +4,7 @@
 #include "api/Texture.h"
 #include "ShaderResource.h"
 #include "api/Effect.h"
-#include "basic_linear_algebra.h"
+#include "TeleportClient/basic_linear_algebra.h"
 
 namespace scr
 {
@@ -15,8 +15,8 @@ namespace scr
 		struct MaterialParameter
 		{
 			std::shared_ptr<Texture> texture;	//Texture Reference.
-			avs::vec2 texCoordsScalar[4];			//Scales the texture co-ordinates for tiling; one per channel.
-			avs::vec4 textureOutputScalar;			//Scales the output of the texture per channel.
+			avs::vec2 texCoordsScalar[4];		//Scales the texture co-ordinates for tiling; one per channel.
+			avs::vec4 textureOutputScalar;		//Scales the output of the texture per channel.
 			float texCoordIndex;				//Selects which texture co-ordinates to use in sampling.
 		};
 
@@ -25,11 +25,11 @@ namespace scr
 			std::string name;
 			
 			const RenderPlatform* renderPlatform;
-			MaterialParameter diffuse;	//RGBA Colour Texture
-			MaterialParameter normal;	//R: Tangent, G: Bi-normals and B: Normals
-			MaterialParameter combined;	//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
+			MaterialParameter diffuse;			//RGBA Colour Texture
+			MaterialParameter normal;			//R: Tangent, G: Bi-normals and B: Normals
+			MaterialParameter combined;			//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
 			MaterialParameter emissive;
-			Effect* effect;				//Effect associated with this material: opaque, transparent, emissive, etc.
+			Effect* effect;						//Effect associated with this material: opaque, transparent, emissive, etc.
 		};
 
 		struct MaterialData //Layout conformant to GLSL std140

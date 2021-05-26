@@ -1,7 +1,7 @@
 #pragma once
 
 #include "api/RenderPlatform.h"
-#include "basic_linear_algebra.h"
+#include "TeleportClient/basic_linear_algebra.h"
 #include "ShaderResource.h"
 
 namespace scr
