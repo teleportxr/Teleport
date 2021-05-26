@@ -1,6 +1,7 @@
 #include "ClientDeviceState.h"
 #include "basic_linear_algebra.h"
-
+using namespace teleport;
+using namespace client;
 ClientDeviceState::ClientDeviceState():
 //localOriginPos(0,0,0),
 relativeHeadPos(0,0,0)

@@ -631,7 +631,7 @@ void ovrAppl::AppEyeGLStateSetup(
     GL(glEnable(GL_CULL_FACE));
     GL(glViewport(0, 0, fb->Width, fb->Height));
     GL(glScissor(0, 0, fb->Width, fb->Height));
-    GL(glClearColor(0.125f, 0.0f, 0.125f, 1.0f));
+    GL(glClearColor(0.125f, 0.0f, 0.25f, 1.0f));
     GL(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 }
 

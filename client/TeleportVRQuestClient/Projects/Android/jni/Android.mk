@@ -11,6 +11,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../../VrSamples/SampleCommon/Src \
     $(LOCAL_PATH)/../../../../1stParty/OVR/Include \
     $(LOCAL_PATH)/../../../../1stParty/utilities/include \
     $(LOCAL_PATH)/../../../../3rdParty/stb/src \
+    $(LOCAL_PATH)/../../../../.. \
 
 
 LOCAL_SRC_FILES			:= \

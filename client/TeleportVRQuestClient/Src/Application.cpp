@@ -27,7 +27,8 @@
 #endif
 
 using namespace OVRFW;
-
+using namespace teleport;
+using namespace client;
 
 extern "C"
 {

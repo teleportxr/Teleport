@@ -1,9 +1,9 @@
 #pragma once
 
-#include "crossplatform/DiscoveryService.h"
+#include "TeleportClient/DiscoveryService.h"
 #include <string>
 
-class PCDiscoveryService: public DiscoveryService
+class PCDiscoveryService: public teleport::client::DiscoveryService
 {
 public:
 	PCDiscoveryService();

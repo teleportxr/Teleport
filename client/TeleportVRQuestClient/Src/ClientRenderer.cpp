@@ -22,6 +22,8 @@
 
 using namespace OVR;
 using namespace OVRFW;
+using namespace teleport;
+using namespace client;
 
 ovrQuatf QuaternionMultiply(const ovrQuatf &p, const ovrQuatf &q)
 {
@@ -79,7 +81,7 @@ ClientRenderer::ClientRenderer
     ResourceCreator *r,
     scr::ResourceManagers *rm,
     ClientAppInterface *c,
-    ClientDeviceState *s,
+    teleport::client::ClientDeviceState *s,
     Controllers *cn
 )
     :controllers(cn),

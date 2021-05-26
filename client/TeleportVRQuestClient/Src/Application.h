@@ -166,7 +166,7 @@ namespace OVRFW
 		int client_service_port=10501;
 		int client_streaming_port=10502;
 		ENetAddress remoteEndpoint;
-		ClientDeviceState clientDeviceState;
+		teleport::client::ClientDeviceState clientDeviceState;
 
 		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
 

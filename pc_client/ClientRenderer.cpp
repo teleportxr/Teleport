@@ -79,7 +79,8 @@ void apply_material()
 #include <SDKDDKVer.h>
 #include <shellapi.h>
 #include "ClientRenderer.h"
-
+using namespace teleport;
+using namespace client;
 
 struct AVSTextureImpl :public AVSTexture
 {

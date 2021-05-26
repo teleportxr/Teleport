@@ -40,7 +40,7 @@ public:
 class SessionClient
 {
 public:
-    SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService);
+    SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<teleport::client::DiscoveryService>&& discoveryService);
     ~SessionClient();
 
     void SetResourceCreator(ResourceCreator *);
@@ -102,7 +102,7 @@ private:
     avs::uid lastServerID = 0; //UID of the server we last connected to.
 
     SessionCommandInterface* const mCommandInterface;
-    std::unique_ptr<DiscoveryService> discoveryService;
+    std::unique_ptr<teleport::client::DiscoveryService> discoveryService;
     ResourceCreator* mResourceCreator=nullptr;
 
     ENetHost* mClientHost = nullptr;

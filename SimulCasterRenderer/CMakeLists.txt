@@ -33,7 +33,6 @@ set( src_crossplatform
 	src/crossplatform/Bone.h
 	src/crossplatform/Camera.cpp
 	src/crossplatform/Camera.h
-	src/crossplatform/DiscoveryService.h
 	src/crossplatform/GeometryDecoder.cpp
 	src/crossplatform/GeometryDecoder.h
 	src/crossplatform/Input.h

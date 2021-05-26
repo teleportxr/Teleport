@@ -48,7 +48,7 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	m_BufferOffset = 0;
 	m_Buffer.clear();
 	m_Buffer.resize(m_BufferSize);
-	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
+ 	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
 
 	switch(type)
 	{

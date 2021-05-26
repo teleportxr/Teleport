@@ -1,15 +1,20 @@
 #pragma once
 #include <GUI/GuiSys.h>
 #include "ClientAppInterface.h"
-
-class ClientDeviceState;
+namespace teleport
+{
+	namespace client
+	{
+		class ClientDeviceState;
+	}
+}
 class LobbyRenderer
 {
 public:
-	LobbyRenderer(ClientDeviceState *s,ClientAppInterface *c);
+	LobbyRenderer(teleport::client::ClientDeviceState *s,ClientAppInterface *c);
 	void Render();
 
 protected:
-	ClientDeviceState *clientDeviceState=nullptr;
+	teleport::client::ClientDeviceState *clientDeviceState=nullptr;
 	ClientAppInterface *clientAppInterface=nullptr;
 };

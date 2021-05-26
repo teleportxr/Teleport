@@ -8,5 +8,5 @@ include ':', \
 	'client:TeleportVRQuestClient:Projects:Android', \
 	'client:VrAppFramework:Projects:Android', \
 	'client:VrAppSupport:VrSound:Projects:Android', \
-	'client:VrProjects:Native:RemotePlayClient:Projects:Android', \
+	'client:VrSamples:VrCubeWorld_Vulkan:Projects:Android', \
 	'libavstream'
