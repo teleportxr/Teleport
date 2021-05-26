@@ -257,15 +257,13 @@ namespace SCServer
 		const avs::InputEventMotion* motionEventsPtr = newInputStateAndEvents[0].newMotionEvents.data();
 		processNewInput(clientID, &newInputStateAndEvents[0].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
 
-		//Input has been passed, so clear the events.
-		newInputStateAndEvents[0].clear();
-
 		binaryEventsPtr = newInputStateAndEvents[1].newBinaryEvents.data();
 		analogueEventsPtr = newInputStateAndEvents[1].newAnalogueEvents.data();
 		motionEventsPtr = newInputStateAndEvents[1].newMotionEvents.data();
 		processNewInput(clientID, &newInputStateAndEvents[1].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
 
 		//Input has been passed, so clear the events.
+		newInputStateAndEvents[0].clear();
 		newInputStateAndEvents[1].clear();
 
 		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
@@ -542,7 +540,7 @@ namespace SCServer
 		}
 
 		uint32_t controllerID = inputState.controllerId;
-		auto &newInputState=newInputStateAndEvents[controllerID];
+		InputStateAndEvents& newInputState = newInputStateAndEvents[controllerID];
 		inputState.binaryEventAmount += newInputState.inputState.binaryEventAmount;
 		inputState.analogueEventAmount += newInputState.inputState.analogueEventAmount;
 		inputState.motionEventAmount += newInputState.inputState.motionEventAmount;

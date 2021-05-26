@@ -107,6 +107,7 @@ namespace SCServer
 
 	private:
 		static bool asyncNetworkDataProcessingFailed;
+
 		avs::uid clientID;
 		bool initialized=false;
 		bool startingSession;
@@ -153,7 +154,6 @@ namespace SCServer
 			std::vector<avs::InputEventMotion> newMotionEvents;
 		};
 		InputStateAndEvents newInputStateAndEvents[2]; //Newest input state received from the client.
-
 
 		void dispatchEvent(const ENetEvent& event);
 		void receiveHandshake(const ENetPacket* packet);
