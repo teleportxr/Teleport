@@ -15,7 +15,7 @@
 #include "Log.h"
 #include "VideoSurface.h"
 
-#include "AndroidDiscoveryService.h"
+#include "renderTextureveryService.h"
 #include "OVRNodeManager.h"
 
 #if defined( USE_AAUDIO )

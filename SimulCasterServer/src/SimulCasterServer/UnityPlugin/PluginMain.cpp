@@ -34,6 +34,7 @@ using namespace SCServer;
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
+TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 
 TELEPORT_EXPORT void ConvertTransform(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::Transform &transform)
 {
@@ -634,8 +635,6 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 
 	newClient.clientMessaging.initialise(&newClient.casterContext, delegates);
 
-	unlinkedClientIDs.insert(clientID);
-
 	discoveryService->sendResponseToClient(clientID);
 
 	return true;
@@ -896,6 +895,11 @@ TELEPORT_EXPORT avs::uid GetUnlinkedClientID()
 	{
 		return 0;
 	}
+}
+
+TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID)
+{
+	unlinkedClientIDs.insert(clientID);
 }
 ///PLUGIN-SPECIFC END
 

@@ -209,10 +209,11 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 }
 
-void ClientRenderer::SetServer(const char *ip,int port)
+void ClientRenderer::SetServer(const char *ip, int port, uint32_t clientID)
 {
-	server_ip=ip;
-	server_discovery_port=port;
+	server_ip = ip;
+	server_discovery_port = port;
+	sessionClient.SetDiscoveryClientID(clientID);
 }
 
 // This allows live-recompile of shaders. 

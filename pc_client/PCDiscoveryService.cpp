@@ -1,19 +1,14 @@
 #include "PCDiscoveryService.h"
 
-#include <random>
-
 #include "libavstream/common_networking.h"
 
 #include "crossplatform/Log.h"
 #include "ErrorHandling.h"
 
-PCDiscoveryService::PCDiscoveryService()
+PCDiscoveryService::PCDiscoveryService(uint32_t manualClientID)
+	: DiscoveryService(manualClientID)
 {
-	std::random_device rd;  //Will be used to obtain a seed for the random number engine
-	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-	std::uniform_int_distribution<> dis(1);
-
-	clientID = static_cast<uint32_t>(dis(gen));
+	
 }
 
 PCDiscoveryService::~PCDiscoveryService()

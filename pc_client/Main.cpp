@@ -34,6 +34,7 @@ teleport::client::ClientDeviceState clientDeviceState;
 ClientRenderer clientRenderer(&clientDeviceState);
 std::string server_ip= REMOTEPLAY_SERVER_IP;
 int server_discovery_port = REMOTEPLAY_SERVER_DISCOVERY_PORT;
+uint32_t clientID = 0;
 
 #define MAX_LOADSTRING 100
 
@@ -70,7 +71,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	if (rc== SI_OK)
 	{
 		server_ip = ini.GetValue("", "SERVER_IP", REMOTEPLAY_SERVER_IP);
-		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",REMOTEPLAY_SERVER_DISCOVERY_PORT);
+		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT", REMOTEPLAY_SERVER_DISCOVERY_PORT);
+		clientID = ini.GetLongValue("", "CLIENT_ID", 0);
 	}
 	else
 	{
@@ -200,7 +202,7 @@ void InitRenderer(HWND hWnd)
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	clientRenderer.Init(renderPlatform);
-	clientRenderer.SetServer(server_ip.c_str(), server_discovery_port);
+	clientRenderer.SetServer(server_ip.c_str(), server_discovery_port, clientID);
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(hWnd,&clientRenderer,-1);
 }
