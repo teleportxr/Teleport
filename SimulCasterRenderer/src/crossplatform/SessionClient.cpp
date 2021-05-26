@@ -212,7 +212,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	//Append resource requests to the request list again, if it has been too long since we sent the request.
 	for(auto sentResource : mSentResourceRequests)
 	{
-		float timeSinceSent = float(time - sentResource.second);
+		double timeSinceSent = time - sentResource.second;
 		if(timeSinceSent > RESOURCE_REQUEST_RESEND_TIME)
 		{
 			SCR_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;

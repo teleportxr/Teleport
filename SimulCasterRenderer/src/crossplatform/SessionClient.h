@@ -97,7 +97,7 @@ private:
     void ReceiveNodeMovementUpdate(const ENetPacket* packet);
 	void ReceiveNodeAnimationUpdate(const ENetPacket* packet);
 
-	static constexpr float RESOURCE_REQUEST_RESEND_TIME = 10.0f; //Seconds we wait before resending a resource request.
+	static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 
     avs::uid lastServerID = 0; //UID of the server we last connected to.
 

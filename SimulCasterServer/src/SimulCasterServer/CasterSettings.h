@@ -23,7 +23,9 @@ namespace SCServer
 
 		bool enableVideoStreaming = false;
 		bool enableWebcamStreaming = false;
-		float captureCubeSize = 0.0f;
+		int32_t captureCubeSize = 0;
+		int32_t webcamWidth = 0;
+		int32_t webcamHeight = 0;
 		int32_t videoEncodeFrequency = 0;
 		bool enableDeferOutput = false;
 		bool enableCubemapCulling = false;
