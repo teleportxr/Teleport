@@ -83,7 +83,7 @@ Application::~Application()
 	mRefreshRates.clear();
 	clientRenderer.ExitedVR();
 	delete mSoundEffectPlayer;
-	sessionClient.Disconnect(REMOTEPLAY_TIMEOUT);
+	sessionClient.Disconnect(TELEPORT_TIMEOUT);
 	enet_deinitialize();
 	SAFE_DELETE(audioPlayer)
 
@@ -110,11 +110,11 @@ bool Application::ProcessIniFile()
 	{
 		server_ip = ini.GetValue("", "SERVER_IP", "");
 		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",
-												 REMOTEPLAY_SERVER_DISCOVERY_PORT);
+												 TELEPORT_SERVER_DISCOVERY_PORT);
 		client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",
-												 REMOTEPLAY_CLIENT_SERVICE_PORT);
+											   TELEPORT_CLIENT_SERVICE_PORT);
 		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",
-												 REMOTEPLAY_CLIENT_STREAMING_PORT);
+												 TELEPORT_CLIENT_STREAMING_PORT);
 		return true;
 	}
 	else
@@ -367,12 +367,12 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	{
 		if (!sessionClient.HasDiscovered())
 		{
-			sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+			sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
 		}
 		if (sessionClient.HasDiscovered())
 		{
 			// if connect fails, restart discovery.
-			if(!sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT))
+			if(!sessionClient.Connect(remoteEndpoint, TELEPORT_TIMEOUT))
 				sessionClient.Disconnect(0);
 		}
 	}

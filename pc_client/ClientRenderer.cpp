@@ -204,15 +204,16 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
-	//sessionClient.Connect(REMOTEPLAY_SERVER_IP,REMOTEPLAY_SERVER_PORT,REMOTEPLAY_TIMEOUT);
+	//sessionClient.Connect(TELEPORT_SERVER_IP, TELEPORT_SERVER_PORT, TELEPORT_TIMEOUT);
 
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 }
 
-void ClientRenderer::SetServer(const char *ip,int port)
+void ClientRenderer::SetServer(const char *ip, int port, uint32_t clientID)
 {
-	server_ip=ip;
-	server_discovery_port=port;
+	server_ip = ip;
+	server_discovery_port = port;
+	sessionClient.SetDiscoveryClientID(clientID);
 }
 
 // This allows live-recompile of shaders. 
@@ -604,7 +605,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	deviceContext.framePrintY = 8;
 	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
 		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
-		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d",REMOTEPLAY_CLIENT_DISCOVERY_PORT):"Offline"),white);
+		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d", TELEPORT_CLIENT_DISCOVERY_PORT):"Offline"),white);
 	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
 	if(show_osd== NETWORK_OSD)
 	{
@@ -1543,9 +1544,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	else
 	{
 		ENetAddress remoteEndpoint; //192.168.3.42 45.132.108.84
-		if (canConnect && sessionClient.Discover("", REMOTEPLAY_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
+		if (canConnect && sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
-			sessionClient.Connect(remoteEndpoint, REMOTEPLAY_TIMEOUT);
+			sessionClient.Connect(remoteEndpoint, TELEPORT_TIMEOUT);
 		}
 	}
 

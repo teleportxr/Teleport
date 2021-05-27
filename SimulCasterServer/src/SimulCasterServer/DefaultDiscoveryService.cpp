@@ -6,6 +6,7 @@
 extern std::map<avs::uid, ClientData> clientServices;
 extern SCServer::CasterSettings casterSettings;
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 
 using namespace SCServer;
 
@@ -135,11 +136,11 @@ void DefaultDiscoveryService::tick()
 		if (Client_StartSession(clientID, servicePort))
 		{
 			++c;
-	}
+		}
 		else
 		{
 			c = newClients.erase(c);
-}
+		}
 	}
 }
 
@@ -175,5 +176,6 @@ void DefaultDiscoveryService::discoveryCompleteForClient(uint64_t clientID)
 	else
 	{
 		newClients.erase(i);
+		AddUnlinkedClientID(clientID);
 	}
 }

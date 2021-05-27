@@ -624,3 +624,8 @@ void SessionClient::ReceiveNodeAnimationUpdate(const ENetPacket* packet)
 
 	mCommandInterface->UpdateNodeAnimation(command.animationUpdate);
 }
+
+void SessionClient::SetDiscoveryClientID(uint32_t clientID)
+{
+	discoveryService->SetClientID(clientID);
+}

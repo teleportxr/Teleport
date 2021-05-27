@@ -77,6 +77,8 @@ public:
     	return clientID;
 	}
 
+    void SetDiscoveryClientID(uint32_t clientID);
+
 private:
     void DispatchEvent(const ENetEvent& event);
     void ParseCommandPacket(ENetPacket* packet);
