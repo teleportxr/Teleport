@@ -2,8 +2,10 @@
 
 #pragma once
 
-#define REMOTEPLAY_SERVER_IP		"127.0.0.1"
-#define REMOTEPLAY_SERVER_PORT		        10500
-#define REMOTEPLAY_CLIENT_DISCOVERY_PORT	10599
-#define REMOTEPLAY_SERVER_DISCOVERY_PORT	10600
-#define REMOTEPLAY_TIMEOUT			        1000
+constexpr char* TELEPORT_SERVER_IP = "127.0.0.1";
+constexpr unsigned int TELEPORT_SERVER_PORT = 10500;
+constexpr unsigned int TELEPORT_CLIENT_DISCOVERY_PORT = 10599;
+constexpr unsigned int TELEPORT_SERVER_DISCOVERY_PORT = 10600;
+constexpr unsigned int TELEPORT_TIMEOUT = 1000;
+
+constexpr unsigned int TELEPORT_DEFAULT_CLIENT_ID = 2021;

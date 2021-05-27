@@ -32,9 +32,9 @@ simul::dx11::Direct3D11Manager direct3D11Manager;
 simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
 ClientRenderer clientRenderer(&clientDeviceState);
-std::string server_ip= REMOTEPLAY_SERVER_IP;
-int server_discovery_port = REMOTEPLAY_SERVER_DISCOVERY_PORT;
-uint32_t clientID = 0;
+std::string server_ip= TELEPORT_SERVER_IP;
+int server_discovery_port = TELEPORT_SERVER_DISCOVERY_PORT;
+uint32_t clientID = TELEPORT_DEFAULT_CLIENT_ID;
 
 #define MAX_LOADSTRING 100
 
@@ -68,11 +68,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	CSimpleIniA ini;
 	SI_Error rc = ini.LoadFile("pc_client/client.ini");
-	if (rc== SI_OK)
+	if(rc == SI_OK)
 	{
-		server_ip = ini.GetValue("", "SERVER_IP", REMOTEPLAY_SERVER_IP);
-		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT", REMOTEPLAY_SERVER_DISCOVERY_PORT);
-		clientID = ini.GetLongValue("", "CLIENT_ID", 0);
+		server_ip = ini.GetValue("", "SERVER_IP", TELEPORT_SERVER_IP);
+		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT", TELEPORT_SERVER_DISCOVERY_PORT);
+		clientID = ini.GetLongValue("", "CLIENT_ID", TELEPORT_DEFAULT_CLIENT_ID);
 	}
 	else
 	{
