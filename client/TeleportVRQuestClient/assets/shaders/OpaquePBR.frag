@@ -468,11 +468,6 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	gl_FragColor = Gamma(u);
 }
 
-void OpaquePBRDiffuse()
-{
-	PBR(true, false, false, false, true, 0,false);
-}
-
 void OpaquePBRAmbient()
 {
 	PBR(false, false, false, false, true, 0,false);

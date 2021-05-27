@@ -402,43 +402,57 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	passNames.push_back("OpaquePBR");
 	passNames.push_back("OpaqueAlbedo");
 	passNames.push_back("OpaqueNormal");
-	passNames.push_back("OpaquePBRDiffuse");
 	passNames.push_back("OpaquePBRAmbient");
-	passNames.push_back("OpaquePBRDiffuseNormal");
-	passNames.push_back("OpaquePBRDiffuseNormalCombined");
-	passNames.push_back("OpaquePBRLightsOnly");
 	passNames.push_back("OpaquePBRDebug");
 
 	scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
-	{
-		pipelineCreateInfo.m_Count = 2;
-		pipelineCreateInfo.m_PipelineType = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-		pipelineCreateInfo.m_ShaderCreateInfo[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
-		pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/OpaquePBR.vert";
-		pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = clientAppInterface->LoadTextFile(
-				"shaders/OpaquePBR.vert");
-		pipelineCreateInfo.m_ShaderCreateInfo[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
-		pipelineCreateInfo.m_ShaderCreateInfo[1].filepath = "shaders/OpaquePBR.frag";
-		pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = clientAppInterface->LoadTextFile(
-				"shaders/OpaquePBR.frag");
-	}
 
+	pipelineCreateInfo.m_Count = 2;
+	pipelineCreateInfo.m_PipelineType = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
+	pipelineCreateInfo.m_ShaderCreateInfo[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+	pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/OpaquePBR.vert";
+	pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = clientAppInterface->LoadTextFile(
+			"shaders/OpaquePBR.vert");
+	pipelineCreateInfo.m_ShaderCreateInfo[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+	pipelineCreateInfo.m_ShaderCreateInfo[1].filepath = "shaders/OpaquePBR.frag";
+	pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = clientAppInterface->LoadTextFile(
+				"shaders/OpaquePBR.frag");
+	std::string &src=pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode;
+	// Now we will GENERATE the variants of the fragment shader, while adding them to the passNames list:
+	for(int emissive=0;emissive<2;emissive++)
+	{
+		for(int combined=0;combined<2;combined++)
+		{
+			for(int normal=0;normal<2;normal++)
+			{
+				for(int diffuse=0;diffuse<2;diffuse++)
+				{
+					std::string passname=GlobalGraphicsResources::GenerateShaderPassName(diffuse,normal,combined,emissive);
+					passNames.push_back(passname.c_str());
+					static char txt2[2000];
+					char *true_or_false[]={"false","true"};
+					sprintf(txt2,"\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, 0, false);\n}",
+			 			passname.c_str(),true_or_false[diffuse], true_or_false[normal], true_or_false[combined], true_or_false[emissive]);
+					src+=txt2;
+				}
+			}
+		}
+	}
 	//Static passes.
 	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Static";
 	for(const std::string& passName : passNames)
 	{
 		std::string completeName = "Static_" + passName;
 		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = passName.c_str();
-		clientAppInterface->BuildEffectPass(completeName.c_str(), &layout, &pipelineCreateInfo, {pbrShaderResource});
+		clientAppInterface->BuildEffectPass(completeName.c_str(), &layout, &pipelineCreateInfo,{pbrShaderResource});
 	}
-
 	//Skinned passes.
 	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Animated";
 	for(const std::string& passName : passNames)
 	{
 		std::string effectName = "Animated_" + passName;
 		pipelineCreateInfo.m_ShaderCreateInfo[1].entryPoint = passName.c_str();
-		clientAppInterface->BuildEffectPass(effectName.c_str(), &layout, &pipelineCreateInfo, {pbrShaderResource});
+		clientAppInterface->BuildEffectPass(effectName.c_str(), &layout, &pipelineCreateInfo,{pbrShaderResource});
 	}
 }
 

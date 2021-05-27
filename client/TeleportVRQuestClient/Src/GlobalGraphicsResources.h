@@ -28,6 +28,8 @@ public:
     char* effectPassName = const_cast<char*>("OpaquePBR"); //Which effect pass the geometry should be rendered with.
 
     static GlobalGraphicsResources& GetInstance();
+
+	static std::string GenerateShaderPassName(int diffuse,int normal,int combined,int emissive);
 private:
 	static GlobalGraphicsResources *instance;
 
