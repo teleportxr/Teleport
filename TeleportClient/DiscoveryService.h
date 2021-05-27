@@ -30,7 +30,10 @@ namespace teleport
 
 			void SetClientID(uint32_t inClientID)
 			{
-				clientID = inClientID;
+				if (inClientID != 0)
+				{
+					clientID = inClientID;
+				}
 			}
 		protected:
 			uint32_t clientID = 0;
