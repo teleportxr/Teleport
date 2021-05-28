@@ -58,6 +58,13 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeD
 		node->SetLastMovement(movementPair->second);
 	}
 
+	//Set enabled state, if a enabled state update was received early.
+	auto enabledPair = earlyEnabledUpdates.find(node->id);
+	if(enabledPair != earlyEnabledUpdates.end())
+	{
+		node->visibility.setVisibility(enabledPair->second.enabled, VisibilityComponent::InvisibilityReason::DISABLED);
+	}
+
 	//Set playing animation, if an animation update was received early.
 	auto animationPair = earlyAnimationUpdates.find(node->id);
 	if(animationPair != earlyAnimationUpdates.end())
@@ -261,7 +268,7 @@ bool NodeManager::UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translat
 	return false;
 }
 
-void NodeManager::UpdateNodeMovement(std::vector<avs::MovementUpdate> updateList)
+void NodeManager::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
 {
 	earlyMovements.clear();
 
@@ -275,6 +282,24 @@ void NodeManager::UpdateNodeMovement(std::vector<avs::MovementUpdate> updateList
 		else
 		{
 			earlyMovements[update.nodeID] = update;
+		}
+	}
+}
+
+void NodeManager::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
+{
+	earlyEnabledUpdates.clear();
+
+	for(avs::NodeUpdateEnabledState update : updateList)
+	{
+		std::shared_ptr<scr::Node> node = GetNode(update.nodeID);
+		if(node)
+		{
+			node->visibility.setVisibility(update.enabled, VisibilityComponent::InvisibilityReason::DISABLED);
+		}
+		else
+		{
+			earlyEnabledUpdates[update.nodeID] = update;
 		}
 	}
 }
@@ -299,7 +324,7 @@ void NodeManager::Update(float deltaTime)
 	{
 		node->Update(deltaTime);
 
-		if(node->GetTimeSinceLastVisible() >= nodeLifetime)
+		if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == VisibilityComponent::InvisibilityReason::OUT_OF_BOUNDS)
 		{
 			expiredNodes.push_back(node);
 		}

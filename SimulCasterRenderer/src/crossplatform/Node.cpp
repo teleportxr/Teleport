@@ -132,7 +132,7 @@ namespace scr
 
 	void Node::SetVisible(bool visible)
 	{
-		visibility.setVisibility(visible);
+		visibility.setVisibility(visible, VisibilityComponent::InvisibilityReason::OUT_OF_BOUNDS);
 	}
 
 	void Node::SetLocalTransform(const Transform& transform)

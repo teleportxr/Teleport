@@ -1390,6 +1390,11 @@ void ClientRenderer::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& 
 	resourceManagers.mNodeManager->UpdateNodeMovement(updateList);
 }
 
+void ClientRenderer::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
+{
+	resourceManagers.mNodeManager->UpdateNodeEnabledState(updateList);
+}
+
 void ClientRenderer::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
 {
 	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);

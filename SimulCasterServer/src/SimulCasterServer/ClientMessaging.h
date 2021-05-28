@@ -60,7 +60,8 @@ namespace SCServer
 
 		void nodeEnteredBounds(avs::uid nodeID);
 		void nodeLeftBounds(avs::uid nodeID);
-		void updateNodeMovement(std::vector<avs::MovementUpdate>& updateList);
+		void updateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
+		void updateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void updateNodeAnimation(avs::NodeUpdateAnimation update);
 
 		bool hasHost() const;
@@ -70,7 +71,7 @@ namespace SCServer
 		bool setPosition(uint64_t valid_counter,const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head,const avs::vec4 &orientation);
 
 		bool sendCommand(const avs::Command& avsCommand) const;
-		template<typename T> bool sendCommand(const avs::Command& command, std::vector<T>& appendedList) const
+		template<typename T> bool sendCommand(const avs::Command& command, const std::vector<T>& appendedList) const
 		{
 			if(!peer)
 			{

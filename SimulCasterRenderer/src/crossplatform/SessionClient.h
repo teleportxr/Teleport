@@ -34,6 +34,7 @@ public:
 
     virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) = 0;
     virtual void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) = 0;
+	virtual void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) = 0;
 	virtual void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate) = 0;
 };
 
@@ -94,9 +95,10 @@ private:
     void SendKeyframeRequest();
     //Tell server we are ready to receive geometry payloads.
     void SendHandshake(const avs::Handshake &handshake, const std::vector<avs::uid>& clientResourceIDs);
-
+	
     void ReceiveHandshakeAcknowledgement(const ENetPacket* packet);
     void ReceiveNodeMovementUpdate(const ENetPacket* packet);
+	void ReceiveNodeEnabledStateUpdate(const ENetPacket* packet);
 	void ReceiveNodeAnimationUpdate(const ENetPacket* packet);
 
 	static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.

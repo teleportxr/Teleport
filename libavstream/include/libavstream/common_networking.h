@@ -47,6 +47,7 @@ namespace avs
 		AcknowledgeHandshake,
 		SetPosition,
 		UpdateNodeMovement,
+		UpdateNodeEnabledState,
 		UpdateNodeAnimation,
 		ReconfigureVideo
 	};
@@ -144,6 +145,12 @@ namespace avs
 		uid nodeID = 0;
 		vec3 scale;
 		vec3 velocity;
+	};
+
+	struct NodeUpdateEnabledState
+	{
+		uid nodeID = 0; //ID of the node we are changing the enabled state of.
+		bool enabled = false; //Whether the node is enabled, and thus should be rendered.
 	};
 
 	struct NodeUpdateAnimation
@@ -273,6 +280,24 @@ namespace avs
 		virtual size_t getCommandSize() const override
 		{
 			return sizeof(UpdateNodeMovementCommand);
+		}
+	};
+	
+	struct UpdateNodeEnabledStateCommand : public Command
+	{
+		size_t updatesAmount;
+
+		UpdateNodeEnabledStateCommand()
+			:UpdateNodeEnabledStateCommand(0)
+		{}
+
+		UpdateNodeEnabledStateCommand(size_t updatesAmount)
+			:Command(CommandPayloadType::UpdateNodeEnabledState), updatesAmount(updatesAmount)
+		{}
+
+		virtual size_t getCommandSize() const override
+		{
+			return sizeof(UpdateNodeEnabledStateCommand);
 		}
 	};
 

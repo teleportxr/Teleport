@@ -377,6 +377,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::UpdateNodeMovement:
 			ReceiveNodeMovementUpdate(packet);
 			break;
+		case avs::CommandPayloadType::UpdateNodeEnabledState:
+			ReceiveNodeEnabledStateUpdate(packet);
+			break;
 		case avs::CommandPayloadType::UpdateNodeAnimation:
 			ReceiveNodeAnimationUpdate(packet);
 			break;
@@ -613,6 +616,19 @@ void SessionClient::ReceiveNodeMovementUpdate(const ENetPacket* packet)
 	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::MovementUpdate) * command.updatesAmount);
 
 	mCommandInterface->UpdateNodeMovement(updateList);
+}
+
+void SessionClient::ReceiveNodeEnabledStateUpdate(const ENetPacket* packet)
+{
+	//Extract command from packet.
+	avs::UpdateNodeEnabledStateCommand command;
+	size_t commandSize = command.getCommandSize();
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
+
+	std::vector<avs::NodeUpdateEnabledState> updateList(command.updatesAmount);
+	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::NodeUpdateEnabledState) * command.updatesAmount);
+
+	mCommandInterface->UpdateNodeEnabledState(updateList);
 }
 
 void SessionClient::ReceiveNodeAnimationUpdate(const ENetPacket* packet)

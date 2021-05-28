@@ -292,10 +292,16 @@ namespace SCServer
 		nodesEnteredBounds.erase(std::remove(nodesEnteredBounds.begin(), nodesEnteredBounds.end(), nodeID), nodesEnteredBounds.end());
 	}
 
-	void ClientMessaging::updateNodeMovement(std::vector<avs::MovementUpdate>& updateList)
+	void ClientMessaging::updateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
 	{
 		avs::UpdateNodeMovementCommand command(updateList.size());
 		sendCommand<avs::MovementUpdate>(command, updateList);
+	}
+
+	void ClientMessaging::updateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
+	{
+		avs::UpdateNodeEnabledStateCommand command(updateList.size());
+		sendCommand<avs::NodeUpdateEnabledState>(command, updateList);
 	}
 
 	void ClientMessaging::updateNodeAnimation(avs::NodeUpdateAnimation update)

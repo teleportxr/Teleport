@@ -1263,6 +1263,19 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, avs::MovementU
 	clientPair->second.clientMessaging.updateNodeMovement(updateList);
 }
 
+TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, avs::NodeUpdateEnabledState* updates, int updateAmount)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to update enabled state for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
+		return;
+	}
+
+	std::vector<avs::NodeUpdateEnabledState> updateList(updates, updates + updateAmount);
+	clientPair->second.clientMessaging.updateNodeEnabledState(updateList);
+}
+
 TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, avs::NodeUpdateAnimation update)
 {
 	auto clientPair = clientServices.find(clientID);

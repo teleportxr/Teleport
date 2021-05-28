@@ -813,6 +813,11 @@ void Application::UpdateNodeMovement(const std::vector<avs::MovementUpdate> &upd
 	resourceManagers.mNodeManager->UpdateNodeMovement(updateList);
 }
 
+void Application::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
+{
+	resourceManagers.mNodeManager->UpdateNodeEnabledState(updateList);
+}
+
 void Application::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
 {
 	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);

@@ -61,7 +61,8 @@ namespace scr
 
 		bool UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translation, const scr::quat& rotation, const avs::vec3& scale);
 
-		void UpdateNodeMovement(std::vector<avs::MovementUpdate> updateList);
+		void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
+		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate);
 
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
@@ -87,6 +88,7 @@ namespace scr
 	private:
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an node, so they can be linked when received. <ChildID, ParentID>
 		std::map<avs::uid, avs::MovementUpdate> earlyMovements; //Movements that have arrived before the node was received.
+		std::map<avs::uid, avs::NodeUpdateEnabledState> earlyEnabledUpdates; //Enabled state updates that have arrived before the node was received.
 		std::map<avs::uid, avs::NodeUpdateAnimation> earlyAnimationUpdates; //Animation updates that were received before the node was received.
 
 		//Uses the index of the node in the nodeList to determine if it is visible.

@@ -90,11 +90,12 @@ namespace scr
 		}
 	}
 
-	void VisibilityComponent::setVisibility(bool visible)
+	void VisibilityComponent::setVisibility(bool visible, InvisibilityReason reason)
 	{
 		isVisible = visible;
+		invisibilityReason = !visible ? reason : VisibilityComponent::InvisibilityReason::VISIBLE;
 
-		if (isVisible)
+		if(isVisible)
 		{
 			timeSinceLastVisible = 0;
 		}
@@ -103,6 +104,11 @@ namespace scr
 	bool VisibilityComponent::getVisibility() const
 	{
 		return isVisible;
+	}
+
+	VisibilityComponent::InvisibilityReason VisibilityComponent::getInvisibilityReason()
+	{
+		return invisibilityReason;
 	}
 
 	float VisibilityComponent::getTimeSinceLastVisible() const
