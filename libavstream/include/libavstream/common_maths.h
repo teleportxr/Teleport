@@ -35,7 +35,7 @@ namespace avs
 			:vec2(0.0f, 0.0f)
 		{}
 
-		vec2(float x, float y)
+		constexpr vec2(float x, float y)
 			:x(x), y(y)
 		{}
 
@@ -125,7 +125,7 @@ namespace avs
 			:vec3(0.0f, 0.0f, 0.0f)
 		{}
 
-		vec3(float x, float y, float z)
+		constexpr vec3(float x, float y, float z)
 			:x(x), y(y), z(z)
 		{}
 		bool operator==(const vec3& v)

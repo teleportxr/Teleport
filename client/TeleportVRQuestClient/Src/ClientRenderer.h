@@ -111,6 +111,9 @@ public:
 	void RenderLocalNodes(OVRFW::ovrRendererOutput& res);
 	void RenderNode(OVRFW::ovrRendererOutput& res, std::shared_ptr<scr::Node> node);
 
+	void SetWebcamPosition(const avs::vec2& position);
+	void RenderWebcam(OVRFW::ovrRendererOutput& res);
+
 	Controllers *controllers=nullptr;
 
 	avs::Decoder       mDecoder;
@@ -146,6 +149,27 @@ public:
 	};
 	CubemapUB cubemapUB;
 
+	struct WebcamUB
+	{
+		scr::uvec2 sourceTexSize;
+		scr::ivec2 sourceOffset;
+		scr::uvec2 camTexSize;
+	};
+
+	struct WebcamResources
+	{
+		OVRFW::GlProgram program;
+		OVRFW::ovrSurfaceDef surfaceDef;
+		std::shared_ptr<scr::VertexBuffer> vertexBuffer;
+		std::shared_ptr<scr::IndexBuffer> indexBuffer;
+		WebcamUB webcamUBData;
+		std::shared_ptr<scr::UniformBuffer> webcamUB;
+		ovrMatrix4f transform;
+
+		void Destroy();
+	};
+	WebcamResources mWebcamResources;
+
 	OVRFW::ovrSurfaceDef mVideoSurfaceDef;
 	OVRFW::GlProgram     mCubeVideoSurfaceProgram;
 	OVRFW::GlProgram     m2DVideoSurfaceProgram;
@@ -176,6 +200,9 @@ public:
 
 	static constexpr int MAX_TAG_DATA_COUNT = 32;
 
+	static constexpr float WEBCAM_WIDTH = 0.1f;
+	static constexpr float WEBCAM_HEIGHT = 0.1f;
+
 	scr::uvec4 mTagDataID;
 
 	std::string                         CopyCubemapSrc;
@@ -191,7 +218,6 @@ public:
 		NUM_OSDS
 	};
 	int show_osd = NO_OSD;
-	bool mIsCubemapVideo = true;
 	void DrawOSD();
 	avs::SetupCommand lastSetupCommand;
 protected:
@@ -200,4 +226,7 @@ protected:
 	void UpdateTagDataBuffers();
 	static constexpr float INFO_TEXT_DURATION = 0.017f;
 	static constexpr size_t MAX_RESOURCES_PER_LINE = 3;
+
+private:
+	void InitWebcamResources();
 };
