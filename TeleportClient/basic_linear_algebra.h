@@ -410,7 +410,7 @@ namespace scr
 			avs::vec4 output_i = *this * input_i;
 			avs::vec4 output_j = *this * input_j;
 			avs::vec4 output_k = *this * input_k;
-			avs::vec4  output_l = *this * input_l;
+			avs::vec4 output_l = *this * input_l;
 
 			mat4 output(output_i, output_j, output_k, output_l);
 			output.Transposed();

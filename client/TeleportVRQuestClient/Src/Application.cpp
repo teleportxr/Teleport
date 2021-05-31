@@ -115,6 +115,10 @@ bool Application::ProcessIniFile()
 											   TELEPORT_CLIENT_SERVICE_PORT);
 		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",
 												 TELEPORT_CLIENT_STREAMING_PORT);
+		uint32_t client_id = ini.GetLongValue("", "CLIENT_ID",
+											  TELEPORT_DEFAULT_CLIENT_ID);
+
+		sessionClient.SetDiscoveryClientID(client_id);
 		return true;
 	}
 	else
@@ -523,7 +527,10 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	if (sessionClient.IsConnected())
 	{
 		clientRenderer.DrawOSD();
-// Append video surface
+
+		clientRenderer.RenderWebcam(out);
+
+		// Append video surface
 		clientRenderer.RenderVideo(*mDeviceContext, out);
 	}
 	else
@@ -754,7 +761,6 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 	handshake.usingHands = true;
 	handshake.maxLightsSupported=4;
 	handshake.clientStreamingPort=client_streaming_port;
-	clientRenderer.mIsCubemapVideo = setupCommand.video_config.use_cubemap;
 
 	clientRenderer.lastSetupCommand = setupCommand;
 }

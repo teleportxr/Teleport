@@ -742,6 +742,10 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.perspective_width       = casterSettings.perspectiveWidth;
 	videoConfig.perspective_height      = casterSettings.perspectiveHeight;
 	videoConfig.perspective_fov			= casterSettings.perspectiveFOV;
+	videoConfig.webcam_width = clientData.clientSettings.webcamSize[0];
+	videoConfig.webcam_height = clientData.clientSettings.webcamSize[1];
+	videoConfig.webcam_offset_x = clientData.clientSettings.webcamPos[0];
+	videoConfig.webcam_offset_y = clientData.clientSettings.webcamPos[1];
 	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
 	videoConfig.colour_cubemap_size		= encoderSettings.frameWidth / 3;
