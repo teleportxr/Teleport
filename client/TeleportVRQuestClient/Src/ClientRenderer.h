@@ -165,7 +165,10 @@ public:
 		WebcamUB webcamUBData;
 		std::shared_ptr<scr::UniformBuffer> webcamUB;
 		ovrMatrix4f transform;
+		bool initialized = false;
 
+		void Init(ClientAppInterface* clientAppInterface);
+		void SetPosition(const avs::vec2& position);
 		void Destroy();
 	};
 	WebcamResources mWebcamResources;
@@ -200,8 +203,8 @@ public:
 
 	static constexpr int MAX_TAG_DATA_COUNT = 32;
 
-	static constexpr float WEBCAM_WIDTH = 0.1f;
-	static constexpr float WEBCAM_HEIGHT = 0.1f;
+	static constexpr float WEBCAM_WIDTH = 0.2f;
+	static constexpr float WEBCAM_HEIGHT = 0.2f;
 
 	scr::uvec4 mTagDataID;
 

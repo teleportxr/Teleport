@@ -255,7 +255,7 @@ namespace avs
 			:vec4(0.0f, 0.0f, 0.0f, 0.0f)
 		{}
 
-		vec4(float x, float y, float z, float w)
+		constexpr vec4(float x, float y, float z, float w)
 			:x(x), y(y), z(z), w(w)
 		{}
 

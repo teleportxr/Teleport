@@ -5,7 +5,7 @@ precision lowp float;
 //layout(location = 1) in mat4 vInvViewProj;
 //layout(location = 5) in vec3 vEyeOffset;
 //layout(location = 6) in vec3 vDirection;
-layout(location = 7) in vec2 vTexCoords;
+layout(location = 1) in vec2 vTexCoords;
 
 layout(binding = 0) uniform sampler2D videoTexture;
 layout(std140, binding = 1) uniform webcamUB
