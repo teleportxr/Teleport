@@ -1560,56 +1560,58 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
 {
-	avs::InputList inputID;
 	if(bLeftButtonDown)
 	{
-		inputID = avs::InputList::TRIGGER01;
+		avs::InputEventAnalogue buttonEvent;
+		buttonEvent.eventID = nextEventID++;
+		buttonEvent.inputID = avs::InputList::TRIGGER01;
+		buttonEvent.strength = 1.0f;
+		controllerStates[0].analogueEvents.push_back(buttonEvent);
 	}
 	else if(bRightButtonDown)
 	{
-		inputID = avs::InputList::BUTTON_B;
+		avs::InputEventBinary buttonEvent;
+		buttonEvent.eventID = nextEventID++;
+		buttonEvent.inputID = avs::InputList::BUTTON_B;
+		buttonEvent.activated = true;
+		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}
 	else if(bMiddleButtonDown)
 	{
-		inputID = avs::InputList::BUTTON_A;
+		avs::InputEventBinary buttonEvent;
+		buttonEvent.eventID = nextEventID++;
+		buttonEvent.inputID = avs::InputList::BUTTON_A;
+		buttonEvent.activated = true;
+		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}
-	else
-	{
-		return;
-	}
-
-	avs::InputEventBinary buttonEvent;
-	buttonEvent.eventID = nextEventID++;
-	buttonEvent.inputID = inputID;
-	buttonEvent.activated = true;
-	controllerStates[0].binaryEvents.push_back(buttonEvent);
 }
 
 void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta)
 {
-	avs::InputList inputID;
 	if(bLeftButtonReleased)
 	{
-		inputID = avs::InputList::TRIGGER01;
+		avs::InputEventAnalogue buttonEvent;
+		buttonEvent.eventID = nextEventID++;
+		buttonEvent.inputID = avs::InputList::TRIGGER01;
+		buttonEvent.strength = 0.0f;
+		controllerStates[0].analogueEvents.push_back(buttonEvent);
 	}
 	else if(bRightButtonReleased)
 	{
-		inputID = avs::InputList::BUTTON_B;
+		avs::InputEventBinary buttonEvent;
+		buttonEvent.eventID = nextEventID++;
+		buttonEvent.inputID = avs::InputList::BUTTON_B;
+		buttonEvent.activated = false;
+		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}
 	else if(bMiddleButtonReleased)
 	{
-		inputID = avs::InputList::BUTTON_A;
+		avs::InputEventBinary buttonEvent;
+		buttonEvent.eventID = nextEventID++;
+		buttonEvent.inputID = avs::InputList::BUTTON_A;
+		buttonEvent.activated = false;
+		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}
-	else
-	{
-		return;
-	}
-
-	avs::InputEventBinary buttonEvent;
-	buttonEvent.eventID = nextEventID++;
-	buttonEvent.inputID = inputID;
-	buttonEvent.activated = false;
-	controllerStates[0].binaryEvents.push_back(buttonEvent);
 }
 
 void ClientRenderer::OnMouseMove(int xPos
