@@ -464,7 +464,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	{
 		return;
 	}
-	static ovrProgramParm uniformParms[] =
+	static ovrProgramParm wcUniformParms[] =
 			{
 					{"videoTexture", ovrProgramParmType::TEXTURE_SAMPLED},
 					{"webcamUB",       ovrProgramParmType::BUFFER_UNIFORM}
@@ -477,7 +477,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 			nullptr, videoSurfaceVert.c_str(),
 			"#extension GL_OES_EGL_image_external_essl3 : require\n",
 			videoSurfaceFrag.c_str(),
-			uniformParms, sizeof(uniformParms) / sizeof(ovrProgramParm), 310);
+			wcUniformParms, sizeof(wcUniformParms) / sizeof(ovrProgramParm), 310);
 	if (!program.IsValid()) {
 		OVR_FAIL("Failed to build video surface shader program for rendering webcam texture");
 	}
@@ -488,6 +488,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	surfaceDef.graphicsCommand.GpuState.cullEnable = false;
 	surfaceDef.graphicsCommand.GpuState.blendEnable = OVRFW::ovrGpuState::BLEND_DISABLE;
 	surfaceDef.graphicsCommand.GpuState.frontFace = GL_CW;
+	surfaceDef.graphicsCommand.GpuState.polygonMode = GL_FILL;
 	surfaceDef.graphicsCommand.Program = program;
 
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
@@ -500,8 +501,8 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 
 	static constexpr size_t camVertexCount = 4;
 	static constexpr size_t camIndexCount = 6;
-	static constexpr avs::vec3 vertices[camVertexCount] = {{-1, -1, 1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, 1}};
-	static constexpr uint32_t indices[camIndexCount] = {0, 1, 3, 1, 2, 3}; // Clockwise
+	static constexpr avs::vec3 vertices[camVertexCount] = {{-1, -1, 0}, {-1, 1, 0}, {1, 1, 0}, {1, -1, 0}};
+	static constexpr uint16_t indices[camIndexCount] = {0, 1, 3, 1, 2, 3}; // Clockwise
 
 	size_t constructedVBSize = layout->m_Stride * camVertexCount;
 
@@ -518,12 +519,14 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	scr::IndexBuffer::IndexBufferCreateInfo ib_ci;
 	ib_ci.usage = (scr::BufferUsageBit)(scr::STATIC_BIT | scr::DRAW_BIT);
 	ib_ci.indexCount = camIndexCount;
-	ib_ci.stride = sizeof(uint32_t);
+	ib_ci.stride = sizeof(uint16_t);
 	ib_ci.data = (const uint8_t*)indices;
 	indexBuffer->Create(&ib_ci);
 
 	std::shared_ptr<scc::GL_VertexBuffer> gl_vb = std::dynamic_pointer_cast<scc::GL_VertexBuffer>(vertexBuffer);
 	std::shared_ptr<scc::GL_IndexBuffer> gl_ib = std::dynamic_pointer_cast<scc::GL_IndexBuffer>(indexBuffer);
+
+	gl_vb->CreateVAO(gl_ib->GetIndexID());
 
 	// Create the GlGeometry for OVR and reference the GL buffers
 	GlGeometry& geo = surfaceDef.geo;
@@ -533,7 +536,6 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	geo.primitiveType = GL_TRIANGLES;
 	geo.vertexCount = (int)gl_vb->GetVertexCount();
 	geo.indexCount = (int)gl_ib->GetIndexBufferCreateInfo().indexCount;
-	//OVRFW::GlGeometry::IndexType = GL_UNSIGNED_INT;
 
 	// Set up the uniform buffer
 	webcamUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
@@ -551,7 +553,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 
 void ClientRenderer::WebcamResources::SetPosition(const avs::vec2& position)
 {
-	ovrMatrix4f translation = ovrMatrix4f_CreateTranslation(position.x, position.y, 1);
+	ovrMatrix4f translation = ovrMatrix4f_CreateTranslation(position.x, position.y, 0);
 
 	// Width and height of original quad is 2 so scale will be half the width/height
 	const avs::vec2 s = { WEBCAM_WIDTH * 0.5f, WEBCAM_HEIGHT * 0.5f };
@@ -586,7 +588,7 @@ void ClientRenderer::RenderWebcam(OVRFW::ovrRendererOutput& res)
 	{
 		mWebcamResources.surfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mVideoTexture.get())->GetGlTexture());
 		mWebcamResources.surfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mWebcamResources.webcamUB.get())->GetGlBuffer());
-		res.Surfaces.emplace_back(ovrDrawSurface(&mWebcamResources.surfaceDef));
+		res.Surfaces.emplace_back(mWebcamResources.transform, &mWebcamResources.surfaceDef);
 		mWebcamResources.webcamUB->Submit();
 	}
 }

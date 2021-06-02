@@ -282,6 +282,8 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			// KiloBytes
 			m_data->m_counters.bandwidthKPS = (float)perf.mbpsRecvRate * 1000.0f * 0.125f;
 			m_data->bandwidthBytes = m_data->m_counters.bandwidthKPS * 1000.0f;
+			m_data->m_counters.networkPacketsReceived = perf.pktRecv;
+			m_data->m_counters.networkPacketsDropped = perf.pktRcvLoss;
 		}
 	}
 
