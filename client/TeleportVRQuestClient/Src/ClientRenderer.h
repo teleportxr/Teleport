@@ -154,6 +154,7 @@ public:
 		scr::uvec2 sourceTexSize;
 		scr::ivec2 sourceOffset;
 		scr::uvec2 camTexSize;
+        scr::uvec2 pad = {0,0};
 	};
 
 	struct WebcamResources

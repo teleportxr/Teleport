@@ -514,24 +514,24 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	clientRenderer.CopyToCubemaps(*mDeviceContext);
 
 
-//Append SCR Nodes to surfaces.
+    //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
 	float time_elapsed = in.DeltaSeconds * 1000.0f;
 	scr::ServerTimestamp::tick(time_elapsed);
 	resourceManagers.Update(time_elapsed);
 	resourceCreator.Update(time_elapsed);
 
-//Move the hands before they are drawn.
+    //Move the hands before they are drawn.
 	UpdateHandObjects();
 	clientRenderer.RenderLocalNodes(out);
 	if (sessionClient.IsConnected())
 	{
 		clientRenderer.DrawOSD();
 
-		clientRenderer.RenderWebcam(out);
-
 		// Append video surface
 		clientRenderer.RenderVideo(*mDeviceContext, out);
+
+        clientRenderer.RenderWebcam(out);
 	}
 	else
 	{

@@ -117,7 +117,8 @@ namespace avs
 	void Queue::Private::increaseBufferCount()
 	{
 		const size_t oldBufferCount = m_maxBuffers;
-		m_maxBuffers += m_originalMaxBuffers * 0.5f;
+		
+		m_maxBuffers += m_originalMaxBuffers / 2;
 		char* oldMem = m_mem;
 		m_mem = new char[m_maxBuffers * m_maxBufferSize];
 
@@ -154,7 +155,7 @@ namespace avs
 	void Queue::Private::increaseBufferSize(size_t requestedSize)
 	{
 		const size_t oldBufferSize = m_maxBufferSize;
-		m_maxBufferSize = requestedSize * 1.5;
+		m_maxBufferSize = requestedSize + (requestedSize / 2);
 		char* oldMem = m_mem;
 		m_mem = new char[m_maxBuffers * m_maxBufferSize];
 
