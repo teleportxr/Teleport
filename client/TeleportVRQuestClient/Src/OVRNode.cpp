@@ -115,7 +115,7 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	OVRFW::GlProgram* ovrGlProgram = GetEffectPass(passname.c_str());
 
 	OVRFW::ovrSurfaceDef ovr_surface_def;
-	ovr_surface_def.graphicsCommand.Program = ovrGlProgram?*ovrGlProgram:0;
+	ovr_surface_def.graphicsCommand.Program = *ovrGlProgram;
 
 	if(material == nullptr)
 	{
