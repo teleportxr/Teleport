@@ -24,7 +24,7 @@ namespace scc
 
 		void LinkShaders(const char* effectPassName, const std::vector<scr::ShaderResource>& shaderResources) override;
 
-		inline OVRFW::GlProgram* GetGlPlatform(const char* effectPassName)
+		inline OVRFW::GlProgram* GetGlProgram(const char* effectPassName)
 		{
 			for(auto& programPair : m_EffectPrograms)
 			{
@@ -37,7 +37,7 @@ namespace scc
 			return nullptr;
 		}
 
-		inline const OVRFW::GlProgram* GetGlPlatform(const char* effectPassName) const
+		inline const OVRFW::GlProgram* GetGlProgram(const char* effectPassName) const
 		{
 			for(const auto& programPair : m_EffectPrograms)
 			{

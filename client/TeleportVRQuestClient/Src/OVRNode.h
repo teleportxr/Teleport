@@ -22,11 +22,10 @@ public:
 	virtual void SetMaterialList(std::vector<std::shared_ptr<scr::Material>>& materials) override;
 
 	std::string GetCompleteEffectPassName(const char* effectPassName);
-	OVRFW::GlProgram* GetEffectPass(const char* effectPassName);
 	void ChangeEffectPass(const char* effectPassName);
 private:
 	OVRFW::ovrSurfaceDef CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material);
-
+	OVRFW::GlProgram* GetEffectPass(const char* effectPassName);
 	//Recreates all OVR surfaces from scratch.
 	void RefreshOVRSurfaces();
 };

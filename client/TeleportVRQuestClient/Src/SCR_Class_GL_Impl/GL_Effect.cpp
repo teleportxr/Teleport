@@ -23,6 +23,7 @@ void GL_Effect::Create(EffectCreateInfo* pEffectCreateInfo)
 {
     m_CI = *pEffectCreateInfo;
 }
+
 void GL_Effect::CreatePass(EffectPassCreateInfo* pEffectCreateInfo)
 {
     m_EffectPasses[pEffectCreateInfo->effectPassName] = *pEffectCreateInfo;
