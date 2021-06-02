@@ -104,14 +104,27 @@ void OVRNode::ChangeEffectPass(const char* effectPassName)
 		OVR_ASSERT(false);
 	}
 }
-
+bool IsDummy(const scr::Texture *tex)
+{
+	if(!tex)
+		return true;
+	if(!tex->IsValid())
+		return true;
+	if(tex->GetTextureCreateInfo().width>1)
+		return false;
+	if(tex->GetTextureCreateInfo().height>1)
+		return false;
+	if(tex->GetTextureCreateInfo().depth>1)
+		return false;
+	return true;
+}
 OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	std::string passname=GlobalGraphicsResources::GenerateShaderPassName(true
-			,material->GetMaterialCreateInfo().normal.texture.get()!=nullptr
-			,material->GetMaterialCreateInfo().combined.texture.get()!=nullptr
-			,(material->GetMaterialCreateInfo().emissive.texture.get()!=nullptr||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f));
+			,!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
+			,!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
+			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f);
 	OVRFW::GlProgram* ovrGlProgram = GetEffectPass(passname.c_str());
 
 	OVRFW::ovrSurfaceDef ovr_surface_def;

@@ -453,7 +453,7 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	vec4 u					=vec4(c.rgb, 1.0);
 	if (emissiveTex)
 	{
-		vec3 emissive		= texture(u_EmissiveTexture, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;
+		vec3 emissive		=texture(u_EmissiveTexture, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;
 		emissive			*=u_EmissiveOutputScalar.rgb;
 
 		u.rgb				+=emissive.rgb;

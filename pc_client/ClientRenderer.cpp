@@ -605,7 +605,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	deviceContext.framePrintY = 8;
 	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
 		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
-		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d", TELEPORT_CLIENT_DISCOVERY_PORT):"Offline"),white);
+		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d", TELEPORT_SERVER_DISCOVERY_PORT):"Offline"),white);
 	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
 	if(show_osd== NETWORK_OSD)
 	{
