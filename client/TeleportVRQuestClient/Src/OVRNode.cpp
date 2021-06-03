@@ -187,6 +187,10 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	{
 		materialCI.combined.texture->UseSampler(globalGraphicsResources.sampler);
 	}
+	if(materialCI.emissive.texture)
+	{
+		materialCI.emissive.texture->UseSampler(globalGraphicsResources.sampler);
+	}
 
 	//Get effect pass create info.
 	std::string completePassName = GetCompleteEffectPassName(globalGraphicsResources.effectPassName);
