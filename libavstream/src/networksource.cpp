@@ -100,11 +100,11 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 	{
 		if (rPacket->mBroken)
 		{
-			AVSLOG(Warning) << "Received NAL-units of size " << unsigned(rPacket->mFrameSize) <<
-				" stream " << unsigned(rPacket->mStreamID) <<
-				" pts " << unsigned(rPacket->mPts) <<
-				" is broken? " << rPacket->mBroken <<
-				" from EFP connection " << unsigned(rPacket->mSource) << "\n";
+			AVSLOG(Warning) << "Received NAL-units of size: " << unsigned(rPacket->mFrameSize) <<
+				" Stream ID: " << unsigned(rPacket->mStreamID) <<
+				" PTS: " << unsigned(rPacket->mPts) <<
+				" Corrupt: " << rPacket->mBroken <<
+				" EFP connection: " << unsigned(rPacket->mSource) << "\n";
 			std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
 			m_data->m_counters.incompleteDecoderPacketsReceived++;
 		}
@@ -277,7 +277,7 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 
 		SRT_TRACEBSTATS perf;
 		// returns 0 if there's no error during execution and -1 if there is
-		if (srt_bstats(m_data->m_socket, &perf, true) == 0)
+		if (srt_bstats(m_data->m_socket, &perf, false) == 0)
 		{
 			// KiloBytes
 			m_data->m_counters.bandwidthKPS = (float)perf.mbpsRecvRate * 1000.0f * 0.125f;
