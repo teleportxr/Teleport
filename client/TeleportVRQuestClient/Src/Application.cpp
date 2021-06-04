@@ -548,6 +548,7 @@ void Application::UpdateHandObjects()
 	for(int i=0; i<2; i++)
 	{
 		ovrTracking remoteState;
+		if( controllers.mControllerIDs[i]!=0)
 		if(vrapi_GetInputTrackingState(GetSessionObject(), controllers.mControllerIDs[i], 0, &remoteState) >= 0)
 		{
 			clientDeviceState.SetControllerPose(i,	*((const avs::vec3 *) (&remoteState.HeadPose.Pose.Position)),

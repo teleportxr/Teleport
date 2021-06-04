@@ -433,7 +433,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 					passNames.push_back(passname.c_str());
 					static char txt2[2000];
 					char const* true_or_false[]={"false","true"};
-					sprintf(txt2,"\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, 0, false);\n}",
+					sprintf(txt2,"\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, 4, false);\n}",
 			 			passname.c_str(),true_or_false[diffuse], true_or_false[normal], true_or_false[combined], true_or_false[emissive]);
 					src+=txt2;
 				}

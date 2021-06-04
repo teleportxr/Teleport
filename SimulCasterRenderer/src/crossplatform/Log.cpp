@@ -27,7 +27,7 @@ private:
 		}
 		return this->sync() ? traits_type::eof() : traits_type::not_eof(c);
 	}
-
+	std::string str;
 	int sync()
 	{
 		int rc=0;
@@ -36,7 +36,19 @@ private:
 			char writebuf[bufsize+1];
 			memcpy(writebuf, this->pbase(), this->pptr()-this->pbase());
 			writebuf[this->pptr()-this->pbase()]='\0';
-			rc=__android_log_write(logPriority, "co.Simul.simulcasterclient", writebuf)>0;
+			str+=writebuf;
+			for(size_t pos=0;pos<str.length();pos++)
+			{
+				if(str[pos]=='\n')
+				{
+					str[pos]=0;
+					rc=__android_log_write(logPriority, "TeleportVR", str.c_str())>0;
+					if(str.length()>pos+1)
+						str=str.substr(pos+1,str.length()-pos-1);
+					else
+						str.clear();
+				}
+			}
 			this->setp(buffer, buffer+bufsize-1);
 		}
 		return rc;
@@ -51,11 +63,11 @@ void RedirectStdCoutCerr() {
 	auto *olderr = std::cerr.rdbuf(&androidCerr);
 	if (oldout != &androidCout)
 	{
-		__android_log_write(ANDROID_LOG_DEBUG, "co.Simul.simulcasterclient", "redirected cout");
+		__android_log_write(ANDROID_LOG_DEBUG, "TeleportVR", "redirected cout");
 	}
 	if (olderr != &androidCerr)
 	{
-		__android_log_write(ANDROID_LOG_DEBUG, "co.Simul.simulcasterclient", "redirected cerr");
+		__android_log_write(ANDROID_LOG_DEBUG, "TeleportVR", "redirected cerr");
 	}
 }
 #endif
