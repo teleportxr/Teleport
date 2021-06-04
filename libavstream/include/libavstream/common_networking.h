@@ -8,8 +8,9 @@
 
 namespace avs
 {
-	#pragma pack(push)
-	#pragma pack(1)
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 	enum class RemotePlaySessionChannel : unsigned char //enet_uint8
 	{
 		RPCH_Handshake = 0,
@@ -65,7 +66,7 @@ namespace avs
 	{
 		uint64_t clientID;
 		uint16_t remotePort;
-	};
+	} AVS_PACKED;
 
 	struct Handshake
 	{
@@ -81,7 +82,7 @@ namespace avs
 		uint64_t resourceCount = 0; //Amount of resources the client has, and are appended to the handshake.
 		uint32_t maxLightsSupported = 0;
 		uint32_t clientStreamingPort = 0; // the local port on the client to receive the stream.
-	};
+	} AVS_PACKED;
 
 	struct InputState
 	{
@@ -95,7 +96,7 @@ namespace avs
 		uint32_t binaryEventAmount = 0;
 		uint32_t analogueEventAmount = 0;
 		uint32_t motionEventAmount = 0;
-	};
+	} AVS_PACKED;
 
 	//Contains information to update the transform of a node.
 	struct MovementUpdate
@@ -111,7 +112,7 @@ namespace avs
 		vec3 velocity;
 		vec3 angularVelocityAxis;
 		float angularVelocityAngle = 0.0f;
-	};
+	} AVS_PACKED;
 
 	//TODO: Use instead of MovementUpdate for bandwidth.
 	struct NodeUpdatePosition
@@ -122,7 +123,7 @@ namespace avs
 		uid nodeID = 0;
 		vec3 position;
 		vec3 velocity;
-	};
+	} AVS_PACKED;
 
 	//TODO: Use instead of MovementUpdate for bandwidth.
 	struct NodeUpdateRotation
@@ -134,7 +135,7 @@ namespace avs
 		vec4 rotation;
 		vec3 angularVelocityAxis;
 		float angularVelocityAngle = 0.0f;
-	};
+	} AVS_PACKED;
 
 	//TODO: Use instead of MovementUpdate for bandwidth.
 	struct NodeUpdateScale
@@ -145,13 +146,13 @@ namespace avs
 		uid nodeID = 0;
 		vec3 scale;
 		vec3 velocity;
-	};
+	} AVS_PACKED;
 
 	struct NodeUpdateEnabledState
 	{
 		uid nodeID = 0; //ID of the node we are changing the enabled state of.
 		bool enabled = false; //Whether the node is enabled, and thus should be rendered.
-	};
+	} AVS_PACKED;
 
 	struct NodeUpdateAnimation
 	{
@@ -159,7 +160,7 @@ namespace avs
 
 		uid nodeID = 0; //ID of the node the animation is playing on.
 		uid animationID = 0; //ID of the animation that is now playing.
-	};
+	} AVS_PACKED;
 
 	struct Command
 	{
@@ -169,7 +170,7 @@ namespace avs
 
 		//Returns byte size of command.
 		virtual size_t getCommandSize() const = 0;
-	};
+	}; AVS_PACKED;
 
 	struct AcknowledgeHandshakeCommand : public Command
 	{
@@ -182,7 +183,7 @@ namespace avs
 		}
 
 		size_t visibleNodeAmount = 0; //Amount of visible node IDs appended to the command payload.
-	};
+	} AVS_PACKED;
 
 	struct SetPositionCommand : public Command
 	{
@@ -198,7 +199,7 @@ namespace avs
 		uint64_t valid_counter = 0;
 		uint8_t set_relative_pos = 0;
 		vec3 relative_pos;
-	};
+	} AVS_PACKED;
 
 	struct SetupCommand : public Command
 	{
@@ -222,7 +223,7 @@ namespace avs
 		AxesStandard axesStandard = AxesStandard::NotInitialized;
 		uint8_t audio_input_enabled = 0;
 		int64_t startTimestamp = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
-	};
+	} AVS_PACKED;
 
 	struct ReconfigureVideoCommand : public Command
 	{
@@ -234,7 +235,7 @@ namespace avs
 		}
 
 		VideoConfig video_config;
-	};
+	} AVS_PACKED;
 
 	struct ShutdownCommand : public Command
 	{
@@ -244,7 +245,7 @@ namespace avs
 		{
 			return sizeof(ShutdownCommand);
 		}
-	};
+	} AVS_PACKED;
 
 	struct NodeBoundsCommand : public Command
 	{
@@ -263,7 +264,7 @@ namespace avs
 		{
 			return sizeof(NodeBoundsCommand);
 		}
-	};
+	} AVS_PACKED;
 
 	struct UpdateNodeMovementCommand : public Command
 	{
@@ -281,7 +282,7 @@ namespace avs
 		{
 			return sizeof(UpdateNodeMovementCommand);
 		}
-	};
+	} AVS_PACKED;
 	
 	struct UpdateNodeEnabledStateCommand : public Command
 	{
@@ -299,7 +300,7 @@ namespace avs
 		{
 			return sizeof(UpdateNodeEnabledStateCommand);
 		}
-	};
+	} AVS_PACKED;
 
 	struct UpdateNodeAnimationCommand : public Command
 	{
@@ -317,7 +318,7 @@ namespace avs
 		{
 			return sizeof(UpdateNodeAnimationCommand);
 		}
-	};
+	} AVS_PACKED;
 
 	struct ClientMessage
 	{
@@ -327,7 +328,7 @@ namespace avs
 
 		//Returns byte size of message.
 		virtual size_t getMessageSize() const = 0;
-	};
+	} AVS_PACKED;
 
 	//Message info struct containing how many nodes have changed to what state; sent alongside two list of node UIDs.
 	struct NodeStatusMessage : public ClientMessage
@@ -349,7 +350,7 @@ namespace avs
 		{
 			return sizeof(NodeStatusMessage);
 		}
-	};
+	} AVS_PACKED;
 
 	//Message info struct containing how many resources were received; sent alongside a list of UIDs.
 	struct ReceivedResourcesMessage : public ClientMessage
@@ -368,7 +369,7 @@ namespace avs
 		{
 			return sizeof(ReceivedResourcesMessage);
 		}
-	};
+	} AVS_PACKED;
 
 	//Message info struct containing how many resources were received; sent alongside a list of UIDs.
 	struct ControllerPosesMessage : public ClientMessage
@@ -384,7 +385,7 @@ namespace avs
 		{
 			return sizeof(ControllerPosesMessage);
 		}
-	};
+	} AVS_PACKED;
 
 	struct OriginPoseMessage : public ClientMessage
 	{
@@ -397,6 +398,9 @@ namespace avs
 		{
 			return sizeof(OriginPoseMessage);
 		}
-	};
+	} AVS_PACKED;
+
+#ifdef _MSC_VER
 #pragma pack(pop)
+#endif
 } //namespace avs

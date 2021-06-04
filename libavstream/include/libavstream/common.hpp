@@ -10,10 +10,17 @@
 
 #define LIBAVSTREAM_VERSION 1
 
+#if defined(__GNUC__) || defined(__clang__)
+#define AVS_PACKED __attribute__ ((packed))
+#else
+#define AVS_PACKED
+#endif
+
 namespace avs
 {
-#pragma pack(push)
-#pragma pack(1)
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 	typedef unsigned long long uid;
 	extern AVSTREAM_API uid GenerateUid();
 
@@ -239,7 +246,7 @@ namespace avs
 	{
 		uint32_t width;
 		uint32_t height;
-	};
+	} AVS_PACKED;
 
 	struct VideoConfig
 	{
@@ -277,14 +284,15 @@ namespace avs
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
 		float       draw_distance = 0.0f;
-	};
+	} AVS_PACKED;
+
 
 	struct AudioConfig
 	{
 		uint32_t sampleRate = 44100;
 		uint32_t bitsPerSample = 16;
 		uint32_t numChannels = 2;
-	};
+	} AVS_PACKED;
 
 	/*! Graphics API device handle. */
 	struct DeviceHandle
@@ -300,7 +308,7 @@ namespace avs
 		{
 			return reinterpret_cast<T*>(handle);
 		}
-	};
+	} AVS_PACKED;
 
 	struct NetworkFrameInfo
 	{
@@ -308,6 +316,9 @@ namespace avs
 		uint64_t dts = UINT64_MAX;
 		size_t dataSize = 0;
 		bool broken = false; // True if any fragment of the data has been lost
-	};
+	} AVS_PACKED;
+
+#ifdef _MSC_VER
 #pragma pack(pop)
+#endif
 } // avs

@@ -2,12 +2,14 @@
 
 #include <cstdint>
 
+#include "common.hpp"
 #include "common_maths.h"
 
 namespace avs
 {
-	#pragma pack(push)
-	#pragma pack(1)
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 	//List of all IDs for all input types; list contains common aliases.
 	enum class InputList
 	{
@@ -91,7 +93,7 @@ namespace avs
 		uint32_t eventID = 0;
 		InputList inputID = InputList::INVALID; //ID of the input type used that triggered the event.
 		bool activated = false;
-	};
+	} AVS_PACKED;
 
 	//Input events that can be normalised between two values; e.g. how pressed a trigger is.
 	struct InputEventAnalogue
@@ -107,7 +109,7 @@ namespace avs
 		{
 			strength = value / maxValue;
 		}
-	};
+	} AVS_PACKED;
 
 	//Input events that represent the motion in two directions; e.g. a stick on a controller.
 	struct InputEventMotion
@@ -115,6 +117,9 @@ namespace avs
 		uint32_t eventID = 0;
 		InputList inputID = InputList::INVALID; //ID of the input type used that triggered the event.
 		vec2 motion = vec2{0.0f, 0.0f};
-	};
+	} AVS_PACKED;
+
+#ifdef _MSC_VER
 #pragma pack(pop)
+#endif
 } //namespace avs
