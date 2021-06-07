@@ -170,7 +170,7 @@ namespace avs
 
 		//Returns byte size of command.
 		virtual size_t getCommandSize() const = 0;
-	}; AVS_PACKED;
+	} AVS_PACKED;
 
 	struct AcknowledgeHandshakeCommand : public Command
 	{
