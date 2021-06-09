@@ -643,7 +643,8 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
 
-		int linesRemaining = 20;
+		static int lineLimit = 50;
+		int linesRemaining = lineLimit;
 		auto& rootNodes = resourceManagers.mNodeManager->GetRootNodes();
 		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{

@@ -760,7 +760,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.usingHands = true;
-	handshake.maxLightsSupported=4;
+	handshake.maxLightsSupported=TELEPORT_MAX_LIGHTS;
 	handshake.clientStreamingPort=client_streaming_port;
 
 	clientRenderer.lastSetupCommand = setupCommand;
@@ -880,8 +880,7 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char *msg, 
 	}
 }
 
-const scr::Effect::EffectPassCreateInfo *
-Application::BuildEffectPass(const char *effectPassName, scr::VertexBufferLayout *vbl
+const scr::Effect::EffectPassCreateInfo *Application::BuildEffectPass(const char *effectPassName, scr::VertexBufferLayout *vbl
 							 , const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo
 							 , const std::vector<scr::ShaderResource> &shaderResources)
 {

@@ -19,6 +19,7 @@
 #include "ClientDeviceState.h"
 #include "OVRNode.h"
 #include "OVRNodeManager.h"
+#include "Config.h"
 
 using namespace OVR;
 using namespace OVRFW;
@@ -433,8 +434,8 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 					passNames.push_back(passname.c_str());
 					static char txt2[2000];
 					char const* true_or_false[]={"false","true"};
-					sprintf(txt2,"\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, 4, false);\n}",
-			 			passname.c_str(),true_or_false[diffuse], true_or_false[normal], true_or_false[combined], true_or_false[emissive]);
+					sprintf(txt2,"\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, %d, false);\n}",
+			 			passname.c_str(),true_or_false[diffuse], true_or_false[normal], true_or_false[combined], true_or_false[emissive],TELEPORT_MAX_LIGHTS);
 					src+=txt2;
 				}
 			}
@@ -1000,48 +1001,50 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 	if(node->IsVisible())
 	{
 		std::shared_ptr<OVRNode> ovrNode = std::static_pointer_cast<OVRNode>(node);
-
-		//Get final transform.
-		scr::mat4 globalMatrix = node->GetGlobalTransform().GetTransformMatrix();
-		clientDeviceState->transformToLocalOrigin = scr::mat4::Identity();//Translation(-clientDeviceState->localFootPos);
-		scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
-
-		//Convert transform to OVR type.
-		OVR::Matrix4f transform;
-		memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
-
-		//Update skin uniform buffer to animate skinned meshes.
-		std::shared_ptr<scr::Skin> skin = ovrNode->GetSkin();
-		if(skin)
+		if(ovrNode->ovrSurfaceDefs.size()>0)
 		{
-			skin->UpdateBoneMatrices(globalMatrix);
-		}
-		GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
-		std::vector<const scr::ShaderResource *> pbrShaderResources;
-		pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
-		//Push surfaces onto render queue.
-		for(ovrSurfaceDef &surfaceDef : ovrNode->ovrSurfaceDefs)
-		{
-			// Must update the uniforms. e.g. camera pos.
-			for(const scr::ShaderResource *sr : pbrShaderResources)
+			//Get final transform.
+			scr::mat4 globalMatrix = node->GetGlobalTransform().GetTransformMatrix();
+			clientDeviceState->transformToLocalOrigin = scr::mat4::Identity();//Translation(-clientDeviceState->localFootPos);
+			scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
+
+			//Convert transform to OVR type.
+			OVR::Matrix4f transform;
+			memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
+
+			//Update skin uniform buffer to animate skinned meshes.
+			std::shared_ptr<scr::Skin> skin = ovrNode->GetSkin();
+			if(skin)
 			{
-				const std::vector<scr::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
-				int j = 0;
-				for(const scr::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
-				{
-					scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
-					if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER && resource.bufferInfo.buffer)
-					{
-						scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
-						surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
-					}
-					j++;
-				}
-				OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
-				surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
+				skin->UpdateBoneMatrices(globalMatrix);
 			}
+			GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+			std::vector<const scr::ShaderResource *> pbrShaderResources;
+			pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
+			//Push surfaces onto render queue.
+			for(ovrSurfaceDef &surfaceDef : ovrNode->ovrSurfaceDefs)
+			{
+				// Must update the uniforms. e.g. camera pos.
+				for(const scr::ShaderResource *sr : pbrShaderResources)
+				{
+					const std::vector<scr::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
+					int j = 0;
+					for(const scr::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
+					{
+						scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
+						if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER && resource.bufferInfo.buffer)
+						{
+							scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
+							surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
+						}
+						j++;
+					}
+					OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
+					surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
+				}
 
-			res.Surfaces.emplace_back(transform, &surfaceDef);
+				res.Surfaces.emplace_back(transform, &surfaceDef);
+			}
 		}
 	}
 

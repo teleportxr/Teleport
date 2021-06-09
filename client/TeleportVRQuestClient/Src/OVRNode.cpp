@@ -126,27 +126,32 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 			,!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
 			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f);
 	OVRFW::GlProgram* ovrGlProgram = GetEffectPass(passname.c_str());
-
 	OVRFW::ovrSurfaceDef ovr_surface_def;
+	if(ovrGlProgram == nullptr)
+	{
+		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Effect pass %s, not found!",passname.c_str());
+		return ovr_surface_def;
+	}
+
 	ovr_surface_def.graphicsCommand.Program = *ovrGlProgram;
 
 	if(material == nullptr)
 	{
-		OVR_WARN("Failed to create OVR surface! Null material passed to CreateOVRSurface(...)!");
+		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Null material passed to CreateOVRSurface(...)!");
 		return ovr_surface_def;
 	}
 
 	std::shared_ptr<scr::Mesh> mesh = GetMesh();
 	if(!mesh)
 	{
-		OVR_WARN("Failed to create OVR surface! OVRNode has no mesh!");
+		OVR_WARN("CreateOVRSurface Failed to create OVR surface! OVRNode has no mesh!");
 		return ovr_surface_def;
 	}
 
 	const scr::Mesh::MeshCreateInfo &meshCI = mesh->GetMeshCreateInfo();
 	if(materialIndex >= meshCI.vb.size() || materialIndex >= meshCI.ib.size())
 	{
-		OVR_LOG("Failed to create OVR surface!\nMaterial index %zu greater than amount of mesh buffers: %zu Vertex | %zu Index", materialIndex, meshCI.vb.size(), meshCI.ib.size());
+		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nMaterial index %zu greater than amount of mesh buffers: %zu Vertex | %zu Index", materialIndex, meshCI.vb.size(), meshCI.ib.size());
 		return ovr_surface_def;
 	}
 
@@ -157,13 +162,13 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 
 	if(!gl_vb)
 	{
-		OVR_LOG("Failed to create OVR surface!\nNo vertex buffer to create OVR surface for material: %zu", materialIndex);
+		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nNo vertex buffer to create OVR surface for material: %zu", materialIndex);
 		return ovr_surface_def;
 	}
 
 	if(!gl_ib)
 	{
-		OVR_LOG("Failed to create OVR surface!\nNo index buffer to create OVR surface for material: %zu", materialIndex);
+		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nNo index buffer to create OVR surface for material: %zu", materialIndex);
 		return ovr_surface_def;
 	}
 
@@ -294,6 +299,7 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		}
 	}
 
+	OVR_LOG("CreateOVRSurface Created OVR surface! Effect pass %s",passname.c_str());
 	return ovr_surface_def;
 }
 

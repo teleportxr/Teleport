@@ -350,7 +350,7 @@ vec3 PBRLight(SurfaceState surfaceState, vec3 viewDir,vec3 dir_from_surface_to_l
 	///	specular						*=surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
 	vec3 colour = diffuse+specular;
 	//colour *= shadow;
-	return colour;//vec3(n_h,n_h,n_h);
+	return colour;
 }
 
 vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties,LightTag lightTag)
@@ -394,7 +394,7 @@ vec4 Solid(vertexOutput IN)
 	//combinedLookup.b	=1.0;
 	// So combinedLookup is now rough-metal-occl-smooth
 	vec3 roughMetalOcclusion		=combinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.agb;
-	roughMetalOcclusion.r+=combinedOutputScalarRoughMetalOcclusion.a;
+	roughMetalOcclusion.r			+=combinedOutputScalarRoughMetalOcclusion.a;
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.position		=IN.wpos;
 
@@ -410,7 +410,7 @@ vec4 Solid(vertexOutput IN)
 	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
 	int id						=int(TagDataIDBuffer[0].x);
 	VideoTagDataCube tagData	=TagDataCubeBuffer[id];
-	for(int i=0;i<12;i++)
+	for(int i=0;i<4;i++)
 	{
 		if(i>=tagData.lightCount)
 			break;
