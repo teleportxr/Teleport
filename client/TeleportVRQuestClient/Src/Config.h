@@ -13,5 +13,5 @@ constexpr unsigned int TELEPORT_TIMEOUT = 1000;
 
 constexpr unsigned int TELEPORT_DEFAULT_CLIENT_ID = 2021;
 
-constexpr unsigned int TELEPORT_MAX_LIGHTS = 1;
+constexpr unsigned int TELEPORT_MAX_LIGHTS = 0;
 

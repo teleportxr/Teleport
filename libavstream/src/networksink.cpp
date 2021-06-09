@@ -114,7 +114,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	// The callback will be called on the same thread calling 'packAndSendFromPtr'
 	m_data->m_EFPSender->sendCallback = std::bind(&Private::sendOrCacheData, m_data, std::placeholders::_1);
 
-	m_data->m_maxPacketsAllowedPerSecond = 2500000 / PacketFormat::MaxPacketSize;
+	m_data->m_maxPacketsAllowedPerSecond = 5000000 / PacketFormat::MaxPacketSize;
 	m_data->m_maxPacketsAllowed = 0;
 	m_data->m_packetsSent = 0;
 
