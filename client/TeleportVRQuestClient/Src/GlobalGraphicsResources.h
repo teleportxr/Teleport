@@ -25,7 +25,7 @@ public:
 
     std::shared_ptr<scr::Camera> scrCamera;
 
-    char* effectPassName = const_cast<char*>("OpaquePBR"); //Which effect pass the geometry should be rendered with.
+    char* effectPassName = const_cast<char*>("OpaquePBRAmbient"); //Which effect pass the geometry should be rendered with.
 
     static GlobalGraphicsResources& GetInstance();
 

@@ -402,14 +402,16 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	//pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_DiffuseCubemap", {});
 
 	passNames.clear();
-	passNames.push_back("OpaquePBR");
+	passNames.push_back("OpaquePBR_NoLight");
+	passNames.push_back("OpaquePBR_1Light");
 	passNames.push_back("OpaqueAlbedo");
 	passNames.push_back("OpaqueNormal");
 	passNames.push_back("OpaquePBRAmbient");
 	passNames.push_back("OpaquePBRDebug");
 	debugPassNames.clear();
 	debugPassNames.push_back("");
-	debugPassNames.push_back("OpaquePBR");
+	debugPassNames.push_back("OpaquePBR_NoLight");
+	debugPassNames.push_back("OpaquePBR_1Light");
 	debugPassNames.push_back("OpaqueAlbedo");
 	debugPassNames.push_back("OpaqueNormal");
 	debugPassNames.push_back("OpaquePBRAmbient");
