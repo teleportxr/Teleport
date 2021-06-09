@@ -15,7 +15,7 @@ GlobalGraphicsResources::GlobalGraphicsResources()
 	mTagDataBuffer = renderPlatform.InstantiateShaderStorageBuffer();
 }
 
-std::string GlobalGraphicsResources::GenerateShaderPassName(int diffuse,int normal,int combined,int emissive)
+std::string GlobalGraphicsResources::GenerateShaderPassName(int diffuse,int normal,int combined,int emissive,int lightcount,int highlight)
 {
 	std::string passname = "OpaquePBRDiffuse";
 	passname += diffuse ? "1" : "0";
@@ -25,5 +25,11 @@ std::string GlobalGraphicsResources::GenerateShaderPassName(int diffuse,int norm
 	passname += combined ? "1" : "0";
 	passname += "Emissive";
 	passname += emissive ? "1" : "0";
+	passname += "Lights";
+	char countstr[10];
+	sprintf(countstr,"%d",lightcount);
+	passname += countstr;
+	if(highlight)
+		passname+="_Highlight";
 	return passname;
 }

@@ -23,9 +23,12 @@ public:
 
 	std::string GetCompleteEffectPassName(const char* effectPassName);
 	void ChangeEffectPass(const char* effectPassName);
+	void SetHighlight(bool h);
 private:
 	OVRFW::ovrSurfaceDef CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material);
 	OVRFW::GlProgram* GetEffectPass(const char* effectPassName);
 	//Recreates all OVR surfaces from scratch.
 	void RefreshOVRSurfaces();
+	OVRFW::GlProgram* ovrGlProgram =nullptr;
+	OVRFW::GlProgram* ovrGlProgramHighlight =nullptr;
 };

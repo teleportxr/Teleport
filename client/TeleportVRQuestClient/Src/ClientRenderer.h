@@ -200,6 +200,7 @@ public:
 	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	std::vector<std::string> passNames;
+	std::vector<std::string> debugPassNames;
 	int passSelector=0;
 
 	static constexpr int MAX_TAG_DATA_COUNT = 32;

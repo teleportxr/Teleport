@@ -6,6 +6,7 @@
 
 #include "crossplatform/Material.h"
 #include "crossplatform/Mesh.h"
+#include "Config.h"
 
 #include "GlobalGraphicsResources.h"
 #include "SCR_Class_GL_Impl/GL_Effect.h"
@@ -89,21 +90,34 @@ OVRFW::GlProgram* OVRNode::GetEffectPass(const char* effectPassName)
 
 void OVRNode::ChangeEffectPass(const char* effectPassName)
 {
-	OVRFW::GlProgram* effectPass = GetEffectPass(effectPassName);
-
-	if(effectPass)
+	OVRFW::GlProgram* p = GetEffectPass(effectPassName);
+	if(!p)
+		p=ovrGlProgram;
+	if(p)
 	{
 		for(auto &surface : ovrSurfaceDefs)
 		{
-			surface.graphicsCommand.Program = *effectPass;
+			surface.graphicsCommand.Program = *p;
 		}
 	}
 	else
 	{
-		OVR_ERROR("Invalid effect pass name! %s", effectPassName);
-		OVR_ASSERT(false);
+		OVR_WARN("Invalid effect pass name! %s", effectPassName);
 	}
 }
+
+void OVRNode::SetHighlight(bool h)
+{
+	OVRFW::GlProgram* p=h?ovrGlProgramHighlight:ovrGlProgram;
+	if(p)
+	{
+		for(auto &surface : ovrSurfaceDefs)
+		{
+			surface.graphicsCommand.Program = *p;
+		}
+	}
+}
+
 bool IsDummy(const scr::Texture *tex)
 {
 	if(!tex)
@@ -124,14 +138,23 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	std::string passname=GlobalGraphicsResources::GenerateShaderPassName(true
 			,!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
 			,!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
-			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f);
-	OVRFW::GlProgram* ovrGlProgram = GetEffectPass(passname.c_str());
+			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f
+			,TELEPORT_MAX_LIGHTS
+			,false);
+	ovrGlProgram = GetEffectPass(passname.c_str());
 	OVRFW::ovrSurfaceDef ovr_surface_def;
 	if(ovrGlProgram == nullptr)
 	{
 		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Effect pass %s, not found!",passname.c_str());
 		return ovr_surface_def;
 	}
+	std::string highlightpassname=GlobalGraphicsResources::GenerateShaderPassName(true
+			,!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
+			,!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
+			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f
+			,TELEPORT_MAX_LIGHTS
+			,true);
+	ovrGlProgramHighlight = GetEffectPass(highlightpassname.c_str());
 
 	ovr_surface_def.graphicsCommand.Program = *ovrGlProgram;
 

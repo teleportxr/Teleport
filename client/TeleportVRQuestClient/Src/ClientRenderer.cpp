@@ -407,6 +407,13 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	passNames.push_back("OpaqueNormal");
 	passNames.push_back("OpaquePBRAmbient");
 	passNames.push_back("OpaquePBRDebug");
+	debugPassNames.clear();
+	debugPassNames.push_back("");
+	debugPassNames.push_back("OpaquePBR");
+	debugPassNames.push_back("OpaqueAlbedo");
+	debugPassNames.push_back("OpaqueNormal");
+	debugPassNames.push_back("OpaquePBRAmbient");
+	debugPassNames.push_back("OpaquePBRDebug");
 
 	scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
 
@@ -430,13 +437,22 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			{
 				for(int diffuse=0;diffuse<2;diffuse++)
 				{
-					std::string passname=GlobalGraphicsResources::GenerateShaderPassName(diffuse,normal,combined,emissive);
-					passNames.push_back(passname.c_str());
-					static char txt2[2000];
-					char const* true_or_false[]={"false","true"};
-					sprintf(txt2,"\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, %d, false);\n}",
-			 			passname.c_str(),true_or_false[diffuse], true_or_false[normal], true_or_false[combined], true_or_false[emissive],TELEPORT_MAX_LIGHTS);
-					src+=txt2;
+					for(int lightCount=0;lightCount<2;lightCount++)
+					{
+						for(int highlight=0;highlight<2;highlight++)
+						{
+							std::string passname= GlobalGraphicsResources::GenerateShaderPassName(
+									diffuse, normal, combined, emissive, lightCount, highlight);
+							passNames.push_back(passname.c_str());
+							static char txt2[2000];
+							char const  *true_or_false[] = {"false", "true"};
+							sprintf(txt2, "\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, %d, %s);\n}",
+									passname.c_str(), true_or_false[diffuse], true_or_false[normal],
+									true_or_false[combined], true_or_false[emissive],
+									lightCount, true_or_false[highlight]);
+							src += txt2;
+						}
+					}
 				}
 			}
 		}
@@ -1063,8 +1079,8 @@ void ClientRenderer::CycleShaderMode()
 {
 	OVRNodeManager *nodeManager = dynamic_cast<OVRNodeManager *>(resourceManagers->mNodeManager.get());
 	passSelector++;
-	passSelector = passSelector % (passNames.size());
-	nodeManager->ChangeEffectPass(passNames[passSelector].c_str());
+	passSelector = passSelector % (debugPassNames.size());
+	nodeManager->ChangeEffectPass(passSelector>0?debugPassNames[passSelector].c_str():"");
 }
 
 void ClientRenderer::ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining)
@@ -1222,10 +1238,10 @@ void ClientRenderer::DrawOSD()
 			const scr::NodeManager::nodeList_t &rootNodes = resourceManagers->mNodeManager->GetRootNodes();
 
 			str <<"Nodes: "<<static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount())<<
-				"Orphans: "<<ctr.m_packetMapOrphans<<"\n";
+				" Orphans: "<<ctr.m_packetMapOrphans<<"\n";
 			for(std::shared_ptr<scr::Node> node : rootNodes)
 			{
-				str << node->id << ", ";
+				str << node->id << ": "<<node->name.c_str()<<"\n";
 			}
 			str << "\n";
 

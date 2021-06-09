@@ -588,8 +588,6 @@ namespace SCServer
 		CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
 		cameraInfo.width = static_cast<float>(displayInfo.width);
 		cameraInfo.height = static_cast<float>(displayInfo.height);
-
-
 	}
 
 	void ClientMessaging::receiveHeadPose(const ENetPacket* packet)

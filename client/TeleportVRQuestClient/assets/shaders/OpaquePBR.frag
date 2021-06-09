@@ -413,14 +413,14 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 	return surfaceProperties;
 }
 
-void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool debug)
+void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool highlight)
 {
 	vec3 diff					=v_Position-v_CameraPosition;
 	float dist_to_frag          =length(diff);
 	if (dist_to_frag > cam.u_DrawDistance)
 		discard;
 	vec3 view = normalize(diff);
-	SurfaceProperties surfaceProperties=GetSurfaceProperties(diffuseTex,normalTex,combinedTex,emissiveTex,ambient,maxLights,debug);
+	SurfaceProperties surfaceProperties=GetSurfaceProperties(diffuseTex,normalTex,combinedTex,emissiveTex,ambient,maxLights,false);
 
 	SurfaceState surfaceState		=PreprocessSurface(view, surfaceProperties,ambient);
 	vec3 c;
@@ -444,10 +444,10 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 		vertexLight.n_h					=v_VertexLight_nh_lh_nl[i].x;
 		vertexLight.l_h					=v_VertexLight_nh_lh_nl[i].y;
 		vertexLight.n_l					=v_VertexLight_nh_lh_nl[i].z;
-		if(view.x>0.0)
+		//if(view.x>0.0)
 			c		+=PBRAddVertexLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i],vertexLight);
-		else
-			c		+=PBRAddLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i]);//,vertexLight);
+		//else
+		//	c		+=PBRAddLight(surfaceState, view, surfaceProperties, tagDataCube.lightTags[i]);//,vertexLight);
 
 	}
 	vec4 u					=vec4(c.rgb, 1.0);
@@ -458,11 +458,9 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 
 		u.rgb				+=emissive.rgb;
 	}
-	if(debug)
+	if(highlight)
 	{
-		u.r=surfaceProperties.roughness;
-		u.g=surfaceProperties.metallic;
-		u.b=surfaceProperties.ao;
+		u.rgb+=vec3(0.1,0.1,0.1);
 	}
 	//u.rgb=surfaceProperties.albedo;
 	gl_FragColor = Gamma(u);

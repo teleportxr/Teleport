@@ -559,12 +559,12 @@ void Application::UpdateHandObjects()
 	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
 	if(body)
 	{
-			body->SetLocalPosition(clientDeviceState.headPose.position + bodyOffsetFromHead);
+		body->SetLocalPosition(clientDeviceState.headPose.position + bodyOffsetFromHead);
 
-			//Calculate rotation angle on y-axis, and use to create new quaternion that only rotates the body on the y-axis.
-			float angle = std::atan2(clientDeviceState.headPose.orientation.y, clientDeviceState.headPose.orientation.w);
-			scr::quat yRotation(0.0f, std::sin(angle), 0.0f, std::cos(angle));
-			body->SetLocalRotation(yRotation);
+		//Calculate rotation angle on y-axis, and use to create new quaternion that only rotates the body on the y-axis.
+		float angle = std::atan2(clientDeviceState.headPose.orientation.y, clientDeviceState.headPose.orientation.w);
+		scr::quat yRotation(0.0f, std::sin(angle), 0.0f, std::cos(angle));
+		body->SetLocalRotation(yRotation);
 	}
 
 	// Left and right hands have no parent and their position/orientation is relative to the current local space.
