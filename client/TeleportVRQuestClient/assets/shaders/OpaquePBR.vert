@@ -2,7 +2,9 @@
 //#version 310 es
 precision lowp float;
 #define lerp mix
-
+#ifndef TELEPORT_MAX_LIGHTS
+#define TELEPORT_MAX_LIGHTS 4
+#endif
 //From Application VIA
 layout(location = 0) in vec3 a_Position;
 layout(location = 1) in vec3 a_Normal;
@@ -69,14 +71,12 @@ struct SurfaceLightProperties
     vec3 directionToLight;      // 1 location
     float distanceToLight;
     vec3 halfway;
-    float n_h;
-    float l_h;
-    float n_l;
+    vec3 nh2_lh2_nl;
 };
 layout(location = 14) out vec3 v_VertexLight_directionToLight[4];   // Consumes 4 locations.
 layout(location = 18) out float v_VertexLight_distanceToLight[4];   // Consumes 4 locations.
 layout(location = 22) out vec3 v_VertexLight_halfway[4];   // Consumes 4 locations.
-layout(location = 26) out vec3 v_VertexLight_nh_lh_nl[4];   // Consumes 4 locations.
+layout(location = 26) out vec3 v_VertexLight_nh2_lh2_nl[4];   // Consumes 4 locations.
 //Material
 layout(std140, binding = 2) uniform u_MaterialData //Layout conformant to GLSL std140
 {
@@ -146,11 +146,12 @@ SurfaceLightProperties GetVertexLight(vec3 viewDir, VertexSurfaceProperties surf
     float atten                     =step(vertexLight.distanceToLight, lightTag.range);
     vec3 irradiance                 =lightTag.colour.rgb*lerp(1.0, atten/(d*d), lightTag.is_point);
     vertexLight.directionToLight    =lerp(-lightTag.direction, normalize(diff), lightTag.is_point);
-    vertexLight.n_l						=saturate(dot(surfaceProperties.normal, vertexLight.directionToLight));
-    vertexLight.halfway					=normalize(-viewDir+vertexLight.directionToLight);
-    vertexLight.n_h						=saturate(dot(vertexLight.halfway,surfaceProperties.normal));
-    vertexLight.l_h						=saturate(dot(vertexLight.halfway,vertexLight.directionToLight));
-
+    vertexLight.nh2_lh2_nl.z		=saturate(dot(surfaceProperties.normal, vertexLight.directionToLight));
+    vertexLight.halfway				=normalize(-viewDir+vertexLight.directionToLight);
+    float n_h                       =saturate(dot(vertexLight.halfway,surfaceProperties.normal));
+    vertexLight.nh2_lh2_nl.x		=n_h*n_h;
+    float l_h                       =saturate(dot(vertexLight.halfway,vertexLight.directionToLight));
+    vertexLight.nh2_lh2_nl.y         =l_h*l_h;
     //vertexLight.distribution;
     //vertexLight.visibility;
     return vertexLight;
@@ -179,13 +180,13 @@ void Static()
     VertexSurfaceProperties vertexSurfaceProperties;
     vertexSurfaceProperties.position=v_Position;
     vertexSurfaceProperties.normal=v_Normal;
-    for (int i=0;i<4;i++)
+    for (int i=0;i<TELEPORT_MAX_LIGHTS;i++)
     {
         SurfaceLightProperties vertexLight0=GetVertexLight(viewDir,vertexSurfaceProperties,tagDataCube.lightTags[i]);
         v_VertexLight_directionToLight[i]=vertexLight0.directionToLight;
         v_VertexLight_distanceToLight[i]=vertexLight0.distanceToLight;
         v_VertexLight_halfway[i]            =vertexLight0.halfway;
-        v_VertexLight_nh_lh_nl[i]           =vec3(vertexLight0.n_h,vertexLight0.l_h,vertexLight0.n_l);
+        v_VertexLight_nh2_lh2_nl[i]           =vec3(vertexLight0.nh2_lh2_nl);
     }
 }
 
@@ -219,12 +220,12 @@ void Animated()
     VertexSurfaceProperties vertexSurfaceProperties;
     vertexSurfaceProperties.position=v_Position;
     vertexSurfaceProperties.normal=v_Normal;
-    for (int i=0;i<4;i++)
+    for (int i=0;i<TELEPORT_MAX_LIGHTS;i++)
     {
         SurfaceLightProperties vertexLight0=GetVertexLight(viewDir,vertexSurfaceProperties,tagDataCube.lightTags[i]);
         v_VertexLight_directionToLight[i]   =vertexLight0.directionToLight;
         v_VertexLight_distanceToLight[i]    =vertexLight0.distanceToLight;
         v_VertexLight_halfway[i]            =vertexLight0.halfway;
-        v_VertexLight_nh_lh_nl[i]           =vec3(vertexLight0.n_h,vertexLight0.l_h,vertexLight0.n_l);
+        v_VertexLight_nh2_lh2_nl[i]          =vertexLight0.nh2_lh2_nl;
     }
 }

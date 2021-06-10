@@ -134,10 +134,12 @@ bool IsDummy(const scr::Texture *tex)
 }
 OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material)
 {
+	static bool support_normals=false;
+	static bool support_combined=false;
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	std::string passname=GlobalGraphicsResources::GenerateShaderPassName(true
-			,!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
-			,!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
+			,support_normals&&!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
+			,support_combined&&!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
 			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f
 			,TELEPORT_MAX_LIGHTS
 			,false);
@@ -149,8 +151,8 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		return ovr_surface_def;
 	}
 	std::string highlightpassname=GlobalGraphicsResources::GenerateShaderPassName(true
-			,!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
-			,!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
+			,support_normals&&!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
+			,support_combined&&!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
 			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f
 			,TELEPORT_MAX_LIGHTS
 			,true);
