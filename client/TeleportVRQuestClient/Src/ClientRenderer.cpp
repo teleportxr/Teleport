@@ -90,7 +90,8 @@ ClientRenderer::ClientRenderer
      resourceManagers(rm),
      resourceCreator(r),
      clientAppInterface(c),
-     clientDeviceState(s)
+     clientDeviceState(s),
+	 mShowWebcam(true)
 {
 }
 
@@ -564,7 +565,8 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	webcamUB->Create(&uniformBufferCreateInfo);
 
 	// Bottom right corner
-	const avs::vec2 pos =  { 1.0f - (WEBCAM_WIDTH * 0.5f), -1.0f + (WEBCAM_HEIGHT * 0.5f) };
+	const avs::vec2 offset = { 0.5f, 0.0f};
+	const avs::vec2 pos =  { 1.0f - offset.x - (WEBCAM_WIDTH * 0.5f), 0 }; //-1.0f + offset.y + (WEBCAM_HEIGHT * 0.5f) };
 	SetPosition(pos);
 
 	initialized = true;
@@ -579,7 +581,7 @@ void ClientRenderer::WebcamResources::SetPosition(const avs::vec2& position)
 	ovrMatrix4f scale = ovrMatrix4f_CreateScale(s.x, s.y, 1);
 
 	auto t = ovrMatrix4f_Multiply(&translation, &scale);
-	transform = ovrMatrix4f_Transpose(&t);
+	transform = t;
 }
 
 void ClientRenderer::WebcamResources::Destroy()
@@ -603,7 +605,7 @@ void ClientRenderer::SetWebcamPosition(const avs::vec2& position)
 void ClientRenderer::RenderWebcam(OVRFW::ovrRendererOutput& res)
 {
 	// Set data to send to the shader:
-	if (videoConfig.stream_webcam && mVideoTexture->IsValid() && mWebcamResources.initialized)
+	if (mShowWebcam && videoConfig.stream_webcam && mVideoTexture->IsValid() && mWebcamResources.initialized)
 	{
 		mWebcamResources.surfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mVideoTexture.get())->GetGlTexture());
 		mWebcamResources.surfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mWebcamResources.webcamUB.get())->GetGlBuffer());
@@ -1141,6 +1143,11 @@ void ClientRenderer::WriteDebugOutput()
 			break;
 		}
 	}
+}
+
+void ClientRenderer::ToggleWebcam()
+{
+	mShowWebcam = !mShowWebcam;
 }
 
 void ClientRenderer::CycleOSD()

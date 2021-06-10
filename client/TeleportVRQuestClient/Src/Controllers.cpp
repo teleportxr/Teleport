@@ -31,6 +31,11 @@ void Controllers::SetDebugOutputDelegate(TriggerDelegate delegate)
 	WriteDebugOutput = delegate;
 }
 
+void Controllers::SetToggleWebcamDelegate(TriggerDelegate delegate)
+{
+	ToggleWebcam = delegate;
+}
+
 void Controllers::SetSetStickOffsetDelegate(Float2Delegate delegate)
 {
 	SetStickOffset = delegate;
@@ -42,6 +47,7 @@ void Controllers::ClearDelegates()
 	CycleOSD = nullptr;
 	SetStickOffset = nullptr;
 	WriteDebugOutput=nullptr;
+	ToggleWebcam = nullptr;
 }
 
 bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
@@ -129,6 +135,9 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				if( (released & ovrButton::ovrButton_X) != 0)
 				{
 					WriteDebugOutput();
+
+					// All buttons seem to be taken up so putting it here for now
+					ToggleWebcam();
 				}
 
 				if((released & ovrButton::ovrButton_B) != 0 || (released & ovrButton::ovrButton_Y) != 0)

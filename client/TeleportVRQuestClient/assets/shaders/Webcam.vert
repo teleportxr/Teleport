@@ -28,7 +28,6 @@ void main()
 
     vTexCoords = vec2(pos) / vec2(webcam.sourceTexSize);
 
-    vec4 p = vec4(position, 1.0);
-    p = ModelMatrix * p;
+    vec4 p = ModelMatrix * vec4(position, 1.0);
     gl_Position = vec4(p.xyz, 1.0);
 }

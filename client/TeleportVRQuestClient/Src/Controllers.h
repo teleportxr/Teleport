@@ -20,6 +20,7 @@ public :
 	void SetCycleShaderModeDelegate(TriggerDelegate d);
 	void SetCycleOSDDelegate(TriggerDelegate d);;
 	void SetDebugOutputDelegate(TriggerDelegate d);
+	void SetToggleWebcamDelegate(TriggerDelegate d);
 	void SetSetStickOffsetDelegate(Float2Delegate d);
 	void ClearDelegates();
 
@@ -35,6 +36,7 @@ private:
 	TriggerDelegate CycleShaderMode;
 	TriggerDelegate CycleOSD;
 	TriggerDelegate WriteDebugOutput;
+	TriggerDelegate ToggleWebcam;
 	Float2Delegate SetStickOffset;
 
 	uint32_t nextEventID = 0;
