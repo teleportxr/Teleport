@@ -98,6 +98,7 @@ public:
 
 	void CycleShaderMode();
 	void WriteDebugOutput();
+	void ToggleWebcam();
 	void CycleOSD();
 	void  SetStickOffset(float,float);
 
@@ -234,4 +235,5 @@ protected:
 
 private:
 	void InitWebcamResources();
+	bool mShowWebcam;
 };

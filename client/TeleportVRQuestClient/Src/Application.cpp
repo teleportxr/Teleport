@@ -280,6 +280,7 @@ void Application::EnteredVrMode()
 	controllers.SetCycleShaderModeDelegate(std::bind(&ClientRenderer::CycleShaderMode, &clientRenderer));
 	controllers.SetCycleOSDDelegate(std::bind(&ClientRenderer::CycleOSD, &clientRenderer));
 	controllers.SetDebugOutputDelegate(std::bind(&ClientRenderer::WriteDebugOutput, &clientRenderer));
+	controllers.SetToggleWebcamDelegate(std::bind(&ClientRenderer::ToggleWebcam, &clientRenderer));
 	controllers.SetSetStickOffsetDelegate(std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1, std::placeholders::_2));
 }
 
