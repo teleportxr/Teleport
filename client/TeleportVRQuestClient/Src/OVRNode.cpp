@@ -135,7 +135,7 @@ bool IsDummy(const scr::Texture *tex)
 OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material)
 {
 	static bool support_normals=false;
-	static bool support_combined=false;
+	static bool support_combined=true;
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	std::string passname=GlobalGraphicsResources::GenerateShaderPassName(true
 			,support_normals&&!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
