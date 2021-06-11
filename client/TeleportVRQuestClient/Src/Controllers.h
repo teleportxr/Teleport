@@ -13,7 +13,9 @@ typedef std::function<void(float,float)> Float2Delegate;
 
 class Controllers
 {
-public :
+public:
+	static constexpr int CONTROLLER_AMOUNT = 2;
+
 	Controllers();
 	~Controllers();
 
@@ -26,10 +28,11 @@ public :
 
 	bool InitializeController(ovrMobile *pMobile,int idx);
 	void Update(ovrMobile *ovrmobile);
-	ovrDeviceID mControllerIDs[2];
+
+	ovrDeviceID mControllerIDs[CONTROLLER_AMOUNT];
 
 	ovrVector2f mTrackpadDim;
-	ControllerState mLastControllerStates[2]; //State of the primary controller on the last frame.
+	ControllerState mLastControllerStates[CONTROLLER_AMOUNT]; //State of the controllers on the last frame.
 private:
 	void AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, ControllerState& controllerState, ovrButton buttonID, avs::InputList inputID);
 

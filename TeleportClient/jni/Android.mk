@@ -24,7 +24,8 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/1stParty/OpenGL_Loader/Include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../firstparty
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
-LOCAL_SRC_FILES  := 	../ClientDeviceState.cpp					\
+LOCAL_SRC_FILES :=	../ClientDeviceState.cpp					\
+					../ServerTimestamp.cpp						\
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable

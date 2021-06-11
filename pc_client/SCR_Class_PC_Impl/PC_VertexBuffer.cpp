@@ -79,60 +79,60 @@ int GetAttributeSemanticIndex(avs::AttributeSemantic sem)
 	}
 }
 
-simul::crossplatform::PixelFormat GetAttributeFormat(const scr::VertexBufferLayout::VertexAttribute &attr)
+simul::crossplatform::PixelFormat GetAttributeFormat(const scr::VertexBufferLayout::VertexAttribute& attr)
 {
-	std::string fmt = "";
 	switch(attr.type)
 	{
-		case scr::VertexBufferLayout::Type::FLOAT:
+	case scr::VertexBufferLayout::Type::FLOAT:
+		switch(attr.componentCount)
 		{
-			switch (attr.componentCount)
-			{
-			case scr::VertexBufferLayout::ComponentCount::SCALAR:
-				return simul::crossplatform::PixelFormat::R_32_FLOAT;
-			case scr::VertexBufferLayout::ComponentCount::VEC2:
-				return simul::crossplatform::PixelFormat::RG_32_FLOAT;
-			case scr::VertexBufferLayout::ComponentCount::VEC3:
-				return simul::crossplatform::PixelFormat::RGB_32_FLOAT;
-			case scr::VertexBufferLayout::ComponentCount::VEC4:
-				return simul::crossplatform::PixelFormat::RGBA_32_FLOAT;
-			default:
-				break;
-			};
-		}
-		case scr::VertexBufferLayout::Type::HALF:
-		{
-			switch (attr.componentCount)
-			{
-			case scr::VertexBufferLayout::ComponentCount::SCALAR:
-				return simul::crossplatform::PixelFormat::R_16_FLOAT;
-			case scr::VertexBufferLayout::ComponentCount::VEC2:
-				return simul::crossplatform::PixelFormat::RG_16_FLOAT;
-			case scr::VertexBufferLayout::ComponentCount::VEC3:
-				return simul::crossplatform::PixelFormat::RGB_16_FLOAT;
-			case scr::VertexBufferLayout::ComponentCount::VEC4:
-				return simul::crossplatform::PixelFormat::RGBA_16_FLOAT;
-			default:
-				break;
-			};
-		}
-		case scr::VertexBufferLayout::Type::INT:
-		{
-			switch(attr.componentCount)
-			{
-			case scr::VertexBufferLayout::ComponentCount::SCALAR:
-				return simul::crossplatform::PixelFormat::R_32_INT;
-			case scr::VertexBufferLayout::ComponentCount::VEC2:
-				return simul::crossplatform::PixelFormat::RG_8_SNORM;
-			case scr::VertexBufferLayout::ComponentCount::VEC3:
-				return simul::crossplatform::PixelFormat::RGB_10_A2_INT;
-			case scr::VertexBufferLayout::ComponentCount::VEC4:
-				return simul::crossplatform::PixelFormat::RGBA_32_INT;
-			}
-		}
+		case scr::VertexBufferLayout::ComponentCount::SCALAR:
+			return simul::crossplatform::PixelFormat::R_32_FLOAT;
+		case scr::VertexBufferLayout::ComponentCount::VEC2:
+			return simul::crossplatform::PixelFormat::RG_32_FLOAT;
+		case scr::VertexBufferLayout::ComponentCount::VEC3:
+			return simul::crossplatform::PixelFormat::RGB_32_FLOAT;
+		case scr::VertexBufferLayout::ComponentCount::VEC4:
+			return simul::crossplatform::PixelFormat::RGBA_32_FLOAT;
 		default:
 			break;
-	};
+		}
+
+		break;
+	case scr::VertexBufferLayout::Type::HALF:
+		switch(attr.componentCount)
+		{
+		case scr::VertexBufferLayout::ComponentCount::SCALAR:
+			return simul::crossplatform::PixelFormat::R_16_FLOAT;
+		case scr::VertexBufferLayout::ComponentCount::VEC2:
+			return simul::crossplatform::PixelFormat::RG_16_FLOAT;
+		case scr::VertexBufferLayout::ComponentCount::VEC3:
+			return simul::crossplatform::PixelFormat::RGB_16_FLOAT;
+		case scr::VertexBufferLayout::ComponentCount::VEC4:
+			return simul::crossplatform::PixelFormat::RGBA_16_FLOAT;
+		default:
+			break;
+		}
+
+		break;
+	case scr::VertexBufferLayout::Type::INT:
+		switch(attr.componentCount)
+		{
+		case scr::VertexBufferLayout::ComponentCount::SCALAR:
+			return simul::crossplatform::PixelFormat::R_32_INT;
+		case scr::VertexBufferLayout::ComponentCount::VEC2:
+			return simul::crossplatform::PixelFormat::RG_8_SNORM;
+		case scr::VertexBufferLayout::ComponentCount::VEC3:
+			return simul::crossplatform::PixelFormat::RGB_10_A2_INT;
+		case scr::VertexBufferLayout::ComponentCount::VEC4:
+			return simul::crossplatform::PixelFormat::RGBA_32_INT;
+		}
+
+		break;
+	default:
+		break;
+	}
+
 	return simul::crossplatform::PixelFormat::UNKNOWN;
 }
 
@@ -143,17 +143,19 @@ int GetByteSize(const scr::VertexBufferLayout::VertexAttribute &attr)
 	{
 	case scr::VertexBufferLayout::Type::DOUBLE:
 		unit_size = 8;
+		break;
 	default:
 		unit_size = 4;
 		break;
 	};
-	return unit_size * (int)attr.componentCount;
+
+	return unit_size * static_cast<int>(attr.componentCount);
 }
 
 
-PC_VertexBuffer::PC_VertexBuffer(const scr::RenderPlatform*const r) :scr::VertexBuffer(r),m_layout(nullptr),m_SimulBuffer(nullptr)
-{
-}
+PC_VertexBuffer::PC_VertexBuffer(const scr::RenderPlatform*const r)
+	:scr::VertexBuffer(r), m_SimulBuffer(nullptr), m_layout(nullptr)
+{}
 
 void PC_VertexBuffer::Destroy()
 {
@@ -205,7 +207,7 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCre
 		}
 		else if(m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::GROUPED)
 		{
-			byteOffset += (int)this_size * m_CI.vertexCount;
+			byteOffset += static_cast<int>(this_size * m_CI.vertexCount);
 		}
 
 		desc[i].perInstance = false;
@@ -213,7 +215,7 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCre
 	}
 
 	delete m_layout;
-	m_layout = srp->CreateLayout(m_CI.layout->m_Attributes.size(), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
+	m_layout = srp->CreateLayout(static_cast<int>(m_CI.layout->m_Attributes.size()), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
 	m_SimulBuffer->EnsureVertexBuffer(srp, (int)m_CI.vertexCount, m_layout, m_CI.data);
 	delete[] desc;
 }

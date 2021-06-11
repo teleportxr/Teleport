@@ -4,11 +4,13 @@
 #include "libavstream/common_networking.h"
 #include "libavstream/geometry/mesh_interface.hpp"
 
-#include "NodeComponents.h"
-#include "api/UniformBuffer.h"
 #include "TeleportClient/basic_linear_algebra.h"
+
+#include "api/UniformBuffer.h"
 #include "Material.h"
 #include "Mesh.h"
+#include "NodeComponents/AnimationComponent.h"
+#include "NodeComponents/VisibilityComponent.h"
 #include "Skin.h"
 #include "Transform.h"
 

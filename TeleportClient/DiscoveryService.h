@@ -37,7 +37,7 @@ namespace teleport
 			}
 		protected:
 			uint32_t clientID = 0;
-			int serviceDiscoverySocket = 0;
+			ENetSocket serviceDiscoverySocket = 0;
 		};
 	}
 }

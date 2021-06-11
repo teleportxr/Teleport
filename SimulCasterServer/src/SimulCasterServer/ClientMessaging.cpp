@@ -310,6 +310,12 @@ namespace SCServer
 		sendCommand(command);
 	}
 
+	void ClientMessaging::updateNodeAnimationControl(avs::NodeUpdateAnimationControl update)
+	{
+		avs::UpdateNodeAnimationControlCommand command(update);
+		sendCommand(command);
+	}
+
 	bool ClientMessaging::hasHost() const
 	{
 		return host;

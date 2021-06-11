@@ -20,7 +20,10 @@ namespace pc_client
 	private:
 		simul::crossplatform::Texture* m_SimulTexture;
 	public:
-		PC_Texture(const scr::RenderPlatform*const r):scr::Texture(r) {}
+		PC_Texture(const scr::RenderPlatform*const r)
+			:scr::Texture(r), m_SimulTexture(nullptr)
+		{}
+
 		virtual ~PC_Texture();
 		void Destroy() override;
 

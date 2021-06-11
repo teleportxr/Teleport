@@ -2,7 +2,9 @@
 
 #include "Node.h"
 
-#include "crossplatform/ServerTimestamp.h"
+#include "TeleportClient/ServerTimestamp.h"
+
+using InvisibilityReason = scr::VisibilityComponent::InvisibilityReason;
 
 namespace scr
 {
@@ -12,14 +14,14 @@ namespace scr
 
 	void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 	{
-		if (ShouldUseGlobalTransform())
+		if(ShouldUseGlobalTransform())
 		{
-			if (globalTransform.UpdateModelMatrix(translation, rotation, scale))
+			if(globalTransform.UpdateModelMatrix(translation, rotation, scale))
 			{
 				RequestChildrenUpdateTransforms();
 			}
 		}
-		else if (localTransform.UpdateModelMatrix(translation, rotation, scale))
+		else if(localTransform.UpdateModelMatrix(translation, rotation, scale))
 		{
 			RequestTransformUpdate();
 		}
@@ -40,7 +42,7 @@ namespace scr
 
 		//Set transform, then tick based on difference in time since the update was sent and now.
 		UpdateModelMatrix(update.position, update.rotation, update.scale);
-		TickExtrapolatedTransform(static_cast<float>(ServerTimestamp::getCurrentTimestamp() - update.timestamp));
+		TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestamp() - update.timestamp));
 	}
 
 	void Node::TickExtrapolatedTransform(float deltaTime)
@@ -71,7 +73,7 @@ namespace scr
 			animationComponent.update(skin->GetBones(), deltaTime);
 		}
 
-		for (std::weak_ptr<Node> child : children)
+		for(std::weak_ptr<Node> child : children)
 		{
 			child.lock()->Update(deltaTime);
 		}
@@ -86,7 +88,7 @@ namespace scr
 
 		//Remove self from parent list of existing parent, if we have a parent.
 		//Prevent stack overflow by doing this after setting the new parent.
-		if (oldParent)
+		if(oldParent)
 		{
 			oldParent->RemoveChild(id);
 		}
@@ -99,10 +101,10 @@ namespace scr
 
 	void Node::RemoveChild(std::shared_ptr<Node> node)
 	{
-		for (auto it = children.begin(); it != children.end(); it++)
+		for(auto it = children.begin(); it != children.end(); it++)
 		{
 			std::shared_ptr<Node> child = it->lock();
-			if (child == node)
+			if(child == node)
 			{
 				children.erase(it);
 				child->SetParent(nullptr);
@@ -113,10 +115,10 @@ namespace scr
 
 	void Node::RemoveChild(avs::uid childID)
 	{
-		for (auto it = children.begin(); it != children.end(); it++)
+		for(auto it = children.begin(); it != children.end(); it++)
 		{
 			std::shared_ptr<Node> child = it->lock();
-			if (child && child->id == childID)
+			if(child && child->id == childID)
 			{
 				children.erase(it);
 				child->SetParent(nullptr);
@@ -132,12 +134,12 @@ namespace scr
 
 	void Node::SetVisible(bool visible)
 	{
-		visibility.setVisibility(visible, VisibilityComponent::InvisibilityReason::OUT_OF_BOUNDS);
+		visibility.setVisibility(visible, InvisibilityReason::OUT_OF_BOUNDS);
 	}
 
 	void Node::SetLocalTransform(const Transform& transform)
 	{
-		if (abs(transform.m_Scale.x) < 0.0001f)
+		if(abs(transform.m_Scale.x) < 0.0001f)
 		{
 			SCR_CERR << "Failed to update local transform of Node_" << id << "(" << name.c_str() << ")! Scale.x is zero!\n";
 			return;
@@ -149,19 +151,19 @@ namespace scr
 	void Node::SetLocalPosition(const avs::vec3& value)
 	{
 		localTransform.m_Translation = value;
-		isTransformDirty = true;
+		RequestTransformUpdate();
 	}
 
 	void Node::SetLocalRotation(const scr::quat& value)
 	{
 		localTransform.m_Rotation = value;
-		isTransformDirty = true;
+		RequestTransformUpdate();
 	}
 
 	void Node::SetLocalScale(const avs::vec3& value)
 	{
 		localTransform.m_Scale = value;
-		isTransformDirty = true;
+		RequestTransformUpdate();
 	}
 
 	void Node::UpdateGlobalTransform() const
@@ -170,21 +172,16 @@ namespace scr
 		globalTransform = parentPtr ? localTransform * parentPtr->GetGlobalTransform() : localTransform;
 
 		isTransformDirty = false;
-
-		for (std::weak_ptr<Node> child : children)
-		{
-			child.lock()->UpdateGlobalTransform();
-		}
 	}
 
 	void Node::RequestChildrenUpdateTransforms()
 	{
-		for (auto childIt = children.begin(); childIt != children.end();)
+		for(auto childIt = children.begin(); childIt != children.end();)
 		{
 			std::shared_ptr<Node> child = childIt->lock();
 
 			//Erase weak pointer from list, if the child node has been removed.
-			if (child)
+			if(child)
 			{
 				child->RequestTransformUpdate();
 				++childIt;

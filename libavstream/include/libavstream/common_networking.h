@@ -44,13 +44,14 @@ namespace avs
 		Invalid,
 		Shutdown,
 		Setup,
-		NodeBounds,
 		AcknowledgeHandshake,
+		ReconfigureVideo,
 		SetPosition,
+		NodeBounds,
 		UpdateNodeMovement,
 		UpdateNodeEnabledState,
 		UpdateNodeAnimation,
-		ReconfigureVideo
+		UpdateNodeAnimationControl,
 	};
 
 	enum class ClientMessagePayloadType : uint8_t
@@ -60,6 +61,15 @@ namespace avs
 		ReceivedResources,
 		ControllerPoses,
 		OriginPose
+	};
+
+	//TODO: These enumerations are placeholder; in the future we want a more flexible system, but right now it's too much time to invest.
+	//Controls what is used as the current time of the animation.
+	enum class AnimationTimeControl
+	{
+		ANIMATION_TIME, //Default; animation is controlled by time since animation started.
+		CONTROLLER_0_TRIGGER,
+		CONTROLLER_1_TRIGGER
 	};
 
 	struct ServiceDiscoveryResponse
@@ -161,6 +171,14 @@ namespace avs
 		uid nodeID = 0; //ID of the node the animation is playing on.
 		uid animationID = 0; //ID of the animation that is now playing.
 	} AVS_PACKED;
+
+	struct NodeUpdateAnimationControl
+	{
+		uid nodeID = 0; //ID of the node the animation is playing on.
+		uid animationID = 0; //ID of the animation that we are updating.
+
+		AnimationTimeControl timeControl; //What controls the animation's time value.
+	};
 
 	struct Command
 	{
@@ -317,6 +335,24 @@ namespace avs
 		virtual size_t getCommandSize() const override
 		{
 			return sizeof(UpdateNodeAnimationCommand);
+		}
+	} AVS_PACKED;
+
+	struct UpdateNodeAnimationControlCommand : public Command
+	{
+		avs::NodeUpdateAnimationControl animationControlUpdate;
+
+		UpdateNodeAnimationControlCommand()
+			:UpdateNodeAnimationControlCommand(avs::NodeUpdateAnimationControl{})
+		{}
+
+		UpdateNodeAnimationControlCommand(const avs::NodeUpdateAnimationControl& update)
+			:Command(CommandPayloadType::UpdateNodeAnimationControl), animationControlUpdate(update)
+		{}
+
+		virtual size_t getCommandSize() const override
+		{
+			return sizeof(UpdateNodeAnimationControlCommand);
 		}
 	} AVS_PACKED;
 

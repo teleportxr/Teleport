@@ -14,7 +14,7 @@
 #include <VrApi_Input.h>
 #include <VrApi_Helpers.h>
 
-#include "crossplatform/ServerTimestamp.h"
+#include "TeleportClient/ServerTimestamp.h"
 
 #include "ClientDeviceState.h"
 #include "OVRNode.h"
@@ -529,7 +529,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	vertexBuffer = globalGraphicsResources.renderPlatform.InstantiateVertexBuffer();
 	scr::VertexBuffer::VertexBufferCreateInfo vb_ci;
 	vb_ci.layout = layout;
-	vb_ci.usage = (scr::BufferUsageBit)(scr::STATIC_BIT | scr::DRAW_BIT);
+	vb_ci.usage = scr::BufferUsageBit::STATIC_BIT | scr::BufferUsageBit::DRAW_BIT;
 	vb_ci.vertexCount = camVertexCount;
 	vb_ci.size = constructedVBSize;
 	vb_ci.data = (const void*)vertices;
@@ -537,7 +537,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 
 	indexBuffer = globalGraphicsResources.renderPlatform.InstantiateIndexBuffer();
 	scr::IndexBuffer::IndexBufferCreateInfo ib_ci;
-	ib_ci.usage = (scr::BufferUsageBit)(scr::STATIC_BIT | scr::DRAW_BIT);
+	ib_ci.usage = scr::BufferUsageBit::STATIC_BIT | scr::BufferUsageBit::DRAW_BIT;
 	ib_ci.indexCount = camIndexCount;
 	ib_ci.stride = sizeof(uint16_t);
 	ib_ci.data = (const uint8_t*)indices;
@@ -715,7 +715,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 
 	tagData.lights.resize(std::min(tagData.coreData.lightCount, (uint32_t) 4));
 
-	scr::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
 
 	// Aidan : View and proj matrices are currently unchanged from Unity
 	size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
@@ -1343,34 +1343,16 @@ void ClientRenderer::DrawOSD()
 
 			clientAppInterface->PrintText(
 							offset, colour,
-							"Controller 0 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
-							"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
-							"Controller 1 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
-							"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
-							,clientDeviceState->controllerRelativePoses[0].position.x,
-							clientDeviceState->controllerRelativePoses[0].position.y,
-							clientDeviceState->controllerRelativePoses[0].position.z,
-							clientDeviceState->controllerRelativePoses[0].orientation.x,
-							clientDeviceState->controllerRelativePoses[0].orientation.y,
-							clientDeviceState->controllerRelativePoses[0].orientation.z,
-							clientDeviceState->controllerPoses[0].position.x,
-							clientDeviceState->controllerPoses[0].position.y,
-							clientDeviceState->controllerPoses[0].position.z,
-							clientDeviceState->controllerPoses[0].orientation.x,
-							clientDeviceState->controllerPoses[0].orientation.y,
-							clientDeviceState->controllerPoses[0].orientation.z,
-							clientDeviceState->controllerRelativePoses[1].position.x,
-							clientDeviceState->controllerRelativePoses[1].position.y,
-							clientDeviceState->controllerRelativePoses[1].position.z,
-							clientDeviceState->controllerRelativePoses[1].orientation.x,
-							clientDeviceState->controllerRelativePoses[1].orientation.y,
-							clientDeviceState->controllerRelativePoses[1].orientation.z,
-							clientDeviceState->controllerPoses[1].position.x,
-							clientDeviceState->controllerPoses[1].position.y,
-							clientDeviceState->controllerPoses[1].position.z,
-							clientDeviceState->controllerPoses[1].orientation.x,
-							clientDeviceState->controllerPoses[1].orientation.y,
-							clientDeviceState->controllerPoses[1].orientation.z
+							"Left Hand:		(%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+							"TRIGGER_BACK:	%1.2f\n"
+							"Right Hand:	(%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
+							"TRIGGER_BACK:	%1.2f\n",
+							leftHandPosition.x, leftHandPosition.y, leftHandPosition.z,
+							leftHandOrientation.x, leftHandOrientation.y, leftHandOrientation.z,
+							controllers->mLastControllerStates[1].triggerBack,
+							rightHandPosition.x, rightHandPosition.y, rightHandPosition.z,
+							rightHandOrientation.x, rightHandOrientation.y, rightHandOrientation.z,
+							controllers->mLastControllerStates[0].triggerBack
 					);
 
 			break;

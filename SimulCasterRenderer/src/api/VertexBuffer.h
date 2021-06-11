@@ -12,17 +12,20 @@ namespace scr
 		struct VertexBufferCreateInfo
 		{
 			std::shared_ptr<VertexBufferLayout> layout;
-			BufferUsageBit usage;
+			BufferUsageBit usage = BufferUsageBit::UNKNOWN_BIT;
 			size_t vertexCount = 0;
-			size_t size;
-			const void* data;
+			size_t size = 0;
+			const void* data = nullptr;
 		};
 
     protected:
 		VertexBufferCreateInfo m_CI;
 	
 	public:
-		VertexBuffer(const RenderPlatform*const r) :APIObject(r) {}
+		VertexBuffer(const RenderPlatform* const r)
+			:APIObject(r), m_CI()
+		{}
+
 		virtual ~VertexBuffer()
 		{
 			m_CI.layout = nullptr;

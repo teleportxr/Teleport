@@ -169,9 +169,13 @@ namespace scr
 
 		bool IsValid() const
 		{
-			return (m_CI.width>0);
+			return m_CI.width != 0 && m_CI.height != 0 && m_CI.depth != 0;
 		}
 
+		static bool IsValid(scr::Texture* texture)
+		{
+			return texture && texture->IsValid();
+		}
 
 		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bytesPerPixel will be the same for all faces.
 		virtual void Create(const TextureCreateInfo& pTextureCreateInfo) = 0;

@@ -28,7 +28,10 @@ namespace scr
 		ShaderStorageBufferCreateInfo m_CI;
 
 	public:
-		ShaderStorageBuffer(const scr::RenderPlatform*const r) : APIObject(r) {}
+		ShaderStorageBuffer(const scr::RenderPlatform* const r)
+			: APIObject(r), m_CI()
+		{}
+
 		virtual ~ShaderStorageBuffer()
 		{
 			m_CI.bindingLocation = 0;

@@ -9,7 +9,7 @@
 
 #include <libavstream/common.hpp>
 
-#include "crossplatform/ServerTimestamp.h"
+#include "TeleportClient/ServerTimestamp.h"
 
 #include "Config.h"
 #include "Log.h"
@@ -333,16 +333,18 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	mScene.Frame(vrFrame,-1,false);
 	clientRenderer.eyeSeparation=vrFrame.IPD;
 	GLCheckErrorsWithTitle("Frame: Start");
+
 	// Try to find remote controller
-	if((int)controllers.mControllerIDs[0] == 0)
+	if(controllers.mControllerIDs[0] == 0)
 	{
 		controllers.InitializeController(GetSessionObject(),0);
 	}
-	if((int)controllers.mControllerIDs[1] == 0)
+	if(controllers.mControllerIDs[1] == 0)
 	{
 		controllers.InitializeController(GetSessionObject(),1);
 	}
 	controllers.Update(GetSessionObject());
+
 	clientDeviceState.originPose.position=*((const avs::vec3*)&mScene.GetFootPos());
 	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
 
@@ -518,7 +520,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
     //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
 	float time_elapsed = in.DeltaSeconds * 1000.0f;
-	scr::ServerTimestamp::tick(time_elapsed);
+	teleport::client::ServerTimestamp::tick(time_elapsed);
 	resourceManagers.Update(time_elapsed);
 	resourceCreator.Update(time_elapsed);
 
@@ -546,14 +548,16 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 void Application::UpdateHandObjects()
 {
 	//Poll controller state from the Oculus API.
-	for(int i=0; i<2; i++)
+	for(int i=0; i < 2; i++)
 	{
 		ovrTracking remoteState;
-		if( controllers.mControllerIDs[i]!=0)
-		if(vrapi_GetInputTrackingState(GetSessionObject(), controllers.mControllerIDs[i], 0, &remoteState) >= 0)
+		if(controllers.mControllerIDs[i] != 0)
 		{
-			clientDeviceState.SetControllerPose(i,	*((const avs::vec3 *) (&remoteState.HeadPose.Pose.Position)),
-													*((const scr::quat *) (&remoteState.HeadPose.Pose.Orientation)));
+			if(vrapi_GetInputTrackingState(GetSessionObject(), controllers.mControllerIDs[i], 0, &remoteState) >= 0)
+			{
+				clientDeviceState.SetControllerPose(i,	*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),
+														*((const scr::quat *)(&remoteState.HeadPose.Pose.Orientation)));
+			}
 		}
 	}
 
@@ -575,6 +579,7 @@ void Application::UpdateHandObjects()
 		rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].position);
 		rightHand->SetLocalRotation(clientDeviceState.controllerPoses[0].orientation);
 	}
+
 	std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
@@ -606,7 +611,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 				 videoConfig.video_width, videoConfig.video_height,
 				 videoConfig.colour_cubemap_size);
 
-		scr::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
+		teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 		std::vector<avs::NetworkSourceStream> streams = {{20}};
@@ -754,8 +759,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 	handshake.FOV = 110;
 	handshake.isVR = true;
 	handshake.udpBufferSize = static_cast<uint32_t>(clientRenderer.mNetworkSource.getSystemBufferSize());
-	handshake.maxBandwidthKpS =
-			10 * handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
+	handshake.maxBandwidthKpS = 10 * handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.usingHands = true;
@@ -827,6 +831,25 @@ void Application::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnable
 void Application::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
 {
 	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
+}
+
+void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate)
+{
+	switch(animationControlUpdate.timeControl)
+	{
+		case avs::AnimationTimeControl::ANIMATION_TIME:
+			resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
+			break;
+		case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
+			resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[0].triggerBack, 1.0f);
+			break;
+		case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
+			resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[1].triggerBack, 1.0f);
+			break;
+		default:
+			WARN("Failed to update node animation control! Time control was set to the invalid value %d!", static_cast<int>(animationControlUpdate.timeControl));
+			break;
+	}
 }
 
 void Application::OnFrameAvailable()

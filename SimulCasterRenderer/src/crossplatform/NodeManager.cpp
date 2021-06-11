@@ -2,6 +2,8 @@
 
 using namespace scr;
 
+using InvisibilityReason = scr::VisibilityComponent::InvisibilityReason;
+
 std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const std::string& name) const
 {
 	return std::make_shared<Node>(id, name);
@@ -62,7 +64,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeD
 	auto enabledPair = earlyEnabledUpdates.find(node->id);
 	if(enabledPair != earlyEnabledUpdates.end())
 	{
-		node->visibility.setVisibility(enabledPair->second.enabled, VisibilityComponent::InvisibilityReason::DISABLED);
+		node->visibility.setVisibility(enabledPair->second.enabled, InvisibilityReason::DISABLED);
 	}
 
 	//Set playing animation, if an animation update was received early.
@@ -70,6 +72,13 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeD
 	if(animationPair != earlyAnimationUpdates.end())
 	{
 		node->animationComponent.setAnimation(animationPair->second.animationID, animationPair->second.timestamp);
+	}
+
+	//Set playing animation, if an animation update was received early.
+	auto animationControlPair = earlyAnimationControlUpdates.find(node->id);
+	if(animationControlPair != earlyAnimationControlUpdates.end())
+	{
+		node->animationComponent.setAnimationTimeOverride(animationControlPair->second.animationID, animationControlPair->second.timeOverride, animationControlPair->second.overrideMaximum);
 	}
 }
 
@@ -295,7 +304,7 @@ void NodeManager::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnable
 		std::shared_ptr<scr::Node> node = GetNode(update.nodeID);
 		if(node)
 		{
-			node->visibility.setVisibility(update.enabled, VisibilityComponent::InvisibilityReason::DISABLED);
+			node->visibility.setVisibility(update.enabled, InvisibilityReason::DISABLED);
 		}
 		else
 		{
@@ -317,6 +326,19 @@ void NodeManager::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationU
 	}
 }
 
+void scr::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* animationTimeOverride, float overrideMaximum)
+{
+	std::shared_ptr<scr::Node> node = GetNode(nodeID);
+	if(node)
+	{
+		node->animationComponent.setAnimationTimeOverride(animationID, animationTimeOverride, overrideMaximum);
+	}
+	else
+	{
+		earlyAnimationControlUpdates.emplace(nodeID, EarlyAnimationControl{animationID, animationTimeOverride, overrideMaximum});
+	}
+}
+
 void NodeManager::Update(float deltaTime)
 {
 	nodeList_t expiredNodes;
@@ -324,7 +346,7 @@ void NodeManager::Update(float deltaTime)
 	{
 		node->Update(deltaTime);
 
-		if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == VisibilityComponent::InvisibilityReason::OUT_OF_BOUNDS)
+		if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
 		{
 			expiredNodes.push_back(node);
 		}
@@ -362,7 +384,9 @@ void NodeManager::Clear()
 
 	parentLookup.clear();
 	earlyMovements.clear();
+	earlyEnabledUpdates.clear();
 	earlyAnimationUpdates.clear();
+	earlyAnimationControlUpdates.clear();
 }
 
 void NodeManager::ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)

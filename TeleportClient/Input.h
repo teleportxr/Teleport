@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <map>
 #include <stdint.h>
 #include <vector>
 
@@ -15,6 +16,10 @@ struct ControllerState
 	float mTrackpadY = 0.0f;
 	float mJoystickAxisX = 0.0f;
 	float mJoystickAxisY = 0.0f;
+
+	//We are using hard-set values as the Android compiler didn't like reading from referenced memory in a dictionary; every other frame it would evaluate to zero.
+	float triggerBack = 0.0f;
+	float triggerGrip = 0.0f;
 
 	//These are split for simplicity, and we can not marshal to the managed C# code polymorphic types.
 	std::vector<avs::InputEventBinary> binaryEvents;

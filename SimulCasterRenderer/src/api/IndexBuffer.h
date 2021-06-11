@@ -13,17 +13,20 @@ namespace scr
 	public:
 		struct IndexBufferCreateInfo
 		{
-			BufferUsageBit usage=BufferUsageBit::UNKNOWN_BIT;
-			size_t indexCount=0;
-			size_t stride=0;
-			const uint8_t* data=nullptr;
+			BufferUsageBit usage = BufferUsageBit::UNKNOWN_BIT;
+			size_t indexCount = 0;
+			size_t stride = 0;
+			const uint8_t* data = nullptr;
 		};
 
 	protected:
 		IndexBufferCreateInfo m_CI;
 	
 	public:
-		IndexBuffer(const RenderPlatform*const r) :APIObject(r) {}
+		IndexBuffer(const RenderPlatform* const r)
+			:APIObject(r), m_CI()
+		{}
+
 		virtual ~IndexBuffer()
 		{
 			m_CI.usage = BufferUsageBit::UNKNOWN_BIT;

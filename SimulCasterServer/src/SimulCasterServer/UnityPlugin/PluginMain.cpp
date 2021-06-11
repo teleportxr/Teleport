@@ -1292,6 +1292,18 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, avs::NodeUpda
 	clientPair->second.clientMessaging.updateNodeAnimation(update);
 }
 
+TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, avs::NodeUpdateAnimationControl update)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to update node animation control for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
+		return;
+	}
+
+	clientPair->second.clientMessaging.updateNodeAnimationControl(update);
+}
+
 TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)
 {
 	auto clientPair = clientServices.find(clientID);
