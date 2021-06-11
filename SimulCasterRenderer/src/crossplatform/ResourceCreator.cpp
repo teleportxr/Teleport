@@ -1,9 +1,8 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "ResourceCreator.h"
 
+#include "Animation.h"
 #include "Material.h"
-
-#include <set>
 
 using namespace avs;
 
@@ -407,7 +406,7 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 		std::shared_ptr<VertexBuffer> vb = m_pRenderPlatform->InstantiateVertexBuffer();
 		VertexBuffer::VertexBufferCreateInfo vb_ci;
 		vb_ci.layout = layout;
-		vb_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
+		vb_ci.usage = BufferUsageBit::STATIC_BIT | BufferUsageBit::DRAW_BIT;
 		vb_ci.vertexCount = meshElementCreate.m_VertexCount;
 		vb_ci.size = constructedVBSize;
 		vb_ci.data = (const void*)constructedVB.get();
@@ -415,7 +414,7 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 
 		std::shared_ptr<IndexBuffer> ib = m_pRenderPlatform->InstantiateIndexBuffer();
 		IndexBuffer::IndexBufferCreateInfo ib_ci;
-		ib_ci.usage = (BufferUsageBit)(STATIC_BIT | DRAW_BIT);
+		ib_ci.usage = BufferUsageBit::STATIC_BIT | BufferUsageBit::DRAW_BIT;
 		ib_ci.indexCount = meshElementCreate.m_IndexCount;
 		ib_ci.stride = meshElementCreate.m_IndexSize;
 		ib_ci.data = _indices.get();

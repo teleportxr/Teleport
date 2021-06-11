@@ -1,29 +1,28 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <thread>
-#include <mutex>
 #include <atomic>
+#include <mutex>
 #include <set>
-
+#include <thread>
 
 #include "transcoder/basisu_transcoder.h"
 
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/mesh.hpp>
 
-#include "NodeManager.h"
 #include "API.h"
 #include "api/RenderPlatform.h"
 #include "Light.h"
+#include "MemoryUtil.h"
+#include "NodeManager.h"
 #include "ResourceManager.h"
 #include "Skin.h"
-#include "MemoryUtil.h"
 
 namespace scr
 {
-class Animation;
-class Material;
+	class Animation;
+	class Material;
 }
 
 namespace scr

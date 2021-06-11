@@ -37,7 +37,10 @@ namespace scr
 		std::unique_ptr<FrameBuffer> m_ResolvedFrameBuffer = nullptr;
 
 	public:
-		FrameBuffer(const RenderPlatform*const r) :APIObject(r) {}
+		FrameBuffer(const RenderPlatform* const r)
+			:APIObject(r), m_CI(), m_DepthTexture(nullptr)
+		{}
+
 		virtual ~FrameBuffer()
 		{
 			m_CI.type = Texture::Type::TEXTURE_UNKNOWN;

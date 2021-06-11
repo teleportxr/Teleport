@@ -42,7 +42,7 @@ public:
 	//Updates how long the animations runs for by scanning boneKeyframeLists.
 	void updateAnimationLength();
 
-	//Returns how long the animation is in milliseconds.
+	//Returns how many milliseconds long the animation is.
 	float getAnimationLength();
 
 	//Sets bone transforms to positions and rotations specified by the animation at the passed time.

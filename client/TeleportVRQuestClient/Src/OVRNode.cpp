@@ -16,6 +16,9 @@
 #include "SCR_Class_GL_Impl/GL_VertexBuffer.h"
 #include "SCR_Class_GL_Impl/GL_ShaderStorageBuffer.h"
 
+static bool SUPPORT_NORMALS = false;
+static bool SUPPORT_COMBINED = false;
+
 void OVRNode::SetMesh(std::shared_ptr<scr::Mesh> mesh)
 {
 	Node::SetMesh(mesh);
@@ -118,44 +121,37 @@ void OVRNode::SetHighlight(bool h)
 	}
 }
 
-bool IsDummy(const scr::Texture *tex)
-{
-	if(!tex)
-		return true;
-	if(!tex->IsValid())
-		return true;
-	if(tex->GetTextureCreateInfo().width>1)
-		return false;
-	if(tex->GetTextureCreateInfo().height>1)
-		return false;
-	if(tex->GetTextureCreateInfo().depth>1)
-		return false;
-	return true;
-}
 OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material)
 {
-	static bool support_normals=false;
-	static bool support_combined=true;
+	static bool support_combined=false;
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
-	std::string passname=GlobalGraphicsResources::GenerateShaderPassName(true
-			,support_normals&&!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
-			,support_combined&&!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
-			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f
-			,TELEPORT_MAX_LIGHTS
-			,false);
+	std::string passname = GlobalGraphicsResources::GenerateShaderPassName
+			(
+					true,
+					scr::Texture::IsValid(material->GetMaterialCreateInfo().normal.texture.get()) && SUPPORT_NORMALS,
+					scr::Texture::IsValid(material->GetMaterialCreateInfo().combined.texture.get()) && SUPPORT_COMBINED,
+					scr::Texture::IsValid(material->GetMaterialCreateInfo().emissive.texture.get()) || material->GetMaterialCreateInfo().emissive.textureOutputScalar != avs::vec4::ZERO,
+					TELEPORT_MAX_LIGHTS,
+					false
+			);
 	ovrGlProgram = GetEffectPass(passname.c_str());
+
 	OVRFW::ovrSurfaceDef ovr_surface_def;
 	if(ovrGlProgram == nullptr)
 	{
 		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Effect pass %s, not found!",passname.c_str());
 		return ovr_surface_def;
 	}
-	std::string highlightpassname=GlobalGraphicsResources::GenerateShaderPassName(true
-			,support_normals&&!IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
-			,support_combined&&!IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
-			,!IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f
-			,TELEPORT_MAX_LIGHTS
-			,true);
+
+	std::string highlightpassname=GlobalGraphicsResources::GenerateShaderPassName
+			(
+					true,
+					scr::Texture::IsValid(material->GetMaterialCreateInfo().normal.texture.get()) && SUPPORT_NORMALS,
+					scr::Texture::IsValid(material->GetMaterialCreateInfo().combined.texture.get()) && SUPPORT_COMBINED,
+					scr::Texture::IsValid(material->GetMaterialCreateInfo().emissive.texture.get()) || material->GetMaterialCreateInfo().emissive.textureOutputScalar != avs::vec4::ZERO,
+					TELEPORT_MAX_LIGHTS,
+					true
+			);
 	ovrGlProgramHighlight = GetEffectPass(highlightpassname.c_str());
 
 	ovr_surface_def.graphicsCommand.Program = *ovrGlProgram;

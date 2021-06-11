@@ -20,7 +20,7 @@ PCDiscoveryService::~PCDiscoveryService()
 	}
 }
 
-int PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t discoveryPort)
+ENetSocket PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t discoveryPort)
 {
 	ENetSocket socket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);// PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (socket <= 0)

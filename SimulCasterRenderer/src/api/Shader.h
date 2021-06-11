@@ -23,19 +23,23 @@ namespace scr
 			SHADER_STAGE_DOMAIN = SHADER_STAGE_TESSELLATION_EVALUATION,
 			SHADER_STAGE_PIXEL = SHADER_STAGE_FRAGMENT,
 		};
+
 		struct ShaderCreateInfo
 		{
 			std::string sourceCode;
 			std::string filepath;
 			std::string entryPoint;
-			Shader::Stage stage;
+			Stage stage = Stage::SHADER_STAGE_UNKNOWN;
 		};
 	
 	protected:
 		ShaderCreateInfo m_CI;
 
 	public:
-		Shader(const scr::RenderPlatform*const r) :APIObject(r) {}
+		Shader(const scr::RenderPlatform* const r)
+			:APIObject(r), m_CI()
+		{}
+
 		virtual ~Shader()
 		{
 			m_CI.sourceCode.clear();

@@ -93,7 +93,7 @@ void Controllers::Update(ovrMobile *ovrmobile)
 	ControllerState controllerState = {};
 	for(int i = 0; i < 2; i++)
 	{
-		if((int)mControllerIDs[i] != 0)
+		if(mControllerIDs[i] != 0)
 		{
 			ControllerState &lastControllerState = mLastControllerStates[i];
 			ovrInputStateTrackedRemote ovrState;
@@ -124,15 +124,25 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_B, avs::InputList::BUTTON02);
 				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Y, avs::InputList::BUTTON02);
 				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Enter, avs::InputList::BUTTON_HOME);
-				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Trigger, avs::InputList::TRIGGER_BACK);
-				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_GripTrigger, avs::InputList::TRIGGER_GRIP);
 				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Joystick, avs::InputList::BUTTON_STICK);
 
-				if((released & ovrButton::ovrButton_A) != 0 != 0)
+				if(lastControllerState.triggerBack != ovrState.IndexTrigger)
+				{
+					controllerState.addAnalogueEvent(nextEventID++, avs::InputList::TRIGGER_BACK, ovrState.IndexTrigger);
+				}
+				controllerState.triggerBack = ovrState.IndexTrigger;
+
+				if(lastControllerState.triggerGrip != ovrState.GripTrigger)
+				{
+					controllerState.addAnalogueEvent(nextEventID++, avs::InputList::TRIGGER_GRIP, ovrState.GripTrigger);
+				}
+				controllerState.triggerGrip = ovrState.GripTrigger;
+
+				if((released & ovrButton::ovrButton_A) != 0)
 				{
 					CycleOSD();
 				}
-				if( (released & ovrButton::ovrButton_X) != 0)
+				if((released & ovrButton::ovrButton_X) != 0)
 				{
 					WriteDebugOutput();
 

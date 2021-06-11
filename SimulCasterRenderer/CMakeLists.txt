@@ -45,15 +45,11 @@ set( src_crossplatform
 	src/crossplatform/Mesh.h
 	src/crossplatform/Node.cpp
 	src/crossplatform/Node.h
-	src/crossplatform/NodeComponents.cpp
-	src/crossplatform/NodeComponents.h
 	src/crossplatform/NodeManager.cpp
 	src/crossplatform/NodeManager.h
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h
-	src/crossplatform/ServerTimestamp.cpp
-	src/crossplatform/ServerTimestamp.h
 	src/crossplatform/SessionClient.cpp
 	src/crossplatform/SessionClient.h
 	src/crossplatform/ShaderResource.cpp
@@ -68,10 +64,25 @@ set( src_crossplatform
 	src/crossplatform/MemoryUtil.h
 	)
 
+set(src_node_components
+	src/crossplatform/NodeComponents/AnimationComponent.cpp
+	src/crossplatform/NodeComponents/AnimationState.cpp
+	src/crossplatform/NodeComponents/VisibilityComponent.cpp
+)
+
+set(hdr_node_components
+	src/crossplatform/NodeComponents/AnimationComponent.h
+	src/crossplatform/NodeComponents/AnimationState.h
+	src/crossplatform/NodeComponents/VisibilityComponent.h
+)
+
 set(src_testing
 	src/crossplatform/Tests.cpp
 	src/crossplatform/Tests.h
 	)
+	
+source_group("Source Files\\Node Components" src FILES ${src_node_components})
+source_group("Header Files\\Node Components" src FILES ${hdr_node_components})
 
 #Include its root directory
 include_directories(src)
@@ -92,7 +103,7 @@ elseif(ANDROID)
 	include_directories(../client/LibOVRKernel/Src)
 endif()
 
-set( src_public ${src_root} ${src_api} ${src_crossplatform} ${src_testing})
+set( src_public ${src_root} ${src_api} ${src_crossplatform} ${src_node_components} ${hdr_node_components} ${src_testing})
 message ( "src_public ${src_public}" )
 #source_group("src" src FILES ${src_root} )
 #source_group("src\\api" src FILES ${src_api} )

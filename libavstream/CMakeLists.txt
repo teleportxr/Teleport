@@ -37,6 +37,7 @@ set(src_private_root
 	src/networksink.cpp
 	src/networksource.cpp
 	src/libraryloader.cpp
+	src/common_maths.cpp
 )
 set(src_private_api
 	src/api/cuda.cpp

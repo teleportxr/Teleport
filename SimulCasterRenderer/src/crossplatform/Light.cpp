@@ -2,6 +2,8 @@
 
 #include "Light.h"
 
+#include "api/RenderPlatform.h"
+
 using namespace scr;
 
 const uint32_t Light::s_MaxLights = 8; 

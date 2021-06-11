@@ -15,6 +15,7 @@ include $(LOCAL_PATH)/../../client/cflags.mk
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src/api
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src/crossplatform
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src/crossplatform/NodeComponents
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../libavstream/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/enet/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/basis_universal
@@ -28,27 +29,28 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../..
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
-LOCAL_SRC_FILES  := 	../src/api/Effect.cpp						\
-						../src/crossplatform/Animation.cpp			\
-						../src/crossplatform/API.cpp				\
-						../src/crossplatform/Bone.cpp				\
-						../src/crossplatform/Camera.cpp				\
-						../src/crossplatform/GeometryDecoder.cpp	\
-						../src/crossplatform/Light.cpp				\
-						../src/crossplatform/Log.cpp				\
-						../src/crossplatform/Material.cpp			\
-						../src/crossplatform/Mesh.cpp				\
-						../src/crossplatform/Node.cpp				\
-						../src/crossplatform/NodeComponents.cpp     \
-						../src/crossplatform/NodeManager.cpp		\
-						../src/crossplatform/ResourceCreator.cpp	\
-						../src/crossplatform/ServerTimestamp.cpp	\
-						../src/crossplatform/SessionClient.cpp		\
-						../src/crossplatform/ShaderSystem.cpp		\
-						../src/crossplatform/ShaderResource.cpp		\
-						../src/crossplatform/Skin.cpp				\
-						../src/crossplatform/Transform.cpp			\
-						../src/crossplatform/MemoryUtil.cpp			\
+LOCAL_SRC_FILES  := 	../src/api/Effect.cpp										\
+						../src/crossplatform/Animation.cpp							\
+						../src/crossplatform/API.cpp								\
+						../src/crossplatform/Bone.cpp								\
+						../src/crossplatform/Camera.cpp								\
+						../src/crossplatform/GeometryDecoder.cpp					\
+						../src/crossplatform/Light.cpp								\
+						../src/crossplatform/Log.cpp								\
+						../src/crossplatform/Material.cpp							\
+						../src/crossplatform/Mesh.cpp								\
+						../src/crossplatform/Node.cpp								\
+						../src/crossplatform/NodeComponents/AnimationComponent.cpp	\
+						../src/crossplatform/NodeComponents/AnimationState.cpp		\
+						../src/crossplatform/NodeComponents/VisibilityComponent.cpp	\
+						../src/crossplatform/NodeManager.cpp						\
+						../src/crossplatform/ResourceCreator.cpp					\
+						../src/crossplatform/SessionClient.cpp						\
+						../src/crossplatform/ShaderSystem.cpp						\
+						../src/crossplatform/ShaderResource.cpp						\
+						../src/crossplatform/Skin.cpp								\
+						../src/crossplatform/Transform.cpp							\
+						../src/crossplatform/MemoryUtil.cpp							\
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable

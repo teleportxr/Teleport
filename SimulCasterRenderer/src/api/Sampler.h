@@ -43,8 +43,10 @@ namespace scr
 		SamplerCreateInfo m_CI;
 
 	public:
-		Sampler(const RenderPlatform*const r)
-			:APIObject(r) {}
+		Sampler(const RenderPlatform* const r)
+			:APIObject(r), m_CI()
+		{}
+
 		virtual ~Sampler() 
 		{
 			m_CI.minFilter = Filter::UNKNOWN;

@@ -20,7 +20,10 @@ namespace scr
 		UniformBufferCreateInfo m_CI;
 
 	public:
-		UniformBuffer(const scr::RenderPlatform*const r) :APIObject(r) {}
+		UniformBuffer(const scr::RenderPlatform* const r)
+			:APIObject(r), m_CI()
+		{}
+
 		virtual ~UniformBuffer()
 		{
 			m_CI.bindingLocation = 0;

@@ -161,13 +161,16 @@ namespace scr
 		std::map<std::string, EffectPassCreateInfo> m_EffectPasses;
 
 	public:
-		Effect(const RenderPlatform*const r) : APIObject(r) {}
+		Effect(const RenderPlatform* const r)
+			: APIObject(r), m_CI()
+		{}
+
 		virtual ~Effect() = default;
 
 		virtual void Create(EffectCreateInfo* pEffectCreateInfo) = 0;
 		virtual void CreatePass(EffectPassCreateInfo* pEffectPassCreateInfo) = 0;
 
-		inline const EffectCreateInfo& GetEffectCreateInfo() const { return m_CI;}
+		inline const EffectCreateInfo& GetEffectCreateInfo() const { return m_CI; }
 		const EffectPassCreateInfo* GetEffectPassCreateInfo(const char* effectPassName) const
 		{
 			for(const auto& passPair : m_EffectPasses)

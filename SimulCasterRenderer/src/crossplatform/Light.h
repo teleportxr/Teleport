@@ -23,19 +23,20 @@ namespace scr
 			RECTANGLE=3,
 			DISC=4
 		};
+
 		struct LightCreateInfo
 		{
-			const RenderPlatform* renderPlatform;
-			Type type;
+			const RenderPlatform* renderPlatform = nullptr;
+			Type type = Type::SPOT;
 			avs::vec3 position;
 			avs::vec4 lightColour;
-			float lightRadius;
+			float lightRadius = 0.0f;
 			avs::vec3 direction;
 			quat orientation;
 			std::shared_ptr<Texture> shadowMapTexture;
-			avs::uid uid;
-			std::string name;	// stored here because the actual NODE seems to be discarded - not good.
-			float lightRange;	// max range for effect.
+			avs::uid uid = 0;
+			std::string name; // stored here because the actual NODE seems to be discarded - not good.
+			float lightRange = 0.0f; // max range for effect.
 		};
 
 		struct LightData //Layout: conformant to GLSL std140. No point to this now.

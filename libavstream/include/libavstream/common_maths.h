@@ -249,6 +249,8 @@ namespace avs
 
 	struct vec4
 	{
+		static const vec4 ZERO;
+
 		float x, y, z, w;
 
 		vec4()
@@ -318,6 +320,16 @@ namespace avs
 		void operator/=(float rhs)
 		{
 			*this = *this / rhs;
+		}
+
+		bool operator==(const vec4 other)
+		{
+			return x == other.x && y == other.y && z == other.z && w == other.w;
+		}
+
+		bool operator!=(const vec4 other)
+		{
+			return !(*this == other);
 		}
 
 		float Length() const

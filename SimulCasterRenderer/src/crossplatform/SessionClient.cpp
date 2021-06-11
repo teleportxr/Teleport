@@ -276,104 +276,21 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::Shutdown:
 			mCommandInterface->OnVideoStreamClosed();
 			break;
+		case avs::CommandPayloadType::Setup:
+			ReceiveSetupCommand(packet);
+			break;
 		case avs::CommandPayloadType::AcknowledgeHandshake:
 			ReceiveHandshakeAcknowledgement(packet);
 			break;
-		case avs::CommandPayloadType::Setup:
-		{
-			size_t commandSize = sizeof(avs::SetupCommand);
-
-			//Copy command out of packet.
-			memcpy(static_cast<void*>(&setupCommand), packet->data, commandSize);
-
-			avs::Handshake handshake;
-			char server_ip[100];
-			enet_address_get_host_ip(&mServerEndpoint, server_ip, 99);
-			mCommandInterface->OnVideoStreamChanged(server_ip, setupCommand, handshake);
-			
-			std::vector<avs::uid> resourceIDs;
-			if(setupCommand.server_id == lastServerID)
-			{
-				resourceIDs = mCommandInterface->GetGeometryResources();
-				handshake.resourceCount = resourceIDs.size();
-			}
-			else
-			{
-				mCommandInterface->ClearGeometryResources();
-			}
-
-			SendHandshake(handshake, resourceIDs);
-			lastServerID = setupCommand.server_id;
-		}
-		break;
 		case avs::CommandPayloadType::ReconfigureVideo:
-		{
-			size_t commandSize = sizeof(avs::ReconfigureVideoCommand);
-
-			//Copy command out of packet.
-			avs::ReconfigureVideoCommand reconfigureCommand;
-			memcpy(static_cast<void*>(&reconfigureCommand), packet->data, commandSize);
-
-			mCommandInterface->OnReconfigureVideo(reconfigureCommand);
-		}
-		break;
+			ReceiveVideoReconfigureCommand(packet);
+			break;
 		case avs::CommandPayloadType::SetPosition:
-		{
-			size_t commandSize = sizeof(avs::SetPositionCommand);
-			avs::SetPositionCommand command;
-			memcpy(static_cast<void*>(&command), packet->data, commandSize);
-			if(command.valid_counter>receivedInitialPos)
-			{
-				receivedInitialPos = command.valid_counter;
-				originPose.position = command.origin_pos;
-				originPose.orientation=command.orientation;
-				if (command.set_relative_pos)
-					receivedRelativePos = command.valid_counter;
-				originToHeadPos = command.relative_pos;
-			}
-		}
-		break;
+			ReceivePositionUpdate(packet);
+			break;
 		case avs::CommandPayloadType::NodeBounds:
-		{
-			size_t commandSize = sizeof(avs::NodeBoundsCommand);
-
-			avs::NodeBoundsCommand command;
-			memcpy(static_cast<void*>(&command), packet->data, commandSize);
-
-			size_t enteredSize = sizeof(avs::uid) * command.nodesShowAmount;
-			size_t leftSize = sizeof(avs::uid) * command.nodesHideAmount;
-
-			std::vector<avs::uid> enteredNodes(command.nodesShowAmount);
-			std::vector<avs::uid> leftNodes(command.nodesHideAmount);
-
-			memcpy(enteredNodes.data(), packet->data + commandSize, enteredSize);
-			memcpy(leftNodes.data(), packet->data + commandSize + enteredSize, leftSize);
-
-			std::vector<avs::uid> missingNodes;
-			//Tell the renderer to show the nodes that have entered the streamable bounds; create resend requests for nodes it does not have the data on, and confirm nodes it does have the data for.
-			for(avs::uid node_uid : enteredNodes)
-			{
-				if(!mCommandInterface->OnNodeEnteredBounds(node_uid))
-				{
-					missingNodes.push_back(node_uid);
-				}
-				else
-				{
-					mReceivedNodes.push_back(node_uid);
-				}
-			}
-			mResourceRequests.insert(mResourceRequests.end(), missingNodes.begin(), missingNodes.end());
-
-			//Tell renderer to hide nodes that have left bounds.
-			for(avs::uid node_uid : leftNodes)
-			{
-				if(mCommandInterface->OnNodeLeftBounds(node_uid))
-				{
-					mLostNodes.push_back(node_uid);
-				}
-			}
-		}
-		break;
+			ReceiveNodeBoundsUpdate(packet);
+			break;
 		case avs::CommandPayloadType::UpdateNodeMovement:
 			ReceiveNodeMovementUpdate(packet);
 			break;
@@ -382,6 +299,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 			break;
 		case avs::CommandPayloadType::UpdateNodeAnimation:
 			ReceiveNodeAnimationUpdate(packet);
+			break;
+		case avs::CommandPayloadType::UpdateNodeAnimationControl:
+			ReceiveNodeAnimationControlUpdate(packet);
 			break;
 		default:
 			break;
@@ -605,6 +525,106 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 	handshakeAcknowledged = true;
 }
 
+void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::SetupCommand);
+
+	//Copy command out of packet.
+	memcpy(static_cast<void*>(&setupCommand), packet->data, commandSize);
+
+	avs::Handshake handshake;
+	char server_ip[100];
+	enet_address_get_host_ip(&mServerEndpoint, server_ip, 99);
+	mCommandInterface->OnVideoStreamChanged(server_ip, setupCommand, handshake);
+
+	std::vector<avs::uid> resourceIDs;
+	if(setupCommand.server_id == lastServerID)
+	{
+		resourceIDs = mCommandInterface->GetGeometryResources();
+		handshake.resourceCount = resourceIDs.size();
+	}
+	else
+	{
+		mCommandInterface->ClearGeometryResources();
+	}
+
+	SendHandshake(handshake, resourceIDs);
+	lastServerID = setupCommand.server_id;
+}
+
+void SessionClient::ReceiveVideoReconfigureCommand(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::ReconfigureVideoCommand);
+
+	//Copy command out of packet.
+	avs::ReconfigureVideoCommand reconfigureCommand;
+	memcpy(static_cast<void*>(&reconfigureCommand), packet->data, commandSize);
+
+	mCommandInterface->OnReconfigureVideo(reconfigureCommand);
+}
+
+void SessionClient::ReceivePositionUpdate(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::SetPositionCommand);
+
+	avs::SetPositionCommand command;
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
+
+	if(command.valid_counter > receivedInitialPos)
+	{
+		receivedInitialPos = command.valid_counter;
+		originPose.position = command.origin_pos;
+		originPose.orientation = command.orientation;
+		if(command.set_relative_pos)
+		{
+			receivedRelativePos = command.valid_counter;
+		}
+
+		originToHeadPos = command.relative_pos;
+	}
+}
+
+void SessionClient::ReceiveNodeBoundsUpdate(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::NodeBoundsCommand);
+
+	avs::NodeBoundsCommand command;
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
+
+	size_t enteredSize = sizeof(avs::uid) * command.nodesShowAmount;
+	size_t leftSize = sizeof(avs::uid) * command.nodesHideAmount;
+
+	std::vector<avs::uid> enteredNodes(command.nodesShowAmount);
+	std::vector<avs::uid> leftNodes(command.nodesHideAmount);
+
+	memcpy(enteredNodes.data(), packet->data + commandSize, enteredSize);
+	memcpy(leftNodes.data(), packet->data + commandSize + enteredSize, leftSize);
+
+	std::vector<avs::uid> missingNodes;
+	//Tell the renderer to show the nodes that have entered the streamable bounds; create resend requests for nodes it does not have the data on, and confirm nodes it does have the data for.
+	for(avs::uid node_uid : enteredNodes)
+	{
+		if(!mCommandInterface->OnNodeEnteredBounds(node_uid))
+		{
+			missingNodes.push_back(node_uid);
+		}
+		else
+		{
+			mReceivedNodes.push_back(node_uid);
+		}
+	}
+	mResourceRequests.insert(mResourceRequests.end(), missingNodes.begin(), missingNodes.end());
+
+	//Tell renderer to hide nodes that have left bounds.
+	for(avs::uid node_uid : leftNodes)
+	{
+		if(mCommandInterface->OnNodeLeftBounds(node_uid))
+		{
+			mLostNodes.push_back(node_uid);
+		}
+	}
+}
+
 void SessionClient::ReceiveNodeMovementUpdate(const ENetPacket* packet)
 {
 	//Extract command from packet.
@@ -639,6 +659,16 @@ void SessionClient::ReceiveNodeAnimationUpdate(const ENetPacket* packet)
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	mCommandInterface->UpdateNodeAnimation(command.animationUpdate);
+}
+
+void SessionClient::ReceiveNodeAnimationControlUpdate(const ENetPacket* packet)
+{
+	//Extract command from packet.
+	avs::UpdateNodeAnimationControlCommand command;
+	size_t commandSize = command.getCommandSize();
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
+
+	mCommandInterface->UpdateNodeAnimationControl(command.animationControlUpdate);
 }
 
 void SessionClient::SetDiscoveryClientID(uint32_t clientID)

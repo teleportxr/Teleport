@@ -86,6 +86,7 @@ namespace OVRFW
 		virtual void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) override;
 		virtual void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) override;
 		virtual void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate) override;
+		virtual void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
 		/* End SessionCommandInterface */
 
 		/* Begin DecodeEventInterface */

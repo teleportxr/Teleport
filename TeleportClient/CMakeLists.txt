@@ -4,12 +4,15 @@ project( TeleportClient )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
-set( src_files
+set(src_files
+	basic_linear_algebra.h
 	ClientDeviceState.cpp
 	ClientDeviceState.h
 	DiscoveryService.h
-	basic_linear_algebra.h
-	)
+	Input.h
+	ServerTimestamp.cpp
+	ServerTimestamp.h
+)
 
 #Include its root directory
 include_directories(src)
@@ -30,7 +33,7 @@ elseif(ANDROID)
 endif()
 
 #For MT runtime
-add_static_library( TeleportClient SOURCES ${src_files} )  
+add_static_library( TeleportClient SOURCES ${src_files})
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 
 #For MD runtime

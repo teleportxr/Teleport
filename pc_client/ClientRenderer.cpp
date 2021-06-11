@@ -30,9 +30,10 @@
 #include "crossplatform/Light.h"
 #include "crossplatform/Log.h"
 #include "crossplatform/Material.h"
-#include "crossplatform/ServerTimestamp.h"
 #include "crossplatform/SessionClient.h"
 #include "crossplatform/Tests.h"
+
+#include "TeleportClient/ServerTimestamp.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
 
@@ -907,7 +908,6 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->IsVisible())
 	{
-		const scr::Transform& transform = node->GetGlobalTransform();
 		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
 		if(mesh)
 		{
@@ -924,7 +924,8 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				simul::crossplatform::Layout* layout = vb->GetLayout();
 
 				mat4 model;
-				model = ((const float*)&(transform.GetTransformMatrix()));
+				const scr::mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
+				model = reinterpret_cast<const float*>(&globalTransformMatrix);
 				static bool override_model=false;
 				if(override_model)
 				{
@@ -971,7 +972,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				std::shared_ptr<scr::Skin> skin = node->GetSkin();
 				if(skin)
 				{
-					scr::mat4* scr_matrices = skin->GetBoneMatrices(transform.GetTransformMatrix());
+					scr::mat4* scr_matrices = skin->GetBoneMatrices(globalTransformMatrix);
 					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(scr::mat4) * scr::Skin::MAX_BONES);
 
 					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
@@ -1066,7 +1067,7 @@ void ClientRenderer::Update()
 	double timestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	double timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
 
-	scr::ServerTimestamp::tick(timeElapsed);
+	teleport::client::ServerTimestamp::tick(timeElapsed);
 
 	resourceManagers.Update(static_cast<float>(timeElapsed));
 	resourceCreator.Update(static_cast<float>(timeElapsed));
@@ -1076,8 +1077,6 @@ void ClientRenderer::Update()
 
 void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
-	ClearGeometryResources();
-
 	videoConfig = setupCommand.video_config;
 
 	WARN("VIDEO STREAM CHANGED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
@@ -1088,7 +1087,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	videoTagDataCubeArray.clear();
 	videoTagDataCubeArray.resize(maxTagDataSize);
 
-	scr::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 	std::vector<avs::NetworkSourceStream> streams = { {20} };
@@ -1334,7 +1333,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 	tagData.lights.resize(tagData.coreData.lightCount);
 
-	scr::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
 
 	// We will check the received light tags agains the current list of lights - rough and temporary.
 	/*
@@ -1399,6 +1398,25 @@ void ClientRenderer::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEna
 void ClientRenderer::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
 {
 	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
+}
+
+void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate)
+{
+	switch(animationControlUpdate.timeControl)
+	{
+	case avs::AnimationTimeControl::ANIMATION_TIME:
+		resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
+		break;
+	case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
+		resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[0].triggerBack, 1.0f);
+		break;
+	case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
+		resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[1].triggerBack, 1.0f);
+		break;
+	default:
+		SCR_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
+		break;
+	}
 }
 
 #include "Platform/CrossPlatform/Quaterniond.h"
@@ -1568,6 +1586,8 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 		buttonEvent.inputID = avs::InputList::TRIGGER01;
 		buttonEvent.strength = 1.0f;
 		controllerStates[0].analogueEvents.push_back(buttonEvent);
+
+		controllerStates[0].triggerBack = buttonEvent.strength;
 	}
 	else if(bRightButtonDown)
 	{
@@ -1596,6 +1616,8 @@ void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRight
 		buttonEvent.inputID = avs::InputList::TRIGGER01;
 		buttonEvent.strength = 0.0f;
 		controllerStates[0].analogueEvents.push_back(buttonEvent);
+
+		controllerStates[0].triggerBack = buttonEvent.strength;
 	}
 	else if(bRightButtonReleased)
 	{

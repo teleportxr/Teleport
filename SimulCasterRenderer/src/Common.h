@@ -43,7 +43,8 @@ namespace scr
 		APIObject(const RenderPlatform*const r) 
 			: renderPlatform(r) {}
 	};
-	enum BufferUsageBit : uint32_t
+
+	enum class BufferUsageBit : uint32_t
 	{
 		UNKNOWN_BIT = 0x00000000,
 		STREAM_BIT	= 0x00000001,
@@ -54,6 +55,11 @@ namespace scr
 		COPY_BIT	= 0x00000020,
 		DRAW_BIT	= 0x00000040
 	};
+	
+	inline BufferUsageBit operator|(BufferUsageBit a, BufferUsageBit b)
+	{
+		return static_cast<BufferUsageBit>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
 
 	// Taken from Unity
 	enum class LightType : char
