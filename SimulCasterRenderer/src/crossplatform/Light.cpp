@@ -102,7 +102,7 @@ void Light::UpdateLightSpaceTransform()
 	{
 		auto &light=s_LightData[m_LightID];
 		// We consider lights to shine in the Z direction.
-		avs::vec3 defaultDirection(0,0,1.0f);
+		//avs::vec3 defaultDirection(0,0,1.0f);
 		light.position = m_CI.position;
 		light.direction = ((m_CI.orientation * m_CI.direction) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
 		avs::vec3 scale(m_CI.lightRadius,m_CI.lightRadius,m_CI.lightRadius);
