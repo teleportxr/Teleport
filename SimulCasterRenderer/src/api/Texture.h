@@ -139,13 +139,18 @@ namespace scr
 			bool externalResource = false;	// If true, the actual API resource will be created and managed externally on a per-platform basis.
 		};
 
+		static const avs::vec3 DUMMY_DIMENSIONS; //X = Width, Y = Height, Z = Depth
+
 	protected:
 		TextureCreateInfo m_CI;
 
 		std::shared_ptr<Sampler> m_Sampler = nullptr;
 
 	public:
-		Texture(const RenderPlatform*const r) : APIObject(r) {m_CI={};}
+		Texture(const RenderPlatform* const r)
+			: APIObject(r), m_CI()
+		{}
+
 		virtual ~Texture()
 		{
 			/* RK: Purpose of all this unclear..
@@ -167,14 +172,28 @@ namespace scr
 			m_CI.mips.clear();
 		}
 
+		//Returns whether the texture is valid.
 		bool IsValid() const
 		{
 			return m_CI.width != 0 && m_CI.height != 0 && m_CI.depth != 0;
 		}
 
+		//Returns whether the passed texture is valid.
 		static bool IsValid(scr::Texture* texture)
 		{
 			return texture && texture->IsValid();
+		}
+
+		//Returns whether the texture is a dummy/placeholder texture.
+		bool IsDummy() const
+		{
+			return m_CI.width == DUMMY_DIMENSIONS.x && m_CI.height == DUMMY_DIMENSIONS.y && m_CI.depth == DUMMY_DIMENSIONS.z;
+		}
+
+		//Returns whether the passed texture is a dummy/placeholder texture.
+		static bool IsDummy(scr::Texture* texture)
+		{
+			return texture && texture->IsDummy();
 		}
 
 		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bytesPerPixel will be the same for all faces.

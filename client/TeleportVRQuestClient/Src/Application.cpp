@@ -673,6 +673,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			textureCreateInfo.type = scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
 			textureCreateInfo.height = videoConfig.video_height;
 			textureCreateInfo.width = videoConfig.video_width;
+			textureCreateInfo.depth = 1;
 
 			clientRenderer.mVideoTexture->Create(textureCreateInfo);
 			((scc::GL_Texture *) (clientRenderer.mVideoTexture.get()))->SetExternalGlTexture(

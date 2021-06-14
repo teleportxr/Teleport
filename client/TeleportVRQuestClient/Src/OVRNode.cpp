@@ -17,7 +17,7 @@
 #include "SCR_Class_GL_Impl/GL_ShaderStorageBuffer.h"
 
 static bool SUPPORT_NORMALS = false;
-static bool SUPPORT_COMBINED = false;
+static bool SUPPORT_COMBINED = true;
 
 void OVRNode::SetMesh(std::shared_ptr<scr::Mesh> mesh)
 {
@@ -123,14 +123,14 @@ void OVRNode::SetHighlight(bool h)
 
 OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material)
 {
-	static bool support_combined=false;
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+
 	std::string passname = GlobalGraphicsResources::GenerateShaderPassName
 			(
 					true,
-					scr::Texture::IsValid(material->GetMaterialCreateInfo().normal.texture.get()) && SUPPORT_NORMALS,
-					scr::Texture::IsValid(material->GetMaterialCreateInfo().combined.texture.get()) && SUPPORT_COMBINED,
-					scr::Texture::IsValid(material->GetMaterialCreateInfo().emissive.texture.get()) || material->GetMaterialCreateInfo().emissive.textureOutputScalar != avs::vec4::ZERO,
+					SUPPORT_NORMALS && !scr::Texture::IsDummy(material->GetMaterialCreateInfo().normal.texture.get()),
+					SUPPORT_COMBINED && !scr::Texture::IsDummy(material->GetMaterialCreateInfo().combined.texture.get()),
+					!scr::Texture::IsDummy(material->GetMaterialCreateInfo().emissive.texture.get()) || material->GetMaterialCreateInfo().emissive.textureOutputScalar != avs::vec4::ZERO,
 					TELEPORT_MAX_LIGHTS,
 					false
 			);
@@ -146,9 +146,9 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	std::string highlightpassname=GlobalGraphicsResources::GenerateShaderPassName
 			(
 					true,
-					scr::Texture::IsValid(material->GetMaterialCreateInfo().normal.texture.get()) && SUPPORT_NORMALS,
-					scr::Texture::IsValid(material->GetMaterialCreateInfo().combined.texture.get()) && SUPPORT_COMBINED,
-					scr::Texture::IsValid(material->GetMaterialCreateInfo().emissive.texture.get()) || material->GetMaterialCreateInfo().emissive.textureOutputScalar != avs::vec4::ZERO,
+					SUPPORT_NORMALS && !scr::Texture::IsDummy(material->GetMaterialCreateInfo().normal.texture.get()),
+					SUPPORT_COMBINED && !scr::Texture::IsDummy(material->GetMaterialCreateInfo().combined.texture.get()),
+					!scr::Texture::IsDummy(material->GetMaterialCreateInfo().emissive.texture.get()) || material->GetMaterialCreateInfo().emissive.textureOutputScalar != avs::vec4::ZERO,
 					TELEPORT_MAX_LIGHTS,
 					true
 			);

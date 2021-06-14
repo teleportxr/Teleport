@@ -30,6 +30,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../..
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
 LOCAL_SRC_FILES  := 	../src/api/Effect.cpp										\
+						../src/api/Texture.cpp										\
 						../src/crossplatform/Animation.cpp							\
 						../src/crossplatform/API.cpp								\
 						../src/crossplatform/Bone.cpp								\

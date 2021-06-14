@@ -36,7 +36,10 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 	scr::Texture::TextureCreateInfo tci =
 	{
 		"Dummy Texture",
-		1, 1, 1, 4, 1, 1,
+		static_cast<uint32_t>(scr::Texture::DUMMY_DIMENSIONS.x),
+		static_cast<uint32_t>(scr::Texture::DUMMY_DIMENSIONS.y),
+		static_cast<uint32_t>(scr::Texture::DUMMY_DIMENSIONS.z),
+		4, 1, 1,
 		scr::Texture::Slot::UNKNOWN,
 		scr::Texture::Type::TEXTURE_2D,
 		scr::Texture::Format::RGBA8,

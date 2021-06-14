@@ -18,9 +18,10 @@ set( src_api
 	src/api/Sampler.h
 	src/api/Shader.h
 	src/api/ShaderStorageBuffer.h
+	src/api/Texture.cpp
 	src/api/Texture.h
-	src/api/UniformBuffer.h
 	src/api/UniformBuffer.cpp
+	src/api/UniformBuffer.h
 	src/api/VertexBuffer.h
 	src/api/VertexBufferLayout.h
 	)

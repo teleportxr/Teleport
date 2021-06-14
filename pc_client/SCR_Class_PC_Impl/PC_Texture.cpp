@@ -4,6 +4,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "crossplatform/Log.h"
+
 using namespace pc_client;
 using namespace scr;
 
