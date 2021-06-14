@@ -330,7 +330,7 @@ namespace avs
 				codecConfig.h264Config.repeatSPSPPS = 1;
 				codecConfig.h264Config.idrPeriod = config.config.gopLength;
 
-				// Only relevant if the inpout buffer format is a YUV format. Set to 1 for YUV420.
+				// Only relevant if the input buffer format is a YUV format. Set to 1 for YUV420.
 				if (params.useYUV444ChromaFormat && m_EncodeCapabilities.isYUV444Capable)
 				{
 					codecConfig.h264Config.chromaFormatIDC = 3;
