@@ -303,6 +303,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::UpdateNodeAnimationControl:
 			ReceiveNodeAnimationControlUpdate(packet);
 			break;
+		case avs::CommandPayloadType::SetNodeHighlighted:
+			ReceiveNodeHighlightUpdate(packet);
+			break;
 		default:
 			break;
 	};
@@ -669,6 +672,15 @@ void SessionClient::ReceiveNodeAnimationControlUpdate(const ENetPacket* packet)
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	mCommandInterface->UpdateNodeAnimationControl(command.animationControlUpdate);
+}
+
+void SessionClient::ReceiveNodeHighlightUpdate(const ENetPacket* packet)
+{
+	avs::SetNodeHighlightedCommand command;
+	size_t commandSize = command.getCommandSize();
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
+
+	mCommandInterface->SetNodeHighlighted(command.nodeID, command.isHighlighted);
 }
 
 void SessionClient::SetDiscoveryClientID(uint32_t clientID)

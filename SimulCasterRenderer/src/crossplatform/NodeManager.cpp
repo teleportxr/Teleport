@@ -80,6 +80,13 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeD
 	{
 		node->animationComponent.setAnimationTimeOverride(animationControlPair->second.animationID, animationControlPair->second.timeOverride, animationControlPair->second.overrideMaximum);
 	}
+
+	//Set correct highlighting for node, if a highlight update was received early.
+	auto highlightPair = earlyNodeHighlights.find(node->id);
+	if(highlightPair != earlyNodeHighlights.end())
+	{
+		node->SetHighlighted(highlightPair->second);
+	}
 }
 
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
@@ -339,6 +346,19 @@ void scr::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid anim
 	}
 }
 
+void scr::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+{
+	std::shared_ptr<scr::Node> node = GetNode(nodeID);
+	if(node)
+	{
+		node->SetHighlighted(isHighlighted);
+	}
+	else
+	{
+		earlyNodeHighlights[nodeID] = isHighlighted;
+	}
+}
+
 void NodeManager::Update(float deltaTime)
 {
 	nodeList_t expiredNodes;
@@ -387,6 +407,7 @@ void NodeManager::Clear()
 	earlyEnabledUpdates.clear();
 	earlyAnimationUpdates.clear();
 	earlyAnimationControlUpdates.clear();
+	earlyNodeHighlights.clear();
 }
 
 void NodeManager::ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)

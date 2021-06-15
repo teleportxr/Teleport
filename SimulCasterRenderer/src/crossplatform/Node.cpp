@@ -166,6 +166,11 @@ namespace scr
 		RequestTransformUpdate();
 	}
 
+	void Node::SetHighlighted(bool highlighted)
+	{
+		isHighlighted = highlighted;
+	}
+
 	void Node::UpdateGlobalTransform() const
 	{
 		std::shared_ptr<Node> parentPtr = parent.lock();

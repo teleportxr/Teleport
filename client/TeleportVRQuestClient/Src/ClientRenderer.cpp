@@ -430,7 +430,8 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	pipelineCreateInfo.m_ShaderCreateInfo[1].filepath = "shaders/OpaquePBR.frag";
 	pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = clientAppInterface->LoadTextFile(
 				"shaders/OpaquePBR.frag");
-	std::string &src=pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode;
+
+	std::string &src = pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode;
 	// Now we will GENERATE the variants of the fragment shader, while adding them to the passNames list:
 	for(int emissive=0;emissive<2;emissive++)
 	{
@@ -447,6 +448,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 							std::string passname= GlobalGraphicsResources::GenerateShaderPassName(
 									diffuse, normal, combined, emissive, lightCount, highlight);
 							passNames.push_back(passname.c_str());
+
 							static char txt2[2000];
 							char const  *true_or_false[] = {"false", "true"};
 							sprintf(txt2, "\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, %d, %s);\n}",
@@ -460,6 +462,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			}
 		}
 	}
+
 	//Static passes.
 	pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "Static";
 	for(const std::string& passName : passNames)

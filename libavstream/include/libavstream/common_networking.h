@@ -52,6 +52,7 @@ namespace avs
 		UpdateNodeEnabledState,
 		UpdateNodeAnimation,
 		UpdateNodeAnimationControl,
+		SetNodeHighlighted
 	};
 
 	enum class ClientMessagePayloadType : uint8_t
@@ -353,6 +354,25 @@ namespace avs
 		virtual size_t getCommandSize() const override
 		{
 			return sizeof(UpdateNodeAnimationControlCommand);
+		}
+	} AVS_PACKED;
+
+	struct SetNodeHighlightedCommand : public Command
+	{
+		avs::uid nodeID = 0;
+		bool isHighlighted = false;
+
+		SetNodeHighlightedCommand()
+			:SetNodeHighlightedCommand(0, false)
+		{}
+
+		SetNodeHighlightedCommand(avs::uid nodeID, bool isHighlighted)
+			:Command(CommandPayloadType::SetNodeHighlighted), nodeID(nodeID), isHighlighted(isHighlighted)
+		{}
+
+		virtual size_t getCommandSize() const override
+		{
+			return sizeof(SetNodeHighlightedCommand);
 		}
 	} AVS_PACKED;
 

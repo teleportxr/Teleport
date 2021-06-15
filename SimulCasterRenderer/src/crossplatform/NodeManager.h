@@ -65,6 +65,7 @@ namespace scr
 		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate);
 		void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* const animationTimeOverride = nullptr, float overrideMaximum = 0.0f);
+		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted);
 
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.
@@ -99,6 +100,7 @@ namespace scr
 		std::map<avs::uid, avs::NodeUpdateEnabledState> earlyEnabledUpdates; //Enabled state updates that have arrived before the node was received.
 		std::map<avs::uid, avs::NodeUpdateAnimation> earlyAnimationUpdates; //Animation updates that were received before the node was received.
 		std::map<avs::uid, EarlyAnimationControl> earlyAnimationControlUpdates; //Animation control updates that were received before the node was received. Pair is <AnimationID, Animation Time Override>.
+		std::map<avs::uid, bool> earlyNodeHighlights; //Highlight updates that were received before the node was received.
 
 		//Uses the index of the node in the nodeList to determine if it is visible.
 		bool IsNodeVisible(avs::uid nodeID) const;

@@ -37,6 +37,7 @@ public:
 	virtual void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) = 0;
 	virtual void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate) = 0;
 	virtual void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) = 0;
+	virtual void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) = 0;
 };
 
 class SessionClient
@@ -106,6 +107,7 @@ private:
 	void ReceiveNodeEnabledStateUpdate(const ENetPacket* packet);
 	void ReceiveNodeAnimationUpdate(const ENetPacket* packet);
 	void ReceiveNodeAnimationControlUpdate(const ENetPacket* packet);
+	void ReceiveNodeHighlightUpdate(const ENetPacket* packet);
 
 	static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 

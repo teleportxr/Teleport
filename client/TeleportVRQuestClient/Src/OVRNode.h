@@ -21,9 +21,11 @@ public:
 	virtual void SetMaterialListSize(size_t size) override;
 	virtual void SetMaterialList(std::vector<std::shared_ptr<scr::Material>>& materials) override;
 
+	virtual void SetHighlighted(bool highlighted) override;
+
 	std::string GetCompleteEffectPassName(const char* effectPassName);
 	void ChangeEffectPass(const char* effectPassName);
-	void SetHighlight(bool h);
+
 private:
 	OVRFW::ovrSurfaceDef CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material);
 	OVRFW::GlProgram* GetEffectPass(const char* effectPassName);

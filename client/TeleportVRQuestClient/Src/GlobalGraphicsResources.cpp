@@ -26,10 +26,15 @@ std::string GlobalGraphicsResources::GenerateShaderPassName(int diffuse,int norm
 	passname += "Emissive";
 	passname += emissive ? "1" : "0";
 	passname += "Lights";
+
 	char countstr[10];
 	sprintf(countstr,"%d",lightcount);
 	passname += countstr;
+
 	if(highlight)
-		passname+="_Highlight";
+	{
+		passname += HIGHLIGHT_APPEND;
+	}
+
 	return passname;
 }
