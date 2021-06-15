@@ -17,7 +17,7 @@
 #include "SCR_Class_GL_Impl/GL_ShaderStorageBuffer.h"
 
 static bool support_normals=false;
-static bool support_combined=true;
+static bool support_combined=false;
 
 void OVRNode::SetMesh(std::shared_ptr<scr::Mesh> mesh)
 {
@@ -94,31 +94,27 @@ OVRFW::GlProgram* OVRNode::GetEffectPass(const char* effectPassName)
 void OVRNode::ChangeEffectPass(const char* effectPassName)
 {
 	OVRFW::GlProgram* p = GetEffectPass(effectPassName);
-	if(!p)
-		p=ovrGlProgram;
-	if(p)
+
+	for(size_t i=0;i<ovrSurfaceDefs.size();i++)
 	{
-		for(auto &surface : ovrSurfaceDefs)
-		{
+		auto &surface=ovrSurfaceDefs[i];
+		if(p)
 			surface.graphicsCommand.Program = *p;
-		}
-	}
-	else
-	{
-		OVR_WARN("Invalid effect pass name! %s", effectPassName);
+		else if(effectInfo[i].ovrGlProgram)
+			surface.graphicsCommand.Program=*effectInfo[i].ovrGlProgram;
 	}
 }
 
 void OVRNode::SetHighlight(bool h)
 {
-	OVRFW::GlProgram* p=h?ovrGlProgramHighlight:ovrGlProgram;
-	if(p)
+	for(size_t i=0;i<ovrSurfaceDefs.size();i++)
 	{
-		for(auto &surface : ovrSurfaceDefs)
-		{
+		auto &surface=ovrSurfaceDefs[i];
+		OVRFW::GlProgram* p=h?effectInfo[i].ovrGlProgramHighlight:effectInfo[i].ovrGlProgram;
+		if(p)
 			surface.graphicsCommand.Program = *p;
-		}
 	}
+
 }
 
 OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material)
@@ -130,9 +126,9 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 			,!scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f
 			,TELEPORT_MAX_LIGHTS
 			,false);
-	ovrGlProgram = GetEffectPass(passname.c_str());
+	effectInfo[materialIndex].ovrGlProgram = GetEffectPass(passname.c_str());
 	OVRFW::ovrSurfaceDef ovr_surface_def;
-	if(ovrGlProgram == nullptr)
+	if(effectInfo[materialIndex].ovrGlProgram == nullptr)
 	{
 		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Effect pass %s, not found!",passname.c_str());
 		return ovr_surface_def;
@@ -143,9 +139,9 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 			,!scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().emissive.texture.get())||material->GetMaterialCreateInfo().emissive.textureOutputScalar.Length()>0.0f
 			,TELEPORT_MAX_LIGHTS
 			,true);
-	ovrGlProgramHighlight = GetEffectPass(highlightpassname.c_str());
+	effectInfo[materialIndex].ovrGlProgramHighlight = GetEffectPass(highlightpassname.c_str());
 
-	ovr_surface_def.graphicsCommand.Program = *ovrGlProgram;
+	ovr_surface_def.graphicsCommand.Program = *effectInfo[materialIndex].ovrGlProgram;
 
 	if(material == nullptr)
 	{

@@ -30,6 +30,7 @@ struct VideoTagDataCube
     vec3 cameraPosition;
     int lightCount;
     vec4 cameraRotation;
+    vec4 ambientMultipliers;
     LightTag lightTags[4];
 };
 

@@ -588,7 +588,6 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 		{
 			clientPair->second.clientMessaging.Disconnect();
 		}
-
 		return true;
 	}
 

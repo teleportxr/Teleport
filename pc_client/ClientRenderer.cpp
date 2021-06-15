@@ -516,6 +516,7 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 
 		videoTagDataCube[i].cameraPosition = { pos.x, pos.y, pos.z };
 		videoTagDataCube[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
+		videoTagDataCube[i].diffuseAmbientScale=td.coreData.diffuseAmbientScale;
 		videoTagDataCube[i].lightCount = static_cast<int>(td.lights.size());
 		if(td.lights.size() > 10)
 		{

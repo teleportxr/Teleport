@@ -57,6 +57,7 @@ struct VideoTagDataCube
 	vec3 cameraPosition;
 	int lightCount;
 	vec4 cameraRotation;
+	float diffuseAmbientScale;
 	// Some light information 
 	LightTag lightTags[10];
 };

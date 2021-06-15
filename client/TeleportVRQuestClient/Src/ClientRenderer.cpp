@@ -730,6 +730,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 	VideoTagDataCube shaderData;
 	shaderData.cameraPosition = tagData.coreData.cameraTransform.position;
 	shaderData.cameraRotation = tagData.coreData.cameraTransform.rotation;
+	shaderData.ambientMultipliers.x=tagData.coreData.diffuseAmbientScale;
 	shaderData.lightCount = tagData.lights.size();
 
 	uint32_t offset = sizeof(VideoTagDataCube) * tagData.coreData.id;

@@ -133,7 +133,7 @@ void DefaultDiscoveryService::tick()
 		auto clientID = c->first;
 		auto addr = c->second;
 
-		if (Client_StartSession(clientID, servicePort))
+		if(Client_StartSession(clientID, servicePort))
 		{
 			++c;
 		}

@@ -98,6 +98,7 @@ namespace scr
 		uint32_t id;
 		avs::Transform cameraTransform;
 		uint32_t lightCount;
+		float diffuseAmbientScale;
 #ifndef __ANDROID__
 #pragma pack(pop)
 #endif

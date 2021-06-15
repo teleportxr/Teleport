@@ -109,7 +109,6 @@ namespace SCServer
 
 	private:
 		static bool asyncNetworkDataProcessingFailed;
-
 		avs::uid clientID;
 		bool initialized=false;
 		bool startingSession;

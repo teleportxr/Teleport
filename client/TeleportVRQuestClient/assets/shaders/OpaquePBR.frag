@@ -93,6 +93,7 @@ struct VideoTagDataCube
 	vec3 cameraPosition;
 	int lightCount;
 	vec4 cameraRotation;
+	vec4 ambientMultipliers;
 	LightTag lightTags[4];
 };
 
@@ -276,6 +277,8 @@ SurfaceState PreprocessSurface(vec3 viewDir, SurfaceProperties surfaceProperties
 	else
 		surfaceState.env	=vec3(0,0,0);
 	surfaceState.kD			= lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0, 0.0, 0.0), surfaceProperties.metallic);
+
+	surfaceState.kD			*=tagDataCube.ambientMultipliers.x;
 	return surfaceState;
 }
 
@@ -294,7 +297,7 @@ vec3 PBRAmbient(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfa
 	vec3 envSpecularColour	=ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness, surfaceState.n_v);
 	vec3 specular			=surfaceState.kS*envSpecularColour*surfaceState.env;
 	vec3 colour				=diffuse+specular;
-
+//colour.r=surfaceProperties.roughness;
 	return colour;
 }
 

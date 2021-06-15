@@ -79,6 +79,7 @@ struct __attribute__ ((packed)) VideoTagDataCube
     avs::vec3 cameraPosition;
 	int lightCount;
     avs::vec4 cameraRotation;
+	avs::vec4 ambientMultipliers;
 	// Some light information
 	LightTag lightTags[4];
 };

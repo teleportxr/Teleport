@@ -29,6 +29,11 @@ private:
 	OVRFW::GlProgram* GetEffectPass(const char* effectPassName);
 	//Recreates all OVR surfaces from scratch.
 	void RefreshOVRSurfaces();
-	OVRFW::GlProgram* ovrGlProgram =nullptr;
-	OVRFW::GlProgram* ovrGlProgramHighlight =nullptr;
+	struct EffectInfo
+	{
+		OVRFW::GlProgram* ovrGlProgram =nullptr;
+		OVRFW::GlProgram* ovrGlProgramHighlight =nullptr;
+	};
+
+	std::map<size_t,EffectInfo> effectInfo;
 };
