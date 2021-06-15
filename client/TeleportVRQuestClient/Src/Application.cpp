@@ -853,6 +853,11 @@ void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationContr
 	}
 }
 
+void Application::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+{
+	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+}
+
 void Application::OnFrameAvailable()
 {
 	++mNumPendingFrames;

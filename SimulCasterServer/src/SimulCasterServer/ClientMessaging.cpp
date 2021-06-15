@@ -316,6 +316,12 @@ namespace SCServer
 		sendCommand(command);
 	}
 
+	void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+	{
+		avs::SetNodeHighlightedCommand command(nodeID, isHighlighted);
+		sendCommand(command);
+	}
+
 	bool ClientMessaging::hasHost() const
 	{
 		return host;

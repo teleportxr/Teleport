@@ -128,6 +128,8 @@ namespace scr
 		const avs::vec3& GetLocalScale() const { return GetLocalTransform().m_Scale; }
 		const avs::vec3& GetGlobalScale() const { return GetGlobalTransform().m_Scale; }
 
+		virtual void SetHighlighted(bool highlighted);
+		bool IsHighlighted() const { return isHighlighted; }
 
 	private:
 		std::shared_ptr<Mesh> mesh;
@@ -145,6 +147,8 @@ namespace scr
 		std::vector<std::weak_ptr<Node>> children;
 
 		avs::MovementUpdate lastReceivedMovement;
+
+		bool isHighlighted = false;
 
 		void UpdateGlobalTransform() const;
 

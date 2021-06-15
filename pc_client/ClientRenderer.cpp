@@ -1419,6 +1419,11 @@ void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationCo
 	}
 }
 
+void ClientRenderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+{
+	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+}
+
 #include "Platform/CrossPlatform/Quaterniond.h"
 void ClientRenderer::FillInControllerPose(int index, float offset)
 {

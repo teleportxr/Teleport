@@ -64,6 +64,7 @@ namespace SCServer
 		void updateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void updateNodeAnimation(avs::NodeUpdateAnimation update);
 		void updateNodeAnimationControl(avs::NodeUpdateAnimationControl update);
+		void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
 
 		bool hasHost() const;
 		bool hasPeer() const;

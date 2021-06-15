@@ -27,10 +27,11 @@ public:
 
     char* effectPassName = const_cast<char*>("OpaquePBRAmbient"); //Which effect pass the geometry should be rendered with.
 
+    static constexpr const char* HIGHLIGHT_APPEND = "_Highlight"; //What is appended on pass names to designate them a highlight pass.
+
     static GlobalGraphicsResources& GetInstance();
 
 	static std::string GenerateShaderPassName(int diffuse,int normal,int combined,int emissive,int lightcount,int highlight);
 private:
 	static GlobalGraphicsResources *instance;
-
 };
