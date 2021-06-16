@@ -119,7 +119,7 @@ layout(binding = 13) uniform sampler2D u_EmissiveTexture;
 
 layout(binding = 14) uniform samplerCube u_SpecularCubemap;
 //layout(binding = 15) uniform samplerCube u_LightsCubemap;
-//layout(binding = 16) uniform samplerCube u_DiffuseCubemap;
+layout(binding = 15) uniform samplerCube u_DiffuseCubemap;
 
 layout(binding = 19) uniform sampler2D u_ShadowMap0;
 layout(binding = 20) uniform sampler2D u_ShadowMap1;
@@ -292,7 +292,7 @@ vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 vec3 PBRAmbient(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties)
 {
 	vec3 diffuse			=surfaceState.kD*surfaceProperties.albedo * surfaceProperties.diffuse_env;
-	diffuse					*=surfaceProperties.ao;
+	//diffuse					*=surfaceProperties.ao;
 
 	vec3 envSpecularColour	=ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness, surfaceState.n_v);
 	vec3 specular			=surfaceState.kS*envSpecularColour*surfaceState.env;
@@ -391,7 +391,7 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 	}
 	// Sample the environment maps:
 	if(ambient)
-		surfaceProperties.diffuse_env	=textureLod(u_SpecularCubemap, ConvertCubemapTexcoords(surfaceProperties.normal.xyz),5.0).rgb;
+		surfaceProperties.diffuse_env	=textureLod(u_DiffuseCubemap, ConvertCubemapTexcoords(surfaceProperties.normal.xyz),0.0).rgb;
 	else
 		surfaceProperties.diffuse_env	=vec3(0,0,0);
 	if (combinedTex)
@@ -444,7 +444,6 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	{
 		c							=vec3(0,0,0);
 	}
-
 	for (int i=0;i<maxLights;i++)
 	{
 		if (i>=tagDataCube.lightCount)

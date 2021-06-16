@@ -400,7 +400,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,12,"u_CombinedTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,13,"u_EmissiveTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,14,"u_SpecularCubemap", {});
-	//pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_DiffuseCubemap", {});
+	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,15,"u_DiffuseCubemap", {});
 
 	passNames.clear();
 	passNames.push_back("OpaquePBR_NoLight");
@@ -896,9 +896,9 @@ void ClientRenderer::UpdateTagDataBuffers()
 			const auto &td = videoTagDataCubeArray[i];
 			const auto &pos = td.coreData.cameraTransform.position;
 			const auto &rot = td.coreData.cameraTransform.rotation;
-
 			data[i].cameraPosition = {pos.x, pos.y, pos.z};
 			data[i].cameraRotation = {rot.x, rot.y, rot.z, rot.w};
+			data[i].ambientMultipliers={td.coreData.diffuseAmbientScale,0,0,0};
 			data[i].lightCount = td.lights.size();
 			for (size_t j = 0; j < td.lights.size(); j++)
 			{

@@ -249,14 +249,14 @@ void Application::EnteredVrMode()
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14,
 			"u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler()
 								  , clientRenderer.specularCubemapTexture});
+	globalGraphicsResources.lightCubemapShaderResources.AddImage(
+			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
+			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
+								 , clientRenderer.diffuseCubemapTexture});
 /*	globalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
 			"u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler()
-								, clientRenderer.mCubemapLightingTexture});
-	globalGraphicsResources.lightCubemapShaderResources.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16,
-			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
-								 , clientRenderer.diffuseCubemapTexture});*/
+								, clientRenderer.mCubemapLightingTexture});*/
 
 	scr::ShaderResourceLayout tagBufferLayout;
 	tagBufferLayout.AddBinding(1,

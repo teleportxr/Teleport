@@ -17,7 +17,7 @@
 #include "SCR_Class_GL_Impl/GL_ShaderStorageBuffer.h"
 
 static bool support_normals=false;
-static bool support_combined=false;
+static bool support_combined=true;
 
 void OVRNode::SetMesh(std::shared_ptr<scr::Mesh> mesh)
 {
@@ -94,57 +94,28 @@ OVRFW::GlProgram* OVRNode::GetEffectPass(const char* effectPassName)
 void OVRNode::ChangeEffectPass(const char* effectPassName)
 {
 	OVRFW::GlProgram* p = GetEffectPass(effectPassName);
-
 	for(size_t i=0;i<ovrSurfaceDefs.size();i++)
 	{
 		auto &surface=ovrSurfaceDefs[i];
 		if(p)
-		program = ovrGlProgram;
+			surface.graphicsCommand.Program = *p;
+		else if(IsHighlighted() && effectInfo[i].ovrGlProgramHighlight)
+			surface.graphicsCommand.Program=*effectInfo[i].ovrGlProgramHighlight;
 		else if(effectInfo[i].ovrGlProgram)
 			surface.graphicsCommand.Program=*effectInfo[i].ovrGlProgram;
-	}
-
-	std::string highlightPassName = std::string(effectPassName) + GlobalGraphicsResources::HIGHLIGHT_APPEND;
-	OVRFW::GlProgram* highlightProgram = GetEffectPass(highlightPassName.c_str());
-	if(highlightProgram)
-	{
-		ovrGlProgramHighlight = highlightProgram;
-}
-	else
-	{
-		highlightProgram = ovrGlProgramHighlight;
-	}
-
-	if(IsHighlighted() && highlightProgram)
-	{
-		for(auto& surface : ovrSurfaceDefs)
-		{
-			surface.graphicsCommand.Program = *highlightProgram;
-		}
-	}
-	else if(program)
-	{
-		for(auto& surface : ovrSurfaceDefs)
-		{
-			surface.graphicsCommand.Program = *program;
-		}
 	}
 }
 
 void OVRNode::SetHighlighted(bool highlighted)
 {
+	Node::SetHighlighted(highlighted);
 	for(size_t i=0;i<ovrSurfaceDefs.size();i++)
 	{
 		auto &surface=ovrSurfaceDefs[i];
-		OVRFW::GlProgram* p=h?effectInfo[i].ovrGlProgramHighlight:effectInfo[i].ovrGlProgram;
+		OVRFW::GlProgram* p=highlighted?effectInfo[i].ovrGlProgramHighlight:effectInfo[i].ovrGlProgram;
 		if(p)
-	Node::SetHighlighted(highlighted);
-
-	OVRFW::GlProgram* program = highlighted ? ovrGlProgramHighlight : ovrGlProgram;
-	if(program)
-			surface.graphicsCommand.Program = *program;
+			surface.graphicsCommand.Program = *p;
 	}
-
 }
 
 OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material)
@@ -165,7 +136,7 @@ OVRFW::ovrSurfaceDef OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Effect pass %s, not found!",passname.c_str());
 		return ovr_surface_def;
 	}
-	ovr_surface_def.graphicsCommand.Program = *ovrGlProgram;
+	ovr_surface_def.graphicsCommand.Program = *effectInfo[materialIndex].ovrGlProgram;
 
 	std::string highlightpassname=GlobalGraphicsResources::GenerateShaderPassName(true
 			,support_normals&&!scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
