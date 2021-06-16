@@ -1303,6 +1303,18 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, avs::N
 	clientPair->second.clientMessaging.updateNodeAnimationControl(update);
 }
 
+TELEPORT_EXPORT void Client_SetNodeAnimationSpeed(avs::uid clientID, avs::uid nodeID, avs::uid animationID, float speed)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to set node animation speed for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
+		return;
+	}
+
+	clientPair->second.clientMessaging.setNodeAnimationSpeed(nodeID, animationID, speed);
+}
+
 TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeID, bool isHighlighted)
 {
 	auto clientPair = clientServices.find(clientID);
