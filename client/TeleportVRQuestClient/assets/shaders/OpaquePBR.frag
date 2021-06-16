@@ -144,7 +144,8 @@ vec3 saturate(vec3 _val)
 }
 vec3 ConvertCubemapTexcoords(vec3 p)
 {
-	return vec3(-p.z,p.x,p.y);
+// We now send the correctly oriented cube from the server.
+	return p;//vec3(-p.z,p.x,p.y);
 }
 
 float VisibilityTerm(float rough2, float lh2)
@@ -469,6 +470,37 @@ void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bo
 	}
 	//u.rgb=surfaceProperties.albedo;
 	gl_FragColor = Gamma(u);
+}
+
+void PBRSimple(bool diffuseTex, bool emissiveTex,bool highlight)
+{
+	vec3 diff					=v_Position-v_CameraPosition;
+	float dist_to_frag          =length(diff);
+	if (dist_to_frag > cam.u_DrawDistance)
+		discard;
+	vec3 albedo	=u_DiffuseOutputScalar.rgb;
+	/*if (diffuseTex)
+	{
+		albedo*=texture(u_DiffuseTexture, v_UV_diffuse* u_DiffuseTexCoordsScalar_R).rgb;
+	}*/
+	vec3 diffuse_env	=textureLod(u_DiffuseCubemap, ConvertCubemapTexcoords(v_Normal.xyz),0.0).rgb;
+	vec3 u				=diffuse_env*albedo;
+	if (emissiveTex)
+	{
+		vec3 emissive		=texture(u_EmissiveTexture, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;
+		emissive			*=u_EmissiveOutputScalar.rgb;
+		u.rgb				+=emissive.rgb;
+	}
+	if(highlight)
+	{
+		u.rgb+=vec3(0.1,0.1,0.1);
+	}
+	gl_FragColor = Gamma(vec4(u,1.0));
+}
+
+void PBRSimpleDefault()
+{
+	PBRSimple(true,true,true);
 }
 
 void OpaquePBRAmbient()
