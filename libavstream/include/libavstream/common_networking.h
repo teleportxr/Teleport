@@ -50,9 +50,10 @@ namespace avs
 		NodeBounds,
 		UpdateNodeMovement,
 		UpdateNodeEnabledState,
+		SetNodeHighlighted,
 		UpdateNodeAnimation,
 		UpdateNodeAnimationControl,
-		SetNodeHighlighted
+		SetNodeAnimationSpeed,
 	};
 
 	enum class ClientMessagePayloadType : uint8_t
@@ -321,6 +322,25 @@ namespace avs
 		}
 	} AVS_PACKED;
 
+	struct SetNodeHighlightedCommand : public Command
+	{
+		avs::uid nodeID = 0;
+		bool isHighlighted = false;
+
+		SetNodeHighlightedCommand()
+			:SetNodeHighlightedCommand(0, false)
+		{}
+
+		SetNodeHighlightedCommand(avs::uid nodeID, bool isHighlighted)
+			:Command(CommandPayloadType::SetNodeHighlighted), nodeID(nodeID), isHighlighted(isHighlighted)
+		{}
+
+		virtual size_t getCommandSize() const override
+		{
+			return sizeof(SetNodeHighlightedCommand);
+		}
+	} AVS_PACKED;
+
 	struct UpdateNodeAnimationCommand : public Command
 	{
 		avs::NodeUpdateAnimation animationUpdate;
@@ -357,22 +377,23 @@ namespace avs
 		}
 	} AVS_PACKED;
 
-	struct SetNodeHighlightedCommand : public Command
+	struct SetNodeAnimationSpeedCommand : public Command
 	{
-		avs::uid nodeID = 0;
-		bool isHighlighted = false;
+		uid nodeID = 0;
+		uid animationID = 0;
+		float speed = 1.0f;
 
-		SetNodeHighlightedCommand()
-			:SetNodeHighlightedCommand(0, false)
+		SetNodeAnimationSpeedCommand()
+			:SetNodeAnimationSpeedCommand(0, 0, 1.0f)
 		{}
 
-		SetNodeHighlightedCommand(avs::uid nodeID, bool isHighlighted)
-			:Command(CommandPayloadType::SetNodeHighlighted), nodeID(nodeID), isHighlighted(isHighlighted)
+		SetNodeAnimationSpeedCommand(uid nodeID, uid animationID, float speed)
+			:Command(CommandPayloadType::SetNodeAnimationSpeed), nodeID(nodeID), animationID(animationID), speed(speed)
 		{}
 
 		virtual size_t getCommandSize() const override
 		{
-			return sizeof(SetNodeHighlightedCommand);
+			return sizeof(SetNodeAnimationSpeedCommand);
 		}
 	} AVS_PACKED;
 

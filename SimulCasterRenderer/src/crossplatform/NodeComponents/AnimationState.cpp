@@ -2,6 +2,10 @@
 
 namespace scr
 {
+	AnimationState::AnimationState()
+		:AnimationState(nullptr)
+	{}
+
 	AnimationState::AnimationState(const std::shared_ptr<Animation>& animation)
 		:animation(animation)
 	{}

@@ -297,14 +297,17 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::UpdateNodeEnabledState:
 			ReceiveNodeEnabledStateUpdate(packet);
 			break;
+		case avs::CommandPayloadType::SetNodeHighlighted:
+			ReceiveNodeHighlightUpdate(packet);
+			break;
 		case avs::CommandPayloadType::UpdateNodeAnimation:
 			ReceiveNodeAnimationUpdate(packet);
 			break;
 		case avs::CommandPayloadType::UpdateNodeAnimationControl:
 			ReceiveNodeAnimationControlUpdate(packet);
 			break;
-		case avs::CommandPayloadType::SetNodeHighlighted:
-			ReceiveNodeHighlightUpdate(packet);
+		case avs::CommandPayloadType::SetNodeAnimationSpeed:
+			ReceiveNodeAnimationSpeedUpdate(packet);
 			break;
 		default:
 			break;
@@ -654,6 +657,15 @@ void SessionClient::ReceiveNodeEnabledStateUpdate(const ENetPacket* packet)
 	mCommandInterface->UpdateNodeEnabledState(updateList);
 }
 
+void SessionClient::ReceiveNodeHighlightUpdate(const ENetPacket* packet)
+{
+	avs::SetNodeHighlightedCommand command;
+	size_t commandSize = command.getCommandSize();
+	memcpy(static_cast<void*>(&command), packet->data, commandSize);
+
+	mCommandInterface->SetNodeHighlighted(command.nodeID, command.isHighlighted);
+}
+
 void SessionClient::ReceiveNodeAnimationUpdate(const ENetPacket* packet)
 {
 	//Extract command from packet.
@@ -674,13 +686,12 @@ void SessionClient::ReceiveNodeAnimationControlUpdate(const ENetPacket* packet)
 	mCommandInterface->UpdateNodeAnimationControl(command.animationControlUpdate);
 }
 
-void SessionClient::ReceiveNodeHighlightUpdate(const ENetPacket* packet)
+void SessionClient::ReceiveNodeAnimationSpeedUpdate(const ENetPacket* packet)
 {
-	avs::SetNodeHighlightedCommand command;
-	size_t commandSize = command.getCommandSize();
-	memcpy(static_cast<void*>(&command), packet->data, commandSize);
+	avs::SetNodeAnimationSpeedCommand command;
+	memcpy(static_cast<void*>(&command), packet->data, command.getCommandSize());
 
-	mCommandInterface->SetNodeHighlighted(command.nodeID, command.isHighlighted);
+	mCommandInterface->SetNodeAnimationSpeed(command.nodeID, command.animationID, command.speed);
 }
 
 void SessionClient::SetDiscoveryClientID(uint32_t clientID)

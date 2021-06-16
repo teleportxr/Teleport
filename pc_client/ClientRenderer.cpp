@@ -1396,6 +1396,11 @@ void ClientRenderer::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEna
 	resourceManagers.mNodeManager->UpdateNodeEnabledState(updateList);
 }
 
+void ClientRenderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+{
+	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+}
+
 void ClientRenderer::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
 {
 	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
@@ -1420,9 +1425,9 @@ void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationCo
 	}
 }
 
-void ClientRenderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+void ClientRenderer::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+	resourceManagers.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 #include "Platform/CrossPlatform/Quaterniond.h"

@@ -11,6 +11,9 @@ namespace scr
 	class AnimationState
 	{
 	public:
+		float speed = 1.0f; //Speed the animation plays at.
+
+		AnimationState();
 		AnimationState(const std::shared_ptr<Animation>& animation);
 
 		//Set animation this state is wrapping.

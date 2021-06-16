@@ -21,10 +21,6 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeD
 	}
 	nodeLookup[node->id] = node;
 
-	//Update movement based on movement data that was received before the node was complete.
-	auto movementIt = earlyMovements.find(node->id);
-	if(movementIt != earlyMovements.end()) node->SetLastMovement(movementIt->second);
-
 	//Link new node to parent.
 	LinkToParentNode(node->id);
 
@@ -54,38 +50,57 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeD
 	}
 
 	//Set last movement, if a movement update was received early.
-	auto movementPair = earlyMovements.find(node->id);
-	if(movementPair != earlyMovements.end())
+	auto movementIt = earlyMovements.find(node->id);
+	if(movementIt != earlyMovements.end())
 	{
-		node->SetLastMovement(movementPair->second);
+		node->SetLastMovement(movementIt->second);
+		earlyMovements.erase(movementIt);
 	}
 
 	//Set enabled state, if a enabled state update was received early.
-	auto enabledPair = earlyEnabledUpdates.find(node->id);
-	if(enabledPair != earlyEnabledUpdates.end())
+	auto enabledIt = earlyEnabledUpdates.find(node->id);
+	if(enabledIt != earlyEnabledUpdates.end())
 	{
-		node->visibility.setVisibility(enabledPair->second.enabled, InvisibilityReason::DISABLED);
-	}
-
-	//Set playing animation, if an animation update was received early.
-	auto animationPair = earlyAnimationUpdates.find(node->id);
-	if(animationPair != earlyAnimationUpdates.end())
-	{
-		node->animationComponent.setAnimation(animationPair->second.animationID, animationPair->second.timestamp);
-	}
-
-	//Set playing animation, if an animation update was received early.
-	auto animationControlPair = earlyAnimationControlUpdates.find(node->id);
-	if(animationControlPair != earlyAnimationControlUpdates.end())
-	{
-		node->animationComponent.setAnimationTimeOverride(animationControlPair->second.animationID, animationControlPair->second.timeOverride, animationControlPair->second.overrideMaximum);
+		node->visibility.setVisibility(enabledIt->second.enabled, InvisibilityReason::DISABLED);
+		earlyEnabledUpdates.erase(enabledIt);
 	}
 
 	//Set correct highlighting for node, if a highlight update was received early.
-	auto highlightPair = earlyNodeHighlights.find(node->id);
-	if(highlightPair != earlyNodeHighlights.end())
+	auto highlightIt = earlyNodeHighlights.find(node->id);
+	if(highlightIt != earlyNodeHighlights.end())
 	{
-		node->SetHighlighted(highlightPair->second);
+		node->SetHighlighted(highlightIt->second);
+		earlyNodeHighlights.erase(highlightIt);
+	}
+
+	//Set playing animation, if an animation update was received early.
+	auto animationIt = earlyAnimationUpdates.find(node->id);
+	if(animationIt != earlyAnimationUpdates.end())
+	{
+		node->animationComponent.setAnimation(animationIt->second.animationID, animationIt->second.timestamp);
+		earlyAnimationUpdates.erase(animationIt);
+	}
+
+	//Set playing animation, if an animation control update was received early.
+	auto animationControlIt = earlyAnimationControlUpdates.find(node->id);
+	if(animationControlIt != earlyAnimationControlUpdates.end())
+	{
+		for(const EarlyAnimationControl& earlyControlUpdate : animationControlIt->second)
+		{
+			node->animationComponent.setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
+		}
+		earlyAnimationControlUpdates.erase(animationControlIt);
+	}
+
+	//Set animation speed, if an animation speed update was received early.
+	auto animationSpeedIt = earlyAnimationSpeedUpdates.find(node->id);
+	if(animationSpeedIt != earlyAnimationSpeedUpdates.end())
+	{
+		for(const EarlyAnimationSpeed& earlySpeedUpdate : animationSpeedIt->second)
+		{
+			node->animationComponent.setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
+		}
+		earlyAnimationSpeedUpdates.erase(animationSpeedIt);
 	}
 }
 
@@ -151,21 +166,21 @@ const NodeManager::nodeList_t& NodeManager::GetRootNodes() const
 {
 	return rootNodes;
 }
-namespace std
-{}
-void swap(std::shared_ptr<Node>& v1, std::shared_ptr<Node>& v2) {
-	std::shared_ptr<Node> v=v2;
-	v2=v1;
-	v1=v;
-}
-const std::vector<std::shared_ptr<Node>> & NodeManager::GetSortedRootNodes()
+
+const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedRootNodes()
 {
-	std::sort(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), [](std::shared_ptr<Node> a, std::shared_ptr<Node> b) {
-		return a->distance < b->distance;
-	});
+	std::sort
+	(
+		distanceSortedRootNodes.begin(),
+		distanceSortedRootNodes.end(),
+		[](std::shared_ptr<Node> a, std::shared_ptr<Node> b)
+		{
+			return a->distance < b->distance;
+		}
+	);
+
 	return distanceSortedRootNodes;
 }
-
 
 void NodeManager::SetBody(std::shared_ptr<Node> node)
 {
@@ -320,6 +335,19 @@ void NodeManager::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnable
 	}
 }
 
+void scr::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+{
+	std::shared_ptr<scr::Node> node = GetNode(nodeID);
+	if(node)
+	{
+		node->SetHighlighted(isHighlighted);
+	}
+	else
+	{
+		earlyNodeHighlights[nodeID] = isHighlighted;
+	}
+}
+
 void NodeManager::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
 {
 	std::shared_ptr<scr::Node> node = GetNode(animationUpdate.nodeID);
@@ -342,20 +370,22 @@ void scr::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid anim
 	}
 	else
 	{
-		earlyAnimationControlUpdates.emplace(nodeID, EarlyAnimationControl{animationID, animationTimeOverride, overrideMaximum});
+		std::vector<EarlyAnimationControl>& earlyControlUpdates = earlyAnimationControlUpdates[nodeID];
+		earlyControlUpdates.emplace_back(EarlyAnimationControl{animationID, animationTimeOverride, overrideMaximum});
 	}
 }
 
-void scr::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+void scr::NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
 	std::shared_ptr<scr::Node> node = GetNode(nodeID);
 	if(node)
 	{
-		node->SetHighlighted(isHighlighted);
+		node->animationComponent.setAnimationSpeed(animationID, speed);
 	}
 	else
 	{
-		earlyNodeHighlights[nodeID] = isHighlighted;
+		std::vector<EarlyAnimationSpeed>& earlySpeedUpdates = earlyAnimationSpeedUpdates[nodeID];
+		earlySpeedUpdates.emplace_back(EarlyAnimationSpeed{animationID, speed});
 	}
 }
 
@@ -403,11 +433,13 @@ void NodeManager::Clear()
 	rightHand = nullptr;
 
 	parentLookup.clear();
+
 	earlyMovements.clear();
 	earlyEnabledUpdates.clear();
+	earlyNodeHighlights.clear();
 	earlyAnimationUpdates.clear();
 	earlyAnimationControlUpdates.clear();
-	earlyNodeHighlights.clear();
+	earlyAnimationSpeedUpdates.clear();
 }
 
 void NodeManager::ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)

@@ -829,6 +829,11 @@ void Application::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnable
 	resourceManagers.mNodeManager->UpdateNodeEnabledState(updateList);
 }
 
+void Application::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+{
+	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+}
+
 void Application::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
 {
 	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
@@ -853,9 +858,9 @@ void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationContr
 	}
 }
 
-void Application::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+void Application::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+	resourceManagers.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 void Application::OnFrameAvailable()

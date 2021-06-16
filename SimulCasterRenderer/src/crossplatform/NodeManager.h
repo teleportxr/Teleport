@@ -63,9 +63,10 @@ namespace scr
 
 		void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
 		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
+		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted);
 		void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate);
 		void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* const animationTimeOverride = nullptr, float overrideMaximum = 0.0f);
-		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted);
+		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.
@@ -95,12 +96,21 @@ namespace scr
 			float overrideMaximum;
 		};
 
+		struct EarlyAnimationSpeed
+		{
+			avs::uid animationID;
+			float speed;
+		};
+
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an node, so they can be linked when received. <ChildID, ParentID>
-		std::map<avs::uid, avs::MovementUpdate> earlyMovements; //Movements that have arrived before the node was received.
-		std::map<avs::uid, avs::NodeUpdateEnabledState> earlyEnabledUpdates; //Enabled state updates that have arrived before the node was received.
-		std::map<avs::uid, avs::NodeUpdateAnimation> earlyAnimationUpdates; //Animation updates that were received before the node was received.
-		std::map<avs::uid, EarlyAnimationControl> earlyAnimationControlUpdates; //Animation control updates that were received before the node was received. Pair is <AnimationID, Animation Time Override>.
-		std::map<avs::uid, bool> earlyNodeHighlights; //Highlight updates that were received before the node was received.
+
+		//Node updates that were received before the node was received.
+		std::map<avs::uid, avs::MovementUpdate> earlyMovements;
+		std::map<avs::uid, avs::NodeUpdateEnabledState> earlyEnabledUpdates;
+		std::map<avs::uid, bool> earlyNodeHighlights;
+		std::map<avs::uid, avs::NodeUpdateAnimation> earlyAnimationUpdates;
+		std::map<avs::uid, std::vector<EarlyAnimationControl>> earlyAnimationControlUpdates;
+		std::map<avs::uid, std::vector<EarlyAnimationSpeed>> earlyAnimationSpeedUpdates;
 
 		//Uses the index of the node in the nodeList to determine if it is visible.
 		bool IsNodeVisible(avs::uid nodeID) const;

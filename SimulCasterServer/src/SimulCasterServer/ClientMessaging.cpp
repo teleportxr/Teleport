@@ -304,6 +304,12 @@ namespace SCServer
 		sendCommand<avs::NodeUpdateEnabledState>(command, updateList);
 	}
 
+	void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+	{
+		avs::SetNodeHighlightedCommand command(nodeID, isHighlighted);
+		sendCommand(command);
+	}
+
 	void ClientMessaging::updateNodeAnimation(avs::NodeUpdateAnimation update)
 	{
 		avs::UpdateNodeAnimationCommand command(update);
@@ -316,9 +322,9 @@ namespace SCServer
 		sendCommand(command);
 	}
 
-	void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+	void ClientMessaging::setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 	{
-		avs::SetNodeHighlightedCommand command(nodeID, isHighlighted);
+		avs::SetNodeAnimationSpeedCommand command(nodeID, animationID, speed);
 		sendCommand(command);
 	}
 

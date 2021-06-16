@@ -32,12 +32,14 @@ namespace scr
 		//	valueMaximum : Maximum value the override can be; i.e. number is of the range [0.0, valueMaximum].
 		void setAnimationTimeOverride(avs::uid animationID, const float* timeOverride = nullptr, float overrideMaximum = 0.0f);
 
+		void setAnimationSpeed(avs::uid animationID, float speed);
+
 		void update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime);
 	private:
 		typedef std::map<avs::uid, AnimationState> AnimationLookup_t;
 
-		AnimationLookup_t animations;
-		AnimationLookup_t::iterator currentAnimation = animations.end();
+		AnimationLookup_t animationStates;
+		AnimationLookup_t::iterator currentAnimationState = animationStates.end();
 		float currentAnimationTime = 0.0f; //How many milliseconds along the current animation is.
 
 		//Variables for if we can't start the animation because it has yet to be received, but we want to start when the animation is received.

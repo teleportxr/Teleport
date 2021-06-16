@@ -185,9 +185,10 @@ public:
 	void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
 	void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) override;
 	void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) override;
+	void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
 	void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate) override;
 	void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
-	void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
+	void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
 
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
