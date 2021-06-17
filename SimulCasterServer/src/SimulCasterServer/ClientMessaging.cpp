@@ -251,20 +251,24 @@ namespace SCServer
 			}
 		}
 
-		//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
-		const avs::InputEventBinary* binaryEventsPtr = newInputStateAndEvents[0].newBinaryEvents.data();
-		const avs::InputEventAnalogue* analogueEventsPtr = newInputStateAndEvents[0].newAnalogueEvents.data();
-		const avs::InputEventMotion* motionEventsPtr = newInputStateAndEvents[0].newMotionEvents.data();
-		processNewInput(clientID, &newInputStateAndEvents[0].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+		{
+			//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
+			const avs::InputEventBinary* binaryEventsPtr = latestInputStateAndEvents[0].binaryEvents.data();
+			const avs::InputEventAnalogue* analogueEventsPtr = latestInputStateAndEvents[0].analogueEvents.data();
+			const avs::InputEventMotion* motionEventsPtr = latestInputStateAndEvents[0].motionEvents.data();
+			processNewInput(clientID, &latestInputStateAndEvents[0].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+		}
 
-		binaryEventsPtr = newInputStateAndEvents[1].newBinaryEvents.data();
-		analogueEventsPtr = newInputStateAndEvents[1].newAnalogueEvents.data();
-		motionEventsPtr = newInputStateAndEvents[1].newMotionEvents.data();
-		processNewInput(clientID, &newInputStateAndEvents[1].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+		{
+			const avs::InputEventBinary* binaryEventsPtr = latestInputStateAndEvents[1].binaryEvents.data();
+			const avs::InputEventAnalogue* analogueEventsPtr = latestInputStateAndEvents[1].analogueEvents.data();
+			const avs::InputEventMotion* motionEventsPtr = latestInputStateAndEvents[1].motionEvents.data();
+			processNewInput(clientID, &latestInputStateAndEvents[1].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+		}
 
 		//Input has been passed, so clear the events.
-		newInputStateAndEvents[0].clear();
-		newInputStateAndEvents[1].clear();
+		latestInputStateAndEvents[0].clear();
+		latestInputStateAndEvents[1].clear();
 
 		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
 		if (host && peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
@@ -544,51 +548,44 @@ namespace SCServer
 			return;
 		}
 
-		avs::InputState inputState;
+		avs::InputState receivedInputState;
 		//Copy newest input state into member variable.
-		memcpy(&inputState, packet->data, inputStateSize);
+		memcpy(&receivedInputState, packet->data, inputStateSize);
 
-		size_t binaryEventSize = sizeof(avs::InputEventBinary) * inputState.binaryEventAmount;
-		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * inputState.analogueEventAmount;
-		size_t motionEventSize = sizeof(avs::InputEventMotion) * inputState.motionEventAmount;
+		size_t binaryEventSize = sizeof(avs::InputEventBinary) * receivedInputState.binaryEventAmount;
+		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * receivedInputState.analogueEventAmount;
+		size_t motionEventSize = sizeof(avs::InputEventMotion) * receivedInputState.motionEventAmount;
 
 		if (packet->dataLength != inputStateSize + binaryEventSize + analogueEventSize + motionEventSize)
 		{
 			TELEPORT_CERR << "Error on receive input for Client_" << clientID << "! Received malformed InputState packet of length " << packet->dataLength << "; expected size of " << inputStateSize + binaryEventSize + analogueEventSize + motionEventSize << "!\n" <<
 				"InputState Size: " << inputStateSize << "\n" <<
-				"Binary Events Size:" << binaryEventSize << "(" << inputState.binaryEventAmount << ")\n" <<
-				"Analogue Events Size:" << analogueEventSize << "(" << inputState.analogueEventAmount << ")\n" <<
-				"Motion Events Size:" << motionEventSize << "(" << inputState.motionEventAmount << ")\n";
+				"Binary Events Size:" << binaryEventSize << "(" << receivedInputState.binaryEventAmount << ")\n" <<
+				"Analogue Events Size:" << analogueEventSize << "(" << receivedInputState.analogueEventAmount << ")\n" <<
+				"Motion Events Size:" << motionEventSize << "(" << receivedInputState.motionEventAmount << ")\n";
 
 			return;
 		}
 
-		uint32_t controllerID = inputState.controllerId;
-		InputStateAndEvents& newInputState = newInputStateAndEvents[controllerID];
-		inputState.binaryEventAmount += newInputState.inputState.binaryEventAmount;
-		inputState.analogueEventAmount += newInputState.inputState.analogueEventAmount;
-		inputState.motionEventAmount += newInputState.inputState.motionEventAmount;
-		newInputState.inputState = inputState;
+		InputStateAndEvents& aggregateInputState = latestInputStateAndEvents[receivedInputState.controllerId];
+		aggregateInputState.inputState = receivedInputState;
 
-		if(newInputState.inputState.binaryEventAmount != 0) 
+		if(receivedInputState.binaryEventAmount != 0)
 		{
-			size_t oldBinarySize = sizeof(avs::InputEventBinary) * newInputState.newBinaryEvents.size();
-			newInputState.newBinaryEvents.resize(newInputState.newBinaryEvents.size() + inputState.binaryEventAmount);
-			memcpy(newInputState.newBinaryEvents.data() + oldBinarySize, packet->data + inputStateSize, binaryEventSize);
+			avs::InputEventBinary* binaryData = reinterpret_cast<avs::InputEventBinary*>(packet->data + inputStateSize);
+			aggregateInputState.binaryEvents.insert(aggregateInputState.binaryEvents.end(), binaryData, binaryData + receivedInputState.binaryEventAmount);
 		}
 
-		if(newInputState.inputState.analogueEventAmount != 0)
+		if(receivedInputState.analogueEventAmount != 0)
 		{
-			size_t oldAnalogueSize = sizeof(avs::InputEventAnalogue) * newInputState.newAnalogueEvents.size();
-			newInputState.newAnalogueEvents.resize(newInputState.newAnalogueEvents.size() + inputState.analogueEventAmount);
-			memcpy(newInputState.newAnalogueEvents.data() + oldAnalogueSize, packet->data + inputStateSize + binaryEventSize, analogueEventSize);
+			avs::InputEventAnalogue* analogueData = reinterpret_cast<avs::InputEventAnalogue*>(packet->data + inputStateSize + binaryEventSize);
+			aggregateInputState.analogueEvents.insert(aggregateInputState.analogueEvents.end(), analogueData, analogueData + receivedInputState.analogueEventAmount);
 		}
 
-		if(newInputState.inputState.motionEventAmount != 0)
+		if(receivedInputState.motionEventAmount != 0)
 		{
-			size_t oldMotionSize = sizeof(avs::InputEventMotion) * newInputState.newMotionEvents.size();
-			newInputState.newMotionEvents.resize(newInputState.newMotionEvents.size() + inputState.motionEventAmount);
-			memcpy(newInputState.newMotionEvents.data() + oldMotionSize, packet->data + inputStateSize + binaryEventSize + analogueEventSize, motionEventSize);
+			avs::InputEventMotion* motionData = reinterpret_cast<avs::InputEventMotion*>(packet->data + inputStateSize + binaryEventSize + analogueEventSize);
+			aggregateInputState.motionEvents.insert(aggregateInputState.motionEvents.end(), motionData, motionData + receivedInputState.motionEventAmount);
 		}
 	}
 
