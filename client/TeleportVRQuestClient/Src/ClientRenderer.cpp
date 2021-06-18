@@ -1025,8 +1025,10 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 	if(node->IsVisible())
 	{
 		std::shared_ptr<OVRNode> ovrNode = std::static_pointer_cast<OVRNode>(node);
-		if(ovrNode->ovrSurfaceDefs.size()>0)
+		if(ovrNode->GetSurfaces().size() != 0)
 		{
+			GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+
 			//Get final transform.
 			scr::mat4 globalMatrix = node->GetGlobalTransform().GetTransformMatrix();
 			clientDeviceState->transformToLocalOrigin = scr::mat4::Identity();//Translation(-clientDeviceState->localFootPos);
@@ -1042,11 +1044,11 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			{
 				skin->UpdateBoneMatrices(globalMatrix);
 			}
-			GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+
 			std::vector<const scr::ShaderResource *> pbrShaderResources;
 			pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
 			//Push surfaces onto render queue.
-			for(ovrSurfaceDef &surfaceDef : ovrNode->ovrSurfaceDefs)
+			for(ovrSurfaceDef& surfaceDef : ovrNode->GetSurfaces())
 			{
 				// Must update the uniforms. e.g. camera pos.
 				for(const scr::ShaderResource *sr : pbrShaderResources)

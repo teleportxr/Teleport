@@ -141,22 +141,25 @@ namespace SCServer
 
 		struct InputStateAndEvents
 		{
+			avs::InputState inputState;
+
+			//New input events we have received from the client this tick.
+			std::vector<avs::InputEventBinary> binaryEvents;
+			std::vector<avs::InputEventAnalogue> analogueEvents;
+			std::vector<avs::InputEventMotion> motionEvents;
+
 			void clear()
 			{
 				inputState.binaryEventAmount = 0;
 				inputState.analogueEventAmount = 0;
 				inputState.motionEventAmount = 0;
-				newBinaryEvents.clear();
-				newAnalogueEvents.clear();
-				newMotionEvents.clear();
+
+				binaryEvents.clear();
+				analogueEvents.clear();
+				motionEvents.clear();
 			}
-			avs::InputState inputState;
-			//New input events we have received from the client this tick.
-			std::vector<avs::InputEventBinary> newBinaryEvents;
-			std::vector<avs::InputEventAnalogue> newAnalogueEvents;
-			std::vector<avs::InputEventMotion> newMotionEvents;
 		};
-		InputStateAndEvents newInputStateAndEvents[2]; //Newest input state received from the client.
+		InputStateAndEvents latestInputStateAndEvents[2]; //Latest input state received from the client.
 
 		void dispatchEvent(const ENetEvent& event);
 		void receiveHandshake(const ENetPacket* packet);
