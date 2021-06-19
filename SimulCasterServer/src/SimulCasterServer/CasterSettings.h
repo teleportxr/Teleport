@@ -42,6 +42,7 @@ namespace SCServer
 		bool useAsyncEncoding = false;
 		bool use10BitEncoding = false;
 		bool useYUV444Decoding = false;
+		bool useAlphaLayerEncoding = false;
 		bool usePerspectiveRendering = false;
 		int32_t perspectiveWidth = 0;
 		int32_t perspectiveHeight = 0;

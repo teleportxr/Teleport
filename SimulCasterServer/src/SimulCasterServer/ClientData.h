@@ -27,6 +27,7 @@ public:
 	SCServer::ClientMessaging clientMessaging;
 
 	bool isStreaming = false;
+	bool validClientSettings = false;
 	bool videoKeyframeRequired = false;
 
 	bool setOrigin(uint64_t ctr,avs::vec3 pos,bool set_rel,avs::vec3 rel_to_head,avs::vec4 orientation);

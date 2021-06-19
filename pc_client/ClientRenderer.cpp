@@ -372,15 +372,17 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			}
 
 			UpdateTagDataBuffers(deviceContext);
-
+ 
 			if (videoTexture->IsCubemap())
 			{
-				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, "recompose_with_depth_alpha");
+				const char* technique = videoConfig.alpha_layer_encoding_enabled ? "recompose" : "recompose_with_depth_alpha";
+				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
 			}
 			else
 			{	
-				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, "recompose_perspective_with_depth_alpha");
+				const char* technique = videoConfig.alpha_layer_encoding_enabled ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
+				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 				simul::math::Matrix4x4 projInv;
 				deviceContext.viewStruct.proj.Inverse(projInv);
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);

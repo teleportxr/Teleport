@@ -49,6 +49,8 @@ set(src_private_stream
 	src/stream/parser.cpp
 	src/decoders/dec_nvidia.cpp
 	src/encoders/enc_nvidia.cpp
+	src/decoders/dec_nvidia.cu
+	src/encoders/enc_nvidia.cu
 )
 set(hdr_private_root
 	src/common_p.hpp

@@ -57,6 +57,8 @@ struct EncoderParams
 	bool use10BitEncoding = true;
 	/*! If using a YUV input format, the decoder will use chroma format YUV444 if true and YUV420 if false.*/
 	bool useYUV444ChromaFormat = false;
+	/*! Determines if alpha of texture is encoded in a separate alpha layer. Only supported on HEVC with modern GPUs. */
+	bool useAlphaLayerEncoding = true;
 };
 
 struct EncodeCapabilities
@@ -65,6 +67,7 @@ struct EncodeCapabilities
 	uint32_t isAsyncCapable = 0;
 	uint32_t is10BitCapable = 0;
 	uint32_t isYUV444Capable = 0;
+	uint32_t isAlphaLayerSupported = 0;
 };
 
 /*!
