@@ -191,11 +191,13 @@ public:
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
 	scr::ShaderResource				    mColourAndDepthShaderResources;
 	scr::ShaderResource				    mCopyCubemapShaderResources;
+	scr::ShaderResource				    mPerspectiveColourAndDepthShaderResources;
 	scr::ShaderResource				    mCopyPerspectiveShaderResources;
 	scr::ShaderResource				    mExtractTagShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
 	std::shared_ptr<scr::Effect>        mCopyPerspectiveEffect;
+	std::shared_ptr<scr::Effect>        mCopyPerspectiveWithDepthEffect;
 	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;
 	std::shared_ptr<scr::Effect>        mExtractOneTagEffect;
 

@@ -584,7 +584,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 	}
 	else
 	{
-		if (!clientPair->second.clientMessaging.isStartingSession())
+		if (!clientPair->second.clientMessaging.isStartingSession() || clientPair->second.clientMessaging.TimedOutStartingSession())
 		{
 			clientPair->second.clientMessaging.Disconnect();
 		}

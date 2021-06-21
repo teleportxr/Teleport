@@ -109,11 +109,14 @@ namespace SCServer
 
 		static avs::Timestamp getLastTickTimestamp();
 
+		bool TimedOutStartingSession() const;
+
 	private:
 		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
 		bool initialized=false;
 		bool startingSession;
+		float timeStartingSession;
 		float timeSinceLastClientComm;
 		const CasterSettings* settings;
 		std::shared_ptr<DiscoveryService> discoveryService;
@@ -181,5 +184,7 @@ namespace SCServer
 		static std::mutex networkMutex;
 		static std::mutex dataMutex;
 		static avs::Timestamp lastTickTimestamp;
+		// Seconds
+		static constexpr float startSessionTimeout = 3;
 	};
 }
