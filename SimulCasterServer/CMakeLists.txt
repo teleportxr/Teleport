@@ -79,7 +79,7 @@ target_include_directories(SimulCasterServer PUBLIC ../libavstream/include)
 #Include libavstream
 target_include_directories(SimulCasterServer PUBLIC ../SimulCasterAudio/src)
 #Include Basis Universal
-target_include_directories(SimulCasterServer PUBLIC ../thirdparty/basis_universal)
+target_include_directories(SimulCasterServer PUBLIC ../thirdparty/basis_universal/encoder)
 #Include enet
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/enet/include)
 

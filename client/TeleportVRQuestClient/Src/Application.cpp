@@ -52,7 +52,7 @@ Application::Application()
 		  , clientRenderer(&resourceCreator, &resourceManagers, this, &clientDeviceState,&controllers)
 		  , lobbyRenderer(&clientDeviceState, this)
 		  , resourceManagers(new OVRNodeManager)
-		  , resourceCreator(basist::transcoder_texture_format::cTFETC2)
+		  , resourceCreator()
 {
 	RedirectStdCoutCerr();
 
@@ -253,10 +253,12 @@ void Application::EnteredVrMode()
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
 			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
 								 , clientRenderer.diffuseCubemapTexture});
-/*	globalGraphicsResources.lightCubemapShaderResources.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
-			"u_LightsCubemap", {clientRenderer.mCubemapLightingTexture->GetSampler()
-								, clientRenderer.mCubemapLightingTexture});*/
+	if(!clientRenderer.mlightmapTexture.get())
+		clientRenderer.mlightmapTexture=resourceCreator.m_DummyWhite;
+	globalGraphicsResources.lightCubemapShaderResources.AddImage(
+			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16,
+			"u_LightsCubemap", {clientRenderer.mlightmapTexture->GetSampler()
+								, clientRenderer.mlightmapTexture});
 
 	scr::ShaderResourceLayout tagBufferLayout;
 	tagBufferLayout.AddBinding(1,
@@ -768,6 +770,11 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 	handshake.clientStreamingPort=client_streaming_port;
 
 	clientRenderer.lastSetupCommand = setupCommand;
+}
+
+void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)
+{
+	clientRenderer.setupLightingCommand=s;
 }
 
 void Application::OnVideoStreamClosed()

@@ -170,7 +170,7 @@ public:
 		{}
 	};
 
-	ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat);
+	ResourceCreator();
 	~ResourceCreator();
 	
 	void Initialise(scr::RenderPlatform *r, scr::VertexBufferLayout::PackingStyle packingStyle);
@@ -299,15 +299,19 @@ private:
 	scr::VertexBufferLayout::PackingStyle m_PackingStyle = scr::VertexBufferLayout::PackingStyle::GROUPED;
 
 	basist::etc1_global_selector_codebook basis_codeBook;
-	basist::transcoder_texture_format basis_textureFormat;
+#ifdef _MSC_VER
+	basist::transcoder_texture_format basis_transcoder_textureFormat =basist::transcoder_texture_format::cTFBC3;
+#else
+	basist::transcoder_texture_format basis_transcoder_textureFormat =basist::transcoder_texture_format::cTFETC2;
+#endif
 
 	std::vector<UntranscodedTexture> texturesToTranscode;
 	std::map<avs::uid, scr::Texture::TextureCreateInfo> texturesToCreate; //Textures that are ready to be created <Texture's UID, Texture's Data>
 	
 	std::mutex mutex_texturesToTranscode;
 	std::mutex mutex_texturesToCreate;
-	std::atomic_bool shouldBeTranscoding = true; //Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
-	std::thread basisThread; //Thread where we transcode basis files to mip data.
+	std::atomic_bool shouldBeTranscoding = true;	//Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
+	std::thread basisThread;						//Thread where we transcode basis files to mip data.
 	
 	const uint32_t whiteBGRA = 0xFFFFFFFF;
 	//const uint32_t normalBGRA = 0xFF7F7FFF;

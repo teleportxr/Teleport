@@ -34,9 +34,15 @@ public:
 	bool hasOrigin() const;
 	avs::vec3 getOrigin() const;
 
+	void setGlobalIlluminationTexture(avs::uid uid);
+	avs::uid getGlobalIlluminationTexture() const
+	{
+		return global_illumination_texture_uid;
+	}
 protected:
 	mutable bool _hasOrigin=false;
 	avs::vec3 originClientHas;
+	avs::uid global_illumination_texture_uid;
 	ENetAddress address = {};
 };
 

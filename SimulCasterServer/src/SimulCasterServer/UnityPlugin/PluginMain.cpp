@@ -741,10 +741,10 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.perspective_width       = casterSettings.perspectiveWidth;
 	videoConfig.perspective_height      = casterSettings.perspectiveHeight;
 	videoConfig.perspective_fov			= casterSettings.perspectiveFOV;
-	videoConfig.webcam_width = clientData.clientSettings.webcamSize[0];
-	videoConfig.webcam_height = clientData.clientSettings.webcamSize[1];
-	videoConfig.webcam_offset_x = clientData.clientSettings.webcamPos[0];
-	videoConfig.webcam_offset_y = clientData.clientSettings.webcamPos[1];
+	videoConfig.webcam_width			= clientData.clientSettings.webcamSize[0];
+	videoConfig.webcam_height			= clientData.clientSettings.webcamSize[1];
+	videoConfig.webcam_offset_x			= clientData.clientSettings.webcamPos[0];
+	videoConfig.webcam_offset_y			= clientData.clientSettings.webcamPos[1];
 	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
 	videoConfig.colour_cubemap_size		= encoderSettings.frameWidth / 3;
@@ -778,7 +778,24 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.shadowmap_size	=clientData.clientSettings.shadowmapSize;//64;
 	clientData.clientMessaging.sendCommand(std::move(setupCommand));
 
+
+	avs::SetupLightingCommand setupLightingCommand;
+	setupLightingCommand.global_illumination_texture_uid=clientData.getGlobalIlluminationTexture();
+	clientData.clientMessaging.sendCommand(std::move(setupLightingCommand));
+
 	clientData.isStreaming = true;
+}
+
+TELEPORT_EXPORT void Client_SetGlobalIlluminationTexture(avs::uid clientID,avs::uid textureID)
+{
+	auto clientPair = clientServices.find(clientID);
+	if (clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Client_SetGlobalIlluminationTexture: No client exists with ID " << clientID << "!\n";
+		return;
+	}
+	ClientData& clientData = clientPair->second;
+	clientData.setGlobalIlluminationTexture(textureID);
 }
 
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
@@ -912,6 +929,18 @@ TELEPORT_EXPORT avs::uid GenerateID()
 	return avs::GenerateUid();
 }
 ///libavstream END
+
+///GeometryStreamingService START
+TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textureID)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to start streaming Texture " << textureID << " to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return;
+	}
+	clientPair->second.geometryStreamingService->addGenericTexture(textureID);
+}
 
 ///GeometryStreamingService START
 TELEPORT_EXPORT void Client_AddNode(avs::uid clientID, avs::uid nodeID, avs::Transform currentTransform)
@@ -1303,6 +1332,19 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, avs::N
 	clientPair->second.clientMessaging.updateNodeAnimationControl(update);
 }
 
+TELEPORT_EXPORT void Client_UpdateNodeRenderState(avs::uid clientID, avs::NodeRenderState update)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to update node animation control for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
+		return;
+	}
+
+	clientPair->second.clientMessaging.updateNodeRenderState(clientID,update);
+}
+
+
 TELEPORT_EXPORT void Client_SetNodeAnimationSpeed(avs::uid clientID, avs::uid nodeID, avs::uid animationID, float speed)
 {
 	auto clientPair = clientServices.find(clientID);
@@ -1503,9 +1545,9 @@ TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModif
 	geometryStore.storeMaterial(id, guid, lastModified, avs::Material(material));
 }
 
-TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation)
+TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC)
 {
-	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation);
+	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC);
 }
 
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture shadowMap)

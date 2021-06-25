@@ -185,6 +185,7 @@ public:
 	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;
 	std::shared_ptr<scr::Texture>       specularCubemapTexture;
 	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
+	std::shared_ptr<scr::Texture>		mlightmapTexture;
 	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
 	std::shared_ptr<scr::UniformBuffer> mVideoUB;
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataIDBuffer;
@@ -227,6 +228,7 @@ public:
 	int show_osd = NO_OSD;
 	void DrawOSD();
 	avs::SetupCommand lastSetupCommand;
+	avs::SetupLightingCommand setupLightingCommand;
 protected:
 	void ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining);
 	teleport::client::ClientDeviceState *clientDeviceState=nullptr;

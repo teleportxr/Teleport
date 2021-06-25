@@ -8,6 +8,8 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	float drawDistance;
 	float _pad0;
 
+	vec4 lightmapScaleOffset;
+
 	vec4 depthToLinFadeDistParams;
 
 	vec4 diffuseOutputScalar;

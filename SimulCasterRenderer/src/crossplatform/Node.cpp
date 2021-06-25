@@ -9,9 +9,16 @@ using InvisibilityReason = scr::VisibilityComponent::InvisibilityReason;
 namespace scr
 {
 	Node::Node(avs::uid id, const std::string& name)
-		:id(id), name(name)
+		:id(id), name(name), isStatic(false)
 	{}
-
+	void Node::SetStatic(bool s)
+	{
+		isStatic=s;
+	}
+	bool Node::IsStatic() const
+	{
+		return isStatic;
+	}
 	void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 	{
 		if(ShouldUseGlobalTransform())

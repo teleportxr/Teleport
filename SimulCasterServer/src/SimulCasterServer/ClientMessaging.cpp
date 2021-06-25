@@ -246,6 +246,10 @@ namespace SCServer
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
 				timeSinceLastClientComm = 0;
+				if(event.packet->freeCallback!=0)
+				{
+					TELEPORT_COUT << "freeCallback is nonzero " << std::endl;
+				}
 				dispatchEvent(event);
 				break;
 			}
@@ -324,6 +328,12 @@ namespace SCServer
 	{
 		avs::UpdateNodeAnimationControlCommand command(update);
 		sendCommand(command);
+	}
+	
+
+	void ClientMessaging::updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update)
+	{
+		TELEPORT_ASSERT(false);// not implemented
 	}
 
 	void ClientMessaging::setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)

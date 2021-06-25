@@ -120,6 +120,7 @@ layout(binding = 13) uniform sampler2D u_EmissiveTexture;
 layout(binding = 14) uniform samplerCube u_SpecularCubemap;
 //layout(binding = 15) uniform samplerCube u_LightsCubemap;
 layout(binding = 15) uniform samplerCube u_DiffuseCubemap;
+layout(binding = 16) uniform sampler2D u_LightMap;
 
 layout(binding = 19) uniform sampler2D u_ShadowMap0;
 layout(binding = 20) uniform sampler2D u_ShadowMap1;
@@ -426,7 +427,7 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 	return surfaceProperties;
 }
 
-void PBR(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool highlight)
+void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool highlight)
 {
 	vec3 diff					=v_Position-v_CameraPosition;
 	float dist_to_frag          =length(diff);
@@ -505,37 +506,37 @@ void PBRSimpleDefault()
 
 void OpaquePBRAmbient()
 {
-	PBR(false, false, false, false, true, 0,false);
+	PBR(false,false, false, false, false, true, 0,false);
 }
 
 void OpaquePBRDiffuseNormal()
 {
-	PBR(true, true, false, false, true, 0,false);
+	PBR(false,true, true, false, false, true, 0,false);
 }
 
 void OpaquePBRDiffuseNormalCombined()
 {
-	PBR(true, true, true, true, true, 0,false);
+	PBR(false,true, true, true, true, true, 0,false);
 }
 
 void OpaquePBRLightsOnly()
 {
-	PBR(true, true, true, false, false, 1,false);
+	PBR(false,true, true, true, false, false, 1,false);
 }
 
 void OpaquePBRDebug()
 {
-	PBR(true, true, true, false, false, 1,true);
+	PBR(false,true, true, true, false, false, 1,true);
 }
 
 void OpaquePBR_NoLight()
 {
-	PBR(true, true, true, true, true, 0,false);
+	PBR(false,true, true, true, true, true, 0,false);
 }
 
 void OpaquePBR_1Light()
 {
-	PBR(true, true, true, true, true, 1,false);
+	PBR(false,true, true, true, true, true, 1,false);
 }
 
 void OpaqueAlbedo()

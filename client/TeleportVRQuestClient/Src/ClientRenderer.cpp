@@ -403,16 +403,14 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,15,"u_DiffuseCubemap", {});
 
 	passNames.clear();
-	passNames.push_back("OpaquePBR_NoLight");
-	passNames.push_back("OpaquePBR_1Light");
+	passNames.push_back("PBRSimpleDefault");
 	passNames.push_back("OpaqueAlbedo");
 	passNames.push_back("OpaqueNormal");
 	passNames.push_back("OpaquePBRAmbient");
 	passNames.push_back("OpaquePBRDebug");
 	debugPassNames.clear();
 	debugPassNames.push_back("");
-	debugPassNames.push_back("OpaquePBR_NoLight");
-	debugPassNames.push_back("OpaquePBR_1Light");
+	debugPassNames.push_back("PBRSimpleDefault");
 	debugPassNames.push_back("OpaqueAlbedo");
 	debugPassNames.push_back("OpaqueNormal");
 	debugPassNames.push_back("OpaquePBRAmbient");
@@ -433,29 +431,32 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 	std::string &src = pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode;
 	// Now we will GENERATE the variants of the fragment shader, while adding them to the passNames list:
-	for(int emissive=0;emissive<2;emissive++)
+	for(int lightmap=0;lightmap<2;lightmap++)
 	{
-		for(int combined=0;combined<2;combined++)
+		for(int emissive=0;emissive<2;emissive++)
 		{
-			for(int normal=0;normal<2;normal++)
+			for(int combined=0;combined<2;combined++)
 			{
-				for(int diffuse=0;diffuse<2;diffuse++)
+				for(int normal=0;normal<2;normal++)
 				{
-					for(int lightCount=0;lightCount<2;lightCount++)
+					for(int diffuse=0;diffuse<2;diffuse++)
 					{
-						for(int highlight=0;highlight<2;highlight++)
+						for(int lightCount=0;lightCount<2;lightCount++)
 						{
-							std::string passname= GlobalGraphicsResources::GenerateShaderPassName(
-									diffuse, normal, combined, emissive, lightCount, highlight);
-							passNames.push_back(passname.c_str());
+							for(int highlight=0;highlight<2;highlight++)
+							{
+								std::string passname= GlobalGraphicsResources::GenerateShaderPassName(
+										lightmap!=0,diffuse!=0, normal!=0, combined!=0, emissive!=0, lightCount, highlight!=0);
+								passNames.push_back(passname.c_str());
 
-							static char txt2[2000];
-							char const  *true_or_false[] = {"false", "true"};
-							sprintf(txt2, "\nvoid %s()\n{\nPBR(%s,%s,%s,%s,true, %d, %s);\n}",
-									passname.c_str(), true_or_false[diffuse], true_or_false[normal],
-									true_or_false[combined], true_or_false[emissive],
-									lightCount, true_or_false[highlight]);
-							src += txt2;
+								static char txt2[2000];
+								char const  *true_or_false[] = {"false", "true"};
+								sprintf(txt2, "\nvoid %s()\n{\nPBR(%s,%s,%s,%s,%s,true, %d, %s);\n}",
+										passname.c_str(), true_or_false[lightmap], true_or_false[diffuse], true_or_false[normal],
+										true_or_false[combined], true_or_false[emissive],
+										lightCount, true_or_false[highlight]);
+								src += txt2;
+							}
 						}
 					}
 				}
@@ -994,6 +995,16 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	avs::SetupLightingCommand setupLightingCommand;
+	if(setupLightingCommand.global_illumination_texture_uid!=0)
+	{
+		mlightmapTexture = resourceManagers->mTextureManager.Get(
+				setupLightingCommand.global_illumination_texture_uid);
+		if(!mlightmapTexture.get())
+			mlightmapTexture=resourceCreator->m_DummyWhite;
+	}
+	globalGraphicsResources.lightCubemapShaderResources.SetImageInfo(2,{mlightmapTexture->GetSampler()
+			, mlightmapTexture});
 	//Render local nodes.
 	const scr::NodeManager::nodeList_t &distanceSortedRootNodes = resourceManagers->mNodeManager->GetSortedRootNodes();
 	for (std::shared_ptr<scr::Node> node : distanceSortedRootNodes)

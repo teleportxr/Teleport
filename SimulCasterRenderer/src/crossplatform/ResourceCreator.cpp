@@ -6,8 +6,8 @@
 
 using namespace avs;
 
-ResourceCreator::ResourceCreator(basist::transcoder_texture_format transcoderTextureFormat)
-	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basis_textureFormat(transcoderTextureFormat), basisThread(&ResourceCreator::BasisThread_TranscodeTextures, this)
+ResourceCreator::ResourceCreator()
+	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basisThread(&ResourceCreator::BasisThread_TranscodeTextures, this)
 {
 	basist::basisu_transcoder_init();
 }
@@ -449,6 +449,7 @@ scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format
 	case avs::TextureFormat::RGBA16: return scr::Texture::Format::RGBA16;
 	case avs::TextureFormat::RGBE8: return scr::Texture::Format::RGBA8;
 	case avs::TextureFormat::RGBA16F: return scr::Texture::Format::RGBA16F;
+	case avs::TextureFormat::RGBA32F: return scr::Texture::Format::RGBA32F;
 	case avs::TextureFormat::RGBA8: return scr::Texture::Format::RGBA8;
 	case avs::TextureFormat::D16F: return scr::Texture::Format::DEPTH_COMPONENT16;
 	case avs::TextureFormat::D24F: return scr::Texture::Format::DEPTH_COMPONENT24;
@@ -459,6 +460,16 @@ scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format
 	}
 }
 
+basist::transcoder_texture_format transcoderFormatFromBasisTextureFormat(basist::basis_tex_format format)
+{
+	switch (format)
+	{
+	case basist::basis_tex_format::cETC1S: return basist::transcoder_texture_format::cTFBC3;
+	case basist::basis_tex_format::cUASTC4x4: return basist::transcoder_texture_format::cTFASTC_4x4;
+	default:
+		exit(1);
+	}
+}
 //Returns a SCR compression format from a basis universal transcoder format.
 scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_texture_format format)
 {
@@ -472,6 +483,8 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 	case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
 	case basist::transcoder_texture_format::cTFPVRTC1_4_RGBA: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
 	case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+	case basist::transcoder_texture_format::cTFASTC_4x4_RGBA:
+		return scr::Texture::CompressionFormat::BC6H;
 	case basist::transcoder_texture_format::cTFTotalTextureFormats: return scr::Texture::CompressionFormat::UNCOMPRESSED;
 	default:
 		exit(1);
@@ -482,7 +495,19 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 {
 	SCR_COUT << "CreateTexture(" << id << ", " << texture.name << ")\n";
 	m_ReceivedResources.push_back(id);
-
+	scr::Texture::CompressionFormat scrTextureCompressionFormat= scr::Texture::CompressionFormat::UNCOMPRESSED;
+	if(texture.compression!=avs::TextureCompression::UNCOMPRESSED)
+	{
+		switch(texture.format)
+		{
+		case avs::TextureFormat::RGBA32F:
+			scrTextureCompressionFormat = scr::Texture::CompressionFormat::BC6H;
+			break;
+		default:
+			scrTextureCompressionFormat = scr::Texture::CompressionFormat::BC3;
+			break;
+		};
+	}
 	scr::Texture::TextureCreateInfo texInfo =
 	{
 		texture.name,
@@ -498,14 +523,15 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
 		{},
 		{},
-		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_textureFormat) : scr::Texture::CompressionFormat::UNCOMPRESSED
+		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : scr::Texture::CompressionFormat::UNCOMPRESSED
+//		scrTextureCompressionFormat
 	};
 
 	//Copy the data out of the buffer, so it can be transcoded or used as-is (uncompressed).
 	unsigned char* data = new unsigned char[texture.dataSize];
 	memcpy(data, texture.data, texture.dataSize);
 
-	if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
+	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 		texturesToTranscode.emplace_back(UntranscodedTexture{ id, texture.dataSize, data, std::move(texInfo), texture.name });
@@ -750,6 +776,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 			newNode->materialSlots[node.materials[i]].push_back(i);
 		}
 	}
+	newNode->node->SetLightmapScaleOffset(node.renderState.lightmapScaleOffset);
 
 	newNode->node->SetChildrenIDs(node.childrenIDs);
 
@@ -1058,16 +1085,20 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data, transcoding.dataSize, 0);
 				transcoding.scrTexture.mipSizes.reserve(transcoding.scrTexture.mipCount);
 				transcoding.scrTexture.mips.reserve(transcoding.scrTexture.mipCount);
+				//basist::basis_tex_format format=basis_transcoder.get_tex_format(transcoding.data, transcoding.dataSize);
+				// choose a transcoder format based on this:
+				//basist::transcoder_texture_format basis_transcoder_textureFormat= transcoderFormatFromBasisTextureFormat(format);
 
+				//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
 				for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
 				{
 					uint32_t basisWidth, basisHeight, basisBlocks;
 
 					basis_transcoder.get_image_level_desc(transcoding.data, transcoding.dataSize, 0, mipIndex, basisWidth, basisHeight, basisBlocks);
-					uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_textureFormat) * basisBlocks;
+					uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
 
 					unsigned char* outData = new unsigned char[outDataSize];
-					if (basis_transcoder.transcode_image_level(transcoding.data, transcoding.dataSize, 0, mipIndex, outData, basisBlocks, basis_textureFormat))
+					if (basis_transcoder.transcode_image_level(transcoding.data, transcoding.dataSize, 0, mipIndex, outData, basisBlocks, basis_transcoder_textureFormat))
 					{
 						transcoding.scrTexture.mipSizes.push_back(outDataSize);
 						transcoding.scrTexture.mips.push_back(outData);

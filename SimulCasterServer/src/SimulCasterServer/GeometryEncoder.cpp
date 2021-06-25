@@ -57,8 +57,9 @@ namespace SCServer
 			std::vector<avs::uid> nodeIDsToStream;
 			std::vector<avs::MeshNodeResources> meshNodeResources;
 			std::vector<avs::LightNodeResources> lightNodeResources;
+			std::vector<avs::uid> genericTexturesToStream;
 
-			req->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources);
+			req->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream);
 
 			for(avs::uid nodeID : nodeIDsToStream)
 			{
@@ -85,9 +86,8 @@ namespace SCServer
 					if(!keepQueueing)
 					{
 						break;
+					}
 				}
-				}
-
 				if(meshResourceInfo.skinID != 0)
 				{
 					for(avs::uid boneID : meshResourceInfo.jointIDs)
@@ -100,8 +100,8 @@ namespace SCServer
 							if(!keepQueueing)
 							{
 								break;
+							}
 						}
-					}
 					}
 
 					if(!req->hasResource(meshResourceInfo.skinID))
@@ -112,8 +112,8 @@ namespace SCServer
 						if(!keepQueueing)
 						{
 							break;
+						}
 					}
-				}
 				}
 
 				for(avs::uid animationID : meshResourceInfo.animationIDs)
@@ -126,8 +126,8 @@ namespace SCServer
 						if(!keepQueueing)
 						{
 							break;
+						}
 					}
-				}
 				}
 				if(!keepQueueing)
 				{
@@ -146,13 +146,13 @@ namespace SCServer
 							if(!keepQueueing)
 							{
 								break;
-						}
+							}
 						}
 
 						if(!keepQueueing)
 						{
 							break;
-					}
+						}
 					}
 
 					if(!req->hasResource(material.material_uid))
@@ -164,8 +164,8 @@ namespace SCServer
 						if(!keepQueueing)
 						{
 							break;
+						}
 					}
-				}
 				}
 				if(!keepQueueing)
 				{
@@ -180,8 +180,8 @@ namespace SCServer
 					if(!keepQueueing)
 					{
 						break;
+					}
 				}
-			}
 			}
 
 			for(avs::LightNodeResources lightResourceInfo : lightNodeResources)
@@ -208,9 +208,22 @@ namespace SCServer
 					if(!keepQueueing)
 					{
 						break;
+					}
 				}
 			}
-		}
+
+			//Encode mesh nodes first, as they should be sent before lighting data.
+			for(avs::uid texture_uid : genericTexturesToStream)
+			{
+				if(req->hasResource(texture_uid))
+					continue;
+				encodeTextures(src, req, {texture_uid});
+				keepQueueing = attemptQueueData();
+				if(!keepQueueing)
+				{
+					break;
+				}
+			}
 		}
 
 		return avs::Result::OK;
@@ -366,6 +379,7 @@ namespace SCServer
 				{
 					put(id);
 				}
+				put(node->renderState.lightmapScaleOffset);
 			}
 			else
 			{

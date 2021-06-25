@@ -42,3 +42,17 @@ avs::vec3 ClientData::getOrigin() const
 {
 	return originClientHas;
 }
+
+void ClientData::setGlobalIlluminationTexture(avs::uid uid)
+{
+	if(global_illumination_texture_uid!=uid)
+	{
+		global_illumination_texture_uid=uid;
+		if(isStreaming)
+		{
+			avs::SetupLightingCommand setupLightingCommand;
+			setupLightingCommand.global_illumination_texture_uid=global_illumination_texture_uid;
+			clientMessaging.sendCommand(std::move(setupLightingCommand));
+		}
+	}
+}

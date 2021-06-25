@@ -82,13 +82,6 @@ namespace SCServer
 {
 GeometryStore::GeometryStore()
 {
-	basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
-
-	const uint32_t THREAD_AMOUNT = 16;
-	basisCompressorParams.m_pJob_pool = new basisu::job_pool(THREAD_AMOUNT);
-
-	basisCompressorParams.m_quality_level = 1;
-	basisCompressorParams.m_compression_level = 1;
 
 	//Create look-up maps.
 	meshes[avs::AxesStandard::EngineeringStyle];
@@ -102,7 +95,6 @@ GeometryStore::GeometryStore()
 
 GeometryStore::~GeometryStore()
 {
-	delete basisCompressorParams.m_pJob_pool;
 }
 
 void GeometryStore::saveToDisk() const
@@ -269,11 +261,10 @@ void GeometryStore::clear(bool freeMeshBuffers)
 	texturesToCompress.clear();
 	lightNodes.clear();
 }
-
-void GeometryStore::setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
+void GeometryStore::setCompressionLevels(uint8_t str, uint8_t q)
 {
-	basisCompressorParams.m_quality_level = compressionStrength;
-	basisCompressorParams.m_compression_level = compressionQuality;
+	compressionStrength = str;
+	compressionQuality= q;
 }
 
 const char* GeometryStore::getNodeName(avs::uid nodeID) const
@@ -455,7 +446,7 @@ void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastMod
 	materials[id] = ExtractedMaterial{guid, lastModified, newMaterial};
 }
 
-void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation)
+void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips, bool highQualityUASTC)
 {
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
 	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
@@ -496,7 +487,7 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 			memcpy(dataCopy, newTexture.data, newTexture.dataSize);
 			newTexture.data = dataCopy;
 
-			texturesToCompress.emplace(id, PrecompressedTexture{basisFileLocation, newTexture.data, newTexture.dataSize});
+			texturesToCompress.emplace(id, PrecompressedTexture{basisFileLocation, newTexture.data, newTexture.dataSize, newTexture.mipCount, genMips, highQualityUASTC});
 		}
 	}
 	else
@@ -569,18 +560,52 @@ void GeometryStore::compressNextTexture()
 	basisu::color_rgba_vec& imageData = image.get_pixels();
 	memcpy(imageData.data(), compressionData.rawData, compressionData.dataSize);
 
+
+	basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
 	basisCompressorParams.m_source_images.clear();
 	basisCompressorParams.m_source_images.push_back(image);
 
+	basisCompressorParams.m_quality_level = compressionQuality;
+	basisCompressorParams.m_compression_level = compressionStrength;
+
 	basisCompressorParams.m_write_output_basis_files = true;
 	basisCompressorParams.m_out_filename = compressionData.basisFilePath;
+	basisCompressorParams.m_uastc=compressionData.highQualityUASTC;
 
-	basisCompressorParams.m_mip_gen = true;
-	basisCompressorParams.m_mip_smallest_dimension = 4; // ???
+	if(compressionData.highQualityUASTC)
+	{
+		//basisCompressorParams.m_ktx2_uastc_supercompression = basist::KTX2_SS_NONE;//= basist::KTX2_SS_ZSTANDARD;
 	
-	basisu::basis_compressor basisCompressor;
+		int uastc_level = std::clamp<int>(4, 0, 4);
 
-	if(basisCompressor.init(basisCompressorParams))
+		static const uint32_t s_level_flags[5] = { basisu::cPackUASTCLevelFastest, basisu::cPackUASTCLevelFaster, basisu::cPackUASTCLevelDefault, basisu::cPackUASTCLevelSlower, basisu::cPackUASTCLevelVerySlow };
+
+		//basisCompressorParams.m_pack_uastc_flags &= ~basisu::cPackUASTCLevelMask;
+		//basisCompressorParams.m_pack_uastc_flags |= s_level_flags[uastc_level];
+
+		//basisCompressorParams.m_rdo_uastc_dict_size = 32768;
+		//basisCompressorParams.m_check_for_alpha=true;
+		basisCompressorParams.m_debug=true;
+		//basisCompressorParams.m_perceptual=true;
+		//basisCompressorParams.m_validate=false;
+		basisCompressorParams.m_mip_srgb=true;
+	}
+	else
+	{
+		basisCompressorParams.m_mip_gen = compressionData.genMips;
+		basisCompressorParams.m_mip_smallest_dimension = 4; // ???
+		basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
+	}
+	if(!basisCompressorParams.m_pJob_pool)
+	{
+		const uint32_t THREAD_AMOUNT = 32;
+		basisCompressorParams.m_pJob_pool = new basisu::job_pool(THREAD_AMOUNT);
+	}
+	basisu::basis_compressor basisCompressor;
+	basisu::enable_debug_printf(true);
+	
+	bool ok=basisCompressor.init(basisCompressorParams);
+	if(ok)
 	{
 		basisu::basis_compressor::error_code result = basisCompressor.process();
 
@@ -605,6 +630,8 @@ void GeometryStore::compressNextTexture()
 	}
 
 	texturesToCompress.erase(texturesToCompress.begin());
+	delete basisCompressorParams.m_pJob_pool;
+	basisCompressorParams.m_pJob_pool = nullptr;
 }
 
 template<typename ExtractedResource>

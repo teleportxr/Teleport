@@ -51,7 +51,8 @@ namespace SCServer
 		sentResources[resource_uid] = true;
 	}
 
-	void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const
+	void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources
+	, std::vector<avs::LightNodeResources>& outLightResources,std::vector<avs::uid>& genericTextureUids) const
 	{
 		for (avs::uid nodeID : streamedNodeIDs)
 		{
@@ -73,6 +74,11 @@ namespace SCServer
 			default:
 				break;
 			}
+		}
+		genericTextureUids.clear();
+		for(auto &t:streamedGenericTextureUids)
+		{
+			genericTextureUids.push_back(t);
 		}
 	}
 
@@ -210,6 +216,11 @@ namespace SCServer
 	bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
 	{
 		return streamedNodeIDs.find(nodeID) != streamedNodeIDs.end();
+	}
+
+	void GeometryStreamingService::addGenericTexture(avs::uid id)
+	{
+		streamedGenericTextureUids.insert(id);
 	}
 
 	void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::DataNode& node, std::vector<avs::MeshNodeResources>& outMeshResources) const

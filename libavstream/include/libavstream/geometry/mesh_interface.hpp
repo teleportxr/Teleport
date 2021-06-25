@@ -231,11 +231,19 @@ struct Animation;
 		}
 	};
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 	struct Transform
 	{
 		vec3 position = { 0, 0, 0 };
 		vec4 rotation = { 0, 0, 0, 1 };
 		vec3 scale = { 1, 1, 1 };
+	};
+
+	struct NodeRenderState
+	{
+		vec4 lightmapScaleOffset;
 	};
 
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);
@@ -249,6 +257,7 @@ struct Animation;
 		std::string name;
 
 		Transform transform;
+		bool stationary;
 
 		uid parentID;
 		std::vector<uid> childrenIDs;
@@ -263,6 +272,9 @@ struct Animation;
 		uid skinID;
 		std::vector<uid> animations;
 
+		// e.g. lightmap offset and multiplier.
+		avs::NodeRenderState renderState;
+
 		//LIGHT
 		vec4 lightColour;
 		float lightRadius;
@@ -270,6 +282,9 @@ struct Animation;
 		uint8_t lightType;
 		float lightRange;	// Maximum distance the light is effective at, in metres.
 	};
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 	inline size_t GetComponentSize(Accessor::ComponentType t)
 	{
@@ -540,7 +555,11 @@ struct Animation;
 		//	outNodeIDs : IDs of nodes to stream with no dependencies on sub-resources.
 		//	outMeshResources : Resources to stream for mesh nodes.
 		//	outLightResources : Resources to stream for light nodes.
-		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<MeshNodeResources>& outMeshResources, std::vector<LightNodeResources>& outLightResources) const = 0;
+		//	genericTextureUids : Textures that are not specific members of materials, e.g. lightmaps.
+		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
+										,std::vector<MeshNodeResources>& outMeshResources
+										,std::vector<LightNodeResources>& outLightResources
+										,std::vector<avs::uid>& genericTextureUids) const = 0;
 
 		//Returns the axes standard used by the client.
 		virtual AxesStandard getClientAxesStandard() const = 0;

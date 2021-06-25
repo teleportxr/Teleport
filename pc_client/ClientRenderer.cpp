@@ -119,7 +119,7 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c):
 	sessionClient(this, std::make_unique<PCDiscoveryService>()),
 	resourceManagers(new scr::NodeManager),
 	clientDeviceState(c),
-	resourceCreator(basist::transcoder_texture_format::cTFBC3),
+	resourceCreator(),
 	RenderMode(0)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
@@ -418,8 +418,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto& textures = resourceManagers.mTextureManager.GetCache(cacheLock);
-		static int tw = 64;
-		int x = 0, y = hdrFramebuffer->GetHeight()-tw*2;
+		static int tw = 128;
+		int x = 0, y = 0;//hdrFramebuffer->GetHeight()-tw*2;
 		for (auto t : textures)
 		{
 			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
@@ -837,6 +837,7 @@ void ClientRenderer::WriteHierarchies()
 void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 //	deviceContext.viewStruct.view = camera.MakeViewMatrix();
+	globalIlluminationTexture=resourceManagers.mTextureManager.Get(lastSetupLightingCommand.global_illumination_texture_uid);
 	deviceContext.viewStruct.Init();
 
 	cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
@@ -947,16 +948,18 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 					const scr::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
 					const scr::Material::MaterialData& md = material->GetMaterialData();
 					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
-
+					pbrConstants.lightmapScaleOffset=*(const vec4*)(&(node->GetLightmapScaleOffset()));
 					std::shared_ptr<pc_client::PC_Texture> diffuse = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.diffuse.texture);
 					std::shared_ptr<pc_client::PC_Texture> normal = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.normal.texture);
 					std::shared_ptr<pc_client::PC_Texture> combined = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.combined.texture);
 					std::shared_ptr<pc_client::PC_Texture> emissive = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.emissive.texture);
-
+					std::shared_ptr<pc_client::PC_Texture> gi = std::dynamic_pointer_cast<pc_client::PC_Texture>(globalIlluminationTexture);
+					
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), diffuse ? diffuse->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), normal ? normal->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), combined ? combined->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"), emissive ? emissive->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi?gi->GetSimulTexture():nullptr);
 
 					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
 					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
@@ -1074,6 +1077,10 @@ void ClientRenderer::Update()
 	resourceCreator.Update(static_cast<float>(timeElapsed));
 
 	previousTimestamp = timestamp;
+}
+void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
+{
+	lastSetupLightingCommand=l;
 }
 
 void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)

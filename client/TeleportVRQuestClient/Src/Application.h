@@ -79,6 +79,7 @@ namespace OVRFW
 		virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
 		virtual bool OnNodeEnteredBounds(avs::uid id) override;
 		virtual bool OnNodeLeftBounds(avs::uid id) override;
+		virtual void OnLightingSetupChanged(const avs::SetupLightingCommand &) override;
 		virtual std::vector<avs::uid> GetGeometryResources() override;
 		virtual void ClearGeometryResources() override;
 		virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;

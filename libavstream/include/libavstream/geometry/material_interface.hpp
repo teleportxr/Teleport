@@ -66,12 +66,13 @@ namespace avs
 		D16F,
 		D24F,
 		D32F,
+		RGBA32F,
 		MAX
 	};
-
+	
 	enum class TextureCompression : uint32_t
 	{
-		UNCOMPRESSED=0,
+		UNCOMPRESSED = 0,
 		BASIS_COMPRESSED
 	};
 

@@ -11,6 +11,7 @@ uniform Texture2D diffuseTexture;
 uniform Texture2D normalTexture;
 uniform Texture2D combinedTexture;
 uniform Texture2D emissiveTexture;
+uniform Texture2D globalIlluminationTexture;
 uniform TextureCube diffuseCubemap;
 uniform TextureCube specularCubemap;
 uniform TextureCube lightingCubemap;
@@ -269,6 +270,7 @@ struct SurfaceProperties
     vec3 normal;
     vec3 emission;
 	vec3 position;
+	vec3 globalIllumination;
 	float roughness;
 	float roughness2;
 	float metallic;
@@ -313,13 +315,18 @@ vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 	float m3=mult*mult*mult;
 	return specularColour +vec3(m3,m3,m3);
 }
-
+vec3 ConvertCubemapLookup(vec3 d)
+{
+	d=d.xzy;
+	d.z=-d.z;
+	return d;
+}
 vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties)
 {
 	float roughness_mip		= MipFromRoughness(surfaceProperties.roughness, 5.0);
 	// Sample the environment maps:
-	vec3 diffuse_env		= diffuseCubemap.SampleLevel(cubeSamplerState, surfaceProperties.normal.xyz,0.0).rgb;
-	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,surfaceState.refl.xyz, roughness_mip).rgb;
+	vec3 diffuse_env		=surfaceProperties.globalIllumination.rgb;//+diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
+	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
 	vec3 envSpecularColour	= ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
 	vec3 specular			=surfaceState.kS* env;
@@ -387,8 +394,10 @@ vec4 Solid(vertexOutput IN)
 	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R).rgb;
 	diffuseColour		= diffuseColour.rgb * diffuseOutputScalar.rgb;
 
+	vec2 lightmapUVs	=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
+	
 	vec3 view			= normalize(diff);
-	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords0.xy * combinedTexCoordsScalar_R);
+	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, lightmapUVs);
 	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
 	// this allows us to have either roughness or smoothness textures.
 	//combinedLookup.b	=1.0;
@@ -405,6 +414,7 @@ vec4 Solid(vertexOutput IN)
 	surfaceProperties.normal		=normal;
 	surfaceProperties.albedo		=diffuseColour;
 	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
+	surfaceProperties.globalIllumination=globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs).rgb;
 
 	SurfaceState surfaceState	=PreprocessSurface(view,surfaceProperties);
 	int id						=int(TagDataIDBuffer[0].x);
@@ -421,12 +431,10 @@ vec4 Solid(vertexOutput IN)
 
 	vec3 emissive		= emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
 	emissive			*= emissiveOutputScalar.rgb;
-//	c=1.0-roughMetalOcclusion.a;
 	vec4 u				=vec4(c.rgb+emissive, 1.0);
-	//u.r=float(id)/32.0;
-	vec3 highlight=vec3(0.01,0.02,0.05);
-//u.rgb+= highlight;
-//u.rg=frac(IN.texCoords0.xy );
+	vec3 highlight		=vec3(0.01,0.02,0.05);
+	//u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
+	//u.b=0;
 	return u;
 }
 

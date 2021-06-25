@@ -427,6 +427,7 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 			{
 				node.materials.push_back(Next8B);
 			}
+			node.renderState.lightmapScaleOffset=NextVec4;
 		}
 		break;
 		case avs::NodeDataType::Light:

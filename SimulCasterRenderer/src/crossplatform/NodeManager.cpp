@@ -14,6 +14,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeD
 	//Remove any node already using the ID.
 	RemoveNode(node->id);
 
+	node->SetStatic(nodeData.stationary);
 	if(nodeData.data_subtype == avs::NodeDataSubtype::None)
 	{
 		rootNodes.push_back(node);

@@ -113,7 +113,8 @@ namespace scr
 			ETC1,
 			ETC2,
 			PVRTC1_4_OPAQUE_ONLY,
-			BC7_M6_OPAQUE_ONLY
+			BC7_M6_OPAQUE_ONLY,
+			BC6H
 		};
 		
 		struct TextureCreateInfo
@@ -135,7 +136,7 @@ namespace scr
 			std::vector<const uint8_t*> mips;
 
 			CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
-
+		
 			bool externalResource = false;	// If true, the actual API resource will be created and managed externally on a per-platform basis.
 		};
 

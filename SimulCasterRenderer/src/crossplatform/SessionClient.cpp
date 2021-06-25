@@ -309,6 +309,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::SetNodeAnimationSpeed:
 			ReceiveNodeAnimationSpeedUpdate(packet);
 			break;
+		case avs::CommandPayloadType::SetupLighting:
+			ReceiveSetupLightingCommand(packet);
+			break;
 		default:
 			break;
 	};
@@ -692,6 +695,14 @@ void SessionClient::ReceiveNodeAnimationSpeedUpdate(const ENetPacket* packet)
 	memcpy(static_cast<void*>(&command), packet->data, command.getCommandSize());
 
 	mCommandInterface->SetNodeAnimationSpeed(command.nodeID, command.animationID, command.speed);
+}
+
+void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::SetupLightingCommand);
+	//Copy command out of packet.
+	memcpy(static_cast<void*>(&setupLightingCommand), packet->data, commandSize);
+	mCommandInterface->OnLightingSetupChanged(setupLightingCommand);
 }
 
 void SessionClient::SetDiscoveryClientID(uint32_t clientID)

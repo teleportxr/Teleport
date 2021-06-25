@@ -78,7 +78,7 @@ namespace SCServer
 		void storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard);
 		void storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard);
 		void storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Material& newMaterial);
-		void storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation);
+		void storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC);
 		void storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& shadowMap);
 
 		void removeNode(avs::uid id);
@@ -99,6 +99,10 @@ namespace SCServer
 
 			uint8_t* rawData;
 			size_t dataSize;
+
+			size_t numMips;	
+			bool genMips;	// if false, numMips tells how many are in the data already.
+			bool highQualityUASTC;
 		};
 
 		//Names of the files that store each resource type.
@@ -106,8 +110,8 @@ namespace SCServer
 		const std::string MATERIAL_FILE_NAME = "teleportVR_materials.dat";
 		const std::string MESH_PC_FILE_NAME = "teleportVR_meshes_PC.dat";
 		const std::string MESH_ANDROID_FILE_NAME = "teleportVR_meshes_android.dat";
-
-		basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
+		uint8_t compressionStrength = 1;
+		uint8_t compressionQuality = 1;
 
 		std::map<avs::uid, avs::DataNode> nodes;
 		std::map<avs::AxesStandard, std::map<avs::uid, avs::Skin>> skins;

@@ -52,7 +52,9 @@ namespace scr
 {
 	class Material;
 }
-
+/// <summary>
+/// A 
+/// </summary>
 struct AVSTexture
 {
 	virtual ~AVSTexture() = default;
@@ -67,6 +69,7 @@ struct RendererStats
 	double lastFPS;
 };
 
+/// @brief The renderer for a client connection.
 class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, public SessionCommandInterface
 {
 	enum class ShaderMode
@@ -178,6 +181,8 @@ public:
 
 	bool OnNodeEnteredBounds(avs::uid nodeID) override;
 	bool OnNodeLeftBounds(avs::uid nodeID) override;
+	
+	void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
 
 	std::vector<avs::uid> GetGeometryResources() override;
 	void ClearGeometryResources() override;
@@ -230,6 +235,7 @@ public:
 		avs::SurfaceFormat::ARGB,
 	};
 	std::vector<AVSTextureHandle> avsTextures;
+	std::shared_ptr<scr::Texture> globalIlluminationTexture;
 	avs::Context context;
 	avs::VideoConfig videoConfig;
 
@@ -254,6 +260,8 @@ public:
 	avs::Pipeline pipeline;
 	
 	avs::SetupCommand lastSetupCommand;
+
+	avs::SetupLightingCommand lastSetupLightingCommand;
 	int RenderMode;
 	std::shared_ptr<scr::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;

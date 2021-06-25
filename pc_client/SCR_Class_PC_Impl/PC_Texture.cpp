@@ -54,7 +54,7 @@ simul::crossplatform::PixelFormat ToSimulPixelFormat(scr::Texture::Format f)
 	case scr::Texture::Format::R8I:								
 	case scr::Texture::Format::R8_SNORM:						return R_8_SNORM;
 	case scr::Texture::Format::R8:								return R_8_UNORM;
-	case scr::Texture::Format::DEPTH_COMPONENT32F:			return D_32_FLOAT;
+	case scr::Texture::Format::DEPTH_COMPONENT32F:				return D_32_FLOAT;
 	case scr::Texture::Format::DEPTH_COMPONENT32:				return D_32_UINT;
 	case scr::Texture::Format::DEPTH_COMPONENT24:					 
 	case scr::Texture::Format::DEPTH_COMPONENT16:					

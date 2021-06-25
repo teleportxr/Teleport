@@ -25,7 +25,10 @@ namespace SCServer
 		virtual void requestResource(avs::uid resourceID) override;
 		virtual void confirmResource(avs::uid resourceID) override;
 
-		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources, std::vector<avs::LightNodeResources>& outLightResources) const override;
+		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
+		, std::vector<avs::MeshNodeResources>& outMeshResources
+		, std::vector<avs::LightNodeResources>& outLightResources
+		,std::vector<avs::uid>& genericTextureUids) const override;
 
 		virtual avs::AxesStandard getClientAxesStandard() const override
 		{
@@ -53,6 +56,9 @@ namespace SCServer
 		void addNode(avs::uid nodeID);
 		void removeNode(avs::uid nodeID);
 		bool isStreamingNode(avs::uid nodeID);
+
+
+		void addGenericTexture(avs::uid id);
 	protected:
 		GeometryStore* geometryStore = nullptr;
 
@@ -74,6 +80,7 @@ namespace SCServer
 		std::unordered_map<avs::uid, float> unconfirmedResourceTimes; //Tracks time since an unconfirmed resource was sent; <resource identifier, time since sent>.
 		std::set<avs::uid> streamedNodeIDs; //Nodes that the client needs to draw, and should be sent to them.
 		std::set<avs::uid> hiddenNodes; //Nodes that are currently hidden on the server.
+		std::set<avs::uid> streamedGenericTextureUids; // Textures that are not specifically specified in a material, e.g. lightmaps.
 
 		//Recursively obtains the resources from the mesh node, and its child nodes.
 		void GetMeshNodeResources(avs::uid nodeID, const avs::DataNode& node, std::vector<avs::MeshNodeResources>& outMeshResources) const;

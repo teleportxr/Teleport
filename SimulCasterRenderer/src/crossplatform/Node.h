@@ -32,6 +32,8 @@ namespace scr
 
 		virtual ~Node() = default;
 
+		void SetStatic(bool s);
+		bool IsStatic() const;
 		void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 		//Requests global transform of node, and node's children, be recalculated.
 		void RequestTransformUpdate();
@@ -131,14 +133,26 @@ namespace scr
 		virtual void SetHighlighted(bool highlighted);
 		bool IsHighlighted() const { return isHighlighted; }
 
-	private:
+		void SetLightmapScaleOffset(const avs::vec4& lso)
+		{
+			lightmapScaleOffset=lso;
+		}
+		const avs::vec4 & GetLightmapScaleOffset() const
+		{
+			return lightmapScaleOffset;
+		}
+
+	protected:
 		std::shared_ptr<Mesh> mesh;
 		std::shared_ptr<Skin> skin;
 		std::vector<std::shared_ptr<Material>> materials;
+		avs::vec4 lightmapScaleOffset;
 		Transform localTransform;
 
 		std::vector<avs::uid> childIDs;
 
+		//
+		bool isStatic;
 		//Cached global transform, and dirty flag; updated when necessary on a request.
 		mutable bool isTransformDirty = true;
 		mutable Transform globalTransform;

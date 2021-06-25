@@ -61,6 +61,7 @@ namespace SCServer
 		bool pipeDllOutputToUnity = false;
 		uint8_t estimatedDecodingFrequency = 0; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
 
+		int32_t maxTextureSize = 2048;
 		bool useCompressedTextures = false;
 		uint8_t qualityLevel = 0;
 		uint8_t compressionLevel = 0;

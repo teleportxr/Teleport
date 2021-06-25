@@ -65,6 +65,7 @@ namespace SCServer
 		void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
 		void updateNodeAnimation(avs::NodeUpdateAnimation update);
 		void updateNodeAnimationControl(avs::NodeUpdateAnimationControl update);
+		void updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update);
 		void setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
 		bool hasHost() const;

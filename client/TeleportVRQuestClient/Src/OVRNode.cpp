@@ -17,7 +17,13 @@
 #include "SCR_Class_GL_Impl/GL_ShaderStorageBuffer.h"
 
 static bool support_normals=false;
-static bool support_combined=true;
+static bool support_combined=false;
+
+OVRNode::OVRNode(avs::uid id, const std::string& name)
+:Node(id, name)
+{
+
+}
 
 void OVRNode::SurfaceInfo::SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlProgram* newHighlightProgram)
 {
@@ -148,9 +154,10 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	OVRNode::SurfaceInfo surfaceInfo;
-
+	bool useLightmap=(this->isStatic);
 	std::string passname = GlobalGraphicsResources::GenerateShaderPassName
 			(
+					useLightmap,
 					true,
 					support_normals && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().normal.texture.get()),
 					support_combined && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().combined.texture.get()),
@@ -168,6 +175,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 
 	std::string highlightPassname = GlobalGraphicsResources::GenerateShaderPassName
 			(
+					useLightmap,
 					true,
 					support_normals && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().normal.texture.get()),
 					support_combined && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().combined.texture.get()),
@@ -276,9 +284,9 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		surfaceDef.graphicsCommand.GpuState.depthFunc				= scc::GL_Effect::ToGLCompareOp(effectPassCreateInfo->depthStencilingState.depthCompareOp);
 
 		surfaceDef.graphicsCommand.GpuState.frontFace				= GL_CW;
-		surfaceDef.graphicsCommand.GpuState.polygonMode			= scc::GL_Effect::ToGLPolygonMode(effectPassCreateInfo->rasterizationState.polygonMode);
-		surfaceDef.graphicsCommand.GpuState.blendEnable			= effectPassCreateInfo->colourBlendingState.blendEnable ? OVRFW::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVRFW::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
-		surfaceDef.graphicsCommand.GpuState.depthEnable			= effectPassCreateInfo->depthStencilingState.depthTestEnable;
+		surfaceDef.graphicsCommand.GpuState.polygonMode				= scc::GL_Effect::ToGLPolygonMode(effectPassCreateInfo->rasterizationState.polygonMode);
+		surfaceDef.graphicsCommand.GpuState.blendEnable				= effectPassCreateInfo->colourBlendingState.blendEnable ? OVRFW::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVRFW::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
+		surfaceDef.graphicsCommand.GpuState.depthEnable				= effectPassCreateInfo->depthStencilingState.depthTestEnable;
 		surfaceDef.graphicsCommand.GpuState.depthMaskEnable 		= true;
 		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[0]		= true;
 		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[1]		= true;

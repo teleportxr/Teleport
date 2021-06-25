@@ -31,7 +31,7 @@ public:
 
     static GlobalGraphicsResources& GetInstance();
 
-	static std::string GenerateShaderPassName(int diffuse,int normal,int combined,int emissive,int lightcount,int highlight);
+	static std::string GenerateShaderPassName(bool lightmap, bool diffuse,bool normal,bool combined,bool emissive,int lightcount,bool highlight);
 private:
 	static GlobalGraphicsResources *instance;
 };

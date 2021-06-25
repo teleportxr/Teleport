@@ -496,5 +496,9 @@ GLenum GL_Texture::ToGLCompressedFormat(CompressionFormat format, uint32_t bytes
                 return 0;
         case Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY:
             return 0;
+        case Texture::CompressionFormat::BC6H:
+            return 0;
+        default:
+            return 0;
     }
 }

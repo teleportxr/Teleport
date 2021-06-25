@@ -30,9 +30,7 @@ public:
 		OVRFW::GlProgram* highlightProgram = nullptr;
 	};
 
-	OVRNode(avs::uid id, const std::string& name)
-		:Node(id, name)
-	{}
+	OVRNode(avs::uid id, const std::string& name);
 
 	virtual ~OVRNode() = default;
 

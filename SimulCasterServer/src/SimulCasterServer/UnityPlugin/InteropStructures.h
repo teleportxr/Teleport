@@ -13,6 +13,8 @@ struct InteropNode
 	BSTR name;
 
 	avs::Transform transform;
+	uint8_t stationary;
+
 	avs::NodeDataType dataType;
 	avs::NodeDataSubtype dataSubtype;
 	avs::uid parentID;
@@ -30,6 +32,8 @@ struct InteropNode
 
 	size_t materialAmount;
 	avs::uid* materialIDs;
+	
+	avs::NodeRenderState renderState;
 
 	size_t childAmount;
 	avs::uid* childIDs;
@@ -42,6 +46,8 @@ struct InteropNode
 
 			transform,
 
+			stationary!=0,
+
 			parentID,
 			{childIDs, childIDs + childAmount},
 
@@ -52,6 +58,8 @@ struct InteropNode
 			{materialIDs, materialIDs + materialAmount},
 			skinID,
 			{animationIDs, animationIDs + animationAmount},
+
+			renderState,
 
 			lightColour,
 			lightRadius,
