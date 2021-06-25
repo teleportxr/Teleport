@@ -146,6 +146,7 @@ namespace SCServer
 		encoderParams.deferOutput = settings.enableDeferOutput;
 		encoderParams.useAsyncEncoding = settings.useAsyncEncoding;
 		encoderParams.use10BitEncoding = settings.use10BitEncoding;
+		encoderParams.useAlphaLayerEncoding = settings.useAlphaLayerEncoding;
 
 		if (settings.use10BitEncoding)
 		{

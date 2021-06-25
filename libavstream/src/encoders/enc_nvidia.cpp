@@ -12,6 +12,21 @@
 #include <libavstream/surfaces/surface_dx11.hpp>
 #include <libavstream/surfaces/surface_dx12.hpp>
 
+/**  
+    Low-latency use cases like game-streaming, video conferencing etc.
+
+	1. Ultra-low latency or low latency Tuning Info
+	2. Rate control mode = CBR
+	3. Multi Pass – Quarter/Full (evaluate and decide)
+	4. Very low VBV buffer size (e.g. single frame = bitrate/framerate)
+	5. No B Frames
+	6. Infinite GOP length
+	7. Adaptive quantization (AQ) enabled**
+	8. Long term reference pictures***
+	9. Intra refresh***
+	10. Non-reference P frames***
+	11. Force IDR***
+*/
 
 namespace
 {
@@ -280,7 +295,7 @@ namespace avs
 			}
 		}
 
-		// Check if 10-bit encodng is supported
+		// Check if 10-bit encoding is supported
 		{
 			NV_ENC_CAPS_PARAM capsParam;
 			capsParam.version = NV_ENC_CAPS_PARAM_VER;
@@ -295,7 +310,7 @@ namespace avs
 			}
 		}
 
-		// Check if YUV444 encodng is supported
+		// Check if YUV444 encoding is supported
 		{
 			NV_ENC_CAPS_PARAM capsParam;
 			capsParam.version = NV_ENC_CAPS_PARAM_VER;
@@ -303,6 +318,21 @@ namespace avs
 
 			// m_encoder not initialized here yet but function just needs the encode GUID.
 			if (NVFAILED(g_api.nvEncGetEncodeCaps(m_encoder, config.encodeGUID, &capsParam, (int*)&m_EncodeCapabilities.isYUV444Capable)))
+			{
+				shutdown();
+				AVSLOG(Error) << "EncoderNV: Failed to check encoder capability";
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check if alpha layer encoding is supported
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_ALPHA_LAYER_ENCODING;
+
+			// m_encoder not initialized here yet but function just needs the encode GUID.
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(m_encoder, config.encodeGUID, &capsParam, (int*)&m_EncodeCapabilities.isAlphaLayerSupported)))
 			{
 				shutdown();
 				AVSLOG(Error) << "EncoderNV: Failed to check encoder capability";
@@ -323,12 +353,21 @@ namespace avs
 				config.config.gopLength = params.idrInterval;
 			}
 
+			// Some settings that reduce latency
+			//config.config.rcParams.multiPass = NV_ENC_TWO_PASS_FULL_RESOLUTION;
+			config.config.rcParams.enableAQ = 1;
+			config.config.rcParams.enableNonRefP = 1;
+
 			auto& codecConfig = config.config.encodeCodecConfig;
 			if (config.encodeGUID == NV_ENC_CODEC_H264_GUID)
 			{
 				codecConfig.h264Config.level = NV_ENC_LEVEL_AUTOSELECT;
 				codecConfig.h264Config.repeatSPSPPS = 1;
 				codecConfig.h264Config.idrPeriod = config.config.gopLength;
+
+				// Settings for low latency
+				codecConfig.h264Config.enableIntraRefresh = 1;
+				//codecConfig.h264Config.enableLTR = 1;
 
 				// Only relevant if the input buffer format is a YUV format. Set to 1 for YUV420.
 				if (params.useYUV444ChromaFormat && m_EncodeCapabilities.isYUV444Capable)
@@ -342,16 +381,29 @@ namespace avs
 				codecConfig.hevcConfig.repeatSPSPPS = 1;
 				codecConfig.hevcConfig.idrPeriod = config.config.gopLength;
 
-				if (params.use10BitEncoding && m_EncodeCapabilities.is10BitCapable)
-				{
-					codecConfig.hevcConfig.pixelBitDepthMinus8 = 2;
-					config.config.profileGUID = NV_ENC_HEVC_PROFILE_MAIN10_GUID;
-				}
+				// Settings for low latency
+				codecConfig.hevcConfig.enableIntraRefresh = 1;
+				//codecConfig.hevcConfig.enableLTR = 1;
 
-				// Only relevant if the inpout buffer format is a YUV format. Set to 1 for YUV420.
-				if (params.useYUV444ChromaFormat && m_EncodeCapabilities.isYUV444Capable)
+				// 10-bit and YUV-444 are not supported with alpha encoding
+				if (params.useAlphaLayerEncoding && m_EncodeCapabilities.isAlphaLayerSupported)
 				{
-					codecConfig.hevcConfig.chromaFormatIDC = 3;
+					codecConfig.hevcConfig.enableAlphaLayerEncoding = 1;
+					config.config.rcParams.alphaLayerBitrateRatio = 3;
+				}
+				else
+				{
+					if (params.use10BitEncoding && m_EncodeCapabilities.is10BitCapable)
+					{
+						codecConfig.hevcConfig.pixelBitDepthMinus8 = 2;
+						config.config.profileGUID = NV_ENC_HEVC_PROFILE_MAIN10_GUID;
+					}
+
+					// Only relevant if the inpout buffer format is a YUV format. Set to 1 for YUV420.
+					if (params.useYUV444ChromaFormat && m_EncodeCapabilities.isYUV444Capable)
+					{
+						codecConfig.hevcConfig.chromaFormatIDC = 3;
+					}
 				}
 			}
 		}
@@ -422,7 +474,7 @@ namespace avs
 			initializeParams.privDataSize = 0;
 			initializeParams.enableExternalMEHints = 0;
 			initializeParams.encodeConfig = &config.config;
-
+			//initializeParams.tuningInfo = NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY;
 
 
 #if defined(PLATFORM_WINDOWS)
@@ -448,7 +500,8 @@ namespace avs
 			}
 			else
 			{
-				if (NVFAILED(g_api.nvEncInitializeEncoder(m_encoder, &initializeParams)))
+				NVENCSTATUS r = g_api.nvEncInitializeEncoder(m_encoder, &initializeParams);
+				if (NVFAILED(r))
 				{
 					shutdown();
 					AVSLOG(Error) << "EncoderNV: Failed to initialize hardware encoder";
@@ -485,6 +538,7 @@ namespace avs
 		m_params.useAsyncEncoding = params.useAsyncEncoding && m_EncodeCapabilities.isAsyncCapable;
 		m_params.use10BitEncoding = params.use10BitEncoding && m_EncodeCapabilities.is10BitCapable;
 		m_params.useYUV444ChromaFormat &= (m_EncodeCapabilities.isYUV444Capable != 0);
+		m_params.useAlphaLayerEncoding &= (m_EncodeCapabilities.isAlphaLayerSupported != 0);
 		m_params.idrInterval = config.config.gopLength;
 
 		return Result::OK;
@@ -641,8 +695,8 @@ namespace avs
 		assert(m_inputBuffer.ptr == nullptr);
 		assert(m_inputBuffer.devicePtr == 0);
 
-		size_t inputBufferWidthInBytes;
-		size_t inputBufferHeight;
+		size_t inputBufferWidthInBytes = 0;
+		size_t inputBufferHeight = 0;
 		const SurfaceFormat surfaceFormat = surface->getFormat();
 
 		uint32_t arbgBytesPerPixel = 4;
@@ -653,12 +707,12 @@ namespace avs
 		case NV_ENC_BUFFER_FORMAT_ABGR:
 		case NV_ENC_BUFFER_FORMAT_ABGR10:
 		case NV_ENC_BUFFER_FORMAT_ARGB10:
-			inputBufferWidthInBytes = surface->getWidth() * arbgBytesPerPixel;
+			inputBufferWidthInBytes = surface->getWidth() * (size_t)arbgBytesPerPixel;
 			inputBufferHeight = surface->getHeight();
 			break;
 		case NV_ENC_BUFFER_FORMAT_NV12:
 			inputBufferWidthInBytes = surface->getWidth();
-			inputBufferHeight = surface->getHeight() + (surface->getHeight() + 1) / 2;
+			inputBufferHeight = (size_t)surface->getHeight() + (surface->getHeight() + 1) / 2;
 			break;
 		default:
 			assert(false);
@@ -787,6 +841,8 @@ namespace avs
 		encParams.version = NV_ENC_PIC_PARAMS_VER;
 		encParams.bufferFmt = m_resource.mappedBufferFmt;
 		encParams.inputBuffer = m_resource.mappedResource;
+		// TODO: alphaBuffer should contain alpha data for NV12. Contained in inputBuffer for ARGB.
+		encParams.alphaBuffer = nullptr;
 		encParams.outputBitstream = m_outputBuffer.ptr;
 		encParams.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
 		encParams.inputWidth = m_registeredSurface.surface->getWidth();
@@ -797,7 +853,8 @@ namespace avs
 		if (forceIDR)
 			encParams.encodePicFlags = NV_ENC_PIC_FLAG_FORCEIDR | NV_ENC_PIC_FLAG_OUTPUT_SPSPPS;
 
-		if (NVFAILED(g_api.nvEncEncodePicture(m_encoder, &encParams)))
+		NVENCSTATUS r = g_api.nvEncEncodePicture(m_encoder, &encParams);
+		if (NVFAILED(r))
 		{
 			AVSLOG(Error) << "EncoderNV: Failed to encode frame";
 			result = Result::EncoderBackend_EncodeFailed;

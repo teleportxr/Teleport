@@ -44,6 +44,7 @@ namespace SCServer
 		, casterContext(nullptr)
 		, clientID(0)
 		, startingSession(false)
+		, timeStartingSession(0)
 		, timeSinceLastClientComm(0)
 	{}
 
@@ -218,6 +219,11 @@ namespace SCServer
 	{
 		timeSinceLastClientComm += deltaTime;
 
+		if (startingSession)
+		{
+			timeStartingSession += deltaTime;
+		}
+		
 		ENetEvent event;
 		while (enet_host_service(host, &event, 0) > 0)
 		{
@@ -233,7 +239,9 @@ namespace SCServer
 				discoveryService->discoveryCompleteForClient(clientID);
 				TELEPORT_COUT << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
 				startingSession = false;
-				break;
+				timeStartingSession = 0;
+				// Return because we don't want to process other events until the C# side objects have been created.
+				return;
 			case ENET_EVENT_TYPE_DISCONNECT:
 				assert(peer == event.peer);
 				timeSinceLastClientComm = 0;
@@ -246,11 +254,10 @@ namespace SCServer
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
 				timeSinceLastClientComm = 0;
-				if(event.packet->freeCallback!=0)
+				if (!startingSession)
 				{
-					TELEPORT_COUT << "freeCallback is nonzero " << std::endl;
-				}
 				dispatchEvent(event);
+				}
 				break;
 			}
 		}
@@ -280,6 +287,11 @@ namespace SCServer
 			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
 			Disconnect();
 		}
+	}
+
+	bool ClientMessaging::TimedOutStartingSession() const
+	{
+		return timeStartingSession > startSessionTimeout;
 	}
 
 	void ClientMessaging::Disconnect()

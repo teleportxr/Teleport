@@ -189,6 +189,7 @@ namespace avs
 		VPS,             /*!< Video Parameter Set (HEVC only) */
 		SPS,             /*!< Sequence Parameter Set */
 		PPS,             /*!< Picture Parameter Set */
+		ALE,			 /*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
 		OtherNALUnit,    /*!< Other NAL unit. */
 		AccessUnit,      /*!< Entire access unit (possibly multiple NAL units). */
 		ExtraData		 /*!< Data containing info relating to the video */
@@ -264,6 +265,7 @@ namespace avs
 		int32_t webcam_offset_y = 0;
 		uint32_t    use_10_bit_decoding = 0;
 		uint32_t    use_yuv_444_decoding = 0;
+		uint32_t    alpha_layer_encoding_enabled = 1;
 		uint32_t	colour_cubemap_size = 0;
 		int32_t		compose_cube = 0;
 		int32_t     use_cubemap = 1;

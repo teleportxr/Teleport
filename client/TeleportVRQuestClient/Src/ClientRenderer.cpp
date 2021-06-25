@@ -193,8 +193,10 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		mCopyCubemapEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		mCopyCubemapWithDepthEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		mCopyPerspectiveEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
+        mCopyPerspectiveWithDepthEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		mExtractTagDataIDEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		mExtractOneTagEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
+
 		scr::Effect::EffectCreateInfo effectCreateInfo = {};
 		effectCreateInfo.effectName = "CopyCubemap";
 		mCopyCubemapEffect->Create(&effectCreateInfo);
@@ -204,6 +206,9 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 		effectCreateInfo.effectName = "CopyPerspective";
 		mCopyPerspectiveEffect->Create(&effectCreateInfo);
+
+        effectCreateInfo.effectName = "CopyPerspectiveWithDepth";
+        mCopyPerspectiveWithDepthEffect->Create(&effectCreateInfo);
 
 		effectCreateInfo.effectName = "ExtractTagDataID";
 		mExtractTagDataIDEffect->Create(&effectCreateInfo);
@@ -240,12 +245,20 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			// pass to extract from the array into a single tag buffer:
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/CopyPerspective.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = copyPerspectiveSrc;
-			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_depth";
+			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_only";
 			scr::ShaderSystem::Pipeline cp3(&globalGraphicsResources.renderPlatform,
 											&pipelineCreateInfo);
-			effectPassCreateInfo.effectPassName = "PerspectiveColourAndDepth";
+			effectPassCreateInfo.effectPassName = "PerspectiveColour";
 			effectPassCreateInfo.pipeline = cp3;
 			mCopyPerspectiveEffect->CreatePass(&effectPassCreateInfo);
+
+            pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_depth";
+            scr::ShaderSystem::Pipeline cp4(&globalGraphicsResources.renderPlatform,
+                                            &pipelineCreateInfo);
+
+            effectPassCreateInfo.effectPassName = "PerspectiveColourAndDepth";
+            effectPassCreateInfo.pipeline = cp4;
+            mCopyPerspectiveWithDepthEffect->CreatePass(&effectPassCreateInfo);
 		}
 
 		{
@@ -253,10 +266,10 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/ExtractTagDataID.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractTagDataIDSrc;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_tag_data_id";
-			scr::ShaderSystem::Pipeline cp4(&globalGraphicsResources.renderPlatform,
+			scr::ShaderSystem::Pipeline cp5(&globalGraphicsResources.renderPlatform,
 											&pipelineCreateInfo);
 			effectPassCreateInfo.effectPassName = "ExtractTagDataID";
-			effectPassCreateInfo.pipeline = cp4;
+			effectPassCreateInfo.pipeline = cp5;
 			mExtractTagDataIDEffect->CreatePass(&effectPassCreateInfo);
 
 			std::string ExtractTagDataSrc = clientAppInterface->LoadTextFile(
@@ -265,10 +278,10 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/ExtractOneTag.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractTagDataSrc;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_tag_data";
-			scr::ShaderSystem::Pipeline cp5(&globalGraphicsResources.renderPlatform,
+			scr::ShaderSystem::Pipeline cp6(&globalGraphicsResources.renderPlatform,
 											&pipelineCreateInfo);
 			effectPassCreateInfo.effectPassName = "ExtractOneTag";
-			effectPassCreateInfo.pipeline = cp5;
+			effectPassCreateInfo.pipeline = cp6;
 			mExtractOneTagEffect->CreatePass(&effectPassCreateInfo);
 
 			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {2
@@ -310,7 +323,20 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 				scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB",
 				{mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
-		mCopyPerspectiveShaderResources.SetLayout(layout);
+
+        mPerspectiveColourAndDepthShaderResources.SetLayout(layout);
+        mPerspectiveColourAndDepthShaderResources.AddImage(
+                scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0,
+                "destTex", {globalGraphicsResources.sampler, mRenderTexture});
+        mPerspectiveColourAndDepthShaderResources.AddImage(
+                scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
+                "videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
+        mPerspectiveColourAndDepthShaderResources.AddBuffer(
+                scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "cubemapUB",
+                {mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
+        mPerspectiveColourAndDepthShaderResources.SetLayout(layout);
+
+        mCopyPerspectiveShaderResources.SetLayout(layout);
 		mCopyPerspectiveShaderResources.AddImage(
 				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0,
 				"destTex", {globalGraphicsResources.sampler, mRenderTexture});
@@ -341,7 +367,8 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 		mCopyCubemapWithDepthEffect->LinkShaders("ColourAndDepth",{mColourAndDepthShaderResources});
 		mCopyCubemapEffect->LinkShaders("CopyCubemap", {mCopyCubemapShaderResources});
-		mCopyPerspectiveEffect->LinkShaders("PerspectiveColourAndDepth",{mCopyPerspectiveShaderResources});
+        mCopyPerspectiveWithDepthEffect->LinkShaders("PerspectiveColourAndDepth",{mPerspectiveColourAndDepthShaderResources});
+		mCopyPerspectiveEffect->LinkShaders("PerspectiveColour",{mCopyPerspectiveShaderResources});
 		mExtractTagDataIDEffect->LinkShaders("ExtractTagDataID", {mExtractTagShaderResources});
 		mExtractOneTagEffect->LinkShaders("ExtractOneTag", {mExtractTagShaderResources});
 	}
@@ -774,28 +801,55 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			cubemapUB.dimensions = {cubemapUB.faceSize * 3, cubemapUB.faceSize * 2};
 
 			scr::InputCommandCreateInfo inputCommandCreateInfo;
-			inputCommandCreateInfo.effectPassName = "ColourAndDepth";
 
-			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
-												   mCopyCubemapWithDepthEffect,
-												   {mColourAndDepthShaderResources});
+			if (videoConfig.alpha_layer_encoding_enabled)
+            {
+                inputCommandCreateInfo.effectPassName = "CopyCubemap";
 
-			mDeviceContext.DispatchCompute(&inputCommand);
+                scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+                                                       mCopyCubemapEffect,
+                                                       {mCopyCubemapShaderResources});
+
+                mDeviceContext.DispatchCompute(&inputCommand);
+            }
+			else
+            {
+                inputCommandCreateInfo.effectPassName = "ColourAndDepth";
+
+                scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+                                                       mCopyCubemapWithDepthEffect,
+                                                       {mColourAndDepthShaderResources});
+
+                mDeviceContext.DispatchCompute(&inputCommand);
+            }
 		}
 		else
 		{
 			scr::uvec3 perspSize = { size.x, size.y, 1};
 			const auto texInfo = mRenderTexture->GetTextureCreateInfo();
 			cubemapUB.dimensions = { texInfo.width, texInfo.height };
+            scr::InputCommandCreateInfo inputCommandCreateInfo;
 
-			scr::InputCommandCreateInfo inputCommandCreateInfo;
-			inputCommandCreateInfo.effectPassName = "PerspectiveColourAndDepth";
+            if (videoConfig.alpha_layer_encoding_enabled)
+            {
+                inputCommandCreateInfo.effectPassName = "PerspectiveColour";
 
-			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, perspSize,
-												   mCopyPerspectiveEffect,
-												   {mCopyPerspectiveShaderResources});
+                scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, perspSize,
+                                                       mCopyPerspectiveEffect,
+                                                       {mCopyPerspectiveShaderResources});
 
-			mDeviceContext.DispatchCompute(&inputCommand);
+                mDeviceContext.DispatchCompute(&inputCommand);
+            }
+            else
+            {
+                inputCommandCreateInfo.effectPassName = "PerspectiveColourAndDepth";
+
+                scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, perspSize,
+                                                       mCopyPerspectiveWithDepthEffect,
+                                                       {mPerspectiveColourAndDepthShaderResources});
+
+                mDeviceContext.DispatchCompute(&inputCommand);
+            }
 		}
 
 		GLCheckErrorsWithTitle("Frame: CopyToCubemaps - Main");

@@ -277,6 +277,7 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		{
 			AVSLOG(Warning) << "Decoder: Failed to parse/decode the video frame \n";
 		}
+		break;
 
 	} while (result == Result::OK);
 
@@ -347,6 +348,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		return Result::DecoderBackend_PayloadIsExtraData;
 	}
 
+	// There are two VCLs per frame with alpha layer encoding enabled (HEVC only) and one without.
 	if (payloadType == VideoPayloadType::VCL)
 	{
 		if (!m_firstVCLOffset)
@@ -366,8 +368,6 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		}
 	}
 	
-
-	// Update payload flags
 	bool isCodecConfig = false;
 	bool isRedundant = false;
 
@@ -387,6 +387,11 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		isRedundant = m_state.hasSPS;
 		isCodecConfig = true;
 		m_state.hasSPS = true;
+		break;
+	case VideoPayloadType::ALE:
+		isRedundant = m_state.hasALE;
+		isCodecConfig = true;
+		m_state.hasALE = true;
 		break;
 	default:
 		break;
@@ -409,11 +414,18 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 #if defined(PLATFORM_WINDOWS)
 		const void* frameData = buffer + m_extraDataSize;
 		size_t frameSize = m_frame.dataSize - m_extraDataSize;
+		//size_t firstSize = m_firstVCLOffset - m_extraDataSize;
+		//size_t frameSize = firstSize + dataSize;
+		//uint8_t* b = new uint8_t[frameSize];
+		//memcpy(b, buffer + m_extraDataSize, firstSize);
+		//memcpy(b + firstSize, data, dataSize);
 		// NVidia decoder takes the whole frame
 		result = m_backend->decode(frameData, frameSize, payloadType, isLastPayload);
+		//delete[] b;
 #elif defined(PLATFORM_ANDROID)
 		size_t size = m_frame.dataSize - m_firstVCLOffset;
 		result = m_backend->decode(buffer + m_firstVCLOffset, size, payloadType, isLastPayload);
+		//result = m_backend->decode(buffer + dataOffset, dataSize, payloadType, isLastPayload);
 #endif
 		if (result == avs::Result::DecoderBackend_ReadyToDisplay)
 		{
@@ -427,7 +439,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 	else
 	{
 #if defined(PLATFORM_ANDROID)
-		result = m_backend->decode(buffer + dataOffset, dataSize, payloadType, isLastPayload);
+		result = m_backend->decode(data, dataSize, payloadType, isLastPayload);
 #endif
 	}
 	

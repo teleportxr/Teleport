@@ -39,6 +39,8 @@ struct DecoderParams
 	bool use10BitDecoding = false;
 	/*! If using a YUV output format, the decoder will use chroma format YUV444 if true and YUV420 if false.*/
 	bool useYUV444ChromaFormat = false;
+	/*! True if the encoder uses alpha layer encoding; a separate decoder will be created for alpha. */
+	bool useAlphaLayerDecoding = false;
 };
 
 /*!

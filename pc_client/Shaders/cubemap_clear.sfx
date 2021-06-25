@@ -117,7 +117,7 @@ shader vec4 PS_UsePerspectiveOld(posTexVertexOutput IN) : SV_TARGET
 
 	vec4 lookup = perspectiveTexture.SampleLevel(wrapSamplerState, texCoords, 0);
 
-	return lookup; //vec4(vec.xyz, 1.0);
+	return lookup; 
 }
 
 shader vec4 PS_UsePerspective(posTexVertexOutput IN) : SV_TARGET
@@ -274,7 +274,8 @@ shader void CS_RecomposePerspective(uint3 g : SV_GroupID, uint3 t : SV_GroupThre
 	float4 SceneColor = plainTexture.Load(pos);
 	// RGB values are squared here because the server used their square root to improve colour quantization in the video encoder. 
 	SceneColor.rgb *= SceneColor.rgb;
-	RWTextureTargetArray[pos] = SceneColor;
+	float alpha = SceneColor.a;
+	RWTextureTargetArray[pos] = SceneColor;//float4(alpha, alpha, alpha, 1.0);
 }
 
 [numthreads(16, 16, 1)]

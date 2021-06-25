@@ -27,6 +27,7 @@ namespace avs
 				case 32: return VideoPayloadType::VPS;
 				case 33: return VideoPayloadType::SPS;
 				case 34: return VideoPayloadType::PPS;
+				case 39: return VideoPayloadType::ALE;
 				case 62: return VideoPayloadType::ExtraData;
 				}
 			}

@@ -584,7 +584,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 	}
 	else
 	{
-		if (!clientPair->second.clientMessaging.isStartingSession())
+		if (!clientPair->second.clientMessaging.isStartingSession() || clientPair->second.clientMessaging.TimedOutStartingSession())
 		{
 			clientPair->second.clientMessaging.Disconnect();
 		}
@@ -682,7 +682,8 @@ TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID, ClientSettings 
 		return;
 	}
 	ClientData& clientData = clientPair->second;
-	clientData.clientSettings=clientSettings;
+	clientData.clientSettings = clientSettings;
+	clientData.validClientSettings = true;
 }
 
 TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
@@ -695,7 +696,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	}
 	ClientData& clientData = clientPair->second;
 	//not ready?
-	if(clientData.clientSettings.diffusePos[0]==0)
+	if(!clientData.validClientSettings)
 		return;
 	clientData.geometryStreamingService->startStreaming(&clientData.casterContext);
 
@@ -747,6 +748,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.webcam_offset_y			= clientData.clientSettings.webcamPos[1];
 	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
+	videoConfig.alpha_layer_encoding_enabled = casterSettings.useAlphaLayerEncoding;
 	videoConfig.colour_cubemap_size		= encoderSettings.frameWidth / 3;
 	videoConfig.compose_cube			= encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec				= casterSettings.videoCodec;
@@ -762,9 +764,8 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	
 	videoConfig.specular_mips		=clientData.clientSettings.specularMips;
 	// To the right of the specular cube, after 3 mips = 1 + 1/2 + 1/4
-	
 	videoConfig.diffuse_cubemap_size=clientData.clientSettings.diffuseCubemapSize;
-	// To the right of the depth map, under the specular map.
+	// To the right of the depth map (if alpha layer encoding is disabled), under the specular map.
 	videoConfig.diffuse_x			=clientData.clientSettings.diffusePos[0];//depth_cubemap_size*3;
 	videoConfig.diffuse_y			=clientData.clientSettings.diffusePos[1];//videoConfig.specular_y+casterSettings.specularCubemapSize*2;
 	
@@ -1105,6 +1106,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.perspective_fov = casterSettings.perspectiveFOV;
 	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
+	videoConfig.alpha_layer_encoding_enabled = casterSettings.useAlphaLayerEncoding;
 	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;

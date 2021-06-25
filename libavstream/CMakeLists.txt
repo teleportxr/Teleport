@@ -49,6 +49,8 @@ set(src_private_stream
 	src/stream/parser.cpp
 	src/decoders/dec_nvidia.cpp
 	src/encoders/enc_nvidia.cpp
+	src/decoders/dec_nvidia.cu
+	src/encoders/enc_nvidia.cu
 )
 set(hdr_private_root
 	src/common_p.hpp
@@ -268,7 +270,7 @@ if(LIBAV_USE_EFP)
 	set(efp_include_paths ${efp_SOURCE_DIR} ${efp_BINARY_DIR})
 	#message(WARNING efp_include_paths ${efp_include_paths})
 endif()
-target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} PUBLIC include ${PTHREAD_INCLUDE_DIR})
+target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} include ${PTHREAD_INCLUDE_DIR} PUBLIC include/libavstream)
 target_compile_features(libavstream PRIVATE cxx_std_17)
 
 if(LIBAV_BUILD_SHARED_LIBS)
@@ -302,6 +304,6 @@ target_link_libraries(libavstream asio nv srt_static efp)
 # Build CUDA kernels on PC platforms only
 if(NOT ANDROID)
 	add_dependencies(libavstream cuda_kernels)
-	target_include_directories(libavstream PUBLIC "${LIBAV_CUDA_SAMPLES_DIR}/common/inc")
-	target_include_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/include")
+	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_SAMPLES_DIR}/common/inc")
+	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_DIR}/include")
 endif()
