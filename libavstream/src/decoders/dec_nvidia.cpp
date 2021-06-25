@@ -278,10 +278,17 @@ namespace avs
 				return Result::DecoderBackend_CodecNotSupported;
 			}
 
-			if (CUFAILED(cuvidCreateDecoder(&m_decoder, &createInfo)))
+			if (CUFAILED(cuvidCreateDecoder(&m_colorDecoder, &createInfo)))
 			{
 				shutdown();
 				AVSLOG(Error) << "DecoderNV: Failed to create the video decoder";
+				return Result::DecoderBackend_InitFailed;
+			}
+
+			if (CUFAILED(cuvidCreateDecoder(&m_alphaDecoder, &createInfo)))
+			{
+				shutdown();
+				AVSLOG(Error) << "DecoderNV: Failed to create the alpha video decoder";
 				return Result::DecoderBackend_InitFailed;
 			}
 		}
@@ -296,7 +303,7 @@ namespace avs
 
 	Result DecoderNV::reconfigure(int frameWidth, int frameHeight, const DecoderParams& params)
 	{
-		if (!m_decoder)
+		if (!m_colorDecoder)
 		{
 			AVSLOG(Error) << "DecoderNV: Can't reconfigure because decoder not initialized";
 			return Result::DecoderBackend_NotInitialized;
@@ -310,9 +317,15 @@ namespace avs
 		reconfigInfo.ulNumDecodeSurfaces = numDecodeSurfaces;
 		
 
-		if (CUFAILED(cuvidReconfigureDecoder(&m_decoder, &reconfigInfo)))
+		if (CUFAILED(cuvidReconfigureDecoder(&m_colorDecoder, &reconfigInfo)))
 		{
 			AVSLOG(Error) << "DecoderNV: Failed to reconfigure the video decoder";
+			return Result::DecoderBackend_ReconfigFailed;
+		}
+
+		if (CUFAILED(cuvidReconfigureDecoder(&m_alphaDecoder, &reconfigInfo)))
+		{
+			AVSLOG(Error) << "DecoderNV: Failed to reconfigure the alpha video decoder";
 			return Result::DecoderBackend_ReconfigFailed;
 		}
 
@@ -329,10 +342,15 @@ namespace avs
 			unregisterSurface();
 		}
 
-		if (m_decoder)
+		if (m_colorDecoder)
 		{
-			cuvidDestroyDecoder(m_decoder);
-			m_decoder = nullptr;
+			cuvidDestroyDecoder(m_colorDecoder);
+			m_colorDecoder = nullptr;
+		}
+		if (m_alphaDecoder)
+		{
+			cuvidDestroyDecoder(m_alphaDecoder);
+			m_alphaDecoder = nullptr;
 		}
 		if (m_parser)
 		{
@@ -377,7 +395,7 @@ namespace avs
 
 		CUDA::ContextGuard ctx(m_context);
 
-		if (!m_decoder)
+		if (!m_colorDecoder)
 		{
 			AVSLOG(Error) << "DecoderNV: Decoder not initialized";
 			return Result::DecoderBackend_NotInitialized;
@@ -428,7 +446,7 @@ namespace avs
 	{
 		CUDA::ContextGuard ctx(m_context);
 
-		if (!m_decoder)
+		if (!m_colorDecoder)
 		{
 			AVSLOG(Error) << "DecoderNV: Decoder not initialized";
 			return Result::DecoderBackend_NotInitialized;
@@ -452,7 +470,7 @@ namespace avs
 
 	Result DecoderNV::decode(const void* buffer, size_t bufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload)
 	{
-		if (!m_parser || !m_decoder)
+		if (!m_parser || !m_colorDecoder)
 		{
 			return Result::DecoderBackend_NotInitialized;
 		}
@@ -493,7 +511,7 @@ namespace avs
 
 		CUVIDPROCPARAMS procParams = {};
 		procParams.progressive_frame = 1;
-		if (CUFAILED(cuvidMapVideoFrame(m_decoder, m_displayPictureIndex, &frameDevicePtr, &framePitch, &procParams)))
+		if (CUFAILED(cuvidMapVideoFrame(m_colorDecoder, m_displayPictureIndex, &frameDevicePtr, &framePitch, &procParams)))
 		{
 			AVSLOG(Warning) << "DecoderNV: Failed to map video frame";
 			return Result::DecoderBackend_DisplayFailed;
@@ -502,7 +520,7 @@ namespace avs
 		if (CUFAILED(cuGraphicsMapResources(1, &m_registeredSurface, 0)))
 		{
 			AVSLOG(Warning) << "DecoderNV: Failed to map registered output surface for post processing";
-			cuvidUnmapVideoFrame(m_decoder, frameDevicePtr);
+			cuvidUnmapVideoFrame(m_colorDecoder, frameDevicePtr);
 			return Result::DecoderBackend_DisplayFailed;
 		}
 
@@ -543,6 +561,7 @@ namespace avs
 		}
 		assert(ppKernel);
 
+		//frameDevicePtr += ((unsigned long long)m_frameWidth * m_frameHeight * 3);
 		void* ppKernelParams[] = {
 			&frameDevicePtr,
 			&m_frameWidth,
@@ -568,7 +587,7 @@ namespace avs
 		}
 
 		cuGraphicsUnmapResources(1, &m_registeredSurface, 0);
-		cuvidUnmapVideoFrame(m_decoder, frameDevicePtr);
+		cuvidUnmapVideoFrame(m_colorDecoder, frameDevicePtr);
 
 		m_displayPictureIndex = -1;
 		return result;
@@ -601,7 +620,7 @@ namespace avs
 		assert(pic);
 
 		DecoderNV* self = reinterpret_cast<DecoderNV*>(userData);
-		if (CUFAILED(cuvidDecodePicture(self->m_decoder, pic)))
+		if (CUFAILED(cuvidDecodePicture(self->m_colorDecoder, pic)))
 		{
 			AVSLOG(Warning) << "DecoderNV: Failed to decode picture";
 			return 0;

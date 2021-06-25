@@ -353,12 +353,21 @@ namespace avs
 				config.config.gopLength = params.idrInterval;
 			}
 
+			// Some settings that reduce latency
+			//config.config.rcParams.multiPass = NV_ENC_TWO_PASS_FULL_RESOLUTION;
+			config.config.rcParams.enableAQ = 1;
+			config.config.rcParams.enableNonRefP = 1;
+
 			auto& codecConfig = config.config.encodeCodecConfig;
 			if (config.encodeGUID == NV_ENC_CODEC_H264_GUID)
 			{
 				codecConfig.h264Config.level = NV_ENC_LEVEL_AUTOSELECT;
 				codecConfig.h264Config.repeatSPSPPS = 1;
 				codecConfig.h264Config.idrPeriod = config.config.gopLength;
+
+				// Settings for low latency
+				codecConfig.h264Config.enableIntraRefresh = 1;
+				//codecConfig.h264Config.enableLTR = 1;
 
 				// Only relevant if the input buffer format is a YUV format. Set to 1 for YUV420.
 				if (params.useYUV444ChromaFormat && m_EncodeCapabilities.isYUV444Capable)
@@ -371,6 +380,10 @@ namespace avs
 				codecConfig.hevcConfig.level = NV_ENC_LEVEL_AUTOSELECT;
 				codecConfig.hevcConfig.repeatSPSPPS = 1;
 				codecConfig.hevcConfig.idrPeriod = config.config.gopLength;
+
+				// Settings for low latency
+				codecConfig.hevcConfig.enableIntraRefresh = 1;
+				//codecConfig.hevcConfig.enableLTR = 1;
 
 				// 10-bit and YUV-444 are not supported with alpha encoding
 				if (params.useAlphaLayerEncoding && m_EncodeCapabilities.isAlphaLayerSupported)
@@ -461,7 +474,7 @@ namespace avs
 			initializeParams.privDataSize = 0;
 			initializeParams.enableExternalMEHints = 0;
 			initializeParams.encodeConfig = &config.config;
-
+			//initializeParams.tuningInfo = NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY;
 
 
 #if defined(PLATFORM_WINDOWS)
@@ -487,7 +500,8 @@ namespace avs
 			}
 			else
 			{
-				if (NVFAILED(g_api.nvEncInitializeEncoder(m_encoder, &initializeParams)))
+				NVENCSTATUS r = g_api.nvEncInitializeEncoder(m_encoder, &initializeParams);
+				if (NVFAILED(r))
 				{
 					shutdown();
 					AVSLOG(Error) << "EncoderNV: Failed to initialize hardware encoder";
@@ -839,7 +853,8 @@ namespace avs
 		if (forceIDR)
 			encParams.encodePicFlags = NV_ENC_PIC_FLAG_FORCEIDR | NV_ENC_PIC_FLAG_OUTPUT_SPSPPS;
 
-		if (NVFAILED(g_api.nvEncEncodePicture(m_encoder, &encParams)))
+		NVENCSTATUS r = g_api.nvEncEncodePicture(m_encoder, &encParams);
+		if (NVFAILED(r))
 		{
 			AVSLOG(Error) << "EncoderNV: Failed to encode frame";
 			result = Result::EncoderBackend_EncodeFailed;

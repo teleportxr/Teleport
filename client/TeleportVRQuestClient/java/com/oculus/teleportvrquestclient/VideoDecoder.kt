@@ -20,6 +20,7 @@ enum class PayloadType {
     VPS,            /*!< Video Parameter Set (HEVC only) */
     SPS,            /*!< Sequence Parameter Set */
     PPS,            /*!< Picture Parameter Set */
+    ALE,            /*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
     OtherNALUnit,   /*!< Other NAL unit. */
     AccessUnit,     /*!< Entire access unit (possibly multiple NAL units). */
 }
@@ -77,6 +78,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
             PayloadType.VPS -> MediaCodec.BUFFER_FLAG_CODEC_CONFIG
             PayloadType.PPS -> MediaCodec.BUFFER_FLAG_CODEC_CONFIG
             PayloadType.SPS -> MediaCodec.BUFFER_FLAG_CODEC_CONFIG
+            PayloadType.ALE -> MediaCodec.BUFFER_FLAG_CODEC_CONFIG
             else -> 0
         }
         val startCodes = when(payloadFlags)

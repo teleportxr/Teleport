@@ -189,6 +189,7 @@ namespace avs
 		VPS,             /*!< Video Parameter Set (HEVC only) */
 		SPS,             /*!< Sequence Parameter Set */
 		PPS,             /*!< Picture Parameter Set */
+		ALE,			 /*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
 		OtherNALUnit,    /*!< Other NAL unit. */
 		AccessUnit,      /*!< Entire access unit (possibly multiple NAL units). */
 		ExtraData		 /*!< Data containing info relating to the video */

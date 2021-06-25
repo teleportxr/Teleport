@@ -25,6 +25,7 @@ namespace avs
 		bool hasVPS = false;
 		bool hasPPS = false;
 		bool hasSPS = false;
+		bool hasALE = false;
 
 		bool isReady(VideoCodec codec) const
 		{
@@ -156,6 +157,8 @@ namespace avs
 		bool idrRequired() const;
 
 		long long getTotalFramesProcessed() const;
+
+		int testCount = 0;
 	private:
 		Result onInputLink(int slot, Node* node) override;
 		Result onOutputLink(int slot, Node* node) override;

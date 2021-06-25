@@ -38,7 +38,9 @@ namespace avs
 
 		CUcontext m_context = nullptr;
 		CUvideoparser m_parser = nullptr;
-		CUvideodecoder m_decoder = nullptr;
+		CUvideodecoder m_colorDecoder = nullptr;
+		CUvideodecoder m_alphaDecoder = nullptr;
+		CUvideodecoder m_activeDecoder = nullptr;
 		unsigned int m_frameWidth = 0;
 		unsigned int m_frameHeight = 0;
 		int m_displayPictureIndex = -1;
