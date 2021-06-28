@@ -63,7 +63,7 @@ layout(location = 3)  out vec3 v_Binormal;
 layout(location = 4)  out mat3 v_TBN;
 layout(location = 7)  out vec2 v_UV_diffuse;
 layout(location = 8)  out vec2 v_UV_normal;
-layout(location = 9)  out vec4 v_Color;
+layout(location = 9)  out vec2 v_UV_lightmap;
 layout(location = 10) out vec4 v_Joint;
 layout(location = 11) out vec4 v_Weights;
 layout(location = 12) out vec3 v_CameraPosition;
@@ -118,7 +118,12 @@ layout(std140, binding = 3) uniform u_BoneData
 {
     mat4 u_Bones[64];
 };
-
+/*
+layout(std140, binding = 5) uniform u_PerMeshInstanceData
+{
+    vec4 u_LightmapScaleOffset;
+} perMeshInstance;
+*/
 struct VertexSurfaceProperties
 {
     vec3 position;
@@ -170,7 +175,8 @@ void Static()
     vec2 UV1		    = vec2(a_UV1.x,a_UV1.y);
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
-    v_Color		        = a_Color;
+    v_UV_lightmap       =UV1;//*perMeshInstance.u_LightmapScaleOffset.xy+perMeshInstance.u_LightmapScaleOffset.zw;
+
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;
     v_CameraPosition    = cam.u_Position;
@@ -210,7 +216,8 @@ void Animated()
     vec2 UV1		    =a_UV1.xy;
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
-    v_Color		        = a_Color;
+    v_UV_lightmap       =UV1;//*perMeshInstance.u_LightmapScaleOffset.xy+perMeshInstance.u_LightmapScaleOffset.zw;
+
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;
     v_CameraPosition    = cam.u_Position;

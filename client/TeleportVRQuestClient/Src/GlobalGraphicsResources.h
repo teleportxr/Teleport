@@ -7,10 +7,17 @@
 #include "SCR_Class_GL_Impl/GL_Sampler.h"
 #include "SCR_Class_GL_Impl/GL_Skin.h"
 
+struct PerMeshInstanceData
+{
+	avs::vec4 u_LightmapScaleOffset;
+};
+
 struct GlobalGraphicsResources
 {
 public:
 	GlobalGraphicsResources();
+	void Init();
+	const scr::ShaderResource& GetPerMeshInstanceShaderResource(const PerMeshInstanceData&) const;
 	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
 
     scc::GL_RenderPlatform renderPlatform;
@@ -19,6 +26,7 @@ public:
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataBuffer;
 	scr::ShaderResource lightCubemapShaderResources;
 	scr::ShaderResource tagShaderResource;
+	scr::ShaderResource perMeshInstanceShaderResource;
 
 	scc::GL_Effect defaultPBREffect;
 	scc::GL_Skin defaultSkin;
@@ -34,4 +42,6 @@ public:
 	static std::string GenerateShaderPassName(bool lightmap, bool diffuse,bool normal,bool combined,bool emissive,int lightcount,bool highlight);
 private:
 	static GlobalGraphicsResources *instance;
+	PerMeshInstanceData perMeshInstanceData;
+	std::shared_ptr<scr::UniformBuffer> s_perMeshInstanceUniformBuffer;
 };

@@ -3,7 +3,6 @@
 precision mediump float;
 
 //To Output Framebuffer - Use gl_FragColor
-//layout(location = 0) out vec4 colour;
 
 //From Vertex Varying
 layout(location = 0)	in vec3 v_Position;
@@ -13,7 +12,7 @@ layout(location = 3)	in vec3 v_Binormal;
 layout(location = 4)	in mat3 v_TBN;
 layout(location = 7)	in vec2 v_UV_diffuse;
 layout(location = 8)	in vec2 v_UV_normal;
-layout(location = 9)  in vec4 v_Color;
+layout(location = 9)  in vec2 v_UV_lightmap;
 layout(location = 10) in vec4 v_Joint;
 layout(location = 11) in vec4 v_Weights;
 layout(location = 12) in vec3 v_CameraPosition;
@@ -102,7 +101,7 @@ layout(std140, binding = 0) uniform u_CameraData
 {
 	mat4 u_ProjectionMatrix;
 	mat4 u_ViewMatrix;
-	vec4 u_Orientation; //Quaternion
+	vec4 u_Orientation; // Quaternion
 	vec3 u_Position;
 	float u_DrawDistance;
 } cam;
@@ -116,11 +115,10 @@ layout(binding = 10) uniform sampler2D u_DiffuseTexture;
 layout(binding = 11) uniform sampler2D u_NormalTexture;
 layout(binding = 12) uniform sampler2D u_CombinedTexture;
 layout(binding = 13) uniform sampler2D u_EmissiveTexture;
-
 layout(binding = 14) uniform samplerCube u_SpecularCubemap;
 //layout(binding = 15) uniform samplerCube u_LightsCubemap;
 layout(binding = 15) uniform samplerCube u_DiffuseCubemap;
-layout(binding = 16) uniform sampler2D u_LightMap;
+layout(binding = 16) uniform sampler2D u_LightmapTexture;
 
 layout(binding = 19) uniform sampler2D u_ShadowMap0;
 layout(binding = 20) uniform sampler2D u_ShadowMap1;
@@ -427,12 +425,18 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 	return surfaceProperties;
 }
 
+vec3 PBRLightmap(SurfaceProperties surfaceProperties)
+{
+	vec3 lookup=texture(u_LightmapTexture, v_UV_lightmap).rgb;
+	return vec3(v_UV_lightmap.xy,0);//*surfaceProperties.albedo;
+}
+
 void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool highlight)
 {
 	vec3 diff					=v_Position-v_CameraPosition;
 	float dist_to_frag          =length(diff);
-	if (dist_to_frag > cam.u_DrawDistance)
-		discard;
+	//if (dist_to_frag > cam.u_DrawDistance)
+		//discard;
 	vec3 view = normalize(diff);
 	SurfaceProperties surfaceProperties=GetSurfaceProperties(diffuseTex,normalTex,combinedTex,emissiveTex,ambient,maxLights,false);
 
@@ -441,6 +445,10 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	if (ambient)
 	{
 		c							=PBRAmbient(surfaceState, view, surfaceProperties);
+	}
+	else if(lightmap)
+	{
+		c							=PBRLightmap(surfaceProperties);
 	}
 	else
 	{
@@ -469,6 +477,7 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	{
 		u.rgb+=vec3(0.1,0.1,0.1);
 	}
+	//u.rgb=fract(v_Position);//vec3(dist_to_frag,dist_to_frag,cam.u_DrawDistance));//v_UV_lightmap.xyy);
 	//u.rgb=surfaceProperties.albedo;
 	gl_FragColor = Gamma(u);
 }

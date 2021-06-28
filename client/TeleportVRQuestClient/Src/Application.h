@@ -117,6 +117,7 @@ namespace OVRFW
 
 		static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
 		const scr::Effect::EffectPassCreateInfo *BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources) override;
+		void DrawTexture(avs::vec3 &offset,scr::Texture &texture) override;
 		void PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,...) override;
 		std::string LoadTextFile(const char *filename) override;
 

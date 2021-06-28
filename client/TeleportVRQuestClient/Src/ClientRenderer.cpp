@@ -406,6 +406,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	shaderResourceLayout.AddBinding(1, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	shaderResourceLayout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
 	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(5, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
 
 	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	shaderResourceLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
@@ -415,19 +416,20 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	shaderResourceLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	shaderResourceLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	shaderResourceLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(17, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	scr::ShaderResource pbrShaderResource(shaderResourceLayout);
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,0,"u_CameraData", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataID", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,4,"u_BoneData", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,2,"u_MaterialData", {});
+	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,5,"u_PerMeshInstanceData", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,10,"u_DiffuseTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,11,"u_NormalTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,12,"u_CombinedTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,13,"u_EmissiveTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,14,"u_SpecularCubemap", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,15,"u_DiffuseCubemap", {});
+	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_LightmapTexture", {});
 
 	passNames.clear();
 	passNames.push_back("PBRSimpleDefault");
@@ -478,10 +480,10 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 								static char txt2[2000];
 								char const  *true_or_false[] = {"false", "true"};
-								sprintf(txt2, "\nvoid %s()\n{\nPBR(%s,%s,%s,%s,%s,true, %d, %s);\n}",
+								sprintf(txt2, "\nvoid %s()\n{\nPBR(%s,%s,%s,%s,%s,%s, %d, %s);\n}",
 										passname.c_str(), true_or_false[lightmap], true_or_false[diffuse], true_or_false[normal],
-										true_or_false[combined], true_or_false[emissive],
-										lightCount, true_or_false[highlight]);
+										true_or_false[combined], true_or_false[emissive],true_or_false[!lightmap]
+										,lightCount, true_or_false[highlight]);
 								src += txt2;
 							}
 						}
@@ -1111,7 +1113,10 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			}
 
 			std::vector<const scr::ShaderResource *> pbrShaderResources;
+			PerMeshInstanceData perMeshInstanceData;
+			perMeshInstanceData.u_LightmapScaleOffset=ovrNode->GetLightmapScaleOffset();
 			pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
+			//pbrShaderResources.push_back(&globalGraphicsResources.GetPerMeshInstanceShaderResource(perMeshInstanceData));
 			//Push surfaces onto render queue.
 			for(ovrSurfaceDef& surfaceDef : ovrNode->GetSurfaces())
 			{

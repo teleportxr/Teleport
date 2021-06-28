@@ -109,14 +109,10 @@ bool Application::ProcessIniFile()
 	if (rc == SI_OK)
 	{
 		server_ip = ini.GetValue("", "SERVER_IP", "");
-		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",
-												 TELEPORT_SERVER_DISCOVERY_PORT);
-		client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",
-											   TELEPORT_CLIENT_SERVICE_PORT);
-		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",
-												 TELEPORT_CLIENT_STREAMING_PORT);
-		uint32_t client_id = ini.GetLongValue("", "CLIENT_ID",
-											  TELEPORT_DEFAULT_CLIENT_ID);
+		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",TELEPORT_SERVER_DISCOVERY_PORT);
+		client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",TELEPORT_CLIENT_SERVICE_PORT);
+		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",TELEPORT_CLIENT_STREAMING_PORT);
+		uint32_t client_id = ini.GetLongValue("", "CLIENT_ID",TELEPORT_DEFAULT_CLIENT_ID);
 
 		sessionClient.SetDiscoveryClientID(client_id);
 		return true;
@@ -240,9 +236,6 @@ void Application::EnteredVrMode()
 	lightingCubemapLayout.AddBinding(16,
 									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	lightingCubemapLayout.AddBinding(17,
-									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	globalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
 	globalGraphicsResources.lightCubemapShaderResources.AddImage(
@@ -257,7 +250,7 @@ void Application::EnteredVrMode()
 		clientRenderer.mlightmapTexture=resourceCreator.m_DummyWhite;
 	globalGraphicsResources.lightCubemapShaderResources.AddImage(
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16,
-			"u_LightsCubemap", {clientRenderer.mlightmapTexture->GetSampler()
+			"u_LightmapTexture", {clientRenderer.mlightmapTexture->GetSampler()
 								, clientRenderer.mlightmapTexture});
 
 	scr::ShaderResourceLayout tagBufferLayout;
@@ -267,6 +260,7 @@ void Application::EnteredVrMode()
 	globalGraphicsResources.tagShaderResource.SetLayout(tagBufferLayout);
 	globalGraphicsResources.tagShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataCube_ssbo",{
 			globalGraphicsResources.mTagDataBuffer.get()});
+	globalGraphicsResources.Init();
 	//useMultiview=(vrapi_GetSystemPropertyInt( java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE ) == VRAPI_TRUE);
 	int num_refresh_rates = vrapi_GetSystemPropertyInt(java,
 													   VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
@@ -436,6 +430,10 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 	}
 }
 
+void Application::DrawTexture(avs::vec3 &offset,scr::Texture &texture)
+{
+	//mGuiSys->ShowInfoText()
+}
 void Application::PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,...)
 {
 	static char txt2[2000];
