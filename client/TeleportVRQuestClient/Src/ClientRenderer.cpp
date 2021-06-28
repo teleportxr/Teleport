@@ -804,7 +804,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 
 			scr::InputCommandCreateInfo inputCommandCreateInfo;
 
-			if (videoConfig.alpha_layer_encoding_enabled)
+			if (videoConfig.use_alpha_layer_decoding)
             {
                 inputCommandCreateInfo.effectPassName = "CopyCubemap";
 
@@ -832,7 +832,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			cubemapUB.dimensions = { texInfo.width, texInfo.height };
             scr::InputCommandCreateInfo inputCommandCreateInfo;
 
-            if (videoConfig.alpha_layer_encoding_enabled)
+            if (videoConfig.use_alpha_layer_decoding)
             {
                 inputCommandCreateInfo.effectPassName = "PerspectiveColour";
 

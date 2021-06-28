@@ -748,7 +748,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.webcam_offset_y			= clientData.clientSettings.webcamPos[1];
 	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
-	videoConfig.alpha_layer_encoding_enabled = casterSettings.useAlphaLayerEncoding;
+	videoConfig.use_alpha_layer_decoding = casterSettings.useAlphaLayerEncoding;
 	videoConfig.colour_cubemap_size		= encoderSettings.frameWidth / 3;
 	videoConfig.compose_cube			= encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec				= casterSettings.videoCodec;
@@ -1106,7 +1106,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.perspective_fov = casterSettings.perspectiveFOV;
 	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
-	videoConfig.alpha_layer_encoding_enabled = casterSettings.useAlphaLayerEncoding;
+	videoConfig.use_alpha_layer_decoding = casterSettings.useAlphaLayerEncoding;
 	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;

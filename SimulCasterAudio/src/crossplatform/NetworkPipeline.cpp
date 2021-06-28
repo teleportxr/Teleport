@@ -8,7 +8,6 @@
 
 namespace
 {
-	constexpr double networkPipelineStatInterval = 60000000.0; // 1s
 	constexpr int networkPipelineSocketBufferSize = 16 * 1024 * 1024; // 16MiB
 }
 

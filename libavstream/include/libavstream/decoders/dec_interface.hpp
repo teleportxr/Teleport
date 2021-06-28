@@ -136,7 +136,7 @@ public:
 	 *  - Result::OK on succes.
 	 *  - Result::DecoderBackend_DisplayFailed on failure, or if decoder was not yet ready to display.
 	 */
-	virtual Result display() = 0;
+	virtual Result display(bool showAlphaAsColor = false) = 0;
 };
 
 } // avs

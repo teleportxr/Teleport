@@ -135,7 +135,7 @@ namespace SCServer
 	void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams)
 	{
 		encoderParams.codec = settings.videoCodec;
-		encoderParams.preset = avs::VideoPreset::HighQuality;
+		encoderParams.preset = avs::VideoPreset::HighPerformance;
 		encoderParams.targetFrameRate = settings.targetFPS;
 		encoderParams.idrInterval = settings.idrInterval;
 		encoderParams.rateControlMode = static_cast<avs::RateControlMode>(settings.rateControlMode);

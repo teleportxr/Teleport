@@ -24,7 +24,7 @@ public:
     avs::Result registerSurface(const avs::SurfaceBackendInterface* surface) override;
     avs::Result unregisterSurface() override;
     avs::Result decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payaloadType, bool lastPayload) override;
-    avs::Result display() override;
+    avs::Result display(bool showAlphaAsColor = false) override;
     /* End avs::DecoderBackendInterface */
 
     void NotifyFrameAvailable();
