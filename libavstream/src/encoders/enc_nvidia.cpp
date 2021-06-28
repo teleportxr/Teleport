@@ -419,15 +419,6 @@ namespace avs
 		case RateControlMode::RC_CBR:
 			config.config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR;
 			break;
-		case RateControlMode::RC_CBR_LOWDELAY_HQ:
-			config.config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR_LOWDELAY_HQ;
-			break;
-		case RateControlMode::RC_CBR_HQ:
-			config.config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR_HQ;
-			break;
-		case RateControlMode::RC_VBR_HQ:
-			config.config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR_HQ;
-			break;
 		}
 
 		if (params.autoBitRate)

@@ -14,10 +14,7 @@ enum class RateControlMode
 {
 	RC_CONSTQP = 0, /**< Constant QP mode */
 	RC_VBR = 1, /**< Variable bitrate mode */
-	RC_CBR = 2, /**< Constant bitrate mode */
-	RC_CBR_LOWDELAY_HQ = 3, /**< low-delay CBR, high quality */
-	RC_CBR_HQ = 4, /**< CBR, high quality (slower) */
-	RC_VBR_HQ = 5 /**< VBR, high quality (slower) */
+	RC_CBR = 2 /**< Constant bitrate mode */
 };
 
 /*!
@@ -36,7 +33,7 @@ struct EncoderParams
 	/*! How often should frames be encoded as IDR picture type (0 is disabled). */
 	uint32_t idrInterval = 60;
 	/*! The rate control algorithm used by the encoder. */
-	RateControlMode rateControlMode = RateControlMode::RC_CBR_LOWDELAY_HQ;
+	RateControlMode rateControlMode = RateControlMode::RC_CBR;
 	/*! Average encoded stream bitrate (0 is automatic). */
 	uint32_t averageBitrate = 0;
 	/*! Maximum encoded stream bitrate (0 is automatic). */

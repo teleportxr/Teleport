@@ -123,7 +123,7 @@ avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInByt
     return isReadyToDisplay ? avs::Result::DecoderBackend_ReadyToDisplay : avs::Result::OK;
 }
 
-avs::Result VideoDecoderProxy::display()
+avs::Result VideoDecoderProxy::display(bool showAlphaAsColor)
 {
     if(!mInitialized) {
         return avs::Result::DecoderBackend_NotInitialized;

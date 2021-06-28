@@ -652,6 +652,9 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 		decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 		decoderParams.prependStartCodes = false;
 		decoderParams.deferDisplay = false;
+        decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
+        decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
+        decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
 
 		size_t stream_width = videoConfig.video_width;
 		size_t stream_height = videoConfig.video_height;

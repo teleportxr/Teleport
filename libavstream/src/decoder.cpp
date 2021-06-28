@@ -277,8 +277,6 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		{
 			AVSLOG(Warning) << "Decoder: Failed to parse/decode the video frame \n";
 		}
-		break;
-
 	} while (result == Result::OK);
 
 	if (!m_params.deferDisplay && m_displayPending)
@@ -292,7 +290,7 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 Result Decoder::DisplayFrame()
 {
 	m_displayPending = false;
-	Result result = m_backend->display();
+	Result result = m_backend->display(m_showAlphaAsColor);
 	if (!result)
 	{
 		AVSLOG(Error) << "Failed to display video frame.";
@@ -414,14 +412,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 #if defined(PLATFORM_WINDOWS)
 		const void* frameData = buffer + m_extraDataSize;
 		size_t frameSize = m_frame.dataSize - m_extraDataSize;
-		//size_t firstSize = m_firstVCLOffset - m_extraDataSize;
-		//size_t frameSize = firstSize + dataSize;
-		//uint8_t* b = new uint8_t[frameSize];
-		//memcpy(b, buffer + m_extraDataSize, firstSize);
-		//memcpy(b + firstSize, data, dataSize);
-		// NVidia decoder takes the whole frame
 		result = m_backend->decode(frameData, frameSize, payloadType, isLastPayload);
-		//delete[] b;
 #elif defined(PLATFORM_ANDROID)
 		size_t size = m_frame.dataSize - m_firstVCLOffset;
 		result = m_backend->decode(buffer + m_firstVCLOffset, size, payloadType, isLastPayload);

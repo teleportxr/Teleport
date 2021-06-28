@@ -375,13 +375,13 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
  
 			if (videoTexture->IsCubemap())
 			{
-				const char* technique = videoConfig.alpha_layer_encoding_enabled ? "recompose" : "recompose_with_depth_alpha";
+				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
 				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
 			}
 			else
 			{	
-				const char* technique = videoConfig.alpha_layer_encoding_enabled ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
+				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
 				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 				simul::math::Matrix4x4 projInv;
 				deviceContext.viewStruct.proj.Inverse(projInv);
@@ -1127,6 +1127,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	decoderParams.codec = videoConfig.videoCodec;
 	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
+	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
 
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();
@@ -1734,6 +1735,10 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'L':
 			renderPlayer = !renderPlayer;
+			break;
+		case 'Y':
+			if (sessionClient.IsConnected())
+				decoder[0].toggleShowAlphaAsColor();
 			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
 			ChangePass(ShaderMode::PBR);
