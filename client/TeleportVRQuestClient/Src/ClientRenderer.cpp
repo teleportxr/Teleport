@@ -1120,11 +1120,12 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			//Push surfaces onto render queue.
 			for(ovrSurfaceDef& surfaceDef : ovrNode->GetSurfaces())
 			{
+				int j = 0;
 				// Must update the uniforms. e.g. camera pos.
+				// The below seems to only apply/work for camerapos anyway:
 				for(const scr::ShaderResource *sr : pbrShaderResources)
 				{
 					const std::vector<scr::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
-					int j = 0;
 					for(const scr::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
 					{
 						scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
@@ -1133,12 +1134,12 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 							scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
 							surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
 						}
-						j++;
 					}
-					OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
-					surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
+					j++;
 				}
-
+				OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
+				surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
+				surfaceDef.graphicsCommand.UniformData[3].Data = &perMeshInstanceData.u_LightmapScaleOffset;
 				res.Surfaces.emplace_back(transform, &surfaceDef);
 			}
 		}

@@ -427,8 +427,8 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 
 vec3 PBRLightmap(SurfaceProperties surfaceProperties)
 {
-	vec3 lookup=texture(u_LightmapTexture, v_UV_lightmap).rgb;
-	return vec3(v_UV_lightmap.xy,0);//*surfaceProperties.albedo;
+	vec3 lookup=texture(u_DiffuseTexture, v_UV_lightmap).rgb;
+	return lookup.rgb;//*surfaceProperties.albedo;
 }
 
 void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool highlight)
@@ -442,18 +442,19 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 
 	SurfaceState surfaceState		=PreprocessSurface(view, surfaceProperties,ambient);
 	vec3 c;
-	if (ambient)
+/*	if (ambient)
 	{
 		c							=PBRAmbient(surfaceState, view, surfaceProperties);
 	}
-	else if(lightmap)
+	else*/
+	//if(lightmap)
 	{
 		c							=PBRLightmap(surfaceProperties);
 	}
-	else
+	/*else
 	{
 		c							=vec3(0,0,0);
-	}
+	}*/
 	for (int i=0;i<maxLights;i++)
 	{
 		if (i>=tagDataCube.lightCount)
@@ -477,6 +478,7 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	{
 		u.rgb+=vec3(0.1,0.1,0.1);
 	}
+	//u.rg=v_UV_lightmap.xy;
 	//u.rgb=fract(v_Position);//vec3(dist_to_frag,dist_to_frag,cam.u_DrawDistance));//v_UV_lightmap.xyy);
 	//u.rgb=surfaceProperties.albedo;
 	gl_FragColor = Gamma(u);
