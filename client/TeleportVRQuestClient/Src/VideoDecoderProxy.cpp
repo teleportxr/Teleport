@@ -133,7 +133,7 @@ avs::Result VideoDecoderProxy::display(bool showAlphaAsColor)
     }
     jboolean displayResult = mEnv->CallBooleanMethod(mVideoDecoder, jni.displayMethod);
     // Switched around. true return means OK!!
-    return displayResult ?  avs::Result::OK:avs::Result::DecoderBackend_DisplayFailed ;
+    return displayResult ?  avs::Result::OK : avs::Result::DecoderBackend_DisplayFailed ;
 }
 
 void VideoDecoderProxy::NotifyFrameAvailable()

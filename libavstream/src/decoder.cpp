@@ -296,7 +296,7 @@ Result Decoder::DisplayFrame()
 		AVSLOG(Error) << "Failed to display video frame.";
 	}
 	m_data->mTotalFramesProcessed += m_interimFramesProcessed;
-	if(m_interimFramesProcessed>1)
+	if(m_interimFramesProcessed > 4)
 		AVSLOG(Warning) << m_interimFramesProcessed << " interim frames processed \n";
 	m_interimFramesProcessed = 0;
 	return result;
@@ -346,7 +346,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		return Result::DecoderBackend_PayloadIsExtraData;
 	}
 
-	// There are two VCLs per frame with alpha layer encoding enabled (HEVC only) and one without.
+	// There are two VCLs per frame with alpha layer encoding enabled (HEVC only) and one VCL without.
 	if (payloadType == VideoPayloadType::VCL)
 	{
 		if (!m_firstVCLOffset)
@@ -360,10 +360,10 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 			return Result::OK;
 		}
 
-		if (!isLastPayload)
-		{
-			return Result::OK;
-		}
+//		if (!isLastPayload)
+//		{
+//			return Result::OK;
+//		}
 	}
 	
 	bool isCodecConfig = false;
@@ -414,23 +414,18 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		size_t frameSize = m_frame.dataSize - m_extraDataSize;
 		result = m_backend->decode(frameData, frameSize, payloadType, isLastPayload);
 #elif defined(PLATFORM_ANDROID)
-		size_t size = m_frame.dataSize - m_firstVCLOffset;
-		result = m_backend->decode(buffer + m_firstVCLOffset, size, payloadType, isLastPayload);
-		//result = m_backend->decode(buffer + dataOffset, dataSize, payloadType, isLastPayload);
+		//size_t frameSize = m_frame.dataSize - m_firstVCLOffset;
+		size_t frameSize = m_frame.dataSize - dataOffset;
+		//result = m_backend->decode(buffer + m_firstVCLOffset, frameSize, payloadType, true);
+		//result = m_backend->decode(data, m_frame.dataSize - dataOffset, payloadType, true);
+		result = m_backend->decode(data, frameSize, payloadType, true);
 #endif
-		if (result == avs::Result::DecoderBackend_ReadyToDisplay)
-		{
-			m_idrRequired = false;
-		}
-		else
-		{
-			m_idrRequired = true;
-		}
+		m_idrRequired = (result != avs::Result::DecoderBackend_ReadyToDisplay);
 	}
 	else
 	{
 #if defined(PLATFORM_ANDROID)
-		result = m_backend->decode(data, dataSize, payloadType, isLastPayload);
+		result = m_backend->decode(data, dataSize, payloadType, false);
 #endif
 	}
 	

@@ -95,10 +95,10 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         else
         {
             // Signifies partial frame data. For all VCLs in a frame besides the last one. Needed for H264.
-           // if (payloadFlags == 0)
-            //{
-              //  payloadFlags = 8;
-            //}
+            if (payloadFlags == 0)
+            {
+                payloadFlags = MediaCodec.BUFFER_FLAG_PARTIAL_FRAME;
+            }
         }
 
         val inputBuffer = startCodes.plus(ByteArray(buffer.remaining()))
@@ -124,7 +124,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
 
     private fun queueInputBuffer(buffer: ByteArray, flags: Int)
     {
-        val inputBufferID = mDecoder.dequeueInputBuffer(0)
+        val inputBufferID = mDecoder.dequeueInputBuffer(5000) // microseconds
         if(inputBufferID >= 0)
         {
             val inputBuffer = mDecoder.getInputBuffer(inputBufferID)
