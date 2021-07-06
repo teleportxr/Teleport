@@ -22,7 +22,7 @@ namespace avs
 		Result initialize(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params) override;
 		Result reconfigure(int frameWidth, int frameHeight, const DecoderParams& params) override;
 		Result shutdown() override;
-		Result registerSurface(const SurfaceBackendInterface* surface) override;
+		Result registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface = nullptr) override;
 		Result unregisterSurface() override;
 
 		Result decode(const void* buffer, size_t bufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) override;

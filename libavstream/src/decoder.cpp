@@ -360,10 +360,10 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 			return Result::OK;
 		}
 
-//		if (!isLastPayload)
-//		{
-//			return Result::OK;
-//		}
+		if (!isLastPayload)
+		{
+			return Result::OK;
+		}
 	}
 	
 	bool isCodecConfig = false;
@@ -414,20 +414,20 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		size_t frameSize = m_frame.dataSize - m_extraDataSize;
 		result = m_backend->decode(frameData, frameSize, payloadType, isLastPayload);
 #elif defined(PLATFORM_ANDROID)
-		//size_t frameSize = m_frame.dataSize - m_firstVCLOffset;
-		size_t frameSize = m_frame.dataSize - dataOffset;
-		//result = m_backend->decode(buffer + m_firstVCLOffset, frameSize, payloadType, true);
+		size_t frameSize = m_frame.dataSize - m_firstVCLOffset;
+        result = m_backend->decode(buffer + m_firstVCLOffset, frameSize, payloadType, true);
+		//size_t frameSize = dataOffset - m_firstVCLOffset;
 		//result = m_backend->decode(data, m_frame.dataSize - dataOffset, payloadType, true);
-		result = m_backend->decode(data, frameSize, payloadType, true);
+		//result = m_backend->decode(data, frameSize, payloadType, true);
 #endif
 		m_idrRequired = (result != avs::Result::DecoderBackend_ReadyToDisplay);
 	}
+#if defined(PLATFORM_ANDROID)
 	else
 	{
-#if defined(PLATFORM_ANDROID)
 		result = m_backend->decode(data, dataSize, payloadType, false);
-#endif
 	}
+#endif
 	
 	return result;
 }
@@ -483,7 +483,7 @@ Result Decoder::registerSurface(SurfaceInterface* surface)
 	}
 
 	assert(m_backend);
-	Result result = m_backend->registerSurface(surface->getBackendSurface());
+	Result result = m_backend->registerSurface(surface->getBackendSurface(), surface->getAlphaBackendSurface());
 
 	if (result)
 	{

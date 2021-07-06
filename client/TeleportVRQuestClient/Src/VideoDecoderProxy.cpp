@@ -19,8 +19,10 @@ bool VideoDecoderProxy::mJNIInitialized=false;
 
 VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInterface)
     : mFrameWidth(0), mFrameHeight(0)
+    , mUseAlphaLayerDecoding(false)
     , mInitialized(false)
-    , mSurfaceTexture(nullptr)
+    , mColorSurfaceTexture(nullptr)
+    , mAlphaSurfaceTexture(nullptr)
     , mEventInterface(eventInterface)
     , mEnv(env)
 {
@@ -40,11 +42,13 @@ avs::Result VideoDecoderProxy::initialize(const avs::DeviceHandle& device, int f
         return avs::Result::OK;
     }
 
-    mFrameWidth  = frameWidth;
+    mFrameWidth = frameWidth;
     mFrameHeight = frameHeight;
 
+    mUseAlphaLayerDecoding = params.useAlphaLayerDecoding;
+
     assert(mEnv);
-    jobject videoDecoder = mEnv->NewObject(jni.videoDecoderClass, jni.ctorMethod, this, static_cast<int>(params.codec));
+    jobject videoDecoder = mEnv->NewObject(jni.videoDecoderClass, jni.ctorMethod, this, static_cast<int>(params.codec), mUseAlphaLayerDecoding);
     mVideoDecoder = mEnv->NewGlobalRef(videoDecoder);
 
     mInitialized = true;
@@ -70,7 +74,7 @@ avs::Result VideoDecoderProxy::shutdown()
     if(!mInitialized) {
         return avs::Result::DecoderBackend_NotInitialized;
     }
-    if(mSurfaceTexture) {
+    if(mColorSurfaceTexture) {
         ShutdownVideoDecoder();
     }
 
@@ -80,27 +84,37 @@ avs::Result VideoDecoderProxy::shutdown()
     return avs::Result::OK;
 }
 
-avs::Result VideoDecoderProxy::registerSurface(const avs::SurfaceBackendInterface* surface)
+avs::Result VideoDecoderProxy::registerSurface(const avs::SurfaceBackendInterface* colorSurface, const avs::SurfaceBackendInterface* alphaSurface)
 {
     if(!mInitialized) {
         return avs::Result::DecoderBackend_NotInitialized;
     }
-    if(mSurfaceTexture) {
+    if(mColorSurfaceTexture) {
         return avs::Result::DecoderBackend_SurfaceAlreadyRegistered;
     }
 
-    const VideoSurface* videoSurface = dynamic_cast<const VideoSurface*>(surface);
-    if(!videoSurface) {
+    const VideoSurface* videoColorSurface = dynamic_cast<const VideoSurface*>(colorSurface);
+    if(!videoColorSurface) {
         return avs::Result::DecoderBackend_InvalidSurface;
     }
 
-    InitializeVideoDecoder(videoSurface->GetTexture());
+    OVRFW::SurfaceTexture* ovrAlphaSurface = nullptr;
+    if (mUseAlphaLayerDecoding)
+    {
+        const VideoSurface* videoAlphaSurface = dynamic_cast<const VideoSurface*>(alphaSurface);
+        if(!videoAlphaSurface) {
+            return avs::Result::DecoderBackend_InvalidSurface;
+        }
+        ovrAlphaSurface = videoAlphaSurface->GetTexture();
+    }
+
+    InitializeVideoDecoder(videoColorSurface->GetTexture(), ovrAlphaSurface);
     return avs::Result::OK;
 }
 
 avs::Result VideoDecoderProxy::unregisterSurface()
 {
-    if(!mSurfaceTexture) {
+    if(!mColorSurfaceTexture) {
         return avs::Result::DecoderBackend_SurfaceNotRegistered;
     }
 
@@ -113,7 +127,7 @@ avs::Result VideoDecoderProxy::decode(const void* buffer, size_t bufferSizeInByt
     if(!mInitialized) {
         return avs::Result::DecoderBackend_NotInitialized;
     }
-    if(!mSurfaceTexture) {
+    if(!mColorSurfaceTexture) {
         return avs::Result::DecoderBackend_InvalidSurface;
     }
 
@@ -128,7 +142,7 @@ avs::Result VideoDecoderProxy::display(bool showAlphaAsColor)
     if(!mInitialized) {
         return avs::Result::DecoderBackend_NotInitialized;
     }
-    if(!mSurfaceTexture) {
+    if(!mColorSurfaceTexture) {
         return avs::Result::DecoderBackend_InvalidSurface;
     }
     jboolean displayResult = mEnv->CallBooleanMethod(mVideoDecoder, jni.displayMethod);
@@ -151,26 +165,36 @@ void VideoDecoderProxy::InitializeJNI(JNIEnv* env)
 	assert(videoDecoderClass);
     jni.videoDecoderClass = (jclass)env->NewGlobalRef((jobject)videoDecoderClass);
 
-    jni.ctorMethod = env->GetMethodID(jni.videoDecoderClass, "<init>", "(JI)V");
-    jni.initializeMethod = env->GetMethodID(jni.videoDecoderClass, "initialize", "(IILandroid/graphics/SurfaceTexture;)V");
+    jni.ctorMethod = env->GetMethodID(jni.videoDecoderClass, "<init>", "(JIZ)V");
+    jni.initializeMethod = env->GetMethodID(jni.videoDecoderClass, "initialize", "(Landroid/graphics/SurfaceTexture;Landroid/graphics/SurfaceTexture;II)V");
     jni.shutdownMethod = env->GetMethodID(jni.videoDecoderClass, "shutdown", "()V");
     jni.decodeMethod = env->GetMethodID(jni.videoDecoderClass, "decode", "(Ljava/nio/ByteBuffer;IZ)Z");
     jni.displayMethod = env->GetMethodID(jni.videoDecoderClass, "display", "()Z");
     mJNIInitialized=true;
 }
 
-void VideoDecoderProxy::InitializeVideoDecoder(OVRFW::SurfaceTexture* surfaceTexture)
+void VideoDecoderProxy::InitializeVideoDecoder(OVRFW::SurfaceTexture* colorSurfaceTexture, OVRFW::SurfaceTexture* alphaSurfaceTexture)
 {
     assert(mFrameWidth > 0 && mFrameHeight > 0);
     assert(surfaceTexture);
 
-    mSurfaceTexture = surfaceTexture;
-    mEnv->CallVoidMethod(mVideoDecoder, jni.initializeMethod, mFrameWidth, mFrameHeight, mSurfaceTexture->GetJavaObject());
+    mColorSurfaceTexture = colorSurfaceTexture;
+    mAlphaSurfaceTexture = alphaSurfaceTexture;
+
+    jobject alphaTextureJObject = nullptr;
+
+    if (mAlphaSurfaceTexture)
+    {
+        alphaTextureJObject = mAlphaSurfaceTexture->GetJavaObject();
+    }
+
+    mEnv->CallVoidMethod(mVideoDecoder, jni.initializeMethod, mColorSurfaceTexture->GetJavaObject(), alphaTextureJObject, mFrameWidth, mFrameHeight);
 }
 
 void VideoDecoderProxy::ShutdownVideoDecoder()
 {
     mEnv->CallVoidMethod(mVideoDecoder, jni.shutdownMethod);
-    mSurfaceTexture = nullptr;
+    mColorSurfaceTexture = nullptr;
+    mAlphaSurfaceTexture = nullptr;
 }
 

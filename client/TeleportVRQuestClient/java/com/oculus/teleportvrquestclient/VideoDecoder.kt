@@ -11,7 +11,7 @@ import java.nio.ByteBuffer
 
 enum class VideoCodec {
     H264,
-    H265,
+    H265
 }
 
 enum class PayloadType {
@@ -22,16 +22,20 @@ enum class PayloadType {
     PPS,            /*!< Picture Parameter Set */
     ALE,            /*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
     OtherNALUnit,   /*!< Other NAL unit. */
-    AccessUnit,     /*!< Entire access unit (possibly multiple NAL units). */
+    AccessUnit      /*!< Entire access unit (possibly multiple NAL units). */
 }
 
-class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex: Int) : SurfaceTexture.OnFrameAvailableListener
+class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex: Int, private val mUseAlphaLayerDecoding : Boolean) : SurfaceTexture.OnFrameAvailableListener
 {
     private val mDecoder = MediaCodec.createDecoderByType(mCodecMimeType)
     private var mDecoderConfigured = false
     private var mDisplayRequests = 0
+    private var mOutputs = if (mUseAlphaLayerDecoding) 2 else 1
+    private lateinit var mColorSurface : Surface
+    private lateinit var mAlphaSurface : Surface
+    private var mIsColorSurface = true
 
-    fun initialize(frameWidth: Int, frameHeight: Int, surface: SurfaceTexture)
+    fun initialize(colorSurface: SurfaceTexture, alphaSurface: SurfaceTexture?, frameWidth: Int, frameHeight: Int)
     {
         if(mDecoderConfigured)
         {
@@ -43,8 +47,16 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         format.setInteger(MediaFormat.KEY_MAX_WIDTH, frameWidth)
         format.setInteger(MediaFormat.KEY_MAX_HEIGHT, frameHeight)
 
-        surface.setOnFrameAvailableListener(this)
-        mDecoder.configure(format, Surface(surface), null, 0)
+        mColorSurface = Surface(colorSurface)
+        colorSurface.setOnFrameAvailableListener(this)
+
+        if (mUseAlphaLayerDecoding)
+        {
+            mAlphaSurface = Surface(alphaSurface)
+            alphaSurface?.setOnFrameAvailableListener(this)
+        }
+
+        mDecoder.configure(format, Surface(colorSurface), null, 0)
         mDecoder.start()
 
         mDecoderConfigured = true
@@ -90,21 +102,21 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         if(lastPayload)
         {
             // Request to output previous access unit.
-            ++mDisplayRequests
+            mDisplayRequests += mOutputs
         }
         else
         {
             // Signifies partial frame data. For all VCLs in a frame besides the last one. Needed for H264.
             if (payloadFlags == 0)
             {
-                payloadFlags = MediaCodec.BUFFER_FLAG_PARTIAL_FRAME;
+                payloadFlags = 8;
             }
         }
 
         val inputBuffer = startCodes.plus(ByteArray(buffer.remaining()))
         buffer.get(inputBuffer, startCodes.size, buffer.remaining())
         queueInputBuffer(inputBuffer, payloadFlags)
-        return mDisplayRequests > 0
+        return mDisplayRequests >= mOutputs
     }
 
     fun display(): Boolean
@@ -116,15 +128,29 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         }
         while(mDisplayRequests > 0)
         {
-            releaseOutputBuffer(mDisplayRequests == 1)
-            --mDisplayRequests
+            val render = mDisplayRequests <= mOutputs;
+            releaseOutputBuffer(render)
+            mDisplayRequests--;
         }
         return true
     }
 
+    private fun swapSurfaces()
+    {
+        if (mIsColorSurface)
+        {
+            mDecoder.setOutputSurface(mAlphaSurface)
+        }
+        else
+        {
+            mDecoder.setOutputSurface(mColorSurface)
+        }
+        mIsColorSurface = !mIsColorSurface;
+    }
+
     private fun queueInputBuffer(buffer: ByteArray, flags: Int)
     {
-        val inputBufferID = mDecoder.dequeueInputBuffer(5000) // microseconds
+        val inputBufferID = mDecoder.dequeueInputBuffer(0) // microseconds
         if(inputBufferID >= 0)
         {
             val inputBuffer = mDecoder.getInputBuffer(inputBufferID)
@@ -134,7 +160,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         }
         else
         {
-            Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
+            //Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
         }
     }
 
@@ -146,14 +172,19 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         {
             mDecoder.releaseOutputBuffer(outputBufferID, render)
         }
-        else {
+        else
+        {
             //Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder output buffer");
         }
     }
 
     external fun nativeFrameAvailable(decoderProxy: Long)
     override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
-        nativeFrameAvailable(mDecoderProxy)
+        if (!mUseAlphaLayerDecoding || !mIsColorSurface)
+            nativeFrameAvailable(mDecoderProxy)
+
+        if (mOutputs > 1)
+            swapSurfaces();
     }
 
     private val mCodecType get() = when(mCodecTypeIndex) {
@@ -171,8 +202,9 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         2 -> PayloadType.VPS
         3 -> PayloadType.SPS
         4 -> PayloadType.PPS
-        5 -> PayloadType.OtherNALUnit
-        6 -> PayloadType.AccessUnit
+        5 -> PayloadType.ALE
+        6 -> PayloadType.OtherNALUnit
+        7 -> PayloadType.AccessUnit
         else -> PayloadType.OtherNALUnit
     }
 }

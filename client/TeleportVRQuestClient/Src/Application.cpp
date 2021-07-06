@@ -387,7 +387,14 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	// Update video texture if we have any pending decoded frames.
 	while(mNumPendingFrames > 0)
 	{
-		clientRenderer.mVideoSurfaceTexture->Update();
+        //if (mNumPendingFrames == 1)
+        //{
+            clientRenderer.mVideoSurfaceTexture->Update();
+            if (clientRenderer.videoConfig.use_alpha_layer_decoding)
+            {
+                clientRenderer.mAlphaSurfaceTexture->Update();
+            }
+        //}
 		--mNumPendingFrames;
 	}
 
@@ -682,9 +689,22 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			((scc::GL_Texture *) (clientRenderer.mVideoTexture.get()))->SetExternalGlTexture(
 					clientRenderer.mVideoSurfaceTexture->GetTextureId());
 
+			clientRenderer.mAlphaVideoTexture->Create(textureCreateInfo);
+			((scc::GL_Texture *) (clientRenderer.mAlphaVideoTexture.get()))->SetExternalGlTexture(
+					clientRenderer.mAlphaSurfaceTexture->GetTextureId());
 		}
 
-		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
+		VideoSurface* alphaSurface;
+		if (videoConfig.use_alpha_layer_decoding)
+		{
+			alphaSurface = new VideoSurface(clientRenderer.mAlphaSurfaceTexture);
+		}
+		else
+		{
+			alphaSurface = nullptr;
+		}
+
+		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture), alphaSurface);
 
 		clientRenderer.mVideoQueue.configure(200000, 16, "VideoQueue");
 

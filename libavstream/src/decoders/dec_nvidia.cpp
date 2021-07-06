@@ -378,7 +378,8 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result DecoderNV::registerSurface(const SurfaceBackendInterface* surface)
+	// Note: Alpha surface is not needed for PC because we use a CUDA kernel to write alpha to the color surface.
+	Result DecoderNV::registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface)
 	{
 		const unsigned int registerFlags = CU_GRAPHICS_REGISTER_FLAGS_SURFACE_LDST;
 

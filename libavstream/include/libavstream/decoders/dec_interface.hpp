@@ -103,7 +103,7 @@ public:
 	 *  - Result::DeocderBackend_SurfaceAlreadyRegistered if surface backend has already been registered with this decoder backend.
 	 *  - Result::DecoderBackend_InvalidSurface if passed surface backend is invalid or otherwise unsuitable for this decoder.
 	 */
-	virtual Result registerSurface(const SurfaceBackendInterface* surface) = 0;
+	virtual Result registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface = nullptr) = 0;
 
 	/*!
 	 * Unregister surface as destination for decoded video frames.

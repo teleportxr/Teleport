@@ -147,11 +147,6 @@ namespace avs
 		const char* getDisplayName() const override { return "Decoder"; }
 
 		/*!
-		 * If a transform has been sent yet.
-		 */
-		bool hasValidTransform() const;
-
-		/*!
 		 * If due to a decoder packet loss, a new IDR frame is needed from the server's encoder to prevent corrupted video.
 		 */
 		bool idrRequired() const;

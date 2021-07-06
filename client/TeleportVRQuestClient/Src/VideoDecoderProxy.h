@@ -21,7 +21,7 @@ public:
     avs::Result initialize(const avs::DeviceHandle& device, int frameWidth, int frameHeight, const avs::DecoderParams& params) override;
     avs::Result reconfigure(int frameWidth, int frameHeight, const avs::DecoderParams& params) override;
     avs::Result shutdown() override;
-    avs::Result registerSurface(const avs::SurfaceBackendInterface* surface) override;
+    avs::Result registerSurface(const avs::SurfaceBackendInterface* colorSurface, const avs::SurfaceBackendInterface* alphaSurface = nullptr) override;
     avs::Result unregisterSurface() override;
     avs::Result decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payaloadType, bool lastPayload) override;
     avs::Result display(bool showAlphaAsColor = false) override;
@@ -35,14 +35,16 @@ public:
     }
 
 private:
-    void InitializeVideoDecoder(OVRFW::SurfaceTexture* surfaceTexture);
+    void InitializeVideoDecoder(OVRFW::SurfaceTexture* colorSurfaceTexture, OVRFW::SurfaceTexture* alphaSurfaceTexture);
     void ShutdownVideoDecoder();
 
     int mFrameWidth, mFrameHeight;
+    bool mUseAlphaLayerDecoding;
     bool mInitialized;
     static bool mJNIInitialized;
 
-    OVRFW::SurfaceTexture* mSurfaceTexture;
+    OVRFW::SurfaceTexture* mColorSurfaceTexture;
+    OVRFW::SurfaceTexture* mAlphaSurfaceTexture;
     DecodeEventInterface* mEventInterface;
 
     JNIEnv* mEnv;

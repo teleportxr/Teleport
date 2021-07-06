@@ -180,7 +180,9 @@ public:
 	OVRFW::GlProgram     mCubeVideoSurfaceProgram;
 	OVRFW::GlProgram     m2DVideoSurfaceProgram;
 	OVRFW::SurfaceTexture* mVideoSurfaceTexture = nullptr;
+	OVRFW::SurfaceTexture* mAlphaSurfaceTexture = nullptr;
 	std::shared_ptr<scr::Texture>       mVideoTexture;
+	std::shared_ptr<scr::Texture>       mAlphaVideoTexture;
 	std::shared_ptr<scr::Texture>       mRenderTexture;
 	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;
 	std::shared_ptr<scr::Texture>       specularCubemapTexture;

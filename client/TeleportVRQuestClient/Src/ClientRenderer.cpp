@@ -152,7 +152,9 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	}
 	{
 		mVideoSurfaceTexture = new OVRFW::SurfaceTexture(java->Env);
+        mAlphaSurfaceTexture = new OVRFW::SurfaceTexture(java->Env);
 		mVideoTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
+		mAlphaVideoTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
 		mCubemapUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
 		mRenderTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
 		diffuseCubemapTexture = globalGraphicsResources.renderPlatform.InstantiateTexture();
@@ -650,6 +652,7 @@ void ClientRenderer::RenderWebcam(OVRFW::ovrRendererOutput& res)
 void ClientRenderer::ExitedVR()
 {
 	delete mVideoSurfaceTexture;
+    delete mAlphaSurfaceTexture;
 	mVideoSurfaceDef.geo.Free();
 	GlProgram::Free(mCubeVideoSurfaceProgram);
 	GlProgram::Free(m2DVideoSurfaceProgram);

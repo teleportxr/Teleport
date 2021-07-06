@@ -103,7 +103,11 @@ public:
 
 	/*! Get surface backend associated with this node. */
 	virtual SurfaceBackendInterface* getBackendSurface() const = 0;
+
+	/*! Get surface backend associated with this node. */
+	virtual SurfaceBackendInterface* getAlphaBackendSurface() const = 0;
 };
+
 /*!
  * Mesh interface.
  *

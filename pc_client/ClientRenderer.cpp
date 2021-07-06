@@ -123,7 +123,6 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c):
 	RenderMode(0)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
-	avsTextures.resize(NumVidStreams);
 	resourceCreator.AssociateResourceManagers(resourceManagers);
 
 	//Initalise time stamping for state update.
@@ -340,7 +339,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
 		// MUST call init each frame.
 		deviceContext.viewStruct.Init();
-		AVSTextureHandle th = avsTextures[0];
+		AVSTextureHandle th = avsTexture;
 		AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
@@ -894,7 +893,7 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 
 void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node)
 {
-	AVSTextureHandle th = avsTextures[0];
+	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
@@ -1012,15 +1011,12 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 
 void ClientRenderer::InvalidateDeviceObjects()
 {
-	for (auto i : avsTextures)
+	AVSTextureImpl *ti = (AVSTextureImpl*)avsTexture.get();
+	if (ti)
 	{
-		AVSTextureImpl *ti = (AVSTextureImpl*)i.get();
-		if (ti)
-		{
-			SAFE_DELETE(ti->texture);
-		}
+		SAFE_DELETE(ti->texture);
 	}
-	avsTextures.clear();
+	
 	if(pbrEffect)
 	{
 		pbrEffect->InvalidateDeviceObjects();
@@ -1091,7 +1087,6 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	WARN("VIDEO STREAM CHANGED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
-
 	videoPosDecoded=false;
 
 	videoTagDataCubeArray.clear();
@@ -1144,15 +1139,12 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	// Top of the pipeline, we have the network source.
 	pipeline.add(&source);
 
-	for (auto t : avsTextures)
+	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
+	if (ti)
 	{
-		AVSTextureImpl* ti= (AVSTextureImpl*)(t.get());
-		if (ti)
-		{
-			SAFE_DELETE(ti->texture);
-		}
+		SAFE_DELETE(ti->texture);
 	}
-
+	
 	/* Now for each stream, we add both a DECODER and a SURFACE node. e.g. for two streams:
 					 /->decoder -> surface
 			source -<
@@ -1186,26 +1178,25 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
-	for (int i = 0; i < NumVidStreams; ++i)
+	
+	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
+	auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
+	// Video streams are 0+...
+	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20, f))
 	{
-		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
-		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
-		// Video streams are 0+...
-		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20 + i, f))
-		{
-			SCR_CERR << "Failed to configure decoder node!\n";
-		}
-		if (!surface[i].configure(avsTextures[i]->createSurface()))
-		{
-			SCR_CERR << "Failed to configure output surface node!\n";
-		}
-
-		videoQueues[i].configure(200000, 16, "VideoQueue " + i);
-
-		avs::Node::link(source, videoQueues[i]);
-		avs::Node::link(videoQueues[i], decoder[i]);
-		pipeline.link({ &decoder[i], &surface[i] });
+		SCR_CERR << "Failed to configure decoder node!\n";
 	}
+	if (!surface.configure(avsTexture->createSurface()))
+	{
+		SCR_CERR << "Failed to configure output surface node!\n";
+	}
+
+	videoQueue.configure(200000, 16, "VideoQueue");
+
+	avs::Node::link(source, videoQueue);
+	avs::Node::link(videoQueue, decoder);
+	pipeline.link({ &decoder, &surface });
+	
 
 	// Audio
 	if (AudioStream)
@@ -1263,10 +1254,7 @@ void ClientRenderer::OnVideoStreamClosed()
 {
 	WARN("VIDEO STREAM CLOSED\n");
 	pipeline.deconfigure();
-	for (int i = 0; i < NumVidStreams; ++i)
-	{
-		videoQueues[i].deconfigure();
-	}
+	videoQueue.deconfigure();
 	audioQueue.deconfigure();
 	geometryQueue.deconfigure();
 
@@ -1312,27 +1300,25 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
-	for (size_t i = 0; i < NumVidStreams; ++i)
+	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
+	// Only create new texture and register new surface if resolution has changed
+	if (ti && ti->texture->GetWidth() != stream_width || ti->texture->GetLength() != stream_height)
 	{
-		AVSTextureImpl* ti = (AVSTextureImpl*)(avsTextures[i].get());
-		// Only create new texture and register new surface if resolution has changed
-		if (ti && ti->texture->GetWidth() != stream_width || ti->texture->GetLength() != stream_height)
+		SAFE_DELETE(ti->texture);
+
+		if (!decoder.unregisterSurface())
 		{
-			SAFE_DELETE(ti->texture);
-
-			if (!decoder[i].unregisterSurface())
-			{
-				throw std::runtime_error("Failed to unregister decoder surface");
-			}
-
-			CreateTexture(avsTextures[i], int(stream_width), int(stream_height), SurfaceFormats[i]);
+			throw std::runtime_error("Failed to unregister decoder surface");
 		}
 
-		if (!decoder[i].reconfigure((int)stream_width, (int)stream_height, decoderParams))
-		{
-			throw std::runtime_error("Failed to reconfigure decoder");
-		}
+		CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
 	}
+
+	if (!decoder.reconfigure((int)stream_width, (int)stream_height, decoderParams))
+	{
+		throw std::runtime_error("Failed to reconfigure decoder");
+	}
+	
 	lastSetupCommand.video_config = reconfigureVideoCommand.video_config;
 }
 
@@ -1552,7 +1538,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(0,1.0f);
 		FillInControllerPose(1, -1.0f);
 
-		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder->idrRequired(),fTime);
+		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime);
 
 		for(int i = 0; i < 2; i++)
 		{
@@ -1745,7 +1731,7 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'Y':
 			if (sessionClient.IsConnected())
-				decoder[0].toggleShowAlphaAsColor();
+				decoder.toggleShowAlphaAsColor();
 			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
 			ChangePass(ShaderMode::PBR);
