@@ -41,7 +41,6 @@ private:
     int mFrameWidth, mFrameHeight;
     bool mUseAlphaLayerDecoding;
     bool mInitialized;
-    bool mFirstVCL;
     static bool mJNIInitialized;
 
     OVRFW::SurfaceTexture* mColorSurfaceTexture;

@@ -25,7 +25,6 @@ VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInt
     , mAlphaSurfaceTexture(nullptr)
     , mEventInterface(eventInterface)
     , mEnv(env)
-    , mFirstVCL(false)
 {
 
 }
