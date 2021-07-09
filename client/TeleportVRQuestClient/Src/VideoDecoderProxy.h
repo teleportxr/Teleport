@@ -23,7 +23,7 @@ public:
     avs::Result shutdown() override;
     avs::Result registerSurface(const avs::SurfaceBackendInterface* colorSurface, const avs::SurfaceBackendInterface* alphaSurface = nullptr) override;
     avs::Result unregisterSurface() override;
-    avs::Result decode(const void* buffer, size_t bufferSizeInBytes, avs::VideoPayloadType payaloadType, bool lastPayload) override;
+    avs::Result decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, avs::VideoPayloadType payaloadType, bool lastPayload) override;
     avs::Result display(bool showAlphaAsColor = false) override;
     /* End avs::DecoderBackendInterface */
 
@@ -41,6 +41,7 @@ private:
     int mFrameWidth, mFrameHeight;
     bool mUseAlphaLayerDecoding;
     bool mInitialized;
+    bool mFirstVCL;
     static bool mJNIInitialized;
 
     OVRFW::SurfaceTexture* mColorSurfaceTexture;
@@ -48,7 +49,8 @@ private:
     DecodeEventInterface* mEventInterface;
 
     JNIEnv* mEnv;
-    jobject mVideoDecoder;
+    jobject mColorDecoder;
+    jobject mAlphaDecoder;
 
     struct JNI {
         jclass videoDecoderClass;

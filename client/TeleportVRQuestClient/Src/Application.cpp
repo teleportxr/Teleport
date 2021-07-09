@@ -385,18 +385,16 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.HeadPose.Translation)),*((const scr::quat *)(&vrFrame.HeadPose.Rotation)));
 	clientDeviceState.UpdateOriginPose();
 	// Update video texture if we have any pending decoded frames.
-	while(mNumPendingFrames > 0)
-	{
-        //if (mNumPendingFrames == 1)
-        //{
-            clientRenderer.mVideoSurfaceTexture->Update();
-            if (clientRenderer.videoConfig.use_alpha_layer_decoding)
-            {
-                clientRenderer.mAlphaSurfaceTexture->Update();
-            }
-        //}
-		--mNumPendingFrames;
-	}
+
+    if (mNumPendingFrames > 0)
+    {
+        clientRenderer.mVideoSurfaceTexture->Update();
+        if (clientRenderer.videoConfig.use_alpha_layer_decoding)
+        {
+            clientRenderer.mAlphaSurfaceTexture->Update();
+        }
+        mNumPendingFrames = 0;
+    }
 
 	// Process stream pipeline
 	mPipeline.process();

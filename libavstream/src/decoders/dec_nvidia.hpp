@@ -25,7 +25,7 @@ namespace avs
 		Result registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface = nullptr) override;
 		Result unregisterSurface() override;
 
-		Result decode(const void* buffer, size_t bufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) override;
+		Result decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) override;
 		Result display(bool showAlphaAsColor = false) override;
 		/* End DecoderBackendInterface */
 

@@ -47,6 +47,8 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 	// Vital that idr is required at the beginning because usually the first frame is missed
 	m_idrRequired = true;
 
+	m_firstIDRReceived = false;
+
 	if (m_configured)
 	{
 		Result deconf_result = deconfigure();
@@ -346,6 +348,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		return Result::DecoderBackend_PayloadIsExtraData;
 	}
 
+    bool isIDR = m_parser->isIDR(data, dataSize);
 	// There are two VCLs per frame with alpha layer encoding enabled (HEVC only) and one VCL without.
 	if (payloadType == VideoPayloadType::VCL)
 	{
@@ -355,7 +358,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		}
 
 		// Do not process a non-IDR Frame if an IDR is required
-		if (m_idrRequired && !m_parser->isIDR(data, dataSize))
+		if (m_idrRequired && !isIDR)
 		{
 			return Result::OK;
 		}
@@ -412,20 +415,26 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 #if defined(PLATFORM_WINDOWS)
 		const void* frameData = buffer + m_extraDataSize;
 		size_t frameSize = m_frame.dataSize - m_extraDataSize;
-		result = m_backend->decode(frameData, frameSize, payloadType, isLastPayload);
+		result = m_backend->decode(frameData, frameSize, nullptr, 0, payloadType, isLastPayload);
 #elif defined(PLATFORM_ANDROID)
-		size_t frameSize = m_frame.dataSize - m_firstVCLOffset;
-        result = m_backend->decode(buffer + m_firstVCLOffset, frameSize, payloadType, true);
-		//size_t frameSize = dataOffset - m_firstVCLOffset;
-		//result = m_backend->decode(data, m_frame.dataSize - dataOffset, payloadType, true);
-		//result = m_backend->decode(data, frameSize, payloadType, true);
+		// Color is contained in first VCL and alpha in the second.
+		if (!m_params.useAlphaLayerDecoding || !m_firstIDRReceived)
+        {
+			m_firstIDRReceived = true;
+            size_t frameSize = m_frame.dataSize - m_firstVCLOffset;
+            result = m_backend->decode(buffer + m_firstVCLOffset, frameSize, buffer + m_firstVCLOffset, frameSize, payloadType, true);
+        } 
+		else
+        {
+            result = m_backend->decode(buffer + m_firstVCLOffset, dataOffset - m_firstVCLOffset, data, m_frame.dataSize - dataOffset, payloadType, true);
+        }
 #endif
 		m_idrRequired = (result != avs::Result::DecoderBackend_ReadyToDisplay);
 	}
 #if defined(PLATFORM_ANDROID)
 	else
 	{
-		result = m_backend->decode(data, dataSize, payloadType, false);
+		result = m_backend->decode(data, dataSize, data, dataSize, payloadType, false);
 	}
 #endif
 	

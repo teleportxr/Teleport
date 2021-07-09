@@ -189,6 +189,7 @@ namespace avs
 		bool m_displayPending = false;
 		bool m_surfaceRegistered = false;
 		bool m_showAlphaAsColor = false;
+		bool m_firstIDRReceived = false;
 
 		std::unique_ptr<class StreamParserInterface> m_vid_parser;
 		std::function<void(const uint8_t * data, size_t dataSize)> m_extraDataCallback;

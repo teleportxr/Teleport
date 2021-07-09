@@ -128,7 +128,7 @@ public:
 	 *  - Result::DecoderBackend_InvalidPayload if the specified payloadType is not suitable for this decoder.
 	 *  - Result::DecoderBackend_ParseFailed if decoder failed to parse video data.
 	 */
-	virtual Result decode(const void* buffer, size_t bufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) = 0;
+	virtual Result decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) = 0;
 
 	/*!
 	 * Display decoded frame on destination surface.

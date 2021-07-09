@@ -378,7 +378,7 @@ namespace avs
 		return Result::OK;
 	}
 
-	// Note: Alpha surface is not needed for PC because we use a CUDA kernel to write alpha to the color surface.
+	// Note: Alpha surface is not needed for the NVidia decoder because we use a CUDA kernel to write alpha to the color surface.
 	Result DecoderNV::registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface)
 	{
 		const unsigned int registerFlags = CU_GRAPHICS_REGISTER_FLAGS_SURFACE_LDST;
@@ -494,7 +494,8 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result DecoderNV::decode(const void* buffer, size_t bufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload)
+	// Note: Alpha is included in the color buffer for the NVidia decoder. Only Android needs the alpha buffer.
+	Result DecoderNV::decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload)
 	{
 		if (!m_parser || !m_decoder)
 		{
