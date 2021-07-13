@@ -31,7 +31,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
     private var mDecoderConfigured = false
     private var mDisplayRequests = 0
 
-    fun initialize(colorSurface: SurfaceTexture, frameWidth: Int, frameHeight: Int)
+    fun initialize(surface: SurfaceTexture, frameWidth: Int, frameHeight: Int)
     {
         if(mDecoderConfigured)
         {
@@ -43,9 +43,9 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         format.setInteger(MediaFormat.KEY_MAX_WIDTH, frameWidth)
         format.setInteger(MediaFormat.KEY_MAX_HEIGHT, frameHeight)
 
-        colorSurface.setOnFrameAvailableListener(this)
+        surface.setOnFrameAvailableListener(this)
 
-        mDecoder.configure(format, Surface(colorSurface), null, 0)
+        mDecoder.configure(format, Surface(surface), null, 0)
         mDecoder.start()
 
         mDecoderConfigured = true

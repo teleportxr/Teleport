@@ -454,6 +454,9 @@ void ClientRenderer::RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceC
 {
 	int W = targetTexture->width;
 	int H = targetTexture->length;
+	cubemapConstants.sourceOffset = { 0, 0 };
+	cubemapConstants.targetSize.x = W;
+	cubemapConstants.targetSize.y = H;
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -490,7 +493,10 @@ void ClientRenderer::RecomposeCubemap(simul::crossplatform::GraphicsDeviceContex
 	cubemapConstants.sourceOffset = sourceOffset;
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-	cubemapConstants.targetSize = targetTexture->width;
+
+	cubemapConstants.targetSize.x = targetTexture->width;
+	cubemapConstants.targetSize.y = targetTexture->length;
+
 	for (int m = 0; m < mips; m++)
 	{
 		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, m);
@@ -498,7 +504,7 @@ void ClientRenderer::RecomposeCubemap(simul::crossplatform::GraphicsDeviceContex
 		cubemapClearEffect->Apply(deviceContext, "recompose", 0);
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
 		cubemapClearEffect->Unapply(deviceContext);
-		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize;
+		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize.x;
 		cubemapConstants.targetSize /= 2;
 	}
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);

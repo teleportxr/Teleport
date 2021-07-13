@@ -194,7 +194,7 @@ shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
 shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 {
 	uint3 ThreadID = uint3(g.xy * 16 + t.xy,g.z);
-	if (ThreadID.x >= targetSize || ThreadID.y >= targetSize)
+	if (ThreadID.x >= targetSize.x || ThreadID.y >= targetSize.y)
 		return;
 	uint InputW, InputH;
 	plainTexture.GetDimensions(InputW, InputH);
@@ -203,7 +203,7 @@ shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	int3 pos = int3(ThreadID);
 	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 	float4 SceneColor = plainTexture.Load(int3(pos.xy+sourceOffset+ OutputW*FaceOffsets[ThreadID.z],0));
-    SceneColor.rgb*=SceneColor.rgb;
+    SceneColor.rgb *= SceneColor.rgb;
 	RWTextureTargetArray[pos] = SceneColor;
 }
 

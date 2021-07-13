@@ -11,7 +11,7 @@ uniform int _pad2;
 uniform vec4 cameraRotation;
 uniform vec4 depthOffsetScale;
 uniform int2 sourceOffset;
-uniform int targetSize;
+uniform int2 targetSize;
 
 SIMUL_CONSTANT_BUFFER_END
 
