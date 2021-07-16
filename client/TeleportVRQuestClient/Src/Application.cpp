@@ -676,6 +676,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 		{
 			scr::Texture::TextureCreateInfo textureCreateInfo = {};
 			textureCreateInfo.externalResource = true;
+			// Slot 1
 			textureCreateInfo.slot = scr::Texture::Slot::NORMAL;
 			textureCreateInfo.format = scr::Texture::Format::RGBA8;
 			textureCreateInfo.type = scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
@@ -687,6 +688,8 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			((scc::GL_Texture *) (clientRenderer.mVideoTexture.get()))->SetExternalGlTexture(
 					clientRenderer.mVideoSurfaceTexture->GetTextureId());
 
+			// Slot 2
+			textureCreateInfo.slot = scr::Texture::Slot::COMBINED;
 			clientRenderer.mAlphaVideoTexture->Create(textureCreateInfo);
 			((scc::GL_Texture *) (clientRenderer.mAlphaVideoTexture.get()))->SetExternalGlTexture(
 					clientRenderer.mAlphaSurfaceTexture->GetTextureId());

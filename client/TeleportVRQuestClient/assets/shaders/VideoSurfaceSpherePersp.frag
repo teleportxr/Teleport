@@ -96,7 +96,7 @@ void main()
 		float U = -b + sqrt(max(b * b - c, 0.0));
 		pos_m += (U - R) * vSampleVec * step(-F, 0.0);
 		view = normalize(pos_m);
-		vec2 uv = ViewToServerScreenSpace(view);
+		uv = ViewToServerScreenSpace(view);
 		lookup = texture(renderTexture, uv);
     }
     gl_FragColor = pow(lookup, vec4(.44, .44, .44, 1.0));

@@ -324,9 +324,9 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		mColourAndDepthShaderResources.AddImage(
 				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
 				"videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
-		//mColourAndDepthShaderResources.AddImage(
-				//scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 2,
-				//"alphaVideoFrameTexture", {globalGraphicsResources.sampler, mAlphaVideoTexture});
+		mColourAndDepthShaderResources.AddImage(
+				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 2,
+				"alphaVideoFrameTexture", {globalGraphicsResources.sampler, mAlphaVideoTexture});
 		mColourAndDepthShaderResources.AddBuffer(
 				scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
 				{mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
