@@ -701,20 +701,26 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	clientData.geometryStreamingService->startStreaming(&clientData.casterContext);
 
 	SCServer::CasterEncoderSettings encoderSettings{};
-	if (casterSettings.usePerspectiveRendering)
+
+	encoderSettings.frameWidth = clientData.clientSettings.videoTextureSize[0];
+	encoderSettings.frameHeight = clientData.clientSettings.videoTextureSize[1];
+
+	if (casterSettings.useAlphaLayerEncoding)
 	{
-		encoderSettings.frameWidth = casterSettings.perspectiveWidth;
-		encoderSettings.frameHeight = static_cast<int32_t>(casterSettings.perspectiveHeight * 1.5f);
+		encoderSettings.depthWidth = 0;
+		encoderSettings.depthHeight = 0;
+	}
+	else if (casterSettings.usePerspectiveRendering)
+	{
 		encoderSettings.depthWidth = static_cast<int32_t>(casterSettings.perspectiveWidth * 0.5f);
 		encoderSettings.depthHeight = static_cast<int32_t>(casterSettings.perspectiveHeight * 0.5f);
 	}
 	else
 	{
-		encoderSettings.frameWidth = static_cast<int32_t>(casterSettings.captureCubeSize * 3);
-		encoderSettings.frameHeight = static_cast<int32_t>(casterSettings.captureCubeSize * 3);
 		encoderSettings.depthWidth = static_cast<int32_t>(casterSettings.captureCubeSize * 1.5f);
 		encoderSettings.depthHeight = static_cast<int32_t>(casterSettings.captureCubeSize);
 	}
+
 	encoderSettings.wllWriteDepthTexture = false;
 	encoderSettings.enableStackDepth = true;
 	encoderSettings.enableDecomposeCube = true;
@@ -749,34 +755,33 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
 	videoConfig.use_alpha_layer_decoding = casterSettings.useAlphaLayerEncoding;
-	videoConfig.colour_cubemap_size		= encoderSettings.frameWidth / 3;
+	videoConfig.colour_cubemap_size		= casterSettings.captureCubeSize;
 	videoConfig.compose_cube			= encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec				= casterSettings.videoCodec;
 	videoConfig.use_cubemap				= !casterSettings.usePerspectiveRendering;
 	videoConfig.stream_webcam			= casterSettings.enableWebcamStreaming;
 	videoConfig.draw_distance			= casterSettings.detectionSphereRadius+casterSettings.clientDrawDistanceOffset;
 
-	videoConfig.specular_cubemap_size	=clientData.clientSettings.specularCubemapSize;
-	int depth_cubemap_size				=videoConfig.colour_cubemap_size/2;
+	videoConfig.specular_cubemap_size = clientData.clientSettings.specularCubemapSize;
+
 	// To the right of the depth cube, underneath the colour cube.
-	videoConfig.specular_x			=clientData.clientSettings.specularPos[0];//depth_cubemap_size*3;
-	videoConfig.specular_y			=clientData.clientSettings.specularPos[1];//videoConfig.colour_cubemap_size*2;
+	videoConfig.specular_x	= clientData.clientSettings.specularPos[0];
+	videoConfig.specular_y	= clientData.clientSettings.specularPos[1];
 	
-	videoConfig.specular_mips		=clientData.clientSettings.specularMips;
+	videoConfig.specular_mips = clientData.clientSettings.specularMips;
 	// To the right of the specular cube, after 3 mips = 1 + 1/2 + 1/4
-	videoConfig.diffuse_cubemap_size=clientData.clientSettings.diffuseCubemapSize;
+	videoConfig.diffuse_cubemap_size = clientData.clientSettings.diffuseCubemapSize;
 	// To the right of the depth map (if alpha layer encoding is disabled), under the specular map.
-	videoConfig.diffuse_x			=clientData.clientSettings.diffusePos[0];//depth_cubemap_size*3;
-	videoConfig.diffuse_y			=clientData.clientSettings.diffusePos[1];//videoConfig.specular_y+casterSettings.specularCubemapSize*2;
+	videoConfig.diffuse_x = clientData.clientSettings.diffusePos[0];
+	videoConfig.diffuse_y = clientData.clientSettings.diffusePos[1];
 	
-	videoConfig.light_cubemap_size	=clientData.clientSettings.lightCubemapSize;
+	videoConfig.light_cubemap_size = clientData.clientSettings.lightCubemapSize;
 	// To the right of the diffuse map.
-	videoConfig.light_x				=clientData.clientSettings.lightPos[0];//videoConfig.diffuse_x+(casterSettings.diffuseCubemapSize*3*7)/4;
-	videoConfig.light_y				=clientData.clientSettings.lightPos[1];//videoConfig.diffuse_y;
-	
-	videoConfig.shadowmap_x		=clientData.clientSettings.shadowmapPos[0];//videoConfig.diffuse_x;
-	videoConfig.shadowmap_y		=clientData.clientSettings.shadowmapPos[1];//videoConfig.diffuse_y+2*videoConfig.diffuse_cubemap_size;
-	videoConfig.shadowmap_size	=clientData.clientSettings.shadowmapSize;//64;
+	videoConfig.light_x	= clientData.clientSettings.lightPos[0];
+	videoConfig.light_y	= clientData.clientSettings.lightPos[1];
+	videoConfig.shadowmap_x	= clientData.clientSettings.shadowmapPos[0];
+	videoConfig.shadowmap_y	= clientData.clientSettings.shadowmapPos[1];
+	videoConfig.shadowmap_size = clientData.clientSettings.shadowmapSize;
 	clientData.clientMessaging.sendCommand(std::move(setupCommand));
 
 
@@ -1107,7 +1112,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
 	videoConfig.use_alpha_layer_decoding = casterSettings.useAlphaLayerEncoding;
-	videoConfig.colour_cubemap_size = encoderSettings.frameWidth / 3;
+	videoConfig.colour_cubemap_size = casterSettings.captureCubeSize;
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
 	videoConfig.videoCodec = casterSettings.videoCodec;
 	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;

@@ -314,8 +314,6 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 						  scr::Shader::Stage::SHADER_STAGE_COMPUTE);
 		layout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
 						  scr::Shader::Stage::SHADER_STAGE_COMPUTE);
-		layout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,
-						  scr::Shader::Stage::SHADER_STAGE_COMPUTE);
 
 		mColourAndDepthShaderResources.SetLayout(layout);
 		mColourAndDepthShaderResources.AddImage(

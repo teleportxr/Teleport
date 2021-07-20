@@ -81,6 +81,7 @@ namespace SCServer
 	};
 	struct ClientSettings
 	{
+		int32_t videoTextureSize[2];
 		int32_t specularPos[2];
 		int32_t specularCubemapSize ;
 		int32_t specularMips;
