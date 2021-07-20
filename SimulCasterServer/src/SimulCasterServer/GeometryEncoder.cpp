@@ -684,7 +684,7 @@ namespace SCServer
 			}
 			else
 			{
-				DEBUG_BREAK_ONCE("Missing texture");
+				//DEBUG_BREAK_ONCE("Missing texture");
 				TELEPORT_CERR<<"Trying to encode texture "<<uid<<" but it is not there.\n";
 			}
 		}

@@ -698,6 +698,9 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	//not ready?
 	if(!clientData.validClientSettings)
 		return;
+
+	clientData.clientMessaging.ConfirmSessionStarted();
+
 	clientData.geometryStreamingService->startStreaming(&clientData.casterContext);
 
 	SCServer::CasterEncoderSettings encoderSettings{};

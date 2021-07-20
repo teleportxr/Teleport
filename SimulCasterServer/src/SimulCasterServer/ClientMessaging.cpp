@@ -238,10 +238,7 @@ namespace SCServer
 				enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 6);
 				discoveryService->discoveryCompleteForClient(clientID);
 				TELEPORT_COUT << "Client connected: " << getClientIP() << ":" << getClientPort() << std::endl;
-				startingSession = false;
-				timeStartingSession = 0;
-				// Return because we don't want to process other events until the C# side objects have been created.
-				return;
+				break;
 			case ENET_EVENT_TYPE_DISCONNECT:
 				assert(peer == event.peer);
 				timeSinceLastClientComm = 0;
@@ -256,10 +253,23 @@ namespace SCServer
 				timeSinceLastClientComm = 0;
 				if (!startingSession)
 				{
-				dispatchEvent(event);
+					dispatchEvent(event);
 				}
 				break;
 			}
+		}
+
+		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
+		if (host && peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
+		{
+			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
+			Disconnect();
+		}
+
+		if (startingSession)
+		{
+			// Return because we don't want to process input until the C# side objects have been created.
+			return;
 		}
 
 		{
@@ -280,13 +290,12 @@ namespace SCServer
 		//Input has been passed, so clear the events.
 		latestInputStateAndEvents[0].clear();
 		latestInputStateAndEvents[1].clear();
+	}
 
-		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
-		if (host && peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
-		{
-			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
-			Disconnect();
-		}
+	void ClientMessaging::ConfirmSessionStarted()
+	{
+		startingSession = false;
+		timeStartingSession = 0;
 	}
 
 	bool ClientMessaging::TimedOutStartingSession() const

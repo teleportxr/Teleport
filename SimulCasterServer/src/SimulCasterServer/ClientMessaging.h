@@ -112,6 +112,8 @@ namespace SCServer
 
 		bool TimedOutStartingSession() const;
 
+		void ConfirmSessionStarted();
+
 	private:
 		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
