@@ -285,6 +285,13 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			m_data->m_counters.networkPacketsReceived = perf.pktRecv;
 			m_data->m_counters.networkPacketsDropped = perf.pktRcvLoss;
 		}
+
+		m_data->m_counters.connectionTime += deltaTime * 0.001f;
+
+		if (m_data->m_counters.connectionTime)
+		{
+			m_data->m_counters.decoderPacketsReceivedPerSec = m_data->m_counters.decoderPacketsReceived / m_data->m_counters.connectionTime;
+		}
 	}
 
 	m_data->m_pipelineTimestamp = timestamp;

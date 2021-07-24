@@ -1320,11 +1320,13 @@ void ClientRenderer::DrawOSD()
 					offset, colour,
 					"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 					"Incomplete Decoder Packets: %d\n"
+                    "Decoder Packets Per Sec: %4.4f\n"
 					"Bandwidth(kbps): %4.4f"
 					, mDecoder.getTotalFramesProcessed(),
 					ctr.networkPacketsDropped,
 					ctr.decoderPacketsDropped,
 					ctr.incompleteDecoderPacketsReceived,
+                    ctr.decoderPacketsReceivedPerSec,
 					ctr.bandwidthKPS);
 			break;
 		}
@@ -1333,8 +1335,7 @@ void ClientRenderer::DrawOSD()
 			std::ostringstream str;
 			const scr::NodeManager::nodeList_t &rootNodes = resourceManagers->mNodeManager->GetRootNodes();
 
-			str <<"Nodes: "<<static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount())<<
-				" Orphans: "<<ctr.m_packetMapOrphans<<"\n";
+			str <<"Nodes: "<<static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()) << "\n";
 			for(std::shared_ptr<scr::Node> node : rootNodes)
 			{
 				str << node->id << ": "<<node->name.c_str()<<"\n";

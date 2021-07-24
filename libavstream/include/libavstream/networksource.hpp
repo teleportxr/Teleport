@@ -43,19 +43,16 @@ namespace avs
 		uint64_t decoderPacketsDropped = 0;
 		/*! Number of incomplete decoder packets received. */
 		uint64_t incompleteDecoderPacketsReceived = 0;
-		/*! Current length of jitter buffer in ms. */
-		uint32_t jitterBufferLength = 0;
-		/*! Number of jitter buffer push calls this frame. */
-		uint32_t jitterBufferPush = 0;
-		/*! Number of jitter buffer pop calls this frame. */
-		uint32_t jitterBufferPop = 0;
-		//! Number of NetworkPackets unprocessed at the start of polling.
-		uint32_t m_packetMapOrphans = 0;
-		uint32_t m_maxAge = 0;
+		/*! Fraction of decoder packets dropped. */
 		float decoderDropped = 0.0f;
+		/*! Fraction of network packets dropped. */
 		float networkDropped = 0.0f;
-
+		/*! Bandwidth in kilobytes. */
 		float bandwidthKPS = 0.0f;
+		/*! Time in seconds since the connection to the erver was established. */
+		double connectionTime = 0.0;
+		/*! Number of successfully assembled decoder packets received per second. */
+		double decoderPacketsReceivedPerSec = 0.0;
 	};
 
 	/*!

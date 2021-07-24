@@ -531,7 +531,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
     //Move the hands before they are drawn.
 	UpdateHandObjects();
-	clientRenderer.RenderLocalNodes(out);
+    clientRenderer.RenderLocalNodes(out);
 	if (sessionClient.IsConnected())
 	{
 		clientRenderer.DrawOSD();
