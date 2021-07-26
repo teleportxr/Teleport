@@ -37,7 +37,6 @@ Decoder::~Decoder()
 
 Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params, uint8_t streamId, std::function<void(const uint8_t * data, size_t dataSize)> extraDataCallback)
 {
-	m_data->mTotalFramesProcessed=0;
 	m_interimFramesProcessed = 0;
 	m_currentFrameNumber = 0;
 	m_surfaceRegistered = false;
@@ -188,6 +187,7 @@ Result Decoder::deconfigure()
 	m_parser.reset();
 	m_frame = {};
 	m_state = {};
+	m_stats = {};
 	m_configured = false;
 	m_displayPending = false;
 	m_currentFrameNumber = 0;
@@ -222,6 +222,8 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		DisplayFrame();
 	}
 
+	double connectionTime = 0.0;
+
 	do
 	{
 		m_extraDataSize = 0;
@@ -251,6 +253,10 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		// Copy frame info 
 		memcpy(&m_frame, m_frameBuffer.data(), sizeof(NetworkFrameInfo));
 
+		connectionTime = m_frame.connectionTime;
+
+		++m_stats.framesReceived;
+
 		// Check if data was lost or corrupted
 		if (m_frame.broken || m_frame.dataSize == 0)
 		{
@@ -273,12 +279,16 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		result = m_vid_parser->parse((const char*)(m_frameBuffer.data() + sizeof(NetworkFrameInfo)), m_frame.dataSize);
 		// Any decoding for this frame now complete //
 
-		m_currentFrameNumber = m_frame.pts;
-
-		if (result != Result::OK)
+		if (result)
+		{
+			++m_stats.framesDecoded;
+		}
+		else
 		{
 			AVSLOG(Warning) << "Decoder: Failed to parse/decode the video frame \n";
 		}
+	
+		m_currentFrameNumber = m_frame.pts;
 	} while (result == Result::OK);
 
 	if (!m_params.deferDisplay && m_displayPending)
@@ -286,6 +296,13 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		DisplayFrame();
 	}
 
+	if (connectionTime)
+	{
+		m_stats.framesReceivedPerSec = m_stats.framesReceived / connectionTime;
+		m_stats.framesDecodedPerSec = m_stats.framesDecoded / connectionTime;
+		m_stats.framesProcessedPerSec = m_stats.framesProcessed / connectionTime;
+	}
+	
 	return result;
 }
 
@@ -297,8 +314,8 @@ Result Decoder::DisplayFrame()
 	{
 		AVSLOG(Error) << "Failed to display video frame.";
 	}
-	m_data->mTotalFramesProcessed += m_interimFramesProcessed;
-	if(m_interimFramesProcessed > 4)
+	m_stats.framesProcessed += m_interimFramesProcessed;
+	if(m_interimFramesProcessed > 3)
 		AVSLOG(Warning) << m_interimFramesProcessed << " interim frames processed \n";
 	m_interimFramesProcessed = 0;
 	return result;
@@ -530,11 +547,6 @@ Result Decoder::unregisterSurface()
 bool Decoder::idrRequired() const
 {
 	return m_idrRequired;
-}
-
-long long Decoder::getTotalFramesProcessed() const
-{
-	return m_data->mTotalFramesProcessed;
 }
 
 uint8_t Decoder::getStreamId() const

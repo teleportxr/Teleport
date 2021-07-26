@@ -317,6 +317,7 @@ namespace avs
 		uint64_t pts = UINT64_MAX;
 		uint64_t dts = UINT64_MAX;
 		size_t dataSize = 0;
+		double connectionTime = 0.0;
 		bool broken = false; // True if any fragment of the data has been lost
 	} AVS_PACKED;
 

@@ -41,6 +41,16 @@ namespace avs
 		}
 	};
 
+	struct DecoderStats
+	{
+		size_t framesReceived;
+		size_t framesDecoded;
+		size_t framesProcessed;
+		float framesReceivedPerSec;
+		float framesDecodedPerSec;
+		float framesProcessedPerSec;
+	};
+
 	/*!
 	 * Video decoder node `[input-active, output-active, 1/1]`
 	 *
@@ -141,6 +151,11 @@ namespace avs
 		 */
 		Result setBackend(DecoderBackendInterface* backend);
 
+		DecoderStats GetStats() const
+		{
+			return m_stats;
+		}
+
 		/*!
 		 * Get node display name (for reporting & profiling).
 		 */
@@ -150,8 +165,6 @@ namespace avs
 		 * If due to a decoder packet loss, a new IDR frame is needed from the server's encoder to prevent corrupted video.
 		 */
 		bool idrRequired() const;
-
-		long long getTotalFramesProcessed() const;
 
 		void toggleShowAlphaAsColor() { m_showAlphaAsColor = !m_showAlphaAsColor; }
 
@@ -176,14 +189,15 @@ namespace avs
 		DecoderBackend m_selectedBackendType;
 		DecoderParams m_params = {};
 		DecoderState m_state = {};
+		DecoderStats m_stats = {};
 
 		uint64_t m_currentFrameNumber = 0;
 		std::vector<uint8_t> m_frameBuffer;
 		NetworkFrameInfo m_frame;
 		size_t m_extraDataSize = 0;
 		size_t m_firstVCLOffset = 0;
-		int m_interimFramesProcessed = 0;
 		uint8_t m_streamId = 0;
+		size_t m_interimFramesProcessed = 0;
 		bool m_idrRequired = false;
 		bool m_configured = false;
 		bool m_displayPending = false;

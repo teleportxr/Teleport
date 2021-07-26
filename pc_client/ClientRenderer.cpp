@@ -610,6 +610,8 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = source.getCounterValues();
+	const avs::DecoderStats vidStats = decoder.GetStats();
+
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
 	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
@@ -621,13 +623,16 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	{
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Bandwidth KBs: %4.4f", counters.bandwidthKPS));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets per sec: %4.4f", counters.decoderPacketsReceivedPerSec));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames decoded per sec: %4.2f", vidStats.framesDecodedPerSec));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
 	}
 	else if(show_osd== CAMERA_OSD)
 	{

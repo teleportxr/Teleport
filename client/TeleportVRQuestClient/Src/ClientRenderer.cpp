@@ -1260,6 +1260,7 @@ void ClientRenderer::DrawOSD()
 		clientAppInterface->PrintText(passoffset,colour,"%s",globalGraphicsResources.effectPassName);
 	}
 	auto ctr = mNetworkSource.getCounterValues();
+	auto vidStats = mDecoder.GetStats();
 
 	switch(show_osd)
 	{
@@ -1320,14 +1321,20 @@ void ClientRenderer::DrawOSD()
 					offset, colour,
 					"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 					"Incomplete Decoder Packets: %d\n"
-                    "Decoder Packets Per Sec: %4.4f\n"
-					"Bandwidth(kbps): %4.4f"
-					, mDecoder.getTotalFramesProcessed(),
+					"Bandwidth(kbps): %4.2f\n",
+                    "Decoder Packets Per Sec: %4.2f\n",
+					"Video Frames Received Per Sec: %4.2f\n",
+					"Video frames Decoded Per Sec: %4.2f\n",
+					"Video Frames Processed Per Sec: %4.2f",
+					vidStats.framesProcessed,
 					ctr.networkPacketsDropped,
 					ctr.decoderPacketsDropped,
 					ctr.incompleteDecoderPacketsReceived,
-                    ctr.decoderPacketsReceivedPerSec,
-					ctr.bandwidthKPS);
+					ctr.bandwidthKPS,
+					ctr.decoderPacketsReceivedPerSec,
+					vidStats.framesReceivedPerSec,
+					vidStats.framesDecodedPerSec,
+					vidStats.framesProcessedPerSec);
 			break;
 		}
 		case GEOMETRY_OSD:

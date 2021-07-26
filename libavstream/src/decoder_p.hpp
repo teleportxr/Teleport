@@ -26,8 +26,6 @@ namespace avs
 		AVSTREAM_PRIVATEINTERFACE(Decoder, Node)
 
 		bool m_doChecksums=false;
-
-		long long mTotalFramesProcessed=0;
 	};
 
 } // avs
