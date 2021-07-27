@@ -124,6 +124,8 @@ void ResourceCreator::Update(float deltaTime)
 	for (auto texturePair = texturesToCreate.begin(); texturePair != texturesToCreate.end();)
 	{
 		CompleteTexture(texturePair->first, texturePair->second);
+		// delete the allocated mip data:
+		texturePair->second.Free();
 		texturePair = texturesToCreate.erase(texturePair);
 	}
 }
@@ -534,7 +536,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(UntranscodedTexture{ id, texture.dataSize, data, std::move(texInfo), texture.name });
+		texturesToTranscode.emplace_back(UntranscodedTexture{ id, texture.dataSize, data, std::move(texInfo), texture.name,texture.compression });
 	}
 	else
 	{
@@ -1066,6 +1068,11 @@ ResourceCreator::MissingResource& ResourceCreator::GetMissingResource(avs::uid i
 	return missingPair->second;
 }
 
+//#define STB_IMAGE_IMPLEMENTATION
+namespace teleport
+{
+#include "stb_image.h"
+}
 void ResourceCreator::BasisThread_TranscodeTextures()
 {
 	while (shouldBeTranscoding)
@@ -1076,57 +1083,90 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 		if (texturesToTranscode.size() != 0)
 		{
 			UntranscodedTexture& transcoding = texturesToTranscode[0];
-
-			//We need a new transcoder for every .basis file.
-			basist::basisu_transcoder basis_transcoder(&basis_codeBook);
-
-			if (basis_transcoder.start_transcoding(transcoding.data, transcoding.dataSize))
+			if (transcoding.fromCompressionFormat == avs::TextureCompression::PNG)
 			{
-				transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data, transcoding.dataSize, 0);
-				transcoding.scrTexture.mipSizes.reserve(transcoding.scrTexture.mipCount);
-				transcoding.scrTexture.mips.reserve(transcoding.scrTexture.mipCount);
-				//basist::basis_tex_format format=basis_transcoder.get_tex_format(transcoding.data, transcoding.dataSize);
-				// choose a transcoder format based on this:
-				//basist::transcoder_texture_format basis_transcoder_textureFormat= transcoderFormatFromBasisTextureFormat(format);
-
-				//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
-				for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+				int mipWidth=0, mipHeight=0;
+				int num_channels=0;
+				unsigned char *target = teleport::stbi_load_from_memory((const unsigned char*)transcoding.data, transcoding.dataSize, &mipWidth, &mipHeight, &num_channels, 4);
+				if(num_channels==4&&mipWidth>0&&mipHeight>0)
 				{
-					uint32_t basisWidth, basisHeight, basisBlocks;
+				// this is for 8-bits-per-channel textures:
+					size_t outDataSize=mipWidth*mipHeight*4;
+					unsigned char *outData=new unsigned char[outDataSize];
+					memcpy(outData,target,outDataSize);
+					transcoding.scrTexture.mipSizes.push_back(outDataSize);
+					transcoding.scrTexture.mips.push_back(outData);
 
-					basis_transcoder.get_image_level_desc(transcoding.data, transcoding.dataSize, 0, mipIndex, basisWidth, basisHeight, basisBlocks);
-					uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
-
-					unsigned char* outData = new unsigned char[outDataSize];
-					if (basis_transcoder.transcode_image_level(transcoding.data, transcoding.dataSize, 0, mipIndex, outData, basisBlocks, basis_transcoder_textureFormat))
+					if (transcoding.scrTexture.mips.size() != 0)
 					{
-						transcoding.scrTexture.mipSizes.push_back(outDataSize);
-						transcoding.scrTexture.mips.push_back(outData);
+						std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
+						texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
 					}
 					else
 					{
-						SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
-						delete[] outData;
+						SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
 					}
-				}
 
-				if (transcoding.scrTexture.mips.size() != 0)
-				{
-					std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-					texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
 				}
 				else
 				{
-					SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
+					SCR_CERR << "Failed to transcode PNG-format texture \"" << transcoding.name << "\"." << std::endl;
 				}
-
 				delete[] transcoding.data;
+				teleport::stbi_image_free(target);
 			}
-			else
+			else if(transcoding.fromCompressionFormat==avs::TextureCompression::BASIS_COMPRESSED)
 			{
-				SCR_CERR << "Texture \"" << transcoding.name << "\" failed to start transcoding." << std::endl;
-			}
+				//We need a new transcoder for every .basis file.
+				basist::basisu_transcoder basis_transcoder(&basis_codeBook);
 
+				if (basis_transcoder.start_transcoding(transcoding.data, transcoding.dataSize))
+				{
+					transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data, transcoding.dataSize, 0);
+					transcoding.scrTexture.mipSizes.reserve(transcoding.scrTexture.mipCount);
+					transcoding.scrTexture.mips.reserve(transcoding.scrTexture.mipCount);
+					//basist::basis_tex_format format=basis_transcoder.get_tex_format(transcoding.data, transcoding.dataSize);
+					// choose a transcoder format based on this:
+					//basist::transcoder_texture_format basis_transcoder_textureFormat= transcoderFormatFromBasisTextureFormat(format);
+
+					//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
+					for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+					{
+						uint32_t basisWidth, basisHeight, basisBlocks;
+
+						basis_transcoder.get_image_level_desc(transcoding.data, transcoding.dataSize, 0, mipIndex, basisWidth, basisHeight, basisBlocks);
+						uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
+
+						unsigned char* outData = new unsigned char[outDataSize];
+						if (basis_transcoder.transcode_image_level(transcoding.data, transcoding.dataSize, 0, mipIndex, outData, basisBlocks, basis_transcoder_textureFormat))
+						{
+							transcoding.scrTexture.mipSizes.push_back(outDataSize);
+							transcoding.scrTexture.mips.push_back(outData);
+						}
+						else
+						{
+							SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
+							delete[] outData;
+						}
+					}
+
+					if (transcoding.scrTexture.mips.size() != 0)
+					{
+						std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
+						texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
+					}
+					else
+					{
+						SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
+					}
+
+					delete[] transcoding.data;
+				}
+				else
+				{
+					SCR_CERR << "Texture \"" << transcoding.name << "\" failed to start transcoding." << std::endl;
+				}
+			}
 			texturesToTranscode.erase(texturesToTranscode.begin());
 		}
 	}

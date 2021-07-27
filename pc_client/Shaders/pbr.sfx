@@ -395,9 +395,9 @@ vec4 Solid(vertexOutput IN)
 	diffuseColour		= diffuseColour.rgb * diffuseOutputScalar.rgb;
 
 	vec2 lightmapUVs	=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	
+	lightmapUVs.y=1.0- lightmapUVs.y;
 	vec3 view			= normalize(diff);
-	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, lightmapUVs);
+	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords1.xy);
 	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
 	// this allows us to have either roughness or smoothness textures.
 	//combinedLookup.b	=1.0;
@@ -435,6 +435,7 @@ vec4 Solid(vertexOutput IN)
 	vec3 highlight		=vec3(0.01,0.02,0.05);
 	//u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 	//u.b=0;
+	u.rgb= surfaceProperties.globalIllumination.xyz;
 	return u;
 }
 

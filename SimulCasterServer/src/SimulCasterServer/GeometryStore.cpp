@@ -451,7 +451,7 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
 	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
 	{
-		newTexture.compression = avs::TextureCompression::BASIS_COMPRESSED;
+		//newTexture.compression = newTexture.compression;//avs::TextureCompression::BASIS_COMPRESSED;
 
 		bool validBasisFileExists = false;
 		filesystem::path filePath = basisFileLocation;

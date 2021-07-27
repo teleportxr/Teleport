@@ -72,7 +72,7 @@ void RedirectStdCoutCerr() {
 }
 #endif
 
-#include  <strstream>
+#include  <sstream>
 void ClientLog(const char* fileTag, int lineno, ClientLogPriority prio, const char* format_str, ...)
 {
 #ifdef __ANDROID__
@@ -98,7 +98,7 @@ void ClientLog(const char* fileTag, int lineno, ClientLogPriority prio, const ch
 		else
 			size *= 2;
 	}
-	std::strstream sstr;
+	std::stringstream sstr;
 	const char *typestr="info";
 	if(prio==ClientLogPriority::WARNING)
 		typestr="warning";

@@ -262,8 +262,8 @@ private:
 		uint32_t dataSize; //Size of the basis file.
 		unsigned char* data; //The raw data of the basis file.
 		scr::Texture::TextureCreateInfo scrTexture; //Creation information on texture being transcoded.
-
 		std::string name; //For debugging which texture failed.
+		avs::TextureCompression fromCompressionFormat;
 	};
 	
 	void CreateMeshNode(avs::uid id, avs::DataNode& node);

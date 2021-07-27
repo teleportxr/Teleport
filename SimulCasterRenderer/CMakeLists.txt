@@ -91,6 +91,8 @@ include_directories(src)
 include_directories(../libavstream/include)
 #Include Basis Universal
 include_directories(../thirdparty/basis_universal)
+#Include stb
+include_directories(../firstparty/Platform/External/stb)
 #Include enet
 include_directories(../thirdparty/enet/include)
 include_directories(../TeleportClient)
@@ -106,9 +108,6 @@ endif()
 
 set( src_public ${src_root} ${src_api} ${src_crossplatform} ${src_node_components} ${hdr_node_components} ${src_testing})
 message ( "src_public ${src_public}" )
-#source_group("src" src FILES ${src_root} )
-#source_group("src\\api" src FILES ${src_api} )
-#source_group("src\\crossplatform" src FILES ${src_crossplatform} )
 
 #For MT runtime
 add_static_library( SimulCasterRenderer SOURCES ${src_public} )  

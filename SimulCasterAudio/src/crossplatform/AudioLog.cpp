@@ -1,7 +1,7 @@
 #include "AudioLog.h"
 #include <iostream>
 #include <stdarg.h>
-#include  <strstream>
+#include  <sstream>
 void AudioLog(const char* fileTag, int lineno, const char* msg_type, const char* format_str, ...)
 {
 	int size = (int)strlen(format_str) + 100;
@@ -24,7 +24,7 @@ void AudioLog(const char* fileTag, int lineno, const char* msg_type, const char*
 		else
 			size *= 2;
 	}
-	std::strstream sstr;
+	std::stringstream sstr;
 	sstr << "Teleport: "<<fileTag << "(" << lineno << "): " << msg_type << ": " << str.c_str();
 	std::cerr<<sstr.str();
 }

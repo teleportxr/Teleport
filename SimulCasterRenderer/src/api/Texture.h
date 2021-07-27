@@ -119,6 +119,7 @@ namespace scr
 		
 		struct TextureCreateInfo
 		{
+			void Free();
 			std::string name;
 
 			uint32_t width = 0;
