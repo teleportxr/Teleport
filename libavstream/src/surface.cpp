@@ -14,7 +14,12 @@ namespace avs {
 		return d().m_backend.get();
 	}
 
-	Result Surface::configure(SurfaceBackendInterface* surfaceBackend)
+	SurfaceBackendInterface* Surface::getAlphaBackendSurface() const
+	{
+		return d().m_alphaBackend.get();
+	}
+
+	Result Surface::configure(SurfaceBackendInterface* surfaceBackend, SurfaceBackendInterface* alphaSurfaceBackend)
 	{
 		if (d().m_backend)
 		{
@@ -29,6 +34,9 @@ namespace avs {
 		}
 
 		d().m_backend.reset(surfaceBackend);
+
+		d().m_alphaBackend.reset(alphaSurfaceBackend);
+
 		setNumSlots(1, 1);
 		return Result::OK;
 	}
@@ -41,6 +49,9 @@ namespace avs {
 		}
 
 		d().m_backend.reset();
+
+		d().m_alphaBackend.reset();
+
 		setNumSlots(0, 0);
 		return Result::OK;
 	}

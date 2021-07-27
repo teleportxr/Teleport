@@ -224,7 +224,6 @@ public:
 	//Update the state of objects on the ClientRenderer.
 	void Update();
 
-	static constexpr size_t NumVidStreams = 1;
 	static constexpr bool AudioStream = true;
 	static constexpr bool GeoStream  = true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
@@ -232,17 +231,17 @@ public:
 
 	static constexpr avs::SurfaceFormat SurfaceFormats[2] = {
 		avs::SurfaceFormat::ARGB10,
-		avs::SurfaceFormat::ARGB,
+		avs::SurfaceFormat::ARGB
 	};
-	std::vector<AVSTextureHandle> avsTextures;
+	AVSTextureHandle avsTexture;
 	std::shared_ptr<scr::Texture> globalIlluminationTexture;
 	avs::Context context;
 	avs::VideoConfig videoConfig;
 
 	avs::NetworkSource source;
-	avs::Queue videoQueues[NumVidStreams];
-	avs::Decoder decoder[NumVidStreams];
-	avs::Surface surface[NumVidStreams];
+	avs::Queue videoQueue;
+	avs::Decoder decoder;
+	avs::Surface surface;
 
 	GeometryDecoder geometryDecoder;
 	ResourceCreator resourceCreator;

@@ -143,6 +143,61 @@ __device__ void inline Yuv444ToRgb(const uint8_t* frame, int width, int height, 
 	surf2Dwrite(p1, outputSurfaceRef, (x + 1) * 4, (y), cudaBoundaryModeZero);
 }
 
+template<class YuvUnit>
+__device__ inline unsigned char YuvToAlphaForPixel(YuvUnit y)
+{
+	const int low = 1 << (sizeof(YuvUnit) * 8 - 4);
+	float fy = (int)y - low;
+	const float maxf = (1 << sizeof(YuvUnit) * 8) - 1.0f;
+
+	// uvs not needed. alpha is stored in the y channel only.
+	YuvUnit a = (YuvUnit)Clamp(YUVtoRGB_BT709[0][0] * fy, 0.0f, maxf);
+	return a;
+}
+
+template<class YuvUnitx2>
+__device__ void inline YuvToAlpha(const uint8_t* frame, int width, int height, int pitch, bool isABGR)
+{
+	unsigned int x = 2 * (blockDim.x * blockIdx.x + threadIdx.x);
+	unsigned int y = 2 * (blockDim.y * blockIdx.y + threadIdx.y);
+
+	if (x + 1 >= width || y + 1 >= height) {
+		return;
+	}
+
+	uint8_t* pSrc = (uint8_t*)&frame[x * sizeof(YuvUnitx2) / 2 + y * pitch];
+	// 4 Ys
+	YuvUnitx2 l0 = *(YuvUnitx2*)pSrc;
+	YuvUnitx2 l1 = *(YuvUnitx2*)(pSrc + pitch);
+
+	uchar4 p0, p1, p2, p3;
+
+	surf2Dread(&p0, outputSurfaceRef, x * 4, y);
+	surf2Dread(&p1, outputSurfaceRef, (x + 1) * 4, y);
+	surf2Dread(&p2, outputSurfaceRef, x * 4, y + 1);
+	surf2Dread(&p3, outputSurfaceRef, (x + 1) * 4, y + 1);
+
+	if (isABGR)
+	{
+		p0.x = YuvToAlphaForPixel(l0.x);
+		p1.x = YuvToAlphaForPixel(l0.y);
+		p2.x = YuvToAlphaForPixel(l1.x);
+		p3.x = YuvToAlphaForPixel(l1.y);
+	}
+	else
+	{
+		p0.w = YuvToAlphaForPixel(l0.x);
+		p1.w = YuvToAlphaForPixel(l0.y);
+		p2.w = YuvToAlphaForPixel(l1.x);
+		p3.w = YuvToAlphaForPixel(l1.y);
+	}
+
+	surf2Dwrite(p0, outputSurfaceRef, (x) * 4, (y), cudaBoundaryModeZero);
+	surf2Dwrite(p1, outputSurfaceRef, (x + 1) * 4, (y), cudaBoundaryModeZero);
+	surf2Dwrite(p2, outputSurfaceRef, (x) * 4, (y + 1), cudaBoundaryModeZero);
+	surf2Dwrite(p3, outputSurfaceRef, (x + 1) * 4, (y + 1), cudaBoundaryModeZero);
+}
+
 __device__ uchar4 packRGBA8(uchar3 value)
 {
 	return make_uchar4(value.x, value.y, value.z, 255);
@@ -187,6 +242,16 @@ extern "C" __global__ void NV12toRGBA(const uint8_t* frame, int width, int heigh
 extern "C" __global__ void NV12toABGR(const uint8_t* frame, int width, int height, int pitch)
 {
 	YuvToRgb<uchar2>(frame, width, height, pitch, 0, true);
+}
+
+extern "C" __global__ void AlphaNV12toRGBA(const uint8_t * frame, int width, int height, int pitch)
+{
+	YuvToAlpha<uchar2>(frame, width, height, pitch, false);
+}
+
+extern "C" __global__ void AlphaNV12toABGR(const uint8_t * frame, int width, int height, int pitch)
+{
+	YuvToAlpha<uchar2>(frame, width, height, pitch, true);
 }
 
 extern "C" __global__ void P016toRGBA(const uint8_t* frame, int width, int height, int pitch)

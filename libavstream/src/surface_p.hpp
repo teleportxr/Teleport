@@ -17,6 +17,7 @@ struct Surface::Private final : public Node::Private
 {
 	AVSTREAM_PRIVATEINTERFACE(Surface, Node)
 	std::unique_ptr<SurfaceBackendInterface> m_backend;
+	std::unique_ptr<SurfaceBackendInterface> m_alphaBackend;
 };
 
 } // avs

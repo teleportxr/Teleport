@@ -385,11 +385,16 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.HeadPose.Translation)),*((const scr::quat *)(&vrFrame.HeadPose.Rotation)));
 	clientDeviceState.UpdateOriginPose();
 	// Update video texture if we have any pending decoded frames.
-	while(mNumPendingFrames > 0)
-	{
-		clientRenderer.mVideoSurfaceTexture->Update();
-		--mNumPendingFrames;
-	}
+
+    if (mNumPendingFrames > 0)
+    {
+        clientRenderer.mVideoSurfaceTexture->Update();
+        if (clientRenderer.videoConfig.use_alpha_layer_decoding)
+        {
+            clientRenderer.mAlphaSurfaceTexture->Update();
+        }
+        mNumPendingFrames = 0;
+    }
 
 	// Process stream pipeline
 	mPipeline.process();
@@ -526,7 +531,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
     //Move the hands before they are drawn.
 	UpdateHandObjects();
-	clientRenderer.RenderLocalNodes(out);
+    clientRenderer.RenderLocalNodes(out);
 	if (sessionClient.IsConnected())
 	{
 		clientRenderer.DrawOSD();
@@ -652,6 +657,9 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 		decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 		decoderParams.prependStartCodes = false;
 		decoderParams.deferDisplay = false;
+        decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
+        decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
+        decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
 
 		size_t stream_width = videoConfig.video_width;
 		size_t stream_height = videoConfig.video_height;
@@ -668,6 +676,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 		{
 			scr::Texture::TextureCreateInfo textureCreateInfo = {};
 			textureCreateInfo.externalResource = true;
+			// Slot 1
 			textureCreateInfo.slot = scr::Texture::Slot::NORMAL;
 			textureCreateInfo.format = scr::Texture::Format::RGBA8;
 			textureCreateInfo.type = scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
@@ -679,9 +688,24 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			((scc::GL_Texture *) (clientRenderer.mVideoTexture.get()))->SetExternalGlTexture(
 					clientRenderer.mVideoSurfaceTexture->GetTextureId());
 
+			// Slot 2
+			textureCreateInfo.slot = scr::Texture::Slot::COMBINED;
+			clientRenderer.mAlphaVideoTexture->Create(textureCreateInfo);
+			((scc::GL_Texture *) (clientRenderer.mAlphaVideoTexture.get()))->SetExternalGlTexture(
+					clientRenderer.mAlphaSurfaceTexture->GetTextureId());
 		}
 
-		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture));
+		VideoSurface* alphaSurface;
+		if (videoConfig.use_alpha_layer_decoding)
+		{
+			alphaSurface = new VideoSurface(clientRenderer.mAlphaSurfaceTexture);
+		}
+		else
+		{
+			alphaSurface = nullptr;
+		}
+
+		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture), alphaSurface);
 
 		clientRenderer.mVideoQueue.configure(200000, 16, "VideoQueue");
 

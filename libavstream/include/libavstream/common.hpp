@@ -265,7 +265,7 @@ namespace avs
 		int32_t webcam_offset_y = 0;
 		uint32_t    use_10_bit_decoding = 0;
 		uint32_t    use_yuv_444_decoding = 0;
-		uint32_t    alpha_layer_encoding_enabled = 1;
+		uint32_t    use_alpha_layer_decoding = 1;
 		uint32_t	colour_cubemap_size = 0;
 		int32_t		compose_cube = 0;
 		int32_t     use_cubemap = 1;
@@ -317,6 +317,7 @@ namespace avs
 		uint64_t pts = UINT64_MAX;
 		uint64_t dts = UINT64_MAX;
 		size_t dataSize = 0;
+		double connectionTime = 0.0;
 		bool broken = false; // True if any fragment of the data has been lost
 	} AVS_PACKED;
 

@@ -1,9 +1,10 @@
 
+
 //#version 310 es
 precision lowp float;
 #define lerp mix
 #ifndef TELEPORT_MAX_LIGHTS
-#define TELEPORT_MAX_LIGHTS 4
+#define TELEPORT_MAX_LIGHTS 1
 #endif
 //From Application VIA
 layout(location = 0) in vec3 a_Position;

@@ -180,7 +180,9 @@ public:
 	OVRFW::GlProgram     mCubeVideoSurfaceProgram;
 	OVRFW::GlProgram     m2DVideoSurfaceProgram;
 	OVRFW::SurfaceTexture* mVideoSurfaceTexture = nullptr;
+	OVRFW::SurfaceTexture* mAlphaSurfaceTexture = nullptr;
 	std::shared_ptr<scr::Texture>       mVideoTexture;
+	std::shared_ptr<scr::Texture>       mAlphaVideoTexture;
 	std::shared_ptr<scr::Texture>       mRenderTexture;
 	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;
 	std::shared_ptr<scr::Texture>       specularCubemapTexture;
@@ -192,11 +194,11 @@ public:
 	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
 	scr::ShaderResource				    mColourAndDepthShaderResources;
 	scr::ShaderResource				    mCopyCubemapShaderResources;
-	scr::ShaderResource				    mPerspectiveColourAndDepthShaderResources;
 	scr::ShaderResource				    mCopyPerspectiveShaderResources;
 	scr::ShaderResource				    mExtractTagShaderResources;
 	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
 	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
+	std::shared_ptr<scr::Effect>        mCopyCubemapWithAlphaLayerEffect;
 	std::shared_ptr<scr::Effect>        mCopyPerspectiveEffect;
 	std::shared_ptr<scr::Effect>        mCopyPerspectiveWithDepthEffect;
 	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;

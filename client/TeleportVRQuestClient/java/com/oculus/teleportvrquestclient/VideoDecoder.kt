@@ -11,7 +11,7 @@ import java.nio.ByteBuffer
 
 enum class VideoCodec {
     H264,
-    H265,
+    H265
 }
 
 enum class PayloadType {
@@ -22,7 +22,7 @@ enum class PayloadType {
     PPS,            /*!< Picture Parameter Set */
     ALE,            /*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
     OtherNALUnit,   /*!< Other NAL unit. */
-    AccessUnit,     /*!< Entire access unit (possibly multiple NAL units). */
+    AccessUnit      /*!< Entire access unit (possibly multiple NAL units). */
 }
 
 class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex: Int) : SurfaceTexture.OnFrameAvailableListener
@@ -31,7 +31,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
     private var mDecoderConfigured = false
     private var mDisplayRequests = 0
 
-    fun initialize(frameWidth: Int, frameHeight: Int, surface: SurfaceTexture)
+    fun initialize(surface: SurfaceTexture, frameWidth: Int, frameHeight: Int)
     {
         if(mDecoderConfigured)
         {
@@ -44,6 +44,7 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         format.setInteger(MediaFormat.KEY_MAX_HEIGHT, frameHeight)
 
         surface.setOnFrameAvailableListener(this)
+
         mDecoder.configure(format, Surface(surface), null, 0)
         mDecoder.start()
 
@@ -87,24 +88,24 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
             else -> byteArrayOf(0, 0, 1)
         }
 
-        if(lastPayload)
-        {
-            // Request to output previous access unit.
-            ++mDisplayRequests
-        }
-        else
+        if(!lastPayload)
         {
             // Signifies partial frame data. For all VCLs in a frame besides the last one. Needed for H264.
-           // if (payloadFlags == 0)
-            //{
-              //  payloadFlags = 8;
-            //}
+            if (payloadFlags == 0) {
+                payloadFlags = 8;
+            }
         }
 
         val inputBuffer = startCodes.plus(ByteArray(buffer.remaining()))
         buffer.get(inputBuffer, startCodes.size, buffer.remaining())
-        queueInputBuffer(inputBuffer, payloadFlags)
-        return mDisplayRequests > 0
+        val bufferId = queueInputBuffer(inputBuffer, payloadFlags)
+        if(lastPayload && bufferId >= 0)
+        {
+            ++mDisplayRequests
+            return true
+        }
+
+        return false
     }
 
     fun display(): Boolean
@@ -116,15 +117,15 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         }
         while(mDisplayRequests > 0)
         {
-            releaseOutputBuffer(mDisplayRequests == 1)
-            --mDisplayRequests
+            if (releaseOutputBuffer(mDisplayRequests == 1) > -2)
+                mDisplayRequests--
         }
         return true
     }
 
-    private fun queueInputBuffer(buffer: ByteArray, flags: Int)
+    private fun queueInputBuffer(buffer: ByteArray, flags: Int) : Int
     {
-        val inputBufferID = mDecoder.dequeueInputBuffer(0)
+        val inputBufferID = mDecoder.dequeueInputBuffer(0) // microseconds
         if(inputBufferID >= 0)
         {
             val inputBuffer = mDecoder.getInputBuffer(inputBufferID)
@@ -134,11 +135,12 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         }
         else
         {
-            Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
+            //Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
         }
+        return inputBufferID
     }
 
-    private fun releaseOutputBuffer(render: Boolean)
+    private fun releaseOutputBuffer(render: Boolean) : Int
     {
         var bufferInfo = MediaCodec.BufferInfo()
         val outputBufferID = mDecoder.dequeueOutputBuffer(bufferInfo, 0)
@@ -146,9 +148,11 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         {
             mDecoder.releaseOutputBuffer(outputBufferID, render)
         }
-        else {
+        else
+        {
             //Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder output buffer");
         }
+        return outputBufferID
     }
 
     external fun nativeFrameAvailable(decoderProxy: Long)
@@ -171,8 +175,9 @@ class VideoDecoder(private val mDecoderProxy: Long, private val mCodecTypeIndex:
         2 -> PayloadType.VPS
         3 -> PayloadType.SPS
         4 -> PayloadType.PPS
-        5 -> PayloadType.OtherNALUnit
-        6 -> PayloadType.AccessUnit
+        5 -> PayloadType.ALE
+        6 -> PayloadType.OtherNALUnit
+        7 -> PayloadType.AccessUnit
         else -> PayloadType.OtherNALUnit
     }
 }

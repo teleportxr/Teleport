@@ -123,7 +123,6 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c):
 	RenderMode(0)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
-	avsTextures.resize(NumVidStreams);
 	resourceCreator.AssociateResourceManagers(resourceManagers);
 
 	//Initalise time stamping for state update.
@@ -340,7 +339,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
 		// MUST call init each frame.
 		deviceContext.viewStruct.Init();
-		AVSTextureHandle th = avsTextures[0];
+		AVSTextureHandle th = avsTexture;
 		AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
@@ -375,13 +374,13 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
  
 			if (videoTexture->IsCubemap())
 			{
-				const char* technique = videoConfig.alpha_layer_encoding_enabled ? "recompose" : "recompose_with_depth_alpha";
+				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
 				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
 			}
 			else
 			{	
-				const char* technique = videoConfig.alpha_layer_encoding_enabled ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
+				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
 				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 				simul::math::Matrix4x4 projInv;
 				deviceContext.viewStruct.proj.Inverse(projInv);
@@ -455,6 +454,9 @@ void ClientRenderer::RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceC
 {
 	int W = targetTexture->width;
 	int H = targetTexture->length;
+	cubemapConstants.sourceOffset = { 0, 0 };
+	cubemapConstants.targetSize.x = W;
+	cubemapConstants.targetSize.y = H;
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -491,7 +493,10 @@ void ClientRenderer::RecomposeCubemap(simul::crossplatform::GraphicsDeviceContex
 	cubemapConstants.sourceOffset = sourceOffset;
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-	cubemapConstants.targetSize = targetTexture->width;
+
+	cubemapConstants.targetSize.x = targetTexture->width;
+	cubemapConstants.targetSize.y = targetTexture->length;
+
 	for (int m = 0; m < mips; m++)
 	{
 		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, m);
@@ -499,7 +504,7 @@ void ClientRenderer::RecomposeCubemap(simul::crossplatform::GraphicsDeviceContex
 		cubemapClearEffect->Apply(deviceContext, "recompose", 0);
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
 		cubemapClearEffect->Unapply(deviceContext);
-		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize;
+		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize.x;
 		cubemapConstants.targetSize /= 2;
 	}
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
@@ -605,27 +610,29 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = source.getCounterValues();
+	const avs::DecoderStats vidStats = decoder.GetStats();
+
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
 	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
 		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
 		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d", TELEPORT_SERVER_DISCOVERY_PORT):"Offline"),white);
 	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
+
 	if(show_osd== NETWORK_OSD)
 	{
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Bandwidth KBs: %4.4f", counters.bandwidthKPS));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Length: %d ", counters.jitterBufferLength ));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Push: %d ", counters.jitterBufferPush));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Jitter Buffer Pop: %d ", counters.jitterBufferPop )); 
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network Packet orphans: %d", counters.m_packetMapOrphans));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Max age: %d", counters.m_maxAge));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames decoded per sec: %4.2f", vidStats.framesDecodedPerSec));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
 	}
 	else if(show_osd== CAMERA_OSD)
 	{
@@ -894,7 +901,7 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 
 void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node)
 {
-	AVSTextureHandle th = avsTextures[0];
+	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
@@ -1012,15 +1019,12 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 
 void ClientRenderer::InvalidateDeviceObjects()
 {
-	for (auto i : avsTextures)
+	AVSTextureImpl *ti = (AVSTextureImpl*)avsTexture.get();
+	if (ti)
 	{
-		AVSTextureImpl *ti = (AVSTextureImpl*)i.get();
-		if (ti)
-		{
-			SAFE_DELETE(ti->texture);
-		}
+		SAFE_DELETE(ti->texture);
 	}
-	avsTextures.clear();
+	
 	if(pbrEffect)
 	{
 		pbrEffect->InvalidateDeviceObjects();
@@ -1091,7 +1095,6 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	WARN("VIDEO STREAM CHANGED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
-
 	videoPosDecoded=false;
 
 	videoTagDataCubeArray.clear();
@@ -1134,6 +1137,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	decoderParams.codec = videoConfig.videoCodec;
 	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
+	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
 
 	avs::DeviceHandle dev;
 	dev.handle = renderPlatform->AsD3D11Device();
@@ -1143,15 +1147,12 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	// Top of the pipeline, we have the network source.
 	pipeline.add(&source);
 
-	for (auto t : avsTextures)
+	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
+	if (ti)
 	{
-		AVSTextureImpl* ti= (AVSTextureImpl*)(t.get());
-		if (ti)
-		{
-			SAFE_DELETE(ti->texture);
-		}
+		SAFE_DELETE(ti->texture);
 	}
-
+	
 	/* Now for each stream, we add both a DECODER and a SURFACE node. e.g. for two streams:
 					 /->decoder -> surface
 			source -<
@@ -1185,26 +1186,25 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
-	for (int i = 0; i < NumVidStreams; ++i)
+	
+	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
+	auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
+	// Video streams are 0+...
+	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20, f))
 	{
-		CreateTexture(avsTextures[i], int(stream_width),int(stream_height), SurfaceFormats[i]);
-		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
-		// Video streams are 0+...
-		if (!decoder[i].configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20 + i, f))
-		{
-			SCR_CERR << "Failed to configure decoder node!\n";
-		}
-		if (!surface[i].configure(avsTextures[i]->createSurface()))
-		{
-			SCR_CERR << "Failed to configure output surface node!\n";
-		}
-
-		videoQueues[i].configure(200000, 16, "VideoQueue " + i);
-
-		avs::Node::link(source, videoQueues[i]);
-		avs::Node::link(videoQueues[i], decoder[i]);
-		pipeline.link({ &decoder[i], &surface[i] });
+		SCR_CERR << "Failed to configure decoder node!\n";
 	}
+	if (!surface.configure(avsTexture->createSurface()))
+	{
+		SCR_CERR << "Failed to configure output surface node!\n";
+	}
+
+	videoQueue.configure(200000, 16, "VideoQueue");
+
+	avs::Node::link(source, videoQueue);
+	avs::Node::link(videoQueue, decoder);
+	pipeline.link({ &decoder, &surface });
+	
 
 	// Audio
 	if (AudioStream)
@@ -1262,10 +1262,7 @@ void ClientRenderer::OnVideoStreamClosed()
 {
 	WARN("VIDEO STREAM CLOSED\n");
 	pipeline.deconfigure();
-	for (int i = 0; i < NumVidStreams; ++i)
-	{
-		videoQueues[i].deconfigure();
-	}
+	videoQueue.deconfigure();
 	audioQueue.deconfigure();
 	geometryQueue.deconfigure();
 
@@ -1311,27 +1308,25 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
-	for (size_t i = 0; i < NumVidStreams; ++i)
+	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
+	// Only create new texture and register new surface if resolution has changed
+	if (ti && ti->texture->GetWidth() != stream_width || ti->texture->GetLength() != stream_height)
 	{
-		AVSTextureImpl* ti = (AVSTextureImpl*)(avsTextures[i].get());
-		// Only create new texture and register new surface if resolution has changed
-		if (ti && ti->texture->GetWidth() != stream_width || ti->texture->GetLength() != stream_height)
+		SAFE_DELETE(ti->texture);
+
+		if (!decoder.unregisterSurface())
 		{
-			SAFE_DELETE(ti->texture);
-
-			if (!decoder[i].unregisterSurface())
-			{
-				throw std::runtime_error("Failed to unregister decoder surface");
-			}
-
-			CreateTexture(avsTextures[i], int(stream_width), int(stream_height), SurfaceFormats[i]);
+			throw std::runtime_error("Failed to unregister decoder surface");
 		}
 
-		if (!decoder[i].reconfigure((int)stream_width, (int)stream_height, decoderParams))
-		{
-			throw std::runtime_error("Failed to reconfigure decoder");
-		}
+		CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
 	}
+
+	if (!decoder.reconfigure((int)stream_width, (int)stream_height, decoderParams))
+	{
+		throw std::runtime_error("Failed to reconfigure decoder");
+	}
+	
 	lastSetupCommand.video_config = reconfigureVideoCommand.video_config;
 }
 
@@ -1551,7 +1546,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(0,1.0f);
 		FillInControllerPose(1, -1.0f);
 
-		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder->idrRequired(),fTime);
+		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime);
 
 		for(int i = 0; i < 2; i++)
 		{
@@ -1741,6 +1736,10 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'L':
 			renderPlayer = !renderPlayer;
+			break;
+		case 'Y':
+			if (sessionClient.IsConnected())
+				decoder.toggleShowAlphaAsColor();
 			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
 			ChangePass(ShaderMode::PBR);

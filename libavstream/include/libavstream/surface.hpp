@@ -31,7 +31,7 @@ public:
 	 *
 	 * \note Surface node takes ownership of its backend.
 	 */
-	Result configure(SurfaceBackendInterface* surfaceBackend);
+	Result configure(SurfaceBackendInterface* surfaceBackend, SurfaceBackendInterface* alphaSurfaceBackend = nullptr);
 
 	/*!
 	 * Deconfigure surface node and release its backend.
@@ -48,6 +48,9 @@ public:
 
 	/*! Return a non-owning pointer to associated surface backend. */
 	SurfaceBackendInterface* getBackendSurface() const override;
+
+	/*! Return a non-owning pointer to associated surface backend. */
+	SurfaceBackendInterface* getAlphaBackendSurface() const override;
 };
 
 } // avs

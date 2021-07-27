@@ -13,6 +13,8 @@ namespace {
 	const char* SYM_surfaceRef = "outputSurfaceRef";
 	const char* SYM_kNV12toRGBA = "NV12toRGBA";
 	const char* SYM_kNV12toABGR = "NV12toABGR";
+	const char* SYM_kAlphaNV12toRGBA = "AlphaNV12toRGBA";
+	const char* SYM_kAlphaNV12toABGR = "AlphaNV12toABGR";
 	const char* SYM_kNV12toR16 = "NV12toR16";
 	const char* SYM_kP016toRGBA = "P016toRGBA";
 	const char* SYM_kP016toABGR = "PO16toABGR";
@@ -182,6 +184,8 @@ namespace avs
 		cuModuleGetSurfRef(&m_surfaceRef, m_module, SYM_surfaceRef);
 		cuModuleGetFunction(&m_kNV12toRGBA, m_module, SYM_kNV12toRGBA);
 		cuModuleGetFunction(&m_kNV12toABGR, m_module, SYM_kNV12toABGR);
+		cuModuleGetFunction(&m_kAlphaNV12toRGBA, m_module, SYM_kAlphaNV12toRGBA);
+		cuModuleGetFunction(&m_kAlphaNV12toABGR, m_module, SYM_kAlphaNV12toABGR);
 		cuModuleGetFunction(&m_kNV12toR16, m_module, SYM_kNV12toR16);
 		cuModuleGetFunction(&m_kP016toRGBA, m_module, SYM_kP016toRGBA);
 		cuModuleGetFunction(&m_kP016toABGR, m_module, SYM_kP016toABGR);
@@ -278,17 +282,10 @@ namespace avs
 				return Result::DecoderBackend_CodecNotSupported;
 			}
 
-			if (CUFAILED(cuvidCreateDecoder(&m_colorDecoder, &createInfo)))
+			if (CUFAILED(cuvidCreateDecoder(&m_decoder, &createInfo)))
 			{
 				shutdown();
 				AVSLOG(Error) << "DecoderNV: Failed to create the video decoder";
-				return Result::DecoderBackend_InitFailed;
-			}
-
-			if (CUFAILED(cuvidCreateDecoder(&m_alphaDecoder, &createInfo)))
-			{
-				shutdown();
-				AVSLOG(Error) << "DecoderNV: Failed to create the alpha video decoder";
 				return Result::DecoderBackend_InitFailed;
 			}
 		}
@@ -303,7 +300,7 @@ namespace avs
 
 	Result DecoderNV::reconfigure(int frameWidth, int frameHeight, const DecoderParams& params)
 	{
-		if (!m_colorDecoder)
+		if (!m_decoder)
 		{
 			AVSLOG(Error) << "DecoderNV: Can't reconfigure because decoder not initialized";
 			return Result::DecoderBackend_NotInitialized;
@@ -317,15 +314,9 @@ namespace avs
 		reconfigInfo.ulNumDecodeSurfaces = numDecodeSurfaces;
 		
 
-		if (CUFAILED(cuvidReconfigureDecoder(&m_colorDecoder, &reconfigInfo)))
+		if (CUFAILED(cuvidReconfigureDecoder(&m_decoder, &reconfigInfo)))
 		{
 			AVSLOG(Error) << "DecoderNV: Failed to reconfigure the video decoder";
-			return Result::DecoderBackend_ReconfigFailed;
-		}
-
-		if (CUFAILED(cuvidReconfigureDecoder(&m_alphaDecoder, &reconfigInfo)))
-		{
-			AVSLOG(Error) << "DecoderNV: Failed to reconfigure the alpha video decoder";
 			return Result::DecoderBackend_ReconfigFailed;
 		}
 
@@ -342,16 +333,12 @@ namespace avs
 			unregisterSurface();
 		}
 
-		if (m_colorDecoder)
+		if (m_decoder)
 		{
-			cuvidDestroyDecoder(m_colorDecoder);
-			m_colorDecoder = nullptr;
+			cuvidDestroyDecoder(m_decoder);
+			m_decoder = nullptr;
 		}
-		if (m_alphaDecoder)
-		{
-			cuvidDestroyDecoder(m_alphaDecoder);
-			m_alphaDecoder = nullptr;
-		}
+
 		if (m_parser)
 		{
 			cuvidDestroyVideoParser(m_parser);
@@ -365,6 +352,8 @@ namespace avs
 
 			m_kNV12toRGBA = nullptr;
 			m_kNV12toABGR = nullptr;
+			m_kAlphaNV12toRGBA = nullptr;
+			m_kAlphaNV12toABGR = nullptr;
 			m_kNV12toR16 = nullptr;
 			m_kP016toRGBA = nullptr;
 			m_kP016toABGR = nullptr;
@@ -389,13 +378,14 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result DecoderNV::registerSurface(const SurfaceBackendInterface* surface)
+	// Note: Alpha surface is not needed for the NVidia decoder because we use a CUDA kernel to write alpha to the color surface.
+	Result DecoderNV::registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface)
 	{
 		const unsigned int registerFlags = CU_GRAPHICS_REGISTER_FLAGS_SURFACE_LDST;
 
 		CUDA::ContextGuard ctx(m_context);
 
-		if (!m_colorDecoder)
+		if (!m_decoder)
 		{
 			AVSLOG(Error) << "DecoderNV: Decoder not initialized";
 			return Result::DecoderBackend_NotInitialized;
@@ -439,6 +429,39 @@ namespace avs
 
 		cuGraphicsResourceSetMapFlags(m_registeredSurface, CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD);
 		m_registeredSurfaceFormat = surface->getFormat();
+
+		switch (m_registeredSurfaceFormat)
+		{
+		case SurfaceFormat::ARGB:
+			if (m_params.use10BitDecoding)
+			{
+				m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444P16toRGBA : m_kP016toRGBA;
+			}
+			else
+			{
+				m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444toRGBA : m_kNV12toRGBA;
+				m_alphaKernel = m_kAlphaNV12toRGBA;
+			}
+			break;
+		case SurfaceFormat::ABGR:
+			if (m_params.use10BitDecoding)
+			{
+				m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444P16toABGR : m_kP016toABGR;
+			}
+			else
+			{
+				m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444toABGR : m_kNV12toABGR;
+				m_alphaKernel = m_kAlphaNV12toABGR;
+			}
+			break;
+		case SurfaceFormat::R16:
+			m_colorKernel = m_kNV12toR16;
+			break;
+		case SurfaceFormat::NV12:
+			/* Not implemented yet. */
+			break;
+		}
+
 		return Result::OK;
 	}
 
@@ -446,7 +469,7 @@ namespace avs
 	{
 		CUDA::ContextGuard ctx(m_context);
 
-		if (!m_colorDecoder)
+		if (!m_decoder)
 		{
 			AVSLOG(Error) << "DecoderNV: Decoder not initialized";
 			return Result::DecoderBackend_NotInitialized;
@@ -464,13 +487,17 @@ namespace avs
 		}
 
 		m_registeredSurface = nullptr;
+		m_colorKernel = nullptr;
+		m_alphaKernel = nullptr;
 		m_registeredSurfaceFormat = SurfaceFormat::Unknown;
+
 		return Result::OK;
 	}
 
-	Result DecoderNV::decode(const void* buffer, size_t bufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload)
+	// Note: Alpha is included in the color buffer for the NVidia decoder. Only Android needs the alpha buffer.
+	Result DecoderNV::decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload)
 	{
-		if (!m_parser || !m_colorDecoder)
+		if (!m_parser || !m_decoder)
 		{
 			return Result::DecoderBackend_NotInitialized;
 		}
@@ -486,18 +513,23 @@ namespace avs
 		CUVIDSOURCEDATAPACKET packet = {};
 		packet.payload = reinterpret_cast<const unsigned char*>(buffer);
 		packet.payload_size = static_cast<unsigned long>(bufferSizeInBytes);
-		// Roderick: This flag removes one frame of lag:
-		packet.flags = CUVID_PKT_ENDOFPICTURE;
+
+		// This flag removes one frame of lag but only works when there is no alpha layer.
+		if (!m_params.useAlphaLayerDecoding)
+		{
+			packet.flags = CUVID_PKT_ENDOFPICTURE;
+		}
+		
 		if (CUFAILED(cuvidParseVideoData(m_parser, &packet)))
 		{
 			AVSLOG(Error) << "DecoderNV: Failed to parse data packet";
 			return Result::DecoderBackend_ParseFailed;
 		}
 
-		return (m_displayPictureIndex >= 0) ? Result::DecoderBackend_ReadyToDisplay : Result::OK;
+		return m_displayPictureIndex >= 0 ? Result::DecoderBackend_ReadyToDisplay : Result::OK;
 	}
 
-	Result DecoderNV::display()
+	Result DecoderNV::display(bool showAlphaAsColor)
 	{
 		CUDA::ContextGuard ctx(m_context);
 
@@ -506,21 +538,11 @@ namespace avs
 			return Result::DecoderBackend_DisplayFailed;
 		}
 
-		CUdeviceptr frameDevicePtr;
-		unsigned int framePitch;
-
-		CUVIDPROCPARAMS procParams = {};
-		procParams.progressive_frame = 1;
-		if (CUFAILED(cuvidMapVideoFrame(m_colorDecoder, m_displayPictureIndex, &frameDevicePtr, &framePitch, &procParams)))
-		{
-			AVSLOG(Warning) << "DecoderNV: Failed to map video frame";
-			return Result::DecoderBackend_DisplayFailed;
-		}
+		assert(colorKernel);
 
 		if (CUFAILED(cuGraphicsMapResources(1, &m_registeredSurface, 0)))
 		{
 			AVSLOG(Warning) << "DecoderNV: Failed to map registered output surface for post processing";
-			cuvidUnmapVideoFrame(m_colorDecoder, frameDevicePtr);
 			return Result::DecoderBackend_DisplayFailed;
 		}
 
@@ -529,67 +551,82 @@ namespace avs
 		assert(surfaceBaseMipLevel);
 		cuSurfRefSetArray(m_surfaceRef, surfaceBaseMipLevel, 0);
 
-		CUfunction ppKernel = nullptr;
-		switch (m_registeredSurfaceFormat)
-		{
-		case SurfaceFormat::ARGB:
-			if (m_params.use10BitDecoding)
-			{
-				ppKernel = m_params.useYUV444ChromaFormat ? m_kYUV444P16toRGBA : m_kP016toRGBA;
-			}
-			else
-			{
-				ppKernel = m_params.useYUV444ChromaFormat ? m_kYUV444toRGBA : m_kNV12toRGBA;
-			}
-			break;
-		case SurfaceFormat::ABGR:
-			if (m_params.use10BitDecoding)
-			{
-				ppKernel = m_params.useYUV444ChromaFormat ? m_kYUV444P16toABGR : m_kP016toABGR;
-			}
-			else
-			{
-				ppKernel = m_params.useYUV444ChromaFormat ? m_kYUV444toABGR : m_kNV12toABGR;
-			}
-			break;
-		case SurfaceFormat::R16:
-			ppKernel = m_kNV12toR16;
-			break;
-		case SurfaceFormat::NV12:
-			/* Not implemented yet. */
-			break;
-		}
-		assert(ppKernel);
+		int alphaIndex = m_displayPictureIndex + 1;
+		int colorIndex = m_params.useAlphaLayerDecoding && showAlphaAsColor ? alphaIndex : m_displayPictureIndex;
 
-		//frameDevicePtr += ((unsigned long long)m_frameWidth * m_frameHeight * 3);
-		void* ppKernelParams[] = {
+		CUdeviceptr frameDevicePtr;
+		unsigned int framePitch;
+
+		CUVIDPROCPARAMS procParams = {};
+		procParams.progressive_frame = 1;
+		if (CUFAILED(cuvidMapVideoFrame(m_decoder, colorIndex, &frameDevicePtr, &framePitch, &procParams)))
+		{
+			AVSLOG(Warning) << "DecoderNV: Failed to map color video frame";
+			cuGraphicsUnmapResources(1, &m_registeredSurface, 0);
+			return Result::DecoderBackend_DisplayFailed;
+		}
+
+		const unsigned int blockDimX = 32;
+		const unsigned int blockDimY = 2;
+		const float dimYDiv = m_params.useYUV444ChromaFormat ? 1.f : 2.f;
+		const unsigned int gridDimX = (unsigned int)std::ceilf(float(m_frameWidth) / blockDimX / 2.f);
+		const unsigned int gridDimY = (unsigned int)std::ceilf(float(m_frameHeight) / blockDimY / dimYDiv);
+		
+		void* kernelParams[] = 
+		{
 			&frameDevicePtr,
 			&m_frameWidth,
 			&m_frameHeight,
 			&framePitch,
 		};
 
-		const unsigned int blockDimX = 32;
-		const unsigned int blockDimY = 2;
-		const float DimYDiv = m_params.useYUV444ChromaFormat ? 1.f : 2.f;
-		const unsigned int gridDimX = (unsigned int)std::ceilf(float(m_frameWidth) / blockDimX / 2.f);
-		const unsigned int gridDimY = (unsigned int)std::ceilf(float(m_frameHeight) / blockDimY / DimYDiv);
-		
 		Result result = Result::OK;
-		if (CUFAILED(cuLaunchKernel(ppKernel, gridDimX, gridDimY, 1, blockDimX, blockDimY, 1, 0, 0, ppKernelParams, nullptr)))
+
+		if (CUFAILED(cuLaunchKernel(m_colorKernel, gridDimX, gridDimY, 1, blockDimX, blockDimY, 1, 0, 0, kernelParams, nullptr)))
 		{
 			AVSLOG(Warning) << "DecoderNV: Failed to launch post processing kernel";
 			result = Result::DecoderBackend_DisplayFailed;
 		}
-		else {
+		else 
+		{
 			// Wait for kernel to finish.
 			cuStreamSynchronize(0);
 		}
 
+		cuvidUnmapVideoFrame(m_decoder, frameDevicePtr);
+
+		if (result && m_params.useAlphaLayerDecoding)
+		{
+			assert(alphaKernel);
+
+			// When alpha layer encoding is enabled, the alpha layer will have its own picture index and always 
+			// comes after the color picture.
+			if (CUFAILED(cuvidMapVideoFrame(m_decoder, alphaIndex, &frameDevicePtr, &framePitch, &procParams)))
+			{
+				AVSLOG(Warning) << "DecoderNV: Failed to map video frame";
+				cuGraphicsUnmapResources(1, &m_registeredSurface, 0);
+				return Result::DecoderBackend_DisplayFailed;
+			}
+
+			kernelParams[0] = &frameDevicePtr;
+
+			if (CUFAILED(cuLaunchKernel(m_alphaKernel, gridDimX, gridDimY, 1, blockDimX, blockDimY, 1, 0, 0, kernelParams, nullptr)))
+			{
+				AVSLOG(Warning) << "DecoderNV: Failed to launch post processing kernel";
+				result = Result::DecoderBackend_DisplayFailed;
+			}
+			else {
+				// Wait for kernel to finish.
+				cuStreamSynchronize(0);
+			}
+
+			cuvidUnmapVideoFrame(m_decoder, frameDevicePtr);
+		}
+
 		cuGraphicsUnmapResources(1, &m_registeredSurface, 0);
-		cuvidUnmapVideoFrame(m_colorDecoder, frameDevicePtr);
 
 		m_displayPictureIndex = -1;
+
 		return result;
 	}
 
@@ -620,7 +657,7 @@ namespace avs
 		assert(pic);
 
 		DecoderNV* self = reinterpret_cast<DecoderNV*>(userData);
-		if (CUFAILED(cuvidDecodePicture(self->m_colorDecoder, pic)))
+		if (CUFAILED(cuvidDecodePicture(self->m_decoder, pic)))
 		{
 			AVSLOG(Warning) << "DecoderNV: Failed to decode picture";
 			return 0;

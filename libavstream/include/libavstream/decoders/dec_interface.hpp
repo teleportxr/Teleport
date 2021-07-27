@@ -103,7 +103,7 @@ public:
 	 *  - Result::DeocderBackend_SurfaceAlreadyRegistered if surface backend has already been registered with this decoder backend.
 	 *  - Result::DecoderBackend_InvalidSurface if passed surface backend is invalid or otherwise unsuitable for this decoder.
 	 */
-	virtual Result registerSurface(const SurfaceBackendInterface* surface) = 0;
+	virtual Result registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface = nullptr) = 0;
 
 	/*!
 	 * Unregister surface as destination for decoded video frames.
@@ -128,7 +128,7 @@ public:
 	 *  - Result::DecoderBackend_InvalidPayload if the specified payloadType is not suitable for this decoder.
 	 *  - Result::DecoderBackend_ParseFailed if decoder failed to parse video data.
 	 */
-	virtual Result decode(const void* buffer, size_t bufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) = 0;
+	virtual Result decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) = 0;
 
 	/*!
 	 * Display decoded frame on destination surface.
@@ -136,7 +136,7 @@ public:
 	 *  - Result::OK on succes.
 	 *  - Result::DecoderBackend_DisplayFailed on failure, or if decoder was not yet ready to display.
 	 */
-	virtual Result display() = 0;
+	virtual Result display(bool showAlphaAsColor = false) = 0;
 };
 
 } // avs

@@ -130,7 +130,7 @@ void GL_DeviceContext::BindShaderResources(const std::vector<const ShaderResourc
 	            GLCheckErrorsWithTitle("BindShaderResources: 3");
 	            //NULL
 	        }
-	        else
+            else
 	        {
 	            continue;
 	        }

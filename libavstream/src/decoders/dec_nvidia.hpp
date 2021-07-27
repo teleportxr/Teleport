@@ -22,11 +22,11 @@ namespace avs
 		Result initialize(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params) override;
 		Result reconfigure(int frameWidth, int frameHeight, const DecoderParams& params) override;
 		Result shutdown() override;
-		Result registerSurface(const SurfaceBackendInterface* surface) override;
+		Result registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface = nullptr) override;
 		Result unregisterSurface() override;
 
-		Result decode(const void* buffer, size_t bufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) override;
-		Result display() override;
+		Result decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload) override;
+		Result display(bool showAlphaAsColor = false) override;
 		/* End DecoderBackendInterface */
 
 	private:
@@ -38,9 +38,9 @@ namespace avs
 
 		CUcontext m_context = nullptr;
 		CUvideoparser m_parser = nullptr;
-		CUvideodecoder m_colorDecoder = nullptr;
-		CUvideodecoder m_alphaDecoder = nullptr;
-		CUvideodecoder m_activeDecoder = nullptr;
+		CUvideodecoder m_decoder = nullptr;
+		CUfunction m_colorKernel = nullptr;
+		CUfunction m_alphaKernel = nullptr;
 		unsigned int m_frameWidth = 0;
 		unsigned int m_frameHeight = 0;
 		int m_displayPictureIndex = -1;
@@ -50,6 +50,8 @@ namespace avs
 
 		CUfunction m_kNV12toRGBA = nullptr;
 		CUfunction m_kNV12toABGR = nullptr;
+		CUfunction m_kAlphaNV12toRGBA = nullptr;
+		CUfunction m_kAlphaNV12toABGR = nullptr;
 		CUfunction m_kNV12toR16 = nullptr;
 		CUfunction m_kP016toRGBA = nullptr;
 		CUfunction m_kP016toABGR = nullptr;
