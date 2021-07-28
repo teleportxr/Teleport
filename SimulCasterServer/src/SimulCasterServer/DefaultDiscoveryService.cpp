@@ -104,7 +104,7 @@ void DefaultDiscoveryService::tick()
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
 		if (desiredIP.length() != 0)
 		{
-			//Retrieve IP of client that sent message, and covert to string.
+			//Retrieve IP of client that sent message, and convert to string.
 			char clientIPRaw[20];
 			enet_address_get_host_ip(&addr, clientIPRaw, 20);
 

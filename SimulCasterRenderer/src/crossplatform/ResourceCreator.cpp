@@ -123,9 +123,9 @@ void ResourceCreator::Update(float deltaTime)
 	//This has to happen on the main thread, so we can use the main GL context.
 	for (auto texturePair = texturesToCreate.begin(); texturePair != texturesToCreate.end();)
 	{
+		// The texture object has a copy of the create info and
+		// will delete the allocated mip data in its destructor.
 		CompleteTexture(texturePair->first, texturePair->second);
-		// delete the allocated mip data:
-		texturePair->second.Free();
 		texturePair = texturesToCreate.erase(texturePair);
 	}
 }
