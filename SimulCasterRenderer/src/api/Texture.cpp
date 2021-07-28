@@ -4,7 +4,7 @@ using namespace scr;
 
 void Texture::TextureCreateInfo::Free()
 {
-	for(auto m:mips)
+	for(auto m : mips)
 	{
 		delete [] m;
 	}

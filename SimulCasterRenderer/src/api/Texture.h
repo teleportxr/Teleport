@@ -166,12 +166,7 @@ namespace scr
 			m_CI.sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
 			m_CI.mipSizes.clear();*/
 
-			//Free mip data.
-			for(size_t mipLevel = 0; mipLevel < m_CI.mips.size(); mipLevel++)
-			{
-				delete[] m_CI.mips[mipLevel];
-			}
-			m_CI.mips.clear();
+			m_CI.Free();
 		}
 
 		//Returns whether the texture is valid.
