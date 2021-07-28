@@ -41,7 +41,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
         {
             //Can't use FP16 != 16UI
             //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, m_CI.width, m_CI.height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, m_CI.mips[0]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, m_CI.width, m_CI.height, 0, GL_RED, GL_HALF_FLOAT, m_CI.mips[0]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, m_CI.width, m_CI.height, 0, GL_RED, GL_HALF_FLOAT, m_CI.mips[0].data());
             return;
         }
 
@@ -57,7 +57,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
             case Type::TEXTURE_2D: {
                 if(m_CI.mips.size() != 0)
                 {
-                    glTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);
+                    glTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0].data());
                 }
                 else
                 {
@@ -69,7 +69,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_3D: {
-                glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);
+                glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0].data());
                 break;
             }
             case Type::TEXTURE_1D_ARRAY:
@@ -78,7 +78,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_2D_ARRAY: {
-                glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0]);
+                glTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, m_CI.depth, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0].data());
                 break;
             }
             case Type::TEXTURE_2D_MULTISAMPLE: {
@@ -96,7 +96,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 					size_t offset = 0;
 					for (uint32_t i = 0; i < 6; i++)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, m_CI.mips[0] + offset);
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToGLFormat(m_CI.format), m_CI.width, m_CI.height, 0, ToBaseGLFormat(m_CI.format), GL_UNSIGNED_BYTE, &m_CI.mips[0][offset]);
 						offset += m_CI.mipSizes[0];
 					}
 					m_CI.mipSizes[0] *= 6;
@@ -133,11 +133,11 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
                 return;
             }
             case Type::TEXTURE_2D: {
-                glCompressedTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, 0, (GLsizei)m_CI.mipSizes[0], m_CI.mips[0]);
+                glCompressedTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, 0, (GLsizei)m_CI.mipSizes[0], m_CI.mips[0].data());
                 break;
             }
             case Type::TEXTURE_3D: {
-                glCompressedTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, m_CI.depth, 0, (GLsizei)m_CI.mipSizes[0], m_CI.mips[0]);
+                glCompressedTexImage3D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, m_CI.depth, 0, (GLsizei)m_CI.mipSizes[0], m_CI.mips[0].data());
                 break;
             }
             case Type::TEXTURE_1D_ARRAY: {
@@ -159,7 +159,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
             case Type::TEXTURE_CUBE_MAP: {
                 size_t offset = 0;
                 for (uint32_t i = 0; i < 6; i++) {
-                    glCompressedTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, 0, (GLsizei)m_CI.mipSizes[0] / 6, m_CI.mips[0] + offset);
+                    glCompressedTexImage2D(TypeToGLTarget(m_CI.type), 0, ToGLCompressedFormat(m_CI.compression, m_CI.bytesPerPixel), m_CI.width, m_CI.height, 0, (GLsizei)m_CI.mipSizes[0] / 6, &m_CI.mips[0][offset]);
                     offset += m_CI.mipSizes[0] / 6;
                 }
             }

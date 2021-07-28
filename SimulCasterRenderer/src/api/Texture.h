@@ -119,7 +119,6 @@ namespace scr
 		
 		struct TextureCreateInfo
 		{
-			void Free();
 			std::string name;
 
 			uint32_t width = 0;
@@ -134,7 +133,7 @@ namespace scr
 			Format format = Format::FORMAT_UNKNOWN;
 			SampleCountBit sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
 			std::vector<size_t> mipSizes;
-			std::vector<const uint8_t*> mips;
+			std::vector<std::vector<unsigned char>> mips;
 
 			CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
 		
@@ -155,18 +154,7 @@ namespace scr
 
 		virtual ~Texture()
 		{
-			/* RK: Purpose of all this unclear..
-			m_CI.width = 0;
-			m_CI.height = 0; 
-			m_CI.depth = 0;
-			m_CI.bytesPerPixel = 0;
-			m_CI.slot = Slot::UNKNOWN;
-			m_CI.type = Type::TEXTURE_UNKNOWN;
-			m_CI.format = Format::FORMAT_UNKNOWN;
-			m_CI.sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
-			m_CI.mipSizes.clear();*/
-
-			m_CI.Free();
+		
 		}
 
 		//Returns whether the texture is valid.
