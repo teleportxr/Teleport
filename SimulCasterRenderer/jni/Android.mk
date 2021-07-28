@@ -16,6 +16,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src/api
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src/crossplatform
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src/crossplatform/NodeComponents
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../firstparty/Platform/External/stb
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../libavstream/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/enet/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/basis_universal
