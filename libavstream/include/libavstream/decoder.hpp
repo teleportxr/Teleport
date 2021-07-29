@@ -43,12 +43,12 @@ namespace avs
 
 	struct DecoderStats
 	{
-		size_t framesReceived;
-		size_t framesDecoded;
-		size_t framesProcessed;
-		float framesReceivedPerSec;
-		float framesDecodedPerSec;
-		float framesProcessedPerSec;
+		size_t framesReceived = 0;
+		size_t framesProcessed = 0;
+		size_t framesDisplayed = 0;
+		float framesReceivedPerSec = 0;
+		float framesProcessedPerSec = 0;
+		float framesDisplayedPerSec = 0;
 	};
 
 	/*!

@@ -279,11 +279,7 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		result = m_vid_parser->parse((const char*)(m_frameBuffer.data() + sizeof(NetworkFrameInfo)), m_frame.dataSize);
 		// Any decoding for this frame now complete //
 
-		if (result)
-		{
-			++m_stats.framesDecoded;
-		}
-		else
+		if (!result)
 		{
 			AVSLOG(Warning) << "Decoder: Failed to parse/decode the video frame \n";
 		}
@@ -299,8 +295,8 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 	if (connectionTime)
 	{
 		m_stats.framesReceivedPerSec = m_stats.framesReceived / connectionTime;
-		m_stats.framesDecodedPerSec = m_stats.framesDecoded / connectionTime;
 		m_stats.framesProcessedPerSec = m_stats.framesProcessed / connectionTime;
+		m_stats.framesDisplayedPerSec = m_stats.framesDisplayed / connectionTime;
 	}
 	
 	return result;
@@ -315,6 +311,7 @@ Result Decoder::DisplayFrame()
 		AVSLOG(Error) << "Failed to display video frame.";
 	}
 	m_stats.framesProcessed += m_interimFramesProcessed;
+	++m_stats.framesDisplayed;
 	if(m_interimFramesProcessed > 3)
 		AVSLOG(Warning) << m_interimFramesProcessed << " interim frames processed \n";
 	m_interimFramesProcessed = 0;

@@ -1324,8 +1324,8 @@ void ClientRenderer::DrawOSD()
 					"Bandwidth(kbps): %4.2f\n",
                     "Decoder Packets Per Sec: %4.2f\n",
 					"Video Frames Received Per Sec: %4.2f\n",
-					"Video frames Decoded Per Sec: %4.2f\n",
-					"Video Frames Processed Per Sec: %4.2f",
+					"Video frames Processed Per Sec: %4.2f\n",
+					"Video Frames Displayed Per Sec: %4.2f\n",
 					vidStats.framesProcessed,
 					ctr.networkPacketsDropped,
 					ctr.decoderPacketsDropped,
@@ -1333,8 +1333,8 @@ void ClientRenderer::DrawOSD()
 					ctr.bandwidthKPS,
 					ctr.decoderPacketsReceivedPerSec,
 					vidStats.framesReceivedPerSec,
-					vidStats.framesDecodedPerSec,
-					vidStats.framesProcessedPerSec);
+					vidStats.framesProcessedPerSec,
+					vidStats.framesDisplayedPerSec);
 			break;
 		}
 		case GEOMETRY_OSD:

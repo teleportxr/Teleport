@@ -631,8 +631,8 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames decoded per sec: %4.2f", vidStats.framesDecodedPerSec));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
 	}
 	else if(show_osd== CAMERA_OSD)
 	{
