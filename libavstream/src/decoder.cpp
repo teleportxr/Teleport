@@ -9,6 +9,7 @@
 #include <libavstream/stream/parser_interface.hpp>
 
 #include <libavstream/networksource.hpp>
+#include <libavstream\timer.hpp>
 #include "ElasticFrameProtocol.h"
 #include "ElasticInternal.h"
 
@@ -222,8 +223,6 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		DisplayFrame();
 	}
 
-	double connectionTime = 0.0;
-
 	do
 	{
 		m_extraDataSize = 0;
@@ -253,9 +252,12 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		// Copy frame info 
 		memcpy(&m_frame, m_frameBuffer.data(), sizeof(NetworkFrameInfo));
 
-		connectionTime = m_frame.connectionTime;
-
 		++m_stats.framesReceived;
+
+		if (m_frame.connectionTime)
+		{
+			m_stats.framesReceivedPerSec = m_stats.framesReceived / m_frame.connectionTime;
+		}
 
 		// Check if data was lost or corrupted
 		if (m_frame.broken || m_frame.dataSize == 0)
@@ -291,13 +293,6 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		DisplayFrame();
 	}
-
-	if (connectionTime)
-	{
-		m_stats.framesReceivedPerSec = m_stats.framesReceived / connectionTime;
-		m_stats.framesProcessedPerSec = m_stats.framesProcessed / connectionTime;
-		m_stats.framesDisplayedPerSec = m_stats.framesDisplayed / connectionTime;
-	}
 	
 	return result;
 }
@@ -310,8 +305,16 @@ Result Decoder::DisplayFrame()
 	{
 		AVSLOG(Error) << "Failed to display video frame.";
 	}
+
+	double connectionTime = TimerUtil::GetElapsedTime();
 	m_stats.framesProcessed += m_interimFramesProcessed;
 	++m_stats.framesDisplayed;
+	if (connectionTime)
+	{
+		m_stats.framesProcessedPerSec = m_stats.framesProcessed / connectionTime;
+		m_stats.framesDisplayedPerSec = m_stats.framesDisplayed / connectionTime;
+	}
+	
 	if(m_interimFramesProcessed > 3)
 		AVSLOG(Warning) << m_interimFramesProcessed << " interim frames processed \n";
 	m_interimFramesProcessed = 0;

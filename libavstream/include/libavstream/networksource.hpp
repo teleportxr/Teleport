@@ -49,8 +49,6 @@ namespace avs
 		float networkDropped = 0.0f;
 		/*! Bandwidth in kilobytes. */
 		float bandwidthKPS = 0.0f;
-		/*! Time in seconds since the connection to the erver was established. */
-		double connectionTime = 0.0;
 		/*! Number of successfully assembled decoder packets received per second. */
 		double decoderPacketsReceivedPerSec = 0.0;
 	};
@@ -113,10 +111,6 @@ namespace avs
 
 	private:
 		Private *m_data; 
-
-		//remove
-		//ElasticFrameType2 m_type2Frame;
-		//size_t m_size;
 
 		void sendAck(avs::NetworkPacket &packet);
 		void asyncRecvPackets();

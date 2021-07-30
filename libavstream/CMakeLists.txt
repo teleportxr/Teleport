@@ -38,6 +38,7 @@ set(src_private_root
 	src/networksource.cpp
 	src/libraryloader.cpp
 	src/common_maths.cpp
+	src/timer.cpp
 )
 set(src_private_api
 	src/api/cuda.cpp
@@ -151,6 +152,7 @@ set(src_public_root
 	include/libavstream/pipeline.hpp
 	include/libavstream/queue.hpp
 	include/libavstream/surface.hpp
+	include/libavstream/timer.hpp
 	)
 set(src_public_stream
 	include/libavstream/stream/parser_interface.hpp)
