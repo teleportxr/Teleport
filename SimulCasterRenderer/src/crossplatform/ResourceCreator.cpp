@@ -45,29 +45,25 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 		scr::Texture::Format::RGBA8,
 		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
 		{4},
-		{0x00000000},
+		{{0x00000000}},
 		scr::Texture::CompressionFormat::UNCOMPRESSED,
 		false
 	};
 
-	uint32_t* white = new uint32_t[1];
-	*white = whiteBGRA;
-	tci.mips[0] = reinterpret_cast<uint8_t*>(white);
+	tci.mips[0] = std::vector<unsigned char>(sizeof(whiteBGRA));
+	memcpy(tci.mips[0].data(), &whiteBGRA, sizeof(whiteBGRA));
 	m_DummyWhite->Create(tci);
 
-	uint32_t* normal = new uint32_t[1];
-	*normal = normalRGBA;
-	tci.mips[0] = reinterpret_cast<uint8_t*>(normal);
+	tci.mips[0] = std::vector<unsigned char>(sizeof(normalRGBA));
+	memcpy(tci.mips[0].data(), &normalRGBA, sizeof(normalRGBA));
 	m_DummyNormal->Create(tci);
 
-	uint32_t* combine = new uint32_t[1];
-	*combine = combinedBGRA;
-	tci.mips[0] = reinterpret_cast<uint8_t*>(combine);
+	tci.mips[0] = std::vector<unsigned char>(sizeof(combinedBGRA));
+	memcpy(tci.mips[0].data(), &combinedBGRA, sizeof(combinedBGRA));
 	m_DummyCombined->Create(tci);
 
-	uint32_t* black = new uint32_t[1];
-	*black = blackBGRA;
-	tci.mips[0] = reinterpret_cast<uint8_t*>(black);
+	tci.mips[0] = std::vector<unsigned char>(sizeof(blackBGRA));
+	memcpy(tci.mips[0].data(), &blackBGRA, sizeof(blackBGRA));
 	m_DummyBlack->Create(tci);
 }
 
@@ -530,18 +526,18 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	};
 
 	//Copy the data out of the buffer, so it can be transcoded or used as-is (uncompressed).
-	unsigned char* data = new unsigned char[texture.dataSize];
-	memcpy(data, texture.data, texture.dataSize);
+	std::vector<unsigned char> data = std::vector<unsigned char>(texture.dataSize);
+	memcpy(data.data(), texture.data, texture.dataSize);
 
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(UntranscodedTexture{ id, texture.dataSize, data, std::move(texInfo), texture.name,texture.compression });
+		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), std::move(texInfo), texture.name,texture.compression });
 	}
 	else
 	{
 		texInfo.mipSizes.push_back(texture.dataSize);
-		texInfo.mips.push_back(data);
+		texInfo.mips.emplace_back(std::move(data));
 
 		CompleteTexture(id, texInfo);
 	}
@@ -1087,15 +1083,15 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			{
 				int mipWidth=0, mipHeight=0;
 				int num_channels=0;
-				unsigned char *target = teleport::stbi_load_from_memory((const unsigned char*)transcoding.data, transcoding.dataSize, &mipWidth, &mipHeight, &num_channels, 4);
-				if(num_channels==4&&mipWidth>0&&mipHeight>0)
+				unsigned char *target = teleport::stbi_load_from_memory((const unsigned char*)transcoding.data.data(), transcoding.data.size(), &mipWidth, &mipHeight, &num_channels, 4);
+				if(num_channels ==4 && mipWidth > 0 && mipHeight > 0)
 				{
-				// this is for 8-bits-per-channel textures:
-					size_t outDataSize=mipWidth*mipHeight*4;
-					unsigned char *outData=new unsigned char[outDataSize];
-					memcpy(outData,target,outDataSize);
+					// this is for 8-bits-per-channel textures:
+					size_t outDataSize = (size_t)(mipWidth * mipHeight * 4);
+					std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
+					memcpy(outData.data(), target, outDataSize);
 					transcoding.scrTexture.mipSizes.push_back(outDataSize);
-					transcoding.scrTexture.mips.push_back(outData);
+					transcoding.scrTexture.mips.emplace_back(std::move(outData));
 
 					if (transcoding.scrTexture.mips.size() != 0)
 					{
@@ -1112,7 +1108,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				{
 					SCR_CERR << "Failed to transcode PNG-format texture \"" << transcoding.name << "\"." << std::endl;
 				}
-				delete[] transcoding.data;
 				teleport::stbi_image_free(target);
 			}
 			else if(transcoding.fromCompressionFormat==avs::TextureCompression::BASIS_COMPRESSED)
@@ -1120,9 +1115,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				//We need a new transcoder for every .basis file.
 				basist::basisu_transcoder basis_transcoder(&basis_codeBook);
 
-				if (basis_transcoder.start_transcoding(transcoding.data, transcoding.dataSize))
+				if (basis_transcoder.start_transcoding(transcoding.data.data(), transcoding.data.size()))
 				{
-					transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data, transcoding.dataSize, 0);
+					transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), transcoding.data.size(), 0);
 					transcoding.scrTexture.mipSizes.reserve(transcoding.scrTexture.mipCount);
 					transcoding.scrTexture.mips.reserve(transcoding.scrTexture.mipCount);
 					//basist::basis_tex_format format=basis_transcoder.get_tex_format(transcoding.data, transcoding.dataSize);
@@ -1134,19 +1129,18 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					{
 						uint32_t basisWidth, basisHeight, basisBlocks;
 
-						basis_transcoder.get_image_level_desc(transcoding.data, transcoding.dataSize, 0, mipIndex, basisWidth, basisHeight, basisBlocks);
+						basis_transcoder.get_image_level_desc(transcoding.data.data(), transcoding.data.size(), 0, mipIndex, basisWidth, basisHeight, basisBlocks);
 						uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
 
-						unsigned char* outData = new unsigned char[outDataSize];
-						if (basis_transcoder.transcode_image_level(transcoding.data, transcoding.dataSize, 0, mipIndex, outData, basisBlocks, basis_transcoder_textureFormat))
+						std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
+						if (basis_transcoder.transcode_image_level(transcoding.data.data(), transcoding.data.size(), 0, mipIndex, outData.data(), basisBlocks, basis_transcoder_textureFormat))
 						{
 							transcoding.scrTexture.mipSizes.push_back(outDataSize);
-							transcoding.scrTexture.mips.push_back(outData);
+							transcoding.scrTexture.mips.emplace_back(std::move(outData));
 						}
 						else
 						{
 							SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
-							delete[] outData;
 						}
 					}
 
@@ -1159,8 +1153,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					{
 						SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
 					}
-
-					delete[] transcoding.data;
 				}
 				else
 				{

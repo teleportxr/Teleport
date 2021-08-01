@@ -122,7 +122,7 @@ void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	textureCreate.setDepthStencil	= ds;
 	textureCreate.numOfSamples		= num_samp;
 	textureCreate.compressionFormat = (simul::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
-	textureCreate.initialData		= pTextureCreateInfo.mips[0];
+	textureCreate.initialData		= pTextureCreateInfo.mips[0].data();
 	m_SimulTexture->EnsureTexture(srp, &textureCreate);
 	//m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, (int)(pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel));
 }

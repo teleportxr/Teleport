@@ -259,8 +259,7 @@ private:
 	struct UntranscodedTexture
 	{
 		avs::uid texture_uid;
-		uint32_t dataSize; //Size of the basis file.
-		unsigned char* data; //The raw data of the basis file.
+		std::vector<unsigned char> data; //The raw data of the basis file.
 		scr::Texture::TextureCreateInfo scrTexture; //Creation information on texture being transcoded.
 		std::string name; //For debugging which texture failed.
 		avs::TextureCompression fromCompressionFormat;

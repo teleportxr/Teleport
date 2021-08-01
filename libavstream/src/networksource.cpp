@@ -5,6 +5,7 @@
 #include <networksource_p.hpp>
 #include <ElasticFrameProtocol.h>
 #include <libavstream\queue.hpp>
+#include <libavstream\timer.hpp>
 
 #ifdef __ANDROID__
 #include <pthread.h>
@@ -14,7 +15,6 @@
 
 
 using namespace avs;
-//static uint32_t gaps=0;
 
 #define EFPFAILED(x) \
 	((x) != ElasticFrameMessages::noError)
@@ -74,6 +74,8 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		m_data->m_remote.address = params.remoteIP;
 		m_data->m_remote.port = std::to_string(params.remotePort);
 		m_data->bandwidthBytes=0;
+
+		TimerUtil::Start();
 	}
 	catch (const std::exception& e)
 	{
@@ -98,7 +100,6 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 
 	m_data->m_EFPReceiver->receiveCallback = [this](ElasticFrameProtocolReceiver::pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)->void
 	{
-		double connectionTime;
 		if (rPacket->mBroken)
 		{
 			AVSLOG(Warning) << "Received NAL-units of size: " << unsigned(rPacket->mFrameSize) <<
@@ -108,13 +109,11 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 				" EFP connection: " << unsigned(rPacket->mSource) << "\n";
 			std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
 			m_data->m_counters.incompleteDecoderPacketsReceived++;
-			connectionTime = m_data->m_counters.connectionTime;
 		}
 		else
 		{
 			std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
-			m_data->m_counters.decoderPacketsReceived++;
-			connectionTime = m_data->m_counters.connectionTime;
+			m_data->m_counters.decoderPacketsReceived++;		
 		}
 
 		size_t bufferSize = sizeof(NetworkFrameInfo) + rPacket->mFrameSize;
@@ -127,7 +126,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		frameInfo.pts = rPacket->mPts;
 		frameInfo.dts = rPacket->mDts;
 		frameInfo.dataSize = rPacket->mFrameSize;
-		frameInfo.connectionTime = connectionTime;
+		frameInfo.connectionTime = TimerUtil::GetElapsedTime();
 		frameInfo.broken = rPacket->mBroken;
 
 		memcpy(m_data->m_tempBuffer.data(), &frameInfo, sizeof(NetworkFrameInfo));
@@ -290,11 +289,10 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			m_data->m_counters.networkPacketsDropped = perf.pktRcvLoss;
 		}
 
-		m_data->m_counters.connectionTime += deltaTime * 0.001f;
-
-		if (m_data->m_counters.connectionTime)
+		double connectionTime = TimerUtil::GetElapsedTime();
+		if (connectionTime)
 		{
-			m_data->m_counters.decoderPacketsReceivedPerSec = m_data->m_counters.decoderPacketsReceived / m_data->m_counters.connectionTime;
+			m_data->m_counters.decoderPacketsReceivedPerSec = m_data->m_counters.decoderPacketsReceived / connectionTime;
 		}
 	}
 
