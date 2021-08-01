@@ -356,7 +356,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		}
 	}
 
-	OVR_LOG("CreateOVRSurface Created OVR surface! Effect pass %s", passname.c_str());
+	OVR_LOG("CreateOVRSurface Created OVR surface! Effect pass %s resource %d", passname.c_str(),j);
 	return surfaceInfo;
 }
 

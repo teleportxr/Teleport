@@ -1061,7 +1061,7 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
-	avs::SetupLightingCommand setupLightingCommand;
+
 	if(setupLightingCommand.global_illumination_texture_uid!=0)
 	{
 		mlightmapTexture = resourceManagers->mTextureManager.Get(
@@ -1150,6 +1150,11 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 				OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 				surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
 				surfaceDef.graphicsCommand.UniformData[3].Data = &perMeshInstanceData.u_LightmapScaleOffset;
+				if(mlightmapTexture.get())
+				{
+					auto gl_texture = dynamic_cast<scc::GL_Texture *>(mlightmapTexture.get());
+					surfaceDef.graphicsCommand.UniformData[11].Data =&(gl_texture->GetGlTexture());
+				}
 				res.Surfaces.emplace_back(transform, &surfaceDef);
 			}
 		}

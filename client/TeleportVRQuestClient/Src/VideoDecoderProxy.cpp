@@ -197,7 +197,7 @@ void VideoDecoderProxy::InitializeJNI(JNIEnv* env)
 void VideoDecoderProxy::InitializeVideoDecoder(OVRFW::SurfaceTexture* colorSurfaceTexture, OVRFW::SurfaceTexture* alphaSurfaceTexture)
 {
     assert(mFrameWidth > 0 && mFrameHeight > 0);
-    assert(surfaceTexture);
+    assert(colorSurfaceTexture);
 
     mColorSurfaceTexture = colorSurfaceTexture;
     mAlphaSurfaceTexture = alphaSurfaceTexture;
