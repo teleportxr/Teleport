@@ -12,8 +12,8 @@
 #include <libavstream/surfaces/surface_dx11.hpp>
 #include <libavstream/surfaces/surface_dx12.hpp>
 
-/**  
-    Low-latency use cases like game-streaming, video conferencing etc.
+/**
+	Low-latency use cases like game-streaming, video conferencing etc.
 
 	1. Ultra-low latency or low latency Tuning Info
 	2. Rate control mode = CBR
@@ -48,12 +48,12 @@ static NVENCSTATUS g_nvstatus;
 
 namespace avs
 {
-	
+
 	namespace
 	{
 		NV_ENCODE_API_FUNCTION_LIST g_api;
 	}
-	
+
 	LibraryLoader EncoderNV::m_libNVENC(
 #if defined(PLATFORM_64BIT)
 		"nvEncodeAPI64"
@@ -98,7 +98,7 @@ namespace avs
 				return Result::EncoderBackend_InvalidDevice;
 			}
 			{
-				
+
 				if (CUFAILED(cuD3D11GetDevices(&numDevices, &cudaDevice, 1, device.as<ID3D11Device>(), CU_D3D11_DEVICE_LIST_ALL)))
 				{
 					AVSLOG(Error) << "EncoderNV: Supplied DirectX 11 device is not CUDA capable";
@@ -180,7 +180,7 @@ namespace avs
 			if (NVFAILED(g_api.nvEncOpenEncodeSessionEx(&params, &m_encoder)))
 			{
 				shutdown();
-				AVSLOG(Error) << "EncoderNV: Failed to open NVENC encode session - error is "<< g_nvstatus;
+				AVSLOG(Error) << "EncoderNV: Failed to open NVENC encode session - error is " << g_nvstatus;
 				return Result::EncoderBackend_InitFailed;
 			}
 		}
@@ -258,7 +258,7 @@ namespace avs
 
 		EncodeConfig config;
 		{
-			Result result = chooseEncodeConfig(requestedEncodeGUID, requestedPresetGUID, requestedFormat, config);
+			Result result = chooseEncodeConfig(requestedEncodeGUID, requestedPresetGUID, NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY, requestedFormat, config);
 			if (!result)
 			{
 				return result;
@@ -479,7 +479,7 @@ namespace avs
 				NV_ENC_RECONFIGURE_PARAMS reInitEncodeParams;
 				reInitEncodeParams.forceIDR = true;
 				reInitEncodeParams.reInitEncodeParams = initializeParams;
-				reInitEncodeParams.resetEncoder = true;	
+				reInitEncodeParams.resetEncoder = true;
 				reInitEncodeParams.version = NV_ENC_RECONFIGURE_PARAMS_VER;
 
 				if (NVFAILED(g_api.nvEncReconfigureEncoder(m_encoder, &reInitEncodeParams)))
@@ -520,7 +520,7 @@ namespace avs
 				}
 
 				m_initialized = true;
-			}		
+			}
 		}
 
 		m_inputBuffer.format = config.format;
@@ -620,7 +620,7 @@ namespace avs
 			{
 				m_device.as<ID3D12Device>()->Release();
 			}
-		}		
+		}
 #endif
 
 		m_params = {};
@@ -681,7 +681,7 @@ namespace avs
 			return Result::EncoderBackend_InvalidDevice;
 		}
 
-		
+
 		assert(!m_gResourceSupport || m_registeredSurface.resource);
 		assert(m_inputBuffer.ptr == nullptr);
 		assert(m_inputBuffer.devicePtr == 0);
@@ -716,7 +716,7 @@ namespace avs
 			{
 				cuGraphicsUnregisterResource(m_registeredSurface.resource);
 				m_registeredSurface.resource = nullptr;
-			}		
+			}
 			AVSLOG(Error) << "EncoderNV: Failed to allocate input buffer in device memory";
 			return Result::EncoderBackend_OutOfMemory;
 		}
@@ -763,7 +763,7 @@ namespace avs
 
 		CUDA::ContextGuard ctx(m_context);
 
-		
+
 		if (m_registeredSurface.resource)
 		{
 			if (CUFAILED(cuGraphicsUnregisterResource(m_registeredSurface.resource)))
@@ -931,7 +931,7 @@ namespace avs
 			}
 			cuGraphicsSubResourceGetMappedArray(&surfaceBaseMipLevel, m_registeredSurface.resource, 0, 0);
 		}
-		else 
+		else
 		{
 #if defined(PLATFORM_WINDOWS)
 			if (m_device.type == DeviceType::Direct3D12)
@@ -945,7 +945,7 @@ namespace avs
 			}
 #endif
 		}
-		
+
 		assert(surfaceBaseMipLevel);
 
 		CUDA_ARRAY_DESCRIPTOR desc1;
@@ -975,7 +975,7 @@ namespace avs
 		Result result = Result::OK;
 		if (CUFAILED(cuLaunchKernel(ppKernel, gridDimX, gridDimY, 1, blockDim, blockDim, 1, 0, 0, ppKernelParams, nullptr)))
 		{
-			AVSLOG(Warning) << "EncoderNV: Failed to launch pre processing kernel"; 
+			AVSLOG(Warning) << "EncoderNV: Failed to launch pre processing kernel";
 			result = Result::EncoderBackend_EncodeFailed;
 		}
 
@@ -1098,7 +1098,7 @@ namespace avs
 			return false;
 		}
 
-		typedef NVENCSTATUS(NVENCAPI *NvEncodeAPIGetMaxSupportedVersionFUNC)(uint32_t*);
+		typedef NVENCSTATUS(NVENCAPI* NvEncodeAPIGetMaxSupportedVersionFUNC)(uint32_t*);
 		NvEncodeAPIGetMaxSupportedVersionFUNC NvEncodeAPIGetMaxSupportedVersion =
 			(NvEncodeAPIGetMaxSupportedVersionFUNC)Platform::getProcAddress(hNVENC, "NvEncodeAPIGetMaxSupportedVersion");
 		if (!NvEncodeAPIGetMaxSupportedVersion)
@@ -1114,7 +1114,7 @@ namespace avs
 		return apiVersion <= maxSupportedVersion;
 	}
 
-	Result EncoderNV::chooseEncodeConfig(GUID requestedEncodeGUID, GUID requestedPresetGUID, NV_ENC_BUFFER_FORMAT requestedFormat, EncodeConfig& config) const
+	Result EncoderNV::chooseEncodeConfig(GUID requestedEncodeGUID, GUID requestedPresetGUID, NV_ENC_TUNING_INFO tuningInfo, NV_ENC_BUFFER_FORMAT requestedFormat, EncodeConfig& config) const
 	{
 		enum RankPriority {
 			High = 10,
@@ -1175,7 +1175,7 @@ namespace avs
 					break;
 				}
 				// YUV 4:2:0 is also supported.
-				if (format == NV_ENC_BUFFER_FORMAT_NV12) 
+				if (format == NV_ENC_BUFFER_FORMAT_NV12)
 				{
 					config.format = format;
 				}
@@ -1217,7 +1217,7 @@ namespace avs
 				NV_ENC_PRESET_CONFIG presetConfig = {};
 				presetConfig.version = NV_ENC_PRESET_CONFIG_VER;
 				presetConfig.presetCfg.version = NV_ENC_CONFIG_VER;
-				g_api.nvEncGetEncodePresetConfig(m_encoder, encodeGUID, config.presetGUID, &presetConfig);
+				g_api.nvEncGetEncodePresetConfigEx(m_encoder, encodeGUID, config.presetGUID, tuningInfo, &presetConfig);
 				config.config = presetConfig.presetCfg;
 			}
 
@@ -1239,7 +1239,7 @@ namespace avs
 		ScopedLibraryHandle hNVENC(m_libNVENC);
 		if (hNVENC)
 		{
-			typedef NVENCSTATUS(NVENCAPI *NvEncodeAPICreateInstanceFUNC)(NV_ENCODE_API_FUNCTION_LIST*);
+			typedef NVENCSTATUS(NVENCAPI* NvEncodeAPICreateInstanceFUNC)(NV_ENCODE_API_FUNCTION_LIST*);
 			NvEncodeAPICreateInstanceFUNC NvEncodeAPICreateInstance =
 				(NvEncodeAPICreateInstanceFUNC)Platform::getProcAddress(hNVENC, "NvEncodeAPICreateInstance");
 			if (!NvEncodeAPICreateInstance)

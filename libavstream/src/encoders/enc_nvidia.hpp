@@ -52,7 +52,7 @@ namespace avs
 			NV_ENC_BUFFER_FORMAT format;
 			NV_ENC_CONFIG config;
 		};
-		Result chooseEncodeConfig(GUID requestedEncodeGUID, GUID requestedPresetGUID, NV_ENC_BUFFER_FORMAT requestedFormat, EncodeConfig& config) const;
+		Result chooseEncodeConfig(GUID requestedEncodeGUID, GUID requestedPresetGUID, NV_ENC_TUNING_INFO tuningInfo, NV_ENC_BUFFER_FORMAT requestedFormat, EncodeConfig& config) const;
 		Result processInput();
 
 	private:
