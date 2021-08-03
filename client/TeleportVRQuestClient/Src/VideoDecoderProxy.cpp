@@ -25,6 +25,8 @@ VideoDecoderProxy::VideoDecoderProxy(JNIEnv *env, DecodeEventInterface* eventInt
     , mAlphaSurfaceTexture(nullptr)
     , mEventInterface(eventInterface)
     , mEnv(env)
+    , mColorDecoder(nullptr)
+    , mAlphaDecoder(nullptr)
 {
 
 }
@@ -213,7 +215,10 @@ void VideoDecoderProxy::InitializeVideoDecoder(OVRFW::SurfaceTexture* colorSurfa
 void VideoDecoderProxy::ShutdownVideoDecoder()
 {
     mEnv->CallVoidMethod(mColorDecoder, jni.shutdownMethod);
-    mEnv->CallVoidMethod(mAlphaDecoder, jni.shutdownMethod);
+    if (mUseAlphaLayerDecoding)
+    {
+        mEnv->CallVoidMethod(mAlphaDecoder, jni.shutdownMethod);
+    }
     mColorSurfaceTexture = nullptr;
     mAlphaSurfaceTexture = nullptr;
 }
