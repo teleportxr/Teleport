@@ -152,24 +152,30 @@ void OVRNode::SetHighlighted(bool highlighted)
 
 OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material)
 {
-	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	OVRNode::SurfaceInfo surfaceInfo;
-	bool useLightmap=(this->isStatic);
-	std::string passname = GlobalGraphicsResources::GenerateShaderPassName
+	bool                 useLightmap                 = (this->isStatic);
+	std::string          passname                    = GlobalGraphicsResources::GenerateShaderPassName
 			(
 					useLightmap,
 					true,
-					support_normals && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().normal.texture.get()),
-					support_combined && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().combined.texture.get()),
-					!scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().emissive.texture.get()) || material->GetMaterialCreateInfo().emissive.textureOutputScalar != avs::vec4::ZERO,
+					support_normals && !scc::GL_Texture::IsDummy(
+							material->GetMaterialCreateInfo().normal.texture.get()),
+					support_combined && !scc::GL_Texture::IsDummy(
+							material->GetMaterialCreateInfo().combined.texture.get()),
+					!scc::GL_Texture::IsDummy(
+							material->GetMaterialCreateInfo().emissive.texture.get()) ||
+					material->GetMaterialCreateInfo().emissive.textureOutputScalar !=
+					avs::vec4::ZERO,
 					TELEPORT_MAX_LIGHTS,
 					false
 			);
 
-	OVRFW::GlProgram* ovrProgram = GetEffectPass(passname.c_str());
-	if(ovrProgram == nullptr)
+	OVRFW::GlProgram *ovrProgram = GetEffectPass(passname.c_str());
+	if (ovrProgram == nullptr)
 	{
-		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Effect pass %s, not found!",passname.c_str());
+		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Effect pass %s, not found!",
+				 passname.c_str());
 		return surfaceInfo;
 	}
 
@@ -177,50 +183,61 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 			(
 					useLightmap,
 					true,
-					support_normals && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().normal.texture.get()),
-					support_combined && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().combined.texture.get()),
-					!scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().emissive.texture.get()) || material->GetMaterialCreateInfo().emissive.textureOutputScalar != avs::vec4::ZERO,
+					support_normals && !scc::GL_Texture::IsDummy(
+							material->GetMaterialCreateInfo().normal.texture.get()),
+					support_combined && !scc::GL_Texture::IsDummy(
+							material->GetMaterialCreateInfo().combined.texture.get()),
+					!scc::GL_Texture::IsDummy(
+							material->GetMaterialCreateInfo().emissive.texture.get()) ||
+					material->GetMaterialCreateInfo().emissive.textureOutputScalar !=
+					avs::vec4::ZERO,
 					TELEPORT_MAX_LIGHTS,
 					true
 			);
-	OVRFW::GlProgram* ovrHighlightProgram = GetEffectPass(highlightPassname.c_str());
+	OVRFW::GlProgram *ovrHighlightProgram = GetEffectPass(highlightPassname.c_str());
 
 	surfaceInfo.SetPrograms(ovrProgram, ovrHighlightProgram);
 
-	if(material == nullptr)
+	if (material == nullptr)
 	{
-		OVR_WARN("CreateOVRSurface Failed to create OVR surface! Null material passed to CreateOVRSurface(...)!");
+		OVR_WARN(
+				"CreateOVRSurface Failed to create OVR surface! Null material passed to CreateOVRSurface(...)!");
 		return surfaceInfo;
 	}
 
 	std::shared_ptr<scr::Mesh> mesh = GetMesh();
-	if(!mesh)
+	if (!mesh)
 	{
 		OVR_WARN("CreateOVRSurface Failed to create OVR surface! OVRNode has no mesh!");
 		return surfaceInfo;
 	}
 
 	const scr::Mesh::MeshCreateInfo &meshCI = mesh->GetMeshCreateInfo();
-	if(materialIndex >= meshCI.vb.size() || materialIndex >= meshCI.ib.size())
+	if (materialIndex >= meshCI.vb.size() || materialIndex >= meshCI.ib.size())
 	{
-		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nMaterial index %zu greater than amount of mesh buffers: %zu Vertex | %zu Index", materialIndex, meshCI.vb.size(), meshCI.ib.size());
+		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nMaterial index %zu greater than amount of mesh buffers: %zu Vertex | %zu Index",
+				materialIndex, meshCI.vb.size(), meshCI.ib.size());
 		return surfaceInfo;
 	}
 
 	///MESH
 
-	std::shared_ptr<scc::GL_VertexBuffer> gl_vb = std::dynamic_pointer_cast<scc::GL_VertexBuffer>(meshCI.vb[materialIndex]);
-	std::shared_ptr<scc::GL_IndexBuffer> gl_ib = std::dynamic_pointer_cast<scc::GL_IndexBuffer>(meshCI.ib[materialIndex]);
+	std::shared_ptr<scc::GL_VertexBuffer> gl_vb = std::dynamic_pointer_cast<scc::GL_VertexBuffer>(
+			meshCI.vb[materialIndex]);
+	std::shared_ptr<scc::GL_IndexBuffer>  gl_ib = std::dynamic_pointer_cast<scc::GL_IndexBuffer>(
+			meshCI.ib[materialIndex]);
 
-	if(!gl_vb)
+	if (!gl_vb)
 	{
-		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nNo vertex buffer to create OVR surface for material: %zu", materialIndex);
+		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nNo vertex buffer to create OVR surface for material: %zu",
+				materialIndex);
 		return surfaceInfo;
 	}
 
-	if(!gl_ib)
+	if (!gl_ib)
 	{
-		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nNo index buffer to create OVR surface for material: %zu", materialIndex);
+		OVR_LOG("CreateOVRSurface Failed to create OVR surface!\nNo index buffer to create OVR surface for material: %zu",
+				materialIndex);
 		return surfaceInfo;
 	}
 
@@ -232,115 +249,148 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	scr::Material::MaterialCreateInfo &materialCI = material->GetMaterialCreateInfo();
 	materialCI.effect = &globalGraphicsResources.defaultPBREffect;
 
-	if(materialCI.diffuse.texture)
+	if (materialCI.diffuse.texture)
 	{
 		materialCI.diffuse.texture->UseSampler(globalGraphicsResources.sampler);
 	}
-	if(materialCI.normal.texture)
+	if (materialCI.normal.texture)
 	{
 		materialCI.normal.texture->UseSampler(globalGraphicsResources.sampler);
 	}
-	if(materialCI.combined.texture)
+	if (materialCI.combined.texture)
 	{
 		materialCI.combined.texture->UseSampler(globalGraphicsResources.sampler);
 	}
-	if(materialCI.emissive.texture)
+	if (materialCI.emissive.texture)
 	{
 		materialCI.emissive.texture->UseSampler(globalGraphicsResources.sampler);
 	}
 
 	//Get effect pass create info.
-	std::string completePassName = GetCompleteEffectPassName(globalGraphicsResources.effectPassName);
-	const scc::GL_Effect& gl_effect = globalGraphicsResources.defaultPBREffect;
-	const scr::Effect::EffectPassCreateInfo* effectPassCreateInfo = gl_effect.GetEffectPassCreateInfo(completePassName.c_str());
+	std::string completePassName = GetCompleteEffectPassName(
+			globalGraphicsResources.effectPassName);
+	const scc::GL_Effect                    &gl_effect            = globalGraphicsResources.defaultPBREffect;
+	const scr::Effect::EffectPassCreateInfo *effectPassCreateInfo = gl_effect.GetEffectPassCreateInfo(
+			completePassName.c_str());
 
 	//Construct OVR::GLGeometry from mesh data.
 	OVRFW::GlGeometry geo;
-	geo.vertexBuffer = gl_vb->GetVertexID();
-	geo.indexBuffer = gl_ib->GetIndexID();
+	geo.vertexBuffer      = gl_vb->GetVertexID();
+	geo.indexBuffer       = gl_ib->GetIndexID();
 	geo.vertexArrayObject = gl_vb->GetVertexArrayID();
-	geo.primitiveType = scc::GL_Effect::ToGLTopology(effectPassCreateInfo->topology);
-	geo.vertexCount = (int)gl_vb->GetVertexCount();
-	geo.indexCount = (int)gl_ib->GetIndexBufferCreateInfo().indexCount;
-	OVRFW::GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT : gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
+	geo.primitiveType     = scc::GL_Effect::ToGLTopology(effectPassCreateInfo->topology);
+	geo.vertexCount       = (int) gl_vb->GetVertexCount();
+	geo.indexCount        = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
+	OVRFW::GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
+								   gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT
+																				 : GL_UNSIGNED_BYTE;
 
-	OVRFW::ovrSurfaceDef& surfaceDef = surfaceInfo.surfaceDef;
+	OVRFW::ovrSurfaceDef &surfaceDef = surfaceInfo.surfaceDef;
 
 	//Initialise surface definition.
 	std::string _nodeName = std::string("NodeID: ") + std::to_string(id);
-	surfaceDef.surfaceName = _nodeName;
+	surfaceDef.surfaceName  = _nodeName;
 	surfaceDef.numInstances = 1;
-	surfaceDef.geo = geo;
+	surfaceDef.geo          = geo;
 
 	//Set Rendering Set
-	if(effectPassCreateInfo)
+	if (effectPassCreateInfo)
 	{
-		surfaceDef.graphicsCommand.GpuState.blendMode				= scc::GL_Effect::ToGLBlendOp(effectPassCreateInfo->colourBlendingState.colorBlendOp);
-		surfaceDef.graphicsCommand.GpuState.blendSrc				= scc::GL_Effect::ToGLBlendFactor(effectPassCreateInfo->colourBlendingState.srcColorBlendFactor);
-		surfaceDef.graphicsCommand.GpuState.blendDst				= scc::GL_Effect::ToGLBlendFactor(effectPassCreateInfo->colourBlendingState.dstColorBlendFactor);
-		surfaceDef.graphicsCommand.GpuState.blendModeAlpha			= scc::GL_Effect::ToGLBlendOp(effectPassCreateInfo->colourBlendingState.alphaBlendOp);
-		surfaceDef.graphicsCommand.GpuState.blendSrcAlpha			= scc::GL_Effect::ToGLBlendFactor(effectPassCreateInfo->colourBlendingState.srcAlphaBlendFactor);
-		surfaceDef.graphicsCommand.GpuState.blendDstAlpha			= scc::GL_Effect::ToGLBlendFactor(effectPassCreateInfo->colourBlendingState.dstAlphaBlendFactor);
-		surfaceDef.graphicsCommand.GpuState.depthFunc				= scc::GL_Effect::ToGLCompareOp(effectPassCreateInfo->depthStencilingState.depthCompareOp);
+		surfaceDef.graphicsCommand.GpuState.blendMode      = scc::GL_Effect::ToGLBlendOp(
+				effectPassCreateInfo->colourBlendingState.colorBlendOp);
+		surfaceDef.graphicsCommand.GpuState.blendSrc       = scc::GL_Effect::ToGLBlendFactor(
+				effectPassCreateInfo->colourBlendingState.srcColorBlendFactor);
+		surfaceDef.graphicsCommand.GpuState.blendDst       = scc::GL_Effect::ToGLBlendFactor(
+				effectPassCreateInfo->colourBlendingState.dstColorBlendFactor);
+		surfaceDef.graphicsCommand.GpuState.blendModeAlpha = scc::GL_Effect::ToGLBlendOp(
+				effectPassCreateInfo->colourBlendingState.alphaBlendOp);
+		surfaceDef.graphicsCommand.GpuState.blendSrcAlpha  = scc::GL_Effect::ToGLBlendFactor(
+				effectPassCreateInfo->colourBlendingState.srcAlphaBlendFactor);
+		surfaceDef.graphicsCommand.GpuState.blendDstAlpha  = scc::GL_Effect::ToGLBlendFactor(
+				effectPassCreateInfo->colourBlendingState.dstAlphaBlendFactor);
+		surfaceDef.graphicsCommand.GpuState.depthFunc      = scc::GL_Effect::ToGLCompareOp(
+				effectPassCreateInfo->depthStencilingState.depthCompareOp);
 
-		surfaceDef.graphicsCommand.GpuState.frontFace				= GL_CW;
-		surfaceDef.graphicsCommand.GpuState.polygonMode				= scc::GL_Effect::ToGLPolygonMode(effectPassCreateInfo->rasterizationState.polygonMode);
-		surfaceDef.graphicsCommand.GpuState.blendEnable				= effectPassCreateInfo->colourBlendingState.blendEnable ? OVRFW::ovrGpuState::ovrBlendEnable::BLEND_ENABLE : OVRFW::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
-		surfaceDef.graphicsCommand.GpuState.depthEnable				= effectPassCreateInfo->depthStencilingState.depthTestEnable;
-		surfaceDef.graphicsCommand.GpuState.depthMaskEnable 		= true;
-		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[0]		= true;
-		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[1]		= true;
-		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[2]		= true;
-		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[3]		= true;
-		surfaceDef.graphicsCommand.GpuState.polygonOffsetEnable	= false;
-		surfaceDef.graphicsCommand.GpuState.cullEnable				= effectPassCreateInfo->rasterizationState.cullMode != scr::Effect::CullMode::NONE;
-		surfaceDef.graphicsCommand.GpuState.lineWidth				= 1.0F;
-		surfaceDef.graphicsCommand.GpuState.depthRange[0]			= effectPassCreateInfo->depthStencilingState.minDepthBounds;
-		surfaceDef.graphicsCommand.GpuState.depthRange[1]			= effectPassCreateInfo->depthStencilingState.maxDepthBounds;
+		surfaceDef.graphicsCommand.GpuState.frontFace       = GL_CW;
+		surfaceDef.graphicsCommand.GpuState.polygonMode     = scc::GL_Effect::ToGLPolygonMode(
+				effectPassCreateInfo->rasterizationState.polygonMode);
+		surfaceDef.graphicsCommand.GpuState.blendEnable     = effectPassCreateInfo->colourBlendingState.blendEnable
+															  ? OVRFW::ovrGpuState::ovrBlendEnable::BLEND_ENABLE
+															  : OVRFW::ovrGpuState::ovrBlendEnable::BLEND_DISABLE;
+		surfaceDef.graphicsCommand.GpuState.depthEnable     = effectPassCreateInfo->depthStencilingState.depthTestEnable;
+		surfaceDef.graphicsCommand.GpuState.depthMaskEnable = true;
+		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[0] = true;
+		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[1] = true;
+		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[2] = true;
+		surfaceDef.graphicsCommand.GpuState.colorMaskEnable[3] = true;
+		surfaceDef.graphicsCommand.GpuState.polygonOffsetEnable = false;
+		surfaceDef.graphicsCommand.GpuState.cullEnable          =
+				effectPassCreateInfo->rasterizationState.cullMode != scr::Effect::CullMode::NONE;
+		surfaceDef.graphicsCommand.GpuState.lineWidth           = 1.0F;
+		surfaceDef.graphicsCommand.GpuState.depthRange[0] = effectPassCreateInfo->depthStencilingState.minDepthBounds;
+		surfaceDef.graphicsCommand.GpuState.depthRange[1] = effectPassCreateInfo->depthStencilingState.maxDepthBounds;
 	}
 
-	PerMeshInstanceData perMeshInstanceData;
-	perMeshInstanceData.u_LightmapScaleOffset=GetLightmapScaleOffset();
+	perMeshInstanceData.u_LightmapScaleOffset = lightmapScaleOffset;
+	scr::UniformBuffer::UniformBufferCreateInfo ub_ci;
+	ub_ci.bindingLocation = 5;
+	ub_ci.size = sizeof(PerMeshInstanceData);
+	ub_ci.data =  &perMeshInstanceData;
+	s_perMeshInstanceUniformBuffer = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
+	s_perMeshInstanceUniformBuffer->Create(&ub_ci);
+	s_perMeshInstanceUniformBuffer->Update();
+
+	scr::ShaderResourceLayout perMeshInstanceBufferLayout;
+	perMeshInstanceBufferLayout.AddBinding(5,
+										   scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
+										   scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	perMeshInstanceShaderResource.SetLayout(perMeshInstanceBufferLayout);
+	perMeshInstanceShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
+											5,"u_PerMeshInstanceData"
+			,{ s_perMeshInstanceUniformBuffer.get(), 0, sizeof(PerMeshInstanceData) });
+
 	//Fill shader resources vector.
-	std::vector<const scr::ShaderResource*> pbrShaderResources;
+	std::vector<const scr::ShaderResource *> pbrShaderResources;
 	pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
 	pbrShaderResources.push_back(&globalGraphicsResources.tagShaderResource);
-	pbrShaderResources.push_back(&(skin ? skin->GetShaderResource() : globalGraphicsResources.defaultSkin.GetShaderResource()));
-	pbrShaderResources.push_back(&globalGraphicsResources.GetPerMeshInstanceShaderResource(perMeshInstanceData));
+	pbrShaderResources.push_back(
+			&(skin ? skin->GetShaderResource()
+				   : globalGraphicsResources.defaultSkin.GetShaderResource()));
+	pbrShaderResources.push_back(&perMeshInstanceShaderResource);
 	pbrShaderResources.push_back(&material->GetShaderResource());
 	pbrShaderResources.push_back(&globalGraphicsResources.lightCubemapShaderResources);
 
 	//Set image samplers and uniform buffers.
-	size_t resourceCount = 0;
-	GLint textureCount = 0, uniformCount = 0, storageBufferCount = 0;
-	size_t j = 0;
-	for(const scr::ShaderResource *sr : pbrShaderResources)
+	size_t                        resourceCount = 0;
+	GLint                         textureCount  = 0, uniformCount = 0, storageBufferCount = 0;
+	size_t                        j             = 0;
+	for (const scr::ShaderResource *sr : pbrShaderResources)
 	{
 		const std::vector<scr::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
-		for(const scr::ShaderResource::WriteShaderResource& resource : shaderResourceSet)
+		for (const scr::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
 		{
 			scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
-			if(type == scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
+			if (type == scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER)
 			{
-				if(resource.imageInfo.texture)
+				if (resource.imageInfo.texture)
 				{
 					auto gl_texture = dynamic_cast<scc::GL_Texture *>(resource.imageInfo.texture.get());
 					surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_texture->GetGlTexture());
 					textureCount++;
 				}
 			}
-			else if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
+			else if (type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER)
 			{
-				if(resource.bufferInfo.buffer)
+				if (resource.bufferInfo.buffer)
 				{
 					scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
 					surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
 					uniformCount++;
 				}
 			}
-			else if(type == scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
+			else if (type == scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER)
 			{
-				if(resource.bufferInfo.buffer)
+				if (resource.bufferInfo.buffer)
 				{
 					scc::GL_ShaderStorageBuffer *gl_storageBuffer = static_cast<scc::GL_ShaderStorageBuffer *>(resource.bufferInfo.buffer);
 
@@ -356,8 +406,16 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		}
 	}
 
-	OVR_LOG("CreateOVRSurface Created OVR surface! Effect pass %s resource %d", passname.c_str(),j);
+	OVR_LOG("CreateOVRSurface Created OVR surface! Effect pass %s resource %d", passname.c_str(),
+			(int) j);
 	return surfaceInfo;
+}
+
+const scr::ShaderResource& OVRNode::GetPerMeshInstanceShaderResource(const PerMeshInstanceData &p) const
+{
+	// I THINK this updates the values on the GPU...
+	s_perMeshInstanceUniformBuffer->Update();
+	return perMeshInstanceShaderResource;
 }
 
 void OVRNode::RefreshOVRSurfaces()

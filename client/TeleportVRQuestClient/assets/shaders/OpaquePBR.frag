@@ -70,6 +70,11 @@ layout(std140, binding = 2) uniform u_MaterialData //Layout conformant to GLSL s
 	float u_EmissiveTexCoordIndex;
 };
 
+layout(std140, binding = 5) uniform u_PerMeshInstanceData
+{
+	vec4 u_LightmapScaleOffset;
+};
+
 // ALL light data is passed in as tags.
 struct LightTag
 {
@@ -427,8 +432,8 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 
 vec3 PBRLightmap(SurfaceProperties surfaceProperties)
 {
-	vec3 lookup=texture(u_LightmapTexture, v_UV_lightmap).rgb;
-	return v_UV_lightmap.xyy;//lookup.rgb;//*surfaceProperties.albedo;
+	vec3 lookup=textureLod(u_LightmapTexture, v_UV_lightmap,0.0).rgb;
+	return u_LightmapScaleOffset.xyy;//*surfaceProperties.albedo;
 }
 
 void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool highlight)
@@ -478,7 +483,6 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	{
 		u.rgb+=vec3(0.1,0.1,0.1);
 	}
-	//u.rg=v_UV_lightmap.xy;
 	//u.rgb=fract(v_Position);//vec3(dist_to_frag,dist_to_frag,cam.u_DrawDistance));//v_UV_lightmap.xyy);
 	//u.rgb=surfaceProperties.albedo;
 	gl_FragColor = Gamma(u);

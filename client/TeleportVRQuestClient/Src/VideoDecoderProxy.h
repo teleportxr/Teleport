@@ -43,13 +43,13 @@ private:
     bool mInitialized;
     static bool mJNIInitialized;
 
-    OVRFW::SurfaceTexture* mColorSurfaceTexture;
-    OVRFW::SurfaceTexture* mAlphaSurfaceTexture;
-    DecodeEventInterface* mEventInterface;
+    OVRFW::SurfaceTexture* mColorSurfaceTexture=nullptr;
+    OVRFW::SurfaceTexture* mAlphaSurfaceTexture=nullptr;
+    DecodeEventInterface* mEventInterface=nullptr;
 
-    JNIEnv* mEnv;
-    jobject mColorDecoder;
-    jobject mAlphaDecoder;
+    JNIEnv* mEnv=nullptr;
+    jobject mColorDecoder=nullptr;
+    jobject mAlphaDecoder=nullptr;
 
     struct JNI {
         jclass videoDecoderClass;

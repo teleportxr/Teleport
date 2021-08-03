@@ -1068,6 +1068,8 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 				setupLightingCommand.global_illumination_texture_uid);
 		if(!mlightmapTexture.get())
 			mlightmapTexture=resourceCreator->m_DummyWhite;
+		else
+			mlightmapTexture->UseSampler(globalGraphicsResources.noMipsampler);
 	}
 	globalGraphicsResources.lightCubemapShaderResources.SetImageInfo(2,{mlightmapTexture->GetSampler()
 			, mlightmapTexture});
@@ -1123,8 +1125,6 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			}
 
 			std::vector<const scr::ShaderResource *> pbrShaderResources;
-			PerMeshInstanceData perMeshInstanceData;
-			perMeshInstanceData.u_LightmapScaleOffset=ovrNode->GetLightmapScaleOffset();
 			pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
 			//pbrShaderResources.push_back(&globalGraphicsResources.GetPerMeshInstanceShaderResource(perMeshInstanceData));
 			//Push surfaces onto render queue.
@@ -1149,7 +1149,7 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 				}
 				OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 				surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
-				surfaceDef.graphicsCommand.UniformData[3].Data = &perMeshInstanceData.u_LightmapScaleOffset;
+				//surfaceDef.graphicsCommand.UniformData[3].Data = &ovrNode->perMeshInstanceData.u_LightmapScaleOffset;
 				if(mlightmapTexture.get())
 				{
 					auto gl_texture = dynamic_cast<scc::GL_Texture *>(mlightmapTexture.get());

@@ -11,7 +11,7 @@ Clone the repository with submodules:
 1. Visual Studio 2019 (with Visual C++ tools for CMake)
 2. Android Studio
 3. Unreal Engine 4.22 incorporating the patch to move SceneCaptureSource from USceneCaptureComponent2D to USceneCaptureComponent
-4. NVIDIA CUDA Toolkit 10.
+4. NVIDIA CUDA Toolkit 11 https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64.
 5. NVIDIA Video Codec SDK
 6. Recent CMake, and get ninja.exe and put it in C:\Program Files\CMake\bin
 7. Edit local.properties to contain cmake.dir=C\:\\Program Files\\CMake

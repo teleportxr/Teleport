@@ -195,6 +195,9 @@ void Application::EnteredVrMode()
 	globalGraphicsResources.sampler = globalGraphicsResources.renderPlatform.InstantiateSampler();
 	globalGraphicsResources.sampler->Create(&sci);
 
+	globalGraphicsResources.noMipsampler = globalGraphicsResources.renderPlatform.InstantiateSampler();
+	globalGraphicsResources.noMipsampler->Create(&sci);
+
 	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
 	globalGraphicsResources.cubeMipMapSampler = globalGraphicsResources.renderPlatform.InstantiateSampler();
 	globalGraphicsResources.cubeMipMapSampler->Create(&sci);

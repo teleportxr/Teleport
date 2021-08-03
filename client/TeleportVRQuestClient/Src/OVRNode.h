@@ -3,6 +3,7 @@
 #include <Render/SurfaceRender.h>
 
 #include "crossplatform/Node.h"
+#include "GlobalGraphicsResources.h"
 
 class OVRNode : public scr::Node
 {
@@ -54,7 +55,12 @@ public:
 
 	std::string GetCompleteEffectPassName(const char* effectPassName);
 	void ChangeEffectPass(const char* effectPassName);
+
+	const scr::ShaderResource& GetPerMeshInstanceShaderResource(const PerMeshInstanceData &p) const;
 private:
+	PerMeshInstanceData perMeshInstanceData;
+	std::shared_ptr<scr::UniformBuffer> s_perMeshInstanceUniformBuffer;
+	scr::ShaderResource perMeshInstanceShaderResource;
 	std::vector<SurfaceInfo> surfaceDefinitions;
 
 	SurfaceInfo CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material);
