@@ -12,7 +12,6 @@
 #include "Platform/CrossPlatform/Macros.h"
 #include "Platform/CrossPlatform/Camera.h"
 #include "Platform/CrossPlatform/DeviceContext.h"
-#include "Platform/CrossPlatform/CommandLineParams.h"
 #include "Platform/CrossPlatform/SphericalHarmonics.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
 
