@@ -218,7 +218,6 @@ void VideoDecoderProxy::ShutdownVideoDecoder()
 		mEnv->CallVoidMethod(mColorDecoder, jni.shutdownMethod);
     if(mAlphaDecoder)
 	    mEnv->CallVoidMethod(mAlphaDecoder, jni.shutdownMethod);
-    }
     mColorSurfaceTexture = nullptr;
     mAlphaSurfaceTexture = nullptr;
 }
