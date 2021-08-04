@@ -13,7 +13,7 @@ public:
 	public:
 		OVRFW::ovrSurfaceDef surfaceDef;
 
-		void SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlProgram* newHighlightProgram);
+		void SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlProgram* newHighlightProgram,bool setDefaults);
 
 		void SetHighlighted(bool highLighted);
 
@@ -33,6 +33,7 @@ public:
 	private:
 		OVRFW::GlProgram* program = nullptr;
 		OVRFW::GlProgram* highlightProgram = nullptr;
+		bool highlighted=false;
 	};
 
 	OVRNode(avs::uid id, const std::string& name);

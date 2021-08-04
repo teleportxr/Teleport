@@ -25,7 +25,7 @@ OVRNode::OVRNode(avs::uid id, const std::string& name)
 
 }
 
-void OVRNode::SurfaceInfo::SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlProgram* newHighlightProgram)
+void OVRNode::SurfaceInfo::SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlProgram* newHighlightProgram,bool setDefaults)
 {
 	//We don't want to set a nullptr as a program, so we just use the current program.
 	if(!newProgram)
@@ -47,8 +47,11 @@ void OVRNode::SurfaceInfo::SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlPr
 	{
 		surfaceDef.graphicsCommand.Program = *newHighlightProgram;
 	}
-	program = newProgram;
-	highlightProgram = newHighlightProgram;
+	if(setDefaults)
+	{
+		program = newProgram;
+		highlightProgram = newHighlightProgram;
+	}
 }
 
 void OVRNode::SurfaceInfo::SetHighlighted(bool highlighted)
@@ -124,7 +127,7 @@ void OVRNode::ChangeEffectPass(const char* effectPassName)
 
 	for(SurfaceInfo& surfaceInfo : surfaceDefinitions)
 	{
-		surfaceInfo.SetPrograms(program, highlightProgram);
+		surfaceInfo.SetPrograms(program, highlightProgram,false);
 	}
 }
 
@@ -184,7 +187,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 			);
 	OVRFW::GlProgram *ovrHighlightProgram = GetEffectPass(highlightPassname.c_str());
 
-	surfaceInfo.SetPrograms(ovrProgram, ovrHighlightProgram);
+	surfaceInfo.SetPrograms(ovrProgram, ovrHighlightProgram,true);
 
 	if (material == nullptr)
 	{

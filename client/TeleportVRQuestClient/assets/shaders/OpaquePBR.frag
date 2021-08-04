@@ -449,7 +449,7 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	vec3 c	=vec3(0,0,0);
 	if (ambient)
 	{
-	//	c							=PBRAmbient(surfaceState, view, surfaceProperties);
+		c							=PBRAmbient(surfaceState, view, surfaceProperties);
 	}
 	if(lightmap)
 	{
