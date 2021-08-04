@@ -538,7 +538,7 @@ namespace avs
 			return Result::DecoderBackend_DisplayFailed;
 		}
 
-		assert(colorKernel);
+		assert(m_colorKernel);
 
 		if (CUFAILED(cuGraphicsMapResources(1, &m_registeredSurface, 0)))
 		{
@@ -597,7 +597,7 @@ namespace avs
 
 		if (result && m_params.useAlphaLayerDecoding)
 		{
-			assert(alphaKernel);
+			assert(m_alphaKernel);
 
 			// When alpha layer encoding is enabled, the alpha layer will have its own picture index and always 
 			// comes after the color picture.
