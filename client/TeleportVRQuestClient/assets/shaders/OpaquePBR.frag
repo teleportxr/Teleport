@@ -433,7 +433,7 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 vec3 PBRLightmap(SurfaceProperties surfaceProperties)
 {
 	vec3 lookup=textureLod(u_LightmapTexture, v_UV_lightmap,0.0).rgb;
-	return u_LightmapScaleOffset.xyy;//*surfaceProperties.albedo;
+	return v_UV_lightmap.xyy;//*surfaceProperties.albedo;
 }
 
 void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool highlight)

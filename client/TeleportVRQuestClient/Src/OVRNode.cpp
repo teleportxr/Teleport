@@ -356,10 +356,11 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	pbrShaderResources.push_back(
 			&(skin ? skin->GetShaderResource()
 				   : globalGraphicsResources.defaultSkin.GetShaderResource()));
-	pbrShaderResources.push_back(&perMeshInstanceShaderResource);
 	pbrShaderResources.push_back(&material->GetShaderResource());
+	pbrShaderResources.push_back(&perMeshInstanceShaderResource);
 	pbrShaderResources.push_back(&globalGraphicsResources.lightCubemapShaderResources);
 
+	OVR_LOG("CreateOVRSurface Creating OVR surface Effect pass %s", passname.c_str());
 	//Set image samplers and uniform buffers.
 	size_t                        resourceCount = 0;
 	GLint                         textureCount  = 0, uniformCount = 0, storageBufferCount = 0;
@@ -376,6 +377,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 				{
 					auto gl_texture = dynamic_cast<scc::GL_Texture *>(resource.imageInfo.texture.get());
 					surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_texture->GetGlTexture());
+					OVR_LOG("CreateOVRSurface Linking Texture %d %s, bound at %d", (int)j,gl_texture->GetTextureCreateInfo().name.c_str(),gl_texture->GetTextureCreateInfo().slot);
 					textureCount++;
 				}
 			}
@@ -385,6 +387,8 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 				{
 					scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
 					surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
+
+					OVR_LOG("CreateOVRSurface Linking Uniform Buffer %d bound at %d", (int)j,gl_uniformBuffer->GetUniformBufferCreateInfo().bindingLocation);
 					uniformCount++;
 				}
 			}
@@ -393,6 +397,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 				if (resource.bufferInfo.buffer)
 				{
 					scc::GL_ShaderStorageBuffer *gl_storageBuffer = static_cast<scc::GL_ShaderStorageBuffer *>(resource.bufferInfo.buffer);
+					OVR_LOG("CreateOVRSurface Linking Storage Buffer %d bound at %d", (int)j,gl_storageBuffer->GetShaderStorageBufferCreateInfo().bindingLocation);
 
 					surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_storageBuffer->GetGlBuffer());
 					storageBufferCount++;
@@ -406,8 +411,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		}
 	}
 
-	OVR_LOG("CreateOVRSurface Created OVR surface! Effect pass %s resource %d", passname.c_str(),
-			(int) j);
+	OVR_LOG("CreateOVRSurface Created OVR surface! Effect pass %s resource %d", passname.c_str(),(int) j);
 	return surfaceInfo;
 }
 

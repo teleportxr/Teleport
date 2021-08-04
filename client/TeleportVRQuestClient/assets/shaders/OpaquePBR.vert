@@ -177,7 +177,7 @@ void Static()
     vec2 UV1		    = vec2(a_UV1.x,a_UV1.y);
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
-    v_UV_lightmap       =u_LightmapScaleOffset.xy;//UV1*u_LightmapScaleOffset.xy+u_LightmapScaleOffset.zw;
+    v_UV_lightmap       =UV1*u_LightmapScaleOffset.xy+u_LightmapScaleOffset.zw;
 
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;

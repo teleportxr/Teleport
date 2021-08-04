@@ -60,6 +60,7 @@ namespace scc
 		static OVRFW::ovrProgramParmType ToOVRProgramParmType(scr::ShaderResourceLayout::ShaderResourceType type);
 
 	private:
+		std::vector<OVRFW::ovrProgramParm> uniformParms;
 		std::map<std::string, OVRFW::GlProgram> m_EffectPrograms;
 
 		void BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources);
