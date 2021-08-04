@@ -11,6 +11,7 @@ namespace scr
 	public:
 		struct UniformBufferCreateInfo
 		{
+			std::string name;
 			uint32_t bindingLocation;
 			size_t size;
 			const void* data;

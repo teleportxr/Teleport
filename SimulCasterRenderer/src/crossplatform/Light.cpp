@@ -18,6 +18,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	if (s_UninitialisedUB)
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
+		ub_ci.name="u_lightData";
 		ub_ci.bindingLocation = 2;
 		ub_ci.size = sizeof(LightData) * s_MaxLights;
 		ub_ci.data = &s_LightData;

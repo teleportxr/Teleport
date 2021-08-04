@@ -11,11 +11,22 @@ using namespace OVRFW;
 
 #define OPENGLES_310 310
 
+int GL_Effect::Pass::GetParameterIndex(const char *param_name) const
+{
+    for (size_t i = 0; i < uniformParms.size(); i++)
+    {
+        if(strcmp(uniformParms[i].Name,param_name)==0)
+            return (int)i;
+    }
+    OVR_ERROR("Unknown shader parameter %s",param_name);
+    return -1;
+}
+
 GL_Effect::~GL_Effect()
 {
-    for(auto& programPair : m_EffectPrograms)
+    for(auto& programPair : m_passes)
     {
-        GlProgram::Free(programPair.second);
+        GlProgram::Free(programPair.second.ovrProgram);
     }
 }
 
@@ -218,6 +229,7 @@ void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSys
     assert(vertex != nullptr && fragment != nullptr);
     OVR_LOG("Linking %s ",effectPassName);
     int i=0;
+    Pass pass;
     for(const auto& shaderResource : shaderResources)
     {
         for(const auto& resource : shaderResource.GetWriteShaderResources())
@@ -225,7 +237,7 @@ void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSys
             const char* name = resource.shaderResourceName;
             ovrProgramParmType type = ToOVRProgramParmType(resource.shaderResourceType);
             assert(type != ovrProgramParmType::MAX);
-            uniformParms.push_back({name, type});
+            pass.uniformParms.push_back({name, type});
             OVR_LOG("Linking %d uniform %s %s ",i,ToString(type),name);
             i++;
         }
@@ -237,10 +249,13 @@ void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSys
     static std::string vertDir = "";
     static std::string fragDir = "";//#extension GL_EXT_shader_texture_lod : require\n";
 
-    m_EffectPrograms.emplace
+    pass.ovrProgram= GlProgram::Build(vertDir.c_str(), vertSourceCode.c_str(), fragDir.c_str()
+                                      , fragSourceCode.c_str(), pass.uniformParms.data()
+                                      , (int)pass.uniformParms.size(), OPENGLES_310);
+    m_passes.emplace
     (
             effectPassName,
-            GlProgram::Build(vertDir.c_str(), vertSourceCode.c_str(), fragDir.c_str(), fragSourceCode.c_str(), uniformParms.data(), (int)uniformParms.size(), OPENGLES_310)
+            pass
      );
 }
 
@@ -296,5 +311,5 @@ void GL_Effect::BuildComputePipeline(const char* effectPassName, scr::ShaderSyst
     }
     glValidateProgram(program);
     glDeleteShader(id);
-    m_EffectPrograms[effectPassName].Program = program;
+    m_passes[effectPassName].ovrProgram.Program = program;
 }

@@ -107,7 +107,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	{
 		{
 			mVideoUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {1
+			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"mVideoUB",1
 					, sizeof(VideoUB)
 					, &videoUB};
 			mVideoUB->Create(&uniformBufferCreateInfo);
@@ -298,7 +298,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			effectPassCreateInfo.pipeline = cp7;
 			mExtractOneTagEffect->CreatePass(&effectPassCreateInfo);
 
-			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {3
+			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"mCubemapUB",3
 					, sizeof(CubemapUB)
 					, &cubemapUB};
 			mCubemapUB->Create(&uniformBufferCreateInfo);
@@ -602,7 +602,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 
 	// Set up the uniform buffer
 	webcamUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-	scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {1
+	scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"WebcamUB",1
 			, sizeof(WebcamUB)
 			, &webcamUBData};
 	webcamUB->Create(&uniformBufferCreateInfo);

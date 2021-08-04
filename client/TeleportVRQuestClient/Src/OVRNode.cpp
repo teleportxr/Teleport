@@ -94,19 +94,7 @@ void OVRNode::SetMaterialListSize(size_t size)
 	{
 		return;
 	}
-
-	size_t old_size = surfaceDefinitions.size();
 	surfaceDefinitions.resize(size);
-	if(old_size < size)
-	{
-		GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
-
-		//We don't know have the information on the material yet, so we use placeholder OVR surfaces.
-		for(size_t i = old_size; i < size; i++)
-		{
-			surfaceDefinitions[i] = CreateOVRSurface(i, globalGraphicsResources.renderPlatform.placeholderMaterial);
-		}
-	}
 }
 
 void OVRNode::SetMaterialList(std::vector<std::shared_ptr<scr::Material>>& materials)
@@ -154,7 +142,8 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 {
 	GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	OVRNode::SurfaceInfo surfaceInfo;
-	bool                 useLightmap                 = (this->isStatic);
+	surfaceInfo.initialized=true;
+	bool                 useLightmap                 = isStatic;
 	std::string          passname                    = GlobalGraphicsResources::GenerateShaderPassName
 			(
 					useLightmap,
@@ -165,12 +154,11 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 							material->GetMaterialCreateInfo().combined.texture.get()),
 					!scc::GL_Texture::IsDummy(
 							material->GetMaterialCreateInfo().emissive.texture.get()) ||
-					material->GetMaterialCreateInfo().emissive.textureOutputScalar !=
-					avs::vec4::ZERO,
+					material->GetMaterialCreateInfo().emissive.textureOutputScalar!=avs::vec4::ZERO,
 					TELEPORT_MAX_LIGHTS,
 					false
 			);
-
+	OVR_LOG("CreateOVRSurface %s %d with pass %s",name.c_str(),(int)materialIndex,passname.c_str());
 	OVRFW::GlProgram *ovrProgram = GetEffectPass(passname.c_str());
 	if (ovrProgram == nullptr)
 	{
@@ -273,6 +261,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	const scr::Effect::EffectPassCreateInfo *effectPassCreateInfo = gl_effect.GetEffectPassCreateInfo(
 			completePassName.c_str());
 
+	 const scc::GL_Effect::Pass* pass=gl_effect.GetPass(completePassName.c_str());
 	//Construct OVR::GLGeometry from mesh data.
 	OVRFW::GlGeometry geo;
 	geo.vertexBuffer      = gl_vb->GetVertexID();
@@ -331,23 +320,24 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		surfaceDef.graphicsCommand.GpuState.depthRange[1] = effectPassCreateInfo->depthStencilingState.maxDepthBounds;
 	}
 
-	perMeshInstanceData.u_LightmapScaleOffset = lightmapScaleOffset;
+	surfaceInfo.perMeshInstanceData.u_LightmapScaleOffset = lightmapScaleOffset;
 	scr::UniformBuffer::UniformBufferCreateInfo ub_ci;
+	ub_ci.name="u_perMeshInstanceData";
 	ub_ci.bindingLocation = 5;
 	ub_ci.size = sizeof(PerMeshInstanceData);
-	ub_ci.data =  &perMeshInstanceData;
-	s_perMeshInstanceUniformBuffer = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-	s_perMeshInstanceUniformBuffer->Create(&ub_ci);
-	s_perMeshInstanceUniformBuffer->Update();
+	ub_ci.data =  &surfaceInfo.perMeshInstanceData;
+	surfaceInfo.s_perMeshInstanceUniformBuffer = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
+	surfaceInfo.s_perMeshInstanceUniformBuffer->Create(&ub_ci);
+	surfaceInfo.s_perMeshInstanceUniformBuffer->Update();
 
 	scr::ShaderResourceLayout perMeshInstanceBufferLayout;
 	perMeshInstanceBufferLayout.AddBinding(5,
 										   scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
 										   scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	perMeshInstanceShaderResource.SetLayout(perMeshInstanceBufferLayout);
-	perMeshInstanceShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
+	surfaceInfo.perMeshInstanceShaderResource.SetLayout(perMeshInstanceBufferLayout);
+	surfaceInfo.perMeshInstanceShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
 											5,"u_PerMeshInstanceData"
-			,{ s_perMeshInstanceUniformBuffer.get(), 0, sizeof(PerMeshInstanceData) });
+			,{ surfaceInfo.s_perMeshInstanceUniformBuffer.get(), 0, sizeof(PerMeshInstanceData) });
 
 	//Fill shader resources vector.
 	std::vector<const scr::ShaderResource *> pbrShaderResources;
@@ -357,7 +347,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 			&(skin ? skin->GetShaderResource()
 				   : globalGraphicsResources.defaultSkin.GetShaderResource()));
 	pbrShaderResources.push_back(&material->GetShaderResource());
-	pbrShaderResources.push_back(&perMeshInstanceShaderResource);
+	pbrShaderResources.push_back(&surfaceInfo.perMeshInstanceShaderResource);
 	pbrShaderResources.push_back(&globalGraphicsResources.lightCubemapShaderResources);
 
 	OVR_LOG("CreateOVRSurface Creating OVR surface Effect pass %s", passname.c_str());
@@ -376,8 +366,13 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 				if (resource.imageInfo.texture)
 				{
 					auto gl_texture = dynamic_cast<scc::GL_Texture *>(resource.imageInfo.texture.get());
+					int param_index=pass->GetParameterIndex(resource.shaderResourceName);
+					if(param_index!=(int)j)
+					{
+						OVR_WARN("CreateOVRSurface Linking: Parameter index mismatch %d != %d for texture %s",param_index,(int)j,gl_texture->GetTextureCreateInfo().name.c_str());
+					}
 					surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_texture->GetGlTexture());
-					OVR_LOG("CreateOVRSurface Linking Texture %d %s, bound at %d", (int)j,gl_texture->GetTextureCreateInfo().name.c_str(),gl_texture->GetTextureCreateInfo().slot);
+					OVR_LOG("CreateOVRSurface Linking Texture %d %s to %s, bound at %d", (int)j,resource.shaderResourceName,gl_texture->GetTextureCreateInfo().name.c_str(),gl_texture->GetTextureCreateInfo().slot);
 					textureCount++;
 				}
 			}
@@ -386,9 +381,14 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 				if (resource.bufferInfo.buffer)
 				{
 					scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
+					int param_index=pass->GetParameterIndex(resource.shaderResourceName);
+					if(param_index!=(int)j)
+					{
+						OVR_WARN("CreateOVRSurface Linking: Parameter index mismatch %d != %d for uniform buffer %s",param_index,(int)j,gl_uniformBuffer->GetUniformBufferCreateInfo().name.c_str());
+					}
 					surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
 
-					OVR_LOG("CreateOVRSurface Linking Uniform Buffer %d bound at %d", (int)j,gl_uniformBuffer->GetUniformBufferCreateInfo().bindingLocation);
+					OVR_LOG("CreateOVRSurface Linking Uniform Buffer %d %s to %s bound at %d", (int)j,resource.shaderResourceName,gl_uniformBuffer->GetUniformBufferCreateInfo().name.c_str(),gl_uniformBuffer->GetUniformBufferCreateInfo().bindingLocation);
 					uniformCount++;
 				}
 			}
@@ -415,12 +415,6 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	return surfaceInfo;
 }
 
-const scr::ShaderResource& OVRNode::GetPerMeshInstanceShaderResource(const PerMeshInstanceData &p) const
-{
-	// I THINK this updates the values on the GPU...
-	s_perMeshInstanceUniformBuffer->Update();
-	return perMeshInstanceShaderResource;
-}
 
 void OVRNode::RefreshOVRSurfaces()
 {

@@ -8,7 +8,7 @@
 class OVRNode : public scr::Node
 {
 public:
-	class SurfaceInfo
+	struct SurfaceInfo
 	{
 	public:
 		OVRFW::ovrSurfaceDef surfaceDef;
@@ -26,6 +26,10 @@ public:
 		{
 			return surfaceDef;
 		}
+		PerMeshInstanceData perMeshInstanceData;
+		std::shared_ptr<scr::UniformBuffer> s_perMeshInstanceUniformBuffer;
+		scr::ShaderResource perMeshInstanceShaderResource;
+		bool initialized=false;
 	private:
 		OVRFW::GlProgram* program = nullptr;
 		OVRFW::GlProgram* highlightProgram = nullptr;
@@ -56,11 +60,7 @@ public:
 	std::string GetCompleteEffectPassName(const char* effectPassName);
 	void ChangeEffectPass(const char* effectPassName);
 
-	const scr::ShaderResource& GetPerMeshInstanceShaderResource(const PerMeshInstanceData &p) const;
 private:
-	PerMeshInstanceData perMeshInstanceData;
-	std::shared_ptr<scr::UniformBuffer> s_perMeshInstanceUniformBuffer;
-	scr::ShaderResource perMeshInstanceShaderResource;
 	std::vector<SurfaceInfo> surfaceDefinitions;
 
 	SurfaceInfo CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material);

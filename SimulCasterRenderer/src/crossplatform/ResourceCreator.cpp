@@ -685,10 +685,10 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 {
 	if (m_pNodeManager->HasNode(id))
 	{
-		SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created!\n";
+		SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created! "<<(node.stationary?"static":"mobile")<<"\n";
 		return;
 	}
-	SCR_COUT << "CreateMeshNode(" << id << ", " << node.name << ")\n";
+	SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << ") "<<(node.stationary?"static":"mobile")<<"\n";
 
 	std::shared_ptr<IncompleteNode> newNode = std::make_shared<IncompleteNode>(id, avs::GeometryPayloadType::Node);
 	//Whether the node is missing any resource before, and must wait for them before it can be completed.
@@ -752,8 +752,10 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 		materialCreateInfo.emissive.texture = m_DummyBlack;
 		m_pRenderPlatform->placeholderMaterial = std::make_shared<scr::Material>(materialCreateInfo);
 	}
-
+	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
+	newNode->node->SetLightmapScaleOffset(node.renderState.lightmapScaleOffset);
 	newNode->node->SetMaterialListSize(node.materials.size());
+	newNode->node->SetStatic(node.stationary);
 	for (size_t i = 0; i < node.materials.size(); i++)
 	{
 		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(node.materials[i]);
@@ -764,6 +766,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 		}
 		else
 		{
+			// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
 			newNode->node->SetMaterial(i, m_pRenderPlatform->placeholderMaterial);
 
 			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
@@ -774,7 +777,6 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 			newNode->materialSlots[node.materials[i]].push_back(i);
 		}
 	}
-	newNode->node->SetLightmapScaleOffset(node.renderState.lightmapScaleOffset);
 
 	newNode->node->SetChildrenIDs(node.childrenIDs);
 

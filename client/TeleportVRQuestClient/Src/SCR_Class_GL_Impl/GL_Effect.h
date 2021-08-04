@@ -24,9 +24,15 @@ namespace scc
 
 		void LinkShaders(const char* effectPassName, const std::vector<scr::ShaderResource>& shaderResources) override;
 
-		inline OVRFW::GlProgram* GetGlProgram(const char* effectPassName)
+		struct Pass
 		{
-			for(auto& programPair : m_EffectPrograms)
+			std::vector<OVRFW::ovrProgramParm> uniformParms;
+			OVRFW::GlProgram ovrProgram;
+			int GetParameterIndex(const char *param_name) const;
+		};
+		inline const Pass* GetPass(const char* effectPassName) const
+		{
+			for(const auto& programPair : m_passes)
 			{
 				if(strcmp(programPair.first.c_str(), effectPassName) == 0)
 				{
@@ -37,13 +43,24 @@ namespace scc
 			return nullptr;
 		}
 
-		inline const OVRFW::GlProgram* GetGlProgram(const char* effectPassName) const
+		inline OVRFW::GlProgram* GetGlProgram(const char* effectPassName)
 		{
-			for(const auto& programPair : m_EffectPrograms)
+			for(auto& programPair : m_passes)
 			{
 				if(strcmp(programPair.first.c_str(), effectPassName) == 0)
 				{
-					return &programPair.second;
+					return &programPair.second.ovrProgram;
+				}
+			}
+			return nullptr;
+		}
+		inline const OVRFW::GlProgram* GetGlProgram(const char* effectPassName) const
+		{
+			for(const auto& programPair : m_passes)
+			{
+				if(strcmp(programPair.first.c_str(), effectPassName) == 0)
+				{
+					return &programPair.second.ovrProgram;
 				}
 			}
 
@@ -60,8 +77,7 @@ namespace scc
 		static OVRFW::ovrProgramParmType ToOVRProgramParmType(scr::ShaderResourceLayout::ShaderResourceType type);
 
 	private:
-		std::vector<OVRFW::ovrProgramParm> uniformParms;
-		std::map<std::string, OVRFW::GlProgram> m_EffectPrograms;
+		std::map<std::string, Pass> m_passes;
 
 		void BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources);
 		void BuildComputePipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources);

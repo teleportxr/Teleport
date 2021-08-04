@@ -28,6 +28,7 @@ void GL_Skin::CreateUniformBuffer(const scc::GL_RenderPlatform *renderPlatform)
 
 	//Set up uniform buffer.
 	scr::UniformBuffer::UniformBufferCreateInfo bufferCreateInfo;
+	bufferCreateInfo.name="u_BoneData";
 	bufferCreateInfo.bindingLocation = bindingIndex;
 	bufferCreateInfo.size = boneMatricesSize;
 	bufferCreateInfo.data = GetBoneMatrices();

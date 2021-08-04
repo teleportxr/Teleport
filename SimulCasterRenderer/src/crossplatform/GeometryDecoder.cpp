@@ -404,6 +404,7 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		copy<char>(node.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 
 		node.transform = NextChunk(avs::Transform);
+		node.stationary =(NextB)!=0;
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);
 		node.data_subtype = static_cast<NodeDataSubtype>(NextB);

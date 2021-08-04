@@ -41,6 +41,7 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 
 	//Set up UB
 	UniformBuffer::UniformBufferCreateInfo ub_ci;
+	ub_ci.name="u_MaterialData";
 	ub_ci.bindingLocation = 3;
 	ub_ci.size = sizeof(MaterialData);
 	ub_ci.data = &m_MaterialData;
@@ -58,8 +59,8 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
 	m_ShaderResource.AddBuffer( ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_MaterialData", { m_UB.get(), 0, sizeof(MaterialData)});
-	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_Diffuse",  { m_CI.diffuse.texture ? m_CI.diffuse.texture->GetSampler() : nullptr, m_CI.diffuse.texture });
-	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_Normal",   { m_CI.normal.texture ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
-	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_Combined", { m_CI.combined.texture ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });
-	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_Emissive", {m_CI.emissive.texture ? m_CI.emissive.texture->GetSampler() : nullptr, m_CI.emissive.texture});
+	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_DiffuseTexture",  { m_CI.diffuse.texture ? m_CI.diffuse.texture->GetSampler() : nullptr, m_CI.diffuse.texture });
+	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_NormalTexture",   { m_CI.normal.texture ? m_CI.normal.texture->GetSampler() : nullptr, m_CI.normal.texture });
+	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_CombinedTexture", { m_CI.combined.texture ? m_CI.combined.texture->GetSampler() : nullptr, m_CI.combined.texture });
+	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_EmissiveTexture", {m_CI.emissive.texture ? m_CI.emissive.texture->GetSampler() : nullptr, m_CI.emissive.texture});
 }

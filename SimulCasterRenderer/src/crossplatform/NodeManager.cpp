@@ -11,10 +11,9 @@ std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const std::string& na
 
 void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeData)
 {
+	SCR_COUT<<"AddNode "<<nodeData.name.c_str()<<" "<<(nodeData.stationary?"static":"mobile")<<"\n";
 	//Remove any node already using the ID.
 	RemoveNode(node->id);
-
-	node->SetStatic(nodeData.stationary);
 	if(nodeData.data_subtype == avs::NodeDataSubtype::None)
 	{
 		rootNodes.push_back(node);
