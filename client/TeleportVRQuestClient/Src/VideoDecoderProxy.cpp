@@ -215,9 +215,11 @@ void VideoDecoderProxy::InitializeVideoDecoder(OVRFW::SurfaceTexture* colorSurfa
 void VideoDecoderProxy::ShutdownVideoDecoder()
 {
     mEnv->CallVoidMethod(mColorDecoder, jni.shutdownMethod);
+    mColorDecoder = nullptr;
     if (mUseAlphaLayerDecoding)
     {
         mEnv->CallVoidMethod(mAlphaDecoder, jni.shutdownMethod);
+        mAlphaDecoder = nullptr;
     }
     mColorSurfaceTexture = nullptr;
     mAlphaSurfaceTexture = nullptr;

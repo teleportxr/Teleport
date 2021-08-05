@@ -177,6 +177,14 @@ public:
 	virtual Result unmapOutputBuffer() = 0;
 
 	/*!
+	 * Wait for encoding to finish.
+	 * \return
+	 *  - Result::OK on success.
+	 *  - Result::EncoderBackend_EncodeFailed if timeout occurs during encoding.
+	 */
+	virtual Result waitForEncodingCompletion() = 0;
+
+	/*!
 	 * Get registered input surface format.
 	 */
 	virtual SurfaceFormat getInputFormat() const = 0;

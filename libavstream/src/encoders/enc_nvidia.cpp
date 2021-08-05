@@ -745,6 +745,15 @@ namespace avs
 		m_registeredSurface.surface = surface;
 		m_inputBuffer.ptr = resource.registeredResource;
 
+		m_resource = {};
+		m_resource.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
+		m_resource.registeredResource = m_inputBuffer.ptr;
+		if (NVFAILED(g_api.nvEncMapInputResource(m_encoder, &m_resource)))
+		{
+			AVSLOG(Error) << "EncoderNV: Failed to map input surface";
+			return Result::EncoderBackend_MapFailed;
+		}
+
 		return Result::OK;
 	}
 
@@ -763,6 +772,11 @@ namespace avs
 
 		CUDA::ContextGuard ctx(m_context);
 
+		if (NVFAILED(g_api.nvEncUnmapInputResource(m_encoder, m_resource.mappedResource)))
+		{
+			AVSLOG(Error) << "EncoderNV: Failed to unmap input surface";
+			return Result::EncoderBackend_UnmapFailed;
+		}
 
 		if (m_registeredSurface.resource)
 		{
@@ -819,14 +833,7 @@ namespace avs
 			return result;
 		}
 
-		m_resource = {};
-		m_resource.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
-		m_resource.registeredResource = m_inputBuffer.ptr;
-		if (NVFAILED(g_api.nvEncMapInputResource(m_encoder, &m_resource)))
-		{
-			AVSLOG(Error) << "EncoderNV: Failed to map input surface";
-			return Result::EncoderBackend_MapFailed;
-		}
+		///
 
 		NV_ENC_PIC_PARAMS encParams = {};
 		encParams.version = NV_ENC_PIC_PARAMS_VER;
@@ -851,17 +858,6 @@ namespace avs
 			result = Result::EncoderBackend_EncodeFailed;
 		}
 
-		if (!m_completionEvent)
-		{
-			if (NVFAILED(g_api.nvEncUnmapInputResource(m_encoder, m_resource.mappedResource)))
-			{
-				AVSLOG(Error) << "EncoderNV: Failed to unmap input surface";
-				if (result)
-				{
-					result = Result::EncoderBackend_UnmapFailed;
-				}
-			}
-		}
 		return result;
 	}
 
@@ -997,26 +993,6 @@ namespace avs
 
 		assert(m_outputBuffer.ptr);
 
-		Result result = Result::OK;
-		if (m_completionEvent)
-		{
-			result = waitForCompletionEvent();
-
-			if (NVFAILED(g_api.nvEncUnmapInputResource(m_encoder, m_resource.mappedResource)))
-			{
-				AVSLOG(Error) << "EncoderNV: Failed to unmap input surface";
-
-				if (result)
-				{
-					result = Result::EncoderBackend_UnmapFailed;
-				}
-			}
-			if (!result)
-			{
-				return result;
-			}
-		}
-
 		NV_ENC_LOCK_BITSTREAM params = {};
 		params.version = NV_ENC_LOCK_BITSTREAM_VER;
 		params.outputBitstream = m_outputBuffer.ptr;
@@ -1030,10 +1006,10 @@ namespace avs
 		bufferPtr = params.bitstreamBufferPtr;
 		bufferSizeInBytes = params.bitstreamSizeInBytes;
 
-		return result;
+		return Result::OK;
 	}
 
-	Result EncoderNV::waitForCompletionEvent()
+	Result EncoderNV::waitForEncodingCompletion()
 	{
 #if defined(PLATFORM_WINDOWS)
 		if (!m_completionEvent)
@@ -1043,7 +1019,7 @@ namespace avs
 #ifdef DEBUG
 		WaitForSingleObject(m_completionEvent, INFINITE);
 #else
-		// wait for 20s which is infinite on terms of gpu time
+		// wait for 20 seconds which is infinity in terms of gpu time
 		if (WaitForSingleObject(m_completionEvent, 20000) == WAIT_FAILED)
 		{
 			return Result::EncoderBackend_EncodeFailed;
