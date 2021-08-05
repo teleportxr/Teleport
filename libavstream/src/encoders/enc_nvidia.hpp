@@ -43,6 +43,8 @@ namespace avs
 
 		SurfaceFormat getInputFormat() const override;
 
+		Result waitForEncodingCompletion() override;
+
 		/* End EncoderInterface */
 
 		struct EncodeConfig
@@ -57,7 +59,6 @@ namespace avs
 
 	private:
 		Result initializeEncoder(int frameWidth, int frameHeight, const EncoderParams& params);
-		Result waitForCompletionEvent();
 		static bool initializeEncodeLibrary();
 		static void releaseEncodeLibrary();
 

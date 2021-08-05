@@ -5,12 +5,15 @@
 
 #include <memory>
 #include <queue>
+#include <thread>
+#include <atomic>
 
 #include <common_p.hpp>
 #include <node_p.hpp>
 #include <libavstream/encoder.hpp>
 #include <libavstream/encoders/enc_interface.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
+#include <libavstream/queue.hpp>
 
 namespace avs
 {
@@ -20,13 +23,18 @@ namespace avs
 		std::unique_ptr<EncoderBackendInterface> m_backend;
 		EncoderBackend m_selectedBackendType;
 		EncoderParams m_params = {};
+		avs::Queue m_tagDataQueue;
 		std::vector<uint8_t> m_videoData;
+		std::vector<uint8_t> m_tagData;
+		std::atomic_bool m_encodingThreadActive;
+		std::thread m_encodingThread;
 		bool m_configured = false;
 		bool m_surfaceRegistered = false;
 		bool m_outputPending = false;
 		bool m_forceIDR = false;
 
-		Result writeOutput(IOInterface* outputNode, const uint8_t* tagDataBuffer, size_t tagDataBufferSize);
+		Result writeOutput(IOInterface* outputNode, const void* mappedBuffer, size_t mappedBufferSize, const uint8_t* tagDataBuffer, size_t tagDataBufferSize);
+		Result ConfigureTagDataQueue();
 	};
 
 } // avs

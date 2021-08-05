@@ -91,6 +91,14 @@ Result Encoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 	}
 
 	d().m_videoData.resize(200000);
+	d().m_tagData.resize(200);
+
+	result = d().m_tagDataQueue.configure(200, 3, "VideoTagDataQueue");
+
+	if (result)
+	{
+		StartEncodingThread();
+	}
 
 	return result;
 }
@@ -102,6 +110,8 @@ Result Encoder::reconfigure(int frameWidth, int frameHeight, const EncoderParams
 		return Result::Node_NotConfigured;
 	}
 
+	StopEncodingThread();
+
 	assert(d().m_backend);
 	Result result = d().m_backend->reconfigure(frameWidth, frameHeight, params);
 	if (result)
@@ -110,6 +120,14 @@ Result Encoder::reconfigure(int frameWidth, int frameHeight, const EncoderParams
 		SurfaceInterface* surface = dynamic_cast<SurfaceInterface*>(getInput(0));
 		registerSurface(surface);
 	}
+
+	result = d().ConfigureTagDataQueue();
+
+	if (result)
+	{
+		StartEncodingThread();
+	}
+
 	return result;
 }
 
@@ -121,6 +139,9 @@ Result Encoder::deconfigure()
 	}
 
 	Result result = Result::OK;
+
+	StopEncodingThread();
+
 	if (d().m_backend)
 	{
 		unlinkInput();
@@ -130,8 +151,9 @@ Result Encoder::deconfigure()
 	d().m_outputPending = false;
 
 	d().m_videoData.clear();
+	d().m_tagData.clear();
 
-	return result;
+	return d().m_tagDataQueue.deconfigure();
 }
 
 Result Encoder::process(uint64_t timestamp, uint64_t deltaTime)
@@ -146,7 +168,7 @@ Result Encoder::process(uint64_t timestamp, uint64_t deltaTime)
 	return d().m_backend->encodeFrame(timestamp, d().m_forceIDR);
 }
 
-Result Encoder::writeOutput(const uint8_t* extraDataBuffer, size_t bufferSize)
+Result Encoder::writeOutput(const uint8_t* tagDataBuffer, size_t tagDataBufferSize)
 {
 	if (!d().m_configured)
 	{
@@ -157,7 +179,53 @@ Result Encoder::writeOutput(const uint8_t* extraDataBuffer, size_t bufferSize)
 	{
 		return Result::Node_InvalidOutput;
 	}
-	return d().writeOutput(outputNode, extraDataBuffer, bufferSize);
+
+	void* mappedBuffer;
+	size_t mappedBufferSize;
+
+	Result result = d().m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize);
+	if (!result)
+	{
+		return result;
+	}
+
+	result = d().writeOutput(outputNode, mappedBuffer, mappedBufferSize, tagDataBuffer, tagDataBufferSize);
+	if (!result)
+	{
+		return result;
+	}
+
+	return d().m_backend->unmapOutputBuffer();
+}
+
+void Encoder::writeOutputAsync()
+{
+	while (d().m_encodingThreadActive)
+	{
+		Result result = d().m_backend->waitForEncodingCompletion();
+		if (result)
+		{
+			size_t tagDataBufferSize;
+			size_t bytesRead;
+			result = d().m_tagDataQueue.read(this, d().m_tagData.data(), tagDataBufferSize, bytesRead);
+			if (result == Result::IO_Empty)
+			{
+				tagDataBufferSize = 0;
+			}
+			else if (result == Result::IO_Retry)
+			{
+				d().m_tagData.resize(tagDataBufferSize);
+				result = d().m_tagDataQueue.read(this, d().m_tagData.data(), tagDataBufferSize, bytesRead);
+			}
+			writeOutput(d().m_tagData.data(), tagDataBufferSize);
+		}
+	}
+}
+
+Result Encoder::writeTagData(const uint8_t* data, size_t dataSize)
+{
+	size_t bytesWritten;
+	return d().m_tagDataQueue.write(this, data, dataSize, bytesWritten);
 }
 
 Result Encoder::setBackend(EncoderBackendInterface* backend)
@@ -249,21 +317,38 @@ Result Encoder::unregisterSurface()
 	return result;
 }
 
-Result Encoder::Private::writeOutput(IOInterface* outputNode, const uint8_t* tagDataBuffer, size_t tagDataBufferSize)
+void Encoder::StartEncodingThread()
+{
+	if (d().m_params.useAsyncEncoding && !d().m_encodingThread.joinable())
+	{
+		d().m_encodingThreadActive = true;
+		d().m_encodingThread = std::thread(&Encoder::writeOutputAsync, this);
+	}
+}
+
+void Encoder::StopEncodingThread()
+{
+	if (d().m_params.useAsyncEncoding && d().m_encodingThread.joinable())
+	{
+		d().m_encodingThreadActive = false;
+		d().m_encodingThread.join();
+	}
+}
+
+void Encoder::setForceIDR(bool forceIDR)
+{
+	d().m_forceIDR = forceIDR;
+}
+
+bool Encoder::isEncodingAsynchronously()
+{
+	return d().m_params.useAsyncEncoding;
+}
+
+Result Encoder::Private::writeOutput(IOInterface* outputNode, const void* mappedBuffer, size_t mappedBufferSize, const uint8_t* tagDataBuffer, size_t tagDataBufferSize)
 {
 	assert(outputNode);
 	assert(m_backend);
-
-	Result result = Result::OK;
-
-	void* mappedBuffer;
-	size_t mappedBufferSize;
-
-	result = m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize);
-	if (!result)
-	{
-		return result;
-	}
 
 	// Write video and tag data to the output node
 	size_t sizeFieldInBytes = sizeof(size_t);
@@ -309,7 +394,7 @@ Result Encoder::Private::writeOutput(IOInterface* outputNode, const uint8_t* tag
 	}
 
 	size_t numBytesWrittenToOutput;
-	result = outputNode->write(q_ptr(), m_videoData.data(), videoDataSize, numBytesWrittenToOutput);
+	Result result = outputNode->write(q_ptr(), m_videoData.data(), videoDataSize, numBytesWrittenToOutput);
 
 	if (!result)
 	{
@@ -325,7 +410,7 @@ Result Encoder::Private::writeOutput(IOInterface* outputNode, const uint8_t* tag
 	return result;
 }
 
-void Encoder::setForceIDR(bool forceIDR)
+Result Encoder::Private::ConfigureTagDataQueue()
 {
-	d().m_forceIDR = forceIDR;
+	return m_tagDataQueue.configure(200, 3, "VideoTagDataQueue");
 }

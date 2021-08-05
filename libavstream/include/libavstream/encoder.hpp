@@ -91,10 +91,9 @@ public:
 	Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
 	/*!
-	 * Write data to the output stream
-	 * \sa Node::process()
-	 * \param extra data buffer
-	 * \param extra data buffer size
+	 * Write data to the output stream.
+	 * \param tag data buffer
+	 * \param tag data buffer size
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.
@@ -102,10 +101,19 @@ public:
 	 *  - Result::Encoder_IncompleteFrame if encoded bitstream was only partially written to output node.
 	 *  - Any error result returned by EncoderBackendInterface::mapOutputBuffer().
 	 */
-	Result writeOutput(const uint8_t* extraDataBuffer, size_t bufferSize);
+	Result writeOutput(const uint8_t* tagDataBuffer, size_t tagDataBufferSize);
 
 	/*!
-	 * Unregister the encoder's surface texture 
+	 * Store tag data for asynchronous thread.
+	 * \param tag data buffer
+	 * \param tag data buffer size
+	 * \return
+	 *  - Result::OK on success.
+	 */
+	Result writeTagData(const uint8_t* data, size_t dataSize);
+
+	/*!
+	 * Unregister the encoder's surface texture. 
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.
@@ -134,6 +142,8 @@ public:
 	 */
 	void setForceIDR(bool forceIDR);
 
+	bool isEncodingAsynchronously();
+
 private:
 	Result onInputLink(int slot, Node* node) override;
 	Result onOutputLink(int slot, Node* node) override;
@@ -148,6 +158,10 @@ private:
 	*  - Any error result returned by EncoderBackendInterface::registerSurface().
 	*/
 	Result registerSurface(SurfaceInterface* surface);
+
+	void writeOutputAsync();
+	void StartEncodingThread();
+	void StopEncodingThread();
 };
 
 } // avs

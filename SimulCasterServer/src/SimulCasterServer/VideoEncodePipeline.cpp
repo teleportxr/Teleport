@@ -168,6 +168,11 @@ namespace SCServer
 
 		encoder->setForceIDR(forceIDR);
 
+		if (encoder->isEncodingAsynchronously())
+		{
+			encoder->writeTagData(extraData, extraDataSize);
+		}
+
 		avs::Result result = pipeline->process();
 
 		if (!result)
@@ -176,7 +181,10 @@ namespace SCServer
 			return Result::Code::PipelineProcessingError;
 		}
 
-		result = encoder->writeOutput(extraData, extraDataSize);
+		if (!encoder->isEncodingAsynchronously())
+		{
+			result = encoder->writeOutput(extraData, extraDataSize);
+		}
 
 		if (!result)
 		{
