@@ -33,6 +33,7 @@ void GL_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
         return;
     glGenTextures(1, &m_Texture.texture);
     glBindTexture(TypeToGLTarget(m_CI.type), m_Texture.texture);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAX_LEVEL,m_CI.mipCount-1);
 	GLCheckErrorsWithTitle("GL_Texture:Create 0");
     if(m_CI.compression == Texture::CompressionFormat::UNCOMPRESSED)
     {

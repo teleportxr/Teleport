@@ -359,6 +359,7 @@ namespace SCServer
 			avs::ConvertTransform(settings->axesStandard, req->getClientAxesStandard(), transform);
 
 			put(transform);
+			put((uint8_t)(node->stationary));
 			put(node->data_uid);
 			put(node->data_type);
 			put(node->data_subtype);

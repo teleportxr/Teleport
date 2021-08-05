@@ -178,6 +178,7 @@ void Static()
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_lightmap       =UV1*u_LightmapScaleOffset.xy+u_LightmapScaleOffset.zw;
+    v_UV_lightmap.y     =1.0-v_UV_lightmap.y;
 
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;
@@ -195,7 +196,7 @@ void Static()
         v_VertexLight_directionToLight[i]=vertexLight0.directionToLight;
         v_VertexLight_distanceToLight[i]=vertexLight0.distanceToLight;
         v_VertexLight_halfway[i]            =vertexLight0.halfway;
-        v_VertexLight_nh2_lh2_nl[i]           =vec3(vertexLight0.nh2_lh2_nl);
+        v_VertexLight_nh2_lh2_nl[i]         =vec3(vertexLight0.nh2_lh2_nl);
     }
 }
 
@@ -219,6 +220,7 @@ void Animated()
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_lightmap       =UV1*u_LightmapScaleOffset.xy+u_LightmapScaleOffset.zw;
+    v_UV_lightmap.y=1.0-v_UV_lightmap.y;
 
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;

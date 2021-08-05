@@ -3,16 +3,17 @@
 #include <Render/SurfaceRender.h>
 
 #include "crossplatform/Node.h"
+#include "GlobalGraphicsResources.h"
 
 class OVRNode : public scr::Node
 {
 public:
-	class SurfaceInfo
+	struct SurfaceInfo
 	{
 	public:
 		OVRFW::ovrSurfaceDef surfaceDef;
 
-		void SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlProgram* newHighlightProgram);
+		void SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlProgram* newHighlightProgram,bool setDefaults);
 
 		void SetHighlighted(bool highLighted);
 
@@ -25,9 +26,14 @@ public:
 		{
 			return surfaceDef;
 		}
+		PerMeshInstanceData perMeshInstanceData;
+		std::shared_ptr<scr::UniformBuffer> s_perMeshInstanceUniformBuffer;
+		scr::ShaderResource perMeshInstanceShaderResource;
+		bool initialized=false;
 	private:
 		OVRFW::GlProgram* program = nullptr;
 		OVRFW::GlProgram* highlightProgram = nullptr;
+		bool highlighted=false;
 	};
 
 	OVRNode(avs::uid id, const std::string& name);
@@ -54,6 +60,7 @@ public:
 
 	std::string GetCompleteEffectPassName(const char* effectPassName);
 	void ChangeEffectPass(const char* effectPassName);
+
 private:
 	std::vector<SurfaceInfo> surfaceDefinitions;
 

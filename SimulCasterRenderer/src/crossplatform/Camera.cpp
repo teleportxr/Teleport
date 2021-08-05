@@ -14,6 +14,7 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	if (s_UninitialisedUB)
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
+		ub_ci.name="u_cameraData";
 		ub_ci.bindingLocation = 0;
 		ub_ci.size = sizeof(CameraData);
 		ub_ci.data =  &m_CameraData;

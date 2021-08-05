@@ -11,11 +11,22 @@ using namespace OVRFW;
 
 #define OPENGLES_310 310
 
+int GL_Effect::Pass::GetParameterIndex(const char *param_name) const
+{
+    for (size_t i = 0; i < uniformParms.size(); i++)
+    {
+        if(strcmp(uniformParms[i].Name,param_name)==0)
+            return (int)i;
+    }
+    OVR_ERROR("Unknown shader parameter %s",param_name);
+    return -1;
+}
+
 GL_Effect::~GL_Effect()
 {
-    for(auto& programPair : m_EffectPrograms)
+    for(auto& programPair : m_passes)
     {
-        GlProgram::Free(programPair.second);
+        GlProgram::Free(programPair.second.ovrProgram);
     }
 }
 
@@ -178,7 +189,26 @@ ovrProgramParmType GL_Effect::ToOVRProgramParmType(ShaderResourceLayout::ShaderR
 			exit(1);
     }
 }
-
+static const char *ToString(OVRFW::ovrProgramParmType t)
+{
+    switch (t)
+    {
+        case OVRFW::ovrProgramParmType::INT: return "int";
+        case OVRFW::ovrProgramParmType::INT_VECTOR2: return "Vector2i";
+        case OVRFW::ovrProgramParmType::INT_VECTOR3: return "Vector3i";
+        case OVRFW::ovrProgramParmType::INT_VECTOR4: return "Vector4i";
+        case OVRFW::ovrProgramParmType::FLOAT: return "float";
+        case OVRFW::ovrProgramParmType::FLOAT_VECTOR2: return "Vector2f";
+        case OVRFW::ovrProgramParmType::FLOAT_VECTOR3: return "Vector3f";
+        case OVRFW::ovrProgramParmType::FLOAT_VECTOR4: return "Vector4f";
+        case OVRFW::ovrProgramParmType::FLOAT_MATRIX4: return "Matrix4f";
+        case OVRFW::ovrProgramParmType::TEXTURE_SAMPLED: return "GlTexture";
+        case OVRFW::ovrProgramParmType::BUFFER_UNIFORM: return "read-only uniform buffer";
+        case OVRFW::ovrProgramParmType::BUFFER_STORAGE: return "read-write storage buffer";
+        default:
+            return "";
+    }
+}
 void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources)
 {
     Shader* vertex = nullptr;
@@ -197,8 +227,9 @@ void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSys
     }
 
     assert(vertex != nullptr && fragment != nullptr);
-
-    std::vector<ovrProgramParm> uniformParms;
+    OVR_LOG("Linking %s ",effectPassName);
+    int i=0;
+    Pass pass;
     for(const auto& shaderResource : shaderResources)
     {
         for(const auto& resource : shaderResource.GetWriteShaderResources())
@@ -206,7 +237,9 @@ void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSys
             const char* name = resource.shaderResourceName;
             ovrProgramParmType type = ToOVRProgramParmType(resource.shaderResourceType);
             assert(type != ovrProgramParmType::MAX);
-            uniformParms.push_back({name, type});
+            pass.uniformParms.push_back({name, type});
+            OVR_LOG("Linking %d uniform %s %s ",i,ToString(type),name);
+            i++;
         }
     }
 
@@ -216,10 +249,13 @@ void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSys
     static std::string vertDir = "";
     static std::string fragDir = "";//#extension GL_EXT_shader_texture_lod : require\n";
 
-    m_EffectPrograms.emplace
+    pass.ovrProgram= GlProgram::Build(vertDir.c_str(), vertSourceCode.c_str(), fragDir.c_str()
+                                      , fragSourceCode.c_str(), pass.uniformParms.data()
+                                      , (int)pass.uniformParms.size(), OPENGLES_310);
+    m_passes.emplace
     (
             effectPassName,
-            GlProgram::Build(vertDir.c_str(), vertSourceCode.c_str(), fragDir.c_str(), fragSourceCode.c_str(), uniformParms.data(), (int)uniformParms.size(), OPENGLES_310)
+            pass
      );
 }
 
@@ -275,5 +311,5 @@ void GL_Effect::BuildComputePipeline(const char* effectPassName, scr::ShaderSyst
     }
     glValidateProgram(program);
     glDeleteShader(id);
-    m_EffectPrograms[effectPassName].Program = program;
+    m_passes[effectPassName].ovrProgram.Program = program;
 }

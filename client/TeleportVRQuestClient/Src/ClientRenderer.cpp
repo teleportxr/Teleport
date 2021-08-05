@@ -107,7 +107,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	{
 		{
 			mVideoUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {1
+			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"mVideoUB",1
 					, sizeof(VideoUB)
 					, &videoUB};
 			mVideoUB->Create(&uniformBufferCreateInfo);
@@ -298,7 +298,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			effectPassCreateInfo.pipeline = cp7;
 			mExtractOneTagEffect->CreatePass(&effectPassCreateInfo);
 
-			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {3
+			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"mCubemapUB",3
 					, sizeof(CubemapUB)
 					, &cubemapUB};
 			mCubemapUB->Create(&uniformBufferCreateInfo);
@@ -422,6 +422,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	shaderResourceLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	shaderResourceLayout.AddBinding(12, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	shaderResourceLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(5, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	shaderResourceLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	shaderResourceLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	shaderResourceLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
@@ -431,11 +432,11 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataID", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,4,"u_BoneData", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,2,"u_MaterialData", {});
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,5,"u_PerMeshInstanceData", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,10,"u_DiffuseTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,11,"u_NormalTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,12,"u_CombinedTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,13,"u_EmissiveTexture", {});
+	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,5,"u_PerMeshInstanceData", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,14,"u_SpecularCubemap", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,15,"u_DiffuseCubemap", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_LightmapTexture", {});
@@ -601,7 +602,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 
 	// Set up the uniform buffer
 	webcamUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-	scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {1
+	scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"WebcamUB",1
 			, sizeof(WebcamUB)
 			, &webcamUBData};
 	webcamUB->Create(&uniformBufferCreateInfo);
@@ -1068,6 +1069,8 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 				setupLightingCommand.global_illumination_texture_uid);
 		if(!mlightmapTexture.get())
 			mlightmapTexture=resourceCreator->m_DummyWhite;
+		else
+			mlightmapTexture->UseSampler(globalGraphicsResources.noMipsampler);
 	}
 	globalGraphicsResources.lightCubemapShaderResources.SetImageInfo(2,{mlightmapTexture->GetSampler()
 			, mlightmapTexture});
@@ -1123,8 +1126,6 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			}
 
 			std::vector<const scr::ShaderResource *> pbrShaderResources;
-			PerMeshInstanceData perMeshInstanceData;
-			perMeshInstanceData.u_LightmapScaleOffset=ovrNode->GetLightmapScaleOffset();
 			pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
 			//pbrShaderResources.push_back(&globalGraphicsResources.GetPerMeshInstanceShaderResource(perMeshInstanceData));
 			//Push surfaces onto render queue.
@@ -1149,7 +1150,7 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 				}
 				OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 				surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
-				surfaceDef.graphicsCommand.UniformData[3].Data = &perMeshInstanceData.u_LightmapScaleOffset;
+				//surfaceDef.graphicsCommand.UniformData[3].Data = &ovrNode->perMeshInstanceData.u_LightmapScaleOffset;
 				if(mlightmapTexture.get())
 				{
 					auto gl_texture = dynamic_cast<scc::GL_Texture *>(mlightmapTexture.get());
