@@ -378,7 +378,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, irradiance);
 }
 
-vec4 Solid(vertexOutput IN)
+vec4 Solid(vertexOutput IN,bool lightmap,bool ambient)
 {
 	vec3 diff			=IN.wpos.xyz - viewPosition;
 	if(length(diff) > drawDistance)
@@ -420,7 +420,11 @@ vec4 Solid(vertexOutput IN)
 	int id						=int(TagDataIDBuffer[0].x);
 	VideoTagDataCube tagData	=TagDataCubeBuffer[id];
 	surfaceState.kD				*=tagData.diffuseAmbientScale;
-	vec3 c						=PBRAmbient(surfaceState, view, surfaceProperties);
+	vec3 c						=vec3(0,0,0);
+	if(lightmap)
+		c+=surfaceProperties.globalIllumination.rgb*surfaceProperties.albedo;
+	if(ambient)
+		c+=PBRAmbient(surfaceState, view, surfaceProperties);
 	for(int i=0;i<4;i++)
 	{
 		if(i>=tagData.lightCount)
@@ -435,7 +439,7 @@ vec4 Solid(vertexOutput IN)
 	vec3 highlight		=vec3(0.01,0.02,0.05);
 	//u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 	//u.b=0;
-	u.rgb= surfaceProperties.globalIllumination.xyz;
+	//u.rgb= surfaceProperties.globalIllumination.xyz;
 	return u;
 }
 
@@ -447,14 +451,19 @@ vec4 Solid_AlbedoOnly(vertexOutput IN)
 	return vec4(diffuseColour.rgb, 1.0);
 }
 
-shader vec4 PS_Solid(vertexOutput IN) : SV_TARGET
+shader vec4 PS_Solid_NoLightmap(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN);
+	return Solid(IN,false,true);
+}
+
+shader vec4 PS_Solid_Lightmap(vertexOutput IN) : SV_TARGET
+{
+	return Solid(IN,true,false);
 }
 
 shader vec4 PS_Depth(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN);
+	return Solid(IN,false,false);
 }
 
 shader vec4 PS_Solid_AlbedoOnly(vertexOutput IN) : SV_TARGET
@@ -570,7 +579,8 @@ shader vec4 PS_Transparent(vertexOutput IN) : SV_TARGET
 
 VertexShader vs_solid = CompileShader(vs_4_0, VS_Solid());
 VertexShader vs_anim = CompileShader(vs_4_0, VS_Animation());
-PixelShader ps_solid = CompileShader(ps_4_0, PS_Solid());
+PixelShader ps_solid_lightmap = CompileShader(ps_4_0, PS_Solid_Lightmap());
+PixelShader ps_solid_nolightmap = CompileShader(ps_4_0, PS_Solid_NoLightmap());
 PixelShader ps_depth = CompileShader(ps_5_1, PS_Depth());
 
 //Debug renders.
@@ -591,15 +601,24 @@ technique solid
         SetGeometryShader(NULL);
 		SetPixelShader(ps_depth);
     }
-    pass pbr 
+    pass pbr_lightmap 
     {
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
         SetGeometryShader(NULL);
-		SetPixelShader(ps_solid);
+		SetPixelShader(ps_solid_lightmap);
     }
+	pass pbr_nolightmap
+	{
+		SetRasterizerState(RenderFrontfaceCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_solid_nolightmap);
+	}
 	pass albedo_only
     {
 		SetRasterizerState(RenderFrontfaceCull);
@@ -646,14 +665,23 @@ technique solid
 		SetPixelShader(ps_debug_normal_vertexnormals);
     }
 
-	pass anim_pbr 
+	pass anim_pbr_lightmap
+	{
+		SetRasterizerState(RenderFrontfaceCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_anim);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_solid_lightmap);
+	}
+	pass anim_pbr_nolightmap
 	{
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
 		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid);
+		SetPixelShader(ps_solid_nolightmap);
 	}
 	pass anim_albedo_only
 	{

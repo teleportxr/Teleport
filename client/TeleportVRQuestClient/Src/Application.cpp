@@ -442,6 +442,7 @@ void Application::DrawTexture(avs::vec3 &offset,scr::Texture &texture)
 {
 	//mGuiSys->ShowInfoText()
 }
+
 void Application::PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,...)
 {
 	static char txt2[2000];

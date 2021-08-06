@@ -1224,7 +1224,7 @@ void ClientRenderer::WriteDebugOutput()
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto& rootNodes = resourceManagers->mNodeManager->GetRootNodes();
 	OVR_LOG("Root Nodes: %zu   Total Nodes: %zu",rootNodes.size(),resourceManagers->mNodeManager->GetNodeAmount());
-	size_t linesRemaining = 2000;
+	size_t linesRemaining = 20;
 	static uid show_only=0;
 	for(const std::shared_ptr<scr::Node>& node : rootNodes)
 	{

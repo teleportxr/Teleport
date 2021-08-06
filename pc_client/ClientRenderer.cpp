@@ -259,22 +259,22 @@ void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 	switch(newShaderMode)
 	{
 		case ShaderMode::PBR:
-			passName = "pbr";
+			overridePassName = "";
 			break;
 		case ShaderMode::ALBEDO:
-			passName = "albedo_only";
+			overridePassName = "albedo_only";
 			break;
 		case ShaderMode::NORMAL_UNSWIZZLED:
-			passName = "normal_unswizzled";
+			overridePassName = "normal_unswizzled";
 			break;
 		case ShaderMode::NORMAL_UNREAL:
-			passName = "normal_unreal";
+			overridePassName = "normal_unreal";
 			break;
 		case ShaderMode::NORMAL_UNITY:
-			passName = "normal_unity";
+			overridePassName = "normal_unity";
 			break;
 		case ShaderMode::NORMAL_VERTEXNORMALS:
-			passName = "normal_vertexnormals";
+			overridePassName = "normal_vertexnormals";
 			break;
 	}
 }
@@ -915,6 +915,12 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
 
+
+	std::string passName = "pbr_nolightmap"; //Pass used for rendering geometry.
+	if(node->IsStatic())
+		passName="pbr_lightmap";
+	if(overridePassName.length()>0)
+		passName= overridePassName;
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->IsVisible())
 	{

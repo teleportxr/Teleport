@@ -39,7 +39,7 @@ void OVRNode::SurfaceInfo::SetPrograms(OVRFW::GlProgram* newProgram, OVRFW::GlPr
 	}
 
 	//We want to stay in the highlighting mode we were in.
-	if(!program || surfaceDef.graphicsCommand.Program.Program == program->Program)
+	if(!highlighted)
 	{
 		surfaceDef.graphicsCommand.Program = *newProgram;
 	}
@@ -161,7 +161,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 					TELEPORT_MAX_LIGHTS,
 					false
 			);
-	OVR_LOG("CreateOVRSurface %s %d with pass %s",name.c_str(),(int)materialIndex,passname.c_str());
+	//OVR_LOG("CreateOVRSurface %s %d with pass %s",name.c_str(),(int)materialIndex,passname.c_str());
 	OVRFW::GlProgram *ovrProgram = GetEffectPass(passname.c_str());
 	if (ovrProgram == nullptr)
 	{

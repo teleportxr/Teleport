@@ -151,7 +151,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool render_from_video_centre = false;
 	bool show_textures = false;
 
-	std::string passName = "pbr"; //Pass used for rendering geometry.
+	std::string overridePassName = ""; //Pass used for rendering geometry.
 
 	struct ControllerSim
 	{
