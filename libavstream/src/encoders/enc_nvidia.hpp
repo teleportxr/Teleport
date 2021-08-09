@@ -86,32 +86,48 @@ namespace avs
 		CUfunction m_kBGRAtoNV12 = nullptr;
 		CUfunction m_kR16toNV12 = nullptr;
 
-		struct InputBuffer
+		struct EncoderInputData
 		{
 			NV_ENC_BUFFER_FORMAT format = NV_ENC_BUFFER_FORMAT_UNDEFINED;
-			NV_ENC_REGISTERED_PTR ptr = nullptr;
-			CUdeviceptr devicePtr = 0;
 			size_t pitch = 0;
 		};
-		InputBuffer m_inputBuffer;
+		EncoderInputData m_inputData;
+
+		static constexpr uint32_t MAX_BUFFERS = 4;
+
+		struct InputBuffer
+		{
+			CUdeviceptr devicePtr = 0;
+			NV_ENC_REGISTERED_PTR regPtr = nullptr;
+			NV_ENC_MAP_INPUT_RESOURCE resource;
+		};
 
 		struct OutputBuffer
 		{
 			NV_ENC_OUTPUT_PTR ptr = nullptr;
 		};
-		OutputBuffer m_outputBuffer;
+
+		struct EncoderBufferData
+		{
+			InputBuffer inputBuffer;
+			OutputBuffer outputBuffer;
+			void* completionEvent = nullptr;
+		};
+		EncoderBufferData m_bufferData[MAX_BUFFERS];
 
 		struct RegisteredSurface
 		{
 			const SurfaceBackendInterface* surface = nullptr;
-			CUgraphicsResource resource = nullptr;
+			CUgraphicsResource cuResource = nullptr;
 		};
 		RegisteredSurface m_registeredSurface;
-		NV_ENC_MAP_INPUT_RESOURCE m_resource;
-		void* m_completionEvent = nullptr;
 		EncodeCapabilities m_EncodeCapabilities;
 		static LibraryLoader m_libNVENC;
+		uint32_t m_numBuffers = 1;
+		int m_bufferIndex = 0;
 		bool m_initialized = false;
+
+		ThreadSafeQueue<int> m_bufferIndexQueue;
 	};
 
 } // avs

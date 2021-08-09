@@ -4,6 +4,7 @@
 #include "crossplatform/AudioPlayer.h"
 #include <wrl.h>
 #include <future>
+#include <libavstream/common.hpp>
 
 interface IXAudio2;
 interface IXAudio2MasteringVoice;
@@ -44,7 +45,7 @@ namespace sca
 
 		std::unique_ptr<class VoiceCallback> mVoiceCallback;
 
-		ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
+		avs::ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
 	};
 }
 
