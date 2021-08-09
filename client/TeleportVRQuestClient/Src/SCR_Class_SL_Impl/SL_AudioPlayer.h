@@ -4,6 +4,7 @@
 #include <crossplatform/AudioPlayer.h>
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
+#include <libavstream/common.hpp>
 
 /*! A class to play audio from streams and files for PC
 */
@@ -38,7 +39,7 @@ private:
     SLObjectItf mPlayerObject = nullptr;
 	SLPlayItf mPlayInterface = nullptr;
 	SLAndroidSimpleBufferQueueItf mOutputBufferQueueInterface = nullptr;
-	sca::ThreadSafeQueue<std::vector<uint8_t>> mOutputBufferQueue;
+	avs::ThreadSafeQueue<std::vector<uint8_t>> mOutputBufferQueue;
 
 	// Recording
 	SLObjectItf mRecorderObject = nullptr;

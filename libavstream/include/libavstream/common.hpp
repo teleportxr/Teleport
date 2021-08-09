@@ -389,8 +389,8 @@ namespace avs
 #if _HAS_CXX17
 			return m_data.emplace(std::forward<_Valty>(_Val)...);
 #else // ^^^ C++17 or newer / C++14 vvv
-			data.emplace(std::forward<_Valty>(_Val)...);
-			return data.back();
+			m_data.emplace(std::forward<_Valty>(_Val)...);
+			return m_data.back();
 #endif // _HAS_CXX17
 		}
 
