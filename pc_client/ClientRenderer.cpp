@@ -1108,14 +1108,14 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
-	std::vector<avs::NetworkSourceStream> streams = { {20} };
+	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } };
 	if (AudioStream)
 	{
-		streams.push_back({ 40 });
+		streams.push_back({ 60 });
 	}
 	if (GeoStream)
 	{
-		streams.push_back({ 60 });
+		streams.push_back({ 80 });
 	}
 
 	avs::NetworkSourceParams sourceParams;
