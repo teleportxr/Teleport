@@ -102,7 +102,6 @@ namespace avs
 			DecoderBackend_DisplayFailed,
 			DecoderBackend_ShutdownFailed,
 			DecoderBackend_ReadyToDisplay,
-			DecoderBackend_PayloadIsExtraData,
 			DecoderBackend_CapabilityCheckFailed,
 			GeometryEncoder_Incomplete,
 			GeometryEncoder_InvalidPayload,
@@ -193,8 +192,7 @@ namespace avs
 		PPS,             /*!< Picture Parameter Set */
 		ALE,			 /*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
 		OtherNALUnit,    /*!< Other NAL unit. */
-		AccessUnit,      /*!< Entire access unit (possibly multiple NAL units). */
-		ExtraData		 /*!< Data containing info relating to the video */
+		AccessUnit      /*!< Entire access unit (possibly multiple NAL units). */
 	};
 
 	enum class VideoExtraDataType : uint8_t
@@ -207,7 +205,8 @@ namespace avs
 		H264 = 0,
 		HEVC,
 		Geometry,
-		Audio
+		Audio,
+		VideoTagData
 	};
 
 	enum class GeometryPayloadType : uint8_t

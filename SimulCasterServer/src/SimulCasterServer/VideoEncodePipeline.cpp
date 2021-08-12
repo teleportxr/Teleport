@@ -20,7 +20,7 @@ namespace SCServer
 	
 	}
 
-	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* output)
+	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* videoOutput, avs::IOInterface* tagDataOutput)
 	{
 		auto createSurfaceBackend = [](GraphicsDeviceType deviceType, void* resource)->avs::SurfaceBackendInterface*
 		{
@@ -61,11 +61,12 @@ namespace SCServer
 			return Result::Code::InvalidGraphicsResource;
 		}
 		
-		pipeline.reset(new avs::Pipeline);
-		encoder.reset(new avs::Encoder);
-		inputSurface.reset(new avs::Surface);
+		mPipeline.reset(new avs::Pipeline);
+		mEncoder.reset(new avs::Encoder);
+		mInputSurface.reset(new avs::Surface);
+		mTagDataOutput = tagDataOutput;
 
-		if (!inputSurface->configure(avsSurfaceBackend))
+		if (!mInputSurface->configure(avsSurfaceBackend))
 		{
 			TELEPORT_CERR << "Failed to configure input surface node \n";
 			return Result::Code::InputSurfaceNodeConfigurationError;
@@ -74,13 +75,13 @@ namespace SCServer
 		avs::EncoderParams encoderParams = {};
 		CrateEncodeParams(settings, videoEncodeParams, encoderParams);
 
-		if (!encoder->configure(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams))
+		if (!mEncoder->configure(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams))
 		{
 			TELEPORT_CERR << "Failed to configure encoder node \n";
 			return Result::Code::EncoderNodeConfigurationError;
 		}
 
-		if (!pipeline->link({ inputSurface.get(), encoder.get(), output }))
+		if (!mPipeline->link({ mInputSurface.get(), mEncoder.get(), videoOutput }))
 		{
 			TELEPORT_CERR << "Error configuring the video encoding pipeline \n";
 			return Result::Code::PipelineConfigurationError;
@@ -91,7 +92,7 @@ namespace SCServer
 
 	Result VideoEncodePipeline::reconfigure(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams)
 	{
-		if (!pipeline)
+		if (!mPipeline)
 		{
 			TELEPORT_CERR << "Error video encode pipeline not initialized \n";
 			return Result::Code::PipelineNotInitialized;
@@ -117,18 +118,18 @@ namespace SCServer
 
 		if (videoEncodeParams.inputSurfaceResource)
 		{
-			if (!encoder->unregisterSurface())
+			if (!mEncoder->unregisterSurface())
 			{
 				TELEPORT_CERR << "Error occured trying to unregister the surface \n";
 				return Result::Code::InputSurfaceUnregistrationError;
 			}
-			changeSurfaceBackendResource(inputSurface->getBackendSurface(), videoEncodeParams.deviceType, videoEncodeParams.inputSurfaceResource);
+			changeSurfaceBackendResource(mInputSurface->getBackendSurface(), videoEncodeParams.deviceType, videoEncodeParams.inputSurfaceResource);
 		}
 
 		avs::EncoderParams encoderParams = {};
 		CrateEncodeParams(settings, videoEncodeParams, encoderParams);
 
-		encoder->reconfigure(videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams);
+		mEncoder->reconfigure(videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams);
 		return Result::Code::OK;
 	}
 
@@ -158,38 +159,31 @@ namespace SCServer
 		}
 	}
 
-	Result VideoEncodePipeline::process(const uint8_t* extraData, size_t extraDataSize, bool forceIDR)
+	Result VideoEncodePipeline::process(const uint8_t* tagData, size_t tagDataSize, bool forceIDR)
 	{
-		if (!pipeline)
+		if (!mPipeline)
 		{
-			TELEPORT_CERR << "Error video encode pipeline not initialized \n";
+			TELEPORT_CERR << "Error video encode pipeline not initialized. \n";
 			return Result::Code::PipelineNotInitialized;
 		}
 
-		encoder->setForceIDR(forceIDR);
+		size_t bytesWritten;
+		mTagDataOutput->write(nullptr, tagData, tagDataSize, bytesWritten);
 
-		if (encoder->isEncodingAsynchronously())
+		if (!bytesWritten)
 		{
-			encoder->writeTagData(extraData, extraDataSize);
-		}
-
-		avs::Result result = pipeline->process();
-
-		if (!result)
-		{
-			TELEPORT_CERR << "Encode pipeline processing encountered an error \n";
+			TELEPORT_CERR << "Failed to write tag data to output. \n";
 			return Result::Code::PipelineProcessingError;
 		}
 
-		if (!encoder->isEncodingAsynchronously())
-		{
-			result = encoder->writeOutput(extraData, extraDataSize);
-		}
+		mEncoder->setForceIDR(forceIDR);
+
+		avs::Result result = mPipeline->process();
 
 		if (!result)
 		{
-			TELEPORT_CERR << "Encode pipeline encountered an error trying to write output \n";
-			return Result::Code::PipelineWriteOutputError;
+			TELEPORT_CERR << "Encode pipeline processing encountered an error. \n";
+			return Result::Code::PipelineProcessingError;
 		}
 
 		return Result::Code::OK;
@@ -197,9 +191,10 @@ namespace SCServer
 
 	Result VideoEncodePipeline::release()
 	{
-		encoder.reset();
-		inputSurface.reset();
-		pipeline.reset();
+		mEncoder.reset();
+		mInputSurface.reset();
+		mPipeline.reset();
+		mTagDataOutput = nullptr;
 		
 		return Result::Code::OK;
 	}

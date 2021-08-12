@@ -8,10 +8,7 @@
 #include <libavstream/surfaces/surface_interface.hpp>
 #include <libavstream/stream/parser_interface.hpp>
 
-#include <libavstream/networksource.hpp>
 #include <libavstream\timer.hpp>
-#include "ElasticFrameProtocol.h"
-#include "ElasticInternal.h"
 
 
 using namespace avs;
@@ -36,15 +33,11 @@ Decoder::~Decoder()
 	deconfigure();
 }
 
-Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params, uint8_t streamId, std::function<void(const uint8_t * data, size_t dataSize)> extraDataCallback)
+Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params, uint8_t streamId)
 {
 	m_interimFramesProcessed = 0;
 	m_currentFrameNumber = 0;
 	m_surfaceRegistered = false;
-
-	m_extraDataCallback = extraDataCallback;
-
-	// Vital that idr is required at the beginning because usually the first frame is missed
 	m_idrRequired = true;
 
 	m_firstIDRReceived = false;
@@ -131,10 +124,6 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 		{
 			++d->m_interimFramesProcessed;
 			d->m_displayPending = true;
-			return Result::OK;
-		}
-		if (result == Result::DecoderBackend_PayloadIsExtraData)
-		{
 			return Result::OK;
 		}
 		return result;
@@ -225,7 +214,6 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 	do
 	{
-		m_extraDataSize = 0;
 		m_firstVCLOffset = 0;
 
 		size_t bufferSize = m_frameBuffer.size();
@@ -350,21 +338,6 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 
 	VideoPayloadType payloadType = m_parser->classify(data, dataSize);
 
-	if (payloadType == VideoPayloadType::ExtraData)
-	{
-		// Execute callback to extract extra data if there is any
-		if (dataSize > 1)
-		{
-			// Ignore first byte because it is the video payload type
-			m_extraDataCallback(data + 1, dataSize - 1);
-		}
-
-		// Add size of data size field that was removed by the avc parser
-		m_extraDataSize += dataSize + sizeof(size_t);
-
-		return Result::DecoderBackend_PayloadIsExtraData;
-	}
-
     bool isIDR = m_parser->isIDR(data, dataSize);
 	// There are two VCLs per frame with alpha layer encoding enabled (HEVC only) and one VCL without.
 	if (payloadType == VideoPayloadType::VCL)
@@ -430,9 +403,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 	if (isLastPayload)
 	{
 #if defined(PLATFORM_WINDOWS)
-		const void* frameData = buffer + m_extraDataSize;
-		size_t frameSize = m_frame.dataSize - m_extraDataSize;
-		result = m_backend->decode(frameData, frameSize, nullptr, 0, payloadType, isLastPayload);
+		result = m_backend->decode(buffer, m_frame.dataSize, nullptr, 0, payloadType, isLastPayload);
 #elif defined(PLATFORM_ANDROID)
 		// Color is contained in first VCL and alpha in the second.
 		if (!m_params.useAlphaLayerDecoding || !m_firstIDRReceived)

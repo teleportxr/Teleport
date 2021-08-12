@@ -44,19 +44,6 @@ namespace avs
 		flush();
 
 		size_t parseOffset = 0;
-
-		static const size_t sizeFieldInBytes = sizeof(size_t);
-
-		// data size should always be at least 1 for the video payload type
-		size_t dataSize;
-		memcpy(&dataSize, buffer, sizeFieldInBytes);
-	
-		Result callbackResult = m_callback(m_node, m_inputNodeIndex, buffer, dataSize, parseOffset + sizeFieldInBytes, true);
-		if (!callbackResult)
-		{
-			return callbackResult;
-		}
-		parseOffset += (sizeFieldInBytes + dataSize);
 		
 		for (; parseOffset < bufferSize; ++parseOffset)
 		{

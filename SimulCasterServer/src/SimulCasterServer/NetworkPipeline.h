@@ -19,7 +19,7 @@ namespace SCServer
 		NetworkPipeline(const CasterSettings* settings);
 		virtual ~NetworkPipeline();
 
-		void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
+		void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
 
 		virtual void release();
 		virtual bool process();
@@ -29,30 +29,14 @@ namespace SCServer
 		avs::Result getCounters(avs::NetworkSinkCounters& counters) const;
 
 	private:
-		struct VideoPipe
-		{
-			avs::Queue* sourceQueue;
-		};
-		struct GeometryPipe
-		{
-			avs::Queue* sourceQueue;
-		};
-		struct AudioPipe
-		{
-			avs::Queue* sourceQueue;
-		};
+		const CasterSettings* mSettings;
 
-		const CasterSettings* settings;
-
-		std::unique_ptr<avs::Pipeline> pipeline;
-		std::vector<std::unique_ptr<VideoPipe>> videoPipes;
-		std::vector<std::unique_ptr<GeometryPipe>> geometryPipes;
-		std::vector<std::unique_ptr<AudioPipe>> audioPipes;
-		std::unique_ptr<avs::NetworkSink> networkSink;
-		avs::Result prevProcResult;
+		std::unique_ptr<avs::Pipeline> mPipeline;
+		std::unique_ptr<avs::NetworkSink> mNetworkSink;
+		avs::Result mPrevProcResult;
 
 #if WITH_REMOTEPLAY_STATS
-		avs::Timestamp lastTimestamp;
+		avs::Timestamp mLastTimestamp;
 #endif // WITH_REMOTEPLAY_STATS
 	};
 }

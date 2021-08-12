@@ -159,7 +159,7 @@ public:
 		deconfigure();
 	}
 
-	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue)
+	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue, avs::Queue* tagDataQueue)
 	{
 		if (configured)
 		{
@@ -187,7 +187,7 @@ public:
 		params.deviceHandle = GraphicsManager::mGraphicsDevice;
 		params.inputSurfaceResource = encoderSurfaceResource;
 
-		Result result = SCServer::VideoEncodePipeline::initialize(casterSettings, params, colorQueue);
+		Result result = SCServer::VideoEncodePipeline::initialize(casterSettings, params, colorQueue, tagDataQueue);
 		if (result)
 		{
 			configured = true;
@@ -599,10 +599,12 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 
 	// Sending
 	newClient.casterContext.ColorQueue.reset(new avs::Queue);
+	newClient.casterContext.TagDataQueue.reset(new avs::Queue);
 	newClient.casterContext.GeometryQueue.reset(new avs::Queue);
 	newClient.casterContext.AudioQueue.reset(new avs::Queue);
 
 	newClient.casterContext.ColorQueue->configure(200000, 16,"ColorQueue");
+	newClient.casterContext.TagDataQueue->configure(200, 16, "TagDataQueue");
 	newClient.casterContext.GeometryQueue->configure(200000, 16, "GeometryQueue");
 	newClient.casterContext.AudioQueue->configure(8192, 120, "AudioQueue");
 
@@ -1064,8 +1066,9 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEn
 	}
 
 	ClientData& clientData = clientPair->second;
-	avs::Queue *q	=clientData.casterContext.ColorQueue.get();
-	Result result	=clientData.videoEncodePipeline->configure(videoEncodeParams, q);
+	avs::Queue* cq = clientData.casterContext.ColorQueue.get();
+	avs::Queue* tq = clientData.casterContext.TagDataQueue.get();
+	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, cq, tq);
 	if(!result)
 	{
 		TELEPORT_CERR << "Failed to initialise video encoder for Client_" << clientID << "! Error occurred when trying to configure the video encoder pipeline!\n";

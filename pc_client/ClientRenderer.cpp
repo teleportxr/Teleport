@@ -1193,9 +1193,8 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	
 	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
-	auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
 	// Video streams are 0+...
-	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20, f))
+	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20))
 	{
 		SCR_CERR << "Failed to configure decoder node!\n";
 	}
@@ -1210,11 +1209,24 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	avs::Node::link(videoQueue, decoder);
 	pipeline.link({ &decoder, &surface });
 	
+	// Tag Data
+	{
+		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
+		if (!tagDataDecoder.configure(40, f))
+		{
+			SCR_CERR << "Failed to configure video tag data decoder node!\n";
+		}
+
+		tagDataQueue.configure(200, 16, "TagDataQueue");
+
+		avs::Node::link(source, tagDataQueue);
+		pipeline.link({ &tagDataQueue, &tagDataDecoder });
+	}
 
 	// Audio
 	if (AudioStream)
 	{
-		avsAudioDecoder.configure(40);
+		avsAudioDecoder.configure(60);
 		sca::AudioParams audioParams;
 		audioParams.codec = sca::AudioCodec::PCM;
 		audioParams.numChannels = 2;
@@ -1235,7 +1247,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	// We will add a GEOMETRY PIPE
 	if(GeoStream)
 	{
-		avsGeometryDecoder.configure(60,&geometryDecoder);
+		avsGeometryDecoder.configure(80, &geometryDecoder);
 		avsGeometryTarget.configure(&resourceCreator);
 
 		geometryQueue.configure(10000, 200, "GeometryQueue");

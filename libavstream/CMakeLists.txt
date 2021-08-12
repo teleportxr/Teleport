@@ -20,6 +20,7 @@ set(src_private_root
 	src/pipeline.cpp
 	src/node.cpp
 	src/decoder.cpp
+	src/tagdatadecoder.cpp
 	src/geometrydecoder.cpp
 	src/encoder.cpp
 	src/geometryencoder.cpp
@@ -135,6 +136,7 @@ set(src_public_root
 	include/libavstream/common_networking.h
 	include/libavstream/context.hpp
 	include/libavstream/decoder.hpp
+	include/libavstream/tagdatadecoder.hpp
 	include/libavstream/encoder.hpp
 	include/libavstream/file.hpp
 	include/libavstream/forwarder.hpp

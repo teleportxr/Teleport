@@ -492,7 +492,7 @@ namespace SCServer
 			};
 
 			casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));
-			casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->DepthQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
+			casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->TagDataQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
 		}
 
 		addNetworkPipelineToAsyncProcessing();

@@ -12,9 +12,7 @@
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
-#include <libavstream/geometrydecoder.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
-#include <libavstream/audiodecoder.h>
 #include <libavstream/audio/audiotarget.h>
 
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
@@ -242,6 +240,9 @@ public:
 	avs::Queue videoQueue;
 	avs::Decoder decoder;
 	avs::Surface surface;
+
+	avs::Queue tagDataQueue;
+	avs::TagDataDecoder tagDataDecoder;
 
 	GeometryDecoder geometryDecoder;
 	ResourceCreator resourceCreator;

@@ -15,7 +15,7 @@ namespace
 namespace SCServer
 {
 	NetworkPipeline::NetworkPipeline(const CasterSettings* settings)
-		: settings(settings), prevProcResult(avs::Result::OK)
+		: mSettings(settings), mPrevProcResult(avs::Result::OK)
 	{
 	}
 
@@ -24,44 +24,18 @@ namespace SCServer
 		release();
 	}
 
-	void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* colorQueue, avs::Queue* depthQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue)
+	void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue)
 	{
-		assert(colorQueue);
-
 		avs::NetworkSinkParams SinkParams = {};
 		SinkParams.socketBufferSize = networkPipelineSocketBufferSize;
-		SinkParams.throttleToRateKpS = std::min(settings->throttleKpS, static_cast<int64_t>(inNetworkSettings.clientBandwidthLimit));// Assuming 60Hz on the other size. k per sec
+		SinkParams.throttleToRateKpS = std::min(mSettings->throttleKpS, static_cast<int64_t>(inNetworkSettings.clientBandwidthLimit));// Assuming 60Hz on the other size. k per sec
 		SinkParams.socketBufferSize = inNetworkSettings.clientBufferSize;
 		SinkParams.requiredLatencyMs = inNetworkSettings.requiredLatencyMs;
 		SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;
 
-		pipeline.reset(new avs::Pipeline);
-		networkSink.reset(new avs::NetworkSink);
+		mPipeline.reset(new avs::Pipeline);
+		mNetworkSink.reset(new avs::NetworkSink);
 
-		videoPipes.resize(depthQueue ? 2 : 1);
-		for (std::unique_ptr<VideoPipe>& pipe : videoPipes)
-		{
-			pipe = std::make_unique<VideoPipe>();
-		}
-		videoPipes[0]->sourceQueue = colorQueue;
-		if (depthQueue)
-			videoPipes[1]->sourceQueue = depthQueue;
-
-		if(audioQueue)
-		{
-			audioPipes.resize(1);
-			for (std::unique_ptr<AudioPipe>& pipe : audioPipes)
-			{
-				pipe = std::make_unique<AudioPipe>();
-			}
-			audioPipes[0]->sourceQueue = audioQueue;
-		}
-		geometryPipes.resize(1);
-		for (std::unique_ptr<GeometryPipe>& pipe : geometryPipes)
-		{
-			pipe = std::make_unique<GeometryPipe>();
-		}
-		geometryPipes[0]->sourceQueue = geometryQueue;
 
 		char remoteIP[20];
 		size_t stringLength = wcslen(inNetworkSettings.remoteIP);
@@ -70,7 +44,7 @@ namespace SCServer
 
 		std::vector<avs::NetworkSinkStream> streams;
 
-		for (int32_t i = 0; i < videoPipes.size(); ++i)
+		// Video
 		{
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::AVC_AnnexB;
@@ -78,12 +52,25 @@ namespace SCServer
 			stream.isDataLimitPerFrame = false;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
-			stream.id = 20 + i;
-			stream.dataType = avs::NetworkDataType::HEVC; 
+			stream.id = 20;
+			stream.dataType = avs::NetworkDataType::HEVC;
 			streams.emplace_back(std::move(stream));
 		}
 
-		for (int32_t i = 0; i < audioPipes.size(); ++i)
+		// Tag Data
+		{
+			avs::NetworkSinkStream stream;
+			stream.parserType = avs::StreamParserType::None;
+			stream.useParser = false;
+			stream.isDataLimitPerFrame = false;
+			stream.counter = 0;
+			stream.chunkSize = 200;
+			stream.id = 40;
+			stream.dataType = avs::NetworkDataType::VideoTagData;
+			streams.emplace_back(std::move(stream));
+		}
+
+		// Audio
 		{
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::Audio;
@@ -91,12 +78,12 @@ namespace SCServer
 			stream.isDataLimitPerFrame = false;
 			stream.counter = 0;
 			stream.chunkSize = 2048;
-			stream.id = 40 + i;
+			stream.id = 60;
 			stream.dataType = avs::NetworkDataType::Audio;
 			streams.emplace_back(std::move(stream));
 		}
 
-		for (int32_t i = 0; i < geometryPipes.size(); ++i)
+		// Geometry
 		{
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::Geometry;
@@ -104,114 +91,116 @@ namespace SCServer
 			stream.isDataLimitPerFrame = true;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
-			stream.id = 60 + i;
+			stream.id = 80;
 			stream.dataType = avs::NetworkDataType::Geometry;
 			streams.emplace_back(std::move(stream));
 		}
 
-		if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP, inNetworkSettings.remotePort, SinkParams))
+		if (!mNetworkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP, inNetworkSettings.remotePort, SinkParams))
 		{
 			TELEPORT_CERR << "Failed to configure network sink!" << std::endl;
 			return;
 		}
 
-		for (int32_t i = 0; i < videoPipes.size(); ++i)
+		// Video
 		{
-			auto &pipe = videoPipes[i];
-			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
+			if (!avs::Node::link(*videoQueue, *mNetworkSink))
 			{
 				TELEPORT_CERR << "Failed to configure network pipeline for video!" << std::endl;
 				return;
 			}
-			pipeline->add(pipe->sourceQueue);
+			mPipeline->add(videoQueue);
 		}
 
-		for (int32_t i = 0; i < audioPipes.size(); ++i)
+		// Tag Data
 		{
-			auto& pipe = audioPipes[i];
-			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
+			if (!avs::Node::link(*tagDataQueue, *mNetworkSink))
+			{
+				TELEPORT_CERR << "Failed to configure network pipeline for video tag data!" << std::endl;
+				return;
+			}
+			mPipeline->add(tagDataQueue);
+		}
+
+		// Audio
+		{
+			if (!avs::Node::link(*audioQueue, *mNetworkSink))
 			{
 				TELEPORT_CERR << "Failed to configure network pipeline for audio!" << std::endl;
 				return;
 			}
-			pipeline->add(pipe->sourceQueue);
+			mPipeline->add(audioQueue);
 		}
-
-		for (int32_t i = 0; i < geometryPipes.size(); ++i)
+		
+		// Geometry
 		{
-			auto &pipe = geometryPipes[i];
-			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
+			if (!avs::Node::link(*geometryQueue, *mNetworkSink))
 			{
 				TELEPORT_CERR << "Failed to configure network pipeline for geometry!" << std::endl;
 				return;
 			}
-			pipeline->add(pipe->sourceQueue);
+			mPipeline->add(geometryQueue);
 		}
 
-		pipeline->add(networkSink.get());
+		mPipeline->add(mNetworkSink.get());
 
 #if WITH_REMOTEPLAY_STATS
-		lastTimestamp = avs::PlatformWindows::getTimestamp();
+		mLastTimestamp = avs::PlatformWindows::getTimestamp();
 #endif // WITH_REMOTEPLAY_STATS
 
-		prevProcResult = avs::Result::OK;
+		mPrevProcResult = avs::Result::OK;
 	}
 
 	void NetworkPipeline::release()
 	{
-		pipeline.reset();
-		if (networkSink) networkSink->deconfigure();
-		networkSink.reset();
-		videoPipes.clear();
-		geometryPipes.clear();
-		audioPipes.clear();
+		mPipeline.reset();
+		if (mNetworkSink)
+			mNetworkSink->deconfigure();
+		mNetworkSink.reset();
 	}
 
 	bool NetworkPipeline::process()
 	{
-		assert(pipeline);
-		assert(networkSink);
-
-		const avs::Result result = pipeline->process();
+		const avs::Result result = mPipeline->process();
 		// Prevent spamming of errors from NetworkSink. This happens when there is a connection issue.
 		if (!result && result != avs::Result::IO_Empty)
 		{
-			if (result != prevProcResult)
+			if (result != mPrevProcResult)
 			{
 				TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
-				prevProcResult = result;
+				mPrevProcResult = result;
 			}
 			return false;
 		}
 
-		prevProcResult = result;
+		mPrevProcResult = result;
 
 #if 0
 		avs::Timestamp timestamp = avs::PlatformWindows::getTimestamp();
 		if (avs::PlatformWindows::getTimeElapsed(lastTimestamp, timestamp) >= networkPipelineStatInterval)
 		{
-			const avs::NetworkSinkCounters counters = networkSink->getCounterValues();
+			const avs::NetworkSinkCounters counters = mNetworkSink->getCounterValues();
 			TELEPORT_COUT << "DP: " << counters.decoderPacketsQueued << " | NP: " << counters.networkPacketsSent << " | BYTES: " << counters.bytesSent << std::endl;
 			lastTimestamp = timestamp;
 		}
-		networkSink->setDebugStream(settings->debugStream);
-		networkSink->setDebugNetworkPackets(settings->enableDebugNetworkPackets);
-		networkSink->setDoChecksums(settings->enableChecksums);
-		networkSink->setEstimatedDecodingFrequency(settings->estimatedDecodingFrequency);
+		mNetworkSink->setDebugStream(mSettings->debugStream);
+		mNetworkSink->setDebugNetworkPackets(mSettings->enableDebugNetworkPackets);
+		mNetworkSink->setDoChecksums(mSettings->enableChecksums);
+		mNetworkSink->setEstimatedDecodingFrequency(mSettings->estimatedDecodingFrequency);
 #endif // WITH_REMOTEPLAY_STATS
 		return true;
 	}
 
 	avs::Pipeline* NetworkPipeline::getAvsPipeline() const
 	{
-		return pipeline.get();
+		return mPipeline.get();
 	}
 
 	avs::Result NetworkPipeline::getCounters(avs::NetworkSinkCounters& counters) const
 	{
-		if (networkSink)
+		if (mNetworkSink)
 		{
-			counters = networkSink->getCounters();
+			counters = mNetworkSink->getCounters();
 		}
 		else
 		{
