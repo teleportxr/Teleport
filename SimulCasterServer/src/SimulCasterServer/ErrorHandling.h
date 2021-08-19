@@ -29,9 +29,15 @@
 	if(!c){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}
 
 #if TELEPORT_INTERNAL_CHECKS
+void TeleportLogUnsafe(const char* fmt, ...);
+#define TELEPORT_INTERNAL_LOG_UNSAFE(...) \
+    { TeleportLogUnsafe(__VA_ARGS__); }
 #define TELEPORT_INTERNAL_CERR\
 		std::cerr << __FILE__ << "(" << __LINE__ << "): warning: "
 #else
-#define TELEPORT_INTERNAL_CERR\
-	//
+
+#define TELEPORT_INTERNAL_CERR
+
+#define TELEPORT_INTERNAL_LOG_UNSAFE(a,...)
+
 #endif

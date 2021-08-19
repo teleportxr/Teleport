@@ -85,33 +85,47 @@ set(src_testing
 source_group("Source Files\\Node Components" src FILES ${src_node_components})
 source_group("Header Files\\Node Components" src FILES ${hdr_node_components})
 
+
+set( src_public ${src_root} ${src_api} ${src_crossplatform} ${src_node_components} ${hdr_node_components} ${src_testing})
+message ( "src_public ${src_public}" )
+
+if(ANDROID)
+	add_subdirectory(../thirdparty/draco
+			${CMAKE_BINARY_DIR}/draco_build)
+	include_directories("${CMAKE_BINARY_DIR}" ../thirdparty/draco)
+endif()
+#For MT runtime
+add_static_library(SimulCasterRenderer SOURCES ${src_public} )  
+
 #Include its root directory
-include_directories(src)
+target_include_directories(SimulCasterRenderer PRIVATE src)
 #Include libavstream
-include_directories(../libavstream/include)
+target_include_directories(SimulCasterRenderer PRIVATE ../libavstream/include)
 #Include Basis Universal
-include_directories(../thirdparty/basis_universal)
+target_include_directories(SimulCasterRenderer PRIVATE ../thirdparty/basis_universal)
 #Include stb
-include_directories(../firstparty/Platform/External/stb)
+target_include_directories(SimulCasterRenderer PRIVATE ../firstparty/Platform/External/stb)
 #Include enet
-include_directories(../thirdparty/enet/include)
-include_directories(../TeleportClient)
+target_include_directories(SimulCasterRenderer PRIVATE ../thirdparty/enet/include)
+target_include_directories(SimulCasterRenderer PRIVATE ../TeleportClient)
+#Include draco
+target_include_directories(SimulCasterRenderer PUBLIC ${CMAKE_BINARY_DIR})
+target_include_directories(SimulCasterRenderer PUBLIC ../thirdparty/draco/src)
+set_target_properties(SimulCasterRenderer PROPERTIES FOLDER Client)
+target_link_libraries(SimulCasterRenderer draco)
 
 if(WIN32)
 # Removed circular dependency
 elseif(ANDROID)
 	#Include OpenGL ES 3.0
-	include_directories(../client/VrApi/Include) 
-	include_directories(../client/VrAppFramework/Include) 
-	include_directories(../client/LibOVRKernel/Src)
+	target_include_directories(SimulCasterRenderer ../client/VrApi/Include) 
+	target_include_directories(SimulCasterRenderer ../client/VrAppFramework/Include) 
+	target_include_directories(SimulCasterRenderer ../client/LibOVRKernel/Src)
+	target_link_libraries( SimulCasterRenderer draco)
+			# Links the target library to the log library
+			# included in the NDK.
+			#${log-lib} )
 endif()
-
-set( src_public ${src_root} ${src_api} ${src_crossplatform} ${src_node_components} ${hdr_node_components} ${src_testing})
-message ( "src_public ${src_public}" )
-
-#For MT runtime
-add_static_library( SimulCasterRenderer SOURCES ${src_public} )  
-set_target_properties( SimulCasterRenderer PROPERTIES FOLDER Client)
 
 #For MD runtime
 #add_library( SimulCasterRenderer STATIC ${src_public} ) 

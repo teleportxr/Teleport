@@ -256,7 +256,7 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 		if (m_frame.connectionTime)
 		{
-			m_stats.framesReceivedPerSec = m_stats.framesReceived / m_frame.connectionTime;
+			m_stats.framesReceivedPerSec = float(m_stats.framesReceived / m_frame.connectionTime);
 		}
 
 		// Check if data was lost or corrupted
@@ -311,8 +311,8 @@ Result Decoder::DisplayFrame()
 	++m_stats.framesDisplayed;
 	if (connectionTime)
 	{
-		m_stats.framesProcessedPerSec = m_stats.framesProcessed / connectionTime;
-		m_stats.framesDisplayedPerSec = m_stats.framesDisplayed / connectionTime;
+		m_stats.framesProcessedPerSec = float(m_stats.framesProcessed / connectionTime);
+		m_stats.framesDisplayedPerSec = float(m_stats.framesDisplayed / connectionTime);
 	}
 	
 	if(m_interimFramesProcessed > 3)

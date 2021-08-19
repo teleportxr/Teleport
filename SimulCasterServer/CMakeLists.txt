@@ -19,6 +19,7 @@ set(src
 	src/SimulCasterServer/DiscoveryService.cpp
 	src/SimulCasterServer/DiscoveryService.h 
 	src/SimulCasterServer/ErrorHandling.h
+	src/SimulCasterServer/ErrorHandling.cpp
 	src/SimulCasterServer/ExtractedTypes.h
 	src/SimulCasterServer/GeometryEncoder.cpp
 	src/SimulCasterServer/GeometryEncoder.h
@@ -82,11 +83,14 @@ target_include_directories(SimulCasterServer PUBLIC ../SimulCasterAudio/src)
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/basis_universal/encoder)
 #Include enet
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/enet/include)
+#Include draco
+target_include_directories(SimulCasterServer PUBLIC ${CMAKE_BINARY_DIR})
+target_include_directories(SimulCasterServer PUBLIC ../thirdparty/draco/src)
 
 #Include CUDA library location.
 target_link_directories(SimulCasterServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
-target_link_libraries(SimulCasterServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12)
+target_link_libraries(SimulCasterServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco)
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)

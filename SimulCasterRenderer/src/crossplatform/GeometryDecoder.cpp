@@ -5,6 +5,7 @@
 #include <Common.h>
 
 #include "libavstream/geometry/animation_interface.h"
+#include "draco/compression/decode.h"
 
 using namespace avs;
 
@@ -71,6 +72,213 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	};
 }
 
+
+avs::Accessor::ComponentType FromDracoDataType(draco::DataType dracoDataType)
+{
+	switch (dracoDataType)
+	{
+	case draco::DataType::DT_FLOAT32:
+		return avs::Accessor::ComponentType::FLOAT;
+	case draco::DataType::DT_FLOAT64:
+		return avs::Accessor::ComponentType::DOUBLE;
+	case draco::DataType::DT_INVALID:
+		return avs::Accessor::ComponentType::HALF;
+	case draco::DataType::DT_INT32:
+		return avs::Accessor::ComponentType::UINT;
+	case draco::DataType::DT_INT16:
+		return avs::Accessor::ComponentType::USHORT;
+	case draco::DataType::DT_INT8:
+		return avs::Accessor::ComponentType::UBYTE;
+	default:
+		return avs::Accessor::ComponentType::BYTE;
+	};
+}
+
+// Convert from Draco to our Semantic. But Draco semantics are limited. So the index helps disambiguate.
+avs::AttributeSemantic FromDracoGeometryAttribute(draco::GeometryAttribute::Type t,int index)
+{
+	switch (t)
+	{
+	case draco::GeometryAttribute::Type::POSITION:
+		return avs::AttributeSemantic::POSITION;
+	case draco::GeometryAttribute::Type::NORMAL:
+		return avs::AttributeSemantic::NORMAL;
+	case draco::GeometryAttribute::Type::GENERIC:
+		if (index == 2)
+			return avs::AttributeSemantic::TANGENT;
+		if (index == 6)
+			return avs::AttributeSemantic::JOINTS_0;
+		if (index == 7)
+			return avs::AttributeSemantic::WEIGHTS_0;
+		if (index == 8)
+			return avs::AttributeSemantic::TANGENTNORMALXZ;
+		return avs::AttributeSemantic::TANGENT;
+	case draco::GeometryAttribute::Type::TEX_COORD:
+		if(index==4)
+			return avs::AttributeSemantic::TEXCOORD_1;
+		return avs::AttributeSemantic::TEXCOORD_0;
+	case draco::GeometryAttribute::Type::COLOR:
+		return avs::AttributeSemantic::COLOR_0;
+	default:
+		return avs::AttributeSemantic::COUNT;
+	};
+}
+avs::Accessor::DataType FromDracoNumComponents(int num_components)
+{
+	switch (num_components)
+	{
+	case 1:
+		return avs::Accessor::DataType::SCALAR;
+	case 2:
+		return avs::Accessor::DataType::VEC2;
+	case 3:
+		return avs::Accessor::DataType::VEC3;
+	case 4:
+		return avs::Accessor::DataType::VEC4;
+	default:
+		return avs::Accessor::DataType::SCALAR;
+		break;
+	}
+}
+// NOTE the inefficiency here, we're coding into "DecodedGeometry", but that is then immediately converted to a MeshCreate.
+avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,DecodedGeometry &dg,const draco::Mesh &dracoMesh, const avs::CompressedMesh &compressedMesh)
+{
+	size_t primitiveArraysSize = compressedMesh.subMeshes.size();
+	dg.primitiveArrays[primitiveArrayUid].reserve(primitiveArraysSize);
+
+	size_t attributeCount = dracoMesh.num_attributes();
+	// Let's create ONE buffer per attribute.
+	std::vector<avs::uid> buffers;
+	std::vector<avs::uid> buffer_views;
+	const auto* dracoPositionAttribute = dracoMesh.GetNamedAttribute(draco::GeometryAttribute::Type::POSITION);
+	for (size_t k = 0; k < attributeCount; k++)
+	{
+		if(k==compressedMesh.subMeshAttributeIndex)
+			continue;
+		const auto* dracoAttribute = dracoMesh.attribute((int32_t)k);
+		avs::uid buffer_uid = GenerateUid();
+		auto& buffer = dg.buffers[buffer_uid];
+		buffers.push_back(buffer_uid);
+		buffer.byteLength = dracoAttribute->buffer()->data_size();
+		avs::uid buffer_view_uid = GenerateUid();
+		buffer_views.push_back(buffer_view_uid);
+		auto& bufferView = dg.bufferViews[buffer_view_uid];
+		bufferView.byteStride = dracoAttribute->byte_stride();
+		bufferView.byteLength = dracoAttribute->buffer()->data_size();
+		bufferView.byteOffset = 0;
+		buffer.byteLength = bufferView.byteLength;
+		auto &buf=m_DecompressedBuffers[m_DecompressedBufferIndex++];
+		buf.resize(buffer.byteLength);
+		buffer.data = buf.data();
+		memcpy(buffer.data, dracoAttribute->GetAddress(draco::AttributeValueIndex(0)), buffer.byteLength);
+
+		uint8_t * buf_ptr=buffer.data;
+		std::array<float, 3> value;
+		for (draco::AttributeValueIndex i(0); i < static_cast<uint32_t>(dracoAttribute->size()); ++i)
+		{
+			if (!dracoAttribute->ConvertValue<float, 3>(i, &value[0]))
+			{
+				return avs::Result::DecoderBackend_DecodeFailed;
+			}
+			memcpy(buf_ptr,&value[0], bufferView.byteStride);
+		}
+		bufferView.buffer = buffer_uid;
+	}
+	const draco::PointAttribute* dracoSubMeshAttribute = nullptr;
+	if (compressedMesh.subMeshAttributeIndex < attributeCount)
+	{
+		dracoSubMeshAttribute = dracoMesh.GetAttributeByUniqueId((int32_t)compressedMesh.subMeshAttributeIndex);
+		attributeCount--;
+	}
+	size_t indexStride = sizeof(draco::PointIndex);
+	std::vector<uid> index_buffer_uids;
+	for(size_t i=0;i< primitiveArraysSize;i++)
+	{
+		auto& subMesh = compressedMesh.subMeshes[i];
+		uid indices_buffer_uid = GenerateUid();
+		buffers.push_back(indices_buffer_uid);
+		auto& indicesBuffer = dg.buffers[indices_buffer_uid];
+		size_t subMeshFaces= subMesh.num_indices / 3;
+		if(sizeof(draco::PointIndex)==sizeof(uint32_t))
+		{
+			indicesBuffer.byteLength=3*sizeof(uint32_t)* subMeshFaces;
+		}
+		else if (sizeof(draco::PointIndex) == sizeof(uint16_t))
+		{
+			indicesBuffer.byteLength = 3 * sizeof(uint16_t) * subMeshFaces;
+		}
+		indicesBuffer.data = new uint8_t[indicesBuffer.byteLength];
+		uint8_t * ind_ptr=indicesBuffer.data;
+		for(uint32_t j=0;j<subMeshFaces;j++)
+		{
+			const draco::Mesh::Face& face = dracoMesh.face(draco::FaceIndex(subMesh.first_index/3+j));
+			/*if (dracoSubMeshAttribute)
+			{
+				auto pointIndex = draco::PointIndex(face[0]);
+				const draco::AttributeValueIndex submesh_index = dracoSubMeshAttribute->mapped_index(pointIndex);
+				uint32_t submesh = 0;
+				if (!dracoSubMeshAttribute->ConvertValue<uint32_t>(submesh_index, &submesh))
+				{
+					SCR_CERR << "Draco  failed. "<<std::endl;
+					continue;
+				}
+				if (submesh != i)
+				{
+					//SCR_CERR << "Draco  submesh screwup. "<<std::endl;
+					//break;
+					continue;
+				}
+			}*/
+			for(size_t k=0;k<3;k++)
+			{
+				uint32_t val= dracoPositionAttribute->mapped_index(draco::PointIndex(face[k])).value();
+				memcpy(ind_ptr,&val, indexStride);
+				ind_ptr+=indexStride;
+			}
+		}
+
+		avs::uid indices_accessor_uid = subMesh.indices_accessor;
+		auto & indices_accessor =dg.accessors[indices_accessor_uid];
+		if (sizeof(draco::PointIndex) == sizeof(uint32_t))
+			indices_accessor.componentType=avs::Accessor::ComponentType::UINT;
+		else
+			indices_accessor.componentType = avs::Accessor::ComponentType::USHORT;
+		indices_accessor.bufferView = GenerateUid();
+		indices_accessor.count=subMesh.num_indices;
+		indices_accessor.byteOffset=0;
+		indices_accessor.type=avs::Accessor::DataType::SCALAR;
+		buffer_views.push_back(indices_accessor.bufferView);
+		auto& indicesBufferView = dg.bufferViews[indices_accessor.bufferView];
+		indicesBufferView.byteOffset= 0;// indexStride *subMesh.first_index;
+		indicesBufferView.byteLength= indexStride *subMesh.num_indices;
+		indicesBufferView.byteStride= indexStride;
+		indicesBufferView.buffer	= indices_buffer_uid ;
+		indicesBuffer.byteLength	= indicesBufferView.byteLength;
+
+		avs::PrimitiveMode primitiveMode = avs::PrimitiveMode::TRIANGLES;
+		std::vector<avs::Attribute> attributes;
+		attributes.reserve(attributeCount);
+		for (int32_t k = 0; k < attributeCount; k++)
+		{
+			auto *dracoAttribute= dracoMesh.attribute((int32_t)k);
+			auto &a= compressedMesh.attributeSemantics.find(k);
+			if(a== compressedMesh.attributeSemantics.end())
+				continue;
+			avs::AttributeSemantic semantic = a->second;
+			avs::uid accessor_uid = GenerateUid();
+			attributes.push_back({ semantic, accessor_uid });
+			auto &accessor=dg.accessors[accessor_uid];
+			accessor.componentType=FromDracoDataType(dracoAttribute->data_type());
+			accessor.type=FromDracoNumComponents(dracoAttribute->num_components());
+			accessor.byteOffset=0;
+			accessor.count=dracoAttribute->size();
+			accessor.bufferView=buffer_views[k];
+		}
+		dg.primitiveArrays[primitiveArrayUid].push_back({ attributeCount, attributes, indices_accessor_uid, subMesh.material, primitiveMode });
+	}
+	return avs::Result::OK;
+}
+
 avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 {
 	//Parse buffer and fill struct DecodedGeometry
@@ -80,87 +288,137 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	std::string name;
 
 	size_t meshCount = Next8B;
+	m_DecompressedBuffers.clear();
+	const size_t MAX_ATTR_COUNT=20;
+	m_DecompressedBuffers.resize(meshCount*MAX_ATTR_COUNT);
+	m_DecompressedBufferIndex=0;
 	for (size_t i = 0; i < meshCount; i++)
 	{
-		uid = Next8B; 
-
+		uid = Next8B;
+		avs::CompressedMesh compressedMesh;
+		compressedMesh.meshCompressionType =(avs::MeshCompressionType)NextB;
 		size_t nameLength = Next8B;
 		name.resize(nameLength);
 		copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
-
-		size_t primitiveArraysSize = Next8B;
-		dg.primitiveArrays[uid].reserve(primitiveArraysSize);
-
-		for (size_t j = 0; j < primitiveArraysSize; j++)
+		compressedMesh.name= name;
+		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO)
 		{
-			size_t attributeCount = Next8B;
-			avs::uid indices_accessor = Next8B;
-			avs::uid material = Next8B;
-			PrimitiveMode primitiveMode = (PrimitiveMode)Next4B;
-
-			std::vector<Attribute> attributes;
-			attributes.reserve(attributeCount);
-			for (size_t k = 0; k < attributeCount; k++)
+			compressedMesh.subMeshAttributeIndex = (size_t)NextB;
+			size_t num_elements=(size_t)Next4B;
+			compressedMesh.subMeshes.resize(num_elements);
+			for(size_t i=0;i< num_elements;i++)
 			{
-				AttributeSemantic semantic = (AttributeSemantic)Next8B;
-				avs::uid accessor = Next8B;
-				attributes.push_back({ semantic, accessor });
+				auto &subMesh= compressedMesh.subMeshes[i];
+				subMesh.indices_accessor=Next8B;
+				subMesh.material=Next8B;
+				subMesh.first_index = Next4B;
+				subMesh.num_indices = Next4B;
+			}
+			size_t numAttributeSemantics = Next8B;
+			for (size_t i = 0; i < numAttributeSemantics; i++)
+			{
+				int32_t attr= Next4B;
+				compressedMesh.attributeSemantics[attr] = (AttributeSemantic)NextB;
+			}
+			size_t bufferSize = Next8B;
+			std::vector<uint8_t> buffer;
+			buffer.resize(bufferSize);
+			copy<uint8_t>(buffer.data(), m_Buffer.data(), m_BufferOffset, bufferSize);
+			draco::Decoder dracoDecoder;
+			draco::Mesh dracoMesh;
+			draco::DecoderBuffer dracoDecoderBuffer;
+			dracoDecoderBuffer.Init((const char*)buffer.data(), bufferSize);
+			draco::Status dracoStatus=dracoDecoder.DecodeBufferToGeometry(&dracoDecoderBuffer,&dracoMesh);
+			if(!dracoStatus.ok())
+			{
+				SCR_CERR << "Draco decode failed: " << (uint32_t)dracoStatus.code()<< std::endl;
+				return avs::Result::DecoderBackend_DecodeFailed;
+			}
+			avs::Result result=DracoMeshToDecodedGeometry(uid,dg,dracoMesh,compressedMesh);
+			if(result !=avs::Result::OK)
+				return result;
+		}
+		else if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::NONE)
+		{
+			size_t primitiveArraysSize = Next8B;
+			dg.primitiveArrays[uid].reserve(primitiveArraysSize);
+
+			for (size_t j = 0; j < primitiveArraysSize; j++)
+			{
+				size_t attributeCount = Next8B;
+				avs::uid indices_accessor = Next8B;
+				avs::uid material = Next8B;
+				PrimitiveMode primitiveMode = (PrimitiveMode)Next4B;
+
+				std::vector<Attribute> attributes;
+				attributes.reserve(attributeCount);
+				for (size_t k = 0; k < attributeCount; k++)
+				{
+					AttributeSemantic semantic = (AttributeSemantic)Next8B;
+					avs::uid accessor = Next8B;
+					attributes.push_back({ semantic, accessor });
+				}
+
+				dg.primitiveArrays[uid].push_back({ attributeCount, attributes, indices_accessor, material, primitiveMode });
+			}
+			bool isIndexAccessor = true;
+			size_t accessorsSize = Next8B;
+			for (size_t j = 0; j < accessorsSize; j++)
+			{
+				avs::uid acc_uid= Next8B;
+				Accessor::DataType type = (Accessor::DataType)Next4B;
+				Accessor::ComponentType componentType = (Accessor::ComponentType)Next4B;
+				size_t count = Next8B;
+				avs::uid bufferView = Next8B;
+				size_t byteOffset = Next8B;
+
+				if (isIndexAccessor) //For Indices Only
+				{
+					dg.accessors[acc_uid] = { type, componentType, count, bufferView, byteOffset };
+					isIndexAccessor = false;
+				}
+				else
+				{
+					dg.accessors[acc_uid] = { type, componentType, count, bufferView, byteOffset };
+				}
+		
+			}
+			size_t bufferViewsSize = Next8B;
+			for (size_t j = 0; j < bufferViewsSize; j++)
+			{
+				avs::uid bv_uid = Next8B;
+				avs::uid buffer = Next8B;
+				size_t byteOffset = Next8B;
+				size_t byteLength = Next8B;
+				size_t byteStride = Next8B;
+		
+				dg.bufferViews[bv_uid] = { buffer, byteOffset, byteLength, byteStride };
 			}
 
-			dg.primitiveArrays[uid].push_back({ attributeCount, attributes, indices_accessor, material, primitiveMode });
-		}
-	}
+			size_t buffersSize = Next8B;
+			for (size_t j = 0; j < buffersSize; j++)
+			{
+				avs::uid key = Next8B;
+				dg.buffers[key]= { 0, nullptr };
+				dg.buffers[key].byteLength = Next8B;
+				if(m_BufferSize < m_BufferOffset + dg.buffers[key].byteLength)
+				{
+					return avs::Result::GeometryDecoder_InvalidBufferSize;
+				}
 
-	bool isIndexAccessor = true;
-	size_t accessorsSize = Next8B;
-	for (size_t j = 0; j < accessorsSize; j++)
-	{
-		avs::uid acc_uid= Next8B;
-		Accessor::DataType type = (Accessor::DataType)Next4B;
-		Accessor::ComponentType componentType = (Accessor::ComponentType)Next4B;
-		size_t count = Next8B;
-		avs::uid bufferView = Next8B;
-		size_t byteOffset = Next8B;
-
-		if (isIndexAccessor) //For Indices Only
-		{
-			dg.accessors[acc_uid] = { type, componentType, count, bufferView, byteOffset };
-			isIndexAccessor = false;
+				dg.buffers[key].data = (m_Buffer.data() + m_BufferOffset);
+				m_BufferOffset += dg.buffers[key].byteLength;
+			}
 		}
 		else
 		{
-			dg.accessors[acc_uid] = { type, componentType, count, bufferView, byteOffset };
+			SCR_CERR << "Unknown meshCompressionType: " << (uint32_t)compressedMesh.meshCompressionType << std::endl;
+			return avs::Result::DecoderBackend_DecodeFailed;
 		}
-		
 	}
-	size_t bufferViewsSize = Next8B;
-	for (size_t j = 0; j < bufferViewsSize; j++)
-	{
-		avs::uid bv_uid = Next8B;
-		avs::uid buffer = Next8B;
-		size_t byteOffset = Next8B;
-		size_t byteLength = Next8B;
-		size_t byteStride = Next8B;
-		
-		dg.bufferViews[bv_uid] = { buffer, byteOffset, byteLength, byteStride };
-	}
-
-	size_t buffersSize = Next8B;
-	for (size_t j = 0; j < buffersSize; j++)
-	{
-		avs::uid key = Next8B;
-		dg.buffers[key]= { 0, nullptr };
-		dg.buffers[key].byteLength = Next8B;
-		if(m_BufferSize < m_BufferOffset + dg.buffers[key].byteLength)
-		{
-			return avs::Result::GeometryDecoder_InvalidBufferSize;
-		}
-
-		dg.buffers[key].data = (m_Buffer.data() + m_BufferOffset);
-		m_BufferOffset += dg.buffers[key].byteLength;
-	}
-
-	//Push data to GeometryTargetBackendInterface
+	// TODO: Is there any point in FIRST creating DecodedGeometry THEN translating that to MeshCreate, THEN using MeshCreate to
+	// 	   create the mesh? Why not go direct to MeshCreate??
+	// dg is complete, now send to GeometryTargetBackendInterface
 	for (std::unordered_map<avs::uid, std::vector<PrimitiveArray2>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
 	{
 		size_t index = 0;
@@ -176,11 +434,11 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			for (size_t i = 0; i < primitive.attributeCount; i++)
 			{
 				//Vertices
-				const Attribute& attrib			= primitive.attributes[i];
-				const Accessor& accessor		= dg.accessors[attrib.accessor];
-				const BufferView& bufferView	= dg.bufferViews[accessor.bufferView];
-				const GeometryBuffer& buffer	= dg.buffers[bufferView.buffer];
-				const uint8_t* data				= buffer.data + bufferView.byteOffset;
+				const Attribute& attrib = primitive.attributes[i];
+				const Accessor& accessor = dg.accessors[attrib.accessor];
+				const BufferView& bufferView = dg.bufferViews[accessor.bufferView];
+				const GeometryBuffer& buffer = dg.buffers[bufferView.buffer];
+				const uint8_t* data = buffer.data + bufferView.byteOffset;
 
 				switch (attrib.semantic)
 				{
@@ -195,7 +453,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					meshElementCreate.m_TangentNormalSize = tnSize;
 					meshElementCreate.m_TangentNormals = reinterpret_cast<const uint8_t*>(data);
 				}
-					continue;
+				continue;
 				case AttributeSemantic::NORMAL:
 					meshElementCreate.m_Normals = reinterpret_cast<const avs::vec3*>(data);
 					assert(accessor.count == vertexCount);
@@ -225,8 +483,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					assert(accessor.count == vertexCount);
 					continue;
 				default:
-				    SCR_CERR<<"Unknown attribute semantic: " << (uint32_t)attrib.semantic<<std::endl;
-				    continue;
+					SCR_CERR << "Unknown attribute semantic: " << (uint32_t)attrib.semantic << std::endl;
+					continue;
 				}
 			}
 
@@ -236,7 +494,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			const GeometryBuffer& indicesBuffer = dg.buffers[indicesBufferView.buffer];
 			size_t componentSize = avs::GetComponentSize(indicesAccessor.componentType);
 			meshElementCreate.ib_uid = primitive.indices_accessor;
-			meshElementCreate.m_Indices = (indicesBuffer.data+indicesBufferView.byteOffset+ indicesAccessor.byteOffset);
+			meshElementCreate.m_Indices = (indicesBuffer.data + indicesBufferView.byteOffset + indicesAccessor.byteOffset);
 			meshElementCreate.m_IndexSize = componentSize;
 			meshElementCreate.m_IndexCount = indicesAccessor.count;
 			meshElementCreate.m_ElementIndex = index;
@@ -245,7 +503,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		meshCreate.name = name;
 
 		avs::Result result = target->Assemble(meshCreate);
-		if(result != avs::Result::OK)
+		if (result != avs::Result::OK)
 		{
 			return result;
 		}

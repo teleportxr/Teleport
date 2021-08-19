@@ -103,7 +103,6 @@ namespace SCServer
 							}
 						}
 					}
-
 					if(!req->hasResource(meshResourceInfo.skinID))
 					{
 						encodeSkin(src, req, meshResourceInfo.skinID);
@@ -247,75 +246,106 @@ namespace SCServer
 		for(avs::uid uid : missingUIDs)
 		{
 			size_t oldBufferSize = buffer.size();
-
 			avs::Mesh* mesh = src->getMesh(uid, req->getClientAxesStandard());
-			if(!mesh)
+			if (!mesh)
 			{
 				TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " does not exist!\n";
 				continue;
 			}
-
+			const avs::CompressedMesh* compressedMesh = src->getCompressedMesh(uid, req->getClientAxesStandard());
 			putPayload(avs::GeometryPayloadType::Mesh);
 			put((size_t)1);
 			put(uid);
-
-			//Push name length.
-			size_t nameLength = mesh->name.length();
-			put(nameLength);
-			//Push name.
-			put((uint8_t*)mesh->name.data(), nameLength);
-
-			put(mesh->primitiveArrays.size());
-
-			std::set<avs::uid> accessors;
-			for(const avs::PrimitiveArray& primitiveArray : mesh->primitiveArrays)
+			if(compressedMesh&& compressedMesh->meshCompressionType!= avs::MeshCompressionType::NONE)
 			{
-				put(primitiveArray.attributeCount);
-				put(primitiveArray.indices_accessor);
-				put(primitiveArray.material);
-				put(primitiveArray.primitiveMode);
-				accessors.insert(primitiveArray.indices_accessor);
-				for(size_t k = 0; k < primitiveArray.attributeCount; k++)
+				put(compressedMesh->meshCompressionType);
+				//Push name.
+				size_t nameLength = compressedMesh->name.length();
+				put(nameLength);
+				put((uint8_t*)compressedMesh->name.data(), nameLength);
+				put(compressedMesh->subMeshAttributeIndex);
+				size_t num_elements= compressedMesh->subMeshes.size();
+				put((uint32_t)num_elements);
+				for(size_t i=0;i< num_elements;i++)
 				{
-					put(primitiveArray.attributes[k]);
-					accessors.insert(primitiveArray.attributes[k].accessor);
+					auto &subMesh= compressedMesh->subMeshes[i];
+					put(subMesh.indices_accessor);
+					put(subMesh.material);
+					put(subMesh.first_index);
+					put(subMesh.num_indices);
 				}
+				size_t numAttrs = compressedMesh->attributeSemantics.size();
+				put(numAttrs);
+				for (auto a: compressedMesh->attributeSemantics)
+				{
+					put((int32_t)a.first);
+					put((uint8_t)a.second);
+				}
+				size_t bufferSize = compressedMesh->buffer.size();
+				put(bufferSize);
+				put((uint8_t*)compressedMesh->buffer.data(), bufferSize);
 			}
-
-			put(accessors.size());
-			std::set<avs::uid> bufferViews;
-			for(avs::uid accessorID : accessors)
+			else
 			{
-				avs::Accessor accessor = mesh->accessors[accessorID];
-				put(accessorID);
-				put(accessor.type);
-				put(accessor.componentType);
-				put(accessor.count);
-				put(accessor.bufferView);
-				bufferViews.insert(accessor.bufferView);
-				put(accessor.byteOffset);
-			}
+				put(avs::MeshCompressionType::NONE);
+				//Push name length.
+				size_t nameLength = mesh->name.length();
+				put(nameLength);
+				//Push name.
+				put((uint8_t*)mesh->name.data(), nameLength);
 
-			put(bufferViews.size());
-			std::set<avs::uid> buffers;
-			for(avs::uid bufferViewID : bufferViews)
-			{
-				avs::BufferView bufferView = mesh->bufferViews[bufferViewID];
-				put(bufferViewID);
-				put(bufferView.buffer);
-				put(bufferView.byteOffset);
-				put(bufferView.byteLength);
-				put(bufferView.byteStride);
-				buffers.insert(bufferView.buffer);
-			}
+				put(mesh->primitiveArrays.size());
 
-			put(buffers.size());
-			for(avs::uid bufferID : buffers)
-			{
-				avs::GeometryBuffer buffer = mesh->buffers[bufferID];
-				put(bufferID);
-				put(buffer.byteLength);
-				put(buffer.data, buffer.byteLength);
+				std::set<avs::uid> accessors;
+				for(const avs::PrimitiveArray& primitiveArray : mesh->primitiveArrays)
+				{
+					put(primitiveArray.attributeCount);
+					put(primitiveArray.indices_accessor);
+					put(primitiveArray.material);
+					put(primitiveArray.primitiveMode);
+					accessors.insert(primitiveArray.indices_accessor);
+					for(size_t k = 0; k < primitiveArray.attributeCount; k++)
+					{
+						put(primitiveArray.attributes[k]);
+						accessors.insert(primitiveArray.attributes[k].accessor);
+					}
+				}
+
+				put(accessors.size());
+				std::set<avs::uid> bufferViews;
+				for(avs::uid accessorID : accessors)
+				{
+					avs::Accessor accessor = mesh->accessors[accessorID];
+					put(accessorID);
+					put(accessor.type);
+					put(accessor.componentType);
+					put(accessor.count);
+					put(accessor.bufferView);
+					bufferViews.insert(accessor.bufferView);
+					put(accessor.byteOffset);
+				}
+
+				put(bufferViews.size());
+				std::set<avs::uid> buffers;
+				for(avs::uid bufferViewID : bufferViews)
+				{
+					avs::BufferView bufferView = mesh->bufferViews[bufferViewID];
+					put(bufferViewID);
+					put(bufferView.buffer);
+					put(bufferView.byteOffset);
+					put(bufferView.byteLength);
+					put(bufferView.byteStride);
+					buffers.insert(bufferView.buffer);
+				}
+
+				put(buffers.size());
+				for(avs::uid bufferID : buffers)
+				{
+					avs::GeometryBuffer buffer = mesh->buffers[bufferID];
+					put(bufferID);
+					put(buffer.byteLength);
+					put(buffer.data, buffer.byteLength);
+				}
 			}
 
 			//TELEPORT_COUT<<"Encoded mesh "<<mesh->name.c_str()<<" with size "<<MemSize(buffer.size()-oldBufferSize)<<"\n";

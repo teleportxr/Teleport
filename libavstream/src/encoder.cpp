@@ -205,8 +205,8 @@ void Encoder::writeOutputAsync()
 		Result result = d().m_backend->waitForEncodingCompletion();
 		if (result)
 		{
-			size_t tagDataBufferSize;
-			size_t bytesRead;
+			size_t tagDataBufferSize=0;
+			size_t bytesRead=0;
 			result = d().m_tagDataQueue.read(this, d().m_tagData.data(), tagDataBufferSize, bytesRead);
 			if (result == Result::IO_Empty)
 			{
@@ -217,7 +217,9 @@ void Encoder::writeOutputAsync()
 				d().m_tagData.resize(tagDataBufferSize);
 				result = d().m_tagDataQueue.read(this, d().m_tagData.data(), tagDataBufferSize, bytesRead);
 			}
-			writeOutput(d().m_tagData.data(), tagDataBufferSize);
+			// any other error would cause a possible crash here without this check.
+			if(tagDataBufferSize>0)
+				writeOutput(d().m_tagData.data(), tagDataBufferSize);
 		}
 	}
 }

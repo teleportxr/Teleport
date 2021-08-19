@@ -51,6 +51,7 @@ else()
 	add_static_library( SimulCasterAudio SOURCES ${src_public} )  
 	set_target_properties( SimulCasterAudio PROPERTIES FOLDER Client )
 endif()
+SetDefaults( SimulCasterAudio )
 
 
 

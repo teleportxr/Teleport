@@ -1186,7 +1186,7 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 		memcpy(&clientID, buffer, sizeof(avs::uid));
 
 		uint32_t tagDataSize;
-		memcpy(&tagDataSize, buffer + sizeof(avs::uid), sizeof(size_t));
+		memcpy(&tagDataSize, buffer + sizeof(avs::uid), sizeof(tagDataSize));
 
 		const uint8_t* tagData = buffer + sizeof(avs::uid) + sizeof(size_t);
 		
@@ -1545,9 +1545,9 @@ TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransf
 	geometryStore.storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
 }
 
-TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, std::time_t lastModified, InteropMesh* mesh, avs::AxesStandard extractToStandard)
+TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, std::time_t lastModified, InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)
 {
-	geometryStore.storeMesh(id, guid, lastModified, avs::Mesh(*mesh), extractToStandard);
+	geometryStore.storeMesh(id, guid, lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
 }
 
 TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModified, InteropMaterial material)

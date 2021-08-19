@@ -8,7 +8,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)				# clean everything up to prepare for a module
 
 LOCAL_MODULE    := SimulCasterRenderer	        # generate SimulCasterRenderer.a
-LOCAL_STATIC_LIBRARIES	:= Basis_universal enet
+LOCAL_STATIC_LIBRARIES	:= Basis_universal enet draco
 
 include $(LOCAL_PATH)/../../client/cflags.mk
 
@@ -21,6 +21,8 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../libavstream/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/enet/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/basis_universal
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/basis_universal/transcoder
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/draco/src
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/ndk-projects
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/VrApi/Include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/VrAppFramework/Include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/LibOVRKernel/Src
@@ -60,4 +62,5 @@ LOCAL_CPP_FEATURES += exceptions
 include $(BUILD_STATIC_LIBRARY)		# start building based on everything since CLEAR_VARS
 
 $(call import-module, ../thirdparty/basis_universal/jni)
+$(call import-module, ../thirdparty/ndk-projects/draco)
 $(call import-module, 3rdParty/enet/jni)

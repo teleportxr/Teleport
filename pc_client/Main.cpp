@@ -23,7 +23,7 @@
 #include "TeleportClient/ClientDeviceState.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #endif
-
+ClientRenderer *clientRenderer=nullptr;
 simul::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
 simul::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 simul::crossplatform::RenderPlatform *renderPlatform = nullptr;
@@ -31,7 +31,6 @@ simul::dx11::RenderPlatform renderPlatformDx11;
 simul::dx11::Direct3D11Manager direct3D11Manager;
 simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
-ClientRenderer clientRenderer(&clientDeviceState);
 std::string server_ip= TELEPORT_SERVER_IP;
 int server_discovery_port = TELEPORT_SERVER_DISCOVERY_PORT;
 uint32_t clientID = TELEPORT_DEFAULT_CLIENT_ID;
@@ -148,13 +147,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 void ShutdownRenderer()
 {
-	clientRenderer.InvalidateDeviceObjects();
+	if(clientRenderer)
+		clientRenderer->InvalidateDeviceObjects();
+	delete clientRenderer;
+	clientRenderer=nullptr;
 }
 #define STRINGIFY(a) STRINGIFY2(a)
 #define STRINGIFY2(a) #a
 	
 void InitRenderer(HWND hWnd)
 {
+	clientRenderer=new ClientRenderer (&clientDeviceState);
 	gdi = &direct3D11Manager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform =&renderPlatformDx11;
@@ -201,10 +204,10 @@ void InitRenderer(HWND hWnd)
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
-	clientRenderer.Init(renderPlatform);
-	clientRenderer.SetServer(server_ip.c_str(), server_discovery_port, clientID);
+	clientRenderer->Init(renderPlatform);
+	clientRenderer->SetServer(server_ip.c_str(), server_discovery_port, clientID);
 	dsmi->AddWindow(hWnd);
-	dsmi->SetRenderer(hWnd,&clientRenderer,-1);
+	dsmi->SetRenderer(hWnd,clientRenderer,-1);
 }
 
 #define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))
@@ -216,10 +219,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
 	case WM_LBUTTONDOWN:
-		clientRenderer.OnMouseButtonPressed(true, false, false, 0);
+		clientRenderer->OnMouseButtonPressed(true, false, false, 0);
 		break;
 	case WM_LBUTTONUP:
-		clientRenderer.OnMouseButtonReleased(true, false, false, 0);
+		clientRenderer->OnMouseButtonReleased(true, false, false, 0);
 		break;
 	case WM_MOUSEWHEEL:
 		{
@@ -233,7 +236,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			int xPos = GET_X_LPARAM(lParam); 
 			int yPos = GET_Y_LPARAM(lParam); 
 			short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-			clientRenderer.OnMouseMove(xPos, yPos
+			clientRenderer->OnMouseMove(xPos, yPos
 				,(wParam&MK_LBUTTON)!=0
 				,(wParam&MK_RBUTTON)!=0
 				,(wParam&MK_MBUTTON)!=0
@@ -241,10 +244,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_KEYDOWN:
-			clientRenderer.OnKeyboard((unsigned)wParam,true);
+			clientRenderer->OnKeyboard((unsigned)wParam,true);
 		break;
 	case WM_KEYUP:
-			clientRenderer.OnKeyboard((unsigned)wParam,false);
+			clientRenderer->OnKeyboard((unsigned)wParam,false);
 		break;
     case WM_COMMAND:
         {
@@ -272,13 +275,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				 * But the windows message loop is constantly receiving WM_PAINT messages because BeginPaint and EndPaint aren't being used.
 				 * But using them is causing the window to not be refreshed, and right now fixing it isn't top priority.
 				 */
-				clientRenderer.Update();
+				clientRenderer->Update();
 				static double fTime=0.0;
 				static simul::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
-				clientRenderer.ResizeView(0, w->viewport.w, w->viewport.h);
-				clientRenderer.OnFrameMove(fTime,time_step);
+				clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
+				clientRenderer->OnFrameMove(fTime,time_step);
 				fTime+=time_step;
 				errno=0;
 				dsmi->Render(hWnd);
@@ -288,6 +291,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
+		ShutdownRenderer();
         PostQuitMessage(0);
         break;
     default:

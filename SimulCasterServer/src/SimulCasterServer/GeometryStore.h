@@ -44,6 +44,7 @@ namespace SCServer
 		virtual const avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const override;
 
 		virtual std::vector<avs::uid> getMeshIDs() const override;
+		const avs::CompressedMesh* getCompressedMesh(avs::uid meshID, avs::AxesStandard standard) const override;
 		virtual avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) override;
 		virtual const avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) const override;
 
@@ -76,7 +77,7 @@ namespace SCServer
 		void storeNode(avs::uid id, avs::DataNode& newNode);
 		void storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard);
 		void storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard);
-		void storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard);
+		void storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard,bool compress=false,bool verify=false);
 		void storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Material& newMaterial);
 		void storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC);
 		void storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& shadowMap);
@@ -106,10 +107,10 @@ namespace SCServer
 		};
 
 		//Names of the files that store each resource type.
-		const std::string TEXTURE_FILE_NAME = "teleportVR_textures.dat";
-		const std::string MATERIAL_FILE_NAME = "teleportVR_materials.dat";
-		const std::string MESH_PC_FILE_NAME = "teleportVR_meshes_PC.dat";
-		const std::string MESH_ANDROID_FILE_NAME = "teleportVR_meshes_android.dat";
+		const std::string TEXTURE_CACHE_PATH		= "textures";
+		const std::string MATERIAL_CACHE_PATH		= "materials";
+		const std::string MESH_PC_CACHE_PATH		= "meshes/engineering";
+		const std::string MESH_ANDROID_CACHE_PATH	= "meshes/gl";
 		uint8_t compressionStrength = 1;
 		uint8_t compressionQuality = 1;
 

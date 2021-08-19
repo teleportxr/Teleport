@@ -15,15 +15,21 @@ namespace SCServer
 {
 	struct ExtractedMesh
 	{
+		static const char* fileExtension()
+		{
+			return ".mesh";
+		}
 		_bstr_t guid;
 		std::time_t lastModified;
 		avs::Mesh mesh;
+		avs::CompressedMesh compressedMesh;
 
 		friend std::wostream& operator<< (std::wostream& out, const ExtractedMesh& meshData)
 		{
 			return out << std::wstring{meshData.guid, SysStringLen(meshData.guid)}
 				<< " " << meshData.lastModified
-				<< std::endl << meshData.mesh << std::endl;
+				<< std::endl << meshData.mesh
+				<< std::endl << meshData.compressedMesh << std::endl;
 		}
 
 		friend std::wistream& operator>> (std::wistream& in, ExtractedMesh& meshData)
@@ -32,12 +38,16 @@ namespace SCServer
 			in >> guidAsString;
 			meshData.guid = _bstr_t(guidAsString.data());
 
-			return in >> meshData.lastModified >> meshData.mesh;
+			return in >> meshData.lastModified >> meshData.mesh >> meshData.compressedMesh;
 		}
 	};
 
 	struct ExtractedMaterial
 	{
+		static const char *fileExtension()
+		{
+			return ".material";
+		}
 		_bstr_t guid;
 		std::time_t lastModified;
 		avs::Material material;
@@ -61,6 +71,10 @@ namespace SCServer
 
 	struct ExtractedTexture
 	{
+		static const char* fileExtension()
+		{
+			return ".texture";
+		}
 		_bstr_t guid;
 		std::time_t lastModified;
 		avs::Texture texture;

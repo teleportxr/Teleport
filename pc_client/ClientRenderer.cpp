@@ -688,6 +688,15 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
 																									resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 
+		auto& cachedMaterials = resourceManagers.mMaterialManager.GetCache(cacheLock);
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
+		for(auto m: cachedMaterials)
+		{
+			auto &M=m.second;
+			const auto &mat=M.resource->GetMaterialCreateInfo();
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("  %s", mat.name.c_str()),white,background);
+			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    emissive: %3.3f %3.3f %3.3f", mat.emissive.textureOutputScalar.x, mat.emissive.textureOutputScalar.y, mat.emissive.textureOutputScalar.z),white, background);
+		}
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
 		int j=0;
 		for(auto &i:cachedLights)

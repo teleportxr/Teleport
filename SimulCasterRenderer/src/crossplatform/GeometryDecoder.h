@@ -12,6 +12,11 @@ struct Vector3Keyframe;
 struct Vector4Keyframe;
 }
 
+namespace draco
+{
+	class Mesh;
+}
+
 /*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.
 */
 class GeometryDecoder final : public avs::GeometryDecoderBackendInterface
@@ -39,6 +44,9 @@ private:
 	std::vector<uint8_t> m_Buffer;
 	size_t m_BufferSize= 0;
 	size_t m_BufferOffset = 0;
+	// Use for data extracted from compressed objects.
+	std::vector<std::vector<uint8_t>> m_DecompressedBuffers;
+	size_t m_DecompressedBufferIndex=0;
 
 #define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
 #define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
@@ -89,5 +97,6 @@ private:
 		}
 	};
 	DecodedGeometry dg = {};
+	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry& dg, const draco::Mesh& dracoMesh,const avs::CompressedMesh &compressedMesh);
 };
 

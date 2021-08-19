@@ -36,7 +36,7 @@ struct Animation;
 	enum class AttributeSemantic : uint32_t
 	{
 		//Name	Accessor Type(s)	Component Type(s)				Description
-		POSITION	//"VEC3"	5126 (FLOAT)						XYZ vertex positions
+		POSITION=0	//"VEC3"	5126 (FLOAT)						XYZ vertex positions
 		, NORMAL		//"VEC3"	5126 (FLOAT)						Normalized XYZ vertex normals
 		, TANGENT	//"VEC4"	5126 (FLOAT)						XYZW vertex tangents where the w component is a sign value(-1 or +1) indicating handedness of the tangent basis
 		, TEXCOORD_0	//"VEC2"	5126 (FLOAT)
@@ -394,7 +394,6 @@ struct Animation;
 			{
 				out << " " << bufferPair.first << " " << bufferPair.second;
 			}
-
 			return out;
 		}
 
@@ -455,7 +454,111 @@ struct Animation;
 			return in;
 		}
 	};
+	enum class MeshCompressionType:uint8_t
+	{
+		NONE=0,
+		DRACO=1
+	};
+	struct CompressedSubMesh
+	{
+		uid indices_accessor;
+		uid material;
+		uint32_t first_index;
+		uint32_t num_indices;
+		std::map<int32_t, AttributeSemantic> attributeSemantics;
+		// Raw data buffer of draco (or other) encoded mesh.
+		std::vector<uint8_t> buffer;
+		//uint8_t subMeshAttributeIndex=0;		// which attribute is the subMesh index if any.
+	};
+	struct CompressedMesh
+	{
+		MeshCompressionType meshCompressionType;
+		std::string name;
+		std::vector<CompressedSubMesh> subMeshes;
+		template<typename OutStream> friend OutStream& operator<< (OutStream& out, const CompressedMesh& compressedMesh)
+		{
+			//Name needs its own line, so spaces can be included.
+			out << std::wstring{ compressedMesh.name.begin(), compressedMesh.name.end() } << std::endl;
 
+			out << (uint32_t)compressedMesh.meshCompressionType;
+			//out << " " << (uint32_t)compressedMesh.subMeshAttributeIndex;
+			out << " " << compressedMesh.subMeshes.size(); 
+			for (size_t i = 0; i < compressedMesh.subMeshes.size(); i++)
+			{
+				out << " " << compressedMesh.subMeshes[i].indices_accessor;
+				out << " " << compressedMesh.subMeshes[i].material;
+				out << " " << compressedMesh.subMeshes[i].first_index;
+				out << " " << compressedMesh.subMeshes[i].num_indices;
+			}
+			out << " " << compressedMesh.attributeSemantics.size() << std::endl;
+			for (const auto &a: compressedMesh.attributeSemantics)
+			{
+				out << " " << a.first;
+				out << " " << (int32_t)a.second;
+			}
+			out << " " << compressedMesh.buffer.size() << std::endl;
+
+			size_t num_c= compressedMesh.buffer.size() ;
+			// have to do this because of dumb decision to use wchar_t instead of bytes. Change this!
+			for(size_t i=0;i<num_c;i++)
+			{
+				out.put(out.widen(compressedMesh.buffer[i]));
+			}
+			return out;
+		}
+
+		template<typename InStream>	friend InStream& operator>> (InStream& in, CompressedMesh& compressedMesh)
+		{
+			//Step past new line that may be next in buffer.
+			if (in.peek() == '\n')
+				in.get();
+			//Read name with spaces included.
+			std::wstring wideName;
+			std::getline(in, wideName);
+			compressedMesh.name = convertToByteString(wideName);
+			uint32_t type=0;
+			in >> type;
+			compressedMesh.meshCompressionType=(MeshCompressionType)type;
+			uint32_t subMesh = 0;
+			in >> subMesh;
+			compressedMesh.subMeshAttributeIndex= (uint8_t)subMesh;
+			size_t numSubMeshes=0;
+			in >> numSubMeshes;
+			compressedMesh.subMeshes.resize(numSubMeshes);
+			for (size_t i = 0; i < compressedMesh.subMeshes.size(); i++)
+			{
+				in >> compressedMesh.subMeshes[i].indices_accessor;
+				in >> compressedMesh.subMeshes[i].material;
+				in >> compressedMesh.subMeshes[i].first_index;
+				in >> compressedMesh.subMeshes[i].num_indices;
+			}
+			size_t numAttrSem = 0;
+			in >> numAttrSem ;
+			//Discard new line.
+			in.get();
+			for (size_t i=0;i< numAttrSem;i++)
+			{
+				int32_t attr= 0;
+				int32_t semantic=0;
+				in >> attr;
+				in >> semantic;
+				compressedMesh.attributeSemantics[attr]= (AttributeSemantic)semantic;
+			}
+			size_t bufferSize=0;
+			in >> bufferSize; 
+			//Discard new line.
+			in.get();
+			compressedMesh.buffer.resize(bufferSize);
+			size_t num_c = compressedMesh.buffer.size();
+			// have to do this because of dumb decision to use wchar_t instead of bytes. Change this!
+			for (size_t i = 0; i < num_c; i++)
+			{
+				// I mean honestly:
+				compressedMesh.buffer[i]= in.narrow(in.get(), '\000');
+			}
+			return in;
+		}
+	};
 	struct MaterialResources
 	{
 		uid material_uid;
@@ -500,6 +603,7 @@ struct Animation;
 
 		//Get IDs of all meshes stored.
 		virtual std::vector<uid> getMeshIDs() const = 0;
+		virtual const avs::CompressedMesh* getCompressedMesh(avs::uid meshID, avs::AxesStandard standard) const =0;
 		//Get mesh with passed ID.
 		//	meshID : Indentifier of the mesh.
 		//Returns the mesh if successfully found, otherwise nullptr.
