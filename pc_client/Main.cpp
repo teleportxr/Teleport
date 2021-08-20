@@ -47,7 +47,7 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void InitRenderer(HWND);
-void ShutdownRenderer();
+void ShutdownRenderer(HWND);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -96,7 +96,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
     }
-	ShutdownRenderer();
+	ShutdownRenderer(msg.hwnd);
 
 	// Needed for asynchronous device creation in XAudio2
 	CoUninitialize();
@@ -145,8 +145,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-void ShutdownRenderer()
+void ShutdownRenderer(HWND hWnd)
 {
+	displaySurfaceManager.Shutdown();
 	if(clientRenderer)
 		clientRenderer->InvalidateDeviceObjects();
 	delete clientRenderer;
@@ -291,7 +292,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
-		ShutdownRenderer();
+		ShutdownRenderer(hWnd);
         PostQuitMessage(0);
         break;
     default:

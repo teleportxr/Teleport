@@ -515,12 +515,12 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 	else
 		dracoEncoder.SetEncodingMethod(draco::MESH_SEQUENTIAL_ENCODING);
 	size_t sourceSize=0;
+	size_t compressedSize = 0;
 	// create zero-based material indices:
 	compressedMesh.subMeshes.resize(sourceMesh.primitiveArrays.size());
 	// Primitive array elements in each mesh.
 	draco::FaceIndex face_index(0);
 	std::map<avs::uid, avs::AttributeSemantic> attributeSemantics;
-	size_t numVertices = 0;
 	for (size_t i=0;i<sourceMesh.primitiveArrays.size();i++)
 	{
 		const auto& primitive = sourceMesh.primitiveArrays[i];
@@ -528,15 +528,16 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		const avs::Accessor& indices_accessor = sourceMesh.accessors[primitive.indices_accessor];
 		subMesh.material=primitive.material;
 		subMesh.indices_accessor=primitive.indices_accessor;
-		subMesh.first_index= index;
+		subMesh.first_index= 0;
 		subMesh.num_indices = indices_accessor.count;
 		size_t numTriangles = indices_accessor.count / 3;
 	
 		draco::Mesh dracoMesh;
 		draco::EncoderBuffer dracoEncoderBuffer;
-		for (size_t i = 0; i < primitive.attributeCount; i++)
+		size_t numVertices = 0;
+		for (size_t j = 0; j < primitive.attributeCount; j++)
 		{
-			const avs::Attribute& attrib = primitive.attributes[i];
+			const avs::Attribute& attrib = primitive.attributes[j];
 			const auto &attrib_accessor=sourceMesh.accessors[attrib.accessor];
 			numVertices=std::max(numVertices, attrib_accessor.count);
 			auto s= attributeSemantics.find(attrib.accessor);
@@ -548,63 +549,60 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 				return;
 			}
 		}
-	dracoMesh.set_num_points((uint32_t)numVertices);
-	dracoMesh.SetNumFaces(numTriangles);
-	for (const auto& a : sourceMesh.accessors)
-	{
-		const auto &accessor=a.second;
-		draco::DataType dracoDataType = ToDracoDataType(accessor.componentType);
-		auto s = attributeSemantics.find(a.first);
-		if (s == attributeSemantics.end())
-			continue;	// not an attribute.
-		auto semantic=s->second;
-		draco::GeometryAttribute::Type dracoGeometryAttributeType = ToDracoGeometryAttribute(semantic);
-		avs::BufferView& bufferView = sourceMesh.bufferViews[accessor.bufferView];
-		avs::GeometryBuffer& geometryBuffer = sourceMesh.buffers[bufferView.buffer];
-		const uint8_t* data = geometryBuffer.data + bufferView.byteOffset;
-		int8_t num_components = 0;
-		switch (accessor.type)
+		dracoMesh.set_num_points((uint32_t)numVertices);
+		dracoMesh.SetNumFaces(numTriangles);
+		for (const auto& a : sourceMesh.accessors)
 		{
-		case avs::Accessor::DataType::SCALAR:
-			num_components = 1;
-			break;
-		case avs::Accessor::DataType::VEC2:
-			num_components = 2;
-			break;
-		case avs::Accessor::DataType::VEC3:
-			num_components = 3;
-			break;
-		case avs::Accessor::DataType::VEC4:
-			num_components = 4;
-			break;
-		};
-		int att_id = -1;
-		draco::PointAttribute* attr = nullptr;
-		draco::GeometryAttribute dracoGeometryAttribute;
-		size_t stride = draco::DataTypeLength(dracoDataType) * num_components;
-		dracoGeometryAttribute.Init(dracoGeometryAttributeType, nullptr, num_components, dracoDataType, semantic == avs::AttributeSemantic::NORMAL, stride, 0);
-		att_id = dracoMesh.AddAttribute(dracoGeometryAttribute, true, (uint32_t)geometryBuffer.byteLength / stride);
-		compressedMesh.attributeSemantics[att_id]=semantic;
+			const auto &accessor=a.second;
+			draco::DataType dracoDataType = ToDracoDataType(accessor.componentType);
+			auto s = attributeSemantics.find(a.first);
+			if (s == attributeSemantics.end())
+				continue;	// not an attribute.
+			auto semantic=s->second;
+			draco::GeometryAttribute::Type dracoGeometryAttributeType = ToDracoGeometryAttribute(semantic);
+			avs::BufferView& bufferView = sourceMesh.bufferViews[accessor.bufferView];
+			avs::GeometryBuffer& geometryBuffer = sourceMesh.buffers[bufferView.buffer];
+			const uint8_t* data = geometryBuffer.data + bufferView.byteOffset;
+			int8_t num_components = 0;
+			switch (accessor.type)
+			{
+			case avs::Accessor::DataType::SCALAR:
+				num_components = 1;
+				break;
+			case avs::Accessor::DataType::VEC2:
+				num_components = 2;
+				break;
+			case avs::Accessor::DataType::VEC3:
+				num_components = 3;
+				break;
+			case avs::Accessor::DataType::VEC4:
+				num_components = 4;
+				break;
+			};
+			int att_id = -1;
+			draco::PointAttribute* attr = nullptr;
+			draco::GeometryAttribute dracoGeometryAttribute;
+			size_t stride = draco::DataTypeLength(dracoDataType) * num_components;
+			dracoGeometryAttribute.Init(dracoGeometryAttributeType, nullptr, num_components, dracoDataType, semantic == avs::AttributeSemantic::NORMAL, stride, 0);
+			att_id = dracoMesh.AddAttribute(dracoGeometryAttribute, true, (uint32_t)geometryBuffer.byteLength / stride);
+			subMesh.attributeSemantics[att_id]=semantic;
 		
-		attr = dracoMesh.attribute(att_id);
-		for (size_t j = 0; j < accessor.count; j++)
-		{
-			attr->SetAttributeValue(draco::AttributeValueIndex(j), data + j * bufferView.byteStride);
+			attr = dracoMesh.attribute(att_id);
+			for (size_t j = 0; j < accessor.count; j++)
+			{
+				attr->SetAttributeValue(draco::AttributeValueIndex(j), data + j * bufferView.byteStride);
+			}
+			sourceSize += bufferView.byteLength;
 		}
-		sourceSize += bufferView.byteLength;
-	}
-	for (const auto& primitive : sourceMesh.primitiveArrays)
-	{
 		//Indices
-		const avs::Accessor& indicesAccessor = sourceMesh.accessors[primitive.indices_accessor];
-		const avs::BufferView& indicesBufferView = sourceMesh.bufferViews[indicesAccessor.bufferView];
+		const avs::BufferView& indicesBufferView = sourceMesh.bufferViews[indices_accessor.bufferView];
 		sourceSize += indicesBufferView.byteLength;
 		const avs::GeometryBuffer& indicesBuffer = sourceMesh.buffers[indicesBufferView.buffer];
-		size_t componentSize = avs::GetComponentSize(indicesAccessor.componentType);
-		size_t triangleCount= indicesAccessor.count / 3;
+		size_t componentSize = avs::GetComponentSize(indices_accessor.componentType);
+		size_t triangleCount= indices_accessor.count / 3;
 		if(indicesBufferView.byteStride==4)
 		{
-			uint32_t* data=(uint32_t*)(indicesBuffer.data + indicesBufferView.byteOffset);
+			uint32_t* data=(uint32_t*)(indicesBuffer.data + indicesBufferView.byteOffset+ indices_accessor.byteOffset);
 			for(size_t j=0;j< triangleCount;j++)
 			{
 				draco::Mesh::Face dracoMeshFace;
@@ -616,7 +614,7 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		}
 		else if (indicesBufferView.byteStride == 2)
 		{
-			uint16_t* data = (uint16_t*)(indicesBuffer.data + indicesBufferView.byteOffset);
+			uint16_t* data = (uint16_t*)(indicesBuffer.data + indicesBufferView.byteOffset + indices_accessor.byteOffset);
 			for (size_t j = 0; j < triangleCount; j++)
 			{
 				draco::Mesh::Face dracoMeshFace;
@@ -630,63 +628,30 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		{
 			TELEPORT_ASSERT(false);
 		}
-	}
-	size_t numSubObjects = sourceMesh.primitiveArrays.size();
-	// Add sub-object index only if we have multiple arrays:
-	if (numSubObjects > 0)
-	{
-		draco::GeometryAttribute subObjectGeometryAttribute;
-		subObjectGeometryAttribute.Init(draco::GeometryAttribute::GENERIC, nullptr, 1, draco::DT_UINT32, false, 4, 0);
-		const int sub_obj_att_id_ = dracoMesh.AddAttribute(subObjectGeometryAttribute, false, numSubObjects);
-		draco::PointAttribute* subObjectAttribute = dracoMesh.attribute(sub_obj_att_id_);
-		compressedMesh.subMeshAttributeIndex= sub_obj_att_id_;
-		for (uint32_t i=0;i<numSubObjects;i++)
-		{
-			const draco::AttributeValueIndex attributeValueIndex(i);
-			subObjectAttribute->SetAttributeValue(attributeValueIndex,&i);
-		}
-		// Now assign the material index to points:
-		int face_index = 0;
-		uint32_t sub_obj_id_=0;
-		for(const auto& primitive:sourceMesh.primitiveArrays)
-		{
-			const avs::Accessor& indicesAccessor = sourceMesh.accessors[primitive.indices_accessor];
-			int num_faces= indicesAccessor.count/3;
-			//const int pos_att_id=dracoMesh.GetNamedAttribute(draco::GeometryAttribute::Type::POSITION)
-			for(size_t i=0;i< num_faces;i++)
-			{
-				const draco::PointIndex vert_id(3*face_index);
-				subObjectAttribute->SetPointMapEntry(vert_id, draco::AttributeValueIndex(sub_obj_id_));
-				subObjectAttribute->SetPointMapEntry(vert_id+1, draco::AttributeValueIndex(sub_obj_id_));
-				subObjectAttribute->SetPointMapEntry(vert_id+2, draco::AttributeValueIndex(sub_obj_id_));
-				face_index++;
-			}
-			sub_obj_id_++;
-		}
-	}
-	else
-	{
-		compressedMesh.subMeshAttributeIndex=0xFF;
-	}
-	//dracoMesh.DeduplicateAttributeValues();
-	//dracoMesh.DeduplicatePointIds();
-	draco::Status status= dracoEncoder.EncodeMeshToBuffer(dracoMesh,&dracoEncoderBuffer);
-	if(!status.ok())
-		return;
-	
-	std::ofstream saveFile("C:\\temp\\test.drc", std::ofstream::out | std::ofstream::binary);
-	saveFile.write(dracoEncoderBuffer.data(), dracoEncoderBuffer.size());
-	saveFile.close();
-	compressedMesh.buffer.resize(dracoEncoderBuffer.size());
-	memcpy(compressedMesh.buffer.data(), dracoEncoderBuffer.data(), compressedMesh.buffer.size());
-	TELEPORT_INTERNAL_LOG_UNSAFE("Compressed from %uk to %uk\n",(sourceSize+1023)/1024,(compressedMesh.buffer.size() +1023)/1024);
-	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO;
+		//dracoMesh.DeduplicateAttributeValues();
+		//dracoMesh.DeduplicatePointIds();
+		draco::Status status= dracoEncoder.EncodeMeshToBuffer(dracoMesh,&dracoEncoderBuffer);
+		if(!status.ok())
+			break;
+		subMesh.buffer.resize(dracoEncoderBuffer.size());
+		memcpy(subMesh.buffer.data(), dracoEncoderBuffer.data(), subMesh.buffer.size());
+		compressedSize+= subMesh.buffer.size();
 
+		std::string test_str="C:\\temp\\test";
+		test_str +=char('0')+(char)i;
+		test_str +=".drc";
+		std::ofstream saveFile(test_str.c_str(), std::ofstream::out | std::ofstream::binary);
+		saveFile.write(dracoEncoderBuffer.data(), dracoEncoderBuffer.size());
+		saveFile.close();
+	}
+	TELEPORT_INTERNAL_LOG_UNSAFE("Compressed from %uk to %uk\n",(sourceSize+1023)/1024,(compressedSize +1023)/1024);
+	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO;
+/*
 	draco::Decoder dracoDecoder;
 	draco::DecoderBuffer dracoDecoderBuffer;
 	dracoDecoderBuffer.Init((const char*)dracoEncoderBuffer.data(), dracoEncoderBuffer.size());
 	draco::Mesh dracoMesh2;
-	dracoDecoder.DecodeBufferToGeometry(&dracoDecoderBuffer,&dracoMesh2);
+	dracoDecoder.DecodeBufferToGeometry(&dracoDecoderBuffer,&dracoMesh2);*/
 	
 	return;
 	
@@ -694,68 +659,72 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 
 static void VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::Mesh& sourceMesh)
 {
-	draco::Decoder dracoDecoder;
-	draco::DecoderBuffer dracoDecoderBuffer;
-	dracoDecoderBuffer.Init((const char*)compressedMesh.buffer.data(),compressedMesh.buffer.size());
+	for(int i=0;i<compressedMesh.subMeshes.size();i++)
+	{
+		auto &subMesh=compressedMesh.subMeshes[i];
+		draco::Decoder dracoDecoder;
+		draco::DecoderBuffer dracoDecoderBuffer;
+		dracoDecoderBuffer.Init((const char*)subMesh.buffer.data(), subMesh.buffer.size());
 
-	auto statusor = dracoDecoder.DecodeMeshFromBuffer(&dracoDecoderBuffer);
-	auto &dm=statusor.value();
-	if(!dm.get())
-		return;
-	// are there the same number of members for each attrib?
-	size_t num_elements=0;
-	for(int a=0;a<dm->num_attributes();a++)
-	{
-		const draco::PointAttribute *attr=dm->attribute(a);
-		if(!attr)
-			continue;
-		if(!num_elements)
-			num_elements =attr->size();
-		else if(attr->size()!= num_elements)
+		auto statusor = dracoDecoder.DecodeMeshFromBuffer(&dracoDecoderBuffer);
+		auto &dm=statusor.value();
+		if(!dm.get())
+			return;
+		// are there the same number of members for each attrib?
+		size_t num_elements=0;
+		for(int a=0;a<dm->num_attributes();a++)
 		{
-			TELEPORT_INTERNAL_LOG_UNSAFE("Attr size mismatch %ull != %ull",attr->size(), num_elements);
-		}
-		const uint8_t *dracoDatabuffer=attr->GetAddress(draco::AttributeValueIndex(0));
-		const avs::vec3 *v=(const avs::vec3 *)dracoDatabuffer;
-		for(int i=0;i<attr->size();i++)
-		{
-			const auto pos = attr->GetValue<float,3>(draco::AttributeValueIndex(i));
-			//TELEPORT_INTERNAL_LOG_UNSAFE("%3.3f %3.3f %3.3f", pos[0], pos[1], pos[2]);
-		}
-	}
-	draco::Mesh &dracoMesh=*dm;
-	uint32_t max_index = 0;
-	uint32_t max_value = 0;
-	uint32_t unset = 0xffffffff;
-	// Go through each unique point and see whether the "mapped indices" are the same for the attributes:
-	for(uint32_t idx=0;idx<dracoMesh.num_points();idx++)
-	{
-		max_index = std::max(max_index, idx);
-		TELEPORT_INTERNAL_LOG_UNSAFE("Point %u:",idx);
-		uint32_t index = unset;
-		bool mismatch=false;
-		for (int a = 0; a < dm->num_attributes(); a++)
-		{
-			const draco::PointAttribute* attr = dm->attribute(a);
-			uint32_t val = attr->mapped_index(draco::PointIndex(idx)).value();
-			if(a)
+			const draco::PointAttribute *attr=dm->attribute(a);
+			if(!attr)
+				continue;
+			if(!num_elements)
+				num_elements =attr->size();
+			else if(attr->size()!= num_elements)
 			{
-				TELEPORT_INTERNAL_LOG_UNSAFE(",");
+				TELEPORT_INTERNAL_LOG_UNSAFE("Attr size mismatch %ull != %ull",attr->size(), num_elements);
 			}
-			TELEPORT_INTERNAL_LOG_UNSAFE(" %u", val);
-			max_value = std::max(max_value, val);
-			if (index == unset)
-				index = val;
-			else if (val != index)
+			const uint8_t *dracoDatabuffer=attr->GetAddress(draco::AttributeValueIndex(0));
+			const avs::vec3 *v=(const avs::vec3 *)dracoDatabuffer;
+			for(int i=0;i<attr->size();i++)
 			{
-				mismatch=true;
+				const auto pos = attr->GetValue<float,3>(draco::AttributeValueIndex(i));
+				//TELEPORT_INTERNAL_LOG_UNSAFE("%3.3f %3.3f %3.3f", pos[0], pos[1], pos[2]);
 			}
 		}
-		if(mismatch)
+		draco::Mesh &dracoMesh=*dm;
+		uint32_t max_index = 0;
+		uint32_t max_value = 0;
+		uint32_t unset = 0xffffffff;
+		// Go through each unique point and see whether the "mapped indices" are the same for the attributes:
+		for(uint32_t idx=0;idx<dracoMesh.num_points();idx++)
 		{
-			TELEPORT_INTERNAL_LOG_UNSAFE("Mismatch");
+			max_index = std::max(max_index, idx);
+			TELEPORT_INTERNAL_LOG_UNSAFE("Point %u:",idx);
+			uint32_t index = unset;
+			bool mismatch=false;
+			for (int a = 0; a < dm->num_attributes(); a++)
+			{
+				const draco::PointAttribute* attr = dm->attribute(a);
+				uint32_t val = attr->mapped_index(draco::PointIndex(idx)).value();
+				if(a)
+				{
+					TELEPORT_INTERNAL_LOG_UNSAFE(",");
+				}
+				TELEPORT_INTERNAL_LOG_UNSAFE(" %u", val);
+				max_value = std::max(max_value, val);
+				if (index == unset)
+					index = val;
+				else if (val != index)
+				{
+					mismatch=true;
+				}
+			}
+			if(mismatch)
+			{
+				TELEPORT_INTERNAL_LOG_UNSAFE("Mismatch");
+			}
+			TELEPORT_INTERNAL_LOG_UNSAFE("\n");
 		}
-		TELEPORT_INTERNAL_LOG_UNSAFE("\n");
 	}
 }
 

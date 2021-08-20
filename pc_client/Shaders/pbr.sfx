@@ -163,8 +163,8 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	OUT.clip_pos	=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
 	//OUT.clip_pos	=mul( opos, worldViewProj);
-	OUT.texCoords0	=IN.texCoords0;
-	OUT.texCoords1	=IN.texCoords1;
+	OUT.texCoords0	=vec2(IN.texCoords0.x,IN.texCoords0.y);
+	OUT.texCoords1	=vec2(IN.texCoords1.x,IN.texCoords1.y);
 #ifdef SFX_OPENGL
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, mat3(world));
@@ -434,8 +434,13 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient)
 	}
 
 	vec3 emissive		= emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
-	emissive			= emissiveOutputScalar.rgb;
-	vec4 u				=vec4(emissiveOutputScalar.rgb, 1.0);
+	emissive			*= emissiveOutputScalar.rgb;
+/*	vec2 diffl = abs(IN.texCoords0.xy - vec2(0.25, 0.75));
+	float dist = min(diffl.x, diffl.y);
+	if(dist<0.01)
+		emissive=vec3(1.0,1.0,1.0);*/
+	vec4 u				=vec4(c+emissive, 1.0);
+//	u.rg+= step(0.5,IN.texCoords0.x)*saturate(IN.texCoords0.xy* emissiveTexCoordsScalar_R-vec2(0.0,0.5));
 	vec3 highlight		=vec3(0.01,0.02,0.05);
 	//u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 	//u.b=0;

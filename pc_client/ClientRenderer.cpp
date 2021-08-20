@@ -940,8 +940,8 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 			static int mat_select=-1;
 			for(size_t element = 0; element < node->GetMaterials().size() && element < meshInfo.ib.size(); element++)
 			{
-				if(mat_select >= 0 && mat_select != element) continue;
-
+				if(mat_select >= 0 && mat_select != element)
+					continue;
 				auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(meshInfo.vb[element].get());
 				const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(meshInfo.ib[element].get());
 

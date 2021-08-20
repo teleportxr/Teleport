@@ -97,6 +97,6 @@ private:
 		}
 	};
 	DecodedGeometry dg = {};
-	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry& dg, const draco::Mesh& dracoMesh,const avs::CompressedMesh &compressedMesh);
+	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry& dg, const avs::CompressedMesh &compressedMesh);
 };
 

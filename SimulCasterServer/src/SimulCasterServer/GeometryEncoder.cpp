@@ -263,7 +263,7 @@ namespace SCServer
 				size_t nameLength = compressedMesh->name.length();
 				put(nameLength);
 				put((uint8_t*)compressedMesh->name.data(), nameLength);
-				put(compressedMesh->subMeshAttributeIndex);
+				//put(compressedMesh->subMeshAttributeIndex);
 				size_t num_elements= compressedMesh->subMeshes.size();
 				put((uint32_t)num_elements);
 				for(size_t i=0;i< num_elements;i++)
@@ -273,17 +273,17 @@ namespace SCServer
 					put(subMesh.material);
 					put(subMesh.first_index);
 					put(subMesh.num_indices);
+					size_t numAttrs = subMesh.attributeSemantics.size();
+					put(numAttrs);
+					for (auto a: subMesh.attributeSemantics)
+					{
+						put((int32_t)a.first);
+						put((uint8_t)a.second);
+					}
+					size_t bufferSize = subMesh.buffer.size();
+					put(bufferSize);
+					put((uint8_t*)subMesh.buffer.data(), bufferSize);
 				}
-				size_t numAttrs = compressedMesh->attributeSemantics.size();
-				put(numAttrs);
-				for (auto a: compressedMesh->attributeSemantics)
-				{
-					put((int32_t)a.first);
-					put((uint8_t)a.second);
-				}
-				size_t bufferSize = compressedMesh->buffer.size();
-				put(bufferSize);
-				put((uint8_t*)compressedMesh->buffer.data(), bufferSize);
 			}
 			else
 			{

@@ -485,24 +485,25 @@ struct Animation;
 			out << " " << compressedMesh.subMeshes.size(); 
 			for (size_t i = 0; i < compressedMesh.subMeshes.size(); i++)
 			{
-				out << " " << compressedMesh.subMeshes[i].indices_accessor;
-				out << " " << compressedMesh.subMeshes[i].material;
-				out << " " << compressedMesh.subMeshes[i].first_index;
-				out << " " << compressedMesh.subMeshes[i].num_indices;
-			}
-			out << " " << compressedMesh.attributeSemantics.size() << std::endl;
-			for (const auto &a: compressedMesh.attributeSemantics)
-			{
-				out << " " << a.first;
-				out << " " << (int32_t)a.second;
-			}
-			out << " " << compressedMesh.buffer.size() << std::endl;
+				const auto &subMesh= compressedMesh.subMeshes[i];
+				out << " " << subMesh.indices_accessor;
+				out << " " << subMesh.material;
+				out << " " << subMesh.first_index;
+				out << " " << subMesh.num_indices;
+				out << " " << subMesh.attributeSemantics.size() << std::endl;
+				for (const auto &a: subMesh.attributeSemantics)
+				{
+					out << " " << a.first;
+					out << " " << (int32_t)a.second;
+				}
+				out << " " << subMesh.buffer.size() << std::endl;
 
-			size_t num_c= compressedMesh.buffer.size() ;
-			// have to do this because of dumb decision to use wchar_t instead of bytes. Change this!
-			for(size_t i=0;i<num_c;i++)
-			{
-				out.put(out.widen(compressedMesh.buffer[i]));
+				size_t num_c= subMesh.buffer.size() ;
+				// have to do this because of dumb decision to use wchar_t instead of bytes. Change this!
+				for(size_t i=0;i<num_c;i++)
+				{
+					out.put(out.widen(subMesh.buffer[i]));
+				}
 			}
 			return out;
 		}
@@ -519,42 +520,43 @@ struct Animation;
 			uint32_t type=0;
 			in >> type;
 			compressedMesh.meshCompressionType=(MeshCompressionType)type;
-			uint32_t subMesh = 0;
-			in >> subMesh;
-			compressedMesh.subMeshAttributeIndex= (uint8_t)subMesh;
+			//uint32_t subMesh = 0;
+			//in >> subMesh;
+			//compressedMesh.subMeshAttributeIndex= (uint8_t)subMesh;
 			size_t numSubMeshes=0;
 			in >> numSubMeshes;
 			compressedMesh.subMeshes.resize(numSubMeshes);
 			for (size_t i = 0; i < compressedMesh.subMeshes.size(); i++)
 			{
-				in >> compressedMesh.subMeshes[i].indices_accessor;
-				in >> compressedMesh.subMeshes[i].material;
-				in >> compressedMesh.subMeshes[i].first_index;
-				in >> compressedMesh.subMeshes[i].num_indices;
-			}
-			size_t numAttrSem = 0;
-			in >> numAttrSem ;
-			//Discard new line.
-			in.get();
-			for (size_t i=0;i< numAttrSem;i++)
-			{
-				int32_t attr= 0;
-				int32_t semantic=0;
-				in >> attr;
-				in >> semantic;
-				compressedMesh.attributeSemantics[attr]= (AttributeSemantic)semantic;
-			}
-			size_t bufferSize=0;
-			in >> bufferSize; 
-			//Discard new line.
-			in.get();
-			compressedMesh.buffer.resize(bufferSize);
-			size_t num_c = compressedMesh.buffer.size();
-			// have to do this because of dumb decision to use wchar_t instead of bytes. Change this!
-			for (size_t i = 0; i < num_c; i++)
-			{
-				// I mean honestly:
-				compressedMesh.buffer[i]= in.narrow(in.get(), '\000');
+				auto& subMesh = compressedMesh.subMeshes[i];
+				in >> subMesh.indices_accessor;
+				in >> subMesh.material;
+				in >> subMesh.first_index;
+				in >> subMesh.num_indices;
+				size_t numAttrSem = 0;
+				in >> numAttrSem ;
+				//Discard new line.
+				in.get();
+				for (size_t i=0;i< numAttrSem;i++)
+				{
+					int32_t attr= 0;
+					int32_t semantic=0;
+					in >> attr;
+					in >> semantic;
+					subMesh.attributeSemantics[attr]= (AttributeSemantic)semantic;
+				}
+				size_t bufferSize=0;
+				in >> bufferSize; 
+				//Discard new line.
+				in.get();
+				subMesh.buffer.resize(bufferSize);
+				size_t num_c = subMesh.buffer.size();
+				// have to do this because of dumb decision to use wchar_t instead of bytes. Change this!
+				for (size_t i = 0; i < num_c; i++)
+				{
+					// I mean honestly:
+					subMesh.buffer[i]= in.narrow(in.get(), '\000');
+				}
 			}
 			return in;
 		}
