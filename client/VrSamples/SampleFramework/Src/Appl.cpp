@@ -125,7 +125,7 @@ void ovrAppl::GetClockLevels(int32_t& cpuLevel, int& gpuLevel) const {
     gpuLevel = GpuLevel;
 }
 
-#define GET_INSTANCE_PROC_ADDR(function) PFN_##function function = (PFN_##function)(vkGetInstanceProcAddr(instance, #function))
+//#define GET_INSTANCE_PROC_ADDR(function) PFN_##function function = (PFN_##function)(vkGetInstanceProcAddr(instance, #function))
 
 bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) {
     ALOGV("ovrAppl::Init");
@@ -135,7 +135,7 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
     int32_t result = VRAPI_INITIALIZE_SUCCESS;
     if (initParms == nullptr) {
         ovrInitParms localInitParms = vrapi_DefaultInitParms(java);
-        localInitParms.GraphicsAPI = VRAPI_GRAPHICS_API_VULKAN_1;
+        //localInitParms.GraphicsAPI = VRAPI_GRAPHICS_API_VULKAN_1;
         result = vrapi_Initialize(&localInitParms);
     } else {
         result = vrapi_Initialize(initParms);
@@ -145,7 +145,7 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
         ALOGV("ovrAppl::Init - failed to Initialize initParms=%p", initParms);
         return false;
     }
-
+/*
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
     if (!InitVulkan())
     {
@@ -310,7 +310,7 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
 
     vkDestroyDevice(m_Device, nullptr);
 
-    vkDestroyInstance(instance, nullptr);
+    vkDestroyInstance(instance, nullptr);*/
 
     ovrEgl_Clear(&Egl);
     ovrEgl_CreateContext(&Egl, NULL);
