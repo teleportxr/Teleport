@@ -125,6 +125,8 @@ void ovrAppl::GetClockLevels(int32_t& cpuLevel, int& gpuLevel) const {
     gpuLevel = GpuLevel;
 }
 
+#define GET_INSTANCE_PROC_ADDR(function) PFN_##function function = (PFN_##function)(vkGetInstanceProcAddr(instance, #function))
+
 bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) {
     ALOGV("ovrAppl::Init");
     Context = context;
@@ -133,6 +135,7 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
     int32_t result = VRAPI_INITIALIZE_SUCCESS;
     if (initParms == nullptr) {
         ovrInitParms localInitParms = vrapi_DefaultInitParms(java);
+        localInitParms.GraphicsAPI = VRAPI_GRAPHICS_API_VULKAN_1;
         result = vrapi_Initialize(&localInitParms);
     } else {
         result = vrapi_Initialize(initParms);
@@ -142,6 +145,172 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
         ALOGV("ovrAppl::Init - failed to Initialize initParms=%p", initParms);
         return false;
     }
+
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+    if (!InitVulkan())
+    {
+        ALOGV("ERROR: VULKAN: Failed to load 'libvulkan.so'.");
+    }
+#endif
+
+    // Get the required instance extensions.
+    char instanceExtensionNames[4096];
+    uint32_t instanceExtensionNamesSize = sizeof(instanceExtensionNames);
+    if (vrapi_GetInstanceExtensionsVulkan(instanceExtensionNames, &instanceExtensionNamesSize)) {
+        return false;
+    }
+
+    auto ParseExtensionString = [](
+            char* extensionNames,
+            uint32_t* numExtensions,
+            const char* extensionArrayPtr[],
+            const uint32_t arrayCount) {
+        uint32_t extensionCount = 0;
+        char* nextExtensionName = extensionNames;
+
+        while (*nextExtensionName && (extensionCount < arrayCount)) {
+            extensionArrayPtr[extensionCount++] = nextExtensionName;
+
+            // Skip to a space or null
+            while (*(++nextExtensionName)) {
+                if (*nextExtensionName == ' ') {
+                    // Null-terminate and break out of the loop
+                    *nextExtensionName++ = '\0';
+                    break;
+                }
+            }
+        }
+
+        *numExtensions = extensionCount;
+    };
+    const char* enabledExtensionNames[32] = {0};
+    uint32_t enabledExtensionCount = 0;
+    ParseExtensionString(instanceExtensionNames, &enabledExtensionCount, enabledExtensionNames, 32);
+
+    uint32_t layerCount = 0;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+    std::vector<VkLayerProperties> instanceLayerProperties;
+    instanceLayerProperties.resize(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, instanceLayerProperties.data());
+
+    uint32_t extensionCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+    std::vector<VkExtensionProperties> instanceExtensionProperties;
+    instanceExtensionProperties.resize(extensionCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instanceExtensionProperties.data());
+
+    VkApplicationInfo ai;
+    ai.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    ai.pNext = nullptr;
+    ai.pApplicationName = "VkTeleport";
+    ai.applicationVersion = 1;
+    ai.pEngineName = ai.pApplicationName;
+    ai.apiVersion = VK_API_VERSION_1_0;
+
+    VkInstanceCreateInfo iCI;
+    iCI.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    iCI.pNext = nullptr;
+    iCI.flags = 0;
+    iCI.pApplicationInfo = &ai;
+    iCI.enabledLayerCount = 0;
+    iCI.ppEnabledLayerNames = nullptr;
+    iCI.enabledExtensionCount = enabledExtensionCount;
+    iCI.ppEnabledExtensionNames = (const char* const*)enabledExtensionNames;
+    VkInstance instance = nullptr;
+    vkCreateInstance(&iCI, nullptr, &instance);
+
+    uint32_t physicalDeviceCount = 0;
+    vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr);
+    std::vector<VkPhysicalDevice> m_PhysicalDevices(physicalDeviceCount);
+    vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, m_PhysicalDevices.data());
+    VkPhysicalDevice physicalDevice = m_PhysicalDevices[0];
+
+    VkPhysicalDeviceFeatures features = {};
+    vkGetPhysicalDeviceFeatures(physicalDevice, &features);
+
+    VkPhysicalDeviceMultiviewFeatures mvFeatures = {};
+    mvFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+    VkPhysicalDeviceFeatures2 features2;
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    features2.pNext = &mvFeatures;
+    vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
+
+    uint32_t queueFamilyPropertiesCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropertiesCount, nullptr);
+    std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties(queueFamilyPropertiesCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropertiesCount, m_QueueFamilyProperties.data());
+
+    std::vector<std::vector<float>> m_QueuePriorities(m_QueueFamilyProperties.size());
+    std::vector<VkDeviceQueueCreateInfo> m_DeviceQueueCIs(m_QueueFamilyProperties.size());
+    for (size_t i = 0; i < m_DeviceQueueCIs.size(); i++)
+    {
+        for (size_t j = 0; j < m_QueueFamilyProperties[i].queueCount; j++)
+            m_QueuePriorities[i].push_back(1.0f);
+
+        m_DeviceQueueCIs[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        m_DeviceQueueCIs[i].pNext = nullptr;
+        m_DeviceQueueCIs[i].flags = 0;
+        m_DeviceQueueCIs[i].queueFamilyIndex = static_cast<uint32_t>(i);
+        m_DeviceQueueCIs[i].queueCount = m_QueueFamilyProperties[i].queueCount;
+        m_DeviceQueueCIs[i].pQueuePriorities = m_QueuePriorities[i].data();
+    }
+
+    uint32_t layerPropertiesCount = 0;
+    vkEnumerateDeviceLayerProperties(physicalDevice, &layerPropertiesCount, nullptr);
+    std::vector<VkLayerProperties> deviceLayerProperties;
+    deviceLayerProperties.resize(layerPropertiesCount);
+    vkEnumerateDeviceLayerProperties(physicalDevice, &layerPropertiesCount, deviceLayerProperties.data());
+
+    uint32_t extensionPropertiesCount = 0;
+    vkEnumerateDeviceExtensionProperties(physicalDevice, 0, &extensionPropertiesCount, 0);
+    std::vector<VkExtensionProperties> deviceExtensionProperties;
+    deviceExtensionProperties.resize(extensionPropertiesCount);
+    vkEnumerateDeviceExtensionProperties(physicalDevice, 0, &extensionPropertiesCount, deviceExtensionProperties.data());
+
+    std::vector<const char*> devExt;
+    devExt.push_back("VK_KHR_multiview");
+
+    VkDeviceCreateInfo m_DeviceCI;
+    m_DeviceCI.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    m_DeviceCI.pNext = &mvFeatures;
+    m_DeviceCI.flags = 0;
+    m_DeviceCI.queueCreateInfoCount = static_cast<uint32_t>(m_DeviceQueueCIs.size());
+    m_DeviceCI.pQueueCreateInfos = m_DeviceQueueCIs.data();
+    m_DeviceCI.enabledLayerCount = 0;
+    m_DeviceCI.ppEnabledLayerNames = nullptr;
+    m_DeviceCI.enabledExtensionCount = static_cast<uint32_t>(devExt.size());
+    m_DeviceCI.ppEnabledExtensionNames = devExt.data();
+    m_DeviceCI.pEnabledFeatures = &features;
+
+    VkDevice m_Device;
+    vkCreateDevice(physicalDevice, &m_DeviceCI, nullptr, &m_Device);
+
+    std::vector<std::vector<VkQueue>> m_Queues;
+    for (size_t i = 0; i < m_DeviceQueueCIs.size(); i++)
+    {
+        std::vector<VkQueue>localQueues;
+        for (size_t j = 0; j < m_DeviceQueueCIs[i].queueCount; j++)
+        {
+            VkQueue queue;
+            vkGetDeviceQueue(m_Device, static_cast<uint32_t>(i), static_cast<uint32_t>(j), &queue);
+            localQueues.push_back(queue);
+
+            VkQueueFlags flags = m_QueueFamilyProperties[i].queueFlags;
+            std::string typeStr("");
+            if((flags & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT)
+                typeStr += "Graphics/";
+            if ((flags & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT)
+                typeStr += "Compute/";
+            if ((flags & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT)
+                typeStr += "Transfer";
+        }
+        m_Queues.push_back(localQueues);
+        localQueues.clear();
+    }
+
+    vkDestroyDevice(m_Device, nullptr);
+
+    vkDestroyInstance(instance, nullptr);
 
     ovrEgl_Clear(&Egl);
     ovrEgl_CreateContext(&Egl, NULL);
