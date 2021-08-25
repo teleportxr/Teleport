@@ -653,8 +653,8 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
 
-		static int lineLimit = 50;
-		int linesRemaining = lineLimit;
+		static int nodeLimit = 5;
+		int linesRemaining = nodeLimit;
 		auto& rootNodes = resourceManagers.mNodeManager->GetRootNodes();
 		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{
@@ -666,7 +666,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 				break;
 			}
 		}
-
+		static int lineLimit = 50;
+		linesRemaining = lineLimit;
+		/*
 		const std::shared_ptr<scr::Node>& body = resourceManagers.mNodeManager->GetBody();
 		if(body)
 		{
@@ -683,13 +685,15 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		if(rightHand)
 		{
 			ListNode(deviceContext, rightHand, 1, linesRemaining);
-		}
+		}*/
 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
 																									resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 
 		auto& cachedMaterials = resourceManagers.mMaterialManager.GetCache(cacheLock);
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
+		static int matLimit = 5;
+		linesRemaining = matLimit;
 		for(auto m: cachedMaterials)
 		{
 			auto &M=m.second;
@@ -799,6 +803,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\n   joystick: %3.3f %3.3f", controllerStates[0].mJoystickAxisX, controllerStates[0].mJoystickAxisY));
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f", controllerStates[1].mJoystickAxisX, controllerStates[1].mJoystickAxisY));
+
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\n   trigger: %3.3f %3.3f", controllerStates[0].triggerBack, controllerStates[0].triggerGrip));
+		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("            : %3.3f %3.3f", controllerStates[1].triggerBack, controllerStates[1].triggerGrip));
 	}
 
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
@@ -1019,6 +1026,26 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				layout->Unapply(deviceContext);
 			}
 		}
+		const scr::AnimationComponent &anim= node->animationComponent;
+		if(node->GetSkin().get())
+		{
+			avs::vec4 white(1.0f,1.0f,1.0f,1.0f);
+			avs::vec3 pos= node->GetGlobalPosition();
+			std::string str;
+			const scr::AnimationState &animationState= node->animationComponent.GetCurrentAnimationState();
+			//const scr::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
+			static char txt[250];
+			//for(const auto &s:animationStates)
+			{
+				const auto &a= animationState.getAnimation();
+				if(a.get())
+				{
+					sprintf(txt,"%s %3.3f\n",a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
+					str +=txt;
+				}
+			}
+			renderPlatform->PrintAt3dPos(deviceContext,(const float *)(&pos),str.c_str(), (const float*)(&white));
+		}
 	}
 
 	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
@@ -1117,14 +1144,14 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
-	std::vector<avs::NetworkSourceStream> streams = { {20} };
+	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } };
 	if (AudioStream)
 	{
-		streams.push_back({ 40 });
+		streams.push_back({ 60 });
 	}
 	if (GeoStream)
 	{
-		streams.push_back({ 60 });
+		streams.push_back({ 80 });
 	}
 
 	avs::NetworkSourceParams sourceParams;
@@ -1202,9 +1229,8 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	
 	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
-	auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
 	// Video streams are 0+...
-	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20, f))
+	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20))
 	{
 		SCR_CERR << "Failed to configure decoder node!\n";
 	}
@@ -1219,11 +1245,24 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	avs::Node::link(videoQueue, decoder);
 	pipeline.link({ &decoder, &surface });
 	
+	// Tag Data
+	{
+		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
+		if (!tagDataDecoder.configure(40, f))
+		{
+			SCR_CERR << "Failed to configure video tag data decoder node!\n";
+		}
+
+		tagDataQueue.configure(200, 16, "TagDataQueue");
+
+		avs::Node::link(source, tagDataQueue);
+		pipeline.link({ &tagDataQueue, &tagDataDecoder });
+	}
 
 	// Audio
 	if (AudioStream)
 	{
-		avsAudioDecoder.configure(40);
+		avsAudioDecoder.configure(60);
 		sca::AudioParams audioParams;
 		audioParams.codec = sca::AudioCodec::PCM;
 		audioParams.numChannels = 2;
@@ -1244,7 +1283,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	// We will add a GEOMETRY PIPE
 	if(GeoStream)
 	{
-		avsGeometryDecoder.configure(60,&geometryDecoder);
+		avsGeometryDecoder.configure(80, &geometryDecoder);
 		avsGeometryTarget.configure(&resourceCreator);
 
 		geometryQueue.configure(10000, 200, "GeometryQueue");
@@ -1419,7 +1458,7 @@ void ClientRenderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
 }
 
-void ClientRenderer::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
+void ClientRenderer::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
 {
 	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
 }
@@ -1483,6 +1522,10 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
 {
+	for (int i = 0; i < 2; i++)
+	{
+		controllerStates[i].clear();
+	}
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
 	clientspace_input.y=((float)keydown['w']-(float)keydown['s'])*(float)(keydown[VK_SHIFT]);
@@ -1523,14 +1566,17 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	controllerStates[1].mJoystickAxisY=stored_clientspace_input.y;
 	//controllerStates[0].mJoystickAxisX=stored_clientspace_input.x;
 
-	controllerStates[0].mTrackpadX=0.5f;
-	controllerStates[0].mTrackpadY=0.5f;
+	controllerStates[0].mTrackpadX		=0.5f;
+	controllerStates[0].mTrackpadY		=0.5f;
 	//controllerStates[0].mJoystickAxisX	=mouseCameraInput.right_left_input;
 	//controllerStates[0].mJoystickAxisY	=mouseCameraInput.forward_back_input;
 	controllerStates[0].mButtons		=mouseCameraInput.MouseButtons;
+	controllerStates[0].triggerBack		=(mouseCameraInput.MouseButtons&crossplatform::MouseCameraInput::LEFT_BUTTON)==crossplatform::MouseCameraInput::LEFT_BUTTON?1.0f:0.0f;
+
+	controllerStates[0].triggerGrip		=(mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::RIGHT_BUTTON)==crossplatform::MouseCameraInput::RIGHT_BUTTON?1.0f : 0.0f;
 
 	// Reset
-	mouseCameraInput.MouseButtons = 0;
+	//mouseCameraInput.MouseButtons = 0; wtf? No.
 	controllerStates[0].mTrackpadStatus=true;
 
 	simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
@@ -1562,10 +1608,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime);
 
-		for(int i = 0; i < 2; i++)
-		{
-			controllerStates[i].clear();
-		}
 
 		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
@@ -1608,6 +1650,10 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
 {
+	mouseCameraInput.MouseButtons
+		|= (bLeftButtonDown ? crossplatform::MouseCameraInput::LEFT_BUTTON : 0)
+		| (bRightButtonDown ? crossplatform::MouseCameraInput::RIGHT_BUTTON : 0)
+		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 	if(bLeftButtonDown)
 	{
 		avs::InputEventAnalogue buttonEvent;
@@ -1615,7 +1661,6 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 		buttonEvent.inputID = avs::InputList::TRIGGER01;
 		buttonEvent.strength = 1.0f;
 		controllerStates[0].analogueEvents.push_back(buttonEvent);
-
 		controllerStates[0].triggerBack = buttonEvent.strength;
 	}
 	else if(bRightButtonDown)
@@ -1638,12 +1683,16 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 
 void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta)
 {
+	mouseCameraInput.MouseButtons
+		&= (bLeftButtonReleased ? ~crossplatform::MouseCameraInput::LEFT_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS)
+		& (bRightButtonReleased ? ~crossplatform::MouseCameraInput::RIGHT_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS)
+		& (bMiddleButtonReleased ? ~crossplatform::MouseCameraInput::MIDDLE_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS);
 	if(bLeftButtonReleased)
 	{
 		avs::InputEventAnalogue buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputList::TRIGGER01;
-		buttonEvent.strength = 0.0f;
+		buttonEvent.eventID		= nextEventID++;
+		buttonEvent.inputID		= avs::InputList::TRIGGER01;
+		buttonEvent.strength	= 0.0f;
 		controllerStates[0].analogueEvents.push_back(buttonEvent);
 
 		controllerStates[0].triggerBack = buttonEvent.strength;
@@ -1651,9 +1700,9 @@ void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRight
 	else if(bRightButtonReleased)
 	{
 		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputList::BUTTON_B;
-		buttonEvent.activated = false;
+		buttonEvent.eventID		= nextEventID++;
+		buttonEvent.inputID		= avs::InputList::BUTTON_B;
+		buttonEvent.activated	= false;
 		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}
 	else if(bMiddleButtonReleased)

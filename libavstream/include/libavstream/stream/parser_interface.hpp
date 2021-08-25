@@ -15,6 +15,7 @@ namespace avs
 		Geometry,
 		Audio,
 		Custom,     /*<! Custom bitstream parser */
+		None,
 		Default = AVC_AnnexB, /*<! Default bitstream parser */
 	};
 

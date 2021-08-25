@@ -64,7 +64,7 @@ namespace scr
 		void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
 		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted);
-		void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate);
+		void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate);
 		void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* const animationTimeOverride = nullptr, float overrideMaximum = 0.0f);
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
@@ -108,7 +108,7 @@ namespace scr
 		std::map<avs::uid, avs::MovementUpdate> earlyMovements;
 		std::map<avs::uid, avs::NodeUpdateEnabledState> earlyEnabledUpdates;
 		std::map<avs::uid, bool> earlyNodeHighlights;
-		std::map<avs::uid, avs::NodeUpdateAnimation> earlyAnimationUpdates;
+		std::map<avs::uid, avs::ApplyAnimation> earlyAnimationUpdates;
 		std::map<avs::uid, std::vector<EarlyAnimationControl>> earlyAnimationControlUpdates;
 		std::map<avs::uid, std::vector<EarlyAnimationSpeed>> earlyAnimationSpeedUpdates;
 

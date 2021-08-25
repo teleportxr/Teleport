@@ -21,7 +21,7 @@ struct ControllerState
 	float triggerBack = 0.0f;
 	float triggerGrip = 0.0f;
 
-	//These are split for simplicity, and we can not marshal to the managed C# code polymorphic types.
+	//These are split for simplicity, and we can't marshal polymorphic types to the managed C# code.
 	std::vector<avs::InputEventBinary> binaryEvents;
 	std::vector<avs::InputEventAnalogue> analogueEvents;
 	std::vector<avs::InputEventMotion> motionEvents;
@@ -34,6 +34,8 @@ struct ControllerState
 		mTrackpadY = 0.0f;
 		mJoystickAxisX = 0.0f;
 		mJoystickAxisY = 0.0f;
+		triggerBack = 0.0f;
+		triggerGrip = 0.0f;
 
 		binaryEvents.clear();
 		analogueEvents.clear();

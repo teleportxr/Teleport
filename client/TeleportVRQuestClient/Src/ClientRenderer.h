@@ -5,7 +5,6 @@
 #include "crossplatform/ResourceCreator.h"
 #include "GlobalGraphicsResources.h"
 #include <Render/SurfaceTexture.h>
-#include <libavstream/decoder.hpp>
 #include <libavstream/libavstream.hpp>
 #include <VrApi_Input.h>
 #include <FrameParams.h>
@@ -118,9 +117,11 @@ public:
 
 	Controllers *controllers=nullptr;
 
-	avs::Decoder       mDecoder;
+	avs::Decoder mDecoder;
+	avs::TagDataDecoder mTagDataDecoder;
 	avs::NetworkSource mNetworkSource;
 	avs::Queue mVideoQueue;
+	avs::Queue mTagDataQueue;
 	avs::Queue mAudioQueue;
 	avs::Queue mGeometryQueue;
 

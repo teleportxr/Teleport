@@ -348,7 +348,7 @@ void scr::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	}
 }
 
-void NodeManager::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
+void NodeManager::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
 {
 	std::shared_ptr<scr::Node> node = GetNode(animationUpdate.nodeID);
 	if(node)

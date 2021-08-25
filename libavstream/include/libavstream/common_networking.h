@@ -66,15 +66,6 @@ namespace avs
 		OriginPose
 	};
 
-	//TODO: These enumerations are placeholder; in the future we want a more flexible system, but right now it's too much time to invest.
-	//Controls what is used as the current time of the animation.
-	enum class AnimationTimeControl
-	{
-		ANIMATION_TIME, //Default; animation is controlled by time since animation started.
-		CONTROLLER_0_TRIGGER,
-		CONTROLLER_1_TRIGGER
-	};
-
 	struct ServiceDiscoveryResponse
 	{
 		uint64_t clientID;
@@ -105,6 +96,8 @@ namespace avs
 		float trackpadAxisY = 0.0f;
 		float joystickAxisX = 0.0f;
 		float joystickAxisY = 0.0f;
+		float triggerBack = 0.0f;
+		float triggerGrip = 0.0f;
 
 		uint32_t binaryEventAmount = 0;
 		uint32_t analogueEventAmount = 0;
@@ -150,7 +143,7 @@ namespace avs
 		float angularVelocityAngle = 0.0f;
 	} AVS_PACKED;
 
-	//TODO: Use instead of MovementUpdate for bandwidth.
+	// TODO: Use instead of MovementUpdate for bandwidth.
 	struct NodeUpdateScale
 	{
 		int64_t timestamp = 0;
@@ -163,25 +156,33 @@ namespace avs
 
 	struct NodeUpdateEnabledState
 	{
-		uid nodeID = 0; //ID of the node we are changing the enabled state of.
-		bool enabled = false; //Whether the node is enabled, and thus should be rendered.
+		uid nodeID = 0;			//< ID of the node we are changing the enabled state of.
+		bool enabled = false;	//< Whether the node is enabled, and thus should be rendered.
 	} AVS_PACKED;
 
-	struct NodeUpdateAnimation
+	struct ApplyAnimation
 	{
-		int64_t timestamp = 0; //When the animation change was detected.
-
-		uid nodeID = 0; //ID of the node the animation is playing on.
-		uid animationID = 0; //ID of the animation that is now playing.
+		int64_t timestamp = 0;	//< When the animation change was detected.
+		uid nodeID = 0;			//< ID of the node the animation is playing on.
+		uid animationID = 0;	//< ID of the animation that is now playing.
 	} AVS_PACKED;
+
+	// TODO: These enumerations are placeholder; in the future we want a more flexible system.
+	//! Controls what is used as the current time of the animation.
+	enum class AnimationTimeControl
+	{
+		ANIMATION_TIME=0,				//< Default; animation is controlled by time since animation started.
+		CONTROLLER_0_TRIGGER,
+		CONTROLLER_1_TRIGGER
+	};
 
 	struct NodeUpdateAnimationControl
 	{
-		uid nodeID = 0; //ID of the node the animation is playing on.
-		uid animationID = 0; //ID of the animation that we are updating.
+		uid nodeID = 0;						//< ID of the node the animation is playing on.
+		uid animationID = 0;				//< ID of the animation that we are updating.
 
-		AnimationTimeControl timeControl; //What controls the animation's time value.
-	};
+		AnimationTimeControl timeControl;	//< What controls the animation's time value.
+	} AVS_PACKED;
 
 	struct Command
 	{
@@ -189,7 +190,7 @@ namespace avs
 
 		Command(CommandPayloadType t) : commandPayloadType(t) {}
 
-		//Returns byte size of command.
+		//! Returns byte size of command.
 		virtual size_t getCommandSize() const = 0;
 	} AVS_PACKED;
 
@@ -356,13 +357,13 @@ namespace avs
 
 	struct UpdateNodeAnimationCommand : public Command
 	{
-		avs::NodeUpdateAnimation animationUpdate;
+		avs::ApplyAnimation animationUpdate;
 
 		UpdateNodeAnimationCommand()
-			:UpdateNodeAnimationCommand(avs::NodeUpdateAnimation{})
+			:UpdateNodeAnimationCommand(avs::ApplyAnimation{})
 		{}
 
-		UpdateNodeAnimationCommand(const avs::NodeUpdateAnimation& update)
+		UpdateNodeAnimationCommand(const avs::ApplyAnimation& update)
 			:Command(CommandPayloadType::UpdateNodeAnimation), animationUpdate(update)
 		{}
 
@@ -372,21 +373,21 @@ namespace avs
 		}
 	} AVS_PACKED;
 
-	struct UpdateNodeAnimationControlCommand : public Command
+	struct SetAnimationControlCommand : public Command
 	{
 		avs::NodeUpdateAnimationControl animationControlUpdate;
 
-		UpdateNodeAnimationControlCommand()
-			:UpdateNodeAnimationControlCommand(avs::NodeUpdateAnimationControl{})
+		SetAnimationControlCommand()
+			:SetAnimationControlCommand(avs::NodeUpdateAnimationControl{})
 		{}
 
-		UpdateNodeAnimationControlCommand(const avs::NodeUpdateAnimationControl& update)
+		SetAnimationControlCommand(const avs::NodeUpdateAnimationControl& update)
 			:Command(CommandPayloadType::UpdateNodeAnimationControl), animationControlUpdate(update)
 		{}
 
 		virtual size_t getCommandSize() const override
 		{
-			return sizeof(UpdateNodeAnimationControlCommand);
+			return sizeof(SetAnimationControlCommand);
 		}
 	} AVS_PACKED;
 

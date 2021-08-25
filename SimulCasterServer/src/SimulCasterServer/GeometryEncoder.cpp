@@ -667,9 +667,13 @@ namespace SCServer
 				texture = src->getShadowMap(uid);
 			else
 				texture = src->getTexture(uid);
-
 			if (texture)
 			{
+				if (texture->compression == avs::TextureCompression::UNCOMPRESSED)
+				{
+					TELEPORT_CERR << "Trying to send uncompressed texture. Never do this!\n";
+					continue;
+				}
 				size_t oldBufferSize = buffer.size();
 
 				//Place payload type onto the buffer.

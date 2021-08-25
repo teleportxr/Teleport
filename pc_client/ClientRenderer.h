@@ -12,9 +12,7 @@
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
-#include <libavstream/geometrydecoder.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
-#include <libavstream/audiodecoder.h>
 #include <libavstream/audio/audiotarget.h>
 
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
@@ -191,7 +189,7 @@ public:
 	void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) override;
 	void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) override;
 	void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
-	void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate) override;
+	void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate) override;
 	void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
 	void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
 
@@ -242,6 +240,9 @@ public:
 	avs::Queue videoQueue;
 	avs::Decoder decoder;
 	avs::Surface surface;
+
+	avs::Queue tagDataQueue;
+	avs::TagDataDecoder tagDataDecoder;
 
 	GeometryDecoder geometryDecoder;
 	ResourceCreator resourceCreator;

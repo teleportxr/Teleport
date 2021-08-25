@@ -432,6 +432,7 @@ Result NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, 
 	{
 	case NetworkDataType::Geometry:
 	case NetworkDataType::Audio:
+	case NetworkDataType::VideoTagData:
 		dataContent = ElasticFrameContent::privatedata;
 		break;
 	case NetworkDataType::H264:

@@ -28,7 +28,6 @@ namespace avs
 				{
 				case 7: return VideoPayloadType::SPS;
 				case 8: return VideoPayloadType::PPS;
-				case 30: return VideoPayloadType::ExtraData; // max - 1 (11110)
 				}
 			}
 

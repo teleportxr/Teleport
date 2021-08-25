@@ -18,7 +18,7 @@ namespace SCServer
 		// Sending
 		std::unique_ptr<NetworkPipeline> NetworkPipeline;
 		std::unique_ptr<avs::Queue> ColorQueue;
-		std::unique_ptr<avs::Queue> DepthQueue;
+		std::unique_ptr<avs::Queue> TagDataQueue;
 		std::unique_ptr<avs::Queue> GeometryQueue;
 		std::unique_ptr<avs::Queue> AudioQueue;
 

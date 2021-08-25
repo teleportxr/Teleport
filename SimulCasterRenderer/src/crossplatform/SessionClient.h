@@ -37,7 +37,7 @@ public:
     virtual void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) = 0;
 	virtual void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) = 0;
 	virtual void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) = 0;
-	virtual void UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate) = 0;
+	virtual void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate) = 0;
 	virtual void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) = 0;
 	virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
 };

@@ -63,7 +63,7 @@ namespace SCServer
 		void updateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
 		void updateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
-		void updateNodeAnimation(avs::NodeUpdateAnimation update);
+		void updateNodeAnimation(avs::ApplyAnimation update);
 		void updateNodeAnimationControl(avs::NodeUpdateAnimationControl update);
 		void updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update);
 		void setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);

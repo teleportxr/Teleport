@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <libavstream/abi.hpp>
 #include <vector>
+#include <mutex>
+#include <queue>
 
 #define LIBAVSTREAM_VERSION 1
 
@@ -100,7 +102,6 @@ namespace avs
 			DecoderBackend_DisplayFailed,
 			DecoderBackend_ShutdownFailed,
 			DecoderBackend_ReadyToDisplay,
-			DecoderBackend_PayloadIsExtraData,
 			DecoderBackend_CapabilityCheckFailed,
 			GeometryEncoder_Incomplete,
 			GeometryEncoder_InvalidPayload,
@@ -191,8 +192,7 @@ namespace avs
 		PPS,             /*!< Picture Parameter Set */
 		ALE,			 /*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
 		OtherNALUnit,    /*!< Other NAL unit. */
-		AccessUnit,      /*!< Entire access unit (possibly multiple NAL units). */
-		ExtraData		 /*!< Data containing info relating to the video */
+		AccessUnit      /*!< Entire access unit (possibly multiple NAL units). */
 	};
 
 	enum class VideoExtraDataType : uint8_t
@@ -205,7 +205,8 @@ namespace avs
 		H264 = 0,
 		HEVC,
 		Geometry,
-		Audio
+		Audio,
+		VideoTagData
 	};
 
 	enum class GeometryPayloadType : uint8_t
@@ -324,4 +325,76 @@ namespace avs
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif
+
+	template<class T>
+	class ThreadSafeQueue
+	{
+	public:
+		void push(T& val)
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_data.push(val);
+		}
+
+		void push(T&& val)
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_data.push(std::move(val));
+		}
+
+		void pop() noexcept
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_data.pop();
+		}
+
+		T& front() noexcept
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			return m_data.front();
+		}
+
+		T& back() noexcept
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			return m_data.back();
+		}
+
+		bool empty() noexcept
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			return m_data.empty();
+		}
+
+		size_t size() noexcept
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			return m_data.size();
+		}
+
+		void clear() noexcept
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			while (!m_data.empty())
+			{
+				m_data.pop();
+			}
+		}
+
+		template <class... _Valty>
+		T& emplace(_Valty&&... _Val)
+		{
+			std::lock_guard<std::mutex> guard(m_mutex);
+#if _HAS_CXX17
+			return m_data.emplace(std::forward<_Valty>(_Val)...);
+#else // ^^^ C++17 or newer / C++14 vvv
+			m_data.emplace(std::forward<_Valty>(_Val)...);
+			return m_data.back();
+#endif // _HAS_CXX17
+		}
+
+	private:
+		std::mutex m_mutex;
+		std::queue<T> m_data;
+	};
 } // avs

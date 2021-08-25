@@ -361,56 +361,46 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 	inputState.controllerId=id;
 	inputState.joystickAxisX = controllerState.mJoystickAxisX;
 	inputState.joystickAxisY = controllerState.mJoystickAxisY;
-	// We need to update trackpad axis on the server whenever:
-	// (1) User is currently touching the trackpad.
-	// (2) User was touching the trackpad previous frame.
-	//bool updateTrackpadAxis =    controllerState.mTrackpadStatus || controllerState.mTrackpadStatus != mPrevControllerState.mTrackpadStatus;
-
-	//bool stateDirty =  updateTrackpadAxis || buttonsDiffMask > 0;
-	// If there's a joystick, we must send an update every frame.
-	//if(stateDirty)
-	{
-		enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
-
-		/*updateButtonState(ovrButton_A);
-		updateButtonState(ovrButton_Enter); // FIXME: Currently not getting down event for this button.
-		updateButtonState(ovrButton_Back);*/
-
-		// Trackpad axis should be non-zero only if the user is currently touching the trackpad.
-		if(controllerState.mTrackpadStatus)
-		{
-			// Remap axis value to [-1,1] range.
-			inputState.trackpadAxisX = 2.0f * controllerState.mTrackpadX - 1.0f;
-			inputState.trackpadAxisY = 2.0f * controllerState.mTrackpadY - 1.0f;
-
-			// If this update does not include button information send it unreliably to improve latency.
-			if(buttonsDiffMask == 0)
-			{
-				packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
-			}
-		}
-
-		//Set event amount.
-		inputState.binaryEventAmount = static_cast<uint32_t>(controllerState.binaryEvents.size());
-		inputState.analogueEventAmount = static_cast<uint32_t>(controllerState.analogueEvents.size());
-		inputState.motionEventAmount = static_cast<uint32_t>(controllerState.motionEvents.size());
+	inputState.triggerBack = controllerState.triggerBack;
+	inputState.triggerGrip = controllerState.triggerGrip;
 	
-		//Calculate sizes for memory copy operations.
-		size_t inputStateSize = sizeof(avs::InputState);
-		size_t binaryEventSize = sizeof(avs::InputEventBinary) * inputState.binaryEventAmount;
-		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * inputState.analogueEventAmount;
-		size_t motionEventSize = sizeof(avs::InputEventMotion) * inputState.motionEventAmount;
+	enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
 
-		//Size packet to final size, but initially only put the InputState struct inside.
-		ENetPacket* packet = enet_packet_create(&inputState, inputStateSize + binaryEventSize + analogueEventSize + motionEventSize, packetFlags);
+	// Trackpad axis should be non-zero only if the user is currently touching the trackpad.
+	if(controllerState.mTrackpadStatus)
+	{
+		// Remap axis value to [-1,1] range.
+		inputState.trackpadAxisX = 2.0f * controllerState.mTrackpadX - 1.0f;
+		inputState.trackpadAxisY = 2.0f * controllerState.mTrackpadY - 1.0f;
 
-		//Copy events into packet.
-		memcpy(packet->data + inputStateSize, controllerState.binaryEvents.data(), binaryEventSize);
-		memcpy(packet->data + inputStateSize + binaryEventSize, controllerState.analogueEvents.data(), analogueEventSize);
-		memcpy(packet->data + inputStateSize + binaryEventSize + analogueEventSize, controllerState.motionEvents.data(), motionEventSize);
-
-		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
+		// If this update does not include button information send it unreliably to improve latency.
+		if(buttonsDiffMask == 0)
+		{
+			packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
+		}
 	}
+
+	//Set event amount.
+	inputState.binaryEventAmount = static_cast<uint32_t>(controllerState.binaryEvents.size());
+	inputState.analogueEventAmount = static_cast<uint32_t>(controllerState.analogueEvents.size());
+	inputState.motionEventAmount = static_cast<uint32_t>(controllerState.motionEvents.size());
+	
+	//Calculate sizes for memory copy operations.
+	size_t inputStateSize = sizeof(avs::InputState);
+	size_t binaryEventSize = sizeof(avs::InputEventBinary) * inputState.binaryEventAmount;
+	size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * inputState.analogueEventAmount;
+	size_t motionEventSize = sizeof(avs::InputEventMotion) * inputState.motionEventAmount;
+
+	//Size packet to final size, but initially only put the InputState struct inside.
+	ENetPacket* packet = enet_packet_create(&inputState, inputStateSize + binaryEventSize + analogueEventSize + motionEventSize, packetFlags);
+
+	//Copy events into packet.
+	memcpy(packet->data + inputStateSize, controllerState.binaryEvents.data(), binaryEventSize);
+	memcpy(packet->data + inputStateSize + binaryEventSize, controllerState.analogueEvents.data(), analogueEventSize);
+	memcpy(packet->data + inputStateSize + binaryEventSize + analogueEventSize, controllerState.motionEvents.data(), motionEventSize);
+
+	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
+	
 }
 
 void SessionClient::SendResourceRequests()
@@ -682,7 +672,7 @@ void SessionClient::ReceiveNodeAnimationUpdate(const ENetPacket* packet)
 void SessionClient::ReceiveNodeAnimationControlUpdate(const ENetPacket* packet)
 {
 	//Extract command from packet.
-	avs::UpdateNodeAnimationControlCommand command;
+	avs::SetAnimationControlCommand command;
 	size_t commandSize = command.getCommandSize();
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 

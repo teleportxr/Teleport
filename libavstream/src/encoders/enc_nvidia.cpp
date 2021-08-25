@@ -499,14 +499,28 @@ namespace avs
 					return Result::EncoderBackend_InitFailed;
 				}
 
+				m_bufferIndex = 0;
+
 				if (initializeParams.enableEncodeAsync)
 				{
-					m_completionEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-					NV_ENC_EVENT_PARAMS eventParams = { NV_ENC_EVENT_PARAMS_VER };
-					eventParams.completionEvent = m_completionEvent;
-					g_api.nvEncRegisterAsyncEvent(m_encoder, &eventParams);
+					m_numBuffers = 4;
+#if defined(PLATFORM_WINDOWS)
+					for (int i = 0; i < m_numBuffers; ++i)
+					{
+						auto& bd = m_bufferData[i];
+						bd.completionEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+						NV_ENC_EVENT_PARAMS eventParams = { NV_ENC_EVENT_PARAMS_VER };
+						eventParams.completionEvent = bd.completionEvent;
+						g_api.nvEncRegisterAsyncEvent(m_encoder, &eventParams);
+					}
+#endif
+				}
+				else
+				{
+					m_numBuffers = 1;
 				}
 
+				for (int i = 0; i < m_numBuffers; ++i)
 				{
 					NV_ENC_CREATE_BITSTREAM_BUFFER params = {};
 					params.version = NV_ENC_CREATE_BITSTREAM_BUFFER_VER;
@@ -516,14 +530,14 @@ namespace avs
 						AVSLOG(Error) << "EncoderNV: Failed to create output bitstream buffer";
 						return Result::EncoderBackend_OutOfMemory;
 					}
-					m_outputBuffer.ptr = params.bitstreamBuffer;
+					m_bufferData[i].outputBuffer.ptr = params.bitstreamBuffer;
 				}
 
 				m_initialized = true;
 			}
 		}
 
-		m_inputBuffer.format = config.format;
+		m_inputData.format = config.format;
 
 		m_params = params;
 		m_params.useAsyncEncoding = params.useAsyncEncoding && m_EncodeCapabilities.isAsyncCapable;
@@ -571,23 +585,28 @@ namespace avs
 			{
 				result = unregisterSurface();
 			}
+			for (int i = 0; i < m_numBuffers; ++i)
+			{
+				auto& bd = m_bufferData[i];
 #if defined(PLATFORM_WINDOWS)
-			if (m_completionEvent)
-			{
-				NV_ENC_EVENT_PARAMS eventParams = { NV_ENC_EVENT_PARAMS_VER };
-				eventParams.completionEvent = m_completionEvent;
-				g_api.nvEncUnregisterAsyncEvent(m_encoder, &eventParams);
-				CloseHandle(m_completionEvent);
-			}
-#endif
-			if (m_outputBuffer.ptr)
-			{
-				if (NVFAILED(g_api.nvEncDestroyBitstreamBuffer(m_encoder, m_outputBuffer.ptr)))
+				if (bd.completionEvent)
 				{
-					AVSLOG(Error) << "EncoderNV: Failed to destroy output bitstream buffer\n";
-					result = Result::EncoderBackend_ShutdownFailed;
+					NV_ENC_EVENT_PARAMS eventParams = { NV_ENC_EVENT_PARAMS_VER };
+					eventParams.completionEvent = bd.completionEvent;
+					g_api.nvEncUnregisterAsyncEvent(m_encoder, &eventParams);
+					CloseHandle(bd.completionEvent);
+					bd.completionEvent = nullptr;
 				}
-				m_outputBuffer = {};
+#endif
+				if (bd.outputBuffer.ptr)
+				{
+					if (NVFAILED(g_api.nvEncDestroyBitstreamBuffer(m_encoder, bd.outputBuffer.ptr)))
+					{
+						AVSLOG(Error) << "EncoderNV: Failed to destroy output bitstream buffer\n";
+						result = Result::EncoderBackend_ShutdownFailed;
+					}
+					bd.outputBuffer.ptr = nullptr;
+				}
 			}
 			if (NVFAILED(g_api.nvEncDestroyEncoder(m_encoder)))
 			{
@@ -658,7 +677,7 @@ namespace avs
 		{
 #if PLATFORM_WINDOWS
 		case DeviceType::Direct3D11:
-			res = cuGraphicsD3D11RegisterResource(&m_registeredSurface.resource, reinterpret_cast<ID3D11Texture2D*>(surface->getResource()), registerFlags);
+			res = cuGraphicsD3D11RegisterResource(&m_registeredSurface.cuResource, reinterpret_cast<ID3D11Texture2D*>(surface->getResource()), registerFlags);
 			if (CUFAILED(res))
 			{
 				AVSLOG(Error) << "EncoderNV: Failed to register D3D11 surface with CUDA";
@@ -682,9 +701,7 @@ namespace avs
 		}
 
 
-		assert(!m_gResourceSupport || m_registeredSurface.resource);
-		assert(m_inputBuffer.ptr == nullptr);
-		assert(m_inputBuffer.devicePtr == 0);
+		assert(!m_gResourceSupport || m_registeredSurface.cuResource);
 
 		size_t inputBufferWidthInBytes = 0;
 		size_t inputBufferHeight = 0;
@@ -692,7 +709,7 @@ namespace avs
 
 		uint32_t arbgBytesPerPixel = 4;
 
-		switch (m_inputBuffer.format)
+		switch (m_inputData.format)
 		{
 		case NV_ENC_BUFFER_FORMAT_ARGB:
 		case NV_ENC_BUFFER_FORMAT_ABGR:
@@ -709,49 +726,54 @@ namespace avs
 			assert(false);
 		}
 
-		CUresult r = cuMemAllocPitch_v2(&m_inputBuffer.devicePtr, &m_inputBuffer.pitch, inputBufferWidthInBytes, inputBufferHeight, 16);
-		if (CUFAILED(r))
+		for (int i = 0; i < m_numBuffers; ++i)
 		{
+			auto& bd = m_bufferData[i];
+			CUresult r = cuMemAllocPitch_v2(&bd.inputBuffer.devicePtr, &m_inputData.pitch, inputBufferWidthInBytes, inputBufferHeight, 16);
+			if (CUFAILED(r))
+			{
+				if (m_gResourceSupport)
+				{
+					cuGraphicsUnregisterResource(m_registeredSurface.cuResource);
+					m_registeredSurface.cuResource = nullptr;
+				}
+				AVSLOG(Error) << "EncoderNV: Failed to allocate input buffer in device memory";
+				return Result::EncoderBackend_OutOfMemory;
+			}
+
+
+			NV_ENC_REGISTER_RESOURCE resource = {};
+			resource.version = NV_ENC_REGISTER_RESOURCE_VER;
+			resource.bufferFormat = m_inputData.format;
+			resource.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_CUDADEVICEPTR;
+			resource.resourceToRegister = reinterpret_cast<void*>(bd.inputBuffer.devicePtr);
+			resource.width = surface->getWidth();
+			resource.height = surface->getHeight();
+			resource.pitch = uint32_t(m_inputData.pitch);
+
+			NVENCSTATUS status = g_api.nvEncRegisterResource(m_encoder, &resource);
+			if (NVFAILED(status))
+			{
+				AVSLOG(Error) << "EncoderNV: Failed to register surface";
+				return Result::EncoderBackend_InvalidSurface;
+			}
+
 			if (m_gResourceSupport)
 			{
-				cuGraphicsUnregisterResource(m_registeredSurface.resource);
-				m_registeredSurface.resource = nullptr;
+				cuGraphicsResourceSetMapFlags(m_registeredSurface.cuResource, CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY);
 			}
-			AVSLOG(Error) << "EncoderNV: Failed to allocate input buffer in device memory";
-			return Result::EncoderBackend_OutOfMemory;
-		}
 
-		NV_ENC_REGISTER_RESOURCE resource = {};
-		resource.version = NV_ENC_REGISTER_RESOURCE_VER;
-		resource.bufferFormat = m_inputBuffer.format;
-		resource.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_CUDADEVICEPTR;
-		resource.resourceToRegister = reinterpret_cast<void*>(m_inputBuffer.devicePtr);
-		resource.width = surface->getWidth();
-		resource.height = surface->getHeight();
-		resource.pitch = uint32_t(m_inputBuffer.pitch);
+			m_registeredSurface.surface = surface;
+			bd.inputBuffer.regPtr = resource.registeredResource;
 
-		NVENCSTATUS status = g_api.nvEncRegisterResource(m_encoder, &resource);
-		if (NVFAILED(status))
-		{
-			AVSLOG(Error) << "EncoderNV: Failed to register surface";
-			return Result::EncoderBackend_InvalidSurface;
-		}
-
-		if (m_gResourceSupport)
-		{
-			cuGraphicsResourceSetMapFlags(m_registeredSurface.resource, CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY);
-		}
-
-		m_registeredSurface.surface = surface;
-		m_inputBuffer.ptr = resource.registeredResource;
-
-		m_resource = {};
-		m_resource.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
-		m_resource.registeredResource = m_inputBuffer.ptr;
-		if (NVFAILED(g_api.nvEncMapInputResource(m_encoder, &m_resource)))
-		{
-			AVSLOG(Error) << "EncoderNV: Failed to map input surface";
-			return Result::EncoderBackend_MapFailed;
+			bd.inputBuffer.resource = {};
+			bd.inputBuffer.resource.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
+			bd.inputBuffer.resource.registeredResource = bd.inputBuffer.regPtr;
+			if (NVFAILED(g_api.nvEncMapInputResource(m_encoder, &bd.inputBuffer.resource)))
+			{
+				AVSLOG(Error) << "EncoderNV: Failed to map input surface";
+				return Result::EncoderBackend_MapFailed;
+			}
 		}
 
 		return Result::OK;
@@ -772,19 +794,13 @@ namespace avs
 
 		CUDA::ContextGuard ctx(m_context);
 
-		if (NVFAILED(g_api.nvEncUnmapInputResource(m_encoder, m_resource.mappedResource)))
+		if (m_registeredSurface.cuResource)
 		{
-			AVSLOG(Error) << "EncoderNV: Failed to unmap input surface";
-			return Result::EncoderBackend_UnmapFailed;
-		}
-
-		if (m_registeredSurface.resource)
-		{
-			if (CUFAILED(cuGraphicsUnregisterResource(m_registeredSurface.resource)))
+			if (CUFAILED(cuGraphicsUnregisterResource(m_registeredSurface.cuResource)))
 			{
 				AVSLOG(Warning) << "EncoderNV: Failed to unregister surface with CUDA";
 			}
-			m_registeredSurface.resource = nullptr;
+			m_registeredSurface.cuResource = nullptr;
 		}
 		else
 		{
@@ -795,21 +811,34 @@ namespace avs
 			}
 #endif
 		}
-		if (m_inputBuffer.ptr)
+
+		for (int i = 0; i < m_numBuffers; ++i)
 		{
-			if (NVFAILED(g_api.nvEncUnregisterResource(m_encoder, m_inputBuffer.ptr)))
+			auto& bd = m_bufferData[i];
+			if (NVFAILED(g_api.nvEncUnmapInputResource(m_encoder, bd.inputBuffer.resource.mappedResource)))
 			{
-				AVSLOG(Error) << "EncoderNV: Failed to unregister surface";
-				return Result::EncoderBackend_InvalidSurface;
+				AVSLOG(Error) << "EncoderNV: Failed to unmap input surface";
+				return Result::EncoderBackend_UnmapFailed;
 			}
-			m_inputBuffer.ptr = nullptr;
+			if (bd.inputBuffer.regPtr)
+			{
+				if (NVFAILED(g_api.nvEncUnregisterResource(m_encoder, bd.inputBuffer.regPtr)))
+				{
+					AVSLOG(Error) << "EncoderNV: Failed to unregister surface";
+					return Result::EncoderBackend_InvalidSurface;
+				}
+				bd.inputBuffer.regPtr = nullptr;
+			}
+			if (bd.inputBuffer.devicePtr)
+			{
+				cuMemFree_v2(bd.inputBuffer.devicePtr);
+				bd.inputBuffer.devicePtr = 0;
+			}
 		}
-		if (m_inputBuffer.devicePtr)
-		{
-			cuMemFree_v2(m_inputBuffer.devicePtr);
-			m_inputBuffer.devicePtr = 0;
-			m_inputBuffer.pitch = 0;
-		}
+		m_inputData.pitch = 0;
+
+		m_bufferIndex = 0;
+		m_bufferIndexQueue.clear();
 
 		return Result::OK;
 	}
@@ -833,29 +862,38 @@ namespace avs
 			return result;
 		}
 
-		///
+		auto& bd = m_bufferData[m_bufferIndex];
 
 		NV_ENC_PIC_PARAMS encParams = {};
 		encParams.version = NV_ENC_PIC_PARAMS_VER;
-		encParams.bufferFmt = m_resource.mappedBufferFmt;
-		encParams.inputBuffer = m_resource.mappedResource;
+		encParams.bufferFmt = bd.inputBuffer.resource.mappedBufferFmt;
+		encParams.inputBuffer = bd.inputBuffer.resource.mappedResource;
 		// TODO: alphaBuffer should contain alpha data for NV12. Contained in inputBuffer for ARGB.
 		encParams.alphaBuffer = nullptr;
-		encParams.outputBitstream = m_outputBuffer.ptr;
+		encParams.outputBitstream = bd.outputBuffer.ptr;
 		encParams.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
 		encParams.inputWidth = m_registeredSurface.surface->getWidth();
 		encParams.inputHeight = m_registeredSurface.surface->getHeight();
-		encParams.inputPitch = uint32_t(m_inputBuffer.pitch);
+		encParams.inputPitch = uint32_t(m_inputData.pitch);
 		encParams.inputTimeStamp = timestamp;
-		encParams.completionEvent = m_completionEvent;
+		encParams.completionEvent = bd.completionEvent;
 		if (forceIDR)
 			encParams.encodePicFlags = NV_ENC_PIC_FLAG_FORCEIDR | NV_ENC_PIC_FLAG_OUTPUT_SPSPPS;
+
+		// Only useful for async encoding but keeps code cleaner.
+		m_bufferIndexQueue.push(m_bufferIndex);
 
 		NVENCSTATUS r = g_api.nvEncEncodePicture(m_encoder, &encParams);
 		if (NVFAILED(r))
 		{
+			m_bufferIndexQueue.pop();
 			AVSLOG(Error) << "EncoderNV: Failed to encode frame";
 			result = Result::EncoderBackend_EncodeFailed;
+		}
+
+		if (m_params.useAsyncEncoding)
+		{
+			m_bufferIndex = (m_bufferIndex + 1) % m_numBuffers;
 		}
 
 		return result;
@@ -866,15 +904,14 @@ namespace avs
 		CUDA::ContextGuard ctx(m_context);
 
 		assert(m_registeredSurface.surface);
-		assert(!m_gResourceSupport || m_registeredSurface.resource);
-		assert(m_inputBuffer.devicePtr);
+		assert(!m_gResourceSupport || m_registeredSurface.cuResource);
 
 		float gridDimDivisor = 1.0f;
 		CUfunction ppKernel = nullptr;
 
 		const SurfaceFormat surfaceFormat = m_registeredSurface.surface->getFormat();
 		int width_mult = 1;
-		switch (m_inputBuffer.format)
+		switch (m_inputData.format)
 		{
 		case NV_ENC_BUFFER_FORMAT_NV12:
 			gridDimDivisor = 2.0f;
@@ -920,12 +957,12 @@ namespace avs
 		CUarray surfaceBaseMipLevel = nullptr;
 		if (m_gResourceSupport)
 		{
-			if (CUFAILED(cuGraphicsMapResources(1, &m_registeredSurface.resource, 0)))
+			if (CUFAILED(cuGraphicsMapResources(1, &m_registeredSurface.cuResource, 0)))
 			{
 				AVSLOG(Warning) << "EncoderNV: Failed to map video frame";
 				return Result::EncoderBackend_EncodeFailed;
 			}
-			cuGraphicsSubResourceGetMappedArray(&surfaceBaseMipLevel, m_registeredSurface.resource, 0, 0);
+			cuGraphicsSubResourceGetMappedArray(&surfaceBaseMipLevel, m_registeredSurface.cuResource, 0, 0);
 		}
 		else
 		{
@@ -955,11 +992,15 @@ namespace avs
 		unsigned int frameWidth = m_registeredSurface.surface->getWidth();
 		unsigned int frameHeight = m_registeredSurface.surface->getHeight();
 
+		auto& bd = m_bufferData[m_bufferIndex];
+
+		assert(bd.inputBuffer.devicePtr);
+
 		void* ppKernelParams[] = {
-			&m_inputBuffer.devicePtr,
+			&bd.inputBuffer.devicePtr,
 			&frameWidth,
 			&frameHeight,
-			&m_inputBuffer.pitch,
+			&m_inputData.pitch,
 			&m_params.depthRemapNear,
 			&m_params.depthRemapFar,
 		};
@@ -977,7 +1018,7 @@ namespace avs
 
 		if (m_gResourceSupport)
 		{
-			cuGraphicsUnmapResources(1, &m_registeredSurface.resource, 0);
+			cuGraphicsUnmapResources(1, &m_registeredSurface.cuResource, 0);
 		}
 
 		return result;
@@ -987,18 +1028,23 @@ namespace avs
 	{
 		if (!m_encoder)
 		{
+			m_bufferIndexQueue.pop();
 			AVSLOG(Error) << "EncoderNV: Encoder not initialized";
 			return Result::EncoderBackend_NotInitialized;
 		}
 
-		assert(m_outputBuffer.ptr);
+		int bufferIndex = m_bufferIndexQueue.front();
+		auto& bd = m_bufferData[bufferIndex];
+
+		assert(bd.outputBuffer.ptr);
 
 		NV_ENC_LOCK_BITSTREAM params = {};
 		params.version = NV_ENC_LOCK_BITSTREAM_VER;
-		params.outputBitstream = m_outputBuffer.ptr;
+		params.outputBitstream = bd.outputBuffer.ptr;
 		params.doNotWait = false;
 		if (NVFAILED(g_api.nvEncLockBitstream(m_encoder, &params)))
 		{
+			m_bufferIndexQueue.pop();
 			AVSLOG(Error) << "EncoderNV: Failed to lock output bitstream buffer";
 			return Result::EncoderBackend_MapFailed;
 		}
@@ -1011,21 +1057,21 @@ namespace avs
 
 	Result EncoderNV::waitForEncodingCompletion()
 	{
-#if defined(PLATFORM_WINDOWS)
-		if (!m_completionEvent)
+		if (m_bufferIndexQueue.empty())
 		{
-			return Result::OK;
+			return Result::IO_Empty;
 		}
-#ifdef DEBUG
-		WaitForSingleObject(m_completionEvent, INFINITE);
-#else
-		// wait for 20 seconds which is infinity in terms of gpu time
-		if (WaitForSingleObject(m_completionEvent, 20000) == WAIT_FAILED)
+
+		int bufferIndex = m_bufferIndexQueue.front();
+		const auto& bd = m_bufferData[bufferIndex];
+
+		// wait for 1 second which is a lot in terms of gpu time.
+		if (WaitForSingleObject(bd.completionEvent, 1000) == WAIT_FAILED)
 		{
+			m_bufferIndexQueue.pop();
 			return Result::EncoderBackend_EncodeFailed;
 		}
-#endif
-#endif
+
 		return Result::OK;
 	}
 
@@ -1033,22 +1079,30 @@ namespace avs
 	{
 		if (!m_encoder)
 		{
+			m_bufferIndexQueue.pop();
 			AVSLOG(Error) << "EncoderNV: Encoder not initialized";
 			return Result::EncoderBackend_NotInitialized;
 		}
 
-		assert(m_outputBuffer.ptr);
-		if (NVFAILED(g_api.nvEncUnlockBitstream(m_encoder, m_outputBuffer.ptr)))
+		int bufferIndex = m_bufferIndexQueue.front();
+		auto& bd = m_bufferData[bufferIndex];
+
+		assert(bd.outputBuffer.ptr);
+		if (NVFAILED(g_api.nvEncUnlockBitstream(m_encoder, bd.outputBuffer.ptr)))
 		{
+			m_bufferIndexQueue.pop();
 			AVSLOG(Error) << "EncoderNV: Failed to unlock output bitstream buffer";
 			return Result::EncoderBackend_UnmapFailed;
 		}
+
+		m_bufferIndexQueue.pop();
+
 		return Result::OK;
 	}
 
 	SurfaceFormat EncoderNV::getInputFormat() const
 	{
-		switch (m_inputBuffer.format)
+		switch (m_inputData.format)
 		{
 		case NV_ENC_BUFFER_FORMAT_ABGR:
 			return SurfaceFormat::ABGR;

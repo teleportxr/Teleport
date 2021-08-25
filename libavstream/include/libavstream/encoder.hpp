@@ -101,16 +101,7 @@ public:
 	 *  - Result::Encoder_IncompleteFrame if encoded bitstream was only partially written to output node.
 	 *  - Any error result returned by EncoderBackendInterface::mapOutputBuffer().
 	 */
-	Result writeOutput(const uint8_t* tagDataBuffer, size_t tagDataBufferSize);
-
-	/*!
-	 * Store tag data for asynchronous thread.
-	 * \param tag data buffer
-	 * \param tag data buffer size
-	 * \return
-	 *  - Result::OK on success.
-	 */
-	Result writeTagData(const uint8_t* data, size_t dataSize);
+	Result writeOutput();
 
 	/*!
 	 * Unregister the encoder's surface texture. 

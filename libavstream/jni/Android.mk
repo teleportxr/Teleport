@@ -55,6 +55,7 @@ LOCAL_SRC_FILES  := 	../src/context.cpp \
                         ../src/audio/audiotarget.cpp \
                         ../src/common_maths.cpp \
                         ../src/timer.cpp \
+                        ../src/tagdatadecoder.cpp \
 
 LOCAL_CFLAGS += -DASIO_STANDALONE -DSRT_NO_DEPRECATED
 LOCAL_CPPFLAGS += -Wc++17-extensions

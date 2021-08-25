@@ -29,14 +29,15 @@ namespace SCServer
 		VideoEncodePipeline() = default;
 		virtual ~VideoEncodePipeline();
 
-		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* output);
+		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* videoOutput, avs::IOInterface* tagDataOutput);
 		Result reconfigure(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams);
-		Result process(const uint8_t* extraData, size_t extraDataSize, bool forceIDR = false);
+		Result process(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);
 		Result release();
 
 	private:
-		std::unique_ptr<avs::Pipeline> pipeline;
-		std::unique_ptr<avs::Surface> inputSurface;
-		std::unique_ptr<avs::Encoder> encoder;
+		std::unique_ptr<avs::Pipeline> mPipeline;
+		std::unique_ptr<avs::Surface> mInputSurface;
+		std::unique_ptr<avs::Encoder> mEncoder;
+		avs::IOInterface* mTagDataOutput = nullptr;
 	};
 }

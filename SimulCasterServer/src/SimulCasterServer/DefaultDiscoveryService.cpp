@@ -29,7 +29,11 @@ bool DefaultDiscoveryService::initialize(uint16_t discovPort, uint16_t servPort,
 		TELEPORT_CERR <<"Service port is not set.\n";
 		return false;
 	}
-
+	if(discoverySocket!=0)
+	{
+		TELEPORT_CERR << "Discovery socket is already set.\n";
+		return false;
+	}
 	discoverySocket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);
 	if (discoverySocket <= 0)
 	{

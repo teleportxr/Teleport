@@ -339,7 +339,7 @@ namespace SCServer
 		sendCommand(command);
 	}
 
-	void ClientMessaging::updateNodeAnimation(avs::NodeUpdateAnimation update)
+	void ClientMessaging::updateNodeAnimation(avs::ApplyAnimation update)
 	{
 		avs::UpdateNodeAnimationCommand command(update);
 		sendCommand(command);
@@ -347,7 +347,7 @@ namespace SCServer
 
 	void ClientMessaging::updateNodeAnimationControl(avs::NodeUpdateAnimationControl update)
 	{
-		avs::UpdateNodeAnimationControlCommand command(update);
+		avs::SetAnimationControlCommand command(update);
 		sendCommand(command);
 	}
 	
@@ -492,7 +492,7 @@ namespace SCServer
 			};
 
 			casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));
-			casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->DepthQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
+			casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->TagDataQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
 		}
 
 		addNetworkPipelineToAsyncProcessing();

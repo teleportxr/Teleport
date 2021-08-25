@@ -107,7 +107,22 @@ namespace scr
 #endif
 	}
 
-	void AnimationComponent::startAnimation(AnimationLookup_t::iterator animationIterator, uint64_t startTimestamp)
+	const AnimationStateMap& AnimationComponent::GetAnimationStates() const
+	{
+		return animationStates;
+	}
+
+	const AnimationState& AnimationComponent::GetCurrentAnimationState() const
+	{
+		return currentAnimationState->second;
+	}
+
+	float AnimationComponent::GetCurrentAnimationTime() const
+	{
+		return currentAnimationTime;
+	}
+
+	void AnimationComponent::startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestamp)
 	{
 		currentAnimationState = animationIterator;
 		currentAnimationTime = static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestamp() - startTimestamp);

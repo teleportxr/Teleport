@@ -50,25 +50,31 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	m_Buffer.clear();
 	m_Buffer.resize(m_BufferSize);
  	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
-
+	size_t bufferSizeK=(m_BufferSize+1023)/1024;
 	switch(type)
 	{
 	case GeometryPayloadType::Mesh:
+		SCR_COUT << "GeometryPayloadType::Mesh: " << bufferSizeK << std::endl;
 		return decodeMesh(target);
 	case GeometryPayloadType::Material:
+		SCR_COUT << "GeometryPayloadType::Material: " << bufferSizeK << std::endl;
 		return decodeMaterial(target);
 	case GeometryPayloadType::MaterialInstance:
 		return decodeMaterialInstance(target);
 	case GeometryPayloadType::Texture:
+		SCR_COUT << "GeometryPayloadType::Texture: " << bufferSizeK << std::endl;
 		return decodeTexture(target);
 	case GeometryPayloadType::Animation:
+		SCR_COUT << "GeometryPayloadType::Animation: " << bufferSizeK << std::endl;
 		return decodeAnimation(target);
 	case GeometryPayloadType::Node:
+		SCR_COUT << "GeometryPayloadType::Node: " << bufferSizeK << std::endl;
 		return decodeNode(target);
 	case GeometryPayloadType::Skin:
+		SCR_COUT << "GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
 		return decodeSkin(target);
 	default:
-	return avs::Result::GeometryDecoder_InvalidPayload;
+		return avs::Result::GeometryDecoder_InvalidPayload;
 	};
 }
 
@@ -183,10 +189,10 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 			auto &buf=m_DecompressedBuffers[m_DecompressedBufferIndex++];
 			buf.resize(buffer.byteLength);
 			buffer.data = buf.data();
-			//memcpy(buffer.data, dracoAttribute->GetAddress(draco::AttributeValueIndex(0)), buffer.byteLength);
+		
 
 			uint8_t * buf_ptr=buffer.data;
-			std::array<float, 3> value;
+			std::array<float, 4> value;
 			for (draco::AttributeValueIndex i(0); i < static_cast<uint32_t>(dracoAttribute->size()); ++i)
 			{
 				if (!dracoAttribute->ConvertValue(i, dracoAttribute->num_components(), &value[0]))
@@ -245,10 +251,10 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 		avs::PrimitiveMode primitiveMode = avs::PrimitiveMode::TRIANGLES;
 		std::vector<avs::Attribute> attributes;
 		attributes.reserve(attributeCount);
-		for (int32_t k = 0; k < attributeCount; k++)
+		for (int32_t k = 0; k < (int32_t)attributeCount; k++)
 		{
 			auto *dracoAttribute= dracoMesh.attribute((int32_t)k);
-			auto &a= subMesh.attributeSemantics.find(k);
+			const auto &a= subMesh.attributeSemantics.find(k);
 			if(a== subMesh.attributeSemantics.end())
 				continue;
 			avs::AttributeSemantic semantic = a->second;

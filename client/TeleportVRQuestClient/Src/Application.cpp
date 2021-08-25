@@ -623,14 +623,14 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 		teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
-		std::vector<avs::NetworkSourceStream> streams = {{20}};
+		std::vector<avs::NetworkSourceStream> streams = {{20}, {40}};
 		if (AudioStream)
 		{
-			streams.push_back({40});
+			streams.push_back({60});
 		}
 		if (GeoStream)
 		{
-			streams.push_back({60});
+			streams.push_back({80});
 		}
 
 		avs::NetworkSourceParams sourceParams;
@@ -667,11 +667,10 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 
 		size_t stream_width = videoConfig.video_width;
 		size_t stream_height = videoConfig.video_height;
-		// test
-		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, &clientRenderer,
-						   std::placeholders::_1, std::placeholders::_2);
+
+		// Video
 		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height,
-											   decoderParams, 20, f))
+											   decoderParams, 20))
 		{
 			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
 			clientRenderer.mNetworkSource.deconfigure();
@@ -718,10 +717,25 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 		mPipeline.link({&clientRenderer.mDecoder, &mSurface});
 
 
+		// Tag Data
+		{
+			auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, &clientRenderer,
+							   std::placeholders::_1, std::placeholders::_2);
+			if (!clientRenderer.mTagDataDecoder.configure(40, f)) {
+				OVR_WARN("OnVideoStreamChanged: Failed to configure tag data decoder node.");
+				return;
+			}
+			clientRenderer.mTagDataQueue.configure(200, 16, "TagDataQueue");
+
+			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mTagDataQueue);
+			mPipeline.link({&clientRenderer.mTagDataQueue, &clientRenderer.mTagDataDecoder});
+		}
+
+
 		// Audio
 		if (AudioStream)
 		{
-			avsAudioDecoder.configure(40);
+			avsAudioDecoder.configure(60);
 			sca::AudioParams audioParams;
 			audioParams.codec = sca::AudioCodec::PCM;
 			audioParams.numChannels = 2;
@@ -768,7 +782,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 
 		if (GeoStream)
 		{
-			avsGeometryDecoder.configure(60, &geometryDecoder);
+			avsGeometryDecoder.configure(80, &geometryDecoder);
 			avsGeometryTarget.configure(&resourceCreator);
 			clientRenderer.mGeometryQueue.configure(2500000, 100, "GeometryQueue");
 
@@ -867,7 +881,7 @@ void Application::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
 }
 
-void Application::UpdateNodeAnimation(const avs::NodeUpdateAnimation& animationUpdate)
+void Application::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
 {
 	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
 }

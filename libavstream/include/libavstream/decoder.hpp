@@ -91,7 +91,7 @@ namespace avs
 		 *  - Result::Decoder_NoSuitableBackendFound if there's no usable decoder backend on the system.
 		 *  - Any error result returned by DecoderBackendInterface::initialize().
 		 */
-		Result configure(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params, uint8_t streamId, std::function<void(const uint8_t* data, size_t dataSize)> extraDataCallback);
+		Result configure(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params, uint8_t streamId);
 
 
 		/*!
@@ -194,7 +194,6 @@ namespace avs
 		uint64_t m_currentFrameNumber = 0;
 		std::vector<uint8_t> m_frameBuffer;
 		NetworkFrameInfo m_frame;
-		size_t m_extraDataSize = 0;
 		size_t m_firstVCLOffset = 0;
 		uint8_t m_streamId = 0;
 		size_t m_interimFramesProcessed = 0;
@@ -206,7 +205,6 @@ namespace avs
 		bool m_firstIDRReceived = false;
 
 		std::unique_ptr<class StreamParserInterface> m_vid_parser;
-		std::function<void(const uint8_t * data, size_t dataSize)> m_extraDataCallback;
 
 		Result processPayload(const uint8_t* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload);
 		Result DisplayFrame();

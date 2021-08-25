@@ -225,6 +225,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_LBUTTONUP:
 		clientRenderer->OnMouseButtonReleased(true, false, false, 0);
 		break;
+	case WM_RBUTTONDOWN:
+		clientRenderer->OnMouseButtonPressed(false, true,  false, 0);
+		break;
+	case WM_RBUTTONUP:
+		clientRenderer->OnMouseButtonReleased(false, true,  false, 0);
+		break;
+	case WM_MBUTTONDOWN:
+		clientRenderer->OnMouseButtonPressed(false, false, true, 0);
+		break;
+	case WM_MBUTTONUP:
+		clientRenderer->OnMouseButtonReleased(false, false, true, 0);
+		break;
 	case WM_MOUSEWHEEL:
 		{
 			int xPos = GET_X_LPARAM(lParam); 

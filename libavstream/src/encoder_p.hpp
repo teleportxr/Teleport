@@ -23,9 +23,6 @@ namespace avs
 		std::unique_ptr<EncoderBackendInterface> m_backend;
 		EncoderBackend m_selectedBackendType;
 		EncoderParams m_params = {};
-		avs::Queue m_tagDataQueue;
-		std::vector<uint8_t> m_videoData;
-		std::vector<uint8_t> m_tagData;
 		std::atomic_bool m_encodingThreadActive;
 		std::thread m_encodingThread;
 		bool m_configured = false;
@@ -33,7 +30,7 @@ namespace avs
 		bool m_outputPending = false;
 		bool m_forceIDR = false;
 
-		Result writeOutput(IOInterface* outputNode, const void* mappedBuffer, size_t mappedBufferSize, const uint8_t* tagDataBuffer, size_t tagDataBufferSize);
+		Result writeOutput(IOInterface* outputNode, const void* mappedBuffer, size_t mappedBufferSize);
 		Result ConfigureTagDataQueue();
 	};
 
