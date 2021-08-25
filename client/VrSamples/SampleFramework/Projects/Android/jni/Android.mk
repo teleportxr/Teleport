@@ -29,6 +29,7 @@ LOCAL_SRC_FILES := \
   ../../../Src/Platform/Android/Android.cpp \
   ../../../Src/Render/Framebuffer.c \
   ../../../Src/SurfaceRenderApp.cpp \
+  ../../../Src/vulkan_wrapper.cpp \
 
 # start building based on everything since CLEAR_VARS
 include $(BUILD_STATIC_LIBRARY)

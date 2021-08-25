@@ -61,6 +61,7 @@ android {
 			java.srcDirs = ['../../java']
 		}
 	}
+    ndkVersion '21.3.6528147'
 }
 
 task( "cleanWorkAround" ) {

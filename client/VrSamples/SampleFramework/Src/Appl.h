@@ -35,6 +35,11 @@ Copyright:  Copyright (c) Facebook Technologies, LLC and its affiliates. All rig
 #include "Render/Framebuffer.h"
 #include "Render/SurfaceRender.h"
 
+/*#include "VrApi_Vulkan.h"
+#define VK_USE_PLATFORM_ANDROID_KHR
+#include "vulkan_wrapper.h"
+#include <jni.h>*/
+
 inline xrJava JavaContextConvert(const ovrJava& j) {
     xrJava x;
     x.Vm = j.Vm;
