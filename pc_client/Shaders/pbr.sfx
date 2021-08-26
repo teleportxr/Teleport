@@ -129,6 +129,7 @@ struct vertexOutput
     vec3 wpos			: TEXCOORD4;
     vec3 view			: TEXCOORD5;
     vec4 clip_pos		: TEXCOORD6;
+	vec4 debug_colour	: TEXCOORD7;
 };
 
 shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
@@ -148,6 +149,7 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 	OUT.tangent.xyz =mul(vec4(vec3(0, 0, 1.0), 0.0), world).xyz;
 #endif
 	OUT.hPosition	=OUT.clip_pos;
+	OUT.debug_colour = vec4(0, 0, 0, 0);
     return OUT;
 }
 
@@ -175,6 +177,7 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	//OUT.tangent = IN.tangent;
 #endif
 	OUT.hPosition	=OUT.clip_pos;
+	OUT.debug_colour = vec4(0, 0, 0, 0);
     return OUT;
 }
 
@@ -203,6 +206,7 @@ shader vertexOutput VS_Animation(vertexInput IN)
 	OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world);
 
 	OUT.hPosition = OUT.clip_pos;
+	OUT.debug_colour = IN.joints;
 	return OUT;
 }
 
@@ -583,6 +587,11 @@ shader vec4 PS_Transparent(vertexOutput IN) : SV_TARGET
 	return c;
 }
 
+shader vec4 PS_DebugAnim(vertexOutput IN):SV_TARGET
+{
+	return IN.debug_colour;
+}
+
 VertexShader vs_solid = CompileShader(vs_4_0, VS_Solid());
 VertexShader vs_anim = CompileShader(vs_4_0, VS_Animation());
 PixelShader ps_solid_lightmap = CompileShader(ps_4_0, PS_Solid_Lightmap());
@@ -592,7 +601,7 @@ PixelShader ps_depth = CompileShader(ps_5_1, PS_Depth());
 //Debug renders.
 PixelShader ps_solid_albedo_only = CompileShader(ps_4_0, PS_Solid_AlbedoOnly()); //Albedo only view
 PixelShader ps_debug_normal_unswizzled = CompileShader(ps_4_0, PS_DebugNormal_Unswizzled()); //Unswizzled Normal view
-PixelShader ps_debug_normal_unreal = CompileShader(ps_4_0, PS_DebugNormal_Unreal()); //Unreal-basis normal view
+PixelShader ps_debug_anim = CompileShader(ps_4_0, PS_DebugAnim()); //Unreal-basis normal view
 PixelShader ps_debug_normal_unity = CompileShader(ps_4_0, PS_DebugNormal_Unity()); //Unity-basis normal view
 PixelShader ps_debug_normal_vertexnormals = CompileShader(ps_4_0, PS_DebugNormal_VertexNormals()); //Vertex normals
 
@@ -643,14 +652,23 @@ technique solid
         SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_unswizzled);
     }
-	pass normal_unreal
+	pass debug_anim
+	{
+		SetRasterizerState(RenderFrontfaceCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_debug_anim);
+	}
+	pass anim_debug_anim
 	{
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
+		SetVertexShader(vs_anim);
         SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unreal);
+		SetPixelShader(ps_debug_anim);
     }
 	pass normal_unity
 	{
@@ -707,14 +725,14 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_unswizzled);
 	}
-	pass anim_normal_unreal
+	pass anim_debug_anim
 	{
 		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
 		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unreal);
+		SetPixelShader(ps_debug_anim);
 	}
 	pass anim_normal_unity
 	{

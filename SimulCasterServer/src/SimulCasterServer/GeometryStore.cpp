@@ -492,7 +492,7 @@ draco::GeometryAttribute::Type ToDracoGeometryAttribute(avs::AttributeSemantic a
 	};
 }
 
-static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMesh)
+static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMesh)
 {
 	compressedMesh.meshCompressionType = avs::MeshCompressionType::NONE;
 	compressedMesh.name=sourceMesh.name;
@@ -546,7 +546,7 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 			 if(attrib.semantic!= attributeSemantics[attrib.accessor])
 			{
 				TELEPORT_CERR<<"Different attributes for submeshes, can't compress this: "<<sourceMesh.name.c_str()<<std::endl;
-				return;
+				return false;
 			}
 		}
 		dracoMesh.set_num_points((uint32_t)numVertices);
@@ -563,22 +563,8 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 			avs::BufferView& bufferView = sourceMesh.bufferViews[accessor.bufferView];
 			avs::GeometryBuffer& geometryBuffer = sourceMesh.buffers[bufferView.buffer];
 			const uint8_t* data = geometryBuffer.data + bufferView.byteOffset;
-			int8_t num_components = 0;
-			switch (accessor.type)
-			{
-			case avs::Accessor::DataType::SCALAR:
-				num_components = 1;
-				break;
-			case avs::Accessor::DataType::VEC2:
-				num_components = 2;
-				break;
-			case avs::Accessor::DataType::VEC3:
-				num_components = 3;
-				break;
-			case avs::Accessor::DataType::VEC4:
-				num_components = 4;
-				break;
-			};
+			// Naively convert enum to integer.
+			int8_t num_components = (int8_t)accessor.type;	
 			int att_id = -1;
 			draco::PointAttribute* attr = nullptr;
 			draco::GeometryAttribute dracoGeometryAttribute;
@@ -586,7 +572,6 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 			dracoGeometryAttribute.Init(dracoGeometryAttributeType, nullptr, num_components, dracoDataType, semantic == avs::AttributeSemantic::NORMAL, stride, 0);
 			att_id = dracoMesh.AddAttribute(dracoGeometryAttribute, true, (uint32_t)geometryBuffer.byteLength / stride);
 			subMesh.attributeSemantics[att_id]=semantic;
-		
 			attr = dracoMesh.attribute(att_id);
 			for (size_t j = 0; j < accessor.count; j++)
 			{
@@ -632,7 +617,10 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		//dracoMesh.DeduplicatePointIds();
 		draco::Status status= dracoEncoder.EncodeMeshToBuffer(dracoMesh,&dracoEncoderBuffer);
 		if(!status.ok())
-			break;
+		{
+			TELEPORT_INTERNAL_LOG_UNSAFE("dracoEncoder failed\n");
+			return false;
+		}
 		subMesh.buffer.resize(dracoEncoderBuffer.size());
 		memcpy(subMesh.buffer.data(), dracoEncoderBuffer.data(), subMesh.buffer.size());
 		compressedSize+= subMesh.buffer.size();
@@ -653,11 +641,65 @@ static void CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 	draco::Mesh dracoMesh2;
 	dracoDecoder.DecodeBufferToGeometry(&dracoDecoderBuffer,&dracoMesh2);*/
 	
-	return;
+	return true;
 	
 }
 
-static void VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::Mesh& sourceMesh)
+static bool FloatCompare(float a,float b)
+{
+	float diff=(a-b);
+	float m=std::max(b,1.0f);
+	float dif_rel=diff/m;
+	if(dif_rel>0.1f)
+		return false;
+	return true;
+}
+
+static bool VecCompare(avs::vec2 a, avs::vec2 b)
+{
+	float A=sqrt(a.x*a.x+a.y*a.y);
+	float B=sqrt(b.x*b.x+b.y*b.y);
+	float m = std::max(B, 1.0f);
+	avs::vec2 diff = a - b;
+	float dif_rel = abs(diff.x+diff.y)/ m;
+	if (dif_rel > 0.1f)
+		return false;
+	return true;
+}
+
+static bool VecCompare(avs::vec3 a, avs::vec3 b)
+{
+	float B = sqrt(b.x * b.x + b.y * b.y + b.z * b.z);
+	float m = std::max(B, 1.0f);
+	avs::vec3 diff = a - b;
+	float dif_rel = abs(diff.x + diff.y + diff.z) / m;
+	if (dif_rel > 0.1f)
+		return false;
+	return true;
+}
+
+static bool VecCompare(avs::vec4 a, avs::vec4 b)
+{
+	float B = sqrt(b.x * b.x + b.y * b.y + b.z * b.z + b.w * b.w);
+	float m = std::max(B, 1.0f);
+	avs::vec4 diff = a - b;
+	float dif_rel = abs(diff.x + diff.y + diff.z + diff.w) / m;
+	if (dif_rel > 0.1f)
+		return false;
+	return true;
+}
+
+template<int n> bool IntCompare(const int*a,const int*b)
+{
+	for(size_t i=0;i<n;i++)
+	{
+		if(a[i]!=b[i])
+			return false;
+	}
+	return true;
+}
+
+static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::Mesh& sourceMesh)
 {
 	for(int i=0;i<compressedMesh.subMeshes.size();i++)
 	{
@@ -665,11 +707,11 @@ static void VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 		draco::Decoder dracoDecoder;
 		draco::DecoderBuffer dracoDecoderBuffer;
 		dracoDecoderBuffer.Init((const char*)subMesh.buffer.data(), subMesh.buffer.size());
-
+		const auto &primitiveArray=sourceMesh.primitiveArrays[i];
 		auto statusor = dracoDecoder.DecodeMeshFromBuffer(&dracoDecoderBuffer);
 		auto &dm=statusor.value();
 		if(!dm.get())
-			return;
+			return false;
 		// are there the same number of members for each attrib?
 		size_t num_elements=0;
 		for(int a=0;a<dm->num_attributes();a++)
@@ -684,13 +726,109 @@ static void VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 				TELEPORT_INTERNAL_LOG_UNSAFE("Attr size mismatch %ull != %ull",attr->size(), num_elements);
 			}
 			const uint8_t *dracoDatabuffer=attr->GetAddress(draco::AttributeValueIndex(0));
-			const avs::vec3 *v=(const avs::vec3 *)dracoDatabuffer;
-			for(int i=0;i<attr->size();i++)
+			const auto &attribute=primitiveArray.attributes[a];
+			if(attribute.semantic!=subMesh.attributeSemantics[a])
 			{
-				const auto pos = attr->GetValue<float,3>(draco::AttributeValueIndex(i));
-				//TELEPORT_INTERNAL_LOG_UNSAFE("%3.3f %3.3f %3.3f", pos[0], pos[1], pos[2]);
+				TELEPORT_INTERNAL_LOG_UNSAFE("Attr semantic mismatch");
+				continue;
+			}
+			const avs::Accessor  &attr_accessor=sourceMesh.accessors.find(attribute.accessor).operator*().second;
+			const avs::BufferView& attr_bufferView=(*(sourceMesh.bufferViews.find(attr_accessor.bufferView))).second;
+			const avs::GeometryBuffer &attr_buffer=(*(sourceMesh.buffers.find(attr_bufferView.buffer))).second;
+			const uint8_t *src_data=attr_buffer.data+attr_bufferView.byteOffset+attr_accessor.byteOffset; 
+			for (int i = 0; i < attr->size(); i++)
+			{
+				if(attr_accessor.componentType==avs::Accessor::ComponentType::INT)
+				{
+					size_t sz=(size_t)attr_accessor.type;
+					const int *compare=nullptr;
+					switch(sz)
+					{
+					case 1:
+						compare = ((const int *)&(attr->GetValue<int, 1>(draco::AttributeValueIndex(i))));
+						if (!IntCompare<1>(compare, (const int*)src_data))
+						{
+							TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+							break;
+						}
+					case 2:
+						compare = ((const int*)&(attr->GetValue<int, 2>(draco::AttributeValueIndex(i))));
+						if (!IntCompare<1>(compare, (const int*)src_data))
+						{
+							TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+							break;
+						}
+					case 3:
+						compare = ((const int*)&(attr->GetValue<int, 3>(draco::AttributeValueIndex(i))));
+						if (!IntCompare<1>(compare, (const int*)src_data))
+						{
+							TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+							break;
+						}
+					case 4:
+						compare = ((const int*)&(attr->GetValue<int, 4>(draco::AttributeValueIndex(i))));
+						if (!IntCompare<1>(compare, (const int*)src_data))
+						{
+							TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+							break;
+						}
+					}
+					src_data+=sz*sizeof(int);
+				}
+				else if (attr_accessor.componentType == avs::Accessor::ComponentType::FLOAT)
+				{
+					switch(attr_accessor.type)
+					{
+						case avs::Accessor::DataType::SCALAR:
+						{
+							float compare = attr->GetValue<float,1>(draco::AttributeValueIndex(i))[0];
+							if(!FloatCompare(compare,*((const float*)src_data)))
+							{
+								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+								break;
+							}
+						}
+						break;
+						case avs::Accessor::DataType::VEC2:
+						{
+							auto c= attr->GetValue<float, 2>(draco::AttributeValueIndex(i));
+							avs::vec2 compare = *((const avs::vec2*)&c);
+							if (!VecCompare(compare,*((const avs::vec2*)src_data)))
+							{
+								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+								break;
+							}
+						}
+						break;
+						case avs::Accessor::DataType::VEC3:
+						{
+							auto c = attr->GetValue<float, 3>(draco::AttributeValueIndex(i));
+							avs::vec3 compare = *((const avs::vec3*)&c);
+							if (!VecCompare(compare, *((const avs::vec3*)src_data)))
+							{
+								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+								break;
+							}
+						}
+						break;
+						case avs::Accessor::DataType::VEC4:
+						{
+							auto c = attr->GetValue<float, 4>(draco::AttributeValueIndex(i));
+							avs::vec4 compare = *((const avs::vec4*)&c);
+							if (!VecCompare(compare, *((const avs::vec4*)src_data)))
+							{
+								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+								break;
+							}
+						}
+						break;
+						default:
+							break;
+					}
+				}
 			}
 		}
+		return true;
 		draco::Mesh &dracoMesh=*dm;
 		uint32_t max_index = 0;
 		uint32_t max_value = 0;
@@ -699,7 +837,7 @@ static void VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 		for(uint32_t idx=0;idx<dracoMesh.num_points();idx++)
 		{
 			max_index = std::max(max_index, idx);
-			TELEPORT_INTERNAL_LOG_UNSAFE("Point %u:",idx);
+			//TELEPORT_INTERNAL_LOG_UNSAFE("Point %u:",idx);
 			uint32_t index = unset;
 			bool mismatch=false;
 			for (int a = 0; a < dm->num_attributes(); a++)
@@ -708,9 +846,9 @@ static void VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 				uint32_t val = attr->mapped_index(draco::PointIndex(idx)).value();
 				if(a)
 				{
-					TELEPORT_INTERNAL_LOG_UNSAFE(",");
+				//	TELEPORT_INTERNAL_LOG_UNSAFE(",");
 				}
-				TELEPORT_INTERNAL_LOG_UNSAFE(" %u", val);
+			//	TELEPORT_INTERNAL_LOG_UNSAFE(" %u", val);
 				max_value = std::max(max_value, val);
 				if (index == unset)
 					index = val;
@@ -726,6 +864,7 @@ static void VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 			TELEPORT_INTERNAL_LOG_UNSAFE("\n");
 		}
 	}
+	return true;
 }
 
 void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)

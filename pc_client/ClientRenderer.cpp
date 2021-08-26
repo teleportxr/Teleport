@@ -267,8 +267,8 @@ void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 		case ShaderMode::NORMAL_UNSWIZZLED:
 			overridePassName = "normal_unswizzled";
 			break;
-		case ShaderMode::NORMAL_UNREAL:
-			overridePassName = "normal_unreal";
+		case ShaderMode::DEBUG_ANIM:
+			overridePassName = "debug_anim";
 			break;
 		case ShaderMode::NORMAL_UNITY:
 			overridePassName = "normal_unity";
@@ -1744,7 +1744,7 @@ void ClientRenderer::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& 
 	renderPlatform->LinePrint(deviceContext, "NUM 0: PBR");
 	renderPlatform->LinePrint(deviceContext, "NUM 1: Albedo");
 	renderPlatform->LinePrint(deviceContext, "NUM 4: Unswizzled Normals");
-	renderPlatform->LinePrint(deviceContext, "NUM 5: Unreal Normals");
+	renderPlatform->LinePrint(deviceContext, "NUM 5: Debug animation");
 	renderPlatform->LinePrint(deviceContext, "NUM 6: Unity Normals");
 	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
 }
@@ -1814,7 +1814,7 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			ChangePass(ShaderMode::NORMAL_UNSWIZZLED);
 			break;
 		case VK_NUMPAD5: //Display normals swizzled for matching Unreal output.
-			ChangePass(ShaderMode::NORMAL_UNREAL);
+			ChangePass(ShaderMode::DEBUG_ANIM);
 			break;
 		case VK_NUMPAD6: //Display normals swizzled for matching Unity output.
 			ChangePass(ShaderMode::NORMAL_UNITY);

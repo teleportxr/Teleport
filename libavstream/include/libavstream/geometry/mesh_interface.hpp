@@ -185,7 +185,7 @@ struct Animation;
 	{
 		enum class DataType : uint32_t
 		{
-			SCALAR = 0,
+			SCALAR = 1,
 			VEC2,
 			VEC3,
 			VEC4

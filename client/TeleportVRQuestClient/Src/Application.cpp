@@ -481,7 +481,6 @@ void Application::PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,
 			1.0f,
 			*((OVR::Vector4f*)&colour),
 			txt2);
-
 }
 
 void Application::DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRendererOutput &out)

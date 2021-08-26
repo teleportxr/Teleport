@@ -354,7 +354,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 				avs::uid bufferView = Next8B;
 				size_t byteOffset = Next8B;
 
-				if (isIndexAccessor) //For Indices Only
+				if (isIndexAccessor) // For Indices Only
 				{
 					dg.accessors[acc_uid] = { type, componentType, count, bufferView, byteOffset };
 					isIndexAccessor = false;

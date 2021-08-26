@@ -115,7 +115,7 @@ layout(std140, binding = 2) uniform u_MaterialData //Layout conformant to GLSL s
     float u_EmissiveTexCoordIndex;
 };
 
-layout(std140, binding = 3) uniform u_BoneData
+layout(std140, binding = 4) uniform u_BoneData
 {
     mat4 u_Bones[64];
 };
@@ -220,7 +220,7 @@ void Animated()
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_lightmap       =UV1*u_LightmapScaleOffset.xy+u_LightmapScaleOffset.zw;
-    v_UV_lightmap.y=1.0-v_UV_lightmap.y;
+    v_UV_lightmap.y     =1.0-v_UV_lightmap.y;
 
     v_Joint		        = a_Joint;
     v_Weights	        = a_Weights;
