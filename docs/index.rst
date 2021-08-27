@@ -7,11 +7,13 @@ Welcome to TeleportVR's documentation!
 ======================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    introduction
    libavstream
+   teleportclient
+   clientrenderer
    unity
 
 

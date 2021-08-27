@@ -18,6 +18,9 @@ namespace avs
 		AudioCodec codec = AudioCodec::Any;
 	};
 
+	/*!
+	 * Audio encoder backend interface.
+	 */
 	class AVSTREAM_API AudioEncoderBackendInterface : public UseInternalAllocator
 	{
 	public:
@@ -29,6 +32,9 @@ namespace avs
 		virtual Result shutdown() = 0;
 	};
 
+	/*!
+	 * Audio target backend interface.
+	 */
 	class AVSTREAM_API AudioTargetBackendInterface : public UseInternalAllocator
 	{
 	public:
@@ -37,6 +43,10 @@ namespace avs
 		virtual Result deconfigure() = 0;
 	};
 
+
+	/*!
+	 * Audio parser interface.
+	 */
 	class AudioParserInterface
 	{
 	public:

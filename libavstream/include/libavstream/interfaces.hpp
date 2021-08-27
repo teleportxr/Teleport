@@ -151,18 +151,4 @@ public:
 	virtual AudioTargetBackendInterface* getAudioTargetBackendInterface() const = 0;
 };
 
-///*!
-// * Decoder interface.
-// *
-// * Nodes implementing this interface can pass data to decoder output nodes
-// */
-//class AVSTREAM_API DecoderInterface
-//{
-//public:
-//	virtual ~DecoderInterface() = default;
-//
-//	/*! Get the stream id of the decoder */
-//	virtual uint8_t getStreamId() = 0;
-//};
-
 } // avs

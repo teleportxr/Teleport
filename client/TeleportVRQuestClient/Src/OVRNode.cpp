@@ -273,7 +273,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	geo.primitiveType     = scc::GL_Effect::ToGLTopology(effectPassCreateInfo->topology);
 	geo.vertexCount       = (int) gl_vb->GetVertexCount();
 	geo.indexCount        = (int) gl_ib->GetIndexBufferCreateInfo().indexCount;
-	OVRFW::GlGeometry::IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
+	geo.IndexType = gl_ib->GetIndexBufferCreateInfo().stride == 4 ? GL_UNSIGNED_INT :
 								   gl_ib->GetIndexBufferCreateInfo().stride == 2 ? GL_UNSIGNED_SHORT
 																				 : GL_UNSIGNED_BYTE;
 

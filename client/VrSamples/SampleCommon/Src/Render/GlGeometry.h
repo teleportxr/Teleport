@@ -74,7 +74,7 @@ class GlGeometry {
         return MAX_GEOMETRY_INDICES;
     }
 
-    static unsigned IndexType; // GL_UNSIGNED_SHORT, GL_UNSIGNED_INT, etc.
+    unsigned IndexType= (sizeof(TriangleIndex) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT; // GL_UNSIGNED_SHORT, GL_UNSIGNED_INT, etc.
 
     class TransformScope {
        public:

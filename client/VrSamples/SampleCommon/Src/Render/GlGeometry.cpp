@@ -43,7 +43,7 @@ GlGeometry::TransformScope::~TransformScope() {
     geometryTransfom = previousTransform;
 }
 
-unsigned GlGeometry::IndexType = (sizeof(TriangleIndex) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+//unsigned GlGeometry::IndexType = (sizeof(TriangleIndex) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 
 template <typename _attrib_type_>
 void PackVertexAttribute(

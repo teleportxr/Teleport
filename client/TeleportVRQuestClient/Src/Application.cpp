@@ -541,7 +541,6 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
 		// Append video surface
 		clientRenderer.RenderVideo(*mDeviceContext, out);
-
         clientRenderer.RenderWebcam(out);
 	}
 	else

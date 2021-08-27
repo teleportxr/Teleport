@@ -1030,32 +1030,32 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 		videoUB.invViewProj[1] = ovrMatrix4f_Inverse(&viewProjT1);
 	}
 	// Set data to send to the shader:
+	ovrQuatf X0 = {1.0f, 0.f, 0.f, 0.0f};
+	ovrQuatf headPoseQ = {clientDeviceState->headPose.orientation.x
+			, clientDeviceState->headPose.orientation.y
+			, clientDeviceState->headPose.orientation.z
+			, clientDeviceState->headPose.orientation.w};
+	ovrQuatf headPoseC = {-clientDeviceState->headPose.orientation.x
+			, -clientDeviceState->headPose.orientation.y
+			, -clientDeviceState->headPose.orientation.z
+			, clientDeviceState->headPose.orientation.w};
+	ovrQuatf xDir = QuaternionMultiply(QuaternionMultiply(headPoseQ, X0), headPoseC);
+	float w = eyeSeparation / 2.0f;//.04f; //half separation.
+	avs::vec4 eye = {w * xDir.x, w * xDir.y, w * xDir.z, 0.0f};
+	avs::vec4 left_eye = {-eye.x, -eye.y, -eye.z, 0.0f};
+	videoUB.eyeOffsets[0] = left_eye;        // left eye
+	videoUB.eyeOffsets[1] = eye;    // right eye.
+	videoUB.cameraPosition = clientDeviceState->headPose.position;
+	videoUB.cameraRotation = clientDeviceState->headPose.orientation;
+	videoUB.viewProj=res.FrameMatrices.EyeProjection[0]*res.FrameMatrices.CenterView;
 	if (mRenderTexture->IsValid())
 	{
-		ovrQuatf X0 = {1.0f, 0.f, 0.f, 0.0f};
-		ovrQuatf headPoseQ = {clientDeviceState->headPose.orientation.x
-				, clientDeviceState->headPose.orientation.y
-				, clientDeviceState->headPose.orientation.z
-				, clientDeviceState->headPose.orientation.w};
-		ovrQuatf headPoseC = {-clientDeviceState->headPose.orientation.x
-				, -clientDeviceState->headPose.orientation.y
-				, -clientDeviceState->headPose.orientation.z
-				, clientDeviceState->headPose.orientation.w};
-		ovrQuatf xDir = QuaternionMultiply(QuaternionMultiply(headPoseQ, X0), headPoseC);
-		float w = eyeSeparation / 2.0f;//.04f; //half separation.
-		avs::vec4 eye = {w * xDir.x, w * xDir.y, w * xDir.z, 0.0f};
-		avs::vec4 left_eye = {-eye.x, -eye.y, -eye.z, 0.0f};
-		videoUB.eyeOffsets[0] = left_eye;        // left eye
-		videoUB.eyeOffsets[1] = eye;    // right eye.
-		videoUB.cameraPosition = clientDeviceState->headPose.position;
-		videoUB.cameraRotation = clientDeviceState->headPose.orientation;
-		videoUB.viewProj=res.FrameMatrices.EyeProjection[0]*res.FrameMatrices.CenterView;
 		mVideoSurfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mRenderTexture.get())->GetGlTexture());
-		mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mVideoUB.get())->GetGlBuffer());
-		OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *) globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
-		mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &buf;
-		res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 	}
+	mVideoSurfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mVideoUB.get())->GetGlBuffer());
+	OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *) globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
+	mVideoSurfaceDef.graphicsCommand.UniformData[2].Data = &buf;
+	res.Surfaces.push_back(ovrDrawSurface(&mVideoSurfaceDef));
 	mVideoUB->Submit();
 }
 

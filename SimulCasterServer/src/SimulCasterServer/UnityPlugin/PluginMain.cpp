@@ -1353,10 +1353,8 @@ TELEPORT_EXPORT void Client_UpdateNodeRenderState(avs::uid clientID, avs::NodeRe
 		TELEPORT_CERR << "Failed to update node animation control for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-
 	clientPair->second.clientMessaging.updateNodeRenderState(clientID,update);
 }
-
 
 TELEPORT_EXPORT void Client_SetNodeAnimationSpeed(avs::uid clientID, avs::uid nodeID, avs::uid animationID, float speed)
 {
@@ -1366,7 +1364,6 @@ TELEPORT_EXPORT void Client_SetNodeAnimationSpeed(avs::uid clientID, avs::uid no
 		TELEPORT_CERR << "Failed to set node animation speed for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-
 	clientPair->second.clientMessaging.setNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
