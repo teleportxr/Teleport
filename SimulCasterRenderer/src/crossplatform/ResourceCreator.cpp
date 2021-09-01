@@ -756,6 +756,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	newNode->node->SetLightmapScaleOffset(node.renderState.lightmapScaleOffset);
 	newNode->node->SetMaterialListSize(node.materials.size());
 	newNode->node->SetStatic(node.stationary);
+	newNode->node->SetGlobalIlluminationTextureUid(node.renderState.globalIlluminationUid);
 	for (size_t i = 0; i < node.materials.size(); i++)
 	{
 		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(node.materials[i]);
@@ -1071,6 +1072,77 @@ namespace teleport
 {
 #include "stb_image.h"
 }
+
+bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fileinfo,const std::vector<unsigned char>& data)
+{
+
+	assert(fileinfo.m_total_images == fileinfo.m_image_mipmap_levels.size());
+	assert(fileinfo.m_total_images == dec.get_total_images(&basis_file_data[0], (uint32_t)basis_file_data.size()));
+
+	printf("File info:\n");
+	printf("  Version: %X\n", fileinfo.m_version);
+	printf("  Total header size: %u\n", fileinfo.m_total_header_size);
+	printf("  Total selectors: %u\n", fileinfo.m_total_selectors);
+	printf("  Selector codebook size: %u\n", fileinfo.m_selector_codebook_size);
+	printf("  Total endpoints: %u\n", fileinfo.m_total_endpoints);
+	printf("  Endpoint codebook size: %u\n", fileinfo.m_endpoint_codebook_size);
+	printf("  Tables size: %u\n", fileinfo.m_tables_size);
+	printf("  Slices size: %u\n", fileinfo.m_slices_size);
+	printf("  Texture format: %s\n", (fileinfo.m_tex_format == basist::basis_tex_format::cUASTC4x4) ? "UASTC" : "ETC1S");
+	printf("  Texture type: %s\n", basist::basis_get_texture_type_name(fileinfo.m_tex_type));
+	printf("  us per frame: %u (%f fps)\n", fileinfo.m_us_per_frame, fileinfo.m_us_per_frame ? (1.0f / ((float)fileinfo.m_us_per_frame / 1000000.0f)) : 0.0f);
+	printf("  Total slices: %u\n", (uint32_t)fileinfo.m_slice_info.size());
+	printf("  Total images: %i\n", fileinfo.m_total_images);
+	printf("  Y Flipped: %u, Has alpha slices: %u\n", fileinfo.m_y_flipped, fileinfo.m_has_alpha_slices);
+	printf("  userdata0: 0x%X userdata1: 0x%X\n", fileinfo.m_userdata0, fileinfo.m_userdata1);
+	printf("  Per-image mipmap levels: ");
+	for (uint32_t i = 0; i < fileinfo.m_total_images; i++)
+		printf("%u ", fileinfo.m_image_mipmap_levels[i]);
+	printf("\n");
+
+	uint32_t total_texels = 0;
+
+	printf("\nImage info:\n");
+	for (uint32_t i = 0; i < fileinfo.m_total_images; i++)
+	{
+		basist::basisu_image_info ii;
+		if (!dec.get_image_info(data.data(),(uint32_t)data.size(), ii, i))
+		{
+			printf("get_image_info() failed!\n");
+			return false;
+		}
+
+		printf("Image %u: MipLevels: %u OrigDim: %ux%u, BlockDim: %ux%u, FirstSlice: %u, HasAlpha: %u\n", i, ii.m_total_levels, ii.m_orig_width, ii.m_orig_height,
+			ii.m_num_blocks_x, ii.m_num_blocks_y, ii.m_first_slice_index, (uint32_t)ii.m_alpha_flag);
+
+		total_texels += ii.m_width * ii.m_height;
+	}
+
+	printf("\nSlice info:\n");
+
+	for (uint32_t i = 0; i < fileinfo.m_slice_info.size(); i++)
+	{
+		const basist::basisu_slice_info& sliceinfo = fileinfo.m_slice_info[i];
+		printf("%u: OrigWidthHeight: %ux%u, BlockDim: %ux%u, TotalBlocks: %u, Compressed size: %u, Image: %u, Level: %u, UnpackedCRC16: 0x%X, alpha: %u, iframe: %i\n",
+			i,
+			sliceinfo.m_orig_width, sliceinfo.m_orig_height,
+			sliceinfo.m_num_blocks_x, sliceinfo.m_num_blocks_y,
+			sliceinfo.m_total_blocks,
+			sliceinfo.m_compressed_size,
+			sliceinfo.m_image_index, sliceinfo.m_level_index,
+			sliceinfo.m_unpacked_slice_crc16,
+			(uint32_t)sliceinfo.m_alpha_flag,
+			(uint32_t)sliceinfo.m_iframe_flag);
+	}
+	printf("\n");
+
+
+	const float basis_bits_per_texel = data.size() * 8.0f / total_texels;
+	//const float comp_bits_per_texel = comp_size * 8.0f / total_texels;
+
+	//printf("Original size: %u, bits per texel: %3.3f\nCompressed size (Deflate): %u, bits per texel: %3.3f\n", (uint32_t)basis_file_data.size(), basis_bits_per_texel, (uint32_t)comp_size, comp_bits_per_texel);
+
+}
 void ResourceCreator::BasisThread_TranscodeTextures()
 {
 	while (shouldBeTranscoding)
@@ -1085,7 +1157,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			{
 				int mipWidth=0, mipHeight=0;
 				int num_channels=0;
-				unsigned char *target = teleport::stbi_load_from_memory((const unsigned char*)transcoding.data.data(), transcoding.data.size(), &mipWidth, &mipHeight, &num_channels, 4);
+				unsigned char *target = teleport::stbi_load_from_memory((const unsigned char*)transcoding.data.data(),(int) transcoding.data.size(), &mipWidth, &mipHeight, &num_channels,(int)4);
 				if(num_channels ==4 && mipWidth > 0 && mipHeight > 0)
 				{
 					// this is for 8-bits-per-channel textures:
@@ -1116,7 +1188,13 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			{
 				//We need a new transcoder for every .basis file.
 				basist::basisu_transcoder basis_transcoder(&basis_codeBook);
-
+				basist::basisu_file_info fileinfo;
+				if (!basis_transcoder.get_file_info(transcoding.data.data(), (uint32_t)transcoding.data.size(), fileinfo))
+				{
+					SCR_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
+					continue;
+				}
+				BasisValidate(basis_transcoder, fileinfo,transcoding.data);
 				if (basis_transcoder.start_transcoding(transcoding.data.data(), transcoding.data.size()))
 				{
 					transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), transcoding.data.size(), 0);
@@ -1126,6 +1204,11 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					// choose a transcoder format based on this:
 					//basist::transcoder_texture_format basis_transcoder_textureFormat= transcoderFormatFromBasisTextureFormat(format);
 
+					if (!basis_is_format_supported(basis_transcoder_textureFormat, fileinfo.m_tex_format))
+					{
+						SCR_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
+						continue;
+					}
 					//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
 					for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
 					{

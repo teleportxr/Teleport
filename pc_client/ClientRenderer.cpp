@@ -689,7 +689,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
 																									resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
-
+/*
 		auto& cachedMaterials = resourceManagers.mMaterialManager.GetCache(cacheLock);
 		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
 		static int matLimit = 5;
@@ -700,6 +700,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			const auto &mat=M.resource->GetMaterialCreateInfo();
 			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("  %s", mat.name.c_str()),white,background);
 			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    emissive: %3.3f %3.3f %3.3f", mat.emissive.textureOutputScalar.x, mat.emissive.textureOutputScalar.y, mat.emissive.textureOutputScalar.z),white, background);
+			linesRemaining--;
+			if(!linesRemaining)
+				break;
 		}
 		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
 		int j=0;
@@ -729,7 +732,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
 			}
 			j++;
-		}
+		}*/
 		
 		auto &missing=resourceCreator.GetMissingResources();
 		if(missing.size())
@@ -861,7 +864,6 @@ void ClientRenderer::WriteHierarchies()
 void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 //	deviceContext.viewStruct.view = camera.MakeViewMatrix();
-	globalIlluminationTexture=resourceManagers.mTextureManager.Get(lastSetupLightingCommand.global_illumination_texture_uid);
 	deviceContext.viewStruct.Init();
 
 	cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
@@ -931,6 +933,10 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
 
+
+	std::shared_ptr<scr::Texture> globalIlluminationTexture ;
+	if(node->GetGlobalIlluminationTextureUid() )
+		globalIlluminationTexture = resourceManagers.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	std::string passName = "pbr_nolightmap"; //Pass used for rendering geometry.
 	if(node->IsStatic())

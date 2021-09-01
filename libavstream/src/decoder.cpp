@@ -64,7 +64,7 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 	};
 	if (m_backend)
 	{
-		assert(m_selectedBackendType == DecoderBackend::Custom);
+		assert(m_selectedBackendType == DecoderBackend::Custom|| m_selectedBackendType == DecoderBackend::Any);
 	}
 	else
 	{

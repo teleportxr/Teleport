@@ -232,7 +232,6 @@ public:
 		avs::SurfaceFormat::ARGB
 	};
 	AVSTextureHandle avsTexture;
-	std::shared_ptr<scr::Texture> globalIlluminationTexture;
 	avs::Context context;
 	avs::VideoConfig videoConfig;
 

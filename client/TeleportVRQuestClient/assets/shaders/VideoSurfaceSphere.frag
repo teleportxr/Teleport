@@ -5,7 +5,7 @@ const float PI    = 3.1415926536;
 const float TwoPI = 2.0 * PI;
 
 layout(location = 0) in vec3 vSampleVec;
-layout(location = 1) in float vDepth;
+//layout(location = 1) in float vDepth;
 layout(location = 7) in vec3 vOffsetFromVideo;
 
 // ALL light data is passed in as tags.
@@ -79,7 +79,7 @@ void main()
 		lookup=textureLod(renderTexture, colourSampleVec, 0.0);
        //lookup.rgb+=vec3(depth,depth,depth);
     }
-    //lookup.rgb+=vec3(vDepth,vDepth,vDepth);
+//   lookup.rgb+=lookup.aaa;
 	//lookup.b=float(RWTagDataID.x)/31.0;
     gl_FragColor = pow(lookup,vec4(.44,.44,.44,1.0));
 }

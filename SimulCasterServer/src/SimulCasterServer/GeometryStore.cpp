@@ -895,7 +895,7 @@ void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastMod
 	materials[id] = ExtractedMaterial{guid, lastModified, newMaterial};
 }
 
-void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips, bool highQualityUASTC)
+void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips, bool highQualityUASTC,bool forceOverwrite)
 {
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
 	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
@@ -916,9 +916,8 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 			//The file is valid if the basis file is younger than the texture file.
 			validBasisFileExists = basisLastModified >= lastModified;
 		}
-
 		//Read from disk if the file exists.
-		if(validBasisFileExists)
+		if(highQualityUASTC||((!forceOverwrite)&&validBasisFileExists))
 		{
 			std::ifstream basisReader(basisFileLocation, std::ifstream::in | std::ifstream::binary);
 
@@ -929,13 +928,12 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 			basisReader.close();
 		}
 		//Otherwise, queue the texture for compression.
-		else
+		else 	// UASTC doesn't work from inside the dll. Unclear why.
 		{
 			//Copy data from source, so it isn't lost.
 			unsigned char* dataCopy = new unsigned char[newTexture.dataSize];
 			memcpy(dataCopy, newTexture.data, newTexture.dataSize);
 			newTexture.data = dataCopy;
-
 			texturesToCompress.emplace(id, PrecompressedTexture{basisFileLocation, newTexture.data, newTexture.dataSize, newTexture.mipCount, genMips, highQualityUASTC});
 		}
 	}
@@ -1021,13 +1019,24 @@ void GeometryStore::compressNextTexture()
 	basisCompressorParams.m_out_filename = compressionData.basisFilePath;
 	basisCompressorParams.m_uastc=compressionData.highQualityUASTC;
 
+	uint32_t THREAD_AMOUNT = 32;
 	if(compressionData.highQualityUASTC)
 	{
+		THREAD_AMOUNT = 1;
+		// Write this to a different filename, it's just for testing.
+		auto ext_pos = basisCompressorParams.m_out_filename.find(".basis");
+		basisCompressorParams.m_out_filename = basisCompressorParams.m_out_filename.substr(0, ext_pos) + "-dll.basis";
+		return;
+
+		// we want the equivalent of:
+		// -uastc -uastc_rdo_m -no_multithreading -debug -stats -output_path "outputPath" "srcPng"
+		basisCompressorParams.m_rdo_uastc_multithreading = false;
+		basisCompressorParams.m_multithreading=false;
 		//basisCompressorParams.m_ktx2_uastc_supercompression = basist::KTX2_SS_NONE;//= basist::KTX2_SS_ZSTANDARD;
-	
+
 		int uastc_level = std::clamp<int>(4, 0, 4);
 
-		static const uint32_t s_level_flags[5] = { basisu::cPackUASTCLevelFastest, basisu::cPackUASTCLevelFaster, basisu::cPackUASTCLevelDefault, basisu::cPackUASTCLevelSlower, basisu::cPackUASTCLevelVerySlow };
+		//static const uint32_t s_level_flags[5] = { basisu::cPackUASTCLevelFastest, basisu::cPackUASTCLevelFaster, basisu::cPackUASTCLevelDefault, basisu::cPackUASTCLevelSlower, basisu::cPackUASTCLevelVerySlow };
 
 		//basisCompressorParams.m_pack_uastc_flags &= ~basisu::cPackUASTCLevelMask;
 		//basisCompressorParams.m_pack_uastc_flags |= s_level_flags[uastc_level];
@@ -1035,9 +1044,12 @@ void GeometryStore::compressNextTexture()
 		//basisCompressorParams.m_rdo_uastc_dict_size = 32768;
 		//basisCompressorParams.m_check_for_alpha=true;
 		basisCompressorParams.m_debug=true;
+		basisCompressorParams.m_status_output=true;
+		basisCompressorParams.m_compute_stats = true;
 		//basisCompressorParams.m_perceptual=true;
 		//basisCompressorParams.m_validate=false;
 		basisCompressorParams.m_mip_srgb=true;
+		basisCompressorParams.m_quality_level = 128;
 	}
 	else
 	{
@@ -1047,7 +1059,6 @@ void GeometryStore::compressNextTexture()
 	}
 	if(!basisCompressorParams.m_pJob_pool)
 	{
-		const uint32_t THREAD_AMOUNT = 32;
 		basisCompressorParams.m_pJob_pool = new basisu::job_pool(THREAD_AMOUNT);
 	}
 	basisu::basis_compressor basisCompressor;

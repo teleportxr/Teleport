@@ -141,8 +141,16 @@ namespace scr
 		{
 			return lightmapScaleOffset;
 		}
-
+		avs::uid GetGlobalIlluminationTextureUid() const
+		{
+			return globalIlluminationTextureUid;
+		}
+		void SetGlobalIlluminationTextureUid(avs::uid uid)
+		{
+			globalIlluminationTextureUid=uid;
+		}
 	protected:
+		avs::uid globalIlluminationTextureUid=0;
 		std::shared_ptr<Mesh> mesh;
 		std::shared_ptr<Skin> skin;
 		std::vector<std::shared_ptr<Material>> materials;

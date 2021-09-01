@@ -1378,9 +1378,9 @@ void ClientRenderer::DrawOSD()
 					}
 				}
 			}
-
-			clientAppInterface->PrintText(
-					offset, colour, str.str().c_str()
+			if(str.str().length()<1700)
+				clientAppInterface->PrintText(
+						offset, colour, str.str().c_str()
 			);
 
 			break;

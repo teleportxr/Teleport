@@ -247,16 +247,20 @@ namespace avs
 		int64_t startTimestamp = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
 	} AVS_PACKED;
 
+	//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
 	struct SetupLightingCommand : public Command
 	{
 		SetupLightingCommand() : Command(CommandPayloadType::SetupLighting) {}
+		SetupLightingCommand(uint8_t numGI)
+			:Command(CommandPayloadType::SetupLighting), num_gi_textures(numGI)
+		{}
 
 		virtual size_t getCommandSize() const override
 		{
 			return sizeof(SetupLightingCommand);
 		}
 		// If this is nonzero, implicitly gi should be enabled.
-		uid	global_illumination_texture_uid = 0;
+		uint8_t num_gi_textures=0;
 	} AVS_PACKED;
 
 	struct ReconfigureVideoCommand : public Command

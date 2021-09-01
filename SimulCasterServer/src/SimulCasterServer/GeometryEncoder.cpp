@@ -411,6 +411,7 @@ namespace SCServer
 					put(id);
 				}
 				put(node->renderState.lightmapScaleOffset);
+				put(node->renderState.globalIlluminationUid);
 			}
 			else
 			{

@@ -692,6 +692,9 @@ void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
 	size_t commandSize = sizeof(avs::SetupLightingCommand);
 	//Copy command out of packet.
 	memcpy(static_cast<void*>(&setupLightingCommand), packet->data, commandSize);
+
+	std::vector<avs::uid> uidList((size_t)setupLightingCommand.num_gi_textures);
+	memcpy(uidList.data(), packet->data + commandSize, sizeof(avs::uid) * uidList.size());
 	mCommandInterface->OnLightingSetupChanged(setupLightingCommand);
 }
 

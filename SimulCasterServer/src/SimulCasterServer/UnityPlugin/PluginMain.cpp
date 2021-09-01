@@ -790,14 +790,14 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	clientData.clientMessaging.sendCommand(std::move(setupCommand));
 
 
-	avs::SetupLightingCommand setupLightingCommand;
-	setupLightingCommand.global_illumination_texture_uid=clientData.getGlobalIlluminationTexture();
-	clientData.clientMessaging.sendCommand(std::move(setupLightingCommand));
+	auto global_illumination_texture_uids=clientData.getGlobalIlluminationTextures();
+	avs::SetupLightingCommand setupLightingCommand(global_illumination_texture_uids.size());
+	clientData.clientMessaging.sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 
 	clientData.isStreaming = true;
 }
 
-TELEPORT_EXPORT void Client_SetGlobalIlluminationTexture(avs::uid clientID,avs::uid textureID)
+TELEPORT_EXPORT void Client_SetGlobalIlluminationTextures(avs::uid clientID,size_t num,const avs::uid * textureIDs)
 {
 	auto clientPair = clientServices.find(clientID);
 	if (clientPair == clientServices.end())
@@ -806,7 +806,7 @@ TELEPORT_EXPORT void Client_SetGlobalIlluminationTexture(avs::uid clientID,avs::
 		return;
 	}
 	ClientData& clientData = clientPair->second;
-	clientData.setGlobalIlluminationTexture(textureID);
+	clientData.setGlobalIlluminationTextures(num,textureIDs);
 }
 
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
@@ -1555,9 +1555,9 @@ TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModif
 	geometryStore.storeMaterial(id, guid, lastModified, avs::Material(material));
 }
 
-TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC)
+TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
-	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC);
+	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
 }
 
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture shadowMap)

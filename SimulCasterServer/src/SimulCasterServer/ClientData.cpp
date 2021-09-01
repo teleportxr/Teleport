@@ -1,6 +1,6 @@
 #include "SimulCasterServer/ClientData.h"
 
-ClientData::ClientData(std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const SCServer::ClientMessaging& clientMessaging)
+ClientData::ClientData(std::shared_ptr<SCServer::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const SCServer::ClientMessaging& clientMessaging)
 	: geometryStreamingService(geometryStreamingService), videoEncodePipeline(videoPipeline), audioEncodePipeline(audioPipeline), clientMessaging(clientMessaging)
 {
 	originClientHas.x = originClientHas.y = originClientHas.z = 0.f;
@@ -43,16 +43,32 @@ avs::vec3 ClientData::getOrigin() const
 	return originClientHas;
 }
 
-void ClientData::setGlobalIlluminationTexture(avs::uid uid)
+void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 {
-	if(global_illumination_texture_uid!=uid)
+	if(num>255)
 	{
-		global_illumination_texture_uid=uid;
-		if(isStreaming)
+		num=255;
+		TELEPORT_CERR<<"Too many GI Textures."<<std::endl;
+	}
+	if(global_illumination_texture_uids.size()!=num)
+		global_illumination_texture_uids.resize(num);
+	bool changed=false;
+	for(size_t i=0;i<num;i++)
+	{
+		if(global_illumination_texture_uids[i]!=uids[i])
 		{
-			avs::SetupLightingCommand setupLightingCommand;
-			setupLightingCommand.global_illumination_texture_uid=global_illumination_texture_uid;
-			clientMessaging.sendCommand(std::move(setupLightingCommand));
+			changed=true;
+			global_illumination_texture_uids[i] = uids[i];
+			geometryStreamingService->addGenericTexture(uids[i]);
 		}
 	}
+	if (!isStreaming)
+		return;
+	if(changed)
+	{
+		avs::SetupLightingCommand setupLightingCommand;
+		setupLightingCommand.num_gi_textures=num;
+		clientMessaging.sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
+	}
+	
 }

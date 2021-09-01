@@ -79,7 +79,7 @@ namespace SCServer
 		void storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard);
 		void storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard,bool compress=false,bool verify=false);
 		void storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Material& newMaterial);
-		void storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC);
+		void storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC,bool forceOverwrite);
 		void storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& shadowMap);
 
 		void removeNode(avs::uid id);

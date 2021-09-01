@@ -244,6 +244,7 @@ struct Animation;
 	struct NodeRenderState
 	{
 		vec4 lightmapScaleOffset;
+		uid globalIlluminationUid = 0;
 	};
 
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);
@@ -268,6 +269,7 @@ struct Animation;
 
 		//MESH
 		std::vector<uid> materials;
+
 		//SKINNED MESH
 		uid skinID;
 		std::vector<uid> animations;

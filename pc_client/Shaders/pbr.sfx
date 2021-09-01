@@ -447,8 +447,8 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient)
 	vec4 u				=vec4(c+emissive, 1.0);
 //	u.rg+= step(0.5,IN.texCoords0.x)*saturate(IN.texCoords0.xy* emissiveTexCoordsScalar_R-vec2(0.0,0.5));
 	vec3 highlight		=vec3(0.01,0.02,0.05);
-	//u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	//u.b=0;
+//u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
+//u.b=0;
 	//u.rgb= surfaceProperties.globalIllumination.xyz;
 	return u;
 }

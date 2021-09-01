@@ -8,20 +8,20 @@
 #include "SimulCasterServer/CasterSettings.h"
 
 class PluginDiscoveryService;
-class PluginGeometryStreamingService;
+class SCServer::GeometryStreamingService;
 class PluginVideoEncodePipeline;
 class PluginAudioEncodePipeline;
 
 class ClientData
 {
 public:
-	ClientData(std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const SCServer::ClientMessaging& clientMessaging);
+	ClientData(std::shared_ptr<SCServer::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const SCServer::ClientMessaging& clientMessaging);
 	
 	// client settings from engine-side:
 	SCServer::ClientSettings clientSettings;
 	SCServer::CasterContext casterContext;
 
-	std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService;
+	std::shared_ptr<SCServer::GeometryStreamingService> geometryStreamingService;
 	std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline;
 	std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline;
 	SCServer::ClientMessaging clientMessaging;
@@ -35,15 +35,15 @@ public:
 	bool hasOrigin() const;
 	avs::vec3 getOrigin() const;
 
-	void setGlobalIlluminationTexture(avs::uid uid);
-	avs::uid getGlobalIlluminationTexture() const
+	void setGlobalIlluminationTextures(size_t num, const avs::uid *uids);
+	const std::vector<avs::uid> &getGlobalIlluminationTextures() const
 	{
-		return global_illumination_texture_uid;
+		return global_illumination_texture_uids;
 	}
 protected:
 	mutable bool _hasOrigin=false;
 	avs::vec3 originClientHas;
-	avs::uid global_illumination_texture_uid;
+	std::vector<avs::uid> global_illumination_texture_uids;
 	ENetAddress address = {};
 };
 
