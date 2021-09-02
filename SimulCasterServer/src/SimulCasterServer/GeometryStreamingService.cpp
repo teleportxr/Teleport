@@ -124,7 +124,7 @@ namespace SCServer
 		auto nodePair = streamedNodeIDs.find(nodeID);
 		if (nodePair != streamedNodeIDs.end())
 		{
-			hideNode_Internal(clientID, nodeID);
+			bool result=hideNode_Internal(clientID, nodeID);
 			hiddenNodes.insert(nodeID);
 		}
 		else
@@ -138,7 +138,7 @@ namespace SCServer
 		auto nodePair = hiddenNodes.find(nodeID);
 		if (nodePair != hiddenNodes.end())
 		{
-			showNode_Internal(clientID, nodeID);
+			bool result=showNode_Internal(clientID, nodeID);
 			hiddenNodes.erase(nodeID);
 		}
 		else

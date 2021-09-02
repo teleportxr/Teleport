@@ -1075,9 +1075,10 @@ namespace teleport
 
 bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fileinfo,const std::vector<unsigned char>& data)
 {
+#ifndef __ANDROID__
 
 	assert(fileinfo.m_total_images == fileinfo.m_image_mipmap_levels.size());
-	assert(fileinfo.m_total_images == dec.get_total_images(&basis_file_data[0], (uint32_t)basis_file_data.size()));
+	assert(fileinfo.m_total_images == dec.get_total_images(data.data(), (uint32_t)data.size()));
 
 	printf("File info:\n");
 	printf("  Version: %X\n", fileinfo.m_version);
@@ -1136,13 +1137,14 @@ bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fil
 	}
 	printf("\n");
 
-
 	const float basis_bits_per_texel = data.size() * 8.0f / total_texels;
 	//const float comp_bits_per_texel = comp_size * 8.0f / total_texels;
 
 	//printf("Original size: %u, bits per texel: %3.3f\nCompressed size (Deflate): %u, bits per texel: %3.3f\n", (uint32_t)basis_file_data.size(), basis_bits_per_texel, (uint32_t)comp_size, comp_bits_per_texel);
-
+#endif
+	return true;
 }
+
 void ResourceCreator::BasisThread_TranscodeTextures()
 {
 	while (shouldBeTranscoding)

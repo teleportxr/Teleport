@@ -437,9 +437,9 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,12,"u_CombinedTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,13,"u_EmissiveTexture", {});
 	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,5,"u_PerMeshInstanceData", {});
+	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_LightmapTexture", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,14,"u_SpecularCubemap", {});
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,15,"u_DiffuseCubemap", {});
-	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_LightmapTexture", {});
 
 	passNames.clear();
 	passNames.push_back("PBRSimpleDefault");
@@ -1063,17 +1063,6 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
-	if(setupLightingCommand.global_illumination_texture_uid!=0)
-	{
-		mlightmapTexture = resourceManagers->mTextureManager.Get(
-				setupLightingCommand.global_illumination_texture_uid);
-		if(!mlightmapTexture.get())
-			mlightmapTexture=resourceCreator->m_DummyWhite;
-		else
-			mlightmapTexture->UseSampler(globalGraphicsResources.noMipsampler);
-	}
-	globalGraphicsResources.lightCubemapShaderResources.SetImageInfo(2,{mlightmapTexture->GetSampler()
-			, mlightmapTexture});
 	//Render local nodes.
 	const scr::NodeManager::nodeList_t &distanceSortedRootNodes = resourceManagers->mNodeManager->GetSortedRootNodes();
 	for (std::shared_ptr<scr::Node> node : distanceSortedRootNodes)
@@ -1108,6 +1097,16 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 		if(ovrNode->GetSurfaces().size() != 0)
 		{
 			GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+			// Get lightmap texture.
+			std::shared_ptr<scr::Texture>		lightmapTexture;
+			if(node->GetGlobalIlluminationTextureUid()!=0)
+			{
+				lightmapTexture = resourceManagers->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+				if(!lightmapTexture.get())
+					lightmapTexture=resourceCreator->m_DummyWhite;
+				else
+					lightmapTexture->UseSampler(globalGraphicsResources.noMipsampler);
+			}
 
 			//Get final transform.
 			scr::mat4 globalMatrix = node->GetGlobalTransform().GetTransformMatrix();
@@ -1151,10 +1150,10 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 				OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 				surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
 				//surfaceDef.graphicsCommand.UniformData[3].Data = &ovrNode->perMeshInstanceData.u_LightmapScaleOffset;
-				if(mlightmapTexture.get())
+				if(lightmapTexture.get())
 				{
-					auto gl_texture = dynamic_cast<scc::GL_Texture *>(mlightmapTexture.get());
-					surfaceDef.graphicsCommand.UniformData[11].Data =&(gl_texture->GetGlTexture());
+					auto gl_texture = dynamic_cast<scc::GL_Texture *>(lightmapTexture.get());
+					surfaceDef.graphicsCommand.UniformData[9].Data =&(gl_texture->GetGlTexture());
 				}
 				res.Surfaces.emplace_back(transform, &surfaceDef);
 			}

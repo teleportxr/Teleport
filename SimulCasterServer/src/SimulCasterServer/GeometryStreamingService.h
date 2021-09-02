@@ -62,8 +62,8 @@ namespace SCServer
 	protected:
 		GeometryStore* geometryStore = nullptr;
 
-		virtual void showNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
-		virtual void hideNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
+		virtual bool showNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
+		virtual bool hideNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
 
 	private:
 		const struct CasterSettings* settings;

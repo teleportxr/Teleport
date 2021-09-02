@@ -118,26 +118,32 @@ public:
 	virtual ~PluginGeometryStreamingService() = default;
 
 private:
-	virtual void showNode_Internal(avs::uid clientID, avs::uid nodeID)
+	virtual bool showNode_Internal(avs::uid clientID, avs::uid nodeID)
 	{
 		if(onShowNode)
 		{
 			if(!onShowNode(clientID, nodeID))
 			{
 				TELEPORT_CERR << "onShowNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << std::endl;
+				return false;
 			}
+			return true;
 		}
+		return false;
 	}
 
-	virtual void hideNode_Internal(avs::uid clientID, avs::uid nodeID)
+	virtual bool hideNode_Internal(avs::uid clientID, avs::uid nodeID)
 	{
 		if(onHideNode)
 		{
 			if(!onHideNode(clientID, nodeID))
 			{
 				TELEPORT_CERR << "onHideNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << std::endl;
+				return false;
 			}
+			return true;
 		}
+		return false;
 	}
 };
 

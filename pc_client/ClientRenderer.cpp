@@ -270,8 +270,8 @@ void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 		case ShaderMode::DEBUG_ANIM:
 			overridePassName = "debug_anim";
 			break;
-		case ShaderMode::NORMAL_UNITY:
-			overridePassName = "normal_unity";
+		case ShaderMode::LIGHTMAPS:
+			overridePassName = "debug_lightmaps";
 			break;
 		case ShaderMode::NORMAL_VERTEXNORMALS:
 			overridePassName = "normal_vertexnormals";
@@ -1505,8 +1505,20 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 	// we seek the angle positive on the Z-axis representing the view direction azimuth:
 	controllerSim.angle=atan2f(-controllerSim.view_dir.x, controllerSim.view_dir.y);
 	float sine= sin(controllerSim.angle), cosine=cos(controllerSim.angle);
+	float sine_elev= controllerSim.view_dir.z;
 	static float hand_dist=0.5f;
-	controllerSim.pos_offset[index]=vec3(hand_dist*(-sine+offset*cosine),hand_dist*(cosine+offset*sine),-0.5f);
+	// Position the hand based on mouse pos.
+	static float xmotion_scale = 1.0f;
+	static float ymotion_scale = 1.0f;
+	static float ymotion_offset = 1.0f;
+	static float z_offset = -0.2f;
+	vec2 pos; 
+	pos.x = offset+(x - 0.5f) * xmotion_scale;
+	pos.y = ymotion_offset + (0.5f-y) * ymotion_scale;
+
+	controllerSim.pos_offset[index]=vec3(hand_dist*(-pos.y*sine+ pos.x*cosine),hand_dist*(pos.y*cosine+pos.x*sine),z_offset+hand_dist*sine_elev*pos.y);
+
+
 	// Get horizontal azimuth of view.
 	vec3 camera_local_pos=camera.GetPosition();
 	vec3 footspace_pos=camera_local_pos;
@@ -1609,8 +1621,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
-		FillInControllerPose(0,1.0f);
-		FillInControllerPose(1, -1.0f);
+		FillInControllerPose(0,0.5f);
+		FillInControllerPose(1, -0.5f);
 
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime);
 
@@ -1751,7 +1763,7 @@ void ClientRenderer::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& 
 	renderPlatform->LinePrint(deviceContext, "NUM 1: Albedo");
 	renderPlatform->LinePrint(deviceContext, "NUM 4: Unswizzled Normals");
 	renderPlatform->LinePrint(deviceContext, "NUM 5: Debug animation");
-	renderPlatform->LinePrint(deviceContext, "NUM 6: Unity Normals");
+	renderPlatform->LinePrint(deviceContext, "NUM 6: Lightmaps");
 	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
 }
 
@@ -1823,7 +1835,7 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			ChangePass(ShaderMode::DEBUG_ANIM);
 			break;
 		case VK_NUMPAD6: //Display normals swizzled for matching Unity output.
-			ChangePass(ShaderMode::NORMAL_UNITY);
+			ChangePass(ShaderMode::LIGHTMAPS);
 			break;
 		case VK_NUMPAD2: //Display normals swizzled for matching Unity output.
 			ChangePass(ShaderMode::NORMAL_VERTEXNORMALS);

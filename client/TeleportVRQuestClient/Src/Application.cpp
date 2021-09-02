@@ -236,9 +236,6 @@ void Application::EnteredVrMode()
 	lightingCubemapLayout.AddBinding(15,
 									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
 									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	lightingCubemapLayout.AddBinding(16,
-									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	globalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
 	globalGraphicsResources.lightCubemapShaderResources.AddImage(
@@ -249,12 +246,6 @@ void Application::EnteredVrMode()
 			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
 			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
 								 , clientRenderer.diffuseCubemapTexture});
-	if(!clientRenderer.mlightmapTexture.get())
-		clientRenderer.mlightmapTexture=resourceCreator.m_DummyWhite;
-	globalGraphicsResources.lightCubemapShaderResources.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 16,
-			"u_LightmapTexture", {clientRenderer.mlightmapTexture->GetSampler()
-								, clientRenderer.mlightmapTexture});
 
 	scr::ShaderResourceLayout tagBufferLayout;
 	tagBufferLayout.AddBinding(1,
