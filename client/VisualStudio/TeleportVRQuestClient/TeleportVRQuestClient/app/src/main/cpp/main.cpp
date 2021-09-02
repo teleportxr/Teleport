@@ -1,11 +1,10 @@
 #include <dlfcn.h>
 #include <jni.h>
-#include <errno.h>
 #include <sys/resource.h>
 #include <android/log.h>
 #include <android/sensor.h>
 #include <android/window.h>
-#include <android_native_app_glue.h>
+#include <android/native_app_glue/android_native_app_glue.h>
 
 #define EXTERN_C_BEGIN extern "C" {
 #define EXTERN_C_END }
@@ -38,7 +37,7 @@ void android_main(struct android_app* app)
 	while (gp_AndroidWindow == nullptr) {
 		if (ALooper_pollAll(1, nullptr, &events, (void**)&source) >= 0)
 		{
-			if (source != NULL)
+			if (source != nullptr)
 				source->process(app, source);
 		}
 	}
@@ -47,7 +46,7 @@ void android_main(struct android_app* app)
 	{
 		if (ALooper_pollAll(1, nullptr, &events, (void**)&source) >= 0)
 		{
-			if (source != NULL)
+			if (source != nullptr)
 				source->process(app, source);
 		}
 	}

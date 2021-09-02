@@ -43,6 +43,7 @@
       <GradlePlugin>4.0.1</GradlePlugin>
       <GradleVersion>6.1.1</GradleVersion>
       <AssembleParameter>assemble</AssembleParameter>
+      <AndroidAppLibName>$(ProjectName)</AndroidAppLibName>
     </GradlePackage>
   </ItemDefinitionGroup>
   <ImportGroup Label="ExtensionSettings" />

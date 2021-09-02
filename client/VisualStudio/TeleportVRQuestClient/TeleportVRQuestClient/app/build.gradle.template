@@ -2,14 +2,14 @@ apply plugin: 'com.android.$(ConfigurationType)'
 
 android 
 {
-	compileSdkVersion = $(AndroidAPILevelNumber)
-	buildToolsVersion = "29.0.3"//"$(AndroidBuildToolsVersion)"
+	compileSdkVersion $(AndroidAPILevelNumber)
+	buildToolsVersion "29.0.3"
 
 	defaultConfig
 	{
 		$(ApplicationId)
-		minSdkVersion = 24
-		targetSdkVersion = 28
+		minSdkVersion 24
+		targetSdkVersion 28
 		versionCode 1
 		versionName "1.0"
 		
@@ -17,13 +17,17 @@ android
 		{
 			abiFilters 'arm64-v8a'
 		}
+		packagingOptions 
+		{
+			doNotStrip '**.so'
+		}
 	}
 
 	buildTypes
 	{
 		release
 		{
-			minifyEnabled = false
+			minifyEnabled false
 			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
 		}
 	}

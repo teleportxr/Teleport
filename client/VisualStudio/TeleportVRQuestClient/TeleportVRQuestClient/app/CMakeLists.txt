@@ -19,7 +19,13 @@ find_library(log-lib log)
 #-----BUILD_OPT----
 #Sets C++17 and build arguements
 #Sets the VK_USE_PLATFORM_ANDROID_KHR and _DEBUG definition
+
+message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Werror -Wno-unused-variable -Wno-self-assign-field -DVK_USE_PLATFORM_ANDROID_KHR -D_DEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS}")
+#message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+#message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 #----EXPORT_JNI----
 #Set the export of JNIEXPORT void ANativeActivity_onCreate(...);

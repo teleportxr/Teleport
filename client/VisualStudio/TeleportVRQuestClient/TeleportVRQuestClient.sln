@@ -7,28 +7,16 @@ Project("{39E2626F-3545-4960-A6E8-258AD8476CE5}") = "TeleportVRQuestClient", "Te
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|ARM = Debug|ARM
 		Debug|ARM64 = Debug|ARM64
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|ARM = Release|ARM
 		Release|ARM64 = Release|ARM64
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Debug|ARM.ActiveCfg = Debug|ARM64
 		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Debug|ARM64.ActiveCfg = Debug|ARM64
 		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Debug|ARM64.Build.0 = Debug|ARM64
 		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Debug|ARM64.Deploy.0 = Debug|ARM64
-		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Debug|x64.ActiveCfg = Debug|ARM64
-		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Debug|x86.ActiveCfg = Debug|ARM64
-		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Release|ARM.ActiveCfg = Release|ARM64
 		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Release|ARM64.ActiveCfg = Release|ARM64
 		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Release|ARM64.Build.0 = Release|ARM64
 		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Release|ARM64.Deploy.0 = Release|ARM64
-		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Release|x64.ActiveCfg = Release|ARM64
-		{C72B3497-1B4C-4967-BE48-ACFC1D488CF1}.Release|x86.ActiveCfg = Release|ARM64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
