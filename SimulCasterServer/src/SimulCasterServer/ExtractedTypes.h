@@ -19,6 +19,10 @@ namespace SCServer
 		{
 			return ".mesh";
 		}
+		std::string getName() const
+		{
+			return mesh.name;
+		}
 		_bstr_t guid;
 		std::time_t lastModified;
 		avs::Mesh mesh;
@@ -48,6 +52,10 @@ namespace SCServer
 		{
 			return ".material";
 		}
+		std::string getName() const
+		{
+			return material.name;
+		}
 		_bstr_t guid;
 		std::time_t lastModified;
 		avs::Material material;
@@ -74,6 +82,10 @@ namespace SCServer
 		static const char* fileExtension()
 		{
 			return ".texture";
+		}
+		std::string getName() const
+		{
+			return texture.name;
 		}
 		_bstr_t guid;
 		std::time_t lastModified;

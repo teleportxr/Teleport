@@ -1102,7 +1102,8 @@ template<typename ExtractedResource> void GeometryStore::saveResources(const std
 	{
 		std::string file_name=path;
 		file_name+="/";
-		file_name+=resourceData.second.guid;
+		file_name+=resourceData.second.getName()+"_";
+		file_name +=resourceData.second.guid;
 		file_name+=resourceData.second.fileExtension();
 		bool oldFileExists = filesystem::exists(file_name);
 
@@ -1128,6 +1129,7 @@ template<typename ExtractedResource> void GeometryStore::loadResources(const std
 	const std::filesystem::path fspath{ path.c_str() };
 	std::filesystem::create_directories(fspath);
 	std::string search_str=ExtractedResource::fileExtension();
+	std::map<avs::uid, std::filesystem::file_time_type> timestamps;
 	for (auto const& dir_entry : std::filesystem::directory_iterator{ fspath })
 	{
 		std::string file_name=dir_entry.path().string();
@@ -1135,12 +1137,31 @@ template<typename ExtractedResource> void GeometryStore::loadResources(const std
 		if(filesystem::exists(file_name))
 		{
 			std::wifstream resourceFile(file_name, std::wifstream::in | std::wifstream::binary);
+			
 			avs::uid oldID;
 			//Load resources from the file, while there is still more data in the file.
 			if(resourceFile >> oldID)
 			{
-				ExtractedResource& newResource = resourceMap[oldID];
-				resourceFile >> newResource;
+				auto write_time= std::filesystem::last_write_time(file_name);
+				// If there's a duplicate, use the newer file.
+				bool use_new=true;
+				if(resourceMap.find(oldID)==resourceMap.end())
+				{
+					// if new file timestamp is older than the last one, don't use it.
+					if(write_time<timestamps[oldID])
+						use_new=false;
+				}
+				if(use_new)
+				{
+					ExtractedResource& newResource = resourceMap[oldID];
+					resourceFile >> newResource;
+					timestamps[oldID]= write_time;
+				}
+				else
+				{
+					ExtractedResource newResource;
+					resourceFile >> newResource;
+				}
 			}
 		}
 	}

@@ -62,6 +62,7 @@ public:
 	void ChangeEffectPass(const char* effectPassName);
 
 private:
+	std::shared_ptr<scr::Texture>		mlightmapTexture;
 	std::vector<SurfaceInfo> surfaceDefinitions;
 
 	SurfaceInfo CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material);

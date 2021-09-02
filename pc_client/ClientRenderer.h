@@ -72,7 +72,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 {
 	enum class ShaderMode
 	{
-		PBR, ALBEDO, NORMAL_UNSWIZZLED, DEBUG_ANIM, NORMAL_UNITY, NORMAL_VERTEXNORMALS
+		PBR, ALBEDO, NORMAL_UNSWIZZLED, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS
 	};
 
 	void ChangePass(ShaderMode newShaderMode);
