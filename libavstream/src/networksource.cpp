@@ -42,6 +42,12 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		m_data->bOneTimeWarnings=true;
 
 		srt_startup();
+#if NDEBUG
+		srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::error;
+#else
+		srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::debug;
+#endif
+
 		m_data->m_socket=srt_create_socket();
 		if (m_data->m_socket == SRT_ERROR)
 		{

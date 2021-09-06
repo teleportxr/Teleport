@@ -279,7 +279,7 @@ void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 	}
 }
 
-void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame)
+void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame, void* context_allocator)
 {
 	simul::crossplatform::GraphicsDeviceContext	deviceContext;
 	deviceContext.setDefaultRenderTargets(renderTexture,nullptr,0,0,w,h);
