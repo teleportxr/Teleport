@@ -88,7 +88,7 @@ namespace SCServer
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::Geometry;
 			stream.useParser = true;
-			stream.isDataLimitPerFrame = true;
+			stream.isDataLimitPerFrame = false;
 			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
 			stream.id = 80;

@@ -325,7 +325,7 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
     GlProgram::SetUseMultiview(UseMultiView);
 
     // Init renderer
-    static const int NUM_MULTI_SAMPLES = 1;
+    static const int NUM_MULTI_SAMPLES = 4;
     for (int eye = 0; eye < NumFramebuffers; eye++) {
         Framebuffer[eye] = std::unique_ptr<ovrFramebuffer>(new ovrFramebuffer());
         ovrFramebuffer_Clear(Framebuffer[eye].get());
@@ -333,8 +333,8 @@ bool ovrAppl::Init(const ovrAppContext* context, const ovrInitParms* initParms) 
             Framebuffer[eye].get(),
             UseMultiView,
             GL_RGBA8,
-            1280, //vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH),
-           1280,//vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
+            vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH),
+           vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
             NUM_MULTI_SAMPLES);
     }
 

@@ -598,7 +598,7 @@ namespace SCServer
 			return;
 		}
 
-		InputStateAndEvents& aggregateInputState = latestInputStateAndEvents[receivedInputState.controllerId];
+		InputStateAndEvents &aggregateInputState = latestInputStateAndEvents[receivedInputState.controllerId];
 		aggregateInputState.inputState = receivedInputState;
 
 		if(receivedInputState.binaryEventAmount != 0)
