@@ -34,7 +34,11 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	try
 	{
 		srt_startup();
+#if NDEBUG
+		srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::error;
+#else
 		srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::debug;
+#endif
 		srt_setloglevel(loglevel);
 		m_data->pollid = srt_epoll_create();
 		m_data->m_socket = srt_create_socket();
@@ -114,7 +118,8 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	// The callback will be called on the same thread calling 'packAndSendFromPtr'
 	m_data->m_EFPSender->sendCallback = std::bind(&Private::sendOrCacheData, m_data, std::placeholders::_1);
 
-	m_data->m_maxPacketsAllowedPerSecond = 5000000 / PacketFormat::MaxPacketSize;
+	// 6 MB (48 mb) per second limit
+	m_data->m_maxPacketsAllowedPerSecond = 6000000 / PacketFormat::MaxPacketSize;
 	m_data->m_maxPacketsAllowed = 0;
 	m_data->m_packetsSent = 0;
 
