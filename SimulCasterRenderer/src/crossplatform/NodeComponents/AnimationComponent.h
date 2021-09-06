@@ -38,7 +38,7 @@ namespace scr
 		void update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime);
 
 		const AnimationStateMap &GetAnimationStates() const;
-		const AnimationState& GetCurrentAnimationState() const;
+		const AnimationState* GetCurrentAnimationState() const;
 		float GetCurrentAnimationTime() const;
 	private:
 		AnimationStateMap animationStates;

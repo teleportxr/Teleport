@@ -112,9 +112,11 @@ namespace scr
 		return animationStates;
 	}
 
-	const AnimationState& AnimationComponent::GetCurrentAnimationState() const
+	const AnimationState *AnimationComponent::GetCurrentAnimationState() const
 	{
-		return currentAnimationState->second;
+		if(currentAnimationState==animationStates.end())
+			return nullptr;
+		return &currentAnimationState->second;
 	}
 
 	float AnimationComponent::GetCurrentAnimationTime() const

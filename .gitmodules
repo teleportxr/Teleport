@@ -13,3 +13,6 @@
 [submodule "plugins/UnrealDemo"]
 	path = plugins/UnrealDemo
 	url = git@github.com:simul/teleport-unreal.git
+[submodule "thirdparty/draco"]
+	path = thirdparty/draco
+	url = git@github.com:google/draco.git

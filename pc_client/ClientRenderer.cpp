@@ -320,7 +320,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	//vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	{
-		simul::geometry::SimulOrientation	globalOrientation;
+		simul::geometry::SimulOrientation globalOrientation;
 		// global pos/orientation:
 		globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.position);
 	
@@ -863,7 +863,6 @@ void ClientRenderer::WriteHierarchies()
 
 void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
-//	deviceContext.viewStruct.view = camera.MakeViewMatrix();
 	deviceContext.viewStruct.Init();
 
 	cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
@@ -899,8 +898,8 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
 		if(rightHand)
 		{
-			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
-			rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
+				rightHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
+				rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
 
 			RenderNode(deviceContext, rightHand);
 		}
@@ -1038,19 +1037,22 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 			avs::vec4 white(1.0f,1.0f,1.0f,1.0f);
 			avs::vec3 pos= node->GetGlobalPosition();
 			std::string str;
-			const scr::AnimationState &animationState= node->animationComponent.GetCurrentAnimationState();
-			//const scr::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
-			static char txt[250];
-			//for(const auto &s:animationStates)
+			const scr::AnimationState *animationState= node->animationComponent.GetCurrentAnimationState();
+			if(animationState)
 			{
-				const auto &a= animationState.getAnimation();
-				if(a.get())
+				//const scr::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
+				static char txt[250];
+				//for(const auto &s:animationStates)
 				{
-					sprintf(txt,"%s %3.3f\n",a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
-					str +=txt;
+					const auto &a= animationState->getAnimation();
+					if(a.get())
+					{
+						sprintf(txt,"%s %3.3f\n",a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
+						str +=txt;
+					}
 				}
+				renderPlatform->PrintAt3dPos(deviceContext,(const float *)(&pos),str.c_str(), (const float*)(&white));
 			}
-			renderPlatform->PrintAt3dPos(deviceContext,(const float *)(&pos),str.c_str(), (const float*)(&white));
 		}
 	}
 
@@ -1514,7 +1516,7 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 	static float z_offset = -0.2f;
 	vec2 pos; 
 	pos.x = offset+(x - 0.5f) * xmotion_scale;
-	pos.y = ymotion_offset + (0.5f-y) * ymotion_scale;
+	pos.y = ymotion_offset + (0.5f-y)*ymotion_scale;
 
 	controllerSim.pos_offset[index]=vec3(hand_dist*(-pos.y*sine+ pos.x*cosine),hand_dist*(pos.y*cosine+pos.x*sine),z_offset+hand_dist*sine_elev*pos.y);
 
@@ -1596,12 +1598,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	// Reset
 	//mouseCameraInput.MouseButtons = 0; wtf? No.
 	controllerStates[0].mTrackpadStatus=true;
-
-	simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
-	auto q = camera.Orientation.GetQuaternion();
-	auto q_rel=q/q0;
-	clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos),*((scr::quat*)&q_rel));
-	clientDeviceState->UpdateOriginPose();
 	// Handle networked session.
 	if (sessionClient.IsConnected())
 	{
@@ -1621,15 +1617,18 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
-		FillInControllerPose(0,0.5f);
-		FillInControllerPose(1, -0.5f);
 
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime);
 
-
-		if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
+		//if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			clientDeviceState->originPose = sessionClient.GetOriginPose();
+			/*static bool s=false;
+			s=!s;
+			if(s)
+			{
+				clientDeviceState->originPose.position.x+=2.0f;
+			}*/
 			receivedInitialPos = sessionClient.receivedInitialPos;
 			if(receivedRelativePos!=sessionClient.receivedRelativePos)
 			{
@@ -1639,9 +1638,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 			}
 		}
 		// Are we being sent an update to our current position, e.g. floor height?
-		else if(receivedInitialPos==sessionClient.receivedInitialPos)
+		//else if(receivedInitialPos==sessionClient.receivedInitialPos)
 		{
-			clientDeviceState->originPose.position.z = sessionClient.GetOriginPose().position.z;
+		//	clientDeviceState->originPose.position.z = sessionClient.GetOriginPose().position.z;
 		}
 		avs::Result result = pipeline.process();
 
@@ -1662,6 +1661,15 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 			sessionClient.Connect(remoteEndpoint, TELEPORT_TIMEOUT);
 		}
 	}
+
+	simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
+	auto q = camera.Orientation.GetQuaternion();
+	auto q_rel = q / q0;
+	clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((scr::quat*)&q_rel));
+	clientDeviceState->UpdateOriginPose();
+	FillInControllerPose(0, 0.5f);
+	FillInControllerPose(1, -0.5f);
+
 
 	//sessionClient.Frame(camera.GetOrientation().GetQuaternion(), controllerState);
 }
