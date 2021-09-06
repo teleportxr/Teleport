@@ -69,7 +69,7 @@ static GeometryStore geometryStore;
 
 std::map<avs::uid, ClientData> clientServices;
 
-SCServer::CasterSettings casterSettings; //Unity side settings are copied into this, so inner-classes can reference this rather than managed code instance.
+SCServer::CasterSettings casterSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
 static ShowNodeFn onShowNode;
 static HideNodeFn onHideNode;
@@ -386,6 +386,11 @@ TELEPORT_EXPORT void DeleteUnmanagedArray(void** unmanagedArray)
 TELEPORT_EXPORT void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
 {
 	casterSettings = newSettings;
+}
+
+TELEPORT_EXPORT void SetCachePath(const char* path)
+{
+	geometryStore.SetCachePath(path);
 }
 
 TELEPORT_EXPORT void SetShowNodeDelegate(ShowNodeFn showNode)

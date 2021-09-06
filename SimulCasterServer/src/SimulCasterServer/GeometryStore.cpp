@@ -84,7 +84,6 @@ const char* stringOf(avs::NodeDataType type)
 
 GeometryStore::GeometryStore()
 {
-
 	//Create look-up maps.
 	meshes[avs::AxesStandard::EngineeringStyle];
 	meshes[avs::AxesStandard::GlStyle];
@@ -101,18 +100,18 @@ GeometryStore::~GeometryStore()
 
 void GeometryStore::saveToDisk() const
 {
-	saveResources(std::string("teleport_cache/")+TEXTURE_CACHE_PATH, textures);
-	saveResources(std::string("teleport_cache/")+MATERIAL_CACHE_PATH, materials);
-	saveResources(std::string("teleport_cache/")+MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
-	saveResources(std::string("teleport_cache/")+MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
+	saveResources(cachePath+"/"+TEXTURE_CACHE_PATH, textures);
+	saveResources(cachePath + "/" +MATERIAL_CACHE_PATH, materials);
+	saveResources(cachePath + "/" +MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
+	saveResources(cachePath + "/" +MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
 }
 
 void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials)
 {
-	loadResources(std::string("teleport_cache/") + MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
-	loadResources(std::string("teleport_cache/") + MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
-	loadResources(std::string("teleport_cache/") + TEXTURE_CACHE_PATH, textures);
-	loadResources(std::string("teleport_cache/") + MATERIAL_CACHE_PATH, materials);
+	loadResources(cachePath + "/" + MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
+	loadResources(cachePath + "/" + MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
+	loadResources(cachePath + "/" + TEXTURE_CACHE_PATH, textures);
+	loadResources(cachePath + "/" + MATERIAL_CACHE_PATH, materials);
 
 	meshAmount = meshes.at(avs::AxesStandard::EngineeringStyle).size();
 	textureAmount = textures.size();

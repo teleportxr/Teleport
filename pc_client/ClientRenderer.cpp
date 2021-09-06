@@ -1212,8 +1212,9 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	if (videoConfig.use_cubemap)
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
+		if(videoConfig.colour_cubemap_size)
+			videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
+				crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 	}
 	else
 	{
