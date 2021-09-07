@@ -320,9 +320,6 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 		return OVRFW::ovrApplFrameOut();
 	// we don't want local slide movements.
 	mScene.SetMoveSpeed(1.0f);
-	mScene.Frame(vrFrame,-1,false);
-	clientRenderer.eyeSeparation=vrFrame.IPD;
-	GLCheckErrorsWithTitle("Frame: Start");
 
 	// Try to find remote controller
 	if(controllers.mControllerIDs[0] == 0)
@@ -373,6 +370,9 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 				sessionClient.Disconnect(0);
 		}
 	}
+	mScene.Frame(vrFrame,-1,false);
+	clientRenderer.eyeSeparation=vrFrame.IPD;
+	GLCheckErrorsWithTitle("Frame: Start");
 
 	//Get HMD Position/Orientation
 	clientDeviceState.stickYaw=mScene.GetStickYaw();
