@@ -26,7 +26,7 @@ typedef struct _ENetPeer ENetPeer;
 typedef struct _ENetPacket ENetPacket;
 typedef struct _ENetEvent ENetEvent;
 
-namespace SCServer
+namespace teleport
 {
 	class DiscoveryService;
 

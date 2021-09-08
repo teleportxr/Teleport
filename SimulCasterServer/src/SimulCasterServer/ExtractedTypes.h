@@ -11,7 +11,7 @@
 #include "libavstream/geometry/material_interface.hpp"
 #include "libavstream/geometry/mesh_interface.hpp"
 
-namespace SCServer
+namespace teleport
 {
 	struct ExtractedMesh
 	{

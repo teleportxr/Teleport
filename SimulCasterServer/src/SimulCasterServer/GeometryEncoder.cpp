@@ -33,7 +33,7 @@ size_t GetNewUIDs(std::vector<avs::uid> & outUIDs, avs::GeometryRequesterBackend
 	return outUIDs.size();
 }
 
-namespace SCServer
+namespace teleport
 {
 	GeometryEncoder::GeometryEncoder(const CasterSettings* settings)
 		:settings(settings), prevBufferSize(0)

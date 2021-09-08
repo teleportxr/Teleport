@@ -12,7 +12,7 @@ namespace avs
 	class AudioEncoder;
 }
 
-namespace SCServer
+namespace teleport
 {
 	struct AudioParams
 	{

@@ -9,7 +9,7 @@
 
 #include "ExtractedTypes.h"
 
-namespace SCServer
+namespace teleport
 {
 	/// Singleton for storing geometry data and managing the geometry file cache.
 	class GeometryStore: public avs::GeometrySourceBackendInterface

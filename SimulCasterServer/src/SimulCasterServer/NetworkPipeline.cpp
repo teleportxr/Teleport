@@ -12,7 +12,7 @@ namespace
 	constexpr int networkPipelineSocketBufferSize = 16 * 1024 * 1024; // 16MiB
 }
 
-namespace SCServer
+namespace teleport
 {
 	NetworkPipeline::NetworkPipeline(const CasterSettings* settings)
 		: mSettings(settings), mPrevProcResult(avs::Result::OK)

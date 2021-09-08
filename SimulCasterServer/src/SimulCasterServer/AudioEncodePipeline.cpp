@@ -9,7 +9,7 @@
 #include <libavstream/common.hpp>
 #include <libavstream/audio/audio_interface.h>
 
-namespace SCServer
+namespace teleport
 {
 	AudioEncodePipeline::~AudioEncodePipeline()
 	{

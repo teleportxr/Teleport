@@ -7,7 +7,7 @@
 #include "SimulCasterServer/DiscoveryService.h"
 #include "SimulCasterServer/UnityPlugin/Export.h"
 
-namespace SCServer
+namespace teleport
 {
 	class DefaultDiscoveryService: public DiscoveryService
 	{

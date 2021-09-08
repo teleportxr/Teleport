@@ -4,7 +4,7 @@
 
 #include "libavstream/common_maths.h"
 
-namespace SCServer
+namespace teleport
 {
 	struct CasterContext;
 
@@ -20,10 +20,10 @@ namespace SCServer
 
 	struct CaptureDelegates
 	{
-		std::function<void(SCServer::CasterContext* context)> startStreaming;
+		std::function<void(teleport::CasterContext* context)> startStreaming;
 
 		std::function<void(void)> requestKeyframe;
 
-		std::function<SCServer::CameraInfo&(void)> getClientCameraInfo;
+		std::function<teleport::CameraInfo&(void)> getClientCameraInfo;
 	};
 }

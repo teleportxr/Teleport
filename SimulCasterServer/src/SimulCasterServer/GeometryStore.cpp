@@ -13,7 +13,7 @@
 #include "libavstream/geometry/animation_interface.h"
 #include "draco/compression/encode.h"
 #include "draco/compression/decode.h"
-using namespace SCServer;
+using namespace teleport;
 
 //We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
 #if _MSC_VER < 1920
@@ -100,7 +100,7 @@ GeometryStore::~GeometryStore()
 
 void GeometryStore::saveToDisk() const
 {
-	saveResources(cachePath+"/"+TEXTURE_CACHE_PATH, textures);
+	saveResources(cachePath + "/" +TEXTURE_CACHE_PATH, textures);
 	saveResources(cachePath + "/" +MATERIAL_CACHE_PATH, materials);
 	saveResources(cachePath + "/" +MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
 	saveResources(cachePath + "/" +MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));

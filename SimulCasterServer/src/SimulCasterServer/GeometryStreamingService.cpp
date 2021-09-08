@@ -14,7 +14,7 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
-namespace SCServer
+namespace teleport
 {
 	GeometryStreamingService::GeometryStreamingService(const CasterSettings* settings)
 		:geometryStore(nullptr), settings(settings), casterContext(nullptr), geometryEncoder(settings)
@@ -82,7 +82,7 @@ namespace SCServer
 		}
 	}
 
-	void GeometryStreamingService::startStreaming(SCServer::CasterContext* context)
+	void GeometryStreamingService::startStreaming(teleport::CasterContext* context)
 	{
 		if (casterContext == context)
 		{
@@ -159,7 +159,7 @@ namespace SCServer
 		}
 	}
 
-	bool SCServer::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
+	bool teleport::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 	{
 		return hiddenNodes.find(nodeID) != hiddenNodes.end();
 	}

@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-namespace SCServer
+namespace teleport
 {  
     IUnityInterfaces* GraphicsManager::mUnityInterfaces = nullptr;
     IUnityGraphics* GraphicsManager::mGraphics = nullptr;
@@ -80,7 +80,7 @@ namespace SCServer
     }
 }
 
-using SGM = SCServer::GraphicsManager;
+using SGM = teleport::GraphicsManager;
 
 static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType);
 static void AssignGraphicsDevice();

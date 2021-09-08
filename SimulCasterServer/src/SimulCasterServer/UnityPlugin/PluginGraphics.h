@@ -3,7 +3,7 @@
 #include "IUnityInterface.h"
 #include "IUnityGraphics.h"
 
-namespace SCServer
+namespace teleport
 {
 	class GraphicsManager
 	{

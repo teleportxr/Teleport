@@ -9,7 +9,7 @@
 #include "CasterContext.h"
 #include "GeometryEncoder.h"
 
-namespace SCServer
+namespace teleport
 {
 	class GeometryStore;
 
@@ -68,8 +68,8 @@ namespace SCServer
 	private:
 		const struct CasterSettings* settings;
 
-		SCServer::CasterContext* casterContext = nullptr;
-		SCServer::GeometryEncoder geometryEncoder;
+		teleport::CasterContext* casterContext = nullptr;
+		teleport::GeometryEncoder geometryEncoder;
 
 		// The following MIGHT be moved later to a separate Pipeline class:
 		std::unique_ptr<avs::Pipeline> avsPipeline;

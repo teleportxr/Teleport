@@ -8,7 +8,7 @@
 
 #include "crossplatform/AudioStreamTarget.h"
 
-namespace SCServer
+namespace teleport
 {
 	SourceNetworkPipeline::SourceNetworkPipeline(const CasterSettings* inSettings)
 		: settings(inSettings), prevProcResult(avs::Result::OK)

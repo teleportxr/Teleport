@@ -11,7 +11,7 @@
 #include <libavstream/audio/audiotarget.h>
 #include <crossplatform/CustomAudioStreamTarget.h>
 
-namespace SCServer
+namespace teleport
 {
 	struct CasterContext
 	{

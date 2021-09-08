@@ -22,7 +22,7 @@ void ClientDeviceState::TransformPose(avs::Pose &p)
 {
 	scr::quat stickRotateQ(stickYaw,avs::vec3(0,1.0f,0));
 	scr::quat localQ=*((scr::quat*)(&p.orientation));
-	scr::quat globalQ=(stickRotateQ*localQ);//*(stickRotateQ.Conjugate());
+	scr::quat globalQ=(stickRotateQ*localQ);
 	p.orientation=globalQ;
 
 	avs::vec3 relp=p.position;

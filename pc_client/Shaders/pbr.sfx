@@ -191,8 +191,8 @@ shader vertexOutput VS_Animation(vertexInput IN)
 						+ boneMatrices[int(IN.joints[3])] * IN.weights[3];
 	
 	vec4 opos		= vec4(IN.position.xyz,1.0);
-	vec4 wpos		= mul(mul(opos, boneTransform), world);
-	//vec4 wpos = mul(opos, world);
+	//vec4 wpos		= mul(mul(opos, boneTransform), world);
+	vec4 wpos = mul(opos, world);
 
 	OUT.view		=normalize(wpos.xyz-viewPosition);
 	vec4 viewspace_pos = mul( view, vec4(wpos.xyz, 1.0));

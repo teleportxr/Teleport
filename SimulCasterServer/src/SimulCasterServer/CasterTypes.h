@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <mutex>
 
-namespace SCServer
+namespace teleport
 {
 	enum class VideoEncoderRateControlMode : uint8_t
 	{

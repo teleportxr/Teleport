@@ -4,7 +4,7 @@
 
 #include "CasterTypes.h"
 
-namespace SCServer
+namespace teleport
 {
 #pragma pack(push)
 #pragma pack(1)
@@ -34,7 +34,7 @@ namespace SCServer
 		int32_t targetFPS = 0;
 		int32_t idrInterval = 0;
 		avs::VideoCodec videoCodec = avs::VideoCodec::Invalid;
-		VideoEncoderRateControlMode rateControlMode = SCServer::VideoEncoderRateControlMode::RC_CONSTQP;
+		VideoEncoderRateControlMode rateControlMode = teleport::VideoEncoderRateControlMode::RC_CONSTQP;
 		int32_t averageBitrate = 0;
 		int32_t maxBitrate = 0;
 		bool enableAutoBitRate = false;

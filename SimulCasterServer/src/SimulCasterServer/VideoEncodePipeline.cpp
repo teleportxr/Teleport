@@ -11,7 +11,7 @@
 #include <libavstream/surfaces/surface_dx12.hpp>
 
 
-namespace SCServer
+namespace teleport
 {
 	static void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams);
 

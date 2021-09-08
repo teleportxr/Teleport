@@ -16,3 +16,6 @@
 [submodule "thirdparty/draco"]
 	path = thirdparty/draco
 	url = git@github.com:google/draco.git
+[submodule "thirdparty/openvr"]
+	path = thirdparty/openvr
+	url = git@github.com:ValveSoftware/openvr.git

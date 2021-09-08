@@ -2,7 +2,7 @@
 
 #include "libavstream/audio/audio_interface.h"
 
-namespace SCServer
+namespace teleport
 {
 	struct CasterSettings;
 

@@ -30,7 +30,9 @@
 VisualStudioDebugOutput debug_buffer(false, nullptr, 128);
 #endif
 
-using namespace SCServer;
+using namespace teleport;
+using namespace server;
+
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
@@ -69,7 +71,7 @@ static GeometryStore geometryStore;
 
 std::map<avs::uid, ClientData> clientServices;
 
-SCServer::CasterSettings casterSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
+teleport::CasterSettings casterSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
 static ShowNodeFn onShowNode;
 static HideNodeFn onHideNode;
@@ -106,11 +108,11 @@ static std::vector<LogMessage> messages(100);
 static std::mutex messagesMutex;
 
 
-class PluginGeometryStreamingService : public SCServer::GeometryStreamingService
+class PluginGeometryStreamingService : public teleport::GeometryStreamingService
 {
 public:
 	PluginGeometryStreamingService()
-		:SCServer::GeometryStreamingService(&casterSettings)
+		:teleport::GeometryStreamingService(&casterSettings)
 	{
 		this->geometryStore = &::geometryStore;
 	}
@@ -147,12 +149,12 @@ private:
 	}
 };
 
-class PluginVideoEncodePipeline : public SCServer::VideoEncodePipeline
+class PluginVideoEncodePipeline : public teleport::VideoEncodePipeline
 {
 public:
 	PluginVideoEncodePipeline() 
 		:
-		SCServer::VideoEncodePipeline(),
+		teleport::VideoEncodePipeline(),
 		inputSurfaceResource(nullptr),
 		encoderSurfaceResource(nullptr),
 		configured(false)
@@ -193,7 +195,7 @@ public:
 		params.deviceHandle = GraphicsManager::mGraphicsDevice;
 		params.inputSurfaceResource = encoderSurfaceResource;
 
-		Result result = SCServer::VideoEncodePipeline::initialize(casterSettings, params, colorQueue, tagDataQueue);
+		Result result = teleport::VideoEncodePipeline::initialize(casterSettings, params, colorQueue, tagDataQueue);
 		if (result)
 		{
 			configured = true;
@@ -236,7 +238,7 @@ public:
 			params.inputSurfaceResource = encoderSurfaceResource;
 		}
 		
-		return SCServer::VideoEncodePipeline::reconfigure(casterSettings, params);
+		return teleport::VideoEncodePipeline::reconfigure(casterSettings, params);
 	}
 
 	Result encode(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false)
@@ -250,7 +252,7 @@ public:
 		// Copy data from Unity texture to its CUDA compatible copy
 		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
 
-		return SCServer::VideoEncodePipeline::process(tagData, tagDataSize, forceIDR);
+		return teleport::VideoEncodePipeline::process(tagData, tagDataSize, forceIDR);
 	}
 
 	Result deconfigure() 
@@ -281,12 +283,12 @@ private:
 	bool configured;
 };
 
-class PluginAudioEncodePipeline : public SCServer::AudioEncodePipeline
+class PluginAudioEncodePipeline : public teleport::AudioEncodePipeline
 {
 public:
 	PluginAudioEncodePipeline()
 		:
-		SCServer::AudioEncodePipeline(),
+		teleport::AudioEncodePipeline(),
 		configured(false)
 	{
 		
@@ -305,7 +307,7 @@ public:
 			return Result::Code::EncoderAlreadyConfigured;
 		}
 
-		Result result = SCServer::AudioEncodePipeline::initialize(casterSettings, audioParams, audioQueue);
+		Result result = teleport::AudioEncodePipeline::initialize(casterSettings, audioParams, audioQueue);
 		if (result)
 		{
 			configured = true;
@@ -321,7 +323,7 @@ public:
 			return Result::Code::EncoderNotConfigured;
 		}
 
-		return SCServer::AudioEncodePipeline::process(data, dataSize);
+		return teleport::AudioEncodePipeline::process(data, dataSize);
 	}
 
 private:
@@ -383,7 +385,7 @@ TELEPORT_EXPORT void DeleteUnmanagedArray(void** unmanagedArray)
 ///MEMORY-MANAGEMENT END
 
 ///PLUGIN-SPECIFIC START
-TELEPORT_EXPORT void UpdateCasterSettings(const SCServer::CasterSettings newSettings)
+TELEPORT_EXPORT void UpdateCasterSettings(const teleport::CasterSettings newSettings)
 {
 	casterSettings = newSettings;
 }
@@ -579,7 +581,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 		std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService = std::make_shared<PluginGeometryStreamingService>();
 		std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline = std::make_shared<PluginVideoEncodePipeline>();
 		std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline = std::make_shared<PluginAudioEncodePipeline>();
-		SCServer::ClientMessaging clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake);
+		teleport::ClientMessaging clientMessaging(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake);
 		ClientData newClientData(geometryStreamingService, videoEncodePipeline, audioEncodePipeline, clientMessaging);
 
 		if(newClientData.clientMessaging.startSession(clientID, listenPort))
@@ -633,15 +635,15 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 	}
 
 	///TODO: Initialize real delegates for capture component.
-	SCServer::CaptureDelegates delegates;
-	delegates.startStreaming = [](SCServer::CasterContext* context){};
+	teleport::CaptureDelegates delegates;
+	delegates.startStreaming = [](teleport::CasterContext* context){};
 	delegates.requestKeyframe = [&newClient]()
 	{
 		newClient.videoKeyframeRequired = true;
 	};
-	delegates.getClientCameraInfo = []()->SCServer::CameraInfo&
+	delegates.getClientCameraInfo = []()->teleport::CameraInfo&
 	{
-		static SCServer::CameraInfo c;
+		static teleport::CameraInfo c;
 		return c;
 	};
 
@@ -716,7 +718,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 
 	clientData.geometryStreamingService->startStreaming(&clientData.casterContext);
 
-	SCServer::CasterEncoderSettings encoderSettings{};
+	teleport::CasterEncoderSettings encoderSettings{};
 
 	encoderSettings.frameWidth = clientData.clientSettings.videoTextureSize[0];
 	encoderSettings.frameHeight = clientData.clientSettings.videoTextureSize[1];
@@ -802,7 +804,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 
 
 	auto global_illumination_texture_uids=clientData.getGlobalIlluminationTextures();
-	avs::SetupLightingCommand setupLightingCommand(global_illumination_texture_uids.size());
+	avs::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
 	clientData.clientMessaging.sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 
 	clientData.isStreaming = true;
@@ -1065,7 +1067,7 @@ bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
 
 
 ///VideoEncodePipeline START
-TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
+TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, teleport::VideoEncodeParams& videoEncodeParams)
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
 
@@ -1086,7 +1088,7 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, SCServer::VideoEn
 	}
 }
 
-TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoEncodeParams& videoEncodeParams)
+TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, teleport::VideoEncodeParams& videoEncodeParams)
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
 
@@ -1106,7 +1108,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, SCServer::VideoE
 	}
 
 	///TODO: Need to retrieve encoder settings from unity.
-	SCServer::CasterEncoderSettings encoderSettings
+	teleport::CasterEncoderSettings encoderSettings
 	{
 		videoEncodeParams.encodeWidth,
 		videoEncodeParams.encodeHeight,
@@ -1177,7 +1179,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 struct EncodeVideoParamsWrapper
 {
 	avs::uid clientID;
-	SCServer::VideoEncodeParams videoEncodeParams;
+	teleport::VideoEncodeParams videoEncodeParams;
 };
 
 static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
@@ -1219,7 +1221,7 @@ TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 ///VideoEncodePipeline END
 
 ///AudioEncodePipeline START
-TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const SCServer::AudioParams& audioParams)
+TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const teleport::AudioParams& audioParams)
 {
 	std::lock_guard<std::mutex> lock(audioMutex);
 

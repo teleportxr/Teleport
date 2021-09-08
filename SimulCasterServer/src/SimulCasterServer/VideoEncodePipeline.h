@@ -12,7 +12,7 @@ namespace avs
 	class Surface;
 }
 
-namespace SCServer
+namespace teleport
 {
 	struct VideoEncodeParams
 	{

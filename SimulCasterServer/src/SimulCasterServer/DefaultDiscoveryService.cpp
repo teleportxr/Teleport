@@ -3,12 +3,14 @@
 #include "SimulCasterServer/ErrorHandling.h"
 #include "SimulCasterServer/ClientData.h"
 #include "SimulCasterServer/CasterSettings.h"
+
+using namespace teleport;
+using namespace server;
+
 extern std::map<avs::uid, ClientData> clientServices;
-extern SCServer::CasterSettings casterSettings;
+extern teleport::CasterSettings casterSettings;
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
-
-using namespace SCServer;
 
 bool DefaultDiscoveryService::initialize(uint16_t discovPort, uint16_t servPort, std::string desIP)
 {
