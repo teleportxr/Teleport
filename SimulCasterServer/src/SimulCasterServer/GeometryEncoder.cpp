@@ -57,7 +57,7 @@ namespace teleport
 			std::vector<avs::uid> nodeIDsToStream;
 			std::vector<avs::MeshNodeResources> meshNodeResources;
 			std::vector<avs::LightNodeResources> lightNodeResources;
-			std::vector<avs::uid> genericTexturesToStream;
+			std::set<avs::uid> genericTexturesToStream;
 
 			req->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream);
 
@@ -360,7 +360,7 @@ namespace teleport
 	avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface *req, std::vector<avs::uid> missingUIDs)
 	{
 		//Place payload type onto the buffer.
-		putPayload(avs::GeometryPayloadType::PipelineNode);
+		putPayload(avs::GeometryPayloadType::Node);
 		for (int i=0;i<missingUIDs.size();i++)
 		{
 			avs::uid uid =missingUIDs[i];

@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <set>
 
 #include <libavstream/common.hpp>
 #include <libavstream/memory.hpp>
@@ -667,7 +668,7 @@ struct Animation;
 		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
 										,std::vector<MeshNodeResources>& outMeshResources
 										,std::vector<LightNodeResources>& outLightResources
-										,std::vector<avs::uid>& genericTextureUids) const = 0;
+										,std::set<avs::uid>& genericTextureUids) const = 0;
 
 		//Returns the axes standard used by the client.
 		virtual AxesStandard getClientAxesStandard() const = 0;

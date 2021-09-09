@@ -28,7 +28,7 @@ namespace teleport
 		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
 		, std::vector<avs::MeshNodeResources>& outMeshResources
 		, std::vector<avs::LightNodeResources>& outLightResources
-		,std::vector<avs::uid>& genericTextureUids) const override;
+		,std::set<avs::uid>& genericTextureUids) const override;
 
 		virtual avs::AxesStandard getClientAxesStandard() const override
 		{

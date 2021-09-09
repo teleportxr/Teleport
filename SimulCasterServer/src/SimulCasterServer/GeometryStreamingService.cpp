@@ -52,7 +52,7 @@ namespace teleport
 	}
 
 	void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources
-	, std::vector<avs::LightNodeResources>& outLightResources,std::vector<avs::uid>& genericTextureUids) const
+	, std::vector<avs::LightNodeResources>& outLightResources,std::set<avs::uid>& genericTextureUids) const
 	{
 		for (avs::uid nodeID : streamedNodeIDs)
 		{
@@ -70,16 +70,20 @@ namespace teleport
 				break;
 			case avs::NodeDataType::Mesh:
 				GetMeshNodeResources(nodeID, *node, outMeshResources);
+				if(node->renderState.globalIlluminationUid>0)
+				{
+					genericTextureUids.insert(node->renderState.globalIlluminationUid);
+				}
 				break;
 			default:
 				break;
 			}
 		}
-		genericTextureUids.clear();
+		/*	genericTextureUids.clear();
 		for(auto &t:streamedGenericTextureUids)
 		{
 			genericTextureUids.push_back(t);
-		}
+		}*/
 	}
 
 	void GeometryStreamingService::startStreaming(teleport::CasterContext* context)
