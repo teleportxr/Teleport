@@ -389,8 +389,8 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	mVideoSurfaceDef.graphicsCommand.GpuState.cullEnable = false;
 	mVideoSurfaceDef.graphicsCommand.GpuState.blendEnable = OVRFW::ovrGpuState::BLEND_DISABLE;
 
-	mWebcamResources.Init(clientAppInterface);
-
+	mWebcamResources.Init(clientAppInterface,"Webcam");
+	mDebugTextureResources.Init(clientAppInterface,"FlatTexture");
 	//Set up scr::Camera
 	scr::Camera::CameraCreateInfo c_ci = {
 			(scr::RenderPlatform *) (&globalGraphicsResources.renderPlatform)
@@ -521,7 +521,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	}
 }
 
-void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterface)
+void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterface,const char *shader_name)
 {
 	if (initialized)
 	{
@@ -532,10 +532,14 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 					{"videoTexture", ovrProgramParmType::TEXTURE_SAMPLED},
 					{"webcamUB",       ovrProgramParmType::BUFFER_UNIFORM}
 			};
-	std::string videoSurfaceVert = clientAppInterface->LoadTextFile(
-			"shaders/Webcam.vert");
-	std::string videoSurfaceFrag = clientAppInterface->LoadTextFile(
-			"shaders/Webcam.frag");
+	std::string vert_file="shaders/";
+	std::string frag_file="shaders/";
+	vert_file+=shader_name;
+	frag_file+=shader_name;
+	vert_file+=".vert";
+	frag_file+=".frag";
+	std::string videoSurfaceVert = clientAppInterface->LoadTextFile(vert_file.c_str());
+	std::string videoSurfaceFrag = clientAppInterface->LoadTextFile(frag_file.c_str());
 	program = GlProgram::Build(
 			nullptr, videoSurfaceVert.c_str(),
 			"#extension GL_OES_EGL_image_external_essl3 : require\n",
@@ -665,6 +669,7 @@ void ClientRenderer::ExitedVR()
 	GlProgram::Free(mCubeVideoSurfaceProgram);
 	GlProgram::Free(m2DVideoSurfaceProgram);
 	mWebcamResources.Destroy();
+	mDebugTextureResources.Destroy();
 }
 
 void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
@@ -1103,7 +1108,9 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			{
 				lightmapTexture = resourceManagers->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 				if(!lightmapTexture.get())
-					lightmapTexture=resourceCreator->m_DummyWhite;
+				{
+					lightmapTexture = resourceCreator->m_DummyWhite;
+				}
 				else
 					lightmapTexture->UseSampler(globalGraphicsResources.noMipsampler);
 			}
@@ -1246,6 +1253,10 @@ void ClientRenderer::CycleOSD()
 {
 	show_osd = (show_osd + 1) % NUM_OSDS;
 }
+void ClientRenderer::CycleOSDSelection()
+{
+	osd_selection++;
+}
 
 void ClientRenderer::SetStickOffset(float x, float y)
 {
@@ -1254,15 +1265,15 @@ void ClientRenderer::SetStickOffset(float x, float y)
 	//f->Input.sticks[0][1] += dy;
 }
 
-void ClientRenderer::DrawOSD()
+void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 {
 	static avs::vec3 offset={0,0,4.5f};
 	static avs::vec4 colour={1.0f,0.7f,0.5f,0.5f};
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	if(passSelector!=0)
 	{
-		static avs::vec3 passoffset={0,2.0f,5.0f};
-		clientAppInterface->PrintText(passoffset,colour,"%s",globalGraphicsResources.effectPassName);
+		static avs::vec3 passoffset={0,2.5f,5.0f};
+		clientAppInterface->PrintText(passoffset,colour,"%s",globalGraphicsResources.effectPassName.c_str());
 	}
 	auto ctr = mNetworkSource.getCounterValues();
 	auto vidStats = mDecoder.GetStats();
@@ -1280,7 +1291,8 @@ void ClientRenderer::DrawOSD()
 			}
 			clientAppInterface->PrintText(
 					offset, colour,
-					"        Foot pos: %1.2f, %1.2f, %1.2f    yaw: %1.2f\n"
+					"Devices\n\n"
+	 				"Foot pos: %1.2f, %1.2f, %1.2f    yaw: %1.2f\n"
 					" Camera Relative: %1.2f, %1.2f, %1.2f Abs: %1.2f, %1.2f, %1.2f\n"
 					"  Video Position: %1.2f, %1.2f, %1.2f\n"
 					"Controller 0 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
@@ -1324,6 +1336,7 @@ void ClientRenderer::DrawOSD()
 		{
 			clientAppInterface->PrintText(
 					offset, colour,
+					"Network\n\n"
 					"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 					"Incomplete Decoder Packets: %d\n"
 					"Bandwidth(kbps): %4.2f\n",
@@ -1347,7 +1360,7 @@ void ClientRenderer::DrawOSD()
 			std::ostringstream str;
 			const scr::NodeManager::nodeList_t &rootNodes = resourceManagers->mNodeManager->GetRootNodes();
 
-			str <<"Nodes: "<<static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()) << "\n";
+			str <<"Geometry\n\nNodes: "<<static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()) << "\n";
 			for(std::shared_ptr<scr::Node> node : rootNodes)
 			{
 				str << node->id << ": "<<node->name.c_str()<<"\n";
@@ -1384,11 +1397,34 @@ void ClientRenderer::DrawOSD()
 
 			break;
 		}
+		case TEXTURES_OSD:
+		{
+			std::ostringstream sstr;
+			std::setprecision(5);
+			const std::vector<uid> texture_uids=resourceManagers->mTextureManager.GetAllIDs();
+			if(osd_selection>=texture_uids.size())
+				osd_selection=0;
+			sstr << "Textures\n\n" << std::setw(4);
+			sstr << "Total: " << texture_uids.size()<<"\n";
+			if(osd_selection>=0&&osd_selection<texture_uids.size())
+			{
+				auto texture = resourceManagers->mTextureManager.Get(texture_uids[osd_selection]);
+				const auto &ci =  texture->GetTextureCreateInfo();
+				sstr << "\tSelected: " << ci.name.c_str()<<"\n";
+				sstr << "\t" << ci.width<<" x "<<ci.height <<"\n";
+				mDebugTextureResources.surfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) texture.get())->GetGlTexture());
+				res.Surfaces.emplace_back(mDebugTextureResources.transform, &mDebugTextureResources.surfaceDef);
+			}
+			clientAppInterface->PrintText(
+					offset, colour,
+					sstr.str().c_str());
+		}
+		break;
 		case TAG_OSD:
 		{
 			std::ostringstream sstr;
 			std::setprecision(5);
-			sstr << "Tags\n" << std::setw(4);
+			sstr << "Tags\n\n" << std::setw(4);
 			static int ii = 0;
 			static char iii = 0;
 			iii++;
@@ -1443,6 +1479,7 @@ void ClientRenderer::DrawOSD()
 
 			clientAppInterface->PrintText(
 							offset, colour,
+							"Controllers\n\n"
 							"Left Hand:		(%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
 							"TRIGGER_BACK:	%1.2f\n"
 							"Right Hand:	(%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"

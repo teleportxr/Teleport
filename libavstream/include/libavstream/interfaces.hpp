@@ -9,7 +9,7 @@
 namespace avs
 {
 
-class Node;
+class PipelineNode;
 class SurfaceBackendInterface;
 class GeometrySourceBackendInterface;
 class GeometryTargetBackendInterface;
@@ -30,28 +30,28 @@ public:
 
 	/*!
 	 * Read bytes.
-	 * \param reader Node which performs the read operation.
+	 * \param reader PipelineNode which performs the read operation.
 	 * \param buffer Pointer to destination buffer.
 	 * \param bufferSize Size of destination buffer in bytes.
 	 * \param bytesRead Number of bytes actually read should the read operation succeed.
 	 * \return
 	 *  - Result::OK on success.
-	 *  - Node specific error result on failure.
+	 *  - PipelineNode specific error result on failure.
 	 */
-	virtual Result read(Node* reader, void* buffer, size_t& bufferSize, size_t& bytesRead) = 0;
+	virtual Result read(PipelineNode* reader, void* buffer, size_t& bufferSize, size_t& bytesRead) = 0;
 
 	/*!
 	 * Write bytes.
-	 * \param writer Node which performs the write operation.
+	 * \param writer PipelineNode which performs the write operation.
 	 * \param buffer Pointer to soruce buffer.
 	 * \param bufferSize Size of source buffer in bytes.
 	 * \param bytesWritten Number of bytes actually written should the write operation succeed.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::IO_InvalidArgument if either buffer is nullptr or bufferSize is zero.
-	 *  - Node specific error result.
+	 *  - PipelineNode specific error result.
 	 */
-	virtual Result write(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) = 0;
+	virtual Result write(PipelineNode* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) = 0;
 };
 
 /*!
@@ -67,28 +67,28 @@ public:
 
 	/*!
 	 * Read packet.
-	 * \param reader Node which performs the read operation.
+	 * \param reader PipelineNode which performs the read operation.
 	 * \param buffer Pointer to destination buffer (may be nullptr to query for buffer size).
 	 * \param bufferSize Size of destination buffer in bytes.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::IO_Retry if either buffer is nullptr or bufferSize is too small.
 	 *                     Correct buffer size is written back to bufferSize and the read should be retried.
-	 *  - Node specific error result.
+	 *  - PipelineNode specific error result.
 	 */
-	virtual Result readPacket(Node* reader, void* buffer, size_t& bufferSize, int index) = 0;
+	virtual Result readPacket(PipelineNode* reader, void* buffer, size_t& bufferSize, int index) = 0;
 
 	/*!
 	 * Write packet.
-	 * \param writer Node which performs the write operation.
+	 * \param writer PipelineNode which performs the write operation.
 	 * \param buffer Pointer to source buffer.
 	 * \param bufferSize Size of source buffer in bytes.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::IO_InvalidArgument if either buffer is nullptr or bufferSize is zero.
-	 *  - Node specific error result.
+	 *  - PipelineNode specific error result.
 	 */
-	virtual Result writePacket(Node* writer, const void* buffer, size_t bufferSize, const int index) = 0;
+	virtual Result writePacket(PipelineNode* writer, const void* buffer, size_t bufferSize, const int index) = 0;
 };
 
 /*!

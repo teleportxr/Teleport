@@ -19,7 +19,7 @@ namespace avs
 	public:
 		StreamParserAVC();
 
-		Result configure(Node* node, OnPacketFn callback, uint32_t inputNodeIndex) override;
+		Result configure(PipelineNode* node, OnPacketFn callback, uint32_t inputNodeIndex) override;
 		Result parse(const char* buffer, size_t bufferSize) override;
 		Result flush() override;
 
@@ -44,7 +44,7 @@ namespace avs
 
 		ALUCodeAccumulator m_aluCodeAccumulator;
 		
-		Node* m_node;
+		PipelineNode* m_node;
 		OnPacketFn m_callback;
 		uint32_t m_inputNodeIndex;
 

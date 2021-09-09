@@ -23,9 +23,9 @@ namespace avs
 			return type;
 		}
 	};
-	struct GeometryDecoder::Private final : public Node::Private
+	struct GeometryDecoder::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(GeometryDecoder, Node)
+		AVSTREAM_PRIVATEINTERFACE(GeometryDecoder, PipelineNode)
 		// non-owned backend
 		GeometryDecoderBackendInterface *m_backend;
 		std::unique_ptr<GeometryParserInterface> m_parser;
@@ -41,7 +41,7 @@ namespace avs
 using namespace avs;
 
 GeometryDecoder::GeometryDecoder()
-	: Node(new GeometryDecoder::Private(this))
+	: PipelineNode(new GeometryDecoder::Private(this))
 {
 	setNumSlots(1, 1);
 	d().m_parser.reset(new GeometryParser);
@@ -177,7 +177,7 @@ Result GeometryDecoder::Private::processPayload(const uint8_t* buffer, size_t bu
 	return result;
 }
 
-Result GeometryDecoder::onInputLink(int slot, Node* node)
+Result GeometryDecoder::onInputLink(int slot, PipelineNode* node)
 {
 	if (!dynamic_cast<IOInterface*>(node))
 	{
@@ -187,11 +187,11 @@ Result GeometryDecoder::onInputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-Result GeometryDecoder::onOutputLink(int slot, Node* node)
+Result GeometryDecoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!d().m_configured)
 	{
-		AVSLOG(Error) << "GeometryDecoder: Node needs to be configured before it can accept output";
+		AVSLOG(Error) << "GeometryDecoder: PipelineNode needs to be configured before it can accept output";
 		return Result::Node_NotConfigured;
 	}
 	assert(d().m_backend);
@@ -205,7 +205,7 @@ Result GeometryDecoder::onOutputLink(int slot, Node* node)
 	return Result::OK;// d().m_backend->registerSurface(surface->getBackendSurface());
 }
 
-void GeometryDecoder::onOutputUnlink(int slot, Node* node)
+void GeometryDecoder::onOutputUnlink(int slot, PipelineNode* node)
 {
 	if (!d().m_configured)
 	{

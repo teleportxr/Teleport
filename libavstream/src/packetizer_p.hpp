@@ -14,11 +14,11 @@
 
 namespace avs
 {
-	struct Packetizer::Private final : public Node::Private
+	struct Packetizer::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(Packetizer, Node)
+		AVSTREAM_PRIVATEINTERFACE(Packetizer, PipelineNode)
 
-		static Result onPacketParsed(Node* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload);
+		static Result onPacketParsed(PipelineNode* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload);
 
 		std::unique_ptr<StreamParserInterface> m_parser;
 		std::vector<char> m_buffer;

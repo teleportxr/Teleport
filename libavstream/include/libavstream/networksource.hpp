@@ -58,7 +58,7 @@ namespace avs
 	 *
 	 * Receives video stream from a remote UDP endpoint.
 	 */
-	class AVSTREAM_API NetworkSource final : public Node
+	class AVSTREAM_API NetworkSource final : public PipelineNode
 	{
 		AVSTREAM_PUBLICINTERFACE(NetworkSource)
 	public:

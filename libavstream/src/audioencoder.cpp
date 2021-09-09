@@ -8,7 +8,7 @@
 using namespace avs;
 
 AudioEncoder::AudioEncoder(AudioEncoderBackend backend)
-	: Node(new AudioEncoder::Private(this))
+	: PipelineNode(new AudioEncoder::Private(this))
 {
 	d().m_selectedBackendType = backend;
 	setNumSlots(0, 1);
@@ -97,7 +97,7 @@ Result AudioEncoder::setBackend(AudioEncoderBackendInterface* backend)
 	return Result::OK;
 }
 
-Result AudioEncoder::onInputLink(int slot, Node* node)
+Result AudioEncoder::onInputLink(int slot, PipelineNode* node)
 {
 	if (!d().m_configured)
 	{
@@ -109,7 +109,7 @@ Result AudioEncoder::onInputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-Result AudioEncoder::onOutputLink(int slot, Node* node)
+Result AudioEncoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!dynamic_cast<IOInterface*>(node))
 	{
@@ -119,7 +119,7 @@ Result AudioEncoder::onOutputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-void AudioEncoder::onInputUnlink(int slot, Node* node)
+void AudioEncoder::onInputUnlink(int slot, PipelineNode* node)
 {
 	
 }

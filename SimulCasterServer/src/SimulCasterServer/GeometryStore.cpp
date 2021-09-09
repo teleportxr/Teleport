@@ -149,7 +149,7 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 }
 void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
 {
-	TELEPORT_COUT << "Reaffirming resources.\node";
+	TELEPORT_COUT << "Renumbering resources.\node";
 
 	//Copy data on the resources that were loaded.
 	std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> oldMeshes = meshes;
@@ -894,13 +894,12 @@ void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastMod
 	materials[id] = ExtractedMaterial{guid, lastModified, newMaterial};
 }
 
-void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips, bool highQualityUASTC,bool forceOverwrite)
+void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips
+	, bool highQualityUASTC,bool forceOverwrite)
 {
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
 	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
 	{
-		//newTexture.compression = newTexture.compression;//avs::TextureCompression::BASIS_COMPRESSED;
-
 		bool validBasisFileExists = false;
 		filesystem::path filePath = basisFileLocation;
 		if(filesystem::exists(filePath))
@@ -909,7 +908,6 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 			filesystem::file_time_type rawBasisTime = filesystem::last_write_time(filePath);
 
 			//Convert to std::time_t; imprecise, but good enough.
-			//std::time_t basisLastModified = GetFileWriteTime(filePath);//std::chrono::system_clock::to_time_t(rawBasisTime);
 			std::time_t basisLastModified = rawBasisTime.time_since_epoch().count();
 
 			//The file is valid if the basis file is younger than the texture file.
@@ -950,7 +948,7 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 		}
 	}
 
-	textures[id] = ExtractedTexture{guid, lastModified, newTexture};
+	textures[id] = ExtractedTexture{guid, lastModified, newTexture };
 }
 
 void GeometryStore::storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newShadowMap)

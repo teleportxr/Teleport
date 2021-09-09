@@ -20,7 +20,8 @@ public:
 	~Controllers();
 
 	void SetCycleShaderModeDelegate(TriggerDelegate d);
-	void SetCycleOSDDelegate(TriggerDelegate d);;
+	void SetCycleOSDDelegate(TriggerDelegate d);
+	void SetCycleOSDSelectionDelegate(TriggerDelegate d);
 	void SetDebugOutputDelegate(TriggerDelegate d);
 	void SetToggleWebcamDelegate(TriggerDelegate d);
 	void SetSetStickOffsetDelegate(Float2Delegate d);
@@ -38,6 +39,7 @@ private:
 
 	TriggerDelegate CycleShaderMode;
 	TriggerDelegate CycleOSD;
+	TriggerDelegate CycleOSDSelection;
 	TriggerDelegate WriteDebugOutput;
 	TriggerDelegate ToggleWebcam;
 	Float2Delegate SetStickOffset;

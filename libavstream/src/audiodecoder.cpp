@@ -24,9 +24,9 @@ namespace avs
 		}
 	};
 
-	struct AudioDecoder::Private final : public Node::Private
+	struct AudioDecoder::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(AudioDecoder, Node)
+		AVSTREAM_PRIVATEINTERFACE(AudioDecoder, PipelineNode)
 
 		std::unique_ptr<AudioParserInterface> m_parser;
 
@@ -38,7 +38,7 @@ namespace avs
 	};
 
 	AudioDecoder::AudioDecoder()
-		: Node(new AudioDecoder::Private(this))
+		: PipelineNode(new AudioDecoder::Private(this))
 	{
 		setNumSlots(1, 1);
 		d().m_parser.reset(new AudioParser);
@@ -169,7 +169,7 @@ namespace avs
 		return result;
 	}
 
-	Result AudioDecoder::onInputLink(int slot, Node* node)
+	Result AudioDecoder::onInputLink(int slot, PipelineNode* node)
 	{
 		if (!dynamic_cast<IOInterface*>(node))
 		{
@@ -179,11 +179,11 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result AudioDecoder::onOutputLink(int slot, Node* node)
+	Result AudioDecoder::onOutputLink(int slot, PipelineNode* node)
 	{
 		if (!d().m_configured)
 		{
-			AVSLOG(Error) << "AudioDecoder: Node needs to be configured before it can accept output";
+			AVSLOG(Error) << "AudioDecoder: PipelineNode needs to be configured before it can accept output";
 			return Result::Node_NotConfigured;
 		}
 
@@ -196,7 +196,7 @@ namespace avs
 		return Result::OK;
 	}
 
-	void AudioDecoder::onOutputUnlink(int slot, Node* node)
+	void AudioDecoder::onOutputUnlink(int slot, PipelineNode* node)
 	{
 		
 	}

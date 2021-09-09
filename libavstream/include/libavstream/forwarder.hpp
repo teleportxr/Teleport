@@ -20,7 +20,7 @@ namespace avs
  * \note If an input or an output of a Forwarder node implements both PacketInterface and IOInterface
  *       then PacketInterface is used by the forwarder node to read or write data.
  */
-class AVSTREAM_API Forwarder final : public Node
+class AVSTREAM_API Forwarder final : public PipelineNode
 {
 	AVSTREAM_PUBLICINTERFACE(Forwarder)
 public:
@@ -53,7 +53,7 @@ public:
 
 	/*!
 	 * Forward data from input nodes to output nodes.
-	 * \sa Node::process()
+	 * \sa PipelineNode::process()
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::IO_OutOfMemory if failed to allocate memory for the internal buffer.
@@ -68,8 +68,8 @@ public:
 	const char* getDisplayName() const override { return "Forwarder"; }
 
 private:
-	Result onInputLink(int slot, Node* node) override;
-	Result onOutputLink(int slot, Node* node) override;
+	Result onInputLink(int slot, PipelineNode* node) override;
+	Result onOutputLink(int slot, PipelineNode* node) override;
 };
 
 } // avs

@@ -11,7 +11,7 @@ namespace avs
 	{
 	}
 
-	Result GeometryStreamParser::configure(Node* node, OnPacketFn callback, uint32_t inputNodeIndex)
+	Result GeometryStreamParser::configure(PipelineNode* node, OnPacketFn callback, uint32_t inputNodeIndex)
 	{
 		m_node = node;
 		m_callback = callback;

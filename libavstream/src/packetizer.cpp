@@ -6,7 +6,7 @@
 namespace avs
 {
 	Packetizer::Packetizer()
-		: Node(new Packetizer::Private(this))
+		: PipelineNode(new Packetizer::Private(this))
 	{
 		setNumInputSlots(1);
 	}
@@ -78,13 +78,13 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result Packetizer::read(Node* reader, void* buffer, size_t& bufferSize, size_t& bytesRead)
+	Result Packetizer::read(PipelineNode* reader, void* buffer, size_t& bufferSize, size_t& bytesRead)
 	{
 		AVSLOG(Warning) << "Attempted to read from Packetizer node";
 		return Result::Node_NotSupported;
 	}
 
-	Result Packetizer::write(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten)
+	Result Packetizer::write(PipelineNode* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
 		if (bufferSize > 0)
 		{
@@ -104,7 +104,7 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result Packetizer::Private::onPacketParsed(Node* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)
+	Result Packetizer::Private::onPacketParsed(PipelineNode* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)
 	{
 		assert(node);
 		Packetizer* self = static_cast<Packetizer*>(node);
@@ -121,7 +121,7 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result Packetizer::onOutputLink(int slot, Node* node)
+	Result Packetizer::onOutputLink(int slot, PipelineNode* node)
 	{
 		if (!dynamic_cast<PacketInterface*>(node))
 		{

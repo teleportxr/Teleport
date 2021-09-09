@@ -19,7 +19,7 @@ namespace avs
  *
  * - Compatible outputs: Any node implementing PacketInterface.
  */
-class AVSTREAM_API Packetizer final : public Node
+class AVSTREAM_API Packetizer final : public PipelineNode
 	                                , public IOInterface
 {
 	AVSTREAM_PUBLICINTERFACE(Packetizer)
@@ -53,7 +53,7 @@ public:
 
 	/*!
 	 * Parse bitstream and broadcast packets to all outputs.
-	 * \sa Node::process()
+	 * \sa PipelineNode::process()
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if packetizer has not been configured.
@@ -65,7 +65,7 @@ public:
 	 * Packetizer node does not support read operations.
 	 * \return Always returns Result::Node_NotSupported.
 	 */
-	Result read(Node* reader, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
+	Result read(PipelineNode* reader, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
 
 	/*!
 	 * Write bitstream to packetizer.
@@ -74,7 +74,7 @@ public:
 	 *  - Result::OK on success.
 	 *  - Result::IO_OutOfMemory if failed to allocate memory for internal buffer.
 	 */
-	Result write(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
+	Result write(PipelineNode* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 	
 	/*!
 	 * Get node display name (for reporting & profiling).
@@ -82,7 +82,7 @@ public:
 	const char* getDisplayName() const override { return "Packetizer"; }
 
 private:
-	Result onOutputLink(int slot, Node* node) override;
+	Result onOutputLink(int slot, PipelineNode* node) override;
 };
 
 } // avs

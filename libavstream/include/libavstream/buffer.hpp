@@ -14,7 +14,7 @@ namespace avs
  *
  * A thread-safe, nonblocking, producer-consumer ring buffer with fixed capacity.
  */
-class AVSTREAM_API Buffer final : public Node
+class AVSTREAM_API Buffer final : public PipelineNode
 	                            , public IOInterface
 {
 	AVSTREAM_PUBLICINTERFACE(Buffer)
@@ -44,7 +44,7 @@ public:
 	 *  - Result::Node_NotConfigured if buffer has not yet been configured with capacity.
 	 *  - Result::IO_Retry if bufferSize is zero.
 	 */
-	Result read(Node*, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
+	Result read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
 
 	/*!
 	 * Write bytes to buffer.
@@ -53,7 +53,7 @@ public:
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if buffer has not yet been configured with capacity.
 	 */
-	Result write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
+	Result write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 
 	/*! Get currently configured buffer capacity. */
 	size_t getCapacity() const;

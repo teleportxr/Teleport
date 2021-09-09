@@ -8,15 +8,15 @@
 
 using namespace avs;
 
-struct TagDataDecoder::Private final : public Node::Private
+struct TagDataDecoder::Private final : public PipelineNode::Private
 {
-	AVSTREAM_PRIVATEINTERFACE(TagDataDecoder, Node)
+	AVSTREAM_PRIVATEINTERFACE(TagDataDecoder, PipelineNode)
 
 	uint8_t m_streamId = 0;
 };
 
 TagDataDecoder::TagDataDecoder()
-	: Node(new TagDataDecoder::Private(this))
+	: PipelineNode(new TagDataDecoder::Private(this))
 {
 	setNumSlots(1, 0);
 }
@@ -105,7 +105,7 @@ Result TagDataDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 		if (frame.connectionTime)
 		{
-			m_stats.framesReceivedPerSec = m_stats.framesReceived / frame.connectionTime;
+			m_stats.framesReceivedPerSec = float(m_stats.framesReceived) / float(frame.connectionTime);
 		}
 
 		// Check if data was lost or corrupted
@@ -121,7 +121,7 @@ Result TagDataDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 	return result;
 }
 
-Result TagDataDecoder::onInputLink(int slot, Node* node)
+Result TagDataDecoder::onInputLink(int slot, PipelineNode* node)
 {
 	if (!dynamic_cast<IOInterface*>(node))
 	{
@@ -131,18 +131,18 @@ Result TagDataDecoder::onInputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-Result TagDataDecoder::onOutputLink(int slot, Node* node)
+Result TagDataDecoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!m_configured)
 	{
-		AVSLOG(Error) << "TagDataDecoder: Node needs to be configured before it can accept output";
+		AVSLOG(Error) << "TagDataDecoder: PipelineNode needs to be configured before it can accept output";
 		return Result::Node_NotConfigured;
 	}
 	
 	return Result::OK;
 }
 
-void TagDataDecoder::onOutputUnlink(int slot, Node* node)
+void TagDataDecoder::onOutputUnlink(int slot, PipelineNode* node)
 {
 	if (!m_configured)
 	{

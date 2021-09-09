@@ -360,19 +360,18 @@ namespace teleport
 	avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface *req, std::vector<avs::uid> missingUIDs)
 	{
 		//Place payload type onto the buffer.
-		putPayload(avs::GeometryPayloadType::Node);
+		putPayload(avs::GeometryPayloadType::PipelineNode);
 		for (int i=0;i<missingUIDs.size();i++)
 		{
 			avs::uid uid =missingUIDs[i];
 			avs::DataNode* node = src->getNode(uid);
 			if(!node)
 			{
-				TELEPORT_CERR << "Node encoding error! Node_" << uid << " does not exist!\n";
+				TELEPORT_CERR << "PipelineNode encoding error! Node_" << uid << " does not exist!\n";
 				missingUIDs.erase(missingUIDs.begin()+i);
 				i--;
 			}
 		}
-
 		put(missingUIDs.size());
 		for (const avs::uid &uid : missingUIDs)
 		{
@@ -704,6 +703,9 @@ namespace teleport
 				//Push format.
 				put(texture->format);
 				put(texture->compression);
+
+				//Value scale - brightness number to scale the final texel by.
+				put(texture->valueScale);
 
 				//Push size, and data.
 				put(texture->dataSize);

@@ -282,4 +282,5 @@ private:
 	const PC_MemoryUtil memoryUtil;
 
 	static constexpr float HFOV = 90;
+	float gamma=0.44f;
 };

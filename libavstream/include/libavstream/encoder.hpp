@@ -25,7 +25,7 @@ enum class EncoderBackend
  * - Compatible inputs : Any node implementing SurfaceInterface.
  * - Compatible outputs: Any node implementing IOInterface.
  */
-class AVSTREAM_API Encoder final : public Node
+class AVSTREAM_API Encoder final : public PipelineNode
 {
 	AVSTREAM_PUBLICINTERFACE(Encoder)
 public:
@@ -82,7 +82,7 @@ public:
 
 	/*!
 	 * Encode single video frame from input surface and write resulting bitstream to output.
-	 * \sa Node::process()
+	 * \sa PipelineNode::process()
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.
@@ -136,9 +136,9 @@ public:
 	bool isEncodingAsynchronously();
 
 private:
-	Result onInputLink(int slot, Node* node) override;
-	Result onOutputLink(int slot, Node* node) override;
-	void   onInputUnlink(int slot, Node* node) override;
+	Result onInputLink(int slot, PipelineNode* node) override;
+	Result onOutputLink(int slot, PipelineNode* node) override;
+	void   onInputUnlink(int slot, PipelineNode* node) override;
 
 	/*!
 	* Register the encoder's surface texture

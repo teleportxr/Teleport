@@ -330,7 +330,7 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 {
 	float roughness_mip		= MipFromRoughness(surfaceProperties.roughness, 5.0);
 	// Sample the environment maps:
-	vec3 diffuse_env		=surfaceProperties.globalIllumination.rgb;//+diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
+	vec3 diffuse_env		=diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
 	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
 	vec3 envSpecularColour	= ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
@@ -439,12 +439,12 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient)
 	}
 
 	vec3 emissive		= emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
-	emissive			*= emissiveOutputScalar.rgb;
+	emissive			*=emissiveOutputScalar.rgb;
 /*	vec2 diffl = abs(IN.texCoords0.xy - vec2(0.25, 0.75));
 	float dist = min(diffl.x, diffl.y);
 	if(dist<0.01)
 		emissive=vec3(1.0,1.0,1.0);*/
-	vec4 u				=vec4(c+emissive, 1.0);
+	vec4 u				=vec4(c+emissive,1.0);
 //	u.rg+= step(0.5,IN.texCoords0.x)*saturate(IN.texCoords0.xy* emissiveTexCoordsScalar_R-vec2(0.0,0.5));
 	vec3 highlight		=vec3(0.01,0.02,0.05);
 //u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
@@ -594,6 +594,9 @@ shader vec4 PS_DebugAnim(vertexOutput IN):SV_TARGET
 
 shader vec4 PS_DebugLightmaps(vertexOutput IN) : SV_TARGET
 {
+	vec3 diff = IN.wpos.xyz - viewPosition;
+	if (length(diff) > drawDistance)
+		discard;
 	vec2 lightmapUVs = IN.texCoords1.xy * lightmapScaleOffset.xy + lightmapScaleOffset.zw;
 	lightmapUVs.y = 1.0 - lightmapUVs.y;
 	vec4 globalIllumination = globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs);

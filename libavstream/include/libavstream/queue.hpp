@@ -16,7 +16,7 @@ namespace avs
  *
  * \note Sharing an instance of this node is the recommended way to link two pipelines running on different threads.
  */
-	class AVSTREAM_API Queue final : public Node
+	class AVSTREAM_API Queue final : public PipelineNode
 		, public IOInterface
 	{
 		AVSTREAM_PUBLICINTERFACE(Queue)
@@ -62,7 +62,7 @@ namespace avs
 		 *  - Result::IO_Retry if buffer is nullptr or bufferSize is smaller than the size of the buffer at the front of queue.
 		 *                     Correct buffer size is written back to bufferSize parameter and the read should be retried.
 		 */
-		Result read(Node*, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
+		Result read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
 
 		/*!
 		 * Write buffer to the back of the queue.
@@ -72,7 +72,7 @@ namespace avs
 		 *  - Result::IO_Full if attempted to write to full queue.
 		 *  - Result::IO_OutOfMemory if failed to allocate memory for the new queue buffer.
 		 */
-		Result write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
+		Result write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 
 	
 		/*!

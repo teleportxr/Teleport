@@ -17,9 +17,9 @@
 
 namespace avs
 {
-	struct Encoder::Private final : public Node::Private
+	struct Encoder::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(Encoder, Node)
+		AVSTREAM_PRIVATEINTERFACE(Encoder, PipelineNode)
 		std::unique_ptr<EncoderBackendInterface> m_backend;
 		EncoderBackend m_selectedBackendType;
 		EncoderParams m_params = {};

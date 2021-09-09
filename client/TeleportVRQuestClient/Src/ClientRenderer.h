@@ -100,6 +100,7 @@ public:
 	void WriteDebugOutput();
 	void ToggleWebcam();
 	void CycleOSD();
+	void CycleOSDSelection();
 	void  SetStickOffset(float,float);
 
 	void EnteredVR(const ovrJava *java);
@@ -171,11 +172,12 @@ public:
 		ovrMatrix4f transform;
 		bool initialized = false;
 
-		void Init(ClientAppInterface* clientAppInterface);
+		void Init(ClientAppInterface* clientAppInterface,const char *shader_name);
 		void SetPosition(const avs::vec2& position);
 		void Destroy();
 	};
 	WebcamResources mWebcamResources;
+	WebcamResources mDebugTextureResources;
 
 	OVRFW::ovrSurfaceDef mVideoSurfaceDef;
 	OVRFW::GlProgram     mCubeVideoSurfaceProgram;
@@ -225,12 +227,14 @@ public:
 		CAMERA_OSD,
 		NETWORK_OSD,
 		GEOMETRY_OSD,
+		TEXTURES_OSD,
 		TAG_OSD,
 		CONTROLLER_OSD,
 		NUM_OSDS
 	};
 	int show_osd = NO_OSD;
-	void DrawOSD();
+	uint32_t osd_selection;
+	void DrawOSD(OVRFW::ovrRendererOutput& res);
 	avs::SetupCommand lastSetupCommand;
 	avs::SetupLightingCommand setupLightingCommand;
 protected:

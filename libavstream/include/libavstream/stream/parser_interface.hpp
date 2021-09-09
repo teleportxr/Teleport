@@ -19,7 +19,7 @@ namespace avs
 		Default = AVC_AnnexB, /*<! Default bitstream parser */
 	};
 
-	class Node;
+	class PipelineNode;
 	/*!
 	 * Common stream parser interface.
 	 *
@@ -31,24 +31,24 @@ namespace avs
 		static StreamParserInterface *Create(StreamParserType StreamParser);
 		/*!
 		 * OnPacket function prototype (invoked periodically by the parser to notify about parsed packets in the stream).
-		 * \param node Node instance passed in configure().
+		 * \param node PipelineNode instance passed in configure().
 		 * \param buffer Pointer to the beginning of the overall data.
 		 * \param dataSize Number of bytes in the data.
 		 * \param dataOffset Offset into the buffer where the data begins.
 		 * \return Result::OK or error code.
 		 */
-		typedef Result(*OnPacketFn)(Node* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload);
+		typedef Result(*OnPacketFn)(PipelineNode* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload);
 
 		virtual ~StreamParserInterface() = default;
 
 		/*!
 		 * Configure stream parser.
-		 * \param node Node instance to pass to the callback invocation.
+		 * \param node PipelineNode instance to pass to the callback invocation.
 		 * \param callback Callback function invoked every time new codec packet has been fully parsed.
 		 * \return
 		 *  - Result::OK on success.
 		 */
-		virtual Result configure(Node* node, OnPacketFn callback, uint32_t inputNodeIndex) = 0;
+		virtual Result configure(PipelineNode* node, OnPacketFn callback, uint32_t inputNodeIndex) = 0;
 
 		/*!
 		 * Parse bitstream.

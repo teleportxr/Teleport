@@ -522,7 +522,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 		{},
 		{},
 		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : scr::Texture::CompressionFormat::UNCOMPRESSED
-//		scrTextureCompressionFormat
+
 	};
 
 	//Copy the data out of the buffer, so it can be transcoded or used as-is (uncompressed).
@@ -532,7 +532,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), std::move(texInfo), texture.name,texture.compression });
+		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), std::move(texInfo), texture.name,texture.compression,texture.valueScale });
 	}
 	else
 	{
@@ -757,6 +757,16 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	newNode->node->SetMaterialListSize(node.materials.size());
 	newNode->node->SetStatic(node.stationary);
 	newNode->node->SetGlobalIlluminationTextureUid(node.renderState.globalIlluminationUid);
+	if(node.renderState.globalIlluminationUid>0)
+	{
+		std::shared_ptr<scr::Texture> gi_texture = m_TextureManager->Get(node.renderState.globalIlluminationUid);
+		if(!gi_texture)
+		{
+			isMissingResources = true;
+			m_ResourceRequests.push_back(node.renderState.globalIlluminationUid);
+			GetMissingResource(node.renderState.globalIlluminationUid, "Texture").waitingResources.push_back(newNode);
+		}
+	}
 	for (size_t i = 0; i < node.materials.size(); i++)
 	{
 		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(node.materials[i]);
@@ -906,14 +916,36 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 	MissingResource& missingTexture = GetMissingResource(id, "Texture");
 	for(auto it = missingTexture.waitingResources.begin(); it != missingTexture.waitingResources.end(); it++)
 	{
-		std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::static_pointer_cast<IncompleteMaterial>(*it);
-		incompleteMaterial->textureSlots.at(id) = scrTexture;
-		SCR_COUT << "Waiting Material_" << incompleteMaterial->id << "(" << incompleteMaterial->materialInfo.name << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
-
-		//If only this texture and this function are pointing to the material, then it is complete.
-		if(it->use_count() == 2)
+		switch((*it)->type)
 		{
-			CompleteMaterial(incompleteMaterial->id, incompleteMaterial->materialInfo);
+			case avs::GeometryPayloadType::Material:
+				{
+					std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::static_pointer_cast<IncompleteMaterial>(*it);
+					incompleteMaterial->textureSlots.at(id) = scrTexture;
+					SCR_COUT << "Waiting Material_" << incompleteMaterial->id << "(" << incompleteMaterial->materialInfo.name << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
+
+					//If only this texture and this function are pointing to the material, then it is complete.
+					if (it->use_count() == 2)
+					{
+						CompleteMaterial(
+								incompleteMaterial->id, incompleteMaterial->materialInfo);
+					}
+				}
+				break;
+			case avs::GeometryPayloadType::Node:
+				{
+					std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
+					SCR_COUT << "Waiting Node " << incompleteNode->id << "(" << incompleteNode->node->name.c_str() << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
+
+					//If only this material and function are pointing to the MeshNode, then it is complete.
+					if(incompleteNode.use_count() == 2)
+					{
+						CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+					}
+				}
+				break;
+			default:
+				break;
 		}
 	}
 
@@ -1168,7 +1200,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					memcpy(outData.data(), target, outDataSize);
 					transcoding.scrTexture.mipSizes.push_back(outDataSize);
 					transcoding.scrTexture.mips.emplace_back(std::move(outData));
-
+					transcoding.scrTexture.valueScale=transcoding.valueScale;
 					if (transcoding.scrTexture.mips.size() != 0)
 					{
 						std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);

@@ -7,7 +7,7 @@
 namespace avs {
 
 	Forwarder::Forwarder()
-		: Node(new Forwarder::Private(this))
+		: PipelineNode(new Forwarder::Private(this))
 	{}
 
 	Result Forwarder::configure(size_t numInputs, size_t numOutputs, size_t chunkSize)
@@ -56,7 +56,7 @@ namespace avs {
 			return Result::Node_NotConfigured;
 		}
 
-		auto readInput = [this](Node* node, size_t& numBytesRead) -> Result
+		auto readInput = [this](PipelineNode* node, size_t& numBytesRead) -> Result
 		{
 			assert(node);
 			assert(d().m_buffer.size() >= d().m_chunkSize);
@@ -80,7 +80,7 @@ namespace avs {
 			}
 		};
 
-		auto writeOutput = [this](Node* node, size_t numBytesToWrite) -> Result
+		auto writeOutput = [this](PipelineNode* node, size_t numBytesToWrite) -> Result
 		{
 			assert(node);
 			assert(d().m_buffer.size() >= numBytesToWrite);
@@ -153,7 +153,7 @@ namespace avs {
 		return Result::OK;
 	}
 
-	Result Forwarder::onInputLink(int slot, Node* node)
+	Result Forwarder::onInputLink(int slot, PipelineNode* node)
 	{
 		if (!(dynamic_cast<PacketInterface*>(node) || dynamic_cast<IOInterface*>(node)))
 		{
@@ -163,7 +163,7 @@ namespace avs {
 		return Result::OK;
 	}
 
-	Result Forwarder::onOutputLink(int slot, Node* node)
+	Result Forwarder::onOutputLink(int slot, PipelineNode* node)
 	{
 		if (!(dynamic_cast<PacketInterface*>(node) || dynamic_cast<IOInterface*>(node)))
 		{

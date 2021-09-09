@@ -14,7 +14,7 @@ uid avs::GenerateUid()
 }
 
 GeometrySource::GeometrySource()
-	: Node(new GeometrySource::Private(this))
+	: PipelineNode(new GeometrySource::Private(this))
 {}
 
 GeometrySourceBackendInterface* GeometrySource::getGeometrySourceBackendInterface() const
@@ -60,7 +60,7 @@ Result GeometrySource::deconfigure()
 
 
 GeometryTarget::GeometryTarget()
-	: Node(new GeometryTarget::Private(this))
+	: PipelineNode(new GeometryTarget::Private(this))
 {}
 
 GeometryTargetBackendInterface* GeometryTarget::getGeometryTargetBackendInterface() const

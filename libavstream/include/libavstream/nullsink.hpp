@@ -14,7 +14,7 @@ namespace avs
  *
  * Silently discards all data written to it.
  */
-class AVSTREAM_API NullSink final : public Node
+class AVSTREAM_API NullSink final : public PipelineNode
 	                              , public IOInterface
 	                              , public PacketInterface
 {
@@ -39,25 +39,25 @@ public:
 	 * Null sink node does not support read operations.
 	 * \return Always returns Result::Node_NotSupported.
 	 */
-	Result read(Node* reader, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
+	Result read(PipelineNode* reader, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
 
 	/*!
 	 * Does nothing.
 	 * \return Always returns Result::OK.
 	 */
-	Result write(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
+	Result write(PipelineNode* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 
 	/*!
 	 * Null sink node does not support read operations.
 	 * \return Always returns Result::Node_NotSupported.
 	 */
-	Result readPacket(Node* reader, void* buffer, size_t& bufferSize, int streamIndex) override;
+	Result readPacket(PipelineNode* reader, void* buffer, size_t& bufferSize, int streamIndex) override;
 
 	/*!
 	 * Does nothing.
 	 * \return Always returns Result::OK.
 	 */
-	Result writePacket(Node* writer, const void* buffer, size_t bufferSize, int streamIndex) override;
+	Result writePacket(PipelineNode* writer, const void* buffer, size_t bufferSize, int streamIndex) override;
 	
 	/*!
 	 * Get node display name (for reporting & profiling).

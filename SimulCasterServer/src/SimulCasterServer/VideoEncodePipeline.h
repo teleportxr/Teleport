@@ -29,7 +29,7 @@ namespace teleport
 		VideoEncodePipeline() = default;
 		virtual ~VideoEncodePipeline();
 
-		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* videoOutput, avs::IOInterface* tagDataOutput);
+		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput);
 		Result reconfigure(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams);
 		Result process(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);
 		Result release();

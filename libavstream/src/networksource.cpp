@@ -20,7 +20,7 @@ using namespace avs;
 	((x) != ElasticFrameMessages::noError)
 
 NetworkSource::NetworkSource()
-	: Node(new NetworkSource::Private(this))
+	: PipelineNode(new NetworkSource::Private(this))
 {
 	m_data = static_cast<NetworkSource::Private*>(m_d);
 }
@@ -43,9 +43,9 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 
 		srt_startup();
 #if NDEBUG
-		srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::error;
+		//srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::error;
 #else
-		srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::debug;
+		//srt_logging::LogLevel::type loglevel = srt_logging::LogLevel::debug;
 #endif
 
 		m_data->m_socket=srt_create_socket();

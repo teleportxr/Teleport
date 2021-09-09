@@ -12,10 +12,10 @@
 namespace avs
 {
 
-	struct Queue::Private final : public Node::Private
+	struct Queue::Private final : public PipelineNode::Private
 	{
 		std::string name;
-		AVSTREAM_PRIVATEINTERFACE(Queue, Node)
+		AVSTREAM_PRIVATEINTERFACE(Queue, PipelineNode)
 		/** Contiguous memory that contains buffers of equal size */
 		char* m_mem = nullptr;
 		/** Contains sizes of data in each buffer */

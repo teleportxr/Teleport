@@ -187,7 +187,7 @@ namespace teleport
 		}
 
 		// For this client's POSITION and OTHER PROPERTIES,
-		// Use the Geometry Source to determine which Node uid's are relevant.
+		// Use the Geometry Source to determine which PipelineNode uid's are relevant.
 
 		avsPipeline->process();
 	}

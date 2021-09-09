@@ -22,7 +22,7 @@ namespace avs
 	 * Reads packets of encoded video tag data and outputs result to the application.
 	 * - Compatible inputs: A queue of taga data.
 	 */
-	class AVSTREAM_API TagDataDecoder final : public Node
+	class AVSTREAM_API TagDataDecoder final : public PipelineNode
 	{
 		AVSTREAM_PUBLICINTERFACE(TagDataDecoder)
 	public:
@@ -57,7 +57,7 @@ namespace avs
 
 		/*!
 		 * Process received video tag data
-		 * \sa Node::process()
+		 * \sa PipelineNode::process()
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_NotConfigured if decoder was not in configured state.
@@ -78,9 +78,9 @@ namespace avs
 		const char* getDisplayName() const override { return "TagDataDecoder"; }
 
 	private:
-		Result onInputLink(int slot, Node* node) override;
-		Result onOutputLink(int slot, Node* node) override;
-		void onOutputUnlink(int slot, Node* node) override;
+		Result onInputLink(int slot, PipelineNode* node) override;
+		Result onOutputLink(int slot, PipelineNode* node) override;
+		void onOutputUnlink(int slot, PipelineNode* node) override;
 		
 		TagDataDecoderStats m_stats = {};
 		std::vector<uint8_t> m_frameBuffer;

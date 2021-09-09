@@ -6,7 +6,7 @@
 namespace avs {
 
 	Surface::Surface()
-		: Node(new Surface::Private(this))
+		: PipelineNode(new Surface::Private(this))
 	{}
 
 	SurfaceBackendInterface* Surface::getBackendSurface() const

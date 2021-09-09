@@ -11,7 +11,7 @@
 using namespace avs;
 
 Encoder::Encoder(EncoderBackend backend)
-	: Node(new Encoder::Private(this))
+	: PipelineNode(new Encoder::Private(this))
 {
 	d().m_selectedBackendType = backend;
 	setNumSlots(1, 1);
@@ -225,7 +225,7 @@ Result Encoder::setBackend(EncoderBackendInterface* backend)
 	return Result::OK;
 }
 
-Result Encoder::onInputLink(int slot, Node* node)
+Result Encoder::onInputLink(int slot, PipelineNode* node)
 {
 	if (!d().m_configured)
 	{
@@ -244,7 +244,7 @@ Result Encoder::onInputLink(int slot, Node* node)
 	return registerSurface(surface);
 }
 
-Result Encoder::onOutputLink(int slot, Node* node)
+Result Encoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!dynamic_cast<IOInterface*>(node))
 	{
@@ -254,7 +254,7 @@ Result Encoder::onOutputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-void Encoder::onInputUnlink(int slot, Node* node)
+void Encoder::onInputUnlink(int slot, PipelineNode* node)
 {
 	unregisterSurface();
 }

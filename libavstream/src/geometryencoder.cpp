@@ -245,9 +245,9 @@ namespace avs
 		}
 	}
 	
-	struct GeometryEncoder::Private final : public Node::Private
+	struct GeometryEncoder::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(GeometryEncoder, Node)
+		AVSTREAM_PRIVATEINTERFACE(GeometryEncoder, PipelineNode)
 		bool m_configured = false;
 		bool m_outputPending = false;
 
@@ -262,7 +262,7 @@ namespace avs
 using namespace avs;
 
 GeometryEncoder::GeometryEncoder()
-	: Node(new GeometryEncoder::Private(this))
+	: PipelineNode(new GeometryEncoder::Private(this))
 {
 	setNumSlots(1, 1);
 }
@@ -302,7 +302,7 @@ Result GeometryEncoder::deconfigure()
 
 Result GeometryEncoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
-	avs::Node *input0 = getInput(0);
+	avs::PipelineNode *input0 = getInput(0);
 	if (!input0)
 	{
 		return Result::Node_InvalidInput;
@@ -343,11 +343,11 @@ Result GeometryEncoder::Private::process(uint32_t timestamp, GeometrySourceInter
 }
 
 
-Result GeometryEncoder::onInputLink(int slot, Node* node)
+Result GeometryEncoder::onInputLink(int slot, PipelineNode* node)
 {
 	if (!d().m_configured)
 	{
-		AVSLOG(Error) << "GeometryEncoder: Node needs to be configured before it can accept input";
+		AVSLOG(Error) << "GeometryEncoder: PipelineNode needs to be configured before it can accept input";
 		return Result::Node_NotConfigured;
 	}
 	assert(d().m_backend);
@@ -370,7 +370,7 @@ Result GeometryEncoder::onInputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-Result GeometryEncoder::onOutputLink(int slot, Node* node)
+Result GeometryEncoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!dynamic_cast<IOInterface*>(node))
 	{
@@ -380,7 +380,7 @@ Result GeometryEncoder::onOutputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-void GeometryEncoder::onInputUnlink(int slot, Node* node)
+void GeometryEncoder::onInputUnlink(int slot, PipelineNode* node)
 {
 	if (!d().m_configured)
 	{

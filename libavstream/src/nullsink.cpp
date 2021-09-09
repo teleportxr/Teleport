@@ -8,7 +8,7 @@
 namespace avs {
 
 NullSink::NullSink()
-	: Node(new Node::Private(this))
+	: PipelineNode(new PipelineNode::Private(this))
 {}
 
 Result NullSink::configure(size_t numInputs)
@@ -23,25 +23,25 @@ Result NullSink::deconfigure()
 	return Result::OK;
 }
 
-Result NullSink::read(Node* reader, void* buffer, size_t& bufferSize, size_t& bytesRead)
+Result NullSink::read(PipelineNode* reader, void* buffer, size_t& bufferSize, size_t& bytesRead)
 {
 	AVSLOG(Warning) << "Attempted to read from null sink node";
 	return Result::Node_NotSupported;
 }
 	
-Result NullSink::write(Node* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten)
+Result NullSink::write(PipelineNode* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 {
 	// Do nothing.
 	return Result::OK;
 }
 	
-Result NullSink::readPacket(Node* reader, void* buffer, size_t& bufferSize, int )
+Result NullSink::readPacket(PipelineNode* reader, void* buffer, size_t& bufferSize, int )
 {
 	AVSLOG(Warning) << "Attempted to read packets from null sink node";
 	return Result::Node_NotSupported;
 }
 	
-Result NullSink::writePacket(Node* writer, const void* buffer, size_t bufferSize, int )
+Result NullSink::writePacket(PipelineNode* writer, const void* buffer, size_t bufferSize, int )
 {
 	// Do nothing.
 	return Result::OK;

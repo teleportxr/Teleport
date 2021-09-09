@@ -12,15 +12,15 @@
 
 namespace avs
 {
-	struct GeometrySource::Private final : public Node::Private
+	struct GeometrySource::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(GeometrySource, Node)
+		AVSTREAM_PRIVATEINTERFACE(GeometrySource, PipelineNode)
 		GeometrySourceBackendInterface *m_backend;
 		GeometryRequesterBackendInterface *m_requesterBackend;
 	};
-	struct GeometryTarget::Private final : public Node::Private
+	struct GeometryTarget::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(GeometryTarget, Node)
+		AVSTREAM_PRIVATEINTERFACE(GeometryTarget, PipelineNode)
 		GeometryTargetBackendInterface *m_backend;
 	};
 } // avs

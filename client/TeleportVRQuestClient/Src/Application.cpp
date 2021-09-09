@@ -269,6 +269,7 @@ void Application::EnteredVrMode()
 
 	controllers.SetCycleShaderModeDelegate(std::bind(&ClientRenderer::CycleShaderMode, &clientRenderer));
 	controllers.SetCycleOSDDelegate(std::bind(&ClientRenderer::CycleOSD, &clientRenderer));
+	controllers.SetCycleOSDSelectionDelegate(std::bind(&ClientRenderer::CycleOSDSelection, &clientRenderer));
 	controllers.SetDebugOutputDelegate(std::bind(&ClientRenderer::WriteDebugOutput, &clientRenderer));
 	controllers.SetToggleWebcamDelegate(std::bind(&ClientRenderer::ToggleWebcam, &clientRenderer));
 	controllers.SetSetStickOffsetDelegate(std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1, std::placeholders::_2));
@@ -528,11 +529,10 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
     clientRenderer.RenderLocalNodes(out);
 	if (sessionClient.IsConnected())
 	{
-		clientRenderer.DrawOSD();
-
 		// Append video surface
 		clientRenderer.RenderVideo(*mDeviceContext, out);
-        clientRenderer.RenderWebcam(out);
+		clientRenderer.RenderWebcam(out);
+		clientRenderer.DrawOSD(out);
 	}
 	else
 	{
@@ -701,8 +701,8 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 
 		clientRenderer.mVideoQueue.configure(200000, 16, "VideoQueue");
 
-		avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mVideoQueue);
-		avs::Node::link(clientRenderer.mVideoQueue, clientRenderer.mDecoder);
+		avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mVideoQueue);
+		avs::PipelineNode::link(clientRenderer.mVideoQueue, clientRenderer.mDecoder);
 		mPipeline.link({&clientRenderer.mDecoder, &mSurface});
 
 
@@ -716,7 +716,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			}
 			clientRenderer.mTagDataQueue.configure(200, 16, "TagDataQueue");
 
-			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mTagDataQueue);
+			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mTagDataQueue);
 			mPipeline.link({&clientRenderer.mTagDataQueue, &clientRenderer.mTagDataDecoder});
 		}
 
@@ -736,8 +736,8 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			avsAudioTarget.configure(audioStreamTarget.get());
 			clientRenderer.mAudioQueue.configure(4096, 120, "AudioQueue");
 
-			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mAudioQueue);
-			avs::Node::link(clientRenderer.mAudioQueue, avsAudioDecoder);
+			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mAudioQueue);
+			avs::PipelineNode::link(clientRenderer.mAudioQueue, avsAudioDecoder);
 			mPipeline.link({&avsAudioDecoder, &avsAudioTarget});
 
 			// Audio Input
@@ -775,8 +775,8 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			avsGeometryTarget.configure(&resourceCreator);
 			clientRenderer.mGeometryQueue.configure(2500000, 100, "GeometryQueue");
 
-			avs::Node::link(clientRenderer.mNetworkSource, clientRenderer.mGeometryQueue);
-			avs::Node::link(clientRenderer.mGeometryQueue, avsGeometryDecoder);
+			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mGeometryQueue);
+			avs::PipelineNode::link(clientRenderer.mGeometryQueue, avsGeometryDecoder);
 			mPipeline.link({&avsGeometryDecoder, &avsGeometryTarget});
 		}
 		//GL_CheckErrors("Pre-Build Cubemap");

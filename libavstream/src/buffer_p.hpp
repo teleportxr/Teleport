@@ -13,9 +13,9 @@
 namespace avs
 {
 
-struct Buffer::Private final : public Node::Private
+struct Buffer::Private final : public PipelineNode::Private
 {
-	AVSTREAM_PRIVATEINTERFACE(Buffer, Node)
+	AVSTREAM_PRIVATEINTERFACE(Buffer, PipelineNode)
 	std::vector<char> m_buffer;
 	mutable std::mutex m_mutex;
 	size_t m_readCursor = 0;

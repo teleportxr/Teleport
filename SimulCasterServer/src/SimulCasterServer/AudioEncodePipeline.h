@@ -9,6 +9,7 @@
 namespace avs
 {
 	class Pipeline;
+	class PipelineNode;
 	class AudioEncoder;
 }
 
@@ -28,7 +29,7 @@ namespace teleport
 		AudioEncodePipeline() = default;
 		virtual ~AudioEncodePipeline();
 
-		Result initialize(const CasterSettings& settings, const AudioParams& audioParams, avs::Node* output);
+		Result initialize(const CasterSettings& settings, const AudioParams& audioParams, avs::PipelineNode* output);
 		Result process(const uint8_t* data, size_t dataSize);
 
 	private:

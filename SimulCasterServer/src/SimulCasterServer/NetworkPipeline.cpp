@@ -104,7 +104,7 @@ namespace teleport
 
 		// Video
 		{
-			if (!avs::Node::link(*videoQueue, *mNetworkSink))
+			if (!avs::PipelineNode::link(*videoQueue, *mNetworkSink))
 			{
 				TELEPORT_CERR << "Failed to configure network pipeline for video!" << std::endl;
 				return;
@@ -114,7 +114,7 @@ namespace teleport
 
 		// Tag Data
 		{
-			if (!avs::Node::link(*tagDataQueue, *mNetworkSink))
+			if (!avs::PipelineNode::link(*tagDataQueue, *mNetworkSink))
 			{
 				TELEPORT_CERR << "Failed to configure network pipeline for video tag data!" << std::endl;
 				return;
@@ -124,7 +124,7 @@ namespace teleport
 
 		// Audio
 		{
-			if (!avs::Node::link(*audioQueue, *mNetworkSink))
+			if (!avs::PipelineNode::link(*audioQueue, *mNetworkSink))
 			{
 				TELEPORT_CERR << "Failed to configure network pipeline for audio!" << std::endl;
 				return;
@@ -134,7 +134,7 @@ namespace teleport
 		
 		// Geometry
 		{
-			if (!avs::Node::link(*geometryQueue, *mNetworkSink))
+			if (!avs::PipelineNode::link(*geometryQueue, *mNetworkSink))
 			{
 				TELEPORT_CERR << "Failed to configure network pipeline for geometry!" << std::endl;
 				return;

@@ -15,7 +15,7 @@ namespace avs
 	 * - Compatible inputs : Any node implementing SurfaceInterface.
 	 * - Compatible outputs: Any node implementing IOInterface.
 	 */
-	class AVSTREAM_API GeometryEncoder final : public Node
+	class AVSTREAM_API GeometryEncoder final : public PipelineNode
 	{
 		AVSTREAM_PUBLICINTERFACE(GeometryEncoder)
 	public:
@@ -38,7 +38,7 @@ namespace avs
 
 		/*!
 		 * Encode the current geometry stack.
-		 * \sa Node::process()
+		 * \sa PipelineNode::process()
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_NotConfigured if encoder was not in configured state.
@@ -54,9 +54,9 @@ namespace avs
 		const char* getDisplayName() const override { return "Geometry Encoder"; }
 
 	private:
-		Result onInputLink(int slot, Node* node) override;
-		Result onOutputLink(int slot, Node* node) override;
-		void   onInputUnlink(int slot, Node* node) override;
+		Result onInputLink(int slot, PipelineNode* node) override;
+		Result onOutputLink(int slot, PipelineNode* node) override;
+		void   onInputUnlink(int slot, PipelineNode* node) override;
 	};
 
 } // avs

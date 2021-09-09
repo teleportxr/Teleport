@@ -29,7 +29,7 @@ uint64_t Pipeline::GetTimestamp() const
 	return m_data->m_lastTimestamp;
 }
 
-void Pipeline::add(Node* node)
+void Pipeline::add(PipelineNode* node)
 {
 	if (std::find(std::begin(m_data->m_nodes), std::end(m_data->m_nodes), node) == m_data->m_nodes.end())
 	{
@@ -42,22 +42,22 @@ void Pipeline::add(Node* node)
 	}
 }
 
-void Pipeline::add(const std::initializer_list<Node*>& nodes)
+void Pipeline::add(const std::initializer_list<PipelineNode*>& nodes)
 {
-	for (Node* node : nodes)
+	for (PipelineNode* node : nodes)
 	{
 		add(node);
 	}
 }
 
-Result Pipeline::link(const std::initializer_list<Node*>& nodes)
+Result Pipeline::link(const std::initializer_list<PipelineNode*>& nodes)
 {
-	Node* prevNode = nullptr;
-	for (Node* node : nodes)
+	PipelineNode* prevNode = nullptr;
+	for (PipelineNode* node : nodes)
 	{
 		if (prevNode)
 		{
-			if (Result result = Node::link(*prevNode, *node); !result)
+			if (Result result = PipelineNode::link(*prevNode, *node); !result)
 			{
 				return result;
 			}
@@ -68,7 +68,7 @@ Result Pipeline::link(const std::initializer_list<Node*>& nodes)
 	return Result::OK;
 }
 
-Node* Pipeline::front() const
+PipelineNode* Pipeline::front() const
 {
 	if (m_data->m_nodes.size() == 0)
 	{
@@ -77,7 +77,7 @@ Node* Pipeline::front() const
 	return m_data->m_nodes.front();
 }
 
-Node* Pipeline::back() const
+PipelineNode* Pipeline::back() const
 {
 	if (m_data->m_nodes.size() == 0)
 	{
@@ -119,7 +119,7 @@ Result Pipeline::Private::process()
 	Result result = Result::OK;
 	for (size_t index = 0; index < m_nodes.size(); ++index)
 	{
-		Node* node = m_nodes[index];
+		PipelineNode* node = m_nodes[index];
 		assert(node);
 		Timestamp profileStartTimestamp;
 		if (isProfiling)
@@ -146,7 +146,7 @@ Result Pipeline::Private::process()
 
 void Pipeline::deconfigure()
 {
-	for (Node* node : m_data->m_nodes)
+	for (PipelineNode* node : m_data->m_nodes)
 	{
 		assert(node);
 		node->deconfigure();
@@ -156,7 +156,7 @@ void Pipeline::deconfigure()
 void Pipeline::reset()
 {
 	// TODO: Unlink only connections relevant to this pipeline.
-	for (Node* node : m_data->m_nodes)
+	for (PipelineNode* node : m_data->m_nodes)
 	{
 		assert(node);
 		node->unlinkAll();
