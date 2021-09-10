@@ -8,7 +8,6 @@ namespace avs
 	Timer::Timer()
 	{
 		memset(&(m_startTimestamp), 0, sizeof(Timestamp));
-		Start();
 	}
 	
 	void Timer::Start()
@@ -17,7 +16,7 @@ namespace avs
 		m_startTimestamp = Platform::getTimestamp();
 	}
 
-	double Timer::GetElapsedTime()
+	double Timer::GetElapsedTime() const
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		// Convert from nanoseconds to seconds.

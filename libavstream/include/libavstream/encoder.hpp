@@ -18,6 +18,12 @@ enum class EncoderBackend
 	NVIDIA, /*!< NVIDIA NVENC backend. */
 };
 
+struct EncoderStats
+{
+	size_t framesEncoded = 0;
+	float framesEncodedPerSec = 0;
+};
+
 /*!
  * Video encoder node `[input-active, output-active, 1/1]`
  *
@@ -134,6 +140,8 @@ public:
 	void setForceIDR(bool forceIDR);
 
 	bool isEncodingAsynchronously();
+
+	EncoderStats GetStats() const;
 
 private:
 	Result onInputLink(int slot, PipelineNode* node) override;

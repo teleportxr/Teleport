@@ -198,4 +198,11 @@ namespace teleport
 		
 		return Result::Code::OK;
 	}
+
+	avs::EncoderStats VideoEncodePipeline::GetEncoderStats() const
+	{
+		if (mEncoder)
+			return mEncoder->GetStats();
+		return avs::EncoderStats();
+	}
 }

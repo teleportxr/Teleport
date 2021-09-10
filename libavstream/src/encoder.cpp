@@ -95,6 +95,10 @@ Result Encoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 		StartEncodingThread();
 	}
 
+	d().m_stats = {};
+
+	d().m_timer.Start();
+
 	return result;
 }
 
@@ -160,10 +164,10 @@ Result Encoder::process(uint64_t timestamp, uint64_t deltaTime)
 	if (!result)
 	{
 		return result;
-}
+	}
 
 	if (!isEncodingAsynchronously())
-{
+	{
 		result = writeOutput();
 	}
 
@@ -191,6 +195,17 @@ Result Encoder::writeOutput()
 		return result;
 	}
 
+	{
+		std::lock_guard<std::mutex> lock(d().m_statsMutex);
+		++d().m_stats.framesEncoded;
+
+		double connectionTime = d().m_timer.GetElapsedTime();
+		if (connectionTime)
+		{
+			d().m_stats.framesEncodedPerSec = float(d().m_stats.framesEncoded / connectionTime);
+		}
+	}
+
 	result = d().writeOutput(outputNode, mappedBuffer, mappedBufferSize);
 	if (!result)
 	{
@@ -208,9 +223,9 @@ void Encoder::writeOutputAsync()
 		if (result)
 		{
 			writeOutput();
-			}
-			}
 		}
+	}
+}
 
 Result Encoder::setBackend(EncoderBackendInterface* backend)
 {
@@ -327,6 +342,12 @@ void Encoder::setForceIDR(bool forceIDR)
 bool Encoder::isEncodingAsynchronously()
 {
 	return d().m_params.useAsyncEncoding;
+}
+
+EncoderStats Encoder::GetStats() const
+{
+	std::lock_guard<std::mutex> lock(d().m_statsMutex);
+	return d().m_stats;
 }
 
 Result Encoder::Private::writeOutput(IOInterface* outputNode, const void* mappedBuffer, size_t mappedBufferSize)

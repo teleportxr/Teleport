@@ -1509,6 +1509,34 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 
 	return true;
 }
+
+TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::EncoderStats& stats)
+{
+	auto clientPair = clientServices.find(clientID);
+	if (clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to retrieve video encoder stats of Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
+		return false;
+	}
+
+	ClientData& clientData = clientPair->second;
+	if (!clientData.clientMessaging.hasPeer())
+	{
+		TELEPORT_COUT << "Failed to retrieve video encoder stats of Client_" << clientID << "! Client has no peer!\n";
+		return false;
+	}
+
+	if (!clientData.videoEncodePipeline)
+	{
+		TELEPORT_COUT << "Failed to retrieve video encoder stats of Client_" << clientID << "! VideoEncoderPipeline is null!\n";
+		return false;
+	}
+
+	// Thread safe
+	stats = clientData.videoEncodePipeline->GetEncoderStats();
+
+	return true;
+}
 ///ClientMessaging END
 
 ///GeometryStore START

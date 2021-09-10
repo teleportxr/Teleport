@@ -34,6 +34,8 @@ namespace teleport
 		Result process(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);
 		Result release();
 
+		avs::EncoderStats GetEncoderStats() const;
+
 	private:
 		std::unique_ptr<avs::Pipeline> mPipeline;
 		std::unique_ptr<avs::Surface> mInputSurface;
