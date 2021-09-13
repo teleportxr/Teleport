@@ -79,4 +79,9 @@ add_custom_target(Sphinx ALL
                   COMMENT "Generating documentation with Sphinx"
                   SOURCES ${RST_FILES})
 set_target_properties( Sphinx PROPERTIES FOLDER Docs)
-add_dependencies(Sphinx DoxygenUnity Doxygen)
+
+
+if(NOT "${TELEPORT_DOXYGEN_UNITY_INPUT_DIR}" STREQUAL "")
+    add_dependencies(Sphinx DoxygenUnity Doxygen)
+endif()
+

@@ -6,9 +6,13 @@ Clone the repository with submodules:
 
     git clone --recurse-submodules git@github.com:simul/RemotePlay.git
 
+or if you have already cloned the main repo,
+
+    git submodule update --init --recursive
+
 ## Prerequisites
 
-1. Visual Studio 2019 (with Visual C++ tools for CMake)
+1. Visual Studio 2019 or later (with Visual C++ tools for CMake)
 2. Android Studio
 3. Unreal Engine 4.22 incorporating the patch to move SceneCaptureSource from USceneCaptureComponent2D to USceneCaptureComponent
 4. NVIDIA CUDA Toolkit 11 https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64.
@@ -21,15 +25,13 @@ Clone the repository with submodules:
 ## Building the PC Client
 
 1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
-2. Check out libavstream submodule to master (if needed)
-3. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/build/x64
-4. Configure for x64 platform with default native compiler
-5. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
-6. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
-7. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
-8. Uncheck 'ENABLE_ENCRYPTION' option from srt.
-9. Check PLATFORM_D3D11_SFX.
-10. Generate, open and build the Visual Studio project.
+2. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/build_pc_client_
+3. Configure for x64 platform with default native compiler
+4. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
+5. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
+6. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
+7. Uncheck 'ENABLE_ENCRYPTION' option from srt.
+8. Generate, open and build the Visual Studio project.
 
 ## Building UE4 plugin
 
