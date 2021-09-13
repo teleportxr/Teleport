@@ -20,6 +20,8 @@ enum class EncoderBackend
 
 struct EncoderStats
 {
+	size_t framesSubmitted = 0;
+	float framesSubmittedPerSec = 0;
 	size_t framesEncoded = 0;
 	float framesEncodedPerSec = 0;
 };
