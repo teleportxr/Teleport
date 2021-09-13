@@ -157,6 +157,14 @@ Result Encoder::process(uint64_t timestamp, uint64_t deltaTime)
 		return Result::Node_NotConfigured;
 	}
 
+	double connectionTime = d().m_timer.GetElapsedTime();
+	if (connectionTime)
+	{
+		std::lock_guard<std::mutex> lock(d().m_statsMutex);
+		++d().m_stats.framesSubmitted;
+		d().m_stats.framesSubmittedPerSec = float(d().m_stats.framesSubmitted / connectionTime);
+	}
+
 	// Next tell the backend encoder to actually encode a frame.
 	assert(d().m_backend);
 	Result result = d().m_backend->encodeFrame(timestamp, d().m_forceIDR);
@@ -186,6 +194,14 @@ Result Encoder::writeOutput()
 		return Result::Node_InvalidOutput;
 	}
 
+	double connectionTime = d().m_timer.GetElapsedTime();
+	if (connectionTime)
+	{
+		std::lock_guard<std::mutex> lock(d().m_statsMutex);
+		++d().m_stats.framesEncoded;
+		d().m_stats.framesEncodedPerSec = float(d().m_stats.framesEncoded / connectionTime);	
+	}
+
 	void* mappedBuffer;
 	size_t mappedBufferSize;
 
@@ -193,17 +209,6 @@ Result Encoder::writeOutput()
 	if (!result)
 	{
 		return result;
-	}
-
-	{
-		std::lock_guard<std::mutex> lock(d().m_statsMutex);
-		++d().m_stats.framesEncoded;
-
-		double connectionTime = d().m_timer.GetElapsedTime();
-		if (connectionTime)
-		{
-			d().m_stats.framesEncodedPerSec = float(d().m_stats.framesEncoded / connectionTime);
-		}
 	}
 
 	result = d().writeOutput(outputNode, mappedBuffer, mappedBufferSize);
