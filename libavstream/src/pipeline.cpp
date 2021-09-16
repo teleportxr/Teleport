@@ -98,8 +98,8 @@ Result Pipeline::process()
 
 Result Pipeline::Private::process()
 {
-	// Returns in nanoseconds. Convert to milliseconds
-	const uint64_t timestamp = (uint64_t)(0.001 * Platform::getTimeElapsed(m_startPlatformTimestamp, Platform::getTimestamp()));
+	// Returns in milliseconds.
+	const uint64_t timestamp = (uint64_t)(Platform::getTimeElapsed(m_startPlatformTimestamp, Platform::getTimestamp()));
 	if (!m_started)
 	{
 		m_startTimestamp = timestamp;

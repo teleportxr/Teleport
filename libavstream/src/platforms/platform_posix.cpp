@@ -32,7 +32,15 @@ double PlatformPOSIX::getTimeElapsed(const Timestamp& tBegin, const Timestamp& t
 {
 	const long double dt_sec  = tEnd.tv_sec  - tBegin.tv_sec;
 	const long double dt_nsec = tEnd.tv_nsec - tBegin.tv_nsec;
+	// Convert to milliseconds
 	return dt_sec * 1000.0 + dt_nsec / 1000000.0;
+}
+
+double PlatformPOSIX::getTimeElapsedInSeconds(const Timestamp& tBegin, const Timestamp& tEnd)
+{
+	const long double dt_sec  = tEnd.tv_sec  - tBegin.tv_sec;
+	const long double dt_nsec = tEnd.tv_nsec - tBegin.tv_nsec;
+	return dt_sec + dt_nsec / 1000000000.0;
 }
 
 } // avs

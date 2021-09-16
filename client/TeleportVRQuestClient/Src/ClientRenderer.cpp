@@ -1339,11 +1339,11 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 					"Network\n\n"
 					"Frames: %d\nPackets Dropped: Network %d | Decoder %d\n"
 					"Incomplete Decoder Packets: %d\n"
-					"Bandwidth(kbps): %4.2f\n",
-                    "Decoder Packets Per Sec: %4.2f\n",
-					"Video Frames Received Per Sec: %4.2f\n",
-					"Video frames Processed Per Sec: %4.2f\n",
-					"Video Frames Displayed Per Sec: %4.2f\n",
+					"Bandwidth(kbps): %4.2f\n"
+                    "Decoder Packets Per Sec: %1.2f\n"
+					"Video Frames Received Per Sec: %1.2f\n"
+					"Video frames Processed Per Sec: %1.2f\n"
+					"Video Frames Displayed Per Sec: %1.2f\n",
 					vidStats.framesProcessed,
 					ctr.networkPacketsDropped,
 					ctr.decoderPacketsDropped,
