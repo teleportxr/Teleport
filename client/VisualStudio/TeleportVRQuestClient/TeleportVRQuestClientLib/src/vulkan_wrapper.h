@@ -404,6 +404,17 @@ extern PFN_vkCreateXlibSurfaceKHR vkCreateXlibSurfaceKHR;
 extern PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR vkGetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
 
+const char* VkResultToString(VkResult result);
+
+//Logs error message if VkResult is not VK_SUCCESS
+//Parameters: result is type VkResult and str is type const char* or std::string.
+#define VK_ASSERT(result, str)\
+if(result != VK_SUCCESS)\
+{\
+	__android_log_write(ANDROID_LOG_ERROR, "TeleportVRQuestClient", VkResultToString(result));\
+	__android_log_write(ANDROID_LOG_ERROR, "TeleportVRQuestClient", str);\
+}
+
 #ifdef __cplusplus
 }
 #endif

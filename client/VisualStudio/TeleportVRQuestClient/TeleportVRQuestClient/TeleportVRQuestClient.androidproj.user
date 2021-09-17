@@ -7,11 +7,12 @@
     <DebuggerType>NativeOnly</DebuggerType>
     <DebuggerFlavor>AndroidDebugger</DebuggerFlavor>
     <LaunchActivity>android.app.NativeActivity</LaunchActivity>
-    <AdditionalSymbolSearchPaths>E:\Simul\Teleport\RemotePlay\client\VisualStudio\TeleportVRQuestClient\TeleportVRQuestClient\app\build\intermediates\cmake\debug\obj\arm64-v8a</AdditionalSymbolSearchPaths>
+    <AdditionalSymbolSearchPaths>$(SolutionDir)TeleportVRQuestClientLib\$(Platform)\$(Configuration)</AdditionalSymbolSearchPaths>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <DebuggerType>NativeOnly</DebuggerType>
     <DebuggerFlavor>AndroidDebugger</DebuggerFlavor>
     <LaunchActivity>android.app.NativeActivity</LaunchActivity>
+    <AdditionalSymbolSearchPaths>$(SolutionDir)TeleportVRQuestClientLib\$(Platform)\$(Configuration)</AdditionalSymbolSearchPaths>
   </PropertyGroup>
 </Project>
