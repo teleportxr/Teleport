@@ -9,14 +9,14 @@
 #include <libavstream/common.hpp>
 #include <libavstream/audio/audio_interface.h>
 
-namespace SCServer
+namespace teleport
 {
 	AudioEncodePipeline::~AudioEncodePipeline()
 	{
 		
 	}
 
-	Result AudioEncodePipeline::initialize(const CasterSettings& settings, const AudioParams& audioParams, avs::Node* output)
+	Result AudioEncodePipeline::initialize(const CasterSettings& settings, const AudioParams& audioParams, avs::PipelineNode* output)
 	{
 		avs::AudioEncoderParams encoderParams;
 		encoderParams.codec = audioParams.codec;

@@ -69,7 +69,7 @@ namespace sca
 		for (size_t i = 0; i < audioPipes.size(); ++i)
 		{
 			auto& pipe = audioPipes[i];
-			if (!avs::Node::link(*pipe->sourceQueue, *networkSink))
+			if (!avs::PipelineNode::link(*pipe->sourceQueue, *networkSink))
 			{
 				SCA_CERR << "Failed to configure network pipeline for audio!" << std::endl;
 				return;

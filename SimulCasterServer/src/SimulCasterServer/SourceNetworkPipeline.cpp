@@ -8,7 +8,7 @@
 
 #include "crossplatform/AudioStreamTarget.h"
 
-namespace SCServer
+namespace teleport
 {
 	SourceNetworkPipeline::SourceNetworkPipeline(const CasterSettings* inSettings)
 		: settings(inSettings), prevProcResult(avs::Result::OK)
@@ -58,13 +58,13 @@ namespace SCServer
 		for (int32_t i = 0; i < audioPipes.size(); ++i)
 		{
 			auto& pipe = audioPipes[i];
-			if (!avs::Node::link(*networkSource, *pipe->queue))
+			if (!avs::PipelineNode::link(*networkSource, *pipe->queue))
 			{
 				TELEPORT_CERR << "Failed to link network source and audio queue!" << std::endl;
 				return;
 			}
 
-			if (!avs::Node::link(*pipe->queue, *pipe->decoder))
+			if (!avs::PipelineNode::link(*pipe->queue, *pipe->decoder))
 			{
 				TELEPORT_CERR << "Failed to link audio queue and audio decoder!" << std::endl;
 				return;

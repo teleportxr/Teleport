@@ -18,6 +18,14 @@ enum class EncoderBackend
 	NVIDIA, /*!< NVIDIA NVENC backend. */
 };
 
+struct EncoderStats
+{
+	size_t framesSubmitted = 0;
+	float framesSubmittedPerSec = 0;
+	size_t framesEncoded = 0;
+	float framesEncodedPerSec = 0;
+};
+
 /*!
  * Video encoder node `[input-active, output-active, 1/1]`
  *
@@ -25,7 +33,7 @@ enum class EncoderBackend
  * - Compatible inputs : Any node implementing SurfaceInterface.
  * - Compatible outputs: Any node implementing IOInterface.
  */
-class AVSTREAM_API Encoder final : public Node
+class AVSTREAM_API Encoder final : public PipelineNode
 {
 	AVSTREAM_PUBLICINTERFACE(Encoder)
 public:
@@ -82,7 +90,7 @@ public:
 
 	/*!
 	 * Encode single video frame from input surface and write resulting bitstream to output.
-	 * \sa Node::process()
+	 * \sa PipelineNode::process()
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.
@@ -135,10 +143,12 @@ public:
 
 	bool isEncodingAsynchronously();
 
+	EncoderStats GetStats() const;
+
 private:
-	Result onInputLink(int slot, Node* node) override;
-	Result onOutputLink(int slot, Node* node) override;
-	void   onInputUnlink(int slot, Node* node) override;
+	Result onInputLink(int slot, PipelineNode* node) override;
+	Result onOutputLink(int slot, PipelineNode* node) override;
+	void   onInputUnlink(int slot, PipelineNode* node) override;
 
 	/*!
 	* Register the encoder's surface texture

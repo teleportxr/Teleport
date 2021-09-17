@@ -129,6 +129,7 @@ avs::AttributeSemantic FromDracoGeometryAttribute(draco::GeometryAttribute::Type
 		return avs::AttributeSemantic::COUNT;
 	};
 }
+
 avs::Accessor::DataType FromDracoNumComponents(int num_components)
 {
 	switch (num_components)
@@ -146,6 +147,7 @@ avs::Accessor::DataType FromDracoNumComponents(int num_components)
 		break;
 	}
 }
+
 // NOTE the inefficiency here, we're coding into "DecodedGeometry", but that is then immediately converted to a MeshCreate.
 avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh)
 {
@@ -594,6 +596,7 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target)
 		texture.format = static_cast<avs::TextureFormat>(Next4B);
 		if(texture.format == avs::TextureFormat::INVALID) texture.format = avs::TextureFormat::G8;
 		texture.compression = static_cast<avs::TextureCompression>(Next4B);
+		texture.valueScale = NextFloat;
 
 		texture.dataSize = Next4B;
 		texture.data = (m_Buffer.data() + m_BufferOffset);

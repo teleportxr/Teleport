@@ -22,13 +22,13 @@ namespace avs
 	 *
 	 * Being aware of this classification is very important in correctly constructing pipelines.
 	 */
-	class AVSTREAM_API Node
+	class AVSTREAM_API PipelineNode
 	{
-		AVSTREAM_PUBLICINTERFACE_BASE(Node)
+		AVSTREAM_PUBLICINTERFACE_BASE(PipelineNode)
 	public:
-		Node(const Node&) = delete;
-		Node(Node&&) = delete;
-		virtual ~Node();
+		PipelineNode(const PipelineNode&) = delete;
+		PipelineNode(PipelineNode&&) = delete;
+		virtual ~PipelineNode();
 
 		/*!
 		 * Link two nodes. Data will flow from source node to target node.
@@ -43,7 +43,7 @@ namespace avs
 		 *  - Any error returned by source node onOutputLink() function.
 		 *  - Any error returned by target node onInputLink() function.
 		 */
-		static Result link(Node& source, int sourceSlot, Node& target, int targetSlot);
+		static Result link(PipelineNode& source, int sourceSlot, PipelineNode& target, int targetSlot);
 
 		/*!
 		 * Link two nodes. Data will flow from source node to target node.
@@ -56,7 +56,7 @@ namespace avs
 		 *  - Any error returned by source node onOutputLink() function.
 		 *  - Any error returned by target node onInputLink() function.
 		 */
-		static Result link(Node& source, Node& target);
+		static Result link(PipelineNode& source, PipelineNode& target);
 
 		/*!
 		 * Unlink two nodes.
@@ -70,7 +70,7 @@ namespace avs
 		 *  - Result::Node_InvalidSlot if targetSlot is not valid target node input slot index.
 		 *  - Result::Node_InvalidLink if source and target nodes were not linked.
 		 */
-		static Result unlink(Node& source, int sourceSlot, Node& target, int targetSlot);
+		static Result unlink(PipelineNode& source, int sourceSlot, PipelineNode& target, int targetSlot);
 
 		/*!
 		 * Unlink node by input slot index.
@@ -124,7 +124,7 @@ namespace avs
 		 * Deconfigure this node.
 		 * \return
 		 *  - Result::OK on success.
-		 *  - Node specific error result on failure.
+		 *  - PipelineNode specific error result on failure.
 		 */
 		virtual Result deconfigure()
 		{
@@ -137,7 +137,7 @@ namespace avs
 		 * \param deltaTime Pipeline timestamp.
 		 * \return
 		 *  - Result::OK on success (or no-op).
-		 *  - Node specific error result on failure.
+		 *  - PipelineNode specific error result on failure.
 		 */
 		virtual Result process(uint64_t timestamp, uint64_t deltaTime)
 		{
@@ -158,31 +158,31 @@ namespace avs
 		void setNumSlots(size_t numInputSlots, size_t numOutputSlots);
 
 		/*! Get node linked to a given input slot; returns nullptr if nothing is linked. */
-		Node* getInput(int slot) const;
+		PipelineNode* getInput(int slot) const;
 		/*! Get node linked to a given output slot; returns nullptr if nothing is linked. */
-		Node* getOutput(int slot) const;
+		PipelineNode* getOutput(int slot) const;
 
 		/*! Get index of input slot a given node is linked to; returns -1 if given node is not linked to any input slot. */
-		int getInputIndex(const Node* node) const;
+		int getInputIndex(const PipelineNode* node) const;
 		/*! Get index of output slot a given node is linked to; returns -1 if given node is not linked to any input slot. */
-		int getOutputIndex(const Node* node) const;
+		int getOutputIndex(const PipelineNode* node) const;
 
 	private:
 		/*!
 		 * Input link event: Called when a node is about to be linked to an input slot.
 		 * \param slot Input slot index.
-		 * \param node Node about to be linked.
+		 * \param node PipelineNode about to be linked.
 		 * \return Result other than Result::OK aborts linking.
 		 */
-		virtual Result onInputLink(int slot, Node* node) { return Result::OK; }
+		virtual Result onInputLink(int slot, PipelineNode* node) { return Result::OK; }
 
 		/*!
 		 * Output link event: Called when a node is about to be linked to an output slot.
 		 * \param slot Output slot index.
-		 * \param node Node about to be linked.
+		 * \param node PipelineNode about to be linked.
 		 * \return Result other than Result::OK aborts linking.
 		 */
-		virtual Result onOutputLink(int slot, Node* node)
+		virtual Result onOutputLink(int slot, PipelineNode* node)
 		{
 			return Result::OK;
 		}
@@ -190,16 +190,16 @@ namespace avs
 		/*!
 		 * Input unlink event: Called when a node is about to be unlinked from an input slot.
 		 * \param slot Input slot index.
-		 * \param node Node about to be unlinked.
+		 * \param node PipelineNode about to be unlinked.
 		 */
-		virtual void onInputUnlink(int slot, Node* node) {}
+		virtual void onInputUnlink(int slot, PipelineNode* node) {}
 
 		/*!
 		 * Output unlink event: Called when a node is about to be unlinked from an output slot.
 		 * \param slot Output slot index.
-		 * \param node Node about to be unlinked.
+		 * \param node PipelineNode about to be unlinked.
 		 */
-		virtual void onOutputUnlink(int slot, Node* node)
+		virtual void onOutputUnlink(int slot, PipelineNode* node)
 		{}
 	};
 

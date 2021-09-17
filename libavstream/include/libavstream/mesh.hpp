@@ -14,7 +14,7 @@ namespace avs
 	 *
 	 * Provides access to geometry source data for other nodes in the pipeline.
 	 */
-	class AVSTREAM_API GeometrySource final : public Node
+	class AVSTREAM_API GeometrySource final : public PipelineNode
 		, public GeometrySourceInterface
 	{
 		AVSTREAM_PUBLICINTERFACE(GeometrySource)
@@ -53,7 +53,7 @@ namespace avs
 	 *
 	 * Provides access to geometry source data for other nodes in the pipeline.
 	 */
-	class AVSTREAM_API GeometryTarget final : public Node
+	class AVSTREAM_API GeometryTarget final : public PipelineNode
 		, public GeometryTargetInterface
 	{
 		AVSTREAM_PUBLICINTERFACE(GeometryTarget)

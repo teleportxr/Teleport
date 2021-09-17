@@ -25,9 +25,9 @@
 namespace avs
 {
 	using asio::ip::udp;
-	struct NetworkSink::Private final : public Node::Private
+	struct NetworkSink::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(NetworkSink, Node)
+		AVSTREAM_PRIVATEINTERFACE(NetworkSink, PipelineNode)
 #if LIBAV_USE_SRT
 		SRTSOCKET m_socket=0;
 		SRTSOCKET m_remote_socket=0;

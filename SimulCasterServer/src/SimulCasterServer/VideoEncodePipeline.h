@@ -12,7 +12,7 @@ namespace avs
 	class Surface;
 }
 
-namespace SCServer
+namespace teleport
 {
 	struct VideoEncodeParams
 	{
@@ -29,10 +29,12 @@ namespace SCServer
 		VideoEncodePipeline() = default;
 		virtual ~VideoEncodePipeline();
 
-		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* videoOutput, avs::IOInterface* tagDataOutput);
+		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput);
 		Result reconfigure(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams);
 		Result process(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);
 		Result release();
+
+		avs::EncoderStats GetEncoderStats() const;
 
 	private:
 		std::unique_ptr<avs::Pipeline> mPipeline;

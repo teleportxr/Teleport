@@ -14,7 +14,7 @@ namespace avs
 	 *
 	 * Reads packets of encoded geometry and outputs decoded data to a Geometry Target.
 	 */
-	class AVSTREAM_API GeometryDecoder final : public Node
+	class AVSTREAM_API GeometryDecoder final : public PipelineNode
 	{
 		AVSTREAM_PUBLICINTERFACE(GeometryDecoder)
 	public:
@@ -52,7 +52,7 @@ namespace avs
 		uint8_t getStreamId() const;
 		/*!
 		 * Process as much encoded video data as available on input and decode zero or more frames.
-		 * \sa Node::process()
+		 * \sa PipelineNode::process()
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_NotConfigured if decoder was not in configured state.
@@ -80,9 +80,9 @@ namespace avs
 		const char* getDisplayName() const override { return "Geometry Decoder"; }
 
 	private:
-		Result onInputLink(int slot, Node* node) override;
-		Result onOutputLink(int slot, Node* node) override;
-		void   onOutputUnlink(int slot, Node* node) override;
+		Result onInputLink(int slot, PipelineNode* node) override;
+		Result onOutputLink(int slot, PipelineNode* node) override;
+		void   onOutputUnlink(int slot, PipelineNode* node) override;
 	};
 
 } // avs

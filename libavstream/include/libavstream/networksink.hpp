@@ -67,7 +67,7 @@ namespace avs
 	 *
 	 * Sends video stream to a remote UDP endpoint.
 	 */
-	class AVSTREAM_API NetworkSink final : public Node
+	class AVSTREAM_API NetworkSink final : public PipelineNode
 	{
 		AVSTREAM_PUBLICINTERFACE(NetworkSink)
 

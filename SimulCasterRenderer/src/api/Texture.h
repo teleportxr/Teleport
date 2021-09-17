@@ -138,6 +138,8 @@ namespace scr
 			CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
 		
 			bool externalResource = false;	// If true, the actual API resource will be created and managed externally on a per-platform basis.
+
+			float valueScale=1.0f;	// multiplier for texel values.
 		};
 
 		static const avs::vec3 DUMMY_DIMENSIONS; //X = Width, Y = Height, Z = Depth
@@ -189,7 +191,7 @@ namespace scr
 		virtual void GenerateMips() = 0;
 
 		inline std::shared_ptr<Sampler> GetSampler() { return m_Sampler; }
-		inline const TextureCreateInfo GetTextureCreateInfo() const { return m_CI;}
+		inline const TextureCreateInfo &GetTextureCreateInfo() const { return m_CI;}
 
 		virtual bool ResourceInUse(int timeout) = 0;
 		std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;

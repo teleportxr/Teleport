@@ -7,17 +7,17 @@
 
 using namespace avs;
 
-Node::Node(Node::Private* d_ptr)
+PipelineNode::PipelineNode(PipelineNode::Private* d_ptr)
 	: m_d(d_ptr)
 {}
 
-Node::~Node()
+PipelineNode::~PipelineNode()
 {
 	unlinkAll();
 	delete m_d;
 }
 
-Result Node::link(Node& source, int sourceSlot, Node& target, int targetSlot)
+Result PipelineNode::link(PipelineNode& source, int sourceSlot, PipelineNode& target, int targetSlot)
 {
 	assert(sourceSlot >= 0);
 	assert(targetSlot >= 0);
@@ -54,7 +54,7 @@ Result Node::link(Node& source, int sourceSlot, Node& target, int targetSlot)
 	return Result::OK;
 }
 
-Result Node::link(Node& source, Node& target)
+Result PipelineNode::link(PipelineNode& source, PipelineNode& target)
 {
 	std::optional<int> sourceSlot;
 	for (int i = 0; i < (int)source.getNumOutputSlots(); ++i)
@@ -67,7 +67,7 @@ Result Node::link(Node& source, Node& target)
 	}
 	if (!sourceSlot.has_value())
 	{
-		AVSLOG(Error) << "Node: Cannot link nodes: no free output slot found on source.\n";
+		AVSLOG(Error) << "PipelineNode: Cannot link nodes: no free output slot found on source.\n";
 		return Result::Node_LinkFailed;
 	}
 
@@ -82,14 +82,14 @@ Result Node::link(Node& source, Node& target)
 	}
 	if (!targetSlot.has_value())
 	{
-		AVSLOG(Error) << "Node: Cannot link nodes: no free source slot found";
+		AVSLOG(Error) << "PipelineNode: Cannot link nodes: no free source slot found";
 		return Result::Node_LinkFailed;
 	}
 
-	return Node::link(source, *sourceSlot, target, *targetSlot);
+	return PipelineNode::link(source, *sourceSlot, target, *targetSlot);
 }
 
-Result Node::unlink(Node& source, int sourceSlot, Node& target, int targetSlot)
+Result PipelineNode::unlink(PipelineNode& source, int sourceSlot, PipelineNode& target, int targetSlot)
 {
 	assert(sourceSlot >= 0);
 	assert(targetSlot >= 0);
@@ -119,7 +119,7 @@ Result Node::unlink(Node& source, int sourceSlot, Node& target, int targetSlot)
 	return Result::OK;
 }
 
-Result Node::unlinkInput(int slot)
+Result PipelineNode::unlinkInput(int slot)
 {
 	auto breakLink = [this](int inputSlot, Link& link)
 	{
@@ -150,7 +150,7 @@ Result Node::unlinkInput(int slot)
 	return Result::OK;
 }
 
-Result Node::unlinkOutput(int slot)
+Result PipelineNode::unlinkOutput(int slot)
 {
 	auto breakLink = [this](int outputSlot, Link& link)
 	{
@@ -181,23 +181,23 @@ Result Node::unlinkOutput(int slot)
 	return Result::OK;
 }
 
-void Node::unlinkAll()
+void PipelineNode::unlinkAll()
 {
 	unlinkInput();
 	unlinkOutput();
 }
 
-size_t Node::getNumInputSlots() const
+size_t PipelineNode::getNumInputSlots() const
 {
 	return d().m_inputs.size();
 }
 
-size_t Node::getNumOutputSlots() const
+size_t PipelineNode::getNumOutputSlots() const
 {
 	return d().m_outputs.size();
 }
 
-Result Node::isInputLinked(int slot) const
+Result PipelineNode::isInputLinked(int slot) const
 {
 	if (slot < 0 || size_t(slot) >= d().m_inputs.size())
 	{
@@ -206,7 +206,7 @@ Result Node::isInputLinked(int slot) const
 	return d().m_inputs[slot].targetNode ? Result::OK : Result::Node_NotLinked;
 }
 
-Result Node::isOutputLinked(int slot) const
+Result PipelineNode::isOutputLinked(int slot) const
 {
 	if (slot < 0 || size_t(slot) >= d().m_outputs.size())
 	{
@@ -215,7 +215,7 @@ Result Node::isOutputLinked(int slot) const
 	return d().m_outputs[slot].targetNode ? Result::OK : Result::Node_NotLinked;
 }
 
-void Node::setNumInputSlots(size_t numSlots)
+void PipelineNode::setNumInputSlots(size_t numSlots)
 {
 	for (size_t slot = numSlots; slot < d().m_inputs.size(); ++slot)
 	{
@@ -224,7 +224,7 @@ void Node::setNumInputSlots(size_t numSlots)
 	d().m_inputs.resize(numSlots);
 }
 
-void Node::setNumOutputSlots(size_t numSlots)
+void PipelineNode::setNumOutputSlots(size_t numSlots)
 {
 	for (size_t slot = numSlots; slot < d().m_outputs.size(); ++slot)
 	{
@@ -233,25 +233,25 @@ void Node::setNumOutputSlots(size_t numSlots)
 	d().m_outputs.resize(numSlots);
 }
 
-void Node::setNumSlots(size_t numInputSlots, size_t numOutputSlots)
+void PipelineNode::setNumSlots(size_t numInputSlots, size_t numOutputSlots)
 {
 	setNumInputSlots(numInputSlots);
 	setNumOutputSlots(numOutputSlots);
 }
 
-Node* Node::getInput(int slot) const
+PipelineNode* PipelineNode::getInput(int slot) const
 {
 	assert(size_t(slot) < d().m_inputs.size());
 	return d().m_inputs[slot].targetNode;
 }
 
-Node* Node::getOutput(int slot) const
+PipelineNode* PipelineNode::getOutput(int slot) const
 {
 	assert(size_t(slot) < d().m_outputs.size());
 	return d().m_outputs[slot].targetNode;
 }
 
-int Node::getInputIndex(const Node* node) const
+int PipelineNode::getInputIndex(const PipelineNode* node) const
 {
 	assert(node);
 	for (size_t i = 0; i < d().m_inputs.size(); ++i)
@@ -264,7 +264,7 @@ int Node::getInputIndex(const Node* node) const
 	return -1;
 }
 
-int Node::getOutputIndex(const Node* node) const
+int PipelineNode::getOutputIndex(const PipelineNode* node) const
 {
 	assert(node);
 	for (size_t i = 0; i < d().m_outputs.size(); ++i)

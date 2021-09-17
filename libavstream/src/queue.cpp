@@ -9,7 +9,7 @@
 namespace avs
 {
 	Queue::Queue()
-		: Node(new Queue::Private(this))
+		: PipelineNode(new Queue::Private(this))
 	{
 		setNumSlots(1, 1);
 		data = (Queue::Private*)this->m_d;
@@ -63,7 +63,7 @@ namespace avs
 		data->flushInternal();
 	}
 
-	Result Queue::read(Node*, void* buffer, size_t& bufferSize, size_t& bytesRead)
+	Result Queue::read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead)
 	{
 		bytesRead = 0;
 		std::lock_guard<std::mutex> lock(data->m_mutex);
@@ -87,7 +87,7 @@ namespace avs
 		return Result::OK;
 	}
 
-	Result Queue::write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
+	Result Queue::write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
 		std::lock_guard<std::mutex> lock(data->m_mutex);
 		if (data->m_numElements == data->m_maxBuffers)

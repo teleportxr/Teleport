@@ -8,7 +8,7 @@
 
 namespace avs
 {
-class Node;
+class PipelineNode;
 
 /*!
  * A pipeline.
@@ -32,12 +32,12 @@ public:
 	/*!
 	 * Add node to the end of the pipeline.
 	 */
-	void add(Node* node);
+	void add(PipelineNode* node);
 
 	/*!
 	 * Add multiple nodes to the end of the pipeline in order specified.
 	 */
-	void add(const std::initializer_list<Node*>& nodes);
+	void add(const std::initializer_list<PipelineNode*>& nodes);
 
 	/*!
 	 * Link multiple nodes and add them at the end of the pipeline.
@@ -45,20 +45,20 @@ public:
 	 * \note This function can be used to build whole pipelines in a single function call.
 	 * \return
 	 *  - Result::OK on success.
-	 *  - Any error result returned by Node::link() function.
+	 *  - Any error result returned by PipelineNode::link() function.
 	 * \sa Pipeline::add()
 	 */
-	Result link(const std::initializer_list<Node*>& nodes);
+	Result link(const std::initializer_list<PipelineNode*>& nodes);
 
 	/*!
 	 * Get node at the front of the pipeline; returns nullptr if pipeline is empty.
 	 */
-	Node* front() const;
+	PipelineNode* front() const;
 
 	/*!
 	 * Get node at the back (end) of the pipeline; returns nullptr if pipeline is empty.
 	 */
-	Node* back() const;
+	PipelineNode* back() const;
 
 	/*!
 	 * Get pipeline length (number of nodes in the pipeline).
@@ -67,10 +67,10 @@ public:
 
 	/*!
 	 * Process pipeline.
-	 * Calls Node::process() on each node in pipeline order providing consistent timestamp to each invocation.
+	 * Calls PipelineNode::process() on each node in pipeline order providing consistent timestamp to each invocation.
 	 * \return
 	 *  - Result::OK on success.
-	 *  - An error result returned by a failing node (pipeline processing is immediately aborted on first Node::process() failure).
+	 *  - An error result returned by a failing node (pipeline processing is immediately aborted on first PipelineNode::process() failure).
 	 *
 	 * \note Pipeline time starts when process() is called first and is backed up by platform's high resolution monotonic clock.
 	 */

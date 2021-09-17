@@ -6,7 +6,7 @@
 namespace avs {
 
 	File::File()
-		: Node(new File::Private(this))
+		: PipelineNode(new File::Private(this))
 	{}
 
 	Result File::configure(const char* filename, FileAccess access)
@@ -59,7 +59,7 @@ namespace avs {
 		return Result::OK;
 	}
 
-	Result File::read(Node*, void* buffer, size_t& bufferSize, size_t& bytesRead)
+	Result File::read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead)
 	{
 		if (!d().m_file.is_open())
 		{
@@ -87,7 +87,7 @@ namespace avs {
 		return Result::OK;
 	}
 
-	Result File::write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
+	Result File::write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
 		if (!d().m_file.is_open())
 		{
@@ -108,13 +108,13 @@ namespace avs {
 		return Result::OK;
 	}
 
-	Result File::readPacket(Node* reader, void* buffer, size_t& bufferSize, int streamId)
+	Result File::readPacket(PipelineNode* reader, void* buffer, size_t& bufferSize, int streamId)
 	{
 		AVSLOG(Warning) << "File: Packet read is not supported";
 		return Result::Node_NotSupported;
 	}
 
-	Result File::writePacket(Node* writer, const void* buffer, size_t bufferSize, int streamIndex)
+	Result File::writePacket(PipelineNode* writer, const void* buffer, size_t bufferSize, int streamIndex)
 	{
 		if (!d().m_file.is_open())
 		{

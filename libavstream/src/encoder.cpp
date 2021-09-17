@@ -11,7 +11,7 @@
 using namespace avs;
 
 Encoder::Encoder(EncoderBackend backend)
-	: Node(new Encoder::Private(this))
+	: PipelineNode(new Encoder::Private(this))
 {
 	d().m_selectedBackendType = backend;
 	setNumSlots(1, 1);
@@ -95,6 +95,10 @@ Result Encoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 		StartEncodingThread();
 	}
 
+	d().m_stats = {};
+
+	d().m_timer.Start();
+
 	return result;
 }
 
@@ -153,6 +157,14 @@ Result Encoder::process(uint64_t timestamp, uint64_t deltaTime)
 		return Result::Node_NotConfigured;
 	}
 
+	double connectionTime = d().m_timer.GetElapsedTime();
+	if (connectionTime)
+	{
+		std::lock_guard<std::mutex> lock(d().m_statsMutex);
+		++d().m_stats.framesSubmitted;
+		d().m_stats.framesSubmittedPerSec = float(d().m_stats.framesSubmitted / connectionTime);
+	}
+
 	// Next tell the backend encoder to actually encode a frame.
 	assert(d().m_backend);
 	Result result = d().m_backend->encodeFrame(timestamp, d().m_forceIDR);
@@ -160,10 +172,10 @@ Result Encoder::process(uint64_t timestamp, uint64_t deltaTime)
 	if (!result)
 	{
 		return result;
-}
+	}
 
 	if (!isEncodingAsynchronously())
-{
+	{
 		result = writeOutput();
 	}
 
@@ -180,6 +192,14 @@ Result Encoder::writeOutput()
 	if (!outputNode)
 	{
 		return Result::Node_InvalidOutput;
+	}
+
+	double connectionTime = d().m_timer.GetElapsedTime();
+	if (connectionTime)
+	{
+		std::lock_guard<std::mutex> lock(d().m_statsMutex);
+		++d().m_stats.framesEncoded;
+		d().m_stats.framesEncodedPerSec = float(d().m_stats.framesEncoded / connectionTime);	
 	}
 
 	void* mappedBuffer;
@@ -208,9 +228,9 @@ void Encoder::writeOutputAsync()
 		if (result)
 		{
 			writeOutput();
-			}
-			}
 		}
+	}
+}
 
 Result Encoder::setBackend(EncoderBackendInterface* backend)
 {
@@ -225,7 +245,7 @@ Result Encoder::setBackend(EncoderBackendInterface* backend)
 	return Result::OK;
 }
 
-Result Encoder::onInputLink(int slot, Node* node)
+Result Encoder::onInputLink(int slot, PipelineNode* node)
 {
 	if (!d().m_configured)
 	{
@@ -244,7 +264,7 @@ Result Encoder::onInputLink(int slot, Node* node)
 	return registerSurface(surface);
 }
 
-Result Encoder::onOutputLink(int slot, Node* node)
+Result Encoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!dynamic_cast<IOInterface*>(node))
 	{
@@ -254,7 +274,7 @@ Result Encoder::onOutputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-void Encoder::onInputUnlink(int slot, Node* node)
+void Encoder::onInputUnlink(int slot, PipelineNode* node)
 {
 	unregisterSurface();
 }
@@ -327,6 +347,12 @@ void Encoder::setForceIDR(bool forceIDR)
 bool Encoder::isEncodingAsynchronously()
 {
 	return d().m_params.useAsyncEncoding;
+}
+
+EncoderStats Encoder::GetStats() const
+{
+	std::lock_guard<std::mutex> lock(d().m_statsMutex);
+	return d().m_stats;
 }
 
 Result Encoder::Private::writeOutput(IOInterface* outputNode, const void* mappedBuffer, size_t mappedBufferSize)

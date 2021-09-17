@@ -51,7 +51,7 @@ public:
 	std::shared_ptr<T> Get(uid id);
 
 	//Pushes the IDs of all of the resources stored in the resource manager into the passed vector.
-	void GetAllIDs(std::vector<uid>& resourceIDs);
+	const std::vector<uid>& GetAllIDs() const;
 
 	//Clear, and free memory of, all resources.
 	void Clear();
@@ -64,6 +64,9 @@ public:
 	void Update(float deltaTimestamp);
 private:
 
+	mutable std::vector<uid> resourceIDs;
+	mutable uint64_t cacheChecksum=0;
+	mutable uint64_t idListChecksum=0;
 	//Increases readability by obfuscating the full iterator definition.
 	typedef typename std::unordered_map<uid, ResourceManager<T>::ResourceData>::iterator mapIterator_t;
 
@@ -100,6 +103,7 @@ void ResourceManager<T>::Add(uid id, std::shared_ptr<T> & newItem, float postUse
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	cachedItems.emplace(id, ResourceData{newItem, postUseLifetime, 0});
+	cacheChecksum++;
 }
 
 template<class T> bool ResourceManager<T>::Has(uid id) const
@@ -133,15 +137,20 @@ template<class T> std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 
 	return data.resource;
 }
-
-template<class T> void ResourceManager<T>::GetAllIDs(std::vector<uid>& resourceIDs)
+template<class T> const std::vector<uid>&  ResourceManager<T>::GetAllIDs() const
 {
-	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
-
-	for(auto idDataPair : cachedItems)
+	if(cacheChecksum!=idListChecksum)
 	{
-		resourceIDs.push_back(idDataPair.first);
+		resourceIDs.clear();
+		std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
+
+		for(auto idDataPair : cachedItems)
+		{
+			resourceIDs.push_back(idDataPair.first);
+		}
+		idListChecksum=cacheChecksum;
 	}
+	return resourceIDs;
 }
 
 template<class T>
@@ -154,6 +163,7 @@ void ResourceManager<T>::Clear()
 	}
 
 	cachedItems.clear();
+	cacheChecksum++;
 }
 
 template<class T>
@@ -187,6 +197,7 @@ void ResourceManager<T>::ClearCareful(std::vector<uid>& excludeList)
 			it = RemoveResource(it);
 		}
 	}
+	cacheChecksum++;
 }
 
 template<class T>
@@ -233,5 +244,6 @@ template<class T>
 typename ResourceManager<T>::mapIterator_t ResourceManager<T>::RemoveResource(typename ResourceManager<T>::mapIterator_t it)
 {
 	FreeResource(*it->second.resource);
+	cacheChecksum++;
 	return cachedItems.erase(it);
 }

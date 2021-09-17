@@ -10,7 +10,7 @@ namespace sca
 	class AudioStreamTarget;
 }
 
-namespace SCServer
+namespace teleport
 {
 	struct CasterSettings;
 

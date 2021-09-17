@@ -14,15 +14,19 @@
 #include <libavstream/encoders/enc_interface.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/queue.hpp>
+#include <libavstream/timer.hpp>
 
 namespace avs
 {
-	struct Encoder::Private final : public Node::Private
+	struct Encoder::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(Encoder, Node)
+		AVSTREAM_PRIVATEINTERFACE(Encoder, PipelineNode)
 		std::unique_ptr<EncoderBackendInterface> m_backend;
 		EncoderBackend m_selectedBackendType;
 		EncoderParams m_params = {};
+		mutable std::mutex m_statsMutex;
+		EncoderStats m_stats = {};
+		Timer m_timer;
 		std::atomic_bool m_encodingThreadActive;
 		std::thread m_encodingThread;
 		bool m_configured = false;

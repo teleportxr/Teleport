@@ -219,6 +219,8 @@ struct InteropTexture
 
 	avs::uid sampler_uid = 0;
 
+	float valueScale=1.0f;
+
 	operator avs::Texture() const
 	{
 		return
@@ -234,7 +236,8 @@ struct InteropTexture
 			compression,
 			dataSize,
 			data,
-			sampler_uid
+			sampler_uid,
+			valueScale
 		};
 	}
 };

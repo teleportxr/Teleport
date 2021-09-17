@@ -9,7 +9,7 @@
 #include "CasterContext.h"
 #include "GeometryEncoder.h"
 
-namespace SCServer
+namespace teleport
 {
 	class GeometryStore;
 
@@ -28,7 +28,7 @@ namespace SCServer
 		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
 		, std::vector<avs::MeshNodeResources>& outMeshResources
 		, std::vector<avs::LightNodeResources>& outLightResources
-		,std::vector<avs::uid>& genericTextureUids) const override;
+		,std::set<avs::uid>& genericTextureUids) const override;
 
 		virtual avs::AxesStandard getClientAxesStandard() const override
 		{
@@ -68,8 +68,8 @@ namespace SCServer
 	private:
 		const struct CasterSettings* settings;
 
-		SCServer::CasterContext* casterContext = nullptr;
-		SCServer::GeometryEncoder geometryEncoder;
+		teleport::CasterContext* casterContext = nullptr;
+		teleport::GeometryEncoder geometryEncoder;
 
 		// The following MIGHT be moved later to a separate Pipeline class:
 		std::unique_ptr<avs::Pipeline> avsPipeline;

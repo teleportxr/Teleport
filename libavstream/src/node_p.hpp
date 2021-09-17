@@ -13,15 +13,15 @@ namespace avs
 
 struct Link
 {
-	Node* targetNode = nullptr;
+	PipelineNode* targetNode = nullptr;
 	int   targetSlot = 0;
 
 	operator bool() const { return targetNode != nullptr; }
 };
 
-struct Node::Private
+struct PipelineNode::Private
 {
-	AVSTREAM_PRIVATEINTERFACE_BASE(Node)
+	AVSTREAM_PRIVATEINTERFACE_BASE(PipelineNode)
 	virtual ~Private() = default;
 
 	std::vector<Link> m_inputs;

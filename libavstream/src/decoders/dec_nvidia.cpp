@@ -193,17 +193,6 @@ namespace avs
 		cuModuleGetFunction(&m_kYUV444toABGR, m_module, SYM_kYUV444toABGR);
 		cuModuleGetFunction(&m_kYUV444P16toRGBA, m_module, SYM_kYUV444P16toRGBA);
 		cuModuleGetFunction(&m_kYUV444P16toABGR, m_module, SYM_kYUV444P16toABGR);
-		
-		assert(m_surfaceRef);
-		assert(m_kNV12toRGBA);
-		assert(m_kNV12toABGR);
-		assert(m_kNV12toR16);
-		assert(m_kP016toRGBA);
-		assert(m_kP016toABGR);
-		assert(m_kYUV444toRGBA);
-		assert(m_kYUV444toABGR);
-		assert(m_kYUV444P16toRGBA);
-		assert(m_kYUV444P16toABGR);
 
 		{
 			CUVIDPARSERPARAMS parseParams = {};

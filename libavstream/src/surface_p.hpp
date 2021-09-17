@@ -13,9 +13,9 @@
 namespace avs
 {
 
-struct Surface::Private final : public Node::Private
+struct Surface::Private final : public PipelineNode::Private
 {
-	AVSTREAM_PRIVATEINTERFACE(Surface, Node)
+	AVSTREAM_PRIVATEINTERFACE(Surface, PipelineNode)
 	std::unique_ptr<SurfaceBackendInterface> m_backend;
 	std::unique_ptr<SurfaceBackendInterface> m_alphaBackend;
 };

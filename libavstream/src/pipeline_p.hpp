@@ -15,7 +15,7 @@ namespace avs
 	struct Pipeline::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE_BASE(Pipeline)
-		std::vector<Node*> m_nodes;
+		std::vector<PipelineNode*> m_nodes;
 		Timestamp m_startPlatformTimestamp;
 		uint64_t m_lastTimestamp;
 		uint64_t m_startTimestamp;

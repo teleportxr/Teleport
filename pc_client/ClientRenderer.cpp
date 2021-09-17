@@ -438,7 +438,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyBlack.get())))->GetSimulTexture());
 	}
 	hdrFramebuffer->Deactivate(deviceContext);
-	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,0.45f);
+	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
@@ -1212,8 +1212,9 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	if (videoConfig.use_cubemap)
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
+		if(videoConfig.colour_cubemap_size)
+			videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
+				crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 	}
 	else
 	{
@@ -1249,8 +1250,8 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	videoQueue.configure(200000, 16, "VideoQueue");
 
-	avs::Node::link(source, videoQueue);
-	avs::Node::link(videoQueue, decoder);
+	avs::PipelineNode::link(source, videoQueue);
+	avs::PipelineNode::link(videoQueue, decoder);
 	pipeline.link({ &decoder, &surface });
 	
 	// Tag Data
@@ -1263,7 +1264,7 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 		tagDataQueue.configure(200, 16, "TagDataQueue");
 
-		avs::Node::link(source, tagDataQueue);
+		avs::PipelineNode::link(source, tagDataQueue);
 		pipeline.link({ &tagDataQueue, &tagDataDecoder });
 	}
 
@@ -1283,8 +1284,8 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 		audioQueue.configure(4096, 120, "AudioQueue");
 
-		avs::Node::link(source, audioQueue);
-		avs::Node::link(audioQueue, avsAudioDecoder);
+		avs::PipelineNode::link(source, audioQueue);
+		avs::PipelineNode::link(audioQueue, avsAudioDecoder);
 		pipeline.link({ &avsAudioDecoder, &avsAudioTarget });
 	}
 
@@ -1296,8 +1297,8 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 		geometryQueue.configure(10000, 200, "GeometryQueue");
 
-		avs::Node::link(source, geometryQueue);
-		avs::Node::link(geometryQueue, avsGeometryDecoder);
+		avs::PipelineNode::link(source, geometryQueue);
+		avs::PipelineNode::link(geometryQueue, avsGeometryDecoder);
 		pipeline.link({ &avsGeometryDecoder, &avsGeometryTarget });
 	}
 

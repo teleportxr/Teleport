@@ -11,7 +11,7 @@
 #include "libavstream/geometry/material_interface.hpp"
 #include "libavstream/geometry/mesh_interface.hpp"
 
-namespace SCServer
+namespace teleport
 {
 	struct ExtractedMesh
 	{
@@ -90,12 +90,12 @@ namespace SCServer
 		_bstr_t guid;
 		std::time_t lastModified;
 		avs::Texture texture;
-
+		float valueScale=1.0f;
 		friend std::wostream& operator<< (std::wostream& out, const ExtractedTexture& textureData)
 		{
 			return out << std::wstring{textureData.guid, SysStringLen(textureData.guid)}
 				<< " " << textureData.lastModified
-				<< std::endl << textureData.texture << std::endl;
+				<< std::endl << textureData.texture << " " << textureData.valueScale << std::endl;
 		}
 
 		friend std::wistream& operator>> (std::wistream& in, ExtractedTexture& textureData)
@@ -104,7 +104,7 @@ namespace SCServer
 			in >> guidAsString;
 			textureData.guid = _bstr_t(guidAsString.data());
 
-			return in >> textureData.lastModified >> textureData.texture;
+			return in >> textureData.lastModified >> textureData.texture >> textureData.valueScale;
 		}
 	};
 

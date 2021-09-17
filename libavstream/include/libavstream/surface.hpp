@@ -14,7 +14,7 @@ namespace avs {
  *
  * Provides access to surface for other nodes in the pipeline.
  */
-class AVSTREAM_API Surface final : public Node
+class AVSTREAM_API Surface final : public PipelineNode
 	                             , public SurfaceInterface
 {
 	AVSTREAM_PUBLICINTERFACE(Surface)

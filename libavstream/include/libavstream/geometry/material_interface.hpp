@@ -104,6 +104,8 @@ namespace avs
 
 		uid sampler_uid = 0;
 
+		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
+
 		friend std::wostream& operator<< (std::wostream& out, const Texture& texture)
 		{
 			//Name needs its own line, so spaces can be included.
@@ -119,6 +121,7 @@ namespace avs
 				<< " " << static_cast<uint32_t>(texture.compression)
 				<< " " << texture.sampler_uid
 				<< " " << texture.dataSize
+				<< " " << texture.valueScale
 				<< std::endl;
 			
 			///TODO: Figure out how to convert the data to wide char without going through each index. ostream::write(...) is detecting the malformed data and failing the write.
@@ -169,6 +172,7 @@ namespace avs
 			in >> compression;
 			in >> texture.sampler_uid;
 			in >> texture.dataSize;
+			in >> texture.valueScale;
 
 			{
 				//Discard new line.

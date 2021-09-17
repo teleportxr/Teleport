@@ -33,7 +33,7 @@ size_t GetNewUIDs(std::vector<avs::uid> & outUIDs, avs::GeometryRequesterBackend
 	return outUIDs.size();
 }
 
-namespace SCServer
+namespace teleport
 {
 	GeometryEncoder::GeometryEncoder(const CasterSettings* settings)
 		:settings(settings), prevBufferSize(0)
@@ -57,7 +57,7 @@ namespace SCServer
 			std::vector<avs::uid> nodeIDsToStream;
 			std::vector<avs::MeshNodeResources> meshNodeResources;
 			std::vector<avs::LightNodeResources> lightNodeResources;
-			std::vector<avs::uid> genericTexturesToStream;
+			std::set<avs::uid> genericTexturesToStream;
 
 			req->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream);
 
@@ -367,12 +367,11 @@ namespace SCServer
 			avs::DataNode* node = src->getNode(uid);
 			if(!node)
 			{
-				TELEPORT_CERR << "Node encoding error! Node_" << uid << " does not exist!\n";
+				TELEPORT_CERR << "PipelineNode encoding error! Node_" << uid << " does not exist!\n";
 				missingUIDs.erase(missingUIDs.begin()+i);
 				i--;
 			}
 		}
-
 		put(missingUIDs.size());
 		for (const avs::uid &uid : missingUIDs)
 		{
@@ -704,6 +703,9 @@ namespace SCServer
 				//Push format.
 				put(texture->format);
 				put(texture->compression);
+
+				//Value scale - brightness number to scale the final texel by.
+				put(texture->valueScale);
 
 				//Push size, and data.
 				put(texture->dataSize);

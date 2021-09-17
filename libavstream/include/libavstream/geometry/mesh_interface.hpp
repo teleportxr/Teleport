@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <set>
 
 #include <libavstream/common.hpp>
 #include <libavstream/memory.hpp>
@@ -280,9 +281,9 @@ struct Animation;
 		//LIGHT
 		vec4 lightColour;
 		float lightRadius;
-		vec3 lightDirection; // Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
+		vec3 lightDirection;	// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
 		uint8_t lightType;
-		float lightRange;	// Maximum distance the light is effective at, in metres.
+		float lightRange;		// Maximum distance the light is effective at, in metres.
 	};
 #ifdef _MSC_VER
 #pragma pack(pop)
@@ -593,7 +594,7 @@ struct Animation;
 	public:
 		virtual ~GeometrySourceBackendInterface() = default;
 
-		//! A Node has a transform, and MAY contain an instance of a mesh.
+		//! A PipelineNode has a transform, and MAY contain an instance of a mesh.
 		virtual std::vector<uid> getNodeIDs() const = 0;
 		//! If it exists, get the name of the node, otherwise an empty string.
 		virtual const char* getNodeName(avs::uid nodeID) const =0;
@@ -667,7 +668,7 @@ struct Animation;
 		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
 										,std::vector<MeshNodeResources>& outMeshResources
 										,std::vector<LightNodeResources>& outLightResources
-										,std::vector<avs::uid>& genericTextureUids) const = 0;
+										,std::set<avs::uid>& genericTextureUids) const = 0;
 
 		//Returns the axes standard used by the client.
 		virtual AxesStandard getClientAxesStandard() const = 0;

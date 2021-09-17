@@ -9,7 +9,7 @@ namespace avs
 {
 	/*! A class to receive and process streamed audio
 	*/
-	class AVSTREAM_API AudioTarget final : public Node, public avs::AudioTargetInterface
+	class AVSTREAM_API AudioTarget final : public PipelineNode, public avs::AudioTargetInterface
 	{
 		AVSTREAM_PUBLICINTERFACE(AudioStreamTarget)
 	public:

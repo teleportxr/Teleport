@@ -11,9 +11,9 @@
 
 namespace avs
 {
-	struct Forwarder::Private final : public Node::Private
+	struct Forwarder::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(Forwarder, Node)
+		AVSTREAM_PRIVATEINTERFACE(Forwarder, PipelineNode)
 		std::vector<char> m_buffer;
 		size_t m_chunkSize = 0;
 		unsigned streamId=0;

@@ -9,7 +9,7 @@ struct Vector3Keyframe;
 struct Vector4Keyframe;
 }
 
-namespace SCServer
+namespace teleport
 {
 	class GeometryEncoder: public avs::GeometryEncoderBackendInterface
 	{

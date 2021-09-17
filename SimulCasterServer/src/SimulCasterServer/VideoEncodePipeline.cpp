@@ -11,7 +11,7 @@
 #include <libavstream/surfaces/surface_dx12.hpp>
 
 
-namespace SCServer
+namespace teleport
 {
 	static void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams);
 
@@ -20,7 +20,7 @@ namespace SCServer
 	
 	}
 
-	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::Node* videoOutput, avs::IOInterface* tagDataOutput)
+	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput)
 	{
 		auto createSurfaceBackend = [](GraphicsDeviceType deviceType, void* resource)->avs::SurfaceBackendInterface*
 		{
@@ -197,5 +197,12 @@ namespace SCServer
 		mTagDataOutput = nullptr;
 		
 		return Result::Code::OK;
+	}
+
+	avs::EncoderStats VideoEncodePipeline::GetEncoderStats() const
+	{
+		if (mEncoder)
+			return mEncoder->GetStats();
+		return avs::EncoderStats();
 	}
 }

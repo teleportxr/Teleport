@@ -4,14 +4,14 @@
 
 namespace avs
 {
-	struct AudioTarget::Private final : public Node::Private
+	struct AudioTarget::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(AudioTarget, Node);
+		AVSTREAM_PRIVATEINTERFACE(AudioTarget, PipelineNode);
 		AudioTargetBackendInterface* m_backend = nullptr;
 	};
 
 	AudioTarget::AudioTarget()
-		: avs::Node(new AudioTarget::Private(this)) {}
+		: avs::PipelineNode(new AudioTarget::Private(this)) {}
 
 	AudioTarget::~AudioTarget() 
 	{

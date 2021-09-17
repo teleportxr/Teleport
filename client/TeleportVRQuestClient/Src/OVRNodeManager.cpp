@@ -16,7 +16,7 @@ void OVRNodeManager::ChangeEffectPass(const char* effectPassName)
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	//Early-out if this we aren't actually changing the effect pass.
-	if(strcmp(globalGraphicsResources.effectPassName, effectPassName) == 0)
+	if(globalGraphicsResources.effectPassName== effectPassName)
 	{
 		return;
 	}

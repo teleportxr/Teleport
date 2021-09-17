@@ -8,7 +8,7 @@
 
 #define WITH_REMOTEPLAY_STATS 1
 
-namespace SCServer
+namespace teleport
 {
 	struct CasterNetworkSettings;
 	struct CasterSettings;

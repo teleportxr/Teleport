@@ -7,7 +7,7 @@
 namespace avs {
 
 	Buffer::Buffer()
-		: Node(new Buffer::Private(this))
+		: PipelineNode(new Buffer::Private(this))
 	{
 		setNumSlots(1, 1);
 	}
@@ -34,7 +34,7 @@ namespace avs {
 		return Result::OK;
 	}
 
-	Result Buffer::read(Node*, void* buffer, size_t& bufferSize, size_t& bytesRead)
+	Result Buffer::read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead)
 	{
 		std::lock_guard<std::mutex> lock(d().m_mutex);
 
@@ -67,7 +67,7 @@ namespace avs {
 		return Result::OK;
 	}
 
-	Result Buffer::write(Node*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
+	Result Buffer::write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
 		std::lock_guard<std::mutex> lock(d().m_mutex);
 

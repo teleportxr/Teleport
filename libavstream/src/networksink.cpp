@@ -12,7 +12,7 @@
 using namespace avs;
 
 NetworkSink::NetworkSink()
-	: Node(new NetworkSink::Private(this)), m_data((NetworkSink::Private*)(m_d))
+	: PipelineNode(new NetworkSink::Private(this)), m_data((NetworkSink::Private*)(m_d))
 {}
 
 Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params)
@@ -94,7 +94,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	m_data->m_streams = std::move(streams);
 
 	// Called by the parser interface if the stream uses one
-	auto onPacketParsed = [](Node* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)->Result
+	auto onPacketParsed = [](PipelineNode* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)->Result
 	{
 		NetworkSink* ns = static_cast<NetworkSink*>(node);
 		return ns->m_data->packData((const uint8_t*)buffer + dataOffset, dataSize, inputNodeIndex);
@@ -296,7 +296,7 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 	// Called to get the data from the input nodes
 	auto readInput = [this](uint32_t inputNodeIndex, size_t& numBytesRead) -> Result
 	{
-		Node* node = getInput(inputNodeIndex);
+		PipelineNode* node = getInput(inputNodeIndex);
 		auto& stream = m_data->m_streams[inputNodeIndex];
 		
 		assert(node);

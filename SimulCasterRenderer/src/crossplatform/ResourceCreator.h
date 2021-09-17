@@ -64,14 +64,21 @@ namespace scr
 		std::vector<uid> GetAllResourceIDs()
 		{
 			std::vector<uid> resourceIDs;
-			
-			mMaterialManager.GetAllIDs(resourceIDs);
-			mTextureManager.GetAllIDs(resourceIDs);
-			mMeshManager.GetAllIDs(resourceIDs);
-			mSkinManager.GetAllIDs(resourceIDs);
-			mLightManager.GetAllIDs(resourceIDs);
-			mBoneManager.GetAllIDs(resourceIDs);
-			mAnimationManager.GetAllIDs(resourceIDs);
+
+			const auto &m=mMaterialManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(), m.begin(), m.end());
+			const auto &t=mTextureManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(),t.begin(), t.end());
+			const auto &h=mMeshManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(), h.begin(), h.end());
+			const auto &s=mSkinManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(), s.begin(), s.end());
+			const auto &l=mLightManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(), l.begin(), l.end());
+			const auto &b=mBoneManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(), b.begin(), b.end());
+			const auto &a=mAnimationManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(), a.begin(), a.end());
 
 			return resourceIDs;
 
@@ -263,6 +270,7 @@ private:
 		scr::Texture::TextureCreateInfo scrTexture; //Creation information on texture being transcoded.
 		std::string name; //For debugging which texture failed.
 		avs::TextureCompression fromCompressionFormat;
+		float valueScale;	// scale on transcode.
 	};
 	
 	void CreateMeshNode(avs::uid id, avs::DataNode& node);

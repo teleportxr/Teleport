@@ -13,9 +13,9 @@
 namespace avs
 {
 
-	struct File::Private final : public Node::Private
+	struct File::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(File, Node)
+		AVSTREAM_PRIVATEINTERFACE(File, PipelineNode)
 		std::fstream m_file;
 		std::string m_filename;
 		FileAccess m_access = FileAccess::None;

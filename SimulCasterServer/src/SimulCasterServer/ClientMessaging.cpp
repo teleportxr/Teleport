@@ -10,7 +10,7 @@
 #include "DiscoveryService.h"
 #include "ErrorHandling.h"
 
-namespace SCServer
+namespace teleport
 {
 	std::atomic_bool ClientMessaging::asyncNetworkDataProcessingActive = false;
 	std::unordered_map<avs::uid, NetworkPipeline*> ClientMessaging::networkPipelines;

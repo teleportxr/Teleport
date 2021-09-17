@@ -21,9 +21,9 @@
 namespace avs
 {
 
-	struct Decoder::Private final : public Node::Private
+	struct Decoder::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(Decoder, Node)
+		AVSTREAM_PRIVATEINTERFACE(Decoder, PipelineNode)
 
 		bool m_doChecksums=false;
 	};

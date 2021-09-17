@@ -1,39 +1,19 @@
-//#version 310 es
 precision highp float;
 
-//From Application VIA
-layout(location = 0) in vec3 a_Position;
-layout(location = 3) in vec2 a_UV0;
-layout(location = 4) in vec2 a_UV1;
+layout(location = 0) in vec3 position;
 
-//From Application SR
-layout(std140, binding = 0) uniform CameraUB
-{
-	mat4 u_ProjectionMatrix;
-	mat4 u_ViewMatrix;
-	vec4 u_Orientation; //Quaternion
-	vec3 u_Position;
-	float _pad;
-}cam;
-
-/*layout(std140, binding = 1) uniform TransformUB
-{
-	mat4 u_ModelMatrix;
-}model;*/
-
-//To Fragment Varying
-layout(location = 7)  out vec2 v_UV0;
-layout(location = 8)  out vec2 v_UV1;
-layout(location = 9)  out vec3 v_CameraPosition;
+layout(location = 1) out vec2 vTexCoords;
 
 void main()
 {
-    //gl_Position = cam.u_ProjectionMatrix * cam.u_ViewMatrix * model.u_ModelMatrix * vec4(a_Position, 1.0);
-    gl_Position = sm.ProjectionMatrix[VIEW_ID] * sm.ViewMatrix[VIEW_ID] * ModelMatrix * vec4(a_Position, 1.0);
+    vec2 vOffsets[4];
+    vOffsets[0] = vec2(0, 1); // Bottom Left
+    vOffsets[1] = vec2(0, 0); // Top Left
+    vOffsets[2] = vec2(1, 0); // Top Right
+    vOffsets[3] = vec2(1, 1); // Bottom Right
 
-    v_UV0		= a_UV0;
-    v_UV0.y		= 1.0 - a_UV0.y;
-    v_UV1		= a_UV1;
-    v_UV1.y		= 1.0 - a_UV1.y;
-    v_CameraPosition = cam.u_Position;
+    vTexCoords = vOffsets[gl_VertexID];
+
+    vec4 p = ModelMatrix * vec4(position, 1.0);
+    gl_Position = vec4(p.xyz, 1.0);
 }

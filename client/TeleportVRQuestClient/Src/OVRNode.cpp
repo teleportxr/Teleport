@@ -110,6 +110,8 @@ void OVRNode::SetMaterialList(std::vector<std::shared_ptr<scr::Material>>& mater
 
 std::string OVRNode::GetCompleteEffectPassName(const char *effectPassName)
 {
+	if(effectPassName==nullptr||effectPassName[0]==0)
+		effectPassName="OpaquePBRAmbient";
 	return std::string(GetSkin() ? "Animated_" : "Static_") + effectPassName;
 }
 
@@ -258,8 +260,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	}
 
 	//Get effect pass create info.
-	std::string completePassName = GetCompleteEffectPassName(
-			globalGraphicsResources.effectPassName);
+	std::string completePassName = GetCompleteEffectPassName(globalGraphicsResources.effectPassName.c_str());
 	const scc::GL_Effect                    &gl_effect            = globalGraphicsResources.defaultPBREffect;
 	const scr::Effect::EffectPassCreateInfo *effectPassCreateInfo = gl_effect.GetEffectPassCreateInfo(
 			completePassName.c_str());
@@ -399,7 +400,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 				}
 				else
 				{
-					OVR_LOG("CreateOVRSurface Linking Unassigned Texture %d %s", (int)j,resource.shaderResourceName,resource.shaderResourceName);
+					OVR_LOG("CreateOVRSurface Linking Unassigned Texture %d %s", (int)j,resource.shaderResourceName);
 					textureCount++;
 				}
 			}

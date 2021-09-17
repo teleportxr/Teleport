@@ -18,11 +18,11 @@ namespace avs
 		Timer();
 		void Start();
 		// Returns time in seconds.
-		double GetElapsedTime();
+		double GetElapsedTime() const;
 
 	private:
 		Timestamp m_startTimestamp;
-		std::mutex m_mutex;
+		mutable std::mutex m_mutex;
 	};
 
 	/*!

@@ -14,7 +14,7 @@
 using namespace avs;
 
 Decoder::Decoder(DecoderBackend backend)
-	: Node(new Decoder::Private(this))
+	: PipelineNode(new Decoder::Private(this))
 {
 	m_data = (Decoder::Private*)m_d;
 	m_selectedBackendType = backend;
@@ -116,7 +116,7 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 	// Create and configure video parser
 	m_vid_parser.reset(StreamParserInterface::Create(StreamParserType::AVC_AnnexB));
 
-	auto onPacketParsed = [](Node* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)->Result
+	auto onPacketParsed = [](PipelineNode* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)->Result
 	{
 		Decoder* d = static_cast<Decoder*>(node);
 		Result result = d->processPayload((const uint8_t*)buffer, dataSize, dataOffset, isLastPayload);
@@ -429,7 +429,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 	return result;
 }
 
-Result Decoder::onInputLink(int slot, Node* node)
+Result Decoder::onInputLink(int slot, PipelineNode* node)
 {
 	if (!dynamic_cast<IOInterface*>(node))
 	{
@@ -439,11 +439,11 @@ Result Decoder::onInputLink(int slot, Node* node)
 	return Result::OK;
 }
 
-Result Decoder::onOutputLink(int slot, Node* node)
+Result Decoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!m_configured)
 	{
-		AVSLOG(Error) << "Decoder: Node needs to be configured before it can accept output";
+		AVSLOG(Error) << "Decoder: PipelineNode needs to be configured before it can accept output";
 		return Result::Node_NotConfigured;
 	}
 	assert(m_backend);
@@ -457,7 +457,7 @@ Result Decoder::onOutputLink(int slot, Node* node)
 	return registerSurface(surface);
 }
 
-void Decoder::onOutputUnlink(int slot, Node* node)
+void Decoder::onOutputUnlink(int slot, PipelineNode* node)
 {
 	if (!m_configured)
 	{

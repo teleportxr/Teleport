@@ -489,7 +489,9 @@ void NodeManager::LinkToParentNode(avs::uid childID)
 	//Connect up hierarchy.
 	child->SetParent(parent);
 	parent->AddChild(child);
-	distanceSortedRootNodes.erase(std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child));
+	auto f= std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
+	if(f!= distanceSortedRootNodes.end())
+		distanceSortedRootNodes.erase(f);
 	//Erase child from the root nodes list, as they now have a parent.
 	rootNodes.erase(std::find(rootNodes.begin(), rootNodes.end(), child));
 }

@@ -25,6 +25,10 @@ void Controllers::SetCycleOSDDelegate(TriggerDelegate delegate)
 {
 	CycleOSD = delegate;
 }
+void Controllers::SetCycleOSDSelectionDelegate(TriggerDelegate delegate)
+{
+	CycleOSDSelection = delegate;
+}
 
 void Controllers::SetDebugOutputDelegate(TriggerDelegate delegate)
 {
@@ -45,6 +49,7 @@ void Controllers::ClearDelegates()
 {
 	CycleShaderMode = nullptr;
 	CycleOSD = nullptr;
+	CycleOSDSelection= nullptr;
 	SetStickOffset = nullptr;
 	WriteDebugOutput=nullptr;
 	ToggleWebcam = nullptr;
@@ -142,6 +147,10 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				{
 					CycleOSD();
 				}
+				if((released & ovrButton::ovrButton_B) != 0)
+				{
+					CycleOSDSelection();
+				}
 				if((released & ovrButton::ovrButton_X) != 0)
 				{
 					WriteDebugOutput();
@@ -149,8 +158,7 @@ void Controllers::Update(ovrMobile *ovrmobile)
 					// All buttons seem to be taken up so putting it here for now
 					ToggleWebcam();
 				}
-
-				if((released & ovrButton::ovrButton_B) != 0 || (released & ovrButton::ovrButton_Y) != 0)
+				if( (released & ovrButton::ovrButton_Y) != 0)
 				{
 					CycleShaderMode();
 				}

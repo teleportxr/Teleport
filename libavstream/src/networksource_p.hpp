@@ -73,9 +73,9 @@ namespace avs
 		uint32_t size:11;
 		//uint32_t sent_ack:1;
 	};
-	struct NetworkSource::Private final : public Node::Private
+	struct NetworkSource::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(NetworkSource, Node)
+		AVSTREAM_PRIVATEINTERFACE(NetworkSource, PipelineNode)
 			
 #if LIBAV_USE_SRT
 		SRTSOCKET m_socket;

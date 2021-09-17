@@ -9,8 +9,9 @@
 
 #include "ExtractedTypes.h"
 
-namespace SCServer
+namespace teleport
 {
+	/// Singleton for storing geometry data and managing the geometry file cache.
 	class GeometryStore: public avs::GeometrySourceBackendInterface
 	{
 	public:
@@ -92,7 +93,13 @@ namespace SCServer
 		const avs::Texture* getNextCompressedTexture() const;
 		//Compresses the next texture to be compressed; does nothing if there are no more textures to compress.
 		void compressNextTexture();
+		/// Set the global cache path for the project.
+		void SetCachePath(const char *path)
+		{
+			cachePath=path;
+		}
 	private:
+		std::string cachePath;
 		//Stores data on a texture that is to be compressed.
 		struct PrecompressedTexture
 		{

@@ -10,7 +10,7 @@
 #include "ErrorHandling.h"
 
 
-namespace SCServer
+namespace teleport
 {
 	AudioEncoder::AudioEncoder(const CasterSettings* settings)
 		:settings(settings)

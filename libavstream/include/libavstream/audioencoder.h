@@ -23,7 +23,7 @@ enum class AudioEncoderBackend
  * Encodes audio 
  * - Compatible outputs: Any node implementing IOInterface.
  */
-class AVSTREAM_API AudioEncoder final : public Node
+class AVSTREAM_API AudioEncoder final : public PipelineNode
 {
 	AVSTREAM_PUBLICINTERFACE(AudioEncoder)
 public:
@@ -68,7 +68,7 @@ public:
 
 	/*!
 	 * Encode single video frame from input surface and write resulting bitstream to output.
-	 * \sa Node::process()
+	 * \sa PipelineNode::process()
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.
@@ -78,7 +78,7 @@ public:
 
 	/*!
 	 * Write data to the output stream
-	 * \sa Node::process()
+	 * \sa PipelineNode::process()
 	 * \param extra data buffer
 	 * \param extra data buffer size
 	 * \return
@@ -116,9 +116,9 @@ public:
 	const char* getDisplayName() const override { return "AudioEncoder"; }
 
 private:
-	Result onInputLink(int slot, Node* node) override;
-	Result onOutputLink(int slot, Node* node) override;
-	void   onInputUnlink(int slot, Node* node) override;
+	Result onInputLink(int slot, PipelineNode* node) override;
+	Result onOutputLink(int slot, PipelineNode* node) override;
+	void   onInputUnlink(int slot, PipelineNode* node) override;
 };
 
 } // avs

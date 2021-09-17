@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-namespace SCServer
+namespace teleport
 {
 	class DiscoveryService
 	{

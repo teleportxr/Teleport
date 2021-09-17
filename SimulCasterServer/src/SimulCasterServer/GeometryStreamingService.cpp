@@ -14,7 +14,7 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
-namespace SCServer
+namespace teleport
 {
 	GeometryStreamingService::GeometryStreamingService(const CasterSettings* settings)
 		:geometryStore(nullptr), settings(settings), casterContext(nullptr), geometryEncoder(settings)
@@ -52,7 +52,7 @@ namespace SCServer
 	}
 
 	void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources
-	, std::vector<avs::LightNodeResources>& outLightResources,std::vector<avs::uid>& genericTextureUids) const
+	, std::vector<avs::LightNodeResources>& outLightResources,std::set<avs::uid>& genericTextureUids) const
 	{
 		for (avs::uid nodeID : streamedNodeIDs)
 		{
@@ -70,19 +70,23 @@ namespace SCServer
 				break;
 			case avs::NodeDataType::Mesh:
 				GetMeshNodeResources(nodeID, *node, outMeshResources);
+				if(node->renderState.globalIlluminationUid>0)
+				{
+					genericTextureUids.insert(node->renderState.globalIlluminationUid);
+				}
 				break;
 			default:
 				break;
 			}
 		}
-		genericTextureUids.clear();
+		/*	genericTextureUids.clear();
 		for(auto &t:streamedGenericTextureUids)
 		{
 			genericTextureUids.push_back(t);
-		}
+		}*/
 	}
 
-	void GeometryStreamingService::startStreaming(SCServer::CasterContext* context)
+	void GeometryStreamingService::startStreaming(teleport::CasterContext* context)
 	{
 		if (casterContext == context)
 		{
@@ -159,7 +163,7 @@ namespace SCServer
 		}
 	}
 
-	bool SCServer::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
+	bool teleport::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 	{
 		return hiddenNodes.find(nodeID) != hiddenNodes.end();
 	}
@@ -187,7 +191,7 @@ namespace SCServer
 		}
 
 		// For this client's POSITION and OTHER PROPERTIES,
-		// Use the Geometry Source to determine which Node uid's are relevant.
+		// Use the Geometry Source to determine which PipelineNode uid's are relevant.
 
 		avsPipeline->process();
 	}

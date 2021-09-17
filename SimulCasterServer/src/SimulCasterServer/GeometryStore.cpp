@@ -13,7 +13,7 @@
 #include "libavstream/geometry/animation_interface.h"
 #include "draco/compression/encode.h"
 #include "draco/compression/decode.h"
-using namespace SCServer;
+using namespace teleport;
 
 //We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
 #if _MSC_VER < 1920
@@ -84,7 +84,6 @@ const char* stringOf(avs::NodeDataType type)
 
 GeometryStore::GeometryStore()
 {
-
 	//Create look-up maps.
 	meshes[avs::AxesStandard::EngineeringStyle];
 	meshes[avs::AxesStandard::GlStyle];
@@ -101,18 +100,18 @@ GeometryStore::~GeometryStore()
 
 void GeometryStore::saveToDisk() const
 {
-	saveResources(std::string("teleport_cache/")+TEXTURE_CACHE_PATH, textures);
-	saveResources(std::string("teleport_cache/")+MATERIAL_CACHE_PATH, materials);
-	saveResources(std::string("teleport_cache/")+MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
-	saveResources(std::string("teleport_cache/")+MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
+	saveResources(cachePath + "/" +TEXTURE_CACHE_PATH, textures);
+	saveResources(cachePath + "/" +MATERIAL_CACHE_PATH, materials);
+	saveResources(cachePath + "/" +MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
+	saveResources(cachePath + "/" +MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
 }
 
 void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials)
 {
-	loadResources(std::string("teleport_cache/") + MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
-	loadResources(std::string("teleport_cache/") + MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
-	loadResources(std::string("teleport_cache/") + TEXTURE_CACHE_PATH, textures);
-	loadResources(std::string("teleport_cache/") + MATERIAL_CACHE_PATH, materials);
+	loadResources(cachePath + "/" + MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
+	loadResources(cachePath + "/" + MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
+	loadResources(cachePath + "/" + TEXTURE_CACHE_PATH, textures);
+	loadResources(cachePath + "/" + MATERIAL_CACHE_PATH, materials);
 
 	meshAmount = meshes.at(avs::AxesStandard::EngineeringStyle).size();
 	textureAmount = textures.size();
@@ -150,7 +149,7 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 }
 void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
 {
-	TELEPORT_COUT << "Reaffirming resources.\node";
+	TELEPORT_COUT << "Renumbering resources.\node";
 
 	//Copy data on the resources that were loaded.
 	std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> oldMeshes = meshes;
@@ -895,13 +894,12 @@ void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastMod
 	materials[id] = ExtractedMaterial{guid, lastModified, newMaterial};
 }
 
-void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips, bool highQualityUASTC,bool forceOverwrite)
+void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips
+	, bool highQualityUASTC,bool forceOverwrite)
 {
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
 	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
 	{
-		//newTexture.compression = newTexture.compression;//avs::TextureCompression::BASIS_COMPRESSED;
-
 		bool validBasisFileExists = false;
 		filesystem::path filePath = basisFileLocation;
 		if(filesystem::exists(filePath))
@@ -910,7 +908,6 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 			filesystem::file_time_type rawBasisTime = filesystem::last_write_time(filePath);
 
 			//Convert to std::time_t; imprecise, but good enough.
-			//std::time_t basisLastModified = GetFileWriteTime(filePath);//std::chrono::system_clock::to_time_t(rawBasisTime);
 			std::time_t basisLastModified = rawBasisTime.time_since_epoch().count();
 
 			//The file is valid if the basis file is younger than the texture file.
@@ -951,7 +948,7 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 		}
 	}
 
-	textures[id] = ExtractedTexture{guid, lastModified, newTexture};
+	textures[id] = ExtractedTexture{guid, lastModified, newTexture };
 }
 
 void GeometryStore::storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newShadowMap)
