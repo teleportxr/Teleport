@@ -741,7 +741,18 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			for(const auto& missingPair : missing)
 			{
 				const ResourceCreator::MissingResource& missingResource = missingPair.second;
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\t%s_%d", missingResource.resourceType, missingResource.id));
+				std::string txt= simul::base::QuickFormat("\t%s %d from ", missingResource.resourceType, missingResource.id);
+				for(auto u:missingResource.waitingResources)
+				{
+					auto type= u.get()->type;
+					avs::uid id=u.get()->id;
+					if(type==avs::GeometryPayloadType::Node)
+					{
+						txt+="Node ";
+					}
+					txt+=simul::base::QuickFormat("%d, ",(uint64_t)id);
+				}
+				renderPlatform->LinePrint(deviceContext, txt.c_str());
 			}
 		}
 	}
@@ -913,8 +924,13 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 			RenderNode(deviceContext, leftHand);
 		}
 	}
+#if 0
+	for (const std::shared_ptr<scr::Node>& node : nodeList)
+	{
+		RenderNodeOverlay(deviceContext, node);
+	}
+#endif
 }
-
 void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node)
 {
 	AVSTextureHandle th = avsTexture;
@@ -932,7 +948,6 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
 
-
 	std::shared_ptr<scr::Texture> globalIlluminationTexture ;
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = resourceManagers.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
@@ -943,7 +958,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 	if(overridePassName.length()>0)
 		passName= overridePassName;
 	//Only render visible nodes, but still render children that are close enough.
-	if(node->IsVisible())
+	if(node->IsVisible()&&(show_only == 0 || show_only == node->id))
 	{
 		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
 		if(mesh)
@@ -972,13 +987,9 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
 				cameraConstants.world = model;
 
+				std::shared_ptr<pc_client::PC_Texture> gi = std::dynamic_pointer_cast<pc_client::PC_Texture>(globalIlluminationTexture);
 				std::shared_ptr<scr::Material> material = node->GetMaterials()[element];
-				if(!material)
-				{
-					//Node incomplete.
-					continue;
-				}
-				else
+				if(material)
 				{
 					const scr::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
 					const scr::Material::MaterialData& md = material->GetMaterialData();
@@ -988,20 +999,27 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 					std::shared_ptr<pc_client::PC_Texture> normal = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.normal.texture);
 					std::shared_ptr<pc_client::PC_Texture> combined = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.combined.texture);
 					std::shared_ptr<pc_client::PC_Texture> emissive = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.emissive.texture);
-					std::shared_ptr<pc_client::PC_Texture> gi = std::dynamic_pointer_cast<pc_client::PC_Texture>(globalIlluminationTexture);
 					
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), diffuse ? diffuse->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), normal ? normal->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), combined ? combined->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"), emissive ? emissive->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi?gi->GetSimulTexture():nullptr);
-
-					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
-					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
-					//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
-					//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
-					//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				}
+				else
+				{
+					pbrConstants.diffuseOutputScalar=vec4(1.0f,1.0f,1.0f,0.5f);
+					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"),  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"),  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"),  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"),  nullptr);
+				}
+				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi ? gi->GetSimulTexture() : nullptr);
+
+				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
+				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
+				//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
+				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				
 				lightsBuffer.Apply(deviceContext, pbrEffect, _lights );
 				tagDataCubeBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataCubeBuffer"));
@@ -1031,29 +1049,6 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				layout->Unapply(deviceContext);
 			}
 		}
-		const scr::AnimationComponent &anim= node->animationComponent;
-		if(node->GetSkin().get())
-		{
-			avs::vec4 white(1.0f,1.0f,1.0f,1.0f);
-			avs::vec3 pos= node->GetGlobalPosition();
-			std::string str;
-			const scr::AnimationState *animationState= node->animationComponent.GetCurrentAnimationState();
-			if(animationState)
-			{
-				//const scr::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
-				static char txt[250];
-				//for(const auto &s:animationStates)
-				{
-					const auto &a= animationState->getAnimation();
-					if(a.get())
-					{
-						sprintf(txt,"%s %3.3f\n",a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
-						str +=txt;
-					}
-				}
-				renderPlatform->PrintAt3dPos(deviceContext,(const float *)(&pos),str.c_str(), (const float*)(&white));
-			}
-		}
 	}
 
 	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
@@ -1062,6 +1057,69 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		if(child)
 		{
 			RenderNode(deviceContext, child);
+		}
+	}
+}
+
+
+void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node)
+{
+	AVSTextureHandle th = avsTexture;
+	AVSTexture& tx = *th;
+	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+
+	std::shared_ptr<scr::Texture> globalIlluminationTexture;
+	if (node->GetGlobalIlluminationTextureUid())
+		globalIlluminationTexture = resourceManagers.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+
+	//Only render visible nodes, but still render children that are close enough.
+	if (node->IsVisible()&& (show_only == 0 || show_only == node->id))
+	{
+		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
+		const scr::AnimationComponent& anim = node->animationComponent;
+		avs::vec3 pos = node->GetGlobalPosition();
+		avs::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
+		if (node->GetSkin().get())
+		{
+			std::string str;
+			const scr::AnimationState* animationState = node->animationComponent.GetCurrentAnimationState();
+			if (animationState)
+			{
+				//const scr::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
+				static char txt[250];
+				//for(const auto &s:animationStates)
+				{
+					const auto& a = animationState->getAnimation();
+					if (a.get())
+					{
+						sprintf(txt, "%d %s %3.3f\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
+						str += txt;
+					}
+				}
+				renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&white));
+			}
+		}
+		else if (mesh)
+		{
+			static char txt[250];
+			sprintf(txt, "%d %s: %s", node->id,node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
+			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), txt, (const float*)(&white), nullptr, 0, 0, false);
+		}
+		else
+		{
+			avs::vec4 yellow(1.0f, 1.0f, 0.0f, 1.0f); 
+				static char txt[250];
+			sprintf(txt, "%d %s", node->id, node->name.c_str());
+			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), txt, (const float*)(&yellow), nullptr, 0, 0, false);
+		}
+	}
+
+	for (std::weak_ptr<scr::Node> childPtr : node->GetChildren())
+	{
+		std::shared_ptr<scr::Node> child = childPtr.lock();
+		if (child)
+		{
+			RenderNodeOverlay(deviceContext, child);
 		}
 	}
 }

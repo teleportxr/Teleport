@@ -967,7 +967,7 @@ TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textur
 }
 
 ///GeometryStreamingService START
-TELEPORT_EXPORT void Client_AddNode(avs::uid clientID, avs::uid nodeID, avs::Transform currentTransform)
+TELEPORT_EXPORT void Client_AddNode(avs::uid clientID, avs::uid nodeID)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -978,7 +978,8 @@ TELEPORT_EXPORT void Client_AddNode(avs::uid clientID, avs::uid nodeID, avs::Tra
 
 	clientPair->second.geometryStreamingService->addNode(nodeID);
 	//Update node transform, as it may have changed since the node was last streamed.
-	geometryStore.updateNode(nodeID, currentTransform);
+	// 	   NO. Terrible idea. Changing a global node property in a per-client function? No.
+	//geometryStore.updateNode(nodeID, currentTransform);
 }
 
 TELEPORT_EXPORT void Client_RemoveNodeByID(avs::uid clientID, avs::uid nodeID)

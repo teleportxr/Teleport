@@ -125,7 +125,7 @@ private:
     ENetPeer* mServerPeer = nullptr;
 	ENetAddress mServerEndpoint{};
 
-    ControllerState mPrevControllerState{};
+    ControllerState mPrevControllerState[2];
 
     bool handshakeAcknowledged = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for nodes.

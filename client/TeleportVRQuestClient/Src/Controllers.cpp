@@ -95,11 +95,11 @@ bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
 void Controllers::Update(ovrMobile *ovrmobile)
 {
 	// Query controller input state.
-	ControllerState controllerState = {};
 	for(int i = 0; i < 2; i++)
 	{
 		if(mControllerIDs[i] != 0)
 		{
+			ControllerState controllerState = {};
 			ControllerState &lastControllerState = mLastControllerStates[i];
 			ovrInputStateTrackedRemote ovrState;
 			ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;

@@ -421,10 +421,9 @@ bool GeometryStore::hasShadowMap(avs::uid id) const
 
 void GeometryStore::storeNode(avs::uid id, avs::DataNode& newNode)
 {
-	//Remove node before re-adding with new data.
-	removeNode(id);
+	//Remove node before re-adding with new data. Why?
+	//removeNode(id);
 	nodes[id] = newNode;
-
 	if(newNode.data_type == avs::NodeDataType::Light)
 	{
 		lightNodes[id]=avs::LightNodeResources{id, newNode.data_uid};
@@ -442,6 +441,7 @@ void GeometryStore::storeAnimation(avs::uid id, avs::Animation& animation, avs::
 	animations[avs::AxesStandard::EngineeringStyle][id] = avs::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
 	animations[avs::AxesStandard::GlStyle][id] = avs::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
 }
+
 draco::DataType ToDracoDataType(avs::Accessor::ComponentType componentType)
 {
 	switch(componentType)
@@ -466,6 +466,7 @@ draco::DataType ToDracoDataType(avs::Accessor::ComponentType componentType)
 		return draco::DataType::DT_INT8;
 	};
 }
+
 draco::GeometryAttribute::Type ToDracoGeometryAttribute(avs::AttributeSemantic attributeSemantic)
 {
 	switch (attributeSemantic)
@@ -641,7 +642,6 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 	dracoDecoder.DecodeBufferToGeometry(&dracoDecoderBuffer,&dracoMesh2);*/
 	
 	return true;
-	
 }
 
 static bool FloatCompare(float a,float b)
@@ -960,7 +960,7 @@ void GeometryStore::removeNode(avs::uid id)
 {
 	nodes.erase(id);
 	lightNodes.erase(id);
-		}
+}
 
 void GeometryStore::updateNode(avs::uid id, avs::Transform& newTransform)
 {

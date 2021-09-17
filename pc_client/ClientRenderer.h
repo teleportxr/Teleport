@@ -202,6 +202,7 @@ public:
 	void WriteHierarchies();
 	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node);
+	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node);
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);

@@ -57,14 +57,14 @@ namespace scr
 		deltaTime /= 1000;
 		const Transform& transform = (ShouldUseGlobalTransform() ? GetGlobalTransform() : GetLocalTransform());
 
-		avs::vec3 newTranslation = transform.m_Translation + (lastReceivedMovement.velocity * deltaTime);
+		avs::vec3 newTranslation = transform.m_Translation;// + (lastReceivedMovement.velocity * deltaTime);
 
 		scr::quat newRotation = transform.m_Rotation;
-		if(lastReceivedMovement.angularVelocityAngle != 0)
+	/*	if(lastReceivedMovement.angularVelocityAngle != 0)
 		{
 			quat deltaRotation(lastReceivedMovement.angularVelocityAngle * deltaTime, lastReceivedMovement.angularVelocityAxis);
 			newRotation *= deltaRotation;
-		}
+		}*/
 
 		UpdateModelMatrix(newTranslation, newRotation, transform.m_Scale);
 	}
@@ -86,19 +86,20 @@ namespace scr
 		}
 	}
 
-	void Node::SetParent(std::shared_ptr<Node> node)
+	void Node::SetParent(std::shared_ptr<Node> newParent)
 	{
-
 		std::shared_ptr<Node> oldParent = parent.lock();
-
-		parent = node;
-
+		if(oldParent== newParent)
+			return;
+		parent = newParent;
 		//Remove self from parent list of existing parent, if we have a parent.
 		//Prevent stack overflow by doing this after setting the new parent.
 		if(oldParent)
 		{
 			oldParent->RemoveChild(id);
 		}
+		// New parent may have different position.
+		RequestTransformUpdate();
 	}
 
 	void Node::AddChild(std::shared_ptr<Node> child)

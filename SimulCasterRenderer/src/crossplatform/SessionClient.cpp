@@ -207,7 +207,8 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			}
 		}
 	}
-	mPrevControllerState = controllerStates[0];
+	mPrevControllerState[0]= controllerStates[0];
+	mPrevControllerState[1]= controllerStates[1];
 
 	//Append resource requests to the request list again, if it has been too long since we sent the request.
 	for(auto sentResource : mSentResourceRequests)
@@ -355,9 +356,10 @@ void SessionClient::sendOriginPose(uint64_t validCounter,const avs::Pose& origin
 
 void SessionClient::SendInput(int id,const ControllerState& controllerState)
 {
+	const ControllerState& prevControllerState=mPrevControllerState[id];
 	avs::InputState inputState = {};
 	inputState.buttonsDown= controllerState.mButtons;
-	const uint32_t buttonsDiffMask = mPrevControllerState.mButtons ^ controllerState.mButtons;
+	const uint32_t buttonsDiffMask = prevControllerState.mButtons ^ controllerState.mButtons;
 	inputState.controllerId=id;
 	inputState.joystickAxisX = controllerState.mJoystickAxisX;
 	inputState.joystickAxisY = controllerState.mJoystickAxisY;
@@ -374,9 +376,10 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 		inputState.trackpadAxisY = 2.0f * controllerState.mTrackpadY - 1.0f;
 
 		// If this update does not include button information send it unreliably to improve latency.
+		// NO! Events could be out of sequence!!
 		if(buttonsDiffMask == 0)
 		{
-			packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
+			//packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
 		}
 	}
 
