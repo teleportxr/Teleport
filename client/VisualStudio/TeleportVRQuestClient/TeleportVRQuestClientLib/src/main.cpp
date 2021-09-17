@@ -5,8 +5,9 @@
 #include <android/log.h>
 #include <android/sensor.h>
 #include <android/window.h>
-#include <android/native_app_glue/android_native_app_glue.h>
+#include <android_native_app_glue.h>
 #include "vulkan_wrapper.h"
+#include <filesystem>
 
 #define EXTERN_C_BEGIN extern "C" {
 #define EXTERN_C_END }
@@ -70,12 +71,6 @@ void android_main(struct android_app* app)
 	instanceExtensionProperties.resize(extensionCount);
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instanceExtensionProperties.data());
 
-	for (auto& ext : instanceExtensionProperties)
-	{
-		const char* str = ext.extensionName;
-		__android_log_write(ANDROID_LOG_INFO, "TeleportVRQuestClient", str);
-	}
-
 	VkInstanceCreateInfo m_InstanceCI;
 	m_InstanceCI.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	m_InstanceCI.pNext = nullptr;
@@ -86,8 +81,9 @@ void android_main(struct android_app* app)
 	m_InstanceCI.enabledExtensionCount = static_cast<uint32_t>(m_ActiveInstanceExtensions.size());
 	m_InstanceCI.ppEnabledExtensionNames = m_ActiveInstanceExtensions.data();
 
+
 	VkInstance m_Instance;
-	VkResult res = vkCreateInstance(&m_InstanceCI, nullptr, &m_Instance);
+	VK_ASSERT(vkCreateInstance(&m_InstanceCI, nullptr, &m_Instance), "Failed to Create VkInstance.");
 
 	vkDestroyInstance(m_Instance, nullptr);
 

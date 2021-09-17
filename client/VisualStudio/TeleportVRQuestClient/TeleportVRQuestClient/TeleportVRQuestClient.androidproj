@@ -43,7 +43,7 @@
       <GradlePlugin>4.0.1</GradlePlugin>
       <GradleVersion>6.1.1</GradleVersion>
       <AssembleParameter>assemble</AssembleParameter>
-      <AndroidAppLibName>$(ProjectName)</AndroidAppLibName>
+      <AndroidAppLibName>$(ProjectName)Lib</AndroidAppLibName>
     </GradlePackage>
   </ItemDefinitionGroup>
   <ImportGroup Label="ExtensionSettings" />
@@ -56,10 +56,7 @@
     <GradleTemplate Include="gradle\wrapper\gradle-wrapper.properties.template" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="app\CMakeLists.txt" />
-    <Content Include="app\src\main\cpp\main.cpp" />
-    <Content Include="app\src\main\cpp\vulkan_wrapper.cpp" />
-    <Content Include="app\src\main\cpp\vulkan_wrapper.h" />
+    <ProjectReference Include="..\TeleportVRQuestClientLib\TeleportVRQuestClientLib.vcxproj" />
   </ItemGroup>
   <Import Project="$(AndroidTargetsPath)\Android.targets" />
   <ImportGroup Label="ExtensionTargets" />

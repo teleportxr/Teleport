@@ -57,8 +57,8 @@ double PlatformWindows::getTimeElapsed(const Timestamp& tBegin, const Timestamp&
 
 	LARGE_INTEGER elapsedCounter;
 	elapsedCounter.QuadPart = tEnd.QuadPart - tBegin.QuadPart;
-	// Convert to nanoseconds:
-	return (elapsedCounter.QuadPart * 1000000.0) / (long double)frequency.QuadPart;
+	// Convert to milliseconds
+	return (elapsedCounter.QuadPart * 1000.0) / (long double)frequency.QuadPart;
 }
 
 double PlatformWindows::getTimeElapsedInSeconds(const Timestamp& tBegin, const Timestamp& tEnd)
