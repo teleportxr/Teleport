@@ -302,6 +302,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		framerate = 1000.0f / (timer.TimeSum - last_t);
 	}
 	last_t = timer.TimeSum;
+	deviceContext.frame_number = frame;
 	deviceContext.platform_context = context;
 	deviceContext.renderPlatform = renderPlatform;
 	deviceContext.viewStruct.view_id = view_id;
