@@ -11,10 +11,9 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/DisplaySurfaceManager.h"
 #include "Platform/CrossPlatform/DisplaySurface.h"
-#include "Platform/DirectX11/RenderPlatform.h"
 #include "Platform/Core/Timer.h"
 #include "Platform/Core/SimpleIni.h"
-#include "Platform/DirectX11/Direct3D11Manager.h"
+
 #include "ClientRenderer.h"
 #include "ErrorHandling.h"
 #include "Config.h"
@@ -23,12 +22,24 @@
 #include "TeleportClient/ClientDeviceState.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #endif
+
+#if IS_D3D12
+#include "Platform/DirectX12/RenderPlatform.h"
+#include "Platform/DirectX12/DeviceManager.h"
+simul::dx12::RenderPlatform renderPlatformImpl;
+simul::dx12::DeviceManager displayManagerImpl;
+#else
+#include "Platform/DirectX11/RenderPlatform.h"
+#include "Platform/DirectX11/Direct3D11Manager.h"
+simul::dx11::RenderPlatform renderPlatformImpl;
+simul::dx11::Direct3D11Manager displayManagerImpl;
+#endif
+
 ClientRenderer *clientRenderer=nullptr;
 simul::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
 simul::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 simul::crossplatform::RenderPlatform *renderPlatform = nullptr;
-simul::dx11::RenderPlatform renderPlatformDx11;
-simul::dx11::Direct3D11Manager direct3D11Manager;
+
 simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
 std::string server_ip= TELEPORT_SERVER_IP;
@@ -159,9 +170,9 @@ void ShutdownRenderer(HWND hWnd)
 void InitRenderer(HWND hWnd)
 {
 	clientRenderer=new ClientRenderer (&clientDeviceState);
-	gdi = &direct3D11Manager;
+	gdi = &displayManagerImpl;
 	dsmi = &displaySurfaceManager;
-	renderPlatform =&renderPlatformDx11;
+	renderPlatform = &renderPlatformImpl;
 	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" to direct3D11Manager to use d3d debugging:
 	gdi->Initialize(true, false,false);
@@ -187,21 +198,22 @@ void InitRenderer(HWND hWnd)
 		renderPlatform->PushShaderPath("../../../../firstparty/Platform/Shaders/SL");
 		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SFX");
 		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SL");
-		if (strcmp(renderPlatform->GetName(), "DirectX 11") == 0)
-		{
-			renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/DirectX11/HLSL").c_str());
-			renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX11/shaderbin").c_str());
-			renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX11/shaderbin").c_str());
-		}
-		if (strcmp(renderPlatform->GetName(), "DirectX 12") == 0)
-		{
-			renderPlatform->PushShaderPath("../../../../Platform/DirectX12/HLSL");
-			renderPlatform->PushShaderPath("../../Platform/DirectX12/HLSL");
-			renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
-			// Must do this before RestoreDeviceObjects so the rootsig can be found
-			renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
-			renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
-		}
+#if IS_D3D12
+		renderPlatform->PushShaderPath("../../../../Platform/DirectX12/HLSL");
+		renderPlatform->PushShaderPath("../../Platform/DirectX12/HLSL");
+		renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
+		// Must do this before RestoreDeviceObjects so the rootsig can be found
+		renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
+		renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
+
+		simul::dx12::DeviceManager* deviceManager = (simul::dx12::DeviceManager*)gdi;
+		// We will provide a command list so initialization of following resource can take place
+		((simul::dx12::RenderPlatform*)renderPlatform)->SetImmediateContext((simul::dx12::ImmediateContext*)deviceManager->GetImmediateContext());
+#else
+		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/HLSL").c_str());
+		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
+		renderPlatform->PushShaderBinaryPath((build_dir + "/Platform/DirectX11/shaderbin").c_str());
+#endif
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());

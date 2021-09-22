@@ -22,7 +22,11 @@
 #include <random>
 #include <functional>
 
+#if IS_D3D12
+#include <libavstream/surfaces/surface_dx12.hpp>
+#else
 #include <libavstream/surfaces/surface_dx11.hpp>
+#endif
 
 #include "libavstream/platforms/platform_windows.hpp"
 
@@ -35,6 +39,8 @@
 #include "TeleportClient/ServerTimestamp.h"
 
 #include "SCR_Class_PC_Impl/PC_Texture.h"
+
+#include "VideoDecoder.h"
 
 static const char* ToString(scr::Light::Type type)
 {
@@ -91,7 +97,11 @@ struct AVSTextureImpl :public AVSTexture
 	simul::crossplatform::Texture *texture = nullptr;
 	avs::SurfaceBackendInterface* createSurface() const override
 	{
+#if IS_D3D12
+		return new avs::SurfaceDX12(texture->AsD3D12Resource());
+#else
 		return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
+#endif
 	}
 };
 
@@ -143,6 +153,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	audioPlayer.initializeAudioDevice();
 
 	renderPlatform=r;
+
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	resourceCreator.Initialise(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
@@ -1247,8 +1258,14 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
 
 	avs::DeviceHandle dev;
+	
+#if IS_D3D12
+	dev.handle = renderPlatform->AsD3D12Device();
+	dev.type = avs::DeviceType::Direct3D12;
+#else
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type = avs::DeviceType::Direct3D11;
+#endif
 
 	pipeline.reset();
 	// Top of the pipeline, we have the network source.
@@ -1296,6 +1313,12 @@ void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::Setup
 
 	
 	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
+
+// Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
+#if IS_D3D12
+	decoder.setBackend(new VideoDecoder());
+#endif
+
 	// Video streams are 0+...
 	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20))
 	{
@@ -1406,8 +1429,13 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
 
 	avs::DeviceHandle dev;
+#if IS_D3D12
+	dev.handle = renderPlatform->AsD3D12Device();
+	dev.type = avs::DeviceType::Direct3D12;
+#else
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type = avs::DeviceType::Direct3D11;
+#endif
 
 	size_t stream_width = videoConfig.video_width;
 	size_t stream_height = videoConfig.video_height;

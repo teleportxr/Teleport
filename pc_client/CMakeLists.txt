@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(pc_client)
+
+option(USE_D3D12 "Use D3D12" OFF)
+
 file(GLOB shaders "Shaders/*.sfx" "Shaders/*.sl")
 file(GLOB inifiles "*.ini")
 set(srcs
@@ -7,12 +10,14 @@ set(srcs
 	Main.cpp
 	PCDiscoveryService.cpp
 	stdafx.cpp
+	VideoDecoder.cpp
 	ClientRenderer.h
 	Config.h
 	Resource.h
 	PCDiscoveryService.h
 	stdafx.h
 	targetver.h
+	VideoDecoder.h
 )
 
 set(scr_pc_impl
@@ -55,8 +60,20 @@ add_static_executable( pc_client WIN32 SOURCES ${srcs} ${scr_pc_impl} ${shaders}
 
 target_include_directories(pc_client PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterAudio/src ../SimulCasterRenderer/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
-set( JSON_FILE "${SIMUL_PLATFORM_DIR}/DirectX11/Sfx/DirectX11.json" )
-add_sfx_shader_project(pc_client ${JSON_FILE} INCLUDES "${SIMUL_PLATFORM_DIR}/DirectX11/Sfx" "${SIMUL_DIR}/Shaders/SL" "${SIMUL_PLATFORM_DIR}/Shaders/SL" SOURCES ${shaders} ${SHADER_INCLUDES} ${CORE_SHADER_INCLUDES} OPTIONS -w OUTPUT "${CMAKE_BINARY_DIR}/Platform/DirectX11/shaderbin" DEFINES PLATFORM_D3D11_SFX=1)
+
+if(USE_D3D12)
+	set( JSON_FILE "${SIMUL_PLATFORM_DIR}/DirectX12/Sfx/DirectX12.json" )
+	add_sfx_shader_project(pc_client ${JSON_FILE} INCLUDES "${SIMUL_PLATFORM_DIR}/DirectX12/Sfx" "${SIMUL_DIR}/Shaders/SL" "${SIMUL_PLATFORM_DIR}/Shaders/SL" SOURCES ${shaders} ${SHADER_INCLUDES} ${CORE_SHADER_INCLUDES} OPTIONS -w OUTPUT "${CMAKE_BINARY_DIR}/Platform/DirectX12/shaderbin")
+	target_compile_definitions(pc_client PUBLIC IS_D3D12=1) 	
+	target_link_libraries(pc_client SimulDirectX12_MT)
+else()
+	set( JSON_FILE "${SIMUL_PLATFORM_DIR}/DirectX11/Sfx/DirectX11.json" )
+	add_sfx_shader_project(pc_client ${JSON_FILE} INCLUDES "${SIMUL_PLATFORM_DIR}/DirectX11/Sfx" "${SIMUL_DIR}/Shaders/SL" "${SIMUL_PLATFORM_DIR}/Shaders/SL" SOURCES ${shaders} ${SHADER_INCLUDES} ${CORE_SHADER_INCLUDES} OPTIONS -w OUTPUT "${CMAKE_BINARY_DIR}/Platform/DirectX11/shaderbin" DEFINES PLATFORM_D3D11_SFX=1)
+	target_compile_definitions(pc_client PUBLIC IS_D3D12=0) 
+	target_link_libraries(pc_client SimulDirectX11_MT)
+endif()
+
+
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 set_target_properties( pc_client PROPERTIES FOLDER Client)
@@ -65,10 +82,12 @@ set_target_properties(pc_client PROPERTIES
 target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include )
 target_compile_features(pc_client PRIVATE cxx_std_17)
 
+
+
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
 target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm)
 
-target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT SimulDirectX11_MT directxtex_MT )
+target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT)

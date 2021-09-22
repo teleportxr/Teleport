@@ -18,6 +18,7 @@ namespace avs
 		Any,    /*!< Any backend (auto-detect during configuration). */
 		Custom, /*!< Custom external backend. */
 		NVIDIA, /*!< NVIDIA CUVID backend. */
+		AMD     /*!< AMD CUVID backend. */
 	};
 
 	struct DecoderState
