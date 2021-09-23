@@ -110,6 +110,15 @@ struct vertexInput
 	vec4 tangent		: TANGENT;
 	vec2 texCoords0		: TEXCOORD0;
 	vec2 texCoords1		: TEXCOORD1;
+};
+
+struct vertexInputAnim
+{
+	vec3 position		: POSITION;
+	vec3 normal			: NORMAL;
+	vec4 tangent		: TANGENT;
+	vec2 texCoords0		: TEXCOORD0;
+	vec2 texCoords1		: TEXCOORD1;
 	vec4 joints			: TEXCOORD2;
 	vec4 weights		: TEXCOORD3;
 };
@@ -181,7 +190,7 @@ shader vertexOutput VS_Solid(vertexInput IN)
     return OUT;
 }
 
-shader vertexOutput VS_Animation(vertexInput IN)
+shader vertexOutput VS_Animation(vertexInputAnim IN)
 {
 	vertexOutput OUT;
 	
