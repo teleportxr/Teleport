@@ -23,6 +23,7 @@
 #include <functional>
 
 #if IS_D3D12
+#include "Platform/DirectX12/RenderPlatform.h"
 #include <libavstream/surfaces/surface_dx12.hpp>
 #else
 #include <libavstream/surfaces/surface_dx11.hpp>
@@ -307,6 +308,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	deviceContext.renderPlatform = renderPlatform;
 	deviceContext.viewStruct.view_id = view_id;
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
+
 	simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	simul::base::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
@@ -1630,6 +1632,12 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
 {
+#if IS_D3D12
+	simul::dx12::RenderPlatform* dx12RenderPlatform = (simul::dx12::RenderPlatform*)renderPlatform;
+	// Set command list to the recording state if it's not in it already.
+	dx12RenderPlatform->ResetImmediateCommandList();
+#endif
+
 	for (int i = 0; i < 2; i++)
 	{
 		controllerStates[i].clear();
@@ -1758,8 +1766,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	FillInControllerPose(0, 0.5f);
 	FillInControllerPose(1, -0.5f);
 
-
-	//sessionClient.Frame(camera.GetOrientation().GetQuaternion(), controllerState);
+#if IS_D3D12
+	// Execute the immediate command list on graphics queue which will include any vertex and index buffer 
+	// upload/transition commands created by the resource creator.
+	dx12RenderPlatform->ExecuteImmediateCommandList(dx12RenderPlatform->GetCommandQueue());
+#endif
 }
 
 void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)

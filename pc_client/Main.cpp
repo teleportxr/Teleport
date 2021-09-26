@@ -219,6 +219,11 @@ void InitRenderer(HWND hWnd)
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	clientRenderer->Init(renderPlatform);
 	clientRenderer->SetServer(server_ip.c_str(), server_discovery_port, clientID);
+
+#if IS_D3D12
+	((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
+#endif
+
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(hWnd,clientRenderer,-1);
 }
