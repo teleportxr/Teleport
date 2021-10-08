@@ -115,6 +115,7 @@ namespace teleport
 		void ConfirmSessionStarted();
 
 	private:
+		avs::Handshake handshake;
 		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
 		bool initialized=false;

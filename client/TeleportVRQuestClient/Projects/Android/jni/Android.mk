@@ -11,7 +11,9 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../../VrSamples/SampleCommon/Src \
     $(LOCAL_PATH)/../../../../1stParty/OVR/Include \
     $(LOCAL_PATH)/../../../../1stParty/utilities/include \
     $(LOCAL_PATH)/../../../../3rdParty/stb/src \
-    $(LOCAL_PATH)/../../../../.. 
+    $(LOCAL_PATH)/../../../../.. \
+    $(LOCAL_PATH)/../../../../../thirdparty/imgui/backends \
+    $(LOCAL_PATH)/../../../../../thirdparty/imgui
 
 LOCAL_SRC_FILES			:= \
     ../../../src/AndroidDiscoveryService.cpp \
@@ -25,6 +27,7 @@ LOCAL_SRC_FILES			:= \
     ../../../src/VideoDecoderProxy.cpp \
 	../../../src/ClientRenderer.cpp \
 	../../../src/LobbyRenderer.cpp \
+	../../../src/UIRenderer.cpp \
     ../../../src/SCR_Class_GL_Impl/GL_DeviceContext.cpp \
     ../../../src/SCR_Class_GL_Impl/GL_Effect.cpp \
     ../../../src/SCR_Class_GL_Impl/GL_FrameBuffer.cpp \
@@ -39,6 +42,12 @@ LOCAL_SRC_FILES			:= \
     ../../../src/SCR_Class_GL_Impl/GL_VertexBuffer.cpp \
     ../../../src/SCR_Class_Android_Impl/Android_MemoryUtil.cpp \
     ../../../src/ConvertUTF.c \
+    ../../../../../thirdparty/imgui/imgui.cpp \
+    ../../../../../thirdparty/imgui/imgui_draw.cpp \
+    ../../../../../thirdparty/imgui/imgui_widgets.cpp \
+    ../../../../../thirdparty/imgui/imgui_tables.cpp \
+    ../../../src/imgui_impl_teleport_android.cpp \
+    ../../../../../thirdparty/imgui/backends/imgui_impl_opengl3.cpp
 
 LOCAL_LDLIBS := -lEGL -lGLESv3 -landroid -llog -lz  		# include default libraries
 

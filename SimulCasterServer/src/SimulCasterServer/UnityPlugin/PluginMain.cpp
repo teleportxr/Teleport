@@ -116,7 +116,6 @@ public:
 	{
 		this->geometryStore = &::geometryStore;
 	}
-
 	virtual ~PluginGeometryStreamingService() = default;
 
 private:
@@ -133,7 +132,6 @@ private:
 		}
 		return false;
 	}
-
 	virtual bool hideNode_Internal(avs::uid clientID, avs::uid nodeID)
 	{
 		if(onHideNode)
@@ -716,7 +714,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 
 	clientData.clientMessaging.ConfirmSessionStarted();
 
-	clientData.geometryStreamingService->startStreaming(&clientData.casterContext);
+	//clientData.geometryStreamingService->startStreaming(&clientData.casterContext,handshake);
 
 	teleport::CasterEncoderSettings encoderSettings{};
 

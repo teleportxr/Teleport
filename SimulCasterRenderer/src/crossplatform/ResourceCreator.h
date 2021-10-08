@@ -224,6 +224,7 @@ public:
 	std::shared_ptr<scr::Texture> m_DummyNormal;
 	std::shared_ptr<scr::Texture> m_DummyCombined;
 	std::shared_ptr<scr::Texture> m_DummyBlack;
+	std::shared_ptr<scr::Texture> m_DummyGreen;
 
 	std::unordered_map<avs::uid, MissingResource>& GetMissingResources()
 	{
@@ -325,6 +326,7 @@ private:
 	const uint32_t normalRGBA = 0xFFFF7F7F;
 	const uint32_t combinedBGRA = 0xFFFFFFFF;
 	const uint32_t blackBGRA = 0x0;
+	const uint32_t greenBGRA = 0xFF337733;
 	
 	ResourceManager<scr::IndexBuffer> *m_IndexBufferManager = nullptr;
 	ResourceManager<scr::Material> *m_MaterialManager = nullptr;

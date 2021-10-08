@@ -465,7 +465,6 @@ namespace teleport
 	{
 		size_t handShakeSize = sizeof(avs::Handshake);
 
-		avs::Handshake handshake;
 		memcpy(&handshake, packet->data, handShakeSize);
 
 		casterContext->axesStandard = handshake.axesStandard;
@@ -528,7 +527,7 @@ namespace teleport
 		}
 
 		captureComponentDelegates.startStreaming(casterContext);
-		geometryStreamingService->startStreaming(casterContext);
+		geometryStreamingService->startStreaming(casterContext, handshake);
 		receivedHandshake = true;
 
 		//Client has nothing, thus can't show nodes.
@@ -541,7 +540,6 @@ namespace teleport
 		else
 		{
 			const std::set<avs::uid>& streamedNodeIDs = geometryStreamingService->getStreamedNodeIDs();
-
 			avs::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
 			sendCommand<avs::uid>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 		}

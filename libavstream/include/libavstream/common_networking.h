@@ -72,20 +72,30 @@ namespace avs
 		uint16_t remotePort;
 	} AVS_PACKED;
 
+	struct RenderingFeatures
+	{
+		bool normals=false;
+		bool ambientOcclusion=false;
+	};
+	//! The handshake sent by a connecting client to the server on initialization.
+	//! Acknowledged by returning a avs::AcknowledgeHandshakeCommand to the client.
 	struct Handshake
 	{
 		DisplayInfo startDisplayInfo = DisplayInfo();
 		float MetresPerUnit = 1.0f;
 		float FOV = 90.0f;
 		uint32_t udpBufferSize = 0;			// In kilobytes.
-		uint32_t maxBandwidthKpS = 0;			// In kilobytes per second
+		uint32_t maxBandwidthKpS = 0;		// In kilobytes per second
 		AxesStandard axesStandard = AxesStandard::NotInitialized;
 		uint8_t framerate = 0;				// In hertz
 		bool usingHands = false; //Whether to send the hand nodes to the client.
 		bool isVR = true;
-		uint64_t resourceCount = 0; //Amount of resources the client has, and are appended to the handshake.
+		uint64_t resourceCount = 0;			//Amount of resources the client has, and are appended to the handshake.
 		uint32_t maxLightsSupported = 0;
-		uint32_t clientStreamingPort = 0; // the local port on the client to receive the stream.
+		uint32_t clientStreamingPort = 0;	// the local port on the client to receive the stream.
+		int32_t minimumPriority = 0;		// The lowest priority object this client will render, meshes with lower priority need not be sent.
+
+		RenderingFeatures renderingFeatures;
 	} AVS_PACKED;
 
 	struct InputState

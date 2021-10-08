@@ -440,8 +440,8 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 {
 	vec3 diff					=v_Position-v_CameraPosition;
 	float dist_to_frag          =length(diff);
-	//if (dist_to_frag > cam.u_DrawDistance)
-		//discard;
+	if (dist_to_frag > cam.u_DrawDistance)
+		discard;
 	vec3 view = normalize(diff);
 	SurfaceProperties surfaceProperties=GetSurfaceProperties(diffuseTex,normalTex,combinedTex,emissiveTex,ambient,maxLights,false);
 
@@ -469,17 +469,15 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	vec4 u					=vec4(c.rgb, 1.0);
 	if (emissiveTex)
 	{
-		vec3 emissive		=texture(u_EmissiveTexture, v_UV_diffuse * u_EmissiveTexCoordsScalar_R).rgb;
-		emissive			*=u_EmissiveOutputScalar.rgb;
-
-		u.rgb				+=emissive.rgb;
+		vec3 emissive	=texture(u_EmissiveTexture, v_UV_diffuse ).rgb;//* u_EmissiveTexCoordsScalar_R
+		//emissive		*=u_EmissiveOutputScalar.rgb;
+		u.rgb			=emissive.rgb;
 	}
 	if(highlight)
 	{
 		u.rgb+=vec3(0.1,0.1,0.1);
 	}
 	//u.rgb=fract(v_Position);//vec3(dist_to_frag,dist_to_frag,cam.u_DrawDistance));//v_UV_lightmap.xyy);
-	//u.rgb=surfaceProperties.albedo;
 	gl_FragColor = Gamma(u);
 }
 
@@ -536,7 +534,7 @@ void OpaquePBRLightsOnly()
 
 void OpaquePBRDebug()
 {
-	PBR(false,true, true, true, false, false, 1,true);
+	PBR(true,false, false, false, true, false, 0,false);
 }
 
 void OpaquePBR_NoLight()

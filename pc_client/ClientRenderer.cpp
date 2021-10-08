@@ -972,6 +972,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 	if(overridePassName.length()>0)
 		passName= overridePassName;
 	//Only render visible nodes, but still render children that are close enough.
+	if(node->GetPriority()>=0)
 	if(node->IsVisible()&&(show_only == 0 || show_only == node->id))
 	{
 		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
@@ -1210,7 +1211,7 @@ void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 	lastSetupLightingCommand=l;
 }
 
-void ClientRenderer::OnVideoStreamChanged(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
+void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
 	videoConfig = setupCommand.video_config;
 

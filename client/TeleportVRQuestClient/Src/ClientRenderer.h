@@ -105,7 +105,7 @@ public:
 
 	void EnteredVR(const ovrJava *java);
 	void ExitedVR();
-	void OnVideoStreamChanged(const avs::VideoConfig &vc);
+	void OnSetupCommandReceived(const avs::VideoConfig &vc);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
     void RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVRFW::ovrRendererOutput &res);
@@ -116,6 +116,15 @@ public:
 	void SetWebcamPosition(const avs::vec2& position);
 	void RenderWebcam(OVRFW::ovrRendererOutput& res);
 
+	void SetMinimumPriority(int32_t p)
+	{
+		minimumPriority=p;
+	}
+
+	int32_t GetMinimumPriority() const
+	{
+		return minimumPriority;
+	}
 	Controllers *controllers=nullptr;
 
 	avs::Decoder mDecoder;
@@ -238,6 +247,7 @@ public:
 	avs::SetupCommand lastSetupCommand;
 	avs::SetupLightingCommand setupLightingCommand;
 protected:
+	int32_t minimumPriority=0;
 	void ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining);
 	teleport::client::ClientDeviceState *clientDeviceState=nullptr;
 	void UpdateTagDataBuffers();

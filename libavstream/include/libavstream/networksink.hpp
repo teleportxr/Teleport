@@ -58,7 +58,6 @@ namespace avs
 		bool isDataLimitPerFrame = false;
 		/*! Buffer of data to be sent */
 		std::vector<uint8_t> buffer;
-
 	};
 	
 

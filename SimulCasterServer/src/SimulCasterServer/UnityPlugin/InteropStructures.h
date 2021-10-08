@@ -38,6 +38,8 @@ struct InteropNode
 	size_t childAmount;
 	avs::uid* childIDs;
 
+	int32_t priority;
+
 	operator avs::DataNode() const
 	{
 		return
@@ -47,6 +49,8 @@ struct InteropNode
 			transform,
 
 			stationary!=0,
+
+			priority,
 
 			parentID,
 			{childIDs, childIDs + childAmount},
@@ -65,7 +69,7 @@ struct InteropNode
 			lightRadius,
 			lightDirection,
 			lightType,
-			lightRange,
+			lightRange
 		};
 	}
 };

@@ -21,7 +21,7 @@ class ResourceCreator;
 class SessionCommandInterface
 {
 public:
-    virtual void OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) = 0;
+    virtual void OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) = 0;
     virtual void OnVideoStreamClosed() = 0;
 
     virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) = 0;
@@ -45,44 +45,55 @@ public:
 class SessionClient
 {
 public:
-    SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<teleport::client::DiscoveryService>&& discoveryService);
-    ~SessionClient();
+	SessionClient(
+			SessionCommandInterface *commandInterface,
+			std::unique_ptr<teleport::client::DiscoveryService> &&discoveryService);
 
-    void SetResourceCreator(ResourceCreator *);
-	uint32_t Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote);
-    bool Connect(const char* remoteIP, uint16_t remotePort, uint timeout);
-    bool Connect(const ENetAddress& remote, uint timeout);
-    void Disconnect(uint timeout);
-    void SetPeerTimeout(uint timeout);
+	~SessionClient();
 
-    void SendClientMessage(const avs::ClientMessage &msg);
+	void SetResourceCreator(ResourceCreator *);
 
-    void Frame(const avs::DisplayInfo& displayInfo
-        , const avs::Pose& headPose
-        , const avs::Pose* controllerPoses
-        , uint64_t originValidCounter
-        , const avs::Pose &originPose
-        , const ControllerState* controllerState
-        , bool requestKeyframe
-	    , double time);
+	uint32_t Discover(
+			std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP,
+			uint16_t serverDiscoveryPort, ENetAddress &remote);
 
-    bool IsConnected() const;
-    bool HasDiscovered() const;
-    std::string GetServerIP() const;
-    int GetPort() const;
-    
+	bool Connect(const char *remoteIP, uint16_t remotePort, uint timeout);
+
+	bool Connect(const ENetAddress &remote, uint timeout);
+
+	void Disconnect(uint timeout);
+
+	void SetPeerTimeout(uint timeout);
+
+	void SendClientMessage(const avs::ClientMessage &msg);
+
+	void Frame(
+			const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
+			const avs::Pose *controllerPoses, uint64_t originValidCounter,
+			const avs::Pose &originPose, const ControllerState *controllerState,
+			bool requestKeyframe, double time);
+
+	bool IsConnected() const;
+
+	bool HasDiscovered() const;
+
+	std::string GetServerIP() const;
+
+	int GetPort() const;
+
 	unsigned long long receivedInitialPos = 0;
-    unsigned long long receivedRelativePos = 0;
+	unsigned long long receivedRelativePos = 0;
 
-    avs::Pose GetOriginPose() const;
-    avs::vec3 GetOriginToHeadOffset() const;
+	avs::Pose GetOriginPose() const;
 
-    uint32_t GetClientID() const
+	avs::vec3 GetOriginToHeadOffset() const;
+
+	uint32_t GetClientID() const
 	{
-    	return clientID;
+		return clientID;
 	}
 
-    void SetDiscoveryClientID(uint32_t clientID);
+	void SetDiscoveryClientID(uint32_t clientID);
 
 private:
     void DispatchEvent(const ENetEvent& event);

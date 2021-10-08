@@ -51,6 +51,7 @@ Application::Application()
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 		  , clientRenderer(&resourceCreator, &resourceManagers, this, &clientDeviceState,&controllers)
 		  , lobbyRenderer(&clientDeviceState, this)
+		, uIRenderer( this)
 		  , resourceManagers(new OVRNodeManager)
 		  , resourceCreator()
 {
@@ -124,11 +125,26 @@ bool Application::ProcessIniFile()
 	}
 }
 
+
+static void SetObjectText(OvrGuiSys& guiSys, VRMenu* menu, char const* name, char const* fmt, ...)
+{
+	VRMenuObject* obj = menu->ObjectForName(guiSys, name);
+	if (obj != nullptr) {
+		char text[1024];
+		va_list argPtr;
+		va_start(argPtr, fmt);
+		OVR::OVR_vsprintf(text, sizeof(text), fmt, argPtr);
+		va_end(argPtr);
+		obj->SetText(text);
+	}
+}
+
 bool Application::AppInit(const OVRFW::ovrAppContext *context)
 {
 	RedirectStdCoutCerr();
 	const ovrJava &jj = *(reinterpret_cast<const ovrJava *>(context->ContextForVrApi()));
 	const xrJava ctx = JavaContextConvert(jj);
+	//const ovrInitParms initParms = vrapi_DefaultInitParms(&jj);
 	FileSys = OVRFW::ovrFileSys::Create(ctx);
 	if (nullptr == FileSys)
 	{
@@ -162,6 +178,25 @@ bool Application::AppInit(const OVRFW::ovrAppContext *context)
 	mGuiSys->Init(FileSys, *mSoundEffectPlayer, fontName.c_str(), nullptr);
 
 	ProcessIniFile();
+
+	if (false == tinyUI.Init(&ctx, FileSys))
+	{
+		ALOG("TinyUI::Init FAILED.");
+	}
+	tinyUI.AddButton("Connect",Vector3f(0,0,1.0f),Vector2f(100.0f,50.0f));
+	tinyUI.AddLabel("label",Vector3f(2.0f,0,-2.0f));
+	//menu = ovrControllerGUI::Create(this,mGuiSys,Locale);
+	if (menu != nullptr)
+	{
+		mGuiSys->AddMenu(menu);
+		mGuiSys->OpenMenu(menu->GetName());
+
+		OVR::Posef pose = menu->GetMenuPose();
+		pose.Translation = Vector3f(0.0f, 1.0f, -2.0f);
+		menu->SetMenuPose(pose);
+
+		SetObjectText(*mGuiSys, menu, "panel", "VrInput");
+	}
 
 	SurfaceRender.Init();
 
@@ -262,6 +297,13 @@ void Application::EnteredVrMode()
 	vrapi_GetSystemPropertyFloatArray(java, VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES,
 									  mRefreshRates.data(), num_refresh_rates);
 
+
+	DeviceType = (ovrDeviceType)vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_DEVICE_TYPE);
+
+	int32_t minPriority=0;
+	if((int)DeviceType>=(int)VRAPI_DEVICE_TYPE_OCULUSQUEST2_START)
+		minPriority=-10000;
+	clientRenderer.SetMinimumPriority(minPriority);
 	//if (num_refresh_rates > 0)
 	//	vrapi_SetDisplayRefreshRate(app->GetOvrMobile(), mRefreshRates[num_refresh_rates - 1]);
 
@@ -273,11 +315,14 @@ void Application::EnteredVrMode()
 	controllers.SetDebugOutputDelegate(std::bind(&ClientRenderer::WriteDebugOutput, &clientRenderer));
 	controllers.SetToggleWebcamDelegate(std::bind(&ClientRenderer::ToggleWebcam, &clientRenderer));
 	controllers.SetSetStickOffsetDelegate(std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1, std::placeholders::_2));
+
+	uIRenderer.Init();
 }
 
 void Application::AppShutdown(const OVRFW::ovrAppContext *)
 {
 	ALOGV("AppShutdown - enter");
+	tinyUI.Shutdown();
 	SurfaceRender.Shutdown();
 	OVRFW::ovrFileSys::Destroy(FileSys);
 	RenderState = RENDER_STATE_ENDING;
@@ -394,6 +439,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	// Process stream pipeline
 	mPipeline.process();
 
+    tinyUI.Update(vrFrame);
 	return OVRFW::ovrApplFrameOut();
 }
 
@@ -516,7 +562,6 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	GLCheckErrorsWithTitle("Frame: Pre-Cubemap");
 	clientRenderer.CopyToCubemaps(*mDeviceContext);
 
-
     //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
 	float time_elapsed = in.DeltaSeconds * 1000.0f;
@@ -532,15 +577,16 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 		// Append video surface
 		clientRenderer.RenderVideo(*mDeviceContext, out);
 		clientRenderer.RenderWebcam(out);
-		clientRenderer.DrawOSD(out);
 	}
 	else
 	{
 		lobbyRenderer.Render(server_ip.c_str(),server_discovery_port);
 	};
+	//uIRenderer.Render(in,out,1440,1600);
+	tinyUI.Render(in, out);
+	clientRenderer.DrawOSD(out);
 	DrawConnectionStateOSD(mGuiSys, out);
 	GLCheckErrorsWithTitle("Frame: Post-SCR");
-
 }
 
 void Application::UpdateHandObjects()
@@ -600,7 +646,7 @@ void Application::AppRenderEye(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrR
 			eye);
 }
 
-void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
+void Application::OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
 {
 	const avs::VideoConfig &videoConfig = setupCommand.video_config;
 	if (!mPipelineConfigured)
@@ -633,13 +679,17 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 
 		if (!clientRenderer.mNetworkSource.configure(std::move(streams), sourceParams))
 		{
-			OVR_WARN("OnVideoStreamChanged: Failed to configure network source node.");
+			OVR_WARN("OnSetupCommandReceived: Failed to configure network source node.");
 			return;
 		}
 		clientRenderer.mNetworkSource.setDebugStream(setupCommand.debug_stream);
 		clientRenderer.mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
 		clientRenderer.mNetworkSource.setDoChecksums(setupCommand.do_checksums);
 
+		handshake.minimumPriority=clientRenderer.GetMinimumPriority();
+		// Don't use these on Android:
+		handshake.renderingFeatures.normals=false;
+		handshake.renderingFeatures.ambientOcclusion=false;
 		mPipeline.add(&clientRenderer.mNetworkSource);
 
 		clientRenderer.videoTagDataCubeArray.clear();
@@ -661,7 +711,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height,
 											   decoderParams, 20))
 		{
-			OVR_WARN("OnVideoStreamChanged: Failed to configure decoder node");
+			OVR_WARN("OnSetupCommandReceived: Failed to configure decoder node");
 			clientRenderer.mNetworkSource.deconfigure();
 			return;
 		}
@@ -711,7 +761,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, &clientRenderer,
 							   std::placeholders::_1, std::placeholders::_2);
 			if (!clientRenderer.mTagDataDecoder.configure(40, f)) {
-				OVR_WARN("OnVideoStreamChanged: Failed to configure tag data decoder node.");
+				OVR_WARN("OnSetupCommandReceived: Failed to configure tag data decoder node.");
 				return;
 			}
 			clientRenderer.mTagDataQueue.configure(200, 16, "TagDataQueue");
@@ -780,7 +830,7 @@ void Application::OnVideoStreamChanged(const char *server_ip, const avs::SetupCo
 			mPipeline.link({&avsGeometryDecoder, &avsGeometryTarget});
 		}
 		//GL_CheckErrors("Pre-Build Cubemap");
-		clientRenderer.OnVideoStreamChanged(videoConfig);
+		clientRenderer.OnSetupCommandReceived(videoConfig);
 
 		mPipelineConfigured = true;
 	}
@@ -824,7 +874,7 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand &reconfi
 		return;
 	}
 
-	clientRenderer.OnVideoStreamChanged(reconfigureVideoCommand.video_config);
+	clientRenderer.OnSetupCommandReceived(reconfigureVideoCommand.video_config);
 	WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d",
 		 clientRenderer.videoConfig.video_width, clientRenderer.videoConfig.video_height,
 		 clientRenderer.videoConfig.depth_width, clientRenderer.videoConfig.depth_height);

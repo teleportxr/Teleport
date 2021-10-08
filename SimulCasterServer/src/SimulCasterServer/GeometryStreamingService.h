@@ -5,6 +5,7 @@
 
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "libavstream/pipeline.hpp"
+#include "libavstream/common_networking.h"
 
 #include "CasterContext.h"
 #include "GeometryEncoder.h"
@@ -28,14 +29,14 @@ namespace teleport
 		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
 		, std::vector<avs::MeshNodeResources>& outMeshResources
 		, std::vector<avs::LightNodeResources>& outLightResources
-		,std::set<avs::uid>& genericTextureUids) const override;
+		,std::set<avs::uid>& genericTextureUids,int32_t minimumPriority) const override;
 
 		virtual avs::AxesStandard getClientAxesStandard() const override
 		{
 			return casterContext->axesStandard;
 		}
 
-		virtual void startStreaming(CasterContext* context);
+		virtual void startStreaming(CasterContext* context,const avs::Handshake &handshake);
 		//Stop streaming to client.
 		virtual void stopStreaming();
 
@@ -64,7 +65,7 @@ namespace teleport
 
 		virtual bool showNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
 		virtual bool hideNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
-
+		avs::Handshake handshake;
 	private:
 		const struct CasterSettings* settings;
 
@@ -83,6 +84,6 @@ namespace teleport
 		std::set<avs::uid> streamedGenericTextureUids; // Textures that are not specifically specified in a material, e.g. lightmaps.
 
 		//Recursively obtains the resources from the mesh node, and its child nodes.
-		void GetMeshNodeResources(avs::uid nodeID, const avs::DataNode& node, std::vector<avs::MeshNodeResources>& outMeshResources) const;
+		void GetMeshNodeResources(avs::uid nodeID, const avs::DataNode& node, std::vector<avs::MeshNodeResources>& outMeshResources, int32_t minimumPriority) const;
 	};
 }

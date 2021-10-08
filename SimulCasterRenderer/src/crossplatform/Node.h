@@ -34,6 +34,8 @@ namespace scr
 
 		void SetStatic(bool s);
 		bool IsStatic() const;
+		void SetPriority(int p);
+		int GetPriority() const;
 		void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 		//Requests global transform of node, and node's children, be recalculated.
 		void RequestTransformUpdate();
@@ -161,6 +163,7 @@ namespace scr
 
 		//
 		bool isStatic;
+		int priority=0;
 		//Cached global transform, and dirty flag; updated when necessary on a request.
 		mutable bool isTransformDirty = true;
 		mutable Transform globalTransform;

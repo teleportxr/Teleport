@@ -59,7 +59,7 @@ namespace teleport
 			std::vector<avs::LightNodeResources> lightNodeResources;
 			std::set<avs::uid> genericTexturesToStream;
 
-			req->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream);
+			req->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream, minimumPriority);
 
 			for(avs::uid nodeID : nodeIDsToStream)
 			{
@@ -135,31 +135,26 @@ namespace teleport
 
 				for(avs::MaterialResources material : meshResourceInfo.materials)
 				{
+					if (!req->hasResource(material.material_uid))
+					{
+						encodeMaterials(src, req, { material.material_uid });
+						keepQueueing = attemptQueueData();
+						if (!keepQueueing)
+						{
+							break;
+						}
+					}
 					if(GetNewUIDs(material.texture_uids, req) != 0)
 					{
 						for(avs::uid textureID : material.texture_uids)
 						{
 							encodeTextures(src, req, {textureID});
-
 							keepQueueing = attemptQueueData();
 							if(!keepQueueing)
 							{
 								break;
 							}
 						}
-
-						if(!keepQueueing)
-						{
-							break;
-						}
-					}
-
-					if(!req->hasResource(material.material_uid))
-					{
-						encodeMaterials(src, req, {material.material_uid});
-
-						keepQueueing = attemptQueueData();
-
 						if(!keepQueueing)
 						{
 							break;
@@ -239,6 +234,11 @@ namespace teleport
 	{
 		queuedBuffer.clear();
 		return avs::Result::OK;
+	}
+
+	void GeometryEncoder::setMinimumPriority(int32_t p)
+	{
+		minimumPriority=p;
 	}
 
 	avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
@@ -389,6 +389,7 @@ namespace teleport
 
 			put(transform);
 			put((uint8_t)(node->stationary));
+			put(node->priority);
 			put(node->data_uid);
 			put(node->data_type);
 			put(node->data_subtype);
@@ -401,7 +402,8 @@ namespace teleport
 			{
 				put(id);
 			}
-
+			// If the node's priority is less than the *client's* minimum, we don't want
+			// to send its mesh.
 			if(node->data_type == avs::NodeDataType::Mesh)
 			{
 				put(node->materials.size());
@@ -764,6 +766,18 @@ namespace teleport
 		}
 
 		return avs::Result::OK;
+	}
+
+	size_t GeometryEncoder::put(const uint8_t* data, size_t count)
+	{
+		size_t pos = buffer.size();
+		buffer.resize(buffer.size() + count);
+		memcpy(buffer.data() + pos, data, count);
+		if(count>= settings->geometryBufferCutoffSize)
+		{
+			TELEPORT_CERR<<"Data too big for geometry buffer cutoff size."<<std::endl;
+		}
+		return pos;
 	}
 
 	bool GeometryEncoder::attemptQueueData()

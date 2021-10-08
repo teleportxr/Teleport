@@ -260,6 +260,7 @@ struct Animation;
 
 		Transform transform;
 		bool stationary;
+		int32_t priority;
 
 		uid parentID;
 		std::vector<uid> childrenIDs;
@@ -284,6 +285,7 @@ struct Animation;
 		vec3 lightDirection;	// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
 		uint8_t lightType;
 		float lightRange;		// Maximum distance the light is effective at, in metres.
+
 	};
 #ifdef _MSC_VER
 #pragma pack(pop)
@@ -668,7 +670,7 @@ struct Animation;
 		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
 										,std::vector<MeshNodeResources>& outMeshResources
 										,std::vector<LightNodeResources>& outLightResources
-										,std::set<avs::uid>& genericTextureUids) const = 0;
+										,std::set<avs::uid>& genericTextureUids, int32_t minimumPriority) const = 0;
 
 		//Returns the axes standard used by the client.
 		virtual AxesStandard getClientAxesStandard() const = 0;
@@ -681,6 +683,7 @@ struct Animation;
 		virtual Result encode(uint32_t timestamp, GeometrySourceBackendInterface* target, GeometryRequesterBackendInterface* requester) = 0;
 		virtual Result mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) = 0;
 		virtual Result unmapOutputBuffer() = 0;
+		virtual void setMinimumPriority(int32_t) =0;
 	};
 
 	/*! Structure to pass to GeometryTargetBackendInterface 

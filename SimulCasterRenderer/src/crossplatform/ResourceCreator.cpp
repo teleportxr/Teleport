@@ -32,7 +32,7 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 	m_DummyNormal = m_pRenderPlatform->InstantiateTexture();
 	m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
 	m_DummyBlack = m_pRenderPlatform->InstantiateTexture();
-
+	m_DummyGreen = m_pRenderPlatform->InstantiateTexture();
 	scr::Texture::TextureCreateInfo tci =
 	{
 		"Dummy Texture",
@@ -65,6 +65,27 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 	tci.mips[0] = std::vector<unsigned char>(sizeof(blackBGRA));
 	memcpy(tci.mips[0].data(), &blackBGRA, sizeof(blackBGRA));
 	m_DummyBlack->Create(tci);
+
+	const size_t GRID=128;
+	tci.mips[0] = std::vector<unsigned char>(sizeof(uint32_t)*GRID*GRID);
+	tci.width=tci.height=GRID;
+	size_t sz=GRID*GRID*sizeof(uint32_t);
+	tci.mipSizes[0]=sz;
+	uint32_t green_grid[GRID*GRID];
+	memset(green_grid,0,sz);
+	for(int i=0;i<GRID;i+=16)
+	{
+		for(int j=0;j<GRID;j++)
+		{
+			green_grid[GRID*i+j]=greenBGRA;
+			green_grid[GRID*j+i]=greenBGRA;
+		}
+	}
+	tci.mips[0] = std::vector<unsigned char>(sz);
+	memcpy(tci.mips[0].data(), &green_grid, sizeof(green_grid));
+	m_DummyGreen->Create(tci);
+
+
 }
 
 std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
@@ -582,6 +603,9 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 		m_DummyWhite,
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.emissive);
+// Add it to the manager, even if incomplete.
+	std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(incompleteMaterial->materialInfo);
+	m_MaterialManager->Add(id, scrMaterial);
 
 	if (incompleteMaterial->textureSlots.size() == 0)
 	{
@@ -749,13 +773,15 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 		materialCreateInfo.diffuse.texture = m_DummyWhite;
 		materialCreateInfo.combined.texture = m_DummyCombined;
 		materialCreateInfo.normal.texture = m_DummyNormal;
-		materialCreateInfo.emissive.texture = m_DummyBlack;
+		//materialCreateInfo.emissive.texture = m_DummyBlack;
+		materialCreateInfo.emissive.texture = m_DummyGreen;
 		m_pRenderPlatform->placeholderMaterial = std::make_shared<scr::Material>(materialCreateInfo);
 	}
 	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
 	newNode->node->SetLightmapScaleOffset(node.renderState.lightmapScaleOffset);
 	newNode->node->SetMaterialListSize(node.materials.size());
 	newNode->node->SetStatic(node.stationary);
+	newNode->node->SetPriority(node.priority);
 	newNode->node->SetGlobalIlluminationTextureUid(node.renderState.globalIlluminationUid);
 	if(node.renderState.globalIlluminationUid>0)
 	{
@@ -780,7 +806,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 			// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
 			newNode->node->SetMaterial(i, m_pRenderPlatform->placeholderMaterial);
 
-			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
+			SCR_CERR << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
 
 			isMissingResources = true;
 			m_ResourceRequests.push_back(node.materials[i]);
@@ -955,11 +981,9 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 
 void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo)
 {
-	SCR_COUT << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
+	SCR_CERR << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
 
-	std::shared_ptr<scr::Material> material = std::make_shared<scr::Material>(materialInfo);
-	m_MaterialManager->Add(id, material);
-
+	std::shared_ptr<scr::Material> material = m_MaterialManager->Get(id);
 	//Add material to nodes waiting for material.
 	MissingResource& missingMaterial = GetMissingResource(id, "Material");
 	for(auto it = missingMaterial.waitingResources.begin(); it != missingMaterial.waitingResources.end(); it++)

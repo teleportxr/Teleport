@@ -92,13 +92,14 @@ namespace avs
 		std::lock_guard<std::mutex> lock(data->m_mutex);
 		if (data->m_numElements == data->m_maxBuffers)
 		{
-			AVSLOG(Warning) << data->name.c_str()<<" Queue::write: Max buffers reached. Increasing max .\n";
+			auto oldsize=data->m_maxBuffers;
 			data->increaseBufferCount();
+			AVSLOG(Warning) << data->name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<data->m_maxBuffers<<".\n";
 		}
 		if (bufferSize > data->m_maxBufferSize)
 		{
-			AVSLOG(Warning) << data->name.c_str() << " Queue::write: Buffer size greater than max. Increasing max .\n";
 			data->increaseBufferSize(bufferSize);
+			AVSLOG(Warning) << data->name.c_str() << " Queue::write: Buffer size "<<bufferSize<<" greater than max. Increasing max to "<<data->m_maxBufferSize<<".\n";
 		}
 		
 		data->push(buffer, bufferSize);

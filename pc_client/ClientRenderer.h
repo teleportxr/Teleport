@@ -172,7 +172,7 @@ public:
 	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState);
 	~ClientRenderer();
 	// Implement SessionCommandInterface
-	void OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+	void OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 	void OnVideoStreamClosed() override;
 
 	void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;

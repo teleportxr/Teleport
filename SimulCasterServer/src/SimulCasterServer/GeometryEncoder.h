@@ -22,9 +22,10 @@ namespace teleport
 						   , avs::GeometryRequesterBackendInterface* geometryRequester) override;
 		avs::Result mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) override;
 		avs::Result unmapOutputBuffer() override;
+		void setMinimumPriority(int32_t) override;
 	protected:
-		std::vector<char> buffer; //Buffer used to encode data before checking it can be sent.
-		std::vector<char> queuedBuffer; //Buffer given to the pipeline to be sent to the client.
+		std::vector<char> buffer;			//Buffer used to encode data before checking it can be sent.
+		std::vector<char> queuedBuffer;		//Buffer given to the pipeline to be sent to the client.
 		template<typename T> size_t put(const T& data)
 		{
 			size_t pos = buffer.size();
@@ -32,13 +33,7 @@ namespace teleport
 			memcpy(buffer.data() + pos, &data, sizeof(T));
 			return pos;
 		}
-		size_t put(const uint8_t* data, size_t count)
-		{
-			size_t pos = buffer.size();
-			buffer.resize(buffer.size() + count);
-			memcpy(buffer.data() + pos, data, count);
-			return pos;
-		}
+		size_t put(const uint8_t* data, size_t count);
 		template<typename T> void replace(size_t pos, const T& data)
 		{
 			memcpy(buffer.data() + pos, &data, sizeof(T));
@@ -46,6 +41,7 @@ namespace teleport
 	private:
 		const struct CasterSettings* settings;
 		size_t prevBufferSize;
+		int32_t minimumPriority=0;
 		void putPayload(avs::GeometryPayloadType t);
 		void putPayloadSize();
 

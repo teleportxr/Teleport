@@ -537,7 +537,7 @@ void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
 	avs::Handshake handshake;
 	char server_ip[100];
 	enet_address_get_host_ip(&mServerEndpoint, server_ip, 99);
-	mCommandInterface->OnVideoStreamChanged(server_ip, setupCommand, handshake);
+	mCommandInterface->OnSetupCommandReceived(server_ip, setupCommand, handshake);
 
 	std::vector<avs::uid> resourceIDs;
 	if(setupCommand.server_id == lastServerID)

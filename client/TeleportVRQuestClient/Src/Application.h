@@ -5,6 +5,7 @@
 #include "GUI/GuiSys.h"
 #include "Locale/OVR_Locale.h"
 #include "Misc/Log.h"
+#include "Input/TinyUI.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -27,6 +28,7 @@
 #include "VideoDecoderProxy.h"
 #include "LobbyRenderer.h"
 #include "ClientRenderer.h"
+#include "UIRenderer.h"
 #include "ClientDeviceState.h"
 
 #include "SCR_Class_Android_Impl/Android_MemoryUtil.h"
@@ -74,7 +76,7 @@ namespace OVRFW
 		virtual void AppRenderEye(const OVRFW::ovrApplFrameIn& in, OVRFW::ovrRendererOutput& out, int eye) override;
 
 		/* Begin SessionCommandInterface */
-		virtual void OnVideoStreamChanged(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) override;
+		virtual void OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) override;
 		virtual void OnVideoStreamClosed() override;
 		virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
 		virtual bool OnNodeEnteredBounds(avs::uid id) override;
@@ -146,6 +148,8 @@ namespace OVRFW
 		OVRFW::OvrGuiSys::SoundEffectPlayer *mSoundEffectPlayer;
 
 		OVRFW::OvrGuiSys *mGuiSys;
+		OVRFW::VRMenu* menu= nullptr;
+		OVRFW::TinyUI tinyUI;
 
 		OVRFW::OvrSceneView mScene;
 
@@ -163,6 +167,7 @@ namespace OVRFW
 
 		ClientRenderer clientRenderer;
 		LobbyRenderer lobbyRenderer;
+		teleport::UIRenderer uIRenderer;
 		std::unique_ptr<Android_MemoryUtil> memoryUtil;
 		scr::ResourceManagers resourceManagers;
 		ResourceCreator resourceCreator;
@@ -181,6 +186,7 @@ namespace OVRFW
 		OVR::Matrix4f lastCenterView;
 
 		float frameRate = 1.0f;
+		ovrDeviceType DeviceType=VRAPI_DEVICE_TYPE_UNKNOWN;
 	};
 
 }

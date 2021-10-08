@@ -69,7 +69,7 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 	if(changed)
 	{
 		avs::SetupLightingCommand setupLightingCommand;
-		setupLightingCommand.num_gi_textures=num;
+		setupLightingCommand.num_gi_textures=(uint8_t)num;
 		clientMessaging.sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 	}
 	

@@ -442,14 +442,12 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,15,"u_DiffuseCubemap", {});
 
 	passNames.clear();
-	passNames.push_back("PBRSimpleDefault");
 	passNames.push_back("OpaqueAlbedo");
 	passNames.push_back("OpaqueNormal");
 	passNames.push_back("OpaquePBRAmbient");
 	passNames.push_back("OpaquePBRDebug");
 	debugPassNames.clear();
 	debugPassNames.push_back("");
-	debugPassNames.push_back("PBRSimpleDefault");
 	debugPassNames.push_back("OpaqueAlbedo");
 	debugPassNames.push_back("OpaqueNormal");
 	debugPassNames.push_back("OpaquePBRAmbient");
@@ -672,7 +670,7 @@ void ClientRenderer::ExitedVR()
 	mDebugTextureResources.Destroy();
 }
 
-void ClientRenderer::OnVideoStreamChanged(const avs::VideoConfig &vc)
+void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	videoConfig = vc;
@@ -1096,7 +1094,7 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 
 void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<scr::Node> node)
 {
-	if(node->IsVisible())
+	if(node->IsVisible()&&node->GetPriority()>=minimumPriority)
 	{
 		std::shared_ptr<OVRNode> ovrNode = std::static_pointer_cast<OVRNode>(node);
 		if(ovrNode->GetSurfaces().size() != 0)
