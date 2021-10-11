@@ -403,7 +403,14 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 	if (isLastPayload)
 	{
 #if defined(PLATFORM_WINDOWS)
-		result = m_backend->decode(buffer, m_frame.dataSize, nullptr, 0, payloadType, isLastPayload);
+		if (m_selectedBackendType == DecoderBackend::Custom)
+		{
+			result = m_backend->decode(buffer + m_firstVCLOffset, dataOffset - m_firstVCLOffset, data, m_frame.dataSize - dataOffset, payloadType, true);
+		}
+		else
+		{
+			result = m_backend->decode(buffer, m_frame.dataSize, nullptr, 0, payloadType, isLastPayload);
+		}
 #elif defined(PLATFORM_ANDROID)
 		// Color is contained in first VCL and alpha in the second.
 		if (!m_params.useAlphaLayerDecoding || !m_firstIDRReceived)
@@ -419,12 +426,19 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 #endif
 		m_idrRequired = (result != avs::Result::DecoderBackend_ReadyToDisplay);
 	}
-#if defined(PLATFORM_ANDROID)
+
 	else
 	{
+#if defined(PLATFORM_WINDOWS)
+		if (m_selectedBackendType == DecoderBackend::Custom)
+		{
+			result = m_backend->decode(data, dataSize, data, dataSize, payloadType, false);
+		}
+#elif defined(PLATFORM_ANDROID)
 		result = m_backend->decode(data, dataSize, data, dataSize, payloadType, false);
-	}
 #endif
+	}
+
 	
 	return result;
 }

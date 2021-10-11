@@ -398,22 +398,22 @@ namespace avs
 		switch (m_deviceType)
 		{
 #if PLATFORM_WINDOWS
-		case DeviceType::Direct3D12:
-			break;
-		case DeviceType::Direct3D11:
-			if (CUFAILED(cuGraphicsD3D11RegisterResource(&m_registeredSurface, reinterpret_cast<ID3D11Texture2D*>(surface->getResource()), registerFlags)))
-			{
-				AVSLOG(Error) << "DecoderNV: Failed to register D3D11 surface with CUDA";
-				return Result::DecoderBackend_InvalidSurface;
-			}
-			break;
+			case DeviceType::Direct3D12:
+				break;
+			case DeviceType::Direct3D11:
+				if (CUFAILED(cuGraphicsD3D11RegisterResource(&m_registeredSurface, reinterpret_cast<ID3D11Texture2D*>(surface->getResource()), registerFlags)))
+				{
+					AVSLOG(Error) << "DecoderNV: Failed to register D3D11 surface with CUDA";
+					return Result::DecoderBackend_InvalidSurface;
+				}
+				break;
 #endif
-		case DeviceType::OpenGL:
-			AVSLOG(Error) << "DecoderNV: OpenGL surfaces are not yet supported";
-			return Result::DecoderBackend_InvalidSurface;
-		default:
-			AVSLOG(Error) << "DecoderNV: Cannot register output surface with invalid device type";
-			return Result::DecoderBackend_InvalidDevice;
+			case DeviceType::OpenGL:
+				AVSLOG(Error) << "DecoderNV: OpenGL surfaces are not yet supported";
+				return Result::DecoderBackend_InvalidSurface;
+			default:
+				AVSLOG(Error) << "DecoderNV: Cannot register output surface with invalid device type";
+				return Result::DecoderBackend_InvalidDevice;
 		}
 
 		cuGraphicsResourceSetMapFlags(m_registeredSurface, CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD);
@@ -421,34 +421,34 @@ namespace avs
 
 		switch (m_registeredSurfaceFormat)
 		{
-		case SurfaceFormat::ARGB:
-			if (m_params.use10BitDecoding)
-			{
-				m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444P16toRGBA : m_kP016toRGBA;
-			}
-			else
-			{
-				m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444toRGBA : m_kNV12toRGBA;
-				m_alphaKernel = m_kAlphaNV12toRGBA;
-			}
-			break;
-		case SurfaceFormat::ABGR:
-			if (m_params.use10BitDecoding)
-			{
-				m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444P16toABGR : m_kP016toABGR;
-			}
-			else
-			{
-				m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444toABGR : m_kNV12toABGR;
-				m_alphaKernel = m_kAlphaNV12toABGR;
-			}
-			break;
-		case SurfaceFormat::R16:
-			m_colorKernel = m_kNV12toR16;
-			break;
-		case SurfaceFormat::NV12:
-			/* Not implemented yet. */
-			break;
+			case SurfaceFormat::ARGB:
+				if (m_params.use10BitDecoding)
+				{
+					m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444P16toRGBA : m_kP016toRGBA;
+				}
+				else
+				{
+					m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444toRGBA : m_kNV12toRGBA;
+					m_alphaKernel = m_kAlphaNV12toRGBA;
+				}
+				break;
+			case SurfaceFormat::ABGR:
+				if (m_params.use10BitDecoding)
+				{
+					m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444P16toABGR : m_kP016toABGR;
+				}
+				else
+				{
+					m_colorKernel = m_params.useYUV444ChromaFormat ? m_kYUV444toABGR : m_kNV12toABGR;
+					m_alphaKernel = m_kAlphaNV12toABGR;
+				}
+				break;
+			case SurfaceFormat::R16:
+				m_colorKernel = m_kNV12toR16;
+				break;
+			case SurfaceFormat::NV12:
+				/* Not implemented yet. */
+				break;
 		}
 
 		return Result::OK;

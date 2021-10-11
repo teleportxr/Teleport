@@ -4,10 +4,23 @@
 #pragma once
 
 #include <libavstream/decoders/dec_interface.hpp>
+#include <memory>
+#include <vector>
+#include "Platform/Crossplatform/BaseRenderer.h"
+#include "Platform/Crossplatform/VideoDecoder.h"
+#include "Platform/Crossplatform/RenderPlatform.h"
 
+namespace simul
+{
+	namespace crossplatform
+	{
+		class Texture;
+	}	
+}
 class VideoDecoder final : public avs::DecoderBackendInterface
 {
 public:
+	VideoDecoder(simul::crossplatform::RenderPlatform* renderPlatform, simul::crossplatform::Texture* surfaceTexture);
 	~VideoDecoder();
 
 	/* Begin DecoderBackendInterface */
@@ -31,6 +44,13 @@ private:
 	unsigned int m_frameHeight = 0;
 	int m_displayPictureIndex = -1;
 
-	avs::SurfaceFormat m_registeredSurfaceFormat = avs::SurfaceFormat::Unknown;
+	std::unique_ptr<simul::crossplatform::VideoDecoder> m_decoder;
+
+	static constexpr uint32_t MAX_ARGS = 10;
+
+	std::vector<simul::crossplatform::VideoDecodeArgument> m_arguments;
+	uint32_t m_argCount = 0;
+	simul::crossplatform::RenderPlatform* m_renderPlatform;
+	simul::crossplatform::Texture* m_surfaceTexture;
 };
 

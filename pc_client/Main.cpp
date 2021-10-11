@@ -311,6 +311,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				float time_step=t.UpdateTime()/1000.0f;
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
+				// Call StartFrame here so the command list will be in a recording state for D3D12 
+				// because vertex and index buffers can be created in OnFrameMove. 
+				// StartFrame does nothing for D3D11.
+				w->StartFrame();
 				clientRenderer->OnFrameMove(fTime,time_step);
 				fTime+=time_step;
 				errno=0;
