@@ -102,6 +102,7 @@ namespace avs
 			DecoderBackend_DisplayFailed,
 			DecoderBackend_ShutdownFailed,
 			DecoderBackend_ReadyToDisplay,
+			DecoderBackend_InvalidOutoutFormat,
 			DecoderBackend_CapabilityCheckFailed,
 			GeometryEncoder_Incomplete,
 			GeometryEncoder_InvalidPayload,

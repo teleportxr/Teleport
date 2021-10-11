@@ -153,13 +153,13 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	// Initialize the audio (asynchronously)
 	audioPlayer.initializeAudioDevice();
 
-	renderPlatform=r;
+	renderPlatform = r;
 
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	resourceCreator.Initialise(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 
-	hDRRenderer		=new crossplatform::HdrRenderer();
+	hDRRenderer = new crossplatform::HdrRenderer();
 
 	hdrFramebuffer=renderPlatform->CreateFramebuffer();
 	hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
@@ -1260,6 +1260,7 @@ void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
 	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
+	decoderParams.surfaceFormat = SurfaceFormat;
 
 	avs::DeviceHandle dev;
 	
@@ -1316,11 +1317,13 @@ void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
 	
-	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
+	CreateTexture(avsTexture, int(stream_width), int(stream_height), decoderParams.surfaceFormat);
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
 #if IS_D3D12
-	decoder.setBackend(new VideoDecoder());
+	AVSTextureHandle th = avsTexture;
+	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
+	decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
 #endif
 
 	// Video streams are 0+...
@@ -1431,10 +1434,12 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	decoderParams.codec = videoConfig.videoCodec;
 	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
+	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
+	decoderParams.surfaceFormat = SurfaceFormat;
 
 	avs::DeviceHandle dev;
 #if IS_D3D12
-	dev.handle = renderPlatform->AsD3D12Device();
+	dev.handle = renderPlatform->AsD3D12Device();;
 	dev.type = avs::DeviceType::Direct3D12;
 #else
 	dev.handle = renderPlatform->AsD3D11Device();
@@ -1471,7 +1476,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 			throw std::runtime_error("Failed to unregister decoder surface");
 		}
 
-		CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormats[1]);
+		CreateTexture(avsTexture, int(stream_width), int(stream_height), decoderParams.surfaceFormat);
 	}
 
 	if (!decoder.reconfigure((int)stream_width, (int)stream_height, decoderParams))
@@ -1634,9 +1639,9 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
 {
 #if IS_D3D12
-	simul::dx12::RenderPlatform* dx12RenderPlatform = (simul::dx12::RenderPlatform*)renderPlatform;
+	//simul::dx12::RenderPlatform* dx12RenderPlatform = (simul::dx12::RenderPlatform*)renderPlatform;
 	// Set command list to the recording state if it's not in it already.
-	dx12RenderPlatform->ResetImmediateCommandList();
+	//dx12RenderPlatform->ResetImmediateCommandList();
 #endif
 
 	for (int i = 0; i < 2; i++)
@@ -1770,7 +1775,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 #if IS_D3D12
 	// Execute the immediate command list on graphics queue which will include any vertex and index buffer 
 	// upload/transition commands created by the resource creator.
-	dx12RenderPlatform->ExecuteImmediateCommandList(dx12RenderPlatform->GetCommandQueue());
+//	dx12RenderPlatform->ExecuteImmediateCommandList(dx12RenderPlatform->GetCommandQueue());
 #endif
 }
 
