@@ -30,6 +30,11 @@ void Controllers::SetCycleOSDSelectionDelegate(TriggerDelegate delegate)
 	CycleOSDSelection = delegate;
 }
 
+void Controllers::SetToggleMenuDelegate(TriggerDelegate delegate)
+{
+	ToggleMenu = delegate;
+}
+
 void Controllers::SetDebugOutputDelegate(TriggerDelegate delegate)
 {
 	WriteDebugOutput = delegate;
@@ -121,15 +126,14 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				}
 
 				uint32_t pressed = controllerState.mButtons & ~lastControllerState.mButtons;
-				uint32_t released = ~controllerState.mButtons & lastControllerState.mButtons;
+				controllerState.mReleased = ~controllerState.mButtons & lastControllerState.mButtons;
 
 				//Detect when a button press or button release event occurs, and store the event in controllerState.
-				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_A, avs::InputList::BUTTON01);
-				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_X, avs::InputList::BUTTON01);
-				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_B, avs::InputList::BUTTON02);
-				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Y, avs::InputList::BUTTON02);
-				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Enter, avs::InputList::BUTTON_HOME);
-				AddButtonPressEvent(pressed, released, controllerState, ovrButton::ovrButton_Joystick, avs::InputList::BUTTON_STICK);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_A, avs::InputList::BUTTON01);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_X, avs::InputList::BUTTON01);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_B, avs::InputList::BUTTON02);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Y, avs::InputList::BUTTON02);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Joystick, avs::InputList::BUTTON_STICK);
 
 				if(lastControllerState.triggerBack != ovrState.IndexTrigger)
 				{
@@ -143,22 +147,26 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				}
 				controllerState.triggerGrip = ovrState.GripTrigger;
 
-				if((released & ovrButton::ovrButton_A) != 0)
+				if((controllerState.mReleased & ovrButton::ovrButton_Enter) != 0)
+				{
+					ToggleMenu();
+				}
+				if((controllerState.mReleased & ovrButton::ovrButton_A) != 0)
 				{
 					CycleOSD();
 				}
-				if((released & ovrButton::ovrButton_B) != 0)
+				if((controllerState.mReleased & ovrButton::ovrButton_B) != 0)
 				{
 					CycleOSDSelection();
 				}
-				if((released & ovrButton::ovrButton_X) != 0)
+				if((controllerState.mReleased & ovrButton::ovrButton_X) != 0)
 				{
 					WriteDebugOutput();
 
 					// All buttons seem to be taken up so putting it here for now
 					ToggleWebcam();
 				}
-				if( (released & ovrButton::ovrButton_Y) != 0)
+				if( (controllerState.mReleased & ovrButton::ovrButton_Y) != 0)
 				{
 					CycleShaderMode();
 				}

@@ -5,7 +5,7 @@
 #include "GUI/GuiSys.h"
 #include "Locale/OVR_Locale.h"
 #include "Misc/Log.h"
-#include "Input/TinyUI.h"
+//#include "Input/TinyUI.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -97,6 +97,9 @@ namespace OVRFW
 		/* Begin DecodeEventInterface */
 		virtual void OnFrameAvailable() override;
 		/* End DecodeEventInterface */
+
+		// UI to connect.
+		void ConnectButtonHandler(const std::string &url);
 	private:
 		OVRFW::ovrApplFrameOut Frame(const OVRFW::ovrApplFrameIn& vrFrame);
 		void DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRendererOutput &out);
@@ -104,13 +107,14 @@ namespace OVRFW
 		void UpdateHandObjects();
 		bool ProcessIniFile();
 		void EnteredVrMode();
+		void ToggleMenu();
 		ovrRenderState RenderState;
 		ovrFileSys* FileSys;
 		ovrLocale* Locale;
 		ovrSurfaceRender SurfaceRender;
 		ovrSurfaceDef SurfaceDef;
 		unsigned int Random;
-	//	ovrMatrix4f CenterEyeViewMatrix;
+
 		double startTime;
 
 		float RandomFloat();
@@ -149,7 +153,7 @@ namespace OVRFW
 
 		OVRFW::OvrGuiSys *mGuiSys;
 		OVRFW::VRMenu* menu= nullptr;
-		OVRFW::TinyUI tinyUI;
+		teleport::TinyUI tinyUI;
 
 		OVRFW::OvrSceneView mScene;
 
@@ -167,7 +171,7 @@ namespace OVRFW
 
 		ClientRenderer clientRenderer;
 		LobbyRenderer lobbyRenderer;
-		teleport::UIRenderer uIRenderer;
+		//teleport::UIRenderer uIRenderer;
 		std::unique_ptr<Android_MemoryUtil> memoryUtil;
 		scr::ResourceManagers resourceManagers;
 		ResourceCreator resourceCreator;
@@ -187,6 +191,7 @@ namespace OVRFW
 
 		float frameRate = 1.0f;
 		ovrDeviceType DeviceType=VRAPI_DEVICE_TYPE_UNKNOWN;
+		bool should_connect=false;
 	};
 
 }

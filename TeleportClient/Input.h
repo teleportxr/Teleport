@@ -11,6 +11,7 @@
 struct ControllerState
 {
 	uint32_t mButtons = 0;
+	uint32_t mReleased = 0;
 	bool  mTrackpadStatus = false;
 	float mTrackpadX = 0.0f;
 	float mTrackpadY = 0.0f;

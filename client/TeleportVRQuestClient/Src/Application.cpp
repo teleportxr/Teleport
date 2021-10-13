@@ -51,7 +51,7 @@ Application::Application()
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
 		  , clientRenderer(&resourceCreator, &resourceManagers, this, &clientDeviceState,&controllers)
 		  , lobbyRenderer(&clientDeviceState, this)
-		, uIRenderer( this)
+		//, uIRenderer( this)
 		  , resourceManagers(new OVRNodeManager)
 		  , resourceCreator()
 {
@@ -109,7 +109,20 @@ bool Application::ProcessIniFile()
 	SI_Error rc = ini.LoadData(client_ini.data(), client_ini.length());
 	if (rc == SI_OK)
 	{
-		server_ip = ini.GetValue("", "SERVER_IP", "");
+		std::vector<std::string> server_ips;
+		std::string ip_list;
+		ip_list = ini.GetValue("", "SERVER_IP", "");
+
+		size_t pos = 0;
+		std::string token;
+		do
+		{
+			pos = ip_list.find(",");
+			std::string ip=ip_list.substr(0, pos);
+			server_ips.push_back(ip);
+			ip_list.erase(0, pos + 1);
+			tinyUI.AddURL(ip);
+		} while (pos != std::string::npos);
 		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",TELEPORT_SERVER_DISCOVERY_PORT);
 		client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",TELEPORT_CLIENT_SERVICE_PORT);
 		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",TELEPORT_CLIENT_STREAMING_PORT);
@@ -179,12 +192,13 @@ bool Application::AppInit(const OVRFW::ovrAppContext *context)
 
 	ProcessIniFile();
 
-	if (false == tinyUI.Init(&ctx, FileSys))
+	if (false == tinyUI.Init(&ctx, FileSys,mGuiSys,Locale))
 	{
 		ALOG("TinyUI::Init FAILED.");
 	}
-	tinyUI.AddButton("Connect",Vector3f(0,0,1.0f),Vector2f(100.0f,50.0f));
-	tinyUI.AddLabel("label",Vector3f(2.0f,0,-2.0f));
+	auto connectButtonHandler = std::bind(&Application::ConnectButtonHandler, this,
+			std::placeholders::_1);
+	tinyUI.SetConnectHandler(connectButtonHandler);
 	//menu = ovrControllerGUI::Create(this,mGuiSys,Locale);
 	if (menu != nullptr)
 	{
@@ -312,11 +326,12 @@ void Application::EnteredVrMode()
 	controllers.SetCycleShaderModeDelegate(std::bind(&ClientRenderer::CycleShaderMode, &clientRenderer));
 	controllers.SetCycleOSDDelegate(std::bind(&ClientRenderer::CycleOSD, &clientRenderer));
 	controllers.SetCycleOSDSelectionDelegate(std::bind(&ClientRenderer::CycleOSDSelection, &clientRenderer));
+	controllers.SetToggleMenuDelegate(std::bind(&Application::ToggleMenu, this));
 	controllers.SetDebugOutputDelegate(std::bind(&ClientRenderer::WriteDebugOutput, &clientRenderer));
 	controllers.SetToggleWebcamDelegate(std::bind(&ClientRenderer::ToggleWebcam, &clientRenderer));
 	controllers.SetSetStickOffsetDelegate(std::bind(&ClientRenderer::SetStickOffset, &clientRenderer, std::placeholders::_1, std::placeholders::_2));
 
-	uIRenderer.Init();
+	//uIRenderer.Init();
 }
 
 void Application::AppShutdown(const OVRFW::ovrAppContext *)
@@ -403,7 +418,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 			}
 		}
 	}
-	else
+	else if(should_connect)
 	{
 		if (!sessionClient.HasDiscovered())
 		{
@@ -414,6 +429,9 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 			// if connect fails, restart discovery.
 			if(!sessionClient.Connect(remoteEndpoint, TELEPORT_TIMEOUT))
 				sessionClient.Disconnect(0);
+			else
+				tinyUI.HideMenu();
+			should_connect=false;
 		}
 	}
 	mScene.Frame(vrFrame,-1,false);
@@ -439,8 +457,36 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	// Process stream pipeline
 	mPipeline.process();
 
+    std::vector<TinyUI::ControllerState> states;
+    states.push_back({});
+	states.push_back({});
+	states[0].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[0].position);
+	states[0].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[0].orientation);
+	states[0].clicking			=(controllers.mLastControllerStates[0].mReleased& ovrButton::ovrButton_Trigger)!=0;
+	states[1].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[1].position);
+	states[1].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[1].orientation);
+	states[1].clicking			=(controllers.mLastControllerStates[1].mReleased& ovrButton::ovrButton_Trigger)!=0;
+	/// Hit test
+	tinyUI.DoHitTests(vrFrame,states);
     tinyUI.Update(vrFrame);
 	return OVRFW::ovrApplFrameOut();
+}
+
+void Application::ConnectButtonHandler(const std::string &url)
+{
+	size_t pos=url.find(":");
+	if(pos<url.length())
+	{
+		std::string port_str=url.substr(pos+1,url.length()-pos-1);
+		server_discovery_port = atoi(port_str.c_str());
+		std::string url_str=url.substr(0,pos);
+		server_ip=url_str;
+	}
+	else
+	{
+		server_ip=url;
+	}
+	should_connect=true;
 }
 
 void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out)
@@ -1100,6 +1146,20 @@ std::string Application::LoadTextFile(const char *filename)
 	}
 	return "";
 }
+void Application::ToggleMenu()
+{
+	ovrVector3f pos;
+	pos.x=clientDeviceState.headPose.position.x;
+	pos.y=clientDeviceState.headPose.position.y;
+	pos.z=clientDeviceState.headPose.position.z;
+	ovrVector4f orient;
+	orient.x=clientDeviceState.headPose.orientation.x;
+	orient.y=clientDeviceState.headPose.orientation.y;
+	orient.z=clientDeviceState.headPose.orientation.z;
+	orient.w=clientDeviceState.headPose.orientation.w;
+	tinyUI.ToggleMenu(pos,orient);
+}
+
 
 
 //==============================================================

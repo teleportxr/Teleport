@@ -1,9 +1,11 @@
 #pragma once
 #include <GUI/GuiSys.h>
 #include <GUI/VRMenu.h>
+#include "UIBeamRenderer.h"
 #include "ClientAppInterface.h"
 namespace teleport
 {
+#ifdef TELEPORT_CLIENT_USE_IMGUI
 	// This is the class we really want to use.
 	class UIRenderer
 	{
@@ -17,39 +19,66 @@ namespace teleport
 		ClientAppInterface *clientAppInterface=nullptr;
 		bool initialized=false;
 	};
-
+#endif
 	// As a TEMPORARY measure we here define a GUI class based on the OVR menu code:
-	class ovrControllerGUI : public OVRFW::VRMenu
+	class TinyUI
 	{
 	public:
-		static char const* MENU_NAME;
+		TinyUI() {}
+		~TinyUI() {}
 
-		virtual ~ovrControllerGUI() {}
+		bool Init(const xrJava* context, OVRFW::ovrFileSys* FileSys,OVRFW::OvrGuiSys *g,OVRFW::ovrLocale* l);
+		void Shutdown();
 
-		static ovrControllerGUI* Create(ClientAppInterface *c,OVRFW::OvrGuiSys *,OVRFW::ovrLocale *);
+		void ToggleMenu(ovrVector3f,ovrVector4f);
+		void HideMenu();
+		void SetURL(const std::string &u);
+		void AddURL(const std::string &u);
+		std::string GetURL() const;
 
-	private:
-		ClientAppInterface *clientAppInterface=nullptr;
-		OVRFW::OvrGuiSys *guiSys=nullptr;
+		void Update(const OVRFW::ovrApplFrameIn& in);
+		void Render(const OVRFW::ovrApplFrameIn& in, OVRFW::ovrRendererOutput& out);
 
-		ovrControllerGUI(ClientAppInterface *c,OVRFW::OvrGuiSys *g)
-				: VRMenu(MENU_NAME), clientAppInterface(c),guiSys(g) {}
+		void SetConnectHandler(std::function<void(const std::string &)> fn);
 
-		ovrControllerGUI operator=(ovrControllerGUI&) = delete;
+		OVRFW::OvrGuiSys& GetGuiSys() {
+			return *GuiSys;
+		}
+		OVRFW::ovrLocale& GetLocale() {
+			return *Locale;
+		}
+		std::vector<HitTest>& HitTests() {
+			return hitTests;
+		}
 
-		virtual void OnItemEvent_Impl(
-				OVRFW::OvrGuiSys& guiSys,
-				OVRFW::ovrApplFrameIn const& vrFrame,
-				OVRFW::VRMenuId_t const itemId,
-				OVRFW::VRMenuEvent const& event) override;
+		struct ControllerState
+		{
+			OVR::Posef pose;
+			bool clicking;
+		};
 
-		virtual bool OnKeyEvent_Impl(OVRFW::OvrGuiSys& guiSys, int const keyCode, const int repeatCount)
-		override;
+		void DoHitTests(const OVRFW::ovrApplFrameIn& in,std::vector<ControllerState> states);
+		void AddHitTestRay(const OVR::Posef& ray, bool isClicking);
 
-		virtual void PostInit_Impl(OVRFW::OvrGuiSys& guiSys, OVRFW::ovrApplFrameIn const& vrFrame) override;
+	protected:
+		OVRFW::VRMenuObject* CreateMenu(const std::string &menuName,const std::string &labelText);
 
-		virtual void Open_Impl(OVRFW::OvrGuiSys& guiSys) override;
-
-		virtual void Frame_Impl(OVRFW::OvrGuiSys& guiSys, OVRFW::ovrApplFrameIn const& vrFrame) override;
+		void PressConnect();
+		void ChangeURL();
+		OVRFW::ovrFileSys* FileSys=nullptr;
+		OVRFW::OvrGuiSys* GuiSys=nullptr;
+		OVRFW::ovrLocale* Locale=nullptr;
+		std::unordered_map<OVRFW::VRMenuObject*, std::function<void(void)>> buttonHandlers;
+		std::vector<HitTest> hitTests;
+		std::vector<HitTest> previousHitTests;
+		std::vector<OVRFW::VRMenuObject*> menuObjects;
+		std::vector<OVRFW::VRMenu*> menus;
+		std::vector<std::string> urls;
+		UIBeamRenderer beamRenderer_;
+		OVRFW::VRMenuObject *url= nullptr;
+		OVRFW::VRMenuObject *connect= nullptr;
+		std::string 		current_url;
+		std::function<void(const std::string &)> connectHandler;
+		bool  visible=false;
 	};
 }

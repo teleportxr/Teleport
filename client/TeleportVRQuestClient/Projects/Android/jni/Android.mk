@@ -41,13 +41,7 @@ LOCAL_SRC_FILES			:= \
     ../../../src/SCR_Class_GL_Impl/GL_UniformBuffer.cpp \
     ../../../src/SCR_Class_GL_Impl/GL_VertexBuffer.cpp \
     ../../../src/SCR_Class_Android_Impl/Android_MemoryUtil.cpp \
-    ../../../src/ConvertUTF.c \
-    ../../../../../thirdparty/imgui/imgui.cpp \
-    ../../../../../thirdparty/imgui/imgui_draw.cpp \
-    ../../../../../thirdparty/imgui/imgui_widgets.cpp \
-    ../../../../../thirdparty/imgui/imgui_tables.cpp \
-    ../../../src/imgui_impl_teleport_android.cpp \
-    ../../../../../thirdparty/imgui/backends/imgui_impl_opengl3.cpp
+    ../../../src/ConvertUTF.c
 
 LOCAL_LDLIBS := -lEGL -lGLESv3 -landroid -llog -lz  		# include default libraries
 
