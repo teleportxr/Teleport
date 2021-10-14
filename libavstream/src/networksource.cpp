@@ -172,13 +172,18 @@ Result NetworkSource::deconfigure()
 		return Result::Node_NotConfigured;
 	}
 
-	m_data->runningThread = false;
+	m_data->m_receivingPackets = false;
 		
-	if (m_data->thr.joinable())
+	if (m_data->m_receiveThread.joinable())
+	{
+		m_data->m_receiveThread.join();
+	}	
+
+	if (m_data->m_processThread.joinable())
 	{
 		std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
-		m_data->thr.join();
-	}	
+		m_data->m_processThread.join();
+	}
 
 	// Will stop any extra EFP thread 
 	m_data->m_EFPReceiver.reset();
@@ -192,6 +197,8 @@ Result NetworkSource::deconfigure()
 
 	m_data->m_tempBuffer.clear();
 
+	m_data->m_recvBuffer.reset();
+
 	// Socket must be killed BEFORE service, or asio throws a fit.
 	// At a guess, this is because socket was created from service, and expects it to still exist
 	// as socket is shut down.
@@ -204,7 +211,7 @@ void NetworkSource::closeSocket()
 {
 	std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
 
-	m_data->runningThread = false;
+	m_data->m_receivingPackets = false;
 	m_data->bConnected=false;
 	if(m_data->m_socket)
 		srt_close(m_data->m_socket);
@@ -213,16 +220,6 @@ void NetworkSource::closeSocket()
 	srt_cleanup();
 	m_data->pollid=0;
 	m_data->m_socket=0;
-}
-
-void NetworkSource::pollData()
-{
-	asyncRecvPackets();
-	while (m_data->runningThread)
-	{
-		std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
-		asyncRecvPackets();
-	}
 }
 
 Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
@@ -314,18 +311,35 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	}
 	if(!m_data->bConnected)
 		return Result::Node_NotReady;
-	if (!m_data->thr.joinable())
+
+	if (!m_data->m_receiveThread.joinable())
 	{
-		m_data->runningThread = true;
-		m_data->thr = std::thread(&NetworkSource::pollData, this);
+		m_data->m_receivingPackets = true;
+		m_data->m_receiveThread = std::thread(&NetworkSource::asyncReceivePackets, this);
 #ifdef __ANDROID__
-		pthread_setname_np(m_data->thr .native_handle(), "buffer_thread");
+		pthread_setname_np(m_data->m_receiveThread .native_handle(), "receive_packets_thread");
 		sched_param sch_params;
 		// Roderick: Upping the priority to 99 really seems to help avoid dropped packets.
 		sch_params.sched_priority = 99;
-		pthread_setschedparam(m_data->thr .native_handle(), SCHED_RR, &sch_params);
+		pthread_setschedparam(m_data->m_receiveThread .native_handle(), SCHED_RR, &sch_params);
 #endif
 	}
+
+	if (!m_data->m_params.asyncProcessPackets)
+	{
+		processPackets();
+	}
+	else if (!m_data->m_processThread.joinable())
+	{
+		m_data->m_processThread = std::thread(&NetworkSource::asyncProcessPackets, this);
+#ifdef __ANDROID__
+		pthread_setname_np(m_data->m_processThread.native_handle(), "process_packets_thread");
+		sched_param sch_params;
+		sch_params.sched_priority = 99;
+		pthread_setschedparam(m_data->m_processThread.native_handle(), SCHED_RR, &sch_params);
+#endif
+	}
+
 
 	return Result::OK;
 }
@@ -360,28 +374,59 @@ void NetworkSource::sendAck(NetworkPacket &packet)
 #ifndef _MSC_VER
 __attribute__((optnone))
 #endif
-void NetworkSource::asyncRecvPackets()
+
+void NetworkSource::asyncReceivePackets()
 {
-	static uint8_t packetData[PacketFormat::MaxPacketSize];
-
-	int st = srt_recvmsg(m_data->m_socket, (char*)packetData, PacketFormat::MaxPacketSize);
-    if (st <= 0)
-    {
-		std::this_thread::sleep_for(std::chrono::nanoseconds(5)); // 0.000000005s (cross platform solution) same as Sleep(100)
-		std::this_thread::yield();
-        return;
-    }
-
+	while (m_data->m_receivingPackets)
 	{
-		std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
-		m_data->m_counters.bytesReceived += PacketFormat::MaxPacketSize;
-		m_data->m_counters.networkPacketsReceived++;
+		RawPacket* rawPacket = m_data->m_recvBuffer.reserve_next();
+		int st = srt_recvmsg(m_data->m_socket, (char*)rawPacket, PacketFormat::MaxPacketSize);
+		if (st <= 0)
+		{
+			//std::this_thread::sleep_for(std::chrono::nanoseconds(5)); // 0.000000005s 
+			std::this_thread::yield();
+			continue;
+		}
+
+		if (!m_data->m_recvBuffer.full())
+		{
+			m_data->m_recvBuffer.commit_next();
+			//std::this_thread::yield();
+		}
+		else
+		{
+			AVSLOG(Warning) << "Ring buffer exhausted " << "\n";
+		}
 	}
+}
 
-	auto val = m_data->m_EFPReceiver->receiveFragmentFromPtr(packetData, PacketFormat::MaxPacketSize, 0);
-	if (EFPFAILED(val))
+void NetworkSource::asyncProcessPackets()
+{
+	while (m_data->m_receivingPackets)
 	{
-		AVSLOG(Warning) << "EFP Error: Invalid data fragment received" << "\n";
+		processPackets();
+		std::this_thread::yield();
+	}
+}
+
+void NetworkSource::processPackets()
+{
+	RawPacket rawPacket;
+	while (!m_data->m_recvBuffer.empty())
+	{
+		//m_data->m_recvBuffer.copyTail(&rawPacket);
+		rawPacket = m_data->m_recvBuffer.get();
+		{
+			std::lock_guard<std::mutex> lock(m_data->m_dataMutex);
+			m_data->m_counters.bytesReceived += PacketFormat::MaxPacketSize;
+			m_data->m_counters.networkPacketsReceived++;
+		}
+
+		auto val = m_data->m_EFPReceiver->receiveFragmentFromPtr(rawPacket.data, PacketFormat::MaxPacketSize, 0);
+		if (EFPFAILED(val))
+		{
+			AVSLOG(Warning) << "EFP Error: Invalid data fragment received" << "\n";
+		}
 	}
 }
 

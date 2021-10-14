@@ -26,6 +26,7 @@ namespace avs
 		const char* remoteIP = "";
 		int32_t remotePort = 0;
 		uint32_t connectionTimeout = 5000;
+		bool asyncProcessPackets = false;
 	};
 
 	/*! Network source counters. */
@@ -113,9 +114,10 @@ namespace avs
 		Private *m_data; 
 
 		void sendAck(avs::NetworkPacket &packet);
-		void asyncRecvPackets();
+		void asyncReceivePackets();
+		void asyncProcessPackets();
+		void processPackets();
 		void closeSocket();
-		void pollData();
 	};
 
 } // avs

@@ -51,10 +51,27 @@ public:
 
 		return val;
 	}
+
+	bool copyTail(T& val)
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		if (empty())
+		{
+			return false;
+		}
+
+		//Copy data and advance the tail (we now have a free space)
+		*val = buf_[tail_];
+		full_ = false;
+		tail_ = (tail_ + 1) % max_size;
+
+		return true;
+	}
+
 	void reset()
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
-		head_ .store(tail_.load());
+		head_.store(tail_.load());
 		full_ = false;
 	}
 
