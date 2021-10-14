@@ -51,6 +51,21 @@ public:
 
 		return val;
 	}
+
+	void copyTail(T* val)
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		if (empty())
+		{
+			return;
+		}
+
+		//Copy data and advance the tail (we now have a free space)
+		memcpy(val, &buf_[tail_], sizeof(T));
+		full_ = false;
+		tail_ = (tail_ + 1) % max_size;
+	}
+
 	void reset()
 	{
 		std::lock_guard<std::mutex> lock(mutex_);

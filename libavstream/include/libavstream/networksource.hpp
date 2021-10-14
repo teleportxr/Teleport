@@ -113,9 +113,9 @@ namespace avs
 		Private *m_data; 
 
 		void sendAck(avs::NetworkPacket &packet);
-		void asyncRecvPackets();
+		void asyncReceivePackets();
+		void asyncProcessPackets();
 		void closeSocket();
-		void pollData();
 	};
 
 } // avs

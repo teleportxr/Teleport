@@ -105,10 +105,11 @@ namespace avs
 
 		float bandwidthBytes;
 
-		std::thread thr;
+		std::thread m_receiveThread;
+		std::thread m_processThread;
 		std::mutex m_networkMutex;
 		std::mutex m_dataMutex;
-		std::atomic_bool runningThread;
+		std::atomic_bool m_receivingPackets;
 
 		int32_t debugStream;
 		bool mDebugNetworkPackets=false;
@@ -121,6 +122,7 @@ namespace avs
 		std::unique_ptr<ElasticFrameProtocolReceiver> m_EFPReceiver;
 
 		std::vector<char> m_tempBuffer;
+		RingBuffer<RawPacket, 12000> m_recvBuffer;
 	};
 
 } // avs
