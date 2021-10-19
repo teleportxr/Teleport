@@ -31,8 +31,6 @@ struct DecoderParams
 	VideoCodec codec = VideoCodec::Invalid;
 	/*! Payload decode frequency. */
 	DecodeFrequency decodeFrequency = DecodeFrequency::NALUnit;
-	/*! Format of the surface texture the decoded output stream is written to. */
-	avs::SurfaceFormat surfaceFormat = avs::SurfaceFormat::ARGB;
 	/*! If true prepend AVC Annex B start codes to every NAL unit before decoding. */
 	bool prependStartCodes = true;
 	/*! If true display is delayed until next Decoder::process() call; this improves pipelining at the expense of additional latency. */

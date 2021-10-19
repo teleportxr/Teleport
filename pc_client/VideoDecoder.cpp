@@ -15,6 +15,7 @@ namespace cp = simul::crossplatform;
 VideoDecoder::VideoDecoder(cp::RenderPlatform* renderPlatform, cp::Texture* surfaceTexture)
 	: m_renderPlatform(renderPlatform)
 	, m_surfaceTexture(surfaceTexture)
+	, m_outputTexture(nullptr)
 {
 }
 
@@ -54,29 +55,8 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 		return Result::DecoderBackend_CodecNotSupported;
 	}
 
-	switch (params.surfaceFormat)
-	{
-		case avs::SurfaceFormat::ARGB:
-			decParams.surfaceFormat = cp::PixelFormat::RGBA_8_UNORM;
-			break;
-		case avs::SurfaceFormat::ARGB16:
-			decParams.surfaceFormat = cp::PixelFormat::RGBA_16_UNORM;
-			break;
-		case avs::SurfaceFormat::ABGR:
-			decParams.surfaceFormat = cp::PixelFormat::BGRA_8_UNORM;
-			break;
-		case avs::SurfaceFormat::NV12:
-			decParams.surfaceFormat = cp::PixelFormat::NV12;
-			break;
-		case avs::SurfaceFormat::R16:
-			decParams.surfaceFormat = cp::PixelFormat::R_16_FLOAT;
-			break;
-		default:
-			SCR_CERR << "VideoDecoder: Unsupported video output format!" << std::endl;
-			return Result::DecoderBackend_InvalidOutoutFormat;
-	}
-
 	decParams.decodeFormat = cp::PixelFormat::NV12;
+	decParams.outputFormat = cp::PixelFormat::NV12;
 	decParams.bitRate = 0;
 	decParams.frameRate = 60;
 	decParams.deinterlaceMode = cp::DeinterlaceMode::None;
@@ -94,6 +74,11 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	{
 		return Result::DecoderBackend_InitFailed;
 	}
+
+	// The output texture is in native decode format.
+	// The surface texture will only be written to in the display function.
+	m_outputTexture = m_renderPlatform->CreateTexture();
+	m_outputTexture->ensureTexture2DSizeAndFormat(m_renderPlatform, decParams.width, decParams.height, simul::crossplatform::RGBA_8_UNORM, true, true, false);
 
 	m_deviceType = device.type;
 	m_params = params;
@@ -134,6 +119,8 @@ Result VideoDecoder::shutdown()
 		}
 	}
 
+	SAFE_DELETE(m_outputTexture);
+
 	return Result::OK;
 }
 
@@ -155,12 +142,6 @@ Result VideoDecoder::registerSurface(const SurfaceBackendInterface* surface, con
 		return Result::DecoderBackend_InvalidSurface;
 	}
 
-	if (DEC_FAILED(m_decoder->RegisterSurface(m_surfaceTexture)))
-	{
-		SCR_CERR << "VideoDecoder: Failed to register surface";
-		return Result::DecoderBackend_InvalidSurface;
-	}
-
 	return Result::OK;
 }
 
@@ -170,12 +151,6 @@ Result VideoDecoder::unregisterSurface()
 	{
 		SCR_CERR << "VideoDecoder: Decoder not initialized";
 		return Result::DecoderBackend_NotInitialized;
-	}
-
-	if (DEC_FAILED(m_decoder->UnregisterSurface()))
-	{
-		SCR_CERR << "VideoDecoder: Failed to unregister surface";
-		return Result::DecoderBackend_InvalidSurface;
 	}
 
 	return Result::OK;
@@ -211,7 +186,7 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 		return Result::DecoderBackend_InvalidPayload;
 	}
 
-	if (DEC_FAILED(m_decoder->Decode(buffer, bufferSizeInBytes, m_arguments.data(), m_argCount)))
+	if (DEC_FAILED(m_decoder->Decode(m_outputTexture, buffer, bufferSizeInBytes, m_arguments.data(), m_argCount)))
 	{
 		SCR_CERR << "VideoDecoder: Error occurred while trying to decode the frame.";
 		return Result::DecoderBackend_DecodeFailed;

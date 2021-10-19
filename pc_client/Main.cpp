@@ -206,9 +206,9 @@ void InitRenderer(HWND hWnd)
 		renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
 
-		simul::dx12::DeviceManager* deviceManager = (simul::dx12::DeviceManager*)gdi;
+		//simul::dx12::DeviceManager* deviceManager = (simul::dx12::DeviceManager*)gdi;
 		// We will provide a command list so initialization of following resource can take place
-		((simul::dx12::RenderPlatform*)renderPlatform)->SetImmediateContext((simul::dx12::ImmediateContext*)deviceManager->GetImmediateContext());
+		//((simul::dx12::RenderPlatform*)renderPlatform)->SetImmediateContext((simul::dx12::ImmediateContext*)deviceManager->GetImmediateContext());
 #else
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/HLSL").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
@@ -221,7 +221,7 @@ void InitRenderer(HWND hWnd)
 	clientRenderer->SetServer(server_ip.c_str(), server_discovery_port, clientID);
 
 #if IS_D3D12
-	((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
+	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
 #endif
 
 	dsmi->AddWindow(hWnd);

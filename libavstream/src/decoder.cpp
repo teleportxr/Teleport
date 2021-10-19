@@ -405,11 +405,12 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 #if defined(PLATFORM_WINDOWS)
 		if (m_selectedBackendType == DecoderBackend::Custom)
 		{
-			result = m_backend->decode(buffer + m_firstVCLOffset, dataOffset - m_firstVCLOffset, data, m_frame.dataSize - dataOffset, payloadType, true);
+			size_t frameSize = m_frame.dataSize - m_firstVCLOffset;
+			result = m_backend->decode(buffer + m_firstVCLOffset, frameSize, nullptr, 0, payloadType, true);
 		}
 		else
 		{
-			result = m_backend->decode(buffer, m_frame.dataSize, nullptr, 0, payloadType, isLastPayload);
+			result = m_backend->decode(buffer, m_frame.dataSize, nullptr, 0, payloadType, true);
 		}
 #elif defined(PLATFORM_ANDROID)
 		// Color is contained in first VCL and alpha in the second.
@@ -432,7 +433,7 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 #if defined(PLATFORM_WINDOWS)
 		if (m_selectedBackendType == DecoderBackend::Custom)
 		{
-			result = m_backend->decode(data, dataSize, data, dataSize, payloadType, false);
+			result = m_backend->decode(data, dataSize, nullptr, 0, payloadType, false);
 		}
 #elif defined(PLATFORM_ANDROID)
 		result = m_backend->decode(data, dataSize, data, dataSize, payloadType, false);

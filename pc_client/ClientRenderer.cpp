@@ -1260,7 +1260,6 @@ void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
 	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
-	decoderParams.surfaceFormat = SurfaceFormat;
 
 	avs::DeviceHandle dev;
 	
@@ -1317,7 +1316,7 @@ void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
 
 	
-	CreateTexture(avsTexture, int(stream_width), int(stream_height), decoderParams.surfaceFormat);
+	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormat);
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
 #if IS_D3D12
@@ -1435,7 +1434,6 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
 	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
 	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
-	decoderParams.surfaceFormat = SurfaceFormat;
 
 	avs::DeviceHandle dev;
 #if IS_D3D12
@@ -1476,7 +1474,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 			throw std::runtime_error("Failed to unregister decoder surface");
 		}
 
-		CreateTexture(avsTexture, int(stream_width), int(stream_height), decoderParams.surfaceFormat);
+		CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormat);
 	}
 
 	if (!decoder.reconfigure((int)stream_width, (int)stream_height, decoderParams))

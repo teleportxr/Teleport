@@ -51,6 +51,7 @@ private:
 	std::vector<simul::crossplatform::VideoDecodeArgument> m_arguments;
 	uint32_t m_argCount = 0;
 	simul::crossplatform::RenderPlatform* m_renderPlatform;
+	simul::crossplatform::Texture* m_outputTexture;
 	simul::crossplatform::Texture* m_surfaceTexture;
 };
 
