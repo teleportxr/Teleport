@@ -3,6 +3,7 @@
 
 #include "VideoDecoder.h"
 #include "Common.h"
+#include "Platform/Crossplatform/Macros.h"
 #include "Platform/Crossplatform/Texture.h"
 #if IS_D3D12
 #include "Platform/DirectX12/VideoDecoder.h"
