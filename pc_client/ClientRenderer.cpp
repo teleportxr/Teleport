@@ -1718,7 +1718,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
 
-		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime);
+		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime, time_step);
 
 		//if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
@@ -1743,6 +1743,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		//	clientDeviceState->originPose.position.z = sessionClient.GetOriginPose().position.z;
 		}
 		avs::Result result = pipeline.process();
+		if (result == avs::Result::Network_Disconnection)
+		{
+			sessionClient.Disconnect(0);
+			return;
+		}
 
 		static short c = 0;
 		if (!(c--))

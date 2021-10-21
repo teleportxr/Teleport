@@ -228,9 +228,19 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		return Result::Node_NotConfigured;
 	}
+
+	if (!m_data->bConnected)
+	{
+		int res = srt_connect(m_data->m_socket, (sockaddr*)&m_data->remote_addr, sizeof m_data->remote_addr);
+		if (res)
+		{
+			CHECK_SRT_ERROR(res);
+		}
+	}
+
     int srtrfdslen = 2;
     int srtwfdslen = 2;
-    SRTSOCKET srtrwfds[4] = { SRT_INVALID_SOCK, SRT_INVALID_SOCK , SRT_INVALID_SOCK  };
+    SRTSOCKET srtrwfds[4] = { SRT_INVALID_SOCK, SRT_INVALID_SOCK , SRT_INVALID_SOCK, SRT_INVALID_SOCK };
     int sysrfdslen = 2;
     SYSSOCKET sysrfds[2];
     if (srt_epoll_wait(m_data->pollid,
@@ -255,18 +265,18 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 				case SRTS_BROKEN:
 					AVSLOG(Error) << "SRTS_BROKEN \n";
 					closeSocket();
-					break;
+					return Result::Network_Disconnection;
 				case SRTS_NONEXIST:
 					AVSLOG(Error) << "SRTS_NONEXIST \n";
 					closeSocket();
-					break;
+					return Result::Network_Disconnection;
 				case SRTS_OPENED:
 					AVSLOG(Info) << "SRTS_OPENED \n";
 					break;
 				case SRTS_CLOSED:
 					AVSLOG(Error) << "SRTS_CLOSED \n";
 					closeSocket();
-					break;
+					return Result::Network_Disconnection;
 				case SRTS_CONNECTED:
 					//AVSLOG(Info) << "SRTS_CONNECTED \n";
 					m_data->bConnected=true;
@@ -276,6 +286,14 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			};
 		}
 	}
+	else
+	{
+		closeSocket();
+		return Result::Network_Disconnection;
+	}
+
+	if (!m_data->bConnected)
+		return Result::Node_NotReady;
 
 	{
 		// Counters will be written to on packet processing thread
@@ -301,18 +319,8 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 
 	m_data->m_pipelineTimestamp = timestamp;
 	
-	if(!m_data->bConnected)
-	{
-		int res=srt_connect(m_data->m_socket, (sockaddr*)&m_data->remote_addr, sizeof m_data->remote_addr);
-		if(res)
-		{
-			CHECK_SRT_ERROR(res);
-		}
-	}
-	if(!m_data->bConnected)
-		return Result::Node_NotReady;
 
-	if (!m_data->m_receiveThread.joinable())
+	if (!m_data->m_receiveThread.joinable() && !m_data->m_receivingPackets)
 	{
 		m_data->m_receivingPackets = true;
 		m_data->m_receiveThread = std::thread(&NetworkSource::asyncReceivePackets, this);
@@ -381,11 +389,12 @@ void NetworkSource::asyncReceivePackets()
 	{
 		RawPacket* rawPacket = m_data->m_recvBuffer.reserve_next();
 		int st = srt_recvmsg(m_data->m_socket, (char*)rawPacket, PacketFormat::MaxPacketSize);
+		// 0 means connection has been close and -1 means an error occurred.
 		if (st <= 0)
 		{
 			//std::this_thread::sleep_for(std::chrono::nanoseconds(5)); // 0.000000005s 
 			std::this_thread::yield();
-			continue;
+			break;
 		}
 
 		if (!m_data->m_recvBuffer.full())

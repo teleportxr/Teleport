@@ -71,7 +71,7 @@ public:
 			const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
 			const avs::Pose *controllerPoses, uint64_t originValidCounter,
 			const avs::Pose &originPose, const ControllerState *controllerState,
-			bool requestKeyframe, double time);
+			bool requestKeyframe, double time, double deltaTime);
 
 	bool IsConnected() const;
 
@@ -154,4 +154,5 @@ private:
 	avs::SetupCommand setupCommand;
 	avs::SetupLightingCommand setupLightingCommand;
 	std::string remoteIP;
+	double mTimeSinceLastServerComm = 0;
 };

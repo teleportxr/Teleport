@@ -242,17 +242,15 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 				break;
 			case SRTS_BROKEN:
 				AVSLOG(Error) << "SRTS_BROKEN \n";
+				m_data->closeConnection();
 				break;
 			case SRTS_NONEXIST:
 				AVSLOG(Error) << "SRTS_NONEXIST \n";
+				m_data->closeConnection();
 				break;
 			case SRTS_CLOSED:
 				AVSLOG(Error) << "SRTS_CLOSED \n";
-				{
-					m_data->bConnected = false;
-					srt_close(m_data->m_remote_socket);
-					m_data->m_remote_socket = 0;
-				}
+				m_data->closeConnection();
 				break;
 			case SRTS_CONNECTED:
 				AVSLOG(Info) << "SRTS_CONNECTED \n";
@@ -262,30 +260,18 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 			};
 		}
 	}
-	if (!m_data->m_remote_socket)
-		return Result::Node_NotReady;
-	//CHECK_SRT_ERROR(srt_connect(m_data->m_socket, (sockaddr*)&m_data->remote_addr, sizeof m_data->remote_addr));
+	if (!m_data->m_remote_socket || !m_data->bConnected)
+		return Result::Network_NoConnection;
 
-	//CHECK_SRT_ERROR( srt_rendezvous(m_data->m_socket, (sockaddr*)&local_bind_addr, sizeof local_bind_addr,                                   (sockaddr*)&remote_addr, sizeof remote_addr));
-
-	if (!m_data->bConnected)
-		return Result::Node_NotReady;
-
-	if (!m_data->m_remote_socket)
-		return Result::Node_NotReady;
 	SRT_SOCKSTATUS stat = srt_getsockstate(m_data->m_remote_socket);
 	if (stat != SRT_SOCKSTATUS::SRTS_CONNECTED)
 	{
 		if (stat == SRT_SOCKSTATUS::SRTS_CLOSED)
 		{
-			m_data->bConnected = false;
-			srt_close(m_data->m_remote_socket);
-			m_data->m_remote_socket = 0;
+			m_data->closeConnection();
 		}
-		return Result::Node_NotReady;
+		return Result::Network_Disconnection;
 	}
-	if (!m_data->bConnected)
-		return Result::Node_NotReady;
 
 	const size_t numInputs = getNumInputSlots();
 	if (numInputs == 0 || !m_data->m_EFPSender)
@@ -496,16 +482,23 @@ void NetworkSink::Private::sendData(const std::vector<uint8_t> &subPacket)
 	const char* buffer = (const char*)subPacket.data();
 	const size_t bufferSize = subPacket.size();
 
-	try
+	SRT_MSGCTRL mctrl;
+	srt_msgctrl_init(&mctrl);
+	int r = srt_sendmsg2(m_remote_socket, buffer, bufferSize, &mctrl);
+	if (r < 0)
 	{
-		SRT_MSGCTRL mctrl;
-		srt_msgctrl_init(&mctrl);
-		srt_sendmsg2(m_remote_socket, buffer, bufferSize, &mctrl);
-		m_packetsSent++;
+		closeConnection();
 	}
-	catch (const std::exception& e)
+	m_packetsSent++;
+}
+
+void NetworkSink::Private::closeConnection()
+{
+	if (bConnected)
 	{
-		AVSLOG(Error) << "NetworkSink: Send failed: " << e.what() << "\n";
+		bConnected = false;
+		srt_close(m_remote_socket);
+		m_remote_socket = 0;
 	}
 }
 

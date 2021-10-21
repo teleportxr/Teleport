@@ -85,6 +85,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 	mClientHost = nullptr;
 	mServerPeer = nullptr;
 	remoteIP="";
+	mTimeSinceLastServerComm = 0;
 	return false;
 }
 
@@ -164,7 +165,8 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose &originPose
 	,const ControllerState* controllerStates
 	,bool requestKeyframe
-	,double t)
+	,double t
+	,double deltaTime)
 {
 	time = t;
 
@@ -197,16 +199,32 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 				case ENET_EVENT_TYPE_NONE:
 					return;
 				case ENET_EVENT_TYPE_CONNECT:
+					mTimeSinceLastServerComm = 0;
 					return;
 				case ENET_EVENT_TYPE_RECEIVE:
+					mTimeSinceLastServerComm = 0;
 					DispatchEvent(event);
 					break;
 				case ENET_EVENT_TYPE_DISCONNECT:
+					mTimeSinceLastServerComm = 0;
 					Disconnect(0);
 					return;
 			}
 		}
 	}
+
+	mTimeSinceLastServerComm += deltaTime;
+
+#if 0
+	// Handle cases where we set a breakpoint and enet doesn't receive disconnect message
+	// This only works with geometry streaming on. Otherwise there are not regular http messages received. 
+	if (mTimeSinceLastServerComm > (setupCommand.idle_connection_timeout * 0.001) + 2)
+	{
+		Disconnect(0);
+		return;
+	}
+#endif
+
 	mPrevControllerState[0]= controllerStates[0];
 	mPrevControllerState[1]= controllerStates[1];
 
