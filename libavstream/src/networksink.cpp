@@ -128,6 +128,8 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	m_data->m_statsTimeElapsed = 0;
 	m_data->m_minBandwidthUsed = UINT32_MAX;
 
+	setProcessingEnabled(true);
+
 	return Result::OK;
 }
 
@@ -183,6 +185,12 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		return Result::Node_NotConfigured;
 	}
 
+	// Don't continue if srt already had an error while connected to prevent CUDT exception spamming.
+	if (!m_data->m_processingEnabled)
+	{
+		return Result::Network_Disconnection;
+	}
+
 	int srtrfdslen = 2;
 	int srtwfdslen = 2;
 	SRTSOCKET srtrwfds[4] = { SRT_INVALID_SOCK, SRT_INVALID_SOCK, SRT_INVALID_SOCK, SRT_INVALID_SOCK };
@@ -212,6 +220,11 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 					{
 						m_data->m_remote_socket = rem;
 						m_data->bConnected = true;
+					}
+					else
+					{
+						setProcessingEnabled(false);
+						return Result::Network_Disconnection;
 					}
 				}
 				break;
@@ -260,6 +273,13 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 			};
 		}
 	}
+	else if (m_data->bConnected)
+	{
+		m_data->closeConnection();
+		setProcessingEnabled(false);
+		return Result::Network_Disconnection;
+	}
+
 	if (!m_data->m_remote_socket || !m_data->bConnected)
 		return Result::Network_NoConnection;
 
@@ -366,6 +386,17 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 
 	return Result::OK;
 }
+
+void NetworkSink::setProcessingEnabled(bool enable)
+{
+	m_data->m_processingEnabled = enable;
+}
+
+bool NetworkSink::isProcessingEnabled() const
+{
+	return m_data->m_processingEnabled;
+}
+
 
 void NetworkSink::Private::updateCounters(uint64_t timestamp, uint32_t deltaTime)
 {
@@ -488,6 +519,8 @@ void NetworkSink::Private::sendData(const std::vector<uint8_t> &subPacket)
 	if (r < 0)
 	{
 		closeConnection();
+		q_ptr()->setProcessingEnabled(false);
+		return;
 	}
 	m_packetsSent++;
 }

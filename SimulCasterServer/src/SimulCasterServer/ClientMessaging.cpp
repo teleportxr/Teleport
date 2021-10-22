@@ -169,6 +169,15 @@ namespace teleport
 		if (!receivedHandshake)
 			return;
 
+		
+		if (host && peer && casterContext->NetworkPipeline && !casterContext->NetworkPipeline->isProcessingEnabled())
+		{
+			TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << std::endl;
+			Disconnect();
+			return;
+		}
+		
+
 		static float timeSinceLastGeometryStream = 0;
 		timeSinceLastGeometryStream += deltaTime;
 
@@ -262,7 +271,7 @@ namespace teleport
 		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
 		if (host && peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
 		{
-			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting" << std::endl;
+			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting." << std::endl;
 			Disconnect();
 		}
 

@@ -209,4 +209,17 @@ namespace teleport
 		}
 		return avs::Result::OK;
 	}
+
+	void NetworkPipeline::setProcessingEnabled(bool enable)
+	{
+		if (mNetworkSink)
+			mNetworkSink->setProcessingEnabled(enable);
+	}
+
+	bool NetworkPipeline::isProcessingEnabled() const
+	{
+		if (mNetworkSink)
+			return mNetworkSink->isProcessingEnabled();
+		return false;
+	}
 }

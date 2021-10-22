@@ -122,6 +122,8 @@ namespace avs
 		void setDebugNetworkPackets(bool);
 		void setDoChecksums(bool);
 		void setEstimatedDecodingFrequency(uint8_t estimatedDecodingFrequency);	
+		void setProcessingEnabled(bool enable);
+		bool isProcessingEnabled() const;
 	};
 
 } // avs

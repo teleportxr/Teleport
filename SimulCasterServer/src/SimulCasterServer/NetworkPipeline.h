@@ -28,6 +28,10 @@ namespace teleport
 
 		avs::Result getCounters(avs::NetworkSinkCounters& counters) const;
 
+		void setProcessingEnabled(bool enable);
+
+		bool isProcessingEnabled() const;
+
 	private:
 		const CasterSettings* mSettings;
 

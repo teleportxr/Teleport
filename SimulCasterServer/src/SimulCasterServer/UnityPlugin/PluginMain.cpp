@@ -853,12 +853,12 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 
 		if(clientData.clientMessaging.hasPeer())
 		{
-			clientData.clientMessaging.tick(deltaTime);
-
-			if(clientData.isStreaming == false)
+			if (clientData.isStreaming == false)
 			{
 				Client_StartStreaming(clientPair.first);
 			}
+
+			clientData.clientMessaging.tick(deltaTime);
 		}
 	}
 

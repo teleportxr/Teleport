@@ -52,6 +52,7 @@ namespace avs
 		uint32_t debugStream;
 		bool doChecksums;
 		bool mDebugNetworkPackets=false;
+		std::atomic_bool m_processingEnabled = true;
 		uint64_t throttleRate; //Unused
 		uint64_t socketBufferSize; //Amount of bytes the client has in their socket's buffer to receive data.
 		uint8_t estimatedDecodingFrequency; //Estimated times per second the client will decode the packets sent to them.
