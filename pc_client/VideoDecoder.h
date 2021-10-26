@@ -35,7 +35,13 @@ public:
 	/* End DecoderBackendInterface */
 
 private:
+	void updatePicParams(const void* buffer, size_t bufferSizeInBytes);
 
+	struct ParameterSet
+	{
+		size_t size = 0;
+		void* data = nullptr;
+	};
 	avs::DeviceType m_deviceType = avs::DeviceType::Invalid;
 
 	avs::DecoderParams m_params = {};
@@ -46,10 +52,13 @@ private:
 
 	std::unique_ptr<simul::crossplatform::VideoDecoder> m_decoder;
 
-	static constexpr uint32_t MAX_ARGS = 10;
-
-	std::vector<simul::crossplatform::VideoDecodeArgument> m_arguments;
-	uint32_t m_argCount = 0;
+	//static constexpr uint32_t MAX_ARGS = 10;
+	static constexpr uint32_t MAX_PARAM_SETS = 4;
+	uint32_t m_numExpectedParamSets = 0;
+	ParameterSet m_paramSets[MAX_PARAM_SETS];
+	uint32_t m_numParamSets = 0;
+	simul::crossplatform::VideoDecodeArgument m_picParams;
+	bool m_newArgs = true;
 	simul::crossplatform::RenderPlatform* m_renderPlatform;
 	simul::crossplatform::Texture* m_outputTexture;
 	simul::crossplatform::Texture* m_surfaceTexture;

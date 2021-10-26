@@ -47,9 +47,11 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	{
 	case VideoCodec::H264:
 		decParams.codec = cp::VideoCodec::H264;
+		m_numExpectedParamSets = 2;
 		break;
 	case VideoCodec::HEVC:
 		decParams.codec = cp::VideoCodec::HEVC;
+		m_numExpectedParamSets = params.useAlphaLayerDecoding ? 4 : 3;
 		break;
 	default:
 		SCR_CERR << "VideoDecoder: Unsupported video codec type selected" << std::endl;
@@ -86,8 +88,10 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	m_frameWidth = frameWidth;
 	m_frameHeight = frameHeight;
 
-	m_arguments.resize(MAX_ARGS);
-	m_argCount = 0;
+	m_picParams = {};
+
+	m_numParamSets = 0;
+	m_newArgs = true;
 
 	return Result::OK;
 }
@@ -121,6 +125,7 @@ Result VideoDecoder::shutdown()
 	}
 
 	SAFE_DELETE(m_outputTexture);
+	SAFE_DELETE(m_picParams.data);
 
 	return Result::OK;
 }
@@ -174,11 +179,11 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 	case VideoPayloadType::SPS:
 	case VideoPayloadType::VPS:
 	case VideoPayloadType::ALE:
-		m_argCount %= MAX_ARGS;
-		m_arguments[m_argCount].size = bufferSizeInBytes;
-		m_arguments[m_argCount].data = const_cast<void*>(buffer);
-		m_arguments[m_argCount].type = cp::VideoDecodeArgumentType::PictureParameters;
-		m_argCount++;
+		if (m_numParamSets == m_numExpectedParamSets)
+		{
+			return Result::DecoderBackend_InvalidPayload;
+		}
+		updatePicParams(buffer, bufferSizeInBytes);
 		return Result::OK;
 	case VideoPayloadType::FirstVCL:
 	case VideoPayloadType::VCL:
@@ -187,13 +192,14 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 		return Result::DecoderBackend_InvalidPayload;
 	}
 
-	if (DEC_FAILED(m_decoder->Decode(m_outputTexture, buffer, bufferSizeInBytes, m_arguments.data(), m_argCount)))
+	if (DEC_FAILED(m_decoder->Decode(m_outputTexture, buffer, bufferSizeInBytes, &m_picParams, 1)))
 	{
 		SCR_CERR << "VideoDecoder: Error occurred while trying to decode the frame.";
 		return Result::DecoderBackend_DecodeFailed;
 	}
 
-	m_argCount = 0;
+	// Allow arguments to be overwitten for the next decode.
+	m_newArgs = true;
 
 	return Result::DecoderBackend_ReadyToDisplay;
 }
@@ -201,6 +207,39 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 Result VideoDecoder::display(bool showAlphaAsColor)
 {
 	return Result::OK;
+}
+
+void VideoDecoder::updatePicParams(const void* buffer, size_t bufferSizeInBytes)
+{
+	if (m_newArgs)
+	{
+		SAFE_DELETE_ARRAY(m_picParams.data);
+		m_picParams.size = 0;
+		m_numParamSets = 0;
+		m_newArgs = false;
+	}
+
+	m_paramSets[m_numParamSets].size = bufferSizeInBytes;
+	m_paramSets[m_numParamSets].data = const_cast<void*>(buffer);
+
+	m_picParams.size += m_paramSets[m_numParamSets].size;
+
+	m_numParamSets++;
+
+	if (m_numParamSets < m_numExpectedParamSets)
+	{
+		return;
+	}
+
+	m_picParams.data = static_cast<void*>(new uint8_t[m_picParams.size]);
+
+	uint8_t* data = static_cast<uint8_t*>(m_picParams.data);
+	size_t index = 0;
+	for (int i = 0; i < m_numExpectedParamSets; ++i)
+	{
+		memcpy(data + index, m_paramSets[i].data, m_paramSets[i].size);
+		index += m_paramSets[i].size;
+	}
 }
 
 	
