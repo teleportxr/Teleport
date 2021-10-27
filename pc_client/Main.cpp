@@ -30,9 +30,9 @@ simul::dx12::RenderPlatform renderPlatformImpl;
 simul::dx12::DeviceManager displayManagerImpl;
 #else
 #include "Platform/DirectX11/RenderPlatform.h"
-#include "Platform/DirectX11/Direct3D11Manager.h"
+#include "Platform/DirectX11/DeviceManager.h"
 simul::dx11::RenderPlatform renderPlatformImpl;
-simul::dx11::Direct3D11Manager displayManagerImpl;
+simul::dx11::DeviceManager displayManagerImpl;
 #endif
 
 ClientRenderer *clientRenderer=nullptr;
@@ -307,7 +307,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				 */
 				clientRenderer->Update();
 				static double fTime=0.0;
-				static simul::core::Timer t;
+				static platform::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);

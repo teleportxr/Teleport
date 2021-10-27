@@ -21,7 +21,7 @@ long PC_MemoryUtil::getAvailableMemory() const
 
     GlobalMemoryStatusEx(&statex);
 
-    return statex.ullAvailPhys;
+    return static_cast<long>(statex.ullAvailPhys);
 }
 
 long PC_MemoryUtil::getTotalMemory() const
@@ -32,7 +32,7 @@ long PC_MemoryUtil::getTotalMemory() const
 
     GlobalMemoryStatusEx(&statex);
 
-    return statex.ullTotalPhys;
+    return static_cast<long>(statex.ullTotalPhys);
 }
 
 void PC_MemoryUtil::printMemoryStats() const

@@ -1253,9 +1253,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					continue;
 				}
 				BasisValidate(basis_transcoder, fileinfo,transcoding.data);
-				if (basis_transcoder.start_transcoding(transcoding.data.data(), transcoding.data.size()))
+				if (basis_transcoder.start_transcoding(transcoding.data.data(), (uint32_t)transcoding.data.size()))
 				{
-					transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), transcoding.data.size(), 0);
+					transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
 					transcoding.scrTexture.mipSizes.reserve(transcoding.scrTexture.mipCount);
 					transcoding.scrTexture.mips.reserve(transcoding.scrTexture.mipCount);
 					//basist::basis_tex_format format=basis_transcoder.get_tex_format(transcoding.data, transcoding.dataSize);
@@ -1272,11 +1272,11 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					{
 						uint32_t basisWidth, basisHeight, basisBlocks;
 
-						basis_transcoder.get_image_level_desc(transcoding.data.data(), transcoding.data.size(), 0, mipIndex, basisWidth, basisHeight, basisBlocks);
+						basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0, mipIndex, basisWidth, basisHeight, basisBlocks);
 						uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
 
 						std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
-						if (basis_transcoder.transcode_image_level(transcoding.data.data(), transcoding.data.size(), 0, mipIndex, outData.data(), basisBlocks, basis_transcoder_textureFormat))
+						if (basis_transcoder.transcode_image_level(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0, mipIndex, outData.data(), basisBlocks, basis_transcoder_textureFormat))
 						{
 							transcoding.scrTexture.mipSizes.push_back(outDataSize);
 							transcoding.scrTexture.mips.emplace_back(std::move(outData));

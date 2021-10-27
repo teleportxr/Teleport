@@ -264,7 +264,7 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 	//cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 }
 
-base::DefaultProfiler cpuProfiler;
+platform::core::DefaultProfiler cpuProfiler;
 
 void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 {
@@ -295,7 +295,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 {
 	simul::crossplatform::GraphicsDeviceContext	deviceContext;
 	deviceContext.setDefaultRenderTargets(renderTexture,nullptr,0,0,w,h);
-	static simul::core::Timer timer;
+	static platform::core::Timer timer;
 	static float last_t = 0.0f;
 	timer.UpdateTime();
 	if (last_t != 0.0f && timer.TimeSum != last_t)
@@ -310,7 +310,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 
 	simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
-	simul::base::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
+	platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	cpuProfiler.SetMaxLevel(5);
 	cpuProfiler.StartFrame();
@@ -600,11 +600,11 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 	const std::shared_ptr<scr::Mesh>& mesh = node->GetMesh();
 	if(mesh)
 	{
-		meshInfoString = simul::base::QuickFormat("mesh: %s (0x%08x)", mesh->GetMeshCreateInfo().name.c_str(), &mesh);
+		meshInfoString = platform::core::QuickFormat("mesh: %s (0x%08x)", mesh->GetMeshCreateInfo().name.c_str(), &mesh);
 	}
 	avs::vec3 pos=node->GetGlobalPosition();
 	//Print details on node to screen.
-	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("%s%d %s (%4.4f,%4.4f,%4.4f) %s", indent_txt, node->id, node->name.c_str()
+	renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("%s%d %s (%4.4f,%4.4f,%4.4f) %s", indent_txt, node->id, node->name.c_str()
 		,pos.x,pos.y,pos.z
 		, meshInfoString.c_str()));
 
@@ -627,45 +627,45 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
-	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? simul::base::QuickFormat("Client %d connected to: %s, port %d"
+	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
 		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
-		(canConnect?simul::base::QuickFormat("Not connected. Discovering on port %d", TELEPORT_SERVER_DISCOVERY_PORT):"Offline"),white);
-	renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Framerate: %4.4f", framerate));
+		(canConnect?platform::core::QuickFormat("Not connected. Discovering on port %d", TELEPORT_SERVER_DISCOVERY_PORT):"Offline"),white);
+	renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Framerate: %4.4f", framerate));
 
 	if(show_osd== NETWORK_OSD)
 	{
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
 	}
 	else if(show_osd== CAMERA_OSD)
 	{
 		vec3 offset=camera.GetPosition();
-		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(simul::base::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
-		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat("Offset: %4.4f %4.4f %4.4f", clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z),white);
-		renderPlatform->LinePrint(deviceContext,  simul::base::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y, clientDeviceState->headPose.position.z),white);
+		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
+		renderPlatform->LinePrint(deviceContext,  platform::core::QuickFormat("Offset: %4.4f %4.4f %4.4f", clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z),white);
+		renderPlatform->LinePrint(deviceContext,  platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y, clientDeviceState->headPose.position.z),white);
 		if (videoPosDecoded)
 		{
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
+			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
 		}	
 		else
 		{
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" Video: -"), white);
+			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat(" Video: -"), white);
 		}
 	}
 	else if(show_osd==GEOMETRY_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
 
 		static int nodeLimit = 5;
 		int linesRemaining = nodeLimit;
@@ -701,19 +701,19 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			ListNode(deviceContext, rightHand, 1, linesRemaining);
 		}*/
 
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
 																									resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
 /*
 		auto& cachedMaterials = resourceManagers.mMaterialManager.GetCache(cacheLock);
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
 		static int matLimit = 5;
 		linesRemaining = matLimit;
 		for(auto m: cachedMaterials)
 		{
 			auto &M=m.second;
 			const auto &mat=M.resource->GetMaterialCreateInfo();
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("  %s", mat.name.c_str()),white,background);
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    emissive: %3.3f %3.3f %3.3f", mat.emissive.textureOutputScalar.x, mat.emissive.textureOutputScalar.y, mat.emissive.textureOutputScalar.z),white, background);
+			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("  %s", mat.name.c_str()),white,background);
+			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("    emissive: %3.3f %3.3f %3.3f", mat.emissive.textureOutputScalar.x, mat.emissive.textureOutputScalar.y, mat.emissive.textureOutputScalar.z),white, background);
 			linesRemaining--;
 			if(!linesRemaining)
 				break;
@@ -734,16 +734,16 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					
 					light_colour.w=1.0f;
 					if(lcr.type==scr::Light::Type::POINT)
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_direction.x,light_direction.y,light_direction.z),light_colour,background);
+						renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_direction.x,light_direction.y,light_direction.z),light_colour,background);
 					else
-						renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_position.x,light_position.y,light_position.z,lcr.lightRadius),light_colour,background);
+						renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_position.x,light_position.y,light_position.z,lcr.lightRadius),light_colour,background);
 				}
 			}
 			if(j<videoTagDataCubeArray[0].lights.size())
 			{
 				auto &l=videoTagDataCubeArray[0].lights[j];
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
-				renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
+				renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("        shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
+				renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("        z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
 			}
 			j++;
 		}*/
@@ -751,11 +751,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		auto &missing=resourceCreator.GetMissingResources();
 		if(missing.size())
 		{
-			renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("Missing Resources"));
+			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Missing Resources"));
 			for(const auto& missingPair : missing)
 			{
 				const ResourceCreator::MissingResource& missingResource = missingPair.second;
-				std::string txt= simul::base::QuickFormat("\t%s %d from ", missingResource.resourceType, missingResource.id);
+				std::string txt= platform::core::QuickFormat("\t%s %d from ", missingResource.resourceType, missingResource.id);
 				for(auto u:missingResource.waitingResources)
 				{
 					auto type= u.get()->type;
@@ -764,7 +764,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					{
 						txt+="Node ";
 					}
-					txt+=simul::base::QuickFormat("%d, ",(uint64_t)id);
+					txt+=platform::core::QuickFormat("%d, ",(uint64_t)id);
 				}
 				renderPlatform->LinePrint(deviceContext, txt.c_str());
 			}
@@ -779,7 +779,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		for(int i=0;i<videoTagDataCubeArray.size();i++)
 		{
 			auto &tag=videoTagDataCubeArray[i];
-			renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%d lights",tag.coreData.lightCount));
+			renderPlatform->LinePrint(deviceContext,platform::core::QuickFormat("%d lights",tag.coreData.lightCount));
 
 			auto *gpu_tag_buffer=videoTagDataCube;
 			if(gpu_tag_buffer)
@@ -797,11 +797,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					name=lcr.name.c_str();
 				}
 				if(l.lightType==scr::LightType::Directional)
-					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
+					renderPlatform->LinePrint(deviceContext,platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
 						,lightTag.direction.x,lightTag.direction.y,lightTag.direction.z
 						,l.color.x,l.color.y,l.color.z),clr);
 				else
-					renderPlatform->LinePrint(deviceContext,simul::base::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
+					renderPlatform->LinePrint(deviceContext,platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
 						,lightTag.position.x
 						,lightTag.position.y
 						,lightTag.position.z
@@ -813,27 +813,27 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	else if(show_osd== CONTROLLER_OSD)
 	{
 		renderPlatform->LinePrint(deviceContext, "CONTROLLERS\n");
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     W %d A %d S %d D %d",keydown['w'],keydown['a'],keydown['s'],keydown['d']));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("     W %d A %d S %d D %d",keydown['w'],keydown['a'],keydown['s'],keydown['d']));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
 		
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
 
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
 
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("      angle: %3.3f", controllerSim.angle));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\n   joystick: %3.3f %3.3f", controllerStates[0].mJoystickAxisX, controllerStates[0].mJoystickAxisY));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("           : %3.3f %3.3f", controllerStates[1].mJoystickAxisX, controllerStates[1].mJoystickAxisY));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("      angle: %3.3f", controllerSim.angle));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("\n   joystick: %3.3f %3.3f", controllerStates[0].mJoystickAxisX, controllerStates[0].mJoystickAxisY));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("           : %3.3f %3.3f", controllerStates[1].mJoystickAxisX, controllerStates[1].mJoystickAxisY));
 
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("\n   trigger: %3.3f %3.3f", controllerStates[0].triggerBack, controllerStates[0].triggerGrip));
-		renderPlatform->LinePrint(deviceContext, simul::base::QuickFormat("            : %3.3f %3.3f", controllerStates[1].triggerBack, controllerStates[1].triggerGrip));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("\n   trigger: %3.3f %3.3f", controllerStates[0].triggerBack, controllerStates[0].triggerGrip));
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("            : %3.3f %3.3f", controllerStates[1].triggerBack, controllerStates[1].triggerGrip));
 	}
 
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
@@ -1107,7 +1107,7 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 					const auto& a = animationState->getAnimation();
 					if (a.get())
 					{
-						sprintf(txt, "%d %s %3.3f\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
+						sprintf_s(txt, "%llu %s %3.3f\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
 						str += txt;
 					}
 				}
@@ -1117,14 +1117,14 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 		else if (mesh)
 		{
 			static char txt[250];
-			sprintf(txt, "%d %s: %s", node->id,node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
+			sprintf_s(txt, "%llu %s: %s", node->id,node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
 			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), txt, (const float*)(&white), nullptr, 0, 0, false);
 		}
 		else
 		{
 			avs::vec4 yellow(1.0f, 1.0f, 0.0f, 1.0f); 
-				static char txt[250];
-			sprintf(txt, "%d %s", node->id, node->name.c_str());
+			static char txt[250];
+			sprintf_s(txt, "%llu %s", node->id, node->name.c_str());
 			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), txt, (const float*)(&yellow), nullptr, 0, 0, false);
 		}
 	}
@@ -1637,7 +1637,7 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 void ClientRenderer::OnFrameMove(double fTime,float time_step)
 {
 #if IS_D3D12
-	//simul::dx12::RenderPlatform* dx12RenderPlatform = (simul::dx12::RenderPlatform*)renderPlatform;
+	//platform::dx12::RenderPlatform* dx12RenderPlatform = (platform::dx12::RenderPlatform*)renderPlatform;
 	// Set command list to the recording state if it's not in it already.
 	//dx12RenderPlatform->ResetImmediateCommandList();
 #endif

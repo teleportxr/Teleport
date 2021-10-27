@@ -19,3 +19,6 @@
 [submodule "thirdparty/openvr"]
 	path = thirdparty/openvr
 	url = git@github.com:ValveSoftware/openvr.git
+[submodule "thirdparty/curl"]
+	path = thirdparty/curl
+	url = git@github.com:simul/curl.git

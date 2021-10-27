@@ -274,7 +274,12 @@ if(LIBAV_USE_EFP)
 	set(efp_include_paths ${efp_SOURCE_DIR} ${efp_BINARY_DIR})
 	#message(WARNING efp_include_paths ${efp_include_paths})
 endif()
-target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} include ${PTHREAD_INCLUDE_DIR} PUBLIC include/libavstream)
+
+if(NOT REMOTEPLAY_SERVER)
+	set(curl_include_paths "${CURL_SOURCE_DIR}/include" ${CURL_BINARY_DIR})
+	set(curl_libs libcurl)
+endif()
+target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} ${curl_include_paths} include ${PTHREAD_INCLUDE_DIR} PUBLIC include/libavstream)
 target_compile_features(libavstream PRIVATE cxx_std_17)
 
 if(LIBAV_BUILD_SHARED_LIBS)
@@ -303,7 +308,7 @@ if(LIBAV_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
 
-target_link_libraries(libavstream asio nv srt_static efp)
+target_link_libraries(libavstream asio nv srt_static efp ${curl_libs})
 
 # Build CUDA kernels on PC platforms only
 if(NOT ANDROID)
