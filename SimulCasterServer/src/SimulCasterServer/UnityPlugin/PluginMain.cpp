@@ -331,6 +331,7 @@ private:
 struct InitialiseState
 {
 	char* clientIP;
+	char* httpMountDirectory;
 	uint32_t DISCOVERY_PORT = 10607;
 	uint32_t SERVICE_PORT = 10500;
 
@@ -531,7 +532,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 	
 	ClientMessaging::startAsyncNetworkDataProcessing();
 
-	return discoveryService->initialize(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT, std::string(initialiseState->clientIP));
+	discoveryService->initialize(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT, std::string(initialiseState->clientIP));
 }
 
 TELEPORT_EXPORT void Shutdown()

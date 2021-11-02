@@ -39,6 +39,10 @@ set(src
 	src/SimulCasterServer/AudioEncoder.h
 	src/SimulCasterServer/AudioEncodePipeline.cpp
 	src/SimulCasterServer/AudioEncodePipeline.h	
+	src/SimulCasterServer/HTTPService.cpp
+	src/SimulCasterServer/HTTPService.h 
+	src/SimulCasterServer/DefaultHTTPService.cpp
+	src/SimulCasterServer/DefaultHTTPService.h 
 )
 
 #Whether to build dynamic runtime libraries.
@@ -86,6 +90,11 @@ target_include_directories(SimulCasterServer PUBLIC ../thirdparty/enet/include)
 #Include draco
 target_include_directories(SimulCasterServer PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(SimulCasterServer PUBLIC ../thirdparty/draco/src)
+#include OpenSSL
+target_include_directories(SimulCasterServer PUBLIC ../thirdparty/openssl/include)
+#Include cpp-httplib
+target_include_directories(SimulCasterServer PUBLIC ../thirdparty/cpp-httplib)
+
 
 #Include CUDA library location.
 target_link_directories(SimulCasterServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
