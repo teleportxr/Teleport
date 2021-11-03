@@ -140,6 +140,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		// Check if data was lost or corrupted
 		if (d().m_frame.broken)
 		{
+			AVSLOG(Warning) << "GeometryDecoder: Frame of size "<< d().m_frame.dataSize<<" was broken.\n";
 			continue;
 		}
 

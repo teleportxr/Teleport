@@ -241,13 +241,13 @@ endif()
 # CUDA kernels
 add_custom_command(
 	OUTPUT enc_nvidia.cubin enc_nvidia.cubin.inl
-	COMMAND ${CMAKE_CUDA_COMPILER} -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/encoders/enc_nvidia.cu -o enc_nvidia.cubin
+	COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/encoders/enc_nvidia.cu -o enc_nvidia.cubin
 	COMMAND ${xxd} -i enc_nvidia.cubin enc_nvidia.cubin.inl
 	DEPENDS src/encoders/enc_nvidia.cu
 )
 add_custom_command(
 	OUTPUT dec_nvidia.cubin dec_nvidia.cubin.inl
-	COMMAND ${CMAKE_CUDA_COMPILER} -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders/dec_nvidia.cu -o dec_nvidia.cubin
+	COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders/dec_nvidia.cu -o dec_nvidia.cubin
 	COMMAND ${xxd} -i dec_nvidia.cubin dec_nvidia.cubin.inl
 	DEPENDS src/decoders/dec_nvidia.cu
 )

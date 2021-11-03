@@ -293,8 +293,6 @@ void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 
 void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int w, int h, long long frame, void* context_allocator)
 {
-	simul::crossplatform::GraphicsDeviceContext	deviceContext;
-	deviceContext.setDefaultRenderTargets(renderTexture,nullptr,0,0,w,h);
 	static platform::core::Timer timer;
 	static float last_t = 0.0f;
 	timer.UpdateTime();
@@ -303,6 +301,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		framerate = 1000.0f / (timer.TimeSum - last_t);
 	}
 	last_t = timer.TimeSum;
+	simul::crossplatform::GraphicsDeviceContext	deviceContext;
+	deviceContext.setDefaultRenderTargets(renderTexture, nullptr, 0, 0, w, h);
 	deviceContext.frame_number = frame;
 	deviceContext.platform_context = context;
 	deviceContext.renderPlatform = renderPlatform;
@@ -319,10 +319,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
 	hdrFramebuffer->Activate(deviceContext);
-	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.0f, 1.0f, 0.f, reverseDepth ? 0.f : 1.f);
-
-	pbrEffect->UnbindTextures(deviceContext);
-
+	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.5f, 1.0f, 0.f, reverseDepth ? 0.f : 1.f);
 	// 
 	vec3 true_pos = camera.GetPosition();
 	if (render_from_video_centre)
@@ -331,27 +328,92 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		vec3 pos = videoPosDecoded ? videoPos : vec3(0, 0, 0);
 		camera.SetPosition(pos);
 	}
+	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
+	float aspect = (float)viewport.w / (float)viewport.h;
+	if (reverseDepth)
+		deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
+	else
+		deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
+	simul::geometry::SimulOrientation globalOrientation;
+	// global pos/orientation:
+	globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.position);
+
+	simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(-1.f, 0.0f, 0.0f));
+	simul::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.orientation;
+
+	auto q_rel = q1 / q0;
+	globalOrientation.SetOrientation(q_rel);
+	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
+
+	// MUST call init each frame.
+	deviceContext.viewStruct.Init();
+	RenderView(deviceContext);
+	vec4 white(1.f, 1.f, 1.f, 1.f);
+	if (render_from_video_centre)
+	{
+		camera.SetPosition(true_pos);
+		renderPlatform->Print(deviceContext, viewport.w - 16, viewport.h - 16, "C", white);
+	}
+	// We must deactivate the depth buffer here, in order to use it as a texture:
+	hdrFramebuffer->DeactivateDepth(deviceContext);
+	if (show_video)
+	{
+		AVSTextureHandle th = avsTexture;
+		AVSTexture& tx = *th;
+		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+		int W = hdrFramebuffer->GetWidth();
+		int H = hdrFramebuffer->GetHeight();
+		renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
+	}
+	static int lod = 0;
+	static char tt = 0;
+	tt--;
+	if (!tt)
+		lod++;
+	lod = lod % 8;
+	renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, -0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+	renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, 0.0f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+	if (show_textures)
+	{
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		auto& textures = resourceManagers.mTextureManager.GetCache(cacheLock);
+		static int tw = 128;
+		int x = 0, y = 0;//hdrFramebuffer->GetHeight()-tw*2;
+		for (auto t : textures)
+		{
+			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
+			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
+			x += tw;
+			if (x > hdrFramebuffer->GetWidth() - tw)
+			{
+				x = 0;
+				y += tw;
+			}
+		}
+		y += tw;
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyWhite.get())))->GetSimulTexture());
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyNormal.get())))->GetSimulTexture());
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyCombined.get())))->GetSimulTexture());
+		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyBlack.get())))->GetSimulTexture());
+	}
+
+	hdrFramebuffer->Deactivate(deviceContext);
+	hDRRenderer->Render(deviceContext, hdrFramebuffer->GetTexture(), 1.0f, gamma);
+
+	if (show_osd)
+	{
+		DrawOSD(deviceContext);
+	}
+}
+
+void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &deviceContext)
+{
+	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
+	pbrEffect->UnbindTextures(deviceContext);
+
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	//vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	{
-		simul::geometry::SimulOrientation globalOrientation;
-		// global pos/orientation:
-		globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.position);
-	
-		simul::math::Quaternion q0(3.1415926536f/2.0f, simul::math::Vector3(-1.f, 0.0f, 0.0f));
-		simul::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.orientation;
-	
-		auto q_rel=q1/q0;
-		globalOrientation.SetOrientation(q_rel);
-		deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
-	
-		float aspect = (float)viewport.w / (float)viewport.h;
-		if (reverseDepth)
-			deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
-		else
-			deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
-		// MUST call init each frame.
-		deviceContext.viewStruct.Init();
 		AVSTextureHandle th = avsTexture;
 		AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
@@ -404,62 +466,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 			RenderLocalNodes(deviceContext);
 
-			// We must deactivate the depth buffer here, in order to use it as a texture:
-			hdrFramebuffer->DeactivateDepth(deviceContext);
-			if (show_video)
-			{
-				int W = hdrFramebuffer->GetWidth();
-				int H = hdrFramebuffer->GetHeight();
-				renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
-			}
-			static int lod=0;
-			static char tt=0;
-			tt--;
-			if(!tt)
-				lod++;
-			lod=lod%8;
-			renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
-			renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
 		}
-	}
-	vec4 white(1.f, 1.f, 1.f, 1.f);
-	if (render_from_video_centre)
-	{
-		camera.SetPosition(true_pos);
-		renderPlatform->Print(deviceContext, w-16, h-16, "C", white);
-	}
-	if(show_textures)
-	{
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& textures = resourceManagers.mTextureManager.GetCache(cacheLock);
-		static int tw = 128;
-		int x = 0, y = 0;//hdrFramebuffer->GetHeight()-tw*2;
-		for (auto t : textures)
-		{
-			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
-			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
-			x += tw;
-			if (x > hdrFramebuffer->GetWidth() - tw)
-			{
-				x = 0;
-				y += tw;
-			}
-		}
-		y += tw;
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyWhite.get())))->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyNormal.get())))->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyCombined.get())))->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyBlack.get())))->GetSimulTexture());
-	}
-	hdrFramebuffer->Deactivate(deviceContext);
-	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
-
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
-	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
-	cpuProfiler.EndFrame();
-	if(show_osd)
-	{
-		DrawOSD(deviceContext);
 	}
 }
 
@@ -1736,11 +1743,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 				vec3 pos =*((vec3*)&sessionClient.GetOriginToHeadOffset());
 				camera.SetPosition((const float*)(&pos));
 			}
-		}
-		// Are we being sent an update to our current position, e.g. floor height?
-		//else if(receivedInitialPos==sessionClient.receivedInitialPos)
-		{
-		//	clientDeviceState->originPose.position.z = sessionClient.GetOriginPose().position.z;
 		}
 		avs::Result result = pipeline.process();
 		if (result == avs::Result::Network_Disconnection)

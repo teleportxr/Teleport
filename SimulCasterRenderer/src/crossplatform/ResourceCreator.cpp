@@ -953,8 +953,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 					//If only this texture and this function are pointing to the material, then it is complete.
 					if (it->use_count() == 2)
 					{
-						CompleteMaterial(
-								incompleteMaterial->id, incompleteMaterial->materialInfo);
+						CompleteMaterial(incompleteMaterial->id, incompleteMaterial->materialInfo);
 					}
 				}
 				break;

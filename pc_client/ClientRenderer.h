@@ -203,6 +203,7 @@ public:
 	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node);
 	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node);
+	void RenderView(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);

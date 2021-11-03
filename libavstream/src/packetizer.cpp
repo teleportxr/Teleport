@@ -59,7 +59,7 @@ namespace avs
 		return d().process(timestamp);
 	}
 
-	Result Packetizer::Private::process(uint32_t timestamp)
+	Result Packetizer::Private::process(uint64_t timestamp)
 	{
 		if (!m_parser)
 		{

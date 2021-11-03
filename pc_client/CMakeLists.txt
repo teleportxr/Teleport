@@ -8,11 +8,13 @@ file(GLOB inifiles "*.ini")
 set(srcs
 	ClientRenderer.cpp
 	Main.cpp
+	UseOpenXR.cpp
 	PCDiscoveryService.cpp
 	stdafx.cpp
 	VideoDecoder.cpp
 	ClientRenderer.h
 	Config.h
+	UseOpenXR.h
 	Resource.h
 	PCDiscoveryService.h
 	stdafx.h
@@ -77,17 +79,16 @@ endif()
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 set_target_properties( pc_client PROPERTIES FOLDER Client)
-set_target_properties(pc_client PROPERTIES
-		VS_DEBUGGER_ENVIRONMENT       "PATH=C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x86;$(PATH)"	 )		
-target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include )
+set_target_properties( pc_client PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x86;$(PATH)"	 )		
+target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include ${TELEPORT_OPENXR_DIR}/include ${SIMUL_PLATFORM_DIR}/External/fmt/include)
 target_compile_features(pc_client PRIVATE cxx_std_17)
-
+target_link_directories(pc_client PUBLIC ${TELEPORT_OPENXR_DIR}/build/src/loader)
 
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
-target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm)
+target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm openxr_loader.lib)
 
-target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT)
+target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT fmt)

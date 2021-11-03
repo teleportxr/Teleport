@@ -24,6 +24,6 @@ namespace avs
 		std::vector<char> m_buffer;
 		int streamIndex=0;
 
-		Result process(uint32_t timestamp);
+		Result process(uint64_t timestamp);
 	};
 } // avs

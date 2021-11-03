@@ -1,8 +1,6 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-// Worldspace.cpp : Defines the entry point for the application.
-//
 
 #include "stdafx.h"
 #include "resource.h"
@@ -27,24 +25,28 @@ VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #include "Platform/DirectX12/RenderPlatform.h"
 #include "Platform/DirectX12/DeviceManager.h"
 simul::dx12::RenderPlatform renderPlatformImpl;
-simul::dx12::DeviceManager displayManagerImpl;
+simul::dx12::DeviceManager deviceManager;
 #else
 #include "Platform/DirectX11/RenderPlatform.h"
 #include "Platform/DirectX11/DeviceManager.h"
 simul::dx11::RenderPlatform renderPlatformImpl;
 simul::dx11::DeviceManager displayManagerImpl;
 #endif
+#include "UseOpenXR.h"
+#include "Platform/CrossPlatform/GpuProfiler.cpp"
 
 ClientRenderer *clientRenderer=nullptr;
+simul::crossplatform::RenderDelegate renderDelegate;
+teleport::UseOpenXR useOpenXR;
 simul::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
 simul::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 simul::crossplatform::RenderPlatform *renderPlatform = nullptr;
 
 simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
-std::string server_ip= TELEPORT_SERVER_IP;
-int server_discovery_port = TELEPORT_SERVER_DISCOVERY_PORT;
-uint32_t clientID = TELEPORT_DEFAULT_CLIENT_ID;
+std::string server_ip		= TELEPORT_SERVER_IP;
+int server_discovery_port	= TELEPORT_SERVER_DISCOVERY_PORT;
+uint32_t clientID			= TELEPORT_DEFAULT_CLIENT_ID;
 
 #define MAX_LOADSTRING 100
 
@@ -158,6 +160,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 void ShutdownRenderer(HWND hWnd)
 {
+	useOpenXR.Shutdown();
 	displaySurfaceManager.Shutdown();
 	if(clientRenderer)
 		clientRenderer->InvalidateDeviceObjects();
@@ -170,7 +173,7 @@ void ShutdownRenderer(HWND hWnd)
 void InitRenderer(HWND hWnd)
 {
 	clientRenderer=new ClientRenderer (&clientDeviceState);
-	gdi = &displayManagerImpl;
+	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
 	displaySurfaceManager.Initialize(renderPlatform);
@@ -217,6 +220,10 @@ void InitRenderer(HWND hWnd)
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
+	// Now renderPlatform is initialized, can init OpenXR:
+	useOpenXR.Init(renderPlatform, "Teleport VR Client");
+	useOpenXR.MakeActions();
+	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform);
 	clientRenderer->SetServer(server_ip.c_str(), server_discovery_port, clientID);
 
@@ -228,6 +235,7 @@ void InitRenderer(HWND hWnd)
 	dsmi->SetRenderer(hWnd,clientRenderer,-1);
 }
 
+simul::base::DefaultProfiler cpuProfiler;
 #define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))
 #define GET_Y_LPARAM(lp)                        ((int)(short)HIWORD(lp))
 #define GET_WHEEL_DELTA_WPARAM(wParam)  ((short)HIWORD(wParam))
@@ -300,12 +308,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
 			if(gdi)
 			{
-				/*
-				 * This is being called too frequently; i.e. in the draw functionality.
-				 * But the windows message loop is constantly receiving WM_PAINT messages because BeginPaint and EndPaint aren't being used.
-				 * But using them is causing the window to not be refreshed, and right now fixing it isn't top priority.
-				 */
 				clientRenderer->Update();
+				bool quit = false;
+				useOpenXR.PollEvents(quit);
+				useOpenXR.PollActions();
 				static double fTime=0.0;
 				static platform::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
@@ -318,7 +324,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				clientRenderer->OnFrameMove(fTime,time_step);
 				fTime+=time_step;
 				errno=0;
+				simul::crossplatform::GraphicsDeviceContext	deviceContext;
+				deviceContext.renderPlatform = renderPlatform;
+				deviceContext.platform_context = deviceManager.GetDeviceContext();
+
+				simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
+				simul::base::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
+				renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
+				cpuProfiler.SetMaxLevel(5);
+				cpuProfiler.StartFrame();
+				renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
+				SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
+
 				dsmi->Render(hWnd);
+
+				SIMUL_COMBINED_PROFILE_END(deviceContext);
+				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
+				cpuProfiler.EndFrame();
+				vec3 headOrigin = *((vec3*)&clientDeviceState.originPose.position);
+				useOpenXR.RenderFrame(deviceContext, renderDelegate, headOrigin);
 				errno=0;
 				displaySurfaceManager.EndFrame();
 			}

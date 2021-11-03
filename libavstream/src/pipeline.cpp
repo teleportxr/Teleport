@@ -139,7 +139,7 @@ Result Pipeline::Private::process()
 	}
 	if (isProfiling)
 	{
-		writeTimings(timestamp, timings);
+		writeTimings(uint32_t(timestamp), timings);
 	}
 	return result;
 }

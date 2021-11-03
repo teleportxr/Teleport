@@ -31,6 +31,7 @@ or if you have already cloned the main repo,
 5. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
 6. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
 7. Uncheck 'ENABLE_ENCRYPTION' option from srt.
+8. set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to the correct installed Cuda version
 8. Generate, open and build the Visual Studio project.
 
 ## Building UE4 plugin

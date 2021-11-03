@@ -233,7 +233,7 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 		if (result != Result::OK || bytesRead < sizeof(NetworkFrameInfo))
 		{
-			AVSLOG(Warning) << "Decoder: Failed to read input.";
+			AVSLOG(Warning) << "Decoder: Failed to read input.\n";
 			return result;
 		}
 
@@ -250,6 +250,10 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		// Check if data was lost or corrupted
 		if (m_frame.broken || m_frame.dataSize == 0)
 		{
+			if (m_frame.broken)
+			{
+				AVSLOG(Warning) << "Decoder: frame of size " << m_frame.dataSize << " is broken.\n";
+			}
 			m_state = {};
 			m_idrRequired = true;
 			continue;
