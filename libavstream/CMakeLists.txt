@@ -40,6 +40,7 @@ set(src_private_root
 	src/libraryloader.cpp
 	src/common_maths.cpp
 	src/timer.cpp
+	src/httputil.cpp
 )
 set(src_private_api
 	src/api/cuda.cpp
@@ -155,6 +156,7 @@ set(src_public_root
 	include/libavstream/queue.hpp
 	include/libavstream/surface.hpp
 	include/libavstream/timer.hpp
+	include/libavstream/httputil.hpp
 	)
 set(src_public_stream
 	include/libavstream/stream/parser_interface.hpp)

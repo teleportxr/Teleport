@@ -317,10 +317,24 @@ namespace avs
 		}
 	} AVS_PACKED;
 
+	enum class HTTPPayloadType
+	{
+		None = 0,
+		Texture,
+		Mesh
+	};
+
+	struct HTTPPayloadRequest
+	{
+		uint32_t streamID;
+		HTTPPayloadType type;
+		const char* fileName;
+	};
+
 	struct NetworkFrameInfo
 	{
-		uint64_t pts = UINT64_MAX;
-		uint64_t dts = UINT64_MAX;
+		uint64_t frameID = UINT64_MAX;
+		HTTPPayloadType httpPayloadType = HTTPPayloadType::None;
 		size_t dataSize = 0;
 		double connectionTime = 0.0;
 		bool broken = false; // True if any fragment of the data has been lost

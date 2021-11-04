@@ -65,10 +65,10 @@ option(ENABLE_STATIC "" ON)
 
 #openssl
 
-#set(LIB_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libcrypto64MTd.lib)
-#set(LIB_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libcrypto64MT.lib)
-set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libssl64MTd.lib)
-set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/lib/VC/libssl64MT.lib )
+#set(LIB_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Debug/lib/libcrypto.lib)
+#set(LIB_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Release/lib/libcrypto.lib)
+set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Debug/lib/libssl.lib)
+set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Release/lib/libssl.lib)
 
 set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
 
@@ -134,7 +134,6 @@ if(REMOTEPLAY_SERVER)
 	add_subdirectory(SimulCasterServer)
 	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "")
 	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "")
-	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "")
 	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "")
 else()
 	add_subdirectory(firstparty/Platform)
@@ -184,9 +183,9 @@ set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
 
 if(NOT REMOTEPLAY_SERVER)
  	set(BUILD_CURL_EXE OFF CACHE BOOL "")
-        set(CURL_STATIC_CRT ON CACHE BOOL "")
+    set(CURL_STATIC_CRT ON CACHE BOOL "")
 	set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
-        add_subdirectory(thirdparty/curl)
+    add_subdirectory(thirdparty/curl)
 	set_target_properties(libcurl PROPERTIES FOLDER thirdparty/curl)
 endif()
 
