@@ -81,7 +81,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	// The output texture is in native decode format.
 	// The surface texture will only be written to in the display function.
 	m_outputTexture = m_renderPlatform->CreateTexture();
-	m_outputTexture->ensureTexture2DSizeAndFormat(m_renderPlatform, decParams.width, decParams.height, simul::crossplatform::RGBA_8_UNORM, true, true, false);
+	m_outputTexture->ensureTexture2DSizeAndFormat(m_renderPlatform, decParams.width, decParams.height,1, simul::crossplatform::RGBA_8_UNORM, true, true, false);
 
 	m_deviceType = device.type;
 	m_params = params;

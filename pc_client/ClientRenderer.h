@@ -30,6 +30,7 @@
 #include "pc/PC_AudioPlayer.h"
 #include "TeleportClient/ClientDeviceState.h"
 #include "SCR_Class_PC_Impl/PC_MemoryUtil.h"
+#include "Gui.h"
 
 namespace avs
 {
@@ -148,6 +149,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	int show_osd = NETWORK_OSD;
 	bool render_from_video_centre = false;
 	bool show_textures = false;
+	bool show_cubemaps=false;
 
 	std::string overridePassName = ""; //Pass used for rendering geometry.
 
@@ -208,7 +210,7 @@ public:
 	void ResizeView(int view_id, int W, int H);
 	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr) override;
 	void Init(simul::crossplatform::RenderPlatform *r);
-	void SetServer(const char* ip,int port, uint32_t clientID);
+	void SetServer(const char* ip_port, uint32_t clientID);
 	void InvalidateDeviceObjects();
 	void RemoveView(int);
 	bool OnDeviceRemoved();
@@ -281,4 +283,6 @@ private:
 
 	static constexpr float HFOV = 90;
 	float gamma=0.44f;
+
+	teleport::Gui gui;
 };

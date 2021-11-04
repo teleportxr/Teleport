@@ -6,8 +6,13 @@
 using namespace scr;
 
 Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
-	:m_CI(pMaterialCreateInfo)
 {
+	SetMaterialCreateInfo(pMaterialCreateInfo);
+}
+
+void Material::SetMaterialCreateInfo(const MaterialCreateInfo& pMaterialCreateInfo)
+{
+	m_CI= pMaterialCreateInfo;
 	m_MaterialData.diffuseOutputScalar			= m_CI.diffuse.textureOutputScalar;
 	m_MaterialData.diffuseTexCoordsScalar_R		= m_CI.diffuse.texCoordsScalar[0];
 	m_MaterialData.diffuseTexCoordsScalar_G		= m_CI.diffuse.texCoordsScalar[1];
@@ -40,14 +45,21 @@ Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 	m_MaterialData.u_EmissiveTexCoordIndex		= m_CI.emissive.texCoordIndex;
 
 	//Set up UB
-	UniformBuffer::UniformBufferCreateInfo ub_ci;
-	ub_ci.name="u_MaterialData";
-	ub_ci.bindingLocation = 3;
-	ub_ci.size = sizeof(MaterialData);
-	ub_ci.data = &m_MaterialData;
+	if(!m_UB.get())
+	{
+		UniformBuffer::UniformBufferCreateInfo ub_ci;
+		ub_ci.name="u_MaterialData";
+		ub_ci.bindingLocation = 3;
+		ub_ci.size = sizeof(MaterialData);
+		ub_ci.data = &m_MaterialData;
 
-	m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
-	m_UB->Create(&ub_ci);
+		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
+		m_UB->Create(&ub_ci);
+	}
+	else
+	{
+		m_UB->Update();
+	}
 
 	//Set up Descriptor Set for Textures and UB
 	//UB from 0 - 9, Texture/Samplers 10+

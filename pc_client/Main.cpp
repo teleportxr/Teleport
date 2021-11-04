@@ -42,8 +42,7 @@ simul::crossplatform::RenderPlatform *renderPlatform = nullptr;
 
 simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
-std::string server_ip= TELEPORT_SERVER_IP;
-int server_discovery_port = TELEPORT_SERVER_DISCOVERY_PORT;
+std::vector<std::string> server_ips;
 uint32_t clientID = TELEPORT_DEFAULT_CLIENT_ID;
 
 #define MAX_LOADSTRING 100
@@ -77,11 +76,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	CSimpleIniA ini;
-	SI_Error rc = ini.LoadFile("pc_client/client.ini");
+	SI_Error rc = ini.LoadFile("client.ini");
 	if(rc == SI_OK)
 	{
-		server_ip = ini.GetValue("", "SERVER_IP", TELEPORT_SERVER_IP);
-		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT", TELEPORT_SERVER_DISCOVERY_PORT);
+
+		std::string server_ip = ini.GetValue("", "SERVER_IP", TELEPORT_SERVER_IP);
+		std::string ip_list;
+		ip_list = ini.GetValue("", "SERVER_IP", "");
+
+		size_t pos = 0;
+		std::string token;
+		do
+		{
+			pos = ip_list.find(",");
+			std::string ip = ip_list.substr(0, pos);
+			server_ips.push_back(ip);
+			ip_list.erase(0, pos + 1);
+		} while (pos != std::string::npos);
+
 		clientID = ini.GetLongValue("", "CLIENT_ID", TELEPORT_DEFAULT_CLIENT_ID);
 	}
 	else
@@ -218,7 +230,7 @@ void InitRenderer(HWND hWnd)
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	clientRenderer->Init(renderPlatform);
-	clientRenderer->SetServer(server_ip.c_str(), server_discovery_port, clientID);
+	clientRenderer->SetServer(server_ips[0].c_str(), clientID);
 
 #if IS_D3D12
 	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
@@ -232,8 +244,24 @@ void InitRenderer(HWND hWnd)
 #define GET_Y_LPARAM(lp)                        ((int)(short)HIWORD(lp))
 #define GET_WHEEL_DELTA_WPARAM(wParam)  ((short)HIWORD(wParam))
 
+
+// Forward declare message handler from imgui_impl_win32.cpp
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y, int W, int H);
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
+	{
+		POINT pos;
+		if (::GetCursorPos(&pos) && ::ScreenToClient(hWnd, &pos))
+		{
+			RECT rect;
+			GetClientRect(hWnd,&rect);
+			ImGui_ImplPlatform_SetMousePos(pos.x, pos.y, rect.right-rect.left, rect.bottom-rect.top);
+		}
+		return true;
+	}
     switch (message)
     {
 	case WM_LBUTTONDOWN:
@@ -300,11 +328,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
 			if(gdi)
 			{
-				/*
-				 * This is being called too frequently; i.e. in the draw functionality.
-				 * But the windows message loop is constantly receiving WM_PAINT messages because BeginPaint and EndPaint aren't being used.
-				 * But using them is causing the window to not be refreshed, and right now fixing it isn't top priority.
-				 */
+				PAINTSTRUCT ps;
+				//BeginPaint(hWnd, &ps);
 				clientRenderer->Update();
 				static double fTime=0.0;
 				static platform::core::Timer t;
@@ -321,6 +346,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				dsmi->Render(hWnd);
 				errno=0;
 				displaySurfaceManager.EndFrame();
+				//EndPaint(hWnd, &ps);
 			}
         }
         break;

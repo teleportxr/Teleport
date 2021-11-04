@@ -202,6 +202,7 @@ void GeometryStreamingService::tick(float deltaTime)
 void GeometryStreamingService::reset()
 {
 	sentResources.clear();
+
 	unconfirmedResourceTimes.clear();
 	streamedNodeIDs.clear();
 	hiddenNodes.clear();

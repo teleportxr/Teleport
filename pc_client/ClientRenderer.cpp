@@ -190,10 +190,12 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	camera.SetCameraViewStruct(vs);
 
 	memset(keydown,0,sizeof(keydown));
-	// These are for example:
+
 	hDRRenderer->RestoreDeviceObjects(renderPlatform);
 	meshRenderer->RestoreDeviceObjects(renderPlatform);
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
+
+	gui.RestoreDeviceObjects(renderPlatform);
 
 	videoTexture = renderPlatform->CreateTexture();  
 	specularCubemapTexture = renderPlatform->CreateTexture();
@@ -215,15 +217,24 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	// Create a basic cube.
 	transparentMesh=renderPlatform->CreateMesh();
-	//sessionClient.Connect(TELEPORT_SERVER_IP, TELEPORT_SERVER_PORT, TELEPORT_TIMEOUT);
 
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 }
 
-void ClientRenderer::SetServer(const char *ip, int port, uint32_t clientID)
+void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
 {
-	server_ip = ip;
-	server_discovery_port = port;
+	std::string ip= ip_port;
+	size_t pos=ip.find(":");
+	if(pos>=ip.length())
+	{
+		server_discovery_port = TELEPORT_SERVER_PORT;
+		server_ip=ip;
+	}
+	else
+	{
+		server_discovery_port =atoi(ip.substr(pos+1,ip.length()-pos-1).c_str());
+		server_ip = ip.substr(0,pos);
+	}
 	sessionClient.SetDiscoveryClientID(clientID);
 }
 
@@ -233,6 +244,7 @@ void ClientRenderer::RecompileShaders()
 	renderPlatform->RecompileShaders();
 	hDRRenderer->RecompileShaders();
 	meshRenderer->RecompileShaders();
+	gui.RecompileShaders();
 	delete pbrEffect;
 	delete cubemapClearEffect;
 	pbrEffect = renderPlatform->CreateEffect("pbr");
@@ -418,8 +430,11 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 			if(!tt)
 				lod++;
 			lod=lod%8;
-			renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
-			renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
+			if(show_cubemaps)
+			{
+				renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
+				renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
+			}
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -454,6 +469,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
 
+	gui.Render(deviceContext);
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 	cpuProfiler.EndFrame();
@@ -461,6 +477,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	{
 		DrawOSD(deviceContext);
 	}
+
 }
 
 void ClientRenderer::RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique)
@@ -1146,7 +1163,7 @@ void ClientRenderer::InvalidateDeviceObjects()
 	{
 		SAFE_DELETE(ti->texture);
 	}
-	
+	gui.InvalidateDeviceObjects();
 	if(pbrEffect)
 	{
 		pbrEffect->InvalidateDeviceObjects();
@@ -1191,7 +1208,7 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 	AVSTextureImpl *ti=(AVSTextureImpl*)t;
 	if(!ti->texture)
 		ti->texture = renderPlatform->CreateTexture();
-	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height, simul::crossplatform::RGBA_8_UNORM, true, true, false);
+	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height,1, simul::crossplatform::RGBA_8_UNORM, true, true, false);
 }
 
 void ClientRenderer::Update()
@@ -1711,9 +1728,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 		if(!receivedInitialPos)
 		{
-			camera.SetPositionAsXYZ(0.f, 0.f, 1.5f);
+		//	camera.SetPositionAsXYZ(0.f, 0.f, 1.5f);
 			vec3 look(0.f, 1.f, 0.f), up(0.f, 0.f, 1.f);
-			camera.LookInDirection(look, up);
+		//	camera.LookInDirection(look, up);
 		}
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
@@ -1912,6 +1929,9 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		case 'C':
 			render_from_video_centre = !render_from_video_centre;
+			break;
+		case 'U':
+			show_cubemaps = !show_cubemaps;
 			break;
 		case 'H':
 			WriteHierarchies();

@@ -11,6 +11,8 @@ set(srcs
 	PCDiscoveryService.cpp
 	stdafx.cpp
 	VideoDecoder.cpp
+	Gui.cpp
+	Gui.h
 	ClientRenderer.h
 	Config.h
 	Resource.h
@@ -75,7 +77,7 @@ endif()
 
 
 set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
-set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 set_target_properties( pc_client PROPERTIES FOLDER Client)
 set_target_properties(pc_client PROPERTIES
 		VS_DEBUGGER_ENVIRONMENT       "PATH=C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x86;$(PATH)"	 )		
@@ -90,4 +92,4 @@ endif()
 
 target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm)
 
-target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT)
+target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT)

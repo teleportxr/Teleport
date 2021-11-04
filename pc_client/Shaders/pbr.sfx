@@ -465,7 +465,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient)
 vec4 Solid_AlbedoOnly(vertexOutput IN)
 {
 	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R).rgb;
-	diffuseColour = diffuseColour.rgb * diffuseOutputScalar.rgb;
+	diffuseColour = diffuseColour.rgb ;//* diffuseOutputScalar.rgb;
 
 	return vec4(diffuseColour.rgb, 1.0);
 }

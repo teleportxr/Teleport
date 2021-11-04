@@ -78,6 +78,7 @@ namespace scr
 	
 	public:
 		Material(const MaterialCreateInfo& pMaterialCreateInfo);
+		void SetMaterialCreateInfo(const MaterialCreateInfo& pMaterialCreateInfo);
 
 		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfo() const { return m_CI; }
