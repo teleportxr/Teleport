@@ -29,7 +29,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 {
 	size_t numOutputs = streams.size();
 
-	if (numOutputs == 0 || params.localPort == 0 || params.remotePort == 0)
+	if (numOutputs == 0 || params.localPort == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
 	{
 		return Result::Node_InvalidConfiguration;
 	}
@@ -129,8 +129,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		}
 		
 		NetworkFrameInfo frameInfo;
-		frameInfo.pts = rPacket->mPts;
-		frameInfo.dts = rPacket->mDts;
+		frameInfo.frameID = rPacket->mPts;
 		frameInfo.dataSize = rPacket->mFrameSize;
 		frameInfo.connectionTime = TimerUtil::GetElapsedTime();
 		frameInfo.broken = rPacket->mBroken;
@@ -162,6 +161,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		}
 	};
 
+	m_data->m_serverDataURL = "";
 	return Result::OK;
 }
 
@@ -203,6 +203,11 @@ Result NetworkSource::deconfigure()
 	// At a guess, this is because socket was created from service, and expects it to still exist
 	// as socket is shut down.
 	closeSocket();
+
+	while(!m_data->m_httpPayloadRequests.empty())
+	{
+		m_data->m_httpPayloadRequests.pop();
+	}
 
 	return Result::OK;
 }

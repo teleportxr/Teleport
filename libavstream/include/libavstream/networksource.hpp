@@ -16,7 +16,7 @@ namespace avs
 	struct NetworkSourceStream
 	{
 		/*! id */
-		uint32_t id = 0;
+		uint32_t id = UINT32_MAX;
 	};
 
 	/*! Network source parameters. */
@@ -24,7 +24,9 @@ namespace avs
 	{
 		int32_t localPort = 0;
 		const char* remoteIP = "";
+		const char* remoteDataPath = "";
 		int32_t remotePort = 0;
+		int32_t remoteHTTPPort = 0;
 		uint32_t connectionTimeout = 5000;
 		bool asyncProcessPackets = false;
 	};

@@ -243,6 +243,7 @@ namespace avs
 		}
 
 		int32_t server_streaming_port = 0;
+		int32_t server_http_port = 0;
 		uint32_t debug_stream = 0;
 		uint32_t do_checksums = 0;
 		uint32_t debug_network_packets = 0;
