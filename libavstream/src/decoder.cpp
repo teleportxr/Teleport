@@ -262,7 +262,7 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 		// Check if a frame was missed
 		// This frame could happen to be an IDR and the issue might fix itself
 		// First frame should have pts of 1
-		if (m_frame.pts - m_currentFrameNumber > 1)
+		if (m_frame.frameID - m_currentFrameNumber > 1)
 		{
 			m_state = {};
 			m_idrRequired = true;
@@ -278,7 +278,7 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 			AVSLOG(Warning) << "Decoder: Failed to parse/decode the video frame \n";
 		}
 	
-		m_currentFrameNumber = m_frame.pts;
+		m_currentFrameNumber = m_frame.frameID;
 	} while (result == Result::OK);
 
 	if (!m_params.deferDisplay && m_displayPending)

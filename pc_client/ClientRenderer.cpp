@@ -1318,6 +1318,7 @@ void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	sourceParams.localPort = 101;
 	sourceParams.remoteIP = server_ip;
 	sourceParams.remotePort = setupCommand.server_streaming_port;
+	sourceParams.remoteHTTPPort = setupCommand.server_http_port;
 	// Configure for num video streams + 1 audio stream + 1 geometry stream
 	if (!source.configure(std::move(streams), sourceParams))
 	{

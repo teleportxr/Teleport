@@ -123,6 +123,8 @@ namespace avs
 
 		std::vector<char> m_tempBuffer;
 		RingBuffer<RawPacket, 12000> m_recvBuffer;
+		std::string m_serverDataURL;
+		std::queue<HTTPPayloadRequest> m_httpPayloadRequests;
 	};
 
 } // avs
