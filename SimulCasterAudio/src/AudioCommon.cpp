@@ -35,7 +35,7 @@ void log_print(const char* source, const char* format,...)
 {
 	va_list ap;
 	char fmt[1000];
-	sprintf_s(fmt, "%s %s", source, format);
+	sprintf(fmt, "%s %s", source, format);
 	va_start(ap, format);
 	vsnprintf(fmt,1000,fmt, ap);
 	va_end(ap);

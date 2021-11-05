@@ -41,6 +41,8 @@ namespace teleport
 
 	avs::Result GeometryEncoder::encode(uint32_t timestamp, avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req)
 	{
+		if(!req||req->getClientAxesStandard()==avs::AxesStandard::NotInitialized)
+			return avs::Result::Failed;
 		queuedBuffer.clear();
 
 		// The source backend will give us the data to encode.

@@ -248,20 +248,23 @@ void InitRenderer(HWND hWnd)
 // Forward declare message handler from imgui_impl_win32.cpp
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y, int W, int H);
-
+#include <imgui.h>
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	bool ui_handled=false;
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 	{
-		POINT pos;
-		if (::GetCursorPos(&pos) && ::ScreenToClient(hWnd, &pos))
-		{
-			RECT rect;
-			GetClientRect(hWnd,&rect);
-			ImGui_ImplPlatform_SetMousePos(pos.x, pos.y, rect.right-rect.left, rect.bottom-rect.top);
-		}
-		return true;
+		ui_handled=true;
 	}
+	POINT pos;
+	if (::GetCursorPos(&pos) && ::ScreenToClient(hWnd, &pos))
+	{
+		RECT rect;
+		GetClientRect(hWnd, &rect);
+		ImGui_ImplPlatform_SetMousePos(pos.x, pos.y, rect.right - rect.left, rect.bottom - rect.top);
+	}
+	if(ui_handled||ImGui::GetCurrentContext()!=nullptr&&ImGui::IsItemFocused())
+		return true;
     switch (message)
     {
 	case WM_LBUTTONDOWN:

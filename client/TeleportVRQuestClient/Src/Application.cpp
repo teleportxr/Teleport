@@ -692,7 +692,7 @@ void Application::AppRenderEye(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrR
 			eye);
 }
 
-void Application::OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
+bool Application::OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
 {
 	const avs::VideoConfig &videoConfig = setupCommand.video_config;
 	if (!mPipelineConfigured)
@@ -719,6 +719,7 @@ void Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		sourceParams.localPort = client_streaming_port;
 		sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
 		sourceParams.remotePort = setupCommand.server_streaming_port;
+		sourceParams.remoteHTTPPort = setupCommand.server_http_port;
 
 		bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 		avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::GlStyle, bodyOffsetFromHead);
@@ -726,7 +727,7 @@ void Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		if (!clientRenderer.mNetworkSource.configure(std::move(streams), sourceParams))
 		{
 			OVR_WARN("OnSetupCommandReceived: Failed to configure network source node.");
-			return;
+			return false;
 		}
 		clientRenderer.mNetworkSource.setDebugStream(setupCommand.debug_stream);
 		clientRenderer.mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
@@ -759,7 +760,7 @@ void Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		{
 			OVR_WARN("OnSetupCommandReceived: Failed to configure decoder node");
 			clientRenderer.mNetworkSource.deconfigure();
-			return;
+			return false;
 		}
 		{
 			scr::Texture::TextureCreateInfo textureCreateInfo = {};
@@ -808,7 +809,7 @@ void Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 							   std::placeholders::_1, std::placeholders::_2);
 			if (!clientRenderer.mTagDataDecoder.configure(40, f)) {
 				OVR_WARN("OnSetupCommandReceived: Failed to configure tag data decoder node.");
-				return;
+				return false;
 			}
 			clientRenderer.mTagDataQueue.configure(200, 16, "TagDataQueue");
 
@@ -895,6 +896,7 @@ void Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 	handshake.clientStreamingPort=client_streaming_port;
 
 	clientRenderer.lastSetupCommand = setupCommand;
+	return true;
 }
 
 void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)

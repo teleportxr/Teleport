@@ -119,10 +119,11 @@ namespace avs
 			AudioTargetBackend_PlayerDeconfigurationError,
 			Node_NotReady,
 			UnknownError,
-			Num_ResultCode,
 			NetworkSink_SendingDataFailed,
 			NetworkSink_PackingDataFailed,
-			NetworkSink_InvalidStreamDataType
+			NetworkSink_InvalidStreamDataType,
+			Failed,
+			Num_ResultCode,
 		};
 
 		Result(Code code) : m_code(code)
