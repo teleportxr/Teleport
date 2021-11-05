@@ -43,6 +43,8 @@
 
 #include "VideoDecoder.h"
 
+#include "ErrorHandling.h"
+
 static const char* ToString(scr::Light::Type type)
 {
 	const char* lightTypeName = "";
@@ -1228,7 +1230,7 @@ void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 {
 	lastSetupLightingCommand=l;
 }
-#include "ErrorHandling.h"
+
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
 	videoConfig = setupCommand.video_config;
