@@ -11,6 +11,7 @@ Welcome to TeleportVR's documentation!
    :caption: Contents:
 
    introduction
+   protocol
    libavstream
    teleportclient
    clientrenderer
