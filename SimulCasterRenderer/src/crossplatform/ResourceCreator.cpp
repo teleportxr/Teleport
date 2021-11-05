@@ -512,7 +512,6 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 
 void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 {
-	SCR_COUT << "CreateTexture(" << id << ", " << texture.name << ")\n";
 	m_ReceivedResources.push_back(id);
 	scr::Texture::CompressionFormat scrTextureCompressionFormat= scr::Texture::CompressionFormat::UNCOMPRESSED;
 	if(texture.compression!=avs::TextureCompression::UNCOMPRESSED)
@@ -550,16 +549,19 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	std::vector<unsigned char> data = std::vector<unsigned char>(texture.dataSize);
 	memcpy(data.data(), texture.data, texture.dataSize);
 
+	SCR_COUT << "CreateTexture(" << id << ", " << texture.name << ") ";
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), std::move(texInfo), texture.name,texture.compression,texture.valueScale });
+		std::cout << "will transcode with "<<(texture.compression== TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
 	}
 	else
 	{
 		texInfo.mipSizes.push_back(texture.dataSize);
 		texInfo.mips.emplace_back(std::move(data));
 
+		std::cout << "Uncompressed, completing.\n";
 		CompleteTexture(id, texInfo);
 	}
 }
@@ -983,6 +985,8 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 	SCR_CERR << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
 
 	std::shared_ptr<scr::Material> material = m_MaterialManager->Get(id);
+	// Update its properties:
+	material->SetMaterialCreateInfo(materialInfo);
 	//Add material to nodes waiting for material.
 	MissingResource& missingMaterial = GetMissingResource(id, "Material");
 	for(auto it = missingMaterial.waitingResources.begin(); it != missingMaterial.waitingResources.end(); it++)
