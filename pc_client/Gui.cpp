@@ -41,10 +41,13 @@ void Gui::RestoreDeviceObjects(simul::crossplatform::RenderPlatform* r)
 
 void Gui::InvalidateDeviceObjects()
 {
-    ImGui_ImplPlatform_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
-
+    if(renderPlatform)
+    {
+        ImGui_ImplWin32_Shutdown();
+        ImGui_ImplPlatform_Shutdown();
+        ImGui::DestroyContext();
+        renderPlatform=nullptr;
+    }
 }
 
 void Gui::RecompileShaders()
@@ -53,11 +56,37 @@ void Gui::RecompileShaders()
 }
 
 
+void Gui::ShowHide()
+{
+    if(visible)
+        Hide();
+    else
+        Show();
+}
+
+
+void Gui::Show()
+{
+    visible = true;
+    menu_pos = view_pos;
+    menu_pos.y += 1.5f;
+}
+
+
+
+void Gui::Hide()
+{
+    visible = false;
+}
+
 void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
+    view_pos = deviceContext.viewStruct.cam_pos;
+    if(!visible)
+        return;
 	// Start the Dear ImGui frame
 	ImGui_ImplWin32_NewFrame();
-    ImGui_ImplPlatform_NewFrame(true,600,300);
+    ImGui_ImplPlatform_NewFrame(true,600,100,menu_pos);
     // Override what win32 did with this
     ImGui_ImplPlatform_Update3DMousePos();
 	ImGui::NewFrame();
@@ -68,31 +97,35 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         static int counter = 0;
         static vec4 clear_color(0,0,0,0);
         ImGui::SetNextWindowPos(ImVec2(0, 0));                    // always at the window origin
-        ImGui::SetNextWindowSize(ImVec2(float(600), float(300)));    // always at the window size
-        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBringToFrontOnFocus |         
-            ImGuiWindowFlags_NoNavFocus |
-            ImGuiWindowFlags_NoResize |
+        ImGui::SetNextWindowSize(ImVec2(float(600), float(100)));    // always at the window size
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoResize |
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoCollapse|
             ImGuiWindowFlags_NoScrollbar;
-        ImGui::Begin("Hello, world!",nullptr, windowFlags);                          // Create a window called "Hello, world!" and append into it.
-
-        ImGui::Text("A");               // Display some text (you can use a format strings too)
-        ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-        ImGui::Checkbox("Another Window", &show_another_window);
-
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
+        ImGui::Begin("Teleport VR",nullptr, windowFlags);                          // Create a window called "Hello, world!" and append into it.
+        static char buf[500];
+        if(ImGui::InputText("", buf, IM_ARRAYSIZE(buf)))
+        {
+            current_url=buf;
+        }
         ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
+        if (ImGui::Button("Connect"))
+        {
+            if(connectHandler)
+            {
+                connectHandler(current_url);
+            }
+        }
 
-        ImGui_ImplPlatform_DebugInfo();
+        //ImGui_ImplPlatform_DebugInfo();
        
         ImGui::End();
     }
     ImGui::Render();
+    hasFocus=ImGui::IsAnyItemFocused();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData(),true);
+}
+void Gui::SetConnectHandler(std::function<void(const std::string&)> fn)
+{
+    connectHandler = fn;
 }

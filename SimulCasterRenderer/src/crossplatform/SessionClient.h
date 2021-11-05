@@ -21,7 +21,7 @@ class ResourceCreator;
 class SessionCommandInterface
 {
 public:
-    virtual void OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) = 0;
+    virtual bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) = 0;
     virtual void OnVideoStreamClosed() = 0;
 
     virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) = 0;

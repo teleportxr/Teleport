@@ -63,7 +63,8 @@ find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
 
-	file(GLOB RST_FILES 	"*.rst" )
+file(GLOB RST_FILES 	"*.rst" )
+source_group("Documentation" FILES ${RST_FILES} )
 add_custom_target(Sphinx ALL
                   COMMAND
                   ${SPHINX_EXECUTABLE} -b html
@@ -73,7 +74,7 @@ add_custom_target(Sphinx ALL
                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                    DEPENDS
                    # Other docs files you want to track should go here (or in some variable)
-                   ${CMAKE_CURRENT_SOURCE_DIR}/index.rst
+                   ${CMAKE_CURRENT_SOURCE_DIR}/index.rst ${RST_FILES}
                    ${DOXYGEN_INDEX_FILE}
                    MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
                   COMMENT "Generating documentation with Sphinx"

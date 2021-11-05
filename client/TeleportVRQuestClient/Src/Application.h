@@ -76,7 +76,7 @@ namespace OVRFW
 		virtual void AppRenderEye(const OVRFW::ovrApplFrameIn& in, OVRFW::ovrRendererOutput& out, int eye) override;
 
 		/* Begin SessionCommandInterface */
-		virtual void OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) override;
+		virtual bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) override;
 		virtual void OnVideoStreamClosed() override;
 		virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
 		virtual bool OnNodeEnteredBounds(avs::uid id) override;

@@ -196,7 +196,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
 	gui.RestoreDeviceObjects(renderPlatform);
-
+	auto connectButtonHandler = std::bind(&ClientRenderer::ConnectButtonHandler, this,std::placeholders::_1);
+	gui.SetConnectHandler(connectButtonHandler);
 	videoTexture = renderPlatform->CreateTexture();  
 	specularCubemapTexture = renderPlatform->CreateTexture();
 	diffuseCubemapTexture = renderPlatform->CreateTexture();
@@ -1288,12 +1289,12 @@ void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 {
 	lastSetupLightingCommand=l;
 }
-
-void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
+#include "ErrorHandling.h"
+bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
 	videoConfig = setupCommand.video_config;
 
-	WARN("VIDEO STREAM CHANGED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
+	WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 	videoPosDecoded=false;
 
@@ -1322,8 +1323,8 @@ void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	// Configure for num video streams + 1 audio stream + 1 geometry stream
 	if (!source.configure(std::move(streams), sourceParams))
 	{
-		LOG("Failed to configure network source node");
-		return;
+		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
+		return false;
 	}
 
 	source.setDebugStream(setupCommand.debug_stream);
@@ -1484,6 +1485,7 @@ void ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	pbrConstants.drawDistance = videoConfig.draw_distance;
 
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
+	return true;
 }
 
 void ClientRenderer::OnVideoStreamClosed()
@@ -1751,7 +1753,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 							,spd
 							,mouseCameraState
 							,mouseCameraInput
-							,14000.f);
+							,14000.f,false, crossplatform::MouseCameraInput::RIGHT_BUTTON);
 
 
 	// consider this to be the position relative to the local origin. Don't let it get too far from centre.
@@ -1838,6 +1840,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		if (canConnect && sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
 			sessionClient.Connect(remoteEndpoint, TELEPORT_TIMEOUT);
+			gui.Hide();
 		}
 	}
 
@@ -2015,6 +2018,9 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			if (sessionClient.IsConnected())
 				decoder.toggleShowAlphaAsColor();
 			break;
+		case VK_SPACE:
+			gui.ShowHide();
+			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
 			ChangePass(ShaderMode::PBR);
 			break;
@@ -2037,4 +2043,21 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
 			break;
 		}
 	}
+}
+
+void ClientRenderer::ConnectButtonHandler(const std::string& url)
+{
+	size_t pos = url.find(":");
+	if (pos < url.length())
+	{
+		std::string port_str = url.substr(pos + 1, url.length() - pos - 1);
+		server_discovery_port = atoi(port_str.c_str());
+		std::string url_str = url.substr(0, pos);
+		server_ip = url_str;
+	}
+	else
+	{
+		server_ip = url;
+	}
+	canConnect = true;
 }

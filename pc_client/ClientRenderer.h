@@ -170,11 +170,15 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 
 	float roomRadius=1.5f;
 	teleport::client::ClientDeviceState *clientDeviceState;
+
+
+	// handler for the UI to tell us to connect.
+	void ConnectButtonHandler(const std::string& url);
 public:
 	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState);
 	~ClientRenderer();
 	// Implement SessionCommandInterface
-	void OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 	void OnVideoStreamClosed() override;
 
 	void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;

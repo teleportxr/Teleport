@@ -745,6 +745,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 
 	avs::SetupCommand setupCommand;
 	setupCommand.server_streaming_port		= clientData.clientMessaging.getServerPort() + 1;
+	setupCommand.server_http_port           = setupCommand.server_streaming_port + 1;
 	setupCommand.debug_stream				= casterSettings.debugStream;
 	setupCommand.do_checksums				= casterSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets		= casterSettings.enableDebugNetworkPackets;

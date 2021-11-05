@@ -1,4 +1,5 @@
 Introduction
 ============
 
-TeleportVR is a protocol and SDK for client-server virtual reality.
+TeleportVR is an application level protocol and SDK for client-server virtual reality.
+

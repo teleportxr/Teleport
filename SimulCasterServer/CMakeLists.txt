@@ -97,9 +97,9 @@ target_include_directories(SimulCasterServer PUBLIC ../thirdparty/cpp-httplib)
 
 
 #Include CUDA library location.
-target_link_directories(SimulCasterServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
+target_link_directories(SimulCasterServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64" ../thirdparty/openssl/x64/Release/lib)
 
-target_link_libraries(SimulCasterServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco)
+target_link_libraries(SimulCasterServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl)
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
