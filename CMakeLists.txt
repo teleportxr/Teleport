@@ -69,8 +69,8 @@ option(ENABLE_STATIC "" ON)
 
 #set(LIB_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Debug/lib/libcrypto.lib)
 #set(LIB_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Release/lib/libcrypto.lib)
-set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Debug/lib/libssl.lib)
-set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Release/lib/libssl.lib)
+set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Debug/lib/libssl_static.lib)
+set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Release/lib/libssl_static.lib)
 
 set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
 

@@ -4,7 +4,7 @@
 #include "SimulCasterServer/ClientData.h"
 #include "SimulCasterServer/CasterSettings.h"
 
-//#define CPPHTTPLIB_OPENSSL_SUPPORT
+#define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib.h>
 
 //extern std::map<avs::uid, ClientData> clientServices;
