@@ -8,16 +8,15 @@
 
 namespace avs
 {
+	struct Context::Private
+	{
+		AVSTREAM_PRIVATEINTERFACE_BASE(Context)
 
-struct Context::Private
-{
-	AVSTREAM_PRIVATEINTERFACE_BASE(Context)
-
-	void log(LogSeverity severity, const char* msg) const;
+		void log(LogSeverity severity, const char* msg) const;
 	
-	static Context* m_self;
-	MessageHandlerFunc m_messageHandler;
-	void* m_userData;
-};
+		static Context* m_self;
+		MessageHandlerFunc m_messageHandler;
+		void* m_userData;
+	};
 
 } // avs

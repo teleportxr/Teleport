@@ -91,11 +91,6 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
     ImGui_ImplPlatform_Update3DMousePos();
 	ImGui::NewFrame();
     {
-        static bool show_demo_window=false;
-        static bool show_another_window = false;
-        static float f = 0.0f;
-        static int counter = 0;
-        static vec4 clear_color(0,0,0,0);
         ImGui::SetNextWindowPos(ImVec2(0, 0));                    // always at the window origin
         ImGui::SetNextWindowSize(ImVec2(float(600), float(100)));    // always at the window size
         ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoResize |
@@ -118,11 +113,11 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         }
 
         //ImGui_ImplPlatform_DebugInfo();
-       
+
+        //hasFocus = ImGui::IsAnyItemFocused(); Note: does not work.
         ImGui::End();
     }
     ImGui::Render();
-    hasFocus=ImGui::IsAnyItemFocused();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData(),true);
 }
 void Gui::SetConnectHandler(std::function<void(const std::string&)> fn)

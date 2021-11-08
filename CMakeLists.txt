@@ -93,6 +93,10 @@ else()
 	set(CMAKE_CXX_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1 /DNOMINMAX")
 		#someday we will add /fsanitize=address - when MS have fixed all the address bugs in their core libs.)
 endif()
+
+# warnings in pthreads:
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /wd4711")
+
 option(BUILD_AS_LIBRARY "" ON) 
 
 function(set_target_runtime targname rt)

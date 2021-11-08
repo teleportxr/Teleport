@@ -71,6 +71,7 @@ XrSession      xr_session = {};
 XrSessionState xr_session_state = XR_SESSION_STATE_UNKNOWN;
 bool           xr_running = false;
 XrSpace        xr_app_space = {};
+XrSpace        xr_head_space = {};
 XrSystemId     xr_system_id = XR_NULL_SYSTEM_ID;
 input_state_t  xr_input = { };
 XrEnvironmentBlendMode   xr_blend = {};
@@ -194,6 +195,7 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	// may be more useful for other runtimes?
 	// Here's some extra information about the message types and severities:
 	// https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#debug-message-categorization
+#if TELEPORT_INTERNAL
 	XrDebugUtilsMessengerCreateInfoEXT debug_info = { XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 	debug_info.messageTypes =
 		XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
@@ -220,14 +222,14 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	// Start up the debug utils!
 	if (ext_xrCreateDebugUtilsMessengerEXT)
 		ext_xrCreateDebugUtilsMessengerEXT(xr_instance, &debug_info, &xr_debug);
-
+#endif
 	// Request a form factor from the device (HMD, Handheld, etc.)
 	XrSystemGetInfo systemInfo = { XR_TYPE_SYSTEM_GET_INFO };
 	systemInfo.formFactor = app_config_form;
 	if (!CheckXrResult(xrGetSystem(xr_instance, &systemInfo, &xr_system_id)))
 	{
 		std::cerr << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
-			return false;
+		return false;
 	}
 
 	// Check what blend mode is valid for this device (opaque vs transparent displays)
@@ -265,9 +267,13 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	// would be relative to your device's starting location. HoloLens doesn't have a STAGE, so we'll use LOCAL.
 	XrReferenceSpaceCreateInfo ref_space = { XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
 	ref_space.poseInReferenceSpace = xr_pose_identity;
-	ref_space.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+	ref_space.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
 	xrCreateReferenceSpace(xr_session, &ref_space, &xr_app_space);
 
+	ref_space.poseInReferenceSpace = xr_pose_identity;
+	ref_space.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
+	xrCreateReferenceSpace(xr_session, &ref_space, &xr_head_space);
+	
 	// Now we need to find all the viewpoints we need to take care of! For a stereo headset, this should be 2.
 	// Similarly, for an AR phone, we'll need 1, and a VR cave could have 6, or even 12!
 	uint32_t view_count = 0;
@@ -336,6 +342,7 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 		xr_swapchains.push_back(swapchain);
 	}
 
+	haveXRDevice = true;
 	return true;
 }
 
@@ -575,8 +582,6 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	
 	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
 
-
-
 	//deviceContext.viewStruct.invView = *((const simul::math::Matrix4x4*)&invview);
 	//deviceContext.viewStruct.invView.Inverse(deviceContext.viewStruct.view);
 	//deviceContext.viewStruct.view.Transpose();
@@ -590,9 +595,7 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static int c = 1;
-	c = 1 - c;
-	float clear[] = { 0, c, 1-c, 1 };
+	static float clear[] = { 0.2f, 0.2f, 0.2f, 1 };
 	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
 	surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
@@ -707,6 +710,16 @@ void UseOpenXR::PollEvents(bool& exit)
 	}
 }
 
+bool UseOpenXR::HaveXRDevice() const
+{
+	return UseOpenXR::haveXRDevice;
+}
+
+const avs::Pose& UseOpenXR::GetHeadPose() const
+{
+	return headPose;
+}
+
 void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceContext,simul::crossplatform::RenderDelegate &renderDelegate,vec3 origin)
 {
 	// Block until the previous frame is finished displaying, and is ready for another one.
@@ -724,6 +737,15 @@ void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceC
 	openxr_poll_predicted(frame_state.predictedDisplayTime);
 	app_update_predicted();
 
+	XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
+	XrResult        res = xrLocateSpace(xr_head_space, xr_app_space, frame_state.predictedDisplayTime, &space_location);
+	if (XR_UNQUALIFIED_SUCCESS(res) &&
+		(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
+		(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
+	{
+		headPose.position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
+ 		headPose.orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+	}
 	// If the session is active, lets render our layer in the compositor!
 	XrCompositionLayerBaseHeader* layer = nullptr;
 	XrCompositionLayerProjection             layer_proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
@@ -745,6 +767,7 @@ void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceC
 
 void UseOpenXR::Shutdown()
 {
+	haveXRDevice = false;
 	// We used a graphics API to initialize the swapchain data, so we'll
 	// give it a chance to release anythig here!
 	for (int32_t i = 0; i < xr_swapchains.size(); i++)

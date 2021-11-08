@@ -82,18 +82,18 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	/// distributes numerical precision to where it is better used.
 	static const bool reverseDepth = true;
 	/// A pointer to RenderPlatform, so that we can use the simul::crossplatform API.
-	simul::crossplatform::RenderPlatform *renderPlatform;
+	simul::crossplatform::RenderPlatform *renderPlatform	=nullptr;
 	pc_client::PC_RenderPlatform PcClientRenderPlatform;
 	/// A framebuffer to store the colour and depth textures for the view.
-	simul::crossplatform::BaseFramebuffer	*hdrFramebuffer;
+	simul::crossplatform::BaseFramebuffer	*hdrFramebuffer	=nullptr;
 	/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.
-	simul::crossplatform::HdrRenderer		*hDRRenderer;
+	simul::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
 
 	// A simple example mesh to draw as transparent
-	simul::crossplatform::Mesh *transparentMesh;
-	simul::crossplatform::MeshRenderer *meshRenderer;
-	simul::crossplatform::Effect *pbrEffect;
-	simul::crossplatform::Effect *cubemapClearEffect;
+	simul::crossplatform::Mesh *transparentMesh			= nullptr;
+	simul::crossplatform::MeshRenderer *meshRenderer	= nullptr;
+	simul::crossplatform::Effect *pbrEffect				= nullptr;
+	simul::crossplatform::Effect *cubemapClearEffect	= nullptr;
 	simul::crossplatform::ShaderResource _RWTagDataIDBuffer;
 	simul::crossplatform::ShaderResource _lights;
 	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
@@ -103,10 +103,10 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 	simul::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 	simul::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
-	simul::crossplatform::Texture* diffuseCubemapTexture;
-	simul::crossplatform::Texture* specularCubemapTexture;
-	simul::crossplatform::Texture* lightingCubemapTexture;
-	simul::crossplatform::Texture* videoTexture;
+	simul::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
+	simul::crossplatform::Texture* specularCubemapTexture	= nullptr;
+	simul::crossplatform::Texture* lightingCubemapTexture	= nullptr;
+	simul::crossplatform::Texture* videoTexture				= nullptr;
 
 	static constexpr int maxTagDataSize = 32;
 	VideoTagDataCube videoTagDataCube[maxTagDataSize];
@@ -128,10 +128,11 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	ControllerState controllerStates[2];
 	float framerate = 0.0f;
 
-	avs::Timestamp platformStartTimestamp; //Timestamp of when the system started.
-	double previousTimestamp; //Milliseconds since the state was last updated.
-	
-	scr::ResourceManagers resourceManagers;
+	avs::Timestamp platformStartTimestamp;	//Timestamp of when the system started.
+	double previousTimestamp;				//Milliseconds since the state was last updated.
+
+	scr::GeometryCache localGeometryCache;
+	scr::GeometryCache geometryCache;
 	
 	bool show_video = false;
 	bool renderPlayer = true; //Whether to render the player.
@@ -147,9 +148,9 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 		NUM_OSDS
 	};
 	int show_osd = NETWORK_OSD;
-	bool render_from_video_centre = false;
-	bool show_textures = false;
-	bool show_cubemaps=false;
+	bool render_from_video_centre	= false;
+	bool show_textures				= false;
+	bool show_cubemaps				=false;
 
 	std::string overridePassName = ""; //Pass used for rendering geometry.
 
@@ -169,13 +170,13 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	int server_discovery_port=0;
 
 	float roomRadius=1.5f;
-	teleport::client::ClientDeviceState *clientDeviceState;
+	teleport::client::ClientDeviceState *clientDeviceState = nullptr;
 
 
 	// handler for the UI to tell us to connect.
 	void ConnectButtonHandler(const std::string& url);
 public:
-	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState);
+	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState, teleport::Gui &g);
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
@@ -219,19 +220,19 @@ public:
 	void InvalidateDeviceObjects();
 	void RemoveView(int);
 	bool OnDeviceRemoved();
-	void OnFrameMove(double fTime, float time_step);
+	void OnFrameMove(double fTime, float time_step, bool have_headset);
 	void OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
 	void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
-	void OnKeyboard(unsigned wParam, bool bKeyDown);
+	void OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown);
 
 	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);
 	void FillInControllerPose(int index, float offset);
 	//Update the state of objects on the ClientRenderer.
 	void Update();
 
-	static constexpr bool AudioStream = true;
-	static constexpr bool GeoStream  = true;
+	static constexpr bool AudioStream	= true;
+	static constexpr bool GeoStream		= true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
 
@@ -289,5 +290,5 @@ private:
 	static constexpr float HFOV = 90;
 	float gamma=0.44f;
 
-	teleport::Gui gui;
+	teleport::Gui &gui;
 };

@@ -116,26 +116,15 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 		std::cout << msg ;
 }
 
-ClientRenderer::ClientRenderer(ClientDeviceState *c):
-	renderPlatform(nullptr),
-	hdrFramebuffer(nullptr),
-	hDRRenderer(nullptr),
-	transparentMesh(nullptr),
-	meshRenderer(nullptr),
-	pbrEffect(nullptr),
-	cubemapClearEffect(nullptr),
-	diffuseCubemapTexture(nullptr),
-	specularCubemapTexture(nullptr),
-	lightingCubemapTexture(nullptr),
-	videoTexture(nullptr),
+ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g):
 	sessionClient(this, std::make_unique<PCDiscoveryService>()),
-	resourceManagers(new scr::NodeManager),
 	clientDeviceState(c),
 	resourceCreator(),
-	RenderMode(0)
+	RenderMode(0),
+	gui(g)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
-	resourceCreator.AssociateResourceManagers(resourceManagers);
+	resourceCreator.AssociateResourceManagers(geometryCache);
 
 	//Initalise time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
@@ -279,7 +268,6 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 	//cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 }
 
-platform::core::DefaultProfiler cpuProfiler;
 
 void ClientRenderer::ChangePass(ShaderMode newShaderMode)
 {
@@ -325,12 +313,9 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 
 	simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
-	platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
-	cpuProfiler.SetMaxLevel(5);
-	cpuProfiler.StartFrame();
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
+	SIMUL_COMBINED_PROFILE_START(deviceContext, "ClientRenderer::Render");
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
 	hdrFramebuffer->Activate(deviceContext);
@@ -377,7 +362,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 		int W = hdrFramebuffer->GetWidth();
 		int H = hdrFramebuffer->GetHeight();
-		renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
+		if(ti)
+			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 	}
 	static int lod = 0;
 	static char tt = 0;
@@ -390,7 +376,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	if (show_textures)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& textures = resourceManagers.mTextureManager.GetCache(cacheLock);
+		auto& textures = geometryCache.mTextureManager.GetCache(cacheLock);
 		static int tw = 128;
 		int x = 0, y = 0;//hdrFramebuffer->GetHeight()-tw*2;
 		for (auto t : textures)
@@ -418,13 +404,14 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	{
 		DrawOSD(deviceContext);
 	}
+	SIMUL_COMBINED_PROFILE_END(deviceContext);
 }
 
 void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &deviceContext)
 {
+	SIMUL_COMBINED_PROFILE_START(deviceContext,"RenderView");
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 	pbrEffect->UnbindTextures(deviceContext);
-
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	//vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	{
@@ -436,8 +423,8 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		{
 			// This will apply to both rendering methods
 			{
-				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture); 
-				tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, _RWTagDataIDBuffer );
+				cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+				tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, _RWTagDataIDBuffer);
 				cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
 				cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 				cubemapClearEffect->Apply(deviceContext, "extract_tag_data_id", 0);
@@ -448,19 +435,19 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 				tagDataIDBuffer.CopyToReadBuffer(deviceContext);
 				const uint4* videoIDBuffer = tagDataIDBuffer.OpenReadBuffer(deviceContext);
 				if (videoIDBuffer && videoIDBuffer[0].x < 32 && videoIDBuffer[0].w == 110) // sanity check
-				{	
-					int tagDataID = videoIDBuffer[0].x;	
+				{
+					int tagDataID = videoIDBuffer[0].x;
 
 					const auto& ct = videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
 					videoPos = vec3(ct.position.x, ct.position.y, ct.position.z);
-					
+
 					videoPosDecoded = true;
 				}
 				tagDataIDBuffer.CloseReadBuffer(deviceContext);
 			}
 
 			UpdateTagDataBuffers(deviceContext);
- 
+
 			if (videoTexture->IsCubemap())
 			{
 				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
@@ -468,7 +455,7 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
 			}
 			else
-			{	
+			{
 				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
 				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 				simul::math::Matrix4x4 projInv;
@@ -477,28 +464,28 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			}
 			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x, videoConfig.diffuse_y));
 			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x, videoConfig.specular_y));
-			//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
-			RenderLocalNodes(deviceContext);
+		}
+		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
+		RenderLocalNodes(deviceContext);
 
-			// We must deactivate the depth buffer here, in order to use it as a texture:
-			hdrFramebuffer->DeactivateDepth(deviceContext);
-			if (show_video)
-			{
-				int W = hdrFramebuffer->GetWidth();
-				int H = hdrFramebuffer->GetHeight();
-				renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
-			}
-			static int lod=0;
-			static char tt=0;
-			tt--;
-			if(!tt)
-				lod++;
-			lod=lod%8;
-			if(show_cubemaps)
-			{
-				renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
-				renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
-			}
+		// We must deactivate the depth buffer here, in order to use it as a texture:
+		//hdrFramebuffer->DeactivateDepth(deviceContext);
+		if (show_video)
+		{
+			int W = hdrFramebuffer->GetWidth();
+			int H = hdrFramebuffer->GetHeight();
+			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
+		}
+		static int lod=0;
+		static char tt=0;
+		tt--;
+		if(!tt)
+			lod++;
+		lod=lod%8;
+		if(show_cubemaps)
+		{
+			renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
+			renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -510,7 +497,7 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 	if(show_textures)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& textures = resourceManagers.mTextureManager.GetCache(cacheLock);
+		auto& textures = geometryCache.mTextureManager.GetCache(cacheLock);
 		static int tw = 128;
 		int x = 0, y = 0;//hdrFramebuffer->GetHeight()-tw*2;
 		for (auto t : textures)
@@ -530,17 +517,11 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyCombined.get())))->GetSimulTexture());
 		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, ((pc_client::PC_Texture*)((resourceCreator.m_DummyBlack.get())))->GetSimulTexture());
 	}
-	hdrFramebuffer->Deactivate(deviceContext);
-	hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
+	//hdrFramebuffer->Deactivate(deviceContext);
+	//hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
 
 	gui.Render(deviceContext);
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
-	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
-	cpuProfiler.EndFrame();
-	if(show_osd)
-	{
-		DrawOSD(deviceContext);
-	}
 
 }
 
@@ -608,7 +589,7 @@ void ClientRenderer::RecomposeCubemap(simul::crossplatform::GraphicsDeviceContex
 void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {				
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+	auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
 	for (int i = 0; i < videoTagDataCubeArray.size(); ++i)
 	{
 		const auto& td = videoTagDataCubeArray[i];
@@ -746,11 +727,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	else if(show_osd==GEOMETRY_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Nodes: %d",resourceManagers.mNodeManager->GetNodeAmount()), white);
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Nodes: %d",geometryCache.mNodeManager->GetNodeAmount()), white);
 
 		static int nodeLimit = 5;
 		int linesRemaining = nodeLimit;
-		auto& rootNodes = resourceManagers.mNodeManager->GetRootNodes();
+		auto& rootNodes = geometryCache.mNodeManager->GetRootNodes();
 		for(const std::shared_ptr<scr::Node>& node : rootNodes)
 		{
 			if(show_only!=0&&show_only!=node->id)
@@ -764,28 +745,28 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		static int lineLimit = 50;
 		linesRemaining = lineLimit;
 		/*
-		const std::shared_ptr<scr::Node>& body = resourceManagers.mNodeManager->GetBody();
+		const std::shared_ptr<scr::Node>& body = geometryCache.mNodeManager->GetBody();
 		if(body)
 		{
 			ListNode(deviceContext, body, 1, linesRemaining);
 		}
 
-		const std::shared_ptr<scr::Node>& leftHand = resourceManagers.mNodeManager->GetLeftHand();
+		const std::shared_ptr<scr::Node>& leftHand = geometryCache.mNodeManager->GetLeftHand();
 		if(leftHand)
 		{
 			ListNode(deviceContext, leftHand, 1, linesRemaining);
 		}
 
-		const std::shared_ptr<scr::Node>& rightHand = resourceManagers.mNodeManager->GetRightHand();
+		const std::shared_ptr<scr::Node>& rightHand = geometryCache.mNodeManager->GetRightHand();
 		if(rightHand)
 		{
 			ListNode(deviceContext, rightHand, 1, linesRemaining);
 		}*/
 
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Meshes: %d\nLights: %d", resourceManagers.mMeshManager.GetCache(cacheLock).size(),
-																									resourceManagers.mLightManager.GetCache(cacheLock).size()), white);
+		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
+																									geometryCache.mLightManager.GetCache(cacheLock).size()), white);
 /*
-		auto& cachedMaterials = resourceManagers.mMaterialManager.GetCache(cacheLock);
+		auto& cachedMaterials = geometryCache.mMaterialManager.GetCache(cacheLock);
 		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
 		static int matLimit = 5;
 		linesRemaining = matLimit;
@@ -799,7 +780,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			if(!linesRemaining)
 				break;
 		}
-		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
 		int j=0;
 		for(auto &i:cachedLights)
 		{
@@ -854,7 +835,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	else if(show_osd==TAG_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& cachedLights = resourceManagers.mLightManager.GetCache(cacheLock);
+		auto& cachedLights = geometryCache.mLightManager.GetCache(cacheLock);
 		const char *name="";
 		renderPlatform->LinePrint(deviceContext,"Tags\n");
 		for(int i=0;i<videoTagDataCubeArray.size();i++)
@@ -941,24 +922,24 @@ void ClientRenderer::WriteHierarchies()
 {
 	std::cout << "Node Tree\n----------------------------------\n";
 
-	for(std::shared_ptr<scr::Node> node : resourceManagers.mNodeManager->GetRootNodes())
+	for(std::shared_ptr<scr::Node> node : geometryCache.mNodeManager->GetRootNodes())
 	{
 		WriteHierarchy(0, node);
 	}
 
-	std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
+	std::shared_ptr<scr::Node> body = geometryCache.mNodeManager->GetBody();
 	if(body)
 	{
 		WriteHierarchy(0, body);
 	}
 
-	std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
+	std::shared_ptr<scr::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
 		WriteHierarchy(0, leftHand);
 	}
 
-	std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
+	std::shared_ptr<scr::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
 	if(rightHand)
 	{
 		WriteHierarchy(0, rightHand);
@@ -978,7 +959,7 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	cameraConstants.viewPosition = ((const float*)&clientDeviceState->headPose.position);
 
-	const scr::NodeManager::nodeList_t& nodeList = resourceManagers.mNodeManager->GetRootNodes();
+	const scr::NodeManager::nodeList_t& nodeList = geometryCache.mNodeManager->GetRootNodes();
 	for(const std::shared_ptr<scr::Node>& node : nodeList)
 	{
 		if(show_only!=0&&show_only!=node->id)
@@ -988,7 +969,7 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 
 	if(renderPlayer)
 	{
-		std::shared_ptr<scr::Node> body = resourceManagers.mNodeManager->GetBody();
+		std::shared_ptr<scr::Node> body = geometryCache.mNodeManager->GetBody();
 		if(body)
 		{
 			body->SetLocalPosition(clientDeviceState->headPose.position + bodyOffsetFromHead);
@@ -1001,7 +982,7 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 			RenderNode(deviceContext, body);
 		}
 
-		std::shared_ptr<scr::Node> rightHand = resourceManagers.mNodeManager->GetRightHand();
+		std::shared_ptr<scr::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
 		if(rightHand)
 		{
 				rightHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
@@ -1010,7 +991,7 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 			RenderNode(deviceContext, rightHand);
 		}
 
-		std::shared_ptr<scr::Node> leftHand = resourceManagers.mNodeManager->GetLeftHand();
+		std::shared_ptr<scr::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
 		if(leftHand)
 		{
 			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[1].position);
@@ -1034,7 +1015,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
 		if(cachedLights.size()>lightsBuffer.count)
 		{
 			lightsBuffer.InvalidateDeviceObjects();
@@ -1045,7 +1026,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 
 	std::shared_ptr<scr::Texture> globalIlluminationTexture ;
 	if(node->GetGlobalIlluminationTextureUid() )
-		globalIlluminationTexture = resourceManagers.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	std::string passName = "pbr_nolightmap"; //Pass used for rendering geometry.
 	if(node->IsStatic())
@@ -1166,7 +1147,7 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 
 	std::shared_ptr<scr::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
-		globalIlluminationTexture = resourceManagers.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	//Only render visible nodes, but still render children that are close enough.
 	if (node->IsVisible()&& (show_only == 0 || show_only == node->id))
@@ -1282,7 +1263,7 @@ void ClientRenderer::Update()
 
 	teleport::client::ServerTimestamp::tick(timeElapsed);
 
-	resourceManagers.Update(static_cast<float>(timeElapsed));
+	geometryCache.Update(static_cast<float>(timeElapsed));
 	resourceCreator.Update(static_cast<float>(timeElapsed));
 
 	previousTimestamp = timestamp;
@@ -1583,7 +1564,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 	Roderick: we will here ignore the cached lights (CPU-streamed node lights) as they are unordered so may be found in a different order
 		to the tag lights. ALL light data will go into the tags, using uid lookup to get any needed data from the unordered cache.
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto &cachedLights=resourceManagers.mLightManager.GetCache(cacheLock);
+	auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
 	auto &cachedLight=cachedLights.begin();*/
 	////
 
@@ -1604,48 +1585,48 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 bool ClientRenderer::OnNodeEnteredBounds(avs::uid id)
 {
-	return resourceManagers.mNodeManager->ShowNode(id);
+	return geometryCache.mNodeManager->ShowNode(id);
 }
 
 bool ClientRenderer::OnNodeLeftBounds(avs::uid id)
 {
-	return resourceManagers.mNodeManager->HideNode(id);
+	return geometryCache.mNodeManager->HideNode(id);
 }
 
 std::vector<uid> ClientRenderer::GetGeometryResources()
 {
-	return resourceManagers.GetAllResourceIDs();
+	return geometryCache.GetAllResourceIDs();
 }
 
 void ClientRenderer::ClearGeometryResources()
 {
-	resourceManagers.Clear();
+	geometryCache.Clear();
 	resourceCreator.Clear();
 }
 
 void ClientRenderer::SetVisibleNodes(const std::vector<avs::uid>& visibleNodes)
 {
-	resourceManagers.mNodeManager->SetVisibleNodes(visibleNodes);
+	geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
 }
 
 void ClientRenderer::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
 {
-	resourceManagers.mNodeManager->UpdateNodeMovement(updateList);
+	geometryCache.mNodeManager->UpdateNodeMovement(updateList);
 }
 
 void ClientRenderer::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
 {
-	resourceManagers.mNodeManager->UpdateNodeEnabledState(updateList);
+	geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
 }
 
 void ClientRenderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
-	resourceManagers.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+	geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
 }
 
 void ClientRenderer::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
 {
-	resourceManagers.mNodeManager->UpdateNodeAnimation(animationUpdate);
+	geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
 }
 
 void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate)
@@ -1653,13 +1634,13 @@ void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationCo
 	switch(animationControlUpdate.timeControl)
 	{
 	case avs::AnimationTimeControl::ANIMATION_TIME:
-		resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
+		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 		break;
 	case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
-		resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[0].triggerBack, 1.0f);
+		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[0].triggerBack, 1.0f);
 		break;
 	case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
-		resourceManagers.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[1].triggerBack, 1.0f);
+		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[1].triggerBack, 1.0f);
 		break;
 	default:
 		SCR_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
@@ -1669,7 +1650,7 @@ void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationCo
 
 void ClientRenderer::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	resourceManagers.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
+	geometryCache.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 #include "Platform/CrossPlatform/Quaterniond.h"
@@ -1717,7 +1698,7 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 	controllerSim.orientation[index] =((const float*)&q);
 }
 
-void ClientRenderer::OnFrameMove(double fTime,float time_step)
+void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 {
 #if IS_D3D12
 	//platform::dx12::RenderPlatform* dx12RenderPlatform = (platform::dx12::RenderPlatform*)renderPlatform;
@@ -1749,22 +1730,29 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 	mouseCameraInput.right_left_input	=((float)keydown['d']-(float)keydown['a'])*(float)(!keydown[VK_SHIFT]);
 	mouseCameraInput.up_down_input		=((float)keydown['q']-(float)keydown['z'])*(float)(!keydown[VK_SHIFT]);
 	
-	static float spd = 0.5f;
-	crossplatform::UpdateMouseCamera(&camera
-							,time_step
-							,spd
-							,mouseCameraState
-							,mouseCameraInput
-							,14000.f,false, crossplatform::MouseCameraInput::RIGHT_BUTTON);
+	if (!have_headset)
+	{
+		static float spd = 0.5f;
+		crossplatform::UpdateMouseCamera(&camera
+			, time_step
+			, spd
+			, mouseCameraState
+			, mouseCameraInput
+			, 14000.f, false, crossplatform::MouseCameraInput::RIGHT_BUTTON);
 
 
-	// consider this to be the position relative to the local origin. Don't let it get too far from centre.
-	vec3 cam_pos=camera.GetPosition();
-	float r=sqrt(cam_pos.x*cam_pos.x+cam_pos.y*cam_pos.y);
-	if(cam_pos.z>2.0f)
-		cam_pos.z=2.0f;
-	if(cam_pos.z<1.0f)
-		cam_pos.z=1.0f;
+		// consider this to be the position relative to the local origin. Don't let it get too far from centre.
+		vec3 cam_pos = camera.GetPosition();
+		float r = sqrt(cam_pos.x * cam_pos.x + cam_pos.y * cam_pos.y);
+		if (cam_pos.z > 2.0f)
+			cam_pos.z = 2.0f;
+		if (cam_pos.z < 1.0f)
+			cam_pos.z = 1.0f;
+		simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
+		auto q = camera.Orientation.GetQuaternion();
+		auto q_rel = q / q0;
+		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((scr::quat*)&q_rel));
+	}
 	controllerStates[1].mJoystickAxisX=stored_clientspace_input.x;
 	controllerStates[1].mJoystickAxisY=stored_clientspace_input.y;
 	//controllerStates[0].mJoystickAxisX=stored_clientspace_input.x;
@@ -1794,24 +1782,15 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 
 		if(!receivedInitialPos)
 		{
-		//	camera.SetPositionAsXYZ(0.f, 0.f, 1.5f);
 			vec3 look(0.f, 1.f, 0.f), up(0.f, 0.f, 1.f);
-		//	camera.LookInDirection(look, up);
 		}
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
 
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime, time_step);
 
-		//if (receivedInitialPos!=sessionClient.receivedInitialPos&& sessionClient.receivedInitialPos>0)
 		{
 			clientDeviceState->originPose = sessionClient.GetOriginPose();
-			/*static bool s=false;
-			s=!s;
-			if(s)
-			{
-				clientDeviceState->originPose.position.x+=2.0f;
-			}*/
 			receivedInitialPos = sessionClient.receivedInitialPos;
 			if(receivedRelativePos!=sessionClient.receivedRelativePos)
 			{
@@ -1846,10 +1825,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step)
 		}
 	}
 
-	simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
-	auto q = camera.Orientation.GetQuaternion();
-	auto q_rel = q / q0;
-	clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((scr::quat*)&q_rel));
 	clientDeviceState->UpdateOriginPose();
 	FillInControllerPose(0, 0.5f);
 	FillInControllerPose(1, -0.5f);
@@ -1963,7 +1938,7 @@ void ClientRenderer::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& 
 }
 
 
-void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown)
+void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 {
 	switch (wParam) 
 	{

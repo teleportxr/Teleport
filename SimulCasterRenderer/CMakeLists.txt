@@ -34,6 +34,8 @@ set( src_crossplatform
 	src/crossplatform/Bone.h
 	src/crossplatform/Camera.cpp
 	src/crossplatform/Camera.h
+	src/crossplatform/GeometryCache.cpp
+	src/crossplatform/GeometryCache.h
 	src/crossplatform/GeometryDecoder.cpp
 	src/crossplatform/GeometryDecoder.h
 	src/crossplatform/Light.cpp

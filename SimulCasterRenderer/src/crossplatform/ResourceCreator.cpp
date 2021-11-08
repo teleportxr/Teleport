@@ -84,8 +84,6 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 	tci.mips[0] = std::vector<unsigned char>(sz);
 	memcpy(tci.mips[0].data(), &green_grid, sizeof(green_grid));
 	m_DummyGreen->Create(tci);
-
-
 }
 
 std::vector<avs::uid> ResourceCreator::TakeResourceRequests()

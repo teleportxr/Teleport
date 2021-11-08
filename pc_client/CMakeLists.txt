@@ -93,4 +93,4 @@ endif()
 
 target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm openxr_loader.lib)
 
-target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT)
+target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)

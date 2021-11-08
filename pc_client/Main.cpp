@@ -46,6 +46,7 @@ simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
 std::vector<std::string> server_ips;
 uint32_t clientID = TELEPORT_DEFAULT_CLIENT_ID;
+teleport::Gui gui;
 
 #define MAX_LOADSTRING 100
 
@@ -55,7 +56,7 @@ WCHAR szWindowClass[]=L"MainWindow";            // the main window class name
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
+HWND               InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void InitRenderer(HWND);
@@ -106,10 +107,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Initialize global strings
     MyRegisterClass(hInstance);
     // Perform application initialization:
-    if (!InitInstance(hInstance, nCmdShow))
+	HWND hWnd = InitInstance(hInstance, nCmdShow);
+	if(!hWnd)
     {
         return FALSE;
     }
+
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WORLDSPACE));
     MSG msg;
     // Main message loop:
@@ -150,7 +153,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
@@ -167,7 +170,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
    InitRenderer(hWnd);
-   return TRUE;
+   return hWnd;
 }
 
 void ShutdownRenderer(HWND hWnd)
@@ -184,7 +187,7 @@ void ShutdownRenderer(HWND hWnd)
 	
 void InitRenderer(HWND hWnd)
 {
-	clientRenderer=new ClientRenderer (&clientDeviceState);
+	clientRenderer=new ClientRenderer (&clientDeviceState,gui);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
@@ -247,7 +250,7 @@ void InitRenderer(HWND hWnd)
 	dsmi->SetRenderer(hWnd,clientRenderer,-1);
 }
 
-platform::core::DefaultProfiler cpuProfiler;
+static platform::core::DefaultProfiler cpuProfiler;
 #define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))
 #define GET_Y_LPARAM(lp)                        ((int)(short)HIWORD(lp))
 #define GET_WHEEL_DELTA_WPARAM(wParam)  ((short)HIWORD(wParam))
@@ -264,6 +267,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		ui_handled=true;
 	}
+	if (!ui_handled && !gui.HasFocus())
+	{
+		switch (message)
+		{
+		case WM_KEYUP:
+			switch (wParam)
+			{
+			case VK_ESCAPE:
+				gui.Hide();
+			default:
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+	}
 	POINT pos;
 	if (::GetCursorPos(&pos) && ::ScreenToClient(hWnd, &pos))
 	{
@@ -271,53 +291,60 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		GetClientRect(hWnd, &rect);
 		ImGui_ImplPlatform_SetMousePos(pos.x, pos.y, rect.right - rect.left, rect.bottom - rect.top);
 	}
-	if(ui_handled||ImGui::GetCurrentContext()!=nullptr&&ImGui::IsItemFocused())
-		return true;
-    switch (message)
-    {
-	case WM_LBUTTONDOWN:
-		clientRenderer->OnMouseButtonPressed(true, false, false, 0);
-		break;
-	case WM_LBUTTONUP:
-		clientRenderer->OnMouseButtonReleased(true, false, false, 0);
-		break;
-	case WM_RBUTTONDOWN:
-		clientRenderer->OnMouseButtonPressed(false, true,  false, 0);
-		break;
-	case WM_RBUTTONUP:
-		clientRenderer->OnMouseButtonReleased(false, true,  false, 0);
-		break;
-	case WM_MBUTTONDOWN:
-		clientRenderer->OnMouseButtonPressed(false, false, true, 0);
-		break;
-	case WM_MBUTTONUP:
-		clientRenderer->OnMouseButtonReleased(false, false, true, 0);
-		break;
-	case WM_MOUSEWHEEL:
+	if (!ui_handled && !gui.HasFocus())
+	{
+		switch (message)
 		{
-			int xPos = GET_X_LPARAM(lParam); 
-			int yPos = GET_Y_LPARAM(lParam); 
+		case WM_KEYDOWN:
+			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.HasFocus());
+			break;
+		case WM_KEYUP:
+			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.HasFocus());
+			break;
+		case WM_LBUTTONDOWN:
+			clientRenderer->OnMouseButtonPressed(true, false, false, 0);
+			break;
+		case WM_LBUTTONUP:
+			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
+			break;
+		case WM_RBUTTONDOWN:
+			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
+			break;
+		case WM_RBUTTONUP:
+			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
+			break;
+		case WM_MBUTTONDOWN:
+			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
+			break;
+		case WM_MBUTTONUP:
+			clientRenderer->OnMouseButtonReleased(false, false, true, 0);
+			break;
+		case WM_MOUSEWHEEL:
+		{
+			int xPos = GET_X_LPARAM(lParam);
+			int yPos = GET_Y_LPARAM(lParam);
 			short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 		}
 		break;
-	case WM_MOUSEMOVE:
+		case WM_MOUSEMOVE:
 		{
-			int xPos = GET_X_LPARAM(lParam); 
-			int yPos = GET_Y_LPARAM(lParam); 
+			int xPos = GET_X_LPARAM(lParam);
+			int yPos = GET_Y_LPARAM(lParam);
 			short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 			clientRenderer->OnMouseMove(xPos, yPos
-				,(wParam&MK_LBUTTON)!=0
-				,(wParam&MK_RBUTTON)!=0
-				,(wParam&MK_MBUTTON)!=0
-				,zDelta);
+				, (wParam & MK_LBUTTON) != 0
+				, (wParam & MK_RBUTTON) != 0
+				, (wParam & MK_MBUTTON) != 0
+				, zDelta);
 		}
 		break;
-	case WM_KEYDOWN:
-			clientRenderer->OnKeyboard((unsigned)wParam,true);
-		break;
-	case WM_KEYUP:
-			clientRenderer->OnKeyboard((unsigned)wParam,false);
-		break;
+		default:
+			break;
+		}
+	}
+
+	switch (message)
+	{
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
@@ -339,7 +366,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
 			if(gdi)
 			{
-				PAINTSTRUCT ps;
+			//	PAINTSTRUCT ps;
 				//BeginPaint(hWnd, &ps);
 				clientRenderer->Update();
 				bool quit = false;
@@ -354,7 +381,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// because vertex and index buffers can be created in OnFrameMove. 
 				// StartFrame does nothing for D3D11.
 				w->StartFrame();
-				clientRenderer->OnFrameMove(fTime,time_step);
+				if (useOpenXR.HaveXRDevice())
+				{
+					const avs::Pose &headPose=useOpenXR.GetHeadPose();
+					clientDeviceState.SetHeadPose(headPose.position, headPose.orientation);
+				}
+				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
 				fTime+=time_step;
 				errno=0;
 				simul::crossplatform::GraphicsDeviceContext	deviceContext;
@@ -372,11 +404,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				dsmi->Render(hWnd);
 
 				SIMUL_COMBINED_PROFILE_END(deviceContext);
-				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
-				cpuProfiler.EndFrame();
 				vec3 headOrigin = *((vec3*)&clientDeviceState.originPose.position);
 				useOpenXR.RenderFrame(deviceContext, renderDelegate, headOrigin);
 				errno=0;
+				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
+				cpuProfiler.EndFrame();
 				displaySurfaceManager.EndFrame();
 				//EndPaint(hWnd, &ps);
 			}

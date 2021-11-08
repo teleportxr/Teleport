@@ -19,7 +19,7 @@ namespace teleport
 		void SetConnectHandler(std::function<void(const std::string&)> fn);
 		bool HasFocus() const
 		{
-			return hasFocus;
+			return visible;
 		}
 	protected:
 		simul::crossplatform::RenderPlatform* renderPlatform=nullptr;
@@ -28,6 +28,5 @@ namespace teleport
 		std::string current_url;
 		std::function<void(const std::string&)> connectHandler;
 		bool visible = false;
-		bool hasFocus=false;
 	};
 }
