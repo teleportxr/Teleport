@@ -16,6 +16,7 @@ namespace teleport
 		void ShowHide();
 		void Show();
 		void Hide();
+		void SetScaleMetres();
 		void SetConnectHandler(std::function<void(const std::string&)> fn);
 		bool HasFocus() const
 		{
@@ -28,5 +29,7 @@ namespace teleport
 		std::string current_url;
 		std::function<void(const std::string&)> connectHandler;
 		bool visible = false;
+		float width_m=0.6f;
+		std::vector<char> keys_pressed;
 	};
 }
