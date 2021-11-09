@@ -91,12 +91,21 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
     ImGui_ImplPlatform_Update3DMousePos();
 	ImGui::NewFrame();
     {
+        bool show_keyboard = true;
         ImGui::SetNextWindowPos(ImVec2(0, 0));                    // always at the window origin
-        ImGui::SetNextWindowSize(ImVec2(float(600), float(100)));    // always at the window size
+       // ImGui::SetNextWindowSize(ImVec2(float(600), float(100)));    // always at the window size
+        ImVec2 size_min(600.f, 100.f);
+        ImVec2 size_max(600.f, 600.f);
+     /*   ImGui::SetNextWindowSizeConstraints(size_min, size_max);
+        if(!show_keyboard)
+            ImGui::SetNextWindowSize(size_min);
+        else
+            ImGui::SetNextWindowSize(size_max);*/
         ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoResize |
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoCollapse|
             ImGuiWindowFlags_NoScrollbar;
+        ImGui::LogToTTY();
         ImGui::Begin("Teleport VR",nullptr, windowFlags);                          // Create a window called "Hello, world!" and append into it.
         static char buf[500];
         if(ImGui::InputText("", buf, IM_ARRAYSIZE(buf)))
@@ -111,8 +120,35 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
                 connectHandler(current_url);
             }
         }
-
-        //ImGui_ImplPlatform_DebugInfo();
+        ImGuiIO& io = ImGui::GetIO();
+        if (show_keyboard)
+        {
+            auto KeyboardLine = [&io](const char* key)
+            {
+                size_t num = strlen(key);
+                for (size_t i = 0; i < num; i++)
+                {
+                    char key_label[] = "X";
+                    key_label[0] = *key;
+                    if (ImGui::Button(key_label,ImVec2(50,40)))
+                    {
+                        io.AddInputCharacter(*key);
+                    }
+                    key++;
+                    if (i<num-1)
+                        ImGui::SameLine();
+                }
+            };
+            KeyboardLine("1234567890-");
+            KeyboardLine("qwertyuiop");
+            KeyboardLine("asdfghjkl");
+        /*    ImGui::SameLine();
+            if (ImGui::Button("Return"))
+            {
+            }*/
+            KeyboardLine("zxcvbnm,./");
+        }
+        ImGui_ImplPlatform_DebugInfo();
 
         //hasFocus = ImGui::IsAnyItemFocused(); Note: does not work.
         ImGui::End();

@@ -291,7 +291,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		GetClientRect(hWnd, &rect);
 		ImGui_ImplPlatform_SetMousePos(pos.x, pos.y, rect.right - rect.left, rect.bottom - rect.top);
 	}
-	if (!ui_handled && !gui.HasFocus())
+	//if (!ui_handled && !gui.HasFocus())
 	{
 		switch (message)
 		{

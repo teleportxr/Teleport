@@ -126,7 +126,7 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g):
 	sessionClient.SetResourceCreator(&resourceCreator);
 	resourceCreator.AssociateResourceManagers(geometryCache);
 
-	//Initalise time stamping for state update.
+	// Initalize time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
 	previousTimestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 
@@ -152,11 +152,11 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	hDRRenderer = new crossplatform::HdrRenderer();
 
-	hdrFramebuffer=renderPlatform->CreateFramebuffer();
+	hdrFramebuffer	=renderPlatform->CreateFramebuffer();
 	hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
 	hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
 	hdrFramebuffer->SetAntialiasing(1);
-	meshRenderer = new crossplatform::MeshRenderer();
+	meshRenderer	= new crossplatform::MeshRenderer();
 	camera.SetPositionAsXYZ(0.f,0.f,5.f);
 	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
 	camera.LookInDirection(look,up);
