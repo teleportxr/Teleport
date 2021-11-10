@@ -21,7 +21,71 @@ namespace scr
 
 namespace scr
 {
+	struct IncompleteResource
+	{
+		IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
+			:id(id), type(type)
+		{}
+
+		const avs::uid id;
+		const avs::GeometryPayloadType type;
+	};
+
+	struct MissingResource
+	{
+		const avs::uid id; //ID of the missing resource.
+		const char* resourceType; //String indicating missing resource's type.
+
+		std::vector<std::shared_ptr<IncompleteResource>> waitingResources; //Resources that can't be completed without this missing resource.
+
+		MissingResource(avs::uid id, const char* resourceType)
+			:id(id), resourceType(resourceType)
+		{}
+	};
+	struct IncompleteMaterial : IncompleteResource
+	{
+		IncompleteMaterial(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
+		scr::Material::MaterialCreateInfo materialInfo;
+		std::unordered_map<avs::uid, std::shared_ptr<scr::Texture>&> textureSlots; //<ID of the texture, slot the texture should be placed into>.
+	};
+
+	struct IncompleteNode : IncompleteResource
+	{
+		IncompleteNode(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
+		std::shared_ptr<scr::Node> node;
+
+		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into node material list>.
+		std::unordered_map<avs::uid, size_t> missingAnimations; //<ID of missing animation, index in animation vector>
+	};
+
+	struct IncompleteSkin : IncompleteResource
+	{
+		IncompleteSkin(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
+		std::shared_ptr<scr::Skin> skin;
+
+		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
+	};
+
+	struct UntranscodedTexture
+	{
+		avs::uid texture_uid;
+		std::vector<unsigned char> data; //The raw data of the basis file.
+		scr::Texture::TextureCreateInfo scrTexture; //Creation information on texture being transcoded.
+		std::string name; //For debugging which texture failed.
+		avs::TextureCompression fromCompressionFormat;
+		float valueScale;	// scale on transcode.
+	};
 	//! A container for geometry sent from servers and cached locally.
+	//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
 	struct GeometryCache
 	{
 		GeometryCache()
@@ -143,5 +207,10 @@ namespace scr
 		ResourceManager<scr::Light>			mLightManager;
 		ResourceManager<scr::Bone>			mBoneManager;
 		ResourceManager<scr::Animation>		mAnimationManager;
+
+		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
+		std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.
+		std::vector<avs::uid> m_CompletedNodes; //List of IDs of nodes that have been fully received, and have yet to be confirmed to the server.
+		std::unordered_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 	};
 }

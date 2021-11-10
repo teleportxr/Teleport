@@ -59,6 +59,7 @@ else()
 	message(FATAL_ERROR "Unsupported platform!")
 endif()
 
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
 add_static_executable( pc_client WIN32 SOURCES ${srcs} ${scr_pc_impl} ${shaders} ${inifiles} )
 
@@ -93,4 +94,7 @@ endif()
 
 target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm openxr_loader.lib)
 
-target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
+target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt -ignore:4711)
+
+target_link_options(pc_client PUBLIC /ignore:4711)
+target_compile_options(pc_client PRIVATE /wd4711)

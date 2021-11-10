@@ -5,9 +5,11 @@
 #include "Material.h"
 
 using namespace avs;
+using namespace scr;
 
 ResourceCreator::ResourceCreator()
-	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb), basisThread(&ResourceCreator::BasisThread_TranscodeTextures, this)
+	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb)
+	, basisThread(&ResourceCreator::BasisThread_TranscodeTextures, this)
 {
 	basist::basisu_transcoder_init();
 }
@@ -88,8 +90,8 @@ void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout
 
 std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
 {
-	std::vector<avs::uid> resourceRequests = std::move(m_ResourceRequests);
-	m_ResourceRequests.clear();
+	std::vector<avs::uid> resourceRequests = std::move(geometryCache->m_ResourceRequests);
+	geometryCache->m_ResourceRequests.clear();
 
 	//Remove duplicates.
 	std::sort(resourceRequests.begin(), resourceRequests.end());
@@ -100,16 +102,16 @@ std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
 
 std::vector<avs::uid> ResourceCreator::TakeReceivedResources()
 {
-	std::vector<avs::uid> receivedResources = std::move(m_ReceivedResources);
-	m_ReceivedResources.clear();
+	std::vector<avs::uid> receivedResources = std::move(geometryCache->m_ReceivedResources);
+	geometryCache->m_ReceivedResources.clear();
 
 	return receivedResources;
 }
 
 std::vector<avs::uid> ResourceCreator::TakeCompletedNodes()
 {
-	std::vector<avs::uid> completedNodes = std::move(m_CompletedNodes);
-	m_CompletedNodes.clear();
+	std::vector<avs::uid> completedNodes = std::move(geometryCache->m_CompletedNodes);
+	geometryCache->m_CompletedNodes.clear();
 
 	return completedNodes;
 }
@@ -124,10 +126,10 @@ void ResourceCreator::Clear()
 	texturesToTranscode.clear();
 	mutex_texturesToTranscode.unlock();
 
-	m_ResourceRequests.clear();
-	m_ReceivedResources.clear();
-	m_CompletedNodes.clear();
-	m_MissingResources.clear();
+	geometryCache->m_ResourceRequests.clear();
+	geometryCache->m_ReceivedResources.clear();
+	geometryCache->m_CompletedNodes.clear();
+	geometryCache->m_MissingResources.clear();
 }
 
 void ResourceCreator::Update(float deltaTime)
@@ -147,12 +149,12 @@ void ResourceCreator::Update(float deltaTime)
 
 avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 {
-	m_ReceivedResources.push_back(meshCreate.mesh_uid);
+	geometryCache->m_ReceivedResources.push_back(meshCreate.mesh_uid);
 	SCR_COUT << "Assemble(Mesh" << meshCreate.mesh_uid << ": " << meshCreate.name << ")\n";
 
 	using namespace scr;
 
-	if (m_VertexBufferManager->Has(meshCreate.mesh_uid) || m_IndexBufferManager->Has(meshCreate.mesh_uid))
+	if (geometryCache->mVertexBufferManager.Has(meshCreate.mesh_uid) || geometryCache->mIndexBufferManager.Has(meshCreate.mesh_uid))
 		return avs::Result::OK;
 
 	if (!m_pRenderPlatform)
@@ -440,13 +442,13 @@ avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
 		ib_ci.data = _indices.get();
 		ib->Create(&ib_ci);
 
-		m_VertexBufferManager->Add(meshElementCreate.vb_uid, vb);
-		m_IndexBufferManager->Add(meshElementCreate.ib_uid, ib);
+		geometryCache->mVertexBufferManager.Add(meshElementCreate.vb_uid, vb);
+		geometryCache->mIndexBufferManager.Add(meshElementCreate.ib_uid, ib);
 
 		mesh_ci.vb[i] = vb;
 		mesh_ci.ib[i] = ib;
 	}
-	if (!m_MeshManager->Has(meshCreate.mesh_uid))
+	if (!geometryCache->mMeshManager.Has(meshCreate.mesh_uid))
 	{
 		CompleteMesh(meshCreate.mesh_uid, mesh_ci);
 	}
@@ -510,7 +512,7 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 
 void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 {
-	m_ReceivedResources.push_back(id);
+	geometryCache->m_ReceivedResources.push_back(id);
 	scr::Texture::CompressionFormat scrTextureCompressionFormat= scr::Texture::CompressionFormat::UNCOMPRESSED;
 	if(texture.compression!=avs::TextureCompression::UNCOMPRESSED)
 	{
@@ -567,7 +569,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 {
 	SCR_COUT << "CreateMaterial(" << id << ", " << material.name << ")\n";
-	m_ReceivedResources.push_back(id);
+	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, avs::GeometryPayloadType::Material);
 	//A list of unique resources that the material is missing, and needs to be completed.
@@ -605,7 +607,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 		incompleteMaterial->materialInfo.emissive);
 // Add it to the manager, even if incomplete.
 	std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(incompleteMaterial->materialInfo);
-	m_MaterialManager->Add(id, scrMaterial);
+	geometryCache->mMaterialManager.Add(id, scrMaterial);
 
 	if (incompleteMaterial->textureSlots.size() == 0)
 	{
@@ -615,7 +617,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 
 void ResourceCreator::CreateNode(avs::uid id, avs::DataNode& node)
 {
-	m_ReceivedResources.push_back(id);
+	geometryCache->m_ReceivedResources.push_back(id);
 
 	switch (node.data_type)
 	{
@@ -643,7 +645,7 @@ void ResourceCreator::CreateNode(avs::uid id, avs::DataNode& node)
 void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 {
 	SCR_COUT << "CreateSkin(" << id << ", " << skin.name << ")\n";
-	m_ReceivedResources.push_back(id);
+	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(id, avs::GeometryPayloadType::Skin);
 
@@ -662,7 +664,7 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 	for (size_t i = 0; i < skin.jointIDs.size(); i++)
 	{
 		avs::uid jointID = skin.jointIDs[i];
-		std::shared_ptr<scr::Bone> bone = m_BoneManager->Get(jointID);
+		std::shared_ptr<scr::Bone> bone = geometryCache->mBoneManager.Get(jointID);
 
 		if (bone)
 			incompleteSkin->skin->SetBone(i, bone);
@@ -670,7 +672,7 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 		{
 			SCR_COUT << "Skin_" << id << "(" << incompleteSkin->skin->name << ") missing Bone_" << jointID << std::endl;
 			incompleteSkin->missingBones[jointID] = i;
-			m_ResourceRequests.push_back(jointID);
+			geometryCache->m_ResourceRequests.push_back(jointID);
 			GetMissingResource(jointID, "Bone").waitingResources.push_back(incompleteSkin);
 		}
 	}
@@ -684,7 +686,7 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 {
 	SCR_COUT << "CreateAnimation(" << id << ", " << animation.name << ")\n";
-	m_ReceivedResources.push_back(id);
+	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::vector<scr::BoneKeyframeList> boneKeyframeLists;
 	boneKeyframeLists.reserve(animation.boneKeyframes.size());
@@ -707,7 +709,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 
 void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 {
-	if (m_pNodeManager->HasNode(id))
+	if (geometryCache->mNodeManager->HasNode(id))
 	{
 		SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created! "<<(node.stationary?"static":"mobile")<<"\n";
 		return;
@@ -718,31 +720,31 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	//Whether the node is missing any resource before, and must wait for them before it can be completed.
 	bool isMissingResources = false;
 
-	newNode->node = m_pNodeManager->CreateNode(id, node.name);
+	newNode->node = geometryCache->mNodeManager->CreateNode(id, node.name);
 	newNode->node->SetLocalTransform(static_cast<scr::Transform>(node.transform));
 
 	if (node.data_uid != 0)
 	{
-		newNode->node->SetMesh(m_MeshManager->Get(node.data_uid));
+		newNode->node->SetMesh(geometryCache->mMeshManager.Get(node.data_uid));
 		if (!newNode->node->GetMesh())
 		{
 			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
 
 			isMissingResources = true;
-			m_ResourceRequests.push_back(node.data_uid);
+			geometryCache->m_ResourceRequests.push_back(node.data_uid);
 			GetMissingResource(node.data_uid, "Mesh").waitingResources.push_back(newNode);
 		}
 	}
 
 	if (node.skinID != 0)
 	{
-		newNode->node->SetSkin(m_SkinManager->Get(node.skinID));
+		newNode->node->SetSkin(geometryCache->mSkinManager.Get(node.skinID));
 		if (!newNode->node->GetSkin())
 		{
 			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
 
 			isMissingResources = true;
-			m_ResourceRequests.push_back(node.skinID);
+			geometryCache->m_ResourceRequests.push_back(node.skinID);
 			GetMissingResource(node.skinID, "Skin").waitingResources.push_back(newNode);
 		}
 	}
@@ -750,7 +752,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	for (size_t i = 0; i < node.animations.size(); i++)
 	{
 		avs::uid animationID = node.animations[i];
-		std::shared_ptr<scr::Animation> animation = m_AnimationManager->Get(animationID);
+		std::shared_ptr<scr::Animation> animation = geometryCache->mAnimationManager.Get(animationID);
 
 		if (animation)
 		{
@@ -761,7 +763,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Animation_" << animationID << std::endl;
 
 			isMissingResources = true;
-			m_ResourceRequests.push_back(animationID);
+			geometryCache->m_ResourceRequests.push_back(animationID);
 			GetMissingResource(animationID, "Animation").waitingResources.push_back(newNode);
 		}
 	}
@@ -785,17 +787,17 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	newNode->node->SetGlobalIlluminationTextureUid(node.renderState.globalIlluminationUid);
 	if(node.renderState.globalIlluminationUid>0)
 	{
-		std::shared_ptr<scr::Texture> gi_texture = m_TextureManager->Get(node.renderState.globalIlluminationUid);
+		std::shared_ptr<scr::Texture> gi_texture = geometryCache->mTextureManager.Get(node.renderState.globalIlluminationUid);
 		if(!gi_texture)
 		{
 			isMissingResources = true;
-			m_ResourceRequests.push_back(node.renderState.globalIlluminationUid);
+			geometryCache->m_ResourceRequests.push_back(node.renderState.globalIlluminationUid);
 			GetMissingResource(node.renderState.globalIlluminationUid, "Texture").waitingResources.push_back(newNode);
 		}
 	}
 	for (size_t i = 0; i < node.materials.size(); i++)
 	{
-		std::shared_ptr<scr::Material> material = m_MaterialManager->Get(node.materials[i]);
+		std::shared_ptr<scr::Material> material = geometryCache->mMaterialManager.Get(node.materials[i]);
 
 		if (material)
 		{
@@ -809,7 +811,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 			SCR_CERR << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
 
 			isMissingResources = true;
-			m_ResourceRequests.push_back(node.materials[i]);
+			geometryCache->m_ResourceRequests.push_back(node.materials[i]);
 			GetMissingResource(node.materials[i], "Material").waitingResources.push_back(newNode);
 			newNode->materialSlots[node.materials[i]].push_back(i);
 		}
@@ -818,7 +820,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	newNode->node->SetChildrenIDs(node.childrenIDs);
 
 	//Create MeshNode even if it is missing resources, but create a hand if it is a hand.
-	m_pNodeManager->AddNode(newNode->node, node);
+	geometryCache->mNodeManager->AddNode(newNode->node, node);
 
 	//Complete node now, if we aren't missing any resources.
 	if (!isMissingResources)
@@ -830,7 +832,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 void ResourceCreator::CreateLight(avs::uid id, avs::DataNode& node)
 {
 	SCR_COUT << "CreateLight(" << id << ", " << node.name << ")\n";
-	m_ReceivedResources.push_back(id);
+	geometryCache->m_ReceivedResources.push_back(id);
 
 	scr::Light::LightCreateInfo lci;
 	lci.renderPlatform = m_pRenderPlatform;
@@ -838,27 +840,27 @@ void ResourceCreator::CreateLight(avs::uid id, avs::DataNode& node)
 	lci.position = avs::vec3(node.transform.position);
 	lci.direction = node.lightDirection;
 	lci.orientation = scr::quat(node.transform.rotation);
-	lci.shadowMapTexture = m_TextureManager->Get(node.data_uid);
+	lci.shadowMapTexture = geometryCache->mTextureManager.Get(node.data_uid);
 	lci.lightColour = node.lightColour;
 	lci.lightRadius = node.lightRadius;
 	lci.lightRange = node.lightRange;
 	lci.uid = id;
 	lci.name = node.name;
 	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
-	m_LightManager->Add(id, light);
+	geometryCache->mLightManager.Add(id, light);
 }
 
 void ResourceCreator::CreateBone(avs::uid id, avs::DataNode& node)
 {
 	SCR_COUT << "CreateBone(" << id << ", " << node.name << ")\n";
-	m_ReceivedResources.push_back(id);
+	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::shared_ptr<scr::Bone> bone = std::make_shared<scr::Bone>(id, node.name);
 	bone->SetLocalTransform(node.transform);
 
 	//Link to parent and child bones.
 	//We don't know what order the bones will arrive in, so we have to do it for both orders(parent -> child, child -> parent).
-	std::shared_ptr<scr::Bone> parent = m_BoneManager->Get(node.parentID);
+	std::shared_ptr<scr::Bone> parent = geometryCache->mBoneManager.Get(node.parentID);
 	if(parent)
 	{
 		bone->SetParent(parent);
@@ -867,7 +869,7 @@ void ResourceCreator::CreateBone(avs::uid id, avs::DataNode& node)
 
 	for(avs::uid childID : node.childrenIDs)
 	{
-		std::shared_ptr<scr::Bone> child = m_BoneManager->Get(childID);
+		std::shared_ptr<scr::Bone> child = geometryCache->mBoneManager.Get(childID);
 		if(child)
 		{
 			child->SetParent(bone);
@@ -883,7 +885,7 @@ void ResourceCreator::CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo&
 	SCR_COUT << "CompleteMesh(" << id << ", " << meshInfo.name << ")\n";
 
 	std::shared_ptr<scr::Mesh> mesh = std::make_shared<scr::Mesh>(meshInfo);
-	m_MeshManager->Add(id, mesh);
+	geometryCache->mMeshManager.Add(id, mesh);
 
 	//Add mesh to nodes waiting for mesh.
 	MissingResource& missingMesh = GetMissingResource(id, "Mesh");
@@ -901,14 +903,14 @@ void ResourceCreator::CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo&
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(id);
+	geometryCache->m_MissingResources.erase(id);
 }
 
 void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin)
 {
 	SCR_COUT << "CompleteSkin(" << id << ", " << completeSkin->skin->name << ")\n";
 
-	m_SkinManager->Add(id, completeSkin->skin);
+	geometryCache->mSkinManager.Add(id, completeSkin->skin);
 
 	//Add skin to nodes waiting for skin.
 	MissingResource& missingSkin = GetMissingResource(id, "Skin");
@@ -926,7 +928,7 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(id);
+	geometryCache->m_MissingResources.erase(id);
 }
 
 void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCreateInfo& textureInfo)
@@ -936,7 +938,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(textureInfo);
 
-	m_TextureManager->Add(id, scrTexture);
+	geometryCache->mTextureManager.Add(id, scrTexture);
 
 	//Add texture to materials waiting for texture.
 	MissingResource& missingTexture = GetMissingResource(id, "Texture");
@@ -975,14 +977,14 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(id);
+	geometryCache->m_MissingResources.erase(id);
 }
 
 void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo)
 {
 	SCR_CERR << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
 
-	std::shared_ptr<scr::Material> material = m_MaterialManager->Get(id);
+	std::shared_ptr<scr::Material> material = geometryCache->mMaterialManager.Get(id);
 	// Update its properties:
 	material->SetMaterialCreateInfo(materialInfo);
 	//Add material to nodes waiting for material.
@@ -1006,7 +1008,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(id);
+	geometryCache->m_MissingResources.erase(id);
 }
 
 void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> node)
@@ -1014,14 +1016,14 @@ void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> n
 	SCR_COUT << "CompleteMeshNode(ID: " << id << ", node: " << node->name << ")\n";
 
 	///We're using the node ID as the node ID as we are currently generating an node per node/transform anyway; this way the server can tell the client to remove an node.
-	m_CompletedNodes.push_back(id);
+	geometryCache->m_CompletedNodes.push_back(id);
 }
 
 void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
 {
 	SCR_COUT << "CompleteBone(" << id << ", " << bone->name << ")\n";
 
-	m_BoneManager->Add(id, bone);
+	geometryCache->mBoneManager.Add(id, bone);
 
 	//Add bone to skin waiting for bone.
 	MissingResource& missingBone = GetMissingResource(id, "Bone");
@@ -1042,7 +1044,7 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(id);
+	geometryCache->m_MissingResources.erase(id);
 }
 
 void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animation> animation)
@@ -1051,7 +1053,7 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animat
 
 	//Update animation length before adding to the animation manager.
 	animation->updateAnimationLength();
-	m_AnimationManager->Add(id, animation);
+	geometryCache->mAnimationManager.Add(id, animation);
 
 	//Add animation to waiting nodes.
 	MissingResource& missingAnimation = GetMissingResource(id, "Animation");
@@ -1069,7 +1071,7 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animat
 	}
 
 	//Resource has arrived, so we are no longer waiting for it.
-	m_MissingResources.erase(id);
+	geometryCache->m_MissingResources.erase(id);
 }
 
 void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<scr::Texture>& dummyTexture,
@@ -1077,7 +1079,7 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 {
 	if (accessor.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> texture = m_TextureManager->Get(accessor.index);
+		const std::shared_ptr<scr::Texture> texture = geometryCache->mTextureManager.Get(accessor.index);
 
 		if (texture)
 		{
@@ -1087,7 +1089,7 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 		{
 			SCR_COUT << "Material_" << incompleteMaterial->id << "(" << incompleteMaterial->id << ") missing Texture_" << accessor.index << std::endl;
 
-			m_ResourceRequests.push_back(accessor.index);
+			geometryCache->m_ResourceRequests.push_back(accessor.index);
 			GetMissingResource(accessor.index, "Texture").waitingResources.push_back(incompleteMaterial);
 			incompleteMaterial->textureSlots.emplace(accessor.index, materialParameter.texture);
 		}
@@ -1113,12 +1115,12 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 	materialParameter.textureOutputScalar = colourFactor;
 }
 
-ResourceCreator::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, const char* resourceType)
+scr::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, const char* resourceType)
 {
-	auto missingPair = m_MissingResources.find(id);
-	if (missingPair == m_MissingResources.end())
+	auto missingPair = geometryCache->m_MissingResources.find(id);
+	if (missingPair == geometryCache->m_MissingResources.end())
 	{
-		missingPair = m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
+		missingPair = geometryCache->m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 	}
 
 	return missingPair->second;

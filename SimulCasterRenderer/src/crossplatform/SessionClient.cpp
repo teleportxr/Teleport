@@ -12,6 +12,7 @@
 
 using namespace teleport;
 using namespace client;
+using namespace scr;
 
 SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService)
 	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService))

@@ -16,7 +16,11 @@
 #include "TeleportClient/basic_linear_algebra.h"
 
 typedef unsigned int uint;
-class ResourceCreator;
+
+namespace scr
+{
+	class ResourceCreator;
+}
 
 class SessionCommandInterface
 {
@@ -51,7 +55,7 @@ public:
 
 	~SessionClient();
 
-	void SetResourceCreator(ResourceCreator *);
+	void SetResourceCreator(scr::ResourceCreator *);
 
 	uint32_t Discover(
 			std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP,
@@ -130,7 +134,7 @@ private:
 
     SessionCommandInterface* const mCommandInterface;
     std::unique_ptr<teleport::client::DiscoveryService> discoveryService;
-    ResourceCreator* mResourceCreator=nullptr;
+	scr::ResourceCreator* mResourceCreator=nullptr;
 
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;

@@ -250,7 +250,7 @@ public:
 	avs::TagDataDecoder tagDataDecoder;
 
 	GeometryDecoder geometryDecoder;
-	ResourceCreator resourceCreator;
+	scr::ResourceCreator resourceCreator;
 	avs::Queue geometryQueue;
 	avs::GeometryDecoder avsGeometryDecoder;
 	avs::GeometryTarget avsGeometryTarget;

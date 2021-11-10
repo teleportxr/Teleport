@@ -124,7 +124,7 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g):
 	gui(g)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
-	resourceCreator.AssociateResourceManagers(geometryCache);
+	resourceCreator.SetGeometryCache(&geometryCache);
 
 	// Initalize time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
@@ -211,6 +211,9 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	transparentMesh=renderPlatform->CreateMesh();
 
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
+
+	// initialize the default local geometry:
+	//localGeometryCache.mNodeManager->AddNode(std::shared_ptr<Node> node, const avs::DataNode & nodeData)
 }
 
 void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
@@ -810,13 +813,13 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			j++;
 		}*/
 		
-		auto &missing=resourceCreator.GetMissingResources();
+		auto &missing=geometryCache.m_MissingResources;
 		if(missing.size())
 		{
 			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Missing Resources"));
 			for(const auto& missingPair : missing)
 			{
-				const ResourceCreator::MissingResource& missingResource = missingPair.second;
+				const scr::MissingResource& missingResource = missingPair.second;
 				std::string txt= platform::core::QuickFormat("\t%s %d from ", missingResource.resourceType, missingResource.id);
 				for(auto u:missingResource.waitingResources)
 				{
