@@ -93,7 +93,7 @@ namespace teleport
 class ClientRenderer
 {
 public:
-	ClientRenderer(ResourceCreator *r,scr::ResourceManagers *rm,ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
+	ClientRenderer(scr::ResourceCreator *r,scr::GeometryCache *rm,ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
 	~ClientRenderer();
 
 	void CycleShaderMode();
@@ -135,8 +135,8 @@ public:
 	avs::Queue mAudioQueue;
 	avs::Queue mGeometryQueue;
 
-	scr::ResourceManagers	*resourceManagers	=nullptr;
-	ResourceCreator			*resourceCreator	=nullptr;
+	scr::GeometryCache	*geometryCache	=nullptr;
+	scr::ResourceCreator			*resourceCreator	=nullptr;
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	float eyeSeparation=0.06f;
 	avs::VideoConfig videoConfig;

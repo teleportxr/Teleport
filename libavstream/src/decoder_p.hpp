@@ -14,8 +14,6 @@
 #include <parsers/nalu_parser_h264.hpp>
 #include <parsers/nalu_parser_h265.hpp>
 
-#include <libavstream/geometry/mesh_interface.hpp>
-
 
 
 namespace avs

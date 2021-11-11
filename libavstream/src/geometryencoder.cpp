@@ -124,6 +124,11 @@ namespace avs
 				static int8_t en_uy[] = { 0, 2, 1 };
 				return en_uy[axis];
 			}
+		else if (toStandard == AxesStandard::GlStyle)
+		{
+			static int8_t e_gl[] = { 0, 2, 4 };
+			return e_gl[axis];
+		}
 		}
 		else if (fromStandard == avs::AxesStandard::GlStyle)
 		{

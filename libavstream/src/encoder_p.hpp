@@ -12,7 +12,6 @@
 #include <node_p.hpp>
 #include <libavstream/encoder.hpp>
 #include <libavstream/encoders/enc_interface.hpp>
-#include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/queue.hpp>
 #include <libavstream/timer.hpp>
 

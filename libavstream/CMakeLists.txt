@@ -259,9 +259,6 @@ add_custom_target(
 )
 set_target_properties(cuda_kernels PROPERTIES FOLDER AVStream)
 
-# ElasticFrameProtocol
-add_subdirectory(thirdparty/efp)
-set_target_properties( efp PROPERTIES FOLDER AVStream)
 
 add_library(libavstream STATIC ${hdr_private} ${src_private} ${hdr_public} ${src_platform})
 #set_target_runtime(libavstream static)
@@ -273,6 +270,12 @@ if(LIBAV_USE_SRT)
 	#message(WARNING srt_include_paths ${srt_include_paths})
 endif()
 if(LIBAV_USE_EFP)
+	# ElasticFrameProtocol
+	add_subdirectory(thirdparty/efp)
+	set_target_properties( efp PROPERTIES FOLDER AVStream/thirdparty/efp)
+	set_target_properties( efp_shared PROPERTIES FOLDER AVStream/thirdparty/efp)
+	set_target_properties( test_efp_c_api PROPERTIES FOLDER AVStream/thirdparty/efp)
+	set_target_properties( efptests PROPERTIES FOLDER AVStream/thirdparty/efp)
 	set(efp_include_paths ${efp_SOURCE_DIR} ${efp_BINARY_DIR})
 	#message(WARNING efp_include_paths ${efp_include_paths})
 endif()

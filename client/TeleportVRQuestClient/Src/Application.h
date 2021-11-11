@@ -173,8 +173,8 @@ namespace OVRFW
 		LobbyRenderer lobbyRenderer;
 		//teleport::UIRenderer uIRenderer;
 		std::unique_ptr<Android_MemoryUtil> memoryUtil;
-		scr::ResourceManagers resourceManagers;
-		ResourceCreator resourceCreator;
+		scr::GeometryCache geometryCache;
+		scr::ResourceCreator resourceCreator;
 		Controllers controllers;
 
 		std::string server_ip;

@@ -13,6 +13,7 @@ namespace teleport
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
 		void Render(simul::crossplatform::GraphicsDeviceContext &deviceContext);
+		void PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 		void ShowHide();
 		void Show();
 		void Hide();
@@ -30,6 +31,7 @@ namespace teleport
 		std::function<void(const std::string&)> connectHandler;
 		bool visible = false;
 		float width_m=0.6f;
-		std::vector<char> keys_pressed;
+		std::vector<unsigned int> keys_pressed;
+		void ShowFont();
 	};
 }

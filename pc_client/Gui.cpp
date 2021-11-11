@@ -3,14 +3,15 @@
 #include "backends/imgui_impl_win32.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "Platform/Core/DefaultFileLoader.h"
+#include "Platform/Core/StringToWString.h"
 #include "Gui.h"
+#include "IconsForkAwesome.h"
 #include <direct.h>
-
 using namespace teleport;
 using namespace simul;
 using namespace platform;
 using namespace crossplatform;
-
+ImFont *smallFont=nullptr;
 void Gui::RestoreDeviceObjects(simul::crossplatform::RenderPlatform* r)
 {
 	renderPlatform=r;
@@ -29,6 +30,7 @@ void Gui::RestoreDeviceObjects(simul::crossplatform::RenderPlatform* r)
     style.FrameRounding = 12.f;
     style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
     style.FramePadding = ImVec2(0.f, 0.f);
+    style.FramePadding.x=8.f;
 
   /*  style.Colors[ImGuiCol_Text] = ImVec4(0.73f, 0.73f, 0.73f, 1.00f);
     style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
@@ -73,15 +75,33 @@ void Gui::RestoreDeviceObjects(simul::crossplatform::RenderPlatform* r)
     simul::base::DefaultFileLoader fileLoader;
     std::vector<std::string> texture_paths;
     texture_paths.push_back("textures");
-    std::string fontFile="Exo-SemiBold.ttf";
-    size_t idx = fileLoader.FindIndexInPathStack(fontFile.c_str(), texture_paths);
-    void *ttf_data;
-    unsigned int ttf_size;
+    ImGuiIO& io = ImGui::GetIO();
     char cwd[100];
     _getcwd(cwd,100);
-    fileLoader.AcquireFileContents(ttf_data,ttf_size,((texture_paths[idx]+"/")+ fontFile).c_str(),false);
-    ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->AddFontFromMemoryTTF(ttf_data,ttf_size,32.0f);
+    auto AddFont=[texture_paths,&fileLoader,cwd,&io](const char *font_filename,float size_pixels=32.f,ImFontConfig *config=nullptr,ImWchar *ranges=nullptr)
+    {
+        size_t idx = fileLoader.FindIndexInPathStack(font_filename, texture_paths);
+        void *ttf_data;
+        unsigned int ttf_size;
+        fileLoader.AcquireFileContents(ttf_data,ttf_size,((texture_paths[idx]+"/")+ font_filename).c_str(),false);
+        return io.Fonts->AddFontFromMemoryTTF(ttf_data,ttf_size,size_pixels,config,ranges);
+    };
+    AddFont("Exo-SemiBold.ttf");
+    {
+        ImFontConfig config;
+        config.MergeMode = true;
+        config.GlyphMinAdvanceX = 13.0f; 
+        ImVector<ImWchar> ranges;
+        ImFontGlyphRangesBuilder builder;
+        builder.AddText(ICON_FK_LONG_ARROW_LEFT);                  
+        builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
+        AddFont("forkawesome-webfont.ttf",32.f,&config,ranges.Data);
+        io.Fonts->Build();                                     // Build the atlas while 'ranges' is still in scope and not deleted.
+    }
+    {
+        smallFont=AddFont("Inter-SemiBold.otf",16.f);
+    }
+    io.ConfigFlags|=ImGuiConfigFlags_IsTouchScreen;// VR more like a touch screen.
 }
 
 void Gui::InvalidateDeviceObjects()
@@ -127,6 +147,120 @@ void Gui::SetScaleMetres()
 {
     visible = false;
 }
+void Gui::ShowFont()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImFontAtlas* atlas = io.Fonts;
+    for (int i = 0; i < atlas->Fonts.Size; i++)
+    {
+        ImFont* font = atlas->Fonts[i];
+        using namespace ImGui;
+        if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
+        {
+            ImDrawList* draw_list = GetWindowDrawList();
+            const ImU32 glyph_col = GetColorU32(ImGuiCol_Text);
+            const float cell_size = font->FontSize * 1;
+            const float cell_spacing = GetStyle().ItemSpacing.y;
+            for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
+            {
+                // Skip ahead if a large bunch of glyphs are not present in the font (test in chunks of 4k)
+                // This is only a small optimization to reduce the number of iterations when IM_UNICODE_MAX_CODEPOINT
+                // is large // (if ImWchar==ImWchar32 we will do at least about 272 queries here)
+                if (!(base & 4095) && font->IsGlyphRangeUnused(base, base + 4095))
+                {
+                    base += 4096 - 256;
+                    continue;
+                }
+
+                int count = 0;
+                for (unsigned int n = 0; n < 256; n++)
+                    if (font->FindGlyphNoFallback((ImWchar)(base + n)))
+                        count++;
+                if (count <= 0)
+                    continue;
+                if (!TreeNode((void*)(intptr_t)base, "U+%04X..U+%04X (%d %s)", base, base + 255, count, count > 1 ? "glyphs" : "glyph"))
+                    continue;
+
+                // Draw a 16x16 grid of glyphs
+                ImVec2 base_pos = GetCursorScreenPos();
+                for (unsigned int n = 0; n < 256; n++)
+                {
+                    // We use ImFont::RenderChar as a shortcut because we don't have UTF-8 conversion functions
+                    // available here and thus cannot easily generate a zero-terminated UTF-8 encoded string.
+                    ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
+                    ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
+                    const ImFontGlyph* glyph = font->FindGlyphNoFallback((ImWchar)(base + n));
+                    draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
+                    if (glyph)
+                        font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
+                    if (glyph && IsMouseHoveringRect(cell_p1, cell_p2))
+                    {
+                        BeginTooltip();
+                        Text("Codepoint: U+%04X", base + n);
+                        Separator();
+                        Text("Visible: %d", glyph->Visible);
+                        Text("AdvanceX: %.1f", glyph->AdvanceX);
+                        Text("Pos: (%.2f,%.2f)->(%.2f,%.2f)", glyph->X0, glyph->Y0, glyph->X1, glyph->Y1);
+                        Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
+                        EndTooltip();
+                    }
+                }
+                Dummy(ImVec2((cell_size + cell_spacing) * 16, (cell_size + cell_spacing) * 16));
+                TreePop();
+            }
+            TreePop();
+        }
+        TreePop();
+    }
+}
+
+void Gui::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+{
+	ImGui_ImplWin32_NewFrame();
+    auto vp=renderPlatform->GetViewport(deviceContext,0);
+    ImGui_ImplPlatform_NewFrame(false,vp.w,vp.h);
+	ImGui::NewFrame();
+    static int corner = 1;
+    ImGuiIO& io = ImGui::GetIO();
+    
+    ImGui::PushFont(smallFont);
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+    if (corner != -1)
+    {
+        const float PAD = 10.0f;
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
+        ImVec2 work_size = viewport->WorkSize;
+        ImVec2 window_pos, window_pos_pivot;
+        window_pos.x = (work_pos.x + work_size.x - PAD);
+        window_pos.y = (work_pos.y + PAD);
+        window_pos_pivot.x =  1.0f ;
+        window_pos_pivot.y =  0.0f;
+        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+        window_flags |= ImGuiWindowFlags_NoMove;
+    }
+    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+    if (ImGui::Begin("Keyboard", nullptr, window_flags))
+    {
+        ImGui::Text("K: Connect/Disconnect\n"
+	            "O: Toggle OSD\n"
+	            "V: Show video\n"
+	            "C: Toggle render from centre\n"
+	            "T: Toggle Textures\n"
+	            "M: Change rendermode\n"
+	            "R: Recompile shaders\n"
+	            "NUM 0: PBR\n"
+	            "NUM 1: Albedo\n"
+	            "NUM 4: Unswizzled Normals\n"
+	            "NUM 5: Debug animation\n"
+	            "NUM 6: Lightmaps\n"
+	            "NUM 2: Vertex Normals\n");
+    }
+    ImGui::PopFont();
+    ImGui::End();
+    ImGui::Render();
+	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
+}
 
 void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
@@ -135,44 +269,51 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         return;
 	// Start the Dear ImGui frame
 	ImGui_ImplWin32_NewFrame();
-    static bool refocus=true;
-    static bool focused_on_edit=false;
     ImGuiIO& io = ImGui::GetIO();
     static bool in3d=true;
-     ImVec2 size_min(640.f, 100.f);
-     ImVec2 size_max(640.f,260.f);
-    ImGui_ImplPlatform_NewFrame(in3d,size_max.x,size_max.y,menu_pos,width_m);
-    // Override what win32 did with this
-    ImGui_ImplPlatform_Update3DMousePos();
+    ImVec2 size_min(720.f,100.f);
+    ImVec2 size_max(720.f,240.f);
+    ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,width_m);
+    static int refocus=0;
+    bool show_hide=true;
 	ImGui::NewFrame();
     {
         bool show_keyboard = true;
-        ImGui::SetNextWindowPos(ImVec2(0, 0));                    // always at the window origin
-       // ImGui::SetNextWindowSize(ImVec2(float(600), float(100)));    // always at the window size
-       ImGui::SetNextWindowSizeConstraints(size_min, size_max);
-        if(!show_keyboard)
-            ImGui::SetNextWindowSize(size_min);
-        else
-            ImGui::SetNextWindowSize(size_max);
-        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoResize |
-            ImGuiWindowFlags_NoMove |
-            ImGuiWindowFlags_NoCollapse|
-            ImGuiWindowFlags_NoScrollbar;
+        ImGuiWindowFlags windowFlags =0;
+        if(in3d)
+        {
+            ImGui::SetNextWindowPos(ImVec2(0, 0));                          // always at the window origin
+            ImGui::SetNextWindowSizeConstraints(size_min, size_max);
+            if(!show_keyboard)
+                ImGui::SetNextWindowSize(size_min);
+            else
+                ImGui::SetNextWindowSize(size_max);
+            windowFlags=ImGuiWindowFlags_NoResize |
+                ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoCollapse|
+                ImGuiWindowFlags_NoScrollbar;
+        }
         ImGui::LogToTTY();
-        ImGui::Begin("Teleport VR",nullptr, windowFlags);                          // Create a window called "Hello, world!" and append into it.
+        ImGui::Begin("Teleport VR",&show_hide, windowFlags);
         static char buf[500];
-        if(refocus)
+        if(refocus==0)
         {
             ImGui::SetKeyboardFocusHere();
         }
-        if(focused_on_edit)
+        io.KeysDown[VK_BACK] = false;
+        if(refocus>=2)
         {
             while(keys_pressed.size())
             {
-                char inp[10];
-                inp[0]=keys_pressed[0];
-                inp[1]=0;
-                io.AddInputCharacter(keys_pressed[0]);
+               int k=keys_pressed[0];
+                if(k==VK_BACK)
+                {
+                    io.KeysDown[k] = true;
+                }
+                else
+                {
+                    io.AddInputCharacter(k);
+                }
                 keys_pressed.erase(keys_pressed.begin());
             }
         }
@@ -180,11 +321,7 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         {
             current_url=buf;
         }
-        if(refocus)
-        {
-            refocus=false;
-            focused_on_edit=true;
-        }
+        refocus++;
         ImGui::SameLine();
         if (ImGui::Button("Connect"))
         {
@@ -204,8 +341,7 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
                     key_label[0] = *key;
                     if (ImGui::Button(key_label,ImVec2(46,32)))
                     {
-                        refocus=true;
-                        focused_on_edit=false;
+                        refocus=0;
                         keys_pressed.push_back(*key);
                     }
                     key++;
@@ -213,31 +349,42 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
                         ImGui::SameLine();
                 }
             };
-            ImGui::Text("  ");
             KeyboardLine("1234567890-");
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
+            {
+                 refocus=0;
+                // keys_pressed.push_back(ImGuiKey_Backspace);
+                 keys_pressed.push_back(VK_BACK);
+            }
             ImGui::Text("  ");
             ImGui::SameLine();
             KeyboardLine("qwertyuiop");
             ImGui::Text("    ");
             ImGui::SameLine();
-            KeyboardLine("asdfghjkl");
+            KeyboardLine("asdfghjkl:");
             ImGui::SameLine();
             static char buf[32] = "Return";
             if (ImGui::Button(buf,ImVec2(92,32)))
             {
+                 refocus=0;
+                 keys_pressed.push_back(ImGuiKey_Enter);
             }
             ImGui::Text("      ");
             ImGui::SameLine();
             KeyboardLine("zxcvbnm,./");
         }
+        //ShowFont();
         //ImGui_ImplPlatform_DebugInfo();
-
         //hasFocus = ImGui::IsAnyItemFocused(); Note: does not work.
         ImGui::End();
     }
     ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
+    if(!show_hide)
+        Hide();
 }
+
 void Gui::SetConnectHandler(std::function<void(const std::string&)> fn)
 {
     connectHandler = fn;

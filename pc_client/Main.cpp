@@ -157,7 +157,7 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   HWND hWnd = CreateWindowW(szWindowClass,L"Client", WS_OVERLAPPEDWINDOW,
+   HWND hWnd = CreateWindowW(szWindowClass,L"Teleport VR Client", WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, 800, 500, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
@@ -291,7 +291,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		GetClientRect(hWnd, &rect);
 		ImGui_ImplPlatform_SetMousePos(pos.x, pos.y, rect.right - rect.left, rect.bottom - rect.top);
 	}
-	//if (!ui_handled && !gui.HasFocus())
+	if (!ui_handled && !gui.HasFocus())
 	{
 		switch (message)
 		{

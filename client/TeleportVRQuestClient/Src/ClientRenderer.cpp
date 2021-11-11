@@ -79,15 +79,15 @@ avs::vec3 QuaternionTimesVector(const ovrQuatf &q, const avs::vec3 &vec)
 
 ClientRenderer::ClientRenderer
 (
-    ResourceCreator *r,
-    scr::ResourceManagers *rm,
+    scr::ResourceCreator *r,
+    scr::GeometryCache *rm,
     ClientAppInterface *c,
     teleport::client::ClientDeviceState *s,
     Controllers *cn
 )
     :controllers(cn),
      mDecoder(avs::DecoderBackend::Custom),
-     resourceManagers(rm),
+     geometryCache(rm),
      resourceCreator(r),
      clientAppInterface(c),
      clientDeviceState(s),
@@ -957,7 +957,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 {
 	// TODO: too slow.
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto &cachedLights = resourceManagers->mLightManager.GetCache(cacheLock);
+	auto &cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
 	VideoTagDataCube *data = static_cast<VideoTagDataCube *>(mTagDataArrayBuffer->Map());
 	if (data)
 	{
@@ -1067,7 +1067,7 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	//Render local nodes.
-	const scr::NodeManager::nodeList_t &distanceSortedRootNodes = resourceManagers->mNodeManager->GetSortedRootNodes();
+	const scr::NodeManager::nodeList_t &distanceSortedRootNodes = geometryCache->mNodeManager->GetSortedRootNodes();
 	for (std::shared_ptr<scr::Node> node : distanceSortedRootNodes)
 	{
 		RenderNode(res, node);
@@ -1075,17 +1075,17 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 	}
 
 	//Render player, if parts exist.
-	std::shared_ptr<scr::Node> body = resourceManagers->mNodeManager->GetBody();
+	std::shared_ptr<scr::Node> body = geometryCache->mNodeManager->GetBody();
 	if (body)
 	{
 		RenderNode(res, body);
 	}
-	std::shared_ptr<scr::Node> leftHand = resourceManagers->mNodeManager->GetLeftHand();
+	std::shared_ptr<scr::Node> leftHand = geometryCache->mNodeManager->GetLeftHand();
 	if (leftHand)
 	{
 		RenderNode(res, leftHand);
 	}
-	std::shared_ptr<scr::Node> rightHand = resourceManagers->mNodeManager->GetRightHand();
+	std::shared_ptr<scr::Node> rightHand = geometryCache->mNodeManager->GetRightHand();
 	if (rightHand)
 	{
 		RenderNode(res, rightHand);
@@ -1104,7 +1104,7 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			std::shared_ptr<scr::Texture>		lightmapTexture;
 			if(node->GetGlobalIlluminationTextureUid()!=0)
 			{
-				lightmapTexture = resourceManagers->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+				lightmapTexture = geometryCache->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 				if(!lightmapTexture.get())
 				{
 					lightmapTexture = resourceCreator->m_DummyWhite;
@@ -1178,7 +1178,7 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 
 void ClientRenderer::CycleShaderMode()
 {
-	OVRNodeManager *nodeManager = dynamic_cast<OVRNodeManager *>(resourceManagers->mNodeManager.get());
+	OVRNodeManager *nodeManager = dynamic_cast<OVRNodeManager *>(geometryCache->mNodeManager.get());
 	passSelector++;
 	passSelector = passSelector % (debugPassNames.size());
 	nodeManager->ChangeEffectPass(passSelector>0?debugPassNames[passSelector].c_str():"");
@@ -1226,8 +1226,8 @@ void ClientRenderer::ListNode(const std::shared_ptr<scr::Node>& node, int indent
 void ClientRenderer::WriteDebugOutput()
 {
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto& rootNodes = resourceManagers->mNodeManager->GetRootNodes();
-	OVR_LOG("Root Nodes: %zu   Total Nodes: %zu",rootNodes.size(),resourceManagers->mNodeManager->GetNodeAmount());
+	auto& rootNodes = geometryCache->mNodeManager->GetRootNodes();
+	OVR_LOG("Root Nodes: %zu   Total Nodes: %zu",rootNodes.size(),geometryCache->mNodeManager->GetNodeAmount());
 	size_t linesRemaining = 20;
 	static uid show_only=0;
 	for(const std::shared_ptr<scr::Node>& node : rootNodes)
@@ -1356,16 +1356,16 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 		case GEOMETRY_OSD:
 		{
 			std::ostringstream str;
-			const scr::NodeManager::nodeList_t &rootNodes = resourceManagers->mNodeManager->GetRootNodes();
+			const scr::NodeManager::nodeList_t &rootNodes = geometryCache->mNodeManager->GetRootNodes();
 
-			str <<"Geometry\n\nNodes: "<<static_cast<uint64_t>(resourceManagers->mNodeManager->GetNodeAmount()) << "\n";
+			str <<"Geometry\n\nNodes: "<<static_cast<uint64_t>(geometryCache->mNodeManager->GetNodeAmount()) << "\n";
 			for(std::shared_ptr<scr::Node> node : rootNodes)
 			{
 				str << node->id << ": "<<node->name.c_str()<<"\n";
 			}
 			str << "\n";
 
-			const auto &missingResources = resourceCreator->GetMissingResources();
+			const auto &missingResources = geometryCache->m_MissingResources;
 			if(missingResources.size() > 0)
 			{
 				str << "Missing Resources\n";
@@ -1373,7 +1373,7 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 				size_t resourcesOnLine = 0;
 				for(const auto &missingPair : missingResources)
 				{
-					const ResourceCreator::MissingResource &missingResource = missingPair.second;
+					const scr::MissingResource &missingResource = missingPair.second;
 					str << missingResource.resourceType << "_" << missingResource.id;
 
 					resourcesOnLine++;
@@ -1399,14 +1399,14 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 		{
 			std::ostringstream sstr;
 			std::setprecision(5);
-			const std::vector<uid> texture_uids=resourceManagers->mTextureManager.GetAllIDs();
+			const std::vector<uid> texture_uids=geometryCache->mTextureManager.GetAllIDs();
 			if(osd_selection>=texture_uids.size())
 				osd_selection=0;
 			sstr << "Textures\n\n" << std::setw(4);
 			sstr << "Total: " << texture_uids.size()<<"\n";
 			if(osd_selection>=0&&osd_selection<texture_uids.size())
 			{
-				auto texture = resourceManagers->mTextureManager.Get(texture_uids[osd_selection]);
+				auto texture = geometryCache->mTextureManager.Get(texture_uids[osd_selection]);
 				const auto &ci =  texture->GetTextureCreateInfo();
 				sstr << "\tSelected: " << ci.name.c_str()<<"\n";
 				sstr << "\t" << ci.width<<" x "<<ci.height <<"\n";
@@ -1462,13 +1462,13 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 			avs::vec3 leftHandPosition, rightHandPosition;
 			avs::vec4 leftHandOrientation, rightHandOrientation;
 
-			std::shared_ptr<scr::Node> leftHand = resourceManagers->mNodeManager->GetLeftHand();
+			std::shared_ptr<scr::Node> leftHand = geometryCache->mNodeManager->GetLeftHand();
 			if(leftHand)
 			{
 				leftHandPosition = leftHand->GetGlobalTransform().m_Translation;
 				leftHandOrientation = leftHand->GetGlobalTransform().m_Rotation;
 			}
-			std::shared_ptr<scr::Node> rightHand = resourceManagers->mNodeManager->GetRightHand();
+			std::shared_ptr<scr::Node> rightHand = geometryCache->mNodeManager->GetRightHand();
 			if(rightHand)
 			{
 				rightHandPosition = rightHand->GetGlobalTransform().m_Translation;

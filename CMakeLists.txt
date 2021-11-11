@@ -137,6 +137,8 @@ endfunction()
 #add_subdirectory(thirdparty/zlib)
 #set_target_properties(zlib PROPERTIES FOLDER thirdparty/zlib)
 
+add_subdirectory(TeleportCore)
+
 if(REMOTEPLAY_SERVER)
 	add_subdirectory(SimulCasterServer)
 	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "")
@@ -179,7 +181,7 @@ set(targets)
 get_all_targets_recursive(targets ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/draco)
 foreach(targ ${targets})
 	set_target_properties( ${targ} PROPERTIES FOLDER thirdparty/draco)
-	message(${targ})
+	#message(${targ})
 endforeach()
 
 add_subdirectory(thirdparty/srt)

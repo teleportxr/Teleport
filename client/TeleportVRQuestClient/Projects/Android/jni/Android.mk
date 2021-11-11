@@ -72,7 +72,7 @@ LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable -Wno-abstract-final-class
 LOCAL_CPP_FEATURES += exceptions
 
-LOCAL_STATIC_LIBRARIES := draco vrsound sampleframework enet libavstream SimulCasterRenderer TeleportClient SimulCasterAudio
+LOCAL_STATIC_LIBRARIES := draco vrsound sampleframework enet libavstream SimulCasterRenderer TeleportCore TeleportClient SimulCasterAudio
 LOCAL_SHARED_LIBRARIES := vrapi
 
 include $(BUILD_SHARED_LIBRARY)
@@ -85,5 +85,6 @@ $(call import-module,../libavstream/thirdparty/srt/build_android/jni)
 $(call import-module,../thirdparty/ndk-projects/draco)
 $(call import-module,../SimulCasterRenderer/jni)
 $(call import-module,../TeleportClient/jni)
+$(call import-module,../TeleportCore/jni)
 $(call import-module,../SimulCasterAudio/jni)
 $(call import-module,3rdParty/enet/jni)

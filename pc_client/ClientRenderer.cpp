@@ -374,8 +374,11 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	if (!tt)
 		lod++;
 	lod = lod % 8;
-	renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, -0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
-	renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, 0.0f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+	if(show_cubemaps)
+	{
+		renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, -0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+		renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, 0.0f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+	}
 	if (show_textures)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
@@ -684,6 +687,8 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 
 void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
+	if(gui.HasFocus())
+		return;
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
@@ -904,7 +909,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 	//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
 	//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
-	PrintHelpText(deviceContext);
+	gui.PrintHelpText(deviceContext);
 }
 
 void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<scr::Node> node)

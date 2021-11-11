@@ -8,7 +8,6 @@
 #include <common_p.hpp>
 #include <node_p.hpp>
 #include <libavstream/mesh.hpp>
-#include <libavstream/geometry/mesh_interface.hpp>
 
 namespace avs
 {
