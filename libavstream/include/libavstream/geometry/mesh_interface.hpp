@@ -729,7 +729,7 @@ struct Animation;
 	{
 	public:
 		virtual ~GeometryTargetBackendInterface() = default;
-		virtual Result Assemble(MeshCreate& meshCreate) = 0;
+		virtual Result CreateMesh(MeshCreate& meshCreate) = 0;
 
 		virtual void CreateTexture(uid id, const Texture& texture) = 0;
 		virtual void CreateMaterial(uid id, const Material& material) = 0;

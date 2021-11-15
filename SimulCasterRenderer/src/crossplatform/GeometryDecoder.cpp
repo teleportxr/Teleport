@@ -1,11 +1,22 @@
 #include "GeometryDecoder.h"
 
+#include <filesystem>
+#include <fstream>
 #include <iostream>
-
 #include <Common.h>
 
 #include "libavstream/geometry/animation_interface.h"
 #include "draco/compression/decode.h"
+
+namespace fs = std::filesystem;
+#define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
+#define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
+#define Next2B get<uint16_t>(m_Buffer.data(), &m_BufferOffset)
+#define NextB get<uint8_t>(m_Buffer.data(), &m_BufferOffset)
+#define NextFloat get<float>(m_Buffer.data(), &m_BufferOffset)
+#define NextVec4 get<avs::vec4>(m_Buffer.data(), &m_BufferOffset)
+#define NextVec3 get<avs::vec3>(m_Buffer.data(), &m_BufferOffset)
+#define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  
 
 using namespace avs;
 
@@ -42,14 +53,31 @@ template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffse
 	dataOffset += count;
 }
 
+std::vector<uint8_t> savedBuffer;
+avs::Result GeometryDecoder::decodeFromFile(const std::string &filename,GeometryTargetBackendInterface *target)
+{
+	m_BufferSize=fs::file_size(filename.c_str());
+	m_BufferOffset = 0;
+	m_Buffer.resize(m_BufferSize);
+	std::ifstream ifs(filename.c_str(),std::ifstream::in|std::ofstream::binary);
+	ifs.read((char*)m_Buffer.data(),m_BufferSize);
+	savedBuffer=m_Buffer;
+	GeometryPayloadType &type=*((GeometryPayloadType*)m_Buffer.data());
+	return decode( type, target);
+}
+
 avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface* target)
 {
 	// No m_GALU on the header or tail on the incoming buffer!
 	m_BufferSize = bufferSizeInBytes;
 	m_BufferOffset = 0;
-	m_Buffer.clear();
 	m_Buffer.resize(m_BufferSize);
  	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
+	return decode(type,target);
+}
+
+avs::Result GeometryDecoder::decode(avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
+{
 	size_t bufferSizeK=(m_BufferSize+1023)/1024;
 	switch(type)
 	{
@@ -274,6 +302,36 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 	return avs::Result::OK;
 }
 
+
+void GeometryDecoder::saveBuffer(const std::string &filename) const
+{
+	for(size_t i=0;i<m_Buffer.size();i++)
+	{
+		if(m_Buffer[i]!=savedBuffer[i])
+		{
+			std::cerr<<"Failed check"<<std::endl;
+			break;
+		}
+	}
+	std::vector<uint8_t> testBuffer;
+	testBuffer.resize(m_Buffer.size());
+	{
+		std::ofstream ofs(filename.c_str(),std::ofstream::out|std::ofstream::binary);
+		ofs.write((const char *)m_Buffer.data(), m_Buffer.size());
+		ofs.close();
+		std::ifstream ifs(filename.c_str(),std::ifstream::in|std::ofstream::binary);
+		ifs.read((char*)testBuffer.data(),m_BufferSize);
+		for(size_t i=0;i<m_Buffer.size();i++)
+		{
+			if(m_Buffer[i]!=testBuffer[i])
+			{
+				std::cerr<<"Failed check"<<std::endl;
+			break;
+			}
+		}
+	}
+}
+
 avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 {
 	//Parse buffer and fill struct DecodedGeometry
@@ -296,6 +354,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		name.resize(nameLength);
 		copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 		compressedMesh.name= name;
+		if(uid==12)
+			saveBuffer(name+".mesh_compressed");
 		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO)
 		{
 			//compressedMesh.subMeshAttributeIndex = (size_t)NextB;
@@ -486,7 +546,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		}
 		meshCreate.name = name;
 
-		avs::Result result = target->Assemble(meshCreate);
+		avs::Result result = target->CreateMesh(meshCreate);
 		if (result != avs::Result::OK)
 		{
 			return result;

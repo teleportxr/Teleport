@@ -24,10 +24,15 @@ class GeometryDecoder final : public avs::GeometryDecoderBackendInterface
 public:
 	GeometryDecoder();
 	~GeometryDecoder();
+	//! Treat the file as buffer input and decode.
+	avs::Result decodeFromFile(const std::string &filename,avs::GeometryTargetBackendInterface *intf);
 	// Inherited via GeometryDecoderBackendInterface
 	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target) override;
-
+	
+	void saveBuffer(const std::string &name) const;
 private:
+	avs::Result decode(avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target);
+	
 	avs::Result decodeMesh(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeMaterial(avs::GeometryTargetBackendInterface*& target);
 	avs::Result decodeMaterialInstance(avs::GeometryTargetBackendInterface*& target);
@@ -47,15 +52,6 @@ private:
 	// Use for data extracted from compressed objects.
 	std::vector<std::vector<uint8_t>> m_DecompressedBuffers;
 	size_t m_DecompressedBufferIndex=0;
-
-#define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
-#define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
-#define Next2B get<uint16_t>(m_Buffer.data(), &m_BufferOffset)
-#define NextB get<uint8_t>(m_Buffer.data(), &m_BufferOffset)
-#define NextFloat get<float>(m_Buffer.data(), &m_BufferOffset)
-#define NextVec4 get<avs::vec4>(m_Buffer.data(), &m_BufferOffset)
-#define NextVec3 get<avs::vec3>(m_Buffer.data(), &m_BufferOffset)
-#define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  
 
 private:
 	struct PrimitiveArray2

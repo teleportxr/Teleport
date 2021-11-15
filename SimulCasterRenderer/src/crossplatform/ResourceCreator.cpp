@@ -147,7 +147,7 @@ void ResourceCreator::Update(float deltaTime)
 	}
 }
 
-avs::Result ResourceCreator::Assemble(avs::MeshCreate& meshCreate)
+avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 {
 	geometryCache->m_ReceivedResources.push_back(meshCreate.mesh_uid);
 	SCR_COUT << "Assemble(Mesh" << meshCreate.mesh_uid << ": " << meshCreate.name << ")\n";

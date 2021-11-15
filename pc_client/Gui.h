@@ -23,15 +23,18 @@ namespace teleport
 		{
 			return visible;
 		}
+		void SetServerIPs(const std::vector<std::string> &server_ips);
 	protected:
 		simul::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
 		vec3 menu_pos;
 		std::string current_url;
+		std::vector<std::string> server_ips;
 		std::function<void(const std::string&)> connectHandler;
 		bool visible = false;
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;
 		void ShowFont();
+        char buf[500];
 	};
 }

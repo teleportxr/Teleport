@@ -132,7 +132,9 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	double previousTimestamp;				//Milliseconds since the state was last updated.
 
 	scr::GeometryCache localGeometryCache;
+	scr::ResourceCreator localResourceCreator;
 	scr::GeometryCache geometryCache;
+	scr::ResourceCreator resourceCreator;
 	
 	bool show_video = false;
 	bool renderPlayer = true; //Whether to render the player.
@@ -250,7 +252,6 @@ public:
 	avs::TagDataDecoder tagDataDecoder;
 
 	GeometryDecoder geometryDecoder;
-	scr::ResourceCreator resourceCreator;
 	avs::Queue geometryQueue;
 	avs::GeometryDecoder avsGeometryDecoder;
 	avs::GeometryTarget avsGeometryTarget;

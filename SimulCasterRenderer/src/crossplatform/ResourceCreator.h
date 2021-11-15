@@ -57,7 +57,7 @@ namespace scr
 		}
 
 		// Inherited via GeometryTargetBackendInterface
-		avs::Result Assemble(avs::MeshCreate& meshCreate) override;
+		avs::Result CreateMesh(avs::MeshCreate& meshCreate) override;
 
 		void CreateTexture(avs::uid id, const avs::Texture& texture) override;
 		void CreateMaterial(avs::uid id, const avs::Material& material) override;

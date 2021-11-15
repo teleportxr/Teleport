@@ -92,8 +92,9 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
-target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm OPTIMIZED openxr_loader.lib DEBUG openxr_loaderd.lib)
-
+target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm)
+target_link_libraries(pc_client debug openxr_loaderd.lib )
+target_link_libraries(pc_client optimized openxr_loader.lib)
 target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt -ignore:4711)
 
 target_link_options(pc_client PUBLIC /ignore:4711)

@@ -119,12 +119,12 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g):
 	sessionClient(this, std::make_unique<PCDiscoveryService>()),
 	clientDeviceState(c),
-	resourceCreator(),
 	RenderMode(0),
 	gui(g)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
 	resourceCreator.SetGeometryCache(&geometryCache);
+	localResourceCreator.SetGeometryCache(&localGeometryCache);
 
 	// Initalize time stamping for state update.
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
@@ -213,7 +213,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 
 	// initialize the default local geometry:
-	//localGeometryCache.mNodeManager->AddNode(std::shared_ptr<Node> node, const avs::DataNode & nodeData)
+	geometryDecoder.decodeFromFile("Oculus_R_Main.mesh_compressed",&localResourceCreator);
 }
 
 void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)

@@ -6,6 +6,7 @@
 #include "Platform/Core/StringToWString.h"
 #include "Gui.h"
 #include "IconsForkAwesome.h"
+#include "ErrorHandling.h"
 #include <direct.h>
 using namespace teleport;
 using namespace simul;
@@ -78,9 +79,14 @@ void Gui::RestoreDeviceObjects(simul::crossplatform::RenderPlatform* r)
     ImGuiIO& io = ImGui::GetIO();
     char cwd[100];
     _getcwd(cwd,100);
-    auto AddFont=[texture_paths,&fileLoader,cwd,&io](const char *font_filename,float size_pixels=32.f,ImFontConfig *config=nullptr,ImWchar *ranges=nullptr)
+    auto AddFont=[texture_paths,&fileLoader,cwd,&io](const char *font_filename,float size_pixels=32.f,ImFontConfig *config=nullptr,ImWchar *ranges=nullptr)->ImFont*
     {
-        size_t idx = fileLoader.FindIndexInPathStack(font_filename, texture_paths);
+        int idx = fileLoader.FindIndexInPathStack(font_filename, texture_paths);
+        if(idx<=-2)
+        {
+            TELEPORT_CERR<<font_filename<<" not found.\n";
+            return nullptr;
+        }
         void *ttf_data;
         unsigned int ttf_size;
         fileLoader.AcquireFileContents(ttf_data,ttf_size,((texture_paths[idx]+"/")+ font_filename).c_str(),false);
@@ -295,7 +301,6 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         }
         ImGui::LogToTTY();
         ImGui::Begin("Teleport VR",&show_hide, windowFlags);
-        static char buf[500];
         if(refocus==0)
         {
             ImGui::SetKeyboardFocusHere();
@@ -388,4 +393,15 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 void Gui::SetConnectHandler(std::function<void(const std::string&)> fn)
 {
     connectHandler = fn;
+}
+
+
+void Gui::SetServerIPs(const std::vector<std::string> &s)
+{
+    server_ips=s;
+    if(server_ips.size())
+    {
+        strcpy(buf,server_ips[0].c_str());//,server_ips[0].size());
+    }
+
 }

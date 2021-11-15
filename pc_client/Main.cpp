@@ -98,6 +98,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		} while (pos != std::string::npos);
 
 		clientID = ini.GetLongValue("", "CLIENT_ID", TELEPORT_DEFAULT_CLIENT_ID);
+		gui.SetServerIPs(server_ips);
 	}
 	else
 	{
