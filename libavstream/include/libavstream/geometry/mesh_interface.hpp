@@ -254,19 +254,19 @@ struct Animation;
 	extern void AVSTREAM_API ConvertScale(AxesStandard fromStandard, AxesStandard toStandard, vec3 &scale);
 	extern int8_t AVSTREAM_API ConvertAxis(AxesStandard fromStandard, AxesStandard toStandard, int8_t axis);
 
-	struct DataNode
+	struct Node
 	{
 		std::string name;
 
 		Transform transform;
-		bool stationary;
-		int32_t priority;
+		bool stationary=false;
+		int32_t priority=0;
 
-		uid parentID;
+		uid parentID=0;
 		std::vector<uid> childrenIDs;
 
-		NodeDataType data_type;
-		NodeDataSubtype data_subtype;
+		NodeDataType data_type=NodeDataType::None;
+		NodeDataSubtype data_subtype=NodeDataSubtype::None;
 		uid data_uid;
 
 		//MESH
@@ -277,14 +277,14 @@ struct Animation;
 		std::vector<uid> animations;
 
 		// e.g. lightmap offset and multiplier.
-		avs::NodeRenderState renderState;
+		NodeRenderState renderState;
 
 		//LIGHT
 		vec4 lightColour;
-		float lightRadius;
+		float lightRadius=0.f;
 		vec3 lightDirection;	// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
-		uint8_t lightType;
-		float lightRange;		// Maximum distance the light is effective at, in metres.
+		uint8_t lightType=0;
+		float lightRange=0.f;		// Maximum distance the light is effective at, in metres.
 
 	};
 #ifdef _MSC_VER
@@ -603,10 +603,10 @@ struct Animation;
 		//Get node with passed ID.
 		//	nodeID : Indentifier of the node.
 		//Returns the node if successfully found, otherwise nullptr.
-		virtual DataNode* getNode(uid nodeID) = 0;
-		virtual const DataNode* getNode(uid nodeID) const = 0;
+		virtual Node* getNode(uid nodeID) = 0;
+		virtual const Node* getNode(uid nodeID) const = 0;
 		//! Nodes make up the hierarchy of the scene
-		virtual const std::map<uid, DataNode>& getNodes() const = 0;
+		virtual const std::map<uid, Node>& getNodes() const = 0;
 
 		//Get IDs of all meshes stored.
 		virtual std::vector<uid> getMeshIDs() const = 0;
@@ -733,7 +733,7 @@ struct Animation;
 
 		virtual void CreateTexture(uid id, const Texture& texture) = 0;
 		virtual void CreateMaterial(uid id, const Material& material) = 0;
-		virtual void CreateNode(uid id, DataNode& node) = 0;
+		virtual void CreateNode(uid id, Node& node) = 0;
 		virtual void CreateSkin(avs::uid id, avs::Skin& skin) = 0;
 		virtual void CreateAnimation(avs::uid id, avs::Animation& animation) = 0;
 	};

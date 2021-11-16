@@ -34,9 +34,9 @@ namespace teleport
 		const char* getNodeName(avs::uid nodeID) const override;
 
 		virtual std::vector<avs::uid> getNodeIDs() const override;
-		virtual avs::DataNode* getNode(avs::uid nodeID) override;
-		virtual const avs::DataNode* getNode(avs::uid nodeID) const override;
-		virtual const std::map<avs::uid, avs::DataNode>& getNodes() const override;
+		virtual avs::Node* getNode(avs::uid nodeID) override;
+		virtual const avs::Node* getNode(avs::uid nodeID) const override;
+		virtual const std::map<avs::uid, avs::Node>& getNodes() const override;
 
 		virtual avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) override;
 		virtual const avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) const override;
@@ -75,7 +75,7 @@ namespace teleport
 		//Returns whether there is a shadow map stored with the passed id.
 		bool hasShadowMap(avs::uid id) const;
 
-		void storeNode(avs::uid id, avs::DataNode& newNode);
+		void storeNode(avs::uid id, avs::Node& newNode);
 		void storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard);
 		void storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard);
 		void storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard,bool compress=false,bool verify=false);
@@ -121,7 +121,7 @@ namespace teleport
 		uint8_t compressionStrength = 1;
 		uint8_t compressionQuality = 1;
 
-		std::map<avs::uid, avs::DataNode> nodes;
+		std::map<avs::uid, avs::Node> nodes;
 		std::map<avs::AxesStandard, std::map<avs::uid, avs::Skin>> skins;
 		std::map<avs::AxesStandard, std::map<avs::uid, avs::Animation>> animations;
 		std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> meshes;

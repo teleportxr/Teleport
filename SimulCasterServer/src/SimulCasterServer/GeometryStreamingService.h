@@ -84,6 +84,6 @@ namespace teleport
 		std::set<avs::uid> streamedGenericTextureUids; // Textures that are not specifically specified in a material, e.g. lightmaps.
 
 		//Recursively obtains the resources from the mesh node, and its child nodes.
-		void GetMeshNodeResources(avs::uid nodeID, const avs::DataNode& node, std::vector<avs::MeshNodeResources>& outMeshResources, int32_t minimumPriority) const;
+		void GetMeshNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources>& outMeshResources, int32_t minimumPriority) const;
 	};
 }

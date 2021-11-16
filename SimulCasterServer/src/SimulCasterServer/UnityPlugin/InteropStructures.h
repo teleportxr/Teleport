@@ -40,7 +40,7 @@ struct InteropNode
 
 	int32_t priority;
 
-	operator avs::DataNode() const
+	operator avs::Node() const
 	{
 		return
 		{

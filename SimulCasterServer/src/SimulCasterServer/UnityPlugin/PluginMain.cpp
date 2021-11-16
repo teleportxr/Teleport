@@ -1574,7 +1574,7 @@ TELEPORT_EXPORT void SetCompressionLevels(uint8_t compressionStrength, uint8_t c
 
 TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 {
-	geometryStore.storeNode(id, avs::DataNode(node));
+	geometryStore.storeNode(id, avs::Node(node));
 }
 
 TELEPORT_EXPORT void StoreSkin(avs::uid id, InteropSkin skin)
@@ -1609,7 +1609,7 @@ TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, std::time_t lastModi
 
 TELEPORT_EXPORT bool IsNodeStored(avs::uid id)
 {
-	const avs::DataNode* node = geometryStore.getNode(id);
+	const avs::Node* node = geometryStore.getNode(id);
 	return node != nullptr;
 }
 
@@ -1644,7 +1644,7 @@ TELEPORT_EXPORT void RemoveNode(avs::uid nodeID)
 	geometryStore.removeNode(nodeID);
 }
 
-TELEPORT_EXPORT avs::DataNode* getNode(avs::uid nodeID)
+TELEPORT_EXPORT avs::Node* getNode(avs::uid nodeID)
 {
 	return geometryStore.getNode(nodeID);
 }

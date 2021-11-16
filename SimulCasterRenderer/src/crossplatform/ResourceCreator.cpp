@@ -21,7 +21,7 @@ ResourceCreator::~ResourceCreator()
 	basisThread.join();
 }
 
-void ResourceCreator::Initialise(scr::RenderPlatform* r, scr::VertexBufferLayout::PackingStyle packingStyle)
+void ResourceCreator::Initialize(scr::RenderPlatform* r, scr::VertexBufferLayout::PackingStyle packingStyle)
 {
 	m_API.SetAPI(r->GetAPI());
 	m_pRenderPlatform = r;
@@ -576,7 +576,6 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 	std::set<avs::uid> missingResources;
 
 	incompleteMaterial->materialInfo.name = material.name;
-	incompleteMaterial->materialInfo.renderPlatform = m_pRenderPlatform;
 
 	//Colour/Albedo/Diffuse
 	AddTextureToMaterial(material.pbrMetallicRoughness.baseColorTexture,
@@ -606,7 +605,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.emissive);
 // Add it to the manager, even if incomplete.
-	std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(incompleteMaterial->materialInfo);
+	std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(m_pRenderPlatform,incompleteMaterial->materialInfo);
 	geometryCache->mMaterialManager.Add(id, scrMaterial);
 
 	if (incompleteMaterial->textureSlots.size() == 0)
@@ -615,7 +614,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 	}
 }
 
-void ResourceCreator::CreateNode(avs::uid id, avs::DataNode& node)
+void ResourceCreator::CreateNode(avs::uid id, avs::Node& node)
 {
 	geometryCache->m_ReceivedResources.push_back(id);
 
@@ -707,7 +706,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 	CompleteAnimation(id, completeAnimation);
 }
 
-void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
+void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 {
 	if (geometryCache->mNodeManager->HasNode(id))
 	{
@@ -720,8 +719,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	//Whether the node is missing any resource before, and must wait for them before it can be completed.
 	bool isMissingResources = false;
 
-	newNode->node = geometryCache->mNodeManager->CreateNode(id, node.name);
-	newNode->node->SetLocalTransform(static_cast<scr::Transform>(node.transform));
+	newNode->node = geometryCache->mNodeManager->CreateNode(id, node);
 
 	if (node.data_uid != 0)
 	{
@@ -771,20 +769,13 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	if (m_pRenderPlatform->placeholderMaterial == nullptr)
 	{
 		scr::Material::MaterialCreateInfo materialCreateInfo;
-		materialCreateInfo.renderPlatform = m_pRenderPlatform;
 		materialCreateInfo.diffuse.texture = m_DummyWhite;
 		materialCreateInfo.combined.texture = m_DummyCombined;
 		materialCreateInfo.normal.texture = m_DummyNormal;
 		//materialCreateInfo.emissive.texture = m_DummyBlack;
 		materialCreateInfo.emissive.texture = m_DummyGreen;
-		m_pRenderPlatform->placeholderMaterial = std::make_shared<scr::Material>(materialCreateInfo);
+		m_pRenderPlatform->placeholderMaterial = std::make_shared<scr::Material>(m_pRenderPlatform,materialCreateInfo);
 	}
-	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
-	newNode->node->SetLightmapScaleOffset(node.renderState.lightmapScaleOffset);
-	newNode->node->SetMaterialListSize(node.materials.size());
-	newNode->node->SetStatic(node.stationary);
-	newNode->node->SetPriority(node.priority);
-	newNode->node->SetGlobalIlluminationTextureUid(node.renderState.globalIlluminationUid);
 	if(node.renderState.globalIlluminationUid>0)
 	{
 		std::shared_ptr<scr::Texture> gi_texture = geometryCache->mTextureManager.Get(node.renderState.globalIlluminationUid);
@@ -819,9 +810,6 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 
 	newNode->node->SetChildrenIDs(node.childrenIDs);
 
-	//Create MeshNode even if it is missing resources, but create a hand if it is a hand.
-	geometryCache->mNodeManager->AddNode(newNode->node, node);
-
 	//Complete node now, if we aren't missing any resources.
 	if (!isMissingResources)
 	{
@@ -829,7 +817,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::DataNode& node)
 	}
 }
 
-void ResourceCreator::CreateLight(avs::uid id, avs::DataNode& node)
+void ResourceCreator::CreateLight(avs::uid id, avs::Node& node)
 {
 	SCR_COUT << "CreateLight(" << id << ", " << node.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
@@ -850,7 +838,7 @@ void ResourceCreator::CreateLight(avs::uid id, avs::DataNode& node)
 	geometryCache->mLightManager.Add(id, light);
 }
 
-void ResourceCreator::CreateBone(avs::uid id, avs::DataNode& node)
+void ResourceCreator::CreateBone(avs::uid id, avs::Node& node)
 {
 	SCR_COUT << "CreateBone(" << id << ", " << node.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
@@ -986,7 +974,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 
 	std::shared_ptr<scr::Material> material = geometryCache->mMaterialManager.Get(id);
 	// Update its properties:
-	material->SetMaterialCreateInfo(materialInfo);
+	material->SetMaterialCreateInfo(m_pRenderPlatform,materialInfo);
 	//Add material to nodes waiting for material.
 	MissingResource& missingMaterial = GetMissingResource(id, "Material");
 	for(auto it = missingMaterial.waitingResources.begin(); it != missingMaterial.waitingResources.end(); it++)

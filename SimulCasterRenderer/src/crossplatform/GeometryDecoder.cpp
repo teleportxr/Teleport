@@ -354,8 +354,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		name.resize(nameLength);
 		copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 		compressedMesh.name= name;
-		if(uid==12)
-			saveBuffer(name+".mesh_compressed");
+		//if(uid==12)
+		//	saveBuffer(name+".mesh_compressed");
 		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO)
 		{
 			//compressedMesh.subMeshAttributeIndex = (size_t)NextB;
@@ -700,7 +700,7 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 	{
 		avs::uid uid = Next8B;
 
-		avs::DataNode node;
+		avs::Node node;
 
 		size_t nameLength = Next8B;
 		node.name.resize(nameLength);

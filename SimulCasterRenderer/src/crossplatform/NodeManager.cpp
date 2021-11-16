@@ -4,12 +4,16 @@ using namespace scr;
 
 using InvisibilityReason = scr::VisibilityComponent::InvisibilityReason;
 
-std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const std::string& name) const
+std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsNode) 
 {
-	return std::make_shared<Node>(id, name);
+	std::shared_ptr<Node> node= std::make_shared<Node>(id, avsNode.name);
+
+	//Create MeshNode even if it is missing resources
+	AddNode(node, avsNode);
+	return node;
 }
 
-void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeData)
+void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData)
 {
 	SCR_COUT<<"AddNode "<<nodeData.name.c_str()<<" "<<(nodeData.stationary?"static":"mobile")<<"\n";
 	//Remove any node already using the ID.
@@ -102,6 +106,16 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeD
 		}
 		earlyAnimationSpeedUpdates.erase(animationSpeedIt);
 	}
+
+	
+	node->SetLocalTransform(static_cast<scr::Transform>(nodeData.transform));
+	
+	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
+	node->SetLightmapScaleOffset(nodeData.renderState.lightmapScaleOffset);
+	node->SetMaterialListSize(nodeData.materials.size());
+	node->SetStatic(nodeData.stationary);
+	node->SetPriority(nodeData.priority);
+	node->SetGlobalIlluminationTextureUid(nodeData.renderState.globalIlluminationUid);
 }
 
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)

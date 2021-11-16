@@ -153,6 +153,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool render_from_video_centre	= false;
 	bool show_textures				= false;
 	bool show_cubemaps				=false;
+	bool show_node_overlays			=false;
 
 	std::string overridePassName = ""; //Pass used for rendering geometry.
 
@@ -209,9 +210,9 @@ public:
 	void DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> node);
 	void WriteHierarchies();
-	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node);
-	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node);
+	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,scr::GeometryCache &g);
+	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g);
+	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g);
 	void RenderView(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 
 	int AddView();

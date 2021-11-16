@@ -24,7 +24,6 @@ namespace scr
 		{
 			std::string name;
 			
-			const RenderPlatform* renderPlatform;
 			MaterialParameter diffuse;			//RGBA Colour Texture
 			MaterialParameter normal;			//R: Tangent, G: Bi-normals and B: Normals
 			MaterialParameter combined;			//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
@@ -77,8 +76,8 @@ namespace scr
 		ShaderResource m_ShaderResource;
 	
 	public:
-		Material(const MaterialCreateInfo& pMaterialCreateInfo);
-		void SetMaterialCreateInfo(const MaterialCreateInfo& pMaterialCreateInfo);
+		Material(RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo);
+		void SetMaterialCreateInfo(RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo);
 
 		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfo() const { return m_CI; }

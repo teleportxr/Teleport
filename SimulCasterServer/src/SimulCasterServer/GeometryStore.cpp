@@ -270,7 +270,7 @@ void GeometryStore::setCompressionLevels(uint8_t str, uint8_t q)
 
 const char* GeometryStore::getNodeName(avs::uid nodeID) const
 {
-	const avs::DataNode* node = getNode(nodeID);
+	const avs::Node* node = getNode(nodeID);
 	return node ? node->name.c_str() : "NULL";
 }
 
@@ -279,17 +279,17 @@ std::vector<avs::uid> GeometryStore::getNodeIDs() const
 	return getVectorOfIDs(nodes);
 }
 
-avs::DataNode* GeometryStore::getNode(avs::uid nodeID)
+avs::Node* GeometryStore::getNode(avs::uid nodeID)
 {
 	return getResource(nodes, nodeID);
 }
 
-const avs::DataNode* GeometryStore::getNode(avs::uid nodeID) const
+const avs::Node* GeometryStore::getNode(avs::uid nodeID) const
 {
 	return getResource(nodes, nodeID);
 }
 
-const std::map<avs::uid, avs::DataNode>& GeometryStore::getNodes() const
+const std::map<avs::uid, avs::Node>& GeometryStore::getNodes() const
 {
 	return nodes;
 }
@@ -419,7 +419,7 @@ bool GeometryStore::hasShadowMap(avs::uid id) const
 	return shadowMaps.find(id) != shadowMaps.end();
 }
 
-void GeometryStore::storeNode(avs::uid id, avs::DataNode& newNode)
+void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 {
 	//Remove node before re-adding with new data. Why?
 	//removeNode(id);

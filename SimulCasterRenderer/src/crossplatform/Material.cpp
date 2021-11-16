@@ -5,12 +5,12 @@
 
 using namespace scr;
 
-Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
+Material::Material(RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo)
 {
-	SetMaterialCreateInfo(pMaterialCreateInfo);
+	SetMaterialCreateInfo(renderPlatform,pMaterialCreateInfo);
 }
 
-void Material::SetMaterialCreateInfo(const MaterialCreateInfo& pMaterialCreateInfo)
+void Material::SetMaterialCreateInfo( RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo)
 {
 	m_CI= pMaterialCreateInfo;
 	m_MaterialData.diffuseOutputScalar			= m_CI.diffuse.textureOutputScalar;
@@ -53,7 +53,7 @@ void Material::SetMaterialCreateInfo(const MaterialCreateInfo& pMaterialCreateIn
 		ub_ci.size = sizeof(MaterialData);
 		ub_ci.data = &m_MaterialData;
 
-		m_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
+		m_UB = renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
 	}
 	else

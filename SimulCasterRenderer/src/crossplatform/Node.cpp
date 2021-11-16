@@ -11,6 +11,7 @@ using namespace scr;
 Node::Node(avs::uid id, const std::string& name)
 	:id(id), name(name), isStatic(false)
 {}
+
 void Node::SetStatic(bool s)
 {
 	isStatic=s;
@@ -41,6 +42,11 @@ void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation,
 	{
 		RequestTransformUpdate();
 	}
+}
+void Node::UpdateModelMatrix()
+{
+	globalTransform.UpdateModelMatrix();
+	localTransform.UpdateModelMatrix();	
 }
 
 void Node::RequestTransformUpdate()

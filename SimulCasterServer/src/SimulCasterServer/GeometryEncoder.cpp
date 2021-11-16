@@ -366,7 +366,7 @@ namespace teleport
 		for (int i=0;i<missingUIDs.size();i++)
 		{
 			avs::uid uid =missingUIDs[i];
-			avs::DataNode* node = src->getNode(uid);
+			avs::Node* node = src->getNode(uid);
 			if(!node)
 			{
 				TELEPORT_CERR << "PipelineNode encoding error! Node_" << uid << " does not exist!\n";
@@ -377,7 +377,7 @@ namespace teleport
 		put(missingUIDs.size());
 		for (const avs::uid &uid : missingUIDs)
 		{
-			avs::DataNode* node = src->getNode(uid);
+			avs::Node* node = src->getNode(uid);
 			put(uid);
 
 			//Push name length.

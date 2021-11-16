@@ -19,7 +19,7 @@
 //Debug
 #define SCR_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
 #define SCR_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
-#define SCR_CERR std::cerr << __FILE__ << "(" << __LINE__ << "): " 
+#define SCR_CERR std::cerr << __FILE__ << "(" << __LINE__ << "): error: " 
 
 #define SCR_COUT std::cout << __FILE__ << "(" << __LINE__ << "): " 
 

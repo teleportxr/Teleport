@@ -148,7 +148,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
-	resourceCreator.Initialise(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	resourceCreator.Initialize(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	localResourceCreator.Initialize(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 
 	hDRRenderer = new crossplatform::HdrRenderer();
 
@@ -157,7 +158,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
 	hdrFramebuffer->SetAntialiasing(1);
 	meshRenderer	= new crossplatform::MeshRenderer();
-	camera.SetPositionAsXYZ(0.f,0.f,5.f);
+	camera.SetPositionAsXYZ(0.f,0.f,2.f);
 	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
 	camera.LookInDirection(look,up);
 
@@ -214,6 +215,23 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	// initialize the default local geometry:
 	geometryDecoder.decodeFromFile("Oculus_R_Main.mesh_compressed",&localResourceCreator);
+	//localGeometryCache.mNodeManager->AddNode()
+	{
+		scr::Material::MaterialCreateInfo materialCreateInfo;
+		materialCreateInfo.name="local material";
+		std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(&PcClientRenderPlatform,materialCreateInfo);
+		localGeometryCache.mMaterialManager.Add(14, scrMaterial);
+	}
+	avs::Node avsNode;
+	avsNode.name="local Right Hand";
+	avsNode.transform=avs::Transform();
+	avsNode.data_type=avs::NodeDataType::Mesh;
+	avsNode.data_subtype=avs::NodeDataSubtype::RightHand;
+	avsNode.data_uid=12;
+	avsNode.materials.push_back(14);
+	std::shared_ptr<scr::Node> rightHandNode=localGeometryCache.mNodeManager->CreateNode(13, avsNode);
+	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(12));
+	localGeometryCache.mNodeManager->SetRightHand(13);
 }
 
 void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
@@ -472,7 +490,12 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x, videoConfig.specular_y));
 		}
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
-		RenderLocalNodes(deviceContext);
+
+		pbrConstants.drawDistance = lastSetupCommand.video_config.draw_distance;
+		RenderLocalNodes(deviceContext,geometryCache);
+
+		pbrConstants.drawDistance = 1000.0f;
+		RenderLocalNodes(deviceContext,localGeometryCache);
 
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		//hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -752,24 +775,6 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		}
 		static int lineLimit = 50;
 		linesRemaining = lineLimit;
-		/*
-		const std::shared_ptr<scr::Node>& body = geometryCache.mNodeManager->GetBody();
-		if(body)
-		{
-			ListNode(deviceContext, body, 1, linesRemaining);
-		}
-
-		const std::shared_ptr<scr::Node>& leftHand = geometryCache.mNodeManager->GetLeftHand();
-		if(leftHand)
-		{
-			ListNode(deviceContext, leftHand, 1, linesRemaining);
-		}
-
-		const std::shared_ptr<scr::Node>& rightHand = geometryCache.mNodeManager->GetRightHand();
-		if(rightHand)
-		{
-			ListNode(deviceContext, rightHand, 1, linesRemaining);
-		}*/
 
 		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
 																									geometryCache.mLightManager.GetCache(cacheLock).size()), white);
@@ -956,7 +961,7 @@ void ClientRenderer::WriteHierarchies()
 	std::cout << std::endl;
 }
 
-void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,scr::GeometryCache &g)
 {
 	deviceContext.viewStruct.Init();
 
@@ -966,18 +971,29 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 	cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	cameraConstants.viewPosition = ((const float*)&clientDeviceState->headPose.position);
+	
 
-	const scr::NodeManager::nodeList_t& nodeList = geometryCache.mNodeManager->GetRootNodes();
+	{
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		auto &cachedLights=g.mLightManager.GetCache(cacheLock);
+		if(cachedLights.size()>lightsBuffer.count)
+		{
+			lightsBuffer.InvalidateDeviceObjects();
+			lightsBuffer.RestoreDeviceObjects(renderPlatform, static_cast<int>(cachedLights.size()));
+		}
+		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
+	}
+	const scr::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
 	for(const std::shared_ptr<scr::Node>& node : nodeList)
 	{
 		if(show_only!=0&&show_only!=node->id)
 			continue;
-		RenderNode(deviceContext, node);
+		RenderNode(deviceContext, node,g);
 	}
 
 	if(renderPlayer)
 	{
-		std::shared_ptr<scr::Node> body = geometryCache.mNodeManager->GetBody();
+		std::shared_ptr<scr::Node> body = g.mNodeManager->GetBody();
 		if(body)
 		{
 			body->SetLocalPosition(clientDeviceState->headPose.position + bodyOffsetFromHead);
@@ -986,55 +1002,46 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 			float angle = std::atan2(clientDeviceState->headPose.orientation.z, clientDeviceState->headPose.orientation.w);
 			scr::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
 			body->SetLocalRotation(zRotation);
-
-			RenderNode(deviceContext, body);
+		// force update of model matrices - should not be necessary, but is.
+			body->UpdateModelMatrix();
+			RenderNode(deviceContext, body,g);
 		}
 
-		std::shared_ptr<scr::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
+		std::shared_ptr<scr::Node> rightHand = g.mNodeManager->GetRightHand();
 		if(rightHand)
 		{
-				rightHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
-				rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
-
-			RenderNode(deviceContext, rightHand);
+			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
+			rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
+		// force update of model matrices - should not be necessary, but is.
+			rightHand->UpdateModelMatrix();
+			RenderNode(deviceContext, rightHand,g);
 		}
 
-		std::shared_ptr<scr::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
+		std::shared_ptr<scr::Node> leftHand = g.mNodeManager->GetLeftHand();
 		if(leftHand)
 		{
 			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[1].position);
 			leftHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[1].orientation);
-
-			RenderNode(deviceContext, leftHand);
+		// force update of model matrices - should not be necessary, but is.
+			leftHand->UpdateModelMatrix();
+			RenderNode(deviceContext, leftHand,g);
 		}
 	}
-#if 0
+	if(show_node_overlays)
 	for (const std::shared_ptr<scr::Node>& node : nodeList)
 	{
-		RenderNodeOverlay(deviceContext, node);
+		RenderNodeOverlay(deviceContext, node,g);
 	}
-#endif
 }
-void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node)
+void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
-	{
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
-		if(cachedLights.size()>lightsBuffer.count)
-		{
-			lightsBuffer.InvalidateDeviceObjects();
-			lightsBuffer.RestoreDeviceObjects(renderPlatform, static_cast<int>(cachedLights.size()));
-		}
-		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
-	}
-
 	std::shared_ptr<scr::Texture> globalIlluminationTexture ;
 	if(node->GetGlobalIlluminationTextureUid() )
-		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	std::string passName = "pbr_nolightmap"; //Pass used for rendering geometry.
 	if(node->IsStatic())
@@ -1141,13 +1148,13 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if(child)
 		{
-			RenderNode(deviceContext, child);
+			RenderNode(deviceContext, child,g);
 		}
 	}
 }
 
 
-void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node)
+void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
@@ -1155,7 +1162,7 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 
 	std::shared_ptr<scr::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
-		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	//Only render visible nodes, but still render children that are close enough.
 	if (node->IsVisible()&& (show_only == 0 || show_only == node->id))
@@ -1204,7 +1211,7 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if (child)
 		{
-			RenderNodeOverlay(deviceContext, child);
+			RenderNodeOverlay(deviceContext, child,g);
 		}
 	}
 }
@@ -1273,6 +1280,9 @@ void ClientRenderer::Update()
 
 	geometryCache.Update(static_cast<float>(timeElapsed));
 	resourceCreator.Update(static_cast<float>(timeElapsed));
+
+	localGeometryCache.Update(static_cast<float>(timeElapsed));
+	localResourceCreator.Update(static_cast<float>(timeElapsed));
 
 	previousTimestamp = timestamp;
 }
@@ -1473,8 +1483,6 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	handshake.clientStreamingPort=sourceParams.localPort;
 	lastSetupCommand = setupCommand;
 
-	pbrConstants.drawDistance = videoConfig.draw_distance;
-
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 	return true;
 }
@@ -1671,6 +1679,8 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 	controllerSim.controller_dir = camera.ScreenPositionToDirection(x, y, hdrFramebuffer->GetWidth() / static_cast<float>(hdrFramebuffer->GetHeight()));
 	controllerSim.view_dir=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
 	// we seek the angle positive on the Z-axis representing the view direction azimuth:
+	static float cc=0.0f;
+	cc+=0.01f;
 	controllerSim.angle=atan2f(-controllerSim.view_dir.x, controllerSim.view_dir.y);
 	float sine= sin(controllerSim.angle), cosine=cos(controllerSim.angle);
 	float sine_elev= controllerSim.view_dir.z;
@@ -1686,17 +1696,16 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 
 	controllerSim.pos_offset[index]=vec3(hand_dist*(-pos.y*sine+ pos.x*cosine),hand_dist*(pos.y*cosine+pos.x*sine),z_offset+hand_dist*sine_elev*pos.y);
 
-
 	// Get horizontal azimuth of view.
-	vec3 camera_local_pos=camera.GetPosition();
-	vec3 footspace_pos=camera_local_pos;
-	footspace_pos+=controllerSim.pos_offset[index];
+	vec3 camera_local_pos	=camera.GetPosition();
+	vec3 footspace_pos		=camera_local_pos;
+	footspace_pos			+=controllerSim.pos_offset[index];
 
 	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
 	// The up direction is x, and the left direction is z.
 	simul::crossplatform::Quaternion<float> q(0,0,0,1.0f);
-	float azimuth= atan2f(-controllerSim.controller_dir.x, controllerSim.controller_dir.y);
-	float elevation=asin(controllerSim.controller_dir.z);
+	float azimuth	= atan2f(-controllerSim.controller_dir.x, controllerSim.controller_dir.y);
+	float elevation	= asin(controllerSim.controller_dir.z);
 	q.Rotate(azimuth,vec3(0,0,1.0f));
 	q.Rotate(elevation, vec3(1.0f, 0, 0));
 
@@ -1983,6 +1992,9 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break;
 		case 'T':
 			show_textures = !show_textures;
+			break;
+		case 'N':
+			show_node_overlays = !show_node_overlays;
 			break;
 		case 'K':
 			if(sessionClient.IsConnected())

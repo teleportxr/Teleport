@@ -56,7 +56,7 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 {
 	for (avs::uid nodeID : streamedNodeIDs)
 	{
-		avs::DataNode* node = geometryStore->getNode(nodeID);
+		avs::Node* node = geometryStore->getNode(nodeID);
 		if (!node)
 		{
 			continue;
@@ -231,7 +231,7 @@ void GeometryStreamingService::addGenericTexture(avs::uid id)
 	streamedGenericTextureUids.insert(id);
 }
 
-void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::DataNode& node, std::vector<avs::MeshNodeResources>& outMeshResources,int32_t minimumPriority) const
+void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources>& outMeshResources,int32_t minimumPriority) const
 {
 	if (node.data_type != avs::NodeDataType::Mesh)
 	{

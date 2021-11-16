@@ -292,6 +292,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		GetClientRect(hWnd, &rect);
 		ImGui_ImplPlatform_SetMousePos(pos.x, pos.y, rect.right - rect.left, rect.bottom - rect.top);
 	}
+	{
+		switch (message)
+		{
+		case WM_RBUTTONDOWN:
+			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
+			break;
+		case WM_RBUTTONUP:
+			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
+			break;
+		case WM_MOUSEMOVE:
+		{
+			int xPos = GET_X_LPARAM(lParam);
+			int yPos = GET_Y_LPARAM(lParam);
+			short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+			clientRenderer->OnMouseMove(xPos, yPos
+				, (wParam & MK_LBUTTON) != 0
+				, (wParam & MK_RBUTTON) != 0
+				, (wParam & MK_MBUTTON) != 0
+				, zDelta);
+		}
+		break;
+		default:
+			break;
+		}
+	}
 	if (!ui_handled && !gui.HasFocus())
 	{
 		switch (message)
@@ -308,12 +333,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_LBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
 			break;
-		case WM_RBUTTONDOWN:
-			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
-			break;
-		case WM_RBUTTONUP:
-			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
-			break;
 		case WM_MBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
 			break;
@@ -327,18 +346,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 		}
 		break;
-		case WM_MOUSEMOVE:
-		{
-			int xPos = GET_X_LPARAM(lParam);
-			int yPos = GET_Y_LPARAM(lParam);
-			short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-			clientRenderer->OnMouseMove(xPos, yPos
-				, (wParam & MK_LBUTTON) != 0
-				, (wParam & MK_RBUTTON) != 0
-				, (wParam & MK_MBUTTON) != 0
-				, zDelta);
-		}
-		break;
+
 		default:
 			break;
 		}

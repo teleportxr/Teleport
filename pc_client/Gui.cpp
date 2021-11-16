@@ -253,6 +253,7 @@ void Gui::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceConte
 	            "V: Show video\n"
 	            "C: Toggle render from centre\n"
 	            "T: Toggle Textures\n"
+	            "N: Toggle Node Overlays\n"
 	            "M: Change rendermode\n"
 	            "R: Recompile shaders\n"
 	            "NUM 0: PBR\n"
@@ -321,6 +322,10 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
                 }
                 keys_pressed.erase(keys_pressed.begin());
             }
+        }
+        if(io.KeysDown[VK_ESCAPE])
+        {
+            show_hide=false;
         }
         if(ImGui::InputText("", buf, IM_ARRAYSIZE(buf)))
         {

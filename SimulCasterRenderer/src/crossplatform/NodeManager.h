@@ -23,9 +23,9 @@ namespace scr
 
 		virtual ~NodeManager() = default;
 
-		virtual std::shared_ptr<Node> CreateNode(avs::uid id, const std::string& name) const;
+		virtual std::shared_ptr<Node> CreateNode(avs::uid id, const avs::Node &avsNode) ;
 
-		void AddNode(std::shared_ptr<Node> node, const avs::DataNode& nodeData);
+		void AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData);
 
 		void RemoveNode(std::shared_ptr<Node> node);
 		void RemoveNode(avs::uid nodeID);

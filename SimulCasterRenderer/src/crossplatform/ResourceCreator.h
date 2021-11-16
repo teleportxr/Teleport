@@ -36,7 +36,7 @@ namespace scr
 		ResourceCreator();
 		~ResourceCreator();
 	
-		void Initialise(scr::RenderPlatform *r, scr::VertexBufferLayout::PackingStyle packingStyle);
+		void Initialize(scr::RenderPlatform *r, scr::VertexBufferLayout::PackingStyle packingStyle);
 
 		//Returns the resources the ResourceCreator needs, and clears the list.
 		std::vector<avs::uid> TakeResourceRequests();
@@ -61,7 +61,7 @@ namespace scr
 
 		void CreateTexture(avs::uid id, const avs::Texture& texture) override;
 		void CreateMaterial(avs::uid id, const avs::Material& material) override;
-		void CreateNode(avs::uid id, avs::DataNode& node) override;
+		void CreateNode(avs::uid id, avs::Node& node) override;
 		void CreateSkin(avs::uid id, avs::Skin& skin) override;
 		void CreateAnimation(avs::uid id, avs::Animation& animation) override;
 
@@ -73,9 +73,9 @@ namespace scr
 
 	private:
 	
-		void CreateMeshNode(avs::uid id, avs::DataNode& node);
-		void CreateLight(avs::uid id, avs::DataNode& node);
-		void CreateBone(avs::uid id, avs::DataNode& node);
+		void CreateMeshNode(avs::uid id, avs::Node& node);
+		void CreateLight(avs::uid id, avs::Node& node);
+		void CreateBone(avs::uid id, avs::Node& node);
 
 		void CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo& meshInfo);
 		void CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin);

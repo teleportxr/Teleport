@@ -37,6 +37,8 @@ namespace scr
 		void SetPriority(int p);
 		int GetPriority() const;
 		void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
+		// force update of model matrices - should not be necessary, but is.
+		void UpdateModelMatrix();
 		//Requests global transform of node, and node's children, be recalculated.
 		void RequestTransformUpdate();
 
