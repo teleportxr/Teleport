@@ -20,11 +20,18 @@ namespace teleport
 		void PollEvents(bool& exit);
 		bool HaveXRDevice() const;
 		const avs::Pose& GetHeadPose() const;
+		const avs::Pose& GetControllerPose(int index) const;
+		size_t GetNumControllers() const
+		{
+			return controllerPoses.size();
+		};
 	protected:
 		simul::crossplatform::RenderPlatform* renderPlatform = nullptr;
 		bool haveXRDevice = false;
 		void RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext, XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin);
 		bool RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext,XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin);
 		avs::Pose headPose;
+		std::vector<avs::Pose> controllerPoses;
+		void openxr_poll_predicted(XrTime predicted_time);
 	};
 }

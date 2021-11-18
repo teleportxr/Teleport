@@ -61,7 +61,9 @@ endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
-add_static_executable( pc_client WIN32 SOURCES ${srcs} ${scr_pc_impl} ${shaders} ${inifiles} )
+set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc")
+add_static_executable( pc_client WIN32 SOURCES ${srcs} ${scr_pc_impl} ${shaders} ${inifiles} ${APP_ICON_RESOURCE_WINDOWS} )
+
 
 target_include_directories(pc_client PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterAudio/src ../SimulCasterRenderer/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)

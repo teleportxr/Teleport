@@ -214,8 +214,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 
 	// initialize the default local geometry:
-	geometryDecoder.decodeFromFile("Oculus_R_Main.mesh_compressed",&localResourceCreator);
-	//localGeometryCache.mNodeManager->AddNode()
+	geometryDecoder.decodeFromFile("meshes/Wand.mesh_compressed",&localResourceCreator);
 	{
 		scr::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.name="local material";
@@ -226,12 +225,19 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avsNode.name="local Right Hand";
 	avsNode.transform=avs::Transform();
 	avsNode.data_type=avs::NodeDataType::Mesh;
-	avsNode.data_subtype=avs::NodeDataSubtype::RightHand;
-	avsNode.data_uid=12;
+	//avsNode.transform.scale = { 0.2f,0.2f,0.2f };
+	avsNode.data_uid=2166;
 	avsNode.materials.push_back(14);
-	std::shared_ptr<scr::Node> rightHandNode=localGeometryCache.mNodeManager->CreateNode(13, avsNode);
-	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(12));
-	localGeometryCache.mNodeManager->SetRightHand(13);
+
+	avsNode.data_subtype = avs::NodeDataSubtype::RightHand;
+	std::shared_ptr<scr::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(13, avsNode);
+	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(2166));
+	localGeometryCache.mNodeManager->SetLeftHand(13);
+
+	avsNode.data_subtype = avs::NodeDataSubtype::LeftHand;
+	std::shared_ptr<scr::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(14, avsNode);
+	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(2166));
+	localGeometryCache.mNodeManager->SetRightHand(14);
 }
 
 void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
@@ -240,7 +246,7 @@ void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
 	size_t pos=ip.find(":");
 	if(pos>=ip.length())
 	{
-		server_discovery_port = TELEPORT_SERVER_PORT;
+		server_discovery_port = TELEPORT_SERVER_DISCOVERY_PORT;
 		server_ip=ip;
 	}
 	else
@@ -494,6 +500,8 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		pbrConstants.drawDistance = lastSetupCommand.video_config.draw_distance;
 		RenderLocalNodes(deviceContext,geometryCache);
 
+		gui.Render(deviceContext);
+
 		pbrConstants.drawDistance = 1000.0f;
 		RenderLocalNodes(deviceContext,localGeometryCache);
 
@@ -549,7 +557,6 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 	//hdrFramebuffer->Deactivate(deviceContext);
 	//hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
 
-	gui.Render(deviceContext);
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 
 }
@@ -722,7 +729,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	deviceContext.framePrintY = 8;
 	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
 		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
-		(canConnect?platform::core::QuickFormat("Not connected. Discovering on port %d", TELEPORT_SERVER_DISCOVERY_PORT):"Offline"),white);
+		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", server_ip.c_str(), server_discovery_port):"Offline"),white);
 	renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Framerate: %4.4f", framerate));
 
 	if(show_osd== NETWORK_OSD)
@@ -1081,6 +1088,18 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 
 				std::shared_ptr<pc_client::PC_Texture> gi = std::dynamic_pointer_cast<pc_client::PC_Texture>(globalIlluminationTexture);
 				std::shared_ptr<scr::Material> material = node->GetMaterials()[element];
+				std::string usedPassName = passName;
+
+				std::shared_ptr<scr::Skin> skin = node->GetSkin();
+				if (skin)
+				{
+					scr::mat4* scr_matrices = skin->GetBoneMatrices(globalTransformMatrix);
+					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(scr::mat4) * scr::Skin::MAX_BONES);
+
+					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
+					usedPassName = "anim_" + usedPassName;
+				}
+				crossplatform::EffectPass *pass = pbrEffect->GetTechniqueByName("solid")->GetPass(usedPassName.c_str());
 				if(material)
 				{
 					const scr::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
@@ -1104,6 +1123,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"),  nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"),  nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"),  nullptr);
+					pass = pbrEffect->GetTechniqueByName("solid")->GetPass("local");
 				}
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi ? gi->GetSimulTexture() : nullptr);
 
@@ -1116,17 +1136,6 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				lightsBuffer.Apply(deviceContext, pbrEffect, _lights );
 				tagDataCubeBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataCubeBuffer"));
 				tagDataIDBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataIDBuffer"));
-				std::string usedPassName = passName;
-
-				std::shared_ptr<scr::Skin> skin = node->GetSkin();
-				if(skin)
-				{
-					scr::mat4* scr_matrices = skin->GetBoneMatrices(globalTransformMatrix);
-					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(scr::mat4) * scr::Skin::MAX_BONES);
-
-					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
-					usedPassName = "anim_" + usedPassName;
-				}
 
 				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 				pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -1134,10 +1143,10 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 				renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
 				renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
-				pbrEffect->Apply(deviceContext, pbrEffect->GetTechniqueByName("solid"), usedPassName.c_str());
+				renderPlatform->ApplyPass(deviceContext, pass);
 				renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
 				pbrEffect->UnbindTextures(deviceContext);
-				pbrEffect->Unapply(deviceContext);
+				renderPlatform->UnapplyPass(deviceContext);
 				layout->Unapply(deviceContext);
 			}
 		}
@@ -1843,8 +1852,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	}
 
 	clientDeviceState->UpdateOriginPose();
-	FillInControllerPose(0, 0.5f);
-	FillInControllerPose(1, -0.5f);
+	if (!have_headset)
+	{
+		FillInControllerPose(0, 0.5f);
+		FillInControllerPose(1, -0.5f);
+	}
 
 #if IS_D3D12
 	// Execute the immediate command list on graphics queue which will include any vertex and index buffer 

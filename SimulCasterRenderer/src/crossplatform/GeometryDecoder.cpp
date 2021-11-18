@@ -56,6 +56,8 @@ template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffse
 std::vector<uint8_t> savedBuffer;
 avs::Result GeometryDecoder::decodeFromFile(const std::string &filename,GeometryTargetBackendInterface *target)
 {
+	if(!fs::exists(filename.c_str()))
+		return avs::Result::Failed;
 	m_BufferSize=fs::file_size(filename.c_str());
 	m_BufferOffset = 0;
 	m_Buffer.resize(m_BufferSize);
@@ -355,7 +357,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 		compressedMesh.name= name;
 		//if(uid==12)
-		//	saveBuffer(name+".mesh_compressed");
+		saveBuffer(std::string("Meshes/"+name+".mesh_compressed"));
 		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO)
 		{
 			//compressedMesh.subMeshAttributeIndex = (size_t)NextB;

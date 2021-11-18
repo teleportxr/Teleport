@@ -140,7 +140,11 @@ void Gui::Show()
 {
     visible = true;
     menu_pos = view_pos;
-    menu_pos.y += 0.5f;
+    static float z_offset = -.3f;
+    static float distance = 0.4f;
+    float angle = atan2f(view_dir.y, view_dir.x);
+    vec3 menu_offset = { distance * cos(angle),distance * sin(angle),z_offset };
+    menu_pos += menu_offset;
     keys_pressed.clear();
 }
 
@@ -272,6 +276,7 @@ void Gui::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceConte
 void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
     view_pos = deviceContext.viewStruct.cam_pos;
+    view_dir = deviceContext.viewStruct.view_dir;
     if(!visible)
         return;
 	// Start the Dear ImGui frame
@@ -407,6 +412,7 @@ void Gui::SetServerIPs(const std::vector<std::string> &s)
     if(server_ips.size())
     {
         strcpy(buf,server_ips[0].c_str());//,server_ips[0].size());
+        current_url = buf;
     }
 
 }

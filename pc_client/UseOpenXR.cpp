@@ -148,7 +148,7 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	std::cout<<"OpenXR extensions available:\n";
 	for (size_t i = 0; i < xr_exts.size(); i++)
 	{
-		std::cout<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str() ;
+		std::cout<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
 
 		// Check if we're asking for this extensions, and add it to our use 
 		// list!
@@ -457,12 +457,16 @@ void UseOpenXR::PollActions()
 				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 			{
 				xr_input.handPose[hand] = space_location.pose;
+				if(hand>= controllerPoses.size())
+					controllerPoses.resize(hand+1);
+				controllerPoses[hand].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
+				controllerPoses[hand].orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 			}
 		}
 	}
 }
 
-void openxr_poll_predicted(XrTime predicted_time)
+void UseOpenXR::openxr_poll_predicted(XrTime predicted_time)
 {
 	if (xr_session_state != XR_SESSION_STATE_FOCUSED)
 		return;
@@ -473,13 +477,17 @@ void openxr_poll_predicted(XrTime predicted_time)
 	{
 		if (!xr_input.renderHand[i])
 			continue;
-		XrSpaceLocation spaceRelation = { XR_TYPE_SPACE_LOCATION };
-		XrResult        res = xrLocateSpace(xr_input.handSpace[i], xr_app_space, predicted_time, &spaceRelation);
+		XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
+		XrResult        res = xrLocateSpace(xr_input.handSpace[i], xr_app_space, predicted_time, &space_location);
 		if (XR_UNQUALIFIED_SUCCESS(res) &&
-			(spaceRelation.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
-			(spaceRelation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
+			(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
+			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
-			xr_input.handPose[i] = spaceRelation.pose;
+			xr_input.handPose[i] = space_location.pose;
+			if (i >= controllerPoses.size())
+				controllerPoses.resize(i + 1);
+			controllerPoses[i].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
+			controllerPoses[i].orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 		}
 	}
 }
@@ -595,7 +603,7 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.2f, 0.2f, 0.2f, 1 };
+	static float clear[] = { 0.2f, 0.3f, 0.5f, 1 };
 	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
 	surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
@@ -720,6 +728,14 @@ const avs::Pose& UseOpenXR::GetHeadPose() const
 	return headPose;
 }
 
+const avs::Pose& UseOpenXR::GetControllerPose(int index) const
+{
+	if (index >= 0 && controllerPoses.size())
+		return controllerPoses[index];
+	else
+		return avs::Pose();
+}
+
 void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceContext,simul::crossplatform::RenderDelegate &renderDelegate,vec3 origin)
 {
 	// Block until the previous frame is finished displaying, and is ready for another one.
@@ -779,9 +795,12 @@ void UseOpenXR::Shutdown()
 
 	// Release all the other OpenXR resources that we've created!
 	// What gets allocated, must get deallocated!
-	if (xr_input.actionSet != XR_NULL_HANDLE) {
-		if (xr_input.handSpace[0] != XR_NULL_HANDLE) xrDestroySpace(xr_input.handSpace[0]);
-		if (xr_input.handSpace[1] != XR_NULL_HANDLE) xrDestroySpace(xr_input.handSpace[1]);
+	if (xr_input.actionSet != XR_NULL_HANDLE)
+	{
+		if (xr_input.handSpace[0] != XR_NULL_HANDLE)
+			xrDestroySpace(xr_input.handSpace[0]);
+		if (xr_input.handSpace[1] != XR_NULL_HANDLE)
+			xrDestroySpace(xr_input.handSpace[1]);
 		xrDestroyActionSet(xr_input.actionSet);
 	}
 	if (xr_app_space != XR_NULL_HANDLE)

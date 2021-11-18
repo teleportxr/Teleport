@@ -27,6 +27,7 @@ namespace teleport
 	protected:
 		simul::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
+		vec3 view_dir;
 		vec3 menu_pos;
 		std::string current_url;
 		std::vector<std::string> server_ips;

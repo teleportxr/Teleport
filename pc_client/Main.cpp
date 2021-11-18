@@ -144,12 +144,17 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+   // wcex.hIcon          = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_WORLDSPACE));
+	wcex.hIcon = static_cast<HICON>(::LoadImage(NULL,
+		MAKEINTRESOURCE(IDI_WARNING),
+		IMAGE_ICON,
+		0, 0,
+		LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszMenuName   = 0;
     wcex.lpszClassName  = L"MainWindow";
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_WORLDSPACE));
 
     return RegisterClassExW(&wcex);
 }
@@ -394,6 +399,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					const avs::Pose &headPose=useOpenXR.GetHeadPose();
 					clientDeviceState.SetHeadPose(headPose.position, headPose.orientation);
+					for (int i = 0; i < useOpenXR.GetNumControllers(); i++)
+					{
+						const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);
+						clientDeviceState.SetControllerPose(i, controllerPose.position, controllerPose.orientation);
+					}
 				}
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
 				fTime+=time_step;
