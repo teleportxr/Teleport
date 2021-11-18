@@ -396,7 +396,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient)
 {
 	vec3 diff			=IN.wpos.xyz - viewPosition;
 	if(length(diff) > drawDistance)
-		return vec4(1.0,0,0,1.0);
+		discard;
 	vec3 tangentx		= normalize(IN.tangent);
 	vec3 tangenty		= normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space

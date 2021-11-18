@@ -63,7 +63,7 @@ avs::Result GeometryDecoder::decodeFromFile(const std::string &filename,Geometry
 	m_Buffer.resize(m_BufferSize);
 	std::ifstream ifs(filename.c_str(),std::ifstream::in|std::ofstream::binary);
 	ifs.read((char*)m_Buffer.data(),m_BufferSize);
-	savedBuffer=m_Buffer;
+	//savedBuffer=m_Buffer;
 	GeometryPayloadType &type=*((GeometryPayloadType*)m_Buffer.data());
 	return decode( type, target);
 }
@@ -307,30 +307,30 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 
 void GeometryDecoder::saveBuffer(const std::string &filename) const
 {
-	for(size_t i=0;i<m_Buffer.size();i++)
+/*	for(size_t i=0;i<m_Buffer.size();i++)
 	{
 		if(m_Buffer[i]!=savedBuffer[i])
 		{
 			std::cerr<<"Failed check"<<std::endl;
 			break;
 		}
-	}
-	std::vector<uint8_t> testBuffer;
-	testBuffer.resize(m_Buffer.size());
+	}*/
+	//std::vector<uint8_t> testBuffer;
+	//testBuffer.resize(m_Buffer.size());
 	{
 		std::ofstream ofs(filename.c_str(),std::ofstream::out|std::ofstream::binary);
 		ofs.write((const char *)m_Buffer.data(), m_Buffer.size());
 		ofs.close();
-		std::ifstream ifs(filename.c_str(),std::ifstream::in|std::ofstream::binary);
-		ifs.read((char*)testBuffer.data(),m_BufferSize);
-		for(size_t i=0;i<m_Buffer.size();i++)
+		//std::ifstream ifs(filename.c_str(),std::ifstream::in|std::ofstream::binary);
+		//ifs.read((char*)testBuffer.data(),m_BufferSize);
+	/*	for(size_t i=0;i<m_Buffer.size();i++)
 		{
 			if(m_Buffer[i]!=testBuffer[i])
 			{
 				std::cerr<<"Failed check"<<std::endl;
 			break;
 			}
-		}
+		}*/
 	}
 }
 
@@ -357,7 +357,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 		compressedMesh.name= name;
 		//if(uid==12)
-		saveBuffer(std::string("Meshes/"+name+".mesh_compressed"));
+		//saveBuffer(std::string("Meshes/"+name+".mesh_compressed"));
 		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO)
 		{
 			//compressedMesh.subMeshAttributeIndex = (size_t)NextB;

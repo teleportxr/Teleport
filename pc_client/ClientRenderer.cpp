@@ -921,7 +921,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 	//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
 	//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
-	gui.PrintHelpText(deviceContext);
+	gui.DebugGui(deviceContext,geometryCache.mNodeManager->GetRootNodes());
 }
 
 void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<scr::Node> node)
@@ -1040,12 +1040,14 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		RenderNodeOverlay(deviceContext, node,g);
 	}
 }
-void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g)
+void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-
+	
+	if(!force&&(node_select > 0 && node_select != node->id))
+		return;
 	std::shared_ptr<scr::Texture> globalIlluminationTexture ;
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
@@ -1157,17 +1159,19 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if(child)
 		{
-			RenderNode(deviceContext, child,g);
+			RenderNode(deviceContext, child,g,true);
 		}
 	}
 }
 
 
-void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g)
+void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+	if(!force&&(node_select > 0 && node_select != node->id))
+		return;
 
 	std::shared_ptr<scr::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
@@ -1220,7 +1224,7 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 		std::shared_ptr<scr::Node> child = childPtr.lock();
 		if (child)
 		{
-			RenderNodeOverlay(deviceContext, child,g);
+			RenderNodeOverlay(deviceContext, child,g,true);
 		}
 	}
 }
@@ -1847,6 +1851,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		if (canConnect && sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
 			sessionClient.Connect(remoteEndpoint, TELEPORT_TIMEOUT);
+			gui.SetConnecting(false);
+			canConnect=false;
 			gui.Hide();
 		}
 	}

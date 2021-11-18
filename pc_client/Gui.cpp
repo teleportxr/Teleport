@@ -224,7 +224,23 @@ void Gui::ShowFont()
     }
 }
 
-void Gui::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+void Gui::NodeTree(const scr::Node& node)
+{
+    bool has_children=node.GetChildren().size()!=0;
+    bool open=ImGui::TreeNodeEx(node.name.c_str(),(has_children?0:ImGuiTreeNodeFlags_Leaf ) );
+  //  ImGui::TableNextColumn();
+  //  ImGui::Text("%lu", node.id);
+    if(open)
+    {
+        for(const auto &r:node.GetChildren())
+        {
+            NodeTree(*r.lock().get());
+        }
+        ImGui::TreePop();
+    }
+}
+
+void Gui::DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::NodeManager::nodeList_t& root_nodes)
 {
 	ImGui_ImplWin32_NewFrame();
     auto vp=renderPlatform->GetViewport(deviceContext,0);
@@ -234,6 +250,16 @@ void Gui::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceConte
     ImGuiIO& io = ImGui::GetIO();
     
     ImGui::PushFont(smallFont);
+    
+    if (ImGui::Begin("Nodes"))
+    {
+        for(const auto &r:root_nodes)
+        {
+                NodeTree(*r.get());
+        }
+    }
+    ImGui::End();
+
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
     if (corner != -1)
     {
@@ -267,8 +293,8 @@ void Gui::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceConte
 	            "NUM 6: Lightmaps\n"
 	            "NUM 2: Vertex Normals\n");
     }
-    ImGui::PopFont();
     ImGui::End();
+    ImGui::PopFont();
     ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
@@ -338,13 +364,16 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         }
         refocus++;
         ImGui::SameLine();
+        ImGui::BeginDisabled(connecting);
         if (ImGui::Button("Connect"))
         {
             if(connectHandler)
             {
                 connectHandler(current_url);
+                connecting=true;
             }
         }
+        ImGui::EndDisabled();
         if (show_keyboard)
         {
             auto KeyboardLine = [&io,this](const char* key)

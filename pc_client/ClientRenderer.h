@@ -211,8 +211,8 @@ public:
 	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> node);
 	void WriteHierarchies();
 	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,scr::GeometryCache &g);
-	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g);
-	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g);
+	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force=false);
+	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force=false);
 	void RenderView(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 
 	int AddView();
@@ -293,4 +293,5 @@ private:
 	float gamma=0.44f;
 
 	teleport::Gui &gui;
+	avs::uid node_select=0;
 };

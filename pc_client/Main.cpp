@@ -3,7 +3,7 @@
 #endif
 
 #include "stdafx.h"
-#include "resource.h"
+#include "Resource.h"
 #include "Platform/Core/EnvironmentVariables.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
@@ -133,29 +133,36 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
+#include <filesystem>
+#include <fstream>
+namespace fs = std::filesystem;
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
+	// replacing Windows' broken resource system, just load our icon from a png:
+	const char filename[]="textures\\teleportvr.png";
+	size_t bufferSize=fs::file_size(filename);
+	std::vector<unsigned char> buffer(bufferSize);
+	std::ifstream ifs(filename,std::ifstream::in|std::ofstream::binary);
+	ifs.read((char*)buffer.data(),bufferSize);
+	
 
     wcex.style          = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc    = WndProc;
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-   // wcex.hIcon          = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_WORLDSPACE));
-	wcex.hIcon = static_cast<HICON>(::LoadImage(NULL,
-		MAKEINTRESOURCE(IDI_WARNING),
-		IMAGE_ICON,
-		0, 0,
-		LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE));
+	auto hResource		= FindResource(hInstance, MAKEINTRESOURCE(IDI_WORLDSPACE), RT_ICON);
+	wcex.hIcon			= CreateIconFromResourceEx(buffer.data(), bufferSize, 1, 0x30000, 256, 256, LR_DEFAULTCOLOR); 
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszMenuName   = 0;
     wcex.lpszClassName  = L"MainWindow";
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_WORLDSPACE));
 
+	wcex.hIconSm = CreateIconFromResourceEx(buffer.data(), bufferSize, 1, 0x30000, 32, 32, LR_DEFAULTCOLOR);
+ 
     return RegisterClassExW(&wcex);
 }
 
