@@ -12,6 +12,7 @@
 #include "SimulCasterServer/CaptureDelegates.h"
 #include "SimulCasterServer/ClientData.h"
 #include "SimulCasterServer/DefaultDiscoveryService.h"
+#include "SimulCasterServer/DefaultHTTPService.h"
 #include "SimulCasterServer/GeometryStore.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
 #include "SimulCasterServer/AudioEncodePipeline.h"
@@ -67,6 +68,7 @@ typedef int64_t(__stdcall* GetUnixTimestampFn)();
 static avs::Context avsContext;
 
 static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_unique<DefaultDiscoveryService>();
+static std::shared_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
 static GeometryStore geometryStore;
 
 std::map<avs::uid, ClientData> clientServices;
@@ -332,6 +334,8 @@ struct InitialiseState
 {
 	char* clientIP;
 	char* httpMountDirectory;
+	char* certDirectory;
+	char* privateKeyDirectory;
 	uint32_t DISCOVERY_PORT = 10607;
 	uint32_t SERVICE_PORT = 10500;
 
@@ -532,7 +536,14 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 	
 	ClientMessaging::startAsyncNetworkDataProcessing();
 
-	discoveryService->initialize(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT, std::string(initialiseState->clientIP));
+	bool result = discoveryService->initialize(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT, std::string(initialiseState->clientIP));
+
+	if (!result)
+	{
+		return false;
+	}
+
+	result = httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
 }
 
 TELEPORT_EXPORT void Shutdown()
@@ -540,6 +551,7 @@ TELEPORT_EXPORT void Shutdown()
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
 
+	httpService->shutdown();
 	discoveryService->shutdown();
 
 	ClientMessaging::stopAsyncNetworkDataProcessing(true);
