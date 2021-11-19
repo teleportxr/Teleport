@@ -543,7 +543,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		return false;
 	}
 
-	result = httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
+	return httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
 }
 
 TELEPORT_EXPORT void Shutdown()
