@@ -15,6 +15,7 @@ namespace teleport
 		void RecompileShaders();
 		void Render(simul::crossplatform::GraphicsDeviceContext &deviceContext);
 		void DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::NodeManager::nodeList_t&);
+		void Update(const std::vector<vec4>& hand_pos_press);
 		void ShowHide();
 		void Show();
 		void Hide();
@@ -35,6 +36,7 @@ namespace teleport
 		vec3 view_pos;
 		vec3 view_dir;
 		vec3 menu_pos;
+		float azimuth=0.0f, tilt = 0.0f;
 		std::string current_url;
 		std::vector<std::string> server_ips;
 		std::function<void(const std::string&)> connectHandler;

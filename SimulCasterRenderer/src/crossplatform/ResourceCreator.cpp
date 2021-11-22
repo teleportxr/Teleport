@@ -711,9 +711,18 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 	if (geometryCache->mNodeManager->HasNode(id))
 	{
 		SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created! "<<(node.stationary?"static":"mobile")<<"\n";
+		//leaves nodes with no children. why?
+		auto n=geometryCache->mNodeManager->GetNode(id);
+		if (n->GetChildrenIDs().size() != node.childrenIDs.size())
+		{
+			SCR_CERR << "recreating node " << n->id << " with " << node.childrenIDs.size() << " children." << std::endl;
+		}
 		return;
 	}
-	SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << ") "<<(node.stationary?"static":"mobile")<<"\n";
+	SCR_COUT << "CreateMeshNode(" << id << ", " << node.name;
+	if (node.childrenIDs.size())
+		std::cout << ", " << node.childrenIDs.size() << " children";
+	std::cout<< ") " << (node.stationary ? "static" : "mobile") << "\n";
 
 	std::shared_ptr<IncompleteNode> newNode = std::make_shared<IncompleteNode>(id, avs::GeometryPayloadType::Node);
 	//Whether the node is missing any resource before, and must wait for them before it can be completed.
@@ -807,8 +816,6 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 			newNode->materialSlots[node.materials[i]].push_back(i);
 		}
 	}
-
-	newNode->node->SetChildrenIDs(node.childrenIDs);
 
 	//Complete node now, if we aren't missing any resources.
 	if (!isMissingResources)
@@ -970,7 +977,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 
 void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo)
 {
-	SCR_CERR << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
+	SCR_COUT << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
 
 	std::shared_ptr<scr::Material> material = geometryCache->mMaterialManager.Get(id);
 	// Update its properties:

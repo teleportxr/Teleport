@@ -357,7 +357,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 		compressedMesh.name= name;
 		//if(uid==12)
-		//saveBuffer(std::string("Meshes/"+name+".mesh_compressed"));
+		saveBuffer(std::string("meshes/"+name+".mesh_compressed"));
 		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO)
 		{
 			//compressedMesh.subMeshAttributeIndex = (size_t)NextB;

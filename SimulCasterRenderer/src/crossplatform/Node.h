@@ -61,7 +61,7 @@ namespace scr
 		void ClearChildren();
 
 		const std::vector<std::weak_ptr<Node>>& GetChildren() const { return children; }
-		void SetChildrenIDs(std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
+		void SetChildrenIDs(const std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
 		const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
 
 		bool IsVisible() const { return visibility.getVisibility(); }

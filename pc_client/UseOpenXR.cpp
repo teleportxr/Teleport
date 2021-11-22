@@ -58,11 +58,13 @@ struct input_state_t
 	XrActionSet actionSet;
 	XrAction    poseAction;
 	XrAction    selectAction;
+	XrAction    showMenuAction;
 	XrPath   handSubactionPath[2];
 	XrSpace  handSpace[2];
 	XrPosef  handPose[2];
 	XrBool32 renderHand[2];
 	XrBool32 handSelect[2];
+	XrBool32 handMenu[2];
 };
 
 const XrPosef  xr_pose_identity = { {0,0,0,1}, {0,0,0} };
@@ -242,8 +244,6 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	// like laptops with integrated graphics chips in addition to dedicated graphics cards.
 	XrGraphicsRequirementsD3D11KHR requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
 	ext_xrGetD3D11GraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
-	//if (!d3d_init(requirement.adapterLuid))
-	//	return false;
 
 	// A session represents this application's desire to display things! This is where we hook up our graphics API.
 	// This does not start the session, for that, you'll need a call to xrBeginSession, which we do in openxr_poll_events
@@ -350,8 +350,8 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 void UseOpenXR::MakeActions()
 {
 	XrActionSetCreateInfo actionset_info = { XR_TYPE_ACTION_SET_CREATE_INFO };
-	strcpy_s(actionset_info.actionSetName, "gameplay");
-	strcpy_s(actionset_info.localizedActionSetName, "Gameplay");
+	strcpy_s(actionset_info.actionSetName, "teleport_client");
+	strcpy_s(actionset_info.localizedActionSetName, "TeleportClient");
 	xrCreateActionSet(xr_instance, &actionset_info, &xr_input.actionSet);
 	xrStringToPath(xr_instance, "/user/hand/left", &xr_input.handSubactionPath[0]);
 	xrStringToPath(xr_instance, "/user/hand/right", &xr_input.handSubactionPath[1]);
@@ -373,6 +373,12 @@ void UseOpenXR::MakeActions()
 	strcpy_s(action_info.localizedActionName, "Select");
 	xrCreateAction(xr_input.actionSet, &action_info, &xr_input.selectAction);
 
+	// Create an action for listening to the "show menu" action.
+	action_info.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+	strcpy_s(action_info.actionName, "menu");
+	strcpy_s(action_info.localizedActionName, "Menu");
+	xrCreateAction(xr_input.actionSet, &action_info, &xr_input.showMenuAction);
+
 	// Bind the actions we just created to specific locations on the Khronos simple_controller
 	// definition! These are labeled as 'suggested' because they may be overridden by the runtime
 	// preferences. For example, if the runtime allows you to remap buttons, or provides input
@@ -380,16 +386,21 @@ void UseOpenXR::MakeActions()
 	XrPath profile_path;
 	XrPath pose_path[2];
 	XrPath select_path[2];
+	XrPath menu_path[2];
 	xrStringToPath(xr_instance, "/user/hand/left/input/grip/pose", &pose_path[0]);
 	xrStringToPath(xr_instance, "/user/hand/right/input/grip/pose", &pose_path[1]);
 	xrStringToPath(xr_instance, "/user/hand/left/input/select/click", &select_path[0]);
 	xrStringToPath(xr_instance, "/user/hand/right/input/select/click", &select_path[1]);
+	xrStringToPath(xr_instance, "/user/hand/left/input/menu/click", &menu_path[0]);
+	xrStringToPath(xr_instance, "/user/hand/right/input/menu/click", &menu_path[1]);
 	xrStringToPath(xr_instance, "/interaction_profiles/khr/simple_controller", &profile_path);
 	XrActionSuggestedBinding bindings[] = {
 		{ xr_input.poseAction,   pose_path[0]   },
 		{ xr_input.poseAction,   pose_path[1]   },
 		{ xr_input.selectAction, select_path[0] },
-		{ xr_input.selectAction, select_path[1] }, };
+		{ xr_input.selectAction, select_path[1] },
+		{ xr_input.showMenuAction, menu_path[0] },
+		{ xr_input.showMenuAction, menu_path[1] }, };
 	XrInteractionProfileSuggestedBinding suggested_binds = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
 	suggested_binds.interactionProfile = profile_path;
 	suggested_binds.suggestedBindings = &bindings[0];
@@ -447,6 +458,9 @@ void UseOpenXR::PollActions()
 		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
 		xr_input.handSelect[hand] = select_state.currentState && select_state.changedSinceLastSync;
 
+		get_info.action = xr_input.showMenuAction;
+		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
+		xr_input.handMenu[hand] = select_state.currentState && select_state.changedSinceLastSync;
 		// If we have a select event, update the hand pose to match the event's timestamp
 		if (xr_input.handSelect[hand])
 		{
@@ -462,6 +476,10 @@ void UseOpenXR::PollActions()
 				controllerPoses[hand].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
 				controllerPoses[hand].orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 			}
+		}
+		if (xr_input.handMenu[hand])
+		{
+			menuButtonHandler();
 		}
 	}
 }

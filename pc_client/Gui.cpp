@@ -142,8 +142,9 @@ void Gui::Show()
     menu_pos = view_pos;
     static float z_offset = -.3f;
     static float distance = 0.4f;
-    float angle = atan2f(view_dir.y, view_dir.x);
-    vec3 menu_offset = { distance * cos(angle),distance * sin(angle),z_offset };
+    azimuth= atan2f(-view_dir.x, view_dir.y);
+    tilt = 3.1415926536f / 4.0f;
+    vec3 menu_offset = { distance * -sin(azimuth),distance * cos(azimuth),z_offset };
     menu_pos += menu_offset;
     keys_pressed.clear();
 }
@@ -298,7 +299,11 @@ void Gui::DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,co
     ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
-
+std::vector<vec4> hand_pos_press;
+void Gui::Update(const std::vector<vec4>& h)
+{
+    hand_pos_press = h;
+}
 void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
     view_pos = deviceContext.viewStruct.cam_pos;
@@ -307,11 +312,12 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         return;
 	// Start the Dear ImGui frame
 	ImGui_ImplWin32_NewFrame();
+    ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
     ImGuiIO& io = ImGui::GetIO();
     static bool in3d=true;
     ImVec2 size_min(720.f,100.f);
     ImVec2 size_max(720.f,240.f);
-    ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,width_m);
+    ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,azimuth,tilt,width_m);
     static int refocus=0;
     bool show_hide=true;
 	ImGui::NewFrame();

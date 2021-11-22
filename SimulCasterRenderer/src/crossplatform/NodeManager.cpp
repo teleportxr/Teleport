@@ -13,12 +13,13 @@ std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsN
 	return node;
 }
 
-void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData)
+void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 {
-	SCR_COUT<<"AddNode "<<nodeData.name.c_str()<<" "<<(nodeData.stationary?"static":"mobile")<<"\n";
+	SCR_COUT<<"AddNode "<<avsNode.name.c_str()<<" "<<(avsNode.stationary?"static":"mobile")<<"\n";
 	//Remove any node already using the ID.
 	RemoveNode(node->id);
-	if(nodeData.data_subtype == avs::NodeDataSubtype::None)
+	node->SetChildrenIDs(avsNode.childrenIDs);
+	if(avsNode.data_subtype == avs::NodeDataSubtype::None)
 	{
 		rootNodes.push_back(node);
 		distanceSortedRootNodes.push_back(node);
@@ -35,7 +36,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData)
 		LinkToParentNode(childID);
 	}
 
-	switch(nodeData.data_subtype)
+	switch(avsNode.data_subtype)
 	{
 	case avs::NodeDataSubtype::None:
 		break;
@@ -49,7 +50,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData)
 		SetRightHand(node);
 		break;
 	default:
-		SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(nodeData.data_subtype) << "!\n";
+		SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(avsNode.data_subtype) << "!\n";
 		break;
 	}
 
@@ -108,7 +109,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData)
 	}
 
 	
-	node->SetLocalTransform(static_cast<scr::Transform>(nodeData.transform));
+	node->SetLocalTransform(static_cast<scr::Transform>(avsNode.transform));
 	
 	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
 	node->SetLightmapScaleOffset(nodeData.renderState.lightmapScaleOffset);

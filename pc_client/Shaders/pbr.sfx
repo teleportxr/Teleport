@@ -186,7 +186,7 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	//OUT.tangent = IN.tangent;
 #endif
 	OUT.hPosition	=OUT.clip_pos;
-	OUT.debug_colour = vec4(0, 0, 0, 0);
+	OUT.debug_colour = vec4(IN.position.xyz, 0);
     return OUT;
 }
 
@@ -392,7 +392,7 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, irradiance);
 }
 
-vec4 Solid(vertexOutput IN,bool lightmap,bool ambient)
+vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 {
 	vec3 diff			=IN.wpos.xyz - viewPosition;
 	if(length(diff) > drawDistance)
@@ -439,7 +439,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient)
 		c+=surfaceProperties.globalIllumination.rgb*surfaceProperties.albedo;
 	if(ambient)
 		c+=PBRAmbient(surfaceState, view, surfaceProperties);
-	for(int i=0;i<4;i++)
+	for(int i=0;i<max_lights;i++)
 	{
 		if(i>=tagData.lightCount)
 			break;
@@ -472,17 +472,17 @@ vec4 Solid_AlbedoOnly(vertexOutput IN)
 
 shader vec4 PS_Solid_NoLightmap(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN,false,true);
+	return Solid(IN,false,true,0);
 }
 
 shader vec4 PS_Solid_Lightmap(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN,true,false);
+	return Solid(IN,true,false,0);
 }
 
 shader vec4 PS_Depth(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN,false,false);
+	return Solid(IN,false,false,0);
 }
 
 shader vec4 PS_Solid_AlbedoOnly(vertexOutput IN) : SV_TARGET
@@ -533,7 +533,9 @@ shader vec4 PS_DebugNormal_VertexNormals(vertexOutput IN) : SV_TARGET
 
 shader vec4 PS_Local(vertexOutput IN) : SV_TARGET
 {
-	return lerp(vec4(0.5,0.5,0.5,1.0),vec4(1.0,1.0,1.0,1.0),0.5*IN.normal.z+0.5);
+	vec4 clr=lerp(vec4(0.25,0.25,0.25,1.0),vec4(1.0,1.0,1.0,1.0),0.5*IN.normal.z+0.5);
+//clr.rgb *= step(0.06,IN.debug_colour.g)*saturate(10.0*IN.debug_colour.rgb);
+	return clr;
 }
 
 /// A function that applies atmospherics and cloud visibility to a pixel of a transparent object.

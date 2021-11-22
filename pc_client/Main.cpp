@@ -251,6 +251,8 @@ void InitRenderer(HWND hWnd)
 	// Now renderPlatform is initialized, can init OpenXR:
 	useOpenXR.Init(renderPlatform, "Teleport VR Client");
 	useOpenXR.MakeActions();
+	auto showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
+	useOpenXR.SetMenuButtonHandler(showHideDelegate);
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform);
 	clientRenderer->SetServer(server_ips[0].c_str(), clientID);
@@ -425,6 +427,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				cpuProfiler.SetMaxLevel(5);
 				cpuProfiler.StartFrame();
 				renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
+				SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
 				SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 
 				dsmi->Render(hWnd);
@@ -436,6 +439,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 				cpuProfiler.EndFrame();
 				displaySurfaceManager.EndFrame();
+				SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 				//EndPaint(hWnd, &ps);
 			}
         }

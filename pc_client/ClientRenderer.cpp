@@ -220,24 +220,37 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 		materialCreateInfo.name="local material";
 		std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(&PcClientRenderPlatform,materialCreateInfo);
 		localGeometryCache.mMaterialManager.Add(14, scrMaterial);
+
+		materialCreateInfo.name = "red glow";
+		materialCreateInfo.emissive.textureOutputScalar = { 1.f, 0, 0, 0 };
+		std::shared_ptr<scr::Material> red = std::make_shared<scr::Material>(&PcClientRenderPlatform, materialCreateInfo);
+		localGeometryCache.mMaterialManager.Add(15, red);
+
+		materialCreateInfo.name = "blue glow";
+		materialCreateInfo.emissive.textureOutputScalar = { 0.f, 0.5f, 1.f, 0 };
+		std::shared_ptr<scr::Material> blue = std::make_shared<scr::Material>(&PcClientRenderPlatform, materialCreateInfo);
+		localGeometryCache.mMaterialManager.Add(16, blue);
 	}
 	avs::Node avsNode;
 	avsNode.name="local Right Hand";
 	avsNode.transform=avs::Transform();
 	avsNode.data_type=avs::NodeDataType::Mesh;
 	//avsNode.transform.scale = { 0.2f,0.2f,0.2f };
-	avsNode.data_uid=2166;
+	avsNode.data_uid=2743;
 	avsNode.materials.push_back(14);
+	avsNode.materials.push_back(15);
 
 	avsNode.data_subtype = avs::NodeDataSubtype::RightHand;
-	std::shared_ptr<scr::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(13, avsNode);
-	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(2166));
-	localGeometryCache.mNodeManager->SetLeftHand(13);
+	std::shared_ptr<scr::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
+	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(2743));
+	localGeometryCache.mNodeManager->SetRightHand(23);
 
+	avsNode.name = "local Left Hand";
+	avsNode.materials[1]=16;
 	avsNode.data_subtype = avs::NodeDataSubtype::LeftHand;
-	std::shared_ptr<scr::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(14, avsNode);
-	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(2166));
-	localGeometryCache.mNodeManager->SetRightHand(14);
+	std::shared_ptr<scr::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
+	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(2743));
+	localGeometryCache.mNodeManager->SetLeftHand(24);
 }
 
 void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
@@ -382,6 +395,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	}
 	// We must deactivate the depth buffer here, in order to use it as a texture:
 	hdrFramebuffer->DeactivateDepth(deviceContext);
+	//renderPlatform->DrawDepth(deviceContext, 0, 0, (256 * viewport.w)/ viewport.h, 256, hdrFramebuffer->GetDepthTexture());
 	if (show_video)
 	{
 		AVSTextureHandle th = avsTexture;
@@ -434,7 +448,17 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	{
 		DrawOSD(deviceContext);
 	}
+#ifdef ONSCREEN_PROF
+	static std::string profiling_text;
+	renderPlatform->LinePrint(deviceContext, profiling_text.c_str());
+#endif
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
+#ifdef ONSCREEN_PROF
+	static char c = 0;
+	c--;
+	if(!c)
+		profiling_text=renderPlatform->GetGpuProfiler()->GetDebugText();
+#endif
 }
 
 void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &deviceContext)
@@ -500,7 +524,22 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		pbrConstants.drawDistance = lastSetupCommand.video_config.draw_distance;
 		RenderLocalNodes(deviceContext,geometryCache);
 
+		{
+			std::shared_ptr<scr::Node> leftHand = localGeometryCache.mNodeManager->GetLeftHand();
+			std::shared_ptr<scr::Node> rightHand = localGeometryCache.mNodeManager->GetRightHand();
+			std::vector<vec4> hand_pos_press;
+			hand_pos_press.resize(2);
+			avs::vec3 pos = rightHand->GetGlobalTransform().LocalToGlobal(avs::vec3(0,0.12f, 0));
+			hand_pos_press[0].xyz = (const float*)&pos;
+			hand_pos_press[0].w = 0.0f;
+			pos = leftHand->GetGlobalTransform().LocalToGlobal(avs::vec3(0, 0.12f, 0));
+			hand_pos_press[1].xyz  = (const float*)&pos;
+			hand_pos_press[1].w = 0.0f;
+			gui.Update(hand_pos_press);
+		}
+		
 		gui.Render(deviceContext);
+
 
 		pbrConstants.drawDistance = 1000.0f;
 		RenderLocalNodes(deviceContext,localGeometryCache);
@@ -558,7 +597,6 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 	//hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
-
 }
 
 void ClientRenderer::RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique)

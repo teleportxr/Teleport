@@ -25,6 +25,10 @@ namespace teleport
 		{
 			return controllerPoses.size();
 		};
+		void SetMenuButtonHandler(std::function<void()> f)
+		{
+			menuButtonHandler = f;
+		}
 	protected:
 		simul::crossplatform::RenderPlatform* renderPlatform = nullptr;
 		bool haveXRDevice = false;
@@ -33,5 +37,6 @@ namespace teleport
 		avs::Pose headPose;
 		std::vector<avs::Pose> controllerPoses;
 		void openxr_poll_predicted(XrTime predicted_time);
+		std::function<void()> menuButtonHandler;
 	};
 }

@@ -48,7 +48,12 @@ namespace scr
 
 			return Transform(translation, rotation, scale);
 		}
-
+		avs::vec3 LocalToGlobal(const avs::vec3& local)
+		{
+			avs::vec3 ret = m_Translation;
+			ret+=m_Rotation.RotateVector(local);
+			return ret;
+		}
 		void UpdateModelMatrix();
 		bool UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
 
