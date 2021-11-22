@@ -16,6 +16,23 @@ void Node::SetStatic(bool s)
 {
 	isStatic=s;
 }
+void Node::SetGrabbable(bool g)
+{
+	isGrabbable=g;
+}
+bool Node::IsGrabbable() const
+{
+	return isGrabbable;
+}
+void Node::SetHolderClientId(avs::uid h)
+{
+	holderClientId=h;
+}
+avs::uid Node::GetHolderClientId() const
+{
+	return holderClientId;
+}
+
 void Node::SetPriority(int p)
 {
 	priority=p;

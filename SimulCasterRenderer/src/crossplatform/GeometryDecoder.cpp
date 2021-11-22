@@ -710,6 +710,8 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 
 		node.transform = NextChunk(avs::Transform);
 		node.stationary =(NextB)!=0;
+		node.grabbable =(NextB)!=0;
+		node.holder_client_id = Next8B;
 		node.priority = Next4B;
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);

@@ -260,11 +260,17 @@ struct Animation;
 
 		Transform transform;
 		bool stationary=false;
+
+		// Can it be grabbed? If not, does it already have an owner?
+		bool grabbable=false;
+		uid holder_client_id=0;
+
 		int32_t priority=0;
 
 		uid parentID=0;
 		std::vector<uid> childrenIDs;
 
+		// The following should be separated out into node components:
 		NodeDataType data_type=NodeDataType::None;
 		NodeDataSubtype data_subtype=NodeDataSubtype::None;
 		uid data_uid;

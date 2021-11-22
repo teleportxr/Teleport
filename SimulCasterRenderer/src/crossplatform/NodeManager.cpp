@@ -114,6 +114,8 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData)
 	node->SetLightmapScaleOffset(nodeData.renderState.lightmapScaleOffset);
 	node->SetMaterialListSize(nodeData.materials.size());
 	node->SetStatic(nodeData.stationary);
+	node->SetGrabbable(nodeData.grabbable);
+	node->SetHolderClientId(nodeData.holder_client_id);
 	node->SetPriority(nodeData.priority);
 	node->SetGlobalIlluminationTextureUid(nodeData.renderState.globalIlluminationUid);
 }

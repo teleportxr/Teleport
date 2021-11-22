@@ -391,6 +391,10 @@ namespace teleport
 
 			put(transform);
 			put((uint8_t)(node->stationary));
+
+			put((uint8_t)(node->grabbable));
+			put(node->owner_client_id);
+
 			put(node->priority);
 			put(node->data_uid);
 			put(node->data_type);

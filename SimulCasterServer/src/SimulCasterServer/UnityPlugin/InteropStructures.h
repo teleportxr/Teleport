@@ -14,6 +14,8 @@ struct InteropNode
 
 	avs::Transform transform;
 	uint8_t stationary;
+	uint8_t grabbable;
+	avs::uid holder_client_id;
 
 	avs::NodeDataType dataType;
 	avs::NodeDataSubtype dataSubtype;
@@ -49,6 +51,9 @@ struct InteropNode
 			transform,
 
 			stationary!=0,
+
+			grabbable!=0,
+			holder_client_id,
 
 			priority,
 

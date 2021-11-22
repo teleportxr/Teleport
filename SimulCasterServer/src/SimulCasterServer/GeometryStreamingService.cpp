@@ -69,17 +69,13 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 			outNodeIDs.push_back(nodeID);
 			break;
 		case avs::NodeDataType::Mesh:
-			if(node->priority>= minimumPriority)
+			if(node->priority>=minimumPriority)
 			{
 				GetMeshNodeResources(nodeID, *node, outMeshResources, minimumPriority);
 				if(node->renderState.globalIlluminationUid>0)
 				{
 					genericTextureUids.insert(node->renderState.globalIlluminationUid);
 				}
-			}
-			else
-			{
-			//	TELEPORT_COUT << "Priority for node " << nodeID << " is "<<node->priority<<".\n";
 			}
 			break;
 		default:

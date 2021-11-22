@@ -34,6 +34,10 @@ namespace scr
 
 		void SetStatic(bool s);
 		bool IsStatic() const;
+		void SetGrabbable(bool g);
+		bool IsGrabbable() const;
+		void SetHolderClientId(avs::uid h);
+		avs::uid GetHolderClientId() const;
 		void SetPriority(int p);
 		int GetPriority() const;
 		void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
@@ -184,5 +188,8 @@ namespace scr
 
 		//Whether we should use the global transform directly for update calculations.
 		bool ShouldUseGlobalTransform() const;
+		
+		avs::uid holderClientId=0;
+		bool isGrabbable=false;
 	};
 }
