@@ -3,10 +3,12 @@
 #include "SimulCasterServer/HTTPService.h"
 #include <map>
 #include <memory>
+#include <thread>
 
 namespace httplib
 {
 	class Server;
+	class SSLServer;
 }
 
 namespace teleport
@@ -14,18 +16,17 @@ namespace teleport
 	class DefaultHTTPService : public HTTPService
 	{
 	public:
-		~DefaultHTTPService()
-		{
-			shutdown();
-		}
+		DefaultHTTPService();
+		~DefaultHTTPService();
 
-		bool initialize(std::string directoryPath) override;
+		bool initialize(std::string mountDirectory, std::string certPath, std::string privateKeyPath, int32_t port) override;
 
 		void shutdown() override;
 
 		void tick() override;
 
 	private:
-		std::unique_ptr<httplib::Server> mServer;
+		std::unique_ptr<httplib::SSLServer> mServer;
+		std::thread mThread;
 	};
 }
