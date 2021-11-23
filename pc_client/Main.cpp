@@ -59,7 +59,7 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 HWND               InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-void InitRenderer(HWND);
+void InitRenderer(HWND,bool);
 void ShutdownRenderer(HWND);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -80,6 +80,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	CSimpleIniA ini;
 	SI_Error rc = ini.LoadFile("client.ini");
+	bool enable_vr = true;
 	if(rc == SI_OK)
 	{
 
@@ -98,6 +99,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		} while (pos != std::string::npos);
 
 		clientID = ini.GetLongValue("", "CLIENT_ID", TELEPORT_DEFAULT_CLIENT_ID);
+		enable_vr = ini.GetLongValue("", "ENABLE_VR", true);
 		gui.SetServerIPs(server_ips);
 	}
 	else
@@ -109,6 +111,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
     // Perform application initialization:
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
+	InitRenderer(hWnd, enable_vr);
 	if(!hWnd)
     {
         return FALSE;
@@ -182,7 +185,6 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
    , 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);	
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
-   InitRenderer(hWnd);
    return hWnd;
 }
 
@@ -198,7 +200,7 @@ void ShutdownRenderer(HWND hWnd)
 #define STRINGIFY(a) STRINGIFY2(a)
 #define STRINGIFY2(a) #a
 	
-void InitRenderer(HWND hWnd)
+void InitRenderer(HWND hWnd,bool try_init_vr)
 {
 	clientRenderer=new ClientRenderer (&clientDeviceState,gui);
 	gdi = &deviceManager;
@@ -249,10 +251,14 @@ void InitRenderer(HWND hWnd)
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	// Now renderPlatform is initialized, can init OpenXR:
-	useOpenXR.Init(renderPlatform, "Teleport VR Client");
-	useOpenXR.MakeActions();
+	if (try_init_vr)
+	{
+		useOpenXR.Init(renderPlatform, "Teleport VR Client");
+		useOpenXR.MakeActions();
+	}
 	auto showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
-	useOpenXR.SetMenuButtonHandler(showHideDelegate);
+	if (useOpenXR.HaveXRDevice())
+		useOpenXR.SetMenuButtonHandler(showHideDelegate);
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform);
 	clientRenderer->SetServer(server_ips[0].c_str(), clientID);
@@ -393,8 +399,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				//BeginPaint(hWnd, &ps);
 				clientRenderer->Update();
 				bool quit = false;
-				useOpenXR.PollEvents(quit);
-				useOpenXR.PollActions();
+				if (useOpenXR.HaveXRDevice())
+				{
+					useOpenXR.PollEvents(quit);
+					useOpenXR.PollActions();
+				}
 				static double fTime=0.0;
 				static platform::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
@@ -434,7 +443,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 				SIMUL_COMBINED_PROFILE_END(deviceContext);
 				vec3 headOrigin = *((vec3*)&clientDeviceState.originPose.position);
-				useOpenXR.RenderFrame(deviceContext, renderDelegate, headOrigin);
+				if (useOpenXR.HaveXRDevice())
+				{
+					useOpenXR.RenderFrame(deviceContext, renderDelegate, headOrigin);
+				}
 				errno=0;
 				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 				cpuProfiler.EndFrame();
