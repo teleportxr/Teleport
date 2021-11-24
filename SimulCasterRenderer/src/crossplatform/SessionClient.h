@@ -33,6 +33,7 @@ public:
     virtual bool OnNodeEnteredBounds(avs::uid node_uid) = 0;
     virtual bool OnNodeLeftBounds(avs::uid node_uid) = 0;
 	virtual void OnLightingSetupChanged(const avs::SetupLightingCommand &) =0;
+	virtual void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& ) =0;
     
     virtual std::vector<avs::uid> GetGeometryResources() = 0;
     virtual void ClearGeometryResources() = 0;
@@ -127,6 +128,7 @@ private:
 	void ReceiveNodeAnimationControlUpdate(const ENetPacket* packet);
 	void ReceiveNodeAnimationSpeedUpdate(const ENetPacket* packet);
 	void ReceiveSetupLightingCommand(const ENetPacket* packet);
+	void ReceiveUpdateNodeStructureCommand(const ENetPacket* packet);
 
 	static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 

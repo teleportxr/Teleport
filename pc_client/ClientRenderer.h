@@ -191,6 +191,7 @@ public:
 	bool OnNodeLeftBounds(avs::uid nodeID) override;
 	
 	void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
+	void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
 
 	std::vector<avs::uid> GetGeometryResources() override;
 	void ClearGeometryResources() override;

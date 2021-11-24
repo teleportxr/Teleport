@@ -332,6 +332,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::SetupLighting:
 			ReceiveSetupLightingCommand(packet);
 			break;
+		case avs::CommandPayloadType::UpdateNodeStructure:
+			ReceiveUpdateNodeStructureCommand(packet);
+			break;
 		default:
 			break;
 	};
@@ -719,6 +722,14 @@ void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
 	std::vector<avs::uid> uidList((size_t)setupLightingCommand.num_gi_textures);
 	memcpy(uidList.data(), packet->data + commandSize, sizeof(avs::uid) * uidList.size());
 	mCommandInterface->OnLightingSetupChanged(setupLightingCommand);
+}
+void SessionClient::ReceiveUpdateNodeStructureCommand(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::UpdateNodeStructureCommand);
+	//Copy command out of packet.
+	avs::UpdateNodeStructureCommand updateNodeStructureCommand;
+	memcpy(static_cast<void*>(&updateNodeStructureCommand), packet->data, commandSize);
+	mCommandInterface->UpdateNodeStructure(updateNodeStructureCommand);
 }
 
 void SessionClient::SetDiscoveryClientID(uint32_t clientID)

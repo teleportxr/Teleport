@@ -373,8 +373,9 @@ namespace avs
 
 	struct UpdateNodeStructureCommand : public Command
 	{
-		avs::uid nodeID = 0;
-		avs::uid parentID = 0;
+		uid nodeID = 0;
+		uid parentID = 0;
+		Pose relativePose;
 
 		UpdateNodeStructureCommand()
 			:UpdateNodeStructureCommand(0, 0)

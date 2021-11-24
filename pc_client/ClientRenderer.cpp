@@ -1155,6 +1155,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), normal ? normal->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), combined ? combined->GetSimulTexture() : nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"), emissive ? emissive->GetSimulTexture() : nullptr);
+
 				}
 				else
 				{
@@ -1164,6 +1165,10 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"),  nullptr);
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"),  nullptr);
 					pass = pbrEffect->GetTechniqueByName("solid")->GetPass("local");
+				}
+				if (node->IsHighlighted())
+				{
+					pbrConstants.emissiveOutputScalar += vec4(0.2f, 0.2f, 0.2f, 0.f);
 				}
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi ? gi->GetSimulTexture() : nullptr);
 
@@ -1340,6 +1345,12 @@ void ClientRenderer::Update()
 void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 {
 	lastSetupLightingCommand=l;
+}
+void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
+{
+	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
+	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
+	node->SetParent(parent);
 }
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
