@@ -348,6 +348,12 @@ namespace teleport
 		sendCommand(command);
 	}
 
+	void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID)
+	{
+		avs::UpdateNodeStructureCommand command(nodeID, newParentID);
+		sendCommand(command);
+	}
+	
 	void ClientMessaging::updateNodeAnimation(avs::ApplyAnimation update)
 	{
 		avs::UpdateNodeAnimationCommand command(update);

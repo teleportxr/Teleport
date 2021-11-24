@@ -543,7 +543,8 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		return false;
 	}
 
-	return httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
+	result=httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
+	return true;
 }
 
 TELEPORT_EXPORT void Shutdown()
@@ -1403,6 +1404,18 @@ TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeI
 	}
 
 	clientPair->second.clientMessaging.setNodeHighlighted(nodeID, isHighlighted);
+}
+
+TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "No client exists with ID " << clientID << "!\n";
+		return;
+	}
+
+	clientPair->second.clientMessaging.reparentNode(nodeID, newParentNodeID);
 }
 
 TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)

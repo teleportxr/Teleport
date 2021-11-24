@@ -55,6 +55,7 @@ namespace avs
 		UpdateNodeAnimationControl,
 		SetNodeAnimationSpeed,
 		SetupLighting,
+		UpdateNodeStructure,
 	};
 
 	enum class ClientMessagePayloadType : uint8_t
@@ -370,6 +371,25 @@ namespace avs
 		}
 	} AVS_PACKED;
 
+	struct UpdateNodeStructureCommand : public Command
+	{
+		avs::uid nodeID = 0;
+		avs::uid parentID = 0;
+
+		UpdateNodeStructureCommand()
+			:UpdateNodeStructureCommand(0, 0)
+		{}
+
+		UpdateNodeStructureCommand(avs::uid n, avs::uid p)
+			:Command(CommandPayloadType::UpdateNodeStructure), nodeID(n), parentID(p)
+		{}
+
+		virtual size_t getCommandSize() const override
+		{
+			return sizeof(UpdateNodeStructureCommand);
+		}
+	} AVS_PACKED;
+	
 	struct UpdateNodeAnimationCommand : public Command
 	{
 		avs::ApplyAnimation animationUpdate;
