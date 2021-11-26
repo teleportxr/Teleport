@@ -6,7 +6,7 @@
 #include "Platform/Core/StringToWString.h"
 #include "Gui.h"
 #include "IconsForkAwesome.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include <direct.h>
 using namespace teleport;
 using namespace simul;
@@ -300,9 +300,11 @@ void Gui::DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,co
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
 std::vector<vec4> hand_pos_press;
-void Gui::Update(const std::vector<vec4>& h)
+bool have_vr_device = false;
+void Gui::Update(const std::vector<vec4>& h,bool have_vr)
 {
     hand_pos_press = h;
+    have_vr_device = have_vr;
 }
 void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
@@ -312,7 +314,10 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         return;
 	// Start the Dear ImGui frame
 	ImGui_ImplWin32_NewFrame();
-    ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
+    if (have_vr_device)
+        ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
+    else
+        ImGui_ImplPlatform_Update3DMousePos();
     ImGuiIO& io = ImGui::GetIO();
     static bool in3d=true;
     ImVec2 size_min(720.f,100.f);

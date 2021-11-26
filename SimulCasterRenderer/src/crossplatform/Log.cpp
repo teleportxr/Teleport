@@ -72,7 +72,7 @@ void RedirectStdCoutCerr() {
 }
 #endif
 
-#include  <sstream>
+#include <sstream>
 void ClientLog(const char* fileTag, int lineno, ClientLogPriority prio, const char* format_str, ...)
 {
 #ifdef __ANDROID__

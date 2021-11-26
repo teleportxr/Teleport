@@ -43,7 +43,7 @@
 
 #include "VideoDecoder.h"
 
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 static const char* ToString(scr::Light::Type type)
 {
@@ -535,7 +535,7 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			pos = leftHand->GetGlobalTransform().LocalToGlobal(avs::vec3(0, 0.12f, 0));
 			hand_pos_press[1].xyz  = (const float*)&pos;
 			hand_pos_press[1].w = 0.0f;
-			gui.Update(hand_pos_press);
+			gui.Update(hand_pos_press, have_vr_device);
 		}
 		
 		gui.Render(deviceContext);
@@ -1357,7 +1357,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 {
 	videoConfig = setupCommand.video_config;
 
-	WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
+	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 	videoPosDecoded=false;
 
@@ -1551,7 +1551,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 void ClientRenderer::OnVideoStreamClosed()
 {
-	WARN("VIDEO STREAM CLOSED\n");
+	TELEPORT_CLIENT_WARN("VIDEO STREAM CLOSED\n");
 	pipeline.deconfigure();
 	videoQueue.deconfigure();
 	audioQueue.deconfigure();
@@ -1567,7 +1567,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 {
 	videoConfig = reconfigureVideoCommand.video_config;
 
-	WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
+	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
 		, videoConfig.depth_width, videoConfig.depth_height);
 
 	decoderParams.deferDisplay = false;
@@ -1784,11 +1784,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	// Set command list to the recording state if it's not in it already.
 	//dx12RenderPlatform->ResetImmediateCommandList();
 #endif
-
-	for (int i = 0; i < 2; i++)
-	{
-		controllerStates[i].clear();
-	}
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
 	clientspace_input.y=((float)keydown['w']-(float)keydown['s'])*(float)(keydown[VK_SHIFT]);
@@ -1912,6 +1907,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		FillInControllerPose(0, 0.5f);
 		FillInControllerPose(1, -0.5f);
 	}
+	// Have processed these, can free them now.
+	for (int i = 0; i < 2; i++)
+	{
+		controllerStates[i].clear();
+	}
 
 #if IS_D3D12
 	// Execute the immediate command list on graphics queue which will include any vertex and index buffer 
@@ -1928,12 +1928,8 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 	if(bLeftButtonDown)
 	{
-		avs::InputEventAnalogue buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputList::TRIGGER01;
-		buttonEvent.strength = 1.0f;
-		controllerStates[0].analogueEvents.push_back(buttonEvent);
-		controllerStates[0].triggerBack = buttonEvent.strength;
+		controllerStates[0].triggerBack = 1.0f;
+		controllerStates[0].addAnalogueEvent(nextEventID++, avs::InputList::TRIGGER01, 1.0f);
 	}
 	else if(bRightButtonDown)
 	{
@@ -1961,13 +1957,8 @@ void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRight
 		& (bMiddleButtonReleased ? ~crossplatform::MouseCameraInput::MIDDLE_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS);
 	if(bLeftButtonReleased)
 	{
-		avs::InputEventAnalogue buttonEvent;
-		buttonEvent.eventID		= nextEventID++;
-		buttonEvent.inputID		= avs::InputList::TRIGGER01;
-		buttonEvent.strength	= 0.0f;
-		controllerStates[0].analogueEvents.push_back(buttonEvent);
-
-		controllerStates[0].triggerBack = buttonEvent.strength;
+		controllerStates[0].triggerBack = 0.f;
+		controllerStates[0].addAnalogueEvent(nextEventID++, avs::InputList::TRIGGER01, 0.0f);
 	}
 	else if(bRightButtonReleased)
 	{

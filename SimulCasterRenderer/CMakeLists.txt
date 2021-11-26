@@ -96,9 +96,10 @@ if(ANDROID)
 			${CMAKE_BINARY_DIR}/draco_build)
 	include_directories("${CMAKE_BINARY_DIR}" ../thirdparty/draco)
 endif()
+
 #For MT runtime
 add_static_library(SimulCasterRenderer SOURCES ${src_public} )  
-
+SetTeleportDefaults(SimulCasterRenderer)
 #Include its root directory
 target_include_directories(SimulCasterRenderer PRIVATE src)
 #Include libavstream

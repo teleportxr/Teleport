@@ -13,7 +13,7 @@
 #include "Platform/Core/SimpleIni.h"
 
 #include "ClientRenderer.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "Config.h"
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"

@@ -295,4 +295,5 @@ private:
 
 	teleport::Gui &gui;
 	avs::uid node_select=0;
+	bool have_vr_device = false;
 };

@@ -110,7 +110,7 @@ void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	int num_samp = 1;
 	if(pTextureCreateInfo.compression==scr::Texture::CompressionFormat::UNCOMPRESSED && pTextureCreateInfo.mipSizes[0] != static_cast<size_t>(pTextureCreateInfo.width) * pTextureCreateInfo.height * pTextureCreateInfo.bytesPerPixel)
 	{
-		WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel, pTextureCreateInfo.mipSizes[0]);
+		TELEPORT_CLIENT_WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel, pTextureCreateInfo.mipSizes[0]);
 		return;
 	}
 	simul::crossplatform::TextureCreate textureCreate;

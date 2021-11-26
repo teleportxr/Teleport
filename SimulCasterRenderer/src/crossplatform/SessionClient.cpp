@@ -9,6 +9,7 @@
 
 #include "ResourceCreator.h"
 #include "Log.h"
+#include "TeleportCore/ErrorHandling.h"
 
 using namespace teleport;
 using namespace client;
@@ -53,7 +54,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 	mClientHost = enet_host_create(nullptr, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 	if(!mClientHost)
 	{
-		FAIL("Failed to create ENET client host");
+		TELEPORT_CLIENT_FAIL("Failed to create ENET client host");
 		remoteIP="";
 		return false;
 	}
@@ -61,7 +62,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 	mServerPeer = enet_host_connect(mClientHost, &remote, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0);
 	if(!mServerPeer)
 	{
-		WARN("Failed to initiate connection to the server");
+		TELEPORT_CLIENT_WARN("Failed to initiate connection to the server");
 		enet_host_destroy(mClientHost);
 		mClientHost = nullptr;
 		remoteIP="";
@@ -75,12 +76,12 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 
 		char remote_ip[20];
 		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
-		LOG("Connected to session server: %s:%d", remote_ip, remote.port);
+		TELEPORT_CLIENT_LOG("Connected to session server: %s:%d", remote_ip, remote.port);
 		remoteIP=remote_ip;
 		return true;
 	}
 
-	WARN("Failed to connect to remote session server");
+	TELEPORT_CLIENT_WARN("Failed to connect to remote session server");
 
 	enet_host_destroy(mClientHost);
 	mClientHost = nullptr;
@@ -281,7 +282,7 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 			ParseCommandPacket(event.packet);
 			break;
 		default:
-			WARN("Received packet on output-only channel: %d", event.channelID);
+			TELEPORT_CLIENT_WARN("Received packet on output-only channel: %d", event.channelID);
 			break;
 	}
 
@@ -362,7 +363,7 @@ void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pos
 	message.controllerPoses[1]=poses[1];
 	if(isnan(headPose.position.x))
 	{
-		WARN("Trying to send NaN");
+		TELEPORT_CLIENT_WARN("Trying to send NaN");
 		return;
 	}
 	SendClientMessage(message);
@@ -404,7 +405,12 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 			//packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
 		}
 	}
-
+#if TELEPORT_INTERNAL_CHECKS
+	for (auto c : controllerState.analogueEvents)
+	{
+		TELEPORT_COUT << "Analogue: "<<c.eventID << std::endl;
+	}
+#endif
 	//Set event amount.
 	inputState.binaryEventAmount = static_cast<uint32_t>(controllerState.binaryEvents.size());
 	inputState.analogueEventAmount = static_cast<uint32_t>(controllerState.analogueEvents.size());
@@ -723,6 +729,7 @@ void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
 	memcpy(uidList.data(), packet->data + commandSize, sizeof(avs::uid) * uidList.size());
 	mCommandInterface->OnLightingSetupChanged(setupLightingCommand);
 }
+
 void SessionClient::ReceiveUpdateNodeStructureCommand(const ENetPacket* packet)
 {
 	size_t commandSize = sizeof(avs::UpdateNodeStructureCommand);

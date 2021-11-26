@@ -15,7 +15,7 @@ namespace teleport
 		void RecompileShaders();
 		void Render(simul::crossplatform::GraphicsDeviceContext &deviceContext);
 		void DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::NodeManager::nodeList_t&);
-		void Update(const std::vector<vec4>& hand_pos_press);
+		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
 		void ShowHide();
 		void Show();
 		void Hide();
