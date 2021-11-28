@@ -110,9 +110,9 @@ namespace avs
 		float triggerBack = 0.0f;
 		float triggerGrip = 0.0f;
 
-		uint32_t binaryEventAmount = 0;
-		uint32_t analogueEventAmount = 0;
-		uint32_t motionEventAmount = 0;
+		uint32_t numBinaryEvents = 0;
+		uint32_t numAnalogueEvents= 0;
+		uint32_t numMotionEvents= 0;
 	} AVS_PACKED;
 
 	//Contains information to update the transform of a node.

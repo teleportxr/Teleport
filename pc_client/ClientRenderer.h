@@ -90,7 +90,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
 
 	// A simple example mesh to draw as transparent
-	simul::crossplatform::Mesh *transparentMesh			= nullptr;
 	simul::crossplatform::MeshRenderer *meshRenderer	= nullptr;
 	simul::crossplatform::Effect *pbrEffect				= nullptr;
 	simul::crossplatform::Effect *cubemapClearEffect	= nullptr;
@@ -125,7 +124,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 
 	bool keydown[256] = {};
 	SessionClient sessionClient;
-	ControllerState controllerStates[2];
+	teleport::client::ControllerState controllerStates[2];
 	float framerate = 0.0f;
 
 	avs::Timestamp platformStartTimestamp;	//Timestamp of when the system started.
@@ -149,7 +148,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 		CONTROLLER_OSD,
 		NUM_OSDS
 	};
-	int show_osd = NETWORK_OSD;
+	int show_osd = NO_OSD;
 	bool render_from_video_centre	= false;
 	bool show_textures				= false;
 	bool show_cubemaps				=false;
@@ -174,12 +173,12 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 
 	float roomRadius=1.5f;
 	teleport::client::ClientDeviceState *clientDeviceState = nullptr;
-
+	bool dev_mode = false;
 
 	// handler for the UI to tell us to connect.
 	void ConnectButtonHandler(const std::string& url);
 public:
-	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState, teleport::Gui &g);
+	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState, teleport::Gui &g,bool dev);
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;

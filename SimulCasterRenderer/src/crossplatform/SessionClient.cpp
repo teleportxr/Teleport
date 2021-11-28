@@ -379,7 +379,7 @@ void SessionClient::sendOriginPose(uint64_t validCounter,const avs::Pose& origin
 
 void SessionClient::SendInput(int id,const ControllerState& controllerState)
 {
-	const ControllerState& prevControllerState=mPrevControllerState[id];
+	const teleport::client::ControllerState& prevControllerState=mPrevControllerState[id];
 	avs::InputState inputState = {};
 	inputState.buttonsDown= controllerState.mButtons;
 	const uint32_t buttonsDiffMask = prevControllerState.mButtons ^ controllerState.mButtons;
@@ -408,19 +408,18 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 #if TELEPORT_INTERNAL_CHECKS
 	for (auto c : controllerState.analogueEvents)
 	{
-		TELEPORT_COUT << "Analogue: "<<c.eventID << std::endl;
+		TELEPORT_COUT << "Analogue: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< std::endl;
 	}
 #endif
 	//Set event amount.
-	inputState.binaryEventAmount = static_cast<uint32_t>(controllerState.binaryEvents.size());
-	inputState.analogueEventAmount = static_cast<uint32_t>(controllerState.analogueEvents.size());
-	inputState.motionEventAmount = static_cast<uint32_t>(controllerState.motionEvents.size());
-	
+	inputState.numBinaryEvents		= static_cast<uint32_t>(controllerState.binaryEvents.size());
+	inputState.numAnalogueEvents	= static_cast<uint32_t>(controllerState.analogueEvents.size());
+	inputState.numMotionEvents		= static_cast<uint32_t>(controllerState.motionEvents.size());
 	//Calculate sizes for memory copy operations.
-	size_t inputStateSize = sizeof(avs::InputState);
-	size_t binaryEventSize = sizeof(avs::InputEventBinary) * inputState.binaryEventAmount;
-	size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * inputState.analogueEventAmount;
-	size_t motionEventSize = sizeof(avs::InputEventMotion) * inputState.motionEventAmount;
+	size_t inputStateSize		= sizeof(avs::InputState);
+	size_t binaryEventSize		= sizeof(avs::InputEventBinary) * inputState.numBinaryEvents;
+	size_t analogueEventSize	= sizeof(avs::InputEventAnalogue) * inputState.numAnalogueEvents;
+	size_t motionEventSize		= sizeof(avs::InputEventMotion) * inputState.numMotionEvents;
 
 	//Size packet to final size, but initially only put the InputState struct inside.
 	ENetPacket* packet = enet_packet_create(&inputState, inputStateSize + binaryEventSize + analogueEventSize + motionEventSize, packetFlags);
