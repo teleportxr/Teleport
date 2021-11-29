@@ -158,9 +158,9 @@ namespace teleport
 
 			void clear()
 			{
-				inputState.binaryEventAmount = 0;
-				inputState.analogueEventAmount = 0;
-				inputState.motionEventAmount = 0;
+				inputState.numBinaryEvents = 0;
+				inputState.numAnalogueEvents = 0;
+				inputState.numMotionEvents = 0;
 				processed=true;
 				binaryEvents.clear();
 				analogueEvents.clear();
