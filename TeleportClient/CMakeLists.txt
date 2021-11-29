@@ -10,6 +10,7 @@ set(src_files
 	ClientDeviceState.h
 	DiscoveryService.h
 	Input.h
+	Input.cpp
 	ServerTimestamp.cpp
 	ServerTimestamp.h
 )

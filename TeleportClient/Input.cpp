@@ -35,7 +35,7 @@ void ControllerState::addBinaryEvent(uint32_t eventID, avs::InputId inputID, boo
 
 void ControllerState::addAnalogueEvent(uint32_t eventID, avs::InputId inputID, float strength)
 {
-	TELEPORT_COUT << "Analogue: " << eventID << " " << (int)inputID << " " << strength << std::endl;
+//	TELEPORT_COUT << "Analogue: " << eventID << " " << (int)inputID << " " << strength << std::endl;
 	avs::InputEventAnalogue analogueEvent;
 	analogueEvent.eventID = eventID;
 	analogueEvent.inputID = inputID;
