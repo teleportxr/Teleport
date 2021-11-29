@@ -11,7 +11,6 @@ set(src_files
 	DiscoveryService.h
 	Input.cpp
 	Input.h
-	Input.cpp
 	ServerTimestamp.cpp
 	ServerTimestamp.h
 )
