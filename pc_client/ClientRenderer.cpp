@@ -529,10 +529,16 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			std::vector<vec4> hand_pos_press;
 			hand_pos_press.resize(2);
 			avs::vec3 pos = rightHand->GetGlobalTransform().LocalToGlobal(avs::vec3(0,0.12f, 0));
-			hand_pos_press[0].xyz = (const float*)&pos;
+			//hand_pos_press[0].xyz = (const float*)&pos;
+			hand_pos_press[0].x = pos.x;
+			hand_pos_press[0].y = pos.y;
+			hand_pos_press[0].z = pos.z;
 			hand_pos_press[0].w = 0.0f;
 			pos = leftHand->GetGlobalTransform().LocalToGlobal(avs::vec3(0, 0.12f, 0));
-			hand_pos_press[1].xyz  = (const float*)&pos;
+			//hand_pos_press[1].xyz  = (const float*)&pos;
+			hand_pos_press[1].x = pos.x;
+			hand_pos_press[1].y = pos.y;
+			hand_pos_press[1].z = pos.z;
 			hand_pos_press[1].w = 0.0f;
 			gui.Update(hand_pos_press, have_vr_device);
 		}
