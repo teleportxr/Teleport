@@ -101,7 +101,7 @@ target_link_directories(SimulCasterServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
 target_link_directories(SimulCasterServer PUBLIC ../thirdparty/openssl/x64/Release/lib)
 
-target_link_libraries(SimulCasterServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl_static libcrypto_static)
+target_link_libraries(SimulCasterServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl_static libcrypto_static TeleportCore)
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
@@ -114,3 +114,4 @@ target_compile_definitions(SimulCasterServer PRIVATE ${def_platform})
 if(${USE_ASYNC_NETWORK_PROCESSING})
 	target_compile_definitions(SimulCasterServer PUBLIC ASYNC_NETWORK_PROCESSING)
 endif()
+set_target_properties( SimulCasterServer PROPERTIES FOLDER Teleport )

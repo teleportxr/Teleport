@@ -22,4 +22,4 @@ endif()
 
 #For MT runtime
 add_library(TeleportCore STATIC ${src_files})
-set_target_properties( TeleportCore PROPERTIES FOLDER Client)
+set_target_properties( TeleportCore PROPERTIES FOLDER Teleport)

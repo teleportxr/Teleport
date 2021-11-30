@@ -120,8 +120,8 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
 	sessionClient(this, std::make_unique<PCDiscoveryService>()),
 	clientDeviceState(c),
 	RenderMode(0),
-	gui(g),
-	dev_mode(dev)
+	dev_mode(dev),
+	gui(g)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
 	resourceCreator.SetGeometryCache(&geometryCache);

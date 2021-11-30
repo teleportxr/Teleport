@@ -625,6 +625,10 @@ namespace teleport
 		{
 			avs::InputEventAnalogue* analogueData = reinterpret_cast<avs::InputEventAnalogue*>(packet->data + inputStateSize + binaryEventSize);
 			aggregateInputState.analogueEvents.insert(aggregateInputState.analogueEvents.end(), analogueData, analogueData + receivedInputState.numAnalogueEvents);
+			for (auto c : aggregateInputState.analogueEvents)
+			{
+				TELEPORT_COUT << "Analogue: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< std::endl;
+			}
 		}
 
 		if(receivedInputState.numMotionEvents != 0)
@@ -668,11 +672,11 @@ namespace teleport
 
 	void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 	{
-		size_t resourceAmount;
-		memcpy(&resourceAmount, packet->data, sizeof(size_t));
+		size_t resourceCount;
+		memcpy(&resourceCount, packet->data, sizeof(size_t));
 
-		std::vector<avs::uid> resourceRequests(resourceAmount);
-		memcpy(resourceRequests.data(), packet->data + sizeof(size_t), sizeof(avs::uid) * resourceAmount);
+		std::vector<avs::uid> resourceRequests(resourceCount);
+		memcpy(resourceRequests.data(), packet->data + sizeof(size_t), sizeof(avs::uid) * resourceCount);
 
 		for (avs::uid id : resourceRequests)
 		{
@@ -726,12 +730,12 @@ namespace teleport
 			avs::NodeStatusMessage message;
 			memcpy(&message, packet->data, messageSize);
 
-			size_t drawnSize = sizeof(avs::uid) * message.nodesDrawnAmount;
-			std::vector<avs::uid> drawn(message.nodesDrawnAmount);
+			size_t drawnSize = sizeof(avs::uid) * message.nodesDrawnCount;
+			std::vector<avs::uid> drawn(message.nodesDrawnCount);
 			memcpy(drawn.data(), packet->data + messageSize, drawnSize);
 
-			size_t toReleaseSize = sizeof(avs::uid) * message.nodesWantToReleaseAmount;
-			std::vector<avs::uid> toRelease(message.nodesWantToReleaseAmount);
+			size_t toReleaseSize = sizeof(avs::uid) * message.nodesWantToReleaseCount;
+			std::vector<avs::uid> toRelease(message.nodesWantToReleaseCount);
 			memcpy(toRelease.data(), packet->data + messageSize + drawnSize, toReleaseSize);
 
 			for (avs::uid nodeID : drawn)
@@ -752,8 +756,8 @@ namespace teleport
 			avs::ReceivedResourcesMessage message;
 			memcpy(&message, packet->data, messageSize);
 
-			size_t confirmedResourcesSize = sizeof(avs::uid) * message.receivedResourcesAmount;
-			std::vector<avs::uid> confirmedResources(message.receivedResourcesAmount);
+			size_t confirmedResourcesSize = sizeof(avs::uid) * message.receivedResourcesCount;
+			std::vector<avs::uid> confirmedResources(message.receivedResourcesCount);
 			memcpy(confirmedResources.data(), packet->data + messageSize, confirmedResourcesSize);
 
 			for (avs::uid id : confirmedResources)

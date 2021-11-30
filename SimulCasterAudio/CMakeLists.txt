@@ -49,9 +49,9 @@ if(SA_BUILD_SHARED_LIB)
 else()
 	#For MT runtime
 	add_static_library( SimulCasterAudio SOURCES ${src_public} )  
-	set_target_properties( SimulCasterAudio PROPERTIES FOLDER Client )
 endif()
 SetTeleportDefaults( SimulCasterAudio )
+set_target_properties( SimulCasterAudio PROPERTIES FOLDER Teleport )
 
 
 

@@ -12,6 +12,22 @@
 
 namespace avs
 {
+	struct guid
+	{
+		char txt[20];
+		template<typename OutStream>
+		friend OutStream& operator<< (OutStream& out, const guid& textureAccessor)
+		{
+			guid g=OutStream.uid_to_guid(textureAccessor.index);
+			return out<<txt;
+		}
+
+		template<typename InStream>
+		friend InStream& operator>> (InStream& in, guid& textureAccessor)
+		{
+			return in>>txt;
+		}
+	};
 	//Convert from wide char to byte char.
 	//We should really NOT use wide strings for the names of textures and materials, as we will want to support UTF-8.
 	// Roderick: wstring is not UTF-8, but UTF-16, favoured only by Microsoft.
@@ -106,7 +122,8 @@ namespace avs
 
 		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
 
-		friend std::wostream& operator<< (std::wostream& out, const Texture& texture)
+		template<typename OutStream>
+		friend OutStream& operator<< (OutStream& out, const Texture& texture)
 		{
 			//Name needs its own line, so spaces can be included.
 			out << std::wstring{texture.name.begin(), texture.name.end()} << std::endl;
@@ -123,33 +140,23 @@ namespace avs
 				<< " " << texture.dataSize
 				<< " " << texture.valueScale
 				<< std::endl;
-			
-			///TODO: Figure out how to convert the data to wide char without going through each index. ostream::write(...) is detecting the malformed data and failing the write.
-			{
-				//size_t characterAmount = static_cast<size_t>(ceil(texture.dataSize / (sizeof(wchar_t) / static_cast<float>(sizeof(unsigned char)))));
-				//wchar_t* dataBuffer = new wchar_t[characterAmount];
-				//memcpy_s(dataBuffer, characterAmount * sizeof(wchar_t), texture.data, texture.dataSize);
 
-				//out.write(dataBuffer, characterAmount);
-
-				//delete[] dataBuffer;
-			}
-
-			size_t characterAmount = texture.dataSize;
-			wchar_t* dataBuffer = new wchar_t[characterAmount];
-			for(size_t i = 0; i < characterAmount; i++)
+			size_t characterCount = texture.dataSize;
+			wchar_t* dataBuffer = new wchar_t[characterCount];
+			for(size_t i = 0; i < characterCount; i++)
 			{
 				dataBuffer[i] = texture.data[i];
 			}
 
-			out.write(dataBuffer, characterAmount);
+			out.write(dataBuffer, characterCount);
 
 			delete[] dataBuffer;
 
 			return out;
 		}
-
-		friend std::wistream& operator>> (std::wistream& in, Texture& texture)
+		
+		template<typename InStream>
+		friend InStream& operator>> (InStream& in, Texture& texture)
 		{
 			//Step past new line that may be next in buffer.
 			if(in.peek() == '\n') in.get();
@@ -178,12 +185,12 @@ namespace avs
 				//Discard new line.
 				in.get();
 
-				size_t characterAmount = texture.dataSize;
-				wchar_t* dataBuffer = new wchar_t[characterAmount];
-				in.read(dataBuffer, characterAmount);
+				size_t characterCount = texture.dataSize;
+				wchar_t* dataBuffer = new wchar_t[characterCount];
+				in.read(dataBuffer, characterCount);
 
 				texture.data = new unsigned char[texture.dataSize];
-				for(size_t i = 0; i < characterAmount; i++)
+				for(size_t i = 0; i < characterCount; i++)
 				{
 					texture.data[i] = static_cast<unsigned char>(dataBuffer[i]);
 				}				
@@ -200,8 +207,8 @@ namespace avs
 	
 	struct TextureAccessor
 	{
-		uid index = 0;		//An index into an array of texture.
-		uid texCoord = 0;	//A reference to TEXCOORD_<N>
+		uid index = 0;		// Session uid of the texture.
+		uid texCoord = 0;	// A reference to TEXCOORD_<N>
 		
 		vec2 tiling = {1.0f, 1.0f};
 		
@@ -211,22 +218,25 @@ namespace avs
 			float strength;			//Used in occlusion textures only.
 		};
 
-		template<typename OutStream>
-		friend OutStream& operator<< (OutStream& out, const TextureAccessor& textureAccessor)
+		template<class OutStream> friend OutStream& operator<<(OutStream& out, const TextureAccessor& textureAccessor)
 		{
+			//guid g=OutStream.uid_to_guid(textureAccessor.index);
 			return out << textureAccessor.index
 				<< " " << textureAccessor.texCoord
 				<< " " << textureAccessor.tiling
 				<< " " << textureAccessor.scale;
 		}
 
-		template<typename InStream>
-		friend InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
+		template<class InStream> friend InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
 		{
-			return in >> textureAccessor.index
+			//guid g;
+			InStream& ret= in >> textureAccessor.index
 				>> textureAccessor.texCoord
 				>> textureAccessor.tiling
 				>> textureAccessor.scale;
+			
+			//textureAccessor.index g=OutStream.uid_to_guid(g);
+			return ret;
 		}
 	};
 	enum class RoughnessMode: uint16_t
@@ -286,19 +296,9 @@ namespace avs
 
 		std::unordered_map<MaterialExtensionIdentifier, std::shared_ptr<MaterialExtension>> extensions; //Mapping of extensions for a material. There should only be one extension per identifier.
 	
-		friend std::ostream& operator<< (std::ostream& out, const Material& material)
-		{
-			//Name needs its own line, so spaces can be included.
-			out << material.name << std::endl;
-
-			return out <<  material.pbrMetallicRoughness
-				<< " " << material.normalTexture
-				<< " " << material.occlusionTexture
-				<< " " << material.emissiveTexture
-				<< " " << material.emissiveFactor;
-		}
-
-		friend std::wostream& operator<< (std::wostream& out, const Material& material)
+		
+		template<typename OutStream>
+		friend OutStream& operator<< (OutStream& out, const Material& material)
 		{
 			//Name needs its own line, so spaces can be included.
 			out << std::wstring{material.name.begin(), material.name.end()} << std::endl;
@@ -309,8 +309,9 @@ namespace avs
 				<< " " << material.emissiveTexture
 				<< " " << material.emissiveFactor;
 		}
-
-		friend std::wistream& operator>> (std::wistream& in, Material& material)
+		
+		template<typename InStream>
+		friend InStream& operator>> (InStream& in, Material& material)
 		{
 			//Step past new line that may be next in buffer.
 			if(in.peek() == '\n') in.get(); 

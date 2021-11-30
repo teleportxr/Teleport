@@ -443,11 +443,11 @@ void SessionClient::SendResourceRequests()
 
 	if(mResourceRequests.size() != 0)
 	{
-		size_t resourceAmount = mResourceRequests.size();
-		ENetPacket* packet = enet_packet_create(&resourceAmount, sizeof(size_t), ENET_PACKET_FLAG_RELIABLE);
+		size_t resourceCount = mResourceRequests.size();
+		ENetPacket* packet = enet_packet_create(&resourceCount, sizeof(size_t), ENET_PACKET_FLAG_RELIABLE);
 
-		enet_packet_resize(packet, sizeof(size_t) + sizeof(avs::uid) * resourceAmount);
-		memcpy(packet->data + sizeof(size_t), mResourceRequests.data(), sizeof(avs::uid) * resourceAmount);
+		enet_packet_resize(packet, sizeof(size_t) + sizeof(avs::uid) * resourceCount);
+		memcpy(packet->data + sizeof(size_t), mResourceRequests.data(), sizeof(avs::uid) * resourceCount);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
 
@@ -546,8 +546,8 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	//Extract list of visible nodes.
-	std::vector<avs::uid> visibleNodes(command.visibleNodeAmount);
-	memcpy(visibleNodes.data(), packet->data + commandSize, sizeof(avs::uid) * command.visibleNodeAmount);
+	std::vector<avs::uid> visibleNodes(command.visibleNodeCount);
+	memcpy(visibleNodes.data(), packet->data + commandSize, sizeof(avs::uid) * command.visibleNodeCount);
 
 	mCommandInterface->SetVisibleNodes(visibleNodes);
 
@@ -621,11 +621,11 @@ void SessionClient::ReceiveNodeBoundsUpdate(const ENetPacket* packet)
 	avs::NodeBoundsCommand command;
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
-	size_t enteredSize = sizeof(avs::uid) * command.nodesShowAmount;
-	size_t leftSize = sizeof(avs::uid) * command.nodesHideAmount;
+	size_t enteredSize = sizeof(avs::uid) * command.nodesShowCount;
+	size_t leftSize = sizeof(avs::uid) * command.nodesHideCount;
 
-	std::vector<avs::uid> enteredNodes(command.nodesShowAmount);
-	std::vector<avs::uid> leftNodes(command.nodesHideAmount);
+	std::vector<avs::uid> enteredNodes(command.nodesShowCount);
+	std::vector<avs::uid> leftNodes(command.nodesHideCount);
 
 	memcpy(enteredNodes.data(), packet->data + commandSize, enteredSize);
 	memcpy(leftNodes.data(), packet->data + commandSize + enteredSize, leftSize);
@@ -662,8 +662,8 @@ void SessionClient::ReceiveNodeMovementUpdate(const ENetPacket* packet)
 	size_t commandSize = command.getCommandSize();
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
-	std::vector<avs::MovementUpdate> updateList(command.updatesAmount);
-	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::MovementUpdate) * command.updatesAmount);
+	std::vector<avs::MovementUpdate> updateList(command.updatesCount);
+	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::MovementUpdate) * command.updatesCount);
 
 	mCommandInterface->UpdateNodeMovement(updateList);
 }
@@ -675,8 +675,8 @@ void SessionClient::ReceiveNodeEnabledStateUpdate(const ENetPacket* packet)
 	size_t commandSize = command.getCommandSize();
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
-	std::vector<avs::NodeUpdateEnabledState> updateList(command.updatesAmount);
-	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::NodeUpdateEnabledState) * command.updatesAmount);
+	std::vector<avs::NodeUpdateEnabledState> updateList(command.updatesCount);
+	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::NodeUpdateEnabledState) * command.updatesCount);
 
 	mCommandInterface->UpdateNodeEnabledState(updateList);
 }
