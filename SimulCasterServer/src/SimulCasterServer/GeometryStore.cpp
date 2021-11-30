@@ -106,19 +106,20 @@ void GeometryStore::saveToDisk() const
 	saveResources(cachePath + "/" +MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
 }
 
-void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials)
+void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshes, size_t& numTextures, LoadedResource*& loadedTextures, size_t& numMaterials, LoadedResource*& loadedMaterials)
 {
-	loadResources(cachePath + "/" + MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
-	loadResources(cachePath + "/" + MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
+	// Load in order of non-dependent to dependent resources, so that we can apply dependencies.
 	loadResources(cachePath + "/" + TEXTURE_CACHE_PATH, textures);
 	loadResources(cachePath + "/" + MATERIAL_CACHE_PATH, materials);
+	loadResources(cachePath + "/" + MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
+	loadResources(cachePath + "/" + MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
 
-	meshAmount = meshes.at(avs::AxesStandard::EngineeringStyle).size();
-	textureAmount = textures.size();
-	materialAmount = materials.size();
+	numMeshes = meshes.at(avs::AxesStandard::EngineeringStyle).size();
+	numTextures = textures.size();
+	numMaterials = materials.size();
 
 	int i = 0;
-	loadedMeshes = new LoadedResource[meshAmount];
+	loadedMeshes = new LoadedResource[numMeshes];
 	for(auto& meshDataPair : meshes.at(avs::AxesStandard::EngineeringStyle))
 	{
 		BSTR meshName = _com_util::ConvertStringToBSTR(meshDataPair.second.mesh.name.c_str());
@@ -128,7 +129,7 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 	}
 
 	i = 0;
-	loadedTextures = new LoadedResource[textureAmount];
+	loadedTextures = new LoadedResource[numTextures];
 	for(auto& textureDataPair : textures)
 	{
 		BSTR textureName = _com_util::ConvertStringToBSTR(textureDataPair.second.texture.name.c_str());
@@ -138,7 +139,7 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 	}
 
 	i = 0;
-	loadedMaterials = new LoadedResource[materialAmount];
+	loadedMaterials = new LoadedResource[numMaterials];
 	for(auto& materialDataPair : materials)
 	{
 		BSTR materialName = _com_util::ConvertStringToBSTR(materialDataPair.second.material.name.c_str());
@@ -147,7 +148,8 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 		++i;
 	}
 }
-void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
+
+void GeometryStore::reaffirmResources(int32_t numMeshes, ReaffirmedResource* reaffirmedMeshes, int32_t numTextures, ReaffirmedResource* reaffirmedTextures, int32_t numMaterials, ReaffirmedResource* reaffirmedMaterials)
 {
 	TELEPORT_COUT << "Renumbering resources.\node";
 
@@ -156,14 +158,14 @@ void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* re
 	std::map<avs::uid, ExtractedMaterial> oldMaterials = materials;
 	std::map<avs::uid, ExtractedTexture> oldTextures = textures;
 
-	//Delete the old data; we don't want to use the GeometryStore::clear(...) function as that will call delete on the pointers we want to copy.
+	//Delete the old data; we don't want to use the GeometryStore::clear(...) function as that would delete the pointers we want to copy.
 	//Clear mesh lookup without messing with the structure.
 	meshes[avs::AxesStandard::EngineeringStyle].clear();
 	meshes[avs::AxesStandard::GlStyle].clear();
 	materials.clear();
 	textures.clear();
 
-	TELEPORT_COUT << "Replacing " << oldMaterials.size() << " materials loaded from disk with " << materialAmount << " confirmed from managed code.\node";
+	TELEPORT_COUT << "Replacing " << oldMaterials.size() << " materials loaded from disk with " << numMaterials << " confirmed from managed code.\node";
 
 	//Replace old IDs with their new IDs; fixing any links that need to be changed.
 
@@ -171,7 +173,7 @@ void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* re
 	for(auto meshMapPair : oldMeshes)
 	{
 		avs::AxesStandard mapStandard = meshMapPair.first;
-		for(int i = 0; i < meshAmount; i++)
+		for(int i = 0; i < numMeshes; i++)
 		{
 			meshes[mapStandard][reaffirmedMeshes[i].newID] = oldMeshes[mapStandard][reaffirmedMeshes[i].oldID];
 		}
@@ -179,7 +181,7 @@ void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* re
 
 	//Lookup to find the new ID from the old ID. For replacing texture IDs in materials. <Old ID, New ID>
 	std::map<avs::uid, avs::uid> textureIDLookup;
-	for(int i = 0; i < textureAmount; i++)
+	for(int i = 0; i < numTextures; i++)
 	{
 		avs::uid newID = reaffirmedTextures[i].newID;
 		avs::uid oldID = reaffirmedTextures[i].oldID;
@@ -196,7 +198,7 @@ void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* re
 		textureID = textureIDLookup[textureID];
 	};
 
-	for(int i = 0; i < materialAmount; i++)
+	for(int i = 0; i < numMaterials; i++)
 	{
 		avs::uid newID = reaffirmedMaterials[i].newID;
 
@@ -881,7 +883,7 @@ void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModifie
 				saveFile.close();
 			}
 			std::wifstream loadFile("verify.mesh", std::wifstream::in | std::wifstream::binary);
-			avs::uid oldID;
+			//avs::uid oldID;
 			ExtractedMesh testMesh;
 			loadFile >> testMesh;
 			VerifyCompressedMesh(testMesh.compressedMesh, testMesh.mesh);
@@ -1122,7 +1124,6 @@ template<typename ExtractedResource> void GeometryStore::saveResources(const std
 template<typename ExtractedResource> void GeometryStore::loadResources(const std::string path, std::map<avs::uid, ExtractedResource>& resourceMap)
 {
 	//Load resources if the file exists.
-
 	const std::filesystem::path fspath{ path.c_str() };
 	std::filesystem::create_directories(fspath);
 	std::string search_str=ExtractedResource::fileExtension();
