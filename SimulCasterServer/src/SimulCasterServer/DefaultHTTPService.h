@@ -8,7 +8,6 @@
 namespace httplib
 {
 	class Server;
-	class SSLServer;
 }
 
 namespace teleport
@@ -26,7 +25,7 @@ namespace teleport
 		void tick() override;
 
 	private:
-		std::unique_ptr<httplib::SSLServer> mServer;
+		std::unique_ptr<httplib::Server> mServer;
 		std::thread mThread;
 	};
 }
