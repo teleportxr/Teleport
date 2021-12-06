@@ -87,15 +87,16 @@ set_target_properties( pc_client PROPERTIES FOLDER Client)
 set_target_properties( pc_client PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x86;$(PATH)"	 )		
 target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
 target_compile_features(pc_client PRIVATE cxx_std_17)
-target_link_directories(pc_client PUBLIC ${TELEPORT_OPENXR_DIR}/build/src/loader)
-
+target_link_directories(pc_client PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/lib)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
 
+target_link_libraries(pc_client debug openxr_loaderd optimized openxr_loader) 
 target_link_libraries(pc_client libavstream enet SimulCasterAudio SimulCasterRenderer TeleportClient basisu winmm)
-target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt openxr_loader -ignore:4711)
+target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt  )
+target_link_libraries(pc_client -ignore:4711)
 
 target_link_options(pc_client PUBLIC /ignore:4711)
 target_compile_options(pc_client PRIVATE /wd4711)

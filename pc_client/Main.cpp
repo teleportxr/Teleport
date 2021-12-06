@@ -263,7 +263,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		useOpenXR.SetMenuButtonHandler(showHideDelegate);
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform);
-	clientRenderer->SetServer(server_ips[0].c_str(), clientID);
+	if(server_ips.size())
+		clientRenderer->SetServer(server_ips[0].c_str(), clientID);
 
 #if IS_D3D12
 	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
