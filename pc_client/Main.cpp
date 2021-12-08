@@ -286,6 +286,7 @@ extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y, int W, int H);
 #include <imgui.h>
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+#ifdef DEBUG_KEYS
 	switch (message)
 	{
 	case WM_KEYDOWN:
@@ -301,6 +302,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		cout << "Left button up" << std::endl;
 		break;
 	};
+#endif
 	bool ui_handled=false;
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 	{

@@ -26,7 +26,8 @@ or if you have already cloned the main repo,
 ## Building the PC Client
 
 1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
-2. Using CMakeGUI, set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/build_pc_client_
+	* You may retarget the projects to a more recent version of the build tools.
+2. Using CMakeGUI, set src: (Teleport Folder) and bin: (Teleport Folder)/build_pc_client_
 3. Configure for x64 platform with default native compiler
 4. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
 5. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
@@ -41,7 +42,7 @@ or if you have already cloned the main repo,
     * You will need to target pthread_lib to the same toolset as your Unreal.
     * You may need to disable Whole Program Optimisation.
 2. Using CMakeGUI: 
-    * Set src: (RemotePlay Folder) and bin: (RemotePlay Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries.
+    * Set src: (Teleport Folder) and bin: (Teleport Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries.
     * Your platform, and toolset, **must** match your Unreal Engine configuration.
     * Enable **Advanced** view in CMake-GUI, if you can't find any of the following settings. 
     * Ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
