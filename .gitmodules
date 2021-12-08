@@ -28,3 +28,6 @@
 [submodule "thirdparty/cpp-httplib"]
 	path = thirdparty/cpp-httplib
 	url = git@github.com:simul/cpp-httplib.git
+[submodule "firstparty/teleport-unity"]
+	path = firstparty/teleport-unity
+	url = git@github.com:simul/teleport-unity.git

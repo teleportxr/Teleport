@@ -263,7 +263,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		useOpenXR.SetMenuButtonHandler(showHideDelegate);
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform);
-	clientRenderer->SetServer(server_ips[0].c_str(), clientID);
+	if(server_ips.size())
+		clientRenderer->SetServer(server_ips[0].c_str(), clientID);
 
 #if IS_D3D12
 	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
@@ -285,6 +286,7 @@ extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y, int W, int H);
 #include <imgui.h>
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+#ifdef DEBUG_KEYS
 	switch (message)
 	{
 	case WM_KEYDOWN:
@@ -300,6 +302,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		cout << "Left button up" << std::endl;
 		break;
 	};
+#endif
 	bool ui_handled=false;
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 	{
