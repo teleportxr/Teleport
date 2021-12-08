@@ -55,7 +55,7 @@ else()
 endif()
 
 #Create static library with source files from group.
-if(REMOTEPLAY_UNITY)
+if(TELEPORT_UNITY)
 	set(src_plugin
 		src/SimulCasterServer/UnityPlugin/Export.h
 		src/SimulCasterServer/UnityPlugin/InteropStructures.h

@@ -280,7 +280,7 @@ if(LIBAV_USE_EFP)
 	#message(WARNING efp_include_paths ${efp_include_paths})
 endif()
 
-if(NOT REMOTEPLAY_SERVER)
+if(NOT TELEPORT_SERVER)
 	set(curl_include_paths "${CURL_SOURCE_DIR}/include" ${CURL_BINARY_DIR})
 	set(curl_libs libcurl)
 endif()
