@@ -148,6 +148,18 @@
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\..\firstparty;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\..\firstparty;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
@@ -205,14 +217,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\RenderPlatform.h" />
     <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Shader.h" />
     <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Texture.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\ZERO_CHECK.vcxproj">
-      <Project>{B42D4E85-6DD6-3B89-A6DB-1C652427C50B}</Project>
-      <Name>ZERO_CHECK</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

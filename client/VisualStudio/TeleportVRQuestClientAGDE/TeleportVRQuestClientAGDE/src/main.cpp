@@ -121,7 +121,7 @@ public:
 		deviceContext.defaultTargetsAndViewport.rtFormats[0] = crossplatform::UNKNOWN; //To be later defined in the pipeline
 		deviceContext.defaultTargetsAndViewport.m_dt = nullptr;
 		deviceContext.defaultTargetsAndViewport.depthFormat = crossplatform::UNKNOWN;
-		deviceContext.defaultTargetsAndViewport.viewport = { 0, 0, w, h };
+		deviceContext.defaultTargetsAndViewport.viewport = int4(0, 0, w, h);
 		deviceContext.frame_number = m_Framenumber;
 		deviceContext.platform_context = pContext;
 		deviceContext.renderPlatform = m_RenderPlatform;

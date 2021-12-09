@@ -148,6 +148,16 @@
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\..\..\..\firstparty;..\..\..\..\..\firstparty\Platform\Android;..\..\..\..\..\firstparty\Platform\External\stb</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\..\..\..\firstparty;..\..\..\..\..\firstparty\Platform\Android;..\..\..\..\..\firstparty\Platform\External\stb</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
@@ -273,14 +283,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\View.h" />
     <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\ViewStruct.h" />
     <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\WinPixGpuCapturerLoader.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\ZERO_CHECK.vcxproj">
-      <Project>{B42D4E85-6DD6-3B89-A6DB-1C652427C50B}</Project>
-      <Name>ZERO_CHECK</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

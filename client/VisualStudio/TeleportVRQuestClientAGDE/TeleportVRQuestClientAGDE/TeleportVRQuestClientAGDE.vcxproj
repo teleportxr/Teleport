@@ -143,7 +143,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;E:\Simul\Teleport\RemotePlay\firstparty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
@@ -152,7 +152,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;E:\Simul\Teleport\RemotePlay\firstparty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -241,16 +241,16 @@
     <None Include="AndroidPackaging\app\src\main\AndroidManifest.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\firstparty\Platform\build\Core\Core_MT.vcxproj">
+    <ProjectReference Include="..\PlatformBuild\Core\Core_MT.vcxproj">
       <Project>{2aeea882-1607-34b2-8811-c9e5c2f1b003}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\firstparty\Platform\build\CrossPlatform\SimulCrossPlatform_MT.vcxproj">
+    <ProjectReference Include="..\PlatformBuild\CrossPlatform\SimulCrossPlatform_MT.vcxproj">
       <Project>{160adc84-9b1c-3598-a176-5eb52cecb5b1}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\firstparty\Platform\build\Math\SimulMath_MT.vcxproj">
+    <ProjectReference Include="..\PlatformBuild\Math\SimulMath_MT.vcxproj">
       <Project>{41285b5b-2bc3-39ca-b4e8-9f3ec5d68053}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\firstparty\Platform\build\Vulkan\SimulVulkan_MT.vcxproj">
+    <ProjectReference Include="..\PlatformBuild\Vulkan\SimulVulkan_MT.vcxproj">
       <Project>{97036138-28ed-340a-82bf-867c6d8f0330}</Project>
     </ProjectReference>
   </ItemGroup>
