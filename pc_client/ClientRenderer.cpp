@@ -1368,6 +1368,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
+	const uint32_t geoStreamID = 80;
 	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } };
 	if (AudioStream)
 	{
@@ -1375,7 +1376,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	}
 	if (GeoStream)
 	{
-		streams.push_back({ 80 });
+		streams.push_back({ geoStreamID });
 	}
 
 	avs::NetworkSourceParams sourceParams;
@@ -1384,7 +1385,11 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	sourceParams.remoteIP = server_ip;
 	sourceParams.remotePort = setupCommand.server_streaming_port;
 	sourceParams.remoteHTTPPort = setupCommand.server_http_port;
-	// Configure for num video streams + 1 audio stream + 1 geometry stream
+	sourceParams.maxHTTPConnections = 10;
+	sourceParams.httpStreamID = geoStreamID;
+	sourceParams.useSSL = setupCommand.using_ssl;
+
+	// Configure for video stream, tag data stream, audio stream and geometry stream.
 	if (!source.configure(std::move(streams), sourceParams))
 	{
 		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
@@ -1394,6 +1399,10 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
 	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+	avs::HTTPPayloadRequest req;
+	req.fileName = "meshes/engineering/Cube_Cube.mesh";
+	req.type = avs::FilePayloadType::Mesh;
+	source.GetHTTPRequestQueue().emplace(std::move(req));
 
 	bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, bodyOffsetFromHead);

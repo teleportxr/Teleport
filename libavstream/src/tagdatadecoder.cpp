@@ -90,13 +90,13 @@ Result TagDataDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			result = input->read(this, m_frameBuffer.data(), bufferSize, bytesRead);
 		}
 
-		if (result != Result::OK || bytesRead < sizeof(NetworkFrameInfo))
+		if (result != Result::OK || bytesRead < sizeof(StreamPayloadInfo))
 		{
 			AVSLOG(Warning) << "TagDataDecoder: Failed to read input.";
 			return result;
 		}
 
-		const NetworkFrameInfo& frame = *reinterpret_cast<const NetworkFrameInfo*>(m_frameBuffer.data());
+		const StreamPayloadInfo& frame = *reinterpret_cast<const StreamPayloadInfo*>(m_frameBuffer.data());
 
 		// Copy frame info 
 		//memcpy(&frame, m_frameBuffer.data(), sizeof(NetworkFrameInfo));
@@ -114,7 +114,7 @@ Result TagDataDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			continue;
 		}
 
-		m_onReceiveDataCallback(m_frameBuffer.data() + sizeof(NetworkFrameInfo), frame.dataSize);
+		m_onReceiveDataCallback(m_frameBuffer.data() + sizeof(StreamPayloadInfo), frame.dataSize);
 
 	} while (result == Result::OK);
 	

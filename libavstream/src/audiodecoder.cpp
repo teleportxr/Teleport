@@ -31,7 +31,7 @@ namespace avs
 		std::unique_ptr<AudioParserInterface> m_parser;
 
 		std::vector<uint8_t> m_frameBuffer;
-		NetworkFrameInfo m_frame;
+		StreamPayloadInfo m_frame;
 		bool m_configured = false;
 		int m_streamId = 0;
 		Result processPayload(const uint8_t* buffer, size_t bufferSize, AudioTargetInterface* target);
@@ -133,14 +133,14 @@ namespace avs
 				result = input->read(this, d().m_frameBuffer.data(), bufferSize, bytesRead);
 			}
 
-			if (result != Result::OK || bytesRead < sizeof(NetworkFrameInfo))
+			if (result != Result::OK || bytesRead < sizeof(StreamPayloadInfo))
 			{
 				AVSLOG(Warning) << "AudioDecoder: Failed to read input.";
 				return result;
 			}
 
 			// Copy frame info 
-			memcpy(&d().m_frame, d().m_frameBuffer.data(), sizeof(NetworkFrameInfo));
+			memcpy(&d().m_frame, d().m_frameBuffer.data(), sizeof(StreamPayloadInfo));
 
 			// Check if data was lost or corrupted
 			if (d().m_frame.broken)
@@ -148,7 +148,7 @@ namespace avs
 				continue;
 			}
 
-			result = d().processPayload(d().m_frameBuffer.data() + sizeof(NetworkFrameInfo), d().m_frame.dataSize, ati);
+			result = d().processPayload(d().m_frameBuffer.data() + sizeof(StreamPayloadInfo), d().m_frame.dataSize, ati);
 		} while (result == Result::OK);
 
 		return result;

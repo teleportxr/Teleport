@@ -20,6 +20,7 @@
 #include <util/ringbuffer.hpp>
 
 #include <libavstream/networksource.hpp>
+#include <libavstream/httputil.hpp>
 #if LIBAV_USE_SRT
 #include <srt.h>
 #endif
@@ -57,7 +58,6 @@ namespace avs
 		bool frameFirstFlag=false;
 		bool frameLastFlag=false;
 	};
-	using asio::ip::udp;
 	// A struct that defines a set of NetworkPackets that together form a single data packet.
 	struct DecoderPacket
 	{
@@ -123,8 +123,7 @@ namespace avs
 
 		std::vector<char> m_tempBuffer;
 		RingBuffer<RawPacket, 12000> m_recvBuffer;
-		std::string m_serverDataURL;
-		std::queue<HTTPPayloadRequest> m_httpPayloadRequests;
+		HTTPUtil m_httpUtil;
 	};
 
 } // avs
