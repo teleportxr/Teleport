@@ -124,6 +124,10 @@ namespace avs
 			NetworkSink_InvalidStreamDataType,
 			Failed,
 			Num_ResultCode,
+			HTTPUtil_NotInitialized,
+			HTTPUtil_AlreadyInitialized,
+			HTTPUtil_InitError,
+			HTTPUtil_TransferError
 		};
 
 		Result(Code code) : m_code(code)
@@ -318,27 +322,50 @@ namespace avs
 		}
 	} AVS_PACKED;
 
-	enum class HTTPPayloadType
+	enum class FilePayloadType : uint8_t
 	{
-		None = 0,
-		Texture,
-		Mesh
+		Texture = 0,
+		Mesh,
+		Material
 	};
 
 	struct HTTPPayloadRequest
 	{
-		uint32_t streamID;
-		HTTPPayloadType type;
-		const char* fileName;
+		FilePayloadType type;
+		std::string fileName;
 	};
 
-	struct NetworkFrameInfo
+	enum class PayloadInfoType : uint8_t
+	{
+		Stream = 0,
+		File
+	};
+
+	struct PayloadInfo
+	{
+		size_t dataSize = 0;
+		PayloadInfoType payloadInfoType;
+
+		PayloadInfo(PayloadInfoType inPayloadInfoType)
+			: payloadInfoType(inPayloadInfoType) {}
+		
+	} AVS_PACKED;
+
+	struct StreamPayloadInfo : PayloadInfo
 	{
 		uint64_t frameID = UINT64_MAX;
-		HTTPPayloadType httpPayloadType = HTTPPayloadType::None;
-		size_t dataSize = 0;
 		double connectionTime = 0.0;
-		bool broken = false; // True if any fragment of the data has been lost
+		bool broken = false; 
+
+		StreamPayloadInfo() : PayloadInfo(PayloadInfoType::Stream) {}
+
+	} AVS_PACKED;
+
+	struct FilePayloadInfo : PayloadInfo
+	{
+		FilePayloadType httpPayloadType;
+
+		FilePayloadInfo() : PayloadInfo(PayloadInfoType::File) {}
 	} AVS_PACKED;
 
 #ifdef _MSC_VER

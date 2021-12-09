@@ -194,7 +194,7 @@ namespace avs
 
 		uint64_t m_currentFrameNumber = 0;
 		std::vector<uint8_t> m_frameBuffer;
-		NetworkFrameInfo m_frame;
+		StreamPayloadInfo m_frame;
 		size_t m_firstVCLOffset = 0;
 		uint8_t m_streamId = 0;
 		size_t m_interimFramesProcessed = 0;
