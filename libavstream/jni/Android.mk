@@ -19,6 +19,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/nv/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/asio/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/efp
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/curl/include
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/srt/build_android/$(TARGET_ARCH_ABI)/include/srt
 
@@ -56,6 +57,7 @@ LOCAL_SRC_FILES  := 	../src/context.cpp \
                         ../src/common_maths.cpp \
                         ../src/timer.cpp \
                         ../src/tagdatadecoder.cpp \
+                        ../src/httputil.cpp \
 
 LOCAL_CFLAGS += -DASIO_STANDALONE -DSRT_NO_DEPRECATED
 LOCAL_CPPFLAGS += -Wc++17-extensions
@@ -67,6 +69,7 @@ $(call import-module,3rdParty/minizip/build/android/jni)
 $(call import-module,3rdParty/stb/build/android/jni)
 $(call import-module,../libavstream/thirdparty/srt/build_android/jni)
 $(call import-module,../libavstream/thirdparty/efp/jni)
+#$(call import-module,../libavstream/thirdparty/curl/jni)
 
 # Note: Even though we depend on LibOVRKernel, we don't explicitly import it since our
 # dependents may want either a prebuilt or from-source LibOVRKernel.

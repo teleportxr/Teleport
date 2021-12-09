@@ -50,7 +50,7 @@ namespace avs
 		// Create easy Handles
 		mTransfers.reserve(config.maxConnections);
 
-		for (int i = 0; i < config.maxConnections; ++i)
+		for (uint32_t i = 0; i < config.maxConnections; ++i)
 		{
 			mTransfers.emplace_back(mMultiHandle.get(), mRemoteURL, mMinTransferBufferSize);
 			mHandleTransferMap[mTransfers[i].getHandle()] = i;
@@ -102,7 +102,7 @@ namespace avs
 				{
 					int index = mHandleTransferMap[msgs[i].easy_handle];
 					Transfer& transfer = mTransfers[index];
-					if (msgs[i].data.result == CURLM_OK)
+					if (msgs[i].data.result == CURLE_OK)
 					{
 						size_t dataSize = transfer.getReceivedDataSize();
 						if (dataSize)
@@ -121,7 +121,7 @@ namespace avs
 	bool HTTPUtil::AddRequest(const HTTPPayloadRequest& request)
 	{
 		// Try all transfers starting from the last.
-		for (int i = 0; i < mConfig.maxConnections; ++i)
+		for (uint32_t i = 0; i < mConfig.maxConnections; ++i)
 		{
 			int index = (mTransferIndex + i) % mConfig.maxConnections;
 			Transfer& transfer = mTransfers[index];
