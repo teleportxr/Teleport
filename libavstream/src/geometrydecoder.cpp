@@ -30,11 +30,10 @@ namespace avs
 		GeometryDecoderBackendInterface *m_backend;
 		std::unique_ptr<GeometryParserInterface> m_parser;
 
-		std::vector<uint8_t> m_frameBuffer;
-		NetworkFrameInfo m_frame;
+		std::vector<uint8_t> m_buffer;
 		bool m_configured = false;
 		int m_streamId = 0;
-		Result processPayload(const uint8_t* buffer, size_t bufferSize, GeometryTargetInterface *target);
+		Result processPayload(const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target);
 	};
 } // avs
 
@@ -66,7 +65,7 @@ Result GeometryDecoder::configure(uint8_t streamId, GeometryDecoderBackendInterf
 
 	d().m_configured = true;
 	d().m_streamId = streamId;
-	d().m_frameBuffer.resize(2000);
+	d().m_buffer.resize(2000);
 
 	return Result::OK;
 }
@@ -85,8 +84,6 @@ Result GeometryDecoder::deconfigure()
 	}
 
 	d().m_configured = false;
-
-	d().m_frame = {};
 
 	return result;
 }
@@ -113,9 +110,9 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 	do
 	{
-		size_t bufferSize = d().m_frameBuffer.size();
+		size_t bufferSize = d().m_buffer.size();
 		size_t bytesRead;
-		result = input->read(this, d().m_frameBuffer.data(), bufferSize, bytesRead);
+		result = input->read(this, d().m_buffer.data(), bufferSize, bytesRead);
 
 		if (result == Result::IO_Empty)
 		{
@@ -124,27 +121,66 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 		if (result == Result::IO_Retry)
 		{
-			d().m_frameBuffer.resize(bufferSize);
-			result = input->read(this, d().m_frameBuffer.data(), bufferSize, bytesRead);
+			d().m_buffer.resize(bufferSize);
+			result = input->read(this, d().m_buffer.data(), bufferSize, bytesRead);
 		}
 
-		if (result != Result::OK || bytesRead < sizeof(NetworkFrameInfo))
+		if (result != Result::OK)
 		{
 			AVSLOG(Warning) << "GeometryDecoder: Failed to read input.";
 			return result;
 		}
 
-		// Copy frame info 
-		memcpy(&d().m_frame, d().m_frameBuffer.data(), sizeof(NetworkFrameInfo));
+		PayloadInfoType payloadInfoType = (PayloadInfoType)d().m_buffer[4];
 
-		// Check if data was lost or corrupted
-		if (d().m_frame.broken)
+		size_t dataOffset = 0;
+		size_t dataSize = 0;
+		GeometryPayloadType payloadType = GeometryPayloadType::Invalid;
+		if (payloadInfoType == PayloadInfoType::Stream)
 		{
-			AVSLOG(Warning) << "GeometryDecoder: Frame of size "<< d().m_frame.dataSize<<" was broken.\n";
+			StreamPayloadInfo info;
+			memcpy(&info, d().m_buffer.data(), sizeof(StreamPayloadInfo));
+
+			// Check if data was lost or corrupted
+			if (info.broken)
+			{
+				continue;
+			}
+
+			size_t offset = sizeof(StreamPayloadInfo);
+			// offset is incremented in the classify function to be after the payload type.
+			payloadType = d().m_parser->classify(d().m_buffer.data(), bufferSize, dataOffset);
+
+			dataOffset = offset;
+			dataSize = info.dataSize - sizeof(GeometryPayloadType);
+		}
+		else if (payloadInfoType == PayloadInfoType::File)
+		{
+			FilePayloadInfo info;
+			memcpy(&info, d().m_buffer.data(), sizeof(FilePayloadInfo));
+
+			dataOffset = sizeof(FilePayloadInfo);
+			dataSize = info.dataSize;
+
+			switch (info.httpPayloadType)
+			{
+			case FilePayloadType::Texture:
+				payloadType = GeometryPayloadType::Texture;
+				break;
+			case FilePayloadType::Mesh:
+				payloadType = GeometryPayloadType::Mesh;
+				break;
+			case FilePayloadType::Material:
+				payloadType = GeometryPayloadType::Material;
+				break;
+			}
+		}
+		else
+		{
 			continue;
 		}
 
-		result = d().processPayload(d().m_frameBuffer.data() + sizeof(NetworkFrameInfo), d().m_frame.dataSize, gti);
+		result = d().processPayload(d().m_buffer.data() + dataOffset, dataSize, payloadType, gti);
 	} while (result == Result::OK);
 
 
@@ -163,17 +199,14 @@ Result GeometryDecoder::setBackend(GeometryDecoderBackendInterface* backend)
 	return Result::OK;
 }
 
-Result GeometryDecoder::Private::processPayload(const uint8_t* buffer, size_t bufferSize, GeometryTargetInterface *target)
+Result GeometryDecoder::Private::processPayload(const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target)
 {
 	assert(m_backend);
 	Result result = Result::UnknownError;
 
-	size_t payloadTypeOffset = 0;
-	GeometryPayloadType payloadType = m_parser->classify(buffer, bufferSize, payloadTypeOffset);
-
 	if (m_backend && bufferSize)
 	{
-		result = m_backend->decode(buffer + payloadTypeOffset, bufferSize - payloadTypeOffset, payloadType, target->getGeometryTargetBackendInterface());
+		result = m_backend->decode(buffer, bufferSize, payloadType, target->getGeometryTargetBackendInterface());
 	}
 	return result;
 }

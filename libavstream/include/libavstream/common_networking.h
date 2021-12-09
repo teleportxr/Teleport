@@ -270,6 +270,7 @@ namespace avs
 		vec3 bodyOffsetFromHead;
 		AxesStandard axesStandard = AxesStandard::NotInitialized;
 		uint8_t audio_input_enabled = 0;
+		bool using_ssl = true;
 		int64_t startTimestamp = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
 	} AVS_PACKED;
 
