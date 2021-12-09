@@ -1408,10 +1408,12 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
 	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
-	avs::HTTPPayloadRequest req;
-	req.fileName = "meshes/engineering/Cube_Cube.mesh";
-	req.type = avs::FilePayloadType::Mesh;
-	source.GetHTTPRequestQueue().emplace(std::move(req));
+
+	//test
+	//avs::HTTPPayloadRequest req;
+	//req.fileName = "meshes/engineering/Cube_Cube.mesh";
+	//req.type = avs::FilePayloadType::Mesh;
+	//source.GetHTTPRequestQueue().emplace(std::move(req));
 
 	bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, bodyOffsetFromHead);
