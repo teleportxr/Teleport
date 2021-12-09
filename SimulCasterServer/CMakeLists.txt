@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(SimulCasterServer)
+project(TeleportServer)
 
 # Build options
 option(USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" ON)
@@ -64,44 +64,44 @@ if(TELEPORT_UNITY)
 		src/SimulCasterServer/UnityPlugin/PluginMain.cpp
 	)
 
-	add_library(SimulCasterServer SHARED ${src} ${src_plugin})
-	set_target_properties( SimulCasterServer PROPERTIES 
+	add_library(TeleportServer SHARED ${src} ${src_plugin})
+	set_target_properties( TeleportServer PROPERTIES 
 		VS_DEBUGGER_COMMAND ${REMOTEPLAY_UNITY_EDITOR_DIR}/${REMOTEPLAY_UNITY_EDITOR_EXE}
 		VS_DEBUGGER_COMMAND_ARGUMENTS "-projectPath \"${REMOTEPLAY_UNITY_PROJECT_DIR}\""
 		VS_DEBUGGER_ENVIRONMENT ""
 		)
 	#Include Unity's native plugin interface headers
-	target_include_directories(SimulCasterServer PUBLIC ${REMOTEPLAY_UNITY_EDITOR_DIR}/Data/PluginAPI)
+	target_include_directories(TeleportServer PUBLIC ${REMOTEPLAY_UNITY_EDITOR_DIR}/Data/PluginAPI)
 else()
-	add_library(SimulCasterServer STATIC ${src})
+	add_library(TeleportServer STATIC ${src})
 endif()
-SetTeleportDefaults( SimulCasterServer )
+SetTeleportDefaults( TeleportServer )
 
 #Include its root directory
-target_include_directories(SimulCasterServer PUBLIC src)
+target_include_directories(TeleportServer PUBLIC src)
 #Include libavstream
-target_include_directories(SimulCasterServer PUBLIC ../libavstream/include)
+target_include_directories(TeleportServer PUBLIC ../libavstream/include)
 #Include libavstream
-target_include_directories(SimulCasterServer PUBLIC ../SimulCasterAudio/src)
+target_include_directories(TeleportServer PUBLIC ../SimulCasterAudio/src)
 #Include Basis Universal
-target_include_directories(SimulCasterServer PUBLIC ../thirdparty/basis_universal/encoder)
+target_include_directories(TeleportServer PUBLIC ../thirdparty/basis_universal/encoder)
 #Include enet
-target_include_directories(SimulCasterServer PUBLIC ../thirdparty/enet/include)
+target_include_directories(TeleportServer PUBLIC ../thirdparty/enet/include)
 #Include draco
-target_include_directories(SimulCasterServer PUBLIC ${CMAKE_BINARY_DIR})
-target_include_directories(SimulCasterServer PUBLIC ../thirdparty/draco/src)
+target_include_directories(TeleportServer PUBLIC ${CMAKE_BINARY_DIR})
+target_include_directories(TeleportServer PUBLIC ../thirdparty/draco/src)
 #include OpenSSL
-target_include_directories(SimulCasterServer PUBLIC ../thirdparty/openssl/include)
+target_include_directories(TeleportServer PUBLIC ../thirdparty/openssl/include)
 #Include cpp-httplib
-target_include_directories(SimulCasterServer PUBLIC ../thirdparty/cpp-httplib)
+target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
 
 
 #Include CUDA library location.
-target_link_directories(SimulCasterServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
+target_link_directories(TeleportServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
-target_link_directories(SimulCasterServer PUBLIC ../thirdparty/openssl/x64/Release/lib)
+target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/Release/lib)
 
-target_link_libraries(SimulCasterServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl_static libcrypto_static TeleportCore)
+target_link_libraries(TeleportServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl_static libcrypto_static TeleportCore )
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
@@ -109,9 +109,9 @@ else()
 	set(def_platform PLATFORM_LINUX)
 endif()
 
-target_compile_definitions(SimulCasterServer PRIVATE ${def_platform})
+target_compile_definitions(TeleportServer PRIVATE ${def_platform})
 
 if(${USE_ASYNC_NETWORK_PROCESSING})
-	target_compile_definitions(SimulCasterServer PUBLIC ASYNC_NETWORK_PROCESSING)
+	target_compile_definitions(TeleportServer PUBLIC ASYNC_NETWORK_PROCESSING)
 endif()
-set_target_properties( SimulCasterServer PROPERTIES FOLDER Teleport )
+set_target_properties( TeleportServer PROPERTIES FOLDER Teleport )
