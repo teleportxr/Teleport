@@ -161,6 +161,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		}
 	};
 
+#if IS_CLIENT
 	HTTPUtilConfig httpUtilConfig;
 	httpUtilConfig.remoteIP = params.remoteIP;
 	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
@@ -168,6 +169,9 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 	httpUtilConfig.useSSL = params.useSSL;
 	auto f = std::bind(&NetworkSource::receiveHTTPFile, this, std::placeholders::_1, std::placeholders::_2);
 	return m_data->m_httpUtil.initialize(httpUtilConfig, std::move(f));
+#else
+	return Result::OK;
+#endif
 }
 
 void NetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
@@ -241,7 +245,11 @@ Result NetworkSource::deconfigure()
 	// as socket is shut down.
 	closeSocket();
 
+#if IS_CLIENT
 	return m_data->m_httpUtil.shutdown();
+#else
+	return Result::OK;
+#endif
 }
 
 void NetworkSource::closeSocket()
@@ -385,7 +393,11 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 #endif
 	}
 
+#if IS_CLIENT
 	return m_data->m_httpUtil.process();
+#else
+	return Result::OK;
+#endif
 }
 
 NetworkSourceCounters NetworkSource::getCounterValues() const
@@ -480,8 +492,10 @@ size_t NetworkSource::getSystemBufferSize() const
 	return 100000;
 }
 
+#if IS_CLIENT
 std::queue<HTTPPayloadRequest>& NetworkSource::GetHTTPRequestQueue()
 {
 	return m_data->m_httpUtil.GetRequestQueue();
 }
+#endif
 

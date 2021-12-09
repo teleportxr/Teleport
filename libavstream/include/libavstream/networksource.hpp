@@ -115,7 +115,9 @@ namespace avs
 		void setDoChecksums(bool);
 		void setDebugNetworkPackets(bool s);
 		size_t getSystemBufferSize() const;
+#if IS_CLIENT
 		std::queue<HTTPPayloadRequest>& GetHTTPRequestQueue();
+#endif
 
 	private:
 		Private *m_data; 
