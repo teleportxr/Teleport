@@ -22,6 +22,23 @@ namespace filesystem = std::experimental::filesystem;
 namespace filesystem = std::filesystem;
 #endif
 
+static avs::guid bstr_to_guid(_bstr_t b)
+{
+	avs::guid g;
+	strncpy_s(g.txt,(const char*)b,32);
+	g.txt[33]=0;
+	return g;
+}
+
+static _bstr_t guid_to_bstr(avs::guid g)
+{
+	char txt[21];
+	strncpy_s(txt,g.txt,32);
+	txt[32]=0;
+	_bstr_t b(txt);
+	return b;
+}
+
 template<class T>
 std::vector<avs::uid> getVectorOfIDs(const std::map<avs::uid, T>& resourceMap)
 {
@@ -106,19 +123,21 @@ void GeometryStore::saveToDisk() const
 	saveResources(cachePath + "/" +MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
 }
 
-void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials)
+void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshes, size_t& numTextures, LoadedResource*& loadedTextures, size_t& numMaterials, LoadedResource*& loadedMaterials)
 {
-	loadResources(cachePath + "/" + MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
-	loadResources(cachePath + "/" + MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
+	// Load in order of non-dependent to dependent resources, so that we can apply dependencies.
 	loadResources(cachePath + "/" + TEXTURE_CACHE_PATH, textures);
 	loadResources(cachePath + "/" + MATERIAL_CACHE_PATH, materials);
-
-	meshAmount = meshes.at(avs::AxesStandard::EngineeringStyle).size();
-	textureAmount = textures.size();
-	materialAmount = materials.size();
+	loadResources(cachePath + "/" + MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
+	loadResources(cachePath + "/" + MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
+	
+	// Now fill in the return values.
+	numMeshes = meshes.at(avs::AxesStandard::EngineeringStyle).size();
+	numTextures = textures.size();
+	numMaterials = materials.size();
 
 	int i = 0;
-	loadedMeshes = new LoadedResource[meshAmount];
+	loadedMeshes = new LoadedResource[numMeshes];
 	for(auto& meshDataPair : meshes.at(avs::AxesStandard::EngineeringStyle))
 	{
 		BSTR meshName = _com_util::ConvertStringToBSTR(meshDataPair.second.mesh.name.c_str());
@@ -128,7 +147,7 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 	}
 
 	i = 0;
-	loadedTextures = new LoadedResource[textureAmount];
+	loadedTextures = new LoadedResource[numTextures];
 	for(auto& textureDataPair : textures)
 	{
 		BSTR textureName = _com_util::ConvertStringToBSTR(textureDataPair.second.texture.name.c_str());
@@ -138,7 +157,7 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 	}
 
 	i = 0;
-	loadedMaterials = new LoadedResource[materialAmount];
+	loadedMaterials = new LoadedResource[numMaterials];
 	for(auto& materialDataPair : materials)
 	{
 		BSTR materialName = _com_util::ConvertStringToBSTR(materialDataPair.second.material.name.c_str());
@@ -147,69 +166,9 @@ void GeometryStore::loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMesh
 		++i;
 	}
 }
-void GeometryStore::reaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
+
+void GeometryStore::reaffirmResources(int32_t numMeshes, ReaffirmedResource* reaffirmedMeshes, int32_t numTextures, ReaffirmedResource* reaffirmedTextures, int32_t numMaterials, ReaffirmedResource* reaffirmedMaterials)
 {
-	TELEPORT_COUT << "Renumbering resources.\node";
-
-	//Copy data on the resources that were loaded.
-	std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> oldMeshes = meshes;
-	std::map<avs::uid, ExtractedMaterial> oldMaterials = materials;
-	std::map<avs::uid, ExtractedTexture> oldTextures = textures;
-
-	//Delete the old data; we don't want to use the GeometryStore::clear(...) function as that will call delete on the pointers we want to copy.
-	//Clear mesh lookup without messing with the structure.
-	meshes[avs::AxesStandard::EngineeringStyle].clear();
-	meshes[avs::AxesStandard::GlStyle].clear();
-	materials.clear();
-	textures.clear();
-
-	TELEPORT_COUT << "Replacing " << oldMaterials.size() << " materials loaded from disk with " << materialAmount << " confirmed from managed code.\node";
-
-	//Replace old IDs with their new IDs; fixing any links that need to be changed.
-
-	//ASSUMPTION: Mesh sub-resources(e.g. index buffers) aren't shared, and as such it doesn't matter that their IDs aren't re-assigned.
-	for(auto meshMapPair : oldMeshes)
-	{
-		avs::AxesStandard mapStandard = meshMapPair.first;
-		for(int i = 0; i < meshAmount; i++)
-		{
-			meshes[mapStandard][reaffirmedMeshes[i].newID] = oldMeshes[mapStandard][reaffirmedMeshes[i].oldID];
-		}
-	}
-
-	//Lookup to find the new ID from the old ID. For replacing texture IDs in materials. <Old ID, New ID>
-	std::map<avs::uid, avs::uid> textureIDLookup;
-	for(int i = 0; i < textureAmount; i++)
-	{
-		avs::uid newID = reaffirmedTextures[i].newID;
-		avs::uid oldID = reaffirmedTextures[i].oldID;
-
-		textures[newID] = oldTextures[oldID];
-		textureIDLookup[oldID] = newID;
-	}
-
-	//Takes old ID reference and replaces with the new ID in the lookup.
-	auto replaceTextureID = [&textureIDLookup](avs::uid& textureID)
-	{
-		//If the texture doesn't exist it should have a zero filled in.
-		//Which means the material has been updated, and will be re-extracted anyway (assuming the old index isn't zero).
-		textureID = textureIDLookup[textureID];
-	};
-
-	for(int i = 0; i < materialAmount; i++)
-	{
-		avs::uid newID = reaffirmedMaterials[i].newID;
-
-		materials[newID] = oldMaterials[reaffirmedMaterials[i].oldID];
-		TELEPORT_COUT << "New ID: Material " << newID << ", was material " << reaffirmedMaterials[i].oldID << ".\n";
-
-		//Replace all texture accessor indexes with their new index.
-		replaceTextureID(materials[newID].material.pbrMetallicRoughness.baseColorTexture.index);
-		replaceTextureID(materials[newID].material.pbrMetallicRoughness.metallicRoughnessTexture.index);
-		replaceTextureID(materials[newID].material.normalTexture.index);
-		replaceTextureID(materials[newID].material.occlusionTexture.index);
-		replaceTextureID(materials[newID].material.emissiveTexture.index);
-	}
 }
 
 void GeometryStore::clear(bool freeMeshBuffers)
@@ -529,7 +488,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		subMesh.material=primitive.material;
 		subMesh.indices_accessor=primitive.indices_accessor;
 		subMesh.first_index= 0;
-		subMesh.num_indices = indices_accessor.count;
+		subMesh.num_indices = (uint32_t)indices_accessor.count;
 		size_t numTriangles = indices_accessor.count / 3;
 	
 		draco::Mesh dracoMesh;
@@ -570,12 +529,12 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 			draco::GeometryAttribute dracoGeometryAttribute;
 			size_t stride = draco::DataTypeLength(dracoDataType) * num_components;
 			dracoGeometryAttribute.Init(dracoGeometryAttributeType, nullptr, num_components, dracoDataType, semantic == avs::AttributeSemantic::NORMAL, stride, 0);
-			att_id = dracoMesh.AddAttribute(dracoGeometryAttribute, true, (uint32_t)geometryBuffer.byteLength / stride);
+			att_id = dracoMesh.AddAttribute(dracoGeometryAttribute, true, (uint32_t)(geometryBuffer.byteLength / stride));
 			subMesh.attributeSemantics[att_id]=semantic;
 			attr = dracoMesh.attribute(att_id);
 			for (size_t j = 0; j < accessor.count; j++)
 			{
-				attr->SetAttributeValue(draco::AttributeValueIndex(j), data + j * bufferView.byteStride);
+				attr->SetAttributeValue(draco::AttributeValueIndex((uint32_t)j), data + j * bufferView.byteStride);
 			}
 			sourceSize += bufferView.byteLength;
 		}
@@ -866,8 +825,51 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 	return true;
 }
 
+// Here we implement special cases of std::wofstream and wifstream that are able to convert uids to guids and vice versa.
+class resource_ofstream:public std::wofstream
+{
+protected:
+	std::function<avs::guid(avs::uid)> uid_to_guid;
+public:
+	resource_ofstream(const char *filename,std::function<avs::guid(avs::uid)> f)
+		:std::wofstream(filename, std::wofstream::out | std::wofstream::binary)
+		,uid_to_guid(f)
+	{
+	}
+	friend resource_ofstream& operator<<(resource_ofstream& stream, avs::uid u)
+	{
+		avs::guid g=stream.uid_to_guid(u);
+		return stream<<g;
+	
+	
+	}
+};
+
+class resource_ifstream:public std::wifstream
+{
+protected:
+	std::function<avs::uid(avs::guid)> guid_to_uid;
+public:
+	resource_ifstream(const char *filename,std::function<avs::uid(avs::guid)> f)
+		:std::wifstream(filename, resource_ifstream::in | resource_ifstream::binary)
+		,guid_to_uid(f)
+	{
+	}
+	friend resource_ifstream& operator>>(resource_ifstream& stream, avs::uid &u)
+	{
+		avs::guid g;
+		//*(static_cast<std::wifstream*>(&stream))>>u;
+		stream>>g;
+		u=stream.guid_to_uid(g);
+		return stream;
+	}
+};
+
 void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)
 {
+	auto g=bstr_to_guid(guid);
+	guids[id]=g;
+	uids[g]=id;
 	auto &mesh=meshes[standard][id] = ExtractedMesh{guid, lastModified, newMesh};
 	if(compress)
 	{
@@ -876,12 +878,12 @@ void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModifie
 		{
 			//Save data to new file.
 			{
-				std::wofstream saveFile("verify.mesh", std::wofstream::out | std::wofstream::binary);
+				resource_ofstream saveFile("verify.mesh", std::bind(&GeometryStore::UidToGuid,this,std::placeholders::_1));
 				saveFile << mesh << std::endl;
 				saveFile.close();
 			}
-			std::wifstream loadFile("verify.mesh", std::wifstream::in | std::wifstream::binary);
-			avs::uid oldID;
+			resource_ifstream loadFile("verify.mesh", std::bind(&GeometryStore::GuidToUid,this,std::placeholders::_1));
+		
 			ExtractedMesh testMesh;
 			loadFile >> testMesh;
 			VerifyCompressedMesh(testMesh.compressedMesh, testMesh.mesh);
@@ -891,12 +893,18 @@ void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModifie
 
 void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Material& newMaterial)
 {
+	auto g=bstr_to_guid(guid);
+	guids[id]=g;
+	uids[g]=id;
 	materials[id] = ExtractedMaterial{guid, lastModified, newMaterial};
 }
 
 void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
+	auto g=bstr_to_guid(guid);
+	guids[id]=g;
+	uids[g]=id;
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
 	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
 	{
@@ -1109,7 +1117,7 @@ template<typename ExtractedResource> void GeometryStore::saveResources(const std
 			filesystem::rename(file_name, file_name + ".bak");
 
 		//Save data to new file.
-		std::wofstream resourceFile(file_name, std::wofstream::out | std::wofstream::binary);
+		resource_ofstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::UidToGuid,this,std::placeholders::_1));
 		resourceFile << resourceData.first << std::endl << resourceData.second << std::endl;
 		resourceFile.close();
 
@@ -1122,7 +1130,6 @@ template<typename ExtractedResource> void GeometryStore::saveResources(const std
 template<typename ExtractedResource> void GeometryStore::loadResources(const std::string path, std::map<avs::uid, ExtractedResource>& resourceMap)
 {
 	//Load resources if the file exists.
-
 	const std::filesystem::path fspath{ path.c_str() };
 	std::filesystem::create_directories(fspath);
 	std::string search_str=ExtractedResource::fileExtension();
@@ -1133,33 +1140,56 @@ template<typename ExtractedResource> void GeometryStore::loadResources(const std
 		if(file_name.find(search_str)<file_name.length())
 		if(filesystem::exists(file_name))
 		{
-			std::wifstream resourceFile(file_name, std::wifstream::in | std::wifstream::binary);
+			resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::GuidToUid,this,std::placeholders::_1));
 			
-			avs::uid oldID;
+			avs::guid g;
 			//Load resources from the file, while there is still more data in the file.
-			if(resourceFile >> oldID)
+			if(resourceFile >> g)
 			{
 				auto write_time= std::filesystem::last_write_time(file_name);
 				// If there's a duplicate, use the newer file.
-				bool use_new=true;
+			/*	bool use_new=true;
 				if(resourceMap.find(oldID)==resourceMap.end())
 				{
 					// if new file timestamp is older than the last one, don't use it.
 					if(write_time<timestamps[oldID])
 						use_new=false;
 				}
-				if(use_new)
+				if(use_new)*/
 				{
-					ExtractedResource& newResource = resourceMap[oldID];
+					avs::uid newID=avs::GenerateUid();
+					guids[newID]=g;
+					uids[g]=newID;
+					ExtractedResource& newResource = resourceMap[newID];
 					resourceFile >> newResource;
-					timestamps[oldID]= write_time;
+					//timestamps[oldID]= write_time;
 				}
-				else
+			/*	else
 				{
 					ExtractedResource newResource;
 					resourceFile >> newResource;
-				}
+				}*/
 			}
 		}
 	}
+}
+
+avs::uid GeometryStore::GuidToUid(avs::guid g) const
+{
+	auto i=uids.find(g);
+	if(i==uids.end())
+	{
+		throw std::runtime_error("");
+	}
+	return i->second;
+}
+
+avs::guid GeometryStore::UidToGuid(avs::uid u) const
+{
+	auto i=guids.find(u);
+	if(i==guids.end())
+	{
+		throw std::runtime_error("");
+	}
+	return i->second;
 }

@@ -280,18 +280,24 @@ namespace teleport
 			// Return because we don't want to process input until the C# side objects have been created.
 			return;
 		}
-		if(!latestInputStateAndEvents[0].processed)
 		{
 			//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
 			const avs::InputEventBinary* binaryEventsPtr = latestInputStateAndEvents[0].binaryEvents.data();
 			const avs::InputEventAnalogue* analogueEventsPtr = latestInputStateAndEvents[0].analogueEvents.data();
 			const avs::InputEventMotion* motionEventsPtr = latestInputStateAndEvents[0].motionEvents.data();
+			for (auto c : latestInputStateAndEvents[0].analogueEvents)
+			{
+				TELEPORT_COUT << "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< std::endl;
+			}
 			processNewInput(clientID, &latestInputStateAndEvents[0].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+			if(latestInputStateAndEvents[0].analogueEvents.size())
+			{
+				TELEPORT_COUT << "processNewInput sends "<<latestInputStateAndEvents[0].analogueEvents.size()<<" analogue events."<<latestInputStateAndEvents[0].inputState.numAnalogueEvents<< std::endl;
+			}
 		}
 		//Input has been passed, so clear the events.
 		latestInputStateAndEvents[0].clear();
 
-		if (!latestInputStateAndEvents[1].processed)
 		{
 			const avs::InputEventBinary* binaryEventsPtr = latestInputStateAndEvents[1].binaryEvents.data();
 			const avs::InputEventAnalogue* analogueEventsPtr = latestInputStateAndEvents[1].analogueEvents.data();
@@ -596,41 +602,45 @@ namespace teleport
 		//Copy newest input state into member variable.
 		memcpy(&receivedInputState, packet->data, inputStateSize);
 
-		size_t binaryEventSize = sizeof(avs::InputEventBinary) * receivedInputState.binaryEventAmount;
-		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * receivedInputState.analogueEventAmount;
-		size_t motionEventSize = sizeof(avs::InputEventMotion) * receivedInputState.motionEventAmount;
+		size_t binaryEventSize = sizeof(avs::InputEventBinary) * receivedInputState.numBinaryEvents;
+		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * receivedInputState.numAnalogueEvents;
+		size_t motionEventSize = sizeof(avs::InputEventMotion) * receivedInputState.numMotionEvents;
 
 		if (packet->dataLength != inputStateSize + binaryEventSize + analogueEventSize + motionEventSize)
 		{
 			TELEPORT_CERR << "Error on receive input for Client_" << clientID << "! Received malformed InputState packet of length " << packet->dataLength << "; expected size of " << inputStateSize + binaryEventSize + analogueEventSize + motionEventSize << "!\n" <<
 				"InputState Size: " << inputStateSize << "\n" <<
-				"Binary Events Size:" << binaryEventSize << "(" << receivedInputState.binaryEventAmount << ")\n" <<
-				"Analogue Events Size:" << analogueEventSize << "(" << receivedInputState.analogueEventAmount << ")\n" <<
-				"Motion Events Size:" << motionEventSize << "(" << receivedInputState.motionEventAmount << ")\n";
+				"Binary Events Size:" << binaryEventSize << "(" << receivedInputState.numBinaryEvents << ")\n" <<
+				"Analogue Events Size:" << analogueEventSize << "(" << receivedInputState.numAnalogueEvents << ")\n" <<
+				"Motion Events Size:" << motionEventSize << "(" << receivedInputState.numMotionEvents << ")\n";
 
 			return;
 		}
 
 		InputStateAndEvents &aggregateInputState = latestInputStateAndEvents[receivedInputState.controllerId];
-		aggregateInputState.processed=false;
-		aggregateInputState.inputState = receivedInputState;
+		
+		aggregateInputState.inputState.add(receivedInputState);
 
-		if(receivedInputState.binaryEventAmount != 0)
+		if(receivedInputState.numBinaryEvents != 0)
 		{
 			avs::InputEventBinary* binaryData = reinterpret_cast<avs::InputEventBinary*>(packet->data + inputStateSize);
-			aggregateInputState.binaryEvents.insert(aggregateInputState.binaryEvents.end(), binaryData, binaryData + receivedInputState.binaryEventAmount);
+			aggregateInputState.binaryEvents.insert(aggregateInputState.binaryEvents.end(), binaryData, binaryData + receivedInputState.numBinaryEvents);
 		}
 
-		if(receivedInputState.analogueEventAmount != 0)
+		if(receivedInputState.numAnalogueEvents != 0)
 		{
 			avs::InputEventAnalogue* analogueData = reinterpret_cast<avs::InputEventAnalogue*>(packet->data + inputStateSize + binaryEventSize);
-			aggregateInputState.analogueEvents.insert(aggregateInputState.analogueEvents.end(), analogueData, analogueData + receivedInputState.analogueEventAmount);
+			aggregateInputState.analogueEvents.insert(aggregateInputState.analogueEvents.end(), analogueData, analogueData + receivedInputState.numAnalogueEvents);
+			for (auto c : aggregateInputState.analogueEvents)
+			{
+				TELEPORT_COUT << "Analogue: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< std::endl;
+			}
 		}
 
-		if(receivedInputState.motionEventAmount != 0)
+		if(receivedInputState.numMotionEvents != 0)
 		{
 			avs::InputEventMotion* motionData = reinterpret_cast<avs::InputEventMotion*>(packet->data + inputStateSize + binaryEventSize + analogueEventSize);
-			aggregateInputState.motionEvents.insert(aggregateInputState.motionEvents.end(), motionData, motionData + receivedInputState.motionEventAmount);
+			aggregateInputState.motionEvents.insert(aggregateInputState.motionEvents.end(), motionData, motionData + receivedInputState.numMotionEvents);
 		}
 	}
 
@@ -668,11 +678,11 @@ namespace teleport
 
 	void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 	{
-		size_t resourceAmount;
-		memcpy(&resourceAmount, packet->data, sizeof(size_t));
+		size_t resourceCount;
+		memcpy(&resourceCount, packet->data, sizeof(size_t));
 
-		std::vector<avs::uid> resourceRequests(resourceAmount);
-		memcpy(resourceRequests.data(), packet->data + sizeof(size_t), sizeof(avs::uid) * resourceAmount);
+		std::vector<avs::uid> resourceRequests(resourceCount);
+		memcpy(resourceRequests.data(), packet->data + sizeof(size_t), sizeof(avs::uid) * resourceCount);
 
 		for (avs::uid id : resourceRequests)
 		{
@@ -726,12 +736,12 @@ namespace teleport
 			avs::NodeStatusMessage message;
 			memcpy(&message, packet->data, messageSize);
 
-			size_t drawnSize = sizeof(avs::uid) * message.nodesDrawnAmount;
-			std::vector<avs::uid> drawn(message.nodesDrawnAmount);
+			size_t drawnSize = sizeof(avs::uid) * message.nodesDrawnCount;
+			std::vector<avs::uid> drawn(message.nodesDrawnCount);
 			memcpy(drawn.data(), packet->data + messageSize, drawnSize);
 
-			size_t toReleaseSize = sizeof(avs::uid) * message.nodesWantToReleaseAmount;
-			std::vector<avs::uid> toRelease(message.nodesWantToReleaseAmount);
+			size_t toReleaseSize = sizeof(avs::uid) * message.nodesWantToReleaseCount;
+			std::vector<avs::uid> toRelease(message.nodesWantToReleaseCount);
 			memcpy(toRelease.data(), packet->data + messageSize + drawnSize, toReleaseSize);
 
 			for (avs::uid nodeID : drawn)
@@ -752,8 +762,8 @@ namespace teleport
 			avs::ReceivedResourcesMessage message;
 			memcpy(&message, packet->data, messageSize);
 
-			size_t confirmedResourcesSize = sizeof(avs::uid) * message.receivedResourcesAmount;
-			std::vector<avs::uid> confirmedResources(message.receivedResourcesAmount);
+			size_t confirmedResourcesSize = sizeof(avs::uid) * message.receivedResourcesCount;
+			std::vector<avs::uid> confirmedResources(message.receivedResourcesCount);
 			memcpy(confirmedResources.data(), packet->data + messageSize, confirmedResourcesSize);
 
 			for (avs::uid id : confirmedResources)

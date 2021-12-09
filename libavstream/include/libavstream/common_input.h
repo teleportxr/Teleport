@@ -11,7 +11,7 @@ namespace avs
 #pragma pack(push, 1)
 #endif
 	//List of all IDs for all input types; list contains common aliases.
-	enum class InputList
+	enum class InputId
 	{
 		INVALID,
 
@@ -91,7 +91,7 @@ namespace avs
 	struct InputEventBinary
 	{
 		uint32_t eventID = 0;
-		InputList inputID = InputList::INVALID; //ID of the input type used that triggered the event.
+		InputId inputID = InputId::INVALID; //ID of the input type used that triggered the event.
 		bool activated = false;
 	} AVS_PACKED;
 
@@ -99,7 +99,7 @@ namespace avs
 	struct InputEventAnalogue
 	{
 		uint32_t eventID = 0;
-		InputList inputID = InputList::INVALID; //ID of the input type used that triggered the event.
+		InputId inputID = InputId::INVALID; //ID of the input type used that triggered the event.
 		float strength = 0.0f;
 
 		//Set the value normalised between 0 and 1.
@@ -115,7 +115,7 @@ namespace avs
 	struct InputEventMotion
 	{
 		uint32_t eventID = 0;
-		InputList inputID = InputList::INVALID; //ID of the input type used that triggered the event.
+		InputId inputID = InputId::INVALID; //ID of the input type used that triggered the event.
 		vec2 motion = vec2{0.0f, 0.0f};
 	} AVS_PACKED;
 

@@ -91,7 +91,7 @@ namespace avs
 		uint8_t framerate = 0;				// In hertz
 		bool usingHands = false; //Whether to send the hand nodes to the client.
 		bool isVR = true;
-		uint64_t resourceCount = 0;			//Amount of resources the client has, and are appended to the handshake.
+		uint64_t resourceCount = 0;			//Count of resources the client has, and are appended to the handshake.
 		uint32_t maxLightsSupported = 0;
 		uint32_t clientStreamingPort = 0;	// the local port on the client to receive the stream.
 		int32_t minimumPriority = 0;		// The lowest priority object this client will render, meshes with lower priority need not be sent.
@@ -110,9 +110,23 @@ namespace avs
 		float triggerBack = 0.0f;
 		float triggerGrip = 0.0f;
 
-		uint32_t binaryEventAmount = 0;
-		uint32_t analogueEventAmount = 0;
-		uint32_t motionEventAmount = 0;
+		uint32_t numBinaryEvents = 0;
+		uint32_t numAnalogueEvents= 0;
+		uint32_t numMotionEvents= 0;
+		void add(const InputState &i)
+		{
+			controllerId		=i.controllerId;
+			buttonsDown			=i.buttonsDown ;	
+			trackpadAxisX		=i.trackpadAxisX;
+			trackpadAxisY		=i.trackpadAxisY;
+			joystickAxisX		=i.joystickAxisX;
+			joystickAxisY		=i.joystickAxisY;
+			triggerBack			=i.triggerBack;
+			triggerGrip			=i.triggerGrip;
+			numBinaryEvents		+=i.numBinaryEvents;
+			numAnalogueEvents	+=i.numAnalogueEvents;
+			numMotionEvents		+=i.numMotionEvents;
+		}
 	} AVS_PACKED;
 
 	//Contains information to update the transform of a node.
@@ -208,14 +222,14 @@ namespace avs
 	struct AcknowledgeHandshakeCommand : public Command
 	{
 		AcknowledgeHandshakeCommand() : Command(CommandPayloadType::AcknowledgeHandshake) {}
-		AcknowledgeHandshakeCommand(size_t visibleNodeAmount) : Command(CommandPayloadType::AcknowledgeHandshake), visibleNodeAmount(visibleNodeAmount) {}
+		AcknowledgeHandshakeCommand(size_t visibleNodeCount) : Command(CommandPayloadType::AcknowledgeHandshake), visibleNodeCount(visibleNodeCount) {}
 		
 		virtual size_t getCommandSize() const override
 		{
 			return sizeof(AcknowledgeHandshakeCommand);
 		}
 
-		size_t visibleNodeAmount = 0; //Amount of visible node IDs appended to the command payload.
+		size_t visibleNodeCount = 0; //Count of visible node IDs appended to the command payload.
 	} AVS_PACKED;
 
 	struct SetPositionCommand : public Command
@@ -256,6 +270,7 @@ namespace avs
 		vec3 bodyOffsetFromHead;
 		AxesStandard axesStandard = AxesStandard::NotInitialized;
 		uint8_t audio_input_enabled = 0;
+		bool using_ssl = true;
 		int64_t startTimestamp = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
 	} AVS_PACKED;
 
@@ -299,15 +314,15 @@ namespace avs
 
 	struct NodeBoundsCommand : public Command
 	{
-		size_t nodesShowAmount;
-		size_t nodesHideAmount;
+		size_t nodesShowCount;
+		size_t nodesHideCount;
 
 		NodeBoundsCommand()
 			:NodeBoundsCommand(0, 0)
 		{}
 
-		NodeBoundsCommand(size_t nodesShowAmount, size_t nodesHideAmount)
-			:Command(CommandPayloadType::NodeBounds), nodesShowAmount(nodesShowAmount), nodesHideAmount(nodesHideAmount)
+		NodeBoundsCommand(size_t nodesShowCount, size_t nodesHideCount)
+			:Command(CommandPayloadType::NodeBounds), nodesShowCount(nodesShowCount), nodesHideCount(nodesHideCount)
 		{}
 
 		virtual size_t getCommandSize() const override
@@ -318,14 +333,14 @@ namespace avs
 
 	struct UpdateNodeMovementCommand : public Command
 	{
-		size_t updatesAmount;
+		size_t updatesCount;
 
 		UpdateNodeMovementCommand()
 			:UpdateNodeMovementCommand(0)
 		{}
 
-		UpdateNodeMovementCommand(size_t updatesAmount)
-			:Command(CommandPayloadType::UpdateNodeMovement), updatesAmount(updatesAmount)
+		UpdateNodeMovementCommand(size_t updatesCount)
+			:Command(CommandPayloadType::UpdateNodeMovement), updatesCount(updatesCount)
 		{}
 
 		virtual size_t getCommandSize() const override
@@ -336,14 +351,14 @@ namespace avs
 	
 	struct UpdateNodeEnabledStateCommand : public Command
 	{
-		size_t updatesAmount;
+		size_t updatesCount;
 
 		UpdateNodeEnabledStateCommand()
 			:UpdateNodeEnabledStateCommand(0)
 		{}
 
-		UpdateNodeEnabledStateCommand(size_t updatesAmount)
-			:Command(CommandPayloadType::UpdateNodeEnabledState), updatesAmount(updatesAmount)
+		UpdateNodeEnabledStateCommand(size_t updatesCount)
+			:Command(CommandPayloadType::UpdateNodeEnabledState), updatesCount(updatesCount)
 		{}
 
 		virtual size_t getCommandSize() const override
@@ -463,17 +478,17 @@ namespace avs
 	//Message info struct containing how many nodes have changed to what state; sent alongside two list of node UIDs.
 	struct NodeStatusMessage : public ClientMessage
 	{
-		size_t nodesDrawnAmount;
-		size_t nodesWantToReleaseAmount;
+		size_t nodesDrawnCount;
+		size_t nodesWantToReleaseCount;
 
 		NodeStatusMessage()
 			:NodeStatusMessage(0, 0)
 		{}
 
-		NodeStatusMessage(size_t nodesDrawnAmount, size_t nodesWantToReleaseAmount)
+		NodeStatusMessage(size_t nodesDrawnCount, size_t nodesWantToReleaseCount)
 			:ClientMessage(ClientMessagePayloadType::NodeStatus),
-			nodesDrawnAmount(nodesDrawnAmount),
-			nodesWantToReleaseAmount(nodesWantToReleaseAmount)
+			nodesDrawnCount(nodesDrawnCount),
+			nodesWantToReleaseCount(nodesWantToReleaseCount)
 		{}
 
 		virtual size_t getMessageSize() const override
@@ -485,14 +500,14 @@ namespace avs
 	//Message info struct containing how many resources were received; sent alongside a list of UIDs.
 	struct ReceivedResourcesMessage : public ClientMessage
 	{
-		size_t receivedResourcesAmount;
+		size_t receivedResourcesCount;
 
 		ReceivedResourcesMessage()
 			:ReceivedResourcesMessage(0)
 		{}
 
-		ReceivedResourcesMessage(size_t receivedResourcesAmount)
-			:ClientMessage(ClientMessagePayloadType::ReceivedResources), receivedResourcesAmount(receivedResourcesAmount)
+		ReceivedResourcesMessage(size_t receivedResourcesCount)
+			:ClientMessage(ClientMessagePayloadType::ReceivedResources), receivedResourcesCount(receivedResourcesCount)
 		{}
 
 		virtual size_t getMessageSize() const override

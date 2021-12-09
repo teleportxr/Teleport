@@ -6,7 +6,7 @@
 #include "Platform/Core/StringToWString.h"
 #include "Gui.h"
 #include "IconsForkAwesome.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include <direct.h>
 using namespace teleport;
 using namespace simul;
@@ -240,29 +240,43 @@ void Gui::NodeTree(const scr::Node& node)
         ImGui::TreePop();
     }
 }
-
-void Gui::DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::NodeManager::nodeList_t& root_nodes)
+static int in_debug_gui = 0;
+void Gui::BeginDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
-	ImGui_ImplWin32_NewFrame();
-    auto vp=renderPlatform->GetViewport(deviceContext,0);
-    ImGui_ImplPlatform_NewFrame(false,vp.w,vp.h);
-	ImGui::NewFrame();
-    static int corner = 1;
-    ImGuiIO& io = ImGui::GetIO();
-    
-    ImGui::PushFont(smallFont);
-    
-    if (ImGui::Begin("Nodes"))
+    if (in_debug_gui != 0)
     {
-        for(const auto &r:root_nodes)
-        {
-                NodeTree(*r.get());
-        }
+        return;
+    }
+    ImGui_ImplWin32_NewFrame();
+    auto vp = renderPlatform->GetViewport(deviceContext, 0);
+    ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
+    ImGui::NewFrame();
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::PushFont(smallFont);
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+    if (ImGui::Begin("Teleport VR", nullptr, window_flags))
+        in_debug_gui++;
+}
+void Gui::LinePrint(const char* txt,const float *clr)
+{
+    if (in_debug_gui != 1)
+    {
+        return;
+    }
+    if (clr == nullptr)
+        ImGui::Text(txt);
+    else
+        ImGui::TextColored(*(reinterpret_cast<const ImVec4*>(clr)), txt);
+}
+void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+{
+    if (in_debug_gui != 1)
+    {
+        return;
     }
     ImGui::End();
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-    if (corner != -1)
     {
         const float PAD = 10.0f;
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -271,8 +285,8 @@ void Gui::DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,co
         ImVec2 window_pos, window_pos_pivot;
         window_pos.x = (work_pos.x + work_size.x - PAD);
         window_pos.y = (work_pos.y + PAD);
-        window_pos_pivot.x =  1.0f ;
-        window_pos_pivot.y =  0.0f;
+        window_pos_pivot.x = 1.0f;
+        window_pos_pivot.y = 0.0f;
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
         window_flags |= ImGuiWindowFlags_NoMove;
     }
@@ -280,29 +294,45 @@ void Gui::DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,co
     if (ImGui::Begin("Keyboard", nullptr, window_flags))
     {
         ImGui::Text("K: Connect/Disconnect\n"
-	            "O: Toggle OSD\n"
-	            "V: Show video\n"
-	            "C: Toggle render from centre\n"
-	            "T: Toggle Textures\n"
-	            "N: Toggle Node Overlays\n"
-	            "M: Change rendermode\n"
-	            "R: Recompile shaders\n"
-	            "NUM 0: PBR\n"
-	            "NUM 1: Albedo\n"
-	            "NUM 4: Unswizzled Normals\n"
-	            "NUM 5: Debug animation\n"
-	            "NUM 6: Lightmaps\n"
-	            "NUM 2: Vertex Normals\n");
+            "O: Toggle OSD\n"
+            "V: Show video\n"
+            "C: Toggle render from centre\n"
+            "T: Toggle Textures\n"
+            "N: Toggle Node Overlays\n"
+            "M: Change rendermode\n"
+            "R: Recompile shaders\n"
+            "NUM 0: PBR\n"
+            "NUM 1: Albedo\n"
+            "NUM 4: Unswizzled Normals\n"
+            "NUM 5: Debug animation\n"
+            "NUM 6: Lightmaps\n"
+            "NUM 2: Vertex Normals\n");
     }
     ImGui::End();
+
+    in_debug_gui--;
     ImGui::PopFont();
     ImGui::Render();
-	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
+    ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
+}
+
+void Gui::NodeTree(const scr::NodeManager::nodeList_t& root_nodes)
+{
+   // if (ImGui::Begin("Nodes"))
+    {
+        for(const auto &r:root_nodes)
+        {
+            NodeTree(*r.get());
+        }
+    }
+   // ImGui::End();
 }
 std::vector<vec4> hand_pos_press;
-void Gui::Update(const std::vector<vec4>& h)
+bool have_vr_device = false;
+void Gui::Update(const std::vector<vec4>& h,bool have_vr)
 {
     hand_pos_press = h;
+    have_vr_device = have_vr;
 }
 void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
@@ -312,7 +342,10 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
         return;
 	// Start the Dear ImGui frame
 	ImGui_ImplWin32_NewFrame();
-    ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
+    if (have_vr_device)
+        ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
+    else
+        ImGui_ImplPlatform_Update3DMousePos();
     ImGuiIO& io = ImGui::GetIO();
     static bool in3d=true;
     ImVec2 size_min(720.f,100.f);

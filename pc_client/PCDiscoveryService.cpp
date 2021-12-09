@@ -3,7 +3,7 @@
 #include "libavstream/common_networking.h"
 
 #include "crossplatform/Log.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 PCDiscoveryService::PCDiscoveryService(uint32_t manualClientID)
 	: DiscoveryService(manualClientID)
@@ -25,7 +25,7 @@ ENetSocket PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t di
 	ENetSocket socket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);// PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (socket <= 0)
 	{
-		FAIL("Failed to create service discovery UDP socket");
+		TELEPORT_CLIENT_FAIL("Failed to create service discovery UDP socket");
 		return 0;
 	}
 
@@ -49,7 +49,7 @@ ENetSocket PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t di
 	}
 	if (enet_socket_bind(socket, &bindAddress) != 0)
 	{
-		FAIL("Failed to bind to service discovery UDP socket");
+		TELEPORT_CLIENT_FAIL("Failed to bind to service discovery UDP socket");
 		enet_socket_destroy(socket);
 		socket = 0;
 		return 0;
@@ -110,7 +110,7 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 	{
 		char remoteIP[20];
 		enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
-		LOG("Discovered session server: %s:%d", remoteIP, remote.port);
+		TELEPORT_CLIENT_LOG("Discovered session server: %s:%d", remoteIP, remote.port);
 
 		enet_socket_destroy(serviceDiscoverySocket);
 		serviceDiscoverySocket = 0;

@@ -27,25 +27,24 @@ namespace teleport
 			return false;
 		}
 
-		if (certPath == "")
-		{
-			TELEPORT_CERR << "Path to SSL certificate cannot be empty!" << std::endl;
-			return false;
-		}
-
-		if (privateKeyPath == "")
-		{
-			TELEPORT_CERR << "Path to private key cannot be empty!" << std::endl;
-			return false;
-		}
-
 		if (port == 0)
 		{
 			TELEPORT_CERR << "HTTP port cannot be 0!" << std::endl;
 			return false;
 		}
 
-		mServer.reset(new httplib::SSLServer(certPath.c_str(), privateKeyPath.c_str()));
+		if (certPath.size() > 0 && privateKeyPath.size() > 0)
+		{
+			TELEPORT_COUT << "SSL certificate and key provided. Usng HTTPS server." << std::endl;
+			mServer.reset(new httplib::SSLServer(certPath.c_str(), privateKeyPath.c_str()));
+		}
+		else
+		{
+			TELEPORT_COUT << "SSL certificate and key provided. Usng HTTP server." << std::endl;
+			mServer.reset(new httplib::Server());
+		}
+
+		
 
 		// Mount / to provided directory
 		auto ret = mServer->set_mount_point("/", mountDirectory);

@@ -150,18 +150,15 @@ namespace teleport
 		struct InputStateAndEvents
 		{
 			avs::InputState inputState;
-			bool processed=false;
 			//New input events we have received from the client this tick.
 			std::vector<avs::InputEventBinary> binaryEvents;
 			std::vector<avs::InputEventAnalogue> analogueEvents;
 			std::vector<avs::InputEventMotion> motionEvents;
-
 			void clear()
 			{
-				inputState.binaryEventAmount = 0;
-				inputState.analogueEventAmount = 0;
-				inputState.motionEventAmount = 0;
-				processed=true;
+				inputState.numBinaryEvents = 0;
+				inputState.numAnalogueEvents = 0;
+				inputState.numMotionEvents = 0;
 				binaryEvents.clear();
 				analogueEvents.clear();
 				motionEvents.clear();

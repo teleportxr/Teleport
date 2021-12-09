@@ -13,7 +13,7 @@
 #include "Platform/Core/SimpleIni.h"
 
 #include "ClientRenderer.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "Config.h"
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
@@ -59,7 +59,7 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 HWND               InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-void InitRenderer(HWND,bool);
+void InitRenderer(HWND,bool,bool);
 void ShutdownRenderer(HWND);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -81,6 +81,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	CSimpleIniA ini;
 	SI_Error rc = ini.LoadFile("client.ini");
 	bool enable_vr = true;
+	bool dev_mode = false;
 	if(rc == SI_OK)
 	{
 
@@ -100,6 +101,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		clientID = ini.GetLongValue("", "CLIENT_ID", TELEPORT_DEFAULT_CLIENT_ID);
 		enable_vr = ini.GetLongValue("", "ENABLE_VR", true);
+		dev_mode = ini.GetLongValue("", "DEV_MODE", false);
 		gui.SetServerIPs(server_ips);
 	}
 	else
@@ -111,7 +113,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
     // Perform application initialization:
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
-	InitRenderer(hWnd, enable_vr);
+	InitRenderer(hWnd, enable_vr, dev_mode);
 	if(!hWnd)
     {
         return FALSE;
@@ -122,9 +124,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+       // if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
         {
-            TranslateMessage(&msg);
+          //  TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
     }
@@ -158,13 +160,13 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
 	auto hResource		= FindResource(hInstance, MAKEINTRESOURCE(IDI_WORLDSPACE), RT_ICON);
-	wcex.hIcon			= CreateIconFromResourceEx(buffer.data(), bufferSize, 1, 0x30000, 256, 256, LR_DEFAULTCOLOR); 
+	wcex.hIcon			= CreateIconFromResourceEx(buffer.data(), (DWORD)bufferSize, 1, 0x30000, 256, 256, LR_DEFAULTCOLOR); 
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszMenuName   = 0;
     wcex.lpszClassName  = L"MainWindow";
 
-	wcex.hIconSm = CreateIconFromResourceEx(buffer.data(), bufferSize, 1, 0x30000, 32, 32, LR_DEFAULTCOLOR);
+	wcex.hIconSm = CreateIconFromResourceEx(buffer.data(), (DWORD)bufferSize, 1, 0x30000, 32, 32, LR_DEFAULTCOLOR);
  
     return RegisterClassExW(&wcex);
 }
@@ -200,9 +202,9 @@ void ShutdownRenderer(HWND hWnd)
 #define STRINGIFY(a) STRINGIFY2(a)
 #define STRINGIFY2(a) #a
 	
-void InitRenderer(HWND hWnd,bool try_init_vr)
+void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	clientRenderer=new ClientRenderer (&clientDeviceState,gui);
+	clientRenderer=new ClientRenderer (&clientDeviceState,gui, dev_mode);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
@@ -261,7 +263,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr)
 		useOpenXR.SetMenuButtonHandler(showHideDelegate);
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform);
-	clientRenderer->SetServer(server_ips[0].c_str(), clientID);
+	if(server_ips.size())
+		clientRenderer->SetServer(server_ips[0].c_str(), clientID);
 
 #if IS_D3D12
 	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
@@ -283,6 +286,23 @@ extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y, int W, int H);
 #include <imgui.h>
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+#ifdef DEBUG_KEYS
+	switch (message)
+	{
+	case WM_KEYDOWN:
+		cout << "Key down" << std::endl;
+		break;
+	case WM_KEYUP:
+		cout << "Key up" << std::endl;
+		break;
+	case WM_LBUTTONDOWN:
+		cout << "Left button down" << std::endl;
+		break;
+	case WM_LBUTTONUP:
+		cout << "Left button up" << std::endl;
+		break;
+	};
+#endif
 	bool ui_handled=false;
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 	{

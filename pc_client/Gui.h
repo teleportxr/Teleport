@@ -14,8 +14,11 @@ namespace teleport
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
 		void Render(simul::crossplatform::GraphicsDeviceContext &deviceContext);
-		void DebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext,const scr::NodeManager::nodeList_t&);
-		void Update(const std::vector<vec4>& hand_pos_press);
+		void LinePrint(const char* txt,const float *clr=nullptr);
+		void NodeTree(const scr::NodeManager::nodeList_t&);
+		void BeginDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+		void EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
 		void ShowHide();
 		void Show();
 		void Hide();

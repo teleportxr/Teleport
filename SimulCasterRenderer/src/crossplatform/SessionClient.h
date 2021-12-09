@@ -75,7 +75,7 @@ public:
 	void Frame(
 			const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
 			const avs::Pose *controllerPoses, uint64_t originValidCounter,
-			const avs::Pose &originPose, const ControllerState *controllerState,
+			const avs::Pose &originPose, const teleport::client::ControllerState *controllerState,
 			bool requestKeyframe, double time, double deltaTime);
 
 	bool IsConnected() const;
@@ -108,7 +108,7 @@ private:
     void SendHeadPose(const avs::Pose& headPose);
 	void sendOriginPose(uint64_t validCounter,const avs::Pose& headPose);
     void SendControllerPoses(const avs::Pose& headPose,const avs::Pose* poses);
-    void SendInput(int id,const ControllerState& controllerState);
+    void SendInput(int id,const teleport::client::ControllerState& controllerState);
     void SendResourceRequests();
     void SendReceivedResources();
     void SendNodeUpdates();
@@ -142,7 +142,7 @@ private:
     ENetPeer* mServerPeer = nullptr;
 	ENetAddress mServerEndpoint{};
 
-    ControllerState mPrevControllerState[2];
+	teleport::client::ControllerState mPrevControllerState[2];
 
     bool handshakeAcknowledged = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for nodes.

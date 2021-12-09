@@ -83,11 +83,11 @@ bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
 			vrapi_GetInputDeviceCapabilities(ovrmobile, &trackedInputCaps.Header);
 			if((trackedInputCaps.ControllerCapabilities&caps)!=caps)
 				continue;
-			LOG("Found controller (ID: %d)", inputCapsHeader.DeviceID);
-			LOG("Controller Capabilities: %ud", trackedInputCaps.ControllerCapabilities);
-			LOG("Button Capabilities: %ud", trackedInputCaps.ButtonCapabilities);
-			LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
-			LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
+			TELEPORT_CLIENT_LOG("Found controller (ID: %d)", inputCapsHeader.DeviceID);
+			TELEPORT_CLIENT_LOG("Controller Capabilities: %ud", trackedInputCaps.ControllerCapabilities);
+			TELEPORT_CLIENT_LOG("Button Capabilities: %ud", trackedInputCaps.ButtonCapabilities);
+			TELEPORT_CLIENT_LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
+			TELEPORT_CLIENT_LOG("Trackpad range: %ud, %ud", trackedInputCaps.TrackpadMaxX, trackedInputCaps.TrackpadMaxX);
 			mTrackpadDim.x = trackedInputCaps.TrackpadMaxX;
 			mTrackpadDim.y = trackedInputCaps.TrackpadMaxY;
 			mControllerIDs[idx] = inputCapsHeader.DeviceID;
@@ -104,8 +104,8 @@ void Controllers::Update(ovrMobile *ovrmobile)
 	{
 		if(mControllerIDs[i] != 0)
 		{
-			ControllerState controllerState = {};
-			ControllerState &lastControllerState = mLastControllerStates[i];
+			teleport::client::ControllerState controllerState = {};
+			teleport::client::ControllerState &lastControllerState = mLastControllerStates[i];
 			ovrInputStateTrackedRemote ovrState;
 			ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
 			if(vrapi_GetCurrentInputState(ovrmobile, mControllerIDs[i], &ovrState.Header) >= 0)
@@ -129,21 +129,21 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				controllerState.mReleased = ~controllerState.mButtons & lastControllerState.mButtons;
 
 				//Detect when a button press or button release event occurs, and store the event in controllerState.
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_A, avs::InputList::BUTTON01);
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_X, avs::InputList::BUTTON01);
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_B, avs::InputList::BUTTON02);
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Y, avs::InputList::BUTTON02);
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Joystick, avs::InputList::BUTTON_STICK);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_A, avs::InputId::BUTTON01);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_X, avs::InputId::BUTTON01);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_B, avs::InputId::BUTTON02);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Y, avs::InputId::BUTTON02);
+				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Joystick, avs::InputId::BUTTON_STICK);
 
 				if(lastControllerState.triggerBack != ovrState.IndexTrigger)
 				{
-					controllerState.addAnalogueEvent(nextEventID++, avs::InputList::TRIGGER_BACK, ovrState.IndexTrigger);
+					controllerState.addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER_BACK, ovrState.IndexTrigger);
 				}
 				controllerState.triggerBack = ovrState.IndexTrigger;
 
 				if(lastControllerState.triggerGrip != ovrState.GripTrigger)
 				{
-					controllerState.addAnalogueEvent(nextEventID++, avs::InputList::TRIGGER_GRIP, ovrState.GripTrigger);
+					controllerState.addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER_GRIP, ovrState.GripTrigger);
 				}
 				controllerState.triggerGrip = ovrState.GripTrigger;
 
@@ -177,7 +177,7 @@ void Controllers::Update(ovrMobile *ovrmobile)
 	}
 }
 
-void Controllers::AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, ControllerState& controllerState, ovrButton buttonID, avs::InputList inputID)
+void Controllers::AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, teleport::client::ControllerState& controllerState, ovrButton buttonID, avs::InputId inputID)
 {
 	if((pressedButtons & buttonID) != 0)
 	{

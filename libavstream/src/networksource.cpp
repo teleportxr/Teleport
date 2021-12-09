@@ -122,20 +122,20 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 			m_data->m_counters.decoderPacketsReceived++;		
 		}
 
-		size_t bufferSize = sizeof(NetworkFrameInfo) + rPacket->mFrameSize;
+		size_t bufferSize = sizeof(StreamPayloadInfo) + rPacket->mFrameSize;
 		if (bufferSize > m_data->m_tempBuffer.size())
 		{
 			m_data->m_tempBuffer.resize(bufferSize);
 		}
 		
-		NetworkFrameInfo frameInfo;
+		StreamPayloadInfo frameInfo;
 		frameInfo.frameID = rPacket->mPts;
 		frameInfo.dataSize = rPacket->mFrameSize;
 		frameInfo.connectionTime = TimerUtil::GetElapsedTime();
 		frameInfo.broken = rPacket->mBroken;
 
-		memcpy(m_data->m_tempBuffer.data(), &frameInfo, sizeof(NetworkFrameInfo));
-		memcpy(&m_data->m_tempBuffer[sizeof(NetworkFrameInfo)], rPacket->pFrameData, rPacket->mFrameSize);
+		memcpy(m_data->m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
+		memcpy(&m_data->m_tempBuffer[sizeof(StreamPayloadInfo)], rPacket->pFrameData, rPacket->mFrameSize);
 
 		int nodeIndex = m_data->m_streamNodeMap[rPacket->mStreamID];
 
@@ -161,8 +161,45 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		}
 	};
 
-	m_data->m_serverDataURL = "";
-	return Result::OK;
+	HTTPUtilConfig httpUtilConfig;
+	httpUtilConfig.remoteIP = params.remoteIP;
+	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
+	httpUtilConfig.maxConnections = params.maxHTTPConnections;
+	httpUtilConfig.useSSL = params.useSSL;
+	auto f = std::bind(&NetworkSource::receiveHTTPFile, this, std::placeholders::_1, std::placeholders::_2);
+	return m_data->m_httpUtil.initialize(httpUtilConfig, std::move(f));
+}
+
+void NetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
+{
+	int nodeIndex = m_data->m_streamNodeMap[m_data->m_params.httpStreamID];
+
+	auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
+	if (!outputNode)
+	{
+		AVSLOG(Warning) << "NetworkSource HTTP Callback: Invalid output node. Should be an avs::Queue.";
+		return;
+	}
+
+	size_t numBytesWrittenToOutput;
+	auto result = outputNode->write(m_data->q_ptr(), buffer, bufferSize, numBytesWrittenToOutput);
+
+	if (!result)
+	{
+		AVSLOG(Warning) << "NetworkSource HTTP Callback: Failed to write to output node.";
+		return;
+	}
+
+	if (numBytesWrittenToOutput < bufferSize)
+	{
+		AVSLOG(Warning) << "NetworkSource HTTP Callback: Incomplete payload written to output node.";
+		return;
+	}
+
+	{
+		std::lock_guard<std::mutex> guard(m_data->m_dataMutex);
+		m_data->m_counters.httpFilesReceived++;
+	}
 }
 
 Result NetworkSource::deconfigure()
@@ -204,12 +241,7 @@ Result NetworkSource::deconfigure()
 	// as socket is shut down.
 	closeSocket();
 
-	while(!m_data->m_httpPayloadRequests.empty())
-	{
-		m_data->m_httpPayloadRequests.pop();
-	}
-
-	return Result::OK;
+	return m_data->m_httpUtil.shutdown();
 }
 
 void NetworkSource::closeSocket()
@@ -353,8 +385,7 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 #endif
 	}
 
-
-	return Result::OK;
+	return m_data->m_httpUtil.process();
 }
 
 NetworkSourceCounters NetworkSource::getCounterValues() const
@@ -447,5 +478,10 @@ void NetworkSource::processPackets()
 size_t NetworkSource::getSystemBufferSize() const
 {
 	return 100000;
+}
+
+std::queue<HTTPPayloadRequest>& NetworkSource::GetHTTPRequestQueue()
+{
+	return m_data->m_httpUtil.GetRequestQueue();
 }
 

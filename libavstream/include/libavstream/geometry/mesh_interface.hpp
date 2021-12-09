@@ -130,7 +130,8 @@ struct Animation;
 		size_t byteLength;
 		uint8_t* data;
 
-		friend std::wostream& operator<< (std::wostream& out, const GeometryBuffer& buffer)
+		template<typename OutStream>
+		friend OutStream& operator<< (OutStream& out, const GeometryBuffer& buffer)
 		{
 			out << buffer.byteLength << std::endl;
 
@@ -142,7 +143,8 @@ struct Animation;
 			return out;
 		}
 		
-		friend std::wistream& operator>> (std::wistream& in, GeometryBuffer& buffer)
+		template<typename InStream>
+		friend InStream& operator>> (InStream& in, GeometryBuffer& buffer)
 		{
 			in >> buffer.byteLength;
 
@@ -421,17 +423,17 @@ struct Animation;
 
 			mesh.name = convertToByteString(wideName);
 
-			size_t primitiveArrayAmount;
-			in >> primitiveArrayAmount;
-			mesh.primitiveArrays.resize(primitiveArrayAmount);
-			for(size_t i = 0; i < primitiveArrayAmount; i++)
+			size_t primitiveArrayCount;
+			in >> primitiveArrayCount;
+			mesh.primitiveArrays.resize(primitiveArrayCount);
+			for(size_t i = 0; i < primitiveArrayCount; i++)
 			{
 				in >> mesh.primitiveArrays[i];
 			}
 
-			size_t accessorAmount;
-			in >> accessorAmount;
-			for(size_t i = 0; i < accessorAmount; i++)
+			size_t accessorCount;
+			in >> accessorCount;
+			for(size_t i = 0; i < accessorCount; i++)
 			{
 				avs::uid id;
 				avs::Accessor accessor;
@@ -440,9 +442,9 @@ struct Animation;
 				mesh.accessors[id] = accessor;
 			}
 
-			size_t bufferViewAmount;
-			in >> bufferViewAmount;
-			for(size_t i = 0; i < bufferViewAmount; i++)
+			size_t bufferViewCount;
+			in >> bufferViewCount;
+			for(size_t i = 0; i < bufferViewCount; i++)
 			{
 				avs::uid id;
 				avs::BufferView bufferView;
@@ -451,9 +453,9 @@ struct Animation;
 				mesh.bufferViews[id] = bufferView;
 			}
 
-			size_t bufferAmount;
-			in >> bufferAmount;
-			for(size_t i = 0; i < bufferAmount; i++)
+			size_t bufferCount;
+			in >> bufferCount;
+			for(size_t i = 0; i < bufferCount; i++)
 			{
 				avs::uid id;
 				avs::GeometryBuffer buffer;

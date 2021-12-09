@@ -24,11 +24,13 @@ namespace avs
 	{
 		int32_t localPort = 0;
 		const char* remoteIP = "";
-		const char* remoteDataPath = "";
 		int32_t remotePort = 0;
 		int32_t remoteHTTPPort = 0;
 		uint32_t connectionTimeout = 5000;
+		uint32_t maxHTTPConnections = 10;
+		uint32_t httpStreamID = UINT32_MAX;
 		bool asyncProcessPackets = false;
+		bool useSSL = false;
 	};
 
 	/*! Network source counters. */
@@ -40,6 +42,8 @@ namespace avs
 		uint64_t networkPacketsReceived = 0;
 		/*! Number of successfully assembled decoder packets. */
 		uint64_t decoderPacketsReceived = 0;
+		/*! Number of HTTP files received. */
+		uint64_t httpFilesReceived = 0;
 		/*! Number of network packets dropped due to GC timeout. */
 		uint64_t networkPacketsDropped = 0;
 		/*! Number of decoder packets dropped due to GC timeout. */
@@ -111,6 +115,7 @@ namespace avs
 		void setDoChecksums(bool);
 		void setDebugNetworkPackets(bool s);
 		size_t getSystemBufferSize() const;
+		std::queue<HTTPPayloadRequest>& GetHTTPRequestQueue();
 
 	private:
 		Private *m_data; 
@@ -120,6 +125,7 @@ namespace avs
 		void asyncProcessPackets();
 		void processPackets();
 		void closeSocket();
+		void receiveHTTPFile(const char* buffer, size_t bufferSize);
 	};
 
 } // avs

@@ -43,7 +43,7 @@
 
 #include "VideoDecoder.h"
 
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 static const char* ToString(scr::Light::Type type)
 {
@@ -116,10 +116,11 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 		std::cout << msg ;
 }
 
-ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g):
+ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
 	sessionClient(this, std::make_unique<PCDiscoveryService>()),
 	clientDeviceState(c),
 	RenderMode(0),
+	dev_mode(dev),
 	gui(g)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
@@ -208,13 +209,11 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	boneMatrices.RestoreDeviceObjects(renderPlatform);
 	boneMatrices.LinkToEffect(pbrEffect, "boneMatrices");
 
-	// Create a basic cube.
-	transparentMesh=renderPlatform->CreateMesh();
-
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 
 	// initialize the default local geometry:
 	geometryDecoder.decodeFromFile("meshes/Wand.mesh_compressed",&localResourceCreator);
+	avs::uid wand_uid = 11;
 	{
 		scr::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.name="local material";
@@ -236,20 +235,20 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avsNode.transform=avs::Transform();
 	avsNode.data_type=avs::NodeDataType::Mesh;
 	//avsNode.transform.scale = { 0.2f,0.2f,0.2f };
-	avsNode.data_uid=2743;
+	avsNode.data_uid=wand_uid;
 	avsNode.materials.push_back(14);
 	avsNode.materials.push_back(15);
 
 	avsNode.data_subtype = avs::NodeDataSubtype::RightHand;
 	std::shared_ptr<scr::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
-	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(2743));
+	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetRightHand(23);
 
 	avsNode.name = "local Left Hand";
 	avsNode.materials[1]=16;
 	avsNode.data_subtype = avs::NodeDataSubtype::LeftHand;
 	std::shared_ptr<scr::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
-	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(2743));
+	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetLeftHand(24);
 }
 
@@ -535,7 +534,7 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			pos = leftHand->GetGlobalTransform().LocalToGlobal(avs::vec3(0, 0.12f, 0));
 			hand_pos_press[1].xyz  = (const float*)&pos;
 			hand_pos_press[1].w = 0.0f;
-			gui.Update(hand_pos_press);
+			gui.Update(hand_pos_press, have_vr_device);
 		}
 		
 		gui.Render(deviceContext);
@@ -757,6 +756,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 {
 	if(gui.HasFocus())
 		return;
+	gui.BeginDebugGui(deviceContext);
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
@@ -765,45 +765,45 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
-	renderPlatform->LinePrint(deviceContext,sessionClient.IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
+	gui.LinePrint(sessionClient.IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
 		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
 		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", server_ip.c_str(), server_discovery_port):"Offline"),white);
-	renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Framerate: %4.4f", framerate));
+	gui.LinePrint( platform::core::QuickFormat("Framerate: %4.4f", framerate));
 
 	if(show_osd== NETWORK_OSD)
 	{
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
+		gui.LinePrint( platform::core::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
+		gui.LinePrint( platform::core::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
+		gui.LinePrint( platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
+		gui.LinePrint( platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
+		gui.LinePrint( platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
+		gui.LinePrint( platform::core::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
+		gui.LinePrint( platform::core::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
+		gui.LinePrint( platform::core::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
+		gui.LinePrint( platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
+		gui.LinePrint( platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
+		gui.LinePrint( platform::core::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
+		gui.LinePrint( platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
 	}
 	else if(show_osd== CAMERA_OSD)
 	{
 		vec3 offset=camera.GetPosition();
-		renderPlatform->LinePrint(deviceContext, receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
-		renderPlatform->LinePrint(deviceContext,  platform::core::QuickFormat("Offset: %4.4f %4.4f %4.4f", clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z),white);
-		renderPlatform->LinePrint(deviceContext,  platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y, clientDeviceState->headPose.position.z),white);
+		gui.LinePrint( receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
+		gui.LinePrint(  platform::core::QuickFormat("Offset: %4.4f %4.4f %4.4f", clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z),white);
+		gui.LinePrint(  platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y, clientDeviceState->headPose.position.z),white);
 		if (videoPosDecoded)
 		{
-			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
+			gui.LinePrint( platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
 		}	
 		else
 		{
-			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat(" Video: -"), white);
+			gui.LinePrint( platform::core::QuickFormat(" Video: -"), white);
 		}
 	}
 	else if(show_osd==GEOMETRY_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Nodes: %d",geometryCache.mNodeManager->GetNodeAmount()), white);
+		gui.LinePrint( platform::core::QuickFormat("Nodes: %d",geometryCache.mNodeManager->GetNodeAmount()), white);
 
 		static int nodeLimit = 5;
 		int linesRemaining = nodeLimit;
@@ -821,19 +821,20 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		static int lineLimit = 50;
 		linesRemaining = lineLimit;
 
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
+		gui.LinePrint( platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
 																									geometryCache.mLightManager.GetCache(cacheLock).size()), white);
+		gui.NodeTree( geometryCache.mNodeManager->GetRootNodes());
 /*
 		auto& cachedMaterials = geometryCache.mMaterialManager.GetCache(cacheLock);
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
+		gui.LinePrint( platform::core::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
 		static int matLimit = 5;
 		linesRemaining = matLimit;
 		for(auto m: cachedMaterials)
 		{
 			auto &M=m.second;
 			const auto &mat=M.resource->GetMaterialCreateInfo();
-			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("  %s", mat.name.c_str()),white,background);
-			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("    emissive: %3.3f %3.3f %3.3f", mat.emissive.textureOutputScalar.x, mat.emissive.textureOutputScalar.y, mat.emissive.textureOutputScalar.z),white, background);
+			gui.LinePrint( platform::core::QuickFormat("  %s", mat.name.c_str()),white,background);
+			gui.LinePrint( platform::core::QuickFormat("    emissive: %3.3f %3.3f %3.3f", mat.emissive.textureOutputScalar.x, mat.emissive.textureOutputScalar.y, mat.emissive.textureOutputScalar.z),white, background);
 			linesRemaining--;
 			if(!linesRemaining)
 				break;
@@ -854,16 +855,16 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					
 					light_colour.w=1.0f;
 					if(lcr.type==scr::Light::Type::POINT)
-						renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_direction.x,light_direction.y,light_direction.z),light_colour,background);
+						gui.LinePrint( platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_direction.x,light_direction.y,light_direction.z),light_colour,background);
 					else
-						renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_position.x,light_position.y,light_position.z,lcr.lightRadius),light_colour,background);
+						gui.LinePrint( platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_position.x,light_position.y,light_position.z,lcr.lightRadius),light_colour,background);
 				}
 			}
 			if(j<videoTagDataCubeArray[0].lights.size())
 			{
 				auto &l=videoTagDataCubeArray[0].lights[j];
-				renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("        shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
-				renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("        z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
+				gui.LinePrint( platform::core::QuickFormat("        shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
+				gui.LinePrint( platform::core::QuickFormat("        z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
 			}
 			j++;
 		}*/
@@ -871,7 +872,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		auto &missing=geometryCache.m_MissingResources;
 		if(missing.size())
 		{
-			renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("Missing Resources"));
+			gui.LinePrint( platform::core::QuickFormat("Missing Resources"));
 			for(const auto& missingPair : missing)
 			{
 				const scr::MissingResource& missingResource = missingPair.second;
@@ -886,7 +887,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					}
 					txt+=platform::core::QuickFormat("%d, ",(uint64_t)id);
 				}
-				renderPlatform->LinePrint(deviceContext, txt.c_str());
+				gui.LinePrint( txt.c_str());
 			}
 		}
 	}
@@ -895,11 +896,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto& cachedLights = geometryCache.mLightManager.GetCache(cacheLock);
 		const char *name="";
-		renderPlatform->LinePrint(deviceContext,"Tags\n");
+		gui.LinePrint("Tags\n");
 		for(int i=0;i<videoTagDataCubeArray.size();i++)
 		{
 			auto &tag=videoTagDataCubeArray[i];
-			renderPlatform->LinePrint(deviceContext,platform::core::QuickFormat("%d lights",tag.coreData.lightCount));
+			gui.LinePrint(platform::core::QuickFormat("%d lights",tag.coreData.lightCount));
 
 			auto *gpu_tag_buffer=videoTagDataCube;
 			if(gpu_tag_buffer)
@@ -917,11 +918,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					name=lcr.name.c_str();
 				}
 				if(l.lightType==scr::LightType::Directional)
-					renderPlatform->LinePrint(deviceContext,platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
+					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
 						,lightTag.direction.x,lightTag.direction.y,lightTag.direction.z
 						,l.color.x,l.color.y,l.color.z),clr);
 				else
-					renderPlatform->LinePrint(deviceContext,platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
+					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
 						,lightTag.position.x
 						,lightTag.position.y
 						,lightTag.position.z
@@ -932,34 +933,35 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	}
 	else if(show_osd== CONTROLLER_OSD)
 	{
-		renderPlatform->LinePrint(deviceContext, "CONTROLLERS\n");
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("     W %d A %d S %d D %d",keydown['w'],keydown['a'],keydown['s'],keydown['d']));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
+		gui.LinePrint( "CONTROLLERS\n");
+		gui.LinePrint( platform::core::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
+		gui.LinePrint( platform::core::QuickFormat("     W %d A %d S %d D %d",keydown['w'],keydown['a'],keydown['s'],keydown['d']));
+		gui.LinePrint( platform::core::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
+		gui.LinePrint( platform::core::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
 		
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
+		gui.LinePrint( platform::core::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
 
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
+		gui.LinePrint( platform::core::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
+		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
 
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("      angle: %3.3f", controllerSim.angle));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("\n   joystick: %3.3f %3.3f", controllerStates[0].mJoystickAxisX, controllerStates[0].mJoystickAxisY));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("           : %3.3f %3.3f", controllerStates[1].mJoystickAxisX, controllerStates[1].mJoystickAxisY));
+		gui.LinePrint( platform::core::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
+		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
+		gui.LinePrint( platform::core::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
+		gui.LinePrint( platform::core::QuickFormat("      angle: %3.3f", controllerSim.angle));
+		gui.LinePrint( platform::core::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
+		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
+		gui.LinePrint( platform::core::QuickFormat("\n   joystick: %3.3f %3.3f", controllerStates[0].mJoystickAxisX, controllerStates[0].mJoystickAxisY));
+		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f", controllerStates[1].mJoystickAxisX, controllerStates[1].mJoystickAxisY));
 
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("\n   trigger: %3.3f %3.3f", controllerStates[0].triggerBack, controllerStates[0].triggerGrip));
-		renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("            : %3.3f %3.3f", controllerStates[1].triggerBack, controllerStates[1].triggerGrip));
+		gui.LinePrint( platform::core::QuickFormat("\n   trigger: %3.3f %3.3f", controllerStates[0].triggerBack, controllerStates[0].triggerGrip));
+		gui.LinePrint( platform::core::QuickFormat("            : %3.3f %3.3f", controllerStates[1].triggerBack, controllerStates[1].triggerGrip));
 	}
+	gui.EndDebugGui(deviceContext);
 
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 	//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
 	//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
-	gui.DebugGui(deviceContext,geometryCache.mNodeManager->GetRootNodes());
+
 }
 
 void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<scr::Node> node)
@@ -1050,26 +1052,32 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		// force update of model matrices - should not be necessary, but is.
 			body->UpdateModelMatrix();
 			RenderNode(deviceContext, body,g);
+			if(show_node_overlays)
+				RenderNodeOverlay(deviceContext, body,g);
 		}
-
-		std::shared_ptr<scr::Node> rightHand = g.mNodeManager->GetRightHand();
-		if(rightHand)
-		{
-			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
-			rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
-		// force update of model matrices - should not be necessary, but is.
-			rightHand->UpdateModelMatrix();
-			RenderNode(deviceContext, rightHand,g);
-		}
+		
 
 		std::shared_ptr<scr::Node> leftHand = g.mNodeManager->GetLeftHand();
+		std::shared_ptr<scr::Node> rightHand = g.mNodeManager->GetRightHand();
 		if(leftHand)
 		{
-			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[1].position);
-			leftHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[1].orientation);
+			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
+			leftHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
 		// force update of model matrices - should not be necessary, but is.
 			leftHand->UpdateModelMatrix();
 			RenderNode(deviceContext, leftHand,g);
+			if(show_node_overlays)
+				RenderNodeOverlay(deviceContext, leftHand,g);
+		}
+		if(rightHand)
+		{
+			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].position);
+			rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[1].orientation);
+		// force update of model matrices - should not be necessary, but is.
+			rightHand->UpdateModelMatrix();
+			RenderNode(deviceContext, rightHand,g);
+			if(show_node_overlays)
+				RenderNodeOverlay(deviceContext, rightHand,g);
 		}
 	}
 	if(show_node_overlays)
@@ -1294,7 +1302,6 @@ void ClientRenderer::InvalidateDeviceObjects()
 		hdrFramebuffer->InvalidateDeviceObjects();
 	if(meshRenderer)
 		meshRenderer->InvalidateDeviceObjects();
-	SAFE_DELETE(transparentMesh);
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularCubemapTexture);
 	SAFE_DELETE(lightingCubemapTexture);
@@ -1350,14 +1357,17 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 {
 	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
 	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
+	node->SetLocalPosition(avs::vec3(0,0,0));
+	node->SetLocalRotation(scr::quat(0,0,0,1.0f));
 	node->SetParent(parent);
+	parent->AddChild(node);
 }
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
 	videoConfig = setupCommand.video_config;
 
-	WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
+	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
 																	, videoConfig.depth_width, videoConfig.depth_height	);
 	videoPosDecoded=false;
 
@@ -1367,6 +1377,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
+	const uint32_t geoStreamID = 80;
 	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } };
 	if (AudioStream)
 	{
@@ -1374,7 +1385,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	}
 	if (GeoStream)
 	{
-		streams.push_back({ 80 });
+		streams.push_back({ geoStreamID });
 	}
 
 	avs::NetworkSourceParams sourceParams;
@@ -1383,7 +1394,11 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	sourceParams.remoteIP = server_ip;
 	sourceParams.remotePort = setupCommand.server_streaming_port;
 	sourceParams.remoteHTTPPort = setupCommand.server_http_port;
-	// Configure for num video streams + 1 audio stream + 1 geometry stream
+	sourceParams.maxHTTPConnections = 10;
+	sourceParams.httpStreamID = geoStreamID;
+	sourceParams.useSSL = setupCommand.using_ssl;
+
+	// Configure for video stream, tag data stream, audio stream and geometry stream.
 	if (!source.configure(std::move(streams), sourceParams))
 	{
 		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
@@ -1393,6 +1408,12 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	source.setDebugStream(setupCommand.debug_stream);
 	source.setDoChecksums(setupCommand.do_checksums);
 	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+
+	//test
+	//avs::HTTPPayloadRequest req;
+	//req.fileName = "meshes/engineering/Cube_Cube.mesh";
+	//req.type = avs::FilePayloadType::Mesh;
+	//source.GetHTTPRequestQueue().emplace(std::move(req));
 
 	bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, bodyOffsetFromHead);
@@ -1551,7 +1572,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 void ClientRenderer::OnVideoStreamClosed()
 {
-	WARN("VIDEO STREAM CLOSED\n");
+	TELEPORT_CLIENT_WARN("VIDEO STREAM CLOSED\n");
 	pipeline.deconfigure();
 	videoQueue.deconfigure();
 	audioQueue.deconfigure();
@@ -1567,7 +1588,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 {
 	videoConfig = reconfigureVideoCommand.video_config;
 
-	WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
+	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
 		, videoConfig.depth_width, videoConfig.depth_height);
 
 	decoderParams.deferDisplay = false;
@@ -1784,11 +1805,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	// Set command list to the recording state if it's not in it already.
 	//dx12RenderPlatform->ResetImmediateCommandList();
 #endif
-
-	for (int i = 0; i < 2; i++)
-	{
-		controllerStates[i].clear();
-	}
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
 	clientspace_input.y=((float)keydown['w']-(float)keydown['s'])*(float)(keydown[VK_SHIFT]);
@@ -1909,8 +1925,13 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	clientDeviceState->UpdateOriginPose();
 	if (!have_headset)
 	{
-		FillInControllerPose(0, 0.5f);
-		FillInControllerPose(1, -0.5f);
+		FillInControllerPose(0, -0.5f);
+		FillInControllerPose(1, 0.5f);
+	}
+	// Have processed these, can free them now.
+	for (int i = 0; i < 2; i++)
+	{
+		controllerStates[i].clear();
 	}
 
 #if IS_D3D12
@@ -1928,18 +1949,14 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 	if(bLeftButtonDown)
 	{
-		avs::InputEventAnalogue buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputList::TRIGGER01;
-		buttonEvent.strength = 1.0f;
-		controllerStates[0].analogueEvents.push_back(buttonEvent);
-		controllerStates[0].triggerBack = buttonEvent.strength;
+		controllerStates[0].triggerBack = 1.0f;
+		controllerStates[0].addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER01, 1.0f);
 	}
 	else if(bRightButtonDown)
 	{
 		avs::InputEventBinary buttonEvent;
 		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputList::BUTTON_B;
+		buttonEvent.inputID = avs::InputId::BUTTON_B;
 		buttonEvent.activated = true;
 		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}
@@ -1947,7 +1964,7 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 	{
 		avs::InputEventBinary buttonEvent;
 		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputList::BUTTON_A;
+		buttonEvent.inputID = avs::InputId::BUTTON_A;
 		buttonEvent.activated = true;
 		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}
@@ -1961,19 +1978,14 @@ void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRight
 		& (bMiddleButtonReleased ? ~crossplatform::MouseCameraInput::MIDDLE_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS);
 	if(bLeftButtonReleased)
 	{
-		avs::InputEventAnalogue buttonEvent;
-		buttonEvent.eventID		= nextEventID++;
-		buttonEvent.inputID		= avs::InputList::TRIGGER01;
-		buttonEvent.strength	= 0.0f;
-		controllerStates[0].analogueEvents.push_back(buttonEvent);
-
-		controllerStates[0].triggerBack = buttonEvent.strength;
+		controllerStates[0].triggerBack = 0.f;
+		controllerStates[0].addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER01, 0.0f);
 	}
 	else if(bRightButtonReleased)
 	{
 		avs::InputEventBinary buttonEvent;
 		buttonEvent.eventID		= nextEventID++;
-		buttonEvent.inputID		= avs::InputList::BUTTON_B;
+		buttonEvent.inputID		= avs::InputId::BUTTON_B;
 		buttonEvent.activated	= false;
 		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}
@@ -1981,7 +1993,7 @@ void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRight
 	{
 		avs::InputEventBinary buttonEvent;
 		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputList::BUTTON_A;
+		buttonEvent.inputID = avs::InputId::BUTTON_A;
 		buttonEvent.activated = false;
 		controllerStates[0].binaryEvents.push_back(buttonEvent);
 	}

@@ -231,14 +231,14 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 			result = input->read(this, m_frameBuffer.data(), bufferSize, bytesRead);
 		}
 
-		if (result != Result::OK || bytesRead < sizeof(NetworkFrameInfo))
+		if (result != Result::OK || bytesRead < sizeof(StreamPayloadInfo))
 		{
 			AVSLOG(Warning) << "Decoder: Failed to read input.\n";
 			return result;
 		}
 
 		// Copy frame info 
-		memcpy(&m_frame, m_frameBuffer.data(), sizeof(NetworkFrameInfo));
+		memcpy(&m_frame, m_frameBuffer.data(), sizeof(StreamPayloadInfo));
 
 		++m_stats.framesReceived;
 
@@ -270,7 +270,7 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 		// Parse will call the onPacketParsed callback and this will call processPayload
 		// processPayload will call the decoder
-		result = m_vid_parser->parse((const char*)(m_frameBuffer.data() + sizeof(NetworkFrameInfo)), m_frame.dataSize);
+		result = m_vid_parser->parse((const char*)(m_frameBuffer.data() + sizeof(StreamPayloadInfo)), m_frame.dataSize);
 		// Any decoding for this frame now complete //
 
 		if (!result)
