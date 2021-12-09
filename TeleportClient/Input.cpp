@@ -1,7 +1,4 @@
 // (C) Copyright 2018-2021 Simul Software Ltd
-
-#pragma once
-
 #include "Input.h"
 #include "TeleportCore/ErrorHandling.h"
 using namespace teleport;

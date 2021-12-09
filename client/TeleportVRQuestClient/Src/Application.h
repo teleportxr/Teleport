@@ -82,6 +82,7 @@ namespace OVRFW
 		virtual bool OnNodeEnteredBounds(avs::uid id) override;
 		virtual bool OnNodeLeftBounds(avs::uid id) override;
 		virtual void OnLightingSetupChanged(const avs::SetupLightingCommand &) override;
+		void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
 		virtual std::vector<avs::uid> GetGeometryResources() override;
 		virtual void ClearGeometryResources() override;
 		virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;

@@ -40,7 +40,7 @@ uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t client
         serviceDiscoverySocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if(serviceDiscoverySocket <= 0)
         {
-            FAIL("Failed to create service discovery UDP socket");
+            TELEPORT_CLIENT_FAIL("Failed to create service discovery UDP socket");
             return 0;
         }
 
@@ -55,7 +55,7 @@ uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t client
             enet_socket_destroy(serviceDiscoverySocket);
             serviceDiscoverySocket = 0;
 
-            FAIL("Failed to bind to service discovery UDP socket");
+            TELEPORT_CLIENT_FAIL("Failed to bind to service discovery UDP socket");
             return 0;
         }
     }
@@ -92,7 +92,7 @@ uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t client
             }
             else if(errno!=0&&errno!=11)
             {
-                WARN("recvfrom %d",errno);
+                TELEPORT_CLIENT_WARN("recvfrom %d",errno);
             }
         } while(bytesRecv > 0 && !serverDiscovered);
     }
@@ -101,7 +101,7 @@ uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t client
     {
         char remoteIP[20];
         enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
-        LOG("Discovered session server: %s:%d", remoteIP, remote.port);
+        TELEPORT_CLIENT_LOG("Discovered session server: %s:%d", remoteIP, remote.port);
 
         enet_socket_destroy(serviceDiscoverySocket);
         serviceDiscoverySocket = 0;

@@ -222,7 +222,7 @@ void Application::EnteredVrMode()
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	mDeviceContext.reset(new scc::GL_DeviceContext(&globalGraphicsResources.renderPlatform));
-	resourceCreator.Initialise((&globalGraphicsResources.renderPlatform),
+	resourceCreator.Initialize((&globalGraphicsResources.renderPlatform),
 							   scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	resourceCreator.SetGeometryCache(&geometryCache);
 
@@ -902,6 +902,13 @@ void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)
 	clientRenderer.setupLightingCommand=s;
 }
 
+void Application::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
+{
+	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
+	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
+	node->SetParent(parent);
+}
+
 void Application::OnVideoStreamClosed()
 {
 	OVR_WARN("VIDEO STREAM CLOSED");
@@ -921,7 +928,7 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand &reconfi
 	}
 
 	clientRenderer.OnSetupCommandReceived(reconfigureVideoCommand.video_config);
-	WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d",
+	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d",
 		 clientRenderer.videoConfig.video_width, clientRenderer.videoConfig.video_height,
 		 clientRenderer.videoConfig.depth_width, clientRenderer.videoConfig.depth_height);
 }
@@ -985,7 +992,7 @@ void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationContr
 			geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[1].triggerBack, 1.0f);
 			break;
 		default:
-			WARN("Failed to update node animation control! Time control was set to the invalid value %d!", static_cast<int>(animationControlUpdate.timeControl));
+			TELEPORT_CLIENT_WARN("Failed to update node animation control! Time control was set to the invalid value %d!", static_cast<int>(animationControlUpdate.timeControl));
 			break;
 	}
 }

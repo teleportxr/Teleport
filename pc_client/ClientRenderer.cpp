@@ -1052,26 +1052,32 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		// force update of model matrices - should not be necessary, but is.
 			body->UpdateModelMatrix();
 			RenderNode(deviceContext, body,g);
+			if(show_node_overlays)
+				RenderNodeOverlay(deviceContext, body,g);
 		}
-
-		std::shared_ptr<scr::Node> rightHand = g.mNodeManager->GetRightHand();
-		if(rightHand)
-		{
-			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
-			rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
-		// force update of model matrices - should not be necessary, but is.
-			rightHand->UpdateModelMatrix();
-			RenderNode(deviceContext, rightHand,g);
-		}
+		
 
 		std::shared_ptr<scr::Node> leftHand = g.mNodeManager->GetLeftHand();
+		std::shared_ptr<scr::Node> rightHand = g.mNodeManager->GetRightHand();
 		if(leftHand)
 		{
-			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[1].position);
-			leftHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[1].orientation);
+			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
+			leftHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
 		// force update of model matrices - should not be necessary, but is.
 			leftHand->UpdateModelMatrix();
 			RenderNode(deviceContext, leftHand,g);
+			if(show_node_overlays)
+				RenderNodeOverlay(deviceContext, leftHand,g);
+		}
+		if(rightHand)
+		{
+			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].position);
+			rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[1].orientation);
+		// force update of model matrices - should not be necessary, but is.
+			rightHand->UpdateModelMatrix();
+			RenderNode(deviceContext, rightHand,g);
+			if(show_node_overlays)
+				RenderNodeOverlay(deviceContext, rightHand,g);
 		}
 	}
 	if(show_node_overlays)
@@ -1351,7 +1357,10 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 {
 	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
 	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
+	node->SetLocalPosition(avs::vec3(0,0,0));
+	node->SetLocalRotation(scr::quat(0,0,0,1.0f));
 	node->SetParent(parent);
+	parent->AddChild(node);
 }
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
@@ -1905,8 +1914,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	clientDeviceState->UpdateOriginPose();
 	if (!have_headset)
 	{
-		FillInControllerPose(0, 0.5f);
-		FillInControllerPose(1, -0.5f);
+		FillInControllerPose(0, -0.5f);
+		FillInControllerPose(1, 0.5f);
 	}
 	// Have processed these, can free them now.
 	for (int i = 0; i < 2; i++)

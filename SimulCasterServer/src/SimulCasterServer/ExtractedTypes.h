@@ -121,21 +121,21 @@ namespace teleport
 	//Resource that has been loaded off disk, and needs a new ID.
 	struct LoadedResource
 	{
-		avs::uid oldID; //The id the resource was using previously; kept so the links between resources can be re-linked.
-		BSTR guid; //Uniquely identifying string that the engine uses to identify assets.
-		BSTR name; //Name of the asset to tell it apart from assets with the GUID; i.e. they come from the same source file.
+		avs::uid id;	// The id of the resource in this session.
+		BSTR guid;		// Uniquely identifying string that the engine uses to identify assets.
+		BSTR name;		// Name of the asset to tell it apart from assets with the GUID; i.e. they come from the same source file.
 		std::time_t lastModified;
 
 		LoadedResource() = default;
 		LoadedResource(avs::uid oldID, _bstr_t guid, BSTR name, std::time_t lastModified)
-			:oldID(oldID), guid(guid), name(name), lastModified(lastModified)
+			:id(oldID), guid(guid), name(name), lastModified(lastModified)
 		{}
 	};
 
 	//Resource that the server found to still be in-use, and has assigned a new ID to.
 	struct ReaffirmedResource
 	{
-		avs::uid oldID;
+		_bstr_t guid;
 		avs::uid newID;
 	};
 }

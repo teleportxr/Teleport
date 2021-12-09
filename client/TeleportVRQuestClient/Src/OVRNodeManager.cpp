@@ -6,9 +6,13 @@
 #include "GlobalGraphicsResources.h"
 #include "OVRNode.h"
 
-std::shared_ptr<scr::Node> OVRNodeManager::CreateNode(avs::uid id, const std::string& name) const
+std::shared_ptr<scr::Node> OVRNodeManager::CreateNode(avs::uid id, const avs::Node &avsNode)
 {
-	return std::make_shared<OVRNode>(id, name);
+	std::shared_ptr<scr::Node> node= std::make_shared<scr::Node>(id, avsNode.name);
+
+	//Create MeshNode even if it is missing resources
+	AddNode(node, avsNode);
+	return node;
 }
 
 void OVRNodeManager::ChangeEffectPass(const char* effectPassName)

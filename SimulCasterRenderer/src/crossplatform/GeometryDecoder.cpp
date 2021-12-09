@@ -8,7 +8,24 @@
 #include "libavstream/geometry/animation_interface.h"
 #include "draco/compression/decode.h"
 
+#ifdef __ANDROID__
+namespace fs
+{
+	size_t file_size(const char*filename)
+	{
+		std::ifstream in(filename,std::ifstream::ate | std::ifstream::binary);
+		return in.tellg();
+	}
+	bool exists(const char*filename)
+	{
+		std::ifstream in(filename,std::ifstream::ate | std::ifstream::binary);
+		return in.good();
+	}
+}
+#else
 namespace fs = std::filesystem;
+#endif
+
 #define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
 #define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
 #define Next2B get<uint16_t>(m_Buffer.data(), &m_BufferOffset)

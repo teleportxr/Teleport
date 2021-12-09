@@ -280,18 +280,24 @@ namespace teleport
 			// Return because we don't want to process input until the C# side objects have been created.
 			return;
 		}
-		if(!latestInputStateAndEvents[0].processed)
 		{
 			//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
 			const avs::InputEventBinary* binaryEventsPtr = latestInputStateAndEvents[0].binaryEvents.data();
 			const avs::InputEventAnalogue* analogueEventsPtr = latestInputStateAndEvents[0].analogueEvents.data();
 			const avs::InputEventMotion* motionEventsPtr = latestInputStateAndEvents[0].motionEvents.data();
+			for (auto c : latestInputStateAndEvents[0].analogueEvents)
+			{
+				TELEPORT_COUT << "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< std::endl;
+			}
 			processNewInput(clientID, &latestInputStateAndEvents[0].inputState, &binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+			if(latestInputStateAndEvents[0].analogueEvents.size())
+			{
+				TELEPORT_COUT << "processNewInput sends "<<latestInputStateAndEvents[0].analogueEvents.size()<<" analogue events."<<latestInputStateAndEvents[0].inputState.numAnalogueEvents<< std::endl;
+			}
 		}
 		//Input has been passed, so clear the events.
 		latestInputStateAndEvents[0].clear();
 
-		if (!latestInputStateAndEvents[1].processed)
 		{
 			const avs::InputEventBinary* binaryEventsPtr = latestInputStateAndEvents[1].binaryEvents.data();
 			const avs::InputEventAnalogue* analogueEventsPtr = latestInputStateAndEvents[1].analogueEvents.data();
@@ -612,8 +618,8 @@ namespace teleport
 		}
 
 		InputStateAndEvents &aggregateInputState = latestInputStateAndEvents[receivedInputState.controllerId];
-		aggregateInputState.processed=false;
-		aggregateInputState.inputState = receivedInputState;
+		
+		aggregateInputState.inputState.add(receivedInputState);
 
 		if(receivedInputState.numBinaryEvents != 0)
 		{

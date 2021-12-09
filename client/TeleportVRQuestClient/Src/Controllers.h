@@ -34,9 +34,9 @@ public:
 	ovrDeviceID mControllerIDs[CONTROLLER_AMOUNT];
 
 	ovrVector2f mTrackpadDim;
-	ControllerState mLastControllerStates[CONTROLLER_AMOUNT]; //State of the controllers on the last frame.
+	teleport::client::ControllerState mLastControllerStates[CONTROLLER_AMOUNT]; //State of the controllers on the last frame.
 private:
-	void AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, ControllerState& controllerState, ovrButton buttonID, avs::InputList inputID);
+	void AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, teleport::client::ControllerState& controllerState, ovrButton buttonID, avs::InputId inputID);
 
 	TriggerDelegate CycleShaderMode;
 	TriggerDelegate CycleOSD;

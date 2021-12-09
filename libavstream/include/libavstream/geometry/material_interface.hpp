@@ -12,28 +12,12 @@
 
 namespace avs
 {
-	struct guid
-	{
-		char txt[20];
-		template<typename OutStream>
-		friend OutStream& operator<< (OutStream& out, const guid& textureAccessor)
-		{
-			guid g=OutStream.uid_to_guid(textureAccessor.index);
-			return out<<txt;
-		}
-
-		template<typename InStream>
-		friend InStream& operator>> (InStream& in, guid& textureAccessor)
-		{
-			return in>>txt;
-		}
-	};
 	//Convert from wide char to byte char.
 	//We should really NOT use wide strings for the names of textures and materials, as we will want to support UTF-8.
 	// Roderick: wstring is not UTF-8, but UTF-16, favoured only by Microsoft.
 	// The correct unicode to use in most circumstances is UTF-8, which is represented adequately
 	// by an std::string.
-	static std::string convertToByteString(std::wstring wideString)
+	static inline std::string convertToByteString(std::wstring wideString)
 	{
 		std::string byteString;
 		byteString.resize(wideString.size());
@@ -48,7 +32,34 @@ namespace avs
 
 		return byteString;
 	}
+	
+	struct guid
+	{
+		char txt[33];
+		friend bool operator<(const guid &a,const guid &b)
+		{
+			return a.txt<b.txt;
+		};
+		template<typename OutStream>
+		friend OutStream& operator<< (OutStream& out, const guid& g)
+		{
+			out << g.txt << std::endl;
+			return out;
+		}
 
+		template<typename InStream>
+		friend InStream& operator>> (InStream& in, guid& g)
+		{
+			std::wstring w;
+			std::getline(in, w);
+			std::string str = convertToByteString(w);
+			if(str.length()>32)
+				throw std::runtime_error("str.length()>32");
+			strcpy(g.txt,str.c_str());
+			g.txt[32]=0;
+			return in;
+		}
+	};
 	enum class SamplerFilter : uint32_t
 	{
 		NEAREST,					//GL_NEAREST (0x2600)

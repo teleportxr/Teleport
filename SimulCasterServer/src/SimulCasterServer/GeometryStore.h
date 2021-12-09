@@ -138,5 +138,11 @@ namespace teleport
 
 		template<typename ExtractedResource>
 		void loadResources(const std::string file_name, std::map<avs::uid, ExtractedResource>& resourceMap);
+
+		avs::uid GuidToUid(avs::guid g) const;
+		avs::guid UidToGuid(avs::uid u) const;
+
+		std::map<avs::uid,avs::guid> guids;
+		std::map<avs::guid,avs::uid> uids;
 	};
 }

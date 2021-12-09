@@ -113,6 +113,20 @@ namespace avs
 		uint32_t numBinaryEvents = 0;
 		uint32_t numAnalogueEvents= 0;
 		uint32_t numMotionEvents= 0;
+		void add(const InputState &i)
+		{
+			controllerId		=i.controllerId;
+			buttonsDown			=i.buttonsDown ;	
+			trackpadAxisX		=i.trackpadAxisX;
+			trackpadAxisY		=i.trackpadAxisY;
+			joystickAxisX		=i.joystickAxisX;
+			joystickAxisY		=i.joystickAxisY;
+			triggerBack			=i.triggerBack;
+			triggerGrip			=i.triggerGrip;
+			numBinaryEvents		+=i.numBinaryEvents;
+			numAnalogueEvents	+=i.numAnalogueEvents;
+			numMotionEvents		+=i.numMotionEvents;
+		}
 	} AVS_PACKED;
 
 	//Contains information to update the transform of a node.

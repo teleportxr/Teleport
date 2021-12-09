@@ -62,7 +62,6 @@ void OVRNode::SurfaceInfo::SetHighlighted(bool highlighted)
 void OVRNode::SetMesh(std::shared_ptr<scr::Mesh> mesh)
 {
 	Node::SetMesh(mesh);
-
 	//Recreate surfaces for new mesh.
 	RefreshOVRSurfaces();
 }
@@ -439,7 +438,8 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 		}
 	}
 
-	OVR_LOG("CreateOVRSurface Created OVR surface! Effect pass %s resource %d", passname.c_str(),(int) j);
+	OVR_LOG("CreateOVRSurface Created OVR surface! Node %s, Effect pass %s, resource %d",name.c_str(), passname.c_str(),(int) j);
+	LogWithTag(ANDROID_LOG_WARN,"CreateOVRSurface Created OVR surface! Node %s, Effect pass %s, resource %d",name.c_str(), passname.c_str(),(int) j);
 	return surfaceInfo;
 }
 

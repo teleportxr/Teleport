@@ -662,7 +662,9 @@ void ClientRenderer::RenderWebcam(OVRFW::ovrRendererOutput& res)
 void ClientRenderer::ExitedVR()
 {
 	delete mVideoSurfaceTexture;
+	mVideoSurfaceTexture= nullptr;
     delete mAlphaSurfaceTexture;
+	mAlphaSurfaceTexture= nullptr;
 	mVideoSurfaceDef.geo.Free();
 	GlProgram::Free(mCubeVideoSurfaceProgram);
 	GlProgram::Free(m2DVideoSurfaceProgram);
@@ -1099,6 +1101,11 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 		std::shared_ptr<OVRNode> ovrNode = std::static_pointer_cast<OVRNode>(node);
 		if(ovrNode->GetSurfaces().size() != 0)
 		{
+			// How can this happen?
+			if(node->GetMesh().get()== nullptr)
+			{
+				return;
+			}
 			GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 			// Get lightmap texture.
 			std::shared_ptr<scr::Texture>		lightmapTexture;
@@ -1110,7 +1117,9 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 					lightmapTexture = resourceCreator->m_DummyWhite;
 				}
 				else
+				{
 					lightmapTexture->UseSampler(globalGraphicsResources.noMipsampler);
+				}
 			}
 
 			//Get final transform.

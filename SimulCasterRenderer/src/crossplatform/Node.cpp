@@ -20,10 +20,12 @@ void Node::SetGrabbable(bool g)
 {
 	isGrabbable=g;
 }
+
 bool Node::IsGrabbable() const
 {
 	return isGrabbable;
 }
+
 void Node::SetHolderClientId(avs::uid h)
 {
 	holderClientId=h;
@@ -37,6 +39,7 @@ void Node::SetPriority(int p)
 {
 	priority=p;
 }
+
 int Node::GetPriority()const
 {
 	return priority;
@@ -46,6 +49,7 @@ bool Node::IsStatic() const
 {
 	return isStatic;
 }
+
 void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
 	if(ShouldUseGlobalTransform())
@@ -60,6 +64,7 @@ void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation,
 		RequestTransformUpdate();
 	}
 }
+
 void Node::UpdateModelMatrix()
 {
 	globalTransform.UpdateModelMatrix();
@@ -237,6 +242,7 @@ void Node::RequestChildrenUpdateTransforms()
 		}
 	}
 }
+
 bool Node::ShouldUseGlobalTransform() const
 {
 	//Only use the global transform if we are receiving global transforms for this node and it has a parent.
