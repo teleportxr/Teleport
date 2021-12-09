@@ -9,6 +9,8 @@ Installation
 Get the Teleport Unity plugin from its Git repo at `git@github.com:simul/teleport-unity.git <https://github.com/simul/teleport-unity>`_.
 Email contact@teleportvr.io to get free access to the repo.
 
+From your unity project, launch the Package Manager, and install the Core RP Library.
+
 You can install it as a Git submodule or just copy the code directly, it should go in a subfolder of your Unity project's Assets folder, e.g. Assets/Teleport.
 
 Setup

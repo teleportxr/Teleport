@@ -6,6 +6,11 @@
 #include <cerrno>
 #include <assert.h>
 #include <stdexcept> // for runtime_error
+#ifdef _MSC_VER
+    #pragma warning(push)
+	#pragma warning(disable:4996)
+	#include <Windows.h>// for DebugBreak etc
+#endif
 
 #define DEBUG_BREAK_ONCE {static bool done=false;if(!done){ done=true;DebugBreak();}}
 #ifndef TELEPORT_INTERNAL_CHECKS
@@ -25,4 +30,7 @@
 #else
 #define TELEPORT_INTERNAL_CERR\
 	//
+#endif
+#ifdef _MSC_VER
+    #pragma warning(pop)
 #endif

@@ -393,11 +393,12 @@ namespace avs
 		Pose relativePose;
 
 		UpdateNodeStructureCommand()
-			:UpdateNodeStructureCommand(0, 0)
+			:UpdateNodeStructureCommand(0, 0,avs::Pose())
 		{}
 
-		UpdateNodeStructureCommand(avs::uid n, avs::uid p)
+		UpdateNodeStructureCommand(avs::uid n, avs::uid p,avs::Pose relPose)
 			:Command(CommandPayloadType::UpdateNodeStructure), nodeID(n), parentID(p)
+			,relativePose(relPose)
 		{}
 
 		virtual size_t getCommandSize() const override

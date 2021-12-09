@@ -63,7 +63,7 @@ namespace teleport
 		void updateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
 		void updateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
-		void reparentNode(avs::uid nodeID, avs::uid newParentID);
+		void reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose);
 		void updateNodeAnimation(avs::ApplyAnimation update);
 		void updateNodeAnimationControl(avs::NodeUpdateAnimationControl update);
 		void updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update);

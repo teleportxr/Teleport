@@ -69,7 +69,7 @@ namespace teleport
 
 		bool willDisableMainCamera = false;
 
-		avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
+		avs::AxesStandard serverAxesStandard = avs::AxesStandard::NotInitialized;
 
 		int32_t defaultSpecularCubemapSize = 0;
 		int32_t defaultSpecularMips = 0;

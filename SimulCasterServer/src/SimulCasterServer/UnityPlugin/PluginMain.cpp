@@ -1406,7 +1406,7 @@ TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeI
 	clientPair->second.clientMessaging.setNodeHighlighted(nodeID, isHighlighted);
 }
 
-TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID)
+TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID,avs::Pose relPose)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -1415,7 +1415,7 @@ TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs
 		return;
 	}
 
-	clientPair->second.clientMessaging.reparentNode(nodeID, newParentNodeID);
+	clientPair->second.clientMessaging.reparentNode(nodeID, newParentNodeID,relPose);
 }
 
 TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)

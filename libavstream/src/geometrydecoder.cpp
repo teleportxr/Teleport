@@ -147,11 +147,11 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 				continue;
 			}
 
-			size_t offset = sizeof(StreamPayloadInfo);
+			 dataOffset = sizeof(StreamPayloadInfo);
 			// offset is incremented in the classify function to be after the payload type.
 			payloadType = d().m_parser->classify(d().m_buffer.data(), bufferSize, dataOffset);
 
-			dataOffset = offset;
+			//dataOffset = offset;
 			dataSize = info.dataSize - sizeof(GeometryPayloadType);
 		}
 		else if (payloadInfoType == PayloadInfoType::File)

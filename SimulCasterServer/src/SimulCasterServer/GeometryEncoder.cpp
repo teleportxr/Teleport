@@ -387,7 +387,7 @@ namespace teleport
 			put((uint8_t*)node->name.data(), nameLength);
 
 			avs::Transform transform = node->transform;
-			avs::ConvertTransform(settings->axesStandard, req->getClientAxesStandard(), transform);
+			avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), transform);
 
 			put(transform);
 			put((uint8_t)(node->stationary));
@@ -431,7 +431,7 @@ namespace teleport
 				put(node->lightRadius);
 				put(node->lightRange);
 				avs::vec3 lightDirection = node->lightDirection;
-				avs::ConvertPosition(settings->axesStandard, req->getClientAxesStandard(), lightDirection);
+				avs::ConvertPosition(settings->serverAxesStandard, req->getClientAxesStandard(), lightDirection);
 				put(lightDirection);
 				put(node->lightType);
 			}

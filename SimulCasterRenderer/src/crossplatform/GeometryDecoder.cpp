@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <Common.h>
+#include "TeleportCore/ErrorHandling.h"
 
 #include "libavstream/geometry/animation_interface.h"
 #include "draco/compression/decode.h"
@@ -121,6 +122,7 @@ avs::Result GeometryDecoder::decode(avs::GeometryPayloadType type, avs::Geometry
 		SCR_COUT << "GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
 		return decodeSkin(target);
 	default:
+		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 		return avs::Result::GeometryDecoder_InvalidPayload;
 	};
 }

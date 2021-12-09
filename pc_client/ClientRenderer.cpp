@@ -1357,10 +1357,15 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 {
 	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
 	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
-	node->SetLocalPosition(avs::vec3(0,0,0));
-	node->SetLocalRotation(scr::quat(0,0,0,1.0f));
+	std::weak_ptr<scr::Node> oldParent=node->GetParent();
+	auto oldp=oldParent.lock();
+	if(oldp)
+		oldp->RemoveChild(node);
+	node->SetLocalPosition(updateNodeStructureCommand.relativePose.position);
+	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
 	node->SetParent(parent);
-	parent->AddChild(node);
+	if(parent)
+		parent->AddChild(node);
 }
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
