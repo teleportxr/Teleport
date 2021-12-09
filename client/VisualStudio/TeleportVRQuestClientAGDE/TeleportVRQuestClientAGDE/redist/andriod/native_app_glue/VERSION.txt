@@ -1,0 +1,2 @@
+android_native_app_glue NDK: 22.1.7171670
+Redistribution - No Modifications.

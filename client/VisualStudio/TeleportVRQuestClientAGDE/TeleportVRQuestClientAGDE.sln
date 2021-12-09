@@ -1,0 +1,121 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31702.278
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeleportVRQuestClientAGDE", "TeleportVRQuestClientAGDE\TeleportVRQuestClientAGDE.vcxproj", "{820723D2-2241-4784-A775-EC5A36833A2E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{97036138-28ED-340A-82BF-867C6D8F0330} = {97036138-28ED-340A-82BF-867C6D8F0330}
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053} = {41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003} = {2AEEA882-1607-34B2-8811-C9E5C2F1B003}
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1} = {160ADC84-9B1C-3598-A176-5EB52CECB5B1}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Platform", "Platform", "{F44D62DC-8B9C-4E4B-86C6-016818F74F23}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{7A06CD57-BB62-4E54-A303-92A59B9DA86A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Static", "Static", "{48ACF1D8-8751-41E4-B8B9-3C1737896D80}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dynamic", "Dynamic", "{2B2B79E9-E4F1-49FE-A1AB-F98479FD6241}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Applications", "Applications", "{93C8F41F-9A3E-4E5B-BCA4-1AC7AB72CDE1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulVulkan_MT", "PlatformBuild\Vulkan\SimulVulkan_MT.vcxproj", "{97036138-28ED-340A-82BF-867C6D8F0330}"
+	ProjectSection(ProjectDependencies) = postProject
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1} = {160ADC84-9B1C-3598-A176-5EB52CECB5B1}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VulkanCoreShaders", "PlatformBuild\Vulkan\VulkanCoreShaders.vcxproj", "{D023754D-FF4E-36BD-8630-FD0581B1B55D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sfx", "PlatformBuild\Applications\Sfx\Sfx.vcxproj", "{9FB69995-8327-388B-A3FC-D62666D077BA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core_MT", "PlatformBuild\Core\Core_MT.vcxproj", "{2AEEA882-1607-34B2-8811-C9E5C2F1B003}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulCrossPlatform_MT", "PlatformBuild\CrossPlatform\SimulCrossPlatform_MT.vcxproj", "{160ADC84-9B1C-3598-A176-5EB52CECB5B1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053} = {41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulMath_MT", "PlatformBuild\Math\SimulMath_MT.vcxproj", "{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Android-arm64-v8a = Debug|Android-arm64-v8a
+		Debug|x64 = Debug|x64
+		Release|Android-arm64-v8a = Release|Android-arm64-v8a
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{820723D2-2241-4784-A775-EC5A36833A2E}.Debug|Android-arm64-v8a.ActiveCfg = Debug|Android-arm64-v8a
+		{820723D2-2241-4784-A775-EC5A36833A2E}.Debug|Android-arm64-v8a.Build.0 = Debug|Android-arm64-v8a
+		{820723D2-2241-4784-A775-EC5A36833A2E}.Debug|x64.ActiveCfg = Debug|x64
+		{820723D2-2241-4784-A775-EC5A36833A2E}.Debug|x64.Build.0 = Debug|x64
+		{820723D2-2241-4784-A775-EC5A36833A2E}.Release|Android-arm64-v8a.ActiveCfg = Release|Android-arm64-v8a
+		{820723D2-2241-4784-A775-EC5A36833A2E}.Release|Android-arm64-v8a.Build.0 = Release|Android-arm64-v8a
+		{820723D2-2241-4784-A775-EC5A36833A2E}.Release|x64.ActiveCfg = Release|x64
+		{820723D2-2241-4784-A775-EC5A36833A2E}.Release|x64.Build.0 = Release|x64
+		{97036138-28ED-340A-82BF-867C6D8F0330}.Debug|Android-arm64-v8a.ActiveCfg = Debug|Android-arm64-v8a
+		{97036138-28ED-340A-82BF-867C6D8F0330}.Debug|Android-arm64-v8a.Build.0 = Debug|Android-arm64-v8a
+		{97036138-28ED-340A-82BF-867C6D8F0330}.Debug|x64.ActiveCfg = Debug|x64
+		{97036138-28ED-340A-82BF-867C6D8F0330}.Debug|x64.Build.0 = Debug|x64
+		{97036138-28ED-340A-82BF-867C6D8F0330}.Release|Android-arm64-v8a.ActiveCfg = Release|Android-arm64-v8a
+		{97036138-28ED-340A-82BF-867C6D8F0330}.Release|Android-arm64-v8a.Build.0 = Release|Android-arm64-v8a
+		{97036138-28ED-340A-82BF-867C6D8F0330}.Release|x64.ActiveCfg = Release|x64
+		{97036138-28ED-340A-82BF-867C6D8F0330}.Release|x64.Build.0 = Release|x64
+		{D023754D-FF4E-36BD-8630-FD0581B1B55D}.Debug|Android-arm64-v8a.ActiveCfg = Debug|x64
+		{D023754D-FF4E-36BD-8630-FD0581B1B55D}.Debug|x64.ActiveCfg = Debug|x64
+		{D023754D-FF4E-36BD-8630-FD0581B1B55D}.Debug|x64.Build.0 = Debug|x64
+		{D023754D-FF4E-36BD-8630-FD0581B1B55D}.Release|Android-arm64-v8a.ActiveCfg = Release|x64
+		{D023754D-FF4E-36BD-8630-FD0581B1B55D}.Release|x64.ActiveCfg = Release|x64
+		{D023754D-FF4E-36BD-8630-FD0581B1B55D}.Release|x64.Build.0 = Release|x64
+		{9FB69995-8327-388B-A3FC-D62666D077BA}.Debug|Android-arm64-v8a.ActiveCfg = Debug|x64
+		{9FB69995-8327-388B-A3FC-D62666D077BA}.Debug|x64.ActiveCfg = Debug|x64
+		{9FB69995-8327-388B-A3FC-D62666D077BA}.Debug|x64.Build.0 = Debug|x64
+		{9FB69995-8327-388B-A3FC-D62666D077BA}.Release|Android-arm64-v8a.ActiveCfg = Release|x64
+		{9FB69995-8327-388B-A3FC-D62666D077BA}.Release|x64.ActiveCfg = Release|x64
+		{9FB69995-8327-388B-A3FC-D62666D077BA}.Release|x64.Build.0 = Release|x64
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003}.Debug|Android-arm64-v8a.ActiveCfg = Debug|Android-arm64-v8a
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003}.Debug|Android-arm64-v8a.Build.0 = Debug|Android-arm64-v8a
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003}.Debug|x64.ActiveCfg = Debug|x64
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003}.Debug|x64.Build.0 = Debug|x64
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003}.Release|Android-arm64-v8a.ActiveCfg = Release|Android-arm64-v8a
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003}.Release|Android-arm64-v8a.Build.0 = Release|Android-arm64-v8a
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003}.Release|x64.ActiveCfg = Release|x64
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003}.Release|x64.Build.0 = Release|x64
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1}.Debug|Android-arm64-v8a.ActiveCfg = Debug|Android-arm64-v8a
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1}.Debug|Android-arm64-v8a.Build.0 = Debug|Android-arm64-v8a
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1}.Debug|x64.ActiveCfg = Debug|x64
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1}.Debug|x64.Build.0 = Debug|x64
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1}.Release|Android-arm64-v8a.ActiveCfg = Release|Android-arm64-v8a
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1}.Release|Android-arm64-v8a.Build.0 = Release|Android-arm64-v8a
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1}.Release|x64.ActiveCfg = Release|x64
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1}.Release|x64.Build.0 = Release|x64
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}.Debug|Android-arm64-v8a.ActiveCfg = Debug|Android-arm64-v8a
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}.Debug|Android-arm64-v8a.Build.0 = Debug|Android-arm64-v8a
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}.Debug|x64.ActiveCfg = Debug|x64
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}.Debug|x64.Build.0 = Debug|x64
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}.Release|Android-arm64-v8a.ActiveCfg = Release|Android-arm64-v8a
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}.Release|Android-arm64-v8a.Build.0 = Release|Android-arm64-v8a
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}.Release|x64.ActiveCfg = Release|x64
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7A06CD57-BB62-4E54-A303-92A59B9DA86A} = {F44D62DC-8B9C-4E4B-86C6-016818F74F23}
+		{48ACF1D8-8751-41E4-B8B9-3C1737896D80} = {F44D62DC-8B9C-4E4B-86C6-016818F74F23}
+		{2B2B79E9-E4F1-49FE-A1AB-F98479FD6241} = {F44D62DC-8B9C-4E4B-86C6-016818F74F23}
+		{93C8F41F-9A3E-4E5B-BCA4-1AC7AB72CDE1} = {2B2B79E9-E4F1-49FE-A1AB-F98479FD6241}
+		{97036138-28ED-340A-82BF-867C6D8F0330} = {48ACF1D8-8751-41E4-B8B9-3C1737896D80}
+		{D023754D-FF4E-36BD-8630-FD0581B1B55D} = {7A06CD57-BB62-4E54-A303-92A59B9DA86A}
+		{9FB69995-8327-388B-A3FC-D62666D077BA} = {93C8F41F-9A3E-4E5B-BCA4-1AC7AB72CDE1}
+		{2AEEA882-1607-34B2-8811-C9E5C2F1B003} = {48ACF1D8-8751-41E4-B8B9-3C1737896D80}
+		{160ADC84-9B1C-3598-A176-5EB52CECB5B1} = {48ACF1D8-8751-41E4-B8B9-3C1737896D80}
+		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053} = {48ACF1D8-8751-41E4-B8B9-3C1737896D80}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AA27821A-B243-4828-B197-11884857C085}
+	EndGlobalSection
+EndGlobal

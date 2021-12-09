@@ -1,0 +1,241 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Android-arm64-v8a">
+      <Configuration>Debug</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Android-arm64-v8a">
+      <Configuration>Release</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>SimulMath_MT</ProjectName>
+    <RootNamespace>$(ProjectName)</RootNamespace>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <PlatformToolset>Clang</PlatformToolset>
+    <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CppLanguageStandard>cpp17</CppLanguageStandard>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <PlatformToolset>Clang</PlatformToolset>
+    <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CppLanguageStandard>cpp17</CppLanguageStandard>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SimulMath_MT.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SimulMath_MTd</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SimulMath_MT.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SimulMath_MT</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(SolutionDir)bin\int\$(Platform)\$(Configuration)\$(PlatformTarget)\$(ProjectName)\</IntDir>
+    <TargetExt>.a</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(SolutionDir)bin\int\$(Platform)\$(Configuration)\$(PlatformTarget)\$(ProjectName)\</IntDir>
+    <TargetExt>.a</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Math/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/Simul/Teleport/RemotePlay/firstparty/Platform -BE:/Simul/Teleport/RemotePlay/firstparty/Platform/build --check-stamp-file E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Math/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Math\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Math/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/Simul/Teleport/RemotePlay/firstparty/Platform -BE:/Simul/Teleport/RemotePlay/firstparty/Platform/build --check-stamp-file E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Math/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Math\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\GeometricFunctions.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Iteration.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Math.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MathFunctions.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Matrix.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Matrix4x4.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MatrixVector.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MatrixVector3.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise1D.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise2D.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise3D.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Orientation.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\PointerList.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Quaternion.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\RandomNumberGenerator.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\ReferenceFrame.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\SimVector.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Vector3.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\VirtualVector.cpp" />
+    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\mmxrand.cpp" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Align.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Decay.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Export.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Finite.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\GeometricFunctions.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Iteration.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MathFunctions.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Matrix.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Matrix4x4.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MatrixVector.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MatrixVector3.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise1D.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise2D.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise3D.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Orientation.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\OrientationInterface.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Pi.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Quaternion.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\RandomNumberGenerator.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\ReferenceFrame.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\SimVector.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Vector3.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\VirtualVector.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\afxres.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\mmxrand.h" />
+    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\ZERO_CHECK.vcxproj">
+      <Project>{B42D4E85-6DD6-3B89-A6DB-1C652427C50B}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
