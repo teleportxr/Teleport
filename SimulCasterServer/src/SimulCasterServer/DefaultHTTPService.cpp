@@ -10,6 +10,7 @@
 namespace teleport
 {
 	DefaultHTTPService::DefaultHTTPService()
+		: mUsingSSL(false)
 	{
 
 	}
@@ -37,11 +38,13 @@ namespace teleport
 		{
 			TELEPORT_COUT << "SSL certificate and key provided. Usng HTTPS server." << std::endl;
 			mServer.reset(new httplib::SSLServer(certPath.c_str(), privateKeyPath.c_str()));
+			mUsingSSL = true;
 		}
 		else
 		{
 			TELEPORT_COUT << "SSL certificate and key provided. Usng HTTP server." << std::endl;
 			mServer.reset(new httplib::Server());
+			mUsingSSL = false;
 		}
 
 		
@@ -81,6 +84,8 @@ namespace teleport
 			mThread.join();
 		}
 		mServer.reset();
+
+		mUsingSSL = false;
 	}
 
 	void DefaultHTTPService::tick()

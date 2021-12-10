@@ -543,8 +543,8 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		return false;
 	}
 
-	result=httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
-	return true;
+	result = httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
+	return result;
 }
 
 TELEPORT_EXPORT void Shutdown()
@@ -770,6 +770,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	setupCommand.control_model=casterSettings.controlModel;
 	setupCommand.bodyOffsetFromHead = bodyOffsetFromHead;
 	setupCommand.startTimestamp = getUnixTimestamp();
+	setupCommand.using_ssl = httpService->isUsingSSL();
 
 	avs::VideoConfig& videoConfig		= setupCommand.video_config;
 	videoConfig.video_width				= encoderSettings.frameWidth;
