@@ -69,7 +69,7 @@ $(call import-module,3rdParty/minizip/build/android/jni)
 $(call import-module,3rdParty/stb/build/android/jni)
 $(call import-module,../libavstream/thirdparty/srt/build_android/jni)
 $(call import-module,../libavstream/thirdparty/efp/jni)
-#$(call import-module,../libavstream/thirdparty/curl/jni)
+$(call import-module,../libavstream/thirdparty/curl/jni)
 
 # Note: Even though we depend on LibOVRKernel, we don't explicitly import it since our
 # dependents may want either a prebuilt or from-source LibOVRKernel.
