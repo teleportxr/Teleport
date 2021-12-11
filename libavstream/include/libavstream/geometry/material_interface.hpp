@@ -35,10 +35,14 @@ namespace avs
 	
 	struct guid
 	{
-		char txt[33];
+		char txt[49];
 		friend bool operator<(const guid &a,const guid &b)
 		{
-			return a.txt<b.txt;
+			return (strcmp(a.txt,b.txt)<0);
+		};
+		friend bool operator==(const guid &a,const guid &b)
+		{
+			return strcmp(a.txt,b.txt)==0;
 		};
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const guid& g)
@@ -53,10 +57,10 @@ namespace avs
 			std::wstring w;
 			std::getline(in, w);
 			std::string str = convertToByteString(w);
-			if(str.length()>32)
-				throw std::runtime_error("str.length()>32");
+			if(str.length()>48)
+				throw std::runtime_error("guid length>48");
 			strcpy(g.txt,str.c_str());
-			g.txt[32]=0;
+			g.txt[48]=0;
 			return in;
 		}
 	};

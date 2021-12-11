@@ -10,6 +10,8 @@
     #pragma warning(push)
 	#pragma warning(disable:4996)
 	#include <Windows.h>// for DebugBreak etc
+#else
+inline void DebugBreak(){}
 #endif
 
 #define DEBUG_BREAK_ONCE {static bool done=false;if(!done){ done=true;DebugBreak();}}

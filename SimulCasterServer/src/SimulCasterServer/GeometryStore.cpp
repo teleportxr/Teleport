@@ -25,16 +25,16 @@ namespace filesystem = std::filesystem;
 static avs::guid bstr_to_guid(_bstr_t b)
 {
 	avs::guid g;
-	strncpy_s(g.txt,(const char*)b,32);
-	g.txt[33]=0;
+	strncpy_s(g.txt,(const char*)b,48);
+	g.txt[48]=0;
 	return g;
 }
 
 static _bstr_t guid_to_bstr(avs::guid g)
 {
-	char txt[21];
-	strncpy_s(txt,g.txt,32);
-	txt[32]=0;
+	char txt[49];
+	strncpy_s(txt,g.txt,48);
+	txt[48]=0;
 	_bstr_t b(txt);
 	return b;
 }
@@ -1024,10 +1024,10 @@ void GeometryStore::compressNextTexture()
 	basisCompressorParams.m_out_filename = compressionData.basisFilePath;
 	basisCompressorParams.m_uastc=compressionData.highQualityUASTC;
 
-	uint32_t THREAD_AMOUNT = 32;
+	uint32_t num_threads = 32;
 	if(compressionData.highQualityUASTC)
 	{
-		THREAD_AMOUNT = 1;
+		num_threads = 1;
 		// Write this to a different filename, it's just for testing.
 		auto ext_pos = basisCompressorParams.m_out_filename.find(".basis");
 		basisCompressorParams.m_out_filename = basisCompressorParams.m_out_filename.substr(0, ext_pos) + "-dll.basis";
@@ -1064,7 +1064,7 @@ void GeometryStore::compressNextTexture()
 	}
 	if(!basisCompressorParams.m_pJob_pool)
 	{
-		basisCompressorParams.m_pJob_pool = new basisu::job_pool(THREAD_AMOUNT);
+		basisCompressorParams.m_pJob_pool = new basisu::job_pool(num_threads);
 	}
 	basisu::basis_compressor basisCompressor;
 	basisu::enable_debug_printf(true);
@@ -1148,27 +1148,22 @@ template<typename ExtractedResource> void GeometryStore::loadResources(const std
 			{
 				auto write_time= std::filesystem::last_write_time(file_name);
 				// If there's a duplicate, use the newer file.
-			/*	bool use_new=true;
-				if(resourceMap.find(oldID)==resourceMap.end())
+				// This guid might already exist!
+				avs::uid newID=0;
+				auto u=uids.find(g);
+				if(u!=uids.end())
 				{
-					// if new file timestamp is older than the last one, don't use it.
-					if(write_time<timestamps[oldID])
-						use_new=false;
+					newID=u->second;
 				}
-				if(use_new)*/
+				else
 				{
-					avs::uid newID=avs::GenerateUid();
+					newID=avs::GenerateUid();
 					guids[newID]=g;
 					uids[g]=newID;
-					ExtractedResource& newResource = resourceMap[newID];
-					resourceFile >> newResource;
-					//timestamps[oldID]= write_time;
 				}
-			/*	else
-				{
-					ExtractedResource newResource;
-					resourceFile >> newResource;
-				}*/
+				ExtractedResource& newResource = resourceMap[newID];
+				resourceFile >> newResource;
+				//timestamps[oldID]= write_time;
 			}
 		}
 	}
