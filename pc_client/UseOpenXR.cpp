@@ -39,8 +39,9 @@ struct swapchain_surfdata_t
 struct swapchain_t
 {
 	XrSwapchain handle;
-	int32_t     width;
-	int32_t     height;
+	int32_t     width=0;
+	int32_t     height=0;
+	uint32_t	last_img_id=0;
 	vector<XrSwapchainImageD3D11KHR> surface_images;
 	vector<swapchain_surfdata_t>     surface_data;
 };
@@ -574,7 +575,7 @@ mat4 MatrixPerspectiveOffCenterRH
 	M.M[3][3] = 0.0f;
 	return M;
 }
-mat4 d3d_xr_projection(XrFovf fov, float clip_near, float clip_far)
+mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
 {
 	const float left = clip_near * tanf(fov.angleLeft);
 	const float right = clip_near * tanf(fov.angleRight);
@@ -588,7 +589,7 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	, swapchain_surfdata_t& surface, simul::crossplatform::RenderDelegate& renderDelegate,vec3 origin)
 {
 	// Set up camera matrices based on OpenXR's predicted viewpoint information
-	mat4 proj = d3d_xr_projection(view.fov, 0.1f, 200.0f);
+	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
 	crossplatform::Quaternionf rot = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const crossplatform::Quaternionf*)&view.pose.orientation));
 	vec3 pos=crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL,crossplatform::AxesStandard::Engineering,*((const vec3 *)&view.pose.position));
 	//mat4 invview = AffineTransformation(rot, pos);
@@ -631,6 +632,16 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	renderPlatform->DeactivateRenderTargets(deviceContext);
 }
 
+crossplatform::Texture* UseOpenXR::GetRenderTexture(int index)
+{
+	if (index < 0 || index >= xr_swapchains.size())
+		return nullptr;
+	auto sw = xr_swapchains[index];
+	if (sw.last_img_id < 0 || sw.last_img_id >= sw.surface_data.size())
+		return nullptr;
+	return sw.surface_data[sw.last_img_id].target_view;
+}
+
 bool UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext, XrTime predictedTime
 	, vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer
 	, simul::crossplatform::RenderDelegate& renderDelegate,vec3 origin)
@@ -654,7 +665,7 @@ bool UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 		uint32_t                    img_id;
 		XrSwapchainImageAcquireInfo acquire_info = { XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
 		xrAcquireSwapchainImage(xr_swapchains[i].handle, &acquire_info, &img_id);
-
+		xr_swapchains[i].last_img_id = img_id;
 		// Wait until the image is available to render to. The compositor could still be
 		// reading from it.
 		XrSwapchainImageWaitInfo wait_info = { XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };

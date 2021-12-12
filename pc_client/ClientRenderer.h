@@ -202,7 +202,9 @@ public:
 	void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate) override;
 	void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
 	void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
-
+	//
+	// to render the vr view instead of re-rendering.
+	void SetExternalTexture(simul::crossplatform::Texture* t);
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
 	void PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext);
@@ -295,4 +297,5 @@ private:
 	teleport::Gui &gui;
 	avs::uid node_select=0;
 	bool have_vr_device = false;
+	simul::crossplatform::Texture* externalTexture = nullptr;
 };

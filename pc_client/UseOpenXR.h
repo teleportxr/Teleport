@@ -1,6 +1,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include <vector>
 #include "Platform/CrossPlatform/RenderDelegate.h"
+#include "Platform/CrossPlatform/Texture.h"
 #include "common_maths.h"		// for avs::Pose
 typedef int64_t XrTime;
 struct XrCompositionLayerProjectionView;
@@ -29,6 +30,7 @@ namespace teleport
 		{
 			menuButtonHandler = f;
 		}
+		simul::crossplatform::Texture* GetRenderTexture(int index=0);
 	protected:
 		simul::crossplatform::RenderPlatform* renderPlatform = nullptr;
 		bool haveXRDevice = false;

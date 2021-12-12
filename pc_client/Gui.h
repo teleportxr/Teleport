@@ -49,5 +49,6 @@ namespace teleport
 		std::vector<unsigned int> keys_pressed;
 		void ShowFont();
         char buf[500];
+		bool have_vr_device = false;
 	};
 }

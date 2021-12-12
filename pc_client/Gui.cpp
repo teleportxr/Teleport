@@ -328,7 +328,7 @@ void Gui::NodeTree(const scr::NodeManager::nodeList_t& root_nodes)
    // ImGui::End();
 }
 std::vector<vec4> hand_pos_press;
-bool have_vr_device = false;
+
 void Gui::Update(const std::vector<vec4>& h,bool have_vr)
 {
     hand_pos_press = h;
@@ -458,7 +458,7 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
             KeyboardLine("zxcvbnm,./");
         }
         //ShowFont();
-        //ImGui_ImplPlatform_DebugInfo();
+        ImGui_ImplPlatform_DebugInfo();
         //hasFocus = ImGui::IsAnyItemFocused(); Note: does not work.
         ImGui::End();
     }

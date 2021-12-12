@@ -465,6 +465,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				vec3 headOrigin = *((vec3*)&clientDeviceState.originPose.position);
 				if (useOpenXR.HaveXRDevice())
 				{
+					clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
 					useOpenXR.RenderFrame(deviceContext, renderDelegate, headOrigin);
 				}
 				errno=0;

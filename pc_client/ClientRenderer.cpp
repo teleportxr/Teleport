@@ -213,7 +213,17 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	// initialize the default local geometry:
 	geometryDecoder.decodeFromFile("meshes/Wand.mesh_compressed",&localResourceCreator);
+	
 	avs::uid wand_uid = 11;
+	auto uids=localGeometryCache.mMeshManager.GetAllIDs();
+	if (uids.size())
+	{
+		wand_uid = uids[0];
+	}
+	else
+	{
+		TELEPORT_BREAK_ONCE("Wand mesh not found");
+	}
 	{
 		scr::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.name="local material";
@@ -267,6 +277,12 @@ void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
 		server_ip = ip.substr(0,pos);
 	}
 	sessionClient.SetDiscoveryClientID(clientID);
+}
+
+void ClientRenderer::SetExternalTexture(simul::crossplatform::Texture* t)
+{
+	externalTexture = t;
+	have_vr_device = (externalTexture != nullptr);
 }
 
 // This allows live-recompile of shaders. 
@@ -385,7 +401,15 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 
 	// MUST call init each frame.
 	deviceContext.viewStruct.Init();
-	RenderView(deviceContext);
+	if (externalTexture)
+	{
+		renderPlatform->DrawTexture(deviceContext, 0, 0, w, h, externalTexture);
+	}
+	else
+	{
+		RenderView(deviceContext);
+	}
+
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	if (render_from_video_centre)
 	{
