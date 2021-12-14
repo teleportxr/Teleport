@@ -362,6 +362,12 @@ namespace teleport
 		sendCommand(command);
 	}
 	
+	void ClientMessaging::setNodeSubtype( avs::uid nodeID, avs::NodeSubtype subType)
+	{
+		avs::UpdateNodeSubtypeCommand command(nodeID,  subType);
+		sendCommand(command);
+	}
+
 	void ClientMessaging::updateNodeAnimation(avs::ApplyAnimation update)
 	{
 		avs::UpdateNodeAnimationCommand command(update);

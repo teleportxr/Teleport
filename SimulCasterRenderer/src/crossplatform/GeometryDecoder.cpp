@@ -734,7 +734,6 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.priority = Next4B;
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);
-		node.data_subtype = static_cast<NodeDataSubtype>(NextB);
 
 		node.skinID = Next8B;
 		node.parentID = Next8B;

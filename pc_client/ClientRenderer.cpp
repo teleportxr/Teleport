@@ -249,14 +249,12 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avsNode.materials.push_back(14);
 	avsNode.materials.push_back(15);
 
-	avsNode.data_subtype = avs::NodeDataSubtype::RightHand;
 	std::shared_ptr<scr::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
 	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetRightHand(23);
 
 	avsNode.name = "local Left Hand";
 	avsNode.materials[1]=16;
-	avsNode.data_subtype = avs::NodeDataSubtype::LeftHand;
 	std::shared_ptr<scr::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
 	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetLeftHand(24);
@@ -1389,6 +1387,28 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 	node->SetParent(parent);
 	if(parent)
 		parent->AddChild(node);
+}
+
+void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand)
+{
+	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
+	switch(updateNodeStructureCommand.nodeSubtype)
+	{
+	case avs::NodeSubtype::None:
+		break;
+	case avs::NodeSubtype::Body:
+		geometryCache.mNodeManager->SetBody(node);
+		break;
+	case avs::NodeSubtype::LeftHand:
+		geometryCache.mNodeManager->SetLeftHand(node);
+		break;
+	case avs::NodeSubtype::RightHand:
+		geometryCache.mNodeManager->SetRightHand(node);
+		break;
+	default:
+		SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeStructureCommand.nodeSubtype) << "!\n";
+		break;
+	}
 }
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)

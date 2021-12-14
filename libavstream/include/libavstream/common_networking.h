@@ -56,6 +56,7 @@ namespace avs
 		SetNodeAnimationSpeed,
 		SetupLighting,
 		UpdateNodeStructure,
+		UpdateNodeSubtype,
 	};
 
 	enum class ClientMessagePayloadType : uint8_t
@@ -391,7 +392,6 @@ namespace avs
 		uid nodeID = 0;
 		uid parentID = 0;
 		Pose relativePose;
-
 		UpdateNodeStructureCommand()
 			:UpdateNodeStructureCommand(0, 0,avs::Pose())
 		{}
@@ -399,6 +399,24 @@ namespace avs
 		UpdateNodeStructureCommand(avs::uid n, avs::uid p,avs::Pose relPose)
 			:Command(CommandPayloadType::UpdateNodeStructure), nodeID(n), parentID(p)
 			,relativePose(relPose)
+		{}
+
+		virtual size_t getCommandSize() const override
+		{
+			return sizeof(UpdateNodeStructureCommand);
+		}
+	} AVS_PACKED;
+
+	struct UpdateNodeSubtypeCommand : public Command
+	{
+		uid nodeID = 0;
+		NodeSubtype nodeSubtype=NodeSubtype::None;
+		UpdateNodeSubtypeCommand()
+			:UpdateNodeSubtypeCommand(0, NodeSubtype::None)
+		{}
+
+		UpdateNodeSubtypeCommand(avs::uid n,NodeSubtype s)
+			:Command(CommandPayloadType::UpdateNodeSubtype), nodeID(n),nodeSubtype(s)
 		{}
 
 		virtual size_t getCommandSize() const override

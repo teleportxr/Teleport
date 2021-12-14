@@ -244,10 +244,10 @@ namespace avs
 		Bone
 	};
 
-	enum class NodeDataSubtype : uint8_t
+	//! Identifies special use-cases for a locally-controlled node, used in UpdateNodeSubtypeCommand.
+	enum class NodeSubtype : uint8_t
 	{
-		Invalid=0,
-		None,
+		None=0,
 		Body,
 		LeftHand,
 		RightHand

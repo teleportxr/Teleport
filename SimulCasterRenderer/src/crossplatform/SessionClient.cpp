@@ -738,6 +738,15 @@ void SessionClient::ReceiveUpdateNodeStructureCommand(const ENetPacket* packet)
 	mCommandInterface->UpdateNodeStructure(updateNodeStructureCommand);
 }
 
+void SessionClient::ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::UpdateNodeSubtypeCommand);
+	//Copy command out of packet.
+	avs::UpdateNodeSubtypeCommand updateNodeStructureCommand;
+	memcpy(static_cast<void*>(&updateNodeStructureCommand), packet->data, commandSize);
+	mCommandInterface->UpdateNodeSubtype(updateNodeStructureCommand);
+}
+
 void SessionClient::SetDiscoveryClientID(uint32_t clientID)
 {
 	discoveryService->SetClientID(clientID);

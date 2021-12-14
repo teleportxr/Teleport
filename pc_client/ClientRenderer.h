@@ -188,6 +188,7 @@ public:
 	
 	void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
 	void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
+	void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand);
 
 	std::vector<avs::uid> GetGeometryResources() override;
 	void ClearGeometryResources() override;

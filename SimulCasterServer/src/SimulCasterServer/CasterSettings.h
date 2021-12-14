@@ -93,6 +93,7 @@ namespace teleport
 		int32_t shadowmapSize;
 		int32_t webcamPos[2];
 		int32_t webcamSize[2];
+		avs::vec3 bodyOffsetFromHead;
 	};
 #pragma pack(pop)
 

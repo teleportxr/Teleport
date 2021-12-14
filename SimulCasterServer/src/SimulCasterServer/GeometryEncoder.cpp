@@ -398,7 +398,6 @@ namespace teleport
 			put(node->priority);
 			put(node->data_uid);
 			put(node->data_type);
-			put(node->data_subtype);
 
 			put(node->skinID);
 			put(node->parentID);
