@@ -59,9 +59,9 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 {
 	bool serverDiscovered = false;
 
-	if (serverIP.empty())
+	if (ip.empty())
 	{
-		serverIP = "255.255.255.255";
+		ip = "255.255.255.255";
 	}
 	if (serverAddress.port != serverDiscoveryPort || serverAddress.host == ENET_HOST_ANY || ip != serverIP)
 	{
@@ -70,7 +70,7 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 		{
 			serverAddress.host = ENET_HOST_ANY;
 			serverAddress.port = serverDiscoveryPort;
-			fobj = std::async(&enet_address_set_host, &(serverAddress), serverIP.c_str());
+			fobj = std::async(&enet_address_set_host, &(serverAddress), ip.c_str());
 			awaiting = true;
 		}
 		else
@@ -90,6 +90,7 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 					TELEPORT_CERR << "enet_address_set_host failed with error " << err << std::endl;
 					return 0;
 				}
+				serverIP = ip;
 			}
 		}
 	}
