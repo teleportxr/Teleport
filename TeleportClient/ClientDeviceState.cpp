@@ -49,3 +49,8 @@ void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,scr::quat q)
 	TransformPose(controllerPoses[index]);
 	controllerPoses[index].position+=originPose.position;
 }
+
+void ClientDeviceState::SetControllerState(int index, const teleport::client::ControllerState& st)
+{
+	controllerStates[index]=st;
+}

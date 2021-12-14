@@ -3,6 +3,7 @@
 #include "TeleportCore/ErrorHandling.h"
 using namespace teleport;
 using namespace client;
+static uint32_t nextEventID = 0;
 
 void ControllerState::clear()
 {
@@ -20,31 +21,31 @@ void ControllerState::clear()
 	motionEvents.clear();
 }
 
-void ControllerState::addBinaryEvent(uint32_t eventID, avs::InputId inputID, bool activated)
+void ControllerState::addBinaryEvent( avs::InputId inputID, bool activated)
 {
 	avs::InputEventBinary binaryEvent;
-	binaryEvent.eventID = eventID;
+	binaryEvent.eventID = nextEventID++;
 	binaryEvent.inputID = inputID;
 	binaryEvent.activated = activated;
 
 	binaryEvents.push_back(binaryEvent);
 }
 
-void ControllerState::addAnalogueEvent(uint32_t eventID, avs::InputId inputID, float strength)
+void ControllerState::addAnalogueEvent( avs::InputId inputID, float strength)
 {
 //	TELEPORT_COUT << "Analogue: " << eventID << " " << (int)inputID << " " << strength << std::endl;
 	avs::InputEventAnalogue analogueEvent;
-	analogueEvent.eventID = eventID;
+	analogueEvent.eventID = nextEventID++;
 	analogueEvent.inputID = inputID;
 	analogueEvent.strength = strength;
 
 	analogueEvents.push_back(analogueEvent);
 }
 
-void ControllerState::addMotionEvent(uint32_t eventID, avs::InputId inputID, avs::vec2 motion)
+void ControllerState::addMotionEvent( avs::InputId inputID, avs::vec2 motion)
 {
 	avs::InputEventMotion motionEvent;
-	motionEvent.eventID = eventID;
+	motionEvent.eventID = nextEventID++;
 	motionEvent.inputID = inputID;
 	motionEvent.motion = motion;
 

@@ -65,6 +65,7 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 	}
 	if (serverAddress.port != serverDiscoveryPort || serverAddress.host == ENET_HOST_ANY || ip != serverIP)
 	{
+		serverIP = ip;
 		if (!awaiting)
 		{
 			serverAddress.host = ENET_HOST_ANY;
@@ -101,7 +102,7 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 	ENetAddress  responseAddress = {0xffffffff, 0};
 	ENetBuffer responseBuffer = {sizeof(response),&response};
 	// Send our client id to the server on the discovery port. Once every 1000 frames.
-	static int frame=1000;
+	static int frame=1;
 	frame--;
 	if(!frame)
 	{

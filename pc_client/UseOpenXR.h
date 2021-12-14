@@ -3,10 +3,13 @@
 #include "Platform/CrossPlatform/RenderDelegate.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "common_maths.h"		// for avs::Pose
+#include "common_networking.h"		// for avs::InputState
+#include "TeleportClient/Input.h"
 typedef int64_t XrTime;
 struct XrCompositionLayerProjectionView;
 struct XrCompositionLayerProjection;
 struct swapchain_surfdata_t;
+
 
 namespace teleport
 {
@@ -22,6 +25,7 @@ namespace teleport
 		bool HaveXRDevice() const;
 		const avs::Pose& GetHeadPose() const;
 		const avs::Pose& GetControllerPose(int index) const;
+		const teleport::client::ControllerState& GetControllerState(int index) const;
 		size_t GetNumControllers() const
 		{
 			return controllerPoses.size();
@@ -38,6 +42,7 @@ namespace teleport
 		bool RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext,XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin);
 		avs::Pose headPose;
 		std::vector<avs::Pose> controllerPoses;
+		std::vector<teleport::client::ControllerState> controllerStates;
 		void openxr_poll_predicted(XrTime predicted_time);
 		std::function<void()> menuButtonHandler;
 	};

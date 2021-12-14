@@ -32,9 +32,9 @@ namespace teleport
 			std::vector<avs::InputEventMotion> motionEvents;
 
 			void clear();
-			void addBinaryEvent(uint32_t eventID, avs::InputId inputID, bool activated);
-			void addAnalogueEvent(uint32_t eventID, avs::InputId inputID, float strength);
-			void addMotionEvent(uint32_t eventID, avs::InputId inputID, avs::vec2 motion);
+			void addBinaryEvent( avs::InputId inputID, bool activated);
+			void addAnalogueEvent( avs::InputId inputID, float strength);
+			void addMotionEvent( avs::InputId inputID, avs::vec2 motion);
 		};
 	}
 }

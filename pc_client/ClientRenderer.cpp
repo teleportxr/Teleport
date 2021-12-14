@@ -524,20 +524,22 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			}
 
 			UpdateTagDataBuffers(deviceContext);
-
-			if (videoTexture->IsCubemap())
+			if (sessionClient.IsConnected())
 			{
-				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
-				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
-				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
-			}
-			else
-			{
-				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
-				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
-				simul::math::Matrix4x4 projInv;
-				deviceContext.viewStruct.proj.Inverse(projInv);
-				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
+				if (videoTexture->IsCubemap())
+				{
+					const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
+					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
+					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
+				}
+				else
+				{
+					const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
+					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
+					simul::math::Matrix4x4 projInv;
+					deviceContext.viewStruct.proj.Inverse(projInv);
+					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
+				}
 			}
 			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x, videoConfig.diffuse_y));
 			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x, videoConfig.specular_y));
@@ -545,7 +547,8 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 
 		pbrConstants.drawDistance = lastSetupCommand.video_config.draw_distance;
-		RenderLocalNodes(deviceContext,geometryCache);
+		if (sessionClient.IsConnected()||render_local_offline)
+			RenderLocalNodes(deviceContext,geometryCache);
 
 		{
 			std::shared_ptr<scr::Node> leftHand = localGeometryCache.mNodeManager->GetLeftHand();
@@ -563,10 +566,11 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		
 		gui.Render(deviceContext);
 
-
-		pbrConstants.drawDistance = 1000.0f;
-		RenderLocalNodes(deviceContext,localGeometryCache);
-
+		if (!sessionClient.IsConnected() || gui.HasFocus())
+		{
+			pbrConstants.drawDistance = 1000.0f;
+			RenderLocalNodes(deviceContext, localGeometryCache);
+		}
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		//hdrFramebuffer->DeactivateDepth(deviceContext);
 		if (show_video)
@@ -588,11 +592,6 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
-	if (render_from_video_centre)
-	{
-		//camera.SetPosition(true_pos);
-		//renderPlatform->Print(deviceContext, w-16, h-16, "C", white);
-	}
 	if(show_textures)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
@@ -1829,11 +1828,6 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 {
-#if IS_D3D12
-	//platform::dx12::RenderPlatform* dx12RenderPlatform = (platform::dx12::RenderPlatform*)renderPlatform;
-	// Set command list to the recording state if it's not in it already.
-	//dx12RenderPlatform->ResetImmediateCommandList();
-#endif
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
 	clientspace_input.y=((float)keydown['w']-(float)keydown['s'])*(float)(keydown[VK_SHIFT]);
@@ -1876,23 +1870,20 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
 		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((scr::quat*)&q_rel));
+		controllerStates[0].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::LEFT_BUTTON) == crossplatform::MouseCameraInput::LEFT_BUTTON ? 1.0f : 0.0f;
+		controllerStates[1].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::RIGHT_BUTTON) == crossplatform::MouseCameraInput::RIGHT_BUTTON ? 1.0f : 0.0f;
+
+		controllerStates[1].mJoystickAxisX = stored_clientspace_input.x;
+		controllerStates[1].mJoystickAxisY = stored_clientspace_input.y;
+
+		controllerStates[0].mTrackpadX = 0.5f;
+		controllerStates[0].mTrackpadY = 0.5f;
+		controllerStates[0].mButtons = mouseCameraInput.MouseButtons;
+		controllerStates[0].mTrackpadStatus = true;
+		clientDeviceState->SetControllerState(0, controllerStates[0]);
+		clientDeviceState->SetControllerState(1, controllerStates[1]);
+
 	}
-	controllerStates[1].mJoystickAxisX=stored_clientspace_input.x;
-	controllerStates[1].mJoystickAxisY=stored_clientspace_input.y;
-	//controllerStates[0].mJoystickAxisX=stored_clientspace_input.x;
-
-	controllerStates[0].mTrackpadX		=0.5f;
-	controllerStates[0].mTrackpadY		=0.5f;
-	//controllerStates[0].mJoystickAxisX	=mouseCameraInput.right_left_input;
-	//controllerStates[0].mJoystickAxisY	=mouseCameraInput.forward_back_input;
-	controllerStates[0].mButtons		=mouseCameraInput.MouseButtons;
-	controllerStates[0].triggerBack		=(mouseCameraInput.MouseButtons&crossplatform::MouseCameraInput::LEFT_BUTTON)==crossplatform::MouseCameraInput::LEFT_BUTTON?1.0f:0.0f;
-
-	controllerStates[0].triggerGrip		=(mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::RIGHT_BUTTON)==crossplatform::MouseCameraInput::RIGHT_BUTTON?1.0f : 0.0f;
-
-	// Reset
-	//mouseCameraInput.MouseButtons = 0; wtf? No.
-	controllerStates[0].mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())
 	{
@@ -1910,8 +1901,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		}
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
-
-		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime, time_step);
+		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose,
+			clientDeviceState->controllerStates, decoder.idrRequired(),fTime, time_step);
 
 		{
 			clientDeviceState->originPose = sessionClient.GetOriginPose();
@@ -1979,23 +1970,17 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 	if(bLeftButtonDown)
 	{
 		controllerStates[0].triggerBack = 1.0f;
-		controllerStates[0].addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER01, 1.0f);
+		controllerStates[0].addAnalogueEvent( avs::InputId::TRIGGER01, 1.0f);
+		controllerStates[1].triggerBack = 1.0f;
+		controllerStates[1].addAnalogueEvent(avs::InputId::TRIGGER01, 1.0f);
 	}
 	else if(bRightButtonDown)
 	{
-		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputId::BUTTON_B;
-		buttonEvent.activated = true;
-		controllerStates[0].binaryEvents.push_back(buttonEvent);
+		controllerStates[0].addBinaryEvent( avs::InputId::BUTTON_B, true);
 	}
 	else if(bMiddleButtonDown)
 	{
-		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputId::BUTTON_A;
-		buttonEvent.activated = true;
-		controllerStates[0].binaryEvents.push_back(buttonEvent);
+		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_A, true);
 	}
 }
 
@@ -2008,23 +1993,17 @@ void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRight
 	if(bLeftButtonReleased)
 	{
 		controllerStates[0].triggerBack = 0.f;
-		controllerStates[0].addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER01, 0.0f);
+		controllerStates[0].addAnalogueEvent( avs::InputId::TRIGGER01, 0.0f);
+		controllerStates[1].triggerBack = 0.f;
+		controllerStates[1].addAnalogueEvent(avs::InputId::TRIGGER01, 0.0f);
 	}
 	else if(bRightButtonReleased)
 	{
-		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID		= nextEventID++;
-		buttonEvent.inputID		= avs::InputId::BUTTON_B;
-		buttonEvent.activated	= false;
-		controllerStates[0].binaryEvents.push_back(buttonEvent);
+		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_B, false);
 	}
 	else if(bMiddleButtonReleased)
 	{
-		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputId::BUTTON_A;
-		buttonEvent.activated = false;
-		controllerStates[0].binaryEvents.push_back(buttonEvent);
+		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_A, false);
 	}
 }
 

@@ -989,6 +989,11 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 
 		auto indexesPair = incompleteNode->materialSlots.find(id);
+		if (indexesPair == incompleteNode->materialSlots.end())
+		{
+			SCR_CERR << "Material " << id << " not found in incomplete node " << incompleteNode->id << std::endl;
+			continue;
+		}
 		for(size_t materialIndex : indexesPair->second)
 		{
 			incompleteNode->node->SetMaterial(materialIndex, material);
