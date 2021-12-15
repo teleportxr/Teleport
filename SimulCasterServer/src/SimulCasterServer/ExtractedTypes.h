@@ -67,9 +67,12 @@ namespace teleport
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const ExtractedMaterial& materialData)
 		{
-			return out << std::wstring{materialData.guid, SysStringLen(materialData.guid)}
+			out << std::wstring{materialData.guid, SysStringLen(materialData.guid)}
 				<< " " << materialData.lastModified
-				<< std::endl << materialData.material << std::endl;
+				<< std::endl;
+			out<< materialData.material;
+			out<< std::endl;
+			return out;
 		}
 		
 		template<typename InStream>
@@ -101,9 +104,12 @@ namespace teleport
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const ExtractedTexture& textureData)
 		{
-			return out << std::wstring{textureData.guid, SysStringLen(textureData.guid)}
-				<< " " << textureData.lastModified
-				<< std::endl << textureData.texture << " " << textureData.valueScale << std::endl;
+			out << std::wstring{textureData.guid, SysStringLen(textureData.guid)};
+			out << " " << textureData.lastModified;
+			out << std::endl;
+			out << textureData.texture;
+			out << " " << textureData.valueScale << std::endl;
+			return out;
 		}
 		
 		template<typename InStream>
@@ -113,7 +119,9 @@ namespace teleport
 			in >> guidAsString;
 			textureData.guid = _bstr_t(guidAsString.data());
 
-			in >> textureData.lastModified >> textureData.texture >> textureData.valueScale;
+			in >> textureData.lastModified;
+			in >> textureData.texture;
+			in >> textureData.valueScale;
 			return in;
 		}
 	};

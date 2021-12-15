@@ -35,8 +35,8 @@ namespace scr
 	{
 		const avs::uid id; //ID of the missing resource.
 		const char* resourceType; //String indicating missing resource's type.
-
-		std::vector<std::shared_ptr<IncompleteResource>> waitingResources; //Resources that can't be completed without this missing resource.
+		//Resources that can't be completed without this missing resource.
+		std::vector<std::shared_ptr<IncompleteResource>> waitingResources;
 
 		MissingResource(avs::uid id, const char* resourceType)
 			:id(id), resourceType(resourceType)

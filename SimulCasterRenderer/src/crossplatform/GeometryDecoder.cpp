@@ -592,7 +592,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		copy<char>(material.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 		
 		material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
-		material.pbrMetallicRoughness.baseColorTexture.texCoord = Next8B;
+		material.pbrMetallicRoughness.baseColorTexture.texCoord = NextB;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.x = NextFloat;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.y = NextFloat;
 		material.pbrMetallicRoughness.baseColorFactor.x = NextFloat;
@@ -601,7 +601,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.pbrMetallicRoughness.baseColorFactor.w = NextFloat;
 
 		material.pbrMetallicRoughness.metallicRoughnessTexture.index = Next8B;
-		material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = Next8B;
+		material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = NextB;
 		material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x = NextFloat;
 		material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y = NextFloat;
 		material.pbrMetallicRoughness.metallicFactor = NextFloat;
@@ -609,19 +609,19 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.pbrMetallicRoughness.roughnessOffset = NextFloat;
 
 		material.normalTexture.index = Next8B;
-		material.normalTexture.texCoord = Next8B;
+		material.normalTexture.texCoord = NextB;
 		material.normalTexture.tiling.x = NextFloat;
 		material.normalTexture.tiling.y = NextFloat;
 		material.normalTexture.scale = NextFloat;
 
 		material.occlusionTexture.index = Next8B;
-		material.occlusionTexture.texCoord = Next8B;
+		material.occlusionTexture.texCoord = NextB;
 		material.occlusionTexture.tiling.x = NextFloat;
 		material.occlusionTexture.tiling.y = NextFloat;
 		material.occlusionTexture.strength = NextFloat;
 
 		material.emissiveTexture.index = Next8B;
-		material.emissiveTexture.texCoord = Next8B;
+		material.emissiveTexture.texCoord = NextB;
 		material.emissiveTexture.tiling.x = NextFloat;
 		material.emissiveTexture.tiling.y = NextFloat;
 		material.emissiveFactor.x = NextFloat;

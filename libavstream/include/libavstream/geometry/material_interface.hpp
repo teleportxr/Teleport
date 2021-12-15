@@ -35,6 +35,10 @@ namespace avs
 	
 	struct guid
 	{
+		guid()
+		{
+			txt[0]=0;
+		}
 		char txt[49];
 		friend bool operator<(const guid &a,const guid &b)
 		{
@@ -141,19 +145,22 @@ namespace avs
 		friend OutStream& operator<< (OutStream& out, const Texture& texture)
 		{
 			//Name needs its own line, so spaces can be included.
-			out << std::wstring{texture.name.begin(), texture.name.end()} << std::endl;
+			out<< std::wstring{texture.name.begin(), texture.name.end()} << std::endl;
 
-			out << texture.width
-				<< " " << texture.height
-				<< " " << texture.depth
-				<< " " << texture.bytesPerPixel
-				<< " " << texture.arrayCount
-				<< " " << texture.mipCount
-				<< " " << static_cast<uint32_t>(texture.format)
-				<< " " << static_cast<uint32_t>(texture.compression)
-				<< " " << texture.sampler_uid
-				<< " " << texture.dataSize
-				<< " " << texture.valueScale
+			out.operator<<((unsigned int)texture.width);
+			out	<<" " << texture.height;
+			out	<<" " << texture.depth;
+			out	<<" " << texture.bytesPerPixel;
+			out	<<" " << texture.arrayCount;
+			out	<<" " << texture.mipCount;
+			out	<<" " << static_cast<uint32_t>(texture.format);
+			out	<<" " << static_cast<uint32_t>(texture.compression);
+			if(texture.sampler_uid!=0)
+				out	<<" ";
+			out	<<texture.sampler_uid;
+			
+			out	<<" " << texture.dataSize
+				<<" " << texture.valueScale
 				<< std::endl;
 
 			size_t characterCount = texture.dataSize;
@@ -223,7 +230,7 @@ namespace avs
 	struct TextureAccessor
 	{
 		uid index = 0;		// Session uid of the texture.
-		uid texCoord = 0;	// A reference to TEXCOORD_<N>
+		uint8_t texCoord = 0;	// A reference to TEXCOORD_<N>
 		
 		vec2 tiling = {1.0f, 1.0f};
 		
@@ -233,25 +240,30 @@ namespace avs
 			float strength;			//Used in occlusion textures only.
 		};
 
-		template<class OutStream> friend OutStream& operator<<(OutStream& out, const TextureAccessor& textureAccessor)
+		template<typename OutStream>
+		friend OutStream& operator<<(OutStream& out, const TextureAccessor& textureAccessor)
 		{
 			//guid g=OutStream.uid_to_guid(textureAccessor.index);
-			return out << textureAccessor.index
-				<< " " << textureAccessor.texCoord
+			wchar_t idx=(wchar_t)textureAccessor.index;
+ 			out.write(&idx,1);
+			out	<< " " << textureAccessor.texCoord
 				<< " " << textureAccessor.tiling
 				<< " " << textureAccessor.scale;
+			return out;
 		}
 
-		template<class InStream> friend InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
+		template<typename InStream>
+		friend InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
 		{
 			//guid g;
-			InStream& ret= in >> textureAccessor.index
-				>> textureAccessor.texCoord
-				>> textureAccessor.tiling
+			wchar_t tc;
+			in.read(&tc,1);
+			in>> textureAccessor.tiling
 				>> textureAccessor.scale;
 			
+			textureAccessor.texCoord=(uint8_t)tc;
 			//textureAccessor.index g=OutStream.uid_to_guid(g);
-			return ret;
+			return in;
 		}
 	};
 	enum class RoughnessMode: uint16_t
@@ -277,19 +289,20 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const PBRMetallicRoughness& metallicRoughness)
 		{
-			return out << metallicRoughness.baseColorTexture
+			out << metallicRoughness.baseColorTexture
 				<< " " << metallicRoughness.baseColorFactor
 				<< " " << metallicRoughness.metallicRoughnessTexture
 				<< " " << metallicRoughness.metallicFactor
 				<< " " << metallicRoughness.roughnessMultiplier
 				<< " " << metallicRoughness.roughnessOffset;
 				// TODO: roughnessMode not implemented here.
+			 return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, PBRMetallicRoughness& metallicRoughness)
 		{
-			return 
+			 
 				in>> metallicRoughness.baseColorTexture
 				>> metallicRoughness.baseColorFactor
 				>> metallicRoughness.metallicRoughnessTexture
@@ -297,6 +310,7 @@ namespace avs
 				>> metallicRoughness.roughnessMultiplier
 				>> metallicRoughness.roughnessOffset
 				;
+				return in;
 		}
 	};
 	struct Material
@@ -310,19 +324,36 @@ namespace avs
 		vec3 emissiveFactor = {1.0f, 1.0f, 1.0f};
 
 		std::unordered_map<MaterialExtensionIdentifier, std::shared_ptr<MaterialExtension>> extensions; //Mapping of extensions for a material. There should only be one extension per identifier.
-	
 		
+		inline std::vector<avs::uid> GetTextureUids() const
+		{
+			std::vector<avs::uid> uids;
+			if(pbrMetallicRoughness.baseColorTexture.index)
+				uids.push_back(pbrMetallicRoughness.baseColorTexture.index);
+			
+			if(pbrMetallicRoughness.metallicRoughnessTexture.index)
+				uids.push_back(pbrMetallicRoughness.metallicRoughnessTexture.index);
+			
+			if(normalTexture.index)
+				uids.push_back(normalTexture.index);
+			if(occlusionTexture.index)
+				uids.push_back(occlusionTexture.index);
+			if(emissiveTexture.index)
+				uids.push_back(emissiveTexture.index);
+			return uids;
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Material& material)
 		{
 			//Name needs its own line, so spaces can be included.
 			out << std::wstring{material.name.begin(), material.name.end()} << std::endl;
 
-			return out << material.pbrMetallicRoughness
+			out << material.pbrMetallicRoughness
 				<< " " << material.normalTexture
 				<< " " << material.occlusionTexture
 				<< " " << material.emissiveTexture
 				<< " " << material.emissiveFactor;
+			return out;
 		}
 		
 		template<typename InStream>

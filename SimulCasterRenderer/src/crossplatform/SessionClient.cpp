@@ -336,6 +336,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::UpdateNodeStructure:
 			ReceiveUpdateNodeStructureCommand(packet);
 			break;
+		case avs::CommandPayloadType::UpdateNodeSubtype:
+			ReceiveUpdateNodeSubtypeCommand(packet);
+			break;
 		default:
 			break;
 	};

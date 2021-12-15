@@ -886,6 +886,11 @@ void ResourceCreator::CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo&
 	MissingResource& missingMesh = GetMissingResource(id, "Mesh");
 	for(auto it = missingMesh.waitingResources.begin(); it != missingMesh.waitingResources.end(); it++)
 	{
+		if(it->get()->type!=avs::GeometryPayloadType::Node)
+		{
+			SCR_CERR<<"Waiting resource is not a node, it's "<<int(it->get()->type)<<std::endl;
+			continue;
+		}
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 		incompleteNode->node->SetMesh(mesh);
 		SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Mesh_" << id << "(" << meshInfo.name << ")\n";
@@ -1122,7 +1127,10 @@ scr::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, const cha
 	{
 		missingPair = geometryCache->m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 	}
-
+	if(resourceType!=missingPair->second.resourceType)
+	{
+		SCR_CERR<<"Resource type mismatch"<<std::endl;
+	}
 	return missingPair->second;
 }
 

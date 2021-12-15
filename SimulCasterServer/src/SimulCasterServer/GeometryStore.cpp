@@ -108,7 +108,8 @@ GeometryStore::GeometryStore()
 	animations[avs::AxesStandard::GlStyle];
 	skins[avs::AxesStandard::EngineeringStyle];
 	skins[avs::AxesStandard::GlStyle];
-
+	
+	guids[0]=avs::guid();
 }
 
 GeometryStore::~GeometryStore()
@@ -164,6 +165,18 @@ void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshe
 		loadedMaterials[i] = LoadedResource(materialDataPair.first, materialDataPair.second.guid, materialName, materialDataPair.second.lastModified);
 
 		++i;
+
+#if TELEPORT_INTERNAL_CHECKS		
+		std::vector<avs::uid> materialTexture_uids =materialDataPair.second.material.GetTextureUids();
+		for(auto u:materialTexture_uids)
+		{
+			if(!getTexture(u))
+			{
+				TELEPORT_CERR<<"Material "<<materialDataPair.second.material.name.c_str()<<" points to "<<u<<" which is not a texture."<<std::endl;
+				continue;
+			}
+		}
+#endif
 	}
 }
 
@@ -840,8 +853,6 @@ public:
 	{
 		avs::guid g=stream.uid_to_guid(u);
 		return stream<<g;
-	
-	
 	}
 };
 
@@ -878,7 +889,8 @@ void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModifie
 		{
 			//Save data to new file.
 			{
-				resource_ofstream saveFile("verify.mesh", std::bind(&GeometryStore::UidToGuid,this,std::placeholders::_1));
+				auto f=std::bind(&GeometryStore::UidToGuid,this,std::placeholders::_1);
+				resource_ofstream saveFile("verify.mesh", f);
 				saveFile << mesh << std::endl;
 				saveFile.close();
 			}
@@ -1108,7 +1120,7 @@ template<typename ExtractedResource> void GeometryStore::saveResources(const std
 		std::string file_name=path;
 		file_name+="/";
 		file_name+=resourceData.second.getName()+"_";
-		file_name +=resourceData.second.guid;
+		file_name+=resourceData.second.guid;
 		file_name+=resourceData.second.fileExtension();
 		bool oldFileExists = filesystem::exists(file_name);
 
@@ -1117,8 +1129,12 @@ template<typename ExtractedResource> void GeometryStore::saveResources(const std
 			filesystem::rename(file_name, file_name + ".bak");
 
 		//Save data to new file.
-		resource_ofstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::UidToGuid,this,std::placeholders::_1));
-		resourceFile << resourceData.first << std::endl << resourceData.second << std::endl;
+		auto f=std::bind(&GeometryStore::UidToGuid,this,std::placeholders::_1);
+		resource_ofstream resourceFile(file_name.c_str(), f);
+		resourceFile << resourceData.first;
+		resourceFile << std::endl;
+		resourceFile << resourceData.second;
+		resourceFile << std::endl;
 		resourceFile.close();
 
 		//Delete old file.
@@ -1171,6 +1187,8 @@ template<typename ExtractedResource> void GeometryStore::loadResources(const std
 
 avs::uid GeometryStore::GuidToUid(avs::guid g) const
 {
+	if(strlen(g.txt)<2)
+		return 0;
 	auto i=uids.find(g);
 	if(i==uids.end())
 	{

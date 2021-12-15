@@ -557,6 +557,16 @@ namespace teleport
 
 			if (material)
 			{
+				//UIDs used by textures in material.
+				std::vector<avs::uid> materialTexture_uids =material ->GetTextureUids();
+				for(auto u:materialTexture_uids)
+				{
+					if(!src->getTexture(u))
+					{
+						TELEPORT_CERR<<"Material "<<material->name.c_str()<<" points to "<<u<<" which is not a texture."<<std::endl;
+						continue;
+					}
+				}
 				putPayload(avs::GeometryPayloadType::Material);
 				put((size_t)1);
 				put(uid);
@@ -618,15 +628,6 @@ namespace teleport
 					extensionPair.second->serialise(buffer);
 				}
 
-				//UIDs used by textures in material.
-				std::vector<avs::uid> materialTexture_uids =
-				{
-					material->pbrMetallicRoughness.baseColorTexture.index,
-					material->pbrMetallicRoughness.metallicRoughnessTexture.index,
-					material->normalTexture.index,
-					material->occlusionTexture.index,
-					material->emissiveTexture.index
-				};
 
 				//Array needs to be sorted for std::unique; we won't have many elements anyway.
 				std::sort(materialTexture_uids.begin(), materialTexture_uids.end());
@@ -664,16 +665,13 @@ namespace teleport
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs, bool isShadowMap)
+	avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs, bool )
 	{
 		for (avs::uid uid : missingUIDs)
 		{
 			avs::Texture* texture;
 
-			if (isShadowMap)
-				texture = src->getShadowMap(uid);
-			else
-				texture = src->getTexture(uid);
+			texture = src->getTexture(uid);
 			if (texture)
 			{
 				if (texture->compression == avs::TextureCompression::UNCOMPRESSED)
