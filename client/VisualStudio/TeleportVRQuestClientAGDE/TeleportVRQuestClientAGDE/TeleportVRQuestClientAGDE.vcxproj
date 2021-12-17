@@ -253,6 +253,9 @@
     <ProjectReference Include="..\PlatformBuild\Vulkan\SimulVulkan_MT.vcxproj">
       <Project>{97036138-28ed-340a-82bf-867c6d8f0330}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\PlatformBuild\Vulkan\VulkanCoreShaders.vcxproj">
+      <Project>{d023754d-ff4e-36bd-8630-fd0581b1b55d}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

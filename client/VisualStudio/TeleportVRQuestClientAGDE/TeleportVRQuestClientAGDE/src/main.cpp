@@ -30,6 +30,7 @@ Platform gPlatform = Platform::ANDROID;
 #include "Platform/CrossPlatform/DisplaySurfaceManager.h"
 #include "Platform/CrossPlatform/HdrRenderer.h"
 #include "Platform/CrossPlatform/BaseFramebuffer.h"
+#include "Platform/Core/DefaultFileLoader.h"
 
 #include "Platform/Vulkan/RenderPlatform.h"
 #include "Platform/Vulkan/DeviceManager.h"
@@ -38,6 +39,9 @@ using namespace simul;
 using namespace crossplatform;
 using namespace platform;
 using namespace core;
+
+int kOverrideWidth = 1440;
+int kOverrideHeight = 900;
 
 class VulkanTester : public crossplatform::PlatformRendererInterface
 {
@@ -54,10 +58,24 @@ public:
 
 	void Init()
 	{
+		//Set up GDI, RP and DSM
 		m_GraphicsDeviceInterface = &m_Vulkan_DeviceManager;
 		m_GraphicsDeviceInterface->Initialize(true, false, false);
 
 		m_RenderPlatform = new vulkan::RenderPlatform();
+		m_RenderPlatform->SetShaderBuildMode(simul::crossplatform::ShaderBuildMode::NEVER_BUILD);
+		if (gPlatform == Platform::WIN64)
+		{
+			std::string cmake_source_dir = "../../../../firstparty/Platform";
+			std::string cmake_binary_dir = "../../../../firstparty/Platform/build";
+			m_RenderPlatform->PushTexturePath((cmake_source_dir + "/Resources/Textures").c_str());
+			m_RenderPlatform->PushShaderBinaryPath(((cmake_binary_dir + "/") + m_RenderPlatform->GetPathName() + "/shaderbin").c_str());
+		}
+		else
+		{
+			m_RenderPlatform->PushTexturePath("Resources/Textures");
+			m_RenderPlatform->PushShaderBinaryPath("shaderbin");
+		}
 		m_RenderPlatform->RestoreDeviceObjects(m_GraphicsDeviceInterface->GetDevice());
 
 		m_DisplaySurfaceManager.Initialize(m_RenderPlatform);
@@ -66,6 +84,7 @@ public:
 		//Set up HdrRenderer and Depth texture
 		m_DepthTexture = m_RenderPlatform->CreateTexture("Depth-Stencil"); //Calls new
 		m_HdrRenderer = new crossplatform::HdrRenderer();
+		m_HdrRenderer->RestoreDeviceObjects(m_RenderPlatform);
 
 		//Set up BaseFramebuffer
 		m_HdrFramebuffer = m_RenderPlatform->CreateFramebuffer(); //Calls new
@@ -75,6 +94,7 @@ public:
 		m_HdrFramebuffer->DefaultClearColour = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		m_HdrFramebuffer->DefaultClearDepth = m_ReverseDepth ? 0.0f : 1.0f;
 		m_HdrFramebuffer->DefaultClearStencil = 0;
+		m_HdrFramebuffer->RestoreDeviceObjects(m_RenderPlatform);
 
 		vec3 look = { 0.0f, 1.0f, 0.0f }, up = { 0.0f, 0.0f, 1.0f };
 		m_Camera.LookInDirection(look, up);
@@ -158,8 +178,6 @@ private:
 	cp_hwnd m_Window = nullptr;
 	bool m_ReverseDepth = true;
 	int m_Framenumber = 0;
-	int kOverrideWidth = 1440;
-	int kOverrideHeight = 900;
 
 	vulkan::DeviceManager m_Vulkan_DeviceManager;
 	GraphicsDeviceInterface* m_GraphicsDeviceInterface = nullptr;
@@ -171,24 +189,79 @@ private:
 	crossplatform::BaseFramebuffer* m_HdrFramebuffer = nullptr;
 
 	crossplatform::Camera m_Camera;
+
+public:
+	DisplaySurfaceManager* GetDisplaySurfaceManager() { return &m_DisplaySurfaceManager; }
 };
 
-void main_VulkanTester(cp_hwnd window)
-{
-	VulkanTester vt(window);
-}
-
-
 #if defined(TELEPORT_WIN64)
-HWND window = 0;
+HWND hWnd = 0;
+DisplaySurfaceManager* displaySurfaceManager = nullptr;
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_PAINT:
+		if (displaySurfaceManager)
+		{
+			displaySurfaceManager->Render(hWnd);
+			displaySurfaceManager->EndFrame();
+		}
+		break;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	return 0;
+}
 
 int main(int argc, char** argv)
 {
-	main_VulkanTester(window);
+	// Initialize the Window class:
+	wchar_t wszWindowClass[] = L"TeleportVRQuestClientAGDE - x64";
+	HINSTANCE hInstance = 0;
+
+	WNDCLASSEXW wcex;
+	wcex.cbSize = sizeof(WNDCLASSEXW);
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = 0;
+	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wcex.hbrBackground = NULL;
+	wcex.lpszMenuName = 0;
+	wcex.lpszClassName = wszWindowClass;
+	wcex.hIconSm = 0;
+	RegisterClassExW(&wcex);
+	
+	// Create the window:
+	hWnd = CreateWindowW(wszWindowClass, wszWindowClass, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, kOverrideWidth, kOverrideHeight, NULL, NULL, hInstance, NULL);
+	if (!hWnd)
+		return 0;
+	ShowWindow(hWnd, SW_SHOW);
+	UpdateWindow(hWnd);
+
+	VulkanTester vt(hWnd);
+	displaySurfaceManager = vt.GetDisplaySurfaceManager();
+
+	//Main WIN32 MSG loop
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		InvalidateRect(hWnd, NULL, TRUE);
+	}
 }
 #else
 extern "C" { void android_main(struct android_app* app); }
 ANativeWindow* window = nullptr;
+DisplaySurfaceManager* displaySurfaceManager = nullptr;
 bool g_WindowQuit;
 
 void handle_cmd(android_app* app, int32_t cmd)
@@ -218,8 +291,10 @@ void android_main(struct android_app* app)
 				source->process(app, source);
 		}
 	}
+	base::DefaultFileLoader::SetAndroid_AAssetManager(app->activity->assetManager);
 
-	main_VulkanTester(window);
+	VulkanTester vt(window);
+	displaySurfaceManager = vt.GetDisplaySurfaceManager();
 
 	while (!g_WindowQuit)
 	{
@@ -227,6 +302,9 @@ void android_main(struct android_app* app)
 		{
 			if (source != NULL)
 				source->process(app, source);
+
+			displaySurfaceManager->Render(window);
+			displaySurfaceManager->EndFrame();
 		}
 	}
 }

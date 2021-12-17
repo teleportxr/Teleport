@@ -379,14 +379,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Applications\Sfx\GeneratedFiles\SfxLALRParser.cpp" />
     <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Applications\Sfx\GeneratedFiles\SfxLALRParser.hpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\ZERO_CHECK.vcxproj">
-      <Project>{B42D4E85-6DD6-3B89-A6DB-1C652427C50B}</Project>
-      <Name>ZERO_CHECK</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
