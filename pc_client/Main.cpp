@@ -82,6 +82,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	SI_Error rc = ini.LoadFile("client.ini");
 	bool enable_vr = true;
 	bool dev_mode = false;
+	bool render_local_offline = false;
 	if(rc == SI_OK)
 	{
 
@@ -102,6 +103,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		clientID = ini.GetLongValue("", "CLIENT_ID", TELEPORT_DEFAULT_CLIENT_ID);
 		enable_vr = ini.GetLongValue("", "ENABLE_VR", true);
 		dev_mode = ini.GetLongValue("", "DEV_MODE", false);
+		render_local_offline = ini.GetLongValue("", "RENDER_LOCAL_OFFLINE", false);
 		gui.SetServerIPs(server_ips);
 	}
 	else
@@ -118,7 +120,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         return FALSE;
     }
-
+	clientRenderer->render_local_offline = render_local_offline;
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WORLDSPACE));
     MSG msg;
     // Main message loop:
@@ -441,6 +443,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					{
 						const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);
 						clientDeviceState.SetControllerPose(i, controllerPose.position, controllerPose.orientation);
+						const teleport::client::ControllerState& controllerState = useOpenXR.GetControllerState(i);
+						clientDeviceState.SetControllerState(i, controllerState);
 					}
 				}
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
@@ -465,6 +469,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				vec3 headOrigin = *((vec3*)&clientDeviceState.originPose.position);
 				if (useOpenXR.HaveXRDevice())
 				{
+					clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
 					useOpenXR.RenderFrame(deviceContext, renderDelegate, headOrigin);
 				}
 				errno=0;

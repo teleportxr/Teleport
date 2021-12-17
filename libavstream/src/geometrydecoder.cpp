@@ -133,8 +133,8 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 		PayloadInfoType payloadInfoType = (PayloadInfoType)d().m_buffer[4];
 
-		size_t dataOffset = 0;
-		size_t dataSize = 0;
+		size_t dataOffset;
+		size_t dataSize;
 		GeometryPayloadType payloadType = GeometryPayloadType::Invalid;
 		if (payloadInfoType == PayloadInfoType::Stream)
 		{
@@ -147,11 +147,10 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 				continue;
 			}
 
-			size_t offset = sizeof(StreamPayloadInfo);
-			// offset is incremented in the classify function to be after the payload type.
+			dataOffset = sizeof(StreamPayloadInfo);
+			// The offset is incremented in the classify function to be after the payload type.
 			payloadType = d().m_parser->classify(d().m_buffer.data(), bufferSize, dataOffset);
 
-			dataOffset = offset;
 			dataSize = info.dataSize - sizeof(GeometryPayloadType);
 		}
 		else if (payloadInfoType == PayloadInfoType::File)
@@ -173,6 +172,8 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			case FilePayloadType::Material:
 				payloadType = GeometryPayloadType::Material;
 				break;
+			default:
+				continue;
 			}
 		}
 		else

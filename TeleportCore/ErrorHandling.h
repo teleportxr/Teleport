@@ -6,8 +6,17 @@
 #include <cerrno>
 #include <assert.h>
 #include <stdexcept> // for runtime_error
+#ifdef _MSC_VER
+    #pragma warning(push)
+	#pragma warning(disable:4996)
+	#include <Windows.h>// for DebugBreak etc
+#define DEBUG_BREAK_CROSS DebugBreak();
+#elif defined __ANDROID__
+#include <signal.h>
+#define DEBUG_BREAK_CROSS raise(SIGTRAP);
+#endif
 
-#define DEBUG_BREAK_ONCE {static bool done=false;if(!done){ done=true;DebugBreak();}}
+#define DEBUG_BREAK_ONCE {static bool done=false;if(!done){ done=true;DEBUG_BREAK_CROSS}}
 #ifndef TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_INTERNAL_CHECKS 0
 #endif
@@ -25,4 +34,7 @@
 #else
 #define TELEPORT_INTERNAL_CERR\
 	//
+#endif
+#ifdef _MSC_VER
+    #pragma warning(pop)
 #endif

@@ -95,8 +95,6 @@ static std::vector<avs::uid> lostClients; //Clients who have been lost, and are 
 static std::mutex audioMutex;
 static std::mutex videoMutex;
 
-static avs::vec3 bodyOffsetFromHead;
-
 // Messages related stuff
 avs::MessageHandlerFunc messageHandler = nullptr;
 struct LogMessage
@@ -350,8 +348,6 @@ struct InitialiseState
 	ReportHandshakeFn reportHandshake;
 	ProcessAudioInputFn processAudioInput;
 	GetUnixTimestampFn getUnixTimestamp;
-
-	avs::vec3 bodyOffsetFromHead;
 };
 
 ///PLUGIN-INTERNAL START
@@ -525,8 +521,6 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 
 	reportHandshake=initialiseState->reportHandshake;
 
-	bodyOffsetFromHead = initialiseState->bodyOffsetFromHead;
-
 	if(enet_initialize() != 0)
 	{
 		TELEPORT_CERR<<"An error occurred while attempting to initalise ENet!\n";
@@ -543,8 +537,8 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		return false;
 	}
 
-	result=httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
-	return true;
+	result = httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
+	return result;
 }
 
 TELEPORT_EXPORT void Shutdown()
@@ -768,8 +762,9 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
 	setupCommand.control_model=casterSettings.controlModel;
-	setupCommand.bodyOffsetFromHead = bodyOffsetFromHead;
+	setupCommand.bodyOffsetFromHead = clientData.clientSettings.bodyOffsetFromHead;
 	setupCommand.startTimestamp = getUnixTimestamp();
+	setupCommand.using_ssl = httpService->isUsingSSL();
 
 	avs::VideoConfig& videoConfig		= setupCommand.video_config;
 	videoConfig.video_width				= encoderSettings.frameWidth;
@@ -1406,7 +1401,7 @@ TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeI
 	clientPair->second.clientMessaging.setNodeHighlighted(nodeID, isHighlighted);
 }
 
-TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID)
+TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID,avs::Pose relPose )
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -1415,7 +1410,18 @@ TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs
 		return;
 	}
 
-	clientPair->second.clientMessaging.reparentNode(nodeID, newParentNodeID);
+	clientPair->second.clientMessaging.reparentNode(nodeID, newParentNodeID,relPose);
+}
+
+TELEPORT_EXPORT void Client_SetNodeSubtype(avs::uid clientID, avs::uid nodeID, avs::NodeSubtype subType)
+{
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "No client exists with ID " << clientID << "!\n";
+		return;
+	}
+	clientPair->second.clientMessaging.setNodeSubtype(nodeID,  subType);
 }
 
 TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)

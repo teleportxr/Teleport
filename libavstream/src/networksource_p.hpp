@@ -20,12 +20,16 @@
 #include <util/ringbuffer.hpp>
 
 #include <libavstream/networksource.hpp>
-#include <libavstream/httputil.hpp>
+
 #if LIBAV_USE_SRT
 #include <srt.h>
 #endif
 #include <thread>
 #include "ElasticFrameProtocol.h"
+
+#if IS_CLIENT
+#include <libavstream/httputil.hpp>
+#endif
 
 namespace avs
 {
@@ -123,7 +127,9 @@ namespace avs
 
 		std::vector<char> m_tempBuffer;
 		RingBuffer<RawPacket, 12000> m_recvBuffer;
+#if IS_CLIENT
 		HTTPUtil m_httpUtil;
+#endif
 	};
 
 } // avs

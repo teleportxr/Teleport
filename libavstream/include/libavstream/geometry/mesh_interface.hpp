@@ -274,7 +274,6 @@ struct Animation;
 
 		// The following should be separated out into node components:
 		NodeDataType data_type=NodeDataType::None;
-		NodeDataSubtype data_subtype=NodeDataSubtype::None;
 		uid data_uid;
 
 		//MESH

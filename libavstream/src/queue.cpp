@@ -119,7 +119,7 @@ namespace avs
 	{
 		const size_t oldBufferCount = m_maxBuffers;
 		
-		m_maxBuffers += m_originalMaxBuffers / 2;
+		m_maxBuffers += std::max(m_maxBuffers,m_originalMaxBuffers)/2;
 		char* oldMem = m_mem;
 		m_mem = new char[m_maxBuffers * m_maxBufferSize];
 

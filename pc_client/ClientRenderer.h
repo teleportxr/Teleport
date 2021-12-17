@@ -126,7 +126,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	SessionClient sessionClient;
 	teleport::client::ControllerState controllerStates[2];
 	float framerate = 0.0f;
-
 	avs::Timestamp platformStartTimestamp;	//Timestamp of when the system started.
 	double previousTimestamp;				//Milliseconds since the state was last updated.
 
@@ -166,14 +165,12 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 		avs::vec4 orientation[2];
 	};
 	ControllerSim controllerSim;
-	uint32_t nextEventID = 0;
 
 	std::string server_ip;
 	int server_discovery_port=0;
 
 	float roomRadius=1.5f;
 	teleport::client::ClientDeviceState *clientDeviceState = nullptr;
-	bool dev_mode = false;
 
 	// handler for the UI to tell us to connect.
 	void ConnectButtonHandler(const std::string& url);
@@ -191,6 +188,7 @@ public:
 	
 	void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
 	void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
+	void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand);
 
 	std::vector<avs::uid> GetGeometryResources() override;
 	void ClearGeometryResources() override;
@@ -202,7 +200,9 @@ public:
 	void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate) override;
 	void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
 	void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
-
+	//
+	// to render the vr view instead of re-rendering.
+	void SetExternalTexture(simul::crossplatform::Texture* t);
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
 	void PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext);
@@ -278,6 +278,8 @@ public:
 	vec3 videoPos;
 
 	avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
+	bool dev_mode = false;
+	bool render_local_offline = false;
 private:
 	avs::uid show_only=0;
 	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining);
@@ -295,4 +297,5 @@ private:
 	teleport::Gui &gui;
 	avs::uid node_select=0;
 	bool have_vr_device = false;
+	simul::crossplatform::Texture* externalTexture = nullptr;
 };

@@ -573,7 +573,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 
 	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, avs::GeometryPayloadType::Material);
 	//A list of unique resources that the material is missing, and needs to be completed.
-	std::set<avs::uid> missingResources;
+ 	std::set<avs::uid> missingResources;
 
 	incompleteMaterial->materialInfo.name = material.name;
 
@@ -672,7 +672,7 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 			SCR_COUT << "Skin_" << id << "(" << incompleteSkin->skin->name << ") missing Bone_" << jointID << std::endl;
 			incompleteSkin->missingBones[jointID] = i;
 			geometryCache->m_ResourceRequests.push_back(jointID);
-			GetMissingResource(jointID, "Bone").waitingResources.push_back(incompleteSkin);
+			GetMissingResource(jointID,avs::GeometryPayloadType::Bone ).waitingResources.push_back(incompleteSkin);
 		}
 	}
 
@@ -739,7 +739,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.data_uid);
-			GetMissingResource(node.data_uid, "Mesh").waitingResources.push_back(newNode);
+			GetMissingResource(node.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.push_back(newNode);
 		}
 	}
 
@@ -752,7 +752,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.skinID);
-			GetMissingResource(node.skinID, "Skin").waitingResources.push_back(newNode);
+			GetMissingResource(node.skinID, avs::GeometryPayloadType::Skin).waitingResources.push_back(newNode);
 		}
 	}
 
@@ -771,7 +771,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(animationID);
-			GetMissingResource(animationID, "Animation").waitingResources.push_back(newNode);
+			GetMissingResource(animationID, avs::GeometryPayloadType::Animation).waitingResources.push_back(newNode);
 		}
 	}
 
@@ -792,7 +792,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		{
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.renderState.globalIlluminationUid);
-			GetMissingResource(node.renderState.globalIlluminationUid, "Texture").waitingResources.push_back(newNode);
+			GetMissingResource(node.renderState.globalIlluminationUid, avs::GeometryPayloadType::Texture).waitingResources.push_back(newNode);
 		}
 	}
 	for (size_t i = 0; i < node.materials.size(); i++)
@@ -812,7 +812,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.materials[i]);
-			GetMissingResource(node.materials[i], "Material").waitingResources.push_back(newNode);
+			GetMissingResource(node.materials[i], avs::GeometryPayloadType::Material).waitingResources.push_back(newNode);
 			newNode->materialSlots[node.materials[i]].push_back(i);
 		}
 	}
@@ -883,9 +883,14 @@ void ResourceCreator::CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo&
 	geometryCache->mMeshManager.Add(id, mesh);
 
 	//Add mesh to nodes waiting for mesh.
-	MissingResource& missingMesh = GetMissingResource(id, "Mesh");
+	MissingResource& missingMesh = GetMissingResource(id, avs::GeometryPayloadType::Mesh);
 	for(auto it = missingMesh.waitingResources.begin(); it != missingMesh.waitingResources.end(); it++)
 	{
+		if(it->get()->type!=avs::GeometryPayloadType::Node)
+		{
+			SCR_CERR<<"Waiting resource is not a node, it's "<<int(it->get()->type)<<std::endl;
+			continue;
+		}
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 		incompleteNode->node->SetMesh(mesh);
 		SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Mesh_" << id << "(" << meshInfo.name << ")\n";
@@ -908,7 +913,7 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 	geometryCache->mSkinManager.Add(id, completeSkin->skin);
 
 	//Add skin to nodes waiting for skin.
-	MissingResource& missingSkin = GetMissingResource(id, "Skin");
+	MissingResource& missingSkin = GetMissingResource(id,avs::GeometryPayloadType::Skin);
 	for(auto it = missingSkin.waitingResources.begin(); it != missingSkin.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
@@ -936,7 +941,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 	geometryCache->mTextureManager.Add(id, scrTexture);
 
 	//Add texture to materials waiting for texture.
-	MissingResource& missingTexture = GetMissingResource(id, "Texture");
+	MissingResource& missingTexture = GetMissingResource(id, avs::GeometryPayloadType::Texture);
 	for(auto it = missingTexture.waitingResources.begin(); it != missingTexture.waitingResources.end(); it++)
 	{
 		switch((*it)->type)
@@ -983,12 +988,17 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 	// Update its properties:
 	material->SetMaterialCreateInfo(m_pRenderPlatform,materialInfo);
 	//Add material to nodes waiting for material.
-	MissingResource& missingMaterial = GetMissingResource(id, "Material");
+	MissingResource& missingMaterial = GetMissingResource(id, avs::GeometryPayloadType::Material);
 	for(auto it = missingMaterial.waitingResources.begin(); it != missingMaterial.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 
 		auto indexesPair = incompleteNode->materialSlots.find(id);
+		if (indexesPair->first == incompleteNode->materialSlots.end()->first)
+		{
+			SCR_CERR << "Material " << id << " not found in incomplete node " << incompleteNode->id << std::endl;
+			continue;
+		}
 		for(size_t materialIndex : indexesPair->second)
 		{
 			incompleteNode->node->SetMaterial(materialIndex, material);
@@ -1021,7 +1031,7 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
 	geometryCache->mBoneManager.Add(id, bone);
 
 	//Add bone to skin waiting for bone.
-	MissingResource& missingBone = GetMissingResource(id, "Bone");
+	MissingResource& missingBone = GetMissingResource(id, avs::GeometryPayloadType::Bone);
 	for(auto it = missingBone.waitingResources.begin(); it != missingBone.waitingResources.end(); it++)
 	{
 		if((*it)->type == avs::GeometryPayloadType::Skin)
@@ -1051,7 +1061,7 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animat
 	geometryCache->mAnimationManager.Add(id, animation);
 
 	//Add animation to waiting nodes.
-	MissingResource& missingAnimation = GetMissingResource(id, "Animation");
+	MissingResource& missingAnimation = GetMissingResource(id, avs::GeometryPayloadType::Animation);
 	for(auto it = missingAnimation.waitingResources.begin(); it != missingAnimation.waitingResources.end(); it++)
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
@@ -1085,7 +1095,7 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 			SCR_COUT << "Material_" << incompleteMaterial->id << "(" << incompleteMaterial->id << ") missing Texture_" << accessor.index << std::endl;
 
 			geometryCache->m_ResourceRequests.push_back(accessor.index);
-			GetMissingResource(accessor.index, "Texture").waitingResources.push_back(incompleteMaterial);
+			GetMissingResource(accessor.index, avs::GeometryPayloadType::Texture).waitingResources.push_back(incompleteMaterial);
 			incompleteMaterial->textureSlots.emplace(accessor.index, materialParameter.texture);
 		}
 
@@ -1110,14 +1120,17 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 	materialParameter.textureOutputScalar = colourFactor;
 }
 
-scr::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, const char* resourceType)
+scr::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType)
 {
 	auto missingPair = geometryCache->m_MissingResources.find(id);
 	if (missingPair == geometryCache->m_MissingResources.end())
 	{
 		missingPair = geometryCache->m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 	}
-
+	if(resourceType!=missingPair->second.resourceType)
+	{
+		SCR_CERR<<"Resource type mismatch"<<std::endl;
+	}
 	return missingPair->second;
 }
 

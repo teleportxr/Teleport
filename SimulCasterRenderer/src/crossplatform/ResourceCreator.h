@@ -97,7 +97,7 @@ namespace scr
 								  std::shared_ptr<IncompleteMaterial> incompleteMaterial,
 								  scr::Material::MaterialParameter& materialParameter);
 
-		MissingResource& GetMissingResource(avs::uid id, const char* resourceType);
+		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);
 
 		void BasisThread_TranscodeTextures();
 

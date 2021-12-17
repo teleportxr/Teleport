@@ -5,6 +5,7 @@ project( TeleportCore )
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
 set(src_files TeleportCore.cpp)
+file(GLOB header_files *.h)
 
 #Include its root directory
 include_directories(src)
@@ -21,5 +22,5 @@ if(ANDROID)
 endif()
 
 #For MT runtime
-add_library(TeleportCore STATIC ${src_files})
+add_library(TeleportCore STATIC ${src_files} ${header_files})
 set_target_properties( TeleportCore PROPERTIES FOLDER Teleport)

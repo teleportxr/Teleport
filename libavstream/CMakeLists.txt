@@ -40,7 +40,6 @@ set(src_private_root
 	src/libraryloader.cpp
 	src/common_maths.cpp
 	src/timer.cpp
-	src/httputil.cpp
 )
 set(src_private_api
 	src/api/cuda.cpp
@@ -156,7 +155,6 @@ set(src_public_root
 	include/libavstream/queue.hpp
 	include/libavstream/surface.hpp
 	include/libavstream/timer.hpp
-	include/libavstream/httputil.hpp
 	)
 set(src_public_stream
 	include/libavstream/stream/parser_interface.hpp)
@@ -185,6 +183,11 @@ set(hdr_public_audio
 	include/libavstream/audio/audiotarget.h
 )
 	
+if(NOT TELEPORT_SERVER)
+	set(src_public_root ${src_public_root} include/libavstream/httputil.hpp)
+	set(src_private_root ${src_private_root} src/httputil.cpp)
+endif()
+
 set(hdr_public ${src_public_root} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} ${hdr_public_audio})
 source_group("Public Headers" src FILES ${src_public_root} )
 source_group("Public Headers\\stream" src FILES ${src_public_stream} )
@@ -281,8 +284,16 @@ if(LIBAV_USE_EFP)
 endif()
 
 if(NOT TELEPORT_SERVER)
+    set(BUILD_CURL_EXE OFF CACHE BOOL "")
+    set(CURL_STATIC_CRT ON CACHE BOOL "")
+	set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+	set(BUILD_TESTING OFF CACHE BOOL "")
+    add_subdirectory(thirdparty/curl)
+	set_target_properties(libcurl PROPERTIES FOLDER AVStream/thirdparty/curl)
+	target_compile_definitions(libcurl PRIVATE BUILDING_LIBCURL=1) 
 	set(curl_include_paths "${CURL_SOURCE_DIR}/include" ${CURL_BINARY_DIR})
 	set(curl_libs libcurl)
+	target_compile_definitions(libavstream PUBLIC IS_CLIENT=1) 
 endif()
 target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} ${curl_include_paths} include ${PTHREAD_INCLUDE_DIR} PUBLIC include/libavstream)
 target_compile_features(libavstream PRIVATE cxx_std_17)

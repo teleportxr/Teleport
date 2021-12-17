@@ -24,8 +24,11 @@ namespace teleport
 
 		void tick() override;
 
+		bool isUsingSSL() const { return mUsingSSL; }
+
 	private:
 		std::unique_ptr<httplib::Server> mServer;
 		std::thread mThread;
+		bool mUsingSSL;
 	};
 }

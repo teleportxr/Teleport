@@ -19,9 +19,6 @@
 [submodule "thirdparty/openvr"]
 	path = thirdparty/openvr
 	url = git@github.com:ValveSoftware/openvr.git
-[submodule "thirdparty/curl"]
-	path = thirdparty/curl
-	url = git@github.com:simul/curl.git
 [submodule "thirdparty/zlib"]
 	path = thirdparty/zlib
 	url = git@github.com:simul/zlib.git
@@ -31,3 +28,6 @@
 [submodule "firstparty/teleport-unity"]
 	path = firstparty/teleport-unity
 	url = git@github.com:simul/teleport-unity.git
+[submodule "libavstream/thirdparty/curl"]
+	path = libavstream/thirdparty/curl
+	url = git@github.com:simul/curl.git

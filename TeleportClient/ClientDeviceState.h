@@ -1,6 +1,7 @@
 #pragma once
 #include <libavstream/common.hpp>
 #include "basic_linear_algebra.h"
+#include <Input.h>
 
 namespace teleport
 {
@@ -20,11 +21,13 @@ namespace teleport
 			avs::Pose headPose;				// in game absolute space.
 			avs::Pose originPose;			// in game absolute space.
 			avs::Pose controllerPoses[2];	// in game absolute space.
+			teleport::client::ControllerState controllerStates[2];
 
 			void TransformPose(avs::Pose &p);
 			void UpdateOriginPose();
 			void SetHeadPose(avs::vec3 pos,scr::quat q);
 			void SetControllerPose(int index,avs::vec3 pos,scr::quat q);
+			void SetControllerState(int index, const teleport::client::ControllerState& st);
 		};
 	}
 }

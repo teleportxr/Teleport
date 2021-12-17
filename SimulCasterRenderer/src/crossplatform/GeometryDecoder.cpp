@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <Common.h>
+#include "TeleportCore/ErrorHandling.h"
 
 #include "libavstream/geometry/animation_interface.h"
 #include "draco/compression/decode.h"
@@ -121,6 +122,7 @@ avs::Result GeometryDecoder::decode(avs::GeometryPayloadType type, avs::Geometry
 		SCR_COUT << "GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
 		return decodeSkin(target);
 	default:
+		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 		return avs::Result::GeometryDecoder_InvalidPayload;
 	};
 }
@@ -590,7 +592,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		copy<char>(material.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 		
 		material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
-		material.pbrMetallicRoughness.baseColorTexture.texCoord = Next8B;
+		material.pbrMetallicRoughness.baseColorTexture.texCoord = NextB;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.x = NextFloat;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.y = NextFloat;
 		material.pbrMetallicRoughness.baseColorFactor.x = NextFloat;
@@ -599,7 +601,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.pbrMetallicRoughness.baseColorFactor.w = NextFloat;
 
 		material.pbrMetallicRoughness.metallicRoughnessTexture.index = Next8B;
-		material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = Next8B;
+		material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = NextB;
 		material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x = NextFloat;
 		material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y = NextFloat;
 		material.pbrMetallicRoughness.metallicFactor = NextFloat;
@@ -607,24 +609,24 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.pbrMetallicRoughness.roughnessOffset = NextFloat;
 
 		material.normalTexture.index = Next8B;
-		material.normalTexture.texCoord = Next8B;
+		material.normalTexture.texCoord = NextB;
 		material.normalTexture.tiling.x = NextFloat;
 		material.normalTexture.tiling.y = NextFloat;
 		material.normalTexture.scale = NextFloat;
 
 		material.occlusionTexture.index = Next8B;
-		material.occlusionTexture.texCoord = Next8B;
+		material.occlusionTexture.texCoord = NextB;
 		material.occlusionTexture.tiling.x = NextFloat;
 		material.occlusionTexture.tiling.y = NextFloat;
 		material.occlusionTexture.strength = NextFloat;
 
 		material.emissiveTexture.index = Next8B;
-		material.emissiveTexture.texCoord = Next8B;
+		material.emissiveTexture.texCoord = NextB;
 		material.emissiveTexture.tiling.x = NextFloat;
 		material.emissiveTexture.tiling.y = NextFloat;
 		material.emissiveFactor.x = NextFloat;
 		material.emissiveFactor.y = NextFloat;
-		material.emissiveFactor.z = NextFloat;
+          		material.emissiveFactor.z = NextFloat;
 
 		size_t extensionAmount = Next8B;
 		for(size_t i = 0; i < extensionAmount; i++)
@@ -732,7 +734,6 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.priority = Next4B;
 		node.data_uid = Next8B;
 		node.data_type = static_cast<NodeDataType>(NextB);
-		node.data_subtype = static_cast<NodeDataSubtype>(NextB);
 
 		node.skinID = Next8B;
 		node.parentID = Next8B;

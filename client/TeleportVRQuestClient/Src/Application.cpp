@@ -702,6 +702,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
 		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
+		const uint32_t geoStreamID = 80;
 		std::vector<avs::NetworkSourceStream> streams = {{20}, {40}};
 		if (AudioStream)
 		{
@@ -709,7 +710,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		}
 		if (GeoStream)
 		{
-			streams.push_back({80});
+			streams.push_back({geoStreamID});
 		}
 
 		avs::NetworkSourceParams sourceParams;
@@ -718,6 +719,9 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
 		sourceParams.remotePort = setupCommand.server_streaming_port;
 		sourceParams.remoteHTTPPort = setupCommand.server_http_port;
+		sourceParams.maxHTTPConnections = 10;
+		sourceParams.httpStreamID = geoStreamID;
+		sourceParams.useSSL = setupCommand.using_ssl;
 
 		bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 		avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::GlStyle, bodyOffsetFromHead);

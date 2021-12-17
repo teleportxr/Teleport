@@ -213,7 +213,17 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	// initialize the default local geometry:
 	geometryDecoder.decodeFromFile("meshes/Wand.mesh_compressed",&localResourceCreator);
+	
 	avs::uid wand_uid = 11;
+	auto uids=localGeometryCache.mMeshManager.GetAllIDs();
+	if (uids.size())
+	{
+		wand_uid = uids[0];
+	}
+	else
+	{
+		TELEPORT_BREAK_ONCE("Wand mesh not found");
+	}
 	{
 		scr::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.name="local material";
@@ -239,14 +249,12 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avsNode.materials.push_back(14);
 	avsNode.materials.push_back(15);
 
-	avsNode.data_subtype = avs::NodeDataSubtype::RightHand;
 	std::shared_ptr<scr::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
 	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetRightHand(23);
 
 	avsNode.name = "local Left Hand";
 	avsNode.materials[1]=16;
-	avsNode.data_subtype = avs::NodeDataSubtype::LeftHand;
 	std::shared_ptr<scr::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
 	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetLeftHand(24);
@@ -267,6 +275,12 @@ void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
 		server_ip = ip.substr(0,pos);
 	}
 	sessionClient.SetDiscoveryClientID(clientID);
+}
+
+void ClientRenderer::SetExternalTexture(simul::crossplatform::Texture* t)
+{
+	externalTexture = t;
+	have_vr_device = (externalTexture != nullptr);
 }
 
 // This allows live-recompile of shaders. 
@@ -385,7 +399,15 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 
 	// MUST call init each frame.
 	deviceContext.viewStruct.Init();
-	RenderView(deviceContext);
+	if (externalTexture)
+	{
+		renderPlatform->DrawTexture(deviceContext, 0, 0, w, h, externalTexture);
+	}
+	else
+	{
+		RenderView(deviceContext);
+	}
+
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	if (render_from_video_centre)
 	{
@@ -500,20 +522,22 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			}
 
 			UpdateTagDataBuffers(deviceContext);
-
-			if (videoTexture->IsCubemap())
+			if (sessionClient.IsConnected())
 			{
-				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
-				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
-				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
-			}
-			else
-			{
-				const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
-				RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
-				simul::math::Matrix4x4 projInv;
-				deviceContext.viewStruct.proj.Inverse(projInv);
-				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
+				if (videoTexture->IsCubemap())
+				{
+					const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
+					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
+					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
+				}
+				else
+				{
+					const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
+					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
+					simul::math::Matrix4x4 projInv;
+					deviceContext.viewStruct.proj.Inverse(projInv);
+					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
+				}
 			}
 			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x, videoConfig.diffuse_y));
 			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x, videoConfig.specular_y));
@@ -521,7 +545,8 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 
 		pbrConstants.drawDistance = lastSetupCommand.video_config.draw_distance;
-		RenderLocalNodes(deviceContext,geometryCache);
+		if (sessionClient.IsConnected()||render_local_offline)
+			RenderLocalNodes(deviceContext,geometryCache);
 
 		{
 			std::shared_ptr<scr::Node> leftHand = localGeometryCache.mNodeManager->GetLeftHand();
@@ -539,10 +564,11 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		
 		gui.Render(deviceContext);
 
-
-		pbrConstants.drawDistance = 1000.0f;
-		RenderLocalNodes(deviceContext,localGeometryCache);
-
+		if (!sessionClient.IsConnected() || gui.HasFocus())
+		{
+			pbrConstants.drawDistance = 1000.0f;
+			RenderLocalNodes(deviceContext, localGeometryCache);
+		}
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		//hdrFramebuffer->DeactivateDepth(deviceContext);
 		if (show_video)
@@ -564,11 +590,6 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
-	if (render_from_video_centre)
-	{
-		//camera.SetPosition(true_pos);
-		//renderPlatform->Print(deviceContext, w-16, h-16, "C", white);
-	}
 	if(show_textures)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
@@ -751,6 +772,22 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 	}
 }
 
+const char *stringof(avs::GeometryPayloadType t)
+{
+	static const char *txt[]=
+	{
+		"Invalid", 
+		"Mesh",
+		"Material",
+		"MaterialInstance",
+		"Texture",
+		"Animation",
+		"Node",
+		"Skin",
+		"Bone"
+	};
+	return txt[(size_t)t];
+}
 
 void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
@@ -876,7 +913,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			for(const auto& missingPair : missing)
 			{
 				const scr::MissingResource& missingResource = missingPair.second;
-				std::string txt= platform::core::QuickFormat("\t%s %d from ", missingResource.resourceType, missingResource.id);
+				std::string txt= platform::core::QuickFormat("\t%s %d from ", stringof(missingResource.resourceType), missingResource.id);
 				for(auto u:missingResource.waitingResources)
 				{
 					auto type= u.get()->type;
@@ -1357,10 +1394,37 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 {
 	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
 	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
-	node->SetLocalPosition(avs::vec3(0,0,0));
-	node->SetLocalRotation(scr::quat(0,0,0,1.0f));
+	std::weak_ptr<scr::Node> oldParent=node->GetParent();
+	auto oldp=oldParent.lock();
+	if(oldp)
+		oldp->RemoveChild(node);
+	node->SetLocalPosition(updateNodeStructureCommand.relativePose.position);
+	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
 	node->SetParent(parent);
-	parent->AddChild(node);
+	if(parent)
+		parent->AddChild(node);
+}
+
+void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand)
+{
+	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
+	switch(updateNodeStructureCommand.nodeSubtype)
+	{
+	case avs::NodeSubtype::None:
+		break;
+	case avs::NodeSubtype::Body:
+		geometryCache.mNodeManager->SetBody(node);
+		break;
+	case avs::NodeSubtype::LeftHand:
+		geometryCache.mNodeManager->SetLeftHand(node);
+		break;
+	case avs::NodeSubtype::RightHand:
+		geometryCache.mNodeManager->SetRightHand(node);
+		break;
+	default:
+		SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeStructureCommand.nodeSubtype) << "!\n";
+		break;
+	}
 }
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
@@ -1800,11 +1864,6 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 {
-#if IS_D3D12
-	//platform::dx12::RenderPlatform* dx12RenderPlatform = (platform::dx12::RenderPlatform*)renderPlatform;
-	// Set command list to the recording state if it's not in it already.
-	//dx12RenderPlatform->ResetImmediateCommandList();
-#endif
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
 	clientspace_input.y=((float)keydown['w']-(float)keydown['s'])*(float)(keydown[VK_SHIFT]);
@@ -1847,23 +1906,20 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
 		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((scr::quat*)&q_rel));
+		controllerStates[0].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::LEFT_BUTTON) == crossplatform::MouseCameraInput::LEFT_BUTTON ? 1.0f : 0.0f;
+		controllerStates[1].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::RIGHT_BUTTON) == crossplatform::MouseCameraInput::RIGHT_BUTTON ? 1.0f : 0.0f;
+
+		controllerStates[1].mJoystickAxisX = stored_clientspace_input.x;
+		controllerStates[1].mJoystickAxisY = stored_clientspace_input.y;
+
+		controllerStates[0].mTrackpadX = 0.5f;
+		controllerStates[0].mTrackpadY = 0.5f;
+		controllerStates[0].mButtons = mouseCameraInput.MouseButtons;
+		controllerStates[0].mTrackpadStatus = true;
+		clientDeviceState->SetControllerState(0, controllerStates[0]);
+		clientDeviceState->SetControllerState(1, controllerStates[1]);
+
 	}
-	controllerStates[1].mJoystickAxisX=stored_clientspace_input.x;
-	controllerStates[1].mJoystickAxisY=stored_clientspace_input.y;
-	//controllerStates[0].mJoystickAxisX=stored_clientspace_input.x;
-
-	controllerStates[0].mTrackpadX		=0.5f;
-	controllerStates[0].mTrackpadY		=0.5f;
-	//controllerStates[0].mJoystickAxisX	=mouseCameraInput.right_left_input;
-	//controllerStates[0].mJoystickAxisY	=mouseCameraInput.forward_back_input;
-	controllerStates[0].mButtons		=mouseCameraInput.MouseButtons;
-	controllerStates[0].triggerBack		=(mouseCameraInput.MouseButtons&crossplatform::MouseCameraInput::LEFT_BUTTON)==crossplatform::MouseCameraInput::LEFT_BUTTON?1.0f:0.0f;
-
-	controllerStates[0].triggerGrip		=(mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::RIGHT_BUTTON)==crossplatform::MouseCameraInput::RIGHT_BUTTON?1.0f : 0.0f;
-
-	// Reset
-	//mouseCameraInput.MouseButtons = 0; wtf? No.
-	controllerStates[0].mTrackpadStatus=true;
 	// Handle networked session.
 	if (sessionClient.IsConnected())
 	{
@@ -1881,8 +1937,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		}
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
-
-		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose, controllerStates, decoder.idrRequired(),fTime, time_step);
+		sessionClient.Frame(displayInfo, clientDeviceState->headPose, clientDeviceState->controllerPoses, receivedInitialPos, clientDeviceState->originPose,
+			clientDeviceState->controllerStates, decoder.idrRequired(),fTime, time_step);
 
 		{
 			clientDeviceState->originPose = sessionClient.GetOriginPose();
@@ -1950,23 +2006,17 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 	if(bLeftButtonDown)
 	{
 		controllerStates[0].triggerBack = 1.0f;
-		controllerStates[0].addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER01, 1.0f);
+		controllerStates[0].addAnalogueEvent( avs::InputId::TRIGGER01, 1.0f);
+		controllerStates[1].triggerBack = 1.0f;
+		controllerStates[1].addAnalogueEvent(avs::InputId::TRIGGER01, 1.0f);
 	}
 	else if(bRightButtonDown)
 	{
-		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputId::BUTTON_B;
-		buttonEvent.activated = true;
-		controllerStates[0].binaryEvents.push_back(buttonEvent);
+		controllerStates[0].addBinaryEvent( avs::InputId::BUTTON_B, true);
 	}
 	else if(bMiddleButtonDown)
 	{
-		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputId::BUTTON_A;
-		buttonEvent.activated = true;
-		controllerStates[0].binaryEvents.push_back(buttonEvent);
+		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_A, true);
 	}
 }
 
@@ -1979,23 +2029,17 @@ void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRight
 	if(bLeftButtonReleased)
 	{
 		controllerStates[0].triggerBack = 0.f;
-		controllerStates[0].addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER01, 0.0f);
+		controllerStates[0].addAnalogueEvent( avs::InputId::TRIGGER01, 0.0f);
+		controllerStates[1].triggerBack = 0.f;
+		controllerStates[1].addAnalogueEvent(avs::InputId::TRIGGER01, 0.0f);
 	}
 	else if(bRightButtonReleased)
 	{
-		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID		= nextEventID++;
-		buttonEvent.inputID		= avs::InputId::BUTTON_B;
-		buttonEvent.activated	= false;
-		controllerStates[0].binaryEvents.push_back(buttonEvent);
+		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_B, false);
 	}
 	else if(bMiddleButtonReleased)
 	{
-		avs::InputEventBinary buttonEvent;
-		buttonEvent.eventID = nextEventID++;
-		buttonEvent.inputID = avs::InputId::BUTTON_A;
-		buttonEvent.activated = false;
-		controllerStates[0].binaryEvents.push_back(buttonEvent);
+		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_A, false);
 	}
 }
 

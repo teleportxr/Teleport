@@ -50,13 +50,7 @@ namespace teleport
 
 	ClientMessaging::~ClientMessaging()
 	{
-		// Don't do anything in the destructor - this would break std::move.
-		/*	if (host)
-			{
-				enet_host_destroy(host);
-				host = nullptr;
-			}
-			removeNetworkPipelineFromAsyncProcessing();*/
+		
 	}
 
 	bool ClientMessaging::isInitialised() const
@@ -354,12 +348,20 @@ namespace teleport
 		sendCommand(command);
 	}
 
-	void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID)
+	void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose)
 	{
-		avs::UpdateNodeStructureCommand command(nodeID, newParentID);
+		avs::ConvertRotation(settings->serverAxesStandard, casterContext->axesStandard, relPose.orientation);
+		avs::ConvertPosition(settings->serverAxesStandard, casterContext->axesStandard, relPose.position);
+		avs::UpdateNodeStructureCommand command(nodeID, newParentID, relPose);
 		sendCommand(command);
 	}
 	
+	void ClientMessaging::setNodeSubtype( avs::uid nodeID, avs::NodeSubtype subType)
+	{
+		avs::UpdateNodeSubtypeCommand command(nodeID,  subType);
+		sendCommand(command);
+	}
+
 	void ClientMessaging::updateNodeAnimation(avs::ApplyAnimation update)
 	{
 		avs::UpdateNodeAnimationCommand command(update);
@@ -574,13 +576,13 @@ namespace teleport
 		if (casterContext->axesStandard != avs::AxesStandard::NotInitialized)
 		{
 			avs::vec3 p = pos;
-			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, p);
+			avs::ConvertPosition(settings->serverAxesStandard, casterContext->axesStandard, p);
 			setp.origin_pos = p;
 			setp.set_relative_pos = (uint8_t)set_rel;
 			setp.orientation = orientation;
-			avs::ConvertRotation(settings->axesStandard, casterContext->axesStandard, setp.orientation);
+			avs::ConvertRotation(settings->serverAxesStandard, casterContext->axesStandard, setp.orientation);
 			avs::vec3 o = rel_to_head;
-			avs::ConvertPosition(settings->axesStandard, casterContext->axesStandard, o);
+			avs::ConvertPosition(settings->serverAxesStandard, casterContext->axesStandard, o);
 			setp.relative_pos = o;
 			setp.valid_counter = valid_counter;
 			return sendCommand(setp);
@@ -671,8 +673,8 @@ namespace teleport
 		avs::Pose headPose;
 		memcpy(&headPose, packet->data, packet->dataLength);
 
-		avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, headPose.orientation);
-		avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, headPose.position);
+		avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, headPose.orientation);
+		avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, headPose.position);
 		setHeadPose(clientID, &headPose);
 	}
 
@@ -711,8 +713,8 @@ namespace teleport
 		{
 			avs::OriginPoseMessage message;
 			memcpy(&message, packet->data, packet->dataLength);
-			avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, message.originPose.orientation);
-			avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, message.originPose.position);
+			avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, message.originPose.orientation);
+			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, message.originPose.position);
 			setOriginFromClient(clientID, message.counter, &message.originPose);
 		}
 		break;
@@ -724,8 +726,8 @@ namespace teleport
 			for (int i = 0; i < 2; i++)
 			{
 				avs::Pose& pose = message.controllerPoses[i];
-				avs::ConvertRotation(casterContext->axesStandard, settings->axesStandard, pose.orientation);
-				avs::ConvertPosition(casterContext->axesStandard, settings->axesStandard, pose.position);
+				avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, pose.orientation);
+				avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, pose.position);
 				setControllerPose(clientID, i, &pose);
 			}
 			break;

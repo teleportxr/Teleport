@@ -1,7 +1,5 @@
 #include "PCDiscoveryService.h"
 
-#include "libavstream/common_networking.h"
-
 #include "crossplatform/Log.h"
 #include "TeleportCore/ErrorHandling.h"
 
@@ -57,18 +55,45 @@ ENetSocket PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t di
 	return socket;
 }
 
-uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
+uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string ip, uint16_t serverDiscoveryPort, ENetAddress& remote)
 {
 	bool serverDiscovered = false;
 
-	if (serverIP.empty())
+	if (ip.empty())
 	{
-		serverIP = "255.255.255.255";
+		ip = "255.255.255.255";
 	}
-
-	ENetAddress serverAddress = { ENET_HOST_ANY, serverDiscoveryPort };
-	enet_address_set_host(&(serverAddress), serverIP.c_str());
-
+	if (serverAddress.port != serverDiscoveryPort || serverAddress.host == ENET_HOST_ANY || ip != serverIP)
+	{
+		serverIP = ip;
+		if (!awaiting)
+		{
+			serverAddress.host = ENET_HOST_ANY;
+			serverAddress.port = serverDiscoveryPort;
+			fobj = std::async(&enet_address_set_host, &(serverAddress), ip.c_str());
+			awaiting = true;
+		}
+		else
+		{
+			auto f = fobj.wait_for(std::chrono::microseconds(0));
+			if (f == std::future_status::timeout)
+			{
+				return 0;
+			}
+			if (f == std::future_status::ready)
+			{
+				awaiting = false;
+				int result= fobj.get();
+				if(result!=0)
+				{
+					int err = WSAGetLastError();
+					TELEPORT_CERR << "enet_address_set_host failed with error " << err << std::endl;
+					return 0;
+				}
+				serverIP = ip;
+			}
+		}
+	}
 	if(!serviceDiscoverySocket)
 	{
 		serviceDiscoverySocket = CreateDiscoverySocket(clientIP, clientDiscoveryPort);
@@ -78,7 +103,7 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 	ENetAddress  responseAddress = {0xffffffff, 0};
 	ENetBuffer responseBuffer = {sizeof(response),&response};
 	// Send our client id to the server on the discovery port. Once every 1000 frames.
-	static int frame=1000;
+	static int frame=1;
 	frame--;
 	if(!frame)
 	{

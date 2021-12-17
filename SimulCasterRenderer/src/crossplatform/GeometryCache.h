@@ -34,12 +34,12 @@ namespace scr
 	struct MissingResource
 	{
 		const avs::uid id; //ID of the missing resource.
-		const char* resourceType; //String indicating missing resource's type.
+		avs::GeometryPayloadType resourceType; //String indicating missing resource's type.
+		//Resources that can't be completed without this missing resource.
+		std::vector<std::shared_ptr<IncompleteResource>> waitingResources;
 
-		std::vector<std::shared_ptr<IncompleteResource>> waitingResources; //Resources that can't be completed without this missing resource.
-
-		MissingResource(avs::uid id, const char* resourceType)
-			:id(id), resourceType(resourceType)
+		MissingResource(avs::uid id, avs::GeometryPayloadType r)
+			:id(id), resourceType(r)
 		{}
 	};
 	struct IncompleteMaterial : IncompleteResource

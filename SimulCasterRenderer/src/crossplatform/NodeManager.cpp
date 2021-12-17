@@ -19,7 +19,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	//Remove any node already using the ID.
 	RemoveNode(node->id);
 	node->SetChildrenIDs(avsNode.childrenIDs);
-	if(avsNode.data_subtype == avs::NodeDataSubtype::None)
+	// if !always_render...?
 	{
 		rootNodes.push_back(node);
 		distanceSortedRootNodes.push_back(node);
@@ -34,24 +34,6 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	{
 		parentLookup[childID] = node->id;
 		LinkToParentNode(childID);
-	}
-
-	switch(avsNode.data_subtype)
-	{
-	case avs::NodeDataSubtype::None:
-		break;
-	case avs::NodeDataSubtype::Body:
-		SetBody(node);
-		break;
-	case avs::NodeDataSubtype::LeftHand:
-		SetLeftHand(node);
-		break;
-	case avs::NodeDataSubtype::RightHand:
-		SetRightHand(node);
-		break;
-	default:
-		SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(avsNode.data_subtype) << "!\n";
-		break;
 	}
 
 	//Set last movement, if a movement update was received early.

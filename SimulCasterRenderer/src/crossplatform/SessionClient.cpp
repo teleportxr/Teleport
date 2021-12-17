@@ -336,6 +336,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::UpdateNodeStructure:
 			ReceiveUpdateNodeStructureCommand(packet);
 			break;
+		case avs::CommandPayloadType::UpdateNodeSubtype:
+			ReceiveUpdateNodeSubtypeCommand(packet);
+			break;
 		default:
 			break;
 	};
@@ -736,6 +739,15 @@ void SessionClient::ReceiveUpdateNodeStructureCommand(const ENetPacket* packet)
 	avs::UpdateNodeStructureCommand updateNodeStructureCommand;
 	memcpy(static_cast<void*>(&updateNodeStructureCommand), packet->data, commandSize);
 	mCommandInterface->UpdateNodeStructure(updateNodeStructureCommand);
+}
+
+void SessionClient::ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(avs::UpdateNodeSubtypeCommand);
+	//Copy command out of packet.
+	avs::UpdateNodeSubtypeCommand updateNodeStructureCommand;
+	memcpy(static_cast<void*>(&updateNodeStructureCommand), packet->data, commandSize);
+	mCommandInterface->UpdateNodeSubtype(updateNodeStructureCommand);
 }
 
 void SessionClient::SetDiscoveryClientID(uint32_t clientID)
