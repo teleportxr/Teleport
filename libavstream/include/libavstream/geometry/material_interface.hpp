@@ -321,7 +321,7 @@ namespace avs
 		TextureAccessor normalTexture;
 		TextureAccessor occlusionTexture;
 		TextureAccessor emissiveTexture;
-		vec3 emissiveFactor = {1.0f, 1.0f, 1.0f};
+		vec3 emissiveFactor = {0.0f, 0.0f, 0.0f};
 
 		std::unordered_map<MaterialExtensionIdentifier, std::shared_ptr<MaterialExtension>> extensions; //Mapping of extensions for a material. There should only be one extension per identifier.
 		

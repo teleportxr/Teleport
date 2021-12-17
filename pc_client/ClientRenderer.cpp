@@ -772,6 +772,22 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 	}
 }
 
+const char *stringof(avs::GeometryPayloadType t)
+{
+	static const char *txt[]=
+	{
+		"Invalid", 
+		"Mesh",
+		"Material",
+		"MaterialInstance",
+		"Texture",
+		"Animation",
+		"Node",
+		"Skin",
+		"Bone"
+	};
+	return txt[(size_t)t];
+}
 
 void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
@@ -897,7 +913,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			for(const auto& missingPair : missing)
 			{
 				const scr::MissingResource& missingResource = missingPair.second;
-				std::string txt= platform::core::QuickFormat("\t%s %d from ", missingResource.resourceType, missingResource.id);
+				std::string txt= platform::core::QuickFormat("\t%s %d from ", stringof(missingResource.resourceType), missingResource.id);
 				for(auto u:missingResource.waitingResources)
 				{
 					auto type= u.get()->type;

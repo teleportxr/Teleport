@@ -227,7 +227,8 @@ namespace avs
 		Texture,
 		Animation,
 		Node,
-		Skin
+		Skin,
+		Bone
 	};
 
 	enum class AudioPayloadType : uint8_t

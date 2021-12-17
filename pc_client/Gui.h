@@ -18,6 +18,7 @@ namespace teleport
 		void NodeTree(const scr::NodeManager::nodeList_t&);
 		void BeginDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 		void EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+		//void RenderDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
 		void ShowHide();
 		void Show();
@@ -34,7 +35,7 @@ namespace teleport
 		}
 		void SetServerIPs(const std::vector<std::string> &server_ips);
 	protected:
-		void NodeTree(const scr::Node& node);
+		void TreeNode(const std::shared_ptr<scr::Node>& node);
 		simul::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
 		vec3 view_dir;
@@ -50,5 +51,8 @@ namespace teleport
 		void ShowFont();
         char buf[500];
 		bool have_vr_device = false;
+		avs::uid selected_uid=0;
+		std::shared_ptr<scr::Node> selected_node;
+		bool show_inspector=false;
 	};
 }

@@ -626,7 +626,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.emissiveTexture.tiling.y = NextFloat;
 		material.emissiveFactor.x = NextFloat;
 		material.emissiveFactor.y = NextFloat;
-		material.emissiveFactor.z = NextFloat;
+          		material.emissiveFactor.z = NextFloat;
 
 		size_t extensionAmount = Next8B;
 		for(size_t i = 0; i < extensionAmount; i++)
