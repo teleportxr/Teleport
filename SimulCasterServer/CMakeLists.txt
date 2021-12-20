@@ -99,7 +99,7 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
 #Include CUDA library location.
 target_link_directories(TeleportServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
-target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib)
+target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MD)
 
 target_link_libraries(TeleportServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl libcrypto TeleportCore )
 
