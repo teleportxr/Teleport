@@ -284,15 +284,27 @@ if(LIBAV_USE_EFP)
 endif()
 
 if(NOT TELEPORT_SERVER)
+	
+	
     set(BUILD_CURL_EXE OFF CACHE BOOL "")
     set(CURL_STATIC_CRT ON CACHE BOOL "")
 	set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
 	set(BUILD_TESTING OFF CACHE BOOL "")
+	# SCHANNEL is for native windows SSL.
+	set(CURL_USE_SCHANNEL ON CACHE BOOL "")
+	#set(CURL_USE_OPENSSL ON CACHE BOOL "")
+	# curl fails to find Wldap32 lib for some reason if openssl is enabled and LDAP is not diabled.
+	#set(CURL_DISABLE_LDAP ON CACHE BOOL "")
+	#set(CURL_DISABLE_LDAPS ON CACHE BOOL "")
+	#set(USE_WIN32_LDAP OFF CACHE BOOL "")
+	#set(CMAKE_LDAP_LIB "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64/Wldap32" CACHE STRING "")
+	#set(CMAKE_LBER_LIB ${CMAKE_LDAP_LIB} CACHE STRING "")
+	#add_definitions(-DCURL_STATICLIB)
     add_subdirectory(thirdparty/curl)
 	set_target_properties(libcurl PROPERTIES FOLDER AVStream/thirdparty/curl)
 	target_compile_definitions(libcurl PRIVATE BUILDING_LIBCURL=1) 
 	set(curl_include_paths "${CURL_SOURCE_DIR}/include" ${CURL_BINARY_DIR})
-	set(curl_libs libcurl)
+	set(curl_libraries libcurl)
 	target_compile_definitions(libavstream PUBLIC IS_CLIENT=1) 
 endif()
 target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} ${curl_include_paths} include ${PTHREAD_INCLUDE_DIR} PUBLIC include/libavstream)
@@ -324,7 +336,7 @@ if(LIBAV_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
 
-target_link_libraries(libavstream asio nv srt_static efp ${curl_libs})
+target_link_libraries(libavstream asio nv srt_static efp ${curl_libraries})
 
 # Build CUDA kernels on PC platforms only
 if(NOT ANDROID)

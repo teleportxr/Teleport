@@ -66,10 +66,8 @@ option(ENABLE_STATIC "" ON)
 
 #openssl
 
-#set(LIB_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Debug/lib/libcrypto.lib)
-#set(LIB_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Release/lib/libcrypto.lib)
-set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Debug/lib/libssl_static.lib)
-set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/Release/lib/libssl_static.lib)
+set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MD.lib)
+set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MD.lib)
 
 set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
 
@@ -145,6 +143,9 @@ if(TELEPORT_SERVER)
 	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "")
 	add_subdirectory(thirdparty/cpp-httplib)
 else()
+	set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/openssl)
+	set(OPENSSL_USE_STATIC_LIBS TRUE)
+	set(OPENSSL_MSVC_STATIC_RT TRUE)
 	add_subdirectory(firstparty/Platform)
 	add_subdirectory(pc_client)
 	add_subdirectory(SimulCasterRenderer)
@@ -188,7 +189,6 @@ if(NOT TELEPORT_SERVER)
 	set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
 endif()
 set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
-#set_target_properties( haicrypt PROPERTIES FOLDER thirdparty/srt)
 
 
 if(TELEPORT_BUILD_DOCS)
