@@ -446,7 +446,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\CMakeFiles\c6f6e28e772831ddedf1a06887a151da\VulkanCoreShaders.rule">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -458,7 +459,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\CMakeFiles\VulkanCoreShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -556,12 +558,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\ZERO_CHECK.vcxproj">
-      <Project>{B42D4E85-6DD6-3B89-A6DB-1C652427C50B}</Project>
-      <Name>ZERO_CHECK</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </ProjectReference>
     <ProjectReference Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Applications\Sfx\Sfx.vcxproj">
       <Project>{9FB69995-8327-388B-A3FC-D62666D077BA}</Project>
       <Name>Sfx</Name>
