@@ -84,6 +84,17 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 	}
 }
 
+
+avs::AxesStandard GeometryStreamingService::getClientAxesStandard() const
+{
+	return casterContext->axesStandard;
+}
+
+avs::RenderingFeatures GeometryStreamingService::getClientRenderingFeatures() const
+{
+	return handshake.renderingFeatures;
+}
+
 void GeometryStreamingService::startStreaming(teleport::CasterContext* context, const avs::Handshake& h)
 {
 	if (casterContext == context)

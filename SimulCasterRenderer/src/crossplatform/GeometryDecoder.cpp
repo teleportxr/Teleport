@@ -727,9 +727,11 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 		node.name.resize(nameLength);
 		copy<char>(node.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
 
-		node.transform = NextChunk(avs::Transform);
+		node.localTransform = NextChunk(avs::Transform);
+		node.globalTransform = NextChunk(avs::Transform);
+		bool useLocalTransform =(NextB)!=0;
+
 		node.stationary =(NextB)!=0;
-		node.grabbable =(NextB)!=0;
 		node.holder_client_id = Next8B;
 		node.priority = Next4B;
 		node.data_uid = Next8B;

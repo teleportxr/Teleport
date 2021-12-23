@@ -61,6 +61,10 @@ namespace avs
 			std::wstring w;
 			std::getline(in, w);
 			std::string str = convertToByteString(w);
+			while(str.length()>0&&str[0]==' ')
+			{
+				str.erase(str.begin());
+			}
 			if(str.length()>48)
 				throw std::runtime_error("guid length>48");
 			strcpy(g.txt,str.c_str());
@@ -243,11 +247,10 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<<(OutStream& out, const TextureAccessor& textureAccessor)
 		{
-			//guid g=OutStream.uid_to_guid(textureAccessor.index);
-			wchar_t idx=(wchar_t)textureAccessor.index;
- 			out.write(&idx,1);
-			out	<< " " << textureAccessor.texCoord
-				<< " " << textureAccessor.tiling
+			wchar_t tc=(wchar_t)textureAccessor.texCoord;
+			out<<textureAccessor.index;
+ 			//out.write(&tc,1);
+			out	<< " " << textureAccessor.tiling
 				<< " " << textureAccessor.scale;
 			return out;
 		}
@@ -256,8 +259,10 @@ namespace avs
 		friend InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
 		{
 			//guid g;
-			wchar_t tc;
-			in.read(&tc,1);
+			wchar_t tc=0;
+			in>>textureAccessor.index;
+			//in.read(&tc,1);
+			//in>>textureAccessor.texCoord;
 			in>> textureAccessor.tiling
 				>> textureAccessor.scale;
 			
@@ -289,12 +294,13 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const PBRMetallicRoughness& metallicRoughness)
 		{
-			out << metallicRoughness.baseColorTexture
-				<< " " << metallicRoughness.baseColorFactor
-				<< " " << metallicRoughness.metallicRoughnessTexture
-				<< " " << metallicRoughness.metallicFactor
-				<< " " << metallicRoughness.roughnessMultiplier
-				<< " " << metallicRoughness.roughnessOffset;
+			out << metallicRoughness.baseColorTexture;
+			out<< " " ;
+			out << metallicRoughness.baseColorFactor;
+			out<< " " ;
+			out << metallicRoughness.metallicRoughnessTexture;
+			out<< " "  << metallicRoughness.metallicFactor<< " "  << metallicRoughness.roughnessMultiplier;
+			out<< " " << metallicRoughness.roughnessOffset;
 				// TODO: roughnessMode not implemented here.
 			 return out;
 		}
@@ -302,14 +308,13 @@ namespace avs
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, PBRMetallicRoughness& metallicRoughness)
 		{
-			 
-				in>> metallicRoughness.baseColorTexture
-				>> metallicRoughness.baseColorFactor
-				>> metallicRoughness.metallicRoughnessTexture
-				>> metallicRoughness.metallicFactor
-				>> metallicRoughness.roughnessMultiplier
-				>> metallicRoughness.roughnessOffset
-				;
+			in>> metallicRoughness.baseColorTexture;
+			in>> metallicRoughness.baseColorFactor;
+			in>> metallicRoughness.metallicRoughnessTexture;
+			in>> metallicRoughness.metallicFactor;
+			in>> metallicRoughness.roughnessMultiplier;
+			in>> metallicRoughness.roughnessOffset;
+				
 				return in;
 		}
 	};
@@ -348,11 +353,11 @@ namespace avs
 			//Name needs its own line, so spaces can be included.
 			out << std::wstring{material.name.begin(), material.name.end()} << std::endl;
 
-			out << material.pbrMetallicRoughness
-				<< " " << material.normalTexture
-				<< " " << material.occlusionTexture
-				<< " " << material.emissiveTexture
-				<< " " << material.emissiveFactor;
+			out << material.pbrMetallicRoughness<< " ";
+			out << material.normalTexture<< " ";
+			out << material.occlusionTexture<< " ";
+			out << material.emissiveTexture<< " ";
+			out << material.emissiveFactor<< " ";
 			return out;
 		}
 		
@@ -368,11 +373,12 @@ namespace avs
 
 			material.name = convertToByteString(wideName);
 
-			return in >> material.pbrMetallicRoughness
-				>> material.normalTexture
-				>> material.occlusionTexture
-				>> material.emissiveTexture
-				>> material.emissiveFactor;
+			in >> material.pbrMetallicRoughness;
+			in >> material.normalTexture;
+			in >> material.occlusionTexture;
+			in >> material.emissiveTexture;
+			in >> material.emissiveFactor;
+			return in;
 		}
 	};
 };

@@ -81,8 +81,8 @@ namespace teleport
 			std::wstring guidAsString;
 			in >> guidAsString;
 			materialData.guid = _bstr_t(guidAsString.data());
-
-			 in >> materialData.lastModified >> materialData.material;
+			 in >> materialData.lastModified;
+			 in >> materialData.material;
 			 return in;
 		}
 	};

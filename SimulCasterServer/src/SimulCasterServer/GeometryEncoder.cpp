@@ -386,13 +386,17 @@ namespace teleport
 			//Push name.
 			put((uint8_t*)node->name.data(), nameLength);
 
-			avs::Transform transform = node->transform;
-			avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), transform);
+			avs::Transform localTransform = node->localTransform;
+			avs::Transform globalTransform = node->globalTransform;
+			avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), localTransform);
+			avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), globalTransform);
 
-			put(transform);
+			put(localTransform);
+			put(globalTransform);
+			// If the node is stationary, we will normally use the global transform.
+			put((uint8_t)(!node->stationary));
 			put((uint8_t)(node->stationary));
 
-			put((uint8_t)(node->grabbable));
 			put(node->holder_client_id);
 
 			put(node->priority);
@@ -550,6 +554,7 @@ namespace teleport
 
 	avs::Result GeometryEncoder::encodeMaterials(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs)
 	{
+		auto renderingFeatures=req->getClientRenderingFeatures();
 		//Push amount of materials.
 		for (avs::uid uid : missingUIDs)
 		{
@@ -598,14 +603,22 @@ namespace teleport
 				put(material->pbrMetallicRoughness.roughnessOffset);
 				
 				//Push normal map, and scale.
-				put(material->normalTexture.index);
+				// TODO Note: correspondence between these handshake feature checks and those at GeometryStreamingService::GetMeshNodeResources!
+				if(renderingFeatures.normals)
+					put(material->normalTexture.index);
+				else
+					put(avs::uid(0));
 				put(material->normalTexture.texCoord);
 				put(material->normalTexture.tiling.x);
 				put(material->normalTexture.tiling.y);
 				put(material->normalTexture.scale);
 
 				//Push occlusion texture, and strength.
-				put(material->occlusionTexture.index);
+				// Note, if AO is not supported, we MUST put a zero, or the client will request a missing texture that never arrives.
+				if (renderingFeatures.ambientOcclusion)
+					put(material->occlusionTexture.index);
+				else
+					put(avs::uid(0));
 				put(material->occlusionTexture.texCoord);
 				put(material->occlusionTexture.tiling.x);
 				put(material->occlusionTexture.tiling.y);

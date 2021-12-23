@@ -31,10 +31,8 @@ namespace teleport
 		, std::vector<avs::LightNodeResources>& outLightResources
 		,std::set<avs::uid>& genericTextureUids,int32_t minimumPriority) const override;
 
-		virtual avs::AxesStandard getClientAxesStandard() const override
-		{
-			return casterContext->axesStandard;
-		}
+		virtual avs::AxesStandard getClientAxesStandard() const override;
+		virtual avs::RenderingFeatures getClientRenderingFeatures() const override;
 
 		virtual void startStreaming(CasterContext* context,const avs::Handshake &handshake);
 		//Stop streaming to client.

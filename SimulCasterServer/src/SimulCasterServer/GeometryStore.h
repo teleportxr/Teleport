@@ -21,6 +21,7 @@ namespace teleport
 		bool willDelayTextureCompression = true; //Causes textures to wait for compression in StoreTexture, rather than calling compress them during the function call, when true.
 
 		void saveToDisk() const;
+		void verify();
 		//Load from disk.
 		//Parameters are used to return the meta data of the resources that were loaded back-in, so they can be confirmed.
 		void loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials);
@@ -85,7 +86,7 @@ namespace teleport
 
 		void removeNode(avs::uid id);
 
-		void updateNode(avs::uid id, avs::Transform& newTransform);
+		void updateNodeTransform(avs::uid id, avs::Transform& newLTransform, avs::Transform& newGTransform);
 
 		//Returns amount of textures waiting to be compressed.
 		size_t getAmountOfTexturesWaitingForCompression() const;
@@ -132,6 +133,11 @@ namespace teleport
 		std::map<avs::uid, PrecompressedTexture> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
 
 		std::map<avs::uid, avs::LightNodeResources> lightNodes; //List of ALL light nodes; prevents having to search for them every geometry tick.
+		
+		template<typename ExtractedResource>
+		void saveResource(const std::string file_name, avs::uid uid, const ExtractedResource& resource) const;
+		template<typename ExtractedResource>
+		avs::uid loadResource(const std::string file_name,std::map<avs::uid, ExtractedResource>& resourceMap);
 
 		template<typename ExtractedResource>
 		void saveResources(const std::string file_name, const std::map<avs::uid, ExtractedResource>& resourceMap) const;

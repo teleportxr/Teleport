@@ -122,6 +122,12 @@ void GeometryStore::saveToDisk() const
 	saveResources(cachePath + "/" +MATERIAL_CACHE_PATH, materials);
 	saveResources(cachePath + "/" +MESH_PC_CACHE_PATH, meshes.at(avs::AxesStandard::EngineeringStyle));
 	saveResources(cachePath + "/" +MESH_ANDROID_CACHE_PATH, meshes.at(avs::AxesStandard::GlStyle));
+
+}
+
+void GeometryStore::verify()
+{
+	loadResources(cachePath + "/" + MATERIAL_CACHE_PATH, materials);
 }
 
 void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshes, size_t& numTextures, LoadedResource*& loadedTextures, size_t& numMaterials, LoadedResource*& loadedMaterials)
@@ -903,6 +909,15 @@ void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModifie
 	}
 }
 
+template<typename ExtractedResource> std::string MakeResourceFilename(ExtractedResource& resource)
+{
+		std::string file_name;
+		file_name+=resource.getName()+"_";
+		file_name+=resource.guid;
+		file_name+=resource.fileExtension();
+		return file_name;
+}
+
 void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Material& newMaterial)
 {
 	auto g=bstr_to_guid(guid);
@@ -982,13 +997,14 @@ void GeometryStore::removeNode(avs::uid id)
 	lightNodes.erase(id);
 }
 
-void GeometryStore::updateNode(avs::uid id, avs::Transform& newTransform)
+void GeometryStore::updateNodeTransform(avs::uid id, avs::Transform& newLocalTransform, avs::Transform& newGlobalTransform)
 {
 	auto nodeIt = nodes.find(id);
 	if(nodeIt == nodes.end())
 		return;
 
-	nodeIt->second.transform = newTransform;
+	nodeIt->second.localTransform = newLocalTransform;
+	nodeIt->second.globalTransform= newGlobalTransform;
 }
 
 size_t GeometryStore::getAmountOfTexturesWaitingForCompression() const
@@ -1111,36 +1127,78 @@ void GeometryStore::compressNextTexture()
 	basisCompressorParams.m_pJob_pool = nullptr;
 }
 
+template<typename ExtractedResource> void GeometryStore::saveResource(const std::string file_name,avs::uid uid, const ExtractedResource& resource) const
+{
+	bool oldFileExists = filesystem::exists(file_name);
+
+	//Rename old file.
+	if (oldFileExists)
+		filesystem::rename(file_name, file_name + ".bak");
+
+	//Save data to new file.
+	auto f=std::bind(&GeometryStore::UidToGuid,this,std::placeholders::_1);
+	resource_ofstream resourceFile(file_name.c_str(), f);
+	try
+	{
+		resourceFile << uid;
+		resourceFile << std::endl;
+		resourceFile << resource;
+		resourceFile << std::endl;
+	}
+	catch(...)
+	{
+		TELEPORT_CERR << "Failed to save \"" << file_name << "\"!\n";
+	}
+	resourceFile.close();
+	//Delete old file.
+	if (oldFileExists)
+		filesystem::remove(file_name + ".bak");
+}
+
+
 template<typename ExtractedResource> void GeometryStore::saveResources(const std::string path, const std::map<avs::uid, ExtractedResource>& resourceMap) const
 {
 	const std::filesystem::path fspath{ path.c_str() };
 	std::filesystem::create_directories(fspath);
 	for(const auto& resourceData : resourceMap)
 	{
-		std::string file_name=path;
-		file_name+="/";
-		file_name+=resourceData.second.getName()+"_";
-		file_name+=resourceData.second.guid;
-		file_name+=resourceData.second.fileExtension();
-		bool oldFileExists = filesystem::exists(file_name);
-
-		//Rename old file.
-		if (oldFileExists)
-			filesystem::rename(file_name, file_name + ".bak");
-
-		//Save data to new file.
-		auto f=std::bind(&GeometryStore::UidToGuid,this,std::placeholders::_1);
-		resource_ofstream resourceFile(file_name.c_str(), f);
-		resourceFile << resourceData.first;
-		resourceFile << std::endl;
-		resourceFile << resourceData.second;
-		resourceFile << std::endl;
-		resourceFile.close();
-
-		//Delete old file.
-		if (oldFileExists)
-			filesystem::remove(file_name + ".bak");
+		std::string file_name=(path+"/")+MakeResourceFilename(resourceData.second);
+		saveResource(file_name,resourceData.first,resourceData.second);
 	}
+}
+
+template<typename ExtractedResource> avs::uid GeometryStore::loadResource(const std::string file_name,std::map<avs::uid, ExtractedResource>& resourceMap)
+{
+	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::GuidToUid,this,std::placeholders::_1));
+	avs::guid g;
+	//Load resources from the file, while there is still more data in the file.
+	resourceFile >> g;
+	auto write_time= std::filesystem::last_write_time(file_name);
+	// If there's a duplicate, use the newer file.
+	// This guid might already exist!
+	avs::uid newID=0;
+	auto u=uids.find(g);
+	if(u!=uids.end())
+	{
+		newID=u->second;
+	}
+	else
+	{
+		newID=avs::GenerateUid();
+	}
+	ExtractedResource& newResource = resourceMap[newID];
+	try
+	{
+		resourceFile >> newResource;
+	}
+	catch(...)
+	{
+		TELEPORT_CERR<<"Failed to load "<<file_name.c_str()<<std::endl;
+		return 0;
+	}
+	guids[newID]=g;
+	uids[g]=newID;
+	return newID;
 }
 
 template<typename ExtractedResource> void GeometryStore::loadResources(const std::string path, std::map<avs::uid, ExtractedResource>& resourceMap)
@@ -1156,31 +1214,7 @@ template<typename ExtractedResource> void GeometryStore::loadResources(const std
 		if(file_name.find(search_str)<file_name.length())
 		if(filesystem::exists(file_name))
 		{
-			resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::GuidToUid,this,std::placeholders::_1));
-			
-			avs::guid g;
-			//Load resources from the file, while there is still more data in the file.
-			if(resourceFile >> g)
-			{
-				auto write_time= std::filesystem::last_write_time(file_name);
-				// If there's a duplicate, use the newer file.
-				// This guid might already exist!
-				avs::uid newID=0;
-				auto u=uids.find(g);
-				if(u!=uids.end())
-				{
-					newID=u->second;
-				}
-				else
-				{
-					newID=avs::GenerateUid();
-					guids[newID]=g;
-					uids[g]=newID;
-				}
-				ExtractedResource& newResource = resourceMap[newID];
-				resourceFile >> newResource;
-				//timestamps[oldID]= write_time;
-			}
+			loadResource(file_name,resourceMap);
 		}
 	}
 }
@@ -1192,7 +1226,8 @@ avs::uid GeometryStore::GuidToUid(avs::guid g) const
 	auto i=uids.find(g);
 	if(i==uids.end())
 	{
-		throw std::runtime_error("");
+		TELEPORT_CERR<<"Guid "<<g.txt<<" not found."<<std::endl;
+		return 0;
 	}
 	return i->second;
 }

@@ -16,15 +16,6 @@ void Node::SetStatic(bool s)
 {
 	isStatic=s;
 }
-void Node::SetGrabbable(bool g)
-{
-	isGrabbable=g;
-}
-
-bool Node::IsGrabbable() const
-{
-	return isGrabbable;
-}
 
 void Node::SetHolderClientId(avs::uid h)
 {
@@ -189,8 +180,15 @@ void Node::SetLocalTransform(const Transform& transform)
 		SCR_CERR << "Failed to update local transform of Node_" << id << "(" << name.c_str() << ")! Scale.x is zero!\n";
 		return;
 	}
-
 	localTransform = transform;
+}
+
+void Node::SetGlobalTransform(const Transform& transform)
+{
+	globalTransform=transform;
+	isTransformDirty = false;
+	//The node's children need to update their transforms, as their parent's transform has been updated.
+	RequestChildrenUpdateTransforms();
 }
 
 void Node::SetLocalPosition(const avs::vec3& value)

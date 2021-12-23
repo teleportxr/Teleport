@@ -985,9 +985,6 @@ TELEPORT_EXPORT void Client_AddNode(avs::uid clientID, avs::uid nodeID)
 	}
 
 	clientPair->second.geometryStreamingService->addNode(nodeID);
-	//Update node transform, as it may have changed since the node was last streamed.
-	// 	   NO. Terrible idea. Changing a global node property in a per-client function? No.
-	//geometryStore.updateNode(nodeID, currentTransform);
 }
 
 TELEPORT_EXPORT void Client_RemoveNodeByID(avs::uid clientID, avs::uid nodeID)
@@ -1575,6 +1572,7 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 TELEPORT_EXPORT void SaveGeometryStore()
 {
 	geometryStore.saveToDisk();
+	geometryStore.verify();
 }
 
 TELEPORT_EXPORT void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)

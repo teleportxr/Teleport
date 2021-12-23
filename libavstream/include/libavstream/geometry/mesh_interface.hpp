@@ -9,6 +9,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/memory.hpp>
+#include <libavstream/common_networking.h>
 
 #include "material_interface.hpp"
 
@@ -260,11 +261,11 @@ struct Animation;
 	{
 		std::string name;
 
-		Transform transform;
+		Transform localTransform;
+		Transform globalTransform;
+
 		bool stationary=false;
 
-		// Can it be grabbed? If not, does it already have an owner?
-		bool grabbable=false;
 		uid holder_client_id=0;
 
 		int32_t priority=0;
@@ -681,6 +682,9 @@ struct Animation;
 
 		//Returns the axes standard used by the client.
 		virtual AxesStandard getClientAxesStandard() const = 0;
+
+		//! Returns the rendering features the client supports.
+		virtual RenderingFeatures getClientRenderingFeatures() const=0; 
 	};
 	//! A Geometry decoder backend converts a 
 	class AVSTREAM_API GeometryEncoderBackendInterface : public UseInternalAllocator

@@ -107,13 +107,15 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const vec2& vec)
 		{
-			return out << vec.x << " " << vec.y;
+			out << vec.x << " " << vec.y;
+			return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, vec2& vec)
 		{
-			return in >> vec.x >> vec.y;
+			in >> vec.x >> vec.y;
+			return in;
 		}
 	};
 
@@ -232,13 +234,16 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const vec3& vec)
 		{
-			return out << vec.x << " " << vec.y << " " << vec.z;
+			std::basic_ostream<wchar_t,std::char_traits<wchar_t>> &o=out;
+			o << vec.x << " " << vec.y << " " << vec.z;
+			return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, vec3& vec)
 		{
-			return in >> vec.x >> vec.y >> vec.z;
+			in >> vec.x >> vec.y >> vec.z;
+			return in;
 		}
 
 		friend float length(const vec3& v)
@@ -355,13 +360,17 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const vec4& vec)
 		{
-			return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+			std::basic_ostream<wchar_t,std::char_traits<wchar_t>> &o=out;
+			o << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+			return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, vec4& vec)
 		{
-			return in >> vec.x >> vec.y >> vec.z >> vec.w;
+			std::basic_istream<wchar_t,std::char_traits<wchar_t>> &i=in;
+			i >> vec.x >> vec.y >> vec.z >> vec.w;
+			return in;
 		}
 	};
 

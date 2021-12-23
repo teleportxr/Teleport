@@ -242,7 +242,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	}
 	avs::Node avsNode;
 	avsNode.name="local Right Hand";
-	avsNode.transform=avs::Transform();
 	avsNode.data_type=avs::NodeDataType::Mesh;
 	//avsNode.transform.scale = { 0.2f,0.2f,0.2f };
 	avsNode.data_uid=wand_uid;

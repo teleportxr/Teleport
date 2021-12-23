@@ -34,8 +34,6 @@ namespace scr
 
 		void SetStatic(bool s);
 		bool IsStatic() const;
-		void SetGrabbable(bool g);
-		bool IsGrabbable() const;
 		void SetHolderClientId(avs::uid h);
 		avs::uid GetHolderClientId() const;
 		void SetPriority(int p);
@@ -105,7 +103,9 @@ namespace scr
 		void SetLocalTransform(const Transform& transform);
 		const Transform& GetLocalTransform() const { return localTransform; }
 		Transform& GetLocalTransform() { return localTransform; }
-
+		
+		//! Sets the global transform so it need not be calculated from local.
+		void SetGlobalTransform(const Transform& g);
 		const Transform& GetGlobalTransform() const
 		{
 			if(isTransformDirty)

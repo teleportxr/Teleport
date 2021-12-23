@@ -12,9 +12,10 @@ struct InteropNode
 {
 	BSTR name;
 
-	avs::Transform transform;
+	avs::Transform localTransform;
+	avs::Transform globalTransform;
+
 	uint8_t stationary;
-	uint8_t grabbable;
 	avs::uid holder_client_id;
 
 	avs::NodeDataType dataType;
@@ -47,11 +48,11 @@ struct InteropNode
 		{
 			avs::convertToByteString(name),
 
-			transform,
+			localTransform,
+			globalTransform,
 
 			stationary!=0,
 
-			grabbable!=0,
 			holder_client_id,
 
 			priority,

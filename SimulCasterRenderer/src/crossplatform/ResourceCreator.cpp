@@ -832,9 +832,9 @@ void ResourceCreator::CreateLight(avs::uid id, avs::Node& node)
 	scr::Light::LightCreateInfo lci;
 	lci.renderPlatform = m_pRenderPlatform;
 	lci.type = (scr::Light::Type)node.lightType;
-	lci.position = avs::vec3(node.transform.position);
+	lci.position = avs::vec3(node.globalTransform.position);
 	lci.direction = node.lightDirection;
-	lci.orientation = scr::quat(node.transform.rotation);
+	lci.orientation = scr::quat(node.globalTransform.rotation);
 	lci.shadowMapTexture = geometryCache->mTextureManager.Get(node.data_uid);
 	lci.lightColour = node.lightColour;
 	lci.lightRadius = node.lightRadius;
@@ -851,7 +851,7 @@ void ResourceCreator::CreateBone(avs::uid id, avs::Node& node)
 	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::shared_ptr<scr::Bone> bone = std::make_shared<scr::Bone>(id, node.name);
-	bone->SetLocalTransform(node.transform);
+	bone->SetLocalTransform(node.localTransform);
 
 	//Link to parent and child bones.
 	//We don't know what order the bones will arrive in, so we have to do it for both orders(parent -> child, child -> parent).
