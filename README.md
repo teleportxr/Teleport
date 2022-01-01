@@ -1,4 +1,6 @@
-# RemotePlay
+# Teleport VR
+
+Reference Client/Server software and SDK.
 
 ## Getting the source
 
