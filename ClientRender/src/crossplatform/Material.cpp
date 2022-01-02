@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 
 #include "Material.h"
-#include "../../SimulCasterRenderer/src/api/RenderPlatform.h"
+#include "../src/api/RenderPlatform.h"
 
 using namespace scr;
 

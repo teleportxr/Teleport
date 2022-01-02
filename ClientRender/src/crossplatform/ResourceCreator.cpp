@@ -150,7 +150,7 @@ void ResourceCreator::Update(float deltaTime)
 avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 {
 	geometryCache->m_ReceivedResources.push_back(meshCreate.mesh_uid);
-	SCR_COUT << "Assemble(Mesh" << meshCreate.mesh_uid << ": " << meshCreate.name << ")\n";
+	//SCR_COUT << "Assemble(Mesh" << meshCreate.mesh_uid << ": " << meshCreate.name << ")\n";
 
 	using namespace scr;
 
@@ -568,7 +568,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 
 void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 {
-	SCR_COUT << "CreateMaterial(" << id << ", " << material.name << ")\n";
+	//SCR_COUT << "CreateMaterial(" << id << ", " << material.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, avs::GeometryPayloadType::Material);
@@ -607,6 +607,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 // Add it to the manager, even if incomplete.
 	std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(m_pRenderPlatform,incompleteMaterial->materialInfo);
 	geometryCache->mMaterialManager.Add(id, scrMaterial);
+	scrMaterial->id = id;
 
 	if (incompleteMaterial->textureSlots.size() == 0)
 	{
@@ -719,7 +720,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		}
 		return;
 	}
-	SCR_COUT << "CreateMeshNode(" << id << ", " << node.name;
+	//SCR_COUT << "CreateMeshNode(" << id << ", " << node.name;
 	if (node.childrenIDs.size())
 		std::cout << ", " << node.childrenIDs.size() << " children";
 	std::cout<< ") " << (node.stationary ? "static" : "mobile") << "\n";
@@ -735,7 +736,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		newNode->node->SetMesh(geometryCache->mMeshManager.Get(node.data_uid));
 		if (!newNode->node->GetMesh())
 		{
-			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
+			//SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.data_uid);
@@ -748,7 +749,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		newNode->node->SetSkin(geometryCache->mSkinManager.Get(node.skinID));
 		if (!newNode->node->GetSkin())
 		{
-			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
+			//SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.skinID);
@@ -877,7 +878,7 @@ void ResourceCreator::CreateBone(avs::uid id, avs::Node& node)
 
 void ResourceCreator::CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo& meshInfo)
 {
-	SCR_COUT << "CompleteMesh(" << id << ", " << meshInfo.name << ")\n";
+	//SCR_COUT << "CompleteMesh(" << id << ", " << meshInfo.name << ")\n";
 
 	std::shared_ptr<scr::Mesh> mesh = std::make_shared<scr::Mesh>(meshInfo);
 	geometryCache->mMeshManager.Add(id, mesh);
@@ -983,7 +984,6 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo)
 {
 	SCR_COUT << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
-
 	std::shared_ptr<scr::Material> material = geometryCache->mMaterialManager.Get(id);
 	// Update its properties:
 	material->SetMaterialCreateInfo(m_pRenderPlatform,materialInfo);
@@ -993,7 +993,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 
-		auto indexesPair = incompleteNode->materialSlots.find(id);
+		const auto &indexesPair = incompleteNode->materialSlots.find(id);
 		if (indexesPair->first == incompleteNode->materialSlots.end()->first)
 		{
 			SCR_CERR << "Material " << id << " not found in incomplete node " << incompleteNode->id << std::endl;
@@ -1018,7 +1018,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 
 void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> node)
 {
-	SCR_COUT << "CompleteMeshNode(ID: " << id << ", node: " << node->name << ")\n";
+//	SCR_COUT << "CompleteMeshNode(ID: " << id << ", node: " << node->name << ")\n";
 
 	///We're using the node ID as the node ID as we are currently generating an node per node/transform anyway; this way the server can tell the client to remove an node.
 	geometryCache->m_CompletedNodes.push_back(id);
@@ -1026,7 +1026,7 @@ void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> n
 
 void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
 {
-	SCR_COUT << "CompleteBone(" << id << ", " << bone->name << ")\n";
+	//SCR_COUT << "CompleteBone(" << id << ", " << bone->name << ")\n";
 
 	geometryCache->mBoneManager.Add(id, bone);
 

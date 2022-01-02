@@ -825,7 +825,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	{
 		vec3 offset=camera.GetPosition();
 		gui.LinePrint( receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
-		gui.LinePrint(  platform::core::QuickFormat("Offset: %4.4f %4.4f %4.4f", clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y, clientDeviceState->relativeHeadPos.z),white);
+		gui.LinePrint(  platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientDeviceState->relativeHeadPose.position.x, clientDeviceState->relativeHeadPose.position.y, clientDeviceState->relativeHeadPose.position.z),white);
 		gui.LinePrint(  platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y, clientDeviceState->headPose.position.z),white);
 		if (videoPosDecoded)
 		{
@@ -920,6 +920,9 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					if(type==avs::GeometryPayloadType::Node)
 					{
 						txt+="Node ";
+						auto n = geometryCache.mNodeManager->GetNode(id);
+						if(n)
+							txt += n->name;
 					}
 					txt+=platform::core::QuickFormat("%d, ",(uint64_t)id);
 				}
@@ -1066,18 +1069,11 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		}
 		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
-	const scr::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
-	for(const std::shared_ptr<scr::Node>& node : nodeList)
-	{
-		if(show_only!=0&&show_only!=node->id)
-			continue;
-		RenderNode(deviceContext, node,g);
-	}
 
-	if(renderPlayer)
+	if (renderPlayer)
 	{
 		std::shared_ptr<scr::Node> body = g.mNodeManager->GetBody();
-		if(body)
+		if (body)
 		{
 			body->SetLocalPosition(clientDeviceState->headPose.position + bodyOffsetFromHead);
 
@@ -1085,36 +1081,34 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 			float angle = std::atan2(clientDeviceState->headPose.orientation.z, clientDeviceState->headPose.orientation.w);
 			scr::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
 			body->SetLocalRotation(zRotation);
-		// force update of model matrices - should not be necessary, but is.
+			// force update of model matrices - should not be necessary, but is.
 			body->UpdateModelMatrix();
-			RenderNode(deviceContext, body,g);
-			if(show_node_overlays)
-				RenderNodeOverlay(deviceContext, body,g);
 		}
-		
+
 
 		std::shared_ptr<scr::Node> leftHand = g.mNodeManager->GetLeftHand();
 		std::shared_ptr<scr::Node> rightHand = g.mNodeManager->GetRightHand();
-		if(leftHand)
+		if (leftHand)
 		{
 			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].position);
 			leftHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[0].orientation);
-		// force update of model matrices - should not be necessary, but is.
+			// force update of model matrices - should not be necessary, but is.
 			leftHand->UpdateModelMatrix();
-			RenderNode(deviceContext, leftHand,g);
-			if(show_node_overlays)
-				RenderNodeOverlay(deviceContext, leftHand,g);
 		}
-		if(rightHand)
+		if (rightHand)
 		{
 			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].position);
 			rightHand->SetLocalRotation(clientDeviceState->controllerRelativePoses[1].orientation);
-		// force update of model matrices - should not be necessary, but is.
+			// force update of model matrices - should not be necessary, but is.
 			rightHand->UpdateModelMatrix();
-			RenderNode(deviceContext, rightHand,g);
-			if(show_node_overlays)
-				RenderNodeOverlay(deviceContext, rightHand,g);
 		}
+	}
+	const scr::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
+	for(const std::shared_ptr<scr::Node>& node : nodeList)
+	{
+		if(show_only!=0&&show_only!=node->id)
+			continue;
+		RenderNode(deviceContext, node,g);
 	}
 	if(show_node_overlays)
 	for (const std::shared_ptr<scr::Node>& node : nodeList)
@@ -1139,6 +1133,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		passName="pbr_lightmap";
 	if(overridePassName.length()>0)
 		passName= overridePassName;
+	bool force_highlight = (gui.GetSelectedUid() == node->id);
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->GetPriority()>=0)
 	if(node->IsVisible()&&(show_only == 0 || show_only == node->id))
@@ -1210,7 +1205,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"),  nullptr);
 					pass = pbrEffect->GetTechniqueByName("solid")->GetPass("local");
 				}
-				if (node->IsHighlighted())
+				if (node->IsHighlighted()||force_highlight)
 				{
 					pbrConstants.emissiveOutputScalar += vec4(0.2f, 0.2f, 0.2f, 0.f);
 				}
@@ -1822,8 +1817,8 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 		return;
 	float x= mouseCameraInput.MouseX / (float)hdrFramebuffer->GetWidth();
 	float y= mouseCameraInput.MouseY / (float)hdrFramebuffer->GetHeight();
-	controllerSim.controller_dir = camera.ScreenPositionToDirection(x, y, hdrFramebuffer->GetWidth() / static_cast<float>(hdrFramebuffer->GetHeight()));
-	controllerSim.view_dir=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
+	controllerSim.controller_dir	=camera.ScreenPositionToDirection(x, y, hdrFramebuffer->GetWidth() / static_cast<float>(hdrFramebuffer->GetHeight()));
+	controllerSim.view_dir			=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
 	// we seek the angle positive on the Z-axis representing the view direction azimuth:
 	static float cc=0.0f;
 	cc+=0.01f;
@@ -1849,9 +1844,12 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 
 	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
 	// The up direction is x, and the left direction is z.
-	simul::crossplatform::Quaternion<float> q(0,0,0,1.0f);
-	float azimuth	= atan2f(-controllerSim.controller_dir.x, controllerSim.controller_dir.y);
-	float elevation	= asin(controllerSim.controller_dir.z);
+	vec3 local_controller_dir = { 0,1.f,0 };
+	crossplatform::Quaternionf q = (const float*)(&clientDeviceState->relativeHeadPose.orientation);
+	Multiply(local_controller_dir,q, local_controller_dir);
+	float azimuth	= atan2f(-local_controller_dir.x, local_controller_dir.y);
+	float elevation	= asin(local_controller_dir.z);
+	q.Reset();// = { 0.f, 0.f, 0.f, 1.0f };
 	q.Rotate(azimuth,vec3(0,0,1.0f));
 	q.Rotate(elevation, vec3(1.0f, 0, 0));
 
@@ -1922,10 +1920,10 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	// Handle networked session.
 	if (sessionClient.IsConnected())
 	{
-		vec3 forward=-camera.Orientation.Tz();
-		vec3 right=camera.Orientation.Tx();
-		*((vec3*)&clientDeviceState->originPose.position)+=clientspace_input.y*time_step*forward;
-		*((vec3*)&clientDeviceState->originPose.position)+=clientspace_input.x*time_step*right;
+		//vec3 forward=-camera.Orientation.Tz();
+		//vec3 right=camera.Orientation.Tx();
+		//*((vec3*)&clientDeviceState->originPose.position)+=clientspace_input.y*time_step*forward;
+		//*((vec3*)&clientDeviceState->originPose.position)+=clientspace_input.x*time_step*right;
 		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
@@ -1977,7 +1975,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		}
 	}
 
-	clientDeviceState->UpdateOriginPose();
 	if (!have_headset)
 	{
 		FillInControllerPose(0, -0.5f);

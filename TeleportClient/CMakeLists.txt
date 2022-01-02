@@ -38,6 +38,6 @@ add_static_library( TeleportClient SOURCES ${src_files})
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 
 #For MD runtime
-#add_library( SimulCasterRenderer STATIC ${src_public} ) 
+#add_library( ClientRender STATIC ${src_public} ) 
 
 #target_compile_features(libavstream PRIVATE cxx_std_17)

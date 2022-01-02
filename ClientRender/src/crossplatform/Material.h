@@ -28,7 +28,7 @@ namespace scr
 			MaterialParameter normal;			//R: Tangent, G: Bi-normals and B: Normals
 			MaterialParameter combined;			//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
 			MaterialParameter emissive;
-			Effect* effect;						//Effect associated with this material: opaque, transparent, emissive, etc.
+			avs::uid uid;						//Effect associated with this material: opaque, transparent, emissive, etc.
 		};
 
 		struct MaterialData //Layout conformant to GLSL std140
@@ -83,5 +83,6 @@ namespace scr
 		inline const MaterialCreateInfo& GetMaterialCreateInfo() const { return m_CI; }
 		inline MaterialCreateInfo& GetMaterialCreateInfo() { return m_CI; }
 		inline const MaterialData& GetMaterialData() { return m_MaterialData; }
+		avs::uid id = 0;
 	};
 }

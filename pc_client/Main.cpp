@@ -466,11 +466,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				dsmi->Render(hWnd);
 
 				SIMUL_COMBINED_PROFILE_END(deviceContext);
-				vec3 headOrigin = *((vec3*)&clientDeviceState.originPose.position);
+				vec3 originPosition		= *((vec3*)&clientDeviceState.originPose.position);
+				vec4 originOrientation	= *((vec4*)&clientDeviceState.originPose.orientation);
 				if (useOpenXR.HaveXRDevice())
 				{
 					clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
-					useOpenXR.RenderFrame(deviceContext, renderDelegate, headOrigin);
+					useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
 				}
 				errno=0;
 				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);

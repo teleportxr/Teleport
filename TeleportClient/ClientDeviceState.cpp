@@ -1,26 +1,16 @@
 #include "ClientDeviceState.h"
 #include "basic_linear_algebra.h"
+
 using namespace teleport;
 using namespace client;
-ClientDeviceState::ClientDeviceState():
-//localOriginPos(0,0,0),
-relativeHeadPos(0,0,0)
-//, transformToLocalOrigin(scr::mat4::Translation(-localOriginPos))
-{
-}
 
-void ClientDeviceState::UpdateOriginPose()
+ClientDeviceState::ClientDeviceState()
 {
-	// Footspace is related to local space as follows:
-	// The orientation of footspace is identical to the orientation of localspace.
-	// Footspace is offset from local space by LocalFootPos, which is measured in game space.
-	//originPose.position=localFootPos;
-	//originPose.orientation=scr::quat(stickYaw,avs::vec3(0,1.0f,0));
 }
 
 void ClientDeviceState::TransformPose(avs::Pose &p)
 {
-	scr::quat stickRotateQ(stickYaw,avs::vec3(0,1.0f,0));
+	scr::quat stickRotateQ = originPose.orientation;// (stickYaw, avs::vec3(0, 1.0f, 0));
 	scr::quat localQ=*((scr::quat*)(&p.orientation));
 	scr::quat globalQ=(stickRotateQ*localQ);
 	p.orientation=globalQ;
@@ -36,8 +26,8 @@ void ClientDeviceState::SetHeadPose(avs::vec3 pos,scr::quat q)
 {
 	headPose.orientation=*((const avs::vec4 *)(&q));
 	headPose.position=pos;
+	relativeHeadPose = headPose;
 	TransformPose(headPose);
-	relativeHeadPos=headPose.position;
 	headPose.position+=originPose.position;
 }
 

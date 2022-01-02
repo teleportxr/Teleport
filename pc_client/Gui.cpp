@@ -254,6 +254,7 @@ void Gui::BeginDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceConte
 	{
 		return;
 	}
+	// POSSIBLY can't use ImGui's own Win32 NewFrame as we may want to override the mousepos.
 	ImGui_ImplWin32_NewFrame();
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
@@ -318,21 +319,44 @@ void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext
 			"NUM 2: Vertex Normals\n");
 		ImGui::End();
 	}
-	if(show_inspector&&selected_node.get())
+	if(show_inspector)
 	{
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 		if (ImGui::Begin("Properties", &show_inspector, window_flags))
 		{
-			avs::vec3 pos=selected_node->GetLocalPosition();
-			avs::vec3 gpos=selected_node->GetGlobalPosition();
-			ImGui::Text("%d",selected_node->id);
-			ImGui::Text("%s",selected_node->name.c_str());
-			ImGui::Text(" Local Pos: %3.3f %3.3f %3.3f",pos.x,pos.y,pos.z);
-			ImGui::Text("global Pos: %3.3f %3.3f %3.3f",gpos.x,gpos.y,gpos.z);
-			ImGui::End();
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+			if (selected_node.get())
+			{
+				avs::vec3 pos = selected_node->GetLocalPosition();
+				avs::vec3 gpos = selected_node->GetGlobalPosition();
+				ImGui::Text("%d: %s", selected_node->id,selected_node->name.c_str());
+				ImGui::Text(" Local Pos: %3.3f %3.3f %3.3f", pos.x, pos.y, pos.z);
+				ImGui::Text("global Pos: %3.3f %3.3f %3.3f", gpos.x, gpos.y, gpos.z);
+				for (const auto& m : selected_node->GetMaterials())
+				{
+					ImGui::TreeNodeEx("", flags, "%d: %s",m->id,m->GetMaterialCreateInfo().name.c_str(), flags);
+					if (ImGui::IsItemClicked())
+					{
+						selected_uid = m->id;
+						selected_material = m;
+						selected_node.reset();
+					}
+				}
+				ImGui::End();
+			}
+			else if (selected_material.get())
+			{
+				const auto& mci = selected_material->GetMaterialCreateInfo();
+				ImGui::Text("%d: %s", selected_material->id, mci.name.c_str());
+				if(mci.diffuse.texture.get())
+					ImGui::TreeNodeEx("", flags," Diffuse: %s",  mci.diffuse.texture->GetTextureCreateInfo().name.c_str());
+				if (mci.combined.texture.get())
+					ImGui::TreeNodeEx("", flags,"Combined: %s", mci.combined.texture->GetTextureCreateInfo().name.c_str());
+				if (mci.emissive.texture.get())
+					ImGui::TreeNodeEx("", flags,"Emissive: %s", mci.emissive.texture->GetTextureCreateInfo().name.c_str());
+			}
 		}
 	}
-
 	in_debug_gui--;
 	ImGui::PopFont();
 	ImGui::Render();
@@ -356,6 +380,7 @@ void Gui::Update(const std::vector<vec4>& h,bool have_vr)
 	hand_pos_press = h;
 	have_vr_device = have_vr;
 }
+
 void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	view_pos = deviceContext.viewStruct.cam_pos;
@@ -480,7 +505,7 @@ void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
 			KeyboardLine("zxcvbnm,./");
 		}
 		//ShowFont();
-		ImGui_ImplPlatform_DebugInfo();
+		//ImGui_ImplPlatform_DebugInfo();
 		//hasFocus = ImGui::IsAnyItemFocused(); Note: does not work.
 		ImGui::End();
 	}

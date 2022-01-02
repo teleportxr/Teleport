@@ -102,24 +102,24 @@ avs::Result GeometryDecoder::decode(avs::GeometryPayloadType type, avs::Geometry
 	switch(type)
 	{
 	case GeometryPayloadType::Mesh:
-		SCR_COUT << "GeometryPayloadType::Mesh: " << bufferSizeK << std::endl;
+		//SCR_COUT << "GeometryPayloadType::Mesh: " << bufferSizeK << std::endl;
 		return decodeMesh(target);
 	case GeometryPayloadType::Material:
-		SCR_COUT << "GeometryPayloadType::Material: " << bufferSizeK << std::endl;
+		//SCR_COUT << "GeometryPayloadType::Material: " << bufferSizeK << std::endl;
 		return decodeMaterial(target);
 	case GeometryPayloadType::MaterialInstance:
 		return decodeMaterialInstance(target);
 	case GeometryPayloadType::Texture:
-		SCR_COUT << "GeometryPayloadType::Texture: " << bufferSizeK << std::endl;
+		//SCR_COUT << "GeometryPayloadType::Texture: " << bufferSizeK << std::endl;
 		return decodeTexture(target);
 	case GeometryPayloadType::Animation:
-		SCR_COUT << "GeometryPayloadType::Animation: " << bufferSizeK << std::endl;
+		//SCR_COUT << "GeometryPayloadType::Animation: " << bufferSizeK << std::endl;
 		return decodeAnimation(target);
 	case GeometryPayloadType::Node:
-		SCR_COUT << "GeometryPayloadType::Node: " << bufferSizeK << std::endl;
+		//SCR_COUT << "GeometryPayloadType::Node: " << bufferSizeK << std::endl;
 		return decodeNode(target);
 	case GeometryPayloadType::Skin:
-		SCR_COUT << "GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
+		//SCR_COUT << "GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
 		return decodeSkin(target);
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
@@ -590,8 +590,8 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 
 		material.name.resize(nameLength);
 		copy<char>(material.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
-		
 		material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
+		TELEPORT_COUT <<"GeometryDecoder::decodeMaterial - "<<mat_uid<<" "<< material.name.c_str() << " diffuse " << material.pbrMetallicRoughness.baseColorTexture.index << std::endl;
 		material.pbrMetallicRoughness.baseColorTexture.texCoord = NextB;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.x = NextFloat;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.y = NextFloat;
@@ -626,7 +626,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 		material.emissiveTexture.tiling.y = NextFloat;
 		material.emissiveFactor.x = NextFloat;
 		material.emissiveFactor.y = NextFloat;
-          		material.emissiveFactor.z = NextFloat;
+		material.emissiveFactor.z = NextFloat;
 
 		size_t extensionAmount = Next8B;
 		for(size_t i = 0; i < extensionAmount; i++)

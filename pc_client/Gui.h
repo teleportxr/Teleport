@@ -34,6 +34,10 @@ namespace teleport
 			return connecting=c;
 		}
 		void SetServerIPs(const std::vector<std::string> &server_ips);
+		avs::uid GetSelectedUid() const
+		{
+			return selected_uid;
+		}
 	protected:
 		void TreeNode(const std::shared_ptr<scr::Node>& node);
 		simul::crossplatform::RenderPlatform* renderPlatform=nullptr;
@@ -53,6 +57,7 @@ namespace teleport
 		bool have_vr_device = false;
 		avs::uid selected_uid=0;
 		std::shared_ptr<scr::Node> selected_node;
+		std::shared_ptr<scr::Material> selected_material;
 		bool show_inspector=false;
 	};
 }
