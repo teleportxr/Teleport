@@ -6,7 +6,7 @@ Reference Client/Server software and SDK.
 
 Clone the repository with submodules:
 
-    git clone --recurse-submodules git@github.com:simul/RemotePlay.git
+    git clone --recurse-submodules git@github.com:simul/Teleport.git
 
 or if you have already cloned the main repo,
 
