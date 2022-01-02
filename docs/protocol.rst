@@ -1,20 +1,26 @@
-############
+########################
 The Teleport VR Protocol
-############
+########################
+
+The Teleport VR Protocol is an application-layer network protocol for client-server immersive applications.
+Essentially this means that applications can be used remotely without downloading or installing them.
+The protocol is open, meaning that anyone can use it, either by writing a client program or by developing a server that uses the protocol.
+Simul Software provides reference implementations of both client and server.
+The protocol and software should be considered pre-alpha, suitable for testing, evaluation and experimentation.
 
 Structure
 ---------
 The protocol operates four main connections between a client and server:
 
-+------------------------+----------------------------------------------------------------------------------+
-| Service Connection:    | Two-way communication between client and server, uses Enet over UDP.             |
-+------------------------+----------------------------------------------------------------------------------+
-| Video Stream:          | A one-way stream of video from server to client, uses SRT and EFP over UDP.      |
-+------------------------+----------------------------------------------------------------------------------+
-| Geometry Stream:       | A one-way stream of video from server to client, uses SRT and EFP over UDP.      |
-+------------------------+----------------------------------------------------------------------------------+
-| Static data connection | An http/s connection for data files.                                             |
-+------------------------+----------------------------------------------------------------------------------+
++------------------------+---------------------------------------------------------------------------------------+
+| Service Connection:    | Two-way communication between client and server, uses Enet over UDP.                  |
++------------------------+---------------------------------------------------------------------------------------+
+| Video Stream:          | A one-way stream of video from server to client, uses SRT and EFP over UDP.           |
++------------------------+---------------------------------------------------------------------------------------+
+| Geometry Stream:       | A one-way stream of geometry data from server to client, uses SRT and EFP over UDP.   |
++------------------------+---------------------------------------------------------------------------------------+
+| Static data connection | An http/s connection for data files.                                                  |
++------------------------+---------------------------------------------------------------------------------------+
 
 In addition, a Discovery connection is used only on connection startup, for new clients to connect to a server.
 The Service Connection controls the others and is the main line of information between the client and server.
@@ -57,44 +63,79 @@ All packets on the **Control** channel are of the form:
 
 The **Setup Command** is
 
-+------------------------+-------------------------------+
-|          bytes         |     member                    |
-|                        |                               |
-+========================+===============================+
-|      1                 | commandPayloadType=Setup=2    |
-+------------------------+-------------------------------+
-|      4 (signed)        | server_streaming_port         |
-+------------------------+-------------------------------+
-|      4 (signed)        | server_http_port              |
-+------------------------+-------------------------------+
-|     4 (unsigned)       | debug_stream                  |
-+------------------------+-------------------------------+
-|     4 (unsigned)       | do_checksums                  |
-+------------------------+-------------------------------+
-|     4 (unsigned)       | debug_network_packets         |
-+------------------------+-------------------------------+
-|      4 (signed)        |  requiredLatencyMs            |
-+------------------------+-------------------------------+
-|     4 (unsigned)       | idle_connection_timeout       |
-+------------------------+-------------------------------+
-|      8                 | server_id                     |
-+------------------------+-------------------------------+
-|      1                 | control_model                 |
-+------------------------+-------------------------------+
-|      VideoConfig       | video_config                  |
-+------------------------+-------------------------------+
-|      12 (3 floats)     | bodyOffsetFromHead            |
-+------------------------+-------------------------------+
-|      AxesStandard      | axesStandard                  |
-+------------------------+-------------------------------+
-|      1 (unsigned)      | audio_input_enabled           |
-+------------------------+-------------------------------+
-|      8 (signed)        | startTimestamp                |
-+------------------------+-------------------------------+
-
-	
++-----------------------+-------------------+---------------------------+
+|          bytes        |        type       |    description            |
+|                       |                   |                           |
++=======================+===================+===========================+
+|      1                | CommandPayloadType|    Setup=2                |
++-----------------------+-------------------+---------------------------+
+|      4                |    int32          |    server streaming port  |
++-----------------------+-------------------+---------------------------+
+|      4                |    int32          |    server http port       |
++-----------------------+-------------------+---------------------------+
+|     4                 |    uint32         |    debug_stream           |
++-----------------------+-------------------+---------------------------+
+|     4                 |     uint32        |    do_checksums           |
++-----------------------+-------------------+---------------------------+
+|     4                 |    uint32         |    debug_network_packets  |
++-----------------------+-------------------+---------------------------+
+|     4                 |    int32          |    requiredLatencyMs      |
++-----------------------+-------------------+---------------------------+
+|     4                 |    uint32         | idle_connection_timeout   |
++-----------------------+-------------------+---------------------------+
+|     8                 |    uid            | server ID                 |
++-----------------------+-------------------+---------------------------+
+|     1                 |    ControlModel   | control_model             |
++-----------------------+-------------------+---------------------------+
+|     137               |    VideoConfig    | video stream configuration|
++-----------------------+-------------------+---------------------------+
+|     12 (3 floats)     |                   | bodyOffsetFromHead        |
++-----------------------+-------------------+---------------------------+
+|      1                |    AxesStandard   | axes standard             |
++-----------------------+-------------------+---------------------------+
+|      1                |    uint8_t        |audio input enabled, 1 or 0|
++-----------------------+-------------------+---------------------------+
+|      1                |    uint8_t        |SSL enabled, 1 or 0        |
++-----------------------+-------------------+---------------------------+
+|      8                |    int64          | starting timestamp        |
++-----------------------+-------------------+---------------------------+
 
 The  **Client** then initiates its streaming connection with the given **Server Streaming Port** from the ****Setup Command****. The Client sends a **Handshake** on the Handshake channel of the Service Connection.
+
+The **Handshake** is
+
++-----------------------+-------------------+-------------------------+
+|          bytes        |        type       |    description          |
+|                       |                   |                         |
++=======================+===================+=========================+
+|     4                 | unsigned          | DisplayInfo width       |
++-----------------------+-------------------+-------------------------+
+|     4                 | unsigned          | DisplayInfo height      |
++-----------------------+-------------------+-------------------------+
+|     4                 | float             | metres per unit         |
++-----------------------+-------------------+-------------------------+
+|     4                 | float             | field of view (degrees) |
++-----------------------+-------------------+-------------------------+
+|     4                 | unsigned          | udp buffer size         |
++-----------------------+-------------------+-------------------------+
+|     4                 | unsigned          | max bandwidth, kb/s     |
++-----------------------+-------------------+-------------------------+
+|     1                 | AxesStandard      | Axes standard           |
++-----------------------+-------------------+-------------------------+
+|     1                 | uint8_t           | framerate, Hz           |
++-----------------------+-------------------+-------------------------+
+|     1                 | bool              | using hands             |
++-----------------------+-------------------+-------------------------+
+|     1                 | bool              | is VR                   |
++-----------------------+-------------------+-------------------------+
+|     8                 | uint64_t          | resource count          |
++-----------------------+-------------------+-------------------------+
+|     4                 | uint32_t          | max lights supported    |
++-----------------------+-------------------+-------------------------+
+|     4                 | uint32_t          | client Streaming Port   |
++-----------------------+-------------------+-------------------------+
+|     4                 | int32_t           | minimum Priority        |
++-----------------------+-------------------+-------------------------+
 
 
 When the **Server** receives the **Handshake**, it starts streaming proper. The **Streaming Connection** is created on the **Server Streaming Port**, which is by default (**Server Service Port** + 1). The Handshake is of variable size, as it contains a list of the resource uid's that it already has cached.
