@@ -16,7 +16,7 @@
 #include <libavstream/audio/audiotarget.h>
 
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
-#include "crossplatform/SessionClient.h"
+#include "TeleportClient/SessionClient.h"
 #include "crossplatform/ResourceCreator.h"
 #include "crossplatform/ResourceManager.h"
 #include "crossplatform/GeometryDecoder.h"

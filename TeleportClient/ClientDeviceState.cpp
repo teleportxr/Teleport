@@ -8,39 +8,43 @@ ClientDeviceState::ClientDeviceState()
 {
 }
 
-void ClientDeviceState::TransformPose(avs::Pose &p)
+void ClientDeviceState::TransformPose(LocalGlobalPose &p)
 {
 	scr::quat stickRotateQ = originPose.orientation;// (stickYaw, avs::vec3(0, 1.0f, 0));
-	scr::quat localQ=*((scr::quat*)(&p.orientation));
+	scr::quat localQ=*((scr::quat*)(&p.localPose.orientation));
 	scr::quat globalQ=(stickRotateQ*localQ);
-	p.orientation=globalQ;
+	p.globalPose.orientation=globalQ;
 
-	avs::vec3 relp=p.position;
+	avs::vec3 relp=p.localPose.position;
 	scr::quat localP=*((scr::quat*)(&(relp)));
 	localP.s=0;
 	scr::quat globalP=(stickRotateQ*localP)*(stickRotateQ.Conjugate());
-	p.position=avs::vec3(globalP.i,globalP.j,globalP.k);
+	p.globalPose.position=avs::vec3(globalP.i,globalP.j,globalP.k);
+	p.globalPose.position+=originPose.position;
 }
 
 void ClientDeviceState::SetHeadPose(avs::vec3 pos,scr::quat q)
 {
-	headPose.orientation=*((const avs::vec4 *)(&q));
-	headPose.position=pos;
-	relativeHeadPose = headPose;
+	headPose.localPose.orientation=*((const avs::vec4 *)(&q));
+	headPose.localPose.position=pos;
 	TransformPose(headPose);
-	headPose.position+=originPose.position;
 }
 
 void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,scr::quat q)
 {
-	controllerPoses[index].position = pos;
-	controllerPoses[index].orientation = *((const avs::vec4 *)(&q));
-	controllerRelativePoses[index]=controllerPoses[index];
+	controllerPoses[index].localPose.position = pos;
+	controllerPoses[index].localPose.orientation = *((const avs::vec4 *)(&q));
 	TransformPose(controllerPoses[index]);
-	controllerPoses[index].position+=originPose.position;
 }
 
 void ClientDeviceState::SetControllerState(int index, const teleport::client::ControllerState& st)
 {
 	controllerStates[index]=st;
+}
+
+void ClientDeviceState::UpdateGlobalPoses()
+{
+	TransformPose(headPose);
+	TransformPose(controllerPoses[0]);
+	TransformPose(controllerPoses[1]);
 }

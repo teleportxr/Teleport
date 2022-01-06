@@ -88,32 +88,38 @@ void ResourceCreator::Initialize(scr::RenderPlatform* r, scr::VertexBufferLayout
 	m_DummyGreen->Create(tci);
 }
 
-std::vector<avs::uid> ResourceCreator::TakeResourceRequests()
+std::vector<avs::uid> ResourceCreator::GetResourceRequests() const
 {
-	std::vector<avs::uid> resourceRequests = std::move(geometryCache->m_ResourceRequests);
-	geometryCache->m_ResourceRequests.clear();
-
+	std::vector<avs::uid> resourceRequests = geometryCache->m_ResourceRequests;
 	//Remove duplicates.
 	std::sort(resourceRequests.begin(), resourceRequests.end());
 	resourceRequests.erase(std::unique(resourceRequests.begin(), resourceRequests.end()), resourceRequests.end());
 
 	return resourceRequests;
 }
-
-std::vector<avs::uid> ResourceCreator::TakeReceivedResources()
+void ResourceCreator::ClearResourceRequests()
 {
-	std::vector<avs::uid> receivedResources = std::move(geometryCache->m_ReceivedResources);
-	geometryCache->m_ReceivedResources.clear();
-
-	return receivedResources;
+	geometryCache->m_ResourceRequests.clear();
 }
 
-std::vector<avs::uid> ResourceCreator::TakeCompletedNodes()
+std::vector<avs::uid> ResourceCreator::GetReceivedResources() const
 {
-	std::vector<avs::uid> completedNodes = std::move(geometryCache->m_CompletedNodes);
-	geometryCache->m_CompletedNodes.clear();
+	return geometryCache->m_ReceivedResources;
+}
 
-	return completedNodes;
+void ResourceCreator::ClearReceivedResources()
+{
+	geometryCache->m_ReceivedResources.clear();
+}
+
+std::vector<avs::uid> ResourceCreator::GetCompletedNodes() const
+{
+	return geometryCache->m_CompletedNodes;
+}
+
+void ResourceCreator::ClearCompletedNodes()
+{
+	geometryCache->m_CompletedNodes.clear();
 }
 
 void ResourceCreator::Clear()
