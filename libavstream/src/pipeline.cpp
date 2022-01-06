@@ -1,39 +1,37 @@
 // libavstream
-// (c) Copyright 2018-2019 Simul Software Ltd
+// (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <pipeline_p.hpp>
 #include <node_p.hpp>
+#include <pipeline.hpp>
 
 using namespace avs;
 
 Pipeline::Pipeline()
-	: m_d(new Pipeline::Private(this))
+	: m_d(this)
 {
-	m_data = (Pipeline::Private*)m_d;
 	reset();
 
 }
 
 Pipeline::~Pipeline()
 {
-	delete m_d;
 }
 
 uint64_t Pipeline::GetStartTimestamp() const
 {
-	return m_data->m_startTimestamp;
+	return m_startTimestamp;
 }
 
 uint64_t Pipeline::GetTimestamp() const
 {
-	return m_data->m_lastTimestamp;
+	return m_lastTimestamp;
 }
 
 void Pipeline::add(PipelineNode* node)
 {
-	if (std::find(std::begin(m_data->m_nodes), std::end(m_data->m_nodes), node) == m_data->m_nodes.end())
+	if (std::find(std::begin(m_nodes), std::end(m_nodes), node) == m_nodes.end())
 	{
-		m_data->m_nodes.push_back(node);
+		m_nodes.push_back(node);
 	}
 	else
 	{
@@ -70,33 +68,28 @@ Result Pipeline::link(const std::initializer_list<PipelineNode*>& nodes)
 
 PipelineNode* Pipeline::front() const
 {
-	if (m_data->m_nodes.size() == 0)
+	if (m_nodes.size() == 0)
 	{
 		return nullptr;
 	}
-	return m_data->m_nodes.front();
+	return m_nodes.front();
 }
 
 PipelineNode* Pipeline::back() const
 {
-	if (m_data->m_nodes.size() == 0)
+	if (m_nodes.size() == 0)
 	{
 		return nullptr;
 	}
-	return m_data->m_nodes.back();
+	return m_nodes.back();
 }
 
 size_t Pipeline::getLength() const
 {
-	return m_data->m_nodes.size();
+	return m_nodes.size();
 }
 
 Result Pipeline::process()
-{
-	return m_data->process();
-}
-
-Result Pipeline::Private::process()
 {
 	// Returns in milliseconds.
 	const uint64_t timestamp = (uint64_t)(Platform::getTimeElapsed(m_startPlatformTimestamp, Platform::getTimestamp()));
@@ -146,7 +139,7 @@ Result Pipeline::Private::process()
 
 void Pipeline::deconfigure()
 {
-	for (PipelineNode* node : m_data->m_nodes)
+	for (PipelineNode* node : m_nodes)
 	{
 		assert(node);
 		node->deconfigure();
@@ -156,53 +149,53 @@ void Pipeline::deconfigure()
 void Pipeline::reset()
 {
 	// TODO: Unlink only connections relevant to this pipeline.
-	for (PipelineNode* node : m_data->m_nodes)
+	for (PipelineNode* node : m_nodes)
 	{
 		assert(node);
 		node->unlinkAll();
 	}
-	m_data->m_nodes.clear();
+	m_nodes.clear();
 
 	restart();
 }
 
 void Pipeline::restart()
 {
-	memset(&(m_data->m_startPlatformTimestamp),0,sizeof(Timestamp));
-	m_data->m_startPlatformTimestamp= Platform::getTimestamp();
-	m_data->m_lastTimestamp = 0;
-	m_data->m_startTimestamp = 0;
-	m_data->m_started = false;
+	memset(&(m_startPlatformTimestamp),0,sizeof(Timestamp));
+	m_startPlatformTimestamp= Platform::getTimestamp();
+	m_lastTimestamp = 0;
+	m_startTimestamp = 0;
+	m_started = false;
 }
 
 Result Pipeline::startProfiling(const char* statFileName)
 {
-	if (m_data->m_statFile.is_open())
+	if (m_statFile.is_open())
 	{
 		return Result::Pipeline_AlreadyProfiling;
 	}
 
-	m_data->m_statFile.open(statFileName, std::ios::trunc);
-	if (!m_data->m_statFile)
+	m_statFile.open(statFileName, std::ios::trunc);
+	if (!m_statFile)
 	{
 		return Result::File_OpenFailed;
 	}
 
-	m_data->writeTimingsHeader();
+	writeTimingsHeader();
 	return Result::OK;
 }
 
 Result Pipeline::stopProfiling()
 {
-	if (!m_data->m_statFile.is_open())
+	if (!m_statFile.is_open())
 	{
 		return Result::Pipeline_NotProfiling;
 	}
-	m_data->m_statFile.close();
+	m_statFile.close();
 	return Result::OK;
 }
 
-void Pipeline::Private::writeTimingsHeader()
+void Pipeline::writeTimingsHeader()
 {
 	assert(m_statFile.is_open());
 
@@ -217,7 +210,7 @@ void Pipeline::Private::writeTimingsHeader()
 	}
 }
 
-void Pipeline::Private::writeTimings(uint32_t timestamp, const std::vector<double>& timings)
+void Pipeline::writeTimings(uint32_t timestamp, const std::vector<double>& timings)
 {
 	assert(m_statFile.is_open());
 

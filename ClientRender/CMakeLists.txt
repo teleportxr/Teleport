@@ -40,8 +40,6 @@ set( src_crossplatform
 	src/crossplatform/GeometryDecoder.h
 	src/crossplatform/Light.cpp
 	src/crossplatform/Light.h
-	src/crossplatform/Log.cpp
-	src/crossplatform/Log.h
 	src/crossplatform/Material.cpp
 	src/crossplatform/Material.h
 	src/crossplatform/Mesh.cpp
@@ -53,8 +51,6 @@ set( src_crossplatform
 	src/crossplatform/ResourceCreator.cpp
 	src/crossplatform/ResourceCreator.h
 	src/crossplatform/ResourceManager.h
-	src/crossplatform/SessionClient.cpp
-	src/crossplatform/SessionClient.h
 	src/crossplatform/ShaderResource.cpp
 	src/crossplatform/ShaderResource.h
 	src/crossplatform/ShaderSystem.cpp

@@ -11,8 +11,12 @@ set(src_files
 	DiscoveryService.h
 	Input.cpp
 	Input.h
+	Log.cpp
+	Log.h
 	ServerTimestamp.cpp
 	ServerTimestamp.h
+	SessionClient.cpp
+	SessionClient.h
 )
 
 #Include its root directory

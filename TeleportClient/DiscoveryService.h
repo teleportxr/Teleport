@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <string>
 #include "enet/enet.h"
-#include "Common.h"
 
 namespace teleport
 {
@@ -15,7 +14,7 @@ namespace teleport
 		public:
 			DiscoveryService()
 			{
-				
+
 			}
 			virtual ~DiscoveryService(){};
 			/// Returns Client ID.

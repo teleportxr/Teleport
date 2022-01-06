@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2019 Simul Software Ltd
+// (c) Copyright 2018-2022 Simul Software Ltd
 
 #include <encoder_p.hpp>
 #include <encoders/enc_nvidia.hpp>

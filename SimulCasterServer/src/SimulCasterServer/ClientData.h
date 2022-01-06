@@ -14,12 +14,36 @@ namespace teleport
 {
 	namespace server
 	{
+		typedef int64_t(__stdcall* GetUnixTimestampFn)();
+		enum class ReflectedStateStatus
+		{
+			UNSENT=0,SENT,CONFIRMED
+		};
+		/// <summary>
+		/// A helper struct for a state that should be refleced client-side. Including a boolean flag for whether that state has been confirmed by the client.
+		/// </summary>
+		/// <typeparam name="State">The state's type</typeparam>
+		template<typename State> struct ReflectedState
+		{
+			State state;
+			ReflectedStateStatus status = ReflectedStateStatus::UNSENT;
+		};
+		template<typename State> struct ReflectedStateMap :public std::map<avs::uid, ReflectedState<State>>
+		{
+		};
+		
 		class GeometryStreamingService;
 		class ClientData
 		{
 		public:
 			ClientData(std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const teleport::ClientMessaging& clientMessaging);
-	
+			void StartStreaming(const teleport::CasterSettings &casterSettings, const teleport::CasterEncoderSettings &encoderSettings
+				, uint32_t connectionTimeout
+				, avs::uid serverID
+				, GetUnixTimestampFn getUnixTimestamp
+				, bool use_ssl);
+			void setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType);
+
 			// client settings from engine-side:
 			teleport::ClientSettings clientSettings;
 			teleport::CasterContext casterContext;
@@ -47,6 +71,7 @@ namespace teleport
 			mutable bool _hasOrigin=false;
 			avs::vec3 originClientHas;
 			std::vector<avs::uid> global_illumination_texture_uids;
+			ReflectedStateMap<avs::NodeSubtype> nodeSubTypes;
 			ENetAddress address = {};
 		};
 		struct ClientStatus

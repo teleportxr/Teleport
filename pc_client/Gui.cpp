@@ -329,9 +329,13 @@ void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext
 			{
 				avs::vec3 pos = selected_node->GetLocalPosition();
 				avs::vec3 gpos = selected_node->GetGlobalPosition();
+				avs::vec4 q = selected_node->GetLocalRotation();
+				avs::vec4 gq = selected_node->GetGlobalRotation();
 				ImGui::Text("%d: %s", selected_node->id,selected_node->name.c_str());
 				ImGui::Text(" Local Pos: %3.3f %3.3f %3.3f", pos.x, pos.y, pos.z);
+				ImGui::Text("       Rot: %3.3f %3.3f %3.3f %3.3f", q.x, q.y, q.z, q.w);
 				ImGui::Text("global Pos: %3.3f %3.3f %3.3f", gpos.x, gpos.y, gpos.z);
+				ImGui::Text("       Rot: %3.3f %3.3f %3.3f %3.3f", gq.x, gq.y, gq.z, gq.w);
 				for (const auto& m : selected_node->GetMaterials())
 				{
 					ImGui::TreeNodeEx("", flags, "%d: %s",m->id,m->GetMaterialCreateInfo().name.c_str(), flags);

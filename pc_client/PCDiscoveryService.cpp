@@ -1,6 +1,6 @@
 #include "PCDiscoveryService.h"
 
-#include "crossplatform/Log.h"
+#include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
 
 PCDiscoveryService::PCDiscoveryService()

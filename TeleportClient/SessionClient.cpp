@@ -6,9 +6,9 @@
 #include "libavstream/common.hpp"
 #include "libavstream/common_networking.h"
 #include "libavstream/common_input.h"
+#include <libavstream/geometry/mesh_interface.hpp>
 
-#include "ResourceCreator.h"
-#include "Log.h"
+#include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
 
 using namespace teleport;
@@ -24,7 +24,7 @@ SessionClient::~SessionClient()
 	//Disconnect(0); causes crash. trying to access deleted objects.
 }
 
-void SessionClient::SetResourceCreator(ResourceCreator *r)
+void SessionClient::SetResourceCreator(avs::GeometryTargetBackendInterface *r)
 {
 	mResourceCreator=r;
 }
@@ -238,7 +238,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		double timeSinceSent = time - sentResource.second;
 		if(timeSinceSent > RESOURCE_REQUEST_RESEND_TIME)
 		{
-			SCR_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
+			TELEPORT_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
 			mResourceRequests.push_back(sentResource.first);
 		}
 	}
@@ -355,7 +355,7 @@ void SessionClient::SendDisplayInfo (const avs::DisplayInfo &displayInfo)
 void SessionClient::SendHeadPose(const avs::Pose& pose)
 {
 	ENetPacket* packet = enet_packet_create(&pose, sizeof(avs::Pose), 0);
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose), packet);
+	//enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose), packet);
 }
 
 void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pose * poses)
@@ -440,16 +440,16 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 
 void SessionClient::SendResourceRequests()
 {
-	std::vector<avs::uid> resourceRequests = mResourceCreator->TakeResourceRequests();
-
-	//Append ResourceCreator's resource requests to SessionClient's resource requests.
+	std::vector<avs::uid> resourceRequests = mResourceCreator->GetResourceRequests();
+	mResourceCreator->ClearResourceRequests();
+	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
 	mResourceRequests.insert(mResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
 	resourceRequests.clear();
 
 	if(mResourceRequests.size() != 0)
 	{
 		size_t resourceCount = mResourceRequests.size();
-		ENetPacket* packet = enet_packet_create(&resourceCount, sizeof(size_t), ENET_PACKET_FLAG_RELIABLE);
+		ENetPacket* packet = enet_packet_create(&resourceCount, sizeof(size_t) , ENET_PACKET_FLAG_RELIABLE);
 
 		enet_packet_resize(packet, sizeof(size_t) + sizeof(avs::uid) * resourceCount);
 		memcpy(packet->data + sizeof(size_t), mResourceRequests.data(), sizeof(avs::uid) * resourceCount);
@@ -467,7 +467,8 @@ void SessionClient::SendResourceRequests()
 
 void SessionClient::SendReceivedResources()
 {
-	std::vector<avs::uid> receivedResources = mResourceCreator->TakeReceivedResources();
+	std::vector<avs::uid> receivedResources = mResourceCreator->GetReceivedResources();
+	mResourceCreator->ClearReceivedResources();
 
 	if(receivedResources.size() != 0)
 	{
@@ -498,7 +499,8 @@ void SessionClient::SendNodeUpdates()
 {
 	//Insert completed nodes.
 	{
-		std::vector<avs::uid> completedNodes = mResourceCreator->TakeCompletedNodes();
+		std::vector<avs::uid> completedNodes = mResourceCreator->GetCompletedNodes();
+		mResourceCreator->ClearCompletedNodes();
 		mReceivedNodes.insert(mReceivedNodes.end(), completedNodes.begin(), completedNodes.end());
 	}
 
@@ -614,7 +616,6 @@ void SessionClient::ReceivePositionUpdate(const ENetPacket* packet)
 		{
 			receivedRelativePos = command.valid_counter;
 		}
-
 		originToHeadPos = command.relative_pos;
 	}
 }

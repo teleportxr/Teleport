@@ -1,9 +1,9 @@
 // libavstream
-// (c) Copyright 2018-2019 Simul Software Ltd
+// (c) Copyright 2018-2022 Simul Software Ltd
 
 #pragma once
 
-#if defined(PLATFORM_WINDOWS)
+#if defined(_MSC_VER)
 	#include <libavstream/platforms/platform_windows.hpp>
 #else
 	#include <libavstream/platforms/platform_posix.hpp>

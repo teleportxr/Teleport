@@ -39,15 +39,12 @@ namespace scr
 		const nodeList_t& GetRootNodes() const;
 		const std::vector<std::shared_ptr<Node>> & GetSortedRootNodes();
 
-		void SetBody(std::shared_ptr<Node> node);
 		bool SetBody(avs::uid nodeID);
 		std::shared_ptr<Node> GetBody() const;
 
-		void SetLeftHand(std::shared_ptr<Node> node);
 		bool SetLeftHand(avs::uid nodeID);
 		std::shared_ptr<Node> GetLeftHand() const;
 
-		void SetRightHand(std::shared_ptr<Node> node);
 		bool SetRightHand(avs::uid nodeID);
 		std::shared_ptr<Node> GetRightHand() const;
 
@@ -82,12 +79,12 @@ namespace scr
 	protected:
 		nodeList_t rootNodes; //Nodes that are parented to the world root.
 		std::vector<std::shared_ptr<scr::Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
-		/// List of hand nodes; handled differently as we don't want them cleaned-up.
+	
         std::unordered_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 
-		std::shared_ptr<Node> body;
-		std::shared_ptr<Node> leftHand;
-		std::shared_ptr<Node> rightHand;
+		uid body;
+		uid leftHand;
+		uid rightHand;
 	private:
 		struct EarlyAnimationControl
 		{
