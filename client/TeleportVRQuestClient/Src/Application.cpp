@@ -124,9 +124,7 @@ bool Application::ProcessIniFile()
 		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",TELEPORT_SERVER_DISCOVERY_PORT);
 		client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",TELEPORT_CLIENT_SERVICE_PORT);
 		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",TELEPORT_CLIENT_STREAMING_PORT);
-		uint32_t client_id = ini.GetLongValue("", "CLIENT_ID",TELEPORT_DEFAULT_CLIENT_ID);
 
-		sessionClient.SetDiscoveryClientID(client_id);
 		return true;
 	}
 	else

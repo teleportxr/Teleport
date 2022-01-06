@@ -259,7 +259,7 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	localGeometryCache.mNodeManager->SetLeftHand(24);
 }
 
-void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
+void ClientRenderer::SetServer(const char *ip_port)
 {
 	std::string ip= ip_port;
 	size_t pos=ip.find(":");
@@ -273,7 +273,6 @@ void ClientRenderer::SetServer(const char *ip_port, uint32_t clientID)
 		server_discovery_port =atoi(ip.substr(pos+1,ip.length()-pos-1).c_str());
 		server_ip = ip.substr(0,pos);
 	}
-	sessionClient.SetDiscoveryClientID(clientID);
 }
 
 void ClientRenderer::SetExternalTexture(simul::crossplatform::Texture* t)

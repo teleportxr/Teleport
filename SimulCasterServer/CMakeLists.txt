@@ -81,7 +81,9 @@ SetTeleportDefaults( TeleportServer )
 target_include_directories(TeleportServer PUBLIC src)
 #Include libavstream
 target_include_directories(TeleportServer PUBLIC ../libavstream/include)
-#Include libavstream
+#Include TeleportCore
+target_include_directories(TeleportServer PUBLIC ../TeleportCore)
+#Include SimulCasterAudio
 target_include_directories(TeleportServer PUBLIC ../SimulCasterAudio/src)
 #Include Basis Universal
 target_include_directories(TeleportServer PUBLIC ../thirdparty/basis_universal/encoder)

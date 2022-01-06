@@ -91,7 +91,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 	return false;
 }
 
-void SessionClient::Disconnect(uint timeout)
+void SessionClient::Disconnect(uint timeout, bool resetClientID)
 {
 	remoteIP="";
 	mCommandInterface->OnVideoStreamClosed();
@@ -140,9 +140,11 @@ void SessionClient::Disconnect(uint timeout)
 
 	handshakeAcknowledged = false;
 	receivedInitialPos = false;
-	// TODO: retain client id for reconnection.
-	clientID=0;
-	discovered=false;
+	discovered = false;
+	if (resetClientID)
+	{
+		clientID = 0;
+	}
 }
 
 void SessionClient::SetPeerTimeout(uint timeout)

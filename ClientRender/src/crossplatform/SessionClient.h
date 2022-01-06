@@ -67,7 +67,7 @@ public:
 
 	bool Connect(const ENetAddress &remote, uint timeout);
 
-	void Disconnect(uint timeout);
+	void Disconnect(uint timeout, bool resetClientID = true);
 
 	void SetPeerTimeout(uint timeout);
 

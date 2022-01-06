@@ -8,8 +8,7 @@
 
 #include <arpa/inet.h>
 
-AndroidDiscoveryService::AndroidDiscoveryService(uint32_t manualClientID)
-    : DiscoveryService(manualClientID)
+AndroidDiscoveryService::AndroidDiscoveryService()
 {
 
 }
@@ -82,13 +81,11 @@ uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t client
             // we'll receive a lot of 4-byte packets, our own broadcast that we've just sent...
             if(bytesRecv==sizeof(response))
             {
-                if(clientID==response.clientID)
-                {
-                    remote.host=responseAddr.sin_addr.s_addr;
-                    remote.port=response.remotePort;
-                    serverDiscovered=true;
-                    //sendto(serviceDiscoverySocket, &remote.port, sizeof(remote.port) , 0, (struct sockaddr *) &responseAddr, sizeof(responseAddr));
-                }
+                remote.host=responseAddr.sin_addr.s_addr;
+                remote.port=response.remotePort;
+                serverDiscovered=true;
+                clientID = response.clientID
+                //sendto(serviceDiscoverySocket, &remote.port, sizeof(remote.port) , 0, (struct sockaddr *) &responseAddr, sizeof(responseAddr));
             }
             else if(errno!=0&&errno!=11)
             {

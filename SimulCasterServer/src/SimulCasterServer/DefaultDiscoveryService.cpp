@@ -2,7 +2,8 @@
 
 #include "SimulCasterServer/ErrorHandling.h"
 #include "SimulCasterServer/ClientData.h"
-#include "SimulCasterServer/CasterSettings.h"
+#include "SimulCasterServer/CasterSettings.h"    
+#include "TeleportUtility.h"
 
 using namespace teleport;
 using namespace server;
@@ -90,21 +91,30 @@ void DefaultDiscoveryService::tick()
 
 	uint32_t clientID = 0; //Newly received ID.
 	ENetBuffer buffer = { sizeof(clientID), &clientID }; //Buffer to retrieve client ID with.
+
 	ENetAddress addr;
 	//Retrieve all packets received since last call, and add any new clients.
 	while (size_t packetsize = enet_socket_receive(discoverySocket, &addr, &buffer, 1) > 0)
 	{
-		//Skip clients we have already added.
-		if (newClients.find(clientID) != newClients.end())
-			continue;
-
 		bool already_got = false;
-		if (clientServices.find(clientID) != clientServices.end())
+
+		if (clientID == 0)
 		{
-			// ok, we've received a connection request from a client that WE think we already have.
-			// Apparently the CLIENT thinks they've disconnected.
-			TELEPORT_COUT << "Warning: Client "<<clientID<<" reconnected, but we didn't know we'd lost them.\n";
-			already_got=true;
+			clientID = TeleportUtility::GenerateID();
+		}
+		else
+		{
+			//Skip clients we have already added.
+			if (newClients.find(clientID) != newClients.end())
+				continue;
+
+			if (clientServices.find(clientID) != clientServices.end())
+			{
+				// ok, we've received a connection request from a client that WE think we already have.
+				// Apparently the CLIENT thinks they've disconnected.
+				TELEPORT_COUT << "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them.\n";
+				already_got = true;
+			}
 		}
 		
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.

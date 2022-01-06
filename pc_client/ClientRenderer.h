@@ -219,7 +219,7 @@ public:
 	void ResizeView(int view_id, int W, int H);
 	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr) override;
 	void Init(simul::crossplatform::RenderPlatform *r);
-	void SetServer(const char* ip_port, uint32_t clientID);
+	void SetServer(const char* ip_port);
 	void InvalidateDeviceObjects();
 	void RemoveView(int);
 	bool OnDeviceRemoved();

@@ -3,10 +3,9 @@
 #include "crossplatform/Log.h"
 #include "TeleportCore/ErrorHandling.h"
 
-PCDiscoveryService::PCDiscoveryService(uint32_t manualClientID)
-	: DiscoveryService(manualClientID)
+PCDiscoveryService::PCDiscoveryService()
 {
-	
+	serverAddress = {};
 }
 
 PCDiscoveryService::~PCDiscoveryService()
@@ -122,8 +121,9 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 	{
 		// This will change responseAddress from 0xffffffff into the address of the server
 		bytesRecv = enet_socket_receive(serviceDiscoverySocket, &responseAddress, &responseBuffer, 1);
-		if(bytesRecv == sizeof(response) && clientID == response.clientID)
+		if(bytesRecv == sizeof(response))
 		{
+			clientID = response.clientID;
 			remote.host = responseAddress.host;
 			remote.port = response.remotePort;
 			serverDiscovered = true;

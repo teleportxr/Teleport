@@ -13,16 +13,9 @@ namespace teleport
 		class DiscoveryService
 		{
 		public:
-			DiscoveryService(uint32_t manualClientID = 0)
+			DiscoveryService()
 			{
-				if (manualClientID == 0)
-				{
-					clientID = scr::Utility::GenerateID();
-				}
-				else
-				{
-					clientID = manualClientID;
-				}
+				
 			}
 			virtual ~DiscoveryService(){};
 			/// Returns Client ID.
@@ -30,10 +23,7 @@ namespace teleport
 
 			void SetClientID(uint32_t inClientID)
 			{
-				if (inClientID != 0)
-				{
-					clientID = inClientID;
-				}
+				clientID = inClientID;
 			}
 		protected:
 			uint32_t clientID = 0;

@@ -45,7 +45,6 @@ simul::crossplatform::RenderPlatform *renderPlatform = nullptr;
 simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
 std::vector<std::string> server_ips;
-uint32_t clientID = TELEPORT_DEFAULT_CLIENT_ID;
 teleport::Gui gui;
 
 #define MAX_LOADSTRING 100
@@ -100,7 +99,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			ip_list.erase(0, pos + 1);
 		} while (pos != std::string::npos);
 
-		clientID = ini.GetLongValue("", "CLIENT_ID", TELEPORT_DEFAULT_CLIENT_ID);
 		enable_vr = ini.GetLongValue("", "ENABLE_VR", true);
 		dev_mode = ini.GetLongValue("", "DEV_MODE", false);
 		render_local_offline = ini.GetLongValue("", "RENDER_LOCAL_OFFLINE", false);
@@ -266,7 +264,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform);
 	if(server_ips.size())
-		clientRenderer->SetServer(server_ips[0].c_str(), clientID);
+		clientRenderer->SetServer(server_ips[0].c_str());
 
 #if IS_D3D12
 	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();

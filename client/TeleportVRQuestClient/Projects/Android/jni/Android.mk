@@ -62,7 +62,6 @@ LOCAL_C_INCLUDES += ../../../VrAppSupport/VrGUI/Src
 LOCAL_C_INCLUDES += ../../../VrAppSupport/VrLocale/Include
 LOCAL_C_INCLUDES += ../../../../libavstream/include
 LOCAL_C_INCLUDES += ../../../../thirdparty/basis_universal
-LOCAL_C_INCLUDES += ../../../../SimulCasterRenderer/src
 LOCAL_C_INCLUDES += ../../../../SimulCasterAudio/src
 LOCAL_C_INCLUDES += ../../../../TeleportClient
 LOCAL_C_INCLUDES += ../../../3rdParty/enet/Include
@@ -83,7 +82,6 @@ $(call import-module,VrSamples/SampleFramework/Projects/Android/jni)
 $(call import-module,../libavstream/jni)
 $(call import-module,../libavstream/thirdparty/srt/build_android/jni)
 $(call import-module,../thirdparty/ndk-projects/draco)
-$(call import-module,../SimulCasterRenderer/jni)
 $(call import-module,../TeleportClient/jni)
 $(call import-module,../TeleportCore/jni)
 $(call import-module,../SimulCasterAudio/jni)
