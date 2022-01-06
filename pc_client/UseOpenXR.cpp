@@ -12,6 +12,9 @@
 #include "fmt/core.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "Platform/CrossPlatform/AxesStandard.h"
+#include "TeleportCore/ErrorHandling.h"
+
+#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){TELEPORT_CERR<<"";ReportError((int)res);}
 
 using namespace std;
 using namespace simul;
@@ -61,6 +64,9 @@ struct input_state_t
 	XrAction    selectAction;
 	XrAction    showMenuAction;
 	XrAction	triggerAction;
+	XrAction	joystickActionX[2];
+	XrAction	joystickActionY[2];
+	XrVector2f	thumbstick[2];
 	XrPath   handSubactionPath[2];
 	XrSpace  handSpace[2];
 	XrPosef  handPose[2];
@@ -349,13 +355,21 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	return true;
 }
 
+void UseOpenXR::ReportError( int result)
+{
+	XrResult res = (XrResult)result;
+	char str[XR_MAX_RESULT_STRING_SIZE];
+	xrResultToString(xr_instance,res,str);
+	std::cerr << "Error: " << str << std::endl;
+}
 
 void UseOpenXR::MakeActions()
 {
+	XrResult result;
 	XrActionSetCreateInfo actionset_info = { XR_TYPE_ACTION_SET_CREATE_INFO };
 	strcpy_s(actionset_info.actionSetName, "teleport_client");
 	strcpy_s(actionset_info.localizedActionSetName, "TeleportClient");
-	xrCreateActionSet(xr_instance, &actionset_info, &xr_input.actionSet);
+	XR_CHECK(xrCreateActionSet(xr_instance, &actionset_info, &xr_input.actionSet));
 	xrStringToPath(xr_instance, "/user/hand/left", &xr_input.handSubactionPath[0]);
 	xrStringToPath(xr_instance, "/user/hand/right", &xr_input.handSubactionPath[1]);
 
@@ -367,42 +381,57 @@ void UseOpenXR::MakeActions()
 	action_info.actionType = XR_ACTION_TYPE_POSE_INPUT;
 	strcpy_s(action_info.actionName, "hand_pose");
 	strcpy_s(action_info.localizedActionName, "Hand Pose");
-	xrCreateAction(xr_input.actionSet, &action_info, &xr_input.poseAction);
+	XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.poseAction));
 
 	// Create an action for listening to the select action! This is primary trigger
 	// on controllers, and an airtap on HoloLens
 	action_info.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
 	strcpy_s(action_info.actionName, "select");
 	strcpy_s(action_info.localizedActionName, "Select");
-	xrCreateAction(xr_input.actionSet, &action_info, &xr_input.selectAction);
+	XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.selectAction));
 
 	// Action for trigger press
 	action_info.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
 	strcpy_s(action_info.actionName, "trigger");
 	strcpy_s(action_info.localizedActionName, "trigger");
-	xrCreateAction(xr_input.actionSet, &action_info, &xr_input.triggerAction);
+	XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.triggerAction));
+
+	for (size_t i = 0; i < 2; i++)
+	{
+		const char* side = i ? "right" : "left";
+		action_info.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+		sprintf(action_info.actionName, "thumbstick_x_%s",side);
+		sprintf(action_info.localizedActionName, "thumbstick %s X", side);
+		XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.joystickActionX[i]));
+		sprintf(action_info.actionName, "thumbstick_y_%s", side);
+		sprintf(action_info.localizedActionName, "thumbstick %s Y", side);
+		XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.joystickActionY[i]));
+	}
 
 	// Create an action for listening to the "show menu" action.
 	action_info.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
 	strcpy_s(action_info.actionName, "menu");
 	strcpy_s(action_info.localizedActionName, "Menu");
-	xrCreateAction(xr_input.actionSet, &action_info, &xr_input.showMenuAction);
+	XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.showMenuAction));
 
 	// Bind the actions we just created to specific locations on the Khronos simple_controller
 	// definition! These are labeled as 'suggested' because they may be overridden by the runtime
 	// preferences. For example, if the runtime allows you to remap buttons, or provides input
 	// accessibility settings.
-	XrPath profile_path;
 	XrPath pose_path[2];
 	XrPath select_path[2];
+	XrPath trigger_click_path[2];
 	XrPath menu_path[2];
 	XrPath trigger_path[2];
 	XrPath joystick_path_x[2];
 	XrPath joystick_path_y[2];
+	xrStringToPath(xr_instance, "/user/hand/left/input/select/click", &select_path[0]);
+	xrStringToPath(xr_instance, "/user/hand/right/input/select/click", &select_path[1]);
+
 	xrStringToPath(xr_instance, "/user/hand/left/input/grip/pose", &pose_path[0]);
 	xrStringToPath(xr_instance, "/user/hand/right/input/grip/pose", &pose_path[1]);
-	xrStringToPath(xr_instance, "/user/hand/left/input/trigger/click", &select_path[0]);
-	xrStringToPath(xr_instance, "/user/hand/right/input/trigger/click", &select_path[1]);
+	xrStringToPath(xr_instance, "/user/hand/left/input/trigger/click", &trigger_click_path[0]);
+	xrStringToPath(xr_instance, "/user/hand/right/input/trigger/click", &trigger_click_path[1]);
 	xrStringToPath(xr_instance, "/user/hand/left/input/trigger/value", &trigger_path[0]);
 	xrStringToPath(xr_instance, "/user/hand/right/input/trigger/value", &trigger_path[1]);
 	xrStringToPath(xr_instance, "/user/hand/left/input/b/click", &menu_path[0]);
@@ -410,27 +439,44 @@ void UseOpenXR::MakeActions()
 
 	xrStringToPath(xr_instance, "/user/hand/left/input/thumbstick/x", &joystick_path_x[0]);
 	xrStringToPath(xr_instance, "/user/hand/right/input/thumbstick/x",&joystick_path_x[1]);
-	
-	xrStringToPath(xr_instance, "/interaction_profiles/valve/index_controller", &profile_path);
-		///interaction_profiles/khr/simple_controller", &profile_path);
-	XrActionSuggestedBinding bindings[] = {
+
+	xrStringToPath(xr_instance, "/user/hand/left/input/thumbstick/y", &joystick_path_y[0]);
+	xrStringToPath(xr_instance, "/user/hand/right/input/thumbstick/y", &joystick_path_y[1]);
+
+	XrPath khr_simple_controller;
+	xrStringToPath(xr_instance, "/interaction_profiles/khr/simple_controller", &khr_simple_controller);
+	XrActionSuggestedBinding khr_simple_bindings[] = {
+		{ xr_input.selectAction, select_path[0] },
+		{ xr_input.selectAction, select_path[1] }
+	};
+
+	XrPath valve_index_controller;
+	xrStringToPath(xr_instance, "/interaction_profiles/valve/index_controller", &valve_index_controller);
+	XrActionSuggestedBinding valve_index_bindings[] = {
 		{ xr_input.poseAction,   pose_path[0]   },
 		{ xr_input.poseAction,   pose_path[1]   },
-		{ xr_input.selectAction, select_path[0] },
-		{ xr_input.selectAction, select_path[1] },
+		//{ xr_input.selectAction, trigger_click_path[0] },
+		//{ xr_input.selectAction, trigger_click_path[1] },
 		{ xr_input.showMenuAction, menu_path[0] },
 		{ xr_input.showMenuAction, menu_path[1] },
 		{ xr_input.triggerAction, trigger_path[0] },
-		{ xr_input.triggerAction, trigger_path[1] }, };
+		{ xr_input.triggerAction, trigger_path[1] },
+		{ xr_input.joystickActionX[0], joystick_path_x[0] },
+		{ xr_input.joystickActionX[1], joystick_path_x[1] },
+		{ xr_input.joystickActionY[0], joystick_path_y[0] },
+		{ xr_input.joystickActionY[1], joystick_path_y[1] }
+	};
 	XrInteractionProfileSuggestedBinding suggested_binds = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-	suggested_binds.interactionProfile = profile_path;
-	suggested_binds.suggestedBindings = &bindings[0];
-	suggested_binds.countSuggestedBindings = _countof(bindings);
-	XrResult result=xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds);
-	if (!XR_UNQUALIFIED_SUCCESS(result))
-	{
-		std::cerr << "xrSuggestInteractionProfileBindings failed " << result << std::endl;
-	}
+
+	suggested_binds.interactionProfile = khr_simple_controller;
+	suggested_binds.suggestedBindings = &khr_simple_bindings[0];
+	suggested_binds.countSuggestedBindings = _countof(khr_simple_bindings);
+	XR_CHECK(xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds));
+	suggested_binds.interactionProfile = valve_index_controller;
+	suggested_binds.suggestedBindings = &valve_index_bindings[0];
+	suggested_binds.countSuggestedBindings =_countof(valve_index_bindings);
+	XR_CHECK(xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds));
+
 	// Create frames of reference for the pose actions
 	for (int32_t i = 0; i < 2; i++)
 	{
@@ -515,6 +561,24 @@ void UseOpenXR::PollActions()
 			controllerStates[hand].triggerBack = xr_input.trigger[hand];
 			controllerStates[hand].addAnalogueEvent(avs::InputId::TRIGGER01, controllerStates[hand].triggerBack);
 		}
+
+		// thumbstick:
+		XrActionStateFloat joystick_state_x = { XR_TYPE_ACTION_STATE_FLOAT };
+		get_info.action = xr_input.joystickActionX[hand];
+		xrGetActionStateFloat(xr_session, &get_info, &joystick_state_x);
+		xr_input.thumbstick[hand].x = joystick_state_x.currentState;
+
+		XrActionStateFloat joystick_state_y = { XR_TYPE_ACTION_STATE_FLOAT };
+		get_info.action = xr_input.joystickActionY[hand];
+		xrGetActionStateFloat(xr_session, &get_info, &joystick_state_y);
+		xr_input.thumbstick[hand].y = joystick_state_y.currentState;
+		if (controllerStates[hand].mJoystickAxisX != xr_input.thumbstick[hand].x
+			|| controllerStates[hand].mJoystickAxisY != xr_input.thumbstick[hand].y)
+		{
+			controllerStates[hand].mJoystickAxisX = xr_input.thumbstick[hand].x;
+			controllerStates[hand].mJoystickAxisY = xr_input.thumbstick[hand].y;
+		}
+
 		if (xr_input.handMenu[hand])
 		{
 			menuButtonHandler();
@@ -623,16 +687,18 @@ mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
 }
 
 void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext,XrCompositionLayerProjectionView& view
-	, swapchain_surfdata_t& surface, simul::crossplatform::RenderDelegate& renderDelegate,vec3 origin)
+	, swapchain_surfdata_t& surface, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
 	// Set up camera matrices based on OpenXR's predicted viewpoint information
 	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
 	crossplatform::Quaternionf rot = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const crossplatform::Quaternionf*)&view.pose.orientation));
 	vec3 pos=crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL,crossplatform::AxesStandard::Engineering,*((const vec3 *)&view.pose.position));
-	//mat4 invview = AffineTransformation(rot, pos);
-	pos += origin;
+	crossplatform::Quaternionf orig_rot = origin_orientation;
+	Multiply(pos,orig_rot,pos);
+	pos += origin_pos;
 	deviceContext.viewStruct.proj = *((const simul::math::Matrix4x4*)&proj); 
 
+	rot=orig_rot*rot;
 
 	simul::geometry::SimulOrientation globalOrientation;
 	// global pos/orientation:
@@ -645,12 +711,6 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	globalOrientation.SetOrientation(q_rel);
 	
 	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
-
-	//deviceContext.viewStruct.invView = *((const simul::math::Matrix4x4*)&invview);
-	//deviceContext.viewStruct.invView.Inverse(deviceContext.viewStruct.view);
-	//deviceContext.viewStruct.view.Transpose();
-	//simul::crossplatform::MakeViewProjMatrix(deviceContext.viewStruct.viewProj, deviceContext.viewStruct.view, deviceContext.viewStruct.proj);
-
 	deviceContext.viewStruct.Init();
 
 	// Set up where on the render target we want to draw, the view has a 
@@ -681,7 +741,7 @@ crossplatform::Texture* UseOpenXR::GetRenderTexture(int index)
 
 bool UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext, XrTime predictedTime
 	, vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer
-	, simul::crossplatform::RenderDelegate& renderDelegate,vec3 origin)
+	, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
 	// Find the state and location of each viewpoint at the predicted time
 	uint32_t         view_count = 0;
@@ -725,7 +785,7 @@ bool UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 		deviceContext.viewStruct.view_id = i;
 		deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 		// Call the rendering callback with our view and swapchain info
-		RenderLayer(deviceContext,views[i], xr_swapchains[i].surface_data[img_id],renderDelegate,origin);
+		RenderLayer(deviceContext,views[i], xr_swapchains[i].surface_data[img_id],renderDelegate, origin_pos,origin_orientation);
 
 		// And tell OpenXR we're done with rendering to this one!
 		XrSwapchainImageReleaseInfo release_info = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
@@ -811,7 +871,7 @@ const teleport::client::ControllerState& UseOpenXR::GetControllerState(int index
 		return emptyState;
 }
 
-void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceContext,simul::crossplatform::RenderDelegate &renderDelegate,vec3 origin)
+void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceContext,simul::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
 {
 	// Block until the previous frame is finished displaying, and is ready for another one.
 	// Also returns a prediction of when the next frame will be displayed, for use with predicting
@@ -842,7 +902,7 @@ void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceC
 	XrCompositionLayerProjection             layer_proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
 	vector<XrCompositionLayerProjectionView> views;
 	bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
-	if (session_active && RenderLayer(deviceContext,frame_state.predictedDisplayTime, views, layer_proj,renderDelegate, origin))
+	if (session_active && RenderLayer(deviceContext,frame_state.predictedDisplayTime, views, layer_proj,renderDelegate, origin_pos, origin_orientation))
 	{
 		layer = (XrCompositionLayerBaseHeader*)&layer_proj;
 	}

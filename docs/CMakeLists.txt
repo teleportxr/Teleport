@@ -5,7 +5,7 @@ set(pc_client_HEADER_DIRS ${CMAKE_SOURCE_DIR}/pc_client)
 set(libavstream_HEADER_DIRS ${CMAKE_SOURCE_DIR}/libavstream/src ${CMAKE_SOURCE_DIR}/libavstream/src/audio)
 set(teleportclient_DIR TeleportClient SOURCE_DIR)
 set(teleportclient_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportClient)
-#message("teleportclient_HEADER_DIR ${teleportclient_HEADER_DIRS}")
+message("teleportclient_HEADER_DIR ${teleportclient_HEADER_DIRS}")
 set(teleportrenderer_DIR  ${CMAKE_SOURCE_DIR}/SimulCasterRenderer)
 set(teleportrenderer_HEADER_DIRS ${teleportrenderer_DIR}/src/api ${teleportrenderer_DIR}/src/crossplatform)
 
@@ -28,7 +28,7 @@ add_custom_command(OUTPUT ${DOXYGEN_INDEX_FILE}
                    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
                    MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
                    COMMENT "Generating docs")
-add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
+add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE} ${DOXYFILE_IN})
 set_target_properties( Doxygen PROPERTIES FOLDER Docs)
 set(FIND_DOXYGEN_OUTPUTS -Dbreathe_projects.TeleportVR=${DOXYGEN_OUTPUT_DIR}/xml)
 
@@ -70,7 +70,7 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/firstparty/Platform/CMake" ${CMAKE_
 find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
-file(GLOB RST_FILES 	"*.rst" )
+file(GLOB RST_FILES *.rst "**/*.rst" )
 source_group("Documentation" FILES ${RST_FILES} )
 add_custom_target(Sphinx ALL
                   COMMAND

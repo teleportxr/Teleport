@@ -39,11 +39,14 @@ namespace scr
 		void Initialize(scr::RenderPlatform *r, scr::VertexBufferLayout::PackingStyle packingStyle);
 
 		//Returns the resources the ResourceCreator needs, and clears the list.
-		std::vector<avs::uid> TakeResourceRequests();
+		std::vector<avs::uid> GetResourceRequests() const;
+		void ClearResourceRequests();
 		//Returns a list of resource IDs corresponding to the resources the client has received, and clears the list.
-		std::vector<avs::uid> TakeReceivedResources();
+		std::vector<avs::uid> GetReceivedResources() const;
+		void ClearReceivedResources();
 		//Returns the nodes that have been finished since the call, and clears the list.
-		std::vector<avs::uid> TakeCompletedNodes();
+		std::vector<avs::uid> GetCompletedNodes() const;
+		void ClearCompletedNodes();
 
 		void Clear();
 

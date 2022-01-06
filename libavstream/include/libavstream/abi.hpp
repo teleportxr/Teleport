@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2019 Simul Software Ltd
+// (c) Copyright 2018-2022 Simul Software Ltd
 
 #pragma once
 
@@ -43,3 +43,17 @@
 
 #define AVSTREAM_PUBLICINTERFACE(Type) \
 	AVSTREAM_PUBLICINTERFACE_API
+
+
+// Migrating away from the above confusing mess to a cleaner C++ API:
+#define AVSTREAM_COMPLETEINTERFACE_API(Type) \
+	public: \
+	inline Type& d() { return *this; } \
+	inline Type* d_ptr() { return this; } \
+	inline const Type& d() const { return *m_d; } \
+	inline const Type* d_ptr() const { return m_d; }
+
+#define AVSTREAM_COMPLETEINTERFACE_FINAL(Type) \
+	AVSTREAM_COMPLETEINTERFACE_API(Type) \
+	private: \
+	Type *m_d;

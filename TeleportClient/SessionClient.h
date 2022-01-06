@@ -17,9 +17,9 @@
 
 typedef unsigned int uint;
 
-namespace scr
+namespace avs
 {
-	class ResourceCreator;
+	class GeometryTargetBackendInterface;
 }
 
 class SessionCommandInterface
@@ -57,7 +57,7 @@ public:
 
 	~SessionClient();
 
-	void SetResourceCreator(scr::ResourceCreator *);
+	void SetResourceCreator(avs::GeometryTargetBackendInterface *);
 
 	uint32_t Discover(
 			std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP,
@@ -138,7 +138,7 @@ private:
 
     SessionCommandInterface* const mCommandInterface;
     std::unique_ptr<teleport::client::DiscoveryService> discoveryService;
-	scr::ResourceCreator* mResourceCreator=nullptr;
+	avs::GeometryTargetBackendInterface* mResourceCreator=nullptr;
 
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;

@@ -1,56 +1,50 @@
 #include "ClientDeviceState.h"
 #include "basic_linear_algebra.h"
+
 using namespace teleport;
 using namespace client;
-ClientDeviceState::ClientDeviceState():
-//localOriginPos(0,0,0),
-relativeHeadPos(0,0,0)
-//, transformToLocalOrigin(scr::mat4::Translation(-localOriginPos))
+
+ClientDeviceState::ClientDeviceState()
 {
 }
 
-void ClientDeviceState::UpdateOriginPose()
+void ClientDeviceState::TransformPose(LocalGlobalPose &p)
 {
-	// Footspace is related to local space as follows:
-	// The orientation of footspace is identical to the orientation of localspace.
-	// Footspace is offset from local space by LocalFootPos, which is measured in game space.
-	//originPose.position=localFootPos;
-	//originPose.orientation=scr::quat(stickYaw,avs::vec3(0,1.0f,0));
-}
-
-void ClientDeviceState::TransformPose(avs::Pose &p)
-{
-	scr::quat stickRotateQ(stickYaw,avs::vec3(0,1.0f,0));
-	scr::quat localQ=*((scr::quat*)(&p.orientation));
+	scr::quat stickRotateQ = originPose.orientation;// (stickYaw, avs::vec3(0, 1.0f, 0));
+	scr::quat localQ=*((scr::quat*)(&p.localPose.orientation));
 	scr::quat globalQ=(stickRotateQ*localQ);
-	p.orientation=globalQ;
+	p.globalPose.orientation=globalQ;
 
-	avs::vec3 relp=p.position;
+	avs::vec3 relp=p.localPose.position;
 	scr::quat localP=*((scr::quat*)(&(relp)));
 	localP.s=0;
 	scr::quat globalP=(stickRotateQ*localP)*(stickRotateQ.Conjugate());
-	p.position=avs::vec3(globalP.i,globalP.j,globalP.k);
+	p.globalPose.position=avs::vec3(globalP.i,globalP.j,globalP.k);
+	p.globalPose.position+=originPose.position;
 }
 
 void ClientDeviceState::SetHeadPose(avs::vec3 pos,scr::quat q)
 {
-	headPose.orientation=*((const avs::vec4 *)(&q));
-	headPose.position=pos;
+	headPose.localPose.orientation=*((const avs::vec4 *)(&q));
+	headPose.localPose.position=pos;
 	TransformPose(headPose);
-	relativeHeadPos=headPose.position;
-	headPose.position+=originPose.position;
 }
 
 void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,scr::quat q)
 {
-	controllerPoses[index].position = pos;
-	controllerPoses[index].orientation = *((const avs::vec4 *)(&q));
-	controllerRelativePoses[index]=controllerPoses[index];
+	controllerPoses[index].localPose.position = pos;
+	controllerPoses[index].localPose.orientation = *((const avs::vec4 *)(&q));
 	TransformPose(controllerPoses[index]);
-	controllerPoses[index].position+=originPose.position;
 }
 
 void ClientDeviceState::SetControllerState(int index, const teleport::client::ControllerState& st)
 {
 	controllerStates[index]=st;
+}
+
+void ClientDeviceState::UpdateGlobalPoses()
+{
+	TransformPose(headPose);
+	TransformPose(controllerPoses[0]);
+	TransformPose(controllerPoses[1]);
 }

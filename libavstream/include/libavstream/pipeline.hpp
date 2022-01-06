@@ -1,10 +1,12 @@
 // libavstream
-// (c) Copyright 2018-2019 Simul Software Ltd
+// (c) Copyright 2018-2022 Simul Software Ltd
 
 #pragma once
 
 #include <libavstream/common.hpp>
+#include <../src/platform.hpp>
 #include <initializer_list>
+#include <fstream>
 
 namespace avs
 {
@@ -21,8 +23,18 @@ class PipelineNode;
  */
 class AVSTREAM_API Pipeline final
 {
-	AVSTREAM_PUBLICINTERFACE_FINAL(Pipeline)
-	Pipeline::Private *m_data;
+	AVSTREAM_COMPLETEINTERFACE_FINAL(Pipeline)
+	
+	std::vector<PipelineNode*> m_nodes;
+	Timestamp m_startPlatformTimestamp;
+	uint64_t m_lastTimestamp;
+	uint64_t m_startTimestamp;
+	bool m_started = false;
+
+	std::ofstream m_statFile;
+	void writeTimingsHeader();
+	void writeTimings(uint32_t timestamp, const std::vector<double>& timings);
+
 public:
 	Pipeline();
 	~Pipeline();

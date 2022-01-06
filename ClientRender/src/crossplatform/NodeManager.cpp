@@ -15,7 +15,7 @@ std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsN
 
 void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 {
-	SCR_COUT<<"AddNode "<<avsNode.name.c_str()<<" "<<(avsNode.stationary?"static":"mobile")<<"\n";
+	//SCR_COUT<<"AddNode "<<avsNode.name.c_str()<<" "<<(avsNode.stationary?"static":"mobile")<<"\n";
 	//Remove any node already using the ID.
 	RemoveNode(node->id);
 	node->SetChildrenIDs(avsNode.childrenIDs);
@@ -184,70 +184,46 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedRootNodes()
 	return distanceSortedRootNodes;
 }
 
-void NodeManager::SetBody(std::shared_ptr<Node> node)
-{
-	body = node;
-}
-
 bool NodeManager::SetBody(avs::uid nodeID)
 {
-	auto nodeIt = nodeLookup.find(nodeID);
-	if(nodeIt != nodeLookup.end())
-	{
-		SetBody(nodeIt->second);
-		return true;
-	}
-
-	return false;
+	body=nodeID;
+	return true;
 }
 
 std::shared_ptr<Node> NodeManager::GetBody() const
 {
-	return body;
-}
-
-void NodeManager::SetLeftHand(std::shared_ptr<Node> node)
-{
-	leftHand = node;
+	auto nodeIt = nodeLookup.find(body);
+	if(nodeIt==nodeLookup.end())
+		return nullptr;	
+	return nodeIt->second;
 }
 
 bool NodeManager::SetLeftHand(avs::uid nodeID)
 {
-	auto nodeIt = nodeLookup.find(nodeID);
-	if(nodeIt != nodeLookup.end())
-	{
-		SetLeftHand(nodeIt->second);
-		return true;
-	}
-
-	return false;
+	leftHand=nodeID;
+	return true;
 }
 
 std::shared_ptr<Node> NodeManager::GetLeftHand() const
 {
-	return leftHand;
-}
-
-void NodeManager::SetRightHand(std::shared_ptr<Node> node)
-{
-	rightHand = node;
+	auto nodeIt = nodeLookup.find(leftHand);
+	if(nodeIt==nodeLookup.end())
+		return nullptr;	
+	return nodeIt->second;
 }
 
 bool NodeManager::SetRightHand(avs::uid nodeID)
 {
-	auto nodeIt = nodeLookup.find(nodeID);
-	if(nodeIt != nodeLookup.end())
-	{
-		SetRightHand(nodeIt->second);
-		return true;
-	}
-
-	return false;
+	rightHand=nodeID;
+	return true;
 }
 
 std::shared_ptr<Node> NodeManager::GetRightHand() const
 {
-	return rightHand;
+	auto nodeIt = nodeLookup.find(rightHand);
+	if(nodeIt==nodeLookup.end())
+		return nullptr;	
+	return nodeIt->second;
 }
 
 bool NodeManager::ShowNode(avs::uid nodeID)
@@ -410,17 +386,17 @@ void NodeManager::Update(float deltaTime)
 		RemoveNode(node);
 	}
 
-	if(body)
+	if(auto b=GetBody())
 	{
-		body->Update(deltaTime);
+		b->Update(deltaTime);
 	}
-	if(leftHand)
+	if(auto h=GetLeftHand())
 	{
-		leftHand->Update(deltaTime);
+		h->Update(deltaTime);
 	}
-	if(rightHand)
+	if(auto h=GetRightHand())
 	{
-		rightHand->Update(deltaTime);
+		h->Update(deltaTime);
 	}
 }
 
@@ -430,9 +406,9 @@ void NodeManager::Clear()
 	distanceSortedRootNodes.clear();
 	nodeLookup.clear();
 
-	body = nullptr;
-	leftHand = nullptr;
-	rightHand = nullptr;
+	body = 0;
+	leftHand = 0;
+	rightHand = 0;
 
 	parentLookup.clear();
 

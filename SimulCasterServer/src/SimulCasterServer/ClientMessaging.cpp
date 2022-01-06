@@ -560,7 +560,7 @@ namespace teleport
 			avs::AcknowledgeHandshakeCommand ack;
 			sendCommand(ack);
 		}
-		//Client may have required resources, as they are reconnecting; tell them to show streamed nodes.
+		// Client may have required resources, as they are reconnecting; tell them to show streamed nodes.
 		else
 		{
 			const std::set<avs::uid>& streamedNodeIDs = geometryStreamingService->getStreamedNodeIDs();

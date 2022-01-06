@@ -1,5 +1,9 @@
-Unity Plugin
-############
+##################
+Teleport Unity SDK
+##################
+
+The Teleport Unity SDK provides everything necessary to run a Teleport server as a Unity application. In typical usage, only the server need run Unity - the client
+will be a standard Teleport client app such as the Teleport reference client.
 
 Usage
 *****
@@ -16,7 +20,7 @@ You can install it as a Git submodule or just copy the code directly, it should 
 Setup
 *****
 If you've installed the Teleport Unity SDK as a prebuilt package, you're ready to go. But if you're building the Teleport C++ Server SDK from source, you'll need to follow the instructions in the Server section of this documentation.
-You will want to use CMake to set:
+You will want to use CMakeGui to set:
 
 * TELEPORT_SERVER to true
 * TELEPORT_UNITY to true

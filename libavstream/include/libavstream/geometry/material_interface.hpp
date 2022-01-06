@@ -321,7 +321,6 @@ namespace avs
 	struct Material
 	{
 		std::string name;
-
 		PBRMetallicRoughness pbrMetallicRoughness;
 		TextureAccessor normalTexture;
 		TextureAccessor occlusionTexture;

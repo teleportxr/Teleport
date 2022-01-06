@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2019 Simul Software Ltd
+// (c) Copyright 2018-2022 Simul Software Ltd
 #include <memory>
 #include <vector>
 

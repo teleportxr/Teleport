@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2019 Simul Software Ltd
+// (c) Copyright 2018-2022 Simul Software Ltd
 
 #pragma once
 
@@ -8,5 +8,5 @@
 #include <optional>
 
 #include <libavstream/common.hpp>
-#include <abi_p.hpp>
-#include <logger.hpp>
+#include "abi_p.hpp"
+#include "logger.hpp"

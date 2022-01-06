@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <string>
 #include "enet/enet.h"
-#include "Common.h"
 
 namespace teleport
 {
@@ -15,9 +14,10 @@ namespace teleport
 		public:
 			DiscoveryService(uint32_t manualClientID = 0)
 			{
+				// TODO: client ID should come from the server.
 				if (manualClientID == 0)
 				{
-					clientID = scr::Utility::GenerateID();
+					clientID = 0;
 				}
 				else
 				{

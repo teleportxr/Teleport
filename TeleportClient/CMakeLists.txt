@@ -11,8 +11,12 @@ set(src_files
 	DiscoveryService.h
 	Input.cpp
 	Input.h
+	Log.cpp
+	Log.h
 	ServerTimestamp.cpp
 	ServerTimestamp.h
+	SessionClient.cpp
+	SessionClient.h
 )
 
 #Include its root directory
@@ -38,6 +42,6 @@ add_static_library( TeleportClient SOURCES ${src_files})
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 
 #For MD runtime
-#add_library( SimulCasterRenderer STATIC ${src_public} ) 
+#add_library( ClientRender STATIC ${src_public} ) 
 
 #target_compile_features(libavstream PRIVATE cxx_std_17)
