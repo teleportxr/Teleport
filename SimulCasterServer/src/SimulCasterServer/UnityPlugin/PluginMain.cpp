@@ -63,7 +63,7 @@ TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStan
 typedef bool(__stdcall* ShowNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef bool(__stdcall* HideNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
-typedef int64_t(__stdcall* GetUnixTimestampFn)();
+
 
 static avs::Context avsContext;
 
@@ -750,72 +750,8 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	encoderSettings.enableDecomposeCube = true;
 	encoderSettings.maxDepth = 10000;
 
-	avs::SetupCommand setupCommand;
-	setupCommand.server_streaming_port		= clientData.clientMessaging.getServerPort() + 1;
-	setupCommand.server_http_port           = setupCommand.server_streaming_port + 1;
-	setupCommand.debug_stream				= casterSettings.debugStream;
-	setupCommand.do_checksums				= casterSettings.enableChecksums ? 1 : 0;
-	setupCommand.debug_network_packets		= casterSettings.enableDebugNetworkPackets;
-	setupCommand.requiredLatencyMs			= casterSettings.requiredLatencyMs;
-	setupCommand.idle_connection_timeout	= connectionTimeout;
-	setupCommand.server_id = serverID;
-	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
-	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
-	setupCommand.control_model=casterSettings.controlModel;
-	setupCommand.bodyOffsetFromHead = clientData.clientSettings.bodyOffsetFromHead;
-	setupCommand.startTimestamp = getUnixTimestamp();
-	setupCommand.using_ssl = httpService->isUsingSSL();
+	clientData.StartStreaming(casterSettings, encoderSettings,connectionTimeout,serverID,getUnixTimestamp, httpService->isUsingSSL());
 
-	avs::VideoConfig& videoConfig		= setupCommand.video_config;
-	videoConfig.video_width				= encoderSettings.frameWidth;
-	videoConfig.video_height			= encoderSettings.frameHeight;
-	videoConfig.depth_height			= encoderSettings.depthHeight;
-	videoConfig.depth_width				= encoderSettings.depthWidth;
-	videoConfig.perspective_width       = casterSettings.perspectiveWidth;
-	videoConfig.perspective_height      = casterSettings.perspectiveHeight;
-	videoConfig.perspective_fov			= casterSettings.perspectiveFOV;
-	videoConfig.webcam_width			= clientData.clientSettings.webcamSize[0];
-	videoConfig.webcam_height			= clientData.clientSettings.webcamSize[1];
-	videoConfig.webcam_offset_x			= clientData.clientSettings.webcamPos[0];
-	videoConfig.webcam_offset_y			= clientData.clientSettings.webcamPos[1];
-	videoConfig.use_10_bit_decoding		= casterSettings.use10BitEncoding;
-	videoConfig.use_yuv_444_decoding	= casterSettings.useYUV444Decoding;
-	videoConfig.use_alpha_layer_decoding = casterSettings.useAlphaLayerEncoding;
-	videoConfig.colour_cubemap_size		= casterSettings.captureCubeSize;
-	videoConfig.compose_cube			= encoderSettings.enableDecomposeCube;
-	videoConfig.videoCodec				= casterSettings.videoCodec;
-	videoConfig.use_cubemap				= !casterSettings.usePerspectiveRendering;
-	videoConfig.stream_webcam			= casterSettings.enableWebcamStreaming;
-	videoConfig.draw_distance			= casterSettings.detectionSphereRadius+casterSettings.clientDrawDistanceOffset;
-
-	videoConfig.specular_cubemap_size = clientData.clientSettings.specularCubemapSize;
-
-	// To the right of the depth cube, underneath the colour cube.
-	videoConfig.specular_x	= clientData.clientSettings.specularPos[0];
-	videoConfig.specular_y	= clientData.clientSettings.specularPos[1];
-	
-	videoConfig.specular_mips = clientData.clientSettings.specularMips;
-	// To the right of the specular cube, after 3 mips = 1 + 1/2 + 1/4
-	videoConfig.diffuse_cubemap_size = clientData.clientSettings.diffuseCubemapSize;
-	// To the right of the depth map (if alpha layer encoding is disabled), under the specular map.
-	videoConfig.diffuse_x = clientData.clientSettings.diffusePos[0];
-	videoConfig.diffuse_y = clientData.clientSettings.diffusePos[1];
-	
-	videoConfig.light_cubemap_size = clientData.clientSettings.lightCubemapSize;
-	// To the right of the diffuse map.
-	videoConfig.light_x	= clientData.clientSettings.lightPos[0];
-	videoConfig.light_y	= clientData.clientSettings.lightPos[1];
-	videoConfig.shadowmap_x	= clientData.clientSettings.shadowmapPos[0];
-	videoConfig.shadowmap_y	= clientData.clientSettings.shadowmapPos[1];
-	videoConfig.shadowmap_size = clientData.clientSettings.shadowmapSize;
-	clientData.clientMessaging.sendCommand(std::move(setupCommand));
-
-
-	auto global_illumination_texture_uids=clientData.getGlobalIlluminationTextures();
-	avs::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
-	clientData.clientMessaging.sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
-
-	clientData.isStreaming = true;
 }
 
 TELEPORT_EXPORT void Client_SetGlobalIlluminationTextures(avs::uid clientID,size_t num,const avs::uid * textureIDs)
@@ -962,7 +898,7 @@ TELEPORT_EXPORT avs::uid GenerateID()
 }
 ///libavstream END
 
-///GeometryStreamingService START
+//! Add the specified texture to be sent to the client.
 TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textureID)
 {
 	auto clientPair = clientServices.find(clientID);
@@ -974,17 +910,18 @@ TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textur
 	clientPair->second.geometryStreamingService->addGenericTexture(textureID);
 }
 
-///GeometryStreamingService START
-TELEPORT_EXPORT void Client_AddNode(avs::uid clientID, avs::uid nodeID)
+//! Start streaming the node to the client; returns the number of nodes streamed currently after this addition.
+TELEPORT_EXPORT size_t Client_AddNode(avs::uid clientID, avs::uid nodeID)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
 	{
 		TELEPORT_CERR << "Failed to start streaming Node_" << nodeID << " to Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
+		return 0;
 	}
 
 	clientPair->second.geometryStreamingService->addNode(nodeID);
+	return clientPair->second.geometryStreamingService->getStreamedNodeIDs().size();
 }
 
 TELEPORT_EXPORT void Client_RemoveNodeByID(avs::uid clientID, avs::uid nodeID)
@@ -1418,7 +1355,7 @@ TELEPORT_EXPORT void Client_SetNodeSubtype(avs::uid clientID, avs::uid nodeID, a
 		TELEPORT_CERR << "No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	clientPair->second.clientMessaging.setNodeSubtype(nodeID,  subType);
+	clientPair->second.setNodeSubtype(nodeID,  subType);
 }
 
 TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)

@@ -479,6 +479,7 @@ namespace teleport
 			receiveClientMessage(event.packet);
 			break;
 		default:
+			TELEPORT_CERR << "Unhandled channel " << event.channelID << std::endl;
 			break;
 		}
 		enet_packet_destroy(event.packet);
@@ -723,6 +724,9 @@ namespace teleport
 			avs::ControllerPosesMessage message;
 			memcpy(&message, packet->data, packet->dataLength);
 
+			avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, message.headPose.orientation);
+			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, message.headPose.position);
+			setHeadPose(clientID, &message.headPose);
 			for (int i = 0; i < 2; i++)
 			{
 				avs::Pose& pose = message.controllerPoses[i];
