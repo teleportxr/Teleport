@@ -12,12 +12,12 @@ namespace sca
 
 namespace teleport
 {
-	struct CasterSettings;
+	struct ServerSettings;
 
 	class SourceNetworkPipeline
 	{
 	public:
-		SourceNetworkPipeline(const CasterSettings* inSettings);
+		SourceNetworkPipeline(const ServerSettings* inSettings);
 		virtual ~SourceNetworkPipeline();
 
 		void initialize(const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget);
@@ -37,7 +37,7 @@ namespace teleport
 			avs::AudioTarget* target;
 		};
 
-		const CasterSettings* settings;
+		const ServerSettings* settings;
 
 		std::unique_ptr<avs::Pipeline> pipeline;
 		std::vector<std::unique_ptr<AudioPipe>> audioPipes;

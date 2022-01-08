@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "CasterSettings.h"
+#include "ServerSettings.h"
 #include "GeometryStore.h"
 #include "ErrorHandling.h"
 
@@ -16,7 +16,7 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 }
 
 
-GeometryStreamingService::GeometryStreamingService(const CasterSettings* settings)
+GeometryStreamingService::GeometryStreamingService(const ServerSettings* settings)
 	:geometryStore(nullptr), settings(settings), casterContext(nullptr), geometryEncoder(settings)
 {}
 

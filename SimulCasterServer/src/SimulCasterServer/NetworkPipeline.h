@@ -11,12 +11,12 @@
 namespace teleport
 {
 	struct CasterNetworkSettings;
-	struct CasterSettings;
+	struct ServerSettings;
 
 	class NetworkPipeline
 	{
 	public:
-		NetworkPipeline(const CasterSettings* settings);
+		NetworkPipeline(const ServerSettings* settings);
 		virtual ~NetworkPipeline();
 
 		void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
@@ -33,7 +33,7 @@ namespace teleport
 		bool isProcessingEnabled() const;
 
 	private:
-		const CasterSettings* mSettings;
+		const ServerSettings* mSettings;
 
 		std::unique_ptr<avs::Pipeline> mPipeline;
 		std::unique_ptr<avs::NetworkSink> mNetworkSink;

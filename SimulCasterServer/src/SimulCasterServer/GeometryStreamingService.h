@@ -17,7 +17,7 @@ namespace teleport
 	class GeometryStreamingService : public avs::GeometryRequesterBackendInterface
 	{
 	public:
-		GeometryStreamingService(const struct CasterSettings* settings);
+		GeometryStreamingService(const struct ServerSettings* settings);
 		virtual ~GeometryStreamingService();
 
 		virtual bool hasResource(avs::uid resourceID) const override;
@@ -65,7 +65,7 @@ namespace teleport
 		virtual bool hideNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
 		avs::Handshake handshake;
 	private:
-		const struct CasterSettings* settings;
+		const struct ServerSettings* settings;
 
 		teleport::CasterContext* casterContext = nullptr;
 		teleport::GeometryEncoder geometryEncoder;

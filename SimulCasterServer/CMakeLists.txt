@@ -11,7 +11,7 @@ set(src
 	src/SimulCasterServer/CasterTypes.h
 	src/SimulCasterServer/CaptureDelegates.h
 	src/SimulCasterServer/CasterContext.h
-	src/SimulCasterServer/CasterSettings.h
+	src/SimulCasterServer/ServerSettings.h
 	src/SimulCasterServer/ClientData.cpp
 	src/SimulCasterServer/ClientData.h
 	src/SimulCasterServer/ClientMessaging.cpp

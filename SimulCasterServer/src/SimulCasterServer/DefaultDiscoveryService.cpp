@@ -2,14 +2,14 @@
 
 #include "SimulCasterServer/ErrorHandling.h"
 #include "SimulCasterServer/ClientData.h"
-#include "SimulCasterServer/CasterSettings.h"    
+#include "SimulCasterServer/ServerSettings.h"    
 #include "TeleportUtility.h"
 
 using namespace teleport;
 using namespace server;
 
 extern std::map<avs::uid, ClientData> clientServices;
-extern teleport::CasterSettings casterSettings;
+extern teleport::ServerSettings casterSettings;
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 

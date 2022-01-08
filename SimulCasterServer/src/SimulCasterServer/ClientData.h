@@ -5,7 +5,7 @@
 
 #include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
-#include "SimulCasterServer/CasterSettings.h"
+#include "SimulCasterServer/ServerSettings.h"
 
 class PluginDiscoveryService;
 class PluginVideoEncodePipeline;
@@ -37,7 +37,7 @@ namespace teleport
 		{
 		public:
 			ClientData(std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const teleport::ClientMessaging& clientMessaging);
-			void StartStreaming(const teleport::CasterSettings &casterSettings, const teleport::CasterEncoderSettings &encoderSettings
+			void StartStreaming(const teleport::ServerSettings &casterSettings, const teleport::CasterEncoderSettings &encoderSettings
 				, uint32_t connectionTimeout
 				, avs::uid serverID
 				, GetUnixTimestampFn getUnixTimestamp

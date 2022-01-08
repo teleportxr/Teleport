@@ -2,7 +2,7 @@
 
 #include <memory>
 #include "CasterContext.h"
-#include "CasterSettings.h"
+#include "ServerSettings.h"
 #include "AudioEncoder.h"
 
 // Forward declare so classes that include don't have to know about them
@@ -29,7 +29,7 @@ namespace teleport
 		AudioEncodePipeline() = default;
 		virtual ~AudioEncodePipeline();
 
-		Result initialize(const CasterSettings& settings, const AudioParams& audioParams, avs::PipelineNode* output);
+		Result initialize(const ServerSettings& settings, const AudioParams& audioParams, avs::PipelineNode* output);
 		Result process(const uint8_t* data, size_t dataSize);
 
 	private:

@@ -14,7 +14,7 @@ namespace teleport
 	class GeometryEncoder: public avs::GeometryEncoderBackendInterface
 	{
 	public:
-		GeometryEncoder(const struct CasterSettings* settings);
+		GeometryEncoder(const struct ServerSettings* settings);
 		~GeometryEncoder() = default;
 
 		// Inherited via GeometryEncoderBackendInterface
@@ -39,7 +39,7 @@ namespace teleport
 			memcpy(buffer.data() + pos, &data, sizeof(T));
 		}
 	private:
-		const struct CasterSettings* settings;
+		const struct ServerSettings* settings;
 		size_t prevBufferSize;
 		int32_t minimumPriority=0;
 		void putPayload(avs::GeometryPayloadType t);

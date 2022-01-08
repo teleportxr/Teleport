@@ -5,14 +5,14 @@
 
 #include "libavstream/common.hpp"
 
-#include "CasterSettings.h"
+#include "ServerSettings.h"
 
 #include "ErrorHandling.h"
 
 
 namespace teleport
 {
-	AudioEncoder::AudioEncoder(const CasterSettings* settings)
+	AudioEncoder::AudioEncoder(const ServerSettings* settings)
 		:settings(settings)
 	{}
 

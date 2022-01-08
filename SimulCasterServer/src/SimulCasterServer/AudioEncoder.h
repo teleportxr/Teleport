@@ -4,12 +4,12 @@
 
 namespace teleport
 {
-	struct CasterSettings;
+	struct ServerSettings;
 
 	class AudioEncoder: public avs::AudioEncoderBackendInterface
 	{
 	public:
-		AudioEncoder(const CasterSettings* settings);
+		AudioEncoder(const ServerSettings* settings);
 		~AudioEncoder() = default;
 
 		// Inherited via AudioEncoderBackendInterface
@@ -22,7 +22,7 @@ namespace teleport
 	protected:
 		
 	private:
-		const CasterSettings* settings;
+		const ServerSettings* settings;
 		avs::AudioEncoderParams params;
 	};
 }

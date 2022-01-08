@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "ErrorHandling.h"
-#include "CasterSettings.h"
+#include "ServerSettings.h"
 
 namespace
 {
@@ -14,7 +14,7 @@ namespace
 
 namespace teleport
 {
-	NetworkPipeline::NetworkPipeline(const CasterSettings* settings)
+	NetworkPipeline::NetworkPipeline(const ServerSettings* settings)
 		: mSettings(settings), mPrevProcResult(avs::Result::OK)
 	{
 	}

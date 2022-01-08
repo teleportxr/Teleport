@@ -4,13 +4,13 @@
 #include <iostream>
 
 #include "ErrorHandling.h"
-#include "CasterSettings.h"
+#include "ServerSettings.h"
 
 #include "crossplatform/AudioStreamTarget.h"
 
 namespace teleport
 {
-	SourceNetworkPipeline::SourceNetworkPipeline(const CasterSettings* inSettings)
+	SourceNetworkPipeline::SourceNetworkPipeline(const ServerSettings* inSettings)
 		: settings(inSettings), prevProcResult(avs::Result::OK)
 	{
 	}

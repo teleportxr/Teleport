@@ -923,7 +923,7 @@ void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastMod
 	auto g=bstr_to_guid(guid);
 	guids[id]=g;
 	uids[g]=id;
-	materials[id] = ExtractedMaterial{guid, lastModified, newMaterial};
+ 	materials[id] = ExtractedMaterial{guid, lastModified, newMaterial};
 }
 
 void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips

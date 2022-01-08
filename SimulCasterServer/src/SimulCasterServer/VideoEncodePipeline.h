@@ -2,7 +2,7 @@
 
 #include <memory>
 #include "CasterContext.h"
-#include "CasterSettings.h"
+#include "ServerSettings.h"
 
 // Forward declare so classes that include don't have to know about them
 namespace avs
@@ -29,8 +29,8 @@ namespace teleport
 		VideoEncodePipeline() = default;
 		virtual ~VideoEncodePipeline();
 
-		Result initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput);
-		Result reconfigure(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams);
+		Result initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput);
+		Result reconfigure(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams);
 		Result process(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);
 		Result release();
 

@@ -6,20 +6,28 @@
 
 namespace teleport
 {
+	enum class BackgroundMode : uint8_t
+	{
+		NONE = 0, COLOUR, TEXTURE, VIDEO
+	};
 #pragma pack(push)
 #pragma pack(1)
-	struct CasterSettings
+	struct ServerSettings
 	{
 		int32_t requiredLatencyMs = 0;
 		int32_t detectionSphereRadius = 0;
 		int32_t detectionSphereBufferDistance = 0;
 		int64_t throttleKpS = 0;
 
+		BackgroundMode backgroundMode = BackgroundMode::COLOUR;
+		avs::vec4 backgroundColour = { 0,0,1.0f,0.f };
+
 		bool enableGeometryStreaming = false;
 		uint32_t geometryTicksPerSecond = 0;
 		int32_t geometryBufferCutoffSize = 0;	// Size we stop encoding nodes at.
 		float confirmationWaitTime = 0.0f;		// Seconds to wait before resending a resource.
 		float clientDrawDistanceOffset = 0.0f;	// Offset for distance pixels are clipped at for geometry on the client.
+
 
 		bool enableVideoStreaming = false;
 		bool enableWebcamStreaming = false;
@@ -94,6 +102,7 @@ namespace teleport
 		int32_t webcamPos[2];
 		int32_t webcamSize[2];
 		avs::vec3 bodyOffsetFromHead;
+		int32_t captureCubeTextureSize;
 	};
 #pragma pack(pop)
 

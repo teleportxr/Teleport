@@ -6,7 +6,7 @@
 #include "libavstream/common.hpp"
 #include "libavstream/geometry/animation_interface.h"
 
-#include "CasterSettings.h"
+#include "ServerSettings.h"
 
 #include "ErrorHandling.h"
 
@@ -35,7 +35,7 @@ size_t GetNewUIDs(std::vector<avs::uid> & outUIDs, avs::GeometryRequesterBackend
 
 namespace teleport
 {
-	GeometryEncoder::GeometryEncoder(const CasterSettings* settings)
+	GeometryEncoder::GeometryEncoder(const ServerSettings* settings)
 		:settings(settings), prevBufferSize(0)
 	{}
 

@@ -8,7 +8,7 @@ ClientData::ClientData(std::shared_ptr<teleport::GeometryStreamingService> geome
 	originClientHas.x = originClientHas.y = originClientHas.z = 0.f;
 	memset(&clientSettings,0,sizeof(clientSettings));
 }
-void ClientData::StartStreaming(const teleport::CasterSettings& casterSettings
+void ClientData::StartStreaming(const teleport::ServerSettings& casterSettings
 	,const teleport::CasterEncoderSettings& encoderSettings
 	,uint32_t connectionTimeout
 	,avs::uid serverID

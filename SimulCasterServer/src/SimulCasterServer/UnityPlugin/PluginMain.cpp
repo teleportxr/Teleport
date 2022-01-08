@@ -8,7 +8,7 @@
 #include "enet/enet.h"
 #include "libavstream/common.hpp"
 
-#include "SimulCasterServer/CasterSettings.h"
+#include "SimulCasterServer/ServerSettings.h"
 #include "SimulCasterServer/CaptureDelegates.h"
 #include "SimulCasterServer/ClientData.h"
 #include "SimulCasterServer/DefaultDiscoveryService.h"
@@ -73,7 +73,7 @@ static GeometryStore geometryStore;
 
 std::map<avs::uid, ClientData> clientServices;
 
-teleport::CasterSettings casterSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
+teleport::ServerSettings casterSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
 static ShowNodeFn onShowNode;
 static HideNodeFn onHideNode;
@@ -384,7 +384,7 @@ TELEPORT_EXPORT void DeleteUnmanagedArray(void** unmanagedArray)
 ///MEMORY-MANAGEMENT END
 
 ///PLUGIN-SPECIFIC START
-TELEPORT_EXPORT void UpdateCasterSettings(const teleport::CasterSettings newSettings)
+TELEPORT_EXPORT void UpdateServerSettings(const teleport::ServerSettings newSettings)
 {
 	casterSettings = newSettings;
 }
@@ -577,6 +577,8 @@ TELEPORT_EXPORT void Shutdown()
 
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 {
+	if (!clientID)
+		return false;
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
 
@@ -1641,9 +1643,9 @@ TELEPORT_EXPORT void CompressNextTexture()
 
 TELEPORT_EXPORT size_t SizeOf(const char *str)
 {
-	if(strcmp(str,"CasterSettings")==0)
+	if(strcmp(str,"ServerSettings")==0)
 	{
-		return sizeof(CasterSettings);
+		return sizeof(ServerSettings);
 	}
 	TELEPORT_CERR<<"Unknown type for SizeOf: "<<str<<std::endl;
 	return 0;

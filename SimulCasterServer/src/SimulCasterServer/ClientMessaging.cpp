@@ -19,7 +19,7 @@ namespace teleport
 	std::mutex ClientMessaging::dataMutex;
 	avs::Timestamp ClientMessaging::lastTickTimestamp;
 
-	ClientMessaging::ClientMessaging(const struct CasterSettings* settings,
+	ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 									 std::shared_ptr<DiscoveryService> discoveryService,
 									 std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 									 SetHeadPoseFn setHeadPose,

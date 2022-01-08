@@ -9,7 +9,7 @@
 #include "libavstream/common_input.h"
 
 #include "CaptureDelegates.h"
-#include "CasterSettings.h"
+#include "ServerSettings.h"
 #include "ErrorHandling.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
@@ -33,7 +33,7 @@ namespace teleport
 	class ClientMessaging
 	{
 	public:
-		ClientMessaging(const struct CasterSettings* settings,
+		ClientMessaging(const struct ServerSettings* settings,
 						std::shared_ptr<DiscoveryService> discoveryService,
 						std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 						SetHeadPoseFn setHeadPose,
@@ -124,7 +124,7 @@ namespace teleport
 		bool startingSession;
 		float timeStartingSession;
 		float timeSinceLastClientComm;
-		const CasterSettings* settings;
+		const ServerSettings* settings;
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
 

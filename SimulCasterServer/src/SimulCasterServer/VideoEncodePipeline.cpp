@@ -13,14 +13,14 @@
 
 namespace teleport
 {
-	static void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams);
+	static void CrateEncodeParams(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams);
 
 	VideoEncodePipeline::~VideoEncodePipeline()
 	{
 	
 	}
 
-	Result VideoEncodePipeline::initialize(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput)
+	Result VideoEncodePipeline::initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput)
 	{
 		auto createSurfaceBackend = [](GraphicsDeviceType deviceType, void* resource)->avs::SurfaceBackendInterface*
 		{
@@ -90,7 +90,7 @@ namespace teleport
 		return Result::Code::OK;
 	}
 
-	Result VideoEncodePipeline::reconfigure(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams)
+	Result VideoEncodePipeline::reconfigure(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams)
 	{
 		if (!mPipeline)
 		{
@@ -133,7 +133,7 @@ namespace teleport
 		return Result::Code::OK;
 	}
 
-	void CrateEncodeParams(const CasterSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams)
+	void CrateEncodeParams(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams)
 	{
 		encoderParams.codec = settings.videoCodec;
 		encoderParams.preset = avs::VideoPreset::HighPerformance;

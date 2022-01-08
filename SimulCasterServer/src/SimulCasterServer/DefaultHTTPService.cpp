@@ -2,7 +2,7 @@
 
 #include "SimulCasterServer/ErrorHandling.h"
 #include "SimulCasterServer/ClientData.h"
-#include "SimulCasterServer/CasterSettings.h"
+#include "SimulCasterServer/ServerSettings.h"
 
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib.h>
