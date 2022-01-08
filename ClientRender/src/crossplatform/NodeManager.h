@@ -14,6 +14,7 @@
 
 namespace scr
 {
+	//! Manages nodes for a specific server context.
 	class NodeManager
 	{
 	public:

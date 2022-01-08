@@ -15,13 +15,11 @@ namespace avs
 	 * \param userData Custom user data pointer.
 	 */
 	typedef void(*MessageHandlerFunc)(LogSeverity severity, const char* msg, void* userData);
-
-	/*!
-	 * Global library context.
-	 *
-	 * Context object managing application-global state.
-	 * \note A single instance of this class must be instantiated by the application before accessing any other library functionality.
-	 */
+	
+	//! Global library context.
+	//! 
+	//! Context object managing application-global state.
+	//! \note A single instance of this class must be instantiated by the application before accessing any other library functionality.
 	class AVSTREAM_API Context final
 	{
 		AVSTREAM_PUBLICINTERFACE_FINAL(Context)

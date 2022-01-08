@@ -12,7 +12,7 @@ namespace teleport
 			avs::Pose localPose;
 			avs::Pose globalPose;
 		};
-		//!The generic state of the client hardware device e.g. headset, controllers etc.
+		//! The generic state of the client hardware device e.g. headset, controllers etc.
 		class ClientDeviceState
 		{
 		public:

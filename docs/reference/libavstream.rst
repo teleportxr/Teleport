@@ -12,8 +12,17 @@ Classes
 -------
 
 .. doxygenclass:: avs::Context
+:members:
+
+.. doxygenclass:: avs.Context
+	:members:
+
+.. doxygenclass:: Context
+	:members:
+
 .. doxygenclass:: avs::Pipeline
 .. doxygenclass:: avs::Timer
+.. doxygenclass:: avs::UseInternalAllocator
 
 avs Interface Classes
 ---------------------

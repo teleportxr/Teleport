@@ -22,6 +22,8 @@ A pipeline operates on a single thread, while queues allow threads to exchange d
 Classes
 -------
 
+.. doxygenclass:: ClientRenderer
+
 .. doxygenclass:: avs::Context
 
 .. doxygenclass:: avs::Pipeline

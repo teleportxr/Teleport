@@ -1000,7 +1000,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 
 		const auto &indexesPair = incompleteNode->materialSlots.find(id);
-		if (indexesPair->first == incompleteNode->materialSlots.end()->first)
+		if (indexesPair == incompleteNode->materialSlots.end())
 		{
 			SCR_CERR << "Material " << id << " not found in incomplete node " << incompleteNode->id << std::endl;
 			continue;

@@ -115,7 +115,7 @@ swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform *renderPlat
 	result.target_view->InitFromExternalTexture2D(renderPlatform, d3d_swapchain_img.texture, nullptr,0,0,simul::crossplatform::UNKNOWN,true);
 	result.depth_view				= renderPlatform->CreateTexture("swapchain depth");
 	simul::crossplatform::TextureCreate textureCreate = {};
-	textureCreate.numOfSamples		= 1;
+	textureCreate.numOfSamples		= std::max(1,result.target_view->GetSampleCount());
 	textureCreate.mips				= 1;
 	textureCreate.w					= result.target_view->width;
 	textureCreate.l					= result.target_view->length;
@@ -290,6 +290,13 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	xr_config_views.resize(view_count, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
 	xr_views.resize(view_count, { XR_TYPE_VIEW });
 	xrEnumerateViewConfigurationViews(xr_instance, xr_system_id, app_config_view, view_count, &view_count, xr_config_views.data());
+	// Can we override this stuff?
+	static int samples=1;
+	for (uint32_t i = 0; i < view_count; i++)
+	{
+		xr_config_views[i].maxSwapchainSampleCount=samples;
+		xr_config_views[i].recommendedSwapchainSampleCount=samples;
+	}
 	int64_t swapchain_format = 0;
 	// Find out what format to use:
 	uint32_t formatCount = 0;
@@ -306,8 +313,16 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 		formatCount,
 		&formatCount,
 		formats.data());
+	std::cout<<"xrEnumerateSwapchainFormats:\n";
+	for(auto f:formats)
+	{
+		DXGI_FORMAT F=(DXGI_FORMAT)f;
+		std::cout<<"    "<<F<<std::endl;
+	}
 	if (std::find(formats.begin(), formats.end(), swapchain_format) == formats.end())
+	{
 		swapchain_format = formats[0];
+	}
 
 	for (uint32_t i = 0; i < view_count; i++)
 	{
