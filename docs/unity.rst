@@ -44,8 +44,6 @@ You can create a GameObject in Unity that has the Monitor component. If not, one
 
 When running, the server awaits connections via the Teleport protocol. When a client connects, the server creates a player instance.
 
-.. default-domain:: sphinxsharp
-.. type:: public class teleport.Monitor
-.. end-type::
-.. type:: public class Example
-.. end-type::
+.. doxygenclass:: teleport::Monitor
+	:project: TeleportUnity
+	:members:

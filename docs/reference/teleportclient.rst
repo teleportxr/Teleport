@@ -23,9 +23,3 @@ Classes
 -------
 
 .. doxygenclass:: ClientRenderer
-
-.. doxygenclass:: avs::Context
-
-.. doxygenclass:: avs::Pipeline
-
-.. doxygenclass:: avs::Timer
