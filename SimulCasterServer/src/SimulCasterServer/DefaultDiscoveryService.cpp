@@ -96,7 +96,19 @@ void DefaultDiscoveryService::tick()
 	//Retrieve all packets received since last call, and add any new clients.
 	while (size_t packetsize = enet_socket_receive(discoverySocket, &addr, &buffer, 1) > 0)
 	{
-		bool already_got = false;
+		bool ipConnecting = false;
+		for (const auto& client : newClients)
+		{
+			if (client.second.host == addr.host)
+			{
+				ipConnecting = true;
+				break;
+			}
+		}
+		if (ipConnecting)
+		{
+			continue;
+		}
 
 		if (clientID == 0)
 		{
@@ -113,7 +125,6 @@ void DefaultDiscoveryService::tick()
 				// ok, we've received a connection request from a client that WE think we already have.
 				// Apparently the CLIENT thinks they've disconnected.
 				TELEPORT_COUT << "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them.\n";
-				already_got = true;
 			}
 		}
 		
@@ -131,11 +142,6 @@ void DefaultDiscoveryService::tick()
 			if (desiredIP.compare(0, clientIP.size(), { clientIP.begin(), clientIP.end() }) == 0)
 			{
 				newClients[clientID] = addr;
-			}
-			else if(already_got)
-			{
-				//we should remove this client because its IP is wrong
-				TELEPORT_CERR << "But "<<clientID<<" has the wrong IP, should drop.\n";
 			}
 		}
 		else
