@@ -1,13 +1,13 @@
 LOCAL_PATH := $(call my-dir)
 
 #--------------------------------------------------------
-# SimulCasterRenderer.a
+# ClientRender.a
 #
 # Crossplatform Renderer for SimulCasterClients (PC and Android)
 #--------------------------------------------------------
 include $(CLEAR_VARS)				# clean everything up to prepare for a module
 
-LOCAL_MODULE    := SimulCasterRenderer	        # generate SimulCasterRenderer.a
+LOCAL_MODULE    := ClientRender	        # generate ClientRender.a
 LOCAL_STATIC_LIBRARIES	:= Basis_universal enet draco
 
 include $(LOCAL_PATH)/../../client/cflags.mk
@@ -40,7 +40,6 @@ LOCAL_SRC_FILES  := 	../src/api/Effect.cpp										\
 						../src/crossplatform/Camera.cpp								\
 						../src/crossplatform/GeometryDecoder.cpp					\
 						../src/crossplatform/Light.cpp								\
-						../src/crossplatform/Log.cpp								\
 						../src/crossplatform/Material.cpp							\
 						../src/crossplatform/Mesh.cpp								\
 						../src/crossplatform/Node.cpp								\
@@ -49,7 +48,6 @@ LOCAL_SRC_FILES  := 	../src/api/Effect.cpp										\
 						../src/crossplatform/NodeComponents/VisibilityComponent.cpp	\
 						../src/crossplatform/NodeManager.cpp						\
 						../src/crossplatform/ResourceCreator.cpp					\
-						../src/crossplatform/SessionClient.cpp						\
 						../src/crossplatform/ShaderSystem.cpp						\
 						../src/crossplatform/ShaderResource.cpp						\
 						../src/crossplatform/Skin.cpp								\

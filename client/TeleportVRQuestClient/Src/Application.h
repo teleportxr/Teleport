@@ -19,7 +19,7 @@
 
 #include "crossplatform/GeometryDecoder.h"
 #include "crossplatform/ResourceCreator.h"
-#include "crossplatform/SessionClient.h"
+#include "TeleportClient/SessionClient.h"
 #include "crossplatform/AudioStreamTarget.h"
 #include "crossplatform/AudioPlayer.h"
 #include "crossplatform/NetworkPipeline.h"
@@ -83,6 +83,7 @@ namespace OVRFW
 		virtual bool OnNodeLeftBounds(avs::uid id) override;
 		virtual void OnLightingSetupChanged(const avs::SetupLightingCommand &) override;
 		void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
+		void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &)override;
 		virtual std::vector<avs::uid> GetGeometryResources() override;
 		virtual void ClearGeometryResources() override;
 		virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;

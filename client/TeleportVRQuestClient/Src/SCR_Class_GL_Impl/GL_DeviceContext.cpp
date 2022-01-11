@@ -1,5 +1,6 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_DeviceContext.h"
+#include "../GlobalGraphicsResources.h"
 #include <GLES3/gl32.h>
 using namespace scc;
 using namespace scr;
@@ -13,8 +14,8 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 {
     //Set up for DescriptorSet binding
     std::vector<const ShaderResource*> descriptorSets;
-    Effect* effect = nullptr;
-
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	 GL_Effect* effect = dynamic_cast<GL_Effect*>(&globalGraphicsResources.defaultPBREffect);
     //Default Init
     dynamic_cast<GL_FrameBuffer *>(pInputCommand->pFBs)[0].BeginFrame();
     descriptorSets.push_back(&(pInputCommand->pCamera->GetShaderResource()));
@@ -44,12 +45,11 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             //Material
             const char* effectPassName = "";
             descriptorSets.push_back(&(ic_mmt->pMaterial->GetShaderResource()));
-            effect = ic_mmt->pMaterial->GetMaterialCreateInfo().effect;
-            dynamic_cast<const GL_Effect*>(effect)->Bind(effectPassName);
+            effect->Bind(effectPassName);
             auto *pass=effect->GetEffectPassCreateInfo(effectPassName);
             if(pass)
             {
-                m_Topology = static_cast<const GL_Effect *>(effect)->ToGLTopology(pass->topology);
+                m_Topology = GL_Effect::ToGLTopology(pass->topology);
             }
 
             //Transform

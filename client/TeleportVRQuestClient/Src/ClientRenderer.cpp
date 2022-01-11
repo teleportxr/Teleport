@@ -395,7 +395,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	scr::Camera::CameraCreateInfo c_ci = {
 			(scr::RenderPlatform *) (&globalGraphicsResources.renderPlatform)
 			,scr::Camera::ProjectionType::PERSPECTIVE, scr::quat(0.0f, 0.0f, 0.0f, 1.0f)
-			,clientDeviceState->headPose.position, 5.0f
+			,clientDeviceState->headPose.globalPose.position, 5.0f
 	};
 	globalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
 
@@ -1036,22 +1036,22 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 	}
 	// Set data to send to the shader:
 	ovrQuatf X0 = {1.0f, 0.f, 0.f, 0.0f};
-	ovrQuatf headPoseQ = {clientDeviceState->headPose.orientation.x
-			, clientDeviceState->headPose.orientation.y
-			, clientDeviceState->headPose.orientation.z
-			, clientDeviceState->headPose.orientation.w};
-	ovrQuatf headPoseC = {-clientDeviceState->headPose.orientation.x
-			, -clientDeviceState->headPose.orientation.y
-			, -clientDeviceState->headPose.orientation.z
-			, clientDeviceState->headPose.orientation.w};
+	ovrQuatf headPoseQ = {clientDeviceState->headPose.globalPose.orientation.x
+			, clientDeviceState->headPose.globalPose.orientation.y
+			, clientDeviceState->headPose.globalPose.orientation.z
+			, clientDeviceState->headPose.globalPose.orientation.w};
+	ovrQuatf headPoseC = {-clientDeviceState->headPose.globalPose.orientation.x
+			, -clientDeviceState->headPose.globalPose.orientation.y
+			, -clientDeviceState->headPose.globalPose.orientation.z
+			, clientDeviceState->headPose.globalPose.orientation.w};
 	ovrQuatf xDir = QuaternionMultiply(QuaternionMultiply(headPoseQ, X0), headPoseC);
 	float w = eyeSeparation / 2.0f;//.04f; //half separation.
 	avs::vec4 eye = {w * xDir.x, w * xDir.y, w * xDir.z, 0.0f};
 	avs::vec4 left_eye = {-eye.x, -eye.y, -eye.z, 0.0f};
 	videoUB.eyeOffsets[0] = left_eye;        // left eye
 	videoUB.eyeOffsets[1] = eye;    // right eye.
-	videoUB.cameraPosition = clientDeviceState->headPose.position;
-	videoUB.cameraRotation = clientDeviceState->headPose.orientation;
+	videoUB.cameraPosition = clientDeviceState->headPose.globalPose.position;
+	videoUB.cameraRotation = clientDeviceState->headPose.globalPose.orientation;
 	videoUB.viewProj=res.FrameMatrices.EyeProjection[0]*res.FrameMatrices.CenterView;
 	if (mRenderTexture->IsValid())
 	{
@@ -1139,7 +1139,10 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			}
 
 			std::vector<const scr::ShaderResource *> pbrShaderResources;
-			pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
+			const scr::ShaderResource& r=globalGraphicsResources.scrCamera->GetShaderResource();
+			const scr::ShaderResource *sr=&r;
+			// TODO: Why does THIS crash?
+			//pbrShaderResources.push_back(&r);
 			//pbrShaderResources.push_back(&globalGraphicsResources.GetPerMeshInstanceShaderResource(perMeshInstanceData));
 			//Push surfaces onto render queue.
 			for(ovrSurfaceDef& surfaceDef : ovrNode->GetSurfaces())
@@ -1147,7 +1150,7 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 				int j = 0;
 				// Must update the uniforms. e.g. camera pos.
 				// The below seems to only apply/work for camerapos anyway:
-				for(const scr::ShaderResource *sr : pbrShaderResources)
+				//for(const scr::ShaderResource *sr : pbrShaderResources)
 				{
 					const std::vector<scr::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
 					for(const scr::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
@@ -1307,34 +1310,34 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 					"Controller 1 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
 					"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
 					, clientDeviceState->originPose.position.x,	clientDeviceState->originPose.position.y,clientDeviceState->originPose.position.z,
-					clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,clientDeviceState->relativeHeadPos.z,
-					clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,clientDeviceState->headPose.position.z,
+					clientDeviceState->headPose.localPose.position.x, clientDeviceState->headPose.localPose.position.y,clientDeviceState->headPose.localPose.position.z,
+					clientDeviceState->headPose.globalPose.position.x, clientDeviceState->headPose.globalPose.position.y,clientDeviceState->headPose.globalPose.position.z,
 					clientDeviceState->stickYaw,
 					vidPos.x, vidPos.y, vidPos.z,
-					clientDeviceState->controllerRelativePoses[0].position.x,
-					clientDeviceState->controllerRelativePoses[0].position.y,
-					clientDeviceState->controllerRelativePoses[0].position.z,
-					clientDeviceState->controllerRelativePoses[0].orientation.x,
-					clientDeviceState->controllerRelativePoses[0].orientation.y,
-					clientDeviceState->controllerRelativePoses[0].orientation.z,
-					clientDeviceState->controllerPoses[0].position.x,
-					clientDeviceState->controllerPoses[0].position.y,
-					clientDeviceState->controllerPoses[0].position.z,
-					clientDeviceState->controllerPoses[0].orientation.x,
-					clientDeviceState->controllerPoses[0].orientation.y,
-					clientDeviceState->controllerPoses[0].orientation.z,
-					clientDeviceState->controllerRelativePoses[1].position.x,
-					clientDeviceState->controllerRelativePoses[1].position.y,
-					clientDeviceState->controllerRelativePoses[1].position.z,
-					clientDeviceState->controllerRelativePoses[1].orientation.x,
-					clientDeviceState->controllerRelativePoses[1].orientation.y,
-					clientDeviceState->controllerRelativePoses[1].orientation.z,
-					clientDeviceState->controllerPoses[1].position.x,
-					clientDeviceState->controllerPoses[1].position.y,
-					clientDeviceState->controllerPoses[1].position.z,
-					clientDeviceState->controllerPoses[1].orientation.x,
-					clientDeviceState->controllerPoses[1].orientation.y,
-					clientDeviceState->controllerPoses[1].orientation.z
+					clientDeviceState->controllerPoses[0].localPose.position.x,
+					clientDeviceState->controllerPoses[0].localPose.position.y,
+					clientDeviceState->controllerPoses[0].localPose.position.z,
+					clientDeviceState->controllerPoses[0].localPose.orientation.x,
+					clientDeviceState->controllerPoses[0].localPose.orientation.y,
+					clientDeviceState->controllerPoses[0].localPose.orientation.z,
+					clientDeviceState->controllerPoses[0].globalPose.position.x,
+					clientDeviceState->controllerPoses[0].globalPose.position.y,
+					clientDeviceState->controllerPoses[0].globalPose.position.z,
+					clientDeviceState->controllerPoses[0].globalPose.orientation.x,
+					clientDeviceState->controllerPoses[0].globalPose.orientation.y,
+					clientDeviceState->controllerPoses[0].globalPose.orientation.z,
+					clientDeviceState->controllerPoses[1].localPose.position.x,
+					clientDeviceState->controllerPoses[1].localPose.position.y,
+					clientDeviceState->controllerPoses[1].localPose.position.z,
+					clientDeviceState->controllerPoses[1].localPose.orientation.x,
+					clientDeviceState->controllerPoses[1].localPose.orientation.y,
+					clientDeviceState->controllerPoses[1].localPose.orientation.z,
+					clientDeviceState->controllerPoses[1].globalPose.position.x,
+					clientDeviceState->controllerPoses[1].globalPose.position.y,
+					clientDeviceState->controllerPoses[1].globalPose.position.z,
+					clientDeviceState->controllerPoses[1].globalPose.orientation.x,
+					clientDeviceState->controllerPoses[1].globalPose.orientation.y,
+					clientDeviceState->controllerPoses[1].globalPose.orientation.z
 			);
 
 			break;
@@ -1383,7 +1386,7 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 				for(const auto &missingPair : missingResources)
 				{
 					const scr::MissingResource &missingResource = missingPair.second;
-					str << missingResource.resourceType << "_" << missingResource.id;
+					str << (int)missingResource.resourceType << "_" << missingResource.id;
 
 					resourcesOnLine++;
 					if(resourcesOnLine >= MAX_RESOURCES_PER_LINE)

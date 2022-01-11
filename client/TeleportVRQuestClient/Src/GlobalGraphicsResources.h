@@ -32,7 +32,7 @@ public:
 
     std::shared_ptr<scr::Camera> scrCamera;
 
-    std::string effectPassName= "OpaquePBRAmbient"; //Which effect pass the geometry should be rendered with.
+    std::string effectPassName; //Which effect pass the geometry should be rendered with.
 
     static constexpr const char* HIGHLIGHT_APPEND = "_Highlight"; //What is appended on pass names to designate them a highlight pass.
 

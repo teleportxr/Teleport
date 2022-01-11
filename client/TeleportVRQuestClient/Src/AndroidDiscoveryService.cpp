@@ -4,7 +4,7 @@
 
 #include "libavstream/common_networking.h"
 
-#include "crossplatform/Log.h"
+#include "TeleportClient/Log.h"
 
 #include <arpa/inet.h>
 
@@ -84,7 +84,7 @@ uint32_t AndroidDiscoveryService::Discover(std::string clientIP, uint16_t client
                 remote.host=responseAddr.sin_addr.s_addr;
                 remote.port=response.remotePort;
                 serverDiscovered=true;
-                clientID = response.clientID
+                clientID = response.clientID;
                 //sendto(serviceDiscoverySocket, &remote.port, sizeof(remote.port) , 0, (struct sockaddr *) &responseAddr, sizeof(responseAddr));
             }
             else if(errno!=0&&errno!=11)

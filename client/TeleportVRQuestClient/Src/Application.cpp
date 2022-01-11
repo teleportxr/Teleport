@@ -398,7 +398,10 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	if(sessionClient.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
-		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds, vrFrame.DeltaSeconds);
+		avs::Pose controllerPoses[2];
+		controllerPoses[0]=clientDeviceState.controllerPoses[0].globalPose;
+		controllerPoses[1]=clientDeviceState.controllerPoses[1].globalPose;
+		sessionClient.Frame(displayInfo, clientDeviceState.headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds, vrFrame.DeltaSeconds);
 		if (sessionClient.receivedInitialPos>0&&receivedInitialPos!=sessionClient.receivedInitialPos)
 		{
 			clientDeviceState.originPose = sessionClient.GetOriginPose();
@@ -437,7 +440,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	//Get HMD Position/Orientation
 	clientDeviceState.stickYaw=mScene.GetStickYaw();
 	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.HeadPose.Translation)),*((const scr::quat *)(&vrFrame.HeadPose.Rotation)));
-	clientDeviceState.UpdateOriginPose();
+	clientDeviceState.UpdateGlobalPoses();
 	// Update video texture if we have any pending decoded frames.
 
     if (mNumPendingFrames > 0)
@@ -456,11 +459,11 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
     std::vector<TinyUI::ControllerState> states;
     states.push_back({});
 	states.push_back({});
-	states[0].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[0].position);
-	states[0].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[0].orientation);
+	states[0].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[0].globalPose.position);
+	states[0].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[0].globalPose.orientation);
 	states[0].clicking			=(controllers.mLastControllerStates[0].mReleased& ovrButton::ovrButton_Trigger)!=0;
-	states[1].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[1].position);
-	states[1].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[1].orientation);
+	states[1].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[1].globalPose.position);
+	states[1].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[1].globalPose.orientation);
 	states[1].clicking			=(controllers.mLastControllerStates[1].mReleased& ovrButton::ovrButton_Trigger)!=0;
 	/// Hit test
 	tinyUI.DoHitTests(vrFrame,states);
@@ -597,7 +600,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 // The camera should be where our head is. But when rendering, the camera is in OVR space, so:
-	globalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.position);
+	globalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.globalPose.position);
 
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 
@@ -650,10 +653,11 @@ void Application::UpdateHandObjects()
 	std::shared_ptr<scr::Node> body = geometryCache.mNodeManager->GetBody();
 	if(body)
 	{
-		body->SetLocalPosition(clientDeviceState.headPose.position + bodyOffsetFromHead);
+		// TODO: SHould this be globalPose??
+		body->SetLocalPosition(clientDeviceState.headPose.localPose.position + bodyOffsetFromHead);
 
 		//Calculate rotation angle on y-axis, and use to create new quaternion that only rotates the body on the y-axis.
-		float angle = std::atan2(clientDeviceState.headPose.orientation.y, clientDeviceState.headPose.orientation.w);
+		float angle = std::atan2(clientDeviceState.headPose.localPose.orientation.y, clientDeviceState.headPose.localPose.orientation.w);
 		scr::quat yRotation(0.0f, std::sin(angle), 0.0f, std::cos(angle));
 		body->SetLocalRotation(yRotation);
 	}
@@ -662,15 +666,15 @@ void Application::UpdateHandObjects()
 	std::shared_ptr<scr::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
 	if(rightHand)
 	{
-		rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].position);
-		rightHand->SetLocalRotation(clientDeviceState.controllerPoses[0].orientation);
+		rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].globalPose.position);
+		rightHand->SetLocalRotation(clientDeviceState.controllerPoses[0].globalPose.orientation);
 	}
 
 	std::shared_ptr<scr::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
-		leftHand->SetLocalPosition(clientDeviceState.controllerPoses[1].position);
-		leftHand->SetLocalRotation(clientDeviceState.controllerPoses[1].orientation);
+		leftHand->SetLocalPosition(clientDeviceState.controllerPoses[1].globalPose.position);
+		leftHand->SetLocalRotation(clientDeviceState.controllerPoses[1].globalPose.orientation);
 	}
 }
 
@@ -911,6 +915,26 @@ void Application::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &upd
 	node->SetParent(parent);
 }
 
+void Application::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubTypeCommand)
+{
+	switch(updateNodeSubTypeCommand.nodeSubtype)
+	{
+		case avs::NodeSubtype::None:
+			break;
+		case avs::NodeSubtype::Body:
+			geometryCache.mNodeManager->SetBody(updateNodeSubTypeCommand.nodeID);
+			break;
+		case avs::NodeSubtype::LeftHand:
+			geometryCache.mNodeManager->SetLeftHand(updateNodeSubTypeCommand.nodeID);
+			break;
+		case avs::NodeSubtype::RightHand:
+			geometryCache.mNodeManager->SetRightHand(updateNodeSubTypeCommand.nodeID);
+			break;
+		default:
+			SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeSubTypeCommand.nodeSubtype) << "!\n";
+			break;
+	}
+}
 void Application::OnVideoStreamClosed()
 {
 	OVR_WARN("VIDEO STREAM CLOSED");
@@ -1158,14 +1182,14 @@ std::string Application::LoadTextFile(const char *filename)
 void Application::ToggleMenu()
 {
 	ovrVector3f pos;
-	pos.x=clientDeviceState.headPose.position.x;
-	pos.y=clientDeviceState.headPose.position.y;
-	pos.z=clientDeviceState.headPose.position.z;
+	pos.x=clientDeviceState.headPose.globalPose.position.x;
+	pos.y=clientDeviceState.headPose.globalPose.position.y;
+	pos.z=clientDeviceState.headPose.globalPose.position.z;
 	ovrVector4f orient;
-	orient.x=clientDeviceState.headPose.orientation.x;
-	orient.y=clientDeviceState.headPose.orientation.y;
-	orient.z=clientDeviceState.headPose.orientation.z;
-	orient.w=clientDeviceState.headPose.orientation.w;
+	orient.x=clientDeviceState.headPose.globalPose.orientation.x;
+	orient.y=clientDeviceState.headPose.globalPose.orientation.y;
+	orient.z=clientDeviceState.headPose.globalPose.orientation.z;
+	orient.w=clientDeviceState.headPose.globalPose.orientation.w;
 	tinyUI.ToggleMenu(pos,orient);
 }
 

@@ -239,7 +239,7 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 
 	//Update material with Android-specific state.
 	scr::Material::MaterialCreateInfo &materialCI = material->GetMaterialCreateInfo();
-	materialCI.effect = &globalGraphicsResources.defaultPBREffect;
+	//materialCI.effect = &globalGraphicsResources.defaultPBREffect;
 
 	if (materialCI.diffuse.texture)
 	{

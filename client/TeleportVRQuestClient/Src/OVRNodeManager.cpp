@@ -25,7 +25,9 @@ void OVRNodeManager::ChangeEffectPass(const char* effectPassName)
 		return;
 	}
 
-	globalGraphicsResources.effectPassName = const_cast<char*>(effectPassName);
+	return;
+	//TODO: Why does this crash?
+	globalGraphicsResources.effectPassName = effectPassName;
 
 	//Change effect used by all nodes/surfaces.
 	for(auto& nodePair : nodeLookup)
