@@ -65,14 +65,14 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\copy.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\copy.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/copy.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/copy.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/copy.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -80,16 +80,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\copy.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\copy.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/copy.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/copy.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/copy.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -97,20 +97,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\copy.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\copy.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\debug.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\debug.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/debug.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/debug.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/debug.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -118,16 +118,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\debug.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\debug.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/debug.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/debug.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/debug.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -135,20 +135,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\debug.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\debug.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\font.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\font.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/font.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/font.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/font.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -156,16 +156,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\font.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\font.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/font.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/font.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/font.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -173,20 +173,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\font.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\font.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\hdr.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\hdr.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/hdr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/hdr.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/hdr.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -194,16 +194,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\hdr.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\hdr.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/hdr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/hdr.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/hdr.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -211,20 +211,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\hdr.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\hdr.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\imgui.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\imgui.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/imgui.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/imgui.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/imgui.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -232,16 +232,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\imgui.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\imgui.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/imgui.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/imgui.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/imgui.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -249,20 +249,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\imgui.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\imgui.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\light_probes.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\light_probes.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/light_probes.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/light_probes.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/light_probes.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -270,16 +270,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\light_probes.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\light_probes.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/light_probes.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/light_probes.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/light_probes.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -287,20 +287,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\light_probes.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\light_probes.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\mip.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\mip.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/mip.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/mip.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/mip.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -308,16 +308,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\mip.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\mip.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/mip.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/mip.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/mip.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -325,20 +325,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\mip.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\mip.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\solid.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\solid.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/solid.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/solid.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/solid.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -346,16 +346,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\solid.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\solid.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/solid.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/solid.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/solid.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -363,20 +363,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\solid.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\solid.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\sphere.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\sphere.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/sphere.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/sphere.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/sphere.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -384,16 +384,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\sphere.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\sphere.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/sphere.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/sphere.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/sphere.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -401,20 +401,20 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\sphere.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\sphere.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SFX\spherical_harmonics.sfx">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Shaders\SFX\spherical_harmonics.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating shaderbin/spherical_harmonics.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/spherical_harmonics.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/spherical_harmonics.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -422,16 +422,16 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\spherical_harmonics.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\spherical_harmonics.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/spherical_harmonics.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-cd E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin
+cd ..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-E:
+
 if %errorlevel% neq 0 goto :cmEnd
-E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SFX/spherical_harmonics.sfx -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx" -I"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Shaders/SL" -O"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/shaderbin" -P"E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=E:/Simul/Teleport/RemotePlay/firstparty/Platform "-EVULKAN_SDK=D:\MASS STORAGE\VulkanSDK\1.2.182.0"
+..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/spherical_harmonics.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../firstparty/Platform/build/Vulkan/shaderbin" -P"../../../../../firstparty/Platform/Vulkan/Sfx/Vulkan.json" -M"../../../../../firstparty/Platform/build/Vulkan/sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -439,13 +439,13 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\spherical_harmonics.sfxo</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\spherical_harmonics.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\CMakeFiles\c6f6e28e772831ddedf1a06887a151da\VulkanCoreShaders.rule">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\build\CMakeFiles\c6f6e28e772831ddedf1a06887a151da\VulkanCoreShaders.rule">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
@@ -455,8 +455,8 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\copy.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\debug.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\font.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\hdr.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\imgui.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\light_probes.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\mip.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\solid.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\sphere.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\spherical_harmonics.sfxo;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\CMakeFiles\VulkanCoreShaders</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\copy.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\debug.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\font.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\hdr.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\imgui.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\light_probes.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\mip.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\solid.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\sphere.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\spherical_harmonics.sfxo;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\CMakeFiles\VulkanCoreShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -468,18 +468,18 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\copy.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\debug.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\font.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\hdr.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\imgui.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\light_probes.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\mip.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\solid.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\sphere.sfxo;E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\shaderbin\spherical_harmonics.sfxo;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\CMakeFiles\VulkanCoreShaders</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\copy.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\debug.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\font.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\hdr.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\imgui.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\light_probes.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\mip.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\solid.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\sphere.sfxo;..\..\..\..\..\\firstparty\Platform\build\Vulkan\shaderbin\spherical_harmonics.sfxo;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\CMakeFiles\VulkanCoreShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</VerifyInputsAndOutputsExist>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\CMakeLists.txt">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Vulkan\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule ../../../../../firstparty/Platform/Vulkan/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SE:/Simul/Teleport/RemotePlay/firstparty/Platform -BE:/Simul/Teleport/RemotePlay/firstparty/Platform/build --check-stamp-file E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/CMakeFiles/generate.stamp
+"C:\Program Files\CMake\bin\cmake.exe" -S../../../../../firstparty/Platform -B../../../../../firstparty/Platform/build --check-stamp-file ../../../../../firstparty/Platform/build/Vulkan/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -488,11 +488,11 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule ../../../../../firstparty/Platform/Vulkan/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SE:/Simul/Teleport/RemotePlay/firstparty/Platform -BE:/Simul/Teleport/RemotePlay/firstparty/Platform/build --check-stamp-file E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Vulkan/CMakeFiles/generate.stamp
+"C:\Program Files\CMake\bin\cmake.exe" -S../../../../../firstparty/Platform -B../../../../../firstparty/Platform/build --check-stamp-file ../../../../../firstparty/Platform/build/Vulkan/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -501,67 +501,61 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\CppSl.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\CppSl.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\brdf.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\brdf.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\camera_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\camera_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\colour_packing.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\colour_packing.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\common.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\common.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\cubemap_matrices.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\cubemap_matrices.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\debug_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\debug_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\depth.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\depth.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\hdr_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\hdr_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\image_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\image_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\light_probe_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\light_probe_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\noise.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\noise.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\quaternion.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\quaternion.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\raytracing.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\raytracing.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\raytracing_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\raytracing_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\render_states.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\render_states.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\sampler_states.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\sampler_states.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\solid_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\solid_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\sphere_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\sphere_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\spherical_harmonics.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\spherical_harmonics.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\spherical_harmonics_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\spherical_harmonics_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Shaders\SL\text_constants.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Shaders\SL\text_constants.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Sfx\shader_platform.sl">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Sfx\shader_platform.sl">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Sfx\Vulkan.json">
+    <None Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Sfx\Vulkan.json">
     </None>
-    <None Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\CMakeFiles\VulkanCoreShaders">
+    <None Include="..\..\..\..\..\\firstparty\Platform\build\Vulkan\CMakeFiles\VulkanCoreShaders">
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Applications\Sfx\Sfx.vcxproj">
-      <Project>{9FB69995-8327-388B-A3FC-D62666D077BA}</Project>
-      <Name>Sfx</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

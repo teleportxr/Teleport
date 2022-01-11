@@ -62,11 +62,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SimulMath_MT.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SimulMath_MTd</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SimulMath_MT.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SimulMath_MT</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
@@ -83,7 +83,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Math;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -101,10 +101,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Math;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Math;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -117,7 +117,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Math;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -134,10 +134,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Math;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Math;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -159,7 +159,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\CMakeLists.txt">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Math\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Math/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
@@ -172,7 +172,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Math\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Math\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Math/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
@@ -185,57 +185,57 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Math\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Math\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\GeometricFunctions.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Iteration.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Math.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MathFunctions.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Matrix.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Matrix4x4.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MatrixVector.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MatrixVector3.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise1D.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise2D.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise3D.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Orientation.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\PointerList.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Quaternion.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\RandomNumberGenerator.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\ReferenceFrame.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\SimVector.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Vector3.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\VirtualVector.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\mmxrand.cpp" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Align.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Decay.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Export.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Finite.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\GeometricFunctions.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Iteration.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MathFunctions.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Matrix.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Matrix4x4.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MatrixVector.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\MatrixVector3.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise1D.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise2D.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Noise3D.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Orientation.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\OrientationInterface.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Pi.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Quaternion.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\RandomNumberGenerator.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\ReferenceFrame.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\SimVector.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\Vector3.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\VirtualVector.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\afxres.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\mmxrand.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Math\resource.h" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\GeometricFunctions.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Iteration.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Math.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\MathFunctions.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Matrix.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Matrix4x4.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\MatrixVector.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\MatrixVector3.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Noise1D.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Noise2D.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Noise3D.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Orientation.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\PointerList.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Quaternion.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\RandomNumberGenerator.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\ReferenceFrame.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\SimVector.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\Vector3.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\VirtualVector.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Math\mmxrand.cpp" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Align.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Decay.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Export.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Finite.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\GeometricFunctions.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Iteration.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\MathFunctions.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Matrix.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Matrix4x4.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\MatrixVector.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\MatrixVector3.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Noise1D.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Noise2D.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Noise3D.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Orientation.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\OrientationInterface.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Pi.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Quaternion.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\RandomNumberGenerator.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\ReferenceFrame.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\SimVector.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\Vector3.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\VirtualVector.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\afxres.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\mmxrand.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Math\resource.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
