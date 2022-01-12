@@ -246,3 +246,12 @@ bool Node::ShouldUseGlobalTransform() const
 	//Only use the global transform if we are receiving global transforms for this node and it has a parent.
 	return lastReceivedMovement.isGlobal && GetParent().lock();
 }
+
+void Node::SetMaterialListSize(size_t size)
+{
+	materials.resize(size);
+}
+void Node::SetMaterialList(std::vector<std::shared_ptr<Material>>& materials)
+{
+	this->materials = materials;
+}

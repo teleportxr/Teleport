@@ -88,18 +88,9 @@ namespace scr
 	//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
 	struct GeometryCache
 	{
-		GeometryCache()
-			: mNodeManager(new scr::NodeManager),
-			mIndexBufferManager(&scr::IndexBuffer::Destroy),
-			mTextureManager(&scr::Texture::Destroy),
-			mUniformBufferManager(&scr::UniformBuffer::Destroy),
-			mVertexBufferManager(&scr::VertexBuffer::Destroy)
-		{
-		}
+		GeometryCache(NodeManager *);
 
-		~GeometryCache()
-		{
-		}
+		~GeometryCache();
 
 		//Clear any resources that have not been used longer than their expiry time.
 		//	timeElapsed : Delta time in milliseconds.

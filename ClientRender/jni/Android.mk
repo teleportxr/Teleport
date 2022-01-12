@@ -39,6 +39,7 @@ LOCAL_SRC_FILES  := 	../src/api/Effect.cpp										\
 						../src/crossplatform/Bone.cpp								\
 						../src/crossplatform/Camera.cpp								\
 						../src/crossplatform/GeometryDecoder.cpp					\
+						../src/crossplatform/GeometryCache.cpp						\
 						../src/crossplatform/Light.cpp								\
 						../src/crossplatform/Material.cpp							\
 						../src/crossplatform/Mesh.cpp								\

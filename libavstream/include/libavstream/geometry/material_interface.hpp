@@ -247,7 +247,7 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<<(OutStream& out, const TextureAccessor& textureAccessor)
 		{
-			wchar_t tc=(wchar_t)textureAccessor.texCoord;
+			//wchar_t tc=(wchar_t)textureAccessor.texCoord;
 			out<<textureAccessor.index;
  			//out.write(&tc,1);
 			out	<< " " << textureAccessor.tiling
@@ -259,14 +259,14 @@ namespace avs
 		friend InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
 		{
 			//guid g;
-			wchar_t tc=0;
+			//wchar_t tc=0;
 			in>>textureAccessor.index;
 			//in.read(&tc,1);
 			//in>>textureAccessor.texCoord;
 			in>> textureAccessor.tiling
 				>> textureAccessor.scale;
 			
-			textureAccessor.texCoord=(uint8_t)tc;
+			textureAccessor.texCoord=(uint8_t)0;
 			//textureAccessor.index g=OutStream.uid_to_guid(g);
 			return in;
 		}

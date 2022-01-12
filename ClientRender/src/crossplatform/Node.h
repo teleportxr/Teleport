@@ -95,8 +95,8 @@ namespace scr
 			return materials[index];
 		}
 
-		virtual void SetMaterialListSize(size_t size) { materials.resize(size); }
-		virtual void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials) { this->materials = materials; }
+		virtual void SetMaterialListSize(size_t size);
+		virtual void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials);
 		const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return materials; }
 		size_t GetMaterialAmount() const { return materials.size(); }
 

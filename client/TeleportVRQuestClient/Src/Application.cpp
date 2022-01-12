@@ -52,6 +52,7 @@ Application::Application()
 		  , clientRenderer(&resourceCreator, &geometryCache, this, &clientDeviceState,&controllers)
 		  , lobbyRenderer(&clientDeviceState, this)
 		  , resourceCreator()
+		  , geometryCache(new OVRNodeManager())
 {
 	RedirectStdCoutCerr();
 

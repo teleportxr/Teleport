@@ -148,19 +148,17 @@ OVRNode::SurfaceInfo OVRNode::CreateOVRSurface(size_t materialIndex, std::shared
 	OVRNode::SurfaceInfo surfaceInfo;
 	surfaceInfo.initialized=true;
 	bool                 useLightmap                 = isStatic;
-	std::string          passname                    = GlobalGraphicsResources::GenerateShaderPassName
+	bool emissive_is_dummy=scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().emissive.texture.get());
+	std::string          passname;
+	passname = GlobalGraphicsResources::GenerateShaderPassName
 			(
-					useLightmap,
-					true,
-					support_normals && !scc::GL_Texture::IsDummy(
-							material->GetMaterialCreateInfo().normal.texture.get()),
-					support_combined && !scc::GL_Texture::IsDummy(
-							material->GetMaterialCreateInfo().combined.texture.get()),
-					!scc::GL_Texture::IsDummy(
-							material->GetMaterialCreateInfo().emissive.texture.get()) ||
-					material->GetMaterialCreateInfo().emissive.textureOutputScalar!=avs::vec4::ZERO,
-					TELEPORT_MAX_LIGHTS,
-					false
+					useLightmap,true
+					,support_normals && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().normal.texture.get())
+					,support_combined && !scc::GL_Texture::IsDummy(material->GetMaterialCreateInfo().combined.texture.get())
+					,!emissive_is_dummy
+							||material->GetMaterialCreateInfo().emissive.textureOutputScalar !=avs::vec4::ZERO
+					,TELEPORT_MAX_LIGHTS
+					,false
 			);
 	//OVR_LOG("CreateOVRSurface %s %d with pass %s",name.c_str(),(int)materialIndex,passname.c_str());
 	OVRFW::GlProgram *ovrProgram = GetEffectPass(passname.c_str());
@@ -454,10 +452,11 @@ void OVRNode::RefreshOVRSurfaces()
 		return;
 	}
 
-	std::vector<std::shared_ptr<scr::Material>> materials = GetMaterials();
+	//std::vector<std::shared_ptr<scr::Material>> materials = GetMaterials();
 	surfaceDefinitions.resize(materials.size());
 	for(size_t i = 0; i < materials.size(); i++)
 	{
-		surfaceDefinitions[i] = CreateOVRSurface(i, materials[i]);
+		if(materials[i]!=nullptr)
+			surfaceDefinitions[i] = CreateOVRSurface(i, materials[i]);
 	}
 }

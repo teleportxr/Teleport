@@ -173,7 +173,7 @@ namespace OVRFW
 
 		ClientRenderer clientRenderer;
 		LobbyRenderer lobbyRenderer;
-		//teleport::UIRenderer uIRenderer;
+
 		std::unique_ptr<Android_MemoryUtil> memoryUtil;
 		scr::GeometryCache geometryCache;
 		scr::ResourceCreator resourceCreator;

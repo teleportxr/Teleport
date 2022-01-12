@@ -8,7 +8,7 @@
 
 std::shared_ptr<scr::Node> OVRNodeManager::CreateNode(avs::uid id, const avs::Node &avsNode)
 {
-	std::shared_ptr<scr::Node> node= std::make_shared<scr::Node>(id, avsNode.name);
+	std::shared_ptr<scr::Node> node= std::make_shared<OVRNode>(id, avsNode.name);
 
 	//Create MeshNode even if it is missing resources
 	AddNode(node, avsNode);

@@ -61,9 +61,9 @@ namespace scr
 		};
 		struct ShaderResourceBufferInfo
 		{
-			void* buffer; //Used for both UB and SSB.
-			size_t offset;
-			size_t range;
+			void* buffer=nullptr; //Used for both UB and SSB.
+			size_t offset=0;
+			size_t range=0;
 		};
 		struct WriteShaderResource
 		{
