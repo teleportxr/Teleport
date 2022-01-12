@@ -30,6 +30,7 @@ void ClientData::StartStreaming(const teleport::ServerSettings& casterSettings
 	setupCommand.bodyOffsetFromHead = clientSettings.bodyOffsetFromHead;
 	setupCommand.startTimestamp = getUnixTimestamp();
 	setupCommand.using_ssl = use_ssl;
+	setupCommand.backgroundMode = clientSettings.backgroundMode;
 
 	avs::VideoConfig& videoConfig = setupCommand.video_config;
 	videoConfig.video_width = encoderSettings.frameWidth;

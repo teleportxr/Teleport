@@ -122,6 +122,8 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
 	RenderMode(0),
 	dev_mode(dev),
 	gui(g)
+	,geometryCache(new scr::NodeManager())
+	,localGeometryCache(new scr::NodeManager())
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
 	resourceCreator.SetGeometryCache(&geometryCache);
