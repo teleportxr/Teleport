@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/DeviceContext.h>
+#include <ClientRender/DeviceContext.h>
 
 namespace pc_client
 {

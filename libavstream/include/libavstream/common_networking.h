@@ -272,6 +272,7 @@ namespace avs
 		uid	server_id = 0;
 		ControlModel control_model = ControlModel::NONE;
 		VideoConfig video_config;
+		float       draw_distance = 0.0f;
 		vec3 bodyOffsetFromHead;
 		AxesStandard axesStandard = AxesStandard::NotInitialized;
 		uint8_t audio_input_enabled = 0;

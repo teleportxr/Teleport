@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <crossplatform/MemoryUtil.h>
+#include <ClientRender/MemoryUtil.h>
 
 #include "JniUtils.h"
 

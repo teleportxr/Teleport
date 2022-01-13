@@ -1,8 +1,8 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/DeviceContext.h>
-#include <crossplatform/ShaderResource.h>
+#include <ClientRender/DeviceContext.h>
+#include <ClientRender/ShaderResource.h>
 
 #include "GL_Effect.h"
 #include "GL_FrameBuffer.h"

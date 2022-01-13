@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/ShaderStorageBuffer.h>
+#include <ClientRender/ShaderStorageBuffer.h>
 #include <Render/GlBuffer.h>
 //#include <Render/OVR_GlUtils.h>
 

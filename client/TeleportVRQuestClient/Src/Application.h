@@ -17,12 +17,12 @@
 #include <libavstream/audiodecoder.h>
 #include <libavstream/audio/audiotarget.h>
 
-#include "crossplatform/GeometryDecoder.h"
-#include "crossplatform/ResourceCreator.h"
+#include "ClientRender/GeometryDecoder.h"
+#include "ClientRender/ResourceCreator.h"
 #include "TeleportClient/SessionClient.h"
-#include "crossplatform/AudioStreamTarget.h"
-#include "crossplatform/AudioPlayer.h"
-#include "crossplatform/NetworkPipeline.h"
+#include "SimulCasterAudio/src/crossplatform/AudioStreamTarget.h"
+#include "SimulCasterAudio/src/crossplatform/AudioPlayer.h"
+#include "SimulCasterAudio/src/crossplatform/NetworkPipeline.h"
 
 #include "GlobalGraphicsResources.h"
 #include "VideoDecoderProxy.h"

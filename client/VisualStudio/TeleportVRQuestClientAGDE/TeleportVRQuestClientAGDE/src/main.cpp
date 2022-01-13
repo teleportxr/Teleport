@@ -280,14 +280,14 @@ void handle_cmd(android_app* app, int32_t cmd)
 		__android_log_write(ANDROID_LOG_INFO, "TeleportVRQuestClientAGDE", "Event not handled");
 	}
 }
-//static bool x = true;
+static bool x = true;
 void android_main(struct android_app* app)
 {
-	/*while (x)
+	while (x)
 	{
 		__android_log_write(ANDROID_LOG_INFO, "TeleportVRQuestClientAGDE", "Waiting");
 		sleep(100);
-	}*/
+	}
 	app->onAppCmd = handle_cmd;
 	int events;
 	android_poll_source* source;

@@ -1,8 +1,8 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/FrameBuffer.h>
-#include <api/Texture.h>
+#include <ClientRender/FrameBuffer.h>
+#include <ClientRender/Texture.h>
 
 namespace pc_client
 {

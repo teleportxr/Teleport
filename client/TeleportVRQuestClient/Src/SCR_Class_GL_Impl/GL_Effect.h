@@ -3,7 +3,7 @@
 
 #include <map>
 
-#include <api/Effect.h>
+#include <ClientRender/Effect.h>
 #include <Render/GlProgram.h>
 
 namespace scc

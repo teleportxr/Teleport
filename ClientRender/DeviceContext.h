@@ -2,10 +2,10 @@
 #pragma once
 #include "Common.h"
 
-#include "api/FrameBuffer.h"
-#include "api/ShaderStorageBuffer.h"
-#include "crossplatform/Camera.h"
-#include "crossplatform/Node.h"
+#include "ClientRender/FrameBuffer.h"
+#include "ClientRender/ShaderStorageBuffer.h"
+#include "ClientRender/Camera.h"
+#include "ClientRender/Node.h"
 
 namespace scr
 {

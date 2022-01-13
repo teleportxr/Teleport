@@ -5,8 +5,8 @@
 #include "VertexBufferLayout.h"
 #include "Texture.h"
 #include "Shader.h"
-#include "crossplatform/ShaderResource.h"
-#include "crossplatform/ShaderSystem.h"
+#include "ClientRender/ShaderResource.h"
+#include "ClientRender/ShaderSystem.h"
 
 namespace scr
 {

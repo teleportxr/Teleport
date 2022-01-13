@@ -2,7 +2,7 @@
 
 #include <Render/SurfaceRender.h>
 
-#include "crossplatform/Node.h"
+#include "ClientRender/Node.h"
 #include "GlobalGraphicsResources.h"
 
 class OVRNode : public scr::Node

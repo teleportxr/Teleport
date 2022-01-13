@@ -4,8 +4,8 @@
 
 #include "libavstream/common.hpp"
 
-#include "crossplatform/Material.h"
-#include "crossplatform/Mesh.h"
+#include "ClientRender/Material.h"
+#include "ClientRender/Mesh.h"
 #include "Config.h"
 
 #include "GlobalGraphicsResources.h"

@@ -31,11 +31,11 @@
 
 #include "libavstream/platforms/platform_windows.hpp"
 
-#include "crossplatform/Light.h"
+#include "ClientRender/Light.h"
 #include "TeleportClient/Log.h"
-#include "crossplatform/Material.h"
+#include "ClientRender/Material.h"
 #include "TeleportClient/SessionClient.h"
-#include "crossplatform/Tests.h"
+#include "ClientRender/Tests.h"
 
 #include "TeleportClient/ServerTimestamp.h"
 
@@ -117,13 +117,13 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 }
 
 ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
-	sessionClient(this, std::make_unique<PCDiscoveryService>()),
-	clientDeviceState(c),
-	RenderMode(0),
-	dev_mode(dev),
-	gui(g)
-	,geometryCache(new scr::NodeManager())
+	sessionClient(this, std::make_unique<PCDiscoveryService>())
 	,localGeometryCache(new scr::NodeManager())
+	, geometryCache(new scr::NodeManager())
+	, clientDeviceState(c)
+	, RenderMode(0)
+	, dev_mode(dev)
+	, gui(g)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
 	resourceCreator.SetGeometryCache(&geometryCache);
@@ -544,7 +544,7 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 		}
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 
-		pbrConstants.drawDistance = lastSetupCommand.video_config.draw_distance;
+		pbrConstants.drawDistance = lastSetupCommand.draw_distance;
 		if (sessionClient.IsConnected()||render_local_offline)
 			RenderLocalNodes(deviceContext,geometryCache);
 

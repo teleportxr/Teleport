@@ -2,8 +2,8 @@
 #pragma once
 
 #include "GL_Sampler.h"
-#include <api/Texture.h>
-#include <api/Sampler.h>
+#include <ClientRender/Texture.h>
+#include <ClientRender/Sampler.h>
 #include <Render/GlTexture.h>
 
 namespace scc

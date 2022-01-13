@@ -1,6 +1,6 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
-#include "api/Shader.h"
+#include "ClientRender/Shader.h"
 
 namespace scr
 {

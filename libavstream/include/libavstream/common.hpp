@@ -296,7 +296,6 @@ namespace avs
 		int32_t		shadowmap_x=0;
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
-		float       draw_distance = 0.0f;
 	} AVS_PACKED;
 
 

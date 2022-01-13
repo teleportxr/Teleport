@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "crossplatform/Animation.h"
+#include "ClientRender/Animation.h"
 
 #include "TeleportClient/ServerTimestamp.h"
 

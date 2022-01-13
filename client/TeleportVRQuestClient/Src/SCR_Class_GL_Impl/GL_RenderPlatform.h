@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "../../ClientRender/src/api/RenderPlatform.h"
+#include "../../ClientRender/RenderPlatform.h"
 
 namespace scc
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "crossplatform/Skin.h"
+#include "ClientRender/Skin.h"
 
 #include "GL_RenderPlatform.h"
 

@@ -2,7 +2,7 @@
 // (C) Copyright 2018 Simul
 #pragma once
 #include "basic_linear_algebra.h"
-#include "crossplatform/ResourceCreator.h"
+#include "ClientRender/ResourceCreator.h"
 #include "GlobalGraphicsResources.h"
 #include <Render/SurfaceTexture.h>
 #include <libavstream/libavstream.hpp>

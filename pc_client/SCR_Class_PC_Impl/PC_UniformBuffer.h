@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/UniformBuffer.h>
+#include <ClientRender/UniformBuffer.h>
 
 namespace pc_client
 {

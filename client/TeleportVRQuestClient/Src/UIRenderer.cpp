@@ -231,7 +231,7 @@ bool TinyUI::Init(const xrJava*context,OVRFW::ovrFileSys*fileSys,OVRFW::OvrGuiSy
 	GuiSys  = guiSys;
 	/// Needed for FONTS
 	Locale  = l;
-	const xrJava*java = context;
+	//const xrJava*java = context;
 
 	/// Leftovers that aren't used
 	auto SoundEffectPlayer = new OVRFW::OvrGuiSys::ovrDummySoundEffectPlayer();
@@ -289,7 +289,7 @@ void TinyUI::ToggleMenu(ovrVector3f pos,ovrVector4f orient)
 		static float pitch_angle=pi/4.0f;
 		ovrQuatf     q_pitch    = {sin(-pitch_angle / 2.0f),0,0,cos(-pitch_angle / 2.0f)};
 		ovrQuatf     q_azimuth  = {0,sin(yaw_angle / 2.0f),0,cos(yaw_angle / 2.0f)};
-		OvrVRMenuMgr &menuMgr = GuiSys->GetVRMenuMgr();
+		//OvrVRMenuMgr &menuMgr = GuiSys->GetVRMenuMgr();
 		Posef        pose;
 		pose.Translation = pos;
 		pose.Rotation    = QuaternionMultiply(q_azimuth,q_pitch);

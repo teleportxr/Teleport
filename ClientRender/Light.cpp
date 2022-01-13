@@ -2,7 +2,7 @@
 
 #include "Light.h"
 
-#include "api/RenderPlatform.h"
+#include "ClientRender/RenderPlatform.h"
 
 using namespace scr;
 

@@ -100,6 +100,7 @@ namespace teleport
 		avs::vec3 bodyOffsetFromHead;
 		int32_t captureCubeTextureSize;
 		avs::BackgroundMode backgroundMode;
+		float drawDistance;
 	};
 #pragma pack(pop)
 

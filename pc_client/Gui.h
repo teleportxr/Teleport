@@ -2,7 +2,7 @@
 #include "Platform/CrossPlatform/Texture.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/DeviceContext.h"
-#include "crossplatform/NodeManager.h"
+#include "ClientRender/NodeManager.h"
 #include <functional>
 
 namespace teleport

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <crossplatform/Camera.h>
+#include <ClientRender/Camera.h>
 
 #include "SCR_Class_GL_Impl/GL_Effect.h"
 #include "SCR_Class_GL_Impl/GL_RenderPlatform.h"

@@ -1,8 +1,8 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "api/VertexBuffer.h"
-#include "api/IndexBuffer.h"
+#include "ClientRender/VertexBuffer.h"
+#include "ClientRender/IndexBuffer.h"
 
 namespace scr
 {

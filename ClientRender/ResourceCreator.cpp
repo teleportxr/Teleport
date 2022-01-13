@@ -75,9 +75,9 @@ void ResourceCreator::Initialize(scr::RenderPlatform* r, scr::VertexBufferLayout
 	tci.mipSizes[0]=sz;
 	uint32_t green_grid[GRID*GRID];
 	memset(green_grid,0,sz);
-	for(int i=0;i<GRID;i+=16)
+	for(size_t i=0;i<GRID;i+=16)
 	{
-		for(int j=0;j<GRID;j++)
+		for(size_t j=0;j<GRID;j++)
 		{
 			green_grid[GRID*i+j]=greenBGRA;
 			green_grid[GRID*j+i]=greenBGRA;

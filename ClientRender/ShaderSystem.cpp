@@ -1,6 +1,6 @@
 
 #include "ShaderSystem.h"
-#include "../api/RenderPlatform.h"
+#include "RenderPlatform.h"
 
 using namespace scr;
 

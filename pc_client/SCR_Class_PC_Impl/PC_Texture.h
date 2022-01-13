@@ -2,8 +2,8 @@
 #pragma once
 
 #include "PC_Sampler.h"
-#include <api/Texture.h>
-#include <api/Sampler.h>
+#include <ClientRender/Texture.h>
+#include <ClientRender/Sampler.h>
 namespace simul
 {
 	namespace crossplatform

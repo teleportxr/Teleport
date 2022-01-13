@@ -2,10 +2,10 @@
 #pragma once
 
 #include "Common.h"
-#include "api/UniformBuffer.h"
+#include "ClientRender/UniformBuffer.h"
 #include "TeleportClient/basic_linear_algebra.h"
 #include "ShaderResource.h"
-#include "api/RenderPlatform.h"
+#include "ClientRender/RenderPlatform.h"
 
 namespace scr
 {

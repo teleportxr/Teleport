@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/IndexBuffer.h>
+#include <ClientRender/IndexBuffer.h>
 #include <Render/GlGeometry.h>
 
 namespace scc

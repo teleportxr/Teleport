@@ -12,7 +12,7 @@
 #include <libavstream/mesh.hpp>
 
 #include "API.h"
-#include "api/RenderPlatform.h"
+#include "ClientRender/RenderPlatform.h"
 #include "Light.h"
 #include "MemoryUtil.h"
 #include "NodeManager.h"

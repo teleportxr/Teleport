@@ -1,7 +1,7 @@
 #pragma once
 
 #include "libavstream/common.hpp"
-#include "crossplatform/NodeManager.h"
+#include "ClientRender/NodeManager.h"
 
 class OVRNodeManager : public scr::NodeManager
 {

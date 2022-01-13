@@ -5,8 +5,8 @@
 
 #include "Node.h"
 
-#include "api/FrameBuffer.h"
-#include "api/UniformBuffer.h"
+#include "ClientRender/FrameBuffer.h"
+#include "ClientRender/UniformBuffer.h"
 
 namespace scr
 {

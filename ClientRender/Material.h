@@ -1,9 +1,9 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include "api/Texture.h"
+#include "ClientRender/Texture.h"
 #include "ShaderResource.h"
-#include "api/Effect.h"
+#include "ClientRender/Effect.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
 namespace scr

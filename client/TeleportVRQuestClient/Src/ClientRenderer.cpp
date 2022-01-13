@@ -752,7 +752,7 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 	//GLCheckErrorsWithTitle("Built Lighting Cubemap");
 
 	// Set discard distance to the sphere detection radius of the server for use in pixel shader.
-	globalGraphicsResources.scrCamera->UpdateDrawDistance(videoConfig.draw_distance);
+	globalGraphicsResources.scrCamera->UpdateDrawDistance(lastSetupCommand.draw_distance);
 }
 
 void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
