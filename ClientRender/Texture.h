@@ -4,7 +4,7 @@
 #include "Common.h"
 #include "Sampler.h"
 
-namespace scr
+namespace clientrender
 {
 	//Interface for Texture
 	class Texture : public APIObject
@@ -166,7 +166,7 @@ namespace scr
 		}
 
 		//Returns whether the passed texture is valid.
-		static bool IsValid(scr::Texture* texture)
+		static bool IsValid(clientrender::Texture* texture)
 		{
 			return texture && texture->IsValid();
 		}
@@ -178,7 +178,7 @@ namespace scr
 		}
 
 		//Returns whether the passed texture is a dummy/placeholder texture.
-		static bool IsDummy(scr::Texture* texture)
+		static bool IsDummy(clientrender::Texture* texture)
 		{
 			return texture && texture->IsDummy();
 		}

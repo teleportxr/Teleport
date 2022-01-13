@@ -124,8 +124,8 @@ namespace OVRFW
 		/////////////////////
 
 		static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
-		const scr::Effect::EffectPassCreateInfo *BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources) override;
-		void DrawTexture(avs::vec3 &offset,scr::Texture &texture) override;
+		const clientrender::Effect::EffectPassCreateInfo *BuildEffectPass(const char* effectPassName, clientrender::VertexBufferLayout* vbl, const clientrender::ShaderSystem::PipelineCreateInfo*, const std::vector<clientrender::ShaderResource>& shaderResources) override;
+		void DrawTexture(avs::vec3 &offset,clientrender::Texture &texture) override;
 		void PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,...) override;
 		std::string LoadTextFile(const char *filename) override;
 
@@ -175,8 +175,8 @@ namespace OVRFW
 		LobbyRenderer lobbyRenderer;
 
 		std::unique_ptr<Android_MemoryUtil> memoryUtil;
-		scr::GeometryCache geometryCache;
-		scr::ResourceCreator resourceCreator;
+		clientrender::GeometryCache geometryCache;
+		clientrender::ResourceCreator resourceCreator;
 		Controllers controllers;
 
 		std::string server_ip;

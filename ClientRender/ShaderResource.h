@@ -7,7 +7,7 @@
 #include "ClientRender/ShaderStorageBuffer.h"
 #include "Common.h"
 
-namespace scr
+namespace clientrender
 {
 	class ShaderResourceLayout
 	{

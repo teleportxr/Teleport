@@ -2,7 +2,7 @@
 #include "GL_IndexBuffer.h"
 
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 using namespace OVR;
 
 void GL_IndexBuffer::Create(IndexBufferCreateInfo* pIndexBufferCreateInfo)

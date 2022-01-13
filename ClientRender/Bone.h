@@ -4,7 +4,7 @@
 
 #include "Transform.h"
 
-namespace scr
+namespace clientrender
 {
 class Bone
 {

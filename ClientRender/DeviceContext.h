@@ -7,7 +7,7 @@
 #include "ClientRender/Camera.h"
 #include "ClientRender/Node.h"
 
-namespace scr
+namespace clientrender
 {
 	enum InputCommandStructureType : uint32_t
 	{
@@ -30,13 +30,13 @@ namespace scr
 
 	struct InputCommand_Mesh_Material_Transform : public InputCommand
 	{
-		std::shared_ptr<scr::VertexBuffer>			pVertexBuffer;
-		std::shared_ptr<scr::IndexBuffer>			pIndexBuffer;
+		std::shared_ptr<clientrender::VertexBuffer>			pVertexBuffer;
+		std::shared_ptr<clientrender::IndexBuffer>			pIndexBuffer;
 		std::shared_ptr<Material>					pMaterial;
 		const Transform								&pTransform;
 
 		InputCommand_Mesh_Material_Transform(InputCommandCreateInfo* pInputCommandCreateInfo, const Transform	&transform
-		,std::shared_ptr<scr::VertexBuffer> vb,std::shared_ptr<scr::IndexBuffer> ib,std::shared_ptr<Material> m)
+		,std::shared_ptr<clientrender::VertexBuffer> vb,std::shared_ptr<clientrender::IndexBuffer> ib,std::shared_ptr<Material> m)
 			:pTransform(transform)
 		{
 			type = INPUT_COMMAND_MESH_MATERIAL_TRANSFORM;

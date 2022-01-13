@@ -15,13 +15,13 @@ namespace simul
 
 namespace pc_client
 {
-	class PC_Texture final : public scr::Texture
+	class PC_Texture final : public clientrender::Texture
 	{
 	private:
 		simul::crossplatform::Texture* m_SimulTexture;
 	public:
-		PC_Texture(const scr::RenderPlatform*const r)
-			:scr::Texture(r), m_SimulTexture(nullptr)
+		PC_Texture(const clientrender::RenderPlatform*const r)
+			:clientrender::Texture(r), m_SimulTexture(nullptr)
 		{}
 
 		virtual ~PC_Texture();
@@ -32,7 +32,7 @@ namespace pc_client
 		void Unbind() const override;
 
 		void GenerateMips() override;
-		void UseSampler(const std::shared_ptr<scr::Sampler>& sampler) override;
+		void UseSampler(const std::shared_ptr<clientrender::Sampler>& sampler) override;
 		bool ResourceInUse(int timeout) override {return true;}
 
 		// Inherited via Texture

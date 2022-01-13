@@ -3,7 +3,7 @@
 
 #include "Common.h"
 
-namespace scr
+namespace clientrender
 {
 	//Interface for ShaderStorageBuffer
 	class ShaderStorageBuffer : public APIObject
@@ -28,7 +28,7 @@ namespace scr
 		ShaderStorageBufferCreateInfo m_CI;
 
 	public:
-		ShaderStorageBuffer(const scr::RenderPlatform* const r)
+		ShaderStorageBuffer(const clientrender::RenderPlatform* const r)
 			: APIObject(r), m_CI()
 		{}
 

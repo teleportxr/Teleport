@@ -1,8 +1,8 @@
 #include "NodeManager.h"
 
-using namespace scr;
+using namespace clientrender;
 
-using InvisibilityReason = scr::VisibilityComponent::InvisibilityReason;
+using InvisibilityReason = clientrender::VisibilityComponent::InvisibilityReason;
 
 std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsNode) 
 {
@@ -91,9 +91,9 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	}
 
 	if(avsNode.stationary)
-		node->SetGlobalTransform(static_cast<scr::Transform>(avsNode.globalTransform));
+		node->SetGlobalTransform(static_cast<clientrender::Transform>(avsNode.globalTransform));
 	else
-		node->SetLocalTransform(static_cast<scr::Transform>(avsNode.localTransform));
+		node->SetLocalTransform(static_cast<clientrender::Transform>(avsNode.localTransform));
 	
 	
 	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
@@ -283,7 +283,7 @@ void NodeManager::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& upd
 
 	for(avs::MovementUpdate update : updateList)
 	{
-		std::shared_ptr<scr::Node> node = GetNode(update.nodeID);
+		std::shared_ptr<clientrender::Node> node = GetNode(update.nodeID);
 		if(node)
 		{
 			node->SetLastMovement(update);
@@ -301,7 +301,7 @@ void NodeManager::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnable
 
 	for(avs::NodeUpdateEnabledState update : updateList)
 	{
-		std::shared_ptr<scr::Node> node = GetNode(update.nodeID);
+		std::shared_ptr<clientrender::Node> node = GetNode(update.nodeID);
 		if(node)
 		{
 			node->visibility.setVisibility(update.enabled, InvisibilityReason::DISABLED);
@@ -313,9 +313,9 @@ void NodeManager::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnable
 	}
 }
 
-void scr::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+void clientrender::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
-	std::shared_ptr<scr::Node> node = GetNode(nodeID);
+	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
 	if(node)
 	{
 		node->SetHighlighted(isHighlighted);
@@ -328,7 +328,7 @@ void scr::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 
 void NodeManager::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
 {
-	std::shared_ptr<scr::Node> node = GetNode(animationUpdate.nodeID);
+	std::shared_ptr<clientrender::Node> node = GetNode(animationUpdate.nodeID);
 	if(node)
 	{
 		node->animationComponent.setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
@@ -339,9 +339,9 @@ void NodeManager::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate
 	}
 }
 
-void scr::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* animationTimeOverride, float overrideMaximum)
+void clientrender::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* animationTimeOverride, float overrideMaximum)
 {
-	std::shared_ptr<scr::Node> node = GetNode(nodeID);
+	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
 	if(node)
 	{
 		node->animationComponent.setAnimationTimeOverride(animationID, animationTimeOverride, overrideMaximum);
@@ -353,9 +353,9 @@ void scr::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid anim
 	}
 }
 
-void scr::NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
+void clientrender::NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	std::shared_ptr<scr::Node> node = GetNode(nodeID);
+	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
 	if(node)
 	{
 		node->animationComponent.setAnimationSpeed(animationID, speed);
@@ -370,7 +370,7 @@ void scr::NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animation
 void NodeManager::Update(float deltaTime)
 {
 	nodeList_t expiredNodes;
-	for(const std::shared_ptr<scr::Node>& node : rootNodes)
+	for(const std::shared_ptr<clientrender::Node>& node : rootNodes)
 	{
 		node->Update(deltaTime);
 
@@ -381,7 +381,7 @@ void NodeManager::Update(float deltaTime)
 	}
 
 	//Delete nodes that have been invisible for too long.
-	for(const std::shared_ptr<scr::Node>& node : expiredNodes)
+	for(const std::shared_ptr<clientrender::Node>& node : expiredNodes)
 	{
 		RemoveNode(node);
 	}
@@ -442,7 +442,7 @@ void NodeManager::ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& 
 
 bool NodeManager::IsNodeVisible(avs::uid nodeID) const
 {
-	std::shared_ptr<scr::Node> node = GetNode(nodeID);
+	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
 	return node != nullptr && node->IsVisible();
 }
 

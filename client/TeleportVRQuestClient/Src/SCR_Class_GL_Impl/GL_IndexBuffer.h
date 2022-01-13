@@ -6,14 +6,14 @@
 
 namespace scc
 {
-class GL_IndexBuffer final : public scr::IndexBuffer
+class GL_IndexBuffer final : public clientrender::IndexBuffer
 	{
 	private:
 		GLuint m_IndexID;
 
 	public:
-		GL_IndexBuffer(const scr::RenderPlatform*const r)
-			:scr::IndexBuffer(r) {}
+		GL_IndexBuffer(const clientrender::RenderPlatform*const r)
+			:clientrender::IndexBuffer(r) {}
 
 		void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo) override;
 		void Destroy() override;

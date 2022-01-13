@@ -2,7 +2,7 @@
 
 #include "libavstream/common_maths.h"
 
-namespace scr
+namespace clientrender
 {
 	//Static class for testing logic; all tests should pass or there is a logic error that needs fixing.
 	class Tests

@@ -5,7 +5,7 @@
 
 #include "libavstream/geometry/animation_interface.h"
 
-namespace scr
+namespace clientrender
 {
 class Bone;
 struct quat;
@@ -48,7 +48,7 @@ public:
 	//Sets bone transforms to positions and rotations specified by the animation at the passed time.
 	//	boneList : List of bones for the animation.
 	//	time : Time the animation will use when moving the bone transforms in milliseconds.
-	void seekTime(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float time);
+	void seekTime(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float time);
 private:
 	float endTime = 0.0f; //Milliseconds the animation lasts for.
 };

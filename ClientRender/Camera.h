@@ -7,7 +7,7 @@
 #include "ShaderResource.h"
 #include "ClientRender/RenderPlatform.h"
 
-namespace scr
+namespace clientrender
 {
 	class Camera
 	{

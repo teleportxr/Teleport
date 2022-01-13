@@ -1,6 +1,6 @@
 #include "AnimationState.h"
 
-namespace scr
+namespace clientrender
 {
 	AnimationState::AnimationState()
 		:AnimationState(nullptr)

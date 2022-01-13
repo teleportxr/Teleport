@@ -1,6 +1,6 @@
 #include "Transform.h"
 
-namespace scr
+namespace clientrender
 {
 	Transform::Transform()
 		: Transform(avs::vec3(), quat(0, 0, 0, 1.0f), avs::vec3(1.0f, 1.0f, 1.0f))
@@ -17,7 +17,7 @@ namespace scr
 		m_TransformData.m_ModelMatrix = mat4::Translation(translation) * mat4::Rotation(rotation) * mat4::Scale(scale);
 	}
 
-	Transform::Transform(scr::mat4 matrix)
+	Transform::Transform(clientrender::mat4 matrix)
 	{
 		m_TransformData.m_ModelMatrix = matrix;
 

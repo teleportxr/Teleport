@@ -8,12 +8,12 @@
 
 #define CYCLE_ANIMATIONS 0
 
-namespace scr
+namespace clientrender
 {
 	AnimationComponent::AnimationComponent()
 	{}
 
-	AnimationComponent::AnimationComponent(const std::map<avs::uid, std::shared_ptr<scr::Animation>>& animations)
+	AnimationComponent::AnimationComponent(const std::map<avs::uid, std::shared_ptr<clientrender::Animation>>& animations)
 	{
 		for(const auto& animationPair : animations)
 		{
@@ -23,7 +23,7 @@ namespace scr
 		currentAnimationState = animationStates.begin();
 	}
 
-	void AnimationComponent::addAnimation(avs::uid id, std::shared_ptr<scr::Animation> animation)
+	void AnimationComponent::addAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation)
 	{
 		animationStates[id] = animation;
 
@@ -79,7 +79,7 @@ namespace scr
 		animationIt->second.speed = speed;
 	}
 
-	void AnimationComponent::update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime)
+	void AnimationComponent::update(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float deltaTime)
 	{
 		//Early-out if we're not playing an animation; either from having no animations or the node isn't currently playing an animation.
 		if(currentAnimationState == animationStates.end())

@@ -8,7 +8,7 @@
 #include "ClientRender/ShaderResource.h"
 #include "ClientRender/ShaderSystem.h"
 
-namespace scr
+namespace clientrender
 {
 	//Interface for Effect
 	class Effect : APIObject

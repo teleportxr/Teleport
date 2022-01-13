@@ -6,7 +6,7 @@
 
 #include "JniUtils.h"
 
-class Android_MemoryUtil : public scr::MemoryUtil
+class Android_MemoryUtil : public clientrender::MemoryUtil
 {
 public:
 	Android_MemoryUtil(JNIEnv* env);

@@ -1,13 +1,13 @@
 #include "GeometryCache.h"
 
-using namespace scr;
+using namespace clientrender;
 
-GeometryCache::GeometryCache(scr::NodeManager *nm)
+GeometryCache::GeometryCache(clientrender::NodeManager *nm)
 		: mNodeManager(nm),
-		  mIndexBufferManager(&scr::IndexBuffer::Destroy),
-		  mTextureManager(&scr::Texture::Destroy),
-		  mUniformBufferManager(&scr::UniformBuffer::Destroy),
-		  mVertexBufferManager(&scr::VertexBuffer::Destroy)
+		  mIndexBufferManager(&clientrender::IndexBuffer::Destroy),
+		  mTextureManager(&clientrender::Texture::Destroy),
+		  mUniformBufferManager(&clientrender::UniformBuffer::Destroy),
+		  mVertexBufferManager(&clientrender::VertexBuffer::Destroy)
 {
 }
 

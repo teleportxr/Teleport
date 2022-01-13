@@ -1,6 +1,6 @@
 #pragma once
 
-namespace scr
+namespace clientrender
 {
 	class VisibilityComponent
 	{

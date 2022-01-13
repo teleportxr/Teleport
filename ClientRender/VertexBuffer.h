@@ -3,7 +3,7 @@
 
 #include "VertexBufferLayout.h"
 
-namespace scr
+namespace clientrender
 {
 	//Interface for VertexBuffer
 	class VertexBuffer : public APIObject

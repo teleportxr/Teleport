@@ -4,9 +4,9 @@
 
 #include "TeleportClient/ServerTimestamp.h"
 
-using InvisibilityReason = scr::VisibilityComponent::InvisibilityReason;
+using InvisibilityReason = clientrender::VisibilityComponent::InvisibilityReason;
 
-using namespace scr;
+using namespace clientrender;
 
 Node::Node(avs::uid id, const std::string& name)
 	:id(id), name(name), isStatic(false)
@@ -87,7 +87,7 @@ void Node::TickExtrapolatedTransform(float deltaTime)
 
 	avs::vec3 newTranslation = transform.m_Translation;// + (lastReceivedMovement.velocity * deltaTime);
 
-	scr::quat newRotation = transform.m_Rotation;
+	clientrender::quat newRotation = transform.m_Rotation;
 /*	if(lastReceivedMovement.angularVelocityAngle != 0)
 	{
 		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * deltaTime, lastReceivedMovement.angularVelocityAxis);
@@ -197,7 +197,7 @@ void Node::SetLocalPosition(const avs::vec3& value)
 	RequestTransformUpdate();
 }
 
-void Node::SetLocalRotation(const scr::quat& value)
+void Node::SetLocalRotation(const clientrender::quat& value)
 {
 	localTransform.m_Rotation = value;
 	RequestTransformUpdate();

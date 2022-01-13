@@ -5,12 +5,12 @@
 
 namespace pc_client
 {
-class PC_UniformBuffer final : public scr::UniformBuffer
+class PC_UniformBuffer final : public clientrender::UniformBuffer
 {
 private:
 
 public:
-	PC_UniformBuffer(const scr::RenderPlatform* const r) :scr::UniformBuffer(r) {}
+	PC_UniformBuffer(const clientrender::RenderPlatform* const r) :clientrender::UniformBuffer(r) {}
 
 	//Binding Locations for UBOs
 	//Camera = 0;

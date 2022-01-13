@@ -13,13 +13,13 @@ namespace simul
 
 namespace pc_client
 {
-	class PC_IndexBuffer  : public scr::IndexBuffer
+	class PC_IndexBuffer  : public clientrender::IndexBuffer
 	{
 	private:
 		simul::crossplatform::Buffer *m_SimulBuffer;
 	public:
-		PC_IndexBuffer(const scr::RenderPlatform*const r)
-			:scr::IndexBuffer(r), m_SimulBuffer(nullptr)
+		PC_IndexBuffer(const clientrender::RenderPlatform*const r)
+			:clientrender::IndexBuffer(r), m_SimulBuffer(nullptr)
 		{}
 
 		void Destroy() override;

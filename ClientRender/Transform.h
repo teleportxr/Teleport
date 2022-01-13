@@ -4,7 +4,7 @@
 
 #include "ShaderResource.h"
 
-namespace scr
+namespace clientrender
 {
 
 	class Transform
@@ -26,7 +26,7 @@ namespace scr
 	public:
 		Transform();
 		Transform(avs::vec3 translation, quat rotation, avs::vec3 scale);
-		Transform(scr::mat4 matrix);
+		Transform(clientrender::mat4 matrix);
 		Transform(const avs::Transform& transform);
 
 		Transform& operator= (const avs::Transform& transform)

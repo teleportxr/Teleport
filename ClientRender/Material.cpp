@@ -3,7 +3,7 @@
 #include "Material.h"
 #include "RenderPlatform.h"
 
-using namespace scr;
+using namespace clientrender;
 
 Material::Material(RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo)
 {

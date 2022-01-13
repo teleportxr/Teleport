@@ -3,7 +3,7 @@
 #include "../GlobalGraphicsResources.h"
 #include <GLES3/gl32.h>
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 
 void GL_DeviceContext::Create(DeviceContextCreateInfo* pDeviceContextCreateInfo)
 {

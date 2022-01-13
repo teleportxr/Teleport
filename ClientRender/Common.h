@@ -33,7 +33,7 @@ extern void log_print(const char* source,const char *format, ...);
 #define SCR_LOG(fmt,...) log_print( "SCR", fmt, __VA_ARGS__);
 #endif
 
-namespace scr
+namespace clientrender
 {
 	class RenderPlatform;
 	class APIObject

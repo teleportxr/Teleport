@@ -47,6 +47,7 @@ LOCAL_SRC_FILES  := 	../Effect.cpp										\
 						../NodeComponents/VisibilityComponent.cpp	\
 						../NodeManager.cpp						\
 						../ResourceCreator.cpp					\
+						../Renderer.cpp						\
 						../ShaderSystem.cpp						\
 						../ShaderResource.cpp						\
 						../Skin.cpp								\

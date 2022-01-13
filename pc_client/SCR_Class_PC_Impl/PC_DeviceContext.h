@@ -6,7 +6,7 @@
 namespace pc_client
 {
 	//Implementation of FrameBuffer wrapping over ovrEyeBuffers
-	class PC_DeviceContext final : public scr::DeviceContext
+	class PC_DeviceContext final : public clientrender::DeviceContext
 	{
 	private:
 

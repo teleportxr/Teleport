@@ -1,6 +1,6 @@
 #include "VisibilityComponent.h"
 
-namespace scr
+namespace clientrender
 {
 	void VisibilityComponent::update(float deltaTime)
 	{

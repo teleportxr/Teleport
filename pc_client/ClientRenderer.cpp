@@ -36,6 +36,7 @@
 #include "ClientRender/Material.h"
 #include "TeleportClient/SessionClient.h"
 #include "ClientRender/Tests.h"
+#include "ClientRender/Renderer.h"
 
 #include "TeleportClient/ServerTimestamp.h"
 
@@ -45,21 +46,21 @@
 
 #include "TeleportCore/ErrorHandling.h"
 
-static const char* ToString(scr::Light::Type type)
+static const char* ToString(clientrender::Light::Type type)
 {
 	const char* lightTypeName = "";
 	switch (type)
 	{
-	case scr::Light::Type::POINT:
+	case clientrender::Light::Type::POINT:
 		lightTypeName = "Point";
 		break;
-	case scr::Light::Type::DIRECTIONAL:
+	case clientrender::Light::Type::DIRECTIONAL:
 		lightTypeName = "  Dir";
 		break;
-	case scr::Light::Type::SPOT:
+	case clientrender::Light::Type::SPOT:
 		lightTypeName = " Spot";
 		break;
-	case scr::Light::Type::AREA:
+	case clientrender::Light::Type::AREA:
 		lightTypeName = " Area";
 		break;
 	};
@@ -118,8 +119,8 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 
 ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
 	sessionClient(this, std::make_unique<PCDiscoveryService>())
-	,localGeometryCache(new scr::NodeManager())
-	, geometryCache(new scr::NodeManager())
+	,localGeometryCache(new clientrender::NodeManager())
+	, geometryCache(new clientrender::NodeManager())
 	, clientDeviceState(c)
 	, RenderMode(0)
 	, dev_mode(dev)
@@ -133,7 +134,7 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
 	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
 	previousTimestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 
-	scr::Tests::RunAllTests();
+	clientrender::Tests::RunAllTests();
 }
 
 ClientRenderer::~ClientRenderer()
@@ -151,8 +152,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
-	resourceCreator.Initialize(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
-	localResourceCreator.Initialize(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	resourceCreator.Initialize(&PcClientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	localResourceCreator.Initialize(&PcClientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
 
 	hDRRenderer = new crossplatform::HdrRenderer();
 
@@ -171,8 +172,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	camera.SetVerticalFieldOfViewDegrees(0.f);
 	
 	//const float aspect = hdrFramebuffer->GetWidth() / hdrFramebuffer->GetHeight();
-	//cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
-	//cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
+	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 
 	crossplatform::CameraViewStruct vs;
 	vs.exposure=1.f;
@@ -227,19 +228,19 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 		TELEPORT_BREAK_ONCE("Wand mesh not found");
 	}
 	{
-		scr::Material::MaterialCreateInfo materialCreateInfo;
+		clientrender::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.name="local material";
-		std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(&PcClientRenderPlatform,materialCreateInfo);
+		std::shared_ptr<clientrender::Material> scrMaterial = std::make_shared<clientrender::Material>(&PcClientRenderPlatform,materialCreateInfo);
 		localGeometryCache.mMaterialManager.Add(14, scrMaterial);
 
 		materialCreateInfo.name = "red glow";
 		materialCreateInfo.emissive.textureOutputScalar = { 1.f, 0, 0, 0 };
-		std::shared_ptr<scr::Material> red = std::make_shared<scr::Material>(&PcClientRenderPlatform, materialCreateInfo);
+		std::shared_ptr<clientrender::Material> red = std::make_shared<clientrender::Material>(&PcClientRenderPlatform, materialCreateInfo);
 		localGeometryCache.mMaterialManager.Add(15, red);
 
 		materialCreateInfo.name = "blue glow";
 		materialCreateInfo.emissive.textureOutputScalar = { 0.f, 0.5f, 1.f, 0 };
-		std::shared_ptr<scr::Material> blue = std::make_shared<scr::Material>(&PcClientRenderPlatform, materialCreateInfo);
+		std::shared_ptr<clientrender::Material> blue = std::make_shared<clientrender::Material>(&PcClientRenderPlatform, materialCreateInfo);
 		localGeometryCache.mMaterialManager.Add(16, blue);
 	}
 	avs::Node avsNode;
@@ -250,13 +251,13 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avsNode.materials.push_back(14);
 	avsNode.materials.push_back(15);
 
-	std::shared_ptr<scr::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
+	std::shared_ptr<clientrender::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
 	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetRightHand(23);
 
 	avsNode.name = "local Left Hand";
 	avsNode.materials[1]=16;
-	std::shared_ptr<scr::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
+	std::shared_ptr<clientrender::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
 	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetLeftHand(24);
 }
@@ -317,8 +318,8 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 		hdrFramebuffer->SetAntialiasing(1);
 	}
 	//const float aspect = W / H;
-	//cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
-	//cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
+	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 }
 
 
@@ -549,8 +550,8 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			RenderLocalNodes(deviceContext,geometryCache);
 
 		{
-			std::shared_ptr<scr::Node> leftHand = localGeometryCache.mNodeManager->GetLeftHand();
-			std::shared_ptr<scr::Node> rightHand = localGeometryCache.mNodeManager->GetRightHand();
+			std::shared_ptr<clientrender::Node> leftHand = localGeometryCache.mNodeManager->GetLeftHand();
+			std::shared_ptr<clientrender::Node> rightHand = localGeometryCache.mNodeManager->GetRightHand();
 			std::vector<vec4> hand_pos_press;
 			hand_pos_press.resize(2);
 			avs::vec3 pos = rightHand->GetGlobalTransform().LocalToGlobal(avs::vec3(0,0.12f, 0));
@@ -701,7 +702,7 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 		for(int j=0;j<td.lights.size()&&j<10;j++)
 		{
 			LightTag &t=videoTagDataCube[i].lightTags[j];
-			const scr::LightTagData &l=td.lights[j];
+			const clientrender::LightTagData &l=td.lights[j];
 			t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
 			t.colour=*((vec4*)&l.color);
 			// Convert from +-1 to [0,1]
@@ -715,16 +716,16 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 			t.position=*((vec3*)&position);
 			crossplatform::Quaternionf q((const float*)&orientation);
 			t.direction=q*vec3(0,0,1.0f);
-			scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
+			clientrender::mat4 worldToShadowMatrix=clientrender::mat4((const float*)&l.worldToShadowMatrix);
 				
 			t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
 
 			auto &nodeLight=cachedLights.find(l.uid);
 			if(nodeLight!=cachedLights.end()&& nodeLight->second.resource!=nullptr)
 			{
-				const scr::Light::LightCreateInfo &lc=nodeLight->second.resource->GetLightCreateInfo();
-				t.is_point=float(lc.type!=scr::Light::Type::DIRECTIONAL);
-				t.is_spot=float(lc.type==scr::Light::Type::SPOT);
+				const clientrender::Light::LightCreateInfo &lc=nodeLight->second.resource->GetLightCreateInfo();
+				t.is_point=float(lc.type!=clientrender::Light::Type::DIRECTIONAL);
+				t.is_spot=float(lc.type==clientrender::Light::Type::SPOT);
 				t.radius=lc.lightRadius;
 				t.range=lc.lightRange;
 				t.shadow_strength=0.0f;
@@ -734,7 +735,7 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 	tagDataCubeBuffer.SetData(deviceContext, videoTagDataCube);
 }
 
-void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining)
+void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node, int indent, int& linesRemaining)
 {
 	//Return if we do not want to print any more lines.
 	if(linesRemaining <= 0)
@@ -753,7 +754,7 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 
 	//Retrieve info string on mesh on node, if the node has a mesh.
 	std::string meshInfoString;
-	const std::shared_ptr<scr::Mesh>& mesh = node->GetMesh();
+	const std::shared_ptr<clientrender::Mesh>& mesh = node->GetMesh();
 	if(mesh)
 	{
 		meshInfoString = platform::core::QuickFormat("mesh: %s (0x%08x)", mesh->GetMeshCreateInfo().name.c_str(), &mesh);
@@ -765,7 +766,7 @@ void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& devic
 		, meshInfoString.c_str()));
 
 	//Print information on children to screen.
-	const std::vector<std::weak_ptr<scr::Node>>& children = node->GetChildren();
+	const std::vector<std::weak_ptr<clientrender::Node>>& children = node->GetChildren();
 	for(const auto c : children)
 	{
 		ListNode(deviceContext, c.lock(), indent + 1, linesRemaining);
@@ -845,7 +846,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		static int nodeLimit = 5;
 		int linesRemaining = nodeLimit;
 		auto& rootNodes = geometryCache.mNodeManager->GetRootNodes();
-		for(const std::shared_ptr<scr::Node>& node : rootNodes)
+		for(const std::shared_ptr<clientrender::Node>& node : rootNodes)
 		{
 			if(show_only!=0&&show_only!=node->id)
 				continue;
@@ -891,7 +892,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					vec4 light_direction=(const float*)&lcr.direction;
 					
 					light_colour.w=1.0f;
-					if(lcr.type==scr::Light::Type::POINT)
+					if(lcr.type==clientrender::Light::Type::POINT)
 						gui.LinePrint( platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_direction.x,light_direction.y,light_direction.z),light_colour,background);
 					else
 						gui.LinePrint( platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_position.x,light_position.y,light_position.z,lcr.lightRadius),light_colour,background);
@@ -912,7 +913,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			gui.LinePrint( platform::core::QuickFormat("Missing Resources"));
 			for(const auto& missingPair : missing)
 			{
-				const scr::MissingResource& missingResource = missingPair.second;
+				const clientrender::MissingResource& missingResource = missingPair.second;
 				std::string txt= platform::core::QuickFormat("\t%s %d from ", stringof(missingResource.resourceType), missingResource.id);
 				for(auto u:missingResource.waitingResources)
 				{
@@ -957,12 +958,12 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					auto& lcr =c.resource->GetLightCreateInfo();
 					name=lcr.name.c_str();
 				}
-				if(l.lightType==scr::LightType::Directional)
-					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
+				if(l.lightType==clientrender::LightType::Directional)
+					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((clientrender::Light::Type)l.lightType)
 						,lightTag.direction.x,lightTag.direction.y,lightTag.direction.z
 						,l.color.x,l.color.y,l.color.z),clr);
 				else
-					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
+					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((clientrender::Light::Type)l.lightType)
 						,lightTag.position.x
 						,lightTag.position.y
 						,lightTag.position.z
@@ -1004,7 +1005,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 
 }
 
-void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<scr::Node> node)
+void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<clientrender::Node> node)
 {
 	for(int i = 0; i < tabDepth; i++)
 	{
@@ -1022,24 +1023,24 @@ void ClientRenderer::WriteHierarchies()
 {
 	std::cout << "Node Tree\n----------------------------------\n";
 
-	for(std::shared_ptr<scr::Node> node : geometryCache.mNodeManager->GetRootNodes())
+	for(std::shared_ptr<clientrender::Node> node : geometryCache.mNodeManager->GetRootNodes())
 	{
 		WriteHierarchy(0, node);
 	}
 
-	std::shared_ptr<scr::Node> body = geometryCache.mNodeManager->GetBody();
+	std::shared_ptr<clientrender::Node> body = geometryCache.mNodeManager->GetBody();
 	if(body)
 	{
 		WriteHierarchy(0, body);
 	}
 
-	std::shared_ptr<scr::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
+	std::shared_ptr<clientrender::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
 		WriteHierarchy(0, leftHand);
 	}
 
-	std::shared_ptr<scr::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
+	std::shared_ptr<clientrender::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
 	if(rightHand)
 	{
 		WriteHierarchy(0, rightHand);
@@ -1048,7 +1049,7 @@ void ClientRenderer::WriteHierarchies()
 	std::cout << std::endl;
 }
 
-void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,scr::GeometryCache &g)
+void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g)
 {
 	deviceContext.viewStruct.Init();
 
@@ -1073,22 +1074,22 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 
 	if (renderPlayer)
 	{
-		std::shared_ptr<scr::Node> body = g.mNodeManager->GetBody();
+		std::shared_ptr<clientrender::Node> body = g.mNodeManager->GetBody();
 		if (body)
 		{
 			body->SetLocalPosition(clientDeviceState->headPose.globalPose.position + bodyOffsetFromHead);
 
 			//Calculate rotation angle on z-axis, and use to create new quaternion that only rotates the body on the z-axis.
 			float angle = std::atan2(clientDeviceState->headPose.globalPose.orientation.z, clientDeviceState->headPose.globalPose.orientation.w);
-			scr::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
+			clientrender::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
 			body->SetLocalRotation(zRotation);
 			// force update of model matrices - should not be necessary, but is.
 			body->UpdateModelMatrix();
 		}
 
 
-		std::shared_ptr<scr::Node> leftHand = g.mNodeManager->GetLeftHand();
-		std::shared_ptr<scr::Node> rightHand = g.mNodeManager->GetRightHand();
+		std::shared_ptr<clientrender::Node> leftHand = g.mNodeManager->GetLeftHand();
+		std::shared_ptr<clientrender::Node> rightHand = g.mNodeManager->GetRightHand();
 		if (leftHand)
 		{
 		// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
@@ -1105,20 +1106,20 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 			rightHand->UpdateModelMatrix();
 		}
 	}
-	const scr::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
-	for(const std::shared_ptr<scr::Node>& node : nodeList)
+	const clientrender::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
+	for(const std::shared_ptr<clientrender::Node>& node : nodeList)
 	{
 		if(show_only!=0&&show_only!=node->id)
 			continue;
 		RenderNode(deviceContext, node,g);
 	}
 	if(show_node_overlays)
-	for (const std::shared_ptr<scr::Node>& node : nodeList)
+	for (const std::shared_ptr<clientrender::Node>& node : nodeList)
 	{
 		RenderNodeOverlay(deviceContext, node,g);
 	}
 }
-void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force)
+void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
@@ -1126,7 +1127,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 	
 	if(!force&&(node_select > 0 && node_select != node->id))
 		return;
-	std::shared_ptr<scr::Texture> globalIlluminationTexture ;
+	std::shared_ptr<clientrender::Texture> globalIlluminationTexture ;
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
@@ -1140,7 +1141,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 	if(node->GetPriority()>=0)
 	if(node->IsVisible()&&(show_only == 0 || show_only == node->id))
 	{
-		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
+		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 		if(mesh)
 		{
 			const auto& meshInfo = mesh->GetMeshCreateInfo();
@@ -1156,7 +1157,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				simul::crossplatform::Layout* layout = vb->GetLayout();
 
 				mat4 model;
-				const scr::mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
+				const clientrender::mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
 				model = reinterpret_cast<const float*>(&globalTransformMatrix);
 				static bool override_model=false;
 				if(override_model)
@@ -1168,14 +1169,14 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				cameraConstants.world = model;
 
 				std::shared_ptr<pc_client::PC_Texture> gi = std::dynamic_pointer_cast<pc_client::PC_Texture>(globalIlluminationTexture);
-				std::shared_ptr<scr::Material> material = node->GetMaterials()[element];
+				std::shared_ptr<clientrender::Material> material = node->GetMaterials()[element];
 				std::string usedPassName = passName;
 
-				std::shared_ptr<scr::Skin> skin = node->GetSkin();
+				std::shared_ptr<clientrender::Skin> skin = node->GetSkin();
 				if (skin)
 				{
-					scr::mat4* scr_matrices = skin->GetBoneMatrices(globalTransformMatrix);
-					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(scr::mat4) * scr::Skin::MAX_BONES);
+					clientrender::mat4* scr_matrices = skin->GetBoneMatrices(globalTransformMatrix);
+					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(clientrender::mat4) * clientrender::Skin::MAX_BONES);
 
 					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
 					usedPassName = "anim_" + usedPassName;
@@ -1183,8 +1184,8 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				crossplatform::EffectPass *pass = pbrEffect->GetTechniqueByName("solid")->GetPass(usedPassName.c_str());
 				if(material)
 				{
-					const scr::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
-					const scr::Material::MaterialData& md = material->GetMaterialData();
+					const clientrender::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
+					const clientrender::Material::MaterialData& md = material->GetMaterialData();
 					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
 					pbrConstants.lightmapScaleOffset=*(const vec4*)(&(node->GetLightmapScaleOffset()));
 					std::shared_ptr<pc_client::PC_Texture> diffuse = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.diffuse.texture);
@@ -1238,9 +1239,9 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		}
 	}
 
-	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
+	for(std::weak_ptr<clientrender::Node> childPtr : node->GetChildren())
 	{
-		std::shared_ptr<scr::Node> child = childPtr.lock();
+		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if(child)
 		{
 			RenderNode(deviceContext, child,g,true);
@@ -1249,7 +1250,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 }
 
 
-void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force)
+void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
@@ -1257,24 +1258,24 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 	if(!force&&(node_select > 0 && node_select != node->id))
 		return;
 
-	std::shared_ptr<scr::Texture> globalIlluminationTexture;
+	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
 		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	//Only render visible nodes, but still render children that are close enough.
 	if (node->IsVisible()&& (show_only == 0 || show_only == node->id))
 	{
-		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
-		const scr::AnimationComponent& anim = node->animationComponent;
+		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
+		const clientrender::AnimationComponent& anim = node->animationComponent;
 		avs::vec3 pos = node->GetGlobalPosition();
 		avs::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 		if (node->GetSkin().get())
 		{
 			std::string str;
-			const scr::AnimationState* animationState = node->animationComponent.GetCurrentAnimationState();
+			const clientrender::AnimationState* animationState = node->animationComponent.GetCurrentAnimationState();
 			if (animationState)
 			{
-				//const scr::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
+				//const clientrender::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
 				static char txt[250];
 				//for(const auto &s:animationStates)
 				{
@@ -1303,9 +1304,9 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 		}
 	}
 
-	for (std::weak_ptr<scr::Node> childPtr : node->GetChildren())
+	for (std::weak_ptr<clientrender::Node> childPtr : node->GetChildren())
 	{
-		std::shared_ptr<scr::Node> child = childPtr.lock();
+		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if (child)
 		{
 			RenderNodeOverlay(deviceContext, child,g,true);
@@ -1390,7 +1391,7 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 {
 	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
 	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
-	std::weak_ptr<scr::Node> oldParent=node->GetParent();
+	std::weak_ptr<clientrender::Node> oldParent=node->GetParent();
 	auto oldp=oldParent.lock();
 	if(oldp)
 		oldp->RemoveChild(node);
@@ -1528,8 +1529,8 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
-	const float horzFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
-	const float vertFOV = scr::GetVerticalFOVFromHorizontal(horzFOV, aspect);
+	const float horzFOV = setupCommand.video_config.perspective_fov * clientrender::DEG_TO_RAD;
+	const float vertFOV = clientrender::GetVerticalFOVFromHorizontal(horzFOV, aspect);
 
 	cubemapConstants.serverProj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(horzFOV, vertFOV, 0.01f, 0);
 
@@ -1709,8 +1710,8 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 
 void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 {
-	scr::SceneCaptureCubeTagData tagData;
-	memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+	clientrender::SceneCaptureCubeTagData tagData;
+	memcpy(&tagData.coreData, data, sizeof(clientrender::SceneCaptureCubeCoreTagData));
 	avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.coreData.cameraTransform);
 
 	tagData.lights.resize(tagData.coreData.lightCount);
@@ -1726,12 +1727,12 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 	auto &cachedLight=cachedLights.begin();*/
 	////
 
-	size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
+	size_t index = sizeof(clientrender::SceneCaptureCubeCoreTagData);
 	for (auto& light : tagData.lights)
 	{
-		memcpy(&light, &data[index], sizeof(scr::LightTagData));
+		memcpy(&light, &data[index], sizeof(clientrender::LightTagData));
 		//avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
-		index += sizeof(scr::LightTagData);
+		index += sizeof(clientrender::LightTagData);
 	}
 	if(tagData.coreData.id>= videoTagDataCubeArray.size())
 	{
@@ -1855,7 +1856,7 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 	q.Rotate(elevation, vec3(1.0f, 0, 0));
 
 	// convert from footspace to worldspace
-	clientDeviceState->SetControllerPose( index,*((avs::vec3*)&footspace_pos),*((const scr::quat*)&q));
+	clientDeviceState->SetControllerPose( index,*((avs::vec3*)&footspace_pos),*((const clientrender::quat*)&q));
 	controllerSim.position[index] =footspace_pos;
 	controllerSim.orientation[index] =((const float*)&q);
 }
@@ -1903,7 +1904,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
-		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((scr::quat*)&q_rel));
+		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
 		controllerStates[0].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::LEFT_BUTTON) == crossplatform::MouseCameraInput::LEFT_BUTTON ? 1.0f : 0.0f;
 		controllerStates[1].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::RIGHT_BUTTON) == crossplatform::MouseCameraInput::RIGHT_BUTTON ? 1.0f : 0.0f;
 

@@ -3,7 +3,7 @@
 
 #include "Common.h"
 
-namespace scr
+namespace clientrender
 {
 
 

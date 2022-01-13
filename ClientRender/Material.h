@@ -6,7 +6,7 @@
 #include "ClientRender/Effect.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
-namespace scr
+namespace clientrender
 {
 	class RenderPlatform;
 	class Material

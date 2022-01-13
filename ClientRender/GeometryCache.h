@@ -12,14 +12,14 @@
 #include "NodeManager.h"
 #include "ResourceManager.h"
 
-namespace scr
+namespace clientrender
 {
 	class Animation;
 	class Material;
 	class Light;
 }
 
-namespace scr
+namespace clientrender
 {
 	struct IncompleteResource
 	{
@@ -48,8 +48,8 @@ namespace scr
 			:IncompleteResource(id, type)
 		{}
 
-		scr::Material::MaterialCreateInfo materialInfo;
-		std::unordered_map<avs::uid, std::shared_ptr<scr::Texture>&> textureSlots; //<ID of the texture, slot the texture should be placed into>.
+		clientrender::Material::MaterialCreateInfo materialInfo;
+		std::unordered_map<avs::uid, std::shared_ptr<clientrender::Texture>&> textureSlots; //<ID of the texture, slot the texture should be placed into>.
 	};
 
 	struct IncompleteNode : IncompleteResource
@@ -58,7 +58,7 @@ namespace scr
 			:IncompleteResource(id, type)
 		{}
 
-		std::shared_ptr<scr::Node> node;
+		std::shared_ptr<clientrender::Node> node;
 
 		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into node material list>.
 		std::unordered_map<avs::uid, size_t> missingAnimations; //<ID of missing animation, index in animation vector>
@@ -70,7 +70,7 @@ namespace scr
 			:IncompleteResource(id, type)
 		{}
 
-		std::shared_ptr<scr::Skin> skin;
+		std::shared_ptr<clientrender::Skin> skin;
 
 		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
 	};
@@ -79,7 +79,7 @@ namespace scr
 	{
 		avs::uid texture_uid;
 		std::vector<unsigned char> data; //The raw data of the basis file.
-		scr::Texture::TextureCreateInfo scrTexture; //Creation information on texture being transcoded.
+		clientrender::Texture::TextureCreateInfo scrTexture; //Creation information on texture being transcoded.
 		std::string name; //For debugging which texture failed.
 		avs::TextureCompression fromCompressionFormat;
 		float valueScale;	// scale on transcode.
@@ -186,18 +186,18 @@ namespace scr
 			//mVertexBufferManager.ClearCareful(excludeList);
 		}
 
-		std::unique_ptr<scr::NodeManager>	mNodeManager;
-		ResourceManager<scr::IndexBuffer>   mIndexBufferManager;
-		ResourceManager<scr::Shader>        mShaderManager;
-		ResourceManager<scr::Material>		mMaterialManager;
-		ResourceManager<scr::Texture>       mTextureManager;
-		ResourceManager<scr::UniformBuffer> mUniformBufferManager;
-		ResourceManager<scr::VertexBuffer>  mVertexBufferManager;
-		ResourceManager<scr::Mesh>			mMeshManager;
-		ResourceManager<scr::Skin>			mSkinManager;
-		ResourceManager<scr::Light>			mLightManager;
-		ResourceManager<scr::Bone>			mBoneManager;
-		ResourceManager<scr::Animation>		mAnimationManager;
+		std::unique_ptr<clientrender::NodeManager>	mNodeManager;
+		ResourceManager<clientrender::IndexBuffer>   mIndexBufferManager;
+		ResourceManager<clientrender::Shader>        mShaderManager;
+		ResourceManager<clientrender::Material>		mMaterialManager;
+		ResourceManager<clientrender::Texture>       mTextureManager;
+		ResourceManager<clientrender::UniformBuffer> mUniformBufferManager;
+		ResourceManager<clientrender::VertexBuffer>  mVertexBufferManager;
+		ResourceManager<clientrender::Mesh>			mMeshManager;
+		ResourceManager<clientrender::Skin>			mSkinManager;
+		ResourceManager<clientrender::Light>			mLightManager;
+		ResourceManager<clientrender::Bone>			mBoneManager;
+		ResourceManager<clientrender::Animation>		mAnimationManager;
 
 		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 		std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.

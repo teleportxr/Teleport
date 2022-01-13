@@ -8,12 +8,12 @@
 #include "ClientRender/FrameBuffer.h"
 #include "ClientRender/UniformBuffer.h"
 
-namespace scr
+namespace clientrender
 {
 	class Light
 	{
 	public:
-		// Matches Unity... also scr::LightType
+		// Matches Unity... also clientrender::LightType
 		enum class Type : uint32_t
 		{
 			SPOT=0,

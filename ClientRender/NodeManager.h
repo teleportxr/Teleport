@@ -12,7 +12,7 @@
 #include "Node.h"
 #include "ResourceManager.h"
 
-namespace scr
+namespace clientrender
 {
 	//! Manages nodes for a specific server context.
 	class NodeManager
@@ -57,7 +57,7 @@ namespace scr
 		//Make all nodes in the passed list visible, while hiding the nodes that are absent.
 		void SetVisibleNodes(const std::vector<avs::uid> visibleNodes);
 
-		bool UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translation, const scr::quat& rotation, const avs::vec3& scale);
+		bool UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translation, const clientrender::quat& rotation, const avs::vec3& scale);
 
 		void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
 		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
@@ -79,7 +79,7 @@ namespace scr
 
 	protected:
 		nodeList_t rootNodes; //Nodes that are parented to the world root.
-		std::vector<std::shared_ptr<scr::Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
+		std::vector<std::shared_ptr<clientrender::Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
 	
         std::unordered_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 

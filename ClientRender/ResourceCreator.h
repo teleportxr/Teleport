@@ -20,13 +20,13 @@
 #include "Skin.h"
 #include "GeometryCache.h"
 
-namespace scr
+namespace clientrender
 {
 	class Animation;
 	class Material;
 }
 
-namespace scr
+namespace clientrender
 {
 	/*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.*/
 	class ResourceCreator final : public avs::GeometryTargetBackendInterface
@@ -36,7 +36,7 @@ namespace scr
 		ResourceCreator();
 		~ResourceCreator();
 	
-		void Initialize(scr::RenderPlatform *r, scr::VertexBufferLayout::PackingStyle packingStyle);
+		void Initialize(clientrender::RenderPlatform *r, clientrender::VertexBufferLayout::PackingStyle packingStyle);
 
 		//Returns the resources the ResourceCreator needs, and clears the list.
 		std::vector<avs::uid> GetResourceRequests() const override;
@@ -54,7 +54,7 @@ namespace scr
 		//	deltaTime : Milliseconds that has passed since the last call to Update();
 		void Update(float deltaTime);
 
-		void SetGeometryCache(scr::GeometryCache * c)
+		void SetGeometryCache(clientrender::GeometryCache * c)
 		{
 			geometryCache = c;
 		}
@@ -68,11 +68,11 @@ namespace scr
 		void CreateSkin(avs::uid id, avs::Skin& skin) override;
 		void CreateAnimation(avs::uid id, avs::Animation& animation) override;
 
-		std::shared_ptr<scr::Texture> m_DummyWhite;
-		std::shared_ptr<scr::Texture> m_DummyNormal;
-		std::shared_ptr<scr::Texture> m_DummyCombined;
-		std::shared_ptr<scr::Texture> m_DummyBlack;
-		std::shared_ptr<scr::Texture> m_DummyGreen;
+		std::shared_ptr<clientrender::Texture> m_DummyWhite;
+		std::shared_ptr<clientrender::Texture> m_DummyNormal;
+		std::shared_ptr<clientrender::Texture> m_DummyCombined;
+		std::shared_ptr<clientrender::Texture> m_DummyBlack;
+		std::shared_ptr<clientrender::Texture> m_DummyGreen;
 
 	private:
 	
@@ -80,13 +80,13 @@ namespace scr
 		void CreateLight(avs::uid id, avs::Node& node);
 		void CreateBone(avs::uid id, avs::Node& node);
 
-		void CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo& meshInfo);
+		void CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo& meshInfo);
 		void CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin);
-		void CompleteTexture(avs::uid id, const scr::Texture::TextureCreateInfo& textureInfo);
-		void CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo);
-		void CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> node);
-		void CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone);
-		void CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animation> animation);
+		void CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo& textureInfo);
+		void CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo& materialInfo);
+		void CompleteMeshNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
+		void CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone> bone);
+		void CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
 
 		//Add texture to material being created.
 		//	accessor : Data on texture that was received from server.
@@ -96,17 +96,17 @@ namespace scr
 		//	materialParameter : Parameter we are modifying.
 		void AddTextureToMaterial(const avs::TextureAccessor& accessor,
 								  const avs::vec4& colourFactor,
-								  const std::shared_ptr<scr::Texture>& dummyTexture,
+								  const std::shared_ptr<clientrender::Texture>& dummyTexture,
 								  std::shared_ptr<IncompleteMaterial> incompleteMaterial,
-								  scr::Material::MaterialParameter& materialParameter);
+								  clientrender::Material::MaterialParameter& materialParameter);
 
 		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);
 
 		void BasisThread_TranscodeTextures();
 
-		scr::API m_API;
-		scr::RenderPlatform* m_pRenderPlatform = nullptr;
-		scr::VertexBufferLayout::PackingStyle m_PackingStyle = scr::VertexBufferLayout::PackingStyle::GROUPED;
+		clientrender::API m_API;
+		clientrender::RenderPlatform* m_pRenderPlatform = nullptr;
+		clientrender::VertexBufferLayout::PackingStyle m_PackingStyle = clientrender::VertexBufferLayout::PackingStyle::GROUPED;
 
 		basist::etc1_global_selector_codebook basis_codeBook;
 	#ifdef _MSC_VER
@@ -116,7 +116,7 @@ namespace scr
 	#endif
 
 		std::vector<UntranscodedTexture> texturesToTranscode;
-		std::map<avs::uid, scr::Texture::TextureCreateInfo> texturesToCreate; //Textures that are ready to be created <Texture's UID, Texture's Data>
+		std::map<avs::uid, clientrender::Texture::TextureCreateInfo> texturesToCreate; //Textures that are ready to be created <Texture's UID, Texture's Data>
 	
 		std::mutex mutex_texturesToTranscode;
 		std::mutex mutex_texturesToCreate;
@@ -130,7 +130,7 @@ namespace scr
 		const uint32_t blackBGRA = 0x0;
 		const uint32_t greenBGRA = 0xFF337733;
 	
-		scr::GeometryCache* geometryCache = nullptr;
+		clientrender::GeometryCache* geometryCache = nullptr;
 	};
 
 

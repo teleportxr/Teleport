@@ -2,7 +2,7 @@
 
 #include "Bone.h"
 
-namespace scr
+namespace clientrender
 {
 	BoneKeyframeList::BoneKeyframeList()
 	{}
@@ -136,7 +136,7 @@ namespace scr
 		return endTime;
 	}
 
-	void Animation::seekTime(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float time)
+	void Animation::seekTime(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float time)
 	{
 		for(BoneKeyframeList boneKeyframeList : boneKeyframeLists)
 		{

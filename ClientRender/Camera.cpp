@@ -2,7 +2,7 @@
 
 #include "Camera.h"
 
-using namespace scr;
+using namespace clientrender;
 
 // A couple of globals... wtf?
 bool Camera::s_UninitialisedUB = true;

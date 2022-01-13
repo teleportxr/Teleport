@@ -3,7 +3,7 @@
 #include "MemoryUtil.h"
 #include <cassert>
 
-namespace scr
+namespace clientrender
 {
 	const MemoryUtil* MemoryUtil::mMemoryUtil = nullptr;
 

@@ -2,7 +2,7 @@
 #pragma once
 #include "ClientRender/Shader.h"
 
-namespace scr
+namespace clientrender
 {
 
 	class ShaderSystem

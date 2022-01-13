@@ -5,7 +5,7 @@
 #include "Common.h"
 #include "Transform.h"
 
-namespace scr
+namespace clientrender
 {
 	void Tests::RunAllTests()
 	{
@@ -33,11 +33,11 @@ namespace scr
 		avs::Transform convertedTransformAVS(transformAVS);
 		avs::ConvertTransform(fromStandard, toStandard, convertedTransformAVS);
 
-		scr::Transform transformSCR(transformAVS);
-		scr::Transform convertedTransformSCR(convertedTransformAVS);
+		clientrender::Transform transformSCR(transformAVS);
+		clientrender::Transform convertedTransformSCR(convertedTransformAVS);
 
-		scr::mat4 matrix = transformSCR.GetTransformMatrix();
-		scr::mat4 convertedMatrix = avs::Mat4x4::convertToStandard(matrix, fromStandard, toStandard);
+		clientrender::mat4 matrix = transformSCR.GetTransformMatrix();
+		clientrender::mat4 convertedMatrix = avs::Mat4x4::convertToStandard(matrix, fromStandard, toStandard);
 
 		if(convertedMatrix != convertedTransformSCR.GetTransformMatrix())
 		{

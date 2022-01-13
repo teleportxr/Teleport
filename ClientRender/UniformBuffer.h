@@ -3,7 +3,7 @@
 
 #include "Common.h"
 
-namespace scr
+namespace clientrender
 {
 	//Interface for UniformBuffer
 	class UniformBuffer : public APIObject
@@ -21,7 +21,7 @@ namespace scr
 		UniformBufferCreateInfo m_CI;
 
 	public:
-		UniformBuffer(const scr::RenderPlatform* const r)
+		UniformBuffer(const clientrender::RenderPlatform* const r)
 			:APIObject(r), m_CI()
 		{}
 

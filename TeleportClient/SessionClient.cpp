@@ -13,7 +13,7 @@
 
 using namespace teleport;
 using namespace client;
-using namespace scr;
+using namespace clientrender;
 
 SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService)
 	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService))
@@ -181,7 +181,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			SendDisplayInfo(displayInfo);
 			if(poseValidCounter)
 			{
-				SendHeadPose(headPose);
 				SendControllerPoses(headPose,controllerPoses);
 				if(setupCommand.control_model==avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY)
 					sendOriginPose(poseValidCounter,originPose);
@@ -350,12 +349,6 @@ void SessionClient::SendDisplayInfo (const avs::DisplayInfo &displayInfo)
 {
 	ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(avs::DisplayInfo), 0);
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo), packet);
-}
-
-void SessionClient::SendHeadPose(const avs::Pose& pose)
-{
-	ENetPacket* packet = enet_packet_create(&pose, sizeof(avs::Pose), 0);
-	//enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_HeadPose), packet);
 }
 
 void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pose * poses)

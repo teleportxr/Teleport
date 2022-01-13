@@ -7,12 +7,12 @@
 namespace pc_client
 {
 	//Implementation of FrameBuffer wrapping over ovrEyeBuffers
-	class PC_FrameBuffer final : public scr::FrameBuffer
+	class PC_FrameBuffer final : public clientrender::FrameBuffer
 	{
 	private:
 
 	public:
-		PC_FrameBuffer(const scr::RenderPlatform *r):scr::FrameBuffer(r) {}
+		PC_FrameBuffer(const clientrender::RenderPlatform *r):clientrender::FrameBuffer(r) {}
 
 		// Inherited via FrameBuffer
 		void Destroy() override;

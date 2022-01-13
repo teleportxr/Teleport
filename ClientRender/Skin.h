@@ -5,7 +5,7 @@
 #include "Bone.h"
 #include "Transform.h"
 
-namespace scr
+namespace clientrender
 {
 	class Skin
 	{
@@ -55,7 +55,7 @@ namespace scr
 			return boneMatrices;
 		}
 	private:
-		std::vector<scr::mat4> inverseBindMatrices;
+		std::vector<clientrender::mat4> inverseBindMatrices;
 		std::vector<std::shared_ptr<Bone>> bones;
 		Transform skinTransform; //Transform of the parent node of the bone hierarchy; i.e there may be multiple top-level bones, but their parent is not the root.
 

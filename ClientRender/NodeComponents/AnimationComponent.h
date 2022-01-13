@@ -8,7 +8,7 @@
 
 #include "AnimationState.h"
 
-namespace scr
+namespace clientrender
 {
 	class Animation;
 	class Bone;
@@ -18,9 +18,9 @@ namespace scr
 	{
 	public:
 		AnimationComponent();
-		AnimationComponent(const std::map<avs::uid, std::shared_ptr<scr::Animation>>& animations);
+		AnimationComponent(const std::map<avs::uid, std::shared_ptr<clientrender::Animation>>& animations);
 
-		void addAnimation(avs::uid id, std::shared_ptr<scr::Animation> animation);
+		void addAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
 		//Set animation the component is playing.
 		//	animationID : ID of the animation to start playing.
 		//	startTimestamp : Timestamp of when the animation started playing on the server.
@@ -35,7 +35,7 @@ namespace scr
 
 		void setAnimationSpeed(avs::uid animationID, float speed);
 
-		void update(const std::vector<std::shared_ptr<scr::Bone>>& boneList, float deltaTime);
+		void update(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float deltaTime);
 
 		const AnimationStateMap &GetAnimationStates() const;
 		const AnimationState* GetCurrentAnimationState() const;

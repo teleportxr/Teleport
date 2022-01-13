@@ -5,7 +5,7 @@
 #include "Material.h"
 
 using namespace avs;
-using namespace scr;
+using namespace clientrender;
 
 ResourceCreator::ResourceCreator()
 	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb)
@@ -21,12 +21,12 @@ ResourceCreator::~ResourceCreator()
 	basisThread.join();
 }
 
-void ResourceCreator::Initialize(scr::RenderPlatform* r, scr::VertexBufferLayout::PackingStyle packingStyle)
+void ResourceCreator::Initialize(clientrender::RenderPlatform* r, clientrender::VertexBufferLayout::PackingStyle packingStyle)
 {
 	m_API.SetAPI(r->GetAPI());
 	m_pRenderPlatform = r;
 
-	assert(packingStyle == scr::VertexBufferLayout::PackingStyle::GROUPED || packingStyle == scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	assert(packingStyle == clientrender::VertexBufferLayout::PackingStyle::GROUPED || packingStyle == clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	m_PackingStyle = packingStyle;
 
 	//Setup Dummy textures.
@@ -35,20 +35,20 @@ void ResourceCreator::Initialize(scr::RenderPlatform* r, scr::VertexBufferLayout
 	m_DummyCombined = m_pRenderPlatform->InstantiateTexture();
 	m_DummyBlack = m_pRenderPlatform->InstantiateTexture();
 	m_DummyGreen = m_pRenderPlatform->InstantiateTexture();
-	scr::Texture::TextureCreateInfo tci =
+	clientrender::Texture::TextureCreateInfo tci =
 	{
 		"Dummy Texture",
-		static_cast<uint32_t>(scr::Texture::DUMMY_DIMENSIONS.x),
-		static_cast<uint32_t>(scr::Texture::DUMMY_DIMENSIONS.y),
-		static_cast<uint32_t>(scr::Texture::DUMMY_DIMENSIONS.z),
+		static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.x),
+		static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.y),
+		static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.z),
 		4, 1, 1,
-		scr::Texture::Slot::UNKNOWN,
-		scr::Texture::Type::TEXTURE_2D,
-		scr::Texture::Format::RGBA8,
-		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+		clientrender::Texture::Slot::UNKNOWN,
+		clientrender::Texture::Type::TEXTURE_2D,
+		clientrender::Texture::Format::RGBA8,
+		clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
 		{4},
 		{{0x00000000}},
-		scr::Texture::CompressionFormat::UNCOMPRESSED,
+		clientrender::Texture::CompressionFormat::UNCOMPRESSED,
 		false
 	};
 
@@ -158,7 +158,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 	geometryCache->m_ReceivedResources.push_back(meshCreate.mesh_uid);
 	//SCR_COUT << "Assemble(Mesh" << meshCreate.mesh_uid << ": " << meshCreate.name << ")\n";
 
-	using namespace scr;
+	using namespace clientrender;
 
 	if (geometryCache->mVertexBufferManager.Has(meshCreate.mesh_uid) || geometryCache->mIndexBufferManager.Has(meshCreate.mesh_uid))
 		return avs::Result::OK;
@@ -168,7 +168,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		SCR_CERR << "No valid render platform was found." << std::endl;
 		return avs::Result::GeometryDecoder_ClientRendererError;
 	}
-	scr::Mesh::MeshCreateInfo mesh_ci;
+	clientrender::Mesh::MeshCreateInfo mesh_ci;
 	mesh_ci.name = meshCreate.name;
 	mesh_ci.vb.resize(meshCreate.m_NumElements);
 	mesh_ci.ib.resize(meshCreate.m_NumElements);
@@ -228,7 +228,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 
 		memcpy(_indices.get(), meshElementCreate.m_Indices, indicesSize);
 
-		if (layout->m_PackingStyle == scr::VertexBufferLayout::PackingStyle::INTERLEAVED)
+		if (layout->m_PackingStyle == clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED)
 		{
 			for (size_t j = 0; j < meshElementCreate.m_VertexCount; j++)
 			{
@@ -312,7 +312,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				}
 			}
 		}
-		else if (layout->m_PackingStyle == scr::VertexBufferLayout::PackingStyle::GROUPED)
+		else if (layout->m_PackingStyle == clientrender::VertexBufferLayout::PackingStyle::GROUPED)
 		{
 			size_t vertexBufferOffset = 0;
 			if (meshElementCreate.m_Vertices)
@@ -462,24 +462,24 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 	return avs::Result::OK;
 }
 
-//Returns a scr::Texture::Format from a avs::TextureFormat.
-scr::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format)
+//Returns a clientrender::Texture::Format from a avs::TextureFormat.
+clientrender::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureFormat format)
 {
 	switch (format)
 	{
-	case avs::TextureFormat::INVALID: return scr::Texture::Format::FORMAT_UNKNOWN;
-	case avs::TextureFormat::G8: return scr::Texture::Format::R8;
-	case avs::TextureFormat::BGRA8: return scr::Texture::Format::BGRA8;
-	case avs::TextureFormat::BGRE8: return scr::Texture::Format::BGRA8;
-	case avs::TextureFormat::RGBA16: return scr::Texture::Format::RGBA16;
-	case avs::TextureFormat::RGBE8: return scr::Texture::Format::RGBA8;
-	case avs::TextureFormat::RGBA16F: return scr::Texture::Format::RGBA16F;
-	case avs::TextureFormat::RGBA32F: return scr::Texture::Format::RGBA32F;
-	case avs::TextureFormat::RGBA8: return scr::Texture::Format::RGBA8;
-	case avs::TextureFormat::D16F: return scr::Texture::Format::DEPTH_COMPONENT16;
-	case avs::TextureFormat::D24F: return scr::Texture::Format::DEPTH_COMPONENT24;
-	case avs::TextureFormat::D32F: return scr::Texture::Format::DEPTH_COMPONENT32F;
-	case avs::TextureFormat::MAX: return scr::Texture::Format::FORMAT_UNKNOWN;
+	case avs::TextureFormat::INVALID: return clientrender::Texture::Format::FORMAT_UNKNOWN;
+	case avs::TextureFormat::G8: return clientrender::Texture::Format::R8;
+	case avs::TextureFormat::BGRA8: return clientrender::Texture::Format::BGRA8;
+	case avs::TextureFormat::BGRE8: return clientrender::Texture::Format::BGRA8;
+	case avs::TextureFormat::RGBA16: return clientrender::Texture::Format::RGBA16;
+	case avs::TextureFormat::RGBE8: return clientrender::Texture::Format::RGBA8;
+	case avs::TextureFormat::RGBA16F: return clientrender::Texture::Format::RGBA16F;
+	case avs::TextureFormat::RGBA32F: return clientrender::Texture::Format::RGBA32F;
+	case avs::TextureFormat::RGBA8: return clientrender::Texture::Format::RGBA8;
+	case avs::TextureFormat::D16F: return clientrender::Texture::Format::DEPTH_COMPONENT16;
+	case avs::TextureFormat::D24F: return clientrender::Texture::Format::DEPTH_COMPONENT24;
+	case avs::TextureFormat::D32F: return clientrender::Texture::Format::DEPTH_COMPONENT32F;
+	case avs::TextureFormat::MAX: return clientrender::Texture::Format::FORMAT_UNKNOWN;
 	default:
 		exit(1);
 	}
@@ -496,21 +496,21 @@ basist::transcoder_texture_format transcoderFormatFromBasisTextureFormat(basist:
 	}
 }
 //Returns a SCR compression format from a basis universal transcoder format.
-scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_texture_format format)
+clientrender::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_texture_format format)
 {
 	switch (format)
 	{
-	case basist::transcoder_texture_format::cTFBC1: return scr::Texture::CompressionFormat::BC1;
-	case basist::transcoder_texture_format::cTFBC3: return scr::Texture::CompressionFormat::BC3;
-	case basist::transcoder_texture_format::cTFBC4: return scr::Texture::CompressionFormat::BC4;
-	case basist::transcoder_texture_format::cTFBC5: return scr::Texture::CompressionFormat::BC5;
-	case basist::transcoder_texture_format::cTFETC1: return scr::Texture::CompressionFormat::ETC1;
-	case basist::transcoder_texture_format::cTFETC2: return scr::Texture::CompressionFormat::ETC2;
-	case basist::transcoder_texture_format::cTFPVRTC1_4_RGBA: return scr::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
-	case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return scr::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+	case basist::transcoder_texture_format::cTFBC1: return clientrender::Texture::CompressionFormat::BC1;
+	case basist::transcoder_texture_format::cTFBC3: return clientrender::Texture::CompressionFormat::BC3;
+	case basist::transcoder_texture_format::cTFBC4: return clientrender::Texture::CompressionFormat::BC4;
+	case basist::transcoder_texture_format::cTFBC5: return clientrender::Texture::CompressionFormat::BC5;
+	case basist::transcoder_texture_format::cTFETC1: return clientrender::Texture::CompressionFormat::ETC1;
+	case basist::transcoder_texture_format::cTFETC2: return clientrender::Texture::CompressionFormat::ETC2;
+	case basist::transcoder_texture_format::cTFPVRTC1_4_RGBA: return clientrender::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
+	case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return clientrender::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
 	case basist::transcoder_texture_format::cTFASTC_4x4_RGBA:
-		return scr::Texture::CompressionFormat::BC6H;
-	case basist::transcoder_texture_format::cTFTotalTextureFormats: return scr::Texture::CompressionFormat::UNCOMPRESSED;
+		return clientrender::Texture::CompressionFormat::BC6H;
+	case basist::transcoder_texture_format::cTFTotalTextureFormats: return clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	default:
 		exit(1);
 	}
@@ -519,20 +519,20 @@ scr::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_textur
 void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 {
 	geometryCache->m_ReceivedResources.push_back(id);
-	scr::Texture::CompressionFormat scrTextureCompressionFormat= scr::Texture::CompressionFormat::UNCOMPRESSED;
+	clientrender::Texture::CompressionFormat scrTextureCompressionFormat= clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	if(texture.compression!=avs::TextureCompression::UNCOMPRESSED)
 	{
 		switch(texture.format)
 		{
 		case avs::TextureFormat::RGBA32F:
-			scrTextureCompressionFormat = scr::Texture::CompressionFormat::BC6H;
+			scrTextureCompressionFormat = clientrender::Texture::CompressionFormat::BC6H;
 			break;
 		default:
-			scrTextureCompressionFormat = scr::Texture::CompressionFormat::BC3;
+			scrTextureCompressionFormat = clientrender::Texture::CompressionFormat::BC3;
 			break;
 		};
 	}
-	scr::Texture::TextureCreateInfo texInfo =
+	clientrender::Texture::TextureCreateInfo texInfo =
 	{
 		texture.name,
 		texture.width,
@@ -541,13 +541,13 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 		texture.bytesPerPixel,
 		texture.arrayCount,
 		texture.mipCount,
-		scr::Texture::Slot::UNKNOWN,
-		scr::Texture::Type::TEXTURE_2D, //Assumed
+		clientrender::Texture::Slot::UNKNOWN,
+		clientrender::Texture::Type::TEXTURE_2D, //Assumed
 		textureFormatFromAVSTextureFormat(texture.format),
-		scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
+		clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
 		{},
 		{},
-		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : scr::Texture::CompressionFormat::UNCOMPRESSED
+		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : clientrender::Texture::CompressionFormat::UNCOMPRESSED
 
 	};
 
@@ -611,7 +611,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.emissive);
 // Add it to the manager, even if incomplete.
-	std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(m_pRenderPlatform,incompleteMaterial->materialInfo);
+	std::shared_ptr<clientrender::Material> scrMaterial = std::make_shared<clientrender::Material>(m_pRenderPlatform,incompleteMaterial->materialInfo);
 	geometryCache->mMaterialManager.Add(id, scrMaterial);
 	scrMaterial->id = id;
 
@@ -655,12 +655,12 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 
 	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(id, avs::GeometryPayloadType::Skin);
 
-	//Convert avs::Mat4x4 to scr::Transform.
-	std::vector<scr::mat4> inverseBindMatrices;
+	//Convert avs::Mat4x4 to clientrender::Transform.
+	std::vector<clientrender::mat4> inverseBindMatrices;
 	inverseBindMatrices.reserve(skin.inverseBindMatrices.size());
 	for (const Mat4x4& matrix : skin.inverseBindMatrices)
 	{
-		inverseBindMatrices.push_back(static_cast<scr::mat4>(matrix));
+		inverseBindMatrices.push_back(static_cast<clientrender::mat4>(matrix));
 	}
 
 	//Create skin.
@@ -670,7 +670,7 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 	for (size_t i = 0; i < skin.jointIDs.size(); i++)
 	{
 		avs::uid jointID = skin.jointIDs[i];
-		std::shared_ptr<scr::Bone> bone = geometryCache->mBoneManager.Get(jointID);
+		std::shared_ptr<clientrender::Bone> bone = geometryCache->mBoneManager.Get(jointID);
 
 		if (bone)
 			incompleteSkin->skin->SetBone(i, bone);
@@ -694,14 +694,14 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 	SCR_COUT << "CreateAnimation(" << id << ", " << animation.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
-	std::vector<scr::BoneKeyframeList> boneKeyframeLists;
+	std::vector<clientrender::BoneKeyframeList> boneKeyframeLists;
 	boneKeyframeLists.reserve(animation.boneKeyframes.size());
 
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		const avs::TransformKeyframe& avsKeyframes = animation.boneKeyframes[i];
 
-		scr::BoneKeyframeList boneKeyframeList;
+		clientrender::BoneKeyframeList boneKeyframeList;
 		boneKeyframeList.boneIndex = avsKeyframes.boneIndex;
 		boneKeyframeList.positionKeyframes = avsKeyframes.positionKeyframes;
 		boneKeyframeList.rotationKeyframes = avsKeyframes.rotationKeyframes;
@@ -709,7 +709,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 		boneKeyframeLists.push_back(boneKeyframeList);
 	}
 
-	std::shared_ptr<scr::Animation> completeAnimation = std::make_shared<scr::Animation>(animation.name, boneKeyframeLists);
+	std::shared_ptr<clientrender::Animation> completeAnimation = std::make_shared<clientrender::Animation>(animation.name, boneKeyframeLists);
 	CompleteAnimation(id, completeAnimation);
 }
 
@@ -766,7 +766,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 	for (size_t i = 0; i < node.animations.size(); i++)
 	{
 		avs::uid animationID = node.animations[i];
-		std::shared_ptr<scr::Animation> animation = geometryCache->mAnimationManager.Get(animationID);
+		std::shared_ptr<clientrender::Animation> animation = geometryCache->mAnimationManager.Get(animationID);
 
 		if (animation)
 		{
@@ -784,17 +784,17 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 
 	if (m_pRenderPlatform->placeholderMaterial == nullptr)
 	{
-		scr::Material::MaterialCreateInfo materialCreateInfo;
+		clientrender::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.diffuse.texture = m_DummyWhite;
 		materialCreateInfo.combined.texture = m_DummyCombined;
 		materialCreateInfo.normal.texture = m_DummyNormal;
 		//materialCreateInfo.emissive.texture = m_DummyBlack;
 		materialCreateInfo.emissive.texture = m_DummyGreen;
-		m_pRenderPlatform->placeholderMaterial = std::make_shared<scr::Material>(m_pRenderPlatform,materialCreateInfo);
+		m_pRenderPlatform->placeholderMaterial = std::make_shared<clientrender::Material>(m_pRenderPlatform,materialCreateInfo);
 	}
 	if(node.renderState.globalIlluminationUid>0)
 	{
-		std::shared_ptr<scr::Texture> gi_texture = geometryCache->mTextureManager.Get(node.renderState.globalIlluminationUid);
+		std::shared_ptr<clientrender::Texture> gi_texture = geometryCache->mTextureManager.Get(node.renderState.globalIlluminationUid);
 		if(!gi_texture)
 		{
 			isMissingResources = true;
@@ -804,7 +804,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 	}
 	for (size_t i = 0; i < node.materials.size(); i++)
 	{
-		std::shared_ptr<scr::Material> material = geometryCache->mMaterialManager.Get(node.materials[i]);
+		std::shared_ptr<clientrender::Material> material = geometryCache->mMaterialManager.Get(node.materials[i]);
 
 		if (material)
 		{
@@ -836,19 +836,19 @@ void ResourceCreator::CreateLight(avs::uid id, avs::Node& node)
 	SCR_COUT << "CreateLight(" << id << ", " << node.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
-	scr::Light::LightCreateInfo lci;
+	clientrender::Light::LightCreateInfo lci;
 	lci.renderPlatform = m_pRenderPlatform;
-	lci.type = (scr::Light::Type)node.lightType;
+	lci.type = (clientrender::Light::Type)node.lightType;
 	lci.position = avs::vec3(node.globalTransform.position);
 	lci.direction = node.lightDirection;
-	lci.orientation = scr::quat(node.globalTransform.rotation);
+	lci.orientation = clientrender::quat(node.globalTransform.rotation);
 	lci.shadowMapTexture = geometryCache->mTextureManager.Get(node.data_uid);
 	lci.lightColour = node.lightColour;
 	lci.lightRadius = node.lightRadius;
 	lci.lightRange = node.lightRange;
 	lci.uid = id;
 	lci.name = node.name;
-	std::shared_ptr<scr::Light> light = std::make_shared<scr::Light>(&lci);
+	std::shared_ptr<clientrender::Light> light = std::make_shared<clientrender::Light>(&lci);
 	geometryCache->mLightManager.Add(id, light);
 }
 
@@ -857,12 +857,12 @@ void ResourceCreator::CreateBone(avs::uid id, avs::Node& node)
 	SCR_COUT << "CreateBone(" << id << ", " << node.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
-	std::shared_ptr<scr::Bone> bone = std::make_shared<scr::Bone>(id, node.name);
+	std::shared_ptr<clientrender::Bone> bone = std::make_shared<clientrender::Bone>(id, node.name);
 	bone->SetLocalTransform(node.localTransform);
 
 	//Link to parent and child bones.
 	//We don't know what order the bones will arrive in, so we have to do it for both orders(parent -> child, child -> parent).
-	std::shared_ptr<scr::Bone> parent = geometryCache->mBoneManager.Get(node.parentID);
+	std::shared_ptr<clientrender::Bone> parent = geometryCache->mBoneManager.Get(node.parentID);
 	if(parent)
 	{
 		bone->SetParent(parent);
@@ -871,7 +871,7 @@ void ResourceCreator::CreateBone(avs::uid id, avs::Node& node)
 
 	for(avs::uid childID : node.childrenIDs)
 	{
-		std::shared_ptr<scr::Bone> child = geometryCache->mBoneManager.Get(childID);
+		std::shared_ptr<clientrender::Bone> child = geometryCache->mBoneManager.Get(childID);
 		if(child)
 		{
 			child->SetParent(bone);
@@ -882,11 +882,11 @@ void ResourceCreator::CreateBone(avs::uid id, avs::Node& node)
 	CompleteBone(id, bone);
 }
 
-void ResourceCreator::CompleteMesh(avs::uid id, const scr::Mesh::MeshCreateInfo& meshInfo)
+void ResourceCreator::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo& meshInfo)
 {
 	//SCR_COUT << "CompleteMesh(" << id << ", " << meshInfo.name << ")\n";
 
-	std::shared_ptr<scr::Mesh> mesh = std::make_shared<scr::Mesh>(meshInfo);
+	std::shared_ptr<clientrender::Mesh> mesh = std::make_shared<clientrender::Mesh>(meshInfo);
 	geometryCache->mMeshManager.Add(id, mesh);
 
 	//Add mesh to nodes waiting for mesh.
@@ -938,11 +938,11 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 	geometryCache->m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCreateInfo& textureInfo)
+void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo& textureInfo)
 {
 	SCR_COUT << "CompleteTexture(" << id << ", " << textureInfo.name << ")\n";
 
-	std::shared_ptr<scr::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
+	std::shared_ptr<clientrender::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(textureInfo);
 
 	geometryCache->mTextureManager.Add(id, scrTexture);
@@ -987,10 +987,10 @@ void ResourceCreator::CompleteTexture(avs::uid id, const scr::Texture::TextureCr
 	geometryCache->m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::MaterialCreateInfo& materialInfo)
+void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo& materialInfo)
 {
 	SCR_COUT << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
-	std::shared_ptr<scr::Material> material = geometryCache->mMaterialManager.Get(id);
+	std::shared_ptr<clientrender::Material> material = geometryCache->mMaterialManager.Get(id);
 	// Update its properties:
 	material->SetMaterialCreateInfo(m_pRenderPlatform,materialInfo);
 	//Add material to nodes waiting for material.
@@ -1022,7 +1022,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const scr::Material::Materia
 	geometryCache->m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> node)
+void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<clientrender::Node> node)
 {
 //	SCR_COUT << "CompleteMeshNode(ID: " << id << ", node: " << node->name << ")\n";
 
@@ -1030,7 +1030,7 @@ void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<scr::Node> n
 	geometryCache->m_CompletedNodes.push_back(id);
 }
 
-void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
+void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone> bone)
 {
 	//SCR_COUT << "CompleteBone(" << id << ", " << bone->name << ")\n";
 
@@ -1058,7 +1058,7 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<scr::Bone> bone)
 	geometryCache->m_MissingResources.erase(id);
 }
 
-void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animation> animation)
+void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation)
 {
 	SCR_COUT << "CompleteAnimation(" << id << ", " << animation->name << ")\n";
 
@@ -1085,12 +1085,12 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<scr::Animat
 	geometryCache->m_MissingResources.erase(id);
 }
 
-void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<scr::Texture>& dummyTexture,
-										   std::shared_ptr<IncompleteMaterial> incompleteMaterial, scr::Material::MaterialParameter& materialParameter)
+void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,
+										   std::shared_ptr<IncompleteMaterial> incompleteMaterial, clientrender::Material::MaterialParameter& materialParameter)
 {
 	if (accessor.index != 0)
 	{
-		const std::shared_ptr<scr::Texture> texture = geometryCache->mTextureManager.Get(accessor.index);
+		const std::shared_ptr<clientrender::Texture> texture = geometryCache->mTextureManager.Get(accessor.index);
 
 		if (texture)
 		{
@@ -1126,7 +1126,7 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 	materialParameter.textureOutputScalar = colourFactor;
 }
 
-scr::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType)
+clientrender::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType)
 {
 	auto missingPair = geometryCache->m_MissingResources.find(id);
 	if (missingPair == geometryCache->m_MissingResources.end())

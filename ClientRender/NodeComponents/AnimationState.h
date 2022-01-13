@@ -4,7 +4,7 @@
 
 #include "ClientRender/Animation.h"
 
-namespace scr
+namespace clientrender
 {
 	class Animation;
 

@@ -3,7 +3,7 @@
 
 #include "Texture.h"
 
-namespace scr
+namespace clientrender
 {
 	//Interface for FrameBuffer
 	class FrameBuffer : public APIObject

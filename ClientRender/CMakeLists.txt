@@ -47,6 +47,8 @@ set( src_root
 	ResourceCreator.cpp
 	ResourceCreator.h
 	ResourceManager.h
+	Renderer.h
+	Renderer.cpp
 	ShaderResource.cpp
 	ShaderResource.h
 	ShaderSystem.cpp

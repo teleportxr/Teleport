@@ -4,7 +4,7 @@
 #include "ClientRender/VertexBuffer.h"
 #include "ClientRender/IndexBuffer.h"
 
-namespace scr
+namespace clientrender
 {
 	class Mesh
 	{

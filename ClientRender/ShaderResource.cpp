@@ -2,7 +2,7 @@
 
 #include "ShaderResource.h"
 
-using namespace scr;
+using namespace clientrender;
 
 ShaderResource::ShaderResource(const ShaderResourceLayout& shaderResourceLayout)
 {

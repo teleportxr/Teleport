@@ -20,17 +20,17 @@ public:
 	GLint maxFragTextureSlots = 0, maxFragUniformBlocks = 0;
 
     scc::GL_RenderPlatform renderPlatform;
-    std::shared_ptr<scr::Sampler> sampler;
-	std::shared_ptr<scr::Sampler> noMipsampler;
-    std::shared_ptr<scr::Sampler> cubeMipMapSampler;
-	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataBuffer;
-	scr::ShaderResource lightCubemapShaderResources;
-	scr::ShaderResource tagShaderResource;
+    std::shared_ptr<clientrender::Sampler> sampler;
+	std::shared_ptr<clientrender::Sampler> noMipsampler;
+    std::shared_ptr<clientrender::Sampler> cubeMipMapSampler;
+	std::shared_ptr<clientrender::ShaderStorageBuffer> mTagDataBuffer;
+	clientrender::ShaderResource lightCubemapShaderResources;
+	clientrender::ShaderResource tagShaderResource;
 
 	scc::GL_Effect defaultPBREffect;
 	scc::GL_Skin defaultSkin;
 
-    std::shared_ptr<scr::Camera> scrCamera;
+    std::shared_ptr<clientrender::Camera> scrCamera;
 
     std::string effectPassName; //Which effect pass the geometry should be rendered with.
 

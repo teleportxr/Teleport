@@ -6,10 +6,10 @@
 namespace pc_client
 {
 	//Interface for Sampler
-	class PC_Sampler final : public scr::Sampler
+	class PC_Sampler final : public clientrender::Sampler
 	{
 	public:
-		PC_Sampler(const scr::RenderPlatform*const r):scr::Sampler(r) {}
+		PC_Sampler(const clientrender::RenderPlatform*const r):clientrender::Sampler(r) {}
 
 		void Destroy() override;
 		

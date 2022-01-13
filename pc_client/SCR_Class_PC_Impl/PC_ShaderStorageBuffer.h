@@ -5,12 +5,12 @@
 
 namespace pc_client
 {
-class PC_ShaderStorageBuffer final : public scr::ShaderStorageBuffer
+class PC_ShaderStorageBuffer final : public clientrender::ShaderStorageBuffer
 	{
 	private:
 
 	public:
-		PC_ShaderStorageBuffer(const scr::RenderPlatform* r) :scr::ShaderStorageBuffer(r) {}
+		PC_ShaderStorageBuffer(const clientrender::RenderPlatform* r) :clientrender::ShaderStorageBuffer(r) {}
 
 		void Create(ShaderStorageBufferCreateInfo * pUniformBuffer) override {}
 		void Update(size_t size, const void* data, uint32_t offset = 0) override {}

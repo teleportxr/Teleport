@@ -14,7 +14,7 @@
 #include "GL_VertexBuffer.h"
 
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 
 std::shared_ptr<FrameBuffer> GL_RenderPlatform::InstantiateFrameBuffer() const
 {
@@ -41,12 +41,12 @@ std::shared_ptr<ShaderStorageBuffer> GL_RenderPlatform::InstantiateShaderStorage
     return std::make_shared<GL_ShaderStorageBuffer>(this);
 }
 
-std::shared_ptr<scr::Skin> GL_RenderPlatform::InstantiateSkin(const std::string& name) const
+std::shared_ptr<clientrender::Skin> GL_RenderPlatform::InstantiateSkin(const std::string& name) const
 {
     return std::make_shared<GL_Skin>(this, name);
 }
 
-std::shared_ptr<scr::Skin> GL_RenderPlatform::InstantiateSkin(const std::string& name, const std::vector<scr::mat4>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const
+std::shared_ptr<clientrender::Skin> GL_RenderPlatform::InstantiateSkin(const std::string& name, const std::vector<clientrender::mat4>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const
 {
 	return std::make_shared<GL_Skin>(this, name, inverseBindMatrices, boneAmount, skinTransform);
 }

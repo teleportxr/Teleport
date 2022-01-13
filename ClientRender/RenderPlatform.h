@@ -6,7 +6,7 @@
 #include "ClientRender/API.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
-namespace scr
+namespace clientrender
 {
 	class FrameBuffer;
 	class IndexBuffer;
@@ -36,11 +36,11 @@ namespace scr
 		virtual std::shared_ptr<Shader>					InstantiateShader() const = 0;
 		virtual std::shared_ptr<ShaderStorageBuffer>	InstantiateShaderStorageBuffer() const = 0;
 		virtual std::shared_ptr<Skin>					InstantiateSkin(const std::string& name) const = 0;
-		virtual std::shared_ptr<Skin>					InstantiateSkin(const std::string& name, const std::vector<scr::mat4>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const = 0;
+		virtual std::shared_ptr<Skin>					InstantiateSkin(const std::string& name, const std::vector<clientrender::mat4>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const = 0;
 		virtual std::shared_ptr<Texture>				InstantiateTexture() const = 0;
 		virtual std::shared_ptr<UniformBuffer>			InstantiateUniformBuffer() const = 0;
 		virtual std::shared_ptr<VertexBuffer>			InstantiateVertexBuffer() const = 0;
 
-		std::shared_ptr<scr::Material> placeholderMaterial;
+		std::shared_ptr<clientrender::Material> placeholderMaterial;
 	};
 }

@@ -1,6 +1,6 @@
 #include "Skin.h"
 
-namespace scr
+namespace clientrender
 {
 	Skin::Skin(const std::string& name)
 		:name(name)

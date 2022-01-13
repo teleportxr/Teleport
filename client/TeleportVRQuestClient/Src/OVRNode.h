@@ -5,7 +5,7 @@
 #include "ClientRender/Node.h"
 #include "GlobalGraphicsResources.h"
 
-class OVRNode : public scr::Node
+class OVRNode : public clientrender::Node
 {
 public:
 	struct SurfaceInfo
@@ -27,8 +27,8 @@ public:
 			return surfaceDef;
 		}
 		PerMeshInstanceData perMeshInstanceData;
-		std::shared_ptr<scr::UniformBuffer> s_perMeshInstanceUniformBuffer;
-		scr::ShaderResource perMeshInstanceShaderResource;
+		std::shared_ptr<clientrender::UniformBuffer> s_perMeshInstanceUniformBuffer;
+		clientrender::ShaderResource perMeshInstanceShaderResource;
 		bool initialized=false;
 	private:
 		OVRFW::GlProgram* program = nullptr;
@@ -40,11 +40,11 @@ public:
 
 	virtual ~OVRNode() = default;
 
-	virtual void SetMesh(std::shared_ptr<scr::Mesh> mesh) override;
-	virtual void SetSkin(std::shared_ptr<scr::Skin> skin) override;
-	virtual void SetMaterial(size_t index, std::shared_ptr<scr::Material> material) override;
+	virtual void SetMesh(std::shared_ptr<clientrender::Mesh> mesh) override;
+	virtual void SetSkin(std::shared_ptr<clientrender::Skin> skin) override;
+	virtual void SetMaterial(size_t index, std::shared_ptr<clientrender::Material> material) override;
 	virtual void SetMaterialListSize(size_t size) override;
-	virtual void SetMaterialList(std::vector<std::shared_ptr<scr::Material>>& materials) override;
+	virtual void SetMaterialList(std::vector<std::shared_ptr<clientrender::Material>>& materials) override;
 
 	virtual void SetHighlighted(bool highlighted) override;
 
@@ -62,10 +62,10 @@ public:
 	void ChangeEffectPass(const char* effectPassName);
 
 private:
-	std::shared_ptr<scr::Texture>		mlightmapTexture;
+	std::shared_ptr<clientrender::Texture>		mlightmapTexture;
 	std::vector<SurfaceInfo> surfaceDefinitions;
 
-	SurfaceInfo CreateOVRSurface(size_t materialIndex, std::shared_ptr<scr::Material> material);
+	SurfaceInfo CreateOVRSurface(size_t materialIndex, std::shared_ptr<clientrender::Material> material);
 	OVRFW::GlProgram* GetEffectPass(const char* effectPassName);
 
 	//Recreates all OVR surfaces from scratch.

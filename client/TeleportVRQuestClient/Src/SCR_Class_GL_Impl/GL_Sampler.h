@@ -8,11 +8,11 @@
 namespace scc
 {
 	//Interface for Sampler
-	class GL_Sampler final : public scr::Sampler
+	class GL_Sampler final : public clientrender::Sampler
 	{
 	public:
-		GL_Sampler(const scr::RenderPlatform*const r)
-			:scr::Sampler(r) {}
+		GL_Sampler(const clientrender::RenderPlatform*const r)
+			:clientrender::Sampler(r) {}
 
 		void Create(SamplerCreateInfo* pSamplerCreateInfo) override;
 		void Destroy() override;

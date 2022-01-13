@@ -3,31 +3,31 @@
 namespace scc
 {
 GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name)
-	:scr::Skin(name)
+	:clientrender::Skin(name)
 {
 	CreateUniformBuffer(renderPlatform);
 }
 
-GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name, const std::vector<scr::mat4>& inverseBindMatrices, size_t boneAmount, const scr::Transform& skinTransform)
-	:scr::Skin(name, inverseBindMatrices, boneAmount, skinTransform)
+GL_Skin::GL_Skin(const scc::GL_RenderPlatform *renderPlatform, const std::string& name, const std::vector<clientrender::mat4>& inverseBindMatrices, size_t boneAmount, const clientrender::Transform& skinTransform)
+	:clientrender::Skin(name, inverseBindMatrices, boneAmount, skinTransform)
 {
 	CreateUniformBuffer(renderPlatform);
 }
 
-void GL_Skin::UpdateBoneMatrices(const scr::mat4 &rootTransform)
+void GL_Skin::UpdateBoneMatrices(const clientrender::mat4 &rootTransform)
 {
-	scr::Skin::UpdateBoneMatrices(rootTransform);
+	clientrender::Skin::UpdateBoneMatrices(rootTransform);
 	uniformBuffer->Update();
 }
 
 void GL_Skin::CreateUniformBuffer(const scc::GL_RenderPlatform *renderPlatform)
 {
 	//return;
-	size_t boneMatricesSize = sizeof(scr::mat4) * MAX_BONES;
+	size_t boneMatricesSize = sizeof(clientrender::mat4) * MAX_BONES;
 	uint32_t bindingIndex = 4;
 
 	//Set up uniform buffer.
-	scr::UniformBuffer::UniformBufferCreateInfo bufferCreateInfo;
+	clientrender::UniformBuffer::UniformBufferCreateInfo bufferCreateInfo;
 	bufferCreateInfo.name="u_BoneData";
 	bufferCreateInfo.bindingLocation = bindingIndex;
 	bufferCreateInfo.size = boneMatricesSize;
@@ -36,9 +36,9 @@ void GL_Skin::CreateUniformBuffer(const scc::GL_RenderPlatform *renderPlatform)
 	uniformBuffer = renderPlatform->InstantiateUniformBuffer();
 	uniformBuffer->Create(&bufferCreateInfo);
 
-	shaderResourceLayout.AddBinding(bindingIndex, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(bindingIndex, clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, clientrender::Shader::Stage::SHADER_STAGE_VERTEX);
 
-	shaderResource = scr::ShaderResource({shaderResourceLayout});
-	shaderResource.AddBuffer( scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, bindingIndex, "u_BoneData", {uniformBuffer.get(), 0, boneMatricesSize});
+	shaderResource = clientrender::ShaderResource({shaderResourceLayout});
+	shaderResource.AddBuffer( clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, bindingIndex, "u_BoneData", {uniformBuffer.get(), 0, boneMatricesSize});
 }
 }

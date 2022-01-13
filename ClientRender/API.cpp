@@ -2,6 +2,6 @@
 
 #include "API.h"
 
-using namespace scr;
+using namespace clientrender;
 
 API::APIType API::s_API = API::APIType::UNKNOWN;

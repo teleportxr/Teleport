@@ -4,7 +4,7 @@
 #include "Common.h"
 
 //Graphics API
-namespace scr
+namespace clientrender
 {
 	class API
 	{

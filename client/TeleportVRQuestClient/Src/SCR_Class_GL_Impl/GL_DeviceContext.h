@@ -14,22 +14,22 @@
 
 namespace scc
 {
-	class GL_DeviceContext final : public scr::DeviceContext
+	class GL_DeviceContext final : public clientrender::DeviceContext
     {
 	public:
-    GL_DeviceContext(const scr::RenderPlatform*const r)
-        :scr::DeviceContext(r) {}
+    GL_DeviceContext(const clientrender::RenderPlatform*const r)
+        :clientrender::DeviceContext(r) {}
 
         void Create(DeviceContextCreateInfo* pDeviceContextCreateInfo) override;
 
-        void Draw(scr::InputCommand* pInputCommand) override;
-        void DispatchCompute(scr::InputCommand* pInputCommand) override;
+        void Draw(clientrender::InputCommand* pInputCommand) override;
+        void DispatchCompute(clientrender::InputCommand* pInputCommand) override;
 
         void BeginFrame() override;
         void EndFrame() override;
 
     private:
-        void BindShaderResources(const std::vector<const scr::ShaderResource*>& shaderResources, scr::Effect* pEffect, const char* effectPassName);
+        void BindShaderResources(const std::vector<const clientrender::ShaderResource*>& shaderResources, clientrender::Effect* pEffect, const char* effectPassName);
 
     private:
     	GLenum m_Topology;

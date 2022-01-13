@@ -3,7 +3,7 @@
 
 #include "Common.h"
 
-namespace scr
+namespace clientrender
 {
 	//Interface for Shader
 	class Shader : public APIObject
@@ -36,7 +36,7 @@ namespace scr
 		ShaderCreateInfo m_CI;
 
 	public:
-		Shader(const scr::RenderPlatform* const r)
+		Shader(const clientrender::RenderPlatform* const r)
 			:APIObject(r), m_CI()
 		{}
 

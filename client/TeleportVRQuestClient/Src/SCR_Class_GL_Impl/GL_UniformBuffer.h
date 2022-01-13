@@ -6,14 +6,14 @@
 
 namespace scc
 {
-	class GL_UniformBuffer final : public scr::UniformBuffer
+	class GL_UniformBuffer final : public clientrender::UniformBuffer
 	{
 	private:
 		OVRFW::GlBuffer m_UBO;
 
 	public:
-		GL_UniformBuffer(const scr::RenderPlatform*const r)
-			:scr::UniformBuffer(r) {}
+		GL_UniformBuffer(const clientrender::RenderPlatform*const r)
+			:clientrender::UniformBuffer(r) {}
 
 		//Binding Locations for UBOs
 		//Camera = 0;

@@ -4,7 +4,7 @@
 
 #include "ClientRender/RenderPlatform.h"
 
-using namespace scr;
+using namespace clientrender;
 
 const uint32_t Light::s_MaxLights = 8; 
 std::vector<Light::LightData> Light::s_LightData = {};

@@ -14,7 +14,7 @@
 #include "Skin.h"
 #include "Transform.h"
 
-namespace scr
+namespace clientrender
 {
 	class Node
 	{
@@ -130,9 +130,9 @@ namespace scr
 		const avs::vec3& GetLocalPosition() const { return GetLocalTransform().m_Translation; }
 		const avs::vec3& GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }
 
-		void SetLocalRotation(const scr::quat& rot);
-		const scr::quat& GetLocalRotation() const { return GetLocalTransform().m_Rotation; }
-		const scr::quat& GetGlobalRotation() const { return GetGlobalTransform().m_Rotation; }
+		void SetLocalRotation(const clientrender::quat& rot);
+		const clientrender::quat& GetLocalRotation() const { return GetLocalTransform().m_Rotation; }
+		const clientrender::quat& GetGlobalRotation() const { return GetGlobalTransform().m_Rotation; }
 
 		void SetLocalScale(const avs::vec3& scale);
 		const avs::vec3& GetLocalScale() const { return GetLocalTransform().m_Scale; }
