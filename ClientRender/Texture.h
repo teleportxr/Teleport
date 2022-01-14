@@ -1,4 +1,4 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
  
 #include "Common.h"

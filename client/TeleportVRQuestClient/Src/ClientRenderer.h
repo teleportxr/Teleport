@@ -3,6 +3,7 @@
 #pragma once
 #include "basic_linear_algebra.h"
 #include "ClientRender/ResourceCreator.h"
+#include "ClientRender/Renderer.h"
 #include "GlobalGraphicsResources.h"
 #include <Render/SurfaceTexture.h>
 #include <libavstream/libavstream.hpp>
@@ -90,10 +91,10 @@ namespace teleport
 		class ClientDeviceState;
 	}
 }
-class ClientRenderer
+class ClientRenderer:public clientrender::Renderer
 {
 public:
-	ClientRenderer(clientrender::ResourceCreator *r,clientrender::GeometryCache *rm,ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
+	ClientRenderer(ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
 	~ClientRenderer();
 
 	void CycleShaderMode();
@@ -105,6 +106,7 @@ public:
 
 	void EnteredVR(const ovrJava *java);
 	void ExitedVR();
+	void Update(float time_elapsed);
 	void OnSetupCommandReceived(const avs::VideoConfig &vc);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
@@ -135,8 +137,9 @@ public:
 	avs::Queue mAudioQueue;
 	avs::Queue mGeometryQueue;
 
-	clientrender::GeometryCache	*geometryCache	=nullptr;
-	clientrender::ResourceCreator			*resourceCreator	=nullptr;
+	clientrender::GeometryCache geometryCache;
+	clientrender::ResourceCreator resourceCreator;
+
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	float eyeSeparation=0.06f;
 	avs::VideoConfig videoConfig;
@@ -230,24 +233,9 @@ public:
 
 	std::string                         CopyCubemapSrc;
 	std::string                         ExtractTagDataIDSrc;
-	enum
-	{
-		NO_OSD,
-		CAMERA_OSD,
-		NETWORK_OSD,
-		GEOMETRY_OSD,
-		TEXTURES_OSD,
-		TAG_OSD,
-		CONTROLLER_OSD,
-		NUM_OSDS
-	};
-	int show_osd = NO_OSD;
 	uint32_t osd_selection;
 	void DrawOSD(OVRFW::ovrRendererOutput& res);
-	avs::SetupCommand lastSetupCommand;
-	avs::SetupLightingCommand setupLightingCommand;
 protected:
-	int32_t minimumPriority=0;
 	void ListNode(const std::shared_ptr<clientrender::Node>& node, int indent, size_t& linesRemaining);
 	teleport::client::ClientDeviceState *clientDeviceState=nullptr;
 	void UpdateTagDataBuffers();

@@ -1,4 +1,4 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #include "SessionClient.h"
 
 #include <limits>
@@ -27,6 +27,11 @@ SessionClient::~SessionClient()
 void SessionClient::SetResourceCreator(avs::GeometryTargetBackendInterface *r)
 {
 	mResourceCreator=r;
+}
+
+void SessionClient::SetGeometryCache(avs::GeometryCacheBackendInterface* r)
+{
+	geometryCache = r;
 }
 
 uint32_t SessionClient::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
@@ -433,8 +438,8 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 
 void SessionClient::SendResourceRequests()
 {
-	std::vector<avs::uid> resourceRequests = mResourceCreator->GetResourceRequests();
-	mResourceCreator->ClearResourceRequests();
+	std::vector<avs::uid> resourceRequests = geometryCache->GetResourceRequests();
+	geometryCache->ClearResourceRequests();
 	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
 	mResourceRequests.insert(mResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
 	resourceRequests.clear();
@@ -460,8 +465,8 @@ void SessionClient::SendResourceRequests()
 
 void SessionClient::SendReceivedResources()
 {
-	std::vector<avs::uid> receivedResources = mResourceCreator->GetReceivedResources();
-	mResourceCreator->ClearReceivedResources();
+	std::vector<avs::uid> receivedResources = geometryCache->GetReceivedResources();
+	geometryCache->ClearReceivedResources();
 
 	if(receivedResources.size() != 0)
 	{
@@ -492,8 +497,8 @@ void SessionClient::SendNodeUpdates()
 {
 	//Insert completed nodes.
 	{
-		std::vector<avs::uid> completedNodes = mResourceCreator->GetCompletedNodes();
-		mResourceCreator->ClearCompletedNodes();
+		std::vector<avs::uid> completedNodes = geometryCache->GetCompletedNodes();
+		geometryCache->ClearCompletedNodes();
 		mReceivedNodes.insert(mReceivedNodes.end(), completedNodes.begin(), completedNodes.end());
 	}
 

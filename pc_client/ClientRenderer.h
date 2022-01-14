@@ -25,16 +25,23 @@
 #include "ClientRender/Texture.h"
 #include "ClientRender/UniformBuffer.h"
 #include "ClientRender/VertexBuffer.h"
+#include "ClientRender/Renderer.h"
 
 #include "crossplatform/AudioStreamTarget.h"
 #include "pc/PC_AudioPlayer.h"
 #include "TeleportClient/ClientDeviceState.h"
 #include "SCR_Class_PC_Impl/PC_MemoryUtil.h"
 #include "Gui.h"
+#include "TeleportClient/ClientPipeline.h"
 
 namespace avs
 {
 	typedef LARGE_INTEGER Timestamp;
+}
+
+namespace clientrender
+{
+	class Material;
 }
 
 namespace pc_client
@@ -46,11 +53,8 @@ namespace pc_client
 	class VertexBuffer;
 	class PC_RenderPlatform;
 }
-
-namespace clientrender
+namespace teleport
 {
-	class Material;
-}
 /// <summary>
 /// A 
 /// </summary>
@@ -70,6 +74,7 @@ struct RendererStats
 
 /// @brief The renderer for a client connection.
 class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, public SessionCommandInterface
+		,public clientrender::Renderer
 {
 	enum class ShaderMode
 	{
@@ -90,7 +95,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
 
 	// A simple example mesh to draw as transparent
-	simul::crossplatform::MeshRenderer *meshRenderer	= nullptr;
 	simul::crossplatform::Effect *pbrEffect				= nullptr;
 	simul::crossplatform::Effect *cubemapClearEffect	= nullptr;
 	simul::crossplatform::ShaderResource _RWTagDataIDBuffer;
@@ -125,10 +129,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool keydown[256] = {};
 	SessionClient sessionClient;
 	teleport::client::ControllerState controllerStates[2];
-	float framerate = 0.0f;
-	avs::Timestamp platformStartTimestamp;	//Timestamp of when the system started.
-	double previousTimestamp;				//Milliseconds since the state was last updated.
-
 	clientrender::GeometryCache localGeometryCache;
 	clientrender::ResourceCreator localResourceCreator;
 	clientrender::GeometryCache geometryCache;
@@ -137,17 +137,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool show_video = false;
 	bool renderPlayer = true; //Whether to render the player.
 
-	enum
-	{
-		NO_OSD,
-		CAMERA_OSD,
-		NETWORK_OSD,
-		GEOMETRY_OSD,
-		TAG_OSD,
-		CONTROLLER_OSD,
-		NUM_OSDS
-	};
-	int show_osd = NO_OSD;
 	bool render_from_video_centre	= false;
 	bool show_textures				= false;
 	bool show_cubemaps				=false;
@@ -241,10 +230,10 @@ public:
 
 	static constexpr avs::SurfaceFormat SurfaceFormat = avs::SurfaceFormat::ARGB;
 	AVSTextureHandle avsTexture;
-	avs::Context context;
+
 	avs::VideoConfig videoConfig;
 
-	avs::NetworkSource source;
+	//avs::NetworkSource source;
 	avs::Queue videoQueue;
 	avs::Decoder decoder;
 	avs::Surface surface;
@@ -269,6 +258,7 @@ public:
 	avs::SetupCommand lastSetupCommand;
 
 	avs::SetupLightingCommand lastSetupLightingCommand;
+		teleport::client::ClientPipeline clientPipeline;
 	int RenderMode;
 	std::shared_ptr<clientrender::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;
@@ -299,3 +289,5 @@ private:
 	bool have_vr_device = false;
 	simul::crossplatform::Texture* externalTexture = nullptr;
 };
+
+}

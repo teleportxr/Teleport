@@ -1,4 +1,4 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
 
 #include <atomic>
@@ -86,8 +86,9 @@ namespace clientrender
 	};
 	//! A container for geometry sent from servers and cached locally.
 	//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
-	struct GeometryCache
+	class GeometryCache : public avs::GeometryCacheBackendInterface
 	{
+	public:
 		GeometryCache(NodeManager *);
 
 		~GeometryCache();
@@ -185,6 +186,15 @@ namespace clientrender
 			//mUniformBufferManager.ClearCareful(excludeList);
 			//mVertexBufferManager.ClearCareful(excludeList);
 		}
+		//Returns the resources the ResourceCreator needs, and clears the list.
+		std::vector<avs::uid> GetResourceRequests() const override;
+		void ClearResourceRequests() override;
+		//Returns a list of resource IDs corresponding to the resources the client has received, and clears the list.
+		std::vector<avs::uid> GetReceivedResources() const override;
+		void ClearReceivedResources() override;
+		//Returns the nodes that have been finished since the call, and clears the list.
+		std::vector<avs::uid> GetCompletedNodes() const override;
+		void ClearCompletedNodes() override;
 
 		std::unique_ptr<clientrender::NodeManager>	mNodeManager;
 		ResourceManager<clientrender::IndexBuffer>   mIndexBufferManager;

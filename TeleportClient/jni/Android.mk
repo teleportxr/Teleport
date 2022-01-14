@@ -26,6 +26,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../firstparty
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
 LOCAL_SRC_FILES :=	../ClientDeviceState.cpp					\
+					../ClientPipeline.cpp						\
 					../ServerTimestamp.cpp						\
 					../Input.cpp						\
 					../Log.cpp						\

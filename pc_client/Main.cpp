@@ -35,7 +35,9 @@ simul::dx11::DeviceManager deviceManager;
 #include "UseOpenXR.h"
 #include "Platform/CrossPlatform/GpuProfiler.cpp"
 
-ClientRenderer *clientRenderer=nullptr;
+using namespace teleport;
+
+teleport::ClientRenderer *clientRenderer=nullptr;
 simul::crossplatform::RenderDelegate renderDelegate;
 teleport::UseOpenXR useOpenXR;
 simul::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
@@ -46,6 +48,9 @@ simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
 std::vector<std::string> server_ips;
 teleport::Gui gui;
+
+// Need ONE global instance of this:
+avs::Context context;
 
 #define MAX_LOADSTRING 100
 
@@ -204,7 +209,7 @@ void ShutdownRenderer(HWND hWnd)
 	
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	clientRenderer=new ClientRenderer (&clientDeviceState,gui, dev_mode);
+	clientRenderer=new teleport::ClientRenderer (&clientDeviceState,gui, dev_mode);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;

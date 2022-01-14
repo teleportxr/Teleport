@@ -46,6 +46,8 @@
 
 #include "TeleportCore/ErrorHandling.h"
 
+using namespace teleport;
+
 static const char* ToString(clientrender::Light::Type type)
 {
 	const char* lightTypeName = "";
@@ -127,12 +129,9 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
 	, gui(g)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
+	sessionClient.SetGeometryCache(&geometryCache);
 	resourceCreator.SetGeometryCache(&geometryCache);
 	localResourceCreator.SetGeometryCache(&localGeometryCache);
-
-	// Initalize time stamping for state update.
-	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
-	previousTimestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 
 	clientrender::Tests::RunAllTests();
 }
@@ -161,7 +160,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
 	hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
 	hdrFramebuffer->SetAntialiasing(1);
-	meshRenderer	= new crossplatform::MeshRenderer();
 	camera.SetPositionAsXYZ(0.f,0.f,2.f);
 	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
 	camera.LookInDirection(look,up);
@@ -188,7 +186,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	memset(keydown,0,sizeof(keydown));
 
 	hDRRenderer->RestoreDeviceObjects(renderPlatform);
-	meshRenderer->RestoreDeviceObjects(renderPlatform);
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
 	gui.RestoreDeviceObjects(renderPlatform);
@@ -289,7 +286,6 @@ void ClientRenderer::RecompileShaders()
 {
 	renderPlatform->RecompileShaders();
 	hDRRenderer->RecompileShaders();
-	meshRenderer->RecompileShaders();
 	gui.RecompileShaders();
 	delete pbrEffect;
 	delete cubemapClearEffect;
@@ -798,7 +794,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
-	const avs::NetworkSourceCounters counters = source.getCounterValues();
+	const avs::NetworkSourceCounters counters = clientPipeline.source.getCounterValues();
 	const avs::DecoderStats vidStats = decoder.GetStats();
 
 	deviceContext.framePrintX = 8;
@@ -808,7 +804,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", server_ip.c_str(), server_discovery_port):"Offline"),white);
 	gui.LinePrint( platform::core::QuickFormat("Framerate: %4.4f", framerate));
 
-	if(show_osd== NETWORK_OSD)
+	if(show_osd== clientrender::NETWORK_OSD)
 	{
 		gui.LinePrint( platform::core::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
 		gui.LinePrint( platform::core::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
@@ -823,7 +819,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		gui.LinePrint( platform::core::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
 		gui.LinePrint( platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
 	}
-	else if(show_osd== CAMERA_OSD)
+	else if(show_osd== clientrender::CAMERA_OSD)
 	{
 		vec3 offset=camera.GetPosition();
 		gui.LinePrint( receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
@@ -838,7 +834,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			gui.LinePrint( platform::core::QuickFormat(" Video: -"), white);
 		}
 	}
-	else if(show_osd==GEOMETRY_OSD)
+	else if(show_osd== clientrender::GEOMETRY_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		gui.LinePrint( platform::core::QuickFormat("Nodes: %d",geometryCache.mNodeManager->GetNodeAmount()), white);
@@ -932,7 +928,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			}
 		}
 	}
-	else if(show_osd==TAG_OSD)
+	else if(show_osd== clientrender::TAG_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto& cachedLights = geometryCache.mLightManager.GetCache(cacheLock);
@@ -972,7 +968,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			}
 		}
 	}
-	else if(show_osd== CONTROLLER_OSD)
+	else if(show_osd== clientrender::CONTROLLER_OSD)
 	{
 		gui.LinePrint( "CONTROLLERS\n");
 		gui.LinePrint( platform::core::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
@@ -1334,13 +1330,10 @@ void ClientRenderer::InvalidateDeviceObjects()
 		renderPlatform->InvalidateDeviceObjects();
 	if(hdrFramebuffer)
 		hdrFramebuffer->InvalidateDeviceObjects();
-	if(meshRenderer)
-		meshRenderer->InvalidateDeviceObjects();
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularCubemapTexture);
 	SAFE_DELETE(lightingCubemapTexture);
 	SAFE_DELETE(videoTexture);
-	SAFE_DELETE(meshRenderer);
 	SAFE_DELETE(hDRRenderer);
 	SAFE_DELETE(hdrFramebuffer);
 	SAFE_DELETE(pbrEffect);
@@ -1370,7 +1363,7 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 
 void ClientRenderer::Update()
 {
-	double timestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
+	double timestamp = avs::PlatformWindows::getTimeElapsed(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 	double timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
 
 	teleport::client::ServerTimestamp::tick(timeElapsed);
@@ -1459,21 +1452,21 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	sourceParams.useSSL = setupCommand.using_ssl;
 
 	// Configure for video stream, tag data stream, audio stream and geometry stream.
-	if (!source.configure(std::move(streams), sourceParams))
+	if (!clientPipeline.source.configure(std::move(streams), sourceParams))
 	{
 		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
 		return false;
 	}
 
-	source.setDebugStream(setupCommand.debug_stream);
-	source.setDoChecksums(setupCommand.do_checksums);
-	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+	clientPipeline.source.setDebugStream(setupCommand.debug_stream);
+	clientPipeline.source.setDoChecksums(setupCommand.do_checksums);
+	clientPipeline.source.setDebugNetworkPackets(setupCommand.debug_network_packets);
 
 	//test
 	//avs::HTTPPayloadRequest req;
 	//req.fileName = "meshes/engineering/Cube_Cube.mesh";
 	//req.type = avs::FilePayloadType::Mesh;
-	//source.GetHTTPRequestQueue().emplace(std::move(req));
+	//clientPipeline.source.GetHTTPRequestQueue().emplace(std::move(req));
 
 	bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, bodyOffsetFromHead);
@@ -1496,8 +1489,8 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 #endif
 
 	pipeline.reset();
-	// Top of the pipeline, we have the network source.
-	pipeline.add(&source);
+	// Top of the pipeline, we have the network clientPipeline.source.
+	pipeline.add(&clientPipeline.source);
 
 	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
 	if (ti)
@@ -1561,7 +1554,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 	videoQueue.configure(200000, 16, "VideoQueue");
 
-	avs::PipelineNode::link(source, videoQueue);
+	avs::PipelineNode::link(clientPipeline.source, videoQueue);
 	avs::PipelineNode::link(videoQueue, decoder);
 	pipeline.link({ &decoder, &surface });
 	
@@ -1575,7 +1568,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 		tagDataQueue.configure(200, 16, "TagDataQueue");
 
-		avs::PipelineNode::link(source, tagDataQueue);
+		avs::PipelineNode::link(clientPipeline.source, tagDataQueue);
 		pipeline.link({ &tagDataQueue, &tagDataDecoder });
 	}
 
@@ -1595,7 +1588,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 		audioQueue.configure(4096, 120, "AudioQueue");
 
-		avs::PipelineNode::link(source, audioQueue);
+		avs::PipelineNode::link(clientPipeline.source, audioQueue);
 		avs::PipelineNode::link(audioQueue, avsAudioDecoder);
 		pipeline.link({ &avsAudioDecoder, &avsAudioTarget });
 	}
@@ -1608,7 +1601,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 		geometryQueue.configure(10000, 200, "GeometryQueue");
 
-		avs::PipelineNode::link(source, geometryQueue);
+		avs::PipelineNode::link(clientPipeline.source, geometryQueue);
 		avs::PipelineNode::link(geometryQueue, avsGeometryDecoder);
 		pipeline.link({ &avsGeometryDecoder, &avsGeometryTarget });
 	}
@@ -1620,7 +1613,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	handshake.FOV = 90.0f;
 	handshake.isVR = false;
 	handshake.framerate = 60;
-	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
+	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
 	handshake.clientStreamingPort=sourceParams.localPort;
@@ -1863,6 +1856,7 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 {
+	using_vr = have_headset;
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
 	clientspace_input.y=((float)keydown['w']-(float)keydown['s'])*(float)(keydown[VK_SHIFT]);
@@ -1962,7 +1956,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		static short c = 0;
 		if (!(c--))
 		{
-			const avs::NetworkSourceCounters Counters = source.getCounterValues();
+			const avs::NetworkSourceCounters Counters = clientPipeline.source.getCounterValues();
 			std::cout << "Network packets dropped: " << 100.0f*Counters.networkDropped << "%"
 				<< "\nDecoder packets dropped: " << 100.0f*Counters.decoderDropped << "%"
 				<< std::endl;
@@ -2103,7 +2097,7 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			show_video = !show_video;
 			break;
 		case 'O':
-			show_osd =(show_osd+1)%NUM_OSDS;
+			show_osd =(show_osd+1)%clientrender::NUM_OSDS;
 			break;
 		case 'C':
 			render_from_video_centre = !render_from_video_centre;

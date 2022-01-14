@@ -747,8 +747,11 @@ struct Animation;
 		virtual void CreateNode(uid id, Node& node) = 0;
 		virtual void CreateSkin(avs::uid id, avs::Skin& skin) = 0;
 		virtual void CreateAnimation(avs::uid id, avs::Animation& animation) = 0;
+	};
 
-		
+	class AVSTREAM_API GeometryCacheBackendInterface : public UseInternalAllocator
+	{
+	public:
 		virtual std::vector<avs::uid> GetCompletedNodes() const = 0;
 		virtual std::vector<avs::uid> GetReceivedResources() const = 0;
 		virtual std::vector<avs::uid> GetResourceRequests() const = 0;

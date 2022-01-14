@@ -129,7 +129,6 @@ namespace OVRFW
 		void PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,...) override;
 		std::string LoadTextFile(const char *filename) override;
 
-
 		avs::Context  mContext;
 		avs::Pipeline mPipeline;
 
@@ -175,8 +174,6 @@ namespace OVRFW
 		LobbyRenderer lobbyRenderer;
 
 		std::unique_ptr<Android_MemoryUtil> memoryUtil;
-		clientrender::GeometryCache geometryCache;
-		clientrender::ResourceCreator resourceCreator;
 		Controllers controllers;
 
 		std::string server_ip;

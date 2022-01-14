@@ -1,4 +1,4 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
 
 #include <atomic>
@@ -37,16 +37,6 @@ namespace clientrender
 		~ResourceCreator();
 	
 		void Initialize(clientrender::RenderPlatform *r, clientrender::VertexBufferLayout::PackingStyle packingStyle);
-
-		//Returns the resources the ResourceCreator needs, and clears the list.
-		std::vector<avs::uid> GetResourceRequests() const override;
-		void ClearResourceRequests() override;
-		//Returns a list of resource IDs corresponding to the resources the client has received, and clears the list.
-		std::vector<avs::uid> GetReceivedResources() const override;
-		void ClearReceivedResources() override;
-		//Returns the nodes that have been finished since the call, and clears the list.
-		std::vector<avs::uid> GetCompletedNodes() const override;
-		void ClearCompletedNodes() override;
 
 		void Clear();
 
@@ -124,7 +114,7 @@ namespace clientrender
 		std::thread basisThread;						//Thread where we transcode basis files to mip data.
 	
 		const uint32_t whiteBGRA = 0xFFFFFFFF;
-		//const uint32_t normalBGRA = 0xFF7F7FFF;
+	
 		const uint32_t normalRGBA = 0xFFFF7F7F;
 		const uint32_t combinedBGRA = 0xFFFFFFFF;
 		const uint32_t blackBGRA = 0x0;

@@ -49,14 +49,13 @@ Application::Application()
 		  , mSoundEffectPlayer(nullptr)
 		  , mGuiSys(nullptr)
 		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
-		  , clientRenderer(&resourceCreator, &geometryCache, this, &clientDeviceState,&controllers)
+			,clientRenderer(this, &clientDeviceState,&controllers)
 		  , lobbyRenderer(&clientDeviceState, this)
-		  , resourceCreator()
-		  , geometryCache(new OVRNodeManager())
 {
 	RedirectStdCoutCerr();
 
-	sessionClient.SetResourceCreator(&resourceCreator);
+	sessionClient.SetResourceCreator(&clientRenderer.resourceCreator);
+	sessionClient.SetGeometryCache(&clientRenderer.geometryCache);
 
 	pthread_setname_np(pthread_self(), "SimulCaster_Application");
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
@@ -221,9 +220,9 @@ void Application::EnteredVrMode()
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	mDeviceContext.reset(new scc::GL_DeviceContext(&globalGraphicsResources.renderPlatform));
-	resourceCreator.Initialize((&globalGraphicsResources.renderPlatform),
+	clientRenderer.resourceCreator.Initialize((&globalGraphicsResources.renderPlatform),
 							   clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
-	resourceCreator.SetGeometryCache(&geometryCache);
+	clientRenderer.resourceCreator.SetGeometryCache(&clientRenderer.geometryCache);
 
 	//Default Effects
 	clientrender::Effect::EffectCreateInfo ci;
@@ -612,8 +611,8 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
 	float time_elapsed = in.DeltaSeconds * 1000.0f;
 	teleport::client::ServerTimestamp::tick(time_elapsed);
-	geometryCache.Update(time_elapsed);
-	resourceCreator.Update(time_elapsed);
+	clientRenderer.geometryCache.Update(time_elapsed);
+	clientRenderer.resourceCreator.Update(time_elapsed);
 
     //Move the hands before they are drawn.
 	UpdateHandObjects();
@@ -651,7 +650,7 @@ void Application::UpdateHandObjects()
 		}
 	}
 
-	std::shared_ptr<clientrender::Node> body = geometryCache.mNodeManager->GetBody();
+	std::shared_ptr<clientrender::Node> body = clientRenderer.geometryCache.mNodeManager->GetBody();
 	if(body)
 	{
 		// TODO: SHould this be globalPose??
@@ -664,14 +663,14 @@ void Application::UpdateHandObjects()
 	}
 
 	// Left and right hands have no parent and their position/orientation is relative to the current local space.
-	std::shared_ptr<clientrender::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
+	std::shared_ptr<clientrender::Node> rightHand = clientRenderer.geometryCache.mNodeManager->GetRightHand();
 	if(rightHand)
 	{
 		rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].globalPose.position);
 		rightHand->SetLocalRotation(clientDeviceState.controllerPoses[0].globalPose.orientation);
 	}
 
-	std::shared_ptr<clientrender::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
+	std::shared_ptr<clientrender::Node> leftHand = clientRenderer.geometryCache.mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
 		leftHand->SetLocalPosition(clientDeviceState.controllerPoses[1].globalPose.position);
@@ -874,7 +873,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		if (GeoStream)
 		{
 			avsGeometryDecoder.configure(80, &geometryDecoder);
-			avsGeometryTarget.configure(&resourceCreator);
+			avsGeometryTarget.configure(&clientRenderer.resourceCreator);
 			clientRenderer.mGeometryQueue.configure(2500000, 100, "GeometryQueue");
 
 			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mGeometryQueue);
@@ -906,13 +905,13 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 
 void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)
 {
-	clientRenderer.setupLightingCommand=s;
+	clientRenderer.lastSetupLightingCommand=s;
 }
 
 void Application::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
-	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
-	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
+	auto node=clientRenderer.geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
+	auto parent=clientRenderer.geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
 	node->SetParent(parent);
 }
 
@@ -923,13 +922,13 @@ void Application::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateN
 		case avs::NodeSubtype::None:
 			break;
 		case avs::NodeSubtype::Body:
-			geometryCache.mNodeManager->SetBody(updateNodeSubTypeCommand.nodeID);
+			clientRenderer.geometryCache.mNodeManager->SetBody(updateNodeSubTypeCommand.nodeID);
 			break;
 		case avs::NodeSubtype::LeftHand:
-			geometryCache.mNodeManager->SetLeftHand(updateNodeSubTypeCommand.nodeID);
+			clientRenderer.geometryCache.mNodeManager->SetLeftHand(updateNodeSubTypeCommand.nodeID);
 			break;
 		case avs::NodeSubtype::RightHand:
-			geometryCache.mNodeManager->SetRightHand(updateNodeSubTypeCommand.nodeID);
+			clientRenderer.geometryCache.mNodeManager->SetRightHand(updateNodeSubTypeCommand.nodeID);
 			break;
 		default:
 			SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeSubTypeCommand.nodeSubtype) << "!\n";
@@ -962,47 +961,47 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand &reconfi
 
 bool Application::OnNodeEnteredBounds(avs::uid id)
 {
-	return geometryCache.mNodeManager->ShowNode(id);
+	return clientRenderer.geometryCache.mNodeManager->ShowNode(id);
 }
 
 bool Application::OnNodeLeftBounds(avs::uid id)
 {
-	return geometryCache.mNodeManager->HideNode(id);
+	return clientRenderer.geometryCache.mNodeManager->HideNode(id);
 }
 
 std::vector<uid> Application::GetGeometryResources()
 {
-	return geometryCache.GetAllResourceIDs();
+	return clientRenderer.geometryCache.GetAllResourceIDs();
 }
 
 void Application::ClearGeometryResources()
 {
-	geometryCache.Clear();
+	clientRenderer.geometryCache.Clear();
 }
 
 void Application::SetVisibleNodes(const std::vector<avs::uid> &visibleNodes)
 {
-	geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
+	clientRenderer.geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
 }
 
 void Application::UpdateNodeMovement(const std::vector<avs::MovementUpdate> &updateList)
 {
-	geometryCache.mNodeManager->UpdateNodeMovement(updateList);
+	clientRenderer.geometryCache.mNodeManager->UpdateNodeMovement(updateList);
 }
 
 void Application::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
 {
-	geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
+	clientRenderer.geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
 }
 
 void Application::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
-	geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+	clientRenderer.geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
 }
 
 void Application::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
 {
-	geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
+	clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
 }
 
 void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate)
@@ -1010,13 +1009,13 @@ void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationContr
 	switch(animationControlUpdate.timeControl)
 	{
 		case avs::AnimationTimeControl::ANIMATION_TIME:
-			geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
+			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 			break;
 		case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
-			geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[0].triggerBack, 1.0f);
+			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[0].triggerBack, 1.0f);
 			break;
 		case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
-			geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[1].triggerBack, 1.0f);
+			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[1].triggerBack, 1.0f);
 			break;
 		default:
 			TELEPORT_CLIENT_WARN("Failed to update node animation control! Time control was set to the invalid value %d!", static_cast<int>(animationControlUpdate.timeControl));
@@ -1026,7 +1025,7 @@ void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationContr
 
 void Application::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	geometryCache.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
+	clientRenderer.geometryCache.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 void Application::OnFrameAvailable()

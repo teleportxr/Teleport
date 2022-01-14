@@ -8,6 +8,8 @@ set(src_files
 	basic_linear_algebra.h
 	ClientDeviceState.cpp
 	ClientDeviceState.h
+	ClientPipeline.cpp
+	ClientPipeline.h
 	DiscoveryService.h
 	Input.cpp
 	Input.h

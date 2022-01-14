@@ -1,4 +1,4 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #include "ResourceCreator.h"
 
 #include "Animation.h"
@@ -88,39 +88,6 @@ void ResourceCreator::Initialize(clientrender::RenderPlatform* r, clientrender::
 	m_DummyGreen->Create(tci);
 }
 
-std::vector<avs::uid> ResourceCreator::GetResourceRequests() const
-{
-	std::vector<avs::uid> resourceRequests = geometryCache->m_ResourceRequests;
-	//Remove duplicates.
-	std::sort(resourceRequests.begin(), resourceRequests.end());
-	resourceRequests.erase(std::unique(resourceRequests.begin(), resourceRequests.end()), resourceRequests.end());
-
-	return resourceRequests;
-}
-void ResourceCreator::ClearResourceRequests()
-{
-	geometryCache->m_ResourceRequests.clear();
-}
-
-std::vector<avs::uid> ResourceCreator::GetReceivedResources() const
-{
-	return geometryCache->m_ReceivedResources;
-}
-
-void ResourceCreator::ClearReceivedResources()
-{
-	geometryCache->m_ReceivedResources.clear();
-}
-
-std::vector<avs::uid> ResourceCreator::GetCompletedNodes() const
-{
-	return geometryCache->m_CompletedNodes;
-}
-
-void ResourceCreator::ClearCompletedNodes()
-{
-	geometryCache->m_CompletedNodes.clear();
-}
 
 void ResourceCreator::Clear()
 {
