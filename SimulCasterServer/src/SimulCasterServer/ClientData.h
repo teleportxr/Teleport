@@ -3,6 +3,7 @@
 #include "enet/enet.h"
 #include "libavstream/common.hpp"
 
+#include "SimulCasterServer/ClientManager.h"
 #include "SimulCasterServer/ClientMessaging.h"
 #include "SimulCasterServer/GeometryStreamingService.h"
 #include "SimulCasterServer/ServerSettings.h"
@@ -36,7 +37,7 @@ namespace teleport
 		class ClientData
 		{
 		public:
-			ClientData(std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const teleport::ClientMessaging& clientMessaging);
+			ClientData(std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, std::shared_ptr<teleport::ClientMessaging> clientMessaging);
 			void StartStreaming(const teleport::ServerSettings &casterSettings, const teleport::CasterEncoderSettings &encoderSettings
 				, uint32_t connectionTimeout
 				, avs::uid serverID
@@ -51,7 +52,7 @@ namespace teleport
 			std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService;
 			std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline;
 			std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline;
-			teleport::ClientMessaging clientMessaging;
+			std::shared_ptr<teleport::ClientMessaging> clientMessaging;
 
 			bool isStreaming = false;
 			bool validClientSettings = false;
