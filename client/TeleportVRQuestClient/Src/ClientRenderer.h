@@ -2,7 +2,7 @@
 // (C) Copyright 2018 Simul
 #pragma once
 #include "basic_linear_algebra.h"
-#include "crossplatform/ResourceCreator.h"
+#include "ClientRender/ResourceCreator.h"
 #include "GlobalGraphicsResources.h"
 #include <Render/SurfaceTexture.h>
 #include <libavstream/libavstream.hpp>
@@ -93,7 +93,7 @@ namespace teleport
 class ClientRenderer
 {
 public:
-	ClientRenderer(scr::ResourceCreator *r,scr::GeometryCache *rm,ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
+	ClientRenderer(clientrender::ResourceCreator *r,clientrender::GeometryCache *rm,ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
 	~ClientRenderer();
 
 	void CycleShaderMode();
@@ -111,7 +111,7 @@ public:
     void RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVRFW::ovrRendererOutput &res);
 
 	void RenderLocalNodes(OVRFW::ovrRendererOutput& res);
-	void RenderNode(OVRFW::ovrRendererOutput& res, std::shared_ptr<scr::Node> node);
+	void RenderNode(OVRFW::ovrRendererOutput& res, std::shared_ptr<clientrender::Node> node);
 
 	void SetWebcamPosition(const avs::vec2& position);
 	void RenderWebcam(OVRFW::ovrRendererOutput& res);
@@ -135,8 +135,8 @@ public:
 	avs::Queue mAudioQueue;
 	avs::Queue mGeometryQueue;
 
-	scr::GeometryCache	*geometryCache	=nullptr;
-	scr::ResourceCreator			*resourceCreator	=nullptr;
+	clientrender::GeometryCache	*geometryCache	=nullptr;
+	clientrender::ResourceCreator			*resourceCreator	=nullptr;
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	float eyeSeparation=0.06f;
 	avs::VideoConfig videoConfig;
@@ -154,8 +154,8 @@ public:
 
 	struct CubemapUB
 	{
-		scr::uvec2 dimensions;
-		scr::ivec2 sourceOffset;
+		clientrender::uvec2 dimensions;
+		clientrender::ivec2 sourceOffset;
 		uint32_t   faceSize;
 		uint32_t    mip = 0;
 		uint32_t    face = 0;
@@ -164,20 +164,20 @@ public:
 
 	struct WebcamUB
 	{
-		scr::uvec2 sourceTexSize;
-		scr::ivec2 sourceOffset;
-		scr::uvec2 camTexSize;
-        scr::uvec2 pad = {0,0};
+		clientrender::uvec2 sourceTexSize;
+		clientrender::ivec2 sourceOffset;
+		clientrender::uvec2 camTexSize;
+        clientrender::uvec2 pad = {0,0};
 	};
 
 	struct WebcamResources
 	{
 		OVRFW::GlProgram program;
 		OVRFW::ovrSurfaceDef surfaceDef;
-		std::shared_ptr<scr::VertexBuffer> vertexBuffer;
-		std::shared_ptr<scr::IndexBuffer> indexBuffer;
+		std::shared_ptr<clientrender::VertexBuffer> vertexBuffer;
+		std::shared_ptr<clientrender::IndexBuffer> indexBuffer;
 		WebcamUB webcamUBData;
-		std::shared_ptr<scr::UniformBuffer> webcamUB;
+		std::shared_ptr<clientrender::UniformBuffer> webcamUB;
 		ovrMatrix4f transform;
 		bool initialized = false;
 
@@ -193,29 +193,29 @@ public:
 	OVRFW::GlProgram     m2DVideoSurfaceProgram;
 	OVRFW::SurfaceTexture* mVideoSurfaceTexture = nullptr;
 	OVRFW::SurfaceTexture* mAlphaSurfaceTexture = nullptr;
-	std::shared_ptr<scr::Texture>       mVideoTexture;
-	std::shared_ptr<scr::Texture>       mAlphaVideoTexture;
-	std::shared_ptr<scr::Texture>       mRenderTexture;
-	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;
-	std::shared_ptr<scr::Texture>       specularCubemapTexture;
-	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
-	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
-	std::shared_ptr<scr::UniformBuffer> mVideoUB;
-	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataIDBuffer;
-	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
-	scr::ShaderResource				    mColourAndDepthShaderResources;
-	scr::ShaderResource				    mCopyCubemapShaderResources;
-	scr::ShaderResource				    mCopyPerspectiveShaderResources;
-	scr::ShaderResource				    mExtractTagShaderResources;
-	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
-	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
-	std::shared_ptr<scr::Effect>        mCopyCubemapWithAlphaLayerEffect;
-	std::shared_ptr<scr::Effect>        mCopyPerspectiveEffect;
-	std::shared_ptr<scr::Effect>        mCopyPerspectiveWithDepthEffect;
-	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;
-	std::shared_ptr<scr::Effect>        mExtractOneTagEffect;
+	std::shared_ptr<clientrender::Texture>       mVideoTexture;
+	std::shared_ptr<clientrender::Texture>       mAlphaVideoTexture;
+	std::shared_ptr<clientrender::Texture>       mRenderTexture;
+	std::shared_ptr<clientrender::Texture>       diffuseCubemapTexture;
+	std::shared_ptr<clientrender::Texture>       specularCubemapTexture;
+	std::shared_ptr<clientrender::Texture>       mCubemapLightingTexture;
+	std::shared_ptr<clientrender::UniformBuffer> mCubemapUB;
+	std::shared_ptr<clientrender::UniformBuffer> mVideoUB;
+	std::shared_ptr<clientrender::ShaderStorageBuffer> mTagDataIDBuffer;
+	std::shared_ptr<clientrender::ShaderStorageBuffer> mTagDataArrayBuffer;
+	clientrender::ShaderResource				    mColourAndDepthShaderResources;
+	clientrender::ShaderResource				    mCopyCubemapShaderResources;
+	clientrender::ShaderResource				    mCopyPerspectiveShaderResources;
+	clientrender::ShaderResource				    mExtractTagShaderResources;
+	std::shared_ptr<clientrender::Effect>        mCopyCubemapEffect;
+	std::shared_ptr<clientrender::Effect>        mCopyCubemapWithDepthEffect;
+	std::shared_ptr<clientrender::Effect>        mCopyCubemapWithAlphaLayerEffect;
+	std::shared_ptr<clientrender::Effect>        mCopyPerspectiveEffect;
+	std::shared_ptr<clientrender::Effect>        mCopyPerspectiveWithDepthEffect;
+	std::shared_ptr<clientrender::Effect>        mExtractTagDataIDEffect;
+	std::shared_ptr<clientrender::Effect>        mExtractOneTagEffect;
 
-	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
+	std::vector<clientrender::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	std::vector<std::string> passNames;
 	std::vector<std::string> debugPassNames;
@@ -226,7 +226,7 @@ public:
 	static constexpr float WEBCAM_WIDTH = 0.2f;
 	static constexpr float WEBCAM_HEIGHT = 0.2f;
 
-	scr::uvec4 mTagDataID;
+	clientrender::uvec4 mTagDataID;
 
 	std::string                         CopyCubemapSrc;
 	std::string                         ExtractTagDataIDSrc;
@@ -248,7 +248,7 @@ public:
 	avs::SetupLightingCommand setupLightingCommand;
 protected:
 	int32_t minimumPriority=0;
-	void ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining);
+	void ListNode(const std::shared_ptr<clientrender::Node>& node, int indent, size_t& linesRemaining);
 	teleport::client::ClientDeviceState *clientDeviceState=nullptr;
 	void UpdateTagDataBuffers();
 	static constexpr float INFO_TEXT_DURATION = 0.017f;

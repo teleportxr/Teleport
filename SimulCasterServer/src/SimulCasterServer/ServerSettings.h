@@ -6,10 +6,6 @@
 
 namespace teleport
 {
-	enum class BackgroundMode : uint8_t
-	{
-		NONE = 0, COLOUR, TEXTURE, VIDEO
-	};
 #pragma pack(push)
 #pragma pack(1)
 	struct ServerSettings
@@ -19,7 +15,7 @@ namespace teleport
 		int32_t detectionSphereBufferDistance = 0;
 		int64_t throttleKpS = 0;
 
-		BackgroundMode backgroundMode = BackgroundMode::COLOUR;
+		avs::BackgroundMode backgroundMode = avs::BackgroundMode::COLOUR;
 		avs::vec4 backgroundColour = { 0,0,1.0f,0.f };
 
 		bool enableGeometryStreaming = false;
@@ -103,6 +99,8 @@ namespace teleport
 		int32_t webcamSize[2];
 		avs::vec3 bodyOffsetFromHead;
 		int32_t captureCubeTextureSize;
+		avs::BackgroundMode backgroundMode;
+		float drawDistance;
 	};
 #pragma pack(pop)
 

@@ -62,11 +62,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SimulVulkan_MT.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SimulVulkan_MTd</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SimulVulkan_MT.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SimulVulkan_MT</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
@@ -83,7 +83,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Vulkan;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -101,10 +101,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;SIMUL_VULKAN_DLL=1;VK_PROTOTYPES;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Vulkan;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Vulkan;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -117,7 +117,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Vulkan;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -134,10 +134,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;SIMUL_VULKAN_DLL=1;VK_PROTOTYPES;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Vulkan;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Vulkan;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;D:\MASS STORAGE\VulkanSDK\1.2.182.0\Include;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -161,7 +161,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\CMakeLists.txt">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Vulkan\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
@@ -174,7 +174,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Vulkan/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
@@ -187,36 +187,36 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Vulkan\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Vulkan\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Buffer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\DeviceManager.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\DisplaySurface.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Effect.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\EffectPass.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Framebuffer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Layout.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\PlatformConstantBuffer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\PlatformStructuredBuffer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\RenderPlatform.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Shader.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Texture.cpp" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Buffer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\DeviceManager.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\DisplaySurface.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Effect.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\EffectPass.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Export.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Framebuffer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Layout.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\PlatformConstantBuffer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\PlatformStructuredBuffer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\RenderPlatform.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Shader.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Vulkan\Texture.h" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Buffer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\DeviceManager.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\DisplaySurface.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Effect.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\EffectPass.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Framebuffer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Layout.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\PlatformConstantBuffer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\PlatformStructuredBuffer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\RenderPlatform.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Shader.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Texture.cpp" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Buffer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\DeviceManager.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\DisplaySurface.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Effect.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\EffectPass.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Export.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Framebuffer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Layout.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\PlatformConstantBuffer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\PlatformStructuredBuffer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\RenderPlatform.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Shader.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Vulkan\Texture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

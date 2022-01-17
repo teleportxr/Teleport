@@ -225,9 +225,9 @@ void Gui::ShowFont()
 	}
 }
 
-void Gui::TreeNode(const std::shared_ptr<scr::Node>& n)
+void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n)
 {
-	const scr::Node *node=n.get();
+	const clientrender::Node *node=n.get();
 	bool has_children=node->GetChildren().size()!=0;
 	bool open=ImGui::TreeNodeEx(node->name.c_str(),(has_children?0:ImGuiTreeNodeFlags_Leaf ) );
 	if (ImGui::IsItemClicked())
@@ -370,7 +370,7 @@ void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext
 {
 }*/
 
-void Gui::NodeTree(const scr::NodeManager::nodeList_t& root_nodes)
+void Gui::NodeTree(const clientrender::NodeManager::nodeList_t& root_nodes)
 {
 	for(auto &r:root_nodes)
 	{

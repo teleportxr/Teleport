@@ -2,20 +2,20 @@
 #pragma once
 
 #include "GL_Sampler.h"
-#include <api/Texture.h>
-#include <api/Sampler.h>
+#include <ClientRender/Texture.h>
+#include <ClientRender/Sampler.h>
 #include <Render/GlTexture.h>
 
 namespace scc
 {
-	class GL_Texture final : public scr::Texture
+	class GL_Texture final : public clientrender::Texture
 	{
 	private:
 		OVRFW::GlTexture m_Texture;
 
 	public:
-		GL_Texture(const scr::RenderPlatform*const r)
-			:scr::Texture(r) {}
+		GL_Texture(const clientrender::RenderPlatform*const r)
+			:clientrender::Texture(r) {}
 
 		void Create(const TextureCreateInfo& pTextureCreateInfo) override;
 		void Destroy() override;
@@ -25,7 +25,7 @@ namespace scc
 		void Unbind() const override;
 
 		void GenerateMips() override;
-		void UseSampler(const std::shared_ptr<scr::Sampler>& sampler) override;
+		void UseSampler(const std::shared_ptr<clientrender::Sampler>& sampler) override;
 		bool ResourceInUse(int timeout) override {return true;}
 
 		inline OVRFW::GlTexture& GetGlTexture() { return m_Texture;}

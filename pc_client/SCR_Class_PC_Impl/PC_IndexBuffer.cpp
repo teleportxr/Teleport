@@ -5,7 +5,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 
 using namespace pc_client;
-using namespace scr;
+using namespace clientrender;
 
 void PC_IndexBuffer::Destroy()
 {

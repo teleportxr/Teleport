@@ -15,7 +15,7 @@
 #if defined(PLATFORM_WINDOWS)
 #include <api/cuda_dx12.hpp>
 #else
-#include <api/cuda.hpp>
+#include <ClientRender/cuda.hpp>
 #endif
 
 #include <nvEncodeAPI.h>

@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include <crossplatform/MemoryUtil.h>
+#include <ClientRender/MemoryUtil.h>
 
-class PC_MemoryUtil : public scr::MemoryUtil
+class PC_MemoryUtil : public clientrender::MemoryUtil
 {
 public:
 	long getAvailableMemory() const override;

@@ -2,7 +2,7 @@
 #include "Platform/CrossPlatform/Texture.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/DeviceContext.h"
-#include "crossplatform/NodeManager.h"
+#include "ClientRender/NodeManager.h"
 #include <functional>
 
 namespace teleport
@@ -15,7 +15,7 @@ namespace teleport
 		void RecompileShaders();
 		void Render(simul::crossplatform::GraphicsDeviceContext &deviceContext);
 		void LinePrint(const char* txt,const float *clr=nullptr);
-		void NodeTree(const scr::NodeManager::nodeList_t&);
+		void NodeTree(const clientrender::NodeManager::nodeList_t&);
 		void BeginDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 		void EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 		//void RenderDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
@@ -39,7 +39,7 @@ namespace teleport
 			return selected_uid;
 		}
 	protected:
-		void TreeNode(const std::shared_ptr<scr::Node>& node);
+		void TreeNode(const std::shared_ptr<clientrender::Node>& node);
 		simul::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
 		vec3 view_dir;
@@ -56,8 +56,8 @@ namespace teleport
         char buf[500];
 		bool have_vr_device = false;
 		avs::uid selected_uid=0;
-		std::shared_ptr<scr::Node> selected_node;
-		std::shared_ptr<scr::Material> selected_material;
+		std::shared_ptr<clientrender::Node> selected_node;
+		std::shared_ptr<clientrender::Material> selected_material;
 		bool show_inspector=false;
 	};
 }

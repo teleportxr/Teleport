@@ -2,7 +2,7 @@
 #include "PC_FrameBuffer.h"
 
 using namespace pc_client;
-using namespace scr;
+using namespace clientrender;
 
 void PC_FrameBuffer::Destroy()
 {

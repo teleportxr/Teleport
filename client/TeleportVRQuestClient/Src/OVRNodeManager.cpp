@@ -6,9 +6,9 @@
 #include "GlobalGraphicsResources.h"
 #include "OVRNode.h"
 
-std::shared_ptr<scr::Node> OVRNodeManager::CreateNode(avs::uid id, const avs::Node &avsNode)
+std::shared_ptr<clientrender::Node> OVRNodeManager::CreateNode(avs::uid id, const avs::Node &avsNode)
 {
-	std::shared_ptr<scr::Node> node= std::make_shared<scr::Node>(id, avsNode.name);
+	std::shared_ptr<clientrender::Node> node= std::make_shared<OVRNode>(id, avsNode.name);
 
 	//Create MeshNode even if it is missing resources
 	AddNode(node, avsNode);
@@ -25,7 +25,9 @@ void OVRNodeManager::ChangeEffectPass(const char* effectPassName)
 		return;
 	}
 
-	globalGraphicsResources.effectPassName = const_cast<char*>(effectPassName);
+	return;
+	//TODO: Why does this crash?
+	globalGraphicsResources.effectPassName = effectPassName;
 
 	//Change effect used by all nodes/surfaces.
 	for(auto& nodePair : nodeLookup)

@@ -222,7 +222,7 @@ void VideoDecoder::updatePicParams(const void* buffer, size_t bufferSizeInBytes)
 	m_paramSets[m_numParamSets].size = bufferSizeInBytes;
 	m_paramSets[m_numParamSets].data = const_cast<void*>(buffer);
 
-	m_picParams.size += m_paramSets[m_numParamSets].size;
+	m_picParams.size += (uint32_t)m_paramSets[m_numParamSets].size;
 
 	m_numParamSets++;
 

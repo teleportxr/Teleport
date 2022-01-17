@@ -2,7 +2,7 @@
 #include "GL_VertexBuffer.h"
 
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 using namespace OVR;
 
 void GL_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCreateInfo)

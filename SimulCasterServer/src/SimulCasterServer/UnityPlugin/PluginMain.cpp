@@ -74,7 +74,7 @@ static GeometryStore geometryStore;
 
 std::map<avs::uid, ClientData> clientServices;
 
-teleport::ServerSettings casterSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
+teleport::ServerSettings serverSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
 static ShowNodeFn onShowNode;
 static HideNodeFn onHideNode;
@@ -115,7 +115,7 @@ class PluginGeometryStreamingService : public teleport::GeometryStreamingService
 {
 public:
 	PluginGeometryStreamingService()
-		:teleport::GeometryStreamingService(&casterSettings)
+		:teleport::GeometryStreamingService(&serverSettings)
 	{
 		this->geometryStore = &::geometryStore;
 	}
@@ -196,7 +196,7 @@ public:
 		params.deviceHandle = GraphicsManager::mGraphicsDevice;
 		params.inputSurfaceResource = encoderSurfaceResource;
 
-		Result result = teleport::VideoEncodePipeline::initialize(casterSettings, params, colorQueue, tagDataQueue);
+		Result result = teleport::VideoEncodePipeline::initialize(serverSettings, params, colorQueue, tagDataQueue);
 		if (result)
 		{
 			configured = true;
@@ -239,7 +239,7 @@ public:
 			params.inputSurfaceResource = encoderSurfaceResource;
 		}
 		
-		return teleport::VideoEncodePipeline::reconfigure(casterSettings, params);
+		return teleport::VideoEncodePipeline::reconfigure(serverSettings, params);
 	}
 
 	Result encode(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false)
@@ -308,7 +308,7 @@ public:
 			return Result::Code::EncoderAlreadyConfigured;
 		}
 
-		Result result = teleport::AudioEncodePipeline::initialize(casterSettings, audioParams, audioQueue);
+		Result result = teleport::AudioEncodePipeline::initialize(serverSettings, audioParams, audioQueue);
 		if (result)
 		{
 			configured = true;
@@ -389,7 +389,7 @@ TELEPORT_EXPORT void DeleteUnmanagedArray(void** unmanagedArray)
 ///PLUGIN-SPECIFIC START
 TELEPORT_EXPORT void UpdateServerSettings(const teleport::ServerSettings newSettings)
 {
-	casterSettings = newSettings;
+	serverSettings = newSettings;
 }
 
 TELEPORT_EXPORT void SetCachePath(const char* path)
@@ -645,7 +645,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	newClient.casterContext.AudioQueue->configure(8192, 120, "AudioQueue");
 
 	// Receiving
-	if (casterSettings.isReceivingAudio)
+	if (serverSettings.isReceivingAudio)
 	{
 		newClient.casterContext.sourceAudioQueue.reset(new avs::Queue);
 		newClient.casterContext.audioDecoder.reset(new avs::AudioDecoder); 
@@ -746,20 +746,20 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	encoderSettings.frameWidth = clientData.clientSettings.videoTextureSize[0];
 	encoderSettings.frameHeight = clientData.clientSettings.videoTextureSize[1];
 
-	if (casterSettings.useAlphaLayerEncoding)
+	if (serverSettings.useAlphaLayerEncoding)
 	{
 		encoderSettings.depthWidth = 0;
 		encoderSettings.depthHeight = 0;
 	}
-	else if (casterSettings.usePerspectiveRendering)
+	else if (serverSettings.usePerspectiveRendering)
 	{
-		encoderSettings.depthWidth = static_cast<int32_t>(casterSettings.perspectiveWidth * 0.5f);
-		encoderSettings.depthHeight = static_cast<int32_t>(casterSettings.perspectiveHeight * 0.5f);
+		encoderSettings.depthWidth = static_cast<int32_t>(serverSettings.perspectiveWidth * 0.5f);
+		encoderSettings.depthHeight = static_cast<int32_t>(serverSettings.perspectiveHeight * 0.5f);
 	}
 	else
 	{
-		encoderSettings.depthWidth = static_cast<int32_t>(casterSettings.captureCubeSize * 1.5f);
-		encoderSettings.depthHeight = static_cast<int32_t>(casterSettings.captureCubeSize);
+		encoderSettings.depthWidth = static_cast<int32_t>(serverSettings.captureCubeSize * 1.5f);
+		encoderSettings.depthHeight = static_cast<int32_t>(serverSettings.captureCubeSize);
 	}
 
 	encoderSettings.wllWriteDepthTexture = false;
@@ -767,7 +767,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	encoderSettings.enableDecomposeCube = true;
 	encoderSettings.maxDepth = 10000;
 
-	clientData.StartStreaming(casterSettings, encoderSettings,connectionTimeout,serverID,getUnixTimestamp, httpService->isUsingSSL());
+	clientData.StartStreaming(serverSettings, encoderSettings,connectionTimeout,serverID,getUnixTimestamp, httpService->isUsingSSL());
 
 }
 
@@ -1087,17 +1087,16 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, teleport::VideoE
 	videoConfig.video_height = encoderSettings.frameHeight;
 	videoConfig.depth_height = encoderSettings.depthHeight;
 	videoConfig.depth_width = encoderSettings.depthWidth;
-	videoConfig.perspective_width = casterSettings.perspectiveWidth;
-	videoConfig.perspective_height = casterSettings.perspectiveHeight;
-	videoConfig.perspective_fov = casterSettings.perspectiveFOV;
-	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
-	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
-	videoConfig.use_alpha_layer_decoding = casterSettings.useAlphaLayerEncoding;
-	videoConfig.colour_cubemap_size = casterSettings.captureCubeSize;
+	videoConfig.perspective_width = serverSettings.perspectiveWidth;
+	videoConfig.perspective_height = serverSettings.perspectiveHeight;
+	videoConfig.perspective_fov = serverSettings.perspectiveFOV;
+	videoConfig.use_10_bit_decoding = serverSettings.use10BitEncoding;
+	videoConfig.use_yuv_444_decoding = serverSettings.useYUV444Decoding;
+	videoConfig.use_alpha_layer_decoding = serverSettings.useAlphaLayerEncoding;
+	videoConfig.colour_cubemap_size = serverSettings.captureCubeSize;
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
-	videoConfig.videoCodec = casterSettings.videoCodec;
-	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;
-	videoConfig.draw_distance = casterSettings.detectionSphereRadius+casterSettings.clientDrawDistanceOffset;
+	videoConfig.videoCodec = serverSettings.videoCodec;
+	videoConfig.use_cubemap = !serverSettings.usePerspectiveRendering;
 
 	clientData.clientMessaging->sendCommand(cmd);
 }

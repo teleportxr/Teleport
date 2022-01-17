@@ -2,7 +2,7 @@
 #include "GL_FrameBuffer.h"
 
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 //using namespace OVRFW;
 
 void GL_FrameBuffer::Create(FrameBufferCreateInfo* pFrameBufferCreateInfo)

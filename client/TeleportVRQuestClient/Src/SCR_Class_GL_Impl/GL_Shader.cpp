@@ -3,7 +3,7 @@
 #include "GL_Shader.h"
 
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 
 void GL_Shader::Create(const ShaderCreateInfo* pShaderCreateInfo)
 {

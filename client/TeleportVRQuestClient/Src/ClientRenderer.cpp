@@ -35,24 +35,24 @@ ovrQuatf QuaternionMultiply(const ovrQuatf &p, const ovrQuatf &q)
 	r.z = p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x;
 	return r;
 }
-static const char *ToString(scr::Light::Type type)
+static const char *ToString(clientrender::Light::Type type)
 {
 	const char *lightTypeName = "";
 	switch (type)
 	{
-		case scr::Light::Type::POINT:
+		case clientrender::Light::Type::POINT:
 			lightTypeName = "Point";
 			break;
-		case scr::Light::Type::DIRECTIONAL:
+		case clientrender::Light::Type::DIRECTIONAL:
 			lightTypeName = "  Dir";
 			break;
-		case scr::Light::Type::SPOT:
+		case clientrender::Light::Type::SPOT:
 			lightTypeName = " Spot";
 			break;
-		case scr::Light::Type::AREA:
+		case clientrender::Light::Type::AREA:
 			lightTypeName = " Area";
 			break;
-		case scr::Light::Type::DISC:
+		case clientrender::Light::Type::DISC:
 			lightTypeName = " Disc";
 			break;
 		default:
@@ -79,8 +79,8 @@ avs::vec3 QuaternionTimesVector(const ovrQuatf &q, const avs::vec3 &vec)
 
 ClientRenderer::ClientRenderer
 (
-    scr::ResourceCreator *r,
-    scr::GeometryCache *rm,
+    clientrender::ResourceCreator *r,
+    clientrender::GeometryCache *rm,
     ClientAppInterface *c,
     teleport::client::ClientDeviceState *s,
     Controllers *cn
@@ -107,7 +107,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	{
 		{
 			mVideoUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"mVideoUB",1
+			clientrender::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"mVideoUB",1
 					, sizeof(VideoUB)
 					, &videoUB};
 			mVideoUB->Create(&uniformBufferCreateInfo);
@@ -166,8 +166,8 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	}
 	// Tag Data ID
 	{
-		scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
-				0, scr::ShaderStorageBuffer::Access::NONE, sizeof(scr::uvec4), (void *) &mTagDataID
+		clientrender::ShaderStorageBuffer::ShaderStorageBufferCreateInfo shaderStorageBufferCreateInfo = {
+				0, clientrender::ShaderStorageBuffer::Access::NONE, sizeof(clientrender::uvec4), (void *) &mTagDataID
 		};
 		mTagDataIDBuffer->Create(&shaderStorageBufferCreateInfo);
 	}
@@ -176,14 +176,14 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	// Tag Data Cube Buffer
 	VideoTagDataCube shaderTagDataCubeArray[MAX_TAG_DATA_COUNT];
 	shaderTagDataCubeArray[0].cameraPosition.x = 1.0f;
-	scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo tagBufferCreateInfo = {
-			1, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
+	clientrender::ShaderStorageBuffer::ShaderStorageBufferCreateInfo tagBufferCreateInfo = {
+			1, clientrender::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
 			, (void *) nullptr
 	};
 	globalGraphicsResources.mTagDataBuffer->Create(&tagBufferCreateInfo);
 
-	scr::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
-			2, scr::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
+	clientrender::ShaderStorageBuffer::ShaderStorageBufferCreateInfo arrayBufferCreateInfo = {
+			2, clientrender::ShaderStorageBuffer::Access::READ_WRITE_BIT, sizeof(VideoTagDataCube)
 																 * MAX_TAG_DATA_COUNT
 			, (void *) &shaderTagDataCubeArray
 	};
@@ -200,7 +200,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		mExtractTagDataIDEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 		mExtractOneTagEffect = globalGraphicsResources.renderPlatform.InstantiateEffect();
 
-		scr::Effect::EffectCreateInfo effectCreateInfo = {};
+		clientrender::Effect::EffectCreateInfo effectCreateInfo = {};
 		effectCreateInfo.effectName = "CopyCubemap";
 		mCopyCubemapEffect->Create(&effectCreateInfo);
 
@@ -222,23 +222,23 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		effectCreateInfo.effectName = "ExtractOneTag";
 		mExtractOneTagEffect->Create(&effectCreateInfo);
 
-		scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo = {};
+		clientrender::ShaderSystem::PipelineCreateInfo pipelineCreateInfo = {};
 		pipelineCreateInfo.m_Count = 1;
-		pipelineCreateInfo.m_PipelineType = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_COMPUTE;
-		pipelineCreateInfo.m_ShaderCreateInfo[0].stage = scr::Shader::Stage::SHADER_STAGE_COMPUTE;
+		pipelineCreateInfo.m_PipelineType = clientrender::ShaderSystem::PipelineType::PIPELINE_TYPE_COMPUTE;
+		pipelineCreateInfo.m_ShaderCreateInfo[0].stage = clientrender::Shader::Stage::SHADER_STAGE_COMPUTE;
 		pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_only";
 		pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/CopyCubemap.comp";
 		pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = CopyCubemapSrc;
-		scr::ShaderSystem::Pipeline cp(&globalGraphicsResources.renderPlatform,
+		clientrender::ShaderSystem::Pipeline cp(&globalGraphicsResources.renderPlatform,
 									   &pipelineCreateInfo);
 
-		scr::Effect::EffectPassCreateInfo effectPassCreateInfo;
+		clientrender::Effect::EffectPassCreateInfo effectPassCreateInfo;
 		effectPassCreateInfo.effectPassName = "CopyCubemap";
 		effectPassCreateInfo.pipeline = cp;
 		mCopyCubemapEffect->CreatePass(&effectPassCreateInfo);
 
 		pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_depth";
-		scr::ShaderSystem::Pipeline cp2(&globalGraphicsResources.renderPlatform,
+		clientrender::ShaderSystem::Pipeline cp2(&globalGraphicsResources.renderPlatform,
 										&pipelineCreateInfo);
 
 		effectPassCreateInfo.effectPassName = "ColourAndDepth";
@@ -246,7 +246,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 		mCopyCubemapWithDepthEffect->CreatePass(&effectPassCreateInfo);
 
 		pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_alpha_layer";
-		scr::ShaderSystem::Pipeline cp3(&globalGraphicsResources.renderPlatform,
+		clientrender::ShaderSystem::Pipeline cp3(&globalGraphicsResources.renderPlatform,
 										&pipelineCreateInfo);
 
 		effectPassCreateInfo.effectPassName = "ColourAndAlphaLayer";
@@ -260,14 +260,14 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/CopyPerspective.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = copyPerspectiveSrc;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_only";
-			scr::ShaderSystem::Pipeline cp4(&globalGraphicsResources.renderPlatform,
+			clientrender::ShaderSystem::Pipeline cp4(&globalGraphicsResources.renderPlatform,
 											&pipelineCreateInfo);
 			effectPassCreateInfo.effectPassName = "PerspectiveColour";
 			effectPassCreateInfo.pipeline = cp4;
 			mCopyPerspectiveEffect->CreatePass(&effectPassCreateInfo);
 
             pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "colour_and_depth";
-            scr::ShaderSystem::Pipeline cp5(&globalGraphicsResources.renderPlatform,
+            clientrender::ShaderSystem::Pipeline cp5(&globalGraphicsResources.renderPlatform,
                                             &pipelineCreateInfo);
 
             effectPassCreateInfo.effectPassName = "PerspectiveColourAndDepth";
@@ -280,7 +280,7 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/ExtractTagDataID.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractTagDataIDSrc;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_tag_data_id";
-			scr::ShaderSystem::Pipeline cp6(&globalGraphicsResources.renderPlatform,
+			clientrender::ShaderSystem::Pipeline cp6(&globalGraphicsResources.renderPlatform,
 											&pipelineCreateInfo);
 			effectPassCreateInfo.effectPassName = "ExtractTagDataID";
 			effectPassCreateInfo.pipeline = cp6;
@@ -292,84 +292,84 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 			pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/ExtractOneTag.comp";
 			pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = ExtractTagDataSrc;
 			pipelineCreateInfo.m_ShaderCreateInfo[0].entryPoint = "extract_tag_data";
-			scr::ShaderSystem::Pipeline cp7(&globalGraphicsResources.renderPlatform,
+			clientrender::ShaderSystem::Pipeline cp7(&globalGraphicsResources.renderPlatform,
 											&pipelineCreateInfo);
 			effectPassCreateInfo.effectPassName = "ExtractOneTag";
 			effectPassCreateInfo.pipeline = cp7;
 			mExtractOneTagEffect->CreatePass(&effectPassCreateInfo);
 
-			scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"mCubemapUB",3
+			clientrender::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"mCubemapUB",3
 					, sizeof(CubemapUB)
 					, &cubemapUB};
 			mCubemapUB->Create(&uniformBufferCreateInfo);
 		}
 		GLCheckErrorsWithTitle("mCubemapUB:Create");
 
-		scr::ShaderResourceLayout layout;
-		layout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE,
-						  scr::Shader::Stage::SHADER_STAGE_COMPUTE);
-		layout.AddBinding(1, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_COMPUTE);
-		layout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-						  scr::Shader::Stage::SHADER_STAGE_COMPUTE);
-		layout.AddBinding(3, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
-						  scr::Shader::Stage::SHADER_STAGE_COMPUTE);
+		clientrender::ShaderResourceLayout layout;
+		layout.AddBinding(0, clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE,
+						  clientrender::Shader::Stage::SHADER_STAGE_COMPUTE);
+		layout.AddBinding(1, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+						  clientrender::Shader::Stage::SHADER_STAGE_COMPUTE);
+		layout.AddBinding(2, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+						  clientrender::Shader::Stage::SHADER_STAGE_COMPUTE);
+		layout.AddBinding(3, clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,
+						  clientrender::Shader::Stage::SHADER_STAGE_COMPUTE);
 
 		mColourAndDepthShaderResources.SetLayout(layout);
 		mColourAndDepthShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex",
+				clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0, "destTex",
 				{globalGraphicsResources.cubeMipMapSampler, mRenderTexture, 0, uint32_t(-1)});
 		mColourAndDepthShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
+				clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
 				"videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
 		mColourAndDepthShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 2,
+				clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 2,
 				"alphaVideoFrameTexture", {globalGraphicsResources.sampler, mAlphaVideoTexture});
 		mColourAndDepthShaderResources.AddBuffer(
-				scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
+				clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
 				{mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
 		// We can't share same resources between copy cubemap effects because dest texture of below resources changes for different cases.
 		mCopyCubemapShaderResources.SetLayout(layout);
 		mCopyCubemapShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0,
+				clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0,
 				"destTex", {});
 		mCopyCubemapShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
+				clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
 				"videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
 		mCopyCubemapShaderResources.AddBuffer(
-				scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
+				clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
 				{mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
         mCopyPerspectiveShaderResources.SetLayout(layout);
 		mCopyPerspectiveShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0,
+				clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_IMAGE, 0,
 				"destTex", {globalGraphicsResources.sampler, mRenderTexture});
 		mCopyPerspectiveShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
+				clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
 				"videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
 		mCopyPerspectiveShaderResources.AddImage(
-                scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 2,
+                clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 2,
                 "alphaVideoFrameTexture", {globalGraphicsResources.sampler, mAlphaVideoTexture});
 		mCopyPerspectiveShaderResources.AddBuffer(
-				scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
+				clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
 				{mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 
 		mExtractTagShaderResources.SetLayout(layout);
 		mExtractTagShaderResources.AddImage(
-				scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
+				clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 1,
 				"videoFrameTexture", {globalGraphicsResources.sampler, mVideoTexture});
 		mExtractTagShaderResources.AddBuffer(
-				scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
+				clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 3, "cubemapUB",
 				{mCubemapUB.get(), 0, mCubemapUB->GetUniformBufferCreateInfo().size});
 		mExtractTagShaderResources.AddBuffer(
-				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 0, "TagDataID",
+				clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 0, "TagDataID",
 				{mTagDataIDBuffer.get()});
 		mExtractTagShaderResources.AddBuffer(
-				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 1,
+				clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 1,
 				"TagDataCube_ssbo", {globalGraphicsResources.mTagDataBuffer.get()});
 		mExtractTagShaderResources.AddBuffer(
-				scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 2,
+				clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER, 2,
 				"TagDataCubeArray_ssbo", {mTagDataArrayBuffer.get()});
 
 
@@ -391,55 +391,55 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 
 	mWebcamResources.Init(clientAppInterface,"Webcam");
 	mDebugTextureResources.Init(clientAppInterface,"FlatTexture");
-	//Set up scr::Camera
-	scr::Camera::CameraCreateInfo c_ci = {
-			(scr::RenderPlatform *) (&globalGraphicsResources.renderPlatform)
-			,scr::Camera::ProjectionType::PERSPECTIVE, scr::quat(0.0f, 0.0f, 0.0f, 1.0f)
-			,clientDeviceState->headPose.position, 5.0f
+	//Set up clientrender::Camera
+	clientrender::Camera::CameraCreateInfo c_ci = {
+			(clientrender::RenderPlatform *) (&globalGraphicsResources.renderPlatform)
+			,clientrender::Camera::ProjectionType::PERSPECTIVE, clientrender::quat(0.0f, 0.0f, 0.0f, 1.0f)
+			,clientDeviceState->headPose.globalPose.position, 5.0f
 	};
-	globalGraphicsResources.scrCamera = std::make_shared<scr::Camera>(&c_ci);
+	globalGraphicsResources.scrCamera = std::make_shared<clientrender::Camera>(&c_ci);
 
-	scr::VertexBufferLayout layout;
-	layout.AddAttribute(0, scr::VertexBufferLayout::ComponentCount::VEC3,scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(1, scr::VertexBufferLayout::ComponentCount::VEC3,scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(2, scr::VertexBufferLayout::ComponentCount::VEC4,scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(3, scr::VertexBufferLayout::ComponentCount::VEC2,scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(4, scr::VertexBufferLayout::ComponentCount::VEC2,scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(5, scr::VertexBufferLayout::ComponentCount::VEC4,scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(6, scr::VertexBufferLayout::ComponentCount::VEC4,scr::VertexBufferLayout::Type::FLOAT);
-	layout.AddAttribute(7, scr::VertexBufferLayout::ComponentCount::VEC4,scr::VertexBufferLayout::Type::FLOAT);
+	clientrender::VertexBufferLayout layout;
+	layout.AddAttribute(0, clientrender::VertexBufferLayout::ComponentCount::VEC3,clientrender::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(1, clientrender::VertexBufferLayout::ComponentCount::VEC3,clientrender::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(2, clientrender::VertexBufferLayout::ComponentCount::VEC4,clientrender::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(3, clientrender::VertexBufferLayout::ComponentCount::VEC2,clientrender::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(4, clientrender::VertexBufferLayout::ComponentCount::VEC2,clientrender::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(5, clientrender::VertexBufferLayout::ComponentCount::VEC4,clientrender::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(6, clientrender::VertexBufferLayout::ComponentCount::VEC4,clientrender::VertexBufferLayout::Type::FLOAT);
+	layout.AddAttribute(7, clientrender::VertexBufferLayout::ComponentCount::VEC4,clientrender::VertexBufferLayout::Type::FLOAT);
 	layout.CalculateStride();
 
-	scr::ShaderResourceLayout shaderResourceLayout;
-	shaderResourceLayout.AddBinding(0, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	shaderResourceLayout.AddBinding(1, scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	shaderResourceLayout.AddBinding(4, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
-	shaderResourceLayout.AddBinding(5, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_VERTEX);
+	clientrender::ShaderResourceLayout shaderResourceLayout;
+	shaderResourceLayout.AddBinding(0, clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,clientrender::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(1, clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,clientrender::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(4, clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,clientrender::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(2, clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,clientrender::Shader::Stage::SHADER_STAGE_VERTEX);
+	shaderResourceLayout.AddBinding(5, clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,clientrender::Shader::Stage::SHADER_STAGE_VERTEX);
 
-	shaderResourceLayout.AddBinding(2, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(10, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(11, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(12, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(13, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(5, scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(14, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(15, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
-	shaderResourceLayout.AddBinding(16, scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(2, clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(10, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(11, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(12, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(13, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(5, clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(14, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(15, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
+	shaderResourceLayout.AddBinding(16, clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
-	scr::ShaderResource pbrShaderResource(shaderResourceLayout);
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,0,"u_CameraData", {});
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataID", {});
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,4,"u_BoneData", {});
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,2,"u_MaterialData", {});
-	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,10,"u_DiffuseTexture", {});
-	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,11,"u_NormalTexture", {});
-	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,12,"u_CombinedTexture", {});
-	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,13,"u_EmissiveTexture", {});
-	pbrShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,5,"u_PerMeshInstanceData", {});
-	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_LightmapTexture", {});
-	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,14,"u_SpecularCubemap", {});
-	pbrShaderResource.AddImage(	scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,15,"u_DiffuseCubemap", {});
+	clientrender::ShaderResource pbrShaderResource(shaderResourceLayout);
+	pbrShaderResource.AddBuffer(clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,0,"u_CameraData", {});
+	pbrShaderResource.AddBuffer(clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataID", {});
+	pbrShaderResource.AddBuffer(clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,4,"u_BoneData", {});
+	pbrShaderResource.AddBuffer(clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,2,"u_MaterialData", {});
+	pbrShaderResource.AddImage(	clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,10,"u_DiffuseTexture", {});
+	pbrShaderResource.AddImage(	clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,11,"u_NormalTexture", {});
+	pbrShaderResource.AddImage(	clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,12,"u_CombinedTexture", {});
+	pbrShaderResource.AddImage(	clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,13,"u_EmissiveTexture", {});
+	pbrShaderResource.AddBuffer(clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER,5,"u_PerMeshInstanceData", {});
+	pbrShaderResource.AddImage(	clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,16,"u_LightmapTexture", {});
+	pbrShaderResource.AddImage(	clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,14,"u_SpecularCubemap", {});
+	pbrShaderResource.AddImage(	clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,15,"u_DiffuseCubemap", {});
 
 	passNames.clear();
 	passNames.push_back("OpaqueAlbedo");
@@ -453,15 +453,15 @@ void ClientRenderer::EnteredVR(const ovrJava *java)
 	debugPassNames.push_back("OpaquePBRAmbient");
 	debugPassNames.push_back("OpaquePBRDebug");
 
-	scr::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
+	clientrender::ShaderSystem::PipelineCreateInfo pipelineCreateInfo;
 
 	pipelineCreateInfo.m_Count = 2;
-	pipelineCreateInfo.m_PipelineType = scr::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
-	pipelineCreateInfo.m_ShaderCreateInfo[0].stage = scr::Shader::Stage::SHADER_STAGE_VERTEX;
+	pipelineCreateInfo.m_PipelineType = clientrender::ShaderSystem::PipelineType::PIPELINE_TYPE_GRAPHICS;
+	pipelineCreateInfo.m_ShaderCreateInfo[0].stage = clientrender::Shader::Stage::SHADER_STAGE_VERTEX;
 	pipelineCreateInfo.m_ShaderCreateInfo[0].filepath = "shaders/OpaquePBR.vert";
 	pipelineCreateInfo.m_ShaderCreateInfo[0].sourceCode = clientAppInterface->LoadTextFile(
 			"shaders/OpaquePBR.vert");
-	pipelineCreateInfo.m_ShaderCreateInfo[1].stage = scr::Shader::Stage::SHADER_STAGE_FRAGMENT;
+	pipelineCreateInfo.m_ShaderCreateInfo[1].stage = clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT;
 	pipelineCreateInfo.m_ShaderCreateInfo[1].filepath = "shaders/OpaquePBR.frag";
 	pipelineCreateInfo.m_ShaderCreateInfo[1].sourceCode = clientAppInterface->LoadTextFile(
 				"shaders/OpaquePBR.frag");
@@ -559,10 +559,10 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	// Create vertex layout and associated buffers
-	std::shared_ptr<scr::VertexBufferLayout> layout(new scr::VertexBufferLayout);
-	layout->AddAttribute((uint32_t)avs::AttributeSemantic::POSITION, scr::VertexBufferLayout::ComponentCount::VEC3, scr::VertexBufferLayout::Type::FLOAT);
+	std::shared_ptr<clientrender::VertexBufferLayout> layout(new clientrender::VertexBufferLayout);
+	layout->AddAttribute((uint32_t)avs::AttributeSemantic::POSITION, clientrender::VertexBufferLayout::ComponentCount::VEC3, clientrender::VertexBufferLayout::Type::FLOAT);
 	layout->CalculateStride();
-	layout->m_PackingStyle = scr::VertexBufferLayout::PackingStyle::INTERLEAVED;
+	layout->m_PackingStyle = clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED;
 
 	static constexpr size_t camVertexCount = 4;
 	static constexpr size_t camIndexCount = 6;
@@ -572,17 +572,17 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	size_t constructedVBSize = layout->m_Stride * camVertexCount;
 
 	vertexBuffer = globalGraphicsResources.renderPlatform.InstantiateVertexBuffer();
-	scr::VertexBuffer::VertexBufferCreateInfo vb_ci;
+	clientrender::VertexBuffer::VertexBufferCreateInfo vb_ci;
 	vb_ci.layout = layout;
-	vb_ci.usage = scr::BufferUsageBit::STATIC_BIT | scr::BufferUsageBit::DRAW_BIT;
+	vb_ci.usage = clientrender::BufferUsageBit::STATIC_BIT | clientrender::BufferUsageBit::DRAW_BIT;
 	vb_ci.vertexCount = camVertexCount;
 	vb_ci.size = constructedVBSize;
 	vb_ci.data = (const void*)vertices;
 	vertexBuffer->Create(&vb_ci);
 
 	indexBuffer = globalGraphicsResources.renderPlatform.InstantiateIndexBuffer();
-	scr::IndexBuffer::IndexBufferCreateInfo ib_ci;
-	ib_ci.usage = scr::BufferUsageBit::STATIC_BIT | scr::BufferUsageBit::DRAW_BIT;
+	clientrender::IndexBuffer::IndexBufferCreateInfo ib_ci;
+	ib_ci.usage = clientrender::BufferUsageBit::STATIC_BIT | clientrender::BufferUsageBit::DRAW_BIT;
 	ib_ci.indexCount = camIndexCount;
 	ib_ci.stride = sizeof(uint16_t);
 	ib_ci.data = (const uint8_t*)indices;
@@ -604,7 +604,7 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 
 	// Set up the uniform buffer
 	webcamUB = globalGraphicsResources.renderPlatform.InstantiateUniformBuffer();
-	scr::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"WebcamUB",1
+	clientrender::UniformBuffer::UniformBufferCreateInfo uniformBufferCreateInfo = {"WebcamUB",1
 			, sizeof(WebcamUB)
 			, &webcamUBData};
 	webcamUB->Create(&uniformBufferCreateInfo);
@@ -679,13 +679,13 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 	//Build Video Cubemap or perspective texture
 	if (vc.use_cubemap)
 	{
-		scr::Texture::TextureCreateInfo textureCreateInfo =
+		clientrender::Texture::TextureCreateInfo textureCreateInfo =
 				{
 						"Cubemap Texture", videoConfig.colour_cubemap_size
-						, videoConfig.colour_cubemap_size, 1, 4, 1, 1, scr::Texture::Slot::UNKNOWN
-						, scr::Texture::Type::TEXTURE_CUBE_MAP, scr::Texture::Format::RGBA8
-						, scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
-						, scr::Texture::CompressionFormat::UNCOMPRESSED
+						, videoConfig.colour_cubemap_size, 1, 4, 1, 1, clientrender::Texture::Slot::UNKNOWN
+						, clientrender::Texture::Type::TEXTURE_CUBE_MAP, clientrender::Texture::Format::RGBA8
+						, clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
+						, clientrender::Texture::CompressionFormat::UNCOMPRESSED
 				};
 		mRenderTexture->Create(textureCreateInfo);
 		mRenderTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
@@ -694,13 +694,13 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 	}
 	else
 	{
-		scr::Texture::TextureCreateInfo textureCreateInfo =
+		clientrender::Texture::TextureCreateInfo textureCreateInfo =
 				{
 						"Perspective Texture", videoConfig.perspective_width
-						, videoConfig.perspective_height, 1, 4, 1, 1, scr::Texture::Slot::UNKNOWN
-						, scr::Texture::Type::TEXTURE_2D, scr::Texture::Format::RGBA8
-						, scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
-						, scr::Texture::CompressionFormat::UNCOMPRESSED
+						, videoConfig.perspective_height, 1, 4, 1, 1, clientrender::Texture::Slot::UNKNOWN
+						, clientrender::Texture::Type::TEXTURE_2D, clientrender::Texture::Format::RGBA8
+						, clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
+						, clientrender::Texture::CompressionFormat::UNCOMPRESSED
 				};
 		mRenderTexture->Create(textureCreateInfo);
 		mRenderTexture->UseSampler(globalGraphicsResources.sampler);
@@ -709,7 +709,7 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 	}
 
 	const float aspect = vc.perspective_width / vc.perspective_height;
-	const float vertFOV = scr::GetVerticalFOVFromHorizontalInDegrees(vc.perspective_fov, aspect);
+	const float vertFOV = clientrender::GetVerticalFOVFromHorizontalInDegrees(vc.perspective_fov, aspect);
 	// Takes FOV values in degrees
 	ovrMatrix4f serverProj = ovrMatrix4f_CreateProjectionFov( vc.perspective_fov, vertFOV, 0.0f, 0.0f, 0.1f, 0.0f );
 	videoUB.serverProj = ovrMatrix4f_Transpose(&serverProj);
@@ -727,12 +727,12 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 	//GLCheckErrorsWithTitle("Built Video Cubemap");
 	//Build Lighting Cubemap
 	{
-		scr::Texture::TextureCreateInfo textureCreateInfo //TODO: Check this against the incoming texture from the video stream
+		clientrender::Texture::TextureCreateInfo textureCreateInfo //TODO: Check this against the incoming texture from the video stream
 				{
-						"Cubemap Sub-Textures", 128, 128, 1, 4, 1, 3, scr::Texture::Slot::UNKNOWN
-						, scr::Texture::Type::TEXTURE_CUBE_MAP, scr::Texture::Format::RGBA8
-						, scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
-						, scr::Texture::CompressionFormat::UNCOMPRESSED
+						"Cubemap Sub-Textures", 128, 128, 1, 4, 1, 3, clientrender::Texture::Slot::UNKNOWN
+						, clientrender::Texture::Type::TEXTURE_CUBE_MAP, clientrender::Texture::Format::RGBA8
+						, clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
+						, clientrender::Texture::CompressionFormat::UNCOMPRESSED
 				};
 		textureCreateInfo.mipCount = std::min(6,videoConfig.specular_mips);
 		textureCreateInfo.width = videoConfig.specular_cubemap_size;
@@ -752,13 +752,13 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 	//GLCheckErrorsWithTitle("Built Lighting Cubemap");
 
 	// Set discard distance to the sphere detection radius of the server for use in pixel shader.
-	globalGraphicsResources.scrCamera->UpdateDrawDistance(videoConfig.draw_distance);
+	globalGraphicsResources.scrCamera->UpdateDrawDistance(lastSetupCommand.draw_distance);
 }
 
 void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 {
-	scr::SceneCaptureCubeTagData tagData;
-	memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+	clientrender::SceneCaptureCubeTagData tagData;
+	memcpy(&tagData.coreData, data, sizeof(clientrender::SceneCaptureCubeCoreTagData));
 	avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle,
 						  tagData.coreData.cameraTransform);
 
@@ -767,13 +767,13 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 	teleport::client::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
 
 	// Aidan : View and proj matrices are currently unchanged from Unity
-	size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
+	size_t index = sizeof(clientrender::SceneCaptureCubeCoreTagData);
 	for (auto &light : tagData.lights)
 	{
-		memcpy(&light, &data[index], sizeof(scr::LightTagData));
+		memcpy(&light, &data[index], sizeof(clientrender::LightTagData));
 		avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::GlStyle,
 							  light.worldTransform);
-		index += sizeof(scr::LightTagData);
+		index += sizeof(clientrender::LightTagData);
 	}
 
 	VideoTagDataCube shaderData;
@@ -790,9 +790,9 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 
 void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 {
-	scr::ivec2 specularOffset = {videoConfig.specular_x, videoConfig.specular_y};
-	scr::ivec2 diffuseOffset = {videoConfig.diffuse_x, videoConfig.diffuse_y};
-	//scr::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
+	clientrender::ivec2 specularOffset = {videoConfig.specular_x, videoConfig.specular_y};
+	clientrender::ivec2 diffuseOffset = {videoConfig.diffuse_x, videoConfig.diffuse_y};
+	//clientrender::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
 	// Here the compute shader to copy from the video texture into the cubemap/s.
 	auto &tc = mRenderTexture->GetTextureCreateInfo();
 	if (mRenderTexture->IsValid())
@@ -803,7 +803,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &max_v);
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &max_w);
 
-		scr::uvec3 size = {tc.width / ThreadCount, tc.height / ThreadCount, 6};
+		clientrender::uvec3 size = {tc.width / ThreadCount, tc.height / ThreadCount, 6};
 
 		size.x = std::min(size.x, (uint32_t) max_u);
 		size.y = std::min(size.y, (uint32_t) max_v);
@@ -814,17 +814,17 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		cubemapUB.mip = 0;
 		cubemapUB.face = 0;
 
-		if (tc.type == scr::Texture::Type::TEXTURE_CUBE_MAP)
+		if (tc.type == clientrender::Texture::Type::TEXTURE_CUBE_MAP)
 		{
 			cubemapUB.dimensions = {cubemapUB.faceSize * 3, cubemapUB.faceSize * 2};
 
-			scr::InputCommandCreateInfo inputCommandCreateInfo;
+			clientrender::InputCommandCreateInfo inputCommandCreateInfo;
 
 			if (videoConfig.use_alpha_layer_decoding)
             {
                 inputCommandCreateInfo.effectPassName = "ColourAndAlphaLayer";
 
-                scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+                clientrender::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
                                                        mCopyCubemapWithAlphaLayerEffect,
                                                        {mColourAndDepthShaderResources});
 
@@ -834,7 +834,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
             {
                 inputCommandCreateInfo.effectPassName = "ColourAndDepth";
 
-                scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+                clientrender::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
                                                        mCopyCubemapWithDepthEffect,
                                                        {mColourAndDepthShaderResources});
 
@@ -843,16 +843,16 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		}
 		else
 		{
-			scr::uvec3 perspSize = { size.x, size.y, 1};
+			clientrender::uvec3 perspSize = { size.x, size.y, 1};
 			const auto texInfo = mRenderTexture->GetTextureCreateInfo();
 			cubemapUB.dimensions = { texInfo.width, texInfo.height };
-            scr::InputCommandCreateInfo inputCommandCreateInfo;
+            clientrender::InputCommandCreateInfo inputCommandCreateInfo;
 
             if (videoConfig.use_alpha_layer_decoding)
             {
                 inputCommandCreateInfo.effectPassName = "PerspectiveColour";
 
-                scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, perspSize,
+                clientrender::InputCommand_Compute inputCommand(&inputCommandCreateInfo, perspSize,
                                                        mCopyPerspectiveEffect,
                                                        {mCopyPerspectiveShaderResources});
 
@@ -862,7 +862,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
             {
                 inputCommandCreateInfo.effectPassName = "PerspectiveColourAndDepth";
 
-                scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, perspSize,
+                clientrender::InputCommand_Compute inputCommand(&inputCommandCreateInfo, perspSize,
                                                        mCopyPerspectiveWithDepthEffect,
                                                        {mCopyPerspectiveShaderResources});
 
@@ -872,13 +872,13 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 
 		GLCheckErrorsWithTitle("Frame: CopyToCubemaps - Main");
 
-		scr::InputCommandCreateInfo inputCommandCreateInfo;
+		clientrender::InputCommandCreateInfo inputCommandCreateInfo;
 		inputCommandCreateInfo.effectPassName = "CopyCubemap";
-		scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+		clientrender::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
 											   mCopyCubemapEffect,
 											   {mCopyCubemapShaderResources});
 		cubemapUB.faceSize = 0;
-		scr::ivec2 offset0 = {0, 0};
+		clientrender::ivec2 offset0 = {0, 0};
 		int32_t mip_x = 0;
 
 		if (diffuseCubemapTexture->IsValid())
@@ -887,7 +887,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			mip_x = 0;
 			int32_t mip_size = videoConfig.diffuse_cubemap_size;
 			uint32_t M = diffuseCubemapTexture->GetTextureCreateInfo().mipCount;
-			scr::ivec2 offset = {offset0.x + diffuseOffset.x, offset0.y + diffuseOffset.y};
+			clientrender::ivec2 offset = {offset0.x + diffuseOffset.x, offset0.y + diffuseOffset.y};
 			for (uint32_t m = 0; m < M; m++)
 			{
 				inputCommand.m_WorkGroupSize = {(mip_size + ThreadCount- 1) / ThreadCount, (mip_size + ThreadCount- 1)
@@ -913,7 +913,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			mip_x = 0;
 			int32_t mip_size = videoConfig.specular_cubemap_size;
 			uint32_t M = specularCubemapTexture->GetTextureCreateInfo().mipCount;
-			scr::ivec2 offset = {
+			clientrender::ivec2 offset = {
 					offset0.x + specularOffset.x, offset0.y + specularOffset.y};
 			for (uint32_t m = 0; m < M; m++)
 			{
@@ -935,8 +935,8 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		if (mVideoTexture->IsValid())
 		{
 			inputCommandCreateInfo.effectPassName = "ExtractTagDataID";
-			scr::uvec3 size = {1, 1, 1};
-			scr::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
+			clientrender::uvec3 size = {1, 1, 1};
+			clientrender::InputCommand_Compute inputCommand(&inputCommandCreateInfo, size,
 												   mExtractTagDataIDEffect,
 												   {mExtractTagShaderResources});
 			cubemapUB.faceSize = tc.width;
@@ -946,7 +946,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			mDeviceContext.DispatchCompute(&inputCommand);
 
 			inputCommandCreateInfo.effectPassName = "ExtractOneTag";
-			scr::InputCommand_Compute extractTagCommand(&inputCommandCreateInfo, size,
+			clientrender::InputCommand_Compute extractTagCommand(&inputCommandCreateInfo, size,
 														mExtractOneTagEffect,
 														{mExtractTagShaderResources});
 			mDeviceContext.DispatchCompute(&extractTagCommand);
@@ -976,7 +976,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 			for (size_t j = 0; j < td.lights.size(); j++)
 			{
 				LightTag &t = data[i].lightTags[j];
-				const scr::LightTagData &l = td.lights[j];
+				const clientrender::LightTagData &l = td.lights[j];
 				t.uid32 = (unsigned) (((uint64_t) 0xFFFFFFFF) & l.uid);
 				t.colour = *((avs::vec4 *) &l.color);
 				// Convert from +-1 to [0,1]
@@ -995,7 +995,7 @@ void ClientRenderer::UpdateTagDataBuffers()
 				// to express this.
 				static avs::vec3 z = {0, 1.0f, 0.0f};
 				t.direction = QuaternionTimesVector(q, z);
-				scr::mat4 worldToShadowMatrix = scr::mat4((const float *) &l.worldToShadowMatrix);
+				clientrender::mat4 worldToShadowMatrix = clientrender::mat4((const float *) &l.worldToShadowMatrix);
 
 				t.worldToShadowMatrix = *((ovrMatrix4f *) &worldToShadowMatrix);
 
@@ -1003,8 +1003,8 @@ void ClientRenderer::UpdateTagDataBuffers()
 				if (nodeLight != cachedLights.end() && nodeLight->second.resource!=nullptr)
 				{
 					auto &lc		=nodeLight->second.resource->GetLightCreateInfo();
-					t.is_point		=float(lc.type!=scr::Light::Type::DIRECTIONAL);
-					t.is_spot		=float(lc.type==scr::Light::Type::SPOT);
+					t.is_point		=float(lc.type!=clientrender::Light::Type::DIRECTIONAL);
+					t.is_spot		=float(lc.type==clientrender::Light::Type::SPOT);
 					t.radius		=lc.lightRadius;
 					t.range			=lc.lightRange;
 					t.shadow_strength=0.0f;
@@ -1036,22 +1036,22 @@ void ClientRenderer::RenderVideo(scc::GL_DeviceContext &mDeviceContext, OVRFW::o
 	}
 	// Set data to send to the shader:
 	ovrQuatf X0 = {1.0f, 0.f, 0.f, 0.0f};
-	ovrQuatf headPoseQ = {clientDeviceState->headPose.orientation.x
-			, clientDeviceState->headPose.orientation.y
-			, clientDeviceState->headPose.orientation.z
-			, clientDeviceState->headPose.orientation.w};
-	ovrQuatf headPoseC = {-clientDeviceState->headPose.orientation.x
-			, -clientDeviceState->headPose.orientation.y
-			, -clientDeviceState->headPose.orientation.z
-			, clientDeviceState->headPose.orientation.w};
+	ovrQuatf headPoseQ = {clientDeviceState->headPose.globalPose.orientation.x
+			, clientDeviceState->headPose.globalPose.orientation.y
+			, clientDeviceState->headPose.globalPose.orientation.z
+			, clientDeviceState->headPose.globalPose.orientation.w};
+	ovrQuatf headPoseC = {-clientDeviceState->headPose.globalPose.orientation.x
+			, -clientDeviceState->headPose.globalPose.orientation.y
+			, -clientDeviceState->headPose.globalPose.orientation.z
+			, clientDeviceState->headPose.globalPose.orientation.w};
 	ovrQuatf xDir = QuaternionMultiply(QuaternionMultiply(headPoseQ, X0), headPoseC);
 	float w = eyeSeparation / 2.0f;//.04f; //half separation.
 	avs::vec4 eye = {w * xDir.x, w * xDir.y, w * xDir.z, 0.0f};
 	avs::vec4 left_eye = {-eye.x, -eye.y, -eye.z, 0.0f};
 	videoUB.eyeOffsets[0] = left_eye;        // left eye
 	videoUB.eyeOffsets[1] = eye;    // right eye.
-	videoUB.cameraPosition = clientDeviceState->headPose.position;
-	videoUB.cameraRotation = clientDeviceState->headPose.orientation;
+	videoUB.cameraPosition = clientDeviceState->headPose.globalPose.position;
+	videoUB.cameraRotation = clientDeviceState->headPose.globalPose.orientation;
 	videoUB.viewProj=res.FrameMatrices.EyeProjection[0]*res.FrameMatrices.CenterView;
 	if (mRenderTexture->IsValid())
 	{
@@ -1069,32 +1069,32 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 
 	//Render local nodes.
-	const scr::NodeManager::nodeList_t &distanceSortedRootNodes = geometryCache->mNodeManager->GetSortedRootNodes();
-	for (std::shared_ptr<scr::Node> node : distanceSortedRootNodes)
+	const clientrender::NodeManager::nodeList_t &distanceSortedRootNodes = geometryCache->mNodeManager->GetSortedRootNodes();
+	for (std::shared_ptr<clientrender::Node> node : distanceSortedRootNodes)
 	{
 		RenderNode(res, node);
 		node->distance=length(globalGraphicsResources.scrCamera->GetPosition()-node->GetGlobalTransform().m_Translation);
 	}
 
 	//Render player, if parts exist.
-	std::shared_ptr<scr::Node> body = geometryCache->mNodeManager->GetBody();
+	std::shared_ptr<clientrender::Node> body = geometryCache->mNodeManager->GetBody();
 	if (body)
 	{
 		RenderNode(res, body);
 	}
-	std::shared_ptr<scr::Node> leftHand = geometryCache->mNodeManager->GetLeftHand();
+	std::shared_ptr<clientrender::Node> leftHand = geometryCache->mNodeManager->GetLeftHand();
 	if (leftHand)
 	{
 		RenderNode(res, leftHand);
 	}
-	std::shared_ptr<scr::Node> rightHand = geometryCache->mNodeManager->GetRightHand();
+	std::shared_ptr<clientrender::Node> rightHand = geometryCache->mNodeManager->GetRightHand();
 	if (rightHand)
 	{
 		RenderNode(res, rightHand);
 	}
 }
 
-void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<scr::Node> node)
+void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<clientrender::Node> node)
 {
 	if(node->IsVisible()&&node->GetPriority()>=minimumPriority)
 	{
@@ -1108,7 +1108,7 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			}
 			GlobalGraphicsResources &globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 			// Get lightmap texture.
-			std::shared_ptr<scr::Texture>		lightmapTexture;
+			std::shared_ptr<clientrender::Texture>		lightmapTexture;
 			if(node->GetGlobalIlluminationTextureUid()!=0)
 			{
 				lightmapTexture = geometryCache->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
@@ -1123,23 +1123,26 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 			}
 
 			//Get final transform.
-			scr::mat4 globalMatrix = node->GetGlobalTransform().GetTransformMatrix();
-			clientDeviceState->transformToLocalOrigin = scr::mat4::Identity();//Translation(-clientDeviceState->localFootPos);
-			scr::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
+			clientrender::mat4 globalMatrix = node->GetGlobalTransform().GetTransformMatrix();
+			clientDeviceState->transformToLocalOrigin = clientrender::mat4::Identity();//Translation(-clientDeviceState->localFootPos);
+			clientrender::mat4 scr_Transform = clientDeviceState->transformToLocalOrigin * globalMatrix;
 
 			//Convert transform to OVR type.
 			OVR::Matrix4f transform;
 			memcpy(&transform.M[0][0], &scr_Transform.a, 16 * sizeof(float));
 
 			//Update skin uniform buffer to animate skinned meshes.
-			std::shared_ptr<scr::Skin> skin = ovrNode->GetSkin();
+			std::shared_ptr<clientrender::Skin> skin = ovrNode->GetSkin();
 			if(skin)
 			{
 				skin->UpdateBoneMatrices(globalMatrix);
 			}
 
-			std::vector<const scr::ShaderResource *> pbrShaderResources;
-			pbrShaderResources.push_back(&globalGraphicsResources.scrCamera->GetShaderResource());
+			std::vector<const clientrender::ShaderResource *> pbrShaderResources;
+			const clientrender::ShaderResource& r=globalGraphicsResources.scrCamera->GetShaderResource();
+			const clientrender::ShaderResource *sr=&r;
+			// TODO: Why does THIS crash?
+			//pbrShaderResources.push_back(&r);
 			//pbrShaderResources.push_back(&globalGraphicsResources.GetPerMeshInstanceShaderResource(perMeshInstanceData));
 			//Push surfaces onto render queue.
 			for(ovrSurfaceDef& surfaceDef : ovrNode->GetSurfaces())
@@ -1147,16 +1150,17 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 				int j = 0;
 				// Must update the uniforms. e.g. camera pos.
 				// The below seems to only apply/work for camerapos anyway:
-				for(const scr::ShaderResource *sr : pbrShaderResources)
+				//for(const clientrender::ShaderResource *sr : pbrShaderResources)
 				{
-					const std::vector<scr::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
-					for(const scr::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
+					const std::vector<clientrender::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
+					for(const clientrender::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
 					{
-						scr::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
-						if(type == scr::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER && resource.bufferInfo.buffer)
+						clientrender::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
+						if(type == clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER && resource.bufferInfo.buffer)
 						{
 							scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
-							surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
+							if(gl_uniformBuffer)
+								surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
 						}
 					}
 					j++;
@@ -1175,9 +1179,9 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<s
 	}
 
 	//Render children.
-	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
+	for(std::weak_ptr<clientrender::Node> childPtr : node->GetChildren())
 	{
-		std::shared_ptr<scr::Node> child = childPtr.lock();
+		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if(child)
 		{
 			RenderNode(res, child);
@@ -1193,7 +1197,7 @@ void ClientRenderer::CycleShaderMode()
 	nodeManager->ChangeEffectPass(passSelector>0?debugPassNames[passSelector].c_str():"");
 }
 
-void ClientRenderer::ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining)
+void ClientRenderer::ListNode(const std::shared_ptr<clientrender::Node>& node, int indent, size_t& linesRemaining)
 {
 	//Return if we do not want to print any more lines.
 	if(linesRemaining <= 0)
@@ -1212,7 +1216,7 @@ void ClientRenderer::ListNode(const std::shared_ptr<scr::Node>& node, int indent
 
 	//Retrieve info string on mesh on node, if the node has a mesh.
 	std::string meshInfoString;
-	const std::shared_ptr<scr::Mesh>& mesh = node->GetMesh();
+	const std::shared_ptr<clientrender::Mesh>& mesh = node->GetMesh();
 	if(mesh)
 	{
 		meshInfoString = "mesh ";
@@ -1225,7 +1229,7 @@ void ClientRenderer::ListNode(const std::shared_ptr<scr::Node>& node, int indent
 			, meshInfoString.c_str());
 
 	//Print information on children to screen.
-	const std::vector<std::weak_ptr<scr::Node>>& children = node->GetChildren();
+	const std::vector<std::weak_ptr<clientrender::Node>>& children = node->GetChildren();
 	for(const auto c : children)
 	{
 		ListNode(c.lock(), indent + 1, linesRemaining);
@@ -1239,7 +1243,7 @@ void ClientRenderer::WriteDebugOutput()
 	OVR_LOG("Root Nodes: %zu   Total Nodes: %zu",rootNodes.size(),geometryCache->mNodeManager->GetNodeAmount());
 	size_t linesRemaining = 20;
 	static uid show_only=0;
-	for(const std::shared_ptr<scr::Node>& node : rootNodes)
+	for(const std::shared_ptr<clientrender::Node>& node : rootNodes)
 	{
 		if(show_only!=0&&show_only!=node->id)
 			continue;
@@ -1307,34 +1311,34 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 					"Controller 1 rel: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
 					"             abs: (%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
 					, clientDeviceState->originPose.position.x,	clientDeviceState->originPose.position.y,clientDeviceState->originPose.position.z,
-					clientDeviceState->relativeHeadPos.x, clientDeviceState->relativeHeadPos.y,clientDeviceState->relativeHeadPos.z,
-					clientDeviceState->headPose.position.x, clientDeviceState->headPose.position.y,clientDeviceState->headPose.position.z,
+					clientDeviceState->headPose.localPose.position.x, clientDeviceState->headPose.localPose.position.y,clientDeviceState->headPose.localPose.position.z,
+					clientDeviceState->headPose.globalPose.position.x, clientDeviceState->headPose.globalPose.position.y,clientDeviceState->headPose.globalPose.position.z,
 					clientDeviceState->stickYaw,
 					vidPos.x, vidPos.y, vidPos.z,
-					clientDeviceState->controllerRelativePoses[0].position.x,
-					clientDeviceState->controllerRelativePoses[0].position.y,
-					clientDeviceState->controllerRelativePoses[0].position.z,
-					clientDeviceState->controllerRelativePoses[0].orientation.x,
-					clientDeviceState->controllerRelativePoses[0].orientation.y,
-					clientDeviceState->controllerRelativePoses[0].orientation.z,
-					clientDeviceState->controllerPoses[0].position.x,
-					clientDeviceState->controllerPoses[0].position.y,
-					clientDeviceState->controllerPoses[0].position.z,
-					clientDeviceState->controllerPoses[0].orientation.x,
-					clientDeviceState->controllerPoses[0].orientation.y,
-					clientDeviceState->controllerPoses[0].orientation.z,
-					clientDeviceState->controllerRelativePoses[1].position.x,
-					clientDeviceState->controllerRelativePoses[1].position.y,
-					clientDeviceState->controllerRelativePoses[1].position.z,
-					clientDeviceState->controllerRelativePoses[1].orientation.x,
-					clientDeviceState->controllerRelativePoses[1].orientation.y,
-					clientDeviceState->controllerRelativePoses[1].orientation.z,
-					clientDeviceState->controllerPoses[1].position.x,
-					clientDeviceState->controllerPoses[1].position.y,
-					clientDeviceState->controllerPoses[1].position.z,
-					clientDeviceState->controllerPoses[1].orientation.x,
-					clientDeviceState->controllerPoses[1].orientation.y,
-					clientDeviceState->controllerPoses[1].orientation.z
+					clientDeviceState->controllerPoses[0].localPose.position.x,
+					clientDeviceState->controllerPoses[0].localPose.position.y,
+					clientDeviceState->controllerPoses[0].localPose.position.z,
+					clientDeviceState->controllerPoses[0].localPose.orientation.x,
+					clientDeviceState->controllerPoses[0].localPose.orientation.y,
+					clientDeviceState->controllerPoses[0].localPose.orientation.z,
+					clientDeviceState->controllerPoses[0].globalPose.position.x,
+					clientDeviceState->controllerPoses[0].globalPose.position.y,
+					clientDeviceState->controllerPoses[0].globalPose.position.z,
+					clientDeviceState->controllerPoses[0].globalPose.orientation.x,
+					clientDeviceState->controllerPoses[0].globalPose.orientation.y,
+					clientDeviceState->controllerPoses[0].globalPose.orientation.z,
+					clientDeviceState->controllerPoses[1].localPose.position.x,
+					clientDeviceState->controllerPoses[1].localPose.position.y,
+					clientDeviceState->controllerPoses[1].localPose.position.z,
+					clientDeviceState->controllerPoses[1].localPose.orientation.x,
+					clientDeviceState->controllerPoses[1].localPose.orientation.y,
+					clientDeviceState->controllerPoses[1].localPose.orientation.z,
+					clientDeviceState->controllerPoses[1].globalPose.position.x,
+					clientDeviceState->controllerPoses[1].globalPose.position.y,
+					clientDeviceState->controllerPoses[1].globalPose.position.z,
+					clientDeviceState->controllerPoses[1].globalPose.orientation.x,
+					clientDeviceState->controllerPoses[1].globalPose.orientation.y,
+					clientDeviceState->controllerPoses[1].globalPose.orientation.z
 			);
 
 			break;
@@ -1365,10 +1369,10 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 		case GEOMETRY_OSD:
 		{
 			std::ostringstream str;
-			const scr::NodeManager::nodeList_t &rootNodes = geometryCache->mNodeManager->GetRootNodes();
+			const clientrender::NodeManager::nodeList_t &rootNodes = geometryCache->mNodeManager->GetRootNodes();
 
 			str <<"Geometry\n\nNodes: "<<static_cast<uint64_t>(geometryCache->mNodeManager->GetNodeAmount()) << "\n";
-			for(std::shared_ptr<scr::Node> node : rootNodes)
+			for(std::shared_ptr<clientrender::Node> node : rootNodes)
 			{
 				str << node->id << ": "<<node->name.c_str()<<"\n";
 			}
@@ -1382,8 +1386,8 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 				size_t resourcesOnLine = 0;
 				for(const auto &missingPair : missingResources)
 				{
-					const scr::MissingResource &missingResource = missingPair.second;
-					str << missingResource.resourceType << "_" << missingResource.id;
+					const clientrender::MissingResource &missingResource = missingPair.second;
+					str << (int)missingResource.resourceType << "_" << missingResource.id;
 
 					resourcesOnLine++;
 					if(resourcesOnLine >= MAX_RESOURCES_PER_LINE)
@@ -1450,9 +1454,9 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 				for(size_t j = 0; j < tag.lights.size(); j++)
 				{
 					auto &l = tag.lights[j];
-					sstr << "\t" << l.uid << ": Type " << ToString((scr::Light::Type)l.lightType)
+					sstr << "\t" << l.uid << ": Type " << ToString((clientrender::Light::Type)l.lightType)
 						 << ", clr " << l.color.x << "," << l.color.y << "," << l.color.z;
-					if(l.lightType == scr::LightType::Directional)
+					if(l.lightType == clientrender::LightType::Directional)
 					{
 						ovrQuatf q = {l.orientation.x, l.orientation.y, l.orientation.z, l.orientation.w};
 						avs::vec3 z = {0, 0, 1.0f};
@@ -1471,13 +1475,13 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 			avs::vec3 leftHandPosition, rightHandPosition;
 			avs::vec4 leftHandOrientation, rightHandOrientation;
 
-			std::shared_ptr<scr::Node> leftHand = geometryCache->mNodeManager->GetLeftHand();
+			std::shared_ptr<clientrender::Node> leftHand = geometryCache->mNodeManager->GetLeftHand();
 			if(leftHand)
 			{
 				leftHandPosition = leftHand->GetGlobalTransform().m_Translation;
 				leftHandOrientation = leftHand->GetGlobalTransform().m_Rotation;
 			}
-			std::shared_ptr<scr::Node> rightHand = geometryCache->mNodeManager->GetRightHand();
+			std::shared_ptr<clientrender::Node> rightHand = geometryCache->mNodeManager->GetRightHand();
 			if(rightHand)
 			{
 				rightHandPosition = rightHand->GetGlobalTransform().m_Translation;

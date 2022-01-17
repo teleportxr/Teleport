@@ -106,7 +106,6 @@ private:
     void ParseCommandPacket(ENetPacket* packet);
 
     void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
-    void SendHeadPose(const avs::Pose& headPose);
 	void sendOriginPose(uint64_t validCounter,const avs::Pose& headPose);
     void SendControllerPoses(const avs::Pose& headPose,const avs::Pose* poses);
     void SendInput(int id,const teleport::client::ControllerState& controllerState);

@@ -3,7 +3,7 @@
 #include <OVR_LogUtils.h>
 
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 using namespace OVRFW;
 
 void GL_UniformBuffer::Create(UniformBufferCreateInfo* pUniformBufferCreateInfo)

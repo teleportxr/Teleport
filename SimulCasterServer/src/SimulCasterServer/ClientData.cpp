@@ -8,7 +8,7 @@ ClientData::ClientData(std::shared_ptr<teleport::GeometryStreamingService> geome
 	originClientHas.x = originClientHas.y = originClientHas.z = 0.f;
 	memset(&clientSettings,0,sizeof(clientSettings));
 }
-void ClientData::StartStreaming(const teleport::ServerSettings& casterSettings
+void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	,const teleport::CasterEncoderSettings& encoderSettings
 	,uint32_t connectionTimeout
 	,avs::uid serverID
@@ -25,33 +25,36 @@ void ClientData::StartStreaming(const teleport::ServerSettings& casterSettings
 	setupCommand.idle_connection_timeout = connectionTimeout;
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
-	setupCommand.audio_input_enabled = casterSettings.isReceivingAudio;
-	setupCommand.control_model = casterSettings.controlModel;
+	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
+	setupCommand.control_model = serverSettings.controlModel;
 	setupCommand.bodyOffsetFromHead = clientSettings.bodyOffsetFromHead;
 	setupCommand.startTimestamp = getUnixTimestamp();
 	setupCommand.using_ssl = use_ssl;
+	setupCommand.backgroundMode = clientSettings.backgroundMode;
+	setupCommand.draw_distance = clientSettings.drawDistance;
+	// Often drawDistance will equal serverSettings.detectionSphereRadius + serverSettings.clientDrawDistanceOffset;
+	// but this is for the server operator to decide.
 
 	avs::VideoConfig& videoConfig = setupCommand.video_config;
 	videoConfig.video_width = encoderSettings.frameWidth;
 	videoConfig.video_height = encoderSettings.frameHeight;
 	videoConfig.depth_height = encoderSettings.depthHeight;
 	videoConfig.depth_width = encoderSettings.depthWidth;
-	videoConfig.perspective_width = casterSettings.perspectiveWidth;
-	videoConfig.perspective_height = casterSettings.perspectiveHeight;
-	videoConfig.perspective_fov = casterSettings.perspectiveFOV;
+	videoConfig.perspective_width = serverSettings.perspectiveWidth;
+	videoConfig.perspective_height = serverSettings.perspectiveHeight;
+	videoConfig.perspective_fov = serverSettings.perspectiveFOV;
 	videoConfig.webcam_width = clientSettings.webcamSize[0];
 	videoConfig.webcam_height = clientSettings.webcamSize[1];
 	videoConfig.webcam_offset_x = clientSettings.webcamPos[0];
 	videoConfig.webcam_offset_y = clientSettings.webcamPos[1];
-	videoConfig.use_10_bit_decoding = casterSettings.use10BitEncoding;
-	videoConfig.use_yuv_444_decoding = casterSettings.useYUV444Decoding;
-	videoConfig.use_alpha_layer_decoding = casterSettings.useAlphaLayerEncoding;
-	videoConfig.colour_cubemap_size = casterSettings.captureCubeSize;
+	videoConfig.use_10_bit_decoding = serverSettings.use10BitEncoding;
+	videoConfig.use_yuv_444_decoding = serverSettings.useYUV444Decoding;
+	videoConfig.use_alpha_layer_decoding = serverSettings.useAlphaLayerEncoding;
+	videoConfig.colour_cubemap_size = serverSettings.captureCubeSize;
 	videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
-	videoConfig.videoCodec = casterSettings.videoCodec;
-	videoConfig.use_cubemap = !casterSettings.usePerspectiveRendering;
-	videoConfig.stream_webcam = casterSettings.enableWebcamStreaming;
-	videoConfig.draw_distance = casterSettings.detectionSphereRadius + casterSettings.clientDrawDistanceOffset;
+	videoConfig.videoCodec = serverSettings.videoCodec;
+	videoConfig.use_cubemap = !serverSettings.usePerspectiveRendering;
+	videoConfig.stream_webcam = serverSettings.enableWebcamStreaming;
 
 	videoConfig.specular_cubemap_size = clientSettings.specularCubemapSize;
 

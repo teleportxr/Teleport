@@ -62,11 +62,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Core_MT.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Core_MTd</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Core_MT.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Core_MT</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
@@ -83,7 +83,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -101,10 +101,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -117,7 +117,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -134,10 +134,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -151,6 +151,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\..\..\..\firstparty;..\..\..\..\..\firstparty\Platform\Android;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>UNIX=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
@@ -159,7 +160,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\CMakeLists.txt">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Core\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Core/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
@@ -172,7 +173,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Core/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
@@ -185,40 +186,40 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\BaseMouseHandler.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\CommandLine.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\CommandLineParams.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\DefaultFileLoader.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\EnvironmentVariables.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\MemoryInterface.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\ProfilingInterface.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\RuntimeError.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\StringFunctions.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\StringToWString.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\Timer.cpp" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\BaseMouseHandler.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\CommandLine.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\CommandLineParams.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\DebugMemory.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\DefaultFileLoader.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\EnvironmentVariables.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\Export.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\FileLoader.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\MemoryInterface.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\MemoryUsageInterface.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\ProfilingInterface.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\PropertyMacros.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\ReadWriteMutex.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\RuntimeError.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\SimpleIni.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\StringFunctions.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\StringToWString.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\Core\Timer.h" />
+    <ClCompile Include="..\..\..\..\..\firstparty\Platform\Core\BaseMouseHandler.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\CommandLine.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\CommandLineParams.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\DefaultFileLoader.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\EnvironmentVariables.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\MemoryInterface.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\ProfilingInterface.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\RuntimeError.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\StringFunctions.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\StringToWString.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\Timer.cpp" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\BaseMouseHandler.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\CommandLine.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\CommandLineParams.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\DebugMemory.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\DefaultFileLoader.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\EnvironmentVariables.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\Export.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\FileLoader.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\MemoryInterface.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\MemoryUsageInterface.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\ProfilingInterface.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\PropertyMacros.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\ReadWriteMutex.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\RuntimeError.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\SimpleIni.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\StringFunctions.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\StringToWString.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\Timer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -17,14 +17,14 @@
 
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
 #include "TeleportClient/SessionClient.h"
-#include "crossplatform/ResourceCreator.h"
-#include "crossplatform/ResourceManager.h"
-#include "crossplatform/GeometryDecoder.h"
-#include "api/IndexBuffer.h"
-#include "api/Shader.h"
-#include "api/Texture.h"
-#include "api/UniformBuffer.h"
-#include "api/VertexBuffer.h"
+#include "ClientRender/ResourceCreator.h"
+#include "ClientRender/ResourceManager.h"
+#include "ClientRender/GeometryDecoder.h"
+#include "ClientRender/IndexBuffer.h"
+#include "ClientRender/Shader.h"
+#include "ClientRender/Texture.h"
+#include "ClientRender/UniformBuffer.h"
+#include "ClientRender/VertexBuffer.h"
 
 #include "crossplatform/AudioStreamTarget.h"
 #include "pc/PC_AudioPlayer.h"
@@ -47,7 +47,7 @@ namespace pc_client
 	class PC_RenderPlatform;
 }
 
-namespace scr
+namespace clientrender
 {
 	class Material;
 }
@@ -110,7 +110,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	static constexpr int maxTagDataSize = 32;
 	VideoTagDataCube videoTagDataCube[maxTagDataSize];
 
-	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
+	std::vector<clientrender::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	/// A camera instance to generate view and proj matrices and handle mouse control.
 	/// In practice you will have your own solution for this.
@@ -129,10 +129,10 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	avs::Timestamp platformStartTimestamp;	//Timestamp of when the system started.
 	double previousTimestamp;				//Milliseconds since the state was last updated.
 
-	scr::GeometryCache localGeometryCache;
-	scr::ResourceCreator localResourceCreator;
-	scr::GeometryCache geometryCache;
-	scr::ResourceCreator resourceCreator;
+	clientrender::GeometryCache localGeometryCache;
+	clientrender::ResourceCreator localResourceCreator;
+	clientrender::GeometryCache geometryCache;
+	clientrender::ResourceCreator resourceCreator;
 	
 	bool show_video = false;
 	bool renderPlayer = true; //Whether to render the player.
@@ -208,11 +208,11 @@ public:
 	void PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	
 	void DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> node);
+	void WriteHierarchy(int tab,std::shared_ptr<clientrender::Node> node);
 	void WriteHierarchies();
-	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,scr::GeometryCache &g);
-	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force=false);
-	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force=false);
+	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g);
+	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
+	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
 	void RenderView(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 
 	int AddView();
@@ -270,7 +270,7 @@ public:
 
 	avs::SetupLightingCommand lastSetupLightingCommand;
 	int RenderMode;
-	std::shared_ptr<scr::Material> mFlatColourMaterial;
+	std::shared_ptr<clientrender::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;
 	unsigned long long receivedRelativePos = 0;
 	bool videoPosDecoded=false;
@@ -282,7 +282,7 @@ public:
 	bool render_local_offline = false;
 private:
 	avs::uid show_only=0;
-	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining);
+	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node, int indent, int& linesRemaining);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	void RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique);

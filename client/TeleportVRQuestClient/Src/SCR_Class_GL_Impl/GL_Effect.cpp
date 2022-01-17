@@ -5,7 +5,7 @@
 #include <GLES3/gl32.h>
 
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 using namespace OVR;
 using namespace OVRFW;
 
@@ -209,7 +209,7 @@ static const char *ToString(OVRFW::ovrProgramParmType t)
             return "";
     }
 }
-void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources)
+void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, clientrender::ShaderSystem::Pipeline& pipeline, const std::vector<clientrender::ShaderResource>& shaderResources)
 {
     Shader* vertex = nullptr;
     Shader* fragment = nullptr;
@@ -259,7 +259,7 @@ void GL_Effect::BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSys
      );
 }
 
-void GL_Effect::BuildComputePipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources)
+void GL_Effect::BuildComputePipeline(const char* effectPassName, clientrender::ShaderSystem::Pipeline& pipeline, const std::vector<clientrender::ShaderResource>& shaderResources)
 {
     std::string src = "#version 310 es\r\n";
     //Compile compute shader

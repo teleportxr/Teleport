@@ -4,7 +4,7 @@
 #include <GLES2/gl2ext.h>
 
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 using namespace OVR;
 using namespace OVRFW;
 
@@ -231,8 +231,8 @@ void GL_Texture::UseSampler(const std::shared_ptr<Sampler>& sampler)
 
     if(tt==GL_TEXTURE_2D || tt==GL_TEXTURE_CUBE_MAP)
 	{
-		scr::Sampler::Filter minf=glSampler->GetSamplerCreateInfo().minFilter;
-		scr::Sampler::Filter magf=glSampler->GetSamplerCreateInfo().magFilter;
+		clientrender::Sampler::Filter minf=glSampler->GetSamplerCreateInfo().minFilter;
+		clientrender::Sampler::Filter magf=glSampler->GetSamplerCreateInfo().magFilter;
     	glTexParameteri(tt, GL_TEXTURE_MIN_FILTER, glSampler->ToGLFilterType(minf));
     	glTexParameteri(tt, GL_TEXTURE_MAG_FILTER, glSampler->ToGLFilterType(magf));
 	}
