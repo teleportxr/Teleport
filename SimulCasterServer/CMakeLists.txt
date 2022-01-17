@@ -16,6 +16,8 @@ set(src
 	src/SimulCasterServer/ClientData.h
 	src/SimulCasterServer/ClientMessaging.cpp
 	src/SimulCasterServer/ClientMessaging.h
+	src/SimulCasterServer/ClientManager.cpp
+	src/SimulCasterServer/ClientManager.h
 	src/SimulCasterServer/DiscoveryService.cpp
 	src/SimulCasterServer/DiscoveryService.h 
 	src/SimulCasterServer/ErrorHandling.h

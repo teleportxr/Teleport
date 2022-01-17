@@ -2,7 +2,7 @@
 using namespace teleport;
 using namespace server;
 
-ClientData::ClientData(std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, const teleport::ClientMessaging& clientMessaging)
+ClientData::ClientData(std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, std::shared_ptr<teleport::ClientMessaging> clientMessaging)
 	: geometryStreamingService(geometryStreamingService), videoEncodePipeline(videoPipeline), audioEncodePipeline(audioPipeline), clientMessaging(clientMessaging)
 {
 	originClientHas.x = originClientHas.y = originClientHas.z = 0.f;
@@ -16,12 +16,12 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	,bool use_ssl)
 {
 	avs::SetupCommand setupCommand;
-	setupCommand.server_streaming_port = clientMessaging.getServerPort() + 1;
-	setupCommand.server_http_port = setupCommand.server_streaming_port + 1;
-	setupCommand.debug_stream = serverSettings.debugStream;
-	setupCommand.do_checksums = serverSettings.enableChecksums ? 1 : 0;
-	setupCommand.debug_network_packets = serverSettings.enableDebugNetworkPackets;
-	setupCommand.requiredLatencyMs = serverSettings.requiredLatencyMs;
+	setupCommand.server_http_port = clientMessaging->getServerPort() + 1;
+	setupCommand.server_streaming_port = clientMessaging->getStreamingPort();
+	setupCommand.debug_stream = casterSettings.debugStream;
+	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
+	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
+	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
 	setupCommand.idle_connection_timeout = connectionTimeout;
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
@@ -76,17 +76,17 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
 	videoConfig.shadowmap_size = clientSettings.shadowmapSize;
-	clientMessaging.sendCommand(setupCommand);
+	clientMessaging->sendCommand(setupCommand);
 
 	auto global_illumination_texture_uids = getGlobalIlluminationTextures();
 	avs::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
-	clientMessaging.sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
+	clientMessaging->sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 
 	isStreaming = true;
 
 	for (auto s : nodeSubTypes)
 	{
-		clientMessaging.setNodeSubtype(s.first,s.second.state);
+		clientMessaging->setNodeSubtype(s.first,s.second.state);
 		s.second.status = ReflectedStateStatus::SENT;
 	}
 }
@@ -97,16 +97,16 @@ void ClientData::setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType)
 	nodeSubTypes[nodeID].status=ReflectedStateStatus::UNSENT;
 	if (isStreaming)
 	{
-		clientMessaging.setNodeSubtype(nodeID, subType);
+		clientMessaging->setNodeSubtype(nodeID, subType);
 		nodeSubTypes[nodeID].status = ReflectedStateStatus::SENT;
 	}
 }
 
 bool ClientData::setOrigin(uint64_t ctr,avs::vec3 pos,bool set_rel,avs::vec3 rel_to_head,avs::vec4 orientation)
 {
-	if(clientMessaging.hasPeer()&& clientMessaging.hasReceivedHandshake())
+	if(clientMessaging->hasPeer()&& clientMessaging->hasReceivedHandshake())
 	{
-		if(clientMessaging.setPosition(ctr,pos,set_rel,rel_to_head,orientation))
+		if(clientMessaging->setPosition(ctr,pos,set_rel,rel_to_head,orientation))
 		{
 		// ASSUME the message was received...
 		// TODO: Only set this when client confirms.
@@ -120,12 +120,12 @@ bool ClientData::setOrigin(uint64_t ctr,avs::vec3 pos,bool set_rel,avs::vec3 rel
 
 bool ClientData::isConnected() const
 {
-	return clientMessaging.hasPeer();
+	return clientMessaging->hasPeer();
 }
 
 bool ClientData::hasOrigin() const
 {
-	if(clientMessaging.hasPeer())
+	if(clientMessaging->hasPeer())
 	{
 		return _hasOrigin;
 	}
@@ -163,7 +163,7 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 	{
 		avs::SetupLightingCommand setupLightingCommand;
 		setupLightingCommand.num_gi_textures=(uint8_t)num;
-		clientMessaging.sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
+		clientMessaging->sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 	}
 	
 }

@@ -9,8 +9,8 @@ using namespace teleport;
 using namespace server;
 
 extern std::map<avs::uid, ClientData> clientServices;
-extern teleport::ServerSettings serverSettings;
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
+extern teleport::ServerSettings casterSettings;
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP);
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 
 bool DefaultDiscoveryService::initialize(uint16_t discovPort, uint16_t servPort, std::string desIP)
@@ -155,7 +155,10 @@ void DefaultDiscoveryService::tick()
 		auto clientID = c->first;
 		auto addr = c->second;
 
-		if(Client_StartSession(clientID, servicePort))
+		char clientIP[20];
+		enet_address_get_host_ip(&addr, clientIP, sizeof(clientIP));
+
+		if(Client_StartSession(clientID, std::string(clientIP)))
 		{
 			++c;
 		}

@@ -29,7 +29,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 {
 	size_t numOutputs = streams.size();
 
-	if (numOutputs == 0 || params.localPort == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
+	if (numOutputs == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
 	{
 		return Result::Node_InvalidConfiguration;
 	}

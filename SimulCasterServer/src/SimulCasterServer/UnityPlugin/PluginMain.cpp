@@ -17,6 +17,7 @@
 #include "SimulCasterServer/GeometryStreamingService.h"
 #include "SimulCasterServer/AudioEncodePipeline.h"
 #include "SimulCasterServer/VideoEncodePipeline.h"
+#include "SimulCasterServer/ClientManager.h"
 
 #include "Export.h"
 #include "InteropStructures.h"
@@ -34,7 +35,7 @@ VisualStudioDebugOutput debug_buffer(false, nullptr, 128);
 using namespace teleport;
 using namespace server;
 
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort);
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP);
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
@@ -67,8 +68,8 @@ typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data,
 
 static avs::Context avsContext;
 
-static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_unique<DefaultDiscoveryService>();
-static std::shared_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
+static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_shared<DefaultDiscoveryService>();
+static std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
 static GeometryStore geometryStore;
 
 std::map<avs::uid, ClientData> clientServices;
@@ -94,6 +95,8 @@ static std::vector<avs::uid> lostClients; //Clients who have been lost, and are 
 
 static std::mutex audioMutex;
 static std::mutex videoMutex;
+
+static ClientManager clientManager;
 
 // Messages related stuff
 avs::MessageHandlerFunc messageHandler = nullptr;
@@ -363,7 +366,7 @@ void RemoveClient(avs::uid clientID)
 		TELEPORT_CERR << "Failed to remove client from server! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	clientPair->second.clientMessaging.stopSession();
+	clientPair->second.clientMessaging->stopSession();
 
 	// Remove references to lost client.
 	clientServices.erase(clientID);
@@ -527,8 +530,6 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		return false;
 	}
 	atexit(enet_deinitialize);
-	
-	ClientMessaging::startAsyncNetworkDataProcessing();
 
 	bool result = discoveryService->initialize(initialiseState->DISCOVERY_PORT,initialiseState->SERVICE_PORT, std::string(initialiseState->clientIP));
 
@@ -537,7 +538,16 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		return false;
 	}
 
-	result = httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 2);
+	result = clientManager.initialize(initialiseState->SERVICE_PORT);
+
+	if (!result)
+	{
+		return false;
+	}
+
+	clientManager.startAsyncNetworkDataProcessing();
+
+	result = httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 1);
 	return result;
 }
 
@@ -546,10 +556,7 @@ TELEPORT_EXPORT void Shutdown()
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
 
-	httpService->shutdown();
-	discoveryService->shutdown();
-
-	ClientMessaging::stopAsyncNetworkDataProcessing(true);
+	clientManager.stopAsyncNetworkDataProcessing(true);
 
 	for(auto& clientPair : clientServices)
 	{
@@ -559,8 +566,15 @@ TELEPORT_EXPORT void Shutdown()
 			// This will add to lost clients but will be cleared below
 			Client_StopStreaming(clientPair.first);
 		}
-		clientData.clientMessaging.stopSession();
+		else
+		{
+			clientData.clientMessaging->stopSession();
+		}
 	}
+
+	clientManager.shutdown();
+	httpService->shutdown();
+	discoveryService->shutdown();
 
 	lostClients.clear();
 	unlinkedClientIDs.clear();
@@ -575,9 +589,9 @@ TELEPORT_EXPORT void Shutdown()
 	processNewInput = nullptr;
 }
 
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP)
 {
-	if (!clientID)
+	if (!clientID || clientIP.size() == 0)
 		return false;
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
@@ -589,10 +603,10 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 		std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService = std::make_shared<PluginGeometryStreamingService>();
 		std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline = std::make_shared<PluginVideoEncodePipeline>();
 		std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline = std::make_shared<PluginAudioEncodePipeline>();
-		teleport::ClientMessaging clientMessaging(&serverSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake);
+		std::shared_ptr<teleport::ClientMessaging> clientMessaging = std::make_shared<teleport::ClientMessaging>(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
 		ClientData newClientData(geometryStreamingService, videoEncodePipeline, audioEncodePipeline, clientMessaging);
 
-		if(newClientData.clientMessaging.startSession(clientID, listenPort))
+		if(newClientData.clientMessaging->startSession(clientID, clientIP))
 		{
 			clientServices.emplace(clientID, std::move(newClientData));
 		}
@@ -605,17 +619,18 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 	}
 	else
 	{
-		if (!clientPair->second.clientMessaging.isStartingSession() || clientPair->second.clientMessaging.TimedOutStartingSession())
+		if (!clientPair->second.clientMessaging->isStartingSession() || clientPair->second.clientMessaging->timedOutStartingSession())
 		{
-			clientPair->second.clientMessaging.Disconnect();
+			clientPair->second.clientMessaging->Disconnect();
+			return false;
 		}
 		return true;
 	}
 
 	ClientData& newClient = clientPair->second;
-	if(newClient.clientMessaging.isInitialised())
+	if(newClient.clientMessaging->isInitialised())
 	{
-		newClient.clientMessaging.unInitialise();
+		newClient.clientMessaging->unInitialise();
 	}
 
 	// Sending
@@ -655,7 +670,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, int32_t listenPort)
 		return c;
 	};
 
-	newClient.clientMessaging.initialise(&newClient.casterContext, delegates);
+	newClient.clientMessaging->initialise(&newClient.casterContext, delegates);
 
 	discoveryService->sendResponseToClient(clientID);
 
@@ -722,7 +737,7 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 	if(!clientData.validClientSettings)
 		return;
 
-	clientData.clientMessaging.ConfirmSessionStarted();
+	clientData.clientMessaging->ConfirmSessionStarted();
 
 	//clientData.geometryStreamingService->startStreaming(&clientData.casterContext,handshake);
 
@@ -778,7 +793,7 @@ TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
 	}
 
 	ClientData& lostClient = clientPair->second;
-	lostClient.clientMessaging.stopSession();
+	lostClient.clientMessaging->stopSession();
 	lostClient.isStreaming = false;
 
 	//Delay deletion of clients.
@@ -794,19 +809,21 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	}
 	lostClients.clear();
 
+	clientManager.tick(deltaTime);
+
 	for(auto& clientPair : clientServices)
 	{
 		ClientData& clientData = clientPair.second;
-		clientData.clientMessaging.handleEvents(deltaTime);
+		clientData.clientMessaging->handleEvents(deltaTime);
 
-		if(clientData.clientMessaging.hasPeer())
+		if(clientData.clientMessaging->hasPeer())
 		{
 			if (clientData.isStreaming == false)
 			{
 				Client_StartStreaming(clientPair.first);
 			}
 
-			clientData.clientMessaging.tick(deltaTime);
+			clientData.clientMessaging->tick(deltaTime);
 		}
 	}
 
@@ -1081,7 +1098,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, teleport::VideoE
 	videoConfig.videoCodec = serverSettings.videoCodec;
 	videoConfig.use_cubemap = !serverSettings.usePerspectiveRendering;
 
-	clientData.clientMessaging.sendCommand(cmd);
+	clientData.clientMessaging->sendCommand(cmd);
 }
 
 TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData, size_t tagDataSize)
@@ -1096,7 +1113,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 	}
 
 	ClientData& clientData = clientPair->second;
-	if(!clientData.clientMessaging.hasPeer())
+	if(!clientData.clientMessaging->hasPeer())
 	{
 		TELEPORT_COUT << "Failed to encode video frame for Client_" << clientID << "! Client has no peer!\n";
 		return;
@@ -1196,13 +1213,13 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 	}
 
 	ClientData& clientData = clientPair->second;
-	if (!clientData.clientMessaging.hasPeer())
+	if (!clientData.clientMessaging->hasPeer())
 	{
 		return;
 	}
 
 	// Only continue processing if the main thread hasn't hung.
-	double elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(ClientMessaging::getLastTickTimestamp(), avs::PlatformWindows::getTimestamp());
+	double elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(clientManager.getLastTickTimestamp(), avs::PlatformWindows::getTimestamp());
 	if (elapsedTime > 0.15f)
 	{
 		return;
@@ -1226,7 +1243,7 @@ TELEPORT_EXPORT void Client_NodeEnteredBounds(avs::uid clientID, avs::uid nodeID
 		return;
 	}
 
-	clientPair->second.clientMessaging.nodeEnteredBounds(nodeID);
+	clientPair->second.clientMessaging->nodeEnteredBounds(nodeID);
 }
 
 TELEPORT_EXPORT void Client_NodeLeftBounds(avs::uid clientID, avs::uid nodeID)
@@ -1238,7 +1255,7 @@ TELEPORT_EXPORT void Client_NodeLeftBounds(avs::uid clientID, avs::uid nodeID)
 		return;
 	}
 
-	clientPair->second.clientMessaging.nodeLeftBounds(nodeID);
+	clientPair->second.clientMessaging->nodeLeftBounds(nodeID);
 }
 
 TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, avs::MovementUpdate* updates, int updateAmount)
@@ -1262,7 +1279,7 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, avs::MovementU
 		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].angularVelocityAxis);
 	}
 
-	clientPair->second.clientMessaging.updateNodeMovement(updateList);
+	clientPair->second.clientMessaging->updateNodeMovement(updateList);
 }
 
 TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, avs::NodeUpdateEnabledState* updates, int updateAmount)
@@ -1275,7 +1292,7 @@ TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, avs::NodeU
 	}
 
 	std::vector<avs::NodeUpdateEnabledState> updateList(updates, updates + updateAmount);
-	clientPair->second.clientMessaging.updateNodeEnabledState(updateList);
+	clientPair->second.clientMessaging->updateNodeEnabledState(updateList);
 }
 
 TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, avs::ApplyAnimation update)
@@ -1287,7 +1304,7 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, avs::ApplyAni
 		return;
 	}
 
-	clientPair->second.clientMessaging.updateNodeAnimation(update);
+	clientPair->second.clientMessaging->updateNodeAnimation(update);
 }
 
 TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, avs::NodeUpdateAnimationControl update)
@@ -1299,7 +1316,7 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, avs::N
 		return;
 	}
 
-	clientPair->second.clientMessaging.updateNodeAnimationControl(update);
+	clientPair->second.clientMessaging->updateNodeAnimationControl(update);
 }
 
 TELEPORT_EXPORT void Client_UpdateNodeRenderState(avs::uid clientID, avs::NodeRenderState update)
@@ -1310,7 +1327,7 @@ TELEPORT_EXPORT void Client_UpdateNodeRenderState(avs::uid clientID, avs::NodeRe
 		TELEPORT_CERR << "Failed to update node animation control for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	clientPair->second.clientMessaging.updateNodeRenderState(clientID,update);
+	clientPair->second.clientMessaging->updateNodeRenderState(clientID,update);
 }
 
 TELEPORT_EXPORT void Client_SetNodeAnimationSpeed(avs::uid clientID, avs::uid nodeID, avs::uid animationID, float speed)
@@ -1321,7 +1338,7 @@ TELEPORT_EXPORT void Client_SetNodeAnimationSpeed(avs::uid clientID, avs::uid no
 		TELEPORT_CERR << "Failed to set node animation speed for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	clientPair->second.clientMessaging.setNodeAnimationSpeed(nodeID, animationID, speed);
+	clientPair->second.clientMessaging->setNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeID, bool isHighlighted)
@@ -1333,7 +1350,7 @@ TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeI
 		return;
 	}
 
-	clientPair->second.clientMessaging.setNodeHighlighted(nodeID, isHighlighted);
+	clientPair->second.clientMessaging->setNodeHighlighted(nodeID, isHighlighted);
 }
 
 TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID,avs::Pose relPose )
@@ -1345,7 +1362,7 @@ TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs
 		return;
 	}
 
-	clientPair->second.clientMessaging.reparentNode(nodeID, newParentNodeID,relPose);
+	clientPair->second.clientMessaging->reparentNode(nodeID, newParentNodeID,relPose);
 }
 
 TELEPORT_EXPORT void Client_SetNodeSubtype(avs::uid clientID, avs::uid nodeID, avs::NodeSubtype subType)
@@ -1367,7 +1384,7 @@ TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)
 		TELEPORT_CERR << "Failed to check if Client_" << clientID << " has host! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return clientPair->second.clientMessaging.hasHost();
+	return !clientManager.hasHost() && clientManager.hasClient(clientID);
 }
 
 TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
@@ -1378,7 +1395,7 @@ TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
 		TELEPORT_CERR << "Failed to check if Client_" << clientID << " has peer! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return clientPair->second.clientMessaging.hasPeer();
+	return clientPair->second.clientMessaging->hasPeer();
 }
 
 TELEPORT_EXPORT bool Client_SendCommand(avs::uid clientID, const avs::Command& avsCommand)
@@ -1389,7 +1406,7 @@ TELEPORT_EXPORT bool Client_SendCommand(avs::uid clientID, const avs::Command& a
 		TELEPORT_CERR << "Failed to send command to Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return clientPair->second.clientMessaging.sendCommand(avsCommand);
+	return clientPair->second.clientMessaging->sendCommand(avsCommand);
 }
 
 TELEPORT_EXPORT bool Client_SendCommandWithList(avs::uid clientID, const avs::Command& avsCommand, std::vector<avs::uid>& appendedList)
@@ -1400,7 +1417,7 @@ TELEPORT_EXPORT bool Client_SendCommandWithList(avs::uid clientID, const avs::Co
 		TELEPORT_CERR << "Failed to send command to Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return clientPair->second.clientMessaging.sendCommand(avsCommand, appendedList);
+	return clientPair->second.clientMessaging->sendCommand(avsCommand, appendedList);
 }
 
 TELEPORT_EXPORT const DWORD WINAPI Client_GetClientIP(avs::uid clientID, __in DWORD bufferLength, __out char* lpBuffer)
@@ -1410,7 +1427,7 @@ TELEPORT_EXPORT const DWORD WINAPI Client_GetClientIP(avs::uid clientID, __in DW
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair != clientServices.end())
 	{
-		str = clientPair->second.clientMessaging.getClientIP();
+		str = clientPair->second.clientMessaging->getClientIP();
 	}
 	else
 	{
@@ -1435,18 +1452,12 @@ TELEPORT_EXPORT uint16_t Client_GetClientPort(avs::uid clientID)
 		TELEPORT_CERR << "Failed to retrieve client port of Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
 		return 0;
 	}
-	return clientPair->second.clientMessaging.getClientPort();
+	return clientPair->second.clientMessaging->getClientPort();
 }
 
 TELEPORT_EXPORT uint16_t Client_GetServerPort(avs::uid clientID)
 {
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to retrieve server port of Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
-		return 0;
-	}
-	return clientPair->second.clientMessaging.getServerPort();
+	return clientManager.getServerPort();
 }
 
 TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::NetworkSinkCounters& counters)
@@ -1459,7 +1470,7 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 	}
 	
 	ClientData& clientData = clientPair->second;
-	if (!clientData.clientMessaging.hasPeer())
+	if (!clientData.clientMessaging->hasPeer())
 	{
 		TELEPORT_COUT << "Failed to retrieve network stats of Client_" << clientID << "! Client has no peer!\n";
 		return false;
@@ -1487,7 +1498,7 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 	}
 
 	ClientData& clientData = clientPair->second;
-	if (!clientData.clientMessaging.hasPeer())
+	if (!clientData.clientMessaging->hasPeer())
 	{
 		TELEPORT_COUT << "Failed to retrieve video encoder stats of Client_" << clientID << "! Client has no peer!\n";
 		return false;

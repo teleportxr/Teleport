@@ -1450,7 +1450,6 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 	avs::NetworkSourceParams sourceParams;
 	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-	sourceParams.localPort = 101;
 	sourceParams.remoteIP = server_ip;
 	sourceParams.remotePort = setupCommand.server_streaming_port;
 	sourceParams.remoteHTTPPort = setupCommand.server_http_port;
@@ -1623,7 +1622,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
-	handshake.clientStreamingPort=sourceParams.localPort;
+	handshake.clientStreamingPort = setupCommand.server_streaming_port + 1;
 	lastSetupCommand = setupCommand;
 
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
