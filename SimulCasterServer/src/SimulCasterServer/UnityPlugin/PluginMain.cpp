@@ -603,7 +603,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 		std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService = std::make_shared<PluginGeometryStreamingService>();
 		std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline = std::make_shared<PluginVideoEncodePipeline>();
 		std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline = std::make_shared<PluginAudioEncodePipeline>();
-		std::shared_ptr<teleport::ClientMessaging> clientMessaging = std::make_shared<teleport::ClientMessaging>(&casterSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
+		std::shared_ptr<teleport::ClientMessaging> clientMessaging = std::make_shared<teleport::ClientMessaging>(&serverSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
 		ClientData newClientData(geometryStreamingService, videoEncodePipeline, audioEncodePipeline, clientMessaging);
 
 		if(newClientData.clientMessaging->startSession(clientID, clientIP))

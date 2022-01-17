@@ -18,10 +18,10 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	avs::SetupCommand setupCommand;
 	setupCommand.server_http_port = clientMessaging->getServerPort() + 1;
 	setupCommand.server_streaming_port = clientMessaging->getStreamingPort();
-	setupCommand.debug_stream = casterSettings.debugStream;
-	setupCommand.do_checksums = casterSettings.enableChecksums ? 1 : 0;
-	setupCommand.debug_network_packets = casterSettings.enableDebugNetworkPackets;
-	setupCommand.requiredLatencyMs = casterSettings.requiredLatencyMs;
+	setupCommand.debug_stream = serverSettings.debugStream;
+	setupCommand.do_checksums = serverSettings.enableChecksums ? 1 : 0;
+	setupCommand.debug_network_packets = serverSettings.enableDebugNetworkPackets;
+	setupCommand.requiredLatencyMs = serverSettings.requiredLatencyMs;
 	setupCommand.idle_connection_timeout = connectionTimeout;
 	setupCommand.server_id = serverID;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
