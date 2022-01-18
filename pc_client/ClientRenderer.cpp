@@ -1582,13 +1582,13 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	if (AudioStream)
 	{
 		avsAudioDecoder.configure(60);
-		sca::AudioParams audioParams;
-		audioParams.codec = sca::AudioCodec::PCM;
-		audioParams.numChannels = 2;
-		audioParams.sampleRate = 48000;
-		audioParams.bitsPerSample = 32;
+		sca::AudioSettings audioSettings;
+		audioSettings.codec = sca::AudioCodec::PCM;
+		audioSettings.numChannels = 2;
+		audioSettings.sampleRate = 48000;
+		audioSettings.bitsPerSample = 32;
 		// This will be deconfigured automatically when the pipeline is deconfigured.
-		audioPlayer.configure(audioParams);
+		audioPlayer.configure(audioSettings);
 		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
 		avsAudioTarget.configure(audioStreamTarget.get());
 

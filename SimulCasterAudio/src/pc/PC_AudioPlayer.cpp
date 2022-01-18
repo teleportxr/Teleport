@@ -82,7 +82,7 @@ namespace sca
 		return sca::Result::OK;
 	}
 
-	Result PC_AudioPlayer::configure(const sca::AudioParams& audioParams)
+	Result PC_AudioPlayer::configure(const sca::AudioSettings& audioSettings)
 	{
 		if (mConfigured)
 		{
@@ -102,10 +102,10 @@ namespace sca
 		}
 
 		WAVEFORMATEX waveFormat;
-		waveFormat.nChannels = audioParams.numChannels;
-		waveFormat.nSamplesPerSec = audioParams.sampleRate;
+		waveFormat.nChannels = audioSettings.numChannels;
+		waveFormat.nSamplesPerSec = audioSettings.sampleRate;
 		waveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-		waveFormat.wBitsPerSample = audioParams.bitsPerSample;
+		waveFormat.wBitsPerSample = audioSettings.bitsPerSample;
 		waveFormat.nBlockAlign = (waveFormat.wBitsPerSample * waveFormat.nChannels) / 8;
 		waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
 		waveFormat.cbSize = 0; // Ignored for PCM formats
@@ -123,7 +123,7 @@ namespace sca
 
 		mSourceVoice->Start();
 
-		mAudioParams = audioParams;
+		mAudioSettings = audioSettings;
 		mConfigured = true;
 
 		return sca::Result::OK;
@@ -220,7 +220,7 @@ namespace sca
 
 		mConfigured = false;
 
-		mAudioParams = {};
+		mAudioSettings = {};
 
 		if (mDevice.Get())
 			mDevice->StopEngine();

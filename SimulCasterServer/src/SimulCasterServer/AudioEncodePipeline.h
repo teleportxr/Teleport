@@ -15,7 +15,7 @@ namespace avs
 
 namespace teleport
 {
-	struct AudioParams
+	struct AudioSettings
 	{
 		avs::AudioCodec codec = avs::AudioCodec::PCM;
 		uint32_t sampleRate = 44100;
@@ -29,7 +29,7 @@ namespace teleport
 		AudioEncodePipeline() = default;
 		virtual ~AudioEncodePipeline();
 
-		Result initialize(const ServerSettings& settings, const AudioParams& audioParams, avs::PipelineNode* output);
+		Result initialize(const ServerSettings& settings, const AudioSettings& audioSettings, avs::PipelineNode* output);
 		Result process(const uint8_t* data, size_t dataSize);
 
 	private:

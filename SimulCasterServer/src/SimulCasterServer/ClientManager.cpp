@@ -152,6 +152,12 @@ namespace teleport
 		return mHost->address.port;
 	}
 
+	avs::Timestamp ClientManager::getLastTickTimestamp() const
+	{
+		std::lock_guard<std::mutex> guard(mDataMutex);
+		return mLastTickTimestamp;
+	}
+
 	void ClientManager::startAsyncNetworkDataProcessing()
 	{
 		if (mInitialized && !mAsyncNetworkDataProcessingActive)
@@ -159,10 +165,7 @@ namespace teleport
 			mAsyncNetworkDataProcessingActive = true;
 			if (!mNetworkThread.joinable())
 			{
-				{
-					std::lock_guard<std::mutex> guard(mDataMutex);
-					mLastTickTimestamp = avs::PlatformWindows::getTimestamp();
-				}
+				mLastTickTimestamp = avs::PlatformWindows::getTimestamp();
 				mNetworkThread = std::thread(&ClientManager::processNetworkDataAsync, this);
 			}
 		}

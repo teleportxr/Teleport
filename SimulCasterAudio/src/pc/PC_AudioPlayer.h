@@ -22,7 +22,7 @@ namespace sca
 
 		Result initializeAudioDevice() override;
 
-		Result configure(const sca::AudioParams& audioParams) override;
+		Result configure(const sca::AudioSettings& audioSettings) override;
 
 		Result playStream(const uint8_t* data, size_t dataSize) override;
 

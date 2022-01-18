@@ -35,10 +35,7 @@ namespace teleport
 		bool hasClient(avs::uid clientID);
 		uint16_t getServerPort() const;
 
-		avs::Timestamp getLastTickTimestamp() const
-		{
-			return mLastTickTimestamp;
-		}
+		avs::Timestamp getLastTickTimestamp() const;
 
 		bool asyncProcessingFailed() const 
 		{
@@ -61,7 +58,7 @@ namespace teleport
 		std::vector<ClientMessaging*> mClients;
 		std::thread mNetworkThread;
 		std::mutex mNetworkMutex;
-		std::mutex mDataMutex;
+		mutable std::mutex mDataMutex;
 		avs::Timestamp mLastTickTimestamp;
 		uint32_t mMaxClients;
 		std::vector<bool> mPorts;

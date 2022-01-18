@@ -76,6 +76,8 @@ std::map<avs::uid, ClientData> clientServices;
 
 teleport::ServerSettings serverSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
+teleport::AudioSettings audioSettings;
+
 static ShowNodeFn onShowNode;
 static HideNodeFn onHideNode;
 
@@ -300,7 +302,7 @@ public:
 		
 	}
 
-	Result configure(const AudioParams& audioParams, avs::Queue* audioQueue)
+	Result configure(const AudioSettings& audioSettings, avs::Queue* audioQueue)
 	{
 		if (configured)
 		{
@@ -308,7 +310,7 @@ public:
 			return Result::Code::EncoderAlreadyConfigured;
 		}
 
-		Result result = teleport::AudioEncodePipeline::initialize(serverSettings, audioParams, audioQueue);
+		Result result = teleport::AudioEncodePipeline::initialize(serverSettings, audioSettings, audioQueue);
 		if (result)
 		{
 			configured = true;
@@ -325,6 +327,11 @@ public:
 		}
 
 		return teleport::AudioEncodePipeline::process(data, dataSize);
+	}
+
+	bool isConfigured() const
+	{
+		return configured;
 	}
 
 private:
@@ -1182,42 +1189,13 @@ TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 ///VideoEncodePipeline END
 
 ///AudioEncodePipeline START
-TELEPORT_EXPORT void InitializeAudioEncoder(avs::uid clientID, const teleport::AudioParams& audioParams)
+TELEPORT_EXPORT void SetAudioSettings(const teleport::AudioSettings& newAudioSettings)
 {
-	std::lock_guard<std::mutex> lock(audioMutex);
-
-	auto clientPair = clientServices.find(clientID);
-	if (clientPair == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to initialise audio encoder for Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
-
-	ClientData& clientData = clientPair->second;
-	Result result = clientData.audioEncodePipeline->configure(audioParams, clientData.casterContext.AudioQueue.get());
-	if (!result)
-	{
-		TELEPORT_CERR << "Failed to initialise audio encoder for Client_" << clientID << "! Error occurred when trying to configure the audio encoder pipeline!\n";
-	}
+	audioSettings = newAudioSettings;
 }
 
-TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t dataSize)
+TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 {
-	std::lock_guard<std::mutex> lock(audioMutex);
-
-	auto clientPair = clientServices.find(clientID);
-	if (clientPair == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to send audio to Client_" << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
-
-	ClientData& clientData = clientPair->second;
-	if (!clientData.clientMessaging->hasPeer())
-	{
-		return;
-	}
-
 	// Only continue processing if the main thread hasn't hung.
 	double elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(clientManager.getLastTickTimestamp(), avs::PlatformWindows::getTimestamp());
 	if (elapsedTime > 0.15f)
@@ -1225,11 +1203,33 @@ TELEPORT_EXPORT void SendAudio(avs::uid clientID, const uint8_t* data, size_t da
 		return;
 	}
 
-	Result result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
-	if (!result)
+	std::lock_guard<std::mutex> lock(audioMutex);
+
+	for (auto& clientPair : clientServices)
 	{
-		TELEPORT_CERR << "Failed to send audio to Client_" << clientID << "! Error occurred when trying to send audio" << std::endl;
-	} 
+		const avs::uid& clientID = clientPair.first;
+		ClientData& clientData = clientPair.second;
+		if (!clientData.clientMessaging->hasPeer())
+		{
+			continue;
+		}
+
+		Result result = Result(Result::Code::OK);
+		if (!clientData.audioEncodePipeline->isConfigured())
+		{
+			result = clientData.audioEncodePipeline->configure(audioSettings, clientData.casterContext.AudioQueue.get());
+			if (!result)
+			{
+				TELEPORT_CERR << "Failed to configure audio encoder pipeline for Client_" << clientID << "!\n";
+			}
+		}
+
+		result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
+		if (!result)
+		{
+			TELEPORT_CERR << "Failed to send audio to Client_" << clientID << "! Error occurred when trying to send audio" << std::endl;
+		}
+	}
 }
 ///AudioEncodePipeline END
 
