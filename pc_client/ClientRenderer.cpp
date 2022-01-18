@@ -731,44 +731,6 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 	tagDataCubeBuffer.SetData(deviceContext, videoTagDataCube);
 }
 
-void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node, int indent, int& linesRemaining)
-{
-	//Return if we do not want to print any more lines.
-	if(linesRemaining <= 0)
-	{
-		return;
-	}
-	--linesRemaining;
-
-	//Set indent string to indent amount.
-	static char indent_txt[20];
-	indent_txt[indent] = 0;
-	if(indent > 0)
-	{
-		indent_txt[indent - 1] = ' ';
-	}
-
-	//Retrieve info string on mesh on node, if the node has a mesh.
-	std::string meshInfoString;
-	const std::shared_ptr<clientrender::Mesh>& mesh = node->GetMesh();
-	if(mesh)
-	{
-		meshInfoString = platform::core::QuickFormat("mesh: %s (0x%08x)", mesh->GetMeshCreateInfo().name.c_str(), &mesh);
-	}
-	avs::vec3 pos=node->GetGlobalPosition();
-	//Print details on node to screen.
-	renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("%s%d %s (%4.4f,%4.4f,%4.4f) %s", indent_txt, node->id, node->name.c_str()
-		,pos.x,pos.y,pos.z
-		, meshInfoString.c_str()));
-
-	//Print information on children to screen.
-	const std::vector<std::weak_ptr<clientrender::Node>>& children = node->GetChildren();
-	for(const auto c : children)
-	{
-		ListNode(deviceContext, c.lock(), indent + 1, linesRemaining);
-	}
-}
-
 const char *stringof(avs::GeometryPayloadType t)
 {
 	static const char *txt[]=
@@ -795,7 +757,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = clientPipeline.source.getCounterValues();
-	const avs::DecoderStats vidStats = decoder.GetStats();
+	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
@@ -840,68 +802,13 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		gui.LinePrint( platform::core::QuickFormat("Nodes: %d",geometryCache.mNodeManager->GetNodeAmount()), white);
 
 		static int nodeLimit = 5;
-		int linesRemaining = nodeLimit;
 		auto& rootNodes = geometryCache.mNodeManager->GetRootNodes();
-		for(const std::shared_ptr<clientrender::Node>& node : rootNodes)
-		{
-			if(show_only!=0&&show_only!=node->id)
-				continue;
-			ListNode(deviceContext, node, 1, linesRemaining);
-			if(linesRemaining <= 0)
-			{
-				break;
-			}
-		}
 		static int lineLimit = 50;
-		linesRemaining = lineLimit;
 
 		gui.LinePrint( platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
 																									geometryCache.mLightManager.GetCache(cacheLock).size()), white);
 		gui.NodeTree( geometryCache.mNodeManager->GetRootNodes());
-/*
-		auto& cachedMaterials = geometryCache.mMaterialManager.GetCache(cacheLock);
-		gui.LinePrint( platform::core::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
-		static int matLimit = 5;
-		linesRemaining = matLimit;
-		for(auto m: cachedMaterials)
-		{
-			auto &M=m.second;
-			const auto &mat=M.resource->GetMaterialCreateInfo();
-			gui.LinePrint( platform::core::QuickFormat("  %s", mat.name.c_str()),white,background);
-			gui.LinePrint( platform::core::QuickFormat("    emissive: %3.3f %3.3f %3.3f", mat.emissive.textureOutputScalar.x, mat.emissive.textureOutputScalar.y, mat.emissive.textureOutputScalar.z),white, background);
-			linesRemaining--;
-			if(!linesRemaining)
-				break;
-		}
-		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
-		int j=0;
-		for(auto &i:cachedLights)
-		{
-			auto &l=i.second;
-			if(l.resource)
-			{
-				auto &lcr=l.resource->GetLightCreateInfo();
-				{
-					const char *lightTypeName=ToString(lcr.type);
-					vec4 light_colour=(const float*)&lcr.lightColour;
-					vec4 light_position=(const float*)&lcr.position;
-					vec4 light_direction=(const float*)&lcr.direction;
-					
-					light_colour.w=1.0f;
-					if(lcr.type==clientrender::Light::Type::POINT)
-						gui.LinePrint( platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_direction.x,light_direction.y,light_direction.z),light_colour,background);
-					else
-						gui.LinePrint( platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_position.x,light_position.y,light_position.z,lcr.lightRadius),light_colour,background);
-				}
-			}
-			if(j<videoTagDataCubeArray[0].lights.size())
-			{
-				auto &l=videoTagDataCubeArray[0].lights[j];
-				gui.LinePrint( platform::core::QuickFormat("        shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
-				gui.LinePrint( platform::core::QuickFormat("        z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
-			}
-			j++;
-		}*/
+
 		
 		auto &missing=geometryCache.m_MissingResources;
 		if(missing.size())
@@ -1068,39 +975,36 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
 
-	if (renderPlayer)
+	std::shared_ptr<clientrender::Node> body = g.mNodeManager->GetBody();
+	if (body)
 	{
-		std::shared_ptr<clientrender::Node> body = g.mNodeManager->GetBody();
-		if (body)
-		{
-			body->SetLocalPosition(clientDeviceState->headPose.globalPose.position + bodyOffsetFromHead);
+		body->SetLocalPosition(clientDeviceState->headPose.globalPose.position + bodyOffsetFromHead);
 
-			//Calculate rotation angle on z-axis, and use to create new quaternion that only rotates the body on the z-axis.
-			float angle = std::atan2(clientDeviceState->headPose.globalPose.orientation.z, clientDeviceState->headPose.globalPose.orientation.w);
-			clientrender::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
-			body->SetLocalRotation(zRotation);
-			// force update of model matrices - should not be necessary, but is.
-			body->UpdateModelMatrix();
-		}
+		//Calculate rotation angle on z-axis, and use to create new quaternion that only rotates the body on the z-axis.
+		float angle = std::atan2(clientDeviceState->headPose.globalPose.orientation.z, clientDeviceState->headPose.globalPose.orientation.w);
+		clientrender::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
+		body->SetLocalRotation(zRotation);
+		// force update of model matrices - should not be necessary, but is.
+		body->UpdateModelMatrix();
+	}
 
 
-		std::shared_ptr<clientrender::Node> leftHand = g.mNodeManager->GetLeftHand();
-		std::shared_ptr<clientrender::Node> rightHand = g.mNodeManager->GetRightHand();
-		if (leftHand)
-		{
-		// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
-			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].globalPose.position);
-			leftHand->SetLocalRotation(clientDeviceState->controllerPoses[0].globalPose.orientation);
-			// force update of model matrices - should not be necessary, but is.
-			leftHand->UpdateModelMatrix();
-		}
-		if (rightHand)
-		{
-			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].globalPose.position);
-			rightHand->SetLocalRotation(clientDeviceState->controllerPoses[1].globalPose.orientation);
-			// force update of model matrices - should not be necessary, but is.
-			rightHand->UpdateModelMatrix();
-		}
+	std::shared_ptr<clientrender::Node> leftHand = g.mNodeManager->GetLeftHand();
+	std::shared_ptr<clientrender::Node> rightHand = g.mNodeManager->GetRightHand();
+	if (leftHand)
+	{
+	// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
+		leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].globalPose.position);
+		leftHand->SetLocalRotation(clientDeviceState->controllerPoses[0].globalPose.orientation);
+		// force update of model matrices - should not be necessary, but is.
+		leftHand->UpdateModelMatrix();
+	}
+	if (rightHand)
+	{
+		rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].globalPose.position);
+		rightHand->SetLocalRotation(clientDeviceState->controllerPoses[1].globalPose.orientation);
+		// force update of model matrices - should not be necessary, but is.
+		rightHand->UpdateModelMatrix();
 	}
 	const clientrender::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
 	for(const std::shared_ptr<clientrender::Node>& node : nodeList)
@@ -1539,37 +1443,37 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 #if IS_D3D12
 	AVSTextureHandle th = avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
-	decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
+	clientPipeline.decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
 #endif
 
 	// Video streams are 0+...
-	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20))
+	if (!clientPipeline.decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20))
 	{
 		SCR_CERR << "Failed to configure decoder node!\n";
 	}
-	if (!surface.configure(avsTexture->createSurface()))
+	if (!clientPipeline.surface.configure(avsTexture->createSurface()))
 	{
 		SCR_CERR << "Failed to configure output surface node!\n";
 	}
 
-	videoQueue.configure(200000, 16, "VideoQueue");
+	clientPipeline.videoQueue.configure(200000, 16, "VideoQueue");
 
-	avs::PipelineNode::link(clientPipeline.source, videoQueue);
-	avs::PipelineNode::link(videoQueue, decoder);
-	pipeline.link({ &decoder, &surface });
+	avs::PipelineNode::link(clientPipeline.source, clientPipeline.videoQueue);
+	avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
+	pipeline.link({ &clientPipeline.decoder, &clientPipeline.surface });
 	
 	// Tag Data
 	{
 		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
-		if (!tagDataDecoder.configure(40, f))
+		if (!clientPipeline.tagDataDecoder.configure(40, f))
 		{
 			SCR_CERR << "Failed to configure video tag data decoder node!\n";
 		}
 
-		tagDataQueue.configure(200, 16, "TagDataQueue");
+		clientPipeline.tagDataQueue.configure(200, 16, "clientPipeline.tagDataQueue");
 
-		avs::PipelineNode::link(clientPipeline.source, tagDataQueue);
-		pipeline.link({ &tagDataQueue, &tagDataDecoder });
+		avs::PipelineNode::link(clientPipeline.source, clientPipeline.tagDataQueue);
+		pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
 	}
 
 	// Audio
@@ -1596,14 +1500,14 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	// We will add a GEOMETRY PIPE
 	if(GeoStream)
 	{
-		avsGeometryDecoder.configure(80, &geometryDecoder);
-		avsGeometryTarget.configure(&resourceCreator);
+		clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
+		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
 
-		geometryQueue.configure(10000, 200, "GeometryQueue");
+		clientPipeline.geometryQueue.configure(10000, 200, "clientPipeline.geometryQueue");
 
-		avs::PipelineNode::link(clientPipeline.source, geometryQueue);
-		avs::PipelineNode::link(geometryQueue, avsGeometryDecoder);
-		pipeline.link({ &avsGeometryDecoder, &avsGeometryTarget });
+		avs::PipelineNode::link(clientPipeline.source, clientPipeline.geometryQueue);
+		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);
+		pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
 	}
 
 	handshake.startDisplayInfo.width = hdrFramebuffer->GetWidth();
@@ -1627,9 +1531,9 @@ void ClientRenderer::OnVideoStreamClosed()
 {
 	TELEPORT_CLIENT_WARN("VIDEO STREAM CLOSED\n");
 	pipeline.deconfigure();
-	videoQueue.deconfigure();
+	clientPipeline.videoQueue.deconfigure();
 	audioQueue.deconfigure();
-	geometryQueue.deconfigure();
+	clientPipeline.geometryQueue.deconfigure();
 
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
@@ -1685,7 +1589,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	{
 		SAFE_DELETE(ti->texture);
 
-		if (!decoder.unregisterSurface())
+		if (!clientPipeline.decoder.unregisterSurface())
 		{
 			throw std::runtime_error("Failed to unregister decoder surface");
 		}
@@ -1693,7 +1597,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 		CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormat);
 	}
 
-	if (!decoder.reconfigure((int)stream_width, (int)stream_height, decoderParams))
+	if (!clientPipeline.decoder.reconfigure((int)stream_width, (int)stream_height, decoderParams))
 	{
 		throw std::runtime_error("Failed to reconfigure decoder");
 	}
@@ -1930,7 +1834,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		controllerPoses[0]=clientDeviceState->controllerPoses[0].globalPose;
 		controllerPoses[1]=clientDeviceState->controllerPoses[1].globalPose;
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
-			clientDeviceState->controllerStates, decoder.idrRequired(),fTime, time_step);
+			clientDeviceState->controllerStates, clientPipeline.decoder.idrRequired(),fTime, time_step);
 
 		if(receivedInitialPos != sessionClient.receivedInitialPos)
 		{
@@ -2126,12 +2030,9 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		case 'R':
 			RecompileShaders();
 			break;
-		case 'L':
-			renderPlayer = !renderPlayer;
-			break;
 		case 'Y':
 			if (sessionClient.IsConnected())
-				decoder.toggleShowAlphaAsColor();
+				clientPipeline.decoder.toggleShowAlphaAsColor();
 			break;
 		case VK_SPACE:
 			gui.ShowHide();

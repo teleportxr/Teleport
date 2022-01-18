@@ -270,7 +270,7 @@ void Application::EnteredVrMode()
 
 	clientRenderer.EnteredVR(java);
 
-	clientRenderer.mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));
+	clientRenderer.clientPipeline.decoder.setBackend(new VideoDecoderProxy(java->Env, this));
 
 
 	//Set Lighting Cubemap Shader Resource
@@ -401,7 +401,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 		avs::Pose controllerPoses[2];
 		controllerPoses[0]=clientDeviceState.controllerPoses[0].globalPose;
 		controllerPoses[1]=clientDeviceState.controllerPoses[1].globalPose;
-		sessionClient.Frame(displayInfo, clientDeviceState.headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds, vrFrame.DeltaSeconds);
+		sessionClient.Frame(displayInfo, clientDeviceState.headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.clientPipeline.decoder.idrRequired(), vrFrame.RealTimeInSeconds, vrFrame.DeltaSeconds);
 		if (sessionClient.receivedInitialPos>0&&receivedInitialPos!=sessionClient.receivedInitialPos)
 		{
 			clientDeviceState.originPose = sessionClient.GetOriginPose();
@@ -728,20 +728,20 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 		avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::GlStyle, bodyOffsetFromHead);
 
-		if (!clientRenderer.mNetworkSource.configure(std::move(streams), sourceParams))
+		if (!clientRenderer.clientPipeline.source.configure(std::move(streams), sourceParams))
 		{
 			OVR_WARN("OnSetupCommandReceived: Failed to configure network source node.");
 			return false;
 		}
-		clientRenderer.mNetworkSource.setDebugStream(setupCommand.debug_stream);
-		clientRenderer.mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
-		clientRenderer.mNetworkSource.setDoChecksums(setupCommand.do_checksums);
+		clientRenderer.clientPipeline.source.setDebugStream(setupCommand.debug_stream);
+		clientRenderer.clientPipeline.source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+		clientRenderer.clientPipeline.source.setDoChecksums(setupCommand.do_checksums);
 
 		handshake.minimumPriority=clientRenderer.GetMinimumPriority();
 		// Don't use these on Android:
 		handshake.renderingFeatures.normals=false;
 		handshake.renderingFeatures.ambientOcclusion=false;
-		mPipeline.add(&clientRenderer.mNetworkSource);
+		mPipeline.add(&clientRenderer.clientPipeline.source);
 
 		clientRenderer.videoTagDataCubeArray.clear();
 		clientRenderer.videoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
@@ -759,11 +759,11 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		size_t stream_height = videoConfig.video_height;
 
 		// Video
-		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height,
+		if (!clientRenderer.clientPipeline.decoder.configure(avs::DeviceHandle(), stream_width, stream_height,
 											   decoderParams, 20))
 		{
 			OVR_WARN("OnSetupCommandReceived: Failed to configure decoder node");
-			clientRenderer.mNetworkSource.deconfigure();
+			clientRenderer.clientPipeline.source.deconfigure();
 			return false;
 		}
 		{
@@ -798,27 +798,27 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 			alphaSurface = nullptr;
 		}
 
-		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture), alphaSurface);
+		clientRenderer.clientPipeline.surface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture), alphaSurface);
 
-		clientRenderer.mVideoQueue.configure(200000, 16, "VideoQueue");
+		clientRenderer.clientPipeline.videoQueue.configure(200000, 16, "VideoQueue");
 
-		avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mVideoQueue);
-		avs::PipelineNode::link(clientRenderer.mVideoQueue, clientRenderer.mDecoder);
-		mPipeline.link({&clientRenderer.mDecoder, &mSurface});
+		avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.videoQueue);
+		avs::PipelineNode::link(clientRenderer.clientPipeline.videoQueue, clientRenderer.clientPipeline.decoder);
+		mPipeline.link({&clientRenderer.clientPipeline.decoder, &clientRenderer.clientPipeline.surface});
 
 
 		// Tag Data
 		{
 			auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, &clientRenderer,
 							   std::placeholders::_1, std::placeholders::_2);
-			if (!clientRenderer.mTagDataDecoder.configure(40, f)) {
+			if (!clientRenderer.clientPipeline.tagDataDecoder.configure(40, f)) {
 				OVR_WARN("OnSetupCommandReceived: Failed to configure tag data decoder node.");
 				return false;
 			}
-			clientRenderer.mTagDataQueue.configure(200, 16, "TagDataQueue");
+			clientRenderer.clientPipeline.tagDataQueue.configure(200, 16, "TagDataQueue");
 
-			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mTagDataQueue);
-			mPipeline.link({&clientRenderer.mTagDataQueue, &clientRenderer.mTagDataDecoder});
+			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.tagDataQueue);
+			mPipeline.link({&clientRenderer.clientPipeline.tagDataQueue, &clientRenderer.clientPipeline.tagDataDecoder});
 		}
 
 
@@ -837,7 +837,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 			avsAudioTarget.configure(audioStreamTarget.get());
 			clientRenderer.mAudioQueue.configure(4096, 120, "AudioQueue");
 
-			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mAudioQueue);
+			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.mAudioQueue);
 			avs::PipelineNode::link(clientRenderer.mAudioQueue, avsAudioDecoder);
 			mPipeline.link({&avsAudioDecoder, &avsAudioTarget});
 
@@ -872,13 +872,13 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 
 		if (GeoStream)
 		{
-			avsGeometryDecoder.configure(80, &geometryDecoder);
-			avsGeometryTarget.configure(&clientRenderer.resourceCreator);
-			clientRenderer.mGeometryQueue.configure(2500000, 100, "GeometryQueue");
+			clientRenderer.clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
+			clientRenderer.clientPipeline.avsGeometryTarget.configure(&clientRenderer.resourceCreator);
+			clientRenderer.clientPipeline.geometryQueue.configure(2500000, 100, "GeometryQueue");
 
-			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mGeometryQueue);
-			avs::PipelineNode::link(clientRenderer.mGeometryQueue, avsGeometryDecoder);
-			mPipeline.link({&avsGeometryDecoder, &avsGeometryTarget});
+			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.geometryQueue);
+			avs::PipelineNode::link(clientRenderer.clientPipeline.geometryQueue, clientRenderer.clientPipeline.avsGeometryDecoder);
+			mPipeline.link({&clientRenderer.clientPipeline.avsGeometryDecoder, &clientRenderer.clientPipeline.avsGeometryTarget});
 		}
 		//GL_CheckErrors("Pre-Build Cubemap");
 		clientRenderer.OnSetupCommandReceived(videoConfig);
@@ -891,7 +891,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 	handshake.framerate = 60;
 	handshake.FOV = 110;
 	handshake.isVR = true;
-	handshake.udpBufferSize = static_cast<uint32_t>(clientRenderer.mNetworkSource.getSystemBufferSize());
+	handshake.udpBufferSize = static_cast<uint32_t>(clientRenderer.clientPipeline.source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = 10 * handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
 	handshake.axesStandard = avs::AxesStandard::GlStyle;
 	handshake.MetresPerUnit = 1.0f;

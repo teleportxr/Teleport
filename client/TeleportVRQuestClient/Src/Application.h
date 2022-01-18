@@ -132,7 +132,7 @@ namespace OVRFW
 		avs::Context  mContext;
 		avs::Pipeline mPipeline;
 
-		avs::Surface       mSurface;
+		//avs::Surface       mSurface;
 		bool               mPipelineConfigured;
 
 		static constexpr size_t NumVideoStreams = 1;
@@ -140,8 +140,8 @@ namespace OVRFW
 		static constexpr bool   GeoStream  = true;
 
 		GeometryDecoder        geometryDecoder;
-		avs::GeometryDecoder   avsGeometryDecoder;
-		avs::GeometryTarget    avsGeometryTarget;
+		//avs::GeometryDecoder   avsGeometryDecoder;
+		//.avs::GeometryTarget    avsGeometryTarget;
 
 		avs::AudioDecoder avsAudioDecoder;
 		avs::AudioTarget avsAudioTarget;

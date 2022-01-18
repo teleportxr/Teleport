@@ -1289,8 +1289,8 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 		static avs::vec3 passoffset={0,2.5f,5.0f};
 		clientAppInterface->PrintText(passoffset,colour,"%s",globalGraphicsResources.effectPassName.c_str());
 	}
-	auto ctr = mNetworkSource.getCounterValues();
-	auto vidStats = mDecoder.GetStats();
+	auto ctr = clientPipeline.source.getCounterValues();
+	auto vidStats = clientPipeline.decoder.GetStats();
 
 	switch(show_osd)
 	{

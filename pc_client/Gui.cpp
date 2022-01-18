@@ -229,7 +229,8 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n)
 {
 	const clientrender::Node *node=n.get();
 	bool has_children=node->GetChildren().size()!=0;
-	bool open=ImGui::TreeNodeEx(node->name.c_str(),(has_children?0:ImGuiTreeNodeFlags_Leaf ) );
+	std::string str =(std::to_string(n->id)+" ")+ node->name;
+	bool open=ImGui::TreeNodeEx(str.c_str(),(has_children?0:ImGuiTreeNodeFlags_Leaf ) );
 	if (ImGui::IsItemClicked())
 	{
 		if(!show_inspector)

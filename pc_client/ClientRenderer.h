@@ -135,7 +135,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	clientrender::ResourceCreator resourceCreator;
 	
 	bool show_video = false;
-	bool renderPlayer = true; //Whether to render the player.
 
 	bool render_from_video_centre	= false;
 	bool show_textures				= false;
@@ -233,18 +232,7 @@ public:
 
 	avs::VideoConfig videoConfig;
 
-	//avs::NetworkSource source;
-	avs::Queue videoQueue;
-	avs::Decoder decoder;
-	avs::Surface surface;
-
-	avs::Queue tagDataQueue;
-	avs::TagDataDecoder tagDataDecoder;
-
 	GeometryDecoder geometryDecoder;
-	avs::Queue geometryQueue;
-	avs::GeometryDecoder avsGeometryDecoder;
-	avs::GeometryTarget avsGeometryTarget;
 	
 	avs::Queue audioQueue;
 	avs::AudioDecoder avsAudioDecoder;
@@ -258,7 +246,8 @@ public:
 	avs::SetupCommand lastSetupCommand;
 
 	avs::SetupLightingCommand lastSetupLightingCommand;
-		teleport::client::ClientPipeline clientPipeline;
+	teleport::client::ClientPipeline clientPipeline;
+
 	int RenderMode;
 	std::shared_ptr<clientrender::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;
@@ -272,7 +261,6 @@ public:
 	bool render_local_offline = false;
 private:
 	avs::uid show_only=0;
-	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node, int indent, int& linesRemaining);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	void RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique);

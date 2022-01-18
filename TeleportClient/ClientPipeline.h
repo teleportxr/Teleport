@@ -7,6 +7,7 @@
 #include <libavstream/decoder.hpp>
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/mesh.hpp>
+#include <libavstream/tagdatadecoder.hpp>
 
 namespace teleport
 {
@@ -25,6 +26,9 @@ namespace teleport
 			avs::Queue videoQueue;
 			avs::Decoder decoder;
 			avs::Surface surface;
+
+			avs::Queue tagDataQueue;
+			avs::TagDataDecoder tagDataDecoder;
 
 			avs::Queue geometryQueue;
 			avs::GeometryDecoder avsGeometryDecoder;

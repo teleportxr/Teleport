@@ -9,6 +9,7 @@
 #include <libavstream/libavstream.hpp>
 #include <VrApi_Input.h>
 #include <FrameParams.h>
+#include <TeleportClient/ClientPipeline.h>
 
 #include "SCR_Class_GL_Impl/GL_DeviceContext.h"
 #include "Controllers.h"
@@ -129,17 +130,16 @@ public:
 	}
 	Controllers *controllers=nullptr;
 
-	avs::Decoder mDecoder;
-	avs::TagDataDecoder mTagDataDecoder;
-	avs::NetworkSource mNetworkSource;
-	avs::Queue mVideoQueue;
-	avs::Queue mTagDataQueue;
+	//avs::Decoder mDecoder;
+	//avs::TagDataDecoder mTagDataDecoder;
+
+	//avs::Queue mVideoQueue;
+	//avs::Queue mTagDataQueue;
 	avs::Queue mAudioQueue;
-	avs::Queue mGeometryQueue;
 
 	clientrender::GeometryCache geometryCache;
 	clientrender::ResourceCreator resourceCreator;
-
+	teleport::client::ClientPipeline clientPipeline;
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	float eyeSeparation=0.06f;
 	avs::VideoConfig videoConfig;

@@ -3,8 +3,7 @@
 using namespace teleport;
 using namespace client;
 
-ClientPipeline::ClientPipeline():
-		decoder(avs::DecoderBackend::Custom)
+ClientPipeline::ClientPipeline()
 {
 }
 
