@@ -17,7 +17,7 @@ public:
 
 	sca::Result initializeAudioDevice() override;
 
-	sca::Result configure(const sca::AudioParams& audioParams) override;
+	sca::Result configure(const sca::AudioSettings& audioSettings) override;
 
 	sca::Result startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback) override;
 

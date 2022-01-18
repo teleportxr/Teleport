@@ -32,7 +32,7 @@ sca::Result AA_AudioPlayer::initializeAudioDevice()
 	return sca::Result::OK;
 }
 
-sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
+sca::Result AA_AudioPlayer::configure(const sca::AudioSettings& audioSettings)
 {
 	if (mConfigured)
 	{
@@ -50,8 +50,8 @@ sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 	AAudioStreamBuilder_setPerformanceMode(builder, AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
 
 	AAudioStreamBuilder_setSharingMode(builder, AAUDIO_SHARING_MODE_EXCLUSIVE);
-	AAudioStreamBuilder_setSampleRate(builder, audioParams.sampleRate);
-	AAudioStreamBuilder_setChannelCount(builder, audioParams.numChannels);
+	AAudioStreamBuilder_setSampleRate(builder, audioSettings.sampleRate);
+	AAudioStreamBuilder_setChannelCount(builder, audioSettings.numChannels);
 	AAudioStreamBuilder_setFormat(builder, AAUDIO_FORMAT_PCM_FLOAT);
 
 	auto result = sca::Result::OK;
@@ -75,7 +75,7 @@ sca::Result AA_AudioPlayer::configure(const sca::AudioParams& audioParams)
 		return result;
 	}
 
-	mAudioParams = audioParams;
+	mAudioSettings = audioSettings;
 	mConfigured = true;
 
 	return result;
@@ -95,7 +95,7 @@ sca::Result AA_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 		return sca::Result::AudioPlayerNotConfigured;
 	}
 
-	int32_t numFrames = (int32_t)dataSize / (audioParams.bitsPerSample * audioParams.numChannels);
+	int32_t numFrames = (int32_t)dataSize / (audioSettings.bitsPerSample * audioSettings.numChannels);
 	if(FAILED(AAudioStream_write(mAudioStream, (const void*)data, numFrames, 100000)))
 	{
 		return sca::Result::AudioWriteError;
@@ -166,7 +166,7 @@ sca::Result AA_AudioPlayer::deconfigure()
 
 	mConfigured = false;
 
-	mAudioParams = {};
+	mAudioSettings = {};
 
 	return sca::Result::OK;
 }

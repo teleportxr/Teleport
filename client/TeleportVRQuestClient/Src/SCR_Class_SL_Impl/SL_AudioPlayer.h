@@ -16,7 +16,7 @@ public:
 
 	sca::Result initializeAudioDevice() override;
 
-	sca::Result configure(const sca::AudioParams& audioParams) override;
+	sca::Result configure(const sca::AudioSettings& audioSettings) override;
 
 	sca::Result playStream(const uint8_t* data, size_t dataSize) override;
 
