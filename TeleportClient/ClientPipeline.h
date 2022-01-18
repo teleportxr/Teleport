@@ -8,6 +8,8 @@
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/mesh.hpp>
 #include <libavstream/tagdatadecoder.hpp>
+#include <libavstream/audiodecoder.h>
+#include <libavstream/audio/audiotarget.h>
 
 namespace teleport
 {
@@ -33,6 +35,10 @@ namespace teleport
 			avs::Queue geometryQueue;
 			avs::GeometryDecoder avsGeometryDecoder;
 			avs::GeometryTarget avsGeometryTarget;
+
+			avs::Queue audioQueue;
+			avs::AudioDecoder avsAudioDecoder;
+			avs::AudioTarget avsAudioTarget;
 		};
 	}
 }

@@ -3,22 +3,15 @@
 #include <algorithm>
 #include <iostream>
 
-#include "enet/enet.h"
 #include "libavstream/common_input.h"
 #include "libavstream/common_networking.h"
 
 #include "DiscoveryService.h"
 #include "ErrorHandling.h"
+#include "ClientManager.h"
 
 namespace teleport
 {
-	std::atomic_bool ClientMessaging::asyncNetworkDataProcessingActive = false;
-	std::unordered_map<avs::uid, NetworkPipeline*> ClientMessaging::networkPipelines;
-	std::thread ClientMessaging::networkThread;
-	std::mutex ClientMessaging::networkMutex;
-	std::mutex ClientMessaging::dataMutex;
-	avs::Timestamp ClientMessaging::lastTickTimestamp;
-
 	ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 									 std::shared_ptr<DiscoveryService> discoveryService,
 									 std::shared_ptr<GeometryStreamingService> geometryStreamingService,
@@ -27,8 +20,9 @@ namespace teleport
 									 SetControllerPoseFn setControllerPose,
 									 ProcessNewInputFn processNewInput,
 									 DisconnectFn onDisconnect,
-									 const uint32_t& disconnectTimeout,
-									 ReportHandshakeFn reportHandshakeFn)
+									 uint32_t disconnectTimeout,
+									 ReportHandshakeFn reportHandshakeFn,
+									 ClientManager* clientManager)
 		: settings(settings)
 		, discoveryService(discoveryService)
 		, geometryStreamingService(geometryStreamingService)
@@ -37,15 +31,16 @@ namespace teleport
 		, setControllerPose(setControllerPose)
 		, processNewInput(processNewInput)
 		, onDisconnect(onDisconnect)
-		, reportHandshake(reportHandshakeFn)
 		, disconnectTimeout(disconnectTimeout)
-		, host(nullptr)
+		, reportHandshake(reportHandshakeFn)
+		, clientManager(clientManager)
 		, peer(nullptr)
 		, casterContext(nullptr)
 		, clientID(0)
 		, startingSession(false)
 		, timeStartingSession(0)
 		, timeSinceLastClientComm(0)
+		, streamingPort(0)
 	{}
 
 	ClientMessaging::~ClientMessaging()
@@ -70,63 +65,36 @@ namespace teleport
 		initialized = true;
 	}
 
-	bool ClientMessaging::restartSession(avs::uid clientID, int32_t listenPort)
+	bool ClientMessaging::restartSession(avs::uid clientID, std::string clientIP)
 	{
 		stopSession();
 		
-		if (host)
-		{
-			enet_host_destroy(host);
-			host = nullptr;
-		}
-		return startSession(clientID, listenPort);
+		return startSession(clientID, clientIP);
 	}
 
-	bool ClientMessaging::startSession(avs::uid clientID, int32_t listenPort)
+	bool ClientMessaging::startSession(avs::uid clientID, std::string clientIP)
 	{
 		this->clientID = clientID;
-
-		ENetAddress ListenAddress = {};
-		ListenAddress.host = ENET_HOST_ANY;
-		ListenAddress.port = listenPort;
-
-		// ServerHost will live for the lifetime of the session.
-		if (host)
-		{
-			TELEPORT_COUT << "startSession - already have host ptr.\n";
-		}
-		else
-		{
-			host = enet_host_create(&ListenAddress, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
-		}
-		if (!host)
-		{
-			host = enet_host_create(&ListenAddress, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
-			if (!host)
-			{
-				std::cerr << "Session: Failed to create ENET server host!\n";
-				DEBUG_BREAK_ONCE;
-				return false;
-			}
-		}
+		this->clientIP = clientIP;
 
 		startingSession = true;
+
+		clientManager->addClient(this);
 
 		return true;
 	}
 
 	void ClientMessaging::stopSession()
 	{
-		removeNetworkPipelineFromAsyncProcessing();
+		clientManager->removeClient(this);
 
 		if (peer)
 		{
 			assert(host);
 
-			enet_host_flush(host);
 			enet_peer_disconnect(peer, 0);
-
-			ENetEvent event;
+			enet_peer_reset(peer);
+			/*ENetEvent event;
 			bool bIsPeerConnected = true;
 			while (bIsPeerConnected && enet_host_service(host, &event, 5) > 0)
 			{
@@ -143,14 +111,8 @@ namespace teleport
 			if (bIsPeerConnected)
 			{
 				enet_peer_reset(peer);
-			}
+			}*/
 			peer = nullptr;
-		}
-
-		if (host)
-		{
-			enet_host_destroy(host);
-			host = nullptr;
 		}
 
 		receivedHandshake = false;
@@ -164,7 +126,7 @@ namespace teleport
 			return;
 
 		
-		if (host && peer && casterContext->NetworkPipeline && !casterContext->NetworkPipeline->isProcessingEnabled())
+		if (peer && casterContext->NetworkPipeline && !casterContext->NetworkPipeline->isProcessingEnabled())
 		{
 			TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << std::endl;
 			Disconnect();
@@ -174,12 +136,6 @@ namespace teleport
 
 		static float timeSinceLastGeometryStream = 0;
 		timeSinceLastGeometryStream += deltaTime;
-
-		{
-			std::lock_guard<std::mutex> guard(dataMutex);
-			lastTickTimestamp = avs::PlatformWindows::getTimestamp();
-		}
-
 
 		const float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f / settings->geometryTicksPerSecond;
 
@@ -226,10 +182,10 @@ namespace teleport
 		{
 			timeStartingSession += deltaTime;
 		}
-		
-		ENetEvent event;
-		while (enet_host_service(host, &event, 0) > 0)
+		size_t eventCount = eventQueue.size();
+		for(int i = 0; i < eventCount; ++i)
 		{
+			ENetEvent& event = eventQueue.front();
 			switch (event.type)
 			{
 			case ENET_EVENT_TYPE_CONNECT:
@@ -248,6 +204,8 @@ namespace teleport
 				if (!startingSession)
 				{
 					TELEPORT_COUT << "Client disconnected: " << getClientIP() << ":" << getClientPort() << std::endl;
+					enet_packet_destroy(event.packet);
+					eventQueue.pop();
 					Disconnect();
 					return;
 				}
@@ -260,10 +218,12 @@ namespace teleport
 				}
 				break;
 			}
+			enet_packet_destroy(event.packet);
+			eventQueue.pop();
 		}
 
 		// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
-		if (host && peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
+		if (peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
 		{
 			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting." << std::endl;
 			Disconnect();
@@ -307,7 +267,7 @@ namespace teleport
 		timeStartingSession = 0;
 	}
 
-	bool ClientMessaging::TimedOutStartingSession() const
+	bool ClientMessaging::timedOutStartingSession() const
 	{
 		return timeStartingSession > startSessionTimeout;
 	}
@@ -386,11 +346,6 @@ namespace teleport
 		sendCommand(command);
 	}
 
-	bool ClientMessaging::hasHost() const
-	{
-		return host;
-	}
-
 	bool ClientMessaging::hasPeer() const
 	{
 		return peer;
@@ -421,7 +376,8 @@ namespace teleport
 		return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 	}
 
-	std::string ClientMessaging::getClientIP() const
+	// Same as clientIP
+	std::string ClientMessaging::getPeerIP() const
 	{
 		assert(peer);
 
@@ -443,13 +399,6 @@ namespace teleport
 		assert(peer);
 
 		return peer->address.port;
-	}
-
-	uint16_t ClientMessaging::getServerPort() const
-	{
-		assert(host);
-
-		return host->address.port;
 	}
 
 	void ClientMessaging::dispatchEvent(const ENetEvent& event)
@@ -482,7 +431,6 @@ namespace teleport
 			TELEPORT_CERR << "Unhandled channel " << event.channelID << std::endl;
 			break;
 		}
-		enet_packet_destroy(event.packet);
 	}
 
 	void ClientMessaging::receiveHandshake(const ENetPacket* packet)
@@ -492,8 +440,6 @@ namespace teleport
 		memcpy(&handshake, packet->data, handShakeSize);
 
 		casterContext->axesStandard = handshake.axesStandard;
-
-		int32_t streamingPort = getServerPort() + 1;
 
 		if (!casterContext->NetworkPipeline)
 		{
@@ -505,7 +451,7 @@ namespace teleport
 
 			CasterNetworkSettings networkSettings =
 			{
-				streamingPort,
+				static_cast<int32_t>(streamingPort),
 				clientIP,
 				static_cast<int32_t>(handshake.clientStreamingPort),
 				static_cast<int32_t>(handshake.maxBandwidthKpS),
@@ -518,17 +464,12 @@ namespace teleport
 			casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->TagDataQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
 		}
 
-		addNetworkPipelineToAsyncProcessing();
-
 		if (settings->isReceivingAudio && !casterContext->sourceNetworkPipeline)
 		{
-			std::string clientIP = getClientIP();
-
 			avs::NetworkSourceParams sourceParams;
 			sourceParams.connectionTimeout = disconnectTimeout;
-			sourceParams.localPort = streamingPort;
 			sourceParams.remoteIP = clientIP.c_str();
-			sourceParams.remotePort = streamingPort + 1;
+			sourceParams.remotePort = handshake.clientStreamingPort;
 
 			casterContext->sourceNetworkPipeline.reset(new SourceNetworkPipeline(settings));
 			casterContext->sourceNetworkPipeline->initialize(sourceParams, casterContext->sourceAudioQueue.get(), casterContext->audioDecoder.get(), casterContext->audioTarget.get());
@@ -784,92 +725,16 @@ namespace teleport
 		};
 	}
 
-	void ClientMessaging::addNetworkPipelineToAsyncProcessing()
+	uint16_t ClientMessaging::getServerPort() const
 	{
-		std::lock_guard<std::mutex> lock(networkMutex);
-		networkPipelines[clientID] = casterContext->NetworkPipeline.get();
+		assert(clientManager);
+
+		return clientManager->getServerPort();
 	}
 
-	void ClientMessaging::removeNetworkPipelineFromAsyncProcessing()
+	uint16_t ClientMessaging::getStreamingPort() const
 	{
-		std::lock_guard<std::mutex> lock(networkMutex);
-		if (networkPipelines.find(clientID) != networkPipelines.end())
-		{
-			networkPipelines.erase(clientID);
-		}
+		return streamingPort;
 	}
-
-	void ClientMessaging::startAsyncNetworkDataProcessing()
-	{
-		if (!asyncNetworkDataProcessingActive)
-		{
-			asyncNetworkDataProcessingActive = true;
-			if (!networkThread.joinable())
-			{
-				{
-					std::lock_guard<std::mutex> guard(dataMutex);
-					lastTickTimestamp = avs::PlatformWindows::getTimestamp();
-				}
-				networkThread = std::thread(&ClientMessaging::processNetworkDataAsync);
-			}
-		}
-	}
-	bool ClientMessaging::asyncNetworkDataProcessingFailed = false;
-
-	void ClientMessaging::stopAsyncNetworkDataProcessing(bool killThread)
-	{
-		if (asyncNetworkDataProcessingActive)
-		{
-			asyncNetworkDataProcessingActive = false;
-			if (killThread && networkThread.joinable())
-			{
-				networkThread.join();
-			}
-		}
-		else if (networkThread.joinable())
-		{
-			networkThread.join();
-		}
-	}
-
-	void ClientMessaging::processNetworkDataAsync()
-	{
-		asyncNetworkDataProcessingFailed = false;
-		// Elapsed time since the main thread last ticked (seconds).
-		avs::Timestamp timestamp;
-		double elapsedTime;
-		while (asyncNetworkDataProcessingActive)
-		{
-			// Only continue processing if the main thread hasn't hung.
-			timestamp = avs::PlatformWindows::getTimestamp();
-			{
-				std::lock_guard<std::mutex> lock(dataMutex);
-				elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(lastTickTimestamp, timestamp);
-			}
-
-			// Proceed only if the main thread hasn't hung.
-			if (elapsedTime < 0.20)
-			{
-				std::lock_guard<std::mutex> lock(networkMutex);
-				for (auto& keyVal : networkPipelines)
-				{
-					if (keyVal.second)
-					{
-						if (!keyVal.second->process())
-						{
-							asyncNetworkDataProcessingFailed = true;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	avs::Timestamp ClientMessaging::getLastTickTimestamp()
-	{
-		std::lock_guard<std::mutex> guard(dataMutex);
-		return lastTickTimestamp;
-	}
-
 }
 

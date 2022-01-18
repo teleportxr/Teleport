@@ -138,7 +138,7 @@ ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
 
 ClientRenderer::~ClientRenderer()
 {
-	pipeline.deconfigure();
+	clientPipeline.pipeline.deconfigure();
 	InvalidateDeviceObjects(); 
 }
 
@@ -768,8 +768,8 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 
 	if(show_osd== clientrender::NETWORK_OSD)
 	{
-		gui.LinePrint( platform::core::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
-		gui.LinePrint( platform::core::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
+		gui.LinePrint( platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
+		gui.LinePrint( platform::core::QuickFormat("Current timestamp: %d",clientPipeline.pipeline.GetTimestamp()));
 		gui.LinePrint( platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
 		gui.LinePrint( platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
 		gui.LinePrint( platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
@@ -1347,7 +1347,6 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 	avs::NetworkSourceParams sourceParams;
 	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-	sourceParams.localPort = 101;
 	sourceParams.remoteIP = server_ip;
 	sourceParams.remotePort = setupCommand.server_streaming_port;
 	sourceParams.remoteHTTPPort = setupCommand.server_http_port;
@@ -1392,9 +1391,9 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	dev.type = avs::DeviceType::Direct3D11;
 #endif
 
-	pipeline.reset();
-	// Top of the pipeline, we have the network clientPipeline.source.
-	pipeline.add(&clientPipeline.source);
+	clientPipeline.pipeline.reset();
+	// Top of the clientPipeline.pipeline, we have the network clientPipeline.source.
+	clientPipeline.pipeline.add(&clientPipeline.source);
 
 	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
 	if (ti)
@@ -1460,7 +1459,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 	avs::PipelineNode::link(clientPipeline.source, clientPipeline.videoQueue);
 	avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
-	pipeline.link({ &clientPipeline.decoder, &clientPipeline.surface });
+	clientPipeline.pipeline.link({ &clientPipeline.decoder, &clientPipeline.surface });
 	
 	// Tag Data
 	{
@@ -1473,28 +1472,28 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 		clientPipeline.tagDataQueue.configure(200, 16, "clientPipeline.tagDataQueue");
 
 		avs::PipelineNode::link(clientPipeline.source, clientPipeline.tagDataQueue);
-		pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
+		clientPipeline.pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
 	}
 
 	// Audio
 	if (AudioStream)
 	{
-		avsAudioDecoder.configure(60);
-		sca::AudioParams audioParams;
-		audioParams.codec = sca::AudioCodec::PCM;
-		audioParams.numChannels = 2;
-		audioParams.sampleRate = 48000;
-		audioParams.bitsPerSample = 32;
-		// This will be deconfigured automatically when the pipeline is deconfigured.
-		audioPlayer.configure(audioParams);
+		clientPipeline.avsAudioDecoder.configure(60);
+		sca::AudioSettings audioSettings;
+		audioSettings.codec = sca::AudioCodec::PCM;
+		audioSettings.numChannels = 2;
+		audioSettings.sampleRate = 48000;
+		audioSettings.bitsPerSample = 32;
+		// This will be deconfigured automatically when the clientPipeline.pipeline is deconfigured.
+		audioPlayer.configure(audioSettings);
 		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
-		avsAudioTarget.configure(audioStreamTarget.get());
+		clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
 
-		audioQueue.configure(4096, 120, "AudioQueue");
+		clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
 
-		avs::PipelineNode::link(clientPipeline.source, audioQueue);
-		avs::PipelineNode::link(audioQueue, avsAudioDecoder);
-		pipeline.link({ &avsAudioDecoder, &avsAudioTarget });
+		avs::PipelineNode::link(clientPipeline.source, clientPipeline.audioQueue);
+		avs::PipelineNode::link(clientPipeline.audioQueue, clientPipeline.avsAudioDecoder);
+		clientPipeline.pipeline.link({ &clientPipeline.avsAudioDecoder, &clientPipeline.avsAudioTarget });
 	}
 
 	// We will add a GEOMETRY PIPE
@@ -1507,7 +1506,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 		avs::PipelineNode::link(clientPipeline.source, clientPipeline.geometryQueue);
 		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);
-		pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
+		clientPipeline.pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
 	}
 
 	handshake.startDisplayInfo.width = hdrFramebuffer->GetWidth();
@@ -1520,7 +1519,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
-	handshake.clientStreamingPort=sourceParams.localPort;
+	handshake.clientStreamingPort = setupCommand.server_streaming_port + 1;
 	lastSetupCommand = setupCommand;
 
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
@@ -1530,9 +1529,9 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 void ClientRenderer::OnVideoStreamClosed()
 {
 	TELEPORT_CLIENT_WARN("VIDEO STREAM CLOSED\n");
-	pipeline.deconfigure();
+	clientPipeline.pipeline.deconfigure();
 	clientPipeline.videoQueue.deconfigure();
-	audioQueue.deconfigure();
+	clientPipeline.audioQueue.deconfigure();
 	clientPipeline.geometryQueue.deconfigure();
 
 	//const ovrJava* java = app->GetJava();
@@ -1850,7 +1849,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			camera.SetPosition((const float*)(&pos));
 		}
 		
-		avs::Result result = pipeline.process();
+		avs::Result result = clientPipeline.pipeline.process();
 		if (result == avs::Result::Network_Disconnection)
 		{
 			sessionClient.Disconnect(0);

@@ -130,7 +130,7 @@ namespace OVRFW
 		std::string LoadTextFile(const char *filename) override;
 
 		avs::Context  mContext;
-		avs::Pipeline mPipeline;
+		//avs::Pipeline mPipeline;
 
 		//avs::Surface       mSurface;
 		bool               mPipelineConfigured;
@@ -143,8 +143,8 @@ namespace OVRFW
 		//avs::GeometryDecoder   avsGeometryDecoder;
 		//.avs::GeometryTarget    avsGeometryTarget;
 
-		avs::AudioDecoder avsAudioDecoder;
-		avs::AudioTarget avsAudioTarget;
+		//avs::AudioDecoder avsAudioDecoder;
+		//avs::AudioTarget avsAudioTarget;
 		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 		sca::AudioPlayer* audioPlayer;
 		std::unique_ptr<sca::NetworkPipeline> mNetworkPipeline;

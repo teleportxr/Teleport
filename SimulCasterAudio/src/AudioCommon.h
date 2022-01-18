@@ -88,7 +88,7 @@ namespace sca
 		Invalid = 0,
 		PCM
 	};
-	struct AudioParams
+	struct AudioSettings
 	{
 		AudioCodec codec = AudioCodec::PCM;
 		uint32_t sampleRate = 44100;

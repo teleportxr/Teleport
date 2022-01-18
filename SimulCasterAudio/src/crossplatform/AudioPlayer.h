@@ -14,7 +14,7 @@ namespace sca
 		AudioPlayer();
 		virtual ~AudioPlayer() = default;
 		virtual Result initializeAudioDevice() = 0;
-		virtual Result configure(const AudioParams& audioParams) = 0;
+		virtual Result configure(const AudioSettings& audioSettings) = 0;
 		virtual Result playStream(const uint8_t* data, size_t dataSize) = 0;
 		virtual Result startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback) = 0;
 		virtual Result stopRecording() = 0;
@@ -25,7 +25,7 @@ namespace sca
 		bool isRecording() const { return mRecording; }
 
 	protected:
-		AudioParams mAudioParams;
+		AudioSettings mAudioSettings;
 		bool mInitialized;
 		bool mConfigured;
 		bool mRecording;

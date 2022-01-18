@@ -234,17 +234,13 @@ public:
 
 	GeometryDecoder geometryDecoder;
 	
-	avs::Queue audioQueue;
-	avs::AudioDecoder avsAudioDecoder;
-	avs::AudioTarget avsAudioTarget;
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 	sca::PC_AudioPlayer audioPlayer;
 
 	avs::DecoderParams decoderParams = {};
-	avs::Pipeline pipeline;
+	//avs::Pipeline pipeline;
 	
 	avs::SetupCommand lastSetupCommand;
-
 	avs::SetupLightingCommand lastSetupLightingCommand;
 	teleport::client::ClientPipeline clientPipeline;
 

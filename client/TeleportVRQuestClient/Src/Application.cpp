@@ -78,7 +78,7 @@ Application::Application()
 
 Application::~Application()
 {
-	mPipeline.deconfigure();
+	clientRenderer.clientPipeline.pipeline.deconfigure();
 	mRefreshRates.clear();
 	clientRenderer.ExitedVR();
 	delete mSoundEffectPlayer;
@@ -454,7 +454,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
     }
 
 	// Process stream pipeline
-	mPipeline.process();
+	clientRenderer.clientPipeline.pipeline.process();
 
     std::vector<TinyUI::ControllerState> states;
     states.push_back({});
@@ -741,7 +741,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		// Don't use these on Android:
 		handshake.renderingFeatures.normals=false;
 		handshake.renderingFeatures.ambientOcclusion=false;
-		mPipeline.add(&clientRenderer.clientPipeline.source);
+		clientRenderer.clientPipeline.pipeline.add(&clientRenderer.clientPipeline.source);
 
 		clientRenderer.videoTagDataCubeArray.clear();
 		clientRenderer.videoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
@@ -804,7 +804,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 
 		avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.videoQueue);
 		avs::PipelineNode::link(clientRenderer.clientPipeline.videoQueue, clientRenderer.clientPipeline.decoder);
-		mPipeline.link({&clientRenderer.clientPipeline.decoder, &clientRenderer.clientPipeline.surface});
+		clientRenderer.clientPipeline.pipeline.link({&clientRenderer.clientPipeline.decoder, &clientRenderer.clientPipeline.surface});
 
 
 		// Tag Data
@@ -818,14 +818,14 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 			clientRenderer.clientPipeline.tagDataQueue.configure(200, 16, "TagDataQueue");
 
 			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.tagDataQueue);
-			mPipeline.link({&clientRenderer.clientPipeline.tagDataQueue, &clientRenderer.clientPipeline.tagDataDecoder});
+			clientRenderer.clientPipeline.pipeline.link({&clientRenderer.clientPipeline.tagDataQueue, &clientRenderer.clientPipeline.tagDataDecoder});
 		}
 
 
 		// Audio
 		if (AudioStream)
 		{
-			avsAudioDecoder.configure(60);
+			clientRenderer.clientPipeline.avsAudioDecoder.configure(60);
 			sca::AudioParams audioParams;
 			audioParams.codec = sca::AudioCodec::PCM;
 			audioParams.numChannels = 2;
@@ -834,12 +834,12 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 			// This will be deconfigured automatically when the pipeline is deconfigured.
 			audioPlayer->configure(audioParams);
 			audioStreamTarget.reset(new sca::AudioStreamTarget(audioPlayer));
-			avsAudioTarget.configure(audioStreamTarget.get());
-			clientRenderer.mAudioQueue.configure(4096, 120, "AudioQueue");
+			clientRenderer.clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
+			clientRenderer.clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
 
-			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.mAudioQueue);
-			avs::PipelineNode::link(clientRenderer.mAudioQueue, avsAudioDecoder);
-			mPipeline.link({&avsAudioDecoder, &avsAudioTarget});
+			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.audioQueue);
+			avs::PipelineNode::link(clientRenderer.clientPipeline.audioQueue, clientRenderer.clientPipeline.avsAudioDecoder);
+			clientRenderer.clientPipeline.pipeline.link({&clientRenderer.clientPipeline.avsAudioDecoder, &clientRenderer.clientPipeline.avsAudioTarget});
 
 			// Audio Input
 			if (setupCommand.audio_input_enabled)
@@ -878,7 +878,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 
 			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.geometryQueue);
 			avs::PipelineNode::link(clientRenderer.clientPipeline.geometryQueue, clientRenderer.clientPipeline.avsGeometryDecoder);
-			mPipeline.link({&clientRenderer.clientPipeline.avsGeometryDecoder, &clientRenderer.clientPipeline.avsGeometryTarget});
+			clientRenderer.clientPipeline.pipeline.link({&clientRenderer.clientPipeline.avsGeometryDecoder, &clientRenderer.clientPipeline.avsGeometryTarget});
 		}
 		//GL_CheckErrors("Pre-Build Cubemap");
 		clientRenderer.OnSetupCommandReceived(videoConfig);
@@ -939,8 +939,8 @@ void Application::OnVideoStreamClosed()
 {
 	OVR_WARN("VIDEO STREAM CLOSED");
 
-	mPipeline.deconfigure();
-	mPipeline.reset();
+	clientRenderer.clientPipeline.pipeline.deconfigure();
+	clientRenderer.clientPipeline.pipeline.reset();
 	mPipelineConfigured = false;
 
 	receivedInitialPos = false;

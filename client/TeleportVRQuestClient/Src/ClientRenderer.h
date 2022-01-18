@@ -135,7 +135,7 @@ public:
 
 	//avs::Queue mVideoQueue;
 	//avs::Queue mTagDataQueue;
-	avs::Queue mAudioQueue;
+	//avs::Queue mAudioQueue;
 
 	clientrender::GeometryCache geometryCache;
 	clientrender::ResourceCreator resourceCreator;

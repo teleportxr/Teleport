@@ -16,10 +16,10 @@ namespace teleport
 		
 	}
 
-	Result AudioEncodePipeline::initialize(const ServerSettings& settings, const AudioParams& audioParams, avs::PipelineNode* output)
+	Result AudioEncodePipeline::initialize(const ServerSettings& settings, const AudioSettings& audioSettings, avs::PipelineNode* output)
 	{
 		avs::AudioEncoderParams encoderParams;
-		encoderParams.codec = audioParams.codec;
+		encoderParams.codec = audioSettings.codec;
 
 		encoder.reset(new avs::AudioEncoder(new AudioEncoder(&settings)));
 		pipeline.reset(new avs::Pipeline);

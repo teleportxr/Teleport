@@ -13,6 +13,7 @@
 #include "ErrorHandling.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
+#include "enet/enet.h"
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
 typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, uint64_t, const avs::Pose*);
@@ -21,15 +22,14 @@ typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 typedef void(__stdcall* ReportHandshakeFn) (avs::uid clientID,const avs::Handshake *h);
 
-typedef struct _ENetHost ENetHost;
-typedef struct _ENetPeer ENetPeer;
-typedef struct _ENetPacket ENetPacket;
-typedef struct _ENetEvent ENetEvent;
+//typedef struct _ENetPeer ENetPeer;
+//typedef struct _ENetPacket ENetPacket;
+//typedef struct _ENetEvent ENetEvent;
 
 namespace teleport
 {
 	class DiscoveryService;
-
+	class ClientManager;
 	class ClientMessaging
 	{
 	public:
@@ -41,8 +41,9 @@ namespace teleport
 						SetControllerPoseFn setControllerPose,
 						ProcessNewInputFn processNewInput,
 						DisconnectFn onDisconnect,
-						const uint32_t& disconnectTimeout,
-						ReportHandshakeFn reportHandshakeFn);
+						uint32_t disconnectTimeout,
+						ReportHandshakeFn reportHandshakeFn,
+						ClientManager* clientManager);
 		
 		virtual ~ClientMessaging();
 
@@ -50,9 +51,9 @@ namespace teleport
 		void initialise(CasterContext* context, CaptureDelegates captureDelegates);
 		void unInitialise();
 
-		bool startSession(avs::uid clientID, int32_t listenPort);
+		bool startSession(avs::uid clientID, std::string clientIP);
 		void stopSession();
-		bool restartSession(avs::uid clientID, int32_t listenPort);
+		bool restartSession(avs::uid clientID, std::string clientIP);
 		bool isStartingSession() { return startingSession;  }
 		void tick(float deltaTime);
 		void handleEvents(float deltaTime);
@@ -70,13 +71,17 @@ namespace teleport
 		void updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update);
 		void setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
-		bool hasHost() const;
 		bool hasPeer() const;
 		bool hasReceivedHandshake() const;
 
 		bool setPosition(uint64_t valid_counter,const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head,const avs::vec4 &orientation);
 
 		bool sendCommand(const avs::Command& avsCommand) const;
+
+		uint16_t getServerPort() const;
+
+		uint16_t getStreamingPort() const;
+
 		template<typename T> bool sendCommand(const avs::Command& command, const std::vector<T>& appendedList) const
 		{
 			if(!peer)
@@ -103,23 +108,46 @@ namespace teleport
 			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 		}
 
-		std::string getClientIP() const;
+		std::string getClientIP() const 
+		{
+			return clientIP;
+		};
+
+		avs::uid getClientID() const
+		{
+			return clientID;
+		}
+
+		// Same as c;ient ip.
+		std::string getPeerIP() const;
+
 		uint16_t getClientPort() const;
-		uint16_t getServerPort() const;
 
-		static void startAsyncNetworkDataProcessing();
-		static void stopAsyncNetworkDataProcessing(bool killThread = true);
+		CasterContext* getContext() const
+		{
+			return casterContext;
+		}
 
-		static avs::Timestamp getLastTickTimestamp();
-
-		bool TimedOutStartingSession() const;
+		bool timedOutStartingSession() const;
 
 		void ConfirmSessionStarted();
 
 	private:
+		void dispatchEvent(const ENetEvent& event);
+		void receiveHandshake(const ENetPacket* packet);
+		void receiveInput(const ENetPacket* packet);
+		void receiveDisplayInfo(const ENetPacket* packet);
+		void receiveHeadPose(const ENetPacket* packet);
+		void receiveResourceRequest(const ENetPacket* packet);
+		void receiveKeyframeRequest(const ENetPacket* packet);
+		void receiveClientMessage(const ENetPacket* packet);
+
+		friend class ClientManager;
+		avs::ThreadSafeQueue<ENetEvent> eventQueue;
 		avs::Handshake handshake;
 		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
+		std::string clientIP;
 		bool initialized=false;
 		bool startingSession;
 		float timeStartingSession;
@@ -127,7 +155,7 @@ namespace teleport
 		const ServerSettings* settings;
 		std::shared_ptr<DiscoveryService> discoveryService;
 		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
-
+		ClientManager* clientManager;
 		SetHeadPoseFn setHeadPose; //Delegate called when a head pose is received.
 		SetOriginFromClientFn setOriginFromClient; //Delegate called when an origin is received.
 		SetControllerPoseFn setControllerPose; //Delegate called when a head pose is received.
@@ -135,15 +163,15 @@ namespace teleport
 		DisconnectFn onDisconnect; //Delegate called when the peer disconnects.
 		ReportHandshakeFn reportHandshake;
 
-		const uint32_t& disconnectTimeout;
+		uint32_t disconnectTimeout;
+		uint16_t streamingPort;
 
 		CasterContext* casterContext;
 		CaptureDelegates captureComponentDelegates;
 
-		ENetHost* host;
 		ENetPeer* peer;
 
-		bool receivedHandshake = false;				//Whether we've received the handshake from the client.
+		std::atomic_bool receivedHandshake = false;				//Whether we've received the handshake from the client.
 
 		std::vector<avs::uid> nodesEnteredBounds;	//Stores nodes client needs to know have entered streaming bounds.
 		std::vector<avs::uid> nodesLeftBounds;		//Stores nodes client needs to know have left streaming bounds.
@@ -167,26 +195,6 @@ namespace teleport
 		};
 		InputStateAndEvents latestInputStateAndEvents[2]; //Latest input state received from the client.
 
-		void dispatchEvent(const ENetEvent& event);
-		void receiveHandshake(const ENetPacket* packet);
-		void receiveInput(const ENetPacket* packet);
-		void receiveDisplayInfo(const ENetPacket* packet);
-		void receiveHeadPose(const ENetPacket* packet);
-		void receiveResourceRequest(const ENetPacket* packet);
-		void receiveKeyframeRequest(const ENetPacket* packet);
-		void receiveClientMessage(const ENetPacket* packet);
-
-		void addNetworkPipelineToAsyncProcessing();
-		void removeNetworkPipelineFromAsyncProcessing();
-		
-		static std::atomic_bool asyncNetworkDataProcessingActive;
-		static void processNetworkDataAsync();
-
-		static std::unordered_map<avs::uid, NetworkPipeline*> networkPipelines;
-		static std::thread networkThread;
-		static std::mutex networkMutex;
-		static std::mutex dataMutex;
-		static avs::Timestamp lastTickTimestamp;
 		// Seconds
 		static constexpr float startSessionTimeout = 3;
 	};
