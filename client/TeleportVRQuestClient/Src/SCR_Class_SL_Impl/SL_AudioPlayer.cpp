@@ -151,7 +151,7 @@ sca::Result SL_AudioPlayer::initializeAudioDevice()
 	return sca::Result::OK;
 }
 
-sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
+sca::Result SL_AudioPlayer::configure(const sca::AudioSettings& audioSettings)
 {
 	if (!mInitialized)
 	{
@@ -167,7 +167,7 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 
 	sca::Result result = sca::Result::OK;
 
-    SLuint32 bitsPerSample = static_cast<SLuint32>(audioParams.bitsPerSample);
+    SLuint32 bitsPerSample = static_cast<SLuint32>(audioSettings.bitsPerSample);
 
 
 
@@ -190,11 +190,11 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
         // Define the output audio data format.
         SLAndroidDataFormat_PCM_EX format_pcm_ex = {
                 SL_ANDROID_DATAFORMAT_PCM_EX,       // formatType
-                static_cast<SLuint32>(audioParams.numChannels),           // numChannels
-                static_cast<SLuint32>(audioParams.sampleRate * 1000),    // milliSamplesPerSec
+                static_cast<SLuint32>(audioSettings.numChannels),           // numChannels
+                static_cast<SLuint32>(audioSettings.sampleRate * 1000),    // milliSamplesPerSec
                 bitsPerSample,                      // bitsPerSample
                 bitsPerSample,                      // containerSize;
-                outputChannelCountToChannelMask(audioParams.numChannels), // channelMask
+                outputChannelCountToChannelMask(audioSettings.numChannels), // channelMask
                 getDefaultByteOrder(),
                 SL_ANDROID_PCM_REPRESENTATION_FLOAT
         };
@@ -296,11 +296,11 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 		// Define the output audio data format.
 		SLAndroidDataFormat_PCM_EX format_pcm_ex = {
 				SL_ANDROID_DATAFORMAT_PCM_EX,       // formatType
-				static_cast<SLuint32>(audioParams.numChannels),           // numChannels
-				static_cast<SLuint32>(audioParams.sampleRate * 1000),    // milliSamplesPerSec
+				static_cast<SLuint32>(audioSettings.numChannels),           // numChannels
+				static_cast<SLuint32>(audioSettings.sampleRate * 1000),    // milliSamplesPerSec
 				bitsPerSample,                      // bitsPerSample
 				bitsPerSample,                      // containerSize;
-				outputChannelCountToChannelMask(audioParams.numChannels), // channelMask
+				outputChannelCountToChannelMask(audioSettings.numChannels), // channelMask
 				getDefaultByteOrder(),
 				SL_ANDROID_PCM_REPRESENTATION_FLOAT
 		};
@@ -342,7 +342,7 @@ sca::Result SL_AudioPlayer::configure(const sca::AudioParams& audioParams)
 		}
 	}
 
-	mAudioParams = audioParams;
+	mAudioSettings = audioSettings;
 	mConfigured = true;
 
 	return result;
@@ -441,7 +441,7 @@ sca::Result SL_AudioPlayer::startRecording(std::function<void(const uint8_t * da
 
 	static constexpr int NUM_RECORD_FRAMES = 2048;
 
-	mRecordBuffer.reset(new RecordBuffer(NUM_RECORD_FRAMES * mAudioParams.numChannels * (mAudioParams.bitsPerSample / 8)));
+	mRecordBuffer.reset(new RecordBuffer(NUM_RECORD_FRAMES * mAudioSettings.numChannels * (mAudioSettings.bitsPerSample / 8)));
 
 	if (FAILED((*recorderBufferQueue)->Enqueue(recorderBufferQueue, mRecordBuffer->getNextBuffer(), 1024)))
 	{
@@ -525,7 +525,7 @@ sca::Result SL_AudioPlayer::deconfigure()
 
     mConfigured = false;
 
-    mAudioParams = {};
+    mAudioSettings = {};
 
     return sca::Result::OK;
 }

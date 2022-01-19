@@ -717,7 +717,6 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 
 		avs::NetworkSourceParams sourceParams;
 		sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-		sourceParams.localPort = client_streaming_port;
 		sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
 		sourceParams.remotePort = setupCommand.server_streaming_port;
 		sourceParams.remoteHTTPPort = setupCommand.server_http_port;
@@ -826,13 +825,13 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		if (AudioStream)
 		{
 			clientRenderer.clientPipeline.avsAudioDecoder.configure(60);
-			sca::AudioParams audioParams;
-			audioParams.codec = sca::AudioCodec::PCM;
-			audioParams.numChannels = 2;
-			audioParams.sampleRate = 48000;
-			audioParams.bitsPerSample = 32;
+			sca::AudioSettings audioSettings;
+			audioSettings.codec = sca::AudioCodec::PCM;
+			audioSettings.numChannels = 2;
+			audioSettings.sampleRate = 48000;
+			audioSettings.bitsPerSample = 32;
 			// This will be deconfigured automatically when the pipeline is deconfigured.
-			audioPlayer->configure(audioParams);
+			audioPlayer->configure(audioSettings);
 			audioStreamTarget.reset(new sca::AudioStreamTarget(audioPlayer));
 			clientRenderer.clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
 			clientRenderer.clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
