@@ -143,7 +143,9 @@ public:
 
 	bool isEncodingAsynchronously();
 
-	EncoderStats GetStats() const;
+	EncoderStats getStats() const;
+
+	static Result getEncodeCapabilities(const DeviceHandle& device, const EncoderParams& params, avs::EncodeCapabilities& capabilities);
 
 private:
 	Result onInputLink(int slot, PipelineNode* node) override;

@@ -44,7 +44,8 @@ namespace teleport
 			PipelineNotInitialized,
 			PipelineProcessingError,
 			PipelineWriteOutputError,
-			InvalidTagDataIdError
+			InvalidTagDataIdError,
+			EncodeCapabilitiesRetrievalError
 		};
 
 		Result(Code code) : m_code(code)

@@ -117,6 +117,8 @@ namespace teleport
 
 		receivedHandshake = false;
 		geometryStreamingService->reset();
+
+		eventQueue.clear();
 	}
 
 	void ClientMessaging::tick(float deltaTime)

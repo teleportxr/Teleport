@@ -13,7 +13,7 @@
 
 namespace teleport
 {
-	static void CrateEncodeParams(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams);
+	static void CrateEncodeParams(const ServerSettings& settings, avs::EncoderParams& encoderParams);
 
 	VideoEncodePipeline::~VideoEncodePipeline()
 	{
@@ -73,7 +73,7 @@ namespace teleport
 		}
 
 		avs::EncoderParams encoderParams = {};
-		CrateEncodeParams(settings, videoEncodeParams, encoderParams);
+		CrateEncodeParams(settings, encoderParams);
 
 		if (!mEncoder->configure(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams))
 		{
@@ -127,13 +127,13 @@ namespace teleport
 		}
 
 		avs::EncoderParams encoderParams = {};
-		CrateEncodeParams(settings, videoEncodeParams, encoderParams);
+		CrateEncodeParams(settings, encoderParams);
 
 		mEncoder->reconfigure(videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams);
 		return Result::Code::OK;
 	}
 
-	void CrateEncodeParams(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncoderParams& encoderParams)
+	void CrateEncodeParams(const ServerSettings& settings, avs::EncoderParams& encoderParams)
 	{
 		encoderParams.codec = settings.videoCodec;
 		encoderParams.preset = avs::VideoPreset::HighPerformance;
@@ -199,10 +199,21 @@ namespace teleport
 		return Result::Code::OK;
 	}
 
-	avs::EncoderStats VideoEncodePipeline::GetEncoderStats() const
+	avs::EncoderStats VideoEncodePipeline::getEncoderStats() const
 	{
 		if (mEncoder)
-			return mEncoder->GetStats();
+			return mEncoder->getStats();
 		return avs::EncoderStats();
+	}
+
+	Result VideoEncodePipeline::getEncodeCapabilities(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncodeCapabilities& capabilities)
+	{
+		avs::EncoderParams encoderParams = {};
+		CrateEncodeParams(settings, encoderParams);
+		if (avs::Encoder::getEncodeCapabilities(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, encoderParams, capabilities))
+		{
+			return Result::Code::OK;
+		}
+		return Result::Code::EncodeCapabilitiesRetrievalError;
 	}
 }

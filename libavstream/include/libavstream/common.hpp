@@ -127,7 +127,8 @@ namespace avs
 			HTTPUtil_NotInitialized,
 			HTTPUtil_AlreadyInitialized,
 			HTTPUtil_InitError,
-			HTTPUtil_TransferError
+			HTTPUtil_TransferError,
+			NotSupported
 		};
 
 		Result(Code code) : m_code(code)

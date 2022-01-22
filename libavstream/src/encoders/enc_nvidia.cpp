@@ -48,7 +48,6 @@ static NVENCSTATUS g_nvstatus;
 
 namespace avs
 {
-
 	namespace
 	{
 		NV_ENCODE_API_FUNCTION_LIST g_api;
@@ -69,6 +68,66 @@ namespace avs
 	}
 
 	Result EncoderNV::initialize(const DeviceHandle& device, int frameWidth, int frameHeight, const EncoderParams& params)
+	{
+		Result result = createEncoder(device);
+		if (!result)
+		{
+			return result;
+		}
+
+		CUDA::ContextGuard ctx(m_context);
+
+		if (CUFAILED(cuModuleLoadFatBinary(&m_module, enc_nvidia_cubin)))
+		{
+			shutdown();
+			AVSLOG(Error) << "EncoderNV: Failed to load CUDA pre-processing kernels module";
+			return Result::EncoderBackend_InitFailed;
+		}
+
+		cuModuleGetSurfRef(&m_surfaceRef, m_module, SYM_surfaceRef);
+		assert(m_surfaceRef);
+
+		cuModuleGetFunction(&m_kCopyPixels, m_module, SYM_kCopyPixels);
+		assert(m_kCopyPixels);
+		cuModuleGetFunction(&m_kCopyPixelsSwapRB, m_module, SYM_kCopyPixelsSwapRB);
+		assert(m_kCopyPixelsSwapRB);
+		cuModuleGetFunction(&m_kCopyPixels16, m_module, SYM_kCopyPixels16);
+		assert(m_kCopyPixels16);
+		cuModuleGetFunction(&m_kCopyPixels16SwapRB, m_module, SYM_kCopyPixels16SwapRB);
+		assert(m_kCopyPixels16SwapRB);
+		cuModuleGetFunction(&m_kRGBAtoNV12, m_module, SYM_kRGBAtoNV12);
+		assert(m_kRGBAtoNV12);
+		cuModuleGetFunction(&m_kBGRAtoNV12, m_module, SYM_kBGRAtoNV12);
+		assert(m_kBGRAtoNV12);
+		cuModuleGetFunction(&m_kR16toNV12, m_module, SYM_kR16toNV12);
+		assert(m_kR16toNV12);
+
+		result = initializeEncoder(frameWidth, frameHeight, params);
+		if (!result)
+		{
+			return result;
+		}
+
+		assert(device);
+
+#if defined(PLATFORM_WINDOWS)
+		if (device.type == DeviceType::Direct3D11)
+		{
+			device.as<ID3D11Device>()->AddRef();
+		}
+		else if (device.type == DeviceType::Direct3D12)
+		{
+			device.as<ID3D12Device>()->AddRef();
+		}
+
+#endif
+
+		m_device = device;
+
+		return Result::OK;
+	}
+
+	Result EncoderNV::createEncoder(const DeviceHandle& device)
 	{
 		m_gResourceSupport = true;
 
@@ -146,31 +205,6 @@ namespace avs
 		// cuCtxCreate already made context current.
 		CUDA::ContextGuard ctx(m_context, false);
 
-		if (CUFAILED(cuModuleLoadFatBinary(&m_module, enc_nvidia_cubin)))
-		{
-			shutdown();
-			AVSLOG(Error) << "EncoderNV: Failed to load CUDA pre-processing kernels module";
-			return Result::EncoderBackend_InitFailed;
-		}
-
-		cuModuleGetSurfRef(&m_surfaceRef, m_module, SYM_surfaceRef);
-		assert(m_surfaceRef);
-
-		cuModuleGetFunction(&m_kCopyPixels, m_module, SYM_kCopyPixels);
-		assert(m_kCopyPixels);
-		cuModuleGetFunction(&m_kCopyPixelsSwapRB, m_module, SYM_kCopyPixelsSwapRB);
-		assert(m_kCopyPixelsSwapRB);
-		cuModuleGetFunction(&m_kCopyPixels16, m_module, SYM_kCopyPixels16);
-		assert(m_kCopyPixels16);
-		cuModuleGetFunction(&m_kCopyPixels16SwapRB, m_module, SYM_kCopyPixels16SwapRB);
-		assert(m_kCopyPixels16SwapRB);
-		cuModuleGetFunction(&m_kRGBAtoNV12, m_module, SYM_kRGBAtoNV12);
-		assert(m_kRGBAtoNV12);
-		cuModuleGetFunction(&m_kBGRAtoNV12, m_module, SYM_kBGRAtoNV12);
-		assert(m_kBGRAtoNV12);
-		cuModuleGetFunction(&m_kR16toNV12, m_module, SYM_kR16toNV12);
-		assert(m_kR16toNV12);
-
 		{
 			NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS params = {};
 			params.apiVersion = NVENCAPI_VERSION;
@@ -185,158 +219,26 @@ namespace avs
 			}
 		}
 
-		Result result = initializeEncoder(frameWidth, frameHeight, params);
-		if (!result)
-		{
-			return result;
-		}
-
-		assert(device);
-
-#if defined(PLATFORM_WINDOWS)
-		if (device.type == DeviceType::Direct3D11)
-		{
-			device.as<ID3D11Device>()->AddRef();
-		}
-		else if (device.type == DeviceType::Direct3D12)
-		{
-			device.as<ID3D12Device>()->AddRef();
-		}
-
-#endif
-
-		m_device = device;
-
 		return Result::OK;
 	}
 
 	Result EncoderNV::initializeEncoder(int frameWidth, int frameHeight, const EncoderParams& params)
 	{
-		GUID requestedEncodeGUID = { 0 };
-		switch (params.codec)
-		{
-		case VideoCodec::H264:
-			requestedEncodeGUID = NV_ENC_CODEC_H264_GUID;
-			break;
-		case VideoCodec::HEVC:
-			requestedEncodeGUID = NV_ENC_CODEC_HEVC_GUID;
-			break;
-		}
-
-		GUID requestedPresetGUID = NV_ENC_PRESET_LOW_LATENCY_DEFAULT_GUID;
-		switch (params.preset)
-		{
-		case VideoPreset::HighPerformance:
-			requestedPresetGUID = NV_ENC_PRESET_LOW_LATENCY_HP_GUID;
-			break;
-		case VideoPreset::HighQuality:
-			requestedPresetGUID = NV_ENC_PRESET_LOW_LATENCY_HQ_GUID;
-			break;
-		}
-
-		NV_ENC_BUFFER_FORMAT requestedFormat = NV_ENC_BUFFER_FORMAT_UNDEFINED;
-		switch (params.inputFormat)
-		{
-		case SurfaceFormat::ABGR:
-			requestedFormat = NV_ENC_BUFFER_FORMAT_ABGR;
-			break;
-		case SurfaceFormat::ARGB:
-			requestedFormat = NV_ENC_BUFFER_FORMAT_ARGB;
-			break;
-		case SurfaceFormat::NV12:
-			requestedFormat = NV_ENC_BUFFER_FORMAT_NV12;
-			break;
-		case SurfaceFormat::ARGB10:
-			requestedFormat = NV_ENC_BUFFER_FORMAT_ARGB10;
-			break;
-		case SurfaceFormat::ABGR10:
-			requestedFormat = NV_ENC_BUFFER_FORMAT_ABGR10;
-			break;
-		}
-
 		uint32_t frameRateDen = 1;
 
 		EncodeConfig config;
 		{
-			Result result = chooseEncodeConfig(requestedEncodeGUID, requestedPresetGUID, NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY, requestedFormat, config);
+			Result result = chooseEncodeConfig(m_encoder, params, NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY, config);
 			if (!result)
 			{
 				return result;
 			}
-		}
 
-		// Check the highest encoding level supported
-		{
-			NV_ENC_CAPS_PARAM capsParam;
-			capsParam.version = NV_ENC_CAPS_PARAM_VER;
-			capsParam.capsToQuery = NV_ENC_CAPS_LEVEL_MAX;
-
-			// m_encoder not initialized here yet but function just needs the encode GUID.
-			if (NVFAILED(g_api.nvEncGetEncodeCaps(m_encoder, config.encodeGUID, &capsParam, (int*)&m_EncodeCapabilities.maxEncodeLevel)))
+			result = getEncodeConfigCapabilities(m_encoder, config, params, m_EncodeCapabilities);
+			if (!result)
 			{
 				shutdown();
-				AVSLOG(Error) << "EncoderNV: Failed to check encoder capability";
-				return Result::EncoderBackend_CapabilityCheckFailed;
-			}
-		}
-
-		// Check if async mode is supported
-		{
-			NV_ENC_CAPS_PARAM capsParam;
-			capsParam.version = NV_ENC_CAPS_PARAM_VER;
-			capsParam.capsToQuery = NV_ENC_CAPS_ASYNC_ENCODE_SUPPORT;
-
-			// m_encoder not initialized here yet but function just needs the encode GUID.
-			if (NVFAILED(g_api.nvEncGetEncodeCaps(m_encoder, config.encodeGUID, &capsParam, (int*)&m_EncodeCapabilities.isAsyncCapable)))
-			{
-				shutdown();
-				AVSLOG(Error) << "EncoderNV: Failed to check encoder capability";
-				return Result::EncoderBackend_CapabilityCheckFailed;
-			}
-		}
-
-		// Check if 10-bit encoding is supported
-		{
-			NV_ENC_CAPS_PARAM capsParam;
-			capsParam.version = NV_ENC_CAPS_PARAM_VER;
-			capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_10BIT_ENCODE;
-
-			// m_encoder not initialized here yet but function just needs the encode GUID.
-			if (NVFAILED(g_api.nvEncGetEncodeCaps(m_encoder, config.encodeGUID, &capsParam, (int*)&m_EncodeCapabilities.is10BitCapable)))
-			{
-				shutdown();
-				AVSLOG(Error) << "EncoderNV: Failed to check encoder capability";
-				return Result::EncoderBackend_CapabilityCheckFailed;
-			}
-		}
-
-		// Check if YUV444 encoding is supported
-		{
-			NV_ENC_CAPS_PARAM capsParam;
-			capsParam.version = NV_ENC_CAPS_PARAM_VER;
-			capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_YUV444_ENCODE;
-
-			// m_encoder not initialized here yet but function just needs the encode GUID.
-			if (NVFAILED(g_api.nvEncGetEncodeCaps(m_encoder, config.encodeGUID, &capsParam, (int*)&m_EncodeCapabilities.isYUV444Capable)))
-			{
-				shutdown();
-				AVSLOG(Error) << "EncoderNV: Failed to check encoder capability";
-				return Result::EncoderBackend_CapabilityCheckFailed;
-			}
-		}
-
-		// Check if alpha layer encoding is supported
-		{
-			NV_ENC_CAPS_PARAM capsParam;
-			capsParam.version = NV_ENC_CAPS_PARAM_VER;
-			capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_ALPHA_LAYER_ENCODING;
-
-			// m_encoder not initialized here yet but function just needs the encode GUID.
-			if (NVFAILED(g_api.nvEncGetEncodeCaps(m_encoder, config.encodeGUID, &capsParam, (int*)&m_EncodeCapabilities.isAlphaLayerSupported)))
-			{
-				shutdown();
-				AVSLOG(Error) << "EncoderNV: Failed to check encoder capability";
-				return Result::EncoderBackend_CapabilityCheckFailed;
+				return result;
 			}
 		}
 
@@ -572,40 +474,43 @@ namespace avs
 
 		if (m_encoder)
 		{
-			NV_ENC_PIC_PARAMS flushParams = {};
-			flushParams.version = NV_ENC_PIC_PARAMS_VER;
-			flushParams.encodePicFlags = NV_ENC_PIC_FLAG_EOS;
-			NVENCSTATUS status = g_api.nvEncEncodePicture(m_encoder, &flushParams);
-			if (NVFAILED(status))
+			if (m_initialized)
 			{
-				AVSLOG(Warning) << "EncoderNV: Failed to flush hardware encoder\n";
-				result = Result::EncoderBackend_FlushError;
-			}
-			if (m_registeredSurface.surface)
-			{
-				result = unregisterSurface();
-			}
-			for (int i = 0; i < m_numBuffers; ++i)
-			{
-				auto& bd = m_bufferData[i];
-#if defined(PLATFORM_WINDOWS)
-				if (bd.completionEvent)
+				NV_ENC_PIC_PARAMS flushParams = {};
+				flushParams.version = NV_ENC_PIC_PARAMS_VER;
+				flushParams.encodePicFlags = NV_ENC_PIC_FLAG_EOS;
+				NVENCSTATUS status = g_api.nvEncEncodePicture(m_encoder, &flushParams);
+				if (NVFAILED(status))
 				{
-					NV_ENC_EVENT_PARAMS eventParams = { NV_ENC_EVENT_PARAMS_VER };
-					eventParams.completionEvent = bd.completionEvent;
-					g_api.nvEncUnregisterAsyncEvent(m_encoder, &eventParams);
-					CloseHandle(bd.completionEvent);
-					bd.completionEvent = nullptr;
+					AVSLOG(Warning) << "EncoderNV: Failed to flush hardware encoder\n";
+					result = Result::EncoderBackend_FlushError;
 				}
-#endif
-				if (bd.outputBuffer.ptr)
+				if (m_registeredSurface.surface)
 				{
-					if (NVFAILED(g_api.nvEncDestroyBitstreamBuffer(m_encoder, bd.outputBuffer.ptr)))
+					result = unregisterSurface();
+				}
+				for (int i = 0; i < m_numBuffers; ++i)
+				{
+					auto& bd = m_bufferData[i];
+#if defined(PLATFORM_WINDOWS)
+					if (bd.completionEvent)
 					{
-						AVSLOG(Error) << "EncoderNV: Failed to destroy output bitstream buffer\n";
-						result = Result::EncoderBackend_ShutdownFailed;
+						NV_ENC_EVENT_PARAMS eventParams = { NV_ENC_EVENT_PARAMS_VER };
+						eventParams.completionEvent = bd.completionEvent;
+						g_api.nvEncUnregisterAsyncEvent(m_encoder, &eventParams);
+						CloseHandle(bd.completionEvent);
+						bd.completionEvent = nullptr;
 					}
-					bd.outputBuffer.ptr = nullptr;
+#endif
+					if (bd.outputBuffer.ptr)
+					{
+						if (NVFAILED(g_api.nvEncDestroyBitstreamBuffer(m_encoder, bd.outputBuffer.ptr)))
+						{
+							AVSLOG(Error) << "EncoderNV: Failed to destroy output bitstream buffer\n";
+							result = Result::EncoderBackend_ShutdownFailed;
+						}
+						bd.outputBuffer.ptr = nullptr;
+					}
 				}
 			}
 			if (NVFAILED(g_api.nvEncDestroyEncoder(m_encoder)))
@@ -1144,8 +1049,50 @@ namespace avs
 		return apiVersion <= maxSupportedVersion;
 	}
 
-	Result EncoderNV::chooseEncodeConfig(GUID requestedEncodeGUID, GUID requestedPresetGUID, NV_ENC_TUNING_INFO tuningInfo, NV_ENC_BUFFER_FORMAT requestedFormat, EncodeConfig& config) const
+	Result EncoderNV::chooseEncodeConfig(void* encoder, const EncoderParams& params, NV_ENC_TUNING_INFO tuningInfo, EncodeConfig& config)
 	{
+		GUID requestedEncodeGUID = { 0 };
+		switch (params.codec)
+		{
+		case VideoCodec::H264:
+			requestedEncodeGUID = NV_ENC_CODEC_H264_GUID;
+			break;
+		case VideoCodec::HEVC:
+			requestedEncodeGUID = NV_ENC_CODEC_HEVC_GUID;
+			break;
+		}
+
+		GUID requestedPresetGUID = NV_ENC_PRESET_LOW_LATENCY_DEFAULT_GUID;
+		switch (params.preset)
+		{
+		case VideoPreset::HighPerformance:
+			requestedPresetGUID = NV_ENC_PRESET_LOW_LATENCY_HP_GUID;
+			break;
+		case VideoPreset::HighQuality:
+			requestedPresetGUID = NV_ENC_PRESET_LOW_LATENCY_HQ_GUID;
+			break;
+		}
+
+		NV_ENC_BUFFER_FORMAT requestedFormat = NV_ENC_BUFFER_FORMAT_UNDEFINED;
+		switch (params.inputFormat)
+		{
+		case SurfaceFormat::ABGR:
+			requestedFormat = NV_ENC_BUFFER_FORMAT_ABGR;
+			break;
+		case SurfaceFormat::ARGB:
+			requestedFormat = NV_ENC_BUFFER_FORMAT_ARGB;
+			break;
+		case SurfaceFormat::NV12:
+			requestedFormat = NV_ENC_BUFFER_FORMAT_NV12;
+			break;
+		case SurfaceFormat::ARGB10:
+			requestedFormat = NV_ENC_BUFFER_FORMAT_ARGB10;
+			break;
+		case SurfaceFormat::ABGR10:
+			requestedFormat = NV_ENC_BUFFER_FORMAT_ABGR10;
+			break;
+		}
+
 		enum RankPriority {
 			High = 10,
 			Medium = 5,
@@ -1154,9 +1101,9 @@ namespace avs
 		std::multimap<int, EncodeConfig, std::greater<int>> rankedConfigs;
 
 		uint32_t numEncodeGUIDs;
-		g_api.nvEncGetEncodeGUIDCount(m_encoder, &numEncodeGUIDs);
+		g_api.nvEncGetEncodeGUIDCount(encoder, &numEncodeGUIDs);
 		std::vector<GUID> encodeGUIDs(numEncodeGUIDs);
-		g_api.nvEncGetEncodeGUIDs(m_encoder, encodeGUIDs.data(), (uint32_t)encodeGUIDs.size(), &numEncodeGUIDs);
+		g_api.nvEncGetEncodeGUIDs(encoder, encodeGUIDs.data(), (uint32_t)encodeGUIDs.size(), &numEncodeGUIDs);
 
 		// Filter codecs first.
 		if (requestedEncodeGUID != GUID{ 0 })
@@ -1179,9 +1126,9 @@ namespace avs
 			}
 
 			uint32_t numInputFormats;
-			g_api.nvEncGetInputFormatCount(m_encoder, encodeGUID, &numInputFormats);
+			g_api.nvEncGetInputFormatCount(encoder, encodeGUID, &numInputFormats);
 			std::vector<NV_ENC_BUFFER_FORMAT> inputFormats(numInputFormats);
-			g_api.nvEncGetInputFormats(m_encoder, encodeGUID, inputFormats.data(), (uint32_t)inputFormats.size(), &numInputFormats);
+			g_api.nvEncGetInputFormats(encoder, encodeGUID, inputFormats.data(), (uint32_t)inputFormats.size(), &numInputFormats);
 			for (const NV_ENC_BUFFER_FORMAT format : inputFormats)
 			{
 				// If specific format is requested only rank configs supporting said format.
@@ -1217,9 +1164,9 @@ namespace avs
 			}
 
 			uint32_t numPresets;
-			g_api.nvEncGetEncodePresetCount(m_encoder, encodeGUID, &numPresets);
+			g_api.nvEncGetEncodePresetCount(encoder, encodeGUID, &numPresets);
 			std::vector<GUID> presetGUIDs(numPresets);
-			g_api.nvEncGetEncodePresetGUIDs(m_encoder, encodeGUID, presetGUIDs.data(), (uint32_t)presetGUIDs.size(), &numPresets);
+			g_api.nvEncGetEncodePresetGUIDs(encoder, encodeGUID, presetGUIDs.data(), (uint32_t)presetGUIDs.size(), &numPresets);
 			for (GUID presetGUID : presetGUIDs)
 			{
 				// Prefer matching preset.
@@ -1247,7 +1194,7 @@ namespace avs
 				NV_ENC_PRESET_CONFIG presetConfig = {};
 				presetConfig.version = NV_ENC_PRESET_CONFIG_VER;
 				presetConfig.presetCfg.version = NV_ENC_CONFIG_VER;
-				g_api.nvEncGetEncodePresetConfigEx(m_encoder, encodeGUID, config.presetGUID, tuningInfo, &presetConfig);
+				g_api.nvEncGetEncodePresetConfigEx(encoder, encodeGUID, config.presetGUID, tuningInfo, &presetConfig);
 				config.config = presetConfig.presetCfg;
 			}
 
@@ -1262,6 +1209,139 @@ namespace avs
 		config = rankedConfigs.begin()->second;
 
 		return Result::OK;
+	}
+
+	Result EncoderNV::getEncodeConfigCapabilities(void* encoder, const EncodeConfig& config, const EncoderParams& params, EncodeCapabilities& capabilities)
+	{
+		// Check the highest encoding level supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_LEVEL_MAX;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.maxEncodeLevel)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check if async mode is supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_ASYNC_ENCODE_SUPPORT;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.isAsyncCapable)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check if 10-bit encoding is supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_10BIT_ENCODE;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.is10BitCapable)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check if YUV444 encoding is supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_YUV444_ENCODE;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.isYUV444Capable)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check if alpha layer encoding is supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_ALPHA_LAYER_ENCODING;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.isAlphaLayerSupported)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check minimum input width supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_WIDTH_MIN;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.minWidth)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check maximum output width supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_WIDTH_MAX;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.maxWidth)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check minimum input height supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_HEIGHT_MIN;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.minHeight)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		// Check maximum output height supported.
+		{
+			NV_ENC_CAPS_PARAM capsParam;
+			capsParam.version = NV_ENC_CAPS_PARAM_VER;
+			capsParam.capsToQuery = NV_ENC_CAPS_HEIGHT_MAX;
+
+			if (NVFAILED(g_api.nvEncGetEncodeCaps(encoder, config.encodeGUID, &capsParam, (int*)&capabilities.maxHeight)))
+			{
+				return Result::EncoderBackend_CapabilityCheckFailed;
+			}
+		}
+
+		return Result::OK;
+	}
+
+	Result EncoderNV::getEncodeCapabilities(const DeviceHandle& device, const EncoderParams& params, EncodeCapabilities& capabilities)
+	{
+		// Create dummy encoder to query the capabilities.
+		EncoderNV encoder;
+		Result result = encoder.createEncoder(device);
+		if (!result)
+		{
+			return result;
+		}
+
+		EncodeConfig config;
+		result = chooseEncodeConfig(encoder.m_encoder, params, NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY, config);
+		if (result)
+		{
+			result = getEncodeConfigCapabilities(encoder.m_encoder, config, params, capabilities);
+		}
+	
+		return result;
 	}
 
 	bool EncoderNV::initializeEncodeLibrary()
@@ -1289,6 +1369,7 @@ namespace avs
 		}
 
 		hNVENC.take();
+
 		return true;
 	}
 
