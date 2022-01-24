@@ -8,43 +8,43 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
-	src/SimulCasterServer/CasterTypes.h
-	src/SimulCasterServer/CaptureDelegates.h
-	src/SimulCasterServer/CasterContext.h
-	src/SimulCasterServer/ServerSettings.h
-	src/SimulCasterServer/ClientData.cpp
-	src/SimulCasterServer/ClientData.h
-	src/SimulCasterServer/ClientMessaging.cpp
-	src/SimulCasterServer/ClientMessaging.h
-	src/SimulCasterServer/ClientManager.cpp
-	src/SimulCasterServer/ClientManager.h
-	src/SimulCasterServer/DiscoveryService.cpp
-	src/SimulCasterServer/DiscoveryService.h 
-	src/SimulCasterServer/ErrorHandling.h
-	src/SimulCasterServer/ErrorHandling.cpp
-	src/SimulCasterServer/ExtractedTypes.h
-	src/SimulCasterServer/GeometryEncoder.cpp
-	src/SimulCasterServer/GeometryEncoder.h
-	src/SimulCasterServer/GeometryStore.cpp
-	src/SimulCasterServer/GeometryStore.h
-	src/SimulCasterServer/GeometryStreamingService.cpp
-	src/SimulCasterServer/GeometryStreamingService.h
-	src/SimulCasterServer/NetworkPipeline.cpp
-	src/SimulCasterServer/NetworkPipeline.h
-	src/SimulCasterServer/SourceNetworkPipeline.cpp
-	src/SimulCasterServer/SourceNetworkPipeline.h
-	src/SimulCasterServer/DefaultDiscoveryService.cpp
-	src/SimulCasterServer/DefaultDiscoveryService.h
-	src/SimulCasterServer/VideoEncodePipeline.cpp
-	src/SimulCasterServer/VideoEncodePipeline.h	
-	src/SimulCasterServer/AudioEncoder.cpp
-	src/SimulCasterServer/AudioEncoder.h
-	src/SimulCasterServer/AudioEncodePipeline.cpp
-	src/SimulCasterServer/AudioEncodePipeline.h	
-	src/SimulCasterServer/HTTPService.cpp
-	src/SimulCasterServer/HTTPService.h 
-	src/SimulCasterServer/DefaultHTTPService.cpp
-	src/SimulCasterServer/DefaultHTTPService.h 
+	src/TeleportServer/CasterTypes.h
+	src/TeleportServer/CaptureDelegates.h
+	src/TeleportServer/CasterContext.h
+	src/TeleportServer/ServerSettings.h
+	src/TeleportServer/ClientData.cpp
+	src/TeleportServer/ClientData.h
+	src/TeleportServer/ClientMessaging.cpp
+	src/TeleportServer/ClientMessaging.h
+	src/TeleportServer/ClientManager.cpp
+	src/TeleportServer/ClientManager.h
+	src/TeleportServer/DiscoveryService.cpp
+	src/TeleportServer/DiscoveryService.h 
+	src/TeleportServer/ErrorHandling.h
+	src/TeleportServer/ErrorHandling.cpp
+	src/TeleportServer/ExtractedTypes.h
+	src/TeleportServer/GeometryEncoder.cpp
+	src/TeleportServer/GeometryEncoder.h
+	src/TeleportServer/GeometryStore.cpp
+	src/TeleportServer/GeometryStore.h
+	src/TeleportServer/GeometryStreamingService.cpp
+	src/TeleportServer/GeometryStreamingService.h
+	src/TeleportServer/NetworkPipeline.cpp
+	src/TeleportServer/NetworkPipeline.h
+	src/TeleportServer/SourceNetworkPipeline.cpp
+	src/TeleportServer/SourceNetworkPipeline.h
+	src/TeleportServer/DefaultDiscoveryService.cpp
+	src/TeleportServer/DefaultDiscoveryService.h
+	src/TeleportServer/VideoEncodePipeline.cpp
+	src/TeleportServer/VideoEncodePipeline.h	
+	src/TeleportServer/AudioEncoder.cpp
+	src/TeleportServer/AudioEncoder.h
+	src/TeleportServer/AudioEncodePipeline.cpp
+	src/TeleportServer/AudioEncodePipeline.h	
+	src/TeleportServer/HTTPService.cpp
+	src/TeleportServer/HTTPService.h 
+	src/TeleportServer/DefaultHTTPService.cpp
+	src/TeleportServer/DefaultHTTPService.h 
 )
 
 #Whether to build dynamic runtime libraries.
@@ -59,11 +59,11 @@ endif()
 #Create static library with source files from group.
 if(TELEPORT_UNITY)
 	set(src_plugin
-		src/SimulCasterServer/UnityPlugin/Export.h
-		src/SimulCasterServer/UnityPlugin/InteropStructures.h
-		src/SimulCasterServer/UnityPlugin/PluginGraphics.h
-		src/SimulCasterServer/UnityPlugin/PluginGraphics.cpp
-		src/SimulCasterServer/UnityPlugin/PluginMain.cpp
+		src/TeleportServer/UnityPlugin/Export.h
+		src/TeleportServer/UnityPlugin/InteropStructures.h
+		src/TeleportServer/UnityPlugin/PluginGraphics.h
+		src/TeleportServer/UnityPlugin/PluginGraphics.cpp
+		src/TeleportServer/UnityPlugin/PluginMain.cpp
 	)
 
 	add_library(TeleportServer SHARED ${src} ${src_plugin})
@@ -85,8 +85,8 @@ target_include_directories(TeleportServer PUBLIC src)
 target_include_directories(TeleportServer PUBLIC ../libavstream/include)
 #Include TeleportCore
 target_include_directories(TeleportServer PUBLIC ../TeleportCore)
-#Include SimulCasterAudio
-target_include_directories(TeleportServer PUBLIC ../SimulCasterAudio/src)
+#Include TeleportAudio
+target_include_directories(TeleportServer PUBLIC ../TeleportAudio/src)
 #Include Basis Universal
 target_include_directories(TeleportServer PUBLIC ../thirdparty/basis_universal/encoder)
 #Include enet
@@ -105,7 +105,7 @@ target_link_directories(TeleportServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MD)
 
-target_link_libraries(TeleportServer SimulCasterAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl libcrypto TeleportCore )
+target_link_libraries(TeleportServer TeleportAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl libcrypto TeleportCore )
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)

@@ -66,7 +66,7 @@ add_static_executable( pc_client WIN32 SOURCES ${srcs} ${scr_pc_impl} ${shaders}
 
 
 target_include_directories(pc_client PRIVATE 
-	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../SimulCasterAudio/src ../ClientRender/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
+	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
 
 if(USE_D3D12)
 	set( JSON_FILE "${SIMUL_PLATFORM_DIR}/DirectX12/Sfx/DirectX12.json" )
@@ -94,7 +94,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif()
 
 target_link_libraries(pc_client debug openxr_loaderd optimized openxr_loader) 
-target_link_libraries(pc_client libavstream enet SimulCasterAudio ClientRender TeleportClient basisu winmm)
+target_link_libraries(pc_client libavstream enet TeleportAudio ClientRender TeleportClient basisu winmm)
 target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
 target_link_libraries(pc_client -ignore:4711)
 

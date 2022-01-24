@@ -20,9 +20,9 @@
 #include "ClientRender/GeometryDecoder.h"
 #include "ClientRender/ResourceCreator.h"
 #include "TeleportClient/SessionClient.h"
-#include "SimulCasterAudio/src/crossplatform/AudioStreamTarget.h"
-#include "SimulCasterAudio/src/crossplatform/AudioPlayer.h"
-#include "SimulCasterAudio/src/crossplatform/NetworkPipeline.h"
+#include "TeleportAudio/src/crossplatform/AudioStreamTarget.h"
+#include "TeleportAudio/src/crossplatform/AudioPlayer.h"
+#include "TeleportAudio/src/crossplatform/NetworkPipeline.h"
 
 #include "GlobalGraphicsResources.h"
 #include "VideoDecoderProxy.h"

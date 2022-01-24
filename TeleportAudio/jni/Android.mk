@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 
 #--------------------------------------------------------
-# SimulCasterAudio.a
+# TeleportAudio.a
 #
 # Crossplatform Audio library for SimulCasterClients (PC and Android)
 #--------------------------------------------------------
@@ -9,7 +9,7 @@ include $(CLEAR_VARS)				# clean everything up to prepare for a module
 
 include $(LOCAL_PATH)/../../client/cflags.mk
 
-LOCAL_MODULE    := SimulCasterAudio	        # generate SimulCasterAudio.a
+LOCAL_MODULE    := TeleportAudio	        # generate TeleportAudio.a
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src/crossplatform

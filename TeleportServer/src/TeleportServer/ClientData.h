@@ -3,10 +3,10 @@
 #include "enet/enet.h"
 #include "libavstream/common.hpp"
 
-#include "SimulCasterServer/ClientManager.h"
-#include "SimulCasterServer/ClientMessaging.h"
-#include "SimulCasterServer/GeometryStreamingService.h"
-#include "SimulCasterServer/ServerSettings.h"
+#include "TeleportServer/ClientManager.h"
+#include "TeleportServer/ClientMessaging.h"
+#include "TeleportServer/GeometryStreamingService.h"
+#include "TeleportServer/ServerSettings.h"
 
 class PluginDiscoveryService;
 class PluginVideoEncodePipeline;

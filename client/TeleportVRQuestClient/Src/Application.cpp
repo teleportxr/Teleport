@@ -57,7 +57,7 @@ Application::Application()
 	sessionClient.SetResourceCreator(&clientRenderer.resourceCreator);
 	sessionClient.SetGeometryCache(&clientRenderer.geometryCache);
 
-	pthread_setname_np(pthread_self(), "SimulCaster_Application");
+	pthread_setname_np(pthread_self(), "Teleport_Application");
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
 
 	if (enet_initialize() != 0)
