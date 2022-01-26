@@ -8,17 +8,17 @@ LibAVStream is a helper library for streaming video and geometry data between a 
 
 A pipeline operates on a single thread, while queues allow threads to exchange data. For example, the server's Network pipeline connects several avs::Queue instances to a single avs::NetworkSink. For example, the video encoding pipeline links an avs::Surface that receives raw video frames, to an avs::Encoder, and finally to a queue. On another thread, the same queue in the network pipeline passes the data to the avs::NetworkSink.
 
+.. image:: ../images/reference/ExamplePipeline.png
+  :width: 800
+  :alt: Two pipelines operating on separate threads are connected using a avs::Queue.
+
+
+
 Classes
 -------
 
 .. doxygenclass:: avs::Context
 :members:
-
-.. doxygenclass:: avs.Context
-	:members:
-
-.. doxygenclass:: Context
-	:members:
 
 .. doxygenclass:: avs::Pipeline
 .. doxygenclass:: avs::Timer

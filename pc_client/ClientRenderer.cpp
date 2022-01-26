@@ -523,21 +523,21 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			{
 				if (videoTexture->IsCubemap())
 				{
-					const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
+					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
 					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
 				}
 				else
 				{
-					const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
+					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
 					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 					simul::math::Matrix4x4 projInv;
 					deviceContext.viewStruct.proj.Inverse(projInv);
 					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
 				}
 			}
-			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x, videoConfig.diffuse_y));
-			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x, videoConfig.specular_y));
+			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(clientPipeline.videoConfig.diffuse_x, clientPipeline.videoConfig.diffuse_y));
+			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(clientPipeline.videoConfig.specular_x, clientPipeline.videoConfig.specular_y));
 		}
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 
@@ -807,9 +807,10 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 
 		gui.LinePrint( platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
 																									geometryCache.mLightManager.GetCache(cacheLock).size()), white);
+
+
 		gui.NodeTree( geometryCache.mNodeManager->GetRootNodes());
 
-		
 		auto &missing=geometryCache.m_MissingResources;
 		if(missing.size())
 		{
@@ -1254,7 +1255,7 @@ bool ClientRenderer::OnDeviceRemoved()
 	return true;
 }
 
-void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format)
+void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height)
 {
 	if (!(th))
 		th.reset(new AVSTextureImpl(nullptr));
@@ -1322,10 +1323,10 @@ void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &upda
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
-	videoConfig = setupCommand.video_config;
+	clientPipeline.videoConfig = setupCommand.video_config;
 
-	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
-																	, videoConfig.depth_width, videoConfig.depth_height	);
+	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
+																	, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height	);
 	videoPosDecoded=false;
 
 	videoTagDataCubeArray.clear();
@@ -1374,12 +1375,12 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, bodyOffsetFromHead);
 	
-	decoderParams.deferDisplay = false;
-	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	decoderParams.codec = videoConfig.videoCodec;
-	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
-	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
-	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
+	clientPipeline.decoderParams.deferDisplay = false;
+	clientPipeline.decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
+	clientPipeline.decoderParams.codec = clientPipeline.videoConfig.videoCodec;
+	clientPipeline.decoderParams.use10BitDecoding = clientPipeline.videoConfig.use_10_bit_decoding;
+	clientPipeline.decoderParams.useYUV444ChromaFormat = clientPipeline.videoConfig.use_yuv_444_decoding;
+	clientPipeline.decoderParams.useAlphaLayerDecoding = clientPipeline.videoConfig.use_alpha_layer_decoding;
 
 	avs::DeviceHandle dev;
 	
@@ -1406,22 +1407,22 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 			source -<
 					 \->decoder	-> surface
 	*/
-	size_t stream_width = videoConfig.video_width;
-	size_t stream_height = videoConfig.video_height;
+	size_t stream_width = clientPipeline.videoConfig.video_width;
+	size_t stream_height = clientPipeline.videoConfig.video_height;
 
-	if (videoConfig.use_cubemap)
+	if (clientPipeline.videoConfig.use_cubemap)
 	{
-		if(videoConfig.colour_cubemap_size)
-			videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
+		if(clientPipeline.videoConfig.colour_cubemap_size)
+			videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
 				crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
-	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.specular_cubemap_size, videoConfig.specular_cubemap_size, 1, videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.diffuse_cubemap_size, videoConfig.diffuse_cubemap_size, 1, 1,
+	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.specular_cubemap_size, clientPipeline.videoConfig.specular_cubemap_size, 1, clientPipeline.videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.diffuse_cubemap_size, clientPipeline.videoConfig.diffuse_cubemap_size, 1, 1,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
@@ -1433,10 +1434,10 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
-	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
+	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
 
 	
-	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormat);
+	CreateTexture(avsTexture, int(stream_width), int(stream_height));
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
 #if IS_D3D12
@@ -1446,7 +1447,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 #endif
 
 	// Video streams are 0+...
-	if (!clientPipeline.decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20))
+	if (!clientPipeline.decoder.configure(dev, (int)stream_width, (int)stream_height, clientPipeline.decoderParams, 20))
 	{
 		SCR_CERR << "Failed to configure decoder node!\n";
 	}
@@ -1542,17 +1543,17 @@ void ClientRenderer::OnVideoStreamClosed()
 
 void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand)
 {
-	videoConfig = reconfigureVideoCommand.video_config;
+	clientPipeline.videoConfig = reconfigureVideoCommand.video_config;
 
-	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
-		, videoConfig.depth_width, videoConfig.depth_height);
+	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
+		, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height);
 
-	decoderParams.deferDisplay = false;
-	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	decoderParams.codec = videoConfig.videoCodec;
-	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
-	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
-	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
+	clientPipeline.decoderParams.deferDisplay = false;
+	clientPipeline.decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
+	clientPipeline.decoderParams.codec = clientPipeline.videoConfig.videoCodec;
+	clientPipeline.decoderParams.use10BitDecoding = clientPipeline.videoConfig.use_10_bit_decoding;
+	clientPipeline.decoderParams.useYUV444ChromaFormat = clientPipeline.videoConfig.use_yuv_444_decoding;
+	clientPipeline.decoderParams.useAlphaLayerDecoding = clientPipeline.videoConfig.use_alpha_layer_decoding;
 
 	avs::DeviceHandle dev;
 #if IS_D3D12
@@ -1563,24 +1564,24 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	dev.type = avs::DeviceType::Direct3D11;
 #endif
 
-	size_t stream_width = videoConfig.video_width;
-	size_t stream_height = videoConfig.video_height;
+	size_t stream_width = clientPipeline.videoConfig.video_width;
+	size_t stream_height = clientPipeline.videoConfig.video_height;
 
-	if (videoConfig.use_cubemap)
+	if (clientPipeline.videoConfig.use_cubemap)
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
-	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
+	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
 
 	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
 	// Only create new texture and register new surface if resolution has changed
@@ -1593,10 +1594,10 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 			throw std::runtime_error("Failed to unregister decoder surface");
 		}
 
-		CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormat);
+		CreateTexture(avsTexture, int(stream_width), int(stream_height));
 	}
 
-	if (!clientPipeline.decoder.reconfigure((int)stream_width, (int)stream_height, decoderParams))
+	if (!clientPipeline.decoder.reconfigure((int)stream_width, (int)stream_height, clientPipeline.decoderParams))
 	{
 		throw std::runtime_error("Failed to reconfigure decoder");
 	}

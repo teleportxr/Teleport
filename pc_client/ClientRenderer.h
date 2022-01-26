@@ -217,7 +217,7 @@ public:
 	void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown);
 
-	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);
+	void CreateTexture(AVSTextureHandle &th,int width, int height);
 	void FillInControllerPose(int index, float offset);
 	//Update the state of objects on the ClientRenderer.
 	void Update();
@@ -227,21 +227,14 @@ public:
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
 
-	static constexpr avs::SurfaceFormat SurfaceFormat = avs::SurfaceFormat::ARGB;
+	//static constexpr avs::SurfaceFormat SurfaceFormat = avs::SurfaceFormat::ARGB;
 	AVSTextureHandle avsTexture;
-
-	avs::VideoConfig videoConfig;
 
 	GeometryDecoder geometryDecoder;
 	
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 	sca::PC_AudioPlayer audioPlayer;
-
-	avs::DecoderParams decoderParams = {};
-	//avs::Pipeline pipeline;
 	
-	avs::SetupCommand lastSetupCommand;
-	avs::SetupLightingCommand lastSetupLightingCommand;
 	teleport::client::ClientPipeline clientPipeline;
 
 	int RenderMode;

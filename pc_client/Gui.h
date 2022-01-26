@@ -39,7 +39,7 @@ namespace teleport
 			return selected_uid;
 		}
 	protected:
-		void TreeNode(const std::shared_ptr<clientrender::Node>& node);
+		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);
 		simul::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
 		vec3 view_dir;

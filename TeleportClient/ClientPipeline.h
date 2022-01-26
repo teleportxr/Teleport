@@ -22,6 +22,8 @@ namespace teleport
 			ClientPipeline();
 			~ClientPipeline();
 			void Shutdown();
+
+			// Pipeline and nodes:
 			avs::Pipeline pipeline;
 
 			avs::NetworkSource source;
@@ -39,6 +41,9 @@ namespace teleport
 			avs::Queue audioQueue;
 			avs::AudioDecoder avsAudioDecoder;
 			avs::AudioTarget avsAudioTarget;
+
+			avs::DecoderParams decoderParams = {};
+			avs::VideoConfig videoConfig;
 		};
 	}
 }

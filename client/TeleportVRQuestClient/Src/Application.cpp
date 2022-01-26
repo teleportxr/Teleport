@@ -446,7 +446,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
     if (mNumPendingFrames > 0)
     {
         clientRenderer.mVideoSurfaceTexture->Update();
-        if (clientRenderer.videoConfig.use_alpha_layer_decoding)
+        if (clientRenderer.clientPipeline.videoConfig.use_alpha_layer_decoding)
         {
             clientRenderer.mAlphaSurfaceTexture->Update();
         }
@@ -694,7 +694,8 @@ void Application::AppRenderEye(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrR
 
 bool Application::OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
 {
-	const avs::VideoConfig &videoConfig = setupCommand.video_config;
+	avs::VideoConfig &videoConfig=clientRenderer.clientPipeline.videoConfig;
+	videoConfig = setupCommand.video_config;
 	if (!mPipelineConfigured)
 	{
 		OVR_WARN("VIDEO STREAM CHANGED: server port %d %d %d, cubemap %d", setupCommand.server_streaming_port,
@@ -745,7 +746,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 		clientRenderer.videoTagDataCubeArray.clear();
 		clientRenderer.videoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
 
-		avs::DecoderParams decoderParams = {};
+		avs::DecoderParams &decoderParams = clientRenderer.clientPipeline.decoderParams;
 		decoderParams.codec = videoConfig.videoCodec;
 		decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
 		decoderParams.prependStartCodes = false;
@@ -954,8 +955,8 @@ void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand &reconfi
 
 	clientRenderer.OnSetupCommandReceived(reconfigureVideoCommand.video_config);
 	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d",
-		 clientRenderer.videoConfig.video_width, clientRenderer.videoConfig.video_height,
-		 clientRenderer.videoConfig.depth_width, clientRenderer.videoConfig.depth_height);
+		 clientRenderer.clientPipeline.videoConfig.video_width, clientRenderer.clientPipeline.videoConfig.video_height,
+		 clientRenderer.clientPipeline.videoConfig.depth_width, clientRenderer.clientPipeline.videoConfig.depth_height);
 }
 
 bool Application::OnNodeEnteredBounds(avs::uid id)

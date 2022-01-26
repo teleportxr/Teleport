@@ -653,7 +653,7 @@ void ClientRenderer::SetWebcamPosition(const avs::vec2& position)
 void ClientRenderer::RenderWebcam(OVRFW::ovrRendererOutput& res)
 {
 	// Set data to send to the shader:
-	if (mShowWebcam && videoConfig.stream_webcam && mVideoTexture->IsValid() && mWebcamResources.initialized)
+	if (mShowWebcam && clientPipeline.videoConfig.stream_webcam && mVideoTexture->IsValid() && mWebcamResources.initialized)
 	{
 		mWebcamResources.surfaceDef.graphicsCommand.UniformData[0].Data = &(((scc::GL_Texture *) mVideoTexture.get())->GetGlTexture());
 		mWebcamResources.surfaceDef.graphicsCommand.UniformData[1].Data = &(((scc::GL_UniformBuffer *) mWebcamResources.webcamUB.get())->GetGlBuffer());
@@ -678,14 +678,14 @@ void ClientRenderer::ExitedVR()
 void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
-	videoConfig = vc;
+	clientPipeline.videoConfig = vc;
 	//Build Video Cubemap or perspective texture
 	if (vc.use_cubemap)
 	{
 		clientrender::Texture::TextureCreateInfo textureCreateInfo =
 				{
-						"Cubemap Texture", videoConfig.colour_cubemap_size
-						, videoConfig.colour_cubemap_size, 1, 4, 1, 1, clientrender::Texture::Slot::UNKNOWN
+						"Cubemap Texture", clientPipeline.videoConfig.colour_cubemap_size
+						, clientPipeline.videoConfig.colour_cubemap_size, 1, 4, 1, 1, clientrender::Texture::Slot::UNKNOWN
 						, clientrender::Texture::Type::TEXTURE_CUBE_MAP, clientrender::Texture::Format::RGBA8
 						, clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
 						, clientrender::Texture::CompressionFormat::UNCOMPRESSED
@@ -699,8 +699,8 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 	{
 		clientrender::Texture::TextureCreateInfo textureCreateInfo =
 				{
-						"Perspective Texture", videoConfig.perspective_width
-						, videoConfig.perspective_height, 1, 4, 1, 1, clientrender::Texture::Slot::UNKNOWN
+						"Perspective Texture", clientPipeline.videoConfig.perspective_width
+						, clientPipeline.videoConfig.perspective_height, 1, 4, 1, 1, clientrender::Texture::Slot::UNKNOWN
 						, clientrender::Texture::Type::TEXTURE_2D, clientrender::Texture::Format::RGBA8
 						, clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
 						, clientrender::Texture::CompressionFormat::UNCOMPRESSED
@@ -737,16 +737,16 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 						, clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, {}, {}
 						, clientrender::Texture::CompressionFormat::UNCOMPRESSED
 				};
-		textureCreateInfo.mipCount = std::min(6,videoConfig.specular_mips);
-		textureCreateInfo.width = videoConfig.specular_cubemap_size;
-		textureCreateInfo.height = videoConfig.specular_cubemap_size;
+		textureCreateInfo.mipCount = std::min(6,clientPipeline.videoConfig.specular_mips);
+		textureCreateInfo.width = clientPipeline.videoConfig.specular_cubemap_size;
+		textureCreateInfo.height = clientPipeline.videoConfig.specular_cubemap_size;
 		specularCubemapTexture->Create(textureCreateInfo);
 		textureCreateInfo.mipCount = 1;
-		textureCreateInfo.width = videoConfig.diffuse_cubemap_size;
-		textureCreateInfo.height = videoConfig.diffuse_cubemap_size;
+		textureCreateInfo.width = clientPipeline.videoConfig.diffuse_cubemap_size;
+		textureCreateInfo.height = clientPipeline.videoConfig.diffuse_cubemap_size;
 		diffuseCubemapTexture->Create(textureCreateInfo);
-		textureCreateInfo.width = videoConfig.light_cubemap_size;
-		textureCreateInfo.height = videoConfig.light_cubemap_size;
+		textureCreateInfo.width = clientPipeline.videoConfig.light_cubemap_size;
+		textureCreateInfo.height = clientPipeline.videoConfig.light_cubemap_size;
 		mCubemapLightingTexture->Create(textureCreateInfo);
 		diffuseCubemapTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
 		specularCubemapTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
@@ -793,8 +793,8 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 
 void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 {
-	clientrender::ivec2 specularOffset = {videoConfig.specular_x, videoConfig.specular_y};
-	clientrender::ivec2 diffuseOffset = {videoConfig.diffuse_x, videoConfig.diffuse_y};
+	clientrender::ivec2 specularOffset = {clientPipeline.videoConfig.specular_x, clientPipeline.videoConfig.specular_y};
+	clientrender::ivec2 diffuseOffset = {clientPipeline.videoConfig.diffuse_x, clientPipeline.videoConfig.diffuse_y};
 	//clientrender::ivec2  lightOffset={2 * specularSize+3 * specularSize / 2, specularSize * 2};
 	// Here the compute shader to copy from the video texture into the cubemap/s.
 	auto &tc = mRenderTexture->GetTextureCreateInfo();
@@ -823,7 +823,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 
 			clientrender::InputCommandCreateInfo inputCommandCreateInfo;
 
-			if (videoConfig.use_alpha_layer_decoding)
+			if (clientPipeline.videoConfig.use_alpha_layer_decoding)
             {
                 inputCommandCreateInfo.effectPassName = "ColourAndAlphaLayer";
 
@@ -851,7 +851,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 			cubemapUB.dimensions = { texInfo.width, texInfo.height };
             clientrender::InputCommandCreateInfo inputCommandCreateInfo;
 
-            if (videoConfig.use_alpha_layer_decoding)
+            if (clientPipeline.videoConfig.use_alpha_layer_decoding)
             {
                 inputCommandCreateInfo.effectPassName = "PerspectiveColour";
 
@@ -888,7 +888,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		{
 			static uint32_t face = 0;
 			mip_x = 0;
-			int32_t mip_size = videoConfig.diffuse_cubemap_size;
+			int32_t mip_size = clientPipeline.videoConfig.diffuse_cubemap_size;
 			uint32_t M = diffuseCubemapTexture->GetTextureCreateInfo().mipCount;
 			clientrender::ivec2 offset = {offset0.x + diffuseOffset.x, offset0.y + diffuseOffset.y};
 			for (uint32_t m = 0; m < M; m++)
@@ -914,7 +914,7 @@ void ClientRenderer::CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext)
 		if (specularCubemapTexture->IsValid())
 		{
 			mip_x = 0;
-			int32_t mip_size = videoConfig.specular_cubemap_size;
+			int32_t mip_size = clientPipeline.videoConfig.specular_cubemap_size;
 			uint32_t M = specularCubemapTexture->GetTextureCreateInfo().mipCount;
 			clientrender::ivec2 offset = {
 					offset0.x + specularOffset.x, offset0.y + specularOffset.y};

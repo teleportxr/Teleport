@@ -142,7 +142,6 @@ public:
 	teleport::client::ClientPipeline clientPipeline;
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	float eyeSeparation=0.06f;
-	avs::VideoConfig videoConfig;
 	struct VideoUB
 	{
 		avs::vec4 eyeOffsets[2];

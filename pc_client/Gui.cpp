@@ -225,12 +225,28 @@ void Gui::ShowFont()
 	}
 }
 
-void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n)
+void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *search_text)
 {
 	const clientrender::Node *node=n.get();
 	bool has_children=node->GetChildren().size()!=0;
 	std::string str =(std::to_string(n->id)+" ")+ node->name;
-	bool open=ImGui::TreeNodeEx(str.c_str(),(has_children?0:ImGuiTreeNodeFlags_Leaf ) );
+	bool open = false;
+	bool show = true;
+	if (search_text)
+	{
+		if (str.find(search_text) >= str.length())
+		{
+			show = false;
+		}
+	}
+	if (show)
+	{
+		open = ImGui::TreeNodeEx(str.c_str(), (has_children ? 0 : ImGuiTreeNodeFlags_Leaf));
+	}
+	else
+	{
+		open = true;
+	}
 	if (ImGui::IsItemClicked())
 	{
 		if(!show_inspector)
@@ -242,7 +258,7 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n)
 	{
 		for(const auto &r:node->GetChildren())
 		{
-			TreeNode(r.lock());
+			TreeNode(r.lock(), search_text);
 		}
 		ImGui::TreePop();
 	}
@@ -373,9 +389,15 @@ void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext
 
 void Gui::NodeTree(const clientrender::NodeManager::nodeList_t& root_nodes)
 {
+	static const size_t bufferSize = 40;
+	static char buffer[bufferSize];
+	ImGui::InputText("Search: ", buffer, bufferSize);
+	const char* search_text = nullptr;
+	if (strlen(buffer) > 0)
+		search_text = buffer;
 	for(auto &r:root_nodes)
 	{
-		TreeNode(r);
+		TreeNode(r, search_text);
 	}
 }
 std::vector<vec4> hand_pos_press;

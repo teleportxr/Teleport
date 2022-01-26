@@ -70,7 +70,9 @@ find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
 file(GLOB RST_FILES *.rst "**/*.rst" )
+file(GLOB RST_REF_FILES *.rst "Reference/*.rst" )
 source_group("Documentation" FILES ${RST_FILES} )
+source_group("Documentation/Reference" FILES ${RST_REF_FILES} )
 add_custom_target(Sphinx ALL
                   COMMAND
                   ${SPHINX_EXECUTABLE} -b html
