@@ -349,10 +349,19 @@ bool Encoder::isEncodingAsynchronously()
 	return d().m_params.useAsyncEncoding;
 }
 
-EncoderStats Encoder::GetStats() const
+EncoderStats Encoder::getStats() const
 {
 	std::lock_guard<std::mutex> lock(d().m_statsMutex);
 	return d().m_stats;
+}
+
+Result Encoder::getEncodeCapabilities(const DeviceHandle& device, const EncoderParams& params, avs::EncodeCapabilities& capabilities)
+{
+#if !defined(PLATFORM_ANDROID)
+	 return EncoderNV::getEncodeCapabilities(device, params, capabilities);
+#else
+	 return Result::NotSupported;
+#endif 
 }
 
 Result Encoder::Private::writeOutput(IOInterface* outputNode, const void* mappedBuffer, size_t mappedBufferSize)

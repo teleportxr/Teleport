@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "AudioCommon.h"
-#include "AudioLog.h"
 
 namespace
 {

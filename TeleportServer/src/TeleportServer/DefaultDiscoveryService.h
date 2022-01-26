@@ -4,8 +4,8 @@
 
 #include <enet/enet.h>
 
-#include "SimulCasterServer/DiscoveryService.h"
-#include "SimulCasterServer/UnityPlugin/Export.h"
+#include "TeleportServer/DiscoveryService.h"
+#include "TeleportServer/UnityPlugin/Export.h"
 
 namespace teleport
 {

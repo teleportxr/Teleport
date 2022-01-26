@@ -3,7 +3,7 @@ LOCAL_PATH := $(call my-dir)
 #--------------------------------------------------------
 # ClientRender.a
 #
-# Crossplatform Renderer for SimulCasterClients (PC and Android)
+# Crossplatform Renderer for TeleportClients (PC and Android)
 #--------------------------------------------------------
 include $(CLEAR_VARS)				# clean everything up to prepare for a module
 

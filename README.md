@@ -60,7 +60,7 @@ or if you have already cloned the main repo,
 	* enet
 	* haicrypt_virtual
 	* libavstream
-    * SimulCasterServer
+    * TeleportServer
     * srt_static
     * srt_virtual
 
@@ -81,20 +81,20 @@ or if you have already cloned the main repo,
 	* Set REMOTEPLAY_UNITY_EDITOR_DIR to "Editor" sub-directory where Unity is installed; e.g. "C:/Program Files/Unity/2019.4.15f1/Editor".
 	* Click 'Generate' solution button.
 2. Open Project, and set to "Release" build mode.
-3. Set SimulCasterServer as startup project.
-	* Right-click SimulCasterServer project in 'Solution Explorer' pane.
+3. Set TeleportServer as startup project.
+	* Right-click TeleportServer project in 'Solution Explorer' pane.
 	* Click "Set as Startup Project".
 
 ## Building Android client application
 
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
-2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client\SimulCasterClient\assets` directory.
+2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client\TeleportClient\assets` directory.
 3. Connect your Android device to your PC and make sure that ADB debugging is enabled and the PC is authorized.
 4. (old method) Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
 5. New method: In Android Studio open RemotePlay/build.gradle.
 6. On the top right, click the Sync Project with Gradle Files button (has a shark icon) to load the config for your device.
-7. In Android Studio, go to Build->Generate Signed Bundle / APK and generate a key named android.debug.keystore in your RemotePlay/client/SimulCasterClient directory.
-8. Go to File->Project Structure->Modules->client->SimulCasterClient->Signing Configs and in debug config, put in the details of the key you created. 
+7. In Android Studio, go to Build->Generate Signed Bundle / APK and generate a key named android.debug.keystore in your RemotePlay/client/TeleportClient directory.
+8. Go to File->Project Structure->Modules->client->TeleportClient->Signing Configs and in debug config, put in the details of the key you created. 
 9. Click the build icon to compile and then you should be able to run.
 
 ## Firewall setup

@@ -34,7 +34,9 @@ namespace teleport
 		Result process(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);
 		Result release();
 
-		avs::EncoderStats GetEncoderStats() const;
+		avs::EncoderStats getEncoderStats() const;
+
+		static Result getEncodeCapabilities(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncodeCapabilities& capabilities);
 
 	private:
 		std::unique_ptr<avs::Pipeline> mPipeline;

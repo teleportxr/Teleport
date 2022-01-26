@@ -1,8 +1,8 @@
 #include "DefaultHTTPService.h"
 
-#include "SimulCasterServer/ErrorHandling.h"
-#include "SimulCasterServer/ClientData.h"
-#include "SimulCasterServer/ServerSettings.h"
+#include "TeleportServer/ErrorHandling.h"
+#include "TeleportServer/ClientData.h"
+#include "TeleportServer/ServerSettings.h"
 
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib.h>

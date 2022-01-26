@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 3.8 )
-project( SimulCasterAudio )
+project( TeleportAudio )
 
 # Build options
 option(SA_BUILD_SHARED_LIB "Build shared library" OFF)
@@ -18,8 +18,6 @@ set( src_crossplatform
 	src/crossplatform/CustomAudioStreamTarget.h
 	src/crossplatform/AudioPlayer.cpp
 	src/crossplatform/AudioPlayer.h
-	src/crossplatform/AudioLog.cpp
-	src/crossplatform/AudioLog.h
 	src/crossplatform/NetworkPipeline.cpp
 	src/crossplatform/NetworkPipeline.h
 	)
@@ -30,8 +28,6 @@ set( src_pc
 
 #Include its root directory
 include_directories(src)
-#Include libavstream
-include_directories(../libavstream/include)
 
 if(WIN32)
 	set( src_public ${src_root} ${src_crossplatform} ${src_pc})
@@ -45,13 +41,15 @@ message ( "src_public ${src_public}" )
 
 if(SA_BUILD_SHARED_LIB)
 	#For MD runtime
-	add_library( SimulCasterAudio STATIC ${src_public} ) 
+	add_library( TeleportAudio STATIC ${src_public} ) 
 else()
 	#For MT runtime
-	add_static_library( SimulCasterAudio SOURCES ${src_public} )  
+	add_static_library( TeleportAudio SOURCES ${src_public} )  
 endif()
-SetTeleportDefaults( SimulCasterAudio )
-set_target_properties( SimulCasterAudio PROPERTIES FOLDER Teleport )
+SetTeleportDefaults( TeleportAudio )
+set_target_properties( TeleportAudio PROPERTIES FOLDER Teleport )
+#Include libavstreamand TeleportCore
+target_include_directories(TeleportAudio PUBLIC ../libavstream/include ../TeleportCore)
 
 
 

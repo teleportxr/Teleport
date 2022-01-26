@@ -141,7 +141,7 @@ endfunction()
 add_subdirectory(TeleportCore)
 
 if(TELEPORT_SERVER)
-	add_subdirectory(SimulCasterServer)
+	add_subdirectory(TeleportServer)
 	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "")
 	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "")
 	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "")
@@ -163,7 +163,7 @@ endif()
 
 set(SA_BUILD_SHARED_LIB ${TELEPORT_SERVER})
 
-add_subdirectory(SimulCasterAudio)
+add_subdirectory(TeleportAudio)
 add_subdirectory(libavstream)
 
 add_subdirectory(thirdparty/enet)

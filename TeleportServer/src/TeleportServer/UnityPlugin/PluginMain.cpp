@@ -8,21 +8,21 @@
 #include "enet/enet.h"
 #include "libavstream/common.hpp"
 
-#include "SimulCasterServer/ServerSettings.h"
-#include "SimulCasterServer/CaptureDelegates.h"
-#include "SimulCasterServer/ClientData.h"
-#include "SimulCasterServer/DefaultDiscoveryService.h"
-#include "SimulCasterServer/DefaultHTTPService.h"
-#include "SimulCasterServer/GeometryStore.h"
-#include "SimulCasterServer/GeometryStreamingService.h"
-#include "SimulCasterServer/AudioEncodePipeline.h"
-#include "SimulCasterServer/VideoEncodePipeline.h"
-#include "SimulCasterServer/ClientManager.h"
+#include "TeleportServer/ServerSettings.h"
+#include "TeleportServer/CaptureDelegates.h"
+#include "TeleportServer/ClientData.h"
+#include "TeleportServer/DefaultDiscoveryService.h"
+#include "TeleportServer/DefaultHTTPService.h"
+#include "TeleportServer/GeometryStore.h"
+#include "TeleportServer/GeometryStreamingService.h"
+#include "TeleportServer/AudioEncodePipeline.h"
+#include "TeleportServer/VideoEncodePipeline.h"
+#include "TeleportServer/ClientManager.h"
 
 #include "Export.h"
 #include "InteropStructures.h"
 #include "PluginGraphics.h"
-#include "SimulCasterServer/ErrorHandling.h"
+#include "TeleportServer/ErrorHandling.h"
 #include "crossplatform/CustomAudioStreamTarget.h"
 
 //#include <OAIdl.h>	// for SAFE_ARRAY
@@ -1036,6 +1036,40 @@ bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
 
 
 ///VideoEncodePipeline START
+TELEPORT_EXPORT bool GetVideoEncodeCapabilities(avs::EncodeCapabilities& capabilities)
+{
+	VideoEncodeParams params;
+	params.deviceHandle = GraphicsManager::mGraphicsDevice;
+
+	switch (GraphicsManager::mRendererType)
+	{
+	case kUnityGfxRendererD3D11:
+	{
+		params.deviceType = GraphicsDeviceType::Direct3D11;
+		break;
+	}
+	case kUnityGfxRendererD3D12:
+	{
+		params.deviceType = GraphicsDeviceType::Direct3D12;
+		break;
+	}
+	case kUnityGfxRendererVulkan:
+	{
+		params.deviceType = GraphicsDeviceType::Vulkan;
+		break;
+	}
+	default:
+		return false;
+	};
+
+	if (teleport::VideoEncodePipeline::getEncodeCapabilities(serverSettings, params, capabilities))
+	{
+		return true;
+	}
+
+	return false;
+}
+
 TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, teleport::VideoEncodeParams& videoEncodeParams)
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
@@ -1221,6 +1255,7 @@ TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 			if (!result)
 			{
 				TELEPORT_CERR << "Failed to configure audio encoder pipeline for Client_" << clientID << "!\n";
+				continue;
 			}
 		}
 
@@ -1511,7 +1546,7 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 	}
 
 	// Thread safe
-	stats = clientData.videoEncodePipeline->GetEncoderStats();
+	stats = clientData.videoEncodePipeline->getEncoderStats();
 
 	return true;
 }

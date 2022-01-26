@@ -54,13 +54,18 @@ namespace avs
 			NV_ENC_BUFFER_FORMAT format;
 			NV_ENC_CONFIG config;
 		};
-		Result chooseEncodeConfig(GUID requestedEncodeGUID, GUID requestedPresetGUID, NV_ENC_TUNING_INFO tuningInfo, NV_ENC_BUFFER_FORMAT requestedFormat, EncodeConfig& config) const;
+		
 		Result processInput();
 
+		static Result getEncodeCapabilities(const DeviceHandle& device, const EncoderParams& params, EncodeCapabilities& capabilities);
+
 	private:
+		Result createEncoder(const DeviceHandle& device);
 		Result initializeEncoder(int frameWidth, int frameHeight, const EncoderParams& params);
 		static bool initializeEncodeLibrary();
 		static void releaseEncodeLibrary();
+		static Result chooseEncodeConfig(void* encoder, const EncoderParams& params, NV_ENC_TUNING_INFO tuningInfo, EncodeConfig& config);
+		static Result getEncodeConfigCapabilities(void* encoder, const EncodeConfig& config, const EncoderParams& params, EncodeCapabilities& capabilities);
 
 		// Variable signifying if the GraphicsResource type is supported by CUDA for the graphics API in use
 		// Currently not supported for Vulkan and D3D12
