@@ -18,8 +18,6 @@ set( src_crossplatform
 	src/crossplatform/CustomAudioStreamTarget.h
 	src/crossplatform/AudioPlayer.cpp
 	src/crossplatform/AudioPlayer.h
-	src/crossplatform/AudioLog.cpp
-	src/crossplatform/AudioLog.h
 	src/crossplatform/NetworkPipeline.cpp
 	src/crossplatform/NetworkPipeline.h
 	)
@@ -30,8 +28,6 @@ set( src_pc
 
 #Include its root directory
 include_directories(src)
-#Include libavstream
-include_directories(../libavstream/include)
 
 if(WIN32)
 	set( src_public ${src_root} ${src_crossplatform} ${src_pc})
@@ -52,6 +48,8 @@ else()
 endif()
 SetTeleportDefaults( TeleportAudio )
 set_target_properties( TeleportAudio PROPERTIES FOLDER Teleport )
+#Include libavstreamand TeleportCore
+target_include_directories(TeleportAudio PUBLIC ../libavstream/include ../TeleportCore)
 
 
 

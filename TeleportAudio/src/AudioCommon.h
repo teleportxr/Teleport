@@ -15,12 +15,10 @@
 #include <memory>
 #include <algorithm>
 #include <functional>
+#include "ErrorHandling.h"
 
-//Debug
-#define SCA_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
-#define SCA_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
-#define SCA_CERR std::cerr << __FILE__ << "(" << __LINE__ << "): " 
-#define SCA_COUT std::cout << __FILE__ << "(" << __LINE__ << "): " 
+#define SCA_CERR TELEPORT_COUT
+#define SCA_COUT TELEPORT_CERR
 
 extern void log_print(const char* source,const char *format, ...);
 
