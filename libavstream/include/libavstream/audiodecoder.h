@@ -12,7 +12,7 @@ namespace avs
 	/*!
 	 * Audio decoder node `[input-active, output-active, 1/1]`
 	 *
-	 * Reads packets of encoded geometry and outputs decoded data to a Audio Target.
+	 * Reads packets of encoded audio and outputs decoded data to an Audio Target.
 	 */
 	class AVSTREAM_API AudioDecoder final : public PipelineNode
 	{

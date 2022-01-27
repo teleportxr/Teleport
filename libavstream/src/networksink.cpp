@@ -62,7 +62,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 		CHECK_SRT_ERROR(srt_setsockopt(m_data->m_socket, 0, SRTO_PAYLOADSIZE, &payloadSize, sizeof(payloadSize)));
 		int events = SRT_EPOLL_IN | SRT_EPOLL_ERR | SRT_EPOLL_OUT;
 		CHECK_SRT_ERROR(srt_epoll_add_usock(m_data->pollid, m_data->m_socket, &events));
-		sockaddr_in local_bind_addr;//= CreateAddrInet(local_bind,localPort);
+		sockaddr_in local_bind_addr;
 
 		// bind the socket to the local address and port.
 		local_bind_addr.sin_family = AF_INET;

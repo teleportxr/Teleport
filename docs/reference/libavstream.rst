@@ -18,7 +18,7 @@ Classes
 -------
 
 .. doxygenclass:: avs::Context
-:members:
+   :members:
 
 .. doxygenclass:: avs::Pipeline
 .. doxygenclass:: avs::Timer
@@ -51,6 +51,7 @@ avs Nodes
 .. doxygenclass:: avs::GeometrySource
 .. doxygenclass:: avs::GeometryTarget
 .. doxygenclass:: avs::NetworkSink
+   :members:
 .. doxygenclass:: avs::NetworkSource
 .. doxygenclass:: avs::NullSink
 .. doxygenclass:: avs::Packetizer
