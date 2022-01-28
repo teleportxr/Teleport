@@ -100,3 +100,12 @@ target_link_libraries(pc_client -ignore:4711)
 
 target_link_options(pc_client PUBLIC /ignore:4711)
 target_compile_options(pc_client PRIVATE /wd4711)
+
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
+
+install(TARGETS pc_client
+		RUNTIME
+		DESTINATION pc_client
+		COMPONENT client)
+
+install(FILES client.ini DESTINATION pc_client)
