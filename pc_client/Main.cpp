@@ -21,7 +21,7 @@
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #endif
 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
 #include "Platform/DirectX12/DeviceManager.h"
 simul::dx12::RenderPlatform renderPlatformImpl;
@@ -238,7 +238,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderPath("../../../../firstparty/Platform/Shaders/SL");
 		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SFX");
 		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SL");
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 		renderPlatform->PushShaderPath("../../../../Platform/DirectX12/HLSL");
 		renderPlatform->PushShaderPath("../../Platform/DirectX12/HLSL");
 		renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
@@ -246,9 +246,9 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
 
-		//simul::dx12::DeviceManager* deviceManager = (simul::dx12::DeviceManager*)gdi;
+		simul::dx12::DeviceManager* deviceManager = (simul::dx12::DeviceManager*)gdi;
 		// We will provide a command list so initialization of following resource can take place
-		//((simul::dx12::RenderPlatform*)renderPlatform)->SetImmediateContext((simul::dx12::ImmediateContext*)deviceManager->GetImmediateContext());
+		((simul::dx12::RenderPlatform*)renderPlatform)->SetImmediateContext((simul::dx12::ImmediateContext*)deviceManager->GetImmediateContext());
 #else
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/HLSL").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
@@ -271,7 +271,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	if(server_ips.size())
 		clientRenderer->SetServer(server_ips[0].c_str());
 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
 #endif
 
@@ -432,6 +432,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				static double fTime=0.0;
 				static platform::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
+				static long long frame = 1;
+				renderPlatform->BeginFrame(frame++);
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
 				// Call StartFrame here so the command list will be in a recording state for D3D12 
@@ -455,7 +457,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				errno=0;
 				simul::crossplatform::GraphicsDeviceContext	deviceContext;
 				deviceContext.renderPlatform = renderPlatform;
-				deviceContext.platform_context = deviceManager.GetDeviceContext();
+				// This context is active. 
+				deviceContext.platform_context = w->GetPlatformDeviceContext();
 
 				simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 				platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
@@ -480,6 +483,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 				cpuProfiler.EndFrame();
 				displaySurfaceManager.EndFrame();
+				//renderPlatform->EndFrame();
 				SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 				//EndPaint(hWnd, &ps);
 			}

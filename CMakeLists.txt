@@ -212,8 +212,12 @@ set(CPACK_PACKAGE_VENDOR "Simul")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Installer for the Teleport PC CLient")
 
 # get commit id from a file:
+file(TOUCH "teleport_commit.properties")
 file(READ "teleport_commit.properties" ver)
-string(REGEX MATCH "TELEPORT_COMMIT= ([a-zA-Z0-9]+)" _ ${ver})
+if(NOT( "${ver}" STREQUAL ""))
+	message(${ver})
+	string(REGEX MATCH "TELEPORT_COMMIT= ([a-zA-Z0-9]+)" _ ${ver})
+endif()
 set(TELEPORT_COMMIT ${CMAKE_MATCH_1})
 set(CPACK_PACKAGE_VERSION_MAJOR "${TELEPORT_COMMIT}")
 set(CPACK_PACKAGE_VERSION_MINOR "0")

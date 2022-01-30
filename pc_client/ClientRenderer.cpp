@@ -22,7 +22,7 @@
 #include <random>
 #include <functional>
 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
 #include <libavstream/surfaces/surface_dx12.hpp>
 #else
@@ -103,7 +103,7 @@ struct AVSTextureImpl :public AVSTexture
 	simul::crossplatform::Texture *texture = nullptr;
 	avs::SurfaceBackendInterface* createSurface() const override
 	{
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 		return new avs::SurfaceDX12(texture->AsD3D12Resource());
 #else
 		return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
@@ -356,7 +356,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	last_t = timer.TimeSum;
 	simul::crossplatform::GraphicsDeviceContext	deviceContext;
 	deviceContext.setDefaultRenderTargets(renderTexture, nullptr, 0, 0, w, h);
-	deviceContext.frame_number = frame;
 	deviceContext.platform_context = context;
 	deviceContext.renderPlatform = renderPlatform;
 	deviceContext.viewStruct.view_id = view_id;
@@ -1384,7 +1383,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 	avs::DeviceHandle dev;
 	
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 	dev.handle = renderPlatform->AsD3D12Device();
 	dev.type = avs::DeviceType::Direct3D12;
 #else
@@ -1440,7 +1439,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	CreateTexture(avsTexture, int(stream_width), int(stream_height));
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 	AVSTextureHandle th = avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
 	clientPipeline.decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
@@ -1556,7 +1555,7 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	clientPipeline.decoderParams.useAlphaLayerDecoding = clientPipeline.videoConfig.use_alpha_layer_decoding;
 
 	avs::DeviceHandle dev;
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 	dev.handle = renderPlatform->AsD3D12Device();;
 	dev.type = avs::DeviceType::Direct3D12;
 #else
@@ -1889,7 +1888,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		controllerStates[i].clear();
 	}
 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 	// Execute the immediate command list on graphics queue which will include any vertex and index buffer 
 	// upload/transition commands created by the resource creator.
 //	dx12RenderPlatform->ExecuteImmediateCommandList(dx12RenderPlatform->GetCommandQueue());

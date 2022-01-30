@@ -1,11 +1,13 @@
 #include "UseOpenXR.h"
 #include <vector>
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
+#include <d3d12.h>
+#define XR_USE_GRAPHICS_API_D3D12
 #else
 #include <d3d11.h>
+#define XR_USE_GRAPHICS_API_D3D11
 #endif
 #define XR_USE_PLATFORM_WIN32
-#define XR_USE_GRAPHICS_API_D3D11
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
@@ -45,7 +47,11 @@ struct swapchain_t
 	int32_t     width=0;
 	int32_t     height=0;
 	uint32_t	last_img_id=0;
+#if TELEPORT_CLIENT_USE_D3D12
+	vector<XrSwapchainImageD3D12KHR> surface_images;
+#else
 	vector<XrSwapchainImageD3D11KHR> surface_images;
+#endif
 	vector<swapchain_surfdata_t>     surface_data;
 };
 
@@ -92,7 +98,11 @@ vector<XrViewConfigurationView> xr_config_views;
 vector<swapchain_t>             xr_swapchains;
 
 // Function pointers for some OpenXR extension methods we'll use.
+#if TELEPORT_CLIENT_USE_D3D12
+PFN_xrGetD3D12GraphicsRequirementsKHR ext_xrGetD3D12GraphicsRequirementsKHR = nullptr;
+#else
 PFN_xrGetD3D11GraphicsRequirementsKHR ext_xrGetD3D11GraphicsRequirementsKHR = nullptr;
+#endif
 PFN_xrCreateDebugUtilsMessengerEXT    ext_xrCreateDebugUtilsMessengerEXT = nullptr;
 PFN_xrDestroyDebugUtilsMessengerEXT   ext_xrDestroyDebugUtilsMessengerEXT = nullptr;
 
@@ -110,7 +120,11 @@ swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform *renderPlat
 	swapchain_surfdata_t result = {};
 
 	// Get information about the swapchain image that OpenXR made for us!
+#if TELEPORT_CLIENT_USE_D3D12
+	XrSwapchainImageD3D12KHR& d3d_swapchain_img = (XrSwapchainImageD3D12KHR&)swapchain_img;
+#else
 	XrSwapchainImageD3D11KHR& d3d_swapchain_img = (XrSwapchainImageD3D11KHR&)swapchain_img;
+#endif
 	result.target_view				= renderPlatform->CreateTexture("swapchain target");
 	result.target_view->InitFromExternalTexture2D(renderPlatform, d3d_swapchain_img.texture, nullptr,0,0,simul::crossplatform::UNKNOWN,true);
 	result.depth_view				= renderPlatform->CreateTexture("swapchain depth");
@@ -143,7 +157,11 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	// additional checks that should be made before using certain features!
 	vector<const char*> use_extensions;
 	const char* ask_extensions[] = {
+#if TELEPORT_CLIENT_USE_D3D12
+		XR_KHR_D3D12_ENABLE_EXTENSION_NAME, // Use Direct3D12 for rendering
+#else
 		XR_KHR_D3D11_ENABLE_EXTENSION_NAME, // Use Direct3D11 for rendering
+#endif
 		XR_EXT_DEBUG_UTILS_EXTENSION_NAME,  // Debug utils for extra info
 	};
 	renderPlatform = r;
@@ -176,7 +194,11 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	if (!std::any_of(use_extensions.begin(), use_extensions.end(),
 		[](const char* ext)
 			{
+#if TELEPORT_CLIENT_USE_D3D12
+				return strcmp(ext, XR_KHR_D3D12_ENABLE_EXTENSION_NAME) == 0;
+#else
 				return strcmp(ext, XR_KHR_D3D11_ENABLE_EXTENSION_NAME) == 0;
+#endif
 			}))
 		return false;
 
@@ -199,8 +221,11 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	// https://github.com/maluoi/StereoKit/blob/master/StereoKitC/systems/platform/openxr_extensions.h
 	xrGetInstanceProcAddr(xr_instance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrCreateDebugUtilsMessengerEXT));
 	xrGetInstanceProcAddr(xr_instance, "xrDestroyDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrDestroyDebugUtilsMessengerEXT));
+#if TELEPORT_CLIENT_USE_D3D12
+	xrGetInstanceProcAddr(xr_instance, "xrGetD3D12GraphicsRequirementsKHR", (PFN_xrVoidFunction*)(&ext_xrGetD3D12GraphicsRequirementsKHR));
+#else
 	xrGetInstanceProcAddr(xr_instance, "xrGetD3D11GraphicsRequirementsKHR", (PFN_xrVoidFunction*)(&ext_xrGetD3D11GraphicsRequirementsKHR));
-
+#endif
 	// Set up a really verbose debug log! Great for dev, but turn this off or
 	// down for final builds. WMR doesn't produce much output here, but it
 	// may be more useful for other runtimes?
@@ -251,13 +276,21 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	// OpenXR wants to ensure apps are using the correct graphics card, so this MUST be called 
 	// before xrCreateSession. This is crucial on devices that have multiple graphics cards, 
 	// like laptops with integrated graphics chips in addition to dedicated graphics cards.
+#if TELEPORT_CLIENT_USE_D3D12
+	XrGraphicsRequirementsD3D12KHR requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D12_KHR };
+	ext_xrGetD3D12GraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
+	// A session represents this application's desire to display things! This is where we hook up our graphics API.
+	// This does not start the session, for that, you'll need a call to xrBeginSession, which we do in openxr_poll_events
+	XrGraphicsBindingD3D12KHR binding = { XR_TYPE_GRAPHICS_BINDING_D3D12_KHR };
+	binding.device = renderPlatform->AsD3D12Device();
+#else
 	XrGraphicsRequirementsD3D11KHR requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
 	ext_xrGetD3D11GraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
-
 	// A session represents this application's desire to display things! This is where we hook up our graphics API.
 	// This does not start the session, for that, you'll need a call to xrBeginSession, which we do in openxr_poll_events
 	XrGraphicsBindingD3D11KHR binding = { XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
 	binding.device = renderPlatform->AsD3D11Device();
+#endif
 	XrSessionCreateInfo sessionInfo = { XR_TYPE_SESSION_CREATE_INFO };
 	sessionInfo.next = &binding;
 	sessionInfo.systemId = xr_system_id;
@@ -356,7 +389,11 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 		swapchain.width = swapchain_info.width;
 		swapchain.height = swapchain_info.height;
 		swapchain.handle = handle;
+#if TELEPORT_CLIENT_USE_D3D12
+		swapchain.surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR });
+#else
 		swapchain.surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR });
+#endif
 		swapchain.surface_data.resize(surface_count);
 		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)swapchain.surface_images.data());
 		for (uint32_t i = 0; i < surface_count; i++)
@@ -794,7 +831,7 @@ bool UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 
 		deviceContext.setDefaultRenderTargets(nullptr,nullptr, 0, 0, xr_swapchains[i].width, xr_swapchains[i].height
 			,&xr_swapchains[i].surface_data[img_id].target_view,1, xr_swapchains[i].surface_data[img_id].depth_view);
-		deviceContext.frame_number = frame;
+		
 		deviceContext.renderPlatform = renderPlatform;
 
 		deviceContext.viewStruct.view_id = i;
