@@ -18,11 +18,16 @@ enum class EncoderBackend
 	NVIDIA, /*!< NVIDIA NVENC backend. */
 };
 
+/*! Encoder performance stats. */
 struct EncoderStats
 {
+	/*! Number of frames submitted for encoding in the current session. */
 	size_t framesSubmitted = 0;
+	/*! Number of frames submitted for encoding per second in the current session. */
 	float framesSubmittedPerSec = 0;
+	/*! Number of frames encoded in the current session. */
 	size_t framesEncoded = 0;
+	/*! Number of frames encoded per second in the current session. */
 	float framesEncodedPerSec = 0;
 };
 
@@ -57,7 +62,7 @@ public:
 	 * \param device Graphics API device handle (DirectX or OpenGL).
 	 * \param frameWidth Expected video frame width in pixels.
 	 * \param frameHeight Expected video frame height in pixels.
-	 * \param params Additional encoder parameters.
+	 * \param params Additional encoder configuration settings.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_AlreadyConfigured if encoder was already in configured state.
@@ -70,7 +75,7 @@ public:
 	 * Configure encoder.
 	 * \param frameWidth Expected video frame width in pixels.
 	 * \param frameHeight Expected video frame height in pixels.
-	 * \param params Additional encoder parameters.
+	 * \param params Additional encoder configuration settings.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.
@@ -141,10 +146,25 @@ public:
 	 */
 	void setForceIDR(bool forceIDR);
 
+	/*!
+	 * Returns true if the encoder is encoding asynchronously on a separate thread.
+	 */
 	bool isEncodingAsynchronously();
 
+	/*!
+	 * Gets encoder performance stats for the current session.
+	 */
 	EncoderStats getStats() const;
 
+	/*!
+	 * Gets the encoding capabilities of the GPU.
+	 *
+	 * \param device Graphics API device handle (DirectX or OpenGL).
+	 * \param params Additional encoder configuration settings.
+	 * \param capabilities Reference to the capabilities structure that will store the output.
+	 * \return
+	 *  - Result::OK on success.
+	 */
 	static Result getEncodeCapabilities(const DeviceHandle& device, const EncoderParams& params, avs::EncodeCapabilities& capabilities);
 
 private:

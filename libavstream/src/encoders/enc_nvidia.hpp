@@ -22,6 +22,13 @@
 
 namespace avs
 {
+	/*!
+	 * A EncoderNV.
+	 *
+	 * A EncoderNV reads a video frame from an input surface texture using CUDA and uses
+	 * the NVENC video encoder api to encode the frame as a compressed bitstream.
+	 *
+	 */
 	class EncoderNV final : public EncoderBackendInterface
 	{
 	public:

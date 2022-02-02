@@ -60,7 +60,7 @@ public:
 	 * \param device Graphics API device handle (DirectX or OpenGL).
 	 * \param frameWidth Expected video frame width in pixels.
 	 * \param frameHeight Expected video frame height in pixels.
-	 * \param params Additional decoder parameters.
+	 * \param params Additional decoder configuration settings.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::DecoderBackend_InvalidDevice if passed device handle is invalid or otherwise unsuitable for this particular decoder.
@@ -71,11 +71,11 @@ public:
 	virtual Result initialize(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params) = 0;
 
 	/*!
-	 * Reconfigure hardware decoder.
+	 * Reconfigure hardware decoder with new initialization settings.
 	 * Decoder backend must be succcesfully initialized before this function can be called.
 	 * \param frameWidth Expected video frame width in pixels.
 	 * \param frameHeight Expected video frame height in pixels.
-	 * \param params Additional decoder parameters.
+	 * \param params Additional decoder configuration settings.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::DecoderBackend_NotInitialized if decoder backend has not yet been initialized.
@@ -97,6 +97,7 @@ public:
 	 * The surface must be compatible with the graphics API device handle passed to initialize().
 	 * \note Decoder backend does not take ownership of the registered surface.
 	 * \param surface Surface backend to register as output.
+	 * \param alphaSurface Separate surface backend to register as output for alpha only.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::DecoderBackend_NotInitialized if decoder backend has not yet been initialized.
@@ -117,9 +118,12 @@ public:
 
 	/*!
 	 * Decode compressed video payload.
-	 * \param buffer Pointer to the beginning of compressed video data.
-	 * \param bufferSizeInBytes Size in bytes of compressed video data.
+	 * \param buffer Pointer to the beginning of compressed color video data.
+	 * \param bufferSizeInBytes Size in bytes of compressed color video data.
+	 * \param alphaBuffer Pointer to the beginning of compressed alpha video data.
+	 * \param alphaBufferSizeInBytes Size in bytes of compressed alpha video data.
 	 * \param payloadType Video payload type in buffer.
+	 * \param lastPayload Signifies whether the buffer contains the last segment of the video frame.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::DecoderBackend_ReadyToDisplay on success and decoder is ready to display output.
@@ -132,6 +136,8 @@ public:
 
 	/*!
 	 * Display decoded frame on destination surface.
+	 * 
+	 * \param showAlphaAsColor Determines whether to render the alpha channel to the output surface as color for debugging purposes. 
 	 * \return
 	 *  - Result::OK on succes.
 	 *  - Result::DecoderBackend_DisplayFailed on failure, or if decoder was not yet ready to display.

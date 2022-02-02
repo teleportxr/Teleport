@@ -19,55 +19,83 @@ Classes
 
 .. doxygenclass:: avs::Context
    :members:
-
 .. doxygenclass:: avs::Pipeline
+   :members:
 .. doxygenclass:: avs::Timer
+   :members:
 .. doxygenclass:: avs::UseInternalAllocator
+   :members:
 
 avs Interface Classes
 ---------------------
 .. doxygenclass:: avs::AudioTargetBackendInterface
+   :members:
 .. doxygenclass:: avs::AudioEncoderBackendInterface
+   :members:
 .. doxygenclass:: avs::IOInterface
+   :members:
 .. doxygenclass:: avs::PacketInterface
+   :members:
 .. doxygenclass:: avs::SurfaceInterface
+   :members:
 .. doxygenclass:: avs::GeometrySourceInterface
+   :members:
 .. doxygenclass:: avs::GeometryTargetInterface
+   :members:
 .. doxygenclass:: avs::AudioTargetInterface
+   :members:
 
 avs Nodes
 ---------
 .. doxygenclass:: avs::PipelineNode
-
+   :members:
 .. doxygenclass:: avs::AudioDecoder
+   :members:
 .. doxygenclass:: avs::AudioEncoder
+   :members:
 .. doxygenclass:: avs::Buffer
 .. doxygenclass:: avs::Decoder
+   :members:
 .. doxygenclass:: avs::Encoder
+   :members:
 .. doxygenclass:: avs::File
 .. doxygenclass:: avs::Forwarder
 .. doxygenclass:: avs::GeometryDecoder
+   :members:
 .. doxygenclass:: avs::GeometryEncoder
+   :members:
 .. doxygenclass:: avs::GeometrySource
+   :members:
 .. doxygenclass:: avs::GeometryTarget
+   :members:
 .. doxygenclass:: avs::NetworkSink
    :members:
 .. doxygenclass:: avs::NetworkSource
+   :members:
 .. doxygenclass:: avs::NullSink
 .. doxygenclass:: avs::Packetizer
 .. doxygenclass:: avs::Queue
+   :members:
 .. doxygenclass:: avs::Surface
+   :members:
 .. doxygenclass:: avs::TagDataDecoder
+   :members:
 :members:
 
 avs Structs
 -----------
 .. doxygenstruct:: avs::ClientMessage
 .. doxygenstruct:: avs::NetworkSinkCounters
+   :members:
 .. doxygenstruct:: avs::NetworkSinkParams
+   :members:
 .. doxygenstruct:: avs::NetworkSinkStream
+   :members:
 .. doxygenstruct:: avs::NetworkSourceCounters
+   :members:
 .. doxygenstruct:: avs::NetworkSourceParams
+   :members:
 .. doxygenstruct:: avs::NetworkSourceStream
+   :members:
 .. doxygenstruct:: avs::Result
    :members:
