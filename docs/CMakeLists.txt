@@ -2,7 +2,7 @@ find_package(Doxygen REQUIRED)
 
 # Find all the public headersc
 set(pc_client_HEADER_DIRS ${CMAKE_SOURCE_DIR}/pc_client)
-set(libavstream_HEADER_DIRS ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream ${CMAKE_SOURCE_DIR}/libavstream/src ${CMAKE_SOURCE_DIR}/libavstream/src/audio)
+set(libavstream_HEADER_DIRS ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream ${CMAKE_SOURCE_DIR}/libavstream/src ${CMAKE_SOURCE_DIR}/libavstream/src/audio ${CMAKE_SOURCE_DIR}/libavstream/src/encoders ${CMAKE_SOURCE_DIR}/libavstream/src/decoders)
 set(teleportclient_DIR TeleportClient SOURCE_DIR)
 set(teleportclient_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportClient)
 message("teleportclient_HEADER_DIR ${teleportclient_HEADER_DIRS}")

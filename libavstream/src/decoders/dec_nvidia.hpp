@@ -13,6 +13,13 @@
 
 namespace avs
 {
+	/*!
+	 * A DecoderNV.
+	 *
+	 * A DecoderNV uses the NVidia nvcuvid video decoder api to decode a video frame 
+	 * from a compressed bitstream and writes the output to a surface texture using CUDA.
+	 *
+	 */
 	class DecoderNV final : public DecoderBackendInterface
 	{
 	public:
