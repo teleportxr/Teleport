@@ -8,3 +8,4 @@ Build
 .idea
 gradle
 bin
+teleport_commit.properties
