@@ -7,12 +7,11 @@ Classes
 -------
 
 .. doxygenclass:: clientrender::NodeManager
-:members:
+   :members:
 
 .. doxygenclass:: clientrender::GeometryCache
-	:members:
+   :members:
 
 Structs
 -------
-.. doxygenstruct:: clientrender::GeometryCache
-	:members:
+
