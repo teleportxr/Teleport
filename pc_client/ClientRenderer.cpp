@@ -1439,7 +1439,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	CreateTexture(avsTexture, int(stream_width), int(stream_height));
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
-#if TELEPORT_CLIENT_USE_D3D12
+#if TELEPORT_CLIENT_USE_D3D12_VIDEO
 	AVSTextureHandle th = avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
 	clientPipeline.decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
@@ -1887,12 +1887,6 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	{
 		controllerStates[i].clear();
 	}
-
-#if TELEPORT_CLIENT_USE_D3D12
-	// Execute the immediate command list on graphics queue which will include any vertex and index buffer 
-	// upload/transition commands created by the resource creator.
-//	dx12RenderPlatform->ExecuteImmediateCommandList(dx12RenderPlatform->GetCommandQueue());
-#endif
 }
 
 void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)

@@ -454,33 +454,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				errno=0;
 				simul::crossplatform::GraphicsDeviceContext	deviceContext;
 				deviceContext.renderPlatform = renderPlatform;
-				// This context is active. 
+				// This context is active. So we will use it.
 				deviceContext.platform_context = w->GetPlatformDeviceContext();
-
-				simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
-				platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
-				renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
-				cpuProfiler.SetMaxLevel(5);
-				cpuProfiler.StartFrame();
-				renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
-				SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
-				SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
-
-				dsmi->Render(hWnd);
-
-				SIMUL_COMBINED_PROFILE_END(deviceContext);
-				vec3 originPosition		= *((vec3*)&clientDeviceState.originPose.position);
-				vec4 originOrientation	= *((vec4*)&clientDeviceState.originPose.orientation);
-				if (useOpenXR.HaveXRDevice())
+				if (deviceContext.platform_context)
 				{
-					clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
-					useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
+					simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
+					platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
+					renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
+					cpuProfiler.SetMaxLevel(5);
+					cpuProfiler.StartFrame();
+					renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
+					SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
+					SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
+
+					dsmi->Render(hWnd);
+
+					SIMUL_COMBINED_PROFILE_END(deviceContext);
+					vec3 originPosition = *((vec3*)&clientDeviceState.originPose.position);
+					vec4 originOrientation = *((vec4*)&clientDeviceState.originPose.orientation);
+					if (useOpenXR.HaveXRDevice())
+					{
+						clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
+						useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
+					}
+					errno = 0;
+					renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
+					cpuProfiler.EndFrame();
+					SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 				}
-				errno=0;
-				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
-				cpuProfiler.EndFrame();
 				displaySurfaceManager.EndFrame();
-				SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 				renderPlatform->EndFrame();
 			}
         }

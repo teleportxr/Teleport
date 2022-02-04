@@ -5,7 +5,7 @@
 #include "Common.h"
 #include "Platform/Crossplatform/Macros.h"
 #include "Platform/Crossplatform/Texture.h"
-#if TELEPORT_CLIENT_USE_D3D12
+#if TELEPORT_CLIENT_USE_D3D12_VIDEO
 #include "Platform/DirectX12/VideoDecoder.h"
 #endif
 
@@ -69,7 +69,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	decParams.minHeight = frameHeight;
 	decParams.maxDecodePictureBufferCount = 20;
 
-#if TELEPORT_CLIENT_USE_D3D12
+#if TELEPORT_CLIENT_USE_D3D12_VIDEO
 	m_decoder.reset(new simul::dx12::VideoDecoder());
 #endif
 
