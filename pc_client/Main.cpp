@@ -246,9 +246,6 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
 
-		simul::dx12::DeviceManager* deviceManager = (simul::dx12::DeviceManager*)gdi;
-		// We will provide a command list so initialization of following resource can take place
-		((simul::dx12::RenderPlatform*)renderPlatform)->SetImmediateContext((simul::dx12::ImmediateContext*)deviceManager->GetImmediateContext());
 #else
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/HLSL").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
@@ -483,9 +480,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 				cpuProfiler.EndFrame();
 				displaySurfaceManager.EndFrame();
-				//renderPlatform->EndFrame();
 				SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
-				//EndPaint(hWnd, &ps);
+				renderPlatform->EndFrame();
 			}
         }
         break;
