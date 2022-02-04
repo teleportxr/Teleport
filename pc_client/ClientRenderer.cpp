@@ -1262,7 +1262,16 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height)
 	AVSTextureImpl *ti=(AVSTextureImpl*)t;
 	if(!ti->texture)
 		ti->texture = renderPlatform->CreateTexture();
-	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height,1, simul::crossplatform::RGBA_8_UNORM, true, true, false);
+
+	// NVidia decoder needs a shared handle to the resource.
+#if TELEPORT_CLIENT_USE_D3D12 && !TELEPORT_CLIENT_USE_D3D12_VIDEO
+	bool useSharedHeap = true;
+#else
+	bool useSharedHeap = false;
+#endif
+
+	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height,1, simul::crossplatform::RGBA_8_UNORM, true, true, 
+		false, 1, 0, false, vec4(0.5f, 0.5f, 0.2f, 1.0f), 1.0f, 0, useSharedHeap);
 }
 
 void ClientRenderer::Update()

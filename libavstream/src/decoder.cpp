@@ -342,7 +342,6 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 
 	VideoPayloadType payloadType = m_parser->classify(data, dataSize);
 
-    bool isIDR = m_parser->isIDR(data, dataSize);
 	// There are two VCLs per frame with alpha layer encoding enabled (HEVC only) and one VCL without.
 	if (payloadType == VideoPayloadType::VCL)
 	{
@@ -350,6 +349,8 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		{
 			m_firstVCLOffset = dataOffset;
 		}
+
+		bool isIDR = m_parser->isIDR(data, dataSize);
 
 		// Do not process a non-IDR Frame if an IDR is required
 		if (m_idrRequired && !isIDR)
