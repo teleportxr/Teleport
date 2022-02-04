@@ -44,6 +44,10 @@ avs Interface Classes
    :members:
 .. doxygenclass:: avs::AudioTargetInterface
    :members:
+.. doxygenclass:: avs::EncoderBackendInterface
+   :members:
+.. doxygenclass:: avs::DecoderBackendInterface
+   :members:
 
 avs Nodes
 ---------
