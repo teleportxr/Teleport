@@ -336,7 +336,10 @@ if(LIBAV_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
 
-target_link_libraries(libavstream asio nv srt_static efp ${curl_libraries})
+#Include CUDA library location.
+target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
+
+target_link_libraries(libavstream cudart asio nv srt_static efp ${curl_libraries})
 
 # Build CUDA kernels on PC platforms only
 if(NOT ANDROID)

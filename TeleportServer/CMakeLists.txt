@@ -101,11 +101,11 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
 
 
 #Include CUDA library location.
-target_link_directories(TeleportServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
+#target_link_directories(TeleportServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MD)
 
-target_link_libraries(TeleportServer TeleportAudio libavstream enet basisu efp winmm cudart d3d12 draco libssl libcrypto TeleportCore )
+target_link_libraries(TeleportServer TeleportAudio libavstream enet basisu efp winmm d3d12 draco libssl libcrypto TeleportCore )
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
