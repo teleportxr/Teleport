@@ -4,7 +4,7 @@ LibAVStream Example
 Introduction
 ------------
 
-Here we present an example of how to use libavstream to stream video.
+Here we present an example of how to use LibAVStream to stream video.
 LibAVStream has a default video encoder and decoder class that uses NVENC but for this example, we will assume a custom 
 video encoder needs to be used.
 
@@ -15,13 +15,13 @@ avs::NetworkSink is an avs::PipelineNode that handles the packing and sending of
 An avs::NetworkSink instance must be created and configured. Each stream is configured by passing an instance of 
 an avs::NetworkStream struct to the avs::NetworkSink configure function. 
 An avs::Pipeline is used to send data between multiple linked avs::PipelineNode instances.
-It is useful to create two avs::Pipeline instances. One that processes the encoding and queueing of data 
-on one thread and another that processes the dequeueing and sending of data on another thread.
+It is useful to create two avs::Pipeline instances, one for the encoding and queueing of data 
+on one thread and another for the dequeueing and sending of data on another thread.
 The encoder will write data to the avs::IOInterface(s) and the network sink will read data from the avs::IOInterface(s). 
 There must be a separate avs::IOInterface instance for each stream. The avs::Queue class derives avs::IOInterface and 
 avs::PipelineNode and is useful for the asynchronous writing and reading of data. The queue must be linked to the video 
 encoder as an output node and to the network sink as an input node. The node implementing the avs::IOInterface is therefore
-the only node that will be used on the encoder and network transfer pipelines.
+the only node that will be used on both the encoder and network transfer pipelines.
 
 This example will assume the video texture to be encoded was created using the D3D12 API. Currently LibAVStream supports
 D3D11 abd D3D12 but this can easily be extended.
