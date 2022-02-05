@@ -4,9 +4,9 @@ LibAVStream Example
 Introduction
 ------------
 
-Here we present an example of how to use libavstream to send and receive audio video.
+Here we present an example of how to use libavstream to stream video.
 LibAVStream has a default video encoder and decoder class that uses NVENC but for this example, we will assume a custom 
-video encoder and decoder needs to be used.
+video encoder needs to be used.
 
 
 Video Stream Example
@@ -23,11 +23,11 @@ avs::PipelineNode and is useful for the asynchronous writing and reading of data
 encoder as an output node and to the network sink as an input node. The node implementing the avs::IOInterface is therefore
 the only node that will be used on the encoder and network transfer pipelines.
 
-This example will assume the video texture to ben encoded was rendered to using the D3D12 API. Currently LibAVStream supports
+This example will assume the video texture to be encoded was created using the D3D12 API. Currently LibAVStream supports
 D3D11 abd D3D12 but this can easily be extended.
 
 The example below shows how to create and configure an avs::Queue.
-'
+``
 avs::Queue* createVideoQueue()
 {
 	avs::Queue* videoQueue = new avs::Queue();
@@ -36,11 +36,11 @@ avs::Queue* createVideoQueue()
 	videoQueue->configure(maxBufferSize, maxBuffers,"VideoQueue");
 	return videoQueue;
 }
-'
+``
 
 The example below demonstrates how to create the video encoding pipeline in a wrapper class:
 
-'
+``
 class VideoEncodingPipeline
 {
 public:
@@ -118,12 +118,12 @@ private:
 	avs::Encoder mEncoder;
 	avs::Surface mInputSurface;
 }	
-'
+``
 
 
 The example below illustrates how to create a network transfer pipeline in a wrapper class:
 
-'
+``
 class NetworkPipeline
 {
 public:
@@ -182,6 +182,6 @@ private:
 	avs::Pipeline mPipeline;
 	avs::NetworkSink mNetworkSink;
 }
-'
+``
 
 
