@@ -84,7 +84,6 @@ avs Nodes
    :members:
 .. doxygenclass:: avs::TagDataDecoder
    :members:
-:members:
 
 avs Structs
 -----------

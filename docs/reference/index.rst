@@ -10,5 +10,6 @@ Simul provides reference code for the Teleport VR server and client in the Telep
 	:maxdepth: 2
 
 	libavstream
+	libavstream_example
 	clientrenderer
 	teleportclient
