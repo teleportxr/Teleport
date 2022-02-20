@@ -50,7 +50,7 @@ Timestamp PlatformWindows::getTimestamp()
 	return *((LARGE_INTEGER*)&result);
 }
 
-double PlatformWindows::getTimeElapsed(const Timestamp& tBegin, const Timestamp& tEnd)
+double PlatformWindows::getTimeElapsedInMilliseconds(const Timestamp& tBegin, const Timestamp& tEnd)
 {
 	if(!frequency.QuadPart)
 		QueryPerformanceFrequency(&frequency);

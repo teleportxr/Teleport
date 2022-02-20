@@ -18,7 +18,7 @@ namespace avs
 		Timer();
 		void Start();
 		// Returns time in seconds.
-		double GetElapsedTime() const;
+		double GetElapsedTimeS() const;
 
 	private:
 		Timestamp m_startTimestamp;
@@ -33,7 +33,7 @@ namespace avs
 	public:
 		static void Start();
 		// Returns time in seconds.
-		static double GetElapsedTime();
+		static double GetElapsedTimeS();
 
 	private:
 		static Timer m_timer;

@@ -121,8 +121,6 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 
 ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
 	sessionClient(this, std::make_unique<PCDiscoveryService>())
-	,localGeometryCache(new clientrender::NodeManager())
-	, geometryCache(new clientrender::NodeManager())
 	, clientDeviceState(c)
 	, RenderMode(0)
 	, dev_mode(dev)
@@ -297,7 +295,7 @@ void ClientRenderer::RecompileShaders()
 
 
 // We only ever create one view in this example, but in general, this should return a new value each time it's called.
-int ClientRenderer::AddView(/*external_framebuffer*/)
+int ClientRenderer::AddView()
 {
 	static int last_view_id=0;
 	// We override external_framebuffer here and pass "true" to demonstrate how external depth buffers are used.
@@ -692,7 +690,7 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 		videoTagDataCube[i].lightCount = static_cast<int>(td.lights.size());
 		if(td.lights.size() > 10)
 		{
-			SCR_CERR_BREAK("Too many lights in tag.",10);
+			TELEPORT_CERR_BREAK("Too many lights in tag.",10);
 		}
 		for(int j=0;j<td.lights.size()&&j<10;j++)
 		{
@@ -805,10 +803,11 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		static int lineLimit = 50;
 
 		gui.LinePrint( platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
-																									geometryCache.mLightManager.GetCache(cacheLock).size()), white);
+						geometryCache.mLightManager.GetCache(cacheLock).size()), white);
 
+		gui.Anims(geometryCache.mAnimationManager);
 
-		gui.NodeTree( geometryCache.mNodeManager->GetRootNodes());
+		gui.NodeTree( rootNodes);
 
 		auto &missing=geometryCache.m_MissingResources;
 		if(missing.size())
@@ -1182,7 +1181,7 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 					const auto& a = animationState->getAnimation();
 					if (a.get())
 					{
-						sprintf_s(txt, "%llu %s %3.3f\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
+						sprintf_s(txt, "%llu %s %3.3f\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTimeSeconds());
 						str += txt;
 					}
 				}
@@ -1274,25 +1273,11 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height)
 		false, 1, 0, false, vec4(0.5f, 0.5f, 0.2f, 1.0f), 1.0f, 0, useSharedHeap);
 }
 
-void ClientRenderer::Update()
-{
-	double timestamp = avs::PlatformWindows::getTimeElapsed(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-	double timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
-
-	teleport::client::ServerTimestamp::tick(timeElapsed);
-
-	geometryCache.Update(static_cast<float>(timeElapsed));
-	resourceCreator.Update(static_cast<float>(timeElapsed));
-
-	localGeometryCache.Update(static_cast<float>(timeElapsed));
-	localResourceCreator.Update(static_cast<float>(timeElapsed));
-
-	previousTimestamp = timestamp;
-}
 void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 {
 	lastSetupLightingCommand=l;
 }
+
 void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
 	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
@@ -1324,7 +1309,7 @@ void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &upda
 		geometryCache.mNodeManager->SetRightHand(updateNodeStructureCommand.nodeID);
 		break;
 	default:
-		SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeStructureCommand.nodeSubtype) << "!\n";
+		TELEPORT_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeStructureCommand.nodeSubtype) << "!\n";
 		break;
 	}
 }
@@ -1340,7 +1325,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	videoTagDataCubeArray.clear();
 	videoTagDataCubeArray.resize(maxTagDataSize);
 
-	teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ms);
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 	const uint32_t geoStreamID = 80;
@@ -1457,11 +1442,11 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	// Video streams are 0+...
 	if (!clientPipeline.decoder.configure(dev, (int)stream_width, (int)stream_height, clientPipeline.decoderParams, 20))
 	{
-		SCR_CERR << "Failed to configure decoder node!\n";
+		TELEPORT_CERR << "Failed to configure decoder node!\n";
 	}
 	if (!clientPipeline.surface.configure(avsTexture->createSurface()))
 	{
-		SCR_CERR << "Failed to configure output surface node!\n";
+		TELEPORT_CERR << "Failed to configure output surface node!\n";
 	}
 
 	clientPipeline.videoQueue.configure(200000, 16, "VideoQueue");
@@ -1475,7 +1460,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
 		if (!clientPipeline.tagDataDecoder.configure(40, f))
 		{
-			SCR_CERR << "Failed to configure video tag data decoder node!\n";
+			TELEPORT_CERR << "Failed to configure video tag data decoder node!\n";
 		}
 
 		clientPipeline.tagDataQueue.configure(200, 16, "clientPipeline.tagDataQueue");
@@ -1621,7 +1606,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 
 	tagData.lights.resize(tagData.coreData.lightCount);
 
-	teleport::client::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(tagData.coreData.timestamp_unix_ms);
 
 	// We will check the received light tags agains the current list of lights - rough and temporary.
 	/*
@@ -1641,7 +1626,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 	}
 	if(tagData.coreData.id>= videoTagDataCubeArray.size())
 	{
-		SCR_CERR_BREAK("Bad tag id",1);
+		TELEPORT_CERR_BREAK("Bad tag id",1);
 		return;
 	}
 	videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
@@ -1707,7 +1692,7 @@ void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationCo
 		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[1].triggerBack, 1.0f);
 		break;
 	default:
-		SCR_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
+		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
 		break;
 	}
 }

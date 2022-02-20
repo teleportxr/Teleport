@@ -123,7 +123,7 @@ void ResourceCreator::Update(float deltaTime)
 avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 {
 	geometryCache->m_ReceivedResources.push_back(meshCreate.mesh_uid);
-	//SCR_COUT << "Assemble(Mesh" << meshCreate.mesh_uid << ": " << meshCreate.name << ")\n";
+	//TELEPORT_COUT << "Assemble(Mesh" << meshCreate.mesh_uid << ": " << meshCreate.name << ")\n";
 
 	using namespace clientrender;
 
@@ -132,7 +132,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 
 	if (!m_pRenderPlatform)
 	{
-		SCR_CERR << "No valid render platform was found." << std::endl;
+		TELEPORT_CERR << "No valid render platform was found." << std::endl;
 		return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 	clientrender::Mesh::MeshCreateInfo mesh_ci;
@@ -388,13 +388,13 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		}
 		else
 		{
-			SCR_CERR << "Unknown vertex buffer layout." << std::endl;
+			TELEPORT_CERR << "Unknown vertex buffer layout." << std::endl;
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
 		if (constructedVBSize == 0 || constructedVB == nullptr || meshElementCreate.m_IndexCount == 0 || meshElementCreate.m_Indices == nullptr)
 		{
-			SCR_CERR << "Unable to construct vertex and index buffers." << std::endl;
+			TELEPORT_CERR << "Unable to construct vertex and index buffers." << std::endl;
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
@@ -522,7 +522,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	std::vector<unsigned char> data = std::vector<unsigned char>(texture.dataSize);
 	memcpy(data.data(), texture.data, texture.dataSize);
 
-	SCR_COUT << "CreateTexture(" << id << ", " << texture.name << ") ";
+	TELEPORT_COUT << "CreateTexture(" << id << ", " << texture.name << ") ";
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
@@ -541,7 +541,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 
 void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 {
-	//SCR_COUT << "CreateMaterial(" << id << ", " << material.name << ")\n";
+	//TELEPORT_COUT << "CreateMaterial(" << id << ", " << material.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, avs::GeometryPayloadType::Material);
@@ -595,7 +595,7 @@ void ResourceCreator::CreateNode(avs::uid id, avs::Node& node)
 	switch (node.data_type)
 	{
 	case NodeDataType::Invalid:
-		SCR_CERR << "CreateNode failure! Received a node with a data type of Invalid(0)!\n";
+		TELEPORT_CERR << "CreateNode failure! Received a node with a data type of Invalid(0)!\n";
 		break;
 	case NodeDataType::None:
 		CreateMeshNode(id, node);
@@ -617,7 +617,7 @@ void ResourceCreator::CreateNode(avs::uid id, avs::Node& node)
 
 void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 {
-	SCR_COUT << "CreateSkin(" << id << ", " << skin.name << ")\n";
+	TELEPORT_COUT << "CreateSkin(" << id << ", " << skin.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(id, avs::GeometryPayloadType::Skin);
@@ -631,25 +631,41 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 	}
 
 	//Create skin.
-	incompleteSkin->skin = m_pRenderPlatform->InstantiateSkin(skin.name, inverseBindMatrices, skin.jointIDs.size(), skin.skinTransform);
+	incompleteSkin->skin = m_pRenderPlatform->InstantiateSkin(skin.name, inverseBindMatrices, skin.boneIDs.size(), skin.skinTransform);
 
-	//Add bones we have.
-	for (size_t i = 0; i < skin.jointIDs.size(); i++)
+	//Add bones. This is the full list of transforms for this skin.
+	for (size_t i = 0; i < skin.boneIDs.size(); i++)
 	{
-		avs::uid jointID = skin.jointIDs[i];
-		std::shared_ptr<clientrender::Bone> bone = geometryCache->mBoneManager.Get(jointID);
+		avs::uid  boneID = skin.boneIDs[i];
+		std::shared_ptr<clientrender::Bone> bone = geometryCache->mBoneManager.Get(boneID);
 
 		if (bone)
 			incompleteSkin->skin->SetBone(i, bone);
 		else
 		{
-			SCR_COUT << "Skin_" << id << "(" << incompleteSkin->skin->name << ") missing Bone_" << jointID << std::endl;
-			incompleteSkin->missingBones[jointID] = i;
-			geometryCache->m_ResourceRequests.push_back(jointID);
-			GetMissingResource(jointID,avs::GeometryPayloadType::Bone ).waitingResources.push_back(incompleteSkin);
+			TELEPORT_COUT << "Skin " << id << "(" << incompleteSkin->skin->name << ") missing Bone_" << boneID << std::endl;
+			incompleteSkin->missingBones[boneID] = i;
+			geometryCache->m_ResourceRequests.push_back(boneID);
+			GetMissingResource(boneID,avs::GeometryPayloadType::Bone ).waitingResources.push_back(incompleteSkin);
 		}
 	}
-
+	// Add joints. This is only those bones that are part of the skeleton, a subset of the full hierarchy.
+	std::vector<std::shared_ptr<clientrender::Bone>> joints;
+	joints.reserve(skin.jointIDs.size());
+	for (size_t i = 0; i < skin.jointIDs.size(); i++)
+	{
+		avs::uid jointID = skin.jointIDs[i];
+		std::shared_ptr<clientrender::Bone> bone = geometryCache->mBoneManager.Get(jointID);
+#if TELEPORT_INTERNAL_CHECKS
+		if (std::find(skin.boneIDs.begin(),skin.boneIDs.end(),jointID) == skin.boneIDs.end())
+		{
+			TELEPORT_CERR << "Joints must be a subset of bones!" << std::endl;
+		}
+#endif
+		if(bone)
+			joints.push_back(bone);
+	}
+	incompleteSkin->skin->SetJoints(joints);
 	if (incompleteSkin->missingBones.size() == 0)
 	{
 		CompleteSkin(id, incompleteSkin);
@@ -658,7 +674,7 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 
 void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 {
-	SCR_COUT << "CreateAnimation(" << id << ", " << animation.name << ")\n";
+	TELEPORT_COUT << "CreateAnimation(" << id << ", " << animation.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::vector<clientrender::BoneKeyframeList> boneKeyframeLists;
@@ -666,7 +682,7 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
-		const avs::TransformKeyframe& avsKeyframes = animation.boneKeyframes[i];
+		const avs::TransformKeyframeList& avsKeyframes = animation.boneKeyframes[i];
 
 		clientrender::BoneKeyframeList boneKeyframeList;
 		boneKeyframeList.boneIndex = avsKeyframes.boneIndex;
@@ -684,16 +700,16 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 {
 	if (geometryCache->mNodeManager->HasNode(id))
 	{
-		SCR_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created! "<<(node.stationary?"static":"mobile")<<"\n";
+		TELEPORT_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created! "<<(node.stationary?"static":"mobile")<<"\n";
 		//leaves nodes with no children. why?
 		auto n=geometryCache->mNodeManager->GetNode(id);
 		if (n->GetChildrenIDs().size() != node.childrenIDs.size())
 		{
-			SCR_CERR << "recreating node " << n->id << " with " << node.childrenIDs.size() << " children." << std::endl;
+			TELEPORT_CERR << "recreating node " << n->id << " with " << node.childrenIDs.size() << " children." << std::endl;
 		}
 		return;
 	}
-	//SCR_COUT << "CreateMeshNode(" << id << ", " << node.name;
+	//TELEPORT_COUT << "CreateMeshNode(" << id << ", " << node.name;
 	if (node.childrenIDs.size())
 		std::cout << ", " << node.childrenIDs.size() << " children";
 	std::cout<< ") " << (node.stationary ? "static" : "mobile") << "\n";
@@ -709,7 +725,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		newNode->node->SetMesh(geometryCache->mMeshManager.Get(node.data_uid));
 		if (!newNode->node->GetMesh())
 		{
-			//SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
+			//TELEPORT_COUT << "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.data_uid);
@@ -722,7 +738,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		newNode->node->SetSkin(geometryCache->mSkinManager.Get(node.skinID));
 		if (!newNode->node->GetSkin())
 		{
-			//SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
+			//TELEPORT_COUT << "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.skinID);
@@ -741,7 +757,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		}
 		else
 		{
-			SCR_COUT << "MeshNode_" << id << "(" << node.name << ") missing Animation_" << animationID << std::endl;
+			TELEPORT_COUT << "MeshNode_" << id << "(" << node.name << ") missing Animation_" << animationID << std::endl;
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(animationID);
@@ -782,7 +798,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 			// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
 			newNode->node->SetMaterial(i, m_pRenderPlatform->placeholderMaterial);
 
-			SCR_CERR << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
+			TELEPORT_CERR << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
 
 			isMissingResources = true;
 			geometryCache->m_ResourceRequests.push_back(node.materials[i]);
@@ -800,7 +816,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 
 void ResourceCreator::CreateLight(avs::uid id, avs::Node& node)
 {
-	SCR_COUT << "CreateLight(" << id << ", " << node.name << ")\n";
+	TELEPORT_COUT << "CreateLight(" << id << ", " << node.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
 	clientrender::Light::LightCreateInfo lci;
@@ -821,16 +837,21 @@ void ResourceCreator::CreateLight(avs::uid id, avs::Node& node)
 
 void ResourceCreator::CreateBone(avs::uid id, avs::Node& node)
 {
-	SCR_COUT << "CreateBone(" << id << ", " << node.name << ")\n";
+	TELEPORT_COUT << "CreateBone(" << id << ", " << node.name << ")\n";
 	geometryCache->m_ReceivedResources.push_back(id);
 
 	std::shared_ptr<clientrender::Bone> bone = std::make_shared<clientrender::Bone>(id, node.name);
 	bone->SetLocalTransform(node.localTransform);
 
 	//Link to parent and child bones.
-	//We don't know what order the bones will arrive in, so we have to do it for both orders(parent -> child, child -> parent).
+	//Bones are sent in order from the top to bottom of the hierarchy.
+	// So the parent will be present when the child is processed here.
 	std::shared_ptr<clientrender::Bone> parent = geometryCache->mBoneManager.Get(node.parentID);
-	if(parent)
+	if (!parent)
+	{
+		TELEPORT_CERR << "Parent not found for bone " << node.name.c_str() << std::endl;
+	}
+	else
 	{
 		bone->SetParent(parent);
 		parent->AddChild(bone);
@@ -851,7 +872,7 @@ void ResourceCreator::CreateBone(avs::uid id, avs::Node& node)
 
 void ResourceCreator::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo& meshInfo)
 {
-	//SCR_COUT << "CompleteMesh(" << id << ", " << meshInfo.name << ")\n";
+	//TELEPORT_COUT << "CompleteMesh(" << id << ", " << meshInfo.name << ")\n";
 
 	std::shared_ptr<clientrender::Mesh> mesh = std::make_shared<clientrender::Mesh>(meshInfo);
 	geometryCache->mMeshManager.Add(id, mesh);
@@ -862,12 +883,12 @@ void ResourceCreator::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCr
 	{
 		if(it->get()->type!=avs::GeometryPayloadType::Node)
 		{
-			SCR_CERR<<"Waiting resource is not a node, it's "<<int(it->get()->type)<<std::endl;
+			TELEPORT_CERR<<"Waiting resource is not a node, it's "<<int(it->get()->type)<<std::endl;
 			continue;
 		}
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 		incompleteNode->node->SetMesh(mesh);
-		SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Mesh_" << id << "(" << meshInfo.name << ")\n";
+		TELEPORT_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Mesh_" << id << "(" << meshInfo.name << ")\n";
 
 		//If only this mesh and this function are pointing to the node, then it is complete.
 		if(it->use_count() == 2)
@@ -882,7 +903,7 @@ void ResourceCreator::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCr
 
 void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin)
 {
-	SCR_COUT << "CompleteSkin(" << id << ", " << completeSkin->skin->name << ")\n";
+	TELEPORT_COUT << "CompleteSkin(" << id << ", " << completeSkin->skin->name << ")\n";
 
 	geometryCache->mSkinManager.Add(id, completeSkin->skin);
 
@@ -892,7 +913,7 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 		incompleteNode->node->SetSkin(completeSkin->skin);
-		SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Skin_" << id << "(" << completeSkin->skin->name << ")\n";
+		TELEPORT_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Skin_" << id << "(" << completeSkin->skin->name << ")\n";
 
 		//If only this resource and this skin are pointing to the node, then it is complete.
 		if(it->use_count() == 2)
@@ -907,7 +928,7 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 
 void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo& textureInfo)
 {
-	SCR_COUT << "CompleteTexture(" << id << ", " << textureInfo.name << ")\n";
+	TELEPORT_COUT << "CompleteTexture(" << id << ", " << textureInfo.name << ")\n";
 
 	std::shared_ptr<clientrender::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(textureInfo);
@@ -924,7 +945,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 				{
 					std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::static_pointer_cast<IncompleteMaterial>(*it);
 					incompleteMaterial->textureSlots.at(id) = scrTexture;
-					SCR_COUT << "Waiting Material_" << incompleteMaterial->id << "(" << incompleteMaterial->materialInfo.name << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
+					TELEPORT_COUT << "Waiting Material_" << incompleteMaterial->id << "(" << incompleteMaterial->materialInfo.name << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
 
 					//If only this texture and this function are pointing to the material, then it is complete.
 					if (it->use_count() == 2)
@@ -936,7 +957,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 			case avs::GeometryPayloadType::Node:
 				{
 					std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
-					SCR_COUT << "Waiting Node " << incompleteNode->id << "(" << incompleteNode->node->name.c_str() << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
+					TELEPORT_COUT << "Waiting Node " << incompleteNode->id << "(" << incompleteNode->node->name.c_str() << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
 
 					//If only this material and function are pointing to the MeshNode, then it is complete.
 					if(incompleteNode.use_count() == 2)
@@ -956,7 +977,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 
 void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo& materialInfo)
 {
-	SCR_COUT << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
+	TELEPORT_COUT << "CompleteMaterial(" << id << ", " << materialInfo.name << ")\n";
 	std::shared_ptr<clientrender::Material> material = geometryCache->mMaterialManager.Get(id);
 	// Update its properties:
 	material->SetMaterialCreateInfo(m_pRenderPlatform,materialInfo);
@@ -969,14 +990,14 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 		const auto &indexesPair = incompleteNode->materialSlots.find(id);
 		if (indexesPair == incompleteNode->materialSlots.end())
 		{
-			SCR_CERR << "Material " << id << " not found in incomplete node " << incompleteNode->id << std::endl;
+			TELEPORT_CERR << "Material " << id << " not found in incomplete node " << incompleteNode->id << std::endl;
 			continue;
 		}
 		for(size_t materialIndex : indexesPair->second)
 		{
 			incompleteNode->node->SetMaterial(materialIndex, material);
 		}
-		SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Material_" << id << "(" << materialInfo.name << ")\n";
+		TELEPORT_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Material_" << id << "(" << materialInfo.name << ")\n";
 
 		//If only this material and function are pointing to the MeshNode, then it is complete.
 		if(incompleteNode.use_count() == 2)
@@ -991,7 +1012,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 
 void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<clientrender::Node> node)
 {
-//	SCR_COUT << "CompleteMeshNode(ID: " << id << ", node: " << node->name << ")\n";
+//	TELEPORT_COUT << "CompleteMeshNode(ID: " << id << ", node: " << node->name << ")\n";
 
 	///We're using the node ID as the node ID as we are currently generating an node per node/transform anyway; this way the server can tell the client to remove an node.
 	geometryCache->m_CompletedNodes.push_back(id);
@@ -999,7 +1020,7 @@ void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<clientrender
 
 void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone> bone)
 {
-	//SCR_COUT << "CompleteBone(" << id << ", " << bone->name << ")\n";
+	//TELEPORT_COUT << "CompleteBone(" << id << ", " << bone->name << ")\n";
 
 	geometryCache->mBoneManager.Add(id, bone);
 
@@ -1011,7 +1032,7 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bo
 		{
 			std::shared_ptr<IncompleteSkin> incompleteSkin = std::static_pointer_cast<IncompleteSkin>(*it);
 			incompleteSkin->skin->SetBone(incompleteSkin->missingBones[id], bone);
-			SCR_COUT << "Waiting Skin_" << incompleteSkin->id << "(" << incompleteSkin->skin->name << ") got Bone_" << id << "(" << bone->name << ")\n";
+			TELEPORT_COUT << "Waiting Skin_" << incompleteSkin->id << "(" << incompleteSkin->skin->name << ") got Bone_" << id << "(" << bone->name << ")\n";
 
 			//If only this bone, and the loop, are pointing at the skin, then it is complete.
 			if(it->use_count() == 2)
@@ -1027,7 +1048,7 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bo
 
 void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation)
 {
-	SCR_COUT << "CompleteAnimation(" << id << ", " << animation->name << ")\n";
+	TELEPORT_COUT << "CompleteAnimation(" << id << ", " << animation->name << ")\n";
 
 	//Update animation length before adding to the animation manager.
 	animation->updateAnimationLength();
@@ -1039,7 +1060,7 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrende
 	{
 		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
 		incompleteNode->node->animationComponent.addAnimation(id, animation);
-		SCR_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Animation_" << id << "(" << animation->name << ")\n";
+		TELEPORT_COUT << "Waiting MeshNode_" << incompleteNode->id << "(" << incompleteNode->node->name << ") got Animation_" << id << "(" << animation->name << ")\n";
 
 		//If only this bone, and the loop, are pointing at the skin, then it is complete.
 		if(incompleteNode.use_count() == 2)
@@ -1065,7 +1086,7 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 		}
 		else
 		{
-			SCR_COUT << "Material_" << incompleteMaterial->id << "(" << incompleteMaterial->id << ") missing Texture_" << accessor.index << std::endl;
+			TELEPORT_COUT << "Material_" << incompleteMaterial->id << "(" << incompleteMaterial->id << ") missing Texture_" << accessor.index << std::endl;
 
 			geometryCache->m_ResourceRequests.push_back(accessor.index);
 			GetMissingResource(accessor.index, avs::GeometryPayloadType::Texture).waitingResources.push_back(incompleteMaterial);
@@ -1102,7 +1123,7 @@ clientrender::MissingResource& ResourceCreator::GetMissingResource(avs::uid id, 
 	}
 	if(resourceType!=missingPair->second.resourceType)
 	{
-		SCR_CERR<<"Resource type mismatch"<<std::endl;
+		TELEPORT_CERR<<"Resource type mismatch"<<std::endl;
 	}
 	return missingPair->second;
 }
@@ -1216,13 +1237,13 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					}
 					else
 					{
-						SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
+						TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
 					}
 
 				}
 				else
 				{
-					SCR_CERR << "Failed to transcode PNG-format texture \"" << transcoding.name << "\"." << std::endl;
+					TELEPORT_CERR << "Failed to transcode PNG-format texture \"" << transcoding.name << "\"." << std::endl;
 				}
 				teleport::stbi_image_free(target);
 			}
@@ -1233,7 +1254,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				basist::basisu_file_info fileinfo;
 				if (!basis_transcoder.get_file_info(transcoding.data.data(), (uint32_t)transcoding.data.size(), fileinfo))
 				{
-					SCR_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
+					TELEPORT_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
 					continue;
 				}
 				BasisValidate(basis_transcoder, fileinfo,transcoding.data);
@@ -1248,7 +1269,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 
 					if (!basis_is_format_supported(basis_transcoder_textureFormat, fileinfo.m_tex_format))
 					{
-						SCR_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
+						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
 						continue;
 					}
 					//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
@@ -1267,7 +1288,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						}
 						else
 						{
-							SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
+							TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
 						}
 					}
 
@@ -1278,12 +1299,12 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					}
 					else
 					{
-						SCR_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
+						TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
 					}
 				}
 				else
 				{
-					SCR_CERR << "Texture \"" << transcoding.name << "\" failed to start transcoding." << std::endl;
+					TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to start transcoding." << std::endl;
 				}
 			}
 			texturesToTranscode.erase(texturesToTranscode.begin());

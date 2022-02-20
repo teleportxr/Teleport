@@ -399,9 +399,28 @@ bool GeometryStore::hasShadowMap(avs::uid id) const
 
 void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 {
-	//Remove node before re-adding with new data. Why?
-	//removeNode(id);
 	nodes[id] = newNode;
+	if (newNode.parentID != 0)
+	{
+		avs::Node* parent = getNode(newNode.parentID);
+		if (parent)
+		{
+			if (std::find(parent->childrenIDs.begin(), parent->childrenIDs.end(),id) == parent->childrenIDs.end())
+				parent->childrenIDs.push_back(id);
+		}
+	}
+	for(auto c:newNode.childrenIDs)
+	{
+		avs::Node* child = getNode(c);
+		if (child)
+		{
+			if (child->parentID != 0 && child->parentID != id)
+			{
+				TELEPORT_CERR << "Changing parent of " << child->name.c_str() << " to " << newNode.name.c_str() << std::endl;
+			}
+			child->parentID = id;
+		}
+	}
 	if(newNode.data_type == avs::NodeDataType::Light)
 	{
 		lightNodes[id]=avs::LightNodeResources{id, newNode.data_uid};

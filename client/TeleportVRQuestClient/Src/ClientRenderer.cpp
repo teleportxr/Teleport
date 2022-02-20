@@ -614,12 +614,6 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	initialized = true;
 }
 
-void ClientRenderer::Update(float time_elapsed)
-{
-	geometryCache.Update(time_elapsed);
-	resourceCreator.Update(time_elapsed);
-}
-
 void ClientRenderer::WebcamResources::SetPosition(const avs::vec2& position)
 {
 	ovrMatrix4f translation = ovrMatrix4f_CreateTranslation(position.x, position.y, 0);
@@ -767,7 +761,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 
 	tagData.lights.resize(std::min(tagData.coreData.lightCount, (uint32_t) 4));
 
-	teleport::client::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(tagData.coreData.timestamp_unix_ms);
 
 	// Aidan : View and proj matrices are currently unchanged from Unity
 	size_t index = sizeof(clientrender::SceneCaptureCubeCoreTagData);
@@ -1154,20 +1148,24 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<c
 				// Must update the uniforms. e.g. camera pos.
 				// The below seems to only apply/work for camerapos anyway:
 				//for(const clientrender::ShaderResource *sr : pbrShaderResources)
+				const std::vector<clientrender::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
+				for(const clientrender::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
 				{
-					const std::vector<clientrender::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
-					for(const clientrender::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
+					clientrender::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
+					if(type == clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER && resource.bufferInfo.buffer)
 					{
-						clientrender::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
-						if(type == clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER && resource.bufferInfo.buffer)
-						{
-							scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
-							if(gl_uniformBuffer)
-								surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
-						}
+						scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
+						if(gl_uniformBuffer)
+							surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
 					}
-					j++;
 				}
+				j++;
+				if(skin)
+				{
+					//OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer*)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
+					//surfaceDef.graphicsCommand.UniformData[4].Data = &buf;
+				}
+
 				OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 				surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
 				//surfaceDef.graphicsCommand.UniformData[3].Data = &ovrNode->perMeshInstanceData.u_LightmapScaleOffset;

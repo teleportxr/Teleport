@@ -609,11 +609,9 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
     //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
-	float time_elapsed = in.DeltaSeconds * 1000.0f;
-	teleport::client::ServerTimestamp::tick(time_elapsed);
-	clientRenderer.geometryCache.Update(time_elapsed);
-	clientRenderer.resourceCreator.Update(time_elapsed);
-
+	float timestamp_ms = GetTimeInSeconds() * 1000.0f;
+	// TODO: is this the timestamp we want, or do we need something server-synchronized?
+	clientRenderer.Update(timestamp_ms);
     //Move the hands before they are drawn.
 	UpdateHandObjects();
     clientRenderer.RenderLocalNodes(out);
@@ -702,7 +700,7 @@ bool Application::OnSetupCommandReceived(const char *server_ip, const avs::Setup
 				 videoConfig.video_width, videoConfig.video_height,
 				 videoConfig.colour_cubemap_size);
 
-		teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
+		teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ms);
 		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 		const uint32_t geoStreamID = 80;
@@ -931,7 +929,7 @@ void Application::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateN
 			clientRenderer.geometryCache.mNodeManager->SetRightHand(updateNodeSubTypeCommand.nodeID);
 			break;
 		default:
-			SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeSubTypeCommand.nodeSubtype) << "!\n";
+			TELEPORT_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeSubTypeCommand.nodeSubtype) << "!\n";
 			break;
 	}
 }

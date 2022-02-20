@@ -1,5 +1,6 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_VertexBuffer.h"
+#include "TeleportClient/Log.h"
 
 using namespace scc;
 using namespace clientrender;
@@ -50,7 +51,7 @@ void GL_VertexBuffer::CreateVAO(GLuint indexBufferID)
 			break;
 		case VertexBufferLayout::Type::DOUBLE:
 			type = 0;
-			SCR_COUT_BREAK("OpenGL ES 3.0 does not support GL_DOUBLE", -1);
+			TELEPORT_COUT_BREAK("OpenGL ES 3.0 does not support GL_DOUBLE", -1);
 			break;
 		case VertexBufferLayout::Type::UINT:
 			type = GL_UNSIGNED_INT;
@@ -71,7 +72,7 @@ void GL_VertexBuffer::CreateVAO(GLuint indexBufferID)
 			type = GL_BYTE;
 			break;
 		default:
-			SCR_COUT_BREAK("OpenGL ES 3.0 does not support this type", -1);
+			TELEPORT_COUT_BREAK("OpenGL ES 3.0 does not support this type", -1);
 			break;
 
 		}
@@ -90,7 +91,7 @@ void GL_VertexBuffer::CreateVAO(GLuint indexBufferID)
 		}
 		else
 		{
-			SCR_COUT_BREAK("Unknown VertexBufferLayout::PackingStyle", -1);
+			TELEPORT_COUT_BREAK("Unknown VertexBufferLayout::PackingStyle", -1);
 		}
 	}
 

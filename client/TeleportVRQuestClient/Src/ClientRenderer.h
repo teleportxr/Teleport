@@ -107,7 +107,6 @@ public:
 
 	void EnteredVR(const ovrJava *java);
 	void ExitedVR();
-	void Update(float time_elapsed);
 	void OnSetupCommandReceived(const avs::VideoConfig &vc);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);

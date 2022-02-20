@@ -160,8 +160,7 @@ SurfaceLightProperties GetVertexLight(vec3 viewDir, VertexSurfaceProperties surf
     vertexLight.nh2_lh2_nl.x		=n_h*n_h;
     float l_h                       =saturate(dot(vertexLight.halfway,vertexLight.directionToLight));
     vertexLight.nh2_lh2_nl.y         =l_h*l_h;
-    //vertexLight.distribution;
-    //vertexLight.visibility;
+
     return vertexLight;
 }
 

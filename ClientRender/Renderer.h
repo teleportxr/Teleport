@@ -3,8 +3,10 @@
 
 #include "Common.h"
 #include "TeleportClient/basic_linear_algebra.h"
-
+#include "ClientRender/GeometryCache.h"
+#include "ClientRender/ResourceCreator.h"
 #include <libavstream/src/platform.hpp>
+
 namespace clientrender
 {
 	enum
@@ -39,11 +41,16 @@ namespace clientrender
 		avs::SetupLightingCommand lastSetupLightingCommand;
 
 		float framerate = 0.0f;
+		void Update(double timestamp_ms);
 	protected:
 		int show_osd = NO_OSD;
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
 		bool using_vr = true;
+		clientrender::GeometryCache localGeometryCache;
+		clientrender::ResourceCreator localResourceCreator;
+		clientrender::GeometryCache geometryCache;
+		clientrender::ResourceCreator resourceCreator;
 
 	};
 }

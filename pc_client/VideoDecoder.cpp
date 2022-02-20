@@ -8,6 +8,7 @@
 #if TELEPORT_CLIENT_USE_D3D12_VIDEO
 #include "Platform/DirectX12/VideoDecoder.h"
 #endif
+#include "TeleportClient/Log.h"
 
 using namespace avs;
 
@@ -28,17 +29,17 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 {
 	if (device.type == DeviceType::Invalid)
 	{
-		SCR_CERR << "VideoDecoder: Invalid device handle" << std::endl;
+		TELEPORT_CERR << "VideoDecoder: Invalid device handle" << std::endl;
 		return Result::DecoderBackend_InvalidDevice;
 	}
 	if (params.codec == VideoCodec::Invalid)
 	{
-		SCR_CERR << "VideoDecoder: Invalid video codec type" << std::endl;
+		TELEPORT_CERR << "VideoDecoder: Invalid video codec type" << std::endl;
 		return Result::DecoderBackend_InvalidParam;
 	}
 	if (device.type != DeviceType::Direct3D12)
 	{
-		SCR_CERR << "VideoDecoder: Platform library only supports D3D12 video decoder currently." << std::endl;
+		TELEPORT_CERR << "VideoDecoder: Platform library only supports D3D12 video decoder currently." << std::endl;
 	}
 
 	cp::VideoDecoderParams decParams;
@@ -54,7 +55,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 		m_numExpectedParamSets = params.useAlphaLayerDecoding ? 4 : 3;
 		break;
 	default:
-		SCR_CERR << "VideoDecoder: Unsupported video codec type selected" << std::endl;
+		TELEPORT_CERR << "VideoDecoder: Unsupported video codec type selected" << std::endl;
 		return Result::DecoderBackend_CodecNotSupported;
 	}
 
@@ -100,7 +101,7 @@ Result VideoDecoder::reconfigure(int frameWidth, int frameHeight, const DecoderP
 {
 	if (!m_decoder)
 	{
-		SCR_CERR << "VideoDecoder: Can't reconfigure because decoder not initialized";
+		TELEPORT_CERR << "VideoDecoder: Can't reconfigure because decoder not initialized";
 		return Result::DecoderBackend_NotInitialized;
 	}
 
@@ -119,7 +120,7 @@ Result VideoDecoder::shutdown()
 	{
 		if (DEC_FAILED(m_decoder->Shutdown()))
 		{
-			SCR_CERR << "VideoDecoder: Failed to shut down the decoder";
+			TELEPORT_CERR << "VideoDecoder: Failed to shut down the decoder";
 			return Result::DecoderBackend_ShutdownFailed;
 		}
 	}
@@ -134,17 +135,17 @@ Result VideoDecoder::registerSurface(const SurfaceBackendInterface* surface, con
 {
 	if (!m_decoder)
 	{
-		SCR_CERR << "VideoDecoder: Decoder not initialized";
+		TELEPORT_CERR << "VideoDecoder: Decoder not initialized";
 		return Result::DecoderBackend_NotInitialized;
 	}
 	if (!surface || !surface->getResource())
 	{
-		SCR_CERR << "VideoDecoder: Invalid surface handle";
+		TELEPORT_CERR << "VideoDecoder: Invalid surface handle";
 		return Result::DecoderBackend_InvalidSurface;
 	}
 	if (surface->getWidth() != m_frameWidth || surface->getHeight() != m_frameHeight)
 	{
-		SCR_CERR << "VideoDecoder: Output surface dimensions do not match video frame dimensions";
+		TELEPORT_CERR << "VideoDecoder: Output surface dimensions do not match video frame dimensions";
 		return Result::DecoderBackend_InvalidSurface;
 	}
 
@@ -155,7 +156,7 @@ Result VideoDecoder::unregisterSurface()
 {
 	if (!m_decoder)
 	{
-		SCR_CERR << "VideoDecoder: Decoder not initialized";
+		TELEPORT_CERR << "VideoDecoder: Decoder not initialized";
 		return Result::DecoderBackend_NotInitialized;
 	}
 
@@ -194,7 +195,7 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 
 	if (DEC_FAILED(m_decoder->Decode(m_outputTexture, buffer, bufferSizeInBytes, &m_picParams, 1)))
 	{
-		SCR_CERR << "VideoDecoder: Error occurred while trying to decode the frame.";
+		TELEPORT_CERR << "VideoDecoder: Error occurred while trying to decode the frame.";
 		return Result::DecoderBackend_DecodeFailed;
 	}
 

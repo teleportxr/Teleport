@@ -1,6 +1,7 @@
 #include "Tests.h"
 
 #include "libavstream/common_maths.h"
+#include "TeleportClient/Log.h"
 
 #include "Common.h"
 #include "Transform.h"
@@ -41,7 +42,7 @@ namespace clientrender
 
 		if(convertedMatrix != convertedTransformSCR.GetTransformMatrix())
 		{
-			SCR_CERR_BREAK("Test failure! Failed equivalence check between transform conversion and matrix conversion!", EPROTO)
+			TELEPORT_CERR_BREAK("Test failure! Failed equivalence check between transform conversion and matrix conversion!", EPROTO)
 		}
 	}
 }

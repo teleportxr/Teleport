@@ -1,4 +1,5 @@
 #include "Transform.h"
+#include "TeleportClient/Log.h" 
 
 namespace clientrender
 {
@@ -41,7 +42,7 @@ namespace clientrender
 	{
 		if (abs(scale.x) < 0.0001f)
 		{
-			SCR_CERR << "Failed to update model matrix of transform! Scale.x is zero!\n";
+			TELEPORT_CERR << "Failed to update model matrix of transform! Scale.x is zero!\n";
 			return false;
 		}
 

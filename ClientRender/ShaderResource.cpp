@@ -1,6 +1,7 @@
 // (C) Copyright 2018-2022 Simul Software Ltd
 
 #include "ShaderResource.h"
+#include "TeleportClient/Log.h"
 
 using namespace clientrender;
 
@@ -76,7 +77,7 @@ ShaderResourceLayout::ShaderResourceLayoutBinding& ShaderResourceLayout::FindSha
 	if (index == (size_t)-1)
 	{
 		SCR_LOG("Warning: Layout %d not found in the %d layout bindings.",bindingIndex,(int)m_LayoutBindings.size());
-		SCR_CERR_BREAK("Could not find DescriptorSetLayoutBinding at binding index: " << bindingIndex << ".", -1);
+		TELEPORT_CERR_BREAK("Could not find DescriptorSetLayoutBinding at binding index: " << bindingIndex << ".", -1);
 		throw;
 	}
 	return m_LayoutBindings[index];

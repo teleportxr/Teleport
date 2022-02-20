@@ -17,11 +17,6 @@
 #include <random>
 
 //Debug
-#define SCR_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
-#define SCR_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
-#define SCR_CERR std::cerr << __FILE__ << "(" << __LINE__ << "): error: " 
-
-#define SCR_COUT std::cout << __FILE__ << "(" << __LINE__ << "): " 
 
 extern void log_print(const char* source,const char *format, ...);
 
@@ -93,7 +88,7 @@ namespace clientrender
 #ifndef __ANDROID__
 #pragma pack(push, 1)
 #endif
-		uint64_t timestamp;
+		uint64_t timestamp_unix_ms;
 
 		uint32_t id;
 		avs::Transform cameraTransform;

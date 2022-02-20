@@ -15,7 +15,7 @@ namespace clientrender
 		const std::string name;
 
 		Skin(const std::string& name);
-		Skin(const std::string& name, const std::vector<mat4>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform);
+		Skin(const std::string& name, const std::vector<mat4>& inverseBindMatrices, size_t numBones, const Transform& skinTransform);
 
 		virtual ~Skin() = default;
 
@@ -33,19 +33,10 @@ namespace clientrender
 		void SetBones(const std::vector<std::shared_ptr<Bone>>& vector) { bones = vector; }
 		const std::vector<std::shared_ptr<Bone>>& GetBones() { return bones; }
 
-		void SetBoneAmount(size_t boneAmount) { bones.resize(boneAmount); }
-		void SetBone(size_t index, std::shared_ptr<Bone> bone)
-		{
-			if(index < bones.size())
-			{
-				bones[index] = bone;
-			}
-			else
-			{
-				SCR_COUT << "ERROR: Attempted to add bone to skin (" << name << ") at index " << index << " greater than size " << bones.size() << "!\n";
-			}
-		}
-
+		void SetNumBones(size_t numBones) { bones.resize(numBones); }
+		void SetBone(size_t index, std::shared_ptr<Bone> bone);
+		void SetJoints(const std::vector<std::shared_ptr<Bone>>& j);
+		const std::vector<std::shared_ptr<Bone>>& GetJoints() { return joints; }
 		void SetSkinTransform(const Transform& value) { skinTransform = value; }
 		const Transform& GetSkinTransform() { return skinTransform; }
 	protected:
@@ -54,9 +45,9 @@ namespace clientrender
 		{
 			return boneMatrices;
 		}
-	private:
 		std::vector<clientrender::mat4> inverseBindMatrices;
 		std::vector<std::shared_ptr<Bone>> bones;
+		std::vector<std::shared_ptr<Bone>> joints;
 		Transform skinTransform; //Transform of the parent node of the bone hierarchy; i.e there may be multiple top-level bones, but their parent is not the root.
 
 		mat4 boneMatrices[MAX_BONES];

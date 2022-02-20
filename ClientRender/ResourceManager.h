@@ -22,8 +22,8 @@ public:
 	struct ResourceData
 	{
 		std::shared_ptr<T> resource;
-		float postUseLifetime; //Milliseconds the resource should be kept alive after the last object has stopped using it.
-		float timeSinceLastUse; //Milliseconds since the data was last used by the session.
+		float postUseLifetime_s; // Seconds the resource should be kept alive after the last object has stopped using it.
+		float timeSinceLastUse_s; // Seconds since the data was last used by the session.
 	};
 
 	//Create a resource manager with the class specific function to free it from memory before destroying the resource.
@@ -34,7 +34,7 @@ public:
 	//	id : Unique identifier of the resource.
 	//	newResource : The resource.
 	//	postUseLifetime : Milliseconds the resource should be kept alive after the last object has stopped using it.
-	void Add(uid id, std::shared_ptr<T> & newItem, float postUseLifetime = 60000);
+	void Add(uid id, std::shared_ptr<T> & newItem, float postUseLifetime_s = 60.0f);
 
 	//Returns whether the manager contains the resource.
 	bool Has(uid id) const;
@@ -49,6 +49,10 @@ public:
 	//Returns a shared pointer to the resource; returns nullptr if the resource was not found.
 	//Resets time since last use of the resource.
 	std::shared_ptr<T> Get(uid id);
+
+	//Returns a shared pointer to the resource; returns nullptr if the resource was not found.
+	//Resets time since last use of the resource.
+	std::shared_ptr<const T> Get(uid id) const;
 
 	//Pushes the IDs of all of the resources stored in the resource manager into the passed vector.
 	const std::vector<uid>& GetAllIDs() const;
@@ -99,10 +103,10 @@ ResourceManager<T>::~ResourceManager()
 }
 
 template<class T>
-void ResourceManager<T>::Add(uid id, std::shared_ptr<T> & newItem, float postUseLifetime)
+void ResourceManager<T>::Add(uid id, std::shared_ptr<T> & newItem, float postUseLifetime_s)
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
-	cachedItems.emplace(id, ResourceData{newItem, postUseLifetime, 0});
+	cachedItems.emplace(id, ResourceData{newItem, postUseLifetime_s, 0});
 	cacheChecksum++;
 }
 
@@ -133,10 +137,24 @@ template<class T> std::shared_ptr<T> ResourceManager<T>::Get(uid id)
 
 	ResourceData& data = it->second;
 
-	data.timeSinceLastUse = 0;
+	data.timeSinceLastUse_s = 0;
 
 	return data.resource;
 }
+
+template<class T> std::shared_ptr<const T> ResourceManager<T>::Get(uid id) const
+{
+	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
+
+	auto it = cachedItems.find(id);
+	if (it == cachedItems.end())
+		return nullptr;
+
+	const ResourceData& data = it->second;
+
+	return data.resource;
+}
+
 template<class T> const std::vector<uid>&  ResourceManager<T>::GetAllIDs() const
 {
 	if(cacheChecksum!=idListChecksum)
@@ -201,7 +219,7 @@ void ResourceManager<T>::ClearCareful(std::vector<uid>& excludeList)
 }
 
 template<class T>
-void ResourceManager<T>::Update(float deltaTimestamp)
+void ResourceManager<T>::Update(float deltaTimestamp_s)
 {
 	const bool sufficientMemory = false;//clientrender::MemoryUtil::Get()->isSufficientMemory(MIN_REQUIRED_MEMORY);
 
@@ -212,10 +230,10 @@ void ResourceManager<T>::Update(float deltaTimestamp)
 		//Increment time spent unused, if the resource manager is the only object pointing to the resource.
 		if(it->second.resource.use_count() == 1)
 		{
-			it->second.timeSinceLastUse += deltaTimestamp;
+			it->second.timeSinceLastUse_s += deltaTimestamp_s;
 
 			//Delete the resource, if memory is low and it has been too long since the object was last used.
-			if(!sufficientMemory && it->second.timeSinceLastUse >= it->second.postUseLifetime * lifetimeFactor)
+			if(!sufficientMemory && it->second.timeSinceLastUse_s >= it->second.postUseLifetime_s * lifetimeFactor)
 			{
 				it = RemoveResource(it);
 			}

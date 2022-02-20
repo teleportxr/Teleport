@@ -59,7 +59,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
         }
         case INPUT_COMMAND_COMPUTE:
         {
-            SCR_CERR<<"Invalid Input Command";
+            TELEPORT_CERR<<"Invalid Input Command";
         }
     }
     BindShaderResources(descriptorSets, effect, pInputCommand->effectPassName);
@@ -74,7 +74,7 @@ void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
 #ifdef DEBUG
 	if(size.x*size.y*size.z==0)
 	{
-		SCR_CERR<<"Empty compute dispatch!\n";
+		TELEPORT_CERR<<"Empty compute dispatch!\n";
 	}
 #endif
 	GLCheckErrorsWithTitle("DispatchCompute: 1");
