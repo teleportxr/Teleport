@@ -165,28 +165,28 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 shader vertexOutput VS_Solid(vertexInput IN)
 {
     vertexOutput OUT;
-	vec4 opos		=vec4(IN.position.xyz,1.0);
-    vec4 wpos		=mul(opos, world);
+	vec4 opos			=vec4(IN.position.xyz,1.0);
+    vec4 wpos			=mul(opos, world);
 
 	//wpos.xyz		-= videoCamPosition;
-	OUT.view		=normalize(wpos.xyz-viewPosition);
-	vec4 viewspace_pos = mul( view, vec4(wpos.xyz, 1.0));
-	OUT.clip_pos	=mul(proj,vec4(viewspace_pos.xyz,1.0));
+	OUT.view			=normalize(wpos.xyz-viewPosition);
+	vec4 viewspace_pos	=mul( view, vec4(wpos.xyz, 1.0));
+	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
 	//OUT.clip_pos	=mul( opos, worldViewProj);
-	OUT.texCoords0	=vec2(IN.texCoords0.x,IN.texCoords0.y);
-	OUT.texCoords1	=vec2(IN.texCoords1.x,IN.texCoords1.y);
+	OUT.texCoords0		=vec2(IN.texCoords0.x,1.0-IN.texCoords0.y);
+	OUT.texCoords1		=vec2(IN.texCoords1.x,IN.texCoords1.y);
 #ifdef SFX_OPENGL
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, mat3(world));
 #else
-	OUT.normal = mul(vec4(IN.normal.xyz, 0.0), world).xyz;
-	OUT.tangent = vec4(mul(IN.tangent.xyz, (mat3)world).xyz,0.0).xyz;
+	OUT.normal			= mul(vec4(IN.normal.xyz, 0.0), world).xyz;
+	OUT.tangent			= vec4(mul(IN.tangent.xyz, (mat3)world).xyz,0.0).xyz;
 	//OUT.normal = IN.normal;
 	//OUT.tangent = IN.tangent;
 #endif
-	OUT.hPosition	=OUT.clip_pos;
-	OUT.debug_colour = vec4(IN.position.xyz, 0);
+	OUT.hPosition		=OUT.clip_pos;
+	OUT.debug_colour	= vec4(IN.position.xyz, 0);
     return OUT;
 }
 

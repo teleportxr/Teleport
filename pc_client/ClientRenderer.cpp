@@ -120,7 +120,8 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 }
 
 ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
-	sessionClient(this, std::make_unique<PCDiscoveryService>())
+	Renderer(new clientrender::NodeManager,new clientrender::NodeManager)
+	,sessionClient(this, std::make_unique<PCDiscoveryService>())
 	, clientDeviceState(c)
 	, RenderMode(0)
 	, dev_mode(dev)
@@ -1280,6 +1281,8 @@ void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 
 void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
+	geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
+/*
 	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
 	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
 	std::weak_ptr<clientrender::Node> oldParent=node->GetParent();
@@ -1290,7 +1293,7 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
 	node->SetParent(parent);
 	if(parent)
-		parent->AddChild(node);
+		parent->AddChild(node);*/
 }
 
 void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand)
@@ -1313,10 +1316,14 @@ void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &upda
 		break;
 	}
 }
+void ClientRenderer::ConfigureVideo(const avs::VideoConfig& videoConfig)
+{
+	clientPipeline.videoConfig = videoConfig;
+}
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
-	clientPipeline.videoConfig = setupCommand.video_config;
+	ConfigureVideo(setupCommand.video_config);
 
 	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
 																	, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height	);

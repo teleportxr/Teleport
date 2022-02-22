@@ -6,9 +6,9 @@ avs::Timestamp clientrender::platformStartTimestamp ;
 static bool timestamp_initialized=false;
 using namespace clientrender;
 
-Renderer::Renderer()
-	:localGeometryCache(new clientrender::NodeManager())
-	, geometryCache(new clientrender::NodeManager())
+Renderer::Renderer(clientrender::NodeManager *localNodeManager,clientrender::NodeManager *remoteNodeManager)
+	:localGeometryCache(localNodeManager)
+	, geometryCache(remoteNodeManager)
 {
 	if (!timestamp_initialized)
 #ifdef _MSC_VER

@@ -43,8 +43,8 @@ namespace teleport
 		ListenAddress.port = listenPort;
 
 		// ServerHost will live for the lifetime of the session.
-		
-		mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+		if(!mHost)
+			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 		if (!mHost)
 		{
 			std::cerr << "Session: Failed to create ENET server host!\n";
@@ -215,21 +215,27 @@ namespace teleport
 	void ClientManager::handleMessages()
 	{
 		ENetEvent event;
-		while (enet_host_service(mHost, &event, 0) > 0)
+		try
 		{
-			if (event.type != ENET_EVENT_TYPE_NONE)
+			while (enet_host_service(mHost, &event, 0) > 0)
 			{
-				for (auto client : mClients)
+				if (event.type != ENET_EVENT_TYPE_NONE)
 				{
-					char peerIP[20];
-					enet_address_get_host_ip(&event.peer->address, peerIP, sizeof(peerIP));
-
-					if (client->clientIP == std::string(peerIP))
+					for (auto client : mClients)
 					{
-						client->eventQueue.push(event);
+						char peerIP[20];
+						enet_address_get_host_ip(&event.peer->address, peerIP, sizeof(peerIP));
+
+						if (client->clientIP == std::string(peerIP))
+						{
+							client->eventQueue.push(event);
+						}
 					}
 				}
 			}
+		}
+		catch (...)
+		{
 		}
 	}
 

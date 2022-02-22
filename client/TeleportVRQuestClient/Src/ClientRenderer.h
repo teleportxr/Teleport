@@ -3,6 +3,7 @@
 #pragma once
 #include "basic_linear_algebra.h"
 #include "ClientRender/ResourceCreator.h"
+#include "ClientRender/GeometryDecoder.h"
 #include "ClientRender/Renderer.h"
 #include "GlobalGraphicsResources.h"
 #include <Render/SurfaceTexture.h>
@@ -14,6 +15,9 @@
 #include "SCR_Class_GL_Impl/GL_DeviceContext.h"
 #include "Controllers.h"
 #include "ClientAppInterface.h"
+#include "TeleportAudio/src/crossplatform/AudioStreamTarget.h"
+#include "TeleportAudio/src/crossplatform/AudioPlayer.h"
+#include "TeleportAudio/src/crossplatform/NetworkPipeline.h"
 
 
 // Placeholders for lights
@@ -95,7 +99,7 @@ namespace teleport
 class ClientRenderer:public clientrender::Renderer
 {
 public:
-	ClientRenderer(ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
+	ClientRenderer(ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn,SessionCommandInterface *sc);
 	~ClientRenderer();
 
 	void CycleShaderMode();
@@ -107,7 +111,7 @@ public:
 
 	void EnteredVR(const ovrJava *java);
 	void ExitedVR();
-	void OnSetupCommandReceived(const avs::VideoConfig &vc);
+	void ConfigureVideo(const avs::VideoConfig &vc);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
     void RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVRFW::ovrRendererOutput &res);
@@ -136,8 +140,6 @@ public:
 	//avs::Queue mTagDataQueue;
 	//avs::Queue mAudioQueue;
 
-	clientrender::GeometryCache geometryCache;
-	clientrender::ResourceCreator resourceCreator;
 	teleport::client::ClientPipeline clientPipeline;
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	float eyeSeparation=0.06f;
@@ -233,6 +235,10 @@ public:
 	std::string                         ExtractTagDataIDSrc;
 	uint32_t osd_selection;
 	void DrawOSD(OVRFW::ovrRendererOutput& res);
+	// TODO: move to parent class
+	SessionClient                       sessionClient;
+	void UpdateHandObjects(ovrMobile *);
+	bool OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake);
 protected:
 	void ListNode(const std::shared_ptr<clientrender::Node>& node, int indent, size_t& linesRemaining);
 	teleport::client::ClientDeviceState *clientDeviceState=nullptr;
@@ -242,5 +248,21 @@ protected:
 
 private:
 	void InitWebcamResources();
-	bool mShowWebcam;
+public:
+	bool mShowWebcam=true;
+	bool               mPipelineConfigured=false;
+	static constexpr size_t NumVideoStreams = 1;
+	static constexpr bool AudioStream = true;
+	static constexpr bool   GeoStream  = true;
+
+	std::string server_ip;
+	int server_discovery_port=10600;
+	int client_service_port=10501;
+	int client_streaming_port=10502;
+	sca::AudioPlayer* audioPlayer=nullptr;
+	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
+	std::unique_ptr<sca::NetworkPipeline> mNetworkPipeline;
+	avs::Queue mAudioInputQueue;
+	GeometryDecoder        geometryDecoder;
+
 };

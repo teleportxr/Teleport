@@ -156,7 +156,10 @@ bool NodeManager::HasNode(avs::uid nodeID) const
 
 std::shared_ptr<Node> NodeManager::GetNode(avs::uid nodeID) const
 {
-	return HasNode(nodeID) ? nodeLookup.at(nodeID) : nullptr;
+	auto f = nodeLookup.find(nodeID);
+	if (f == nodeLookup.end())
+		return nullptr;
+	return f->second;
 }
 
 size_t NodeManager::GetNodeAmount() const
@@ -367,6 +370,30 @@ void clientrender::NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid 
 	}
 }
 
+void NodeManager::ReparentNode(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand)
+{
+	auto c = nodeLookup.find(updateNodeStructureCommand.nodeID);
+	auto p = nodeLookup.find(updateNodeStructureCommand.parentID);
+	std::shared_ptr<Node> node = c!= nodeLookup.end()?c->second:nullptr;
+	std::shared_ptr<Node> parent = p!= nodeLookup.end()?p->second : nullptr;
+
+	if(updateNodeStructureCommand.parentID !=0)
+		parentLookup[updateNodeStructureCommand.nodeID] = updateNodeStructureCommand.parentID;
+	else
+	{
+		auto p = parentLookup.find(updateNodeStructureCommand.nodeID);
+		if (p!=parentLookup.end())
+			parentLookup.erase(p);
+	}
+	std::weak_ptr<clientrender::Node> oldParent = node->GetParent();
+	auto oldp = oldParent.lock();
+	if (oldp)
+		oldp->RemoveChild(node);
+	node->SetLocalPosition(updateNodeStructureCommand.relativePose.position);
+	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
+	LinkToParentNode(updateNodeStructureCommand.nodeID);
+}
+
 void NodeManager::Update(float deltaTime)
 {
 	nodeList_t expiredNodes;
@@ -450,26 +477,41 @@ void NodeManager::LinkToParentNode(avs::uid childID)
 {
 	//Do nothing if the child doesn't appear in the parent lookup; i.e. we have not received a parent for the node.
 	auto parentIt = parentLookup.find(childID);
-	if(parentIt == parentLookup.end())
+	std::shared_ptr<Node> parent;
+	if(parentIt != parentLookup.end())
 	{
-		return;
+		parent = GetNode(parentIt->second);
 	}
-
-	std::shared_ptr<Node> parent = GetNode(parentIt->second);
 	std::shared_ptr<Node> child = GetNode(childID);
 
+	//Connect up hierarchy.
+	if (child != nullptr)
+	{
+		child->SetParent(parent);
+		if (parent == nullptr)
+		{
+			// put in root nodes list.
+			auto r = std::find(rootNodes.begin(), rootNodes.end(), child);
+			if (r == rootNodes.end())
+				rootNodes.push_back(child);
+			auto f = std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
+			if (f == distanceSortedRootNodes.end())
+				distanceSortedRootNodes.push_back(child);
+		}
+	}
 	//Do nothing if we couldn't find one of the nodes; likely due to the parent being removed before the child was received.
 	if(parent == nullptr || child == nullptr)
 	{
 		return;
 	}
 
-	//Connect up hierarchy.
-	child->SetParent(parent);
 	parent->AddChild(child);
 	auto f= std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
 	if(f!= distanceSortedRootNodes.end())
 		distanceSortedRootNodes.erase(f);
 	//Erase child from the root nodes list, as they now have a parent.
-	rootNodes.erase(std::find(rootNodes.begin(), rootNodes.end(), child));
+	// TODO: ONLY do this if it was unparented before.....
+	auto r=std::find(rootNodes.begin(), rootNodes.end(), child);
+	if(r!=rootNodes.end())
+		rootNodes.erase(r);
 }

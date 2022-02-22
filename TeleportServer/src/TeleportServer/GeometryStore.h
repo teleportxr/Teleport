@@ -112,6 +112,7 @@ namespace teleport
 			size_t numMips;	
 			bool genMips;	// if false, numMips tells how many are in the data already.
 			bool highQualityUASTC;
+			avs::TextureCompression textureCompression = avs::TextureCompression::UNCOMPRESSED;
 		};
 
 		//Names of the files that store each resource type.

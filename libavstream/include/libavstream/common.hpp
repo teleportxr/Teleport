@@ -231,7 +231,22 @@ namespace avs
 		Skin,
 		Bone
 	};
-
+	inline const char *stringOf(GeometryPayloadType t)
+	{
+		switch(t)
+		{
+			case GeometryPayloadType::Mesh:				return "Mesh";
+			case GeometryPayloadType::Material:			return "Material";
+			case GeometryPayloadType::MaterialInstance:	return "MaterialInstance";
+			case GeometryPayloadType::Texture:			return "Texture";
+			case GeometryPayloadType::Animation:		return "Animation";
+			case GeometryPayloadType::Node:				return "Node";
+			case GeometryPayloadType::Skin:				return "Skin";
+			case GeometryPayloadType::Bone:				return "Bone";
+			default:
+				return "Invalid";
+		}
+	}
 	enum class AudioPayloadType : uint8_t
 	{
 		Capture = 0

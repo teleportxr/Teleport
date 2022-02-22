@@ -6,6 +6,7 @@
 #include "ClientRender/GeometryCache.h"
 #include "ClientRender/ResourceCreator.h"
 #include <libavstream/src/platform.hpp>
+#include "TeleportClient/SessionClient.h"
 
 namespace clientrender
 {
@@ -27,7 +28,7 @@ namespace clientrender
 	class Renderer
 	{
 	public:
-		Renderer();
+		Renderer(clientrender::NodeManager *localNodeManager,clientrender::NodeManager *remoteNodeManager);
 
 		void SetMinimumPriority(int32_t p)
 		{
@@ -37,6 +38,7 @@ namespace clientrender
 		{
 			return minimumPriority;
 		}
+		virtual void ConfigureVideo(const avs::VideoConfig &vc)=0;
 		avs::SetupCommand lastSetupCommand;
 		avs::SetupLightingCommand lastSetupLightingCommand;
 
@@ -49,6 +51,7 @@ namespace clientrender
 		bool using_vr = true;
 		clientrender::GeometryCache localGeometryCache;
 		clientrender::ResourceCreator localResourceCreator;
+	public:
 		clientrender::GeometryCache geometryCache;
 		clientrender::ResourceCreator resourceCreator;
 

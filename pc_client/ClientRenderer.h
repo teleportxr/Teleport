@@ -163,6 +163,7 @@ public:
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+	void ConfigureVideo(const avs::VideoConfig& vc) override;
 	void OnVideoStreamClosed() override;
 
 	void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;

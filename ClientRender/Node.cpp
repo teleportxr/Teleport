@@ -116,16 +116,21 @@ void Node::Update(float deltaTime_ms)
 
 void Node::SetParent(std::shared_ptr<Node> newParent)
 {
-	std::shared_ptr<Node> oldParent = parent.lock();
-	if(oldParent== newParent)
-		return;
-	parent = newParent;
-	//Remove self from parent list of existing parent, if we have a parent.
-	//Prevent stack overflow by doing this after setting the new parent.
-	if(oldParent)
+	if(parent.use_count())
 	{
-		oldParent->RemoveChild(id);
+		std::shared_ptr<Node> oldParent = parent.lock();
+		if (oldParent == newParent)
+			return;
+		parent = newParent;
+		//Remove self from parent list of existing parent, if we have a parent.
+		//Prevent stack overflow by doing this after setting the new parent.
+		if(oldParent)
+		{
+			oldParent->RemoveChild(id);
+		}
 	}
+	else
+		parent=newParent;
 	// New parent may have different position.
 	RequestTransformUpdate();
 }

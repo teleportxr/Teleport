@@ -17,13 +17,6 @@
 #include <libavstream/audiodecoder.h>
 #include <libavstream/audio/audiotarget.h>
 
-#include "ClientRender/GeometryDecoder.h"
-#include "ClientRender/ResourceCreator.h"
-#include "TeleportClient/SessionClient.h"
-#include "TeleportAudio/src/crossplatform/AudioStreamTarget.h"
-#include "TeleportAudio/src/crossplatform/AudioPlayer.h"
-#include "TeleportAudio/src/crossplatform/NetworkPipeline.h"
-
 #include "GlobalGraphicsResources.h"
 #include "VideoDecoderProxy.h"
 #include "LobbyRenderer.h"
@@ -106,7 +99,6 @@ namespace OVRFW
 		OVRFW::ovrApplFrameOut Frame(const OVRFW::ovrApplFrameIn& vrFrame);
 		void DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRendererOutput &out);
 		void Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out);
-		void UpdateHandObjects();
 		bool ProcessIniFile();
 		void EnteredVrMode();
 		void ToggleMenu();
@@ -133,23 +125,12 @@ namespace OVRFW
 		//avs::Pipeline mPipeline;
 
 		//avs::Surface       mSurface;
-		bool               mPipelineConfigured;
 
-		static constexpr size_t NumVideoStreams = 1;
-		static constexpr bool AudioStream = true;
-		static constexpr bool   GeoStream  = true;
-
-		GeometryDecoder        geometryDecoder;
 		//avs::GeometryDecoder   avsGeometryDecoder;
 		//.avs::GeometryTarget    avsGeometryTarget;
 
 		//avs::AudioDecoder avsAudioDecoder;
 		//avs::AudioTarget avsAudioTarget;
-		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
-		sca::AudioPlayer* audioPlayer;
-		std::unique_ptr<sca::NetworkPipeline> mNetworkPipeline;
-		avs::Queue mAudioInputQueue;
-
 		OVRFW::OvrGuiSys::SoundEffectPlayer *mSoundEffectPlayer;
 
 		OVRFW::OvrGuiSys *mGuiSys;
@@ -157,8 +138,6 @@ namespace OVRFW
 		teleport::TinyUI tinyUI;
 
 		OVRFW::OvrSceneView mScene;
-
-		SessionClient                       sessionClient;
 
 		std::vector<float> mRefreshRates;
 
@@ -176,15 +155,8 @@ namespace OVRFW
 		std::unique_ptr<Android_MemoryUtil> memoryUtil;
 		Controllers controllers;
 
-		std::string server_ip;
-		int server_discovery_port=10600;
-		int client_service_port=10501;
-		int client_streaming_port=10502;
-
 		ENetAddress remoteEndpoint;
 		teleport::client::ClientDeviceState clientDeviceState;
-
-		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
 
 		OVR::Matrix4f lastCenterView;
 
