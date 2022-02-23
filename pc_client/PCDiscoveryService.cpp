@@ -106,7 +106,7 @@ uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDisco
 	frame--;
 	if(!frame)
 	{
-		frame = 1000;
+		frame = 10;
 		int res = enet_socket_send(serviceDiscoverySocket, &serverAddress, &buffer, 1);
 		if(res==-1)
 		{

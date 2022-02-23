@@ -463,6 +463,11 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 
 void Application::ConnectButtonHandler(const std::string &url)
 {
+	auto &sessionClient=clientRenderer.sessionClient;
+	if(sessionClient.IsConnected())
+	{
+		sessionClient.Disconnect(0);
+	}
 	size_t pos=url.find(":");
 	if(pos<url.length())
 	{
