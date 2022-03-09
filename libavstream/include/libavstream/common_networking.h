@@ -5,6 +5,7 @@
 
 #include "common.hpp"
 #include "common_maths.h"
+#include "common_input.h"
 
 namespace avs
 {
@@ -61,6 +62,7 @@ namespace avs
 		SetupLighting,
 		UpdateNodeStructure,
 		UpdateNodeSubtype,
+		SetupInputs,
 	};
 
 	enum class ClientMessagePayloadType : uint8_t
@@ -106,28 +108,11 @@ namespace avs
 
 	struct InputState
 	{
-		uint32_t controllerId = 0;
-		uint32_t buttonsDown = 0;		// arbitrary bitfield.
-		float trackpadAxisX = 0.0f;
-		float trackpadAxisY = 0.0f;
-		float joystickAxisX = 0.0f;
-		float joystickAxisY = 0.0f;
-		float triggerBack = 0.0f;
-		float triggerGrip = 0.0f;
-
 		uint32_t numBinaryEvents = 0;
 		uint32_t numAnalogueEvents= 0;
 		uint32_t numMotionEvents= 0;
 		void add(const InputState &i)
 		{
-			controllerId		=i.controllerId;
-			buttonsDown			=i.buttonsDown ;	
-			trackpadAxisX		=i.trackpadAxisX;
-			trackpadAxisY		=i.trackpadAxisY;
-			joystickAxisX		=i.joystickAxisX;
-			joystickAxisY		=i.joystickAxisY;
-			triggerBack			=i.triggerBack;
-			triggerGrip			=i.triggerGrip;
 			numBinaryEvents		+=i.numBinaryEvents;
 			numAnalogueEvents	+=i.numAnalogueEvents;
 			numMotionEvents		+=i.numMotionEvents;
@@ -295,6 +280,35 @@ namespace avs
 		}
 		// If this is nonzero, implicitly gi should be enabled.
 		uint8_t num_gi_textures=0;
+	} AVS_PACKED;
+
+	struct InputDefinition
+	{
+		InputId inputId;
+		InputType inputType;
+		std::string path;
+	} AVS_PACKED;
+
+	struct InputDefinitionNetPacket
+	{
+		avs::InputId inputId;
+		avs::InputType inputType;
+		uint16_t pathLength;
+	} AVS_PACKED;
+	//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
+	struct SetupInputsCommand : public Command
+	{
+		SetupInputsCommand() : Command(CommandPayloadType::SetupInputs) {}
+		SetupInputsCommand(uint8_t numi)
+			:Command(CommandPayloadType::SetupInputs), numInputs(numi)
+		{}
+
+		virtual size_t getCommandSize() const override
+		{
+			return sizeof(SetupInputsCommand);
+		}
+		//! The number of inputs to follow the command.
+		uint16_t numInputs = 0;
 	} AVS_PACKED;
 
 	struct ReconfigureVideoCommand : public Command

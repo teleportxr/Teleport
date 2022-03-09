@@ -80,6 +80,12 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	{
 		PBR, ALBEDO, NORMAL_UNSWIZZLED, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS
 	};
+	enum MouseOrKey :char
+	{
+		LEFT_BUTTON = 0x01
+		, MIDDLE_BUTTON = 0x02
+		, RIGHT_BUTTON = 0x04
+	};
 
 	void ChangePass(ShaderMode newShaderMode);
 
@@ -121,6 +127,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::Camera			camera;
 	simul::crossplatform::MouseCameraState	mouseCameraState;
 	simul::crossplatform::MouseCameraInput	mouseCameraInput;
+	std::map<MouseOrKey, avs::InputId> inputIdMappings;
 
 	// determined by the stream setup command:
 	vec4 colourOffsetScale;
@@ -128,7 +135,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 
 	bool keydown[256] = {};
 	SessionClient sessionClient;
-	teleport::client::ControllerState controllerStates[2];
+	teleport::client::Input inputs;
 	
 	bool show_video = false;
 
@@ -158,9 +165,14 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 
 	// handler for the UI to tell us to connect.
 	void ConnectButtonHandler(const std::string& url);
+	std::function<void(const std::vector<avs::InputDefinition>&)> inputSetupDelegate;
 public:
 	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState, teleport::Gui &g,bool dev);
 	~ClientRenderer();
+	void SetInputSetupDelegate(std::function<void(const std::vector<avs::InputDefinition>&)> f)
+	{
+		inputSetupDelegate = f;
+	}
 	// Implement SessionCommandInterface
 	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 	void ConfigureVideo(const avs::VideoConfig& vc) override;
@@ -172,6 +184,7 @@ public:
 	bool OnNodeLeftBounds(avs::uid nodeID) override;
 	
 	void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
+	void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) override;
 	void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
 	void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand);
 

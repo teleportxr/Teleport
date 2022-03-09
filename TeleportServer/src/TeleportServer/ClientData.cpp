@@ -81,7 +81,19 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	auto global_illumination_texture_uids = getGlobalIlluminationTextures();
 	avs::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
 	clientMessaging->sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
-
+	if (inputDefinitions.size() >= 256)
+	{
+	}
+	else
+	{
+		avs::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
+	/*	std::vector<avs::InputDefinition> inputDefinitionsV;
+		for (auto &it = inputDefinitions.begin(); it != inputDefinitions.end(); ++it)
+		{
+			inputDefinitionsV.push_back(it->second);
+		}*/
+		clientMessaging->sendCommand(setupInputsCommand, inputDefinitions);
+	}
 	isStreaming = true;
 
 	for (auto s : nodeSubTypes)
@@ -100,6 +112,10 @@ void ClientData::setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType)
 		clientMessaging->setNodeSubtype(nodeID, subType);
 		nodeSubTypes[nodeID].status = ReflectedStateStatus::SENT;
 	}
+}
+void ClientData::setInputDefinitions(const std::vector<avs::InputDefinition>& inputDefs)
+{
+	inputDefinitions = inputDefs;
 }
 
 bool ClientData::setOrigin(uint64_t ctr,avs::vec3 pos,bool set_rel,avs::vec3 rel_to_head,avs::vec4 orientation)

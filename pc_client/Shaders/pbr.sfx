@@ -344,7 +344,7 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	vec3 diffuse_env		=diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
 	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
-	vec3 envSpecularColour	= ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
+	//vec3 envSpecularColour	= ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
 	vec3 specular			=surfaceState.kS* env;
 
 	 //Metallic materials will have no diffuse output.
@@ -362,7 +362,7 @@ vec3 PBRLightmap(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 	// Sample the environment maps:
 	vec3 env = specularCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
-	vec3 envSpecularColour = ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
+	//vec3 envSpecularColour = ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
 	vec3 diffuse = surfaceState.kD * surfaceProperties.globalIllumination.rgb * surfaceProperties.albedo;
 	vec3 specular = surfaceState.kS * env;
 
@@ -475,7 +475,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 //u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 //u.b=0;
 // 
-	//u.rgb= surfaceProperties.globalIllumination.xyz;
+	//u.rgb= surfaceProperties.roughness;
 	return u;
 }
 

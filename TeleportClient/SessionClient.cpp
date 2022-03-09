@@ -172,7 +172,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose* controllerPoses
 	,uint64_t poseValidCounter
 	,const avs::Pose &originPose
-	,const ControllerState* controllerStates
+	,const Input &input
 	,bool requestKeyframe
 	,double t
 	,double deltaTime)
@@ -190,8 +190,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 				if(setupCommand.control_model==avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY)
 					sendOriginPose(poseValidCounter,originPose);
 			}
-			SendInput(0,controllerStates[0]);
-			SendInput(1,controllerStates[1]);
+			SendInput(input);
 			SendResourceRequests();
 			SendReceivedResources();
 			SendNodeUpdates();
@@ -232,9 +231,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		return;
 	}
 #endif
-
-	mPrevControllerState[0]= controllerStates[0];
-	mPrevControllerState[1]= controllerStates[1];
 
 	//Append resource requests to the request list again, if it has been too long since we sent the request.
 	for(auto sentResource : mSentResourceRequests)
@@ -339,6 +335,9 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::SetupLighting:
 			ReceiveSetupLightingCommand(packet);
 			break;
+		case avs::CommandPayloadType::SetupInputs:
+			ReceiveSetupInputsCommand(packet);
+			break;
 		case avs::CommandPayloadType::UpdateNodeStructure:
 			ReceiveUpdateNodeStructureCommand(packet);
 			break;
@@ -380,34 +379,13 @@ void SessionClient::sendOriginPose(uint64_t validCounter,const avs::Pose& origin
 	SendClientMessage(message);
 }
 
-void SessionClient::SendInput(int id,const ControllerState& controllerState)
+void SessionClient::SendInput(const Input& input)
 {
-	const teleport::client::ControllerState& prevControllerState=mPrevControllerState[id];
 	avs::InputState inputState = {};
-	inputState.buttonsDown= controllerState.mButtons;
-	const uint32_t buttonsDiffMask = prevControllerState.mButtons ^ controllerState.mButtons;
-	inputState.controllerId=id;
-	inputState.joystickAxisX = controllerState.mJoystickAxisX;
-	inputState.joystickAxisY = controllerState.mJoystickAxisY;
-	inputState.triggerBack = controllerState.triggerBack;
-	inputState.triggerGrip = controllerState.triggerGrip;
+	//const uint32_t buttonsDiffMask = prevControllerState.mButtons ^ input.mButtons;
 	
 	enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
 
-	// Trackpad axis should be non-zero only if the user is currently touching the trackpad.
-	if(controllerState.mTrackpadStatus)
-	{
-		// Remap axis value to [-1,1] range.
-		inputState.trackpadAxisX = 2.0f * controllerState.mTrackpadX - 1.0f;
-		inputState.trackpadAxisY = 2.0f * controllerState.mTrackpadY - 1.0f;
-
-		// If this update does not include button information send it unreliably to improve latency.
-		// NO! Events could be out of sequence!!
-		if(buttonsDiffMask == 0)
-		{
-			//packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
-		}
-	}
 #if TELEPORT_INTERNAL_CHECKS
 	for (auto c : controllerState.analogueEvents)
 	{
@@ -415,9 +393,9 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 	}
 #endif
 	//Set event amount.
-	inputState.numBinaryEvents		= static_cast<uint32_t>(controllerState.binaryEvents.size());
-	inputState.numAnalogueEvents	= static_cast<uint32_t>(controllerState.analogueEvents.size());
-	inputState.numMotionEvents		= static_cast<uint32_t>(controllerState.motionEvents.size());
+	inputState.numBinaryEvents		= static_cast<uint32_t>(input.binaryEvents.size());
+	inputState.numAnalogueEvents	= static_cast<uint32_t>(input.analogueEvents.size());
+	inputState.numMotionEvents		= static_cast<uint32_t>(input.motionEvents.size());
 	//Calculate sizes for memory copy operations.
 	size_t inputStateSize		= sizeof(avs::InputState);
 	size_t binaryEventSize		= sizeof(avs::InputEventBinary) * inputState.numBinaryEvents;
@@ -428,9 +406,9 @@ void SessionClient::SendInput(int id,const ControllerState& controllerState)
 	ENetPacket* packet = enet_packet_create(&inputState, inputStateSize + binaryEventSize + analogueEventSize + motionEventSize, packetFlags);
 
 	//Copy events into packet.
-	memcpy(packet->data + inputStateSize, controllerState.binaryEvents.data(), binaryEventSize);
-	memcpy(packet->data + inputStateSize + binaryEventSize, controllerState.analogueEvents.data(), analogueEventSize);
-	memcpy(packet->data + inputStateSize + binaryEventSize + analogueEventSize, controllerState.motionEvents.data(), motionEventSize);
+	memcpy(packet->data + inputStateSize, input.binaryEvents.data(), binaryEventSize);
+	memcpy(packet->data + inputStateSize + binaryEventSize, input.analogueEvents.data(), analogueEventSize);
+	memcpy(packet->data + inputStateSize + binaryEventSize + analogueEventSize, input.motionEvents.data(), motionEventSize);
 
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
 	
@@ -731,6 +709,38 @@ void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
 	std::vector<avs::uid> uidList((size_t)setupLightingCommand.num_gi_textures);
 	memcpy(uidList.data(), packet->data + commandSize, sizeof(avs::uid) * uidList.size());
 	mCommandInterface->OnLightingSetupChanged(setupLightingCommand);
+}
+
+void SessionClient::ReceiveSetupInputsCommand(const ENetPacket* packet)
+{
+	avs::SetupInputsCommand setupInputsCommand;
+	memcpy(static_cast<void*>(&setupInputsCommand), packet->data, sizeof(avs::SetupInputsCommand));
+	setupInputsCommand.numInputs;
+	inputDefinitions.resize(setupInputsCommand.numInputs);
+	unsigned char* ptr = packet->data + sizeof(avs::SetupInputsCommand);
+	for (int i = 0; i < setupInputsCommand.numInputs; i++)
+	{
+		if (ptr - packet->data >= packet->dataLength)
+		{
+			TELEPORT_CERR << "Bad packet" << std::endl;
+			return;
+		}
+		auto& def = inputDefinitions[i];
+		avs::InputDefinitionNetPacket& packetDef = *((avs::InputDefinitionNetPacket*)ptr);
+		ptr += sizeof(avs::InputDefinitionNetPacket);
+		if (ptr + packetDef.pathLength - packet->data > packet->dataLength)
+		{
+			TELEPORT_CERR << "Bad packet" << std::endl;
+			return;
+		}
+		def.inputId = packetDef.inputId;
+		def.inputType = packetDef.inputType;
+		def.path.resize(packetDef.pathLength);
+		memcpy(def.path.data(), ptr, packetDef.pathLength);
+		ptr += packetDef.pathLength;
+	}
+	// Now process the input definitions according to the available hardware:
+	mCommandInterface->OnInputsSetupChanged(inputDefinitions);
 }
 
 void SessionClient::ReceiveUpdateNodeStructureCommand(const ENetPacket* packet)

@@ -35,6 +35,7 @@ public:
     virtual bool OnNodeEnteredBounds(avs::uid node_uid) = 0;
     virtual bool OnNodeLeftBounds(avs::uid node_uid) = 0;
 	virtual void OnLightingSetupChanged(const avs::SetupLightingCommand &) =0;
+	virtual void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) =0;
 	virtual void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& ) =0;
 	virtual void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &)=0;
     
@@ -79,7 +80,7 @@ public:
 	void Frame(
 			const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
 			const avs::Pose *controllerPoses, uint64_t originValidCounter,
-			const avs::Pose &originPose, const teleport::client::ControllerState *controllerState,
+			const avs::Pose &originPose, const teleport::client::Input& input,
 			bool requestKeyframe, double time, double deltaTime);
 
 	bool IsConnected() const;
@@ -111,7 +112,7 @@ private:
     void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
 	void sendOriginPose(uint64_t validCounter,const avs::Pose& headPose);
     void SendControllerPoses(const avs::Pose& headPose,const avs::Pose* poses);
-    void SendInput(int id,const teleport::client::ControllerState& controllerState);
+    void SendInput(const teleport::client::Input& input);
     void SendResourceRequests();
     void SendReceivedResources();
     void SendNodeUpdates();
@@ -131,6 +132,7 @@ private:
 	void ReceiveNodeAnimationControlUpdate(const ENetPacket* packet);
 	void ReceiveNodeAnimationSpeedUpdate(const ENetPacket* packet);
 	void ReceiveSetupLightingCommand(const ENetPacket* packet);
+	void ReceiveSetupInputsCommand(const ENetPacket* packet);
 	void ReceiveUpdateNodeStructureCommand(const ENetPacket* packet);
 	void ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet);
 
@@ -146,8 +148,6 @@ private:
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;
 	ENetAddress mServerEndpoint{};
-
-	teleport::client::ControllerState mPrevControllerState[2];
 
     bool handshakeAcknowledged = false;
     std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for nodes.
@@ -166,4 +166,5 @@ private:
 	avs::SetupLightingCommand setupLightingCommand;
 	std::string remoteIP;
 	double mTimeSinceLastServerComm = 0;
+	std::vector<avs::InputDefinition> inputDefinitions;
 };

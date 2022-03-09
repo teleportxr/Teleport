@@ -265,7 +265,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		useOpenXR.Init(renderPlatform, "Teleport VR Client");
 		useOpenXR.MakeActions();
 	}
-	auto showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
+	std::function<void()> showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
 	if (useOpenXR.HaveXRDevice())
 		useOpenXR.SetMenuButtonHandler(showHideDelegate);
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
@@ -273,6 +273,9 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	if(server_ips.size())
 		clientRenderer->SetServer(server_ips[0].c_str());
 
+
+	std::function<void(const std::vector<avs::InputDefinition>&)> setInputSetupDelegate= std::bind(&teleport::UseOpenXR::OnInputsSetupChanged, &useOpenXR,std::placeholders::_1);
+	clientRenderer->SetInputSetupDelegate(setInputSetupDelegate);
 #if TELEPORT_CLIENT_USE_D3D12
 	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
 #endif
@@ -452,8 +455,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					{
 						const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);
 						clientDeviceState.SetControllerPose(i, controllerPose.position, controllerPose.orientation);
-						const teleport::client::ControllerState& controllerState = useOpenXR.GetControllerState(i);
-						clientDeviceState.SetControllerState(i, controllerState);
+						const teleport::client::Input& inputs = useOpenXR.GetInputs();
+						clientDeviceState.SetInputs(inputs);
 					}
 				}
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());

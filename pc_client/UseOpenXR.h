@@ -23,9 +23,10 @@ namespace teleport
 		void Shutdown();
 		void PollEvents(bool& exit);
 		bool HaveXRDevice() const;
+		void OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_);
 		const avs::Pose& GetHeadPose() const;
 		const avs::Pose& GetControllerPose(int index) const;
-		const teleport::client::ControllerState& GetControllerState(int index) const;
+		const teleport::client::Input& GetInputs() const;
 		size_t GetNumControllers() const
 		{
 			return controllerPoses.size();
@@ -36,14 +37,14 @@ namespace teleport
 		}
 		simul::crossplatform::Texture* GetRenderTexture(int index=0);
 	protected:
-		void ReportError( int result);
+	
 		simul::crossplatform::RenderPlatform* renderPlatform = nullptr;
 		bool haveXRDevice = false;
 		void RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext, XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
 		bool RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext,XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
 		avs::Pose headPose;
 		std::vector<avs::Pose> controllerPoses;
-		std::vector<teleport::client::ControllerState> controllerStates;
+		teleport::client::Input inputs;
 		void openxr_poll_predicted(XrTime predicted_time);
 		std::function<void()> menuButtonHandler;
 	};

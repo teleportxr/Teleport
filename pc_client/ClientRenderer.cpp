@@ -894,11 +894,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		gui.LinePrint( platform::core::QuickFormat("      angle: %3.3f", controllerSim.angle));
 		gui.LinePrint( platform::core::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
 		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
-		gui.LinePrint( platform::core::QuickFormat("\n   joystick: %3.3f %3.3f", controllerStates[0].mJoystickAxisX, controllerStates[0].mJoystickAxisY));
-		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f", controllerStates[1].mJoystickAxisX, controllerStates[1].mJoystickAxisY));
 
-		gui.LinePrint( platform::core::QuickFormat("\n   trigger: %3.3f %3.3f", controllerStates[0].triggerBack, controllerStates[0].triggerGrip));
-		gui.LinePrint( platform::core::QuickFormat("            : %3.3f %3.3f", controllerStates[1].triggerBack, controllerStates[1].triggerGrip));
 	}
 	gui.EndDebugGui(deviceContext);
 
@@ -1277,6 +1273,33 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height)
 void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 {
 	lastSetupLightingCommand=l;
+}
+
+void ClientRenderer::OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_)
+{
+	inputDefinitions = inputDefinitions_;
+	if (inputSetupDelegate)
+		inputSetupDelegate(inputDefinitions_);
+	// for each input, we will match it 
+	inputIdMappings.clear();
+	std::string leftButton = "/interaction_profiles/simul/mouse_ext/input/trigger/value";
+	std::string rightButton = "/interaction_profiles/simul/mouse_ext/input/a/click";
+	std::string middleButton = "/interaction_profiles/simul/mouse_ext/input/b/click";
+	for (const auto& d : inputDefinitions)
+	{
+		if (Match(leftButton, d.path))
+		{
+			inputIdMappings[teleport::ClientRenderer::MouseOrKey::LEFT_BUTTON] = d.inputId;
+		}
+		if (Match(rightButton, d.path))
+		{
+			inputIdMappings[teleport::ClientRenderer::MouseOrKey::RIGHT_BUTTON] = d.inputId;
+		}
+		if (Match(middleButton, d.path))
+		{
+			inputIdMappings[teleport::ClientRenderer::MouseOrKey::MIDDLE_BUTTON] = d.inputId;
+		}
+	}
 }
 
 void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
@@ -1692,12 +1715,12 @@ void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationCo
 	case avs::AnimationTimeControl::ANIMATION_TIME:
 		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 		break;
-	case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
-		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[0].triggerBack, 1.0f);
+	/*case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
+		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &inputs.triggerBack, 1.0f);
 		break;
 	case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
-		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[1].triggerBack, 1.0f);
-		break;
+		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &inputs.triggerBack, 1.0f);
+		break;*/
 	default:
 		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
 		break;
@@ -1748,7 +1771,7 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 	Multiply(local_controller_dir,q, local_controller_dir);
 	float azimuth	= atan2f(-local_controller_dir.x, local_controller_dir.y);
 	float elevation	= asin(local_controller_dir.z);
-	q.Reset();// = { 0.f, 0.f, 0.f, 1.0f };
+	q.Reset();
 	q.Rotate(azimuth,vec3(0,0,1.0f));
 	q.Rotate(elevation, vec3(1.0f, 0, 0));
 
@@ -1803,18 +1826,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
 		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
-		controllerStates[0].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::LEFT_BUTTON) == crossplatform::MouseCameraInput::LEFT_BUTTON ? 1.0f : 0.0f;
-		controllerStates[1].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::RIGHT_BUTTON) == crossplatform::MouseCameraInput::RIGHT_BUTTON ? 1.0f : 0.0f;
-
-		controllerStates[1].mJoystickAxisX = stored_clientspace_input.x;
-		controllerStates[1].mJoystickAxisY = stored_clientspace_input.y;
-
-		controllerStates[0].mTrackpadX = 0.5f;
-		controllerStates[0].mTrackpadY = 0.5f;
-		controllerStates[0].mButtons = mouseCameraInput.MouseButtons;
-		controllerStates[0].mTrackpadStatus = true;
-		clientDeviceState->SetControllerState(0, controllerStates[0]);
-		clientDeviceState->SetControllerState(1, controllerStates[1]);
+		clientDeviceState->SetInputs( inputs);
 
 	}
 	// Handle networked session.
@@ -1834,7 +1846,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		controllerPoses[0]=clientDeviceState->controllerPoses[0].globalPose;
 		controllerPoses[1]=clientDeviceState->controllerPoses[1].globalPose;
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
-			clientDeviceState->controllerStates, clientPipeline.decoder.idrRequired(),fTime, time_step);
+			clientDeviceState->input, clientPipeline.decoder.idrRequired(),fTime, time_step);
 
 		if(receivedInitialPos != sessionClient.receivedInitialPos)
 		{
@@ -1884,10 +1896,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		FillInControllerPose(1, 0.5f);
 	}
 	// Have processed these, can free them now.
-	for (int i = 0; i < 2; i++)
-	{
-		controllerStates[i].clear();
-	}
+	inputs.clear();
 }
 
 void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
@@ -1898,18 +1907,20 @@ void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButto
 		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 	if(bLeftButtonDown)
 	{
-		controllerStates[0].triggerBack = 1.0f;
-		controllerStates[0].addAnalogueEvent( avs::InputId::TRIGGER01, 1.0f);
-		controllerStates[1].triggerBack = 1.0f;
-		controllerStates[1].addAnalogueEvent(avs::InputId::TRIGGER01, 1.0f);
+		//  usually trigger
+		inputs.addAnalogueEvent( inputIdMappings[MouseOrKey::LEFT_BUTTON], 1.0f);
 	}
 	else if(bRightButtonDown)
 	{
-		controllerStates[0].addBinaryEvent( avs::InputId::BUTTON_B, true);
+		// usually button B
+		inputs.addAnalogueEvent(inputIdMappings[MouseOrKey::RIGHT_BUTTON], 1.0f);
+		inputs.addBinaryEvent(inputIdMappings[MouseOrKey::RIGHT_BUTTON], true);
 	}
 	else if(bMiddleButtonDown)
 	{
-		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_A, true);
+		// usually button A
+		inputs.addAnalogueEvent(inputIdMappings[MouseOrKey::MIDDLE_BUTTON], 1.0f);
+		inputs.addBinaryEvent(inputIdMappings[MouseOrKey::MIDDLE_BUTTON], true);
 	}
 }
 
@@ -1921,18 +1932,18 @@ void ClientRenderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRight
 		& (bMiddleButtonReleased ? ~crossplatform::MouseCameraInput::MIDDLE_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS);
 	if(bLeftButtonReleased)
 	{
-		controllerStates[0].triggerBack = 0.f;
-		controllerStates[0].addAnalogueEvent( avs::InputId::TRIGGER01, 0.0f);
-		controllerStates[1].triggerBack = 0.f;
-		controllerStates[1].addAnalogueEvent(avs::InputId::TRIGGER01, 0.0f);
+		inputs.addAnalogueEvent(inputIdMappings[MouseOrKey::LEFT_BUTTON], 0.0f);
 	}
 	else if(bRightButtonReleased)
 	{
-		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_B, false);
+		// usually button B
+		inputs.addAnalogueEvent(inputIdMappings[MouseOrKey::RIGHT_BUTTON], 0.0f);
+		inputs.addBinaryEvent(inputIdMappings[MouseOrKey::RIGHT_BUTTON], false);
 	}
 	else if(bMiddleButtonReleased)
 	{
-		controllerStates[0].addBinaryEvent(avs::InputId::BUTTON_A, false);
+		inputs.addAnalogueEvent(inputIdMappings[MouseOrKey::MIDDLE_BUTTON], 0.0f);
+		inputs.addBinaryEvent(inputIdMappings[MouseOrKey::MIDDLE_BUTTON], false);
 	}
 }
 

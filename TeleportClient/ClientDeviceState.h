@@ -24,12 +24,12 @@ namespace teleport
 			LocalGlobalPose headPose;
 			avs::Pose originPose;					// in game absolute space.
 			LocalGlobalPose controllerPoses[2];		// in game absolute space.
-			teleport::client::ControllerState controllerStates[2];
+			teleport::client::Input input;
 
 			void TransformPose(LocalGlobalPose &p);
 			void SetHeadPose(avs::vec3 pos,clientrender::quat q);
 			void SetControllerPose(int index,avs::vec3 pos,clientrender::quat q);
-			void SetControllerState(int index, const teleport::client::ControllerState& st);
+			void SetInputs(const teleport::client::Input& st);
 
 			//! From the stored relative poses, update the global ones to correspond.
 			void UpdateGlobalPoses();

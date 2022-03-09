@@ -1,6 +1,7 @@
 #include "ClientRender/Renderer.h"
 #include <libavstream/libavstream.hpp>
 #include "TeleportClient/ServerTimestamp.h"
+#include <regex>
 
 avs::Timestamp clientrender::platformStartTimestamp ;
 static bool timestamp_initialized=false;
@@ -32,4 +33,30 @@ void Renderer::Update(double timestamp_ms)
 	localResourceCreator.Update(static_cast<float>(timeElapsed_s));
 
 	previousTimestamp = timestamp_ms;
+}
+
+bool Renderer::Match(const std::string& full_string, const std::string& substring)
+{
+	try
+	{
+		std::regex regex(substring, std::regex_constants::icase | std::regex::extended);
+		std::smatch match;
+		if (std::regex_search(full_string, match, regex))
+		{
+			std::cout << "matches for '" << full_string << "'\n";
+			std::cout << "Prefix: '" << match.prefix() << "'\n";
+			for (size_t i = 0; i < match.size(); ++i)
+				std::cout << i << ": " << match[i] << '\n';
+			std::cout << "Suffix: '" << match.suffix() << "\'\n\n";
+			return true;
+		}
+	}
+	catch (std::exception&)
+	{
+		return false;
+	}
+	catch (...)
+	{
+		return false;
+	}
 }

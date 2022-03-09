@@ -25,8 +25,12 @@ namespace teleport
 			//We are using hard-set values as the Android compiler didn't like reading from referenced memory in a dictionary; every other frame it would evaluate to zero.
 			float triggerBack = 0.0f;
 			float triggerGrip = 0.0f;
+			void clear();
+		};
 
-			//These are split for simplicity, and we can't marshal polymorphic types to the managed C# code.
+		class Input
+		{
+		public:			
 			std::vector<avs::InputEventBinary> binaryEvents;
 			std::vector<avs::InputEventAnalogue> analogueEvents;
 			std::vector<avs::InputEventMotion> motionEvents;

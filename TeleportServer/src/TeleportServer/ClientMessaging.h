@@ -107,7 +107,63 @@ namespace teleport
 			
 			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 		}
+		template <> bool sendCommand<avs::InputDefinition>(const avs::Command& command, const std::vector<avs::InputDefinition>& appendedInputDefinitions) const
+		{
+			if (!peer)
+			{
+				TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
+				return false;
+			}
+			if (command.commandPayloadType != avs::CommandPayloadType::SetupInputs)
+			{
+				TELEPORT_CERR << "Invalid command!\n";
+				return false;
+			}
+			size_t commandSize = command.getCommandSize();
+			size_t listSize = appendedInputDefinitions.size()*(sizeof(avs::InputId)+sizeof(avs::InputType));
+			for (const auto& d : appendedInputDefinitions)
+			{
+				// a uint16 to store the path length.
+				listSize += sizeof(uint16_t);
+				// and however many chars in the path.
+				listSize += sizeof(char)*d.path.length();
+				if (d.path.length() >= (1 << 16))
+				{
+					TELEPORT_CERR << "Input path too long!\n";
+					return false;
+				}
+			}
 
+			ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
+
+			if (!packet)
+			{
+				TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! Failed to create packet!\n";
+				return false;
+			}
+
+			//Copy list into packet.
+			enet_packet_resize(packet, commandSize + listSize);
+			unsigned char* data_ptr = packet->data + commandSize;
+			for (const auto& d : appendedInputDefinitions)
+			{
+				avs::InputDefinitionNetPacket defPacket;
+				defPacket.inputId = d.inputId;
+				defPacket.inputType = d.inputType;
+				defPacket.pathLength= (uint16_t)d.path.length();
+				memcpy(data_ptr, &defPacket, sizeof(defPacket));
+				data_ptr += sizeof(defPacket);
+				memcpy(data_ptr, d.path.c_str(),  d.path.length());
+				data_ptr += d.path.length();
+			}
+			if (packet->data + commandSize + listSize != data_ptr)
+			{
+				TELEPORT_CERR << "Failed to send command due to packet size discrepancy\n";
+				return false;
+			}
+
+			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
+		}
 		std::string getClientIP() const 
 		{
 			return clientIP;
@@ -193,7 +249,7 @@ namespace teleport
 				motionEvents.clear();
 			}
 		};
-		InputStateAndEvents latestInputStateAndEvents[2]; //Latest input state received from the client.
+		InputStateAndEvents latestInputStateAndEvents; //Latest input state received from the client.
 
 		// Seconds
 		static constexpr float startSessionTimeout = 3;

@@ -15,13 +15,16 @@ void ControllerState::clear()
 	mJoystickAxisY = 0.0f;
 	triggerBack = 0.0f;
 	triggerGrip = 0.0f;
+}
 
+void Input::clear()
+{
 	binaryEvents.clear();
 	analogueEvents.clear();
 	motionEvents.clear();
 }
 
-void ControllerState::addBinaryEvent( avs::InputId inputID, bool activated)
+void Input::addBinaryEvent( avs::InputId inputID, bool activated)
 {
 	avs::InputEventBinary binaryEvent;
 	binaryEvent.eventID = nextEventID++;
@@ -31,7 +34,7 @@ void ControllerState::addBinaryEvent( avs::InputId inputID, bool activated)
 	binaryEvents.push_back(binaryEvent);
 }
 
-void ControllerState::addAnalogueEvent( avs::InputId inputID, float strength)
+void Input::addAnalogueEvent( avs::InputId inputID, float strength)
 {
 //	TELEPORT_COUT << "Analogue: " << eventID << " " << (int)inputID << " " << strength << std::endl;
 	avs::InputEventAnalogue analogueEvent;
@@ -42,7 +45,7 @@ void ControllerState::addAnalogueEvent( avs::InputId inputID, float strength)
 	analogueEvents.push_back(analogueEvent);
 }
 
-void ControllerState::addMotionEvent( avs::InputId inputID, avs::vec2 motion)
+void Input::addMotionEvent( avs::InputId inputID, avs::vec2 motion)
 {
 	avs::InputEventMotion motionEvent;
 	motionEvent.eventID = nextEventID++;

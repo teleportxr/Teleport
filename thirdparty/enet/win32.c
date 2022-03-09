@@ -170,7 +170,7 @@ enet_socket_bind (ENetSocket socket, const ENetAddress * address)
     {
         show_winsock_error();
         return -1;
-    }
+}
     return  bind_result== SOCKET_ERROR ? -1 : 0;
 }
 
@@ -327,7 +327,7 @@ enet_socket_send (ENetSocket socket,
                   size_t bufferCount)
 {
     struct sockaddr_in sin;
-    DWORD sentLength;
+    DWORD sentLength = 0;
 
     if (address != NULL)
     {
@@ -365,7 +365,7 @@ enet_socket_receive (ENetSocket socket,
 {
     INT sinLength = sizeof (struct sockaddr_in);
     DWORD flags = 0,
-          recvLength;
+          recvLength = 0;
     struct sockaddr_in sin;
 
     if (WSARecvFrom (socket,

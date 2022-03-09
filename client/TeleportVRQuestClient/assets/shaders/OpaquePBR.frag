@@ -294,13 +294,12 @@ vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 	return specularColour+vec3(m3,m3,m3);
 }
 
-vec3 PBRAmbient(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties)
+vec3 PBRAmbient(SurfaceState surfaceState, SurfaceProperties surfaceProperties)
 {
 	vec3 diffuse			=surfaceState.kD*surfaceProperties.albedo * surfaceProperties.diffuse_env;
 	//diffuse					*=surfaceProperties.ao;
-
-	vec3 envSpecularColour	=ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness, surfaceState.n_v);
-	vec3 specular			=surfaceState.kS*envSpecularColour*surfaceState.env;
+	//vec3 envSpecularColour	=ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness, surfaceState.n_v);
+	vec3 specular			=surfaceState.kS*surfaceState.env;
 	vec3 colour				=diffuse+specular;
 //colour.r=surfaceProperties.roughness;
 	return colour;
@@ -311,7 +310,7 @@ vec4 Gamma(vec4 a)
 	return pow(a, vec4(.45, .45, .45, 1.0));
 }
 
-vec3 PBRLight(SurfaceState surfaceState, vec3 viewDir,vec2 nh2_lh2, SurfaceProperties surfaceProperties, vec3 irradiance_n_l)
+vec3 PBRLight(SurfaceState surfaceState, vec2 nh2_lh2, SurfaceProperties surfaceProperties, vec3 irradiance_n_l)
 {
 	float lightDV					=CombinedVisibilityDistribution(surfaceProperties.roughness,surfaceProperties.roughness4, nh2_lh2);
 	vec3 diffuse					=surfaceState.kD*irradiance_n_l * surfaceProperties.albedo ;
@@ -334,7 +333,7 @@ vec3 SpotLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfac
 	sl.nh2_lh2_nl					=vec3(saturate(dot(sl.halfway,surfaceProperties.normal))
 										,l_h*l_h
 										,0);
-	return PBRLight(surfaceState, viewDir,sl.nh2_lh2_nl.xy,surfaceProperties, irradiance);
+	return PBRLight(surfaceState, sl.nh2_lh2_nl.xy,surfaceProperties, irradiance);
 }
 
 vec3 DirectionalLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
@@ -347,7 +346,7 @@ vec3 DirectionalLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties
 	sl.nh2_lh2_nl					=vec3(saturate(dot(sl.halfway,surfaceProperties.normal))
 	,l_h*l_h
 	,0);
-	return PBRLight(surfaceState, viewDir, sl.nh2_lh2_nl.xy,surfaceProperties, lightTag.colour.rgb);
+	return PBRLight(surfaceState,  sl.nh2_lh2_nl.xy,surfaceProperties, lightTag.colour.rgb);
 }
 
 vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag)
@@ -364,7 +363,7 @@ vec3 PBRAddLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 	sl.nh2_lh2_nl=vec3(saturate(dot(sl.halfway,surfaceProperties.normal))
 					,l_h*l_h
 					,saturate(dot(surfaceProperties.normal, sl.directionToLight)));
-	return PBRLight(surfaceState, viewDir, sl.nh2_lh2_nl.xy,surfaceProperties, irradiance*sl.nh2_lh2_nl.z);
+	return PBRLight(surfaceState, sl.nh2_lh2_nl.xy,surfaceProperties, irradiance*sl.nh2_lh2_nl.z);
 }
 
 vec3 PBRAddVertexLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag, SurfaceLightProperties vertexLight)
@@ -372,12 +371,12 @@ vec3 PBRAddVertexLight(SurfaceState surfaceState, vec3 viewDir, SurfacePropertie
 	float d							=max(0.001,vertexLight.distanceToLight/lightTag.radius);
 	float atten						=step(vertexLight.distanceToLight,lightTag.range);
 	vec3 irradiance					=lightTag.colour.rgb*lerp(1.0,atten/(d*d),lightTag.is_point);
-	return PBRLight(surfaceState, viewDir, vertexLight.nh2_lh2_nl.xy,surfaceProperties, irradiance*vertexLight.nh2_lh2_nl.z);
+	return PBRLight(surfaceState, vertexLight.nh2_lh2_nl.xy,surfaceProperties, irradiance*vertexLight.nh2_lh2_nl.z);
 }
 
 vec3 PBRAddDirectionalVertexLight(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties, LightTag lightTag, vec3 nh2_lh2_nl)
 {
-	return PBRLight(surfaceState, viewDir, nh2_lh2_nl.xy,surfaceProperties, lightTag.colour.rgb*nh2_lh2_nl.z);
+	return PBRLight(surfaceState, nh2_lh2_nl.xy,surfaceProperties, lightTag.colour.rgb*nh2_lh2_nl.z);
 }
 
 SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool debug)
@@ -412,7 +411,7 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 	}
 	else
 	{
-		surfaceProperties.roughness		=u_CombinedOutputScalarRoughMetalOcclusion.r;
+		surfaceProperties.roughness		=u_CombinedOutputScalarRoughMetalOcclusion.r+u_CombinedOutputScalarRoughMetalOcclusion.a;
 		surfaceProperties.metallic		=u_CombinedOutputScalarRoughMetalOcclusion.g;
 		surfaceProperties.ao			=u_CombinedOutputScalarRoughMetalOcclusion.b;
 	}
@@ -430,10 +429,16 @@ SurfaceProperties GetSurfaceProperties(bool diffuseTex, bool normalTex, bool com
 	return surfaceProperties;
 }
 
-vec3 PBRLightmap(SurfaceProperties surfaceProperties)
+vec3 PBRLightmap(SurfaceState surfaceState,SurfaceProperties surfaceProperties)
 {
-	vec3 lookup=textureLod(u_LightmapTexture, v_UV_lightmap,0.0).rgb;
-	return lookup.rgb*surfaceProperties.albedo;
+	float roughness_mip		=MipFromRoughness(surfaceProperties.roughness, 5.0);
+	vec3 lookup				=textureLod(u_LightmapTexture, v_UV_lightmap,0.0).rgb;
+	vec3 diffuse			=surfaceState.kD*surfaceProperties.albedo * lookup;
+	//diffuse					*=surfaceProperties.ao;
+	vec3 envSpecularColour	=ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness, surfaceState.n_v);
+	vec3 specular			=surfaceState.kS*envSpecularColour;
+	vec3 colour				=diffuse+specular;
+	return envSpecularColour;// colour;
 }
 
 void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool emissiveTex, bool ambient, int maxLights,bool highlight)
@@ -449,11 +454,11 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	vec3 c							=vec3(0,0,0);
 	if (ambient)
 	{
-		c							=PBRAmbient(surfaceState, view, surfaceProperties);
+		c							=PBRAmbient(surfaceState, surfaceProperties);
 	}
 	if(lightmap)
 	{
-		c							=PBRLightmap(surfaceProperties);
+		c							=PBRLightmap(surfaceState, surfaceProperties);
 	}
 	for (int i=0;i<maxLights;i++)
 	{
@@ -477,6 +482,7 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	{
 		u.rgb+=vec3(0.1,0.2,0.15);
 	}
+	//u.r=surfaceProperties.roughness;
 	//u.rgb=fract(v_Position);//vec3(dist_to_frag,dist_to_frag,cam.u_DrawDistance));//v_UV_lightmap.xyy);
 	gl_FragColor = Gamma(u);
 }

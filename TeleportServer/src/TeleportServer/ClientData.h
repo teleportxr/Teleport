@@ -44,9 +44,10 @@ namespace teleport
 				, GetUnixTimestampFn getUnixTimestamp
 				, bool use_ssl);
 			void setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType);
-
+			void setInputDefinitions(const std::vector<avs::InputDefinition> &inputDefs);
 			// client settings from engine-side:
 			teleport::ClientSettings clientSettings;
+			std::vector<avs::InputDefinition> inputDefinitions;
 			teleport::CasterContext casterContext;
 
 			std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService;

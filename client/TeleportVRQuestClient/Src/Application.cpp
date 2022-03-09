@@ -653,6 +653,30 @@ void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)
 	clientRenderer.lastSetupLightingCommand=s;
 }
 
+void Application::OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_)
+{
+	clientRenderer.inputDefinitions = inputDefinitions_;
+	// for each input, we will match it
+	inputIdMappings.clear();
+	std::string leftButton = "/interaction_profiles/simul/mouse_ext/input/trigger/value";
+	std::string rightButton = "/interaction_profiles/simul/mouse_ext/input/a/click";
+	std::string middleButton = "/interaction_profiles/simul/mouse_ext/input/b/click";
+	for (const auto& d : inputDefinitions)
+	{
+		if (Match(leftButton, d.path))
+		{
+			inputIdMappings[teleport::ClientRenderer::MouseOrKey::LEFT_BUTTON] = d.inputId;
+		}
+		if (Match(rightButton, d.path))
+		{
+			inputIdMappings[teleport::ClientRenderer::MouseOrKey::RIGHT_BUTTON] = d.inputId;
+		}
+		if (Match(middleButton, d.path))
+		{
+			inputIdMappings[teleport::ClientRenderer::MouseOrKey::MIDDLE_BUTTON] = d.inputId;
+		}
+	}
+}
 void Application::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
 	clientRenderer.geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);

@@ -104,12 +104,13 @@ void Controllers::Update(ovrMobile *ovrmobile)
 	{
 		if(mControllerIDs[i] != 0)
 		{
-			teleport::client::ControllerState controllerState = {};
+			teleport::client::Input controllerState = {};
 			teleport::client::ControllerState &lastControllerState = mLastControllerStates[i];
 			ovrInputStateTrackedRemote ovrState;
 			ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
 			if(vrapi_GetCurrentInputState(ovrmobile, mControllerIDs[i], &ovrState.Header) >= 0)
 			{
+#if 0
 				controllerState.mButtons = ovrState.Buttons;
 
 				controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
@@ -117,35 +118,35 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
 				controllerState.mJoystickAxisX = ovrState.Joystick.x;
 				controllerState.mJoystickAxisY = ovrState.Joystick.y;
-
-				if(controllerState.mTrackpadStatus)
+#endif
+				if(ovrState.TrackpadStatus)
 				{
-					float dx = controllerState.mTrackpadX - 0.5f;
-					float dy = controllerState.mTrackpadY - 0.5f;
+					float dx = ovrState.TrackpadPosition.x / mTrackpadDim.x - 0.5f;
+					float dy = ovrState.TrackpadPosition.y / mTrackpadDim.y - 0.5f;
 					SetStickOffset(dx, dy);
 				}
 
-				uint32_t pressed = controllerState.mButtons & ~lastControllerState.mButtons;
-				controllerState.mReleased = ~controllerState.mButtons & lastControllerState.mButtons;
+				//uint32_t pressed = controllerState.mButtons & ~lastControllerState.mButtons;
+				//controllerState.mReleased = ~controllerState.mButtons & lastControllerState.mButtons;
 
 				//Detect when a button press or button release event occurs, and store the event in controllerState.
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_A, avs::InputId::BUTTON01);
+			/*	AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_A, avs::InputId::BUTTON01);
 				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_X, avs::InputId::BUTTON01);
 				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_B, avs::InputId::BUTTON02);
 				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Y, avs::InputId::BUTTON02);
 				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Joystick, avs::InputId::BUTTON_STICK);
-
+*/
 				if(lastControllerState.triggerBack != ovrState.IndexTrigger)
 				{
 					controllerState.addAnalogueEvent(avs::InputId::TRIGGER_BACK, ovrState.IndexTrigger);
 				}
-				controllerState.triggerBack = ovrState.IndexTrigger;
+				//controllerState.triggerBack = ovrState.IndexTrigger;
 
 				if(lastControllerState.triggerGrip != ovrState.GripTrigger)
 				{
 					controllerState.addAnalogueEvent(avs::InputId::TRIGGER_GRIP, ovrState.GripTrigger);
 				}
-				controllerState.triggerGrip = ovrState.GripTrigger;
+				//controllerState.triggerGrip = ovrState.GripTrigger;
 
 				if((controllerState.mReleased & ovrButton::ovrButton_Enter) != 0)
 				{

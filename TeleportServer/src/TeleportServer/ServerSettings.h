@@ -102,6 +102,11 @@ namespace teleport
 		avs::BackgroundMode backgroundMode;
 		float drawDistance;
 	};
+	struct InputDefinitionInterop
+	{
+		avs::InputId inputId;
+		avs::InputType inputType;
+	} AVS_PACKED;
 #pragma pack(pop)
 
 	struct CasterNetworkSettings

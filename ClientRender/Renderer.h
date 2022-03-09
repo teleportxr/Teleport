@@ -51,9 +51,11 @@ namespace clientrender
 		bool using_vr = true;
 		clientrender::GeometryCache localGeometryCache;
 		clientrender::ResourceCreator localResourceCreator;
+		bool Match(const std::string& full_string, const std::string& substring);
 	public:
 		clientrender::GeometryCache geometryCache;
 		clientrender::ResourceCreator resourceCreator;
+		std::vector<avs::InputDefinition> inputDefinitions;
 
 	};
 }

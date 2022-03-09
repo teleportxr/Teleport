@@ -37,9 +37,9 @@ void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,clientrender::
 	TransformPose(controllerPoses[index]);
 }
 
-void ClientDeviceState::SetControllerState(int index, const teleport::client::ControllerState& st)
+void ClientDeviceState::SetInputs( const teleport::client::Input& st)
 {
-	controllerStates[index]=st;
+	input =st;
 }
 
 void ClientDeviceState::UpdateGlobalPoses()

@@ -16,7 +16,7 @@
 #include "Platform/CrossPlatform/AxesStandard.h"
 #include "TeleportCore/ErrorHandling.h"
 
-#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){TELEPORT_CERR<<"";ReportError((int)res);}
+#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){TELEPORT_CERR<<"";ReportError(xr_instance,(int)res);}
 
 using namespace std;
 using namespace simul;
@@ -63,15 +63,40 @@ void swapchain_destroy(swapchain_t& swapchain)
 		delete swapchain.surface_data[i].target_view;
 	}
 }
+
+struct ActionMapping
+{
+	std::string path;
+	XrPath xrPath;
+	XrAction action;
+};
+enum ActionId:uint16_t
+{
+	POSE=0,
+	HAPTIC,
+	SELECT,
+	SHOW_MENU,
+	A,
+	B,
+	X,
+	Y,
+	TRIGGER,
+	GRIP,
+	AIM,
+	STICK_LEFT_X,
+	STICK_LEFT_Y,
+	STICK_RIGHT_X,
+	STICK_RIGHT_Y,
+	THUMB_LEFT_X,
+	THUMB_LEFT_Y,
+	THUMB_RIGHT_X,
+	THUMB_RIGHT_Y,
+	MAX_ACTIONS
+};
 struct input_state_t
 {
 	XrActionSet actionSet;
-	XrAction    poseAction;
-	XrAction    selectAction;
-	XrAction    showMenuAction;
-	XrAction	triggerAction;
-	XrAction	joystickActionX[2];
-	XrAction	joystickActionY[2];
+	XrAction    actions[MAX_ACTIONS];
 	XrVector2f	thumbstick[2];
 	XrPath   handSubactionPath[2];
 	XrSpace  handSpace[2];
@@ -81,6 +106,8 @@ struct input_state_t
 	XrBool32 handSelect[2];
 	XrBool32 handMenu[2];
 };
+
+std::map<uint16_t, uint16_t> mapActionIndexToInputId;
 
 const XrPosef  xr_pose_identity = { {0,0,0,1}, {0,0,0} };
 XrInstance     xr_instance = {};
@@ -407,7 +434,7 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	return true;
 }
 
-void UseOpenXR::ReportError( int result)
+static void ReportError( XrInstance xr_instance,int result)
 {
 	XrResult res = (XrResult)result;
 	char str[XR_MAX_RESULT_STRING_SIZE];
@@ -425,29 +452,59 @@ void UseOpenXR::MakeActions()
 	xrStringToPath(xr_instance, "/user/hand/left", &xr_input.handSubactionPath[0]);
 	xrStringToPath(xr_instance, "/user/hand/right", &xr_input.handSubactionPath[1]);
 
-	// Create an action to track the position and orientation of the hands! This is
-	// the controller location, or the center of the palms for actual hands.
-	XrActionCreateInfo action_info = { XR_TYPE_ACTION_CREATE_INFO };
-	action_info.countSubactionPaths = _countof(xr_input.handSubactionPath);
-	action_info.subactionPaths = xr_input.handSubactionPath;
-	action_info.actionType = XR_ACTION_TYPE_POSE_INPUT;
-	strcpy_s(action_info.actionName, "hand_pose");
-	strcpy_s(action_info.localizedActionName, "Hand Pose");
-	XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.poseAction));
+	struct Action
+	{
+		ActionId actionId;
+		const char* name;
+		const char* localizedName;
+		XrActionType xrActionType;
+	};
+	struct ActionSet
+	{
+		std::vector<XrPath> subActionPaths;
+		std::vector<XrAction> xrActions;
+		ActionSet(XrInstance & xr_instance,std::initializer_list<const char *>sub_actions,std::initializer_list<Action> actions)
+		{
+			subActionPaths.resize(sub_actions.size());
+			size_t i = 0;
+			for (auto& s : sub_actions)
+			{
+				xrStringToPath(xr_instance, s, &subActionPaths[i]);
+				++i;
+			}
+			i = 0;
+			xrActions.resize(MAX_ACTIONS);
+			for (auto& a : actions)
+			{
+				XrActionCreateInfo action_info = { XR_TYPE_ACTION_CREATE_INFO };
+				action_info.countSubactionPaths = subActionPaths.size();
+				action_info.subactionPaths = subActionPaths.data();
+				action_info.actionType = a.xrActionType;
+				strcpy_s(action_info.actionName, "hand_pose");
+				strcpy_s(action_info.localizedActionName, "Hand Pose");
+				XrAction& action = xrActions[a.actionId];
+				XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &action));
+				++i;
+			}
+		}
+	};
+	ActionSet actionSet(xr_instance, { "/user/hand/left" ,"/user/hand/right" }, {
+		// Create an action to track the position and orientation of the hands! This is
+		// the controller location, or the center of the palms for actual hands.
+		 {POSE			,"hand_pose"			,"Hand Pose"			,XR_ACTION_TYPE_POSE_INPUT }
+		 // Create an action for listening to the select action! This is primary trigger
+		 // on controllers, and an airtap on HoloLens
+		,{SELECT		,"select"				,"Select"				,XR_ACTION_TYPE_BOOLEAN_INPUT }
+		,{SHOW_MENU		,"menu"					,"Menu"					,XR_ACTION_TYPE_BOOLEAN_INPUT }
+		// Action for trigger press
+		,{TRIGGER		,"trigger"				,"Trigger"				,XR_ACTION_TYPE_FLOAT_INPUT }
+		,{THUMB_LEFT_X	,"thumbstick_x_left"	,"Left Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT }
+		,{THUMB_LEFT_Y	,"thumbstick_y_left"	,"Left Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT }
+		,{THUMB_RIGHT_X	,"thumbstick_x_right"	,"Right Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT }
+		,{THUMB_RIGHT_Y	,"thumbstick_y_right"	,"Right Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT }
+		});
 
-	// Create an action for listening to the select action! This is primary trigger
-	// on controllers, and an airtap on HoloLens
-	action_info.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
-	strcpy_s(action_info.actionName, "select");
-	strcpy_s(action_info.localizedActionName, "Select");
-	XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.selectAction));
-
-	// Action for trigger press
-	action_info.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
-	strcpy_s(action_info.actionName, "trigger");
-	strcpy_s(action_info.localizedActionName, "trigger");
-	XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.triggerAction));
-
+	/*
 	for (size_t i = 0; i < 2; i++)
 	{
 		const char* side = i ? "right" : "left";
@@ -458,14 +515,34 @@ void UseOpenXR::MakeActions()
 		sprintf(action_info.actionName, "thumbstick_y_%s", side);
 		sprintf(action_info.localizedActionName, "thumbstick %s Y", side);
 		XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.joystickActionY[i]));
-	}
+	}*/
 
-	// Create an action for listening to the "show menu" action.
-	action_info.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
-	strcpy_s(action_info.actionName, "menu");
-	strcpy_s(action_info.localizedActionName, "Menu");
-	XR_CHECK(xrCreateAction(xr_input.actionSet, &action_info, &xr_input.showMenuAction));
+	struct Binding
+	{
+		XrAction action;
+		const char *user;
+		const char *component;
+	};
+	struct InteractionProfile
+	{
+		XrPath profilePath;
+		std::vector<XrActionSuggestedBinding> xrActionSuggestedBindings;
+		InteractionProfile(XrInstance &xr_instance,const char *pr,std::initializer_list<Binding> bindings)
+		{
+			xrStringToPath(xr_instance, pr, &profilePath);
+			xrActionSuggestedBindings.resize(bindings.size());
+			size_t i = 0;
+			for (auto elem : bindings)
+			{
+				XrPath p;
+				std::string combined = (std::string(elem.user) + "/") + elem.component;
+				xrStringToPath(xr_instance, combined.c_str(), &p);
 
+				xrActionSuggestedBindings[i] = {elem.action, p};
+				i++;
+			};
+		}
+	};
 	// Bind the actions we just created to specific locations on the Khronos simple_controller
 	// definition! These are labeled as 'suggested' because they may be overridden by the runtime
 	// preferences. For example, if the runtime allows you to remap buttons, or provides input
@@ -477,6 +554,8 @@ void UseOpenXR::MakeActions()
 	XrPath trigger_path[2];
 	XrPath joystick_path_x[2];
 	XrPath joystick_path_y[2];
+	const char* left = "user/hand/left";
+	const char* right = "user/hand/right";
 	xrStringToPath(xr_instance, "/user/hand/left/input/select/click", &select_path[0]);
 	xrStringToPath(xr_instance, "/user/hand/right/input/select/click", &select_path[1]);
 
@@ -495,35 +574,46 @@ void UseOpenXR::MakeActions()
 	xrStringToPath(xr_instance, "/user/hand/left/input/thumbstick/y", &joystick_path_y[0]);
 	xrStringToPath(xr_instance, "/user/hand/right/input/thumbstick/y", &joystick_path_y[1]);
 
-	XrPath khr_simple_controller;
-	xrStringToPath(xr_instance, "/interaction_profiles/khr/simple_controller", &khr_simple_controller);
-	XrActionSuggestedBinding khr_simple_bindings[] = {
-		{ xr_input.selectAction, select_path[0] },
-		{ xr_input.selectAction, select_path[1] }
-	};
+	InteractionProfile khrSimpleIP(xr_instance
+			, "/interaction_profiles/khr/simple_controller"
+			, {
+				 {xr_input.actions[SELECT], left,"input/select/click"}
+				,{xr_input.actions[SELECT],right,"input/select/click"}
+			});
 
+
+	InteractionProfile valveIndexIP(xr_instance
+		, "/interaction_profiles/valve/index_controller"
+		, {
+			 {xr_input.actions[POSE]		, left,"input/grip/pose"}
+			,{xr_input.actions[POSE]		,right,"input/grip/pose"}
+			,{xr_input.actions[SHOW_MENU]	, left,"input/b/click" }
+			,{xr_input.actions[SHOW_MENU]	,right,"input/b/click" }
+			,{xr_input.actions[TRIGGER]		, left,"input/trigger/value" }
+			,{xr_input.actions[TRIGGER]		,right,"input/trigger/value" }
+		});
 	XrPath valve_index_controller;
 	xrStringToPath(xr_instance, "/interaction_profiles/valve/index_controller", &valve_index_controller);
 	XrActionSuggestedBinding valve_index_bindings[] = {
-		{ xr_input.poseAction,   pose_path[0]   },
-		{ xr_input.poseAction,   pose_path[1]   },
-		//{ xr_input.selectAction, trigger_click_path[0] },
-		//{ xr_input.selectAction, trigger_click_path[1] },
-		{ xr_input.showMenuAction, menu_path[0] },
-		{ xr_input.showMenuAction, menu_path[1] },
-		{ xr_input.triggerAction, trigger_path[0] },
-		{ xr_input.triggerAction, trigger_path[1] },
-		{ xr_input.joystickActionX[0], joystick_path_x[0] },
-		{ xr_input.joystickActionX[1], joystick_path_x[1] },
-		{ xr_input.joystickActionY[0], joystick_path_y[0] },
-		{ xr_input.joystickActionY[1], joystick_path_y[1] }
+		{ xr_input.actions[POSE]			,pose_path[0]   },
+		{ xr_input.actions[POSE]			,pose_path[1]   },
+		{ xr_input.actions[SHOW_MENU]		,menu_path[0] },
+		{ xr_input.actions[SHOW_MENU]		,menu_path[1] },
+		{ xr_input.actions[TRIGGER]			,trigger_path[0] },
+		{ xr_input.actions[TRIGGER]			,trigger_path[1] },
+		{ xr_input.actions[STICK_LEFT_X]	,joystick_path_x[0] },
+		{ xr_input.actions[STICK_RIGHT_X]	,joystick_path_x[1] },
+		{ xr_input.actions[STICK_LEFT_Y]	,joystick_path_y[0] },
+		{ xr_input.actions[STICK_RIGHT_Y]	,joystick_path_y[1] }
 	};
+	//The application can call xrSuggestInteractionProfileBindings once per interaction profile that it supports.
 	XrInteractionProfileSuggestedBinding suggested_binds = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
 
-	suggested_binds.interactionProfile = khr_simple_controller;
-	suggested_binds.suggestedBindings = &khr_simple_bindings[0];
-	suggested_binds.countSuggestedBindings = _countof(khr_simple_bindings);
+	suggested_binds.interactionProfile = khrSimpleIP.profilePath;
+	suggested_binds.suggestedBindings = khrSimpleIP.xrActionSuggestedBindings.data();
+	suggested_binds.countSuggestedBindings = khrSimpleIP.xrActionSuggestedBindings.size();
 	XR_CHECK(xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds));
+
 	suggested_binds.interactionProfile = valve_index_controller;
 	suggested_binds.suggestedBindings = &valve_index_bindings[0];
 	suggested_binds.countSuggestedBindings =_countof(valve_index_bindings);
@@ -533,7 +623,7 @@ void UseOpenXR::MakeActions()
 	for (int32_t i = 0; i < 2; i++)
 	{
 		XrActionSpaceCreateInfo action_space_info = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
-		action_space_info.action = xr_input.poseAction;
+		action_space_info.action = xr_input.actions[POSE];
 		action_space_info.poseInActionSpace = xr_pose_identity;
 		action_space_info.subactionPath = xr_input.handSubactionPath[i];
 		xrCreateActionSpace(xr_session, &action_space_info, &xr_input.handSpace[i]);
@@ -544,6 +634,12 @@ void UseOpenXR::MakeActions()
 	attach_info.countActionSets = 1;
 	attach_info.actionSets = &xr_input.actionSet;
 	xrAttachSessionActionSets(xr_session, &attach_info);
+
+	// now we are ready to:
+	XrInteractionProfileState interactionProfile;
+	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,
+		trigger_path[0],
+		&interactionProfile));
 }
 
 
@@ -563,29 +659,27 @@ void UseOpenXR::PollActions()
 
 	xrSyncActions(xr_session, &sync_info);
 
+	inputs.analogueEvents.clear();
+	inputs.binaryEvents.clear();
+	inputs.motionEvents.clear();
 	// Now we'll get the current states of our actions, and store them for later use
 	for (uint32_t hand = 0; hand < 2; hand++)
 	{
-		while (hand >= controllerStates.size())
-			controllerStates.push_back(teleport::client::ControllerState());
-		controllerStates[hand].analogueEvents.clear();
-		controllerStates[hand].binaryEvents.clear();
-		controllerStates[hand].motionEvents.clear();
 		XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
 		get_info.subactionPath = xr_input.handSubactionPath[hand];
 
 		XrActionStatePose pose_state = { XR_TYPE_ACTION_STATE_POSE };
-		get_info.action = xr_input.poseAction;
+		get_info.action = xr_input.actions[POSE];
 		xrGetActionStatePose(xr_session, &get_info, &pose_state);
 		xr_input.renderHand[hand] = pose_state.isActive;
 
 		// Events come with a timestamp
 		XrActionStateBoolean select_state = { XR_TYPE_ACTION_STATE_BOOLEAN };
-		get_info.action = xr_input.selectAction;
+		get_info.action = xr_input.actions[SELECT];
 		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
 		xr_input.handSelect[hand] = select_state.currentState && select_state.changedSinceLastSync;
 
-		get_info.action = xr_input.showMenuAction;
+		get_info.action = xr_input.actions[SHOW_MENU];
 		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
 		xr_input.handMenu[hand] = select_state.currentState && select_state.changedSinceLastSync;
 		// If we have a select event, update the hand pose to match the event's timestamp
@@ -605,15 +699,16 @@ void UseOpenXR::PollActions()
 			}
 		}
 		XrActionStateFloat trigger_state = { XR_TYPE_ACTION_STATE_FLOAT };
-		get_info.action = xr_input.triggerAction;
+		get_info.action = xr_input.actions[TRIGGER];
 		xrGetActionStateFloat(xr_session, &get_info, &trigger_state);
-		xr_input.trigger[hand] = trigger_state.currentState;
-		if (controllerStates[hand].triggerBack != xr_input.trigger[hand])
+		
+		if (xr_input.trigger[hand] != trigger_state.currentState)
 		{
-			controllerStates[hand].triggerBack = xr_input.trigger[hand];
-			controllerStates[hand].addAnalogueEvent(avs::InputId::TRIGGER01, controllerStates[hand].triggerBack);
+			xr_input.trigger[hand] = trigger_state.currentState;
+			// what is the mapping?
+			inputs.addAnalogueEvent(avs::TRIGGER01, controllerStates[hand].triggerBack);
 		}
-
+#if 0
 		// thumbstick:
 		XrActionStateFloat joystick_state_x = { XR_TYPE_ACTION_STATE_FLOAT };
 		get_info.action = xr_input.joystickActionX[hand];
@@ -630,12 +725,20 @@ void UseOpenXR::PollActions()
 			controllerStates[hand].mJoystickAxisX = xr_input.thumbstick[hand].x;
 			controllerStates[hand].mJoystickAxisY = xr_input.thumbstick[hand].y;
 		}
-
+#endif
 		if (xr_input.handMenu[hand])
 		{
 			menuButtonHandler();
 		}
 	}
+}
+
+struct InputMapping
+{
+	InputDefinition defn;
+};
+void UseOpenXR::OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions_)
+{
 }
 
 void UseOpenXR::openxr_poll_predicted(XrTime predicted_time)
@@ -914,13 +1017,9 @@ const avs::Pose& UseOpenXR::GetControllerPose(int index) const
 		return avs::Pose();
 }
 
-const teleport::client::ControllerState& UseOpenXR::GetControllerState(int index) const
+const teleport::client::Input& UseOpenXR::GetInputs() const
 {
-	static teleport::client::ControllerState emptyState;
-	if (index >= 0 && controllerStates.size())
-		return controllerStates[index];
-	else
-		return emptyState;
+	return inputs;
 }
 
 void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceContext,simul::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)

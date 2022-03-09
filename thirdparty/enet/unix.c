@@ -8,7 +8,6 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
-#include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -51,10 +50,10 @@
 #endif
 
 #ifdef HAS_POLL
-#include <sys/poll.h>
+#include <poll.h>
 #endif
 
-#ifndef HAS_SOCKLEN_T
+#if !defined(HAS_SOCKLEN_T) && !defined(__socklen_t_defined)
 typedef int socklen_t;
 #endif
 
