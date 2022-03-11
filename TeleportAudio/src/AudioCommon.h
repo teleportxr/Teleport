@@ -17,8 +17,8 @@
 #include <functional>
 #include "ErrorHandling.h"
 
-#define SCA_CERR TELEPORT_COUT
-#define SCA_COUT TELEPORT_CERR
+#define SCA_CERR TELEPORT_CERR
+#define SCA_COUT TELEPORT_COUT
 
 extern void log_print(const char* source,const char *format, ...);
 
@@ -62,7 +62,10 @@ namespace sca
 			AudioSetStateError,
 			AudioRecorderCreationError,
 			AudioRecorderInitializationError,
-			AudioRecordingNotPermitted
+			AudioRecordingNotPermitted,
+			AudioRecorderStartError,
+			NoAudioInputDeviceFound,
+			AudioProcessingError
 		};
 
 		Result() : m_code(Code::OK) 

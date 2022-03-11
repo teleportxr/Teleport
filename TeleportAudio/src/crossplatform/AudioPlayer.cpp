@@ -5,7 +5,12 @@
 namespace sca
 {
 	AudioPlayer::AudioPlayer()
-		: mInitialized(false), mConfigured(false), mRecording(false), mRecordingAllowed(false), mLastResult(Result::OK) {}
+		: mInitialized(false)
+		, mConfigured(false)
+		, mRecording(false)
+		, mRecordingAllowed(false)
+		, mInputDeviceAvailable(false)
+		, mLastResult(Result::OK) {}
 }
 
 
