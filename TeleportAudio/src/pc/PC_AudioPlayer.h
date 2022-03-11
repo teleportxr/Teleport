@@ -28,6 +28,8 @@ namespace sca
 
 		Result startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback) override;
 
+		Result processRecordedAudio() override;
+
 		Result stopRecording() override;
 
 		Result deconfigure() override;
@@ -46,6 +48,8 @@ namespace sca
 		std::unique_ptr<class VoiceCallback> mVoiceCallback;
 
 		avs::ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
+
+		std::unique_ptr<class PC_AudioCapture> mAudioCapture;
 	};
 }
 
