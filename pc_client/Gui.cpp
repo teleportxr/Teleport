@@ -13,6 +13,8 @@ using namespace simul;
 using namespace platform;
 using namespace crossplatform;
 ImFont *smallFont=nullptr;
+#define STR_VECTOR3 "%3.3f %3.3f %3.3f"
+#define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
 void Gui::RestoreDeviceObjects(simul::crossplatform::RenderPlatform* r)
 {
 	renderPlatform=r;
@@ -158,6 +160,7 @@ void Gui::SetScaleMetres()
 {
 	visible = false;
 }
+
 void Gui::ShowFont()
 {
 	ImGuiIO& io = ImGui::GetIO();
@@ -224,6 +227,7 @@ void Gui::ShowFont()
 		TreePop();
 	}
 }
+
 
 void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *search_text)
 {
@@ -338,7 +342,8 @@ void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext
 	}
 	if(show_inspector)
 	{
-		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize
+			| ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 		if (ImGui::Begin("Properties", &show_inspector, window_flags))
 		{
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
@@ -355,13 +360,44 @@ void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext
 				ImGui::Text("       Rot: %3.3f %3.3f %3.3f %3.3f", gq.x, gq.y, gq.z, gq.w);
 				for (const auto& m : selected_node->GetMaterials())
 				{
-					ImGui::TreeNodeEx("", flags, "%d: %s",m->id,m->GetMaterialCreateInfo().name.c_str(), flags);
+					ImGui::TreeNodeEx("", flags, "%d: %s", m->id, m->GetMaterialCreateInfo().name.c_str(), flags);
 					if (ImGui::IsItemClicked())
 					{
 						selected_uid = m->id;
 						selected_material = m;
 						selected_node.reset();
 					}
+				}
+				std::shared_ptr<clientrender::Skin> skin = selected_node->GetSkin();
+				if (skin)
+				{
+					float anim_time_s=selected_node->animationComponent.GetCurrentAnimationTimeSeconds();
+
+					ImGui::Text("Animation Time: %3.3f", anim_time_s);
+					ImGui::BeginGroup();
+					const auto &bones =skin->GetBones();
+					{
+						for (auto b : bones)
+						{
+							if(b->GetParent()==nullptr)
+								BoneTreeNode(b, nullptr);
+						}
+						/*
+					if (ImGui::BeginTable("Bones", 4))
+					const auto& l = b->GetLocalTransform().m_Rotation;
+							const auto& g = b->GetGlobalTransform().m_Rotation;
+							ImGui::TableNextColumn(); 
+							ImGui::Text("%d", b->id);
+							ImGui::TableNextColumn();
+							ImGui::Text("%s", b->name.c_str());
+							ImGui::TableNextColumn();
+							ImGui::Text(STR_VECTOR4,l.i, l.j, l.k, l.s);
+							ImGui::TableNextColumn();
+							ImGui::Text(STR_VECTOR4, g.i, g.j, g.k, g.s);
+					
+						ImGui::EndTable();	*/
+					}
+					ImGui::EndGroup();
 				}
 				ImGui::End();
 			}
@@ -383,9 +419,65 @@ void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
-/*void Gui::RenderDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+
+void Gui::BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text)
 {
-}*/
+	const clientrender::Bone* bone = n.get();
+	bool has_children = bone->GetChildren().size() != 0;
+	std::string str = (std::to_string(n->id) + " ") + bone->name;
+	const auto& l = bone->GetLocalTransform().m_Rotation;
+	const auto& p = bone->GetLocalTransform().m_Translation;
+	const auto& g = bone->GetGlobalTransform().m_Rotation;
+	static char txt[400];
+	str += ", ";
+	sprintf(txt,"pos " STR_VECTOR3, p.x, p.y, p.z);
+	str +=txt;
+	str += ", ";
+	sprintf(txt, ", rot " STR_VECTOR4, l.i, l.j, l.k, l.s);
+	//sprintf(txt,STR_VECTOR4, g.i, g.j, g.k, g.s);
+	str += txt;
+	bool open = false;
+	bool show = true;
+	if (search_text)
+	{
+		if (str.find(search_text) >= str.length())
+		{
+			show = false;
+		}
+	}
+	if (show)
+	{
+		open = ImGui::TreeNodeEx(str.c_str(), (has_children ? 0 : ImGuiTreeNodeFlags_Leaf));
+	}
+	else
+	{
+		open = true;
+	}
+	if (open)
+	{
+		for (const auto& r : bone->GetChildren())
+		{
+			BoneTreeNode(r.lock(), search_text);
+		}
+		ImGui::TreePop();
+	}
+}
+void Gui::Anims(const ResourceManager<clientrender::Animation>& animManager)
+{
+	ImGui::BeginGroup();
+	static bool check = true;
+	ImGui::Checkbox("Animations", &check);
+	if (check)
+	{
+		const auto& ids= animManager.GetAllIDs();
+		for (auto id : ids)
+		{
+			const auto &anim=animManager.Get(id);
+			ImGui::Text(" %ull: %s ",id, anim->name.c_str());
+		}
+	}
+	ImGui::EndGroup();
+}
 
 void Gui::NodeTree(const clientrender::NodeManager::nodeList_t& root_nodes)
 {

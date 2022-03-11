@@ -85,7 +85,7 @@ void DefaultDiscoveryService::tick()
 {
 	if (!discoverySocket || discoveryPort == 0 || servicePort == 0)
 	{
-		printf_s("Attempted to call tick on client discovery service without initalising!");
+		printf_s("Attempted to call tick on client discovery service without initalizing!");
 		return;
 	}
 

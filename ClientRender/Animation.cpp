@@ -120,20 +120,20 @@ namespace clientrender
 		BoneKeyframeList& boneAnimation = boneKeyframeLists[0];
 		if(!boneAnimation.positionKeyframes.empty())
 		{
-			endTime = std::max(endTime, boneAnimation.positionKeyframes[boneAnimation.positionKeyframes.size() - 1].time);
+			endTime_s = std::max(endTime_s, boneAnimation.positionKeyframes[boneAnimation.positionKeyframes.size() - 1].time);
 			return;
 		}
 
 		if(!boneAnimation.rotationKeyframes.empty())
 		{
-			endTime = std::max(endTime, boneAnimation.rotationKeyframes[boneAnimation.rotationKeyframes.size() - 1].time);
+			endTime_s = std::max(endTime_s, boneAnimation.rotationKeyframes[boneAnimation.rotationKeyframes.size() - 1].time);
 			return;
 		}
 	}
 
-	float Animation::getAnimationLength()
+	float Animation::getAnimationLengthSeconds()
 	{
-		return endTime;
+		return endTime_s;
 	}
 
 	void Animation::seekTime(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float time)

@@ -28,7 +28,7 @@ Timestamp PlatformPOSIX::getTimestamp()
 	return timestamp;
 }
 	
-double PlatformPOSIX::getTimeElapsed(const Timestamp& tBegin, const Timestamp& tEnd)
+double PlatformPOSIX::getTimeElapsedInMilliseconds(const Timestamp& tBegin, const Timestamp& tEnd)
 {
 	const long double dt_sec  = tEnd.tv_sec  - tBegin.tv_sec;
 	const long double dt_nsec = tEnd.tv_nsec - tBegin.tv_nsec;

@@ -399,9 +399,28 @@ bool GeometryStore::hasShadowMap(avs::uid id) const
 
 void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 {
-	//Remove node before re-adding with new data. Why?
-	//removeNode(id);
 	nodes[id] = newNode;
+	if (newNode.parentID != 0)
+	{
+		avs::Node* parent = getNode(newNode.parentID);
+		if (parent)
+		{
+			if (std::find(parent->childrenIDs.begin(), parent->childrenIDs.end(),id) == parent->childrenIDs.end())
+				parent->childrenIDs.push_back(id);
+		}
+	}
+	for(auto c:newNode.childrenIDs)
+	{
+		avs::Node* child = getNode(c);
+		if (child)
+		{
+			if (child->parentID != 0 && child->parentID != id)
+			{
+				TELEPORT_CERR << "Changing parent of " << child->name.c_str() << " to " << newNode.name.c_str() << std::endl;
+			}
+			child->parentID = id;
+		}
+	}
 	if(newNode.data_type == avs::NodeDataType::Light)
 	{
 		lightNodes[id]=avs::LightNodeResources{id, newNode.data_uid};
@@ -926,34 +945,34 @@ void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastMod
  	materials[id] = ExtractedMaterial{guid, lastModified, newMaterial};
 }
 
-void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips
+void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string filePath, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
 	auto g=bstr_to_guid(guid);
 	guids[id]=g;
 	uids[g]=id;
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
-	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
+	if(!filePath.empty() && newTexture.bytesPerPixel == 4)
 	{
-		bool validBasisFileExists = false;
-		filesystem::path filePath = basisFileLocation;
-		if(filesystem::exists(filePath))
+		bool validFileExists = false;
+		filesystem::path fsFilePath = filePath;
+		if(filesystem::exists(fsFilePath))
 		{
 			//Read last write time.
-			filesystem::file_time_type rawBasisTime = filesystem::last_write_time(filePath);
+			filesystem::file_time_type rawFileTime = filesystem::last_write_time(fsFilePath);
 
 			//Convert to std::time_t; imprecise, but good enough.
-			std::time_t basisLastModified = rawBasisTime.time_since_epoch().count();
+			std::time_t lastModified = rawFileTime.time_since_epoch().count();
 
 			//The file is valid if the basis file is younger than the texture file.
-			validBasisFileExists = basisLastModified >= lastModified;
+			validFileExists = lastModified >= lastModified;
 		}
-		//Read from disk if the file exists.
-		if(highQualityUASTC||((!forceOverwrite)&&validBasisFileExists))
+		//Read from disk if the file exists or if it isn't basis compression.
+		if(newTexture.compression!= avs::TextureCompression::BASIS_COMPRESSED||highQualityUASTC||((!forceOverwrite)&&validFileExists))
 		{
-			std::ifstream basisReader(basisFileLocation, std::ifstream::in | std::ifstream::binary);
+			std::ifstream basisReader(fsFilePath, std::ifstream::in | std::ifstream::binary);
 
-			newTexture.dataSize = static_cast<uint32_t>(filesystem::file_size(filePath));
+			newTexture.dataSize = static_cast<uint32_t>(filesystem::file_size(fsFilePath));
 			newTexture.data = new unsigned char[newTexture.dataSize];
 			basisReader.read(reinterpret_cast<char*>(newTexture.data), newTexture.dataSize);
 
@@ -966,7 +985,7 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModi
 			unsigned char* dataCopy = new unsigned char[newTexture.dataSize];
 			memcpy(dataCopy, newTexture.data, newTexture.dataSize);
 			newTexture.data = dataCopy;
-			texturesToCompress.emplace(id, PrecompressedTexture{basisFileLocation, newTexture.data, newTexture.dataSize, newTexture.mipCount, genMips, highQualityUASTC});
+			texturesToCompress.emplace(id, PrecompressedTexture{filePath, newTexture.data, newTexture.dataSize, newTexture.mipCount, genMips, highQualityUASTC,newTexture.compression});
 		}
 	}
 	else
@@ -1035,96 +1054,102 @@ void GeometryStore::compressNextTexture()
 
 	avs::Texture& newTexture = foundTexture->second.texture;
 	PrecompressedTexture& compressionData = compressionPair->second;
-
-	basisu::image image(newTexture.width, newTexture.height);
-	basisu::color_rgba_vec& imageData = image.get_pixels();
-	memcpy(imageData.data(), compressionData.rawData, compressionData.dataSize);
-
-
-	basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
-	basisCompressorParams.m_source_images.clear();
-	basisCompressorParams.m_source_images.push_back(image);
-
-	basisCompressorParams.m_quality_level = compressionQuality;
-	basisCompressorParams.m_compression_level = compressionStrength;
-
-	basisCompressorParams.m_write_output_basis_files = true;
-	basisCompressorParams.m_out_filename = compressionData.basisFilePath;
-	basisCompressorParams.m_uastc=compressionData.highQualityUASTC;
-
-	uint32_t num_threads = 32;
-	if(compressionData.highQualityUASTC)
+	if (compressionData.textureCompression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
-		num_threads = 1;
-		// Write this to a different filename, it's just for testing.
-		auto ext_pos = basisCompressorParams.m_out_filename.find(".basis");
-		basisCompressorParams.m_out_filename = basisCompressorParams.m_out_filename.substr(0, ext_pos) + "-dll.basis";
-		return;
+		basisu::image image(newTexture.width, newTexture.height);
+		basisu::color_rgba_vec& imageData = image.get_pixels();
+		memcpy(imageData.data(), compressionData.rawData, compressionData.dataSize);
 
-		// we want the equivalent of:
-		// -uastc -uastc_rdo_m -no_multithreading -debug -stats -output_path "outputPath" "srcPng"
-		basisCompressorParams.m_rdo_uastc_multithreading = false;
-		basisCompressorParams.m_multithreading=false;
-		//basisCompressorParams.m_ktx2_uastc_supercompression = basist::KTX2_SS_NONE;//= basist::KTX2_SS_ZSTANDARD;
 
-		int uastc_level = std::clamp<int>(4, 0, 4);
+		basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
+		basisCompressorParams.m_source_images.clear();
+		basisCompressorParams.m_source_images.push_back(image);
 
-		//static const uint32_t s_level_flags[5] = { basisu::cPackUASTCLevelFastest, basisu::cPackUASTCLevelFaster, basisu::cPackUASTCLevelDefault, basisu::cPackUASTCLevelSlower, basisu::cPackUASTCLevelVerySlow };
+		basisCompressorParams.m_quality_level = compressionQuality;
+		basisCompressorParams.m_compression_level = compressionStrength;
 
-		//basisCompressorParams.m_pack_uastc_flags &= ~basisu::cPackUASTCLevelMask;
-		//basisCompressorParams.m_pack_uastc_flags |= s_level_flags[uastc_level];
+		basisCompressorParams.m_write_output_basis_files = true;
+		basisCompressorParams.m_out_filename = compressionData.basisFilePath;
+		basisCompressorParams.m_uastc = compressionData.highQualityUASTC;
 
-		//basisCompressorParams.m_rdo_uastc_dict_size = 32768;
-		//basisCompressorParams.m_check_for_alpha=true;
-		basisCompressorParams.m_debug=true;
-		basisCompressorParams.m_status_output=true;
-		basisCompressorParams.m_compute_stats = true;
-		//basisCompressorParams.m_perceptual=true;
-		//basisCompressorParams.m_validate=false;
-		basisCompressorParams.m_mip_srgb=true;
-		basisCompressorParams.m_quality_level = 128;
-	}
-	else
-	{
-		basisCompressorParams.m_mip_gen = compressionData.genMips;
-		basisCompressorParams.m_mip_smallest_dimension = 4; // ???
-		basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
-	}
-	if(!basisCompressorParams.m_pJob_pool)
-	{
-		basisCompressorParams.m_pJob_pool = new basisu::job_pool(num_threads);
-	}
-	basisu::basis_compressor basisCompressor;
-	basisu::enable_debug_printf(true);
-	
-	bool ok=basisCompressor.init(basisCompressorParams);
-	if(ok)
-	{
-		basisu::basis_compressor::error_code result = basisCompressor.process();
-
-		if(result == basisu::basis_compressor::error_code::cECSuccess)
+		uint32_t num_threads = 32;
+		if (compressionData.highQualityUASTC)
 		{
-			basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
+			num_threads = 1;
+			// Write this to a different filename, it's just for testing.
+			auto ext_pos = basisCompressorParams.m_out_filename.find(".basis");
+			basisCompressorParams.m_out_filename = basisCompressorParams.m_out_filename.substr(0, ext_pos) + "-dll.basis";
+			return;
 
-			delete[] newTexture.data;
+			// we want the equivalent of:
+			// -uastc -uastc_rdo_m -no_multithreading -debug -stats -output_path "outputPath" "srcPng"
+			basisCompressorParams.m_rdo_uastc_multithreading = false;
+			basisCompressorParams.m_multithreading = false;
+			//basisCompressorParams.m_ktx2_uastc_supercompression = basist::KTX2_SS_NONE;//= basist::KTX2_SS_ZSTANDARD;
 
-			newTexture.dataSize = basisCompressor.get_basis_file_size();
-			newTexture.data = new unsigned char[newTexture.dataSize];
-			memcpy(newTexture.data, basisTex.data(), newTexture.dataSize);
+			int uastc_level = std::clamp<int>(4, 0, 4);
+
+			//static const uint32_t s_level_flags[5] = { basisu::cPackUASTCLevelFastest, basisu::cPackUASTCLevelFaster, basisu::cPackUASTCLevelDefault, basisu::cPackUASTCLevelSlower, basisu::cPackUASTCLevelVerySlow };
+
+			//basisCompressorParams.m_pack_uastc_flags &= ~basisu::cPackUASTCLevelMask;
+			//basisCompressorParams.m_pack_uastc_flags |= s_level_flags[uastc_level];
+
+			//basisCompressorParams.m_rdo_uastc_dict_size = 32768;
+			//basisCompressorParams.m_check_for_alpha=true;
+			basisCompressorParams.m_debug = true;
+			basisCompressorParams.m_status_output = true;
+			basisCompressorParams.m_compute_stats = true;
+			//basisCompressorParams.m_perceptual=true;
+			//basisCompressorParams.m_validate=false;
+			basisCompressorParams.m_mip_srgb = true;
+			basisCompressorParams.m_quality_level = 128;
 		}
 		else
 		{
-			TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"!\n";
+			basisCompressorParams.m_mip_gen = compressionData.genMips;
+			basisCompressorParams.m_mip_smallest_dimension = 4; // ???
+			basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
 		}
+		if (!basisCompressorParams.m_pJob_pool)
+		{
+			basisCompressorParams.m_pJob_pool = new basisu::job_pool(num_threads);
+		}
+		basisu::basis_compressor basisCompressor;
+		basisu::enable_debug_printf(true);
+
+		bool ok = basisCompressor.init(basisCompressorParams);
+		if (ok)
+		{
+			basisu::basis_compressor::error_code result = basisCompressor.process();
+
+			if (result == basisu::basis_compressor::error_code::cECSuccess)
+			{
+				basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
+
+				delete[] newTexture.data;
+
+				newTexture.dataSize = basisCompressor.get_basis_file_size();
+				newTexture.data = new unsigned char[newTexture.dataSize];
+				memcpy(newTexture.data, basisTex.data(), newTexture.dataSize);
+			}
+			else
+			{
+				TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"!\n";
+			}
+		}
+		else
+		{
+			TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"! Basis Universal compressor failed to initialise.\n";
+		}
+		delete basisCompressorParams.m_pJob_pool;
+		basisCompressorParams.m_pJob_pool = nullptr;
 	}
 	else
 	{
-		TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"! Basis Universal compressor failed to initialise.\n";
+		// TODO: just store?
+		TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"!\n";
 	}
-
 	texturesToCompress.erase(texturesToCompress.begin());
-	delete basisCompressorParams.m_pJob_pool;
-	basisCompressorParams.m_pJob_pool = nullptr;
 }
 
 template<typename ExtractedResource> void GeometryStore::saveResource(const std::string file_name,avs::uid uid, const ExtractedResource& resource) const

@@ -63,9 +63,10 @@ namespace teleport
 			const std::vector<HitTest>& hitTestDevices)
 		{
 			// Clear old beams and particles
-			for (auto h : beams_)
+			while (beams_.size())
 			{
-				beamRenderer_.RemoveBeam(h);
+				beamRenderer_.RemoveBeam(beams_[0]);
+				beams_.erase(beams_.begin());
 			}
 			for (auto h : particles_)
 			{

@@ -214,15 +214,16 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
 	displaySurfaceManager.Initialize(renderPlatform);
-	// Pass "true" to direct3D11Manager to use d3d debugging:
-	gdi->Initialize(true, false,false);
+	// Pass "true" to deviceManager to use API debugging:
+	gdi->Initialize(false, false,false);
 	std::string src_dir = STRINGIFY(CMAKE_SOURCE_DIR);
 	std::string build_dir = STRINGIFY(CMAKE_BINARY_DIR);
 	// Create an instance of our simple clientRenderer class defined above:
 	{
 		// Whether run from the project directory or from the executable location, we want to be
 		// able to find the shaders and textures:
-		
+		char cwd[90];
+		_getcwd(cwd, 90);
 		renderPlatform->PushTexturePath("");
 		renderPlatform->PushTexturePath("Textures");
 		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
@@ -230,7 +231,9 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		// Or from the Simul directory -e.g. by automatic builds:
 
 		renderPlatform->PushTexturePath("pc_client/Textures");
-		renderPlatform->PushShaderPath("pc_client/Shaders");		// working directory C:\Simul\RemotePlay
+		renderPlatform->PushShaderPath("pc_client/Shaders");
+		renderPlatform->PushTexturePath("Textures");
+		renderPlatform->PushShaderPath("Shaders");	// working directory C:\Teleport
 
 		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/Shaders/SFX").c_str());
 		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/Shaders/SL").c_str());
@@ -251,6 +254,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/Platform/DirectX11/shaderbin").c_str());
 #endif
+
+		renderPlatform->SetShaderBuildMode(simul::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
@@ -419,7 +424,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 			//	PAINTSTRUCT ps;
 				//BeginPaint(hWnd, &ps);
-				clientRenderer->Update();
+				double timestamp_ms = avs::PlatformWindows::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
+
+				clientRenderer->Update(timestamp_ms);
 				bool quit = false;
 				if (useOpenXR.HaveXRDevice())
 				{

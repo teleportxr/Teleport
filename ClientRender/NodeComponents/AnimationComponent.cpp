@@ -38,22 +38,22 @@ namespace clientrender
 		if(id == latestAnimationID)
 		{
 			auto animationIterator = animationStates.find(id);
-			startAnimation(animationIterator, latestAnimationStartTimestamp);
+			startAnimation(animationIterator, latestAnimationStartTimestampUnixUTCMs);
 		}
 #endif
 	}
 
-	void AnimationComponent::setAnimation(avs::uid animationID, uint64_t startTimestamp)
+	void AnimationComponent::setAnimation(avs::uid animationID, uint64_t startTimestampUtcMs)
 	{
 #if !CYCLE_ANIMATIONS
 		auto animationItr = animationStates.find(animationID);
 		if(animationItr != animationStates.end())
 		{
-			startAnimation(animationItr, startTimestamp);
+			startAnimation(animationItr, startTimestampUtcMs);
 		}
 
 		latestAnimationID = animationID;
-		latestAnimationStartTimestamp = startTimestamp;
+		latestAnimationStartTimestampUnixUTCMs = startTimestampUtcMs;
 #endif
 	}
 
@@ -79,7 +79,7 @@ namespace clientrender
 		animationIt->second.speed = speed;
 	}
 
-	void AnimationComponent::update(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float deltaTime)
+	void AnimationComponent::update(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float deltaTimeS)
 	{
 		//Early-out if we're not playing an animation; either from having no animations or the node isn't currently playing an animation.
 		if(currentAnimationState == animationStates.end())
@@ -88,8 +88,8 @@ namespace clientrender
 		}
 
 		std::shared_ptr<Animation> animation = currentAnimationState->second.getAnimation();
-		currentAnimationTime = std::min(currentAnimationTime + deltaTime * currentAnimationState->second.speed, animation->getAnimationLength());;
-		animation->seekTime(boneList, getAnimationTimeValue());
+		currentAnimationTimeS = std::min(currentAnimationTimeS + deltaTimeS * currentAnimationState->second.speed, animation->getAnimationLengthSeconds());
+		animation->seekTime(boneList, getAnimationTimeSeconds());
 
 #if CYCLE_ANIMATIONS
 		if(currentAnimationTime >= animation->getAnimationLength())
@@ -119,27 +119,27 @@ namespace clientrender
 		return &currentAnimationState->second;
 	}
 
-	float AnimationComponent::GetCurrentAnimationTime() const
+	float AnimationComponent::GetCurrentAnimationTimeSeconds() const
 	{
-		return currentAnimationTime;
+		return currentAnimationTimeS;
 	}
 
-	void AnimationComponent::startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestamp)
+	void AnimationComponent::startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestampUtcMs)
 	{
 		currentAnimationState = animationIterator;
-		currentAnimationTime = static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestamp() - startTimestamp);
+		currentAnimationTimeS = float(0.001 * (teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - startTimestampUtcMs));
 	}
 
-	float AnimationComponent::getAnimationTimeValue()
+	float AnimationComponent::getAnimationTimeSeconds()
 	{
 		AnimationState animationState = currentAnimationState->second;
 		if(!animationState.hasTimeOverride())
 		{
-			return currentAnimationTime;
+			return currentAnimationTimeS;
 		}
 
 		float normalisedTime = animationState.getNormalisedTimeOverride();
-		float animationLength = animationState.getAnimation()->getAnimationLength();
+		float animationLength = animationState.getAnimation()->getAnimationLengthSeconds();
 		return normalisedTime * animationLength;
 	}
 }

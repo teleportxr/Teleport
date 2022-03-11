@@ -15,7 +15,6 @@
 #include "Log.h"
 #include "VideoSurface.h"
 
-#include "AndroidDiscoveryService.h"
 #include "OVRNodeManager.h"
 
 #if defined( USE_AAUDIO )
@@ -45,17 +44,12 @@ Application::Application()
 		: ovrAppl(0, 0, CPU_LEVEL, GPU_LEVEL, true /* useMultiView */)
 		  , Locale(nullptr)
 		  , Random(2)
-		  , mPipelineConfigured(false)
 		  , mSoundEffectPlayer(nullptr)
 		  , mGuiSys(nullptr)
-		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
-			,clientRenderer(this, &clientDeviceState,&controllers)
+			,clientRenderer(this, &clientDeviceState,&controllers,this)
 		  , lobbyRenderer(&clientDeviceState, this)
 {
 	RedirectStdCoutCerr();
-
-	sessionClient.SetResourceCreator(&clientRenderer.resourceCreator);
-	sessionClient.SetGeometryCache(&clientRenderer.geometryCache);
 
 	pthread_setname_np(pthread_self(), "Teleport_Application");
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
@@ -65,14 +59,14 @@ Application::Application()
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
-	if (AudioStream)
+	if (clientRenderer.AudioStream)
 	{
 #if defined( USE_AAUDIO )
 		audioPlayer = new AA_AudioPlayer();
 #else
-		audioPlayer = new SL_AudioPlayer();
+		clientRenderer.audioPlayer = new SL_AudioPlayer();
 #endif
-		audioPlayer->initializeAudioDevice();
+		clientRenderer.audioPlayer ->initializeAudioDevice();
 	}
 }
 
@@ -82,9 +76,8 @@ Application::~Application()
 	mRefreshRates.clear();
 	clientRenderer.ExitedVR();
 	delete mSoundEffectPlayer;
-	sessionClient.Disconnect(TELEPORT_TIMEOUT);
 	enet_deinitialize();
-	SAFE_DELETE(audioPlayer)
+	SAFE_DELETE(clientRenderer.audioPlayer)
 
 	mSoundEffectPlayer = nullptr;
 
@@ -121,9 +114,9 @@ bool Application::ProcessIniFile()
 			ip_list.erase(0, pos + 1);
 			tinyUI.AddURL(ip);
 		} while (pos != std::string::npos);
-		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",TELEPORT_SERVER_DISCOVERY_PORT);
-		client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",TELEPORT_CLIENT_SERVICE_PORT);
-		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",TELEPORT_CLIENT_STREAMING_PORT);
+		clientRenderer.server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",TELEPORT_SERVER_DISCOVERY_PORT);
+		clientRenderer.client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",TELEPORT_CLIENT_SERVICE_PORT);
+		clientRenderer.client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",TELEPORT_CLIENT_STREAMING_PORT);
 
 		return true;
 	}
@@ -220,9 +213,6 @@ void Application::EnteredVrMode()
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	mDeviceContext.reset(new scc::GL_DeviceContext(&globalGraphicsResources.renderPlatform));
-	clientRenderer.resourceCreator.Initialize((&globalGraphicsResources.renderPlatform),
-							   clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
-	clientRenderer.resourceCreator.SetGeometryCache(&clientRenderer.geometryCache);
 
 	//Default Effects
 	clientrender::Effect::EffectCreateInfo ci;
@@ -393,7 +383,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
 
 	// Oculus Origin means where the headset's zero is in real space.
-
+	auto &sessionClient=clientRenderer.sessionClient;
 	// Handle networked session.
 	if(sessionClient.IsConnected())
 	{
@@ -421,7 +411,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	{
 		if (!sessionClient.HasDiscovered())
 		{
-			sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+			sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, clientRenderer.server_ip.c_str(), clientRenderer.server_discovery_port, remoteEndpoint);
 		}
 		if (sessionClient.HasDiscovered())
 		{
@@ -473,17 +463,22 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 
 void Application::ConnectButtonHandler(const std::string &url)
 {
+	auto &sessionClient=clientRenderer.sessionClient;
+	if(sessionClient.IsConnected())
+	{
+		sessionClient.Disconnect(0);
+	}
 	size_t pos=url.find(":");
 	if(pos<url.length())
 	{
 		std::string port_str=url.substr(pos+1,url.length()-pos-1);
-		server_discovery_port = atoi(port_str.c_str());
+		clientRenderer.server_discovery_port = atoi(port_str.c_str());
 		std::string url_str=url.substr(0,pos);
-		server_ip=url_str;
+		clientRenderer.server_ip=url_str;
 	}
 	else
 	{
-		server_ip=url;
+		clientRenderer.server_ip=url;
 	}
 	should_connect=true;
 }
@@ -571,6 +566,7 @@ void Application::DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRen
 	static avs::vec3 offset = {-2.0f, 2.0f, 5.5f};
 	static avs::vec4 colour = {1.0f, 1.0f, 0.5f, 0.5f};
 	static char txt[100];
+	auto &sessionClient=clientRenderer.sessionClient;
 	if (sessionClient.IsConnected())
 	{
 		sprintf(txt,"Server: %s", sessionClient.GetServerIP().c_str());
@@ -609,14 +605,13 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
     //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
-	float time_elapsed = in.DeltaSeconds * 1000.0f;
-	teleport::client::ServerTimestamp::tick(time_elapsed);
-	clientRenderer.geometryCache.Update(time_elapsed);
-	clientRenderer.resourceCreator.Update(time_elapsed);
-
+	float timestamp_ms = GetTimeInSeconds() * 1000.0f;
+	// TODO: is this the timestamp we want, or do we need something server-synchronized?
+	clientRenderer.Update(timestamp_ms);
     //Move the hands before they are drawn.
-	UpdateHandObjects();
+	clientRenderer.UpdateHandObjects(GetSessionObject());
     clientRenderer.RenderLocalNodes(out);
+	auto &sessionClient=clientRenderer.sessionClient;
 	if (sessionClient.IsConnected())
 	{
 		// Append video surface
@@ -625,57 +620,13 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	}
 	else
 	{
-		lobbyRenderer.Render(server_ip.c_str(),server_discovery_port);
+		lobbyRenderer.Render(clientRenderer.server_ip.c_str(),clientRenderer.server_discovery_port);
 	};
 	//uIRenderer.Render(in,out,1440,1600);
 	tinyUI.Render(in, out);
 	clientRenderer.DrawOSD(out);
 	DrawConnectionStateOSD(mGuiSys, out);
 	GLCheckErrorsWithTitle("Frame: Post-SCR");
-}
-
-void Application::UpdateHandObjects()
-{
-	//Poll controller state from the Oculus API.
-	for(int i=0; i < 2; i++)
-	{
-		ovrTracking remoteState;
-		if(controllers.mControllerIDs[i] != 0)
-		{
-			if(vrapi_GetInputTrackingState(GetSessionObject(), controllers.mControllerIDs[i], 0, &remoteState) >= 0)
-			{
-				clientDeviceState.SetControllerPose(i,	*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),
-														*((const clientrender::quat *)(&remoteState.HeadPose.Pose.Orientation)));
-			}
-		}
-	}
-
-	std::shared_ptr<clientrender::Node> body = clientRenderer.geometryCache.mNodeManager->GetBody();
-	if(body)
-	{
-		// TODO: SHould this be globalPose??
-		body->SetLocalPosition(clientDeviceState.headPose.localPose.position + bodyOffsetFromHead);
-
-		//Calculate rotation angle on y-axis, and use to create new quaternion that only rotates the body on the y-axis.
-		float angle = std::atan2(clientDeviceState.headPose.localPose.orientation.y, clientDeviceState.headPose.localPose.orientation.w);
-		clientrender::quat yRotation(0.0f, std::sin(angle), 0.0f, std::cos(angle));
-		body->SetLocalRotation(yRotation);
-	}
-
-	// Left and right hands have no parent and their position/orientation is relative to the current local space.
-	std::shared_ptr<clientrender::Node> rightHand = clientRenderer.geometryCache.mNodeManager->GetRightHand();
-	if(rightHand)
-	{
-		rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].globalPose.position);
-		rightHand->SetLocalRotation(clientDeviceState.controllerPoses[0].globalPose.orientation);
-	}
-
-	std::shared_ptr<clientrender::Node> leftHand = clientRenderer.geometryCache.mNodeManager->GetLeftHand();
-	if(leftHand)
-	{
-		leftHand->SetLocalPosition(clientDeviceState.controllerPoses[1].globalPose.position);
-		leftHand->SetLocalRotation(clientDeviceState.controllerPoses[1].globalPose.orientation);
-	}
 }
 
 void Application::AppRenderEye(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrRendererOutput &out, int eye)
@@ -694,213 +645,7 @@ void Application::AppRenderEye(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrR
 
 bool Application::OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
 {
-	avs::VideoConfig &videoConfig=clientRenderer.clientPipeline.videoConfig;
-	videoConfig = setupCommand.video_config;
-	if (!mPipelineConfigured)
-	{
-		OVR_WARN("VIDEO STREAM CHANGED: server port %d %d %d, cubemap %d", setupCommand.server_streaming_port,
-				 videoConfig.video_width, videoConfig.video_height,
-				 videoConfig.colour_cubemap_size);
-
-		teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
-		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
-
-		const uint32_t geoStreamID = 80;
-		std::vector<avs::NetworkSourceStream> streams = {{20}, {40}};
-		if (AudioStream)
-		{
-			streams.push_back({60});
-		}
-		if (GeoStream)
-		{
-			streams.push_back({geoStreamID});
-		}
-
-		avs::NetworkSourceParams sourceParams;
-		sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-		sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
-		sourceParams.remotePort = setupCommand.server_streaming_port;
-		sourceParams.remoteHTTPPort = setupCommand.server_http_port;
-		sourceParams.maxHTTPConnections = 10;
-		sourceParams.httpStreamID = geoStreamID;
-		sourceParams.useSSL = setupCommand.using_ssl;
-
-		bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
-		avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::GlStyle, bodyOffsetFromHead);
-
-		if (!clientRenderer.clientPipeline.source.configure(std::move(streams), sourceParams))
-		{
-			OVR_WARN("OnSetupCommandReceived: Failed to configure network source node.");
-			return false;
-		}
-		clientRenderer.clientPipeline.source.setDebugStream(setupCommand.debug_stream);
-		clientRenderer.clientPipeline.source.setDebugNetworkPackets(setupCommand.debug_network_packets);
-		clientRenderer.clientPipeline.source.setDoChecksums(setupCommand.do_checksums);
-
-		handshake.minimumPriority=clientRenderer.GetMinimumPriority();
-		// Don't use these on Android:
-		handshake.renderingFeatures.normals=false;
-		handshake.renderingFeatures.ambientOcclusion=false;
-		clientRenderer.clientPipeline.pipeline.add(&clientRenderer.clientPipeline.source);
-
-		clientRenderer.videoTagDataCubeArray.clear();
-		clientRenderer.videoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
-
-		avs::DecoderParams &decoderParams = clientRenderer.clientPipeline.decoderParams;
-		decoderParams.codec = videoConfig.videoCodec;
-		decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-		decoderParams.prependStartCodes = false;
-		decoderParams.deferDisplay = false;
-        decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
-        decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
-        decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
-
-		size_t stream_width = videoConfig.video_width;
-		size_t stream_height = videoConfig.video_height;
-
-		// Video
-		if (!clientRenderer.clientPipeline.decoder.configure(avs::DeviceHandle(), stream_width, stream_height,
-											   decoderParams, 20))
-		{
-			OVR_WARN("OnSetupCommandReceived: Failed to configure decoder node");
-			clientRenderer.clientPipeline.source.deconfigure();
-			return false;
-		}
-		{
-			clientrender::Texture::TextureCreateInfo textureCreateInfo = {};
-			textureCreateInfo.externalResource = true;
-			// Slot 1
-			textureCreateInfo.slot = clientrender::Texture::Slot::NORMAL;
-			textureCreateInfo.format = clientrender::Texture::Format::RGBA8;
-			textureCreateInfo.type = clientrender::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
-			textureCreateInfo.height = videoConfig.video_height;
-			textureCreateInfo.width = videoConfig.video_width;
-			textureCreateInfo.depth = 1;
-
-			clientRenderer.mVideoTexture->Create(textureCreateInfo);
-			((scc::GL_Texture *) (clientRenderer.mVideoTexture.get()))->SetExternalGlTexture(
-					clientRenderer.mVideoSurfaceTexture->GetTextureId());
-
-			// Slot 2
-			textureCreateInfo.slot = clientrender::Texture::Slot::COMBINED;
-			clientRenderer.mAlphaVideoTexture->Create(textureCreateInfo);
-			((scc::GL_Texture *) (clientRenderer.mAlphaVideoTexture.get()))->SetExternalGlTexture(
-					clientRenderer.mAlphaSurfaceTexture->GetTextureId());
-		}
-
-		VideoSurface* alphaSurface;
-		if (videoConfig.use_alpha_layer_decoding)
-		{
-			alphaSurface = new VideoSurface(clientRenderer.mAlphaSurfaceTexture);
-		}
-		else
-		{
-			alphaSurface = nullptr;
-		}
-
-		clientRenderer.clientPipeline.surface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture), alphaSurface);
-
-		clientRenderer.clientPipeline.videoQueue.configure(200000, 16, "VideoQueue");
-
-		avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.videoQueue);
-		avs::PipelineNode::link(clientRenderer.clientPipeline.videoQueue, clientRenderer.clientPipeline.decoder);
-		clientRenderer.clientPipeline.pipeline.link({&clientRenderer.clientPipeline.decoder, &clientRenderer.clientPipeline.surface});
-
-
-		// Tag Data
-		{
-			auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, &clientRenderer,
-							   std::placeholders::_1, std::placeholders::_2);
-			if (!clientRenderer.clientPipeline.tagDataDecoder.configure(40, f)) {
-				OVR_WARN("OnSetupCommandReceived: Failed to configure tag data decoder node.");
-				return false;
-			}
-			clientRenderer.clientPipeline.tagDataQueue.configure(200, 16, "TagDataQueue");
-
-			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.tagDataQueue);
-			clientRenderer.clientPipeline.pipeline.link({&clientRenderer.clientPipeline.tagDataQueue, &clientRenderer.clientPipeline.tagDataDecoder});
-		}
-
-
-		// Audio
-		if (AudioStream)
-		{
-			clientRenderer.clientPipeline.avsAudioDecoder.configure(60);
-			sca::AudioSettings audioSettings;
-			audioSettings.codec = sca::AudioCodec::PCM;
-			audioSettings.numChannels = 2;
-			audioSettings.sampleRate = 48000;
-			audioSettings.bitsPerSample = 32;
-			// This will be deconfigured automatically when the pipeline is deconfigured.
-			audioPlayer->configure(audioSettings);
-			audioStreamTarget.reset(new sca::AudioStreamTarget(audioPlayer));
-			clientRenderer.clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
-			clientRenderer.clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
-
-			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.audioQueue);
-			avs::PipelineNode::link(clientRenderer.clientPipeline.audioQueue, clientRenderer.clientPipeline.avsAudioDecoder);
-			clientRenderer.clientPipeline.pipeline.link({&clientRenderer.clientPipeline.avsAudioDecoder, &clientRenderer.clientPipeline.avsAudioTarget});
-
-			// Audio Input
-			if (setupCommand.audio_input_enabled)
-			{
-				sca::NetworkSettings networkSettings =
-						{
-								setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
-								, static_cast<int32_t>(handshake.maxBandwidthKpS)
-								, static_cast<int32_t>(handshake.udpBufferSize)
-								, setupCommand.requiredLatencyMs
-								, (int32_t) setupCommand.idle_connection_timeout
-						};
-
-				mNetworkPipeline.reset(new sca::NetworkPipeline());
-				mAudioInputQueue.configure(4096, 120, "AudioInputQueue");
-				mNetworkPipeline->initialise(networkSettings, &mAudioInputQueue);
-
-				// Callback called on separate thread when recording buffer is full
-				auto f = [this](const uint8_t *data, size_t dataSize) -> void
-				{
-					size_t bytesWritten;
-					if (mAudioInputQueue.write(nullptr, data, dataSize, bytesWritten))
-					{
-						mNetworkPipeline->process();
-					}
-				};
-				audioPlayer->startRecording(f);
-			}
-		}
-
-		if (GeoStream)
-		{
-			clientRenderer.clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
-			clientRenderer.clientPipeline.avsGeometryTarget.configure(&clientRenderer.resourceCreator);
-			clientRenderer.clientPipeline.geometryQueue.configure(2500000, 100, "GeometryQueue");
-
-			avs::PipelineNode::link(clientRenderer.clientPipeline.source, clientRenderer.clientPipeline.geometryQueue);
-			avs::PipelineNode::link(clientRenderer.clientPipeline.geometryQueue, clientRenderer.clientPipeline.avsGeometryDecoder);
-			clientRenderer.clientPipeline.pipeline.link({&clientRenderer.clientPipeline.avsGeometryDecoder, &clientRenderer.clientPipeline.avsGeometryTarget});
-		}
-		//GL_CheckErrors("Pre-Build Cubemap");
-		clientRenderer.OnSetupCommandReceived(videoConfig);
-
-		mPipelineConfigured = true;
-	}
-
-	handshake.startDisplayInfo.width = 1440;
-	handshake.startDisplayInfo.height = 1600;
-	handshake.framerate = 60;
-	handshake.FOV = 110;
-	handshake.isVR = true;
-	handshake.udpBufferSize = static_cast<uint32_t>(clientRenderer.clientPipeline.source.getSystemBufferSize());
-	handshake.maxBandwidthKpS = 10 * handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
-	handshake.axesStandard = avs::AxesStandard::GlStyle;
-	handshake.MetresPerUnit = 1.0f;
-	handshake.usingHands = true;
-	handshake.maxLightsSupported=TELEPORT_MAX_LIGHTS;
-	handshake.clientStreamingPort=client_streaming_port;
-
-	clientRenderer.lastSetupCommand = setupCommand;
-	return true;
+	return clientRenderer.OnSetupCommandReceived(server_ip,setupCommand,handshake);
 }
 
 void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)
@@ -910,9 +655,7 @@ void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)
 
 void Application::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
-	auto node=clientRenderer.geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
-	auto parent=clientRenderer.geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
-	node->SetParent(parent);
+	clientRenderer.geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
 }
 
 void Application::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubTypeCommand)
@@ -931,7 +674,7 @@ void Application::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateN
 			clientRenderer.geometryCache.mNodeManager->SetRightHand(updateNodeSubTypeCommand.nodeID);
 			break;
 		default:
-			SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeSubTypeCommand.nodeSubtype) << "!\n";
+			TELEPORT_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeSubTypeCommand.nodeSubtype) << "!\n";
 			break;
 	}
 }
@@ -941,19 +684,19 @@ void Application::OnVideoStreamClosed()
 
 	clientRenderer.clientPipeline.pipeline.deconfigure();
 	clientRenderer.clientPipeline.pipeline.reset();
-	mPipelineConfigured = false;
+	clientRenderer.mPipelineConfigured = false;
 
 	receivedInitialPos = false;
 }
 
 void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand &reconfigureVideoCommand)
 {
-	if (!mPipelineConfigured)
+	if (!clientRenderer.mPipelineConfigured)
 	{
 		return;
 	}
 
-	clientRenderer.OnSetupCommandReceived(reconfigureVideoCommand.video_config);
+	clientRenderer.ConfigureVideo(reconfigureVideoCommand.video_config);
 	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d",
 		 clientRenderer.clientPipeline.videoConfig.video_width, clientRenderer.clientPipeline.videoConfig.video_height,
 		 clientRenderer.clientPipeline.videoConfig.depth_width, clientRenderer.clientPipeline.videoConfig.depth_height);

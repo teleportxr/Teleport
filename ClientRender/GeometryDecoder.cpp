@@ -102,24 +102,24 @@ avs::Result GeometryDecoder::decode(avs::GeometryPayloadType type, avs::Geometry
 	switch(type)
 	{
 	case GeometryPayloadType::Mesh:
-		//SCR_COUT << "GeometryPayloadType::Mesh: " << bufferSizeK << std::endl;
+		//TELEPORT_COUT << "GeometryPayloadType::Mesh: " << bufferSizeK << std::endl;
 		return decodeMesh(target);
 	case GeometryPayloadType::Material:
-		//SCR_COUT << "GeometryPayloadType::Material: " << bufferSizeK << std::endl;
+		//TELEPORT_COUT << "GeometryPayloadType::Material: " << bufferSizeK << std::endl;
 		return decodeMaterial(target);
 	case GeometryPayloadType::MaterialInstance:
 		return decodeMaterialInstance(target);
 	case GeometryPayloadType::Texture:
-		//SCR_COUT << "GeometryPayloadType::Texture: " << bufferSizeK << std::endl;
+		//TELEPORT_COUT << "GeometryPayloadType::Texture: " << bufferSizeK << std::endl;
 		return decodeTexture(target);
 	case GeometryPayloadType::Animation:
-		//SCR_COUT << "GeometryPayloadType::Animation: " << bufferSizeK << std::endl;
+		//TELEPORT_COUT << "GeometryPayloadType::Animation: " << bufferSizeK << std::endl;
 		return decodeAnimation(target);
 	case GeometryPayloadType::Node:
-		//SCR_COUT << "GeometryPayloadType::Node: " << bufferSizeK << std::endl;
+		//TELEPORT_COUT << "GeometryPayloadType::Node: " << bufferSizeK << std::endl;
 		return decodeNode(target);
 	case GeometryPayloadType::Skin:
-		//SCR_COUT << "GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
+		//TELEPORT_COUT << "GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
 		return decodeSkin(target);
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
@@ -214,7 +214,7 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 		draco::Status dracoStatus = dracoDecoder.DecodeBufferToGeometry(&dracoDecoderBuffer, &dracoMesh);
 		if (!dracoStatus.ok())
 		{
-			SCR_CERR << "Draco decode failed: " << (uint32_t)dracoStatus.code() << std::endl;
+			TELEPORT_CERR << "Draco decode failed: " << (uint32_t)dracoStatus.code() << std::endl;
 			return avs::Result::DecoderBackend_DecodeFailed;
 		}
 
@@ -477,7 +477,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		}
 		else
 		{
-			SCR_CERR << "Unknown meshCompressionType: " << (uint32_t)compressedMesh.meshCompressionType << std::endl;
+			TELEPORT_CERR << "Unknown meshCompressionType: " << (uint32_t)compressedMesh.meshCompressionType << std::endl;
 			return avs::Result::DecoderBackend_DecodeFailed;
 		}
 	}
@@ -548,7 +548,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 					assert(accessor.count == vertexCount);
 					continue;
 				default:
-					SCR_CERR << "Unknown attribute semantic: " << (uint32_t)attrib.semantic << std::endl;
+					TELEPORT_CERR << "Unknown attribute semantic: " << (uint32_t)attrib.semantic << std::endl;
 					continue;
 				}
 			}
@@ -702,7 +702,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& ta
 	animation.boneKeyframes.resize(Next8B);
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
-		avs::TransformKeyframe& transformKeyframe = animation.boneKeyframes[i];
+		avs::TransformKeyframeList& transformKeyframe = animation.boneKeyframes[i];
 		transformKeyframe.boneIndex = Next8B;
 
 		decodeVector3Keyframes(transformKeyframe.positionKeyframes);
@@ -797,6 +797,12 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 	for(size_t i = 0; i < skin.inverseBindMatrices.size(); i++)
 	{
 		skin.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
+	}
+
+	skin.boneIDs.resize(Next8B);
+	for (size_t i = 0; i < skin.boneIDs.size(); i++)
+	{
+		skin.boneIDs[i] = Next8B;
 	}
 
 	skin.jointIDs.resize(Next8B);

@@ -92,11 +92,12 @@ namespace teleport
 				}
 				if(meshResourceInfo.skinID != 0)
 				{
-					for(avs::uid boneID : meshResourceInfo.jointIDs)
+					if( meshResourceInfo.boneIDs.size())
 					{
-						if(!req->hasResource(boneID))
+						// It should have either none or all of the joints.
+						if(!req->hasResource(meshResourceInfo.boneIDs[0]))
 						{
-							encodeNodes(src, req, {boneID});
+							encodeNodes(src, req, meshResourceInfo.boneIDs);
 
 							keepQueueing = attemptQueueData();
 							if(!keepQueueing)
@@ -473,6 +474,12 @@ namespace teleport
 			{
 				put(skin->inverseBindMatrices[i]);
 			}
+			// TODO: This is inefficient, most boneID's will be jointID's :
+			put(skin->boneIDs.size());
+			for (int i = 0; i < skin->boneIDs.size(); i++)
+			{
+				put(skin->boneIDs[i]);
+			}
 
 			put(skin->jointIDs.size());
 			for(int i = 0; i < skin->jointIDs.size(); i++)
@@ -504,7 +511,7 @@ namespace teleport
 			put((uint8_t*)animation->name.data(), nameLength);
 
 			put(animation->boneKeyframes.size());
-			for(const avs::TransformKeyframe& transformKeyframe : animation->boneKeyframes)
+			for(const avs::TransformKeyframeList& transformKeyframe : animation->boneKeyframes)
 			{
 				put(transformKeyframe.boneIndex);
 

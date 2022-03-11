@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Texture.h"
+#include "TeleportClient/Log.h"
 
 namespace clientrender
 {
@@ -69,22 +70,22 @@ namespace clientrender
 		void AddColourAttachment(Texture& colourTexture, uint32_t attachmentIndex, bool overrideTexture = false)
 		{
 			if (!CheckTextureCompatibility(colourTexture))
-				SCR_CERR<<"Incompatible texture.\n";
+				TELEPORT_CERR<<"Incompatible texture.\n";
 			
 			if (m_ColourTextures.at(attachmentIndex) == nullptr || overrideTexture)
 				m_ColourTextures.at(attachmentIndex) = &colourTexture;
 			else
-				SCR_CERR<<"Can't add colour texture attachment.\n";
+				TELEPORT_CERR<<"Can't add colour texture attachment.\n";
 		};
 		void AddDepthAttachment(Texture& depthTexture, bool overrideTexture = false)
 		{
 			if (!CheckTextureCompatibility(depthTexture))
-				SCR_CERR<<"Incompatible texture.\n";
+				TELEPORT_CERR<<"Incompatible texture.\n";
 
 			if (m_DepthTexture == nullptr || overrideTexture)
 				m_DepthTexture = &depthTexture;
 			else
-				SCR_CERR<<"Can't add depth texture attachment\n";
+				TELEPORT_CERR<<"Can't add depth texture attachment\n";
 		};
 
 	private:

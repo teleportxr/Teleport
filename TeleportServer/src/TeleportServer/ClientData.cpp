@@ -28,7 +28,7 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
 	setupCommand.control_model = serverSettings.controlModel;
 	setupCommand.bodyOffsetFromHead = clientSettings.bodyOffsetFromHead;
-	setupCommand.startTimestamp = getUnixTimestamp();
+	setupCommand.startTimestamp_utc_unix_ms = getUnixTimestamp();
 	setupCommand.using_ssl = use_ssl;
 	setupCommand.backgroundMode = clientSettings.backgroundMode;
 	setupCommand.draw_distance = clientSettings.drawDistance;

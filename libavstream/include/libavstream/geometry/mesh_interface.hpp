@@ -348,6 +348,8 @@ struct Animation;
 	{
 		std::string name;
 		std::vector<Mat4x4> inverseBindMatrices;
+		std::vector<uid> boneIDs;
+		// of which a subset is:
 		std::vector<uid> jointIDs;
 		Transform skinTransform;
 
@@ -355,6 +357,7 @@ struct Animation;
 		{
 			avs::Skin convertedSkin;
 			convertedSkin.name = skin.name;
+			convertedSkin.boneIDs = skin.boneIDs;
 			convertedSkin.jointIDs = skin.jointIDs;
 
 			for(const Mat4x4& matrix : skin.inverseBindMatrices)
@@ -585,7 +588,7 @@ struct Animation;
 		uid node_uid;
 		uid mesh_uid;
 		uid skinID;
-		std::vector<uid> jointIDs;
+		std::vector<uid> boneIDs;
 		std::vector<uid> animationIDs;
 		std::vector<MaterialResources> materials;
 	};

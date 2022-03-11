@@ -20,6 +20,9 @@
 #include "OVRNode.h"
 #include "OVRNodeManager.h"
 #include "Config.h"
+#include "AndroidDiscoveryService.h"
+#include "VideoSurface.h"
+#include "AudioCommon.h"
 
 using namespace OVR;
 using namespace OVRFW;
@@ -82,14 +85,18 @@ ClientRenderer::ClientRenderer
     ClientAppInterface *c,
     teleport::client::ClientDeviceState *s,
     Controllers *cn
+    ,SessionCommandInterface *sc
 )
-    :controllers(cn)
-		,geometryCache(new OVRNodeManager())
-		,resourceCreator()
+    :Renderer(new OVRNodeManager(),new OVRNodeManager())
+    	,controllers(cn)
 		,clientAppInterface(c)
 		,clientDeviceState(s)
 		,mShowWebcam(true)
+	,sessionClient(sc, std::make_unique<AndroidDiscoveryService>())
 {
+
+	sessionClient.SetResourceCreator(&resourceCreator);
+	sessionClient.SetGeometryCache(&geometryCache);
 }
 
 ClientRenderer::~ClientRenderer()
@@ -100,6 +107,10 @@ ClientRenderer::~ClientRenderer()
 void ClientRenderer::EnteredVR(const ovrJava *java)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+
+	resourceCreator.Initialize((&globalGraphicsResources.renderPlatform),
+			clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	resourceCreator.SetGeometryCache(&geometryCache);
 	//VideoSurfaceProgram
 	{
 		{
@@ -614,12 +625,6 @@ void ClientRenderer::WebcamResources::Init(ClientAppInterface* clientAppInterfac
 	initialized = true;
 }
 
-void ClientRenderer::Update(float time_elapsed)
-{
-	geometryCache.Update(time_elapsed);
-	resourceCreator.Update(time_elapsed);
-}
-
 void ClientRenderer::WebcamResources::SetPosition(const avs::vec2& position)
 {
 	ovrMatrix4f translation = ovrMatrix4f_CreateTranslation(position.x, position.y, 0);
@@ -673,9 +678,10 @@ void ClientRenderer::ExitedVR()
 	GlProgram::Free(m2DVideoSurfaceProgram);
 	mWebcamResources.Destroy();
 	mDebugTextureResources.Destroy();
+	sessionClient.Disconnect(TELEPORT_TIMEOUT);
 }
 
-void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
+void ClientRenderer::ConfigureVideo(const avs::VideoConfig &vc)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	clientPipeline.videoConfig = vc;
@@ -752,10 +758,6 @@ void ClientRenderer::OnSetupCommandReceived(const avs::VideoConfig &vc)
 		specularCubemapTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
 		mCubemapLightingTexture->UseSampler(globalGraphicsResources.cubeMipMapSampler);
 	}
-	//GLCheckErrorsWithTitle("Built Lighting Cubemap");
-
-	// Set discard distance to the sphere detection radius of the server for use in pixel shader.
-	globalGraphicsResources.scrCamera->UpdateDrawDistance(lastSetupCommand.draw_distance);
 }
 
 void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
@@ -767,7 +769,7 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t *data, size_t dataSize)
 
 	tagData.lights.resize(std::min(tagData.coreData.lightCount, (uint32_t) 4));
 
-	teleport::client::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(tagData.coreData.timestamp_unix_ms);
 
 	// Aidan : View and proj matrices are currently unchanged from Unity
 	size_t index = sizeof(clientrender::SceneCaptureCubeCoreTagData);
@@ -1080,6 +1082,7 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 	}
 
 	//Render player, if parts exist.
+#ifdef RENDER_BODY_SEPARATELY
 	std::shared_ptr<clientrender::Node> body = geometryCache.mNodeManager->GetBody();
 	if (body)
 	{
@@ -1095,6 +1098,7 @@ void ClientRenderer::RenderLocalNodes(OVRFW::ovrRendererOutput &res)
 	{
 		RenderNode(res, rightHand);
 	}
+#endif
 }
 
 void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<clientrender::Node> node)
@@ -1154,20 +1158,26 @@ void ClientRenderer::RenderNode(OVRFW::ovrRendererOutput &res, std::shared_ptr<c
 				// Must update the uniforms. e.g. camera pos.
 				// The below seems to only apply/work for camerapos anyway:
 				//for(const clientrender::ShaderResource *sr : pbrShaderResources)
+				const std::vector<clientrender::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
+				for(const clientrender::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
 				{
-					const std::vector<clientrender::ShaderResource::WriteShaderResource> &shaderResourceSet = sr->GetWriteShaderResources();
-					for(const clientrender::ShaderResource::WriteShaderResource &resource : shaderResourceSet)
+					clientrender::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
+					if(type == clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER && resource.bufferInfo.buffer)
 					{
-						clientrender::ShaderResourceLayout::ShaderResourceType type = resource.shaderResourceType;
-						if(type == clientrender::ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER && resource.bufferInfo.buffer)
+						scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
+						if(gl_uniformBuffer!=nullptr)
 						{
-							scc::GL_UniformBuffer *gl_uniformBuffer = static_cast<scc::GL_UniformBuffer *>(resource.bufferInfo.buffer);
-							if(gl_uniformBuffer)
-								surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
+							surfaceDef.graphicsCommand.UniformData[j].Data = &(gl_uniformBuffer->GetGlBuffer());
 						}
 					}
-					j++;
 				}
+				j++;
+				if(skin)
+				{
+					//OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer*)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
+					//surfaceDef.graphicsCommand.UniformData[4].Data = &buf;
+				}
+
 				OVRFW::GlBuffer &buf = ((scc::GL_ShaderStorageBuffer *)globalGraphicsResources.mTagDataBuffer.get())->GetGlBuffer();
 				surfaceDef.graphicsCommand.UniformData[1].Data = &buf;
 				//surfaceDef.graphicsCommand.UniformData[3].Data = &ovrNode->perMeshInstanceData.u_LightmapScaleOffset;
@@ -1390,7 +1400,7 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 				for(const auto &missingPair : missingResources)
 				{
 					const clientrender::MissingResource &missingResource = missingPair.second;
-					str << (int)missingResource.resourceType << "_" << missingResource.id;
+					str << stringOf(missingResource.resourceType) << " " << missingResource.id;
 
 					resourcesOnLine++;
 					if(resourcesOnLine >= MAX_RESOURCES_PER_LINE)
@@ -1511,4 +1521,267 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 		default:
 			break;
 	}
+}
+
+
+void ClientRenderer::UpdateHandObjects(ovrMobile *ovrm)
+{
+	//Poll controller state from the Oculus API.
+	for(int i=0; i < 2; i++)
+	{
+		ovrTracking remoteState;
+		if(controllers->mControllerIDs[i] != 0)
+		{
+			if(vrapi_GetInputTrackingState(ovrm, controllers->mControllerIDs[i], 0, &remoteState) >= 0)
+			{
+				clientDeviceState->SetControllerPose(i,	*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),
+						*((const clientrender::quat *)(&remoteState.HeadPose.Pose.Orientation)));
+			}
+		}
+	}
+
+	std::shared_ptr<clientrender::Node> body = geometryCache.mNodeManager->GetBody();
+	if(body)
+	{
+		// TODO: SHould this be globalPose??
+		body->SetLocalPosition(clientDeviceState->headPose.localPose.position + lastSetupCommand.bodyOffsetFromHead);
+
+		//Calculate rotation angle on y-axis, and use to create new quaternion that only rotates the body on the y-axis.
+		float angle = std::atan2(clientDeviceState->headPose.localPose.orientation.y, clientDeviceState->headPose.localPose.orientation.w);
+		clientrender::quat yRotation(0.0f, std::sin(angle), 0.0f, std::cos(angle));
+		body->SetLocalRotation(yRotation);
+	}
+
+	// Left and right hands have no parent and their position/orientation is relative to the current local space.
+	std::shared_ptr<clientrender::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
+	if(rightHand)
+	{
+		rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].globalPose.position);
+		rightHand->SetLocalRotation(clientDeviceState->controllerPoses[1].globalPose.orientation);
+	}
+
+	std::shared_ptr<clientrender::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
+	if(leftHand)
+	{
+		leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].globalPose.position);
+		leftHand->SetLocalRotation(clientDeviceState->controllerPoses[0].globalPose.orientation);
+	}
+}
+
+bool ClientRenderer::OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
+{
+	avs::VideoConfig &videoConfig=clientPipeline.videoConfig;
+	videoConfig = setupCommand.video_config;
+	if (!mPipelineConfigured)
+	{
+		OVR_WARN("VIDEO STREAM CHANGED: server port %d %d %d, cubemap %d", setupCommand.server_streaming_port,
+				videoConfig.video_width, videoConfig.video_height,
+				videoConfig.colour_cubemap_size);
+
+		teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ms);
+		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
+
+		const uint32_t geoStreamID = 80;
+		std::vector<avs::NetworkSourceStream> streams = {{20}, {40}};
+		if (AudioStream)
+		{
+			streams.push_back({60});
+		}
+		if (GeoStream)
+		{
+			streams.push_back({geoStreamID});
+		}
+
+		avs::NetworkSourceParams sourceParams;
+		sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
+		sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
+		sourceParams.remotePort = setupCommand.server_streaming_port;
+		sourceParams.remoteHTTPPort = setupCommand.server_http_port;
+		sourceParams.maxHTTPConnections = 10;
+		sourceParams.httpStreamID = geoStreamID;
+		sourceParams.useSSL = setupCommand.using_ssl;
+
+
+		if (!clientPipeline.source.configure(std::move(streams), sourceParams))
+		{
+			OVR_WARN("OnSetupCommandReceived: Failed to configure network source node.");
+			return false;
+		}
+		clientPipeline.source.setDebugStream(setupCommand.debug_stream);
+		clientPipeline.source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+		clientPipeline.source.setDoChecksums(setupCommand.do_checksums);
+
+		handshake.minimumPriority=GetMinimumPriority();
+		// Don't use these on Android:
+		handshake.renderingFeatures.normals=false;
+		handshake.renderingFeatures.ambientOcclusion=false;
+		clientPipeline.pipeline.add(&clientPipeline.source);
+
+		videoTagDataCubeArray.clear();
+		videoTagDataCubeArray.resize(MAX_TAG_DATA_COUNT);
+
+		avs::DecoderParams &decoderParams = clientPipeline.decoderParams;
+		decoderParams.codec = videoConfig.videoCodec;
+		decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
+		decoderParams.prependStartCodes = false;
+		decoderParams.deferDisplay = false;
+		decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
+		decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
+		decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
+
+		size_t stream_width = videoConfig.video_width;
+		size_t stream_height = videoConfig.video_height;
+
+		// Video
+		if (!clientPipeline.decoder.configure(avs::DeviceHandle(), stream_width, stream_height,
+				decoderParams, 20))
+		{
+			OVR_WARN("OnSetupCommandReceived: Failed to configure decoder node");
+			clientPipeline.source.deconfigure();
+			return false;
+		}
+		{
+			clientrender::Texture::TextureCreateInfo textureCreateInfo = {};
+			textureCreateInfo.externalResource = true;
+			// Slot 1
+			textureCreateInfo.slot = clientrender::Texture::Slot::NORMAL;
+			textureCreateInfo.format = clientrender::Texture::Format::RGBA8;
+			textureCreateInfo.type = clientrender::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
+			textureCreateInfo.height = videoConfig.video_height;
+			textureCreateInfo.width = videoConfig.video_width;
+			textureCreateInfo.depth = 1;
+
+			mVideoTexture->Create(textureCreateInfo);
+			((scc::GL_Texture *) (mVideoTexture.get()))->SetExternalGlTexture(
+					mVideoSurfaceTexture->GetTextureId());
+
+			// Slot 2
+			textureCreateInfo.slot = clientrender::Texture::Slot::COMBINED;
+			mAlphaVideoTexture->Create(textureCreateInfo);
+			((scc::GL_Texture *) (mAlphaVideoTexture.get()))->SetExternalGlTexture(
+					mAlphaSurfaceTexture->GetTextureId());
+		}
+
+		VideoSurface* alphaSurface;
+		if (videoConfig.use_alpha_layer_decoding)
+		{
+			alphaSurface = new VideoSurface(mAlphaSurfaceTexture);
+		}
+		else
+		{
+			alphaSurface = nullptr;
+		}
+
+		clientPipeline.surface.configure(new VideoSurface(mVideoSurfaceTexture), alphaSurface);
+
+		clientPipeline.videoQueue.configure(200000, 16, "VideoQueue");
+
+		avs::PipelineNode::link(clientPipeline.source, clientPipeline.videoQueue);
+		avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
+		clientPipeline.pipeline.link({&clientPipeline.decoder, &clientPipeline.surface});
+
+
+		// Tag Data
+		{
+			auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this,
+					std::placeholders::_1, std::placeholders::_2);
+			if (!clientPipeline.tagDataDecoder.configure(40, f)) {
+				OVR_WARN("OnSetupCommandReceived: Failed to configure tag data decoder node.");
+				return false;
+			}
+			clientPipeline.tagDataQueue.configure(200, 16, "TagDataQueue");
+
+			avs::PipelineNode::link(clientPipeline.source, clientPipeline.tagDataQueue);
+			clientPipeline.pipeline.link({&clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder});
+		}
+
+
+		// Audio
+		if (AudioStream)
+		{
+			clientPipeline.avsAudioDecoder.configure(60);
+			sca::AudioSettings audioSettings;
+			audioSettings.codec = sca::AudioCodec::PCM;
+			audioSettings.numChannels = 2;
+			audioSettings.sampleRate = 48000;
+			audioSettings.bitsPerSample = 32;
+			// This will be deconfigured automatically when the pipeline is deconfigured.
+			audioPlayer->configure(audioSettings);
+			audioStreamTarget.reset(new sca::AudioStreamTarget(audioPlayer));
+			clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
+			clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
+
+			avs::PipelineNode::link(clientPipeline.source, clientPipeline.audioQueue);
+			avs::PipelineNode::link(clientPipeline.audioQueue, clientPipeline.avsAudioDecoder);
+			clientPipeline.pipeline.link({&clientPipeline.avsAudioDecoder, &clientPipeline.avsAudioTarget});
+
+			// Audio Input
+			if (setupCommand.audio_input_enabled)
+			{
+				sca::NetworkSettings networkSettings =
+											 {
+													 setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
+													 , static_cast<int32_t>(handshake.maxBandwidthKpS)
+													 , static_cast<int32_t>(handshake.udpBufferSize)
+													 , setupCommand.requiredLatencyMs
+													 , (int32_t) setupCommand.idle_connection_timeout
+											 };
+
+				mNetworkPipeline.reset(new sca::NetworkPipeline());
+				mAudioInputQueue.configure(4096, 120, "AudioInputQueue");
+				mNetworkPipeline->initialise(networkSettings, &mAudioInputQueue);
+
+				// Callback called on separate thread when recording buffer is full
+				auto f = [this](const uint8_t *data, size_t dataSize) -> void
+				{
+					size_t bytesWritten;
+					if (mAudioInputQueue.write(nullptr, data, dataSize, bytesWritten))
+					{
+						mNetworkPipeline->process();
+					}
+				};
+				audioPlayer->startRecording(f);
+			}
+		}
+
+		if (GeoStream)
+		{
+			clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
+			clientPipeline.avsGeometryTarget.configure(&resourceCreator);
+			clientPipeline.geometryQueue.configure(2500000, 100, "GeometryQueue");
+
+			avs::PipelineNode::link(clientPipeline.source, clientPipeline.geometryQueue);
+			avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);
+			clientPipeline.pipeline.link({&clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget});
+		}
+		//GL_CheckErrors("Pre-Build Cubemap");
+		ConfigureVideo(videoConfig);
+
+		mPipelineConfigured = true;
+	}
+	//GLCheckErrorsWithTitle("Built Lighting Cubemap");
+
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	// Set discard distance to the sphere detection radius of the server for use in pixel shader.
+	if(setupCommand.draw_distance!=0.0f)
+		globalGraphicsResources.scrCamera->UpdateDrawDistance(setupCommand.draw_distance);
+	else
+		globalGraphicsResources.scrCamera->UpdateDrawDistance(10000.0f);
+
+	handshake.startDisplayInfo.width = 1440;
+	handshake.startDisplayInfo.height = 1600;
+	handshake.framerate = 60;
+	handshake.FOV = 110;
+	handshake.isVR = true;
+	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source.getSystemBufferSize());
+	handshake.maxBandwidthKpS = 10 * handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
+	handshake.axesStandard = avs::AxesStandard::GlStyle;
+	handshake.MetresPerUnit = 1.0f;
+	handshake.usingHands = true;
+	handshake.maxLightsSupported=TELEPORT_MAX_LIGHTS;
+	handshake.clientStreamingPort=client_streaming_port;
+
+	lastSetupCommand = setupCommand;
+	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::GlStyle, lastSetupCommand.bodyOffsetFromHead);
+	return true;
 }

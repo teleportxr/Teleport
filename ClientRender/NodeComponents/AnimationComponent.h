@@ -39,15 +39,15 @@ namespace clientrender
 
 		const AnimationStateMap &GetAnimationStates() const;
 		const AnimationState* GetCurrentAnimationState() const;
-		float GetCurrentAnimationTime() const;
+		float GetCurrentAnimationTimeSeconds() const;
 	private:
 		AnimationStateMap animationStates;
 		AnimationStateMap::iterator currentAnimationState = animationStates.end();
-		float currentAnimationTime = 0.0f; //How many milliseconds along the current animation is.
+		float currentAnimationTimeS = 0.0f; //How many seconds along the current animation is.
 
 		//Variables for if we can't start the animation because it has yet to be received, but we want to start when the animation is received.
 		avs::uid latestAnimationID = 0;
-		uint64_t latestAnimationStartTimestamp = 0;
+		uint64_t latestAnimationStartTimestampUnixUTCMs = 0;
 
 		//Starts playing animation as if it had started at the passed time.
 		//	animationIterator : Iterator for animation to play from animations lookup.
@@ -55,6 +55,6 @@ namespace clientrender
 		void startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestamp);
 
 		//Animation may have an animation override, so we need to use the current time in the animation component only when it is set.
-		float getAnimationTimeValue();
+		float getAnimationTimeSeconds();
 	};
 }

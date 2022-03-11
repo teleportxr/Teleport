@@ -94,21 +94,21 @@ namespace clientrender
 		~GeometryCache();
 
 		//Clear any resources that have not been used longer than their expiry time.
-		//	timeElapsed : Delta time in milliseconds.
-		void Update(float timeElapsed)
+		//	timeElapsed_s : Delta time in seconds.
+		void Update(float timeElapsed_s)
 		{
-			mNodeManager->Update(timeElapsed);
-			mIndexBufferManager.Update(timeElapsed);
-			mShaderManager.Update(timeElapsed);
-			mMaterialManager.Update(timeElapsed);
-			mTextureManager.Update(timeElapsed);
-			mUniformBufferManager.Update(timeElapsed);
-			mVertexBufferManager.Update(timeElapsed);
-			mMeshManager.Update(timeElapsed);
-			mSkinManager.Update(timeElapsed);
-			//mLightManager.Update(timeElapsed);
-			mBoneManager.Update(timeElapsed);
-			mAnimationManager.Update(timeElapsed);
+			mNodeManager->Update(timeElapsed_s);
+			mIndexBufferManager.Update(timeElapsed_s);
+			mShaderManager.Update(timeElapsed_s);
+			mMaterialManager.Update(timeElapsed_s);
+			mTextureManager.Update(timeElapsed_s);
+			mUniformBufferManager.Update(timeElapsed_s);
+			mVertexBufferManager.Update(timeElapsed_s);
+			mMeshManager.Update(timeElapsed_s);
+			mSkinManager.Update(timeElapsed_s);
+			//mLightManager.Update(timeElapsed_s);
+			mBoneManager.Update(timeElapsed_s);
+			mAnimationManager.Update(timeElapsed_s);
 		}
 
 

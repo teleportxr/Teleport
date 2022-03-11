@@ -64,11 +64,11 @@ bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
 {
 	ovrInputCapabilityHeader inputCapsHeader;
 	ovrControllerCapabilities caps;
-	if(idx==0)
+	if(idx==1)
 	{
 		caps=ovrControllerCapabilities::ovrControllerCaps_RightHand;
 	}
-	if(idx==1)
+	if(idx==0)
 	{
 		caps=ovrControllerCapabilities::ovrControllerCaps_LeftHand;
 	}

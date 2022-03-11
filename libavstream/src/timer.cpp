@@ -16,7 +16,7 @@ namespace avs
 		m_startTimestamp = Platform::getTimestamp();
 	}
 
-	double Timer::GetElapsedTime() const
+	double Timer::GetElapsedTimeS() const
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		return Platform::getTimeElapsedInSeconds(m_startTimestamp, Platform::getTimestamp());
@@ -29,8 +29,8 @@ namespace avs
 		m_timer.Start();
 	}
 
-	double TimerUtil::GetElapsedTime()
+	double TimerUtil::GetElapsedTimeS()
 	{
-		return m_timer.GetElapsedTime();
+		return m_timer.GetElapsedTimeS();
 	}
 } 

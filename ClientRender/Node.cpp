@@ -77,7 +77,7 @@ void Node::SetLastMovement(const avs::MovementUpdate& update)
 
 	//Set transform, then tick based on difference in time since the update was sent and now.
 	UpdateModelMatrix(update.position, update.rotation, update.scale);
-	TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestamp() - update.timestamp));
+	TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - update.timestamp));
 }
 
 void Node::TickExtrapolatedTransform(float deltaTime)
@@ -97,35 +97,40 @@ void Node::TickExtrapolatedTransform(float deltaTime)
 	UpdateModelMatrix(newTranslation, newRotation, transform.m_Scale);
 }
 
-void Node::Update(float deltaTime)
+void Node::Update(float deltaTime_ms)
 {
-	TickExtrapolatedTransform(deltaTime);
-	visibility.update(deltaTime);
+	TickExtrapolatedTransform(deltaTime_ms);
+	visibility.update(deltaTime_ms);
 
 	//Attempt to animate, if we have a skin.
 	if(skin)
 	{
-		animationComponent.update(skin->GetBones(), deltaTime);
+		animationComponent.update(skin->GetJoints(), deltaTime_ms);
 	}
 
 	for(std::weak_ptr<Node> child : children)
 	{
-		child.lock()->Update(deltaTime);
+		child.lock()->Update(deltaTime_ms);
 	}
 }
 
 void Node::SetParent(std::shared_ptr<Node> newParent)
 {
-	std::shared_ptr<Node> oldParent = parent.lock();
-	if(oldParent== newParent)
-		return;
-	parent = newParent;
-	//Remove self from parent list of existing parent, if we have a parent.
-	//Prevent stack overflow by doing this after setting the new parent.
-	if(oldParent)
+	if(parent.use_count())
 	{
-		oldParent->RemoveChild(id);
+		std::shared_ptr<Node> oldParent = parent.lock();
+		if (oldParent == newParent)
+			return;
+		parent = newParent;
+		//Remove self from parent list of existing parent, if we have a parent.
+		//Prevent stack overflow by doing this after setting the new parent.
+		if(oldParent)
+		{
+			oldParent->RemoveChild(id);
+		}
 	}
+	else
+		parent=newParent;
 	// New parent may have different position.
 	RequestTransformUpdate();
 }
@@ -177,7 +182,7 @@ void Node::SetLocalTransform(const Transform& transform)
 {
 	if(abs(transform.m_Scale.x) < 0.0001f)
 	{
-		SCR_CERR << "Failed to update local transform of Node_" << id << "(" << name.c_str() << ")! Scale.x is zero!\n";
+		TELEPORT_CERR << "Failed to update local transform of Node_" << id << "(" << name.c_str() << ")! Scale.x is zero!\n";
 		return;
 	}
 	localTransform = transform;

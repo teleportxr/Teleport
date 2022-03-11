@@ -197,7 +197,7 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCre
 
 		if(desc[i].format == simul::crossplatform::UNKNOWN)
 		{
-			SCR_COUT << "ERROR: Unknown format for attribute: " << desc[i].semanticName << std::endl;
+			TELEPORT_COUT << "ERROR: Unknown format for attribute: " << desc[i].semanticName << std::endl;
 		}
 
 		size_t this_size = GetByteSize(attr);

@@ -129,10 +129,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool keydown[256] = {};
 	SessionClient sessionClient;
 	teleport::client::ControllerState controllerStates[2];
-	clientrender::GeometryCache localGeometryCache;
-	clientrender::ResourceCreator localResourceCreator;
-	clientrender::GeometryCache geometryCache;
-	clientrender::ResourceCreator resourceCreator;
 	
 	bool show_video = false;
 
@@ -167,6 +163,7 @@ public:
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+	void ConfigureVideo(const avs::VideoConfig& vc) override;
 	void OnVideoStreamClosed() override;
 
 	void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
@@ -219,9 +216,6 @@ public:
 
 	void CreateTexture(AVSTextureHandle &th,int width, int height);
 	void FillInControllerPose(int index, float offset);
-	//Update the state of objects on the ClientRenderer.
-	void Update();
-
 	static constexpr bool AudioStream	= true;
 	static constexpr bool GeoStream		= true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;

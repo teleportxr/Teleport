@@ -66,6 +66,7 @@ namespace clientrender
 		void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* const animationTimeOverride = nullptr, float overrideMaximum = 0.0f);
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
+		void ReparentNode(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand);
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.
 		void Update(float deltaTime);

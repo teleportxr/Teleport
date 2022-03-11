@@ -4,23 +4,23 @@ namespace teleport
 {
 	namespace client
 	{
-		uint64_t ServerTimestamp::lastReceivedTimestamp;
-		double ServerTimestamp::currentTimestamp;
+		uint64_t ServerTimestamp::lastReceivedTimestampUTCUnixMs;
+		double ServerTimestamp::currentTimestampUTCUnixMs;
 
-		void ServerTimestamp::setLastReceivedTimestamp(uint64_t value)
+		void ServerTimestamp::setLastReceivedTimestampUTCUnixMs(uint64_t value)
 		{
-			lastReceivedTimestamp = value;
-			currentTimestamp = static_cast<double>(lastReceivedTimestamp);
+			lastReceivedTimestampUTCUnixMs = value;
+			currentTimestampUTCUnixMs = static_cast<double>(lastReceivedTimestampUTCUnixMs);
 		}
 
-		double ServerTimestamp::getCurrentTimestamp()
+		double ServerTimestamp::getCurrentTimestampUTCUnixMs()
 		{
-			return currentTimestamp;
+			return currentTimestampUTCUnixMs;
 		}
 
-		void ServerTimestamp::tick(double deltaTime)
+		void ServerTimestamp::tick(double deltaTime_s)
 		{
-			currentTimestamp += deltaTime;
+			currentTimestampUTCUnixMs += deltaTime_s*1000.0;
 		}
 	}
 }

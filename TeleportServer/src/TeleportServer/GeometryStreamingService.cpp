@@ -258,7 +258,7 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 	if (meshNode.skinID != 0)
 	{
 		avs::Skin* skin = geometryStore->getSkin(node.skinID, getClientAxesStandard());
-		meshNode.jointIDs = skin->jointIDs;
+		meshNode.boneIDs = skin->boneIDs;
 	}
 
 	meshNode.animationIDs = node.animations;

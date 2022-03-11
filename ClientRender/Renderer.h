@@ -3,8 +3,11 @@
 
 #include "Common.h"
 #include "TeleportClient/basic_linear_algebra.h"
-
+#include "ClientRender/GeometryCache.h"
+#include "ClientRender/ResourceCreator.h"
 #include <libavstream/src/platform.hpp>
+#include "TeleportClient/SessionClient.h"
+
 namespace clientrender
 {
 	enum
@@ -25,7 +28,7 @@ namespace clientrender
 	class Renderer
 	{
 	public:
-		Renderer();
+		Renderer(clientrender::NodeManager *localNodeManager,clientrender::NodeManager *remoteNodeManager);
 
 		void SetMinimumPriority(int32_t p)
 		{
@@ -35,15 +38,22 @@ namespace clientrender
 		{
 			return minimumPriority;
 		}
+		virtual void ConfigureVideo(const avs::VideoConfig &vc)=0;
 		avs::SetupCommand lastSetupCommand;
 		avs::SetupLightingCommand lastSetupLightingCommand;
 
 		float framerate = 0.0f;
+		void Update(double timestamp_ms);
 	protected:
 		int show_osd = NO_OSD;
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
 		bool using_vr = true;
+		clientrender::GeometryCache localGeometryCache;
+		clientrender::ResourceCreator localResourceCreator;
+	public:
+		clientrender::GeometryCache geometryCache;
+		clientrender::ResourceCreator resourceCreator;
 
 	};
 }

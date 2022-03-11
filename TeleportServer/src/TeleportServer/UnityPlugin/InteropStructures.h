@@ -82,10 +82,13 @@ struct InteropSkin
 {
 	BSTR name;
 
-	size_t bindMatrixAmount;
+	size_t numInverseBindMatrices;
 	avs::Mat4x4* inverseBindMatrices;
+
+	size_t numBones;
+	avs::uid* boneIDs;
 	
-	size_t jointAmount;
+	size_t numJoints;
 	avs::uid* jointIDs;
 
 	avs::Transform rootTransform;
@@ -95,8 +98,9 @@ struct InteropSkin
 		return
 		{
 			avs::convertToByteString(name),
-			{inverseBindMatrices, inverseBindMatrices + bindMatrixAmount},
-			{jointIDs, jointIDs + jointAmount},
+			{inverseBindMatrices, inverseBindMatrices + numInverseBindMatrices},
+			{boneIDs, boneIDs + numBones},
+			{jointIDs, jointIDs + numJoints},
 			rootTransform
 		};
 	}
@@ -254,19 +258,19 @@ struct InteropTransformKeyframe
 {
 	size_t boneIndex;
 
-	int positionAmount;
+	int numPositions;
 	avs::Vector3Keyframe* positionKeyframes;
 
-	int rotationAmount;
+	int numRotations;
 	avs::Vector4Keyframe* rotationKeyframes;
 
-	operator avs::TransformKeyframe() const
+	operator avs::TransformKeyframeList() const
 	{
 		return
 		{
 			boneIndex,
-			{positionKeyframes, positionKeyframes + positionAmount},
-			{rotationKeyframes, rotationKeyframes + rotationAmount}
+			{positionKeyframes, positionKeyframes + numPositions},
+			{rotationKeyframes, rotationKeyframes + numRotations}
 		};
 	}
 };
