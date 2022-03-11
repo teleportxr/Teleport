@@ -475,6 +475,12 @@ sca::Result SL_AudioPlayer::startRecording(std::function<void(const uint8_t * da
 	return sca::Result::OK;
 }
 
+// Not used because audio is processed asynchronously.
+sca::Result SL_AudioPlayer::processRecordedAudio()
+{
+	return sca::Result::OK;
+}
+
 sca::Result SL_AudioPlayer::stopRecording()
 {
 	if (!mRecording)

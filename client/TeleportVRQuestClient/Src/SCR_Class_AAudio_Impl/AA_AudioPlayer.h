@@ -21,6 +21,8 @@ public:
 
 	sca::Result startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback) override;
 
+	sca::Result processRecordedAudio() override;
+
 	sca::Result stopRecording() override;
 
 	sca::Result deconfigure() override;
