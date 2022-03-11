@@ -24,6 +24,8 @@ set( src_crossplatform
 set( src_pc
 	src/pc/PC_AudioPlayer.cpp
 	src/pc/PC_AudioPlayer.h
+	src/pc/PC_AudioCapture.cpp
+	src/pc/PC_AudioCapture.h
 	)
 
 #Include its root directory

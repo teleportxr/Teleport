@@ -776,7 +776,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		gui.LinePrint( platform::core::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
 		gui.LinePrint( platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
 		gui.LinePrint( platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
-		gui.LinePrint( platform::core::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
+		gui.LinePrint( platform::core::QuickFormat("Video frames parseed per sec: %4.2f", vidStats.framesProcessedPerSec));
 		gui.LinePrint( platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
 	}
 	else if(show_osd== clientrender::CAMERA_OSD)
@@ -1260,7 +1260,7 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height)
 		ti->texture = renderPlatform->CreateTexture();
 
 	// NVidia decoder needs a shared handle to the resource.
-#if TELEPORT_CLIENT_USE_D3D12 && !TELEPORT_CLIENT_USE_D3D12_VIDEO
+#if TELEPORT_CLIENT_USE_D3D12 && !TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
 	bool useSharedHeap = true;
 #else
 	bool useSharedHeap = false;
@@ -1463,7 +1463,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	CreateTexture(avsTexture, int(stream_width), int(stream_height));
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
-#if TELEPORT_CLIENT_USE_D3D12_VIDEO
+#if TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
 	AVSTextureHandle th = avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
 	clientPipeline.decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
@@ -1895,7 +1895,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		FillInControllerPose(0, -0.5f);
 		FillInControllerPose(1, 0.5f);
 	}
-	// Have processed these, can free them now.
+	// Have parseed these, can free them now.
 	inputs.clear();
 }
 
