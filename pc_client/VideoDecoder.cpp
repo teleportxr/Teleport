@@ -49,7 +49,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 		return Result::DecoderBackend_InvalidParam;
 	}
 
-	mFrames.clear();
+	mDPB.clear();
 	
 	cp::VideoDecoderParams decParams;
 
@@ -57,13 +57,13 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	{
 	case VideoCodec::H264:
 		decParams.codec = cp::VideoCodec::H264;
-		mFrames.resize(17);
+		mDPB.resize(17);
 		// TODO: Implement
 		//mParser.reset(new h264::H264Parser());
 		break;
 	case VideoCodec::HEVC:
 		decParams.codec = cp::VideoCodec::HEVC;
-		mFrames.resize(16);
+		mDPB.resize(16);
 		mParser.reset(new hevc::HevcParser());
 		break;
 	default:
@@ -80,7 +80,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	decParams.height = frameHeight;
 	decParams.minWidth = frameWidth;
 	decParams.minHeight = frameHeight;
-	decParams.maxDecodePictureBufferCount = mFrames.size();
+	decParams.maxDecodePictureBufferCount = mDPB.size();
 
 #if TELEPORT_CLIENT_USE_D3D12
 	mDecoder.reset(new simul::dx12::VideoDecoder());
@@ -239,7 +239,7 @@ void VideoDecoder::updatePicParams()
 		break;
 	}
 
-	mCurrentFrame = (mCurrentFrame + 1) % mFrames.size();
+	mCurrentFrame = (mCurrentFrame + 1) % mDPB.size();
 }
 
 void VideoDecoder::updatePicParamsH264()
@@ -296,7 +296,7 @@ void VideoDecoder::updatePicParamsHEVC()
 	}
 
 
-	FrameCache& frame = mFrames[mCurrentFrame];
+	FrameCache& frame = mDPB[mCurrentFrame];
 	frame.reset();
 	frame.stRpsIdx = extraData->stRpsIdx;
 	frame.refRpsIdx = extraData->refRpsIdx;
@@ -437,7 +437,7 @@ void VideoDecoder::updatePicParamsHEVC()
 	}
 	
 
-	for (uint32_t i = 0, j = 0; i < mFrames.size(); ++i)
+	for (uint32_t i = 0, j = 0; i < mDPB.size(); ++i)
 	{
 		if (i == mCurrentFrame)
 		{
@@ -445,7 +445,7 @@ void VideoDecoder::updatePicParamsHEVC()
 		}
 
 		bool longRef = true;
-		if (mFrames[i].inUse && (longRef || strps->used_by_curr_pic_flag[mFrames[i].refRpsIdx]))
+		if (mDPB[i].inUse && (longRef || strps->used_by_curr_pic_flag[mDPB[i].refRpsIdx]))
 		{
 			pp->RefPicList[j].Index7Bits = mCurrentFrame;
 			pp->RefPicList[j].AssociatedFlag = longRef;
@@ -496,7 +496,7 @@ uint32_t VideoDecoder::computeHevcPoc(const hevc::SPS* sps, uint32_t prevPocTid0
 
 void VideoDecoder::resetFrames()
 {
-	for (auto& frame : mFrames)
+	for (auto& frame : mDPB)
 	{
 		frame.reset();
 	}

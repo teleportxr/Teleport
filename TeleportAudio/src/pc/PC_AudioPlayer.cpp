@@ -267,6 +267,11 @@ namespace sca
 			return Result::AudioPlayerNotConfigured;
 		}
 
+		if (mRecording)
+		{
+			stopRecording();
+		}
+
 		mRecordingAllowed = false;
 
 		mConfigured = false;
