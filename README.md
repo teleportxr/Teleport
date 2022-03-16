@@ -1,6 +1,8 @@
 # Teleport VR
 
-Reference Client/Server software and SDK.
+Teleport VR is an open, native network protocol for virtual and augmented reality.
+This repository contains the reference Client/Server software and SDK for Teleport VR.
+Comments, bug reports and pull requests are welcome.
 
 ## Getting the source
 
