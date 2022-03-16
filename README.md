@@ -42,6 +42,8 @@ or if you have already cloned the main repo,
 
 ## Building UE4 plugin
 
+The UE4 plugin is not currently functional, it will be updated in early 2022.
+
 1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
     * You will need to target pthread_lib to the same toolset as your Unreal.
     * You may need to disable Whole Program Optimisation.
@@ -74,6 +76,8 @@ or if you have already cloned the main repo,
 10. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
 ## Building Unity plugin
+
+The Unity server plugin is currently the main testbed for Teleport servers.
 
 1. Using CMakeGUI:
 	* Check REMOTEPLAY_UNITY.
