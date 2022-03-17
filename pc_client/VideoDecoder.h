@@ -89,7 +89,7 @@ private:
 	simul::crossplatform::Texture* mOutputTexture;
 	simul::crossplatform::Texture* mSurfaceTexture;
 
-	std::vector<FrameCache> mFrames;
+	std::vector<FrameCache> mDPB;
 
 	uint32_t mCurrentFrame;
 	uint32_t mPrevPocTid0;

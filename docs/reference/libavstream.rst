@@ -18,7 +18,9 @@ Classes
 -------
 
 .. doxygenclass:: avs::Context
-   :members:
+:members:
+
+
 .. doxygenclass:: avs::Pipeline
    :members:
 .. doxygenclass:: avs::Timer

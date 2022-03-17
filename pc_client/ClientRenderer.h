@@ -33,6 +33,7 @@
 #include "SCR_Class_PC_Impl/PC_MemoryUtil.h"
 #include "Gui.h"
 #include "TeleportClient/ClientPipeline.h"
+#include "TeleportAudio/src/crossplatform/NetworkPipeline.h"
 
 namespace avs
 {
@@ -243,6 +244,8 @@ public:
 	sca::PC_AudioPlayer audioPlayer;
 	
 	teleport::client::ClientPipeline clientPipeline;
+	std::unique_ptr<sca::NetworkPipeline> inputNetworkPipeline;
+	avs::Queue audioInputQueue;
 
 	int RenderMode;
 	std::shared_ptr<clientrender::Material> mFlatColourMaterial;

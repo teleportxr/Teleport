@@ -1505,7 +1505,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 		clientPipeline.avsAudioDecoder.configure(60);
 		sca::AudioSettings audioSettings;
 		audioSettings.codec = sca::AudioCodec::PCM;
-		audioSettings.numChannels = 2;
+		audioSettings.numChannels = 1;
 		audioSettings.sampleRate = 48000;
 		audioSettings.bitsPerSample = 32;
 		// This will be deconfigured automatically when the clientPipeline.pipeline is deconfigured.
@@ -1518,6 +1518,35 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 		avs::PipelineNode::link(clientPipeline.source, clientPipeline.audioQueue);
 		avs::PipelineNode::link(clientPipeline.audioQueue, clientPipeline.avsAudioDecoder);
 		clientPipeline.pipeline.link({ &clientPipeline.avsAudioDecoder, &clientPipeline.avsAudioTarget });
+
+		// Audio Input
+		if (setupCommand.audio_input_enabled)
+		{
+			sca::NetworkSettings networkSettings =
+			{
+					setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
+					, static_cast<int32_t>(handshake.maxBandwidthKpS)
+					, static_cast<int32_t>(handshake.udpBufferSize)
+					, setupCommand.requiredLatencyMs
+					, (int32_t)setupCommand.idle_connection_timeout
+			};
+
+			inputNetworkPipeline.reset(new sca::NetworkPipeline());
+			audioInputQueue.configure(4096, 120, "AudioInputQueue");
+			inputNetworkPipeline->initialise(networkSettings, &audioInputQueue);
+
+			// The callback will be called when audio input is received.
+			auto f = [this](const uint8_t* data, size_t dataSize) -> void
+			{
+				size_t bytesWritten;
+				if (audioInputQueue.write(nullptr, data, dataSize, bytesWritten))
+				{
+					inputNetworkPipeline->process();
+				}
+			};
+			// The audio player will stop recording automatically when deconfigured. 
+			audioPlayer.startRecording(f);
+		}
 	}
 
 	// We will add a GEOMETRY PIPE
