@@ -109,6 +109,8 @@ namespace avs
 
 	Result DecoderNV::initialize(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params)
 	{
+		m_gResourceSupport = true;
+
 		PrintMatYuv2Rgb(ColorSpaceStandard_BT709);
 		PrintMatYuv2Rgb(ColorSpaceStandard_BT2020);
 
@@ -159,13 +161,34 @@ namespace avs
 			return Result::DecoderBackend_InvalidDevice;
 #endif
 			break;
+		case DeviceType::Direct3D12:
+#if !defined(PLATFORM_WINDOWS)
+			AVSLOG(Error) << "DecoderNV: DirectX 12 is only supported on Windows platform";
+			return Result::DecoderBackend_InvalidDevice;
+#endif
+			if (!device)
+			{
+				AVSLOG(Error) << "DecoderNV: Invalid DirectX 12 device";
+				return Result::DecoderBackend_InvalidDevice;
+			}
+			{
+				m_dx12Util.Initialize();
+				unsigned int numDevices;
+				if (CUFAILED(m_dx12Util.GetCudaDevice(&numDevices, &m_device, device.as<ID3D12Device>())))
+				{
+					AVSLOG(Error) << "DecoderNV: Supplied DirectX 12 device is not CUDA capable";
+					return Result::DecoderBackend_InvalidDevice;
+				}
+			}
+			m_gResourceSupport = false;
+			break;
 		case DeviceType::OpenGL:
 			AVSLOG(Error) << "DecoderNV: OpenGL device support is not implemented.";
 			return Result::DecoderBackend_InvalidDevice;
 		}
 
 		// TODO: Is blocking sync the right thing to do?
-		if (CUFAILED(cuCtxCreate(&m_context, CU_CTX_SCHED_BLOCKING_SYNC, m_device)))
+		if (CUFAILED(cuCtxCreate_v2(&m_context, CU_CTX_SCHED_BLOCKING_SYNC, m_device)))
 		{
 			AVSLOG(Error) << "DecoderNV: Failed to create CUDA context";
 			return Result::DecoderBackend_InitFailed;
@@ -317,7 +340,7 @@ namespace avs
 		// Not using ContextGuard here since we're about to destroy current context.
 		cuCtxPushCurrent(m_context);
 
-		if (m_registeredSurface)
+		if (m_surfaceRegistered)
 		{
 			unregisterSurface();
 		}
@@ -353,7 +376,7 @@ namespace avs
 		}
 		if (m_context)
 		{
-			cuCtxDestroy(m_context);
+			cuCtxDestroy_v2(m_context);
 			m_context = nullptr;
 		}
 
@@ -363,6 +386,7 @@ namespace avs
 		m_frameWidth = 0;
 		m_frameHeight = 0;
 		m_displayPictureIndex = -1;
+		m_surfaceRegistered = false;
 
 		return Result::OK;
 	}
@@ -379,7 +403,7 @@ namespace avs
 			AVSLOG(Error) << "DecoderNV: Decoder not initialized";
 			return Result::DecoderBackend_NotInitialized;
 		}
-		if (m_registeredSurface)
+		if (m_surfaceRegistered)
 		{
 			AVSLOG(Error) << "DecoderNV: Output surface already registered";
 			return Result::DecoderBackend_SurfaceAlreadyRegistered;
@@ -398,12 +422,18 @@ namespace avs
 		switch (m_deviceType)
 		{
 #if PLATFORM_WINDOWS
-			case DeviceType::Direct3D12:
-				break;
 			case DeviceType::Direct3D11:
 				if (CUFAILED(cuGraphicsD3D11RegisterResource(&m_registeredSurface, reinterpret_cast<ID3D11Texture2D*>(surface->getResource()), registerFlags)))
 				{
 					AVSLOG(Error) << "DecoderNV: Failed to register D3D11 surface with CUDA";
+					return Result::DecoderBackend_InvalidSurface;
+				}
+				cuGraphicsResourceSetMapFlags(m_registeredSurface, CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD);
+				break;
+			case DeviceType::Direct3D12:
+				if (CUFAILED(m_dx12Util.LoadGraphicsResource(reinterpret_cast<ID3D12Resource*>(surface->getResource()))))
+				{
+					AVSLOG(Error) << "DecoderNV: Failed to register D3D12 surface with CUDA";
 					return Result::DecoderBackend_InvalidSurface;
 				}
 				break;
@@ -416,7 +446,7 @@ namespace avs
 				return Result::DecoderBackend_InvalidDevice;
 		}
 
-		cuGraphicsResourceSetMapFlags(m_registeredSurface, CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD);
+		
 		m_registeredSurfaceFormat = surface->getFormat();
 
 		switch (m_registeredSurfaceFormat)
@@ -451,6 +481,7 @@ namespace avs
 				break;
 		}
 
+		m_surfaceRegistered = true;
 		return Result::OK;
 	}
 
@@ -463,22 +494,35 @@ namespace avs
 			AVSLOG(Error) << "DecoderNV: Decoder not initialized";
 			return Result::DecoderBackend_NotInitialized;
 		}
-		if (!m_registeredSurface)
+		if (!m_surfaceRegistered)
 		{
 			AVSLOG(Error) << "DecoderNV: No registered output surface";
 			return Result::DecoderBackend_SurfaceNotRegistered;
 		}
 
-		if (CUFAILED(cuGraphicsUnregisterResource(m_registeredSurface)))
+		if (m_registeredSurface)
 		{
-			AVSLOG(Error) << "DecoderNV: Failed to unregister surface";
-			return Result::DecoderBackend_InvalidSurface;
+			if (CUFAILED(cuGraphicsUnregisterResource(m_registeredSurface)))
+			{
+				AVSLOG(Error) << "DecoderNV: Failed to unregister surface";
+				return Result::DecoderBackend_InvalidSurface;
+			}
+		}
+		else
+		{
+#if defined(PLATFORM_WINDOWS)
+			if (m_deviceType == DeviceType::Direct3D12)
+			{
+				m_dx12Util.UnloadGraphicsResource();
+			}
+#endif
 		}
 
 		m_registeredSurface = nullptr;
 		m_colorKernel = nullptr;
 		m_alphaKernel = nullptr;
 		m_registeredSurfaceFormat = SurfaceFormat::Unknown;
+		m_surfaceRegistered = false;
 
 		return Result::OK;
 	}
@@ -529,15 +573,33 @@ namespace avs
 
 		assert(m_colorKernel);
 
-		if (CUFAILED(cuGraphicsMapResources(1, &m_registeredSurface, 0)))
+		CUarray surfaceBaseMipLevel = nullptr;
+		if (m_gResourceSupport)
 		{
-			AVSLOG(Warning) << "DecoderNV: Failed to map registered output surface for post processing";
-			return Result::DecoderBackend_DisplayFailed;
+			if (CUFAILED(cuGraphicsMapResources(1, &m_registeredSurface, 0)))
+			{
+				AVSLOG(Warning) << "DecoderNV: Failed to map registered output surface for post processing";
+				return Result::DecoderBackend_DisplayFailed;
+			}
+			cuGraphicsSubResourceGetMappedArray(&surfaceBaseMipLevel, m_registeredSurface, 0, 0);
+		}
+		else
+		{
+#if defined(PLATFORM_WINDOWS)
+			if (m_deviceType == DeviceType::Direct3D12)
+			{
+				CUresult r = m_dx12Util.GetMipmappedArrayLevel(&surfaceBaseMipLevel, 0);
+				if (CUFAILED(r))
+				{
+					AVSLOG(Warning) << "DecoderNV: Failed to map video frame";
+					return Result::DecoderBackend_DisplayFailed;
+				}
+			}
+#endif
 		}
 
-		CUarray surfaceBaseMipLevel = nullptr;
-		cuGraphicsSubResourceGetMappedArray(&surfaceBaseMipLevel, m_registeredSurface, 0, 0);
 		assert(surfaceBaseMipLevel);
+
 		cuSurfRefSetArray(m_surfaceRef, surfaceBaseMipLevel, 0);
 
 		int alphaIndex = m_displayPictureIndex + 1;

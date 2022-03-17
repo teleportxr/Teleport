@@ -6,85 +6,81 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 # Source
 set( src_root
-	src/Common.h
-	src/Common.cpp
-	)
-set( src_api
-	src/api/DeviceContext.h
-	src/api/Effect.h
-	src/api/FrameBuffer.h
-	src/api/IndexBuffer.h
-	src/api/RenderPlatform.h
-	src/api/Sampler.h
-	src/api/Shader.h
-	src/api/ShaderStorageBuffer.h
-	src/api/Texture.cpp
-	src/api/Texture.h
-	src/api/UniformBuffer.cpp
-	src/api/UniformBuffer.h
-	src/api/VertexBuffer.h
-	src/api/VertexBufferLayout.h
-	)
-set( src_crossplatform
-	src/crossplatform/Animation.cpp
-	src/crossplatform/Animation.h
-	src/crossplatform/API.cpp
-	src/crossplatform/API.h
-	src/crossplatform/Bone.cpp
-	src/crossplatform/Bone.h
-	src/crossplatform/Camera.cpp
-	src/crossplatform/Camera.h
-	src/crossplatform/GeometryCache.cpp
-	src/crossplatform/GeometryCache.h
-	src/crossplatform/GeometryDecoder.cpp
-	src/crossplatform/GeometryDecoder.h
-	src/crossplatform/Light.cpp
-	src/crossplatform/Light.h
-	src/crossplatform/Material.cpp
-	src/crossplatform/Material.h
-	src/crossplatform/Mesh.cpp
-	src/crossplatform/Mesh.h
-	src/crossplatform/Node.cpp
-	src/crossplatform/Node.h
-	src/crossplatform/NodeManager.cpp
-	src/crossplatform/NodeManager.h
-	src/crossplatform/ResourceCreator.cpp
-	src/crossplatform/ResourceCreator.h
-	src/crossplatform/ResourceManager.h
-	src/crossplatform/ShaderResource.cpp
-	src/crossplatform/ShaderResource.h
-	src/crossplatform/ShaderSystem.cpp
-	src/crossplatform/ShaderSystem.h
-	src/crossplatform/Skin.cpp
-	src/crossplatform/Skin.h
-	src/crossplatform/Transform.cpp
-	src/crossplatform/Transform.h
-	src/crossplatform/MemoryUtil.cpp
-	src/crossplatform/MemoryUtil.h
+	Common.h
+	Common.cpp
+	DeviceContext.h
+	Effect.h
+	FrameBuffer.h
+	IndexBuffer.h
+	RenderPlatform.h
+	Sampler.h
+	Shader.h
+	ShaderStorageBuffer.h
+	Texture.cpp
+	Texture.h
+	UniformBuffer.cpp
+	UniformBuffer.h
+	VertexBuffer.h
+	VertexBufferLayout.h
+	Animation.cpp
+	Animation.h
+	API.cpp
+	API.h
+	Bone.cpp
+	Bone.h
+	Camera.cpp
+	Camera.h
+	GeometryCache.cpp
+	GeometryCache.h
+	GeometryDecoder.cpp
+	GeometryDecoder.h
+	Light.cpp
+	Light.h
+	Material.cpp
+	Material.h
+	Mesh.cpp
+	Mesh.h
+	Node.cpp
+	Node.h
+	NodeManager.cpp
+	NodeManager.h
+	ResourceCreator.cpp
+	ResourceCreator.h
+	ResourceManager.h
+	Renderer.h
+	Renderer.cpp
+	ShaderResource.cpp
+	ShaderResource.h
+	ShaderSystem.cpp
+	ShaderSystem.h
+	Skin.cpp
+	Skin.h
+	Transform.cpp
+	Transform.h
+	MemoryUtil.cpp
+	MemoryUtil.h
+	Tests.cpp
+	Tests.h
 	)
 
 set(src_node_components
-	src/crossplatform/NodeComponents/AnimationComponent.cpp
-	src/crossplatform/NodeComponents/AnimationState.cpp
-	src/crossplatform/NodeComponents/VisibilityComponent.cpp
+	NodeComponents/AnimationComponent.cpp
+	NodeComponents/AnimationState.cpp
+	NodeComponents/VisibilityComponent.cpp
 )
 
 set(hdr_node_components
-	src/crossplatform/NodeComponents/AnimationComponent.h
-	src/crossplatform/NodeComponents/AnimationState.h
-	src/crossplatform/NodeComponents/VisibilityComponent.h
+	NodeComponents/AnimationComponent.h
+	NodeComponents/AnimationState.h
+	NodeComponents/VisibilityComponent.h
 )
 
-set(src_testing
-	src/crossplatform/Tests.cpp
-	src/crossplatform/Tests.h
-	)
 	
 source_group("Source Files\\Node Components" src FILES ${src_node_components})
 source_group("Header Files\\Node Components" src FILES ${hdr_node_components})
 
 
-set( src_public ${src_root} ${src_api} ${src_crossplatform} ${src_node_components} ${hdr_node_components} ${src_testing})
+set( src_public ${src_root} ${src_node_components} ${hdr_node_components} )
 message ( "src_public ${src_public}" )
 
 if(ANDROID)

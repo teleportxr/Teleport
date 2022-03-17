@@ -141,7 +141,7 @@ endfunction()
 add_subdirectory(TeleportCore)
 
 if(TELEPORT_SERVER)
-	add_subdirectory(SimulCasterServer)
+	add_subdirectory(TeleportServer)
 	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "")
 	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "")
 	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "")
@@ -163,7 +163,7 @@ endif()
 
 set(SA_BUILD_SHARED_LIB ${TELEPORT_SERVER})
 
-add_subdirectory(SimulCasterAudio)
+add_subdirectory(TeleportAudio)
 add_subdirectory(libavstream)
 
 add_subdirectory(thirdparty/enet)
@@ -200,3 +200,46 @@ set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
 if(TELEPORT_BUILD_DOCS)
 	add_subdirectory ("docs")
 endif()
+
+# Create an installer for the client:
+#set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+#include(InstallRequiredSystemLibraries)
+#install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+#        DESTINATION programs
+#        COMPONENT applications)
+set(CPACK_PACKAGE_NAME "TeleportClientInstaller")
+set(CPACK_PACKAGE_VENDOR "Simul")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Installer for the Teleport PC CLient")
+
+# get commit id from a file:
+file(TOUCH "teleport_commit.properties")
+file(READ "teleport_commit.properties" ver)
+if(NOT( "${ver}" STREQUAL ""))
+	message(${ver})
+	string(REGEX MATCH "TELEPORT_COMMIT= ([a-zA-Z0-9]+)" _ ${ver})
+endif()
+set(TELEPORT_COMMIT ${CMAKE_MATCH_1})
+set(CPACK_PACKAGE_VERSION_MAJOR "${TELEPORT_COMMIT}")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "TeleportClient")
+#
+set(CPACK_GENERATOR "NSIS")
+set(CPACK_COMPONENTS_ALL client)
+
+#set(CPACK_COMPONENT_CTDATA_GROUP "data")
+#set(CPACK_COMPONENT_INSTRUCTIONDATA_GROUP "data")
+#
+#set(CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "applications (hello & world)")
+#set(CPACK_COMPONENT_GROUP_DATA_DESCRIPTION "data (CT and instructions)")
+#
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.md")
+##Create an icon which will be displayed inside the installation wizard, and an icon for the installer and uninstaller. Tell CPack about these icons.
+set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+##Set the programs, directories and files, displayed under the Start menu shortcut.
+set(CPACK_NSIS_MENU_LINKS "pc_client\\pc_client" "Teleport VR Client")
+
+include(CPack)

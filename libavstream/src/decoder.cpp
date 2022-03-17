@@ -298,13 +298,13 @@ Result Decoder::DisplayFrame()
 		AVSLOG(Error) << "Failed to display video frame.";
 	}
 
-	double connectionTime = TimerUtil::GetElapsedTime();
+	double connection_time_s = TimerUtil::GetElapsedTimeS();
 	m_stats.framesProcessed += m_interimFramesProcessed;
 	++m_stats.framesDisplayed;
-	if (connectionTime)
+	if (connection_time_s)
 	{
-		m_stats.framesProcessedPerSec = float(m_stats.framesProcessed / connectionTime);
-		m_stats.framesDisplayedPerSec = float(m_stats.framesDisplayed / connectionTime);
+		m_stats.framesProcessedPerSec = float(m_stats.framesProcessed / connection_time_s);
+		m_stats.framesDisplayedPerSec = float(m_stats.framesDisplayed / connection_time_s);
 	}
 	
 	if(m_interimFramesProcessed > 3)
@@ -342,7 +342,6 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 
 	VideoPayloadType payloadType = m_parser->classify(data, dataSize);
 
-    bool isIDR = m_parser->isIDR(data, dataSize);
 	// There are two VCLs per frame with alpha layer encoding enabled (HEVC only) and one VCL without.
 	if (payloadType == VideoPayloadType::VCL)
 	{
@@ -350,6 +349,8 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		{
 			m_firstVCLOffset = dataOffset;
 		}
+
+		bool isIDR = m_parser->isIDR(data, dataSize);
 
 		// Do not process a non-IDR Frame if an IDR is required
 		if (m_idrRequired && !isIDR)

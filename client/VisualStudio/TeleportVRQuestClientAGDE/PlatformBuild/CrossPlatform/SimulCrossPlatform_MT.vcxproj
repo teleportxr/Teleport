@@ -62,11 +62,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SimulCrossPlatform_MT.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SimulCrossPlatform_MTd</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\lib\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SimulCrossPlatform_MT.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SimulCrossPlatform_MT</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
@@ -83,7 +83,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\CrossPlatform;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -101,10 +101,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_LOAD_RENDERDOC=0;PLATFORM_LOAD_WINPIXGPUCAPTURER=0;PLATFORM_USE_ASSIMP=0;PLATFORM_STD_CHARCONV=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\CrossPlatform;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\CrossPlatform;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -117,7 +117,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\CrossPlatform;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -134,10 +134,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_LOAD_RENDERDOC=0;PLATFORM_LOAD_WINPIXGPUCAPTURER=0;PLATFORM_USE_ASSIMP=0;PLATFORM_STD_CHARCONV=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\CrossPlatform;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform;E:\Simul\Teleport\RemotePlay\firstparty\Platform;E:\Simul\Teleport\RemotePlay\firstparty\Platform\..;E:\Simul\Teleport\RemotePlay\firstparty\Platform\Windows;E:\Simul\Teleport\RemotePlay\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\CrossPlatform;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;..\..\..\..\..\\firstparty\Platform\External\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -159,7 +159,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\CMakeLists.txt">
+    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/CrossPlatform/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
@@ -172,7 +172,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\CrossPlatform\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\CrossPlatform\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/CrossPlatform/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
@@ -185,104 +185,104 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Simul\Teleport\RemotePlay\firstparty\Platform\build\CrossPlatform\CMakeFiles\generate.stamp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\CrossPlatform\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\AccelerationStructureManager.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Allocator.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\AmortizationStruct.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\AxesStandard.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\BaseAccelerationStructure.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\BaseFramebuffer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\BottomLevelAccelerationStructure.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Buffer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Camera.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\CameraInterface.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\DemoOverlay.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\DeviceContext.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\DisplaySurface.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\DisplaySurfaceManager.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Effect.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\GpuProfiler.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\HdrRenderer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Layout.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\LensFlare.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Light.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Material.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Mesh.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\MeshLoad.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\MeshRenderer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\MouseHandler.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\PixelFormat.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\PlatformStructuredBuffer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Quaterniond.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\RenderDelegater.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\RenderDocLoader.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\RenderPlatform.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\ShaderBindingTable.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\SphereRenderer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\SphericalHarmonics.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\TextInputOutput.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\TextRenderer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Texture.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\TopLevelAccelerationStructure.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\VideoBuffer.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\VideoDecoder.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\View.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\ViewStruct.cpp" />
-    <ClCompile Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\WinPixGpuCapturerLoader.cpp" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\AccelerationStructureManager.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Allocator.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\AmortizationStruct.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\AxesStandard.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\BaseAccelerationStructure.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\BaseFramebuffer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\BaseRenderer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\BottomLevelAccelerationStructure.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Buffer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Camera.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\CameraInterface.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\DemoOverlay.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\DeviceContext.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\DisplaySurface.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\DisplaySurfaceManager.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Effect.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Export.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\GpuProfiler.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\GraphicsDeviceInterface.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\HdrRenderer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Layout.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\LensFlare.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Light.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Macros.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Material.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Mesh.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\MeshRenderer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\MouseHandler.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\PixelFormat.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\PlatformStructuredBuffer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Quaterniond.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Query.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\RenderDelegate.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\RenderDelegater.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\RenderDocLoader.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\RenderPlatform.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\ShaderBindingTable.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\ShaderMode.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\SphereRenderer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\SphericalHarmonics.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\TextInputOutput.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\TextRenderer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Texture.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\TopLevelAccelerationStructure.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\Topology.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\VideoBuffer.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\VideoDecoder.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\View.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\ViewStruct.h" />
-    <ClInclude Include="E:\Simul\Teleport\RemotePlay\firstparty\Platform\CrossPlatform\WinPixGpuCapturerLoader.h" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\AccelerationStructureManager.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Allocator.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\AmortizationStruct.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\AxesStandard.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\BaseAccelerationStructure.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\BaseFramebuffer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\BottomLevelAccelerationStructure.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Buffer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Camera.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\CameraInterface.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\DemoOverlay.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\DeviceContext.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\DisplaySurface.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\DisplaySurfaceManager.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Effect.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\GpuProfiler.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\HdrRenderer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Layout.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\LensFlare.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Light.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Material.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Mesh.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\MeshLoad.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\MeshRenderer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\MouseHandler.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\PixelFormat.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\PlatformStructuredBuffer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Quaterniond.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\RenderDelegater.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\RenderDocLoader.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\RenderPlatform.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\ShaderBindingTable.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\SphereRenderer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\SphericalHarmonics.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\TextInputOutput.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\TextRenderer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Texture.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\TopLevelAccelerationStructure.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\VideoBuffer.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\VideoDecoder.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\View.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\ViewStruct.cpp" />
+    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\WinPixGpuCapturerLoader.cpp" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\AccelerationStructureManager.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Allocator.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\AmortizationStruct.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\AxesStandard.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\BaseAccelerationStructure.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\BaseFramebuffer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\BaseRenderer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\BottomLevelAccelerationStructure.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Buffer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Camera.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\CameraInterface.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\DemoOverlay.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\DeviceContext.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\DisplaySurface.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\DisplaySurfaceManager.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Effect.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Export.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\GpuProfiler.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\GraphicsDeviceInterface.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\HdrRenderer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Layout.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\LensFlare.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Light.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Macros.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Material.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Mesh.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\MeshRenderer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\MouseHandler.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\PixelFormat.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\PlatformStructuredBuffer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Quaterniond.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Query.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\RenderDelegate.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\RenderDelegater.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\RenderDocLoader.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\RenderPlatform.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\ShaderBindingTable.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\ShaderMode.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\SphereRenderer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\SphericalHarmonics.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\TextInputOutput.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\TextRenderer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Texture.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\TopLevelAccelerationStructure.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\Topology.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\VideoBuffer.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\VideoDecoder.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\View.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\ViewStruct.h" />
+    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\CrossPlatform\WinPixGpuCapturerLoader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

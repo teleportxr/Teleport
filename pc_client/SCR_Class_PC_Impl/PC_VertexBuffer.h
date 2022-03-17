@@ -1,8 +1,8 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
 
-#include <api/VertexBuffer.h>
-#include <api/VertexBufferLayout.h>
+#include <ClientRender/VertexBuffer.h>
+#include <ClientRender/VertexBufferLayout.h>
 
 namespace simul
 {
@@ -15,13 +15,13 @@ namespace simul
 
 namespace pc_client
 {
-	class PC_VertexBuffer final : public scr::VertexBuffer
+	class PC_VertexBuffer final : public clientrender::VertexBuffer
 	{
 	private:
 		simul::crossplatform::Buffer *m_SimulBuffer;
 		simul::crossplatform::Layout *m_layout;
 	public:
-		PC_VertexBuffer(const scr::RenderPlatform*const r);
+		PC_VertexBuffer(const clientrender::RenderPlatform*const r);
 
 		simul::crossplatform::Layout* GetLayout()
 		{

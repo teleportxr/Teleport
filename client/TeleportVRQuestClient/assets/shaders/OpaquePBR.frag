@@ -475,7 +475,7 @@ void PBR(bool lightmap,bool diffuseTex, bool normalTex, bool combinedTex, bool e
 	}
 	if(highlight)
 	{
-		//u.rgb+=vec3(0.1,0.1,0.1);
+		u.rgb+=vec3(0.1,0.2,0.15);
 	}
 	//u.rgb=fract(v_Position);//vec3(dist_to_frag,dist_to_frag,cam.u_DrawDistance));//v_UV_lightmap.xyy);
 	gl_FragColor = Gamma(u);
@@ -502,7 +502,7 @@ void PBRSimple(bool diffuseTex, bool emissiveTex,bool highlight)
 	}
 	if(highlight)
 	{
-		u.rgb+=vec3(0.1,0.1,0.1);
+		u.rgb+=vec3(0.0,0.4,0.1);
 	}
 	gl_FragColor = Gamma(vec4(u,1.0));
 }

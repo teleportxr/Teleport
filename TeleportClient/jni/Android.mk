@@ -26,8 +26,11 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../firstparty
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
 LOCAL_SRC_FILES :=	../ClientDeviceState.cpp					\
+					../ClientPipeline.cpp						\
 					../ServerTimestamp.cpp						\
 					../Input.cpp						\
+					../Log.cpp						\
+					../SessionClient.cpp	\
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable

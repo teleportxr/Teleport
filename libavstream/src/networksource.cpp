@@ -29,7 +29,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 {
 	size_t numOutputs = streams.size();
 
-	if (numOutputs == 0 || params.localPort == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
+	if (numOutputs == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
 	{
 		return Result::Node_InvalidConfiguration;
 	}
@@ -131,7 +131,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		StreamPayloadInfo frameInfo;
 		frameInfo.frameID = rPacket->mPts;
 		frameInfo.dataSize = rPacket->mFrameSize;
-		frameInfo.connectionTime = TimerUtil::GetElapsedTime();
+		frameInfo.connectionTime = TimerUtil::GetElapsedTimeS();
 		frameInfo.broken = rPacket->mBroken;
 
 		memcpy(m_data->m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
@@ -355,7 +355,7 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			m_data->m_counters.networkPacketsDropped = perf.pktRcvLoss;
 		}
 
-		double connectionTime = TimerUtil::GetElapsedTime();
+		double connectionTime = TimerUtil::GetElapsedTimeS();
 		if (connectionTime)
 		{
 			m_data->m_counters.decoderPacketsReceivedPerSec = m_data->m_counters.decoderPacketsReceived / connectionTime;

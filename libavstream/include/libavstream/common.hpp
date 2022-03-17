@@ -127,7 +127,8 @@ namespace avs
 			HTTPUtil_NotInitialized,
 			HTTPUtil_AlreadyInitialized,
 			HTTPUtil_InitError,
-			HTTPUtil_TransferError
+			HTTPUtil_TransferError,
+			NotSupported
 		};
 
 		Result(Code code) : m_code(code)
@@ -230,7 +231,22 @@ namespace avs
 		Skin,
 		Bone
 	};
-
+	inline const char *stringOf(GeometryPayloadType t)
+	{
+		switch(t)
+		{
+			case GeometryPayloadType::Mesh:				return "Mesh";
+			case GeometryPayloadType::Material:			return "Material";
+			case GeometryPayloadType::MaterialInstance:	return "MaterialInstance";
+			case GeometryPayloadType::Texture:			return "Texture";
+			case GeometryPayloadType::Animation:		return "Animation";
+			case GeometryPayloadType::Node:				return "Node";
+			case GeometryPayloadType::Skin:				return "Skin";
+			case GeometryPayloadType::Bone:				return "Bone";
+			default:
+				return "Invalid";
+		}
+	}
 	enum class AudioPayloadType : uint8_t
 	{
 		Capture = 0
@@ -296,7 +312,6 @@ namespace avs
 		int32_t		shadowmap_x=0;
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
-		float       draw_distance = 0.0f;
 	} AVS_PACKED;
 
 

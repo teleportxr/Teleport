@@ -17,13 +17,6 @@
 #include <libavstream/audiodecoder.h>
 #include <libavstream/audio/audiotarget.h>
 
-#include "crossplatform/GeometryDecoder.h"
-#include "crossplatform/ResourceCreator.h"
-#include "crossplatform/SessionClient.h"
-#include "crossplatform/AudioStreamTarget.h"
-#include "crossplatform/AudioPlayer.h"
-#include "crossplatform/NetworkPipeline.h"
-
 #include "GlobalGraphicsResources.h"
 #include "VideoDecoderProxy.h"
 #include "LobbyRenderer.h"
@@ -83,6 +76,7 @@ namespace OVRFW
 		virtual bool OnNodeLeftBounds(avs::uid id) override;
 		virtual void OnLightingSetupChanged(const avs::SetupLightingCommand &) override;
 		void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
+		void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &)override;
 		virtual std::vector<avs::uid> GetGeometryResources() override;
 		virtual void ClearGeometryResources() override;
 		virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
@@ -105,7 +99,6 @@ namespace OVRFW
 		OVRFW::ovrApplFrameOut Frame(const OVRFW::ovrApplFrameIn& vrFrame);
 		void DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRendererOutput &out);
 		void Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutput &out);
-		void UpdateHandObjects();
 		bool ProcessIniFile();
 		void EnteredVrMode();
 		void ToggleMenu();
@@ -123,33 +116,21 @@ namespace OVRFW
 		/////////////////////
 
 		static void avsMessageHandler(avs::LogSeverity severity, const char *msg, void *);
-		const scr::Effect::EffectPassCreateInfo *BuildEffectPass(const char* effectPassName, scr::VertexBufferLayout* vbl, const scr::ShaderSystem::PipelineCreateInfo*, const std::vector<scr::ShaderResource>& shaderResources) override;
-		void DrawTexture(avs::vec3 &offset,scr::Texture &texture) override;
+		const clientrender::Effect::EffectPassCreateInfo *BuildEffectPass(const char* effectPassName, clientrender::VertexBufferLayout* vbl, const clientrender::ShaderSystem::PipelineCreateInfo*, const std::vector<clientrender::ShaderResource>& shaderResources) override;
+		void DrawTexture(avs::vec3 &offset,clientrender::Texture &texture) override;
 		void PrintText(avs::vec3 &offset,avs::vec4 &colour,const char *txt,...) override;
 		std::string LoadTextFile(const char *filename) override;
 
-
 		avs::Context  mContext;
-		avs::Pipeline mPipeline;
+		//avs::Pipeline mPipeline;
 
-		avs::Surface       mSurface;
-		bool               mPipelineConfigured;
+		//avs::Surface       mSurface;
 
-		static constexpr size_t NumVideoStreams = 1;
-		static constexpr bool AudioStream = true;
-		static constexpr bool   GeoStream  = true;
+		//avs::GeometryDecoder   avsGeometryDecoder;
+		//.avs::GeometryTarget    avsGeometryTarget;
 
-		GeometryDecoder        geometryDecoder;
-		avs::GeometryDecoder   avsGeometryDecoder;
-		avs::GeometryTarget    avsGeometryTarget;
-
-		avs::AudioDecoder avsAudioDecoder;
-		avs::AudioTarget avsAudioTarget;
-		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
-		sca::AudioPlayer* audioPlayer;
-		std::unique_ptr<sca::NetworkPipeline> mNetworkPipeline;
-		avs::Queue mAudioInputQueue;
-
+		//avs::AudioDecoder avsAudioDecoder;
+		//avs::AudioTarget avsAudioTarget;
 		OVRFW::OvrGuiSys::SoundEffectPlayer *mSoundEffectPlayer;
 
 		OVRFW::OvrGuiSys *mGuiSys;
@@ -157,8 +138,6 @@ namespace OVRFW
 		teleport::TinyUI tinyUI;
 
 		OVRFW::OvrSceneView mScene;
-
-		SessionClient                       sessionClient;
 
 		std::vector<float> mRefreshRates;
 
@@ -172,21 +151,12 @@ namespace OVRFW
 
 		ClientRenderer clientRenderer;
 		LobbyRenderer lobbyRenderer;
-		//teleport::UIRenderer uIRenderer;
-		std::unique_ptr<Android_MemoryUtil> memoryUtil;
-		scr::GeometryCache geometryCache;
-		scr::ResourceCreator resourceCreator;
-		Controllers controllers;
 
-		std::string server_ip;
-		int server_discovery_port=10600;
-		int client_service_port=10501;
-		int client_streaming_port=10502;
+		std::unique_ptr<Android_MemoryUtil> memoryUtil;
+		Controllers controllers;
 
 		ENetAddress remoteEndpoint;
 		teleport::client::ClientDeviceState clientDeviceState;
-
-		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
 
 		OVR::Matrix4f lastCenterView;
 

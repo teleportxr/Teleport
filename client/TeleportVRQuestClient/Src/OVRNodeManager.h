@@ -1,14 +1,14 @@
 #pragma once
 
 #include "libavstream/common.hpp"
-#include "crossplatform/NodeManager.h"
+#include "ClientRender/NodeManager.h"
 
-class OVRNodeManager : public scr::NodeManager
+class OVRNodeManager : public clientrender::NodeManager
 {
 public:
 	virtual ~OVRNodeManager() = default;
 
-	virtual std::shared_ptr<scr::Node> CreateNode(avs::uid id, const avs::Node &avsNode) override;
+	virtual std::shared_ptr<clientrender::Node> CreateNode(avs::uid id, const avs::Node &avsNode) override;
 
 	//Changes PBR effect used on nodes/surfaces to the effect pass with the passed name.
 	//Also changes GlobalGraphicsResource::effectPassName.

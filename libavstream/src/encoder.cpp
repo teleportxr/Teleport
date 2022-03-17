@@ -157,12 +157,12 @@ Result Encoder::process(uint64_t timestamp, uint64_t deltaTime)
 		return Result::Node_NotConfigured;
 	}
 
-	double connectionTime = d().m_timer.GetElapsedTime();
-	if (connectionTime)
+	double connectionTime_s = d().m_timer.GetElapsedTimeS();
+	if (connectionTime_s)
 	{
 		std::lock_guard<std::mutex> lock(d().m_statsMutex);
 		++d().m_stats.framesSubmitted;
-		d().m_stats.framesSubmittedPerSec = float(d().m_stats.framesSubmitted / connectionTime);
+		d().m_stats.framesSubmittedPerSec = float(d().m_stats.framesSubmitted / connectionTime_s);
 	}
 
 	// Next tell the backend encoder to actually encode a frame.
@@ -194,12 +194,12 @@ Result Encoder::writeOutput()
 		return Result::Node_InvalidOutput;
 	}
 
-	double connectionTime = d().m_timer.GetElapsedTime();
-	if (connectionTime)
+	double connectionTimeS = d().m_timer.GetElapsedTimeS();
+	if (connectionTimeS)
 	{
 		std::lock_guard<std::mutex> lock(d().m_statsMutex);
 		++d().m_stats.framesEncoded;
-		d().m_stats.framesEncodedPerSec = float(d().m_stats.framesEncoded / connectionTime);	
+		d().m_stats.framesEncodedPerSec = float(d().m_stats.framesEncoded / connectionTimeS);
 	}
 
 	void* mappedBuffer;
@@ -349,10 +349,19 @@ bool Encoder::isEncodingAsynchronously()
 	return d().m_params.useAsyncEncoding;
 }
 
-EncoderStats Encoder::GetStats() const
+EncoderStats Encoder::getStats() const
 {
 	std::lock_guard<std::mutex> lock(d().m_statsMutex);
 	return d().m_stats;
+}
+
+Result Encoder::getEncodeCapabilities(const DeviceHandle& device, const EncoderParams& params, avs::EncodeCapabilities& capabilities)
+{
+#if !defined(PLATFORM_ANDROID)
+	 return EncoderNV::getEncodeCapabilities(device, params, capabilities);
+#else
+	 return Result::NotSupported;
+#endif 
 }
 
 Result Encoder::Private::writeOutput(IOInterface* outputNode, const void* mappedBuffer, size_t mappedBufferSize)

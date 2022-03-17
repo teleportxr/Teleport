@@ -10,9 +10,21 @@
 
 #include <api/cuda.hpp>
 #include <dynlink_nvcuvid.h>
+#if defined(PLATFORM_WINDOWS)
+#include <api/cuda_dx12.hpp>
+#else
+#include <ClientRender/cuda.hpp>
+#endif
 
 namespace avs
 {
+	/*!
+	 * A DecoderNV.
+	 *
+	 * A DecoderNV uses the NVidia nvcuvid video decoder api to decode a video frame 
+	 * from a compressed bitstream and writes the output to a surface texture using CUDA.
+	 *
+	 */
 	class DecoderNV final : public DecoderBackendInterface
 	{
 	public:
@@ -44,6 +56,14 @@ namespace avs
 		unsigned int m_frameWidth = 0;
 		unsigned int m_frameHeight = 0;
 		int m_displayPictureIndex = -1;
+
+#if defined(PLATFORM_WINDOWS)
+		CUDA::DX12Util m_dx12Util;
+#endif
+		// Variable signifying if the GraphicsResource type is supported by CUDA for the graphics API in use
+		// Currently not supported for Vulkan and D3D12
+		bool m_gResourceSupport = true;
+		bool m_surfaceRegistered = false;
 
 		CUmodule m_module = nullptr;
 		CUsurfref m_surfaceRef = nullptr;

@@ -1,8 +1,9 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #include "GL_DeviceContext.h"
+#include "../GlobalGraphicsResources.h"
 #include <GLES3/gl32.h>
 using namespace scc;
-using namespace scr;
+using namespace clientrender;
 
 void GL_DeviceContext::Create(DeviceContextCreateInfo* pDeviceContextCreateInfo)
 {
@@ -13,8 +14,8 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
 {
     //Set up for DescriptorSet binding
     std::vector<const ShaderResource*> descriptorSets;
-    Effect* effect = nullptr;
-
+	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
+	 GL_Effect* effect = dynamic_cast<GL_Effect*>(&globalGraphicsResources.defaultPBREffect);
     //Default Init
     dynamic_cast<GL_FrameBuffer *>(pInputCommand->pFBs)[0].BeginFrame();
     descriptorSets.push_back(&(pInputCommand->pCamera->GetShaderResource()));
@@ -44,12 +45,11 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
             //Material
             const char* effectPassName = "";
             descriptorSets.push_back(&(ic_mmt->pMaterial->GetShaderResource()));
-            effect = ic_mmt->pMaterial->GetMaterialCreateInfo().effect;
-            dynamic_cast<const GL_Effect*>(effect)->Bind(effectPassName);
+            effect->Bind(effectPassName);
             auto *pass=effect->GetEffectPassCreateInfo(effectPassName);
             if(pass)
             {
-                m_Topology = static_cast<const GL_Effect *>(effect)->ToGLTopology(pass->topology);
+                m_Topology = GL_Effect::ToGLTopology(pass->topology);
             }
 
             //Transform
@@ -59,7 +59,7 @@ void GL_DeviceContext::Draw(InputCommand* pInputCommand)
         }
         case INPUT_COMMAND_COMPUTE:
         {
-            SCR_CERR<<"Invalid Input Command";
+            TELEPORT_CERR<<"Invalid Input Command";
         }
     }
     BindShaderResources(descriptorSets, effect, pInputCommand->effectPassName);
@@ -74,7 +74,7 @@ void GL_DeviceContext::DispatchCompute(InputCommand* pInputCommand)
 #ifdef DEBUG
 	if(size.x*size.y*size.z==0)
 	{
-		SCR_CERR<<"Empty compute dispatch!\n";
+		TELEPORT_CERR<<"Empty compute dispatch!\n";
 	}
 #endif
 	GLCheckErrorsWithTitle("DispatchCompute: 1");

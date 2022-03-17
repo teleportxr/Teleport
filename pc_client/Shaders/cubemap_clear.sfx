@@ -253,7 +253,7 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 	int3 loadPos		= int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0);
 	float4 SceneColor = plainTexture.Load(loadPos);
 
-	int2 loadDepthPos	= loadPos / 2;
+	int2 loadDepthPos	= loadPos.xy / 2;
 	int2 offsetToPos	= pos.xy % 2;// -loadDepthPos * 2;
 	loadDepthPos		+= int2(0, OutputW) * 2;	// underneath the main cube in the video texture.
 	vec3 dMask			= DepthMask[offsetToPos.x];// +2 * offsetToPos.y ];

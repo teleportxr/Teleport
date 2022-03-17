@@ -22,7 +22,6 @@ namespace avs
 	/*! Network source parameters. */
 	struct NetworkSourceParams
 	{
-		int32_t localPort = 0;
 		const char* remoteIP = "";
 		int32_t remotePort = 0;
 		int32_t remoteHTTPPort = 0;

@@ -348,6 +348,8 @@ struct Animation;
 	{
 		std::string name;
 		std::vector<Mat4x4> inverseBindMatrices;
+		std::vector<uid> boneIDs;
+		// of which a subset is:
 		std::vector<uid> jointIDs;
 		Transform skinTransform;
 
@@ -355,6 +357,7 @@ struct Animation;
 		{
 			avs::Skin convertedSkin;
 			convertedSkin.name = skin.name;
+			convertedSkin.boneIDs = skin.boneIDs;
 			convertedSkin.jointIDs = skin.jointIDs;
 
 			for(const Mat4x4& matrix : skin.inverseBindMatrices)
@@ -585,7 +588,7 @@ struct Animation;
 		uid node_uid;
 		uid mesh_uid;
 		uid skinID;
-		std::vector<uid> jointIDs;
+		std::vector<uid> boneIDs;
 		std::vector<uid> animationIDs;
 		std::vector<MaterialResources> materials;
 	};
@@ -747,8 +750,11 @@ struct Animation;
 		virtual void CreateNode(uid id, Node& node) = 0;
 		virtual void CreateSkin(avs::uid id, avs::Skin& skin) = 0;
 		virtual void CreateAnimation(avs::uid id, avs::Animation& animation) = 0;
+	};
 
-		
+	class AVSTREAM_API GeometryCacheBackendInterface : public UseInternalAllocator
+	{
+	public:
 		virtual std::vector<avs::uid> GetCompletedNodes() const = 0;
 		virtual std::vector<avs::uid> GetReceivedResources() const = 0;
 		virtual std::vector<avs::uid> GetResourceRequests() const = 0;

@@ -1,14 +1,14 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/FrameBuffer.h>
-#include <api/Texture.h>
+#include <ClientRender/FrameBuffer.h>
+#include <ClientRender/Texture.h>
 //#include <EyeBuffers.h>
 
 namespace scc
 {
 	//Implementation of FrameBuffer wrapping over ovrEyeBuffers
-class GL_FrameBuffer final : public scr::FrameBuffer
+class GL_FrameBuffer final : public clientrender::FrameBuffer
 	{
 	private:
 	    int eyeNum = 0;
@@ -16,8 +16,8 @@ class GL_FrameBuffer final : public scr::FrameBuffer
 	    //OVR::ovrEyeBuffers m_EyeBuffers;
 
 	public:
-		GL_FrameBuffer(const scr::RenderPlatform*const r)
-			:scr::FrameBuffer(r) {}
+		GL_FrameBuffer(const clientrender::RenderPlatform*const r)
+			:clientrender::FrameBuffer(r) {}
 
 		void Create(FrameBufferCreateInfo* pFrameBufferCreateInfo) override;
 		void Destroy() override;

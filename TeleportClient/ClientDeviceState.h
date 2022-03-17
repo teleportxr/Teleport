@@ -18,7 +18,7 @@ namespace teleport
 		public:
 			ClientDeviceState();
 
-			scr::mat4 transformToLocalOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.
+			clientrender::mat4 transformToLocalOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.
 			float eyeHeight=0.5f;
 			float stickYaw=0.0f;
 			LocalGlobalPose headPose;
@@ -27,8 +27,8 @@ namespace teleport
 			teleport::client::ControllerState controllerStates[2];
 
 			void TransformPose(LocalGlobalPose &p);
-			void SetHeadPose(avs::vec3 pos,scr::quat q);
-			void SetControllerPose(int index,avs::vec3 pos,scr::quat q);
+			void SetHeadPose(avs::vec3 pos,clientrender::quat q);
+			void SetControllerPose(int index,avs::vec3 pos,clientrender::quat q);
 			void SetControllerState(int index, const teleport::client::ControllerState& st);
 
 			//! From the stored relative poses, update the global ones to correspond.

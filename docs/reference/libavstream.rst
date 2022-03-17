@@ -8,6 +8,12 @@ LibAVStream is a helper library for streaming video and geometry data between a 
 
 A pipeline operates on a single thread, while queues allow threads to exchange data. For example, the server's Network pipeline connects several avs::Queue instances to a single avs::NetworkSink. For example, the video encoding pipeline links an avs::Surface that receives raw video frames, to an avs::Encoder, and finally to a queue. On another thread, the same queue in the network pipeline passes the data to the avs::NetworkSink.
 
+.. image:: ../images/reference/ExamplePipeline.png
+  :width: 800
+  :alt: Two pipelines operating on separate threads are connected using a avs::Queue.
+
+
+
 Classes
 -------
 
@@ -16,52 +22,85 @@ Classes
 
 
 .. doxygenclass:: avs::Pipeline
+   :members:
 .. doxygenclass:: avs::Timer
+   :members:
 .. doxygenclass:: avs::UseInternalAllocator
+   :members:
 
 avs Interface Classes
 ---------------------
 .. doxygenclass:: avs::AudioTargetBackendInterface
+   :members:
 .. doxygenclass:: avs::AudioEncoderBackendInterface
+   :members:
 .. doxygenclass:: avs::IOInterface
+   :members:
 .. doxygenclass:: avs::PacketInterface
+   :members:
 .. doxygenclass:: avs::SurfaceInterface
+   :members:
 .. doxygenclass:: avs::GeometrySourceInterface
+   :members:
 .. doxygenclass:: avs::GeometryTargetInterface
+   :members:
 .. doxygenclass:: avs::AudioTargetInterface
+   :members:
+.. doxygenclass:: avs::EncoderBackendInterface
+   :members:
+.. doxygenclass:: avs::DecoderBackendInterface
+   :members:
 
 avs Nodes
 ---------
 .. doxygenclass:: avs::PipelineNode
-
+   :members:
 .. doxygenclass:: avs::AudioDecoder
+   :members:
 .. doxygenclass:: avs::AudioEncoder
+   :members:
 .. doxygenclass:: avs::Buffer
 .. doxygenclass:: avs::Decoder
+   :members:
 .. doxygenclass:: avs::Encoder
+   :members:
 .. doxygenclass:: avs::File
 .. doxygenclass:: avs::Forwarder
 .. doxygenclass:: avs::GeometryDecoder
+   :members:
 .. doxygenclass:: avs::GeometryEncoder
+   :members:
 .. doxygenclass:: avs::GeometrySource
+   :members:
 .. doxygenclass:: avs::GeometryTarget
+   :members:
 .. doxygenclass:: avs::NetworkSink
+   :members:
 .. doxygenclass:: avs::NetworkSource
+   :members:
 .. doxygenclass:: avs::NullSink
 .. doxygenclass:: avs::Packetizer
 .. doxygenclass:: avs::Queue
+   :members:
 .. doxygenclass:: avs::Surface
+   :members:
 .. doxygenclass:: avs::TagDataDecoder
-:members:
+   :members:
 
 avs Structs
 -----------
 .. doxygenstruct:: avs::ClientMessage
 .. doxygenstruct:: avs::NetworkSinkCounters
+   :members:
 .. doxygenstruct:: avs::NetworkSinkParams
+   :members:
 .. doxygenstruct:: avs::NetworkSinkStream
+   :members:
 .. doxygenstruct:: avs::NetworkSourceCounters
+   :members:
 .. doxygenstruct:: avs::NetworkSourceParams
+   :members:
 .. doxygenstruct:: avs::NetworkSourceStream
+   :members:
 .. doxygenstruct:: avs::Result
    :members:

@@ -22,7 +22,7 @@
 #include <random>
 #include <functional>
 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
 #include <libavstream/surfaces/surface_dx12.hpp>
 #else
@@ -31,11 +31,12 @@
 
 #include "libavstream/platforms/platform_windows.hpp"
 
-#include "crossplatform/Light.h"
+#include "ClientRender/Light.h"
 #include "TeleportClient/Log.h"
-#include "crossplatform/Material.h"
+#include "ClientRender/Material.h"
 #include "TeleportClient/SessionClient.h"
-#include "crossplatform/Tests.h"
+#include "ClientRender/Tests.h"
+#include "ClientRender/Renderer.h"
 
 #include "TeleportClient/ServerTimestamp.h"
 
@@ -45,21 +46,23 @@
 
 #include "TeleportCore/ErrorHandling.h"
 
-static const char* ToString(scr::Light::Type type)
+using namespace teleport;
+
+static const char* ToString(clientrender::Light::Type type)
 {
 	const char* lightTypeName = "";
 	switch (type)
 	{
-	case scr::Light::Type::POINT:
+	case clientrender::Light::Type::POINT:
 		lightTypeName = "Point";
 		break;
-	case scr::Light::Type::DIRECTIONAL:
+	case clientrender::Light::Type::DIRECTIONAL:
 		lightTypeName = "  Dir";
 		break;
-	case scr::Light::Type::SPOT:
+	case clientrender::Light::Type::SPOT:
 		lightTypeName = " Spot";
 		break;
-	case scr::Light::Type::AREA:
+	case clientrender::Light::Type::AREA:
 		lightTypeName = " Area";
 		break;
 	};
@@ -100,7 +103,7 @@ struct AVSTextureImpl :public AVSTexture
 	simul::crossplatform::Texture *texture = nullptr;
 	avs::SurfaceBackendInterface* createSurface() const override
 	{
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 		return new avs::SurfaceDX12(texture->AsD3D12Resource());
 #else
 		return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
@@ -117,26 +120,24 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 }
 
 ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
-	sessionClient(this, std::make_unique<PCDiscoveryService>()),
-	clientDeviceState(c),
-	RenderMode(0),
-	dev_mode(dev),
-	gui(g)
+	Renderer(new clientrender::NodeManager,new clientrender::NodeManager)
+	,sessionClient(this, std::make_unique<PCDiscoveryService>())
+	, clientDeviceState(c)
+	, RenderMode(0)
+	, dev_mode(dev)
+	, gui(g)
 {
 	sessionClient.SetResourceCreator(&resourceCreator);
+	sessionClient.SetGeometryCache(&geometryCache);
 	resourceCreator.SetGeometryCache(&geometryCache);
 	localResourceCreator.SetGeometryCache(&localGeometryCache);
 
-	// Initalize time stamping for state update.
-	platformStartTimestamp = avs::PlatformWindows::getTimestamp();
-	previousTimestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-
-	scr::Tests::RunAllTests();
+	clientrender::Tests::RunAllTests();
 }
 
 ClientRenderer::~ClientRenderer()
 {
-	pipeline.deconfigure();
+	clientPipeline.pipeline.deconfigure();
 	InvalidateDeviceObjects(); 
 }
 
@@ -149,8 +150,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
-	resourceCreator.Initialize(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
-	localResourceCreator.Initialize(&PcClientRenderPlatform, scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	resourceCreator.Initialize(&PcClientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	localResourceCreator.Initialize(&PcClientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
 
 	hDRRenderer = new crossplatform::HdrRenderer();
 
@@ -158,7 +159,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
 	hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
 	hdrFramebuffer->SetAntialiasing(1);
-	meshRenderer	= new crossplatform::MeshRenderer();
 	camera.SetPositionAsXYZ(0.f,0.f,2.f);
 	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
 	camera.LookInDirection(look,up);
@@ -169,8 +169,8 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	camera.SetVerticalFieldOfViewDegrees(0.f);
 	
 	//const float aspect = hdrFramebuffer->GetWidth() / hdrFramebuffer->GetHeight();
-	//cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
-	//cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
+	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 
 	crossplatform::CameraViewStruct vs;
 	vs.exposure=1.f;
@@ -185,7 +185,6 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	memset(keydown,0,sizeof(keydown));
 
 	hDRRenderer->RestoreDeviceObjects(renderPlatform);
-	meshRenderer->RestoreDeviceObjects(renderPlatform);
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
 	gui.RestoreDeviceObjects(renderPlatform);
@@ -225,19 +224,19 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 		TELEPORT_BREAK_ONCE("Wand mesh not found");
 	}
 	{
-		scr::Material::MaterialCreateInfo materialCreateInfo;
+		clientrender::Material::MaterialCreateInfo materialCreateInfo;
 		materialCreateInfo.name="local material";
-		std::shared_ptr<scr::Material> scrMaterial = std::make_shared<scr::Material>(&PcClientRenderPlatform,materialCreateInfo);
+		std::shared_ptr<clientrender::Material> scrMaterial = std::make_shared<clientrender::Material>(&PcClientRenderPlatform,materialCreateInfo);
 		localGeometryCache.mMaterialManager.Add(14, scrMaterial);
 
 		materialCreateInfo.name = "red glow";
 		materialCreateInfo.emissive.textureOutputScalar = { 1.f, 0, 0, 0 };
-		std::shared_ptr<scr::Material> red = std::make_shared<scr::Material>(&PcClientRenderPlatform, materialCreateInfo);
+		std::shared_ptr<clientrender::Material> red = std::make_shared<clientrender::Material>(&PcClientRenderPlatform, materialCreateInfo);
 		localGeometryCache.mMaterialManager.Add(15, red);
 
 		materialCreateInfo.name = "blue glow";
 		materialCreateInfo.emissive.textureOutputScalar = { 0.f, 0.5f, 1.f, 0 };
-		std::shared_ptr<scr::Material> blue = std::make_shared<scr::Material>(&PcClientRenderPlatform, materialCreateInfo);
+		std::shared_ptr<clientrender::Material> blue = std::make_shared<clientrender::Material>(&PcClientRenderPlatform, materialCreateInfo);
 		localGeometryCache.mMaterialManager.Add(16, blue);
 	}
 	avs::Node avsNode;
@@ -248,13 +247,13 @@ void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
 	avsNode.materials.push_back(14);
 	avsNode.materials.push_back(15);
 
-	std::shared_ptr<scr::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
+	std::shared_ptr<clientrender::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
 	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetRightHand(23);
 
 	avsNode.name = "local Left Hand";
 	avsNode.materials[1]=16;
-	std::shared_ptr<scr::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
+	std::shared_ptr<clientrender::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
 	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 	localGeometryCache.mNodeManager->SetLeftHand(24);
 }
@@ -286,7 +285,6 @@ void ClientRenderer::RecompileShaders()
 {
 	renderPlatform->RecompileShaders();
 	hDRRenderer->RecompileShaders();
-	meshRenderer->RecompileShaders();
 	gui.RecompileShaders();
 	delete pbrEffect;
 	delete cubemapClearEffect;
@@ -298,7 +296,7 @@ void ClientRenderer::RecompileShaders()
 
 
 // We only ever create one view in this example, but in general, this should return a new value each time it's called.
-int ClientRenderer::AddView(/*external_framebuffer*/)
+int ClientRenderer::AddView()
 {
 	static int last_view_id=0;
 	// We override external_framebuffer here and pass "true" to demonstrate how external depth buffers are used.
@@ -315,8 +313,8 @@ void ClientRenderer::ResizeView(int view_id,int W,int H)
 		hdrFramebuffer->SetAntialiasing(1);
 	}
 	//const float aspect = W / H;
-	//cubemapConstants.localHorizFOV = HFOV * scr::DEG_TO_RAD;
-	//cubemapConstants.localVertFOV = scr::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
+	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 }
 
 
@@ -357,7 +355,6 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	last_t = timer.TimeSum;
 	simul::crossplatform::GraphicsDeviceContext	deviceContext;
 	deviceContext.setDefaultRenderTargets(renderTexture, nullptr, 0, 0, w, h);
-	deviceContext.frame_number = frame;
 	deviceContext.platform_context = context;
 	deviceContext.renderPlatform = renderPlatform;
 	deviceContext.viewStruct.view_id = view_id;
@@ -524,31 +521,31 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 			{
 				if (videoTexture->IsCubemap())
 				{
-					const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
+					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
 					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
 				}
 				else
 				{
-					const char* technique = videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
+					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
 					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
 					simul::math::Matrix4x4 projInv;
 					deviceContext.viewStruct.proj.Inverse(projInv);
 					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
 				}
 			}
-			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(videoConfig.diffuse_x, videoConfig.diffuse_y));
-			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(videoConfig.specular_x, videoConfig.specular_y));
+			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(clientPipeline.videoConfig.diffuse_x, clientPipeline.videoConfig.diffuse_y));
+			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(clientPipeline.videoConfig.specular_x, clientPipeline.videoConfig.specular_y));
 		}
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 
-		pbrConstants.drawDistance = lastSetupCommand.video_config.draw_distance;
+		pbrConstants.drawDistance = lastSetupCommand.draw_distance;
 		if (sessionClient.IsConnected()||render_local_offline)
 			RenderLocalNodes(deviceContext,geometryCache);
 
 		{
-			std::shared_ptr<scr::Node> leftHand = localGeometryCache.mNodeManager->GetLeftHand();
-			std::shared_ptr<scr::Node> rightHand = localGeometryCache.mNodeManager->GetRightHand();
+			std::shared_ptr<clientrender::Node> leftHand = localGeometryCache.mNodeManager->GetLeftHand();
+			std::shared_ptr<clientrender::Node> rightHand = localGeometryCache.mNodeManager->GetRightHand();
 			std::vector<vec4> hand_pos_press;
 			hand_pos_press.resize(2);
 			avs::vec3 pos = rightHand->GetGlobalTransform().LocalToGlobal(avs::vec3(0,0.12f, 0));
@@ -694,12 +691,12 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 		videoTagDataCube[i].lightCount = static_cast<int>(td.lights.size());
 		if(td.lights.size() > 10)
 		{
-			SCR_CERR_BREAK("Too many lights in tag.",10);
+			TELEPORT_CERR_BREAK("Too many lights in tag.",10);
 		}
 		for(int j=0;j<td.lights.size()&&j<10;j++)
 		{
 			LightTag &t=videoTagDataCube[i].lightTags[j];
-			const scr::LightTagData &l=td.lights[j];
+			const clientrender::LightTagData &l=td.lights[j];
 			t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
 			t.colour=*((vec4*)&l.color);
 			// Convert from +-1 to [0,1]
@@ -713,16 +710,16 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 			t.position=*((vec3*)&position);
 			crossplatform::Quaternionf q((const float*)&orientation);
 			t.direction=q*vec3(0,0,1.0f);
-			scr::mat4 worldToShadowMatrix=scr::mat4((const float*)&l.worldToShadowMatrix);
+			clientrender::mat4 worldToShadowMatrix=clientrender::mat4((const float*)&l.worldToShadowMatrix);
 				
 			t.worldToShadowMatrix	=*((mat4*)&worldToShadowMatrix);
 
 			auto &nodeLight=cachedLights.find(l.uid);
 			if(nodeLight!=cachedLights.end()&& nodeLight->second.resource!=nullptr)
 			{
-				const scr::Light::LightCreateInfo &lc=nodeLight->second.resource->GetLightCreateInfo();
-				t.is_point=float(lc.type!=scr::Light::Type::DIRECTIONAL);
-				t.is_spot=float(lc.type==scr::Light::Type::SPOT);
+				const clientrender::Light::LightCreateInfo &lc=nodeLight->second.resource->GetLightCreateInfo();
+				t.is_point=float(lc.type!=clientrender::Light::Type::DIRECTIONAL);
+				t.is_spot=float(lc.type==clientrender::Light::Type::SPOT);
 				t.radius=lc.lightRadius;
 				t.range=lc.lightRange;
 				t.shadow_strength=0.0f;
@@ -730,44 +727,6 @@ void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceCo
 		}
 	}	
 	tagDataCubeBuffer.SetData(deviceContext, videoTagDataCube);
-}
-
-void ClientRenderer::ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining)
-{
-	//Return if we do not want to print any more lines.
-	if(linesRemaining <= 0)
-	{
-		return;
-	}
-	--linesRemaining;
-
-	//Set indent string to indent amount.
-	static char indent_txt[20];
-	indent_txt[indent] = 0;
-	if(indent > 0)
-	{
-		indent_txt[indent - 1] = ' ';
-	}
-
-	//Retrieve info string on mesh on node, if the node has a mesh.
-	std::string meshInfoString;
-	const std::shared_ptr<scr::Mesh>& mesh = node->GetMesh();
-	if(mesh)
-	{
-		meshInfoString = platform::core::QuickFormat("mesh: %s (0x%08x)", mesh->GetMeshCreateInfo().name.c_str(), &mesh);
-	}
-	avs::vec3 pos=node->GetGlobalPosition();
-	//Print details on node to screen.
-	renderPlatform->LinePrint(deviceContext, platform::core::QuickFormat("%s%d %s (%4.4f,%4.4f,%4.4f) %s", indent_txt, node->id, node->name.c_str()
-		,pos.x,pos.y,pos.z
-		, meshInfoString.c_str()));
-
-	//Print information on children to screen.
-	const std::vector<std::weak_ptr<scr::Node>>& children = node->GetChildren();
-	for(const auto c : children)
-	{
-		ListNode(deviceContext, c.lock(), indent + 1, linesRemaining);
-	}
 }
 
 const char *stringof(avs::GeometryPayloadType t)
@@ -795,8 +754,8 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
-	const avs::NetworkSourceCounters counters = source.getCounterValues();
-	const avs::DecoderStats vidStats = decoder.GetStats();
+	const avs::NetworkSourceCounters counters = clientPipeline.source.getCounterValues();
+	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
@@ -805,10 +764,10 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", server_ip.c_str(), server_discovery_port):"Offline"),white);
 	gui.LinePrint( platform::core::QuickFormat("Framerate: %4.4f", framerate));
 
-	if(show_osd== NETWORK_OSD)
+	if(show_osd== clientrender::NETWORK_OSD)
 	{
-		gui.LinePrint( platform::core::QuickFormat("Start timestamp: %d", pipeline.GetStartTimestamp()));
-		gui.LinePrint( platform::core::QuickFormat("Current timestamp: %d",pipeline.GetTimestamp()));
+		gui.LinePrint( platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
+		gui.LinePrint( platform::core::QuickFormat("Current timestamp: %d",clientPipeline.pipeline.GetTimestamp()));
 		gui.LinePrint( platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
 		gui.LinePrint( platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
 		gui.LinePrint( platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
@@ -817,10 +776,10 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 		gui.LinePrint( platform::core::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
 		gui.LinePrint( platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
 		gui.LinePrint( platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
-		gui.LinePrint( platform::core::QuickFormat("Video frames processed per sec: %4.2f", vidStats.framesProcessedPerSec));
+		gui.LinePrint( platform::core::QuickFormat("Video frames parseed per sec: %4.2f", vidStats.framesProcessedPerSec));
 		gui.LinePrint( platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
 	}
-	else if(show_osd== CAMERA_OSD)
+	else if(show_osd== clientrender::CAMERA_OSD)
 	{
 		vec3 offset=camera.GetPosition();
 		gui.LinePrint( receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
@@ -835,82 +794,29 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			gui.LinePrint( platform::core::QuickFormat(" Video: -"), white);
 		}
 	}
-	else if(show_osd==GEOMETRY_OSD)
+	else if(show_osd== clientrender::GEOMETRY_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		gui.LinePrint( platform::core::QuickFormat("Nodes: %d",geometryCache.mNodeManager->GetNodeAmount()), white);
 
 		static int nodeLimit = 5;
-		int linesRemaining = nodeLimit;
 		auto& rootNodes = geometryCache.mNodeManager->GetRootNodes();
-		for(const std::shared_ptr<scr::Node>& node : rootNodes)
-		{
-			if(show_only!=0&&show_only!=node->id)
-				continue;
-			ListNode(deviceContext, node, 1, linesRemaining);
-			if(linesRemaining <= 0)
-			{
-				break;
-			}
-		}
 		static int lineLimit = 50;
-		linesRemaining = lineLimit;
 
 		gui.LinePrint( platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
-																									geometryCache.mLightManager.GetCache(cacheLock).size()), white);
-		gui.NodeTree( geometryCache.mNodeManager->GetRootNodes());
-/*
-		auto& cachedMaterials = geometryCache.mMaterialManager.GetCache(cacheLock);
-		gui.LinePrint( platform::core::QuickFormat("Materials: %d", cachedMaterials.size(),cachedMaterials.size()), white);
-		static int matLimit = 5;
-		linesRemaining = matLimit;
-		for(auto m: cachedMaterials)
-		{
-			auto &M=m.second;
-			const auto &mat=M.resource->GetMaterialCreateInfo();
-			gui.LinePrint( platform::core::QuickFormat("  %s", mat.name.c_str()),white,background);
-			gui.LinePrint( platform::core::QuickFormat("    emissive: %3.3f %3.3f %3.3f", mat.emissive.textureOutputScalar.x, mat.emissive.textureOutputScalar.y, mat.emissive.textureOutputScalar.z),white, background);
-			linesRemaining--;
-			if(!linesRemaining)
-				break;
-		}
-		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
-		int j=0;
-		for(auto &i:cachedLights)
-		{
-			auto &l=i.second;
-			if(l.resource)
-			{
-				auto &lcr=l.resource->GetLightCreateInfo();
-				{
-					const char *lightTypeName=ToString(lcr.type);
-					vec4 light_colour=(const float*)&lcr.lightColour;
-					vec4 light_position=(const float*)&lcr.position;
-					vec4 light_direction=(const float*)&lcr.direction;
-					
-					light_colour.w=1.0f;
-					if(lcr.type==scr::Light::Type::POINT)
-						gui.LinePrint( platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, dir %3.3f %3.3f %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_direction.x,light_direction.y,light_direction.z),light_colour,background);
-					else
-						gui.LinePrint( platform::core::QuickFormat("    %d, %s: %3.3f %3.3f %3.3f, pos %3.3f %3.3f %3.3f, rad %3.3f",i.first, lcr.name.c_str(), lightTypeName,light_colour.x,light_colour.y,light_colour.z,light_position.x,light_position.y,light_position.z,lcr.lightRadius),light_colour,background);
-				}
-			}
-			if(j<videoTagDataCubeArray[0].lights.size())
-			{
-				auto &l=videoTagDataCubeArray[0].lights[j];
-				gui.LinePrint( platform::core::QuickFormat("        shadow orig %3.3f %3.3f %3.3f",l.position.x,l.position.y,l.position.z),text_colour,background);
-				gui.LinePrint( platform::core::QuickFormat("        z=%3.3f + %3.3f zpos",l.shadowProjectionMatrix[2][3],l.shadowProjectionMatrix[2][2]),text_colour,background);
-			}
-			j++;
-		}*/
-		
+						geometryCache.mLightManager.GetCache(cacheLock).size()), white);
+
+		gui.Anims(geometryCache.mAnimationManager);
+
+		gui.NodeTree( rootNodes);
+
 		auto &missing=geometryCache.m_MissingResources;
 		if(missing.size())
 		{
 			gui.LinePrint( platform::core::QuickFormat("Missing Resources"));
 			for(const auto& missingPair : missing)
 			{
-				const scr::MissingResource& missingResource = missingPair.second;
+				const clientrender::MissingResource& missingResource = missingPair.second;
 				std::string txt= platform::core::QuickFormat("\t%s %d from ", stringof(missingResource.resourceType), missingResource.id);
 				for(auto u:missingResource.waitingResources)
 				{
@@ -929,7 +835,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			}
 		}
 	}
-	else if(show_osd==TAG_OSD)
+	else if(show_osd== clientrender::TAG_OSD)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto& cachedLights = geometryCache.mLightManager.GetCache(cacheLock);
@@ -955,12 +861,12 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 					auto& lcr =c.resource->GetLightCreateInfo();
 					name=lcr.name.c_str();
 				}
-				if(l.lightType==scr::LightType::Directional)
-					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((scr::Light::Type)l.lightType)
+				if(l.lightType==clientrender::LightType::Directional)
+					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((clientrender::Light::Type)l.lightType)
 						,lightTag.direction.x,lightTag.direction.y,lightTag.direction.z
 						,l.color.x,l.color.y,l.color.z),clr);
 				else
-					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((scr::Light::Type)l.lightType)
+					gui.LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((clientrender::Light::Type)l.lightType)
 						,lightTag.position.x
 						,lightTag.position.y
 						,lightTag.position.z
@@ -969,7 +875,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 			}
 		}
 	}
-	else if(show_osd== CONTROLLER_OSD)
+	else if(show_osd== clientrender::CONTROLLER_OSD)
 	{
 		gui.LinePrint( "CONTROLLERS\n");
 		gui.LinePrint( platform::core::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
@@ -1002,7 +908,7 @@ void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& device
 
 }
 
-void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<scr::Node> node)
+void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<clientrender::Node> node)
 {
 	for(int i = 0; i < tabDepth; i++)
 	{
@@ -1020,24 +926,24 @@ void ClientRenderer::WriteHierarchies()
 {
 	std::cout << "Node Tree\n----------------------------------\n";
 
-	for(std::shared_ptr<scr::Node> node : geometryCache.mNodeManager->GetRootNodes())
+	for(std::shared_ptr<clientrender::Node> node : geometryCache.mNodeManager->GetRootNodes())
 	{
 		WriteHierarchy(0, node);
 	}
 
-	std::shared_ptr<scr::Node> body = geometryCache.mNodeManager->GetBody();
+	std::shared_ptr<clientrender::Node> body = geometryCache.mNodeManager->GetBody();
 	if(body)
 	{
 		WriteHierarchy(0, body);
 	}
 
-	std::shared_ptr<scr::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
+	std::shared_ptr<clientrender::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
 	if(leftHand)
 	{
 		WriteHierarchy(0, leftHand);
 	}
 
-	std::shared_ptr<scr::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
+	std::shared_ptr<clientrender::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
 	if(rightHand)
 	{
 		WriteHierarchy(0, rightHand);
@@ -1046,7 +952,7 @@ void ClientRenderer::WriteHierarchies()
 	std::cout << std::endl;
 }
 
-void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,scr::GeometryCache &g)
+void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g)
 {
 	deviceContext.viewStruct.Init();
 
@@ -1069,54 +975,51 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		pbrConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
 
-	if (renderPlayer)
+	std::shared_ptr<clientrender::Node> body = g.mNodeManager->GetBody();
+	if (body)
 	{
-		std::shared_ptr<scr::Node> body = g.mNodeManager->GetBody();
-		if (body)
-		{
-			body->SetLocalPosition(clientDeviceState->headPose.globalPose.position + bodyOffsetFromHead);
+		body->SetLocalPosition(clientDeviceState->headPose.globalPose.position + bodyOffsetFromHead);
 
-			//Calculate rotation angle on z-axis, and use to create new quaternion that only rotates the body on the z-axis.
-			float angle = std::atan2(clientDeviceState->headPose.globalPose.orientation.z, clientDeviceState->headPose.globalPose.orientation.w);
-			scr::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
-			body->SetLocalRotation(zRotation);
-			// force update of model matrices - should not be necessary, but is.
-			body->UpdateModelMatrix();
-		}
-
-
-		std::shared_ptr<scr::Node> leftHand = g.mNodeManager->GetLeftHand();
-		std::shared_ptr<scr::Node> rightHand = g.mNodeManager->GetRightHand();
-		if (leftHand)
-		{
-		// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
-			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].globalPose.position);
-			leftHand->SetLocalRotation(clientDeviceState->controllerPoses[0].globalPose.orientation);
-			// force update of model matrices - should not be necessary, but is.
-			leftHand->UpdateModelMatrix();
-		}
-		if (rightHand)
-		{
-			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].globalPose.position);
-			rightHand->SetLocalRotation(clientDeviceState->controllerPoses[1].globalPose.orientation);
-			// force update of model matrices - should not be necessary, but is.
-			rightHand->UpdateModelMatrix();
-		}
+		//Calculate rotation angle on z-axis, and use to create new quaternion that only rotates the body on the z-axis.
+		float angle = std::atan2(clientDeviceState->headPose.globalPose.orientation.z, clientDeviceState->headPose.globalPose.orientation.w);
+		clientrender::quat zRotation(0.0f, 0.0f, std::sin(angle), std::cos(angle));
+		body->SetLocalRotation(zRotation);
+		// force update of model matrices - should not be necessary, but is.
+		body->UpdateModelMatrix();
 	}
-	const scr::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
-	for(const std::shared_ptr<scr::Node>& node : nodeList)
+
+
+	std::shared_ptr<clientrender::Node> leftHand = g.mNodeManager->GetLeftHand();
+	std::shared_ptr<clientrender::Node> rightHand = g.mNodeManager->GetRightHand();
+	if (leftHand)
+	{
+	// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
+		leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].globalPose.position);
+		leftHand->SetLocalRotation(clientDeviceState->controllerPoses[0].globalPose.orientation);
+		// force update of model matrices - should not be necessary, but is.
+		leftHand->UpdateModelMatrix();
+	}
+	if (rightHand)
+	{
+		rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].globalPose.position);
+		rightHand->SetLocalRotation(clientDeviceState->controllerPoses[1].globalPose.orientation);
+		// force update of model matrices - should not be necessary, but is.
+		rightHand->UpdateModelMatrix();
+	}
+	const clientrender::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
+	for(const std::shared_ptr<clientrender::Node>& node : nodeList)
 	{
 		if(show_only!=0&&show_only!=node->id)
 			continue;
 		RenderNode(deviceContext, node,g);
 	}
 	if(show_node_overlays)
-	for (const std::shared_ptr<scr::Node>& node : nodeList)
+	for (const std::shared_ptr<clientrender::Node>& node : nodeList)
 	{
 		RenderNodeOverlay(deviceContext, node,g);
 	}
 }
-void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force)
+void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
@@ -1124,7 +1027,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 	
 	if(!force&&(node_select > 0 && node_select != node->id))
 		return;
-	std::shared_ptr<scr::Texture> globalIlluminationTexture ;
+	std::shared_ptr<clientrender::Texture> globalIlluminationTexture ;
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
@@ -1138,7 +1041,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 	if(node->GetPriority()>=0)
 	if(node->IsVisible()&&(show_only == 0 || show_only == node->id))
 	{
-		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
+		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 		if(mesh)
 		{
 			const auto& meshInfo = mesh->GetMeshCreateInfo();
@@ -1154,7 +1057,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				simul::crossplatform::Layout* layout = vb->GetLayout();
 
 				mat4 model;
-				const scr::mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
+				const clientrender::mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
 				model = reinterpret_cast<const float*>(&globalTransformMatrix);
 				static bool override_model=false;
 				if(override_model)
@@ -1166,14 +1069,14 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				cameraConstants.world = model;
 
 				std::shared_ptr<pc_client::PC_Texture> gi = std::dynamic_pointer_cast<pc_client::PC_Texture>(globalIlluminationTexture);
-				std::shared_ptr<scr::Material> material = node->GetMaterials()[element];
+				std::shared_ptr<clientrender::Material> material = node->GetMaterials()[element];
 				std::string usedPassName = passName;
 
-				std::shared_ptr<scr::Skin> skin = node->GetSkin();
+				std::shared_ptr<clientrender::Skin> skin = node->GetSkin();
 				if (skin)
 				{
-					scr::mat4* scr_matrices = skin->GetBoneMatrices(globalTransformMatrix);
-					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(scr::mat4) * scr::Skin::MAX_BONES);
+					clientrender::mat4* scr_matrices = skin->GetBoneMatrices(globalTransformMatrix);
+					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(clientrender::mat4) * clientrender::Skin::MAX_BONES);
 
 					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
 					usedPassName = "anim_" + usedPassName;
@@ -1181,8 +1084,8 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				crossplatform::EffectPass *pass = pbrEffect->GetTechniqueByName("solid")->GetPass(usedPassName.c_str());
 				if(material)
 				{
-					const scr::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
-					const scr::Material::MaterialData& md = material->GetMaterialData();
+					const clientrender::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
+					const clientrender::Material::MaterialData& md = material->GetMaterialData();
 					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
 					pbrConstants.lightmapScaleOffset=*(const vec4*)(&(node->GetLightmapScaleOffset()));
 					std::shared_ptr<pc_client::PC_Texture> diffuse = std::dynamic_pointer_cast<pc_client::PC_Texture>(matInfo.diffuse.texture);
@@ -1236,9 +1139,9 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 		}
 	}
 
-	for(std::weak_ptr<scr::Node> childPtr : node->GetChildren())
+	for(std::weak_ptr<clientrender::Node> childPtr : node->GetChildren())
 	{
-		std::shared_ptr<scr::Node> child = childPtr.lock();
+		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if(child)
 		{
 			RenderNode(deviceContext, child,g,true);
@@ -1247,7 +1150,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 }
 
 
-void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force)
+void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
@@ -1255,31 +1158,31 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 	if(!force&&(node_select > 0 && node_select != node->id))
 		return;
 
-	std::shared_ptr<scr::Texture> globalIlluminationTexture;
+	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
 		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	//Only render visible nodes, but still render children that are close enough.
 	if (node->IsVisible()&& (show_only == 0 || show_only == node->id))
 	{
-		const std::shared_ptr<scr::Mesh> mesh = node->GetMesh();
-		const scr::AnimationComponent& anim = node->animationComponent;
+		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
+		const clientrender::AnimationComponent& anim = node->animationComponent;
 		avs::vec3 pos = node->GetGlobalPosition();
 		avs::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 		if (node->GetSkin().get())
 		{
 			std::string str;
-			const scr::AnimationState* animationState = node->animationComponent.GetCurrentAnimationState();
+			const clientrender::AnimationState* animationState = node->animationComponent.GetCurrentAnimationState();
 			if (animationState)
 			{
-				//const scr::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
+				//const clientrender::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
 				static char txt[250];
 				//for(const auto &s:animationStates)
 				{
 					const auto& a = animationState->getAnimation();
 					if (a.get())
 					{
-						sprintf_s(txt, "%llu %s %3.3f\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTime());
+						sprintf_s(txt, "%llu %s %3.3f\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTimeSeconds());
 						str += txt;
 					}
 				}
@@ -1301,9 +1204,9 @@ void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceConte
 		}
 	}
 
-	for (std::weak_ptr<scr::Node> childPtr : node->GetChildren())
+	for (std::weak_ptr<clientrender::Node> childPtr : node->GetChildren())
 	{
-		std::shared_ptr<scr::Node> child = childPtr.lock();
+		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if (child)
 		{
 			RenderNodeOverlay(deviceContext, child,g,true);
@@ -1331,13 +1234,10 @@ void ClientRenderer::InvalidateDeviceObjects()
 		renderPlatform->InvalidateDeviceObjects();
 	if(hdrFramebuffer)
 		hdrFramebuffer->InvalidateDeviceObjects();
-	if(meshRenderer)
-		meshRenderer->InvalidateDeviceObjects();
 	SAFE_DELETE(diffuseCubemapTexture);
 	SAFE_DELETE(specularCubemapTexture);
 	SAFE_DELETE(lightingCubemapTexture);
 	SAFE_DELETE(videoTexture);
-	SAFE_DELETE(meshRenderer);
 	SAFE_DELETE(hDRRenderer);
 	SAFE_DELETE(hdrFramebuffer);
 	SAFE_DELETE(pbrEffect);
@@ -1354,7 +1254,7 @@ bool ClientRenderer::OnDeviceRemoved()
 	return true;
 }
 
-void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format)
+void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height)
 {
 	if (!(th))
 		th.reset(new AVSTextureImpl(nullptr));
@@ -1362,33 +1262,30 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height, a
 	AVSTextureImpl *ti=(AVSTextureImpl*)t;
 	if(!ti->texture)
 		ti->texture = renderPlatform->CreateTexture();
-	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height,1, simul::crossplatform::RGBA_8_UNORM, true, true, false);
+
+	// NVidia decoder needs a shared handle to the resource.
+#if TELEPORT_CLIENT_USE_D3D12 && !TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
+	bool useSharedHeap = true;
+#else
+	bool useSharedHeap = false;
+#endif
+
+	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height,1, simul::crossplatform::RGBA_8_UNORM, true, true, 
+		false, 1, 0, false, vec4(0.5f, 0.5f, 0.2f, 1.0f), 1.0f, 0, useSharedHeap);
 }
 
-void ClientRenderer::Update()
-{
-	double timestamp = avs::PlatformWindows::getTimeElapsed(platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-	double timeElapsed = (timestamp - previousTimestamp) / 1000.0f;//ns to ms
-
-	teleport::client::ServerTimestamp::tick(timeElapsed);
-
-	geometryCache.Update(static_cast<float>(timeElapsed));
-	resourceCreator.Update(static_cast<float>(timeElapsed));
-
-	localGeometryCache.Update(static_cast<float>(timeElapsed));
-	localResourceCreator.Update(static_cast<float>(timeElapsed));
-
-	previousTimestamp = timestamp;
-}
 void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 {
 	lastSetupLightingCommand=l;
 }
+
 void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
+	geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
+/*
 	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
 	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
-	std::weak_ptr<scr::Node> oldParent=node->GetParent();
+	std::weak_ptr<clientrender::Node> oldParent=node->GetParent();
 	auto oldp=oldParent.lock();
 	if(oldp)
 		oldp->RemoveChild(node);
@@ -1396,7 +1293,7 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
 	node->SetParent(parent);
 	if(parent)
-		parent->AddChild(node);
+		parent->AddChild(node);*/
 }
 
 void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand)
@@ -1415,23 +1312,27 @@ void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &upda
 		geometryCache.mNodeManager->SetRightHand(updateNodeStructureCommand.nodeID);
 		break;
 	default:
-		SCR_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeStructureCommand.nodeSubtype) << "!\n";
+		TELEPORT_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeStructureCommand.nodeSubtype) << "!\n";
 		break;
 	}
+}
+void ClientRenderer::ConfigureVideo(const avs::VideoConfig& videoConfig)
+{
+	clientPipeline.videoConfig = videoConfig;
 }
 
 bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
 {
-	videoConfig = setupCommand.video_config;
+	ConfigureVideo(setupCommand.video_config);
 
-	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, videoConfig.video_width, videoConfig.video_height
-																	, videoConfig.depth_width, videoConfig.depth_height	);
+	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
+																	, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height	);
 	videoPosDecoded=false;
 
 	videoTagDataCubeArray.clear();
 	videoTagDataCubeArray.resize(maxTagDataSize);
 
-	teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ms);
 	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 	const uint32_t geoStreamID = 80;
@@ -1447,7 +1348,6 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 
 	avs::NetworkSourceParams sourceParams;
 	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-	sourceParams.localPort = 101;
 	sourceParams.remoteIP = server_ip;
 	sourceParams.remotePort = setupCommand.server_streaming_port;
 	sourceParams.remoteHTTPPort = setupCommand.server_http_port;
@@ -1456,35 +1356,35 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	sourceParams.useSSL = setupCommand.using_ssl;
 
 	// Configure for video stream, tag data stream, audio stream and geometry stream.
-	if (!source.configure(std::move(streams), sourceParams))
+	if (!clientPipeline.source.configure(std::move(streams), sourceParams))
 	{
 		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
 		return false;
 	}
 
-	source.setDebugStream(setupCommand.debug_stream);
-	source.setDoChecksums(setupCommand.do_checksums);
-	source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+	clientPipeline.source.setDebugStream(setupCommand.debug_stream);
+	clientPipeline.source.setDoChecksums(setupCommand.do_checksums);
+	clientPipeline.source.setDebugNetworkPackets(setupCommand.debug_network_packets);
 
 	//test
 	//avs::HTTPPayloadRequest req;
 	//req.fileName = "meshes/engineering/Cube_Cube.mesh";
 	//req.type = avs::FilePayloadType::Mesh;
-	//source.GetHTTPRequestQueue().emplace(std::move(req));
+	//clientPipeline.source.GetHTTPRequestQueue().emplace(std::move(req));
 
 	bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
 	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, bodyOffsetFromHead);
 	
-	decoderParams.deferDisplay = false;
-	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	decoderParams.codec = videoConfig.videoCodec;
-	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
-	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
-	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
+	clientPipeline.decoderParams.deferDisplay = false;
+	clientPipeline.decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
+	clientPipeline.decoderParams.codec = clientPipeline.videoConfig.videoCodec;
+	clientPipeline.decoderParams.use10BitDecoding = clientPipeline.videoConfig.use_10_bit_decoding;
+	clientPipeline.decoderParams.useYUV444ChromaFormat = clientPipeline.videoConfig.use_yuv_444_decoding;
+	clientPipeline.decoderParams.useAlphaLayerDecoding = clientPipeline.videoConfig.use_alpha_layer_decoding;
 
 	avs::DeviceHandle dev;
 	
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 	dev.handle = renderPlatform->AsD3D12Device();
 	dev.type = avs::DeviceType::Direct3D12;
 #else
@@ -1492,9 +1392,9 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	dev.type = avs::DeviceType::Direct3D11;
 #endif
 
-	pipeline.reset();
-	// Top of the pipeline, we have the network source.
-	pipeline.add(&source);
+	clientPipeline.pipeline.reset();
+	// Top of the clientPipeline.pipeline, we have the network clientPipeline.source.
+	clientPipeline.pipeline.add(&clientPipeline.source);
 
 	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
 	if (ti)
@@ -1507,107 +1407,136 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 			source -<
 					 \->decoder	-> surface
 	*/
-	size_t stream_width = videoConfig.video_width;
-	size_t stream_height = videoConfig.video_height;
+	size_t stream_width = clientPipeline.videoConfig.video_width;
+	size_t stream_height = clientPipeline.videoConfig.video_height;
 
-	if (videoConfig.use_cubemap)
+	if (clientPipeline.videoConfig.use_cubemap)
 	{
-		if(videoConfig.colour_cubemap_size)
-			videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
+		if(clientPipeline.videoConfig.colour_cubemap_size)
+			videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
 				crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
-	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.specular_cubemap_size, videoConfig.specular_cubemap_size, 1, videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.diffuse_cubemap_size, videoConfig.diffuse_cubemap_size, 1, 1,
+	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.specular_cubemap_size, clientPipeline.videoConfig.specular_cubemap_size, 1, clientPipeline.videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.diffuse_cubemap_size, clientPipeline.videoConfig.diffuse_cubemap_size, 1, 1,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
-	const float horzFOV = setupCommand.video_config.perspective_fov * scr::DEG_TO_RAD;
-	const float vertFOV = scr::GetVerticalFOVFromHorizontal(horzFOV, aspect);
+	const float horzFOV = setupCommand.video_config.perspective_fov * clientrender::DEG_TO_RAD;
+	const float vertFOV = clientrender::GetVerticalFOVFromHorizontal(horzFOV, aspect);
 
 	cubemapConstants.serverProj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(horzFOV, vertFOV, 0.01f, 0);
 
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
-	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
+	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
 
 	
-	CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormat);
+	CreateTexture(avsTexture, int(stream_width), int(stream_height));
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
 	AVSTextureHandle th = avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
-	decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
+	clientPipeline.decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
 #endif
 
 	// Video streams are 0+...
-	if (!decoder.configure(dev, (int)stream_width, (int)stream_height, decoderParams, 20))
+	if (!clientPipeline.decoder.configure(dev, (int)stream_width, (int)stream_height, clientPipeline.decoderParams, 20))
 	{
-		SCR_CERR << "Failed to configure decoder node!\n";
+		TELEPORT_CERR << "Failed to configure decoder node!\n";
 	}
-	if (!surface.configure(avsTexture->createSurface()))
+	if (!clientPipeline.surface.configure(avsTexture->createSurface()))
 	{
-		SCR_CERR << "Failed to configure output surface node!\n";
+		TELEPORT_CERR << "Failed to configure output surface node!\n";
 	}
 
-	videoQueue.configure(200000, 16, "VideoQueue");
+	clientPipeline.videoQueue.configure(200000, 16, "VideoQueue");
 
-	avs::PipelineNode::link(source, videoQueue);
-	avs::PipelineNode::link(videoQueue, decoder);
-	pipeline.link({ &decoder, &surface });
+	avs::PipelineNode::link(clientPipeline.source, clientPipeline.videoQueue);
+	avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
+	clientPipeline.pipeline.link({ &clientPipeline.decoder, &clientPipeline.surface });
 	
 	// Tag Data
 	{
 		auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
-		if (!tagDataDecoder.configure(40, f))
+		if (!clientPipeline.tagDataDecoder.configure(40, f))
 		{
-			SCR_CERR << "Failed to configure video tag data decoder node!\n";
+			TELEPORT_CERR << "Failed to configure video tag data decoder node!\n";
 		}
 
-		tagDataQueue.configure(200, 16, "TagDataQueue");
+		clientPipeline.tagDataQueue.configure(200, 16, "clientPipeline.tagDataQueue");
 
-		avs::PipelineNode::link(source, tagDataQueue);
-		pipeline.link({ &tagDataQueue, &tagDataDecoder });
+		avs::PipelineNode::link(clientPipeline.source, clientPipeline.tagDataQueue);
+		clientPipeline.pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
 	}
 
 	// Audio
 	if (AudioStream)
 	{
-		avsAudioDecoder.configure(60);
-		sca::AudioParams audioParams;
-		audioParams.codec = sca::AudioCodec::PCM;
-		audioParams.numChannels = 2;
-		audioParams.sampleRate = 48000;
-		audioParams.bitsPerSample = 32;
-		// This will be deconfigured automatically when the pipeline is deconfigured.
-		audioPlayer.configure(audioParams);
+		clientPipeline.avsAudioDecoder.configure(60);
+		sca::AudioSettings audioSettings;
+		audioSettings.codec = sca::AudioCodec::PCM;
+		audioSettings.numChannels = 1;
+		audioSettings.sampleRate = 48000;
+		audioSettings.bitsPerSample = 32;
+		// This will be deconfigured automatically when the clientPipeline.pipeline is deconfigured.
+		audioPlayer.configure(audioSettings);
 		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
-		avsAudioTarget.configure(audioStreamTarget.get());
+		clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
 
-		audioQueue.configure(4096, 120, "AudioQueue");
+		clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
 
-		avs::PipelineNode::link(source, audioQueue);
-		avs::PipelineNode::link(audioQueue, avsAudioDecoder);
-		pipeline.link({ &avsAudioDecoder, &avsAudioTarget });
+		avs::PipelineNode::link(clientPipeline.source, clientPipeline.audioQueue);
+		avs::PipelineNode::link(clientPipeline.audioQueue, clientPipeline.avsAudioDecoder);
+		clientPipeline.pipeline.link({ &clientPipeline.avsAudioDecoder, &clientPipeline.avsAudioTarget });
+
+		// Audio Input
+		if (setupCommand.audio_input_enabled)
+		{
+			sca::NetworkSettings networkSettings =
+			{
+					setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
+					, static_cast<int32_t>(handshake.maxBandwidthKpS)
+					, static_cast<int32_t>(handshake.udpBufferSize)
+					, setupCommand.requiredLatencyMs
+					, (int32_t)setupCommand.idle_connection_timeout
+			};
+
+			inputNetworkPipeline.reset(new sca::NetworkPipeline());
+			audioInputQueue.configure(4096, 120, "AudioInputQueue");
+			inputNetworkPipeline->initialise(networkSettings, &audioInputQueue);
+
+			// The callback will be called when audio input is received.
+			auto f = [this](const uint8_t* data, size_t dataSize) -> void
+			{
+				size_t bytesWritten;
+				if (audioInputQueue.write(nullptr, data, dataSize, bytesWritten))
+				{
+					inputNetworkPipeline->process();
+				}
+			};
+			// The audio player will stop recording automatically when deconfigured. 
+			audioPlayer.startRecording(f);
+		}
 	}
 
 	// We will add a GEOMETRY PIPE
 	if(GeoStream)
 	{
-		avsGeometryDecoder.configure(80, &geometryDecoder);
-		avsGeometryTarget.configure(&resourceCreator);
+		clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
+		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
 
-		geometryQueue.configure(10000, 200, "GeometryQueue");
+		clientPipeline.geometryQueue.configure(10000, 200, "clientPipeline.geometryQueue");
 
-		avs::PipelineNode::link(source, geometryQueue);
-		avs::PipelineNode::link(geometryQueue, avsGeometryDecoder);
-		pipeline.link({ &avsGeometryDecoder, &avsGeometryTarget });
+		avs::PipelineNode::link(clientPipeline.source, clientPipeline.geometryQueue);
+		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);
+		clientPipeline.pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
 	}
 
 	handshake.startDisplayInfo.width = hdrFramebuffer->GetWidth();
@@ -1617,10 +1546,10 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	handshake.FOV = 90.0f;
 	handshake.isVR = false;
 	handshake.framerate = 60;
-	handshake.udpBufferSize = static_cast<uint32_t>(source.getSystemBufferSize());
+	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source.getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
-	handshake.clientStreamingPort=sourceParams.localPort;
+	handshake.clientStreamingPort = setupCommand.server_streaming_port + 1;
 	lastSetupCommand = setupCommand;
 
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
@@ -1630,10 +1559,10 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 void ClientRenderer::OnVideoStreamClosed()
 {
 	TELEPORT_CLIENT_WARN("VIDEO STREAM CLOSED\n");
-	pipeline.deconfigure();
-	videoQueue.deconfigure();
-	audioQueue.deconfigure();
-	geometryQueue.deconfigure();
+	clientPipeline.pipeline.deconfigure();
+	clientPipeline.videoQueue.deconfigure();
+	clientPipeline.audioQueue.deconfigure();
+	clientPipeline.geometryQueue.deconfigure();
 
 	//const ovrJava* java = app->GetJava();
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
@@ -1643,20 +1572,20 @@ void ClientRenderer::OnVideoStreamClosed()
 
 void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand)
 {
-	videoConfig = reconfigureVideoCommand.video_config;
+	clientPipeline.videoConfig = reconfigureVideoCommand.video_config;
 
-	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
-		, videoConfig.depth_width, videoConfig.depth_height);
+	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
+		, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height);
 
-	decoderParams.deferDisplay = false;
-	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	decoderParams.codec = videoConfig.videoCodec;
-	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
-	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
-	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
+	clientPipeline.decoderParams.deferDisplay = false;
+	clientPipeline.decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
+	clientPipeline.decoderParams.codec = clientPipeline.videoConfig.videoCodec;
+	clientPipeline.decoderParams.use10BitDecoding = clientPipeline.videoConfig.use_10_bit_decoding;
+	clientPipeline.decoderParams.useYUV444ChromaFormat = clientPipeline.videoConfig.use_yuv_444_decoding;
+	clientPipeline.decoderParams.useAlphaLayerDecoding = clientPipeline.videoConfig.use_alpha_layer_decoding;
 
 	avs::DeviceHandle dev;
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 	dev.handle = renderPlatform->AsD3D12Device();;
 	dev.type = avs::DeviceType::Direct3D12;
 #else
@@ -1664,24 +1593,24 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	dev.type = avs::DeviceType::Direct3D11;
 #endif
 
-	size_t stream_width = videoConfig.video_width;
-	size_t stream_height = videoConfig.video_height;
+	size_t stream_width = clientPipeline.videoConfig.video_width;
+	size_t stream_height = clientPipeline.videoConfig.video_height;
 
-	if (videoConfig.use_cubemap)
+	if (clientPipeline.videoConfig.use_cubemap)
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
 	}
 	else
 	{
-		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
+		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
 	}
 
 	colourOffsetScale.x = 0;
 	colourOffsetScale.y = 0;
 	colourOffsetScale.z = 1.0f;
-	colourOffsetScale.w = float(videoConfig.video_height) / float(stream_height);
+	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
 
 	AVSTextureImpl* ti = (AVSTextureImpl*)(avsTexture.get());
 	// Only create new texture and register new surface if resolution has changed
@@ -1689,15 +1618,15 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 	{
 		SAFE_DELETE(ti->texture);
 
-		if (!decoder.unregisterSurface())
+		if (!clientPipeline.decoder.unregisterSurface())
 		{
 			throw std::runtime_error("Failed to unregister decoder surface");
 		}
 
-		CreateTexture(avsTexture, int(stream_width), int(stream_height), SurfaceFormat);
+		CreateTexture(avsTexture, int(stream_width), int(stream_height));
 	}
 
-	if (!decoder.reconfigure((int)stream_width, (int)stream_height, decoderParams))
+	if (!clientPipeline.decoder.reconfigure((int)stream_width, (int)stream_height, clientPipeline.decoderParams))
 	{
 		throw std::runtime_error("Failed to reconfigure decoder");
 	}
@@ -1707,13 +1636,13 @@ void ClientRenderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reco
 
 void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 {
-	scr::SceneCaptureCubeTagData tagData;
-	memcpy(&tagData.coreData, data, sizeof(scr::SceneCaptureCubeCoreTagData));
+	clientrender::SceneCaptureCubeTagData tagData;
+	memcpy(&tagData.coreData, data, sizeof(clientrender::SceneCaptureCubeCoreTagData));
 	avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.coreData.cameraTransform);
 
 	tagData.lights.resize(tagData.coreData.lightCount);
 
-	teleport::client::ServerTimestamp::setLastReceivedTimestamp(tagData.coreData.timestamp);
+	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(tagData.coreData.timestamp_unix_ms);
 
 	// We will check the received light tags agains the current list of lights - rough and temporary.
 	/*
@@ -1724,16 +1653,16 @@ void ClientRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
 	auto &cachedLight=cachedLights.begin();*/
 	////
 
-	size_t index = sizeof(scr::SceneCaptureCubeCoreTagData);
+	size_t index = sizeof(clientrender::SceneCaptureCubeCoreTagData);
 	for (auto& light : tagData.lights)
 	{
-		memcpy(&light, &data[index], sizeof(scr::LightTagData));
+		memcpy(&light, &data[index], sizeof(clientrender::LightTagData));
 		//avs::ConvertTransform(lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
-		index += sizeof(scr::LightTagData);
+		index += sizeof(clientrender::LightTagData);
 	}
 	if(tagData.coreData.id>= videoTagDataCubeArray.size())
 	{
-		SCR_CERR_BREAK("Bad tag id",1);
+		TELEPORT_CERR_BREAK("Bad tag id",1);
 		return;
 	}
 	videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
@@ -1799,7 +1728,7 @@ void ClientRenderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationCo
 		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllerStates[1].triggerBack, 1.0f);
 		break;
 	default:
-		SCR_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
+		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
 		break;
 	}
 }
@@ -1853,13 +1782,14 @@ void ClientRenderer::FillInControllerPose(int index, float offset)
 	q.Rotate(elevation, vec3(1.0f, 0, 0));
 
 	// convert from footspace to worldspace
-	clientDeviceState->SetControllerPose( index,*((avs::vec3*)&footspace_pos),*((const scr::quat*)&q));
+	clientDeviceState->SetControllerPose( index,*((avs::vec3*)&footspace_pos),*((const clientrender::quat*)&q));
 	controllerSim.position[index] =footspace_pos;
 	controllerSim.orientation[index] =((const float*)&q);
 }
 
 void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 {
+	using_vr = have_headset;
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
 	clientspace_input.y=((float)keydown['w']-(float)keydown['s'])*(float)(keydown[VK_SHIFT]);
@@ -1901,7 +1831,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
-		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((scr::quat*)&q_rel));
+		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
 		controllerStates[0].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::LEFT_BUTTON) == crossplatform::MouseCameraInput::LEFT_BUTTON ? 1.0f : 0.0f;
 		controllerStates[1].triggerBack = (mouseCameraInput.MouseButtons & crossplatform::MouseCameraInput::RIGHT_BUTTON) == crossplatform::MouseCameraInput::RIGHT_BUTTON ? 1.0f : 0.0f;
 
@@ -1933,7 +1863,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		controllerPoses[0]=clientDeviceState->controllerPoses[0].globalPose;
 		controllerPoses[1]=clientDeviceState->controllerPoses[1].globalPose;
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
-			clientDeviceState->controllerStates, decoder.idrRequired(),fTime, time_step);
+			clientDeviceState->controllerStates, clientPipeline.decoder.idrRequired(),fTime, time_step);
 
 		if(receivedInitialPos != sessionClient.receivedInitialPos)
 		{
@@ -1949,7 +1879,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			camera.SetPosition((const float*)(&pos));
 		}
 		
-		avs::Result result = pipeline.process();
+		avs::Result result = clientPipeline.pipeline.process();
 		if (result == avs::Result::Network_Disconnection)
 		{
 			sessionClient.Disconnect(0);
@@ -1959,7 +1889,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		static short c = 0;
 		if (!(c--))
 		{
-			const avs::NetworkSourceCounters Counters = source.getCounterValues();
+			const avs::NetworkSourceCounters Counters = clientPipeline.source.getCounterValues();
 			std::cout << "Network packets dropped: " << 100.0f*Counters.networkDropped << "%"
 				<< "\nDecoder packets dropped: " << 100.0f*Counters.decoderDropped << "%"
 				<< std::endl;
@@ -1982,17 +1912,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		FillInControllerPose(0, -0.5f);
 		FillInControllerPose(1, 0.5f);
 	}
-	// Have processed these, can free them now.
+	// Have parseed these, can free them now.
 	for (int i = 0; i < 2; i++)
 	{
 		controllerStates[i].clear();
 	}
-
-#if IS_D3D12
-	// Execute the immediate command list on graphics queue which will include any vertex and index buffer 
-	// upload/transition commands created by the resource creator.
-//	dx12RenderPlatform->ExecuteImmediateCommandList(dx12RenderPlatform->GetCommandQueue());
-#endif
 }
 
 void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
@@ -2100,7 +2024,7 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			show_video = !show_video;
 			break;
 		case 'O':
-			show_osd =(show_osd+1)%NUM_OSDS;
+			show_osd =(show_osd+1)%clientrender::NUM_OSDS;
 			break;
 		case 'C':
 			render_from_video_centre = !render_from_video_centre;
@@ -2129,12 +2053,9 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		case 'R':
 			RecompileShaders();
 			break;
-		case 'L':
-			renderPlayer = !renderPlayer;
-			break;
 		case 'Y':
 			if (sessionClient.IsConnected())
-				decoder.toggleShowAlphaAsColor();
+				clientPipeline.decoder.toggleShowAlphaAsColor();
 			break;
 		case VK_SPACE:
 			gui.ShowHide();

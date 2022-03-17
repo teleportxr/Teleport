@@ -8,7 +8,6 @@
 
 namespace avs
 {
-
 	class NALUParser_H265 final : public NALUParserInterface
 	{
 	public:

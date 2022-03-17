@@ -4,7 +4,7 @@
 
 #include "Controllers.h"
 
-#include <crossplatform/Log.h>
+#include <TeleportClient/Log.h>
 
 Controllers::Controllers()
 {
@@ -64,11 +64,11 @@ bool Controllers::InitializeController(ovrMobile *ovrmobile,int idx)
 {
 	ovrInputCapabilityHeader inputCapsHeader;
 	ovrControllerCapabilities caps;
-	if(idx==0)
+	if(idx==1)
 	{
 		caps=ovrControllerCapabilities::ovrControllerCaps_RightHand;
 	}
-	if(idx==1)
+	if(idx==0)
 	{
 		caps=ovrControllerCapabilities::ovrControllerCaps_LeftHand;
 	}
@@ -137,13 +137,13 @@ void Controllers::Update(ovrMobile *ovrmobile)
 
 				if(lastControllerState.triggerBack != ovrState.IndexTrigger)
 				{
-					controllerState.addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER_BACK, ovrState.IndexTrigger);
+					controllerState.addAnalogueEvent(avs::InputId::TRIGGER_BACK, ovrState.IndexTrigger);
 				}
 				controllerState.triggerBack = ovrState.IndexTrigger;
 
 				if(lastControllerState.triggerGrip != ovrState.GripTrigger)
 				{
-					controllerState.addAnalogueEvent(nextEventID++, avs::InputId::TRIGGER_GRIP, ovrState.GripTrigger);
+					controllerState.addAnalogueEvent(avs::InputId::TRIGGER_GRIP, ovrState.GripTrigger);
 				}
 				controllerState.triggerGrip = ovrState.GripTrigger;
 
@@ -181,10 +181,10 @@ void Controllers::AddButtonPressEvent(uint32_t pressedButtons, uint32_t released
 {
 	if((pressedButtons & buttonID) != 0)
 	{
-		controllerState.addBinaryEvent(nextEventID++, inputID, true);
+		controllerState.addBinaryEvent(inputID, true);
 	}
 	else if((releasedButtons & buttonID) != 0)
 	{
-		controllerState.addBinaryEvent(nextEventID++, inputID, false);
+		controllerState.addBinaryEvent(inputID, false);
 	}
 }

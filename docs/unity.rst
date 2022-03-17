@@ -36,7 +36,7 @@ The global settings for the plugin are found in the *Edit* menu, under *Project 
 
 .. image:: images/unity/ProjectSettings.png
   :width: 400
-  :alt: Alternative text
+  :alt: Teleport has a page on the Project Settings panel.
 
 Usage
 *****

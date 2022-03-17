@@ -1,0 +1,51 @@
+//  Copyright (c) 2015-2017 Simul Software Ltd. All rights reserved.
+#include "shader_platform.sl"
+#include "common.sl"
+#include "video_types.sl"
+#include "render_states.sl"
+#include "sampler_states.sl"
+#include "camera_constants.sl"
+#include "quaternion.sl"
+#include "cubemap_constants.sl"
+
+static float3x3 YUVtoRGB_ITU709[3][3] = {
+	1.0f, 0.0f, 1.5748f,
+	1.0f, -0.187324f, -0.468124f,
+	1.0f, 1.8556f, 0.0f,
+};
+
+static float3x3 YUVtoRGB_BT709[3][3] = {
+	1.16438f, 0.0f, 1.83367f,
+	1.16438f, -0.218117f, -0.545076f,
+	1.16438f, 2.16063f, 0.0f,
+};
+
+static float3x3 YUVtoRGB_BT2020[3][3] = {
+	1.16893f, 0.0f, 1.72371f,
+	1.16893f, -0.192351f, -0.667873f,
+	1.16893f, 2.19923f, 0.0f,
+};
+
+uniform Texture2D<float> yPlane;
+uniform Texture2D<float2> uvPlane;
+uniform RWTexture2D<float4> rgbTexture; 
+
+
+
+[numthreads(16, 16, 1)]
+shader void CS_NV12ToRGBA(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
+{
+	uint3 threadID = uint3(g.xy * 16 + t.xy,g.z);
+	uint outputW, outputH;
+	rgbTexture.GetDimensions(outputW, outputH);
+	if (threadID.x >= outputW || threadID.y >= outputH)
+		return;
+}
+
+technique NV12ToRGBA
+{
+	pass p0
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_NV12ToRGBA()));
+	}
+}

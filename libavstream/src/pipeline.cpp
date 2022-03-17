@@ -2,7 +2,7 @@
 // (c) Copyright 2018-2022 Simul Software Ltd
 
 #include <node_p.hpp>
-#include <pipeline.hpp>
+#include "libavstream/pipeline.hpp"
 
 using namespace avs;
 
@@ -92,7 +92,7 @@ size_t Pipeline::getLength() const
 Result Pipeline::process()
 {
 	// Returns in milliseconds.
-	const uint64_t timestamp = (uint64_t)(Platform::getTimeElapsed(m_startPlatformTimestamp, Platform::getTimestamp()));
+	const uint64_t timestamp = (uint64_t)(Platform::getTimeElapsedInMilliseconds(m_startPlatformTimestamp, Platform::getTimestamp()));
 	if (!m_started)
 	{
 		m_startTimestamp = timestamp;
@@ -123,7 +123,7 @@ Result Pipeline::process()
 		if (isProfiling)
 		{
 			const Timestamp profileEndTimestamp = Platform::getTimestamp();
-			timings[index] = Platform::getTimeElapsed(profileStartTimestamp, profileEndTimestamp);
+			timings[index] = Platform::getTimeElapsedInMilliseconds(profileStartTimestamp, profileEndTimestamp);
 		}
 		if (!result && result != Result::IO_Empty)
 		{

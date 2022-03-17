@@ -65,6 +65,10 @@ struct EncodeCapabilities
 	uint32_t is10BitCapable = 0;
 	uint32_t isYUV444Capable = 0;
 	uint32_t isAlphaLayerSupported = 0;
+	uint32_t minWidth = 0;
+	uint32_t maxWidth = 0;
+	uint32_t minHeight = 0;
+	uint32_t maxHeight = 0;
 };
 
 /*!

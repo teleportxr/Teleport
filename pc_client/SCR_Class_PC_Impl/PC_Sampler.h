@@ -1,15 +1,15 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
 
-#include <api/Sampler.h>
+#include <ClientRender/Sampler.h>
 
 namespace pc_client
 {
 	//Interface for Sampler
-	class PC_Sampler final : public scr::Sampler
+	class PC_Sampler final : public clientrender::Sampler
 	{
 	public:
-		PC_Sampler(const scr::RenderPlatform*const r):scr::Sampler(r) {}
+		PC_Sampler(const clientrender::RenderPlatform*const r):clientrender::Sampler(r) {}
 
 		void Destroy() override;
 		

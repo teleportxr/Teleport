@@ -3,16 +3,16 @@
 
 #include <map>
 
-#include <api/Effect.h>
+#include <ClientRender/Effect.h>
 #include <Render/GlProgram.h>
 
 namespace scc
 {
-	class GL_Effect final : public scr::Effect
+	class GL_Effect final : public clientrender::Effect
 	{
 	public:
-		GL_Effect(const scr::RenderPlatform*const r)
-			:scr::Effect(r) {}
+		GL_Effect(const clientrender::RenderPlatform*const r)
+			:clientrender::Effect(r) {}
 
         virtual ~GL_Effect();
 
@@ -22,7 +22,7 @@ namespace scc
 		void Bind(const char* effectPassName) const override;
 		void Unbind(const char* effectPassName) const override;
 
-		void LinkShaders(const char* effectPassName, const std::vector<scr::ShaderResource>& shaderResources) override;
+		void LinkShaders(const char* effectPassName, const std::vector<clientrender::ShaderResource>& shaderResources) override;
 
 		struct Pass
 		{
@@ -74,12 +74,12 @@ namespace scc
         static GLenum ToGLStencilCompareOp(StencilCompareOp op);
         static GLenum ToGLBlendFactor(BlendFactor factor);
         static GLenum ToGLBlendOp(BlendOp op);
-		static OVRFW::ovrProgramParmType ToOVRProgramParmType(scr::ShaderResourceLayout::ShaderResourceType type);
+		static OVRFW::ovrProgramParmType ToOVRProgramParmType(clientrender::ShaderResourceLayout::ShaderResourceType type);
 
 	private:
 		std::map<std::string, Pass> m_passes;
 
-		void BuildGraphicsPipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources);
-		void BuildComputePipeline(const char* effectPassName, scr::ShaderSystem::Pipeline& pipeline, const std::vector<scr::ShaderResource>& shaderResources);
+		void BuildGraphicsPipeline(const char* effectPassName, clientrender::ShaderSystem::Pipeline& pipeline, const std::vector<clientrender::ShaderResource>& shaderResources);
+		void BuildComputePipeline(const char* effectPassName, clientrender::ShaderSystem::Pipeline& pipeline, const std::vector<clientrender::ShaderResource>& shaderResources);
 	};
 }

@@ -7,7 +7,7 @@
 #include "Platform/Shaders/SL/CppSl.sl"
 
 //TODO: Placeholder! Find maths library!
-namespace scr
+namespace clientrender
 {
 	//CONSTANTS
 
@@ -105,7 +105,7 @@ namespace scr
 				quatVec.Cross(rhs) * 2.0f * s;
 		}
 
-		static quat Slerp(const scr::quat& source, const scr::quat& target, float time)
+		static quat Slerp(const clientrender::quat& source, const clientrender::quat& target, float time)
 		{
 			avs::vec4 unitSource = source.GetNormalised();
 			avs::vec4 unitTarget = target.GetNormalised();
@@ -135,7 +135,7 @@ namespace scr
 			return (s0 * unitSource) + (s1 * unitTarget);
 		}
 
-		quat Slerp(const scr::quat& rhs, float time) const
+		quat Slerp(const clientrender::quat& rhs, float time) const
 		{
 			return Slerp(*this, rhs, time);
 		}
@@ -459,10 +459,10 @@ namespace scr
 			return avs::vec3(d, h, l);
 		}
 
-		scr::quat GetRotation() const
+		clientrender::quat GetRotation() const
 		{
 			//TODO: An actual implementation.
-			return scr::quat(0,0,0,1.0f);
+			return clientrender::quat(0,0,0,1.0f);
 		}
 
 		avs::vec3 GetScale() const

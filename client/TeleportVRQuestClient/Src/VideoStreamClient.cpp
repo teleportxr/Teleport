@@ -46,7 +46,6 @@ void VideoStreamClient::RecvThreadMain(std::string address, uint16_t port)
     avs::NetworkSourceParams params = {};
     params.remoteIP = address.c_str(); // 16MiB socket buffer size
     params.connectionTimeout = 90000;
-    params.localPort = port + 1;
     params.remotePort = port;
     //params.gcTTL = (1000/60) * 4; // TTL = 4 * expected frame time
 

@@ -21,7 +21,7 @@
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #endif
 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
 #include "Platform/DirectX12/DeviceManager.h"
 simul::dx12::RenderPlatform renderPlatformImpl;
@@ -35,7 +35,9 @@ simul::dx11::DeviceManager deviceManager;
 #include "UseOpenXR.h"
 #include "Platform/CrossPlatform/GpuProfiler.cpp"
 
-ClientRenderer *clientRenderer=nullptr;
+using namespace teleport;
+
+teleport::ClientRenderer *clientRenderer=nullptr;
 simul::crossplatform::RenderDelegate renderDelegate;
 teleport::UseOpenXR useOpenXR;
 simul::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
@@ -46,6 +48,9 @@ simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
 std::vector<std::string> server_ips;
 teleport::Gui gui;
+
+// Need ONE global instance of this:
+avs::Context context;
 
 #define MAX_LOADSTRING 100
 
@@ -204,20 +209,21 @@ void ShutdownRenderer(HWND hWnd)
 	
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	clientRenderer=new ClientRenderer (&clientDeviceState,gui, dev_mode);
+	clientRenderer=new teleport::ClientRenderer (&clientDeviceState,gui, dev_mode);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
 	displaySurfaceManager.Initialize(renderPlatform);
-	// Pass "true" to direct3D11Manager to use d3d debugging:
-	gdi->Initialize(true, false,false);
+	// Pass "true" to deviceManager to use API debugging:
+	gdi->Initialize(false, false,false);
 	std::string src_dir = STRINGIFY(CMAKE_SOURCE_DIR);
 	std::string build_dir = STRINGIFY(CMAKE_BINARY_DIR);
 	// Create an instance of our simple clientRenderer class defined above:
 	{
 		// Whether run from the project directory or from the executable location, we want to be
 		// able to find the shaders and textures:
-		
+		char cwd[90];
+		_getcwd(cwd, 90);
 		renderPlatform->PushTexturePath("");
 		renderPlatform->PushTexturePath("Textures");
 		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
@@ -225,7 +231,9 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		// Or from the Simul directory -e.g. by automatic builds:
 
 		renderPlatform->PushTexturePath("pc_client/Textures");
-		renderPlatform->PushShaderPath("pc_client/Shaders");		// working directory C:\Simul\RemotePlay
+		renderPlatform->PushShaderPath("pc_client/Shaders");
+		renderPlatform->PushTexturePath("Textures");
+		renderPlatform->PushShaderPath("Shaders");	// working directory C:\Teleport
 
 		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/Shaders/SFX").c_str());
 		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/Shaders/SL").c_str());
@@ -233,7 +241,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderPath("../../../../firstparty/Platform/Shaders/SL");
 		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SFX");
 		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SL");
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 		renderPlatform->PushShaderPath("../../../../Platform/DirectX12/HLSL");
 		renderPlatform->PushShaderPath("../../Platform/DirectX12/HLSL");
 		renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
@@ -241,14 +249,13 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
 
-		//simul::dx12::DeviceManager* deviceManager = (simul::dx12::DeviceManager*)gdi;
-		// We will provide a command list so initialization of following resource can take place
-		//((simul::dx12::RenderPlatform*)renderPlatform)->SetImmediateContext((simul::dx12::ImmediateContext*)deviceManager->GetImmediateContext());
 #else
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/HLSL").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/Platform/DirectX11/shaderbin").c_str());
 #endif
+
+		renderPlatform->SetShaderBuildMode(simul::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
@@ -266,7 +273,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	if(server_ips.size())
 		clientRenderer->SetServer(server_ips[0].c_str());
 
-#if IS_D3D12
+#if TELEPORT_CLIENT_USE_D3D12
 	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
 #endif
 
@@ -417,7 +424,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 			//	PAINTSTRUCT ps;
 				//BeginPaint(hWnd, &ps);
-				clientRenderer->Update();
+				double timestamp_ms = avs::PlatformWindows::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
+
+				clientRenderer->Update(timestamp_ms);
 				bool quit = false;
 				if (useOpenXR.HaveXRDevice())
 				{
@@ -427,6 +436,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				static double fTime=0.0;
 				static platform::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
+				static long long frame = 1;
+				renderPlatform->BeginFrame(frame++);
 				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
 				// Call StartFrame here so the command list will be in a recording state for D3D12 
@@ -450,33 +461,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				errno=0;
 				simul::crossplatform::GraphicsDeviceContext	deviceContext;
 				deviceContext.renderPlatform = renderPlatform;
-				deviceContext.platform_context = deviceManager.GetDeviceContext();
-
-				simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
-				platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
-				renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
-				cpuProfiler.SetMaxLevel(5);
-				cpuProfiler.StartFrame();
-				renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
-				SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
-				SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
-
-				dsmi->Render(hWnd);
-
-				SIMUL_COMBINED_PROFILE_END(deviceContext);
-				vec3 originPosition		= *((vec3*)&clientDeviceState.originPose.position);
-				vec4 originOrientation	= *((vec4*)&clientDeviceState.originPose.orientation);
-				if (useOpenXR.HaveXRDevice())
+				// This context is active. So we will use it.
+				deviceContext.platform_context = w->GetPlatformDeviceContext();
+				if (deviceContext.platform_context)
 				{
-					clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
-					useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
+					simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
+					platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
+					renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
+					cpuProfiler.SetMaxLevel(5);
+					cpuProfiler.StartFrame();
+					renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
+					SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
+					SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
+
+					dsmi->Render(hWnd);
+
+					SIMUL_COMBINED_PROFILE_END(deviceContext);
+					vec3 originPosition = *((vec3*)&clientDeviceState.originPose.position);
+					vec4 originOrientation = *((vec4*)&clientDeviceState.originPose.orientation);
+					if (useOpenXR.HaveXRDevice())
+					{
+						clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
+						useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
+					}
+					errno = 0;
+					renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
+					cpuProfiler.EndFrame();
+					SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 				}
-				errno=0;
-				renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
-				cpuProfiler.EndFrame();
 				displaySurfaceManager.EndFrame();
-				SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
-				//EndPaint(hWnd, &ps);
+				renderPlatform->EndFrame();
 			}
         }
         break;

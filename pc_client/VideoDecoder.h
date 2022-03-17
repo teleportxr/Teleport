@@ -9,6 +9,8 @@
 #include "Platform/Crossplatform/BaseRenderer.h"
 #include "Platform/Crossplatform/VideoDecoder.h"
 #include "Platform/Crossplatform/RenderPlatform.h"
+#include "AVParser/H264Types.h"
+#include "AVParser/HevcTypes.h"
 
 namespace simul
 {
@@ -17,8 +19,37 @@ namespace simul
 		class Texture;
 	}	
 }
+namespace avparser
+{
+	class Parser;
+}
+
 class VideoDecoder final : public avs::DecoderBackendInterface
 {
+	struct FrameCache
+	{
+		uint32_t poc;
+		// Related to short term reference picture.
+		uint32_t stRpsIdx;
+		uint32_t refRpsIdx;
+		avparser::hevc::SliceType sliceType;
+		bool inUse;
+
+		FrameCache()
+		{
+			reset();
+		}
+
+		void reset()
+		{
+			poc = 0;
+			stRpsIdx = 0;
+			refRpsIdx = 0;
+			sliceType = avparser::hevc::SliceType::None;
+			inUse = false;
+		}
+	};
+
 public:
 	VideoDecoder(simul::crossplatform::RenderPlatform* renderPlatform, simul::crossplatform::Texture* surfaceTexture);
 	~VideoDecoder();
@@ -35,32 +66,32 @@ public:
 	/* End DecoderBackendInterface */
 
 private:
-	void updatePicParams(const void* buffer, size_t bufferSizeInBytes);
+	void updatePicParams();
+	void updatePicParamsH264();
+	void updatePicParamsHEVC();
+	static uint32_t computeHevcPoc(const avparser::hevc::SPS* sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType);
+	void resetFrames();
 
-	struct ParameterSet
-	{
-		size_t size = 0;
-		void* data = nullptr;
-	};
-	avs::DeviceType m_deviceType = avs::DeviceType::Invalid;
+	avs::DeviceType mDeviceType = avs::DeviceType::Invalid;
 
-	avs::DecoderParams m_params = {};
+	avs::DecoderParams mParams = {};
 
-	unsigned int m_frameWidth = 0;
-	unsigned int m_frameHeight = 0;
-	int m_displayPictureIndex = -1;
+	unsigned int mFrameWidth = 0;
+	unsigned int mFrameHeight = 0;
+	int mDisplayPictureIndex = -1;
 
-	std::unique_ptr<simul::crossplatform::VideoDecoder> m_decoder;
+	std::unique_ptr<avparser::Parser> mParser;
 
-	//static constexpr uint32_t MAX_ARGS = 10;
-	static constexpr uint32_t MAX_PARAM_SETS = 4;
-	uint32_t m_numExpectedParamSets = 0;
-	ParameterSet m_paramSets[MAX_PARAM_SETS];
-	uint32_t m_numParamSets = 0;
-	simul::crossplatform::VideoDecodeArgument m_picParams;
-	bool m_newArgs = true;
-	simul::crossplatform::RenderPlatform* m_renderPlatform;
-	simul::crossplatform::Texture* m_outputTexture;
-	simul::crossplatform::Texture* m_surfaceTexture;
+	std::unique_ptr<simul::crossplatform::VideoDecoder> mDecoder;
+
+	simul::crossplatform::VideoDecodeArgument mPicParams;
+	simul::crossplatform::RenderPlatform* mRenderPlatform;
+	simul::crossplatform::Texture* mOutputTexture;
+	simul::crossplatform::Texture* mSurfaceTexture;
+
+	std::vector<FrameCache> mDPB;
+
+	uint32_t mCurrentFrame;
+	uint32_t mPrevPocTid0;
 };
 

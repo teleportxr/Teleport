@@ -1,8 +1,8 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #include "PC_FrameBuffer.h"
 
 using namespace pc_client;
-using namespace scr;
+using namespace clientrender;
 
 void PC_FrameBuffer::Destroy()
 {

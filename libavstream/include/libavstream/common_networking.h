@@ -11,6 +11,10 @@ namespace avs
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
+	enum class BackgroundMode : uint8_t
+	{
+		NONE = 0, COLOUR, TEXTURE, VIDEO
+	};
 	enum class RemotePlaySessionChannel : unsigned char //enet_uint8
 	{
 		RPCH_Handshake = 0,
@@ -268,11 +272,13 @@ namespace avs
 		uid	server_id = 0;
 		ControlModel control_model = ControlModel::NONE;
 		VideoConfig video_config;
+		float       draw_distance = 0.0f;
 		vec3 bodyOffsetFromHead;
 		AxesStandard axesStandard = AxesStandard::NotInitialized;
 		uint8_t audio_input_enabled = 0;
 		bool using_ssl = true;
-		int64_t startTimestamp = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
+		int64_t startTimestamp_utc_unix_ms = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
+		BackgroundMode backgroundMode;
 	} AVS_PACKED;
 
 	//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.

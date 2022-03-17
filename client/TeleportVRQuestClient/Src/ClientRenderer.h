@@ -2,16 +2,22 @@
 // (C) Copyright 2018 Simul
 #pragma once
 #include "basic_linear_algebra.h"
-#include "crossplatform/ResourceCreator.h"
+#include "ClientRender/ResourceCreator.h"
+#include "ClientRender/GeometryDecoder.h"
+#include "ClientRender/Renderer.h"
 #include "GlobalGraphicsResources.h"
 #include <Render/SurfaceTexture.h>
 #include <libavstream/libavstream.hpp>
 #include <VrApi_Input.h>
 #include <FrameParams.h>
+#include <TeleportClient/ClientPipeline.h>
 
 #include "SCR_Class_GL_Impl/GL_DeviceContext.h"
 #include "Controllers.h"
 #include "ClientAppInterface.h"
+#include "TeleportAudio/src/crossplatform/AudioStreamTarget.h"
+#include "TeleportAudio/src/crossplatform/AudioPlayer.h"
+#include "TeleportAudio/src/crossplatform/NetworkPipeline.h"
 
 
 // Placeholders for lights
@@ -90,10 +96,10 @@ namespace teleport
 		class ClientDeviceState;
 	}
 }
-class ClientRenderer
+class ClientRenderer:public clientrender::Renderer
 {
 public:
-	ClientRenderer(scr::ResourceCreator *r,scr::GeometryCache *rm,ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn);
+	ClientRenderer(ClientAppInterface *c,teleport::client::ClientDeviceState *s,Controllers *cn,SessionCommandInterface *sc);
 	~ClientRenderer();
 
 	void CycleShaderMode();
@@ -105,13 +111,13 @@ public:
 
 	void EnteredVR(const ovrJava *java);
 	void ExitedVR();
-	void OnSetupCommandReceived(const avs::VideoConfig &vc);
+	void ConfigureVideo(const avs::VideoConfig &vc);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void CopyToCubemaps(scc::GL_DeviceContext &mDeviceContext);
     void RenderVideo(scc::GL_DeviceContext &mDeviceContext,OVRFW::ovrRendererOutput &res);
 
 	void RenderLocalNodes(OVRFW::ovrRendererOutput& res);
-	void RenderNode(OVRFW::ovrRendererOutput& res, std::shared_ptr<scr::Node> node);
+	void RenderNode(OVRFW::ovrRendererOutput& res, std::shared_ptr<clientrender::Node> node);
 
 	void SetWebcamPosition(const avs::vec2& position);
 	void RenderWebcam(OVRFW::ovrRendererOutput& res);
@@ -127,19 +133,16 @@ public:
 	}
 	Controllers *controllers=nullptr;
 
-	avs::Decoder mDecoder;
-	avs::TagDataDecoder mTagDataDecoder;
-	avs::NetworkSource mNetworkSource;
-	avs::Queue mVideoQueue;
-	avs::Queue mTagDataQueue;
-	avs::Queue mAudioQueue;
-	avs::Queue mGeometryQueue;
+	//avs::Decoder mDecoder;
+	//avs::TagDataDecoder mTagDataDecoder;
 
-	scr::GeometryCache	*geometryCache	=nullptr;
-	scr::ResourceCreator			*resourceCreator	=nullptr;
+	//avs::Queue mVideoQueue;
+	//avs::Queue mTagDataQueue;
+	//avs::Queue mAudioQueue;
+
+	teleport::client::ClientPipeline clientPipeline;
 	ClientAppInterface		*clientAppInterface	=nullptr;
 	float eyeSeparation=0.06f;
-	avs::VideoConfig videoConfig;
 	struct VideoUB
 	{
 		avs::vec4 eyeOffsets[2];
@@ -154,8 +157,8 @@ public:
 
 	struct CubemapUB
 	{
-		scr::uvec2 dimensions;
-		scr::ivec2 sourceOffset;
+		clientrender::uvec2 dimensions;
+		clientrender::ivec2 sourceOffset;
 		uint32_t   faceSize;
 		uint32_t    mip = 0;
 		uint32_t    face = 0;
@@ -164,20 +167,20 @@ public:
 
 	struct WebcamUB
 	{
-		scr::uvec2 sourceTexSize;
-		scr::ivec2 sourceOffset;
-		scr::uvec2 camTexSize;
-        scr::uvec2 pad = {0,0};
+		clientrender::uvec2 sourceTexSize;
+		clientrender::ivec2 sourceOffset;
+		clientrender::uvec2 camTexSize;
+        clientrender::uvec2 pad = {0,0};
 	};
 
 	struct WebcamResources
 	{
 		OVRFW::GlProgram program;
 		OVRFW::ovrSurfaceDef surfaceDef;
-		std::shared_ptr<scr::VertexBuffer> vertexBuffer;
-		std::shared_ptr<scr::IndexBuffer> indexBuffer;
+		std::shared_ptr<clientrender::VertexBuffer> vertexBuffer;
+		std::shared_ptr<clientrender::IndexBuffer> indexBuffer;
 		WebcamUB webcamUBData;
-		std::shared_ptr<scr::UniformBuffer> webcamUB;
+		std::shared_ptr<clientrender::UniformBuffer> webcamUB;
 		ovrMatrix4f transform;
 		bool initialized = false;
 
@@ -193,29 +196,29 @@ public:
 	OVRFW::GlProgram     m2DVideoSurfaceProgram;
 	OVRFW::SurfaceTexture* mVideoSurfaceTexture = nullptr;
 	OVRFW::SurfaceTexture* mAlphaSurfaceTexture = nullptr;
-	std::shared_ptr<scr::Texture>       mVideoTexture;
-	std::shared_ptr<scr::Texture>       mAlphaVideoTexture;
-	std::shared_ptr<scr::Texture>       mRenderTexture;
-	std::shared_ptr<scr::Texture>       diffuseCubemapTexture;
-	std::shared_ptr<scr::Texture>       specularCubemapTexture;
-	std::shared_ptr<scr::Texture>       mCubemapLightingTexture;
-	std::shared_ptr<scr::UniformBuffer> mCubemapUB;
-	std::shared_ptr<scr::UniformBuffer> mVideoUB;
-	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataIDBuffer;
-	std::shared_ptr<scr::ShaderStorageBuffer> mTagDataArrayBuffer;
-	scr::ShaderResource				    mColourAndDepthShaderResources;
-	scr::ShaderResource				    mCopyCubemapShaderResources;
-	scr::ShaderResource				    mCopyPerspectiveShaderResources;
-	scr::ShaderResource				    mExtractTagShaderResources;
-	std::shared_ptr<scr::Effect>        mCopyCubemapEffect;
-	std::shared_ptr<scr::Effect>        mCopyCubemapWithDepthEffect;
-	std::shared_ptr<scr::Effect>        mCopyCubemapWithAlphaLayerEffect;
-	std::shared_ptr<scr::Effect>        mCopyPerspectiveEffect;
-	std::shared_ptr<scr::Effect>        mCopyPerspectiveWithDepthEffect;
-	std::shared_ptr<scr::Effect>        mExtractTagDataIDEffect;
-	std::shared_ptr<scr::Effect>        mExtractOneTagEffect;
+	std::shared_ptr<clientrender::Texture>       mVideoTexture;
+	std::shared_ptr<clientrender::Texture>       mAlphaVideoTexture;
+	std::shared_ptr<clientrender::Texture>       mRenderTexture;
+	std::shared_ptr<clientrender::Texture>       diffuseCubemapTexture;
+	std::shared_ptr<clientrender::Texture>       specularCubemapTexture;
+	std::shared_ptr<clientrender::Texture>       mCubemapLightingTexture;
+	std::shared_ptr<clientrender::UniformBuffer> mCubemapUB;
+	std::shared_ptr<clientrender::UniformBuffer> mVideoUB;
+	std::shared_ptr<clientrender::ShaderStorageBuffer> mTagDataIDBuffer;
+	std::shared_ptr<clientrender::ShaderStorageBuffer> mTagDataArrayBuffer;
+	clientrender::ShaderResource				    mColourAndDepthShaderResources;
+	clientrender::ShaderResource				    mCopyCubemapShaderResources;
+	clientrender::ShaderResource				    mCopyPerspectiveShaderResources;
+	clientrender::ShaderResource				    mExtractTagShaderResources;
+	std::shared_ptr<clientrender::Effect>        mCopyCubemapEffect;
+	std::shared_ptr<clientrender::Effect>        mCopyCubemapWithDepthEffect;
+	std::shared_ptr<clientrender::Effect>        mCopyCubemapWithAlphaLayerEffect;
+	std::shared_ptr<clientrender::Effect>        mCopyPerspectiveEffect;
+	std::shared_ptr<clientrender::Effect>        mCopyPerspectiveWithDepthEffect;
+	std::shared_ptr<clientrender::Effect>        mExtractTagDataIDEffect;
+	std::shared_ptr<clientrender::Effect>        mExtractOneTagEffect;
 
-	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
+	std::vector<clientrender::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	std::vector<std::string> passNames;
 	std::vector<std::string> debugPassNames;
@@ -226,29 +229,18 @@ public:
 	static constexpr float WEBCAM_WIDTH = 0.2f;
 	static constexpr float WEBCAM_HEIGHT = 0.2f;
 
-	scr::uvec4 mTagDataID;
+	clientrender::uvec4 mTagDataID;
 
 	std::string                         CopyCubemapSrc;
 	std::string                         ExtractTagDataIDSrc;
-	enum
-	{
-		NO_OSD,
-		CAMERA_OSD,
-		NETWORK_OSD,
-		GEOMETRY_OSD,
-		TEXTURES_OSD,
-		TAG_OSD,
-		CONTROLLER_OSD,
-		NUM_OSDS
-	};
-	int show_osd = NO_OSD;
 	uint32_t osd_selection;
 	void DrawOSD(OVRFW::ovrRendererOutput& res);
-	avs::SetupCommand lastSetupCommand;
-	avs::SetupLightingCommand setupLightingCommand;
+	// TODO: move to parent class
+	SessionClient                       sessionClient;
+	void UpdateHandObjects(ovrMobile *);
+	bool OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake);
 protected:
-	int32_t minimumPriority=0;
-	void ListNode(const std::shared_ptr<scr::Node>& node, int indent, size_t& linesRemaining);
+	void ListNode(const std::shared_ptr<clientrender::Node>& node, int indent, size_t& linesRemaining);
 	teleport::client::ClientDeviceState *clientDeviceState=nullptr;
 	void UpdateTagDataBuffers();
 	static constexpr float INFO_TEXT_DURATION = 0.017f;
@@ -256,5 +248,21 @@ protected:
 
 private:
 	void InitWebcamResources();
-	bool mShowWebcam;
+public:
+	bool mShowWebcam=true;
+	bool               mPipelineConfigured=false;
+	static constexpr size_t NumVideoStreams = 1;
+	static constexpr bool AudioStream = true;
+	static constexpr bool   GeoStream  = true;
+
+	std::string server_ip;
+	int server_discovery_port=10600;
+	int client_service_port=10501;
+	int client_streaming_port=10502;
+	sca::AudioPlayer* audioPlayer=nullptr;
+	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
+	std::unique_ptr<sca::NetworkPipeline> mNetworkPipeline;
+	avs::Queue mAudioInputQueue;
+	GeometryDecoder        geometryDecoder;
+
 };

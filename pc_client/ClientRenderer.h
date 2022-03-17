@@ -17,24 +17,32 @@
 
 #include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
 #include "TeleportClient/SessionClient.h"
-#include "crossplatform/ResourceCreator.h"
-#include "crossplatform/ResourceManager.h"
-#include "crossplatform/GeometryDecoder.h"
-#include "api/IndexBuffer.h"
-#include "api/Shader.h"
-#include "api/Texture.h"
-#include "api/UniformBuffer.h"
-#include "api/VertexBuffer.h"
+#include "ClientRender/ResourceCreator.h"
+#include "ClientRender/ResourceManager.h"
+#include "ClientRender/GeometryDecoder.h"
+#include "ClientRender/IndexBuffer.h"
+#include "ClientRender/Shader.h"
+#include "ClientRender/Texture.h"
+#include "ClientRender/UniformBuffer.h"
+#include "ClientRender/VertexBuffer.h"
+#include "ClientRender/Renderer.h"
 
 #include "crossplatform/AudioStreamTarget.h"
 #include "pc/PC_AudioPlayer.h"
 #include "TeleportClient/ClientDeviceState.h"
 #include "SCR_Class_PC_Impl/PC_MemoryUtil.h"
 #include "Gui.h"
+#include "TeleportClient/ClientPipeline.h"
+#include "TeleportAudio/src/crossplatform/NetworkPipeline.h"
 
 namespace avs
 {
 	typedef LARGE_INTEGER Timestamp;
+}
+
+namespace clientrender
+{
+	class Material;
 }
 
 namespace pc_client
@@ -46,11 +54,8 @@ namespace pc_client
 	class VertexBuffer;
 	class PC_RenderPlatform;
 }
-
-namespace scr
+namespace teleport
 {
-	class Material;
-}
 /// <summary>
 /// A 
 /// </summary>
@@ -70,6 +75,7 @@ struct RendererStats
 
 /// @brief The renderer for a client connection.
 class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, public SessionCommandInterface
+		,public clientrender::Renderer
 {
 	enum class ShaderMode
 	{
@@ -90,7 +96,6 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	simul::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
 
 	// A simple example mesh to draw as transparent
-	simul::crossplatform::MeshRenderer *meshRenderer	= nullptr;
 	simul::crossplatform::Effect *pbrEffect				= nullptr;
 	simul::crossplatform::Effect *cubemapClearEffect	= nullptr;
 	simul::crossplatform::ShaderResource _RWTagDataIDBuffer;
@@ -110,7 +115,7 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	static constexpr int maxTagDataSize = 32;
 	VideoTagDataCube videoTagDataCube[maxTagDataSize];
 
-	std::vector<scr::SceneCaptureCubeTagData> videoTagDataCubeArray;
+	std::vector<clientrender::SceneCaptureCubeTagData> videoTagDataCubeArray;
 
 	/// A camera instance to generate view and proj matrices and handle mouse control.
 	/// In practice you will have your own solution for this.
@@ -125,29 +130,9 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	bool keydown[256] = {};
 	SessionClient sessionClient;
 	teleport::client::ControllerState controllerStates[2];
-	float framerate = 0.0f;
-	avs::Timestamp platformStartTimestamp;	//Timestamp of when the system started.
-	double previousTimestamp;				//Milliseconds since the state was last updated.
-
-	scr::GeometryCache localGeometryCache;
-	scr::ResourceCreator localResourceCreator;
-	scr::GeometryCache geometryCache;
-	scr::ResourceCreator resourceCreator;
 	
 	bool show_video = false;
-	bool renderPlayer = true; //Whether to render the player.
 
-	enum
-	{
-		NO_OSD,
-		CAMERA_OSD,
-		NETWORK_OSD,
-		GEOMETRY_OSD,
-		TAG_OSD,
-		CONTROLLER_OSD,
-		NUM_OSDS
-	};
-	int show_osd = NO_OSD;
 	bool render_from_video_centre	= false;
 	bool show_textures				= false;
 	bool show_cubemaps				=false;
@@ -179,6 +164,7 @@ public:
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+	void ConfigureVideo(const avs::VideoConfig& vc) override;
 	void OnVideoStreamClosed() override;
 
 	void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
@@ -208,11 +194,11 @@ public:
 	void PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	
 	void DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-	void WriteHierarchy(int tab,std::shared_ptr<scr::Node> node);
+	void WriteHierarchy(int tab,std::shared_ptr<clientrender::Node> node);
 	void WriteHierarchies();
-	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,scr::GeometryCache &g);
-	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force=false);
-	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node,scr::GeometryCache &g,bool force=false);
+	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g);
+	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
+	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
 	void RenderView(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 
 	int AddView();
@@ -229,48 +215,27 @@ public:
 	void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown);
 
-	void CreateTexture(AVSTextureHandle &th,int width, int height, avs::SurfaceFormat format);
+	void CreateTexture(AVSTextureHandle &th,int width, int height);
 	void FillInControllerPose(int index, float offset);
-	//Update the state of objects on the ClientRenderer.
-	void Update();
-
 	static constexpr bool AudioStream	= true;
 	static constexpr bool GeoStream		= true;
 	static constexpr uint32_t NominalJitterBufferLength = 0;
 	static constexpr uint32_t MaxJitterBufferLength = 50;
 
-	static constexpr avs::SurfaceFormat SurfaceFormat = avs::SurfaceFormat::ARGB;
+	//static constexpr avs::SurfaceFormat SurfaceFormat = avs::SurfaceFormat::ARGB;
 	AVSTextureHandle avsTexture;
-	avs::Context context;
-	avs::VideoConfig videoConfig;
-
-	avs::NetworkSource source;
-	avs::Queue videoQueue;
-	avs::Decoder decoder;
-	avs::Surface surface;
-
-	avs::Queue tagDataQueue;
-	avs::TagDataDecoder tagDataDecoder;
 
 	GeometryDecoder geometryDecoder;
-	avs::Queue geometryQueue;
-	avs::GeometryDecoder avsGeometryDecoder;
-	avs::GeometryTarget avsGeometryTarget;
 	
-	avs::Queue audioQueue;
-	avs::AudioDecoder avsAudioDecoder;
-	avs::AudioTarget avsAudioTarget;
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 	sca::PC_AudioPlayer audioPlayer;
-
-	avs::DecoderParams decoderParams = {};
-	avs::Pipeline pipeline;
 	
-	avs::SetupCommand lastSetupCommand;
+	teleport::client::ClientPipeline clientPipeline;
+	std::unique_ptr<sca::NetworkPipeline> inputNetworkPipeline;
+	avs::Queue audioInputQueue;
 
-	avs::SetupLightingCommand lastSetupLightingCommand;
 	int RenderMode;
-	std::shared_ptr<scr::Material> mFlatColourMaterial;
+	std::shared_ptr<clientrender::Material> mFlatColourMaterial;
 	unsigned long long receivedInitialPos = 0;
 	unsigned long long receivedRelativePos = 0;
 	bool videoPosDecoded=false;
@@ -282,7 +247,6 @@ public:
 	bool render_local_offline = false;
 private:
 	avs::uid show_only=0;
-	void ListNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<scr::Node>& node, int indent, int& linesRemaining);
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
 	void RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique);
@@ -299,3 +263,5 @@ private:
 	bool have_vr_device = false;
 	simul::crossplatform::Texture* externalTexture = nullptr;
 };
+
+}

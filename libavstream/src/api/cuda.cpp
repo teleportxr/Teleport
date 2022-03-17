@@ -72,6 +72,11 @@ namespace avs::CUDA {
 
 	bool initialize()
 	{
+		static bool initialized = false;
+
+		if (initialized)
+			return true;
+
 		static LibraryLoader libCUDA("nvcuda");
 
 		ScopedLibraryHandle hLibrary(libCUDA);
@@ -137,6 +142,9 @@ namespace avs::CUDA {
 #endif
 
 		hLibrary.take();
+
+		initialized = true;
+
 		return true;
 	}
 } // avs

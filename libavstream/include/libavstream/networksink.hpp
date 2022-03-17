@@ -62,9 +62,14 @@ namespace avs
 	
 
 	/*!
-	 * Network sink node `[passive, 1/0]`
+	 * Network sink node `[passive, 0/1]`
 	 *
-	 * Sends video stream to a remote UDP endpoint.
+	 * Reads data for each stream from a corresponding avs::Queue input node
+	 * , assembles the data into payloads of network packets and sends the data
+	 * to the client.
+	 * 
+	 * If data throttling is enabled for a stream, the seding of data may be spread 
+	 * over time to reduce network congestion.
 	 */
 	class AVSTREAM_API NetworkSink final : public PipelineNode
 	{
@@ -77,7 +82,7 @@ namespace avs
 
 		/*!
 		 * Configure network sink and bind to local UDP endpoint.
-		 * \param numInputs Number of input slots. This determines maximum number of multiplexed streams the node will support.
+		 * \param streams Collection of configurations for each stream. 
 		 * \param localPort Local UDP endpoint port number.
 		 * \param remote Remote UDP endpoint name or IP address.
 		 * \param remotePort Remote UDP endpoint port number.
@@ -96,7 +101,7 @@ namespace avs
 		Result deconfigure() override;
 
 		/*!
-		 * Send all available video stream data to remote UDP endpoint.
+		 * Send data for all streams to remote UDP endpoint.
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_NotConfigured if network sink has not been configured.

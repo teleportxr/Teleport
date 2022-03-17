@@ -10,6 +10,7 @@
 #include <enet/enet.h>
 #include "libavstream/common.hpp"
 #include "libavstream/common_networking.h"
+#include <libavstream/libavstream.hpp>
 
 #include "TeleportClient/Input.h"
 #include "TeleportClient/DiscoveryService.h"
@@ -20,6 +21,7 @@ typedef unsigned int uint;
 namespace avs
 {
 	class GeometryTargetBackendInterface;
+	class GeometryCacheBackendInterface;
 }
 
 class SessionCommandInterface
@@ -58,6 +60,7 @@ public:
 	~SessionClient();
 
 	void SetResourceCreator(avs::GeometryTargetBackendInterface *);
+	void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
 
 	uint32_t Discover(
 			std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP,
@@ -106,7 +109,6 @@ private:
     void ParseCommandPacket(ENetPacket* packet);
 
     void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
-    void SendHeadPose(const avs::Pose& headPose);
 	void sendOriginPose(uint64_t validCounter,const avs::Pose& headPose);
     void SendControllerPoses(const avs::Pose& headPose,const avs::Pose* poses);
     void SendInput(int id,const teleport::client::ControllerState& controllerState);
@@ -139,6 +141,7 @@ private:
     SessionCommandInterface* const mCommandInterface;
     std::unique_ptr<teleport::client::DiscoveryService> discoveryService;
 	avs::GeometryTargetBackendInterface* mResourceCreator=nullptr;
+	avs::GeometryCacheBackendInterface* geometryCache = nullptr;
 
     ENetHost* mClientHost = nullptr;
     ENetPeer* mServerPeer = nullptr;

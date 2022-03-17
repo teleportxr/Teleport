@@ -2,11 +2,13 @@ find_package(Doxygen REQUIRED)
 
 # Find all the public headersc
 set(pc_client_HEADER_DIRS ${CMAKE_SOURCE_DIR}/pc_client)
-set(libavstream_HEADER_DIRS ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream ${CMAKE_SOURCE_DIR}/libavstream/src ${CMAKE_SOURCE_DIR}/libavstream/src/audio)
+set(libavstream_HEADER_DIRS ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream/encoders 
+${CMAKE_SOURCE_DIR}/libavstream/include/libavstream/decoders ${CMAKE_SOURCE_DIR}/libavstream/src ${CMAKE_SOURCE_DIR}/libavstream/src/audio 
+${CMAKE_SOURCE_DIR}/libavstream/src/encoders ${CMAKE_SOURCE_DIR}/libavstream/src/decoders)
 set(teleportclient_DIR TeleportClient SOURCE_DIR)
 set(teleportclient_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportClient)
 message("teleportclient_HEADER_DIR ${teleportclient_HEADER_DIRS}")
-set(teleportrenderer_DIR  ${CMAKE_SOURCE_DIR}/SimulCasterRenderer)
+set(teleportrenderer_DIR  ${CMAKE_SOURCE_DIR}/TeleportRenderer)
 set(teleportrenderer_HEADER_DIRS ${teleportrenderer_DIR}/src/api ${teleportrenderer_DIR}/src/crossplatform)
 
 set(DOXYGEN_INPUT_DIR ${pc_client_HEADER_DIRS} ${libavstream_HEADER_DIRS} ${teleportclient_HEADER_DIRS} ${teleportrenderer_HEADER_DIRS})
@@ -70,7 +72,9 @@ find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
 file(GLOB RST_FILES *.rst "**/*.rst" )
+file(GLOB RST_REF_FILES *.rst "Reference/*.rst" )
 source_group("Documentation" FILES ${RST_FILES} )
+source_group("Documentation/Reference" FILES ${RST_REF_FILES} )
 add_custom_target(Sphinx ALL
                   COMMAND
                   ${SPHINX_EXECUTABLE} -b html

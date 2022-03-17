@@ -1,7 +1,7 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #include "PC_UniformBuffer.h"
 
-using namespace scr;
+using namespace clientrender;
 
 namespace pc_client
 {

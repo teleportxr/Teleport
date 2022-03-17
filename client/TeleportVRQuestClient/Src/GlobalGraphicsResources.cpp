@@ -12,6 +12,7 @@ GlobalGraphicsResources& GlobalGraphicsResources::GetInstance()
 GlobalGraphicsResources::GlobalGraphicsResources()
 	:defaultPBREffect(&renderPlatform), defaultSkin(&renderPlatform, "Default Skin")
 {
+	effectPassName= "OpaquePBRAmbient";
 	mTagDataBuffer = renderPlatform.InstantiateShaderStorageBuffer();
 }
 

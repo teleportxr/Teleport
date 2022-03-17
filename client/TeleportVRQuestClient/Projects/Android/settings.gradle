@@ -5,7 +5,7 @@ rootProject.name = "TeleportVRQuestClient"
 include ':', \
 	'libavstream', \
 	'TeleportClient', \
-	'SimulCasterRenderer', \
+	'TeleportRenderer', \
 	'client:VrSamples:SampleCommon:Projects:Android', \
 	'client:VrSamples:SampleFramework:Projects:Android', \
 	'client:VrSamples:TeleportVRQuestClient:Projects:Android'

@@ -15,7 +15,6 @@
 #include "Log.h"
 #include "VideoSurface.h"
 
-#include "AndroidDiscoveryService.h"
 #include "OVRNodeManager.h"
 
 #if defined( USE_AAUDIO )
@@ -45,19 +44,14 @@ Application::Application()
 		: ovrAppl(0, 0, CPU_LEVEL, GPU_LEVEL, true /* useMultiView */)
 		  , Locale(nullptr)
 		  , Random(2)
-		  , mPipelineConfigured(false)
 		  , mSoundEffectPlayer(nullptr)
 		  , mGuiSys(nullptr)
-		  , sessionClient(this, std::make_unique<AndroidDiscoveryService>())
-		  , clientRenderer(&resourceCreator, &geometryCache, this, &clientDeviceState,&controllers)
+			,clientRenderer(this, &clientDeviceState,&controllers,this)
 		  , lobbyRenderer(&clientDeviceState, this)
-		  , resourceCreator()
 {
 	RedirectStdCoutCerr();
 
-	sessionClient.SetResourceCreator(&resourceCreator);
-
-	pthread_setname_np(pthread_self(), "SimulCaster_Application");
+	pthread_setname_np(pthread_self(), "Teleport_Application");
 	mContext.setMessageHandler(Application::avsMessageHandler, this);
 
 	if (enet_initialize() != 0)
@@ -65,26 +59,25 @@ Application::Application()
 		OVR_FAIL("Failed to initialize ENET library");
 	}
 
-	if (AudioStream)
+	if (clientRenderer.AudioStream)
 	{
 #if defined( USE_AAUDIO )
 		audioPlayer = new AA_AudioPlayer();
 #else
-		audioPlayer = new SL_AudioPlayer();
+		clientRenderer.audioPlayer = new SL_AudioPlayer();
 #endif
-		audioPlayer->initializeAudioDevice();
+		clientRenderer.audioPlayer ->initializeAudioDevice();
 	}
 }
 
 Application::~Application()
 {
-	mPipeline.deconfigure();
+	clientRenderer.clientPipeline.pipeline.deconfigure();
 	mRefreshRates.clear();
 	clientRenderer.ExitedVR();
 	delete mSoundEffectPlayer;
-	sessionClient.Disconnect(TELEPORT_TIMEOUT);
 	enet_deinitialize();
-	SAFE_DELETE(audioPlayer)
+	SAFE_DELETE(clientRenderer.audioPlayer)
 
 	mSoundEffectPlayer = nullptr;
 
@@ -121,9 +114,9 @@ bool Application::ProcessIniFile()
 			ip_list.erase(0, pos + 1);
 			tinyUI.AddURL(ip);
 		} while (pos != std::string::npos);
-		server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",TELEPORT_SERVER_DISCOVERY_PORT);
-		client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",TELEPORT_CLIENT_SERVICE_PORT);
-		client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",TELEPORT_CLIENT_STREAMING_PORT);
+		clientRenderer.server_discovery_port = ini.GetLongValue("", "SERVER_DISCOVERY_PORT",TELEPORT_SERVER_DISCOVERY_PORT);
+		clientRenderer.client_service_port = ini.GetLongValue("", "CLIENT_SERVICE_PORT",TELEPORT_CLIENT_SERVICE_PORT);
+		clientRenderer.client_streaming_port = ini.GetLongValue("", "CLIENT_STREAMING_PORT",TELEPORT_CLIENT_STREAMING_PORT);
 
 		return true;
 	}
@@ -220,22 +213,19 @@ void Application::EnteredVrMode()
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	mDeviceContext.reset(new scc::GL_DeviceContext(&globalGraphicsResources.renderPlatform));
-	resourceCreator.Initialize((&globalGraphicsResources.renderPlatform),
-							   scr::VertexBufferLayout::PackingStyle::INTERLEAVED);
-	resourceCreator.SetGeometryCache(&geometryCache);
 
 	//Default Effects
-	scr::Effect::EffectCreateInfo ci;
+	clientrender::Effect::EffectCreateInfo ci;
 	ci.effectName = "StandardEffects";
 	globalGraphicsResources.defaultPBREffect.Create(&ci);
 
 	//Default Sampler
-	scr::Sampler::SamplerCreateInfo sci = {};
-	sci.wrapU = scr::Sampler::Wrap::REPEAT;
-	sci.wrapV = scr::Sampler::Wrap::REPEAT;
-	sci.wrapW = scr::Sampler::Wrap::REPEAT;
-	sci.minFilter = scr::Sampler::Filter::LINEAR;
-	sci.magFilter = scr::Sampler::Filter::LINEAR;
+	clientrender::Sampler::SamplerCreateInfo sci = {};
+	sci.wrapU = clientrender::Sampler::Wrap::REPEAT;
+	sci.wrapV = clientrender::Sampler::Wrap::REPEAT;
+	sci.wrapW = clientrender::Sampler::Wrap::REPEAT;
+	sci.minFilter = clientrender::Sampler::Filter::LINEAR;
+	sci.magFilter = clientrender::Sampler::Filter::LINEAR;
 
 	globalGraphicsResources.sampler = globalGraphicsResources.renderPlatform.InstantiateSampler();
 	globalGraphicsResources.sampler->Create(&sci);
@@ -243,7 +233,7 @@ void Application::EnteredVrMode()
 	globalGraphicsResources.noMipsampler = globalGraphicsResources.renderPlatform.InstantiateSampler();
 	globalGraphicsResources.noMipsampler->Create(&sci);
 
-	sci.minFilter = scr::Sampler::Filter::MIPMAP_LINEAR;
+	sci.minFilter = clientrender::Sampler::Filter::MIPMAP_LINEAR;
 	globalGraphicsResources.cubeMipMapSampler = globalGraphicsResources.renderPlatform.InstantiateSampler();
 	globalGraphicsResources.cubeMipMapSampler->Create(&sci);
 
@@ -270,34 +260,34 @@ void Application::EnteredVrMode()
 
 	clientRenderer.EnteredVR(java);
 
-	clientRenderer.mDecoder.setBackend(new VideoDecoderProxy(java->Env, this));
+	clientRenderer.clientPipeline.decoder.setBackend(new VideoDecoderProxy(java->Env, this));
 
 
 	//Set Lighting Cubemap Shader Resource
-	scr::ShaderResourceLayout lightingCubemapLayout;
+	clientrender::ShaderResourceLayout lightingCubemapLayout;
 	lightingCubemapLayout.AddBinding(14,
-									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+									 clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+									 clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	lightingCubemapLayout.AddBinding(15,
-									 scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
-									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+									 clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER,
+									 clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
 
 	globalGraphicsResources.lightCubemapShaderResources.SetLayout(lightingCubemapLayout);
 	globalGraphicsResources.lightCubemapShaderResources.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14,
+			clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 14,
 			"u_SpecularCubemap", {clientRenderer.specularCubemapTexture->GetSampler()
 								  , clientRenderer.specularCubemapTexture});
 	globalGraphicsResources.lightCubemapShaderResources.AddImage(
-			scr::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
+			clientrender::ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 15,
 			"u_DiffuseCubemap", {clientRenderer.diffuseCubemapTexture->GetSampler()
 								 , clientRenderer.diffuseCubemapTexture});
 
-	scr::ShaderResourceLayout tagBufferLayout;
+	clientrender::ShaderResourceLayout tagBufferLayout;
 	tagBufferLayout.AddBinding(1,
-									 scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,
-									 scr::Shader::Stage::SHADER_STAGE_FRAGMENT);
+									 clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,
+									 clientrender::Shader::Stage::SHADER_STAGE_FRAGMENT);
 	globalGraphicsResources.tagShaderResource.SetLayout(tagBufferLayout);
-	globalGraphicsResources.tagShaderResource.AddBuffer(scr::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataCube_ssbo",{
+	globalGraphicsResources.tagShaderResource.AddBuffer(clientrender::ShaderResourceLayout::ShaderResourceType::STORAGE_BUFFER,1,"TagDataCube_ssbo",{
 			globalGraphicsResources.mTagDataBuffer.get()});
 	globalGraphicsResources.Init();
 	//useMultiview=(vrapi_GetSystemPropertyInt( java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE ) == VRAPI_TRUE);
@@ -393,12 +383,15 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	clientDeviceState.eyeHeight=mScene.GetEyeHeight();
 
 	// Oculus Origin means where the headset's zero is in real space.
-
+	auto &sessionClient=clientRenderer.sessionClient;
 	// Handle networked session.
 	if(sessionClient.IsConnected())
 	{
 		avs::DisplayInfo displayInfo = {1440, 1600};
-		sessionClient.Frame(displayInfo, clientDeviceState.headPose, clientDeviceState.controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.mDecoder.idrRequired(), vrFrame.RealTimeInSeconds, vrFrame.DeltaSeconds);
+		avs::Pose controllerPoses[2];
+		controllerPoses[0]=clientDeviceState.controllerPoses[0].globalPose;
+		controllerPoses[1]=clientDeviceState.controllerPoses[1].globalPose;
+		sessionClient.Frame(displayInfo, clientDeviceState.headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.clientPipeline.decoder.idrRequired(), vrFrame.RealTimeInSeconds, vrFrame.DeltaSeconds);
 		if (sessionClient.receivedInitialPos>0&&receivedInitialPos!=sessionClient.receivedInitialPos)
 		{
 			clientDeviceState.originPose = sessionClient.GetOriginPose();
@@ -418,7 +411,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	{
 		if (!sessionClient.HasDiscovered())
 		{
-			sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+			sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, clientRenderer.server_ip.c_str(), clientRenderer.server_discovery_port, remoteEndpoint);
 		}
 		if (sessionClient.HasDiscovered())
 		{
@@ -436,14 +429,14 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 
 	//Get HMD Position/Orientation
 	clientDeviceState.stickYaw=mScene.GetStickYaw();
-	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.HeadPose.Translation)),*((const scr::quat *)(&vrFrame.HeadPose.Rotation)));
-	clientDeviceState.UpdateOriginPose();
+	clientDeviceState.SetHeadPose(*((const avs::vec3 *)(&vrFrame.HeadPose.Translation)),*((const clientrender::quat *)(&vrFrame.HeadPose.Rotation)));
+	clientDeviceState.UpdateGlobalPoses();
 	// Update video texture if we have any pending decoded frames.
 
     if (mNumPendingFrames > 0)
     {
         clientRenderer.mVideoSurfaceTexture->Update();
-        if (clientRenderer.videoConfig.use_alpha_layer_decoding)
+        if (clientRenderer.clientPipeline.videoConfig.use_alpha_layer_decoding)
         {
             clientRenderer.mAlphaSurfaceTexture->Update();
         }
@@ -451,16 +444,16 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
     }
 
 	// Process stream pipeline
-	mPipeline.process();
+	clientRenderer.clientPipeline.pipeline.process();
 
     std::vector<TinyUI::ControllerState> states;
     states.push_back({});
 	states.push_back({});
-	states[0].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[0].position);
-	states[0].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[0].orientation);
+	states[0].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[0].globalPose.position);
+	states[0].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[0].globalPose.orientation);
 	states[0].clicking			=(controllers.mLastControllerStates[0].mReleased& ovrButton::ovrButton_Trigger)!=0;
-	states[1].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[1].position);
-	states[1].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[1].orientation);
+	states[1].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[1].globalPose.position);
+	states[1].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[1].globalPose.orientation);
 	states[1].clicking			=(controllers.mLastControllerStates[1].mReleased& ovrButton::ovrButton_Trigger)!=0;
 	/// Hit test
 	tinyUI.DoHitTests(vrFrame,states);
@@ -470,17 +463,22 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 
 void Application::ConnectButtonHandler(const std::string &url)
 {
+	auto &sessionClient=clientRenderer.sessionClient;
+	if(sessionClient.IsConnected())
+	{
+		sessionClient.Disconnect(0);
+	}
 	size_t pos=url.find(":");
 	if(pos<url.length())
 	{
 		std::string port_str=url.substr(pos+1,url.length()-pos-1);
-		server_discovery_port = atoi(port_str.c_str());
+		clientRenderer.server_discovery_port = atoi(port_str.c_str());
 		std::string url_str=url.substr(0,pos);
-		server_ip=url_str;
+		clientRenderer.server_ip=url_str;
 	}
 	else
 	{
-		server_ip=url;
+		clientRenderer.server_ip=url;
 	}
 	should_connect=true;
 }
@@ -518,7 +516,7 @@ void Application::AppRenderFrame(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRend
 	}
 }
 
-void Application::DrawTexture(avs::vec3 &offset,scr::Texture &texture)
+void Application::DrawTexture(avs::vec3 &offset,clientrender::Texture &texture)
 {
 	//mGuiSys->ShowInfoText()
 }
@@ -568,6 +566,7 @@ void Application::DrawConnectionStateOSD(OVRFW::OvrGuiSys *mGuiSys,OVRFW::ovrRen
 	static avs::vec3 offset = {-2.0f, 2.0f, 5.5f};
 	static avs::vec4 colour = {1.0f, 1.0f, 0.5f, 0.5f};
 	static char txt[100];
+	auto &sessionClient=clientRenderer.sessionClient;
 	if (sessionClient.IsConnected())
 	{
 		sprintf(txt,"Server: %s", sessionClient.GetServerIP().c_str());
@@ -597,7 +596,7 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 // The camera should be where our head is. But when rendering, the camera is in OVR space, so:
-	globalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.position);
+	globalGraphicsResources.scrCamera->UpdatePosition(clientDeviceState.headPose.globalPose.position);
 
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 
@@ -606,14 +605,13 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 
     //Append SCR Nodes to surfaces.
 	GLCheckErrorsWithTitle("Frame: Pre-SCR");
-	float time_elapsed = in.DeltaSeconds * 1000.0f;
-	teleport::client::ServerTimestamp::tick(time_elapsed);
-	geometryCache.Update(time_elapsed);
-	resourceCreator.Update(time_elapsed);
-
+	float timestamp_ms = GetTimeInSeconds() * 1000.0f;
+	// TODO: is this the timestamp we want, or do we need something server-synchronized?
+	clientRenderer.Update(timestamp_ms);
     //Move the hands before they are drawn.
-	UpdateHandObjects();
+	clientRenderer.UpdateHandObjects(GetSessionObject());
     clientRenderer.RenderLocalNodes(out);
+	auto &sessionClient=clientRenderer.sessionClient;
 	if (sessionClient.IsConnected())
 	{
 		// Append video surface
@@ -622,56 +620,13 @@ void Application::Render(const OVRFW::ovrApplFrameIn &in, OVRFW::ovrRendererOutp
 	}
 	else
 	{
-		lobbyRenderer.Render(server_ip.c_str(),server_discovery_port);
+		lobbyRenderer.Render(clientRenderer.server_ip.c_str(),clientRenderer.server_discovery_port);
 	};
 	//uIRenderer.Render(in,out,1440,1600);
 	tinyUI.Render(in, out);
 	clientRenderer.DrawOSD(out);
 	DrawConnectionStateOSD(mGuiSys, out);
 	GLCheckErrorsWithTitle("Frame: Post-SCR");
-}
-
-void Application::UpdateHandObjects()
-{
-	//Poll controller state from the Oculus API.
-	for(int i=0; i < 2; i++)
-	{
-		ovrTracking remoteState;
-		if(controllers.mControllerIDs[i] != 0)
-		{
-			if(vrapi_GetInputTrackingState(GetSessionObject(), controllers.mControllerIDs[i], 0, &remoteState) >= 0)
-			{
-				clientDeviceState.SetControllerPose(i,	*((const avs::vec3 *)(&remoteState.HeadPose.Pose.Position)),
-														*((const scr::quat *)(&remoteState.HeadPose.Pose.Orientation)));
-			}
-		}
-	}
-
-	std::shared_ptr<scr::Node> body = geometryCache.mNodeManager->GetBody();
-	if(body)
-	{
-		body->SetLocalPosition(clientDeviceState.headPose.position + bodyOffsetFromHead);
-
-		//Calculate rotation angle on y-axis, and use to create new quaternion that only rotates the body on the y-axis.
-		float angle = std::atan2(clientDeviceState.headPose.orientation.y, clientDeviceState.headPose.orientation.w);
-		scr::quat yRotation(0.0f, std::sin(angle), 0.0f, std::cos(angle));
-		body->SetLocalRotation(yRotation);
-	}
-
-	// Left and right hands have no parent and their position/orientation is relative to the current local space.
-	std::shared_ptr<scr::Node> rightHand = geometryCache.mNodeManager->GetRightHand();
-	if(rightHand)
-	{
-		rightHand->SetLocalPosition(clientDeviceState.controllerPoses[0].position);
-		rightHand->SetLocalRotation(clientDeviceState.controllerPoses[0].orientation);
-	}
-
-	std::shared_ptr<scr::Node> leftHand = geometryCache.mNodeManager->GetLeftHand();
-	if(leftHand)
-	{
-		leftHand->SetLocalPosition(clientDeviceState.controllerPoses[1].position);
-		leftHand->SetLocalRotation(clientDeviceState.controllerPoses[1].orientation);
-	}
 }
 
 void Application::AppRenderEye(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrRendererOutput &out, int eye)
@@ -690,294 +645,106 @@ void Application::AppRenderEye(const OVRFW::ovrApplFrameIn &vrFrame, OVRFW::ovrR
 
 bool Application::OnSetupCommandReceived(const char *server_ip, const avs::SetupCommand &setupCommand, avs::Handshake &handshake)
 {
-	const avs::VideoConfig &videoConfig = setupCommand.video_config;
-	if (!mPipelineConfigured)
-	{
-		OVR_WARN("VIDEO STREAM CHANGED: server port %d %d %d, cubemap %d", setupCommand.server_streaming_port,
-				 videoConfig.video_width, videoConfig.video_height,
-				 videoConfig.colour_cubemap_size);
-
-		teleport::client::ServerTimestamp::setLastReceivedTimestamp(setupCommand.startTimestamp);
-		sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
-
-		const uint32_t geoStreamID = 80;
-		std::vector<avs::NetworkSourceStream> streams = {{20}, {40}};
-		if (AudioStream)
-		{
-			streams.push_back({60});
-		}
-		if (GeoStream)
-		{
-			streams.push_back({geoStreamID});
-		}
-
-		avs::NetworkSourceParams sourceParams;
-		sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-		sourceParams.localPort = client_streaming_port;
-		sourceParams.remoteIP = sessionClient.GetServerIP().c_str();
-		sourceParams.remotePort = setupCommand.server_streaming_port;
-		sourceParams.remoteHTTPPort = setupCommand.server_http_port;
-		sourceParams.maxHTTPConnections = 10;
-		sourceParams.httpStreamID = geoStreamID;
-		sourceParams.useSSL = setupCommand.using_ssl;
-
-		bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
-		avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::GlStyle, bodyOffsetFromHead);
-
-		if (!clientRenderer.mNetworkSource.configure(std::move(streams), sourceParams))
-		{
-			OVR_WARN("OnSetupCommandReceived: Failed to configure network source node.");
-			return false;
-		}
-		clientRenderer.mNetworkSource.setDebugStream(setupCommand.debug_stream);
-		clientRenderer.mNetworkSource.setDebugNetworkPackets(setupCommand.debug_network_packets);
-		clientRenderer.mNetworkSource.setDoChecksums(setupCommand.do_checksums);
-
-		handshake.minimumPriority=clientRenderer.GetMinimumPriority();
-		// Don't use these on Android:
-		handshake.renderingFeatures.normals=false;
-		handshake.renderingFeatures.ambientOcclusion=false;
-		mPipeline.add(&clientRenderer.mNetworkSource);
-
-		clientRenderer.videoTagDataCubeArray.clear();
-		clientRenderer.videoTagDataCubeArray.resize(clientRenderer.MAX_TAG_DATA_COUNT);
-
-		avs::DecoderParams decoderParams = {};
-		decoderParams.codec = videoConfig.videoCodec;
-		decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-		decoderParams.prependStartCodes = false;
-		decoderParams.deferDisplay = false;
-        decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
-        decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
-        decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
-
-		size_t stream_width = videoConfig.video_width;
-		size_t stream_height = videoConfig.video_height;
-
-		// Video
-		if (!clientRenderer.mDecoder.configure(avs::DeviceHandle(), stream_width, stream_height,
-											   decoderParams, 20))
-		{
-			OVR_WARN("OnSetupCommandReceived: Failed to configure decoder node");
-			clientRenderer.mNetworkSource.deconfigure();
-			return false;
-		}
-		{
-			scr::Texture::TextureCreateInfo textureCreateInfo = {};
-			textureCreateInfo.externalResource = true;
-			// Slot 1
-			textureCreateInfo.slot = scr::Texture::Slot::NORMAL;
-			textureCreateInfo.format = scr::Texture::Format::RGBA8;
-			textureCreateInfo.type = scr::Texture::Type::TEXTURE_2D_EXTERNAL_OES;
-			textureCreateInfo.height = videoConfig.video_height;
-			textureCreateInfo.width = videoConfig.video_width;
-			textureCreateInfo.depth = 1;
-
-			clientRenderer.mVideoTexture->Create(textureCreateInfo);
-			((scc::GL_Texture *) (clientRenderer.mVideoTexture.get()))->SetExternalGlTexture(
-					clientRenderer.mVideoSurfaceTexture->GetTextureId());
-
-			// Slot 2
-			textureCreateInfo.slot = scr::Texture::Slot::COMBINED;
-			clientRenderer.mAlphaVideoTexture->Create(textureCreateInfo);
-			((scc::GL_Texture *) (clientRenderer.mAlphaVideoTexture.get()))->SetExternalGlTexture(
-					clientRenderer.mAlphaSurfaceTexture->GetTextureId());
-		}
-
-		VideoSurface* alphaSurface;
-		if (videoConfig.use_alpha_layer_decoding)
-		{
-			alphaSurface = new VideoSurface(clientRenderer.mAlphaSurfaceTexture);
-		}
-		else
-		{
-			alphaSurface = nullptr;
-		}
-
-		mSurface.configure(new VideoSurface(clientRenderer.mVideoSurfaceTexture), alphaSurface);
-
-		clientRenderer.mVideoQueue.configure(200000, 16, "VideoQueue");
-
-		avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mVideoQueue);
-		avs::PipelineNode::link(clientRenderer.mVideoQueue, clientRenderer.mDecoder);
-		mPipeline.link({&clientRenderer.mDecoder, &mSurface});
-
-
-		// Tag Data
-		{
-			auto f = std::bind(&ClientRenderer::OnReceiveVideoTagData, &clientRenderer,
-							   std::placeholders::_1, std::placeholders::_2);
-			if (!clientRenderer.mTagDataDecoder.configure(40, f)) {
-				OVR_WARN("OnSetupCommandReceived: Failed to configure tag data decoder node.");
-				return false;
-			}
-			clientRenderer.mTagDataQueue.configure(200, 16, "TagDataQueue");
-
-			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mTagDataQueue);
-			mPipeline.link({&clientRenderer.mTagDataQueue, &clientRenderer.mTagDataDecoder});
-		}
-
-
-		// Audio
-		if (AudioStream)
-		{
-			avsAudioDecoder.configure(60);
-			sca::AudioParams audioParams;
-			audioParams.codec = sca::AudioCodec::PCM;
-			audioParams.numChannels = 2;
-			audioParams.sampleRate = 48000;
-			audioParams.bitsPerSample = 32;
-			// This will be deconfigured automatically when the pipeline is deconfigured.
-			audioPlayer->configure(audioParams);
-			audioStreamTarget.reset(new sca::AudioStreamTarget(audioPlayer));
-			avsAudioTarget.configure(audioStreamTarget.get());
-			clientRenderer.mAudioQueue.configure(4096, 120, "AudioQueue");
-
-			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mAudioQueue);
-			avs::PipelineNode::link(clientRenderer.mAudioQueue, avsAudioDecoder);
-			mPipeline.link({&avsAudioDecoder, &avsAudioTarget});
-
-			// Audio Input
-			if (setupCommand.audio_input_enabled)
-			{
-				sca::NetworkSettings networkSettings =
-						{
-								setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
-								, static_cast<int32_t>(handshake.maxBandwidthKpS)
-								, static_cast<int32_t>(handshake.udpBufferSize)
-								, setupCommand.requiredLatencyMs
-								, (int32_t) setupCommand.idle_connection_timeout
-						};
-
-				mNetworkPipeline.reset(new sca::NetworkPipeline());
-				mAudioInputQueue.configure(4096, 120, "AudioInputQueue");
-				mNetworkPipeline->initialise(networkSettings, &mAudioInputQueue);
-
-				// Callback called on separate thread when recording buffer is full
-				auto f = [this](const uint8_t *data, size_t dataSize) -> void
-				{
-					size_t bytesWritten;
-					if (mAudioInputQueue.write(nullptr, data, dataSize, bytesWritten))
-					{
-						mNetworkPipeline->process();
-					}
-				};
-				audioPlayer->startRecording(f);
-			}
-		}
-
-		if (GeoStream)
-		{
-			avsGeometryDecoder.configure(80, &geometryDecoder);
-			avsGeometryTarget.configure(&resourceCreator);
-			clientRenderer.mGeometryQueue.configure(2500000, 100, "GeometryQueue");
-
-			avs::PipelineNode::link(clientRenderer.mNetworkSource, clientRenderer.mGeometryQueue);
-			avs::PipelineNode::link(clientRenderer.mGeometryQueue, avsGeometryDecoder);
-			mPipeline.link({&avsGeometryDecoder, &avsGeometryTarget});
-		}
-		//GL_CheckErrors("Pre-Build Cubemap");
-		clientRenderer.OnSetupCommandReceived(videoConfig);
-
-		mPipelineConfigured = true;
-	}
-
-	handshake.startDisplayInfo.width = 1440;
-	handshake.startDisplayInfo.height = 1600;
-	handshake.framerate = 60;
-	handshake.FOV = 110;
-	handshake.isVR = true;
-	handshake.udpBufferSize = static_cast<uint32_t>(clientRenderer.mNetworkSource.getSystemBufferSize());
-	handshake.maxBandwidthKpS = 10 * handshake.udpBufferSize * static_cast<uint32_t>(handshake.framerate);
-	handshake.axesStandard = avs::AxesStandard::GlStyle;
-	handshake.MetresPerUnit = 1.0f;
-	handshake.usingHands = true;
-	handshake.maxLightsSupported=TELEPORT_MAX_LIGHTS;
-	handshake.clientStreamingPort=client_streaming_port;
-
-	clientRenderer.lastSetupCommand = setupCommand;
-	return true;
+	return clientRenderer.OnSetupCommandReceived(server_ip,setupCommand,handshake);
 }
 
 void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)
 {
-	clientRenderer.setupLightingCommand=s;
+	clientRenderer.lastSetupLightingCommand=s;
 }
 
 void Application::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
-	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
-	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
-	node->SetParent(parent);
+	clientRenderer.geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
 }
 
+void Application::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubTypeCommand)
+{
+	switch(updateNodeSubTypeCommand.nodeSubtype)
+	{
+		case avs::NodeSubtype::None:
+			break;
+		case avs::NodeSubtype::Body:
+			clientRenderer.geometryCache.mNodeManager->SetBody(updateNodeSubTypeCommand.nodeID);
+			break;
+		case avs::NodeSubtype::LeftHand:
+			clientRenderer.geometryCache.mNodeManager->SetLeftHand(updateNodeSubTypeCommand.nodeID);
+			break;
+		case avs::NodeSubtype::RightHand:
+			clientRenderer.geometryCache.mNodeManager->SetRightHand(updateNodeSubTypeCommand.nodeID);
+			break;
+		default:
+			TELEPORT_CERR << "Unrecognised node data sub-type: " << static_cast<int>(updateNodeSubTypeCommand.nodeSubtype) << "!\n";
+			break;
+	}
+}
 void Application::OnVideoStreamClosed()
 {
 	OVR_WARN("VIDEO STREAM CLOSED");
 
-	mPipeline.deconfigure();
-	mPipeline.reset();
-	mPipelineConfigured = false;
+	clientRenderer.clientPipeline.pipeline.deconfigure();
+	clientRenderer.clientPipeline.pipeline.reset();
+	clientRenderer.mPipelineConfigured = false;
 
 	receivedInitialPos = false;
 }
 
 void Application::OnReconfigureVideo(const avs::ReconfigureVideoCommand &reconfigureVideoCommand)
 {
-	if (!mPipelineConfigured)
+	if (!clientRenderer.mPipelineConfigured)
 	{
 		return;
 	}
 
-	clientRenderer.OnSetupCommandReceived(reconfigureVideoCommand.video_config);
+	clientRenderer.ConfigureVideo(reconfigureVideoCommand.video_config);
 	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d",
-		 clientRenderer.videoConfig.video_width, clientRenderer.videoConfig.video_height,
-		 clientRenderer.videoConfig.depth_width, clientRenderer.videoConfig.depth_height);
+		 clientRenderer.clientPipeline.videoConfig.video_width, clientRenderer.clientPipeline.videoConfig.video_height,
+		 clientRenderer.clientPipeline.videoConfig.depth_width, clientRenderer.clientPipeline.videoConfig.depth_height);
 }
 
 bool Application::OnNodeEnteredBounds(avs::uid id)
 {
-	return geometryCache.mNodeManager->ShowNode(id);
+	return clientRenderer.geometryCache.mNodeManager->ShowNode(id);
 }
 
 bool Application::OnNodeLeftBounds(avs::uid id)
 {
-	return geometryCache.mNodeManager->HideNode(id);
+	return clientRenderer.geometryCache.mNodeManager->HideNode(id);
 }
 
 std::vector<uid> Application::GetGeometryResources()
 {
-	return geometryCache.GetAllResourceIDs();
+	return clientRenderer.geometryCache.GetAllResourceIDs();
 }
 
 void Application::ClearGeometryResources()
 {
-	geometryCache.Clear();
+	clientRenderer.geometryCache.Clear();
 }
 
 void Application::SetVisibleNodes(const std::vector<avs::uid> &visibleNodes)
 {
-	geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
+	clientRenderer.geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
 }
 
 void Application::UpdateNodeMovement(const std::vector<avs::MovementUpdate> &updateList)
 {
-	geometryCache.mNodeManager->UpdateNodeMovement(updateList);
+	clientRenderer.geometryCache.mNodeManager->UpdateNodeMovement(updateList);
 }
 
 void Application::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
 {
-	geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
+	clientRenderer.geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
 }
 
 void Application::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
-	geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+	clientRenderer.geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
 }
 
 void Application::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
 {
-	geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
+	clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
 }
 
 void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate)
@@ -985,13 +752,13 @@ void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationContr
 	switch(animationControlUpdate.timeControl)
 	{
 		case avs::AnimationTimeControl::ANIMATION_TIME:
-			geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
+			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 			break;
 		case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
-			geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[0].triggerBack, 1.0f);
+			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[0].triggerBack, 1.0f);
 			break;
 		case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
-			geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[1].triggerBack, 1.0f);
+			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[1].triggerBack, 1.0f);
 			break;
 		default:
 			TELEPORT_CLIENT_WARN("Failed to update node animation control! Time control was set to the invalid value %d!", static_cast<int>(animationControlUpdate.timeControl));
@@ -1001,7 +768,7 @@ void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationContr
 
 void Application::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	geometryCache.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
+	clientRenderer.geometryCache.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 void Application::OnFrameAvailable()
@@ -1054,9 +821,9 @@ void Application::avsMessageHandler(avs::LogSeverity severity, const char *msg, 
 	}
 }
 
-const scr::Effect::EffectPassCreateInfo *Application::BuildEffectPass(const char *effectPassName, scr::VertexBufferLayout *vbl
-							 , const scr::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo
-							 , const std::vector<scr::ShaderResource> &shaderResources)
+const clientrender::Effect::EffectPassCreateInfo *Application::BuildEffectPass(const char *effectPassName, clientrender::VertexBufferLayout *vbl
+							 , const clientrender::ShaderSystem::PipelineCreateInfo *pipelineCreateInfo
+							 , const std::vector<clientrender::ShaderResource> &shaderResources)
 {
 	GlobalGraphicsResources& globalGraphicsResources = GlobalGraphicsResources::GetInstance();
 	if (globalGraphicsResources.defaultPBREffect.HasEffectPass(effectPassName))
@@ -1064,17 +831,17 @@ const scr::Effect::EffectPassCreateInfo *Application::BuildEffectPass(const char
 		return globalGraphicsResources.defaultPBREffect.GetEffectPassCreateInfo(effectPassName);
 	}
 
-	scr::ShaderSystem::PassVariables pv;
+	clientrender::ShaderSystem::PassVariables pv;
 	pv.mask = false;
 	pv.reverseDepth = false;
 	pv.msaa = false;
 
-	scr::ShaderSystem::Pipeline gp(&globalGraphicsResources.renderPlatform, pipelineCreateInfo);
+	clientrender::ShaderSystem::Pipeline gp(&globalGraphicsResources.renderPlatform, pipelineCreateInfo);
 
-	//scr::VertexBufferLayout
+	//clientrender::VertexBufferLayout
 	vbl->CalculateStride();
 
-	scr::Effect::ViewportAndScissor vs = {};
+	clientrender::Effect::ViewportAndScissor vs = {};
 	vs.x = 0.0f;
 	vs.y = 0.0f;
 	vs.width = 0.0f;
@@ -1086,26 +853,26 @@ const scr::Effect::EffectPassCreateInfo *Application::BuildEffectPass(const char
 	vs.extentX = (uint32_t) vs.x;
 	vs.extentY = (uint32_t) vs.y;
 
-	scr::Effect::RasterizationState rs = {};
+	clientrender::Effect::RasterizationState rs = {};
 	rs.depthClampEnable = false;
 	rs.rasterizerDiscardEnable = false;
-	rs.polygonMode = scr::Effect::PolygonMode::FILL;
-	rs.cullMode = scr::Effect::CullMode::FRONT_BIT; //As of 2020-02-24, this only affects whether culling is enabled.
-	rs.frontFace = scr::Effect::FrontFace::COUNTER_CLOCKWISE; //Unity does clockwise winding, and Unreal does counter-clockwise, but this is set before we connect to a server.
+	rs.polygonMode = clientrender::Effect::PolygonMode::FILL;
+	rs.cullMode = clientrender::Effect::CullMode::FRONT_BIT; //As of 2020-02-24, this only affects whether culling is enabled.
+	rs.frontFace = clientrender::Effect::FrontFace::COUNTER_CLOCKWISE; //Unity does clockwise winding, and Unreal does counter-clockwise, but this is set before we connect to a server.
 
-	scr::Effect::MultisamplingState ms = {};
+	clientrender::Effect::MultisamplingState ms = {};
 	ms.samplerShadingEnable = false;
-	ms.rasterizationSamples = scr::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT;
+	ms.rasterizationSamples = clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT;
 
-	scr::Effect::StencilCompareOpState scos = {};
-	scos.stencilFailOp = scr::Effect::StencilCompareOp::KEEP;
-	scos.stencilPassDepthFailOp = scr::Effect::StencilCompareOp::KEEP;
-	scos.passOp = scr::Effect::StencilCompareOp::KEEP;
-	scos.compareOp = scr::Effect::CompareOp::NEVER;
-	scr::Effect::DepthStencilingState dss = {};
+	clientrender::Effect::StencilCompareOpState scos = {};
+	scos.stencilFailOp = clientrender::Effect::StencilCompareOp::KEEP;
+	scos.stencilPassDepthFailOp = clientrender::Effect::StencilCompareOp::KEEP;
+	scos.passOp = clientrender::Effect::StencilCompareOp::KEEP;
+	scos.compareOp = clientrender::Effect::CompareOp::NEVER;
+	clientrender::Effect::DepthStencilingState dss = {};
 	dss.depthTestEnable = true;
 	dss.depthWriteEnable = true;
-	dss.depthCompareOp = scr::Effect::CompareOp::LESS;
+	dss.depthCompareOp = clientrender::Effect::CompareOp::LESS;
 	dss.stencilTestEnable = false;
 	dss.frontCompareOp = scos;
 	dss.backCompareOp = scos;
@@ -1113,21 +880,21 @@ const scr::Effect::EffectPassCreateInfo *Application::BuildEffectPass(const char
 	dss.minDepthBounds = 0.0f;
 	dss.maxDepthBounds = 1.0f;
 
-	scr::Effect::ColourBlendingState cbs = {};
+	clientrender::Effect::ColourBlendingState cbs = {};
 	cbs.blendEnable = true;
-	cbs.srcColorBlendFactor = scr::Effect::BlendFactor::SRC_ALPHA;
-	cbs.dstColorBlendFactor = scr::Effect::BlendFactor::ONE_MINUS_SRC_ALPHA;
-	cbs.colorBlendOp = scr::Effect::BlendOp::ADD;
-	cbs.srcAlphaBlendFactor = scr::Effect::BlendFactor::ONE;
-	cbs.dstAlphaBlendFactor = scr::Effect::BlendFactor::ZERO;
-	cbs.alphaBlendOp = scr::Effect::BlendOp::ADD;
+	cbs.srcColorBlendFactor = clientrender::Effect::BlendFactor::SRC_ALPHA;
+	cbs.dstColorBlendFactor = clientrender::Effect::BlendFactor::ONE_MINUS_SRC_ALPHA;
+	cbs.colorBlendOp = clientrender::Effect::BlendOp::ADD;
+	cbs.srcAlphaBlendFactor = clientrender::Effect::BlendFactor::ONE;
+	cbs.dstAlphaBlendFactor = clientrender::Effect::BlendFactor::ZERO;
+	cbs.alphaBlendOp = clientrender::Effect::BlendOp::ADD;
 
-	scr::Effect::EffectPassCreateInfo ci;
+	clientrender::Effect::EffectPassCreateInfo ci;
 	ci.effectPassName = effectPassName;
 	ci.passVariables = pv;
 	ci.pipeline = gp;
 	ci.vertexLayout = *vbl;
-	ci.topology = scr::Effect::TopologyType::TRIANGLE_LIST;
+	ci.topology = clientrender::Effect::TopologyType::TRIANGLE_LIST;
 	ci.viewportAndScissor = vs;
 	ci.rasterizationState = rs;
 	ci.multisamplingState = ms;
@@ -1158,14 +925,14 @@ std::string Application::LoadTextFile(const char *filename)
 void Application::ToggleMenu()
 {
 	ovrVector3f pos;
-	pos.x=clientDeviceState.headPose.position.x;
-	pos.y=clientDeviceState.headPose.position.y;
-	pos.z=clientDeviceState.headPose.position.z;
+	pos.x=clientDeviceState.headPose.globalPose.position.x;
+	pos.y=clientDeviceState.headPose.globalPose.position.y;
+	pos.z=clientDeviceState.headPose.globalPose.position.z;
 	ovrVector4f orient;
-	orient.x=clientDeviceState.headPose.orientation.x;
-	orient.y=clientDeviceState.headPose.orientation.y;
-	orient.z=clientDeviceState.headPose.orientation.z;
-	orient.w=clientDeviceState.headPose.orientation.w;
+	orient.x=clientDeviceState.headPose.globalPose.orientation.x;
+	orient.y=clientDeviceState.headPose.globalPose.orientation.y;
+	orient.z=clientDeviceState.headPose.globalPose.orientation.z;
+	orient.w=clientDeviceState.headPose.globalPose.orientation.w;
 	tinyUI.ToggleMenu(pos,orient);
 }
 

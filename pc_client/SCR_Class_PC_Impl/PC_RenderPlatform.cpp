@@ -1,9 +1,9 @@
-// (C) Copyright 2018-2019 Simul Software Ltd
+// (C) Copyright 2018-2022 Simul Software Ltd
 #include "PC_RenderPlatform.h"
 
-#include "crossplatform/Skin.h"
+#include "ClientRender/Skin.h"
 
-using namespace scr;
+using namespace clientrender;
 
 namespace pc_client
 {
@@ -12,50 +12,50 @@ void PC_RenderPlatform::SetSimulRenderPlatform(simul::crossplatform::RenderPlatf
 	renderPlatform = r;
 }
 
-std::shared_ptr<scr::FrameBuffer> PC_RenderPlatform::InstantiateFrameBuffer() const
+std::shared_ptr<clientrender::FrameBuffer> PC_RenderPlatform::InstantiateFrameBuffer() const
 {
 	return std::make_shared<PC_FrameBuffer>(this);
 }
-std::shared_ptr<scr::IndexBuffer> PC_RenderPlatform::InstantiateIndexBuffer() const
+std::shared_ptr<clientrender::IndexBuffer> PC_RenderPlatform::InstantiateIndexBuffer() const
 {
 	return std::make_shared<PC_IndexBuffer>(this);
 }
-std::shared_ptr<scr::Effect> PC_RenderPlatform::InstantiateEffect() const
+std::shared_ptr<clientrender::Effect> PC_RenderPlatform::InstantiateEffect() const
 {
 	return std::make_shared<PC_Effect>(this);
 }
-std::shared_ptr<scr::Sampler> PC_RenderPlatform::InstantiateSampler() const
+std::shared_ptr<clientrender::Sampler> PC_RenderPlatform::InstantiateSampler() const
 {
 	return std::make_shared<PC_Sampler>(this);
 }
-std::shared_ptr<scr::Shader> PC_RenderPlatform::InstantiateShader() const
+std::shared_ptr<clientrender::Shader> PC_RenderPlatform::InstantiateShader() const
 {
 	return std::make_shared<PC_Shader>(this);
 }
-std::shared_ptr<scr::ShaderStorageBuffer> PC_RenderPlatform::InstantiateShaderStorageBuffer() const
+std::shared_ptr<clientrender::ShaderStorageBuffer> PC_RenderPlatform::InstantiateShaderStorageBuffer() const
 {
 	return std::make_shared<PC_ShaderStorageBuffer>(this);
 }
 
-std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin(const std::string& name) const
+std::shared_ptr<clientrender::Skin> PC_RenderPlatform::InstantiateSkin(const std::string& name) const
 {
-	return std::make_shared<scr::Skin>(name);
+	return std::make_shared<clientrender::Skin>(name);
 }
 
-std::shared_ptr<scr::Skin> PC_RenderPlatform::InstantiateSkin(const std::string& name, const std::vector<scr::mat4>& inverseBindMatrices, size_t boneAmount, const Transform& skinTransform) const
+std::shared_ptr<clientrender::Skin> PC_RenderPlatform::InstantiateSkin(const std::string& name, const std::vector<clientrender::mat4>& inverseBindMatrices, size_t numBones, const Transform& skinTransform) const
 {
-	return std::make_shared<scr::Skin>(name, inverseBindMatrices, boneAmount, skinTransform);
+	return std::make_shared<clientrender::Skin>(name, inverseBindMatrices, numBones, skinTransform);
 }
 
-std::shared_ptr<scr::Texture> PC_RenderPlatform::InstantiateTexture() const
+std::shared_ptr<clientrender::Texture> PC_RenderPlatform::InstantiateTexture() const
 {
 	return std::make_shared<PC_Texture>(this);
 }
-std::shared_ptr<scr::UniformBuffer> PC_RenderPlatform::InstantiateUniformBuffer() const
+std::shared_ptr<clientrender::UniformBuffer> PC_RenderPlatform::InstantiateUniformBuffer() const
 {
 	return std::make_shared<PC_UniformBuffer>(this);
 }
-std::shared_ptr<scr::VertexBuffer> PC_RenderPlatform::InstantiateVertexBuffer() const
+std::shared_ptr<clientrender::VertexBuffer> PC_RenderPlatform::InstantiateVertexBuffer() const
 {
 	return std::make_shared<PC_VertexBuffer>(this);
 }

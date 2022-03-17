@@ -62,8 +62,9 @@ LOCAL_C_INCLUDES += ../../../VrAppSupport/VrGUI/Src
 LOCAL_C_INCLUDES += ../../../VrAppSupport/VrLocale/Include
 LOCAL_C_INCLUDES += ../../../../libavstream/include
 LOCAL_C_INCLUDES += ../../../../thirdparty/basis_universal
-LOCAL_C_INCLUDES += ../../../../SimulCasterAudio/src
+LOCAL_C_INCLUDES += ../../../../TeleportAudio/src
 LOCAL_C_INCLUDES += ../../../../TeleportClient
+LOCAL_C_INCLUDES += ../../../../ClientRender/src
 LOCAL_C_INCLUDES += ../../../3rdParty/enet/Include
 LOCAL_C_INCLUDES += ../../../../firstparty
 
@@ -71,7 +72,7 @@ LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable -Wno-abstract-final-class
 LOCAL_CPP_FEATURES += exceptions
 
-LOCAL_STATIC_LIBRARIES := draco vrsound sampleframework enet libavstream SimulCasterRenderer TeleportCore TeleportClient SimulCasterAudio
+LOCAL_STATIC_LIBRARIES := draco vrsound sampleframework enet libavstream ClientRender TeleportCore TeleportClient TeleportAudio
 LOCAL_SHARED_LIBRARIES := vrapi
 
 include $(BUILD_SHARED_LIBRARY)
@@ -83,6 +84,7 @@ $(call import-module,../libavstream/jni)
 $(call import-module,../libavstream/thirdparty/srt/build_android/jni)
 $(call import-module,../thirdparty/ndk-projects/draco)
 $(call import-module,../TeleportClient/jni)
+$(call import-module,../ClientRender/jni)
 $(call import-module,../TeleportCore/jni)
-$(call import-module,../SimulCasterAudio/jni)
+$(call import-module,../TeleportAudio/jni)
 $(call import-module,3rdParty/enet/jni)

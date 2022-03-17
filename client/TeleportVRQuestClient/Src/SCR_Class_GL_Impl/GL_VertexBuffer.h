@@ -1,21 +1,21 @@
 // (C) Copyright 2018-2019 Simul Software Ltd
 #pragma once
 
-#include <api/VertexBuffer.h>
-#include <api/VertexBufferLayout.h>
+#include <ClientRender/VertexBuffer.h>
+#include <ClientRender/VertexBufferLayout.h>
 #include <Render/GlGeometry.h>
 
 namespace scc
 {
-	class GL_VertexBuffer final : public scr::VertexBuffer
+	class GL_VertexBuffer final : public clientrender::VertexBuffer
 	{
 	private:
 		GLuint m_VertexID;
 		GLuint m_VertexArrayID = 0;
 
 	public:
-        GL_VertexBuffer(const scr::RenderPlatform*const r)
-        	:scr::VertexBuffer(r) {}
+        GL_VertexBuffer(const clientrender::RenderPlatform*const r)
+        	:clientrender::VertexBuffer(r) {}
 
 		void Create(VertexBufferCreateInfo* pVertexBufferCreateInfo) override;
 		void Destroy() override;
