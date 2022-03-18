@@ -22,9 +22,11 @@ VideoDecoder::VideoDecoder(cp::RenderPlatform* renderPlatform, cp::Texture* surf
 	: mRenderPlatform(renderPlatform)
 	, mSurfaceTexture(surfaceTexture)
 	, mOutputTexture(nullptr)
+	, mTextureConversionEffect(nullptr)
 	, mCurrentFrame(0)
 	, mPrevPocTid0(0)
 {
+	recompileShaders();
 }
 
 VideoDecoder::~VideoDecoder()
@@ -94,7 +96,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	// The output texture is in native decode format.
 	// The surface texture will only be written to in the display function.
 	mOutputTexture = mRenderPlatform->CreateTexture();
-	mOutputTexture->ensureTexture2DSizeAndFormat(mRenderPlatform, decParams.width, decParams.height, 1, simul::crossplatform::NV12, true, false, false);
+	mOutputTexture->ensureTexture2DSizeAndFormat(mRenderPlatform, decParams.width, decParams.height, 1, simul::crossplatform::NV12, false, false, false);
 
 	mDeviceType = device.type;
 	mParams = params;
@@ -139,6 +141,7 @@ Result VideoDecoder::shutdown()
 
 	SAFE_DELETE(mOutputTexture);
 	SAFE_DELETE(mPicParams.data);
+	SAFE_DELETE(mTextureConversionEffect);
 
 	return Result::OK;
 }
@@ -223,6 +226,16 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 
 Result VideoDecoder::display(bool showAlphaAsColor)
 {
+	cp::GraphicsDeviceContext& deviceContext = mRenderPlatform->GetImmediateContext();
+	// Same texture. Two SRVs for two layers. D3D12 Texture class handles this..
+	mTextureConversionEffect->SetTexture(deviceContext, "yTexture", mOutputTexture);
+	mTextureConversionEffect->SetTexture(deviceContext, "uvTexture", mOutputTexture);
+	mTextureConversionEffect->SetTexture(deviceContext, "rgbTexture", mSurfaceTexture);
+	mTextureConversionEffect->Apply(deviceContext, "NV12ToRGBA", 0);
+	mRenderPlatform->DispatchCompute(deviceContext, (mFrameWidth / 2) / 16, (mFrameHeight / 2) / 16, 1);
+	mTextureConversionEffect->Unapply(deviceContext);
+	mTextureConversionEffect->UnbindTextures(deviceContext);
+
 	return Result::OK;
 }
 
@@ -501,6 +514,12 @@ void VideoDecoder::resetFrames()
 		frame.reset();
 	}
 	mCurrentFrame = 0;
+}
+
+void VideoDecoder::recompileShaders()
+{
+	SAFE_DELETE(mTextureConversionEffect);
+	mTextureConversionEffect = mRenderPlatform->CreateEffect("texture_conversion");
 }
 
 
