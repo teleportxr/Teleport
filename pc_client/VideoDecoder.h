@@ -65,6 +65,8 @@ public:
 	avs::Result display(bool showAlphaAsColor = false) override;
 	/* End DecoderBackendInterface */
 
+	void recompileShaders();
+
 private:
 	void updatePicParams();
 	void updatePicParamsH264();
@@ -86,8 +88,9 @@ private:
 
 	simul::crossplatform::VideoDecodeArgument mPicParams;
 	simul::crossplatform::RenderPlatform* mRenderPlatform;
-	simul::crossplatform::Texture* mOutputTexture;
 	simul::crossplatform::Texture* mSurfaceTexture;
+	simul::crossplatform::Texture* mOutputTexture;
+	simul::crossplatform::Effect* mTextureConversionEffect;
 
 	std::vector<FrameCache> mDPB;
 
