@@ -177,6 +177,7 @@ void Static()
     v_UV_diffuse        =(u_DiffuseTexCoordIndex > 0.0 ? UV1 : UV0);
     v_UV_diffuse.y     =1.0-v_UV_diffuse.y;
     v_UV_normal         =(u_NormalTexCoordIndex > 0.0 ? UV1 : UV0);
+    v_UV_normal.y     =1.0-v_UV_normal.y;
     v_UV_lightmap       =UV1*u_LightmapScaleOffset.xy+u_LightmapScaleOffset.zw;
     v_UV_lightmap.y     =1.0-v_UV_lightmap.y;
 
