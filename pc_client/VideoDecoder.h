@@ -6,6 +6,7 @@
 #include <libavstream/decoders/dec_interface.hpp>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 #include "Platform/Crossplatform/BaseRenderer.h"
 #include "Platform/Crossplatform/VideoDecoder.h"
 #include "Platform/Crossplatform/RenderPlatform.h"
@@ -71,7 +72,7 @@ private:
 	void updatePicParams();
 	void updatePicParamsH264();
 	void updatePicParamsHEVC();
-	static uint32_t computeHevcPoc(const avparser::hevc::SPS* sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType);
+	
 	void resetFrames();
 
 	avs::DeviceType mDeviceType = avs::DeviceType::Invalid;
@@ -93,8 +94,8 @@ private:
 	simul::crossplatform::Effect* mTextureConversionEffect;
 
 	std::vector<FrameCache> mDPB;
+	std::unordered_map<uint32_t, uint32_t> mPocPicMap;
 
 	uint32_t mCurrentFrame;
-	uint32_t mPrevPocTid0;
 };
 

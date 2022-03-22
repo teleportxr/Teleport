@@ -24,7 +24,6 @@ VideoDecoder::VideoDecoder(cp::RenderPlatform* renderPlatform, cp::Texture* surf
 	, mOutputTexture(nullptr)
 	, mTextureConversionEffect(nullptr)
 	, mCurrentFrame(0)
-	, mPrevPocTid0(0)
 {
 	recompileShaders();
 }
@@ -52,6 +51,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	}
 
 	mDPB.clear();
+	mPocPicMap.clear();
 	
 	cp::VideoDecoderParams decParams;
 
@@ -106,7 +106,6 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	mPicParams = {};
 
 	mCurrentFrame = 0;
-	mPrevPocTid0 = 0;
 
 	return Result::OK;
 }
@@ -314,6 +313,7 @@ void VideoDecoder::updatePicParamsHEVC()
 	frame.stRpsIdx = extraData->stRpsIdx;
 	frame.refRpsIdx = extraData->refRpsIdx;
 	frame.sliceType = slice->slice_type;
+	frame.poc = extraData->poc;
 	frame.inUse = true;
 
 
@@ -430,25 +430,7 @@ void VideoDecoder::updatePicParamsHEVC()
 	pp->pps_tc_offset_div2 = pps->pps_tc_offset_div2;
 	pp->log2_parallel_merge_level_minus2 = pps->log2_parallel_merge_level_minus2;
 
-	if (!IS_HEVC_IDR(slice))
-	{
-		frame.poc = computeHevcPoc(sps, mPrevPocTid0, slice->slice_pic_order_cnt_lsb, (uint32_t)slice->header.type);
-	}
-
 	pp->CurrPicOrderCntVal = frame.poc;
-
-	if ((slice->header.temporal_id_plus1 - 1) == 0 &&
-		slice->header.type != hevc::NALUnitType::TRAIL_N &&
-		slice->header.type != hevc::NALUnitType::TSA_N &&
-		slice->header.type != hevc::NALUnitType::STSA_N &&
-		slice->header.type != hevc::NALUnitType::RADL_N &&
-		slice->header.type != hevc::NALUnitType::RASL_N &&
-		slice->header.type != hevc::NALUnitType::RADL_R &&
-		slice->header.type != hevc::NALUnitType::RASL_R)
-	{
-		mPrevPocTid0 = frame.poc;
-	}
-	
 
 	for (uint32_t i = 0, j = 0; i < mDPB.size(); ++i)
 	{
@@ -474,37 +456,6 @@ void VideoDecoder::updatePicParamsHEVC()
 	}
 
 #endif
-}
-
-uint32_t VideoDecoder::computeHevcPoc(const hevc::SPS* sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType)
-{
-	uint32_t maxPocLsb = 1 << (sps->log2_max_pic_order_cnt_lsb_minus4 + 4);
-	uint32_t prevPocLsb = prevPocTid0 % maxPocLsb;
-	uint32_t prevPocMsb = prevPocTid0 - prevPocLsb;
-	uint32_t pocMsb;
-
-	if (pocLsb < prevPocLsb && prevPocLsb - pocLsb >= maxPocLsb / 2)
-	{
-		pocMsb = prevPocMsb + maxPocLsb;
-	}
-	else if (pocLsb > prevPocLsb && pocLsb - prevPocLsb > maxPocLsb / 2)
-	{
-		pocMsb = prevPocMsb - maxPocLsb;
-	}
-	else
-	{
-		pocMsb = prevPocMsb;
-	}
-
-	// POC msb must be set to 0 for BLA picture types.
-	if ((hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_W_LP ||
-		(hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_W_RADL ||
-		(hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_N_LP)
-	{
-		pocMsb = 0;
-	}
-
-	return pocMsb + pocLsb;
 }
 
 void VideoDecoder::resetFrames()

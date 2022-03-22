@@ -20,6 +20,8 @@ namespace avparser
     {
         struct ExtraData
         {
+            uint32_t poc = 0;
+            uint32_t prevPocTid0 = 0;
             uint32_t stRpsIdx = 0;
             uint32_t refRpsIdx = 0;
             uint32_t short_term_ref_pic_set_size = 0;
@@ -77,6 +79,8 @@ namespace avparser
             static uint32_t log2(uint32_t k);
             static uint32_t computeNumPocTotal(Slice& slice, SPS& sps);
 
+            static uint32_t computeHevcPoc(const SPS& sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType);
+
 
             static constexpr uint8_t mLog2Table[256] = {
                 0,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
@@ -96,9 +100,6 @@ namespace avparser
             ExtraData mExtraData;
 
             std::unique_ptr<BitReader> mReader;
-
-
-
         };
     }
 }
