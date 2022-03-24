@@ -460,6 +460,7 @@ void VideoDecoder::updatePicParamsHEVC()
 
 void VideoDecoder::resetFrames()
 {
+	mPocPicMap.clear();
 	for (auto& frame : mDPB)
 	{
 		frame.reset();
