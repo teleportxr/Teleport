@@ -14,6 +14,10 @@ namespace avparser
 {
 	namespace hevc
 	{
+		HevcParser::HevcParser(bool shortSliceParse)
+			: mShortSliceParse(shortSliceParse) {}
+
+		
 		size_t HevcParser::parseNALUnit(const uint8_t* data, size_t size)
 		{
 			mReader.reset(new BitReader(data, size));
@@ -508,9 +512,13 @@ namespace avparser
 			hrd.cpb_cnt_minus1.resize(maxNumSubLayersMinus1 + 1, 0);
 
 			if (hrd.nal_hrd_parameters_present_flag)
+			{
 				hrd.nal_sub_layer_hrd_parameters.resize(maxNumSubLayersMinus1 + 1);
+			}
 			if (hrd.vcl_hrd_parameters_present_flag)
+			{
 				hrd.vcl_sub_layer_hrd_parameters.resize(maxNumSubLayersMinus1 + 1);
+			}
 
 			for (size_t i = 0; i <= maxNumSubLayersMinus1; ++i)
 			{
@@ -1090,6 +1098,11 @@ namespace avparser
 				slice.num_ref_idx_l0_active_minus1 = mPPS.num_ref_idx_l0_default_active_minus1;
 				slice.num_ref_idx_l1_active_minus1 = mPPS.num_ref_idx_l1_default_active_minus1;
 
+				if (mShortSliceParse)
+				{
+					return;
+				}
+
 				if (slice.slice_type == SliceType::B || slice.slice_type == SliceType::P)
 				{
 					slice.num_ref_idx_active_override_flag = mReader->getBits(1);
@@ -1125,7 +1138,9 @@ namespace avparser
 					if (slice.slice_temporal_mvp_enabled_flag)
 					{
 						if (slice.slice_type == SliceType::B)
+						{
 							slice.collocated_from_l0_flag = mReader->getBits(1);
+						}
 
 						if (slice.collocated_from_l0_flag && slice.num_ref_idx_l0_active_minus1 ||
 							!slice.collocated_from_l0_flag && slice.num_ref_idx_l1_active_minus1)
@@ -1157,7 +1172,9 @@ namespace avparser
 				}
 
 				if (mPPS.deblocking_filter_override_enabled_flag)
+				{
 					slice.deblocking_filter_override_flag = mReader->getBits(1);
+				}
 
 				if (slice.deblocking_filter_override_flag)
 				{
@@ -1207,7 +1224,9 @@ namespace avparser
 				slice.slice_segment_header_extension_length = mReader->getGolombU();
 				slice.slice_segment_header_extension_data_byte.resize(slice.slice_segment_header_extension_length);
 				for (size_t i = 0; i < slice.slice_segment_header_extension_length; ++i)
+				{
 					slice.slice_segment_header_extension_data_byte[i] = mReader->getBits(8);
+				}
 			}
 		}
 

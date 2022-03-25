@@ -66,7 +66,8 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	case VideoCodec::HEVC:
 		decParams.codec = cp::VideoCodec::HEVC;
 		mDPB.resize(16);
-		mParser.reset(new hevc::HevcParser());
+		// Pass true to exclude the ref pic list modification and weight table parts of a slice from being parsed as D3D12 video decoder parses them.
+		mParser.reset(new hevc::HevcParser(true));
 		break;
 	default:
 		TELEPORT_CERR << "VideoDecoder: Unsupported video codec type selected" << std::endl;
@@ -191,6 +192,9 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 	switch (payloadType)
 	{
 	case VideoPayloadType::VPS:
+		// VPS not used by DXVA params for D3D12 Video Decoder.
+		// TODO: Will Vulkan use the VPS?
+		return Result::OK;
 	case VideoPayloadType::PPS:
 	case VideoPayloadType::SPS:
 	case VideoPayloadType::ALE:
@@ -210,10 +214,6 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 
 	updatePicParams();
 
-
-	// Get video data after the slice header.
-	//const uint8_t* videoData = (uint8_t*)buffer + nalSize;
-
 	if (DEC_FAILED(mDecoder->Decode(mOutputTexture, buffer, bufferSizeInBytes - nalSize, &mPicParams, 1)))
 	{
 		TELEPORT_CERR << "VideoDecoder: Error occurred while trying to decode the frame.";
@@ -226,7 +226,7 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 Result VideoDecoder::display(bool showAlphaAsColor)
 {
 	cp::GraphicsDeviceContext& deviceContext = mRenderPlatform->GetImmediateContext();
-	// Same texture. Two SRVs for two layers. D3D12 Texture class handles this..
+	// Same texture. Two SRVs for two layers. D3D12 Texture class handles this.
 	mTextureConversionEffect->SetTexture(deviceContext, "yTexture", mOutputTexture);
 	mTextureConversionEffect->SetTexture(deviceContext, "uvTexture", mOutputTexture);
 	mTextureConversionEffect->SetTexture(deviceContext, "rgbTexture", mSurfaceTexture);
@@ -273,7 +273,8 @@ void VideoDecoder::updatePicParamsH264()
 
 void VideoDecoder::updatePicParamsHEVC()
 {
-	const hevc::VPS* vps = (hevc::VPS*)mParser->getVPS();
+	// Commenting out as not used by DXVA.
+	//const hevc::VPS* vps = (hevc::VPS*)mParser->getVPS();
 	const hevc::SPS* sps = (hevc::SPS*)mParser->getSPS();
 	const hevc::PPS* pps = (hevc::PPS*)mParser->getPPS();
 	const hevc::Slice* slice = (hevc::Slice*)mParser->getVPS();
@@ -305,6 +306,10 @@ void VideoDecoder::updatePicParamsHEVC()
 		{
 			resetFrames();
 		}
+		else
+		{
+			markFramesUnusedForReference();
+		}
 	}
 
 
@@ -314,7 +319,6 @@ void VideoDecoder::updatePicParamsHEVC()
 	frame.refRpsIdx = extraData->refRpsIdx;
 	frame.sliceType = slice->slice_type;
 	frame.poc = extraData->poc;
-	frame.inUse = true;
 
 
 #if TELEPORT_CLIENT_USE_D3D12
@@ -432,18 +436,54 @@ void VideoDecoder::updatePicParamsHEVC()
 
 	pp->CurrPicOrderCntVal = frame.poc;
 
+	int picSetIndex = 0;
+	uint32_t prevPocDiff = 0;
+	for (int i = 0; i < strps->num_negative_pics; ++i)
+	{
+		uint32_t pocDiff = prevPocDiff + strps->delta_poc_s0_minus1[i] + 1;
+		uint32_t poc = frame.poc - pocDiff;
+		if (strps->used_by_curr_pic_s0_flag[i] && mPocPicMap.find(poc) != mPocPicMap.end())
+		{	
+			mDPB[mPocPicMap[poc]].usedForShortTermRef = true;
+			pp->RefPicSetStCurrBefore[picSetIndex++] = mPocPicMap[poc];
+		}	
+		prevPocDiff = pocDiff;
+	}
+
+	for (; picSetIndex < 8; ++picSetIndex)
+	{
+		pp->RefPicSetStCurrBefore[picSetIndex] = 0xff;
+	}
+
+	picSetIndex = 0;
+	prevPocDiff = 0;
+	for (int i = 0; i < strps->num_positive_pics; ++i)
+	{
+		uint32_t pocDiff = prevPocDiff + strps->delta_poc_s1_minus1[i] + 1;
+		uint32_t poc = frame.poc + pocDiff;
+		if (strps->used_by_curr_pic_s1_flag[i] && mPocPicMap.find(poc) != mPocPicMap.end())
+		{
+			mDPB[mPocPicMap[poc]].usedForLongTermRef = true;
+			pp->RefPicSetStCurrAfter[picSetIndex++] = mPocPicMap[poc];
+		}
+		prevPocDiff = pocDiff;
+	}
+
+	for (; picSetIndex < 8; ++picSetIndex)
+	{
+		pp->RefPicSetStCurrAfter[picSetIndex] = 0xff;
+	}
+
 	for (uint32_t i = 0, j = 0; i < mDPB.size(); ++i)
 	{
 		if (i == mCurrentFrame)
 		{
 			continue;
 		}
-
-		bool longRef = true;
-		if (mDPB[i].inUse && (longRef || strps->used_by_curr_pic_flag[mDPB[i].refRpsIdx]))
+		if (mDPB[i].usedForShortTermRef || mDPB[i].usedForLongTermRef)
 		{
 			pp->RefPicList[j].Index7Bits = mCurrentFrame;
-			pp->RefPicList[j].AssociatedFlag = longRef;
+			pp->RefPicList[j].AssociatedFlag = mDPB[i].usedForLongTermRef;
 			pp->PicOrderCntValList[j] = frame.poc;
 		}
 		else
@@ -454,6 +494,8 @@ void VideoDecoder::updatePicParamsHEVC()
 
 		++j;
 	}
+
+	mPocPicMap[frame.poc] = mCurrentFrame;
 
 #endif
 }
@@ -466,6 +508,14 @@ void VideoDecoder::resetFrames()
 		frame.reset();
 	}
 	mCurrentFrame = 0;
+}
+
+void VideoDecoder::markFramesUnusedForReference()
+{
+	for (auto& frame : mDPB)
+	{
+		frame.markUnusedForReference();
+	}
 }
 
 void VideoDecoder::recompileShaders()

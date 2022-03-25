@@ -34,7 +34,8 @@ class VideoDecoder final : public avs::DecoderBackendInterface
 		uint32_t stRpsIdx;
 		uint32_t refRpsIdx;
 		avparser::hevc::SliceType sliceType;
-		bool inUse;
+		bool usedForShortTermRef;
+		bool usedForLongTermRef;
 
 		FrameCache()
 		{
@@ -47,7 +48,13 @@ class VideoDecoder final : public avs::DecoderBackendInterface
 			stRpsIdx = 0;
 			refRpsIdx = 0;
 			sliceType = avparser::hevc::SliceType::None;
-			inUse = false;
+			markUnusedForReference();
+		}
+
+		void markUnusedForReference()
+		{
+			usedForShortTermRef = false;
+			usedForLongTermRef = false;
 		}
 	};
 
@@ -74,6 +81,7 @@ private:
 	void updatePicParamsHEVC();
 	
 	void resetFrames();
+	void markFramesUnusedForReference();
 
 	avs::DeviceType mDeviceType = avs::DeviceType::Invalid;
 

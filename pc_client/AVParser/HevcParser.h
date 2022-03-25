@@ -30,6 +30,8 @@ namespace avparser
         class HevcParser : public Parser
         {
         public:
+            HevcParser(bool shortSliceParse = false);
+
             size_t parseNALUnit(const uint8_t* data, size_t size) override;
 
             void* getVPS() const override
@@ -100,6 +102,9 @@ namespace avparser
             ExtraData mExtraData;
 
             std::unique_ptr<BitReader> mReader;
+
+            // True if slice parsing should exclude the modification list and weight table. 
+            bool mShortSliceParse;
         };
     }
 }

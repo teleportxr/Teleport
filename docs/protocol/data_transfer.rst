@@ -45,6 +45,7 @@ EFP header types 1, 2 and 3 are currently only used but types 0 and 4 may be use
 For a detailed breakdown and explanation about the different kinds of **ElasticFrameType** headers, see here: https://edgeware-my.sharepoint.com/:p:/g/personal/anders_cedronius_edgeware_tv/ERnSit7j6udBsZOqkQcMLrQBpKmnfdApG3lehRk4zE-qgQ?rtime=swkDU08M2kg
 
 **ElasticFrameType1**
+
 +-----------------------+-------------------+---------------------------+
 |          bytes        |        type       |    description            |
 |                       |                   |                           |
@@ -61,6 +62,7 @@ For a detailed breakdown and explanation about the different kinds of **ElasticF
 +-----------------------+-------------------+---------------------------+
 
 **ElasticFrameType2**
+
 +-----------------------+-------------------+---------------------------+
 |          bytes        |        type       |    description            |
 |                       |                   |                           |
@@ -87,6 +89,7 @@ For a detailed breakdown and explanation about the different kinds of **ElasticF
 +-----------------------+-------------------+---------------------------+
 
 **ElasticFrameType3**
+
 +-----------------------+-------------------+---------------------------+
 |          bytes        |        type       |    description            |
 |                       |                   |                           |
@@ -120,6 +123,7 @@ The **EFP Sender** on the server maintains this value.
 
 
 **SuperFrame**
+
 +-----------------------+-------------------+---------------------------------------------+
 |          bytes        |        type       |                  description                |  
 |                       |                   |                                             |
@@ -146,7 +150,8 @@ The **EFP Sender** on the server maintains this value.
 +-----------------------+-------------------+---------------------------------------------+
 
 
-The network packet structure.
+The network packet structure is of the form:
+
 +-----------------------+
 |    Network Packet     |  
 |                       |
@@ -162,11 +167,9 @@ The network packet structure.
 
 
 
-Sending Data from the Server
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Initialization
-^^^^^^^^^^^^^^
+Initialization of EFP on the Server
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 On the start of a **client-server session**, the server initializes SRT and starts listening for messages on a user specified socket.
 An instance of an **ElasticFrameProtocolSender** class is created and the Maximum Transmission Unit (MTU) is passed to the constructor
 This is 1450 for UDP which is the protocol SRT is built on.
@@ -178,8 +181,8 @@ Any network transfer protocol can be used in the callback to send the data but T
 
 
 
-Data Transfer Process
-^^^^^^^^^^^^^^^^^^^^^
+Sending Data from the Server
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 On each frame or application update, the server will poll SRT to check the status of the connection for each client.
 If the server and client are connected, the server will do the following to transfer data to the client for each stream:
 
@@ -192,12 +195,8 @@ If the server and client are connected, the server will do the following to tran
 7. This function will add the SRT and UDP headers to the network packet and send the packet to the client.
 
 
-
-Receiving Data on the Client
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Initialization
-^^^^^^^^^^^^^^
+Initialization of EFP on the Client
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 On receiving the **SetupCommand**, the client will initialize SRT and create and configure an SRT socket for receiving network packets from the server.
 Subsequently, the client will create an instance of an **ElasticFrameProtocolReceiver** or **EFP Receiver** and this will remain in use until the end of the 
 **server-client-session**. A **SuperFrame** timeout and **EFPReceiverMode** are passed to the **EFP Receiver** constructor.
@@ -212,8 +211,8 @@ This function will receive a completed **SuperFrame** containing the server's pa
 
 
 
-Data Receiving Process
-^^^^^^^^^^^^^^^^^^^^^^
+Receiving Data on the Client
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 On each frame or application update, the client will use **srt_connect** to try make a connection to the server using the server ip and **server streaming port**
 provided in the **Setup Command**. If a connection has been attempted, the client will poll SRT to check the status of the connection.
 If the server and client are connected, the client will do the following to process incoming packets from the server:
@@ -226,7 +225,7 @@ If the server and client are connected, the client will do the following to proc
    This function also requires a parameter for the **MTU** and the **EFP Receiver** index which can be set to 0.
 3. EFP will process each packet to assemble a **SuperFrame** and pass each completed **SuperFrame** to the **readCallback**.
 4. The callback creates a **Payload Info** structure from the mPTS, pFrameSize, pFrameData (payload) and mBroken members of the **SuperFrame**. 
-5. The payload's stream is identified by the mStreamID member of the **SuperFrame** and the **Payload Info** structure is written to a designated queue for the stream.
+5. The payload's stream is identified by the mStreamID member of the **SuperFrame** and the **Payload Info** structure is written to a designated thread-safe queue for the stream.
 6. The main thread will read the **Payload Info** structure from the queue. If the value of mBroken is true, the application may request a new payload.
    If the data is not corrupted, the payload will be passed to the corresponding decoder for the stream.
    .
