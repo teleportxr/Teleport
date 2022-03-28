@@ -102,7 +102,7 @@ private:
 	simul::crossplatform::Effect* mTextureConversionEffect;
 
 	std::vector<FrameCache> mDPB;
-	std::unordered_map<uint32_t, uint32_t> mPocPicMap;
+	std::unordered_map<uint32_t, uint32_t> mPocFrameIndexMap;
 
 	uint32_t mCurrentFrame;
 };

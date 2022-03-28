@@ -589,6 +589,7 @@ namespace avparser
 
 			if (rps.inter_ref_pic_set_prediction_flag)
 			{
+				// Only set if this ref pic set belongs to a slice.
 				if (stRpsIdx == num_short_term_ref_pic_sets)
 				{
 					rps.delta_idx_minus1 = mReader->getGolombU();
@@ -617,6 +618,13 @@ namespace avparser
 				}*/
 
 				uint32_t refRPSNumDelataPocs = refPicSets[refRpsIdx].num_negative_pics + refPicSets[refRpsIdx].num_positive_pics;
+				
+				// Only set if this ref pic set belongs to a slice.
+				if (stRpsIdx == num_short_term_ref_pic_sets)
+				{
+					mExtraData.numDeltaPocsOfRefRpsIdx = refRPSNumDelataPocs;
+				}
+
 				uint32_t numDeltaPocs = refRPSNumDelataPocs + 1;
 
 				rps.used_by_curr_pic_flag.resize(numDeltaPocs);
@@ -995,11 +1003,13 @@ namespace avparser
 					}
 
 					slice.slice_pic_order_cnt_lsb = mReader->getBits(mSPS.log2_max_pic_order_cnt_lsb_minus4 + 4);
-					mExtraData.poc = computeHevcPoc(mSPS, mExtraData.prevPocTid0, slice.slice_pic_order_cnt_lsb, (uint32_t)slice.header.type);
+					mExtraData.poc = computePoc(mSPS, mExtraData.prevPocTid0, slice.slice_pic_order_cnt_lsb, (uint32_t)slice.header.type);
 
 					slice.short_term_ref_pic_set_sps_flag = mReader->getBits(1);
 
 					size_t remainingBits = mReader->getBitsRemaining();
+
+					mExtraData.numDeltaPocsOfRefRpsIdx = 0;
 
 					if (!slice.short_term_ref_pic_set_sps_flag)
 					{
@@ -1040,11 +1050,15 @@ namespace avparser
 
 						size_t num_long_term = slice.num_long_term_sps + slice.num_long_term_pics;
 
-						slice.lt_idx_sps.resize(num_long_term);
+						slice.lt_idx_sps.resize(num_long_term, 0);
 						slice.poc_lsb_lt.resize(num_long_term);
 						slice.used_by_curr_pic_lt_flag.resize(num_long_term);
 						slice.delta_poc_msb_present_flag.resize(num_long_term);
 						slice.delta_poc_msb_cycle_lt.resize(num_long_term);
+
+						mExtraData.longTermRefPicPocs.resize(num_long_term, 0);
+
+						uint32_t prevPocMsb = 0;
 
 						for (size_t i = 0; i < num_long_term; ++i)
 						{
@@ -1052,8 +1066,10 @@ namespace avparser
 							{
 								if (mSPS.num_long_term_ref_pics_sps > 1)
 								{
-									uint32_t ltIdxSpsSize = log2(mSPS.num_long_term_ref_pics_sps);
-									slice.lt_idx_sps[i] = mReader->getBits(ltIdxSpsSize);
+									uint32_t size = log2(mSPS.num_long_term_ref_pics_sps);
+									slice.lt_idx_sps[i] = mReader->getBits(size);
+									slice.poc_lsb_lt[i] = mSPS.lt_ref_pic_poc_lsb_sps[slice.lt_idx_sps[i]];
+									slice.used_by_curr_pic_lt_flag[i] = mSPS.used_by_curr_pic_lt_sps_flag[slice.lt_idx_sps[i]];
 								}
 							}
 							else
@@ -1067,13 +1083,30 @@ namespace avparser
 							{
 								slice.delta_poc_msb_cycle_lt[i] = mReader->getGolombU();
 							}
+							else
+							{
+								slice.delta_poc_msb_cycle_lt[i] = 0;
+							}
 
+							uint32_t pocMsb;
+							if (i == 0 || i == slice.num_long_term_sps)
+							{
+								pocMsb = slice.delta_poc_msb_cycle_lt[i];
+							}
+							else 
+							{
+								pocMsb = slice.delta_poc_msb_cycle_lt[i] + prevPocMsb;
+							}
+
+							prevPocMsb = pocMsb;
+							
+							mExtraData.longTermRefPicPocs[i] = (pocMsb << (mSPS.log2_max_pic_order_cnt_lsb_minus4 + 4)) + slice.poc_lsb_lt[i];
 						}
 					}
 
 					if (mSPS.sps_temporal_mvp_enabled_flag)
 					{
-						slice.slice_temporal_mvp_enabled_flag = mReader->getBits(1);
+						slice.slice_temporal_mvp_enabled_flag = mReader->getBits(1); 
 					}
 				}
 
@@ -1465,14 +1498,22 @@ namespace avparser
 			return numPocTotal;
 		}
 
-		uint32_t HevcParser::computeHevcPoc(const SPS& sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType)
+		uint32_t HevcParser::computePoc(const SPS& sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType)
 		{
 			uint32_t maxPocLsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
 			uint32_t prevPocLsb = prevPocTid0 % maxPocLsb;
 			uint32_t prevPocMsb = prevPocTid0 - prevPocLsb;
 			uint32_t pocMsb;
 
-			if (pocLsb < prevPocLsb && prevPocLsb - pocLsb >= maxPocLsb / 2)
+
+			// POC msb must be set to 0 for BLA picture types.
+			if ((hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_W_LP ||
+				(hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_W_RADL ||
+				(hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_N_LP)
+			{
+				pocMsb = 0;
+			}
+			else if (pocLsb < prevPocLsb && prevPocLsb - pocLsb >= maxPocLsb / 2)
 			{
 				pocMsb = prevPocMsb + maxPocLsb;
 			}
@@ -1483,14 +1524,6 @@ namespace avparser
 			else
 			{
 				pocMsb = prevPocMsb;
-			}
-
-			// POC msb must be set to 0 for BLA picture types.
-			if ((hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_W_LP ||
-				(hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_W_RADL ||
-				(hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_N_LP)
-			{
-				pocMsb = 0;
 			}
 
 			return pocMsb + pocLsb;

@@ -51,7 +51,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	}
 
 	mDPB.clear();
-	mPocPicMap.clear();
+	mPocFrameIndexMap.clear();
 	
 	cp::VideoDecoderParams decParams;
 
@@ -357,8 +357,7 @@ void VideoDecoder::updatePicParamsHEVC()
 
 	if (slice->short_term_ref_pic_set_sps_flag == 0)
 	{
-		// Uncertain
-		pp->ucNumDeltaPocsOfRefRpsIdx = slice->short_term_ref_pic_set.use_delta_flag.size();
+		pp->ucNumDeltaPocsOfRefRpsIdx = extraData->numDeltaPocsOfRefRpsIdx;;
 		pp->wNumBitsForShortTermRPSInSlice = extraData->short_term_ref_pic_set_size;
 	}
 	else
@@ -436,16 +435,22 @@ void VideoDecoder::updatePicParamsHEVC()
 
 	pp->CurrPicOrderCntVal = frame.poc;
 
+	// Fill short term lists.
 	int picSetIndex = 0;
 	uint32_t prevPocDiff = 0;
 	for (int i = 0; i < strps->num_negative_pics; ++i)
 	{
 		uint32_t pocDiff = prevPocDiff + strps->delta_poc_s0_minus1[i] + 1;
 		uint32_t poc = frame.poc - pocDiff;
-		if (strps->used_by_curr_pic_s0_flag[i] && mPocPicMap.find(poc) != mPocPicMap.end())
+		if (strps->used_by_curr_pic_s0_flag[i] && mPocFrameIndexMap.find(poc) != mPocFrameIndexMap.end())
 		{	
-			mDPB[mPocPicMap[poc]].usedForShortTermRef = true;
-			pp->RefPicSetStCurrBefore[picSetIndex++] = mPocPicMap[poc];
+			mDPB[mPocFrameIndexMap[poc]].usedForShortTermRef = true;
+			uint32_t refListindex = mPocFrameIndexMap[poc];
+			if (refListindex > mCurrentFrame)
+			{
+				refListindex--;
+			}
+			pp->RefPicSetStCurrBefore[picSetIndex++] = refListindex;
 		}	
 		prevPocDiff = pocDiff;
 	}
@@ -461,10 +466,15 @@ void VideoDecoder::updatePicParamsHEVC()
 	{
 		uint32_t pocDiff = prevPocDiff + strps->delta_poc_s1_minus1[i] + 1;
 		uint32_t poc = frame.poc + pocDiff;
-		if (strps->used_by_curr_pic_s1_flag[i] && mPocPicMap.find(poc) != mPocPicMap.end())
+		if (strps->used_by_curr_pic_s1_flag[i] && mPocFrameIndexMap.find(poc) != mPocFrameIndexMap.end())
 		{
-			mDPB[mPocPicMap[poc]].usedForLongTermRef = true;
-			pp->RefPicSetStCurrAfter[picSetIndex++] = mPocPicMap[poc];
+			mDPB[mPocFrameIndexMap[poc]].usedForShortTermRef = true;
+			uint32_t refListindex = mPocFrameIndexMap[poc];
+			if (refListindex > mCurrentFrame)
+			{
+				refListindex--;
+			}
+			pp->RefPicSetStCurrAfter[picSetIndex++] = refListindex;
 		}
 		prevPocDiff = pocDiff;
 	}
@@ -473,6 +483,32 @@ void VideoDecoder::updatePicParamsHEVC()
 	{
 		pp->RefPicSetStCurrAfter[picSetIndex] = 0xff;
 	}
+
+	// Check if long term reference frames are enabled. This is an option that can be enabled in the video encoder on the server.
+	if (sps->long_term_ref_pics_present_flag)
+	{
+		// fill long term lists.
+		picSetIndex = 0;
+		for (int i = 0; i < slice->used_by_curr_pic_lt_flag.size(); ++i)
+		{
+			if (slice->used_by_curr_pic_lt_flag[i])
+			{
+				uint32_t poc = extraData->longTermRefPicPocs[i];
+				mDPB[mPocFrameIndexMap[poc]].usedForLongTermRef = true;
+				uint32_t refListindex = mPocFrameIndexMap[poc];
+				if (refListindex > mCurrentFrame)
+				{
+					refListindex--;
+				}
+				pp->RefPicSetLtCurr[picSetIndex++] = refListindex;
+			}
+		}
+		for (; picSetIndex < 8; ++picSetIndex)
+		{
+			pp->RefPicSetLtCurr[picSetIndex] = 0xff;
+		}
+	}
+	
 
 	for (uint32_t i = 0, j = 0; i < mDPB.size(); ++i)
 	{
@@ -495,14 +531,14 @@ void VideoDecoder::updatePicParamsHEVC()
 		++j;
 	}
 
-	mPocPicMap[frame.poc] = mCurrentFrame;
+	mPocFrameIndexMap[frame.poc] = mCurrentFrame;
 
 #endif
 }
 
 void VideoDecoder::resetFrames()
 {
-	mPocPicMap.clear();
+	mPocFrameIndexMap.clear();
 	for (auto& frame : mDPB)
 	{
 		frame.reset();
