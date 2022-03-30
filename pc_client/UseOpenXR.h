@@ -13,10 +13,34 @@ typedef enum XrResult;
 
 namespace teleport
 {
+	enum ActionId:uint16_t
+	{
+		INVALID=0,
+		SELECT,
+		SHOW_MENU,
+		A,
+		B,
+		X,
+		Y,
+		LEFT_TRIGGER,
+		LEFT_GRIP_POSE,
+		LEFT_AIM_POSE,
+		LEFT_STICK_X,
+		LEFT_STICK_Y,
+		LEFT_HAPTIC,
+		RIGHT_TRIGGER,
+		RIGHT_GRIP_POSE,
+		RIGHT_AIM_POSE,
+		RIGHT_STICK_X,
+		RIGHT_STICK_Y,
+		RIGHT_HAPTIC,
+		MAX_ACTIONS
+	};
 	class UseOpenXR
 	{
 	public:
 		bool Init(simul::crossplatform::RenderPlatform* renderPlatform, const char* app_name);
+		bool TryInitDevice();
 		void MakeActions();
 		void PollActions();
 		void RenderFrame(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::RenderDelegate &, vec3 origin_pos, vec4 origin_orientation);

@@ -263,7 +263,10 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	if (try_init_vr)
 	{
 		useOpenXR.Init(renderPlatform, "Teleport VR Client");
-		useOpenXR.MakeActions();
+		if(useOpenXR.TryInitDevice())
+		{
+			useOpenXR.MakeActions();
+		}
 	}
 	std::function<void()> showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
 	if (useOpenXR.HaveXRDevice())
