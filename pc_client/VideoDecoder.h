@@ -6,6 +6,7 @@
 #include <libavstream/decoders/dec_interface.hpp>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 #include "Platform/Crossplatform/BaseRenderer.h"
 #include "Platform/Crossplatform/VideoDecoder.h"
 #include "Platform/Crossplatform/RenderPlatform.h"
@@ -33,7 +34,8 @@ class VideoDecoder final : public avs::DecoderBackendInterface
 		uint32_t stRpsIdx;
 		uint32_t refRpsIdx;
 		avparser::hevc::SliceType sliceType;
-		bool inUse;
+		bool usedForShortTermRef;
+		bool usedForLongTermRef;
 
 		FrameCache()
 		{
@@ -46,7 +48,13 @@ class VideoDecoder final : public avs::DecoderBackendInterface
 			stRpsIdx = 0;
 			refRpsIdx = 0;
 			sliceType = avparser::hevc::SliceType::None;
-			inUse = false;
+			markUnusedForReference();
+		}
+
+		void markUnusedForReference()
+		{
+			usedForShortTermRef = false;
+			usedForLongTermRef = false;
 		}
 	};
 
@@ -71,8 +79,9 @@ private:
 	void updatePicParams();
 	void updatePicParamsH264();
 	void updatePicParamsHEVC();
-	static uint32_t computeHevcPoc(const avparser::hevc::SPS* sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType);
+	
 	void resetFrames();
+	void markFramesUnusedForReference();
 
 	avs::DeviceType mDeviceType = avs::DeviceType::Invalid;
 
@@ -93,8 +102,8 @@ private:
 	simul::crossplatform::Effect* mTextureConversionEffect;
 
 	std::vector<FrameCache> mDPB;
+	std::unordered_map<uint32_t, uint32_t> mPocFrameIndexMap;
 
 	uint32_t mCurrentFrame;
-	uint32_t mPrevPocTid0;
 };
 

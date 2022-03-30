@@ -285,7 +285,9 @@ namespace avs
 
 				// Settings for low latency
 				codecConfig.hevcConfig.enableIntraRefresh = 1;
+				// TODO: Determine why long term reference frames aren't working. Currently commenting out.
 				//codecConfig.hevcConfig.enableLTR = 1;
+				//codecConfig.hevcConfig.ltrTrustMode = 0;
 
 				// 10-bit and YUV-444 are not supported with alpha encoding
 				if (params.useAlphaLayerEncoding && m_EncodeCapabilities.isAlphaLayerSupported)
