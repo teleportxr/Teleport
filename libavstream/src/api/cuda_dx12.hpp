@@ -3,6 +3,8 @@
 
 #pragma once
 
+#if (LIBAV_USE_D3D12)
+
 #include "api/cuda.hpp"
 #include <wrl.h>
 #include <d3d12.h>
@@ -74,3 +76,4 @@ namespace avs::CUDA
 		CUmipmappedArray m_mipmapArray;
 	};
 } // avs::CUDA
+#endif

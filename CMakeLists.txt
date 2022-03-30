@@ -166,6 +166,12 @@ set(SA_BUILD_SHARED_LIB ${TELEPORT_SERVER})
 add_subdirectory(TeleportAudio)
 add_subdirectory(libavstream)
 
+if(TELEPORT_CLIENT_USE_D3D12)
+	target_compile_definitions(libavstream PRIVATE LIBAV_USE_D3D12=1)
+else()
+	target_compile_definitions(libavstream PRIVATE LIBAV_USE_D3D12=0)
+endif()
+
 add_subdirectory(thirdparty/enet)
 set_target_properties( enet PROPERTIES FOLDER thirdparty/enet)
 

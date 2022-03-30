@@ -12,10 +12,10 @@
 #include <libraryloader.hpp>
 
 #include <libavstream/encoders/enc_interface.hpp>
-#if defined(PLATFORM_WINDOWS)
+#if (LIBAV_USE_D3D12)
 #include <api/cuda_dx12.hpp>
 #else
-#include <ClientRender/cuda.hpp>
+#include <api/cuda.hpp>
 #endif
 
 #include <nvEncodeAPI.h>
@@ -81,7 +81,7 @@ namespace avs
 		DeviceHandle m_device = {};
 		void* m_encoder = nullptr;
 
-#if defined(PLATFORM_WINDOWS)
+#if (LIBAV_USE_D3D12)
 		CUDA::DX12Util m_dx12Util;
 #endif
 
