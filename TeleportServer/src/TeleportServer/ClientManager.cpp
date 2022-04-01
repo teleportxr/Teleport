@@ -203,7 +203,7 @@ namespace teleport
 			}
 
 			// Proceed only if the main thread hasn't hung.
-			if (elapsedTime < 0.20)
+			if (elapsedTime < 1.0)
 			{
 				std::lock_guard<std::mutex> lock(mNetworkMutex);
 				handleMessages();

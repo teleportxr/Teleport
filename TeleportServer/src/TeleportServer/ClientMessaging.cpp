@@ -90,8 +90,6 @@ namespace teleport
 
 		if (peer)
 		{
-			assert(host);
-
 			enet_peer_disconnect(peer, 0);
 			enet_peer_reset(peer);
 			/*ENetEvent event;
@@ -187,7 +185,7 @@ namespace teleport
 		size_t eventCount = eventQueue.size();
 		for(int i = 0; i < eventCount; ++i)
 		{
-			ENetEvent& event = eventQueue.front();
+			ENetEvent event = eventQueue.front();
 			switch (event.type)
 			{
 			case ENET_EVENT_TYPE_CONNECT:
@@ -229,6 +227,7 @@ namespace teleport
 		{
 			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting." << std::endl;
 			Disconnect();
+			return;
 		}
 
 		if (startingSession)
