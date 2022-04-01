@@ -205,7 +205,7 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 		return Result::DecoderBackend_InvalidPayload;
 	}
 
-	size_t nalSize = mParser->parseNALUnit((uint8_t*)buffer, bufferSizeInBytes);
+	size_t bytesParsed = mParser->parseNALUnit((uint8_t*)buffer, bufferSizeInBytes);
 
 	if (!lastPayload)
 	{
@@ -214,7 +214,7 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 
 	updatePicParams();
 
-	if (DEC_FAILED(mDecoder->Decode(mOutputTexture, buffer, bufferSizeInBytes - nalSize, &mPicParams, 1)))
+	if (DEC_FAILED(mDecoder->Decode(mOutputTexture, buffer, bufferSizeInBytes, &mPicParams, 1)))
 	{
 		TELEPORT_CERR << "VideoDecoder: Error occurred while trying to decode the frame.";
 		return Result::DecoderBackend_DecodeFailed;
@@ -483,33 +483,28 @@ void VideoDecoder::updatePicParamsHEVC()
 	{
 		pp->RefPicSetStCurrAfter[picSetIndex] = 0xff;
 	}
-
-	// Check if long term reference frames are enabled. This is an option that can be enabled in the video encoder on the server.
-	if (sps->long_term_ref_pics_present_flag)
+	
+	// Fill long term lists.
+	picSetIndex = 0;
+	for (int i = 0; i < slice->used_by_curr_pic_lt_flag.size(); ++i)
 	{
-		// fill long term lists.
-		picSetIndex = 0;
-		for (int i = 0; i < slice->used_by_curr_pic_lt_flag.size(); ++i)
+		if (slice->used_by_curr_pic_lt_flag[i])
 		{
-			if (slice->used_by_curr_pic_lt_flag[i])
+			uint32_t poc = extraData->longTermRefPicPocs[i];
+			mDPB[mPocFrameIndexMap[poc]].usedForLongTermRef = true;
+			uint32_t refListindex = mPocFrameIndexMap[poc];
+			if (refListindex > mCurrentFrame)
 			{
-				uint32_t poc = extraData->longTermRefPicPocs[i];
-				mDPB[mPocFrameIndexMap[poc]].usedForLongTermRef = true;
-				uint32_t refListindex = mPocFrameIndexMap[poc];
-				if (refListindex > mCurrentFrame)
-				{
-					refListindex--;
-				}
-				pp->RefPicSetLtCurr[picSetIndex++] = refListindex;
+				refListindex--;
 			}
-		}
-		for (; picSetIndex < 8; ++picSetIndex)
-		{
-			pp->RefPicSetLtCurr[picSetIndex] = 0xff;
+			pp->RefPicSetLtCurr[picSetIndex++] = refListindex;
 		}
 	}
+	for (; picSetIndex < 8; ++picSetIndex)
+	{
+		pp->RefPicSetLtCurr[picSetIndex] = 0xff;
+	}
 	
-
 	for (uint32_t i = 0, j = 0; i < mDPB.size(); ++i)
 	{
 		if (i == mCurrentFrame)
@@ -518,7 +513,7 @@ void VideoDecoder::updatePicParamsHEVC()
 		}
 		if (mDPB[i].usedForShortTermRef || mDPB[i].usedForLongTermRef)
 		{
-			pp->RefPicList[j].Index7Bits = mCurrentFrame;
+			pp->RefPicList[j].Index7Bits = i;
 			pp->RefPicList[j].AssociatedFlag = mDPB[i].usedForLongTermRef;
 			pp->PicOrderCntValList[j] = frame.poc;
 		}

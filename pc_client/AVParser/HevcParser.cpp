@@ -15,12 +15,16 @@ namespace avparser
 	namespace hevc
 	{
 		HevcParser::HevcParser(bool shortSliceParse)
-			: mShortSliceParse(shortSliceParse) {}
+			: mPrevPocTid0(0)
+			, mShortSliceParse(shortSliceParse)
+		{
+			mReader.reset(new BitReader());
+		}
 
 		
 		size_t HevcParser::parseNALUnit(const uint8_t* data, size_t size)
 		{
-			mReader.reset(new BitReader(data, size));
+			mReader->start(data, size);
 
 			NALHeader header;
 			parseNALUnitHeader(header);
@@ -71,14 +75,14 @@ namespace avparser
 				mLastSlice = Slice();
 				mLastSlice.header = header;
 				mExtraData = {};
-				parseSliceHeader(mLastSlice, mExtraData);
+				parseSliceHeader(mLastSlice);
 				break;
 			}
 			default:
 				return 0;
 			};
 
-			return mReader->getByteIndex();
+			return mReader->getBytesRead();
 		}
 
 
@@ -184,9 +188,13 @@ namespace avparser
 			sps.chroma_format_idc = mReader->getGolombU();
 
 			if (sps.chroma_format_idc == 3)
+			{
 				sps.separate_colour_plane_flag = mReader->getBits(1);
+			}
 			else
+			{
 				sps.separate_colour_plane_flag = 0;
+			}
 
 			sps.pic_width_in_luma_samples = mReader->getGolombU();
 			sps.pic_height_in_luma_samples = mReader->getGolombU();
@@ -209,9 +217,7 @@ namespace avparser
 			sps.sps_max_num_reorder_pics.resize(sps.sps_max_sub_layers_minus1 + 1, 0);
 			sps.sps_max_latency_increase_plus1.resize(sps.sps_max_sub_layers_minus1 + 1, 0);
 
-			for (size_t i = (sps.sps_sub_layer_ordering_info_present_flag ? 0 : sps.sps_max_sub_layers_minus1);
-				i <= sps.sps_max_sub_layers_minus1;
-				++i)
+			for (size_t i = (sps.sps_sub_layer_ordering_info_present_flag ? 0 : sps.sps_max_sub_layers_minus1); i <= sps.sps_max_sub_layers_minus1;++i)
 			{
 				sps.sps_max_dec_pic_buffering_minus1[i] = mReader->getGolombU();
 				sps.sps_max_num_reorder_pics[i] = mReader->getGolombU();
@@ -920,7 +926,7 @@ namespace avparser
 			return sc;
 		}
 
-		void HevcParser::parseSliceHeader(Slice& slice, ExtraData& extraData)
+		void HevcParser::parseSliceHeader(Slice& slice)
 		{
 			slice.first_slice_segment_in_pic_flag = mReader->getBits(1);
 
@@ -991,8 +997,7 @@ namespace avparser
 				bool idrPicFlag = slice.header.type == NALUnitType::IDR_W_RADL || slice.header.type == NALUnitType::IDR_N_LP;
 				if (idrPicFlag)
 				{
-					mExtraData.poc = 0;
-					mExtraData.prevPocTid0 = 0;
+					mPrevPocTid0 = 0;
 				}
 				else
 				{
@@ -1003,7 +1008,7 @@ namespace avparser
 					}
 
 					slice.slice_pic_order_cnt_lsb = mReader->getBits(mSPS.log2_max_pic_order_cnt_lsb_minus4 + 4);
-					mExtraData.poc = computePoc(mSPS, mExtraData.prevPocTid0, slice.slice_pic_order_cnt_lsb, (uint32_t)slice.header.type);
+					mExtraData.poc = computePoc(mSPS, mPrevPocTid0, slice.slice_pic_order_cnt_lsb, (uint32_t)slice.header.type);
 
 					slice.short_term_ref_pic_set_sps_flag = mReader->getBits(1);
 
@@ -1013,8 +1018,8 @@ namespace avparser
 
 					if (!slice.short_term_ref_pic_set_sps_flag)
 					{
-						slice.short_term_ref_pic_set = parseShortTermRefPicSet(mSPS.num_short_term_ref_pic_sets, mSPS.num_short_term_ref_pic_sets, mSPS.short_term_ref_pic_set, mSPS, extraData.refRpsIdx);
-						extraData.stRpsIdx = mSPS.num_short_term_ref_pic_sets;
+						slice.short_term_ref_pic_set = parseShortTermRefPicSet(mSPS.num_short_term_ref_pic_sets, mSPS.num_short_term_ref_pic_sets, mSPS.short_term_ref_pic_set, mSPS, mExtraData.refRpsIdx);
+						mExtraData.stRpsIdx = mSPS.num_short_term_ref_pic_sets;
 					}
 					else if (mSPS.num_short_term_ref_pic_sets > 1)
 					{
@@ -1032,12 +1037,13 @@ namespace avparser
 						{
 							slice.short_term_ref_pic_set_idx = 0;
 						}
-						extraData.stRpsIdx = slice.short_term_ref_pic_set_idx;
-						extraData.refRpsIdx = extraData.stRpsIdx;
+						mExtraData.stRpsIdx = slice.short_term_ref_pic_set_idx;
+						mExtraData.refRpsIdx = mExtraData.stRpsIdx;
 					}
 
-					extraData.short_term_ref_pic_set_size = remainingBits - mReader->getBitsRemaining();
+					mExtraData.short_term_ref_pic_set_size = remainingBits - mReader->getBitsRemaining();
 
+					// Long term reference frames may not be enabled. This is an option that can be enabled in the video encoder.
 					if (mSPS.long_term_ref_pics_present_flag)
 					{
 						slice.num_long_term_sps = 0;
@@ -1119,7 +1125,7 @@ namespace avparser
 					slice.header.type != NALUnitType::RADL_R &&
 					slice.header.type != NALUnitType::RASL_R)
 				{
-					mExtraData.prevPocTid0 = mExtraData.poc;
+					mPrevPocTid0 = mExtraData.poc;
 				}
 
 				if (mSPS.sample_adaptive_offset_enabled_flag)
