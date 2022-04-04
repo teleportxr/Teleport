@@ -99,7 +99,7 @@ namespace avs
 		if (bufferSize > data->m_maxBufferSize)
 		{
 			data->increaseBufferSize(bufferSize);
-			AVSLOG(Warning) << data->name.c_str() << " Queue::write: Buffer size "<<bufferSize<<" greater than max. Increasing max to "<<data->m_maxBufferSize<<".\n";
+			AVSLOG(Warning) << data->name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<data->m_maxBufferSize<<".\n";
 		}
 		
 		data->push(buffer, bufferSize);

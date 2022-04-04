@@ -85,8 +85,17 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	decParams.minHeight = frameHeight;
 	decParams.maxDecodePictureBufferCount = mDPB.size();
 
+
+	// The output texture is in native decode format.
+	// The surface texture will be written to in the display function.
+	mOutputTexture = mRenderPlatform->CreateTexture();
+	mOutputTexture->ensureTexture2DSizeAndFormat(mRenderPlatform, decParams.width, decParams.height, 1, simul::crossplatform::NV12, false, false, false);
+
 #if TELEPORT_CLIENT_USE_D3D12
 	mDecoder.reset(new simul::dx12::VideoDecoder());
+
+	// Change to common state for use with D3D12 video decode command list.
+	((simul::dx12::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 #endif
 
 	if (DEC_FAILED(mDecoder->Initialize(mRenderPlatform, decParams)))
@@ -94,10 +103,8 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 		return Result::DecoderBackend_InitFailed;
 	}
 
-	// The output texture is in native decode format.
-	// The surface texture will be written to in the display function.
-	mOutputTexture = mRenderPlatform->CreateTexture();
-	mOutputTexture->ensureTexture2DSizeAndFormat(mRenderPlatform, decParams.width, decParams.height, 1, simul::crossplatform::NV12, false, false, false);
+
+
 
 	mDeviceType = device.type;
 	mParams = params;
@@ -193,7 +200,7 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 	{
 	case VideoPayloadType::VPS:
 		// VPS not used by DXVA params for D3D12 Video Decoder.
-		// TODO: Will Vulkan use the VPS?
+		// TODO: Parse VPS if the picture parameters for the Vulkan decoder need it.
 		return Result::OK;
 	case VideoPayloadType::PPS:
 	case VideoPayloadType::SPS:
@@ -226,14 +233,22 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 Result VideoDecoder::display(bool showAlphaAsColor)
 {
 	cp::GraphicsDeviceContext& deviceContext = mRenderPlatform->GetImmediateContext();
+
+	// Change to generic read state for use with the compute shader.
+	((simul::dx12::Texture*)mOutputTexture)->SetLayout(deviceContext, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ);
+
 	// Same texture. Two SRVs for two layers. D3D12 Texture class handles this.
 	mTextureConversionEffect->SetTexture(deviceContext, "yTexture", mOutputTexture);
 	mTextureConversionEffect->SetTexture(deviceContext, "uvTexture", mOutputTexture);
-	mTextureConversionEffect->SetTexture(deviceContext, "rgbTexture", mSurfaceTexture);
-	mTextureConversionEffect->Apply(deviceContext, "NV12ToRGBA", 0);
+	mTextureConversionEffect->SetUnorderedAccessView(deviceContext, "rgbTexture", mSurfaceTexture);
+	mTextureConversionEffect->Apply(deviceContext, "nv12_to_rgba", 0);
 	mRenderPlatform->DispatchCompute(deviceContext, (mFrameWidth / 2) / 16, (mFrameHeight / 2) / 16, 1);
 	mTextureConversionEffect->Unapply(deviceContext);
+	mTextureConversionEffect->SetUnorderedAccessView(deviceContext, "rgbTexture", nullptr);
 	mTextureConversionEffect->UnbindTextures(deviceContext);
+
+	// Change back to common state for use with D3D12 video decode command list.
+	((simul::dx12::Texture*)mOutputTexture)->SetLayout(deviceContext, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 
 	return Result::OK;
 }

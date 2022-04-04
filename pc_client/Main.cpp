@@ -214,7 +214,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
 	displaySurfaceManager.Initialize(renderPlatform);
-	// Pass "true" to deviceManager to use API debugging:
+	// Pass "true" for first argument to deviceManager to use API debugging:
 	gdi->Initialize(false, false,false);
 	std::string src_dir = STRINGIFY(CMAKE_SOURCE_DIR);
 	std::string build_dir = STRINGIFY(CMAKE_BINARY_DIR);
@@ -272,10 +272,6 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	clientRenderer->Init(renderPlatform);
 	if(server_ips.size())
 		clientRenderer->SetServer(server_ips[0].c_str());
-
-#if TELEPORT_CLIENT_USE_D3D12
-	//((simul::dx12::DeviceManager*)gdi)->FlushImmediateCommandList();
-#endif
 
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(hWnd,clientRenderer,-1);

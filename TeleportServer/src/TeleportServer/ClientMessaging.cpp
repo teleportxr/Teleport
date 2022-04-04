@@ -90,12 +90,12 @@ namespace teleport
 
 		if (peer)
 		{
-			enet_peer_disconnect(peer, 0);
-			enet_peer_reset(peer);
-			/*ENetEvent event;
+			/*enet_peer_disconnect(peer, 0);
+
 			bool bIsPeerConnected = true;
-			while (bIsPeerConnected && enet_host_service(host, &event, 5) > 0)
+			while (bIsPeerConnected && !eventQueue.empty())
 			{
+				ENetEvent& event = eventQueue.front();
 				switch (event.type)
 				{
 				case ENET_EVENT_TYPE_RECEIVE:
@@ -105,11 +105,13 @@ namespace teleport
 					bIsPeerConnected = false;
 					break;
 				}
+				eventQueue.pop();
 			}
 			if (bIsPeerConnected)
 			{
 				enet_peer_reset(peer);
 			}*/
+			enet_peer_reset(peer);
 			peer = nullptr;
 		}
 
@@ -218,7 +220,8 @@ namespace teleport
 				}
 				break;
 			}
-			enet_packet_destroy(event.packet);
+			if (event.packet)
+				enet_packet_destroy(event.packet);
 			eventQueue.pop();
 		}
 

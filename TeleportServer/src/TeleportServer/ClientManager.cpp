@@ -79,6 +79,8 @@ namespace teleport
 		mClients.clear();
 
 		mInitialized = false;
+
+		return true;
 	}
 
 	void ClientManager::tick(float deltaTime)
@@ -229,6 +231,7 @@ namespace teleport
 						if (client->clientIP == std::string(peerIP))
 						{
 							client->eventQueue.push(event);
+							break;
 						}
 					}
 				}

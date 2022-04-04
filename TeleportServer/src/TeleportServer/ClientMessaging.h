@@ -133,6 +133,7 @@ namespace teleport
 		void ConfirmSessionStarted();
 
 	private:
+		friend class ClientManager;
 		void dispatchEvent(const ENetEvent& event);
 		void receiveHandshake(const ENetPacket* packet);
 		void receiveInput(const ENetPacket* packet);
@@ -142,7 +143,6 @@ namespace teleport
 		void receiveKeyframeRequest(const ENetPacket* packet);
 		void receiveClientMessage(const ENetPacket* packet);
 
-		friend class ClientManager;
 		avs::ThreadSafeQueue<ENetEvent> eventQueue;
 		avs::Handshake handshake;
 		static bool asyncNetworkDataProcessingFailed;
