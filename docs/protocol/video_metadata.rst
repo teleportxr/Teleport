@@ -127,9 +127,11 @@ Processing Metadata on the Client
 The client should receive the payload of metadata before the related video frame.
 The metadata should be cached by the client's application for use when the video frame is received.
 The client should maintain a cache of 32 metadata structures that are overwritten every 32 frames.
-This ensures delays between receiving of the video frame and metadata don't cause metadata to be discarded before use.
+This ensures delays between receiving the video frame and metadata don't cause metadata to be discarded before use.
 Metadata needed to render the content of the video frame should be uploaded to the GPU for shader accessibility. 
 This includes the **Tag ID**, **cameraTransform**, **diffuseAmbientScale** and **lights**.
-The **Tag ID* must used by the shader to use the correct the metadata for a video frame.
-The position and rotation of the camera will be needed for the reprojection algorithm used to render the **cubemap** contained in video frame correctly.
+The **Tag ID** must be used by the shader to use the correct the metadata for a video frame.
+The rotation of the client's camera should be used to determine what pixels of the cubemap are visible to the client.
+The offset between the client's camera position and the position in the **cameraTransform** of the metadata must be used to perform reprojection on the visible pixels of the cubemap.
+This accounts for any camera movemment that occurred on the client since the video frame was rendered on the server. 
 The **diffuseAmbientScale** and **lights** should be used by the client application's renderer to render local geometry.
