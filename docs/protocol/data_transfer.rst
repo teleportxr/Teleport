@@ -1,4 +1,4 @@
-.. _data-transfer-reference:
+.. _data_transfer:
 
 #############
 Data Transfer

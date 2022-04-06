@@ -1,4 +1,4 @@
-.. _video-metadata-reference:
+.. _video_metadata:
 
 ##############
 Video Metadata
@@ -15,7 +15,7 @@ Teleport requires that the metadata contain a header consisting of useful inform
 The remaining content of the metadata may vary depending on the needs of the application.
 The header consists of a **timestamp** in milliseconds intended to inform the client of when the metadata was created by the server application.
 The metadata header must also have a **Tag ID** which is an unsigned integer in the range of 0 - 31 that uniquely identifies the video frame the metadata belongs to.
-A **Tag ID* is written as 5 bits to the **video texture** by the server and this should be used by the client to match the video frame with its associated metadata.
+A **Tag ID** is written as 5 bits to the **video texture** by the server and this should be used by the client to match the video frame with its associated metadata.
 
 
 The metadata is of the form:
@@ -113,12 +113,12 @@ Each instance of metadata should be sent by the server as an individual **payloa
 Every video frame payload needs to have one matching payload of metadata.
 The metadata must be received on the client before the associated video frame as it will be needed to render the contents of the video frame correctly.
 For each video frame, the server must write the same **Tag ID** to the video frame and associated metadata.
-The current time should be written to the unix timestamp of the metadata on its creation.
-The camera position and rotation at the time the **cubemap** was rendered on the server should be added to the **cameraTransform** member of the metadata.
-For more details on the structure of the **cubemap**, see :ref:`_video_reference`.
+The current time should be written to the unix timestamp member of the metadata on its creation.
+The game or application camera position and rotation at the time of rendering should be added to the **cameraTransform** member of the metadata.
+For more details on the structure of the **cubemap**, see :ref:`video`.
 The diffuse to ambient scale in the scene of the server applicatiion's renderer should also be added to the metadata.
 For each light in the scene, an instance of **avs::LightTagData** should be created and populated with the light's properties.
-Each payload of metadata should be sent to the client using the protocols and processes described in :ref:`_data_transfer_reference`.
+Each payload of metadata should be sent to the client using the protocols and processes described in :ref:`data_transfer`.
 
 
 
@@ -126,8 +126,10 @@ Processing Metadata on the Client
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The client should receive the payload of metadata before the related video frame.
 The metadata should be cached by the client's application for use when the video frame is received.
+The client should maintain a cache of 32 metadata structures that are overwritten every 32 frames.
+This ensures delays between receiving of the video frame and metadata don't cause metadata to be discarded before use.
 Metadata needed to render the content of the video frame should be uploaded to the GPU for shader accessibility. 
-This includes the **Tag ID*, **cameraTransform**, **diffuseAmbientScale** and **lights**.
+This includes the **Tag ID**, **cameraTransform**, **diffuseAmbientScale** and **lights**.
 The **Tag ID* must used by the shader to use the correct the metadata for a video frame.
 The position and rotation of the camera will be needed for the reprojection algorithm used to render the **cubemap** contained in video frame correctly.
 The **diffuseAmbientScale** and **lights** should be used by the client application's renderer to render local geometry.

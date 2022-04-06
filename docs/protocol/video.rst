@@ -1,4 +1,4 @@
-.. _video-reference:
+.. _video:
 
 #####
 Video
@@ -27,7 +27,7 @@ The resolution of the video texture is configurable but must be communicated to 
 A resolution of 1536x1536 pixels is recommended for the video texture with 512x512 for each face of the color cubemap and 256x256 for each face of the depth cubemap. 
 
 A **Tag ID** should also be included in the video texture. This links the video frame with the associated video metadata.
-The metadata is sent in a separate stream. See :ref:`video-metadata-reference`.
+The metadata is sent in a separate stream. See :ref:`video_metadata`.
 The **Tag ID** should be encoded as a sequence of 5 bits at the bottom right of the video texture. 
 This allows 32 different IDs or a maximum delay of 31 frames between the transmission of the metadata and video texture before a **Tag ID** is reused. 
 
@@ -71,7 +71,7 @@ The structure of the output depends on the video codec used. The server and clie
 The server must tell the client what codec is being used in the **VideoConfig** structure of the **SetupCommand**. 
 For HEVC/H264, the output is made up of multiple **NAL-units** such as **picture parameters** (VPS, SPS, PPS etc.) and **video coding layers** (**VCL**) containing the compressed data of the video texture.
 Each frame has at least one **VCL** and may have **picture parameters** if the frame is an IDR frame or the video encoder is configured to send the **picture parameters** with every frame.
-The video data should be transferred in accordance with the section of the protocol outlined in :ref:`data_transfer_reference`.
+The video data should be transferred in accordance with the section of the protocol outlined in :ref:`data_transfer`.
 
 
 Recovering from Corruption
@@ -92,7 +92,7 @@ The client needs to compare this count with the **stream-payload-id** set by the
 If there is a mismatch between both values and the current video frame is not an **IDR frame** or the video frame has been corrupted during the transfer, the client must send a HTTP message to the server requesting am **IDR frame**. 
 On receiving the HTTP message, the server must tell the video encoder to force an **IDR** for the next frame.
 This allows the video stream to recover.
-To understand how the **stream-payload-id** is managed and how the client determines if a payload is corrupted, see :ref:`_data_transfer_reference`.
+To understand how the **stream-payload-id** is managed and how the client determines if a payload is corrupted, see :ref:`data_transfer`.
 
 
 Minimizing Latency
