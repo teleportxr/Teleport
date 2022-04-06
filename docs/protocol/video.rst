@@ -1,3 +1,5 @@
+.. _video-reference:
+
 #####
 Video
 #####
@@ -41,7 +43,8 @@ A webcam image may also be sent to the clien. The dimensions of the webcam image
 The width, height and offset can be communicated to the client in the **VideoConfig** structure of the **SetupCommand**.
 
 The video texture should be in the following form:
-+----------------------------------------------------------------------+
+
++==========================+===================+=======================+
 |                       |                       |                      |
 |      Front Face       |      Back Face        |      Right Face      |
 |                       |                       |                      |
@@ -65,7 +68,7 @@ The video texture must therefore be converted to the the **YUV 4:2:0** format fo
 The server must send the video encoder output to the client each frame.
 The raw unmodified output must be sent as one large chunk or **payload** to the client.
 The structure of the output depends on the video codec used. The server and client must use the same video codec and a software or hardware video encoder and decoder that supports it.
-The server must tell the client what codec is being used in the **handshake**. 
+The server must tell the client what codec is being used in the **VideoConfig** structure of the **SetupCommand**. 
 For HEVC/H264, the output is made up of multiple **NAL-units** such as **picture parameters** (VPS, SPS, PPS etc.) and **video coding layers** (**VCL**) containing the compressed data of the video texture.
 Each frame has at least one **VCL** and may have **picture parameters** if the frame is an IDR frame or the video encoder is configured to send the **picture parameters** with every frame.
 The video data should be transferred in accordance with the section of the protocol outlined in :ref:`data_transfer_reference`.
@@ -89,7 +92,7 @@ The client needs to compare this count with the **stream-payload-id** set by the
 If there is a mismatch between both values and the current video frame is not an **IDR frame** or the video frame has been corrupted during the transfer, the client must send a HTTP message to the server requesting am **IDR frame**. 
 On receiving the HTTP message, the server must tell the video encoder to force an **IDR** for the next frame.
 This allows the video stream to recover.
-To understand how the **stream-payload-id** is managed and how the client determines if a payload is corrupted, see :ref:`data_transfer_reference`.
+To understand how the **stream-payload-id** is managed and how the client determines if a payload is corrupted, see :ref:`_data_transfer_reference`.
 
 
 Minimizing Latency
