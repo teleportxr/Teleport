@@ -91,8 +91,8 @@ where
      - 512
      - 512
      - Color Cubemap Right Face
-   * - 512
-     - 0
+   * - 0
+     - 512
      - 512
      - 512
      - Color Cubemap Left Face
@@ -101,8 +101,8 @@ where
      - 512
      - 512
      - Color Cubemap Top Face
-   * - 512
-     - 1024
+   * - 1024
+     - 512
      - 512
      - 512
      - Color Cubemap Bottom Face
@@ -122,32 +122,32 @@ where
      - 256
      - Depth Cubemap Right Face
    * - 0
-     - 1024
+     - 1280
      - 256
      - 256
      - Depth Cubemap Left Face
    * - 256
-     - 1024
+     - 1280
      - 512
      - 512
      - Depth Cubemap Top Face
    * - 512
-     - 1024
+     - 1280
      - 256
      - 256
      - Depth Cubemap Bottom Face
    * - 768
-     - 1024
+     - 1280
      - 126
      - 64
      - Specular Lighting Cubemap
    * - 768
-     - 1152
+     - 1406
      - 64
      - 64
      - Diffuse Lighting Cubemap
    * - 960
-     - 1152
+     - 1406
      - 128
      - 96
      - Webcam Texture
