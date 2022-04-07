@@ -32,32 +32,123 @@ The **Tag ID** should be encoded as a sequence of 5 bits at the bottom right of 
 This allows 32 different IDs or a maximum delay of 31 frames between the transmission of the metadata and video texture before a **Tag ID** is reused. 
 
 Teleport also supports the sending of lighting information in the video texture.
-Each frame, the cubemap can be used by the server application to generate a specular cubemap at lower mip levels for reflections and a diffuse cubemap fo global illumination.
+Each frame, the cubemap can be used by the server application to generate a specular cubemap at lower mip levels for reflections and a diffuse cubemap for global illumination.
 A cubemap containing the specular lighting of the scene should be written to the video texture at 6 different mip levels.
-Eah mip-level should be half the resolution of the previous mip, from 64x64 pixels down to 2x2.
+Each mip should be half the resolution of the previous mip, from 64x64 pixels down to 2x2.
 A cubemap containing the diffuse lighting of the scene should be rendered to the video texture at 64x64 resolution..
 The resolution and offsets of the lighting cubemaps can be communicated to the client in the **VideoConfig** structure of the **SetupCommand**.
 
 
-A webcam image may also be sent to the clien. The dimensions of the webcam image and offset may vary as long as they fit in the video texture.
-The width, height and offset can be communicated to the client in the **VideoConfig** structure of the **SetupCommand**.
+A webcam image may also be sent to the client. The dimensions of the webcam image and offset may vary as long as they fit in the video texture.
+A flag indicating if the webcam image is being streamed and the width, height and offset of the image can be communicated to the client in the **VideoConfig** structure of the **SetupCommand**.
 
 The video texture should be in the following form:
 
-+==========================+===================+=======================+
++----------------------------------------------------------------------+
+|                        Video   Texture  Layout                       |
+|                                                                      |
++=======================+=======================+======================+
 |                       |                       |                      |
 |      Front Face       |      Back Face        |      Right Face      |
 |                       |                       |                      |
-+----------------------------------------------------------------------+
++-----------------------+-----------------------+----------------------+
 |                       |                       |                      |
 |     Left Face         |      Top Face         |      Bottom Face     |
 |                       |                       |                      |
-+----------------------------------------------------------------------+
++-----------------------+-----------+-----------+------+--------+------+
 |                                   |                  |        |      |
 |           Depth Cubemap           | Lighting Cubemaps| webcam |      |
-+----------------------------------------------------------------------+
++-----------------------------------+------------------+--------+------+
 |                                   |                  |        |Tag ID|
-+----------------------------------------------------------------------+
++-----------------------------------+------------------+--------+------+
+
+
+The following is default texture layout Teleport uses:
+
+.. list-table:: Video Texture Layout
+   :widths: 5 10 10 30
+   :header-rows: 1
+
+   * - Offset X
+     - Offset Y
+     - Width
+     - Heigth
+     - Description
+   * - 0
+     - 0
+     - 512
+     - 512
+     - Color Cubemap Front Face
+   * - 512
+     - 0
+     - 512
+     - 512
+     - Color Cubemap Back Face
+   * - 1024
+     - 0
+     - 512
+     - 512
+     - Color Cubemap Right Face
+   * - 512
+     - 0
+     - 512
+     - 512
+     - Color Cubemap Left Face
+   * - 512
+     - 512
+     - 512
+     - 512
+     - Color Cubemap Top Face
+   * - 512
+     - 1024
+     - 512
+     - 512
+     - Color Cubemap Bottom Face
+   * - 0
+     - 1024
+     - 256
+     - 256
+     - Depth Cubemap Front Face
+   * - 256
+     - 1024
+     - 256
+     - 256
+     - Depth Cubemap Back Face
+   * - 512
+     - 1024
+     - 256
+     - 256
+     - Depth Cubemap Right Face
+   * - 0
+     - 1024
+     - 256
+     - 256
+     - Depth Cubemap Left Face
+   * - 256
+     - 1024
+     - 512
+     - 512
+     - Depth Cubemap Top Face
+   * - 512
+     - 1024
+     - 256
+     - 256
+     - Depth Cubemap Bottom Face
+   * - 768
+     - 1024
+     - 126
+     - 64
+     - Specular Lighting Cubemap
+   * - 768
+     - 1152
+     - 64
+     - 64
+     - Diffuse Lighting Cubemap
+   * - 960
+     - 1152
+     - 128
+     - 96
+     - Webcam Texture
 
 
 Video Frame Structure
