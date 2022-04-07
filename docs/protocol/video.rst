@@ -55,18 +55,20 @@ The video texture should be in the following form:
 |                       |                       |                      |
 |     Left Face         |      Top Face         |      Bottom Face     |
 |                       |                       |                      |
-+-----------------------+-----------+-----------+------+--------+------+
-|                                   |                  |        |      |
-|           Depth Cubemap           | Lighting Cubemaps| webcam |      |
-+-----------------------------------+------------------+--------+------+
++-----------------------+-----------+-----------+------+---------------+
+|                                   | Specular Cubemap |     Webcam    |       
+|           Depth Cubemap           +------------------+--------+------+               
++                                   | Diffuse Cubemap  |        |      |
 |                                   |                  |        |Tag ID|
 +-----------------------------------+------------------+--------+------+
 
 
-The following is default texture layout Teleport uses:
+
+
+where
 
 .. list-table:: Video Texture Layout
-   :widths: 5 10 10 30
+   :widths: 5 5 10 10 30
    :header-rows: 1
 
    * - Offset X
@@ -149,6 +151,15 @@ The following is default texture layout Teleport uses:
      - 128
      - 96
      - Webcam Texture
+   * - 1516
+     - 1532
+     - 20
+     - 4
+     - Tag ID
+
+Note: In the offsets above, higher X values go from left to right and higher Y values go from top to bottom.. 
+
+
 
 
 Video Frame Structure
