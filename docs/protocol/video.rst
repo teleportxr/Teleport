@@ -56,9 +56,9 @@ The video texture should be in the following form:
 |     Left Face         |      Top Face         |      Bottom Face     |
 |                       |                       |                      |
 +-----------------------+-----------+-----------+------+---------------+
-|                                   | Specular Cubemap |     Webcam    |       
-|           Depth Cubemap           +------------------+--------+------+               
-+                                   | Diffuse Cubemap  |        |      |
+|                                   | Specular Cubemap |               |
+|           Depth Cubemap           +------------------+--------+------+        
++                                   | Diffuse Cubemap  | Webcam |      | 
 |                                   |                  |        |Tag ID|
 +-----------------------------------+------------------+--------+------+
 
@@ -180,7 +180,7 @@ Recovering from Corruption
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 An **IDR frame** is a special type of **I-frame** or keyframe in HEVC/H264. 
 It does not rely on any prior frames for decoding and subsequent frames will reference it until the next **I-frame**. 
-The **IDR frame** will also include metadata or **picture parameters** added by the encoder for the decoder to process. 
+The **IDR frame** will also include **picture parameters** added by the encoder for the decoder to process. 
 This includes information such as the bitrate of the encoder, the texture resolution and pixel format etc. 
 The video encoder will output an **IDR frame** as the very first frame and at periodic intervals determined by the encoder settings. 
 
@@ -205,6 +205,7 @@ The server application must therefore query the capabilities of the encoder to d
 The video decoder on the client will be informed of these settings via the **picture parameters** received with each **IDR frame**.
 
 The following settings are recommended to minimize latency:
+
 1. Ultra-low latency or low latency Tuning Info
 2. Rate control mode of Constant Bit Rate (CBR)
 3. Multi Pass – Quarter/Full (evaluate and decide)
@@ -215,7 +216,7 @@ The following settings are recommended to minimize latency:
 8. Long term reference pictures enabled
 9. Intra refresh enabled
 10. Non-reference P frames
-11. IDR as the first frame only except when reccovering from a lost frame.
+11. The first frame should be the only **IDR** sent unless reccovering from a lost frame.
 
 
 
