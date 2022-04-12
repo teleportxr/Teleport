@@ -2,70 +2,52 @@
 #include "shader_platform.sl"
 #include "common.sl"
 
-static float3x3 YUVtoRGB_ITU709 = {
-	1.0f, 0.0f, 1.5748f,
-	1.0f, -0.187324f, -0.468124f,
-	1.0f, 1.8556f, 0.0f,
-};
-
-static float3x3 YUVtoRGB_BT709 = {
-	1.16438f, 0.0f, 1.83367f,
-	1.16438f, -0.218117f, -0.545076f,
-	1.16438f, 2.16063f, 0.0f,
-};
-
-static float3x3 YUVtoRGB_BT2020 = {
-	1.16893f, 0.0f, 1.72371f,
-	1.16893f, -0.192351f, -0.667873f,
-	1.16893f, 2.19923f, 0.0f,
-};
-
 uniform Texture2D<uint> yTexture;
 uniform Texture2D<uint2> uvTexture;
-uniform RWTexture2D<uint4> rgbTexture; 
+uniform RWTexture2D<float4> rgbTexture; 
 
-
-uint3 Yuv420ToRgbForPixel(uint y, uint u, uint v) 
+float4 Yuv420ToRgbForPixel(uint y, uint u, uint v) 
 {
+	static float3x3 YUVtoRGB_BT709 = 
+	{
+		1.16438f, 0.0f, 1.83367f,
+		1.16438f, -0.218117f, -0.545076f,
+		1.16438f, 2.16063f, 0.0f
+	};
+
 	float fy = int(y) - 16;
 	float fu = int(u) - 128;
 	float fv = int(v) - 128;
 
 	float maxf = 255.0f;
 
-	uint3 rgb;
-	rgb.x = int(clamp(YUVtoRGB_BT709[0][0] * fy + YUVtoRGB_BT709[0][1] * fu + YUVtoRGB_BT709[0][2] * fv, 0.0f, maxf));
-	rgb.y = int(clamp(YUVtoRGB_BT709[1][0] * fy + YUVtoRGB_BT709[1][1] * fu + YUVtoRGB_BT709[1][2] * fv, 0.0f, maxf));
-	rgb.z = int(clamp(YUVtoRGB_BT709[2][0] * fy + YUVtoRGB_BT709[2][1] * fu + YUVtoRGB_BT709[2][2] * fv, 0.0f, maxf));
-	
-	return uint3(rgb.x, rgb.y, rgb.z);
-}
+	float4 rgb;
+	rgb.x = clamp(YUVtoRGB_BT709[0][0] * fy + YUVtoRGB_BT709[0][1] * fu + YUVtoRGB_BT709[0][2] * fv, 0.0f, maxf);
+	rgb.y = clamp(YUVtoRGB_BT709[1][0] * fy + YUVtoRGB_BT709[1][1] * fu + YUVtoRGB_BT709[1][2] * fv, 0.0f, maxf);
+	rgb.z = clamp(YUVtoRGB_BT709[2][0] * fy + YUVtoRGB_BT709[2][1] * fu + YUVtoRGB_BT709[2][2] * fv, 0.0f, maxf);
+	rgb.w = 1.0f;
 
-uint4 packRGBA8(uint3 value)
-{
-	return uint4(value.x, value.y, value.z, 255);
-}
+	// Convert to unit scale float4 needed for the rgbTexture.
+	float toUnitScale = 1.0f / 255.0f;
+	rgb.xyz *= toUnitScale;
 
-uint4 packABGR8(uint3 value)
-{
-	return uint4(255, value.z, value.y, value.x);
+	return rgb;
 }
 
 [numthreads(16, 16, 1)]
 shader void CS_NV12ToRGBA(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 {
 	uint2 threadID = uint2(g.xy * 16 + t.xy);
-	uint yW, yH;
-	yTexture.GetDimensions(yW, yH);
+	uint W, H;
+	rgbTexture.GetDimensions(W, H);
 
 	int2 pos = int2(threadID) * 2;
 
-	if (pos.x >= yW || pos.y >= yH)
+	if (pos.x >= W || pos.y >= H)
 	{
 		return;
 	}
 
-	
 	int2 uvPos = int2(threadID) / 2;
 
 	uint l0 = yTexture.Load(int3(pos, 0));
@@ -75,11 +57,11 @@ shader void CS_NV12ToRGBA(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	uint2 ch = uvTexture.Load(int3(uvPos, 0));
 
 	// All four pixels have their own Y but share the U and V.
-	uint4 p0, p1, p2, p3;
-	p0 = packRGBA8(Yuv420ToRgbForPixel(l0, ch.x, ch.y));
-	p1 = packRGBA8(Yuv420ToRgbForPixel(l1, ch.x, ch.y));
-	p2 = packRGBA8(Yuv420ToRgbForPixel(l2, ch.x, ch.y));
-	p3 = packRGBA8(Yuv420ToRgbForPixel(l3, ch.x, ch.y));
+	float4 p0, p1, p2, p3;
+	p0 = Yuv420ToRgbForPixel(l0, ch.x, ch.y);
+	p1 = Yuv420ToRgbForPixel(l1, ch.x, ch.y);
+	p2 = Yuv420ToRgbForPixel(l2, ch.x, ch.y);
+	p3 = Yuv420ToRgbForPixel(l3, ch.x, ch.y);
 
 	rgbTexture[pos] = p0;
 	rgbTexture[int2(pos.x + 1, pos.y)] = p1;
@@ -87,7 +69,7 @@ shader void CS_NV12ToRGBA(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	rgbTexture[int2(pos.x + 1, pos.y + 1)] = p3;
 }
 
-technique NV12ToRGBA
+technique nv12_to_rgba
 {
 	pass p0
 	{

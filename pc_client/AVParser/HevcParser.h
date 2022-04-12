@@ -18,10 +18,10 @@ namespace avparser
 
     namespace hevc
     {
+        // Useful data extracted from the raw data of the last slice parsed.
         struct ExtraData
         {
             uint32_t poc = 0;
-            uint32_t prevPocTid0 = 0;
             uint32_t stRpsIdx = 0;
             uint32_t refRpsIdx = 0;
             uint32_t short_term_ref_pic_set_size = 0;
@@ -76,7 +76,7 @@ namespace avparser
             VuiParameters parseVuiParameters(size_t sps_max_sub_layers_minus1);
             ScalingListData parseScalingListData();
 
-            void parseSliceHeader(Slice& slice, ExtraData& extraData);
+            void parseSliceHeader(Slice& slice);
             RefPicListModification parseRefPicListModification(Slice& slice);
             PredWeightTable parsePredWeightTable(Slice& slice);
 
@@ -101,9 +101,12 @@ namespace avparser
             SPS mSPS;
             PPS mPPS;
             Slice mLastSlice;
+            // This will be reset before parsing a new slice.
             ExtraData mExtraData;
 
             std::unique_ptr<BitReader> mReader;
+
+            uint32_t mPrevPocTid0;
 
             // True if slice parsing should exclude the modification list and weight table. 
             bool mShortSliceParse;

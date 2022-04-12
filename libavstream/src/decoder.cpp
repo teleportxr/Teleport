@@ -134,7 +134,7 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 	m_params = params;
 	m_configured = true;
 	m_streamId = streamId;
-	m_frameBuffer.resize(100000);
+	m_frameBuffer.resize(450000);
 
 	return Result::OK;
 }

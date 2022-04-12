@@ -214,7 +214,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
 	displaySurfaceManager.Initialize(renderPlatform);
-	// Pass "true" to deviceManager to use API debugging:
+	// Pass "true" for first argument to deviceManager to use API debugging:
 	gdi->Initialize(false, false,false);
 	std::string src_dir = STRINGIFY(CMAKE_SOURCE_DIR);
 	std::string build_dir = STRINGIFY(CMAKE_BINARY_DIR);

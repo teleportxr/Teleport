@@ -1479,7 +1479,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 		TELEPORT_CERR << "Failed to configure output surface node!\n";
 	}
 
-	clientPipeline.videoQueue.configure(200000, 16, "VideoQueue");
+	clientPipeline.videoQueue.configure(300000, 16, "VideoQueue");
 
 	avs::PipelineNode::link(clientPipeline.source, clientPipeline.videoQueue);
 	avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);

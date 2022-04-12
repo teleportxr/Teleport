@@ -90,14 +90,12 @@ namespace teleport
 
 		if (peer)
 		{
-			assert(host);
+			/*enet_peer_disconnect(peer, 0);
 
-			enet_peer_disconnect(peer, 0);
-			enet_peer_reset(peer);
-			/*ENetEvent event;
 			bool bIsPeerConnected = true;
-			while (bIsPeerConnected && enet_host_service(host, &event, 5) > 0)
+			while (bIsPeerConnected && !eventQueue.empty())
 			{
+				ENetEvent& event = eventQueue.front();
 				switch (event.type)
 				{
 				case ENET_EVENT_TYPE_RECEIVE:
@@ -107,11 +105,13 @@ namespace teleport
 					bIsPeerConnected = false;
 					break;
 				}
+				eventQueue.pop();
 			}
 			if (bIsPeerConnected)
 			{
 				enet_peer_reset(peer);
 			}*/
+			enet_peer_reset(peer);
 			peer = nullptr;
 		}
 
@@ -187,7 +187,7 @@ namespace teleport
 		size_t eventCount = eventQueue.size();
 		for(int i = 0; i < eventCount; ++i)
 		{
-			ENetEvent& event = eventQueue.front();
+			ENetEvent event = eventQueue.front();
 			switch (event.type)
 			{
 			case ENET_EVENT_TYPE_CONNECT:
@@ -220,7 +220,8 @@ namespace teleport
 				}
 				break;
 			}
-			enet_packet_destroy(event.packet);
+			if (event.packet)
+				enet_packet_destroy(event.packet);
 			eventQueue.pop();
 		}
 
@@ -229,6 +230,7 @@ namespace teleport
 		{
 			TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting." << std::endl;
 			Disconnect();
+			return;
 		}
 
 		if (startingSession)
