@@ -26,6 +26,10 @@
 #define TELEPORT_CERR\
 	std::cerr<<__FILE__<<"("<<std::dec<<__LINE__<<"): warning: "
 
+
+#define TELEPORT_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
+#define TELEPORT_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
+
 #define TELEPORT_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
 
 #if TELEPORT_INTERNAL_CHECKS

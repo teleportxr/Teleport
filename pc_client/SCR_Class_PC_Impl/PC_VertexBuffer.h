@@ -4,7 +4,7 @@
 #include <ClientRender/VertexBuffer.h>
 #include <ClientRender/VertexBufferLayout.h>
 
-namespace simul
+namespace platform
 {
 	namespace crossplatform
 	{
@@ -18,12 +18,12 @@ namespace pc_client
 	class PC_VertexBuffer final : public clientrender::VertexBuffer
 	{
 	private:
-		simul::crossplatform::Buffer *m_SimulBuffer;
-		simul::crossplatform::Layout *m_layout;
+		platform::crossplatform::Buffer *m_SimulBuffer;
+		platform::crossplatform::Layout *m_layout;
 	public:
 		PC_VertexBuffer(const clientrender::RenderPlatform*const r);
 
-		simul::crossplatform::Layout* GetLayout()
+		platform::crossplatform::Layout* GetLayout()
 		{
 			return m_layout;
 		}
@@ -34,12 +34,12 @@ namespace pc_client
 
 		bool ResourceInUse(int timeout) override {return true;}
 
-		simul::crossplatform::Buffer *GetSimulVertexBuffer()
+		platform::crossplatform::Buffer *GetSimulVertexBuffer()
 		{
 			return m_SimulBuffer;
 		}
 
-		const simul::crossplatform::Buffer* GetSimulVertexBuffer() const
+		const platform::crossplatform::Buffer* GetSimulVertexBuffer() const
 		{
 			return m_SimulBuffer;
 		}

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "IUnityInterface.h"
-#include "IUnityGraphics.h"
+#include "Unity/IUnityInterface.h"
+#include "Unity/IUnityGraphics.h"
 
 namespace teleport
 {

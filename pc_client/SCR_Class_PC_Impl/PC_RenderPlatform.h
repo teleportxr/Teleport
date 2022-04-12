@@ -14,7 +14,7 @@
 #include "PC_VertexBuffer.h"
 #include "basic_linear_algebra.h"
 
-namespace simul
+namespace platform
 {
 	namespace crossplatform
 	{
@@ -26,7 +26,7 @@ namespace pc_client
 {
     class PC_RenderPlatform final : public clientrender::RenderPlatform
     {
-		simul::crossplatform::RenderPlatform* renderPlatform = nullptr;
+		platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
     public:
         PC_RenderPlatform():clientrender::RenderPlatform() {}
         ~PC_RenderPlatform() {}
@@ -49,8 +49,8 @@ namespace pc_client
 			return clientrender::API::APIType::UNKNOWN;
 		}
 
-		void SetSimulRenderPlatform(simul::crossplatform::RenderPlatform *r);
-		simul::crossplatform::RenderPlatform *GetSimulRenderPlatform() const
+		void SetSimulRenderPlatform(platform::crossplatform::RenderPlatform *r);
+		platform::crossplatform::RenderPlatform *GetSimulRenderPlatform() const
 		{
 			return renderPlatform;
 		}

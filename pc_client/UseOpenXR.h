@@ -23,27 +23,27 @@ namespace teleport
 		X,
 		Y,
 		LEFT_TRIGGER,
-		LEFT_GRIP_POSE,
-		LEFT_AIM_POSE,
-		LEFT_STICK_X,
-		LEFT_STICK_Y,
-		LEFT_HAPTIC,
 		RIGHT_TRIGGER,
+		LEFT_GRIP_POSE,
 		RIGHT_GRIP_POSE,
+		LEFT_AIM_POSE,
 		RIGHT_AIM_POSE,
+		LEFT_STICK_X,
 		RIGHT_STICK_X,
+		LEFT_STICK_Y,
 		RIGHT_STICK_Y,
+		LEFT_HAPTIC,
 		RIGHT_HAPTIC,
 		MAX_ACTIONS
 	};
 	class UseOpenXR
 	{
 	public:
-		bool Init(simul::crossplatform::RenderPlatform* renderPlatform, const char* app_name);
+		bool Init(platform::crossplatform::RenderPlatform* renderPlatform, const char* app_name);
 		bool TryInitDevice();
 		void MakeActions();
 		void PollActions();
-		void RenderFrame(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::RenderDelegate &, vec3 origin_pos, vec4 origin_orientation);
+		void RenderFrame(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::RenderDelegate &, vec3 origin_pos, vec4 origin_orientation);
 		void Shutdown();
 		void PollEvents(bool& exit);
 		bool HaveXRDevice() const;
@@ -59,13 +59,13 @@ namespace teleport
 		{
 			menuButtonHandler = f;
 		}
-		simul::crossplatform::Texture* GetRenderTexture(int index=0);
+		platform::crossplatform::Texture* GetRenderTexture(int index=0);
 	protected:
 	
-		simul::crossplatform::RenderPlatform* renderPlatform = nullptr;
+		platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 		bool haveXRDevice = false;
-		void RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext, XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
-		bool RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext,XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
+		void RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext, XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
+		bool RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext,XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
 		avs::Pose headPose;
 		std::vector<avs::Pose> controllerPoses;
 		teleport::client::Input inputs;

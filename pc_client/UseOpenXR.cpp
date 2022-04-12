@@ -16,19 +16,25 @@
 #include "Platform/CrossPlatform/AxesStandard.h"
 #include "TeleportCore/ErrorHandling.h"
 
+XrInstance		xr_instance = {};
+
+const char *GetXRErrorString(XrResult res)
+{
+	static char str[XR_MAX_RESULT_STRING_SIZE];
+	xrResultToString(xr_instance, res, str);
+	return str;
+}
 
 static void ReportError(XrInstance xr_instance, int result)
 {
 	XrResult res = (XrResult)result;
-	char str[XR_MAX_RESULT_STRING_SIZE];
-	xrResultToString(xr_instance, res, str);
-	std::cerr << "Error: " << str << std::endl;
+	std::cerr << "Error: " << GetXRErrorString(res) << std::endl;
 }
 
 #define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){TELEPORT_CERR<<"";ReportError(xr_instance,(int)res);}
 
 using namespace std;
-using namespace simul;
+using namespace platform;
 using namespace teleport;
 const XrPosef	xr_pose_identity = { {0,0,0,1}, {0,0,0} };
 
@@ -108,7 +114,7 @@ enum SubActionIndex:uint8_t
 	SA_GAMEPAD=4,
 	SA_LEFT_AND_RIGHT=SA_LEFT|SA_RIGHT
 };
-struct Action
+struct ActionInitializer
 {
 	ActionId actionId;
 	const char* name;
@@ -122,8 +128,8 @@ struct ActionState
 	{
 		float f32;
 		uint32_t u32;
+		float vec2f[2];
 	};
-	XrSpace		space;
 	XrPosef		pose;
 };
 //
@@ -139,6 +145,7 @@ struct ActionDefinition
 	XrAction xrAction;
 	ActionId actionId;
 	XrActionType xrActionType;
+	XrSpace		space;
 };
 
 struct XRInputState
@@ -148,9 +155,9 @@ struct XRInputState
 	ActionState			actionStates[MAX_ACTIONS];
 	std::vector<XRInputDeviceState> inputDeviceStates;
 	// Here we  can set all the actions to be supported.
-	void SetActions(XrInstance& xr_instance, std::initializer_list<Action> actions)
+	void SetActions(XrInstance& xr_instance, std::initializer_list<ActionInitializer> actions)
 	{
-//		xrActions.resize(MAX_ACTIONS);
+		inputDeviceStates.resize(2);
 		for (auto& a : actions)
 		{
 			XrActionCreateInfo action_info = { XR_TYPE_ACTION_CREATE_INFO };
@@ -169,16 +176,14 @@ struct XRInputState
 		{
 			auto& def = actionDefinitions[i];
 
-			if(def.xrActionType==XR_TYPE_ACTION_STATE_POSE)
+			if(def.xrActionType==XR_ACTION_TYPE_POSE_INPUT)
 			{
 				// Create frames of reference for the pose actions
 					XrActionSpaceCreateInfo action_space_info = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
 					action_space_info.action			= def.xrAction;
 					action_space_info.poseInActionSpace	= xr_pose_identity;
-					XR_CHECK(xrCreateActionSpace(xr_session, &action_space_info, &actionStates[def.actionId].space));
+					XR_CHECK(xrCreateActionSpace(xr_session, &action_space_info, &actionDefinitions[def.actionId].space));
 			}
-
-			++i;
 		}
 	}
 };
@@ -222,7 +227,6 @@ struct InteractionProfile
 };
 std::map<uint16_t, uint16_t> mapActionIndexToInputId;
 
-XrInstance		xr_instance = {};
 XrSession		xr_session = {};
 XrSessionState	xr_session_state = XR_SESSION_STATE_UNKNOWN;
 bool			xr_running = false;
@@ -265,15 +269,15 @@ swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform *renderPlat
 	XrSwapchainImageD3D11KHR& d3d_swapchain_img = (XrSwapchainImageD3D11KHR&)swapchain_img;
 #endif
 	result.target_view				= renderPlatform->CreateTexture("swapchain target");
-	result.target_view->InitFromExternalTexture2D(renderPlatform, d3d_swapchain_img.texture, nullptr,0,0,simul::crossplatform::UNKNOWN,true);
+	result.target_view->InitFromExternalTexture2D(renderPlatform, d3d_swapchain_img.texture, nullptr,0,0,platform::crossplatform::UNKNOWN,true);
 	result.depth_view				= renderPlatform->CreateTexture("swapchain depth");
-	simul::crossplatform::TextureCreate textureCreate = {};
+	platform::crossplatform::TextureCreate textureCreate = {};
 	textureCreate.numOfSamples		= std::max(1,result.target_view->GetSampleCount());
 	textureCreate.mips				= 1;
 	textureCreate.w					= result.target_view->width;
 	textureCreate.l					= result.target_view->length;
 	textureCreate.arraysize			= 1;
-	textureCreate.f					= simul::crossplatform::PixelFormat::D_32_FLOAT;
+	textureCreate.f					= platform::crossplatform::PixelFormat::D_32_FLOAT;
 	textureCreate.setDepthStencil	= true;
 	textureCreate.computable		= false;
 	result.depth_view->EnsureTexture(renderPlatform, &textureCreate);
@@ -608,8 +612,21 @@ void UseOpenXR::MakeActions()
 
 		suggested_binds.interactionProfile = p.profilePath;
 		suggested_binds.suggestedBindings = p.xrActionSuggestedBindings.data();
+		#if TELEPORT_INTERNAL_CHECKS
+		for(suggested_binds.countSuggestedBindings=1;suggested_binds.countSuggestedBindings<=p.xrActionSuggestedBindings.size();
+				suggested_binds.countSuggestedBindings++)
+		{
+			XrResult res=xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds);
+			if(res!=XR_SUCCESS)
+			{
+				TELEPORT_CERR<<GetXRErrorString(res)<<" for path "<<
+				FromXrPath(xr_instance,p.xrActionSuggestedBindings[suggested_binds.countSuggestedBindings-1].binding)<<std::endl;
+			}
+		}
+		#else
 		suggested_binds.countSuggestedBindings = p.xrActionSuggestedBindings.size();
 		XR_CHECK(xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds));
+		#endif
 	};
 	InteractionProfile khrSimpleIP(xr_instance
 			, "/interaction_profiles/khr/simple_controller"
@@ -644,8 +661,7 @@ void UseOpenXR::MakeActions()
 		, {
 			 {xr_input.actionDefinitions[LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
 			,{xr_input.actionDefinitions[RIGHT_GRIP_POSE].xrAction		,RIGHT "/input/grip/pose"}
-			,{xr_input.actionDefinitions[SHOW_MENU].xrAction			, LEFT "/input/b/click" }
-			,{xr_input.actionDefinitions[SHOW_MENU].xrAction			,RIGHT "/input/b/click" }
+			,{xr_input.actionDefinitions[SHOW_MENU].xrAction			, LEFT "/input/menu/click" }
 			,{xr_input.actionDefinitions[LEFT_TRIGGER].xrAction			, LEFT "/input/trigger/value" }
 			,{xr_input.actionDefinitions[RIGHT_TRIGGER].xrAction		,RIGHT "/input/trigger/value" }
 			,{xr_input.actionDefinitions[LEFT_STICK_X].xrAction			, LEFT "/input/thumbstick/x"	}
@@ -666,15 +682,10 @@ void UseOpenXR::MakeActions()
 	XrInteractionProfileState interactionProfile={XR_TYPE_INTERACTION_PROFILE_STATE,0,0};
 	// for each action, what is the binding?
 	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance, "/user/hand/left"),&interactionProfile));
-
 	std::cout<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
 
 	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance,"/user/hand/right"),&interactionProfile));
 	std::cout<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
-
-	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,XR_NULL_PATH,&interactionProfile));
-	std::cout<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
-
 }
 
 
@@ -708,7 +719,7 @@ void UseOpenXR::PollActions()
 		get_info.action=def.xrAction;
 		switch(def.xrActionType)
 		{
-			case XR_TYPE_ACTION_STATE_POSE:
+			case XR_ACTION_TYPE_POSE_INPUT:
 			{
 				XrActionStatePose pose_state	= { XR_TYPE_ACTION_STATE_POSE };
 				get_info.action					= def.xrAction;
@@ -716,48 +727,64 @@ void UseOpenXR::PollActions()
 				state.u32=pose_state.isActive;
 			}
 			break;
-			case XR_TYPE_ACTION_STATE_BOOLEAN:
+			case XR_ACTION_TYPE_BOOLEAN_INPUT:
 			{
-				XrActionStateBoolean pose_state	= { XR_TYPE_ACTION_STATE_BOOLEAN };
+				XrActionStateBoolean bool_state	= { XR_TYPE_ACTION_STATE_BOOLEAN };
 				get_info.action					= def.xrAction;
-				xrGetActionStateBoolean(xr_session, &get_info, &pose_state);
-				state.u32=pose_state.isActive;
+				xrGetActionStateBoolean(xr_session, &get_info, &bool_state);
+				state.u32=bool_state.isActive;
+			}
+			break;
+			case XR_ACTION_TYPE_FLOAT_INPUT:
+			{
+				XrActionStateFloat float_state	= { XR_TYPE_ACTION_STATE_FLOAT };
+				get_info.action					= def.xrAction;
+				xrGetActionStateFloat(xr_session, &get_info, &float_state);
+				state.f32=float_state.currentState;
+			}
+			break;
+			case XR_ACTION_TYPE_VECTOR2F_INPUT:
+			{
+				XrActionStateVector2f vec2_state	= { XR_TYPE_ACTION_STATE_VECTOR2F };
+				get_info.action					= def.xrAction;
+				xrGetActionStateVector2f(xr_session, &get_info, &vec2_state);
+				state.vec2f[0]=vec2_state.currentState.x;
+				state.vec2f[1]=vec2_state.currentState.y;
 			}
 			break;
 			default:
 			break;
 		};
-		
 	}
 	for (uint32_t hand = 0; hand < xr_input.inputDeviceStates.size(); hand++)
 	{
 		XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
 		auto &inputDeviceState =xr_input.inputDeviceStates[hand];
-		get_info.subactionPath = inputDeviceState.subActionPath;
+	
 		XrActionStatePose pose_state = { XR_TYPE_ACTION_STATE_POSE };
-		get_info.action				= xr_input.actionDefinitions[GRIP_POSE].xrAction;
-		xrGetActionStatePose(xr_session, &get_info, &inputDeviceState.actionStates[GRIP_POSE].pose);
+		get_info.action				= xr_input.actionDefinitions[LEFT_GRIP_POSE+hand].xrAction;
+		xrGetActionStatePose(xr_session, &get_info, &pose_state);
 		inputDeviceState.renderThisDevice	= pose_state.isActive;
 
 		// Events come with a timestamp
 		XrActionStateBoolean select_state = { XR_TYPE_ACTION_STATE_BOOLEAN };
-		get_info.action = xr_input.xrActions[SELECT];
+		get_info.action = xr_input.actionDefinitions[SELECT].xrAction;
 		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
-		xr_input.handSelect[hand] = select_state.currentState && select_state.changedSinceLastSync;
+		xr_input.inputDeviceStates[hand].handSelect = select_state.currentState && select_state.changedSinceLastSync;
 
-		get_info.action = xr_input.xrActions[SHOW_MENU];
+		get_info.action = xr_input.actionDefinitions[SHOW_MENU].xrAction;
 		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
-		xr_input.handMenu[hand] = select_state.currentState && select_state.changedSinceLastSync;
+		xr_input.inputDeviceStates[hand].handMenu = select_state.currentState && select_state.changedSinceLastSync;
 		// If we have a select event, update the hand pose to match the event's timestamp
-		if (xr_input.handSelect[hand])
+		if (xr_input.inputDeviceStates[hand].handSelect)
 		{
 			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-			XrResult        res = xrLocateSpace(xr_input.gripHandSpace[hand], xr_app_space, select_state.lastChangeTime, &space_location);
+			XrResult        res = xrLocateSpace(xr_input.actionDefinitions[LEFT_GRIP_POSE+hand].space, xr_app_space, select_state.lastChangeTime, &space_location);
 			if (XR_UNQUALIFIED_SUCCESS(res) &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 			{
-				xr_input.gripHandPose[hand] = space_location.pose;
+				xr_input.actionStates[LEFT_GRIP_POSE+hand].pose= space_location.pose;
 				if(hand>= controllerPoses.size())
 					controllerPoses.resize(hand+1);
 				controllerPoses[hand].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
@@ -765,14 +792,14 @@ void UseOpenXR::PollActions()
 			}
 		}
 		XrActionStateFloat trigger_state = { XR_TYPE_ACTION_STATE_FLOAT };
-		get_info.action = xr_input.xrActions[TRIGGER];
+		get_info.action = xr_input.actionDefinitions[LEFT_TRIGGER+hand].xrAction;
 		xrGetActionStateFloat(xr_session, &get_info, &trigger_state);
 		
-		if (xr_input.trigger[hand] != trigger_state.currentState)
+		if (xr_input.actionStates[LEFT_TRIGGER+hand].f32 != trigger_state.currentState)
 		{
-			xr_input.trigger[hand] = trigger_state.currentState;
+			xr_input.actionStates[LEFT_TRIGGER+hand].f32 = trigger_state.currentState;
 			// what is the mapping?
-			inputs.addAnalogueEvent(avs::TRIGGER01, xr_input.trigger[hand]);
+			inputs.addAnalogueEvent(avs::TRIGGER01, xr_input.actionStates[LEFT_TRIGGER+hand].f32);
 		}
 #if 0
 		// thumbstick:
@@ -792,7 +819,7 @@ void UseOpenXR::PollActions()
 			controllerStates[hand].mJoystickAxisY = xr_input.thumbstick[hand].y;
 		}
 #endif
-		if (xr_input.handMenu[hand])
+		if (xr_input.actionStates[SHOW_MENU].u32)
 		{
 			menuButtonHandler();
 		}
@@ -828,15 +855,15 @@ void UseOpenXR::openxr_poll_predicted(XrTime predicted_time)
 	// should result in a more accurate location, and reduce perceived lag.
 	for (size_t i = 0; i < 2; i++)
 	{
-		if (!xr_input.renderHand[i])
+		if (!xr_input.inputDeviceStates[i].renderThisDevice)
 			continue;
 		XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-		XrResult        res = xrLocateSpace(xr_input.gripHandSpace[i], xr_app_space, predicted_time, &space_location);
+		XrResult        res = xrLocateSpace(xr_input.actionDefinitions[LEFT_GRIP_POSE+i].space, xr_app_space, predicted_time, &space_location);
 		if (XR_UNQUALIFIED_SUCCESS(res) &&
 			(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
-			xr_input.gripHandPose[i] = space_location.pose;
+			xr_input.actionStates[LEFT_GRIP_POSE+i].pose = space_location.pose;
 			if (i >= controllerPoses.size())
 				controllerPoses.resize(i + 1);
 			controllerPoses[i].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
@@ -858,11 +885,11 @@ void app_update_predicted()
 
  mat4  AffineTransformation(vec4 q,vec3 p)
 {
-	 simul::crossplatform::Quaternion<float> rotation = (const float*)&q;
+	 platform::crossplatform::Quaternion<float> rotation = (const float*)&q;
 	 vec3 Translation = (const float*)&p;
 	 vec4 VTranslation = { Translation.x,Translation.y,Translation.z,1.0f };
 	 mat4 M;
-	 simul::crossplatform::QuaternionToMatrix(M, rotation);
+	 platform::crossplatform::QuaternionToMatrix(M, rotation);
 	 vec4 row3 = M.M[3];
 	 row3 = row3 + VTranslation;
 	 M.M[3][0] = row3.x;
@@ -919,8 +946,8 @@ mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
 	return MatrixPerspectiveOffCenterRH(left, right, down, up, clip_near, clip_far);
 }
 
-void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext,XrCompositionLayerProjectionView& view
-	, swapchain_surfdata_t& surface, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
+void UseOpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext,XrCompositionLayerProjectionView& view
+	, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
 	// Set up camera matrices based on OpenXR's predicted viewpoint information
 	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
@@ -929,16 +956,16 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	crossplatform::Quaternionf orig_rot = origin_orientation;
 	Multiply(pos,orig_rot,pos);
 	pos += origin_pos;
-	deviceContext.viewStruct.proj = *((const simul::math::Matrix4x4*)&proj); 
+	deviceContext.viewStruct.proj = *((const platform::math::Matrix4x4*)&proj); 
 
 	rot=orig_rot*rot;
 
-	simul::geometry::SimulOrientation globalOrientation;
+	platform::math::SimulOrientation globalOrientation;
 	// global pos/orientation:
 	globalOrientation.SetPosition((const float*)&pos);
 
-	simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(-1.f, 0.0f, 0.0f));
-	simul::math::Quaternion q1 = (const float*)&rot;
+	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
+	platform::math::Quaternion q1 = (const float*)&rot;
 
 	auto q_rel = q1 / q0;
 	globalOrientation.SetOrientation(q_rel);
@@ -972,9 +999,9 @@ crossplatform::Texture* UseOpenXR::GetRenderTexture(int index)
 	return sw.surface_data[sw.last_img_id].target_view;
 }
 
-bool UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext, XrTime predictedTime
+bool UseOpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext, XrTime predictedTime
 	, vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer
-	, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
+	, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
 	// Find the state and location of each viewpoint at the predicted time
 	uint32_t         view_count = 0;
@@ -1100,7 +1127,7 @@ const teleport::client::Input& UseOpenXR::GetInputs() const
 	return inputs;
 }
 
-void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceContext,simul::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
+void UseOpenXR::RenderFrame(platform::crossplatform::GraphicsDeviceContext	&deviceContext,platform::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
 {
 	// Block until the previous frame is finished displaying, and is ready for another one.
 	// Also returns a prediction of when the next frame will be displayed, for use with predicting
@@ -1159,12 +1186,13 @@ void UseOpenXR::Shutdown()
 
 	// Release all the other OpenXR resources that we've created!
 	// What gets allocated, must get deallocated!
+	for(int i=0;i<MAX_ACTIONS;i++)
+	{
+		if (xr_input.actionDefinitions[i].space != XR_NULL_HANDLE)
+			xrDestroySpace(xr_input.actionDefinitions[i].space);
+	}
 	if (xr_input.actionSet != XR_NULL_HANDLE)
 	{
-		if (xr_input.gripHandSpace[0] != XR_NULL_HANDLE)
-			xrDestroySpace(xr_input.gripHandSpace[0]);
-		if (xr_input.gripHandSpace[1] != XR_NULL_HANDLE)
-			xrDestroySpace(xr_input.gripHandSpace[1]);
 		xrDestroyActionSet(xr_input.actionSet);
 	}
 	if (xr_app_space != XR_NULL_HANDLE)

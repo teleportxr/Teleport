@@ -24,13 +24,13 @@ VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
 #include "Platform/DirectX12/DeviceManager.h"
-simul::dx12::RenderPlatform renderPlatformImpl;
-simul::dx12::DeviceManager deviceManager;
+platform::dx12::RenderPlatform renderPlatformImpl;
+platform::dx12::DeviceManager deviceManager;
 #else
 #include "Platform/DirectX11/RenderPlatform.h"
 #include "Platform/DirectX11/DeviceManager.h"
-simul::dx11::RenderPlatform renderPlatformImpl;
-simul::dx11::DeviceManager deviceManager;
+platform::dx11::RenderPlatform renderPlatformImpl;
+platform::dx11::DeviceManager deviceManager;
 #endif
 #include "UseOpenXR.h"
 #include "Platform/CrossPlatform/GpuProfiler.cpp"
@@ -38,13 +38,13 @@ simul::dx11::DeviceManager deviceManager;
 using namespace teleport;
 
 teleport::ClientRenderer *clientRenderer=nullptr;
-simul::crossplatform::RenderDelegate renderDelegate;
+platform::crossplatform::RenderDelegate renderDelegate;
 teleport::UseOpenXR useOpenXR;
-simul::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
-simul::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
-simul::crossplatform::RenderPlatform *renderPlatform = nullptr;
+platform::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
+platform::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
+platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 
-simul::crossplatform::DisplaySurfaceManager displaySurfaceManager;
+platform::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 teleport::client::ClientDeviceState clientDeviceState;
 std::vector<std::string> server_ips;
 teleport::Gui gui;
@@ -255,7 +255,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderBinaryPath((build_dir + "/Platform/DirectX11/shaderbin").c_str());
 #endif
 
-		renderPlatform->SetShaderBuildMode(simul::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
+		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
 	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
@@ -444,7 +444,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				float time_step=t.UpdateTime()/1000.0f;
 				static long long frame = 1;
 				renderPlatform->BeginFrame(frame++);
-				simul::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
+				platform::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 				clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
 				// Call StartFrame here so the command list will be in a recording state for D3D12 
 				// because vertex and index buffers can be created in OnFrameMove. 
@@ -465,13 +465,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
 				fTime+=time_step;
 				errno=0;
-				simul::crossplatform::GraphicsDeviceContext	deviceContext;
+				platform::crossplatform::GraphicsDeviceContext	deviceContext;
 				deviceContext.renderPlatform = renderPlatform;
 				// This context is active. So we will use it.
 				deviceContext.platform_context = w->GetPlatformDeviceContext();
 				if (deviceContext.platform_context)
 				{
-					simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
+					platform::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 					platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
 					renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 					cpuProfiler.SetMaxLevel(5);
