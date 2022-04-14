@@ -206,6 +206,17 @@ void ShutdownRenderer(HWND hWnd)
 }
 #define STRINGIFY(a) STRINGIFY2(a)
 #define STRINGIFY2(a) #a
+
+void InitXR()
+{
+	if(useOpenXR.TryInitDevice())
+	{
+		useOpenXR.MakeActions();
+		std::function<void()> showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
+		if (useOpenXR.HaveXRDevice())
+			useOpenXR.SetMenuButtonHandler(showHideDelegate);
+	}
+}
 	
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
@@ -263,20 +274,16 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	if (try_init_vr)
 	{
 		useOpenXR.Init(renderPlatform, "Teleport VR Client");
-		useOpenXR.MakeActions();
+		InitXR();
 	}
-	std::function<void()> showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
-	if (useOpenXR.HaveXRDevice())
-		useOpenXR.SetMenuButtonHandler(showHideDelegate);
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
-	clientRenderer->Init(renderPlatform);
+	clientRenderer->Init(renderPlatform,&useOpenXR);
 	if(server_ips.size())
 		clientRenderer->SetServer(server_ips[0].c_str());
 
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(hWnd,clientRenderer,-1);
 }
-
 static platform::core::DefaultProfiler cpuProfiler;
 #define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))
 #define GET_Y_LPARAM(lp)                        ((int)(short)HIWORD(lp))
@@ -429,6 +436,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					useOpenXR.PollEvents(quit);
 					useOpenXR.PollActions();
 				}
+				else
+				{
+					static char c=0;
+					c--;
+					if(!c)
+						InitXR();
+				}
 				static double fTime=0.0;
 				static platform::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
@@ -448,8 +462,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					{
 						const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);
 						clientDeviceState.SetControllerPose(i, controllerPose.position, controllerPose.orientation);
-						const teleport::client::Input& inputs = useOpenXR.GetInputs();
-						clientDeviceState.SetInputs(inputs);
 					}
 				}
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());

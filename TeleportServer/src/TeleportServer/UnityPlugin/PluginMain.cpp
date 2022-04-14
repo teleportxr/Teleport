@@ -22,7 +22,7 @@
 #include "Export.h"
 #include "InteropStructures.h"
 #include "PluginGraphics.h"
-#include "TeleportServer/ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "crossplatform/CustomAudioStreamTarget.h"
 
 //#include <OAIdl.h>	// for SAFE_ARRAY
@@ -749,7 +749,7 @@ TELEPORT_EXPORT void Client_SetClientInputDefinitions(avs::uid clientID, int num
 			TELEPORT_CERR << "Failed to set Input definitions to Client " << clientID << ". Bad path string!\n";
 			return;
 		}
-		inputDefs[i].path = controlPaths[i];
+		inputDefs[i].regexPath = controlPaths[i];
 	}
 	clientPair->second.setInputDefinitions(inputDefs);
 }

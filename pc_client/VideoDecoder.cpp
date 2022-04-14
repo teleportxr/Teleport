@@ -12,6 +12,7 @@
 #include "Platform/DirectX12/VideoDecoder.h"
 #endif
 #include "TeleportClient/Log.h"
+#include "TeleportCore/ErrorHandling.h"
 
 using namespace avs;
 using namespace avparser;
@@ -239,7 +240,8 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 Result VideoDecoder::display(bool showAlphaAsColor)
 {
 	cp::GraphicsDeviceContext& deviceContext = mRenderPlatform->GetImmediateContext();
-
+	
+#if TELEPORT_CLIENT_USE_D3D12
 	// Same texture. Two SRVs for two layers. D3D12 Texture class handles this.
 	mTextureConversionEffect->SetTexture(deviceContext, "yTexture", mOutputTexture);
 	mTextureConversionEffect->SetTexture(deviceContext, "uvTexture", mOutputTexture);

@@ -1,5 +1,5 @@
 #include "GeometryStore.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 #include <filesystem>
 #include <fstream>

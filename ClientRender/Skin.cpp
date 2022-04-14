@@ -1,5 +1,6 @@
 #include "Skin.h"
 #include "TeleportClient/Log.h"
+#include "TeleportCore/ErrorHandling.h"
 
 namespace clientrender
 {

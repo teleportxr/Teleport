@@ -141,12 +141,13 @@ ClientRenderer::~ClientRenderer()
 	InvalidateDeviceObjects(); 
 }
 
-void ClientRenderer::Init(platform::crossplatform::RenderPlatform *r)
+void ClientRenderer::Init(platform::crossplatform::RenderPlatform *r,teleport::UseOpenXR *u)
 {
 	// Initialize the audio (asynchronously)
 	audioPlayer.initializeAudioDevice();
 
 	renderPlatform = r;
+	openXR=u;
 
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
@@ -877,31 +878,36 @@ void ClientRenderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& dev
 	}
 	else if(show_osd== clientrender::CONTROLLER_OSD)
 	{
-		gui.LinePrint( "CONTROLLERS\n");
-		gui.LinePrint( platform::core::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
-		gui.LinePrint( platform::core::QuickFormat("     W %d A %d S %d D %d",keydown['w'],keydown['a'],keydown['s'],keydown['d']));
-		gui.LinePrint( platform::core::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
-		gui.LinePrint( platform::core::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
+		gui.LinePrint( "CONTROLS\n");
+		if(openXR)
+		{
+			gui.LinePrint(openXR->GetDebugString().c_str());
+		}
+		else
+		{
+			gui.LinePrint( platform::core::QuickFormat("     Shift: %d ",keydown[VK_SHIFT]));
+			gui.LinePrint( platform::core::QuickFormat("     W %d A %d S %d D %d",keydown['w'],keydown['a'],keydown['s'],keydown['d']));
+			gui.LinePrint( platform::core::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
+			gui.LinePrint( platform::core::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
 		
-		gui.LinePrint( platform::core::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
+			gui.LinePrint( platform::core::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
 
-		gui.LinePrint( platform::core::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
-		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
+			gui.LinePrint( platform::core::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
+			gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
 
-		gui.LinePrint( platform::core::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
-		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
-		gui.LinePrint( platform::core::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
-		gui.LinePrint( platform::core::QuickFormat("      angle: %3.3f", controllerSim.angle));
-		gui.LinePrint( platform::core::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
-		gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
-
+			gui.LinePrint( platform::core::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
+			gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
+			gui.LinePrint( platform::core::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
+			gui.LinePrint( platform::core::QuickFormat("      angle: %3.3f", controllerSim.angle));
+			gui.LinePrint( platform::core::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
+			gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
+		}
 	}
 	gui.EndDebugGui(deviceContext);
 
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 	//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
 	//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
-
 }
 
 void ClientRenderer::WriteHierarchy(int tabDepth, std::shared_ptr<clientrender::Node> node)
@@ -1278,8 +1284,8 @@ void ClientRenderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 void ClientRenderer::OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_)
 {
 	inputDefinitions = inputDefinitions_;
-	if (inputSetupDelegate)
-		inputSetupDelegate(inputDefinitions_);
+	if (openXR)
+		openXR->OnInputsSetupChanged(server_uid,inputDefinitions_);
 	// for each input, we will match it 
 	inputIdMappings.clear();
 	std::string leftButton = "/interaction_profiles/simul/mouse_ext/input/trigger/value";
@@ -1287,15 +1293,15 @@ void ClientRenderer::OnInputsSetupChanged(const std::vector<avs::InputDefinition
 	std::string middleButton = "/interaction_profiles/simul/mouse_ext/input/b/click";
 	for (const auto& d : inputDefinitions)
 	{
-		if (Match(leftButton, d.path))
+		if (Match(leftButton, d.regexPath))
 		{
 			inputIdMappings[teleport::ClientRenderer::MouseOrKey::LEFT_BUTTON] = d.inputId;
 		}
-		if (Match(rightButton, d.path))
+		if (Match(rightButton, d.regexPath))
 		{
 			inputIdMappings[teleport::ClientRenderer::MouseOrKey::RIGHT_BUTTON] = d.inputId;
 		}
-		if (Match(middleButton, d.path))
+		if (Match(middleButton, d.regexPath))
 		{
 			inputIdMappings[teleport::ClientRenderer::MouseOrKey::MIDDLE_BUTTON] = d.inputId;
 		}
@@ -1305,18 +1311,6 @@ void ClientRenderer::OnInputsSetupChanged(const std::vector<avs::InputDefinition
 void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
 	geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
-/*
-	auto node=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.nodeID);
-	auto parent=geometryCache.mNodeManager->GetNode(updateNodeStructureCommand.parentID);
-	std::weak_ptr<clientrender::Node> oldParent=node->GetParent();
-	auto oldp=oldParent.lock();
-	if(oldp)
-		oldp->RemoveChild(node);
-	node->SetLocalPosition(updateNodeStructureCommand.relativePose.position);
-	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
-	node->SetParent(parent);
-	if(parent)
-		parent->AddChild(node);*/
 }
 
 void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand)
@@ -1874,6 +1868,11 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		avs::Pose controllerPoses[2];
 		controllerPoses[0]=clientDeviceState->controllerPoses[0].globalPose;
 		controllerPoses[1]=clientDeviceState->controllerPoses[1].globalPose;
+		if (openXR)
+		{
+			const teleport::client::Input& inputs = openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
+			clientDeviceState->SetInputs(inputs);
+		}
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
 			clientDeviceState->input, clientPipeline.decoder.idrRequired(),fTime, time_step);
 

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "ServerSettings.h"
 
 #include "crossplatform/AudioStreamTarget.h"

@@ -8,7 +8,7 @@
 
 #include "ServerSettings.h"
 
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 
 //Clear a passed vector of UIDs that are believed to have already been sent to the client.

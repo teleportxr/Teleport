@@ -2,6 +2,7 @@
 
 #include "libavstream/common_maths.h"
 #include "TeleportClient/Log.h"
+#include "TeleportCore/ErrorHandling.h"
 
 #include "Common.h"
 #include "Transform.h"
