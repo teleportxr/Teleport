@@ -9,13 +9,13 @@
 #include "TeleportCore/ErrorHandling.h"
 #include <direct.h>
 using namespace teleport;
-using namespace simul;
+using namespace platform;
 using namespace platform;
 using namespace crossplatform;
 ImFont *smallFont=nullptr;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
-void Gui::RestoreDeviceObjects(simul::crossplatform::RenderPlatform* r)
+void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r)
 {
 	renderPlatform=r;
 	if(!r)
@@ -75,7 +75,7 @@ void Gui::RestoreDeviceObjects(simul::crossplatform::RenderPlatform* r)
 
 	// NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
 
-	simul::base::DefaultFileLoader fileLoader;
+	platform::core::DefaultFileLoader fileLoader;
 	std::vector<std::string> texture_paths;
 	texture_paths.push_back("textures");
 	ImGuiIO& io = ImGui::GetIO();
@@ -269,7 +269,7 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *sear
 }
 
 static int in_debug_gui = 0;
-void Gui::BeginDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+void Gui::BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if (in_debug_gui != 0)
 	{
@@ -299,7 +299,7 @@ void Gui::LinePrint(const char* txt,const float *clr)
 		ImGui::TextColored(*(reinterpret_cast<const ImVec4*>(clr)), txt);
 }
 
-void Gui::EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if (in_debug_gui != 1)
 	{
@@ -500,7 +500,7 @@ void Gui::Update(const std::vector<vec4>& h,bool have_vr)
 	have_vr_device = have_vr;
 }
 
-void Gui::Render(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+void Gui::Render(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	view_pos = deviceContext.viewStruct.cam_pos;
 	view_dir = deviceContext.viewStruct.view_dir;

@@ -13,7 +13,7 @@
 #include "AVParser/H264Types.h"
 #include "AVParser/HevcTypes.h"
 
-namespace simul
+namespace platform
 {
 	namespace crossplatform
 	{
@@ -59,7 +59,7 @@ class VideoDecoder final : public avs::DecoderBackendInterface
 	};
 
 public:
-	VideoDecoder(simul::crossplatform::RenderPlatform* renderPlatform, simul::crossplatform::Texture* surfaceTexture);
+	VideoDecoder(platform::crossplatform::RenderPlatform* renderPlatform, platform::crossplatform::Texture* surfaceTexture);
 	~VideoDecoder();
 
 	/* Begin DecoderBackendInterface */
@@ -93,12 +93,12 @@ private:
 	int mDisplayPictureIndex = -1;
 
 	std::unique_ptr<avparser::Parser> mParser;
-	std::unique_ptr<simul::crossplatform::VideoDecoder> mDecoder;
-	std::vector<simul::crossplatform::VideoDecodeArgument> mDecodeArgs;
-	simul::crossplatform::RenderPlatform* mRenderPlatform;
-	simul::crossplatform::Texture* mSurfaceTexture;
-	simul::crossplatform::Texture* mOutputTexture;
-	simul::crossplatform::Effect* mTextureConversionEffect;
+	std::unique_ptr<platform::crossplatform::VideoDecoder> mDecoder;
+	std::vector<platform::crossplatform::VideoDecodeArgument> mDecodeArgs;
+	platform::crossplatform::RenderPlatform* mRenderPlatform;
+	platform::crossplatform::Texture* mSurfaceTexture;
+	platform::crossplatform::Texture* mOutputTexture;
+	platform::crossplatform::Effect* mTextureConversionEffect;
 
 	std::vector<FrameCache> mDPB;
 	std::unordered_map<uint32_t, uint32_t> mPocFrameIndexMap;

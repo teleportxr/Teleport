@@ -7,7 +7,7 @@ using namespace clientrender;
 
 namespace pc_client
 {
-void PC_RenderPlatform::SetSimulRenderPlatform(simul::crossplatform::RenderPlatform* r)
+void PC_RenderPlatform::SetSimulRenderPlatform(platform::crossplatform::RenderPlatform* r)
 {
 	renderPlatform = r;
 }

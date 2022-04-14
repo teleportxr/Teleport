@@ -74,7 +74,7 @@ struct RendererStats
 };
 
 /// @brief The renderer for a client connection.
-class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, public SessionCommandInterface
+class ClientRenderer :public platform::crossplatform::PlatformRendererInterface, public SessionCommandInterface
 		,public clientrender::Renderer
 {
 	enum class ShaderMode
@@ -87,30 +87,30 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 	/// It is better to use a reversed depth buffer format, i.e. the near plane is z=1 and the far plane is z=0. This
 	/// distributes numerical precision to where it is better used.
 	static const bool reverseDepth = true;
-	/// A pointer to RenderPlatform, so that we can use the simul::crossplatform API.
-	simul::crossplatform::RenderPlatform *renderPlatform	=nullptr;
+	/// A pointer to RenderPlatform, so that we can use the platform::crossplatform API.
+	platform::crossplatform::RenderPlatform *renderPlatform	=nullptr;
 	pc_client::PC_RenderPlatform PcClientRenderPlatform;
 	/// A framebuffer to store the colour and depth textures for the view.
-	simul::crossplatform::BaseFramebuffer	*hdrFramebuffer	=nullptr;
+	platform::crossplatform::BaseFramebuffer	*hdrFramebuffer	=nullptr;
 	/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.
-	simul::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
+	platform::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
 
 	// A simple example mesh to draw as transparent
-	simul::crossplatform::Effect *pbrEffect				= nullptr;
-	simul::crossplatform::Effect *cubemapClearEffect	= nullptr;
-	simul::crossplatform::ShaderResource _RWTagDataIDBuffer;
-	simul::crossplatform::ShaderResource _lights;
-	simul::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
-	simul::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
-	simul::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
-	simul::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
-	simul::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
-	simul::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
-	simul::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
-	simul::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
-	simul::crossplatform::Texture* specularCubemapTexture	= nullptr;
-	simul::crossplatform::Texture* lightingCubemapTexture	= nullptr;
-	simul::crossplatform::Texture* videoTexture				= nullptr;
+	platform::crossplatform::Effect *pbrEffect				= nullptr;
+	platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
+	platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
+	platform::crossplatform::ShaderResource _lights;
+	platform::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
+	platform::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
+	platform::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
+	platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
+	platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
+	platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
+	platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
+	platform::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
+	platform::crossplatform::Texture* specularCubemapTexture	= nullptr;
+	platform::crossplatform::Texture* lightingCubemapTexture	= nullptr;
+	platform::crossplatform::Texture* videoTexture				= nullptr;
 
 	static constexpr int maxTagDataSize = 32;
 	VideoTagDataCube videoTagDataCube[maxTagDataSize];
@@ -119,9 +119,9 @@ class ClientRenderer :public simul::crossplatform::PlatformRendererInterface, pu
 
 	/// A camera instance to generate view and proj matrices and handle mouse control.
 	/// In practice you will have your own solution for this.
-	simul::crossplatform::Camera			camera;
-	simul::crossplatform::MouseCameraState	mouseCameraState;
-	simul::crossplatform::MouseCameraInput	mouseCameraInput;
+	platform::crossplatform::Camera			camera;
+	platform::crossplatform::MouseCameraState	mouseCameraState;
+	platform::crossplatform::MouseCameraInput	mouseCameraInput;
 
 	// determined by the stream setup command:
 	vec4 colourOffsetScale;
@@ -188,23 +188,23 @@ public:
 	void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
 	//
 	// to render the vr view instead of re-rendering.
-	void SetExternalTexture(simul::crossplatform::Texture* t);
+	void SetExternalTexture(platform::crossplatform::Texture* t);
 	// This allows live-recompile of shaders. 
 	void RecompileShaders();
-	void PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+	void PrintHelpText(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 	
-	void DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+	void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 	void WriteHierarchy(int tab,std::shared_ptr<clientrender::Node> node);
 	void WriteHierarchies();
-	void RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g);
-	void RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
-	void RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
-	void RenderView(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+	void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g);
+	void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
+	void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
+	void RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
 	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr) override;
-	void Init(simul::crossplatform::RenderPlatform *r);
+	void Init(platform::crossplatform::RenderPlatform *r);
 	void SetServer(const char* ip_port);
 	void InvalidateDeviceObjects();
 	void RemoveView(int);
@@ -248,10 +248,10 @@ public:
 private:
 	avs::uid show_only=0;
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
-	void UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-	void RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique);
-	void RenderVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const simul::math::Matrix4x4& invCamMatrix);
-	void RecomposeCubemap(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
+	void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+	void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
+	void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const platform::math::Matrix4x4& invCamMatrix);
+	void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 
 	const PC_MemoryUtil memoryUtil;
 
@@ -261,7 +261,7 @@ private:
 	teleport::Gui &gui;
 	avs::uid node_select=0;
 	bool have_vr_device = false;
-	simul::crossplatform::Texture* externalTexture = nullptr;
+	platform::crossplatform::Texture* externalTexture = nullptr;
 };
 
 }

@@ -19,7 +19,7 @@
 #define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){TELEPORT_CERR<<"";ReportError((int)res);}
 
 using namespace std;
-using namespace simul;
+using namespace platform;
 using namespace teleport;
 
 struct XrGraphicsBindingPlatform
@@ -126,15 +126,15 @@ swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform *renderPlat
 	XrSwapchainImageD3D11KHR& d3d_swapchain_img = (XrSwapchainImageD3D11KHR&)swapchain_img;
 #endif
 	result.target_view				= renderPlatform->CreateTexture("swapchain target");
-	result.target_view->InitFromExternalTexture2D(renderPlatform, d3d_swapchain_img.texture, nullptr,0,0,simul::crossplatform::UNKNOWN,true);
+	result.target_view->InitFromExternalTexture2D(renderPlatform, d3d_swapchain_img.texture, nullptr,0,0,platform::crossplatform::UNKNOWN,true);
 	result.depth_view				= renderPlatform->CreateTexture("swapchain depth");
-	simul::crossplatform::TextureCreate textureCreate = {};
+	platform::crossplatform::TextureCreate textureCreate = {};
 	textureCreate.numOfSamples		= std::max(1,result.target_view->GetSampleCount());
 	textureCreate.mips				= 1;
 	textureCreate.w					= result.target_view->width;
 	textureCreate.l					= result.target_view->length;
 	textureCreate.arraysize			= 1;
-	textureCreate.f					= simul::crossplatform::PixelFormat::D_32_FLOAT;
+	textureCreate.f					= platform::crossplatform::PixelFormat::D_32_FLOAT;
 	textureCreate.setDepthStencil	= true;
 	textureCreate.computable		= false;
 	result.depth_view->EnsureTexture(renderPlatform, &textureCreate);
@@ -658,8 +658,8 @@ void UseOpenXR::openxr_poll_predicted(XrTime predicted_time)
 			xr_input.handPose[i] = space_location.pose;
 			if (i >= controllerPoses.size())
 				controllerPoses.resize(i + 1);
-			controllerPoses[i].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
-			controllerPoses[i].orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+			controllerPoses[i].position = platform::crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
+			controllerPoses[i].orientation = platform::crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 		}
 	}
 }
@@ -677,11 +677,11 @@ void app_update_predicted()
 
  mat4  AffineTransformation(vec4 q,vec3 p)
 {
-	 simul::crossplatform::Quaternion<float> rotation = (const float*)&q;
+	 platform::crossplatform::Quaternion<float> rotation = (const float*)&q;
 	 vec3 Translation = (const float*)&p;
 	 vec4 VTranslation = { Translation.x,Translation.y,Translation.z,1.0f };
 	 mat4 M;
-	 simul::crossplatform::QuaternionToMatrix(M, rotation);
+	 platform::crossplatform::QuaternionToMatrix(M, rotation);
 	 vec4 row3 = M.M[3];
 	 row3 = row3 + VTranslation;
 	 M.M[3][0] = row3.x;
@@ -738,8 +738,8 @@ mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
 	return MatrixPerspectiveOffCenterRH(left, right, down, up, clip_near, clip_far);
 }
 
-void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext,XrCompositionLayerProjectionView& view
-	, swapchain_surfdata_t& surface, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
+void UseOpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext,XrCompositionLayerProjectionView& view
+	, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
 	// Set up camera matrices based on OpenXR's predicted viewpoint information
 	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
@@ -748,16 +748,16 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	crossplatform::Quaternionf orig_rot = origin_orientation;
 	Multiply(pos,orig_rot,pos);
 	pos += origin_pos;
-	deviceContext.viewStruct.proj = *((const simul::math::Matrix4x4*)&proj); 
+	deviceContext.viewStruct.proj = *((const platform::math::Matrix4x4*)&proj); 
 
 	rot=orig_rot*rot;
 
-	simul::geometry::SimulOrientation globalOrientation;
+	platform::math::SimulOrientation globalOrientation;
 	// global pos/orientation:
 	globalOrientation.SetPosition((const float*)&pos);
 
-	simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(-1.f, 0.0f, 0.0f));
-	simul::math::Quaternion q1 = (const float*)&rot;
+	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
+	platform::math::Quaternion q1 = (const float*)&rot;
 
 	auto q_rel = q1 / q0;
 	globalOrientation.SetOrientation(q_rel);
@@ -781,7 +781,7 @@ void UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceC
 	renderPlatform->DeactivateRenderTargets(deviceContext);
 }
 
-crossplatform::Texture* UseOpenXR::GetRenderTexture(int index)
+platform::crossplatform::Texture* UseOpenXR::GetRenderTexture(int index)
 {
 	if (index < 0 || index >= xr_swapchains.size())
 		return nullptr;
@@ -791,9 +791,9 @@ crossplatform::Texture* UseOpenXR::GetRenderTexture(int index)
 	return sw.surface_data[sw.last_img_id].target_view;
 }
 
-bool UseOpenXR::RenderLayer(simul::crossplatform::GraphicsDeviceContext& deviceContext, XrTime predictedTime
+bool UseOpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext, XrTime predictedTime
 	, vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer
-	, simul::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
+	, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
 	// Find the state and location of each viewpoint at the predicted time
 	uint32_t         view_count = 0;
@@ -923,7 +923,7 @@ const teleport::client::ControllerState& UseOpenXR::GetControllerState(int index
 		return emptyState;
 }
 
-void UseOpenXR::RenderFrame(simul::crossplatform::GraphicsDeviceContext	&deviceContext,simul::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
+void UseOpenXR::RenderFrame(platform::crossplatform::GraphicsDeviceContext	&deviceContext,platform::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
 {
 	// Block until the previous frame is finished displaying, and is ready for another one.
 	// Also returns a prediction of when the next frame will be displayed, for use with predicting

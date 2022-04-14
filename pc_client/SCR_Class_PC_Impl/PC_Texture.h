@@ -4,7 +4,7 @@
 #include "PC_Sampler.h"
 #include <ClientRender/Texture.h>
 #include <ClientRender/Sampler.h>
-namespace simul
+namespace platform
 {
 	namespace crossplatform
 	{
@@ -18,7 +18,7 @@ namespace pc_client
 	class PC_Texture final : public clientrender::Texture
 	{
 	private:
-		simul::crossplatform::Texture* m_SimulTexture;
+		platform::crossplatform::Texture* m_SimulTexture;
 	public:
 		PC_Texture(const clientrender::RenderPlatform*const r)
 			:clientrender::Texture(r), m_SimulTexture(nullptr)
@@ -38,7 +38,7 @@ namespace pc_client
 		// Inherited via Texture
 		void Create(const TextureCreateInfo& pTextureCreateInfo) override;
 
-		simul::crossplatform::Texture* GetSimulTexture()
+		platform::crossplatform::Texture* GetSimulTexture()
 		{
 			return m_SimulTexture;
 		}

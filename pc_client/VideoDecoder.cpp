@@ -16,7 +16,7 @@
 using namespace avs;
 using namespace avparser;
 
-namespace cp = simul::crossplatform;
+namespace cp = platform::crossplatform;
 
 VideoDecoder::VideoDecoder(cp::RenderPlatform* renderPlatform, cp::Texture* surfaceTexture)
 	: mRenderPlatform(renderPlatform)
@@ -93,13 +93,13 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	// The output texture is in native decode format.
 	// The surface texture will be written to in the display function.
 	mOutputTexture = mRenderPlatform->CreateTexture("OutputTexture");
-	mOutputTexture->ensureTexture2DSizeAndFormat(mRenderPlatform, decParams.width, decParams.height, 1, simul::crossplatform::NV12, false, false, false);
+	mOutputTexture->ensureTexture2DSizeAndFormat(mRenderPlatform, decParams.width, decParams.height, 1, platform::crossplatform::NV12, false, false, false);
 
 #if TELEPORT_CLIENT_USE_D3D12
-	mDecoder.reset(new simul::dx12::VideoDecoder());
+	mDecoder.reset(new platform::dx12::VideoDecoder());
 
 	// Change to common state for use with D3D12 video decode command list.
-	((simul::dx12::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
+	((platform::dx12::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 #endif
 
 	// Pass true to perform a query to check if the decoder successfully decoded the frame.
@@ -252,7 +252,7 @@ Result VideoDecoder::display(bool showAlphaAsColor)
 
 #if TELEPORT_CLIENT_USE_D3D12
 	// Change back to common state for use with D3D12 video decode command list.
-	((simul::dx12::Texture*)mOutputTexture)->SetLayout(deviceContext, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
+	((platform::dx12::Texture*)mOutputTexture)->SetLayout(deviceContext, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 #endif
 
 	return Result::OK;

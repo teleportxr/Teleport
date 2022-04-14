@@ -8,9 +8,9 @@
 using namespace pc_client;
 using namespace clientrender;
 
-simul::crossplatform::PixelFormat ToSimulPixelFormat(clientrender::Texture::Format f)
+platform::crossplatform::PixelFormat ToSimulPixelFormat(clientrender::Texture::Format f)
 {
-	using namespace simul::crossplatform;
+	using namespace platform::crossplatform;
 	using namespace clientrender;
 	switch (f)
 	{
@@ -113,7 +113,7 @@ void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 		TELEPORT_CLIENT_WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel, pTextureCreateInfo.mipSizes[0]);
 		return;
 	}
-	simul::crossplatform::TextureCreate textureCreate;
+	platform::crossplatform::TextureCreate textureCreate;
 	textureCreate.w					= pTextureCreateInfo.width;
 	textureCreate.l					= pTextureCreateInfo.height;
 	textureCreate.f					= pixelFormat;
@@ -121,7 +121,7 @@ void PC_Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	textureCreate.make_rt			= rt;
 	textureCreate.setDepthStencil	= ds;
 	textureCreate.numOfSamples		= num_samp;
-	textureCreate.compressionFormat = (simul::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
+	textureCreate.compressionFormat = (platform::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
 	textureCreate.initialData		= pTextureCreateInfo.mips[0].data();
 	textureCreate.name				= m_CI.name.c_str();
 	m_SimulTexture->EnsureTexture(srp, &textureCreate);
