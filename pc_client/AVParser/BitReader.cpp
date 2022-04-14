@@ -7,11 +7,16 @@
 #include "ErrorHandling.h"
 
 BitReader::BitReader(const uint8_t* data, size_t size) 
-	: mData(data)
-	, mSize(size)
-	, mByteIndex(0)
-	, mBitIndex(CHAR_BIT - 1)
 {
+	start(data, size);
+}
+
+void BitReader::start(const uint8_t* data, size_t size)
+{
+	mData = data;
+	mSize = size;
+	mByteIndex = 0;
+	mBitIndex = mBitStartIndex;
 }
 
 bool BitReader::getBit()
@@ -26,9 +31,10 @@ bool BitReader::getBit()
 
 	mBitIndex--;
 
-	if (mBitIndex > CHAR_BIT)
+	// The unsigned value of mBitIndex will become UINT32_MAX if it goes below 0.
+	if (mBitIndex > mBitStartIndex)
 	{
-		mBitIndex = CHAR_BIT - 1;
+		mBitIndex = mBitStartIndex;
 		mByteIndex++;
 
 		if (mByteIndex >= 2)
@@ -132,9 +138,18 @@ int32_t BitReader::getGolombS()
 	return buffer;
 }
 
+size_t BitReader::getBytesRead() const
+{
+	if (mBitIndex == mBitStartIndex)
+	{
+		return mByteIndex;
+	}
+	return mByteIndex + 1;
+}
+
 size_t BitReader::getBitsRemaining() const
 {
-	size_t numBytesRemaining = mSize - mByteIndex - 1;
-	return (numBytesRemaining * CHAR_BIT) + mBitIndex + 1;
+	size_t numBytesRemaining = (mSize - mByteIndex) - 1;
+	return (numBytesRemaining * 8) + mBitIndex + 1;
 }
 

@@ -470,7 +470,7 @@ Result NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, 
 		return Result::NetworkSink_InvalidStreamDataType;
 	}
 
-	// total number of EFP superframes created since the start for this stream
+	// Total number of EFP superframes created since the start for this stream.
 	stream.counter++;
 
 	auto efpResult = m_EFPSender->packAndSendFromPtr(buffer,

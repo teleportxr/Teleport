@@ -72,7 +72,7 @@ static const char* ToString(clientrender::Light::Type type)
 std::default_random_engine generator;
 std::uniform_real_distribution<float> rando(-1.0f,1.f);
 
-using namespace simul;
+using namespace platform;
 
 void set_float4(float f[4], float a, float b, float c, float d)
 {
@@ -96,11 +96,11 @@ using namespace client;
 
 struct AVSTextureImpl :public AVSTexture
 {
-	AVSTextureImpl(simul::crossplatform::Texture *t)
+	AVSTextureImpl(platform::crossplatform::Texture *t)
 		:texture(t)
 	{
 	}
-	simul::crossplatform::Texture *texture = nullptr;
+	platform::crossplatform::Texture *texture = nullptr;
 	avs::SurfaceBackendInterface* createSurface() const override
 	{
 #if TELEPORT_CLIENT_USE_D3D12
@@ -141,7 +141,7 @@ ClientRenderer::~ClientRenderer()
 	InvalidateDeviceObjects(); 
 }
 
-void ClientRenderer::Init(simul::crossplatform::RenderPlatform *r)
+void ClientRenderer::Init(platform::crossplatform::RenderPlatform *r)
 {
 	// Initialize the audio (asynchronously)
 	audioPlayer.initializeAudioDevice();
@@ -274,7 +274,7 @@ void ClientRenderer::SetServer(const char *ip_port)
 	}
 }
 
-void ClientRenderer::SetExternalTexture(simul::crossplatform::Texture* t)
+void ClientRenderer::SetExternalTexture(platform::crossplatform::Texture* t)
 {
 	externalTexture = t;
 	have_vr_device = (externalTexture != nullptr);
@@ -353,14 +353,14 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		framerate = 1000.0f / (timer.TimeSum - last_t);
 	}
 	last_t = timer.TimeSum;
-	simul::crossplatform::GraphicsDeviceContext	deviceContext;
+	platform::crossplatform::GraphicsDeviceContext	deviceContext;
 	deviceContext.setDefaultRenderTargets(renderTexture, nullptr, 0, 0, w, h);
 	deviceContext.platform_context = context;
 	deviceContext.renderPlatform = renderPlatform;
 	deviceContext.viewStruct.view_id = view_id;
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 
-	simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
+	platform::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "ClientRenderer::Render");
@@ -381,12 +381,12 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
 	else
 		deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
-	simul::geometry::SimulOrientation globalOrientation;
+	platform::math::SimulOrientation globalOrientation;
 	// global pos/orientation:
 	globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.globalPose.position);
 
-	simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(-1.f, 0.0f, 0.0f));
-	simul::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.globalPose.orientation;
+	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
+	platform::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.globalPose.orientation;
 
 	auto q_rel = q1 / q0;
 	globalOrientation.SetOrientation(q_rel);
@@ -477,7 +477,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 #endif
 }
 
-void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &deviceContext)
+void ClientRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext,"RenderView");
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
@@ -529,7 +529,7 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 				{
 					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
 					RecomposeVideoTexture(deviceContext, ti->texture, videoTexture, technique);
-					simul::math::Matrix4x4 projInv;
+					platform::math::Matrix4x4 projInv;
 					deviceContext.viewStruct.proj.Inverse(projInv);
 					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
 				}
@@ -614,7 +614,7 @@ void ClientRenderer::RenderView(simul::crossplatform::GraphicsDeviceContext &dev
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 }
 
-void ClientRenderer::RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique)
+void ClientRenderer::RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique)
 {
 	int W = targetTexture->width;
 	int H = targetTexture->length;
@@ -634,7 +634,7 @@ void ClientRenderer::RecomposeVideoTexture(simul::crossplatform::GraphicsDeviceC
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
-void ClientRenderer::RenderVideoTexture(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const simul::math::Matrix4x4& invCamMatrix)
+void ClientRenderer::RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const platform::math::Matrix4x4& invCamMatrix)
 {
 	tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
 	cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
@@ -652,7 +652,7 @@ void ClientRenderer::RenderVideoTexture(simul::crossplatform::GraphicsDeviceCont
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
-void ClientRenderer::RecomposeCubemap(simul::crossplatform::GraphicsDeviceContext& deviceContext, simul::crossplatform::Texture* srcTexture, simul::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset)
+void ClientRenderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset)
 {
 	cubemapConstants.sourceOffset = sourceOffset;
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
@@ -675,7 +675,7 @@ void ClientRenderer::RecomposeCubemap(simul::crossplatform::GraphicsDeviceContex
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
-void ClientRenderer::UpdateTagDataBuffers(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+void ClientRenderer::UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {				
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
@@ -746,7 +746,7 @@ const char *stringof(avs::GeometryPayloadType t)
 	return txt[(size_t)t];
 }
 
-void ClientRenderer::DrawOSD(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+void ClientRenderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if(gui.HasFocus())
 		return;
@@ -948,7 +948,7 @@ void ClientRenderer::WriteHierarchies()
 	std::cout << std::endl;
 }
 
-void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g)
+void ClientRenderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g)
 {
 	deviceContext.viewStruct.Init();
 
@@ -1015,7 +1015,7 @@ void ClientRenderer::RenderLocalNodes(simul::crossplatform::GraphicsDeviceContex
 		RenderNodeOverlay(deviceContext, node,g);
 	}
 }
-void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
+void ClientRenderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
@@ -1049,8 +1049,8 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 				auto* vb = dynamic_cast<pc_client::PC_VertexBuffer*>(meshInfo.vb[element].get());
 				const auto* ib = dynamic_cast<pc_client::PC_IndexBuffer*>(meshInfo.ib[element].get());
 
-				const simul::crossplatform::Buffer* const v[] = {vb->GetSimulVertexBuffer()};
-				simul::crossplatform::Layout* layout = vb->GetLayout();
+				const platform::crossplatform::Buffer* const v[] = {vb->GetSimulVertexBuffer()};
+				platform::crossplatform::Layout* layout = vb->GetLayout();
 
 				mat4 model;
 				const clientrender::mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
@@ -1146,7 +1146,7 @@ void ClientRenderer::RenderNode(simul::crossplatform::GraphicsDeviceContext& dev
 }
 
 
-void ClientRenderer::RenderNodeOverlay(simul::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
+void ClientRenderer::RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
 	AVSTextureHandle th = avsTexture;
 	AVSTexture& tx = *th;
@@ -1266,7 +1266,7 @@ void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height)
 	bool useSharedHeap = false;
 #endif
 
-	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height,1, simul::crossplatform::RGBA_8_UNORM, true, true, 
+	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height,1, platform::crossplatform::RGBA_8_UNORM, true, true, 
 		false, 1, 0, false, vec4(0.5f, 0.5f, 0.2f, 1.0f), 1.0f, 0, useSharedHeap);
 }
 
@@ -1479,7 +1479,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 		TELEPORT_CERR << "Failed to configure output surface node!\n";
 	}
 
-	clientPipeline.videoQueue.configure(200000, 16, "VideoQueue");
+	clientPipeline.videoQueue.configure(300000, 16, "VideoQueue");
 
 	avs::PipelineNode::link(clientPipeline.source, clientPipeline.videoQueue);
 	avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
@@ -1851,7 +1851,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			cam_pos.z = 2.0f;
 		if (cam_pos.z < 1.0f)
 			cam_pos.z = 1.0f;
-		simul::math::Quaternion q0(3.1415926536f / 2.0f, simul::math::Vector3(1.f, 0.0f, 0.0f));
+		platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(1.f, 0.0f, 0.0f));
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
 		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
@@ -1991,7 +1991,7 @@ void ClientRenderer::OnMouseMove(int xPos
 		| (bMiddleButtonDown ? crossplatform::MouseCameraInput::MIDDLE_BUTTON : 0);
 }
 
-void ClientRenderer::PrintHelpText(simul::crossplatform::GraphicsDeviceContext& deviceContext)
+void ClientRenderer::PrintHelpText(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	deviceContext.framePrintY = 8;
 	deviceContext.framePrintX = hdrFramebuffer->GetWidth() / 2;

@@ -18,16 +18,22 @@ namespace avparser
 
     namespace hevc
     {
+        // Useful data extracted from the raw data of the last slice parsed.
         struct ExtraData
         {
+            uint32_t poc = 0;
             uint32_t stRpsIdx = 0;
             uint32_t refRpsIdx = 0;
             uint32_t short_term_ref_pic_set_size = 0;
+            uint32_t numDeltaPocsOfRefRpsIdx = 0;
+            std::vector<uint32_t> longTermRefPicPocs;
         };
 
         class HevcParser : public Parser
         {
         public:
+            HevcParser();
+
             size_t parseNALUnit(const uint8_t* data, size_t size) override;
 
             void* getVPS() const override
@@ -70,12 +76,14 @@ namespace avparser
             VuiParameters parseVuiParameters(size_t sps_max_sub_layers_minus1);
             ScalingListData parseScalingListData();
 
-            void parseSliceHeader(Slice& slice, ExtraData& extraData);
+            void parseSliceHeader(Slice& slice);
             RefPicListModification parseRefPicListModification(Slice& slice);
             PredWeightTable parsePredWeightTable(Slice& slice);
 
             static uint32_t log2(uint32_t k);
             static uint32_t computeNumPocTotal(Slice& slice, SPS& sps);
+
+            static uint32_t computePoc(const SPS& sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType);
 
 
             static constexpr uint8_t mLog2Table[256] = {
@@ -93,12 +101,12 @@ namespace avparser
             SPS mSPS;
             PPS mPPS;
             Slice mLastSlice;
+            // This will be reset before parsing a new slice.
             ExtraData mExtraData;
 
             std::unique_ptr<BitReader> mReader;
 
-
-
+            uint32_t mPrevPocTid0;
         };
     }
 }

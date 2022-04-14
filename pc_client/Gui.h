@@ -10,16 +10,16 @@ namespace teleport
 	class Gui
 	{
 	public:
-		void RestoreDeviceObjects(simul::crossplatform::RenderPlatform *r);
+		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r);
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
-		void Render(simul::crossplatform::GraphicsDeviceContext &deviceContext);
+		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void LinePrint(const char* txt,const float *clr=nullptr);
 		void Anims(const ResourceManager<clientrender::Animation>& animManager);
 		void NodeTree(const clientrender::NodeManager::nodeList_t&);
-		void BeginDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-		void EndDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
-		//void RenderDebugGui(simul::crossplatform::GraphicsDeviceContext& deviceContext);
+		void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		void EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		//void RenderDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
 		void ShowHide();
 		void Show();
@@ -42,7 +42,7 @@ namespace teleport
 	protected:
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);
-		simul::crossplatform::RenderPlatform* renderPlatform=nullptr;
+		platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
 		vec3 view_dir;
 		vec3 menu_pos;

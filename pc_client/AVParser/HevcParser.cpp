@@ -14,9 +14,16 @@ namespace avparser
 {
 	namespace hevc
 	{
+		HevcParser::HevcParser()
+			: mPrevPocTid0(0)
+		{
+			mReader.reset(new BitReader());
+		}
+
+		
 		size_t HevcParser::parseNALUnit(const uint8_t* data, size_t size)
 		{
-			mReader.reset(new BitReader(data, size));
+			mReader->start(data, size);
 
 			NALHeader header;
 			parseNALUnitHeader(header);
@@ -67,28 +74,28 @@ namespace avparser
 				mLastSlice = Slice();
 				mLastSlice.header = header;
 				mExtraData = {};
-				parseSliceHeader(mLastSlice, mExtraData);
+				parseSliceHeader(mLastSlice);
 				break;
 			}
 			default:
 				return 0;
 			};
 
-			return mReader->getByteIndex();
+			return mReader->getBytesRead();
 		}
 
 
 		void HevcParser::parseNALUnitHeader(NALHeader& header)
 		{
-			//forbidden_zero_bit
+			// forbidden_zero_bit
 			mReader->getBit();
 
 			header.type = (NALUnitType)mReader->getBits(6);
 
-			//nuh_layer_id
+			// nuh_layer_id
 			header.layer_id = mReader->getBits(6);
 
-			//nuh_temporal_id_plus1
+			// nuh_temporal_id_plus1
 			header.temporal_id_plus1 = mReader->getBits(3);
 		}
 
@@ -180,9 +187,13 @@ namespace avparser
 			sps.chroma_format_idc = mReader->getGolombU();
 
 			if (sps.chroma_format_idc == 3)
+			{
 				sps.separate_colour_plane_flag = mReader->getBits(1);
+			}
 			else
+			{
 				sps.separate_colour_plane_flag = 0;
+			}
 
 			sps.pic_width_in_luma_samples = mReader->getGolombU();
 			sps.pic_height_in_luma_samples = mReader->getGolombU();
@@ -205,9 +216,7 @@ namespace avparser
 			sps.sps_max_num_reorder_pics.resize(sps.sps_max_sub_layers_minus1 + 1, 0);
 			sps.sps_max_latency_increase_plus1.resize(sps.sps_max_sub_layers_minus1 + 1, 0);
 
-			for (size_t i = (sps.sps_sub_layer_ordering_info_present_flag ? 0 : sps.sps_max_sub_layers_minus1);
-				i <= sps.sps_max_sub_layers_minus1;
-				++i)
+			for (size_t i = (sps.sps_sub_layer_ordering_info_present_flag ? 0 : sps.sps_max_sub_layers_minus1); i <= sps.sps_max_sub_layers_minus1;++i)
 			{
 				sps.sps_max_dec_pic_buffering_minus1[i] = mReader->getGolombU();
 				sps.sps_max_num_reorder_pics[i] = mReader->getGolombU();
@@ -508,9 +517,13 @@ namespace avparser
 			hrd.cpb_cnt_minus1.resize(maxNumSubLayersMinus1 + 1, 0);
 
 			if (hrd.nal_hrd_parameters_present_flag)
+			{
 				hrd.nal_sub_layer_hrd_parameters.resize(maxNumSubLayersMinus1 + 1);
+			}
 			if (hrd.vcl_hrd_parameters_present_flag)
+			{
 				hrd.vcl_sub_layer_hrd_parameters.resize(maxNumSubLayersMinus1 + 1);
+			}
 
 			for (size_t i = 0; i <= maxNumSubLayersMinus1; ++i)
 			{
@@ -581,6 +594,7 @@ namespace avparser
 
 			if (rps.inter_ref_pic_set_prediction_flag)
 			{
+				// Only set if this ref pic set belongs to a slice.
 				if (stRpsIdx == num_short_term_ref_pic_sets)
 				{
 					rps.delta_idx_minus1 = mReader->getGolombU();
@@ -590,7 +604,8 @@ namespace avparser
 				rps.abs_delta_rps_minus1 = mReader->getGolombU();
 
 				refRpsIdx = stRpsIdx - (rps.delta_idx_minus1 + 1);
-				uint32_t numDeltaPocs = 0;
+
+				/*uint32_t numDeltaPocs = 0;
 
 				if (refPicSets[refRpsIdx].inter_ref_pic_set_prediction_flag)
 				{
@@ -605,19 +620,97 @@ namespace avparser
 				else
 				{
 					numDeltaPocs = refPicSets[refRpsIdx].num_negative_pics + refPicSets[refRpsIdx].num_positive_pics;
+				}*/
+
+				uint32_t refRPSNumDelataPocs = refPicSets[refRpsIdx].num_negative_pics + refPicSets[refRpsIdx].num_positive_pics;
+				
+				// Only set if this ref pic set belongs to a slice.
+				if (stRpsIdx == num_short_term_ref_pic_sets)
+				{
+					mExtraData.numDeltaPocsOfRefRpsIdx = refRPSNumDelataPocs;
 				}
 
-				rps.used_by_curr_pic_flag.resize(numDeltaPocs + 1);
-				rps.use_delta_flag.resize(numDeltaPocs + 1, 1);
+				uint32_t numDeltaPocs = refRPSNumDelataPocs + 1;
 
-				for (uint32_t i = 0; i <= numDeltaPocs; ++i)
+				rps.used_by_curr_pic_flag.resize(numDeltaPocs);
+				rps.use_delta_flag.resize(numDeltaPocs, 1);
+
+				for (uint32_t i = 0; i < numDeltaPocs; ++i)
 				{
+					// Determines if the ith entry in the source candidate RPS is referenced by the current picture.
 					rps.used_by_curr_pic_flag[i] = mReader->getBits(1);
 					if (!rps.used_by_curr_pic_flag[i])
 					{
+						// Determines if the ith entry in the source candidate RPS is included in this RPS.
 						rps.use_delta_flag[i] = mReader->getBits(1);
 					}
 				}
+
+				int deltaRps = (1 - (2 * rps.delta_rps_sign)) * (rps.abs_delta_rps_minus1 + 1);
+
+
+				// Pictures with poc values less than the current picture's.
+				for (int j = refPicSets[refRpsIdx].num_positive_pics - 1; j >= 0; --j)
+				{
+					int dPoc = (refPicSets[refRpsIdx].delta_poc_s1_minus1[j] + 1) + deltaRps;
+					if (dPoc < 0 && rps.use_delta_flag[refPicSets[refRpsIdx].num_negative_pics + j])
+					{
+						uint32_t dPocMinus1 = (uint32_t)(dPoc * -1) - 1;
+						rps.delta_poc_s0_minus1.push_back(dPocMinus1);
+						rps.used_by_curr_pic_s0_flag.push_back(rps.used_by_curr_pic_flag[refPicSets[refRpsIdx].num_negative_pics + j]);
+					}
+				}
+
+				if (deltaRps < 0 && rps.use_delta_flag[refRPSNumDelataPocs])
+				{
+					uint32_t dPocMinus1 = (uint32_t)(deltaRps * -1) - 1;
+					rps.delta_poc_s0_minus1.push_back(dPocMinus1);
+					rps.used_by_curr_pic_s0_flag.push_back(rps.used_by_curr_pic_flag[refRPSNumDelataPocs]);
+				} 
+
+				for (int j = 0; j < refPicSets[refRpsIdx].num_negative_pics; ++j)
+				{
+					int dPoc = (refPicSets[refRpsIdx].delta_poc_s0_minus1[j] + 1) + deltaRps;
+					if (dPoc < 0 && rps.use_delta_flag[j])
+					{
+						uint32_t dPocMinus1 = (uint32_t)(dPoc * -1) - 1;
+						rps.delta_poc_s0_minus1.push_back(dPocMinus1);
+						rps.used_by_curr_pic_s0_flag.push_back(rps.used_by_curr_pic_flag[j]);
+					}
+				}
+				rps.num_negative_pics = rps.used_by_curr_pic_s0_flag.size();
+
+
+				// Pictures with poc values greater than the current picture's.	
+				for (int j = refPicSets[refRpsIdx].num_negative_pics - 1; j >= 0; --j)
+				{
+					int dPoc = (refPicSets[refRpsIdx].delta_poc_s0_minus1[j] + 1) + deltaRps;
+					if (dPoc > 0 && rps.use_delta_flag[j])
+					{
+						uint32_t dPocMinus1 = (uint32_t)(dPoc * -1) - 1;
+						rps.delta_poc_s1_minus1.push_back(dPocMinus1);
+						rps.used_by_curr_pic_s1_flag.push_back(rps.used_by_curr_pic_flag[j]);
+					}
+				}
+
+				if (deltaRps > 0 && rps.use_delta_flag[refRPSNumDelataPocs])
+				{
+					uint32_t dPocMinus1 = (uint32_t)(deltaRps * -1) - 1;
+					rps.delta_poc_s1_minus1.push_back(dPocMinus1);
+					rps.used_by_curr_pic_s1_flag.push_back(rps.used_by_curr_pic_flag[refRPSNumDelataPocs]);
+				}
+
+				for (int j = 0; j < refPicSets[refRpsIdx].num_positive_pics; ++j)
+				{
+					int dPoc = (refPicSets[refRpsIdx].delta_poc_s1_minus1[j] + 1) + deltaRps;
+					if (dPoc > 0 && rps.use_delta_flag[refPicSets[refRpsIdx].num_negative_pics + j])
+					{
+						uint32_t dPocMinus1 = (uint32_t)(dPoc * -1) - 1;
+						rps.delta_poc_s1_minus1.push_back(dPocMinus1);
+						rps.used_by_curr_pic_s1_flag.push_back(rps.used_by_curr_pic_flag[refPicSets[refRpsIdx].num_negative_pics + j]);
+					}
+				}
+				rps.num_positive_pics = rps.used_by_curr_pic_s1_flag.size();
 			}
 			else
 			{
@@ -803,14 +896,18 @@ namespace avparser
 					sc.scaling_list_pred_matrix_id_delta[sizeId].resize(6);
 					sc.scaling_list_delta_coef[sizeId].resize(6);
 					if (sizeId >= 2)
+					{
 						sc.scaling_list_dc_coef_minus8[sizeId - 2].resize(6);
+					}
 				}
 
 				for (size_t matrixId = 0; matrixId < ((sizeId == 3) ? 2 : 6); matrixId++)
 				{
 					sc.scaling_list_pred_mode_flag[sizeId][matrixId] = mReader->getBits(1);
 					if (!sc.scaling_list_pred_mode_flag[sizeId][matrixId])
+					{
 						sc.scaling_list_pred_matrix_id_delta[sizeId][matrixId] = mReader->getGolombU();
+					}
 					else
 					{
 						size_t nextCoef = 8;
@@ -832,12 +929,14 @@ namespace avparser
 			return sc;
 		}
 
-		void HevcParser::parseSliceHeader(Slice& slice, ExtraData& extraData)
+		void HevcParser::parseSliceHeader(Slice& slice)
 		{
 			slice.first_slice_segment_in_pic_flag = mReader->getBits(1);
 
 			if (slice.header.type >= NALUnitType::BLA_W_LP && slice.header.type <= NALUnitType::IRAP_VCL23)
+			{
 				slice.no_output_of_prior_pics_flag = mReader->getBits(1);
+			}
 
 			slice.slice_pic_parameter_set_id = mReader->getGolombU();
 
@@ -899,7 +998,11 @@ namespace avparser
 				}
 
 				bool idrPicFlag = slice.header.type == NALUnitType::IDR_W_RADL || slice.header.type == NALUnitType::IDR_N_LP;
-				if (!idrPicFlag)
+				if (idrPicFlag)
+				{
+					mPrevPocTid0 = 0;
+				}
+				else
 				{
 					if (mSPS.log2_max_pic_order_cnt_lsb_minus4 + 4 >= 32)
 					{
@@ -908,14 +1011,18 @@ namespace avparser
 					}
 
 					slice.slice_pic_order_cnt_lsb = mReader->getBits(mSPS.log2_max_pic_order_cnt_lsb_minus4 + 4);
+					mExtraData.poc = computePoc(mSPS, mPrevPocTid0, slice.slice_pic_order_cnt_lsb, (uint32_t)slice.header.type);
+
 					slice.short_term_ref_pic_set_sps_flag = mReader->getBits(1);
 
 					size_t remainingBits = mReader->getBitsRemaining();
 
+					mExtraData.numDeltaPocsOfRefRpsIdx = 0;
+
 					if (!slice.short_term_ref_pic_set_sps_flag)
 					{
-						slice.short_term_ref_pic_set = parseShortTermRefPicSet(mSPS.num_short_term_ref_pic_sets, mSPS.num_short_term_ref_pic_sets, mSPS.short_term_ref_pic_set, mSPS, extraData.refRpsIdx);
-						extraData.stRpsIdx = mSPS.num_short_term_ref_pic_sets;
+						slice.short_term_ref_pic_set = parseShortTermRefPicSet(mSPS.num_short_term_ref_pic_sets, mSPS.num_short_term_ref_pic_sets, mSPS.short_term_ref_pic_set, mSPS, mExtraData.refRpsIdx);
+						mExtraData.stRpsIdx = mSPS.num_short_term_ref_pic_sets;
 					}
 					else if (mSPS.num_short_term_ref_pic_sets > 1)
 					{
@@ -933,12 +1040,13 @@ namespace avparser
 						{
 							slice.short_term_ref_pic_set_idx = 0;
 						}
-						extraData.stRpsIdx = slice.short_term_ref_pic_set_idx;
-						extraData.refRpsIdx = extraData.stRpsIdx;
+						mExtraData.stRpsIdx = slice.short_term_ref_pic_set_idx;
+						mExtraData.refRpsIdx = mExtraData.stRpsIdx;
 					}
 
-					extraData.short_term_ref_pic_set_size = remainingBits - mReader->getBitsRemaining();
+					mExtraData.short_term_ref_pic_set_size = remainingBits - mReader->getBitsRemaining();
 
+					// Long term reference frames may not be enabled. This is an option that can be enabled in the video encoder.
 					if (mSPS.long_term_ref_pics_present_flag)
 					{
 						slice.num_long_term_sps = 0;
@@ -951,11 +1059,15 @@ namespace avparser
 
 						size_t num_long_term = slice.num_long_term_sps + slice.num_long_term_pics;
 
-						slice.lt_idx_sps.resize(num_long_term);
+						slice.lt_idx_sps.resize(num_long_term, 0);
 						slice.poc_lsb_lt.resize(num_long_term);
 						slice.used_by_curr_pic_lt_flag.resize(num_long_term);
 						slice.delta_poc_msb_present_flag.resize(num_long_term);
 						slice.delta_poc_msb_cycle_lt.resize(num_long_term);
+
+						mExtraData.longTermRefPicPocs.resize(num_long_term, 0);
+
+						uint32_t prevPocMsb = 0;
 
 						for (size_t i = 0; i < num_long_term; ++i)
 						{
@@ -963,8 +1075,10 @@ namespace avparser
 							{
 								if (mSPS.num_long_term_ref_pics_sps > 1)
 								{
-									uint32_t ltIdxSpsSize = log2(mSPS.num_long_term_ref_pics_sps);
-									slice.lt_idx_sps[i] = mReader->getBits(ltIdxSpsSize);
+									uint32_t size = log2(mSPS.num_long_term_ref_pics_sps);
+									slice.lt_idx_sps[i] = mReader->getBits(size);
+									slice.poc_lsb_lt[i] = mSPS.lt_ref_pic_poc_lsb_sps[slice.lt_idx_sps[i]];
+									slice.used_by_curr_pic_lt_flag[i] = mSPS.used_by_curr_pic_lt_sps_flag[slice.lt_idx_sps[i]];
 								}
 							}
 							else
@@ -978,14 +1092,43 @@ namespace avparser
 							{
 								slice.delta_poc_msb_cycle_lt[i] = mReader->getGolombU();
 							}
+							else
+							{
+								slice.delta_poc_msb_cycle_lt[i] = 0;
+							}
 
+							uint32_t pocMsb;
+							if (i == 0 || i == slice.num_long_term_sps)
+							{
+								pocMsb = slice.delta_poc_msb_cycle_lt[i];
+							}
+							else 
+							{
+								pocMsb = slice.delta_poc_msb_cycle_lt[i] + prevPocMsb;
+							}
+
+							prevPocMsb = pocMsb;
+							
+							mExtraData.longTermRefPicPocs[i] = (pocMsb << (mSPS.log2_max_pic_order_cnt_lsb_minus4 + 4)) + slice.poc_lsb_lt[i];
 						}
 					}
 
 					if (mSPS.sps_temporal_mvp_enabled_flag)
 					{
-						slice.slice_temporal_mvp_enabled_flag = mReader->getBits(1);
+						slice.slice_temporal_mvp_enabled_flag = mReader->getBits(1); 
 					}
+				}
+
+				if ((slice.header.temporal_id_plus1 - 1) == 0 &&
+					slice.header.type != NALUnitType::TRAIL_N &&
+					slice.header.type != NALUnitType::TSA_N &&
+					slice.header.type != NALUnitType::STSA_N &&
+					slice.header.type != NALUnitType::RADL_N &&
+					slice.header.type != NALUnitType::RASL_N &&
+					slice.header.type != NALUnitType::RADL_R &&
+					slice.header.type != NALUnitType::RASL_R)
+				{
+					mPrevPocTid0 = mExtraData.poc;
 				}
 
 				if (mSPS.sample_adaptive_offset_enabled_flag)
@@ -1032,7 +1175,9 @@ namespace avparser
 					if (slice.slice_temporal_mvp_enabled_flag)
 					{
 						if (slice.slice_type == SliceType::B)
+						{
 							slice.collocated_from_l0_flag = mReader->getBits(1);
+						}
 
 						if (slice.collocated_from_l0_flag && slice.num_ref_idx_l0_active_minus1 ||
 							!slice.collocated_from_l0_flag && slice.num_ref_idx_l1_active_minus1)
@@ -1064,7 +1209,9 @@ namespace avparser
 				}
 
 				if (mPPS.deblocking_filter_override_enabled_flag)
+				{
 					slice.deblocking_filter_override_flag = mReader->getBits(1);
+				}
 
 				if (slice.deblocking_filter_override_flag)
 				{
@@ -1114,7 +1261,9 @@ namespace avparser
 				slice.slice_segment_header_extension_length = mReader->getGolombU();
 				slice.slice_segment_header_extension_data_byte.resize(slice.slice_segment_header_extension_length);
 				for (size_t i = 0; i < slice.slice_segment_header_extension_length; ++i)
+				{
 					slice.slice_segment_header_extension_data_byte[i] = mReader->getBits(8);
+				}
 			}
 		}
 
@@ -1351,6 +1500,37 @@ namespace avparser
 			}
 
 			return numPocTotal;
+		}
+
+		uint32_t HevcParser::computePoc(const SPS& sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType)
+		{
+			uint32_t maxPocLsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
+			uint32_t prevPocLsb = prevPocTid0 % maxPocLsb;
+			uint32_t prevPocMsb = prevPocTid0 - prevPocLsb;
+			uint32_t pocMsb;
+
+
+			// POC msb must be set to 0 for BLA picture types.
+			if ((hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_W_LP ||
+				(hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_W_RADL ||
+				(hevc::NALUnitType)nalUnitType == hevc::NALUnitType::BLA_N_LP)
+			{
+				pocMsb = 0;
+			}
+			else if (pocLsb < prevPocLsb && prevPocLsb - pocLsb >= maxPocLsb / 2)
+			{
+				pocMsb = prevPocMsb + maxPocLsb;
+			}
+			else if (pocLsb > prevPocLsb && pocLsb - prevPocLsb > maxPocLsb / 2)
+			{
+				pocMsb = prevPocMsb - maxPocLsb;
+			}
+			else
+			{
+				pocMsb = prevPocMsb;
+			}
+
+			return pocMsb + pocLsb;
 		}
 	}
 }

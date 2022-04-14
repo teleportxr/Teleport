@@ -1,6 +1,8 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
+#if (LIBAV_USE_D3D12)
+
 #include <api/cuda_dx12.hpp>
 #include <libraryloader.hpp>
 #include <logger.hpp>
@@ -295,3 +297,4 @@ namespace avs::CUDA {
 	}
 
 } // avs::CUDA_N
+#endif

@@ -79,7 +79,7 @@ int GetAttributeSemanticIndex(avs::AttributeSemantic sem)
 	}
 }
 
-simul::crossplatform::PixelFormat GetAttributeFormat(const clientrender::VertexBufferLayout::VertexAttribute& attr)
+platform::crossplatform::PixelFormat GetAttributeFormat(const clientrender::VertexBufferLayout::VertexAttribute& attr)
 {
 	switch(attr.type)
 	{
@@ -87,13 +87,13 @@ simul::crossplatform::PixelFormat GetAttributeFormat(const clientrender::VertexB
 		switch(attr.componentCount)
 		{
 		case clientrender::VertexBufferLayout::ComponentCount::SCALAR:
-			return simul::crossplatform::PixelFormat::R_32_FLOAT;
+			return platform::crossplatform::PixelFormat::R_32_FLOAT;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC2:
-			return simul::crossplatform::PixelFormat::RG_32_FLOAT;
+			return platform::crossplatform::PixelFormat::RG_32_FLOAT;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC3:
-			return simul::crossplatform::PixelFormat::RGB_32_FLOAT;
+			return platform::crossplatform::PixelFormat::RGB_32_FLOAT;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC4:
-			return simul::crossplatform::PixelFormat::RGBA_32_FLOAT;
+			return platform::crossplatform::PixelFormat::RGBA_32_FLOAT;
 		default:
 			break;
 		}
@@ -103,13 +103,13 @@ simul::crossplatform::PixelFormat GetAttributeFormat(const clientrender::VertexB
 		switch(attr.componentCount)
 		{
 		case clientrender::VertexBufferLayout::ComponentCount::SCALAR:
-			return simul::crossplatform::PixelFormat::R_16_FLOAT;
+			return platform::crossplatform::PixelFormat::R_16_FLOAT;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC2:
-			return simul::crossplatform::PixelFormat::RG_16_FLOAT;
+			return platform::crossplatform::PixelFormat::RG_16_FLOAT;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC3:
-			return simul::crossplatform::PixelFormat::RGB_16_FLOAT;
+			return platform::crossplatform::PixelFormat::RGB_16_FLOAT;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC4:
-			return simul::crossplatform::PixelFormat::RGBA_16_FLOAT;
+			return platform::crossplatform::PixelFormat::RGBA_16_FLOAT;
 		default:
 			break;
 		}
@@ -119,13 +119,13 @@ simul::crossplatform::PixelFormat GetAttributeFormat(const clientrender::VertexB
 		switch(attr.componentCount)
 		{
 		case clientrender::VertexBufferLayout::ComponentCount::SCALAR:
-			return simul::crossplatform::PixelFormat::R_32_INT;
+			return platform::crossplatform::PixelFormat::R_32_INT;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC2:
-			return simul::crossplatform::PixelFormat::RG_8_SNORM;
+			return platform::crossplatform::PixelFormat::RG_8_SNORM;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC3:
-			return simul::crossplatform::PixelFormat::RGB_10_A2_INT;
+			return platform::crossplatform::PixelFormat::RGB_10_A2_INT;
 		case clientrender::VertexBufferLayout::ComponentCount::VEC4:
-			return simul::crossplatform::PixelFormat::RGBA_32_INT;
+			return platform::crossplatform::PixelFormat::RGBA_32_INT;
 		}
 
 		break;
@@ -133,7 +133,7 @@ simul::crossplatform::PixelFormat GetAttributeFormat(const clientrender::VertexB
 		break;
 	}
 
-	return simul::crossplatform::PixelFormat::UNKNOWN;
+	return platform::crossplatform::PixelFormat::UNKNOWN;
 }
 
 int GetByteSize(const clientrender::VertexBufferLayout::VertexAttribute &attr)
@@ -182,7 +182,7 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCre
 	m_SimulBuffer = srp->CreateBuffer();
 
 	size_t numAttr = m_CI.layout->m_Attributes.size();
-	simul::crossplatform::LayoutDesc* desc = new simul::crossplatform::LayoutDesc[numAttr];
+	platform::crossplatform::LayoutDesc* desc = new platform::crossplatform::LayoutDesc[numAttr];
 
 	int byteOffset = 0;
 	for(size_t i = 0; i < numAttr; i++)
@@ -195,7 +195,7 @@ void pc_client::PC_VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCre
 		desc[i].inputSlot = 0;
 		desc[i].alignedByteOffset = byteOffset;
 
-		if(desc[i].format == simul::crossplatform::UNKNOWN)
+		if(desc[i].format == platform::crossplatform::UNKNOWN)
 		{
 			TELEPORT_COUT << "ERROR: Unknown format for attribute: " << desc[i].semanticName << std::endl;
 		}

@@ -163,7 +163,7 @@ namespace avs
 			break;
 		case DeviceType::Direct3D12:
 #if !defined(PLATFORM_WINDOWS)
-			AVSLOG(Error) << "DecoderNV: DirectX 12 is only supported on Windows platform";
+			AVSLOG(Error) << "DecoderNV: DirectX 12 is only supported on Windows platform!";
 			return Result::DecoderBackend_InvalidDevice;
 #endif
 			if (!device)
@@ -171,6 +171,7 @@ namespace avs
 				AVSLOG(Error) << "DecoderNV: Invalid DirectX 12 device";
 				return Result::DecoderBackend_InvalidDevice;
 			}
+#if (LIBAV_USE_D3D12)
 			{
 				m_dx12Util.Initialize();
 				unsigned int numDevices;
@@ -180,6 +181,7 @@ namespace avs
 					return Result::DecoderBackend_InvalidDevice;
 				}
 			}
+#endif
 			m_gResourceSupport = false;
 			break;
 		case DeviceType::OpenGL:
@@ -421,7 +423,7 @@ namespace avs
 
 		switch (m_deviceType)
 		{
-#if PLATFORM_WINDOWS
+#if defined (PLATFORM_WINDOWS)
 			case DeviceType::Direct3D11:
 				if (CUFAILED(cuGraphicsD3D11RegisterResource(&m_registeredSurface, reinterpret_cast<ID3D11Texture2D*>(surface->getResource()), registerFlags)))
 				{
@@ -430,6 +432,8 @@ namespace avs
 				}
 				cuGraphicsResourceSetMapFlags(m_registeredSurface, CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD);
 				break;
+#endif
+#if (LIBAV_USE_D3D12)
 			case DeviceType::Direct3D12:
 				if (CUFAILED(m_dx12Util.LoadGraphicsResource(reinterpret_cast<ID3D12Resource*>(surface->getResource()))))
 				{
@@ -510,7 +514,7 @@ namespace avs
 		}
 		else
 		{
-#if defined(PLATFORM_WINDOWS)
+#if (LIBAV_USE_D3D12)
 			if (m_deviceType == DeviceType::Direct3D12)
 			{
 				m_dx12Util.UnloadGraphicsResource();
@@ -585,7 +589,7 @@ namespace avs
 		}
 		else
 		{
-#if defined(PLATFORM_WINDOWS)
+#if (LIBAV_USE_D3D12)
 			if (m_deviceType == DeviceType::Direct3D12)
 			{
 				CUresult r = m_dx12Util.GetMipmappedArrayLevel(&surfaceBaseMipLevel, 0);

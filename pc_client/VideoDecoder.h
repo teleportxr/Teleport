@@ -6,13 +6,14 @@
 #include <libavstream/decoders/dec_interface.hpp>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 #include "Platform/Crossplatform/BaseRenderer.h"
 #include "Platform/Crossplatform/VideoDecoder.h"
 #include "Platform/Crossplatform/RenderPlatform.h"
 #include "AVParser/H264Types.h"
 #include "AVParser/HevcTypes.h"
 
-namespace simul
+namespace platform
 {
 	namespace crossplatform
 	{
@@ -33,7 +34,8 @@ class VideoDecoder final : public avs::DecoderBackendInterface
 		uint32_t stRpsIdx;
 		uint32_t refRpsIdx;
 		avparser::hevc::SliceType sliceType;
-		bool inUse;
+		bool usedForShortTermRef;
+		bool usedForLongTermRef;
 
 		FrameCache()
 		{
@@ -46,12 +48,18 @@ class VideoDecoder final : public avs::DecoderBackendInterface
 			stRpsIdx = 0;
 			refRpsIdx = 0;
 			sliceType = avparser::hevc::SliceType::None;
-			inUse = false;
+			markUnusedForReference();
+		}
+
+		void markUnusedForReference()
+		{
+			usedForShortTermRef = false;
+			usedForLongTermRef = false;
 		}
 	};
 
 public:
-	VideoDecoder(simul::crossplatform::RenderPlatform* renderPlatform, simul::crossplatform::Texture* surfaceTexture);
+	VideoDecoder(platform::crossplatform::RenderPlatform* renderPlatform, platform::crossplatform::Texture* surfaceTexture);
 	~VideoDecoder();
 
 	/* Begin DecoderBackendInterface */
@@ -68,11 +76,13 @@ public:
 	void recompileShaders();
 
 private:
-	void updatePicParams();
-	void updatePicParamsH264();
-	void updatePicParamsHEVC();
-	static uint32_t computeHevcPoc(const avparser::hevc::SPS* sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType);
+	void updateInputArguments(size_t sliceControlSize);
+	void updateInputArgumentsH264(size_t sliceControlSize);
+	void updateInputArgumentsHEVC(size_t sliceControlSize);
+	
 	void resetFrames();
+	void markFramesUnusedForReference();
+	void clearDecodeArguments();
 
 	avs::DeviceType mDeviceType = avs::DeviceType::Invalid;
 
@@ -83,18 +93,17 @@ private:
 	int mDisplayPictureIndex = -1;
 
 	std::unique_ptr<avparser::Parser> mParser;
-
-	std::unique_ptr<simul::crossplatform::VideoDecoder> mDecoder;
-
-	simul::crossplatform::VideoDecodeArgument mPicParams;
-	simul::crossplatform::RenderPlatform* mRenderPlatform;
-	simul::crossplatform::Texture* mSurfaceTexture;
-	simul::crossplatform::Texture* mOutputTexture;
-	simul::crossplatform::Effect* mTextureConversionEffect;
+	std::unique_ptr<platform::crossplatform::VideoDecoder> mDecoder;
+	std::vector<platform::crossplatform::VideoDecodeArgument> mDecodeArgs;
+	platform::crossplatform::RenderPlatform* mRenderPlatform;
+	platform::crossplatform::Texture* mSurfaceTexture;
+	platform::crossplatform::Texture* mOutputTexture;
+	platform::crossplatform::Effect* mTextureConversionEffect;
 
 	std::vector<FrameCache> mDPB;
+	std::unordered_map<uint32_t, uint32_t> mPocFrameIndexMap;
 
 	uint32_t mCurrentFrame;
-	uint32_t mPrevPocTid0;
+	uint32_t mStatusID;
 };
 

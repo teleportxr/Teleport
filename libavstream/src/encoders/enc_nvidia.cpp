@@ -175,6 +175,7 @@ namespace avs
 				AVSLOG(Error) << "EncoderNV: Invalid DirectX 12 device";
 				return Result::EncoderBackend_InvalidDevice;
 			}
+#if (LIBAV_USE_D3D12)
 			{
 				m_dx12Util.Initialize();
 				if (CUFAILED(m_dx12Util.GetCudaDevice(&numDevices, &cudaDevice, device.as<ID3D12Device>())))
@@ -183,6 +184,7 @@ namespace avs
 					return Result::EncoderBackend_InvalidDevice;
 				}
 			}
+#endif
 			m_gResourceSupport = false;
 			break;
 		case DeviceType::OpenGL:
@@ -285,7 +287,9 @@ namespace avs
 
 				// Settings for low latency
 				codecConfig.hevcConfig.enableIntraRefresh = 1;
+				// TODO: Determine why long term reference frames aren't working. Currently commenting out.
 				//codecConfig.hevcConfig.enableLTR = 1;
+				//codecConfig.hevcConfig.ltrTrustMode = 0;
 
 				// 10-bit and YUV-444 are not supported with alpha encoding
 				if (params.useAlphaLayerEncoding && m_EncodeCapabilities.isAlphaLayerSupported)
@@ -580,7 +584,7 @@ namespace avs
 		CUresult res;
 		switch (m_device.type)
 		{
-#if PLATFORM_WINDOWS
+#if defined (PLATFORM_WINDOWS)
 		case DeviceType::Direct3D11:
 			res = cuGraphicsD3D11RegisterResource(&m_registeredSurface.cuResource, reinterpret_cast<ID3D11Texture2D*>(surface->getResource()), registerFlags);
 			if (CUFAILED(res))
@@ -589,6 +593,8 @@ namespace avs
 				return Result::EncoderBackend_InvalidSurface;
 			}
 			break;
+#endif
+#if (LIBAV_USE_D3D12)
 		case DeviceType::Direct3D12:
 			if (CUFAILED(m_dx12Util.LoadGraphicsResource(reinterpret_cast<ID3D12Resource*>(surface->getResource()))))
 			{
@@ -709,7 +715,7 @@ namespace avs
 		}
 		else
 		{
-#if defined(PLATFORM_WINDOWS)
+#if (LIBAV_USE_D3D12)
 			if (m_device.type == DeviceType::Direct3D12)
 			{
 				m_dx12Util.UnloadGraphicsResource();
@@ -871,7 +877,7 @@ namespace avs
 		}
 		else
 		{
-#if defined(PLATFORM_WINDOWS)
+#if (LIBAV_USE_D3D12)
 			if (m_device.type == DeviceType::Direct3D12)
 			{
 				CUresult r = m_dx12Util.GetMipmappedArrayLevel(&surfaceBaseMipLevel, 0);

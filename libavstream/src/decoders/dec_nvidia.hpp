@@ -10,10 +10,10 @@
 
 #include <api/cuda.hpp>
 #include <dynlink_nvcuvid.h>
-#if defined(PLATFORM_WINDOWS)
+#if(LIBAV_USE_D3D12)
 #include <api/cuda_dx12.hpp>
 #else
-#include <ClientRender/cuda.hpp>
+#include <api/cuda.hpp>
 #endif
 
 namespace avs
@@ -57,7 +57,7 @@ namespace avs
 		unsigned int m_frameHeight = 0;
 		int m_displayPictureIndex = -1;
 
-#if defined(PLATFORM_WINDOWS)
+#if(LIBAV_USE_D3D12)
 		CUDA::DX12Util m_dx12Util;
 #endif
 		// Variable signifying if the GraphicsResource type is supported by CUDA for the graphics API in use

@@ -32,3 +32,6 @@ The Service Connection controls the others and is the main line of information b
 	
 	protocol/discovery
 	protocol/service
+	protocol/data_transfer
+	protocol/video
+	protocol/video_metadata

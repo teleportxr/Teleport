@@ -370,7 +370,7 @@ namespace avparser
 			uint8_t dependent_slice_segment_flag = 0;
 			uint32_t slice_segment_address = 0;
 			std::vector<uint32_t> slice_reserved_undetermined_flag;
-			SliceType slice_type;
+			SliceType slice_type = SliceType::None;
 			uint8_t pic_output_flag = 1;
 			uint8_t colour_plane_id = 0;
 			uint32_t slice_pic_order_cnt_lsb = 0;

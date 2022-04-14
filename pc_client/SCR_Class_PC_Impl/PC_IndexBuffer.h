@@ -3,7 +3,7 @@
 
 #include <ClientRender/IndexBuffer.h>
 
-namespace simul
+namespace platform
 {
 	namespace crossplatform
 	{
@@ -16,7 +16,7 @@ namespace pc_client
 	class PC_IndexBuffer  : public clientrender::IndexBuffer
 	{
 	private:
-		simul::crossplatform::Buffer *m_SimulBuffer;
+		platform::crossplatform::Buffer *m_SimulBuffer;
 	public:
 		PC_IndexBuffer(const clientrender::RenderPlatform*const r)
 			:clientrender::IndexBuffer(r), m_SimulBuffer(nullptr)
@@ -29,11 +29,11 @@ namespace pc_client
 
 		bool ResourceInUse(int timeout) override {return true;}
 
-		simul::crossplatform::Buffer* GetSimulIndexBuffer()
+		platform::crossplatform::Buffer* GetSimulIndexBuffer()
 		{
 			return m_SimulBuffer;
 		}
-		const simul::crossplatform::Buffer* GetSimulIndexBuffer() const
+		const platform::crossplatform::Buffer* GetSimulIndexBuffer() const
 		{
 			return m_SimulBuffer;
 		}

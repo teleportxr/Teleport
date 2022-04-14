@@ -570,7 +570,9 @@ TELEPORT_EXPORT void Shutdown()
 		ClientData& clientData = clientPair.second;
 		if(clientData.isStreaming)
 		{
-			// This will add to lost clients but will be cleared below
+			// This will add to lost clients and lost clients will be cleared below.
+			// That's okay because the session is being stopped in Client_StopStreaming 
+			// and the clientServices map is being cleared below too.
 			Client_StopStreaming(clientPair.first);
 		}
 		else

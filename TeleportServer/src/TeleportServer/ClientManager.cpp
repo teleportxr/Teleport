@@ -79,6 +79,8 @@ namespace teleport
 		mClients.clear();
 
 		mInitialized = false;
+
+		return true;
 	}
 
 	void ClientManager::tick(float deltaTime)
@@ -203,7 +205,7 @@ namespace teleport
 			}
 
 			// Proceed only if the main thread hasn't hung.
-			if (elapsedTime < 0.20)
+			if (elapsedTime < 1.0)
 			{
 				std::lock_guard<std::mutex> lock(mNetworkMutex);
 				handleMessages();
@@ -229,6 +231,7 @@ namespace teleport
 						if (client->clientIP == std::string(peerIP))
 						{
 							client->eventQueue.push(event);
+							break;
 						}
 					}
 				}
