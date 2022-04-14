@@ -282,11 +282,13 @@ namespace avs
 		uint8_t num_gi_textures=0;
 	} AVS_PACKED;
 
+	//! The definition of a single input that the server expects the client to provide when needed.
 	struct InputDefinition
 	{
 		InputId inputId;
 		InputType inputType;
-		std::string path;
+		//! A regular expression that will be used to match the full component path of a client-side control
+		std::string regexPath;
 	} AVS_PACKED;
 
 	struct InputDefinitionNetPacket

@@ -1,3 +1,4 @@
+#pragma once
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include <vector>
 #include "Platform/CrossPlatform/RenderDelegate.h"
@@ -9,7 +10,7 @@ typedef int64_t XrTime;
 struct XrCompositionLayerProjectionView;
 struct XrCompositionLayerProjection;
 struct swapchain_surfdata_t;
-typedef enum XrResult;
+enum XrResult;
 
 namespace teleport
 {
@@ -24,6 +25,8 @@ namespace teleport
 		Y,
 		LEFT_TRIGGER,
 		RIGHT_TRIGGER,
+		LEFT_SQUEEZE,
+		RIGHT_SQUEEZE,
 		LEFT_GRIP_POSE,
 		RIGHT_GRIP_POSE,
 		LEFT_AIM_POSE,
@@ -36,6 +39,28 @@ namespace teleport
 		RIGHT_HAPTIC,
 		MAX_ACTIONS
 	};
+	//! Defines a mapping between an Input Definition from the server, 
+	//! and an action on the client.
+	struct InputMapping
+	{
+		avs::InputDefinition serverInputDefinition;
+		ActionId clientActionId;
+	};
+	struct InputState
+	{
+		union
+		{
+			float float32;
+			uint32_t uint32;
+		};
+	};
+	struct OpenXRServer
+	{
+		std::vector<InputMapping> inputMappings;
+		std::vector<InputState> inputStates;
+		teleport::client::Input inputs;
+		unsigned long long framenumber=0;
+	};
 	class UseOpenXR
 	{
 	public:
@@ -47,10 +72,13 @@ namespace teleport
 		void Shutdown();
 		void PollEvents(bool& exit);
 		bool HaveXRDevice() const;
-		void OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_);
+
+		// Getting mapped inputs specific to a given server, in-frame.
+		void OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition> &inputDefinitions_);
+		const teleport::client::Input& GetServerInputs(avs::uid server_uid,unsigned long long framenumber);
+
 		const avs::Pose& GetHeadPose() const;
 		const avs::Pose& GetControllerPose(int index) const;
-		const teleport::client::Input& GetInputs() const;
 		size_t GetNumControllers() const
 		{
 			return controllerPoses.size();
@@ -59,17 +87,18 @@ namespace teleport
 		{
 			menuButtonHandler = f;
 		}
+		const std::string &GetDebugString() const;
 		platform::crossplatform::Texture* GetRenderTexture(int index=0);
 	protected:
-	
+		std::map<avs::uid,OpenXRServer> openXRServers;
 		platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 		bool haveXRDevice = false;
 		void RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext, XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
 		bool RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext,XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
 		avs::Pose headPose;
 		std::vector<avs::Pose> controllerPoses;
-		teleport::client::Input inputs;
 		void openxr_poll_predicted(XrTime predicted_time);
 		std::function<void()> menuButtonHandler;
+		void RecordCurrentBindings();
 	};
 }

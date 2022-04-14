@@ -10,9 +10,10 @@
 
 #include "CaptureDelegates.h"
 #include "ServerSettings.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "enet/enet.h"
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
@@ -126,8 +127,8 @@ namespace teleport
 				// a uint16 to store the path length.
 				listSize += sizeof(uint16_t);
 				// and however many chars in the path.
-				listSize += sizeof(char)*d.path.length();
-				if (d.path.length() >= (1 << 16))
+				listSize += sizeof(char)*d.regexPath.length();
+				if (d.regexPath.length() >= (1 << 16))
 				{
 					TELEPORT_CERR << "Input path too long!\n";
 					return false;
@@ -150,11 +151,11 @@ namespace teleport
 				avs::InputDefinitionNetPacket defPacket;
 				defPacket.inputId = d.inputId;
 				defPacket.inputType = d.inputType;
-				defPacket.pathLength= (uint16_t)d.path.length();
+				defPacket.pathLength= (uint16_t)d.regexPath.length();
 				memcpy(data_ptr, &defPacket, sizeof(defPacket));
 				data_ptr += sizeof(defPacket);
-				memcpy(data_ptr, d.path.c_str(),  d.path.length());
-				data_ptr += d.path.length();
+				memcpy(data_ptr, d.regexPath.c_str(),  d.regexPath.length());
+				data_ptr += d.regexPath.length();
 			}
 			if (packet->data + commandSize + listSize != data_ptr)
 			{

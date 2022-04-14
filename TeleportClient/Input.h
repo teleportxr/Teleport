@@ -12,22 +12,6 @@ namespace teleport
 {
 	namespace client
 	{
-		struct ControllerState
-		{
-			uint32_t mButtons = 0;
-			uint32_t mReleased = 0;
-			bool  mTrackpadStatus = false;
-			float mTrackpadX = 0.0f;
-			float mTrackpadY = 0.0f;
-			float mJoystickAxisX = 0.0f;
-			float mJoystickAxisY = 0.0f;
-
-			//We are using hard-set values as the Android compiler didn't like reading from referenced memory in a dictionary; every other frame it would evaluate to zero.
-			float triggerBack = 0.0f;
-			float triggerGrip = 0.0f;
-			void clear();
-		};
-
 		class Input
 		{
 		public:			

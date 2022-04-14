@@ -4,17 +4,9 @@ project( TeleportCore )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
-set(src_files TeleportCore.cpp)
+set(src_files TeleportCore.cpp ErrorHandling.cpp)
 file(GLOB header_files *.h)
 
-#Include its root directory
-include_directories(src)
-#Include libavstream
-include_directories(../libavstream/include)
-#Include Basis Universal
-include_directories(../thirdparty/basis_universal)
-#Include enet
-include_directories(../thirdparty/enet/include)
 
 if(ANDROID)
 	include_directories(../client/VrApi/Include) 
@@ -24,3 +16,12 @@ endif()
 #For MT runtime
 add_library(TeleportCore STATIC ${src_files} ${header_files})
 set_target_properties(TeleportCore PROPERTIES FOLDER Teleport)
+target_include_directories(TeleportCore PUBLIC ..)
+#Include its root directory
+target_include_directories(TeleportCore PRIVATE src)
+#Include libavstream
+target_include_directories(TeleportCore PRIVATE ../libavstream/include)
+#Include Basis Universal
+target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
+#Include enet
+target_include_directories(TeleportCore PRIVATE ../thirdparty/enet/include)

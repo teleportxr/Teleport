@@ -4,7 +4,7 @@
 
 #include "ServerSettings.h"
 #include "GeometryStore.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 using namespace teleport;
 //Remove duplicates, and 0s, from passed vector of UIDs.

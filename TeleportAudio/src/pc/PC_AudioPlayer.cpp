@@ -1,6 +1,7 @@
 // (C) Copyright 2018-2020 Simul Software Ltd
 
 #include "PC_AudioPlayer.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "PC_AudioCapture.h"
 #include <chrono>
 #include <thread>
@@ -71,7 +72,7 @@ namespace sca
 		hr = XAudio2Create(mDevice.GetAddressOf());
 		if (FAILED(hr))
 		{
-			SCA_COUT << "PC_AudioPlayer: Error occurred trying to create the XAudio2 device." << std::endl;
+			TELEPORT_COUT << "PC_AudioPlayer: Error occurred trying to create the XAudio2 device." << std::endl;
 			return Result::AudioDeviceInitializationError;
 		}
 
@@ -79,7 +80,7 @@ namespace sca
 		hr = mDevice->CreateMasteringVoice(&mMasteringVoice);
 		if (FAILED(hr))
 		{
-			SCA_COUT << "PC_AudioPlayer: Error occurred trying to create the mastering voice." << std::endl;
+			TELEPORT_COUT << "PC_AudioPlayer: Error occurred trying to create the mastering voice." << std::endl;
 			return Result::AudioMasteringVoiceCreationError;
 		}
 
@@ -96,7 +97,7 @@ namespace sca
 	{
 		if (mConfigured)
 		{
-			SCA_COUT << "PC_AudioPlayer: Audio player has already been configured." << std::endl;
+			TELEPORT_COUT << "PC_AudioPlayer: Audio player has already been configured." << std::endl;
 			return Result::AudioPlayerAlreadyConfigured;
 		}
 
@@ -136,7 +137,7 @@ namespace sca
 		if (FAILED(hr))
 		{
 			mMasteringVoice->DestroyVoice();
-			SCA_COUT << "PC_AudioPlayer: Error occurred trying to create the source voice." << std::endl;
+			TELEPORT_COUT << "PC_AudioPlayer: Error occurred trying to create the source voice." << std::endl;
 			return Result::AudioSourceVoiceCreationError;
 		}
 
@@ -160,13 +161,18 @@ namespace sca
 	{
 		if (!mInitialized)
 		{
-			SCA_CERR << "PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
+			TELEPORT_CERR << "PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
 			return Result::AudioPlayerNotInitialized;
 		}
 
 		if (!mConfigured)
 		{
-			SCA_CERR << "PC_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
+			static bool done=false;
+			if(!done)
+			{
+				TELEPORT_CERR << "PC_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
+				done=true;
+			}
 			return Result::AudioPlayerNotConfigured;
 		}
 
@@ -185,7 +191,7 @@ namespace sca
 		HRESULT hr = mSourceVoice->SubmitSourceBuffer(&xaBuffer);
 		if (FAILED(hr))
 		{
-			SCA_CERR << "PC_AudioPlayer: Error occurred trying to submit audio buffer to source voice." << std::endl;
+			TELEPORT_CERR << "PC_AudioPlayer: Error occurred trying to submit audio buffer to source voice." << std::endl;
 			return Result::AudioPlayerBufferSubmissionError;
 		}
 
@@ -196,25 +202,25 @@ namespace sca
 	{
 		if (!mInitialized)
 		{
-			SCA_CERR << "PC_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
+			TELEPORT_CERR << "PC_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
 			return Result::AudioPlayerNotInitialized;
 		}
 
 		if (!mConfigured)
 		{
-			SCA_CERR << "PC_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+			TELEPORT_CERR << "PC_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
 			return Result::AudioPlayerNotConfigured;
 		}
 
 		if (!mRecordingAllowed)
 		{
-			SCA_CERR << "PC_AudioPlayer: The user has not granted permission to record audio." << std::endl;
+			TELEPORT_CERR << "PC_AudioPlayer: The user has not granted permission to record audio." << std::endl;
 			return Result::AudioRecordingNotPermitted;
 		}
 
 		if (mRecording)
 		{
-			SCA_COUT << "PC_AudioPlayer: Already recording." << std::endl;
+			TELEPORT_COUT << "PC_AudioPlayer: Already recording." << std::endl;
 			return Result::OK;
 		}
 
@@ -233,7 +239,7 @@ namespace sca
 	{
 		if (!mRecording)
 		{
-			SCA_COUT << "PC_AudioPlayer: Not recording." << std::endl;
+			TELEPORT_COUT << "PC_AudioPlayer: Not recording." << std::endl;
 			return Result::AudioProcessingError;
 		}
 
@@ -244,7 +250,7 @@ namespace sca
 	{
 		if (!mRecording)
 		{
-			SCA_COUT << "PC_AudioPlayer: Not recording." << std::endl;
+			TELEPORT_COUT << "PC_AudioPlayer: Not recording." << std::endl;
 			return Result::OK;
 		}
 
@@ -263,7 +269,7 @@ namespace sca
 	{
 		if (!mConfigured)
 		{
-			SCA_COUT << "PC_AudioPlayer: Can't deconfigure audio player because it is not configured." << std::endl;
+			TELEPORT_COUT << "PC_AudioPlayer: Can't deconfigure audio player because it is not configured." << std::endl;
 			return Result::AudioPlayerNotConfigured;
 		}
 

@@ -11,7 +11,7 @@
 
 
 #include "DiscoveryService.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 namespace teleport
 {

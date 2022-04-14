@@ -26,6 +26,7 @@
 #include "ClientRender/UniformBuffer.h"
 #include "ClientRender/VertexBuffer.h"
 #include "ClientRender/Renderer.h"
+#include "UseOpenXR.h"
 
 #include "crossplatform/AudioStreamTarget.h"
 #include "pc/PC_AudioPlayer.h"
@@ -166,14 +167,12 @@ class ClientRenderer :public platform::crossplatform::PlatformRendererInterface,
 
 	// handler for the UI to tell us to connect.
 	void ConnectButtonHandler(const std::string& url);
-	std::function<void(const std::vector<avs::InputDefinition>&)> inputSetupDelegate;
+
+	// TODO: temporary.
+	avs::uid server_uid=1;
 public:
 	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState, teleport::Gui &g,bool dev);
 	~ClientRenderer();
-	void SetInputSetupDelegate(std::function<void(const std::vector<avs::InputDefinition>&)> f)
-	{
-		inputSetupDelegate = f;
-	}
 	// Implement SessionCommandInterface
 	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 	void ConfigureVideo(const avs::VideoConfig& vc) override;
@@ -199,7 +198,7 @@ public:
 	void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate) override;
 	void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
 	void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
-	//
+	
 	// to render the vr view instead of re-rendering.
 	void SetExternalTexture(platform::crossplatform::Texture* t);
 	// This allows live-recompile of shaders. 
@@ -217,7 +216,7 @@ public:
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
 	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr) override;
-	void Init(platform::crossplatform::RenderPlatform *r);
+	void Init(platform::crossplatform::RenderPlatform *r,teleport::UseOpenXR *u);
 	void SetServer(const char* ip_port);
 	void InvalidateDeviceObjects();
 	void RemoveView(int);
@@ -275,6 +274,7 @@ private:
 	avs::uid node_select=0;
 	bool have_vr_device = false;
 	platform::crossplatform::Texture* externalTexture = nullptr;
+	teleport::UseOpenXR *openXR=nullptr;
 };
 
 }

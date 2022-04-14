@@ -382,10 +382,7 @@ void SessionClient::sendOriginPose(uint64_t validCounter,const avs::Pose& origin
 void SessionClient::SendInput(const Input& input)
 {
 	avs::InputState inputState = {};
-	//const uint32_t buttonsDiffMask = prevControllerState.mButtons ^ input.mButtons;
-	
 	enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
-
 #if TELEPORT_INTERNAL_CHECKS
 	for (auto c : controllerState.analogueEvents)
 	{
@@ -393,6 +390,10 @@ void SessionClient::SendInput(const Input& input)
 	}
 #endif
 	//Set event amount.
+	if(input.analogueEvents.size()>50)
+	{
+		TELEPORT_BREAK_ONCE("That's a lot of events.");
+	}
 	inputState.numBinaryEvents		= static_cast<uint32_t>(input.binaryEvents.size());
 	inputState.numAnalogueEvents	= static_cast<uint32_t>(input.analogueEvents.size());
 	inputState.numMotionEvents		= static_cast<uint32_t>(input.motionEvents.size());
@@ -735,8 +736,8 @@ void SessionClient::ReceiveSetupInputsCommand(const ENetPacket* packet)
 		}
 		def.inputId = packetDef.inputId;
 		def.inputType = packetDef.inputType;
-		def.path.resize(packetDef.pathLength);
-		memcpy(def.path.data(), ptr, packetDef.pathLength);
+		def.regexPath.resize(packetDef.pathLength);
+		memcpy(def.regexPath.data(), ptr, packetDef.pathLength);
 		ptr += packetDef.pathLength;
 	}
 	// Now process the input definitions according to the available hardware:

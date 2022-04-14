@@ -16,6 +16,8 @@
 #include "Platform/CrossPlatform/AxesStandard.h"
 #include "TeleportCore/ErrorHandling.h"
 
+#include <regex>
+
 XrInstance		xr_instance = {};
 
 const char *GetXRErrorString(XrResult res)
@@ -50,11 +52,15 @@ std::string FromXrPath(const XrInstance & xr_instance,XrPath path)
 	uint32_t strl;
 	char text[XR_MAX_PATH_LENGTH];
 	XrResult res;
-	XR_CHECK(xrPathToString(xr_instance, path, XR_MAX_PATH_LENGTH, &strl, text))
+	res=xrPathToString(xr_instance, path, XR_MAX_PATH_LENGTH, &strl, text);
 	std::string str;
 	if(res==XR_SUCCESS)
 	{
 		str=text;
+	}
+	else
+	{
+		XR_CHECK(res);
 	}
 	return str;
 }
@@ -100,12 +106,6 @@ void swapchain_destroy(swapchain_t& swapchain)
 	}
 }
 
-struct ActionMapping
-{
-	std::string path;
-	XrPath xrPath;
-	XrAction action;
-};
 enum SubActionIndex:uint8_t
 {
 	SA_NONE=0,
@@ -114,6 +114,7 @@ enum SubActionIndex:uint8_t
 	SA_GAMEPAD=4,
 	SA_LEFT_AND_RIGHT=SA_LEFT|SA_RIGHT
 };
+
 struct ActionInitializer
 {
 	ActionId actionId;
@@ -121,6 +122,7 @@ struct ActionInitializer
 	const char* localizedName;
 	XrActionType xrActionType;
 };
+
 // struct to store the state of an XR action:
 struct ActionState
 {
@@ -129,9 +131,11 @@ struct ActionState
 		float f32;
 		uint32_t u32;
 		float vec2f[2];
+		bool poseActive;
 	};
-	XrPosef		pose;
+	XrPosef	pose;
 };
+
 //
 struct XRInputDeviceState
 {
@@ -142,15 +146,16 @@ struct XRInputDeviceState
 
 struct ActionDefinition
 {
-	XrAction xrAction;
-	ActionId actionId;
-	XrActionType xrActionType;
-	XrSpace		space;
+	XrAction		xrAction;
+	ActionId		actionId;
+	XrActionType	xrActionType;
+	XrSpace			space;
+	std::string name;
 };
 
-struct XRInputState
+struct XrInputSession
 {
-	XrActionSet	actionSet;
+	XrActionSet			actionSet;
 	ActionDefinition    actionDefinitions[MAX_ACTIONS];
 	ActionState			actionStates[MAX_ACTIONS];
 	std::vector<XRInputDeviceState> inputDeviceStates;
@@ -168,6 +173,7 @@ struct XRInputState
 			XR_CHECK(xrCreateAction(actionSet, &action_info, &def.xrAction));
 			def.actionId=a.actionId;
 			def.xrActionType=a.xrActionType;
+			def.name=a.name;
 		}
 	}
 	void SessionInit(XrSession &xr_session)
@@ -193,14 +199,19 @@ struct InteractionProfileBinding
 	XrAction action;
 	const char *complete_path;
 };
+
 struct InteractionProfile
 {
 	XrPath profilePath;
+	std::string name;
 	std::vector<XrActionSuggestedBinding> xrActionSuggestedBindings;
-	InteractionProfile(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings)
+	std::vector<std::string> bindingPaths;
+	void Init(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings)
 	{
+		name=pr;
 		profilePath= MakeXrPath(xr_instance, pr);
 		xrActionSuggestedBindings.reserve(bindings.size());
+		bindingPaths.reserve(bindings.size());
 		size_t i = 0;
 		for (auto elem : bindings)
 		{
@@ -209,6 +220,7 @@ struct InteractionProfile
 			if(elem.action&&p)
 			{
 				xrActionSuggestedBindings.push_back( {elem.action, p});
+				bindingPaths.push_back(elem.complete_path);
 				i++;
 			}
 			else
@@ -222,23 +234,26 @@ struct InteractionProfile
 					TELEPORT_CERR<<"InteractionProfile: "<<pr<<": Failed to create suggested binding "<<elem.complete_path<<" as action is null."<<std::endl;
 				}
 			}
-		};
+		}
 	}
 };
+
+std::vector<InteractionProfile> interactionProfiles;
+std::vector<XrPath> activeInteractionProfilePaths;
 std::map<uint16_t, uint16_t> mapActionIndexToInputId;
 
-XrSession		xr_session = {};
-XrSessionState	xr_session_state = XR_SESSION_STATE_UNKNOWN;
-bool			xr_running = false;
-XrSpace			xr_app_space = {};
-XrSpace			xr_head_space = {};
-XrSystemId		xr_system_id = XR_NULL_SYSTEM_ID;
-XRInputState	xr_input = { };
-XrEnvironmentBlendMode   xr_blend = {};
-XrDebugUtilsMessengerEXT xr_debug = {};
-vector<XrView>                  xr_views;
-vector<XrViewConfigurationView> xr_config_views;
-vector<swapchain_t>             xr_swapchains;
+XrSession						xr_session = {};
+XrSessionState					xr_session_state = XR_SESSION_STATE_UNKNOWN;
+bool							xr_running = false;
+XrSpace							xr_app_space = {};
+XrSpace							xr_head_space = {};
+XrSystemId						xr_system_id = XR_NULL_SYSTEM_ID;
+XrInputSession					xr_input_session = { };
+XrEnvironmentBlendMode			xr_blend = {};
+XrDebugUtilsMessengerEXT		xr_debug = {};
+vector<XrView>					xr_views;
+vector<XrViewConfigurationView>	xr_config_views;
+vector<swapchain_t>				xr_swapchains;
 
 // Function pointers for some OpenXR extension methods we'll use.
 #if TELEPORT_CLIENT_USE_D3D12
@@ -565,13 +580,12 @@ const char* left = "user/hand/left";
 const char* right = "user/hand/right";
 void UseOpenXR::MakeActions()
 {
-	XrResult result;
 	XrActionSetCreateInfo actionset_info = { XR_TYPE_ACTION_SET_CREATE_INFO };
 	strcpy_s(actionset_info.actionSetName, "teleport_client");
 	strcpy_s(actionset_info.localizedActionSetName, "TeleportClient");
-	XR_CHECK(xrCreateActionSet(xr_instance, &actionset_info, &xr_input.actionSet));
+	XR_CHECK(xrCreateActionSet(xr_instance, &actionset_info, &xr_input_session.actionSet));
 
-	xr_input.SetActions(xr_instance, {
+	xr_input_session.SetActions(xr_instance, {
 		// Create an action to track the position and orientation of the hands! This is
 		// the controller location, or the center of the palms for actual hands.
 		 // Create an action for listening to the select action! This is primary trigger
@@ -586,6 +600,7 @@ void UseOpenXR::MakeActions()
 		,{LEFT_GRIP_POSE	,"left_grip_pose"			,"Left Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
 		,{LEFT_AIM_POSE		,"left_aim_pose"			,"Left Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
 		,{LEFT_TRIGGER		,"left_trigger"				,"Left Trigger"			,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{LEFT_SQUEEZE		,"left_squeeze"				,"Left Squeeze"			,XR_ACTION_TYPE_FLOAT_INPUT}
 		,{LEFT_STICK_X		,"left_thumbstick_x"		,"Left Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
 		,{LEFT_STICK_Y		,"left_thumbstick_y"		,"Left Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
 		,{LEFT_HAPTIC		,"left_haptic"				,"Left Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
@@ -593,6 +608,7 @@ void UseOpenXR::MakeActions()
 		,{RIGHT_GRIP_POSE	,"right_grip_pose"			,"Right Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
 		,{RIGHT_AIM_POSE	,"right_aim_pose"			,"Right Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
 		,{RIGHT_TRIGGER		,"right_trigger"			,"Right Trigger"		,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{RIGHT_SQUEEZE		,"right_squeeze"			,"Right Squeeze"		,XR_ACTION_TYPE_FLOAT_INPUT}
 		,{RIGHT_STICK_X		,"right_thumbstick_x"		,"Right Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
 		,{RIGHT_STICK_Y		,"right_thumbstick_y"		,"Right Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
 		,{RIGHT_HAPTIC		,"right_haptic"				,"Right Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
@@ -604,88 +620,92 @@ void UseOpenXR::MakeActions()
 	// accessibility settings.
 	#define LEFT	"/user/hand/left"
 	#define RIGHT	"/user/hand/right"
-
-	 auto SuggestBind = [](InteractionProfile &p)
-	 {
+	interactionProfiles.resize(3);
+	auto SuggestBind = [](InteractionProfile &p)
+	{
 		//The application can call xrSuggestInteractionProfileBindings once per interaction profile that it supports.
 		XrInteractionProfileSuggestedBinding suggested_binds = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-
 		suggested_binds.interactionProfile = p.profilePath;
 		suggested_binds.suggestedBindings = p.xrActionSuggestedBindings.data();
-		#if TELEPORT_INTERNAL_CHECKS
-		for(suggested_binds.countSuggestedBindings=1;suggested_binds.countSuggestedBindings<=p.xrActionSuggestedBindings.size();
-				suggested_binds.countSuggestedBindings++)
+#if TELEPORT_INTERNAL_CHECKS
+		for(suggested_binds.countSuggestedBindings=1;suggested_binds.countSuggestedBindings<=p.xrActionSuggestedBindings.size();suggested_binds.countSuggestedBindings++)
 		{
 			XrResult res=xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds);
 			if(res!=XR_SUCCESS)
 			{
-				TELEPORT_CERR<<GetXRErrorString(res)<<" for path "<<
-				FromXrPath(xr_instance,p.xrActionSuggestedBindings[suggested_binds.countSuggestedBindings-1].binding)<<std::endl;
+				TELEPORT_CERR<<GetXRErrorString(res)<<" for path "<<FromXrPath(xr_instance,p.xrActionSuggestedBindings[suggested_binds.countSuggestedBindings-1].binding)<<std::endl;
 			}
 		}
-		#else
+#else
 		suggested_binds.countSuggestedBindings = p.xrActionSuggestedBindings.size();
 		XR_CHECK(xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds));
-		#endif
+#endif
 	};
-	InteractionProfile khrSimpleIP(xr_instance
-			, "/interaction_profiles/khr/simple_controller"
-			, {
-				 {xr_input.actionDefinitions[SELECT].xrAction			, LEFT "/input/select/click"}
-				,{xr_input.actionDefinitions[SELECT].xrAction			,RIGHT "/input/select/click"}
-				,{xr_input.actionDefinitions[LEFT_GRIP_POSE].xrAction	, LEFT "/input/grip/pose"}
-				,{xr_input.actionDefinitions[RIGHT_GRIP_POSE].xrAction	,RIGHT "/input/grip/pose"}
-				,{xr_input.actionDefinitions[LEFT_AIM_POSE].xrAction	, LEFT "/input/aim/pose"}
-				,{xr_input.actionDefinitions[RIGHT_AIM_POSE].xrAction	,RIGHT "/input/aim/pose"}
-				,{xr_input.actionDefinitions[LEFT_HAPTIC].xrAction		, LEFT "/output/haptic"}
-				,{xr_input.actionDefinitions[RIGHT_HAPTIC].xrAction		,RIGHT "/output/haptic"}
+	InteractionProfile &khrSimpleIP	=interactionProfiles[0];
+	InteractionProfile &valveIndexIP=interactionProfiles[1];
+	InteractionProfile &oculusTouch	=interactionProfiles[2];
+	khrSimpleIP.Init(xr_instance
+			,"/interaction_profiles/khr/simple_controller"
+			,{
+				 {xr_input_session.actionDefinitions[SELECT].xrAction			, LEFT "/input/select/click"}
+				,{xr_input_session.actionDefinitions[SELECT].xrAction			,RIGHT "/input/select/click"}
+				,{xr_input_session.actionDefinitions[LEFT_GRIP_POSE].xrAction	, LEFT "/input/grip/pose"}
+				,{xr_input_session.actionDefinitions[RIGHT_GRIP_POSE].xrAction	,RIGHT "/input/grip/pose"}
+				,{xr_input_session.actionDefinitions[LEFT_AIM_POSE].xrAction	, LEFT "/input/aim/pose"}
+				,{xr_input_session.actionDefinitions[RIGHT_AIM_POSE].xrAction	,RIGHT "/input/aim/pose"}
+				,{xr_input_session.actionDefinitions[LEFT_HAPTIC].xrAction		, LEFT "/output/haptic"}
+				,{xr_input_session.actionDefinitions[RIGHT_HAPTIC].xrAction		,RIGHT "/output/haptic"}
 			});
 	SuggestBind(khrSimpleIP);
-	InteractionProfile valveIndexIP(xr_instance
-		, "/interaction_profiles/valve/index_controller"
-		, {
-			 {xr_input.actionDefinitions[LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
-			,{xr_input.actionDefinitions[RIGHT_GRIP_POSE].xrAction		,RIGHT "/input/grip/pose"}
-			,{xr_input.actionDefinitions[SHOW_MENU].xrAction			, LEFT "/input/b/click" }
-			,{xr_input.actionDefinitions[SHOW_MENU].xrAction			,RIGHT "/input/b/click" }
-			,{xr_input.actionDefinitions[LEFT_TRIGGER].xrAction			, LEFT "/input/trigger/value" }
-			,{xr_input.actionDefinitions[RIGHT_TRIGGER].xrAction		,RIGHT "/input/trigger/value" }
-			,{xr_input.actionDefinitions[LEFT_STICK_X].xrAction			, LEFT "/input/thumbstick/x"	}
-			,{xr_input.actionDefinitions[RIGHT_STICK_X].xrAction		,RIGHT "/input/thumbstick/x"}
-			,{xr_input.actionDefinitions[LEFT_STICK_Y].xrAction			, LEFT "/input/thumbstick/y"}
-			,{xr_input.actionDefinitions[RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
+	valveIndexIP.Init(xr_instance
+		,"/interaction_profiles/valve/index_controller"
+		,{
+			 {xr_input_session.actionDefinitions[LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[RIGHT_GRIP_POSE].xrAction		,RIGHT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[SHOW_MENU].xrAction			, LEFT "/input/b/click" }
+			,{xr_input_session.actionDefinitions[SHOW_MENU].xrAction			,RIGHT "/input/b/click" }
+			,{xr_input_session.actionDefinitions[A].xrAction					,RIGHT "/input/a/click" }
+			,{xr_input_session.actionDefinitions[B].xrAction					,RIGHT "/input/b/click" }
+			,{xr_input_session.actionDefinitions[X].xrAction					, LEFT "/input/a/click" }		// Note: a and b buttons on both controllers.
+			,{xr_input_session.actionDefinitions[Y].xrAction					, LEFT "/input/b/click" }
+			,{xr_input_session.actionDefinitions[LEFT_TRIGGER].xrAction			, LEFT "/input/trigger/value"}
+			,{xr_input_session.actionDefinitions[RIGHT_TRIGGER].xrAction		,RIGHT "/input/trigger/value"}
+			,{xr_input_session.actionDefinitions[LEFT_SQUEEZE].xrAction			, LEFT "/input/squeeze/value"}
+			,{xr_input_session.actionDefinitions[RIGHT_SQUEEZE].xrAction		,RIGHT "/input/squeeze/value"}
+			,{xr_input_session.actionDefinitions[LEFT_STICK_X].xrAction			, LEFT "/input/thumbstick/x"}
+			,{xr_input_session.actionDefinitions[RIGHT_STICK_X].xrAction		,RIGHT "/input/thumbstick/x"}
+			,{xr_input_session.actionDefinitions[LEFT_STICK_Y].xrAction			, LEFT "/input/thumbstick/y"}
+			,{xr_input_session.actionDefinitions[RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
 		});
 	SuggestBind(valveIndexIP);
-	InteractionProfile oculusTouch(xr_instance
+	oculusTouch.Init(xr_instance
 		, "/interaction_profiles/oculus/touch_controller"
 		, {
-			 {xr_input.actionDefinitions[LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
-			,{xr_input.actionDefinitions[RIGHT_GRIP_POSE].xrAction		,RIGHT "/input/grip/pose"}
-			,{xr_input.actionDefinitions[SHOW_MENU].xrAction			, LEFT "/input/menu/click" }
-			,{xr_input.actionDefinitions[LEFT_TRIGGER].xrAction			, LEFT "/input/trigger/value" }
-			,{xr_input.actionDefinitions[RIGHT_TRIGGER].xrAction		,RIGHT "/input/trigger/value" }
-			,{xr_input.actionDefinitions[LEFT_STICK_X].xrAction			, LEFT "/input/thumbstick/x"	}
-			,{xr_input.actionDefinitions[RIGHT_STICK_X].xrAction		,RIGHT "/input/thumbstick/x"}
-			,{xr_input.actionDefinitions[LEFT_STICK_Y].xrAction			, LEFT "/input/thumbstick/y"}
-			,{xr_input.actionDefinitions[RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
+			 {xr_input_session.actionDefinitions[LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[RIGHT_GRIP_POSE].xrAction		,RIGHT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[SHOW_MENU].xrAction			, LEFT "/input/menu/click" }
+			,{xr_input_session.actionDefinitions[A].xrAction					,RIGHT "/input/a/click" }
+			,{xr_input_session.actionDefinitions[B].xrAction					,RIGHT "/input/b/click" }
+			,{xr_input_session.actionDefinitions[X].xrAction					, LEFT "/input/x/click" }
+			,{xr_input_session.actionDefinitions[Y].xrAction					, LEFT "/input/y/click" }
+			,{xr_input_session.actionDefinitions[LEFT_TRIGGER].xrAction			, LEFT "/input/trigger/value" }
+			,{xr_input_session.actionDefinitions[RIGHT_TRIGGER].xrAction		,RIGHT "/input/trigger/value" }
+			,{xr_input_session.actionDefinitions[LEFT_SQUEEZE].xrAction			, LEFT "/input/squeeze/value" }
+			,{xr_input_session.actionDefinitions[RIGHT_SQUEEZE].xrAction		,RIGHT "/input/squeeze/value" }
+			,{xr_input_session.actionDefinitions[LEFT_STICK_X].xrAction			, LEFT "/input/thumbstick/x"	}
+			,{xr_input_session.actionDefinitions[RIGHT_STICK_X].xrAction		,RIGHT "/input/thumbstick/x"}
+			,{xr_input_session.actionDefinitions[LEFT_STICK_Y].xrAction			, LEFT "/input/thumbstick/y"}
+			,{xr_input_session.actionDefinitions[RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
 		});
 	SuggestBind(oculusTouch);
-
 
 	// Attach the action set we just made to the session
 	XrSessionActionSetsAttachInfo attach_info = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
 	attach_info.countActionSets = 1;
-	attach_info.actionSets = &xr_input.actionSet;
+	attach_info.actionSets = &xr_input_session.actionSet;
 	XR_CHECK(xrAttachSessionActionSets(xr_session, &attach_info));
-	xr_input.SessionInit(xr_session);
-	// now we are ready to:
-	XrInteractionProfileState interactionProfile={XR_TYPE_INTERACTION_PROFILE_STATE,0,0};
-	// for each action, what is the binding?
-	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance, "/user/hand/left"),&interactionProfile));
-	std::cout<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
-
-	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance,"/user/hand/right"),&interactionProfile));
-	std::cout<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+	xr_input_session.SessionInit(xr_session);
+	RecordCurrentBindings();
 }
 
 
@@ -696,7 +716,7 @@ void UseOpenXR::PollActions()
 
 	// Update our action set with up-to-date input data!
 	XrActiveActionSet action_set = { };
-	action_set.actionSet = xr_input.actionSet;
+	action_set.actionSet = xr_input_session.actionSet;
 	action_set.subactionPath = XR_NULL_PATH;
 
 	XrActionsSyncInfo sync_info = { XR_TYPE_ACTIONS_SYNC_INFO };
@@ -705,16 +725,13 @@ void UseOpenXR::PollActions()
 
 	xrSyncActions(xr_session, &sync_info);
 
-	inputs.analogueEvents.clear();
-	inputs.binaryEvents.clear();
-	inputs.motionEvents.clear();
 	// Now we'll get the current states of our actions, and store them for later use
 	for(size_t i=0;i<MAX_ACTIONS;i++)
 	{
-		auto &def=xr_input.actionDefinitions[i];
+		auto &def=xr_input_session.actionDefinitions[i];
 		if(!def.xrAction)
 			continue;
-		auto &state=xr_input.actionStates[i];
+		auto &state=xr_input_session.actionStates[i];
 		XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
 		get_info.action=def.xrAction;
 		switch(def.xrActionType)
@@ -724,7 +741,7 @@ void UseOpenXR::PollActions()
 				XrActionStatePose pose_state	= { XR_TYPE_ACTION_STATE_POSE };
 				get_info.action					= def.xrAction;
 				xrGetActionStatePose(xr_session, &get_info, &pose_state);
-				state.u32=pose_state.isActive;
+				state.poseActive=pose_state.isActive;
 			}
 			break;
 			case XR_ACTION_TYPE_BOOLEAN_INPUT:
@@ -732,7 +749,7 @@ void UseOpenXR::PollActions()
 				XrActionStateBoolean bool_state	= { XR_TYPE_ACTION_STATE_BOOLEAN };
 				get_info.action					= def.xrAction;
 				xrGetActionStateBoolean(xr_session, &get_info, &bool_state);
-				state.u32=bool_state.isActive;
+				state.u32=bool_state.currentState;
 			}
 			break;
 			case XR_ACTION_TYPE_FLOAT_INPUT:
@@ -756,94 +773,180 @@ void UseOpenXR::PollActions()
 			break;
 		};
 	}
-	for (uint32_t hand = 0; hand < xr_input.inputDeviceStates.size(); hand++)
+	for (uint32_t hand = 0; hand < xr_input_session.inputDeviceStates.size(); hand++)
 	{
 		XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-		auto &inputDeviceState =xr_input.inputDeviceStates[hand];
+		auto &inputDeviceState =xr_input_session.inputDeviceStates[hand];
 	
 		XrActionStatePose pose_state = { XR_TYPE_ACTION_STATE_POSE };
-		get_info.action				= xr_input.actionDefinitions[LEFT_GRIP_POSE+hand].xrAction;
+		get_info.action				= xr_input_session.actionDefinitions[LEFT_GRIP_POSE+hand].xrAction;
 		xrGetActionStatePose(xr_session, &get_info, &pose_state);
 		inputDeviceState.renderThisDevice	= pose_state.isActive;
 
 		// Events come with a timestamp
 		XrActionStateBoolean select_state = { XR_TYPE_ACTION_STATE_BOOLEAN };
-		get_info.action = xr_input.actionDefinitions[SELECT].xrAction;
+		get_info.action = xr_input_session.actionDefinitions[SELECT].xrAction;
 		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
-		xr_input.inputDeviceStates[hand].handSelect = select_state.currentState && select_state.changedSinceLastSync;
+		xr_input_session.inputDeviceStates[hand].handSelect = select_state.currentState && select_state.changedSinceLastSync;
 
-		get_info.action = xr_input.actionDefinitions[SHOW_MENU].xrAction;
+		get_info.action = xr_input_session.actionDefinitions[SHOW_MENU].xrAction;
 		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
-		xr_input.inputDeviceStates[hand].handMenu = select_state.currentState && select_state.changedSinceLastSync;
+		xr_input_session.inputDeviceStates[hand].handMenu = select_state.currentState && select_state.changedSinceLastSync;
 		// If we have a select event, update the hand pose to match the event's timestamp
-		if (xr_input.inputDeviceStates[hand].handSelect)
+		if (xr_input_session.inputDeviceStates[hand].handSelect)
 		{
 			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-			XrResult        res = xrLocateSpace(xr_input.actionDefinitions[LEFT_GRIP_POSE+hand].space, xr_app_space, select_state.lastChangeTime, &space_location);
+			XrResult        res = xrLocateSpace(xr_input_session.actionDefinitions[LEFT_GRIP_POSE+hand].space, xr_app_space, select_state.lastChangeTime, &space_location);
 			if (XR_UNQUALIFIED_SUCCESS(res) &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 			{
-				xr_input.actionStates[LEFT_GRIP_POSE+hand].pose= space_location.pose;
+				xr_input_session.actionStates[LEFT_GRIP_POSE+hand].pose= space_location.pose;
 				if(hand>= controllerPoses.size())
 					controllerPoses.resize(hand+1);
 				controllerPoses[hand].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
 				controllerPoses[hand].orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 			}
 		}
-		XrActionStateFloat trigger_state = { XR_TYPE_ACTION_STATE_FLOAT };
-		get_info.action = xr_input.actionDefinitions[LEFT_TRIGGER+hand].xrAction;
-		xrGetActionStateFloat(xr_session, &get_info, &trigger_state);
-		
-		if (xr_input.actionStates[LEFT_TRIGGER+hand].f32 != trigger_state.currentState)
-		{
-			xr_input.actionStates[LEFT_TRIGGER+hand].f32 = trigger_state.currentState;
-			// what is the mapping?
-			inputs.addAnalogueEvent(avs::TRIGGER01, xr_input.actionStates[LEFT_TRIGGER+hand].f32);
-		}
-#if 0
-		// thumbstick:
-		XrActionStateFloat joystick_state_x = { XR_TYPE_ACTION_STATE_FLOAT };
-		get_info.action = xr_input.joystickActionX[hand];
-		xrGetActionStateFloat(xr_session, &get_info, &joystick_state_x);
-		xr_input.thumbstick[hand].x = joystick_state_x.currentState;
-
-		XrActionStateFloat joystick_state_y = { XR_TYPE_ACTION_STATE_FLOAT };
-		get_info.action = xr_input.joystickActionY[hand];
-		xrGetActionStateFloat(xr_session, &get_info, &joystick_state_y);
-		xr_input.thumbstick[hand].y = joystick_state_y.currentState;
-		if (controllerStates[hand].mJoystickAxisX != xr_input.thumbstick[hand].x
-			|| controllerStates[hand].mJoystickAxisY != xr_input.thumbstick[hand].y)
-		{
-			controllerStates[hand].mJoystickAxisX = xr_input.thumbstick[hand].x;
-			controllerStates[hand].mJoystickAxisY = xr_input.thumbstick[hand].y;
-		}
-#endif
-		if (xr_input.actionStates[SHOW_MENU].u32)
+		if (xr_input_session.actionStates[SHOW_MENU].u32)
 		{
 			menuButtonHandler();
 		}
 	}
 }
+XrPath userHandLeftActiveProfile;
+XrPath userHandRightActiveProfile;
+void UseOpenXR::RecordCurrentBindings()
+{
+	// now we are ready to:
+	XrInteractionProfileState interactionProfile={XR_TYPE_INTERACTION_PROFILE_STATE,0,0};
+	// for each action, what is the binding?
+	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance, "/user/hand/left"),&interactionProfile));
+	std::cout<<" userHandLeftActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+	userHandLeftActiveProfile=interactionProfile.interactionProfile;
+	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance,"/user/hand/right"),&interactionProfile));
+	std::cout<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+	userHandRightActiveProfile=interactionProfile.interactionProfile;
+	activeInteractionProfilePaths.clear();
+	activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);
+	activeInteractionProfilePaths.push_back(userHandRightActiveProfile);
+}
+
+const InteractionProfile *GetActiveBinding(XrPath p)
+{
+	for(size_t i=0;i<interactionProfiles.size();i++)
+	{
+		if(interactionProfiles[i].profilePath==p)
+			return &(interactionProfiles[i]);
+	}
+	return nullptr;
+}
+
+std::string GetBoundPath(const ActionDefinition &def)
+{
+	for(size_t b=0;b<activeInteractionProfilePaths.size();b++)
+	{
+		const InteractionProfile *interactionProfile=GetActiveBinding(activeInteractionProfilePaths[b]);
+		// For each action, get the currently bound path.
+		if(interactionProfile)
+		for(size_t a=0;a<interactionProfile->xrActionSuggestedBindings.size();a++)
+		{
+			auto &binding=interactionProfile->xrActionSuggestedBindings[a];
+			if(binding.action==def.xrAction)
+			{
+				return interactionProfile->bindingPaths[a];
+			}
+		}
+	}
+	return "";
+}
+
 // An InputMapping is created for each InputDefinition that the server has sent.
 // It defines which xrActions are linked to which inputs needed by the server.
 // The mappings are initialized on connection and can be changed at any time by the server.
 // So we have a set of mappings for each currently connected server.
-struct InputMapping
+void UseOpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition>& inputDefinitions_)
 {
-	avs::InputDefinition defn;
-};
-std::vector<InputMapping> inputMappings;
-void UseOpenXR::OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions_)
-{
+	if(!xr_session)
+		return;
+	RecordCurrentBindings();
+	auto &inputMappings=openXRServers[server_uid].inputMappings;
 	inputMappings.clear();
+	auto &inputStates=openXRServers[server_uid].inputStates;
+	inputStates.clear();
 	for (const auto& def : inputDefinitions_)
 	{
-		inputMappings.push_back(InputMapping());
-		InputMapping& mapping = inputMappings.back();
-		// store the definition.
-		mapping.defn=def;
+		std::regex re(def.regexPath, std::regex_constants::icase | std::regex::extended);
+		// which, if any, action should be used to map to this?
+		// we match by the bindings.
+		// For each action, get the currently bound path.
+		for(size_t a=0;a<MAX_ACTIONS;a++)
+		{
+			auto &actionDef=xr_input_session.actionDefinitions[a];
+			std::string path_str=GetBoundPath(actionDef);
+			if(!path_str.length())
+				continue;
+			// Now we try to match this path to the input def.
+			std::smatch match;
+			if (std::regex_search(path_str, match, re))
+			{
+				string matching=match.str(0);
+				std::cout<<"Binding matches: "<<def.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
+				
+				inputMappings.push_back(InputMapping());
+				inputStates.push_back(InputState());
+				InputMapping& mapping = inputMappings.back();
+				// store the definition.
+				mapping.serverInputDefinition=def;
+				mapping.clientActionId=(ActionId)a;
+			}
+		}
 	}
+}
+
+const teleport::client::Input &UseOpenXR::GetServerInputs(avs::uid server_uid,unsigned long long framenumber)
+{
+	auto &server=openXRServers[server_uid];
+	if(server.framenumber!=framenumber)
+	{
+		server.inputs.clear();
+		for(size_t i=0;i<server.inputMappings.size();i++)
+		{
+			auto &mapping=server.inputMappings[i];
+			auto &state=server.inputStates[i];
+			const auto &actionState		=xr_input_session.actionStates[mapping.clientActionId];
+			const auto &actionDefinition=xr_input_session.actionDefinitions[mapping.clientActionId];
+			switch(actionDefinition.xrActionType)
+			{
+				case XR_ACTION_TYPE_BOOLEAN_INPUT:
+				{
+					if(actionState.u32!=state.uint32)
+					{
+						state.uint32=actionState.u32;
+						server.inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,actionState.u32!=0);
+					}
+				}
+				break;
+				case XR_ACTION_TYPE_FLOAT_INPUT:
+				{
+					if(actionState.f32!=state.float32)
+					{
+						state.float32=actionState.f32;
+						server.inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,actionState.f32);
+					}
+				}
+				break;
+				case XR_ACTION_TYPE_VIBRATION_OUTPUT:
+				{
+				}
+				break;
+				default:
+				break;
+			};
+		}
+		server.framenumber=framenumber;
+	}
+	return server.inputs;
 }
 
 void UseOpenXR::openxr_poll_predicted(XrTime predicted_time)
@@ -855,15 +958,15 @@ void UseOpenXR::openxr_poll_predicted(XrTime predicted_time)
 	// should result in a more accurate location, and reduce perceived lag.
 	for (size_t i = 0; i < 2; i++)
 	{
-		if (!xr_input.inputDeviceStates[i].renderThisDevice)
+		if (!xr_input_session.inputDeviceStates[i].renderThisDevice)
 			continue;
 		XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-		XrResult        res = xrLocateSpace(xr_input.actionDefinitions[LEFT_GRIP_POSE+i].space, xr_app_space, predicted_time, &space_location);
+		XrResult        res = xrLocateSpace(xr_input_session.actionDefinitions[LEFT_GRIP_POSE+i].space, xr_app_space, predicted_time, &space_location);
 		if (XR_UNQUALIFIED_SUCCESS(res) &&
 			(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
-			xr_input.actionStates[LEFT_GRIP_POSE+i].pose = space_location.pose;
+			xr_input_session.actionStates[LEFT_GRIP_POSE+i].pose = space_location.pose;
 			if (i >= controllerPoses.size())
 				controllerPoses.resize(i + 1);
 			controllerPoses[i].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
@@ -879,7 +982,7 @@ void app_update_predicted()
 	//if (app_cubes.size() < 2)
 	//	app_cubes.resize(2, xr_pose_identity);
 	//for (uint32_t i = 0; i < 2; i++) {
-	//	app_cubes[i] = xr_input.renderHand[i] ? xr_input.handPose[i] : xr_pose_identity;
+	//	app_cubes[i] = xr_input_session.renderHand[i] ? xr_input_session.handPose[i] : xr_pose_identity;
 	//}
 }
 
@@ -1122,11 +1225,6 @@ const avs::Pose& UseOpenXR::GetControllerPose(int index) const
 		return avs::Pose();
 }
 
-const teleport::client::Input& UseOpenXR::GetInputs() const
-{
-	return inputs;
-}
-
 void UseOpenXR::RenderFrame(platform::crossplatform::GraphicsDeviceContext	&deviceContext,platform::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
 {
 	// Block until the previous frame is finished displaying, and is ready for another one.
@@ -1150,12 +1248,12 @@ void UseOpenXR::RenderFrame(platform::crossplatform::GraphicsDeviceContext	&devi
 		(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 		(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 	{
-		headPose.position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
- 		headPose.orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+		headPose.position	= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
+ 		headPose.orientation= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 	}
 	// If the session is active, lets render our layer in the compositor!
-	XrCompositionLayerBaseHeader* layer = nullptr;
-	XrCompositionLayerProjection             layer_proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+	XrCompositionLayerBaseHeader* layer			= nullptr;
+	XrCompositionLayerProjection  layer_proj	= { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
 	vector<XrCompositionLayerProjectionView> views;
 	bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
 	if (session_active && RenderLayer(deviceContext,frame_state.predictedDisplayTime, views, layer_proj,renderDelegate, origin_pos, origin_orientation))
@@ -1188,12 +1286,12 @@ void UseOpenXR::Shutdown()
 	// What gets allocated, must get deallocated!
 	for(int i=0;i<MAX_ACTIONS;i++)
 	{
-		if (xr_input.actionDefinitions[i].space != XR_NULL_HANDLE)
-			xrDestroySpace(xr_input.actionDefinitions[i].space);
+		if (xr_input_session.actionDefinitions[i].space != XR_NULL_HANDLE)
+			xrDestroySpace(xr_input_session.actionDefinitions[i].space);
 	}
-	if (xr_input.actionSet != XR_NULL_HANDLE)
+	if (xr_input_session.actionSet != XR_NULL_HANDLE)
 	{
-		xrDestroyActionSet(xr_input.actionSet);
+		xrDestroyActionSet(xr_input_session.actionSet);
 	}
 	if (xr_app_space != XR_NULL_HANDLE)
 		xrDestroySpace(xr_app_space);
@@ -1203,4 +1301,55 @@ void UseOpenXR::Shutdown()
 		ext_xrDestroyDebugUtilsMessengerEXT(xr_debug);
 	if (xr_instance != XR_NULL_HANDLE)
 		xrDestroyInstance(xr_instance);
+}
+
+const std::string &UseOpenXR::GetDebugString() const
+{
+	static std::string str;
+	str.clear();
+	str+="Bound profile paths:\n";
+	for(int i=0;i<activeInteractionProfilePaths.size();i++)
+	{
+		if(i)
+			str+=", ";
+		if(activeInteractionProfilePaths[i])
+			str+=FromXrPath(xr_instance,activeInteractionProfilePaths[i]);
+	}
+	str+="\n";
+	for(int i=0;i<MAX_ACTIONS;i++)
+	{
+		auto &def=xr_input_session.actionDefinitions[i];
+		auto &state=xr_input_session.actionStates[i];
+		str+=def.name+": ";
+		switch(def.xrActionType)
+		{
+			case XR_ACTION_TYPE_POSE_INPUT:
+			{
+			}
+			break;
+			case XR_ACTION_TYPE_BOOLEAN_INPUT:
+			{
+				str+=fmt::format("{0}",state.u32!=0?"true":"false");
+			}
+			break;
+			case XR_ACTION_TYPE_FLOAT_INPUT:
+			{
+				str+=fmt::format("{: .3f}",state.f32);
+			}
+			break;
+			case XR_ACTION_TYPE_VECTOR2F_INPUT:
+			{
+				str+=fmt::format("{0},{1}",state.vec2f[0],state.vec2f[1]);
+			}
+			break;
+			case XR_ACTION_TYPE_VIBRATION_OUTPUT:
+			{
+			}
+			break;
+			default:
+			break;
+		};
+		str+="\n";
+	}
+	return str;
 }

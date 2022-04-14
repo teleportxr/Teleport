@@ -20,8 +20,6 @@ set(src
 	src/TeleportServer/ClientManager.h
 	src/TeleportServer/DiscoveryService.cpp
 	src/TeleportServer/DiscoveryService.h 
-	src/TeleportServer/ErrorHandling.h
-	src/TeleportServer/ErrorHandling.cpp
 	src/TeleportServer/ExtractedTypes.h
 	src/TeleportServer/GeometryEncoder.cpp
 	src/TeleportServer/GeometryEncoder.h
@@ -105,7 +103,7 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
 
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MD)
 
-target_link_libraries(TeleportServer TeleportAudio libavstream enet basisu efp winmm d3d12 draco libssl libcrypto TeleportCore )
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp winmm d3d12 draco libssl libcrypto )
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)

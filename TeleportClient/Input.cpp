@@ -5,17 +5,6 @@ using namespace teleport;
 using namespace client;
 static uint32_t nextEventID = 0;
 
-void ControllerState::clear()
-{
-	mButtons = 0;
-	mTrackpadStatus = false;
-	mTrackpadX = 0.0f;
-	mTrackpadY = 0.0f;
-	mJoystickAxisX = 0.0f;
-	mJoystickAxisY = 0.0f;
-	triggerBack = 0.0f;
-	triggerGrip = 0.0f;
-}
 
 void Input::clear()
 {

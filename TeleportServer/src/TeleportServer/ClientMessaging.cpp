@@ -7,7 +7,7 @@
 #include "libavstream/common_networking.h"
 
 #include "DiscoveryService.h"
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "ClientManager.h"
 
 namespace teleport
