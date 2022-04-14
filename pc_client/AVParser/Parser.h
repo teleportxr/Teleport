@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "HevcTypes.h"
 #include <string>
 #include <cstdint>
 

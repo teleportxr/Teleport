@@ -259,9 +259,9 @@ Result Decoder::process(uint64_t timestamp, uint64_t deltaTime)
 			continue;
 		}
 
-		// Check if a frame was missed
-		// This frame could happen to be an IDR and the issue might fix itself
-		// First frame should have pts of 1
+		// Check if a frame was missed.
+		// This frame could happen to be an IDR and the issue might fix itself.
+		// First frame will have frameID of 1.
 		if (m_frame.frameID - m_currentFrameNumber > 1)
 		{
 			m_state = {};
@@ -389,6 +389,29 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 		isCodecConfig = true;
 		m_state.hasALE = true;
 		break;
+	case VideoPayloadType::VCL:
+		// There are two VCLs per frame with alpha layer encoding enabled (HEVC only) and one VCL without.
+		if (payloadType == VideoPayloadType::VCL)
+		{
+			if (!m_firstVCLOffset)
+			{
+				m_firstVCLOffset = dataOffset;
+			}
+
+			bool isIDR = m_parser->isIDR(data, dataSize);
+
+			// Do not process a non-IDR Frame if an IDR is required
+			if (m_idrRequired && !isIDR)
+			{
+				return Result::OK;
+			}
+
+			if (!isLastPayload)
+			{
+				return Result::OK;
+			}
+		}
+		break;
 	default:
 		break;
 	}
@@ -410,8 +433,8 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 #if defined(PLATFORM_WINDOWS)
 		if (m_selectedBackendType == DecoderBackend::Custom)
 		{
-			size_t frameSize = m_frame.dataSize - m_firstVCLOffset;
-			result = m_backend->decode(buffer + m_firstVCLOffset, frameSize, nullptr, 0, payloadType, true);
+			// Include ALU. Needed for D3D12 decoder.
+			result = m_backend->decode(data - 3, dataSize + 3, nullptr, 0, payloadType, true);
 		}
 		else
 		{
@@ -432,13 +455,13 @@ Result Decoder::processPayload(const uint8_t* buffer, size_t dataSize, size_t da
 #endif
 		m_idrRequired = (result != avs::Result::DecoderBackend_ReadyToDisplay);
 	}
-
 	else
 	{
 #if defined(PLATFORM_WINDOWS)
 		if (m_selectedBackendType == DecoderBackend::Custom)
 		{
-			result = m_backend->decode(data, dataSize, nullptr, 0, payloadType, false);
+			// Include ALU. Needed for D3D12 decoder.
+			result = m_backend->decode(data - 3, dataSize + 3, nullptr, 0, payloadType, false);
 		}
 #elif defined(PLATFORM_ANDROID)
 		result = m_backend->decode(data, dataSize, data, dataSize, payloadType, false);

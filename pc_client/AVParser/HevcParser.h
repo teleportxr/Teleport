@@ -32,7 +32,7 @@ namespace avparser
         class HevcParser : public Parser
         {
         public:
-            HevcParser(bool shortSliceParse = false);
+            HevcParser();
 
             size_t parseNALUnit(const uint8_t* data, size_t size) override;
 
@@ -107,9 +107,6 @@ namespace avparser
             std::unique_ptr<BitReader> mReader;
 
             uint32_t mPrevPocTid0;
-
-            // True if slice parsing should exclude the modification list and weight table. 
-            bool mShortSliceParse;
         };
     }
 }

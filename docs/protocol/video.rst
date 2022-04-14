@@ -216,7 +216,7 @@ The following settings are recommended to minimize latency:
 8. Long term reference pictures enabled
 9. Intra refresh enabled
 10. Non-reference P frames
-11. The first frame should be the only **IDR** sent unless reccovering from a lost frame.
+11. The first frame should be the only **IDR** sent unless recovering from a lost frame.
 
 
 

@@ -8,26 +8,19 @@ uniform RWTexture2D<float4> rgbTexture;
 
 float4 Yuv420ToRgbForPixel(uint y, uint u, uint v) 
 {
-	static float3x3 YUVtoRGB_BT709 = 
-	{
-		1.16438f, 0.0f, 1.83367f,
-		1.16438f, -0.218117f, -0.545076f,
-		1.16438f, 2.16063f, 0.0f
-	};
-
-	float fy = int(y) - 16;
-	float fu = int(u) - 128;
-	float fv = int(v) - 128;
+	float fy = float(int(y) - 16);
+	float fu = float(int(u) - 128);
+	float fv = float(int(v) - 128);
 
 	float maxf = 255.0f;
 
 	float4 rgb;
-	rgb.x = clamp(YUVtoRGB_BT709[0][0] * fy + YUVtoRGB_BT709[0][1] * fu + YUVtoRGB_BT709[0][2] * fv, 0.0f, maxf);
-	rgb.y = clamp(YUVtoRGB_BT709[1][0] * fy + YUVtoRGB_BT709[1][1] * fu + YUVtoRGB_BT709[1][2] * fv, 0.0f, maxf);
-	rgb.z = clamp(YUVtoRGB_BT709[2][0] * fy + YUVtoRGB_BT709[2][1] * fu + YUVtoRGB_BT709[2][2] * fv, 0.0f, maxf);
+	rgb.x = clamp((1.16438f * fy) +  (0.0f * fu) + (1.83367f  * fv), 0.0f, maxf);
+	rgb.y = clamp((1.16438f * fy) + (-0.218117f * fu) + (-0.545076f * fv), 0.0f, maxf);
+	rgb.z = clamp((1.16438f * fy) + (2.16063f  * fu)  +  (0.0f * fv), 0.0f, maxf);
 	rgb.w = 1.0f;
 
-	// Convert to unit scale float4 needed for the rgbTexture.
+	// Convert to unit scale float4needed f or the rgbTexture.
 	float toUnitScale = 1.0f / 255.0f;
 	rgb.xyz *= toUnitScale;
 
@@ -48,7 +41,7 @@ shader void CS_NV12ToRGBA(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 		return;
 	}
 
-	int2 uvPos = int2(threadID) / 2;
+	int2 uvPos = int2(threadID);
 
 	uint l0 = yTexture.Load(int3(pos, 0));
 	uint l1 = yTexture.Load(int3(pos.x + 1, pos.y, 0));

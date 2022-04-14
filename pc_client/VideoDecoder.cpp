@@ -24,6 +24,7 @@ VideoDecoder::VideoDecoder(cp::RenderPlatform* renderPlatform, cp::Texture* surf
 	, mOutputTexture(nullptr)
 	, mTextureConversionEffect(nullptr)
 	, mCurrentFrame(0)
+	, mStatusID(0)
 {
 	recompileShaders();
 }
@@ -52,7 +53,11 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 
 	mDPB.clear();
 	mPocFrameIndexMap.clear();
-	
+
+	clearDecodeArguments();
+	mDecodeArgs.push_back({ cp::VideoDecodeArgumentType::PictureParameters, 0, nullptr });
+	mDecodeArgs.push_back({ cp::VideoDecodeArgumentType::SliceControl, 0, nullptr });
+
 	cp::VideoDecoderParams decParams;
 
 	switch (params.codec)
@@ -66,8 +71,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	case VideoCodec::HEVC:
 		decParams.codec = cp::VideoCodec::HEVC;
 		mDPB.resize(16);
-		// Pass true to exclude the ref pic list modification and weight table parts of a slice from being parsed as D3D12 video decoder parses them.
-		mParser.reset(new hevc::HevcParser(true));
+		mParser.reset(new hevc::HevcParser());
 		break;
 	default:
 		TELEPORT_CERR << "VideoDecoder: Unsupported video codec type selected" << std::endl;
@@ -88,7 +92,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 
 	// The output texture is in native decode format.
 	// The surface texture will be written to in the display function.
-	mOutputTexture = mRenderPlatform->CreateTexture();
+	mOutputTexture = mRenderPlatform->CreateTexture("OutputTexture");
 	mOutputTexture->ensureTexture2DSizeAndFormat(mRenderPlatform, decParams.width, decParams.height, 1, simul::crossplatform::NV12, false, false, false);
 
 #if TELEPORT_CLIENT_USE_D3D12
@@ -98,22 +102,20 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	((simul::dx12::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 #endif
 
-	if (DEC_FAILED(mDecoder->Initialize(mRenderPlatform, decParams)))
+	// Pass true to perform a query to check if the decoder successfully decoded the frame.
+	// Just use for debugging!
+	if (DEC_FAILED(mDecoder->Initialize(mRenderPlatform, decParams, false)))
 	{
 		return Result::DecoderBackend_InitFailed;
 	}
-
-
-
 
 	mDeviceType = device.type;
 	mParams = params;
 	mFrameWidth = frameWidth;
 	mFrameHeight = frameHeight;
 
-	mPicParams = {};
-
 	mCurrentFrame = 0;
+	mStatusID = 0;
 
 	return Result::OK;
 }
@@ -146,8 +148,10 @@ Result VideoDecoder::shutdown()
 		}
 	}
 
+	mDecoder.reset();
+
 	SAFE_DELETE(mOutputTexture);
-	SAFE_DELETE(mPicParams.data);
+	clearDecodeArguments();
 	SAFE_DELETE(mTextureConversionEffect);
 
 	return Result::OK;
@@ -202,8 +206,8 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 		// VPS not used by DXVA params for D3D12 Video Decoder.
 		// TODO: Parse VPS if the picture parameters for the Vulkan decoder need it.
 		return Result::OK;
-	case VideoPayloadType::PPS:
 	case VideoPayloadType::SPS:
+	case VideoPayloadType::PPS:
 	case VideoPayloadType::ALE:
 	case VideoPayloadType::FirstVCL:
 	case VideoPayloadType::VCL:
@@ -212,16 +216,18 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 		return Result::DecoderBackend_InvalidPayload;
 	}
 
-	size_t bytesParsed = mParser->parseNALUnit((uint8_t*)buffer, bufferSizeInBytes);
+	// The parse does not account for the ALU so skip it.
+	size_t bytesParsed = mParser->parseNALUnit((uint8_t*)(buffer) + 3, bufferSizeInBytes - 3);
 
 	if (!lastPayload)
 	{
 		return Result::OK;
 	}
 
-	updatePicParams();
+	// Include ALU size of 3 bytes.
+	updateInputArguments(bytesParsed + 3);
 
-	if (DEC_FAILED(mDecoder->Decode(mOutputTexture, buffer, bufferSizeInBytes, &mPicParams, 1)))
+	if (DEC_FAILED(mDecoder->Decode(mOutputTexture, buffer, bufferSizeInBytes, mDecodeArgs.data(), mDecodeArgs.size())))
 	{
 		TELEPORT_CERR << "VideoDecoder: Error occurred while trying to decode the frame.";
 		return Result::DecoderBackend_DecodeFailed;
@@ -234,9 +240,6 @@ Result VideoDecoder::display(bool showAlphaAsColor)
 {
 	cp::GraphicsDeviceContext& deviceContext = mRenderPlatform->GetImmediateContext();
 
-	// Change to generic read state for use with the compute shader.
-	((simul::dx12::Texture*)mOutputTexture)->SetLayout(deviceContext, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ);
-
 	// Same texture. Two SRVs for two layers. D3D12 Texture class handles this.
 	mTextureConversionEffect->SetTexture(deviceContext, "yTexture", mOutputTexture);
 	mTextureConversionEffect->SetTexture(deviceContext, "uvTexture", mOutputTexture);
@@ -247,52 +250,63 @@ Result VideoDecoder::display(bool showAlphaAsColor)
 	mTextureConversionEffect->SetUnorderedAccessView(deviceContext, "rgbTexture", nullptr);
 	mTextureConversionEffect->UnbindTextures(deviceContext);
 
+#if TELEPORT_CLIENT_USE_D3D12
 	// Change back to common state for use with D3D12 video decode command list.
 	((simul::dx12::Texture*)mOutputTexture)->SetLayout(deviceContext, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
+#endif
 
 	return Result::OK;
 }
 
 
-void VideoDecoder::updatePicParams()
+void VideoDecoder::updateInputArguments(size_t sliceControlSize)
 {
 	switch (mParams.codec)
 	{
 	case VideoCodec::H264:
-		updatePicParamsH264();
+		updateInputArgumentsH264(sliceControlSize);
 		break;
 	case VideoCodec::HEVC:
-		updatePicParamsHEVC();
+		updateInputArgumentsHEVC(sliceControlSize);
 		break;
 	}
 
-	mCurrentFrame = (mCurrentFrame + 1) % mDPB.size();
+	mCurrentFrame = (mCurrentFrame + 1) % (uint32_t)mDPB.size();
 }
 
-void VideoDecoder::updatePicParamsH264()
+void VideoDecoder::updateInputArgumentsH264(size_t sliceControlSize)
 {
-	if (!mPicParams.data)
+	cp::VideoDecodeArgument& picParams = mDecodeArgs[0];
+	cp::VideoDecodeArgument& sliceControl = mDecodeArgs[1];
+
+	if (!picParams.data)
 	{
-		mPicParams.type = cp::VideoDecodeArgumentType::PictureParameters;
 #if TELEPORT_CLIENT_USE_D3D12
-		mPicParams.size = sizeof(DXVA_PicParams_H264);
-		mPicParams.data = new DXVA_PicParams_H264;
+		picParams.size = sizeof(DXVA_PicParams_H264);
+		picParams.data = new DXVA_PicParams_H264;
+
+		sliceControl.size = sizeof(DXVA_Slice_H264_Short);
+		sliceControl.data = new DXVA_Slice_H264_Short;
 #endif
 	}
 
 #if TELEPORT_CLIENT_USE_D3D12
-	DXVA_PicParams_H264* pp = (DXVA_PicParams_H264*)mPicParams.data;
+	DXVA_PicParams_H264* pp = (DXVA_PicParams_H264*)picParams.data;
+	DXVA_Slice_H264_Short* sc = (DXVA_Slice_H264_Short*)sliceControl.data;
 	// TODO: Implement
 #endif
 }
 
-void VideoDecoder::updatePicParamsHEVC()
+void VideoDecoder::updateInputArgumentsHEVC(size_t sliceControlSize)
 {
+	cp::VideoDecodeArgument& picParams = mDecodeArgs[0];
+	cp::VideoDecodeArgument& sliceControl = mDecodeArgs[1];
+
 	// Commenting out as not used by DXVA.
 	//const hevc::VPS* vps = (hevc::VPS*)mParser->getVPS();
 	const hevc::SPS* sps = (hevc::SPS*)mParser->getSPS();
 	const hevc::PPS* pps = (hevc::PPS*)mParser->getPPS();
-	const hevc::Slice* slice = (hevc::Slice*)mParser->getVPS();
+	const hevc::Slice* slice = (hevc::Slice*)mParser->getLastSlice();
 	const hevc::ExtraData* extraData = (hevc::ExtraData*)mParser->getExtraData();
 
 	const hevc::ShortTermRefPicSet* strps = nullptr;
@@ -307,12 +321,14 @@ void VideoDecoder::updatePicParamsHEVC()
 	}
 
 
-	if (!mPicParams.data)
+	if (!picParams.data)
 	{
-		mPicParams.type = cp::VideoDecodeArgumentType::PictureParameters;
 #if TELEPORT_CLIENT_USE_D3D12
-		mPicParams.size = sizeof(DXVA_PicParams_HEVC);
-		mPicParams.data = new DXVA_PicParams_HEVC;
+		picParams.size = sizeof(DXVA_PicParams_HEVC);
+		picParams.data = new DXVA_PicParams_HEVC;
+
+		sliceControl.size = sizeof(DXVA_Slice_HEVC_Short);
+		sliceControl.data = new DXVA_Slice_HEVC_Short;
 #endif
 	}
 	else
@@ -327,6 +343,7 @@ void VideoDecoder::updatePicParamsHEVC()
 		}
 	}
 
+	memset(picParams.data, 0, sizeof(DXVA_PicParams_HEVC));
 
 	FrameCache& frame = mDPB[mCurrentFrame];
 	frame.reset();
@@ -335,9 +352,9 @@ void VideoDecoder::updatePicParamsHEVC()
 	frame.sliceType = slice->slice_type;
 	frame.poc = extraData->poc;
 
-
 #if TELEPORT_CLIENT_USE_D3D12
-	DXVA_PicParams_HEVC* pp = (DXVA_PicParams_HEVC*)mPicParams.data;
+	DXVA_PicParams_HEVC* pp = (DXVA_PicParams_HEVC*)picParams.data;
+	DXVA_Slice_HEVC_Short* sc = (DXVA_Slice_HEVC_Short*)sliceControl.data;
 
 	pp->PicWidthInMinCbsY = sps->pic_width_in_luma_samples >> (sps->log2_min_luma_coding_block_size_minus3 + 3);
 	pp->PicHeightInMinCbsY = sps->pic_height_in_luma_samples >> (sps->log2_min_luma_coding_block_size_minus3 + 3);
@@ -352,9 +369,7 @@ void VideoDecoder::updatePicParamsHEVC()
 		(0 << 14) |
 		(0 << 15);
 
-
 	pp->CurrPic.bPicEntry = mCurrentFrame | (0 << 7);
-
 
 	pp->sps_max_dec_pic_buffering_minus1 = sps->sps_max_dec_pic_buffering_minus1[sps->sps_max_sub_layers_minus1];
 	pp->log2_min_luma_coding_block_size_minus3 = sps->log2_min_luma_coding_block_size_minus3;
@@ -372,7 +387,7 @@ void VideoDecoder::updatePicParamsHEVC()
 
 	if (slice->short_term_ref_pic_set_sps_flag == 0)
 	{
-		pp->ucNumDeltaPocsOfRefRpsIdx = extraData->numDeltaPocsOfRefRpsIdx;;
+		pp->ucNumDeltaPocsOfRefRpsIdx = extraData->numDeltaPocsOfRefRpsIdx;
 		pp->wNumBitsForShortTermRPSInSlice = extraData->short_term_ref_pic_set_size;
 	}
 	else
@@ -457,7 +472,7 @@ void VideoDecoder::updatePicParamsHEVC()
 	{
 		uint32_t pocDiff = prevPocDiff + strps->delta_poc_s0_minus1[i] + 1;
 		uint32_t poc = frame.poc - pocDiff;
-		if (strps->used_by_curr_pic_s0_flag[i] && mPocFrameIndexMap.find(poc) != mPocFrameIndexMap.end())
+		if (strps->used_by_curr_pic_s0_flag[i] && (mPocFrameIndexMap.find(poc) != mPocFrameIndexMap.end()))
 		{	
 			mDPB[mPocFrameIndexMap[poc]].usedForShortTermRef = true;
 			uint32_t refListindex = mPocFrameIndexMap[poc];
@@ -481,7 +496,7 @@ void VideoDecoder::updatePicParamsHEVC()
 	{
 		uint32_t pocDiff = prevPocDiff + strps->delta_poc_s1_minus1[i] + 1;
 		uint32_t poc = frame.poc + pocDiff;
-		if (strps->used_by_curr_pic_s1_flag[i] && mPocFrameIndexMap.find(poc) != mPocFrameIndexMap.end())
+		if (strps->used_by_curr_pic_s1_flag[i] && (mPocFrameIndexMap.find(poc) != mPocFrameIndexMap.end()))
 		{
 			mDPB[mPocFrameIndexMap[poc]].usedForShortTermRef = true;
 			uint32_t refListindex = mPocFrameIndexMap[poc];
@@ -530,7 +545,7 @@ void VideoDecoder::updatePicParamsHEVC()
 		{
 			pp->RefPicList[j].Index7Bits = i;
 			pp->RefPicList[j].AssociatedFlag = mDPB[i].usedForLongTermRef;
-			pp->PicOrderCntValList[j] = frame.poc;
+			pp->PicOrderCntValList[j] = mDPB[i].poc;
 		}
 		else
 		{
@@ -540,6 +555,14 @@ void VideoDecoder::updatePicParamsHEVC()
 
 		++j;
 	}
+
+	pp->StatusReportFeedbackNumber = mStatusID++;
+
+
+	// Slice control
+	sc->BSNALunitDataLocation = 0;
+	sc->SliceBytesInBuffer = static_cast<uint32_t>(sliceControlSize);
+	sc->wBadSliceChopping = 0;
 
 	mPocFrameIndexMap[frame.poc] = mCurrentFrame;
 
@@ -562,6 +585,15 @@ void VideoDecoder::markFramesUnusedForReference()
 	{
 		frame.markUnusedForReference();
 	}
+}
+
+void VideoDecoder::clearDecodeArguments()
+{
+	for (auto& arg : mDecodeArgs)
+	{
+		SAFE_DELETE(arg.data);
+	}
+	mDecodeArgs.clear();
 }
 
 void VideoDecoder::recompileShaders()

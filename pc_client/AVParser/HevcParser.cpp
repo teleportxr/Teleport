@@ -14,9 +14,8 @@ namespace avparser
 {
 	namespace hevc
 	{
-		HevcParser::HevcParser(bool shortSliceParse)
+		HevcParser::HevcParser()
 			: mPrevPocTid0(0)
-			, mShortSliceParse(shortSliceParse)
 		{
 			mReader.reset(new BitReader());
 		}
@@ -897,14 +896,18 @@ namespace avparser
 					sc.scaling_list_pred_matrix_id_delta[sizeId].resize(6);
 					sc.scaling_list_delta_coef[sizeId].resize(6);
 					if (sizeId >= 2)
+					{
 						sc.scaling_list_dc_coef_minus8[sizeId - 2].resize(6);
+					}
 				}
 
 				for (size_t matrixId = 0; matrixId < ((sizeId == 3) ? 2 : 6); matrixId++)
 				{
 					sc.scaling_list_pred_mode_flag[sizeId][matrixId] = mReader->getBits(1);
 					if (!sc.scaling_list_pred_mode_flag[sizeId][matrixId])
+					{
 						sc.scaling_list_pred_matrix_id_delta[sizeId][matrixId] = mReader->getGolombU();
+					}
 					else
 					{
 						size_t nextCoef = 8;
@@ -1136,11 +1139,6 @@ namespace avparser
 
 				slice.num_ref_idx_l0_active_minus1 = mPPS.num_ref_idx_l0_default_active_minus1;
 				slice.num_ref_idx_l1_active_minus1 = mPPS.num_ref_idx_l1_default_active_minus1;
-
-				if (mShortSliceParse)
-				{
-					return;
-				}
 
 				if (slice.slice_type == SliceType::B || slice.slice_type == SliceType::P)
 				{

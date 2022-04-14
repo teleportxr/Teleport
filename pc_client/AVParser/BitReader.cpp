@@ -32,7 +32,7 @@ bool BitReader::getBit()
 	mBitIndex--;
 
 	// The unsigned value of mBitIndex will become UINT32_MAX if it goes below 0.
-	if (mBitIndex > 8)
+	if (mBitIndex > mBitStartIndex)
 	{
 		mBitIndex = mBitStartIndex;
 		mByteIndex++;

@@ -76,12 +76,13 @@ public:
 	void recompileShaders();
 
 private:
-	void updatePicParams();
-	void updatePicParamsH264();
-	void updatePicParamsHEVC();
+	void updateInputArguments(size_t sliceControlSize);
+	void updateInputArgumentsH264(size_t sliceControlSize);
+	void updateInputArgumentsHEVC(size_t sliceControlSize);
 	
 	void resetFrames();
 	void markFramesUnusedForReference();
+	void clearDecodeArguments();
 
 	avs::DeviceType mDeviceType = avs::DeviceType::Invalid;
 
@@ -92,10 +93,8 @@ private:
 	int mDisplayPictureIndex = -1;
 
 	std::unique_ptr<avparser::Parser> mParser;
-
 	std::unique_ptr<simul::crossplatform::VideoDecoder> mDecoder;
-
-	simul::crossplatform::VideoDecodeArgument mPicParams;
+	std::vector<simul::crossplatform::VideoDecodeArgument> mDecodeArgs;
 	simul::crossplatform::RenderPlatform* mRenderPlatform;
 	simul::crossplatform::Texture* mSurfaceTexture;
 	simul::crossplatform::Texture* mOutputTexture;
@@ -105,5 +104,6 @@ private:
 	std::unordered_map<uint32_t, uint32_t> mPocFrameIndexMap;
 
 	uint32_t mCurrentFrame;
+	uint32_t mStatusID;
 };
 
