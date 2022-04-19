@@ -265,6 +265,7 @@ namespace avs
 	enum class NodeSubtype : uint8_t
 	{
 		None=0,
+		Pose,
 		Body,
 		LeftHand,
 		RightHand

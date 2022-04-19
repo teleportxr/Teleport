@@ -43,7 +43,7 @@ namespace teleport
 				, avs::uid serverID
 				, GetUnixTimestampFn getUnixTimestamp
 				, bool use_ssl);
-			void setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType);
+			void setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType,const std::string &regexPosePath);
 			void setInputDefinitions(const std::vector<avs::InputDefinition> &inputDefs);
 			// client settings from engine-side:
 			teleport::ClientSettings clientSettings;
@@ -73,7 +73,12 @@ namespace teleport
 			mutable bool _hasOrigin=false;
 			avs::vec3 originClientHas;
 			std::vector<avs::uid> global_illumination_texture_uids;
-			ReflectedStateMap<avs::NodeSubtype> nodeSubTypes;
+			struct NodeSubtypeState
+			{
+				avs::NodeSubtype nodeSubType;
+				std::string regexPath;
+			};
+			ReflectedStateMap<NodeSubtypeState> nodeSubTypes;
 			ENetAddress address = {};
 		};
 		struct ClientStatus

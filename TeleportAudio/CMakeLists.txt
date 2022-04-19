@@ -51,7 +51,7 @@ endif()
 SetTeleportDefaults( TeleportAudio )
 set_target_properties( TeleportAudio PROPERTIES FOLDER Teleport )
 #Include libavstreamand TeleportCore
-target_include_directories(TeleportAudio PUBLIC ../libavstream/include ../TeleportCore)
+target_include_directories(TeleportAudio PUBLIC ../libavstream/include ../)
 
 
 

@@ -756,10 +756,23 @@ void SessionClient::ReceiveUpdateNodeStructureCommand(const ENetPacket* packet)
 void SessionClient::ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet)
 {
 	size_t commandSize = sizeof(avs::UpdateNodeSubtypeCommand);
+	if(packet->dataLength<commandSize)
+	{
+		TELEPORT_CERR << "Bad packet." << std::endl;
+		return;
+	}
 	//Copy command out of packet.
-	avs::UpdateNodeSubtypeCommand updateNodeStructureCommand;
-	memcpy(static_cast<void*>(&updateNodeStructureCommand), packet->data, commandSize);
-	mCommandInterface->UpdateNodeSubtype(updateNodeStructureCommand);
+	avs::UpdateNodeSubtypeCommand updateNodeSubtypeCommand;
+	memcpy(static_cast<void*>(&updateNodeSubtypeCommand), packet->data, commandSize);
+	if(packet->dataLength!=commandSize+updateNodeSubtypeCommand.pathLength)
+	{
+		TELEPORT_CERR << "Bad packet." << std::endl;
+		return;
+	}
+	std::string str;
+	str.resize(updateNodeSubtypeCommand.pathLength);
+	memcpy(static_cast<void*>(str.data()), packet->data+commandSize,updateNodeSubtypeCommand.pathLength);
+	mCommandInterface->UpdateNodeSubtype(updateNodeSubtypeCommand,str);
 }
 
 void SessionClient::SetDiscoveryClientID(uint32_t clientID)

@@ -489,8 +489,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					vec4 originOrientation = *((vec4*)&clientDeviceState.originPose.orientation);
 					if (useOpenXR.HaveXRDevice())
 					{
-						clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
-						useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
+						if(useOpenXR.IsXRDeviceActive())
+						{
+							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
+							useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
+						}
+						else
+							clientRenderer->SetExternalTexture(nullptr);
 					}
 					errno = 0;
 					renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);

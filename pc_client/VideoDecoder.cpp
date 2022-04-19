@@ -252,7 +252,6 @@ Result VideoDecoder::display(bool showAlphaAsColor)
 	mTextureConversionEffect->SetUnorderedAccessView(deviceContext, "rgbTexture", nullptr);
 	mTextureConversionEffect->UnbindTextures(deviceContext);
 
-#if TELEPORT_CLIENT_USE_D3D12
 	// Change back to common state for use with D3D12 video decode command list.
 	((platform::dx12::Texture*)mOutputTexture)->SetLayout(deviceContext, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 #endif
@@ -344,9 +343,10 @@ void VideoDecoder::updateInputArgumentsHEVC(size_t sliceControlSize)
 			markFramesUnusedForReference();
 		}
 	}
-
+	
+#if TELEPORT_CLIENT_USE_D3D12
 	memset(picParams.data, 0, sizeof(DXVA_PicParams_HEVC));
-
+	#endif
 	FrameCache& frame = mDPB[mCurrentFrame];
 	frame.reset();
 	frame.stRpsIdx = extraData->stRpsIdx;

@@ -429,21 +429,26 @@ namespace avs
 		}
 	} AVS_PACKED;
 
+	//! A command to set the subtype of a node, for example, a node can here be linked to a regex path for an OpenXR pose control.
+	//! If pathLength>0, followed by a number of chars given in pathLength for the utf8 regex path.
+
 	struct UpdateNodeSubtypeCommand : public Command
 	{
 		uid nodeID = 0;
 		NodeSubtype nodeSubtype=NodeSubtype::None;
+		//! A regular expression that will be used to match the full component path of a client-side pose.
+		uint16_t pathLength;
 		UpdateNodeSubtypeCommand()
-			:UpdateNodeSubtypeCommand(0, NodeSubtype::None)
+			:UpdateNodeSubtypeCommand(0, NodeSubtype::None,0)
 		{}
 
-		UpdateNodeSubtypeCommand(avs::uid n,NodeSubtype s)
-			:Command(CommandPayloadType::UpdateNodeSubtype), nodeID(n),nodeSubtype(s)
+		UpdateNodeSubtypeCommand(avs::uid n,NodeSubtype s,uint16_t pathl)
+			:Command(CommandPayloadType::UpdateNodeSubtype), nodeID(n),nodeSubtype(s), pathLength(pathl)
 		{}
 
 		virtual size_t getCommandSize() const override
 		{
-			return sizeof(UpdateNodeStructureCommand);
+			return sizeof(UpdateNodeSubtypeCommand);
 		}
 	} AVS_PACKED;
 	

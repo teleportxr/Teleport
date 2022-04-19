@@ -312,10 +312,13 @@ namespace teleport
 		sendCommand(command);
 	}
 	
-	void ClientMessaging::setNodeSubtype( avs::uid nodeID, avs::NodeSubtype subType)
+	void ClientMessaging::setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType,const std::string &regexPosePath)
 	{
-		avs::UpdateNodeSubtypeCommand command(nodeID,  subType);
-		sendCommand(command);
+		avs::UpdateNodeSubtypeCommand command(nodeID, subType, regexPosePath.size());
+		std::vector<char> chars;
+		chars.resize(regexPosePath.size());
+		memcpy(chars.data(),regexPosePath.data(),chars.size());
+		sendCommand(command,chars);
 	}
 
 	void ClientMessaging::updateNodeAnimation(avs::ApplyAnimation update)

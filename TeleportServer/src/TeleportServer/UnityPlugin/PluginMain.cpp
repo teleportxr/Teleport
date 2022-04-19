@@ -1436,7 +1436,7 @@ TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs
 	clientPair->second.clientMessaging->reparentNode(nodeID, newParentNodeID,relPose);
 }
 
-TELEPORT_EXPORT void Client_SetNodeSubtype(avs::uid clientID, avs::uid nodeID, avs::NodeSubtype subType)
+TELEPORT_EXPORT void Client_SetNodeSubtype(avs::uid clientID, avs::uid nodeID, avs::NodeSubtype subType,const char* regexPath)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -1444,7 +1444,7 @@ TELEPORT_EXPORT void Client_SetNodeSubtype(avs::uid clientID, avs::uid nodeID, a
 		TELEPORT_CERR << "No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	clientPair->second.setNodeSubtype(nodeID,  subType);
+	clientPair->second.setNodeSubtype(nodeID,  subType, regexPath?regexPath:"");
 }
 
 TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)

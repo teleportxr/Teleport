@@ -162,6 +162,7 @@ namespace sca
 			}
 			hr = mAudioCaptureClient->GetNextPacketSize(&packetSize);
 		}
+		return Result::OK;
 	}
 
 	void PC_AudioCapture::asyncCaptureAudio()

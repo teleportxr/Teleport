@@ -66,7 +66,7 @@ namespace teleport
 		void updateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
 		void reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose);
-		void setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType);
+		void setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType,const std::string &regexPosePath);
 		void updateNodeAnimation(avs::ApplyAnimation update);
 		void updateNodeAnimationControl(avs::NodeUpdateAnimationControl update);
 		void updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update);
@@ -134,15 +134,12 @@ namespace teleport
 					return false;
 				}
 			}
-
 			ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
-
 			if (!packet)
 			{
 				TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! Failed to create packet!\n";
 				return false;
 			}
-
 			//Copy list into packet.
 			enet_packet_resize(packet, commandSize + listSize);
 			unsigned char* data_ptr = packet->data + commandSize;
