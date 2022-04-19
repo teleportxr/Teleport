@@ -58,6 +58,8 @@ namespace teleport
 	{
 		std::vector<InputMapping> inputMappings;
 		std::vector<InputState> inputStates;
+		std::map<avs::uid,ActionId> nodePoses;
+		std::map<avs::uid,std::string> unboundPoses;
 		teleport::client::Input inputs;
 		unsigned long long framenumber=0;
 	};
@@ -72,9 +74,11 @@ namespace teleport
 		void Shutdown();
 		void PollEvents(bool& exit);
 		bool HaveXRDevice() const;
+		bool IsXRDeviceActive() const;
 
 		// Getting mapped inputs specific to a given server, in-frame.
 		void OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition> &inputDefinitions_);
+		void MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath);
 		const teleport::client::Input& GetServerInputs(avs::uid server_uid,unsigned long long framenumber);
 
 		const avs::Pose& GetHeadPose() const;
@@ -90,6 +94,7 @@ namespace teleport
 		const std::string &GetDebugString() const;
 		platform::crossplatform::Texture* GetRenderTexture(int index=0);
 	protected:
+		void BindUnboundPoses(avs::uid server_uid);
 		std::map<avs::uid,OpenXRServer> openXRServers;
 		platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 		bool haveXRDevice = false;

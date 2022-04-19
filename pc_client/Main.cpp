@@ -489,8 +489,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					vec4 originOrientation = *((vec4*)&clientDeviceState.originPose.orientation);
 					if (useOpenXR.HaveXRDevice())
 					{
-						clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
+						// Note we do this even when the device is inactive.
+						//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
 						useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
+						if(useOpenXR.IsXRDeviceActive())
+						{
+							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
+						}
+						else
+							clientRenderer->SetExternalTexture(nullptr);
 					}
 					errno = 0;
 					renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);

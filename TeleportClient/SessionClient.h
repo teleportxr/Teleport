@@ -37,7 +37,7 @@ public:
 	virtual void OnLightingSetupChanged(const avs::SetupLightingCommand &) =0;
 	virtual void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) =0;
 	virtual void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& ) =0;
-	virtual void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &)=0;
+	virtual void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &,const std::string &)=0;
     
     virtual std::vector<avs::uid> GetGeometryResources() = 0;
     virtual void ClearGeometryResources() = 0;

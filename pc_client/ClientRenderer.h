@@ -186,7 +186,7 @@ public:
 	void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
 	void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) override;
 	void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
-	void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand);
+	void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand,const std::string &regexPath) override;
 
 	std::vector<avs::uid> GetGeometryResources() override;
 	void ClearGeometryResources() override;

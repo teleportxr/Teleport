@@ -1,6 +1,6 @@
 #include "DefaultDiscoveryService.h"
 
-#include "TeleportServer/ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "TeleportServer/ClientData.h"
 #include "TeleportServer/ServerSettings.h"    
 #include "TeleportUtility.h"

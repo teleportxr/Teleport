@@ -4,7 +4,7 @@
 
 #include <climits>
 #include <cassert>
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 BitReader::BitReader(const uint8_t* data, size_t size) 
 {

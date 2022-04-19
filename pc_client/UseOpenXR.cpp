@@ -903,6 +903,49 @@ void UseOpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::
 		}
 	}
 }
+void UseOpenXR::BindUnboundPoses(avs::uid server_uid)
+{
+	auto &unboundPoses=openXRServers[server_uid].unboundPoses;
+	auto &nodePoses=openXRServers[server_uid].nodePoses;
+	for (std::map<avs::uid,std::string>::iterator u = unboundPoses.begin();u!=unboundPoses.end();u++)
+	{
+		avs::uid uid=u->first;
+		std::string regexPath=u->second;
+		std::regex re(regexPath, std::regex_constants::icase | std::regex::extended);
+		// which, if any, action should be used to map to this?
+		// we match by the bindings.
+		// For each action, get the currently bound path.
+		for(size_t a=0;a<MAX_ACTIONS;a++)
+		{
+			auto &actionDef=xr_input_session.actionDefinitions[a];
+			std::string path_str=GetBoundPath(actionDef);
+			if(!path_str.length())
+				continue;
+			// Now we try to match this path to the input def.
+			std::smatch match;
+			if (std::regex_search(path_str, match, re))
+			{
+				string matching=match.str(0);
+				std::cout<<"Node "<<uid<<" pose Binding matches: "<<regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
+				
+				nodePoses[uid]=(ActionId)a;
+				u=unboundPoses.begin();
+				unboundPoses.erase(uid);
+			}
+		}
+	}
+	if(unboundPoses.size())
+		std::cout<<unboundPoses.size()<<" poses remain unbound."<<std::endl;
+}
+
+void UseOpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath)
+{
+	auto &unboundPoses=openXRServers[server_uid].unboundPoses;
+	unboundPoses[uid]=regexPath;
+	if(!xr_session)
+		return;
+	BindUnboundPoses(server_uid);
+}
 
 const teleport::client::Input &UseOpenXR::GetServerInputs(avs::uid server_uid,unsigned long long framenumber)
 {
@@ -1166,8 +1209,9 @@ void UseOpenXR::PollEvents(bool& exit)
 	exit = false;
 
 	XrEventDataBuffer event_buffer = { XR_TYPE_EVENT_DATA_BUFFER };
-
-	while (xrPollEvent(xr_instance, &event_buffer) == XR_SUCCESS)
+	XrResult res;
+	res=xrPollEvent(xr_instance, &event_buffer);
+	while ( res== XR_SUCCESS)
 	{
 		switch (event_buffer.type)
 		{
@@ -1180,19 +1224,23 @@ void UseOpenXR::PollEvents(bool& exit)
 			switch (xr_session_state)
 			{
 			case XR_SESSION_STATE_READY:
-			{
-				XrSessionBeginInfo begin_info = { XR_TYPE_SESSION_BEGIN_INFO };
-				begin_info.primaryViewConfigurationType = app_config_view;
-				xrBeginSession(xr_session, &begin_info);
-				xr_running = true;
-			}
+				{
+					XrSessionBeginInfo begin_info = { XR_TYPE_SESSION_BEGIN_INFO };
+					begin_info.primaryViewConfigurationType = app_config_view;
+					if(xrBeginSession(xr_session, &begin_info)==XR_SUCCESS)
+						xr_running = true;
+				}
 			break;
+			case XR_SESSION_STATE_FOCUSED:
+				break;
+			case XR_SESSION_STATE_VISIBLE :
+				break;
 			case XR_SESSION_STATE_STOPPING:
-			{
-				xr_running = false;
-				xrEndSession(xr_session);
-			}
-			break;
+				{
+					xr_running = false;
+					xrEndSession(xr_session);
+				}
+				break;
 			case XR_SESSION_STATE_EXITING:
 				exit = true;
 				break;
@@ -1201,15 +1249,25 @@ void UseOpenXR::PollEvents(bool& exit)
 				break;
 			}
 		} break;
-		case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: exit = true; return;
+		case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING:
+			exit = true;
+			return;
 		}
 		event_buffer = { XR_TYPE_EVENT_DATA_BUFFER };
+		res=xrPollEvent(xr_instance, &event_buffer);
 	}
 }
 
 bool UseOpenXR::HaveXRDevice() const
 {
 	return UseOpenXR::haveXRDevice;
+}
+
+bool UseOpenXR::IsXRDeviceActive() const
+{
+	if(!UseOpenXR::haveXRDevice)
+		return false;
+	return (xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED);
 }
 
 const avs::Pose& UseOpenXR::GetHeadPose() const

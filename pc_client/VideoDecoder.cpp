@@ -343,11 +343,10 @@ void VideoDecoder::updateInputArgumentsHEVC(size_t sliceControlSize)
 			markFramesUnusedForReference();
 		}
 	}
+	
 #if TELEPORT_CLIENT_USE_D3D12
-
 	memset(picParams.data, 0, sizeof(DXVA_PicParams_HEVC));
-#endif
-
+	#endif
 	FrameCache& frame = mDPB[mCurrentFrame];
 	frame.reset();
 	frame.stRpsIdx = extraData->stRpsIdx;

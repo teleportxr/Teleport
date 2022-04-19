@@ -461,7 +461,10 @@ draco::DataType ToDracoDataType(avs::Accessor::ComponentType componentType)
 		return draco::DataType::DT_INT16;
 	case avs::Accessor::ComponentType::BYTE:
 		return draco::DataType::DT_INT8;
+	default:
+		break;
 	};
+	return draco::DataType::DT_INVALID;
 }
 
 draco::GeometryAttribute::Type ToDracoGeometryAttribute(avs::AttributeSemantic attributeSemantic)
@@ -486,7 +489,10 @@ draco::GeometryAttribute::Type ToDracoGeometryAttribute(avs::AttributeSemantic a
 		return draco::GeometryAttribute::Type::GENERIC;
 	case avs::AttributeSemantic::TANGENTNORMALXZ:
 		return draco::GeometryAttribute::Type::GENERIC;
+	default:
+		break;
 	};
+	return draco::GeometryAttribute::Type::INVALID;
 }
 
 static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMesh)

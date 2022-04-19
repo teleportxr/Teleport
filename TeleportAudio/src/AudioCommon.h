@@ -15,7 +15,7 @@
 #include <memory>
 #include <algorithm>
 #include <functional>
-#include "ErrorHandling.h"
+#include "TeleportCore/ErrorHandling.h"
 
 #define SCA_CERR TELEPORT_CERR
 #define SCA_COUT TELEPORT_COUT

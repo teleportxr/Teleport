@@ -411,7 +411,7 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 		renderPlatform->Print(deviceContext, viewport.w - 16, viewport.h - 16, "C", white);
 	}
 	// We must deactivate the depth buffer here, in order to use it as a texture:
-	hdrFramebuffer->DeactivateDepth(deviceContext);
+  	hdrFramebuffer->DeactivateDepth(deviceContext);
 	//renderPlatform->DrawDepth(deviceContext, 0, 0, (256 * viewport.w)/ viewport.h, 256, hdrFramebuffer->GetDepthTexture());
 	if (show_video)
 	{
@@ -1313,8 +1313,12 @@ void ClientRenderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &
 	geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
 }
 
-void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand)
+void ClientRenderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand,const std::string &regexPath)
 {
+	if(regexPath.size())
+	{
+		openXR->MapNodeToPose(server_uid,updateNodeStructureCommand.nodeID,regexPath);
+	}
 	switch(updateNodeStructureCommand.nodeSubtype)
 	{
 	case avs::NodeSubtype::None:
