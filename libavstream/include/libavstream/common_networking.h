@@ -43,7 +43,8 @@ namespace avs
 		WantToRelease,
 		Released
 	};
-
+	
+	//! The payload type, or how to interpret the server's message.
 	enum class CommandPayloadType : uint8_t
 	{
 		Invalid,
@@ -65,6 +66,7 @@ namespace avs
 		SetupInputs,
 	};
 
+	//! The payload type, or how to interpret the client's message.
 	enum class ClientMessagePayloadType : uint8_t
 	{
 		Invalid,
@@ -73,17 +75,20 @@ namespace avs
 		ControllerPoses,
 		OriginPose
 	};
-
+	
+	//! The response payload sent by a server to a client on discovery.
+	//! The server assigns the client an ID which is unique for that server.
 	struct ServiceDiscoveryResponse
 	{
-		uint64_t clientID;
-		uint16_t remotePort;
+		uint64_t clientID;		//!< The unique client ID.
+		uint16_t remotePort;	//!< The port the client should use for data.
 	} AVS_PACKED;
 
+	//! Features supported by a client.
 	struct RenderingFeatures
 	{
-		bool normals=false;
-		bool ambientOcclusion=false;
+		bool normals=false;				//!< Whether normal maps are supported.
+		bool ambientOcclusion=false;	//!< Whether ambient occlusion maps are supported.
 	};
 	//! The handshake sent by a connecting client to the server on initialization.
 	//! Acknowledged by returning a avs::AcknowledgeHandshakeCommand to the client.
@@ -199,16 +204,22 @@ namespace avs
 		AnimationTimeControl timeControl;	//< What controls the animation's time value.
 	} AVS_PACKED;
 
+	//! A message from a server to a client.
+	//! The commandPayloadType specifies the size and interpretation of the packet.
 	struct Command
 	{
+	//! What type of command this is, how to interpret it.
 		CommandPayloadType commandPayloadType;
 
 		Command(CommandPayloadType t) : commandPayloadType(t) {}
 
-		//! Returns byte size of command.
+		//! Returns byte size of the command.
 		virtual size_t getCommandSize() const = 0;
 	} AVS_PACKED;
-
+	
+	//! The message sent by a server to a client on receipt of the client's handshake,
+	//! confirming that the session can begin.
+	//! size is variable, as visible node uid's are appended.
 	struct AcknowledgeHandshakeCommand : public Command
 	{
 		AcknowledgeHandshakeCommand() : Command(CommandPayloadType::AcknowledgeHandshake) {}
@@ -219,9 +230,10 @@ namespace avs
 			return sizeof(AcknowledgeHandshakeCommand);
 		}
 
-		size_t visibleNodeCount = 0; //Count of visible node IDs appended to the command payload.
+		size_t visibleNodeCount = 0; //!<Count of visible node IDs appended to the command payload.
 	} AVS_PACKED;
 
+	//! Sent from server to client to set the origin of the client's space.
 	struct SetPositionCommand : public Command
 	{
 		SetPositionCommand() : Command(CommandPayloadType::SetPosition) {}
@@ -230,11 +242,14 @@ namespace avs
 		{
 			return sizeof(SetPositionCommand);
 		}
-
-		vec3 origin_pos;
-		vec4 orientation;
+		// TODO: replace these with a Pose.
+		vec3 origin_pos;			//!< Position of the origin in world space.
+		vec4 orientation;			//!< Orientation of the origin in world space.
+		//!< A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
 		uint64_t valid_counter = 0;
+		//!< If nonzero, set the relative position of the origin and headset. Rarely used.
 		uint8_t set_relative_pos = 0;
+		//!< The relative position of the headset from the origin, if specified.
 		vec3 relative_pos;
 	} AVS_PACKED;
 
@@ -507,23 +522,24 @@ namespace avs
 		}
 	} AVS_PACKED;
 
-	/// <summary>
-	/// A message from the client.
-	/// </summary>
+	/// A message from a client to a server.
 	struct ClientMessage
 	{
+		/// Specifies what type of client message this is.
 		ClientMessagePayloadType clientMessagePayloadType;
 
 		ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}
 
-		//Returns byte size of message.
+		/// Returns byte size of message.
 		virtual size_t getMessageSize() const = 0;
 	} AVS_PACKED;
 
-	//Message info struct containing how many nodes have changed to what state; sent alongside two list of node UIDs.
+	//! Message info struct containing how many nodes have changed to what state; sent alongside two lists of node UIDs.
 	struct NodeStatusMessage : public ClientMessage
 	{
+	//! How many nodes the client is drawing. The node uid's will be appended first in the packet.
 		size_t nodesDrawnCount;
+	//! How many nodes the client has but is no longer drawing. The node uid's will be appended second in the packet.
 		size_t nodesWantToReleaseCount;
 
 		NodeStatusMessage()
@@ -542,9 +558,10 @@ namespace avs
 		}
 	} AVS_PACKED;
 
-	//Message info struct containing how many resources were received; sent alongside a list of UIDs.
+	//! Message info struct containing how many resources were received; sent alongside a list of UIDs.
 	struct ReceivedResourcesMessage : public ClientMessage
 	{
+	//! How many resources were received. The uid's will be appended in the packet.
 		size_t receivedResourcesCount;
 
 		ReceivedResourcesMessage()
@@ -561,10 +578,12 @@ namespace avs
 		}
 	} AVS_PACKED;
 
-	//Message info struct containing how many resources were received; sent alongside a list of UIDs.
+	//! Message info struct containing how many resources were received; sent alongside a list of UIDs.
 	struct ControllerPosesMessage : public ClientMessage
 	{
+	//! The headset's pose.
 		Pose headPose;
+	//! Poses of the two controllers.
 		Pose controllerPoses[2];
 
 		ControllerPosesMessage()

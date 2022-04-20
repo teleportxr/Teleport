@@ -28,10 +28,7 @@ namespace avs
 
 		/*!
 		 * Configure decoder.
-		 * \param device Graphics API device handle (DirectX or OpenGL).
-		 * \param frameWidth Expected video frame width in pixels.
-		 * \param frameHeight Expected video frame height in pixels.
-		 * \param params Additional decoder parameters.
+		 * \param backend The object that performas the actual decoding.
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_AlreadyConfigured if decoder was already in configured state.

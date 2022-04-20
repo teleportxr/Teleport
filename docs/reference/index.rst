@@ -7,7 +7,7 @@ Simul provides reference code for the Teleport VR server and client in the Telep
 
 .. toctree::
 	:glob:
-	:maxdepth: 2
+	:maxdepth: 4
 
 	libavstream
 	libavstream_example

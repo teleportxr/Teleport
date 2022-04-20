@@ -542,7 +542,7 @@ void ClientRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &
 
 		pbrConstants.drawDistance = lastSetupCommand.draw_distance;
 		if (sessionClient.IsConnected()||render_local_offline)
-			RenderLocalNodes(deviceContext,geometryCache);
+			RenderLocalNodes(deviceContext,server_uid,geometryCache);
 
 		{
 			std::shared_ptr<clientrender::Node> leftHand = localGeometryCache.mNodeManager->GetLeftHand();
@@ -563,7 +563,7 @@ void ClientRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &
 		if (!sessionClient.IsConnected() || gui.HasFocus())
 		{
 			pbrConstants.drawDistance = 1000.0f;
-			RenderLocalNodes(deviceContext, localGeometryCache);
+			RenderLocalNodes(deviceContext, 0,localGeometryCache);
 		}
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		//hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -954,7 +954,7 @@ void ClientRenderer::WriteHierarchies()
 	std::cout << std::endl;
 }
 
-void ClientRenderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g)
+void ClientRenderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid this_server_uid,clientrender::GeometryCache &g)
 {
 	deviceContext.viewStruct.Init();
 
@@ -990,23 +990,42 @@ void ClientRenderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceCon
 		body->UpdateModelMatrix();
 	}
 
-
-	std::shared_ptr<clientrender::Node> leftHand = g.mNodeManager->GetLeftHand();
-	std::shared_ptr<clientrender::Node> rightHand = g.mNodeManager->GetRightHand();
-	if (leftHand)
+	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
+	if(openXR&&this_server_uid!=0)
 	{
-	// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
-		leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].globalPose.position);
-		leftHand->SetLocalRotation(clientDeviceState->controllerPoses[0].globalPose.orientation);
-		// force update of model matrices - should not be necessary, but is.
-		leftHand->UpdateModelMatrix();
+		const auto &nodePoseStates=openXR->GetNodePoseStates(server_uid,renderPlatform->GetFrameNumber());
+		for(auto &n:nodePoseStates)
+		{
+			std::shared_ptr<clientrender::Node> node=g.mNodeManager->GetNode(n.first);
+			if(node)
+			{
+			// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
+				node->SetLocalPosition(n.second.pose.position);
+				node->SetLocalRotation(n.second.pose.orientation);
+				// force update of model matrices - should not be necessary, but is.
+				node->UpdateModelMatrix();
+			}
+		}
 	}
-	if (rightHand)
+	//else
 	{
-		rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].globalPose.position);
-		rightHand->SetLocalRotation(clientDeviceState->controllerPoses[1].globalPose.orientation);
-		// force update of model matrices - should not be necessary, but is.
-		rightHand->UpdateModelMatrix();
+		std::shared_ptr<clientrender::Node> leftHand = g.mNodeManager->GetLeftHand();
+		std::shared_ptr<clientrender::Node> rightHand = g.mNodeManager->GetRightHand();
+		if (leftHand)
+		{
+		// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
+			leftHand->SetLocalPosition(clientDeviceState->controllerPoses[0].globalPose.position);
+			leftHand->SetLocalRotation(clientDeviceState->controllerPoses[0].globalPose.orientation);
+			// force update of model matrices - should not be necessary, but is.
+			leftHand->UpdateModelMatrix();
+		}
+		if (rightHand)
+		{
+			rightHand->SetLocalPosition(clientDeviceState->controllerPoses[1].globalPose.position);
+			rightHand->SetLocalRotation(clientDeviceState->controllerPoses[1].globalPose.orientation);
+			// force update of model matrices - should not be necessary, but is.
+			rightHand->UpdateModelMatrix();
+		}
 	}
 	const clientrender::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
 	for(const std::shared_ptr<clientrender::Node>& node : nodeList)

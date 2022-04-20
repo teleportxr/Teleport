@@ -271,12 +271,14 @@ namespace avs
 		RightHand
 	};
 
+	//! Information on the resolution of a client's display.
 	struct DisplayInfo
 	{
-		uint32_t width;
-		uint32_t height;
+		uint32_t width;		//!< Width of the display.
+		uint32_t height;	//!< Height of the display.
 	} AVS_PACKED;
-
+	
+	//! Information on the configuration of a video stream.
 	struct VideoConfig
 	{
 		uint32_t	video_width = 0;

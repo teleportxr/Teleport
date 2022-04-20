@@ -773,6 +773,8 @@ void UseOpenXR::PollActions()
 			break;
 		};
 	}
+	// record the updated pose states for bound nodes:
+
 	for (uint32_t hand = 0; hand < xr_input_session.inputDeviceStates.size(); hand++)
 	{
 		XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
@@ -903,14 +905,15 @@ void UseOpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::
 		}
 	}
 }
+
 void UseOpenXR::BindUnboundPoses(avs::uid server_uid)
 {
 	auto &unboundPoses=openXRServers[server_uid].unboundPoses;
-	auto &nodePoses=openXRServers[server_uid].nodePoses;
-	for (std::map<avs::uid,std::string>::iterator u = unboundPoses.begin();u!=unboundPoses.end();u++)
+	auto &nodePoseMappings=openXRServers[server_uid].nodePoseMappings;
+	for (std::map<avs::uid,NodePoseMapping>::iterator u = unboundPoses.begin();u!=unboundPoses.end();u++)
 	{
 		avs::uid uid=u->first;
-		std::string regexPath=u->second;
+		std::string regexPath=u->second.regexPath;
 		std::regex re(regexPath, std::regex_constants::icase | std::regex::extended);
 		// which, if any, action should be used to map to this?
 		// we match by the bindings.
@@ -918,6 +921,8 @@ void UseOpenXR::BindUnboundPoses(avs::uid server_uid)
 		for(size_t a=0;a<MAX_ACTIONS;a++)
 		{
 			auto &actionDef=xr_input_session.actionDefinitions[a];
+			if(actionDef.xrActionType!=XR_ACTION_TYPE_POSE_INPUT)
+				continue;
 			std::string path_str=GetBoundPath(actionDef);
 			if(!path_str.length())
 				continue;
@@ -926,9 +931,11 @@ void UseOpenXR::BindUnboundPoses(avs::uid server_uid)
 			if (std::regex_search(path_str, match, re))
 			{
 				string matching=match.str(0);
-				std::cout<<"Node "<<uid<<" pose Binding matches: "<<regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
+				TELEPORT_COUT<<"Node "<<uid<<" pose Binding matches: "<<regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
 				
-				nodePoses[uid]=(ActionId)a;
+				nodePoseMappings[uid].actionId=(ActionId)a;
+				nodePoseMappings[uid].poseOffset=u->second.poseOffset;
+				nodePoseMappings[uid].regexPath=u->second.regexPath;
 				u=unboundPoses.begin();
 				unboundPoses.erase(uid);
 			}
@@ -940,18 +947,34 @@ void UseOpenXR::BindUnboundPoses(avs::uid server_uid)
 
 void UseOpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath)
 {
+	avs::Pose poseOffset;
 	auto &unboundPoses=openXRServers[server_uid].unboundPoses;
-	unboundPoses[uid]=regexPath;
+	unboundPoses[uid].regexPath=regexPath;
+	unboundPoses[uid].poseOffset=poseOffset;
 	if(!xr_session)
 		return;
 	BindUnboundPoses(server_uid);
 }
-
-const teleport::client::Input &UseOpenXR::GetServerInputs(avs::uid server_uid,unsigned long long framenumber)
+void UseOpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumber)
 {
 	auto &server=openXRServers[server_uid];
 	if(server.framenumber!=framenumber)
 	{
+		for(auto m:server.nodePoseMappings)
+		{
+			auto &def=m.second;
+			auto &state=server.nodePoseStates[m.first];
+			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
+			XrResult        res = xrLocateSpace(xr_input_session.actionDefinitions[def.actionId].space, xr_app_space, lastTime, &space_location);
+			if (XR_UNQUALIFIED_SUCCESS(res) &&
+				(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
+				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
+			{
+				xr_input_session.actionStates[def.actionId].pose= space_location.pose;
+				state.pose.position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
+				state.pose.orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+			}
+		}
 		server.inputs.clear();
 		for(size_t i=0;i<server.inputMappings.size();i++)
 		{
@@ -989,7 +1012,20 @@ const teleport::client::Input &UseOpenXR::GetServerInputs(avs::uid server_uid,un
 		}
 		server.framenumber=framenumber;
 	}
+}
+
+const teleport::client::Input &UseOpenXR::GetServerInputs(avs::uid server_uid,unsigned long long framenumber)
+{
+	UpdateServerState(server_uid, framenumber);
+	auto &server=openXRServers[server_uid];
 	return server.inputs;
+}
+
+const std::map<avs::uid,NodePoseState> &UseOpenXR::GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber)
+{
+	UpdateServerState(server_uid, framenumber);
+	const std::map<avs::uid,NodePoseState> &nodePoseStates=openXRServers[server_uid].nodePoseStates;
+	return nodePoseStates;
 }
 
 void UseOpenXR::openxr_poll_predicted(XrTime predicted_time)
@@ -1149,6 +1185,7 @@ bool UseOpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& devi
 	, vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer
 	, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
+	lastTime=predictedTime;
 	// Find the state and location of each viewpoint at the predicted time
 	uint32_t         view_count = 0;
 	XrViewState      view_state = { XR_TYPE_VIEW_STATE };
@@ -1228,7 +1265,10 @@ void UseOpenXR::PollEvents(bool& exit)
 					XrSessionBeginInfo begin_info = { XR_TYPE_SESSION_BEGIN_INFO };
 					begin_info.primaryViewConfigurationType = app_config_view;
 					if(xrBeginSession(xr_session, &begin_info)==XR_SUCCESS)
+					{
+						TELEPORT_COUT<<"Beginning OpenXR Session."<<std::endl;
 						xr_running = true;
+					}
 				}
 			break;
 			case XR_SESSION_STATE_FOCUSED:

@@ -4,7 +4,7 @@ Teleport VR
 
 .. toctree::
 	:glob:
-	:maxdepth: 4
+	:maxdepth: 6
 	:caption: Contents:
 
 	introduction

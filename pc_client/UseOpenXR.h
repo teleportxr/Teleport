@@ -54,12 +54,23 @@ namespace teleport
 			uint32_t uint32;
 		};
 	};
+	struct NodePoseMapping
+	{
+		std::string regexPath;
+		ActionId actionId;		// Which local action is bound to the node.
+		avs::Pose poseOffset;	// In the XR pose's local space, the offset to the node's pose.
+	};
+	struct NodePoseState
+	{
+		avs::Pose pose;	// In global space, the offset to the node's current pose.
+	};
 	struct OpenXRServer
 	{
 		std::vector<InputMapping> inputMappings;
 		std::vector<InputState> inputStates;
-		std::map<avs::uid,ActionId> nodePoses;
-		std::map<avs::uid,std::string> unboundPoses;
+		std::map<avs::uid,NodePoseMapping> nodePoseMappings;
+		std::map<avs::uid,NodePoseState> nodePoseStates;
+		std::map<avs::uid,NodePoseMapping> unboundPoses;
 		teleport::client::Input inputs;
 		unsigned long long framenumber=0;
 	};
@@ -83,6 +94,7 @@ namespace teleport
 
 		const avs::Pose& GetHeadPose() const;
 		const avs::Pose& GetControllerPose(int index) const;
+		const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 		size_t GetNumControllers() const
 		{
 			return controllerPoses.size();
@@ -105,5 +117,7 @@ namespace teleport
 		void openxr_poll_predicted(XrTime predicted_time);
 		std::function<void()> menuButtonHandler;
 		void RecordCurrentBindings();
+		void UpdateServerState(avs::uid server_uid,unsigned long long framenumber);
+		XrTime lastTime=0;
 	};
 }

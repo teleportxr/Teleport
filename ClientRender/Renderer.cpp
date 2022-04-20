@@ -59,4 +59,5 @@ bool Renderer::Match(const std::string& full_string, const std::string& substrin
 	{
 		return false;
 	}
+	return false;
 }

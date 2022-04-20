@@ -208,7 +208,7 @@ public:
 	void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 	void WriteHierarchy(int tab,std::shared_ptr<clientrender::Node> node);
 	void WriteHierarchies();
-	void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,clientrender::GeometryCache &g);
+	void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid,clientrender::GeometryCache &g);
 	void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
 	void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
 	void RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext);

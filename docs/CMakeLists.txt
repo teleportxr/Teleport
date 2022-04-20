@@ -8,7 +8,7 @@ ${CMAKE_SOURCE_DIR}/libavstream/src/encoders ${CMAKE_SOURCE_DIR}/libavstream/src
 set(teleportclient_DIR TeleportClient SOURCE_DIR)
 set(teleportclient_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportClient)
 message("teleportclient_HEADER_DIR ${teleportclient_HEADER_DIRS}")
-set(teleportrenderer_DIR  ${CMAKE_SOURCE_DIR}/TeleportRenderer)
+set(teleportrenderer_DIR	${CMAKE_SOURCE_DIR}/TeleportRenderer)
 set(teleportrenderer_HEADER_DIRS ${teleportrenderer_DIR}/src/api ${teleportrenderer_DIR}/src/crossplatform)
 
 set(DOXYGEN_INPUT_DIR ${pc_client_HEADER_DIRS} ${libavstream_HEADER_DIRS} ${teleportclient_HEADER_DIRS} ${teleportrenderer_HEADER_DIRS})
@@ -25,10 +25,10 @@ set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
 file(MAKE_DIRECTORY ${DOXYGEN_OUTPUT_DIR}) #Doxygen won't create this for us
 add_custom_command(OUTPUT ${DOXYGEN_INDEX_FILE}
-                   #DEPENDS ${PUBLIC_HEADERS}
-                   COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
-                   MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
-                   COMMENT "Generating docs")
+					#DEPENDS ${PUBLIC_HEADERS}
+					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
+					MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
+					COMMENT "Generating docs")
 add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE} ${DOXYFILE_IN})
 set_target_properties( Doxygen PROPERTIES FOLDER Docs)
 set(FIND_DOXYGEN_OUTPUTS -Dbreathe_projects.TeleportVR=${DOXYGEN_OUTPUT_DIR}/xml)
@@ -45,24 +45,24 @@ set(DOXYFILE_UNITY_OUT ${CMAKE_CURRENT_BINARY_DIR}/DoxyfileUnity)
 configure_file(${DOXYFILE_UNITY_IN} ${DOXYFILE_UNITY_OUT} @ONLY)
 file(MAKE_DIRECTORY ${DOXYGEN_UNITY_OUTPUT_DIR}) #Doxygen won't create this for us
 #add_custom_command(OUTPUT ${DOXYGEN_UNITY_INDEX_FILE}
-                   #DEPENDS ${PUBLIC_HEADERS}
-         #          COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNITY_OUT}
-          #         MAIN_DEPENDENCY ${DOXYFILE_UNITY_OUT} ${DOXYFILE_UNITY_IN}
-           #        COMMENT "Generating Unity docs")
+					#DEPENDS ${PUBLIC_HEADERS}
+		 #			COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNITY_OUT}
+			#		 MAIN_DEPENDENCY ${DOXYFILE_UNITY_OUT} ${DOXYFILE_UNITY_IN}
+			#		COMMENT "Generating Unity docs")
 message("add_custom_target(DoxygenUnity ALL
-                   COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNITY_OUT}
-                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                    DEPENDS ${DOXYGEN_UNITY_INDEX_FILE}
-                   MAIN_DEPENDENCY ${DOXYGEN_UNITY_INDEX_FILE}
-                  COMMENT Generating Unity docs
-                    SOURCES ${DOXYFILE_UNITY_IN})")
+					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNITY_OUT}
+					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+					DEPENDS ${DOXYGEN_UNITY_INDEX_FILE}
+					MAIN_DEPENDENCY ${DOXYGEN_UNITY_INDEX_FILE}
+					COMMENT Generating Unity docs
+					SOURCES ${DOXYFILE_UNITY_IN})")
 add_custom_target(DoxygenUnity ALL
-                   COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNITY_OUT}
-                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                    DEPENDS ${DOXYGEN_UNITY_INDEX_FILE}
-                   MAIN_DEPENDENCY ${DOXYGEN_UNITY_INDEX_FILE}
-                  COMMENT "Generating Unity docs"
-                    SOURCES ${DOXYFILE_UNITY_IN})
+					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNITY_OUT}
+					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+					DEPENDS ${DOXYGEN_UNITY_INDEX_FILE}
+					MAIN_DEPENDENCY ${DOXYGEN_UNITY_INDEX_FILE}
+					COMMENT "Generating Unity docs"
+					SOURCES ${DOXYFILE_UNITY_IN})
 set_target_properties( DoxygenUnity PROPERTIES FOLDER Docs)
 set(FIND_DOXYGEN_OUTPUTS ${FIND_DOXYGEN_OUTPUTS} -Dbreathe_projects.TeleportUnity=${DOXYGEN_UNITY_OUTPUT_DIR}/xml)
 
@@ -71,28 +71,32 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/firstparty/Platform/CMake" ${CMAKE_
 find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
-file(GLOB RST_FILES *.rst "**/*.rst" )
-file(GLOB RST_REF_FILES *.rst "Reference/*.rst" )
+file(GLOB RST_FILES *.rst "*.rst" )
+file(GLOB RST_REF_FILES *.rst "reference/*.rst" )
+file(GLOB RST_PROTOCOL_FILES *.rst "protocol/*.rst" )
+file(GLOB RST_PROTOCOL_SERVICE_FILES *.rst "protocol/service/*.rst" )
 source_group("Documentation" FILES ${RST_FILES} )
 source_group("Documentation/Reference" FILES ${RST_REF_FILES} )
+source_group("Documentation/Protocol" FILES ${RST_PROTOCOL_FILES} )
+source_group("Documentation/Protocol/Service" FILES ${RST_PROTOCOL_SERVICE_FILES} )
 add_custom_target(Sphinx ALL
-                  COMMAND
-                  ${SPHINX_EXECUTABLE} -b html
-                  # Tell Breathe where to find the Doxygen output
-                  ${FIND_DOXYGEN_OUTPUTS}
-                  ${SPHINX_SOURCE} ${SPHINX_BUILD}
-                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                   DEPENDS
-                   # Other docs files you want to track should go here (or in some variable)
-                   ${CMAKE_CURRENT_SOURCE_DIR}/index.rst ${RST_FILES}
-                   ${DOXYGEN_INDEX_FILE}
-                   MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
-                  COMMENT "Generating documentation with Sphinx"
-                  SOURCES ${RST_FILES})
+					COMMAND
+					${SPHINX_EXECUTABLE} -b html
+					# Tell Breathe where to find the Doxygen output
+					${FIND_DOXYGEN_OUTPUTS}
+					${SPHINX_SOURCE} ${SPHINX_BUILD}
+					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+					DEPENDS
+					# Other docs files you want to track should go here (or in some variable)
+					${CMAKE_CURRENT_SOURCE_DIR}/index.rst ${RST_FILES}	${RST_REF_FILES} ${RST_PROTOCOL_FILES} ${RST_PROTOCOL_SERVICE_FILES}
+					${DOXYGEN_INDEX_FILE}
+					MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
+					COMMENT "Generating documentation with Sphinx"
+					SOURCES ${RST_FILES} ${RST_REF_FILES} ${RST_PROTOCOL_FILES} ${RST_PROTOCOL_SERVICE_FILES})
 set_target_properties( Sphinx PROPERTIES FOLDER Docs)
 
 
 if(NOT "${TELEPORT_DOXYGEN_UNITY_INPUT_DIR}" STREQUAL "")
-    add_dependencies(Sphinx DoxygenUnity Doxygen)
+	add_dependencies(Sphinx DoxygenUnity Doxygen)
 endif()
 
