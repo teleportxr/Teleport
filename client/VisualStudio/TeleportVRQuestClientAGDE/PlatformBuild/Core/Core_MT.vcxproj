@@ -96,11 +96,11 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -129,11 +129,11 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;CMAKE_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_SOURCE_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform;PLATFORM_BUILD_DIR=E:/Simul/Teleport/RemotePlay/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -162,9 +162,9 @@
   <ItemGroup>
     <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Core\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Core/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Teleport/firstparty/Platform/Core/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SE:/Simul/Teleport/RemotePlay/firstparty/Platform -BE:/Simul/Teleport/RemotePlay/firstparty/Platform/build --check-stamp-file E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Core/CMakeFiles/generate.stamp
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Teleport/firstparty/Platform -BC:/Teleport/firstparty/Platform/build --check-stamp-file C:/Teleport/firstparty/Platform/build/Core/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -175,9 +175,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Simul/Teleport/RemotePlay/firstparty/Platform/Core/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Teleport/firstparty/Platform/Core/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SE:/Simul/Teleport/RemotePlay/firstparty/Platform -BE:/Simul/Teleport/RemotePlay/firstparty/Platform/build --check-stamp-file E:/Simul/Teleport/RemotePlay/firstparty/Platform/build/Core/CMakeFiles/generate.stamp
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Teleport/firstparty/Platform -BC:/Teleport/firstparty/Platform/build --check-stamp-file C:/Teleport/firstparty/Platform/build/Core/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone

@@ -245,7 +245,7 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *sear
 	}
 	if (show)
 	{
-		open = ImGui::TreeNodeEx(str.c_str(), (has_children ? 0 : ImGuiTreeNodeFlags_Leaf));
+		open = ImGui::TreeNodeEx(str.c_str(), ImGuiTreeNodeFlags_OpenOnArrow|(has_children ? 0 : ImGuiTreeNodeFlags_Leaf));
 	}
 	else
 	{

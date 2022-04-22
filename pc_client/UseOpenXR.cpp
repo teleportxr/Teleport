@@ -394,7 +394,7 @@ bool UseOpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	// may be more useful for other runtimes?
 	// Here's some extra information about the message types and severities:
 	// https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#debug-message-categorization
-#if TELEPORT_INTERNAL
+#if TELEPORT_INTERNAL_CHECKS
 	XrDebugUtilsMessengerCreateInfoEXT debug_info = { XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 	debug_info.messageTypes =
 		XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
@@ -975,46 +975,110 @@ void UseOpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenu
 				state.pose.orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 			}
 		}
-		server.inputs.clear();
+		const float LOWER_HYSTERESIS=0.1f;
+		const float UPPER_HYSTERESIS=0.9f;
+		server.inputs.clearEvents();
+		uint16_t binaryStateIndex=0;
+		uint16_t analogueStateIndex=0;
 		for(size_t i=0;i<server.inputMappings.size();i++)
 		{
 			auto &mapping=server.inputMappings[i];
 			auto &state=server.inputStates[i];
 			const auto &actionState		=xr_input_session.actionStates[mapping.clientActionId];
 			const auto &actionDefinition=xr_input_session.actionDefinitions[mapping.clientActionId];
+			InputState previousState=state;
 			switch(actionDefinition.xrActionType)
 			{
 				case XR_ACTION_TYPE_BOOLEAN_INPUT:
-				{
-					if(actionState.u32!=state.uint32)
-					{
-						state.uint32=actionState.u32;
-						server.inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,actionState.u32!=0);
-					}
-				}
+					state.uint32=actionState.u32;
 				break;
 				case XR_ACTION_TYPE_FLOAT_INPUT:
-				{
-					if(actionState.f32!=state.float32)
-					{
-						state.float32=actionState.f32;
-						server.inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,actionState.f32);
-					}
-				}
-				break;
-				case XR_ACTION_TYPE_VIBRATION_OUTPUT:
-				{
-				}
+					state.float32=actionState.f32;
 				break;
 				default:
 				break;
 			};
+			// process as state or as event?
+			if((mapping.serverInputDefinition.inputType&avs::InputType::IsEvent)==avs::InputType::IsEvent)
+			{
+				// possibilities:
+				// float action interpreted as float event:
+				if(actionDefinition.xrActionType==XR_ACTION_TYPE_FLOAT_INPUT)
+				{
+					if((mapping.serverInputDefinition.inputType&avs::InputType::IsFloat)==avs::InputType::IsFloat)
+					{
+						if(previousState.float32!=state.float32)
+							server.inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,state.float32);
+					}
+					// float action interpreted as boolean event:
+					else if((mapping.serverInputDefinition.inputType&avs::InputType::IsInteger)==avs::InputType::IsInteger)
+					{
+						if(state.uint32!=0&&state.float32<LOWER_HYSTERESIS)
+						{
+							server.inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,0);
+							state.uint32=0;
+						}
+						else if(state.uint32==0&&state.float32>UPPER_HYSTERESIS)
+						{
+							server.inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,1);
+							state.uint32=1;
+						}
+					}
+				}
+				else if(actionDefinition.xrActionType==XR_ACTION_TYPE_BOOLEAN_INPUT)
+				{
+					// boolean action as float event:
+					if((mapping.serverInputDefinition.inputType&avs::InputType::IsFloat)==avs::InputType::IsFloat)
+					{
+						if(previousState.uint32!=state.uint32)
+						{
+							state.float32=state.uint32?1.f:0.f;
+							server.inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,state.float32);
+						}
+					}
+					// boolean action as boolean event:
+					else if((mapping.serverInputDefinition.inputType&avs::InputType::IsInteger)==avs::InputType::IsInteger)
+					{
+						if(previousState.uint32!=state.uint32)
+						{
+							server.inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,state.uint32);
+						}
+					}
+				}
+			}
+			else // If it's a state input, always send.
+			{
+				if((mapping.serverInputDefinition.inputType&avs::InputType::IsFloat)==avs::InputType::IsFloat)
+				{
+					if(actionDefinition.xrActionType==XR_ACTION_TYPE_BOOLEAN_INPUT)
+					{
+						state.float32=state.uint32?1.f:0.f;
+					}
+					server.inputs.setAnalogueState(analogueStateIndex++,state.float32);
+				}
+				// float action interpreted as boolean event:
+				else if((mapping.serverInputDefinition.inputType&avs::InputType::IsInteger)==avs::InputType::IsInteger)
+				{
+					if(actionDefinition.xrActionType==XR_ACTION_TYPE_FLOAT_INPUT)
+					{
+						if(state.uint32!=0&&state.float32<LOWER_HYSTERESIS)
+						{
+							state.uint32=0;
+						}
+						else if(state.uint32==0&&state.float32>UPPER_HYSTERESIS)
+						{
+							state.uint32=1;
+						}
+					}
+					server.inputs.setBinaryState(binaryStateIndex++,state.uint32);
+				}
+			}
 		}
 		server.framenumber=framenumber;
 	}
 }
 
-const teleport::client::Input &UseOpenXR::GetServerInputs(avs::uid server_uid,unsigned long long framenumber)
+const teleport::core::Input &UseOpenXR::GetServerInputs(avs::uid server_uid,unsigned long long framenumber)
 {
 	UpdateServerState(server_uid, framenumber);
 	auto &server=openXRServers[server_uid];
@@ -1401,10 +1465,40 @@ void UseOpenXR::Shutdown()
 		xrDestroyInstance(xr_instance);
 }
 
+static const char *stringOf(XrSessionState s)
+{
+	switch(s)
+	{
+		case XR_SESSION_STATE_UNKNOWN:			
+			return "UNKNOWN";
+		case XR_SESSION_STATE_IDLE:				
+			return "IDLE";
+		case XR_SESSION_STATE_READY:			
+			return "READY";
+		case XR_SESSION_STATE_SYNCHRONIZED:
+			return "SYNCHRONIZED";
+		case XR_SESSION_STATE_VISIBLE:
+			return "VISIBLE";
+		case XR_SESSION_STATE_FOCUSED:			
+			return "FOCUSED";
+		case XR_SESSION_STATE_STOPPING:
+			return "STOPPING";
+		case XR_SESSION_STATE_LOSS_PENDING:
+			return "LOSS_PENDING";
+		case XR_SESSION_STATE_EXITING:
+			return "EXITING";
+		default:
+			return "INVALID";
+	}
+}
+
 const std::string &UseOpenXR::GetDebugString() const
 {
 	static std::string str;
 	str.clear();
+	// Note: when the runtime thinks no-one's wearing the headset, it will go into SYNCHRONIZED mode, and stop taking controller inputs.
+	// prevent this by blocking the light sensor on the inside of the headset with some tape etc.
+	str+=fmt::format("XrSessionState: {0}\n",stringOf(xr_session_state));
 	str+="Bound profile paths:\n";
 	for(int i=0;i<activeInteractionProfilePaths.size();i++)
 	{

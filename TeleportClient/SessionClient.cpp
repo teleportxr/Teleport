@@ -172,7 +172,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose* controllerPoses
 	,uint64_t poseValidCounter
 	,const avs::Pose &originPose
-	,const Input &input
+	,const core::Input &input
 	,bool requestKeyframe
 	,double t
 	,double deltaTime)
@@ -379,7 +379,17 @@ void SessionClient::sendOriginPose(uint64_t validCounter,const avs::Pose& origin
 	SendClientMessage(message);
 }
 
-void SessionClient::SendInput(const Input& input)
+static void copy_and_increment(void *&target,const void *source,size_t size)
+{
+	if(!size)
+		return;
+	memcpy(target, source, size);
+	unsigned char *t=(unsigned char *)target;
+	t+=size;
+	target=t;
+}
+
+void SessionClient::SendInput(const core::Input& input)
 {
 	avs::InputState inputState = {};
 	enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
@@ -394,22 +404,30 @@ void SessionClient::SendInput(const Input& input)
 	{
 		TELEPORT_BREAK_ONCE("That's a lot of events.");
 	}
+	inputState.numBinaryStates		= static_cast<uint32_t>(input.binaryStates.size());
+	inputState.numAnalogueStates	= static_cast<uint32_t>(input.analogueStates.size());
 	inputState.numBinaryEvents		= static_cast<uint32_t>(input.binaryEvents.size());
 	inputState.numAnalogueEvents	= static_cast<uint32_t>(input.analogueEvents.size());
 	inputState.numMotionEvents		= static_cast<uint32_t>(input.motionEvents.size());
 	//Calculate sizes for memory copy operations.
 	size_t inputStateSize		= sizeof(avs::InputState);
+	size_t binaryStateSize		= inputState.numBinaryStates;
+	size_t analogueStateSize	= sizeof(float)*inputState.numAnalogueStates;
 	size_t binaryEventSize		= sizeof(avs::InputEventBinary) * inputState.numBinaryEvents;
 	size_t analogueEventSize	= sizeof(avs::InputEventAnalogue) * inputState.numAnalogueEvents;
 	size_t motionEventSize		= sizeof(avs::InputEventMotion) * inputState.numMotionEvents;
 
 	//Size packet to final size, but initially only put the InputState struct inside.
-	ENetPacket* packet = enet_packet_create(&inputState, inputStateSize + binaryEventSize + analogueEventSize + motionEventSize, packetFlags);
+	ENetPacket* packet = enet_packet_create(nullptr, inputStateSize +binaryStateSize+ binaryEventSize +analogueStateSize+ analogueEventSize + motionEventSize, packetFlags);
 
 	//Copy events into packet.
-	memcpy(packet->data + inputStateSize, input.binaryEvents.data(), binaryEventSize);
-	memcpy(packet->data + inputStateSize + binaryEventSize, input.analogueEvents.data(), analogueEventSize);
-	memcpy(packet->data + inputStateSize + binaryEventSize + analogueEventSize, input.motionEvents.data(), motionEventSize);
+	void *target=packet->data;
+	copy_and_increment(target,&inputState,inputStateSize);
+	copy_and_increment(target,input.binaryStates.data(),binaryStateSize);
+	copy_and_increment(target,input.analogueStates.data(),analogueStateSize);
+	copy_and_increment(target,input.binaryEvents.data(),binaryEventSize);
+	copy_and_increment(target,input.analogueEvents.data(),analogueEventSize);
+	copy_and_increment(target,input.motionEvents.data(),motionEventSize);
 
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
 	

@@ -3,6 +3,7 @@
 #include <GLES3/gl32.h>
 #include <GLES2/gl2ext.h>
 #include "TeleportClient/Log.h"
+#include "TeleportCore/ErrorHandling.h"
 
 using namespace scc;
 using namespace clientrender;

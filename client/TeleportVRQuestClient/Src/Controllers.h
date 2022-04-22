@@ -5,7 +5,7 @@
 
 #include <VrApi_Input.h>
 
-#include <TeleportClient/Input.h>
+#include <TeleportCore/Input.h>
 #include "libavstream/common_input.h"
 
 typedef std::function<void()> TriggerDelegate;
@@ -34,9 +34,7 @@ public:
 	ovrDeviceID mControllerIDs[CONTROLLER_AMOUNT];
 
 	ovrVector2f mTrackpadDim;
-	teleport::client::ControllerState mLastControllerStates[CONTROLLER_AMOUNT]; //State of the controllers on the last frame.
 private:
-	void AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, teleport::client::ControllerState& controllerState, ovrButton buttonID, avs::InputId inputID);
 
 	TriggerDelegate CycleShaderMode;
 	TriggerDelegate CycleOSD;

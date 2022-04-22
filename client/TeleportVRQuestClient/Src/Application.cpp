@@ -391,7 +391,7 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 		avs::Pose controllerPoses[2];
 		controllerPoses[0]=clientDeviceState.controllerPoses[0].globalPose;
 		controllerPoses[1]=clientDeviceState.controllerPoses[1].globalPose;
-		sessionClient.Frame(displayInfo, clientDeviceState.headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState.originPose, controllers.mLastControllerStates, clientRenderer.clientPipeline.decoder.idrRequired(), vrFrame.RealTimeInSeconds, vrFrame.DeltaSeconds);
+		sessionClient.Frame(displayInfo, clientDeviceState.headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState.originPose, clientDeviceState.input, clientRenderer.clientPipeline.decoder.idrRequired(), vrFrame.RealTimeInSeconds, vrFrame.DeltaSeconds);
 		if (sessionClient.receivedInitialPos>0&&receivedInitialPos!=sessionClient.receivedInitialPos)
 		{
 			clientDeviceState.originPose = sessionClient.GetOriginPose();
@@ -451,10 +451,10 @@ OVRFW::ovrApplFrameOut Application::Frame(const OVRFW::ovrApplFrameIn& vrFrame)
 	states.push_back({});
 	states[0].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[0].globalPose.position);
 	states[0].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[0].globalPose.orientation);
-	states[0].clicking			=(controllers.mLastControllerStates[0].mReleased& ovrButton::ovrButton_Trigger)!=0;
+	//states[0].clicking			=(controllers.mLastControllerStates[0].mReleased& ovrButton::ovrButton_Trigger)!=0;
 	states[1].pose.Translation	=*((const OVR::Vector3f*)&clientDeviceState.controllerPoses[1].globalPose.position);
 	states[1].pose.Rotation		=*((const OVR::Quatf *)&clientDeviceState.controllerPoses[1].globalPose.orientation);
-	states[1].clicking			=(controllers.mLastControllerStates[1].mReleased& ovrButton::ovrButton_Trigger)!=0;
+	//states[1].clicking			=(controllers.mLastControllerStates[1].mReleased& ovrButton::ovrButton_Trigger)!=0;
 	/// Hit test
 	tinyUI.DoHitTests(vrFrame,states);
     tinyUI.Update(vrFrame);
@@ -656,33 +656,13 @@ void Application::OnLightingSetupChanged(const avs::SetupLightingCommand &s)
 void Application::OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_)
 {
 	clientRenderer.inputDefinitions = inputDefinitions_;
-	// for each input, we will match it
-	inputIdMappings.clear();
-	std::string leftButton = "/interaction_profiles/simul/mouse_ext/input/trigger/value";
-	std::string rightButton = "/interaction_profiles/simul/mouse_ext/input/a/click";
-	std::string middleButton = "/interaction_profiles/simul/mouse_ext/input/b/click";
-	for (const auto& d : inputDefinitions)
-	{
-		if (Match(leftButton, d.path))
-		{
-			inputIdMappings[teleport::ClientRenderer::MouseOrKey::LEFT_BUTTON] = d.inputId;
-		}
-		if (Match(rightButton, d.path))
-		{
-			inputIdMappings[teleport::ClientRenderer::MouseOrKey::RIGHT_BUTTON] = d.inputId;
-		}
-		if (Match(middleButton, d.path))
-		{
-			inputIdMappings[teleport::ClientRenderer::MouseOrKey::MIDDLE_BUTTON] = d.inputId;
-		}
-	}
 }
 void Application::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
 	clientRenderer.geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
 }
 
-void Application::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubTypeCommand)
+void Application::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubTypeCommand,const std::string &regexPath)
 {
 	switch(updateNodeSubTypeCommand.nodeSubtype)
 	{
@@ -779,10 +759,10 @@ void Application::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationContr
 			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 			break;
 		case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
-			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[0].triggerBack, 1.0f);
+			//clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[0].triggerBack, 1.0f);
 			break;
 		case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
-			clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[1].triggerBack, 1.0f);
+			//clientRenderer.geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &controllers.mLastControllerStates[1].triggerBack, 1.0f);
 			break;
 		default:
 			TELEPORT_CLIENT_WARN("Failed to update node animation control! Time control was set to the invalid value %d!", static_cast<int>(animationControlUpdate.timeControl));

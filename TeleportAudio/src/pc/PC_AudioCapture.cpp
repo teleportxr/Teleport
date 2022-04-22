@@ -63,7 +63,11 @@ namespace sca
 		format.nBlockAlign = (audioSettings.bitsPerSample * audioSettings.numChannels) / 8;
 		format.nAvgBytesPerSec = audioSettings.sampleRate * format.nBlockAlign;
 		format.cbSize = 0;
-
+		if(!mAudioClient)
+		{
+			SCA_CERR << "PC_AudioCapture::configure: mAudioClient is null." << std::endl;
+			return Result::AudioRecorderInitializationError;
+		}
 		if (FAILED(mAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, 200000, 0, &format, nullptr)))
 		{
 			SCA_CERR << "PC_AudioCapture: Error occurred trying to initialize audio client." << std::endl;

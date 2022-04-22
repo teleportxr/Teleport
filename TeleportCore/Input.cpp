@@ -2,11 +2,11 @@
 #include "Input.h"
 #include "TeleportCore/ErrorHandling.h"
 using namespace teleport;
-using namespace client;
+using namespace core;
 static uint32_t nextEventID = 0;
 
 
-void Input::clear()
+void Input::clearEvents()
 {
 	binaryEvents.clear();
 	analogueEvents.clear();
@@ -42,4 +42,19 @@ void Input::addMotionEvent( avs::InputId inputID, avs::vec2 motion)
 	motionEvent.motion = motion;
 
 	motionEvents.push_back(motionEvent);
+}
+
+
+void Input::setBinaryState(uint16_t index, bool activated)
+{
+	if(index>=binaryStates.size())
+		binaryStates.resize(index+1);
+	binaryStates[index]=activated;
+}
+
+void Input::setAnalogueState(uint16_t index, float strength)
+{
+	if(index>=analogueStates.size())
+		analogueStates.resize(index+1);
+	analogueStates[index]=strength;
 }

@@ -90,9 +90,9 @@ ClientRenderer::ClientRenderer
     :Renderer(new OVRNodeManager(),new OVRNodeManager())
     	,controllers(cn)
 		,clientAppInterface(c)
+		,sessionClient(sc, std::make_unique<AndroidDiscoveryService>())
 		,clientDeviceState(s)
 		,mShowWebcam(true)
-	,sessionClient(sc, std::make_unique<AndroidDiscoveryService>())
 {
 
 	sessionClient.SetResourceCreator(&resourceCreator);
@@ -1505,15 +1505,11 @@ void ClientRenderer::DrawOSD(OVRFW::ovrRendererOutput& res)
 							offset, colour,
 							"Controllers\n\n"
 							"Left Hand:		(%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
-							"TRIGGER_BACK:	%1.2f\n"
 							"Right Hand:	(%1.2f, %1.2f, %1.2f) {%1.2f, %1.2f, %1.2f}\n"
-							"TRIGGER_BACK:	%1.2f\n",
-							leftHandPosition.x, leftHandPosition.y, leftHandPosition.z,
+							,leftHandPosition.x, leftHandPosition.y, leftHandPosition.z,
 							leftHandOrientation.x, leftHandOrientation.y, leftHandOrientation.z,
-							controllers->mLastControllerStates[1].triggerBack,
 							rightHandPosition.x, rightHandPosition.y, rightHandPosition.z,
-							rightHandOrientation.x, rightHandOrientation.y, rightHandOrientation.z,
-							controllers->mLastControllerStates[0].triggerBack
+							rightHandOrientation.x, rightHandOrientation.y, rightHandOrientation.z
 					);
 
 			break;

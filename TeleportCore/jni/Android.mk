@@ -13,6 +13,7 @@ LOCAL_STATIC_LIBRARIES	:= Basis_universal enet
 include $(LOCAL_PATH)/../../client/cflags.mk
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/..
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../..
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../libavstream/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/enet/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../thirdparty/basis_universal
@@ -23,7 +24,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../client/LibOVRKernel/Src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../firstparty
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
 
-LOCAL_SRC_FILES :=	../TeleportCore.cpp				\
+LOCAL_SRC_FILES :=	../TeleportCore.cpp	../ErrorHandling.cpp ../Input.cpp			\
 
 LOCAL_CFLAGS += -D__ANDROID__
 LOCAL_CPPFLAGS += -Wc++17-extensions -Wunused-variable

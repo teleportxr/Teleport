@@ -5,7 +5,7 @@
 #include "Platform/CrossPlatform/Texture.h"
 #include "common_maths.h"		// for avs::Pose
 #include "common_networking.h"		// for avs::InputState
-#include "TeleportClient/Input.h"
+#include "TeleportCore/Input.h"
 typedef int64_t XrTime;
 struct XrCompositionLayerProjectionView;
 struct XrCompositionLayerProjection;
@@ -46,13 +46,12 @@ namespace teleport
 		avs::InputDefinition serverInputDefinition;
 		ActionId clientActionId;
 	};
+	//! State of an input. Note that we store *both* float and integer values,
+	//! allowing for hysteresis in the integer interpretation of float input.
 	struct InputState
 	{
-		union
-		{
-			float float32;
-			uint32_t uint32;
-		};
+		float float32;
+		uint32_t uint32;
 	};
 	struct NodePoseMapping
 	{
@@ -71,7 +70,7 @@ namespace teleport
 		std::map<avs::uid,NodePoseMapping> nodePoseMappings;
 		std::map<avs::uid,NodePoseState> nodePoseStates;
 		std::map<avs::uid,NodePoseMapping> unboundPoses;
-		teleport::client::Input inputs;
+		teleport::core::Input inputs;
 		unsigned long long framenumber=0;
 	};
 	class UseOpenXR
@@ -90,7 +89,7 @@ namespace teleport
 		// Getting mapped inputs specific to a given server, in-frame.
 		void OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition> &inputDefinitions_);
 		void MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath);
-		const teleport::client::Input& GetServerInputs(avs::uid server_uid,unsigned long long framenumber);
+		const teleport::core::Input& GetServerInputs(avs::uid server_uid,unsigned long long framenumber);
 
 		const avs::Pose& GetHeadPose() const;
 		const avs::Pose& GetControllerPose(int index) const;

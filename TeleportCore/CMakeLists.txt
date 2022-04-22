@@ -4,9 +4,8 @@ project( TeleportCore )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
-set(src_files TeleportCore.cpp ErrorHandling.cpp)
+set(src_files TeleportCore.cpp ErrorHandling.cpp Input.cpp)
 file(GLOB header_files *.h)
-
 
 if(ANDROID)
 	include_directories(../client/VrApi/Include) 

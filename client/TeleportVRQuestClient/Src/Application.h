@@ -78,7 +78,7 @@ namespace OVRFW
 
 		virtual void OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_) override;
 		void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
-		void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &)override;
+		void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &,const std::string &regexPath) override;
 		virtual std::vector<avs::uid> GetGeometryResources() override;
 		virtual void ClearGeometryResources() override;
 		virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;

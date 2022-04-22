@@ -7,6 +7,24 @@ using namespace client;
 ClientDeviceState::ClientDeviceState()
 {
 }
+void ClientDeviceState::Clear()
+{
+	nodePoses.clear();
+}
+
+void ClientDeviceState::SetLocalNodePose(avs::uid uid,const avs::Pose &localPose)
+{
+	nodePoses[uid].localPose=localPose;
+	TransformPose(nodePoses[uid]);
+}
+
+const avs::Pose &ClientDeviceState::GetGlobalNodePose(avs::uid uid) const
+{
+	const auto &p=nodePoses.find(uid);
+	if(p==nodePoses.end())
+		return avs::Pose();
+	return p->second.globalPose;
+}
 
 void ClientDeviceState::TransformPose(LocalGlobalPose &p)
 {
@@ -37,7 +55,7 @@ void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,clientrender::
 	TransformPose(controllerPoses[index]);
 }
 
-void ClientDeviceState::SetInputs( const teleport::client::Input& st)
+void ClientDeviceState::SetInputs( const teleport::core::Input& st)
 {
 	input =st;
 }

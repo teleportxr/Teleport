@@ -14,12 +14,13 @@
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Input.h"
 #include "enet/enet.h"
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
 typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, uint64_t, const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
-typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*, const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
+typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*,const uint8_t **,const float **,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
 typedef void(__stdcall* ReportHandshakeFn) (avs::uid clientID,const avs::Handshake *h);
 
@@ -230,24 +231,7 @@ namespace teleport
 		std::vector<avs::uid> nodesEnteredBounds;	//Stores nodes client needs to know have entered streaming bounds.
 		std::vector<avs::uid> nodesLeftBounds;		//Stores nodes client needs to know have left streaming bounds.
 
-		struct InputStateAndEvents
-		{
-			avs::InputState inputState;
-			//New input events we have received from the client this tick.
-			std::vector<avs::InputEventBinary> binaryEvents;
-			std::vector<avs::InputEventAnalogue> analogueEvents;
-			std::vector<avs::InputEventMotion> motionEvents;
-			void clear()
-			{
-				inputState.numBinaryEvents = 0;
-				inputState.numAnalogueEvents = 0;
-				inputState.numMotionEvents = 0;
-				binaryEvents.clear();
-				analogueEvents.clear();
-				motionEvents.clear();
-			}
-		};
-		InputStateAndEvents latestInputStateAndEvents; //Latest input state received from the client.
+		core::Input latestInputStateAndEvents; //Latest input state received from the client.
 
 		// Seconds
 		static constexpr float startSessionTimeout = 3;

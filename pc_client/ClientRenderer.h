@@ -137,7 +137,7 @@ class ClientRenderer :public platform::crossplatform::PlatformRendererInterface,
 
 	bool keydown[256] = {};
 	SessionClient sessionClient;
-	teleport::client::Input inputs;
+	teleport::core::Input inputs;
 	
 	bool show_video = false;
 

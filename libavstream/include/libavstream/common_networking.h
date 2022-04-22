@@ -113,15 +113,11 @@ namespace avs
 
 	struct InputState
 	{
-		uint32_t numBinaryEvents = 0;
-		uint32_t numAnalogueEvents= 0;
-		uint32_t numMotionEvents= 0;
-		void add(const InputState &i)
-		{
-			numBinaryEvents		+=i.numBinaryEvents;
-			numAnalogueEvents	+=i.numAnalogueEvents;
-			numMotionEvents		+=i.numMotionEvents;
-		}
+		uint16_t numBinaryStates = 0;
+		uint16_t numAnalogueStates= 0;
+		uint16_t numBinaryEvents = 0;
+		uint16_t numAnalogueEvents= 0;
+		uint16_t numMotionEvents= 0;
 	} AVS_PACKED;
 
 	//Contains information to update the transform of a node.
@@ -312,6 +308,7 @@ namespace avs
 		avs::InputType inputType;
 		uint16_t pathLength;
 	} AVS_PACKED;
+
 	//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
 	struct SetupInputsCommand : public Command
 	{

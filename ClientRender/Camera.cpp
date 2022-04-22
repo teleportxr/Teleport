@@ -2,6 +2,7 @@
 
 #include "Camera.h"
 #include "TeleportClient/Log.h"
+#include "TeleportCore/ErrorHandling.h"
 
 using namespace clientrender;
 

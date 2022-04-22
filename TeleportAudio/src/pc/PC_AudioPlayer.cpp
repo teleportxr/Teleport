@@ -57,8 +57,6 @@ namespace sca
 			return Result::AudioPlayerAlreadyInitialized;
 		}
 
-		mAudioCapture.reset(new PC_AudioCapture());
-
 		mInitResult = std::async(std::launch::async, &PC_AudioPlayer::asyncInitializeAudioDevice, this);
 
 		return Result::OK;
@@ -101,25 +99,32 @@ namespace sca
 			return Result::AudioPlayerAlreadyConfigured;
 		}
 
+		mAudioCapture.reset(new PC_AudioCapture());
+
 		if (!mInitialized)
 		{
-			// This will block until asyncInitializeAudioDevice has finished
-			Result result = mInitResult.get();
+			Result res=initializeAudioDevice();
+			if(res==Result::OK)
+			{
+				// This will block until asyncInitializeAudioDevice has finished
+				Result result = mInitResult.get();
 		
-			if (result)
-			{
-				mInputDeviceAvailable = true;	
-			}
-			else
-			{
-				if (result != Result::NoAudioInputDeviceFound)
+				if (result)
 				{
-					return result;
+					mInputDeviceAvailable = true;	
 				}
-				mInputDeviceAvailable = false;
-				result = Result::OK;
+				else
+				{
+					if (result != Result::NoAudioInputDeviceFound)
+					{
+						return result;
+					}
+					mInputDeviceAvailable = false;
+					result = Result::OK;
+				}
 			}
-
+			else if(res!=Result::AudioPlayerAlreadyInitialized)
+				return res;
 			mInitialized = true;
 		}
 
@@ -144,7 +149,9 @@ namespace sca
 		mDevice->StartEngine();
 
 		mSourceVoice->Start();	
-
+		if(!mAudioCapture)
+			return Result::UnknownError;
+	
 		Result r = mAudioCapture->configure(audioSettings);
 		if (!r)
 		{

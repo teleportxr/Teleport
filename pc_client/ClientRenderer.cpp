@@ -996,12 +996,14 @@ void ClientRenderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceCon
 		const auto &nodePoseStates=openXR->GetNodePoseStates(server_uid,renderPlatform->GetFrameNumber());
 		for(auto &n:nodePoseStates)
 		{
+			clientDeviceState->SetLocalNodePose(n.first,n.second.pose);
+			auto &globalPose=clientDeviceState->GetGlobalNodePose(n.first);
 			std::shared_ptr<clientrender::Node> node=g.mNodeManager->GetNode(n.first);
 			if(node)
 			{
 			// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
-				node->SetLocalPosition(n.second.pose.position);
-				node->SetLocalRotation(n.second.pose.orientation);
+				node->SetLocalPosition(globalPose.position);
+				node->SetLocalRotation(globalPose.orientation);
 				// force update of model matrices - should not be necessary, but is.
 				node->UpdateModelMatrix();
 			}
@@ -1893,7 +1895,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		controllerPoses[1]=clientDeviceState->controllerPoses[1].globalPose;
 		if (openXR)
 		{
-			const teleport::client::Input& inputs = openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
+			const teleport::core::Input& inputs = openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
 			clientDeviceState->SetInputs(inputs);
 		}
 		sessionClient.Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
@@ -1946,8 +1948,8 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		FillInControllerPose(0, -0.5f);
 		FillInControllerPose(1, 0.5f);
 	}
-	// Have parseed these, can free them now.
-	inputs.clear();
+	// Have parsed these, can free them now.
+	inputs.clearEvents();
 }
 
 void ClientRenderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)

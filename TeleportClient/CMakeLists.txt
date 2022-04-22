@@ -11,8 +11,6 @@ set(src_files
 	ClientPipeline.cpp
 	ClientPipeline.h
 	DiscoveryService.h
-	Input.cpp
-	Input.h
 	Log.cpp
 	Log.h
 	ServerTimestamp.cpp
@@ -40,7 +38,7 @@ elseif(ANDROID)
 endif()
 
 #For MT runtime
-add_static_library( TeleportClient SOURCES ${src_files})
+add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore)
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 
 #For MD runtime

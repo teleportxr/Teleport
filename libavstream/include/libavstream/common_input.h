@@ -15,9 +15,10 @@ namespace avs
 	const InputId TRIGGER01 = 1;
 	const InputId BUTTON_A = 2;
 	const InputId BUTTON_B = 1;
-	//! What type of input to send: 
-	enum class InputType : unsigned char //enet_uint8
+	//! What type of input to send, and when. 
+	enum class InputType : uint8_t //enet_uint8
 	{
+		Invalid=0,
 		IsEvent=1,
 		IsReleaseEvent=2,	// For use only with IsEvent
 		IsInteger=4,
@@ -28,6 +29,17 @@ namespace avs
 		ReleaseEvent = IsInteger | IsEvent | IsReleaseEvent,
 		FloatEvent = IsFloat | IsEvent
 	};
+	
+	inline InputType operator|(const InputType& a, const InputType& b)
+	{
+		return (InputType)((uint8_t)a | (uint8_t)b);
+	}
+
+	inline InputType operator&(const InputType& a, const InputType& b)
+	{
+		return (InputType)((uint8_t)a & (uint8_t)b);
+	}
+
 	//! Input events that can only be in two states; e.g. button pressed or not.
 	struct InputEventBinary
 	{

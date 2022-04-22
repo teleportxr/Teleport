@@ -12,7 +12,7 @@
 #include "libavstream/common_networking.h"
 #include <libavstream/libavstream.hpp>
 
-#include "TeleportClient/Input.h"
+#include "TeleportCore/Input.h"
 #include "TeleportClient/DiscoveryService.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
@@ -80,7 +80,7 @@ public:
 	void Frame(
 			const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
 			const avs::Pose *controllerPoses, uint64_t originValidCounter,
-			const avs::Pose &originPose, const teleport::client::Input& input,
+			const avs::Pose &originPose, const teleport::core::Input& input,
 			bool requestKeyframe, double time, double deltaTime);
 
 	bool IsConnected() const;
@@ -112,7 +112,7 @@ private:
     void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
 	void sendOriginPose(uint64_t validCounter,const avs::Pose& headPose);
     void SendControllerPoses(const avs::Pose& headPose,const avs::Pose* poses);
-    void SendInput(const teleport::client::Input& input);
+    void SendInput(const teleport::core::Input& input);
     void SendResourceRequests();
     void SendReceivedResources();
     void SendNodeUpdates();

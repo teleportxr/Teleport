@@ -104,38 +104,18 @@ void Controllers::Update(ovrMobile *ovrmobile)
 	{
 		if(mControllerIDs[i] != 0)
 		{
-			teleport::client::Input controllerState = {};
-			teleport::client::ControllerState &lastControllerState = mLastControllerStates[i];
+#if 0
+            teleport::core::Input input = {};
 			ovrInputStateTrackedRemote ovrState;
 			ovrState.Header.ControllerType = ovrControllerType_TrackedRemote;
 			if(vrapi_GetCurrentInputState(ovrmobile, mControllerIDs[i], &ovrState.Header) >= 0)
 			{
-#if 0
-				controllerState.mButtons = ovrState.Buttons;
-
-				controllerState.mTrackpadStatus = ovrState.TrackpadStatus > 0;
-				controllerState.mTrackpadX = ovrState.TrackpadPosition.x / mTrackpadDim.x;
-				controllerState.mTrackpadY = ovrState.TrackpadPosition.y / mTrackpadDim.y;
-				controllerState.mJoystickAxisX = ovrState.Joystick.x;
-				controllerState.mJoystickAxisY = ovrState.Joystick.y;
-#endif
 				if(ovrState.TrackpadStatus)
 				{
 					float dx = ovrState.TrackpadPosition.x / mTrackpadDim.x - 0.5f;
 					float dy = ovrState.TrackpadPosition.y / mTrackpadDim.y - 0.5f;
 					SetStickOffset(dx, dy);
 				}
-
-				//uint32_t pressed = controllerState.mButtons & ~lastControllerState.mButtons;
-				//controllerState.mReleased = ~controllerState.mButtons & lastControllerState.mButtons;
-
-				//Detect when a button press or button release event occurs, and store the event in controllerState.
-			/*	AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_A, avs::InputId::BUTTON01);
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_X, avs::InputId::BUTTON01);
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_B, avs::InputId::BUTTON02);
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Y, avs::InputId::BUTTON02);
-				AddButtonPressEvent(pressed, controllerState.mReleased, controllerState, ovrButton::ovrButton_Joystick, avs::InputId::BUTTON_STICK);
-*/
 				if(lastControllerState.triggerBack != ovrState.IndexTrigger)
 				{
 					controllerState.addAnalogueEvent(avs::InputId::TRIGGER_BACK, ovrState.IndexTrigger);
@@ -171,21 +151,9 @@ void Controllers::Update(ovrMobile *ovrmobile)
 				{
 					CycleShaderMode();
 				}
-
-				mLastControllerStates[i] = controllerState;
 			}
+#endif
 		}
 	}
 }
 
-void Controllers::AddButtonPressEvent(uint32_t pressedButtons, uint32_t releasedButtons, teleport::client::ControllerState& controllerState, ovrButton buttonID, avs::InputId inputID)
-{
-	if((pressedButtons & buttonID) != 0)
-	{
-		controllerState.addBinaryEvent(inputID, true);
-	}
-	else if((releasedButtons & buttonID) != 0)
-	{
-		controllerState.addBinaryEvent(inputID, false);
-	}
-}

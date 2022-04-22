@@ -11,6 +11,7 @@ include $(LOCAL_PATH)/../../client/cflags.mk
 
 LOCAL_MODULE    := TeleportAudio	        # generate TeleportAudio.a
 
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../..
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src/crossplatform
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../libavstream/include
