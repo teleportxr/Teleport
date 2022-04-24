@@ -36,7 +36,12 @@ Platform gPlatform = Platform::ANDROID;
 #include "Platform/Vulkan/DeviceManager.h"
 #include <unistd.h>
 
-using namespace simul;
+#include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
+#include <openxr/openxr_oculus.h>
+#include <openxr/openxr_oculus_helpers.h>
+
+using namespace platform;
 using namespace crossplatform;
 using namespace platform;
 using namespace core;
@@ -64,7 +69,7 @@ public:
 		m_GraphicsDeviceInterface->Initialize(true, false, false);
 
 		m_RenderPlatform = new vulkan::RenderPlatform();
-		m_RenderPlatform->SetShaderBuildMode(simul::crossplatform::ShaderBuildMode::NEVER_BUILD);
+		m_RenderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::NEVER_BUILD);
 		if (gPlatform == Platform::WIN64)
 		{
 			std::string cmake_source_dir = "../../../../firstparty/Platform";
@@ -134,7 +139,7 @@ public:
 	void Render(int view_id, void* pContext, void* renderTexture, int w, int h, long long frame, void* context_allocator = nullptr) override
 	{
 		// Device context structure
-		simul::crossplatform::GraphicsDeviceContext	deviceContext;
+		platform::crossplatform::GraphicsDeviceContext	deviceContext;
 
 		// Store back buffer, depth buffer and viewport information
 		deviceContext.defaultTargetsAndViewport.num = 1;
@@ -143,7 +148,6 @@ public:
 		deviceContext.defaultTargetsAndViewport.m_dt = nullptr;
 		deviceContext.defaultTargetsAndViewport.depthFormat = crossplatform::UNKNOWN;
 		deviceContext.defaultTargetsAndViewport.viewport = int4(0, 0, w, h);
-		deviceContext.frame_number = m_Framenumber;
 		deviceContext.platform_context = pContext;
 		deviceContext.renderPlatform = m_RenderPlatform;
 		deviceContext.viewStruct.view_id = view_id;
@@ -163,7 +167,7 @@ public:
 		}
 
 		//Begin frame
-		m_RenderPlatform->BeginFrame(deviceContext);
+		m_RenderPlatform->BeginFrame(m_Framenumber);
 		m_HdrFramebuffer->SetWidthAndHeight(w, h);
 		m_HdrFramebuffer->Activate(deviceContext);
 
@@ -171,7 +175,7 @@ public:
 		
 		m_HdrFramebuffer->Deactivate(deviceContext);
 		m_HdrRenderer->Render(deviceContext, m_HdrFramebuffer->GetTexture(), 1.0f, 0.44f);
-
+		m_RenderPlatform->EndFrame();
 		m_Framenumber++;
 	}
 
@@ -286,7 +290,7 @@ void android_main(struct android_app* app)
 	while (x)
 	{
 		__android_log_write(ANDROID_LOG_INFO, "TeleportVRQuestClientAGDE", "Waiting");
-		sleep(100);
+		//sleep(100);
 	}
 	app->onAppCmd = handle_cmd;
 	int events;
@@ -298,7 +302,7 @@ void android_main(struct android_app* app)
 				source->process(app, source);
 		}
 	}
-	base::DefaultFileLoader::SetAndroid_AAssetManager(app->activity->assetManager);
+	platform::core::DefaultFileLoader::SetAndroid_AAssetManager(app->activity->assetManager);
 
 	VulkanTester vt(window);
 	displaySurfaceManager = vt.GetDisplaySurfaceManager();

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31702.278
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeleportVRQuestClientAGDE", "TeleportVRQuestClientAGDE\TeleportVRQuestClientAGDE.vcxproj", "{820723D2-2241-4784-A775-EC5A36833A2E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeleportVRQuestClientAGDE", "TeleportVRQuestClientAGDE\TeleportVRQuestClientAGDE\TeleportVRQuestClientAGDE.vcxproj", "{820723D2-2241-4784-A775-EC5A36833A2E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{97036138-28ED-340A-82BF-867C6D8F0330} = {97036138-28ED-340A-82BF-867C6D8F0330}
 		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053} = {41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}
@@ -21,23 +21,23 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dynamic", "Dynamic", "{2B2B
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Applications", "Applications", "{93C8F41F-9A3E-4E5B-BCA4-1AC7AB72CDE1}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulVulkan_MT", "PlatformBuild\Vulkan\SimulVulkan_MT.vcxproj", "{97036138-28ED-340A-82BF-867C6D8F0330}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulVulkan_MT", "TeleportVRQuestClientAGDE\PlatformBuild\Vulkan\SimulVulkan_MT.vcxproj", "{97036138-28ED-340A-82BF-867C6D8F0330}"
 	ProjectSection(ProjectDependencies) = postProject
 		{160ADC84-9B1C-3598-A176-5EB52CECB5B1} = {160ADC84-9B1C-3598-A176-5EB52CECB5B1}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VulkanCoreShaders", "PlatformBuild\Vulkan\VulkanCoreShaders.vcxproj", "{D023754D-FF4E-36BD-8630-FD0581B1B55D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VulkanCoreShaders", "TeleportVRQuestClientAGDE\PlatformBuild\Vulkan\VulkanCoreShaders.vcxproj", "{D023754D-FF4E-36BD-8630-FD0581B1B55D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sfx", "PlatformBuild\Applications\Sfx\Sfx.vcxproj", "{9FB69995-8327-388B-A3FC-D62666D077BA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sfx", "TeleportVRQuestClientAGDE\PlatformBuild\Applications\Sfx\Sfx.vcxproj", "{9FB69995-8327-388B-A3FC-D62666D077BA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core_MT", "PlatformBuild\Core\Core_MT.vcxproj", "{2AEEA882-1607-34B2-8811-C9E5C2F1B003}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core_MT", "TeleportVRQuestClientAGDE\PlatformBuild\Core\Core_MT.vcxproj", "{2AEEA882-1607-34B2-8811-C9E5C2F1B003}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulCrossPlatform_MT", "PlatformBuild\CrossPlatform\SimulCrossPlatform_MT.vcxproj", "{160ADC84-9B1C-3598-A176-5EB52CECB5B1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulCrossPlatform_MT", "TeleportVRQuestClientAGDE\PlatformBuild\CrossPlatform\SimulCrossPlatform_MT.vcxproj", "{160ADC84-9B1C-3598-A176-5EB52CECB5B1}"
 	ProjectSection(ProjectDependencies) = postProject
 		{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053} = {41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulMath_MT", "PlatformBuild\Math\SimulMath_MT.vcxproj", "{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimulMath_MT", "TeleportVRQuestClientAGDE\PlatformBuild\Math\SimulMath_MT.vcxproj", "{41285B5B-2BC3-39CA-B4E8-9F3EC5D68053}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

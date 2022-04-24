@@ -143,7 +143,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
@@ -152,7 +152,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
