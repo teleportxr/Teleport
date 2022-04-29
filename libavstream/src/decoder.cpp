@@ -1,8 +1,8 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <decoder_p.hpp>
-#include <decoders/dec_nvidia.hpp>
+#include "decoder_p.hpp"
+#include "decoders/dec_nvidia.hpp"
 
 #include <libavstream/surface.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>

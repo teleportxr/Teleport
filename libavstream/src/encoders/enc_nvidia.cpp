@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <map>
 
-#include <common_p.hpp>
+#include "common_p.hpp"
 #include <encoders/enc_nvidia.hpp>
 
 #include <libavstream/surfaces/surface_dx11.hpp>

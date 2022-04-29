@@ -5,8 +5,8 @@
 
 #include <mutex>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/queue.hpp>
 
 namespace avs

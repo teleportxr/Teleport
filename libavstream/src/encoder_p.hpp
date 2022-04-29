@@ -8,8 +8,8 @@
 #include <thread>
 #include <atomic>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/encoder.hpp>
 #include <libavstream/encoders/enc_interface.hpp>
 #include <libavstream/queue.hpp>

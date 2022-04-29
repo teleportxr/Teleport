@@ -8,7 +8,7 @@
 #include <mutex>
 
 #include <platform.hpp>
-#include <common_p.hpp>
+#include "common_p.hpp"
 #include <libraryloader.hpp>
 
 #include <libavstream/encoders/enc_interface.hpp>

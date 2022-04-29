@@ -2,7 +2,7 @@
 // (c) Copyright 2018-2022 Simul Software Ltd
 
 #include <iostream>
-#include <networksource_p.hpp>
+#include "networksource_p.hpp"
 #include <ElasticFrameProtocol.h>
 #include <libavstream\queue.hpp>
 #include <libavstream\timer.hpp>

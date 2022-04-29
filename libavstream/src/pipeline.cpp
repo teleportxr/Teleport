@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <node_p.hpp>
+#include "node_p.hpp"
 #include "libavstream/pipeline.hpp"
 
 using namespace avs;

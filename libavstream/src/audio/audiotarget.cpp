@@ -1,6 +1,6 @@
 #include <libavstream/audio/audiotarget.h>
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 
 namespace avs
 {

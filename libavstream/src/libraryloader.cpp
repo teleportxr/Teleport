@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <libraryloader.hpp>
+#include "libraryloader.hpp"
 
 namespace avs {
 

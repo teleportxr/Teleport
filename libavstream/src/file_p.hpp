@@ -6,8 +6,8 @@
 #include <fstream>
 #include <string>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/file.hpp>
 
 namespace avs

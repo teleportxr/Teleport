@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <packetizer_p.hpp>
+#include "packetizer_p.hpp"
 #include <libavstream/stream/parser_interface.hpp>
 namespace avs
 {

@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/forwarder.hpp>
 
 #include <vector>

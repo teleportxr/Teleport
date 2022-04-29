@@ -6,7 +6,7 @@
 #include <vector>
 #include <fstream>
 
-#include <common_p.hpp>
+#include "common_p.hpp"
 #include <platform.hpp>
 #include <libavstream/pipeline.hpp>
 

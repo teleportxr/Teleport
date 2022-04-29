@@ -10,8 +10,8 @@
 
 #include <asio.hpp>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <network/packetformat.hpp>
 #include <network/serial.hpp>
 #include <util/bytebuffer.hpp>

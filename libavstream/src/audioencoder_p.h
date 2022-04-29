@@ -6,8 +6,8 @@
 #include <memory>
 #include <queue>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/audioencoder.h>
 #include <libavstream/audio/audio_interface.h>
 

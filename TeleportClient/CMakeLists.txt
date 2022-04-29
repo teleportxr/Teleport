@@ -13,33 +13,39 @@ set(src_files
 	DiscoveryService.h
 	Log.cpp
 	Log.h
+	OpenXR.cpp
+	OpenXR.h
 	ServerTimestamp.cpp
 	ServerTimestamp.h
 	SessionClient.cpp
 	SessionClient.h
 )
 
+#For MT runtime
+add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore)
+set_target_properties( TeleportClient PROPERTIES FOLDER Client)
+
 #Include its root directory
-include_directories(src)
+target_include_directories(TeleportClient PUBLIC src)
 #Include libavstream
-include_directories(../libavstream/include)
+target_include_directories(TeleportClient PUBLIC ../libavstream/include)
 #Include Basis Universal
-include_directories(../thirdparty/basis_universal)
+target_include_directories(TeleportClient PUBLIC ../thirdparty/basis_universal)
 #Include enet
-include_directories(../thirdparty/enet/include)
+target_include_directories(TeleportClient PUBLIC ../thirdparty/enet/include)
+
+target_include_directories(TeleportClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include )
+
+target_include_directories(TeleportClient PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 
 if(WIN32)
 # Removed circular dependency
 elseif(ANDROID)
 	#Include OpenGL ES 3.0
-	include_directories(../client/VrApi/Include) 
-	include_directories(../client/VrAppFramework/Include) 
-	include_directories(../client/LibOVRKernel/Src)
+	target_include_directories(TeleportClient PUBLIC ../client/VrApi/Include) 
+	target_include_directories(TeleportClient PUBLIC ../client/VrAppFramework/Include) 
+	target_include_directories(TeleportClient PUBLIC ../client/LibOVRKernel/Src)
 endif()
-
-#For MT runtime
-add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore)
-set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 
 #For MD runtime
 #add_library( ClientRender STATIC ${src_public} ) 

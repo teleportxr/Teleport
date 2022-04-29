@@ -75,12 +75,13 @@ void Camera::UpdateProjection(float horizontalFOV, float aspectRatio, float zNea
 	}
 	m_CameraData.m_ProjectionMatrix = mat4::Perspective(horizontalFOV, aspectRatio, zNear, zFar);
 }
-void Camera::UpdateProjection(float left, float right, float bottom, float top, float near, float far)
+
+void Camera::UpdateProjection(float left, float right, float bottom, float top, float nearf, float farf)
 {
 	if (m_CI.type != Camera::ProjectionType::ORTHOGRAPHIC)
 	{
 		TELEPORT_CERR<<"Invalid ProjectionType.\n";
 		return;
 	}
-	m_CameraData.m_ProjectionMatrix = mat4::Orthographic(left, right, bottom, top, near, far);
+	m_CameraData.m_ProjectionMatrix = mat4::Orthographic(left, right, bottom, top, nearf, farf);
 }

@@ -41,7 +41,7 @@
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <PlatformToolset>Clang</PlatformToolset>
-    <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
+    <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
     <CppLanguageStandard>cpp17</CppLanguageStandard>
     <AndroidNdkVersion>22.1.7171670</AndroidNdkVersion>
   </PropertyGroup>
@@ -139,32 +139,41 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <Link>
-      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</AdditionalLibraryDirectories>
+      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;fmt</LibraryDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../../thirdparty/vulkan/bin/$(PlatformTarget)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(SolutionDir)../../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;../../../../;./;../../../../libavstream/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PLATFORM_ANDROID;DEBUG _DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <Link>
-      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</AdditionalLibraryDirectories>
+      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;fmt</LibraryDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../../thirdparty/vulkan/bin/$(PlatformTarget)</AdditionalLibraryDirectories>
+      <ShowProgress>true</ShowProgress>
+      <AdditionalDependencies>$(SolutionDir)../../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;../../../../;./;../../../../libavstream/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AndroidOpenXR.cpp" />
+    <ClCompile Include="FileLoader.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="redist\andriod\native_app_glue\android_native_app_glue.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AndroidOpenXR.h" />
+    <ClInclude Include="FileLoader.h" />
     <ClInclude Include="redist\andriod\native_app_glue\android_native_app_glue.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -241,20 +250,8 @@
     <None Include="AndroidPackaging\app\src\main\AndroidManifest.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PlatformBuild\Core\Core_MT.vcxproj">
-      <Project>{2aeea882-1607-34b2-8811-c9e5c2f1b003}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\PlatformBuild\CrossPlatform\SimulCrossPlatform_MT.vcxproj">
-      <Project>{160adc84-9b1c-3598-a176-5eb52cecb5b1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\PlatformBuild\Math\SimulMath_MT.vcxproj">
-      <Project>{41285b5b-2bc3-39ca-b4e8-9f3ec5d68053}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\PlatformBuild\Vulkan\SimulVulkan_MT.vcxproj">
-      <Project>{97036138-28ed-340a-82bf-867c6d8f0330}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\PlatformBuild\Vulkan\VulkanCoreShaders.vcxproj">
-      <Project>{d023754d-ff4e-36bd-8630-fd0581b1b55d}</Project>
+    <ProjectReference Include="..\..\..\..\build_android_vs\TeleportClient\TeleportClient_Android.vcxproj">
+      <Project>{07e69bb7-5a19-4a53-ad74-5e841a897e70}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

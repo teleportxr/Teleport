@@ -1,8 +1,8 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <stream/parser_avc.hpp>
-#include <stream/parser_geo.hpp>
+#include "stream/parser_avc.hpp"
+#include "stream/parser_geo.hpp"
 
 using namespace avs;
 

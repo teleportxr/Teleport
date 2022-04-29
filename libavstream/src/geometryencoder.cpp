@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/geometryencoder.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
 

@@ -1,0 +1,1 @@
+This folder reproduces the structure of a CMake-generated build folder, but the vcxproj files are hand-built.

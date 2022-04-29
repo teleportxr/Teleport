@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <buffer_p.hpp>
+#include "buffer_p.hpp"
 #include <algorithm>
 
 namespace avs {

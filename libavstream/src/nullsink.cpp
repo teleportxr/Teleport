@@ -1,8 +1,8 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/nullsink.hpp>
 
 namespace avs {

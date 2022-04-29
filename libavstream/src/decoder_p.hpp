@@ -7,8 +7,8 @@
 #include <vector>
 #include <queue>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/decoder.hpp>
 
 #include <parsers/nalu_parser_h264.hpp>

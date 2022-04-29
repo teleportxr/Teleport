@@ -2,8 +2,8 @@
 // (c) Copyright 2018-2021 Simul Software Ltd
 
 #include <libavstream\tagdatadecoder.hpp>
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream\timer.hpp>
 
 using namespace avs;

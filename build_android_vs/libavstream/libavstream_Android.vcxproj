@@ -21,12 +21,95 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\libavstream\src\abi_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\api\cuda.hpp" />
+    <ClInclude Include="..\..\libavstream\src\api\cuda_dx12.hpp" />
+    <ClInclude Include="..\..\libavstream\src\audiodecoder_p.h" />
+    <ClInclude Include="..\..\libavstream\src\audioencoder_p.h" />
+    <ClInclude Include="..\..\libavstream\src\buffer_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\common_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\context_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\decoders\dec_nvidia.hpp" />
+    <ClInclude Include="..\..\libavstream\src\decoder_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\encoders\enc_nvidia.hpp" />
+    <ClInclude Include="..\..\libavstream\src\encoder_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\file_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\forwarder_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\geometrydecoder_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\geometryencoder_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\libraryloader.hpp" />
+    <ClInclude Include="..\..\libavstream\src\logger.hpp" />
+    <ClInclude Include="..\..\libavstream\src\mesh_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\networksink_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\networksource_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\network\packetformat.hpp" />
+    <ClInclude Include="..\..\libavstream\src\network\serial.hpp" />
+    <ClInclude Include="..\..\libavstream\src\node_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\packetizer_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\parsers\nalu_parser_h264.hpp" />
+    <ClInclude Include="..\..\libavstream\src\parsers\nalu_parser_h265.hpp" />
+    <ClInclude Include="..\..\libavstream\src\parsers\nalu_parser_interface.hpp" />
+    <ClInclude Include="..\..\libavstream\src\pipeline_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\platform.hpp" />
+    <ClInclude Include="..\..\libavstream\src\queue_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\stream\parser_avc.hpp" />
+    <ClInclude Include="..\..\libavstream\src\stream\parser_geo.hpp" />
+    <ClInclude Include="..\..\libavstream\src\surface_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\util\binaryio.hpp" />
+    <ClInclude Include="..\..\libavstream\src\util\bytebuffer.hpp" />
+    <ClInclude Include="..\..\libavstream\src\util\jitterbuffer.hpp" />
+    <ClInclude Include="..\..\libavstream\src\util\misc.hpp" />
+    <ClInclude Include="..\..\libavstream\src\util\ringbuffer.hpp" />
+    <ClInclude Include="..\..\libavstream\src\util\srtutil.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\libavstream\src\api\cuda.cpp" />
+    <ClCompile Include="..\..\libavstream\src\api\cuda_dx12.cpp" />
+    <ClCompile Include="..\..\libavstream\src\audiodecoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\audioencoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\audio\audiotarget.cpp" />
+    <ClCompile Include="..\..\libavstream\src\buffer.cpp" />
+    <ClCompile Include="..\..\libavstream\src\common_maths.cpp" />
+    <ClCompile Include="..\..\libavstream\src\context.cpp" />
+    <ClCompile Include="..\..\libavstream\src\decoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\decoders\dec_nvidia.cpp" />
+    <ClCompile Include="..\..\libavstream\src\encoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\encoders\enc_nvidia.cpp" />
+    <ClCompile Include="..\..\libavstream\src\file.cpp" />
+    <ClCompile Include="..\..\libavstream\src\forwarder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\geometrydecoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\geometryencoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\httputil.cpp" />
+    <ClCompile Include="..\..\libavstream\src\libraryloader.cpp" />
+    <ClCompile Include="..\..\libavstream\src\memory.cpp" />
+    <ClCompile Include="..\..\libavstream\src\mesh.cpp" />
+    <ClCompile Include="..\..\libavstream\src\networksink.cpp" />
+    <ClCompile Include="..\..\libavstream\src\networksource.cpp" />
+    <ClCompile Include="..\..\libavstream\src\node.cpp" />
+    <ClCompile Include="..\..\libavstream\src\nullsink.cpp" />
+    <ClCompile Include="..\..\libavstream\src\packetizer.cpp" />
+    <ClCompile Include="..\..\libavstream\src\pipeline.cpp" />
+    <ClCompile Include="..\..\libavstream\src\platforms\platform_posix.cpp" />
+    <ClCompile Include="..\..\libavstream\src\queue.cpp" />
+    <ClCompile Include="..\..\libavstream\src\stream\parser.cpp" />
+    <ClCompile Include="..\..\libavstream\src\stream\parser_avc.cpp" />
+    <ClCompile Include="..\..\libavstream\src\stream\parser_geo.cpp" />
+    <ClCompile Include="..\..\libavstream\src\surface.cpp" />
+    <ClCompile Include="..\..\libavstream\src\tagdatadecoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\timer.cpp" />
+    <ClCompile Include="..\..\libavstream\src\util\srtutil.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\libavstream\src\decoders\dec_nvidia.cu" />
+    <None Include="..\..\libavstream\src\encoders\enc_nvidia.cu" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{2AEEA882-1607-34B2-8811-C9E5C2F1B003}</ProjectGuid>
+    <ProjectGuid>{6F52B627-C756-44DD-AE24-A9370C3DBDDC}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
-    <ProjectName>Core_MT</ProjectName>
+    <ProjectName>libavstream_Android</ProjectName>
     <RootNamespace>$(ProjectName)</RootNamespace>
     <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
   </PropertyGroup>
@@ -43,7 +126,7 @@
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <PlatformToolset>Clang</PlatformToolset>
-    <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
+    <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CppLanguageStandard>cpp17</CppLanguageStandard>
   </PropertyGroup>
@@ -62,13 +145,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Debug\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Core_MT.dir\Debug\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Core_MTd</TargetName>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty\Platform\build\lib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">libavstream_Android.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">libavstream_Androidd</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\lib\Release\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Core_MT.dir\Release\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Core_MT</TargetName>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty\Platform\build\lib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">libavstream_Android.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">libavstream_Android</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
@@ -83,7 +166,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty\Platform\Core;../../../../firstparty\Platform;../../../../firstparty;../../../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -101,10 +184,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty\Platform\Core;../../../../firstparty\Platform;../../../../firstparty;../../../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty\Platform\Core;../../../../firstparty\Platform;../../../../firstparty;../../../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -117,7 +200,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty\Platform\Core;../../../../firstparty\Platform;../../../../firstparty;../../../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -134,10 +217,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty\Platform\Core;../../../../firstparty\Platform;../../../../firstparty;../../../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>..\..\..\..\..\\firstparty\Platform\Core;..\..\..\..\..\\firstparty\Platform;..\..\..\..\..\\firstparty\Platform\..;..\..\..\..\..\\firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty\Platform\Core;../../../../firstparty\Platform;../../../../firstparty;../../../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -150,77 +233,16 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\..\..\firstparty;..\..\..\..\..\firstparty\Platform\Android;</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>UNIX=1</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\..\..\firstparty;..\..\..\..\..\firstparty\Platform\Android;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\..\..\..\..\\firstparty\Platform\Core\CMakeLists.txt">
-      <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Teleport/firstparty/Platform/Core/CMakeLists.txt</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SC:/Teleport/firstparty/Platform -BC:/Teleport/firstparty/Platform/build --check-stamp-file C:/Teleport/firstparty/Platform/build/Core/CMakeFiles/generate.stamp
-if %errorlevel% neq 0 goto :cmEnd
-:cmEnd
-endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
-:cmErrorLevel
-exit /b %1
-:cmDone
-if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\..\\firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Teleport/firstparty/Platform/Core/CMakeLists.txt</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SC:/Teleport/firstparty/Platform -BC:/Teleport/firstparty/Platform/build --check-stamp-file C:/Teleport/firstparty/Platform/build/Core/CMakeFiles/generate.stamp
-if %errorlevel% neq 0 goto :cmEnd
-:cmEnd
-endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
-:cmErrorLevel
-exit /b %1
-:cmDone
-if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\..\\firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\firstparty\Platform\Core\BaseMouseHandler.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\CommandLine.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\CommandLineParams.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\DefaultFileLoader.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\EnvironmentVariables.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\MemoryInterface.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\ProfilingInterface.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\RuntimeError.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\StringFunctions.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\StringToWString.cpp" />
-    <ClCompile Include="..\..\..\..\..\\firstparty\Platform\Core\Timer.cpp" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\BaseMouseHandler.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\CommandLine.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\CommandLineParams.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\DebugMemory.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\DefaultFileLoader.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\EnvironmentVariables.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\Export.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\FileLoader.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\MemoryInterface.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\MemoryUsageInterface.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\ProfilingInterface.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\PropertyMacros.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\ReadWriteMutex.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\RuntimeError.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\SimpleIni.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\StringFunctions.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\StringToWString.h" />
-    <ClInclude Include="..\..\..\..\..\\firstparty\Platform\Core\Timer.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

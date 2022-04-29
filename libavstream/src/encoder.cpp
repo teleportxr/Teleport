@@ -1,8 +1,8 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <encoder_p.hpp>
-#include <encoders/enc_nvidia.hpp>
+#include "encoder_p.hpp"
+#include "encoders/enc_nvidia.hpp"
 
 #include <libavstream/buffer.hpp>
 #include <libavstream/surface.hpp>

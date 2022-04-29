@@ -3,7 +3,7 @@
 
 #include <optional>
 #include <vector>
-#include <node_p.hpp>
+#include "node_p.hpp"
 
 using namespace avs;
 

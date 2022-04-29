@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <audioencoder_p.h>
+#include "audioencoder_p.h"
 
 #include <libavstream/buffer.hpp>
 

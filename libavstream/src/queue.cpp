@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <queue_p.hpp>
+#include "queue_p.hpp"
 #include <algorithm>
 
 #define SAFE_DELETE_ARRAY(p)		{ if(p) { delete[] p; (p)=nullptr; } }

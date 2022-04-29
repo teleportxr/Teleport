@@ -5,8 +5,8 @@
 
 #include <memory>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/surface.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
 

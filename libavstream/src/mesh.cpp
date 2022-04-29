@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <mesh_p.hpp>
+#include "mesh_p.hpp"
 
 using namespace avs;
 

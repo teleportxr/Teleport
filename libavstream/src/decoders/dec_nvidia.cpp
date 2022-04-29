@@ -3,9 +3,9 @@
 
 #if !defined(PLATFORM_ANDROID)
 
-#include <decoders/dec_nvidia.hpp>
-#include <platform.hpp>
-#include <logger.hpp>
+#include "decoders/dec_nvidia.hpp"
+#include "platform.hpp"
+#include "logger.hpp"
 #include <iostream>
 
 namespace {

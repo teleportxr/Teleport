@@ -7,8 +7,8 @@
 #include <vector>
 #include <queue>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <libavstream/packetizer.hpp>
 #include <libavstream/stream/parser_interface.hpp>
 

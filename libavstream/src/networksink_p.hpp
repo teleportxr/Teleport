@@ -12,8 +12,8 @@
 
 #include <asio.hpp>
 
-#include <common_p.hpp>
-#include <node_p.hpp>
+#include "common_p.hpp"
+#include "node_p.hpp"
 #include <network/packetformat.hpp>
 #include <util/bytebuffer.hpp>
 #include <libavstream/networksink.hpp>
