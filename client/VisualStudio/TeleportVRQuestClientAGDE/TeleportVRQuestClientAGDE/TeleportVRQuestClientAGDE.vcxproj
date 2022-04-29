@@ -144,7 +144,7 @@
       <AdditionalDependencies>$(SolutionDir)../../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;../../../../;./;../../../../libavstream/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;../../../../;./;../../../../libavstream/include;../../../../firstparty/Platform/External/fmt/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PLATFORM_ANDROID;DEBUG _DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -156,7 +156,7 @@
       <AdditionalDependencies>$(SolutionDir)../../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;../../../../;./;../../../../libavstream/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;../../../../;./;../../../../libavstream/include;../../../../firstparty/Platform/External/fmt/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
