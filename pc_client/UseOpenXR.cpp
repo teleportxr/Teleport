@@ -200,7 +200,7 @@ bool UseOpenXR::TryInitDevice()
 		swapchain.handle = handle;
 #if TELEPORT_CLIENT_USE_D3D12
 		vector<XrSwapchainImageD3D12KHR> surface_images;
-		swapchain.surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR });
+		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR });
 #else
 		vector<XrSwapchainImageD3D11KHR> surface_images;
 		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR });

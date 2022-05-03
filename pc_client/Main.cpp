@@ -151,6 +151,20 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     WNDCLASSEXW wcex;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
+	while(fs::current_path().has_parent_path()&&fs::current_path().filename()!="pc_client")
+	{
+		fs::current_path(fs::current_path().parent_path());
+		for (auto const& dir_entry : std::filesystem::directory_iterator{fs::current_path()}) 
+		{
+			auto str=dir_entry.path().filename();
+			if(str=="pc_client")
+			{
+				fs::current_path(dir_entry.path());
+				break;
+			}
+		}
+	}
+
 	// replacing Windows' broken resource system, just load our icon from a png:
 	const char filename[]="textures\\teleportvr.png";
 	size_t bufferSize=fs::file_size(filename);
