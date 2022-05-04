@@ -130,7 +130,7 @@ install(TARGETS pc_client
 		DESTINATION build_client/bin/Release
 		COMPONENT client)
 
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client.ini" DESTINATION pc_client COMPONENT client)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client RENAME client.ini COMPONENT client OPTIONAL)
 message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
 
 #install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
