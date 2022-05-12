@@ -18,7 +18,7 @@
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 #include "TeleportClient/ClientDeviceState.h"
-VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
+VisualStudioDebugOutput debug_buffer(true,nullptr, 128);
 #endif
 
 #if TELEPORT_CLIENT_USE_D3D12
@@ -87,6 +87,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	bool enable_vr = true;
 	bool dev_mode = false;
 	bool render_local_offline = false;
+	std::string log_filename="TeleportClient.log";
 	if(rc == SI_OK)
 	{
 
@@ -106,6 +107,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		enable_vr = ini.GetLongValue("", "ENABLE_VR", true);
 		dev_mode = ini.GetLongValue("", "DEV_MODE", false);
+		log_filename = ini.GetValue("", "LOG_FILE", "TeleportClient.log");
+
 		render_local_offline = ini.GetLongValue("", "RENDER_LOCAL_OFFLINE", false);
 		gui.SetServerIPs(server_ips);
 	}
@@ -113,6 +116,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	{
 		TELEPORT_CERR<<"Create client.ini in pc_client directory to specify settings."<<std::endl;
 	}
+	if(log_filename.size()>0)
+		debug_buffer.setLogFile(log_filename.c_str());
 	errno=0;
     // Initialize global strings
     MyRegisterClass(hInstance);
@@ -151,6 +156,20 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     WNDCLASSEXW wcex;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
+	while(fs::current_path().has_parent_path()&&fs::current_path().filename()!="pc_client")
+	{
+		fs::current_path(fs::current_path().parent_path());
+		for (auto const& dir_entry : std::filesystem::directory_iterator{fs::current_path()}) 
+		{
+			auto str=dir_entry.path().filename();
+			if(str=="pc_client")
+			{
+				fs::current_path(dir_entry.path());
+				break;
+			}
+		}
+	}
+
 	// replacing Windows' broken resource system, just load our icon from a png:
 	const char filename[]="textures\\teleportvr.png";
 	size_t bufferSize=fs::file_size(filename);

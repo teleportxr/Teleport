@@ -127,7 +127,12 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
 install(TARGETS pc_client
 		RUNTIME
-		DESTINATION pc_client
+		DESTINATION build_client/bin/Release
 		COMPONENT client)
 
-install(FILES client.ini DESTINATION pc_client)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client RENAME client.ini COMPONENT client OPTIONAL)
+message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
+
+#install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\Shaders" DESTINATION pc_client COMPONENT client)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\textures" DESTINATION pc_client COMPONENT client)
