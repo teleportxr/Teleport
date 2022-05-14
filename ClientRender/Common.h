@@ -18,13 +18,13 @@
 
 //Debug
 
-extern void log_print(const char* source,const char *format, ...);
 
 #if defined(__ANDROID__)
 #include <android/log.h>
 #define FILE_LINE (std::string(__FILE__) + std::string("(") +  std::to_string(__LINE__) + std::string("):")).c_str()
 #define SCR_LOG(...) __android_log_print(ANDROID_LOG_INFO, "SCR", __VA_ARGS__);
 #else
+extern void log_print(const char* source,const char *format, ...);
 #define SCR_LOG(fmt,...) log_print( "SCR", fmt, __VA_ARGS__);
 #endif
 

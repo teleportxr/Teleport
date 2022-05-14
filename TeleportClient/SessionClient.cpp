@@ -393,12 +393,6 @@ void SessionClient::SendInput(const core::Input& input)
 {
 	avs::InputState inputState = {};
 	enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
-#if TELEPORT_INTERNAL_CHECKS
-	for (auto c : controllerState.analogueEvents)
-	{
-		TELEPORT_COUT << "Analogue: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< std::endl;
-	}
-#endif
 	//Set event amount.
 	if(input.analogueEvents.size()>50)
 	{

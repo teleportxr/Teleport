@@ -14,7 +14,16 @@ namespace teleport
 	{
 	public:
 		bool TryInitDevice() override;
+		void SetCurrentFrameDeviceContext(platform::crossplatform::GraphicsDeviceContext &d)
+		{
+			deviceContext=&d;
+		}
 	protected:
 		const char *GetOpenXRGraphicsAPIExtensionName() const override;
+		platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(int uint32_t) override
+		{
+			return *deviceContext;
+		}
+		platform::crossplatform::GraphicsDeviceContext *deviceContext=nullptr;
 	};
 }

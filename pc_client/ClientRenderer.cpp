@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 
+#ifdef _MSC_VER
 #include "Platform/Core/EnvironmentVariables.h"
 #include "Platform/Core/StringFunctions.h"
 #include "Platform/Core/Timer.h"
@@ -25,12 +26,16 @@
 #if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
 #include <libavstream/surfaces/surface_dx12.hpp>
-#else
+#endif
+#if TELEPORT_CLIENT_USE_D3D11
 #include <libavstream/surfaces/surface_dx11.hpp>
 #endif
-
+#ifdef _MSC_VER
 #include "libavstream/platforms/platform_windows.hpp"
-
+#endif
+#ifdef __ANDROID__
+#include "libavstream/platforms/platform_posix.hpp"
+#endif
 #include "ClientRender/Light.h"
 #include "TeleportClient/Log.h"
 #include "ClientRender/Material.h"
@@ -87,9 +92,11 @@ void apply_material()
 }
 
 // Windows Header Files:
+#ifdef _MSC_VER
 #include <windows.h>
 #include <SDKDDKVer.h>
 #include <shellapi.h>
+#endif
 #include "ClientRenderer.h"
 using namespace teleport;
 using namespace client;
@@ -105,8 +112,12 @@ struct AVSTextureImpl :public AVSTexture
 	{
 #if TELEPORT_CLIENT_USE_D3D12
 		return new avs::SurfaceDX12(texture->AsD3D12Resource());
-#else
+#endif
+#if TELEPORT_CLIENT_USE_D3D11
 		return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
+#endif
+#if TELEPORT_CLIENT_USE_VULKAN
+		return new avs::SurfaceVulkan(texture->AsD3D11Texture2D());
 #endif
 	}
 };
@@ -141,7 +152,7 @@ ClientRenderer::~ClientRenderer()
 	InvalidateDeviceObjects(); 
 }
 
-void ClientRenderer::Init(platform::crossplatform::RenderPlatform *r,teleport::UseOpenXR *u)
+void ClientRenderer::Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u)
 {
 	// Initialize the audio (asynchronously)
 	audioPlayer.initializeAudioDevice();
@@ -2135,3 +2146,4 @@ void ClientRenderer::ConnectButtonHandler(const std::string& url)
 	}
 	canConnect = true;
 }
+#endif

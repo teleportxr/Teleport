@@ -46,6 +46,9 @@
     <ProjectReference Include="..\TeleportCore\TeleportCore_Android.vcxproj">
       <Project>{c5385ffa-b456-40f0-b0c7-3397a7fefe42}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\thirdparty\enet\enet.vcxproj">
+      <Project>{736d5a29-8cb3-4090-a065-efdfbfe76049}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{07E69BB7-5A19-4A53-AD74-5E841A897E70}</ProjectGuid>
@@ -177,13 +180,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

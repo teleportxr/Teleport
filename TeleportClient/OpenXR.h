@@ -8,12 +8,36 @@
 #include "TeleportCore/Input.h"
 #include <openxr/openxr.h>
 
-#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){TELEPORT_CERR<<"";ReportError(xr_instance,(int)res);}
+#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){teleport::client::ReportError(xr_instance,(int)res);}
+#include <openxr/openxr_reflection.h>
+
+// Macro to generate stringify functions for OpenXR enumerations based data provided in openxr_reflection.h
+// clang-format off
+#define ENUM_CASE_STR(name, val) case name: return #name;
+
+#define DECLARE_TO_STRING_FUNC(enumType) extern const char* to_string(enumType e);
+
+#define MAKE_TO_STRING_FUNC(enumType)                  \
+    const char* to_string(enumType e) {         \
+        switch (e) {                                   \
+            XR_LIST_ENUM_##enumType(ENUM_CASE_STR)     \
+            default: return "Unknown " #enumType;      \
+        }                                              \
+    }
+// clang-format on
+
 
 namespace teleport
 {
 	namespace client
 	{
+		DECLARE_TO_STRING_FUNC(XrReferenceSpaceType);
+		DECLARE_TO_STRING_FUNC(XrViewConfigurationType);
+		DECLARE_TO_STRING_FUNC(XrEnvironmentBlendMode);
+		DECLARE_TO_STRING_FUNC(XrSessionState);
+		DECLARE_TO_STRING_FUNC(XrResult);
+		DECLARE_TO_STRING_FUNC(XrFormFactor);
+		extern void ReportError(XrInstance xr_instance, int result);
 		struct swapchain_surfdata_t
 		{
 			platform::crossplatform::Texture* depth_view;
@@ -162,11 +186,13 @@ namespace teleport
 		class OpenXR
 		{
 		public:
-			bool Init(platform::crossplatform::RenderPlatform* renderPlatform, const char* app_name);
+			OpenXR(){}
+			bool InitInstance(const char* app_name);
+			bool Init(platform::crossplatform::RenderPlatform* renderPlatform);
 			virtual bool TryInitDevice()=0;
 			void MakeActions();
 			void PollActions();
-			void RenderFrame(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::RenderDelegate &, vec3 origin_pos, vec4 origin_orientation);
+			void RenderFrame( platform::crossplatform::RenderDelegate &, vec3 origin_pos, vec4 origin_orientation);
 			void Shutdown();
 			void PollEvents(bool& exit);
 			bool HaveXRDevice() const;
@@ -190,13 +216,17 @@ namespace teleport
 			}
 			const std::string &GetDebugString() const;
 			platform::crossplatform::Texture* GetRenderTexture(int index=0);
+			bool IsSessionActive() const
+			{
+				return xr_session_running;
+			}
 		protected:
 			void BindUnboundPoses(avs::uid server_uid);
 			std::map<avs::uid,OpenXRServer> openXRServers;
 			platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 			bool haveXRDevice = false;
-			void RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext, XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
-			bool RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext,XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
+			void RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext,XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
+			bool RenderLayer(XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
 			avs::Pose headPose;
 			std::vector<avs::Pose> controllerPoses;
 			void openxr_poll_predicted(XrTime predicted_time);
@@ -210,6 +240,9 @@ namespace teleport
 			// virtuals for platform-specific
 			virtual const char *GetOpenXRGraphicsAPIExtensionName() const=0;
 			virtual std::vector<std::string> GetRequiredExtensions() const;
+			virtual void HandleSessionStateChanges( XrSessionState state);
+			virtual platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(int uint32_t)=0;
+			virtual void FinishDeviceContext(int i) {}
 
 			XrFormFactor					app_config_form = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 			XrViewConfigurationType			app_config_view = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
@@ -218,7 +251,7 @@ namespace teleport
 
 			XrSession						xr_session = {};
 			XrSessionState					xr_session_state = XR_SESSION_STATE_UNKNOWN;
-			bool							xr_running = false;
+			bool							xr_session_running = false;
 			XrSpace							xr_app_space = {};
 			XrSpace							xr_head_space = {};
 			XrSystemId						xr_system_id = XR_NULL_SYSTEM_ID;

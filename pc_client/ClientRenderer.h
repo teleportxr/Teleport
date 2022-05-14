@@ -1,4 +1,5 @@
 #pragma once
+#ifdef _MSC_VER
 
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
@@ -15,7 +16,6 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/audio/audiotarget.h>
 
-#include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
 #include "TeleportClient/SessionClient.h"
 #include "ClientRender/ResourceCreator.h"
 #include "ClientRender/ResourceManager.h"
@@ -26,12 +26,16 @@
 #include "ClientRender/UniformBuffer.h"
 #include "ClientRender/VertexBuffer.h"
 #include "ClientRender/Renderer.h"
-#include "UseOpenXR.h"
-
-#include "crossplatform/AudioStreamTarget.h"
-#include "pc/PC_AudioPlayer.h"
+#include "TeleportClient/OpenXR.h"
 #include "TeleportClient/ClientDeviceState.h"
+
+#ifdef _MSC_VER
+#include "crossplatform/AudioStreamTarget.h"
+#include "SCR_Class_PC_Impl/PC_RenderPlatform.h"
+#include "pc/PC_AudioPlayer.h"
 #include "SCR_Class_PC_Impl/PC_MemoryUtil.h"
+#endif
+
 #include "Gui.h"
 #include "TeleportClient/ClientPipeline.h"
 #include "TeleportAudio/src/crossplatform/NetworkPipeline.h"
@@ -53,7 +57,9 @@ namespace pc_client
 	class Texture;
 	class UniformBuffer;
 	class VertexBuffer;
+#ifdef _MSC_VER
 	class PC_RenderPlatform;
+#endif
 }
 namespace teleport
 {
@@ -216,7 +222,7 @@ public:
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
 	void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr) override;
-	void Init(platform::crossplatform::RenderPlatform *r,teleport::UseOpenXR *u);
+	void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u);
 	void SetServer(const char* ip_port);
 	void InvalidateDeviceObjects();
 	void RemoveView(int);
@@ -274,7 +280,8 @@ private:
 	avs::uid node_select=0;
 	bool have_vr_device = false;
 	platform::crossplatform::Texture* externalTexture = nullptr;
-	teleport::UseOpenXR *openXR=nullptr;
+	teleport::client::OpenXR *openXR=nullptr;
 };
 
 }
+#endif

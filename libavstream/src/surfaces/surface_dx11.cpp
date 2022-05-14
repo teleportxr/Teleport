@@ -3,8 +3,8 @@
 
 #include <libavstream/surfaces/surface_dx11.hpp>
 
-namespace avs {
-
+namespace avs
+{
 	SurfaceDX11::SurfaceDX11(ID3D11Texture2D* resource)
 		: m_resource(nullptr)
 		, m_desc({})
@@ -64,6 +64,8 @@ namespace avs {
 		case DXGI_FORMAT_R16_FLOAT:
 		case DXGI_FORMAT_R16_TYPELESS:
 			return SurfaceFormat::R16;
+		default:
+			break;
 		}
 		return SurfaceFormat::Unknown;
 	}

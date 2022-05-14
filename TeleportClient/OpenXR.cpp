@@ -11,6 +11,7 @@
 #include "Platform/CrossPlatform/AxesStandard.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "ThisPlatform/StringFunctions.h"
+#include "Log.h"
 
 #include <regex>
 
@@ -21,10 +22,23 @@ const char *GetXRErrorString(XrInstance	xr_instance,XrResult res)
 	return str;
 }
 
-static void ReportError(XrInstance xr_instance, int result)
+void teleport::client::ReportError(XrInstance xr_instance, int result)
 {
 	XrResult res = (XrResult)result;
 	std::cerr << "Error: " << GetXRErrorString(xr_instance,res) << std::endl;
+}
+
+namespace teleport
+{
+	namespace client
+	{
+		MAKE_TO_STRING_FUNC(XrReferenceSpaceType);
+		MAKE_TO_STRING_FUNC(XrViewConfigurationType);
+		MAKE_TO_STRING_FUNC(XrEnvironmentBlendMode);
+		MAKE_TO_STRING_FUNC(XrSessionState);
+		MAKE_TO_STRING_FUNC(XrResult);
+		MAKE_TO_STRING_FUNC(XrFormFactor);
+	}
 }
 
 using namespace std;
@@ -60,15 +74,15 @@ std::string FromXrPath(const XrInstance & xr_instance,XrPath path)
 }
 struct XrGraphicsBindingPlatform
 {
-	XrStructureType             type;
-	const void* XR_MAY_ALIAS    next;
+	XrStructureType			 type;
+	const void* XR_MAY_ALIAS	next;
 	crossplatform::RenderPlatform* renderPlatform;
 } ;
 
 struct XrSwapchainImagePlatform
 {
-	XrStructureType      type;
-	void* XR_MAY_ALIAS    next;
+	XrStructureType	  type;
+	void* XR_MAY_ALIAS	next;
 	crossplatform::Texture* texture;
 } ;
 
@@ -88,7 +102,7 @@ std::vector<XrPath> activeInteractionProfilePaths;
 std::map<uint16_t, uint16_t> mapActionIndexToInputId;
 
 // Function pointers for some OpenXR extension methods we'll use.
-PFN_xrCreateDebugUtilsMessengerEXT    ext_xrCreateDebugUtilsMessengerEXT = nullptr;
+PFN_xrCreateDebugUtilsMessengerEXT	ext_xrCreateDebugUtilsMessengerEXT = nullptr;
 PFN_xrDestroyDebugUtilsMessengerEXT   ext_xrDestroyDebugUtilsMessengerEXT = nullptr;
 
 struct app_transform_buffer_t
@@ -181,8 +195,9 @@ vector<std::string> OpenXR::GetRequiredExtensions() const
 	return str;
 }
 
-bool OpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
+bool OpenXR::InitInstance(const char *app_name)
 {
+	RedirectStdCoutCerr();
 	// OpenXR will fail to initialize if we ask for an extension that OpenXR
 	// can't provide! So we need to check our all extensions before 
 	// initializing OpenXR with them. Note that even if the extension is 
@@ -194,7 +209,6 @@ bool OpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	vector<std::string> ask_extensions;
 	ask_extensions=GetRequiredExtensions();
 	
-	renderPlatform = r;
 	// We'll get a list of extensions that OpenXR provides using this 
 	// enumerate pattern. OpenXR often uses a two-call enumeration pattern 
 	// where the first call will tell you how much memory to allocate, and
@@ -235,11 +249,16 @@ bool OpenXR::Init(crossplatform::RenderPlatform *r,const char* app_name)
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 	strcpy_s(createInfo.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE,app_name);
 	xrCreateInstance(&createInfo, &xr_instance);
+	return (xr_instance!=nullptr);
+}
 
+bool OpenXR::Init(crossplatform::RenderPlatform *r)
+{
 	// Check if OpenXR is on this system, if this is null here, the user 
 	// needs to install an OpenXR runtime and ensure it's active!
 	if (xr_instance == nullptr)
 		return false;
+	renderPlatform = r;
 
 	// Load extension methods that we'll need for this application! There's a
 	// couple ways to do this, and this is a fairly manual one. Chek out this
@@ -506,7 +525,7 @@ void OpenXR::PollActions()
 		if (xr_input_session.inputDeviceStates[hand].handSelect)
 		{
 			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-			XrResult        res = xrLocateSpace(xr_input_session.actionDefinitions[LEFT_GRIP_POSE+hand].space, xr_app_space, select_state.lastChangeTime, &space_location);
+			XrResult		res = xrLocateSpace(xr_input_session.actionDefinitions[LEFT_GRIP_POSE+hand].space, xr_app_space, select_state.lastChangeTime, &space_location);
 			if (XR_UNQUALIFIED_SUCCESS(res) &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
@@ -673,7 +692,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			auto &def=m.second;
 			auto &state=server.nodePoseStates[m.first];
 			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-			XrResult        res = xrLocateSpace(xr_input_session.actionDefinitions[def.actionId].space, xr_app_space, lastTime, &space_location);
+			XrResult		res = xrLocateSpace(xr_input_session.actionDefinitions[def.actionId].space, xr_app_space, lastTime, &space_location);
 			if (XR_UNQUALIFIED_SUCCESS(res) &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
@@ -812,7 +831,7 @@ void OpenXR::openxr_poll_predicted(XrTime predicted_time)
 		if (!xr_input_session.inputDeviceStates[i].renderThisDevice)
 			continue;
 		XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-		XrResult        res = xrLocateSpace(xr_input_session.actionDefinitions[LEFT_GRIP_POSE+i].space, xr_app_space, predicted_time, &space_location);
+		XrResult		res = xrLocateSpace(xr_input_session.actionDefinitions[LEFT_GRIP_POSE+i].space, xr_app_space, predicted_time, &space_location);
 		if (XR_UNQUALIFIED_SUCCESS(res) &&
 			(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
@@ -900,9 +919,10 @@ mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
 	return MatrixPerspectiveOffCenterRH(left, right, down, up, clip_near, clip_far);
 }
 
-void OpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext,XrCompositionLayerProjectionView& view
-	, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
+void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext,XrCompositionLayerProjectionView& view
+	,swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
+	errno=0;
 	// Set up camera matrices based on OpenXR's predicted viewpoint information
 	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
 	crossplatform::Quaternionf rot = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const crossplatform::Quaternionf*)&view.pose.orientation));
@@ -931,7 +951,7 @@ void OpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceC
 	XrRect2Di& rect = view.subImage.imageRect;
 	crossplatform::Viewport viewport{ (int)rect.offset.x, (int)rect.offset.y, (int)rect.extent.width, (int)rect.extent.height };
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
-
+	#if 0
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
 	static float clear[] = { 0.2f, 0.3f, 0.5f, 1 };
 	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
@@ -941,6 +961,7 @@ void OpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceC
 	// And now that we're set up, pass on the rest of our rendering to the application
 	renderDelegate(deviceContext);
 	renderPlatform->DeactivateRenderTargets(deviceContext);
+	#endif
 }
 
 platform::crossplatform::Texture* OpenXR::GetRenderTexture(int index)
@@ -953,14 +974,56 @@ platform::crossplatform::Texture* OpenXR::GetRenderTexture(int index)
 	return sw.surface_data[sw.last_img_id].target_view;
 }
 
-bool OpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceContext, XrTime predictedTime
+void OpenXR::HandleSessionStateChanges( XrSessionState state)
+{
+	// Session state change is where we can begin and end sessions, as well as find quit messages!
+	switch (xr_session_state)
+	{
+		case XR_SESSION_STATE_READY:
+			{
+				XrSessionBeginInfo begin_info = { XR_TYPE_SESSION_BEGIN_INFO };
+				begin_info.primaryViewConfigurationType = app_config_view;
+				if(xrBeginSession(xr_session, &begin_info)==XR_SUCCESS)
+				{
+					TELEPORT_COUT<<"Beginning OpenXR Session."<<std::endl;
+					xr_session_running = true;
+				}
+			}
+		break;
+		case XR_SESSION_STATE_SYNCHRONIZED:
+			{
+				TELEPORT_COUT<<"OpenXR Session Synchronized."<<std::endl;
+			}
+			break;
+		case XR_SESSION_STATE_FOCUSED:
+			{
+				TELEPORT_COUT<<"OpenXR Session Focused."<<std::endl;
+			}
+			break;
+		case XR_SESSION_STATE_VISIBLE:
+			{
+				TELEPORT_COUT<<"OpenXR Session Visible."<<std::endl;
+			}
+			break;
+		case XR_SESSION_STATE_STOPPING:
+			{
+				xr_session_running = false;
+				xrEndSession(xr_session);
+			}
+			break;
+			default:
+			break;
+	}
+}
+
+bool OpenXR::RenderLayer( XrTime predictedTime
 	, vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer
 	, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
 	lastTime=predictedTime;
 	// Find the state and location of each viewpoint at the predicted time
-	uint32_t         view_count = 0;
-	XrViewState      view_state = { XR_TYPE_VIEW_STATE };
+	uint32_t		 view_count = 0;
+	XrViewState	  view_state = { XR_TYPE_VIEW_STATE };
 	XrViewLocateInfo locate_info = { XR_TYPE_VIEW_LOCATE_INFO };
 	locate_info.viewConfigurationType = app_config_view;
 	locate_info.displayTime = predictedTime;
@@ -974,7 +1037,7 @@ bool OpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceC
 	{
 		// We need to ask which swapchain image to use for rendering! Which one will we get?
 		// Who knows! It's up to the runtime to decide.
-		uint32_t                    img_id;
+		uint32_t					img_id;
 		XrSwapchainImageAcquireInfo acquire_info = { XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
 		xrAcquireSwapchainImage(xr_swapchains[i].handle, &acquire_info, &img_id);
 		xr_swapchains[i].last_img_id = img_id;
@@ -991,7 +1054,8 @@ bool OpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceC
 		views[i].subImage.swapchain = xr_swapchains[i].handle;
 		views[i].subImage.imageRect.offset = { 0, 0 };
 		views[i].subImage.imageRect.extent = { xr_swapchains[i].width, xr_swapchains[i].height };
-
+		
+		platform::crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(i);
 		deviceContext.setDefaultRenderTargets(nullptr,nullptr, 0, 0, xr_swapchains[i].width, xr_swapchains[i].height
 			,&xr_swapchains[i].surface_data[img_id].target_view,1, xr_swapchains[i].surface_data[img_id].depth_view);
 		
@@ -1000,8 +1064,9 @@ bool OpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceC
 		deviceContext.viewStruct.view_id = i;
 		deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 		// Call the rendering callback with our view and swapchain info
-		RenderLayer(deviceContext,views[i], xr_swapchains[i].surface_data[img_id],renderDelegate, origin_pos,origin_orientation);
-
+		RenderLayerView(deviceContext,views[i], xr_swapchains[i].surface_data[img_id],renderDelegate, origin_pos,origin_orientation);
+		
+		FinishDeviceContext(i);
 		// And tell OpenXR we're done with rendering to this one!
 		XrSwapchainImageReleaseInfo release_info = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 		xrReleaseSwapchainImage(xr_swapchains[i].handle, &release_info);
@@ -1015,63 +1080,155 @@ bool OpenXR::RenderLayer(platform::crossplatform::GraphicsDeviceContext& deviceC
 
 void OpenXR::PollEvents(bool& exit)
 {
+	RedirectStdCoutCerr();
 	exit = false;
-
 	XrEventDataBuffer event_buffer = { XR_TYPE_EVENT_DATA_BUFFER };
 	XrResult res;
+	XrEventDataBaseHeader* baseEventHeader = (XrEventDataBaseHeader*)(&event_buffer);
+	baseEventHeader->type = XR_TYPE_EVENT_DATA_BUFFER;
+	baseEventHeader->next = NULL;
+
+	// Poll for events
+	for (;;)
+	{
+		XrEventDataBaseHeader* baseEventHeader = (XrEventDataBaseHeader*)(&event_buffer);
+		baseEventHeader->type = XR_TYPE_EVENT_DATA_BUFFER;
+		baseEventHeader->next = NULL;
+		XrResult r;
+		r = xrPollEvent(xr_instance, &event_buffer);
+		if (r != XR_SUCCESS)
+		{
+			break;
+		}
+		switch (baseEventHeader->type)
+		{
+			case XR_TYPE_EVENT_DATA_EVENTS_LOST:
+				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_EVENTS_LOST event";
+				break;
+			case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: {
+				const XrEventDataInstanceLossPending* instance_loss_pending_event =
+					(XrEventDataInstanceLossPending*)(baseEventHeader);
+				std::cout<<
+					"xrPollEvent: received XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING event: time "<<
+					(instance_loss_pending_event->lossTime)<<std::endl;
+			} break;
+			case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
+				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event"<<std::endl;
+				break;
+			case XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT: {
+				const XrEventDataPerfSettingsEXT* perf_settings_event =
+					(XrEventDataPerfSettingsEXT*)(baseEventHeader);
+				std::cout<<
+					"xrPollEvent: received XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT event: type "
+					<<perf_settings_event->type<<" "
+					<<" subdomain "<<perf_settings_event->subDomain<<" "
+					<<" fromLevel "<<perf_settings_event->fromLevel<<" "
+					<<" toLevel "<<perf_settings_event->toLevel<<std::endl;
+			} break;
+			case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING: {
+				XrEventDataReferenceSpaceChangePending* ref_space_change_event =
+					(XrEventDataReferenceSpaceChangePending*)(baseEventHeader);
+				std::cout<<
+					"xrPollEvent: received XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING event: changed space: "
+					<<ref_space_change_event->referenceSpaceType
+					<<" for session "<<(void*)ref_space_change_event->session
+					<<" time "<<(ref_space_change_event->changeTime)<<std::endl;
+			} break;
+			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
+				const XrEventDataSessionStateChanged* session_state_changed_event =
+					(XrEventDataSessionStateChanged*)(baseEventHeader);
+				std::cout<<
+					"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "
+					<<session_state_changed_event->state<<
+					" for session "<<(void*)session_state_changed_event->session<<
+					" time "<<(session_state_changed_event->time)<<std::endl;
+
+				switch (session_state_changed_event->state) {
+					case XR_SESSION_STATE_FOCUSED:
+				std::cout<<	"Focused = true";
+						break;
+					case XR_SESSION_STATE_VISIBLE:
+				std::cout<<	"Focused = false";
+						break;
+					case XR_SESSION_STATE_READY:
+					case XR_SESSION_STATE_STOPPING:
+						HandleSessionStateChanges( session_state_changed_event->state);
+						break;
+					default:
+						break;
+				}
+			} break;
+			default:
+				std::cout<<"xrPollEvent: Unknown event"<<std::endl;
+				break;
+		}
+	}
+	/*
 	res=xrPollEvent(xr_instance, &event_buffer);
 	while ( res== XR_SUCCESS)
 	{
 		switch (event_buffer.type)
 		{
-		case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
-		{
-			XrEventDataSessionStateChanged* changed = (XrEventDataSessionStateChanged*)&event_buffer;
-			xr_session_state = changed->state;
-
-			// Session state change is where we can begin and end sessions, as well as find quit messages!
-			switch (xr_session_state)
-			{
-			case XR_SESSION_STATE_READY:
+			case XR_TYPE_EVENT_DATA_EVENTS_LOST:
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_EVENTS_LOST event."<<std::endl;
+				break;
+			case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING:
 				{
-					XrSessionBeginInfo begin_info = { XR_TYPE_SESSION_BEGIN_INFO };
-					begin_info.primaryViewConfigurationType = app_config_view;
-					if(xrBeginSession(xr_session, &begin_info)==XR_SUCCESS)
-					{
-						TELEPORT_COUT<<"Beginning OpenXR Session."<<std::endl;
-						xr_running = true;
-					}
-				}
-			break;
-			case XR_SESSION_STATE_FOCUSED:
-				break;
-			case XR_SESSION_STATE_VISIBLE :
-				break;
-			case XR_SESSION_STATE_STOPPING:
-				{
-					xr_running = false;
-					xrEndSession(xr_session);
-				}
-				break;
-			case XR_SESSION_STATE_EXITING:
+				const XrEventDataInstanceLossPending* instance_loss_pending_event =
+					(XrEventDataInstanceLossPending*)(baseEventHeader);
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING event."<<std::endl;
 				exit = true;
+				}
+				return;
+			case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event."<<std::endl;
 				break;
-			case XR_SESSION_STATE_LOSS_PENDING:
-				exit = true; 
-				break;
+			case XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT:
+			{
+				const XrEventDataPerfSettingsEXT* perf_settings_event =
+					(XrEventDataPerfSettingsEXT*)(baseEventHeader);
+				TELEPORT_COUT<<fmt::format(
+					"xrPollEvent: received XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT event: type {0} subdomain {1} : level {2} -> level {3}",
+					perf_settings_event->type,
+					perf_settings_event->subDomain,
+					perf_settings_event->fromLevel,
+					perf_settings_event->toLevel).c_str()<<std::endl;
+			} break;
+			case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING: {
+				XrEventDataReferenceSpaceChangePending* ref_space_change_event =
+					(XrEventDataReferenceSpaceChangePending*)(baseEventHeader);
+				TELEPORT_COUT<<fmt::format(
+					"xrPollEvent: received XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING event: changed space: {0} for session {1} at time {2}",
+					ref_space_change_event->referenceSpaceType,
+					(void*)ref_space_change_event->session,
+					ref_space_change_event->changeTime).c_str()<<std::endl;
+			} break;
+			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
+			{
+	RedirectStdCoutCerr();
+				XrEventDataSessionStateChanged* changed = (XrEventDataSessionStateChanged*)&event_buffer;
+				xr_session_state = changed->state;
+				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "<<changed->state
+					<<" for session "<<(void*)changed->session<<" at time "<<changed->time<<std::endl;
+				HandleSessionStateChanges(xr_session_state);
+				switch(xr_session_state)
+				{
+				case XR_SESSION_STATE_EXITING:
+					exit = true;
+					break;
+				case XR_SESSION_STATE_LOSS_PENDING:
+					exit = true; 
+					break;
 				default:
-				break;
+					break;
+				}
 			}
-		} break;
-		case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING:
-			exit = true;
-			return;
-		default:
-			break;
+			default:
+				break;
 		}
 		event_buffer = { XR_TYPE_EVENT_DATA_BUFFER };
 		res=xrPollEvent(xr_instance, &event_buffer);
-	}
+	}*/
 }
 
 bool OpenXR::HaveXRDevice() const
@@ -1102,17 +1259,27 @@ const avs::Pose& OpenXR::GetControllerPose(int index) const
 	}
 }
 
-void OpenXR::RenderFrame(platform::crossplatform::GraphicsDeviceContext	&deviceContext,platform::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
+void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
 {
+	if(!xr_session_running)
+		return;
+	//  OpenXR does not use the concept of frame indices. Instead,
+	// XrWaitFrame returns the predicted display time.
+	XrFrameWaitInfo waitFrameInfo = {};
+	waitFrameInfo.type = XR_TYPE_FRAME_WAIT_INFO;
+	waitFrameInfo.next = NULL;
 	// Block until the previous frame is finished displaying, and is ready for another one.
 	// Also returns a prediction of when the next frame will be displayed, for use with predicting
 	// locations of controllers, viewpoints, etc.
 	XrFrameState frame_state = { XR_TYPE_FRAME_STATE };
-	xrWaitFrame(xr_session, nullptr, &frame_state);
+	XR_CHECK(xrWaitFrame(xr_session, &waitFrameInfo, &frame_state));
 	// Must be called before any rendering is done! This can return some interesting flags, like 
 	// XR_SESSION_VISIBILITY_UNAVAILABLE, which means we could skip rendering this frame and call
 	// xrEndFrame right away.
-	xrBeginFrame(xr_session, nullptr);
+	XrFrameBeginInfo beginFrameDesc = {};
+	beginFrameDesc.type = XR_TYPE_FRAME_BEGIN_INFO;
+	beginFrameDesc.next = NULL;
+	XR_CHECK(xrBeginFrame(xr_session, &beginFrameDesc));
 
 	// Execute any code that's dependant on the predicted time, such as updating the location of
 	// controller models.
@@ -1120,7 +1287,7 @@ void OpenXR::RenderFrame(platform::crossplatform::GraphicsDeviceContext	&deviceC
 	app_update_predicted();
 
 	XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-	XrResult        res = xrLocateSpace(xr_head_space, xr_app_space, frame_state.predictedDisplayTime, &space_location);
+	XrResult		res = xrLocateSpace(xr_head_space, xr_app_space, frame_state.predictedDisplayTime, &space_location);
 	if (XR_UNQUALIFIED_SUCCESS(res) &&
 		(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 		(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
@@ -1133,7 +1300,8 @@ void OpenXR::RenderFrame(platform::crossplatform::GraphicsDeviceContext	&deviceC
 	XrCompositionLayerProjection  layer_proj	= { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
 	vector<XrCompositionLayerProjectionView> views;
 	bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
-	if (session_active && RenderLayer(deviceContext,frame_state.predictedDisplayTime, views, layer_proj,renderDelegate, origin_pos, origin_orientation))
+	session_active|=xr_session_state==XR_SESSION_STATE_SYNCHRONIZED;
+	if (session_active && RenderLayer(frame_state.predictedDisplayTime, views, layer_proj,renderDelegate, origin_pos, origin_orientation))
 	{
 		layer = (XrCompositionLayerBaseHeader*)&layer_proj;
 	}
@@ -1144,7 +1312,7 @@ void OpenXR::RenderFrame(platform::crossplatform::GraphicsDeviceContext	&deviceC
 	end_info.environmentBlendMode = xr_blend;
 	end_info.layerCount = layer == nullptr ? 0 : 1;
 	end_info.layers = &layer;
-	xrEndFrame(xr_session, &end_info);
+	XR_CHECK(xrEndFrame(xr_session, &end_info));
 }
 
 void OpenXR::Shutdown()

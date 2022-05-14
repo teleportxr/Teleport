@@ -96,6 +96,7 @@
     <ClCompile Include="..\..\libavstream\src\stream\parser_avc.cpp" />
     <ClCompile Include="..\..\libavstream\src\stream\parser_geo.cpp" />
     <ClCompile Include="..\..\libavstream\src\surface.cpp" />
+    <ClCompile Include="..\..\libavstream\src\surfaces\surface_vulkan.cpp" />
     <ClCompile Include="..\..\libavstream\src\tagdatadecoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\timer.cpp" />
     <ClCompile Include="..\..\libavstream\src\util\srtutil.cpp" />
@@ -233,13 +234,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>

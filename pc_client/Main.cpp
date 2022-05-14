@@ -292,8 +292,11 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	// Now renderPlatform is initialized, can init OpenXR:
 	if (try_init_vr)
 	{
-		useOpenXR.Init(renderPlatform, "Teleport VR Client");
-		InitXR();
+		if(useOpenXR.InitInstance("Teleport Client"))
+		{
+			useOpenXR.Init(renderPlatform);
+			InitXR();
+		}
 	}
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform,&useOpenXR);
@@ -510,7 +513,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					{
 						// Note we do this even when the device is inactive.
 						//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
-						useOpenXR.RenderFrame(deviceContext, renderDelegate, originPosition, originOrientation);
+						useOpenXR.SetCurrentFrameDeviceContext(deviceContext);
+						useOpenXR.RenderFrame( renderDelegate, originPosition, originOrientation);
 						if(useOpenXR.IsXRDeviceActive())
 						{
 							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());

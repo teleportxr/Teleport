@@ -31,6 +31,7 @@ inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 }
 
 #endif
+#if !defined(__ANDROID__)
 void log_print(const char* source, const char* format, ...)
 {
 	va_list ap;
@@ -43,3 +44,4 @@ void log_print(const char* source, const char* format, ...)
     // Now actually output the darn thing.
     std::cout<<outp<<std::endl;
 }
+#endif

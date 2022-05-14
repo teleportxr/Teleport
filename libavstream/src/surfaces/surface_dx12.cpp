@@ -64,6 +64,8 @@ namespace avs {
 		case DXGI_FORMAT_R16_FLOAT:
 		case DXGI_FORMAT_R16_TYPELESS:
 			return SurfaceFormat::R16;
+		default:
+			break;
 		}
 		return SurfaceFormat::Unknown;
 	}

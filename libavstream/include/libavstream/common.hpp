@@ -14,6 +14,7 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #define AVS_PACKED __attribute__ ((packed))
+#define _isnanf isnan
 #else
 #define AVS_PACKED
 #endif
