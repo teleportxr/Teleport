@@ -951,12 +951,13 @@ void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &dev
 	XrRect2Di& rect = view.subImage.imageRect;
 	crossplatform::Viewport viewport{ (int)rect.offset.x, (int)rect.offset.y, (int)rect.extent.width, (int)rect.extent.height };
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
-	#if 0
+	#if 1
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
 	static float clear[] = { 0.2f, 0.3f, 0.5f, 1 };
 	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
-	surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
+	if(surface.depth_view)
+		surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
 
 	// And now that we're set up, pass on the rest of our rendering to the application
 	renderDelegate(deviceContext);
@@ -977,7 +978,7 @@ platform::crossplatform::Texture* OpenXR::GetRenderTexture(int index)
 void OpenXR::HandleSessionStateChanges( XrSessionState state)
 {
 	// Session state change is where we can begin and end sessions, as well as find quit messages!
-	switch (xr_session_state)
+	switch (state)
 	{
 		case XR_SESSION_STATE_READY:
 			{
@@ -1014,6 +1015,7 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 			default:
 			break;
 	}
+	xr_session_state=state;
 }
 
 bool OpenXR::RenderLayer( XrTime predictedTime
@@ -1157,6 +1159,7 @@ void OpenXR::PollEvents(bool& exit)
 					default:
 						break;
 				}
+				xr_session_state=session_state_changed_event->state;
 			} break;
 			default:
 				std::cout<<"xrPollEvent: Unknown event"<<std::endl;

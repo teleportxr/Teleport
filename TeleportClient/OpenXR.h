@@ -40,8 +40,8 @@ namespace teleport
 		extern void ReportError(XrInstance xr_instance, int result);
 		struct swapchain_surfdata_t
 		{
-			platform::crossplatform::Texture* depth_view;
-			platform::crossplatform::Texture* target_view;
+			platform::crossplatform::Texture* depth_view=nullptr;
+			platform::crossplatform::Texture* target_view=nullptr;
 		};
 
 		struct swapchain_t

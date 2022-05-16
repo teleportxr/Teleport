@@ -110,6 +110,7 @@ client::swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform* re
 	platform::crossplatform::PixelFormat pixelFormat=platform::vulkan::RenderPlatform::FromVulkanFormat((vk::Format)swapchain_info.format);
 	result.target_view->InitFromExternalTexture2D(renderPlatform, vulkan_swapchain_img.image, nullptr, swapchain_info.width,swapchain_info.height
 		,pixelFormat, true,false,true,swapchain_info.sampleCount);
+		#if 0
 	result.depth_view = renderPlatform->CreateTexture("swapchain depth");
 	platform::crossplatform::TextureCreate textureCreate = {};
 	textureCreate.numOfSamples = std::max(1, result.target_view->GetSampleCount());
@@ -121,7 +122,7 @@ client::swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform* re
 	textureCreate.setDepthStencil = true;
 	textureCreate.computable = false;
 	result.depth_view->EnsureTexture(renderPlatform, &textureCreate);
-
+	#endif
 	return result;
 }
 
@@ -360,6 +361,7 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
         XR_CHECK(xrEndSession(xr_session));
 		xr_session_running = false;
     }
+	xr_session_state=state;
 }
 
 platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
