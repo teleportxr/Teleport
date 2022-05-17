@@ -1,0 +1,243 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Android-arm64-v8a">
+      <Configuration>Debug</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Android-arm64-v8a">
+      <Configuration>Release</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\firstparty\Platform\CrossPlatform\SimulCrossPlatform_MT.vcxproj">
+      <Project>{160adc84-9b1c-3598-a176-5eb52cecb5b1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\TeleportCore\TeleportCore_Android.vcxproj">
+      <Project>{c5385ffa-b456-40f0-b0c7-3397a7fefe42}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\thirdparty\enet\enet.vcxproj">
+      <Project>{736d5a29-8cb3-4090-a065-efdfbfe76049}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\ClientRender\Animation.cpp" />
+    <ClCompile Include="..\..\ClientRender\API.cpp" />
+    <ClCompile Include="..\..\ClientRender\Bone.cpp" />
+    <ClCompile Include="..\..\ClientRender\Camera.cpp" />
+    <ClCompile Include="..\..\ClientRender\Common.cpp" />
+    <ClCompile Include="..\..\ClientRender\Effect.cpp" />
+    <ClCompile Include="..\..\ClientRender\GeometryCache.cpp" />
+    <ClCompile Include="..\..\ClientRender\GeometryDecoder.cpp" />
+    <ClCompile Include="..\..\ClientRender\Light.cpp" />
+    <ClCompile Include="..\..\ClientRender\Material.cpp" />
+    <ClCompile Include="..\..\ClientRender\MemoryUtil.cpp" />
+    <ClCompile Include="..\..\ClientRender\Mesh.cpp" />
+    <ClCompile Include="..\..\ClientRender\Node.cpp" />
+    <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationComponent.cpp" />
+    <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationState.cpp" />
+    <ClCompile Include="..\..\ClientRender\NodeComponents\VisibilityComponent.cpp" />
+    <ClCompile Include="..\..\ClientRender\NodeManager.cpp" />
+    <ClCompile Include="..\..\ClientRender\Renderer.cpp" />
+    <ClCompile Include="..\..\ClientRender\ResourceCreator.cpp" />
+    <ClCompile Include="..\..\ClientRender\ShaderResource.cpp" />
+    <ClCompile Include="..\..\ClientRender\ShaderSystem.cpp" />
+    <ClCompile Include="..\..\ClientRender\Skin.cpp" />
+    <ClCompile Include="..\..\ClientRender\Tests.cpp" />
+    <ClCompile Include="..\..\ClientRender\Texture.cpp" />
+    <ClCompile Include="..\..\ClientRender\Transform.cpp" />
+    <ClCompile Include="..\..\ClientRender\UniformBuffer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\ClientRender\Animation.h" />
+    <ClInclude Include="..\..\ClientRender\API.h" />
+    <ClInclude Include="..\..\ClientRender\Bone.h" />
+    <ClInclude Include="..\..\ClientRender\Camera.h" />
+    <ClInclude Include="..\..\ClientRender\Common.h" />
+    <ClInclude Include="..\..\ClientRender\DeviceContext.h" />
+    <ClInclude Include="..\..\ClientRender\Effect.h" />
+    <ClInclude Include="..\..\ClientRender\FrameBuffer.h" />
+    <ClInclude Include="..\..\ClientRender\GeometryCache.h" />
+    <ClInclude Include="..\..\ClientRender\GeometryDecoder.h" />
+    <ClInclude Include="..\..\ClientRender\IndexBuffer.h" />
+    <ClInclude Include="..\..\ClientRender\Light.h" />
+    <ClInclude Include="..\..\ClientRender\Material.h" />
+    <ClInclude Include="..\..\ClientRender\MemoryUtil.h" />
+    <ClInclude Include="..\..\ClientRender\Mesh.h" />
+    <ClInclude Include="..\..\ClientRender\Node.h" />
+    <ClInclude Include="..\..\ClientRender\NodeComponents\AnimationComponent.h" />
+    <ClInclude Include="..\..\ClientRender\NodeComponents\AnimationState.h" />
+    <ClInclude Include="..\..\ClientRender\NodeComponents\VisibilityComponent.h" />
+    <ClInclude Include="..\..\ClientRender\NodeManager.h" />
+    <ClInclude Include="..\..\ClientRender\Renderer.h" />
+    <ClInclude Include="..\..\ClientRender\RenderPlatform.h" />
+    <ClInclude Include="..\..\ClientRender\ResourceCreator.h" />
+    <ClInclude Include="..\..\ClientRender\ResourceManager.h" />
+    <ClInclude Include="..\..\ClientRender\Sampler.h" />
+    <ClInclude Include="..\..\ClientRender\Shader.h" />
+    <ClInclude Include="..\..\ClientRender\ShaderResource.h" />
+    <ClInclude Include="..\..\ClientRender\ShaderStorageBuffer.h" />
+    <ClInclude Include="..\..\ClientRender\ShaderSystem.h" />
+    <ClInclude Include="..\..\ClientRender\Skin.h" />
+    <ClInclude Include="..\..\ClientRender\Tests.h" />
+    <ClInclude Include="..\..\ClientRender\Texture.h" />
+    <ClInclude Include="..\..\ClientRender\Transform.h" />
+    <ClInclude Include="..\..\ClientRender\UniformBuffer.h" />
+    <ClInclude Include="..\..\ClientRender\VertexBuffer.h" />
+    <ClInclude Include="..\..\ClientRender\VertexBufferLayout.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{E60416E1-F881-4E0B-8459-488A21C53030}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>ClientRender_Android</ProjectName>
+    <RootNamespace>$(ProjectName)</RootNamespace>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <PlatformToolset>Clang</PlatformToolset>
+    <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CppLanguageStandard>cpp17</CppLanguageStandard>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <PlatformToolset>Clang</PlatformToolset>
+    <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CppLanguageStandard>cpp17</CppLanguageStandard>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../build_android_vs/lib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ClientRender_Android.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ClientRender_Androidd</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../build_android_vs/lib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ClientRender_Android.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ClientRender_Android</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(SolutionDir)bin\int\$(Platform)\$(Configuration)\$(PlatformTarget)\$(ProjectName)\</IntDir>
+    <TargetExt>.a</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(SolutionDir)bin\int\$(Platform)\$(Configuration)\$(PlatformTarget)\$(ProjectName)\</IntDir>
+    <TargetExt>.a</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../firstparty\Platform\Core;../../firstparty\Platform;../../firstparty;../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../firstparty\Platform\Core;../../firstparty\Platform;../../firstparty;../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>../../firstparty\Platform\Core;../../firstparty\Platform;../../firstparty;../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../firstparty\Platform\Core;../../firstparty\Platform;../../firstparty;../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SIMUL_EDITOR=1;SIMUL_INTERNAL_CHECKS=0;PLATFORM_DEBUG_DISABLE=0;SWAP_NOEXCEPT=;CMAKE_BINARY_DIR=C:/Teleport/firstparty/Platform/build;CMAKE_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_SOURCE_DIR=C:/Teleport/firstparty/Platform;PLATFORM_BUILD_DIR=C:/Teleport/firstparty/Platform/build;SIMUL_USE_D3D11=0;PLATFORM_SUPPORT_D3D11=0;SIMUL_USE_D3D12=0;PLATFORM_SUPPORT_D3D12=0;SIMUL_USE_OPENGL=0;PLATFORM_SUPPORT_OPENGL=0;SIMUL_USE_VULKAN=1;PLATFORM_SUPPORT_VULKAN=1;PLATFORM_NO_OPTIMIZATION;PLATFORM_STD_FILESYSTEM=1;NOMINMAX;WIN64;UNICODE;_UNICODE;SIMUL_BUILD_NUMBER=;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../firstparty\Platform\Core;../../firstparty\Platform;../../firstparty;../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>../../firstparty\Platform\Core;../../firstparty\Platform;../../firstparty;../../firstparty\Platform\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

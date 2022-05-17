@@ -953,15 +953,15 @@ void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &dev
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 	#if 1
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.2f, 0.3f, 0.5f, 1 };
-	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
+	static float clear[] = { 0.8f, 0.1f, 0.4f, 1.0f };
+	//renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
 	if(surface.depth_view)
 		surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
 
 	// And now that we're set up, pass on the rest of our rendering to the application
 	renderDelegate(deviceContext);
-	renderPlatform->DeactivateRenderTargets(deviceContext);
+	//renderPlatform->DeactivateRenderTargets(deviceContext);
 	#endif
 }
 
@@ -1034,6 +1034,7 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 	views.resize(view_count);
 	static int64_t frame = 0;
 	frame++;
+	renderPlatform->BeginFrame(frame);
 	// And now we'll iterate through each viewpoint, and render it!
 	for (uint32_t i = 0; i < view_count; i++)
 	{
@@ -1041,13 +1042,13 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 		// Who knows! It's up to the runtime to decide.
 		uint32_t					img_id;
 		XrSwapchainImageAcquireInfo acquire_info = { XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
-		xrAcquireSwapchainImage(xr_swapchains[i].handle, &acquire_info, &img_id);
+		XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[i].handle, &acquire_info, &img_id));
 		xr_swapchains[i].last_img_id = img_id;
 		// Wait until the image is available to render to. The compositor could still be
 		// reading from it.
 		XrSwapchainImageWaitInfo wait_info = { XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };
 		wait_info.timeout = XR_INFINITE_DURATION;
-		xrWaitSwapchainImage(xr_swapchains[i].handle, &wait_info);
+		XR_CHECK(xrWaitSwapchainImage(xr_swapchains[i].handle, &wait_info));
 
 		// Set up our rendering information for the viewpoint we're using right now!
 		views[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
@@ -1071,8 +1072,9 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 		FinishDeviceContext(i);
 		// And tell OpenXR we're done with rendering to this one!
 		XrSwapchainImageReleaseInfo release_info = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
-		xrReleaseSwapchainImage(xr_swapchains[i].handle, &release_info);
+		XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[i].handle, &release_info));
 	}
+	renderPlatform->EndFrame();
 
 	layer.space = xr_app_space;
 	layer.viewCount = (uint32_t)views.size();

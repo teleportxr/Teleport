@@ -265,7 +265,9 @@ void InitXR(teleport::android::OpenXR &openXR)
 
 void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
 {
+
 }
+
 #include <sys/prctl.h> // for prctl( PR_SET_NAME )
 void android_main(struct android_app* app)
 {
@@ -298,6 +300,7 @@ void android_main(struct android_app* app)
 	openXR.InitInstance("Teleport VR Client");
 	openXR.InitSystem();
 	vulkan::DeviceManager vulkanDeviceManager;
+	RedirectStdCoutCerr();
 	vulkanDeviceManager.Initialize(true,false,false,openXR.GetRequiredVulkanDeviceExtensions(),openXR.GetRequiredVulkanInstanceExtensions());
 	RenderPlatform *renderPlatform = new vulkan::RenderPlatform();
 	renderPlatform->RestoreDeviceObjects(vulkanDeviceManager.GetDevice());

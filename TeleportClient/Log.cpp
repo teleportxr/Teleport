@@ -56,9 +56,12 @@ private:
 
 	char buffer[bufsize];
 };
+
 AndroidStreambuf androidCout;
 AndroidStreambuf androidCerr(ANDROID_LOG_WARN);
-void RedirectStdCoutCerr() {
+
+void RedirectStdCoutCerr()
+{
 	auto *oldout = std::cout.rdbuf(&androidCout);
 	auto *olderr = std::cerr.rdbuf(&androidCerr);
 	if (oldout != &androidCout)

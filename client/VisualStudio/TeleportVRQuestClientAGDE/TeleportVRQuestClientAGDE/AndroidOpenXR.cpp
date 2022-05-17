@@ -110,7 +110,7 @@ client::swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform* re
 	platform::crossplatform::PixelFormat pixelFormat=platform::vulkan::RenderPlatform::FromVulkanFormat((vk::Format)swapchain_info.format);
 	result.target_view->InitFromExternalTexture2D(renderPlatform, vulkan_swapchain_img.image, nullptr, swapchain_info.width,swapchain_info.height
 		,pixelFormat, true,false,true,swapchain_info.sampleCount);
-		#if 0
+#if 0
 	result.depth_view = renderPlatform->CreateTexture("swapchain depth");
 	platform::crossplatform::TextureCreate textureCreate = {};
 	textureCreate.numOfSamples = std::max(1, result.target_view->GetSampleCount());
@@ -453,7 +453,7 @@ bool OpenXR::TryInitDevice()
 		xr_config_views[i].recommendedSwapchainSampleCount = samples;
 	}
 	int64_t swapchain_format = VK_FORMAT_R8G8B8A8_UNORM;
-		constexpr int64_t SupportedColorSwapchainFormats[] = {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB,
+	constexpr int64_t SupportedColorSwapchainFormats[] = {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB,
 															  VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM};
 	// Find out what format to use:
 	uint32_t formatCount = 0;
@@ -477,8 +477,7 @@ bool OpenXR::TryInitDevice()
 		std::cout << "    format " << f << std::endl;
 	}
 	
-	auto swapchainFormatIt =
-		std::find_first_of(availableFormats.begin(), availableFormats.end(), std::begin(SupportedColorSwapchainFormats),
+	auto swapchainFormatIt =std::find_first_of(availableFormats.begin(), availableFormats.end(), std::begin(SupportedColorSwapchainFormats),
 						   std::end(SupportedColorSwapchainFormats));
 	if (swapchainFormatIt == availableFormats.end())
 	{
@@ -499,7 +498,7 @@ bool OpenXR::TryInitDevice()
 		XrSwapchainCreateInfo    swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
 		XrSwapchain              handle;
 		swapchain_info.createFlags=0;
-		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 		swapchain_info.format = swapchain_format;
 		swapchain_info.sampleCount = view.recommendedSwapchainSampleCount;
 		swapchain_info.width = view.recommendedImageRectWidth;
@@ -551,7 +550,7 @@ std::vector<std::string> OpenXR::GetRequiredExtensions() const
 	str.push_back(XR_KHR_ANDROID_THREAD_SETTINGS_EXTENSION_NAME);
 	str.push_back(XR_FB_SWAPCHAIN_UPDATE_STATE_EXTENSION_NAME);
 	str.push_back(XR_FB_SWAPCHAIN_UPDATE_STATE_VULKAN_EXTENSION_NAME);
-	//str.push_back(XR_FB_SPACE_WARP_EXTENSION_NAME);
+//	str.push_back(XR_FB_SPACE_WARP_EXTENSION_NAME);
 	return str;
 }
 #endif

@@ -47,7 +47,7 @@
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <PlatformToolset>Clang</PlatformToolset>
-    <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
+    <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
     <CppLanguageStandard>cpp17</CppLanguageStandard>
     <AndroidNdkVersion>22.1.7171670</AndroidNdkVersion>
   </PropertyGroup>
