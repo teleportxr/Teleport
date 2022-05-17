@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Android-arm64-v8a">
+      <Configuration>Debug</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Android-arm64-v8a">
+      <Configuration>Release</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>fmt</ProjectName>
+    <RootNamespace>$(ProjectName)</RootNamespace>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <PlatformToolset>Clang</PlatformToolset>
+    <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CppLanguageStandard>cpp17</CppLanguageStandard>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <PlatformToolset>Clang</PlatformToolset>
+    <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CppLanguageStandard>cpp17</CppLanguageStandard>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(SolutionDir)bin\int\$(Platform)\$(Configuration)\$(PlatformTarget)\$(ProjectName)\</IntDir>
+    <TargetExt>.a</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(SolutionDir)bin\int\$(Platform)\$(Configuration)\$(PlatformTarget)\$(ProjectName)\</IntDir>
+    <TargetExt>.a</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../../../../firstparty;../../../../../firstparty\Platform\Android;../../../../../firstparty/Platform/External/fmt/include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;UNIX=1</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../../../../firstparty;../../../../../firstparty\Platform\Android;../../../../../firstparty/Platform/External/fmt/include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\firstparty\Platform\External\fmt\src\format.cc" />
+    <ClCompile Include="..\..\..\..\..\firstparty\Platform\External\fmt\src\os.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\args.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\chrono.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\color.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\compile.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\core.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\format-inl.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\format.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\locale.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\os.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\ostream.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\printf.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\ranges.h" />
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\xchar.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
