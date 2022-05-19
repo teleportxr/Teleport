@@ -14,6 +14,7 @@
 #include <sstream>
 #include <iostream>
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportClient/Log.h"
 
 std::string teleport::android::vkResultString(VkResult res)
 {
@@ -235,7 +236,6 @@ bool OpenXR::InitSystem()
 	    // AppSpaceWarp Get recommended motion vector resolution, we don't recommend to use higher
     // motion vector resolution than recommended It won't give you extra quality improvement even it
     // make your motion vector pass more expensive.
-    XrSystemSpaceWarpPropertiesFB spaceWarpProperties = {};
     spaceWarpProperties.type = XR_TYPE_SYSTEM_SPACE_WARP_PROPERTIES_FB;
 
     XrSystemProperties systemProperties = {};
@@ -366,7 +366,7 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 
 platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
 {
-	static platform::crossplatform::GraphicsDeviceContext dcs[2];
+	static platform::crossplatform::GraphicsDeviceContext dcs[3];
 	platform::crossplatform::GraphicsDeviceContext& deviceContext=dcs[i];
 	// the platform context is the pointer to the VkCommandBuffer.
 	CmdBuffer &commandBuffer=cmdBuffer;
@@ -375,6 +375,7 @@ platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
 	cmdBuffer.Begin();
 	return deviceContext;
 }
+
 void OpenXR::FinishDeviceContext(int i)
 {
 	cmdBuffer.End();
@@ -382,7 +383,11 @@ void OpenXR::FinishDeviceContext(int i)
 	// XXX Should double-buffer the command buffers, for now just flush
 	cmdBuffer.Wait();
 }
-#include "TeleportClient/Log.h"
+
+void OpenXR::EndFrame() 
+{
+}
+
 bool OpenXR::TryInitDevice()
 {
 	RedirectStdCoutCerr();
@@ -484,7 +489,9 @@ bool OpenXR::TryInitDevice()
 		throw("No runtime swapchain format supported for color swapchain");
 	}
 	swapchain_format = *swapchainFormatIt;
-
+	
+	XrSwapchainCreateInfo    swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
+	// One xr_swapchain for each view, plus one for the overlay...?
 	for (uint32_t i = 0; i < view_count; i++)
 	{
 		// Create a swapchain for this viewpoint! A swapchain is a set of texture buffers used for displaying to screen,
@@ -495,7 +502,6 @@ bool OpenXR::TryInitDevice()
 		// a concrete type like DXGI_FORMAT_R8G8B8A8_UNORM, as attempting to create a TYPELESS view will throw errors, so 
 		// we do need to store the format separately and remember it later.
 		XrViewConfigurationView& view = xr_config_views[i];
-		XrSwapchainCreateInfo    swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
 		XrSwapchain              handle;
 		swapchain_info.createFlags=0;
 		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
@@ -530,6 +536,109 @@ bool OpenXR::TryInitDevice()
 		}
 		xr_swapchains.push_back(swapchain);
 	}
+	// motion vector swapchains:
+	MOTION_VECTOR_SWAPCHAIN=xr_swapchains.size();
+	swapchain_info.createFlags=0;
+	swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+	swapchain_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+	swapchain_info.sampleCount = 1;
+	swapchain_info.width = spaceWarpProperties.recommendedMotionVectorImageRectWidth;
+	swapchain_info.height = spaceWarpProperties.recommendedMotionVectorImageRectHeight;
+	swapchain_info.faceCount = 1;
+	swapchain_info.arraySize = 1;
+	swapchain_info.mipCount = 1;
+	for (uint32_t i = 0; i < view_count; i++)
+	{
+		XrSwapchain              handle;
+		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
+		uint32_t surface_count = 0;
+		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
+		client::swapchain_t swapchain = {};
+		swapchain.width = swapchain_info.width;
+		swapchain.height = swapchain_info.height;
+		swapchain.handle = handle;
+		vector<XrSwapchainImageVulkanKHR> surface_images;
+		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
+		swapchain.surface_data.resize(surface_count);
+		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
+		for (uint32_t i = 0; i < surface_count; i++)
+		{
+			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
+		}
+		xr_swapchains.push_back(swapchain);
+	}
+	MOTION_DEPTH_SWAPCHAIN=xr_swapchains.size();
+	swapchain_info.usageFlags =XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	swapchain_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+	for (uint32_t i = 0; i < view_count; i++)
+	{
+		XrSwapchain              handle;
+		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
+		uint32_t surface_count = 0;
+		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
+		client::swapchain_t swapchain = {};
+		swapchain.width = swapchain_info.width;
+		swapchain.height = swapchain_info.height;
+		swapchain.handle = handle;
+		vector<XrSwapchainImageVulkanKHR> surface_images;
+		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
+		swapchain.surface_data.resize(surface_count);
+		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
+		for (uint32_t i = 0; i < surface_count; i++)
+		{
+			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
+		}
+		xr_swapchains.push_back(swapchain);
+	}
+	// 
+	// quad swapchain:
+	{
+		XrSwapchainCreateInfo    swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
+		XrSwapchain              handle;
+		swapchain_info.createFlags=0;
+		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchain_info.format = VK_FORMAT_R8G8B8A8_SRGB;
+		swapchain_info.sampleCount = 1;
+		swapchain_info.width = 256;
+		swapchain_info.height = 256;
+		swapchain_info.faceCount = 1;
+		swapchain_info.arraySize = 1;
+		swapchain_info.mipCount = 1;
+		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
+
+		// Find out how many textures were generated for the swapchain
+		uint32_t surface_count = 0;
+		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
+
+		// We'll want to track our own information about the swapchain, so we can draw stuff onto it! We'll also create
+		// a depth buffer for each generated texture here as well with make_surfacedata.
+		client::swapchain_t swapchain = {};
+		swapchain.width = swapchain_info.width;
+		swapchain.height = swapchain_info.height;
+		swapchain.handle = handle;
+
+		vector<XrSwapchainImageVulkanKHR> surface_images;
+		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
+
+		swapchain.surface_data.resize(surface_count);
+		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
+		for (uint32_t i = 0; i < surface_count; i++)
+		{
+			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
+		}
+		OVERLAY_SWAPCHAIN=xr_swapchains.size();
+		xr_swapchains.push_back(swapchain);
+#if 1	
+		uint32_t					img_id;
+		XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, NULL};
+		XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[2].handle, &acquireInfo, &img_id));
+		xr_swapchains[2].last_img_id=img_id;
+		XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, NULL,  XR_INFINITE_DURATION};
+		XR_CHECK(xrWaitSwapchainImage(xr_swapchains[2].handle, &waitInfo));
+		XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+		XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[2].handle, &releaseInfo));
+	#endif
+	}
 
 	haveXRDevice = true;
 	return true;
@@ -550,7 +659,7 @@ std::vector<std::string> OpenXR::GetRequiredExtensions() const
 	str.push_back(XR_KHR_ANDROID_THREAD_SETTINGS_EXTENSION_NAME);
 	str.push_back(XR_FB_SWAPCHAIN_UPDATE_STATE_EXTENSION_NAME);
 	str.push_back(XR_FB_SWAPCHAIN_UPDATE_STATE_VULKAN_EXTENSION_NAME);
-//	str.push_back(XR_FB_SPACE_WARP_EXTENSION_NAME);
+	//str.push_back(XR_FB_SPACE_WARP_EXTENSION_NAME);
 	return str;
 }
 #endif

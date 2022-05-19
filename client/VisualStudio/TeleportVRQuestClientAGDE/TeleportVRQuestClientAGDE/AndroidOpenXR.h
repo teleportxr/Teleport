@@ -40,14 +40,18 @@ namespace teleport
 			void HandleSessionStateChanges( XrSessionState state) override;
 			platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(int i) override;
 			void FinishDeviceContext(int i) override;
+			void EndFrame() override;
 			vk::Device *vulkanDevice=nullptr;
 			//vk::PhysicalDevice *vulkanPhysicalDevice=nullptr;
 			vk::Instance *vulkanInstance=nullptr;
 			CmdBuffer cmdBuffer{};
 			vk::Queue vulkanQueue;
+#define VULKAN_FRAME_LATENCY 2
+			vk::Fence fences[VULKAN_FRAME_LATENCY+1];
 			// These threads will be marked as performance threads.
 			int MainThreadTid=0;
 			int RenderThreadTid=0;
+			XrSystemSpaceWarpPropertiesFB spaceWarpProperties = {};
 		};
 	}
 }

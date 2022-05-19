@@ -48,6 +48,67 @@ using namespace client;
 
 const XrPosef	xr_pose_identity = { {0,0,0,1}, {0,0,0} };
 
+static inline XrVector3f XrVector3f_ScalarMultiply(const XrVector3f v, float scale) {
+    XrVector3f u;
+    u.x = v.x * scale;
+    u.y = v.y * scale;
+    u.z = v.z * scale;
+    return u;
+}
+
+static inline XrQuaternionf XrQuaternionf_Multiply(const XrQuaternionf a, const XrQuaternionf b) {
+    XrQuaternionf c;
+    c.x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y;
+    c.y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x;
+    c.z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w;
+    c.w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z;
+    return c;
+}
+static inline XrVector3f XrVector3f_Add(const XrVector3f u, const XrVector3f v) {
+    XrVector3f w;
+    w.x = u.x + v.x;
+    w.y = u.y + v.y;
+    w.z = u.z + v.z;
+    return w;
+}
+static inline XrQuaternionf XrQuaternionf_Inverse(const XrQuaternionf q) {
+    XrQuaternionf r;
+    r.x = -q.x;
+    r.y = -q.y;
+    r.z = -q.z;
+    r.w = q.w;
+    return r;
+}
+static inline XrVector3f XrQuaternionf_Rotate(const XrQuaternionf a, const XrVector3f v) {
+    XrVector3f r;
+    XrQuaternionf q = {v.x, v.y, v.z, 0.0f};
+    XrQuaternionf aq = XrQuaternionf_Multiply(a, q);
+    XrQuaternionf aInv = XrQuaternionf_Inverse(a);
+    XrQuaternionf aqaInv = XrQuaternionf_Multiply(aq, aInv);
+    r.x = aqaInv.x;
+    r.y = aqaInv.y;
+    r.z = aqaInv.z;
+    return r;
+}
+static inline XrVector3f XrPosef_Transform(const XrPosef a, const XrVector3f v) {
+    XrVector3f r0 = XrQuaternionf_Rotate(a.orientation, v);
+    return XrVector3f_Add(r0, a.position);
+}
+static inline XrPosef XrPosef_Multiply(const XrPosef a, const XrPosef b) {
+    XrPosef c;
+    c.orientation = XrQuaternionf_Multiply(a.orientation, b.orientation);
+    c.position = XrPosef_Transform(a, b.position);
+    return c;
+}
+
+static inline XrPosef XrPosef_Inverse(const XrPosef a) {
+    XrPosef b;
+    b.orientation = XrQuaternionf_Inverse(a.orientation);
+    b.position = XrQuaternionf_Rotate(b.orientation, XrVector3f_ScalarMultiply(a.position, -1.0f));
+    return b;
+}
+
+
 XrPath MakeXrPath(const XrInstance & xr_instance,const char* str)
 {
 	XrPath path;
@@ -551,10 +612,12 @@ void OpenXR::RecordCurrentBindings()
 	XrInteractionProfileState interactionProfile={XR_TYPE_INTERACTION_PROFILE_STATE,0,0};
 	// for each action, what is the binding?
 	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance, "/user/hand/left"),&interactionProfile));
-	std::cout<<" userHandLeftActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+	if(interactionProfile.interactionProfile)
+		std::cout<<" userHandLeftActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
 	userHandLeftActiveProfile=interactionProfile.interactionProfile;
 	XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance,"/user/hand/right"),&interactionProfile));
-	std::cout<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+	if(interactionProfile.interactionProfile)
+		std::cout<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
 	userHandRightActiveProfile=interactionProfile.interactionProfile;
 	activeInteractionProfilePaths.clear();
 	activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);
@@ -1019,7 +1082,8 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 }
 
 bool OpenXR::RenderLayer( XrTime predictedTime
-	, vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer
+	, vector<XrCompositionLayerProjectionView>& projection_views,vector<XrCompositionLayerSpaceWarpInfoFB>& spacewarp_views
+	, XrCompositionLayerProjection& layer
 	, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
 {
 	lastTime=predictedTime;
@@ -1031,10 +1095,9 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 	locate_info.displayTime = predictedTime;
 	locate_info.space = xr_app_space;
 	xrLocateViews(xr_session, &locate_info, &view_state, (uint32_t)xr_views.size(), &view_count, xr_views.data());
-	views.resize(view_count);
-	static int64_t frame = 0;
-	frame++;
-	renderPlatform->BeginFrame(frame);
+	projection_views.resize(view_count);
+	spacewarp_views.resize(view_count);
+	static bool do_spacewarp=true;
 	// And now we'll iterate through each viewpoint, and render it!
 	for (uint32_t i = 0; i < view_count; i++)
 	{
@@ -1051,12 +1114,12 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 		XR_CHECK(xrWaitSwapchainImage(xr_swapchains[i].handle, &wait_info));
 
 		// Set up our rendering information for the viewpoint we're using right now!
-		views[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-		views[i].pose = xr_views[i].pose;
-		views[i].fov = xr_views[i].fov;
-		views[i].subImage.swapchain = xr_swapchains[i].handle;
-		views[i].subImage.imageRect.offset = { 0, 0 };
-		views[i].subImage.imageRect.extent = { xr_swapchains[i].width, xr_swapchains[i].height };
+		projection_views[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+		projection_views[i].pose = xr_views[i].pose;
+		projection_views[i].fov = xr_views[i].fov;
+		projection_views[i].subImage.swapchain = xr_swapchains[i].handle;
+		projection_views[i].subImage.imageRect.offset = { 0, 0 };
+		projection_views[i].subImage.imageRect.extent = { xr_swapchains[i].width, xr_swapchains[i].height };
 		
 		platform::crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(i);
 		deviceContext.setDefaultRenderTargets(nullptr,nullptr, 0, 0, xr_swapchains[i].width, xr_swapchains[i].height
@@ -1067,19 +1130,103 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 		deviceContext.viewStruct.view_id = i;
 		deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 		// Call the rendering callback with our view and swapchain info
-		RenderLayerView(deviceContext,views[i], xr_swapchains[i].surface_data[img_id],renderDelegate, origin_pos,origin_orientation);
+		RenderLayerView(deviceContext,projection_views[i], xr_swapchains[i].surface_data[img_id],renderDelegate, origin_pos,origin_orientation);
 		
 		FinishDeviceContext(i);
 		// And tell OpenXR we're done with rendering to this one!
 		XrSwapchainImageReleaseInfo release_info = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 		XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[i].handle, &release_info));
-	}
-	renderPlatform->EndFrame();
 
+	}
+	
+	if(do_spacewarp)
+	{
+		for (uint32_t i = 0; i < view_count; i++)
+		{
+			projection_views[i].next = &spacewarp_views[i];
+			DoSpaceWarp(projection_views[i],spacewarp_views[i],i);
+		}
+	}
+	
+	layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+	layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+	layer.layerFlags |= XR_COMPOSITION_LAYER_CORRECT_CHROMATIC_ABERRATION_BIT;
 	layer.space = xr_app_space;
-	layer.viewCount = (uint32_t)views.size();
-	layer.views = views.data();
+
+	layer.viewCount = (uint32_t)projection_views.size();
+	layer.views = projection_views.data();
 	return true;
+}
+
+void OpenXR::DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCompositionLayerSpaceWarpInfoFB &spacewarp_view,int i)
+{
+	spacewarp_view.type = XR_TYPE_COMPOSITION_LAYER_SPACE_WARP_INFO_FB;
+	spacewarp_view.next = NULL;
+	spacewarp_view.layerFlags = 0;
+	auto &motion_swapchain=xr_swapchains[MOTION_VECTOR_SWAPCHAIN+i];
+	auto &depth_swapchain=xr_swapchains[MOTION_DEPTH_SWAPCHAIN+i];
+	spacewarp_view.motionVectorSubImage.swapchain =motion_swapchain.handle;
+	spacewarp_view.motionVectorSubImage.imageRect.offset.x = 0;
+	spacewarp_view.motionVectorSubImage.imageRect.offset.y = 0;
+	spacewarp_view.motionVectorSubImage.imageRect.extent.width	=motion_swapchain.width;
+	spacewarp_view.motionVectorSubImage.imageRect.extent.height	=motion_swapchain.height;
+	spacewarp_view.motionVectorSubImage.imageArrayIndex = 0;
+	spacewarp_view.depthSubImage.swapchain =	depth_swapchain.handle;
+	spacewarp_view.nearZ = 0.1f;
+	spacewarp_view.farZ = INFINITY;
+	spacewarp_view.depthSubImage.imageRect.offset.x = 0;
+	spacewarp_view.depthSubImage.imageRect.offset.y = 0;
+	spacewarp_view.depthSubImage.imageRect.extent.width =depth_swapchain.width;
+	spacewarp_view.depthSubImage.imageRect.extent.height =depth_swapchain.height;
+	spacewarp_view.depthSubImage.imageArrayIndex = 0;
+	
+	// AppSpaceWarp: appSpaceDeltaPose is used to capture appState.CurrentSpace's
+	// movement between previous frame and current frame.
+	//
+	// For example:
+	//  * In previous frame, appState.CurrentSpace's application Space (or world
+	// space) pose is currentPose.
+	//  * In current frame, appState.CurrentSpace's application Space pose is
+	//  prevPose.
+	//
+	// Then appSpaceDeltaPose should be the different of the 2 poses.
+	// appSpaceDeltaPose = Inv(prevPose) * currentPose
+	//
+	// The information will be used in XrRuntime for a couple purposes:
+	// 1. Fill in background motion vector: if a pixel on the screen isn't touched
+	// by any drawcalls, the pixel will be kept as clear color, which can't be used
+	// as correct motion vector. XrRuntime will try to generate it automaticlly, but
+	// it need to know if there is any motion driven by the application artificial
+	// locomotion, appSpaceDeltaPose provides the information for that.
+	// 2. Turn off extrapolation for extreme case: for example if the app had
+	// triggered a huge camera movement, we might want to disable frame
+	// extrapolation for the frame appSpaceDeltaPose can be used to detect cases
+	// like that (eg. teleportation)
+	// It is important to make this pose correct by testing camera artificial
+	// locomotion rotation with a scene which has foreground rendered object and
+	// background only has clear color.
+	
+	XrPosef PrevFrameXrSpacePoseInWorld		= previousState.XrSpacePoseInWorld;
+	XrPosef InvPrevFrameXrSpacePoseInWorld	=XrPosef_Inverse(PrevFrameXrSpacePoseInWorld);
+	XrPosef XrSpacePoseInWorld				= state.XrSpacePoseInWorld;
+	spacewarp_view.appSpaceDeltaPose =XrPosef_Multiply(InvPrevFrameXrSpacePoseInWorld, XrSpacePoseInWorld);
+	
+	// Make debugDeltaPose =1 and rotating the camera with thumbstick,
+	// if you looked carefully on the pixels between cube and background color,
+	// you can see the artifact of using wrong appSpaceDeltaPose
+	int debugDeltaPose = 0;
+	/*
+	if (!GetSystemPropertyInt("debug.oculus.debugDeltaPose", &debugDeltaPose)) {
+	    debugDeltaPose = 0; // default value
+	}*/
+	if (debugDeltaPose > 0) {
+	    spacewarp_view.appSpaceDeltaPose = xr_pose_identity;
+	    std::cerr<<"Bad appSpaceDeltaPose: watch carefully on background artifacts"<<std::endl;
+	}
+	
+	spacewarp_view.minDepth = 0.0f;
+	spacewarp_view.maxDepth = 1.0f;
+	previousState.XrSpacePoseInWorld=state.XrSpacePoseInWorld;
 }
 
 void OpenXR::PollEvents(bool& exit)
@@ -1264,6 +1411,12 @@ const avs::Pose& OpenXR::GetControllerPose(int index) const
 	}
 }
 
+typedef union {
+    XrCompositionLayerProjection Projection;
+    XrCompositionLayerQuad Quad;
+} XrCompositionLayer_Union;
+XrCompositionLayer_Union layers[3];
+
 void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
 {
 	if(!xr_session_running)
@@ -1297,27 +1450,107 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 		(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 		(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 	{
+		state.XrSpacePoseInWorld=space_location.pose;
 		headPose.position	= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
  		headPose.orientation= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 	}
 	// If the session is active, lets render our layer in the compositor!
-	XrCompositionLayerBaseHeader* layer			= nullptr;
-	XrCompositionLayerProjection  layer_proj	= { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-	vector<XrCompositionLayerProjectionView> views;
+	
+	static int64_t frame = 0;
+	frame++;
+	renderPlatform->BeginFrame(frame);
+	int num_layers=0;
+	// Compose the layers for this frame.
+	const XrCompositionLayerBaseHeader* layer_ptrs[4] = {};
+	XrCompositionLayerProjection  &layer_proj=layers[0].Projection;
+	layer_proj= { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+	vector<XrCompositionLayerProjectionView> projection_views;
+	vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
 	bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
 	session_active|=xr_session_state==XR_SESSION_STATE_SYNCHRONIZED;
-	if (session_active && RenderLayer(frame_state.predictedDisplayTime, views, layer_proj,renderDelegate, origin_pos, origin_orientation))
+	if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj,renderDelegate, origin_pos, origin_orientation))
 	{
-		layer = (XrCompositionLayerBaseHeader*)&layer_proj;
+	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
 	}
-
+	RenderOverlayLayer(frame_state.predictedDisplayTime);
+	if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
+	{
+	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
+	}
+	if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
+	{
+	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[2];
+	}
+	renderPlatform->EndFrame();
+	EndFrame();
 	// We're finished with rendering our layer, so send it off for display!
 	XrFrameEndInfo end_info{ XR_TYPE_FRAME_END_INFO };
 	end_info.displayTime = frame_state.predictedDisplayTime;
-	end_info.environmentBlendMode = xr_blend;
-	end_info.layerCount = layer == nullptr ? 0 : 1;
-	end_info.layers = &layer;
+	end_info.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+	end_info.layerCount = num_layers;
+	end_info.layers = layer_ptrs;
 	XR_CHECK(xrEndFrame(xr_session, &end_info));
+}
+ 
+bool OpenXR::RenderOverlayLayer(XrTime predictedTime)
+{
+#if 1	
+	uint32_t					img_id;
+	XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, NULL};
+	XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &acquireInfo, &img_id));
+	xr_swapchains[OVERLAY_SWAPCHAIN].last_img_id=img_id;
+	XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, NULL,  XR_INFINITE_DURATION};
+	XR_CHECK(xrWaitSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &waitInfo));
+	platform::crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(2);
+	deviceContext.setDefaultRenderTargets(nullptr,nullptr, 0, 0, xr_swapchains[OVERLAY_SWAPCHAIN].width, xr_swapchains[OVERLAY_SWAPCHAIN].height
+		,&xr_swapchains[OVERLAY_SWAPCHAIN].surface_data[img_id].target_view,1, nullptr);
+	
+	deviceContext.renderPlatform = renderPlatform;
+
+	deviceContext.viewStruct.view_id =2;
+	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
+	// Set up where on the render target we want to draw, the view has a 
+
+	crossplatform::Viewport viewport{ (int)0, (int)0, (int)xr_swapchains[OVERLAY_SWAPCHAIN].width, (int)xr_swapchains[OVERLAY_SWAPCHAIN].height };
+	renderPlatform->SetViewports(deviceContext,1,&viewport);
+
+	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
+	static float clear[] = { 0.1f, 0.1f, 0.4f, 0.5f };
+	//renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
+	renderPlatform->Clear(deviceContext, clear);
+	FinishDeviceContext(2);
+	XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+	XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &releaseInfo));
+	#endif
+	return true;
+}
+
+bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_layer,int i)
+{
+
+// Build the quad layer
+    const XrVector3f axis = {0.0f, 1.0f, 0.0f};
+    XrVector3f pos = {-2.0f, 2.0f, -2.0f};
+    XrExtent2Df size = {1.0f, 1.0f};
+
+    quad_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
+    quad_layer.next = NULL;
+    quad_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+    quad_layer.space = xr_app_space;
+    quad_layer.eyeVisibility = i?XR_EYE_VISIBILITY_RIGHT:XR_EYE_VISIBILITY_LEFT;
+    memset(&quad_layer.subImage, 0, sizeof(XrSwapchainSubImage));
+    quad_layer.subImage.swapchain = xr_swapchains[OVERLAY_SWAPCHAIN].handle;
+    quad_layer.subImage.imageRect.offset.x = 0;
+    quad_layer.subImage.imageRect.offset.y = 0;
+	quad_layer.subImage.imageRect.extent.width = xr_swapchains[OVERLAY_SWAPCHAIN].width;
+	quad_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
+    quad_layer.subImage.imageArrayIndex = 0;
+    quad_layer.pose = xr_pose_identity;
+   // quad_layer.pose.orientation =        XrQuaternionf_CreateFromVectorAngle(axis, 45.0f * MATH_PI / 180.0f);
+    quad_layer.pose.position = pos;
+
+    quad_layer.size = size;
+	return true;
 }
 
 void OpenXR::Shutdown()

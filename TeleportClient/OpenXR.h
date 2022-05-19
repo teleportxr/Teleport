@@ -226,9 +226,18 @@ namespace teleport
 			platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 			bool haveXRDevice = false;
 			void RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext,XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
-			bool RenderLayer(XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
+			bool RenderLayer(XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& projection_views,std::vector<XrCompositionLayerSpaceWarpInfoFB>& spacewarp_views, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
+			void DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCompositionLayerSpaceWarpInfoFB &spacewarp_view,int i);
+			bool RenderOverlayLayer(XrTime predictedTime);
+			bool AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &layer,int i);
 			avs::Pose headPose;
 			std::vector<avs::Pose> controllerPoses;
+			struct XrState
+			{
+				XrPosef XrSpacePoseInWorld;
+			};
+			XrState state;
+			XrState previousState;
 			void openxr_poll_predicted(XrTime predicted_time);
 			std::function<void()> menuButtonHandler;
 			void RecordCurrentBindings();
@@ -236,13 +245,13 @@ namespace teleport
 			static bool CheckXrResult(XrInstance xr_instance,XrResult res);
 			XrTime lastTime=0;
 			std::vector<swapchain_t>				xr_swapchains;
-
 			// virtuals for platform-specific
 			virtual const char *GetOpenXRGraphicsAPIExtensionName() const=0;
 			virtual std::vector<std::string> GetRequiredExtensions() const;
 			virtual void HandleSessionStateChanges( XrSessionState state);
 			virtual platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(int uint32_t)=0;
 			virtual void FinishDeviceContext(int i) {}
+			virtual void EndFrame() {}
 
 			XrFormFactor					app_config_form = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 			XrViewConfigurationType			app_config_view = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
@@ -260,6 +269,9 @@ namespace teleport
 			XrDebugUtilsMessengerEXT		xr_debug = {};
 			std::vector<XrView>					xr_views;
 			std::vector<XrViewConfigurationView>	xr_config_views;
+			int OVERLAY_SWAPCHAIN=0;
+			int MOTION_VECTOR_SWAPCHAIN=0;
+			int MOTION_DEPTH_SWAPCHAIN=0;
 		};
 	}
 }
