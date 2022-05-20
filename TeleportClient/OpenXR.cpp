@@ -1,11 +1,13 @@
-#include "OpenXR.h"
+
 #include <vector>
 #ifdef _MSC_VER
 #define XR_USE_PLATFORM_WIN32
+#undef WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #endif
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
-
+#include "OpenXR.h"
 #include "fmt/core.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "Platform/CrossPlatform/AxesStandard.h"
@@ -258,7 +260,6 @@ vector<std::string> OpenXR::GetRequiredExtensions() const
 
 bool OpenXR::InitInstance(const char *app_name)
 {
-	RedirectStdCoutCerr();
 	// OpenXR will fail to initialize if we ask for an extension that OpenXR
 	// can't provide! So we need to check our all extensions before 
 	// initializing OpenXR with them. Note that even if the extension is 
@@ -1016,15 +1017,15 @@ void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &dev
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 	#if 1
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.8f, 0.1f, 0.4f, 1.0f };
-	//renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
+	static float clear[] = { 0.1f, 0.1f, 0.4f, 1.0f };
+	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
 	if(surface.depth_view)
 		surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
 
 	// And now that we're set up, pass on the rest of our rendering to the application
 	renderDelegate(deviceContext);
-	//renderPlatform->DeactivateRenderTargets(deviceContext);
+	renderPlatform->DeactivateRenderTargets(deviceContext);
 	#endif
 }
 
@@ -1231,7 +1232,6 @@ void OpenXR::DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCom
 
 void OpenXR::PollEvents(bool& exit)
 {
-	RedirectStdCoutCerr();
 	exit = false;
 	XrEventDataBuffer event_buffer = { XR_TYPE_EVENT_DATA_BUFFER };
 	XrResult res;
@@ -1456,9 +1456,6 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	}
 	// If the session is active, lets render our layer in the compositor!
 	
-	static int64_t frame = 0;
-	frame++;
-	renderPlatform->BeginFrame(frame);
 	int num_layers=0;
 	// Compose the layers for this frame.
 	const XrCompositionLayerBaseHeader* layer_ptrs[4] = {};
@@ -1472,7 +1469,7 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	{
 	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
 	}
-	RenderOverlayLayer(frame_state.predictedDisplayTime);
+	/*RenderOverlayLayer(frame_state.predictedDisplayTime);
 	if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
 	{
 	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
@@ -1480,13 +1477,12 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
 	{
 	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[2];
-	}
-	renderPlatform->EndFrame();
+	}*/
 	EndFrame();
 	// We're finished with rendering our layer, so send it off for display!
 	XrFrameEndInfo end_info{ XR_TYPE_FRAME_END_INFO };
 	end_info.displayTime = frame_state.predictedDisplayTime;
-	end_info.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+	end_info.environmentBlendMode = xr_environment_blend;
 	end_info.layerCount = num_layers;
 	end_info.layers = layer_ptrs;
 	XR_CHECK(xrEndFrame(xr_session, &end_info));
@@ -1515,7 +1511,7 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime)
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.1f, 0.1f, 0.4f, 0.5f };
+	static float clear[] = { 0.5f, 0.5f, 0.4f, 0.5f };
 	//renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
 	FinishDeviceContext(2);
@@ -1530,7 +1526,7 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 
 // Build the quad layer
     const XrVector3f axis = {0.0f, 1.0f, 0.0f};
-    XrVector3f pos = {-2.0f, 2.0f, -2.0f};
+    XrVector3f pos = {0.0f, 1.5f, -2.0f};
     XrExtent2Df size = {1.0f, 1.0f};
 
     quad_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;

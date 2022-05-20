@@ -111,42 +111,45 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="redist\andriod\native_app_glue\android_native_app_glue.c">
+    <ClCompile Include="../../pc_client\ClientRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AndroidOpenXR.cpp">
+    <ClCompile Include="..\..\AndroidClient\AndroidOpenXR.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FileLoader.cpp">
+    <ClCompile Include="..\..\AndroidClient\AndroidRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\pc_client\ClientRenderer.cpp">
+    <ClCompile Include="..\..\AndroidClient\CmdBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="graphicsplugin_vulkan.cpp">
+    <ClCompile Include="..\..\AndroidClient\FileLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CmdBuffer.cpp">
+    <ClCompile Include="..\..\AndroidClient\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="redist\andriod\native_app_glue\android_native_app_glue.h">
+    <ClInclude Include="../../pc_client\ClientRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AndroidOpenXR.h">
+    <ClInclude Include="..\..\AndroidClient\AndroidOpenXR.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FileLoader.h">
+    <ClInclude Include="..\..\AndroidClient\AndroidRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\pc_client\ClientRenderer.h">
+    <ClInclude Include="..\..\AndroidClient\CmdBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CmdBuffer.h">
+    <ClInclude Include="..\..\AndroidClient\FileLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

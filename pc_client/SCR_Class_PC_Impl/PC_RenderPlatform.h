@@ -40,7 +40,7 @@ namespace pc_client
 		std::shared_ptr<clientrender::Skin>					InstantiateSkin(const std::string& name) const override;
 		std::shared_ptr<clientrender::Skin>					InstantiateSkin(const std::string& name, const std::vector<clientrender::mat4>& inverseBindMatrices, size_t numBones, const clientrender::Transform& skinTransform) const override;
 		std::shared_ptr<clientrender::Texture>				InstantiateTexture() const override;
-		std::shared_ptr<clientrender::UniformBuffer>			InstantiateUniformBuffer() const override;
+		std::shared_ptr<clientrender::UniformBuffer>		InstantiateUniformBuffer() const override;
 		std::shared_ptr<clientrender::VertexBuffer>			InstantiateVertexBuffer() const override;
 
 		// Inherited via RenderPlatform

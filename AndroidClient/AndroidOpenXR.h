@@ -6,7 +6,7 @@
 #include "Platform/CrossPlatform/Texture.h"
 #include "TeleportClient/OpenXR.h"
 #include "TeleportCore/Input.h"
-#include "redist/andriod/native_app_glue/android_native_app_glue.h"
+#include "redist/android/native_app_glue/android_native_app_glue.h"
 #include <vulkan/vulkan.hpp>
 #include "CmdBuffer.h"
 

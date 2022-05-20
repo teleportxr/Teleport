@@ -265,7 +265,7 @@ namespace teleport
 			XrSpace							xr_head_space = {};
 			XrSystemId						xr_system_id = XR_NULL_SYSTEM_ID;
 			XrInputSession					xr_input_session = { };
-			XrEnvironmentBlendMode			xr_blend = {};
+			XrEnvironmentBlendMode			xr_environment_blend = {XR_ENVIRONMENT_BLEND_MODE_OPAQUE};
 			XrDebugUtilsMessengerEXT		xr_debug = {};
 			std::vector<XrView>					xr_views;
 			std::vector<XrViewConfigurationView>	xr_config_views;

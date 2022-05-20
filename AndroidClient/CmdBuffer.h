@@ -1,5 +1,5 @@
 #pragma once
-#include "redist/andriod/native_app_glue/android_native_app_glue.h"
+#include "redist/android/native_app_glue/android_native_app_glue.h"
 #include <vulkan/vulkan.hpp>
 namespace teleport
 {

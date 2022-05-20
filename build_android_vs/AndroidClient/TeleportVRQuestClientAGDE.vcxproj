@@ -106,7 +106,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>..\..\..\..\firstparty;$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty;$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ShowIncludes>false</ShowIncludes>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
@@ -126,7 +126,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>..\..\..\..\firstparty;$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty;$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,7 +144,7 @@
       <AdditionalDependencies>$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libxrspacewarp.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;../../../../;./;../../../../libavstream/include;../../../../firstparty/Platform/External/fmt/include;../../../../firstparty/Platform/Android;../../../../thirdparty/enet/include;../../../../thirdparty/basis_universal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;PLATFORM_ANDROID;DEBUG _DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -156,35 +156,26 @@
       <AdditionalDependencies>$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;..\..\..\..\firstparty;../../../3rdParty/khronos/openxr/OpenXR-SDK/include/;../../../3rdParty/meta/OpenXR/Include;../../../../;./;../../../../libavstream/include;../../../../firstparty/Platform/External/fmt/include;../../../../firstparty/Platform/Android;../../../../thirdparty/enet/include;../../../../thirdparty/basis_universal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\pc_client\ClientRenderer.cpp" />
-    <ClCompile Include="AndroidOpenXR.cpp" />
-    <ClCompile Include="CmdBuffer.cpp" />
-    <ClCompile Include="FileLoader.cpp" />
-    <ClCompile Include="graphicsplugin_vulkan.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="redist\andriod\native_app_glue\android_native_app_glue.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="../../pc_client\ClientRenderer.cpp" />
+    <ClCompile Include="..\..\AndroidClient\AndroidOpenXR.cpp" />
+    <ClCompile Include="..\..\AndroidClient\AndroidRenderer.cpp" />
+    <ClCompile Include="..\..\AndroidClient\CmdBuffer.cpp" />
+    <ClCompile Include="..\..\AndroidClient\FileLoader.cpp" />
+    <ClCompile Include="..\..\AndroidClient\main.cpp" />
+    <ClCompile Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\pc_client\ClientRenderer.h" />
-    <ClInclude Include="AndroidOpenXR.h" />
-    <ClInclude Include="CmdBuffer.h" />
-    <ClInclude Include="FileLoader.h" />
-    <ClInclude Include="redist\andriod\native_app_glue\android_native_app_glue.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">false</ExcludedFromBuild>
-    </ClInclude>
+    <ClInclude Include="../../pc_client\ClientRenderer.h" />
+    <ClInclude Include="..\..\AndroidClient\AndroidOpenXR.h" />
+    <ClInclude Include="..\..\AndroidClient\AndroidRenderer.h" />
+    <ClInclude Include="..\..\AndroidClient\CmdBuffer.h" />
+    <ClInclude Include="..\..\AndroidClient\FileLoader.h" />
+    <ClInclude Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AndroidPackaging\app\build.gradle" />
@@ -255,11 +246,17 @@
     <None Include="AndroidPackaging\app\src\main\AndroidManifest.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\build_android_vs\ClientRender\ClientRender_Android.vcxproj">
+    <ProjectReference Include="../../build_android_vs\ClientRender\ClientRender_Android.vcxproj">
       <Project>{e60416e1-f881-4e0b-8459-488a21c53030}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\build_android_vs\TeleportClient\TeleportClient_Android.vcxproj">
+    <ProjectReference Include="../../build_android_vs\TeleportClient\TeleportClient_Android.vcxproj">
       <Project>{07e69bb7-5a19-4a53-ad74-5e841a897e70}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\libavstream\libavstream_Android.vcxproj">
+      <Project>{6f52b627-c756-44dd-ae24-a9370c3dbddc}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\thirdparty\basis_universal\basis_universal.vcxproj">
+      <Project>{e6abe220-7eef-47a3-8f2a-a63f6ca816a2}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

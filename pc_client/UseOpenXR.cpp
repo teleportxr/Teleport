@@ -1,5 +1,3 @@
-#include "UseOpenXR.h"
-#include <vector>
 #if TELEPORT_CLIENT_USE_D3D12
 #include <d3d12.h>
 #define XR_USE_GRAPHICS_API_D3D12
@@ -8,6 +6,8 @@
 #define XR_USE_GRAPHICS_API_D3D11
 #endif
 #define XR_USE_PLATFORM_WIN32
+#include "UseOpenXR.h"
+
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
@@ -76,7 +76,7 @@ bool UseOpenXR::TryInitDevice()
 	// Check what blend mode is valid for this device (opaque vs transparent displays)
 	// We'll just take the first one available!
 	uint32_t blend_count = 0;
-	xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, app_config_view, 1, &blend_count, &xr_blend);
+	xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, app_config_view, 1, &blend_count, &xr_environment_blend);
 
 	// OpenXR wants to ensure apps are using the correct graphics card, so this MUST be called 
 	// before xrCreateSession. This is crucial on devices that have multiple graphics cards, 

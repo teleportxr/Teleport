@@ -19,7 +19,6 @@
 #include "TeleportClient/SessionClient.h"
 #include "ClientRender/ResourceCreator.h"
 #include "ClientRender/ResourceManager.h"
-#include "ClientRender/GeometryDecoder.h"
 #include "ClientRender/IndexBuffer.h"
 #include "ClientRender/Shader.h"
 #include "ClientRender/Texture.h"
@@ -63,23 +62,6 @@ namespace pc_client
 }
 namespace teleport
 {
-/// <summary>
-/// A 
-/// </summary>
-struct AVSTexture
-{
-	virtual ~AVSTexture() = default;
-	virtual avs::SurfaceBackendInterface* createSurface() const = 0;
-};
-using AVSTextureHandle = std::shared_ptr<AVSTexture>;
-
-struct RendererStats
-{
-	uint64_t frameCounter;
-	double lastFrameTime;
-	double lastFPS;
-};
-
 /// @brief The renderer for a client connection.
 class ClientRenderer :public platform::crossplatform::PlatformRendererInterface, public SessionCommandInterface
 		,public clientrender::Renderer
@@ -100,31 +82,13 @@ class ClientRenderer :public platform::crossplatform::PlatformRendererInterface,
 	/// It is better to use a reversed depth buffer format, i.e. the near plane is z=1 and the far plane is z=0. This
 	/// distributes numerical precision to where it is better used.
 	static const bool reverseDepth = true;
-	/// A pointer to RenderPlatform, so that we can use the platform::crossplatform API.
-	platform::crossplatform::RenderPlatform *renderPlatform	=nullptr;
 	pc_client::PC_RenderPlatform PcClientRenderPlatform;
-	/// A framebuffer to store the colour and depth textures for the view.
-	platform::crossplatform::BaseFramebuffer	*hdrFramebuffer	=nullptr;
-	/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.
-	platform::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
-
-	// A simple example mesh to draw as transparent
-	platform::crossplatform::Effect *pbrEffect				= nullptr;
-	platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
-	platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
-	platform::crossplatform::ShaderResource _lights;
+	
 	platform::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 	platform::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
-	platform::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 	platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
-	platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 	platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 	platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
-	platform::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
-	platform::crossplatform::Texture* specularCubemapTexture	= nullptr;
-	platform::crossplatform::Texture* lightingCubemapTexture	= nullptr;
-	platform::crossplatform::Texture* videoTexture				= nullptr;
-
 	static constexpr int maxTagDataSize = 32;
 	VideoTagDataCube videoTagDataCube[maxTagDataSize];
 
@@ -168,7 +132,6 @@ class ClientRenderer :public platform::crossplatform::PlatformRendererInterface,
 	std::string server_ip;
 	int server_discovery_port=0;
 
-	float roomRadius=1.5f;
 	teleport::client::ClientDeviceState *clientDeviceState = nullptr;
 
 	// handler for the UI to tell us to connect.
@@ -235,16 +198,6 @@ public:
 
 	void CreateTexture(AVSTextureHandle &th,int width, int height);
 	void FillInControllerPose(int index, float offset);
-	static constexpr bool AudioStream	= true;
-	static constexpr bool GeoStream		= true;
-	static constexpr uint32_t NominalJitterBufferLength = 0;
-	static constexpr uint32_t MaxJitterBufferLength = 50;
-
-	//static constexpr avs::SurfaceFormat SurfaceFormat = avs::SurfaceFormat::ARGB;
-	AVSTextureHandle avsTexture;
-
-	GeometryDecoder geometryDecoder;
-	
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 	sca::PC_AudioPlayer audioPlayer;
 	

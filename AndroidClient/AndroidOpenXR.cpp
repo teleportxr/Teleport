@@ -394,8 +394,15 @@ bool OpenXR::TryInitDevice()
 	// Check what blend mode is valid for this device (opaque vs transparent displays)
 	// We'll just take the first one available!
 	uint32_t blend_count = 0;
-	xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, app_config_view, 1, &blend_count, &xr_blend);
-
+	XR_CHECK(xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, app_config_view, 0, &blend_count, nullptr));
+	std::vector<XrEnvironmentBlendMode> blend_modes;
+	blend_modes.resize(blend_count);
+	XR_CHECK(xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, app_config_view, blend_count, &blend_count, blend_modes.data()));
+	if(std::find(blend_modes.begin(), blend_modes.end(),xr_environment_blend )==blend_modes.end())
+	{
+		std::cerr<<"Failed to find blend mode.\n";
+		return false;
+	}
 	// OpenXR wants to ensure apps are using the correct graphics card, so this MUST be called 
 	// before xrCreateSession. This is crucial on devices that have multiple graphics cards, 
 	// like laptops with integrated graphics chips in addition to dedicated graphics cards.
