@@ -258,6 +258,9 @@
     <ProjectReference Include="..\thirdparty\basis_universal\basis_universal.vcxproj">
       <Project>{e6abe220-7eef-47a3-8f2a-a63f6ca816a2}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\thirdparty\draco\draco.vcxproj">
+      <Project>{45561321-f023-4c8a-9edc-7c721c2da8b5}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
