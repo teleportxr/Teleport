@@ -70,7 +70,7 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/copy.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/copy.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -79,13 +79,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\copy.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/copy.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/copy.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/copy.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/copy.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -94,7 +94,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\copy.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/copy.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -104,7 +104,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/debug.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v -d
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/debug.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v -d
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -113,13 +113,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\debug.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/debug.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/debug.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/debug.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v -d
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/debug.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v -d
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -128,7 +128,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\debug.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/debug.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -138,7 +138,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/font.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/font.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -147,13 +147,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\font.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/font.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/font.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/font.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/font.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -162,7 +162,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\font.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/font.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -172,7 +172,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/hdr.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/hdr.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -181,13 +181,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\hdr.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/hdr.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/hdr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/hdr.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/hdr.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -196,7 +196,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\hdr.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/hdr.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -206,7 +206,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/imgui.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/imgui.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -215,13 +215,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\imgui.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/imgui.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/imgui.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/imgui.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/imgui.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -230,7 +230,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\imgui.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/imgui.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -240,7 +240,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/light_probes.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/light_probes.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -249,13 +249,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\light_probes.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/light_probes.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/light_probes.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/light_probes.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/light_probes.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -264,7 +264,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\light_probes.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/light_probes.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -274,7 +274,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/mip.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/mip.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -283,13 +283,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\mip.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/mip.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/mip.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/mip.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/mip.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -298,7 +298,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\mip.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/mip.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -308,7 +308,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/solid.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/solid.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -317,13 +317,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\solid.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/solid.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/solid.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/solid.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/solid.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -332,7 +332,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\solid.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/solid.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -342,7 +342,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/sphere.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/sphere.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -351,13 +351,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\sphere.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/sphere.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/sphere.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/sphere.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/sphere.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -366,7 +366,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\sphere.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/sphere.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -376,7 +376,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/spherical_harmonics.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/spherical_harmonics.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -385,13 +385,13 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\spherical_harmonics.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/spherical_harmonics.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating shaderbin/spherical_harmonics.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/spherical_harmonics.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../../client/VisualStudio/TeleportVRQuestClientAGDE/TeleportVRQuestClientAGDE/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../firstparty/Platform/Shaders/SFX/spherical_harmonics.sfx -I"../../../../../firstparty/Platform/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -400,7 +400,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\spherical_harmonics.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/spherical_harmonics.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -415,7 +415,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\copy.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\debug.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\font.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\hdr.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\imgui.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\light_probes.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\mip.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\solid.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\sphere.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\spherical_harmonics.sfxo;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/copy.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/debug.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/font.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/hdr.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/imgui.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/light_probes.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/mip.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/solid.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/sphere.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/spherical_harmonics.sfxo;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../../firstparty/Platform/build\Vulkan\CMakeFiles\VulkanCoreShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
@@ -428,7 +428,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty/Platform/build\Vulkan\shaderbin\copy.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\debug.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\font.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\hdr.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\imgui.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\light_probes.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\mip.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\solid.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\sphere.sfxo;../../../../../firstparty/Platform/build\Vulkan\shaderbin\spherical_harmonics.sfxo;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../AndroidClient/AndroidPackaging/app/src/main/assets/copy.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/debug.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/font.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/hdr.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/imgui.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/light_probes.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/mip.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/solid.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/sphere.sfxo;../../../../AndroidClient/AndroidPackaging/app/src/main/assets/spherical_harmonics.sfxo;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../../firstparty/Platform/build\Vulkan\CMakeFiles\VulkanCoreShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</VerifyInputsAndOutputsExist>
