@@ -7,7 +7,7 @@ LOCAL_PATH := $(call my-dir)
 #--------------------------------------------------------
 include $(CLEAR_VARS)				# clean everything up to prepare for a module
 
-LOCAL_MODULE    := draco	        # generate Basis_universal.a
+LOCAL_MODULE    := draco	        # generate draco.a
 
 include $(LOCAL_PATH)/../../../client/cflags.mk
 
