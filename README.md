@@ -103,6 +103,14 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 8. Go to File->Project Structure->Modules->client->TeleportClient->Signing Configs and in debug config, put in the details of the key you created. 
 9. Click the build icon to compile and then you should be able to run.
 
+## Building the Android Vulkan OpenXR client
+
+1. Use Android Studio to install the appropriate NDK (see release.properties).
+2. Install the appropriate JDK (see release.properties) and set JAVA_HOME
+3. Install current stable [AGDE](https://developer.android.com/games/agde#downloads)
+4. Open the sln in build_android_vs in Visual Studio.
+5. Build and run.
+
 ## Firewall setup
 1. Go to Windows Security->Firewall & Network->Advanced Settings.
 2. Choose Inbound Rules->New Rule->Port->UDP.

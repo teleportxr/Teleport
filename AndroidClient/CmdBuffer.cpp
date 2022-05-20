@@ -19,7 +19,7 @@ using namespace android;
 
 
 [[noreturn]] void throwVkResult(VkResult res, const char* originator = nullptr, const char* sourceLocation = nullptr) {
-	throw(fmt::format("VkResult failure {} {} {}", vkResultString(res).c_str()), originator, sourceLocation);
+	throw(fmt::format("VkResult failure {} {} {}", vkResultString(res).c_str(), originator, sourceLocation));
 }
 
 VkResult CheckVkResult(VkResult res, const char* originator = nullptr, const char* sourceLocation = nullptr) {
