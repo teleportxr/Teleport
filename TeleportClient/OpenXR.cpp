@@ -1469,7 +1469,7 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	{
 	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
 	}
-	/*RenderOverlayLayer(frame_state.predictedDisplayTime);
+	RenderOverlayLayer(frame_state.predictedDisplayTime);
 	if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
 	{
 	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
@@ -1477,7 +1477,7 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
 	{
 	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[2];
-	}*/
+	}
 	EndFrame();
 	// We're finished with rendering our layer, so send it off for display!
 	XrFrameEndInfo end_info{ XR_TYPE_FRAME_END_INFO };

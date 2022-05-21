@@ -78,9 +78,15 @@
     <ClCompile Include="..\..\ClientRender\UniformBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationComponent.cpp" />
-    <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationState.cpp" />
-    <ClCompile Include="..\..\ClientRender\NodeComponents\VisibilityComponent.cpp" />
+    <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ClientRender\NodeComponents\VisibilityComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h">
@@ -182,8 +188,14 @@
     <ClInclude Include="..\..\ClientRender\VertexBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ClientRender\NodeComponents\AnimationComponent.h" />
-    <ClInclude Include="..\..\ClientRender\NodeComponents\AnimationState.h" />
-    <ClInclude Include="..\..\ClientRender\NodeComponents\VisibilityComponent.h" />
+    <ClInclude Include="..\..\ClientRender\NodeComponents\VisibilityComponent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\NodeComponents\AnimationComponent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\NodeComponents\AnimationState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

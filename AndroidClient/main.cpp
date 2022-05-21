@@ -35,6 +35,8 @@ using namespace platform;
 using namespace crossplatform;
 using namespace platform;
 using namespace core;
+using namespace teleport;
+using namespace android;
 
 int kOverrideWidth = 1440;
 int kOverrideHeight = 900;
@@ -116,7 +118,7 @@ void InitXR(teleport::android::OpenXR &openXR)
 
 void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
 {
-
+	
 }
 
 #include <sys/prctl.h> // for prctl( PR_SET_NAME )
@@ -150,6 +152,8 @@ void android_main(struct android_app* app)
 	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
 	
 	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState);
+	
+	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	openXR.InitInstance("Teleport VR Client");
 	openXR.InitSystem();
 	vulkan::DeviceManager vulkanDeviceManager;
@@ -162,8 +166,6 @@ void android_main(struct android_app* app)
 	openXR.SetVulkanDeviceAndInstance(vulkanDeviceManager.GetVulkanDevice(),vulkanDeviceManager.GetVulkanInstance(),MainThreadTid,0);
 	openXR.Init(renderPlatform);
 	InitXR(openXR);
-	//VulkanTester vt(window);
-	//displaySurfaceManager = vt.GetDisplaySurfaceManager();
 	
 	platform::crossplatform::RenderDelegate renderDelegate;
 	renderDelegate = std::bind(&RenderView,std::placeholders::_1);
