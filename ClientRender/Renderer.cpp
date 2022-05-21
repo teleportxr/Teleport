@@ -2,15 +2,19 @@
 #include <libavstream/libavstream.hpp>
 #include "TeleportClient/ServerTimestamp.h"
 #include <regex>
+#include "Tests.h"
 
 avs::Timestamp clientrender::platformStartTimestamp ;
 static bool timestamp_initialized=false;
 using namespace clientrender;
 
-Renderer::Renderer(clientrender::NodeManager *localNodeManager,clientrender::NodeManager *remoteNodeManager)
-	:localGeometryCache(localNodeManager)
+Renderer::Renderer(clientrender::NodeManager *localNodeManager,clientrender::NodeManager *remoteNodeManager,SessionClient *sc,bool dev)
+	:sessionClient(sc)
+	,localGeometryCache(localNodeManager)
 	, geometryCache(remoteNodeManager)
+	, dev_mode(dev)
 {
+	sessionClient->SetSessionCommandInterface(this);
 	if (!timestamp_initialized)
 #ifdef _MSC_VER
 		platformStartTimestamp = avs::PlatformWindows::getTimestamp();
@@ -18,6 +22,12 @@ Renderer::Renderer(clientrender::NodeManager *localNodeManager,clientrender::Nod
 		platformStartTimestamp = avs::PlatformPOSIX::getTimestamp();
 #endif
 	timestamp_initialized=true;
+	sessionClient->SetResourceCreator(&resourceCreator);
+	sessionClient->SetGeometryCache(&geometryCache);
+	resourceCreator.SetGeometryCache(&geometryCache);
+	localResourceCreator.SetGeometryCache(&localGeometryCache);
+
+	clientrender::Tests::RunAllTests();
 }
 
 void Renderer::Update(double timestamp_ms)

@@ -101,7 +101,7 @@ void apply_material()
 using namespace teleport;
 using namespace client;
 
-struct AVSTextureImpl :public AVSTexture
+struct AVSTextureImpl :public clientrender::AVSTexture
 {
 	AVSTextureImpl(platform::crossplatform::Texture *t)
 		:texture(t)
@@ -130,20 +130,11 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 		std::cout << msg ;
 }
 
-ClientRenderer::ClientRenderer(ClientDeviceState *c, teleport::Gui& g,bool dev):
-	Renderer(new clientrender::NodeManager,new clientrender::NodeManager)
-	,sessionClient(this, std::make_unique<PCDiscoveryService>())
+ClientRenderer::ClientRenderer(ClientDeviceState *c,SessionClient *sc, teleport::Gui& g,bool dev):
+	Renderer(new clientrender::NodeManager,new clientrender::NodeManager,sc,dev)
 	, clientDeviceState(c)
-	, RenderMode(0)
-	, dev_mode(dev)
 	, gui(g)
 {
-	sessionClient.SetResourceCreator(&resourceCreator);
-	sessionClient.SetGeometryCache(&geometryCache);
-	resourceCreator.SetGeometryCache(&geometryCache);
-	localResourceCreator.SetGeometryCache(&localGeometryCache);
-
-	clientrender::Tests::RunAllTests();
 }
 
 ClientRenderer::~ClientRenderer()
@@ -426,8 +417,8 @@ void ClientRenderer::Render(int view_id, void* context, void* renderTexture, int
 	//renderPlatform->DrawDepth(deviceContext, 0, 0, (256 * viewport.w)/ viewport.h, 256, hdrFramebuffer->GetDepthTexture());
 	if (show_video)
 	{
-		AVSTextureHandle th = avsTexture;
-		AVSTexture& tx = *th;
+		clientrender::AVSTextureHandle th = avsTexture;
+		clientrender::AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 		int W = hdrFramebuffer->GetWidth();
 		int H = hdrFramebuffer->GetHeight();
@@ -497,8 +488,8 @@ void ClientRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &
 	// The following block renders to the hdrFramebuffer's rendertarget:
 	//vec3 finalViewPos=localOriginPos+relativeHeadPos;
 	{
-		AVSTextureHandle th = avsTexture;
-		AVSTexture& tx = *th;
+		clientrender::AVSTextureHandle th = avsTexture;
+		clientrender::AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
 		if (ti)
@@ -529,7 +520,7 @@ void ClientRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &
 			}
 
 			UpdateTagDataBuffers(deviceContext);
-			if (sessionClient.IsConnected())
+			if (sessionClient->IsConnected())
 			{
 				if (videoTexture->IsCubemap())
 				{
@@ -552,7 +543,7 @@ void ClientRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 
 		pbrConstants.drawDistance = lastSetupCommand.draw_distance;
-		if (sessionClient.IsConnected()||render_local_offline)
+		if (sessionClient->IsConnected()||render_local_offline)
 			RenderLocalNodes(deviceContext,server_uid,geometryCache);
 
 		{
@@ -571,7 +562,7 @@ void ClientRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &
 		
 		gui.Render(deviceContext);
 
-		if (!sessionClient.IsConnected() || gui.HasFocus())
+		if (!sessionClient->IsConnected() || gui.HasFocus())
 		{
 			pbrConstants.drawDistance = 1000.0f;
 			RenderLocalNodes(deviceContext, 0,localGeometryCache);
@@ -771,8 +762,8 @@ void ClientRenderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& dev
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
-	gui.LinePrint(sessionClient.IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
-		, sessionClient.GetClientID(),sessionClient.GetServerIP().c_str(),sessionClient.GetPort()):
+	gui.LinePrint(sessionClient->IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
+		, sessionClient->GetClientID(),sessionClient->GetServerIP().c_str(),sessionClient->GetPort()):
 		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", server_ip.c_str(), server_discovery_port):"Offline"),white);
 	gui.LinePrint( platform::core::QuickFormat("Framerate: %4.4f", framerate));
 
@@ -1055,8 +1046,8 @@ void ClientRenderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceCon
 }
 void ClientRenderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
-	AVSTextureHandle th = avsTexture;
-	AVSTexture& tx = *th;
+	clientrender::AVSTextureHandle th = avsTexture;
+	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 	
 	if(!force&&(node_select > 0 && node_select != node->id))
@@ -1186,8 +1177,8 @@ void ClientRenderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& 
 
 void ClientRenderer::RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
-	AVSTextureHandle th = avsTexture;
-	AVSTexture& tx = *th;
+	clientrender::AVSTextureHandle th = avsTexture;
+	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 	if(!force&&(node_select > 0 && node_select != node->id))
 		return;
@@ -1288,11 +1279,11 @@ bool ClientRenderer::OnDeviceRemoved()
 	return true;
 }
 
-void ClientRenderer::CreateTexture(AVSTextureHandle &th,int width, int height)
+void ClientRenderer::CreateTexture(clientrender::AVSTextureHandle &th,int width, int height)
 {
 	if (!(th))
 		th.reset(new AVSTextureImpl(nullptr));
-	AVSTexture *t = th.get();
+	clientrender::AVSTexture *t = th.get();
 	AVSTextureImpl *ti=(AVSTextureImpl*)t;
 	if(!ti->texture)
 		ti->texture = renderPlatform->CreateTexture();
@@ -1386,7 +1377,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 	videoTagDataCubeArray.resize(maxTagDataSize);
 
 	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ms);
-	sessionClient.SetPeerTimeout(setupCommand.idle_connection_timeout);
+	sessionClient->SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 	const uint32_t geoStreamID = 80;
 	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } };
@@ -1561,9 +1552,9 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 					, (int32_t)setupCommand.idle_connection_timeout
 			};
 
-			inputNetworkPipeline.reset(new sca::NetworkPipeline());
+			audioInputNetworkPipeline.reset(new sca::NetworkPipeline());
 			audioInputQueue.configure(4096, 120, "AudioInputQueue");
-			inputNetworkPipeline->initialise(networkSettings, &audioInputQueue);
+			audioInputNetworkPipeline->initialise(networkSettings, &audioInputQueue);
 
 			// The callback will be called when audio input is received.
 			auto f = [this](const uint8_t* data, size_t dataSize) -> void
@@ -1571,7 +1562,7 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip,const avs::Set
 				size_t bytesWritten;
 				if (audioInputQueue.write(nullptr, data, dataSize, bytesWritten))
 				{
-					inputNetworkPipeline->process();
+					audioInputNetworkPipeline->process();
 				}
 			};
 			// The audio player will stop recording automatically when deconfigured. 
@@ -1889,7 +1880,7 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 
 	}
 	// Handle networked session.
-	if (sessionClient.IsConnected())
+	if (sessionClient->IsConnected())
 	{
 		//vec3 forward=-camera.Orientation.Tz();
 		//vec3 right=camera.Orientation.Tx();
@@ -1909,27 +1900,27 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			const teleport::core::Input& inputs = openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
 			clientDeviceState->SetInputs(inputs);
 		}
-		sessionClient.Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
+		sessionClient->Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
 			clientDeviceState->input, clientPipeline.decoder.idrRequired(),fTime, time_step);
 
-		if(receivedInitialPos != sessionClient.receivedInitialPos)
+		if(receivedInitialPos != sessionClient->receivedInitialPos)
 		{
-			clientDeviceState->originPose = sessionClient.GetOriginPose();
-			receivedInitialPos = sessionClient.receivedInitialPos;
+			clientDeviceState->originPose = sessionClient->GetOriginPose();
+			receivedInitialPos = sessionClient->receivedInitialPos;
 			clientDeviceState->UpdateGlobalPoses();
 		}
 		
-		if(receivedRelativePos!=sessionClient.receivedRelativePos)
+		if(receivedRelativePos!=sessionClient->receivedRelativePos)
 		{
-			receivedRelativePos=sessionClient.receivedRelativePos;
-			vec3 pos =*((vec3*)&sessionClient.GetOriginToHeadOffset());
+			receivedRelativePos=sessionClient->receivedRelativePos;
+			vec3 pos =*((vec3*)&sessionClient->GetOriginToHeadOffset());
 			camera.SetPosition((const float*)(&pos));
 		}
 		
 		avs::Result result = clientPipeline.pipeline.process();
 		if (result == avs::Result::Network_Disconnection)
 		{
-			sessionClient.Disconnect(0);
+			sessionClient->Disconnect(0);
 			return;
 		}
 
@@ -1945,9 +1936,9 @@ void ClientRenderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	else
 	{
 		ENetAddress remoteEndpoint; //192.168.3.42 45.132.108.84
-		if (canConnect && sessionClient.Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
+		if (canConnect && sessionClient->Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
-			sessionClient.Connect(remoteEndpoint, TELEPORT_TIMEOUT);
+			sessionClient->Connect(remoteEndpoint, TELEPORT_TIMEOUT);
 			gui.SetConnecting(false);
 			canConnect=false;
 			gui.Hide();
@@ -2088,8 +2079,8 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			show_node_overlays = !show_node_overlays;
 			break;
 		case 'K':
-			if(sessionClient.IsConnected())
-				sessionClient.Disconnect(0);
+			if(sessionClient->IsConnected())
+				sessionClient->Disconnect(0);
 			canConnect=!canConnect;
 			break;
 		case 'M':
@@ -2100,7 +2091,7 @@ void ClientRenderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			RecompileShaders();
 			break;
 		case 'Y':
-			if (sessionClient.IsConnected())
+			if (sessionClient->IsConnected())
 				clientPipeline.decoder.toggleShowAlphaAsColor();
 			break;
 		case VK_SPACE:

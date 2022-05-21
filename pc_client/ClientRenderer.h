@@ -63,7 +63,7 @@ namespace pc_client
 namespace teleport
 {
 /// @brief The renderer for a client connection.
-class ClientRenderer :public platform::crossplatform::PlatformRendererInterface, public SessionCommandInterface
+class ClientRenderer :public platform::crossplatform::PlatformRendererInterface
 		,public clientrender::Renderer
 {
 	enum class ShaderMode
@@ -101,13 +101,6 @@ class ClientRenderer :public platform::crossplatform::PlatformRendererInterface,
 	platform::crossplatform::MouseCameraInput	mouseCameraInput;
 	std::map<MouseOrKey, avs::InputId> inputIdMappings;
 
-	// determined by the stream setup command:
-	vec4 colourOffsetScale;
-	vec4 depthOffsetScale;
-
-	bool keydown[256] = {};
-	SessionClient sessionClient;
-	teleport::core::Input inputs;
 	
 	bool show_video = false;
 
@@ -140,7 +133,7 @@ class ClientRenderer :public platform::crossplatform::PlatformRendererInterface,
 	// TODO: temporary.
 	avs::uid server_uid=1;
 public:
-	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState, teleport::Gui &g,bool dev);
+	ClientRenderer(teleport::client::ClientDeviceState *clientDeviceState,SessionClient *sessionClient, teleport::Gui &g,bool dev);
 	~ClientRenderer();
 	// Implement SessionCommandInterface
 	bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
@@ -180,7 +173,7 @@ public:
 	void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid,clientrender::GeometryCache &g);
 	void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
 	void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
-	void RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+	void RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext) override;
 
 	int AddView();
 	void ResizeView(int view_id, int W, int H);
@@ -196,28 +189,14 @@ public:
 	void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 	void OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown);
 
-	void CreateTexture(AVSTextureHandle &th,int width, int height);
+	void CreateTexture(clientrender::AVSTextureHandle &th,int width, int height);
 	void FillInControllerPose(int index, float offset);
 	std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 	sca::PC_AudioPlayer audioPlayer;
 	
-	teleport::client::ClientPipeline clientPipeline;
-	std::unique_ptr<sca::NetworkPipeline> inputNetworkPipeline;
+	std::unique_ptr<sca::NetworkPipeline> audioInputNetworkPipeline;
 	avs::Queue audioInputQueue;
-
-	int RenderMode;
-	std::shared_ptr<clientrender::Material> mFlatColourMaterial;
-	unsigned long long receivedInitialPos = 0;
-	unsigned long long receivedRelativePos = 0;
-	bool videoPosDecoded=false;
-	bool canConnect=false;
-	vec3 videoPos;
-
-	avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
-	bool dev_mode = false;
-	bool render_local_offline = false;
 private:
-	avs::uid show_only=0;
 	void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 	void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 	void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
@@ -225,15 +204,7 @@ private:
 	void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 
 	const PC_MemoryUtil memoryUtil;
-
-	static constexpr float HFOV = 90;
-	float gamma=0.44f;
-
 	teleport::Gui &gui;
-	avs::uid node_select=0;
-	bool have_vr_device = false;
-	platform::crossplatform::Texture* externalTexture = nullptr;
-	teleport::client::OpenXR *openXR=nullptr;
 };
 
 }

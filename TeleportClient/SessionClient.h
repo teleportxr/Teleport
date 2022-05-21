@@ -55,11 +55,11 @@ class SessionClient
 {
 public:
 	SessionClient(
-			SessionCommandInterface *commandInterface,
 			std::unique_ptr<teleport::client::DiscoveryService> &&discoveryService);
 
 	~SessionClient();
-
+	
+	void SetSessionCommandInterface(SessionCommandInterface*);
 	void SetResourceCreator(avs::GeometryTargetBackendInterface *);
 	void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
 
@@ -140,7 +140,7 @@ private:
 
     avs::uid lastServerID = 0; //UID of the server we last connected to.
 
-    SessionCommandInterface* const mCommandInterface;
+    SessionCommandInterface* mCommandInterface=nullptr;
     std::unique_ptr<teleport::client::DiscoveryService> discoveryService;
 	avs::GeometryTargetBackendInterface* mResourceCreator=nullptr;
 	avs::GeometryCacheBackendInterface* geometryCache = nullptr;

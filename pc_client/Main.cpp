@@ -37,15 +37,16 @@ platform::dx11::DeviceManager deviceManager;
 
 using namespace teleport;
 
-teleport::ClientRenderer *clientRenderer=nullptr;
+ClientRenderer *clientRenderer=nullptr;
+SessionClient *sessionClient=nullptr;
 platform::crossplatform::RenderDelegate renderDelegate;
-teleport::UseOpenXR useOpenXR;
+UseOpenXR useOpenXR;
 platform::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
 platform::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 
 platform::crossplatform::DisplaySurfaceManager displaySurfaceManager;
-teleport::client::ClientDeviceState clientDeviceState;
+client::ClientDeviceState clientDeviceState;
 std::vector<std::string> server_ips;
 teleport::Gui gui;
 
@@ -150,6 +151,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 #include <filesystem>
 #include <fstream>
+#include <PCDiscoveryService.h>
 namespace fs = std::filesystem;
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -222,6 +224,8 @@ void ShutdownRenderer(HWND hWnd)
 		clientRenderer->InvalidateDeviceObjects();
 	delete clientRenderer;
 	clientRenderer=nullptr;
+	delete sessionClient;
+	sessionClient=nullptr;
 }
 #define STRINGIFY(a) STRINGIFY2(a)
 #define STRINGIFY2(a) #a
@@ -236,10 +240,11 @@ void InitXR()
 			useOpenXR.SetMenuButtonHandler(showHideDelegate);
 	}
 }
-	
+
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	clientRenderer=new teleport::ClientRenderer (&clientDeviceState,gui, dev_mode);
+	sessionClient=new SessionClient(std::make_unique<PCDiscoveryService>());
+	clientRenderer=new teleport::ClientRenderer (&clientDeviceState, sessionClient,gui,dev_mode);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;

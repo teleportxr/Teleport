@@ -15,13 +15,18 @@ using namespace teleport;
 using namespace client;
 using namespace clientrender;
 
-SessionClient::SessionClient(SessionCommandInterface* commandInterface, std::unique_ptr<DiscoveryService>&& discoveryService)
-	: mCommandInterface(commandInterface), discoveryService(std::move(discoveryService))
+SessionClient::SessionClient( std::unique_ptr<DiscoveryService>&& discoveryService)
+	:  discoveryService(std::move(discoveryService))
 {}
 
 SessionClient::~SessionClient()
 {
 	//Disconnect(0); causes crash. trying to access deleted objects.
+}
+
+void SessionClient::SetSessionCommandInterface(SessionCommandInterface *s)
+{
+	mCommandInterface=s;
 }
 
 void SessionClient::SetResourceCreator(avs::GeometryTargetBackendInterface *r)

@@ -13,6 +13,8 @@
 #include <libavstream/src/platform.hpp>
 #include "TeleportClient/SessionClient.h"
 #include "ClientRender/GeometryDecoder.h"
+#include "TeleportClient/ClientPipeline.h"
+#include "TeleportClient/OpenXR.h"
 
 namespace clientrender
 {
@@ -48,10 +50,10 @@ namespace clientrender
 	extern avs::Timestamp platformStartTimestamp;	
 	//! Base class for a renderer that draws for a specific server.
 	//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
-	class Renderer
+	class Renderer:public SessionCommandInterface
 	{
 	public:
-		Renderer(clientrender::NodeManager *localNodeManager,clientrender::NodeManager *remoteNodeManager);
+		Renderer(clientrender::NodeManager *localNodeManager,clientrender::NodeManager *remoteNodeManager,SessionClient *sessionClient,bool dev_mode);
 
 		void SetMinimumPriority(int32_t p)
 		{
@@ -62,12 +64,20 @@ namespace clientrender
 			return minimumPriority;
 		}
 		virtual void ConfigureVideo(const avs::VideoConfig &vc)=0;
+		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)=0;
 		avs::SetupCommand lastSetupCommand;
 		avs::SetupLightingCommand lastSetupLightingCommand;
 
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
 	protected:
+		// determined by the stream setup command:
+		vec4 colourOffsetScale;
+		vec4 depthOffsetScale;
+
+		bool keydown[256] = {};
+		SessionClient *sessionClient=nullptr;
+		teleport::core::Input inputs;
 		/// A pointer to RenderPlatform, so that we can use the platform::crossplatform API.
 		platform::crossplatform::RenderPlatform *renderPlatform	=nullptr;
 		/// A framebuffer to store the colour and depth textures for the view.
@@ -92,8 +102,29 @@ namespace clientrender
 		bool using_vr = true;
 		clientrender::GeometryCache localGeometryCache;
 		clientrender::ResourceCreator localResourceCreator;
+
+		int RenderMode=0;
+		std::shared_ptr<clientrender::Material> mFlatColourMaterial;
+		unsigned long long receivedInitialPos = 0;
+		unsigned long long receivedRelativePos = 0;
+		bool videoPosDecoded=false;
+		bool canConnect=false;
+		vec3 videoPos;
+
+		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
+		bool dev_mode = false;
+
+		static constexpr float HFOV = 90;
+		float gamma=0.44f;
+
+		avs::uid node_select=0;
+		bool have_vr_device = false;
+		platform::crossplatform::Texture* externalTexture = nullptr;
+		teleport::client::OpenXR *openXR=nullptr;
+		avs::uid show_only=0;
 		bool Match(const std::string& full_string, const std::string& substring);
 	public:
+		teleport::client::ClientPipeline clientPipeline;
 		clientrender::GeometryCache geometryCache;
 		clientrender::ResourceCreator resourceCreator;
 		std::vector<avs::InputDefinition> inputDefinitions;
@@ -107,6 +138,6 @@ namespace clientrender
 
 		GeometryDecoder geometryDecoder;
 	
-
+		bool render_local_offline = false;
 	};
 }

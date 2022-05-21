@@ -107,7 +107,7 @@ target_include_directories(ClientRender PRIVATE ../TeleportClient)
 target_include_directories(ClientRender PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/src)
 set_target_properties(ClientRender PROPERTIES FOLDER Client)
-target_link_libraries(ClientRender draco)
+target_link_libraries(ClientRender draco TeleportClient)
 
 if(WIN32)
 # Removed circular dependency
