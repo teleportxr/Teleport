@@ -91,7 +91,7 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 	* Right-click TeleportServer project in 'Solution Explorer' pane.
 	* Click "Set as Startup Project".
 
-## Building Android client application
+## Building the Legacy Android Client application with Android Studio
 
 1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
 2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client\TeleportClient\assets` directory.
@@ -103,11 +103,11 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 8. Go to File->Project Structure->Modules->client->TeleportClient->Signing Configs and in debug config, put in the details of the key you created. 
 9. Click the build icon to compile and then you should be able to run.
 
-## Building the Android Vulkan OpenXR client
+## Building the Android Vulkan OpenXR Client with Visual Studio
 
 1. Use Android Studio to install the appropriate NDK (see release.properties).
 2. Install the appropriate JDK (see release.properties) and set JAVA_HOME
-3. Install current stable [AGDE](https://developer.android.com/games/agde#downloads)
+3. Install the current stable [AGDE](https://developer.android.com/games/agde#downloads)
 4. Open the sln in build_android_vs in Visual Studio.
 5. Build and run.
 
@@ -115,27 +115,14 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 1. Go to Windows Security->Firewall & Network->Advanced Settings.
 2. Choose Inbound Rules->New Rule->Port->UDP.
 3. Enter the Discovery Port and create the rule.
-Repeat 2-3 for the Service Port.
+Repeat 2-3 for the the Service Port.
 
 ## Running
 
-1. Connect your Android device to the same WiFi network your development PC is on.
-2. Make sure UE4 editor is not blocked by the Windows firewall.
-3. Make sure the GearVR controller is paired with the Android device.
-4. Run the game in the editor and then launch `RemotePlayClient` application on your Android device.
-
-It may take up to a few seconds for GearVR controller to be recognized.
-
-For best performance when testing with UE4 demo project run the packaged game in windowed mode, in 1024x768 resolution, with Low quality settings.
-
-### Controls
-
-| Control | Action |
-|--|--|
-| Swipe on trackpad up/down | Move forwards/backwards |
-| Swipe on trackpad left/right | Strafe left/right |
-| Click on trackpad | Jump |
-| Trigger | Fire |
+1. Connect your Android device to your local WiFi network (for a local server) or the internet (for a remote server).
+2. On the server machine, make sure Unity or UE4 editor is not blocked by the Windows firewall.
+3. Find the IP address of your server, either a local IP or a global IP or domain name.
+4. Run the game in UE or Unity editor and then launch the client application on your Android or PCVR device.
 
 ### Default network ports
 
