@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#include <libavstream/surfaces/surface_Vulkan.hpp>
+#include <libavstream/surfaces/surface_vulkan.hpp>
 
 namespace avs {
 

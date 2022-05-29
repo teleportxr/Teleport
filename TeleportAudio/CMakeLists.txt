@@ -8,28 +8,26 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 # Source
 set( src_root
-	src/AudioCommon.h
-	src/AudioCommon.cpp
+	AudioCommon.h
+	AudioCommon.cpp
 	)
 set( src_crossplatform
-	src/crossplatform/AudioStreamTarget.cpp
-	src/crossplatform/AudioStreamTarget.h
-	src/crossplatform/CustomAudioStreamTarget.cpp
-	src/crossplatform/CustomAudioStreamTarget.h
-	src/crossplatform/AudioPlayer.cpp
-	src/crossplatform/AudioPlayer.h
-	src/crossplatform/NetworkPipeline.cpp
-	src/crossplatform/NetworkPipeline.h
+	AudioStreamTarget.cpp
+	AudioStreamTarget.h
+	CustomAudioStreamTarget.cpp
+	CustomAudioStreamTarget.h
+	AudioPlayer.cpp
+	AudioPlayer.h
+	NetworkPipeline.cpp
+	NetworkPipeline.h
 	)
 set( src_pc
-	src/pc/PC_AudioPlayer.cpp
-	src/pc/PC_AudioPlayer.h
-	src/pc/PC_AudioCapture.cpp
-	src/pc/PC_AudioCapture.h
+	PC_AudioPlayer.cpp
+	PC_AudioPlayer.h
+	PC_AudioCapture.cpp
+	PC_AudioCapture.h
 	)
 
-#Include its root directory
-include_directories(src)
 
 if(WIN32)
 	set( src_public ${src_root} ${src_crossplatform} ${src_pc})

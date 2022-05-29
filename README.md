@@ -29,51 +29,17 @@ or if you have already cloned the main repo,
 
 ## Building the PC Client
 
-1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
+1. Build pthread.2019.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
 	* You may retarget the projects to a more recent version of the build tools.
-2. Using CMakeGUI, set src: (Teleport Folder) and bin: (Teleport Folder)/build_pc_client_
+2. Using CMakeGUI, set src: (Teleport Folder) and bin: (Teleport Folder)/build_pc_client
 3. Configure for x64 platform with default native compiler
 4. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
 5. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
 6. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
 7. Uncheck 'ENABLE_ENCRYPTION' option from srt.
 8. set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to the correct installed Cuda version
-8. Generate, open and build the Visual Studio project.
-
-## Building UE4 plugin
-
-The UE4 plugin is not currently functional, it will be updated in early 2022.
-
-1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
-    * You will need to target pthread_lib to the same toolset as your Unreal.
-    * You may need to disable Whole Program Optimisation.
-2. Using CMakeGUI: 
-    * Set src: (Teleport Folder) and bin: (Teleport Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries.
-    * Your platform, and toolset, **must** match your Unreal Engine configuration.
-    * Enable **Advanced** view in CMake-GUI, if you can't find any of the following settings. 
-    * Ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
-    * Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build.
-    * For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes.
-    * Ensure BUILD_AS_LIBRARY is checked for Basis.
-    * Uncheck ENABLE_ENCRYPTION.
-    * Remove RelWithDebInfo and MinSizeRelease configurations.
-3. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch.
-4. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config. The projects needed are:
-    * basisu
-	* efp
-	* enet
-	* haicrypt_virtual
-	* libavstream
-    * TeleportServer
-    * srt_static
-    * srt_virtual
-
-5. Ensure cuda_kernels project in libavstream solution is at least toolset Visual Studio 2019.
-6. Build the projects, this creates static libraries for UnrealDemo to link.
-7. Open and build the UE4 project in `Development Editor` configuration.
-8. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
-9. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
-10. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
+9. In firstparty/Platform, run Setup.py to build required libraries fmt and glfw.
+10. Generate, open and build the Visual Studio project.
 
 ## Building Unity plugin
 
@@ -105,11 +71,48 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 
 ## Building the Android Vulkan OpenXR Client with Visual Studio
 
-1. Use Android Studio to install the appropriate NDK (see release.properties).
-2. Install the appropriate JDK (see release.properties) and set JAVA_HOME
-3. Install the current stable [AGDE](https://developer.android.com/games/agde#downloads)
-4. Open the sln in build_android_vs in Visual Studio.
-5. Build and run.
+1. Build the PC client as above.
+2. Use Android Studio to install the appropriate NDK (see release.properties).
+3. Install the appropriate JDK from [Java Archive](https://www.oracle.com/java/technologies/javase/jdk14-archive-downloads.html) (see release.properties) and set JAVA_HOME
+4. Install the current stable [AGDE](https://developer.android.com/games/agde#downloads)
+5. Open the sln in build_android_vs in Visual Studio.
+6. Go to Tools -> Settings -> Cross Platform -> C++ -> Android
+7. Build and run.
+
+## Building UE4 plugin
+
+The UE4 plugin is not currently functional, it will be updated in mid-2022.
+
+1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
+    * You will need to target pthread_lib to the same toolset as your Unreal.
+    * You may need to disable Whole Program Optimisation.
+2. Using CMakeGUI: 
+    * Set src: (Teleport Folder) and bin: (Teleport Folder)/plugins/UnrealDemo/Plugins/RemotePlay/Libraries.
+    * Your platform, and toolset, **must** match your Unreal Engine configuration.
+    * Enable **Advanced** view in CMake-GUI, if you can't find any of the following settings. 
+    * Ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
+    * Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build.
+    * For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes.
+    * Ensure BUILD_AS_LIBRARY is checked for Basis.
+    * Uncheck ENABLE_ENCRYPTION.
+    * Remove RelWithDebInfo and MinSizeRelease configurations.
+3. Right-click UnrealDemo.uproject and select Generate Visual Studio project files and then Switch Unreal Engine version to Simul's private 4.22 branch.
+4. Add the created projects to the solution at plugins/UnrealDemo/UnrealDemo.sln. Make sure that the release build of libavstream is configured to compile in Development Editor solution config. The projects needed are:
+    * basisu
+    * efp
+    * enet
+    * haicrypt_virtual
+    * libavstream
+    * TeleportServer
+    * srt_static
+    * srt_virtual
+
+5. Ensure cuda_kernels project in libavstream solution is at least toolset Visual Studio 2019.
+6. Build the projects, this creates static libraries for UnrealDemo to link.
+7. Open and build the UE4 project in `Development Editor` configuration.
+8. Go to Edit->Editor Preferences, General->Performance and disable "Use Less CPU When in Background". This is to prevent UE switching to a slow low-power mode when the Editor window is not in focus.
+9. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
+10. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
 ## Firewall setup
 1. Go to Windows Security->Firewall & Network->Advanced Settings.

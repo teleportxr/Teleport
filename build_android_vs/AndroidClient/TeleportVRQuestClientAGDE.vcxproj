@@ -141,7 +141,7 @@
     <Link>
       <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;fmt</LibraryDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libxrspacewarp.so;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/lib/libsrt.a;$(SolutionDir)../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/lib/libcrypto.a;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libxrspacewarp.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
       <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -153,7 +153,7 @@
       <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;fmt</LibraryDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget)</AdditionalLibraryDirectories>
       <ShowProgress>true</ShowProgress>
-      <AdditionalDependencies>$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/lib/libsrt.a;$(SolutionDir)../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/lib/libcrypto.a;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
       <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -162,6 +162,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="../../pc_client\ClientRenderer.cpp" />
+    <ClCompile Include="..\..\AndroidClient\AndroidDiscoveryService.cpp" />
     <ClCompile Include="..\..\AndroidClient\AndroidOpenXR.cpp" />
     <ClCompile Include="..\..\AndroidClient\AndroidRenderer.cpp" />
     <ClCompile Include="..\..\AndroidClient\CmdBuffer.cpp" />
@@ -171,6 +172,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="../../pc_client\ClientRenderer.h" />
+    <ClInclude Include="..\..\AndroidClient\AndroidDiscoveryService.h" />
     <ClInclude Include="..\..\AndroidClient\AndroidOpenXR.h" />
     <ClInclude Include="..\..\AndroidClient\AndroidRenderer.h" />
     <ClInclude Include="..\..\AndroidClient\CmdBuffer.h" />
@@ -254,6 +256,9 @@
     </ProjectReference>
     <ProjectReference Include="..\libavstream\libavstream_Android.vcxproj">
       <Project>{6f52b627-c756-44dd-ae24-a9370c3dbddc}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\libavstream\thirdparty\efp\efp.vcxproj">
+      <Project>{965373d9-b298-463f-a523-b5e046f8d402}</Project>
     </ProjectReference>
     <ProjectReference Include="..\thirdparty\basis_universal\basis_universal.vcxproj">
       <Project>{e6abe220-7eef-47a3-8f2a-a63f6ca816a2}</Project>

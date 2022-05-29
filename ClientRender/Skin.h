@@ -45,7 +45,7 @@ namespace clientrender
 		{
 			return boneMatrices;
 		}
-		std::vector<clientrender::mat4> inverseBindMatrices;
+		std::vector<mat4> inverseBindMatrices;
 		std::vector<std::shared_ptr<Bone>> bones;
 		std::vector<std::shared_ptr<Bone>> joints;
 		Transform skinTransform; //Transform of the parent node of the bone hierarchy; i.e there may be multiple top-level bones, but their parent is not the root.

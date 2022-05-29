@@ -39,9 +39,9 @@ void SessionClient::SetGeometryCache(avs::GeometryCacheBackendInterface* r)
 	geometryCache = r;
 }
 
-uint32_t SessionClient::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
+uint64_t SessionClient::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
 {
-	uint32_t cl_id=discoveryService->Discover(clientIP, clientDiscoveryPort, serverIP, serverDiscoveryPort, remote);
+	uint64_t cl_id=discoveryService->Discover(clientIP, clientDiscoveryPort, serverIP, serverDiscoveryPort, remote);
 	if(cl_id!=0)
 	{
 		clientID=cl_id;
@@ -738,7 +738,7 @@ void SessionClient::ReceiveSetupInputsCommand(const ENetPacket* packet)
 	unsigned char* ptr = packet->data + sizeof(avs::SetupInputsCommand);
 	for (int i = 0; i < setupInputsCommand.numInputs; i++)
 	{
-		if (ptr - packet->data >= packet->dataLength)
+		if (size_t(ptr -packet->data) >= packet->dataLength)
 		{
 			TELEPORT_CERR << "Bad packet" << std::endl;
 			return;
@@ -746,7 +746,7 @@ void SessionClient::ReceiveSetupInputsCommand(const ENetPacket* packet)
 		auto& def = inputDefinitions[i];
 		avs::InputDefinitionNetPacket& packetDef = *((avs::InputDefinitionNetPacket*)ptr);
 		ptr += sizeof(avs::InputDefinitionNetPacket);
-		if (ptr + packetDef.pathLength - packet->data > packet->dataLength)
+		if (size_t(ptr + packetDef.pathLength - packet->data) > packet->dataLength)
 		{
 			TELEPORT_CERR << "Bad packet" << std::endl;
 			return;
@@ -792,7 +792,7 @@ void SessionClient::ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet)
 	mCommandInterface->UpdateNodeSubtype(updateNodeSubtypeCommand,str);
 }
 
-void SessionClient::SetDiscoveryClientID(uint32_t clientID)
+void SessionClient::SetDiscoveryClientID(uint64_t clientID)
 {
 	discoveryService->SetClientID(clientID);
 }

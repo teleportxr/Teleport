@@ -94,7 +94,6 @@ namespace clientrender
 
 		void BasisThread_TranscodeTextures();
 
-		clientrender::API m_API;
 		clientrender::RenderPlatform* m_pRenderPlatform = nullptr;
 		clientrender::VertexBufferLayout::PackingStyle m_PackingStyle = clientrender::VertexBufferLayout::PackingStyle::GROUPED;
 

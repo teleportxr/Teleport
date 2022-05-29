@@ -16,52 +16,24 @@ if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
 	endif()
 endif()
 
-file(GLOB shaders "Shaders/*.sfx" "Shaders/*.sl")
+file(GLOB shaders "../ClientRender/Shaders/*.sfx" "../ClientRender/Shaders/*.sl")
 file(GLOB inifiles "*.ini")
 set(srcs
 	ClientRenderer.cpp
 	Main.cpp
+	MemoryUtil.cpp
+	MemoryUtil.h
 	UseOpenXR.cpp
 	PCDiscoveryService.cpp
 	stdafx.cpp
 	VideoDecoder.cpp
-	Gui.cpp
-	Gui.h
 	ClientRenderer.h
-	Config.h
 	UseOpenXR.h
 	Resource.h
 	PCDiscoveryService.h
 	stdafx.h
 	targetver.h
 	VideoDecoder.h
-)
- 
-set(scr_pc_impl
-	SCR_Class_PC_Impl/PC_DeviceContext.cpp
-	SCR_Class_PC_Impl/PC_DeviceContext.h
-	SCR_Class_PC_Impl/PC_Effect.cpp
-	SCR_Class_PC_Impl/PC_Effect.h
-	SCR_Class_PC_Impl/PC_FrameBuffer.cpp
-	SCR_Class_PC_Impl/PC_FrameBuffer.h
-	SCR_Class_PC_Impl/PC_IndexBuffer.cpp
-	SCR_Class_PC_Impl/PC_IndexBuffer.h
-	SCR_Class_PC_Impl/PC_RenderPlatform.h
-	SCR_Class_PC_Impl/PC_RenderPlatform.cpp
-	SCR_Class_PC_Impl/PC_Sampler.cpp
-	SCR_Class_PC_Impl/PC_Sampler.h
-	SCR_Class_PC_Impl/PC_Shader.cpp
-	SCR_Class_PC_Impl/PC_Shader.h
-	SCR_Class_PC_Impl/PC_ShaderStorageBuffer.cpp
-	SCR_Class_PC_Impl/PC_ShaderStorageBuffer.h
-	SCR_Class_PC_Impl/PC_Texture.cpp
-	SCR_Class_PC_Impl/PC_Texture.h
-	SCR_Class_PC_Impl/PC_UniformBuffer.cpp
-	SCR_Class_PC_Impl/PC_UniformBuffer.h
-	SCR_Class_PC_Impl/PC_VertexBuffer.cpp
-	SCR_Class_PC_Impl/PC_VertexBuffer.h
-	SCR_Class_PC_Impl/PC_MemoryUtil.cpp
-	SCR_Class_PC_Impl/PC_MemoryUtil.h
 )
 
 set(av_parser
@@ -85,10 +57,9 @@ endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
-source_group("SCR_Class_PC_Impl" src FILES ${scr_pc_impl} )
 source_group("AVParser" src FILES ${av_parser} )
 
-add_static_executable( pc_client WIN32 SOURCES ${srcs} ${scr_pc_impl} ${av_parser} ${shaders} ${inifiles} )
+add_static_executable( pc_client WIN32 SOURCES ${srcs} ${av_parser} ${shaders} ${inifiles} )
 
 
 target_include_directories(pc_client PRIVATE 

@@ -650,7 +650,7 @@ namespace avparser
 
 
 				// Pictures with poc values less than the current picture's.
-				for (int j = refPicSets[refRpsIdx].num_positive_pics - 1; j >= 0; --j)
+				for (uint32_t j = refPicSets[refRpsIdx].num_positive_pics - 1; j >= 0; --j)
 				{
 					int dPoc = (refPicSets[refRpsIdx].delta_poc_s1_minus1[j] + 1) + deltaRps;
 					if (dPoc < 0 && rps.use_delta_flag[refPicSets[refRpsIdx].num_negative_pics + j])
@@ -668,7 +668,7 @@ namespace avparser
 					rps.used_by_curr_pic_s0_flag.push_back(rps.used_by_curr_pic_flag[refRPSNumDelataPocs]);
 				} 
 
-				for (int j = 0; j < refPicSets[refRpsIdx].num_negative_pics; ++j)
+				for (uint32_t j = 0; j < refPicSets[refRpsIdx].num_negative_pics; ++j)
 				{
 					int dPoc = (refPicSets[refRpsIdx].delta_poc_s0_minus1[j] + 1) + deltaRps;
 					if (dPoc < 0 && rps.use_delta_flag[j])
@@ -678,11 +678,11 @@ namespace avparser
 						rps.used_by_curr_pic_s0_flag.push_back(rps.used_by_curr_pic_flag[j]);
 					}
 				}
-				rps.num_negative_pics = rps.used_by_curr_pic_s0_flag.size();
+				rps.num_negative_pics = (uint32_t)rps.used_by_curr_pic_s0_flag.size();
 
 
 				// Pictures with poc values greater than the current picture's.	
-				for (int j = refPicSets[refRpsIdx].num_negative_pics - 1; j >= 0; --j)
+				for (uint32_t j = refPicSets[refRpsIdx].num_negative_pics - 1; j >= 0; --j)
 				{
 					int dPoc = (refPicSets[refRpsIdx].delta_poc_s0_minus1[j] + 1) + deltaRps;
 					if (dPoc > 0 && rps.use_delta_flag[j])
@@ -700,7 +700,7 @@ namespace avparser
 					rps.used_by_curr_pic_s1_flag.push_back(rps.used_by_curr_pic_flag[refRPSNumDelataPocs]);
 				}
 
-				for (int j = 0; j < refPicSets[refRpsIdx].num_positive_pics; ++j)
+				for (uint32_t j = 0; j < refPicSets[refRpsIdx].num_positive_pics; ++j)
 				{
 					int dPoc = (refPicSets[refRpsIdx].delta_poc_s1_minus1[j] + 1) + deltaRps;
 					if (dPoc > 0 && rps.use_delta_flag[refPicSets[refRpsIdx].num_negative_pics + j])
@@ -710,7 +710,7 @@ namespace avparser
 						rps.used_by_curr_pic_s1_flag.push_back(rps.used_by_curr_pic_flag[refPicSets[refRpsIdx].num_negative_pics + j]);
 					}
 				}
-				rps.num_positive_pics = rps.used_by_curr_pic_s1_flag.size();
+				rps.num_positive_pics = (uint32_t)rps.used_by_curr_pic_s1_flag.size();
 			}
 			else
 			{
@@ -968,7 +968,7 @@ namespace avparser
 				}
 
 				int sliceAddrLength = log2(picHeightInCtbsY * picWidthInCtbsY);
-				if ((1 << sliceAddrLength) < picHeightInCtbsY * picWidthInCtbsY)
+				if (uint32_t(1 << sliceAddrLength) < picHeightInCtbsY * picWidthInCtbsY)
 				{
 					sliceAddrLength++;
 				}
@@ -1027,7 +1027,7 @@ namespace avparser
 					else if (mSPS.num_short_term_ref_pic_sets > 1)
 					{
 						size_t numBits = log2(mSPS.num_short_term_ref_pic_sets);
-						if (1 << numBits < mSPS.num_short_term_ref_pic_sets)
+						if (uint32_t(1 << numBits) < mSPS.num_short_term_ref_pic_sets)
 						{
 							numBits++;
 						}
@@ -1044,7 +1044,7 @@ namespace avparser
 						mExtraData.refRpsIdx = mExtraData.stRpsIdx;
 					}
 
-					mExtraData.short_term_ref_pic_set_size = remainingBits - mReader->getBitsRemaining();
+					mExtraData.short_term_ref_pic_set_size = uint32_t(remainingBits - mReader->getBitsRemaining());
 
 					// Long term reference frames may not be enabled. This is an option that can be enabled in the video encoder.
 					if (mSPS.long_term_ref_pics_present_flag)
@@ -1273,10 +1273,10 @@ namespace avparser
 
 			int32_t spsId = mPPS.pps_seq_parameter_set_id;
 
-			size_t totalRefPics = computeNumPocTotal(slice, mSPS);
-			int32_t listSize = log2(totalRefPics);
+			int32_t totalRefPics = (int32_t)computeNumPocTotal(slice, mSPS);
+			int32_t listSize = int32_t(log2(totalRefPics));
 
-			if ((1 << listSize) < totalRefPics)
+			if ((int64_t(1) << int64_t(listSize)) < int64_t(totalRefPics))
 			{
 				listSize++;
 			}
@@ -1499,7 +1499,7 @@ namespace avparser
 				}
 			}
 
-			return numPocTotal;
+			return uint32_t(numPocTotal);
 		}
 
 		uint32_t HevcParser::computePoc(const SPS& sps, uint32_t prevPocTid0, uint32_t pocLsb, uint32_t nalUnitType)

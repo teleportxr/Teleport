@@ -88,7 +88,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	decParams.height = frameHeight;
 	decParams.minWidth = frameWidth;
 	decParams.minHeight = frameHeight;
-	decParams.maxDecodePictureBufferCount = mDPB.size();
+	decParams.maxDecodePictureBufferCount =(uint32_t) mDPB.size();
 
 
 	// The output texture is in native decode format.
@@ -228,7 +228,7 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 	// Include ALU size of 3 bytes.
 	updateInputArguments(bytesParsed + 3);
 
-	if (DEC_FAILED(mDecoder->Decode(mOutputTexture, buffer, bufferSizeInBytes, mDecodeArgs.data(), mDecodeArgs.size())))
+	if (DEC_FAILED(mDecoder->Decode(mOutputTexture, buffer, bufferSizeInBytes, mDecodeArgs.data(),(uint32_t) mDecodeArgs.size())))
 	{
 		TELEPORT_CERR << "VideoDecoder: Error occurred while trying to decode the frame.";
 		return Result::DecoderBackend_DecodeFailed;

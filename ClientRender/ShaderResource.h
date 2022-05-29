@@ -1,14 +1,16 @@
 // (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
 
-#include "ClientRender/Shader.h"
 #include "ClientRender/Texture.h"
 #include "ClientRender/UniformBuffer.h"
-#include "ClientRender/ShaderStorageBuffer.h"
 #include "Common.h"
 
 namespace clientrender
 {
+	enum class ShaderStage : uint8_t
+	{
+		SHADER_STAGE_FRAGMENT,SHADER_STAGE_VERTEX,SHADER_STAGE_COMPUTE
+	};
 	class ShaderResourceLayout
 	{
 	public:
@@ -31,14 +33,14 @@ namespace clientrender
 			uint32_t binding;
 			ShaderResourceType type;
 			uint32_t count;		//Number of item in a potential array. Default = 1.
-			Shader::Stage stage;
+			ShaderStage stage;
 		};
 
 		std::vector<ShaderResourceLayoutBinding> m_LayoutBindings;
 
 		ShaderResourceLayout() {};
 
-		inline void AddBinding(uint32_t binding, ShaderResourceType type, Shader::Stage stage, uint32_t count = 1)
+		inline void AddBinding(uint32_t binding, ShaderResourceType type, ShaderStage stage, uint32_t count = 1)
 		{
 			m_LayoutBindings.push_back({ binding, type, count, stage });
 		}
@@ -54,7 +56,7 @@ namespace clientrender
 	public:
 		struct ShaderResourceImageInfo
 		{
-			std::shared_ptr<Sampler> sampler;
+			//std::shared_ptr<Sampler> sampler;
 			std::shared_ptr<Texture> texture;
 			uint32_t mip=(uint32_t)-1;
 			uint32_t layer=(uint32_t)-1;

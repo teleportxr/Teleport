@@ -3,7 +3,6 @@
 
 #include "ClientRender/Texture.h"
 #include "ShaderResource.h"
-#include "ClientRender/Effect.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
 namespace clientrender

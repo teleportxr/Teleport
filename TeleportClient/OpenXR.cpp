@@ -174,20 +174,32 @@ struct app_transform_buffer_t
 	float viewproj[16];
 };
 
-void XrInputSession::SetActions(XrInstance& xr_instance, std::initializer_list<ActionInitializer> actions)
+void XrInputSession::SetActions(std::initializer_list<ActionInitializer> actions)
 {
 	inputDeviceStates.resize(2);
 	for (auto& a : actions)
 	{
+		auto &def			=actionDefinitions[a.actionId];
+		def.actionId		=a.actionId;
+		def.xrActionType	=a.xrActionType;
+		def.name			=a.name;
+		def.localizedName	=a.localizedName;
+	}
+}
+
+void XrInputSession::InstanceInit(XrInstance& xr_instance)
+{
+	for(int i=0;i<MAX_ACTIONS;i++)
+	{
+		ActionId actionId=(ActionId)i;
+		auto &def=actionDefinitions[actionId];
 		XrActionCreateInfo action_info = { XR_TYPE_ACTION_CREATE_INFO };
-		action_info.actionType = a.xrActionType;
-		strcpy_s(action_info.actionName, XR_MAX_ACTION_NAME_SIZE, a.name);
-		strcpy_s(action_info.localizedActionName, XR_MAX_LOCALIZED_ACTION_NAME_SIZE, a.localizedName);
-		auto &def=actionDefinitions[a.actionId];
+		action_info.actionType = def.xrActionType;
+		strcpy_s(action_info.actionName, XR_MAX_ACTION_NAME_SIZE, def.name.c_str());
+		strcpy_s(action_info.localizedActionName, XR_MAX_LOCALIZED_ACTION_NAME_SIZE, def.localizedName.c_str());
 		XR_CHECK(xrCreateAction(actionSet, &action_info, &def.xrAction));
-		def.actionId=a.actionId;
-		def.xrActionType=a.xrActionType;
-		def.name=a.name;
+		def.actionId=actionId;
+		def.xrActionType=def.xrActionType;
 	}
 }
 
@@ -260,6 +272,35 @@ vector<std::string> OpenXR::GetRequiredExtensions() const
 
 bool OpenXR::InitInstance(const char *app_name)
 {
+// Define the actions first - we don't need an XR instance for this.
+	xr_input_session.SetActions( {
+		// Create an action to track the position and orientation of the hands! This is
+		// the controller location, or the center of the palms for actual hands.
+		 // Create an action for listening to the select action! This is primary trigger
+		 // on controllers, and an airtap on HoloLens
+		 {SELECT		,"select"				,"Select"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{SHOW_MENU		,"menu"					,"Menu"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{A				,"a"					,"A"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{B				,"b"					,"B"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{X				,"x"					,"X"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{Y				,"y"					,"Y"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		// Action for left controller
+		,{LEFT_GRIP_POSE	,"left_grip_pose"			,"Left Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{LEFT_AIM_POSE		,"left_aim_pose"			,"Left Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{LEFT_TRIGGER		,"left_trigger"				,"Left Trigger"			,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{LEFT_SQUEEZE		,"left_squeeze"				,"Left Squeeze"			,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{LEFT_STICK_X		,"left_thumbstick_x"		,"Left Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{LEFT_STICK_Y		,"left_thumbstick_y"		,"Left Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{LEFT_HAPTIC		,"left_haptic"				,"Left Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
+		// Action for right controller
+		,{RIGHT_GRIP_POSE	,"right_grip_pose"			,"Right Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{RIGHT_AIM_POSE	,"right_aim_pose"			,"Right Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{RIGHT_TRIGGER		,"right_trigger"			,"Right Trigger"		,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{RIGHT_SQUEEZE		,"right_squeeze"			,"Right Squeeze"		,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{RIGHT_STICK_X		,"right_thumbstick_x"		,"Right Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{RIGHT_STICK_Y		,"right_thumbstick_y"		,"Right Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{RIGHT_HAPTIC		,"right_haptic"				,"Right Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
+		});
 	// OpenXR will fail to initialize if we ask for an extension that OpenXR
 	// can't provide! So we need to check our all extensions before 
 	// initializing OpenXR with them. Note that even if the extension is 
@@ -374,35 +415,8 @@ void OpenXR::MakeActions()
 	strcpy_s(actionset_info.localizedActionSetName, XR_MAX_LOCALIZED_ACTION_SET_NAME_SIZE, "TeleportClient");
 	XR_CHECK(xrCreateActionSet(xr_instance, &actionset_info, &xr_input_session.actionSet));
 
-	xr_input_session.SetActions(xr_instance, {
-		// Create an action to track the position and orientation of the hands! This is
-		// the controller location, or the center of the palms for actual hands.
-		 // Create an action for listening to the select action! This is primary trigger
-		 // on controllers, and an airtap on HoloLens
-		 {SELECT		,"select"				,"Select"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{SHOW_MENU		,"menu"					,"Menu"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{A				,"a"					,"A"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{B				,"b"					,"B"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{X				,"x"					,"X"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{Y				,"y"					,"Y"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		// Action for left controller
-		,{LEFT_GRIP_POSE	,"left_grip_pose"			,"Left Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{LEFT_AIM_POSE		,"left_aim_pose"			,"Left Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{LEFT_TRIGGER		,"left_trigger"				,"Left Trigger"			,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{LEFT_SQUEEZE		,"left_squeeze"				,"Left Squeeze"			,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{LEFT_STICK_X		,"left_thumbstick_x"		,"Left Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{LEFT_STICK_Y		,"left_thumbstick_y"		,"Left Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{LEFT_HAPTIC		,"left_haptic"				,"Left Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
-		// Action for right controller
-		,{RIGHT_GRIP_POSE	,"right_grip_pose"			,"Right Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{RIGHT_AIM_POSE	,"right_aim_pose"			,"Right Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{RIGHT_TRIGGER		,"right_trigger"			,"Right Trigger"		,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{RIGHT_SQUEEZE		,"right_squeeze"			,"Right Squeeze"		,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{RIGHT_STICK_X		,"right_thumbstick_x"		,"Right Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{RIGHT_STICK_Y		,"right_thumbstick_y"		,"Right Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{RIGHT_HAPTIC		,"right_haptic"				,"Right Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
-		});
-
+		
+	xr_input_session.InstanceInit(xr_instance);
 	// Bind the actions we just created to specific locations on the Khronos simple_controller
 	// definition! These are labeled as 'suggested' because they may be overridden by the runtime
 	// preferences. For example, if the runtime allows you to remap buttons, or provides input
@@ -426,7 +440,7 @@ void OpenXR::MakeActions()
 			}
 		}
 #else
-		suggested_binds.countSuggestedBindings = p.xrActionSuggestedBindings.size();
+		suggested_binds.countSuggestedBindings = (uint32_t)p.xrActionSuggestedBindings.size();
 		XR_CHECK(xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds));
 #endif
 	};
@@ -609,6 +623,8 @@ XrPath userHandLeftActiveProfile;
 XrPath userHandRightActiveProfile;
 void OpenXR::RecordCurrentBindings()
 {
+	if(!xr_session)
+		return;
 	// now we are ready to:
 	XrInteractionProfileState interactionProfile={XR_TYPE_INTERACTION_PROFILE_STATE,0,0};
 	// for each action, what is the binding?
@@ -635,6 +651,27 @@ const InteractionProfile *GetActiveBinding(XrPath p)
 	return nullptr;
 }
 
+struct FallbackBinding
+{
+	std::string path;
+};
+struct FallbackState
+{
+	avs::Pose pose;
+};
+std::map<avs::uid,FallbackBinding> fallbackBindings;
+std::map<avs::uid,FallbackState> fallbackStates;
+
+void OpenXR::SetFallbackBinding(ActionId actionId,std::string path)
+{
+	fallbackBindings[actionId].path=path;
+}
+
+void OpenXR::SetFallbackPose(ActionId actionId,const avs::Pose &pose)
+{
+	fallbackStates[actionId].pose=pose;
+}
+
 std::string GetBoundPath(const ActionDefinition &def)
 {
 	for(size_t b=0;b<activeInteractionProfilePaths.size();b++)
@@ -651,6 +688,14 @@ std::string GetBoundPath(const ActionDefinition &def)
 			}
 		}
 	}
+	// No active profiles? Then we may use the fallbacks.
+	#ifdef _MSC_VER
+	for(auto &binding:fallbackBindings)
+	{
+		if(binding.first==def.actionId)
+			return binding.second.path;
+	}
+	#endif
 	return "";
 }
 
@@ -660,8 +705,6 @@ std::string GetBoundPath(const ActionDefinition &def)
 // So we have a set of mappings for each currently connected server.
 void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition>& inputDefinitions_)
 {
-	if(!xr_session)
-		return;
 	RecordCurrentBindings();
 	auto &inputMappings=openXRServers[server_uid].inputMappings;
 	inputMappings.clear();
@@ -742,8 +785,6 @@ void OpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &r
 	auto &unboundPoses=openXRServers[server_uid].unboundPoses;
 	unboundPoses[uid].regexPath=regexPath;
 	unboundPoses[uid].poseOffset=poseOffset;
-	if(!xr_session)
-		return;
 	BindUnboundPoses(server_uid);
 }
 void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumber)
@@ -756,14 +797,25 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			auto &def=m.second;
 			auto &state=server.nodePoseStates[m.first];
 			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-			XrResult		res = xrLocateSpace(xr_input_session.actionDefinitions[def.actionId].space, xr_app_space, lastTime, &space_location);
-			if (XR_UNQUALIFIED_SUCCESS(res) &&
-				(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
-				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
+			auto space=xr_input_session.actionDefinitions[def.actionId].space;
+			if(space)
 			{
-				xr_input_session.actionStates[def.actionId].pose= space_location.pose;
-				state.pose.position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
-				state.pose.orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+				XrResult		res = xrLocateSpace(space, xr_app_space, lastTime, &space_location);
+				if (XR_UNQUALIFIED_SUCCESS(res) &&
+					(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
+					(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
+				{
+					xr_input_session.actionStates[def.actionId].pose= space_location.pose;
+					state.pose.position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
+					state.pose.orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+				}
+			}
+			else
+			{
+				if(fallbackBindings.find(def.actionId)!=fallbackBindings.end())
+				{
+					state.pose=fallbackStates[def.actionId].pose;
+				}
 			}
 		}
 		const float LOWER_HYSTERESIS=0.1f;
@@ -1234,7 +1286,7 @@ void OpenXR::PollEvents(bool& exit)
 {
 	exit = false;
 	XrEventDataBuffer event_buffer = { XR_TYPE_EVENT_DATA_BUFFER };
-	XrResult res;
+	//XrResult res;
 	XrEventDataBaseHeader* baseEventHeader = (XrEventDataBaseHeader*)(&event_buffer);
 	baseEventHeader->type = XR_TYPE_EVENT_DATA_BUFFER;
 	baseEventHeader->next = NULL;

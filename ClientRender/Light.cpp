@@ -52,36 +52,22 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 
 	if (m_CI.shadowMapTexture)
 	{
-		m_ShadowMapSampler = m_CI.renderPlatform->InstantiateSampler();
-		Sampler::SamplerCreateInfo sci;
-		sci.minFilter = Sampler::Filter::LINEAR;
-		sci.magFilter = Sampler::Filter::LINEAR;
-		sci.wrapU = Sampler::Wrap::CLAMP_TO_EDGE;
-		sci.wrapV = Sampler::Wrap::CLAMP_TO_EDGE;
-		sci.wrapW = Sampler::Wrap::CLAMP_TO_EDGE;
-		sci.minLod = 0;
-		sci.maxLod = 0;
-		sci.anisotropyEnable = false;
-		sci.maxAnisotropy = 1.0f;
-		m_ShadowMapSampler->Create(&sci);
 	
-		m_CI.shadowMapTexture->UseSampler(m_ShadowMapSampler);
-
-		m_ShaderResourceLayout.AddBinding(2,  ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-		m_ShaderResourceLayout.AddBinding(19, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-		m_ShaderResourceLayout.AddBinding(20, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-		m_ShaderResourceLayout.AddBinding(21, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-		m_ShaderResourceLayout.AddBinding(22, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-		m_ShaderResourceLayout.AddBinding(23, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-		m_ShaderResourceLayout.AddBinding(24, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-		m_ShaderResourceLayout.AddBinding(25, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
-		m_ShaderResourceLayout.AddBinding(26, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, Shader::Stage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(2,  ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, ShaderStage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(19, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(20, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(21, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(22, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(23, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(24, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(25, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
+		m_ShaderResourceLayout.AddBinding(26, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
 
 		m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
 		m_ShaderResource.AddBuffer( ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 2, "u_LightsUB", { s_UB.get(), 0, (s_MaxLights * sizeof(LightData)) });
 	
 		std::string shaderResourceName = std::string("u_ShadowMap") + std::to_string(m_LightID);
-		m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), { m_CI.shadowMapTexture->GetSampler(), m_CI.shadowMapTexture});
+		m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), {  m_CI.shadowMapTexture});
 	}
 }
 
@@ -107,6 +93,6 @@ void Light::UpdateLightSpaceTransform()
 		light.position = m_CI.position;
 		light.direction = ((m_CI.orientation * m_CI.direction) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
 		avs::vec3 scale(m_CI.lightRadius,m_CI.lightRadius,m_CI.lightRadius);
-		light.lightSpaceTransform = mat4::Translation(m_CI.position) * mat4::Rotation(m_CI.orientation)*mat4::Scale(scale);
+		light.lightSpaceTransform = mat4_deprecated::Translation(m_CI.position) * mat4_deprecated::Rotation(m_CI.orientation)*mat4_deprecated::Scale(scale);
 	}
 }

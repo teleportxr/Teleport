@@ -3,6 +3,15 @@
 
 #include "VertexBufferLayout.h"
 
+namespace platform
+{
+	namespace crossplatform
+	{
+		class Buffer;
+		class Layout;
+	}
+}
+
 namespace clientrender
 {
 	//Interface for VertexBuffer
@@ -20,6 +29,9 @@ namespace clientrender
 
     protected:
 		VertexBufferCreateInfo m_CI;
+
+		platform::crossplatform::Buffer *m_SimulBuffer=nullptr;
+		platform::crossplatform::Layout *m_layout=nullptr;
 	
 	public:
 		VertexBuffer(const RenderPlatform* const r)
@@ -34,18 +46,31 @@ namespace clientrender
 			m_CI.size = 0;
 			m_CI.data = nullptr;
 		};
+		
+		platform::crossplatform::Layout* GetLayout()
+		{
+			return m_layout;
+		}
 
-
-		virtual void Create(VertexBufferCreateInfo* pVertexBufferCreateInfo) = 0;
-		virtual void Destroy() = 0;
+		virtual void Create(VertexBufferCreateInfo* pVertexBufferCreateInfo);
+		virtual void Destroy() ;
 
 		inline size_t GetVertexCount() const { return m_CI.vertexCount; }
 
-		virtual bool ResourceInUse(int timeout)= 0;
+		virtual bool ResourceInUse(int timeout) {return true;}
 		std::function<bool(VertexBuffer*, int)> ResourceInUseCallback = &VertexBuffer::ResourceInUse;
+		
+		platform::crossplatform::Buffer *GetSimulVertexBuffer()
+		{
+			return m_SimulBuffer;
+		}
 
+		const platform::crossplatform::Buffer* GetSimulVertexBuffer() const
+		{
+			return m_SimulBuffer;
+		}
 	protected:
-		virtual void Bind() const = 0;
-		virtual void Unbind() const = 0;
+		virtual void Bind() const ;
+		virtual void Unbind() const ;
 	};
 }

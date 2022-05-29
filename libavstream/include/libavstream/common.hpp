@@ -263,7 +263,7 @@ namespace avs
 	};
 
 	//! Identifies special use-cases for a locally-controlled node, used in UpdateNodeSubtypeCommand.
-	enum class NodeSubtype : uint8_t
+	enum class NodeSubtype_deprecated : uint8_t
 	{
 		None=0,
 		Pose,

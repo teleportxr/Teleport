@@ -40,15 +40,6 @@ namespace clientrender
 		const nodeList_t& GetRootNodes() const;
 		const std::vector<std::shared_ptr<Node>> & GetSortedRootNodes();
 
-		bool SetBody(avs::uid nodeID);
-		std::shared_ptr<Node> GetBody() const;
-
-		bool SetLeftHand(avs::uid nodeID);
-		std::shared_ptr<Node> GetLeftHand() const;
-
-		bool SetRightHand(avs::uid nodeID);
-		std::shared_ptr<Node> GetRightHand() const;
-
 		//Causes the node to become visible.
 		bool ShowNode(avs::uid nodeID);
 		//Causes the node to become invisible.
@@ -84,9 +75,6 @@ namespace clientrender
 	
         std::unordered_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 
-		uid body;
-		uid leftHand;
-		uid rightHand;
 	private:
 		struct EarlyAnimationControl
 		{

@@ -38,10 +38,10 @@ namespace clientrender
 		clientrender::Transform transformSCR(transformAVS);
 		clientrender::Transform convertedTransformSCR(convertedTransformAVS);
 
-		clientrender::mat4 matrix = transformSCR.GetTransformMatrix();
-		clientrender::mat4 convertedMatrix = avs::Mat4x4::convertToStandard(matrix, fromStandard, toStandard);
+		mat4 matrix = transformSCR.GetTransformMatrix();
+		avs::Mat4x4 convertedMatrix = avs::Mat4x4::convertToStandard(*((avs::Mat4x4*)&matrix), fromStandard, toStandard);
 
-		if(convertedMatrix != convertedTransformSCR.GetTransformMatrix())
+		if(*((mat4*)&convertedMatrix)!= convertedTransformSCR.GetTransformMatrix())
 		{
 			TELEPORT_CERR_BREAK("Test failure! Failed equivalence check between transform conversion and matrix conversion!", EPROTO)
 		}

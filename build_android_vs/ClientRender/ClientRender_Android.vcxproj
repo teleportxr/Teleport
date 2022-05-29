@@ -25,6 +25,12 @@
     <ProjectReference Include="..\firstparty\Platform\CrossPlatform\SimulCrossPlatform_MT.vcxproj">
       <Project>{160adc84-9b1c-3598-a176-5eb52cecb5b1}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\firstparty\Platform\ImGui\ImGui_Android.vcxproj">
+      <Project>{98612dae-fc43-4146-8d41-2afcc8c980f6}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\TeleportAudio\TeleportAudio_Android.vcxproj">
+      <Project>{523b3ddb-c733-4e4b-b2b7-87e79dfb72a9}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\TeleportCore\TeleportCore_Android.vcxproj">
       <Project>{c5385ffa-b456-40f0-b0c7-3397a7fefe42}</Project>
     </ProjectReference>
@@ -38,9 +44,10 @@
     <ClCompile Include="..\..\ClientRender\Bone.cpp" />
     <ClCompile Include="..\..\ClientRender\Camera.cpp" />
     <ClCompile Include="..\..\ClientRender\Common.cpp" />
-    <ClCompile Include="..\..\ClientRender\Effect.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryCache.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryDecoder.cpp" />
+    <ClCompile Include="..\..\ClientRender\Gui.cpp" />
+    <ClCompile Include="..\..\ClientRender\IndexBuffer.cpp" />
     <ClCompile Include="..\..\ClientRender\Light.cpp" />
     <ClCompile Include="..\..\ClientRender\Material.cpp" />
     <ClCompile Include="..\..\ClientRender\MemoryUtil.cpp" />
@@ -51,14 +58,15 @@
     <ClCompile Include="..\..\ClientRender\NodeComponents\VisibilityComponent.cpp" />
     <ClCompile Include="..\..\ClientRender\NodeManager.cpp" />
     <ClCompile Include="..\..\ClientRender\Renderer.cpp" />
+    <ClCompile Include="..\..\ClientRender\RenderPlatform.cpp" />
     <ClCompile Include="..\..\ClientRender\ResourceCreator.cpp" />
     <ClCompile Include="..\..\ClientRender\ShaderResource.cpp" />
-    <ClCompile Include="..\..\ClientRender\ShaderSystem.cpp" />
     <ClCompile Include="..\..\ClientRender\Skin.cpp" />
     <ClCompile Include="..\..\ClientRender\Tests.cpp" />
     <ClCompile Include="..\..\ClientRender\Texture.cpp" />
     <ClCompile Include="..\..\ClientRender\Transform.cpp" />
     <ClCompile Include="..\..\ClientRender\UniformBuffer.cpp" />
+    <ClCompile Include="..\..\ClientRender\VertexBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h" />
@@ -67,10 +75,9 @@
     <ClInclude Include="..\..\ClientRender\Camera.h" />
     <ClInclude Include="..\..\ClientRender\Common.h" />
     <ClInclude Include="..\..\ClientRender\DeviceContext.h" />
-    <ClInclude Include="..\..\ClientRender\Effect.h" />
-    <ClInclude Include="..\..\ClientRender\FrameBuffer.h" />
     <ClInclude Include="..\..\ClientRender\GeometryCache.h" />
     <ClInclude Include="..\..\ClientRender\GeometryDecoder.h" />
+    <ClInclude Include="..\..\ClientRender\Gui.h" />
     <ClInclude Include="..\..\ClientRender\IndexBuffer.h" />
     <ClInclude Include="..\..\ClientRender\Light.h" />
     <ClInclude Include="..\..\ClientRender\Material.h" />
@@ -85,11 +92,8 @@
     <ClInclude Include="..\..\ClientRender\RenderPlatform.h" />
     <ClInclude Include="..\..\ClientRender\ResourceCreator.h" />
     <ClInclude Include="..\..\ClientRender\ResourceManager.h" />
-    <ClInclude Include="..\..\ClientRender\Sampler.h" />
-    <ClInclude Include="..\..\ClientRender\Shader.h" />
     <ClInclude Include="..\..\ClientRender\ShaderResource.h" />
     <ClInclude Include="..\..\ClientRender\ShaderStorageBuffer.h" />
-    <ClInclude Include="..\..\ClientRender\ShaderSystem.h" />
     <ClInclude Include="..\..\ClientRender\Skin.h" />
     <ClInclude Include="..\..\ClientRender\Tests.h" />
     <ClInclude Include="..\..\ClientRender\Texture.h" />
@@ -227,14 +231,14 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

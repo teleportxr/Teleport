@@ -2,20 +2,39 @@
 #pragma once
 
 #include "Common.h"
+#include <libavstream/src/platform.hpp>
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/HdrRenderer.h"
 #include "Platform/CrossPlatform/MeshRenderer.h"
+#include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/Shaders/SL/CppSl.sl"
 #include "Platform/Shaders/SL/camera_constants.sl"
 #include "TeleportClient/basic_linear_algebra.h"
-#include "ClientRender/GeometryCache.h"
-#include "ClientRender/ResourceCreator.h"
-#include <libavstream/src/platform.hpp>
 #include "TeleportClient/SessionClient.h"
-#include "ClientRender/GeometryDecoder.h"
 #include "TeleportClient/ClientPipeline.h"
 #include "TeleportClient/OpenXR.h"
+#include "TeleportClient/ClientDeviceState.h"
+#include "ClientRender/GeometryCache.h"
+#include "ClientRender/ResourceCreator.h"
+#include "ClientRender/GeometryDecoder.h"
+#include "ClientRender/Shaders/cubemap_constants.sl"
+#include "ClientRender/Shaders/pbr_constants.sl"
+#include "ClientRender/Shaders/video_types.sl"
+#include "ClientRender/Gui.h"
+#include "TeleportAudio/AudioStreamTarget.h"
+#include "TeleportAudio/AudioCommon.h"
+#ifdef _MSC_VER
+#include "TeleportAudio/PC_AudioPlayer.h"
+#endif
+#include "TeleportAudio/NetworkPipeline.h"
 
+namespace teleport
+{
+	namespace client
+	{
+		class ClientDeviceState;
+	}
+}
 namespace clientrender
 {
 	/// <summary>
@@ -46,15 +65,24 @@ namespace clientrender
 		CONTROLLER_OSD,
 		NUM_OSDS
 	};
+	enum class ShaderMode
+	{
+		PBR, ALBEDO, NORMAL_UNSWIZZLED, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS
+	};
 	//! Timestamp of when the system started.
 	extern avs::Timestamp platformStartTimestamp;	
 	//! Base class for a renderer that draws for a specific server.
 	//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
-	class Renderer:public SessionCommandInterface
+	class Renderer:public teleport::client::SessionCommandInterface,public platform::crossplatform::PlatformRendererInterface
 	{
 	public:
-		Renderer(clientrender::NodeManager *localNodeManager,clientrender::NodeManager *remoteNodeManager,SessionClient *sessionClient,bool dev_mode);
-
+		Renderer(teleport::client::ClientDeviceState *c,clientrender::NodeManager *localNodeManager
+				,clientrender::NodeManager *remoteNodeManager
+				,teleport::client::SessionClient *sessionClient
+				, teleport::Gui &g,bool dev_mode);
+		virtual ~Renderer();
+		//! This allows live-recompile of shaders (desktop platforms only).
+		void RecompileShaders();
 		void SetMinimumPriority(int32_t p)
 		{
 			minimumPriority=p;
@@ -63,20 +91,66 @@ namespace clientrender
 		{
 			return minimumPriority;
 		}
-		virtual void ConfigureVideo(const avs::VideoConfig &vc)=0;
-		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)=0;
+
+		void ChangePass(ShaderMode newShaderMode);
+		void ConfigureVideo(const avs::VideoConfig &vc);
+		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		avs::SetupCommand lastSetupCommand;
 		avs::SetupLightingCommand lastSetupLightingCommand;
 
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
 	protected:
+		void InvalidateDeviceObjects();
+		void CreateTexture(clientrender::AVSTextureHandle &th,int width, int height);
+		void FillInControllerPose(int index, float offset);
+		struct ControllerSim
+		{
+			vec3 controller_dir;
+			vec3 view_dir;
+			float angle = 0.0f;
+			vec3 pos_offset[2];
+			avs::vec3 position[2];
+			avs::vec4 orientation[2];
+		};
+		ControllerSim controllerSim;
+		enum MouseOrKey :char
+		{
+			LEFT_BUTTON = 0x01
+			, MIDDLE_BUTTON = 0x02
+			, RIGHT_BUTTON = 0x04
+		};
+	
+		/// A camera instance to generate view and proj matrices and handle mouse control.
+		/// In practice you will have your own solution for this.
+		platform::crossplatform::Camera			camera;
+		platform::crossplatform::MouseCameraState	mouseCameraState;
+		platform::crossplatform::MouseCameraInput	mouseCameraInput;
+		std::map<MouseOrKey, avs::InputId> inputIdMappings;
+		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid,clientrender::GeometryCache &g);
+		virtual void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
+		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
+		
+		clientrender::RenderPlatform PcClientRenderPlatform;
+		/// It is better to use a reversed depth buffer format, i.e. the near plane is z=1 and the far plane is z=0. This
+		/// distributes numerical precision to where it is better used.
+		static const bool reverseDepth = true;
+		platform::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
+		platform::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
+		platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
+		platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
+		platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
+		static constexpr int maxTagDataSize = 32;
+		VideoTagDataCube videoTagDataCube[maxTagDataSize];
+
+		std::vector<clientrender::SceneCaptureCubeTagData> videoTagDataCubeArray;
+
 		// determined by the stream setup command:
 		vec4 colourOffsetScale;
 		vec4 depthOffsetScale;
 
 		bool keydown[256] = {};
-		SessionClient *sessionClient=nullptr;
+		teleport::client::SessionClient *sessionClient=nullptr;
 		teleport::core::Input inputs;
 		/// A pointer to RenderPlatform, so that we can use the platform::crossplatform API.
 		platform::crossplatform::RenderPlatform *renderPlatform	=nullptr;
@@ -122,12 +196,35 @@ namespace clientrender
 		platform::crossplatform::Texture* externalTexture = nullptr;
 		teleport::client::OpenXR *openXR=nullptr;
 		avs::uid show_only=0;
+		
+		std::string server_ip;
+		int server_discovery_port=0;
+		// TODO: temporary.
+		avs::uid server_uid=1;
+	
+		bool show_video = false;
+
+		bool render_from_video_centre	= false;
+		bool show_textures				= false;
+		bool show_cubemaps				=false;
+		bool show_node_overlays			=false;
+
+		teleport::client::ClientDeviceState *clientDeviceState = nullptr;
+		std::string overridePassName = ""; //Pass used for rendering geometry.
+
+		teleport::Gui &gui;
 		bool Match(const std::string& full_string, const std::string& substring);
 	public:
 		teleport::client::ClientPipeline clientPipeline;
 		clientrender::GeometryCache geometryCache;
 		clientrender::ResourceCreator resourceCreator;
 		std::vector<avs::InputDefinition> inputDefinitions;
+		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
+#ifdef _MSC_VER
+		sca::PC_AudioPlayer audioPlayer;
+#endif
+		std::unique_ptr<sca::NetworkPipeline> audioInputNetworkPipeline;
+		avs::Queue audioInputQueue;
 		static constexpr bool AudioStream	= true;
 		static constexpr bool GeoStream		= true;
 		static constexpr uint32_t NominalJitterBufferLength = 0;
@@ -139,5 +236,57 @@ namespace clientrender
 		GeometryDecoder geometryDecoder;
 	
 		bool render_local_offline = false;
+		void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
+		void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
+		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const platform::math::Matrix4x4& invCamMatrix);
+		void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
+		
+		bool OnDeviceRemoved();
+		void OnFrameMove(double fTime, float time_step, bool have_headset);
+		void OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
+		void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
+		void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
+		void OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown);
+		
+		void WriteHierarchy(int tab,std::shared_ptr<clientrender::Node> node);
+		void WriteHierarchies();
+		
+		int AddView() override;
+		void ResizeView(int view_id, int W, int H);
+		void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
+		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
+		void SetServer(const char* ip_port);
+		void RemoveView(int);
+		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		
+		std::vector<avs::uid> GetGeometryResources() ;
+		void ClearGeometryResources() ;
+		// to render the vr view instead of re-rendering.
+		void SetExternalTexture(platform::crossplatform::Texture* t);
+		void PrintHelpText(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		// handler for the UI to tell us to connect.
+		void ConnectButtonHandler(const std::string& url);
+
+		bool OnNodeEnteredBounds(avs::uid nodeID) override;
+		bool OnNodeLeftBounds(avs::uid nodeID) override;
+	
+		void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
+		void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand,const std::string &regexPath) override;
+
+		void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
+		void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) override;
+		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) override;
+		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
+		void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate) override;
+		void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
+		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
+		
+		// Implement SessionCommandInterface
+		bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+		void OnVideoStreamClosed() override;
+		void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
+		void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
+		void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) override;
 	};
 }

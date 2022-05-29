@@ -10,6 +10,7 @@ set(src_files
 	ClientDeviceState.h
 	ClientPipeline.cpp
 	ClientPipeline.h
+	Config.h
 	DiscoveryService.h
 	Log.cpp
 	Log.h

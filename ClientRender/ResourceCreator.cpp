@@ -23,7 +23,6 @@ ResourceCreator::~ResourceCreator()
 
 void ResourceCreator::Initialize(clientrender::RenderPlatform* r, clientrender::VertexBufferLayout::PackingStyle packingStyle)
 {
-	m_API.SetAPI(r->GetAPI());
 	m_pRenderPlatform = r;
 
 	assert(packingStyle == clientrender::VertexBufferLayout::PackingStyle::GROUPED || packingStyle == clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
@@ -623,11 +622,11 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 	std::shared_ptr<IncompleteSkin> incompleteSkin = std::make_shared<IncompleteSkin>(id, avs::GeometryPayloadType::Skin);
 
 	//Convert avs::Mat4x4 to clientrender::Transform.
-	std::vector<clientrender::mat4> inverseBindMatrices;
+	std::vector<mat4> inverseBindMatrices;
 	inverseBindMatrices.reserve(skin.inverseBindMatrices.size());
 	for (const Mat4x4& matrix : skin.inverseBindMatrices)
 	{
-		inverseBindMatrices.push_back(static_cast<clientrender::mat4>(matrix));
+		inverseBindMatrices.push_back(*((mat4*)&matrix));
 	}
 
 	//Create skin.

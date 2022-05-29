@@ -3,11 +3,17 @@
 
 #include "Common.h"
 
+namespace platform
+{
+	namespace crossplatform
+	{
+		class Buffer;
+	}
+}
+
 namespace clientrender
 {
-
-
-	//Interface for IndexBuffer
+	/// Wrapper for an IndexBuffer
 	class IndexBuffer :public APIObject
 	{
 	public:
@@ -35,16 +41,27 @@ namespace clientrender
 			m_CI.data = nullptr;
 		};
 
-		virtual void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo) = 0;
-		virtual void Destroy() = 0;
+		virtual void Create(IndexBufferCreateInfo* pIndexBufferCreateInfo);
+		virtual void Destroy();
 
 		inline const IndexBufferCreateInfo& GetIndexBufferCreateInfo() const { return m_CI; }
 
-		virtual bool ResourceInUse(int timeout) = 0;
+		virtual bool ResourceInUse(int timeout) {return true;}
 		std::function<bool(IndexBuffer*, int)> ResourceInUseCallback = &IndexBuffer::ResourceInUse;
+		
+
+		platform::crossplatform::Buffer* GetSimulIndexBuffer()
+		{
+			return m_SimulBuffer;
+		}
+		const platform::crossplatform::Buffer* GetSimulIndexBuffer() const
+		{
+			return m_SimulBuffer;
+		}
 
 	protected:
-		virtual void Bind() const = 0;
-		virtual void Unbind() const = 0;
+		virtual void Bind() const {}
+		virtual void Unbind() const {}
+		platform::crossplatform::Buffer *m_SimulBuffer=nullptr;
 	};
 }

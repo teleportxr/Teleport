@@ -61,6 +61,7 @@ namespace teleport
 			B,
 			X,
 			Y,
+			HEAD_POSE,
 			LEFT_TRIGGER,
 			RIGHT_TRIGGER,
 			LEFT_SQUEEZE,
@@ -156,6 +157,7 @@ namespace teleport
 			XrActionType	xrActionType;
 			XrSpace			space;
 			std::string name;
+			std::string localizedName;
 		};
 
 		struct XrInputSession
@@ -165,7 +167,8 @@ namespace teleport
 			ActionState			actionStates[MAX_ACTIONS];
 			std::vector<XRInputDeviceState> inputDeviceStates;
 			// Here we  can set all the actions to be supported.
-			void SetActions(XrInstance& xr_instance, std::initializer_list<ActionInitializer> actions);
+			void SetActions( std::initializer_list<ActionInitializer> actions);
+			void InstanceInit(XrInstance& xr_instance);
 			void SessionInit(XrInstance xr_instance,XrSession &xr_session);
 		};
 
@@ -197,6 +200,10 @@ namespace teleport
 			void PollEvents(bool& exit);
 			bool HaveXRDevice() const;
 			bool IsXRDeviceActive() const;
+			
+			// Set a "virtual" pose - e.g. mouse emulation.
+			void SetFallbackBinding(ActionId actionId,std::string path);
+			void SetFallbackPose(ActionId actionId,const avs::Pose &pose);
 
 			// Getting mapped inputs specific to a given server, in-frame.
 			void OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition> &inputDefinitions_);

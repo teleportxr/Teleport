@@ -8,19 +8,14 @@ set(DEBUG_CONFIGURATIONS Debug)
 set( src_root
 	Common.h
 	Common.cpp
-	DeviceContext.h
-	Effect.h
-	FrameBuffer.h
 	IndexBuffer.h
-	RenderPlatform.h
-	Sampler.h
-	Shader.h
-	ShaderStorageBuffer.h
+	IndexBuffer.cpp
 	Texture.cpp
 	Texture.h
 	UniformBuffer.cpp
 	UniformBuffer.h
 	VertexBuffer.h
+	VertexBuffer.cpp
 	VertexBufferLayout.h
 	Animation.cpp
 	Animation.h
@@ -34,6 +29,8 @@ set( src_root
 	GeometryCache.h
 	GeometryDecoder.cpp
 	GeometryDecoder.h
+	Gui.cpp
+	Gui.h
 	Light.cpp
 	Light.h
 	Material.cpp
@@ -49,10 +46,10 @@ set( src_root
 	ResourceManager.h
 	Renderer.h
 	Renderer.cpp
+	RenderPlatform.h
+	RenderPlatform.cpp
 	ShaderResource.cpp
 	ShaderResource.h
-	ShaderSystem.cpp
-	ShaderSystem.h
 	Skin.cpp
 	Skin.h
 	Transform.cpp
@@ -102,12 +99,14 @@ target_include_directories(ClientRender PRIVATE ../thirdparty/basis_universal)
 target_include_directories(ClientRender PRIVATE ../firstparty/Platform/External/stb)
 #Include enet
 target_include_directories(ClientRender PRIVATE ../thirdparty/enet/include)
+target_include_directories(ClientRender PRIVATE ${SIMUL_PLATFORM_DIR}/External/imgui)
 target_include_directories(ClientRender PRIVATE ../TeleportClient)
 #Include draco
 target_include_directories(ClientRender PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/src)
 set_target_properties(ClientRender PROPERTIES FOLDER Client)
 target_link_libraries(ClientRender draco TeleportClient)
+target_compile_definitions(ClientRender PUBLIC TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>)
 
 if(WIN32)
 # Removed circular dependency

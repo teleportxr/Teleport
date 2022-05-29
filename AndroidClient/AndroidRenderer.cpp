@@ -2,7 +2,8 @@
 using namespace teleport;
 using namespace android;
 
-AndroidRenderer::AndroidRenderer(teleport::client::ClientDeviceState *clientDeviceState):clientrender::Renderer(new clientrender::NodeManager,new clientrender::NodeManager)
+AndroidRenderer::AndroidRenderer(teleport::client::ClientDeviceState *clientDeviceState,teleport::client::SessionClient *s,teleport::Gui &g,bool dev)
+:clientrender::Renderer(clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager,s,g,dev)
 {
 }
 
@@ -10,6 +11,7 @@ AndroidRenderer::~AndroidRenderer()
 {
 }
 
-void AndroidRenderer::ConfigureVideo(const avs::VideoConfig &vc) 
+
+void AndroidRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
 {
 }

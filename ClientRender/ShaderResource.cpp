@@ -29,7 +29,7 @@ void ShaderResource::AddBuffer( ShaderResourceLayout::ShaderResourceType shaderR
 	wsr.dstArrayElement = 0;
 	wsr.shaderResourceCount = m_ShaderResourceLayout.FindShaderResourceLayout(bindingIndex).count;
 	wsr.shaderResourceType = shaderResourceType;
-	wsr.imageInfo = { nullptr, nullptr };
+	wsr.imageInfo = {  nullptr };
 	wsr.bufferInfo = bufferInfo;
 
 	m_WriteShaderResources.push_back(wsr);

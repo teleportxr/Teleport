@@ -187,48 +187,6 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedRootNodes()
 	return distanceSortedRootNodes;
 }
 
-bool NodeManager::SetBody(avs::uid nodeID)
-{
-	body=nodeID;
-	return true;
-}
-
-std::shared_ptr<Node> NodeManager::GetBody() const
-{
-	auto nodeIt = nodeLookup.find(body);
-	if(nodeIt==nodeLookup.end())
-		return nullptr;	
-	return nodeIt->second;
-}
-
-bool NodeManager::SetLeftHand(avs::uid nodeID)
-{
-	leftHand=nodeID;
-	return true;
-}
-
-std::shared_ptr<Node> NodeManager::GetLeftHand() const
-{
-	auto nodeIt = nodeLookup.find(leftHand);
-	if(nodeIt==nodeLookup.end())
-		return nullptr;	
-	return nodeIt->second;
-}
-
-bool NodeManager::SetRightHand(avs::uid nodeID)
-{
-	rightHand=nodeID;
-	return true;
-}
-
-std::shared_ptr<Node> NodeManager::GetRightHand() const
-{
-	auto nodeIt = nodeLookup.find(rightHand);
-	if(nodeIt==nodeLookup.end())
-		return nullptr;	
-	return nodeIt->second;
-}
-
 bool NodeManager::ShowNode(avs::uid nodeID)
 {
 	auto nodeIt = nodeLookup.find(nodeID);
@@ -413,18 +371,6 @@ void NodeManager::Update(float deltaTime)
 		RemoveNode(node);
 	}
 
-	if(auto b=GetBody())
-	{
-		b->Update(deltaTime);
-	}
-	if(auto h=GetLeftHand())
-	{
-		h->Update(deltaTime);
-	}
-	if(auto h=GetRightHand())
-	{
-		h->Update(deltaTime);
-	}
 }
 
 void NodeManager::Clear()
@@ -432,10 +378,6 @@ void NodeManager::Clear()
 	rootNodes.clear();
 	distanceSortedRootNodes.clear();
 	nodeLookup.clear();
-
-	body = 0;
-	leftHand = 0;
-	rightHand = 0;
 
 	parentLookup.clear();
 

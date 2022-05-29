@@ -38,7 +38,7 @@ platform::dx11::DeviceManager deviceManager;
 using namespace teleport;
 
 ClientRenderer *clientRenderer=nullptr;
-SessionClient *sessionClient=nullptr;
+teleport::client::SessionClient *sessionClient=nullptr;
 platform::crossplatform::RenderDelegate renderDelegate;
 UseOpenXR useOpenXR;
 platform::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
@@ -220,8 +220,6 @@ void ShutdownRenderer(HWND hWnd)
 {
 	useOpenXR.Shutdown();
 	displaySurfaceManager.Shutdown();
-	if(clientRenderer)
-		clientRenderer->InvalidateDeviceObjects();
 	delete clientRenderer;
 	clientRenderer=nullptr;
 	delete sessionClient;
@@ -238,12 +236,16 @@ void InitXR()
 		std::function<void()> showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
 		if (useOpenXR.HaveXRDevice())
 			useOpenXR.SetMenuButtonHandler(showHideDelegate);
+		// create the input defs for the local (zero-uid) server:		
+		//std::vector<avs::InputDefinition> inputDefinitions;
+		//inputDefinitions.push_back({avs::InputId::})
+		//useOpenXR.OnInputsSetupChanged(0,inputDefinitions);
 	}
 }
 
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	sessionClient=new SessionClient(std::make_unique<PCDiscoveryService>());
+	sessionClient=new teleport::client::SessionClient(std::make_unique<PCDiscoveryService>());
 	clientRenderer=new teleport::ClientRenderer (&clientDeviceState, sessionClient,gui,dev_mode);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
@@ -304,7 +306,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		}
 	}
 	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
-	clientRenderer->Init(renderPlatform,&useOpenXR);
+	clientRenderer->Init(renderPlatform,&useOpenXR,(teleport::PlatformWindow*)GetActiveWindow());
 	if(server_ips.size())
 		clientRenderer->SetServer(server_ips[0].c_str());
 
@@ -465,10 +467,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				else
 				{
-					static char c=0;
+					static uint64_t retry_wait=256;
+					static uint64_t c=1;
 					c--;
 					if(!c)
+					{
 						InitXR();
+						c=retry_wait;
+						retry_wait*=2;
+					}
 				}
 				static double fTime=0.0;
 				static platform::core::Timer t;

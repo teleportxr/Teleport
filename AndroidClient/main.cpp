@@ -30,6 +30,7 @@ Platform gPlatform = Platform::ANDROID;
 #include "AndroidOpenXR.h"
 #include "TeleportClient/ClientDeviceState.h"
 #include "AndroidRenderer.h"
+#include "AndroidDiscoveryService.h"
 
 using namespace platform;
 using namespace crossplatform;
@@ -150,8 +151,15 @@ void android_main(struct android_app* app)
 	platform::core::FileLoader::SetFileLoader(&androidFileLoader);
 	
 	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
-	
-	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState);
+#if TELEPORT_INTERNAL_CHECKS
+	static bool dev_mode=true;
+#else
+	static bool dev_mode=false;
+#endif
+	teleport::Gui gui;
+
+	teleport::client::SessionClient *sessionClient=new teleport::client::SessionClient(std::make_unique<android::AndroidDiscoveryService>());
+	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState, sessionClient,gui,dev_mode);
 	
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	openXR.InitInstance("Teleport VR Client");
@@ -167,7 +175,6 @@ void android_main(struct android_app* app)
 	openXR.Init(renderPlatform);
 	InitXR(openXR);
 	
-	platform::crossplatform::RenderDelegate renderDelegate;
 	renderDelegate = std::bind(&RenderView,std::placeholders::_1);
 
 	while (!g_WindowQuit)
@@ -225,4 +232,6 @@ void android_main(struct android_app* app)
 		renderPlatform->EndFrame();
 	}
 	openXR.Shutdown();
+	delete androidRenderer;
+	delete sessionClient;
 }

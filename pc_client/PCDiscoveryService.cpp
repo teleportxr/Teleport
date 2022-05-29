@@ -54,7 +54,7 @@ ENetSocket PCDiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t di
 	return socket;
 }
 
-uint32_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string ip, uint16_t serverDiscoveryPort, ENetAddress& remote)
+uint64_t PCDiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string ip, uint16_t serverDiscoveryPort, ENetAddress& remote)
 {
 	bool serverDiscovered = false;
 

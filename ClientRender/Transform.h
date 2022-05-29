@@ -26,7 +26,7 @@ namespace clientrender
 	public:
 		Transform();
 		Transform(avs::vec3 translation, quat rotation, avs::vec3 scale);
-		Transform(clientrender::mat4 matrix);
+		Transform(mat4 matrix);
 		Transform(const avs::Transform& transform);
 
 		Transform& operator= (const avs::Transform& transform)
@@ -35,7 +35,7 @@ namespace clientrender
 			m_Rotation = transform.rotation;
 			m_Scale = transform.scale;
 
-			m_TransformData.m_ModelMatrix = mat4::Translation(m_Translation) * mat4::Rotation(m_Rotation) * mat4::Scale(m_Scale);
+			m_TransformData.m_ModelMatrix = mat4_deprecated::Translation(m_Translation) * mat4_deprecated::Rotation(m_Rotation) * mat4_deprecated::Scale(m_Scale);
 
 			return *this;
 		}

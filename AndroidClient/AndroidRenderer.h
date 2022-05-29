@@ -8,9 +8,9 @@ namespace teleport
 		class AndroidRenderer : public clientrender::Renderer
 		{
 		public:
-			AndroidRenderer(teleport::client::ClientDeviceState *clientDeviceState);
+			AndroidRenderer(teleport::client::ClientDeviceState *clientDeviceState,teleport::client::SessionClient *s,teleport::Gui &g,bool dev_mode);
 			~AndroidRenderer();
-			void ConfigureVideo(const avs::VideoConfig &vc) override;
+			void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext) override;
 		};
 	}
 }

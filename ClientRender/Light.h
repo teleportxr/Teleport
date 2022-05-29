@@ -5,7 +5,6 @@
 
 #include "Node.h"
 
-#include "ClientRender/FrameBuffer.h"
 #include "ClientRender/UniformBuffer.h"
 
 namespace clientrender
@@ -62,8 +61,6 @@ namespace clientrender
 		static std::vector<LightData> s_LightData;
 		size_t m_LightID;
 		bool m_IsValid = false;
-
-		std::shared_ptr<Sampler> m_ShadowMapSampler;
 
 		ShaderResourceLayout m_ShaderResourceLayout;
 		ShaderResource m_ShaderResource;

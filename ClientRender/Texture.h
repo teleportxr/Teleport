@@ -2,7 +2,14 @@
 #pragma once
  
 #include "Common.h"
-#include "Sampler.h"
+namespace platform
+{
+	namespace crossplatform
+	{
+		class Texture;
+	}
+}
+
 
 namespace clientrender
 {
@@ -147,17 +154,14 @@ namespace clientrender
 	protected:
 		TextureCreateInfo m_CI;
 
-		std::shared_ptr<Sampler> m_Sampler = nullptr;
+		platform::crossplatform::Texture* m_SimulTexture= nullptr;
 
 	public:
 		Texture(const RenderPlatform* const r)
 			: APIObject(r), m_CI()
 		{}
 
-		virtual ~Texture()
-		{
-		
-		}
+		virtual ~Texture();
 
 		//Returns whether the texture is valid.
 		bool IsValid() const
@@ -184,23 +188,25 @@ namespace clientrender
 		}
 
 		//For cubemaps pass in a uint8_t* to continuous array of data for all 6 sides. Width, height, depth and bytesPerPixel will be the same for all faces.
-		virtual void Create(const TextureCreateInfo& pTextureCreateInfo) = 0;
-		virtual void Destroy() = 0;
+		virtual void Create(const TextureCreateInfo& pTextureCreateInfo) ;
+		virtual void Destroy() ;
 
-		virtual void UseSampler(const std::shared_ptr<Sampler>& sampler) = 0;
-		virtual void GenerateMips() = 0;
+		virtual void GenerateMips() ;
 
-		inline std::shared_ptr<Sampler> GetSampler() { return m_Sampler; }
 		inline const TextureCreateInfo &GetTextureCreateInfo() const { return m_CI;}
 
-		virtual bool ResourceInUse(int timeout) = 0;
+		virtual bool ResourceInUse(int timeout) {return true;}
 		std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;
 
 		friend class FrameBuffer;
-
+		
+		platform::crossplatform::Texture* GetSimulTexture()
+		{
+			return m_SimulTexture;
+		}
 	protected:
-		virtual void Bind(uint32_t mip,uint32_t layer) const = 0;
-		virtual void BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const =0;
-		virtual void Unbind() const = 0;
+		virtual void Bind(uint32_t mip,uint32_t layer) const;
+		virtual void BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const;
+		virtual void Unbind() const ;
 	};
 }

@@ -22,7 +22,10 @@ const avs::Pose &ClientDeviceState::GetGlobalNodePose(avs::uid uid) const
 {
 	const auto &p=nodePoses.find(uid);
 	if(p==nodePoses.end())
-		return avs::Pose();
+	{
+	static avs::Pose p;
+		return p;
+	}
 	return p->second.globalPose;
 }
 

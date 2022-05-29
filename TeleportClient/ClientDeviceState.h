@@ -3,6 +3,8 @@
 #include "basic_linear_algebra.h"
 #include <TeleportCore/Input.h>
 
+#include "Platform/Shaders/SL/CppSl.sl"
+
 namespace teleport
 {
 	namespace client
@@ -20,7 +22,7 @@ namespace teleport
 			ClientDeviceState();
 			//! Clear the stored data, e.g. node poses.
 			void Clear();
-			clientrender::mat4 transformToLocalOrigin; // Because we're using OVR's rendering, we must position the actors relative to the oculus origin.
+			mat4 transformToLocalOrigin; //  position the actors relative to the oculus origin.
 			float eyeHeight=0.5f;
 			float stickYaw=0.0f;
 			LocalGlobalPose headPose;

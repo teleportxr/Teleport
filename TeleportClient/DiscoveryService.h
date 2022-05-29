@@ -18,14 +18,14 @@ namespace teleport
 			}
 			virtual ~DiscoveryService(){};
 			/// Returns Client ID.
-			virtual uint32_t Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote) = 0;
+			virtual uint64_t Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote) = 0;
 
-			void SetClientID(uint32_t inClientID)
+			void SetClientID(uint64_t inClientID)
 			{
 				clientID = inClientID;
 			}
 		protected:
-			uint32_t clientID = 0;
+			uint64_t clientID = 0x1;
 			ENetSocket serviceDiscoverySocket = 0;
 		};
 	}

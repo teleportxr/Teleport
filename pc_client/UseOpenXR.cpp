@@ -69,7 +69,7 @@ bool UseOpenXR::TryInitDevice()
 	systemInfo.formFactor = app_config_form;
 	if (!CheckXrResult(xr_instance,xrGetSystem(xr_instance, &systemInfo, &xr_system_id)))
 	{
-		std::cerr << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
+		TELEPORT_CERR << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
 		return false;
 	}
 

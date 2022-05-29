@@ -22,8 +22,8 @@ namespace clientrender
 	struct quat;
 	inline quat operator*(float lhs, const quat& rhs);
 
-	struct mat4;
-	inline mat4 operator*(float lhs, const mat4& rhs);
+	struct mat4_deprecated;
+	inline mat4_deprecated operator*(float lhs, const mat4_deprecated& rhs);
 
 	//DEFINITIONS
 
@@ -274,18 +274,18 @@ namespace clientrender
 		}
 	};
 
-	struct mat4
+	struct mat4_deprecated
 	{
 		float a, b, c, d;
 		float e, f, g, h;
 		float i, j, k, l;
 		float m, n, o, p;
 
-		mat4()
-			:mat4(1.0f)
+		mat4_deprecated()
+			:mat4_deprecated(1.0f)
 		{}
 
-		mat4(float a, float b, float c, float d, float e, float f, float g, float h,
+		mat4_deprecated(float a, float b, float c, float d, float e, float f, float g, float h,
 			 float i, float j, float k, float l, float m, float n, float o, float p)
 			:a(a), b(b), c(c), d(d),
 			e(e), f(f), g(g), h(h),
@@ -293,15 +293,15 @@ namespace clientrender
 			m(m), n(n), o(o), p(p)
 		{}
 
-		mat4(const float *m)
-			:mat4(m[0], m[1], m[2], m[3],
+		mat4_deprecated(const float *m)
+			:mat4_deprecated(m[0], m[1], m[2], m[3],
 				  m[4], m[5], m[6], m[7],
 				  m[8], m[9], m[10], m[11],
 				  m[12], m[13], m[14], m[15])
 		{}
 
-		mat4(float diagonal)
-			:mat4
+		mat4_deprecated(float diagonal)
+			:mat4_deprecated
 			(diagonal, 0.0f, 0.0f, 0.0f,
 			 0.0f, diagonal, 0.0f, 0.0f,
 			 0.0f, 0.0f, diagonal, 0.0f,
@@ -309,8 +309,8 @@ namespace clientrender
 			)
 		{}
 
-		mat4(const avs::vec4& a, const avs::vec4& b, const avs::vec4& c, const avs::vec4& d)
-			:mat4
+		mat4_deprecated(const avs::vec4& a, const avs::vec4& b, const avs::vec4& c, const avs::vec4& d)
+			:mat4_deprecated
 			(a.x, a.y, a.z, a.w,
 			 b.x, b.y, b.z, b.w,
 			 c.x, c.y, c.z, c.w,
@@ -318,16 +318,16 @@ namespace clientrender
 			)
 		{}
 
-		mat4(avs::Mat4x4 matrix)
-			:mat4(matrix.m00, matrix.m01, matrix.m02, matrix.m03,
+		mat4_deprecated(avs::Mat4x4 matrix)
+			:mat4_deprecated(matrix.m00, matrix.m01, matrix.m02, matrix.m03,
 				  matrix.m10, matrix.m11, matrix.m12, matrix.m13,
 				  matrix.m20, matrix.m21, matrix.m22, matrix.m23,
 				  matrix.m30, matrix.m31, matrix.m32, matrix.m33)
 		{}
 
-		static mat4 Transpose(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j, float k, float l, float m, float n, float o, float p)
+		static mat4_deprecated Transpose(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j, float k, float l, float m, float n, float o, float p)
 		{
-			return mat4
+			return mat4_deprecated
 			(
 				a, e, i, m,
 				b, f, j, n,
@@ -336,17 +336,17 @@ namespace clientrender
 			);
 		}
 
-		static mat4 Transpose(mat4 source)
+		static mat4_deprecated Transpose(mat4_deprecated source)
 		{
 			return Transpose(source.a, source.b, source.c, source.d, source.e, source.f, source.g, source.h, source.i, source.j, source.k, source.l, source.m, source.n, source.o, source.p);
 		}
 
-		mat4 GetTranspose() const
+		mat4_deprecated GetTranspose() const
 		{
 			return Transpose(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p);
 		}
 
-		mat4& Transposed()
+		mat4_deprecated& Transposed()
 		{
 			/*a = a;
 			f = f;
@@ -374,9 +374,9 @@ namespace clientrender
 			return Determinant(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p);
 		}
 
-		mat4 GetInverted() const
+		mat4_deprecated GetInverted() const
 		{
-			const mat4 cofactors
+			const mat4_deprecated cofactors
 			(
 				+mat3::Determinant(f, g, h, j, k, l, n, o, p), -mat3::Determinant(e, g, h, i, k, l, m, o, p), +mat3::Determinant(e, f, h, i, j, l, m, n, p), -mat3::Determinant(e, f, g, i, j, k, m, n, o),
 				-mat3::Determinant(b, c, d, j, k, l, n, o, p), +mat3::Determinant(a, c, d, i, k, l, m, o, p), -mat3::Determinant(a, b, d, i, j, l, m, n, p), +mat3::Determinant(a, b, c, i, j, k, m, n, o),
@@ -384,7 +384,7 @@ namespace clientrender
 				-mat3::Determinant(b, c, d, f, g, h, j, k, l), +mat3::Determinant(a, c, d, e, g, h, i, k, l), -mat3::Determinant(a, b, d, e, f, h, i, j, l), +mat3::Determinant(a, b, c, e, f, g, i, j, k)
 			);
 
-			mat4 adjugate = cofactors.GetTranspose();
+			mat4_deprecated adjugate = cofactors.GetTranspose();
 			float determinate = a * cofactors.a + b * cofactors.b + c * cofactors.c + d * cofactors.d;
 
 			return (1 / determinate) * adjugate;
@@ -400,7 +400,7 @@ namespace clientrender
 			return output;
 		}
 		
-		mat4 operator* (const mat4& input) const
+		mat4_deprecated operator* (const mat4_deprecated& input) const
 		{
 			avs::vec4 input_i(input.a, input.e, input.i, input.m);
 			avs::vec4 input_j(input.b, input.f, input.j, input.n);
@@ -412,14 +412,14 @@ namespace clientrender
 			avs::vec4 output_k = *this * input_k;
 			avs::vec4 output_l = *this * input_l;
 
-			mat4 output(output_i, output_j, output_k, output_l);
+			mat4_deprecated output(output_i, output_j, output_k, output_l);
 			output.Transposed();
 			return output;
 		}
 
-		mat4 operator*(float rhs) const
+		mat4_deprecated operator*(float rhs) const
 		{
-			return mat4
+			return mat4_deprecated
 			(
 				a * rhs, b * rhs, c * rhs, d * rhs,
 				e * rhs, f * rhs, g * rhs, h * rhs,
@@ -428,7 +428,7 @@ namespace clientrender
 			);
 		}
 
-		bool operator==(const mat4& rhs) const
+		bool operator==(const mat4_deprecated& rhs) const
 		{
 			return
 				a == rhs.a &&
@@ -449,83 +449,80 @@ namespace clientrender
 				p == rhs.p;
 		}
 
-		bool operator!=(const mat4& rhs) const
+		bool operator!=(const mat4_deprecated& rhs) const
 		{
 			return !(*this == rhs);
 		}
 
-		avs::vec3 GetTranslation() const
+		static avs::vec3 GetTranslation(const mat4& m) 
 		{
-			return avs::vec3(d, h, l);
+			return avs::vec3(m.d, m.h, m.l);
 		}
 
-		clientrender::quat GetRotation() const
+		static clientrender::quat GetRotation(const mat4 &m) 
 		{
 			//TODO: An actual implementation.
 			return clientrender::quat(0,0,0,1.0f);
 		}
 
-		avs::vec3 GetScale() const
+		static avs::vec3 GetScale(const mat4 &m) 
 		{
-			avs::vec3 x(a, e, i);
-			avs::vec3 y(b, f, j);
-			avs::vec3 z(c, g, k);
+			avs::vec3 x(m.a,m.e,m.i);
+			avs::vec3 y(m.b,m.f,m.j);
+			avs::vec3 z(m.c,m.g,m.k);
 
 			return avs::vec3(x.Length(), y.Length(), z.Length());
 		} 
 
-		static mat4 Identity()
+		static mat4_deprecated Identity()
 		{
-			return mat4(1.0f);
+			return mat4_deprecated(1.0f);
 		}
 
 		static mat4 Perspective(float horizontalFOV, float aspectRatio, float zNear, float zFar)
 		{
-			return mat4
-			(
+			return {
 				(1.0f / (aspectRatio * static_cast<float>(tanf(horizontalFOV / 2.0f)))), (0), (0), (0),
 				(0), (1.0f / static_cast<float>(tanf(horizontalFOV / 2.0f))), (0), (0),
 				(0), (0), -((zFar + zNear) / (zFar - zNear)), -((2.0f * zFar * zNear) / (zFar - zNear)),
 				(0), (0), (-1.0f), (0)
-			);
+			};
 		}
 
 		static mat4 Orthographic(float left, float right, float bottom, float top, float _near, float _far)
 		{
-			return mat4
-			(
+			return {
 				(2.0f / (right - left)), (0), (0), (-(right + left) / (right - left)),
 				(0), (2.0f / (top - bottom)), (0), (-(top + bottom) / (top - bottom)),
 				(0), (0), (-2.0f / (_far - _near)), (-(_far + _near) / (_far - _near)),
 				(0), (0), (0), (1.0f)
-			);
+			};
 		}
 
 		static mat4 Translation(const avs::vec3& translation)
 		{
-			return mat4
-			(
+			return 
+			{
 				1.0f, 0.0f, 0.0f, translation.x,
 				0.0f, 1.0f, 0.0f, translation.y,
 				0.0f, 0.0f, 1.0f, translation.z,
 				0.0f, 0.0f, 0.0f, 1.0f
-			);
+			};
 		}
 
 		static mat4 Rotation(const quat& orientation)
 		{
-			return mat4
-			(
+			return {
 				(powf(orientation.s, 2) + powf(orientation.i, 2) - powf(orientation.j, 2) - powf(orientation.k, 2)), 2 * (orientation.i * orientation.j - orientation.k * orientation.s), 2 * (orientation.i * orientation.k + orientation.j * orientation.s), 0,
 				2 * (orientation.i * orientation.j + orientation.k * orientation.s), (powf(orientation.s, 2) - powf(orientation.i, 2) + powf(orientation.j, 2) - powf(orientation.k, 2)), 2 * (orientation.j * orientation.k - orientation.i * orientation.s), 0,
 				2 * (orientation.i * orientation.k - orientation.j * orientation.s), 2 * (orientation.j * orientation.k + orientation.i * orientation.s), (powf(orientation.s, 2) - powf(orientation.i, 2) - powf(orientation.j, 2) + powf(orientation.k, 2)), 0,
 				0, 0, 0, 1
-			);
+			};
 		}
 
 		static mat4 Rotation(float angle, const avs::vec3& axis)
 		{
-			mat4 result(1);
+			mat4_deprecated result(1);
 			float c_angle = static_cast<float>(cos(angle));
 			float s_angle = static_cast<float>(sin(angle));
 			float omcos = static_cast<float>(1 - c_angle);
@@ -554,18 +551,17 @@ namespace clientrender
 			result.l = 0;
 			result.p = 1;
 
-			return result;
+			return *((mat4*)&result);
 		}
 
 		static mat4 Scale(const avs::vec3& scale)
 		{
-			return mat4
-			(
+			return {
 				scale.x, 0.0f, 0.0f, 0.0f,
 				0.0f, scale.y, 0.0f, 0.0f,
 				0.0f, 0.0f, scale.z, 0.0f,
 				0.0f, 0.0f, 0.0f, 1.0f
-			);
+			};
 		}
 
 		operator avs::Mat4x4()
@@ -580,7 +576,7 @@ namespace clientrender
 		}
 	};
 
-	inline mat4 operator*(float lhs, const mat4& rhs)
+	inline mat4_deprecated operator*(float lhs, const mat4_deprecated& rhs)
 	{
 		return rhs * lhs;
 	}
@@ -624,5 +620,12 @@ namespace clientrender
 	inline float GetVerticalFOVFromHorizontalInDegrees(float horizontal, float aspect)
 	{
 		return GetVerticalFOVFromHorizontal(horizontal * DEG_TO_RAD, aspect) * RAD_TO_DEG;
+	}
+	inline avs::vec3 LocalToGlobal(const avs::Pose &pose,const avs::vec3& local)
+	{
+		avs::vec3 ret = pose.position;
+		quat *q=(clientrender::quat*)&pose.orientation;
+		ret+=q->RotateVector(local);
+		return ret;
 	}
 }

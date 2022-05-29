@@ -99,7 +99,6 @@ namespace clientrender
 		{
 			mNodeManager->Update(timeElapsed_s);
 			mIndexBufferManager.Update(timeElapsed_s);
-			mShaderManager.Update(timeElapsed_s);
 			mMaterialManager.Update(timeElapsed_s);
 			mTextureManager.Update(timeElapsed_s);
 			mUniformBufferManager.Update(timeElapsed_s);
@@ -151,7 +150,6 @@ namespace clientrender
 			mNodeManager->Clear();
 
 			mIndexBufferManager.Clear();
-			mShaderManager.Clear();
 			mMaterialManager.Clear();
 			mTextureManager.Clear();
 			mUniformBufferManager.Clear();
@@ -198,7 +196,6 @@ namespace clientrender
 
 		std::unique_ptr<clientrender::NodeManager>	mNodeManager;
 		ResourceManager<clientrender::IndexBuffer>   mIndexBufferManager;
-		ResourceManager<clientrender::Shader>        mShaderManager;
 		ResourceManager<clientrender::Material>		mMaterialManager;
 		ResourceManager<clientrender::Texture>       mTextureManager;
 		ResourceManager<clientrender::UniformBuffer> mUniformBufferManager;

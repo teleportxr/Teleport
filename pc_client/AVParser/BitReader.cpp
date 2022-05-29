@@ -50,14 +50,14 @@ bool BitReader::getBit()
 }
 
 
-uint32_t BitReader::getBits(size_t amount)
+uint32_t BitReader::getBits(size_t count)
 {
 	uint32_t result = 0;
-	for (size_t i = 0; i < amount; i++)
+	for (size_t i = 0; i < count; i++)
 	{
 		if (getBit())
 		{
-			result |= 1 << (amount - i - 1);
+			result |= 1 << (count - i - 1);
 		}
 	}
 
@@ -65,7 +65,7 @@ uint32_t BitReader::getBits(size_t amount)
 }
 
 
-void BitReader::skipBits(size_t amount)
+void BitReader::skipBits(size_t count)
 {
 	if (mByteIndex >= 2)
 	{
@@ -75,7 +75,7 @@ void BitReader::skipBits(size_t amount)
 		}
 	}
 
-	uint32_t bytesToSkip = amount / 8;
+	uint32_t bytesToSkip = uint32_t(count)/ 8;
 
 
 	while (bytesToSkip)
@@ -91,14 +91,14 @@ void BitReader::skipBits(size_t amount)
 		}
 	}
 
-	if (mBitIndex > amount % 8)
+	if (mBitIndex > count % 8)
 	{
-		mBitIndex -= amount % 8;
+		mBitIndex -= count % 8;
 	}
 	else
 	{
 		mByteIndex++;
-		mBitIndex = mBitIndex - (amount % 8) + 8;
+		mBitIndex = mBitIndex - (count % 8) + 8;
 	}
 
 }

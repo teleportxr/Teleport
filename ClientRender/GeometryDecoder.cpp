@@ -1,3 +1,4 @@
+//#pragma warning(4018,off)
 #include "GeometryDecoder.h"
 
 #include <filesystem>
@@ -7,6 +8,9 @@
 #include "TeleportCore/ErrorHandling.h"
 
 #include "libavstream/geometry/animation_interface.h"
+#ifdef _MSC_VER
+#pragma warning(disable:4018;disable:4804)
+#endif
 #include "draco/compression/decode.h"
 
 #ifdef __ANDROID__

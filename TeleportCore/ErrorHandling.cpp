@@ -1,9 +1,11 @@
 #include "TeleportCore/ErrorHandling.h"
 
-#if TELEPORT_INTERNAL_CHECKS
 #ifdef _MSC_VER
-#include <Windows.h>
+	#include <Windows.h> // for DebugBreak 
+#elif defined __ANDROID__
+	#include <signal.h>
 #endif
+#if TELEPORT_INTERNAL_CHECKS
 void TeleportLogUnsafe(const char* fmt, ...)
 {
     // we keep stack allocations to a minimum to keep logging side-effects to a minimum
@@ -19,3 +21,12 @@ void TeleportLogUnsafe(const char* fmt, ...)
 #endif
 }
 #endif
+
+void teleport::DebugBreak()
+{
+#ifdef _MSC_VER
+	::DebugBreak();
+#elif defined __ANDROID__
+	raise(SIGTRAP);
+#endif
+}

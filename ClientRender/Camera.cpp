@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "ShaderResource.h"
 
 using namespace clientrender;
 
@@ -33,7 +34,7 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 
 	UpdateDrawDistance(m_CI.drawDistance);
 
-	m_ShaderResourceLayout.AddBinding(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, Shader::Stage::SHADER_STAGE_VERTEX);
+	m_ShaderResourceLayout.AddBinding(0, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, ShaderStage::SHADER_STAGE_VERTEX);
 
 	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
 	m_ShaderResource.AddBuffer( ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", { s_UB.get(), 0, sizeof(CameraData) });
@@ -64,7 +65,9 @@ const ShaderResource& Camera::GetShaderResource() const
 void Camera::UpdateView()
 {
 	//Inverse for a translation matrix is a -position input. Inverse for a rotation matrix is its transpose.
-	m_CameraData.m_ViewMatrix = mat4::Translation((m_CameraData.m_Position * -1)) * mat4::Rotation(m_CameraData.m_Orientation).Transposed();
+	mat4 invrot=mat4_deprecated::Rotation(m_CameraData.m_Orientation);
+	invrot.transpose();
+	m_CameraData.m_ViewMatrix = mat4_deprecated::Translation((m_CameraData.m_Position * -1)) * invrot;
 }
 void Camera::UpdateProjection(float horizontalFOV, float aspectRatio, float zNear, float zFar)
 {
@@ -73,7 +76,7 @@ void Camera::UpdateProjection(float horizontalFOV, float aspectRatio, float zNea
 		TELEPORT_CERR<<"Invalid ProjectionType.\n";
 		return;
 	}
-	m_CameraData.m_ProjectionMatrix = mat4::Perspective(horizontalFOV, aspectRatio, zNear, zFar);
+	m_CameraData.m_ProjectionMatrix = mat4_deprecated::Perspective(horizontalFOV, aspectRatio, zNear, zFar);
 }
 
 void Camera::UpdateProjection(float left, float right, float bottom, float top, float nearf, float farf)
@@ -83,5 +86,5 @@ void Camera::UpdateProjection(float left, float right, float bottom, float top, 
 		TELEPORT_CERR<<"Invalid ProjectionType.\n";
 		return;
 	}
-	m_CameraData.m_ProjectionMatrix = mat4::Orthographic(left, right, bottom, top, nearf, farf);
+	m_CameraData.m_ProjectionMatrix = mat4_deprecated::Orthographic(left, right, bottom, top, nearf, farf);
 }
