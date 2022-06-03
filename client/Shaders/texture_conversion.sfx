@@ -43,11 +43,11 @@ shader void CS_NV12ToRGBA(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 
 	int2 uvPos = int2(threadID);
 
-	uint l0 = yTexture.Load(int3(pos, 0));
-	uint l1 = yTexture.Load(int3(pos.x + 1, pos.y, 0));
-	uint l2 = yTexture.Load(int3(pos.x, pos.y + 1, 0));
-	uint l3 = yTexture.Load(int3(pos.x + 1, pos.y + 1, 0));
-	uint2 ch = uvTexture.Load(int3(uvPos, 0));
+	uint l0 = yTexture.Load(int3(pos, 0)).x;
+	uint l1 = yTexture.Load(int3(pos.x + 1, pos.y, 0)).x;
+	uint l2 = yTexture.Load(int3(pos.x, pos.y + 1, 0)).x;
+	uint l3 = yTexture.Load(int3(pos.x + 1, pos.y + 1, 0)).x;
+	uint2 ch = uvTexture.Load(int3(uvPos, 0)).xy;
 
 	// All four pixels have their own Y but share the U and V.
 	float4 p0, p1, p2, p3;

@@ -465,6 +465,8 @@ void OpenXR::MakeActions()
 		,{
 			 {xr_input_session.actionDefinitions[LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
 			,{xr_input_session.actionDefinitions[RIGHT_GRIP_POSE].xrAction		,RIGHT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[LEFT_AIM_POSE].xrAction		, LEFT "/input/aim/pose"}
+			,{xr_input_session.actionDefinitions[RIGHT_AIM_POSE].xrAction		,RIGHT "/input/aim/pose"}
 			,{xr_input_session.actionDefinitions[SHOW_MENU].xrAction			, LEFT "/input/b/click" }
 			,{xr_input_session.actionDefinitions[SHOW_MENU].xrAction			,RIGHT "/input/b/click" }
 			,{xr_input_session.actionDefinitions[A].xrAction					,RIGHT "/input/a/click" }
@@ -486,6 +488,8 @@ void OpenXR::MakeActions()
 		, {
 			 {xr_input_session.actionDefinitions[LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
 			,{xr_input_session.actionDefinitions[RIGHT_GRIP_POSE].xrAction		,RIGHT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[LEFT_AIM_POSE].xrAction		, LEFT "/input/aim/pose"}
+			,{xr_input_session.actionDefinitions[RIGHT_AIM_POSE].xrAction		,RIGHT "/input/aim/pose"}
 			,{xr_input_session.actionDefinitions[SHOW_MENU].xrAction			, LEFT "/input/menu/click" }
 			,{xr_input_session.actionDefinitions[A].xrAction					,RIGHT "/input/a/click" }
 			,{xr_input_session.actionDefinitions[B].xrAction					,RIGHT "/input/b/click" }
@@ -509,6 +513,10 @@ void OpenXR::MakeActions()
 	XR_CHECK(xrAttachSessionActionSets( xr_session, &attach_info));
 	xr_input_session.SessionInit(xr_instance,xr_session);
 	RecordCurrentBindings();
+	for(auto i:openXRServers)
+	{
+		BindUnboundPoses(i.first);
+	}
 }
 
 
@@ -516,7 +524,14 @@ void OpenXR::PollActions()
 {
 	if (xr_session_state != XR_SESSION_STATE_FOCUSED)
 		return;
-
+	if(activeInteractionProfilePaths.size()==0)
+	{
+		RecordCurrentBindings();
+		for(auto i:openXRServers)
+		{
+			BindUnboundPoses(i.first);
+		}
+	}
 	// Update our action set with up-to-date input data!
 	XrActiveActionSet action_set = { };
 	action_set.actionSet = xr_input_session.actionSet;
@@ -598,7 +613,7 @@ void OpenXR::PollActions()
 		xrGetActionStateBoolean(xr_session, &get_info, &select_state);
 		xr_input_session.inputDeviceStates[hand].handMenu = select_state.currentState && select_state.changedSinceLastSync;
 		// If we have a select event, update the hand pose to match the event's timestamp
-		if (xr_input_session.inputDeviceStates[hand].handSelect)
+		//if (xr_input_session.inputDeviceStates[hand].handSelect)
 		{
 			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
 			XrResult		res = xrLocateSpace(xr_input_session.actionDefinitions[LEFT_GRIP_POSE+hand].space, xr_app_space, select_state.lastChangeTime, &space_location);
@@ -612,10 +627,6 @@ void OpenXR::PollActions()
 				controllerPoses[hand].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
 				controllerPoses[hand].orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
 			}
-		}
-		if (xr_input_session.actionStates[SHOW_MENU].u32)
-		{
-			menuButtonHandler();
 		}
 	}
 }
@@ -637,8 +648,10 @@ void OpenXR::RecordCurrentBindings()
 		std::cout<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
 	userHandRightActiveProfile=interactionProfile.interactionProfile;
 	activeInteractionProfilePaths.clear();
-	activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);
-	activeInteractionProfilePaths.push_back(userHandRightActiveProfile);
+	if(userHandLeftActiveProfile)
+		activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);
+	if(userHandRightActiveProfile)
+		activeInteractionProfilePaths.push_back(userHandRightActiveProfile);
 }
 
 const InteractionProfile *GetActiveBinding(XrPath p)
@@ -719,12 +732,18 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 		for(size_t a=0;a<MAX_ACTIONS;a++)
 		{
 			auto &actionDef=xr_input_session.actionDefinitions[a];
-			std::string path_str=GetBoundPath(actionDef);
-			if(!path_str.length())
-				continue;
-			// Now we try to match this path to the input def.
+			bool matches=false;
 			std::smatch match;
-			if (std::regex_search(path_str, match, re))
+			if(def.regexPath.length())
+			{
+				std::string path_str=GetBoundPath(actionDef);
+				if(!path_str.length())
+					continue;
+				// Now we try to match this path to the input def.
+				if (std::regex_search(path_str, match, re))
+					matches=true;
+			}
+			if(matches)
 			{
 				string matching=match.str(0);
 				std::cout<<"Binding matches: "<<def.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
@@ -739,12 +758,25 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 		}
 	}
 }
+void OpenXR::SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId)
+{
+	auto &inputMappings=openXRServers[server_uid].inputMappings;
+	auto &inputStates=openXRServers[server_uid].inputStates;
+	inputMappings.push_back(InputMapping());
+	inputStates.push_back(InputState());
+	InputMapping& mapping = inputMappings.back();
+	// store the definition.
+	mapping.serverInputDefinition.inputId=inputId;
+	mapping.serverInputDefinition.inputType=inputType;
+	mapping.clientActionId=clientActionId;
+}
 
 void OpenXR::BindUnboundPoses(avs::uid server_uid)
 {
 	auto &unboundPoses=openXRServers[server_uid].unboundPoses;
 	auto &nodePoseMappings=openXRServers[server_uid].nodePoseMappings;
-	for (std::map<avs::uid,NodePoseMapping>::iterator u = unboundPoses.begin();u!=unboundPoses.end();u++)
+	std::map<avs::uid,NodePoseMapping>::iterator u;
+	for(u = unboundPoses.begin();u!=unboundPoses.end();)
 	{
 		avs::uid uid=u->first;
 		std::string regexPath=u->second.regexPath;
@@ -752,6 +784,7 @@ void OpenXR::BindUnboundPoses(avs::uid server_uid)
 		// which, if any, action should be used to map to this?
 		// we match by the bindings.
 		// For each action, get the currently bound path.
+		bool found_match=false;
 		for(size_t a=0;a<MAX_ACTIONS;a++)
 		{
 			auto &actionDef=xr_input_session.actionDefinitions[a];
@@ -770,10 +803,16 @@ void OpenXR::BindUnboundPoses(avs::uid server_uid)
 				nodePoseMappings[uid].actionId=(ActionId)a;
 				nodePoseMappings[uid].poseOffset=u->second.poseOffset;
 				nodePoseMappings[uid].regexPath=u->second.regexPath;
-				u=unboundPoses.begin();
-				unboundPoses.erase(uid);
+				found_match=true;
 			}
 		}
+		if(found_match)
+		{
+			u++;
+			unboundPoses.erase(uid);
+			continue;
+		}
+		u++;
 	}
 	if(unboundPoses.size())
 		std::cout<<unboundPoses.size()<<" poses remain unbound."<<std::endl;
@@ -1047,7 +1086,7 @@ void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &dev
 	Multiply(pos,orig_rot,pos);
 	pos += origin_pos;
 	deviceContext.viewStruct.proj = *((const platform::math::Matrix4x4*)&proj); 
-
+	deviceContext.viewStruct.frustum=platform::crossplatform::GetFrustumFromProjectionMatrix(deviceContext.viewStruct.proj);
 	rot=orig_rot*rot;
 
 	platform::math::SimulOrientation globalOrientation;
@@ -1069,9 +1108,11 @@ void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &dev
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 	#if 1
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.1f, 0.1f, 0.4f, 1.0f };
-	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
+	static float clear[] = { 0.1f, 0.1f, 0.2f, 1.0f };
+	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, nullptr);
 	renderPlatform->Clear(deviceContext, clear);
+	renderPlatform->DeactivateRenderTargets(deviceContext);
+	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	if(surface.depth_view)
 		surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
 
@@ -1521,14 +1562,18 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	{
 	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
 	}
-	RenderOverlayLayer(frame_state.predictedDisplayTime);
-	if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
+	static bool add_overlay=false;
+	if(add_overlay)
 	{
-	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
-	}
-	if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
-	{
-	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[2];
+		RenderOverlayLayer(frame_state.predictedDisplayTime);
+		if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
+		{
+			layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
+		}
+		if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
+		{
+			layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[2];
+		}
 	}
 	EndFrame();
 	// We're finished with rendering our layer, so send it off for display!
@@ -1563,7 +1608,7 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime)
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.5f, 0.5f, 0.4f, 0.5f };
+	static float clear[] = { 0.5f, 0.5f, 0.3f, 0.5f };
 	//renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
 	FinishDeviceContext(2);

@@ -87,10 +87,11 @@ bool FileLoader::FileExists(const char *filename_utf8) const
 	return bExists;
 }
 
-
-bool FileLoader::Save(void* pointer, unsigned int bytes, const char* filename_utf8,bool save_as_text)
+#include <fstream>
+bool FileLoader::Save(const void* pointer, unsigned int bytes, const char* filename_utf8,bool save_as_text)
 {
-	SIMUL_CERR << "FileLoader::Save not implemented."<< std::endl;
+    std::ofstream outfile(filename_utf8, std::ios::out | std::ios::binary);
+    outfile.write((const char*)pointer, bytes);
 	return true;
 }
 

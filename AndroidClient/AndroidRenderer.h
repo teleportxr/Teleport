@@ -10,7 +10,6 @@ namespace teleport
 		public:
 			AndroidRenderer(teleport::client::ClientDeviceState *clientDeviceState,teleport::client::SessionClient *s,teleport::Gui &g,bool dev_mode);
 			~AndroidRenderer();
-			void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext) override;
 		};
 	}
 }

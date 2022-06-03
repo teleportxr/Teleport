@@ -786,13 +786,14 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 	}
 	for (size_t i = 0; i < node.materials.size(); i++)
 	{
-		std::shared_ptr<clientrender::Material> material = geometryCache->mMaterialManager.Get(node.materials[i]);
+		auto mat_uid=node.materials[i];
+		std::shared_ptr<clientrender::Material> material = geometryCache->mMaterialManager.Get(mat_uid);
 
 		if (material)
 		{
 			newNode->node->SetMaterial(i, material);
 		}
-		else
+		else if(mat_uid!=0)
 		{
 			// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
 			newNode->node->SetMaterial(i, m_pRenderPlatform->placeholderMaterial);
@@ -803,6 +804,10 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 			geometryCache->m_ResourceRequests.push_back(node.materials[i]);
 			GetMissingResource(node.materials[i], avs::GeometryPayloadType::Material).waitingResources.push_back(newNode);
 			newNode->materialSlots[node.materials[i]].push_back(i);
+		}
+		else
+		{
+			// but if the material is uid 0, this means *no* material.
 		}
 	}
 

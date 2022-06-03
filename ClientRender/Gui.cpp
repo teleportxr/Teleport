@@ -7,7 +7,7 @@
 #include "backends/imgui_impl_android.h"
 #endif
 #include "Platform/ImGui/imgui_impl_platform.h"
-#include "Platform/Core/DefaultFileLoader.h"
+#include "Platform/Core/FileLoader.h"
 #include "Platform/Core/StringToWString.h"
 #include "Gui.h"
 #include "IconsForkAwesome.h"
@@ -20,15 +20,17 @@
 #endif
 
 #ifdef __ANDROID__
-#define VK_BACK           0x08
-#define VK_ESCAPE         0x1B
+#define VK_BACK           0x01
+#define VK_ESCAPE         0x02
+#define VK_MAX         0x10
 #endif
-
+bool KeysDown[VK_MAX];
 using namespace teleport;
 using namespace platform;
 using namespace platform;
 using namespace crossplatform;
 ImFont *smallFont=nullptr;
+ImFont *symbolFont=nullptr;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
 
@@ -37,6 +39,10 @@ void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,Platfo
 	renderPlatform=r;
 	if(!r)
 		return;
+	for(uint16_t i=0;i<VK_MAX;i++)
+	{
+		KeysDown[i]=false;
+	}
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -95,14 +101,14 @@ void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,Platfo
 
 	// NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
 
-	platform::core::DefaultFileLoader fileLoader;
+	platform::core::FileLoader *fileLoader=core::FileLoader::GetFileLoader();
 	std::vector<std::string> texture_paths;
 	texture_paths.push_back("textures");
 	texture_paths.push_back("fonts");
 	ImGuiIO& io = ImGui::GetIO();
-	auto AddFont=[texture_paths,&fileLoader,&io](const char *font_filename,float size_pixels=32.f,ImFontConfig *config=nullptr,ImWchar *ranges=nullptr)->ImFont*
+	auto AddFont=[texture_paths,fileLoader,&io](const char *font_filename,float size_pixels=32.f,ImFontConfig *config=nullptr,const ImWchar *ranges=nullptr)->ImFont*
 	{
-		int idx = fileLoader.FindIndexInPathStack(font_filename, texture_paths);
+		int idx = fileLoader->FindIndexInPathStack(font_filename, texture_paths);
 		if(idx<=-2)
 		{
 			TELEPORT_CERR<<font_filename<<" not found.\n";
@@ -110,20 +116,26 @@ void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,Platfo
 		}
 		void *ttf_data;
 		unsigned int ttf_size;
-		fileLoader.AcquireFileContents(ttf_data,ttf_size,((texture_paths[idx]+"/")+ font_filename).c_str(),false);
+		std::string full_path=((texture_paths[idx]+"/")+ font_filename);
+		//return io.Fonts->AddFontFromFileTTF(full_path.c_str(),size_pixels,config,ranges);
+		fileLoader->AcquireFileContents(ttf_data,ttf_size,full_path.c_str(),false);
 		return io.Fonts->AddFontFromMemoryTTF(ttf_data,ttf_size,size_pixels,config,ranges);
 	};
 	AddFont("Exo-SemiBold.ttf");
+	// NOTE: imgui expects the ranges pointer to be VERY persistent. Not clear how persistent exactly, but it is used out of the scope of
+	// this function. So we have to have a persistent variable for it!
+	static ImVector<ImWchar> glyph_ranges;
 	{
 		ImFontConfig config;
 		config.MergeMode = true;
-		config.GlyphMinAdvanceX = 13.0f; 
-		ImVector<ImWchar> ranges;
+		config.GlyphMinAdvanceX = 32.0f; 
 		ImFontGlyphRangesBuilder builder;
-		builder.AddText(ICON_FK_LONG_ARROW_LEFT);				  
-		builder.BuildRanges(&ranges);						  // Build the final result (ordered ranges with all the unique characters submitted)
-		AddFont("forkawesome-webfont.ttf",32.f,&config,ranges.Data);
-		io.Fonts->Build();									 // Build the atlas while 'ranges' is still in scope and not deleted.
+		builder.AddChar('a');
+		builder.AddText(ICON_FK_SEARCH);
+		builder.AddText(ICON_FK_LONG_ARROW_LEFT);				
+		builder.BuildRanges(&glyph_ranges);							// Build the final result (ordered ranges with all the unique characters submitted)
+		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges.Data);
+		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
 	}
 	{
 		smallFont=AddFont("Inter-SemiBold.otf",16.f);
@@ -311,6 +323,9 @@ void Gui::BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceCo
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	if (ImGui::Begin("Teleport VR", nullptr, window_flags))
 		in_debug_gui++;
+
+		
+	//	ShowFont();
 }
 
 void Gui::LinePrint(const char* txt,const float *clr)
@@ -520,7 +535,6 @@ void Gui::NodeTree(const clientrender::NodeManager::nodeList_t& root_nodes)
 		TreeNode(r, search_text);
 	}
 }
-std::vector<vec4> hand_pos_press;
 
 void Gui::Update(const std::vector<vec4>& h,bool have_vr)
 {
@@ -571,19 +585,27 @@ void Gui::Render(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 		ImGui::LogToTTY();
 		ImGui::Begin("Teleport VR",&show_hide, windowFlags);
+	//	ShowFont();
 		if(refocus==0)
 		{
 			ImGui::SetKeyboardFocusHere();
 		}
-		io.KeysDown[VK_BACK] = false;
+		if(KeysDown[VK_BACK])
+		{
+			KeysDown[VK_BACK]= false;
+			io.AddKeyEvent(0x20b, false);
+		}
 		if(refocus>=2)
 		{
 			while(keys_pressed.size())
 			{
-			   int k=keys_pressed[0];
+				int k=keys_pressed[0];
 				if(k==VK_BACK)
 				{
-					io.KeysDown[k] = true;
+					KeysDown[k] = true;
+					//io.KeysDown[ImGuiKey_Backspace] = true;
+					//io.AddInputCharacter(ImGuiKey_Backspace);
+					io.AddKeyEvent(0x20b, true);
 				}
 				else
 				{
@@ -596,7 +618,7 @@ void Gui::Render(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 		{
 			show_hide=false;
 		}
-		if(ImGui::InputText("", buf, IM_ARRAYSIZE(buf)))
+		if(ImGui::InputText("URL", buf, IM_ARRAYSIZE(buf)))
 		{
 			current_url=buf;
 		}
@@ -633,12 +655,15 @@ void Gui::Render(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 			};
 			KeyboardLine("1234567890-");
 			ImGui::SameLine();
+			ImGui::PushFont(symbolFont);
+//ImGui::Button(ICON_FK_SEARCH " Search");
 			if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
 			{
 				 refocus=0;
 				// keys_pressed.push_back(ImGuiKey_Backspace);
 				 keys_pressed.push_back(VK_BACK);
 			}
+			ImGui::PopFont();
 			ImGui::Text("  ");
 			ImGui::SameLine();
 			KeyboardLine("qwertyuiop");

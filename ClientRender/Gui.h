@@ -69,5 +69,6 @@ namespace teleport
 		std::shared_ptr<clientrender::Node> selected_node;
 		std::shared_ptr<clientrender::Material> selected_material;
 		bool show_inspector=false;
+		std::vector<vec4> hand_pos_press;
 	};
 }

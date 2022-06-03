@@ -33,6 +33,14 @@ using namespace clientrender;
 using namespace teleport;
 using namespace platform;
 
+void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
+{
+	if (severity > avs::LogSeverity::Warning)
+		std::cerr << msg;
+	else
+		std::cout << msg ;
+}
+
 static const char* ToString(clientrender::Light::Type type)
 {
 	const char* lightTypeName = "";
@@ -124,6 +132,146 @@ Renderer::~Renderer()
 	clientPipeline.pipeline.deconfigure();
 	InvalidateDeviceObjects(); 
 }
+
+void Renderer::Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window)
+{
+	// Initialize the audio (asynchronously)
+#ifdef _MSC_VER
+	audioPlayer.initializeAudioDevice();
+#endif
+	renderPlatform = r;
+	openXR=u;
+
+	PcClientRenderPlatform.SetSimulRenderPlatform(r);
+	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
+	resourceCreator.Initialize(&PcClientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	localResourceCreator.Initialize(&PcClientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
+
+	hDRRenderer = new crossplatform::HdrRenderer();
+
+	hdrFramebuffer	=renderPlatform->CreateFramebuffer();
+	hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
+	hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
+	hdrFramebuffer->SetAntialiasing(1);
+	camera.SetPositionAsXYZ(0.f,0.f,2.f);
+	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
+	camera.LookInDirection(look,up);
+
+	camera.SetHorizontalFieldOfViewDegrees(HFOV);
+
+	// Automatic vertical fov - depends on window shape:
+	camera.SetVerticalFieldOfViewDegrees(0.f);
+	
+	//const float aspect = hdrFramebuffer->GetWidth() / hdrFramebuffer->GetHeight();
+	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
+	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
+
+	crossplatform::CameraViewStruct vs;
+	vs.exposure=1.f;
+	vs.farZ=3000.f;
+	vs.nearZ=0.01f;
+	vs.gamma=1.0f;
+	vs.InfiniteFarPlane=true;
+	vs.projection=crossplatform::DEPTH_REVERSE;
+	
+	camera.SetCameraViewStruct(vs);
+
+	memset(keydown,0,sizeof(keydown));
+
+	hDRRenderer->RestoreDeviceObjects(renderPlatform);
+	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
+
+	gui.RestoreDeviceObjects(renderPlatform,active_window);
+	auto connectButtonHandler = std::bind(&Renderer::ConnectButtonHandler, this,std::placeholders::_1);
+	gui.SetConnectHandler(connectButtonHandler);
+	videoTexture = renderPlatform->CreateTexture();
+	specularCubemapTexture = renderPlatform->CreateTexture();
+	diffuseCubemapTexture = renderPlatform->CreateTexture();
+	lightingCubemapTexture = renderPlatform->CreateTexture();
+	errno=0;
+	RecompileShaders();
+
+	pbrConstants.RestoreDeviceObjects(renderPlatform);
+	pbrConstants.LinkToEffect(pbrEffect,"pbrConstants");
+	cubemapConstants.RestoreDeviceObjects(renderPlatform);
+	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
+	cameraConstants.RestoreDeviceObjects(renderPlatform); 
+	tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
+	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
+	lightsBuffer.RestoreDeviceObjects(renderPlatform,10,false,true);
+	boneMatrices.RestoreDeviceObjects(renderPlatform);
+	boneMatrices.LinkToEffect(pbrEffect, "boneMatrices");
+
+	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
+
+	// initialize the default local geometry:
+	geometryDecoder.decodeFromFile("meshes/Wand.mesh_compressed",&localResourceCreator);
+	
+	avs::uid wand_uid = 11;
+	auto uids=localGeometryCache.mMeshManager.GetAllIDs();
+	if (uids.size())
+	{
+		wand_uid = uids[0];
+	}
+	else
+	{
+		TELEPORT_BREAK_ONCE("Wand mesh not found");
+	}
+	{
+	
+		avs::Material avsMaterial;
+		avsMaterial.name="local material";
+		avsMaterial.pbrMetallicRoughness.metallicFactor=0.0f;
+		localResourceCreator.CreateMaterial(14,avsMaterial);// not used just now.
+		avsMaterial.name="local blue glow";
+		avsMaterial.emissiveFactor={0.0f,0.5f,1.f};
+		localResourceCreator.CreateMaterial(15,avsMaterial);
+		avsMaterial.name="local red glow";
+		avsMaterial.emissiveFactor={1.0f,0.1f,0.1f};
+		localResourceCreator.CreateMaterial(16,avsMaterial);
+	}
+	avs::Node avsNode;
+	avsNode.data_type=avs::NodeDataType::Mesh;
+	//avsNode.transform.scale = { 0.2f,0.2f,0.2f };
+	avsNode.data_uid=wand_uid;
+	avsNode.materials.push_back(15);
+	avsNode.materials.push_back(0);
+	
+	avsNode.name = "local Left Aim";
+	avsNode.materials[0]=15;
+	localResourceCreator.CreateNode(23,avsNode);
+	//std::shared_ptr<clientrender::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
+	//leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
+
+	avsNode.name="local Right Aim";
+	avsNode.materials[0]=16;
+	localResourceCreator.CreateNode(24,avsNode);
+
+	avsNode.name = "local Left Grip";
+	avsNode.materials[0]=15;
+	localResourceCreator.CreateNode(25,avsNode);
+
+	avsNode.name="local Right Grip";
+	avsNode.materials[0]=16;
+	localResourceCreator.CreateNode(26,avsNode);
+
+	if(openXR)
+	{
+		openXR->SetFallbackBinding(client::LEFT_AIM_POSE,"left/input/aim/pose");
+		openXR->SetFallbackBinding(client::RIGHT_AIM_POSE,"right/input/aim/pose");
+		openXR->MapNodeToPose(local_server_uid,23,"left/input/aim/pose");
+		openXR->MapNodeToPose(local_server_uid,24,"right/input/aim/pose");
+		
+		openXR->SetFallbackBinding(client::LEFT_GRIP_POSE,"left/input/grip/pose");
+		openXR->SetFallbackBinding(client::RIGHT_GRIP_POSE,"right/input/grip/pose");
+		openXR->MapNodeToPose(local_server_uid,25,"left/input/grip/pose");
+		openXR->MapNodeToPose(local_server_uid,26,"right/input/grip/pose");
+
+		// Hard-code the menu button
+		openXR->SetHardInputMapping(local_server_uid,local_menu_input_id,avs::InputType::IntegerEvent,teleport::client::SHOW_MENU);
+	}
+}
+
 // This allows live-recompile of shaders. 
 void Renderer::RecompileShaders()
 {
@@ -205,8 +353,8 @@ void Renderer::FillInControllerPose(int index, float offset)
 	// Position the hand based on mouse pos.
 	static float xmotion_scale = 1.0f;
 	static float ymotion_scale = 1.0f;
-	static float ymotion_offset = 1.0f;
-	static float z_offset = -0.2f;
+	static float ymotion_offset = .2f;
+	static float z_offset = -0.1f;
 	vec2 pos; 
 	pos.x = offset+(x - 0.5f) * xmotion_scale;
 	pos.y = ymotion_offset + (0.5f-y)*ymotion_scale;
@@ -236,6 +384,8 @@ void Renderer::FillInControllerPose(int index, float offset)
 	pose.orientation=*((const clientrender::quat*)&q);
 
 	openXR->SetFallbackPose(index?client::RIGHT_GRIP_POSE:client::LEFT_GRIP_POSE,pose);
+	pose.position.z-=0.1f;
+	openXR->SetFallbackPose(index?client::RIGHT_AIM_POSE:client::LEFT_AIM_POSE,pose);
 	//openXR->SetVirtualPose("/interaction_profiles/simul/mouse_ext/left/input/grip/pose",LEFT_GRIP_POSE);
 	//openXR->SetFallbackPath(teleport::client::ActionId::LEFT_GRIP_POSE,pose);
 	
@@ -308,36 +458,56 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(clientPipeline.videoConfig.specular_x, clientPipeline.videoConfig.specular_y));
 		}
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
-
 		pbrConstants.drawDistance = lastSetupCommand.draw_distance;
 		if (sessionClient->IsConnected()||render_local_offline)
 			RenderLocalNodes(deviceContext,server_uid,geometryCache);
 
 		{
-			avs::Pose leftHand = openXR->GetControllerPose(0);
-			avs::Pose rightHand = openXR->GetControllerPose(1);
+			const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
+				=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
+			auto l=nodePoseStates.find(23);
 			std::vector<vec4> hand_pos_press;
 			hand_pos_press.resize(2);
+			if(l!=nodePoseStates.end())
 			{
-				avs::vec3 pos = LocalToGlobal(rightHand,avs::vec3(0,0.12f, 0));
-				hand_pos_press[0].xyz = (const float*)&pos;
-				hand_pos_press[0].w = 0.0f;
-			}
-			{
+				avs::Pose leftHand = l->second.pose;
 				avs::vec3 pos = LocalToGlobal(leftHand,avs::vec3(0,0.12f, 0));
-				hand_pos_press[1].xyz  = (const float*)&pos;
-				hand_pos_press[1].w = 0.0f;
+				vec4 pos4;
+				pos4.xyz = (const float*)&pos;
+				pos4.w = 0.0f;
+				hand_pos_press.push_back(pos4);
+			}
+			auto r=nodePoseStates.find(24);
+			if(r!=nodePoseStates.end())
+			{
+				avs::Pose rightHand = r->second.pose;
+				avs::vec3 pos = LocalToGlobal(rightHand,avs::vec3(0,0.12f, 0));
+				vec4 pos4;
+				pos4.xyz = (const float*)&pos;
+				pos4.w = 0.0f;
+				hand_pos_press.push_back(pos4);
 			}
 			gui.Update(hand_pos_press, have_vr_device);
 		}
 		
-		gui.Render(deviceContext);
 
 		if (!sessionClient->IsConnected()|| gui.HasFocus())
-		{
+		{	
 			pbrConstants.drawDistance = 1000.0f;
 			RenderLocalNodes(deviceContext, 0,localGeometryCache);
+			#if 1
+			{
+				pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
+				auto pass=pbrEffect->GetTechniqueByName("triangle_test")->GetPass(0);
+				renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
+				renderPlatform->ApplyPass(deviceContext, pass);
+				renderPlatform->DrawIndexed(deviceContext, 3, 0, 0);
+				renderPlatform->UnapplyPass(deviceContext);
+			}
+			#endif
 		}
+		gui.Render(deviceContext);
 		// We must deactivate the depth buffer here, in order to use it as a texture:
 		//hdrFramebuffer->DeactivateDepth(deviceContext);
 		if (show_video)
@@ -675,6 +845,7 @@ void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& 
 		RenderNodeOverlay(deviceContext, node,g);
 	}
 }
+
 void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
 #if 1
@@ -925,6 +1096,12 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
 		clientDeviceState->SetInputs( inputs);
 
+	}
+	if (openXR)
+	{
+		const teleport::core::Input& local_inputs=openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
+		HandleLocalInputs(local_inputs);
+		have_vr_device=openXR->HaveXRDevice();
 	}
 	// Handle networked session.
 	if (sessionClient->IsConnected())
@@ -1304,7 +1481,7 @@ void Renderer::Render(int view_id, void* context, void* renderTexture, int w, in
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
 	hdrFramebuffer->Activate(deviceContext);
-	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.5f, 1.0f, 0.f, reverseDepth ? 0.f : 1.f);
+	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.25f, 0.5f, 0.f, reverseDepth ? 0.f : 1.f);
 	// 
 	vec3 true_pos = camera.GetPosition();
 	if (render_from_video_centre)
@@ -1414,141 +1591,6 @@ void Renderer::Render(int view_id, void* context, void* renderTexture, int w, in
 	if(!c)
 		profiling_text=renderPlatform->GetGpuProfiler()->GetDebugText();
 #endif
-}
-
-void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
-{
-	if (severity > avs::LogSeverity::Warning)
-		std::cerr << msg;
-	else
-		std::cout << msg ;
-}
-
-void Renderer::Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window)
-{
-	// Initialize the audio (asynchronously)
-#ifdef _MSC_VER
-	audioPlayer.initializeAudioDevice();
-#endif
-	renderPlatform = r;
-	openXR=u;
-
-	PcClientRenderPlatform.SetSimulRenderPlatform(r);
-	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
-	resourceCreator.Initialize(&PcClientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
-	localResourceCreator.Initialize(&PcClientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
-
-	hDRRenderer = new crossplatform::HdrRenderer();
-
-	hdrFramebuffer	=renderPlatform->CreateFramebuffer();
-	hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
-	hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
-	hdrFramebuffer->SetAntialiasing(1);
-	camera.SetPositionAsXYZ(0.f,0.f,2.f);
-	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
-	camera.LookInDirection(look,up);
-
-	camera.SetHorizontalFieldOfViewDegrees(HFOV);
-
-	// Automatic vertical fov - depends on window shape:
-	camera.SetVerticalFieldOfViewDegrees(0.f);
-	
-	//const float aspect = hdrFramebuffer->GetWidth() / hdrFramebuffer->GetHeight();
-	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
-	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
-
-	crossplatform::CameraViewStruct vs;
-	vs.exposure=1.f;
-	vs.farZ=3000.f;
-	vs.nearZ=0.01f;
-	vs.gamma=1.0f;
-	vs.InfiniteFarPlane=true;
-	vs.projection=crossplatform::DEPTH_REVERSE;
-	
-	camera.SetCameraViewStruct(vs);
-
-	memset(keydown,0,sizeof(keydown));
-
-	hDRRenderer->RestoreDeviceObjects(renderPlatform);
-	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
-
-	gui.RestoreDeviceObjects(renderPlatform,active_window);
-	auto connectButtonHandler = std::bind(&Renderer::ConnectButtonHandler, this,std::placeholders::_1);
-	gui.SetConnectHandler(connectButtonHandler);
-	videoTexture = renderPlatform->CreateTexture();  
-	specularCubemapTexture = renderPlatform->CreateTexture();
-	diffuseCubemapTexture = renderPlatform->CreateTexture();
-	lightingCubemapTexture = renderPlatform->CreateTexture();
-	errno=0;
-	RecompileShaders();
-
-	pbrConstants.RestoreDeviceObjects(renderPlatform);
-	pbrConstants.LinkToEffect(pbrEffect,"pbrConstants");
-	cubemapConstants.RestoreDeviceObjects(renderPlatform);
-	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
-	cameraConstants.RestoreDeviceObjects(renderPlatform); 
-	tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
-	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
-	lightsBuffer.RestoreDeviceObjects(renderPlatform,10,false,true);
-	boneMatrices.RestoreDeviceObjects(renderPlatform);
-	boneMatrices.LinkToEffect(pbrEffect, "boneMatrices");
-
-	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
-
-	// initialize the default local geometry:
-	geometryDecoder.decodeFromFile("meshes/Wand.mesh_compressed",&localResourceCreator);
-	
-	avs::uid wand_uid = 11;
-	auto uids=localGeometryCache.mMeshManager.GetAllIDs();
-	if (uids.size())
-	{
-		wand_uid = uids[0];
-	}
-	else
-	{
-		TELEPORT_BREAK_ONCE("Wand mesh not found");
-	}
-	{
-		clientrender::Material::MaterialCreateInfo materialCreateInfo;
-		materialCreateInfo.name="local material";
-		std::shared_ptr<clientrender::Material> scrMaterial = std::make_shared<clientrender::Material>(&PcClientRenderPlatform,materialCreateInfo);
-		localGeometryCache.mMaterialManager.Add(14, scrMaterial);
-
-		materialCreateInfo.name = "red glow";
-		materialCreateInfo.emissive.textureOutputScalar = { 1.f, 0, 0, 0 };
-		std::shared_ptr<clientrender::Material> red = std::make_shared<clientrender::Material>(&PcClientRenderPlatform, materialCreateInfo);
-		localGeometryCache.mMaterialManager.Add(15, red);
-
-		materialCreateInfo.name = "blue glow";
-		materialCreateInfo.emissive.textureOutputScalar = { 0.f, 0.5f, 1.f, 0 };
-		std::shared_ptr<clientrender::Material> blue = std::make_shared<clientrender::Material>(&PcClientRenderPlatform, materialCreateInfo);
-		localGeometryCache.mMaterialManager.Add(16, blue);
-	}
-	avs::Node avsNode;
-	avsNode.name = "local Left Hand";
-	avsNode.data_type=avs::NodeDataType::Mesh;
-	//avsNode.transform.scale = { 0.2f,0.2f,0.2f };
-	avsNode.data_uid=wand_uid;
-	avsNode.materials.push_back(14);
-	avsNode.materials.push_back(15);
-
-	std::shared_ptr<clientrender::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
-	leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
-
-	
-	avsNode.name="local Right Hand";
-	avsNode.materials[1]=16;
-	std::shared_ptr<clientrender::Node> rightHandNode = localGeometryCache.mNodeManager->CreateNode(24, avsNode);
-	rightHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
-
-
-	if(openXR)
-	{
-		openXR->SetFallbackBinding(client::LEFT_GRIP_POSE,"left/input/grip/pose");
-		openXR->SetFallbackBinding(client::RIGHT_GRIP_POSE,"right/input/grip/pose");
-		openXR->MapNodeToPose(0,23,"left/input/grip/pose");
-		openXR->MapNodeToPose(0,24,"right/input/grip/pose");
-	}
 }
 
 void Renderer::SetServer(const char *ip_port)
@@ -2139,4 +2181,17 @@ void Renderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigur
 	}
 	
 	lastSetupCommand.video_config = reconfigureVideoCommand.video_config;
+}
+
+void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
+{
+	for(const  auto &i:local_inputs.binaryEvents)
+	{
+		if(i.inputID==local_menu_input_id)
+		{
+			// do this on *releasing* the button:
+			if(i.activated==false)
+				gui.ShowHide();
+		}
+	}
 }
