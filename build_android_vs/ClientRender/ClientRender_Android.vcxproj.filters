@@ -81,7 +81,6 @@
     <ClCompile Include="..\..\ClientRender\NodeComponents\VisibilityComponent.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ClientRender\Gui.cpp" />
     <ClCompile Include="..\..\ClientRender\IndexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -89,6 +88,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ClientRender\VertexBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ClientRender\Gui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -186,6 +188,8 @@
     <ClInclude Include="..\..\ClientRender\NodeComponents\AnimationState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ClientRender\Gui.h" />
+    <ClInclude Include="..\..\ClientRender\Gui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

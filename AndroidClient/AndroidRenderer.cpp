@@ -10,8 +10,3 @@ AndroidRenderer::AndroidRenderer(teleport::client::ClientDeviceState *clientDevi
 AndroidRenderer::~AndroidRenderer()
 {
 }
-
-
-void AndroidRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
-{
-}

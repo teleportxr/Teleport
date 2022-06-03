@@ -12,9 +12,6 @@ namespace avs
 #endif
 	//! An input identifier, used between client and server to denote a specific input.
 	typedef uint16_t InputId;
-	const InputId TRIGGER01 = 1;
-	const InputId BUTTON_A = 2;
-	const InputId BUTTON_B = 1;
 	//! What type of input to send, and when. 
 	enum class InputType : uint8_t //enet_uint8
 	{

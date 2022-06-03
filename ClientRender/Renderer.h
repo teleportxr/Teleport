@@ -17,9 +17,9 @@
 #include "ClientRender/GeometryCache.h"
 #include "ClientRender/ResourceCreator.h"
 #include "ClientRender/GeometryDecoder.h"
-#include "ClientRender/Shaders/cubemap_constants.sl"
-#include "ClientRender/Shaders/pbr_constants.sl"
-#include "ClientRender/Shaders/video_types.sl"
+#include "client/Shaders/cubemap_constants.sl"
+#include "client/Shaders/pbr_constants.sl"
+#include "client/Shaders/video_types.sl"
 #include "ClientRender/Gui.h"
 #include "TeleportAudio/AudioStreamTarget.h"
 #include "TeleportAudio/AudioCommon.h"
@@ -201,6 +201,8 @@ namespace clientrender
 		int server_discovery_port=0;
 		// TODO: temporary.
 		avs::uid server_uid=1;
+		const avs::uid local_server_uid=0;
+		const avs::InputId local_menu_input_id=0;
 	
 		bool show_video = false;
 
@@ -253,15 +255,15 @@ namespace clientrender
 		void WriteHierarchies();
 		
 		int AddView() override;
-		void ResizeView(int view_id, int W, int H);
-		void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
+		void ResizeView(int view_id, int W, int H) override;
+		void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr) override;
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
 		void SetServer(const char* ip_port);
-		void RemoveView(int);
+		void RemoveView(int) override;
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		
-		std::vector<avs::uid> GetGeometryResources() ;
-		void ClearGeometryResources() ;
+		std::vector<avs::uid> GetGeometryResources() override;
+		void ClearGeometryResources() override;
 		// to render the vr view instead of re-rendering.
 		void SetExternalTexture(platform::crossplatform::Texture* t);
 		void PrintHelpText(platform::crossplatform::GraphicsDeviceContext& deviceContext);
@@ -288,5 +290,7 @@ namespace clientrender
 		void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
 		void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
 		void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) override;
+
+		void HandleLocalInputs(const teleport::core::Input& local_inputs);
 	};
 }

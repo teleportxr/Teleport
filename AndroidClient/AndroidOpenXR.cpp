@@ -101,6 +101,7 @@ void OXR_CheckErrors(XrInstance instance, XrResult result, const char* function,
 	}
 }
 #endif
+
 #include "Platform/Vulkan/RenderPlatform.h"
 client::swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform* renderPlatform, XrBaseInStructure& swapchain_img, XrSwapchainCreateInfo swapchain_info)
 {
@@ -111,7 +112,7 @@ client::swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform* re
 	platform::crossplatform::PixelFormat pixelFormat=platform::vulkan::RenderPlatform::FromVulkanFormat((vk::Format)swapchain_info.format);
 	result.target_view->InitFromExternalTexture2D(renderPlatform, vulkan_swapchain_img.image, nullptr, swapchain_info.width,swapchain_info.height
 		,pixelFormat, true,false,true,swapchain_info.sampleCount);
-#if 0
+#if 1
 	result.depth_view = renderPlatform->CreateTexture("swapchain depth");
 	platform::crossplatform::TextureCreate textureCreate = {};
 	textureCreate.numOfSamples = std::max(1, result.target_view->GetSampleCount());

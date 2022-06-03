@@ -275,24 +275,24 @@ struct Animation;
 
 		// The following should be separated out into node components:
 		NodeDataType data_type=NodeDataType::None;
-		uid data_uid;
+		uid data_uid=0;
 
 		//MESH
 		std::vector<uid> materials;
 
 		//SKINNED MESH
-		uid skinID;
+		uid skinID=0;
 		std::vector<uid> animations;
 
 		// e.g. lightmap offset and multiplier.
 		NodeRenderState renderState;
 
 		//LIGHT
-		vec4 lightColour;
+		vec4 lightColour={0,0,0,0};
 		float lightRadius=0.f;
-		vec3 lightDirection;	// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
+		vec3 lightDirection={0,0,1.0f};	// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
 		uint8_t lightType=0;
-		float lightRange=0.f;		// Maximum distance the light is effective at, in metres.
+		float lightRange=0.f;			//! Maximum distance the light is effective at, in metres.
 
 	};
 #ifdef _MSC_VER

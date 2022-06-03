@@ -111,9 +111,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="../../pc_client\ClientRenderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -137,9 +134,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="../../pc_client\ClientRenderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\AndroidClient\AndroidOpenXR.h">
       <Filter>Header Files</Filter>
     </ClInclude>

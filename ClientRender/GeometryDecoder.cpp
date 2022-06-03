@@ -1,10 +1,10 @@
 //#pragma warning(4018,off)
 #include "GeometryDecoder.h"
 
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include "Common.h"
+#include "Platform/Core/FileLoader.h"
 #include "TeleportCore/ErrorHandling.h"
 
 #include "libavstream/geometry/animation_interface.h"
@@ -12,24 +12,6 @@
 #pragma warning(disable:4018;disable:4804)
 #endif
 #include "draco/compression/decode.h"
-
-#ifdef __ANDROID__
-namespace fs
-{
-	size_t file_size(const char*filename)
-	{
-		std::ifstream in(filename,std::ifstream::ate | std::ifstream::binary);
-		return in.tellg();
-	}
-	bool exists(const char*filename)
-	{
-		std::ifstream in(filename,std::ifstream::ate | std::ifstream::binary);
-		return in.good();
-	}
-}
-#else
-namespace fs = std::filesystem;
-#endif
 
 #define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
 #define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
@@ -78,14 +60,18 @@ template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffse
 std::vector<uint8_t> savedBuffer;
 avs::Result GeometryDecoder::decodeFromFile(const std::string &filename,GeometryTargetBackendInterface *target)
 {
-	if(!fs::exists(filename.c_str()))
+	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
+	if(!fileLoader->FileExists(filename.c_str()))
 		return avs::Result::Failed;
-	m_BufferSize=fs::file_size(filename.c_str());
+	void *ptr=nullptr;
+	unsigned sz=0;
 	m_BufferOffset = 0;
+	fileLoader->AcquireFileContents(ptr,sz,filename.c_str(),false);
+	m_BufferSize=sz;
 	m_Buffer.resize(m_BufferSize);
-	std::ifstream ifs(filename.c_str(),std::ifstream::in|std::ofstream::binary);
-	ifs.read((char*)m_Buffer.data(),m_BufferSize);
-	//savedBuffer=m_Buffer;
+	memcpy(m_Buffer.data(),ptr,m_BufferSize);
+	fileLoader->ReleaseFileContents(ptr);
+	m_Buffer.resize(m_BufferSize);
 	GeometryPayloadType &type=*((GeometryPayloadType*)m_Buffer.data());
 	return decode( type, target);
 }
@@ -330,31 +316,11 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 
 void GeometryDecoder::saveBuffer(const std::string &filename) const
 {
-/*	for(size_t i=0;i<m_Buffer.size();i++)
-	{
-		if(m_Buffer[i]!=savedBuffer[i])
-		{
-			std::cerr<<"Failed check"<<std::endl;
-			break;
-		}
-	}*/
-	//std::vector<uint8_t> testBuffer;
-	//testBuffer.resize(m_Buffer.size());
-	{
-		std::ofstream ofs(filename.c_str(),std::ofstream::out|std::ofstream::binary);
-		ofs.write((const char *)m_Buffer.data(), m_Buffer.size());
-		ofs.close();
-		//std::ifstream ifs(filename.c_str(),std::ifstream::in|std::ofstream::binary);
-		//ifs.read((char*)testBuffer.data(),m_BufferSize);
-	/*	for(size_t i=0;i<m_Buffer.size();i++)
-		{
-			if(m_Buffer[i]!=testBuffer[i])
-			{
-				std::cerr<<"Failed check"<<std::endl;
-			break;
-			}
-		}*/
-	}
+	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
+	fileLoader->Save((const void*)m_Buffer.data(),(unsigned)m_Buffer.size(),filename.c_str(),false);
+/*	std::ofstream ofs(filename.c_str(),std::ofstream::out|std::ofstream::binary);
+	ofs.write((const char *)m_Buffer.data(), m_Buffer.size());
+	ofs.close();*/
 }
 
 avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)

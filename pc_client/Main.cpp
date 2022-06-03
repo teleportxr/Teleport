@@ -1,8 +1,13 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+#include "targetver.h"
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+// Windows Header Files:
+#include <windows.h>
+// C RunTime Header Files
+#include <stdlib.h>
 
-#include "stdafx.h"
 #include "Resource.h"
 #include "Platform/Core/EnvironmentVariables.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
@@ -12,7 +17,7 @@
 #include "Platform/Core/Timer.h"
 #include "Platform/Core/SimpleIni.h"
 
-#include "ClientRenderer.h"
+#include "ClientRender/Renderer.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "Config.h"
 #ifdef _MSC_VER
@@ -37,7 +42,7 @@ platform::dx11::DeviceManager deviceManager;
 
 using namespace teleport;
 
-ClientRenderer *clientRenderer=nullptr;
+clientrender::Renderer *clientRenderer=nullptr;
 teleport::client::SessionClient *sessionClient=nullptr;
 platform::crossplatform::RenderDelegate renderDelegate;
 UseOpenXR useOpenXR;
@@ -233,9 +238,6 @@ void InitXR()
 	if(useOpenXR.TryInitDevice())
 	{
 		useOpenXR.MakeActions();
-		std::function<void()> showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
-		if (useOpenXR.HaveXRDevice())
-			useOpenXR.SetMenuButtonHandler(showHideDelegate);
 		// create the input defs for the local (zero-uid) server:		
 		//std::vector<avs::InputDefinition> inputDefinitions;
 		//inputDefinitions.push_back({avs::InputId::})
@@ -246,7 +248,7 @@ void InitXR()
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
 	sessionClient=new teleport::client::SessionClient(std::make_unique<PCDiscoveryService>());
-	clientRenderer=new teleport::ClientRenderer (&clientDeviceState, sessionClient,gui,dev_mode);
+	clientRenderer=new clientrender::Renderer(&clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager, sessionClient,gui,dev_mode);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
@@ -305,7 +307,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 			InitXR();
 		}
 	}
-	renderDelegate = std::bind(&ClientRenderer::RenderView, clientRenderer, std::placeholders::_1);
+	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform,&useOpenXR,(teleport::PlatformWindow*)GetActiveWindow());
 	if(server_ips.size())
 		clientRenderer->SetServer(server_ips[0].c_str());

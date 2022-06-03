@@ -16,22 +16,17 @@ if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
 	endif()
 endif()
 
-file(GLOB shaders "../ClientRender/Shaders/*.sfx" "../ClientRender/Shaders/*.sl")
 file(GLOB inifiles "*.ini")
 set(srcs
-	ClientRenderer.cpp
 	Main.cpp
 	MemoryUtil.cpp
 	MemoryUtil.h
 	UseOpenXR.cpp
 	PCDiscoveryService.cpp
-	stdafx.cpp
 	VideoDecoder.cpp
-	ClientRenderer.h
 	UseOpenXR.h
 	Resource.h
 	PCDiscoveryService.h
-	stdafx.h
 	targetver.h
 	VideoDecoder.h
 )
@@ -66,12 +61,8 @@ target_include_directories(pc_client PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
 
 if(TELEPORT_CLIENT_USE_D3D12)
-	set( JSON_FILE "${SIMUL_PLATFORM_DIR}/DirectX12/Sfx/DirectX12.json" )
-	add_sfx_shader_project(pc_client ${JSON_FILE} INCLUDES "${SIMUL_PLATFORM_DIR}/DirectX12/Sfx" "${SIMUL_DIR}/Shaders/SL" "${SIMUL_PLATFORM_DIR}/Shaders/SL" SOURCES ${shaders} ${SHADER_INCLUDES} ${CORE_SHADER_INCLUDES} OPTIONS -w OUTPUT "${CMAKE_BINARY_DIR}/Platform/DirectX12/shaderbin")
 	target_link_libraries(pc_client SimulDirectX12_MT)
 else()
-	set( JSON_FILE "${SIMUL_PLATFORM_DIR}/DirectX11/Sfx/DirectX11.json" )
-	add_sfx_shader_project(pc_client ${JSON_FILE} INCLUDES "${SIMUL_PLATFORM_DIR}/DirectX11/Sfx" "${SIMUL_DIR}/Shaders/SL" "${SIMUL_PLATFORM_DIR}/Shaders/SL" SOURCES ${shaders} ${SHADER_INCLUDES} ${CORE_SHADER_INCLUDES} OPTIONS -w OUTPUT "${CMAKE_BINARY_DIR}/Platform/DirectX11/shaderbin" DEFINES PLATFORM_D3D11_SFX=1)
 	target_link_libraries(pc_client SimulDirectX11_MT)
 	target_link_libraries(pc_client d3d12)
 endif()

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <filesystem>
+#include <sys/prctl.h> // for prctl( PR_SET_NAME )
 
 enum class Platform { NONE, WIN64, ANDROID };
 
@@ -45,6 +46,8 @@ int kOverrideHeight = 900;
 extern "C" { void android_main(struct android_app* app); }
 DisplaySurfaceManager* displaySurfaceManager = nullptr;
 teleport::client::ClientDeviceState clientDeviceState;
+// Need ONE global instance of this:
+avs::Context context;
 bool g_WindowQuit;
 struct AppState
 {
@@ -117,12 +120,14 @@ void InitXR(teleport::android::OpenXR &openXR)
 	}
 }
 
-void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
+
+double GetTimeInSeconds()
 {
-	
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (now.tv_sec * 1e9 + now.tv_nsec) * 0.000000001;
 }
 
-#include <sys/prctl.h> // for prctl( PR_SET_NAME )
 void android_main(struct android_app* app)
 {
 	while (x)
@@ -139,13 +144,15 @@ void android_main(struct android_app* app)
 	app->onAppCmd = handle_cmd;
 	int events;
 	android_poll_source* source;
-	/*while (window == nullptr) {
+	// wait for the main window:
+	while (app->window == nullptr)
+	{
 		if (ALooper_pollAll(1, nullptr, &events, (void**)&source) >= 0)
 		{
 			if (source != NULL)
 				source->process(app, source);
 		}
-	}*/
+	}
 	teleport::android::FileLoader androidFileLoader;
 	androidFileLoader.SetAndroid_AAssetManager(app->activity->assetManager);
 	platform::core::FileLoader::SetFileLoader(&androidFileLoader);
@@ -168,14 +175,22 @@ void android_main(struct android_app* app)
 	RedirectStdCoutCerr();
 	vulkanDeviceManager.Initialize(true,false,false,openXR.GetRequiredVulkanDeviceExtensions(),openXR.GetRequiredVulkanInstanceExtensions());
 	RenderPlatform *renderPlatform = new vulkan::RenderPlatform();
+
+	renderPlatform->PushTexturePath("");
+	renderPlatform->PushTexturePath("textures");
+	renderPlatform->PushTexturePath("fonts");
+	renderPlatform->PushShaderBinaryPath("");
+	renderPlatform->PushShaderBinaryPath("shaders");
+
 	renderPlatform->RestoreDeviceObjects(vulkanDeviceManager.GetDevice());
 	renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::NEVER_BUILD);
+	androidRenderer->Init(renderPlatform,&openXR,app->window);
     int MainThreadTid = gettid();
 	openXR.SetVulkanDeviceAndInstance(vulkanDeviceManager.GetVulkanDevice(),vulkanDeviceManager.GetVulkanInstance(),MainThreadTid,0);
 	openXR.Init(renderPlatform);
 	InitXR(openXR);
 	
-	renderDelegate = std::bind(&RenderView,std::placeholders::_1);
+	//renderDelegate = std::bind(&RenderView,std::placeholders::_1);
 
 	while (!g_WindowQuit)
 	{
@@ -216,6 +231,12 @@ void android_main(struct android_app* app)
 		}
 		static int64_t frame = 0;
 		frame++;
+		static double time_seconds=GetTimeInSeconds();
+		double new_time_seconds=GetTimeInSeconds();
+		float time_step_seconds=new_time_seconds-time_seconds;
+		time_seconds=new_time_seconds;
+		
+		androidRenderer->OnFrameMove(float(time_seconds),float(time_step_seconds),openXR.HaveXRDevice());
 		renderPlatform->BeginFrame(frame);
 		if (openXR.HaveXRDevice())
 		{

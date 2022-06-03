@@ -209,6 +209,9 @@ namespace teleport
 			void OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition> &inputDefinitions_);
 			void MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath);
 			const teleport::core::Input& GetServerInputs(avs::uid server_uid,unsigned long long framenumber);
+			
+			// Force input mapping to a particular setting - normally for local controls.
+			void SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId);
 
 			const avs::Pose& GetHeadPose() const;
 			const avs::Pose& GetControllerPose(int index) const;
@@ -217,10 +220,6 @@ namespace teleport
 			{
 				return controllerPoses.size();
 			};
-			void SetMenuButtonHandler(std::function<void()> f)
-			{
-				menuButtonHandler = f;
-			}
 			const std::string &GetDebugString() const;
 			platform::crossplatform::Texture* GetRenderTexture(int index=0);
 			bool IsSessionActive() const
@@ -246,7 +245,6 @@ namespace teleport
 			XrState state;
 			XrState previousState;
 			void openxr_poll_predicted(XrTime predicted_time);
-			std::function<void()> menuButtonHandler;
 			void RecordCurrentBindings();
 			void UpdateServerState(avs::uid server_uid,unsigned long long framenumber);
 			static bool CheckXrResult(XrInstance xr_instance,XrResult res);

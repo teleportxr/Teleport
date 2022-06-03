@@ -151,13 +151,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty\Platform\Android;</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;UNIX=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PLATFORM_STD_FILESYSTEM=1;SIMUL_INTERNAL_CHECKS=1;UNIX=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty\Platform\Android;</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PLATFORM_STD_FILESYSTEM=1;SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
