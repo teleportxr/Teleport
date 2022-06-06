@@ -1,4 +1,5 @@
 #include "ClientRender/Renderer.h"
+#include "ClientRender/VideoDecoder.h"
 #include <libavstream/libavstream.hpp>
 #if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
@@ -57,6 +58,11 @@ static const char* ToString(clientrender::Light::Type type)
 		break;
 	case clientrender::Light::Type::AREA:
 		lightTypeName = " Area";
+		break;
+	default:
+	case clientrender::Light::Type::DISC:
+		lightTypeName = " Disc";
+		break;
 		break;
 	};
 	return lightTypeName;
@@ -435,7 +441,8 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 				}
 				tagDataIDBuffer.CloseReadBuffer(deviceContext);
 			}
-
+			
+			#ifdef _MSC_VER
 			UpdateTagDataBuffers(deviceContext);
 			if (sessionClient->IsConnected())
 			{
@@ -456,6 +463,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 			}
 			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(clientPipeline.videoConfig.diffuse_x, clientPipeline.videoConfig.diffuse_y));
 			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(clientPipeline.videoConfig.specular_x, clientPipeline.videoConfig.specular_y));
+			#endif
 		}
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 		pbrConstants.drawDistance = lastSetupCommand.draw_distance;
@@ -1609,6 +1617,24 @@ void Renderer::SetServer(const char *ip_port)
 	}
 }
 
+void Renderer::ConnectButtonHandler(const std::string& url)
+{
+	SetServer(url.c_str());
+	/*size_t pos = url.find(":");
+	if (pos < url.length())
+	{
+		std::string port_str = url.substr(pos + 1, url.length() - pos - 1);
+		server_discovery_port = atoi(port_str.c_str());
+		std::string url_str = url.substr(0, pos);
+		server_ip = url_str;
+	}
+	else
+	{
+		server_ip = url;
+	}*/
+	canConnect = true;
+}
+
 
 void Renderer::RemoveView(int)
 {
@@ -1817,22 +1843,6 @@ void Renderer::PrintHelpText(platform::crossplatform::GraphicsDeviceContext& dev
 	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
 }
 
-void Renderer::ConnectButtonHandler(const std::string& url)
-{
-	size_t pos = url.find(":");
-	if (pos < url.length())
-	{
-		std::string port_str = url.substr(pos + 1, url.length() - pos - 1);
-		server_discovery_port = atoi(port_str.c_str());
-		std::string url_str = url.substr(0, pos);
-		server_ip = url_str;
-	}
-	else
-	{
-		server_ip = url;
-	}
-	canConnect = true;
-}
 
 void Renderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
 {
@@ -1864,6 +1874,13 @@ void Renderer::OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inp
 			inputIdMappings[MouseOrKey::MIDDLE_BUTTON] = d.inputId;
 		}
 	}
+}
+
+avs::DecoderBackendInterface* Renderer::CreateVideoDecoder()
+{
+	AVSTextureHandle th = avsTexture;
+	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
+	return new VideoDecoder(renderPlatform, t->texture);
 }
 
 bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
@@ -1932,9 +1949,12 @@ bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupComm
 #if TELEPORT_CLIENT_USE_D3D12
 	dev.handle = renderPlatform->AsD3D12Device();
 	dev.type = avs::DeviceType::Direct3D12;
-#else
+#elif TELEPORT_CLIENT_USE_D3D11
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type = avs::DeviceType::Direct3D11;
+#else
+	dev.handle = renderPlatform->AsVulkanDevice();
+	dev.type = avs::DeviceType::Vulkan;
 #endif
 
 	clientPipeline.pipeline.reset();
@@ -1986,9 +2006,7 @@ bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupComm
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
 #if TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
-	AVSTextureHandle th = avsTexture;
-	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
-	clientPipeline.decoder.setBackend(new VideoDecoder(renderPlatform, t->texture));
+	clientPipeline.decoder.setBackend(CreateVideoDecoder());
 #endif
 
 	// Video streams are 0+...

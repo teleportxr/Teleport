@@ -22,8 +22,8 @@
 #ifdef __ANDROID__
 #define VK_BACK           0x01
 #define VK_ESCAPE         0x02
-#define VK_MAX         0x10
 #endif
+#define VK_MAX         0x10
 bool KeysDown[VK_MAX];
 using namespace teleport;
 using namespace platform;

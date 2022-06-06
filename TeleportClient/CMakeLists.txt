@@ -11,7 +11,9 @@ set(src_files
 	ClientPipeline.cpp
 	ClientPipeline.h
 	Config.h
+	Config.cpp
 	DiscoveryService.h
+	DiscoveryService.cpp
 	Log.cpp
 	Log.h
 	OpenXR.cpp

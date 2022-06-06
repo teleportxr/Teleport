@@ -1,21 +1,27 @@
 // libavstream
-// (c) Copyright 2018-2021 Simul Software Ltd
-
+// (c) Copyright 2018-2022 Simul Software Ltd
+#ifdef _MSC_VER
+#include <Windows.h>
+#endif
 #include "VideoDecoder.h"
 #include "Common.h"
-#include "Platform/Crossplatform/Macros.h"
-#include "Platform/Crossplatform/Texture.h"
+#include "Platform/CrossPlatform/Macros.h"
+#include "Platform/CrossPlatform/Texture.h"
 #include "AVParser/HevcParser.h"
 
 #if TELEPORT_CLIENT_USE_D3D12
 #include <dxva.h>
 #include "Platform/DirectX12/VideoDecoder.h"
+#else
+#include "Platform/Vulkan/VideoDecoder.h"
 #endif
 #include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
 
 using namespace avs;
 using namespace avparser;
+using namespace teleport;
+using namespace clientrender;
 
 namespace cp = platform::crossplatform;
 
@@ -41,9 +47,9 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 		TELEPORT_CERR << "VideoDecoder: Invalid device handle" << std::endl;
 		return Result::DecoderBackend_InvalidDevice;
 	}
-	if (device.type != DeviceType::Direct3D12)
+	if (device.type != DeviceType::Direct3D12&&device.type!=DeviceType::Vulkan)
 	{
-		TELEPORT_CERR << "VideoDecoder: Platform library only supports D3D12 video decoder currently." << std::endl;
+		TELEPORT_CERR << "VideoDecoder: Platform only supports D3D12 and Vulkan video decoder currently." << std::endl;
 		return Result::DecoderBackend_InvalidDevice;
 	}
 	if (params.codec == VideoCodec::Invalid)
@@ -98,9 +104,12 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 
 #if TELEPORT_CLIENT_USE_D3D12
 	mDecoder.reset(new platform::dx12::VideoDecoder());
-
 	// Change to common state for use with D3D12 video decode command list.
 	((platform::dx12::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
+#else
+	mDecoder.reset(new platform::vulkan::VideoDecoder());
+	// Change to common state for use with D3D12 video decode command list.
+//	((platform::vulkan::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 #endif
 
 	// Pass true to perform a query to check if the decoder successfully decoded the frame.
@@ -470,7 +479,7 @@ void VideoDecoder::updateInputArgumentsHEVC(size_t sliceControlSize)
 	// Fill short term lists.
 	int picSetIndex = 0;
 	uint32_t prevPocDiff = 0;
-	for (int i = 0; i < strps->num_negative_pics; ++i)
+	for (uint32_t i = 0; i < strps->num_negative_pics; ++i)
 	{
 		uint32_t pocDiff = prevPocDiff + strps->delta_poc_s0_minus1[i] + 1;
 		uint32_t poc = frame.poc - pocDiff;
@@ -494,7 +503,7 @@ void VideoDecoder::updateInputArgumentsHEVC(size_t sliceControlSize)
 
 	picSetIndex = 0;
 	prevPocDiff = 0;
-	for (int i = 0; i < strps->num_positive_pics; ++i)
+	for (uint32_t i = 0; i < strps->num_positive_pics; ++i)
 	{
 		uint32_t pocDiff = prevPocDiff + strps->delta_poc_s1_minus1[i] + 1;
 		uint32_t poc = frame.poc + pocDiff;
@@ -593,7 +602,8 @@ void VideoDecoder::clearDecodeArguments()
 {
 	for (auto& arg : mDecodeArgs)
 	{
-		SAFE_DELETE(arg.data);
+		delete[] arg.data;
+		arg.data=nullptr;
 	}
 	mDecodeArgs.clear();
 }

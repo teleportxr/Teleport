@@ -151,13 +151,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../../thirdparty/enet/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>UNIX=1;HAS_SOCKLEN_T=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HAS_FCNTL=1;HAS_POLL=1;HAS_GETADDRINFO=1;HAS_GETNAMEINFO=1;HAS_GETHOSTBYNAME_R=1;HAS_GETHOSTBYADDR_R=1;HAS_INET_PTON=1;HAS_INET_NTOP=1;HAS_MSGHDR_FLAGS=1;UNIX=1;HAS_SOCKLEN_T=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../../thirdparty/enet/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>;HAS_SOCKLEN_T=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HAS_FCNTL=1;HAS_POLL=1;HAS_GETADDRINFO=1;HAS_GETNAMEINFO=1;HAS_GETHOSTBYNAME_R=1;HAS_GETHOSTBYADDR_R=1;HAS_INET_PTON=1;HAS_INET_NTOP=1;HAS_MSGHDR_FLAGS=1;;HAS_SOCKLEN_T=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

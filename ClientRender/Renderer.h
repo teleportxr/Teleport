@@ -261,14 +261,14 @@ namespace clientrender
 		void SetServer(const char* ip_port);
 		void RemoveView(int) override;
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		// handler for the UI to tell us to connect.
+		void ConnectButtonHandler(const std::string& url);
 		
 		std::vector<avs::uid> GetGeometryResources() override;
 		void ClearGeometryResources() override;
 		// to render the vr view instead of re-rendering.
 		void SetExternalTexture(platform::crossplatform::Texture* t);
 		void PrintHelpText(platform::crossplatform::GraphicsDeviceContext& deviceContext);
-		// handler for the UI to tell us to connect.
-		void ConnectButtonHandler(const std::string& url);
 
 		bool OnNodeEnteredBounds(avs::uid nodeID) override;
 		bool OnNodeLeftBounds(avs::uid nodeID) override;
@@ -284,6 +284,7 @@ namespace clientrender
 		void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
 		
+		virtual avs::DecoderBackendInterface* CreateVideoDecoder();
 		// Implement SessionCommandInterface
 		bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 		void OnVideoStreamClosed() override;

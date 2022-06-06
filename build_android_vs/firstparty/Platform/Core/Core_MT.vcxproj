@@ -161,37 +161,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Core\CMakeLists.txt">
-      <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Teleport/firstparty/Platform/Core/CMakeLists.txt</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SC:/Teleport/firstparty/Platform -BC:/Teleport/firstparty/Platform/build --check-stamp-file C:/Teleport/firstparty/Platform/build/Core/CMakeFiles/generate.stamp
-if %errorlevel% neq 0 goto :cmEnd
-:cmEnd
-endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
-:cmErrorLevel
-exit /b %1
-:cmDone
-if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../../../firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Teleport/firstparty/Platform/Core/CMakeLists.txt</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SC:/Teleport/firstparty/Platform -BC:/Teleport/firstparty/Platform/build --check-stamp-file C:/Teleport/firstparty/Platform/build/Core/CMakeFiles/generate.stamp
-if %errorlevel% neq 0 goto :cmEnd
-:cmEnd
-endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
-:cmErrorLevel
-exit /b %1
-:cmDone
-if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../../../firstparty\Platform\build\Core\CMakeFiles\generate.stamp</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="../../../../firstparty\Platform\Core\BaseMouseHandler.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\Core\CommandLine.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\Core\CommandLineParams.cpp" />
@@ -203,6 +172,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="../../../../firstparty\Platform\Core\StringFunctions.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\Core\StringToWString.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\Core\Timer.cpp" />
+    <ClCompile Include="..\..\..\..\firstparty\Platform\Core\ConvertUTF.c" />
     <ClCompile Include="..\..\..\..\firstparty\Platform\Core\FileLoader.cpp" />
     <ClInclude Include="../../../../firstparty\Platform\Core\BaseMouseHandler.h" />
     <ClInclude Include="../../../../firstparty\Platform\Core\CommandLine.h" />
@@ -222,6 +192,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="../../../../firstparty\Platform\Core\StringFunctions.h" />
     <ClInclude Include="../../../../firstparty\Platform\Core\StringToWString.h" />
     <ClInclude Include="../../../../firstparty\Platform\Core\Timer.h" />
+    <ClInclude Include="..\..\..\..\firstparty\Platform\Core\ConvertUTF.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

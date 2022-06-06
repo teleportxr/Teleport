@@ -30,6 +30,7 @@ Platform gPlatform = Platform::ANDROID;
 #include <openxr/openxr_oculus_helpers.h>
 #include "AndroidOpenXR.h"
 #include "TeleportClient/ClientDeviceState.h"
+#include "TeleportClient/Config.h"
 #include "AndroidRenderer.h"
 #include "AndroidDiscoveryService.h"
 
@@ -46,6 +47,7 @@ int kOverrideHeight = 900;
 extern "C" { void android_main(struct android_app* app); }
 DisplaySurfaceManager* displaySurfaceManager = nullptr;
 teleport::client::ClientDeviceState clientDeviceState;
+teleport::client::Config config;
 // Need ONE global instance of this:
 avs::Context context;
 bool g_WindowQuit;
@@ -156,7 +158,7 @@ void android_main(struct android_app* app)
 	teleport::android::FileLoader androidFileLoader;
 	androidFileLoader.SetAndroid_AAssetManager(app->activity->assetManager);
 	platform::core::FileLoader::SetFileLoader(&androidFileLoader);
-	
+	config.LoadConfigFromIniFile();
 	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
 #if TELEPORT_INTERNAL_CHECKS
 	static bool dev_mode=true;
@@ -164,6 +166,7 @@ void android_main(struct android_app* app)
 	static bool dev_mode=false;
 #endif
 	teleport::Gui gui;
+	gui.SetServerIPs(config.server_ips);
 
 	teleport::client::SessionClient *sessionClient=new teleport::client::SessionClient(std::make_unique<android::AndroidDiscoveryService>());
 	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState, sessionClient,gui,dev_mode);

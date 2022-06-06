@@ -23,23 +23,10 @@ set(srcs
 	MemoryUtil.h
 	UseOpenXR.cpp
 	PCDiscoveryService.cpp
-	VideoDecoder.cpp
 	UseOpenXR.h
 	Resource.h
 	PCDiscoveryService.h
 	targetver.h
-	VideoDecoder.h
-)
-
-set(av_parser
-	AVParser/BitReader.cpp
-	AVParser/BitReader.h
-	AVParser/H264Types.h
-	AVParser/HevcTypes.h
-	AVParser/HevcParser.cpp
-	AVParser/HevcParser.h
-	AVParser/Parser.cpp
-	AVParser/Parser.h
 )
 
 if(WIN32)
@@ -52,9 +39,8 @@ endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
-source_group("AVParser" src FILES ${av_parser} )
 
-add_static_executable( pc_client WIN32 SOURCES ${srcs} ${av_parser} ${shaders} ${inifiles} )
+add_static_executable( pc_client WIN32 SOURCES ${srcs} ${shaders} ${inifiles} )
 
 
 target_include_directories(pc_client PRIVATE 

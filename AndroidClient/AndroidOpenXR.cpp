@@ -555,6 +555,7 @@ bool OpenXR::TryInitDevice()
 	swapchain_info.faceCount = 1;
 	swapchain_info.arraySize = 1;
 	swapchain_info.mipCount = 1;
+	if(swapchain_info.width*swapchain_info.height>0)
 	for (uint32_t i = 0; i < view_count; i++)
 	{
 		XrSwapchain              handle;
@@ -580,7 +581,15 @@ bool OpenXR::TryInitDevice()
 	swapchain_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
 	for (uint32_t i = 0; i < view_count; i++)
 	{
+		XrViewConfigurationView& view = xr_config_views[i];
 		XrSwapchain              handle;
+		swapchain_info.createFlags=0;
+		swapchain_info.sampleCount = view.recommendedSwapchainSampleCount;
+		swapchain_info.width = view.recommendedImageRectWidth;
+		swapchain_info.height = view.recommendedImageRectHeight;
+		swapchain_info.faceCount = 1;
+		swapchain_info.arraySize = 1;
+		swapchain_info.mipCount = 1;
 		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
 		uint32_t surface_count = 0;
 		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);

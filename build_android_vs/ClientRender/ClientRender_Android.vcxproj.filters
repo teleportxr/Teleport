@@ -7,6 +7,9 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{591e1a64-9e6f-49fd-984a-8f4f93553dd4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="AVParser">
+      <UniqueIdentifier>{49661614-d18f-4784-a91c-83da6c7807ff}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ClientRender\Animation.cpp">
@@ -91,6 +94,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ClientRender\Gui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ClientRender\AVParser\BitReader.cpp">
+      <Filter>AVParser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ClientRender\AVParser\HevcParser.cpp">
+      <Filter>AVParser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ClientRender\AVParser\Parser.cpp">
+      <Filter>AVParser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ClientRender\VideoDecoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -189,6 +204,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ClientRender\Gui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\AVParser\Parser.h">
+      <Filter>AVParser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\AVParser\BitReader.h">
+      <Filter>AVParser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\AVParser\H264Types.h">
+      <Filter>AVParser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\AVParser\HevcParser.h">
+      <Filter>AVParser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\AVParser\HevcTypes.h">
+      <Filter>AVParser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\VideoDecoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

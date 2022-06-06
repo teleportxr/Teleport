@@ -15,7 +15,6 @@
 #include "Platform/CrossPlatform/DisplaySurfaceManager.h"
 #include "Platform/CrossPlatform/DisplaySurface.h"
 #include "Platform/Core/Timer.h"
-#include "Platform/Core/SimpleIni.h"
 
 #include "ClientRender/Renderer.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -52,8 +51,8 @@ platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 
 platform::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 client::ClientDeviceState clientDeviceState;
-std::vector<std::string> server_ips;
 teleport::Gui gui;
+teleport::client::Config config;
 
 // Need ONE global instance of this:
 avs::Context context;
@@ -87,54 +86,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		TELEPORT_CERR << "Coinitialize failed. Exiting." << std::endl;
 		return 0;
 	}
-
-	CSimpleIniA ini;
-	SI_Error rc = ini.LoadFile("client.ini");
-	bool enable_vr = true;
-	bool dev_mode = false;
-	bool render_local_offline = false;
-	std::string log_filename="TeleportClient.log";
-	if(rc == SI_OK)
-	{
-
-		std::string server_ip = ini.GetValue("", "SERVER_IP", TELEPORT_SERVER_IP);
-		std::string ip_list;
-		ip_list = ini.GetValue("", "SERVER_IP", "");
-
-		size_t pos = 0;
-		std::string token;
-		do
-		{
-			pos = ip_list.find(",");
-			std::string ip = ip_list.substr(0, pos);
-			server_ips.push_back(ip);
-			ip_list.erase(0, pos + 1);
-		} while (pos != std::string::npos);
-
-		enable_vr = ini.GetLongValue("", "ENABLE_VR", true);
-		dev_mode = ini.GetLongValue("", "DEV_MODE", false);
-		log_filename = ini.GetValue("", "LOG_FILE", "TeleportClient.log");
-
-		render_local_offline = ini.GetLongValue("", "RENDER_LOCAL_OFFLINE", false);
-		gui.SetServerIPs(server_ips);
-	}
-	else
-	{
-		TELEPORT_CERR<<"Create client.ini in pc_client directory to specify settings."<<std::endl;
-	}
-	if(log_filename.size()>0)
-		debug_buffer.setLogFile(log_filename.c_str());
+	config.LoadConfigFromIniFile();
+	gui.SetServerIPs(config.server_ips);
+	if(config.log_filename.size()>0)
+		debug_buffer.setLogFile(config.log_filename.c_str());
 	errno=0;
     // Initialize global strings
     MyRegisterClass(hInstance);
     // Perform application initialization:
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
-	InitRenderer(hWnd, enable_vr, dev_mode);
+	InitRenderer(hWnd, config.enable_vr, config.dev_mode);
 	if(!hWnd)
     {
         return FALSE;
     }
-	clientRenderer->render_local_offline = render_local_offline;
+	clientRenderer->render_local_offline = config.render_local_offline;
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WORLDSPACE));
     MSG msg;
     // Main message loop:
@@ -309,8 +275,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	}
 	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform,&useOpenXR,(teleport::PlatformWindow*)GetActiveWindow());
-	if(server_ips.size())
-		clientRenderer->SetServer(server_ips[0].c_str());
+	if(config.server_ips.size())
+		clientRenderer->SetServer(config.server_ips[0].c_str());
 
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(hWnd,clientRenderer,-1);

@@ -58,6 +58,8 @@ set( src_root
 	MemoryUtil.h
 	Tests.cpp
 	Tests.h
+	VideoDecoder.cpp
+	VideoDecoder.h
 	)
 
 set(src_node_components
@@ -72,10 +74,20 @@ set(hdr_node_components
 	NodeComponents/VisibilityComponent.h
 )
 
+set(av_parser
+	AVParser/BitReader.cpp
+	AVParser/BitReader.h
+	AVParser/H264Types.h
+	AVParser/HevcTypes.h
+	AVParser/HevcParser.cpp
+	AVParser/HevcParser.h
+	AVParser/Parser.cpp
+	AVParser/Parser.h
+)
 	
 source_group("Source Files\\Node Components" src FILES ${src_node_components})
 source_group("Header Files\\Node Components" src FILES ${hdr_node_components})
-
+source_group("AVParser" src FILES ${av_parser} )
 
 set( src_public ${src_root} ${src_node_components} ${hdr_node_components} )
 message ( "src_public ${src_public}" )
@@ -87,7 +99,7 @@ if(ANDROID)
 endif()
 
 #For MT runtime
-add_static_library(ClientRender SOURCES ${src_public} )  
+add_static_library(ClientRender SOURCES ${src_public} ${av_parser} )  
 SetTeleportDefaults(ClientRender)
 #Include its root directory
 target_include_directories(ClientRender PRIVATE src)
@@ -106,6 +118,12 @@ target_include_directories(ClientRender PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/src)
 set_target_properties(ClientRender PROPERTIES FOLDER Client)
 target_link_libraries(ClientRender draco TeleportClient)
+if(TELEPORT_CLIENT_USE_D3D12)
+	target_link_libraries(ClientRender SimulDirectX12_MT)
+else()
+	target_link_libraries(ClientRender SimulDirectX11_MT)
+	target_link_libraries(ClientRender d3d12)
+endif()
 target_compile_definitions(ClientRender PUBLIC TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>)
 
 if(WIN32)

@@ -132,6 +132,9 @@
     <ClCompile Include="..\..\AndroidClient\AndroidDiscoveryService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\AndroidClient\VideoDecoder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\AndroidClient\AndroidOpenXR.h">
@@ -150,6 +153,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\AndroidClient\AndroidDiscoveryService.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\AndroidClient\VideoDecoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

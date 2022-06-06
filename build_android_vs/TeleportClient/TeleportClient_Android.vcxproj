@@ -25,6 +25,7 @@
     <ClInclude Include="..\..\TeleportClient\basic_linear_algebra.h" />
     <ClInclude Include="..\..\TeleportClient\ClientDeviceState.h" />
     <ClInclude Include="..\..\TeleportClient\ClientPipeline.h" />
+    <ClInclude Include="..\..\TeleportClient\Config.h" />
     <ClInclude Include="..\..\TeleportClient\DiscoveryService.h" />
     <ClInclude Include="..\..\TeleportClient\Log.h" />
     <ClInclude Include="..\..\TeleportClient\OpenXR.h" />
@@ -34,6 +35,8 @@
   <ItemGroup>
     <ClCompile Include="..\..\TeleportClient\ClientDeviceState.cpp" />
     <ClCompile Include="..\..\TeleportClient\ClientPipeline.cpp" />
+    <ClCompile Include="..\..\TeleportClient\Config.cpp" />
+    <ClCompile Include="..\..\TeleportClient\DiscoveryService.cpp" />
     <ClCompile Include="..\..\TeleportClient\Log.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXR.cpp" />
     <ClCompile Include="..\..\TeleportClient\ServerTimestamp.cpp" />

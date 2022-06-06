@@ -73,9 +73,7 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 		DecoderBackendInterface* di;
 		if (m_selectedBackendType == DecoderBackend::Any)
 		{
-			
 			di = constructBackendFromType(DecoderBackend::NVIDIA);
-		
 			if (!di)
 			{
 				AVSLOG(Error) << "No suitable decoder backend found";

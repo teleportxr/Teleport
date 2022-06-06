@@ -1597,7 +1597,6 @@ bool ClientRenderer::OnSetupCommandReceived(const char *server_ip, const avs::Se
 		sourceParams.httpStreamID = geoStreamID;
 		sourceParams.useSSL = setupCommand.using_ssl;
 
-
 		if (!clientPipeline.source.configure(std::move(streams), sourceParams))
 		{
 			OVR_WARN("OnSetupCommandReceived: Failed to configure network source node.");

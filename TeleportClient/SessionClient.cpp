@@ -733,7 +733,7 @@ void SessionClient::ReceiveSetupInputsCommand(const ENetPacket* packet)
 {
 	avs::SetupInputsCommand setupInputsCommand;
 	memcpy(static_cast<void*>(&setupInputsCommand), packet->data, sizeof(avs::SetupInputsCommand));
-	setupInputsCommand.numInputs;
+
 	inputDefinitions.resize(setupInputsCommand.numInputs);
 	unsigned char* ptr = packet->data + sizeof(avs::SetupInputsCommand);
 	for (int i = 0; i < setupInputsCommand.numInputs; i++)

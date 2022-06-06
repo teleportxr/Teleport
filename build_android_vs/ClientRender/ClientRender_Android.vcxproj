@@ -41,6 +41,9 @@
   <ItemGroup>
     <ClCompile Include="..\..\ClientRender\Animation.cpp" />
     <ClCompile Include="..\..\ClientRender\API.cpp" />
+    <ClCompile Include="..\..\ClientRender\AVParser\BitReader.cpp" />
+    <ClCompile Include="..\..\ClientRender\AVParser\HevcParser.cpp" />
+    <ClCompile Include="..\..\ClientRender\AVParser\Parser.cpp" />
     <ClCompile Include="..\..\ClientRender\Bone.cpp" />
     <ClCompile Include="..\..\ClientRender\Camera.cpp" />
     <ClCompile Include="..\..\ClientRender\Common.cpp" />
@@ -67,10 +70,16 @@
     <ClCompile Include="..\..\ClientRender\Transform.cpp" />
     <ClCompile Include="..\..\ClientRender\UniformBuffer.cpp" />
     <ClCompile Include="..\..\ClientRender\VertexBuffer.cpp" />
+    <ClCompile Include="..\..\ClientRender\VideoDecoder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h" />
     <ClInclude Include="..\..\ClientRender\API.h" />
+    <ClInclude Include="..\..\ClientRender\AVParser\BitReader.h" />
+    <ClInclude Include="..\..\ClientRender\AVParser\H264Types.h" />
+    <ClInclude Include="..\..\ClientRender\AVParser\HevcParser.h" />
+    <ClInclude Include="..\..\ClientRender\AVParser\HevcTypes.h" />
+    <ClInclude Include="..\..\ClientRender\AVParser\Parser.h" />
     <ClInclude Include="..\..\ClientRender\Bone.h" />
     <ClInclude Include="..\..\ClientRender\Camera.h" />
     <ClInclude Include="..\..\ClientRender\Common.h" />
@@ -101,6 +110,7 @@
     <ClInclude Include="..\..\ClientRender\UniformBuffer.h" />
     <ClInclude Include="..\..\ClientRender\VertexBuffer.h" />
     <ClInclude Include="..\..\ClientRender\VertexBufferLayout.h" />
+    <ClInclude Include="..\..\ClientRender\VideoDecoder.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E60416E1-F881-4E0B-8459-488A21C53030}</ProjectGuid>
@@ -232,13 +242,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

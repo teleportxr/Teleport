@@ -197,7 +197,8 @@ void XrInputSession::InstanceInit(XrInstance& xr_instance)
 		action_info.actionType = def.xrActionType;
 		strcpy_s(action_info.actionName, XR_MAX_ACTION_NAME_SIZE, def.name.c_str());
 		strcpy_s(action_info.localizedActionName, XR_MAX_LOCALIZED_ACTION_NAME_SIZE, def.localizedName.c_str());
-		XR_CHECK(xrCreateAction(actionSet, &action_info, &def.xrAction));
+		if(actionId!=INVALID)
+			XR_CHECK(xrCreateAction(actionSet, &action_info, &def.xrAction));
 		def.actionId=actionId;
 		def.xrActionType=def.xrActionType;
 	}
