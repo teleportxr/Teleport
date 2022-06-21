@@ -21,6 +21,18 @@ public:
 	void shutdown();
 	bool decode(std::vector<uint8_t> &ByteBuffer, avs::VideoPayloadType p, bool lastPayload);
 	bool display();
+	// callbacks:
+	void onAsyncInputAvailable(AMediaCodec *codec,
+		int32_t index);
+	void onAsyncOutputAvailable(AMediaCodec *codec,
+		int32_t index,
+		AMediaCodecBufferInfo *bufferInfo);
+	void onAsyncFormatChanged(	AMediaCodec *codec,
+		AMediaFormat *format);
+	void onAsyncError(AMediaCodec *codec,
+        media_status_t error,
+        int32_t actionCode,
+        const char *detail);
 protected:
 	VideoDecoderBackend *videoDecoder=nullptr;
 	avs::VideoCodec mCodecType;

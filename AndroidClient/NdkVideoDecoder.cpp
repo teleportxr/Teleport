@@ -2,6 +2,62 @@
 #include <media/NdkMediaFormat.h>
 #include <iostream>
 #include "Platform/Vulkan/Texture.h"
+#define AMEDIA_CHECK(r) {media_status_t res=r;if(res!=AMEDIA_OK){std::cerr<<"Failed"<<std::endl;return;}}
+
+void codecOnAsyncInputAvailable(
+	AMediaCodec *codec,
+	void *userdata,
+	int32_t index)
+{
+	NdkVideoDecoder *ndkVideoDecoder=(NdkVideoDecoder*)userdata;
+	ndkVideoDecoder->onAsyncInputAvailable(codec,index);
+}
+/**
+ * Called when an output buffer becomes available.
+ * The specified index is the index of the available output buffer.
+ * The specified bufferInfo contains information regarding the available output buffer.
+ */
+ void codecOnAsyncOutputAvailable(
+	AMediaCodec *codec,
+	void *userdata,
+	int32_t index,
+	AMediaCodecBufferInfo *bufferInfo)
+{
+	NdkVideoDecoder *ndkVideoDecoder=(NdkVideoDecoder*)userdata;
+	ndkVideoDecoder->onAsyncOutputAvailable(codec,index,bufferInfo);
+}
+/**
+ * Called when the output format has changed.
+ * The specified format contains the new output format.
+ */
+ void codecOnAsyncFormatChanged(
+	AMediaCodec *codec,
+	void *userdata,
+	AMediaFormat *format)
+{
+	NdkVideoDecoder *ndkVideoDecoder=(NdkVideoDecoder*)userdata;
+	ndkVideoDecoder->onAsyncFormatChanged(codec,format);
+}
+/**
+ * Called when the MediaCodec encountered an error.
+ * The specified actionCode indicates the possible actions that client can take,
+ * and it can be checked by calling AMediaCodecActionCode_isRecoverable or
+ * AMediaCodecActionCode_isTransient. If both AMediaCodecActionCode_isRecoverable()
+ * and AMediaCodecActionCode_isTransient() return false, then the codec error is fatal
+ * and the codec must be deleted.
+ * The specified detail may contain more detailed messages about this error.
+ */
+ void codecOnAsyncError(
+        AMediaCodec *codec,
+        void *userdata,
+        media_status_t error,
+        int32_t actionCode,
+        const char *detail)
+{
+	NdkVideoDecoder *ndkVideoDecoder=(NdkVideoDecoder*)userdata;
+	ndkVideoDecoder->onAsyncError(codec,error,actionCode,detail);
+}
+
 
 NdkVideoDecoder::NdkVideoDecoder(VideoDecoderBackend *d,avs::VideoCodec codecType)
 {
@@ -22,17 +78,43 @@ void NdkVideoDecoder::initialize(platform::crossplatform::Texture* texture)
 	AImageReader_newWithUsage(vulkanTexture->width,vulkanTexture->length,AIMAGE_FORMAT_RGBA_8888,AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,videoDecoderParams.maxDecodePictureBufferCount,&imageReader);
 	// nativeWindow is managed by the ImageReader.
 	ANativeWindow *nativeWindow=nullptr;
-	media_status_t status=AImageReader_getWindow(imageReader,&nativeWindow);
+	media_status_t status;
+	AMEDIA_CHECK(AImageReader_getWindow(imageReader,&nativeWindow));
 	//= AMediaFormat_createVideoFormat(getCodecMimeType, frameWidth, frameHeight)
 	// Guessing the following is equivalent:
 	AMediaFormat_setString(format,AMEDIAFORMAT_KEY_MIME,getCodecMimeType());
 	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_MAX_WIDTH, vulkanTexture->width);
 	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_MAX_HEIGHT, vulkanTexture->length);
-
+	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_HEIGHT, vulkanTexture->length);
+	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_WIDTH, vulkanTexture->width);
+	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_BIT_RATE, videoDecoderParams.bitRate);
+	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_FRAME_RATE, videoDecoderParams.frameRate);
+	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, 21); // #21 COLOR_FormatYUV420SemiPlanar (NV12) 
+	
+	uint32_t flags = 0;
 	//surface.setOnFrameAvailableListener(this)
-	AMediaCodec_configure(mDecoder,format,nativeWindow,nullptr,0);
+	media_status_t res=AMediaCodec_configure(mDecoder,format,nativeWindow,nullptr,flags);
+	if(res!=AMEDIA_OK)
+	{
+		std::cerr<<"Failed"<<std::endl;
+		return;
+	}
+	AMediaCodecOnAsyncNotifyCallback callback;
+      callback.onAsyncInputAvailable=codecOnAsyncInputAvailable;
+      callback.onAsyncOutputAvailable=onAsyncOutputAvailable;
+      callback.onAsyncFormatChanged=onAsyncFormatChanged;
+      callback.onAsyncError=onAsyncError;
+	res= AMediaCodec_setAsyncNotifyCallback(
+			mDecoder,
+			callback,
+			this);
+	if(res!=AMEDIA_OK)
+	{
+		std::cerr<<"Failed"<<std::endl;
+		return;
+	}
 	//mDecoder.configure(format, Surface(surface), null, 0)
-	AMediaCodec_start(mDecoder);
+	AMEDIA_CHECK(AMediaCodec_start(mDecoder));
 //	mDecoder.start()
 
 	mDecoderConfigured = true;
@@ -129,6 +211,34 @@ bool NdkVideoDecoder::display()
 	return true;
 }
 
+// callbacks:
+void NdkVideoDecoder::onAsyncInputAvailable(AMediaCodec *codec,
+													void *userdata,
+													int32_t index)
+{
+}
+
+void NdkVideoDecoder::onAsyncOutputAvailable(AMediaCodec *codec,
+											void *userdata,
+											int32_t index,
+											AMediaCodecBufferInfo *bufferInfo)
+{
+}
+
+void NdkVideoDecoder::onAsyncFormatChanged(	AMediaCodec *codec,
+												void *userdata,
+												AMediaFormat *format)
+{
+}
+
+void NdkVideoDecoder::onAsyncError(AMediaCodec *codec,
+									media_status_t error,
+									int32_t actionCode,
+									const char *detail)
+{
+	std::cerr<<"VideoDecoder: error: "<<detail<<std::endl;
+}
+
 ssize_t NdkVideoDecoder::queueInputBuffer(std::vector<uint8_t> &buffer, int flags) 
 {
 	// Returns the index of an input buffer to be filled with valid data or -1 if no such buffer is currently available.
@@ -146,7 +256,12 @@ ssize_t NdkVideoDecoder::queueInputBuffer(std::vector<uint8_t> &buffer, int flag
 			//inputBuffer?.put(buffer);
 		}
 		// Send the inputBuffer back to the codec for processing.
-		AMediaCodec_queueInputBuffer(mDecoder,inputBufferID,0,buffer.size(),0,flags);
+		media_status_t res=AMediaCodec_queueInputBuffer(mDecoder,inputBufferID,0,buffer.size(),0,flags);
+		if(res!=AMEDIA_OK)
+		{
+			std::cerr<<"Failed"<<std::endl;
+			return -1;
+		}
 		//mDecoder.queueInputBuffer(inputBufferID, 0, buffer.size, 0, flags)
 	}
 	else
@@ -159,7 +274,7 @@ ssize_t NdkVideoDecoder::queueInputBuffer(std::vector<uint8_t> &buffer, int flag
 int NdkVideoDecoder::releaseOutputBuffer(bool render) 
 {
 	AMediaCodecBufferInfo bufferInfo = {0};
-	ssize_t outputBufferID=AMediaCodec_dequeueOutputBuffer(mDecoder,&bufferInfo,0);
+	ssize_t outputBufferID=AMediaCodec_dequeueOutputBuffer(mDecoder,&bufferInfo,10000000);
 	//int outputBufferID = mDecoder.dequeueOutputBuffer(bufferInfo, 0)
 	if(outputBufferID >= 0)
 	{
